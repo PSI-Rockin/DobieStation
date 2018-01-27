@@ -44,12 +44,18 @@ void DMAC::run()
             if (((channels[i].control >> 2) & 0x3) != 0)
                 continue;
             uint64_t quad[2];
+            //printf("\nDerp: $%08X", e->read64(0x00402C80));
             quad[0] = e->read64(channels[i].address);
             quad[1] = e->read64(channels[i].address + 8);
             channels[i].address += 16;
             channels[i].quadword_count--;
 
-            printf("\n[DMAC] GIF: $%08X_%08X_%08X_%08X", quad[1] >> 32, quad[1] & 0xFFFFFFFF, quad[0] >> 32, quad[0] & 0xFFFFFFFF);
+            switch (i)
+            {
+                case GIF:
+                    gs->send_PATH3(quad);
+                    break;
+            }
             if (!channels[i].quadword_count)
                 channels[i].control &= ~0x100;
         }

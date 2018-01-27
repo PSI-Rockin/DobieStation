@@ -22,7 +22,7 @@ Emulator::~Emulator()
 
 void Emulator::run()
 {
-    for (int i = 0; i < 30000000; i++)
+    for (int i = 0; i < 3000000; i++)
     {
         cpu.run();
         dmac.run();
@@ -35,6 +35,7 @@ void Emulator::reset()
 {
     cpu.reset();
     dmac.reset();
+    gs.reset();
     if (!RDRAM)
         RDRAM = new uint8_t[1024 * 1024 * 32];
     if (!IOP_RAM)
