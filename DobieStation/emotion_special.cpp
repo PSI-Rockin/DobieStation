@@ -65,8 +65,14 @@ void EmotionInterpreter::special(EmotionEngine &cpu, uint32_t instruction)
         case 0x1B:
             divu(cpu, instruction);
             break;
+        case 0x20:
+            add(cpu, instruction);
+            break;
         case 0x21:
             addu(cpu, instruction);
+            break;
+        case 0x22:
+            sub(cpu, instruction);
             break;
         case 0x23:
             subu(cpu, instruction);
@@ -293,6 +299,18 @@ void EmotionInterpreter::divu(EmotionEngine &cpu, uint32_t instruction)
     cpu.set_LO_HI(op1 / op2, op1 % op2);
 }
 
+void EmotionInterpreter::add(EmotionEngine &cpu, uint32_t instruction)
+{
+    int32_t op1 = (instruction >> 21) & 0x1F;
+    int32_t op2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+    printf("add {%d}, {%d}, {%d}", dest, op1, op2);
+    op1 = cpu.get_gpr<int32_t>(op1);
+    op2 = cpu.get_gpr<int32_t>(op2);
+    uint32_t result = op1 + op2;
+    cpu.set_gpr<uint64_t>(dest, result);
+}
+
 void EmotionInterpreter::addu(EmotionEngine &cpu, uint32_t instruction)
 {
     int32_t op1 = (instruction >> 21) & 0x1F;
@@ -302,6 +320,19 @@ void EmotionInterpreter::addu(EmotionEngine &cpu, uint32_t instruction)
     op1 = cpu.get_gpr<int32_t>(op1);
     op2 = cpu.get_gpr<int32_t>(op2);
     uint32_t result = op1 + op2;
+    cpu.set_gpr<uint64_t>(dest, result);
+}
+
+void EmotionInterpreter::sub(EmotionEngine &cpu, uint32_t instruction)
+{
+    //TODO: overflow
+    int32_t op1 = (instruction >> 21) & 0x1F;
+    int32_t op2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+    printf("sub {%d}, {%d}, {%d}", dest, op1, op2);
+    op1 = cpu.get_gpr<int32_t>(op1);
+    op2 = cpu.get_gpr<int32_t>(op2);
+    uint32_t result = op1 - op2;
     cpu.set_gpr<uint64_t>(dest, result);
 }
 

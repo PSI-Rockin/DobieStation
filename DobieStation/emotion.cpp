@@ -32,10 +32,7 @@ void EmotionEngine::reset()
     delay_slot = 0;
     for (int i = 0; i < 16; i++)
         gpr[i] = 0; //Clear out zeroth register
-    gpr_lo[0] = 0;
-    gpr_hi[0] = 0;
     cp0.mtc(9, 0);
-    gpr_lo[29] = 0x70003FF0;
 }
 
 void EmotionEngine::run()
@@ -227,10 +224,10 @@ void EmotionEngine::mtc(int cop_id, int reg, int cop_reg)
     switch (cop_id)
     {
         case 0:
-            cp0.mtc(cop_reg, gpr_lo[reg] & 0xFFFFFFFF);
+            cp0.mtc(cop_reg, get_gpr<uint32_t>(reg));
             break;
         case 1:
-            fpu.mtc(cop_reg, gpr_lo[reg] & 0xFFFFFFFF);
+            fpu.mtc(cop_reg, get_gpr<uint32_t>(reg));
             break;
         default:
             printf("Unrecognized cop id %d in mtc\n", cop_id);

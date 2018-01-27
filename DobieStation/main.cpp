@@ -21,10 +21,12 @@ int main()
         return 1;
     }
     printf("Loaded PS2 BIOS.\n");
-    uint8_t BIOS[1024 * 1024 * 4];
+    uint8_t* BIOS = new uint8_t[1024 * 1024 * 4];
     BIOS_file.read((char*)BIOS, 1024 * 1024 * 4);
     BIOS_file.close();
     e.load_BIOS(BIOS);
+    delete[] BIOS;
+    BIOS = nullptr;
     const char* file_name = "3stars.elf";
 
     ifstream ELF_file(file_name, ios::binary | ios::in);
@@ -42,6 +44,7 @@ int main()
     printf("Size: %lld\n", ELF_size);
     e.load_ELF(ELF);
     delete[] ELF;
+    ELF = nullptr;
     e.run();
 
     return 0;

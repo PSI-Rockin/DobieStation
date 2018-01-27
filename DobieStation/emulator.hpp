@@ -1,6 +1,7 @@
 #ifndef EMULATOR_HPP
 #define EMULATOR_HPP
 #include "bios_hle.hpp"
+#include "dmac.hpp"
 #include "emotion.hpp"
 #include "gs.hpp"
 
@@ -8,6 +9,7 @@ class Emulator
 {
     private:
         BIOS_HLE bios_hle;
+        DMAC dmac;
         EmotionEngine cpu;
         GraphicsSynthesizer gs;
 

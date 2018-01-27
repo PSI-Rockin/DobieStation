@@ -3,31 +3,42 @@
 #include <cstdlib>
 #include "emulator.hpp"
 
-Emulator::Emulator() : bios_hle(this), cpu(&bios_hle, this)
+Emulator::Emulator() : bios_hle(this), cpu(&bios_hle, this), dmac(this, &gs)
 {
     BIOS = nullptr;
-    RDRAM = new uint8_t[1024 * 1024 * 32];
-    IOP_RAM = new uint8_t[1024 * 1024 * 2];
+    RDRAM = nullptr;
+    IOP_RAM = nullptr;
 }
 
 Emulator::~Emulator()
 {
-    delete[] RDRAM;
-    delete[] IOP_RAM;
+    if (RDRAM)
+        delete[] RDRAM;
+    if (IOP_RAM)
+        delete[] IOP_RAM;
     if (BIOS)
         delete[] BIOS;
 }
 
 void Emulator::run()
 {
-    for (int i = 0; i < 1845000; i++)
+    for (int i = 0; i < 30000000; i++)
+    {
         cpu.run();
+        dmac.run();
+    }
+
     cpu.print_state();
 }
 
 void Emulator::reset()
 {
     cpu.reset();
+    dmac.reset();
+    if (!RDRAM)
+        RDRAM = new uint8_t[1024 * 1024 * 32];
+    if (!IOP_RAM)
+        IOP_RAM = new uint8_t[1024 * 1024 * 2];
     MCH_DRD = 0;
     MCH_RICM = 0;
     rdram_sdevid = 0;
@@ -101,6 +112,8 @@ uint8_t Emulator::read8(uint32_t address)
 
 uint16_t Emulator::read16(uint32_t address)
 {
+    if (address < 0x02000000)
+        return *(uint16_t*)&RDRAM[address];
     if (address >= 0x1FC00000 && address < 0x20000000)
         return *(uint16_t*)&BIOS[address & 0x3FFFFF];
     printf("\nUnrecognized read16 at physical addr $%08X", address);
@@ -114,6 +127,10 @@ uint32_t Emulator::read32(uint32_t address)
         return *(uint32_t*)&RDRAM[address];
     if (address >= 0x1FC00000 && address < 0x20000000)
         return *(uint32_t*)&BIOS[address & 0x3FFFFF];
+    if ((address & (0xFF000000)) == 0x12000000)
+        return gs.read32(address);
+    if (address >= 0x10008000 && address < 0x1000F000)
+        return dmac.read32(address);
     switch (address)
     {
         case 0x1000F130:
@@ -202,6 +219,11 @@ void Emulator::write32(uint32_t address, uint32_t value)
     if ((address & (0xFF000000)) == 0x12000000)
     {
         gs.write32(address, value);
+        return;
+    }
+    if (address >= 0x10008000 && address < 0x1000F000)
+    {
+        dmac.write32(address, value);
         return;
     }
     switch (address)

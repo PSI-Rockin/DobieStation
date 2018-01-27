@@ -41,6 +41,9 @@ void EmotionInterpreter::interpret(EmotionEngine &cpu, uint32_t instruction)
         case 0x07:
             bgtz(cpu, instruction);
             break;
+        case 0x08:
+            addi(cpu, instruction);
+            break;
         case 0x09:
             addiu(cpu, instruction);
             break;
@@ -241,6 +244,18 @@ void EmotionInterpreter::bgtz(EmotionEngine &cpu, uint32_t instruction)
     cpu.branch(reg > 0, offset);
 }
 
+void EmotionInterpreter::addi(EmotionEngine &cpu, uint32_t instruction)
+{
+    //TODO: overflow
+    int16_t imm = (int16_t)(instruction & 0xFFFF);
+    uint64_t dest = (instruction >> 16) & 0x1F;
+    uint32_t source = (instruction >> 21) & 0x1F;
+    printf("addi {%d}, {%d}, $%04X", dest, source, imm);
+    int32_t result = cpu.get_gpr<int32_t>(source);
+    result += imm;
+    cpu.set_gpr<int64_t>(dest, result);
+}
+
 void EmotionInterpreter::addiu(EmotionEngine &cpu, uint32_t instruction)
 {
     int16_t imm = (int16_t)(instruction & 0xFFFF);
@@ -249,7 +264,6 @@ void EmotionInterpreter::addiu(EmotionEngine &cpu, uint32_t instruction)
     printf("addiu {%d}, {%d}, $%04X", dest, source, imm);
     int32_t result = cpu.get_gpr<int32_t>(source);
     result += imm;
-    //TODO: check if only lower 32 bits are written to
     cpu.set_gpr<int64_t>(dest, result);
 }
 

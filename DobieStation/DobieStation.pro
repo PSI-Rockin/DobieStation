@@ -13,7 +13,8 @@ SOURCES += main.cpp \
     bios_hle.cpp \
     vu0.cpp \
     emotion_special.cpp \
-    gs.cpp
+    gs.cpp \
+    dmac.cpp
 
 HEADERS += \
     emotion.hpp \
@@ -23,4 +24,5 @@ HEADERS += \
     cop1.hpp \
     bios_hle.hpp \
     vu0.hpp \
-    gs.hpp
+    gs.hpp \
+    dmac.hpp

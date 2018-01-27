@@ -1,2 +1,10 @@
 
 .DS_Store
+*.elf
+*.stash
+*.bin
+*.o
+*.user
+build-DobieStation-Desktop_Qt_5_9_1_clang_64bit-Debug/Makefile
+build-DobieStation-Desktop_Qt_5_9_1_clang_64bit-Debug/DobieStation
+*.autosave

@@ -18,8 +18,8 @@ class EmotionEngine
 
         //Each register is 128-bit
         uint8_t gpr[32 * sizeof(uint64_t) * 2];
-        uint64_t gpr_lo[32];
-        uint64_t gpr_hi[32];
+        //uint64_t gpr_lo[32];
+        //uint64_t gpr_hi[32];
         uint32_t PC, new_PC;
         uint64_t LO, LO1, HI, HI1;
 
@@ -79,7 +79,8 @@ inline T EmotionEngine::get_gpr(int id, int offset)
 template <typename T>
 inline void EmotionEngine::set_gpr(int id, T value, int offset)
 {
-    *(T*)&gpr[(id * sizeof(uint64_t) * 2) + (offset * sizeof(T))] = value;
+    if (id)
+        *(T*)&gpr[(id * sizeof(uint64_t) * 2) + (offset * sizeof(T))] = value;
 }
 
 #endif // EMOTION_HPP

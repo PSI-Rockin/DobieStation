@@ -26,7 +26,9 @@ namespace EmotionInterpreter
     void mult(EmotionEngine& cpu, uint32_t instruction);
     void div(EmotionEngine& cpu, uint32_t instruction);
     void divu(EmotionEngine& cpu, uint32_t instruction);
+    void add(EmotionEngine& cpu, uint32_t instruction);
     void addu(EmotionEngine& cpu, uint32_t instruction);
+    void sub(EmotionEngine& cpu, uint32_t instruction);
     void subu(EmotionEngine& cpu, uint32_t instruction);
     void and_ee(EmotionEngine& cpu, uint32_t instruction);
     void or_ee(EmotionEngine& cpu, uint32_t instruction);
@@ -49,6 +51,7 @@ namespace EmotionInterpreter
     void bne(EmotionEngine& cpu, uint32_t instruction);
     void blez(EmotionEngine& cpu, uint32_t instruction);
     void bgtz(EmotionEngine& cpu, uint32_t instruction);
+    void addi(EmotionEngine& cpu, uint32_t instruction);
     void addiu(EmotionEngine& cpu, uint32_t instruction);
     void slti(EmotionEngine& cpu, uint32_t instruction);
     void sltiu(EmotionEngine& cpu, uint32_t instruction);
