@@ -3,6 +3,11 @@ CONFIG += console c++11
 CONFIG -= app_bundle
 CONFIG -= qt
 
+QMAKE_CFLAGS_RELEASE -= -O
+QMAKE_CFLAGS_RELEASE -= -O1
+QMAKE_CFLAGS_RELEASE *= -O2
+QMAKE_CFLAGS_RELEASE -= -O3
+
 SOURCES += main.cpp \
     emotion.cpp \
     emulator.cpp \

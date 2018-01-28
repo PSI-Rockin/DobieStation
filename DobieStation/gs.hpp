@@ -97,6 +97,45 @@ struct TRXREG_REG
     uint16_t height;
 };
 
+struct PMODE_REG
+{
+    bool circuit1;
+    bool circuit2;
+    uint8_t output_switching;
+    bool use_ALP;
+    bool out1_circuit2;
+    bool blend_with_bg;
+    uint8_t ALP;
+};
+
+struct SMODE
+{
+    bool interlaced;
+    bool frame_mode;
+    uint8_t power_mode;
+};
+
+struct DISPFB
+{
+    uint32_t frame_base;
+    uint32_t width;
+    uint8_t format;
+    uint16_t x, y;
+};
+
+struct DISPLAY
+{
+    uint16_t x, y;
+    uint8_t magnify_x, magnify_y;
+    uint16_t width, height;
+};
+
+struct Vertex
+{
+    uint32_t coords[3];
+    RGBAQ_REG rgbaq;
+};
+
 class GraphicsSynthesizer
 {
     private:
@@ -116,7 +155,6 @@ class GraphicsSynthesizer
         FRAME FRAME_1, FRAME_2;
         ZBUF ZBUF_1, ZBUF_2;
 
-
         BITBLTBUF_REG BITBLTBUF;
         TRXPOS_REG TRXPOS;
         TRXREG_REG TRXREG;
@@ -125,6 +163,21 @@ class GraphicsSynthesizer
         int transfer_bit_depth;
         int pixels_transferred;
 
+        PMODE_REG PMODE;
+        SMODE SMODE2;
+        DISPFB DISPFB1, DISPFB2;
+        DISPLAY DISPLAY1, DISPLAY2;
+
+        Vertex current_vtx;
+        Vertex vtx_queue[3];
+        unsigned int num_vertices;
+
+        static const unsigned int max_vertices[8];
+
+        void vertex_kick(bool drawing_kick);
+        void render_primitive();
+        void render_triangle();
+        void render_sprite();
         void process_PACKED(uint64_t data[2]);
         void write_HWREG(uint64_t data);
     public:
@@ -132,8 +185,9 @@ class GraphicsSynthesizer
         ~GraphicsSynthesizer();
         void reset();
 
-        uint32_t read32(uint32_t addr);
-        void write32(uint32_t addr, uint32_t value);
+        uint32_t read32_privileged(uint32_t addr);
+        void write32_privileged(uint32_t addr, uint32_t value);
+        void write64_privileged(uint32_t addr, uint64_t value);
         void write64(uint32_t addr, uint64_t value);
 
         void feed_GIF(uint64_t data[2]);

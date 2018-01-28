@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <cstdlib>
 #include "dmac.hpp"
 #include "emulator.hpp"
 
@@ -27,7 +28,6 @@ void DMAC::reset()
     for (int i = 0; i < 10; i++)
     {
         channels[i].control = 0;
-        channels[i].active = false;
         interrupt_stat.channel_mask[i] = false;
         interrupt_stat.channel_stat[i] = false;
     }
@@ -41,10 +41,31 @@ void DMAC::run()
     {
         if (channels[i].control & 0x100)
         {
-            if (((channels[i].control >> 2) & 0x3) != 0)
+            if (!channels[i].quadword_count)
+            {
+                if (channels[i].tag_end)
+                {
+                    channels[i].control &= ~0x100;
+                    continue;
+                }
+                int mode = (channels[i].control >> 2) & 0x3;
+                switch (mode)
+                {
+                    //Normal - suspend transfer
+                    case 0:
+                        channels[i].control &= ~0x100;
+                        break;
+                    case 1:
+                        handle_source_chain(i);
+                        break;
+                    default:
+                        break;
+                }
                 continue;
+            }
+
+
             uint64_t quad[2];
-            //printf("\nDerp: $%08X", e->read64(0x00402C80));
             quad[0] = e->read64(channels[i].address);
             quad[1] = e->read64(channels[i].address + 8);
             channels[i].address += 16;
@@ -56,9 +77,39 @@ void DMAC::run()
                     gs->send_PATH3(quad);
                     break;
             }
-            if (!channels[i].quadword_count)
-                channels[i].control &= ~0x100;
+
         }
+    }
+}
+
+void DMAC::handle_source_chain(int index)
+{
+    uint64_t DMAtag = e->read64(channels[index].tag_address);
+    printf("\n[DMAC] DMAtag read $%08X: $%08X_%08X", channels[index].tag_address, DMAtag >> 32, DMAtag & 0xFFFFFFFF);
+
+    uint16_t quadword_count = DMAtag & 0xFFFF;
+    uint8_t id = (DMAtag >> 28) & 0x7;
+    uint32_t addr = (DMAtag >> 32) & 0x7FFFFFFF;
+    addr &= ~0x3;
+    bool IRQ_after_transfer = DMAtag & (1 << 31);
+    channels[index].quadword_count = quadword_count;
+    switch (id)
+    {
+        case 0:
+            //refe
+            channels[index].address = addr;
+            channels[index].tag_end = true;
+            break;
+        case 1:
+            //cnt
+            channels[index].address = channels[index].tag_address + 16;
+            channels[index].tag_address = channels[index].address + (quadword_count * 16);
+            printf("\nNew address: $%08X", channels[index].address);
+            printf("\nNew tag addr: $%08X", channels[index].tag_address);
+            break;
+        default:
+            printf("\n[DMAC] Unrecognized source chain DMAtag id %d\n", id);
+            exit(1);
     }
 }
 
@@ -69,6 +120,7 @@ void DMAC::start_DMA(int index)
     printf("\nMode: %d", (channels[index].control >> 2) & 0x3);
     printf("\nASP: %d", (channels[index].control >> 4) & 0x3);
     printf("\nTTE: %d", channels[index].control & (1 << 6));
+    channels[index].tag_end = false;
 }
 
 uint32_t DMAC::read32(uint32_t address)
@@ -117,12 +169,16 @@ void DMAC::write32(uint32_t address, uint32_t value)
                 start_DMA(GIF);
             break;
         case 0x1000A010:
-            printf("\n[DMAC] GIF addr: $%08X", value);
+            printf("\n[DMAC] GIF M_ADR: $%08X", value);
             channels[GIF].address = value;
             break;
         case 0x1000A020:
             printf("\n[DMAC] GIF QWC: $%08X", value);
             channels[GIF].quadword_count = value;
+            break;
+        case 0x1000A030:
+            printf("\n[DMAC] GIF T_ADR: $%08X", value);
+            channels[GIF].tag_address = value;
             break;
         case 0x1000E000:
             printf("\n[DMAC] Write32 D_CTRL: $%08X", value);

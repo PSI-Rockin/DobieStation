@@ -129,7 +129,7 @@ uint32_t Emulator::read32(uint32_t address)
     if (address >= 0x1FC00000 && address < 0x20000000)
         return *(uint32_t*)&BIOS[address & 0x3FFFFF];
     if ((address & (0xFF000000)) == 0x12000000)
-        return gs.read32(address);
+        return gs.read32_privileged(address);
     if (address >= 0x10008000 && address < 0x1000F000)
         return dmac.read32(address);
     switch (address)
@@ -178,7 +178,7 @@ uint64_t Emulator::read64(uint32_t address)
 {
     if (address < 0x02000000)
         return *(uint64_t*)&RDRAM[address];
-    printf("\nUnrecognized read32 at physical addr $%08X", address);
+    printf("\nUnrecognized read64 at physical addr $%08X", address);
     return 0;
     //exit(1);
 }
@@ -219,7 +219,7 @@ void Emulator::write32(uint32_t address, uint32_t value)
     }
     if ((address & (0xFF000000)) == 0x12000000)
     {
-        gs.write32(address, value);
+        gs.write32_privileged(address, value);
         return;
     }
     if (address >= 0x10008000 && address < 0x1000F000)
@@ -254,6 +254,11 @@ void Emulator::write64(uint32_t address, uint64_t value)
     if (address < 0x02000000)
     {
         *(uint64_t*)&RDRAM[address] = value;
+        return;
+    }
+    if ((address & (0xFF000000)) == 0x12000000)
+    {
+        gs.write64_privileged(address, value);
         return;
     }
     if (address >= 0x1C000000 && address < 0x1C200000)

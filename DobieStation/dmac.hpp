@@ -10,7 +10,7 @@ struct DMA_Channel
     uint32_t tag_address;
     uint32_t tag_save0, tag_save1;
 
-    bool active;
+    bool tag_end;
 };
 
 //Regs
@@ -48,6 +48,8 @@ class DMAC
 
         D_CTRL control;
         D_STAT interrupt_stat;
+
+        void handle_source_chain(int index);
     public:
         DMAC(Emulator* e, GraphicsSynthesizer* gs);
         void reset();

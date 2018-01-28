@@ -1,6 +1,23 @@
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include "gs.hpp"
+
+/**
+~ GS notes ~
+
+PRIM.prim_type:
+0 - Point
+1 - Line
+2 - Line strip
+3 - Triangle
+4 - Triangle strip
+5 - Triangle fan
+6 - Sprite
+7 - Prohibited
+**/
+
+const unsigned int GraphicsSynthesizer::max_vertices[8] = {1, 2, 2, 3, 3, 3, 2, 0};
 
 GraphicsSynthesizer::GraphicsSynthesizer()
 {
@@ -21,9 +38,10 @@ void GraphicsSynthesizer::reset()
     current_tag.data_left = 0;
     pixels_transferred = 0;
     transfer_bit_depth = 32;
+    num_vertices = 0;
 }
 
-uint32_t GraphicsSynthesizer::read32(uint32_t addr)
+uint32_t GraphicsSynthesizer::read32_privileged(uint32_t addr)
 {
     addr &= 0xFFFF;
     switch (addr)
@@ -31,12 +49,12 @@ uint32_t GraphicsSynthesizer::read32(uint32_t addr)
         case 0x1000:
             return 0x00000008;
         default:
-            printf("\n[GS] Unrecognized read32 from $%04X", addr);
+            printf("\n[GS] Unrecognized privileged read32 from $%04X", addr);
             exit(1);
     }
 }
 
-void GraphicsSynthesizer::write32(uint32_t addr, uint32_t value)
+void GraphicsSynthesizer::write32_privileged(uint32_t addr, uint32_t value)
 {
     addr &= 0xFFFF;
     switch (addr)
@@ -45,7 +63,50 @@ void GraphicsSynthesizer::write32(uint32_t addr, uint32_t value)
             printf("\n[GS] Write32 to GS_CSR: $%08X", value);
             break;
         default:
-            printf("\n[GS] Unrecognized write32 to reg $%04X: $%08X", addr, value);
+            printf("\n[GS] Unrecognized privileged write32 to reg $%04X: $%08X", addr, value);
+    }
+}
+
+void GraphicsSynthesizer::write64_privileged(uint32_t addr, uint64_t value)
+{
+    addr &= 0xFFFF;
+    switch (addr)
+    {
+        case 0x0000:
+            printf("\n[GS] Write PMODE: $%08X_%08X", value >> 32, value & 0xFFFFFFFF);
+            PMODE.circuit1 = value & 0x1;
+            PMODE.circuit2 = value & 0x2;
+            PMODE.output_switching = (value >> 2) & 0x7;
+            PMODE.use_ALP = value & (1 << 5);
+            PMODE.out1_circuit2 = value & (1 << 6);
+            PMODE.blend_with_bg = value & (1 << 7);
+            PMODE.ALP = (value >> 8) & 0xFF;
+            break;
+        case 0x0020:
+            printf("\n[GS] Write SMODE2: $%08X_%08X", value >> 32, value & 0xFFFFFFFF);
+            SMODE2.interlaced = value & 0x1;
+            SMODE2.frame_mode = value & 0x2;
+            SMODE2.power_mode = (value >> 2) & 0x3;
+            break;
+        case 0x0090:
+            printf("\n[GS] Write DISPFB2: $%08X_%08X", value >> 32, value & 0xFFFFFFFF);
+            DISPFB2.frame_base = (value & 0x3FF) * 2048;
+            DISPFB2.width = ((value >> 9) & 0x3F) * 64;
+            DISPFB2.format = (value >> 14) & 0x1F;
+            DISPFB2.x = (value >> 32) & 0x7FF;
+            DISPFB2.y = (value >> 43) & 0x7FF;
+            break;
+        case 0x00A0:
+            printf("\n[GS] Write DISPLAY2: $%08X_%08X", value >> 32, value & 0xFFFFFFFF);
+            DISPLAY2.x = value & 0xFFF;
+            DISPLAY2.y = (value >> 12) & 0x7FF;
+            DISPLAY2.magnify_x = (value >> 23) & 0xF;
+            DISPLAY2.magnify_y = (value >> 27) & 0x3;
+            DISPLAY2.width = (value >> 32) & 0xFFF;
+            DISPLAY2.height = (value >> 44) & 0x7FF;
+            break;
+        default:
+            printf("\n[GS] Unrecognized privileged write64 to reg $%04X: $%08X_%08X", addr, value >> 32, value & 0xFFFFFFFF);
     }
 }
 
@@ -64,6 +125,7 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
             PRIM.use_UV = value & (1 << 8);
             PRIM.use_context2 = value & (1 << 9);
             PRIM.fix_fragment_value = value & (1 << 10);
+            num_vertices = 0;
             break;
         case 0x0001:
             RGBAQ.r = value & 0xFF;
@@ -71,6 +133,13 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
             RGBAQ.b = (value >> 16) & 0xFF;
             RGBAQ.a = (value >> 24) & 0xFF;
             RGBAQ.q = (float)(value >> 32);
+            break;
+        case 0x0005:
+            //XYZ2
+            current_vtx.coords[0] = value & 0xFFFF;
+            current_vtx.coords[1] = (value >> 16) & 0xFFFF;
+            current_vtx.coords[2] = value >> 32;
+            vertex_kick(true);
             break;
         case 0x0018:
             XYOFFSET_1.x = value & 0xFFFF;
@@ -166,13 +235,20 @@ void GraphicsSynthesizer::feed_GIF(uint64_t data[])
         current_tag.regs = data[1];
         current_tag.regs_left = current_tag.reg_count;
         current_tag.data_left = current_tag.NLOOP;
-        printf("\n[GS] New primitive!");
+
+        //Q is initialized to 1.0 upon reading a GIFtag
+        RGBAQ.q = 1.0f;
+
+        /*printf("\n[GS] New primitive!");
         printf("\nNLOOP: $%04X", current_tag.NLOOP);
         printf("\nEOP: %d", current_tag.end_of_packet);
         printf("\nOutput PRIM: %d PRIM: $%04X", current_tag.output_PRIM, current_tag.PRIM);
         printf("\nFormat: %d", current_tag.format);
         printf("\nReg count: %d", current_tag.reg_count);
-        printf("\nRegs: $%08X_$%08X", current_tag.regs >> 32, current_tag.regs & 0xFFFFFFFF);
+        printf("\nRegs: $%08X_$%08X", current_tag.regs >> 32, current_tag.regs & 0xFFFFFFFF);*/
+
+        if (current_tag.output_PRIM)
+            write64(0, current_tag.PRIM);
     }
     else
     {
@@ -203,7 +279,67 @@ void GraphicsSynthesizer::feed_GIF(uint64_t data[])
         }
 
     }
-    printf("\n[GS] $%08X_%08X_%08X_%08X", data[1] >> 32, data[1] & 0xFFFFFFFF, data[0] >> 32, data[0] & 0xFFFFFFFF);
+    //printf("\n[GS] $%08X_%08X_%08X_%08X", data[1] >> 32, data[1] & 0xFFFFFFFF, data[0] >> 32, data[0] & 0xFFFFFFFF);
+}
+
+//The "vertex kick" is the name given to the process of placing a vertex in the vertex queue.
+//If drawing_kick is true, and enough vertices are available, then the polygon is rendered.
+void GraphicsSynthesizer::vertex_kick(bool drawing_kick)
+{
+    for (int i = num_vertices; i > 0; i--)
+        vtx_queue[i] = vtx_queue[i - 1];
+    current_vtx.rgbaq = RGBAQ;
+    vtx_queue[0] = current_vtx;
+
+    num_vertices++;
+    bool request_draw_kick = false;
+    switch (PRIM.prim_type)
+    {
+        case 3:
+            if (num_vertices == 3)
+            {
+                num_vertices = 0;
+                request_draw_kick = true;
+            }
+            break;
+        case 6:
+            if (num_vertices == 2)
+            {
+                num_vertices = 0;
+                request_draw_kick = true;
+            }
+            break;
+        default:
+            printf("\n[GS] Unrecognized primitive %d\n", PRIM.prim_type);
+            exit(1);
+    }
+    if (drawing_kick && request_draw_kick)
+        render_primitive();
+}
+
+void GraphicsSynthesizer::render_primitive()
+{
+    switch (PRIM.prim_type)
+    {
+        case 3:
+        case 4:
+        case 5:
+            render_triangle();
+            break;
+        case 6:
+            render_sprite();
+            break;
+    }
+}
+
+void GraphicsSynthesizer::render_triangle()
+{
+    printf("\n[GS] Rendering triangle!");
+}
+
+void GraphicsSynthesizer::render_sprite()
+{
+    printf("\n[GS] Rendering sprite!");
 }
 
 void GraphicsSynthesizer::process_PACKED(uint64_t data[])
@@ -212,6 +348,21 @@ void GraphicsSynthesizer::process_PACKED(uint64_t data[])
     uint8_t reg = (current_tag.regs & (0xF << reg_offset)) >> reg_offset;
     switch (reg)
     {
+        case 0x1:
+            //RGBAQ - set RGBA
+            //Q is taken from the ST command
+            RGBAQ.r = data[0] & 0xFF;
+            RGBAQ.g = (data[0] >> 32) & 0xFF;
+            RGBAQ.b = data[1] & 0xFF;
+            RGBAQ.a = (data[1] >> 32) & 0xFF;
+            break;
+        case 0x4:
+            //XYZF2 - set XYZ and fog coefficient. Optionally disable drawing kick through bit 111
+            current_vtx.coords[0] = data[0] & 0xFFFF;
+            current_vtx.coords[1] = (data[0] >> 32) & 0xFFFF;
+            current_vtx.coords[2] = (data[1] >> 4) & 0xFFFFFF;
+            vertex_kick(!(data[1] & (1UL << (111 - 64))));
+            break;
         case 0xE:
         {
             //A+D: output data to address
@@ -237,7 +388,7 @@ void GraphicsSynthesizer::write_HWREG(uint64_t data)
     int ppd = 2; //pixels per doubleword
     *(uint64_t*)&local_mem[transfer_addr] = data;
 
-    printf("\n[GS] Write to $%08X of $%08X_%08X", transfer_addr, data >> 32, data & 0xFFFFFFFF);
+    //printf("\n[GS] Write to $%08X of $%08X_%08X", transfer_addr, data >> 32, data & 0xFFFFFFFF);
     uint32_t max_pixels = TRXREG.width * TRXREG.height;
     pixels_transferred += ppd;
     transfer_addr += ppd;
