@@ -22,13 +22,12 @@ Emulator::~Emulator()
 
 void Emulator::run()
 {
-    for (int i = 0; i < 3000000; i++)
+    gs.start_frame();
+    while (!gs.is_frame_complete())
     {
         cpu.run();
         dmac.run();
     }
-
-    cpu.print_state();
 }
 
 void Emulator::reset()
@@ -40,17 +39,23 @@ void Emulator::reset()
         RDRAM = new uint8_t[1024 * 1024 * 32];
     if (!IOP_RAM)
         IOP_RAM = new uint8_t[1024 * 1024 * 2];
+    if (!BIOS)
+        BIOS = new uint8_t[1024 * 1024 * 4];
     MCH_DRD = 0;
     MCH_RICM = 0;
     rdram_sdevid = 0;
     INTC_STAT = 0;
 }
 
+uint32_t* Emulator::get_framebuffer()
+{
+    return gs.get_framebuffer();
+}
+
 void Emulator::load_BIOS(uint8_t *BIOS_file)
 {
-    if (BIOS)
-        delete[] BIOS;
-    BIOS = new uint8_t[1024 * 1024 * 4];
+    //if (BIOS)
+        //delete[] BIOS;
     memcpy(this->BIOS, BIOS_file, 1024 * 1024 * 4);
 }
 

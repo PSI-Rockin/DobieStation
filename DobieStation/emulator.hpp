@@ -28,6 +28,7 @@ class Emulator
         void reset();
         void load_BIOS(uint8_t* BIOS);
         void load_ELF(uint8_t* ELF);
+        uint32_t* get_framebuffer();
 
         uint8_t read8(uint32_t address);
         uint16_t read16(uint32_t address);

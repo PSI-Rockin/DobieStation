@@ -15,6 +15,11 @@ PRIM.prim_type:
 5 - Triangle fan
 6 - Sprite
 7 - Prohibited
+
+Color formats:
+PSMCT32 - RGBA32
+PSMCT24 - RGB24 (upper 8 bits unused)
+PSMCT16 - two RGBA16 pixels
 **/
 
 const unsigned int GraphicsSynthesizer::max_vertices[8] = {1, 2, 2, 3, 3, 3, 2, 0};
@@ -41,6 +46,21 @@ void GraphicsSynthesizer::reset()
     num_vertices = 0;
 }
 
+void GraphicsSynthesizer::start_frame()
+{
+    frame_complete = false;
+}
+
+bool GraphicsSynthesizer::is_frame_complete()
+{
+    return frame_complete;
+}
+
+uint32_t* GraphicsSynthesizer::get_framebuffer()
+{
+    return local_mem + FRAME_1.base_pointer;
+}
+
 uint32_t GraphicsSynthesizer::read32_privileged(uint32_t addr)
 {
     addr &= 0xFFFF;
@@ -61,6 +81,10 @@ void GraphicsSynthesizer::write32_privileged(uint32_t addr, uint32_t value)
     {
         case 0x1000:
             printf("\n[GS] Write32 to GS_CSR: $%08X", value);
+
+            //Ugly VSYNC hack
+            if (value & 0x8)
+                frame_complete = true;
             break;
         default:
             printf("\n[GS] Unrecognized privileged write32 to reg $%04X: $%08X", addr, value);
@@ -335,6 +359,13 @@ void GraphicsSynthesizer::render_primitive()
 void GraphicsSynthesizer::render_triangle()
 {
     printf("\n[GS] Rendering triangle!");
+    int32_t point[3];
+    for (int i = 2; i >= 0; i--)
+    {
+        point[0] = vtx_queue[i].coords[0] - XYOFFSET_1.x;
+        point[1] = vtx_queue[i].coords[1] - XYOFFSET_1.y;
+        point[2] = vtx_queue[i].coords[2];
+    }
 }
 
 void GraphicsSynthesizer::render_sprite()
@@ -388,7 +419,7 @@ void GraphicsSynthesizer::write_HWREG(uint64_t data)
     int ppd = 2; //pixels per doubleword
     *(uint64_t*)&local_mem[transfer_addr] = data;
 
-    //printf("\n[GS] Write to $%08X of $%08X_%08X", transfer_addr, data >> 32, data & 0xFFFFFFFF);
+    printf("\n[GS] Write to $%08X of $%08X_%08X", transfer_addr, data >> 32, data & 0xFFFFFFFF);
     uint32_t max_pixels = TRXREG.width * TRXREG.height;
     pixels_transferred += ppd;
     transfer_addr += ppd;

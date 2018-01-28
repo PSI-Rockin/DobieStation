@@ -139,6 +139,7 @@ struct Vertex
 class GraphicsSynthesizer
 {
     private:
+        bool frame_complete;
         uint32_t* local_mem;
 
         GIFtag current_tag;
@@ -184,6 +185,9 @@ class GraphicsSynthesizer
         GraphicsSynthesizer();
         ~GraphicsSynthesizer();
         void reset();
+        void start_frame();
+        bool is_frame_complete();
+        uint32_t* get_framebuffer();
 
         uint32_t read32_privileged(uint32_t addr);
         void write32_privileged(uint32_t addr, uint32_t value);
