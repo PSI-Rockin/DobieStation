@@ -3,7 +3,7 @@
 #include <cstdlib>
 #include "emulator.hpp"
 
-Emulator::Emulator() : bios_hle(this), cpu(&bios_hle, this), dmac(this, &gs)
+Emulator::Emulator() : bios_hle(this, &gs), cpu(&bios_hle, this), dmac(this, &gs)
 {
     BIOS = nullptr;
     RDRAM = nullptr;
@@ -23,11 +23,14 @@ Emulator::~Emulator()
 void Emulator::run()
 {
     gs.start_frame();
-    while (!gs.is_frame_complete())
+    instructions_run = 0;
+    while (!gs.is_frame_complete() && instructions_run < 200000)
     {
         cpu.run();
         dmac.run();
+        instructions_run++;
     }
+    gs.render_CRT();
 }
 
 void Emulator::reset()
@@ -49,7 +52,15 @@ void Emulator::reset()
 
 uint32_t* Emulator::get_framebuffer()
 {
+    //This function should only be called upon ending a frame; return nullptr otherwise
+    if (!gs.is_frame_complete() && instructions_run < 200000)
+        return nullptr;
     return gs.get_framebuffer();
+}
+
+void Emulator::get_resolution(int &w, int &h)
+{
+    gs.get_resolution(w, h);
 }
 
 void Emulator::load_BIOS(uint8_t *BIOS_file)

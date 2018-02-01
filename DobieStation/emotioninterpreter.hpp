@@ -39,6 +39,7 @@ namespace EmotionInterpreter
     void dsll(EmotionEngine& cpu, uint32_t instruction);
     void dsrl(EmotionEngine& cpu, uint32_t instruction);
     void dsll32(EmotionEngine& cpu, uint32_t instruction);
+    void dsrl32(EmotionEngine& cpu, uint32_t instruction);
     void dsra32(EmotionEngine& cpu, uint32_t instruction);
 
     void regimm(EmotionEngine& cpu, uint32_t instruction);

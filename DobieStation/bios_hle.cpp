@@ -1,7 +1,8 @@
 #include <cstdio>
 #include "bios_hle.hpp"
+#include "gs.hpp"
 
-BIOS_HLE::BIOS_HLE(Emulator* e) : e(e)
+BIOS_HLE::BIOS_HLE(Emulator* e, GraphicsSynthesizer* gs) : e(e), gs(gs)
 {
 
 }
@@ -33,7 +34,7 @@ void BIOS_HLE::set_GS_CRT(EmotionEngine &cpu)
     bool interlaced = cpu.get_gpr<uint64_t>(PARAM0);
     int mode = cpu.get_gpr<uint64_t>(PARAM1);
     bool frame_mode = cpu.get_gpr<uint64_t>(PARAM2);
-    printf("\nInterlaced: %d Mode: $%02X Frame mode: %d", interlaced, mode, frame_mode);
+    gs->set_CRT(interlaced, mode, frame_mode);
 }
 
 void BIOS_HLE::init_main_thread(EmotionEngine &cpu)

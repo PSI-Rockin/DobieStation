@@ -21,13 +21,16 @@ struct thread_hle
     uint8_t priority;
 };
 
+class GraphicsSynthesizer;
+
 class BIOS_HLE
 {
     private:
         Emulator* e;
+        GraphicsSynthesizer* gs;
         std::vector<thread_hle> threads;
     public:
-        BIOS_HLE(Emulator* e);
+        BIOS_HLE(Emulator* e, GraphicsSynthesizer* gs);
 
         void hle_syscall(EmotionEngine& cpu, int op);
 

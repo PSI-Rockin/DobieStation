@@ -426,7 +426,7 @@ void EmotionInterpreter::lhu(EmotionEngine &cpu, uint32_t instruction)
     printf("lhu {%d}, %d{%d}", dest, offset, base);
     uint32_t addr = cpu.get_gpr<uint32_t>(base);
     addr += offset;
-    cpu.set_gpr(dest, cpu.read16(addr));
+    cpu.set_gpr<uint64_t>(dest, cpu.read16(addr));
 }
 
 void EmotionInterpreter::sb(EmotionEngine &cpu, uint32_t instruction)

@@ -48,17 +48,19 @@ void EmotionEngine::run()
     EmotionInterpreter::interpret(*this, burp);
     cp0.count_up();
     PC += 4;
-    if (PC == 0xBFC0092C)
-    {
-        print_state();
-        exit(1);
-    }
 }
 
 void EmotionEngine::print_state()
 {
     for (int i = 0; i < 32; i++)
-        printf("r%d: $%08X_%08X\n", i, get_gpr<uint32_t>(i), get_gpr<uint32_t>(i, 1));
+    {
+        printf("r%d: $%08X_%08X", i, get_gpr<uint32_t>(i, 1), get_gpr<uint32_t>(i));
+        if ((i & 1) == 1)
+            printf("\n");
+        else
+            printf("\t");
+    }
+    printf("\n");
 }
 
 /*uint64_t EmotionEngine::get_gpr_lo(int index)

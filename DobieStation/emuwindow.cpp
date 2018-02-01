@@ -34,7 +34,7 @@ int EmuWindow::init()
     e.load_BIOS(BIOS);
     delete[] BIOS;
     BIOS = nullptr;
-    const char* file_name = "3stars.elf";
+    const char* file_name = "ps2tut/ps2tut_02b/demo2b.elf";
 
     ifstream ELF_file(file_name, ios::binary | ios::in);
     if (!ELF_file.is_open())
@@ -55,9 +55,7 @@ int EmuWindow::init()
 
     //Initialize window
     is_running = true;
-    resize(640, 224);
-    setMinimumWidth(640);
-    setMinimumHeight(224);
+    resize(640, 448);
     show();
     return 0;
 }
@@ -77,14 +75,16 @@ void EmuWindow::paintEvent(QPaintEvent *event)
 {
     QPainter painter(this);
     uint32_t* buffer = e.get_framebuffer();
-    for (int y = 0; y < 224; y++)
-    {
-        for (int x = 0; x < 640; x++)
-        {
-            buffer[x + (y * 640)] |= 0xFF000000;
-        }
-    }
-    QImage image((uint8_t*)buffer, 640, 224, QImage::Format_RGBA8888);
+    painter.fillRect(rect(), Qt::black);
+    if (!buffer)
+        return;
+
+    QImage image((uint8_t*)buffer, 640, 256, QImage::Format_RGBA8888);
+
+    int new_w, new_h;
+    e.get_resolution(new_w, new_h);
+    image = image.scaled(new_w, new_h);
+    resize(new_w, new_h);
 
     painter.drawPixmap(0, 0, QPixmap::fromImage(image));
 }

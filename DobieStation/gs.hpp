@@ -136,25 +136,40 @@ struct Vertex
     RGBAQ_REG rgbaq;
 };
 
+struct GSContext
+{
+    XYOFFSET xyoffset;
+    SCISSOR scissor;
+    TEST test;
+    FRAME frame;
+    ZBUF zbuf;
+
+    void set_xyoffset(uint64_t value);
+    void set_scissor(uint64_t value);
+    void set_test(uint64_t value);
+    void set_frame(uint64_t value);
+    void set_zbuf(uint64_t value);
+};
+
 class GraphicsSynthesizer
 {
     private:
         bool frame_complete;
+        uint32_t* output_buffer;
         uint32_t* local_mem;
+        uint8_t CRT_mode;
 
         GIFtag current_tag;
         bool processing_GIF_prim;
 
+        GSContext context1, context2;
+        GSContext* current_ctx;
+
         PRIM_REG PRIM;
         RGBAQ_REG RGBAQ;
-        XYOFFSET XYOFFSET_1, XYOFFSET_2;
         bool DTHE;
         bool COLCLAMP;
         bool use_PRIM;
-        SCISSOR SCISSOR_1, SCISSOR_2;
-        TEST TEST_1, TEST_2;
-        FRAME FRAME_1, FRAME_2;
-        ZBUF ZBUF_1, ZBUF_2;
 
         BITBLTBUF_REG BITBLTBUF;
         TRXPOS_REG TRXPOS;
@@ -177,10 +192,12 @@ class GraphicsSynthesizer
 
         void vertex_kick(bool drawing_kick);
         void render_primitive();
+        void render_point();
         void render_triangle();
         void render_sprite();
         void process_PACKED(uint64_t data[2]);
         void write_HWREG(uint64_t data);
+        void host_to_host();
     public:
         GraphicsSynthesizer();
         ~GraphicsSynthesizer();
@@ -188,6 +205,10 @@ class GraphicsSynthesizer
         void start_frame();
         bool is_frame_complete();
         uint32_t* get_framebuffer();
+        void render_CRT();
+        void get_resolution(int& w, int& h);
+
+        void set_CRT(bool interlaced, int mode, bool frame_mode);
 
         uint32_t read32_privileged(uint32_t addr);
         void write32_privileged(uint32_t addr, uint32_t value);

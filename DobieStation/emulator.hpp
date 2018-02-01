@@ -21,6 +21,7 @@ class Emulator
         uint8_t rdram_sdevid;
 
         uint32_t INTC_STAT;
+        uint32_t instructions_run;
     public:
         Emulator();
         ~Emulator();
@@ -29,6 +30,7 @@ class Emulator
         void load_BIOS(uint8_t* BIOS);
         void load_ELF(uint8_t* ELF);
         uint32_t* get_framebuffer();
+        void get_resolution(int& w, int& h);
 
         uint8_t read8(uint32_t address);
         uint16_t read16(uint32_t address);
