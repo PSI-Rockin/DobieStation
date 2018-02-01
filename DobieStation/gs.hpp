@@ -35,6 +35,27 @@ struct RGBAQ_REG
     float q;
 };
 
+struct TEX0
+{
+    uint32_t texture_base;
+    uint32_t width;
+    uint8_t format;
+    uint16_t tex_width;
+    uint16_t tex_height;
+    bool use_alpha;
+    uint8_t color_function;
+    uint32_t CLUT_base;
+    uint8_t CLUT_format;
+    bool use_CSM2;
+    uint16_t CLUT_offset;
+    uint8_t CLUT_control;
+};
+
+struct UV_REG
+{
+    uint16_t u, v;
+};
+
 struct XYOFFSET
 {
     uint16_t x;
@@ -134,16 +155,19 @@ struct Vertex
 {
     uint32_t coords[3];
     RGBAQ_REG rgbaq;
+    UV_REG uv;
 };
 
 struct GSContext
 {
+    TEX0 tex0;
     XYOFFSET xyoffset;
     SCISSOR scissor;
     TEST test;
     FRAME frame;
     ZBUF zbuf;
 
+    void set_tex0(uint64_t value);
     void set_xyoffset(uint64_t value);
     void set_scissor(uint64_t value);
     void set_test(uint64_t value);
@@ -167,6 +191,7 @@ class GraphicsSynthesizer
 
         PRIM_REG PRIM;
         RGBAQ_REG RGBAQ;
+        UV_REG UV;
         bool DTHE;
         bool COLCLAMP;
         bool use_PRIM;
@@ -191,6 +216,7 @@ class GraphicsSynthesizer
         static const unsigned int max_vertices[8];
 
         void vertex_kick(bool drawing_kick);
+        void draw_pixel(uint32_t x, uint32_t y, uint32_t color, uint32_t z);
         void render_primitive();
         void render_point();
         void render_triangle();
@@ -211,6 +237,7 @@ class GraphicsSynthesizer
         void set_CRT(bool interlaced, int mode, bool frame_mode);
 
         uint32_t read32_privileged(uint32_t addr);
+        uint64_t read64_privileged(uint32_t addr);
         void write32_privileged(uint32_t addr, uint32_t value);
         void write64_privileged(uint32_t addr, uint64_t value);
         void write64(uint32_t addr, uint64_t value);

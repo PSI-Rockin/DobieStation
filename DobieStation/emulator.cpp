@@ -194,6 +194,8 @@ uint64_t Emulator::read64(uint32_t address)
 {
     if (address < 0x02000000)
         return *(uint64_t*)&RDRAM[address];
+    if ((address & (0xFF000000)) == 0x12000000)
+        return gs.read64_privileged(address);
     printf("\nUnrecognized read64 at physical addr $%08X", address);
     return 0;
     //exit(1);

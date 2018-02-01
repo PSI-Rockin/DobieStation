@@ -34,7 +34,7 @@ int EmuWindow::init()
     e.load_BIOS(BIOS);
     delete[] BIOS;
     BIOS = nullptr;
-    const char* file_name = "ps2tut/ps2tut_02b/demo2b.elf";
+    const char* file_name = "ps2tut/ps2tut_02c/demo2c.elf";
 
     ifstream ELF_file(file_name, ios::binary | ios::in);
     if (!ELF_file.is_open())
@@ -55,6 +55,7 @@ int EmuWindow::init()
 
     //Initialize window
     is_running = true;
+    setWindowTitle("DobieStation");
     resize(640, 448);
     show();
     return 0;
