@@ -20,8 +20,14 @@ void BIOS_HLE::hle_syscall(EmotionEngine& cpu, int op)
         case 0x3D:
             init_heap(cpu);
             break;
+        case 0x3E:
+            get_heap_base(cpu);
+            break;
         case 0x71:
             set_GS_IMR(cpu);
+            break;
+        case 0xFF:
+            get_memory_size(cpu);
             break;
         default:
             printf("\nUnrecognized HLE syscall $%02X", op);
@@ -71,8 +77,23 @@ void BIOS_HLE::init_heap(EmotionEngine &cpu)
     cpu.set_gpr<uint64_t>(RETURN, thread->heap_base);
 }
 
+void BIOS_HLE::get_heap_base(EmotionEngine &cpu)
+{
+    printf("\nSYSCALL: get_heap_base");
+    thread_hle* thread = &threads[0];
+
+    cpu.set_gpr<uint64_t>(RETURN, thread->heap_base);
+}
+
 void BIOS_HLE::set_GS_IMR(EmotionEngine &cpu)
 {
     uint32_t imr = cpu.get_gpr<uint32_t>(PARAM0);
     printf("\nSYSCALL: set_GS_IMR $%08X", imr);
 }
+
+void BIOS_HLE::get_memory_size(EmotionEngine &cpu)
+{
+    cpu.set_gpr<uint64_t>(RETURN, 32 * 1024 * 1024);    
+    printf("\nSYSCALL: get_memory_size");
+}
+
