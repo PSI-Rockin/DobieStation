@@ -1,6 +1,7 @@
 #ifndef GS_HPP
 #define GS_HPP
 #include <cstdint>
+#include "gscontext.hpp"
 
 struct GIFtag
 {
@@ -33,65 +34,6 @@ struct RGBAQ_REG
 {
     uint8_t r, g, b, a;
     float q;
-};
-
-struct TEX0
-{
-    uint32_t texture_base;
-    uint32_t width;
-    uint8_t format;
-    uint16_t tex_width;
-    uint16_t tex_height;
-    bool use_alpha;
-    uint8_t color_function;
-    uint32_t CLUT_base;
-    uint8_t CLUT_format;
-    bool use_CSM2;
-    uint16_t CLUT_offset;
-    uint8_t CLUT_control;
-};
-
-struct UV_REG
-{
-    uint16_t u, v;
-};
-
-struct XYOFFSET
-{
-    uint16_t x;
-    uint16_t y;
-};
-
-struct SCISSOR
-{
-    uint16_t x1, x2, y1, y2;
-};
-
-struct TEST
-{
-    bool alpha_test;
-    uint8_t alpha_method;
-    uint8_t alpha_ref;
-    uint8_t alpha_fail_method;
-    bool dest_alpha_test;
-    bool dest_alpha_method;
-    bool depth_test;
-    uint8_t depth_method;
-};
-
-struct FRAME
-{
-    uint32_t base_pointer;
-    uint32_t width;
-    uint8_t format;
-    uint32_t mask;
-};
-
-struct ZBUF
-{
-    uint32_t base_pointer;
-    uint8_t format;
-    bool no_update;
 };
 
 struct BITBLTBUF_REG
@@ -158,23 +100,6 @@ struct Vertex
     UV_REG uv;
 };
 
-struct GSContext
-{
-    TEX0 tex0;
-    XYOFFSET xyoffset;
-    SCISSOR scissor;
-    TEST test;
-    FRAME frame;
-    ZBUF zbuf;
-
-    void set_tex0(uint64_t value);
-    void set_xyoffset(uint64_t value);
-    void set_scissor(uint64_t value);
-    void set_test(uint64_t value);
-    void set_frame(uint64_t value);
-    void set_zbuf(uint64_t value);
-};
-
 class GraphicsSynthesizer
 {
     private:
@@ -216,9 +141,10 @@ class GraphicsSynthesizer
         static const unsigned int max_vertices[8];
 
         void vertex_kick(bool drawing_kick);
-        void draw_pixel(uint32_t x, uint32_t y, uint32_t color, uint32_t z);
+        void draw_pixel(uint32_t x, uint32_t y, uint32_t color, uint32_t z, bool alpha_blending);
         void render_primitive();
         void render_point();
+        void render_line();
         void render_triangle();
         void render_sprite();
         void process_PACKED(uint64_t data[2]);

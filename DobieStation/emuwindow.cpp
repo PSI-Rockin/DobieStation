@@ -34,7 +34,7 @@ int EmuWindow::init()
     e.load_BIOS(BIOS);
     delete[] BIOS;
     BIOS = nullptr;
-    const char* file_name = "ps2tut/ps2tut_02c/demo2c.elf";
+    const char* file_name = "ps2tut/ps2tut_01/demo1.elf";
 
     ifstream ELF_file(file_name, ios::binary | ios::in);
     if (!ELF_file.is_open())

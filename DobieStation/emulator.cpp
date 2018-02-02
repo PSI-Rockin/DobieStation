@@ -24,7 +24,7 @@ void Emulator::run()
 {
     gs.start_frame();
     instructions_run = 0;
-    while (!gs.is_frame_complete() && instructions_run < 200000)
+    while (!gs.is_frame_complete() && instructions_run < 300000)
     {
         cpu.run();
         dmac.run();
@@ -53,7 +53,7 @@ void Emulator::reset()
 uint32_t* Emulator::get_framebuffer()
 {
     //This function should only be called upon ending a frame; return nullptr otherwise
-    if (!gs.is_frame_complete() && instructions_run < 200000)
+    if (!gs.is_frame_complete() && instructions_run < 300000)
         return nullptr;
     return gs.get_framebuffer();
 }

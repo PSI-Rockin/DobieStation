@@ -470,7 +470,7 @@ void EmotionInterpreter::lwc1(EmotionEngine &cpu, uint32_t instruction)
     printf("lwc1 {%d}, %d{%d}", dest, offset, base);
     uint32_t addr = cpu.get_gpr<uint32_t>(base);
     addr += offset;
-    cpu.swc1(addr, dest);
+    cpu.lwc1(addr, dest);
 }
 
 void EmotionInterpreter::ld(EmotionEngine &cpu, uint32_t instruction)
