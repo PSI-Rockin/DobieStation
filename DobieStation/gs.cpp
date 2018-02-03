@@ -661,8 +661,14 @@ void GraphicsSynthesizer::render_point()
     color |= vtx_queue[0].rgbaq.r << 16;
     color |= vtx_queue[0].rgbaq.g << 8;
     color |= vtx_queue[0].rgbaq.b;
-    printf("\nCoords: (%d, %d)", point[0] >> 4, point[1] >> 4);
-    draw_pixel(point[0], point[1], color, vtx_queue[0].coords[2], PRIM.alpha_blend);
+    SCISSOR* scissor = &current_ctx->scissor;
+    printf("\nCoords: (%d, %d, %d)", point[0] >> 4, point[1] >> 4, point[2]);
+    if (point[0] >= scissor->x1 && point[0] <= scissor->x2 && point[1] >= scissor->y1 && point[1] <= scissor->y2)
+        draw_pixel(point[0], point[1], color, point[2], PRIM.alpha_blend);
+    else
+    {
+        printf("\nScissor: (%d, %d) (%d, %d)", scissor->x1, scissor->y1, scissor->x2, scissor->y2);
+    }
 }
 
 void GraphicsSynthesizer::render_line()
@@ -722,12 +728,12 @@ void GraphicsSynthesizer::render_sprite()
 
     for (int32_t y = y1; y < y2; y += 0x10)
     {
-        if (y < 0 || (y >> 4) > current_ctx->scissor.y2)
+        if (y < current_ctx->scissor.y1 || y > current_ctx->scissor.y2)
             continue;
         uint16_t pix_v = interpolate(y, v1, y1, v2, y2) >> 4;
         for (int32_t x = x1; x < x2; x += 0x10)
         {
-            if (x < 0)
+            if (x < current_ctx->scissor.x1 || x > current_ctx->scissor.x2)
                 continue;
             uint16_t pix_u = interpolate(x, u1, x1, u2, x2) >> 4;
             uint32_t tex_coord = current_ctx->tex0.texture_base + pix_u;

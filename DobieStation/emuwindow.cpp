@@ -17,14 +17,14 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
 
 }
 
-int EmuWindow::init()
+int EmuWindow::init(const char* bios_name, const char* file_name)
 {
     //Initialize emulator
     e.reset();
-    ifstream BIOS_file("bios.bin", ios::binary | ios::in);
+    ifstream BIOS_file(bios_name, ios::binary | ios::in);
     if (!BIOS_file.is_open())
     {
-        printf("Failed to load PS2 BIOS.\n");
+        printf("Failed to load PS2 BIOS from %s\n", bios_name);
         return 1;
     }
     printf("Loaded PS2 BIOS.\n");
@@ -34,7 +34,6 @@ int EmuWindow::init()
     e.load_BIOS(BIOS);
     delete[] BIOS;
     BIOS = nullptr;
-    const char* file_name = "ps2tut/ps2tut_01/demo1.elf";
 
     ifstream ELF_file(file_name, ios::binary | ios::in);
     if (!ELF_file.is_open())

@@ -14,7 +14,7 @@ class EmuWindow : public QMainWindow
         bool is_running;
     public:
         explicit EmuWindow(QWidget *parent = nullptr);
-        int init();
+        int init(const char* bios_name, const char* ELF_name);
         bool running();
         void emulate();
 

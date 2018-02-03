@@ -49,10 +49,11 @@ void GSContext::set_xyoffset(uint64_t value)
 
 void GSContext::set_scissor(uint64_t value)
 {
-    scissor.x1 = value & 0x7FF;
-    scissor.x2 = (value >> 16) & 0x7FF;
-    scissor.y1 = (value >> 32) & 0x7FF;
-    scissor.y2 = (value >> 48) & 0x7FF;
+    //Shift by four to compensate for the 4 decimal bits in vertex coords
+    scissor.x1 = (value & 0x7FF) << 4;
+    scissor.x2 = ((value >> 16) & 0x7FF) << 4;
+    scissor.y1 = ((value >> 32) & 0x7FF) << 4;
+    scissor.y2 = ((value >> 48) & 0x7FF) << 4;
     printf("\nSCISSOR: $%08X_%08X", value >> 32, value & 0xFFFFFFFF);
 }
 
