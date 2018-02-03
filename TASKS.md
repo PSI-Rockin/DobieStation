@@ -1,18 +1,20 @@
 # Tasks
 
-Please review the [Contribution Guide](../master/CONTRIBUTING.md) before attempting a task.
+This is a non-exhaustive list of features/improvements that potential contributors can work on.
 
-The general difficulty of each task is represented in brackets. "Difficulty" is very much subjective; each task takes into consideration knowledge needed and the time it would take to be implemented. If you're interested in a task but need assistance or clarification, please contact me (PSISP). More tasks will be added soon.
+Please review the [Contribution Guide](../master/CONTRIBUTING.md) first. After that, contact me (PSISP) and let me know what you're interested in doing. This is so that people don't independently work on the same tasks. More tasks will be added as the need arises.
+
+The general difficulty of each task is represented in brackets. "Difficulty" is very much subjective; each task takes into consideration knowledge needed and the time it would take to be implemented. If you're interested in a task but need assistance or clarification, please let me know.
 
 ## Core
 * [Medium] Rewrite the disassembly infrastructure.
-  * The current disassembly code, located throughout the opcode definitions in the interpreter, is messy and controlled by an ugly compile-time macro (```NDISASSEMBLE``` - emotioninterpreter.hpp). The rewrite will allow for runtime-controlled disassembly and more accurate output.
-  * To complete this task, port the disassembly for all current EE opcodes into emotiondisasm.hpp/.cpp, then remove all the disassembly printf statements and ```NDISASSEMBLE``` junk from the interpreter files.
-  * Two opcodes have already been implemented in emotiondisasm.cpp as an example.
+  * The current disassembly code, located throughout the opcode definitions in the interpreter, is messy and controlled by an ugly compile-time macro (```NDISASSEMBLE``` - core/emotioninterpreter.hpp). The rewrite will allow for runtime-controlled disassembly and more accurate output.
+  * To complete this task, port the disassembly for all current EE opcodes into core/emotiondisasm.cpp, then remove all the disassembly printf statements and ```NDISASSEMBLE``` junk from the interpreter files.
+  * Two opcodes have already been implemented in emotiondisasm.cpp to provide an example.
 * [Medium/Hard] Implement functionality for lines and triangles in the software renderer.
   * Primitives are the name for geometric shapes rendered by the Graphics Synthesizer (GS). The GS supports points, lines, line strips, triangles, triangle strips, triangle fans, and sprites.
   * Points and sprites (2D rectangles) are currently supported. Only stubs exist for lines and triangles.
-  * Locate "render_line" and "render_triangle" in gs.cpp and use Bresenham's line algorithm to complete this task.
+  * Locate "render_line" and "render_triangle" in core/gs.cpp and use Bresenham's line algorithm to complete this task.
 
 ## Qt
 * [Easy] Add a framelimiter that prevents emulation from going beyond 60 FPS, and add an FPS counter that updates every second in the title bar.
