@@ -37,7 +37,9 @@ class BIOS_HLE
         void set_GS_CRT(EmotionEngine& cpu);
         void init_main_thread(EmotionEngine& cpu);
         void init_heap(EmotionEngine& cpu);
+        void get_heap_base(EmotionEngine& cpu);
         void set_GS_IMR(EmotionEngine& cpu);
+        void get_memory_size(EmotionEngine& cpu);
 };
 
 #endif // BIOS_HLE_HPP
