@@ -70,6 +70,7 @@ namespace EmotionInterpreter
     void lw(EmotionEngine& cpu, uint32_t instruction);
     void lbu(EmotionEngine& cpu, uint32_t instruction);
     void lhu(EmotionEngine& cpu, uint32_t instruction);
+    void lwu(EmotionEngine& cpu, uint32_t instruction);
     void sb(EmotionEngine& cpu, uint32_t instruction);
     void sh(EmotionEngine& cpu, uint32_t instruction);
     void sw(EmotionEngine& cpu, uint32_t instruction);

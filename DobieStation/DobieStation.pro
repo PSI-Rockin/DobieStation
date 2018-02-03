@@ -26,7 +26,8 @@ SOURCES += main.cpp \
     gs.cpp \
     dmac.cpp \
     emuwindow.cpp \
-    gscontext.cpp
+    gscontext.cpp \
+    emotiondisasm.cpp
 
 HEADERS += \
     emotion.hpp \
@@ -39,4 +40,5 @@ HEADERS += \
     gs.hpp \
     dmac.hpp \
     emuwindow.hpp \
-    gscontext.hpp
+    gscontext.hpp \
+    emotiondisasm.hpp

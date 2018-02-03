@@ -9,6 +9,8 @@ BIOS_HLE::BIOS_HLE(Emulator* e, GraphicsSynthesizer* gs) : e(e), gs(gs)
 
 void BIOS_HLE::hle_syscall(EmotionEngine& cpu, int op)
 {
+    //TODO: what are "negative" BIOS functions, i.e. those with bit 7 set, for?
+    op &= 0x7F;
     switch (op)
     {
         case 0x02:
@@ -20,8 +22,14 @@ void BIOS_HLE::hle_syscall(EmotionEngine& cpu, int op)
         case 0x3D:
             init_heap(cpu);
             break;
+        case 0x3E:
+            get_heap_end(cpu);
+            break;
         case 0x71:
             set_GS_IMR(cpu);
+            break;
+        case 0x7F:
+            get_memory_size(cpu);
             break;
         default:
             printf("\nUnrecognized HLE syscall $%02X", op);
@@ -71,8 +79,22 @@ void BIOS_HLE::init_heap(EmotionEngine &cpu)
     cpu.set_gpr<uint64_t>(RETURN, thread->heap_base);
 }
 
+void BIOS_HLE::get_heap_end(EmotionEngine &cpu)
+{
+    printf("\nSYSCALL: get_heap_end");
+    thread_hle* thread = &threads[0];
+    cpu.set_gpr<uint64_t>(RETURN, thread->heap_base);
+}
+
 void BIOS_HLE::set_GS_IMR(EmotionEngine &cpu)
 {
     uint32_t imr = cpu.get_gpr<uint32_t>(PARAM0);
     printf("\nSYSCALL: set_GS_IMR $%08X", imr);
+}
+
+void BIOS_HLE::get_memory_size(EmotionEngine &cpu)
+{
+    //size of EE RDRAM
+    printf("\nSYSCALL: get_memory_size");
+    cpu.set_gpr<uint64_t>(RETURN, 0x02000000);
 }

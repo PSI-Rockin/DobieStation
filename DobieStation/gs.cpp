@@ -61,6 +61,12 @@ void GraphicsSynthesizer::reset()
     pixels_transferred = 0;
     transfer_bit_depth = 32;
     num_vertices = 0;
+    DISPLAY2.width = 640 << 2;
+    DISPLAY2.height = 224;
+    DISPFB2.frame_base = 0;
+    DISPFB2.width = 0;
+    DISPFB2.x = 0;
+    DISPFB2.y = 0;
     context1.reset();
     context2.reset();
     current_ctx = &context1;

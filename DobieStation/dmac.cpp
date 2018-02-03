@@ -77,7 +77,6 @@ void DMAC::run()
                     gs->send_PATH3(quad);
                     break;
             }
-
         }
     }
 }
@@ -173,8 +172,8 @@ void DMAC::write32(uint32_t address, uint32_t value)
             channels[GIF].address = value;
             break;
         case 0x1000A020:
-            printf("\n[DMAC] GIF QWC: $%08X", value);
-            channels[GIF].quadword_count = value;
+            printf("\n[DMAC] GIF QWC: $%08X", value & 0xFFFF);
+            channels[GIF].quadword_count = value & 0xFFFF;
             break;
         case 0x1000A030:
             printf("\n[DMAC] GIF T_ADR: $%08X", value);

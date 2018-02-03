@@ -104,6 +104,9 @@ void EmotionInterpreter::interpret(EmotionEngine &cpu, uint32_t instruction)
         case 0x25:
             lhu(cpu, instruction);
             break;
+        case 0x27:
+            lwu(cpu, instruction);
+            break;
         case 0x28:
             sb(cpu, instruction);
             break;
@@ -427,6 +430,17 @@ void EmotionInterpreter::lhu(EmotionEngine &cpu, uint32_t instruction)
     uint32_t addr = cpu.get_gpr<uint32_t>(base);
     addr += offset;
     cpu.set_gpr<uint64_t>(dest, cpu.read16(addr));
+}
+
+void EmotionInterpreter::lwu(EmotionEngine &cpu, uint32_t instruction)
+{
+    int16_t offset = (int16_t)(instruction & 0xFFFF);
+    uint32_t dest = (instruction >> 16) & 0x1F;
+    uint32_t base = (instruction >> 21) & 0x1F;
+    printf("lwu {%d}, %d{%d}", dest, offset, base);
+    uint32_t addr = cpu.get_gpr<uint32_t>(base);
+    addr += offset;
+    cpu.set_gpr<uint64_t>(dest, cpu.read32(addr));
 }
 
 void EmotionInterpreter::sb(EmotionEngine &cpu, uint32_t instruction)
