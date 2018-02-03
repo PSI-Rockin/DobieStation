@@ -16,6 +16,12 @@ void BIOS_HLE::hle_syscall(EmotionEngine& cpu, int op)
         case 0x02:
             set_GS_CRT(cpu);
             break;
+        case 0x10:
+            add_INTC_handler(cpu);
+            break;
+        case 0x14:
+            enable_INTC(cpu);
+            break;
         case 0x3C:
             init_main_thread(cpu);
             break;
@@ -43,6 +49,33 @@ void BIOS_HLE::set_GS_CRT(EmotionEngine &cpu)
     int mode = cpu.get_gpr<uint64_t>(PARAM1);
     bool frame_mode = cpu.get_gpr<uint64_t>(PARAM2);
     gs->set_CRT(interlaced, mode, frame_mode);
+}
+
+void BIOS_HLE::add_INTC_handler(EmotionEngine &cpu)
+{
+    uint32_t cause = cpu.get_gpr<uint32_t>(PARAM0);
+    uint32_t address = cpu.get_gpr<uint32_t>(PARAM1);
+    uint32_t next = cpu.get_gpr<uint32_t>(PARAM2);
+    uint32_t arg = cpu.get_gpr<uint32_t>(PARAM3);
+    printf("\nSYSCALL: add_INTC_handler");
+    printf("\nCause: $%08X", cause);
+    printf("\nAddr: $%08X", address);
+    printf("\nNext: $%08X", next);
+    printf("\nArg: $%08X", arg);
+
+    INTC_handler handler;
+    handler.cause = cause;
+    handler.addr = address;
+    handler.next = next;
+    handler.arg = arg;
+
+    intc_handlers.push_back(handler);
+}
+
+void BIOS_HLE::enable_INTC(EmotionEngine &cpu)
+{
+    uint32_t cause = cpu.get_gpr<uint32_t>(PARAM0);
+    printf("\nSYSCALL: enable_INTC $%08X", cause);
 }
 
 void BIOS_HLE::init_main_thread(EmotionEngine &cpu)

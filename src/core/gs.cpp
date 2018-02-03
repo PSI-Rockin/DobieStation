@@ -7,23 +7,22 @@
 using namespace std;
 
 /**
-~ GS notes ~
-
-PRIM.prim_type:
-0 - Point
-1 - Line
-2 - Line strip
-3 - Triangle
-4 - Triangle strip
-5 - Triangle fan
-6 - Sprite
-7 - Prohibited
-
-Color formats:
-PSMCT32 - RGBA32
-PSMCT24 - RGB24 (upper 8 bits unused)
-PSMCT16 - two RGBA16 pixels
-**/
+  * ~ GS notes ~
+  * PRIM.prim_type:
+  * 0 - Point
+  * 1 - Line
+  * 2 - Line strip
+  * 3 - Triangle
+  * 4 - Triangle strip
+  * 5 - Triangle fan
+  * 6 - Sprite
+  * 7 - Prohibited
+  *
+  * Color formats:
+  * PSMCT32 - RGBA32
+  * PSMCT24 - RGB24 (upper 8 bits unused)
+  * PSMCT16 - RGBA16 * 2 pixels
+  **/
 
 template <typename T>
 T interpolate(int32_t x, T u1, int32_t x1, T u2, int32_t x2)
@@ -758,6 +757,10 @@ void GraphicsSynthesizer::process_PACKED(uint64_t data[])
     uint8_t reg = (current_tag.regs & (0xF << reg_offset)) >> reg_offset;
     switch (reg)
     {
+        case 0x0:
+            //PRIM
+            write64(0, data[0]);
+            break;
         case 0x1:
             //RGBAQ - set RGBA
             //Q is taken from the ST command
@@ -768,10 +771,13 @@ void GraphicsSynthesizer::process_PACKED(uint64_t data[])
             break;
         case 0x4:
             //XYZF2 - set XYZ and fog coefficient. Optionally disable drawing kick through bit 111
+        {
             current_vtx.coords[0] = data[0] & 0xFFFF;
             current_vtx.coords[1] = (data[0] >> 32) & 0xFFFF;
             current_vtx.coords[2] = (data[1] >> 4) & 0xFFFFFF;
-            vertex_kick(!(data[1] & (1UL << (111 - 64))));
+            bool disable_drawing = data[1] & (1UL << (111 - 64));
+            vertex_kick(!disable_drawing);
+        }
             break;
         case 0xE:
         {

@@ -21,6 +21,7 @@ class Emulator
         uint8_t rdram_sdevid;
 
         uint32_t INTC_STAT;
+        uint32_t INTC_MASK;
         uint32_t instructions_run;
     public:
         Emulator();

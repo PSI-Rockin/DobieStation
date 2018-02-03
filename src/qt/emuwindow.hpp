@@ -4,7 +4,7 @@
 #include <QCloseEvent>
 #include <QMainWindow>
 #include <QPaintEvent>
-#include "emulator.hpp"
+#include "../core/emulator.hpp"
 
 class EmuWindow : public QMainWindow
 {

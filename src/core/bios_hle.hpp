@@ -21,6 +21,14 @@ struct thread_hle
     uint8_t priority;
 };
 
+struct INTC_handler
+{
+    uint32_t cause;
+    uint32_t addr;
+    uint32_t next;
+    uint32_t arg;
+};
+
 class GraphicsSynthesizer;
 
 class BIOS_HLE
@@ -29,11 +37,14 @@ class BIOS_HLE
         Emulator* e;
         GraphicsSynthesizer* gs;
         std::vector<thread_hle> threads;
+        std::vector<INTC_handler> intc_handlers;
     public:
         BIOS_HLE(Emulator* e, GraphicsSynthesizer* gs);
 
         void hle_syscall(EmotionEngine& cpu, int op);
 
+        void add_INTC_handler(EmotionEngine& cpu);
+        void enable_INTC(EmotionEngine& cpu);
         void set_GS_CRT(EmotionEngine& cpu);
         void init_main_thread(EmotionEngine& cpu);
         void init_heap(EmotionEngine& cpu);

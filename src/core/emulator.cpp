@@ -108,7 +108,6 @@ void Emulator::load_ELF(uint8_t *ELF)
         for (int file_w = p_offset; file_w < (p_offset + p_filesz); file_w += 4)
         {
             uint32_t word = *(uint32_t*)&ELF[file_w];
-            //printf("Write to $%08X of $%08X\n", mem_w, word);
             write32(mem_w, word);
             mem_w += 4;
         }
@@ -248,7 +247,10 @@ void Emulator::write32(uint32_t address, uint32_t value)
     switch (address)
     {
         case 0x1000F400:
-            INTC_STAT &= ~value;
+            INTC_STAT &= ~(value & 0x7FFF);
+            return;
+        case 0x1000F410:
+            INTC_MASK ^= (value & 0x7FFF);
             return;
         case 0x1000F430:
             printf("\nWrite to MCH_RICM: $%08X", value);
