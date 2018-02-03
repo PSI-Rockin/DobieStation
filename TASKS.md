@@ -2,9 +2,9 @@
 
 This is a non-exhaustive list of features/improvements that potential contributors can work on.
 
-Please review the [Contribution Guide](../master/CONTRIBUTING.md) first. After that, contact https://github.com/PSI-Rockin over GitHub, and let me know what you're interested in doing. This is so that people don't independently work on the same tasks. More tasks will be added as the need arises.
+Please review the [Contribution Guide](../master/CONTRIBUTING.md) first. After that, [contact me over Reddit](https://www.reddit.com/user/PSISP/), and let me know what you're interested in doing. This is so that people don't independently work on the same tasks. More tasks will be added as the need arises.
 
-The general difficulty of each task is represented in brackets. "Difficulty" is very much subjective; each task takes into consideration knowledge needed and the time it would take to be implemented. If you're interested in a task but need assistance or clarification, please let me (PSI-Rockin) know.
+The general difficulty of each task is represented in brackets. "Difficulty" is very much subjective; each task takes into consideration knowledge needed and the time it would take to be implemented. If you're interested in a task but need assistance or clarification, please let me (PSISP) know.
 
 ## Core
 * [Medium] Rewrite the disassembly infrastructure.
