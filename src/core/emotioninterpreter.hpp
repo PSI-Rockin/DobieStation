@@ -2,7 +2,7 @@
 #define EMOTIONINTERPRETER_HPP
 #include "emotion.hpp"
 
-//#define NDISASSEMBLE
+#define NDISASSEMBLE
 
 namespace EmotionInterpreter
 {
