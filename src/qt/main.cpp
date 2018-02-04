@@ -19,10 +19,24 @@ int main(int argc, char** argv)
         printf("Arguments: bios_file ELF_file\n");
         return 0;
     }
+    bool limitFramerate = true;
     while (window->running())
     {
-        a.processEvents();
+        //Loop a.processEvents() while instantaneous framerate exceeds 60
+        //Only if limit framerate is true
+        if (limitFramerate) 
+        {
+            do 
+                a.processEvents();
+            while (window->getFrameRate() > 60.0);
+        } 
+        else 
+            a.processEvents();
+        
         window->emulate();
+        window->updateWindowTitle();
+        window->resetFrameTime();
+        
     }
 
     return 0;
