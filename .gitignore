@@ -5,5 +5,6 @@
 *.bin
 *.user
 *.autosave
+demos
 build-DobieStation-Desktop_Qt_5_9_1_clang_64bit-Debug
 build-DobieStation-Desktop_Qt_5_9_1_clang_64bit-Release
