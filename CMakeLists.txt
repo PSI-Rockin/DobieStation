@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.8.11)
 project(DobieStation_master)
 set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+set(CMAKE_AUTOMOC ON)
 find_package(Qt5Core REQUIRED)
 find_package(Qt5Widgets REQUIRED)
 
