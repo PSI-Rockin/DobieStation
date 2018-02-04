@@ -17,11 +17,11 @@ The general difficulty of each task is represented in brackets. "Difficulty" is 
   * Locate "render_line" and "render_triangle" in core/gs.cpp and use Bresenham's line algorithm to complete this task.
 
 ## Qt
-* [Easy] Add a framelimiter that prevents emulation from going beyond 60 FPS, and add an FPS counter that updates every second in the title bar.
+* ~[Easy] Add a framelimiter that prevents emulation from going beyond 60 FPS, and add an FPS counter that updates every second in the title bar.~
 * [Easy] Support loading ELF files from the menubar. This is simple enough on its own, but it requires that emulation doesn't start until after a file is loaded. Also allow starting DobieStation from the command line with only the BIOS name argument.
 * [Medium/Hard] Create a debugger window for the EE. The window should have, at minimum, a disassembler, an EE register viewer, a call stack, and breakpoints.
   * For obvious reasons, this can only be done after the disassembler rewrite.
 * [Medium/Hard] Split emulation onto a separate thread, keeping the GUI on the main thread. Use QThread for this.
 
 ## Misc
-* [Easy] Support other build systems, such as cmake and meson.
+* ~[Easy] Support other build systems, such as cmake and meson.~
