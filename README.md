@@ -1,6 +1,8 @@
 # DobieStation
 A young PS2 emulator with plans for an optimized Android port, as well as a fast, accurate, and easy-to-use PC port. Basic homebrew is capable of running, but nothing else yet. Not intended for general use.
 
+Join #dobiestation on irc.badnik.net for discussing development.
+
 ## Compiling
 DobieStation uses Qt 5 and currently only supports qmake and meson.
 
