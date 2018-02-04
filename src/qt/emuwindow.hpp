@@ -25,6 +25,7 @@ class EmuWindow : public QMainWindow
         void closeEvent(QCloseEvent *event);
         double getFrameRate();
         void updateWindowTitle();
+        void limitFrameRate();
         void resetFrameTime();
     signals:
 

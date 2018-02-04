@@ -24,19 +24,12 @@ int main(int argc, char** argv)
     {
         //Loop a.processEvents() while instantaneous framerate exceeds 60
         //Only if limit framerate is true
-        if (limitFramerate) 
-        {
-            do 
-                a.processEvents();
-            while (window->getFrameRate() > 60.0);
-        } 
-        else 
-            a.processEvents();
-        
+        a.processEvents();
         window->emulate();
+        if (limitFramerate)
+            window->limitFrameRate();
         window->updateWindowTitle();
         window->resetFrameTime();
-        
     }
 
     return 0;

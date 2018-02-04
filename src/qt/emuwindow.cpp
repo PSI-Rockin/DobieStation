@@ -109,8 +109,10 @@ double EmuWindow::getFrameRate()
 
 void EmuWindow::updateWindowTitle()
 {
-    //Updates window title every second
-    //Framerate displayed is the average framerate over 1 second
+    /*
+    Updates window title every second
+    Framerate displayed is the average framerate over 1 second
+    */
     chrono::system_clock::time_point now = chrono::system_clock::now();
     chrono::duration<double> elapsed_update_seconds = now - old_update_time;
 
@@ -123,6 +125,13 @@ void EmuWindow::updateWindowTitle()
         setWindowTitle(QString::fromStdString(new_title));
         old_update_time = chrono::system_clock::now();
         framerate_avg = framerate;
+    }
+}
+
+void EmuWindow::limitFrameRate()
+{
+    while (getFrameRate() > 60.0)
+    {
     }
 }
 
