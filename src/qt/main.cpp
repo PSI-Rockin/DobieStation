@@ -22,8 +22,6 @@ int main(int argc, char** argv)
     bool limitFramerate = true;
     while (window->running())
     {
-        //Loop a.processEvents() while instantaneous framerate exceeds 60
-        //Only if limit framerate is true
         a.processEvents();
         window->emulate();
         if (limitFramerate)
