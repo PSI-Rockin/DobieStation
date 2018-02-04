@@ -99,7 +99,7 @@ void EmuWindow::closeEvent(QCloseEvent *event)
     is_running = false;
 }
 
-double EmuWindow::getFrameRate()
+double EmuWindow::get_frame_rate()
 {
     //Returns the framerate since old_frametime was set to the current time
     chrono::system_clock::time_point now = chrono::system_clock::now();
@@ -107,7 +107,7 @@ double EmuWindow::getFrameRate()
     return (1 / elapsed_seconds.count());
 }
 
-void EmuWindow::updateWindowTitle()
+void EmuWindow::update_window_title()
 {
     /*
     Updates window title every second
@@ -116,7 +116,7 @@ void EmuWindow::updateWindowTitle()
     chrono::system_clock::time_point now = chrono::system_clock::now();
     chrono::duration<double> elapsed_update_seconds = now - old_update_time;
 
-    double framerate = getFrameRate();
+    double framerate = get_frame_rate();
     framerate_avg = (framerate_avg + framerate) / 2;
     if (elapsed_update_seconds.count() >= 1.0)
     {
@@ -128,14 +128,14 @@ void EmuWindow::updateWindowTitle()
     }
 }
 
-void EmuWindow::limitFrameRate()
+void EmuWindow::limit_frame_rate()
 {
-    while (getFrameRate() > 60.0)
+    while (get_frame_rate() > 60.0)
     {
     }
 }
 
-void EmuWindow::resetFrameTime()
+void EmuWindow::reset_frame_time()
 {
     old_frametime = chrono::system_clock::now();
 }

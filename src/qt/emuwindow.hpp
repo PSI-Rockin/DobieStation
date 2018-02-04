@@ -23,10 +23,11 @@ class EmuWindow : public QMainWindow
 
         void paintEvent(QPaintEvent *event);
         void closeEvent(QCloseEvent *event);
-        double getFrameRate();
-        void updateWindowTitle();
-        void limitFrameRate();
-        void resetFrameTime();
+
+        double get_frame_rate();
+        void update_window_title();
+        void limit_frame_rate();
+        void reset_frame_time();
     signals:
 
     public slots:
