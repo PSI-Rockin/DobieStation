@@ -1,6 +1,6 @@
 #include <fstream>
 #include <iostream>
-#include <tgmath.h>
+#include <cmath>
 
 #include <QPainter>
 #include <QString>
@@ -130,9 +130,7 @@ void EmuWindow::update_window_title()
 
 void EmuWindow::limit_frame_rate()
 {
-    while (get_frame_rate() > 60.0)
-    {
-    }
+    while (get_frame_rate() > 60.0);
 }
 
 void EmuWindow::reset_frame_time()
