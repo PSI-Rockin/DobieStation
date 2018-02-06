@@ -1,7 +1,9 @@
 #include <fstream>
 #include <iostream>
+#include <cmath>
 
 #include <QPainter>
+#include <QString>
 #include "emuwindow.hpp"
 
 using namespace std;
@@ -14,7 +16,9 @@ ifstream::pos_type filesize(const char* filename)
 
 EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
 {
-
+    old_frametime = chrono::system_clock::now();
+    old_update_time = chrono::system_clock::now();
+    framerate_avg = 0.0;
 }
 
 int EmuWindow::init(const char* bios_name, const char* file_name)
@@ -93,4 +97,43 @@ void EmuWindow::closeEvent(QCloseEvent *event)
 {
     event->accept();
     is_running = false;
+}
+
+double EmuWindow::get_frame_rate()
+{
+    //Returns the framerate since old_frametime was set to the current time
+    chrono::system_clock::time_point now = chrono::system_clock::now();
+    chrono::duration<double> elapsed_seconds = now - old_frametime;
+    return (1 / elapsed_seconds.count());
+}
+
+void EmuWindow::update_window_title()
+{
+    /*
+    Updates window title every second
+    Framerate displayed is the average framerate over 1 second
+    */
+    chrono::system_clock::time_point now = chrono::system_clock::now();
+    chrono::duration<double> elapsed_update_seconds = now - old_update_time;
+
+    double framerate = get_frame_rate();
+    framerate_avg = (framerate_avg + framerate) / 2;
+    if (elapsed_update_seconds.count() >= 1.0)
+    {
+        int rf = (int) round(framerate_avg); // rounded framerate
+        string new_title = "DobieStation - FPS: " + to_string(rf);
+        setWindowTitle(QString::fromStdString(new_title));
+        old_update_time = chrono::system_clock::now();
+        framerate_avg = framerate;
+    }
+}
+
+void EmuWindow::limit_frame_rate()
+{
+    while (get_frame_rate() > 60.0);
+}
+
+void EmuWindow::reset_frame_time()
+{
+    old_frametime = chrono::system_clock::now();
 }
