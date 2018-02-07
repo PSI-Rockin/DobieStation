@@ -33,5 +33,10 @@ DobieStation requires a copy of the PS2 BIOS, which must be dumped from your PS2
 
 DobieStation takes two arguments from the command line: the name of the BIOS file, and the name of an ELF file.
 
+### PS2 Homebrew
+Want to test DobieStation? Check out this repository: https://github.com/PSI-Rockin/ps2demos
+
+Compatibility not guaranteed, but some demos do work.
+
 ## Contributing
 First, review the [Contribution Guide](../master/CONTRIBUTING.md). Once you have done so, take a look at the [Task List](../master/TASKS.md) and pick something that interests you.
