@@ -164,12 +164,10 @@ void GraphicsSynthesizer::write32_privileged(uint32_t addr, uint32_t value)
     switch (addr)
     {
         case 0x0070:
-            printf("\n[GS] Write DISPFB1: $%08X_%08X", value >> 32, value & 0xFFFFFFFF);
+            printf("\n[GS] Write DISPFB1: $%08X", value);
             DISPFB1.frame_base = (value & 0x3FF) * 2048;
             DISPFB1.width = ((value >> 9) & 0x3F) * 64;
             DISPFB1.format = (value >> 14) & 0x1F;
-            DISPFB1.x = (value >> 32) & 0x7FF;
-            DISPFB1.y = (value >> 43) & 0x7FF;
             break;
         case 0x1000:
             printf("\n[GS] Write32 to GS_CSR: $%08X", value);
@@ -740,7 +738,7 @@ void GraphicsSynthesizer::render_triangle()
         point[0] = vtx_queue[i].coords[0] - current_ctx->xyoffset.x;
         point[1] = vtx_queue[i].coords[1] - current_ctx->xyoffset.y;
         point[2] = vtx_queue[i].coords[2];
-        //local_mem[(point[0] >> 4) + ((point[1] * current_ctx->frame.width) >> 4)] = color;
+        //draw_pixel(point[0], point[1], color, point[2], false);
     }
 }
 

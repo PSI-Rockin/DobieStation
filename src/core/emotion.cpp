@@ -370,9 +370,9 @@ void EmotionEngine::di()
     cp0.set_EIE(false);
 }
 
-void EmotionEngine::fpu_mov_s(int dest, int source)
+void EmotionEngine::fpu_cop_s(uint32_t instruction)
 {
-    fpu.mtc(dest, fpu.get_gpr(source));
+    EmotionInterpreter::cop_s(fpu, instruction);
 }
 
 void EmotionEngine::fpu_bc1(int32_t offset, bool test_true, bool likely)

@@ -78,7 +78,7 @@ class EmotionEngine
         void ei();
         void di();
 
-        void fpu_mov_s(int dest, int source);
+        void fpu_cop_s(uint32_t instruction);
         void fpu_bc1(int32_t offset, bool test_true, bool likely);
         void fpu_cvt_s_w(int dest, int source);
 };

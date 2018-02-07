@@ -16,8 +16,9 @@ src = ['src/qt/main.cpp',
       'src/core/dmac.cpp',
       'src/qt/emuwindow.cpp',
       'src/core/gscontext.cpp',
-      'src/core/emotiondisasm.cpp’,
-      ‘src/core/emotionasm.cpp']
+      'src/core/emotiondisasm.cpp',
+      'src/core/emotionasm.cpp',
+      'src/core/emotion_fpu.cpp']
 
 headers = ['src/core/emotion.hpp',
           'src/core/emulator.hpp',
@@ -31,7 +32,7 @@ headers = ['src/core/emotion.hpp',
           'src/qt/emuwindow.hpp',
           'src/core/gscontext.hpp',
           'src/core/emotiondisasm.hpp',
-          ‘src/core/emotionasm.hpp']
+          'src/core/emotionasm.hpp']
 
 moc_files = qt5.preprocess(moc_headers: headers)
 

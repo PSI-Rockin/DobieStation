@@ -711,12 +711,7 @@ void EmotionInterpreter::cop(EmotionEngine &cpu, uint32_t instruction)
             cop_bc1(cpu, instruction);
             break;
         case 0x110:
-        {
-            uint32_t dest = (instruction >> 6) & 0x1F;
-            uint32_t source = (instruction >> 11) & 0x1F;
-            printf("mov.s f{%d}, f{%d}", dest, source);
-            cpu.fpu_mov_s(dest, source);
-        }
+            cpu.fpu_cop_s(instruction);
             break;
         case 0x114:
             cop_cvt_s_w(cpu, instruction);
@@ -762,28 +757,4 @@ void EmotionInterpreter::cop_ctc(EmotionEngine &cpu, uint32_t instruction)
     int cop_reg = (instruction >> 11) & 0x1F;
     printf("ctc%d {%d}, {%d}", cop_id, emotion_reg, cop_reg);
     cpu.ctc(cop_id, emotion_reg, cop_reg);
-}
-
-void EmotionInterpreter::cop_bc1(EmotionEngine &cpu, uint32_t instruction)
-{
-    const static char* ops[] = {"bc1f", "bc1fl", "bc1t", "bc1tl"};
-    const static bool likely[] = {false, false, true, true};
-    const static bool op_true[] = {false, true, false, true};
-    int32_t offset = ((int16_t)(instruction & 0xFFFF)) << 2;
-    uint8_t op = (instruction >> 16) & 0x1F;
-    if (op > 3)
-    {
-        printf("\nUnrecognized BC1 op $%02X", op);
-        exit(1);
-    }
-    printf("%s $%08X", ops[op], cpu.get_PC() + 4 + offset);
-    cpu.fpu_bc1(offset, op_true[op], likely[op]);
-}
-
-void EmotionInterpreter::cop_cvt_s_w(EmotionEngine &cpu, uint32_t instruction)
-{
-    int source = (instruction >> 11) & 0x1F;
-    int dest = (instruction >> 6) & 0x1F;
-    printf("cvt.s.w f{%d}, f{%d}", dest, source);
-    cpu.fpu_cvt_s_w(dest, source);
 }

@@ -15,6 +15,7 @@ set(SOURCES
         src/core/cop1.cpp
         src/core/dmac.cpp
         src/core/emotion.cpp
+        src/core/emotion_fpu.cpp
         src/core/emotion_mmi.cpp
         src/core/emotion_special.cpp
         src/core/emotionasm.cpp
