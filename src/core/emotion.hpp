@@ -16,19 +16,22 @@ class EmotionEngine
         Cop0 cp0;
         Cop1 fpu;
 
+        bool interrupt_requested;
+
         //Each register is 128-bit
         uint8_t gpr[32 * sizeof(uint64_t) * 2];
-        //uint64_t gpr_lo[32];
-        //uint64_t gpr_hi[32];
         uint32_t PC, new_PC;
         uint64_t LO, LO1, HI, HI1;
+        uint64_t SA;
 
+        bool increment_PC;
         bool branch_on;
         int delay_slot;
 
         uint8_t scratchpad[1024 * 16];
 
         uint32_t get_paddr(uint32_t vaddr);
+        void handle_exception(uint32_t new_addr);
     public:
         EmotionEngine(BIOS_HLE* b, Emulator* e);
         static const char* REG(int id);
@@ -53,6 +56,7 @@ class EmotionEngine
         void jp(uint32_t new_addr);
         void branch(bool condition, int offset);
         void branch_likely(bool condition, int offset);
+        void ctc(int cop_id, int reg, int cop_reg);
         void mfc(int cop_id, int reg, int cop_reg);
         void mtc(int cop_id, int reg, int cop_reg);
         void lwc1(uint32_t addr, int index);
@@ -60,13 +64,22 @@ class EmotionEngine
 
         void mfhi(int index);
         void mflo(int index);
+        void mfhi1(int index);
         void mflo1(int index);
+        void mfsa(int index);
         void set_LO_HI(uint64_t a, uint64_t b, bool hi = false);
 
         void hle_syscall();
         void syscall_exception();
+        void request_interrupt();
+        void interrupt();
+
+        void eret();
+        void ei();
+        void di();
 
         void fpu_mov_s(int dest, int source);
+        void fpu_bc1(int32_t offset, bool test_true, bool likely);
         void fpu_cvt_s_w(int dest, int source);
 };
 

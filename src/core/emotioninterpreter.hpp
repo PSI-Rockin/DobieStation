@@ -33,6 +33,7 @@ namespace EmotionInterpreter
     void and_ee(EmotionEngine& cpu, uint32_t instruction);
     void or_ee(EmotionEngine& cpu, uint32_t instruction);
     void nor(EmotionEngine& cpu, uint32_t instruction);
+    void mfsa(EmotionEngine& cpu, uint32_t instruction);
     void slt(EmotionEngine& cpu, uint32_t instruction);
     void sltu(EmotionEngine& cpu, uint32_t instruction);
     void daddu(EmotionEngine& cpu, uint32_t instruction);
@@ -44,7 +45,9 @@ namespace EmotionInterpreter
 
     void regimm(EmotionEngine& cpu, uint32_t instruction);
     void bltz(EmotionEngine& cpu, uint32_t instruction);
+    void bltzl(EmotionEngine& cpu, uint32_t instruction);
     void bgez(EmotionEngine& cpu, uint32_t instruction);
+    void bgezl(EmotionEngine& cpu, uint32_t instruction);
 
     void j(EmotionEngine& cpu, uint32_t instruction);
     void jal(EmotionEngine& cpu, uint32_t instruction);
@@ -63,6 +66,8 @@ namespace EmotionInterpreter
     void beql(EmotionEngine& cpu, uint32_t instruction);
     void bnel(EmotionEngine& cpu, uint32_t instruction);
     void daddiu(EmotionEngine& cpu, uint32_t instruction);
+    void ldl(EmotionEngine& cpu, uint32_t instruction);
+    void ldr(EmotionEngine& cpu, uint32_t instruction);
     void lq(EmotionEngine& cpu, uint32_t instruction);
     void sq(EmotionEngine& cpu, uint32_t instruction);
     void lb(EmotionEngine& cpu, uint32_t instruction);
@@ -74,6 +79,8 @@ namespace EmotionInterpreter
     void sb(EmotionEngine& cpu, uint32_t instruction);
     void sh(EmotionEngine& cpu, uint32_t instruction);
     void sw(EmotionEngine& cpu, uint32_t instruction);
+    void sdl(EmotionEngine& cpu, uint32_t instruction);
+    void sdr(EmotionEngine& cpu, uint32_t instruction);
     void lwc1(EmotionEngine& cpu, uint32_t instruction);
     void ld(EmotionEngine& cpu, uint32_t instruction);
     void swc1(EmotionEngine& cpu, uint32_t instruction);
@@ -82,11 +89,15 @@ namespace EmotionInterpreter
     void cop(EmotionEngine& cpu, uint32_t instruction);
     void cop_mfc(EmotionEngine& cpu, uint32_t instruction);
     void cop_mtc(EmotionEngine& cpu, uint32_t instruction);
+    void cop_ctc(EmotionEngine& cpu, uint32_t instruction);
+    void cop_bc1(EmotionEngine& cpu, uint32_t instruction);
     void cop_cvt_s_w(EmotionEngine& cpu, uint32_t instruction);
 
     void mmi(EmotionEngine& cpu, uint32_t instruction);
-    void mult1(EmotionEngine& cpu, uint32_t instruction);
+    void plzcw(EmotionEngine& cpu, uint32_t instruction);
+    void mfhi1(EmotionEngine& cpu, uint32_t instruction);
     void mflo1(EmotionEngine& cpu, uint32_t instruction);
+    void mult1(EmotionEngine& cpu, uint32_t instruction);
     void divu1(EmotionEngine& cpu, uint32_t instruction);
 
     void mmi3(EmotionEngine& cpu, uint32_t instruction);

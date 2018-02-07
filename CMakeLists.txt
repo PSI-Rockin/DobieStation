@@ -17,6 +17,7 @@ set(SOURCES
         src/core/emotion.cpp
         src/core/emotion_mmi.cpp
         src/core/emotion_special.cpp
+        src/core/emotionasm.cpp
         src/core/emotiondisasm.cpp
         src/core/emotioninterpreter.cpp
         src/core/emulator.cpp
@@ -33,6 +34,7 @@ set(HEADERS
         src/core/cop1.hpp
         src/core/dmac.hpp
         src/core/emotion.hpp
+        src/core/emotionasm.hpp
         src/core/emotiondisasm.hpp
         src/core/emotioninterpreter.hpp
         src/core/emulator.hpp

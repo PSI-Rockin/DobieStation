@@ -86,6 +86,9 @@ void EmotionInterpreter::special(EmotionEngine &cpu, uint32_t instruction)
         case 0x27:
             nor(cpu, instruction);
             break;
+        case 0x28:
+            mfsa(cpu, instruction);
+            break;
         case 0x2A:
             slt(cpu, instruction);
             break;
@@ -219,8 +222,8 @@ void EmotionInterpreter::syscall_ee(EmotionEngine &cpu, uint32_t instruction)
 {
     uint32_t code = (instruction >> 6) & 0xFFFFF;
     printf("syscall $%08X", code);
-    cpu.hle_syscall();
-    //cpu.syscall_exception();
+    //cpu.hle_syscall();
+    cpu.syscall_exception();
 }
 
 void EmotionInterpreter::mfhi(EmotionEngine &cpu, uint32_t instruction)
@@ -310,8 +313,8 @@ void EmotionInterpreter::add(EmotionEngine &cpu, uint32_t instruction)
     printf("add {%d}, {%d}, {%d}", dest, op1, op2);
     op1 = cpu.get_gpr<int32_t>(op1);
     op2 = cpu.get_gpr<int32_t>(op2);
-    uint32_t result = op1 + op2;
-    cpu.set_gpr<uint64_t>(dest, result);
+    int32_t result = op1 + op2;
+    cpu.set_gpr<int64_t>(dest, result);
 }
 
 void EmotionInterpreter::addu(EmotionEngine &cpu, uint32_t instruction)
@@ -322,8 +325,8 @@ void EmotionInterpreter::addu(EmotionEngine &cpu, uint32_t instruction)
     printf("addu {%d}, {%d}, {%d}", dest, op1, op2);
     op1 = cpu.get_gpr<int32_t>(op1);
     op2 = cpu.get_gpr<int32_t>(op2);
-    uint32_t result = op1 + op2;
-    cpu.set_gpr<uint64_t>(dest, result);
+    int32_t result = op1 + op2;
+    cpu.set_gpr<int64_t>(dest, result);
 }
 
 void EmotionInterpreter::sub(EmotionEngine &cpu, uint32_t instruction)
@@ -331,24 +334,24 @@ void EmotionInterpreter::sub(EmotionEngine &cpu, uint32_t instruction)
     //TODO: overflow
     int32_t op1 = (instruction >> 21) & 0x1F;
     int32_t op2 = (instruction >> 16) & 0x1F;
-    uint64_t dest = (instruction >> 11) & 0x1F;
+    int64_t dest = (instruction >> 11) & 0x1F;
     printf("sub {%d}, {%d}, {%d}", dest, op1, op2);
     op1 = cpu.get_gpr<int32_t>(op1);
     op2 = cpu.get_gpr<int32_t>(op2);
-    uint32_t result = op1 - op2;
-    cpu.set_gpr<uint64_t>(dest, result);
+    int32_t result = op1 - op2;
+    cpu.set_gpr<int64_t>(dest, result);
 }
 
 void EmotionInterpreter::subu(EmotionEngine &cpu, uint32_t instruction)
 {
     int32_t op1 = (instruction >> 21) & 0x1F;
     int32_t op2 = (instruction >> 16) & 0x1F;
-    uint64_t dest = (instruction >> 11) & 0x1F;
+    int64_t dest = (instruction >> 11) & 0x1F;
     printf("subu {%d}, {%d}, {%d}", dest, op1, op2);
     op1 = cpu.get_gpr<int32_t>(op1);
     op2 = cpu.get_gpr<int32_t>(op2);
-    uint32_t result = op1 - op2;
-    cpu.set_gpr<uint64_t>(dest, result);
+    int32_t result = op1 - op2;
+    cpu.set_gpr<int64_t>(dest, result);
 }
 
 void EmotionInterpreter::and_ee(EmotionEngine &cpu, uint32_t instruction)
@@ -382,6 +385,13 @@ void EmotionInterpreter::nor(EmotionEngine &cpu, uint32_t instruction)
     op1 = cpu.get_gpr<uint64_t>(op1);
     op2 = cpu.get_gpr<uint64_t>(op2);
     cpu.set_gpr<uint64_t>(dest, ~(op1 | op2));
+}
+
+void EmotionInterpreter::mfsa(EmotionEngine &cpu, uint32_t instruction)
+{
+    int dest = (instruction >> 11) & 0x1F;
+    printf("mfsa {%d}", dest);
+    cpu.mfsa(dest);
 }
 
 void EmotionInterpreter::slt(EmotionEngine &cpu, uint32_t instruction)

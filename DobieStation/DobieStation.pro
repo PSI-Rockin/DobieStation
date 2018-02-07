@@ -27,7 +27,8 @@ SOURCES += ../src/qt/main.cpp \
     ../src/core/dmac.cpp \
     ../src/qt/emuwindow.cpp \
     ../src/core/gscontext.cpp \
-    ../src/core/emotiondisasm.cpp
+    ../src/core/emotiondisasm.cpp \
+    ../src/core/emotionasm.cpp
 
 HEADERS += \
     ../src/core/emotion.hpp \
@@ -41,4 +42,5 @@ HEADERS += \
     ../src/core/dmac.hpp \
     ../src/qt/emuwindow.hpp \
     ../src/core/gscontext.hpp \
-    ../src/core/emotiondisasm.hpp
+    ../src/core/emotiondisasm.hpp \
+    ../src/core/emotionasm.hpp

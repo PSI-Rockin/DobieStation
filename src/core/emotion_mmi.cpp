@@ -11,6 +11,12 @@ void EmotionInterpreter::mmi(EmotionEngine &cpu, uint32_t instruction)
     int op = instruction & 0x3F;
     switch (op)
     {
+        case 0x04:
+            plzcw(cpu, instruction);
+            break;
+        case 0x10:
+            mfhi1(cpu, instruction);
+            break;
         case 0x12:
             mflo1(cpu, instruction);
             break;
@@ -27,6 +33,46 @@ void EmotionInterpreter::mmi(EmotionEngine &cpu, uint32_t instruction)
             printf("Unrecognized mmi op $%02X", op);
             exit(1);
     }
+}
+
+//Split a 64-bit register into two words, and count the number of leading bits the same as the highest-order bit
+//Store the two results in each word
+//If at == 0x0F00F000_000FFFFF
+//Then after plzcw at, at
+//at == 0x00000003_0x0000000B
+void EmotionInterpreter::plzcw(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t dest = (instruction >> 11) & 0x1F;
+    uint64_t reg = (instruction >> 21) & 0x1F;
+    printf("plzcw {%d}, {%d}", dest, reg);
+
+    uint32_t words[2];
+    words[0] = cpu.get_gpr<uint32_t>(reg);
+    words[1] = cpu.get_gpr<uint32_t>(reg, 1);
+
+    for (int i = 0; i < 2; i++)
+    {
+        bool high_bit = words[i] & (1 << 31);
+        uint8_t bits = 0;
+        for (int j = 30; j >= 0; j--)
+        {
+            if ((words[i] & (1 << j)) == high_bit)
+                bits++;
+            else
+                break;
+        }
+        words[i] = bits;
+    }
+
+    cpu.set_gpr<uint32_t>(dest, words[0]);
+    cpu.set_gpr<uint32_t>(dest, words[1], 1);
+}
+
+void EmotionInterpreter::mfhi1(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t dest = (instruction >> 11) & 0x1F;
+    printf("mfhi1 {%d}", dest);
+    cpu.mfhi1(dest);
 }
 
 void EmotionInterpreter::mflo1(EmotionEngine &cpu, uint32_t instruction)
@@ -66,7 +112,7 @@ void EmotionInterpreter::divu1(EmotionEngine &cpu, uint32_t instruction)
 
 void EmotionInterpreter::mmi3(EmotionEngine &cpu, uint32_t instruction)
 {
-    uint8_t op = (instruction >> 6) & 0x3F;
+    uint8_t op = (instruction >> 6) & 0x1F;
     switch (op)
     {
         case 0x12:

@@ -38,14 +38,22 @@ class BIOS_HLE
         GraphicsSynthesizer* gs;
         std::vector<thread_hle> threads;
         std::vector<INTC_handler> intc_handlers;
+
+        void sw(uint32_t& address, uint32_t value);
+        void store_INTC_handler(INTC_handler& h);
+        void assemble_interrupt_handler();
     public:
         BIOS_HLE(Emulator* e, GraphicsSynthesizer* gs);
 
+        void reset();
+
         void hle_syscall(EmotionEngine& cpu, int op);
 
+        void reset_EE(EmotionEngine& cpu);
+        void set_GS_CRT(EmotionEngine& cpu);
+        void set_VBLANK_handler(EmotionEngine& cpu);
         void add_INTC_handler(EmotionEngine& cpu);
         void enable_INTC(EmotionEngine& cpu);
-        void set_GS_CRT(EmotionEngine& cpu);
         void init_main_thread(EmotionEngine& cpu);
         void init_heap(EmotionEngine& cpu);
         void get_heap_end(EmotionEngine& cpu);

@@ -28,15 +28,20 @@ const char* EmotionEngine::REG(int id)
 void EmotionEngine::reset()
 {
     PC = 0xBFC00000;
+    interrupt_requested = false;
     branch_on = false;
+    increment_PC = true;
     delay_slot = 0;
     for (int i = 0; i < 16; i++)
         gpr[i] = 0; //Clear out zeroth register
-    cp0.mtc(9, 0);
+    cp0.reset();
+    fpu.reset();
 }
 
 void EmotionEngine::run()
 {
+    //print_state();
+    increment_PC = true;
     if (delay_slot)
         delay_slot--;
     else if (branch_on)
@@ -44,10 +49,13 @@ void EmotionEngine::run()
         PC = new_PC;
         branch_on = false;
     }
+    else if (interrupt_requested)
+        interrupt();
     uint32_t burp = read32(PC);
     EmotionInterpreter::interpret(*this, burp);
     cp0.count_up();
-    PC += 4;
+    if (increment_PC)
+        PC += 4;
 }
 
 void EmotionEngine::print_state()
@@ -55,7 +63,7 @@ void EmotionEngine::print_state()
     for (int i = 0; i < 32; i++)
     {
         printf("r%d: $%08X_%08X", i, get_gpr<uint32_t>(i, 1), get_gpr<uint32_t>(i));
-        if ((i & 1) == 1)
+        if ((i & 3) == 3)
             printf("\n");
         else
             printf("\t");
@@ -237,6 +245,19 @@ void EmotionEngine::mtc(int cop_id, int reg, int cop_reg)
     }
 }
 
+void EmotionEngine::ctc(int cop_id, int reg, int cop_reg)
+{
+    switch (cop_id)
+    {
+        case 1:
+            fpu.ctc(cop_reg, get_gpr<uint32_t>(reg));
+            break;
+        case 2:
+            printf("\n[VU0] TODO: ctc");
+            break;
+    }
+}
+
 void EmotionEngine::mfhi(int index)
 {
     set_gpr<uint64_t>(index, HI);
@@ -247,9 +268,19 @@ void EmotionEngine::mflo(int index)
     set_gpr<uint64_t>(index, LO);
 }
 
+void EmotionEngine::mfhi1(int index)
+{
+    set_gpr<uint64_t>(index, HI1);
+}
+
 void EmotionEngine::mflo1(int index)
 {
     set_gpr<uint64_t>(index, LO1);
+}
+
+void EmotionEngine::mfsa(int index)
+{
+    set_gpr<uint64_t>(index, SA);
 }
 
 void EmotionEngine::lwc1(uint32_t addr, int index)
@@ -276,6 +307,17 @@ void EmotionEngine::set_LO_HI(uint64_t a, uint64_t b, bool hi)
     }
 }
 
+void EmotionEngine::handle_exception(uint32_t new_addr)
+{
+    //Raise EXL
+    uint32_t status = cp0.mfc(STATUS);
+    status |= 0x2;
+    cp0.mtc(STATUS, status);
+    //Set EPC
+    cp0.mtc(14, PC);
+    PC = new_addr;
+}
+
 void EmotionEngine::hle_syscall()
 {
     uint8_t op = read8(PC - 4);
@@ -284,14 +326,67 @@ void EmotionEngine::hle_syscall()
 
 void EmotionEngine::syscall_exception()
 {
-    cp0.mtc(13, 0x20);
-    cp0.mtc(14, PC);
-    PC = 0xBFC00200 + 0x17C;
+    cp0.set_exception_cause(0x8);
+    //handle_exception(0x80000180);
+    //increment_PC = false;
+    hle_syscall();
+}
+
+void EmotionEngine::request_interrupt()
+{
+    printf("\nINTERRUPT REQUESTED");
+    if (cp0.int_enabled())
+        interrupt_requested = true;
+}
+
+void EmotionEngine::interrupt()
+{
+    interrupt_requested = false;
+    cp0.set_exception_cause(0);
+    uint32_t cause = cp0.mfc(CAUSE);
+    cause |= 1 << 10; //set int0 flag
+    cp0.mtc(CAUSE, cause);
+
+    uint32_t status = cp0.mfc(STATUS);
+    status |= 1 << 10;
+    cp0.mtc(STATUS, status);
+    handle_exception(0x80000200);
+}
+
+void EmotionEngine::eret()
+{
+    uint32_t EPC = cp0.mfc(14);
+    PC = EPC;
+    increment_PC = false;
+}
+
+void EmotionEngine::ei()
+{
+    cp0.set_EIE(true);
+}
+
+void EmotionEngine::di()
+{
+    cp0.set_EIE(false);
 }
 
 void EmotionEngine::fpu_mov_s(int dest, int source)
 {
     fpu.mtc(dest, fpu.get_gpr(source));
+}
+
+void EmotionEngine::fpu_bc1(int32_t offset, bool test_true, bool likely)
+{
+    bool passed = false;
+    if (test_true)
+        passed = fpu.get_condition();
+    else
+        passed = !fpu.get_condition();
+
+    if (likely)
+        branch_likely(passed, offset);
+    else
+        branch(passed, offset);
 }
 
 void EmotionEngine::fpu_cvt_s_w(int dest, int source)

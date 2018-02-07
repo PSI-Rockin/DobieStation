@@ -163,6 +163,14 @@ void GraphicsSynthesizer::write32_privileged(uint32_t addr, uint32_t value)
     addr &= 0xFFFF;
     switch (addr)
     {
+        case 0x0070:
+            printf("\n[GS] Write DISPFB1: $%08X_%08X", value >> 32, value & 0xFFFFFFFF);
+            DISPFB1.frame_base = (value & 0x3FF) * 2048;
+            DISPFB1.width = ((value >> 9) & 0x3F) * 64;
+            DISPFB1.format = (value >> 14) & 0x1F;
+            DISPFB1.x = (value >> 32) & 0x7FF;
+            DISPFB1.y = (value >> 43) & 0x7FF;
+            break;
         case 0x1000:
             printf("\n[GS] Write32 to GS_CSR: $%08X", value);
 
@@ -196,6 +204,22 @@ void GraphicsSynthesizer::write64_privileged(uint32_t addr, uint64_t value)
             SMODE2.frame_mode = value & 0x2;
             SMODE2.power_mode = (value >> 2) & 0x3;
             break;
+        case 0x0070:
+            printf("\n[GS] Write DISPFB1: $%08X_%08X", value >> 32, value & 0xFFFFFFFF);
+            DISPFB1.frame_base = (value & 0x3FF) * 2048;
+            DISPFB1.width = ((value >> 9) & 0x3F) * 64;
+            DISPFB1.format = (value >> 14) & 0x1F;
+            DISPFB1.x = (value >> 32) & 0x7FF;
+            DISPFB1.y = (value >> 43) & 0x7FF;
+            break;
+        case 0x0080:
+            printf("\n[GS] Write DISPLAY1: $%08X_%08X", value >> 32, value & 0xFFFFFFFF);
+            DISPLAY1.x = value & 0xFFF;
+            DISPLAY1.y = (value >> 12) & 0x7FF;
+            DISPLAY1.magnify_x = (value >> 23) & 0xF;
+            DISPLAY1.magnify_y = (value >> 27) & 0x3;
+            DISPLAY1.width = ((value >> 32) & 0xFFF) + 1;
+            DISPLAY1.height = ((value >> 44) & 0x7FF) + 1;
         case 0x0090:
             printf("\n[GS] Write DISPFB2: $%08X_%08X", value >> 32, value & 0xFFFFFFFF);
             DISPFB2.frame_base = (value & 0x3FF) * 2048;
@@ -256,6 +280,13 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
             break;
         case 0x0006:
             context1.set_tex0(value);
+            break;
+        case 0x000D:
+            //XYZ3
+            current_vtx.coords[0] = value & 0xFFFF;
+            current_vtx.coords[1] = (value >> 16) & 0xFFFF;
+            current_vtx.coords[2] = value >> 32;
+            vertex_kick(false);
             break;
         case 0x0018:
             context1.set_xyoffset(value);
@@ -430,6 +461,13 @@ void GraphicsSynthesizer::vertex_kick(bool drawing_kick)
             if (num_vertices == 3)
             {
                 num_vertices = 0;
+                request_draw_kick = true;
+            }
+            break;
+        case 4:
+            if (num_vertices == 3)
+            {
+                num_vertices--;
                 request_draw_kick = true;
             }
             break;

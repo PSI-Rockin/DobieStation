@@ -106,6 +106,11 @@ void DMAC::handle_source_chain(int index)
             printf("\nNew address: $%08X", channels[index].address);
             printf("\nNew tag addr: $%08X", channels[index].tag_address);
             break;
+        case 7:
+            //end
+            channels[index].address = channels[index].tag_address + 16;
+            channels[index].tag_end = true;
+            break;
         default:
             printf("\n[DMAC] Unrecognized source chain DMAtag id %d\n", id);
             exit(1);

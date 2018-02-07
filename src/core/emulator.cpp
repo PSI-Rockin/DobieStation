@@ -30,24 +30,31 @@ void Emulator::run()
         dmac.run();
         instructions_run++;
     }
+    //VBLANK start
+    INTC_STAT |= (1 << 2);
+    if (INTC_MASK & 0x4)
+        cpu.request_interrupt();
     gs.render_CRT();
 }
 
 void Emulator::reset()
 {
-    cpu.reset();
-    dmac.reset();
-    gs.reset();
     if (!RDRAM)
         RDRAM = new uint8_t[1024 * 1024 * 32];
     if (!IOP_RAM)
         IOP_RAM = new uint8_t[1024 * 1024 * 2];
     if (!BIOS)
         BIOS = new uint8_t[1024 * 1024 * 4];
+
+    bios_hle.reset();
+    cpu.reset();
+    dmac.reset();
+    gs.reset();
     MCH_DRD = 0;
     MCH_RICM = 0;
     rdram_sdevid = 0;
     INTC_STAT = 0;
+    INTC_MASK = 0;
 }
 
 uint32_t* Emulator::get_framebuffer()
@@ -67,7 +74,15 @@ void Emulator::load_BIOS(uint8_t *BIOS_file)
 {
     //if (BIOS)
         //delete[] BIOS;
-    memcpy(this->BIOS, BIOS_file, 1024 * 1024 * 4);
+    memcpy(BIOS, BIOS_file, 1024 * 1024 * 4);
+
+    //Copy EE kernel into memory
+    //memcpy(RDRAM, BIOS + 0xB3200, 0x13BF0);
+
+    //The BIOS's init_main_thread reads from this memory location and crashes if nothing's there...
+    //I think it's supposed to be the size of RDRAM, as the BIOS writes to memory locations based upon this value.
+    //TODO: confirm that this value is correct after booting the BIOS.
+    //write32(0x00013C10, 0x02000000);
 }
 
 void Emulator::load_ELF(uint8_t *ELF)
@@ -152,7 +167,11 @@ uint32_t Emulator::read32(uint32_t address)
         case 0x1000F130:
             return 0;
         case 0x1000F000:
+            printf("\nRead32 INTC_STAT: $%08X", INTC_STAT);
             return INTC_STAT;
+        case 0x1000F010:
+            printf("\nRead32 INTC_MASK: $%08X", INTC_MASK);
+            return INTC_MASK;
         case 0x1000F430:
             printf("\nRead from MCH_RICM");
             return 0;
@@ -246,10 +265,12 @@ void Emulator::write32(uint32_t address, uint32_t value)
     }
     switch (address)
     {
-        case 0x1000F400:
+        case 0x1000F000:
+            printf("\nWrite32 INTC_STAT: $%08X", value);
             INTC_STAT &= ~(value & 0x7FFF);
             return;
-        case 0x1000F410:
+        case 0x1000F010:
+            printf("\nWrite32 INTC_MASK: $%08X", value);
             INTC_MASK ^= (value & 0x7FFF);
             return;
         case 0x1000F430:
