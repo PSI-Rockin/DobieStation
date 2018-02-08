@@ -55,8 +55,6 @@ void GraphicsSynthesizer::reset()
         local_mem = new uint32_t[1024 * 1024];
     if (!output_buffer)
         output_buffer = new uint32_t[640 * 256];
-    processing_GIF_prim = false;
-    current_tag.data_left = 0;
     pixels_transferred = 0;
     transfer_bit_depth = 32;
     num_vertices = 0;
@@ -366,68 +364,25 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
     }
 }
 
-void GraphicsSynthesizer::feed_GIF(uint64_t data[])
+void GraphicsSynthesizer::set_RGBA(uint8_t r, uint8_t g, uint8_t b, uint8_t a)
 {
-    //printf("\n[GS] $%08X_%08X_%08X_%08X", data[1] >> 32, data[1] & 0xFFFFFFFF, data[0] >> 32, data[0] & 0xFFFFFFFF);
-    if (!current_tag.data_left)
-    {
-        //Read the GIFtag
-        processing_GIF_prim = true;
-        current_tag.NLOOP = data[0] & 0x7FFF;
-        current_tag.end_of_packet = data[0] & (1 << 15);
-        current_tag.output_PRIM = data[0] & (1UL << 46);
-        current_tag.PRIM = (data[0] >> 47) & 0x7FF;
-        current_tag.format = (data[0] >> 58) & 0x3;
-        current_tag.reg_count = data[0] >> 60;
-        if (!current_tag.reg_count)
-            current_tag.reg_count = 16;
-        current_tag.regs = data[1];
-        current_tag.regs_left = current_tag.reg_count;
-        current_tag.data_left = current_tag.NLOOP;
+    RGBAQ.r = r;
+    RGBAQ.g = g;
+    RGBAQ.b = b;
+    RGBAQ.a = a;
+}
 
-        //Q is initialized to 1.0 upon reading a GIFtag
-        RGBAQ.q = 1.0f;
+void GraphicsSynthesizer::set_Q(float q)
+{
+    RGBAQ.q = q;
+}
 
-        /*printf("\n[GS] New primitive!");
-        printf("\nNLOOP: $%04X", current_tag.NLOOP);
-        printf("\nEOP: %d", current_tag.end_of_packet);
-        printf("\nOutput PRIM: %d PRIM: $%04X", current_tag.output_PRIM, current_tag.PRIM);
-        printf("\nFormat: %d", current_tag.format);
-        printf("\nReg count: %d", current_tag.reg_count);
-        printf("\nRegs: $%08X_$%08X", current_tag.regs >> 32, current_tag.regs & 0xFFFFFFFF);*/
-
-        if (current_tag.output_PRIM)
-            write64(0, current_tag.PRIM);
-    }
-    else
-    {
-        /*if (!current_tag.data_left)
-        {
-            processing_GIF_prim = false;
-            return;
-        }*/
-        switch (current_tag.format)
-        {
-            case 0:
-                process_PACKED(data);
-                current_tag.regs_left--;
-                if (!current_tag.regs_left)
-                {
-                    current_tag.regs_left = current_tag.reg_count;
-                    current_tag.data_left--;
-                }
-                break;
-            case 2:
-                write64(0x54, data[0]);
-                write64(0x54, data[1]);
-                current_tag.data_left--;
-                break;
-            default:
-                printf("\n[GS] Unrecognized GIFtag format %d", current_tag.format);
-                break;
-        }
-
-    }
+void GraphicsSynthesizer::set_XYZ(uint32_t x, uint32_t y, uint32_t z, bool drawing_kick)
+{
+    current_vtx.coords[0] = x;
+    current_vtx.coords[1] = y;
+    current_vtx.coords[2] = z;
+    vertex_kick(drawing_kick);
 }
 
 //The "vertex kick" is the name given to the process of placing a vertex in the vertex queue.
@@ -785,52 +740,6 @@ void GraphicsSynthesizer::render_sprite()
                 draw_pixel(x, y, 0x80000000, z, PRIM.alpha_blend);
         }
     }
-}
-
-void GraphicsSynthesizer::process_PACKED(uint64_t data[])
-{
-    int reg_offset = (current_tag.reg_count - current_tag.regs_left) << 2;
-    uint8_t reg = (current_tag.regs & (0xF << reg_offset)) >> reg_offset;
-    switch (reg)
-    {
-        case 0x0:
-            //PRIM
-            write64(0, data[0]);
-            break;
-        case 0x1:
-            //RGBAQ - set RGBA
-            //Q is taken from the ST command
-            RGBAQ.r = data[0] & 0xFF;
-            RGBAQ.g = (data[0] >> 32) & 0xFF;
-            RGBAQ.b = data[1] & 0xFF;
-            RGBAQ.a = (data[1] >> 32) & 0xFF;
-            break;
-        case 0x4:
-            //XYZF2 - set XYZ and fog coefficient. Optionally disable drawing kick through bit 111
-        {
-            current_vtx.coords[0] = data[0] & 0xFFFF;
-            current_vtx.coords[1] = (data[0] >> 32) & 0xFFFF;
-            current_vtx.coords[2] = (data[1] >> 4) & 0xFFFFFF;
-            bool disable_drawing = data[1] & (1UL << (111 - 64));
-            vertex_kick(!disable_drawing);
-        }
-            break;
-        case 0xE:
-        {
-            //A+D: output data to address
-            uint32_t addr = data[1] & 0xFF;
-            write64(addr, data[0]);
-        }
-            break;
-        default:
-            printf("\nUnrecognized PACKED reg $%02X", reg);
-            break;
-    }
-}
-
-void GraphicsSynthesizer::send_PATH3(uint64_t data[])
-{
-    feed_GIF(data);
 }
 
 void GraphicsSynthesizer::write_HWREG(uint64_t data)

@@ -17,7 +17,7 @@ enum CHANNELS
     SPR_TO
 };
 
-DMAC::DMAC(Emulator* e, GraphicsSynthesizer* gs) : e(e), gs(gs)
+DMAC::DMAC(Emulator* e, GraphicsInterface* gif) : e(e), gif(gif)
 {
 
 }
@@ -74,7 +74,7 @@ void DMAC::run()
             switch (i)
             {
                 case GIF:
-                    gs->send_PATH3(quad);
+                    gif->send_PATH3(quad);
                     break;
             }
         }

@@ -4,6 +4,7 @@
 #include "dmac.hpp"
 #include "emotion.hpp"
 #include "gs.hpp"
+#include "gif.hpp"
 
 class Emulator
 {
@@ -12,6 +13,7 @@ class Emulator
         DMAC dmac;
         EmotionEngine cpu;
         GraphicsSynthesizer gs;
+        GraphicsInterface gif;
 
         uint8_t* RDRAM;
         uint8_t* IOP_RAM;
