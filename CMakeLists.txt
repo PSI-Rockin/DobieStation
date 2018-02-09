@@ -22,6 +22,7 @@ set(SOURCES
         src/core/emotiondisasm.cpp
         src/core/emotioninterpreter.cpp
         src/core/emulator.cpp
+        src/core/gif.cpp
         src/core/gs.cpp
         src/core/gscontext.cpp
         src/core/vu0.cpp
@@ -39,6 +40,7 @@ set(HEADERS
         src/core/emotiondisasm.hpp
         src/core/emotioninterpreter.hpp
         src/core/emulator.hpp
+        src/core/gif.hpp
         src/core/gs.hpp
         src/core/gscontext.hpp
         src/core/vu0.hpp
