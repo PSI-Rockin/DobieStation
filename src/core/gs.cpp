@@ -361,6 +361,7 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
             break;
         default:
             printf("\n[GS] Unrecognized write64 to reg $%04X: $%08X_%08X", addr, value >> 32, value & 0xFFFFFFFF);
+            exit(1);
     }
 }
 
@@ -463,6 +464,9 @@ void GraphicsSynthesizer::render_primitive()
 
 void GraphicsSynthesizer::draw_pixel(uint32_t x, uint32_t y, uint32_t color, uint32_t z, bool alpha_blending)
 {
+    SCISSOR* s = &current_ctx->scissor;
+    if (x < s->x1 || x > s->x2 || y < s->y1 && y > s->y2)
+        return;
     TEST* test = &current_ctx->test;
     bool update_frame = true;
     bool update_alpha = true;
@@ -659,12 +663,7 @@ void GraphicsSynthesizer::render_point()
     color |= vtx_queue[0].rgbaq.b;
     SCISSOR* scissor = &current_ctx->scissor;
     printf("\nCoords: (%d, %d, %d)", point[0] >> 4, point[1] >> 4, point[2]);
-    if (point[0] >= scissor->x1 && point[0] <= scissor->x2 && point[1] >= scissor->y1 && point[1] <= scissor->y2)
-        draw_pixel(point[0], point[1], color, point[2], PRIM.alpha_blend);
-    else
-    {
-        printf("\nScissor: (%d, %d) (%d, %d)", scissor->x1, scissor->y1, scissor->x2, scissor->y2);
-    }
+    draw_pixel(point[0], point[1], color, point[2], PRIM.alpha_blend);
 }
 
 void GraphicsSynthesizer::render_line()
@@ -724,13 +723,9 @@ void GraphicsSynthesizer::render_sprite()
 
     for (int32_t y = y1; y < y2; y += 0x10)
     {
-        if (y < current_ctx->scissor.y1 || y > current_ctx->scissor.y2)
-            continue;
         uint16_t pix_v = interpolate(y, v1, y1, v2, y2) >> 4;
         for (int32_t x = x1; x < x2; x += 0x10)
         {
-            if (x < current_ctx->scissor.x1 || x > current_ctx->scissor.x2)
-                continue;
             uint16_t pix_u = interpolate(x, u1, x1, u2, x2) >> 4;
             uint32_t tex_coord = current_ctx->tex0.texture_base + pix_u;
             tex_coord += (uint32_t)pix_v * current_ctx->tex0.tex_width;

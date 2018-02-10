@@ -92,3 +92,8 @@ void Cop1::c_lt_s(int reg1, int reg2)
 {
     control.condition = gpr[reg1].f < gpr[reg2].f;
 }
+
+void Cop1::c_eq_s(int reg1, int reg2)
+{
+    control.condition = gpr[reg1].f == gpr[reg2].f;
+}

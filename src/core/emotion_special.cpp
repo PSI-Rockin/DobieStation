@@ -53,11 +53,17 @@ void EmotionInterpreter::special(EmotionEngine &cpu, uint32_t instruction)
         case 0x14:
             dsllv(cpu, instruction);
             break;
+        case 0x16:
+            dsrlv(cpu, instruction);
+            break;
         case 0x17:
             dsrav(cpu, instruction);
             break;
         case 0x18:
             mult(cpu, instruction);
+            break;
+        case 0x19:
+            multu(cpu, instruction);
             break;
         case 0x1A:
             div(cpu, instruction);
@@ -83,6 +89,9 @@ void EmotionInterpreter::special(EmotionEngine &cpu, uint32_t instruction)
         case 0x25:
             or_ee(cpu, instruction);
             break;
+        case 0x26:
+            xor_ee(cpu, instruction);
+            break;
         case 0x27:
             nor(cpu, instruction);
             break;
@@ -97,6 +106,9 @@ void EmotionInterpreter::special(EmotionEngine &cpu, uint32_t instruction)
             break;
         case 0x2D:
             daddu(cpu, instruction);
+            break;
+        case 0x2F:
+            dsubu(cpu, instruction);
             break;
         case 0x38:
             dsll(cpu, instruction);
@@ -251,6 +263,17 @@ void EmotionInterpreter::dsllv(EmotionEngine &cpu, uint32_t instruction)
     cpu.set_gpr<uint64_t>(dest, source);
 }
 
+void EmotionInterpreter::dsrlv(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t source = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+    uint32_t shift = (instruction >> 21) & 0x1F;
+    printf("dsrlv {%d}, {%d}, {%d}", dest, source, shift);
+    source = cpu.get_gpr<uint64_t>(source);
+    source >>= cpu.get_gpr<uint8_t>(shift) & 0x3F;
+    cpu.set_gpr<int64_t>(dest, source);
+}
+
 void EmotionInterpreter::dsrav(EmotionEngine &cpu, uint32_t instruction)
 {
     int64_t source = (instruction >> 16) & 0x1F;
@@ -272,7 +295,20 @@ void EmotionInterpreter::mult(EmotionEngine &cpu, uint32_t instruction)
     op2 = cpu.get_gpr<int32_t>(op2);
     int64_t temp = (int64_t)op1 * op2;
     cpu.set_LO_HI((int32_t)(temp & 0xFFFFFFFF), (int32_t)(temp >> 32));
-    cpu.mflo(dest);
+    cpu.set_gpr<int64_t>(dest, temp);
+}
+
+void EmotionInterpreter::multu(EmotionEngine& cpu, uint32_t instruction)
+{
+    uint32_t op1 = (instruction >> 21) & 0x1F;
+    uint32_t op2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+    printf("multu {%d}, {%d}, {%d}", dest, op1, op2);
+    op1 = cpu.get_gpr<uint32_t>(op1);
+    op2 = cpu.get_gpr<uint32_t>(op2);
+    uint64_t temp = (uint64_t)op1 * op2;
+    cpu.set_LO_HI(temp & 0xFFFFFFFF, temp >> 32);
+    cpu.set_gpr<uint64_t>(dest, temp);
 }
 
 void EmotionInterpreter::div(EmotionEngine &cpu, uint32_t instruction)
@@ -376,6 +412,17 @@ void EmotionInterpreter::or_ee(EmotionEngine &cpu, uint32_t instruction)
     cpu.set_gpr<uint64_t>(dest, op1 | op2);
 }
 
+void EmotionInterpreter::xor_ee(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t op1 = (instruction >> 21) & 0x1F;
+    uint64_t op2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+    printf("xor {%d}, {%d}, {%d}", dest, op1, op2);
+    op1 = cpu.get_gpr<uint64_t>(op1);
+    op2 = cpu.get_gpr<uint64_t>(op2);
+    cpu.set_gpr<uint64_t>(dest, op1 ^ op2);
+}
+
 void EmotionInterpreter::nor(EmotionEngine &cpu, uint32_t instruction)
 {
     uint64_t op1 = (instruction >> 21) & 0x1F;
@@ -425,6 +472,17 @@ void EmotionInterpreter::daddu(EmotionEngine &cpu, uint32_t instruction)
     op1 = cpu.get_gpr<int64_t>(op1);
     op2 = cpu.get_gpr<int64_t>(op2);
     cpu.set_gpr<uint64_t>(dest, op1 + op2);
+}
+
+void EmotionInterpreter::dsubu(EmotionEngine &cpu, uint32_t instruction)
+{
+    int64_t op1 = (instruction >> 21) & 0x1F;
+    int64_t op2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+    printf("dsubu {%d}, {%d}, {%d}", dest, op1, op2);
+    op1 = cpu.get_gpr<int64_t>(op1);
+    op2 = cpu.get_gpr<int64_t>(op2);
+    cpu.set_gpr<uint64_t>(dest, op1 - op2);
 }
 
 void EmotionInterpreter::dsll(EmotionEngine &cpu, uint32_t instruction)

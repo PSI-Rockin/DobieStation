@@ -40,6 +40,7 @@ class Cop1
         void mov_s(int dest, int source);
         void neg_s(int dest, int source);
         void c_lt_s(int reg1, int reg2);
+        void c_eq_s(int reg1, int reg2);
 };
 
 #endif // COP1_HPP

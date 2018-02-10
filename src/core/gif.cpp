@@ -44,12 +44,25 @@ void GraphicsInterface::process_PACKED(uint64_t data[])
             gs->set_XYZ(x, y, z, !disable_drawing);
         }
             break;
+        case 0x5:
+        //XYZ2 - set XYZ. Optionally disable drawing kick through bit 111
+        {
+            uint32_t x = data[0] & 0xFFFF;
+            uint32_t y = (data[0] >> 32) & 0xFFFF;
+            uint32_t z = (data[1] >> 4) & 0xFFFFFF;
+            bool disable_drawing = data[1] & (1UL << (111 - 64));
+            gs->set_XYZ(x, y, z, !disable_drawing);
+        }
+            break;
         case 0xE:
         {
             //A+D: output data to address
             uint32_t addr = data[1] & 0xFF;
             gs->write64(addr, data[0]);
         }
+            break;
+        case 0xF:
+            //NOP
             break;
         default:
             printf("\nUnrecognized PACKED reg $%02X", reg);

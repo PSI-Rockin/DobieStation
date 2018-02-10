@@ -55,6 +55,8 @@ void GSContext::set_scissor(uint64_t value)
     scissor.y1 = ((value >> 32) & 0x7FF) << 4;
     scissor.y2 = ((value >> 48) & 0x7FF) << 4;
     printf("\nSCISSOR: $%08X_%08X", value >> 32, value & 0xFFFFFFFF);
+    printf("\n(%d)", ((value >> 48) & 0x7FF));
+    printf("\n(%d, %d) (%d, %d)", scissor.x1, scissor.y1, scissor.x2, scissor.y2);
 }
 
 void GSContext::set_alpha(uint64_t value)

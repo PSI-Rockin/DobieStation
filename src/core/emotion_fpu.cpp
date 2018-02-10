@@ -32,6 +32,9 @@ void EmotionInterpreter::cop_s(Cop1& fpu, uint32_t instruction)
         case 0x24:
             fpu_cvt_w_s(fpu, instruction);
             break;
+        case 0x32:
+            fpu_c_eq_s(fpu, instruction);
+            break;
         case 0x34:
             fpu_c_lt_s(fpu, instruction);
             break;
@@ -114,6 +117,14 @@ void EmotionInterpreter::fpu_c_lt_s(Cop1 &fpu, uint32_t instruction)
     uint32_t reg2 = (instruction >> 16) & 0x1F;
     printf("c.lt.s f{%d}, f{%d}", reg1, reg2);
     fpu.c_lt_s(reg1, reg2);
+}
+
+void EmotionInterpreter::fpu_c_eq_s(Cop1 &fpu, uint32_t instruction)
+{
+    uint32_t reg1 = (instruction >> 11) & 0x1F;
+    uint32_t reg2 = (instruction >> 16) & 0x1F;
+    printf("c.eq.s f{%d}, f{%d}", reg1, reg2);
+    fpu.c_eq_s(reg1, reg2);
 }
 
 void EmotionInterpreter::cop_bc1(EmotionEngine &cpu, uint32_t instruction)
