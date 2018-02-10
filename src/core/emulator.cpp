@@ -3,7 +3,7 @@
 #include <cstdlib>
 #include "emulator.hpp"
 
-Emulator::Emulator() : bios_hle(this, &gs), cpu(&bios_hle, this), dmac(this, &gs)
+Emulator::Emulator() : bios_hle(this, &gs), cpu(&bios_hle, this), dmac(this, &gif), gif(&gs)
 {
     BIOS = nullptr;
     RDRAM = nullptr;
@@ -50,6 +50,7 @@ void Emulator::reset()
     cpu.reset();
     dmac.reset();
     gs.reset();
+    gif.reset();
     MCH_DRD = 0;
     MCH_RICM = 0;
     rdram_sdevid = 0;

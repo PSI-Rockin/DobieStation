@@ -3,20 +3,6 @@
 #include <cstdint>
 #include "gscontext.hpp"
 
-struct GIFtag
-{
-    uint16_t NLOOP;
-    bool end_of_packet;
-    bool output_PRIM;
-    uint16_t PRIM;
-    uint8_t format;
-    uint8_t reg_count;
-    uint64_t regs;
-
-    uint8_t regs_left;
-    uint32_t data_left;
-};
-
 struct PRIM_REG
 {
     uint8_t prim_type;
@@ -108,9 +94,6 @@ class GraphicsSynthesizer
         uint32_t* local_mem;
         uint8_t CRT_mode;
 
-        GIFtag current_tag;
-        bool processing_GIF_prim;
-
         GSContext context1, context2;
         GSContext* current_ctx;
 
@@ -147,7 +130,6 @@ class GraphicsSynthesizer
         void render_line();
         void render_triangle();
         void render_sprite();
-        void process_PACKED(uint64_t data[2]);
         void write_HWREG(uint64_t data);
         void host_to_host();
     public:
@@ -168,8 +150,9 @@ class GraphicsSynthesizer
         void write64_privileged(uint32_t addr, uint64_t value);
         void write64(uint32_t addr, uint64_t value);
 
-        void feed_GIF(uint64_t data[2]);
-        void send_PATH3(uint64_t data[2]);
+        void set_RGBA(uint8_t r, uint8_t g, uint8_t b, uint8_t a);
+        void set_Q(float q);
+        void set_XYZ(uint32_t x, uint32_t y, uint32_t z, bool drawing_kick);
 };
 
 #endif // GS_HPP

@@ -37,13 +37,13 @@ struct D_STAT
 };
 
 class Emulator;
-class GraphicsSynthesizer;
+class GraphicsInterface;
 
 class DMAC
 {
     private:
         Emulator* e;
-        GraphicsSynthesizer* gs;
+        GraphicsInterface* gif;
         DMA_Channel channels[10];
 
         D_CTRL control;
@@ -51,7 +51,7 @@ class DMAC
 
         void handle_source_chain(int index);
     public:
-        DMAC(Emulator* e, GraphicsSynthesizer* gs);
+        DMAC(Emulator* e, GraphicsInterface* gif);
         void reset();
         void run();
         void start_DMA(int index);
