@@ -987,7 +987,11 @@ string EmotionDisasm::disasm_mmi(uint32_t instruction, uint32_t instr_addr)
 
 string EmotionDisasm::disasm_plzcw(uint32_t instruction)
 {
-    return std::__cxx11::string();
+    stringstream output;
+    string opcode = "plzcw";
+    output << EmotionEngine::REG(RD) << ", "
+           << EmotionEngine::REG(RS);
+    return opcode + " " + output.str();
 }
 
 string EmotionDisasm::disasm_mfhi1(uint32_t instruction)
