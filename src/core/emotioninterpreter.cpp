@@ -2,16 +2,10 @@
 #include <cstdlib>
 #include "emotioninterpreter.hpp"
 
-#ifdef NDISASSEMBLE
-#define printf(fmt, ...)(0)
-#endif
-
 void EmotionInterpreter::interpret(EmotionEngine &cpu, uint32_t instruction)
 {
-    printf("[$%08X] $%08X - ", cpu.get_PC(), instruction);
     if (!instruction)
     {
-        printf("nop\n");
         return;
     }
     int op = instruction >> 26;
@@ -141,13 +135,11 @@ void EmotionInterpreter::interpret(EmotionEngine &cpu, uint32_t instruction)
             swr(cpu, instruction);
             break;
         case 0x2F:
-            printf("cache");
             break;
         case 0x31:
             lwc1(cpu, instruction);
             break;
         case 0x36:
-            printf("TODO: lqc2");
             break;
         case 0x37:
             ld(cpu, instruction);
@@ -156,22 +148,13 @@ void EmotionInterpreter::interpret(EmotionEngine &cpu, uint32_t instruction)
             swc1(cpu, instruction);
             break;
         case 0x3E:
-            printf("TODO: sqc2");
             break;
         case 0x3F:
             sd(cpu, instruction);
             break;
         default:
-#ifdef NDISASSEMBLE
-#undef printf(fmt, ...)(0)
-#endif
-            printf("Unrecognized op $%02X\n", op);
             exit(1);
     }
-#ifdef NDISASSEMBLE
-#define printf(fmt, ...)(0)
-#endif
-    printf("\n");
 }
 
 void EmotionInterpreter::regimm(EmotionEngine &cpu, uint32_t instruction)
@@ -192,24 +175,16 @@ void EmotionInterpreter::regimm(EmotionEngine &cpu, uint32_t instruction)
             bgezl(cpu, instruction);
             break;
         default:
-#ifdef NDISASSEMBLE
-#undef printf(fmt, ...)(0)
-#endif
-            printf("Unrecognized regimm op $%02X", op);
             exit(1);
     }
 }
 
-#ifdef NDISASSEMBLE
-#define printf(fmt, ...)(0)
-#endif
 
 void EmotionInterpreter::bltz(EmotionEngine &cpu, uint32_t instruction)
 {
     int32_t offset = (int16_t)(instruction & 0xFFFF);
     offset <<= 2;
     int64_t reg = (instruction >> 21) & 0x1F;
-    printf("bltz {%d}, $%08X", reg, cpu.get_PC() + offset + 4);
     reg = cpu.get_gpr<int64_t>(reg);
     cpu.branch(reg < 0, offset);
 }
@@ -219,7 +194,6 @@ void EmotionInterpreter::bltzl(EmotionEngine &cpu, uint32_t instruction)
     int32_t offset = (int16_t)(instruction & 0xFFFF);
     offset <<= 2;
     int64_t reg = (instruction >> 21) & 0x1F;
-    printf("bltzl {%d}, $%08X", reg, cpu.get_PC() + offset + 4);
     reg = cpu.get_gpr<int64_t>(reg);
     cpu.branch_likely(reg < 0, offset);
 }
@@ -229,7 +203,6 @@ void EmotionInterpreter::bgez(EmotionEngine &cpu, uint32_t instruction)
     int32_t offset = (int16_t)(instruction & 0xFFFF);
     offset <<= 2;
     int64_t reg = (instruction >> 21) & 0x1F;
-    printf("bgez {%d}, $%08X", reg, cpu.get_PC() + offset + 4);
     reg = cpu.get_gpr<int64_t>(reg);
     cpu.branch(reg >= 0, offset);
 }
@@ -239,7 +212,6 @@ void EmotionInterpreter::bgezl(EmotionEngine &cpu, uint32_t instruction)
     int32_t offset = (int16_t)(instruction & 0xFFFF);
     offset <<= 2;
     int64_t reg = (instruction >> 21) & 0x1F;
-    printf("bgezl {%d}, $%08X", reg, cpu.get_PC() + offset + 4);
     reg = cpu.get_gpr<int64_t>(reg);
     cpu.branch_likely(reg >= 0, offset);
 }
@@ -249,7 +221,6 @@ void EmotionInterpreter::j(EmotionEngine &cpu, uint32_t instruction)
     uint32_t addr = (instruction & 0x3FFFFFF) << 2;
     uint32_t PC = cpu.get_PC();
     addr += (PC + 4) & 0xF0000000;
-    printf("j $%08X", addr);
     cpu.jp(addr);
 }
 
@@ -258,7 +229,6 @@ void EmotionInterpreter::jal(EmotionEngine &cpu, uint32_t instruction)
     uint32_t addr = (instruction & 0x3FFFFFF) << 2;
     uint32_t PC = cpu.get_PC();
     addr += (PC + 4) & 0xF0000000;
-    printf("jal $%08X", addr);
     cpu.jp(addr);
     cpu.set_gpr<uint32_t>(31, PC + 8);
 }
@@ -269,7 +239,6 @@ void EmotionInterpreter::beq(EmotionEngine &cpu, uint32_t instruction)
     offset <<= 2;
     uint64_t reg1 = cpu.get_gpr<uint64_t>((instruction >> 21) & 0x1F);
     uint64_t reg2 = cpu.get_gpr<uint64_t>((instruction >> 16) & 0x1F);
-    printf("beq {%d}, {%d}, $%08X", (instruction >> 21) & 0x1F, (instruction >> 16) & 0x1F, cpu.get_PC() + offset + 4);
     cpu.branch(reg1 == reg2, offset);
 }
 
@@ -279,7 +248,6 @@ void EmotionInterpreter::bne(EmotionEngine &cpu, uint32_t instruction)
     offset <<= 2;
     uint64_t reg1 = cpu.get_gpr<uint64_t>((instruction >> 21) & 0x1F);
     uint64_t reg2 = cpu.get_gpr<uint64_t>((instruction >> 16) & 0x1F);
-    printf("bne {%d}, {%d}, $%08X", (instruction >> 21) & 0x1F, (instruction >> 16) & 0x1F, cpu.get_PC() + offset + 4);
     cpu.branch(reg1 != reg2, offset);
 }
 
@@ -288,7 +256,6 @@ void EmotionInterpreter::blez(EmotionEngine &cpu, uint32_t instruction)
     int32_t offset = (int16_t)(instruction & 0xFFFF);
     offset <<= 2;
     int64_t reg = (instruction >> 21) & 0x1F;
-    printf("blez {%d}, $%08X", reg, cpu.get_PC() + offset + 4);
     reg = cpu.get_gpr<int64_t>(reg);
     cpu.branch(reg <= 0, offset);
 }
@@ -298,7 +265,6 @@ void EmotionInterpreter::bgtz(EmotionEngine &cpu, uint32_t instruction)
     int32_t offset = (int16_t)(instruction & 0xFFFF);
     offset <<= 2;
     int64_t reg = (instruction >> 21) & 0x1F;
-    printf("bgtz {%d}, $%08X", reg, cpu.get_PC() + offset + 4);
     reg = cpu.get_gpr<int64_t>(reg);
     cpu.branch(reg > 0, offset);
 }
@@ -309,7 +275,6 @@ void EmotionInterpreter::addi(EmotionEngine &cpu, uint32_t instruction)
     int16_t imm = (int16_t)(instruction & 0xFFFF);
     uint64_t dest = (instruction >> 16) & 0x1F;
     uint32_t source = (instruction >> 21) & 0x1F;
-    printf("addi {%d}, {%d}, $%04X", dest, source, imm);
     int32_t result = cpu.get_gpr<int32_t>(source);
     result += imm;
     cpu.set_gpr<int64_t>(dest, result);
@@ -320,7 +285,6 @@ void EmotionInterpreter::addiu(EmotionEngine &cpu, uint32_t instruction)
     int16_t imm = (int16_t)(instruction & 0xFFFF);
     uint64_t dest = (instruction >> 16) & 0x1F;
     uint32_t source = (instruction >> 21) & 0x1F;
-    printf("addiu {%d}, {%d}, $%04X", dest, source, imm);
     int32_t result = cpu.get_gpr<int32_t>(source);
     result += imm;
     cpu.set_gpr<int64_t>(dest, result);
@@ -331,7 +295,6 @@ void EmotionInterpreter::slti(EmotionEngine &cpu, uint32_t instruction)
     int64_t imm = (int64_t)(int16_t)(instruction & 0xFFFF);
     uint64_t dest = (instruction >> 16) & 0x1F;
     int64_t source = (instruction >> 21) & 0x1F;
-    printf("slti {%d}, {%d}, %lld", dest, source, imm);
     source = cpu.get_gpr<int64_t>(source);
     cpu.set_gpr<uint64_t>(dest, source < imm);
 }
@@ -341,7 +304,6 @@ void EmotionInterpreter::sltiu(EmotionEngine &cpu, uint32_t instruction)
     uint64_t imm = instruction & 0xFFFF;
     uint64_t dest = (instruction >> 16) & 0x1F;
     uint64_t source = (instruction >> 21) & 0x1F;
-    printf("sltiu {%d}, {%d}, %lld", dest, source, imm);
     source = cpu.get_gpr<uint64_t>(source);
     cpu.set_gpr<uint64_t>(dest, source < imm);
 }
@@ -351,7 +313,6 @@ void EmotionInterpreter::andi(EmotionEngine &cpu, uint32_t instruction)
     uint64_t imm = instruction & 0xFFFF;
     uint64_t dest = (instruction >> 16) & 0x1F;
     uint64_t source = (instruction >> 21) & 0x1F;
-    printf("andi {%d}, {%d}, $%04X", dest, source, imm);
     cpu.set_gpr<uint64_t>(dest, cpu.get_gpr<uint64_t>(source) & imm);
 }
 
@@ -360,7 +321,6 @@ void EmotionInterpreter::ori(EmotionEngine &cpu, uint32_t instruction)
     uint64_t imm = instruction & 0xFFFF;
     uint64_t dest = (instruction >> 16) & 0x1F;
     uint64_t source = (instruction >> 21) & 0x1F;
-    printf("ori {%d}, {%d}, $%04X", dest, source, imm);
     cpu.set_gpr<uint64_t>(dest, cpu.get_gpr<uint64_t>(source) | imm);
 }
 
@@ -369,7 +329,6 @@ void EmotionInterpreter::xori(EmotionEngine &cpu, uint32_t instruction)
     uint64_t imm = instruction & 0xFFFF;
     uint64_t dest = (instruction >> 16) & 0x1F;
     uint64_t source = (instruction >> 21) & 0x1F;
-    printf("xori {%d}, {%d}, $%04X", dest, source, imm);
     cpu.set_gpr<uint64_t>(dest, cpu.get_gpr<uint64_t>(source) ^ imm);
 }
 
@@ -377,7 +336,6 @@ void EmotionInterpreter::lui(EmotionEngine &cpu, uint32_t instruction)
 {
     int64_t imm = (int64_t)(int32_t)((instruction & 0xFFFF) << 16);
     uint64_t dest = (instruction >> 16) & 0x1F;
-    printf("lui {%d}, $%04X", dest, instruction & 0xFFFF);
     cpu.set_gpr<uint64_t>(dest, imm);
 }
 
@@ -387,7 +345,6 @@ void EmotionInterpreter::beql(EmotionEngine &cpu, uint32_t instruction)
     offset <<= 2;
     uint64_t reg1 = cpu.get_gpr<uint64_t>((instruction >> 21) & 0x1F);
     uint64_t reg2 = cpu.get_gpr<uint64_t>((instruction >> 16) & 0x1F);
-    printf("beql {%d}, {%d}, $%08X", (instruction >> 21) & 0x1F, (instruction >> 16) & 0x1F, cpu.get_PC() + offset + 4);
     cpu.branch_likely(reg1 == reg2, offset);
 }
 
@@ -397,7 +354,6 @@ void EmotionInterpreter::bnel(EmotionEngine &cpu, uint32_t instruction)
     offset <<= 2;
     uint64_t reg1 = cpu.get_gpr<uint64_t>((instruction >> 21) & 0x1F);
     uint64_t reg2 = cpu.get_gpr<uint64_t>((instruction >> 16) & 0x1F);
-    printf("bnel {%d}, {%d}, $%08X", (instruction >> 21) & 0x1F, (instruction >> 16) & 0x1F, cpu.get_PC() + offset + 4);
     cpu.branch_likely(reg1 != reg2, offset);
 }
 
@@ -406,7 +362,6 @@ void EmotionInterpreter::daddiu(EmotionEngine &cpu, uint32_t instruction)
     int16_t imm = (int16_t)(instruction & 0xFFFF);
     int64_t source = (instruction >> 21) & 0x1F;
     uint64_t dest = (instruction >> 16) & 0x1F;
-    printf("daddiu {%d}, {%d}, $%04X", dest, source, imm);
     source = cpu.get_gpr<int64_t>(source);
     cpu.set_gpr<uint64_t>(dest, source + imm);
 }
@@ -416,7 +371,6 @@ void EmotionInterpreter::ldl(EmotionEngine &cpu, uint32_t instruction)
     int16_t imm = (int16_t)(instruction & 0xFFFF);
     uint64_t dest = (instruction >> 16) & 0x1F;
     uint64_t base = (instruction >> 21) & 0x1F;
-    printf("ldl {%d}, %d{%d}", dest, imm, base);
 
     uint32_t addr = cpu.get_gpr<uint32_t>(base) + imm;
     uint64_t dword = cpu.read64(addr & ~0x7);
@@ -439,7 +393,6 @@ void EmotionInterpreter::ldr(EmotionEngine &cpu, uint32_t instruction)
     int16_t imm = (int16_t)(instruction & 0xFFFF);
     uint64_t dest = (instruction >> 16) & 0x1F;
     uint64_t base = (instruction >> 21) & 0x1F;
-    printf("ldr {%d}, %d{%d}", dest, imm, base);
 
     uint32_t addr = cpu.get_gpr<uint32_t>(base) + imm;
     uint64_t dword = cpu.read64(addr & ~0x7);
@@ -462,7 +415,6 @@ void EmotionInterpreter::lq(EmotionEngine &cpu, uint32_t instruction)
     int16_t imm = (int16_t)(instruction & 0xFFFF);
     uint64_t dest = (instruction >> 16) & 0x1F;
     uint64_t base = (instruction >> 21) & 0x1F;
-    printf("lq {%d}, %d{%d}", dest, imm, base);
     uint32_t addr = cpu.get_gpr<uint32_t>(base) + imm;
     cpu.set_gpr<uint64_t>(dest, cpu.read64(addr));
     cpu.set_gpr<uint64_t>(dest, cpu.read64(addr + 8), 1);
@@ -473,7 +425,7 @@ void EmotionInterpreter::sq(EmotionEngine &cpu, uint32_t instruction)
     int16_t imm = (int16_t)(instruction & 0xFFFF);
     uint64_t source = (instruction >> 16) & 0x1F;
     uint64_t base = (instruction >> 21) & 0x1F;
-    printf("sq {%d}, %d{%d}", source, imm, base);
+
     uint32_t addr = cpu.get_gpr<uint32_t>(base) + imm;
     cpu.write64(addr, cpu.get_gpr<uint64_t>(source));
     cpu.write64(addr + 8, cpu.get_gpr<uint64_t>(source, 1));
@@ -484,7 +436,6 @@ void EmotionInterpreter::lb(EmotionEngine &cpu, uint32_t instruction)
     int16_t offset = (int16_t)(instruction & 0xFFFF);
     uint64_t dest = (instruction >> 16) & 0x1F;
     uint32_t base = (instruction >> 21) & 0x1F;
-    printf("lb {%d}, %d{%d}", dest, offset, base);
     uint32_t addr = cpu.get_gpr<uint32_t>(base);
     addr += offset;
     cpu.set_gpr<int64_t>(dest, (int8_t)cpu.read8(addr));
@@ -495,7 +446,6 @@ void EmotionInterpreter::lh(EmotionEngine &cpu, uint32_t instruction)
     int16_t offset = (int16_t)(instruction & 0xFFFF);
     uint64_t dest = (instruction >> 16) & 0x1F;
     uint32_t base = (instruction >> 21) & 0x1F;
-    printf("lh {%d}, %d{%d}", dest, offset, base);
     uint32_t addr = cpu.get_gpr<uint32_t>(base);
     addr += offset;
     cpu.set_gpr<int64_t>(dest, (int16_t)cpu.read16(addr));
@@ -506,7 +456,6 @@ void EmotionInterpreter::lwl(EmotionEngine &cpu, uint32_t instruction)
     int16_t offset = (int16_t)(instruction & 0xFFFF);
     uint32_t dest = (instruction >> 16) & 0x1F;
     uint32_t base = (instruction >> 21) & 0x1F;
-    printf("lwl {%d}, %d{%d}", dest, offset, base);
     uint32_t addr = cpu.get_gpr<uint32_t>(base) + offset;
     uint32_t word = cpu.read32(addr & ~0x3);
     uint32_t new_reg = cpu.get_gpr<uint32_t>(dest);
@@ -529,7 +478,6 @@ void EmotionInterpreter::lw(EmotionEngine &cpu, uint32_t instruction)
     int16_t offset = (int16_t)(instruction & 0xFFFF);
     uint64_t dest = (instruction >> 16) & 0x1F;
     uint32_t base = (instruction >> 21) & 0x1F;
-    printf("lw {%d}, %d{%d}", dest, offset, base);
     uint32_t addr = cpu.get_gpr<uint32_t>(base);
     addr += offset;
     cpu.set_gpr<int64_t>(dest, (int32_t)cpu.read32(addr));
@@ -540,7 +488,6 @@ void EmotionInterpreter::lbu(EmotionEngine &cpu, uint32_t instruction)
     int16_t offset = (int16_t)(instruction & 0xFFFF);
     uint64_t dest = (instruction >> 16) & 0x1F;
     uint32_t base = (instruction >> 21) & 0x1F;
-    printf("lbu {%d}, %d{%d}", dest, offset, base);
     uint32_t addr = cpu.get_gpr<uint32_t>(base);
     addr += offset;
     cpu.set_gpr<uint64_t>(dest, cpu.read8(addr));
@@ -551,7 +498,6 @@ void EmotionInterpreter::lhu(EmotionEngine &cpu, uint32_t instruction)
     int16_t offset = (int16_t)(instruction & 0xFFFF);
     uint64_t dest = (instruction >> 16) & 0x1F;
     uint32_t base = (instruction >> 21) & 0x1F;
-    printf("lhu {%d}, %d{%d}", dest, offset, base);
     uint32_t addr = cpu.get_gpr<uint32_t>(base);
     addr += offset;
     cpu.set_gpr<uint64_t>(dest, cpu.read16(addr));
@@ -562,7 +508,6 @@ void EmotionInterpreter::lwr(EmotionEngine &cpu, uint32_t instruction)
     int16_t imm = (int16_t)(instruction & 0xFFFF);
     uint32_t dest = (instruction >> 16) & 0x1F;
     uint32_t base = (instruction >> 21) & 0x1F;
-    printf("lwr {%d}, %d{%d}", dest, imm, base);
 
     uint32_t addr = cpu.get_gpr<uint32_t>(base) + imm;
     uint32_t word = cpu.read32(addr & ~0x3);
@@ -585,7 +530,6 @@ void EmotionInterpreter::lwu(EmotionEngine &cpu, uint32_t instruction)
     int16_t offset = (int16_t)(instruction & 0xFFFF);
     uint32_t dest = (instruction >> 16) & 0x1F;
     uint32_t base = (instruction >> 21) & 0x1F;
-    printf("lwu {%d}, %d{%d}", dest, offset, base);
     uint32_t addr = cpu.get_gpr<uint32_t>(base);
     addr += offset;
     cpu.set_gpr<uint64_t>(dest, cpu.read32(addr));
@@ -596,7 +540,6 @@ void EmotionInterpreter::sb(EmotionEngine &cpu, uint32_t instruction)
     int16_t offset = (int16_t)(instruction & 0xFFFF);
     uint32_t source = (instruction >> 16) & 0x1F;
     uint32_t base = (instruction >> 21) & 0x1F;
-    printf("sb {%d}, %d{%d}", source, offset, base);
     uint32_t addr = cpu.get_gpr<uint32_t>(base);
     addr += offset;
     cpu.write8(addr, cpu.get_gpr<uint8_t>(source));
@@ -607,7 +550,6 @@ void EmotionInterpreter::sh(EmotionEngine &cpu, uint32_t instruction)
     int16_t offset = (int16_t)(instruction & 0xFFFF);
     uint32_t source = (instruction >> 16) & 0x1F;
     uint32_t base = (instruction >> 21) & 0x1F;
-    printf("sh {%d}, %d{%d}", source, offset, base);
     uint32_t addr = cpu.get_gpr<uint32_t>(base);
     addr += offset;
     cpu.write16(addr, cpu.get_gpr<uint16_t>(source));
@@ -618,7 +560,6 @@ void EmotionInterpreter::swl(EmotionEngine& cpu, uint32_t instruction)
     int16_t imm = (int16_t)(instruction & 0xFFFF);
     uint32_t source = (instruction >> 16) & 0x1F;
     uint32_t base = (instruction >> 21) & 0x1F;
-    printf("swl {%d}, %d{%d}", source, imm, base);
 
     uint32_t addr = cpu.get_gpr<uint32_t>(base) + imm;
     uint32_t reg = cpu.get_gpr<uint32_t>(source);
@@ -641,7 +582,6 @@ void EmotionInterpreter::sw(EmotionEngine &cpu, uint32_t instruction)
     int16_t offset = (int16_t)(instruction & 0xFFFF);
     uint32_t source = (instruction >> 16) & 0x1F;
     uint32_t base = (instruction >> 21) & 0x1F;
-    printf("sw {%d}, %d{%d}", source, offset, base);
     uint32_t addr = cpu.get_gpr<uint32_t>(base);
     addr += offset;
     cpu.write32(addr, cpu.get_gpr<uint32_t>(source));
@@ -652,7 +592,6 @@ void EmotionInterpreter::sdl(EmotionEngine &cpu, uint32_t instruction)
     int16_t imm = (int16_t)(instruction & 0xFFFF);
     uint64_t source = (instruction >> 16) & 0x1F;
     uint64_t base = (instruction >> 21) & 0x1F;
-    printf("sdl {%d}, %d{%d}", source, imm, base);
 
     uint32_t addr = cpu.get_gpr<uint32_t>(base) + imm;
     uint64_t reg = cpu.get_gpr<uint64_t>(source);
@@ -675,7 +614,6 @@ void EmotionInterpreter::sdr(EmotionEngine &cpu, uint32_t instruction)
     int16_t imm = (int16_t)(instruction & 0xFFFF);
     uint64_t source = (instruction >> 16) & 0x1F;
     uint64_t base = (instruction >> 21) & 0x1F;
-    printf("sdr {%d}, %d{%d}", source, imm, base);
 
     uint32_t addr = cpu.get_gpr<uint32_t>(base) + imm;
     uint64_t reg = cpu.get_gpr<uint64_t>(source);
@@ -698,7 +636,6 @@ void EmotionInterpreter::swr(EmotionEngine &cpu, uint32_t instruction)
     int16_t imm = (int16_t)(instruction & 0xFFFF);
     uint32_t source = (instruction >> 16) & 0x1F;
     uint32_t base = (instruction >> 21) & 0x1F;
-    printf("swr {%d}, %d{%d}", source, imm, base);
 
     uint32_t addr = cpu.get_gpr<uint32_t>(base) + imm;
     uint32_t reg = cpu.get_gpr<uint32_t>(source);
@@ -721,7 +658,6 @@ void EmotionInterpreter::lwc1(EmotionEngine &cpu, uint32_t instruction)
     int16_t offset = (int16_t)(instruction & 0xFFFF);
     uint32_t dest = (instruction >> 16) & 0x1F;
     uint32_t base = (instruction >> 21) & 0x1F;
-    printf("lwc1 {%d}, %d{%d}", dest, offset, base);
     uint32_t addr = cpu.get_gpr<uint32_t>(base);
     addr += offset;
     cpu.lwc1(addr, dest);
@@ -732,7 +668,6 @@ void EmotionInterpreter::ld(EmotionEngine &cpu, uint32_t instruction)
     int16_t offset = (int16_t)(instruction & 0xFFFF);
     uint32_t dest = (instruction >> 16) & 0x1F;
     uint32_t base = (instruction >> 21) & 0x1F;
-    printf("ld {%d}, %d{%d}", dest, offset, base);
     uint32_t addr = cpu.get_gpr<uint32_t>(base);
     addr += offset;
     cpu.set_gpr(dest, cpu.read64(addr));
@@ -743,7 +678,6 @@ void EmotionInterpreter::swc1(EmotionEngine &cpu, uint32_t instruction)
     int16_t offset = (int16_t)(instruction & 0xFFFF);
     uint32_t source = (instruction >> 16) & 0x1F;
     uint32_t base = (instruction >> 21) & 0x1F;
-    printf("swc1 {%d}, %d{%d}", source, offset, base);
     uint32_t addr = cpu.get_gpr<uint32_t>(base);
     addr += offset;
     cpu.swc1(addr, source);
@@ -754,7 +688,6 @@ void EmotionInterpreter::sd(EmotionEngine &cpu, uint32_t instruction)
     int16_t offset = (int16_t)(instruction & 0xFFFF);
     uint32_t source = (instruction >> 16) & 0x1F;
     uint32_t base = (instruction >> 21) & 0x1F;
-    printf("sd {%d}, %d{%d}", source, offset, base);
     uint32_t addr = cpu.get_gpr<uint32_t>(base);
     addr += offset;
     cpu.write64(addr, cpu.get_gpr<uint64_t>(source));
@@ -766,7 +699,6 @@ void EmotionInterpreter::cop(EmotionEngine &cpu, uint32_t instruction)
     uint8_t cop_id = ((instruction >> 26) & 0x3);
     if (cop_id == 2)
     {
-        printf("VU0 - TODO");
         return;
     }
     switch (op | (cop_id * 0x100))
@@ -785,22 +717,17 @@ void EmotionInterpreter::cop(EmotionEngine &cpu, uint32_t instruction)
             switch (op2)
             {
                 case 0x2:
-                    printf("tlbwi");
                     break;
                 case 0x18:
-                    printf("eret");
                     cpu.eret();
                     break;
                 case 0x38:
-                    printf("ei");
                     cpu.ei();
                     break;
                 case 0x39:
-                    printf("di");
                     cpu.di();
                     break;
                 default:
-                    printf("\nUnrecognized cop0x010 op $%02X", op2);
                     exit(1);
             }
         }
@@ -819,27 +746,17 @@ void EmotionInterpreter::cop(EmotionEngine &cpu, uint32_t instruction)
             cop_cvt_s_w(cpu, instruction);
             break;
         case 0x202:
-            printf("TODO: cfc2");
             break;
         default:
-#ifdef NDISASSEMBLE
-#undef printf(fmt, ...)(0)
-#endif
-            printf("Unrecognized cop op $%d%02X\n", cop_id, op);
             exit(1);
     }
 }
-
-#ifdef NDISASSEMBLE
-#define printf(fmt, ...)(0)
-#endif
 
 void EmotionInterpreter::cop_mfc(EmotionEngine& cpu, uint32_t instruction)
 {
     int cop_id = (instruction >> 26) & 0x3;
     int emotion_reg = (instruction >> 16) & 0x1F;
     int cop_reg = (instruction >> 11) & 0x1F;
-    printf("mfc%d {%d}, {%d}", cop_id, emotion_reg, cop_reg);
     cpu.mfc(cop_id, emotion_reg, cop_reg);
 }
 
@@ -848,7 +765,6 @@ void EmotionInterpreter::cop_mtc(EmotionEngine& cpu, uint32_t instruction)
     int cop_id = (instruction >> 26) & 0x3;
     int emotion_reg = (instruction >> 16) & 0x1F;
     int cop_reg = (instruction >> 11) & 0x1F;
-    printf("mtc%d {%d}, {%d}", cop_id, emotion_reg, cop_reg);
     cpu.mtc(cop_id, emotion_reg, cop_reg);
 }
 
@@ -857,6 +773,5 @@ void EmotionInterpreter::cop_ctc(EmotionEngine &cpu, uint32_t instruction)
     int cop_id = (instruction >> 26) & 0x3;
     int emotion_reg = (instruction >> 16) & 0x1F;
     int cop_reg = (instruction >> 11) & 0x1F;
-    printf("ctc%d {%d}, {%d}", cop_id, emotion_reg, cop_reg);
     cpu.ctc(cop_id, emotion_reg, cop_reg);
 }
