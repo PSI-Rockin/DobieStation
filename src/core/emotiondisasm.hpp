@@ -130,6 +130,8 @@ namespace EmotionDisasm
     std::string disasm_mmi3(uint32_t instruction);
     std::string disasm_por(uint32_t instruction);
 
+    std::string unknown_op(const std::string optype, uint32_t op, int width);
+
 };
 
 #endif // EMOTIONDISASM_HPP

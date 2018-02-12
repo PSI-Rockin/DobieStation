@@ -116,7 +116,7 @@ string EmotionDisasm::disasm_instr(uint32_t instruction, uint32_t instr_addr)
         case 0x3F:
             return disasm_sd(instruction);
         default:
-            return "Unrecognized op $%02X\n";
+            return unknown_op("", instruction >> 26, 2);
     }
 }
 
@@ -195,7 +195,7 @@ string EmotionDisasm::disasm_regimm(uint32_t instruction, uint32_t instr_addr)
         case 0x03:
             opcode += "bgezl";
         default:
-            return "UNKNOWN";
+            return unknown_op("regimm", RT, 2);
     }
     int32_t offset = IMM;
     offset <<= 2;
@@ -285,7 +285,7 @@ string EmotionDisasm::disasm_special(uint32_t instruction)
         case 0x3F:
             return disasm_dsra32(instruction);
         default:
-            return "Unrecognized special op $%02X\n";
+            return unknown_op("special", instruction & 0x3F, 2);
     }
 }
 
@@ -759,12 +759,13 @@ string EmotionDisasm::disasm_sd(uint32_t instruction)
 
 string EmotionDisasm::disasm_cop(uint32_t instruction, uint32_t instr_addr)
 {
+    uint16_t op = RS;
     uint8_t cop_id = ((instruction >> 26) & 0x3);
     if (cop_id == 2)
     {
         return "VU0 - TODO";
     }
-    switch (RS | (cop_id * 0x100))
+    switch (op | (cop_id * 0x100))
     {
 
         case 0x000:
@@ -787,7 +788,8 @@ string EmotionDisasm::disasm_cop(uint32_t instruction, uint32_t instr_addr)
                 case 0x39:
                     return "di";
                 default:
-                    return "Unrecognized cop0x010 op";
+                    return unknown_op("cop0x010", op2, 2);
+
             }
         }
         case 0x106:
@@ -802,7 +804,7 @@ string EmotionDisasm::disasm_cop(uint32_t instruction, uint32_t instr_addr)
         case 0x202:
             return "TODO: cfc2";
         default:
-            return "Unrecognized cop op";
+            return unknown_op("cop", op, 2);
     }
 }
 string EmotionDisasm::disasm_cop_move(string opcode, uint32_t instruction)
@@ -860,7 +862,7 @@ string EmotionDisasm::disasm_cop_s(uint32_t instruction)
         case 0x34:
             return disasm_fpu_c_lt_s(instruction);
         default:
-            return "Unrecognized FPU-S op";
+            return unknown_op("FPU-S", op, 2);
     }
 }
 
@@ -948,8 +950,7 @@ string EmotionDisasm::disasm_cop_bc1(uint32_t instruction, uint32_t instr_addr)
     uint8_t op = RT;
     if (op > 3)
     {
-        output << "Unrecognized BC1 op" << setfill('0') << setw(2) << hex << op;
-        return output.str();
+        return unknown_op("BC1", op, 2);
     }
     opcode = ops[op];
     output << "$" << setfill('0') << setw(8) << hex << (instr_addr + 4 + offset);
@@ -980,8 +981,7 @@ string EmotionDisasm::disasm_mmi(uint32_t instruction, uint32_t instr_addr)
         case 0x29:
             return disasm_mmi3(instruction);
         default:
-            printf("Unrecognized mmi op $%02X", op);
-            exit(1);
+            return unknown_op("mmi", op, 2);
     }
 }
 
@@ -1017,12 +1017,20 @@ string EmotionDisasm::disasm_mmi3(uint32_t instruction)
         case 0x12:
             return disasm_por(instruction);
         default:
-            return "Unrecognized mmi3 op";
+            return unknown_op("mmi3", SA, 2);
     }
 }
 
 string EmotionDisasm::disasm_por(uint32_t instruction)
 {
     return disasm_special_simplemath("por", instruction);
+}
+
+string EmotionDisasm::unknown_op(const string optype, uint32_t op, int width)
+{
+    stringstream output;
+    output << "Unrecognized " << optype << " op "
+           << "$" << setfill('0') << setw(width) << hex << op;
+    return output.str();
 }
 
