@@ -869,9 +869,9 @@ string EmotionDisasm::disasm_cop_s(uint32_t instruction)
 string EmotionDisasm::disasm_fpu_math(const string opcode, uint32_t instruction)
 {
     stringstream output;
-    output << "f_" << EmotionEngine::REG(SA) << ", "
-           << "f_" << EmotionEngine::REG(RD) << ", "
-           << "f_" << EmotionEngine::REG(RT);
+    output << "f" << SA << ", "
+           << "f" << RD << ", "
+           << "f" << RT;
 
     return opcode + " " + output.str();
 }
@@ -910,8 +910,8 @@ string EmotionDisasm::disasm_fpu_neg(uint32_t instruction)
 string EmotionDisasm::disasm_fpu_convert(const string opcode, uint32_t instruction)
 {
     stringstream output;
-    output << "f_" << EmotionEngine::REG(SA) << ", "
-           << "f_" << EmotionEngine::REG(RD);
+    output << "f" << SA << ", "
+           << "f" << RD;
 
     return opcode + " " + output.str();
 }
@@ -924,8 +924,8 @@ string EmotionDisasm::disasm_fpu_cvt_w_s(uint32_t instruction)
 string EmotionDisasm::disasm_fpu_compare(const string opcode, uint32_t instruction)
 {
     stringstream output;
-    output << "f_" << EmotionEngine::REG(RD) << ", "
-           << "f_" << EmotionEngine::REG(RT);
+    output << "f" << RD << ", "
+           << "f" << RT;
 
     return opcode + " " + output.str();
 }
