@@ -29,6 +29,9 @@ void EmotionInterpreter::cop_s(Cop1& fpu, uint32_t instruction)
         case 0x7:
             fpu_neg(fpu, instruction);
             break;
+        case 0x18:
+            fpu_adda(fpu, instruction);
+            break;
         case 0x24:
             fpu_cvt_w_s(fpu, instruction);
             break;
@@ -101,6 +104,14 @@ void EmotionInterpreter::fpu_neg(Cop1 &fpu, uint32_t instruction)
     uint32_t source = (instruction >> 11) & 0x1F;
     printf("neg.s f{%d}, f{%d}", dest, source);
     fpu.neg_s(dest, source);
+}
+
+void EmotionInterpreter::fpu_adda(Cop1 &fpu, uint32_t instruction)
+{
+    uint32_t reg1 = (instruction >> 11) & 0x1F;
+    uint32_t reg2 = (instruction >> 16) & 0x1F;
+    printf("adda.s f{%d}, f{%d}", reg1, reg2);
+    fpu.adda_s(reg1, reg2);
 }
 
 void EmotionInterpreter::fpu_cvt_w_s(Cop1 &fpu, uint32_t instruction)

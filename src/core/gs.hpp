@@ -124,7 +124,7 @@ class GraphicsSynthesizer
         static const unsigned int max_vertices[8];
 
         void vertex_kick(bool drawing_kick);
-        void draw_pixel(uint32_t x, uint32_t y, uint32_t color, uint32_t z, bool alpha_blending);
+        void draw_pixel(int32_t x, int32_t y, uint32_t color, uint32_t z, bool alpha_blending);
         void render_primitive();
         void render_point();
         void render_line();

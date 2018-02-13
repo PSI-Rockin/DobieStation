@@ -40,7 +40,10 @@ void EmotionEngine::reset()
 
 void EmotionEngine::run()
 {
-    //print_state();
+    if (PC == 0x8000B8A4)
+    {
+        PC = 0x8000B8BC;
+    }
     increment_PC = true;
     if (delay_slot)
         delay_slot--;

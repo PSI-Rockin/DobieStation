@@ -99,12 +99,14 @@ void Emulator::load_ELF(uint8_t *ELF)
     uint32_t e_shoff = *(uint32_t*)&ELF[0x20];
     uint16_t e_phnum = *(uint16_t*)&ELF[0x2C];
     uint16_t e_shnum = *(uint16_t*)&ELF[0x30];
+    uint16_t e_shstrndx = *(uint16_t*)&ELF[0x32];
 
     printf("Entry: $%08X\n", e_entry);
     printf("Program header start: $%08X\n", e_phoff);
     printf("Section header start: $%08X\n", e_shoff);
     printf("Program header entries: %d\n", e_phnum);
     printf("Section header entries: %d\n", e_shnum);
+    printf("Section header names index: %d\n", e_shstrndx);
 
     for (int i = e_phoff; i < e_phoff + (e_phnum * 0x20); i += 0x20)
     {
@@ -128,13 +130,41 @@ void Emulator::load_ELF(uint8_t *ELF)
             mem_w += 4;
         }
     }
+
+    uint32_t name_offset = ELF[e_shoff + (e_shstrndx * 0x28) + 0x10];
+    printf("Name offset: $%08X\n", name_offset);
+
+    for (int i = e_shoff; i < e_shoff + (e_shnum * 0x28); i += 0x28)
+    {
+        uint32_t sh_name = *(uint32_t*)&ELF[i];
+        uint32_t sh_type = *(uint32_t*)&ELF[i + 0x4];
+        uint32_t sh_offset = *(uint32_t*)&ELF[i + 0x10];
+        uint32_t sh_size = *(uint32_t*)&ELF[i + 0x14];
+        printf("\nSection header\n");
+        printf("sh_type: $%08X\n", sh_type);
+        printf("sh_offset: $%08X\n", sh_offset);
+        printf("sh_size: $%08X\n", sh_size);
+
+        if (sh_type == 0x3)
+        {
+            printf("Debug symbols found\n");
+            for (int j = sh_offset; j < sh_offset + sh_size; j++)
+            {
+                unsigned char burp = ELF[j];
+                if (!burp)
+                    printf("\n");
+                else
+                    printf("%c", burp);
+            }
+        }
+    }
     cpu.set_PC(e_entry);
 }
 
 uint8_t Emulator::read8(uint32_t address)
 {
-    if (address < 0x02000000)
-        return *(uint32_t*)&RDRAM[address];
+    if (address < 0x10000000)
+        return *(uint32_t*)&RDRAM[address & 0x01FFFFFF];
     if (address >= 0x1FC00000 && address < 0x20000000)
         return BIOS[address & 0x3FFFFF];
     printf("\nUnrecognized read8 at physical addr $%08X", address);
@@ -144,8 +174,8 @@ uint8_t Emulator::read8(uint32_t address)
 
 uint16_t Emulator::read16(uint32_t address)
 {
-    if (address < 0x02000000)
-        return *(uint16_t*)&RDRAM[address];
+    if (address < 0x10000000)
+        return *(uint16_t*)&RDRAM[address & 0x01FFFFFF];
     if (address >= 0x1FC00000 && address < 0x20000000)
         return *(uint16_t*)&BIOS[address & 0x3FFFFF];
     printf("\nUnrecognized read16 at physical addr $%08X", address);
@@ -155,8 +185,8 @@ uint16_t Emulator::read16(uint32_t address)
 
 uint32_t Emulator::read32(uint32_t address)
 {
-    if (address < 0x02000000)
-        return *(uint32_t*)&RDRAM[address];
+    if (address < 0x10000000)
+        return *(uint32_t*)&RDRAM[address & 0x01FFFFFF];
     if (address >= 0x1FC00000 && address < 0x20000000)
         return *(uint32_t*)&BIOS[address & 0x3FFFFF];
     if ((address & (0xFF000000)) == 0x12000000)
@@ -211,8 +241,10 @@ uint32_t Emulator::read32(uint32_t address)
 
 uint64_t Emulator::read64(uint32_t address)
 {
-    if (address < 0x02000000)
-        return *(uint64_t*)&RDRAM[address];
+    if (address < 0x10000000)
+        return *(uint64_t*)&RDRAM[address & 0x01FFFFFF];
+    if (address >= 0x10008000 && address < 0x1000F000)
+        return dmac.read32(address);
     if ((address & (0xFF000000)) == 0x12000000)
         return gs.read64_privileged(address);
     printf("\nUnrecognized read64 at physical addr $%08X", address);
@@ -222,9 +254,9 @@ uint64_t Emulator::read64(uint32_t address)
 
 void Emulator::write8(uint32_t address, uint8_t value)
 {
-    if (address < 0x02000000)
+    if (address < 0x10000000)
     {
-        RDRAM[address] = value;
+        RDRAM[address & 0x01FFFFFF] = value;
         return;
     }
     switch (address)
@@ -239,9 +271,9 @@ void Emulator::write8(uint32_t address, uint8_t value)
 
 void Emulator::write16(uint32_t address, uint16_t value)
 {
-    if (address < 0x02000000)
+    if (address < 0x10000000)
     {
-        *(uint16_t*)&RDRAM[address] = value;
+        *(uint16_t*)&RDRAM[address & 0x01FFFFFF] = value;
         return;
     }
     printf("\nUnrecognized write16 at physical addr $%08X of $%04X", address, value);
@@ -249,9 +281,9 @@ void Emulator::write16(uint32_t address, uint16_t value)
 
 void Emulator::write32(uint32_t address, uint32_t value)
 {
-    if (address < 0x02000000)
+    if (address < 0x10000000)
     {
-        *(uint32_t*)&RDRAM[address] = value;
+        *(uint32_t*)&RDRAM[address & 0x01FFFFFF] = value;
         return;
     }
     if ((address & (0xFF000000)) == 0x12000000)
@@ -293,9 +325,14 @@ void Emulator::write32(uint32_t address, uint32_t value)
 
 void Emulator::write64(uint32_t address, uint64_t value)
 {
-    if (address < 0x02000000)
+    if (address < 0x10000000)
     {
-        *(uint64_t*)&RDRAM[address] = value;
+        *(uint64_t*)&RDRAM[address & 0x01FFFFFF] = value;
+        return;
+    }
+    if (address >= 0x10008000 && address < 0x1000F000)
+    {
+        dmac.write32(address, value);
         return;
     }
     if ((address & (0xFF000000)) == 0x12000000)

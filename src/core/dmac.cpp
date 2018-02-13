@@ -24,7 +24,8 @@ DMAC::DMAC(Emulator* e, GraphicsInterface* gif) : e(e), gif(gif)
 
 void DMAC::reset()
 {
-    control.master_enable = false;
+    //Certain homebrew seem to assume that master enable is turned on
+    control.master_enable = true;
     for (int i = 0; i < 10; i++)
     {
         channels[i].control = 0;
@@ -64,7 +65,6 @@ void DMAC::run()
                 continue;
             }
 
-
             uint64_t quad[2];
             quad[0] = e->read64(channels[i].address);
             quad[1] = e->read64(channels[i].address + 8);
@@ -86,10 +86,14 @@ void DMAC::handle_source_chain(int index)
     uint64_t DMAtag = e->read64(channels[index].tag_address);
     printf("\n[DMAC] DMAtag read $%08X: $%08X_%08X", channels[index].tag_address, DMAtag >> 32, DMAtag & 0xFFFFFFFF);
 
+    //Change CTRL to have the upper 16 bits equal to bits 16-31 of the most recently read DMAtag
+    channels[index].control &= 0xFFFF;
+    channels[index].control |= DMAtag & 0xFFFF0000;
+
     uint16_t quadword_count = DMAtag & 0xFFFF;
     uint8_t id = (DMAtag >> 28) & 0x7;
     uint32_t addr = (DMAtag >> 32) & 0x7FFFFFFF;
-    addr &= ~0x3;
+    addr &= ~0xF;
     bool IRQ_after_transfer = DMAtag & (1 << 31);
     channels[index].quadword_count = quadword_count;
     switch (id)
@@ -105,6 +109,11 @@ void DMAC::handle_source_chain(int index)
             channels[index].tag_address = channels[index].address + (quadword_count * 16);
             printf("\nNew address: $%08X", channels[index].address);
             printf("\nNew tag addr: $%08X", channels[index].tag_address);
+            break;
+        case 2:
+            //ref
+            channels[index].address = addr;
+            channels[index].tag_address += 16;
             break;
         case 7:
             //end
@@ -174,7 +183,7 @@ void DMAC::write32(uint32_t address, uint32_t value)
             break;
         case 0x1000A010:
             printf("\n[DMAC] GIF M_ADR: $%08X", value);
-            channels[GIF].address = value;
+            channels[GIF].address = value & ~0xF;
             break;
         case 0x1000A020:
             printf("\n[DMAC] GIF QWC: $%08X", value & 0xFFFF);
@@ -182,7 +191,7 @@ void DMAC::write32(uint32_t address, uint32_t value)
             break;
         case 0x1000A030:
             printf("\n[DMAC] GIF T_ADR: $%08X", value);
-            channels[GIF].tag_address = value;
+            channels[GIF].tag_address = value & ~0xF;
             break;
         case 0x1000E000:
             printf("\n[DMAC] Write32 D_CTRL: $%08X", value);
