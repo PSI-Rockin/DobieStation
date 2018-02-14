@@ -233,6 +233,13 @@ void GraphicsSynthesizer::write64_privileged(uint32_t addr, uint64_t value)
             DISPLAY2.width = ((value >> 32) & 0xFFF) + 1;
             DISPLAY2.height = ((value >> 44) & 0x7FF) + 1;
             break;
+        case 0x1000:
+            printf("\n[GS] Write64 to GS_CSR: $%08X_%08X", value >> 32, value & 0xFFFFFFFF);
+
+            //Ugly VSYNC hack
+            if (value & 0x8)
+                frame_complete = true;
+            break;
         default:
             printf("\n[GS] Unrecognized privileged write64 to reg $%04X: $%08X_%08X", addr, value >> 32, value & 0xFFFFFFFF);
     }
@@ -277,6 +284,9 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
         case 0x0006:
             context1.set_tex0(value);
             break;
+        case 0x0007:
+            context2.set_tex0(value);
+            break;
         case 0x000D:
             //XYZ3
             current_vtx.coords[0] = value & 0xFFFF;
@@ -287,6 +297,9 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
         case 0x0018:
             context1.set_xyoffset(value);
             break;
+        case 0x0019:
+            context2.set_xyoffset(value);
+            break;
         case 0x001A:
             use_PRIM = value & 0x1;
             break;
@@ -296,8 +309,14 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
         case 0x0040:
             context1.set_scissor(value);
             break;
+        case 0x0041:
+            context2.set_scissor(value);
+            break;
         case 0x0042:
             context1.set_alpha(value);
+            break;
+        case 0x0043:
+            context2.set_alpha(value);
             break;
         case 0x0045:
             DTHE = value & 0x1;
@@ -308,11 +327,20 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
         case 0x0047:
             context1.set_test(value);
             break;
+        case 0x0048:
+            context2.set_test(value);
+            break;
         case 0x004C:
             context1.set_frame(value);
             break;
+        case 0x004D:
+            context2.set_frame(value);
+            break;
         case 0x004E:
             context1.set_zbuf(value);
+            break;
+        case 0x004F:
+            context2.set_zbuf(value);
             break;
         case 0x0050:
             BITBLTBUF.source_base = (value & 0x3FFF) * 64;
@@ -462,10 +490,10 @@ void GraphicsSynthesizer::render_primitive()
     }
 }
 
-void GraphicsSynthesizer::draw_pixel(uint32_t x, uint32_t y, uint32_t color, uint32_t z, bool alpha_blending)
+void GraphicsSynthesizer::draw_pixel(int32_t x, int32_t y, uint32_t color, uint32_t z, bool alpha_blending)
 {
     SCISSOR* s = &current_ctx->scissor;
-    if (x < s->x1 || x > s->x2 || y < s->y1 && y > s->y2)
+    if (x < s->x1 || x > s->x2 || y < s->y1 || y > s->y2)
         return;
     TEST* test = &current_ctx->test;
     bool update_frame = true;
@@ -656,12 +684,12 @@ void GraphicsSynthesizer::render_point()
     point[0] = vtx_queue[0].coords[0] - current_ctx->xyoffset.x;
     point[1] = vtx_queue[0].coords[1] - current_ctx->xyoffset.y;
     point[2] = vtx_queue[0].coords[2];
-    uint32_t color = 0x00000000;
+
+    uint32_t color = 0;
     color |= vtx_queue[0].rgbaq.a << 24;
     color |= vtx_queue[0].rgbaq.r << 16;
     color |= vtx_queue[0].rgbaq.g << 8;
     color |= vtx_queue[0].rgbaq.b;
-    SCISSOR* scissor = &current_ctx->scissor;
     printf("\nCoords: (%d, %d, %d)", point[0] >> 4, point[1] >> 4, point[2]);
     draw_pixel(point[0], point[1], color, point[2], PRIM.alpha_blend);
 }
@@ -682,11 +710,12 @@ void GraphicsSynthesizer::render_triangle()
 {
     printf("\n[GS] Rendering triangle!");
     int32_t point[3];
-    uint32_t color = 0xFF000000;
+    uint32_t color = 0x00000000;
     color |= vtx_queue[0].rgbaq.r;
     color |= vtx_queue[0].rgbaq.g << 8;
     color |= vtx_queue[0].rgbaq.b << 16;
     color |= vtx_queue[0].rgbaq.a << 24;
+    color = 0xFFFFFFFF;
     for (int i = 2; i >= 0; i--)
     {
         point[0] = vtx_queue[i].coords[0] - current_ctx->xyoffset.x;
@@ -699,8 +728,8 @@ void GraphicsSynthesizer::render_triangle()
 void GraphicsSynthesizer::render_sprite()
 {
     printf("\n[GS] Rendering sprite!");
-    int16_t x1, x2, y1, y2;
-    int16_t u1, u2, v1, v2;
+    int32_t x1, x2, y1, y2;
+    int32_t u1, u2, v1, v2;
     x1 = vtx_queue[1].coords[0] - current_ctx->xyoffset.x;
     x2 = vtx_queue[0].coords[0] - current_ctx->xyoffset.x;
     y1 = vtx_queue[1].coords[1] - current_ctx->xyoffset.y;

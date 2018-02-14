@@ -19,6 +19,9 @@ class Cop1
     private:
         COP1_CONTROL control;
         COP1_REG gpr[32];
+        COP1_REG accumulator;
+
+        float convert(uint32_t value);
     public:
         Cop1();
 
@@ -39,6 +42,7 @@ class Cop1
         void div_s(int dest, int reg1, int reg2);
         void mov_s(int dest, int source);
         void neg_s(int dest, int source);
+        void adda_s(int reg1, int reg2);
         void c_lt_s(int reg1, int reg2);
         void c_eq_s(int reg1, int reg2);
 };

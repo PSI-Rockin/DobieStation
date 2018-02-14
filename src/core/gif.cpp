@@ -72,7 +72,7 @@ void GraphicsInterface::process_PACKED(uint64_t data[])
 
 void GraphicsInterface::feed_GIF(uint64_t data[])
 {
-    //printf("\n[GS] $%08X_%08X_%08X_%08X", data[1] >> 32, data[1] & 0xFFFFFFFF, data[0] >> 32, data[0] & 0xFFFFFFFF);
+    //printf("\n[GIF] $%08X_%08X_%08X_%08X", data[1] >> 32, data[1] & 0xFFFFFFFF, data[0] >> 32, data[0] & 0xFFFFFFFF);
     if (!current_tag.data_left)
     {
         //Read the GIFtag
@@ -92,7 +92,7 @@ void GraphicsInterface::feed_GIF(uint64_t data[])
         //Q is initialized to 1.0 upon reading a GIFtag
         gs->set_Q(1.0f);
 
-        /*printf("\n[GS] New primitive!");
+        /*printf("\n[GIF] New primitive!");
         printf("\nNLOOP: $%04X", current_tag.NLOOP);
         printf("\nEOP: %d", current_tag.end_of_packet);
         printf("\nOutput PRIM: %d PRIM: $%04X", current_tag.output_PRIM, current_tag.PRIM);

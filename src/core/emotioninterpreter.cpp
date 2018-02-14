@@ -574,7 +574,7 @@ void EmotionInterpreter::swl(EmotionEngine& cpu, uint32_t instruction)
         new_word |= byte << offset;
     }
 
-    cpu.write32(addr, new_word);
+    cpu.write32(addr & ~0x3, new_word);
 }
 
 void EmotionInterpreter::sw(EmotionEngine &cpu, uint32_t instruction)
@@ -606,7 +606,7 @@ void EmotionInterpreter::sdl(EmotionEngine &cpu, uint32_t instruction)
         new_dword |= byte << offset;
     }
 
-    cpu.write64(addr, new_dword);
+    cpu.write64(addr & ~0x7, new_dword);
 }
 
 void EmotionInterpreter::sdr(EmotionEngine &cpu, uint32_t instruction)
@@ -628,7 +628,7 @@ void EmotionInterpreter::sdr(EmotionEngine &cpu, uint32_t instruction)
         new_dword |= byte << offset;
     }
 
-    cpu.write64(addr, new_dword);
+    cpu.write64(addr & ~0x7, new_dword);
 }
 
 void EmotionInterpreter::swr(EmotionEngine &cpu, uint32_t instruction)
@@ -646,11 +646,11 @@ void EmotionInterpreter::swr(EmotionEngine &cpu, uint32_t instruction)
         int offset = 24 - (i << 3);
         int reg_offset = ((new_bytes - i - 1) << 3);
         uint32_t byte = (reg >> reg_offset) & 0xFF;
-        new_word &= ~(0xFFUL << offset);
+        new_word &= ~(0xFF << offset);
         new_word |= byte << offset;
     }
 
-    cpu.write32(addr, new_word);
+    cpu.write32(addr & ~0x3, new_word);
 }
 
 void EmotionInterpreter::lwc1(EmotionEngine &cpu, uint32_t instruction)

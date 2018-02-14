@@ -12,6 +12,7 @@ namespace EmotionInterpreter
     void srl(EmotionEngine& cpu, uint32_t instruction);
     void sra(EmotionEngine& cpu, uint32_t instruction);
     void sllv(EmotionEngine& cpu, uint32_t instruction);
+    void srlv(EmotionEngine& cpu, uint32_t instruction);
     void srav(EmotionEngine& cpu, uint32_t instruction);
     void jr(EmotionEngine& cpu, uint32_t instruction);
     void jalr(EmotionEngine& cpu, uint32_t instruction);
@@ -38,6 +39,7 @@ namespace EmotionInterpreter
     void mfsa(EmotionEngine& cpu, uint32_t instruction);
     void slt(EmotionEngine& cpu, uint32_t instruction);
     void sltu(EmotionEngine& cpu, uint32_t instruction);
+    void dadd(EmotionEngine& cpu, uint32_t instruction);
     void daddu(EmotionEngine& cpu, uint32_t instruction);
     void dsubu(EmotionEngine& cpu, uint32_t instruction);
     void dsll(EmotionEngine& cpu, uint32_t instruction);
@@ -105,6 +107,7 @@ namespace EmotionInterpreter
     void fpu_div(Cop1& fpu, uint32_t instruction);
     void fpu_mov(Cop1& fpu, uint32_t instruction);
     void fpu_neg(Cop1& fpu, uint32_t instruction);
+    void fpu_adda(Cop1& fpu, uint32_t instruction);
     void fpu_cvt_w_s(Cop1& fpu, uint32_t instruction);
     void fpu_c_eq_s(Cop1& fpu, uint32_t instruction);
     void fpu_c_lt_s(Cop1& fpu, uint32_t instruction);
