@@ -218,6 +218,8 @@ string EmotionDisasm::disasm_special(uint32_t instruction)
             return disasm_sra(instruction);
         case 0x04:
             return disasm_sllv(instruction);
+        case 0x06:
+            return disasm_srlv(instruction);
         case 0x07:
             return disasm_srav(instruction);
         case 0x08:
@@ -270,6 +272,8 @@ string EmotionDisasm::disasm_special(uint32_t instruction)
             return disasm_slt(instruction);
         case 0x2B:
             return disasm_sltu(instruction);
+        case 0x2C:
+            return disasm_dadd(instruction);
         case 0x2D:
             return disasm_daddu(instruction);
         case 0x2F:
@@ -317,6 +321,11 @@ string EmotionDisasm::disasm_variableshift(const string opcode, uint32_t instruc
 string EmotionDisasm::disasm_sllv(uint32_t instruction)
 {
     return disasm_variableshift("sllv", instruction);
+}
+
+string EmotionDisasm::disasm_srlv(uint32_t instruction)
+{
+    return disasm_variableshift("srlv", instruction);
 }
 
 string EmotionDisasm::disasm_srav(uint32_t instruction)
@@ -493,6 +502,11 @@ string EmotionDisasm::disasm_slt(uint32_t instruction)
 string EmotionDisasm::disasm_sltu(uint32_t instruction)
 {
     return disasm_special_simplemath("sltu", instruction);
+}
+
+string EmotionDisasm::disasm_dadd(uint32_t instruction)
+{
+    return disasm_special_simplemath("dadd", instruction);
 }
 
 string EmotionDisasm::disasm_daddu(uint32_t instruction)
@@ -855,6 +869,8 @@ string EmotionDisasm::disasm_cop_s(uint32_t instruction)
             return disasm_fpu_mov(instruction);
         case 0x7:
             return disasm_fpu_neg(instruction);
+        case 0x18:
+            return disasm_fpu_adda(instruction);
         case 0x24:
             return disasm_fpu_cvt_w_s(instruction);
         case 0x32:
@@ -906,6 +922,11 @@ string EmotionDisasm::disasm_fpu_neg(uint32_t instruction)
     return disasm_fpu_convert("mov.s", instruction);
 }
 
+string EmotionDisasm::disasm_fpu_adda(uint32_t instruction)
+{
+    return disasm_fpu_compare("adda.s", instruction);
+}
+
 //TODO: Find better name for instruction group
 string EmotionDisasm::disasm_fpu_convert(const string opcode, uint32_t instruction)
 {
@@ -921,6 +942,7 @@ string EmotionDisasm::disasm_fpu_cvt_w_s(uint32_t instruction)
     return disasm_fpu_convert("cvt.w.s", instruction);
 }
 
+//TODO: This needs a better name as well
 string EmotionDisasm::disasm_fpu_compare(const string opcode, uint32_t instruction)
 {
     stringstream output;

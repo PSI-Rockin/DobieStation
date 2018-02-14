@@ -14,6 +14,7 @@ namespace EmotionDisasm
     std::string disasm_sra(uint32_t instruction);
     std::string disasm_variableshift(const std::string opcode, uint32_t instruction);
     std::string disasm_sllv(uint32_t instruction);
+    std::string disasm_srlv(uint32_t instruction);
     std::string disasm_srav(uint32_t instruction);
     std::string disasm_jr(uint32_t instruction);
     std::string disasm_jalr(uint32_t instruction);
@@ -43,6 +44,7 @@ namespace EmotionDisasm
     std::string disasm_mfsa(uint32_t instruction);
     std::string disasm_slt(uint32_t instruction);
     std::string disasm_sltu(uint32_t instruction);
+    std::string disasm_dadd(uint32_t instruction);
     std::string disasm_daddu(uint32_t instruction);
     std::string disasm_dsubu(uint32_t instruction);
     std::string disasm_dsll(uint32_t instruction);
@@ -113,6 +115,7 @@ namespace EmotionDisasm
     std::string disasm_fpu_div(uint32_t instruction);
     std::string disasm_fpu_mov(uint32_t instruction);
     std::string disasm_fpu_neg(uint32_t instruction);
+    std::string disasm_fpu_adda(uint32_t instruction);
     std::string disasm_fpu_convert(const std::string opcode, uint32_t instruction);
     std::string disasm_fpu_cvt_w_s(uint32_t instruction);
     std::string disasm_fpu_compare(const std::string, uint32_t instruction);

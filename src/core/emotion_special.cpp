@@ -41,7 +41,6 @@ void EmotionInterpreter::special(EmotionEngine &cpu, uint32_t instruction)
             syscall_ee(cpu, instruction);
             break;
         case 0x0F:
-            printf("sync");
             break;
         case 0x10:
             mfhi(cpu, instruction);
@@ -177,7 +176,6 @@ void EmotionInterpreter::srlv(EmotionEngine &cpu, uint32_t instruction)
     uint32_t source = (instruction >> 16) & 0x1F;
     uint64_t dest = (instruction >> 11) & 0x1F;
     uint32_t shift = (instruction >> 21) & 0x1F;
-    printf("srlv {%d}, {%d}, {%d}", dest, source, shift);
     source = cpu.get_gpr<uint32_t>(source);
     source >>= cpu.get_gpr<uint8_t>(shift) & 0x1F;
     cpu.set_gpr<int64_t>(dest, (int32_t)source);
@@ -441,7 +439,6 @@ void EmotionInterpreter::dadd(EmotionEngine &cpu, uint32_t instruction)
     int64_t op1 = (instruction >> 21) & 0x1F;
     int64_t op2 = (instruction >> 16) & 0x1F;
     uint64_t dest = (instruction >> 11) & 0x1F;
-    printf("dadd {%d}, {%d}, {%d}", dest, op1, op2);
     op1 = cpu.get_gpr<int64_t>(op1);
     op2 = cpu.get_gpr<int64_t>(op2);
     cpu.set_gpr<uint64_t>(dest, op1 + op2);

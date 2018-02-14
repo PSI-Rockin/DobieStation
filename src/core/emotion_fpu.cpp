@@ -93,7 +93,6 @@ void EmotionInterpreter::fpu_adda(Cop1 &fpu, uint32_t instruction)
 {
     uint32_t reg1 = (instruction >> 11) & 0x1F;
     uint32_t reg2 = (instruction >> 16) & 0x1F;
-    printf("adda.s f{%d}, f{%d}", reg1, reg2);
     fpu.adda_s(reg1, reg2);
 }
 
