@@ -1,4 +1,4 @@
-#ifndef EMOTIONDIm_SASM_HPP
+#ifndef EMOTIONDISASM_HPP
 #define EMOTIONDISASM_HPP
 #include <cstdint>
 #include <string>
@@ -58,10 +58,10 @@ namespace EmotionDisasm
     std::string disasm_jump(const std::string opcode, uint32_t instruction, uint32_t instr_addr);
     std::string disasm_j(uint32_t instruction, uint32_t instr_addr);
     std::string disasm_jal(uint32_t instruction, uint32_t instr_addr);
-    std::string disasm_bequality(std::string opcode, uint32_t instruction, uint32_t instr_addr);
+    std::string disasm_branch_equality(std::string opcode, uint32_t instruction, uint32_t instr_addr);
     std::string disasm_beq(uint32_t instruction, uint32_t instr_addr);
     std::string disasm_bne(uint32_t instruction, uint32_t instr_addr);
-    std::string disasm_binequality(const std::string opcode, uint32_t instruction, uint32_t instr_addr);
+    std::string disasm_branch_inequality(const std::string opcode, uint32_t instruction, uint32_t instr_addr);
     std::string disasm_blez(uint32_t instruction, uint32_t instr_addr);
     std::string disasm_bgtz(uint32_t instruction, uint32_t instr_addr);
     std::string disasm_math(const std::string opcode, uint32_t instruction);
@@ -71,6 +71,7 @@ namespace EmotionDisasm
     std::string disasm_sltiu(uint32_t instruction);
     std::string disasm_andi(uint32_t instruction);
     std::string disasm_ori(uint32_t instruction);
+    std::string disasm_move(uint32_t instruction);
     std::string disasm_xori(uint32_t instruction);
     std::string disasm_lui(uint32_t instruction);
     std::string disasm_beql(uint32_t instruction, uint32_t instr_addr);
@@ -108,17 +109,19 @@ namespace EmotionDisasm
     std::string disasm_cop_ctc(uint32_t instruction);
 
     std::string disasm_cop_s(uint32_t instruction);
-    std::string disasm_fpu_math(const std::string, uint32_t instruction);
+    std::string disasm_fpu_math(const std::string opcode, uint32_t instruction);
     std::string disasm_fpu_add(uint32_t instruction);
     std::string disasm_fpu_sub(uint32_t instruction);
     std::string disasm_fpu_mul(uint32_t instruction);
     std::string disasm_fpu_div(uint32_t instruction);
+    std::string disasm_fpu_singleop_math(const std::string opcode, uint32_t instruction);
     std::string disasm_fpu_mov(uint32_t instruction);
     std::string disasm_fpu_neg(uint32_t instruction);
+    std::string disasm_fpu_acc(const std::string opcode, uint32_t instruction);
     std::string disasm_fpu_adda(uint32_t instruction);
     std::string disasm_fpu_convert(const std::string opcode, uint32_t instruction);
     std::string disasm_fpu_cvt_w_s(uint32_t instruction);
-    std::string disasm_fpu_compare(const std::string, uint32_t instruction);
+    std::string disasm_fpu_compare(const std::string opcode, uint32_t instruction);
     std::string disasm_fpu_c_lt_s(uint32_t instruction);
     std::string disasm_fpu_c_eq_s(uint32_t instruction);
     std::string disasm_cop_bc1(uint32_t instruction, uint32_t instr_addr);

@@ -106,7 +106,6 @@ string EmotionDisasm::disasm_instr(uint32_t instruction, uint32_t instr_addr)
             return disasm_lwc1(instruction);
         case 0x36:
             return "TODO: lqc2";
-            break;
         case 0x37:
             return disasm_ld(instruction);
         case 0x39:
@@ -144,11 +143,11 @@ string EmotionDisasm::disasm_jump(const string opcode, uint32_t instruction, uin
 
 string EmotionDisasm::disasm_bne(uint32_t instruction, uint32_t instr_addr)
 {
-    return disasm_bequality("bne", instruction, instr_addr);
+    return disasm_branch_equality("bne", instruction, instr_addr);
 }
 
 
-string EmotionDisasm::disasm_bequality(string opcode, uint32_t instruction, uint32_t instr_addr)
+string EmotionDisasm::disasm_branch_equality(string opcode, uint32_t instruction, uint32_t instr_addr)
 {
     stringstream output;
     int offset = IMM;
@@ -158,13 +157,9 @@ string EmotionDisasm::disasm_bequality(string opcode, uint32_t instruction, uint
 
     output << EmotionEngine::REG(rs) << ", ";
     if (!rt)
-    {
         opcode += "z";
-    }
     else
-    {
         output << EmotionEngine::REG(rt) << ", ";
-    }
     output << "$" << setfill('0') << setw(8) << hex << (instr_addr + offset + 4);
 
     return opcode + " " + output.str();
@@ -194,6 +189,7 @@ string EmotionDisasm::disasm_regimm(uint32_t instruction, uint32_t instr_addr)
             break;
         case 0x03:
             opcode += "bgezl";
+            break;
         default:
             return unknown_op("regimm", RT, 2);
     }
@@ -346,9 +342,9 @@ string EmotionDisasm::disasm_jalr(uint32_t instruction)
 {
     stringstream output;
     string opcode = "jalr";
-    //If RD is not specified then RA is implied TODO: Fix maybe?
-    output << EmotionEngine::REG(RD) << ", "
-           << EmotionEngine::REG(RS);
+    if (RD != 31)
+        output << EmotionEngine::REG(RD) << ", ";
+    output << EmotionEngine::REG(RS);
 
     return opcode + " " + output.str();
 }
@@ -556,18 +552,17 @@ string EmotionDisasm::disasm_dsra32(uint32_t instruction)
 
 string EmotionDisasm::disasm_beq(uint32_t instruction, uint32_t instr_addr)
 {
-    return disasm_bequality("beq", instruction, instr_addr);
+    return disasm_branch_equality("beq", instruction, instr_addr);
 }
 
 
-string EmotionDisasm::disasm_binequality(const std::string opcode, uint32_t instruction, uint32_t instr_addr)
+string EmotionDisasm::disasm_branch_inequality(const std::string opcode, uint32_t instruction, uint32_t instr_addr)
 {
     stringstream output;
     int32_t offset = IMM;
     offset <<= 2;
-    int64_t rs = RS;
 
-    output << EmotionEngine::REG(rs) << ", "
+    output << EmotionEngine::REG(RS) << ", "
            << "$" << setfill('0') << setw(8) << hex << (instr_addr + offset + 4);
 
     return opcode + " " + output.str();
@@ -576,12 +571,12 @@ string EmotionDisasm::disasm_binequality(const std::string opcode, uint32_t inst
 
 string EmotionDisasm::disasm_blez(uint32_t instruction, uint32_t instr_addr)
 {
-    return disasm_binequality("blez", instruction, instr_addr);
+    return disasm_branch_inequality("blez", instruction, instr_addr);
 }
 
 string EmotionDisasm::disasm_bgtz(uint32_t instruction, uint32_t instr_addr)
 {
-    return disasm_binequality("bgtz", instruction, instr_addr);
+    return disasm_branch_inequality("bgtz", instruction, instr_addr);
 }
 
 string EmotionDisasm::disasm_math(const string opcode, uint32_t instruction)
@@ -614,7 +609,19 @@ string EmotionDisasm::disasm_andi(uint32_t instruction)
 
 string EmotionDisasm::disasm_ori(uint32_t instruction)
 {
+    if (IMM == 0)
+        return disasm_move(instruction);
     return disasm_math("ori", instruction);
+}
+
+string EmotionDisasm::disasm_move(uint32_t instruction)
+{
+    stringstream output;
+    string opcode = "move";
+    output << EmotionEngine::REG(RT) << ", "
+           << EmotionEngine::REG(RS);
+
+    return opcode + " " + output.str();
 }
 
 string EmotionDisasm::disasm_xori(uint32_t instruction)
@@ -634,12 +641,12 @@ string EmotionDisasm::disasm_lui(uint32_t instruction)
 
 string EmotionDisasm::disasm_beql(uint32_t instruction, uint32_t instr_addr)
 {
-    return disasm_bequality("beql", instruction, instr_addr);
+    return disasm_branch_equality("beql", instruction, instr_addr);
 }
 
 string EmotionDisasm::disasm_bnel(uint32_t instruction, uint32_t instr_addr)
 {
-    return disasm_bequality("bnel", instruction, instr_addr);
+    return disasm_branch_equality("bnel", instruction, instr_addr);
 }
 
 string EmotionDisasm::disasm_daddiu(uint32_t instruction)
@@ -776,9 +783,7 @@ string EmotionDisasm::disasm_cop(uint32_t instruction, uint32_t instr_addr)
     uint16_t op = RS;
     uint8_t cop_id = ((instruction >> 26) & 0x3);
     if (cop_id == 2)
-    {
         return "VU0 - TODO";
-    }
     switch (op | (cop_id * 0x100))
     {
 
@@ -826,13 +831,10 @@ string EmotionDisasm::disasm_cop_move(string opcode, uint32_t instruction)
     stringstream output;
 
     int cop_id = (instruction >> 26) & 0x3;
-    int emotion_reg = (instruction >> 16) & 0x1F;
-    int cop_reg = (instruction >> 11) & 0x1F;
     opcode += cop_id;
 
-    //Maybe separate names for COP registers?
     output << EmotionEngine::REG(RT) << ", "
-           << EmotionEngine::REG(RD);
+           << RD;
 
     return opcode + " " + output.str();
 }
@@ -912,22 +914,39 @@ string EmotionDisasm::disasm_fpu_div(uint32_t instruction)
     return disasm_fpu_math("div.s", instruction);
 }
 
+string EmotionDisasm::disasm_fpu_singleop_math(const string opcode, uint32_t instruction)
+{
+    stringstream output;
+    output << "f" << SA << ", "
+           << "f" << RD;
+
+    return opcode + " " + output.str();
+}
+
 string EmotionDisasm::disasm_fpu_mov(uint32_t instruction)
 {
-    return disasm_fpu_convert("neg.s", instruction);
+    return disasm_fpu_singleop_math("mov.s", instruction);
 }
 
 string EmotionDisasm::disasm_fpu_neg(uint32_t instruction)
 {
-    return disasm_fpu_convert("mov.s", instruction);
+    return disasm_fpu_singleop_math("neg.s", instruction);
+}
+
+string EmotionDisasm::disasm_fpu_acc(const string opcode, uint32_t instruction)
+{
+    stringstream output;
+    output << "f" << RD << ", "
+           << "f" << RT;
+
+    return opcode + " " + output.str();
 }
 
 string EmotionDisasm::disasm_fpu_adda(uint32_t instruction)
 {
-    return disasm_fpu_compare("adda.s", instruction);
+    return disasm_fpu_acc("adda.s", instruction);
 }
 
-//TODO: Find better name for instruction group
 string EmotionDisasm::disasm_fpu_convert(const string opcode, uint32_t instruction)
 {
     stringstream output;
@@ -942,7 +961,6 @@ string EmotionDisasm::disasm_fpu_cvt_w_s(uint32_t instruction)
     return disasm_fpu_convert("cvt.w.s", instruction);
 }
 
-//TODO: This needs a better name as well
 string EmotionDisasm::disasm_fpu_compare(const string opcode, uint32_t instruction)
 {
     stringstream output;
@@ -971,9 +989,7 @@ string EmotionDisasm::disasm_cop_bc1(uint32_t instruction, uint32_t instr_addr)
     int32_t offset = IMM << 2;
     uint8_t op = RT;
     if (op > 3)
-    {
         return unknown_op("BC1", op, 2);
-    }
     opcode = ops[op];
     output << "$" << setfill('0') << setw(8) << hex << (instr_addr + 4 + offset);
 
