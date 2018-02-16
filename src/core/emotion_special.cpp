@@ -211,6 +211,8 @@ void EmotionInterpreter::movz(EmotionEngine &cpu, uint32_t instruction)
     uint64_t source = (instruction >> 21) & 0x1F;
     uint64_t test = (instruction >> 16) & 0x1F;
     uint64_t dest = (instruction >> 11) & 0x1F;
+    printf("movz {%d}, {%d}, {%d}", dest, source, test);
+    source = cpu.get_gpr<uint64_t>(source);
     if (!cpu.get_gpr<uint64_t>(test))
         cpu.set_gpr<uint64_t>(dest, source);
 }
@@ -220,6 +222,8 @@ void EmotionInterpreter::movn(EmotionEngine &cpu, uint32_t instruction)
     uint64_t source = (instruction >> 21) & 0x1F;
     uint64_t test = (instruction >> 16) & 0x1F;
     uint64_t dest = (instruction >> 11) & 0x1F;
+    printf("movn {%d}, {%d}, {%d}", dest, source, test);
+    source = cpu.get_gpr<uint64_t>(source);
     if (cpu.get_gpr<uint64_t>(test))
         cpu.set_gpr<uint64_t>(dest, source);
 }
@@ -282,7 +286,7 @@ void EmotionInterpreter::mult(EmotionEngine &cpu, uint32_t instruction)
     op2 = cpu.get_gpr<int32_t>(op2);
     int64_t temp = (int64_t)op1 * op2;
     cpu.set_LO_HI((int32_t)(temp & 0xFFFFFFFF), (int32_t)(temp >> 32));
-    cpu.set_gpr<int64_t>(dest, temp);
+    cpu.mflo(dest);
 }
 
 void EmotionInterpreter::multu(EmotionEngine& cpu, uint32_t instruction)
@@ -294,7 +298,7 @@ void EmotionInterpreter::multu(EmotionEngine& cpu, uint32_t instruction)
     op2 = cpu.get_gpr<uint32_t>(op2);
     uint64_t temp = (uint64_t)op1 * op2;
     cpu.set_LO_HI(temp & 0xFFFFFFFF, temp >> 32);
-    cpu.set_gpr<uint64_t>(dest, temp);
+    cpu.mflo(dest);
 }
 
 void EmotionInterpreter::div(EmotionEngine &cpu, uint32_t instruction)

@@ -83,7 +83,7 @@ void EmotionInterpreter::mult1(EmotionEngine &cpu, uint32_t instruction)
     op2 = cpu.get_gpr<int32_t>(op2);
     int64_t temp = (int64_t)op1 * op2;
     cpu.set_LO_HI((int32_t)(temp & 0xFFFFFFFF), (int32_t)(temp >> 32), true);
-    cpu.mflo(dest);
+    cpu.mflo1(dest);
 }
 
 void EmotionInterpreter::divu1(EmotionEngine &cpu, uint32_t instruction)
