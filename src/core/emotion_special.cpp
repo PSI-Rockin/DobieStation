@@ -211,7 +211,6 @@ void EmotionInterpreter::movz(EmotionEngine &cpu, uint32_t instruction)
     uint64_t source = (instruction >> 21) & 0x1F;
     uint64_t test = (instruction >> 16) & 0x1F;
     uint64_t dest = (instruction >> 11) & 0x1F;
-    printf("movz {%d}, {%d}, {%d}", dest, source, test);
     source = cpu.get_gpr<uint64_t>(source);
     if (!cpu.get_gpr<uint64_t>(test))
         cpu.set_gpr<uint64_t>(dest, source);
@@ -222,7 +221,6 @@ void EmotionInterpreter::movn(EmotionEngine &cpu, uint32_t instruction)
     uint64_t source = (instruction >> 21) & 0x1F;
     uint64_t test = (instruction >> 16) & 0x1F;
     uint64_t dest = (instruction >> 11) & 0x1F;
-    printf("movn {%d}, {%d}, {%d}", dest, source, test);
     source = cpu.get_gpr<uint64_t>(source);
     if (cpu.get_gpr<uint64_t>(test))
         cpu.set_gpr<uint64_t>(dest, source);
