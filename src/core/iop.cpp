@@ -62,13 +62,17 @@ void IOP::run()
     uint32_t instr = read32(PC);
     printf("[IOP] [$%08X] $%08X - %s\n", PC, instr, EmotionDisasm::disasm_instr(instr, PC).c_str());
     IOP_Interpreter::interpret(*this, instr);
-    /*for (int i = 0; i < 32; i++)
+
+    /*if (PC == 0x00030018)
     {
-        printf("%s:$%08X\t", REG(i), get_gpr(i));
-        if (i % 3 == 2)
-            printf("\n");
-    }
-    printf("Will branch: %d Load delay: %d New PC: $%08X\n", will_branch, load_delay, new_PC);*/
+        for (int i = 0; i < 32; i++)
+        {
+            printf("%s:$%08X\t", REG(i), get_gpr(i));
+            if (i % 3 == 2)
+                printf("\n");
+        }
+    }*/
+
     if (inc_PC)
         PC += 4;
     else
@@ -77,9 +81,12 @@ void IOP::run()
 
 void IOP::jp(uint32_t addr)
 {
-    new_PC = addr;
-    will_branch = true;
-    load_delay = 1;
+    if (!will_branch)
+    {
+        new_PC = addr;
+        will_branch = true;
+        load_delay = 1;
+    }
 }
 
 void IOP::branch(bool condition, int32_t offset)
@@ -144,15 +151,21 @@ uint32_t IOP::read32(uint32_t addr)
 
 void IOP::write8(uint32_t addr, uint8_t value)
 {
+    if (cop0.status.IsC)
+        return;
     e->iop_write8(translate_addr(addr), value);
 }
 
 void IOP::write16(uint32_t addr, uint16_t value)
 {
+    if (cop0.status.IsC)
+        return;
     e->iop_write16(translate_addr(addr), value);
 }
 
 void IOP::write32(uint32_t addr, uint32_t value)
 {
+    if (cop0.status.IsC)
+        return;
     e->iop_write32(translate_addr(addr), value);
 }

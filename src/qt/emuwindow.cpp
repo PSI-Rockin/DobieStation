@@ -72,7 +72,7 @@ bool EmuWindow::running()
 void EmuWindow::emulate()
 {
     e.run();
-    update();
+    //update();
 }
 
 void EmuWindow::paintEvent(QPaintEvent *event)

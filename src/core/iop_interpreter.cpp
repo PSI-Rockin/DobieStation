@@ -424,6 +424,9 @@ void IOP_Interpreter::special(IOP &cpu, uint32_t instruction)
         case 0x21:
             addu(cpu, instruction);
             break;
+        case 0x22:
+            add(cpu, instruction);
+            break;
         case 0x23:
             subu(cpu, instruction);
             break;

@@ -11,7 +11,7 @@ struct IOP_Cop0_Status
     bool IEo;
     bool KUo;
     uint8_t Im;
-
+    bool IsC;
     bool bev;
 
 };

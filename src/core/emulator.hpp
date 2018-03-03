@@ -27,6 +27,8 @@ class Emulator
         uint32_t INTC_STAT;
         uint32_t INTC_MASK;
         uint32_t instructions_run;
+
+        uint8_t IOP_POST;
     public:
         Emulator();
         ~Emulator();

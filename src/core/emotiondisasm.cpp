@@ -102,6 +102,8 @@ string EmotionDisasm::disasm_instr(uint32_t instruction, uint32_t instr_addr)
             return disasm_swr(instruction);
         case 0x2F:
             return "cache";
+        case 0x30:
+            return disasm_loadstore("lwc0", instruction);
         case 0x31:
             return disasm_lwc1(instruction);
         case 0x36:
