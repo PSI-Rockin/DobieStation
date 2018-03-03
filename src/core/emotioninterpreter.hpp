@@ -2,7 +2,6 @@
 #define EMOTIONINTERPRETER_HPP
 #include "emotion.hpp"
 
-
 namespace EmotionInterpreter
 {
     void interpret(EmotionEngine& cpu, uint32_t instruction);
@@ -116,13 +115,20 @@ namespace EmotionInterpreter
 
     void mmi(EmotionEngine& cpu, uint32_t instruction);
     void plzcw(EmotionEngine& cpu, uint32_t instruction);
+    void mmi0(EmotionEngine& cpu, uint32_t instruction);
+    void psubb(EmotionEngine& cpu, uint32_t instruction);
+    void mmi2(EmotionEngine& cpu, uint32_t instruction);
+    void pcpyld(EmotionEngine& cpu, uint32_t instruction);
+    void pand(EmotionEngine& cpu, uint32_t instruction);
     void mfhi1(EmotionEngine& cpu, uint32_t instruction);
     void mflo1(EmotionEngine& cpu, uint32_t instruction);
     void mult1(EmotionEngine& cpu, uint32_t instruction);
     void divu1(EmotionEngine& cpu, uint32_t instruction);
 
     void mmi3(EmotionEngine& cpu, uint32_t instruction);
+    void pcpyud(EmotionEngine& cpu, uint32_t instruction);
     void por(EmotionEngine& cpu, uint32_t instruction);
+    void pnor(EmotionEngine& cpu, uint32_t instruction);
 };
 
 #endif // EMOTIONINTERPRETER_HPP

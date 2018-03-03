@@ -14,13 +14,13 @@ void Cop0::reset()
 
 uint32_t Cop0::mfc(int index)
 {
-    printf("\n[COP0] Move from reg%d", index);
+    //printf("[COP0] Move from reg%d\n", index);
     return gpr[index];
 }
 
 void Cop0::mtc(int index, uint32_t value)
 {
-    printf("\n[COP0] Move to reg%d: $%08X", index, value);
+    printf("[COP0] Move to reg%d: $%08X\n", index, value);
     gpr[index] = value;
 }
 

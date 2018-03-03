@@ -115,7 +115,7 @@ string EmotionDisasm::disasm_instr(uint32_t instruction, uint32_t instr_addr)
         case 0x3F:
             return disasm_sd(instruction);
         default:
-            return unknown_op("", instruction >> 26, 2);
+            return unknown_op("normal", instruction >> 26, 2);
     }
 }
 
@@ -507,6 +507,8 @@ string EmotionDisasm::disasm_dadd(uint32_t instruction)
 
 string EmotionDisasm::disasm_daddu(uint32_t instruction)
 {
+    if (RT == 0)
+        return disasm_move(instruction);
     return disasm_special_simplemath("daddu", instruction);
 }
 
@@ -618,7 +620,7 @@ string EmotionDisasm::disasm_move(uint32_t instruction)
 {
     stringstream output;
     string opcode = "move";
-    output << EmotionEngine::REG(RT) << ", "
+    output << EmotionEngine::REG(RD) << ", "
            << EmotionEngine::REG(RS);
 
     return opcode + " " + output.str();
@@ -775,7 +777,7 @@ string EmotionDisasm::disasm_swc1(uint32_t instruction)
 
 string EmotionDisasm::disasm_sd(uint32_t instruction)
 {
-    return disasm_loadstore("ldl", instruction);
+    return disasm_loadstore("sd", instruction);
 }
 
 string EmotionDisasm::disasm_cop(uint32_t instruction, uint32_t instr_addr)
@@ -831,12 +833,11 @@ string EmotionDisasm::disasm_cop_move(string opcode, uint32_t instruction)
     stringstream output;
 
     int cop_id = (instruction >> 26) & 0x3;
-    opcode += cop_id;
 
-    output << EmotionEngine::REG(RT) << ", "
+    output << opcode << cop_id << " " << EmotionEngine::REG(RT) << ", "
            << RD;
 
-    return opcode + " " + output.str();
+    return output.str();
 }
 
 string EmotionDisasm::disasm_cop_mfc(uint32_t instruction)
@@ -1008,6 +1009,10 @@ string EmotionDisasm::disasm_mmi(uint32_t instruction, uint32_t instr_addr)
     {
         case 0x04:
             return disasm_plzcw(instruction);
+        case 0x08:
+            return disasm_mmi0(instruction);
+        case 0x09:
+            return disasm_mmi2(instruction);
         case 0x10:
             return disasm_mfhi1(instruction);
         case 0x12:
@@ -1030,6 +1035,47 @@ string EmotionDisasm::disasm_plzcw(uint32_t instruction)
     output << EmotionEngine::REG(RD) << ", "
            << EmotionEngine::REG(RS);
     return opcode + " " + output.str();
+}
+
+string EmotionDisasm::disasm_mmi0(uint32_t instruction)
+{
+    int op = (instruction >> 6) & 0x1F;
+    switch (op)
+    {
+        case 0x09:
+            return disasm_psubb(instruction);
+        default:
+            return unknown_op("mmi0", op, 2);
+    }
+}
+
+string EmotionDisasm::disasm_psubb(uint32_t instruction)
+{
+    return disasm_special_simplemath("psubb", instruction);
+}
+
+string EmotionDisasm::disasm_mmi2(uint32_t instruction)
+{
+    int op = (instruction >> 6) & 0x1F;
+    switch (op)
+    {
+        case 0x0E:
+            return disasm_pcpyld(instruction);
+        case 0x12:
+            return disasm_pand(instruction);
+        default:
+            return unknown_op("mmi2", op, 2);
+    }
+}
+
+string EmotionDisasm::disasm_pcpyld(uint32_t instruction)
+{
+    return disasm_special_simplemath("pcpyld", instruction);
+}
+
+string EmotionDisasm::disasm_pand(uint32_t instruction)
+{
+    return disasm_special_simplemath("pand", instruction);
 }
 
 string EmotionDisasm::disasm_mfhi1(uint32_t instruction)
@@ -1056,16 +1102,30 @@ string EmotionDisasm::disasm_mmi3(uint32_t instruction)
 {
     switch (SA)
     {
+        case 0x0E:
+            return disasm_pcpyud(instruction);
         case 0x12:
             return disasm_por(instruction);
+        case 0x13:
+            return disasm_pnor(instruction);
         default:
             return unknown_op("mmi3", SA, 2);
     }
 }
 
+string EmotionDisasm::disasm_pcpyud(uint32_t instruction)
+{
+    return disasm_special_simplemath("pcpyud", instruction);
+}
+
 string EmotionDisasm::disasm_por(uint32_t instruction)
 {
     return disasm_special_simplemath("por", instruction);
+}
+
+string EmotionDisasm::disasm_pnor(uint32_t instruction)
+{
+    return disasm_special_simplemath("pnor", instruction);
 }
 
 string EmotionDisasm::unknown_op(const string optype, uint32_t op, int width)

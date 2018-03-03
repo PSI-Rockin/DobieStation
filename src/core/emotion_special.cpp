@@ -5,7 +5,7 @@
 void EmotionInterpreter::special(EmotionEngine &cpu, uint32_t instruction)
 {
     int op = instruction & 0x3F;
-    switch (instruction & 0x3F)
+    switch (op)
     {
         case 0x00:
             sll(cpu, instruction);

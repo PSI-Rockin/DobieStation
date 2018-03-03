@@ -129,12 +129,19 @@ namespace EmotionDisasm
 
     std::string disasm_mmi(uint32_t instruction, uint32_t instr_addr);
     std::string disasm_plzcw(uint32_t instruction);
+    std::string disasm_mmi0(uint32_t instruction);
+    std::string disasm_psubb(uint32_t instruction);
+    std::string disasm_mmi2(uint32_t instruction);
+    std::string disasm_pcpyld(uint32_t instruction);
+    std::string disasm_pand(uint32_t instruction);
     std::string disasm_mfhi1(uint32_t instruction);
     std::string disasm_mflo1(uint32_t instruction);
     std::string disasm_mult1(uint32_t instruction);
     std::string disasm_divu1(uint32_t instruction);
     std::string disasm_mmi3(uint32_t instruction);
+    std::string disasm_pcpyud(uint32_t instruction);
     std::string disasm_por(uint32_t instruction);
+    std::string disasm_pnor(uint32_t instruction);
 
     std::string unknown_op(const std::string optype, uint32_t op, int width);
 

@@ -5,6 +5,7 @@
 #include "emotion.hpp"
 #include "gs.hpp"
 #include "gif.hpp"
+#include "iop.hpp"
 
 class Emulator
 {
@@ -14,6 +15,7 @@ class Emulator
         EmotionEngine cpu;
         GraphicsSynthesizer gs;
         GraphicsInterface gif;
+        IOP iop;
 
         uint8_t* RDRAM;
         uint8_t* IOP_RAM;
@@ -43,6 +45,13 @@ class Emulator
         void write16(uint32_t address, uint16_t value);
         void write32(uint32_t address, uint32_t value);
         void write64(uint32_t address, uint64_t value);
+
+        uint8_t iop_read8(uint32_t address);
+        uint16_t iop_read16(uint32_t address);
+        uint32_t iop_read32(uint32_t address);
+        void iop_write8(uint32_t address, uint8_t value);
+        void iop_write16(uint32_t address, uint16_t value);
+        void iop_write32(uint32_t address, uint32_t value);
 };
 
 #endif // EMULATOR_HPP

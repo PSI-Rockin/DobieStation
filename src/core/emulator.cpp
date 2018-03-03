@@ -3,7 +3,7 @@
 #include <cstdlib>
 #include "emulator.hpp"
 
-Emulator::Emulator() : bios_hle(this, &gs), cpu(&bios_hle, this), dmac(this, &gif), gif(&gs)
+Emulator::Emulator() : bios_hle(this, &gs), cpu(&bios_hle, this), dmac(this, &gif), gif(&gs), iop(this)
 {
     BIOS = nullptr;
     RDRAM = nullptr;
@@ -28,6 +28,8 @@ void Emulator::run()
     {
         cpu.run();
         dmac.run();
+        if (instructions_run % 8 == 0)
+            iop.run();
         instructions_run++;
     }
     //VBLANK start
@@ -51,6 +53,7 @@ void Emulator::reset()
     dmac.reset();
     gs.reset();
     gif.reset();
+    iop.reset();
     MCH_DRD = 0;
     MCH_RICM = 0;
     rdram_sdevid = 0;
@@ -88,6 +91,7 @@ void Emulator::load_BIOS(uint8_t *BIOS_file)
 
 void Emulator::load_ELF(uint8_t *ELF)
 {
+    return;
     if (ELF[0] != 0x7F || ELF[1] != 'E' || ELF[2] != 'L' || ELF[3] != 'F')
     {
         printf("Invalid elf\n");
@@ -167,7 +171,7 @@ uint8_t Emulator::read8(uint32_t address)
         return *(uint32_t*)&RDRAM[address & 0x01FFFFFF];
     if (address >= 0x1FC00000 && address < 0x20000000)
         return BIOS[address & 0x3FFFFF];
-    printf("\nUnrecognized read8 at physical addr $%08X", address);
+    printf("Unrecognized read8 at physical addr $%08X\n", address);
     return 0;
     exit(1);
 }
@@ -178,7 +182,7 @@ uint16_t Emulator::read16(uint32_t address)
         return *(uint16_t*)&RDRAM[address & 0x01FFFFFF];
     if (address >= 0x1FC00000 && address < 0x20000000)
         return *(uint16_t*)&BIOS[address & 0x3FFFFF];
-    printf("\nUnrecognized read16 at physical addr $%08X", address);
+    printf("Unrecognized read16 at physical addr $%08X\n", address);
     return 0;
     exit(1);
 }
@@ -233,7 +237,7 @@ uint32_t Emulator::read32(uint32_t address)
             }
             return 0;
     }
-    printf("\nUnrecognized read32 at physical addr $%08X", address);
+    printf("Unrecognized read32 at physical addr $%08X\n", address);
 
     return 0;
     //exit(1);
@@ -247,7 +251,7 @@ uint64_t Emulator::read64(uint32_t address)
         return dmac.read32(address);
     if ((address & (0xFF000000)) == 0x12000000)
         return gs.read64_privileged(address);
-    printf("\nUnrecognized read64 at physical addr $%08X", address);
+    printf("Unrecognized read64 at physical addr $%08X\n", address);
     return 0;
     //exit(1);
 }
@@ -265,7 +269,7 @@ void Emulator::write8(uint32_t address, uint8_t value)
             printf("\nSTDOUT: %c", value);
             return;
     }
-    printf("\nUnrecognized write8 at physical addr $%08X of $%02X", address, value);
+    printf("Unrecognized write8 at physical addr $%08X of $%02X\n", address, value);
     //exit(1);
 }
 
@@ -276,7 +280,7 @@ void Emulator::write16(uint32_t address, uint16_t value)
         *(uint16_t*)&RDRAM[address & 0x01FFFFFF] = value;
         return;
     }
-    printf("\nUnrecognized write16 at physical addr $%08X of $%04X", address, value);
+    printf("Unrecognized write16 at physical addr $%08X of $%04X\n", address, value);
 }
 
 void Emulator::write32(uint32_t address, uint32_t value)
@@ -318,7 +322,7 @@ void Emulator::write32(uint32_t address, uint32_t value)
             MCH_DRD = value;
             return;
     }
-    printf("\nUnrecognized write32 at physical addr $%08X of $%08X", address, value);
+    printf("Unrecognized write32 at physical addr $%08X of $%08X\n", address, value);
 
     //exit(1);
 }
@@ -345,6 +349,127 @@ void Emulator::write64(uint32_t address, uint64_t value)
         *(uint64_t*)&IOP_RAM[address & 0x1FFFFF] = value;
         return;
     }
-    printf("\nUnrecognized write64 at physical addr $%08X of $%08X_%08X", address, value >> 32, value & 0xFFFFFFFF);
+    printf("Unrecognized write64 at physical addr $%08X of $%08X_%08X\n", address, value >> 32, value & 0xFFFFFFFF);
     //exit(1);
+}
+
+uint8_t Emulator::iop_read8(uint32_t address)
+{
+    if (address < 0x00200000)
+        return IOP_RAM[address];
+    if (address >= 0x1FC00000 && address < 0x20000000)
+        return BIOS[address & 0x3FFFFF];
+    switch (address)
+    {
+        case 0x1FA00000:
+            return 0;
+    }
+    printf("Unrecognized IOP read8 from physical addr $%08X\n", address);
+    exit(1);
+}
+
+uint16_t Emulator::iop_read16(uint32_t address)
+{
+    if (address < 0x00200000)
+        return *(uint16_t*)&IOP_RAM[address];
+    if (address >= 0x1FC00000 && address < 0x20000000)
+        return *(uint16_t*)&BIOS[address & 0x3FFFFF];
+    printf("Unrecognized IOP read16 from physical addr $%08X\n", address);
+    exit(1);
+}
+
+uint32_t Emulator::iop_read32(uint32_t address)
+{
+    if (address < 0x00200000)
+        return *(uint32_t*)&IOP_RAM[address];
+
+    if (address >= 0x1FC00000 && address < 0x20000000)
+        return *(uint32_t*)&BIOS[address & 0x3FFFFF];
+    switch (address)
+    {
+        case 0x1F801010:
+            return 0;
+        case 0x1F8010F0:
+            return 0;
+        case 0xFFFE0130:
+            return 0;
+    }
+    printf("Unrecognized IOP read32 from physical addr $%08X\n", address);
+    exit(1);
+}
+
+void Emulator::iop_write8(uint32_t address, uint8_t value)
+{
+    if (address < 0x00200000)
+    {
+        IOP_RAM[address] = value;
+        return;
+    }
+    switch (address)
+    {
+        case 0x1F802070:
+            return;
+        case 0x1FA00000:
+            return;
+    }
+    printf("Unrecognized IOP write8 to physical addr $%08X of $%02X\n", address, value);
+    exit(1);
+}
+
+void Emulator::iop_write16(uint32_t address, uint16_t value)
+{
+    printf("Unrecognized IOP write16 to physical addr $%08X of $%04X\n", address, value);
+    //exit(1);
+}
+
+void Emulator::iop_write32(uint32_t address, uint32_t value)
+{
+    if (address < 0x00200000)
+    {
+        printf("[IOP] Write to $%08X of $%08X\n", address, value);
+        *(uint32_t*)&IOP_RAM[address] = value;
+        return;
+    }
+    if (address >= 0x1F808200 && address < 0x1F808280)
+    {
+        printf("[IOP SIO2] Write32 to $%08X of $%08X\n", address, value);
+        return;
+    }
+    switch (address)
+    {
+        case 0x1F801000:
+            return;
+        case 0x1F801004:
+            return;
+        case 0x1F801008:
+            return;
+        case 0x1F80100C:
+            return;
+        //BIOS ROM delay?
+        case 0x1F801010:
+            return;
+        case 0x1F801014:
+            return;
+        case 0x1F801018:
+            return;
+        case 0x1F80101C:
+            return;
+        //Common delay?
+        case 0x1F801020:
+            return;
+        //RAM size?
+        case 0x1F801060:
+            return;
+        //DMAC/SIF shit
+        case 0x1F8010F0:
+            printf("[IOP] Write32 to $%08X of $%08X\n", address, value);
+            return;
+        case 0x1F802070:
+            return;
+        //Cache control?
+        case 0xFFFE0130:
+            return;
+    }
+    printf("Unrecognized IOP write32 to physical addr $%08X of $%08X\n", address, value);
+    exit(1);
 }

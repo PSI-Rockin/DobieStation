@@ -29,6 +29,8 @@ T interpolate(int32_t x, T u1, int32_t x1, T u2, int32_t x2)
 {
     int64_t bark = (int64_t)u1 * (x2 - x);
     bark += (int64_t)u2 * (x - x1);
+    if (!(x2 - x1))
+        return u1;
     return bark / (x2 - x1);
 }
 
@@ -58,8 +60,10 @@ void GraphicsSynthesizer::reset()
     pixels_transferred = 0;
     transfer_bit_depth = 32;
     num_vertices = 0;
-    DISPLAY2.width = 640 << 2;
-    DISPLAY2.height = 224;
+    DISPLAY2.x = 0;
+    DISPLAY2.y = 0;
+    DISPLAY2.width = 0 << 2;
+    DISPLAY2.height = 0;
     DISPFB2.frame_base = 0;
     DISPFB2.width = 0;
     DISPFB2.x = 0;
@@ -697,13 +701,61 @@ void GraphicsSynthesizer::render_point()
 void GraphicsSynthesizer::render_line()
 {
     printf("\n[GS] Rendering line!");
-    int16_t x1, x2, y1, y2;
+    int32_t x1, x2, y1, y2;
+    int32_t u1, u2, v1, v2;
+    uint32_t z1, z2;
     x1 = vtx_queue[1].coords[0] - current_ctx->xyoffset.x;
     x2 = vtx_queue[0].coords[0] - current_ctx->xyoffset.x;
     y1 = vtx_queue[1].coords[1] - current_ctx->xyoffset.y;
     y2 = vtx_queue[0].coords[1] - current_ctx->xyoffset.y;
+    z1 = vtx_queue[1].coords[2];
+    z2 = vtx_queue[0].coords[2];
+    u1 = vtx_queue[1].uv.u;
+    u2 = vtx_queue[0].uv.u;
+    v1 = vtx_queue[1].uv.v;
+    v2 = vtx_queue[0].uv.v;
 
-    printf("\nCoords: (%d, %d) (%d, %d)", x1 >> 4, y1 >> 4, x2 >> 4, y2 >> 4);
+    uint32_t color = 0;
+    color |= vtx_queue[0].rgbaq.r;
+    color |= vtx_queue[0].rgbaq.g << 8;
+    color |= vtx_queue[0].rgbaq.b << 16;
+    color |= vtx_queue[0].rgbaq.a << 24;
+
+    //Transpose line if it's steep
+    bool is_steep = false;
+    if (abs(x2 - x1) < abs(y2 - y1))
+    {
+        swap(x1, y1);
+        swap(x2, y2);
+        is_steep = true;
+    }
+
+    //Make line left-to-right
+    if (x1 > x2)
+    {
+        swap(x1, x2);
+        swap(y1, y2);
+        swap(z1, z2);
+        swap(u1, u2);
+        swap(v1, v2);
+    }
+
+    printf("\nCoords: (%d, %d, %d) (%d, %d, %d)", x1 >> 4, y1 >> 4, z1, x2 >> 4, y2 >> 4, z2);
+
+    for (int32_t x = x1; x < x2; x += 0x10)
+    {
+        uint32_t z = interpolate(x, z1, x1, z2, x2);
+        float t = (x - x1)/(float)(x2 - x1);
+        int32_t y = y1*(1.-t) + y2*t;
+        uint16_t pix_v = interpolate(y, v1, y1, v2, y2) >> 4;
+        uint16_t pix_u = interpolate(x, u1, x1, u2, x2) >> 4;
+        uint32_t tex_coord = current_ctx->tex0.texture_base + pix_u;
+        tex_coord += (uint32_t)pix_v * current_ctx->tex0.tex_width;
+        if (is_steep)
+            draw_pixel(y, x, color, z, PRIM.alpha_blend);
+        else
+            draw_pixel(x, y, color, z, PRIM.alpha_blend);
+    }
 }
 
 void GraphicsSynthesizer::render_triangle()

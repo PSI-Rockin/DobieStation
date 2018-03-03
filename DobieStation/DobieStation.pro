@@ -30,7 +30,10 @@ SOURCES += ../src/qt/main.cpp \
     ../src/core/emotiondisasm.cpp \
     ../src/core/emotionasm.cpp \
     ../src/core/emotion_fpu.cpp \
-    ../src/core/gif.cpp
+    ../src/core/gif.cpp \
+    ../src/core/iop.cpp \
+    ../src/core/iop_cop0.cpp \
+    ../src/core/iop_interpreter.cpp
 
 HEADERS += \
     ../src/core/emotion.hpp \
@@ -46,4 +49,7 @@ HEADERS += \
     ../src/core/gscontext.hpp \
     ../src/core/emotiondisasm.hpp \
     ../src/core/emotionasm.hpp \
-    ../src/core/gif.hpp
+    ../src/core/gif.hpp \
+    ../src/core/iop.hpp \
+    ../src/core/iop_cop0.hpp \
+    ../src/core/iop_interpreter.hpp

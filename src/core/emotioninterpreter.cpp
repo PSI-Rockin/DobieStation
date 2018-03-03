@@ -1,13 +1,14 @@
 #include <cstdio>
 #include <cstdlib>
+#include "emotiondisasm.hpp"
 #include "emotioninterpreter.hpp"
 
 void EmotionInterpreter::interpret(EmotionEngine &cpu, uint32_t instruction)
 {
+    std::string disasm = EmotionDisasm::disasm_instr(instruction, cpu.get_PC());
+    //printf("[$%08X] $%08X - %s\n", cpu.get_PC(), instruction, disasm.c_str());
     if (!instruction)
-    {
         return;
-    }
     int op = instruction >> 26;
     switch (op)
     {

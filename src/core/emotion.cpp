@@ -32,18 +32,17 @@ void EmotionEngine::reset()
     branch_on = false;
     increment_PC = true;
     delay_slot = 0;
+
+    //Clear out $zero
     for (int i = 0; i < 16; i++)
-        gpr[i] = 0; //Clear out zeroth register
+        gpr[i] = 0;
+
     cp0.reset();
     fpu.reset();
 }
 
 void EmotionEngine::run()
 {
-    if (PC == 0x8000B8A4)
-    {
-        PC = 0x8000B8BC;
-    }
     increment_PC = true;
     if (delay_slot)
         delay_slot--;
@@ -63,9 +62,9 @@ void EmotionEngine::run()
 
 void EmotionEngine::print_state()
 {
-    for (int i = 0; i < 32; i++)
+    for (int i = 1; i < 32; i++)
     {
-        printf("r%d: $%08X_%08X", i, get_gpr<uint32_t>(i, 1), get_gpr<uint32_t>(i));
+        printf("%s: $%08X_%08X", REG(i), get_gpr<uint32_t>(i, 1), get_gpr<uint32_t>(i));
         if ((i & 3) == 3)
             printf("\n");
         else
