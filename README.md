@@ -4,20 +4,13 @@ A young PS2 emulator with plans for an optimized Android port, as well as a fast
 IRC: Join #dobiestation on irc.badnik.net for discussing development.
 
 ## Compiling
-DobieStation uses Qt 5 and currently only supports qmake, meson and CMake.
+DobieStation uses Qt 5 and supports qmake and CMake.
 
 ### Building with qmake
 ```
 cd DobieStation/DobieStation
 qmake DobieStation.pro
 make
-```
-
-### Building with meson
-```
-meson build --buildtype=release
-cd build
-ninja
 ```
 
 ### Building with CMake
