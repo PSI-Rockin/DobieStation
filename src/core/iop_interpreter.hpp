@@ -46,6 +46,7 @@ namespace IOP_Interpreter
     void mthi(IOP& cpu, uint32_t instruction);
     void mflo(IOP& cpu, uint32_t instruction);
     void mtlo(IOP& cpu, uint32_t instruction);
+	void mult(IOP& cpu, uint32_t instruction);
     void multu(IOP& cpu, uint32_t instruction);
     void div(IOP& cpu, uint32_t instruction);
     void divu(IOP& cpu, uint32_t instruction);
