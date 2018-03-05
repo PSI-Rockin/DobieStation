@@ -15,6 +15,7 @@
       "name": "DobieStation",
       "buildsystem": "cmake",
       "no-make-install": true,
+      "builddir": true,
       "build-commands": [
         "mkdir /app/bin",
         "install DobieStation /app/bin/"
@@ -23,10 +24,6 @@
         {
           "type": "git",
           "url": "https://github.com/PSI-Rockin/DobieStation.git"
-        },
-        {
-          "type": "shell",
-          "commands": ["rm -rf DobieStation"]
         }
       ]
     }
