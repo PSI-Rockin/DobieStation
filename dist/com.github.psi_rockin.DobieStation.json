@@ -1,0 +1,31 @@
+{
+  "app-id": "com.github.psi_rockin.DobieStation",
+  "runtime": "org.kde.Platform",
+  "runtime-version": "5.9",
+  "sdk": "org.kde.Sdk",
+  "command": "DobieStation",
+  "finish-args": [
+    "--device=all",
+    "--filesystem=home:ro",
+    "--socket=pulseaudio",
+    "--socket=x11"
+  ],
+  "modules": [
+    {
+      "name": "DobieStation",
+      "buildsystem": "cmake",
+      "no-make-install": true,
+      "builddir": true,
+      "build-commands": [
+        "mkdir /app/bin",
+        "install DobieStation /app/bin/"
+      ],
+      "sources": [
+        {
+          "type": "git",
+          "url": "https://github.com/PSI-Rockin/DobieStation.git"
+        }
+      ]
+    }
+  ]
+}
