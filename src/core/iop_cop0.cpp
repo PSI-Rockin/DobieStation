@@ -17,6 +17,10 @@ void IOP_Cop0::reset()
     status.KUo = false;
     status.Im = 0;
     status.bev = true;
+
+    cause.code = 0;
+    cause.bd = false;
+    cause.int_pending = 0;
 }
 
 uint32_t IOP_Cop0::mfc(int cop_reg)
@@ -38,8 +42,18 @@ uint32_t IOP_Cop0::mfc(int cop_reg)
             reg |= status.bev << 22;
             return reg;
         }
+        case 13:
+        {
+            uint32_t reg = 0;
+            reg |= cause.code << 2;
+            reg |= cause.int_pending << 8;
+            reg |= cause.bd << 31;
+            return reg;
+        }
+        case 14:
+            return EPC;
         case 15:
-            return 0;
+            return 0x10;
         default:
             printf("[IOP COP0] MFC: Unknown cop_reg %d\n", cop_reg);
             exit(1);

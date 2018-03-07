@@ -32,6 +32,7 @@ void IOP::reset()
     gpr[0] = 0;
     load_delay = 0;
     will_branch = false;
+    inc_PC = true;
 }
 
 uint32_t IOP::translate_addr(uint32_t addr)
@@ -55,6 +56,10 @@ void IOP::run()
         {
             will_branch = false;
             PC = new_PC;
+            if (PC < 0xBFC00000)
+            {
+                printf("Jump to RAM!\n");
+            }
         }
         else
             load_delay--;
@@ -63,7 +68,7 @@ void IOP::run()
     printf("[IOP] [$%08X] $%08X - %s\n", PC, instr, EmotionDisasm::disasm_instr(instr, PC).c_str());
     IOP_Interpreter::interpret(*this, instr);
 
-    /*if (PC == 0x00030018)
+    if (PC == 0xBFC5891C)
     {
         for (int i = 0; i < 32; i++)
         {
@@ -71,7 +76,7 @@ void IOP::run()
             if (i % 3 == 2)
                 printf("\n");
         }
-    }*/
+    }
 
     if (inc_PC)
         PC += 4;
@@ -95,10 +100,17 @@ void IOP::branch(bool condition, int32_t offset)
         jp(PC + offset + 4);
 }
 
+void IOP::handle_exception(uint32_t addr, uint8_t cause)
+{
+    inc_PC = false;
+    cop0.cause.code = cause;
+    cop0.EPC = PC;
+    PC = addr;
+}
+
 void IOP::syscall_exception()
 {
-    printf("\n[IOP] syscall");
-    exit(1);
+    handle_exception(0x80000080, 0x08);
 }
 
 void IOP::mfc(int cop_id, int cop_reg, int reg)
@@ -130,8 +142,11 @@ void IOP::mtc(int cop_id, int cop_reg, int reg)
 
 void IOP::rfe()
 {
-    printf("\n[IOP] rfe");
-    exit(1);
+    cop0.status.KUc = cop0.status.KUp;
+    cop0.status.KUp = cop0.status.KUo;
+
+    cop0.status.IEc = cop0.status.IEp;
+    cop0.status.IEp = cop0.status.IEo;
 }
 
 uint8_t IOP::read8(uint32_t addr)

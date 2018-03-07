@@ -16,10 +16,19 @@ struct IOP_Cop0_Status
 
 };
 
+struct IOP_Cop0_Cause
+{
+    uint8_t code;
+    uint8_t int_pending;
+    bool bd;
+};
+
 class IOP_Cop0
 {
     public:
         IOP_Cop0_Status status;
+        IOP_Cop0_Cause cause;
+        uint32_t EPC;
         IOP_Cop0();
 
         void reset();

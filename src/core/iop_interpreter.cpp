@@ -409,6 +409,9 @@ void IOP_Interpreter::special(IOP &cpu, uint32_t instruction)
         case 0x13:
             mtlo(cpu, instruction);
             break;
+        case 0x18:
+            mult(cpu, instruction);
+            break;
         case 0x19:
             multu(cpu, instruction);
             break;
@@ -557,6 +560,17 @@ void IOP_Interpreter::mtlo(IOP &cpu, uint32_t instruction)
     cpu.set_LO(cpu.get_gpr(source));
 }
 
+void IOP_Interpreter::mult(IOP &cpu, uint32_t instruction)
+{
+    int32_t op1 = (instruction >> 21) & 0x1F;
+    int32_t op2 = (instruction >> 16) & 0x1F;
+    op1 = cpu.get_gpr(op1);
+    op2 = cpu.get_gpr(op2);
+    int64_t temp = op1 * op2;
+    cpu.set_LO(temp & 0xFFFFFFFF);
+    cpu.set_HI(temp >> 32);
+}
+
 void IOP_Interpreter::multu(IOP &cpu, uint32_t instruction)
 {
     uint32_t op1 = (instruction >> 21) & 0x1F;
@@ -576,11 +590,23 @@ void IOP_Interpreter::div(IOP &cpu, uint32_t instruction)
     op2 = (int32_t)cpu.get_gpr(op2);
     if (!op2)
     {
-        printf("\n[IOP_Interpreter] DIV division by zero\n");
-        exit(1);
+        cpu.set_HI(op1);
+        if (op1 > 0x80000000)
+            cpu.set_LO(1);
+        else
+            cpu.set_LO(0xFFFFFFFF);
     }
-    cpu.set_LO(op1 / op2);
-    cpu.set_HI(op1 % op2);
+    else if (op1 == 0x80000000 && op2 == 0xFFFFFFFF)
+    {
+        cpu.set_LO(0x80000000);
+        cpu.set_HI(0);
+    }
+    else
+    {
+        cpu.set_LO(op1 / op2);
+        cpu.set_HI(op1 % op2);
+    }
+
 }
 
 void IOP_Interpreter::divu(IOP &cpu, uint32_t instruction)
@@ -591,11 +617,14 @@ void IOP_Interpreter::divu(IOP &cpu, uint32_t instruction)
     op2 = cpu.get_gpr(op2);
     if (!op2)
     {
-        printf("\n[IOP_Interpreter] DIV division by zero\n");
-        exit(1);
+        cpu.set_LO(0xFFFFFFFF);
+        cpu.set_HI(op1);
     }
-    cpu.set_LO(op1 / op2);
-    cpu.set_HI(op1 % op2);
+    else
+    {
+        cpu.set_LO(op1 / op2);
+        cpu.set_HI(op1 % op2);
+    }
 }
 
 void IOP_Interpreter::add(IOP &cpu, uint32_t instruction)

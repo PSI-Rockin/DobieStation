@@ -31,8 +31,10 @@ class IOP
         void jp(uint32_t addr);
         void branch(bool condition, int32_t offset);
 
+        void handle_exception(uint32_t addr, uint8_t cause);
         void syscall_exception();
         void rfe();
+
         void mfc(int cop_id, int cop_reg, int reg);
         void mtc(int cop_id, int cop_reg, int reg);
         void mtc();

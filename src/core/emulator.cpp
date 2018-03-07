@@ -24,10 +24,11 @@ void Emulator::run()
 {
     gs.start_frame();
     instructions_run = 0;
-    uint32_t old_value = iop_read32(0x00190014);
-    while (!gs.is_frame_complete() && instructions_run < 300000)
+    uint32_t addr = 16;
+    uint32_t old_value = iop_read32(addr);
+    while (!gs.is_frame_complete() && instructions_run < 1000000)
     {
-        uint32_t new_value = iop_read32(0x00190014);
+        uint32_t new_value = iop_read32(addr);
         if (new_value != old_value)
         {
             printf("Change to old value: $%08X\n", new_value);
@@ -36,7 +37,11 @@ void Emulator::run()
         //cpu.run();
         //dmac.run();
         if (instructions_run % 8 == 0)
+        {
+            //printf("I: $%08X ", instructions_run / 8);
             iop.run();
+        }
+
         instructions_run++;
     }
     //VBLANK start
@@ -372,6 +377,8 @@ uint8_t Emulator::iop_read8(uint32_t address)
         return BIOS[address & 0x3FFFFF];
     switch (address)
     {
+        case 0x1F402005:
+            return 0;
         case 0x1FA00000:
             return IOP_POST;
     }
@@ -397,17 +404,34 @@ uint32_t Emulator::iop_read32(uint32_t address)
         return *(uint32_t*)&BIOS[address & 0x3FFFFF];
     switch (address)
     {
+        case 0x1D000020:
+            return 0x10000;
+        case 0x1E000000:
+            return 0;
+        case 0x1E000010:
+            return 0;
+        case 0x1F80100C:
+            return 0;
         case 0x1F801010:
             return 0;
         case 0x1F801074:
             return 0;
+        case 0x1F801078:
+            return 0;
         case 0x1F8010F0:
+            return 0;
+        case 0x1F801400:
+            return 0;
+        case 0x1F801450:
+            return 0;
+        case 0x1F801578:
             return 0;
         case 0xFFFE0130:
             return 0;
     }
     printf("Unrecognized IOP read32 from physical addr $%08X\n", address);
-    exit(1);
+    //exit(1);
+    return 0;
 }
 
 void Emulator::iop_write8(uint32_t address, uint8_t value)
@@ -494,6 +518,8 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
         case 0x1F8010F0:
             printf("[IOP] Write32 to $%08X of $%08X\n", address, value);
             return;
+        case 0x1F801404:
+            return;
         //POST2?
         case 0x1F802070:
             return;
@@ -502,5 +528,5 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
             return;
     }
     printf("Unrecognized IOP write32 to physical addr $%08X of $%08X\n", address, value);
-    exit(1);
+    //exit(1);
 }
