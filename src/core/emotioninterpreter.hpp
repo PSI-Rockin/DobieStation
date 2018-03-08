@@ -117,6 +117,8 @@ namespace EmotionInterpreter
     void plzcw(EmotionEngine& cpu, uint32_t instruction);
     void mmi0(EmotionEngine& cpu, uint32_t instruction);
     void psubb(EmotionEngine& cpu, uint32_t instruction);
+    void mmi1(EmotionEngine& cpu, uint32_t instruction);
+    void padduw(EmotionEngine& cpu, uint32_t instruction);
     void mmi2(EmotionEngine& cpu, uint32_t instruction);
     void pcpyld(EmotionEngine& cpu, uint32_t instruction);
     void pand(EmotionEngine& cpu, uint32_t instruction);
@@ -129,6 +131,8 @@ namespace EmotionInterpreter
     void pcpyud(EmotionEngine& cpu, uint32_t instruction);
     void por(EmotionEngine& cpu, uint32_t instruction);
     void pnor(EmotionEngine& cpu, uint32_t instruction);
+
+    void unknown_op(const char* type, uint32_t instruction, uint16_t op);
 };
 
 #endif // EMOTIONINTERPRETER_HPP

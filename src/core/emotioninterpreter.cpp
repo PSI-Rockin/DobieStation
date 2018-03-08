@@ -1,12 +1,9 @@
 #include <cstdio>
 #include <cstdlib>
-#include "emotiondisasm.hpp"
 #include "emotioninterpreter.hpp"
 
 void EmotionInterpreter::interpret(EmotionEngine &cpu, uint32_t instruction)
 {
-    std::string disasm = EmotionDisasm::disasm_instr(instruction, cpu.get_PC());
-    //printf("[$%08X] $%08X - %s\n", cpu.get_PC(), instruction, disasm.c_str());
     if (!instruction)
         return;
     int op = instruction >> 26;
@@ -154,7 +151,7 @@ void EmotionInterpreter::interpret(EmotionEngine &cpu, uint32_t instruction)
             sd(cpu, instruction);
             break;
         default:
-            exit(1);
+            unknown_op("normal", instruction, op);
     }
 }
 
@@ -176,7 +173,7 @@ void EmotionInterpreter::regimm(EmotionEngine &cpu, uint32_t instruction)
             bgezl(cpu, instruction);
             break;
         default:
-            exit(1);
+            unknown_op("regimm", instruction, op);
     }
 }
 
@@ -731,7 +728,7 @@ void EmotionInterpreter::cop(EmotionEngine &cpu, uint32_t instruction)
                     cpu.di();
                     break;
                 default:
-                    exit(1);
+                    unknown_op("cop2", instruction, op2);
             }
         }
             break;
@@ -751,7 +748,7 @@ void EmotionInterpreter::cop(EmotionEngine &cpu, uint32_t instruction)
         case 0x202:
             break;
         default:
-            exit(1);
+            unknown_op("cop", instruction, op);
     }
 }
 
@@ -777,4 +774,11 @@ void EmotionInterpreter::cop_ctc(EmotionEngine &cpu, uint32_t instruction)
     int emotion_reg = (instruction >> 16) & 0x1F;
     int cop_reg = (instruction >> 11) & 0x1F;
     cpu.ctc(cop_id, emotion_reg, cop_reg);
+}
+
+void EmotionInterpreter::unknown_op(const char *type, uint32_t instruction, uint16_t op)
+{
+    printf("[EE Interpreter] Unrecognized %s op $%04X\n", type, op);
+    printf("[EE Interpreter] Instr: $%08X\n", instruction);
+    exit(1);
 }

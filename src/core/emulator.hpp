@@ -6,6 +6,7 @@
 #include "gs.hpp"
 #include "gif.hpp"
 #include "iop.hpp"
+#include "sif.hpp"
 
 class Emulator
 {
@@ -16,6 +17,7 @@ class Emulator
         GraphicsSynthesizer gs;
         GraphicsInterface gif;
         IOP iop;
+        SubsystemInterface sif;
 
         uint8_t* RDRAM;
         uint8_t* IOP_RAM;

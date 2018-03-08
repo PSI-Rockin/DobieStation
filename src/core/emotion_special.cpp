@@ -127,7 +127,7 @@ void EmotionInterpreter::special(EmotionEngine &cpu, uint32_t instruction)
             dsra32(cpu, instruction);
             break;
         default:
-            exit(1);
+            unknown_op("special", instruction, op);
     }
 }
 

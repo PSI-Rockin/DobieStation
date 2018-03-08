@@ -39,7 +39,7 @@ void EmotionInterpreter::cop_s(Cop1& fpu, uint32_t instruction)
             fpu_c_lt_s(fpu, instruction);
             break;
         default:
-            exit(1);
+            unknown_op("FPU", instruction, op);
     }
 }
 
@@ -126,7 +126,7 @@ void EmotionInterpreter::cop_bc1(EmotionEngine &cpu, uint32_t instruction)
     uint8_t op = (instruction >> 16) & 0x1F;
     if (op > 3)
     {
-        exit(1);
+        unknown_op("bc1", instruction, op);
     }
     cpu.fpu_bc1(offset, op_true[op], likely[op]);
 }

@@ -56,19 +56,19 @@ void IOP::run()
         {
             will_branch = false;
             PC = new_PC;
-            if (PC < 0xBFC00000)
+            /*if (PC < 0xBFC00000)
             {
                 printf("Jump to RAM!\n");
-            }
+            }*/
         }
         else
             load_delay--;
     }
     uint32_t instr = read32(PC);
-    printf("[IOP] [$%08X] $%08X - %s\n", PC, instr, EmotionDisasm::disasm_instr(instr, PC).c_str());
+    //printf("[IOP] [$%08X] $%08X - %s\n", PC, instr, EmotionDisasm::disasm_instr(instr, PC).c_str());
     IOP_Interpreter::interpret(*this, instr);
 
-    if (PC == 0xBFC5891C)
+    /*if (PC == 0xBFC5891C)
     {
         for (int i = 0; i < 32; i++)
         {
@@ -76,7 +76,7 @@ void IOP::run()
             if (i % 3 == 2)
                 printf("\n");
         }
-    }
+    }*/
 
     if (inc_PC)
         PC += 4;

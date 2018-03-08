@@ -1023,6 +1023,8 @@ string EmotionDisasm::disasm_mmi(uint32_t instruction, uint32_t instr_addr)
             return disasm_mult1(instruction);
         case 0x1B:
             return disasm_divu1(instruction);
+        case 0x28:
+            return disasm_mmi1(instruction);
         case 0x29:
             return disasm_mmi3(instruction);
         default:
@@ -1054,6 +1056,18 @@ string EmotionDisasm::disasm_mmi0(uint32_t instruction)
 string EmotionDisasm::disasm_psubb(uint32_t instruction)
 {
     return disasm_special_simplemath("psubb", instruction);
+}
+
+string EmotionDisasm::disasm_mmi1(uint32_t instruction)
+{
+    uint8_t op = (instruction >> 6) & 0x1F;
+    switch (op)
+    {
+        case 0x10:
+            return disasm_special_simplemath("padduw", instruction);
+        default:
+            return unknown_op("mmi1", op, 2);
+    }
 }
 
 string EmotionDisasm::disasm_mmi2(uint32_t instruction)

@@ -36,12 +36,14 @@ struct D_STAT
     bool mfifo_mask;
 };
 
+class EmotionEngine;
 class Emulator;
 class GraphicsInterface;
 
 class DMAC
 {
     private:
+        EmotionEngine* cpu;
         Emulator* e;
         GraphicsInterface* gif;
         DMA_Channel channels[10];
@@ -50,8 +52,11 @@ class DMAC
         D_STAT interrupt_stat;
 
         void handle_source_chain(int index);
+        void handle_dest_chain(int index);
+
+        void transfer_end(int index);
     public:
-        DMAC(Emulator* e, GraphicsInterface* gif);
+        DMAC(EmotionEngine* cpu, Emulator* e, GraphicsInterface* gif);
         void reset();
         void run();
         void start_DMA(int index);

@@ -17,7 +17,7 @@ enum CHANNELS
     SPR_TO
 };
 
-DMAC::DMAC(Emulator* e, GraphicsInterface* gif) : e(e), gif(gif)
+DMAC::DMAC(EmotionEngine* cpu, Emulator* e, GraphicsInterface* gif) : cpu(cpu), e(e), gif(gif)
 {
 
 }
@@ -46,7 +46,7 @@ void DMAC::run()
             {
                 if (channels[i].tag_end)
                 {
-                    channels[i].control &= ~0x100;
+                    transfer_end(i);
                     continue;
                 }
                 int mode = (channels[i].control >> 2) & 0x3;
@@ -54,10 +54,13 @@ void DMAC::run()
                 {
                     //Normal - suspend transfer
                     case 0:
-                        channels[i].control &= ~0x100;
+                        transfer_end(i);
                         break;
                     case 1:
                         handle_source_chain(i);
+                        break;
+                    case 2:
+                        handle_dest_chain(i);
                         break;
                     default:
                         break;
@@ -76,15 +79,31 @@ void DMAC::run()
                 case GIF:
                     gif->send_PATH3(quad);
                     break;
+                case SIF1:
+                    printf("[DMAC] SIF1 transfer from $%08X\n", channels[i].address - 16);
+                    break;
             }
         }
     }
 }
 
+void DMAC::transfer_end(int index)
+{
+    printf("[DMAC] Transfer end: %d\n", index);
+    channels[index].control &= ~0x100;
+
+    bool old_stat = interrupt_stat.channel_stat[index];
+    interrupt_stat.channel_stat[index];
+
+    //Rising edge INT1
+    if (!old_stat & interrupt_stat.channel_mask[index])
+        cpu->int1();
+}
+
 void DMAC::handle_source_chain(int index)
 {
     uint64_t DMAtag = e->read64(channels[index].tag_address);
-    printf("\n[DMAC] DMAtag read $%08X: $%08X_%08X", channels[index].tag_address, DMAtag >> 32, DMAtag & 0xFFFFFFFF);
+    printf("[DMAC] DMAtag read $%08X: $%08X_%08X\n", channels[index].tag_address, DMAtag >> 32, DMAtag & 0xFFFFFFFF);
 
     //Change CTRL to have the upper 16 bits equal to bits 16-31 of the most recently read DMAtag
     channels[index].control &= 0xFFFF;
@@ -110,7 +129,7 @@ void DMAC::handle_source_chain(int index)
             printf("\nNew address: $%08X", channels[index].address);
             printf("\nNew tag addr: $%08X", channels[index].tag_address);
             break;
-        case 2:
+        case 3:
             //ref
             channels[index].address = addr;
             channels[index].tag_address += 16;
@@ -124,6 +143,11 @@ void DMAC::handle_source_chain(int index)
             printf("\n[DMAC] Unrecognized source chain DMAtag id %d\n", id);
             exit(1);
     }
+}
+
+void DMAC::handle_dest_chain(int index)
+{
+
 }
 
 void DMAC::start_DMA(int index)
@@ -143,6 +167,15 @@ uint32_t DMAC::read32(uint32_t address)
     {
         case 0x1000A000:
             reg = channels[GIF].control;
+            break;
+        case 0x1000C000:
+            reg = channels[SIF0].control;
+            break;
+        case 0x1000C400:
+            reg = channels[SIF1].control;
+            break;
+        case 0x1000C430:
+            reg = channels[SIF1].tag_address;
             break;
         case 0x1000E000:
             reg |= control.master_enable;
@@ -166,7 +199,7 @@ uint32_t DMAC::read32(uint32_t address)
             reg |= interrupt_stat.mfifo_mask << 30;
             break;
         default:
-            printf("\n[DMAC] Unrecognized read32 from $%08X", address);
+            printf("[DMAC] Unrecognized read32 from $%08X\n", address);
             break;
     }
     return reg;
@@ -186,15 +219,39 @@ void DMAC::write32(uint32_t address, uint32_t value)
             channels[GIF].address = value & ~0xF;
             break;
         case 0x1000A020:
-            printf("\n[DMAC] GIF QWC: $%08X", value & 0xFFFF);
+            printf("[DMAC] GIF QWC: $%08X\n", value & 0xFFFF);
             channels[GIF].quadword_count = value & 0xFFFF;
             break;
         case 0x1000A030:
-            printf("\n[DMAC] GIF T_ADR: $%08X", value);
+            printf("[DMAC] GIF T_ADR: $%08X\n", value);
             channels[GIF].tag_address = value & ~0xF;
             break;
+        case 0x1000C000:
+            printf("[DMAC] SIF0 CTRL: $%08X\n", value);
+            /*channels[SIF0].control = value;
+            if (value & 0x100)
+                start_DMA(SIF0);*/
+            break;
+        case 0x1000C020:
+            printf("[DMAC] SIF0 QWC: $%08X\n", value);
+            channels[SIF0].quadword_count = value & 0xFFFF;
+            break;
+        case 0x1000C400:
+            printf("[DMAC] SIF1 CTRL: $%08X\n", value);
+            channels[SIF1].control = value;
+            if (value & 0x100)
+                start_DMA(SIF1);
+            break;
+        case 0x1000C420:
+            printf("[DMAC] SIF1 QWC: $%08X\n", value);
+            channels[SIF1].quadword_count = value & 0xFFFF;
+            break;
+        case 0x1000C430:
+            printf("[DMAC] SIF1 T_ADR: $%08X\n", value);
+            channels[SIF1].tag_address = value & ~0xF;
+            break;
         case 0x1000E000:
-            printf("\n[DMAC] Write32 D_CTRL: $%08X", value);
+            printf("[DMAC] Write32 D_CTRL: $%08X\n", value);
             control.master_enable = value & 0x1;
             control.cycle_stealing = value & 0x2;
             control.mem_drain_channel = (value >> 2) & 0x3;
@@ -203,7 +260,7 @@ void DMAC::write32(uint32_t address, uint32_t value)
             control.release_cycle = (value >> 8) & 0x7;
             break;
         case 0x1000E010:
-            printf("\n[DMAC] Write32 D_STAT: $%08X", value);
+            printf("[DMAC] Write32 D_STAT: $%08X\n", value);
             for (int i = 0; i < 10; i++)
             {
                 interrupt_stat.channel_stat[i] &= ~(value & (1 << i));
@@ -224,7 +281,7 @@ void DMAC::write32(uint32_t address, uint32_t value)
 
             break;
         default:
-            printf("\n[DMAC] Unrecognized write32 of $%08X to $%08X", value, address);
+            printf("[DMAC] Unrecognized write32 of $%08X to $%08X\n", value, address);
             break;
     }
 }

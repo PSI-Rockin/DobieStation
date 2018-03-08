@@ -3,7 +3,7 @@
 #include <cstdlib>
 #include "emulator.hpp"
 
-Emulator::Emulator() : bios_hle(this, &gs), cpu(&bios_hle, this), dmac(this, &gif), gif(&gs), iop(this)
+Emulator::Emulator() : bios_hle(this, &gs), cpu(&bios_hle, this), dmac(&cpu, this, &gif), gif(&gs), iop(this)
 {
     BIOS = nullptr;
     RDRAM = nullptr;
@@ -34,8 +34,8 @@ void Emulator::run()
             printf("Change to old value: $%08X\n", new_value);
             old_value = new_value;
         }
-        //cpu.run();
-        //dmac.run();
+        cpu.run();
+        dmac.run();
         if (instructions_run % 8 == 0)
         {
             //printf("I: $%08X ", instructions_run / 8);
@@ -66,6 +66,7 @@ void Emulator::reset()
     gs.reset();
     gif.reset();
     iop.reset();
+    sif.reset();
     MCH_DRD = 0;
     MCH_RICM = 0;
     rdram_sdevid = 0;
@@ -220,6 +221,10 @@ uint32_t Emulator::read32(uint32_t address)
         case 0x1000F010:
             printf("\nRead32 INTC_MASK: $%08X", INTC_MASK);
             return INTC_MASK;
+        case 0x1000F220:
+            return sif.get_msflag();
+        case 0x1000F230:
+            return sif.get_smflag();
         case 0x1000F430:
             printf("\nRead from MCH_RICM");
             return 0;
@@ -323,6 +328,14 @@ void Emulator::write32(uint32_t address, uint32_t value)
             printf("\nWrite32 INTC_MASK: $%08X", value);
             INTC_MASK ^= (value & 0x7FFF);
             return;
+        case 0x1000F220:
+            printf("[EE] Write32 msflag: $%08X\n", value);
+            sif.set_msflag(value);
+            return;
+        case 0x1000F230:
+            printf("[EE] Write32 smflag: $%08X\n", value);
+            sif.set_smflag(value);
+            return;
         case 0x1000F430:
             printf("\nWrite to MCH_RICM: $%08X", value);
             if ((((value >> 16) & 0xFFF) == 0x21) && (((value >> 6) & 0xF) == 1) &&
@@ -370,7 +383,7 @@ uint8_t Emulator::iop_read8(uint32_t address)
 {
     if (address < 0x00200000)
     {
-        printf("[IOP] Read8 from $%08X: $%02X\n", address, IOP_RAM[address]);
+        //printf("[IOP] Read8 from $%08X: $%02X\n", address, IOP_RAM[address]);
         return IOP_RAM[address];
     }
     if (address >= 0x1FC00000 && address < 0x20000000)
@@ -405,7 +418,9 @@ uint32_t Emulator::iop_read32(uint32_t address)
     switch (address)
     {
         case 0x1D000020:
-            return 0x10000;
+            return sif.get_msflag();
+        case 0x1D000030:
+            return sif.get_smflag();
         case 0x1E000000:
             return 0;
         case 0x1E000010:
@@ -438,7 +453,7 @@ void Emulator::iop_write8(uint32_t address, uint8_t value)
 {
     if (address < 0x00200000)
     {
-        printf("[IOP] Write to $%08X of $%02X\n", address, value);
+        //printf("[IOP] Write to $%08X of $%02X\n", address, value);
         IOP_RAM[address] = value;
         return;
     }
@@ -462,7 +477,7 @@ void Emulator::iop_write16(uint32_t address, uint16_t value)
 {
     if (address < 0x00200000)
     {
-        printf("[IOP] Write16 to $%08X of $%08X\n", address, value);
+        //printf("[IOP] Write16 to $%08X of $%08X\n", address, value);
         *(uint16_t*)&IOP_RAM[address] = value;
         return;
     }
@@ -474,7 +489,7 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
 {
     if (address < 0x00200000)
     {
-        printf("[IOP] Write to $%08X of $%08X\n", address, value);
+        //printf("[IOP] Write to $%08X of $%08X\n", address, value);
         *(uint32_t*)&IOP_RAM[address] = value;
         return;
     }
@@ -485,6 +500,12 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
     }
     switch (address)
     {
+        case 0x1D000020:
+            sif.set_msflag(value);
+            return;
+        case 0x1D000030:
+            sif.set_smflag(value);
+            return;
         case 0x1F801000:
             return;
         case 0x1F801004:

@@ -26,12 +26,13 @@ class EmotionEngine
 
         bool increment_PC;
         bool branch_on;
+        bool can_disassemble;
         int delay_slot;
 
         uint8_t scratchpad[1024 * 16];
 
         uint32_t get_paddr(uint32_t vaddr);
-        void handle_exception(uint32_t new_addr);
+        void handle_exception(uint32_t new_addr, uint8_t code);
     public:
         EmotionEngine(BIOS_HLE* b, Emulator* e);
         static const char* REG(int id);
@@ -73,6 +74,7 @@ class EmotionEngine
         void syscall_exception();
         void request_interrupt();
         void interrupt();
+        void int1();
 
         void eret();
         void ei();

@@ -20,9 +20,8 @@ struct COP0_CAUSE
 
 class Cop0
 {
-    private:
-        uint32_t gpr[32];
     public:
+        uint32_t gpr[32];
         Cop0();
 
         void reset();

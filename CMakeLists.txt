@@ -28,6 +28,7 @@ set(SOURCES
 	src/core/iop.cpp
 	src/core/iop_cop0.cpp
 	src/core/iop_interpreter.cpp
+	src/core/sif.cpp
         src/core/vu0.cpp
         src/qt/emuwindow.cpp
         src/qt/main.cpp
@@ -45,10 +46,11 @@ set(HEADERS
         src/core/emulator.hpp
         src/core/gif.hpp
         src/core/gs.hpp
+	src/core/gscontext.hpp
 	src/core/iop.hpp
 	src/core/iop_cop0.hpp
 	src/core/iop_interpreter.hpp
-        src/core/gscontext.hpp
+	src/core/sif.hpp
         src/core/vu0.hpp
         src/qt/emuwindow.hpp
         )
