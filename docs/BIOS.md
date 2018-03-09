@@ -25,7 +25,7 @@ Else
 
 ## Syscalls
 
-When the SYSCALL instruction is executed, program execution jumps to a handler at 0x80000200. The BIOS then loads the byte before the syscall and calls the function associated with the byte number. This means that syscalls require two instructions. E.g.:
+When the SYSCALL instruction is executed, program execution jumps to a handler at 0x80000180. The BIOS then loads the byte before the syscall and calls the function associated with the byte number. This means that syscalls require two instructions. E.g.:
 
 ```
 addiu zero, zero, 0x64
