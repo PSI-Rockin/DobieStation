@@ -47,7 +47,7 @@ void Emulator::run()
     //VBLANK start
     INTC_STAT |= (1 << 2);
     if (INTC_MASK & 0x4)
-        cpu.request_interrupt();
+        cpu.int0();
     //gs.render_CRT();
 }
 
@@ -221,6 +221,10 @@ uint32_t Emulator::read32(uint32_t address)
         case 0x1000F010:
             printf("\nRead32 INTC_MASK: $%08X", INTC_MASK);
             return INTC_MASK;
+        case 0x1000F200:
+            return sif.get_mscom();
+        case 0x1000F210:
+            return sif.get_smcom();
         case 0x1000F220:
             return sif.get_msflag();
         case 0x1000F230:
@@ -328,6 +332,12 @@ void Emulator::write32(uint32_t address, uint32_t value)
             printf("\nWrite32 INTC_MASK: $%08X", value);
             INTC_MASK ^= (value & 0x7FFF);
             return;
+        case 0x1000F200:
+            sif.set_mscom(value);
+            return;
+        case 0x1000F210:
+            sif.set_smcom(value);
+            return;
         case 0x1000F220:
             printf("[EE] Write32 msflag: $%08X\n", value);
             sif.set_msflag(value);
@@ -417,6 +427,10 @@ uint32_t Emulator::iop_read32(uint32_t address)
         return *(uint32_t*)&BIOS[address & 0x3FFFFF];
     switch (address)
     {
+        case 0x1D000000:
+            return sif.get_mscom();
+        case 0x1D000010:
+            return sif.get_smcom();
         case 0x1D000020:
             return sif.get_msflag();
         case 0x1D000030:
@@ -500,6 +514,12 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
     }
     switch (address)
     {
+        case 0x1D000000:
+            sif.set_mscom(value);
+            return;
+        case 0x1D000010:
+            sif.set_smcom(value);
+            return;
         case 0x1D000020:
             sif.set_msflag(value);
             return;

@@ -97,7 +97,7 @@ void DMAC::transfer_end(int index)
 
     //Rising edge INT1
     if (!old_stat & interrupt_stat.channel_mask[index])
-        cpu->int1();
+        cpu->set_int1_signal(true);
 }
 
 void DMAC::handle_source_chain(int index)
@@ -189,7 +189,7 @@ uint32_t DMAC::read32(uint32_t address)
             for (int i = 0; i < 10; i++)
             {
                 reg |= interrupt_stat.channel_stat[i] << i;
-                reg |= interrupt_stat.channel_mask[i] << (i + 15);
+                reg |= interrupt_stat.channel_mask[i] << (i + 16);
             }
             reg |= interrupt_stat.stall_stat << 13;
             reg |= interrupt_stat.mfifo_stat << 14;
@@ -266,7 +266,7 @@ void DMAC::write32(uint32_t address, uint32_t value)
                 interrupt_stat.channel_stat[i] &= ~(value & (1 << i));
 
                 //Reverse channel int mask
-                if (value & (1 << (i + 15)))
+                if (value & (1 << (i + 16)))
                     interrupt_stat.channel_mask[i] ^= 1;
             }
 

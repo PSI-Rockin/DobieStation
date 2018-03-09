@@ -16,13 +16,13 @@ class EmotionEngine
         Cop0 cp0;
         Cop1 fpu;
 
-        bool interrupt_requested;
-
         //Each register is 128-bit
         uint8_t gpr[32 * sizeof(uint64_t) * 2];
         uint32_t PC, new_PC;
         uint64_t LO, LO1, HI, HI1;
         uint64_t SA;
+
+        bool int1_signal;
 
         bool increment_PC;
         bool branch_on;
@@ -72,9 +72,9 @@ class EmotionEngine
 
         void hle_syscall();
         void syscall_exception();
-        void request_interrupt();
-        void interrupt();
+        void int0();
         void int1();
+        void set_int1_signal(bool value);
 
         void eret();
         void ei();
