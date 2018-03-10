@@ -39,6 +39,7 @@ struct D_STAT
 class EmotionEngine;
 class Emulator;
 class GraphicsInterface;
+class SubsystemInterface;
 
 class DMAC
 {
@@ -46,6 +47,7 @@ class DMAC
         EmotionEngine* cpu;
         Emulator* e;
         GraphicsInterface* gif;
+        SubsystemInterface* sif;
         DMA_Channel channels[10];
 
         D_CTRL control;
@@ -56,7 +58,7 @@ class DMAC
 
         void transfer_end(int index);
     public:
-        DMAC(EmotionEngine* cpu, Emulator* e, GraphicsInterface* gif);
+        DMAC(EmotionEngine* cpu, Emulator* e, GraphicsInterface* gif, SubsystemInterface* sif);
         void reset();
         void run();
         void start_DMA(int index);

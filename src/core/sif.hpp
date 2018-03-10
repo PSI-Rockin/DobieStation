@@ -1,6 +1,7 @@
 #ifndef SIF_HPP
 #define SIF_HPP
 #include <cstdint>
+#include <queue>
 
 class SubsystemInterface
 {
@@ -9,10 +10,16 @@ class SubsystemInterface
         uint32_t smcom;
         uint32_t msflag;
         uint32_t smflag;
+
+        std::queue<uint32_t> SIF1_FIFO;
     public:
         SubsystemInterface();
 
         void reset();
+        int get_SIF1_size();
+
+        void write_SIF1(uint64_t* quad);
+        uint32_t read_SIF1();
 
         uint32_t get_mscom();
         uint32_t get_smcom();

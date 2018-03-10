@@ -27,6 +27,7 @@ set(SOURCES
         src/core/gscontext.cpp
 	src/core/iop.cpp
 	src/core/iop_cop0.cpp
+	src/core/iop_dma.cpp
 	src/core/iop_interpreter.cpp
 	src/core/sif.cpp
         src/core/vu0.cpp
@@ -49,6 +50,7 @@ set(HEADERS
 	src/core/gscontext.hpp
 	src/core/iop.hpp
 	src/core/iop_cop0.hpp
+	src/core/iop_dma.hpp
 	src/core/iop_interpreter.hpp
 	src/core/sif.hpp
         src/core/vu0.hpp

@@ -17,7 +17,8 @@ enum CHANNELS
     SPR_TO
 };
 
-DMAC::DMAC(EmotionEngine* cpu, Emulator* e, GraphicsInterface* gif) : cpu(cpu), e(e), gif(gif)
+DMAC::DMAC(EmotionEngine* cpu, Emulator* e, GraphicsInterface* gif, SubsystemInterface* sif) :
+    cpu(cpu), e(e), gif(gif), sif(sif)
 {
 
 }
@@ -68,20 +69,30 @@ void DMAC::run()
                 continue;
             }
 
+            bool transfer_success = false;
             uint64_t quad[2];
             quad[0] = e->read64(channels[i].address);
             quad[1] = e->read64(channels[i].address + 8);
-            channels[i].address += 16;
-            channels[i].quadword_count--;
 
             switch (i)
             {
                 case GIF:
                     gif->send_PATH3(quad);
+                    transfer_success = true;
                     break;
                 case SIF1:
-                    printf("[DMAC] SIF1 transfer from $%08X\n", channels[i].address - 16);
+                    if (sif->get_SIF1_size() <= 28)
+                    {
+                        sif->write_SIF1(quad);
+                        transfer_success = true;
+                    }
                     break;
+            }
+
+            if (transfer_success)
+            {
+                channels[i].address += 16;
+                channels[i].quadword_count--;
             }
         }
     }
@@ -152,11 +163,11 @@ void DMAC::handle_dest_chain(int index)
 
 void DMAC::start_DMA(int index)
 {
-    printf("\n[DMAC] D%d started: $%08X", index, channels[index].control);
-    printf("\nAddr: $%08X", channels[index].address);
-    printf("\nMode: %d", (channels[index].control >> 2) & 0x3);
-    printf("\nASP: %d", (channels[index].control >> 4) & 0x3);
-    printf("\nTTE: %d", channels[index].control & (1 << 6));
+    printf("[DMAC] D%d started: $%08X\n", index, channels[index].control);
+    printf("Addr: $%08X\n", channels[index].address);
+    printf("Mode: %d\n", (channels[index].control >> 2) & 0x3);
+    printf("ASP: %d\n", (channels[index].control >> 4) & 0x3);
+    printf("TTE: %d\n", channels[index].control & (1 << 6));
     channels[index].tag_end = false;
 }
 

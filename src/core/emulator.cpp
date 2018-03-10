@@ -3,7 +3,8 @@
 #include <cstdlib>
 #include "emulator.hpp"
 
-Emulator::Emulator() : bios_hle(this, &gs), cpu(&bios_hle, this), dmac(&cpu, this, &gif), gif(&gs), iop(this)
+Emulator::Emulator() :
+    bios_hle(this, &gs), cpu(&bios_hle, this), dmac(&cpu, this, &gif, &sif), gif(&gs), iop(this), iop_dma(&sif)
 {
     BIOS = nullptr;
     RDRAM = nullptr;
@@ -40,14 +41,15 @@ void Emulator::run()
         {
             //printf("I: $%08X ", instructions_run / 8);
             iop.run();
+            iop_dma.run();
         }
 
         instructions_run++;
     }
     //VBLANK start
     INTC_STAT |= (1 << 2);
-    if (INTC_MASK & 0x4)
-        cpu.int0();
+    //if (INTC_MASK & 0x4)
+        //cpu.int0();
     //gs.render_CRT();
 }
 
@@ -60,12 +62,15 @@ void Emulator::reset()
     if (!BIOS)
         BIOS = new uint8_t[1024 * 1024 * 4];
 
+    //RDRAM[0] = 0;
+
     bios_hle.reset();
     cpu.reset();
     dmac.reset();
     gs.reset();
     gif.reset();
     iop.reset();
+    iop_dma.reset(IOP_RAM);
     sif.reset();
     MCH_DRD = 0;
     MCH_RICM = 0;
@@ -182,7 +187,7 @@ void Emulator::load_ELF(uint8_t *ELF)
 uint8_t Emulator::read8(uint32_t address)
 {
     if (address < 0x10000000)
-        return *(uint32_t*)&RDRAM[address & 0x01FFFFFF];
+        return RDRAM[address & 0x01FFFFFF];
     if (address >= 0x1FC00000 && address < 0x20000000)
         return BIOS[address & 0x3FFFFF];
     printf("Unrecognized read8 at physical addr $%08X\n", address);
@@ -448,11 +453,13 @@ uint32_t Emulator::iop_read32(uint32_t address)
         case 0x1F801078:
             return 0;
         case 0x1F8010F0:
-            return 0;
+            return iop_dma.get_DPCR();
         case 0x1F801400:
             return 0;
         case 0x1F801450:
             return 0;
+        case 0x1F801570:
+            return iop_dma.get_DPCR2();
         case 0x1F801578:
             return 0;
         case 0xFFFE0130:
@@ -494,6 +501,15 @@ void Emulator::iop_write16(uint32_t address, uint16_t value)
         //printf("[IOP] Write16 to $%08X of $%08X\n", address, value);
         *(uint16_t*)&IOP_RAM[address] = value;
         return;
+    }
+    switch (address)
+    {
+        case 0x1F801534:
+            iop_dma.set_chan_size(10, value);
+            return;
+        case 0x1F801536:
+            iop_dma.set_chan_count(10, value);
+            return;
     }
     printf("Unrecognized IOP write16 to physical addr $%08X of $%04X\n", address, value);
     //exit(1);
@@ -555,11 +571,31 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
         //I_MASK?
         case 0x1F801074:
             return;
-        //DMAC/SIF shit
+        //Master int enable?
+        case 0x1F801078:
+            return;
         case 0x1F8010F0:
-            printf("[IOP] Write32 to $%08X of $%08X\n", address, value);
+            iop_dma.set_DPCR(value);
+            return;
+        case 0x1F8010F4:
+            iop_dma.set_DICR(value);
             return;
         case 0x1F801404:
+            return;
+        case 0x1F801530:
+            iop_dma.set_chan_addr(10, value);
+            return;
+        case 0x1F801534:
+            iop_dma.set_chan_block(10, value);
+            return;
+        case 0x1F801538:
+            iop_dma.set_chan_control(10, value);
+            return;
+        case 0x1F801570:
+            iop_dma.set_DPCR2(value);
+            return;
+        case 0x1F801574:
+            iop_dma.set_DICR2(value);
             return;
         //POST2?
         case 0x1F802070:

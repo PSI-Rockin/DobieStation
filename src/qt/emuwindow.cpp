@@ -83,6 +83,8 @@ void EmuWindow::paintEvent(QPaintEvent *event)
     if (!buffer)
         return;
 
+    return;
+
     QImage image((uint8_t*)buffer, 640, 256, QImage::Format_RGBA8888);
 
     int new_w, new_h;
