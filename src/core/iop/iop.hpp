@@ -17,6 +17,7 @@ class IOP
 
         uint32_t new_PC;
         int load_delay;
+        bool can_disassemble;
         bool will_branch;
         bool inc_PC;
 
@@ -33,6 +34,7 @@ class IOP
 
         void handle_exception(uint32_t addr, uint8_t cause);
         void syscall_exception();
+        void interrupt();
         void rfe();
 
         void mfc(int cop_id, int cop_reg, int reg);

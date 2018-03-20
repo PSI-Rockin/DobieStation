@@ -14,8 +14,11 @@ struct IOP_DMA_Chan_Control
 struct IOP_DMA_Channel
 {
     uint32_t addr;
-    uint32_t block_control;
+    uint16_t word_count;
+    uint16_t block_size;
     IOP_DMA_Chan_Control control;
+
+    bool tag_end;
 };
 
 struct DMA_DPCR
@@ -26,17 +29,19 @@ struct DMA_DPCR
 
 struct DMA_DICR
 {
-    bool int_enable[16];
-    bool master_int_enable;
-    bool int_flag[16];
+    uint8_t STAT[2];
+    uint8_t MASK[2];
+    bool master_int_enable[2];
 };
 
+class Emulator;
 class SubsystemInterface;
 
 class IOP_DMA
 {
     private:
         uint8_t* RAM;
+        Emulator* e;
         SubsystemInterface* sif;
         IOP_DMA_Channel channels[16];
 
@@ -45,8 +50,10 @@ class IOP_DMA
         DMA_DICR DICR;
 
         void transfer_end(int index);
+        void process_SIF1();
     public:
-        IOP_DMA(SubsystemInterface* sif);
+        static const char* CHAN(int index);
+        IOP_DMA(Emulator* e, SubsystemInterface* sif);
 
         void reset(uint8_t* RAM);
         void run();

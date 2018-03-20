@@ -53,7 +53,7 @@ uint32_t IOP_Cop0::mfc(int cop_reg)
         case 14:
             return EPC;
         case 15:
-            return 0x10;
+            return 0x1F;
         default:
             printf("[IOP COP0] MFC: Unknown cop_reg %d\n", cop_reg);
             exit(1);

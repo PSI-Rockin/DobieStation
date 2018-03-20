@@ -14,46 +14,44 @@ DEFINES += QT_DEPRECATED_WARNINGS
 DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000
 
 SOURCES += ../src/qt/main.cpp \
-    ../src/core/emotion.cpp \
+    ../src/core/ee/emotion.cpp \
     ../src/core/emulator.cpp \
-    ../src/core/emotioninterpreter.cpp \
-    ../src/core/cop0.cpp \
-    ../src/core/cop1.cpp \
-    ../src/core/emotion_mmi.cpp \
-    ../src/core/bios_hle.cpp \
-    ../src/core/vu0.cpp \
-    ../src/core/emotion_special.cpp \
+    ../src/core/ee/emotioninterpreter.cpp \
+    ../src/core/ee/cop0.cpp \
+    ../src/core/ee/cop1.cpp \
+    ../src/core/ee/emotion_mmi.cpp \
+    ../src/core/ee/bios_hle.cpp \
+    ../src/core/ee/emotion_special.cpp \
     ../src/core/gs.cpp \
-    ../src/core/dmac.cpp \
+    ../src/core/ee/dmac.cpp \
     ../src/qt/emuwindow.cpp \
     ../src/core/gscontext.cpp \
-    ../src/core/emotiondisasm.cpp \
-    ../src/core/emotionasm.cpp \
-    ../src/core/emotion_fpu.cpp \
+    ../src/core/ee/emotiondisasm.cpp \
+    ../src/core/ee/emotionasm.cpp \
+    ../src/core/ee/emotion_fpu.cpp \
     ../src/core/gif.cpp \
-    ../src/core/iop.cpp \
-    ../src/core/iop_cop0.cpp \
-    ../src/core/iop_interpreter.cpp \
+    ../src/core/iop/iop.cpp \
+    ../src/core/iop/iop_cop0.cpp \
+    ../src/core/iop/iop_interpreter.cpp \
     ../src/core/sif.cpp \
-    ../src/core/iop_dma.cpp
+    ../src/core/iop/iop_dma.cpp
 
 HEADERS += \
-    ../src/core/emotion.hpp \
+    ../src/core/ee/emotion.hpp \
     ../src/core/emulator.hpp \
-    ../src/core/emotioninterpreter.hpp \
-    ../src/core/cop0.hpp \
-    ../src/core/cop1.hpp \
-    ../src/core/bios_hle.hpp \
-    ../src/core/vu0.hpp \
+    ../src/core/ee/emotioninterpreter.hpp \
+    ../src/core/ee/cop0.hpp \
+    ../src/core/ee/cop1.hpp \
+    ../src/core/ee/bios_hle.hpp \
     ../src/core/gs.hpp \
-    ../src/core/dmac.hpp \
+    ../src/core/ee/dmac.hpp \
     ../src/qt/emuwindow.hpp \
     ../src/core/gscontext.hpp \
-    ../src/core/emotiondisasm.hpp \
-    ../src/core/emotionasm.hpp \
+    ../src/core/ee/emotiondisasm.hpp \
+    ../src/core/ee/emotionasm.hpp \
     ../src/core/gif.hpp \
-    ../src/core/iop.hpp \
-    ../src/core/iop_cop0.hpp \
-    ../src/core/iop_interpreter.hpp \
+    ../src/core/iop/iop.hpp \
+    ../src/core/iop/iop_cop0.hpp \
+    ../src/core/iop/iop_interpreter.hpp \
     ../src/core/sif.hpp \
-    ../src/core/iop_dma.hpp
+    ../src/core/iop/iop_dma.hpp

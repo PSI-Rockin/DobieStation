@@ -4,7 +4,7 @@
 #include "emulator.hpp"
 
 Emulator::Emulator() :
-    bios_hle(this, &gs), cpu(&bios_hle, this), dmac(&cpu, this, &gif, &sif), gif(&gs), iop(this), iop_dma(&sif)
+    bios_hle(this, &gs), cpu(&bios_hle, this), dmac(&cpu, this, &gif, &sif), gif(&gs), iop(this), iop_dma(this, &sif)
 {
     BIOS = nullptr;
     RDRAM = nullptr;
@@ -47,6 +47,7 @@ void Emulator::run()
         instructions_run++;
     }
     //VBLANK start
+    //iop_request_IRQ(0);
     INTC_STAT |= (1 << 2);
     //if (INTC_MASK & 0x4)
         //cpu.int0();
@@ -62,8 +63,6 @@ void Emulator::reset()
     if (!BIOS)
         BIOS = new uint8_t[1024 * 1024 * 4];
 
-    //RDRAM[0] = 0;
-
     bios_hle.reset();
     cpu.reset();
     dmac.reset();
@@ -77,6 +76,8 @@ void Emulator::reset()
     rdram_sdevid = 0;
     INTC_STAT = 0;
     INTC_MASK = 0;
+    IOP_I_STAT = 0;
+    IOP_I_MASK = 0;
     IOP_POST = 0;
 }
 
@@ -448,18 +449,24 @@ uint32_t Emulator::iop_read32(uint32_t address)
             return 0;
         case 0x1F801010:
             return 0;
+        case 0x1F801070:
+            return IOP_I_STAT;
         case 0x1F801074:
-            return 0;
+            return IOP_I_MASK;
         case 0x1F801078:
-            return 0;
+            return IOP_I_CTRL;
         case 0x1F8010F0:
             return iop_dma.get_DPCR();
+        case 0x1F8010F4:
+            return iop_dma.get_DICR();
         case 0x1F801400:
             return 0;
         case 0x1F801450:
             return 0;
         case 0x1F801570:
             return iop_dma.get_DPCR2();
+        case 0x1F801574:
+            return iop_dma.get_DICR2();
         case 0x1F801578:
             return 0;
         case 0xFFFE0130:
@@ -565,14 +572,18 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
         //RAM size?
         case 0x1F801060:
             return;
-        //I_STAT?
         case 0x1F801070:
+            printf("[IOP] I_STAT: $%08X\n", value);
+            IOP_I_STAT &= value;
             return;
-        //I_MASK?
         case 0x1F801074:
+            printf("[IOP] I_MASK: $%08X\n", value);
+            iop_IRQ_check(IOP_I_STAT, value);
+            IOP_I_MASK = value;
             return;
-        //Master int enable?
         case 0x1F801078:
+            IOP_I_CTRL = value;
+            printf("[IOP] I_CTRL: $%08X\n", value);
             return;
         case 0x1F8010F0:
             iop_dma.set_DPCR(value);
@@ -581,6 +592,12 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
             iop_dma.set_DICR(value);
             return;
         case 0x1F801404:
+            return;
+        case 0x1F801520:
+            return;
+        case 0x1F801524:
+            return;
+        case 0x1F801528:
             return;
         case 0x1F801530:
             iop_dma.set_chan_addr(10, value);
@@ -606,4 +623,20 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
     }
     printf("Unrecognized IOP write32 to physical addr $%08X of $%08X\n", address, value);
     //exit(1);
+}
+
+void Emulator::iop_IRQ_check(uint32_t new_stat, uint32_t new_mask)
+{
+    printf("[IOP] Check I_STAT: $%08X\n", new_stat);
+    bool old_check = IOP_I_STAT & IOP_I_MASK;
+    bool new_check = new_stat & new_mask;
+    if (!IOP_I_CTRL && !old_check && new_check)
+        iop.interrupt();
+}
+
+void Emulator::iop_request_IRQ(int index)
+{
+    uint32_t new_stat = IOP_I_STAT | (1 << index);
+    iop_IRQ_check(new_stat, IOP_I_MASK);
+    IOP_I_STAT = new_stat;
 }

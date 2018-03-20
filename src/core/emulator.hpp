@@ -1,12 +1,14 @@
 #ifndef EMULATOR_HPP
 #define EMULATOR_HPP
-#include "bios_hle.hpp"
-#include "dmac.hpp"
-#include "emotion.hpp"
+#include "ee/bios_hle.hpp"
+#include "ee/dmac.hpp"
+#include "ee/emotion.hpp"
+
+#include "iop/iop.hpp"
+#include "iop/iop_dma.hpp"
+
 #include "gs.hpp"
 #include "gif.hpp"
-#include "iop.hpp"
-#include "iop_dma.hpp"
 #include "sif.hpp"
 
 class Emulator
@@ -33,6 +35,11 @@ class Emulator
         uint32_t instructions_run;
 
         uint8_t IOP_POST;
+        uint32_t IOP_I_STAT;
+        uint32_t IOP_I_MASK;
+        uint32_t IOP_I_CTRL;
+
+        void iop_IRQ_check(uint32_t new_stat, uint32_t new_mask);
     public:
         Emulator();
         ~Emulator();
@@ -58,6 +65,8 @@ class Emulator
         void iop_write8(uint32_t address, uint8_t value);
         void iop_write16(uint32_t address, uint16_t value);
         void iop_write32(uint32_t address, uint32_t value);
+
+        void iop_request_IRQ(int index);
 };
 
 #endif // EMULATOR_HPP

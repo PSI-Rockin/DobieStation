@@ -33,6 +33,7 @@ void IOP::reset()
     load_delay = 0;
     will_branch = false;
     inc_PC = true;
+    can_disassemble = false;
 }
 
 uint32_t IOP::translate_addr(uint32_t addr)
@@ -56,16 +57,13 @@ void IOP::run()
         {
             will_branch = false;
             PC = new_PC;
-            /*if (PC < 0xBFC00000)
-            {
-                printf("Jump to RAM!\n");
-            }*/
         }
         else
             load_delay--;
     }
     uint32_t instr = read32(PC);
-    //printf("[IOP] [$%08X] $%08X - %s\n", PC, instr, EmotionDisasm::disasm_instr(instr, PC).c_str());
+    if (can_disassemble)
+        printf("[IOP] [$%08X] $%08X - %s\n", PC, instr, EmotionDisasm::disasm_instr(instr, PC).c_str());
     IOP_Interpreter::interpret(*this, instr);
 
     /*if (PC == 0xBFC5891C)
@@ -104,13 +102,31 @@ void IOP::handle_exception(uint32_t addr, uint8_t cause)
 {
     inc_PC = false;
     cop0.cause.code = cause;
-    cop0.EPC = PC;
+    if (load_delay && will_branch)
+    {
+        cop0.EPC = PC - 4;
+        cop0.cause.bd = true;
+    }
+    else
+    {
+        cop0.EPC = PC;
+        cop0.cause.bd = false;
+    }
     PC = addr;
+    load_delay = 0;
+    will_branch = false;
 }
 
 void IOP::syscall_exception()
 {
     handle_exception(0x80000080, 0x08);
+    //can_disassemble = true;
+}
+
+void IOP::interrupt()
+{
+    handle_exception(0x80000080, 0x00);
+    can_disassemble = true;
 }
 
 void IOP::mfc(int cop_id, int cop_reg, int reg)

@@ -185,6 +185,9 @@ uint32_t DMAC::read32(uint32_t address)
         case 0x1000C400:
             reg = channels[SIF1].control;
             break;
+        case 0x1000C420:
+            reg = channels[SIF1].quadword_count;
+            break;
         case 0x1000C430:
             reg = channels[SIF1].tag_address;
             break;
