@@ -25,7 +25,7 @@ The EE has 32 128-bit general purpose registers (GPRs), two 128-bit LO and HI re
 
 The standard MIPS instructions only use the lower 64 bits of the registers. However, Multimedia Instructions (MMI) can make use of the full 128-bits.
 
-MIPS assembly has certain conventions for the GPRs. While the GPRs may be used for any purpose (except for $0, which is not unwritable), compilers will only use them for specific purposes. This is to ensure that MIPS modules written by different programmers are able to interact with each other.
+MIPS assembly has certain conventions for the GPRs. While the GPRs may be used for any purpose (except for $0, which is not writable), compilers will only use them for specific purposes. This is to ensure that MIPS modules written by different programmers are able to interact with each other.
 
 The following is a list of registers and their conventions:
 
