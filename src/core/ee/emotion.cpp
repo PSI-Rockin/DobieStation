@@ -3,7 +3,8 @@
 #include "emotion.hpp"
 #include "emotiondisasm.hpp"
 #include "emotioninterpreter.hpp"
-#include "emulator.hpp"
+
+#include "../emulator.hpp"
 
 EmotionEngine::EmotionEngine(BIOS_HLE* b, Emulator* e) : bios(b), e(e)
 {
@@ -52,6 +53,8 @@ void EmotionEngine::run()
     {
         PC = new_PC;
         branch_on = false;
+        //if (PC == 0xBFC00928)
+            //can_disassemble = false;
     }
     uint32_t instruction = read32(PC);
     if (can_disassemble)

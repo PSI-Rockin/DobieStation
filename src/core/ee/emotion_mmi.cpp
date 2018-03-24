@@ -25,6 +25,9 @@ void EmotionInterpreter::mmi(EmotionEngine &cpu, uint32_t instruction)
         case 0x18:
             mult1(cpu, instruction);
             break;
+        case 0x1A:
+            div1(cpu, instruction);
+            break;
         case 0x1B:
             divu1(cpu, instruction);
             break;
@@ -205,6 +208,19 @@ void EmotionInterpreter::mult1(EmotionEngine &cpu, uint32_t instruction)
     int64_t temp = (int64_t)op1 * op2;
     cpu.set_LO_HI((int32_t)(temp & 0xFFFFFFFF), (int32_t)(temp >> 32), true);
     cpu.mflo1(dest);
+}
+
+void EmotionInterpreter::div1(EmotionEngine &cpu, uint32_t instruction)
+{
+    int32_t op1 = (instruction >> 21) & 0x1F;
+    int32_t op2 = (instruction >> 16) & 0x1F;
+    op1 = cpu.get_gpr<int32_t>(op1);
+    op2 = cpu.get_gpr<int32_t>(op2);
+    if (!op2)
+    {
+        exit(1);
+    }
+    cpu.set_LO_HI(op1 / op2, op1 % op2, true);
 }
 
 void EmotionInterpreter::divu1(EmotionEngine &cpu, uint32_t instruction)

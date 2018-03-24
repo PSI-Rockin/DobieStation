@@ -1,9 +1,10 @@
 #include <cstdio>
 #include <cstdlib>
-#include "emotiondisasm.hpp"
-#include "emulator.hpp"
 #include "iop.hpp"
 #include "iop_interpreter.hpp"
+
+#include "../emulator.hpp"
+#include "../ee/emotiondisasm.hpp"
 
 IOP::IOP(Emulator* e) : e(e)
 {

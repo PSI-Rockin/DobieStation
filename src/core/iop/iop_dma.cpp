@@ -1,7 +1,8 @@
 #include <cstdio>
-#include "emulator.hpp"
 #include "iop_dma.hpp"
-#include "sif.hpp"
+
+#include "../emulator.hpp"
+#include "../sif.hpp"
 
 enum CHANNELS
 {

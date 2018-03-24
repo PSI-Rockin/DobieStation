@@ -125,6 +125,7 @@ namespace EmotionInterpreter
     void mfhi1(EmotionEngine& cpu, uint32_t instruction);
     void mflo1(EmotionEngine& cpu, uint32_t instruction);
     void mult1(EmotionEngine& cpu, uint32_t instruction);
+    void div1(EmotionEngine& cpu, uint32_t instruction);
     void divu1(EmotionEngine& cpu, uint32_t instruction);
 
     void mmi3(EmotionEngine& cpu, uint32_t instruction);

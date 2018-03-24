@@ -18,6 +18,7 @@ void SubsystemInterface::reset()
     smcom = 0;
     msflag = 0;
     smflag = 0;
+    control = 0;
 }
 
 int SubsystemInterface::get_SIF1_size()
@@ -61,6 +62,11 @@ uint32_t SubsystemInterface::get_smflag()
     return smflag;
 }
 
+uint32_t SubsystemInterface::get_control()
+{
+    return control;
+}
+
 void SubsystemInterface::set_mscom(uint32_t value)
 {
     mscom = value;
@@ -73,10 +79,33 @@ void SubsystemInterface::set_smcom(uint32_t value)
 
 void SubsystemInterface::set_msflag(uint32_t value)
 {
-    msflag = value;
+    msflag |= value;
+}
+
+void SubsystemInterface::reset_msflag(uint32_t value)
+{
+    msflag &= ~value;
 }
 
 void SubsystemInterface::set_smflag(uint32_t value)
 {
-    smflag = value;
+    smflag |= value;
+}
+
+void SubsystemInterface::reset_smflag(uint32_t value)
+{
+    smflag &= ~value;
+}
+
+void SubsystemInterface::set_control_EE(uint32_t value)
+{
+    if (!(value & 0x100))
+        control &= ~0x100;
+    else
+        control |= 0x100;
+}
+
+void SubsystemInterface::set_control_IOP(uint32_t value)
+{
+
 }

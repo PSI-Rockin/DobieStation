@@ -1021,6 +1021,8 @@ string EmotionDisasm::disasm_mmi(uint32_t instruction, uint32_t instr_addr)
             return disasm_mflo1(instruction);
         case 0x18:
             return disasm_mult1(instruction);
+        case 0x1A:
+            return disasm_div1(instruction);
         case 0x1B:
             return disasm_divu1(instruction);
         case 0x28:
@@ -1107,6 +1109,11 @@ string EmotionDisasm::disasm_mflo1(uint32_t instruction)
 string EmotionDisasm::disasm_mult1(uint32_t instruction)
 {
     return disasm_special_simplemath("mult1", instruction);
+}
+
+string EmotionDisasm::disasm_div1(uint32_t instruction)
+{
+    return disasm_division("div1", instruction);
 }
 
 string EmotionDisasm::disasm_divu1(uint32_t instruction)

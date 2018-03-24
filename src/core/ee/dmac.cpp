@@ -1,7 +1,8 @@
 #include <cstdio>
 #include <cstdlib>
 #include "dmac.hpp"
-#include "emulator.hpp"
+
+#include "../emulator.hpp"
 
 enum CHANNELS
 {

@@ -25,18 +25,11 @@ void Emulator::run()
 {
     gs.start_frame();
     instructions_run = 0;
-    uint32_t addr = 16;
-    uint32_t old_value = iop_read32(addr);
     while (!gs.is_frame_complete() && instructions_run < 1000000)
     {
-        uint32_t new_value = iop_read32(addr);
-        if (new_value != old_value)
-        {
-            printf("Change to old value: $%08X\n", new_value);
-            old_value = new_value;
-        }
         cpu.run();
         dmac.run();
+        timers.run();
         if (instructions_run % 8 == 0)
         {
             //printf("I: $%08X ", instructions_run / 8);
@@ -71,6 +64,7 @@ void Emulator::reset()
     iop.reset();
     iop_dma.reset(IOP_RAM);
     sif.reset();
+    timers.reset();
     MCH_DRD = 0;
     MCH_RICM = 0;
     rdram_sdevid = 0;
@@ -84,7 +78,7 @@ void Emulator::reset()
 uint32_t* Emulator::get_framebuffer()
 {
     //This function should only be called upon ending a frame; return nullptr otherwise
-    if (!gs.is_frame_complete() && instructions_run < 300000)
+    if (!gs.is_frame_complete() && instructions_run < 1000000)
         return nullptr;
     return gs.get_framebuffer();
 }
@@ -213,6 +207,8 @@ uint32_t Emulator::read32(uint32_t address)
         return *(uint32_t*)&RDRAM[address & 0x01FFFFFF];
     if (address >= 0x1FC00000 && address < 0x20000000)
         return *(uint32_t*)&BIOS[address & 0x3FFFFF];
+    if (address >= 0x10000000 && address < 0x10002000)
+        return timers.read32(address);
     if ((address & (0xFF000000)) == 0x12000000)
         return gs.read32_privileged(address);
     if (address >= 0x10008000 && address < 0x1000F000)
@@ -235,6 +231,8 @@ uint32_t Emulator::read32(uint32_t address)
             return sif.get_msflag();
         case 0x1000F230:
             return sif.get_smflag();
+        case 0x1000F240:
+            return sif.get_control() | 0xF0000102;
         case 0x1000F430:
             printf("\nRead from MCH_RICM");
             return 0;
@@ -318,6 +316,11 @@ void Emulator::write32(uint32_t address, uint32_t value)
         *(uint32_t*)&RDRAM[address & 0x01FFFFFF] = value;
         return;
     }
+    if (address >= 0x10000000 && address < 0x10002000)
+    {
+        timers.write32(address, value);
+        return;
+    }
     if ((address & (0xFF000000)) == 0x12000000)
     {
         gs.write32_privileged(address, value);
@@ -342,7 +345,7 @@ void Emulator::write32(uint32_t address, uint32_t value)
             sif.set_mscom(value);
             return;
         case 0x1000F210:
-            sif.set_smcom(value);
+            //sif.set_smcom(value);
             return;
         case 0x1000F220:
             printf("[EE] Write32 msflag: $%08X\n", value);
@@ -350,7 +353,10 @@ void Emulator::write32(uint32_t address, uint32_t value)
             return;
         case 0x1000F230:
             printf("[EE] Write32 smflag: $%08X\n", value);
-            sif.set_smflag(value);
+            sif.reset_smflag(value);
+            return;
+        case 0x1000F240:
+            sif.set_control_EE(value);
             return;
         case 0x1000F430:
             printf("\nWrite to MCH_RICM: $%08X", value);
@@ -441,6 +447,8 @@ uint32_t Emulator::iop_read32(uint32_t address)
             return sif.get_msflag();
         case 0x1D000030:
             return sif.get_smflag();
+        case 0x1D000040:
+            return sif.get_control() | 0xF0000002;
         case 0x1E000000:
             return 0;
         case 0x1E000010:
@@ -454,7 +462,12 @@ uint32_t Emulator::iop_read32(uint32_t address)
         case 0x1F801074:
             return IOP_I_MASK;
         case 0x1F801078:
-            return IOP_I_CTRL;
+        {
+            //I_CTRL is reset when read
+            uint32_t value = IOP_I_CTRL;
+            IOP_I_CTRL = 0;
+            return value;
+        }
         case 0x1F8010F0:
             return iop_dma.get_DPCR();
         case 0x1F8010F4:
@@ -538,16 +551,19 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
     switch (address)
     {
         case 0x1D000000:
-            sif.set_mscom(value);
+            //Read only
             return;
         case 0x1D000010:
             sif.set_smcom(value);
             return;
         case 0x1D000020:
-            sif.set_msflag(value);
+            sif.reset_msflag(value);
             return;
         case 0x1D000030:
             sif.set_smflag(value);
+            return;
+        case 0x1D000040:
+            sif.set_control_IOP(value);
             return;
         case 0x1F801000:
             return;

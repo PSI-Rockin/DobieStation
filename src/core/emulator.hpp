@@ -3,6 +3,7 @@
 #include "ee/bios_hle.hpp"
 #include "ee/dmac.hpp"
 #include "ee/emotion.hpp"
+#include "ee/timers.hpp"
 
 #include "iop/iop.hpp"
 #include "iop/iop_dma.hpp"
@@ -17,6 +18,7 @@ class Emulator
         BIOS_HLE bios_hle;
         DMAC dmac;
         EmotionEngine cpu;
+        EmotionTiming timers;
         GraphicsSynthesizer gs;
         GraphicsInterface gif;
         IOP iop;
