@@ -53,8 +53,10 @@ void EmotionEngine::run()
     {
         PC = new_PC;
         branch_on = false;
-        //if (PC == 0xBFC00928)
-            //can_disassemble = false;
+        if (PC == 0x9FC43150)
+            can_disassemble = true;
+        if (PC == 0xBFC00928)
+            exit(1);
     }
     uint32_t instruction = read32(PC);
     if (can_disassemble)

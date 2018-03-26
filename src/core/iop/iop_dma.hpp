@@ -17,6 +17,7 @@ struct IOP_DMA_Channel
     uint16_t word_count;
     uint16_t block_size;
     IOP_DMA_Chan_Control control;
+    uint32_t tag_addr;
 
     bool tag_end;
 };
@@ -50,6 +51,7 @@ class IOP_DMA
         DMA_DICR DICR;
 
         void transfer_end(int index);
+        void process_SIF0();
         void process_SIF1();
     public:
         static const char* CHAN(int index);
@@ -63,6 +65,8 @@ class IOP_DMA
         uint32_t get_DICR();
         uint32_t get_DICR2();
 
+        uint32_t get_chan_control(int index);
+
         void set_DPCR(uint32_t value);
         void set_DPCR2(uint32_t value);
         void set_DICR(uint32_t value);
@@ -73,6 +77,7 @@ class IOP_DMA
         void set_chan_size(int index, uint16_t value);
         void set_chan_count(int index, uint16_t value);
         void set_chan_control(int index, uint32_t value);
+        void set_chan_tag_addr(int index, uint32_t value);
 };
 
 #endif // IOP_DMA_HPP

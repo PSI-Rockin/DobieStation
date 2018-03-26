@@ -35,7 +35,8 @@ SOURCES += ../src/qt/main.cpp \
     ../src/core/iop/iop_interpreter.cpp \
     ../src/core/sif.cpp \
     ../src/core/iop/iop_dma.cpp \
-    ../src/core/ee/timers.cpp
+    ../src/core/ee/timers.cpp \
+    ../src/core/iop/iop_timers.cpp
 
 HEADERS += \
     ../src/core/ee/emotion.hpp \
@@ -56,4 +57,5 @@ HEADERS += \
     ../src/core/iop/iop_interpreter.hpp \
     ../src/core/sif.hpp \
     ../src/core/iop/iop_dma.hpp \
-    ../src/core/ee/timers.hpp
+    ../src/core/ee/timers.hpp \
+    ../src/core/iop/iop_timers.hpp

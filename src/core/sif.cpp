@@ -12,8 +12,9 @@ SubsystemInterface::SubsystemInterface()
 
 void SubsystemInterface::reset()
 {
-    std::queue<uint32_t> empty;
-    SIF1_FIFO.swap(empty);
+    std::queue<uint32_t> empty, empty2;
+    SIF0_FIFO.swap(empty);
+    SIF1_FIFO.swap(empty2);
     mscom = 0;
     smcom = 0;
     msflag = 0;
@@ -21,9 +22,20 @@ void SubsystemInterface::reset()
     control = 0;
 }
 
+int SubsystemInterface::get_SIF0_size()
+{
+    return SIF0_FIFO.size();
+}
+
 int SubsystemInterface::get_SIF1_size()
 {
     return SIF1_FIFO.size();
+}
+
+void SubsystemInterface::write_SIF0(uint32_t word)
+{
+    SIF0_FIFO.push(word);
+    printf("[SIF0] Word: $%08X\n", word);
 }
 
 void SubsystemInterface::write_SIF1(uint64_t *quad)

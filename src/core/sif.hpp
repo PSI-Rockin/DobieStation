@@ -12,14 +12,18 @@ class SubsystemInterface
         uint32_t smflag;
         uint32_t control; //???
 
+        std::queue<uint32_t> SIF0_FIFO;
         std::queue<uint32_t> SIF1_FIFO;
     public:
         SubsystemInterface();
 
         void reset();
+        int get_SIF0_size();
         int get_SIF1_size();
 
+        void write_SIF0(uint32_t word);
         void write_SIF1(uint64_t* quad);
+        uint32_t read_SIF0();
         uint32_t read_SIF1();
 
         uint32_t get_mscom();

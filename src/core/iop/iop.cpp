@@ -124,10 +124,26 @@ void IOP::syscall_exception()
     //can_disassemble = true;
 }
 
+void IOP::interrupt_check(bool i_pass)
+{
+    bool edge = cop0.cause.int_pending & 0x4;
+    if (i_pass)
+        cop0.cause.int_pending |= 0x4;
+    else
+        cop0.cause.int_pending &= ~0x4;
+
+    if (!edge && i_pass)
+    {
+        if (cop0.status.IEc && (cop0.cause.int_pending & cop0.status.Im))
+            interrupt();
+    }
+}
+
 void IOP::interrupt()
 {
+    printf("[IOP] Processing interrupt!\n");
     handle_exception(0x80000080, 0x00);
-    can_disassemble = true;
+    //can_disassemble = true;
 }
 
 void IOP::mfc(int cop_id, int cop_reg, int reg)

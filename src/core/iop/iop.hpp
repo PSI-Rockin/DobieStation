@@ -34,6 +34,7 @@ class IOP
 
         void handle_exception(uint32_t addr, uint8_t cause);
         void syscall_exception();
+        void interrupt_check(bool i_pass);
         void interrupt();
         void rfe();
 

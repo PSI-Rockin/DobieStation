@@ -72,18 +72,26 @@ void DMAC::run()
 
             bool transfer_success = false;
             uint64_t quad[2];
-            quad[0] = e->read64(channels[i].address);
-            quad[1] = e->read64(channels[i].address + 8);
 
             switch (i)
             {
                 case GIF:
                     gif->send_PATH3(quad);
+                    quad[0] = e->read64(channels[i].address);
+                    quad[1] = e->read64(channels[i].address + 8);
                     transfer_success = true;
+                    break;
+                case SIF0:
+                    if (sif->get_SIF0_size() >= 4)
+                    {
+                        exit(1);
+                    }
                     break;
                 case SIF1:
                     if (sif->get_SIF1_size() <= 28)
                     {
+                        quad[0] = e->read64(channels[i].address);
+                        quad[1] = e->read64(channels[i].address + 8);
                         sif->write_SIF1(quad);
                         transfer_success = true;
                     }
@@ -159,7 +167,8 @@ void DMAC::handle_source_chain(int index)
 
 void DMAC::handle_dest_chain(int index)
 {
-
+    printf("[DMAC] Dest chain not handled!\n");
+    exit(1);
 }
 
 void DMAC::start_DMA(int index)
@@ -243,9 +252,9 @@ void DMAC::write32(uint32_t address, uint32_t value)
             break;
         case 0x1000C000:
             printf("[DMAC] SIF0 CTRL: $%08X\n", value);
-            /*channels[SIF0].control = value;
+            channels[SIF0].control = value;
             if (value & 0x100)
-                start_DMA(SIF0);*/
+                start_DMA(SIF0);
             break;
         case 0x1000C020:
             printf("[DMAC] SIF0 QWC: $%08X\n", value);

@@ -476,6 +476,8 @@ uint32_t Emulator::iop_read32(uint32_t address)
             return 0;
         case 0x1F801450:
             return 0;
+        case 0x1F801528:
+            return iop_dma.get_chan_control(10);
         case 0x1F801570:
             return iop_dma.get_DPCR2();
         case 0x1F801574:
@@ -524,11 +526,14 @@ void Emulator::iop_write16(uint32_t address, uint16_t value)
     }
     switch (address)
     {
-        case 0x1F801534:
+        case 0x1F801524:
             iop_dma.set_chan_size(10, value);
             return;
+        case 0x1F801534:
+            iop_dma.set_chan_size(11, value);
+            return;
         case 0x1F801536:
-            iop_dma.set_chan_count(10, value);
+            iop_dma.set_chan_count(11, value);
             return;
     }
     printf("Unrecognized IOP write16 to physical addr $%08X of $%04X\n", address, value);
@@ -591,15 +596,17 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
         case 0x1F801070:
             printf("[IOP] I_STAT: $%08X\n", value);
             IOP_I_STAT &= value;
+            iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
             return;
         case 0x1F801074:
             printf("[IOP] I_MASK: $%08X\n", value);
-            iop_IRQ_check(IOP_I_STAT, value);
             IOP_I_MASK = value;
+            iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
             return;
         case 0x1F801078:
-            IOP_I_CTRL = value;
-            printf("[IOP] I_CTRL: $%08X\n", value);
+            IOP_I_CTRL = value & 0x1;
+            iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
+            //printf("[IOP] I_CTRL: $%08X\n", value);
             return;
         case 0x1F8010F0:
             iop_dma.set_DPCR(value);
@@ -610,19 +617,25 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
         case 0x1F801404:
             return;
         case 0x1F801520:
-            return;
-        case 0x1F801524:
-            return;
-        case 0x1F801528:
-            return;
-        case 0x1F801530:
             iop_dma.set_chan_addr(10, value);
             return;
-        case 0x1F801534:
+        case 0x1F801524:
             iop_dma.set_chan_block(10, value);
             return;
-        case 0x1F801538:
+        case 0x1F801528:
             iop_dma.set_chan_control(10, value);
+            return;
+        case 0x1F80152C:
+            iop_dma.set_chan_tag_addr(10, value);
+            return;
+        case 0x1F801530:
+            iop_dma.set_chan_addr(11, value);
+            return;
+        case 0x1F801534:
+            iop_dma.set_chan_block(11, value);
+            return;
+        case 0x1F801538:
+            iop_dma.set_chan_control(11, value);
             return;
         case 0x1F801570:
             iop_dma.set_DPCR2(value);
@@ -641,18 +654,9 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
     //exit(1);
 }
 
-void Emulator::iop_IRQ_check(uint32_t new_stat, uint32_t new_mask)
-{
-    printf("[IOP] Check I_STAT: $%08X\n", new_stat);
-    bool old_check = IOP_I_STAT & IOP_I_MASK;
-    bool new_check = new_stat & new_mask;
-    if (!IOP_I_CTRL && !old_check && new_check)
-        iop.interrupt();
-}
-
 void Emulator::iop_request_IRQ(int index)
 {
     uint32_t new_stat = IOP_I_STAT | (1 << index);
-    iop_IRQ_check(new_stat, IOP_I_MASK);
     IOP_I_STAT = new_stat;
+    iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
 }

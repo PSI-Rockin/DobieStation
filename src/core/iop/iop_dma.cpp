@@ -14,6 +14,7 @@ enum CHANNELS
     PIO,
     OTC,
     SPU2 = 8,
+    unk,
     SIF0,
     SIF1,
     SIO2in,
@@ -28,7 +29,7 @@ IOP_DMA::IOP_DMA(Emulator* e, SubsystemInterface* sif) : e(e), sif(sif)
 const char* IOP_DMA::CHAN(int index)
 {
     static const char* borp[] =
-    {"MDECin", "MDECout", "GPU", "CDVD", "SPU", "PIO", "OTC", "67", "SPU2", "SIF0", "SIF1", "SIO2in", "SIO2out"};
+    {"MDECin", "MDECout", "GPU", "CDVD", "SPU", "PIO", "OTC", "67", "SPU2", "8", "SIF0", "SIF1", "SIO2in", "SIO2out"};
     return borp[index];
 }
 
@@ -62,11 +63,57 @@ void IOP_DMA::run()
         {
             switch (i)
             {
+                case SIF0:
+                    process_SIF0();
+                    break;
                 case SIF1:
                     process_SIF1();
                     break;
             }
         }
+    }
+}
+
+void IOP_DMA::process_SIF0()
+{
+    if (channels[SIF0].word_count)
+    {
+        if (sif->get_SIF0_size() < 32)
+        {
+            uint32_t data = *(uint32_t*)&RAM[channels[SIF0].addr];
+            sif->write_SIF0(data);
+
+            channels[SIF0].addr += 4;
+            channels[SIF0].word_count--;
+        }
+    }
+    else
+    {
+        if (channels[SIF0].tag_end)
+        {
+            transfer_end(SIF0);
+        }
+        else if (sif->get_SIF0_size() <= 30)
+        {
+            uint32_t data = *(uint32_t*)&RAM[channels[SIF0].tag_addr];
+            uint32_t words = *(uint32_t*)&RAM[channels[SIF0].tag_addr + 4];
+            //Transfer EEtag
+            sif->write_SIF0(*(uint32_t*)&RAM[channels[SIF0].tag_addr + 8]);
+            sif->write_SIF0(*(uint32_t*)&RAM[channels[SIF0].tag_addr + 12]);
+
+            channels[SIF0].addr = data & 0xFFFFFF;
+            channels[SIF0].word_count = (words + 3) & 0xFFFFFFFC; //round to nearest 4?
+
+            channels[SIF0].tag_addr += 16;
+
+            printf("[IOP DMA] Read SIF0 DMAtag!\n");
+            printf("Data: $%08X\n", data);
+            printf("Words: $%08X\n", channels[SIF0].word_count);
+
+            if ((data & (1 << 31)) || (data & (1 << 30)))
+                channels[SIF0].tag_end = true;
+        }
+        //printf("[IOP DMA] SIF0 no data!\n");
     }
 }
 
@@ -103,7 +150,7 @@ void IOP_DMA::process_SIF1()
             printf("[IOP DMA] Read SIF1 DMAtag!\n");
             printf("Addr: $%08X\n", channels[SIF1].addr);
             printf("Words: $%08X\n", channels[SIF1].word_count);
-            if ((tag1 & (1 << 31)) || (tag1 & (1 << 30)))
+            if ((data & (1 << 31)) || (data & (1 << 30)))
                 channels[SIF1].tag_end = true;
         }
     }
@@ -119,8 +166,12 @@ void IOP_DMA::transfer_end(int index)
         index -= 8;
     DICR.STAT[dicr2] |= (1 << index);
 
-    if (DICR.master_int_enable[dicr2] && (DICR.STAT[dicr2] & DICR.MASK[dicr2]))
+    if (DICR.STAT[dicr2] & DICR.MASK[dicr2])
+    {
+        if (DICR.master_int_enable[dicr2])
+            ; //Set bit 31
         e->iop_request_IRQ(3);
+    }
 }
 
 uint32_t IOP_DMA::get_DPCR()
@@ -170,12 +221,23 @@ uint32_t IOP_DMA::get_DICR2()
     reg |= DICR.STAT[1] << 24;
 
     bool IRQ;
-    if (DICR.MASK[1] & DICR.STAT[1])
+    if (DICR.master_int_enable[1] && (DICR.MASK[1] & DICR.STAT[1]))
         IRQ = true;
     else
         IRQ = false;
     reg |= IRQ << 31;
     printf("[IOP DMA] Get DICR2: $%08X\n", reg);
+    return reg;
+}
+
+uint32_t IOP_DMA::get_chan_control(int index)
+{
+    uint32_t reg = 0;
+    reg |= channels[index].control.direction_from;
+    reg |= channels[index].control.unk8 << 8;
+    reg |= channels[index].control.sync_mode << 9;
+    reg |= channels[index].control.busy << 24;
+    reg |= channels[index].control.unk30 << 30;
     return reg;
 }
 
@@ -246,4 +308,10 @@ void IOP_DMA::set_chan_control(int index, uint32_t value)
     channels[index].control.sync_mode = (value >> 9) & 0x3;
     channels[index].control.busy = value & (1 << 24);
     channels[index].control.unk30 = value & (1 << 30);
+}
+
+void IOP_DMA::set_chan_tag_addr(int index, uint32_t value)
+{
+    printf("[IOP DMA] %s tag addr: $%08X\n", CHAN(index), value);
+    channels[index].tag_addr = value;
 }
