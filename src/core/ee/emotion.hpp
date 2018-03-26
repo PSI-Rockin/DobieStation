@@ -64,10 +64,15 @@ class EmotionEngine
         void swc1(uint32_t addr, int index);
 
         void mfhi(int index);
+        void mthi(int index);
         void mflo(int index);
+        void mtlo(int index);
         void mfhi1(int index);
+        void mthi1(int index);
         void mflo1(int index);
+        void mtlo1(int index);
         void mfsa(int index);
+        void mtsa(int index);
         void set_LO_HI(uint64_t a, uint64_t b, bool hi = false);
 
         void hle_syscall();

@@ -234,8 +234,12 @@ string EmotionDisasm::disasm_special(uint32_t instruction)
             return "sync";
         case 0x10:
             return disasm_mfhi(instruction);
+        case 0x11:
+            return disasm_mthi(instruction);
         case 0x12:
             return disasm_mflo(instruction);
+        case 0x13:
+            return disasm_mtlo(instruction);
         case 0x14:
             return disasm_dsllv(instruction);
         case 0x16:
@@ -266,6 +270,8 @@ string EmotionDisasm::disasm_special(uint32_t instruction)
             return disasm_nor(instruction);
         case 0x28:
             return disasm_mfsa(instruction);
+        case 0x29:
+            return disasm_mtsa(instruction);
         case 0x2A:
             return disasm_slt(instruction);
         case 0x2B:
@@ -393,9 +399,26 @@ string EmotionDisasm::disasm_mfhi(uint32_t instruction)
     return disasm_movereg("mfhi", instruction);
 }
 
+string EmotionDisasm::disasm_moveto(const string opcode, uint32_t instruction)
+{
+    stringstream output;
+    output << EmotionEngine::REG(RS);
+    return opcode + " " + output.str();
+}
+
+string EmotionDisasm::disasm_mthi(uint32_t instruction)
+{
+    return disasm_moveto("mthi", instruction);
+}
+
 string EmotionDisasm::disasm_mflo(uint32_t instruction)
 {
     return disasm_movereg("mflo", instruction);
+}
+
+string EmotionDisasm::disasm_mtlo(uint32_t instruction)
+{
+    return disasm_moveto("mtlo", instruction);
 }
 
 string EmotionDisasm::disasm_dsllv(uint32_t instruction)
@@ -490,6 +513,11 @@ string EmotionDisasm::disasm_nor(uint32_t instruction)
 string EmotionDisasm::disasm_mfsa(uint32_t instruction)
 {
     return disasm_movereg("mfsa", instruction);
+}
+
+string EmotionDisasm::disasm_mtsa(uint32_t instruction)
+{
+    return disasm_moveto("mtsa", instruction);
 }
 
 string EmotionDisasm::disasm_slt(uint32_t instruction)
@@ -1017,8 +1045,12 @@ string EmotionDisasm::disasm_mmi(uint32_t instruction, uint32_t instr_addr)
             return disasm_mmi2(instruction);
         case 0x10:
             return disasm_mfhi1(instruction);
+        case 0x11:
+            return disasm_mthi1(instruction);
         case 0x12:
             return disasm_mflo1(instruction);
+        case 0x13:
+            return disasm_mtlo1(instruction);
         case 0x18:
             return disasm_mult1(instruction);
         case 0x1A:
@@ -1101,9 +1133,19 @@ string EmotionDisasm::disasm_mfhi1(uint32_t instruction)
     return disasm_movereg("mfhi1", instruction);
 }
 
+string EmotionDisasm::disasm_mthi1(uint32_t instruction)
+{
+    return disasm_moveto("mthi1", instruction);
+}
+
 string EmotionDisasm::disasm_mflo1(uint32_t instruction)
 {
     return disasm_movereg("mflo1", instruction);
+}
+
+string EmotionDisasm::disasm_mtlo1(uint32_t instruction)
+{
+    return disasm_moveto("mtlo1", instruction);
 }
 
 string EmotionDisasm::disasm_mult1(uint32_t instruction)

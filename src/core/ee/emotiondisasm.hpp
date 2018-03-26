@@ -24,7 +24,10 @@ namespace EmotionDisasm
     std::string disasm_syscall_ee(uint32_t instruction);
     std::string disasm_movereg(const std::string opcode, uint32_t instruction);
     std::string disasm_mfhi(uint32_t instruction);
+    std::string disasm_moveto(const std::string opcode, uint32_t instruction);
+    std::string disasm_mthi(uint32_t instruction);
     std::string disasm_mflo(uint32_t instruction);
+    std::string disasm_mtlo(uint32_t instruction);
     std::string disasm_dsllv(uint32_t instruction);
     std::string disasm_dsrav(uint32_t instruction);
     std::string disasm_dsrlv(uint32_t instruction);
@@ -42,6 +45,7 @@ namespace EmotionDisasm
     std::string disasm_or_ee(uint32_t instruction);
     std::string disasm_nor(uint32_t instruction);
     std::string disasm_mfsa(uint32_t instruction);
+    std::string disasm_mtsa(uint32_t instruction);
     std::string disasm_slt(uint32_t instruction);
     std::string disasm_sltu(uint32_t instruction);
     std::string disasm_dadd(uint32_t instruction);
@@ -136,7 +140,9 @@ namespace EmotionDisasm
     std::string disasm_pcpyld(uint32_t instruction);
     std::string disasm_pand(uint32_t instruction);
     std::string disasm_mfhi1(uint32_t instruction);
+    std::string disasm_mthi1(uint32_t instruction);
     std::string disasm_mflo1(uint32_t instruction);
+    std::string disasm_mtlo1(uint32_t instruction);
     std::string disasm_mult1(uint32_t instruction);
     std::string disasm_div1(uint32_t instruction);
     std::string disasm_divu1(uint32_t instruction);

@@ -277,9 +277,19 @@ void EmotionEngine::mfhi(int index)
     set_gpr<uint64_t>(index, HI);
 }
 
+void EmotionEngine::mthi(int index)
+{
+    HI = get_gpr<uint64_t>(index);
+}
+
 void EmotionEngine::mflo(int index)
 {
     set_gpr<uint64_t>(index, LO);
+}
+
+void EmotionEngine::mtlo(int index)
+{
+    LO = get_gpr<uint64_t>(index);
 }
 
 void EmotionEngine::mfhi1(int index)
@@ -287,14 +297,29 @@ void EmotionEngine::mfhi1(int index)
     set_gpr<uint64_t>(index, HI1);
 }
 
+void EmotionEngine::mthi1(int index)
+{
+    HI1 = get_gpr<uint64_t>(index);
+}
+
 void EmotionEngine::mflo1(int index)
 {
     set_gpr<uint64_t>(index, LO1);
 }
 
+void EmotionEngine::mtlo1(int index)
+{
+    LO1 = get_gpr<uint64_t>(index);
+}
+
 void EmotionEngine::mfsa(int index)
 {
     set_gpr<uint64_t>(index, SA);
+}
+
+void EmotionEngine::mtsa(int index)
+{
+    SA = get_gpr<uint64_t>(index);
 }
 
 void EmotionEngine::lwc1(uint32_t addr, int index)
@@ -363,7 +388,8 @@ void EmotionEngine::syscall_exception()
     uint8_t op = read8(PC - 4);
     printf("[EE] SYSCALL: $%02X Called at $%08X\n", op, PC);
     handle_exception(0x80000180, 0x08);
-    //can_disassemble = true;
+    //if (op == 0x77)
+        //can_disassemble = true;
 
     //hle_syscall();
 }

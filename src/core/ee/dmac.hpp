@@ -53,6 +53,10 @@ class DMAC
         D_CTRL control;
         D_STAT interrupt_stat;
 
+        void process_GIF();
+        void process_SIF0();
+        void process_SIF1();
+
         void handle_source_chain(int index);
         void handle_dest_chain(int index);
 

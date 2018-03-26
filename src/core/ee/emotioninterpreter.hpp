@@ -19,7 +19,9 @@ namespace EmotionInterpreter
     void movn(EmotionEngine& cpu, uint32_t instruction);
     void syscall_ee(EmotionEngine& cpu, uint32_t instruction);
     void mfhi(EmotionEngine& cpu, uint32_t instruction);
+    void mthi(EmotionEngine& cpu, uint32_t instruction);
     void mflo(EmotionEngine& cpu, uint32_t instruction);
+    void mtlo(EmotionEngine& cpu, uint32_t instruction);
     void dsllv(EmotionEngine& cpu, uint32_t instruction);
     void dsrlv(EmotionEngine& cpu, uint32_t instruction);
     void dsrav(EmotionEngine& cpu, uint32_t instruction);
@@ -36,6 +38,7 @@ namespace EmotionInterpreter
     void xor_ee(EmotionEngine& cpu, uint32_t instruction);
     void nor(EmotionEngine& cpu, uint32_t instruction);
     void mfsa(EmotionEngine& cpu, uint32_t instruction);
+    void mtsa(EmotionEngine& cpu, uint32_t instruction);
     void slt(EmotionEngine& cpu, uint32_t instruction);
     void sltu(EmotionEngine& cpu, uint32_t instruction);
     void dadd(EmotionEngine& cpu, uint32_t instruction);
@@ -123,7 +126,9 @@ namespace EmotionInterpreter
     void pcpyld(EmotionEngine& cpu, uint32_t instruction);
     void pand(EmotionEngine& cpu, uint32_t instruction);
     void mfhi1(EmotionEngine& cpu, uint32_t instruction);
+    void mthi1(EmotionEngine& cpu, uint32_t instruction);
     void mflo1(EmotionEngine& cpu, uint32_t instruction);
+    void mtlo1(EmotionEngine& cpu, uint32_t instruction);
     void mult1(EmotionEngine& cpu, uint32_t instruction);
     void div1(EmotionEngine& cpu, uint32_t instruction);
     void divu1(EmotionEngine& cpu, uint32_t instruction);

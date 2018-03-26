@@ -44,64 +44,17 @@ void DMAC::run()
     {
         if (channels[i].control & 0x100)
         {
-            if (!channels[i].quadword_count)
-            {
-                if (channels[i].tag_end)
-                {
-                    transfer_end(i);
-                    continue;
-                }
-                int mode = (channels[i].control >> 2) & 0x3;
-                switch (mode)
-                {
-                    //Normal - suspend transfer
-                    case 0:
-                        transfer_end(i);
-                        break;
-                    case 1:
-                        handle_source_chain(i);
-                        break;
-                    case 2:
-                        handle_dest_chain(i);
-                        break;
-                    default:
-                        break;
-                }
-                continue;
-            }
-
-            bool transfer_success = false;
-            uint64_t quad[2];
-
             switch (i)
             {
                 case GIF:
-                    gif->send_PATH3(quad);
-                    quad[0] = e->read64(channels[i].address);
-                    quad[1] = e->read64(channels[i].address + 8);
-                    transfer_success = true;
+                    process_GIF();
                     break;
                 case SIF0:
-                    if (sif->get_SIF0_size() >= 4)
-                    {
-                        exit(1);
-                    }
+                    process_SIF0();
                     break;
                 case SIF1:
-                    if (sif->get_SIF1_size() <= 28)
-                    {
-                        quad[0] = e->read64(channels[i].address);
-                        quad[1] = e->read64(channels[i].address + 8);
-                        sif->write_SIF1(quad);
-                        transfer_success = true;
-                    }
+                    process_SIF1();
                     break;
-            }
-
-            if (transfer_success)
-            {
-                channels[i].address += 16;
-                channels[i].quadword_count--;
             }
         }
     }
@@ -113,17 +66,106 @@ void DMAC::transfer_end(int index)
     channels[index].control &= ~0x100;
 
     bool old_stat = interrupt_stat.channel_stat[index];
-    interrupt_stat.channel_stat[index];
+    interrupt_stat.channel_stat[index] = true;
 
     //Rising edge INT1
     if (!old_stat & interrupt_stat.channel_mask[index])
         cpu->set_int1_signal(true);
 }
 
+void DMAC::process_GIF()
+{
+    if (channels[GIF].quadword_count)
+    {
+        uint64_t quad[2];
+        quad[0] = e->read64(channels[GIF].address);
+        quad[1] = e->read64(channels[GIF].address + 8);
+        gif->send_PATH3(quad);
+
+        channels[GIF].address += 16;
+        channels[GIF].quadword_count--;
+    }
+    else
+    {
+        if (channels[GIF].tag_end)
+        {
+            transfer_end(GIF);
+        }
+        else
+            handle_source_chain(GIF);
+    }
+}
+
+void DMAC::process_SIF0()
+{
+    if (channels[SIF0].quadword_count)
+    {
+        if (sif->get_SIF0_size() >= 4)
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                uint32_t word = sif->read_SIF0();
+                printf("[DMAC] Read from SIF0: $%08X\n", word);
+                e->write32(channels[SIF0].address, word);
+                channels[SIF0].address += 4;
+            }
+            channels[SIF0].quadword_count--;
+        }
+    }
+    else
+    {
+        if (channels[SIF0].tag_end)
+        {
+            transfer_end(SIF0);
+        }
+        else if (sif->get_SIF0_size() >= 2)
+        {
+            uint64_t DMAtag = sif->read_SIF0();
+            DMAtag |= (uint64_t)sif->read_SIF0() << 32;
+            printf("[DMAC] SIF0 tag: $%08X_%08X\n", DMAtag >> 32, DMAtag);
+
+            channels[SIF0].quadword_count = DMAtag & 0xFFFF;
+            channels[SIF0].address = DMAtag >> 32;
+            channels[SIF0].tag_address += 16;
+
+            int mode = (DMAtag >> 28) & 0x7;
+
+            if (mode == 7 || (DMAtag & (1 << 31)))
+                channels[SIF0].tag_end = true;
+        }
+    }
+}
+
+void DMAC::process_SIF1()
+{
+    if (channels[SIF1].quadword_count)
+    {
+        if (sif->get_SIF1_size() <= 28)
+        {
+            uint64_t quad[2];
+            quad[0] = e->read64(channels[SIF1].address);
+            quad[1] = e->read64(channels[SIF1].address + 8);
+            sif->write_SIF1(quad);
+
+            channels[SIF1].address += 16;
+            channels[SIF1].quadword_count--;
+        }
+    }
+    else
+    {
+        if (channels[SIF1].tag_end)
+        {
+            transfer_end(SIF1);
+        }
+        else
+            handle_source_chain(SIF1);
+    }
+}
+
 void DMAC::handle_source_chain(int index)
 {
     uint64_t DMAtag = e->read64(channels[index].tag_address);
-    printf("[DMAC] DMAtag read $%08X: $%08X_%08X\n", channels[index].tag_address, DMAtag >> 32, DMAtag & 0xFFFFFFFF);
+    printf("[DMAC] Source DMAtag read $%08X: $%08X_%08X\n", channels[index].tag_address, DMAtag >> 32, DMAtag & 0xFFFFFFFF);
 
     //Change CTRL to have the upper 16 bits equal to bits 16-31 of the most recently read DMAtag
     channels[index].control &= 0xFFFF;
@@ -167,7 +209,8 @@ void DMAC::handle_source_chain(int index)
 
 void DMAC::handle_dest_chain(int index)
 {
-    printf("[DMAC] Dest chain not handled!\n");
+    uint64_t DMAtag = e->read64(channels[index].tag_address);
+    printf("[DMAC] Dest DMAtag read $%08X: $%08X_%08X\n", channels[index].tag_address, DMAtag >> 32, DMAtag & 0xFFFFFFFF);
     exit(1);
 }
 
@@ -178,7 +221,8 @@ void DMAC::start_DMA(int index)
     printf("Mode: %d\n", (channels[index].control >> 2) & 0x3);
     printf("ASP: %d\n", (channels[index].control >> 4) & 0x3);
     printf("TTE: %d\n", channels[index].control & (1 << 6));
-    channels[index].tag_end = false;
+    int mode = (channels[index].control >> 2) & 0x3;
+    channels[index].tag_end = (mode == 0); //always end transfers in normal mode
 }
 
 uint32_t DMAC::read32(uint32_t address)
@@ -259,6 +303,10 @@ void DMAC::write32(uint32_t address, uint32_t value)
         case 0x1000C020:
             printf("[DMAC] SIF0 QWC: $%08X\n", value);
             channels[SIF0].quadword_count = value & 0xFFFF;
+            break;
+        case 0x1000C030:
+            printf("[DMAC] SIF0 T_ADR: $%08X\n", value);
+            channels[SIF0].tag_address = value & ~0xF;
             break;
         case 0x1000C400:
             printf("[DMAC] SIF1 CTRL: $%08X\n", value);

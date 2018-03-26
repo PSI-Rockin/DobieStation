@@ -19,8 +19,14 @@ void EmotionInterpreter::mmi(EmotionEngine &cpu, uint32_t instruction)
         case 0x10:
             mfhi1(cpu, instruction);
             break;
+        case 0x11:
+            mthi1(cpu, instruction);
+            break;
         case 0x12:
             mflo1(cpu, instruction);
+            break;
+        case 0x13:
+            mtlo1(cpu, instruction);
             break;
         case 0x18:
             mult1(cpu, instruction);
@@ -192,10 +198,22 @@ void EmotionInterpreter::mfhi1(EmotionEngine &cpu, uint32_t instruction)
     cpu.mfhi1(dest);
 }
 
+void EmotionInterpreter::mthi1(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t source = (instruction >> 21) & 0x1F;
+    cpu.mthi1(source);
+}
+
 void EmotionInterpreter::mflo1(EmotionEngine &cpu, uint32_t instruction)
 {
     uint64_t dest = (instruction >> 11) & 0x1F;
     cpu.mflo1(dest);
+}
+
+void EmotionInterpreter::mtlo1(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t source = (instruction >> 21) & 0x1F;
+    cpu.mtlo1(source);
 }
 
 void EmotionInterpreter::mult1(EmotionEngine &cpu, uint32_t instruction)

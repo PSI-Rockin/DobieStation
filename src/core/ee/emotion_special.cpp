@@ -45,8 +45,14 @@ void EmotionInterpreter::special(EmotionEngine &cpu, uint32_t instruction)
         case 0x10:
             mfhi(cpu, instruction);
             break;
+        case 0x11:
+            mthi(cpu, instruction);
+            break;
         case 0x12:
             mflo(cpu, instruction);
+            break;
+        case 0x13:
+            mtlo(cpu, instruction);
             break;
         case 0x14:
             dsllv(cpu, instruction);
@@ -95,6 +101,9 @@ void EmotionInterpreter::special(EmotionEngine &cpu, uint32_t instruction)
             break;
         case 0x28:
             mfsa(cpu, instruction);
+            break;
+        case 0x29:
+            mtsa(cpu, instruction);
             break;
         case 0x2A:
             slt(cpu, instruction);
@@ -239,10 +248,22 @@ void EmotionInterpreter::mfhi(EmotionEngine &cpu, uint32_t instruction)
     cpu.mfhi(dest);
 }
 
+void EmotionInterpreter::mthi(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint32_t source = (instruction >> 21) & 0x1F;
+    cpu.mthi(source);
+}
+
 void EmotionInterpreter::mflo(EmotionEngine &cpu, uint32_t instruction)
 {
     uint32_t dest = (instruction >> 11) & 0x1F;
     cpu.mflo(dest);
+}
+
+void EmotionInterpreter::mtlo(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint32_t source = (instruction >> 21) & 0x1F;
+    cpu.mtlo(source);
 }
 
 void EmotionInterpreter::dsllv(EmotionEngine &cpu, uint32_t instruction)
@@ -414,6 +435,12 @@ void EmotionInterpreter::mfsa(EmotionEngine &cpu, uint32_t instruction)
 {
     int dest = (instruction >> 11) & 0x1F;
     cpu.mfsa(dest);
+}
+
+void EmotionInterpreter::mtsa(EmotionEngine &cpu, uint32_t instruction)
+{
+    int source = (instruction >> 21) & 0x1F;
+    cpu.mtsa(source);
 }
 
 void EmotionInterpreter::slt(EmotionEngine &cpu, uint32_t instruction)
