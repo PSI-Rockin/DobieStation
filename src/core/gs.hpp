@@ -86,13 +86,13 @@ struct Vertex
     UV_REG uv;
 };
 
-class INTC;
-class Point
+struct Point
 {
-    public:
-        int32_t x, y, z;
-        Point(int32_t _x, int32_t _y, int32_t _z = 0) : x(_x), y(_y), z(_z) {}
+    int32_t x, y, z;
+    Point(int32_t _x, int32_t _y, int32_t _z = 0) : x(_x), y(_y), z(_z) {}
 };
+
+class INTC;
 
 class GraphicsSynthesizer
 {

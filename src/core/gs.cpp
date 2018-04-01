@@ -783,6 +783,11 @@ void GraphicsSynthesizer::render_line()
     }
 }
 
+
+// Returns positive value if the points are in counter-clockwise order
+// 0 if they it's on the same line
+// Negative value if they are in a clockwise order
+// Basicly the cross product of (v2 - v1) and (v3 - v1) vectors
 int32_t GraphicsSynthesizer::orient2D(const Point &v1, const Point &v2, const Point &v3)
 {
     return (v2.x - v1.x) * (v3.y - v1.y) - (v3.x - v1.x) * (v2.y - v1.y);
@@ -811,6 +816,9 @@ void GraphicsSynthesizer::render_triangle()
     Point v2(x2, y2, z2);
     Point v3(x3, y3, z3);
 
+    //The triangle rasterization code uses an approach with barycentric coordinates
+    //Clear explanation can be read below:
+    //https://fgiesen.wordpress.com/2013/02/06/the-barycentric-conspirac/
 
     //Order by counter-clockwise winding order
     if (orient2D(v1, v2, v3) < 0)
