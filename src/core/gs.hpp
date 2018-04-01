@@ -86,6 +86,12 @@ struct Vertex
     UV_REG uv;
 };
 
+struct Point
+{
+    int32_t x, y, z;
+    Point(int32_t _x, int32_t _y, int32_t _z = 0) : x(_x), y(_y), z(_z) {}
+};
+
 class INTC;
 
 class GraphicsSynthesizer
@@ -139,6 +145,8 @@ class GraphicsSynthesizer
         void render_sprite();
         void write_HWREG(uint64_t data);
         void host_to_host();
+
+        int32_t orient2D(const Point& v1, const Point& v2, const Point& v3);
     public:
         GraphicsSynthesizer(INTC* intc);
         ~GraphicsSynthesizer();
