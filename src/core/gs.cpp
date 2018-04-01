@@ -783,22 +783,87 @@ void GraphicsSynthesizer::render_line()
     }
 }
 
+int32_t GraphicsSynthesizer::orient2D(const Point &v1, const Point &v2, const Point &v3)
+{
+    return (v2.x - v1.x) * (v3.y - v1.y) - (v3.x - v1.x) * (v2.y - v1.y);
+}
+
 void GraphicsSynthesizer::render_triangle()
 {
     printf("\n[GS] Rendering triangle!");
-    int32_t point[3];
     uint32_t color = 0x00000000;
     color |= vtx_queue[0].rgbaq.r;
     color |= vtx_queue[0].rgbaq.g << 8;
     color |= vtx_queue[0].rgbaq.b << 16;
     color |= vtx_queue[0].rgbaq.a << 24;
-    color = 0xFFFFFFFF;
-    for (int i = 2; i >= 0; i--)
+
+    int32_t x1, x2, x3, y1, y2, y3, z1, z2, z3;
+    x1 = vtx_queue[2].coords[0] - current_ctx->xyoffset.x;
+    y1 = vtx_queue[2].coords[1] - current_ctx->xyoffset.y;
+    z1 = vtx_queue[2].coords[2];
+    x2 = vtx_queue[1].coords[0] - current_ctx->xyoffset.x;
+    y2 = vtx_queue[1].coords[1] - current_ctx->xyoffset.y;
+    z2 = vtx_queue[1].coords[2];
+    x3 = vtx_queue[0].coords[0] - current_ctx->xyoffset.x;
+    y3 = vtx_queue[0].coords[1] - current_ctx->xyoffset.y;
+    z3 = vtx_queue[0].coords[2];
+    Point v1(x1, y1, z1);
+    Point v2(x2, y2, z2);
+    Point v3(x3, y3, z3);
+
+
+    //Order by counter-clockwise winding order
+    if (orient2D(v1, v2, v3) < 0)
+        swap(v2, v3);
+
+    //Calculate bounding box of triangle
+    int32_t min_x = min({v1.x, v2.x, v3.x});
+    int32_t min_y = min({v1.y, v2.y, v3.y});
+    int32_t max_x = max({v1.x, v2.x, v3.x});
+    int32_t max_y = max({v1.y, v2.y, v3.y});
+
+    //Calculate incremental steps for the weights
+    //Reference: https://fgiesen.wordpress.com/2013/02/10/optimizing-the-basic-rasterizer/
+    int32_t A12 = v1.y - v2.y;
+    int32_t B12 = v2.x - v1.x;
+    int32_t A23 = v2.y - v3.y;
+    int32_t B23 = v3.x - v2.x;
+    int32_t A31 = v3.y - v1.y;
+    int32_t B31 = v1.x - v3.x;
+
+
+    Point min_corner(min_x, min_y);
+    int32_t w1_row = orient2D(v2, v3, min_corner);
+    int32_t w2_row = orient2D(v3, v1, min_corner);
+    int32_t w3_row = orient2D(v1, v2, min_corner);
+
+    //TODO: Parellize this
+    //Iterate through pixels in bounds
+    for (int32_t y = min_y; y <= max_y; y++)
     {
-        point[0] = vtx_queue[i].coords[0] - current_ctx->xyoffset.x;
-        point[1] = vtx_queue[i].coords[1] - current_ctx->xyoffset.y;
-        point[2] = vtx_queue[i].coords[2];
-        //draw_pixel(point[0], point[1], color, point[2], false);
+        int32_t w1 = w1_row;
+        int32_t w2 = w2_row;
+        int32_t w3 = w3_row;
+        for (int32_t x = min_x; x <= max_x; x++)
+        {
+
+            //Is inside triangle?
+            if ((w1 | w2 | w3) >= 0)
+            {
+                //Interpolate Z
+                float z = (float) v1.z * w1 + (float) v2.z * w2 + (float) v3.z * w3;
+                z /= (float) (w1 + w2 + w3);
+                draw_pixel(x, y, color, (int32_t) z, PRIM.alpha_blend);
+            }
+            //Horizontal step
+            w1 += A23;
+            w2 += A31;
+            w3 += A12;
+        }
+        //Vertical step
+        w1_row += B23;
+        w2_row += B31;
+        w3_row += B12;
     }
 }
 
