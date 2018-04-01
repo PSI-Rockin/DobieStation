@@ -97,7 +97,7 @@ void IOP_Interpreter::interpret(IOP &cpu, uint32_t instruction)
             swr(cpu, instruction);
             break;
         default:
-            unknown_op("regular", op);
+            unknown_op("regular", op, instruction);
     }
 }
 
@@ -452,7 +452,7 @@ void IOP_Interpreter::special(IOP &cpu, uint32_t instruction)
             sltu(cpu, instruction);
             break;
         default:
-            unknown_op("special", op);
+            unknown_op("special", op, instruction);
     }
 }
 
@@ -729,7 +729,7 @@ void IOP_Interpreter::regimm(IOP &cpu, uint32_t instruction)
             bgez(cpu, instruction);
             break;
         default:
-            unknown_op("regimm", op);
+            unknown_op("regimm", op, instruction);
     }
 }
 
@@ -766,7 +766,7 @@ void IOP_Interpreter::cop(IOP &cpu, uint32_t instruction)
             cpu.rfe();
             break;
         default:
-            unknown_op("cop", op);
+            unknown_op("cop", op, instruction);
     }
 }
 
@@ -786,8 +786,9 @@ void IOP_Interpreter::mtc(IOP &cpu, uint32_t instruction)
     cpu.mtc(cop_id, cop_reg, reg);
 }
 
-void IOP_Interpreter::unknown_op(const char *type, uint16_t op)
+void IOP_Interpreter::unknown_op(const char *type, uint16_t op, uint32_t instruction)
 {
     printf("\n[IOP_Interpreter] Unrecognized %s op $%02X\n", type, op);
+    printf("[IOP Interpreter] Instruction: $%08X\n", instruction);
     exit(1);
 }

@@ -2,8 +2,9 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include "gs.hpp"
+#include "ee/intc.hpp"
 
+#include "gs.hpp"
 using namespace std;
 
 /**
@@ -36,7 +37,7 @@ T interpolate(int32_t x, T u1, int32_t x1, T u2, int32_t x2)
 
 const unsigned int GraphicsSynthesizer::max_vertices[8] = {1, 2, 2, 3, 3, 3, 2, 0};
 
-GraphicsSynthesizer::GraphicsSynthesizer()
+GraphicsSynthesizer::GraphicsSynthesizer(INTC* intc) : intc(intc)
 {
     frame_complete = false;
     output_buffer = nullptr;
@@ -71,6 +72,8 @@ void GraphicsSynthesizer::reset()
     context1.reset();
     context2.reset();
     current_ctx = &context1;
+    VBLANK_enabled = false;
+    VBLANK_generated = false;
 }
 
 void GraphicsSynthesizer::start_frame()
@@ -93,6 +96,15 @@ void GraphicsSynthesizer::set_CRT(bool interlaced, int mode, bool frame_mode)
 uint32_t* GraphicsSynthesizer::get_framebuffer()
 {
     return output_buffer;
+}
+
+void GraphicsSynthesizer::set_VBLANK(bool is_VBLANK)
+{
+    if (is_VBLANK)
+        intc->assert_IRQ(2);
+    else
+        intc->assert_IRQ(3);
+    VBLANK_generated = is_VBLANK;
 }
 
 void GraphicsSynthesizer::render_CRT()
@@ -143,7 +155,11 @@ uint32_t GraphicsSynthesizer::read32_privileged(uint32_t addr)
     switch (addr)
     {
         case 0x1000:
-            return 0x8;
+        {
+            uint32_t reg = 0;
+            reg |= VBLANK_generated << 3;
+            return reg;
+        }
         default:
             printf("[GS] Unrecognized privileged read32 from $%04X\n", addr);
             return 0;
@@ -156,7 +172,11 @@ uint64_t GraphicsSynthesizer::read64_privileged(uint32_t addr)
     switch (addr)
     {
         case 0x1000:
-            return 0x8;
+        {
+            uint64_t reg = 0;
+            reg |= VBLANK_generated << 3;
+            return reg;
+        }
         default:
             printf("[GS] Unrecognized privileged read64 from $%04X\n", addr);
             return 0;
@@ -176,10 +196,11 @@ void GraphicsSynthesizer::write32_privileged(uint32_t addr, uint32_t value)
             break;
         case 0x1000:
             printf("[GS] Write32 to GS_CSR: $%08X\n", value);
-
-            //Ugly VSYNC hack
             if (value & 0x8)
-                frame_complete = true;
+            {
+                VBLANK_enabled = true;
+                VBLANK_generated = false;
+            }
             break;
         default:
             printf("\n[GS] Unrecognized privileged write32 to reg $%04X: $%08X", addr, value);
@@ -242,10 +263,11 @@ void GraphicsSynthesizer::write64_privileged(uint32_t addr, uint64_t value)
             break;
         case 0x1000:
             printf("[GS] Write64 to GS_CSR: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);
-
-            //Ugly VSYNC hack
             if (value & 0x8)
-                frame_complete = true;
+            {
+                VBLANK_enabled = true;
+                VBLANK_generated = false;
+            }
             break;
         default:
             printf("[GS] Unrecognized privileged write64 to reg $%04X: $%08X_%08X\n", addr, value >> 32, value & 0xFFFFFFFF);

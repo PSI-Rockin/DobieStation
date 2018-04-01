@@ -21,6 +21,7 @@ set(SOURCES
         src/core/ee/emotionasm.cpp
         src/core/ee/emotiondisasm.cpp
         src/core/ee/emotioninterpreter.cpp
+	src/core/ee/intc.cpp
 	src/core/ee/timers.cpp
 	src/core/iop/iop.cpp
 	src/core/iop/iop_cop0.cpp
@@ -45,6 +46,7 @@ set(HEADERS
         src/core/ee/emotionasm.hpp
         src/core/ee/emotiondisasm.hpp
         src/core/ee/emotioninterpreter.hpp
+	src/core/ee/intc.hpp
 	src/core/ee/timers.hpp
 	src/core/iop/iop.hpp
 	src/core/iop/iop_cop0.hpp

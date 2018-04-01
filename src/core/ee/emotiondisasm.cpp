@@ -266,6 +266,8 @@ string EmotionDisasm::disasm_special(uint32_t instruction)
             return disasm_and_ee(instruction);
         case 0x25:
             return disasm_or_ee(instruction);
+        case 0x26:
+            return disasm_xor_ee(instruction);
         case 0x27:
             return disasm_nor(instruction);
         case 0x28:
@@ -503,6 +505,11 @@ string EmotionDisasm::disasm_and_ee(uint32_t instruction)
 string EmotionDisasm::disasm_or_ee(uint32_t instruction)
 {
     return disasm_special_simplemath("or", instruction);
+}
+
+string EmotionDisasm::disasm_xor_ee(uint32_t instruction)
+{
+    return disasm_special_simplemath("xor", instruction);
 }
 
 string EmotionDisasm::disasm_nor(uint32_t instruction)
@@ -904,6 +911,8 @@ string EmotionDisasm::disasm_cop_s(uint32_t instruction)
             return disasm_fpu_neg(instruction);
         case 0x18:
             return disasm_fpu_adda(instruction);
+        case 0x1C:
+            return disasm_fpu_madd(instruction);
         case 0x24:
             return disasm_fpu_cvt_w_s(instruction);
         case 0x32:
@@ -976,6 +985,11 @@ string EmotionDisasm::disasm_fpu_acc(const string opcode, uint32_t instruction)
 string EmotionDisasm::disasm_fpu_adda(uint32_t instruction)
 {
     return disasm_fpu_acc("adda.s", instruction);
+}
+
+string EmotionDisasm::disasm_fpu_madd(uint32_t instruction)
+{
+    return disasm_fpu_math("madd.s", instruction);
 }
 
 string EmotionDisasm::disasm_fpu_convert(const string opcode, uint32_t instruction)

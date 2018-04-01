@@ -86,13 +86,20 @@ struct Vertex
     UV_REG uv;
 };
 
+class INTC;
+
 class GraphicsSynthesizer
 {
     private:
+        INTC* intc;
         bool frame_complete;
         uint32_t* output_buffer;
         uint32_t* local_mem;
         uint8_t CRT_mode;
+
+        //CSR/IMR stuff - to be merged into structs
+        bool VBLANK_generated;
+        bool VBLANK_enabled;
 
         GSContext context1, context2;
         GSContext* current_ctx;
@@ -133,7 +140,7 @@ class GraphicsSynthesizer
         void write_HWREG(uint64_t data);
         void host_to_host();
     public:
-        GraphicsSynthesizer();
+        GraphicsSynthesizer(INTC* intc);
         ~GraphicsSynthesizer();
         void reset();
         void start_frame();
@@ -141,6 +148,8 @@ class GraphicsSynthesizer
         uint32_t* get_framebuffer();
         void render_CRT();
         void get_resolution(int& w, int& h);
+
+        void set_VBLANK(bool is_VBLANK);
 
         void set_CRT(bool interlaced, int mode, bool frame_mode);
 

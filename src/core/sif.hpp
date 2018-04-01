@@ -15,6 +15,7 @@ class SubsystemInterface
         std::queue<uint32_t> SIF0_FIFO;
         std::queue<uint32_t> SIF1_FIFO;
     public:
+        constexpr static int MAX_FIFO_SIZE = 32;
         SubsystemInterface();
 
         void reset();

@@ -11,6 +11,7 @@ struct DMA_Channel
     uint32_t tag_save0, tag_save1;
 
     bool tag_end;
+    bool paused;
 };
 
 //Regs
@@ -53,19 +54,24 @@ class DMAC
         D_CTRL control;
         D_STAT interrupt_stat;
 
+        uint32_t master_disable;
+
         void process_GIF();
         void process_SIF0();
         void process_SIF1();
 
         void handle_source_chain(int index);
-        void handle_dest_chain(int index);
 
         void transfer_end(int index);
+        void int1_check();
     public:
         DMAC(EmotionEngine* cpu, Emulator* e, GraphicsInterface* gif, SubsystemInterface* sif);
         void reset();
         void run();
         void start_DMA(int index);
+
+        uint32_t read_master_disable();
+        void write_master_disable(uint32_t value);
 
         uint32_t read32(uint32_t address);
         void write32(uint32_t address, uint32_t value);

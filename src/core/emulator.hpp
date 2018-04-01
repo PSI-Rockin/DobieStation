@@ -1,12 +1,16 @@
 #ifndef EMULATOR_HPP
 #define EMULATOR_HPP
+#include <fstream>
+
 #include "ee/bios_hle.hpp"
 #include "ee/dmac.hpp"
 #include "ee/emotion.hpp"
+#include "ee/intc.hpp"
 #include "ee/timers.hpp"
 
 #include "iop/iop.hpp"
 #include "iop/iop_dma.hpp"
+#include "iop/iop_timers.hpp"
 
 #include "gs.hpp"
 #include "gif.hpp"
@@ -23,7 +27,12 @@ class Emulator
         GraphicsInterface gif;
         IOP iop;
         IOP_DMA iop_dma;
+        IOPTiming iop_timers;
+        INTC intc;
         SubsystemInterface sif;
+
+        std::ofstream ee_log;
+        std::string ee_stdout;
 
         uint8_t* RDRAM;
         uint8_t* IOP_RAM;
@@ -32,8 +41,6 @@ class Emulator
         uint32_t MCH_RICM, MCH_DRD;
         uint8_t rdram_sdevid;
 
-        uint32_t INTC_STAT;
-        uint32_t INTC_MASK;
         uint32_t instructions_run;
 
         uint8_t IOP_POST;
@@ -41,14 +48,22 @@ class Emulator
         uint32_t IOP_I_MASK;
         uint32_t IOP_I_CTRL;
 
+        bool skip_BIOS_hack;
+
+        uint8_t* ELF_file;
+        uint64_t ELF_size;
+
         void iop_IRQ_check(uint32_t new_stat, uint32_t new_mask);
     public:
         Emulator();
         ~Emulator();
         void run();
         void reset();
+        bool skip_BIOS();
+        void set_skip_BIOS_hack();
         void load_BIOS(uint8_t* BIOS);
-        void load_ELF(uint8_t* ELF);
+        void load_ELF(uint8_t* ELF, uint64_t size);
+        void execute_ELF();
         uint32_t* get_framebuffer();
         void get_resolution(int& w, int& h);
 

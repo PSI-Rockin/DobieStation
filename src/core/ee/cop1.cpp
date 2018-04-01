@@ -10,6 +10,9 @@ Cop1::Cop1()
 //Returns a floating point value that may be changed to accomodate the FPU's non-compliance to the IEEE 754 standard.
 float Cop1::convert(uint32_t value)
 {
+    //Detect infinities/NaN
+    if ((value & 0x7F800000) == 0x7F800000)
+        value = (value & 0x80000000) | 0x7F7FFFFF;
     return *(float*)&value;
 }
 
@@ -30,20 +33,33 @@ uint32_t Cop1::get_gpr(int index)
 
 void Cop1::mtc(int index, uint32_t value)
 {
-    //printf("\nMTC1: %d, $%08X", index, value);
+    printf("\n[FPU] MTC1: %d, $%08X", index, value);
     gpr[index].u = value;
+}
+
+uint32_t Cop1::cfc(int index)
+{
+    switch (index)
+    {
+        case 0:
+            return 0x2E00;
+        case 31:
+            return control.condition << 23;
+        default:
+            return 0;
+    }
 }
 
 void Cop1::ctc(int index, uint32_t value)
 {
-    printf("[FPU] CTC1: $%08X (%d)", value, index);
+    printf("\n[FPU] CTC1: $%08X (%d)", value, index);
 }
 
 void Cop1::cvt_s_w(int dest, int source)
 {
     float bark = (float)gpr[source].u;
     gpr[dest].f = bark;
-    printf("\nCVT_S_W: %f", bark);
+    printf("\n[FPU] CVT_S_W: %f", bark);
 }
 
 void Cop1::cvt_w_s(int dest, int source)
@@ -51,7 +67,7 @@ void Cop1::cvt_w_s(int dest, int source)
     //Default rounding mode in the FPU is truncate
     //TODO: is it possible to change that?
     gpr[dest].u = (uint32_t)trunc(gpr[source].f);
-    printf("\nCVT_W_S: $%08X", gpr[dest].u);
+    printf("\n[FPU]CVT_W_S: $%08X", gpr[dest].u);
 }
 
 void Cop1::add_s(int dest, int reg1, int reg2)
@@ -103,6 +119,16 @@ void Cop1::adda_s(int reg1, int reg2)
     float op1 = convert(gpr[reg1].u);
     float op2 = convert(gpr[reg2].u);
     accumulator.f = op1 + op2;
+    printf("\n[FPU] adda.s: %f + %f = %f", op1, op2, accumulator.f);
+}
+
+void Cop1::madd_s(int dest, int reg1, int reg2)
+{
+    float op1 = convert(gpr[reg1].u);
+    float op2 = convert(gpr[reg2].u);
+    float acc = convert(accumulator.u);
+    gpr[dest].f = acc + (op1 * op2);
+    printf("\n[FPU] madd.s: %f + %f * %f = %f", acc, op1, op2, gpr[dest].f);
 }
 
 void Cop1::c_lt_s(int reg1, int reg2)

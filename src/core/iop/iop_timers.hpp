@@ -17,8 +17,16 @@ struct IOP_Timer
 
 class IOPTiming
 {
+    private:
+        IOP_Timer timers[6];
     public:
         IOPTiming();
+
+        void reset();
+        void run();
+        uint32_t read_counter(int index);
+
+        void write_control(int index, uint16_t value);
 };
 
 #endif // IOP_TIMERS_HPP

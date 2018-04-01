@@ -26,19 +26,24 @@ DMAC::DMAC(EmotionEngine* cpu, Emulator* e, GraphicsInterface* gif, SubsystemInt
 
 void DMAC::reset()
 {
-    //Certain homebrew seem to assume that master enable is turned on
-    control.master_enable = true;
+    master_disable = 0x1201; //hax
+    control.master_enable = false;
     for (int i = 0; i < 10; i++)
     {
         channels[i].control = 0;
         interrupt_stat.channel_mask[i] = false;
         interrupt_stat.channel_stat[i] = false;
     }
+    interrupt_stat.mfifo_mask = false;
+    interrupt_stat.stall_mask = false;
+    interrupt_stat.bus_stat = false;
+    interrupt_stat.mfifo_stat = false;
+    interrupt_stat.stall_stat = false;
 }
 
 void DMAC::run()
 {
-    if (!control.master_enable)
+    if (!control.master_enable || (master_disable & (1 << 16)))
         return;
     for (int i = 0; i < 10; i++)
     {
@@ -64,13 +69,22 @@ void DMAC::transfer_end(int index)
 {
     printf("[DMAC] Transfer end: %d\n", index);
     channels[index].control &= ~0x100;
-
-    bool old_stat = interrupt_stat.channel_stat[index];
     interrupt_stat.channel_stat[index] = true;
+    int1_check();
+}
 
-    //Rising edge INT1
-    if (!old_stat & interrupt_stat.channel_mask[index])
-        cpu->set_int1_signal(true);
+void DMAC::int1_check()
+{
+    bool int1_signal = false;
+    for (int i = 0; i < 10; i++)
+    {
+        if (interrupt_stat.channel_stat[i] & interrupt_stat.channel_mask[i])
+        {
+            int1_signal = true;
+            break;
+        }
+    }
+    cpu->set_int1_signal(int1_signal);
 }
 
 void DMAC::process_GIF()
@@ -127,11 +141,17 @@ void DMAC::process_SIF0()
             channels[SIF0].quadword_count = DMAtag & 0xFFFF;
             channels[SIF0].address = DMAtag >> 32;
             channels[SIF0].tag_address += 16;
+            //channels[SIF0].tag_address = channels[SIF0].address + channels[SIF0].quadword_count * 16;
 
             int mode = (DMAtag >> 28) & 0x7;
 
-            if (mode == 7 || (DMAtag & (1 << 31)))
+            bool IRQ = DMAtag & (1 << 31);
+            bool TIE = channels[SIF0].control & (1 << 7);
+            if (mode == 7 || (IRQ && TIE))
                 channels[SIF0].tag_end = true;
+
+            channels[SIF0].control &= 0xFFFF;
+            channels[SIF0].control |= DMAtag & 0xFFFF0000;
         }
     }
 }
@@ -140,7 +160,7 @@ void DMAC::process_SIF1()
 {
     if (channels[SIF1].quadword_count)
     {
-        if (sif->get_SIF1_size() <= 28)
+        if (sif->get_SIF1_size() <= SubsystemInterface::MAX_FIFO_SIZE - 4)
         {
             uint64_t quad[2];
             quad[0] = e->read64(channels[SIF1].address);
@@ -173,23 +193,29 @@ void DMAC::handle_source_chain(int index)
 
     uint16_t quadword_count = DMAtag & 0xFFFF;
     uint8_t id = (DMAtag >> 28) & 0x7;
-    uint32_t addr = (DMAtag >> 32) & 0x7FFFFFFF;
-    addr &= ~0xF;
+    uint32_t addr = (DMAtag >> 32) & 0x7FFFFFF0;
     bool IRQ_after_transfer = DMAtag & (1 << 31);
+    bool TIE = channels[index].control & (1 << 7);
     channels[index].quadword_count = quadword_count;
     switch (id)
     {
         case 0:
             //refe
             channels[index].address = addr;
+            channels[index].tag_address += 16;
             channels[index].tag_end = true;
             break;
         case 1:
             //cnt
             channels[index].address = channels[index].tag_address + 16;
             channels[index].tag_address = channels[index].address + (quadword_count * 16);
-            printf("\nNew address: $%08X", channels[index].address);
-            printf("\nNew tag addr: $%08X", channels[index].tag_address);
+            break;
+        case 2:
+        {
+            uint32_t temp = channels[index].tag_address;
+            channels[index].tag_address = channels[index].address;
+            channels[index].address = temp + 16;
+        }
             break;
         case 3:
             //ref
@@ -205,13 +231,10 @@ void DMAC::handle_source_chain(int index)
             printf("\n[DMAC] Unrecognized source chain DMAtag id %d\n", id);
             exit(1);
     }
-}
-
-void DMAC::handle_dest_chain(int index)
-{
-    uint64_t DMAtag = e->read64(channels[index].tag_address);
-    printf("[DMAC] Dest DMAtag read $%08X: $%08X_%08X\n", channels[index].tag_address, DMAtag >> 32, DMAtag & 0xFFFFFFFF);
-    exit(1);
+    //if (IRQ_after_transfer && TIE)
+        //channels[index].tag_end = true;
+    printf("\nNew address: $%08X", channels[index].address);
+    printf("\nNew tag addr: $%08X", channels[index].tag_address);
 }
 
 void DMAC::start_DMA(int index)
@@ -223,6 +246,16 @@ void DMAC::start_DMA(int index)
     printf("TTE: %d\n", channels[index].control & (1 << 6));
     int mode = (channels[index].control >> 2) & 0x3;
     channels[index].tag_end = (mode == 0); //always end transfers in normal mode
+}
+
+uint32_t DMAC::read_master_disable()
+{
+    return master_disable;
+}
+
+void DMAC::write_master_disable(uint32_t value)
+{
+    master_disable = value;
 }
 
 uint32_t DMAC::read32(uint32_t address)
@@ -335,9 +368,10 @@ void DMAC::write32(uint32_t address, uint32_t value)
             printf("[DMAC] Write32 D_STAT: $%08X\n", value);
             for (int i = 0; i < 10; i++)
             {
-                interrupt_stat.channel_stat[i] &= ~(value & (1 << i));
+                if (value & (1 << i))
+                    interrupt_stat.channel_stat[i] = false;
 
-                //Reverse channel int mask
+                //Reverse mask
                 if (value & (1 << (i + 16)))
                     interrupt_stat.channel_mask[i] ^= 1;
             }
@@ -351,6 +385,7 @@ void DMAC::write32(uint32_t address, uint32_t value)
             if (value & (1 << 30))
                 interrupt_stat.mfifo_mask ^= 1;
 
+            int1_check();
             break;
         default:
             printf("[DMAC] Unrecognized write32 of $%08X to $%08X\n", value, address);

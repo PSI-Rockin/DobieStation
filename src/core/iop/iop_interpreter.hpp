@@ -69,7 +69,7 @@ namespace IOP_Interpreter
     void mtc(IOP& cpu, uint32_t instruction);
     void rfe(IOP& cpu, uint32_t instruction);
 
-    void unknown_op(const char* type, uint16_t op);
+    void unknown_op(const char* type, uint16_t op, uint32_t instruction);
 };
 
 #endif // IOP_INTERPRETER_HPP

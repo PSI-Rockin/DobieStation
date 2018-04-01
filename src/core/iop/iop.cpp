@@ -29,6 +29,7 @@ const char* IOP::REG(int id)
 
 void IOP::reset()
 {
+    cop0.reset();
     PC = 0xBFC00000;
     gpr[0] = 0;
     load_delay = 0;
@@ -52,35 +53,32 @@ uint32_t IOP::translate_addr(uint32_t addr)
 
 void IOP::run()
 {
+    //bool old_int = cop0.status.IEc && (cop0.status.Im & cop0.cause.int_pending);
+    uint32_t instr = read32(PC);
+    if (can_disassemble)
+        printf("[IOP] [$%08X] $%08X - %s\n", PC, instr, EmotionDisasm::disasm_instr(instr, PC).c_str());
+    IOP_Interpreter::interpret(*this, instr);
+
+    if (inc_PC)
+        PC += 4;
+    else
+        inc_PC = true;
+
     if (will_branch)
     {
         if (!load_delay)
         {
             will_branch = false;
             PC = new_PC;
+            if (PC == 0xAE94)
+                can_disassemble = false;
         }
         else
             load_delay--;
     }
-    uint32_t instr = read32(PC);
-    if (can_disassemble)
-        printf("[IOP] [$%08X] $%08X - %s\n", PC, instr, EmotionDisasm::disasm_instr(instr, PC).c_str());
-    IOP_Interpreter::interpret(*this, instr);
 
-    /*if (PC == 0xBFC5891C)
-    {
-        for (int i = 0; i < 32; i++)
-        {
-            printf("%s:$%08X\t", REG(i), get_gpr(i));
-            if (i % 3 == 2)
-                printf("\n");
-        }
-    }*/
-
-    if (inc_PC)
-        PC += 4;
-    else
-        inc_PC = true;
+    if (cop0.status.IEc && (cop0.status.Im & cop0.cause.int_pending))
+        interrupt();
 }
 
 void IOP::jp(uint32_t addr)
@@ -103,7 +101,7 @@ void IOP::handle_exception(uint32_t addr, uint8_t cause)
 {
     inc_PC = false;
     cop0.cause.code = cause;
-    if (load_delay && will_branch)
+    if (will_branch)
     {
         cop0.EPC = PC - 4;
         cop0.cause.bd = true;
@@ -113,6 +111,9 @@ void IOP::handle_exception(uint32_t addr, uint8_t cause)
         cop0.EPC = PC;
         cop0.cause.bd = false;
     }
+    cop0.status.IEo = cop0.status.IEp;
+    cop0.status.IEp = cop0.status.IEc;
+    cop0.status.IEc = false;
     PC = addr;
     load_delay = 0;
     will_branch = false;
@@ -120,6 +121,8 @@ void IOP::handle_exception(uint32_t addr, uint8_t cause)
 
 void IOP::syscall_exception()
 {
+    uint8_t op = read8(PC - 4);
+    printf("[IOP] SYSCALL: $%02X\n", op);
     handle_exception(0x80000080, 0x08);
     //can_disassemble = true;
 }
@@ -127,16 +130,19 @@ void IOP::syscall_exception()
 void IOP::interrupt_check(bool i_pass)
 {
     bool edge = cop0.cause.int_pending & 0x4;
+    //printf("[IOP] Edge: %d Check: %d\n", edge, i_pass);
+    printf("[IOP] IRQ check: %d\n", i_pass);
+    printf("[IOP] IEc: %d Ip: %d Im: %d\n", cop0.status.IEc, cop0.cause.int_pending, cop0.status.Im);
     if (i_pass)
         cop0.cause.int_pending |= 0x4;
     else
         cop0.cause.int_pending &= ~0x4;
 
-    if (!edge && i_pass)
+    /*if (!edge && i_pass true)
     {
         if (cop0.status.IEc && (cop0.cause.int_pending & cop0.status.Im))
             interrupt();
-    }
+    }*/
 }
 
 void IOP::interrupt()

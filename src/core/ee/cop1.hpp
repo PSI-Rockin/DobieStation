@@ -31,6 +31,7 @@ class Cop1
 
         uint32_t get_gpr(int index);
         void mtc(int index, uint32_t value);
+        uint32_t cfc(int index);
         void ctc(int index, uint32_t value);
 
         void cvt_s_w(int dest, int source);
@@ -43,6 +44,7 @@ class Cop1
         void mov_s(int dest, int source);
         void neg_s(int dest, int source);
         void adda_s(int reg1, int reg2);
+        void madd_s(int dest, int reg1, int reg2);
         void c_lt_s(int reg1, int reg2);
         void c_eq_s(int reg1, int reg2);
 };

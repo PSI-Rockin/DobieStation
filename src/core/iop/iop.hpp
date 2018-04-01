@@ -46,6 +46,7 @@ class IOP
         uint32_t get_gpr(int index);
         uint32_t get_LO();
         uint32_t get_HI();
+        void set_PC(uint32_t value);
         void set_gpr(int index, uint32_t value);
         void set_LO(uint32_t value);
         void set_HI(uint32_t value);
@@ -76,6 +77,11 @@ inline uint32_t IOP::get_LO()
 inline uint32_t IOP::get_HI()
 {
     return HI;
+}
+
+inline void IOP::set_PC(uint32_t value)
+{
+    PC = value;
 }
 
 inline void IOP::set_gpr(int index, uint32_t value)

@@ -17,7 +17,7 @@ class EmuWindow : public QMainWindow
         double framerate_avg;
     public:
         explicit EmuWindow(QWidget *parent = nullptr);
-        int init(const char* bios_name, const char* ELF_name);
+        int init(int argc, char** argv);
         bool running();
         void emulate();
 

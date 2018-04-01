@@ -732,6 +732,9 @@ void EmotionInterpreter::cop(EmotionEngine &cpu, uint32_t instruction)
             }
         }
             break;
+        case 0x102:
+            cop_cfc(cpu, instruction);
+            break;
         case 0x106:
         case 0x206:
             cop_ctc(cpu, instruction);
@@ -748,7 +751,7 @@ void EmotionInterpreter::cop(EmotionEngine &cpu, uint32_t instruction)
         case 0x202:
             break;
         default:
-            unknown_op("cop", instruction, op);
+            unknown_op("cop", instruction, op | (cop_id * 0x100));
     }
 }
 
@@ -766,6 +769,14 @@ void EmotionInterpreter::cop_mtc(EmotionEngine& cpu, uint32_t instruction)
     int emotion_reg = (instruction >> 16) & 0x1F;
     int cop_reg = (instruction >> 11) & 0x1F;
     cpu.mtc(cop_id, emotion_reg, cop_reg);
+}
+
+void EmotionInterpreter::cop_cfc(EmotionEngine &cpu, uint32_t instruction)
+{
+    int cop_id = (instruction >> 26) & 0x3;
+    int emotion_reg = (instruction >> 16) & 0x1F;
+    int cop_reg = (instruction >> 11) & 0x1F;
+    cpu.cfc(cop_id, emotion_reg, cop_reg);
 }
 
 void EmotionInterpreter::cop_ctc(EmotionEngine &cpu, uint32_t instruction)

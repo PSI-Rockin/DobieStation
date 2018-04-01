@@ -71,6 +71,12 @@ uint32_t Cop0::mfc(int index)
             reg |= cause.bd << 31;
             return reg;
         }
+        case 14:
+            if (status.error)
+                return ErrorEPC;
+            else
+                return EPC;
+            break;
         default:
             return gpr[index];
     }
@@ -99,6 +105,12 @@ void Cop0::mtc(int index, uint32_t value)
             break;
         case 13:
             //No bits in CAUSE are writable
+            break;
+        case 14:
+            if (status.error)
+                ErrorEPC = value;
+            else
+                EPC = value;
             break;
         default:
             gpr[index] = value;

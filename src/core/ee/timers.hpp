@@ -5,24 +5,39 @@
 struct TimerControl
 {
     uint8_t mode;
+    bool gate_enable;
+    bool gate_VBLANK;
+    uint8_t gate_mode;
+    bool clear_on_reference;
     bool enabled;
+    bool compare_int_enable;
+    bool overflow_int_enable;
+    bool compare_int;
+    bool overflow_int;
 };
 
 struct Timer
 {
-    uint16_t counter;
+    uint32_t counter;
     TimerControl control;
+    uint32_t compare;
 
     //Internal variable for holding number of EE clocks
     uint32_t clocks;
 };
 
+class INTC;
+
 class EmotionTiming
 {
     private:
+        INTC* intc;
         Timer timers[4];
+
+        void write_control(int index, uint32_t value);
+        void count_up(int index, int cycles_per_count);
     public:
-        EmotionTiming();
+        EmotionTiming(INTC* intc);
 
         void reset();
         void run();

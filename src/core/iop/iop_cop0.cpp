@@ -16,6 +16,7 @@ void IOP_Cop0::reset()
     status.IEo = false;
     status.KUo = false;
     status.Im = 0;
+    status.IsC = false;
     status.bev = true;
 
     cause.code = 0;

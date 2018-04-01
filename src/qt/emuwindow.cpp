@@ -21,10 +21,26 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
     framerate_avg = 0.0;
 }
 
-int EmuWindow::init(const char* bios_name, const char* file_name)
+int EmuWindow::init(int argc, char** argv)
 {
+    if (argc < 3)
+    {
+        printf("Args: [BIOS] [ELF]\n");
+        return 1;
+    }
+
     //Initialize emulator
     e.reset();
+    char* bios_name = argv[1];
+    char* file_name = argv[2];
+
+    //Flag parsing - to be reworked
+    if (argc >= 4)
+    {
+        if (strcmp(argv[3], "-skip") == 0)
+            e.set_skip_BIOS_hack();
+    }
+
     ifstream BIOS_file(bios_name, ios::binary | ios::in);
     if (!BIOS_file.is_open())
     {
@@ -52,7 +68,7 @@ int EmuWindow::init(const char* bios_name, const char* file_name)
 
     printf("Loaded %s\n", file_name);
     printf("Size: %lld\n", ELF_size);
-    e.load_ELF(ELF);
+    e.load_ELF(ELF, ELF_size);
     delete[] ELF;
     ELF = nullptr;
 
@@ -72,7 +88,7 @@ bool EmuWindow::running()
 void EmuWindow::emulate()
 {
     e.run();
-    //update();
+    update();
 }
 
 void EmuWindow::paintEvent(QPaintEvent *event)
@@ -82,8 +98,6 @@ void EmuWindow::paintEvent(QPaintEvent *event)
     painter.fillRect(rect(), Qt::black);
     if (!buffer)
         return;
-
-    return;
 
     QImage image((uint8_t*)buffer, 640, 256, QImage::Format_RGBA8888);
 

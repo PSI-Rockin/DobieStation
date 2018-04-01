@@ -78,7 +78,7 @@ void IOP_DMA::process_SIF0()
 {
     if (channels[SIF0].word_count)
     {
-        if (sif->get_SIF0_size() < 32)
+        if (sif->get_SIF0_size() < SubsystemInterface::MAX_FIFO_SIZE)
         {
             uint32_t data = *(uint32_t*)&RAM[channels[SIF0].addr];
             sif->write_SIF0(data);
@@ -93,7 +93,8 @@ void IOP_DMA::process_SIF0()
         {
             transfer_end(SIF0);
         }
-        else if (sif->get_SIF0_size() <= 30)
+        //Read tag if there's enough room to transfer the EE's tag
+        else if (sif->get_SIF0_size() <= SubsystemInterface::MAX_FIFO_SIZE - 2)
         {
             uint32_t data = *(uint32_t*)&RAM[channels[SIF0].tag_addr];
             uint32_t words = *(uint32_t*)&RAM[channels[SIF0].tag_addr + 4];
@@ -121,7 +122,7 @@ void IOP_DMA::process_SIF1()
 {
     if (channels[SIF1].word_count)
     {
-        if (sif->get_SIF1_size())
+        if (sif->get_SIF1_size() > 0)
         {
             uint32_t data = sif->read_SIF1();
             printf("[IOP DMA] SIF1: Transfer to $%08X of $%08X\n", channels[SIF1].addr, data);
@@ -145,7 +146,7 @@ void IOP_DMA::process_SIF1()
             channels[SIF1].word_count = sif->read_SIF1();
 
             //EEtag
-            uint32_t tag1 = sif->read_SIF1();
+            sif->read_SIF1();
             sif->read_SIF1();
             printf("[IOP DMA] Read SIF1 DMAtag!\n");
             printf("Addr: $%08X\n", channels[SIF1].addr);
@@ -168,8 +169,7 @@ void IOP_DMA::transfer_end(int index)
 
     if (DICR.STAT[dicr2] & DICR.MASK[dicr2])
     {
-        if (DICR.master_int_enable[dicr2])
-            ; //Set bit 31
+        printf("[IOP DMA] IRQ requested\n");
         e->iop_request_IRQ(3);
     }
 }

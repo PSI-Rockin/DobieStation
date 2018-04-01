@@ -44,6 +44,7 @@ class Cop0
         uint32_t gpr[32];
         COP0_STATUS status;
         COP0_CAUSE cause;
+        uint32_t EPC, ErrorEPC;
         Cop0();
 
         void reset();

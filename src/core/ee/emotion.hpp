@@ -22,8 +22,6 @@ class EmotionEngine
         uint64_t LO, LO1, HI, HI1;
         uint64_t SA;
 
-        bool int1_signal;
-
         bool increment_PC;
         bool branch_on;
         bool can_disassemble;
@@ -57,6 +55,7 @@ class EmotionEngine
         void jp(uint32_t new_addr);
         void branch(bool condition, int offset);
         void branch_likely(bool condition, int offset);
+        void cfc(int cop_id, int reg, int cop_reg);
         void ctc(int cop_id, int reg, int cop_reg);
         void mfc(int cop_id, int reg, int cop_reg);
         void mtc(int cop_id, int reg, int cop_reg);
@@ -79,6 +78,7 @@ class EmotionEngine
         void syscall_exception();
         void int0();
         void int1();
+        void set_int0_signal(bool value);
         void set_int1_signal(bool value);
 
         void eret();

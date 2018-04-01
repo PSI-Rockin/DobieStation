@@ -33,7 +33,6 @@ void EmotionEngine::reset()
     branch_on = false;
     increment_PC = true;
     can_disassemble = false;
-    int1_signal = false;
     delay_slot = 0;
 
     //Clear out $zero
@@ -46,18 +45,6 @@ void EmotionEngine::reset()
 
 void EmotionEngine::run()
 {
-    increment_PC = true;
-    if (delay_slot)
-        delay_slot--;
-    else if (branch_on)
-    {
-        PC = new_PC;
-        branch_on = false;
-        if (PC == 0x9FC43150)
-            can_disassemble = true;
-        if (PC == 0xBFC00928)
-            exit(1);
-    }
     uint32_t instruction = read32(PC);
     if (can_disassemble)
     {
@@ -66,10 +53,39 @@ void EmotionEngine::run()
     }
     EmotionInterpreter::interpret(*this, instruction);
     cp0.count_up();
-    if (int1_signal)
-        int1();
     if (increment_PC)
         PC += 4;
+    else
+        increment_PC = true;
+    if (branch_on)
+    {
+        if (!delay_slot)
+        {
+            branch_on = false;
+            PC = new_PC;
+            if (PC == 0x00083270)
+            {
+                can_disassemble = true;
+                print_state();
+            }
+
+            if (PC == 0xBFC00928)
+                exit(1);
+        }
+        else
+            delay_slot--;
+    }
+
+    /*if (PC >= 0x9FC421A0 && PC < 0x9FC421E4)
+        print_state();*/
+
+    if (cp0.int_enabled())
+    {
+        if (cp0.cause.int0_pending)
+            int0();
+        if (cp0.cause.int1_pending)
+            int1();
+    }
 }
 
 void EmotionEngine::print_state()
@@ -259,6 +275,16 @@ void EmotionEngine::mtc(int cop_id, int reg, int cop_reg)
     }
 }
 
+void EmotionEngine::cfc(int cop_id, int reg, int cop_reg)
+{
+    switch (cop_id)
+    {
+        case 1:
+            set_gpr<int64_t>(reg, (int32_t)fpu.cfc(cop_reg));
+            break;
+    }
+}
+
 void EmotionEngine::ctc(int cop_id, int reg, int cop_reg)
 {
     switch (cop_id)
@@ -360,7 +386,13 @@ void EmotionEngine::handle_exception(uint32_t new_addr, uint8_t code)
     cp0.status.exception = true;
     cp0.cause.code = code;
 
-    if (!delay_slot && branch_on)
+    /*if (delay_slot || branch_on)
+    {
+        printf("[EE] Exception in branch delay!\n");
+        exit(1);
+    }*/
+
+    if (branch_on)
     {
         cp0.cause.bd = true;
         cp0.mtc(14, PC - 4);
@@ -386,12 +418,19 @@ void EmotionEngine::hle_syscall()
 void EmotionEngine::syscall_exception()
 {
     uint8_t op = read8(PC - 4);
-    printf("[EE] SYSCALL: $%02X Called at $%08X\n", op, PC);
-    handle_exception(0x80000180, 0x08);
-    //if (op == 0x77)
-        //can_disassemble = true;
+    if (op != 0x7A)
+        printf("[EE] SYSCALL: $%02X Called at $%08X\n", op, PC);
 
-    //hle_syscall();
+    //InitMainThread
+    if (op == 0x3C)
+    {
+        if (e->skip_BIOS())
+        {
+            increment_PC = false;
+            return;
+        }
+    }
+    handle_exception(0x80000180, 0x08);
 }
 
 /*void EmotionEngine::interrupt()
@@ -410,25 +449,36 @@ void EmotionEngine::syscall_exception()
 
 void EmotionEngine::int0()
 {
+    if (cp0.status.int0_mask)
+    {
+        printf("[EE] INT0!\n");
+        handle_exception(0x80000200, 0);
+    }
     //cp0.cause.int0_pending = true;
 }
 
 void EmotionEngine::int1()
 {
-    //printf("[EE] INT1!\n");
-    if (cp0.int_enabled() && cp0.status.int1_mask)
+    if (cp0.status.int1_mask)
     {
         printf("[EE] INT1!\n");
         //can_disassemble = true;
-        cp0.cause.int1_pending = true;
-        int1_signal = false;
         handle_exception(0x80000200, 0);
     }
 }
 
+void EmotionEngine::set_int0_signal(bool value)
+{
+    cp0.cause.int0_pending = value;
+    if (value)
+        printf("[EE] Set INT0\n");
+}
+
 void EmotionEngine::set_int1_signal(bool value)
 {
-    int1_signal = value;
+    cp0.cause.int1_pending = value;
+    if (value)
+        printf("[EE] Set INT1\n");
 }
 
 void EmotionEngine::eret()
