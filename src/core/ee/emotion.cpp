@@ -63,11 +63,11 @@ void EmotionEngine::run()
         {
             branch_on = false;
             PC = new_PC;
-            if (PC == 0x00083270)
+            /*if (PC == 0x00083270)
             {
                 can_disassemble = true;
                 print_state();
-            }
+            }*/
 
             if (PC == 0xBFC00928)
                 exit(1);
@@ -76,11 +76,15 @@ void EmotionEngine::run()
             delay_slot--;
     }
 
-    /*if (PC >= 0x9FC421A0 && PC < 0x9FC421E4)
-        print_state();*/
+    //if (PC < 0x80000000 && PC >= 0x00100000)
+        //can_disassemble = true;
+
+    //if (PC == 0x84010)
+        //print_state();
 
     if (cp0.int_enabled())
     {
+        //printf("[EE] Int enabled!\n");
         if (cp0.cause.int0_pending)
             int0();
         if (cp0.cause.int1_pending)
@@ -386,12 +390,6 @@ void EmotionEngine::handle_exception(uint32_t new_addr, uint8_t code)
     cp0.status.exception = true;
     cp0.cause.code = code;
 
-    /*if (delay_slot || branch_on)
-    {
-        printf("[EE] Exception in branch delay!\n");
-        exit(1);
-    }*/
-
     if (branch_on)
     {
         cp0.cause.bd = true;
@@ -433,20 +431,6 @@ void EmotionEngine::syscall_exception()
     handle_exception(0x80000180, 0x08);
 }
 
-/*void EmotionEngine::interrupt()
-{
-    return;
-    interrupt_requested = false;
-    uint32_t cause = cp0.mfc(CAUSE);
-    cause |= 1 << 10; //set int0 flag
-    cp0.mtc(CAUSE, cause);
-
-    uint32_t status = cp0.mfc(STATUS);
-    status |= 1 << 10;
-    cp0.mtc(STATUS, status);
-    handle_exception(0x80000200, 0);
-}*/
-
 void EmotionEngine::int0()
 {
     if (cp0.status.int0_mask)
@@ -454,7 +438,6 @@ void EmotionEngine::int0()
         printf("[EE] INT0!\n");
         handle_exception(0x80000200, 0);
     }
-    //cp0.cause.int0_pending = true;
 }
 
 void EmotionEngine::int1()
@@ -483,6 +466,7 @@ void EmotionEngine::set_int1_signal(bool value)
 
 void EmotionEngine::eret()
 {
+    printf("[EE] Return from exception\n");
     uint32_t EPC = cp0.mfc(14);
     PC = EPC;
     increment_PC = false;

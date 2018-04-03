@@ -145,7 +145,7 @@ void DMAC::process_SIF0()
 
             int mode = (DMAtag >> 28) & 0x7;
 
-            bool IRQ = DMAtag & (1 << 31);
+            bool IRQ = (DMAtag & (1UL << 31));
             bool TIE = channels[SIF0].control & (1 << 7);
             if (mode == 7 || (IRQ && TIE))
                 channels[SIF0].tag_end = true;
@@ -194,7 +194,7 @@ void DMAC::handle_source_chain(int index)
     uint16_t quadword_count = DMAtag & 0xFFFF;
     uint8_t id = (DMAtag >> 28) & 0x7;
     uint32_t addr = (DMAtag >> 32) & 0x7FFFFFF0;
-    bool IRQ_after_transfer = DMAtag & (1 << 31);
+    bool IRQ_after_transfer = DMAtag & (1UL << 31);
     bool TIE = channels[index].control & (1 << 7);
     channels[index].quadword_count = quadword_count;
     switch (id)
@@ -231,8 +231,8 @@ void DMAC::handle_source_chain(int index)
             printf("\n[DMAC] Unrecognized source chain DMAtag id %d\n", id);
             exit(1);
     }
-    //if (IRQ_after_transfer && TIE)
-        //channels[index].tag_end = true;
+    if (IRQ_after_transfer && TIE)
+        channels[index].tag_end = true;
     printf("\nNew address: $%08X", channels[index].address);
     printf("\nNew tag addr: $%08X", channels[index].tag_address);
 }

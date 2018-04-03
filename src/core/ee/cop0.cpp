@@ -129,14 +129,10 @@ bool Cop0::int_enabled()
 
 bool Cop0::int_pending()
 {
-    bool ie = status.int_enable && status.master_int_enable && !status.exception;
-    if (ie)
-    {
-        if (status.int0_mask && cause.int0_pending)
-            return true;
-        if (status.int1_mask && cause.int1_pending)
-            return true;
-    }
+    if (status.int0_mask && cause.int0_pending)
+        return true;
+    if (status.int1_mask && cause.int1_pending)
+        return true;
     return false;
 }
 

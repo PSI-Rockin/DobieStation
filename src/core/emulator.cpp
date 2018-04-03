@@ -48,7 +48,7 @@ void Emulator::run()
             //printf("I: $%08X ", instructions_run / 8);
             iop.run();
             iop_dma.run();
-            //iop_timers.run();
+            iop_timers.run();
         }
 
         //Start VBLANK
@@ -56,12 +56,13 @@ void Emulator::run()
         if (instructions_run == CYCLES_PER_FRAME * 0.95)
         {
             gs.set_VBLANK(true);
-            //iop_request_IRQ(0);
-            gs.render_CRT();
+            iop_request_IRQ(0);
+            //gs.render_CRT();
         }
     }
     //VBLANK end
-    //iop_request_IRQ(11);
+    iop_request_IRQ(11);
+    gs.render_CRT();
     gs.set_VBLANK(false);
 }
 
@@ -234,6 +235,8 @@ void Emulator::execute_ELF()
 
 uint8_t Emulator::read8(uint32_t address)
 {
+    if (address >= 0x00200000 && address < 0x00200078)
+        printf("[EE] Read from blorp $%08X: $%02X\n", address, RDRAM[address]);
     if (address < 0x10000000)
         return RDRAM[address & 0x01FFFFFF];
     if (address >= 0x1FC00000 && address < 0x20000000)
@@ -354,6 +357,8 @@ uint64_t Emulator::read64(uint32_t address)
 
 void Emulator::write8(uint32_t address, uint8_t value)
 {
+    if (address >= 0x00200070 && address < 0x00200078)
+        printf("[EE] Write to blorp $%08X: $%02X\n", address, value);
     if (address < 0x10000000)
     {
         RDRAM[address & 0x01FFFFFF] = value;
@@ -476,6 +481,8 @@ void Emulator::write32(uint32_t address, uint32_t value)
 
 void Emulator::write64(uint32_t address, uint64_t value)
 {
+    if (address == 0x00200070)
+        printf("[EE] Write to blorp: $%08X_%08X", value >> 32, value);
     if (address < 0x10000000)
     {
         *(uint64_t*)&RDRAM[address & 0x01FFFFFF] = value;

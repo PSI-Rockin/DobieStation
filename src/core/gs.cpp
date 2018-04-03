@@ -57,7 +57,7 @@ void GraphicsSynthesizer::reset()
     if (!local_mem)
         local_mem = new uint32_t[1024 * 1024];
     if (!output_buffer)
-        output_buffer = new uint32_t[640 * 256];
+        output_buffer = new uint32_t[640 * 448];
     pixels_transferred = 0;
     transfer_bit_depth = 32;
     num_vertices = 0;
@@ -74,6 +74,7 @@ void GraphicsSynthesizer::reset()
     current_ctx = &context1;
     VBLANK_enabled = false;
     VBLANK_generated = false;
+    set_CRT(false, 0x2, false);
 }
 
 void GraphicsSynthesizer::start_frame()
@@ -101,9 +102,15 @@ uint32_t* GraphicsSynthesizer::get_framebuffer()
 void GraphicsSynthesizer::set_VBLANK(bool is_VBLANK)
 {
     if (is_VBLANK)
+    {
+        printf("[GS] VBLANK start\n");
         intc->assert_IRQ(2);
+    }
     else
+    {
+        printf("[GS] VBLANK end\n");
         intc->assert_IRQ(3);
+    }
     VBLANK_generated = is_VBLANK;
 }
 
@@ -123,8 +130,8 @@ void GraphicsSynthesizer::render_CRT()
             uint32_t scaled_y = y;
             scaled_x *= DISPFB2.width;
             scaled_x /= width;
-            output_buffer[pixel_x + (pixel_y * width)] = local_mem[DISPFB2.frame_base + scaled_x + (scaled_y * DISPFB2.width)];
-            //printf("\n$%08X ($%08X)", output_buffer[pixel_x + (pixel_y * width)], DISPFB2.frame_base + scaled_x + (scaled_y * DISPFB2.width));
+            uint32_t value = local_mem[DISPFB2.frame_base + scaled_x + (scaled_y * DISPFB2.width)];
+            output_buffer[pixel_x + (pixel_y * width)] = value;
             output_buffer[pixel_x + (pixel_y * width)] |= 0xFF000000;
         }
     }
@@ -795,7 +802,7 @@ int32_t GraphicsSynthesizer::orient2D(const Point &v1, const Point &v2, const Po
 
 void GraphicsSynthesizer::render_triangle()
 {
-    printf("\n[GS] Rendering triangle!");
+    printf("[GS] Rendering triangle!\n");
     uint32_t color = 0x00000000;
     color |= vtx_queue[0].rgbaq.r;
     color |= vtx_queue[0].rgbaq.g << 8;
@@ -839,13 +846,12 @@ void GraphicsSynthesizer::render_triangle()
     int32_t A31 = v3.y - v1.y;
     int32_t B31 = v1.x - v3.x;
 
-
     Point min_corner(min_x, min_y);
     int32_t w1_row = orient2D(v2, v3, min_corner);
     int32_t w2_row = orient2D(v3, v1, min_corner);
     int32_t w3_row = orient2D(v1, v2, min_corner);
 
-    //TODO: Parellize this
+    //TODO: Parallelize this
     //Iterate through pixels in bounds
     for (int32_t y = min_y; y <= max_y; y++)
     {
@@ -854,7 +860,6 @@ void GraphicsSynthesizer::render_triangle()
         int32_t w3 = w3_row;
         for (int32_t x = min_x; x <= max_x; x++)
         {
-
             //Is inside triangle?
             if ((w1 | w2 | w3) >= 0)
             {

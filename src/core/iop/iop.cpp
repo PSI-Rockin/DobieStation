@@ -129,10 +129,6 @@ void IOP::syscall_exception()
 
 void IOP::interrupt_check(bool i_pass)
 {
-    bool edge = cop0.cause.int_pending & 0x4;
-    //printf("[IOP] Edge: %d Check: %d\n", edge, i_pass);
-    printf("[IOP] IRQ check: %d\n", i_pass);
-    printf("[IOP] IEc: %d Ip: %d Im: %d\n", cop0.status.IEc, cop0.cause.int_pending, cop0.status.Im);
     if (i_pass)
         cop0.cause.int_pending |= 0x4;
     else
