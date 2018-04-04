@@ -98,8 +98,9 @@ void EmuWindow::paintEvent(QPaintEvent *event)
     painter.fillRect(rect(), Qt::black);
     if (!buffer)
         return;
-
-    QImage image((uint8_t*)buffer, 640, 256, QImage::Format_RGBA8888);
+    int inner_w, inner_h;
+    e.get_inner_resolution(inner_w, inner_h);
+    QImage image((uint8_t*)buffer, inner_w, inner_h, QImage::Format_RGBA8888);
 
     int new_w, new_h;
     e.get_resolution(new_w, new_h);
