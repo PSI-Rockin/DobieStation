@@ -301,6 +301,10 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
             PRIM.antialiasing = value & (1 << 7);
             PRIM.use_UV = value & (1 << 8);
             PRIM.use_context2 = value & (1 << 9);
+            if (PRIM.use_context2)
+                current_ctx = &context2;
+            else
+                current_ctx = &context1;
             PRIM.fix_fragment_value = value & (1 << 10);
             num_vertices = 0;
             break;

@@ -53,16 +53,15 @@ void Emulator::run()
 
         //Start VBLANK
         instructions_run++;
-        if (instructions_run == CYCLES_PER_FRAME * 0.95)
+        if (instructions_run == CYCLES_PER_FRAME * 0.80)
         {
             gs.set_VBLANK(true);
             iop_request_IRQ(0);
-            //gs.render_CRT();
+            gs.render_CRT();
         }
     }
     //VBLANK end
     iop_request_IRQ(11);
-    gs.render_CRT();
     gs.set_VBLANK(false);
 }
 

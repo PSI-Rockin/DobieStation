@@ -98,8 +98,15 @@ void EmuWindow::paintEvent(QPaintEvent *event)
     painter.fillRect(rect(), Qt::black);
     if (!buffer)
         return;
+
+    //Get the resolution of the GS image
     int inner_w, inner_h;
     e.get_inner_resolution(inner_w, inner_h);
+
+    if (!inner_w || !inner_h)
+        return;
+
+    //Scale it to the TV screen
     QImage image((uint8_t*)buffer, inner_w, inner_h, QImage::Format_RGBA8888);
 
     int new_w, new_h;
