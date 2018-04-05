@@ -66,6 +66,7 @@ class Emulator
         void execute_ELF();
         uint32_t* get_framebuffer();
         void get_resolution(int& w, int& h);
+        void get_inner_resolution(int& w, int& h);
 
         uint8_t read8(uint32_t address);
         uint16_t read16(uint32_t address);

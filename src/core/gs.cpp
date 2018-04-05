@@ -156,6 +156,12 @@ void GraphicsSynthesizer::get_resolution(int &w, int &h)
     }
 }
 
+void GraphicsSynthesizer::get_inner_resolution(int &w, int &h)
+{
+    w = DISPLAY2.width >> 2;
+    h = DISPLAY2.height;
+}
+
 uint32_t GraphicsSynthesizer::read32_privileged(uint32_t addr)
 {
     addr &= 0xFFFF;
@@ -734,8 +740,11 @@ void GraphicsSynthesizer::render_line()
 {
     printf("\n[GS] Rendering line!");
     int32_t x1, x2, y1, y2;
+
     int32_t u1, u2, v1, v2;
     uint32_t z1, z2;
+    uint8_t r1, g1, b1, a1;
+    uint8_t r2, g2, b2, a2;
     x1 = vtx_queue[1].coords[0] - current_ctx->xyoffset.x;
     x2 = vtx_queue[0].coords[0] - current_ctx->xyoffset.x;
     y1 = vtx_queue[1].coords[1] - current_ctx->xyoffset.y;
@@ -746,6 +755,14 @@ void GraphicsSynthesizer::render_line()
     u2 = vtx_queue[0].uv.u;
     v1 = vtx_queue[1].uv.v;
     v2 = vtx_queue[0].uv.v;
+    r1 = vtx_queue[1].rgbaq.r;
+    g1 = vtx_queue[1].rgbaq.g;
+    b1 = vtx_queue[1].rgbaq.b;
+    a1 = vtx_queue[1].rgbaq.a;
+    r2 = vtx_queue[0].rgbaq.r;
+    g2 = vtx_queue[0].rgbaq.g;
+    b2 = vtx_queue[0].rgbaq.b;
+    a2 = vtx_queue[0].rgbaq.a;
 
     uint32_t color = 0;
     color |= vtx_queue[0].rgbaq.r;
@@ -770,6 +787,10 @@ void GraphicsSynthesizer::render_line()
         swap(z1, z2);
         swap(u1, u2);
         swap(v1, v2);
+        swap(r1, r2);
+        swap(g1, g2);
+        swap(b1, b2);
+        swap(a1, a2);
     }
 
     printf("\nCoords: (%d, %d, %d) (%d, %d, %d)", x1 >> 4, y1 >> 4, z1, x2 >> 4, y2 >> 4, z2);
@@ -783,6 +804,19 @@ void GraphicsSynthesizer::render_line()
         uint16_t pix_u = interpolate(x, u1, x1, u2, x2) >> 4;
         uint32_t tex_coord = current_ctx->tex0.texture_base + pix_u;
         tex_coord += (uint32_t)pix_v * current_ctx->tex0.tex_width;
+        if (PRIM.gourand_shading)
+        {
+            uint8_t r = interpolate(x, r1, x1, r2, x2);
+            uint8_t g = interpolate(x, g1, x1, g2, x2);
+            uint8_t b = interpolate(x, b1, x1, b2, x2);
+            uint8_t a = interpolate(x, a1, x1, a2, x2);
+            uint32_t interpolated_color = 0x00000000;
+            interpolated_color |= ((uint8_t)r);
+            interpolated_color |= ((uint8_t)g) << 8;
+            interpolated_color |= ((uint8_t)b) << 16;
+            interpolated_color |= ((uint8_t)a) << 24;
+            color = interpolated_color;
+        }
         if (is_steep)
             draw_pixel(y, x, color, z, PRIM.alpha_blend);
         else
@@ -810,6 +844,7 @@ void GraphicsSynthesizer::render_triangle()
     color |= vtx_queue[0].rgbaq.a << 24;
 
     int32_t x1, x2, x3, y1, y2, y3, z1, z2, z3;
+    uint8_t r1, r2, r3, g1, g2, g3, b1, b2, b3, a1, a2, a3;
     x1 = vtx_queue[2].coords[0] - current_ctx->xyoffset.x;
     y1 = vtx_queue[2].coords[1] - current_ctx->xyoffset.y;
     z1 = vtx_queue[2].coords[2];
@@ -819,9 +854,21 @@ void GraphicsSynthesizer::render_triangle()
     x3 = vtx_queue[0].coords[0] - current_ctx->xyoffset.x;
     y3 = vtx_queue[0].coords[1] - current_ctx->xyoffset.y;
     z3 = vtx_queue[0].coords[2];
-    Point v1(x1, y1, z1);
-    Point v2(x2, y2, z2);
-    Point v3(x3, y3, z3);
+    r1 = vtx_queue[2].rgbaq.r;
+    g1 = vtx_queue[2].rgbaq.g;
+    b1 = vtx_queue[2].rgbaq.b;
+    a1 = vtx_queue[2].rgbaq.a;
+    r2 = vtx_queue[1].rgbaq.r;
+    g2 = vtx_queue[1].rgbaq.g;
+    b2 = vtx_queue[1].rgbaq.b;
+    a2 = vtx_queue[1].rgbaq.a;
+    r3 = vtx_queue[0].rgbaq.r;
+    g3 = vtx_queue[0].rgbaq.g;
+    b3 = vtx_queue[0].rgbaq.b;
+    a3 = vtx_queue[0].rgbaq.a;
+    Point v1(x1, y1, z1, r1, g1, b1, a1);
+    Point v2(x2, y2, z2, r2, g2, b2, a2);
+    Point v3(x3, y3, z3, r3, g3, b3, a3);
 
     //The triangle rasterization code uses an approach with barycentric coordinates
     //Clear explanation can be read below:
@@ -866,7 +913,28 @@ void GraphicsSynthesizer::render_triangle()
                 //Interpolate Z
                 float z = (float) v1.z * w1 + (float) v2.z * w2 + (float) v3.z * w3;
                 z /= (float) (w1 + w2 + w3);
-                draw_pixel(x, y, color, (int32_t) z, PRIM.alpha_blend);
+                if (PRIM.gourand_shading)
+                {
+                    float r = (float) v1.r * w1 + (float) v2.r * w2 + (float) v3.r * w3;
+                    float g = (float) v1.g * w1 + (float) v2.g * w2 + (float) v3.g * w3;
+                    float b = (float) v1.b * w1 + (float) v2.b * w2 + (float) v3.b * w3;
+                    float a = (float) v1.a * w1 + (float) v2.a * w2 + (float) v3.a * w3;
+                    r /= (float) (w1 + w2 + w3);
+                    g /= (float) (w1 + w2 + w3);
+                    b /= (float) (w1 + w2 + w3);
+                    a /= (float) (w1 + w2 + w3);
+
+                    uint32_t interpolated_color = 0x0000000;
+                    interpolated_color |= ((uint8_t)r);
+                    interpolated_color |= ((uint8_t)g) << 8;
+                    interpolated_color |= ((uint8_t)b) << 16;
+                    interpolated_color |= ((uint8_t)a) << 24;
+                    draw_pixel(x, y, interpolated_color, (int32_t) z, PRIM.alpha_blend);
+                }
+                else
+                {
+                    draw_pixel(x, y, color, (int32_t) z, PRIM.alpha_blend);
+                }
             }
             //Horizontal step
             w1 += A23;

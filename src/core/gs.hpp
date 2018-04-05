@@ -89,7 +89,9 @@ struct Vertex
 struct Point
 {
     int32_t x, y, z;
-    Point(int32_t _x, int32_t _y, int32_t _z = 0) : x(_x), y(_y), z(_z) {}
+    uint8_t r, g, b, a;
+    Point(int32_t _x, int32_t _y, int32_t _z = 0, uint8_t _r = 0, uint8_t _g = 0, uint8_t _b = 0, uint8_t _a = 0)
+        : x(_x), y(_y), z(_z), r(_r), g(_g), b(_b), a(_a) {}
 };
 
 class INTC;
@@ -156,6 +158,7 @@ class GraphicsSynthesizer
         uint32_t* get_framebuffer();
         void render_CRT();
         void get_resolution(int& w, int& h);
+        void get_inner_resolution(int& w, int& h);
 
         void set_VBLANK(bool is_VBLANK);
 

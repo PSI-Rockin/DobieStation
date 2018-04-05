@@ -110,6 +110,11 @@ void Emulator::get_resolution(int &w, int &h)
     gs.get_resolution(w, h);
 }
 
+void Emulator::get_inner_resolution(int &w, int &h)
+{
+    gs.get_inner_resolution(w, h);
+}
+
 bool Emulator::skip_BIOS()
 {
     //hax
