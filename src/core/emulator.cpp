@@ -68,7 +68,7 @@ void Emulator::run()
 void Emulator::reset()
 {
     ee_stdout = "";
-    skip_BIOS_hack = false;
+    skip_BIOS_hack = NONE;
     if (!RDRAM)
         RDRAM = new uint8_t[1024 * 1024 * 32];
     if (!IOP_RAM)
@@ -117,19 +117,56 @@ void Emulator::get_inner_resolution(int &w, int &h)
 bool Emulator::skip_BIOS()
 {
     //hax
-    if (skip_BIOS_hack)
+    if (skip_BIOS_hack != NONE)
     {
-        cpu.reset();
-        skip_BIOS_hack = false;
-        execute_ELF();
+        switch (skip_BIOS_hack)
+        {
+            case LOAD_ELF:
+                cpu.reset();
+                execute_ELF();
+                break;
+            case LOAD_DISC:
+            {
+                uint32_t system_cnf_size;
+                uint8_t* system_cnf = cdvd.read_file("SYSTEM.CNF;1", system_cnf_size);
+                if (!system_cnf)
+                {
+                    printf("[Emulator] Failed to load SYSTEM.CNF!\n");
+                    exit(1);
+                }
+                std::string exec_name = "";
+                int i = 0x10;
+                while (system_cnf[i] != '1')
+                {
+                    exec_name += system_cnf[i];
+                    i++;
+                }
+                exec_name += '1';
+                delete[] system_cnf;
+                printf("[Emulator] Loading %s\n", exec_name.c_str());
+                uint8_t* file = cdvd.read_file(exec_name, ELF_size);
+                if (!file)
+                {
+                    printf("[Emulator] Failed to load %s!\n", exec_name.c_str());
+                    exit(1);
+                }
+                load_ELF(file, ELF_size);
+                execute_ELF();
+                delete[] file;
+            }
+                break;
+            default:
+                return false;
+        }
+        skip_BIOS_hack = NONE;
         return true;
     }
     return false;
 }
 
-void Emulator::set_skip_BIOS_hack()
+void Emulator::set_skip_BIOS_hack(SKIP_HACK type)
 {
-    skip_BIOS_hack = true;
+    skip_BIOS_hack = type;
 }
 
 void Emulator::load_BIOS(uint8_t *BIOS_file)
@@ -147,7 +184,7 @@ void Emulator::load_BIOS(uint8_t *BIOS_file)
     //write32(0x00013C10, 0x02000000);
 }
 
-void Emulator::load_ELF(uint8_t *ELF, uint64_t size)
+void Emulator::load_ELF(uint8_t *ELF, uint32_t size)
 {
     if (ELF[0] != 0x7F || ELF[1] != 'E' || ELF[2] != 'L' || ELF[3] != 'F')
     {
@@ -160,6 +197,11 @@ void Emulator::load_ELF(uint8_t *ELF, uint64_t size)
     ELF_file = new uint8_t[size];
     ELF_size = size;
     memcpy(ELF_file, ELF, size);
+}
+
+bool Emulator::load_CDVD(const char *name)
+{
+    return cdvd.load_disc(name);
 }
 
 void Emulator::execute_ELF()

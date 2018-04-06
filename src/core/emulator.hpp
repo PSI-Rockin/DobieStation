@@ -8,6 +8,7 @@
 #include "ee/intc.hpp"
 #include "ee/timers.hpp"
 
+#include "iop/cdvd.hpp"
 #include "iop/iop.hpp"
 #include "iop/iop_dma.hpp"
 #include "iop/iop_timers.hpp"
@@ -16,10 +17,18 @@
 #include "gif.hpp"
 #include "sif.hpp"
 
+enum SKIP_HACK
+{
+    NONE,
+    LOAD_ELF,
+    LOAD_DISC
+};
+
 class Emulator
 {
     private:
         BIOS_HLE bios_hle;
+        CDVD_Drive cdvd;
         DMAC dmac;
         EmotionEngine cpu;
         EmotionTiming timers;
@@ -48,10 +57,10 @@ class Emulator
         uint32_t IOP_I_MASK;
         uint32_t IOP_I_CTRL;
 
-        bool skip_BIOS_hack;
+        SKIP_HACK skip_BIOS_hack;
 
         uint8_t* ELF_file;
-        uint64_t ELF_size;
+        uint32_t ELF_size;
 
         void iop_IRQ_check(uint32_t new_stat, uint32_t new_mask);
     public:
@@ -60,9 +69,10 @@ class Emulator
         void run();
         void reset();
         bool skip_BIOS();
-        void set_skip_BIOS_hack();
+        void set_skip_BIOS_hack(SKIP_HACK type);
         void load_BIOS(uint8_t* BIOS);
-        void load_ELF(uint8_t* ELF, uint64_t size);
+        void load_ELF(uint8_t* ELF, uint32_t size);
+        bool load_CDVD(const char* name);
         void execute_ELF();
         uint32_t* get_framebuffer();
         void get_resolution(int& w, int& h);

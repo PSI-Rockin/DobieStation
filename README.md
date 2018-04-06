@@ -24,7 +24,7 @@ make
 ## Using the Emulator
 DobieStation requires a copy of the PS2 BIOS, which must be dumped from your PS2, and can only be run from the command line. Loading files from the GUI will be supported in the near future.
 
-DobieStation takes two arguments from the command line: the name of the BIOS file, and the name of an ELF file. Additionally, the "-skip" flag will tell DobieStation to stop booting the BIOS and execute the ELF.
+DobieStation takes two arguments from the command line: the name of the BIOS file, and the name of an ELF/ISO file. Additionally, the "-skip" flag will tell DobieStation to stop booting the BIOS and execute the ELF/ISO.
 
 ### PS2 Homebrew
 Want to test DobieStation? Check out this repository: https://github.com/PSI-Rockin/ps2demos

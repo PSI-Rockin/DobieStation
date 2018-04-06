@@ -4,6 +4,7 @@
 
 #include <QPainter>
 #include <QString>
+
 #include "emuwindow.hpp"
 
 using namespace std;
@@ -25,7 +26,7 @@ int EmuWindow::init(int argc, char** argv)
 {
     if (argc < 3)
     {
-        printf("Args: [BIOS] [ELF]\n");
+        printf("Args: [BIOS] [ELF/ISO]\n");
         return 1;
     }
 
@@ -34,11 +35,12 @@ int EmuWindow::init(int argc, char** argv)
     char* bios_name = argv[1];
     char* file_name = argv[2];
 
+    bool skip_BIOS = false;
     //Flag parsing - to be reworked
     if (argc >= 4)
     {
         if (strcmp(argv[3], "-skip") == 0)
-            e.set_skip_BIOS_hack();
+            skip_BIOS = true;
     }
 
     ifstream BIOS_file(bios_name, ios::binary | ios::in);
@@ -55,22 +57,45 @@ int EmuWindow::init(int argc, char** argv)
     delete[] BIOS;
     BIOS = nullptr;
 
-    ifstream ELF_file(file_name, ios::binary | ios::in);
-    if (!ELF_file.is_open())
+    ifstream exec_file(file_name, ios::binary | ios::in);
+    if (!exec_file.is_open())
     {
         printf("Failed to load %s\n", file_name);
         return 1;
     }
-    long long ELF_size = filesize(file_name);
-    uint8_t* ELF = new uint8_t[ELF_size];
-    ELF_file.read((char*)ELF, ELF_size);
-    ELF_file.close();
 
-    printf("Loaded %s\n", file_name);
-    printf("Size: %lld\n", ELF_size);
-    e.load_ELF(ELF, ELF_size);
-    delete[] ELF;
-    ELF = nullptr;
+    //Basic file format detection
+    string file_string = file_name;
+    string format = file_string.substr(file_string.length() - 4);
+    printf("%s\n", format.c_str());
+
+    if (format == ".elf")
+    {
+        long long ELF_size = filesize(file_name);
+        uint8_t* ELF = new uint8_t[ELF_size];
+        exec_file.read((char*)ELF, ELF_size);
+        exec_file.close();
+
+        printf("Loaded %s\n", file_name);
+        printf("Size: %lld\n", ELF_size);
+        e.load_ELF(ELF, ELF_size);
+        delete[] ELF;
+        ELF = nullptr;
+        if (skip_BIOS)
+            e.set_skip_BIOS_hack(SKIP_HACK::LOAD_ELF);
+    }
+    else if (format == ".iso")
+    {
+        exec_file.close();
+        e.load_CDVD(file_name);
+        if (skip_BIOS)
+            e.set_skip_BIOS_hack(SKIP_HACK::LOAD_DISC);
+    }
+    else
+    {
+        printf("Unrecognized file format %s\n", format.c_str());
+        return 1;
+    }
 
     //Initialize window
     is_running = true;
