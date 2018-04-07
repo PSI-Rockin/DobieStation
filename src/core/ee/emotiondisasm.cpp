@@ -192,6 +192,8 @@ string EmotionDisasm::disasm_regimm(uint32_t instruction, uint32_t instr_addr)
         case 0x03:
             opcode += "bgezl";
             break;
+        case 0x19:
+            return disasm_mtsah(instruction);
         default:
             return unknown_op("regimm", RT, 2);
     }
@@ -202,6 +204,13 @@ string EmotionDisasm::disasm_regimm(uint32_t instruction, uint32_t instr_addr)
 
     return opcode + " " + output.str();
 
+}
+
+string EmotionDisasm::disasm_mtsah(uint32_t instruction)
+{
+    stringstream output;
+    output << "mtsah " << EmotionEngine::REG(RS) << ", " << (uint16_t)IMM;
+    return output.str();
 }
 
 string EmotionDisasm::disasm_special(uint32_t instruction)

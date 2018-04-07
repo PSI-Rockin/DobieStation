@@ -233,8 +233,8 @@ void DMAC::handle_source_chain(int index)
     }
     if (IRQ_after_transfer && TIE)
         channels[index].tag_end = true;
-    printf("\nNew address: $%08X", channels[index].address);
-    printf("\nNew tag addr: $%08X", channels[index].tag_address);
+    printf("New address: $%08X\n", channels[index].address);
+    printf("New tag addr: $%08X\n", channels[index].tag_address);
 }
 
 void DMAC::start_DMA(int index)
@@ -316,7 +316,7 @@ void DMAC::write32(uint32_t address, uint32_t value)
                 start_DMA(GIF);
             break;
         case 0x1000A010:
-            printf("\n[DMAC] GIF M_ADR: $%08X", value);
+            printf("[DMAC] GIF M_ADR: $%08X\n", value);
             channels[GIF].address = value & ~0xF;
             break;
         case 0x1000A020:

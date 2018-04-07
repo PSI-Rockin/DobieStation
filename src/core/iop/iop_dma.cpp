@@ -204,7 +204,7 @@ uint32_t IOP_DMA::get_DICR()
     reg |= DICR.STAT[0] << 24;
 
     bool IRQ;
-    if (DICR.MASK[0] & DICR.STAT[0])
+    if (DICR.master_int_enable[0] && (DICR.MASK[0] & DICR.STAT[0]))
         IRQ = true;
     else
         IRQ = false;

@@ -196,7 +196,7 @@ void EmotionInterpreter::srav(EmotionEngine &cpu, uint32_t instruction)
     uint64_t dest = (instruction >> 11) & 0x1F;
     uint32_t shift = (instruction >> 21) & 0x1F;
     source = cpu.get_gpr<int32_t>(source);
-    source <<= cpu.get_gpr<uint8_t>(shift) & 0x1F;
+    source >>= cpu.get_gpr<uint8_t>(shift) & 0x1F;
     cpu.set_gpr<int64_t>(dest, source);
 }
 

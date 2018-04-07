@@ -95,6 +95,7 @@ class Emulator
         void iop_write32(uint32_t address, uint32_t value);
 
         void iop_request_IRQ(int index);
+        void iop_ksprintf();
 };
 
 #endif // EMULATOR_HPP

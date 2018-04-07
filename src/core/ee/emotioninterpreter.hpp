@@ -55,6 +55,7 @@ namespace EmotionInterpreter
     void bltzl(EmotionEngine& cpu, uint32_t instruction);
     void bgez(EmotionEngine& cpu, uint32_t instruction);
     void bgezl(EmotionEngine& cpu, uint32_t instruction);
+    void mtsah(EmotionEngine& cpu, uint32_t instruction);
 
     void j(EmotionEngine& cpu, uint32_t instruction);
     void jal(EmotionEngine& cpu, uint32_t instruction);

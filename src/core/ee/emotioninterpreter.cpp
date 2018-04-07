@@ -172,6 +172,9 @@ void EmotionInterpreter::regimm(EmotionEngine &cpu, uint32_t instruction)
         case 0x03:
             bgezl(cpu, instruction);
             break;
+        case 0x19:
+            mtsah(cpu, instruction);
+            break;
         default:
             unknown_op("regimm", instruction, op);
     }
@@ -212,6 +215,17 @@ void EmotionInterpreter::bgezl(EmotionEngine &cpu, uint32_t instruction)
     int64_t reg = (instruction >> 21) & 0x1F;
     reg = cpu.get_gpr<int64_t>(reg);
     cpu.branch_likely(reg >= 0, offset);
+}
+
+void EmotionInterpreter::mtsah(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint32_t reg = (instruction >> 21) & 0x1F;
+    uint16_t imm = instruction & 0xFFFF;
+
+    reg = cpu.get_gpr<uint32_t>(reg);
+
+    reg = (reg & 0x7) | (imm & 0x7);
+    cpu.set_SA(reg * 16);
 }
 
 void EmotionInterpreter::j(EmotionEngine &cpu, uint32_t instruction)

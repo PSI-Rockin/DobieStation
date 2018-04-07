@@ -59,6 +59,7 @@ namespace EmotionDisasm
     std::string disasm_dsra32(uint32_t instruction);
 
     std::string disasm_regimm(uint32_t instruction, uint32_t instr_addr);
+    std::string disasm_mtsah(uint32_t instruction);
 
     std::string disasm_jump(const std::string opcode, uint32_t instruction, uint32_t instr_addr);
     std::string disasm_j(uint32_t instruction, uint32_t instr_addr);

@@ -126,5 +126,16 @@ void SubsystemInterface::set_control_EE(uint32_t value)
 
 void SubsystemInterface::set_control_IOP(uint32_t value)
 {
+    uint8_t bark = value & 0xF0;
 
+    if (value & 0xA0)
+    {
+        control &= ~0xF000;
+        control |= 0x2000;
+    }
+
+    if (control & bark)
+        control &= ~bark;
+    else
+        control |= bark;
 }

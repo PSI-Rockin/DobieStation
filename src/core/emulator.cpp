@@ -56,12 +56,12 @@ void Emulator::run()
         if (instructions_run == CYCLES_PER_FRAME * 0.80)
         {
             gs.set_VBLANK(true);
-            iop_request_IRQ(0);
+            //iop_request_IRQ(0);
             gs.render_CRT();
         }
     }
     //VBLANK end
-    iop_request_IRQ(11);
+    //iop_request_IRQ(11);
     gs.set_VBLANK(false);
 }
 
@@ -385,8 +385,6 @@ uint32_t Emulator::read32(uint32_t address)
 
 uint64_t Emulator::read64(uint32_t address)
 {
-    if (address >= 0x81000 && address < 0x81A00)
-        printf("[EE] Read64 from $%08X\n", address);
     if (address < 0x10000000)
         return *(uint64_t*)&RDRAM[address & 0x01FFFFFF];
     if (address >= 0x1FC00000 && address < 0x20000000)
@@ -404,7 +402,10 @@ uint64_t Emulator::read64(uint32_t address)
 void Emulator::write8(uint32_t address, uint8_t value)
 {
     if (address >= 0x00200070 && address < 0x00200078)
+    {
         printf("[EE] Write to blorp $%08X: $%02X\n", address, value);
+        cpu.print_state();
+    }
     if (address < 0x10000000)
     {
         RDRAM[address & 0x01FFFFFF] = value;
@@ -527,8 +528,6 @@ void Emulator::write32(uint32_t address, uint32_t value)
 
 void Emulator::write64(uint32_t address, uint64_t value)
 {
-    if (address == 0x00200070)
-        printf("[EE] Write to blorp: $%08X_%08X", value >> 32, value);
     if (address < 0x10000000)
     {
         *(uint64_t*)&RDRAM[address & 0x01FFFFFF] = value;
@@ -807,4 +806,53 @@ void Emulator::iop_request_IRQ(int index)
     uint32_t new_stat = IOP_I_STAT | (1 << index);
     IOP_I_STAT = new_stat;
     iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
+}
+
+void Emulator::iop_ksprintf()
+{
+    uint32_t msg_pointer = iop.get_gpr(6);
+    uint32_t arg_pointer = iop.get_gpr(7);
+
+    uint32_t width;
+    printf("[IOP Debug] ksprintf: %s\n", (char*)&IOP_RAM[msg_pointer]);
+    while (IOP_RAM[msg_pointer])
+    {
+        char c = IOP_RAM[msg_pointer];
+        width = 8;
+        if (c == '%')
+        {
+            msg_pointer++;
+            while (IOP_RAM[msg_pointer] >= '0' && IOP_RAM[msg_pointer] <= '9')
+            {
+                //Hacky, but it works as long as the width is a single digit
+                width = IOP_RAM[msg_pointer] - '0';
+                msg_pointer++;
+            }
+
+            switch (IOP_RAM[msg_pointer])
+            {
+                case 's':
+                {
+                    uint32_t str_pointer = *(uint32_t*)&IOP_RAM[arg_pointer];
+                    ee_log << (char*)&IOP_RAM[str_pointer];
+                }
+                    break;
+                case 'd':
+                    ee_log << *(int32_t*)&IOP_RAM[arg_pointer];
+                    printf("[IOP Debug] %d\n", *(uint32_t*)&IOP_RAM[arg_pointer]);
+                    break;
+                case 'x':
+                case 'X':
+                    ee_log << std::hex << *(uint32_t*)&IOP_RAM[arg_pointer];
+                    printf("[IOP Debug] $%08X\n", *(uint32_t*)&IOP_RAM[arg_pointer]);
+                    break;
+                default:
+                    break;
+            }
+            arg_pointer += 4;
+        }
+        else
+            ee_log << c;
+        msg_pointer++;
+    }
 }

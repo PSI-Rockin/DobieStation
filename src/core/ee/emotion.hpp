@@ -72,6 +72,7 @@ class EmotionEngine
         void mtlo1(int index);
         void mfsa(int index);
         void mtsa(int index);
+        void set_SA(uint64_t value);
         void set_LO_HI(uint64_t a, uint64_t b, bool hi = false);
 
         void hle_syscall();

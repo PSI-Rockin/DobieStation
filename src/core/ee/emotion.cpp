@@ -53,6 +53,10 @@ void EmotionEngine::run()
     }
     EmotionInterpreter::interpret(*this, instruction);
     cp0.count_up();
+    /*if (PC == 0x00100008)
+        can_disassemble = true;
+    if (PC == 0x100BBC)
+        print_state();*/
     if (increment_PC)
         PC += 4;
     else
@@ -63,6 +67,9 @@ void EmotionEngine::run()
         {
             branch_on = false;
             PC = new_PC;
+            if (PC < 0x80000000 && PC >= 0x00100000)
+                if (e->skip_BIOS())
+                    return;
             /*if (PC == 0x00083270)
             {
                 can_disassemble = true;
@@ -352,6 +359,11 @@ void EmotionEngine::mtsa(int index)
     SA = get_gpr<uint64_t>(index);
 }
 
+void EmotionEngine::set_SA(uint64_t value)
+{
+    SA = value;
+}
+
 void EmotionEngine::lwc1(uint32_t addr, int index)
 {
     fpu.mtc(index, read32(addr));
@@ -420,14 +432,14 @@ void EmotionEngine::syscall_exception()
         printf("[EE] SYSCALL: $%02X Called at $%08X\n", op, PC);
 
     //InitMainThread
-    if (op == 0x3C)
+    /*if (op == 0x3C)
     {
         if (e->skip_BIOS())
         {
             increment_PC = false;
             return;
         }
-    }
+    }*/
     handle_exception(0x80000180, 0x08);
 }
 

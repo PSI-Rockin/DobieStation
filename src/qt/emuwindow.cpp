@@ -67,6 +67,7 @@ int EmuWindow::init(int argc, char** argv)
     //Basic file format detection
     string file_string = file_name;
     string format = file_string.substr(file_string.length() - 4);
+    transform(format.begin(), format.end(), format.begin(), ::tolower);
     printf("%s\n", format.c_str());
 
     if (format == ".elf")
