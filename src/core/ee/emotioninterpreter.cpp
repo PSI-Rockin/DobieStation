@@ -69,6 +69,9 @@ void EmotionInterpreter::interpret(EmotionEngine &cpu, uint32_t instruction)
         case 0x15:
             bnel(cpu, instruction);
             break;
+        case 0x16:
+            blezl(cpu, instruction);
+            break;
         case 0x19:
             daddiu(cpu, instruction);
             break;
@@ -367,6 +370,15 @@ void EmotionInterpreter::bnel(EmotionEngine &cpu, uint32_t instruction)
     uint64_t reg1 = cpu.get_gpr<uint64_t>((instruction >> 21) & 0x1F);
     uint64_t reg2 = cpu.get_gpr<uint64_t>((instruction >> 16) & 0x1F);
     cpu.branch_likely(reg1 != reg2, offset);
+}
+
+void EmotionInterpreter::blezl(EmotionEngine &cpu, uint32_t instruction)
+{
+    int32_t offset = (int16_t)(instruction & 0xFFFF);
+    offset <<= 2;
+    int64_t reg = (instruction >> 21) & 0x1F;
+    reg = cpu.get_gpr<int64_t>(reg);
+    cpu.branch_likely(reg <= 0, offset);
 }
 
 void EmotionInterpreter::daddiu(EmotionEngine &cpu, uint32_t instruction)

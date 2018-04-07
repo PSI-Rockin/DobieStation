@@ -12,6 +12,7 @@
 #include "iop/iop.hpp"
 #include "iop/iop_dma.hpp"
 #include "iop/iop_timers.hpp"
+#include "iop/sio2.hpp"
 
 #include "gs.hpp"
 #include "gif.hpp"
@@ -38,6 +39,7 @@ class Emulator
         IOP_DMA iop_dma;
         IOPTiming iop_timers;
         INTC intc;
+        SIO2 sio2;
         SubsystemInterface sif;
 
         std::ofstream ee_log;

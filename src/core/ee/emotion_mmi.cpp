@@ -91,6 +91,9 @@ void EmotionInterpreter::mmi0(EmotionEngine &cpu, uint32_t instruction)
         case 0x09:
             psubb(cpu, instruction);
             break;
+        case 0x12:
+            pcgtb(cpu, instruction);
+            break;
         default:
             unknown_op("mmi0", instruction, op);
     }
@@ -112,6 +115,23 @@ void EmotionInterpreter::psubb(EmotionEngine &cpu, uint32_t instruction)
         uint8_t byte = cpu.get_gpr<uint8_t>(reg1, i);
         byte -= cpu.get_gpr<uint8_t>(reg2, i);
         cpu.set_gpr<uint8_t>(dest, byte, i);
+    }
+}
+
+/**
+ * Parallel Compare for Greater Than Byte
+ * Compares the 16 bytes in RS to RT. For each byte, if RS > RT, 0xFF is stored in RD's byte. Else, 0x0 is stored.
+ */
+void EmotionInterpreter::pcgtb(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+    for (int i = 0; i < 16; i++)
+    {
+        uint8_t byte1 = cpu.get_gpr<uint8_t>(reg1, i);
+        uint8_t byte2 = cpu.get_gpr<uint8_t>(reg2, i);
+        cpu.set_gpr<uint8_t>(dest, (byte1 > byte2) * 0xFF, i);
     }
 }
 
@@ -268,6 +288,9 @@ void EmotionInterpreter::mmi3(EmotionEngine &cpu, uint32_t instruction)
         case 0x13:
             pnor(cpu, instruction);
             break;
+        case 0x1B:
+            pcpyh(cpu, instruction);
+            break;
         default:
             unknown_op("mmi3", instruction, op);
     }
@@ -308,4 +331,27 @@ void EmotionInterpreter::pnor(EmotionEngine &cpu, uint32_t instruction)
 
     cpu.set_gpr<uint64_t>(dest, ~(cpu.get_gpr<uint64_t>(op1) | cpu.get_gpr<uint64_t>(op2)));
     cpu.set_gpr<uint64_t>(dest, ~(cpu.get_gpr<uint64_t>(op1, 1) | cpu.get_gpr<uint64_t>(op2, 1)), 1);
+}
+
+/**
+ * Parallel Copy Halfword
+ * Splits RT into two 64-bit pieces. The least significant halfwords of each doubleword are copied into the
+ * halfwords of the two doublewords in RD.
+ */
+void EmotionInterpreter::pcpyh(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t source = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    for (int i = 0; i < 4; i++)
+    {
+        uint16_t value = cpu.get_gpr<uint16_t>(source);
+        cpu.set_gpr<uint16_t>(dest, value, i);
+    }
+
+    for (int i = 4; i < 8; i++)
+    {
+        uint16_t value = cpu.get_gpr<uint16_t>(source, 4);
+        cpu.set_gpr<uint16_t>(dest, value, i);
+    }
 }

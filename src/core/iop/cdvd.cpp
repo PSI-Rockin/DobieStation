@@ -13,6 +13,12 @@ CDVD_Drive::~CDVD_Drive()
         cdvd_file.close();
 }
 
+void CDVD_Drive::reset()
+{
+    N_status = 0x40;
+    S_status = 0x40;
+}
+
 bool CDVD_Drive::load_disc(const char *name)
 {
     if (cdvd_file.is_open())
@@ -91,4 +97,33 @@ uint8_t* CDVD_Drive::read_file(string name, uint32_t& file_size)
     }
     delete[] root_extent;
     return nullptr;
+}
+
+uint8_t CDVD_Drive::read_disc_type()
+{
+    //Assume it's a DVD for now
+    return 0x14;
+}
+
+uint8_t CDVD_Drive::read_N_status()
+{
+    return N_status;
+}
+
+uint8_t CDVD_Drive::read_S_status()
+{
+    return S_status;
+}
+
+void CDVD_Drive::send_S_command(uint8_t value)
+{
+    switch (value)
+    {
+        case 0x05:
+            printf("[CDVD] Media Change?\n");
+            break;
+        default:
+            printf("[CDVD] Unrecognized S command $%02X\n", value);
+            exit(1);
+    }
 }

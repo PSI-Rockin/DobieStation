@@ -84,6 +84,11 @@ void IOP::run()
         interrupt();
 }
 
+void IOP::set_disassembly(bool dis)
+{
+    can_disassemble = dis;
+}
+
 void IOP::jp(uint32_t addr)
 {
     if (!will_branch)

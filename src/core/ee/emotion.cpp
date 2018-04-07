@@ -440,6 +440,8 @@ void EmotionEngine::syscall_exception()
             return;
         }
     }*/
+    if (op == 0x7C)
+        return;
     handle_exception(0x80000180, 0x08);
 }
 
@@ -478,7 +480,7 @@ void EmotionEngine::set_int1_signal(bool value)
 
 void EmotionEngine::eret()
 {
-    printf("[EE] Return from exception\n");
+    //printf("[EE] Return from exception\n");
     uint32_t EPC = cp0.mfc(14);
     PC = EPC;
     increment_PC = false;

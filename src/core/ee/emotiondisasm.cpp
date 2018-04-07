@@ -58,6 +58,8 @@ string EmotionDisasm::disasm_instr(uint32_t instruction, uint32_t instr_addr)
             return disasm_beql(instruction, instr_addr);
         case 0x15:
             return disasm_bnel(instruction, instr_addr);
+        case 0x16:
+            return disasm_branch_inequality("blezl", instruction, instr_addr);
         case 0x19:
             return disasm_daddiu(instruction);
         case 0x1A:
@@ -1055,6 +1057,15 @@ string EmotionDisasm::disasm_cop_cvt_s_w(uint32_t instruction)
     return disasm_fpu_convert("cvt.s.w", instruction);
 }
 
+string EmotionDisasm::disasm_mmi_copy(const string opcode, uint32_t instruction)
+{
+    stringstream output;
+    output << EmotionEngine::REG(RD) << ", "
+           << EmotionEngine::REG(RT);
+
+    return opcode + " " + output.str();
+}
+
 string EmotionDisasm::disasm_mmi(uint32_t instruction, uint32_t instr_addr)
 {
     int op = instruction & 0x3F;
@@ -1105,6 +1116,8 @@ string EmotionDisasm::disasm_mmi0(uint32_t instruction)
     {
         case 0x09:
             return disasm_psubb(instruction);
+        case 0x12:
+            return disasm_special_simplemath("pcgtb", instruction);
         default:
             return unknown_op("mmi0", op, 2);
     }
@@ -1196,6 +1209,8 @@ string EmotionDisasm::disasm_mmi3(uint32_t instruction)
             return disasm_por(instruction);
         case 0x13:
             return disasm_pnor(instruction);
+        case 0x1B:
+            return disasm_mmi_copy("pcpyh", instruction);
         default:
             return unknown_op("mmi3", SA, 2);
     }

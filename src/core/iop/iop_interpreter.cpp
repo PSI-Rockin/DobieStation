@@ -106,6 +106,15 @@ void IOP_Interpreter::j(IOP &cpu, uint32_t instruction)
     uint32_t addr = (instruction & 0x3FFFFFF) << 2;
     uint32_t PC = cpu.get_PC();
     addr += (PC + 4) & 0xF0000000;
+
+    //IOP module call detection
+    uint32_t next_instr = cpu.read32(PC + 4);
+    if ((next_instr & 0xFFFF0000) == 0x24000000)
+    {
+        if (addr == 0x0000DE74)
+            cpu.set_disassembly(true);
+        printf("[IOP] Jump to module function $%02X at $%08X\n", next_instr & 0xFF, addr);
+    }
     cpu.jp(addr);
 }
 

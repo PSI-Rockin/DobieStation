@@ -134,6 +134,7 @@ namespace EmotionDisasm
     std::string disasm_cop_bc1(uint32_t instruction, uint32_t instr_addr);
     std::string disasm_cop_cvt_s_w(uint32_t instruction);
 
+    std::string disasm_mmi_copy(const std::string opcode, uint32_t instruction);
     std::string disasm_mmi(uint32_t instruction, uint32_t instr_addr);
     std::string disasm_plzcw(uint32_t instruction);
     std::string disasm_mmi0(uint32_t instruction);

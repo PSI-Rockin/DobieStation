@@ -73,6 +73,7 @@ namespace EmotionInterpreter
     void lui(EmotionEngine& cpu, uint32_t instruction);
     void beql(EmotionEngine& cpu, uint32_t instruction);
     void bnel(EmotionEngine& cpu, uint32_t instruction);
+    void blezl(EmotionEngine& cpu, uint32_t instruction);
     void daddiu(EmotionEngine& cpu, uint32_t instruction);
     void ldl(EmotionEngine& cpu, uint32_t instruction);
     void ldr(EmotionEngine& cpu, uint32_t instruction);
@@ -123,6 +124,7 @@ namespace EmotionInterpreter
     void plzcw(EmotionEngine& cpu, uint32_t instruction);
     void mmi0(EmotionEngine& cpu, uint32_t instruction);
     void psubb(EmotionEngine& cpu, uint32_t instruction);
+    void pcgtb(EmotionEngine& cpu, uint32_t instruction);
     void mmi1(EmotionEngine& cpu, uint32_t instruction);
     void padduw(EmotionEngine& cpu, uint32_t instruction);
     void mmi2(EmotionEngine& cpu, uint32_t instruction);
@@ -140,6 +142,7 @@ namespace EmotionInterpreter
     void pcpyud(EmotionEngine& cpu, uint32_t instruction);
     void por(EmotionEngine& cpu, uint32_t instruction);
     void pnor(EmotionEngine& cpu, uint32_t instruction);
+    void pcpyh(EmotionEngine& cpu, uint32_t instruction);
 
     void unknown_op(const char* type, uint32_t instruction, uint16_t op);
 };

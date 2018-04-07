@@ -85,7 +85,7 @@ uint32_t Cop0::mfc(int index)
 
 void Cop0::mtc(int index, uint32_t value)
 {
-    printf("[COP0] Move to reg%d: $%08X\n", index, value);
+    //printf("[COP0] Move to reg%d: $%08X\n", index, value);
     switch (index)
     {
         case 12:

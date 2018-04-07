@@ -28,6 +28,7 @@ class IOP
 
         void reset();
         void run();
+        void set_disassembly(bool dis);
 
         void jp(uint32_t addr);
         void branch(bool condition, int32_t offset);

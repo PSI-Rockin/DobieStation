@@ -141,7 +141,6 @@ void DMAC::process_SIF0()
             channels[SIF0].quadword_count = DMAtag & 0xFFFF;
             channels[SIF0].address = DMAtag >> 32;
             channels[SIF0].tag_address += 16;
-            //channels[SIF0].tag_address = channels[SIF0].address + channels[SIF0].quadword_count * 16;
 
             int mode = (DMAtag >> 28) & 0x7;
 
@@ -213,7 +212,7 @@ void DMAC::handle_source_chain(int index)
         case 2:
         {
             uint32_t temp = channels[index].tag_address;
-            channels[index].tag_address = channels[index].address;
+            channels[index].tag_address = addr;
             channels[index].address = temp + 16;
         }
             break;

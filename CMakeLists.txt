@@ -29,6 +29,7 @@ set(SOURCES
 	src/core/iop/iop_dma.cpp
 	src/core/iop/iop_interpreter.cpp
 	src/core/iop/iop_timers.cpp
+	src/core/iop/sio2.cpp
         src/core/emulator.cpp
         src/core/gif.cpp
         src/core/gs.cpp
@@ -55,6 +56,7 @@ set(HEADERS
 	src/core/iop/iop_dma.hpp
 	src/core/iop/iop_interpreter.hpp
 	src/core/iop/iop_timers.hpp
+	src/core/iop/sio2.hpp
 	src/core/emulator.hpp
         src/core/gif.hpp
         src/core/gs.hpp

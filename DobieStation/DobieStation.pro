@@ -38,7 +38,8 @@ SOURCES += ../src/qt/main.cpp \
     ../src/core/ee/timers.cpp \
     ../src/core/iop/iop_timers.cpp \
     ../src/core/ee/intc.cpp \
-    ../src/core/iop/cdvd.cpp
+    ../src/core/iop/cdvd.cpp \
+    ../src/core/iop/sio2.cpp
 
 HEADERS += \
     ../src/core/ee/emotion.hpp \
@@ -62,4 +63,5 @@ HEADERS += \
     ../src/core/ee/timers.hpp \
     ../src/core/iop/iop_timers.hpp \
     ../src/core/ee/intc.hpp \
-    ../src/core/iop/cdvd.hpp
+    ../src/core/iop/cdvd.hpp \
+    ../src/core/iop/sio2.hpp
