@@ -158,12 +158,14 @@ bool Emulator::skip_BIOS()
                 }
                 std::string exec_name = "";
                 int i = 0x10;
-                while (system_cnf[i] != '1')
+
+                //Search for end of file name
+                while (system_cnf[i] != ';')
                 {
                     exec_name += system_cnf[i];
                     i++;
                 }
-                exec_name += '1';
+                exec_name += ";1";
                 delete[] system_cnf;
                 printf("[Emulator] Loading %s\n", exec_name.c_str());
                 uint8_t* file = cdvd.read_file(exec_name, ELF_size);
