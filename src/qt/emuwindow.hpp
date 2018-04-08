@@ -1,6 +1,8 @@
 #ifndef EMUWINDOW_HPP
 #define EMUWINDOW_HPP
 
+#include <chrono>
+
 #include <QCloseEvent>
 #include <QMainWindow>
 #include <QPaintEvent>
