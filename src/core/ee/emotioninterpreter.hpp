@@ -120,6 +120,12 @@ namespace EmotionInterpreter
     void cop_bc1(EmotionEngine& cpu, uint32_t instruction);
     void cop_cvt_s_w(EmotionEngine& cpu, uint32_t instruction);
 
+    void cop2_qmfc2(EmotionEngine& cpu, uint32_t instruction);
+    void cop2_special(VectorUnit& vu0, uint32_t instruction);
+    void cop2_vsub(VectorUnit& vu0, uint32_t instruction);
+    void cop2_special2(VectorUnit& vu0, uint32_t instruction);
+    void cop2_viswr(VectorUnit& vu0, uint32_t instruction);
+
     void mmi(EmotionEngine& cpu, uint32_t instruction);
     void plzcw(EmotionEngine& cpu, uint32_t instruction);
     void mmi0(EmotionEngine& cpu, uint32_t instruction);

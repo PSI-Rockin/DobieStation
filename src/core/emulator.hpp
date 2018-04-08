@@ -7,6 +7,7 @@
 #include "ee/emotion.hpp"
 #include "ee/intc.hpp"
 #include "ee/timers.hpp"
+#include "ee/vu.hpp"
 
 #include "iop/cdvd.hpp"
 #include "iop/iop.hpp"
@@ -42,6 +43,7 @@ class Emulator
         INTC intc;
         SIO2 sio2;
         SubsystemInterface sif;
+        VectorUnit vu0, vu1;
 
         std::ofstream ee_log;
         std::string ee_stdout;

@@ -723,8 +723,9 @@ void EmotionInterpreter::cop(EmotionEngine &cpu, uint32_t instruction)
 {
     uint16_t op = (instruction >> 21) & 0x1F;
     uint8_t cop_id = ((instruction >> 26) & 0x3);
-    if (cop_id == 2)
+    if (cop_id == 2 && op >= 0x10)
     {
+        cpu.cop2_special(instruction);
         return;
     }
     switch (op | (cop_id * 0x100))
@@ -759,6 +760,7 @@ void EmotionInterpreter::cop(EmotionEngine &cpu, uint32_t instruction)
         }
             break;
         case 0x102:
+        case 0x202:
             cop_cfc(cpu, instruction);
             break;
         case 0x106:
@@ -774,7 +776,8 @@ void EmotionInterpreter::cop(EmotionEngine &cpu, uint32_t instruction)
         case 0x114:
             cop_cvt_s_w(cpu, instruction);
             break;
-        case 0x202:
+        case 0x201:
+            cop2_qmfc2(cpu, instruction);
             break;
         default:
             unknown_op("cop", instruction, op | (cop_id * 0x100));
@@ -811,6 +814,13 @@ void EmotionInterpreter::cop_ctc(EmotionEngine &cpu, uint32_t instruction)
     int emotion_reg = (instruction >> 16) & 0x1F;
     int cop_reg = (instruction >> 11) & 0x1F;
     cpu.ctc(cop_id, emotion_reg, cop_reg);
+}
+
+void EmotionInterpreter::cop2_qmfc2(EmotionEngine &cpu, uint32_t instruction)
+{
+    int dest = (instruction >> 16) & 0x1F;
+    int cop_reg = (instruction >> 11) & 0x1F;
+    cpu.qmfc2(dest, cop_reg);
 }
 
 void EmotionInterpreter::unknown_op(const char *type, uint32_t instruction, uint16_t op)

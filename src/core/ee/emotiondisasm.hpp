@@ -112,6 +112,7 @@ namespace EmotionDisasm
     std::string disasm_cop_move(std::string opcode, uint32_t instruction);
     std::string disasm_cop_mfc(uint32_t instruction);
     std::string disasm_cop_mtc(uint32_t instruction);
+    std::string disasm_cop_cfc(uint32_t instruction);
     std::string disasm_cop_ctc(uint32_t instruction);
 
     std::string disasm_cop_s(uint32_t instruction);
@@ -133,6 +134,14 @@ namespace EmotionDisasm
     std::string disasm_fpu_c_eq_s(uint32_t instruction);
     std::string disasm_cop_bc1(uint32_t instruction, uint32_t instr_addr);
     std::string disasm_cop_cvt_s_w(uint32_t instruction);
+
+    std::string get_dest_field(uint8_t field);
+    std::string disasm_cop2(uint32_t instruction);
+    std::string disasm_qmfc2(uint32_t instruction);
+    std::string disasm_cop2_special(uint32_t instruction);
+    std::string disasm_vsub(uint32_t instruction);
+    std::string disasm_cop2_special2(uint32_t instruction);
+    std::string disasm_viswr(uint32_t instruction);
 
     std::string disasm_mmi_copy(const std::string opcode, uint32_t instruction);
     std::string disasm_mmi(uint32_t instruction, uint32_t instr_addr);

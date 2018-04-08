@@ -3,10 +3,11 @@
 #include "emotion.hpp"
 #include "emotiondisasm.hpp"
 #include "emotioninterpreter.hpp"
+#include "vu.hpp"
 
 #include "../emulator.hpp"
 
-EmotionEngine::EmotionEngine(BIOS_HLE* b, Emulator* e) : bios(b), e(e)
+EmotionEngine::EmotionEngine(BIOS_HLE* b, Emulator* e, VectorUnit* vu0) : bios(b), e(e), vu0(vu0)
 {
     reset();
 }
@@ -283,23 +284,29 @@ void EmotionEngine::mtc(int cop_id, int reg, int cop_reg)
 
 void EmotionEngine::cfc(int cop_id, int reg, int cop_reg)
 {
+    int32_t bark = 0;
     switch (cop_id)
     {
         case 1:
-            set_gpr<int64_t>(reg, (int32_t)fpu.cfc(cop_reg));
+            bark = (int32_t)fpu.cfc(cop_reg);
+            break;
+        case 2:
+            bark = (int32_t)vu0->cfc(cop_reg);
             break;
     }
+    set_gpr<int64_t>(reg, bark);
 }
 
 void EmotionEngine::ctc(int cop_id, int reg, int cop_reg)
 {
+    uint32_t bark = get_gpr<uint32_t>(reg);
     switch (cop_id)
     {
         case 1:
-            fpu.ctc(cop_reg, get_gpr<uint32_t>(reg));
+            fpu.ctc(cop_reg, bark);
             break;
         case 2:
-            printf("\n[VU0] TODO: ctc");
+            vu0->ctc(cop_reg, bark);
             break;
     }
 }
@@ -514,4 +521,15 @@ void EmotionEngine::fpu_bc1(int32_t offset, bool test_true, bool likely)
 void EmotionEngine::fpu_cvt_s_w(int dest, int source)
 {
     fpu.cvt_s_w(dest, source);
+}
+
+void EmotionEngine::qmfc2(int dest, int cop_reg)
+{
+    for (int i = 0; i < 4; i++)
+        set_gpr<uint32_t>(dest, vu0->qmfc2(cop_reg, i), i);
+}
+
+void EmotionEngine::cop2_special(uint32_t instruction)
+{
+    EmotionInterpreter::cop2_special(*vu0, instruction);
 }

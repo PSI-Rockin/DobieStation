@@ -7,8 +7,8 @@
 #define CYCLES_PER_FRAME 1000000
 
 Emulator::Emulator() :
-    bios_hle(this, &gs), cdvd(this), cpu(&bios_hle, this), dmac(&cpu, this, &gif, &sif), gif(&gs), gs(&intc),
-    iop(this), iop_dma(this, &cdvd, &sif), iop_timers(this), intc(&cpu), timers(&intc)
+    bios_hle(this, &gs), cdvd(this), cpu(&bios_hle, this, &vu0), dmac(&cpu, this, &gif, &sif), gif(&gs), gs(&intc),
+    iop(this), iop_dma(this, &cdvd, &sif), iop_timers(this), intc(&cpu), timers(&intc), vu0(0), vu1(1)
 {
     BIOS = nullptr;
     RDRAM = nullptr;
@@ -56,27 +56,13 @@ void Emulator::run()
         instructions_run++;
         if (instructions_run == CYCLES_PER_FRAME * 0.80)
         {
+            /*if (frames == 12)
+            {
+                cpu.set_disassembly(true);
+            }*/
             gs.set_VBLANK(true);
             printf("VSYNC FRAMES: %d\n", frames);
             frames++;
-            /*if (frames >= 120)
-            {
-                //cpu.set_disassembly(true);
-                if (cpu.get_PC() >= 0x00127460 && cpu.get_PC() <= 0x00127478)
-                    cpu.set_gpr<uint32_t>(17, 0);
-                //cpu.print_state();
-                //cpu.set_gpr<uint32_t>(17, 0);
-            }
-            if (frames == 129)
-            {
-                //cpu.set_disassembly(true);
-                cpu.print_state();
-                cpu.set_PC(0x0010387C);
-            }
-            if (frames == 150)
-            {
-                iop.set_disassembly(true);
-            }*/
             //iop_request_IRQ(0);
             gs.render_CRT();
         }

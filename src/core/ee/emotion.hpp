@@ -6,6 +6,7 @@
 
 class Emulator;
 class BIOS_HLE;
+class VectorUnit;
 
 class EmotionEngine
 {
@@ -15,6 +16,7 @@ class EmotionEngine
 
         Cop0 cp0;
         Cop1 fpu;
+        VectorUnit* vu0;
 
         //Each register is 128-bit
         uint8_t gpr[32 * sizeof(uint64_t) * 2];
@@ -32,7 +34,7 @@ class EmotionEngine
         uint32_t get_paddr(uint32_t vaddr);
         void handle_exception(uint32_t new_addr, uint8_t code);
     public:
-        EmotionEngine(BIOS_HLE* b, Emulator* e);
+        EmotionEngine(BIOS_HLE* b, Emulator* e, VectorUnit* vu0);
         static const char* REG(int id);
         void reset();
         void run();
@@ -91,6 +93,9 @@ class EmotionEngine
         void fpu_cop_s(uint32_t instruction);
         void fpu_bc1(int32_t offset, bool test_true, bool likely);
         void fpu_cvt_s_w(int dest, int source);
+
+        void qmfc2(int dest, int cop_reg);
+        void cop2_special(uint32_t instruction);
 };
 
 template <typename T>

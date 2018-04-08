@@ -832,11 +832,8 @@ string EmotionDisasm::disasm_cop(uint32_t instruction, uint32_t instr_addr)
 {
     uint16_t op = RS;
     uint8_t cop_id = ((instruction >> 26) & 0x3);
-    if (cop_id == 2)
-        return "VU0 - TODO";
     switch (op | (cop_id * 0x100))
     {
-
         case 0x000:
         case 0x100:
             return disasm_cop_mfc(instruction);
@@ -870,12 +867,16 @@ string EmotionDisasm::disasm_cop(uint32_t instruction, uint32_t instr_addr)
             return disasm_cop_s(instruction);
         case 0x114:
             return disasm_cop_cvt_s_w(instruction);
+        case 0x102:
         case 0x202:
-            return "TODO: cfc2";
+            return disasm_cop_cfc(instruction);
         default:
+            if (cop_id == 2)
+                return disasm_cop2(instruction);
             return unknown_op("cop", op, 2);
     }
 }
+
 string EmotionDisasm::disasm_cop_move(string opcode, uint32_t instruction)
 {
     stringstream output;
@@ -896,6 +897,11 @@ string EmotionDisasm::disasm_cop_mfc(uint32_t instruction)
 string EmotionDisasm::disasm_cop_mtc(uint32_t instruction)
 {
     return disasm_cop_move("mtc", instruction);
+}
+
+string EmotionDisasm::disasm_cop_cfc(uint32_t instruction)
+{
+    return disasm_cop_move("cfc", instruction);
 }
 
 string EmotionDisasm::disasm_cop_ctc(uint32_t instruction)
@@ -1055,6 +1061,94 @@ string EmotionDisasm::disasm_cop_bc1(uint32_t instruction, uint32_t instr_addr)
 string EmotionDisasm::disasm_cop_cvt_s_w(uint32_t instruction)
 {
     return disasm_fpu_convert("cvt.s.w", instruction);
+}
+
+string EmotionDisasm::get_dest_field(uint8_t field)
+{
+    const static char vectors[] = {'x', 'y', 'z', 'w'};
+    string out;
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << i))
+            out += vectors[i];
+    }
+    return out;
+}
+
+string EmotionDisasm::disasm_cop2(uint32_t instruction)
+{
+    uint8_t op = RS;
+    if (op >= 0x10)
+        return disasm_cop2_special(instruction);
+    switch (op)
+    {
+        case 0x1:
+            return disasm_qmfc2(instruction);
+        default:
+            return unknown_op("cop2", op, 2);
+    }
+}
+
+string EmotionDisasm::disasm_qmfc2(uint32_t instruction)
+{
+    stringstream output;
+    output << "qmfc2";
+    if (instruction & 1)
+        output << ".i";
+    output << " " << EmotionEngine::REG(RT) << ", vf" << ((instruction >> 11) & 0x1F);
+    return output.str();
+}
+
+string EmotionDisasm::disasm_cop2_special(uint32_t instruction)
+{
+    uint8_t op = instruction & 0x3F;
+    if (op >= 0x3C)
+        return disasm_cop2_special2(instruction);
+    switch (op)
+    {
+        case 0x2C:
+            return disasm_vsub(instruction);
+        default:
+            return unknown_op("cop2 special", op, 2);
+    }
+}
+
+string EmotionDisasm::disasm_vsub(uint32_t instruction)
+{
+    stringstream output;
+    uint32_t fd = (instruction >> 6) & 0x1F;
+    uint32_t fs = (instruction >> 11) & 0x1F;
+    uint32_t ft = (instruction >> 16) & 0x1F;
+    uint8_t dest_field = (instruction >> 21) & 0xF;
+    string field = "." + get_dest_field(dest_field);
+    output << "vsub" << field;
+    output << " vf" << fd;
+    output << ", vf" << fs;
+    output << ", vf" << ft;
+    return output.str();
+}
+
+string EmotionDisasm::disasm_cop2_special2(uint32_t instruction)
+{
+    uint16_t op = (instruction & 0x3) | ((instruction >> 4) & 0x7C);
+    switch (op)
+    {
+        case 0x3F:
+            return disasm_viswr(instruction);
+        default:
+            return unknown_op("cop2 special2", op, 2);
+    }
+}
+
+string EmotionDisasm::disasm_viswr(uint32_t instruction)
+{
+    stringstream output;
+    uint32_t is = (instruction >> 11) & 0x1F;
+    uint32_t it = (instruction >> 16) & 0x1F;
+    uint8_t dest_field = (instruction >> 21) & 0xF;
+    output << "viswr." << get_dest_field(dest_field);
+    output << " " << "vi" << it << ", (vi" << is << ")";
+    return output.str();
 }
 
 string EmotionDisasm::disasm_mmi_copy(const string opcode, uint32_t instruction)
