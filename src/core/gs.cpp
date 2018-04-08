@@ -435,7 +435,7 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
             break;
         default:
             printf("\n[GS] Unrecognized write64 to reg $%04X: $%08X_%08X", addr, value >> 32, value & 0xFFFFFFFF);
-            exit(1);
+            //exit(1);
     }
 }
 

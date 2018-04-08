@@ -7,8 +7,8 @@
 #define CYCLES_PER_FRAME 1000000
 
 Emulator::Emulator() :
-    bios_hle(this, &gs), cpu(&bios_hle, this), dmac(&cpu, this, &gif, &sif), gif(&gs), gs(&intc),
-    iop(this), iop_dma(this, &sif), iop_timers(this), intc(&cpu), timers(&intc)
+    bios_hle(this, &gs), cdvd(this), cpu(&bios_hle, this), dmac(&cpu, this, &gif, &sif), gif(&gs), gs(&intc),
+    iop(this), iop_dma(this, &cdvd, &sif), iop_timers(this), intc(&cpu), timers(&intc)
 {
     BIOS = nullptr;
     RDRAM = nullptr;
@@ -57,6 +57,26 @@ void Emulator::run()
         if (instructions_run == CYCLES_PER_FRAME * 0.80)
         {
             gs.set_VBLANK(true);
+            printf("VSYNC FRAMES: %d\n", frames);
+            frames++;
+            /*if (frames >= 120)
+            {
+                //cpu.set_disassembly(true);
+                if (cpu.get_PC() >= 0x00127460 && cpu.get_PC() <= 0x00127478)
+                    cpu.set_gpr<uint32_t>(17, 0);
+                //cpu.print_state();
+                //cpu.set_gpr<uint32_t>(17, 0);
+            }
+            if (frames == 129)
+            {
+                //cpu.set_disassembly(true);
+                cpu.print_state();
+                cpu.set_PC(0x0010387C);
+            }
+            if (frames == 150)
+            {
+                iop.set_disassembly(true);
+            }*/
             //iop_request_IRQ(0);
             gs.render_CRT();
         }
@@ -69,6 +89,7 @@ void Emulator::run()
 void Emulator::reset()
 {
     ee_stdout = "";
+    frames = 0;
     skip_BIOS_hack = NONE;
     if (!RDRAM)
         RDRAM = new uint8_t[1024 * 1024 * 32];
@@ -289,6 +310,13 @@ uint8_t Emulator::read8(uint32_t address)
         return BIOS[address & 0x3FFFFF];
     if (address >= 0x1C000000 && address < 0x1C200000)
         return IOP_RAM[address & 0x1FFFFF];
+    switch (address)
+    {
+        case 0x1F402017:
+            return cdvd.read_S_status();
+        case 0x1F402018:
+            return cdvd.read_S_data();
+    }
     printf("Unrecognized read8 at physical addr $%08X\n", address);
     return 0;
 }
@@ -562,12 +590,20 @@ uint8_t Emulator::iop_read8(uint32_t address)
         return BIOS[address & 0x3FFFFF];
     switch (address)
     {
+        case 0x1F402004:
+            return cdvd.read_N_callback();
         case 0x1F402005:
             return cdvd.read_N_status();
+        case 0x1F402008:
+            return cdvd.read_ISTAT();
         case 0x1F40200F:
             return cdvd.read_disc_type();
+        case 0x1F402016:
+            return cdvd.read_S_command();
         case 0x1F402017:
             return cdvd.read_S_status();
+        case 0x1F402018:
+            return cdvd.read_S_data();
         case 0x1FA00000:
             return IOP_POST;
     }
@@ -622,6 +658,8 @@ uint32_t Emulator::iop_read32(uint32_t address)
             IOP_I_CTRL = 0;
             return value;
         }
+        case 0x1F8010B8:
+            return iop_dma.get_chan_control(3);
         case 0x1F8010F0:
             return iop_dma.get_DPCR();
         case 0x1F8010F4:
@@ -632,12 +670,16 @@ uint32_t Emulator::iop_read32(uint32_t address)
             return iop_timers.read_counter(5);
         case 0x1F801528:
             return iop_dma.get_chan_control(10);
+        case 0x1F801578:
+            return 0; //No clue
         case 0x1F801570:
             return iop_dma.get_DPCR2();
         case 0x1F801574:
             return iop_dma.get_DICR2();
         case 0x1F80826C:
             return sio2.get_RECV1();
+        case 0xFFFE0130: //Cache control?
+            return 0;
     }
     printf("Unrecognized IOP read32 from physical addr $%08X\n", address);
     //exit(1);
@@ -654,8 +696,23 @@ void Emulator::iop_write8(uint32_t address, uint8_t value)
     }
     switch (address)
     {
+        case 0x1F402004:
+            cdvd.send_N_command(value);
+            return;
+        case 0x1F402005:
+            cdvd.write_N_data(value);
+            return;
+        case 0x1F402006:
+            printf("[CDVD] Write to mode: $%02X\n", value);
+            return;
+        case 0x1F402008:
+            cdvd.write_ISTAT(value);
+            return;
         case 0x1F402016:
             cdvd.send_S_command(value);
+            return;
+        case 0x1F402017:
+            cdvd.write_S_data(value);
             return;
         //POST2?
         case 0x1F802070:
@@ -777,6 +834,16 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
             iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
             //printf("[IOP] I_CTRL: $%08X\n", value);
             return;
+        //CDVD DMA
+        case 0x1F8010B0:
+            iop_dma.set_chan_addr(3, value);
+            return;
+        case 0x1F8010B4:
+            iop_dma.set_chan_block(3, value);
+            return;
+        case 0x1F8010B8:
+            iop_dma.set_chan_control(3, value);
+            return;
         case 0x1F8010F0:
             iop_dma.set_DPCR(value);
             return;
@@ -794,6 +861,7 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
         case 0x1F8014A8:
             iop_timers.write_target(5, value);
             return;
+        //SIF0 DMA
         case 0x1F801520:
             iop_dma.set_chan_addr(10, value);
             return;
@@ -806,6 +874,7 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
         case 0x1F80152C:
             iop_dma.set_chan_tag_addr(10, value);
             return;
+        //SIF1 DMA
         case 0x1F801530:
             iop_dma.set_chan_addr(11, value);
             return;
@@ -820,6 +889,8 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
             return;
         case 0x1F801574:
             iop_dma.set_DICR2(value);
+            return;
+        case 0x1F801578:
             return;
         //POST2?
         case 0x1F802070:

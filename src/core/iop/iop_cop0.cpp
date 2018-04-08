@@ -26,7 +26,7 @@ void IOP_Cop0::reset()
 
 uint32_t IOP_Cop0::mfc(int cop_reg)
 {
-    printf("[IOP COP0] MFC: Read from %d\n", cop_reg);
+    //printf("[IOP COP0] MFC: Read from %d\n", cop_reg);
     switch (cop_reg)
     {
         case 12:
@@ -63,7 +63,7 @@ uint32_t IOP_Cop0::mfc(int cop_reg)
 
 void IOP_Cop0::mtc(int cop_reg, uint32_t value)
 {
-    printf("[IOP COP0] MTC: Write to %d of $%08X\n", cop_reg, value);
+    //printf("[IOP COP0] MTC: Write to %d of $%08X\n", cop_reg, value);
     switch (cop_reg)
     {
         case 12:

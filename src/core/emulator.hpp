@@ -28,6 +28,7 @@ enum SKIP_HACK
 class Emulator
 {
     private:
+        int frames;
         BIOS_HLE bios_hle;
         CDVD_Drive cdvd;
         DMAC dmac;

@@ -112,15 +112,10 @@ void EmotionEngine::print_state()
     printf("\n");
 }
 
-/*uint64_t EmotionEngine::get_gpr_lo(int index)
+void EmotionEngine::set_disassembly(bool dis)
 {
-    return gpr_lo[index];
+    can_disassemble = dis;
 }
-
-uint64_t EmotionEngine::get_gpr_hi(int index)
-{
-    return gpr_hi[index];
-}*/
 
 uint32_t EmotionEngine::get_PC()
 {

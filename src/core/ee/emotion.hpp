@@ -37,6 +37,8 @@ class EmotionEngine
         void reset();
         void run();
         void print_state();
+        void set_disassembly(bool dis);
+
         template <typename T> T get_gpr(int id, int offset = 0);
         template <typename T> void set_gpr(int id, T value, int offset = 0);
         uint32_t get_PC();

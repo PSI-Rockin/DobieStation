@@ -51,6 +51,9 @@ void IOP_Interpreter::interpret(IOP &cpu, uint32_t instruction)
         case 0x0D:
             ori(cpu, instruction);
             break;
+        case 0x0E:
+            xori(cpu, instruction);
+            break;
         case 0x0F:
             lui(cpu, instruction);
             break;
@@ -111,9 +114,23 @@ void IOP_Interpreter::j(IOP &cpu, uint32_t instruction)
     uint32_t next_instr = cpu.read32(PC + 4);
     if ((next_instr & 0xFFFF0000) == 0x24000000)
     {
-        if (addr == 0x0000DE74)
-            cpu.set_disassembly(true);
-        printf("[IOP] Jump to module function $%02X at $%08X\n", next_instr & 0xFF, addr);
+        //if (addr == 0x0000E9D0)
+            //cpu.set_disassembly(true);
+        if (addr == 0x1EC8 || addr == 0x00001F64)
+        {
+            uint32_t struct_ptr = cpu.get_gpr(4);
+            uint16_t version = cpu.read32(struct_ptr + 8);
+            char name[9];
+            name[8] = 0;
+            for (int i = 0; i < 8; i++)
+                name[i] = cpu.read8(struct_ptr + 12 + i);
+            printf("[IOP] RegisterLibraryEntries: %s version %d.0%d\n", name, version >> 8, version & 0xFF);
+        }
+        else
+        {
+            printf("[IOP] Jump to module function $%02X at $%08X\n", next_instr & 0xFF, addr);
+        }
+
     }
     cpu.jp(addr);
 }
@@ -213,6 +230,14 @@ void IOP_Interpreter::ori(IOP &cpu, uint32_t instruction)
     uint32_t dest = (instruction >> 16) & 0x1F;
     uint32_t source = (instruction >> 21) & 0x1F;
     cpu.set_gpr(dest, cpu.get_gpr(source) | imm);
+}
+
+void IOP_Interpreter::xori(IOP &cpu, uint32_t instruction)
+{
+    uint32_t imm = instruction & 0xFFFF;
+    uint32_t dest = (instruction >> 16) & 0x1F;
+    uint32_t source = (instruction >> 21) & 0x1F;
+    cpu.set_gpr(dest, cpu.get_gpr(source) ^ imm);
 }
 
 void IOP_Interpreter::lui(IOP &cpu, uint32_t instruction)

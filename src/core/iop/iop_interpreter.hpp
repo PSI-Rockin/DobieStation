@@ -18,6 +18,7 @@ namespace IOP_Interpreter
     void sltiu(IOP& cpu, uint32_t instruction);
     void andi(IOP& cpu, uint32_t instruction);
     void ori(IOP& cpu, uint32_t instruction);
+    void xori(IOP& cpu, uint32_t instruction);
     void lui(IOP& cpu, uint32_t instruction);
     void lb(IOP& cpu, uint32_t instruction);
     void lh(IOP& cpu, uint32_t instruction);

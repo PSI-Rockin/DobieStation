@@ -1,4 +1,5 @@
 #include <cstdio>
+#include "cdvd.hpp"
 #include "iop_dma.hpp"
 
 #include "../emulator.hpp"
@@ -21,7 +22,7 @@ enum CHANNELS
     SIO2out
 };
 
-IOP_DMA::IOP_DMA(Emulator* e, SubsystemInterface* sif) : e(e), sif(sif)
+IOP_DMA::IOP_DMA(Emulator* e, CDVD_Drive* cdvd, SubsystemInterface* sif) : e(e), cdvd(cdvd), sif(sif)
 {
 
 }
@@ -63,6 +64,9 @@ void IOP_DMA::run()
         {
             switch (i)
             {
+                case CDVD:
+                    process_CDVD();
+                    break;
                 case SIF0:
                     process_SIF0();
                     break;
@@ -71,6 +75,20 @@ void IOP_DMA::run()
                     break;
             }
         }
+    }
+}
+
+void IOP_DMA::process_CDVD()
+{
+    if (cdvd->bytes_left() > 0)
+    {
+        uint32_t bytes = channels[CDVD].word_count * channels[CDVD].block_size * 4;
+        cdvd->read_to_RAM(RAM + channels[CDVD].addr, bytes);
+        if (cdvd->bytes_left() < 0)
+            bytes += cdvd->bytes_left();
+        channels[CDVD].addr += bytes / 4;
+        channels[CDVD].word_count = 0;
+        transfer_end(CDVD);
     }
 }
 
@@ -244,6 +262,14 @@ uint32_t IOP_DMA::get_chan_control(int index)
 void IOP_DMA::set_DPCR(uint32_t value)
 {
     printf("[IOP DMA] Set DPCR: $%08X\n", value);
+    for (int i = 0; i < 8; i++)
+    {
+        bool old_enable = DPCR.enable[i];
+        DPCR.priorities[i] = (value >> (i << 2)) & 0x7;
+        DPCR.enable[i] = value & (1 << ((i << 2) + 3));
+        if (!old_enable && DPCR.enable[i])
+            channels[i].tag_end = false;
+    }
 }
 
 void IOP_DMA::set_DPCR2(uint32_t value)

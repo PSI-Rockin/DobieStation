@@ -59,9 +59,6 @@ void IOP::run()
         printf("[IOP] [$%08X] $%08X - %s\n", PC, instr, EmotionDisasm::disasm_instr(instr, PC).c_str());
     IOP_Interpreter::interpret(*this, instr);
 
-    if (PC == 0x86D0)
-        e->iop_ksprintf();
-
     if (inc_PC)
         PC += 4;
     else
@@ -73,8 +70,8 @@ void IOP::run()
         {
             will_branch = false;
             PC = new_PC;
-            if (PC == 0xAE94)
-                can_disassemble = false;
+            if (PC == 0x86D0 || PC == 0x90E0)
+                e->iop_ksprintf();
         }
         else
             load_delay--;
@@ -153,7 +150,7 @@ void IOP::interrupt()
 {
     printf("[IOP] Processing interrupt!\n");
     handle_exception(0x80000080, 0x00);
-    can_disassemble = true;
+    //can_disassemble = true;
 }
 
 void IOP::mfc(int cop_id, int cop_reg, int reg)
@@ -191,7 +188,7 @@ void IOP::rfe()
     cop0.status.IEc = cop0.status.IEp;
     cop0.status.IEp = cop0.status.IEo;
     printf("[IOP] RFE!\n");
-    can_disassemble = false;
+    //can_disassemble = false;
 }
 
 uint8_t IOP::read8(uint32_t addr)
