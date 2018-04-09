@@ -21,7 +21,7 @@ set(SOURCES
         src/core/ee/emotionasm.cpp
         src/core/ee/emotiondisasm.cpp
         src/core/ee/emotioninterpreter.cpp
-	src/core/ee/emotion_vu.cpp
+	src/core/ee/emotion_vu0.cpp
 	src/core/ee/intc.cpp
 	src/core/ee/timers.cpp
 	src/core/ee/vu.cpp
