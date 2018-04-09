@@ -2,6 +2,8 @@
 #include <cstdio>
 #include "cop1.hpp"
 
+#define printf(fmt, ...)(0)
+
 Cop1::Cop1()
 {
 
@@ -33,7 +35,7 @@ uint32_t Cop1::get_gpr(int index)
 
 void Cop1::mtc(int index, uint32_t value)
 {
-    printf("\n[FPU] MTC1: %d, $%08X", index, value);
+    printf("[FPU] MTC1: %d, $%08X\n", index, value);
     gpr[index].u = value;
 }
 
@@ -52,14 +54,14 @@ uint32_t Cop1::cfc(int index)
 
 void Cop1::ctc(int index, uint32_t value)
 {
-    printf("\n[FPU] CTC1: $%08X (%d)", value, index);
+    printf("[FPU] CTC1: $%08X (%d)\n", value, index);
 }
 
 void Cop1::cvt_s_w(int dest, int source)
 {
     float bark = (float)gpr[source].u;
     gpr[dest].f = bark;
-    printf("\n[FPU] CVT_S_W: %f", bark);
+    printf("[FPU] CVT_S_W: %f\n", bark);
 }
 
 void Cop1::cvt_w_s(int dest, int source)
@@ -67,7 +69,7 @@ void Cop1::cvt_w_s(int dest, int source)
     //Default rounding mode in the FPU is truncate
     //TODO: is it possible to change that?
     gpr[dest].u = (uint32_t)trunc(gpr[source].f);
-    printf("\n[FPU]CVT_W_S: $%08X", gpr[dest].u);
+    printf("[FPU] CVT_W_S: $%08X\n", gpr[dest].u);
 }
 
 void Cop1::add_s(int dest, int reg1, int reg2)
@@ -75,7 +77,7 @@ void Cop1::add_s(int dest, int reg1, int reg2)
     float op1 = convert(gpr[reg1].u);
     float op2 = convert(gpr[reg2].u);
     gpr[dest].f = op1 + op2;
-    printf("\n[FPU] add.s: %f + %f = %f", op1, op2, gpr[dest].f);
+    printf("[FPU] add.s: %f + %f = %f\n", op1, op2, gpr[dest].f);
 }
 
 void Cop1::sub_s(int dest, int reg1, int reg2)
@@ -83,7 +85,7 @@ void Cop1::sub_s(int dest, int reg1, int reg2)
     float op1 = convert(gpr[reg1].u);
     float op2 = convert(gpr[reg2].u);
     gpr[dest].f = op1 - op2;
-    printf("\n[FPU] sub.s: %f - %f = %f", op1, op2, gpr[dest].f);
+    printf("[FPU] sub.s: %f - %f = %f\n", op1, op2, gpr[dest].f);
 }
 
 void Cop1::mul_s(int dest, int reg1, int reg2)
@@ -91,7 +93,7 @@ void Cop1::mul_s(int dest, int reg1, int reg2)
     float op1 = convert(gpr[reg1].u);
     float op2 = convert(gpr[reg2].u);
     gpr[dest].f = op1 * op2;
-    printf("\n[FPU] mul.s: %f * %f = %f", op1, op2, gpr[dest].f);
+    printf("[FPU] mul.s: %f * %f = %f\n", op1, op2, gpr[dest].f);
 }
 
 void Cop1::div_s(int dest, int reg1, int reg2)
@@ -99,19 +101,25 @@ void Cop1::div_s(int dest, int reg1, int reg2)
     float numerator = convert(gpr[reg1].u);
     float denominator = convert(gpr[reg2].u);
     gpr[dest].f = numerator / denominator;
-    printf("\n[FPU] div.s: %f / %f = %f", numerator, denominator, gpr[dest].f);
+    printf("[FPU] div.s: %f / %f = %f\n", numerator, denominator, gpr[dest].f);
+}
+
+void Cop1::abs_s(int dest, int source)
+{
+    gpr[dest].f = fabs(gpr[source].f);
+    printf("[FPU] abs.s: %f = -%f\n", gpr[source].f, gpr[dest].f);
 }
 
 void Cop1::mov_s(int dest, int source)
 {
     gpr[dest].u = gpr[source].u;
-    printf("\n[FPU] mov.s: (%d, %d)", dest, source);
+    printf("[FPU] mov.s: (%d, %d)\n", dest, source);
 }
 
 void Cop1::neg_s(int dest, int source)
 {
     gpr[dest].f = -gpr[source].f;
-    printf("\n[FPU] neg.s: %f = -%f", gpr[source].f, gpr[dest].f);
+    printf("[FPU] neg.s: %f = -%f\n", gpr[source].f, gpr[dest].f);
 }
 
 void Cop1::adda_s(int reg1, int reg2)
@@ -119,7 +127,7 @@ void Cop1::adda_s(int reg1, int reg2)
     float op1 = convert(gpr[reg1].u);
     float op2 = convert(gpr[reg2].u);
     accumulator.f = op1 + op2;
-    printf("\n[FPU] adda.s: %f + %f = %f", op1, op2, accumulator.f);
+    printf("[FPU] adda.s: %f + %f = %f\n", op1, op2, accumulator.f);
 }
 
 void Cop1::madd_s(int dest, int reg1, int reg2)
@@ -128,17 +136,17 @@ void Cop1::madd_s(int dest, int reg1, int reg2)
     float op2 = convert(gpr[reg2].u);
     float acc = convert(accumulator.u);
     gpr[dest].f = acc + (op1 * op2);
-    printf("\n[FPU] madd.s: %f + %f * %f = %f", acc, op1, op2, gpr[dest].f);
+    printf("[FPU] madd.s: %f + %f * %f = %f\n", acc, op1, op2, gpr[dest].f);
 }
 
 void Cop1::c_lt_s(int reg1, int reg2)
 {
     control.condition = gpr[reg1].f < gpr[reg2].f;
-    printf("\n[FPU] c.lt.s: %f, %f", gpr[reg1].f, gpr[reg2].f);
+    printf("[FPU] c.lt.s: %f, %f\n", gpr[reg1].f, gpr[reg2].f);
 }
 
 void Cop1::c_eq_s(int reg1, int reg2)
 {
     control.condition = gpr[reg1].f == gpr[reg2].f;
-    printf("\n[FPU] c.eq.s: %f, %f", gpr[reg1].f, gpr[reg2].f);
+    printf("[FPU] c.eq.s: %f, %f\n", gpr[reg1].f, gpr[reg2].f);
 }

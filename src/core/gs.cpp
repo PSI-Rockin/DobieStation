@@ -65,6 +65,10 @@ void GraphicsSynthesizer::reset()
     DISPLAY2.y = 0;
     DISPLAY2.width = 0 << 2;
     DISPLAY2.height = 0;
+    DISPFB1.frame_base = 0;
+    DISPFB1.width = 0;
+    DISPFB1.x = 0;
+    DISPFB1.y = 0;
     DISPFB2.frame_base = 0;
     DISPFB2.width = 0;
     DISPFB2.x = 0;
@@ -117,20 +121,20 @@ void GraphicsSynthesizer::set_VBLANK(bool is_VBLANK)
 void GraphicsSynthesizer::render_CRT()
 {
     printf("DISPLAY2: (%d, %d) wh: (%d, %d)\n", DISPLAY2.x >> 2, DISPLAY2.y, DISPLAY2.width >> 2, DISPLAY2.height);
-    int width = DISPLAY2.width >> 2;
-    for (int y = 0; y < DISPLAY2.height; y++)
+    int width = DISPLAY1.width >> 2;
+    for (int y = 0; y < DISPLAY1.height; y++)
     {
         for (int x = 0; x < width; x++)
         {
             int pixel_x = x;
             int pixel_y = y;
-            if (pixel_x >= width || pixel_y >= DISPLAY2.height)
+            if (pixel_x >= width || pixel_y >= DISPLAY1.height)
                 continue;
             uint32_t scaled_x = x;
             uint32_t scaled_y = y;
-            scaled_x *= DISPFB2.width;
+            scaled_x *= DISPFB1.width;
             scaled_x /= width;
-            uint32_t value = local_mem[DISPFB2.frame_base + scaled_x + (scaled_y * DISPFB2.width)];
+            uint32_t value = local_mem[DISPFB1.frame_base + scaled_x + (scaled_y * DISPFB1.width)];
             output_buffer[pixel_x + (pixel_y * width)] = value;
             output_buffer[pixel_x + (pixel_y * width)] |= 0xFF000000;
         }
@@ -158,8 +162,8 @@ void GraphicsSynthesizer::get_resolution(int &w, int &h)
 
 void GraphicsSynthesizer::get_inner_resolution(int &w, int &h)
 {
-    w = DISPLAY2.width >> 2;
-    h = DISPLAY2.height;
+    w = DISPLAY1.width >> 2;
+    h = DISPLAY1.height;
 }
 
 uint32_t GraphicsSynthesizer::read32_privileged(uint32_t addr)
@@ -840,12 +844,13 @@ int32_t GraphicsSynthesizer::orient2D(const Point &v1, const Point &v2, const Po
 
 void GraphicsSynthesizer::render_triangle()
 {
-    printf("[GS] Rendering triangle!\n");
+    //printf("[GS] Rendering triangle!\n");
     uint32_t color = 0x00000000;
     color |= vtx_queue[0].rgbaq.r;
     color |= vtx_queue[0].rgbaq.g << 8;
     color |= vtx_queue[0].rgbaq.b << 16;
     color |= vtx_queue[0].rgbaq.a << 24;
+    //printf("[GS] Color: $%08X\n", color);
 
     int32_t x1, x2, x3, y1, y2, y3, z1, z2, z3;
     uint8_t r1, r2, r3, g1, g2, g3, b1, b2, b3, a1, a2, a3;

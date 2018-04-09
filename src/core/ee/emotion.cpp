@@ -7,6 +7,8 @@
 
 #include "../emulator.hpp"
 
+#define printf(fmt, ...)(0)
+
 EmotionEngine::EmotionEngine(BIOS_HLE* b, Emulator* e, VectorUnit* vu0) : bios(b), e(e), vu0(vu0)
 {
     reset();
@@ -371,9 +373,30 @@ void EmotionEngine::lwc1(uint32_t addr, int index)
     fpu.mtc(index, read32(addr));
 }
 
+void EmotionEngine::lqc2(uint32_t addr, int index)
+{
+    printf("[EE] LQC2: ");
+    for (int i = 0; i < 4; i++)
+    {
+        uint32_t bark = read32(addr + (i << 2));
+        printf("$%08X ", bark);
+        vu0->set_gpr_u(index, i, bark);
+    }
+    printf("\n");
+}
+
 void EmotionEngine::swc1(uint32_t addr, int index)
 {
     write32(addr, fpu.get_gpr(index));
+}
+
+void EmotionEngine::sqc2(uint32_t addr, int index)
+{
+    for (int i = 0; i < 4; i++)
+    {
+        uint32_t bark = vu0->get_gpr_u(index, i);
+        write32(addr + (i << 2), bark);
+    }
 }
 
 void EmotionEngine::set_LO_HI(uint64_t a, uint64_t b, bool hi)
@@ -527,6 +550,18 @@ void EmotionEngine::qmfc2(int dest, int cop_reg)
 {
     for (int i = 0; i < 4; i++)
         set_gpr<uint32_t>(dest, vu0->qmfc2(cop_reg, i), i);
+}
+
+void EmotionEngine::qmtc2(int source, int cop_reg)
+{
+    printf("[EE] QMTC2: ");
+    for (int i = 0; i < 4; i++)
+    {
+        uint32_t bark = get_gpr<uint32_t>(source);
+        printf("$%08X ", bark);
+        vu0->set_gpr_u(cop_reg, i, bark);
+    }
+    printf("\n");
 }
 
 void EmotionEngine::cop2_special(uint32_t instruction)

@@ -64,7 +64,9 @@ class EmotionEngine
         void mfc(int cop_id, int reg, int cop_reg);
         void mtc(int cop_id, int reg, int cop_reg);
         void lwc1(uint32_t addr, int index);
+        void lqc2(uint32_t addr, int index);
         void swc1(uint32_t addr, int index);
+        void sqc2(uint32_t addr, int index);
 
         void mfhi(int index);
         void mthi(int index);
@@ -95,6 +97,7 @@ class EmotionEngine
         void fpu_cvt_s_w(int dest, int source);
 
         void qmfc2(int dest, int cop_reg);
+        void qmtc2(int source, int cop_reg);
         void cop2_special(uint32_t instruction);
 };
 

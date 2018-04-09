@@ -26,6 +26,7 @@ class GraphicsInterface
         bool processing_GIF_prim;
 
         void process_PACKED(uint64_t data[2]);
+        void process_REGLIST(uint64_t data[2]);
         void feed_GIF(uint64_t data[2]);
     public:
         GraphicsInterface(GraphicsSynthesizer* gs);

@@ -41,6 +41,7 @@ class Cop1
         void sub_s(int dest, int reg1, int reg2);
         void mul_s(int dest, int reg1, int reg2);
         void div_s(int dest, int reg1, int reg2);
+        void abs_s(int dest, int source);
         void mov_s(int dest, int source);
         void neg_s(int dest, int source);
         void adda_s(int reg1, int reg2);

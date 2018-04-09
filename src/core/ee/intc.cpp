@@ -1,3 +1,4 @@
+#include <cstdio>
 #include "emotion.hpp"
 #include "intc.hpp"
 
@@ -31,10 +32,12 @@ void INTC::write_mask(uint32_t value)
 void INTC::write_stat(uint32_t value)
 {
     INTC_STAT &= ~value;
+    int0_check();
 }
 
 void INTC::assert_IRQ(int id)
 {
+    printf("[INTC] EE IRQ: %d\n", id);
     INTC_STAT |= (1 << id);
     int0_check();
 }

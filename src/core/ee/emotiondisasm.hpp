@@ -84,6 +84,7 @@ namespace EmotionDisasm
     std::string disasm_bnel(uint32_t instruction, uint32_t instr_addr);
     std::string disasm_daddiu(uint32_t instruction);
     std::string disasm_loadstore(const std::string opcode, uint32_t instruction);
+    std::string disasm_cop2_loadstore(const std::string opcode, uint32_t instruction);
     std::string disasm_ldl(uint32_t instruction);
     std::string disasm_ldr(uint32_t instruction);
     std::string disasm_lq(uint32_t instruction);
@@ -104,8 +105,10 @@ namespace EmotionDisasm
     std::string disasm_sdr(uint32_t instruction);
     std::string disasm_swr(uint32_t instruction);
     std::string disasm_lwc1(uint32_t instruction);
+    std::string disasm_lqc2(uint32_t instruction);
     std::string disasm_ld(uint32_t instruction);
     std::string disasm_swc1(uint32_t instruction);
+    std::string disasm_sqc2(uint32_t instruction);
     std::string disasm_sd(uint32_t instruction);
 
     std::string disasm_cop(uint32_t instruction, uint32_t instr_addr);
@@ -121,6 +124,7 @@ namespace EmotionDisasm
     std::string disasm_fpu_sub(uint32_t instruction);
     std::string disasm_fpu_mul(uint32_t instruction);
     std::string disasm_fpu_div(uint32_t instruction);
+    std::string disasm_fpu_abs(uint32_t instruction);
     std::string disasm_fpu_singleop_math(const std::string opcode, uint32_t instruction);
     std::string disasm_fpu_mov(uint32_t instruction);
     std::string disasm_fpu_neg(uint32_t instruction);
@@ -136,12 +140,33 @@ namespace EmotionDisasm
     std::string disasm_cop_cvt_s_w(uint32_t instruction);
 
     std::string get_dest_field(uint8_t field);
+    std::string get_fsf(uint8_t fsf);
+    std::string disasm_cop2_qmove(const std::string opcode, uint32_t instruction);
     std::string disasm_cop2(uint32_t instruction);
-    std::string disasm_qmfc2(uint32_t instruction);
+    std::string disasm_cop2_special_simplemath(const std::string opcode, uint32_t instruction);
+    std::string disasm_cop2_special_bc(const std::string opcode, uint32_t instruction);
+    std::string disasm_cop2_special_q(const std::string opcode, uint32_t instruction);
     std::string disasm_cop2_special(uint32_t instruction);
+    std::string disasm_vaddbc(uint32_t instruction);
+    std::string disasm_vsubbc(uint32_t instruction);
+    std::string disasm_vmaddbc(uint32_t instruction);
+    std::string disasm_vmulbc(uint32_t instruction);
+    std::string disasm_vmulq(uint32_t instruction);
+    std::string disasm_vaddq(uint32_t instruction);
+    std::string disasm_vadd(uint32_t instruction);
+    std::string disasm_vmul(uint32_t instruction);
     std::string disasm_vsub(uint32_t instruction);
+    std::string disasm_viadd(uint32_t instruction);
     std::string disasm_cop2_special2(uint32_t instruction);
+    std::string disasm_cop2_acc_bc(const std::string opcode, uint32_t instruction);
+    std::string disasm_vmaddabc(uint32_t instruction);
+    std::string disasm_vftoi4(uint32_t instruction);
+    std::string disasm_vmulabc(uint32_t instruction);
+    std::string disasm_vsqi(uint32_t instruction);
+    std::string disasm_vrsqrt(uint32_t instruction);
     std::string disasm_viswr(uint32_t instruction);
+    std::string disasm_vrnext(uint32_t instruction);
+    std::string disasm_vrinit(uint32_t instruction);
 
     std::string disasm_mmi_copy(const std::string opcode, uint32_t instruction);
     std::string disasm_mmi(uint32_t instruction, uint32_t instr_addr);

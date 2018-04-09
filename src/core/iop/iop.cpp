@@ -70,7 +70,7 @@ void IOP::run()
         {
             will_branch = false;
             PC = new_PC;
-            if (PC == 0x86D0 || PC == 0x90E0)
+            if (PC == 0x86D0 || PC == 0x90E0 || PC == 0x00008EE0)
                 e->iop_ksprintf();
         }
         else

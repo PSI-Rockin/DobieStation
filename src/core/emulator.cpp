@@ -56,12 +56,10 @@ void Emulator::run()
         instructions_run++;
         if (instructions_run == CYCLES_PER_FRAME * 0.80)
         {
-            /*if (frames == 12)
-            {
-                cpu.set_disassembly(true);
-            }*/
             gs.set_VBLANK(true);
             printf("VSYNC FRAMES: %d\n", frames);
+            //if (frames == 103)
+                //cpu.set_disassembly(true);
             frames++;
             //iop_request_IRQ(0);
             gs.render_CRT();
@@ -169,6 +167,7 @@ bool Emulator::skip_BIOS()
         }
         //cpu.reset();
         execute_ELF();
+        //cpu.set_disassembly(true);
         skip_BIOS_hack = NONE;
         return true;
     }

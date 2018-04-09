@@ -141,6 +141,7 @@ void EmotionInterpreter::interpret(EmotionEngine &cpu, uint32_t instruction)
             lwc1(cpu, instruction);
             break;
         case 0x36:
+            lqc2(cpu, instruction);
             break;
         case 0x37:
             ld(cpu, instruction);
@@ -149,6 +150,7 @@ void EmotionInterpreter::interpret(EmotionEngine &cpu, uint32_t instruction)
             swc1(cpu, instruction);
             break;
         case 0x3E:
+            sqc2(cpu, instruction);
             break;
         case 0x3F:
             sd(cpu, instruction);
@@ -689,6 +691,16 @@ void EmotionInterpreter::lwc1(EmotionEngine &cpu, uint32_t instruction)
     cpu.lwc1(addr, dest);
 }
 
+void EmotionInterpreter::lqc2(EmotionEngine &cpu, uint32_t instruction)
+{
+    int16_t offset = (int16_t)(instruction & 0xFFFF);
+    uint32_t dest = (instruction >> 16) & 0x1F;
+    uint32_t base = (instruction >> 21) & 0x1F;
+    uint32_t addr = cpu.get_gpr<uint32_t>(base);
+    addr += offset;
+    cpu.lqc2(addr, dest);
+}
+
 void EmotionInterpreter::ld(EmotionEngine &cpu, uint32_t instruction)
 {
     int16_t offset = (int16_t)(instruction & 0xFFFF);
@@ -707,6 +719,16 @@ void EmotionInterpreter::swc1(EmotionEngine &cpu, uint32_t instruction)
     uint32_t addr = cpu.get_gpr<uint32_t>(base);
     addr += offset;
     cpu.swc1(addr, source);
+}
+
+void EmotionInterpreter::sqc2(EmotionEngine &cpu, uint32_t instruction)
+{
+    int16_t offset = (int16_t)(instruction & 0xFFFF);
+    uint32_t source = (instruction >> 16) & 0x1F;
+    uint32_t base = (instruction >> 21) & 0x1F;
+    uint32_t addr = cpu.get_gpr<uint32_t>(base);
+    addr += offset;
+    cpu.sqc2(addr, source);
 }
 
 void EmotionInterpreter::sd(EmotionEngine &cpu, uint32_t instruction)
@@ -779,6 +801,9 @@ void EmotionInterpreter::cop(EmotionEngine &cpu, uint32_t instruction)
         case 0x201:
             cop2_qmfc2(cpu, instruction);
             break;
+        case 0x205:
+            cop2_qmtc2(cpu, instruction);
+            break;
         default:
             unknown_op("cop", instruction, op | (cop_id * 0x100));
     }
@@ -821,6 +846,13 @@ void EmotionInterpreter::cop2_qmfc2(EmotionEngine &cpu, uint32_t instruction)
     int dest = (instruction >> 16) & 0x1F;
     int cop_reg = (instruction >> 11) & 0x1F;
     cpu.qmfc2(dest, cop_reg);
+}
+
+void EmotionInterpreter::cop2_qmtc2(EmotionEngine &cpu, uint32_t instruction)
+{
+    int source = (instruction >> 16) & 0x1F;
+    int cop_reg = (instruction >> 11) & 0x1F;
+    cpu.qmtc2(source, cop_reg);
 }
 
 void EmotionInterpreter::unknown_op(const char *type, uint32_t instruction, uint16_t op)

@@ -65,8 +65,65 @@ void GraphicsInterface::process_PACKED(uint64_t data[])
             //NOP
             break;
         default:
-            printf("\nUnrecognized PACKED reg $%02X", reg);
+            printf("Unrecognized PACKED reg $%02X\n", reg);
             break;
+    }
+}
+
+void GraphicsInterface::process_REGLIST(uint64_t data[])
+{
+    //printf("[GIF] Reglist: $%08X_%08X_%08X_%08X\n", data[1] >> 32, data[1] & 0xFFFFFFFF, data[0] >> 32, data[0] & 0xFFFFFFFF);
+    for (int i = 0; i < 2; i++)
+    {
+        int reg_offset = (current_tag.reg_count - current_tag.regs_left) << 2;
+        uint8_t reg = (current_tag.regs & (0xF << reg_offset)) >> reg_offset;
+
+        switch (reg)
+        {
+            case 0x00:
+                gs->write64(0, data[i]);
+                break;
+            case 0x01:
+            {
+                uint8_t r = data[0] & 0xFF;
+                uint8_t g = (data[0] >> 32) & 0xFF;
+                uint8_t b = data[1] & 0xFF;
+                uint8_t a = (data[1] >> 32) & 0xFF;
+                gs->set_RGBA(r, g, b, a);
+            }
+                break;
+            case 0x05:
+            {
+                uint32_t x = data[0] & 0xFFFF;
+                uint32_t y = (data[0] >> 32) & 0xFFFF;
+                uint32_t z = (data[1] >> 4) & 0xFFFFFF;
+                gs->set_XYZ(x, y, z, false);
+            }
+                break;
+            //XYZ3 - Disable vertex kick
+            case 0x0D:
+            {
+                uint32_t x = data[0] & 0xFFFF;
+                uint32_t y = (data[0] >> 32) & 0xFFFF;
+                uint32_t z = (data[1] >> 4) & 0xFFFFFF;
+                gs->set_XYZ(x, y, z, true);
+            }
+                break;
+            default:
+                printf("Unrecognized REGLIST reg $%02X\n", reg);
+                break;
+        }
+
+        current_tag.regs_left--;
+        if (!current_tag.regs_left)
+        {
+            current_tag.regs_left = current_tag.reg_count;
+            current_tag.data_left--;
+
+            //If NREGS * NLOOP is odd, discard the last 64 bits of data
+            if (!current_tag.data_left && i == 0)
+                return;
+        }
     }
 }
 
@@ -92,15 +149,15 @@ void GraphicsInterface::feed_GIF(uint64_t data[])
         //Q is initialized to 1.0 upon reading a GIFtag
         gs->set_Q(1.0f);
 
-        /*printf("\n[GIF] New primitive!");
-        printf("\nNLOOP: $%04X", current_tag.NLOOP);
-        printf("\nEOP: %d", current_tag.end_of_packet);
-        printf("\nOutput PRIM: %d PRIM: $%04X", current_tag.output_PRIM, current_tag.PRIM);
-        printf("\nFormat: %d", current_tag.format);
-        printf("\nReg count: %d", current_tag.reg_count);
-        printf("\nRegs: $%08X_$%08X", current_tag.regs >> 32, current_tag.regs & 0xFFFFFFFF);*/
+        /*printf("[GIF] New primitive!\n");
+        printf("NLOOP: $%04X\n", current_tag.NLOOP);
+        printf("EOP: %d\n", current_tag.end_of_packet);
+        printf("Output PRIM: %d PRIM: $%04X\n", current_tag.output_PRIM, current_tag.PRIM);
+        printf("Format: %d\n", current_tag.format);
+        printf("Reg count: %d\n", current_tag.reg_count);
+        printf("Regs: $%08X_$%08X\n", current_tag.regs >> 32, current_tag.regs & 0xFFFFFFFF);*/
 
-        if (current_tag.output_PRIM)
+        if (current_tag.output_PRIM && current_tag.format != 1)
             gs->write64(0, current_tag.PRIM);
     }
     else
@@ -121,13 +178,16 @@ void GraphicsInterface::feed_GIF(uint64_t data[])
                     current_tag.data_left--;
                 }
                 break;
+            case 1:
+                process_REGLIST(data);
+                break;
             case 2:
                 gs->write64(0x54, data[0]);
                 gs->write64(0x54, data[1]);
                 current_tag.data_left--;
                 break;
             default:
-                printf("\n[GS] Unrecognized GIFtag format %d", current_tag.format);
+                printf("[GS] Unrecognized GIFtag format %d\n", current_tag.format);
                 break;
         }
 
