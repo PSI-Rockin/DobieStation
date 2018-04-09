@@ -7,7 +7,7 @@
 
 #include "../emulator.hpp"
 
-#define printf(fmt, ...)(0)
+//#define printf(fmt, ...)(0)
 
 EmotionEngine::EmotionEngine(BIOS_HLE* b, Emulator* e, VectorUnit* vu0) : bios(b), e(e), vu0(vu0)
 {

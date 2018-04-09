@@ -121,20 +121,20 @@ void GraphicsSynthesizer::set_VBLANK(bool is_VBLANK)
 void GraphicsSynthesizer::render_CRT()
 {
     printf("DISPLAY2: (%d, %d) wh: (%d, %d)\n", DISPLAY2.x >> 2, DISPLAY2.y, DISPLAY2.width >> 2, DISPLAY2.height);
-    int width = DISPLAY1.width >> 2;
-    for (int y = 0; y < DISPLAY1.height; y++)
+    int width = DISPLAY2.width >> 2;
+    for (int y = 0; y < DISPLAY2.height; y++)
     {
         for (int x = 0; x < width; x++)
         {
             int pixel_x = x;
             int pixel_y = y;
-            if (pixel_x >= width || pixel_y >= DISPLAY1.height)
+            if (pixel_x >= width || pixel_y >= DISPLAY2.height)
                 continue;
             uint32_t scaled_x = x;
             uint32_t scaled_y = y;
-            scaled_x *= DISPFB1.width;
+            scaled_x *= DISPFB2.width;
             scaled_x /= width;
-            uint32_t value = local_mem[DISPFB1.frame_base + scaled_x + (scaled_y * DISPFB1.width)];
+            uint32_t value = local_mem[DISPFB2.frame_base + scaled_x + (scaled_y * DISPFB2.width)];
             output_buffer[pixel_x + (pixel_y * width)] = value;
             output_buffer[pixel_x + (pixel_y * width)] |= 0xFF000000;
         }
