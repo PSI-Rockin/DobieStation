@@ -53,8 +53,12 @@ namespace EmotionInterpreter
     void regimm(EmotionEngine& cpu, uint32_t instruction);
     void bltz(EmotionEngine& cpu, uint32_t instruction);
     void bltzl(EmotionEngine& cpu, uint32_t instruction);
+    void bltzal(EmotionEngine &cpu, uint32_t instruction);
+    void bltzall(EmotionEngine &cpu, uint32_t instruction);
     void bgez(EmotionEngine& cpu, uint32_t instruction);
     void bgezl(EmotionEngine& cpu, uint32_t instruction);
+    void bgezal(EmotionEngine &cpu, uint32_t instruction);
+    void bgezall(EmotionEngine &cpu, uint32_t instruction);
     void mtsah(EmotionEngine& cpu, uint32_t instruction);
 
     void j(EmotionEngine& cpu, uint32_t instruction);
