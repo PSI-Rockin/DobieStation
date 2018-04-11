@@ -162,8 +162,8 @@ void GraphicsSynthesizer::get_resolution(int &w, int &h)
 
 void GraphicsSynthesizer::get_inner_resolution(int &w, int &h)
 {
-    w = DISPLAY1.width >> 2;
-    h = DISPLAY1.height;
+    w = DISPLAY2.width >> 2;
+    h = DISPLAY2.height;
 }
 
 uint32_t GraphicsSynthesizer::read32_privileged(uint32_t addr)

@@ -68,6 +68,8 @@ class IOP_DMA
         uint32_t get_DICR();
         uint32_t get_DICR2();
 
+        uint32_t get_chan_addr(int index);
+        uint32_t get_chan_block(int index);
         uint32_t get_chan_control(int index);
 
         void set_DPCR(uint32_t value);

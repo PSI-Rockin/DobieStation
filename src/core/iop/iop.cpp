@@ -59,6 +59,18 @@ void IOP::run()
         printf("[IOP] [$%08X] $%08X - %s\n", PC, instr, EmotionDisasm::disasm_instr(instr, PC).c_str());
     IOP_Interpreter::interpret(*this, instr);
 
+    if (PC == 0x0002B0BC)
+    {
+        for (int i = 1; i < 32; i++)
+        {
+            printf("%s - $%08X", REG(i), get_gpr(i));
+            if (i % 4 == 3)
+                printf("\n");
+            else
+                printf("\t");
+        }
+    }
+
     if (inc_PC)
         PC += 4;
     else

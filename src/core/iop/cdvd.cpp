@@ -16,9 +16,10 @@ CDVD_Drive::~CDVD_Drive()
 
 void CDVD_Drive::reset()
 {
+    drive_status = PAUSED;
     N_status = 0x40;
     N_params = 0;
-    N_callback = 0;
+    N_command = 0;
     S_params = 0;
     S_status = 0x40;
     S_out_params = 0;
@@ -31,16 +32,28 @@ int CDVD_Drive::bytes_left()
     return read_bytes_left;
 }
 
-void CDVD_Drive::read_to_RAM(uint8_t *RAM, uint32_t bytes)
+uint32_t CDVD_Drive::read_to_RAM(uint8_t *RAM, uint32_t bytes)
 {
-    bytes = min(read_bytes_left, (int)bytes);
-    cdvd_file.read((char*)RAM, bytes);
-    read_bytes_left -= bytes;
+    memcpy(RAM, read_buffer, block_size);
+    read_bytes_left -= block_size;
     if (read_bytes_left <= 0)
     {
-        ISTAT |= 1;
-        e->iop_request_IRQ(2);
+        if (sectors_left == 0)
+        {
+            N_status = 0x4E;
+            ISTAT |= 0x3;
+            e->iop_request_IRQ(2);
+            drive_status = PAUSED;
+        }
+        else
+        {
+            if (N_command == 0x6)
+                read_CD_sector();
+            else if (N_command == 0x8)
+                read_DVD_sector();
+        }
     }
+    return block_size;
 }
 
 bool CDVD_Drive::load_disc(const char *name)
@@ -123,9 +136,9 @@ uint8_t* CDVD_Drive::read_file(string name, uint32_t& file_size)
     return nullptr;
 }
 
-uint8_t CDVD_Drive::read_N_callback()
+uint8_t CDVD_Drive::read_N_command()
 {
-    return N_callback;
+    return N_command;
 }
 
 uint8_t CDVD_Drive::read_disc_type()
@@ -172,16 +185,29 @@ uint8_t CDVD_Drive::read_ISTAT()
 
 void CDVD_Drive::send_N_command(uint8_t value)
 {
+    N_command = value;
     switch (value)
     {
         case 0x06:
             N_command_read();
+            break;
+        case 0x08:
+            N_command_dvdread();
+            break;
+        case 0x09:
+            printf("[CDVD] GetTOC\n");
+            N_command_gettoc();
             break;
         default:
             printf("[CDVD] Unrecognized N command $%02X\n", value);
             exit(1);
     }
     N_params = 0;
+}
+
+uint8_t CDVD_Drive::read_drive_status()
+{
+    return drive_status;
 }
 
 void CDVD_Drive::write_N_data(uint8_t value)
@@ -197,6 +223,12 @@ void CDVD_Drive::write_N_data(uint8_t value)
         N_command_params[N_params] = value;
         N_params++;
     }
+}
+
+void CDVD_Drive::write_BREAK()
+{
+    printf("[CDVD] Write BREAK\n");
+    e->iop_request_IRQ(2);
 }
 
 void CDVD_Drive::send_S_command(uint8_t value)
@@ -219,6 +251,21 @@ void CDVD_Drive::send_S_command(uint8_t value)
             prepare_S_outdata(8);
             for (int i = 0; i < 8; i++)
                 S_outdata[i] = 0;
+            break;
+        case 0x40:
+            printf("[CDVD] OpenConfig\n");
+            prepare_S_outdata(1);
+            S_outdata[0] = 0;
+            break;
+        case 0x41:
+            printf("[CDVD] ReadConfig\n");
+            prepare_S_outdata(16);
+            memset(S_outdata, 0, 16);
+            break;
+        case 0x43:
+            printf("[CDVD] CloseConfig\n");
+            prepare_S_outdata(1);
+            S_outdata[0] = 0;
             break;
         default:
             printf("[CDVD] Unrecognized S command $%02X\n", value);
@@ -243,7 +290,7 @@ void CDVD_Drive::write_S_data(uint8_t value)
 
 void CDVD_Drive::prepare_S_outdata(int amount)
 {
-    if (amount > 15)
+    if (amount > 16)
     {
         printf("[CDVD] Excess S outdata! (%d)\n", amount);
         exit(1);
@@ -258,10 +305,80 @@ void CDVD_Drive::N_command_read()
     uint32_t seek_pos = *(uint32_t*)&N_command_params[0];
     uint32_t sectors = *(uint32_t*)&N_command_params[4];
     printf("[CDVD] Read; Seek pos: $%08X, Data: $%08X\n", seek_pos * 2048, sectors * 2048);
-    read_bytes_left = sectors * 2048;
-    N_callback = 0;
+    sector_pos = seek_pos;
+    sectors_left = sectors;
+    block_size = 2048;
+    cdvd_file.seekg(seek_pos * block_size);
+    e->iop_request_IRQ(2);
+    read_CD_sector();
+    N_status = 0;
+    drive_status = READING;
+}
+
+void CDVD_Drive::N_command_dvdread()
+{
+    uint32_t seek_pos = *(uint32_t*)&N_command_params[0];
+    uint32_t sectors = *(uint32_t*)&N_command_params[4];
+    printf("[CDVD] ReadDVD; Seek pos: %d, Sectors: %d\n", seek_pos, sectors);
+    sector_pos = seek_pos;
+    sectors_left = sectors;
+    block_size = 2064;
     cdvd_file.seekg(seek_pos * 2048);
     e->iop_request_IRQ(2);
+    read_DVD_sector();
+    N_status = 0;
+    drive_status = READING;
+}
+
+void CDVD_Drive::N_command_gettoc()
+{
+    sectors_left = 0;
+    block_size = 2064;
+    read_bytes_left = 2064;
+    memset(read_buffer, 0, 2064);
+    read_buffer[0] = 0x04;
+    read_buffer[1] = 0x02;
+    read_buffer[2] = 0xF2;
+    read_buffer[3] = 0x00;
+    read_buffer[4] = 0x86;
+    read_buffer[5] = 0x72;
+
+    read_buffer[17] = 0x03;
+    N_status = 0;
+    drive_status = READING;
+}
+
+void CDVD_Drive::read_CD_sector()
+{
+    printf("[CDVD] Read CD sector\n");
+    cdvd_file.read((char*)read_buffer, block_size);
+    read_bytes_left = block_size;
+    sectors_left--;
+}
+
+void CDVD_Drive::read_DVD_sector()
+{
+    printf("[CDVD] Read DVD sector\n");
+    uint32_t lsn = sector_pos + 0x30000;
+    read_buffer[0] = 0x20;
+    read_buffer[1] = (lsn >> 16) & 0xFF;
+    read_buffer[2] = (lsn >> 8) & 0xFF;
+    read_buffer[3] = lsn & 0xFF;
+    read_buffer[4] = 0;
+    read_buffer[5] = 0;
+    read_buffer[6] = 0;
+    read_buffer[7] = 0;
+    read_buffer[8] = 0;
+    read_buffer[9] = 0;
+    read_buffer[10] = 0;
+    read_buffer[11] = 0;
+    cdvd_file.read((char*)&read_buffer[12], 2048);
+    read_buffer[2060] = 0;
+    read_buffer[2061] = 0;
+    read_buffer[2062] = 0;
+    read_buffer[2063] = 0;
+    read_bytes_left = 2064;
+    sectors_left--;
 }
 
 void CDVD_Drive::S_command_sub(uint8_t func)

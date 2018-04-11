@@ -82,13 +82,19 @@ void IOP_DMA::process_CDVD()
 {
     if (cdvd->bytes_left() > 0)
     {
-        uint32_t bytes = channels[CDVD].word_count * channels[CDVD].block_size * 4;
-        cdvd->read_to_RAM(RAM + channels[CDVD].addr, bytes);
-        if (cdvd->bytes_left() < 0)
-            bytes += cdvd->bytes_left();
-        channels[CDVD].addr += bytes / 4;
-        channels[CDVD].word_count = 0;
-        transfer_end(CDVD);
+        uint32_t count = channels[CDVD].word_count * channels[CDVD].block_size * 4;
+        printf("[IOP DMA] CDVD bytes: $%08X\n", count);
+        uint32_t bytes_read = cdvd->read_to_RAM(RAM + channels[CDVD].addr, count);
+        channels[CDVD].addr += bytes_read;
+        if (count <= bytes_read)
+        {
+            transfer_end(CDVD);
+            set_chan_block(CDVD, 0);
+        }
+        else
+        {
+            channels[CDVD].word_count -= bytes_read / (channels[CDVD].block_size * 4);
+        }
     }
 }
 
@@ -246,6 +252,16 @@ uint32_t IOP_DMA::get_DICR2()
     reg |= IRQ << 31;
     printf("[IOP DMA] Get DICR2: $%08X\n", reg);
     return reg;
+}
+
+uint32_t IOP_DMA::get_chan_addr(int index)
+{
+    return channels[index].addr;
+}
+
+uint32_t IOP_DMA::get_chan_block(int index)
+{
+    return channels[index].word_count | (channels[index].block_size << 16);
 }
 
 uint32_t IOP_DMA::get_chan_control(int index)

@@ -20,7 +20,7 @@ void IOPTiming::reset()
 
 void IOPTiming::run()
 {
-    //timers[5].counter++;
+    timers[5].counter++;
     if (timers[5].counter == timers[5].target)
     {
         timers[5].control.compare_interrupt = true;

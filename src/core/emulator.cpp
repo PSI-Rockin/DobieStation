@@ -36,11 +36,8 @@ void Emulator::run()
 {
     gs.start_frame();
     instructions_run = 0;
-    //00201AF8
-    uint32_t addr = 0x00201AF8;
     while (instructions_run < CYCLES_PER_FRAME)
     {
-        uint32_t old = read32(addr);
         cpu.run();
         dmac.run();
         timers.run();
@@ -58,8 +55,16 @@ void Emulator::run()
         {
             gs.set_VBLANK(true);
             printf("VSYNC FRAMES: %d\n", frames);
-            //if (frames == 103)
+            if (frames >= 113)
+            {
+                if (cpu.get_PC() >= 0x00127460 && cpu.get_PC() <= 0x0012747C)
+                {
+                    cpu.set_gpr<uint64_t>(17, 1);
+                }
                 //cpu.set_disassembly(true);
+            }
+            //if (frames == 124)
+                //iop.set_disassembly(true);
             frames++;
             //iop_request_IRQ(0);
             gs.render_CRT();
@@ -568,6 +573,13 @@ void Emulator::write64(uint32_t address, uint64_t value)
 
 uint8_t Emulator::iop_read8(uint32_t address)
 {
+    if (address >= 0x000309F4 && address < 0x000309F4 + 0x800)
+    {
+        printf("[IOP] Read8 from $%08X: $%02X\n", address, IOP_RAM[address]);
+        //iop.set_disassembly(true);
+    }
+    if (address == 0x0002E2C8)
+            printf("[IOP] Read8 2sec: $%08X\n", *(uint16_t*)&IOP_RAM[address]);
     if (address < 0x00200000)
     {
         //printf("[IOP] Read8 from $%08X: $%02X\n", address, IOP_RAM[address]);
@@ -578,18 +590,30 @@ uint8_t Emulator::iop_read8(uint32_t address)
     switch (address)
     {
         case 0x1F402004:
-            return cdvd.read_N_callback();
+            printf("[CDVD] Read N command\n");
+            return cdvd.read_N_command();
         case 0x1F402005:
+            printf("[CDVD] Read N status\n");
             return cdvd.read_N_status();
         case 0x1F402008:
+            printf("[CDVD] Read ISTAT\n");
             return cdvd.read_ISTAT();
+        case 0x1F40200A:
+            printf("[CDVD] Read CDVD status\n");
+            return cdvd.read_drive_status();
         case 0x1F40200F:
+            printf("[CDVD] Read disc type\n");
             return cdvd.read_disc_type();
+        case 0x1F402013:
+            return 4;
         case 0x1F402016:
+            printf("[CDVD] Read S command\n");
             return cdvd.read_S_command();
         case 0x1F402017:
+            printf("[CDVD] Read S status\n");
             return cdvd.read_S_status();
         case 0x1F402018:
+            printf("[CDVD] Read S data\n");
             return cdvd.read_S_data();
         case 0x1FA00000:
             return IOP_POST;
@@ -600,6 +624,12 @@ uint8_t Emulator::iop_read8(uint32_t address)
 
 uint16_t Emulator::iop_read16(uint32_t address)
 {
+    if (address >= 0x000309F4 && address < 0x000309F4 + 0x800)
+    {
+        printf("[IOP] Read16 from $%08X: $%04X\n", address, *(uint16_t*)&IOP_RAM[address]);
+    }
+    if (address == 0x0002E2C8)
+        printf("[IOP] Read16 2sec: $%08X\n", *(uint16_t*)&IOP_RAM[address]);
     if (address < 0x00200000)
         return *(uint16_t*)&IOP_RAM[address];
     if (address >= 0x1FC00000 && address < 0x20000000)
@@ -615,8 +645,14 @@ uint16_t Emulator::iop_read16(uint32_t address)
 
 uint32_t Emulator::iop_read32(uint32_t address)
 {
-    if (address == 0x19608)
-        printf("[IOP] Read from $%08X of $%08X\n", address, *(uint32_t*)&IOP_RAM[address]);
+    if (address >= 0x000309F4 && address < 0x000309F4 + 0x800)
+    {
+        printf("[IOP] Read32 from $%08X: $%08X\n", address, *(uint32_t*)&IOP_RAM[address]);
+    }
+    if (address == 0x0002F8C0)
+        printf("[IOP] Read sec\n");
+    if (address == 0x0002E2C8)
+        printf("[IOP] Read 2sec\n");
     if (address < 0x00200000)
         return *(uint32_t*)&IOP_RAM[address];
     if (address >= 0x1FC00000 && address < 0x20000000)
@@ -645,6 +681,8 @@ uint32_t Emulator::iop_read32(uint32_t address)
             IOP_I_CTRL = 0;
             return value;
         }
+        case 0x1F8010B0:
+            return iop_dma.get_chan_addr(3);
         case 0x1F8010B8:
             return iop_dma.get_chan_control(3);
         case 0x1F8010F0:
@@ -691,6 +729,9 @@ void Emulator::iop_write8(uint32_t address, uint8_t value)
             return;
         case 0x1F402006:
             printf("[CDVD] Write to mode: $%02X\n", value);
+            return;
+        case 0x1F402007:
+            cdvd.write_BREAK();
             return;
         case 0x1F402008:
             cdvd.write_ISTAT(value);
@@ -753,6 +794,10 @@ void Emulator::iop_write16(uint32_t address, uint16_t value)
 
 void Emulator::iop_write32(uint32_t address, uint32_t value)
 {
+    if (value == 0x01050001)
+    {
+        printf("[IOP] Write sector number to $%08X\n", address);
+    }
     if (address < 0x00200000)
     {
         //printf("[IOP] Write to $%08X of $%08X\n", address, value);
