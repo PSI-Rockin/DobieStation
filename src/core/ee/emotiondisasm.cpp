@@ -203,6 +203,7 @@ string EmotionDisasm::disasm_regimm(uint32_t instruction, uint32_t instr_addr)
             break;
         case 0x13:
             opcode += "bgezall";
+            break;
         case 0x19:
             return disasm_mtsah(instruction);
         default:
