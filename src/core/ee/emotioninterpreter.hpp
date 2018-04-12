@@ -156,6 +156,7 @@ namespace EmotionInterpreter
     void mmi2(EmotionEngine& cpu, uint32_t instruction);
     void pcpyld(EmotionEngine& cpu, uint32_t instruction);
     void pand(EmotionEngine& cpu, uint32_t instruction);
+    void pxor(EmotionEngine& cpu, uint32_t instruction);
     void mfhi1(EmotionEngine& cpu, uint32_t instruction);
     void mthi1(EmotionEngine& cpu, uint32_t instruction);
     void mflo1(EmotionEngine& cpu, uint32_t instruction);

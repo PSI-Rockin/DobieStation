@@ -219,6 +219,10 @@ void CDVD_Drive::send_N_command(uint8_t value)
     N_command = value;
     switch (value)
     {
+        case 0x04:
+            //Pause
+            e->iop_request_IRQ(2);
+            break;
         case 0x06:
             N_command_read();
             break;
@@ -282,6 +286,11 @@ void CDVD_Drive::send_S_command(uint8_t value)
             prepare_S_outdata(8);
             for (int i = 0; i < 8; i++)
                 S_outdata[i] = 0;
+            break;
+        case 0x1B:
+            printf("[CDVD] CancelPwOffReady\n");
+            prepare_S_outdata(1);
+            S_outdata[0] = 0;
             break;
         case 0x40:
             printf("[CDVD] OpenConfig\n");

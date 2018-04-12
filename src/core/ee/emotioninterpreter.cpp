@@ -481,24 +481,16 @@ void EmotionInterpreter::lh(EmotionEngine &cpu, uint32_t instruction)
 
 void EmotionInterpreter::lwl(EmotionEngine &cpu, uint32_t instruction)
 {
+    static const uint32_t LWL_MASK[4] = { 0xffffff, 0x0000ffff, 0x000000ff, 0x00000000 };
+    static const uint8_t LWL_SHIFT[4] = { 24, 16, 8, 0 };
     int16_t offset = (int16_t)(instruction & 0xFFFF);
     uint32_t dest = (instruction >> 16) & 0x1F;
     uint32_t base = (instruction >> 21) & 0x1F;
     uint32_t addr = cpu.get_gpr<uint32_t>(base) + offset;
-    uint32_t word = cpu.read32(addr & ~0x3);
-    uint32_t new_reg = cpu.get_gpr<uint32_t>(dest);
-    uint8_t new_bytes = (addr & 0x3) + 1;
+    int shift = addr & 0x3;
 
-    for (int i = 0; i < new_bytes; i++)
-    {
-        int offset = ((new_bytes - i - 1) << 3);
-        int reg_offset = (24 - (i << 3));
-        uint32_t byte = (word >> offset) & 0xFF;
-        new_reg &= ~(0xFF << reg_offset);
-        new_reg |= byte << reg_offset;
-    }
-
-    cpu.set_gpr<int64_t>(dest, (int32_t)new_reg);
+    uint32_t mem = cpu.read32(addr & ~0x3);
+    cpu.set_gpr<int64_t>(dest, (int32_t)((cpu.get_gpr<uint32_t>(dest) & LWL_MASK[shift]) | (mem << LWL_SHIFT[shift])));
 }
 
 void EmotionInterpreter::lw(EmotionEngine &cpu, uint32_t instruction)
@@ -533,24 +525,17 @@ void EmotionInterpreter::lhu(EmotionEngine &cpu, uint32_t instruction)
 
 void EmotionInterpreter::lwr(EmotionEngine &cpu, uint32_t instruction)
 {
-    int16_t imm = (int16_t)(instruction & 0xFFFF);
+    static const uint32_t LWR_MASK[4] = { 0x000000, 0xff000000, 0xffff0000, 0xffffff00 };
+    static const uint8_t LWR_SHIFT[4] = { 0, 8, 16, 24 };
+    int16_t offset = (int16_t)(instruction & 0xFFFF);
     uint32_t dest = (instruction >> 16) & 0x1F;
     uint32_t base = (instruction >> 21) & 0x1F;
+    uint32_t addr = cpu.get_gpr<uint32_t>(base) + offset;
+    int shift = addr & 0x3;
 
-    uint32_t addr = cpu.get_gpr<uint32_t>(base) + imm;
-    uint32_t word = cpu.read32(addr & ~0x3);
-    uint32_t new_reg = cpu.get_gpr<uint32_t>(dest);
-    uint8_t new_bytes = 4 - (addr & 0x3);
-    for (int i = 0; i < new_bytes; i++)
-    {
-        int offset = 24 - (i << 3);
-        int reg_offset = ((new_bytes - i - 1) << 3);
-        uint32_t byte = (word >> offset) & 0xFF;
-        new_reg &= ~(0xFF << reg_offset);
-        new_reg |= byte << reg_offset;
-    }
-
-    cpu.set_gpr<int64_t>(dest, (int32_t)new_reg);
+    uint32_t mem = cpu.read32(addr & ~0x3);
+    mem = (cpu.get_gpr<uint32_t>(dest) & LWR_MASK[shift]) | (mem >> LWR_SHIFT[shift]);
+    cpu.set_gpr<int64_t>(dest, (int32_t)mem);
 }
 
 void EmotionInterpreter::lwu(EmotionEngine &cpu, uint32_t instruction)
@@ -585,24 +570,16 @@ void EmotionInterpreter::sh(EmotionEngine &cpu, uint32_t instruction)
 
 void EmotionInterpreter::swl(EmotionEngine& cpu, uint32_t instruction)
 {
-    int16_t imm = (int16_t)(instruction & 0xFFFF);
+    static const uint32_t SWL_MASK[4] = { 0xffffff00, 0xffff0000, 0xff000000, 0x00000000 };
+    static const uint8_t SWL_SHIFT[4] = { 24, 16, 8, 0 };
+    int16_t offset = (int16_t)(instruction & 0xFFFF);
     uint32_t source = (instruction >> 16) & 0x1F;
     uint32_t base = (instruction >> 21) & 0x1F;
+    uint32_t addr = cpu.get_gpr<uint32_t>(base) + offset;
+    int shift = addr & 3;
+    uint32_t mem = cpu.read32(addr & ~3);
 
-    uint32_t addr = cpu.get_gpr<uint32_t>(base) + imm;
-    uint32_t reg = cpu.get_gpr<uint32_t>(source);
-    uint32_t new_word = cpu.read32(addr & ~0x3);
-    uint8_t new_bytes = (addr & 0x3) + 1;
-    for (int i = 0; i < new_bytes; i++)
-    {
-        int offset = ((new_bytes - i - 1) << 3);
-        int reg_offset = (24 - (i << 3));
-        uint32_t byte = (reg >> reg_offset) & 0xFF;
-        new_word &= ~(0xFF << offset);
-        new_word |= byte << offset;
-    }
-
-    cpu.write32(addr & ~0x3, new_word);
+    cpu.write32(addr & ~0x3, (cpu.get_gpr<uint32_t>(source) >> SWL_SHIFT[shift]) | (mem & SWL_MASK[shift]));
 }
 
 void EmotionInterpreter::sw(EmotionEngine &cpu, uint32_t instruction)
@@ -661,24 +638,16 @@ void EmotionInterpreter::sdr(EmotionEngine &cpu, uint32_t instruction)
 
 void EmotionInterpreter::swr(EmotionEngine &cpu, uint32_t instruction)
 {
-    int16_t imm = (int16_t)(instruction & 0xFFFF);
+    static const uint32_t SWR_MASK[4] = { 0x00000000, 0x000000ff, 0x0000ffff, 0x00ffffff };
+    static const uint8_t SWR_SHIFT[4] = { 0, 8, 16, 24 };
+    int16_t offset = (int16_t)(instruction & 0xFFFF);
     uint32_t source = (instruction >> 16) & 0x1F;
     uint32_t base = (instruction >> 21) & 0x1F;
+    uint32_t addr = cpu.get_gpr<uint32_t>(base) + offset;
+    int shift = addr & 3;
+    uint32_t mem = cpu.read32(addr & ~3);
 
-    uint32_t addr = cpu.get_gpr<uint32_t>(base) + imm;
-    uint32_t reg = cpu.get_gpr<uint32_t>(source);
-    uint32_t new_word = cpu.read32(addr & ~0x3);
-    uint8_t new_bytes = 4 - (addr & 0x3);
-    for (int i = 0; i < new_bytes; i++)
-    {
-        int offset = 24 - (i << 3);
-        int reg_offset = ((new_bytes - i - 1) << 3);
-        uint32_t byte = (reg >> reg_offset) & 0xFF;
-        new_word &= ~(0xFF << offset);
-        new_word |= byte << offset;
-    }
-
-    cpu.write32(addr & ~0x3, new_word);
+    cpu.write32(addr & ~0x3, (cpu.get_gpr<uint32_t>(source) << SWR_SHIFT[shift]) | (mem & SWR_MASK[shift]));
 }
 
 void EmotionInterpreter::lwc1(EmotionEngine &cpu, uint32_t instruction)

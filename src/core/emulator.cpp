@@ -63,8 +63,6 @@ void Emulator::run()
                 }
                 //cpu.set_disassembly(true);
             }
-            //if (frames == 124)
-                //iop.set_disassembly(true);
             frames++;
             //iop_request_IRQ(0);
             gs.render_CRT();

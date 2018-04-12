@@ -14,7 +14,7 @@ struct IOP_DMA_Chan_Control
 struct IOP_DMA_Channel
 {
     uint32_t addr;
-    uint16_t word_count;
+    uint32_t word_count;
     uint16_t block_size;
     IOP_DMA_Chan_Control control;
     uint32_t tag_addr;

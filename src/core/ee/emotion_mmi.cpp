@@ -180,6 +180,9 @@ void EmotionInterpreter::mmi2(EmotionEngine &cpu, uint32_t instruction)
         case 0x12:
             pand(cpu, instruction);
             break;
+        case 0x13:
+            pxor(cpu, instruction);
+            break;
         default:
             unknown_op("mmi2", instruction, op);
     }
@@ -210,6 +213,16 @@ void EmotionInterpreter::pand(EmotionEngine &cpu, uint32_t instruction)
 
     cpu.set_gpr<uint64_t>(dest, cpu.get_gpr<uint64_t>(op1) & cpu.get_gpr<uint64_t>(op2));
     cpu.set_gpr<uint64_t>(dest, cpu.get_gpr<uint64_t>(op1, 1) & cpu.get_gpr<uint64_t>(op2, 1), 1);
+}
+
+void EmotionInterpreter::pxor(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t op1 = (instruction >> 21) & 0x1F;
+    uint64_t op2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    cpu.set_gpr<uint64_t>(dest, cpu.get_gpr<uint64_t>(op1) ^ cpu.get_gpr<uint64_t>(op2));
+    cpu.set_gpr<uint64_t>(dest, cpu.get_gpr<uint64_t>(op1, 1) ^ cpu.get_gpr<uint64_t>(op2, 1), 1);
 }
 
 void EmotionInterpreter::mfhi1(EmotionEngine &cpu, uint32_t instruction)
