@@ -1,3 +1,4 @@
+#include <cstring>
 #include "../emulator.hpp"
 #include "cdvd.hpp"
 
