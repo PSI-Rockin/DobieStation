@@ -6,8 +6,20 @@ class Emulator;
 
 enum CDVD_STATUS
 {
+    STOPPED = 0x00,
+    SPINNING = 0x02,
     READING = 0x06,
     PAUSED = 0x0A
+};
+
+enum class NCOMMAND
+{
+    NONE,
+    SEEK,
+    STANDBY,
+    STOP,
+    READ_SEEK,
+    READ
 };
 
 class CDVD_Drive
@@ -26,13 +38,16 @@ class CDVD_Drive
         uint32_t sectors_left;
         uint32_t block_size;
 
+        uint8_t VBLANKS_left;
         uint8_t read_buffer[4096];
 
         uint8_t ISTAT;
 
-        CDVD_STATUS drive_status;
+        uint8_t drive_status;
 
-        bool N_active;
+        bool is_spinning;
+        bool is_reading;
+        NCOMMAND active_N_command;
         uint8_t N_command;
         uint8_t N_command_params[11];
         uint8_t N_params;
@@ -45,6 +60,7 @@ class CDVD_Drive
         uint8_t S_out_params;
         uint8_t S_status;
 
+        void start_seek();
         void prepare_S_outdata(int amount);
 
         void read_CD_sector();

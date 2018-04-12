@@ -70,6 +70,7 @@ void Emulator::run()
             gs.render_CRT();
         }
     }
+    cdvd.N_command_check();
     //VBLANK end
     //iop_request_IRQ(11);
     gs.set_VBLANK(false);
@@ -573,13 +574,13 @@ void Emulator::write64(uint32_t address, uint64_t value)
 
 uint8_t Emulator::iop_read8(uint32_t address)
 {
-    if (address >= 0x000309F4 && address < 0x000309F4 + 0x800)
+    /*if (address >= 0x000309F4 && address < 0x000309F4 + 0x800)
     {
         printf("[IOP] Read8 from $%08X: $%02X\n", address, IOP_RAM[address]);
         //iop.set_disassembly(true);
     }
     if (address == 0x0002E2C8)
-            printf("[IOP] Read8 2sec: $%08X\n", *(uint16_t*)&IOP_RAM[address]);
+            printf("[IOP] Read8 2sec: $%08X\n", *(uint16_t*)&IOP_RAM[address]);*/
     if (address < 0x00200000)
     {
         //printf("[IOP] Read8 from $%08X: $%02X\n", address, IOP_RAM[address]);
