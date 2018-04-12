@@ -269,38 +269,31 @@ void IOP_Interpreter::lh(IOP &cpu, uint32_t instruction)
 
 void IOP_Interpreter::lwl(IOP &cpu, uint32_t instruction)
 {
-    static const uint32_t MASK[] = {0xFF000000, 0xFFFF0000, 0xFFFFFF00, 0xFFFFFFFF};
-    static const uint32_t SHIFT[] = {24, 16, 8, 0};
+    static const uint32_t LWL_MASK[4] = { 0xffffff, 0x0000ffff, 0x000000ff, 0x00000000 };
+    static const uint8_t LWL_SHIFT[4] = { 24, 16, 8, 0 };
     int16_t offset = (int16_t)(instruction & 0xFFFF);
     uint32_t dest = (instruction >> 16) & 0x1F;
     uint32_t base = (instruction >> 21) & 0x1F;
-    uint32_t addr = cpu.get_gpr(base);
-    addr += offset;
+    uint32_t addr = cpu.get_gpr(base) + offset;
+    int shift = addr & 0x3;
 
-    int bits = addr & 0x3;
-    uint32_t word = cpu.read32(addr & ~0x3) << SHIFT[bits];
-    uint32_t reg = cpu.get_gpr(dest);
-    reg &= ~MASK[bits];
-    reg |= word & MASK[bits];
-    cpu.set_gpr(dest, reg);
+    uint32_t mem = cpu.read32(addr & ~0x3);
+    cpu.set_gpr(dest, (cpu.get_gpr(dest) & LWL_MASK[shift]) | (mem << LWL_SHIFT[shift]));
 }
 
 void IOP_Interpreter::lwr(IOP &cpu, uint32_t instruction)
 {
-    static const uint32_t MASK[] = {0xFFFFFFFF, 0x00FFFFFF, 0x0000FFFF, 0x000000FF};
-    static const uint32_t SHIFT[] = {0, 8, 16, 24};
+    static const uint32_t LWR_MASK[4] = { 0x000000, 0xff000000, 0xffff0000, 0xffffff00 };
+    static const uint8_t LWR_SHIFT[4] = { 0, 8, 16, 24 };
     int16_t offset = (int16_t)(instruction & 0xFFFF);
     uint32_t dest = (instruction >> 16) & 0x1F;
     uint32_t base = (instruction >> 21) & 0x1F;
-    uint32_t addr = cpu.get_gpr(base);
-    addr += offset;
+    uint32_t addr = cpu.get_gpr(base) + offset;
+    int shift = addr & 0x3;
 
-    int bits = addr & 0x3;
-    uint32_t word = cpu.read32(addr & ~0x3) >> SHIFT[bits];
-    uint32_t reg = cpu.get_gpr(dest);
-    reg &= ~MASK[bits];
-    reg |= word & MASK[bits];
-    cpu.set_gpr(dest, reg);
+    uint32_t mem = cpu.read32(addr & ~0x3);
+    mem = (cpu.get_gpr(dest) & LWR_MASK[shift]) | (mem >> LWR_SHIFT[shift]);
+    cpu.set_gpr(dest, mem);
 }
 
 void IOP_Interpreter::lw(IOP &cpu, uint32_t instruction)
@@ -355,20 +348,16 @@ void IOP_Interpreter::sh(IOP &cpu, uint32_t instruction)
 
 void IOP_Interpreter::swl(IOP &cpu, uint32_t instruction)
 {
-    static const uint32_t MASK[] = {0xFF, 0xFFFF, 0xFFFFFF, 0xFFFFFFFF};
-    static const uint32_t SHIFT[] = {24, 16, 8, 0};
+    static const uint32_t SWL_MASK[4] = { 0xffffff00, 0xffff0000, 0xff000000, 0x00000000 };
+    static const uint8_t SWL_SHIFT[4] = { 24, 16, 8, 0 };
     int16_t offset = (int16_t)(instruction & 0xFFFF);
     uint32_t source = (instruction >> 16) & 0x1F;
     uint32_t base = (instruction >> 21) & 0x1F;
-    uint32_t addr = cpu.get_gpr(base);
-    addr += offset;
+    uint32_t addr = cpu.get_gpr(base) + offset;
+    int shift = addr & 3;
+    uint32_t mem = cpu.read32(addr & ~3);
 
-    int bits = addr & 0x3;
-    uint32_t word = cpu.read32(addr & ~0x3) >> SHIFT[bits];
-    uint32_t reg = cpu.get_gpr(source);
-    reg &= ~MASK[bits];
-    reg |= word & MASK[bits];
-    cpu.write32(addr & ~0x3, reg);
+    cpu.write32(addr & ~0x3, (cpu.get_gpr(source) >> SWL_SHIFT[shift]) | (mem & SWL_MASK[shift]));
 }
 
 void IOP_Interpreter::sw(IOP &cpu, uint32_t instruction)
@@ -383,20 +372,16 @@ void IOP_Interpreter::sw(IOP &cpu, uint32_t instruction)
 
 void IOP_Interpreter::swr(IOP &cpu, uint32_t instruction)
 {
-    static const uint32_t MASK[] = {0xFFFFFFFF, 0xFFFFFF00, 0xFFFF0000, 0xFF000000};
-    static const uint32_t SHIFT[] = {0, 8, 16, 24};
+    static const uint32_t SWR_MASK[4] = { 0x00000000, 0x000000ff, 0x0000ffff, 0x00ffffff };
+    static const uint8_t SWR_SHIFT[4] = { 0, 8, 16, 24 };
     int16_t offset = (int16_t)(instruction & 0xFFFF);
     uint32_t source = (instruction >> 16) & 0x1F;
     uint32_t base = (instruction >> 21) & 0x1F;
-    uint32_t addr = cpu.get_gpr(base);
-    addr += offset;
+    uint32_t addr = cpu.get_gpr(base) + offset;
+    int shift = addr & 3;
+    uint32_t mem = cpu.read32(addr & ~3);
 
-    int bits = addr & 0x3;
-    uint32_t word = cpu.read32(addr & ~0x3) << SHIFT[bits];
-    uint32_t reg = cpu.get_gpr(source);
-    reg &= ~MASK[bits];
-    reg |= word & MASK[bits];
-    cpu.write32(addr & ~0x3, reg);
+    cpu.write32(addr & ~0x3, (cpu.get_gpr(source) << SWR_SHIFT[shift]) | (mem & SWR_MASK[shift]));
 }
 
 void IOP_Interpreter::special(IOP &cpu, uint32_t instruction)

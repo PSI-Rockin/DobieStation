@@ -16,7 +16,10 @@ CDVD_Drive::~CDVD_Drive()
 
 void CDVD_Drive::reset()
 {
-    drive_status = PAUSED;
+    drive_status = STOPPED;
+    is_reading = false;
+    is_spinning = false;
+    active_N_command = NCOMMAND::NONE;
     N_status = 0x40;
     N_params = 0;
     N_command = 0;
@@ -44,16 +47,44 @@ uint32_t CDVD_Drive::read_to_RAM(uint8_t *RAM, uint32_t bytes)
             ISTAT |= 0x3;
             e->iop_request_IRQ(2);
             drive_status = PAUSED;
+            active_N_command = NCOMMAND::NONE;
         }
         else
         {
-            if (N_command == 0x6)
-                read_CD_sector();
-            else if (N_command == 0x8)
-                read_DVD_sector();
+            active_N_command = NCOMMAND::READ;
+            VBLANKS_left = 1;
         }
     }
     return block_size;
+}
+
+void CDVD_Drive::N_command_check()
+{
+    if (VBLANKS_left && active_N_command != NCOMMAND::NONE)
+    {
+        VBLANKS_left--;
+        if (!VBLANKS_left)
+        {
+            switch (active_N_command)
+            {
+                case NCOMMAND::READ:
+                    if (N_command == 0x06)
+                        read_CD_sector();
+                    else if (N_command == 0x08)
+                        read_DVD_sector();
+                    break;
+                case NCOMMAND::READ_SEEK:
+                    is_spinning = true;
+                    drive_status = READING | SPINNING;
+                    active_N_command = NCOMMAND::READ;
+                    VBLANKS_left = 1;
+                    break;
+                default:
+                    printf("[CDVD] Unrecognized active N command\n");
+                    exit(1);
+            }
+        }
+    }
 }
 
 bool CDVD_Drive::load_disc(const char *name)
@@ -188,6 +219,10 @@ void CDVD_Drive::send_N_command(uint8_t value)
     N_command = value;
     switch (value)
     {
+        case 0x04:
+            //Pause
+            e->iop_request_IRQ(2);
+            break;
         case 0x06:
             N_command_read();
             break;
@@ -252,6 +287,11 @@ void CDVD_Drive::send_S_command(uint8_t value)
             for (int i = 0; i < 8; i++)
                 S_outdata[i] = 0;
             break;
+        case 0x1B:
+            printf("[CDVD] CancelPwOffReady\n");
+            prepare_S_outdata(1);
+            S_outdata[0] = 0;
+            break;
         case 0x40:
             printf("[CDVD] OpenConfig\n");
             prepare_S_outdata(1);
@@ -300,34 +340,44 @@ void CDVD_Drive::prepare_S_outdata(int amount)
     S_params = 0;
 }
 
+void CDVD_Drive::start_seek()
+{
+    printf("[CDVD] Starting seek!\n");
+    N_status = 0;
+    is_reading = false;
+    drive_status = PAUSED;
+
+    if (!is_spinning)
+    {
+        VBLANKS_left = 5;
+    }
+    else
+    {
+        VBLANKS_left = 2;
+    }
+
+    //Seek anyway. The program won't know the difference
+    cdvd_file.seekg(sector_pos * 2048);
+}
+
 void CDVD_Drive::N_command_read()
 {
-    uint32_t seek_pos = *(uint32_t*)&N_command_params[0];
-    uint32_t sectors = *(uint32_t*)&N_command_params[4];
-    printf("[CDVD] Read; Seek pos: $%08X, Data: $%08X\n", seek_pos * 2048, sectors * 2048);
-    sector_pos = seek_pos;
-    sectors_left = sectors;
+    sector_pos = *(uint32_t*)&N_command_params[0];
+    sectors_left = *(uint32_t*)&N_command_params[4];
+    printf("[CDVD] Read; Seek pos: %d, Sectors: %d\n", sector_pos, sectors_left);
     block_size = 2048;
-    cdvd_file.seekg(seek_pos * block_size);
-    e->iop_request_IRQ(2);
-    read_CD_sector();
-    N_status = 0;
-    drive_status = READING;
+    start_seek();
+    active_N_command = NCOMMAND::READ_SEEK;
 }
 
 void CDVD_Drive::N_command_dvdread()
 {
-    uint32_t seek_pos = *(uint32_t*)&N_command_params[0];
-    uint32_t sectors = *(uint32_t*)&N_command_params[4];
-    printf("[CDVD] ReadDVD; Seek pos: %d, Sectors: %d\n", seek_pos, sectors);
-    sector_pos = seek_pos;
-    sectors_left = sectors;
+    sector_pos = *(uint32_t*)&N_command_params[0];
+    sectors_left = *(uint32_t*)&N_command_params[4];
+    printf("[CDVD] ReadDVD; Seek pos: %d, Sectors: %d\n", sector_pos, sectors_left);
     block_size = 2064;
-    cdvd_file.seekg(seek_pos * 2048);
-    e->iop_request_IRQ(2);
-    read_DVD_sector();
-    N_status = 0;
-    drive_status = READING;
+    start_seek();
+    active_N_command = NCOMMAND::READ_SEEK;
 }
 
 void CDVD_Drive::N_command_gettoc()
@@ -350,9 +400,10 @@ void CDVD_Drive::N_command_gettoc()
 
 void CDVD_Drive::read_CD_sector()
 {
-    printf("[CDVD] Read CD sector\n");
+    printf("[CDVD] Read CD sector - Sector: %d Size: %d\n", sector_pos, block_size);
     cdvd_file.read((char*)read_buffer, block_size);
     read_bytes_left = block_size;
+    sector_pos++;
     sectors_left--;
 }
 
@@ -378,6 +429,7 @@ void CDVD_Drive::read_DVD_sector()
     read_buffer[2062] = 0;
     read_buffer[2063] = 0;
     read_bytes_left = 2064;
+    sector_pos++;
     sectors_left--;
 }
 

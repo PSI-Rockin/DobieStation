@@ -1494,6 +1494,8 @@ string EmotionDisasm::disasm_mmi2(uint32_t instruction)
             return disasm_pcpyld(instruction);
         case 0x12:
             return disasm_pand(instruction);
+        case 0x13:
+            return disasm_pxor(instruction);
         default:
             return unknown_op("mmi2", op, 2);
     }
@@ -1507,6 +1509,11 @@ string EmotionDisasm::disasm_pcpyld(uint32_t instruction)
 string EmotionDisasm::disasm_pand(uint32_t instruction)
 {
     return disasm_special_simplemath("pand", instruction);
+}
+
+string EmotionDisasm::disasm_pxor(uint32_t instruction)
+{
+    return disasm_special_simplemath("pxor", instruction);
 }
 
 string EmotionDisasm::disasm_mfhi1(uint32_t instruction)
