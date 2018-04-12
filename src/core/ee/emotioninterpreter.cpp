@@ -188,6 +188,7 @@ void EmotionInterpreter::regimm(EmotionEngine &cpu, uint32_t instruction)
             break;
         case 0x13:
             bgezall(cpu,instruction);
+            break;
         case 0x19:
             mtsah(cpu, instruction);
             break;
