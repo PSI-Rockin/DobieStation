@@ -18,6 +18,7 @@ struct IOP_Timer
     uint64_t counter;
     IOP_Timer_Control control;
     uint32_t target;
+    uint32_t clocks;
 };
 
 class Emulator;

@@ -27,8 +27,19 @@ void EmotionTiming::run()
             switch (timers[i].control.mode)
             {
                 case 0:
+                    //Bus clock
                     if (timers[i].clocks >= 2)
                         count_up(i, 2);
+                    break;
+                case 1:
+                    //1/16 bus clock
+                    if (timers[i].clocks >= 32)
+                        count_up(i, 32);
+                    break;
+                case 2:
+                    //1/256 bus clock
+                    if (timers[i].clocks >= 512)
+                        count_up(i, 512);
                     break;
                 case 3:
                     //TODO: actual value for HSYNC
@@ -48,6 +59,10 @@ uint32_t EmotionTiming::read32(uint32_t addr)
     {
         case 0x10000000:
             return timers[0].counter;
+        case 0x10000010:
+            return read_control(0);
+        case 0x10001810:
+            return read_control(3);
         default:
             printf("[EE Timing] Unrecognized read32 from $%08X\n", addr);
             return 0;
@@ -58,6 +73,9 @@ void EmotionTiming::write32(uint32_t addr, uint32_t value)
 {
     switch (addr)
     {
+        case 0x10000000:
+            timers[0].counter = value & 0xFFFF;
+            break;
         case 0x10000010:
             write_control(0, value);
             break;
@@ -97,6 +115,22 @@ void EmotionTiming::count_up(int index, int cycles_per_count)
             intc->assert_IRQ((int)Interrupt::TIMER0 + index);
         }
     }
+}
+
+uint32_t EmotionTiming::read_control(int index)
+{
+    uint32_t reg = 0;
+    reg |= timers[index].control.mode;
+    reg |= timers[index].control.gate_enable << 2;
+    reg |= timers[index].control.gate_VBLANK << 3;
+    reg |= timers[index].control.gate_mode << 4;
+    reg |= timers[index].control.clear_on_reference << 6;
+    reg |= timers[index].control.enabled << 7;
+    reg |= timers[index].control.compare_int_enable << 8;
+    reg |= timers[index].control.overflow_int_enable << 9;
+    reg |= timers[index].control.compare_int << 10;
+    reg |= timers[index].control.overflow_int << 11;
+    return reg;
 }
 
 void EmotionTiming::write_control(int index, uint32_t value)

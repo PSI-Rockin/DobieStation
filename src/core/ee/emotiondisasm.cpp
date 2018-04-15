@@ -297,6 +297,8 @@ string EmotionDisasm::disasm_special(uint32_t instruction)
             return disasm_dsll(instruction);
         case 0x3A:
             return disasm_dsrl(instruction);
+        case 0x3B:
+            return disasm_dsra(instruction);
         case 0x3C:
             return disasm_dsll32(instruction);
         case 0x3E:
@@ -580,6 +582,11 @@ string EmotionDisasm::disasm_dsll(uint32_t instruction)
 string EmotionDisasm::disasm_dsrl(uint32_t instruction)
 {
     return disasm_special_shift("dsrl", instruction);
+}
+
+string EmotionDisasm::disasm_dsra(uint32_t instruction)
+{
+    return disasm_special_shift("dsra", instruction);
 }
 
 string EmotionDisasm::disasm_dsll32(uint32_t instruction)
@@ -939,6 +946,8 @@ string EmotionDisasm::disasm_cop_s(uint32_t instruction)
             return disasm_fpu_mul(instruction);
         case 0x3:
             return disasm_fpu_div(instruction);
+        case 0x4:
+            return disasm_fpu_sqrt(instruction);
         case 0x5:
             return disasm_fpu_abs(instruction);
         case 0x6:
@@ -988,6 +997,11 @@ string EmotionDisasm::disasm_fpu_mul(uint32_t instruction)
 string EmotionDisasm::disasm_fpu_div(uint32_t instruction)
 {
     return disasm_fpu_math("div.s", instruction);
+}
+
+string EmotionDisasm::disasm_fpu_sqrt(uint32_t instruction)
+{
+    return disasm_fpu_singleop_math("sqrt.s", instruction);
 }
 
 string EmotionDisasm::disasm_fpu_abs(uint32_t instruction)
@@ -1450,7 +1464,7 @@ string EmotionDisasm::disasm_mmi0(uint32_t instruction)
         case 0x09:
             return disasm_psubb(instruction);
         case 0x12:
-            return disasm_special_simplemath("pcgtb", instruction);
+            return disasm_special_simplemath("pextlw", instruction);
         default:
             return unknown_op("mmi0", op, 2);
     }
@@ -1478,6 +1492,10 @@ string EmotionDisasm::disasm_mmi2(uint32_t instruction)
     int op = (instruction >> 6) & 0x1F;
     switch (op)
     {
+        case 0x08:
+            return disasm_pmfhi(instruction);
+        case 0x09:
+            return disasm_pmflo(instruction);
         case 0x0E:
             return disasm_pcpyld(instruction);
         case 0x12:
@@ -1487,6 +1505,16 @@ string EmotionDisasm::disasm_mmi2(uint32_t instruction)
         default:
             return unknown_op("mmi2", op, 2);
     }
+}
+
+string EmotionDisasm::disasm_pmfhi(uint32_t instruction)
+{
+    return disasm_movereg("pmfhi", instruction);
+}
+
+string EmotionDisasm::disasm_pmflo(uint32_t instruction)
+{
+    return disasm_movereg("pmflo", instruction);
 }
 
 string EmotionDisasm::disasm_pcpyld(uint32_t instruction)
@@ -1543,6 +1571,10 @@ string EmotionDisasm::disasm_mmi3(uint32_t instruction)
 {
     switch (SA)
     {
+        case 0x08:
+            return disasm_pmthi(instruction);
+        case 0x09:
+            return disasm_pmtlo(instruction);
         case 0x0E:
             return disasm_pcpyud(instruction);
         case 0x12:
@@ -1554,6 +1586,16 @@ string EmotionDisasm::disasm_mmi3(uint32_t instruction)
         default:
             return unknown_op("mmi3", SA, 2);
     }
+}
+
+string EmotionDisasm::disasm_pmthi(uint32_t instruction)
+{
+    return disasm_moveto("pmthi", instruction);
+}
+
+string EmotionDisasm::disasm_pmtlo(uint32_t instruction)
+{
+    return disasm_moveto("pmtlo", instruction);
 }
 
 string EmotionDisasm::disasm_pcpyud(uint32_t instruction)

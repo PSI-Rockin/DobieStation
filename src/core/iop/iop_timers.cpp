@@ -12,6 +12,7 @@ void IOPTiming::reset()
     for (int i = 0; i < 6; i++)
     {
         timers[i].counter = 0;
+        timers[i].clocks = 0;
         timers[i].control.gate_mode = 0;
         timers[i].control.compare_interrupt = false;
         timers[i].control.overflow_interrupt = false;
@@ -20,7 +21,12 @@ void IOPTiming::reset()
 
 void IOPTiming::run()
 {
-    timers[5].counter++;
+    timers[5].clocks++;
+    if (timers[5].clocks >= 2)
+    {
+        timers[5].clocks -= 2;
+        timers[5].counter++;
+    }
     if (timers[5].counter == timers[5].target)
     {
         timers[5].control.compare_interrupt = true;

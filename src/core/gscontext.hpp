@@ -23,6 +23,11 @@ struct UV_REG
     uint16_t u, v;
 };
 
+struct ST_REG
+{
+    float s, t;
+};
+
 struct XYOFFSET
 {
     uint16_t x;

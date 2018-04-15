@@ -92,7 +92,7 @@ void EmotionInterpreter::mmi0(EmotionEngine &cpu, uint32_t instruction)
             psubb(cpu, instruction);
             break;
         case 0x12:
-            pcgtb(cpu, instruction);
+            pextlw(cpu, instruction);
             break;
         default:
             unknown_op("mmi0", instruction, op);
@@ -135,6 +135,18 @@ void EmotionInterpreter::pcgtb(EmotionEngine &cpu, uint32_t instruction)
     }
 }
 
+void EmotionInterpreter::pextlw(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    cpu.set_gpr<uint32_t>(dest, cpu.get_gpr<uint32_t>(reg2), 0);
+    cpu.set_gpr<uint32_t>(dest, cpu.get_gpr<uint32_t>(reg1), 1);
+    cpu.set_gpr<uint32_t>(dest, cpu.get_gpr<uint32_t>(reg2, 1), 2);
+    cpu.set_gpr<uint32_t>(dest, cpu.get_gpr<uint32_t>(reg1, 1), 3);
+}
+
 void EmotionInterpreter::mmi1(EmotionEngine &cpu, uint32_t instruction)
 {
     uint8_t op = (instruction >> 6) & 0x1F;
@@ -174,6 +186,12 @@ void EmotionInterpreter::mmi2(EmotionEngine &cpu, uint32_t instruction)
     uint8_t op = (instruction >> 6) & 0x1F;
     switch (op)
     {
+        case 0x08:
+            pmfhi(cpu, instruction);
+            break;
+        case 0x09:
+            pmflo(cpu, instruction);
+            break;
         case 0x0E:
             pcpyld(cpu, instruction);
             break;
@@ -186,6 +204,18 @@ void EmotionInterpreter::mmi2(EmotionEngine &cpu, uint32_t instruction)
         default:
             unknown_op("mmi2", instruction, op);
     }
+}
+
+void EmotionInterpreter::pmfhi(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t dest = (instruction >> 11) & 0x1F;
+    cpu.pmfhi(dest);
+}
+
+void EmotionInterpreter::pmflo(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t dest = (instruction >> 11) & 0x1F;
+    cpu.pmflo(dest);
 }
 
 /**
@@ -292,6 +322,12 @@ void EmotionInterpreter::mmi3(EmotionEngine &cpu, uint32_t instruction)
     uint8_t op = (instruction >> 6) & 0x1F;
     switch (op)
     {
+        case 0x08:
+            pmthi(cpu, instruction);
+            break;
+        case 0x09:
+            pmtlo(cpu, instruction);
+            break;
         case 0x0E:
             pcpyud(cpu, instruction);
             break;
@@ -307,6 +343,18 @@ void EmotionInterpreter::mmi3(EmotionEngine &cpu, uint32_t instruction)
         default:
             unknown_op("mmi3", instruction, op);
     }
+}
+
+void EmotionInterpreter::pmthi(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t source = (instruction >> 21) & 0x1F;
+    cpu.pmthi(source);
+}
+
+void EmotionInterpreter::pmtlo(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t source = (instruction >> 21) & 0x1F;
+    cpu.pmtlo(source);
 }
 
 /**

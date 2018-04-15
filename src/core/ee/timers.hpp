@@ -34,6 +34,7 @@ class EmotionTiming
         INTC* intc;
         Timer timers[4];
 
+        uint32_t read_control(int index);
         void write_control(int index, uint32_t value);
         void count_up(int index, int cycles_per_count);
     public:

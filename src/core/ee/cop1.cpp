@@ -104,6 +104,12 @@ void Cop1::div_s(int dest, int reg1, int reg2)
     printf("[FPU] div.s: %f / %f = %f\n", numerator, denominator, gpr[dest].f);
 }
 
+void Cop1::sqrt_s(int dest, int source)
+{
+    gpr[dest].f = sqrt(gpr[source].f);
+    printf("[FPU] sqrt.s: %f = %f\n", gpr[source].f, gpr[dest].f);
+}
+
 void Cop1::abs_s(int dest, int source)
 {
     gpr[dest].f = fabs(gpr[source].f);

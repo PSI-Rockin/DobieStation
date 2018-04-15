@@ -2,12 +2,14 @@
 #define SIO2_HPP
 #include <cstdint>
 
+class Emulator;
+
 class SIO2
 {
     private:
-
+        Emulator* e;
     public:
-        SIO2();
+        SIO2(Emulator* e);
 
         void reset();
 

@@ -126,6 +126,9 @@ void EmotionInterpreter::special(EmotionEngine &cpu, uint32_t instruction)
         case 0x3A:
             dsrl(cpu, instruction);
             break;
+        case 0x3B:
+            dsra(cpu, instruction);
+            break;
         case 0x3C:
             dsll32(cpu, instruction);
             break;
@@ -511,6 +514,16 @@ void EmotionInterpreter::dsrl(EmotionEngine &cpu, uint32_t instruction)
     source = cpu.get_gpr<uint64_t>(source);
     source >>= shift;
     cpu.set_gpr<uint64_t>(dest, source);
+}
+
+void EmotionInterpreter::dsra(EmotionEngine &cpu, uint32_t instruction)
+{
+    int64_t source = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+    uint32_t shift = (instruction >> 6) & 0x1F;
+    source = cpu.get_gpr<int64_t>(source);
+    source >>= shift;
+    cpu.set_gpr<int64_t>(dest, source);
 }
 
 void EmotionInterpreter::dsll32(EmotionEngine &cpu, uint32_t instruction)
