@@ -36,6 +36,7 @@ struct TRXPOS_REG
 {
     uint16_t source_x, source_y;
     uint16_t dest_x, dest_y;
+    uint16_t int_source_x, int_dest_x;
     uint8_t trans_order;
 };
 
@@ -84,6 +85,7 @@ struct Vertex
     uint32_t coords[3];
     RGBAQ_REG rgbaq;
     UV_REG uv;
+    float s, t;
 };
 
 struct Point
@@ -102,7 +104,7 @@ class GraphicsSynthesizer
         INTC* intc;
         bool frame_complete;
         uint32_t* output_buffer;
-        uint32_t* local_mem;
+        uint8_t* local_mem;
         uint8_t CRT_mode;
 
         //CSR/IMR stuff - to be merged into structs
@@ -115,6 +117,7 @@ class GraphicsSynthesizer
         PRIM_REG PRIM;
         RGBAQ_REG RGBAQ;
         UV_REG UV;
+        ST_REG ST;
         bool DTHE;
         bool COLCLAMP;
         bool use_PRIM;
@@ -123,9 +126,11 @@ class GraphicsSynthesizer
         TRXPOS_REG TRXPOS;
         TRXREG_REG TRXREG;
         uint8_t TRXDIR;
-        uint32_t transfer_addr;
-        int transfer_bit_depth;
         int pixels_transferred;
+
+        //Used for unpacking PSMCT24
+        uint32_t PSMCT24_color;
+        int PSMCT24_unpacked_count;
 
         PMODE_REG PMODE;
         SMODE SMODE2;
@@ -138,6 +143,10 @@ class GraphicsSynthesizer
 
         static const unsigned int max_vertices[8];
 
+        uint32_t get_word(uint32_t addr);
+        void set_word(uint32_t addr, uint32_t value);
+
+        uint32_t tex_lookup(uint32_t coord);
         void vertex_kick(bool drawing_kick);
         void draw_pixel(int32_t x, int32_t y, uint32_t color, uint32_t z, bool alpha_blending);
         void render_primitive();
@@ -146,6 +155,7 @@ class GraphicsSynthesizer
         void render_triangle();
         void render_sprite();
         void write_HWREG(uint64_t data);
+        void unpack_PSMCT24(uint32_t dest_addr, uint64_t data, int offset);
         void host_to_host();
 
         int32_t orient2D(const Point& v1, const Point& v2, const Point& v3);
@@ -161,6 +171,7 @@ class GraphicsSynthesizer
         void get_inner_resolution(int& w, int& h);
 
         void set_VBLANK(bool is_VBLANK);
+        void dump_texture(uint32_t start_addr, uint32_t width);
 
         void set_CRT(bool interlaced, int mode, bool frame_mode);
 
@@ -174,5 +185,15 @@ class GraphicsSynthesizer
         void set_Q(float q);
         void set_XYZ(uint32_t x, uint32_t y, uint32_t z, bool drawing_kick);
 };
+
+inline uint32_t GraphicsSynthesizer::get_word(uint32_t addr)
+{
+    return *(uint32_t*)&local_mem[addr];
+}
+
+inline void GraphicsSynthesizer::set_word(uint32_t addr, uint32_t value)
+{
+    *(uint32_t*)&local_mem[addr] = value;
+}
 
 #endif // GS_HPP

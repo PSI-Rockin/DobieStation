@@ -20,6 +20,9 @@ void EmotionInterpreter::cop_s(Cop1& fpu, uint32_t instruction)
         case 0x3:
             fpu_div(fpu, instruction);
             break;
+        case 0x4:
+            fpu_sqrt(fpu, instruction);
+            break;
         case 0x5:
             fpu_abs(fpu, instruction);
             break;
@@ -79,6 +82,13 @@ void EmotionInterpreter::fpu_div(Cop1 &fpu, uint32_t instruction)
     uint32_t reg1 = (instruction >> 11) & 0x1F;
     uint32_t reg2 = (instruction >> 16) & 0x1F;
     fpu.div_s(dest, reg1, reg2);
+}
+
+void EmotionInterpreter::fpu_sqrt(Cop1 &fpu, uint32_t instruction)
+{
+    uint32_t dest = (instruction >> 6) & 0x1F;
+    uint32_t source = (instruction >> 11) & 0x1F;
+    fpu.sqrt_s(dest, source);
 }
 
 void EmotionInterpreter::fpu_abs(Cop1 &fpu, uint32_t instruction)

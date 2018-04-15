@@ -79,6 +79,9 @@ void EmotionEngine::run()
                 print_state();
             }*/
 
+            if (PC == 0x00138658)
+                PC = 0x0013867C;
+
             if (PC == 0xBFC00928)
                 exit(1);
         }
@@ -363,6 +366,30 @@ void EmotionEngine::mtsa(int index)
     SA = get_gpr<uint64_t>(index);
 }
 
+void EmotionEngine::pmfhi(int index)
+{
+    set_gpr<uint64_t>(index, HI);
+    set_gpr<uint64_t>(index, HI1, 1);
+}
+
+void EmotionEngine::pmflo(int index)
+{
+    set_gpr<uint64_t>(index, LO);
+    set_gpr<uint64_t>(index, LO1, 1);
+}
+
+void EmotionEngine::pmthi(int index)
+{
+    HI = get_gpr<uint64_t>(index);
+    HI1 = get_gpr<uint64_t>(index, 1);
+}
+
+void EmotionEngine::pmtlo(int index)
+{
+    LO = get_gpr<uint64_t>(index);
+    LO1 = get_gpr<uint64_t>(index, 1);
+}
+
 void EmotionEngine::set_SA(uint64_t value)
 {
     SA = value;
@@ -465,8 +492,8 @@ void EmotionEngine::syscall_exception()
             return;
         }
     }*/
-    if (op == 0x7C)
-        return;
+    //if (op == 0x7C)
+        //can_disassemble = true;
     handle_exception(0x80000180, 0x08);
 }
 
@@ -483,7 +510,7 @@ void EmotionEngine::int1()
 {
     if (cp0.status.int1_mask)
     {
-        printf("[EE] INT1!\n");
+        //printf("[EE] INT1!\n");
         //can_disassemble = true;
         handle_exception(0x80000200, 0);
     }

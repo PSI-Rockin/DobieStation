@@ -80,7 +80,6 @@ uint32_t Cop0::mfc(int index)
         default:
             return gpr[index];
     }
-    return gpr[index];
 }
 
 void Cop0::mtc(int index, uint32_t value)

@@ -54,6 +54,7 @@ namespace EmotionDisasm
     std::string disasm_dsubu(uint32_t instruction);
     std::string disasm_dsll(uint32_t instruction);
     std::string disasm_dsrl(uint32_t instruction);
+    std::string disasm_dsra(uint32_t instruction);
     std::string disasm_dsll32(uint32_t instruction);
     std::string disasm_dsrl32(uint32_t instruction);
     std::string disasm_dsra32(uint32_t instruction);
@@ -124,6 +125,7 @@ namespace EmotionDisasm
     std::string disasm_fpu_sub(uint32_t instruction);
     std::string disasm_fpu_mul(uint32_t instruction);
     std::string disasm_fpu_div(uint32_t instruction);
+    std::string disasm_fpu_sqrt(uint32_t instruction);
     std::string disasm_fpu_abs(uint32_t instruction);
     std::string disasm_fpu_singleop_math(const std::string opcode, uint32_t instruction);
     std::string disasm_fpu_mov(uint32_t instruction);
@@ -175,6 +177,8 @@ namespace EmotionDisasm
     std::string disasm_psubb(uint32_t instruction);
     std::string disasm_mmi1(uint32_t instruction);
     std::string disasm_mmi2(uint32_t instruction);
+    std::string disasm_pmfhi(uint32_t instruction);
+    std::string disasm_pmflo(uint32_t instruction);
     std::string disasm_pcpyld(uint32_t instruction);
     std::string disasm_pand(uint32_t instruction);
     std::string disasm_pxor(uint32_t instruction);
@@ -186,6 +190,8 @@ namespace EmotionDisasm
     std::string disasm_div1(uint32_t instruction);
     std::string disasm_divu1(uint32_t instruction);
     std::string disasm_mmi3(uint32_t instruction);
+    std::string disasm_pmthi(uint32_t instruction);
+    std::string disasm_pmtlo(uint32_t instruction);
     std::string disasm_pcpyud(uint32_t instruction);
     std::string disasm_por(uint32_t instruction);
     std::string disasm_pnor(uint32_t instruction);

@@ -132,6 +132,8 @@ void EmuWindow::paintEvent(QPaintEvent *event)
     if (!inner_w || !inner_h)
         return;
 
+    printf("Draw image!\n");
+
     //Scale it to the TV screen
     QImage image((uint8_t*)buffer, inner_w, inner_h, QImage::Format_RGBA8888);
 

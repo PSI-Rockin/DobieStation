@@ -20,8 +20,8 @@ class EmotionEngine
 
         //Each register is 128-bit
         uint8_t gpr[32 * sizeof(uint64_t) * 2];
+        uint64_t LO, HI, LO1, HI1;
         uint32_t PC, new_PC;
-        uint64_t LO, LO1, HI, HI1;
         uint64_t SA;
 
         bool increment_PC;
@@ -42,13 +42,14 @@ class EmotionEngine
         void set_disassembly(bool dis);
 
         template <typename T> T get_gpr(int id, int offset = 0);
+        template <typename T> T get_LO(int id, int offset = 0);
         template <typename T> void set_gpr(int id, T value, int offset = 0);
+        template <typename T> void set_LO(int id, T value, int offset = 0);
         uint32_t get_PC();
         uint8_t read8(uint32_t address);
         uint16_t read16(uint32_t address);
         uint32_t read32(uint32_t address);
         uint64_t read64(uint32_t address);
-        //void set_gpr_lo(int index, uint64_t value);
 
         void set_PC(uint32_t addr);
         void write8(uint32_t address, uint8_t value);
@@ -78,6 +79,10 @@ class EmotionEngine
         void mtlo1(int index);
         void mfsa(int index);
         void mtsa(int index);
+        void pmfhi(int index);
+        void pmflo(int index);
+        void pmthi(int index);
+        void pmtlo(int index);
         void set_SA(uint64_t value);
         void set_LO_HI(uint64_t a, uint64_t b, bool hi = false);
 

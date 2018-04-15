@@ -5,6 +5,7 @@
 #include "ee/intc.hpp"
 
 #include "gs.hpp"
+
 using namespace std;
 
 /**
@@ -35,6 +36,15 @@ T interpolate(int32_t x, T u1, int32_t x1, T u2, int32_t x2)
     return bark / (x2 - x1);
 }
 
+float interpolate_f(int32_t x, float u1, int32_t x1, float u2, int32_t x2)
+{
+    float bark = u1 * (x2 - x);
+    bark += u2 * (x - x1);
+    if (!(x2 - x1))
+        return u1;
+    return bark / (x2 - x1);
+}
+
 const unsigned int GraphicsSynthesizer::max_vertices[8] = {1, 2, 2, 3, 3, 3, 2, 0};
 
 GraphicsSynthesizer::GraphicsSynthesizer(INTC* intc) : intc(intc)
@@ -55,11 +65,10 @@ GraphicsSynthesizer::~GraphicsSynthesizer()
 void GraphicsSynthesizer::reset()
 {
     if (!local_mem)
-        local_mem = new uint32_t[1024 * 1024];
+        local_mem = new uint8_t[1024 * 1024 * 4];
     if (!output_buffer)
         output_buffer = new uint32_t[640 * 448];
     pixels_transferred = 0;
-    transfer_bit_depth = 32;
     num_vertices = 0;
     DISPLAY2.x = 0;
     DISPLAY2.y = 0;
@@ -75,6 +84,8 @@ void GraphicsSynthesizer::reset()
     DISPFB2.y = 0;
     context1.reset();
     context2.reset();
+    PSMCT24_color = 0;
+    PSMCT24_unpacked_count = 0;
     current_ctx = &context1;
     VBLANK_enabled = false;
     VBLANK_generated = false;
@@ -134,11 +145,57 @@ void GraphicsSynthesizer::render_CRT()
             uint32_t scaled_y = y;
             scaled_x *= DISPFB2.width;
             scaled_x /= width;
-            uint32_t value = local_mem[DISPFB2.frame_base + scaled_x + (scaled_y * DISPFB2.width)];
+            uint32_t value = get_word((DISPFB2.frame_base + scaled_x + (scaled_y * DISPFB2.width)) << 2);
             output_buffer[pixel_x + (pixel_y * width)] = value;
             output_buffer[pixel_x + (pixel_y * width)] |= 0xFF000000;
         }
     }
+}
+
+void GraphicsSynthesizer::dump_texture(uint32_t start_addr, uint32_t width)
+{
+    uint32_t dwidth = DISPLAY2.width >> 2;
+    printf("[GS] Dumping texture\n");
+    int max_pixels = width * 256 / 2;
+    int p = 0;
+    while (p < max_pixels)
+    {
+        int x = p % width;
+        int y = p / width;
+        uint32_t addr = (x + (y * width));
+        for (int i = 0; i < 2; i++)
+        {
+            uint8_t entry;
+            entry = (local_mem[start_addr + (addr / 2)] >> (i * 4)) & 0xF;
+            uint32_t value = (entry << 4) | (entry << 12) | (entry << 20);
+            output_buffer[x + (y * dwidth)] = value;
+            output_buffer[x + (y * dwidth)] |= 0xFF000000;
+            x++;
+        }
+        p += 2;
+    }
+    /*for (int y = 0; y < 256; y++)
+    {
+        for (int x = 0; x < width; x++)
+        {
+            int pixel_x = x;
+            int pixel_y = y;
+            if (pixel_x >= width || pixel_y >= 256)
+                continue;
+            uint32_t addr = (pixel_x + (pixel_y * width));
+            for (int i = 0; i < 2; i++)
+            {
+                uint8_t entry;
+                entry = (local_mem[start_addr + (addr / 2)] >> (i * 4)) & 0xF;
+                uint32_t value = (entry << 4) | (entry << 12) | (entry << 20);
+                output_buffer[pixel_x + (pixel_y * dwidth)] = value;
+                output_buffer[pixel_x + (pixel_y * dwidth)] |= 0xFF000000;
+                pixel_x++;
+            }
+            x++;
+        }
+    }*/
+    printf("[GS] Done dumping\n");
 }
 
 void GraphicsSynthesizer::get_resolution(int &w, int &h)
@@ -313,16 +370,36 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
             num_vertices = 0;
             break;
         case 0x0001:
+        {
             RGBAQ.r = value & 0xFF;
             RGBAQ.g = (value >> 8) & 0xFF;
             RGBAQ.b = (value >> 16) & 0xFF;
             RGBAQ.a = (value >> 24) & 0xFF;
-            RGBAQ.q = (float)(value >> 32);
+
+            uint32_t q = value >> 32;
+            RGBAQ.q = *(float*)&q;
+            printf("[GS] Q: %f\n", RGBAQ.q);
+        }
+            break;
+        case 0x0002:
+        {
+            uint32_t s = value & 0xFFFFFFFF;
+            ST.s = *(float*)&s;
+            uint32_t t = (value >> 32);
+            ST.t = *(float*)&t;
+        }
+            printf("ST: (%f, %f)\n", ST.s, ST.t);
             break;
         case 0x0003:
             UV.u = value & 0x3FFF;
             UV.v = (value >> 16) & 0x3FFF;
             printf("UV: ($%04X, $%04X)\n", UV.u, UV.v);
+            break;
+        case 0x0004:
+            current_vtx.coords[0] = value & 0xFFFF;
+            current_vtx.coords[1] = (value >> 16) & 0xFFFF;
+            current_vtx.coords[2] = value >> 32;
+            vertex_kick(true);
             break;
         case 0x0005:
             //XYZ2
@@ -393,10 +470,10 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
             context2.set_zbuf(value);
             break;
         case 0x0050:
-            BITBLTBUF.source_base = (value & 0x3FFF) * 64;
+            BITBLTBUF.source_base = (value & 0x3FFF) * 64 * 4;
             BITBLTBUF.source_width = ((value >> 16) & 0x3F) * 64;
             BITBLTBUF.source_format = (value >> 24) & 0x3F;
-            BITBLTBUF.dest_base = ((value >> 32) & 0x3FFF) * 64;
+            BITBLTBUF.dest_base = ((value >> 32) & 0x3FFF) * 64 * 4;
             BITBLTBUF.dest_width = ((value >> 48) & 0x3F) * 64;
             BITBLTBUF.dest_format = (value >> 56) & 0x3F;
             break;
@@ -419,17 +496,20 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
             if (TRXDIR != 3)
             {
                 pixels_transferred = 0;
-                transfer_addr = BITBLTBUF.dest_base + (TRXPOS.dest_x + (TRXPOS.dest_y * BITBLTBUF.dest_width));
                 printf("Transfer started!\n");
                 printf("Dest base: $%08X\n", BITBLTBUF.dest_base);
                 printf("TRXPOS: (%d, %d)\n", TRXPOS.dest_x, TRXPOS.dest_y);
+                printf("TRXREG (%d, %d)\n", TRXREG.width, TRXREG.height);
                 printf("Width: %d\n", BITBLTBUF.dest_width);
-                printf("Transfer addr: $%08X\n", transfer_addr);
+                TRXPOS.int_dest_x = TRXPOS.dest_x;
+                TRXPOS.int_source_x = TRXPOS.int_source_x;
+                //printf("Transfer addr: $%08X\n", transfer_addr);
                 if (TRXDIR == 2)
                 {
                     //VRAM-to-VRAM transfer
                     //More than likely not instantaneous
                     host_to_host();
+                    TRXDIR = 3;
                 }
             }
             break;
@@ -438,7 +518,7 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
                 write_HWREG(value);
             break;
         default:
-            printf("\n[GS] Unrecognized write64 to reg $%04X: $%08X_%08X", addr, value >> 32, value & 0xFFFFFFFF);
+            printf("[GS] Unrecognized write64 to reg $%04X: $%08X_%08X\n", addr, value >> 32, value & 0xFFFFFFFF);
             //exit(1);
     }
 }
@@ -472,6 +552,8 @@ void GraphicsSynthesizer::vertex_kick(bool drawing_kick)
         vtx_queue[i] = vtx_queue[i - 1];
     current_vtx.rgbaq = RGBAQ;
     current_vtx.uv = UV;
+    current_vtx.s = ST.s;
+    current_vtx.t = ST.t;
     vtx_queue[0] = current_vtx;
 
     num_vertices++;
@@ -605,8 +687,8 @@ void GraphicsSynthesizer::draw_pixel(int32_t x, int32_t y, uint32_t color, uint3
         }
     }
 
-    uint32_t pos = (x >> 4) + ((y >> 4) * current_ctx->frame.width);
-    uint32_t dest_z = local_mem[current_ctx->zbuf.base_pointer + pos];
+    uint32_t pos = ((x >> 4) + ((y >> 4) * current_ctx->frame.width)) * 4;
+    uint32_t dest_z = get_word(current_ctx->zbuf.base_pointer + pos);
     if (test->depth_test)
     {
         switch (test->depth_method)
@@ -633,7 +715,7 @@ void GraphicsSynthesizer::draw_pixel(int32_t x, int32_t y, uint32_t color, uint3
         uint8_t cr, cg, cb;
         uint32_t alpha;
 
-        uint32_t frame_color = local_mem[current_ctx->frame.base_pointer + pos];
+        uint32_t frame_color = get_word(current_ctx->frame.base_pointer + pos);
 
         switch (current_ctx->alpha.spec_A)
         {
@@ -717,14 +799,14 @@ void GraphicsSynthesizer::draw_pixel(int32_t x, int32_t y, uint32_t color, uint3
     }
     if (update_frame)
     {
-        uint8_t alpha = local_mem[current_ctx->frame.base_pointer + pos] >> 24;
+        uint8_t alpha = get_word(current_ctx->frame.base_pointer + pos);
         if (update_alpha)
             alpha = color >> 24;
         color &= 0x00FFFFFF;
-        local_mem[current_ctx->frame.base_pointer + pos] = color | (alpha << 24);
+        set_word(current_ctx->frame.base_pointer + pos, color | alpha << 24);
     }
     if (update_z)
-        local_mem[current_ctx->zbuf.base_pointer + pos] = z;
+        set_word(current_ctx->zbuf.base_pointer + pos, z);
 }
 
 void GraphicsSynthesizer::render_point()
@@ -746,7 +828,7 @@ void GraphicsSynthesizer::render_point()
 
 void GraphicsSynthesizer::render_line()
 {
-    printf("\n[GS] Rendering line!");
+    printf("[GS] Rendering line!\n");
     int32_t x1, x2, y1, y2;
 
     int32_t u1, u2, v1, v2;
@@ -801,7 +883,7 @@ void GraphicsSynthesizer::render_line()
         swap(a1, a2);
     }
 
-    printf("\nCoords: (%d, %d, %d) (%d, %d, %d)", x1 >> 4, y1 >> 4, z1, x2 >> 4, y2 >> 4, z2);
+    printf("Coords: (%d, %d, %d) (%d, %d, %d)\n", x1 >> 4, y1 >> 4, z1, x2 >> 4, y2 >> 4, z2);
 
     for (int32_t x = x1; x < x2; x += 0x10)
     {
@@ -959,9 +1041,10 @@ void GraphicsSynthesizer::render_triangle()
 
 void GraphicsSynthesizer::render_sprite()
 {
-    printf("\n[GS] Rendering sprite!");
+    printf("[GS] Rendering sprite!\n");
     int32_t x1, x2, y1, y2;
     int32_t u1, u2, v1, v2;
+    float s1, s2, t1, t2, q1, q2;
     x1 = vtx_queue[1].coords[0] - current_ctx->xyoffset.x;
     x2 = vtx_queue[0].coords[0] - current_ctx->xyoffset.x;
     y1 = vtx_queue[1].coords[1] - current_ctx->xyoffset.y;
@@ -970,6 +1053,12 @@ void GraphicsSynthesizer::render_sprite()
     u2 = vtx_queue[0].uv.u;
     v1 = vtx_queue[1].uv.v;
     v2 = vtx_queue[0].uv.v;
+    s1 = vtx_queue[1].s;
+    s2 = vtx_queue[0].s;
+    t1 = vtx_queue[1].t;
+    t2 = vtx_queue[0].t;
+    q1 = vtx_queue[1].rgbaq.q;
+    q2 = vtx_queue[0].rgbaq.q;
     uint32_t z = vtx_queue[0].coords[2];
 
     if (x1 > x2)
@@ -978,65 +1067,182 @@ void GraphicsSynthesizer::render_sprite()
         swap(y1, y2);
         swap(u1, u2);
         swap(v1, v2);
+        swap(s1, s2);
+        swap(t1, t2);
     }
 
-    printf("\nCoords: ($%08X, $%08X) ($%08X, $%08X)", x1, y1, x2, y2);
+    uint32_t tex_color = 0;
+
+    printf("Coords: ($%08X, $%08X) ($%08X, $%08X)\n", x1, y1, x2, y2);
 
     for (int32_t y = y1; y < y2; y += 0x10)
     {
+        float pix_t = interpolate_f(y, t1, y1, t2, y2);
         uint16_t pix_v = interpolate(y, v1, y1, v2, y2) >> 4;
         for (int32_t x = x1; x < x2; x += 0x10)
         {
+            float pix_s = interpolate_f(x, s1, x1, s2, x2);
             uint16_t pix_u = interpolate(x, u1, x1, u2, x2) >> 4;
-            uint32_t tex_coord = current_ctx->tex0.texture_base + pix_u;
-            tex_coord += (uint32_t)pix_v * current_ctx->tex0.tex_width;
             if (PRIM.texture_mapping)
-                draw_pixel(x, y, local_mem[tex_coord], z, PRIM.alpha_blend);
+            {
+                if (!PRIM.use_UV)
+                {
+                    pix_v = pix_t * current_ctx->tex0.tex_height;
+                    pix_u = pix_s * current_ctx->tex0.tex_width;
+                }
+                uint32_t tex_coord = pix_u;
+                tex_coord += (uint32_t)pix_v * current_ctx->tex0.tex_width;
+                tex_color = tex_lookup(tex_coord);
+                draw_pixel(x, y, tex_color, z, PRIM.alpha_blend);
+            }
             else
+            {
                 draw_pixel(x, y, 0x80000000, z, PRIM.alpha_blend);
+            }
         }
     }
 }
 
 void GraphicsSynthesizer::write_HWREG(uint64_t data)
 {
-    //TODO: other pixel formats
-    transfer_bit_depth = 32;
-    int ppd = 2; //pixels per doubleword
-    *(uint64_t*)&local_mem[transfer_addr] = data;
+    int ppd; //pixels per doubleword (64-bits)
 
-    //printf("\n[GS] Write to $%08X of $%08X_%08X", transfer_addr, data >> 32, data & 0xFFFFFFFF);
+    switch (BITBLTBUF.dest_format)
+    {
+        case 0x00:
+            ppd = 2;
+            break;
+        case 0x01:
+            ppd = 3;
+            break;
+        case 0x14:
+            ppd = 16;
+            break;
+        default:
+            printf("[GS] Unrecognized BITBLTBUF dest format $%02X\n", BITBLTBUF.dest_format);
+            exit(1);
+    }
+
+    for (int i = 0; i < ppd; i++)
+    {
+        uint32_t dest_addr = TRXPOS.int_dest_x + (TRXPOS.dest_y * BITBLTBUF.dest_width);
+        switch (BITBLTBUF.dest_format)
+        {
+            case 0x00:
+                *(uint32_t*)&local_mem[BITBLTBUF.dest_base + (dest_addr * 4)] = (data >> (i * 32)) & 0xFFFFFFFF;
+                pixels_transferred++;
+                TRXPOS.int_dest_x++;
+                break;
+            case 0x01:
+                unpack_PSMCT24(BITBLTBUF.dest_base + (dest_addr * 4), data, i);
+                break;
+            case 0x14:
+                dest_addr /= 2;
+                dest_addr += BITBLTBUF.dest_base;
+                if (i & 0x1)
+                {
+                    local_mem[dest_addr] &= ~0xF0;
+                    local_mem[dest_addr] |= (data >> ((i >> 1) << 3)) & 0xF0;
+                    printf("[GS] Write to $%08X:1: $%02X\n", dest_addr, local_mem[dest_addr]);
+                }
+                else
+                {
+                    local_mem[dest_addr] &= ~0xF;
+                    local_mem[dest_addr] |= (data >> ((i >> 1) << 3)) & 0xF;
+                    printf("[GS] Write to $%08X:0: $%02X\n", dest_addr, local_mem[dest_addr]);
+                }
+                pixels_transferred++;
+                TRXPOS.int_dest_x++;
+                break;
+        }
+        if (TRXPOS.int_dest_x - TRXPOS.dest_x == TRXREG.width)
+        {
+            TRXPOS.int_dest_x = TRXPOS.dest_x;
+            TRXPOS.dest_y++;
+        }
+    }
+
     uint32_t max_pixels = TRXREG.width * TRXREG.height;
-    pixels_transferred += ppd;
-    transfer_addr += ppd;
     if (pixels_transferred >= max_pixels)
     {
         //Deactivate the transmisssion
-        printf("\n[GS] HWREG transfer ended");
+        printf("[GS] HWREG transfer ended\n");
         TRXDIR = 3;
         pixels_transferred = 0;
     }
 }
 
+void GraphicsSynthesizer::unpack_PSMCT24(uint32_t dest_addr, uint64_t data, int offset)
+{
+    int bytes_unpacked = 0;
+    for (int i = offset * 24; bytes_unpacked < 3 && i < 64; i += 8)
+    {
+        PSMCT24_color |= ((data >> i) & 0xFF) << (PSMCT24_unpacked_count * 8);
+        PSMCT24_unpacked_count++;
+        bytes_unpacked++;
+        if (PSMCT24_unpacked_count == 3)
+        {
+            set_word(dest_addr, PSMCT24_color);
+            PSMCT24_color = 0;
+            PSMCT24_unpacked_count = 0;
+            TRXPOS.int_dest_x++;
+            pixels_transferred++;
+        }
+    }
+}
+
 void GraphicsSynthesizer::host_to_host()
 {
-    transfer_bit_depth = 32;
+    return;
+    exit(1);
     int ppd = 2; //pixels per doubleword
-    uint32_t source_addr = BITBLTBUF.source_base + (TRXPOS.source_x + (TRXPOS.source_y * BITBLTBUF.source_width));
+    uint32_t source_addr = (TRXPOS.source_x + (TRXPOS.source_y * BITBLTBUF.source_width)) << 1;
+    source_addr += BITBLTBUF.source_base;
     uint32_t max_pixels = TRXREG.width * TRXREG.height;
-    printf("\nTRXPOS Source: (%d, %d) Dest: (%d, %d)", TRXPOS.source_x, TRXPOS.source_y, TRXPOS.dest_x, TRXPOS.dest_y);
-    printf("\nTRXREG: (%d, %d)", TRXREG.width, TRXREG.height);
-    printf("\nBase: $%08X", BITBLTBUF.source_base);
-    printf("\nSource addr: $%08X Dest addr: $%08X", source_addr, transfer_addr);
+    printf("TRXPOS Source: (%d, %d) Dest: (%d, %d)\n", TRXPOS.source_x, TRXPOS.source_y, TRXPOS.dest_x, TRXPOS.dest_y);
+    printf("TRXREG: (%d, %d)\n", TRXREG.width, TRXREG.height);
+    printf("Base: $%08X\n", BITBLTBUF.source_base);
+    /*printf("Source addr: $%08X Dest addr: $%08X\n", source_addr, transfer_addr);
     while (pixels_transferred < max_pixels)
     {
-        //printf("\nTransfer from $%08X to $%08X", source_addr, transfer_addr);
+        printf("Host-host transfer from $%08X to $%08X\n", source_addr, transfer_addr);
         uint64_t borp = *(uint64_t*)&local_mem[source_addr];
         *(uint64_t*)&local_mem[transfer_addr] = borp;
         pixels_transferred += ppd;
-        transfer_addr += ppd;
-        source_addr += ppd;
-    }
+        transfer_addr += 8;
+        source_addr += 8;
+    }*/
     pixels_transferred = 0;
     TRXDIR = 3;
+}
+
+uint32_t GraphicsSynthesizer::tex_lookup(uint32_t coord)
+{
+    uint32_t tex_base = current_ctx->tex0.texture_base;
+    uint32_t clut_base = current_ctx->tex0.CLUT_base;
+    switch (current_ctx->tex0.format)
+    {
+        case 0x00:
+            return get_word(tex_base + (coord << 2));
+        case 0x14:
+        {
+            uint8_t entry;
+            if (coord & 0x1)
+                entry = local_mem[tex_base + (coord >> 1)] >> 4;
+            else
+                entry = local_mem[tex_base + (coord >> 1)] & 0xF;
+            return 0xFF000000 | (entry << 4) | (entry << 12) | (entry << 20);
+            /*printf("[GS] CLUT base: $%08X\n", clut_base);
+            printf("Coord: $%08X\n", coord >> 1);
+            printf("Entry: %d\n", entry);
+            printf("Offset: %d\n", current_ctx->tex0.CLUT_offset);
+            printf("Format: %d\n", current_ctx->tex0.CLUT_format);*/
+            //return 0xFF000000 | (entry << 4);
+            //return get_word(clut_base + (entry << 2));
+        }
+            break;
+        default:
+            printf("[GS] Unrecognized texture format $%02X\n", current_ctx->tex0.format);
+            exit(1);
+    }
 }

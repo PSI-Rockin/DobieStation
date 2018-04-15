@@ -350,11 +350,13 @@ void CDVD_Drive::start_seek()
 
     if (!is_spinning)
     {
-        VBLANKS_left = 5;
+        //1/3 of a second
+        VBLANKS_left = 20;
     }
     else
     {
-        VBLANKS_left = 2;
+        //Kinda simulate seek time
+        VBLANKS_left = 5;
     }
 
     //Seek anyway. The program won't know the difference
