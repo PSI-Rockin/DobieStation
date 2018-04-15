@@ -55,13 +55,10 @@ int EmuWindow::init(int argc, char** argv)
     e.reset();
     char* bios_name = argv[1];
 
-	/*
-	 * TODO: make a better conditional
-	 */
 	char* file_name;
 	if(argc == 4)
 		file_name = argv[2];
-	else if(argc == 3 && !strcmp(argv[2], "-skip"))
+	else if(argc == 3 && strcmp(argv[2], "-skip") != 0)
 		file_name = argv[2];
 	else
 		file_name = nullptr;
@@ -102,8 +99,6 @@ int EmuWindow::init(int argc, char** argv)
 		{
 			return 1;
 		}
-
-		is_exec_loaded = true;
 	}
 	else
 	{
