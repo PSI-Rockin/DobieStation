@@ -41,9 +41,6 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
     widget->setLayout(layout);
 
     create_menu();
-    
-    activateWindow();
-    raise();
 }
 
 int EmuWindow::init(int argc, char** argv)
