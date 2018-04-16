@@ -7,7 +7,6 @@
 #include <QVBoxLayout>
 #include <QMenuBar>
 #include <QFileDialog>
-#include <QThread>
 
 #include "emuwindow.hpp"
 
