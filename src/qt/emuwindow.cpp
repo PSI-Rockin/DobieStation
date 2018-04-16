@@ -9,6 +9,7 @@
 #include <QFileDialog>
 
 #include "emuwindow.hpp"
+#include <QApplication>
 
 using namespace std;
 
@@ -40,6 +41,9 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
     widget->setLayout(layout);
 
     create_menu();
+    
+    activateWindow();
+    raise();
 }
 
 int EmuWindow::init(int argc, char** argv)
@@ -51,7 +55,6 @@ int EmuWindow::init(int argc, char** argv)
     }
 
     //Initialize emulator
-    e.reset();
     char* bios_name = argv[1];
 
     char* file_name;
@@ -114,6 +117,8 @@ int EmuWindow::init(int argc, char** argv)
 
 int EmuWindow::load_exec(const char* file_name, bool skip_BIOS)
 {
+    e.reset();
+
     ifstream exec_file(file_name, ios::binary | ios::in);
     if (!exec_file.is_open())
     {
@@ -278,11 +283,11 @@ void EmuWindow::contextMenuEvent(QContextMenuEvent* event)
 void EmuWindow::open_file_no_skip()
 {
     QString file_name = QFileDialog::getOpenFileName(this, tr("Open Rom"), "", tr("ROM Files (*.elf *.iso)"));
-    load_exec(file_name.toStdString().c_str(), true);
+    load_exec(file_name.toStdString().c_str(), false);
 }
 
 void EmuWindow::open_file_skip()
 {
     QString file_name = QFileDialog::getOpenFileName(this, tr("Open Rom"), "", tr("ROM Files (*.elf *.iso)"));
-    load_exec(file_name.toStdString().c_str(), false);
+    load_exec(file_name.toStdString().c_str(), true);
 }
