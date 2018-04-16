@@ -13,14 +13,14 @@ int main(int argc, char** argv)
     while (window->running())
     {
         a.processEvents();
-		if(window->exec_loaded())
-		{
-			window->emulate();
-			if (enable_frame_rate_limiting)
-				window->limit_frame_rate();
-			window->update_window_title();
-			window->reset_frame_time();
-		}
+        if(window->exec_loaded())
+        {
+            window->emulate();
+            if (enable_frame_rate_limiting)
+                window->limit_frame_rate();
+            window->update_window_title();
+            window->reset_frame_time();
+        }
     }
 
     return 0;

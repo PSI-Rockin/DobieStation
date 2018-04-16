@@ -5,9 +5,9 @@
 #include <QPainter>
 #include <QString>
 #include <QVBoxLayout>
-#include <QAction>
 #include <QMenuBar>
 #include <QFileDialog>
+#include <QThread>
 
 #include "emuwindow.hpp"
 
@@ -25,11 +25,11 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
     old_update_time = chrono::system_clock::now();
     framerate_avg = 0.0;
 
-	QWidget* widget = new QWidget;
-	setCentralWidget(widget);
+    QWidget* widget = new QWidget;
+    setCentralWidget(widget);
 
-	QWidget* topFiller = new QWidget;
-	topFiller->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    QWidget* topFiller = new QWidget;
+    topFiller->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
     QWidget *bottomFiller = new QWidget;
     bottomFiller->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
@@ -40,7 +40,7 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
     layout->addWidget(bottomFiller);
     widget->setLayout(layout);
 
-	create_menu();
+    create_menu();
 }
 
 int EmuWindow::init(int argc, char** argv)
@@ -55,28 +55,28 @@ int EmuWindow::init(int argc, char** argv)
     e.reset();
     char* bios_name = argv[1];
 
-	char* file_name;
-	if(argc == 4)
-		file_name = argv[2];
-	else if(argc == 3 && strcmp(argv[2], "-skip") != 0)
-		file_name = argv[2];
-	else
-		file_name = nullptr;
+    char* file_name;
+    if(argc == 4)
+        file_name = argv[2];
+    else if(argc == 3 && strcmp(argv[2], "-skip") != 0)
+        file_name = argv[2];
+    else
+        file_name = nullptr;
 
     bool skip_BIOS = false;
     //Flag parsing - to be reworked
-    if (argc >= 4)
+    if (argc >= 3)
     {
-		if(argc == 3)
-		{
-			if (strcmp(argv[2], "-skip") == 0)
-				skip_BIOS = true;
-		} 
-    	else if(argc == 4)
-		{
-			if (strcmp(argv[3], "-skip") == 0)
-				skip_BIOS = true;
-		}
+        if(argc == 3)
+        {
+            if (strcmp(argv[2], "-skip") == 0)
+                skip_BIOS = true;
+        } 
+        else if(argc == 4)
+        {
+            if (strcmp(argv[3], "-skip") == 0)
+                skip_BIOS = true;
+        }
     }
 
     ifstream BIOS_file(bios_name, ios::binary | ios::in);
@@ -93,17 +93,17 @@ int EmuWindow::init(int argc, char** argv)
     delete[] BIOS;
     BIOS = nullptr;
 
-	if(file_name)
-	{
-		if(load_exec(file_name, skip_BIOS))
-		{
-			return 1;
-		}
-	}
-	else
-	{
-		is_exec_loaded = false;
-	}
+    if(file_name)
+    {
+        if(load_exec(file_name, skip_BIOS))
+        {
+            return 1;
+        }
+    }
+    else
+    {
+        is_exec_loaded = false;
+    }
 
     //Initialize window
     is_running = true;
@@ -115,54 +115,54 @@ int EmuWindow::init(int argc, char** argv)
 
 int EmuWindow::load_exec(const char* file_name, bool skip_BIOS)
 {
-	ifstream exec_file(file_name, ios::binary | ios::in);
+    ifstream exec_file(file_name, ios::binary | ios::in);
     if (!exec_file.is_open())
     {
         printf("Failed to load %s\n", file_name);
         return 1;
     }
 
-	//Basic file format detection
-	string file_string = file_name;
-	string format = file_string.substr(file_string.length() - 4);
-	transform(format.begin(), format.end(), format.begin(), ::tolower);
-	printf("%s\n", format.c_str());
+    //Basic file format detection
+    string file_string = file_name;
+    string format = file_string.substr(file_string.length() - 4);
+    transform(format.begin(), format.end(), format.begin(), ::tolower);
+    printf("%s\n", format.c_str());
 
-	if (format == ".elf")
-	{
-		long long ELF_size = filesize(file_name);
-		uint8_t* ELF = new uint8_t[ELF_size];
-		exec_file.read((char*)ELF, ELF_size);
-		exec_file.close();
+    if (format == ".elf")
+    {
+        long long ELF_size = filesize(file_name);
+        uint8_t* ELF = new uint8_t[ELF_size];
+        exec_file.read((char*)ELF, ELF_size);
+        exec_file.close();
 
-		printf("Loaded %s\n", file_name);
-		printf("Size: %lld\n", ELF_size);
-		e.load_ELF(ELF, ELF_size);
-		delete[] ELF;
-		ELF = nullptr;
-		if (skip_BIOS)
-			e.set_skip_BIOS_hack(SKIP_HACK::LOAD_ELF);
-	}
-	else if (format == ".iso")
-	{
-		exec_file.close();
-		e.load_CDVD(file_name);
-		if (skip_BIOS)
-			e.set_skip_BIOS_hack(SKIP_HACK::LOAD_DISC);
-	}
-	else
-	{
-		printf("Unrecognized file format %s\n", format.c_str());
-		return 1;
-	}
+        printf("Loaded %s\n", file_name);
+        printf("Size: %lld\n", ELF_size);
+        e.load_ELF(ELF, ELF_size);
+        delete[] ELF;
+        ELF = nullptr;
+        if (skip_BIOS)
+            e.set_skip_BIOS_hack(SKIP_HACK::LOAD_ELF);
+    }
+    else if (format == ".iso")
+    {
+        exec_file.close();
+        e.load_CDVD(file_name);
+        if (skip_BIOS)
+            e.set_skip_BIOS_hack(SKIP_HACK::LOAD_DISC);
+    }
+    else
+    {
+        printf("Unrecognized file format %s\n", format.c_str());
+        return 1;
+    }
 
-	is_exec_loaded = true;
-	return 0;
+    is_exec_loaded = true;
+    return 0;
 }
 
 bool EmuWindow::exec_loaded()
 {
-	return is_exec_loaded;
+    return is_exec_loaded;
 }
 
 bool EmuWindow::running()
@@ -178,19 +178,19 @@ void EmuWindow::emulate()
 
 void EmuWindow::create_menu()
 {
-	open_action = new QAction(tr("&Open Rom"), this);
-	connect(open_action, &QAction::triggered, this, &EmuWindow::open_file_no_skip);
+    open_action = new QAction(tr("&Open Rom"), this);
+    connect(open_action, &QAction::triggered, this, &EmuWindow::open_file_no_skip);
 
-	open_action_skip = new QAction(tr("&Open Rom (Skip BIOS)"), this);
-	connect(open_action_skip, &QAction::triggered, this, &EmuWindow::open_file_skip);
+    open_action_skip = new QAction(tr("&Open Rom (Skip BIOS)"), this);
+    connect(open_action_skip, &QAction::triggered, this, &EmuWindow::open_file_skip);
 
-	exit_action = new QAction(tr("&Exit"), this);
-	connect(exit_action, &QAction::triggered, this, &QWidget::close);
+    exit_action = new QAction(tr("&Exit"), this);
+    connect(exit_action, &QAction::triggered, this, &QWidget::close);
 
-	file_menu = menuBar()->addMenu(tr("&File"));
-	file_menu->addAction(open_action);
-	file_menu->addAction(open_action_skip);
-	file_menu->addAction(exit_action);
+    file_menu = menuBar()->addMenu(tr("&File"));
+    file_menu->addAction(open_action);
+    file_menu->addAction(open_action_skip);
+    file_menu->addAction(exit_action);
 }
 
 void EmuWindow::paintEvent(QPaintEvent *event)
@@ -269,21 +269,21 @@ void EmuWindow::reset_frame_time()
 #ifndef QT_NO_CONTEXTMENU
 void EmuWindow::contextMenuEvent(QContextMenuEvent* event)
 {
-	QMenu menu(this);
-	menu.addAction(open_action);
-	menu.addAction(exit_action);
-	menu.exec(event->globalPos());
+    QMenu menu(this);
+    menu.addAction(open_action);
+    menu.addAction(exit_action);
+    menu.exec(event->globalPos());
 }
 #endif // QT_NO_CONTEXTMENU
 
 void EmuWindow::open_file_no_skip()
 {
-	QString file_name = QFileDialog::getOpenFileName(this, tr("Open Rom"), "", tr("ROM Files (*.elf *.iso)"));
-	load_exec(file_name.toStdString().c_str(), true);
+    QString file_name = QFileDialog::getOpenFileName(this, tr("Open Rom"), "", tr("ROM Files (*.elf *.iso)"));
+    load_exec(file_name.toStdString().c_str(), true);
 }
 
 void EmuWindow::open_file_skip()
 {
-	QString file_name = QFileDialog::getOpenFileName(this, tr("Open Rom"), "", tr("ROM Files (*.elf *.iso)"));
-	load_exec(file_name.toStdString().c_str(), false);
+    QString file_name = QFileDialog::getOpenFileName(this, tr("Open Rom"), "", tr("ROM Files (*.elf *.iso)"));
+    load_exec(file_name.toStdString().c_str(), false);
 }
