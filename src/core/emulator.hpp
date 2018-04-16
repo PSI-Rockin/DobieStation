@@ -31,6 +31,8 @@ class Emulator
     private:
         int frames;
         BIOS_HLE bios_hle;
+        Cop0 cp0;
+        Cop1 fpu;
         CDVD_Drive cdvd;
         DMAC dmac;
         EmotionEngine cpu;

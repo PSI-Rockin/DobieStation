@@ -96,7 +96,7 @@ void GraphicsInterface::process_REGLIST(uint64_t data[])
 
 void GraphicsInterface::feed_GIF(uint64_t data[])
 {
-    //printf("\n[GIF] $%08X_%08X_%08X_%08X", data[1] >> 32, data[1] & 0xFFFFFFFF, data[0] >> 32, data[0] & 0xFFFFFFFF);
+    printf("[GIF] $%08X_%08X_%08X_%08X\n", data[1] >> 32, data[1] & 0xFFFFFFFF, data[0] >> 32, data[0] & 0xFFFFFFFF);
     if (!current_tag.data_left)
     {
         //Read the GIFtag

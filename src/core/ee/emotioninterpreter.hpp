@@ -111,6 +111,7 @@ namespace EmotionInterpreter
     void cop_mtc(EmotionEngine& cpu, uint32_t instruction);
     void cop_cfc(EmotionEngine& cpu, uint32_t instruction);
     void cop_ctc(EmotionEngine& cpu, uint32_t instruction);
+    void cop_bc0(EmotionEngine& cpu, uint32_t instruction);
 
     void cop_s(Cop1& fpu, uint32_t instruction);
     void fpu_add(Cop1& fpu, uint32_t instruction);

@@ -500,6 +500,7 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
                 printf("Dest base: $%08X\n", BITBLTBUF.dest_base);
                 printf("TRXPOS: (%d, %d)\n", TRXPOS.dest_x, TRXPOS.dest_y);
                 printf("TRXREG (%d, %d)\n", TRXREG.width, TRXREG.height);
+                printf("Format: $%02X\n", BITBLTBUF.dest_format);
                 printf("Width: %d\n", BITBLTBUF.dest_width);
                 TRXPOS.int_dest_x = TRXPOS.dest_x;
                 TRXPOS.int_source_x = TRXPOS.int_source_x;
@@ -1130,6 +1131,7 @@ void GraphicsSynthesizer::write_HWREG(uint64_t data)
         {
             case 0x00:
                 *(uint32_t*)&local_mem[BITBLTBUF.dest_base + (dest_addr * 4)] = (data >> (i * 32)) & 0xFFFFFFFF;
+                printf("[GS] Write to $%08X\n", BITBLTBUF.dest_base + (dest_addr * 4));
                 pixels_transferred++;
                 TRXPOS.int_dest_x++;
                 break;
@@ -1143,13 +1145,13 @@ void GraphicsSynthesizer::write_HWREG(uint64_t data)
                 {
                     local_mem[dest_addr] &= ~0xF0;
                     local_mem[dest_addr] |= (data >> ((i >> 1) << 3)) & 0xF0;
-                    printf("[GS] Write to $%08X:1: $%02X\n", dest_addr, local_mem[dest_addr]);
+                    //printf("[GS] Write to $%08X:1: $%02X\n", dest_addr, local_mem[dest_addr]);
                 }
                 else
                 {
                     local_mem[dest_addr] &= ~0xF;
                     local_mem[dest_addr] |= (data >> ((i >> 1) << 3)) & 0xF;
-                    printf("[GS] Write to $%08X:0: $%02X\n", dest_addr, local_mem[dest_addr]);
+                    //printf("[GS] Write to $%08X:0: $%02X\n", dest_addr, local_mem[dest_addr]);
                 }
                 pixels_transferred++;
                 TRXPOS.int_dest_x++;
@@ -1231,14 +1233,21 @@ uint32_t GraphicsSynthesizer::tex_lookup(uint32_t coord)
                 entry = local_mem[tex_base + (coord >> 1)] >> 4;
             else
                 entry = local_mem[tex_base + (coord >> 1)] & 0xF;
-            return 0xFF000000 | (entry << 4) | (entry << 12) | (entry << 20);
+            //return 0xFF000000 | (entry << 4) | (entry << 12) | (entry << 20);
             /*printf("[GS] CLUT base: $%08X\n", clut_base);
             printf("Coord: $%08X\n", coord >> 1);
             printf("Entry: %d\n", entry);
             printf("Offset: %d\n", current_ctx->tex0.CLUT_offset);
             printf("Format: %d\n", current_ctx->tex0.CLUT_format);*/
-            //return 0xFF000000 | (entry << 4);
-            //return get_word(clut_base + (entry << 2));
+            uint32_t addr;
+            if (current_ctx->tex0.use_CSM2)
+                addr = clut_base + (entry << 2);
+            else
+            {
+                addr = clut_base + ((entry & 0x7) << 2);
+                addr += (entry & 0x8) * 32; //increase distance by 64 words (256 bytes) if entry > 7
+            }
+            return get_word(addr);
         }
             break;
         default:

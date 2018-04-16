@@ -28,6 +28,7 @@ void DMAC::reset()
 {
     master_disable = 0x1201; //hax
     control.master_enable = false;
+    PCR = 0;
     for (int i = 0; i < 10; i++)
     {
         channels[i].control = 0;
@@ -98,6 +99,7 @@ void DMAC::process_GIF()
 
         channels[GIF].address += 16;
         channels[GIF].quadword_count--;
+        printf("[DMAC] GIF QWC: $%08X\n", channels[GIF].quadword_count);
     }
     else
     {
@@ -263,6 +265,7 @@ uint32_t DMAC::read32(uint32_t address)
     switch (address)
     {
         case 0x1000A000:
+            printf("[DMAC] Read GIF control\n");
             reg = channels[GIF].control;
             break;
         case 0x1000C000:
@@ -298,6 +301,9 @@ uint32_t DMAC::read32(uint32_t address)
             reg |= interrupt_stat.stall_mask << 29;
             reg |= interrupt_stat.mfifo_mask << 30;
             break;
+        case 0x1000E020:
+            reg = PCR;
+            break;
         default:
             printf("[DMAC] Unrecognized read32 from $%08X\n", address);
             break;
@@ -309,7 +315,16 @@ void DMAC::write32(uint32_t address, uint32_t value)
 {
     switch (address)
     {
+        case 0x10008000:
+            printf("[DMAC] VIF0 CTRL: $%08X\n", value);
+            channels[VIF0].control = value;
+            if (value & 0x100)
+            {
+                transfer_end(VIF0);
+            }
+            break;
         case 0x1000A000:
+            printf("[DMAC] GIF CTRL: $%08X\n", value);
             channels[GIF].control = value;
             if (value & 0x100)
                 start_DMA(GIF);
@@ -385,6 +400,10 @@ void DMAC::write32(uint32_t address, uint32_t value)
                 interrupt_stat.mfifo_mask ^= 1;
 
             int1_check();
+            break;
+        case 0x1000E020:
+            printf("[DMAC] Write to PCR: $%08X\n", value);
+            PCR = value;
             break;
         default:
             printf("[DMAC] Unrecognized write32 of $%08X to $%08X\n", value, address);

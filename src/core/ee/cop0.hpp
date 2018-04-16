@@ -38,20 +38,25 @@ struct COP0_CAUSE
     bool bd;
 };
 
+class DMAC;
+
 class Cop0
 {
+    private:
+        DMAC* dmac;
     public:
         uint32_t gpr[32];
         COP0_STATUS status;
         COP0_CAUSE cause;
         uint32_t EPC, ErrorEPC;
-        Cop0();
+        Cop0(DMAC* dmac);
 
         void reset();
 
         uint32_t mfc(int index);
         void mtc(int index, uint32_t value);
 
+        bool get_condition();
         bool int1_raised();
         bool int_enabled();
         bool int_pending();

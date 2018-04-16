@@ -9,7 +9,8 @@
 
 //#define printf(fmt, ...)(0)
 
-EmotionEngine::EmotionEngine(BIOS_HLE* b, Emulator* e, VectorUnit* vu0) : bios(b), e(e), vu0(vu0)
+EmotionEngine::EmotionEngine(BIOS_HLE* b, Cop0* cp0, Cop1* fpu, Emulator* e, VectorUnit* vu0) :
+    bios(b), cp0(cp0), fpu(fpu), e(e), vu0(vu0)
 {
     reset();
 }
@@ -41,9 +42,6 @@ void EmotionEngine::reset()
     //Clear out $zero
     for (int i = 0; i < 16; i++)
         gpr[i] = 0;
-
-    cp0.reset();
-    fpu.reset();
 }
 
 void EmotionEngine::run()
@@ -55,7 +53,7 @@ void EmotionEngine::run()
         printf("[$%08X] $%08X - %s\n", PC, instruction, disasm.c_str());
     }
     EmotionInterpreter::interpret(*this, instruction);
-    cp0.count_up();
+    cp0->count_up();
     /*if (PC == 0x00100008)
         can_disassemble = true;
     if (PC == 0x100BBC)
@@ -79,9 +77,6 @@ void EmotionEngine::run()
                 print_state();
             }*/
 
-            if (PC == 0x00138658)
-                PC = 0x0013867C;
-
             if (PC == 0xBFC00928)
                 exit(1);
         }
@@ -95,12 +90,12 @@ void EmotionEngine::run()
     //if (PC == 0x84010)
         //print_state();
 
-    if (cp0.int_enabled())
+    if (cp0->int_enabled())
     {
         //printf("[EE] Int enabled!\n");
-        if (cp0.cause.int0_pending)
+        if (cp0->cause.int0_pending)
             int0();
-        if (cp0.cause.int1_pending)
+        if (cp0->cause.int1_pending)
             int1();
     }
 }
@@ -258,10 +253,10 @@ void EmotionEngine::mfc(int cop_id, int reg, int cop_reg)
     switch (cop_id)
     {
         case 0:
-            bark = cp0.mfc(cop_reg);
+            bark = cp0->mfc(cop_reg);
             break;
         case 1:
-            bark = fpu.get_gpr(cop_reg);
+            bark = fpu->get_gpr(cop_reg);
             break;
         default:
             printf("Unrecognized cop id %d in mfc\n", cop_id);
@@ -276,10 +271,10 @@ void EmotionEngine::mtc(int cop_id, int reg, int cop_reg)
     switch (cop_id)
     {
         case 0:
-            cp0.mtc(cop_reg, get_gpr<uint32_t>(reg));
+            cp0->mtc(cop_reg, get_gpr<uint32_t>(reg));
             break;
         case 1:
-            fpu.mtc(cop_reg, get_gpr<uint32_t>(reg));
+            fpu->mtc(cop_reg, get_gpr<uint32_t>(reg));
             break;
         default:
             printf("Unrecognized cop id %d in mtc\n", cop_id);
@@ -293,7 +288,7 @@ void EmotionEngine::cfc(int cop_id, int reg, int cop_reg)
     switch (cop_id)
     {
         case 1:
-            bark = (int32_t)fpu.cfc(cop_reg);
+            bark = (int32_t)fpu->cfc(cop_reg);
             break;
         case 2:
             bark = (int32_t)vu0->cfc(cop_reg);
@@ -308,7 +303,7 @@ void EmotionEngine::ctc(int cop_id, int reg, int cop_reg)
     switch (cop_id)
     {
         case 1:
-            fpu.ctc(cop_reg, bark);
+            fpu->ctc(cop_reg, bark);
             break;
         case 2:
             vu0->ctc(cop_reg, bark);
@@ -397,7 +392,7 @@ void EmotionEngine::set_SA(uint64_t value)
 
 void EmotionEngine::lwc1(uint32_t addr, int index)
 {
-    fpu.mtc(index, read32(addr));
+    fpu->mtc(index, read32(addr));
 }
 
 void EmotionEngine::lqc2(uint32_t addr, int index)
@@ -414,7 +409,7 @@ void EmotionEngine::lqc2(uint32_t addr, int index)
 
 void EmotionEngine::swc1(uint32_t addr, int index)
 {
-    write32(addr, fpu.get_gpr(index));
+    write32(addr, fpu->get_gpr(index));
 }
 
 void EmotionEngine::sqc2(uint32_t addr, int index)
@@ -451,18 +446,18 @@ void EmotionEngine::set_LO_HI(uint64_t a, uint64_t b, bool hi)
  */
 void EmotionEngine::handle_exception(uint32_t new_addr, uint8_t code)
 {
-    cp0.status.exception = true;
-    cp0.cause.code = code;
+    cp0->status.exception = true;
+    cp0->cause.code = code;
 
     if (branch_on)
     {
-        cp0.cause.bd = true;
-        cp0.mtc(14, PC - 4);
+        cp0->cause.bd = true;
+        cp0->mtc(14, PC - 4);
     }
     else
     {
-        cp0.cause.bd = false;
-        cp0.mtc(14, PC);
+        cp0->cause.bd = false;
+        cp0->mtc(14, PC);
     }
 
     branch_on = false;
@@ -499,7 +494,7 @@ void EmotionEngine::syscall_exception()
 
 void EmotionEngine::int0()
 {
-    if (cp0.status.int0_mask)
+    if (cp0->status.int0_mask)
     {
         printf("[EE] INT0!\n");
         handle_exception(0x80000200, 0);
@@ -508,7 +503,7 @@ void EmotionEngine::int0()
 
 void EmotionEngine::int1()
 {
-    if (cp0.status.int1_mask)
+    if (cp0->status.int1_mask)
     {
         //printf("[EE] INT1!\n");
         //can_disassemble = true;
@@ -518,14 +513,14 @@ void EmotionEngine::int1()
 
 void EmotionEngine::set_int0_signal(bool value)
 {
-    cp0.cause.int0_pending = value;
+    cp0->cause.int0_pending = value;
     if (value)
         printf("[EE] Set INT0\n");
 }
 
 void EmotionEngine::set_int1_signal(bool value)
 {
-    cp0.cause.int1_pending = value;
+    cp0->cause.int1_pending = value;
     if (value)
         printf("[EE] Set INT1\n");
 }
@@ -533,34 +528,48 @@ void EmotionEngine::set_int1_signal(bool value)
 void EmotionEngine::eret()
 {
     //printf("[EE] Return from exception\n");
-    uint32_t EPC = cp0.mfc(14);
+    uint32_t EPC = cp0->mfc(14);
     PC = EPC;
     increment_PC = false;
-    cp0.status.exception = false;
+    cp0->status.exception = false;
 }
 
 void EmotionEngine::ei()
 {
-    cp0.status.master_int_enable = true;
+    cp0->status.master_int_enable = true;
 }
 
 void EmotionEngine::di()
 {
-    cp0.status.master_int_enable = false;
+    cp0->status.master_int_enable = false;
+}
+
+void EmotionEngine::cp0_bc0(int32_t offset, bool test_true, bool likely)
+{
+    bool passed = false;
+    if (test_true)
+        passed = cp0->get_condition();
+    else
+        passed = !cp0->get_condition();
+
+    if (likely)
+        branch_likely(passed, offset);
+    else
+        branch(passed, offset);
 }
 
 void EmotionEngine::fpu_cop_s(uint32_t instruction)
 {
-    EmotionInterpreter::cop_s(fpu, instruction);
+    EmotionInterpreter::cop_s(*fpu, instruction);
 }
 
 void EmotionEngine::fpu_bc1(int32_t offset, bool test_true, bool likely)
 {
     bool passed = false;
     if (test_true)
-        passed = fpu.get_condition();
+        passed = fpu->get_condition();
     else
-        passed = !fpu.get_condition();
+        passed = !fpu->get_condition();
 
     if (likely)
         branch_likely(passed, offset);
@@ -570,7 +579,7 @@ void EmotionEngine::fpu_bc1(int32_t offset, bool test_true, bool likely)
 
 void EmotionEngine::fpu_cvt_s_w(int dest, int source)
 {
-    fpu.cvt_s_w(dest, source);
+    fpu->cvt_s_w(dest, source);
 }
 
 void EmotionEngine::qmfc2(int dest, int cop_reg)

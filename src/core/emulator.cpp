@@ -8,8 +8,10 @@
 #define VBLANK_START CYCLES_PER_FRAME * 0.8
 
 Emulator::Emulator() :
-    bios_hle(this, &gs), cdvd(this), cpu(&bios_hle, this, &vu0), dmac(&cpu, this, &gif, &sif), gif(&gs), gs(&intc),
-    iop(this), iop_dma(this, &cdvd, &sif), iop_timers(this), intc(&cpu), timers(&intc), sio2(this), vu0(0), vu1(1)
+    bios_hle(this, &gs), cdvd(this), cp0(&dmac), cpu(&bios_hle, &cp0, &fpu, this, &vu0),
+    dmac(&cpu, this, &gif, &sif), gif(&gs), gs(&intc),
+    iop(this), iop_dma(this, &cdvd, &sif), iop_timers(this), intc(&cpu),
+    timers(&intc), sio2(this), vu0(0), vu1(1)
 {
     BIOS = nullptr;
     RDRAM = nullptr;
@@ -89,8 +91,10 @@ void Emulator::reset()
 
     //bios_hle.reset();
     cdvd.reset();
+    cp0.reset();
     cpu.reset();
     dmac.reset();
+    fpu.reset();
     gs.reset();
     gif.reset();
     iop.reset();

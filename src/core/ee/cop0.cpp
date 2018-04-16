@@ -1,7 +1,9 @@
 #include <cstdio>
 #include "cop0.hpp"
+#include "dmac.hpp"
 
-Cop0::Cop0() {}
+Cop0::Cop0(DMAC* dmac) : dmac(dmac)
+{}
 
 void Cop0::reset()
 {
@@ -114,6 +116,16 @@ void Cop0::mtc(int index, uint32_t value)
         default:
             gpr[index] = value;
     }
+}
+
+/**
+ * Coprocessor 0 is wired to the DMAC. CP0COND is true when all DMA transfers indicated in PCR have completed.
+ */
+bool Cop0::get_condition()
+{
+    uint32_t STAT = dmac->read32(0x1000E010) & 0x3FF;
+    uint32_t PCR = dmac->read32(0x1000E020) & 0x3FF;
+    return ((~PCR | STAT) & 0x3FF) == 0x3FF;
 }
 
 bool Cop0::int1_raised()

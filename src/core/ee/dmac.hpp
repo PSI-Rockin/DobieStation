@@ -53,6 +53,7 @@ class DMAC
 
         D_CTRL control;
         D_STAT interrupt_stat;
+        uint32_t PCR;
 
         uint32_t master_disable;
 

@@ -810,6 +810,9 @@ void EmotionInterpreter::cop(EmotionEngine &cpu, uint32_t instruction)
         case 0x206:
             cop_ctc(cpu, instruction);
             break;
+        case 0x008:
+            cop_bc0(cpu, instruction);
+            break;
         case 0x108:
             cop_bc1(cpu, instruction);
             break;
@@ -860,6 +863,19 @@ void EmotionInterpreter::cop_ctc(EmotionEngine &cpu, uint32_t instruction)
     int emotion_reg = (instruction >> 16) & 0x1F;
     int cop_reg = (instruction >> 11) & 0x1F;
     cpu.ctc(cop_id, emotion_reg, cop_reg);
+}
+
+void EmotionInterpreter::cop_bc0(EmotionEngine &cpu, uint32_t instruction)
+{
+    const static bool likely[] = {false, false, true, true};
+    const static bool op_true[] = {false, true, false, true};
+    int32_t offset = ((int16_t)(instruction & 0xFFFF)) << 2;
+    uint8_t op = (instruction >> 16) & 0x1F;
+    if (op > 3)
+    {
+        unknown_op("bc0", instruction, op);
+    }
+    cpu.cp0_bc0(offset, op_true[op], likely[op]);
 }
 
 void EmotionInterpreter::cop2_qmfc2(EmotionEngine &cpu, uint32_t instruction)
