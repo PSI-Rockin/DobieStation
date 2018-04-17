@@ -2,8 +2,6 @@
 #define EMUWINDOW_HPP
 
 #include <chrono>
-
-#include <QCloseEvent>
 #include <QMainWindow>
 #include <QPaintEvent>
 #include "../core/emulator.hpp"
@@ -20,8 +18,8 @@ class EmuWindow : public QMainWindow
         double framerate_avg;
 
         QMenu* file_menu;
-        QAction* open_action;
-        QAction* open_action_skip;
+        QAction* load_rom_action;
+        QAction* load_bios_action;
         QAction* exit_action;
 
     public:

@@ -13,7 +13,7 @@ int main(int argc, char** argv)
     while (window->running())
     {
         a.processEvents();
-        if(window->exec_loaded())
+        if (window->exec_loaded())
         {
             window->emulate();
             if (enable_frame_rate_limiting)

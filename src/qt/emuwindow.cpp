@@ -9,7 +9,6 @@
 #include <QFileDialog>
 
 #include "emuwindow.hpp"
-#include <QApplication>
 
 using namespace std;
 
@@ -51,13 +50,12 @@ int EmuWindow::init(int argc, char** argv)
         return 1;
     }
 
-    //Initialize emulator
     char* bios_name = argv[1];
 
     char* file_name;
-    if(argc == 4)
+    if (argc == 4)
         file_name = argv[2];
-    else if(argc == 3 && strcmp(argv[2], "-skip") != 0)
+    else if (argc == 3 && strcmp(argv[2], "-skip") != 0)
         file_name = argv[2];
     else
         file_name = nullptr;
@@ -66,12 +64,12 @@ int EmuWindow::init(int argc, char** argv)
     //Flag parsing - to be reworked
     if (argc >= 3)
     {
-        if(argc == 3)
+        if (argc == 3)
         {
             if (strcmp(argv[2], "-skip") == 0)
                 skip_BIOS = true;
         } 
-        else if(argc == 4)
+        else if (argc == 4)
         {
             if (strcmp(argv[3], "-skip") == 0)
                 skip_BIOS = true;
@@ -92,12 +90,10 @@ int EmuWindow::init(int argc, char** argv)
     delete[] BIOS;
     BIOS = nullptr;
 
-    if(file_name)
+    if (file_name)
     {
-        if(load_exec(file_name, skip_BIOS))
-        {
+        if (load_exec(file_name, skip_BIOS))
             return 1;
-        }
     }
     else
     {
@@ -179,18 +175,18 @@ void EmuWindow::emulate()
 
 void EmuWindow::create_menu()
 {
-    open_action = new QAction(tr("&Open Rom"), this);
-    connect(open_action, &QAction::triggered, this, &EmuWindow::open_file_no_skip);
+    load_rom_action = new QAction(tr("&Load Rom..."), this);
+    connect(load_rom_action, &QAction::triggered, this, &EmuWindow::open_file_skip);
 
-    open_action_skip = new QAction(tr("&Open Rom (Skip BIOS)"), this);
-    connect(open_action_skip, &QAction::triggered, this, &EmuWindow::open_file_skip);
+    load_bios_action = new QAction(tr("&Load BIOS..."), this);
+    connect(load_bios_action, &QAction::triggered, this, &EmuWindow::open_file_no_skip);
 
     exit_action = new QAction(tr("&Exit"), this);
     connect(exit_action, &QAction::triggered, this, &QWidget::close);
 
     file_menu = menuBar()->addMenu(tr("&File"));
-    file_menu->addAction(open_action);
-    file_menu->addAction(open_action_skip);
+    file_menu->addAction(load_rom_action);
+    file_menu->addAction(load_bios_action);
     file_menu->addAction(exit_action);
 }
 
@@ -271,7 +267,8 @@ void EmuWindow::reset_frame_time()
 void EmuWindow::contextMenuEvent(QContextMenuEvent* event)
 {
     QMenu menu(this);
-    menu.addAction(open_action);
+    menu.addAction(load_rom_action);
+    menu.addAction(load_bios_action);
     menu.addAction(exit_action);
     menu.exec(event->globalPos());
 }
