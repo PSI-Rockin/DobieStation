@@ -175,7 +175,7 @@ void EmuWindow::emulate()
 
 void EmuWindow::create_menu()
 {
-    load_rom_action = new QAction(tr("&Load Rom... (Fast)"), this);
+    load_rom_action = new QAction(tr("&Load ROM... (Fast)"), this);
     connect(load_rom_action, &QAction::triggered, this, &EmuWindow::open_file_skip);
 
     load_bios_action = new QAction(tr("&Load ROM... (Boot BIOS)"), this);
