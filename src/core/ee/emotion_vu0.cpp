@@ -176,6 +176,9 @@ void EmotionInterpreter::cop2_special2(VectorUnit &vu0, uint32_t instruction)
         case 0x35:
             cop2_vsqi(vu0, instruction);
             break;
+        case 0x39:
+            cop2_vsqrt(vu0, instruction);
+            break;
         case 0x3A:
             cop2_vrsqrt(vu0, instruction);
             break;
@@ -239,6 +242,13 @@ void EmotionInterpreter::cop2_vsqi(VectorUnit &vu0, uint32_t instruction)
     uint32_t it = (instruction >> 16) & 0x1F;
     uint8_t dest_field = (instruction >> 21) & 0xF;
     vu0.sqi(dest_field, fs, it);
+}
+
+void EmotionInterpreter::cop2_vsqrt(VectorUnit &vu0, uint32_t instruction)
+{
+    uint8_t reg = (instruction >> 16) & 0x1F;
+    uint8_t ftf = (instruction >> 23) & 0x3;
+    vu0.vu_sqrt(ftf, reg);
 }
 
 void EmotionInterpreter::cop2_vrsqrt(VectorUnit &vu0, uint32_t instruction)

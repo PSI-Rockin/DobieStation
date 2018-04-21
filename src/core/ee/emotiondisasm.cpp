@@ -1354,6 +1354,8 @@ string EmotionDisasm::disasm_cop2_special2(uint32_t instruction)
             return disasm_vmr32(instruction);
         case 0x35:
             return disasm_vsqi(instruction);
+        case 0x39:
+            return disasm_vsqrt(instruction);
         case 0x3A:
             return disasm_vrsqrt(instruction);
         case 0x3B:
@@ -1421,6 +1423,15 @@ string EmotionDisasm::disasm_vsqi(uint32_t instruction)
     string field = get_dest_field((instruction >> 21) & 0xF);
     output << "vsqi." << field;
     output << " vf" << fs << ", (vi" << it << "++)";
+    return output.str();
+}
+
+string EmotionDisasm::disasm_vsqrt(uint32_t instruction)
+{
+    stringstream output;
+    uint32_t ft = (instruction >> 16) & 0x1F;
+    string ftf = get_fsf((instruction >> 23) & 0x3);
+    output << "vsqrt Q, vf" << ft << ftf;
     return output.str();
 }
 

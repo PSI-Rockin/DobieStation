@@ -1163,6 +1163,9 @@ void GraphicsSynthesizer::write_HWREG(uint64_t data)
         case 0x01:
             ppd = 3;
             break;
+        case 0x02:
+            ppd = 4;
+            break;
         case 0x13:
             ppd = 8;
             break;
@@ -1187,6 +1190,11 @@ void GraphicsSynthesizer::write_HWREG(uint64_t data)
                 break;
             case 0x01:
                 unpack_PSMCT24(BITBLTBUF.dest_base + (dest_addr * 4), data, i);
+                break;
+            case 0x02:
+                *(uint16_t*)&local_mem[BITBLTBUF.dest_base + (dest_addr * 2)] = (data >> (i * 16)) & 0xFFFF;
+                pixels_transferred++;
+                TRXPOS.int_dest_x++;
                 break;
             case 0x13:
                 dest_addr += BITBLTBUF.dest_base;
@@ -1283,6 +1291,18 @@ uint32_t GraphicsSynthesizer::tex_lookup(uint32_t coord)
     {
         case 0x00:
             return get_word(tex_base + (coord << 2));
+        case 0x02:
+        {
+            uint16_t color = local_mem[tex_base + (coord << 1)];
+            uint32_t full_color = 0;
+            full_color |= color & 0x1F;
+            full_color |= ((color >> 5) & 0x1F) << 8;
+            full_color |= ((color >> 10) & 0x1F) << 16;
+            if (color & (1 << 15))
+                full_color |= 0xFF000000;
+            return full_color;
+        }
+            break;
         case 0x13:
         {
             uint8_t entry;

@@ -40,6 +40,8 @@ void GSContext::set_tex0(uint64_t value)
     printf("TEX0: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);
     printf("Tex base: $%08X\n", tex0.texture_base);
     printf("Tex width: %d Height: %d\n", tex0.tex_width, tex0.tex_height);
+    printf("CLUT base: $%08X\n", tex0.CLUT_base);
+    printf("CLUT offset: $%08X\n", tex0.CLUT_offset);
 }
 
 void GSContext::set_xyoffset(uint64_t value)

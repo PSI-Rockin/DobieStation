@@ -283,6 +283,13 @@ void VectorUnit::sqi(uint8_t field, uint8_t source, uint8_t base)
     int_gpr[base]++;
 }
 
+void VectorUnit::vu_sqrt(uint8_t ftf, uint8_t source)
+{
+    Q = sqrt(gpr[source].f[ftf]);
+    printf("[VU] SQRT: %f\n", Q);
+    printf("Source: %f\n", gpr[source].f[ftf]);
+}
+
 void VectorUnit::sub(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)
 {
     printf("[VU] SUB: ");
