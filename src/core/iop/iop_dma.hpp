@@ -38,6 +38,7 @@ struct DMA_DICR
 class Emulator;
 class CDVD_Drive;
 class SubsystemInterface;
+class SPU;
 
 class IOP_DMA
 {
@@ -46,6 +47,7 @@ class IOP_DMA
         Emulator* e;
         CDVD_Drive* cdvd;
         SubsystemInterface* sif;
+        SPU *spu, *spu2;
         IOP_DMA_Channel channels[16];
 
         //Merge of DxCR, DxCR2, DxCR3 for easier processing
@@ -58,7 +60,7 @@ class IOP_DMA
         void process_SIF1();
     public:
         static const char* CHAN(int index);
-        IOP_DMA(Emulator* e, CDVD_Drive* cdvd, SubsystemInterface* sif);
+        IOP_DMA(Emulator* e, CDVD_Drive* cdvd, SubsystemInterface* sif, SPU* spu, SPU* spu2);
 
         void reset(uint8_t* RAM);
         void run();

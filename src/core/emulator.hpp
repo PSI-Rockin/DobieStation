@@ -15,6 +15,7 @@
 #include "iop/iop_dma.hpp"
 #include "iop/iop_timers.hpp"
 #include "iop/sio2.hpp"
+#include "iop/spu.hpp"
 
 #include "gs.hpp"
 #include "gif.hpp"
@@ -46,6 +47,7 @@ class Emulator
         IOPTiming iop_timers;
         INTC intc;
         SIO2 sio2;
+        SPU spu, spu2;
         SubsystemInterface sif;
         VectorUnit vu0, vu1;
 

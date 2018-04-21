@@ -51,6 +51,7 @@ class VectorUnit
         void iswr(uint8_t field, uint8_t source, uint8_t base);
         void maddbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
         void maddabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_reg);
+        void mr32(uint8_t field, uint8_t dest, uint8_t source);
         void mul(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2);
         void mulabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_reg);
         void mulbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);

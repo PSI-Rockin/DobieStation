@@ -88,6 +88,9 @@ void EmotionInterpreter::mmi0(EmotionEngine &cpu, uint32_t instruction)
     uint8_t op = (instruction >> 6) & 0x1F;
     switch (op)
     {
+        case 0x01:
+            psubw(cpu, instruction);
+            break;
         case 0x09:
             psubb(cpu, instruction);
             break;
@@ -96,6 +99,25 @@ void EmotionInterpreter::mmi0(EmotionEngine &cpu, uint32_t instruction)
             break;
         default:
             unknown_op("mmi0", instruction, op);
+    }
+}
+
+/**
+ * Parallel Subtract Word
+ * Splits the 128-bit registers RS and RT into four words each, subtracts them, and places the 128-bit result in RD.
+ * TODO: The result of an overflow/underflow is truncated.
+ */
+void EmotionInterpreter::psubw(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    for (int i = 0; i < 4; i++)
+    {
+        int32_t word = cpu.get_gpr<int32_t>(reg1, i);
+        word -= cpu.get_gpr<int32_t>(reg2, i);
+        cpu.set_gpr<int32_t>(dest, word, i);
     }
 }
 

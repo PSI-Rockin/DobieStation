@@ -933,7 +933,6 @@ int32_t GraphicsSynthesizer::orient2D(const Point &v1, const Point &v2, const Po
 
 void GraphicsSynthesizer::render_triangle()
 {
-    //return;
     //printf("[GS] Rendering triangle!\n");
     uint32_t color = 0x00000000;
     color |= vtx_queue[0].rgbaq.r;

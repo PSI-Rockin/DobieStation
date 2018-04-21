@@ -1,6 +1,7 @@
 #include <cstdio>
 #include "cdvd.hpp"
 #include "iop_dma.hpp"
+#include "spu.hpp"
 
 #include "../emulator.hpp"
 #include "../sif.hpp"
@@ -22,7 +23,8 @@ enum CHANNELS
     SIO2out
 };
 
-IOP_DMA::IOP_DMA(Emulator* e, CDVD_Drive* cdvd, SubsystemInterface* sif) : e(e), cdvd(cdvd), sif(sif)
+IOP_DMA::IOP_DMA(Emulator* e, CDVD_Drive* cdvd, SubsystemInterface* sif, class SPU* spu, class SPU* spu2) :
+    e(e), cdvd(cdvd), sif(sif), spu(spu), spu2(spu2)
 {
 
 }
@@ -68,9 +70,11 @@ void IOP_DMA::run()
                     process_CDVD();
                     break;
                 case SPU:
+                    spu->set_int_flag();
                     transfer_end(SPU);
                     break;
                 case SPU2:
+                    spu2->set_int_flag();
                     transfer_end(SPU2);
                     break;
                 case SIF0:
@@ -142,7 +146,6 @@ void IOP_DMA::process_SIF0()
             if ((data & (1 << 31)) || (data & (1 << 30)))
                 channels[SIF0].tag_end = true;
         }
-        //printf("[IOP DMA] SIF0 no data!\n");
     }
 }
 
@@ -153,7 +156,6 @@ void IOP_DMA::process_SIF1()
         if (sif->get_SIF1_size() > 0)
         {
             uint32_t data = sif->read_SIF1();
-            printf("[IOP DMA] SIF1: Transfer to $%08X of $%08X\n", channels[SIF1].addr, data);
 
             *(uint32_t*)&RAM[channels[SIF1].addr] = data;
             channels[SIF1].addr += 4;

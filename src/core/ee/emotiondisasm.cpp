@@ -1334,6 +1334,8 @@ string EmotionDisasm::disasm_cop2_special2(uint32_t instruction)
         case 0x1A:
         case 0x1B:
             return disasm_vmulabc(instruction);
+        case 0x31:
+            return disasm_vmr32(instruction);
         case 0x35:
             return disasm_vsqi(instruction);
         case 0x3A:
@@ -1349,6 +1351,17 @@ string EmotionDisasm::disasm_cop2_special2(uint32_t instruction)
         default:
             return unknown_op("cop2 special2", op, 2);
     }
+}
+
+string EmotionDisasm::disasm_cop2_special2_move(const string opcode, uint32_t instruction)
+{
+    stringstream output;
+    uint32_t fs = (instruction >> 11) & 0x1F;
+    uint32_t ft = (instruction >> 16) & 0x1F;
+    string field = get_dest_field((instruction >> 21) & 0xF);
+    output << opcode << "." << field;
+    output << " vf" << fs << ", vf" << ft;
+    return output.str();
 }
 
 string EmotionDisasm::disasm_cop2_acc_bc(const string opcode, uint32_t instruction)
@@ -1371,18 +1384,17 @@ string EmotionDisasm::disasm_vmaddabc(uint32_t instruction)
 
 string EmotionDisasm::disasm_vftoi4(uint32_t instruction)
 {
-    stringstream output;
-    uint32_t fs = (instruction >> 11) & 0x1F;
-    uint32_t ft = (instruction >> 16) & 0x1F;
-    string field = get_dest_field((instruction >> 21) & 0xF);
-    output << "vftoi4." << field;
-    output << " vf" << fs << ", vf" << ft;
-    return output.str();
+    return disasm_cop2_special2_move("vftoi4", instruction);
 }
 
 string EmotionDisasm::disasm_vmulabc(uint32_t instruction)
 {
     return disasm_cop2_acc_bc("vmula", instruction);
+}
+
+string EmotionDisasm::disasm_vmr32(uint32_t instruction)
+{
+    return disasm_cop2_special2_move("vmr32", instruction);
 }
 
 string EmotionDisasm::disasm_vsqi(uint32_t instruction)
@@ -1494,6 +1506,8 @@ string EmotionDisasm::disasm_mmi0(uint32_t instruction)
     int op = (instruction >> 6) & 0x1F;
     switch (op)
     {
+        case 0x01:
+            return disasm_special_simplemath("psubw", instruction);
         case 0x09:
             return disasm_psubb(instruction);
         case 0x12:

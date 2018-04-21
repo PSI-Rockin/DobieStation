@@ -10,7 +10,7 @@
 Emulator::Emulator() :
     bios_hle(this, &gs), cdvd(this), cp0(&dmac), cpu(&bios_hle, &cp0, &fpu, this, (uint8_t*)&scratchpad, &vu0),
     dmac(&cpu, this, &gif, &sif), gif(&gs), gs(&intc),
-    iop(this), iop_dma(this, &cdvd, &sif), iop_timers(this), intc(&cpu),
+    iop(this), iop_dma(this, &cdvd, &sif, &spu, &spu2), iop_timers(this), intc(&cpu),
     timers(&intc), sio2(this, &pad), vu0(0), vu1(1)
 {
     BIOS = nullptr;
@@ -114,8 +114,6 @@ void Emulator::run()
                 }
                 //cpu.set_disassembly(true);
             }*/
-            if (frames == 3203)
-                cpu.set_disassembly(true);
             frames++;
             iop_request_IRQ(0);
             gs.render_CRT();
@@ -153,6 +151,8 @@ void Emulator::reset()
     pad.reset();
     sif.reset();
     sio2.reset();
+    spu.reset();
+    spu2.reset();
     timers.reset();
     MCH_DRD = 0;
     MCH_RICM = 0;
@@ -692,9 +692,9 @@ uint16_t Emulator::iop_read16(uint32_t address)
         case 0x1F8014A4:
             return iop_timers.read_control(5);
         case 0x1F900344:
+            return spu.get_stat();
         case 0x1F900744:
-            if (frames >= 280)
-                return 0x80;
+            return spu2.get_stat();
     }
     printf("Unrecognized IOP read16 from physical addr $%08X\n", address);
     return 0;
@@ -811,7 +811,7 @@ void Emulator::iop_write8(uint32_t address, uint8_t value)
             return;
     }
     printf("Unrecognized IOP write8 to physical addr $%08X of $%02X\n", address, value);
-    exit(1);
+    //exit(1);
 }
 
 void Emulator::iop_write16(uint32_t address, uint16_t value)

@@ -150,6 +150,7 @@ namespace EmotionInterpreter
     void cop2_vmaddabc(VectorUnit& vu0, uint32_t instruction);
     void cop2_vftoi4(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmulabc(VectorUnit& vu0, uint32_t instruction);
+    void cop2_vmr32(VectorUnit& vu0, uint32_t instruction);
     void cop2_vsqi(VectorUnit& vu0, uint32_t instruction);
     void cop2_vrsqrt(VectorUnit& vu0, uint32_t instruction);
     void cop2_viswr(VectorUnit& vu0, uint32_t instruction);
@@ -159,6 +160,7 @@ namespace EmotionInterpreter
     void mmi(EmotionEngine& cpu, uint32_t instruction);
     void plzcw(EmotionEngine& cpu, uint32_t instruction);
     void mmi0(EmotionEngine& cpu, uint32_t instruction);
+    void psubw(EmotionEngine& cpu, uint32_t instruction);
     void psubb(EmotionEngine& cpu, uint32_t instruction);
     void pcgtb(EmotionEngine& cpu, uint32_t instruction);
     void pextlw(EmotionEngine& cpu, uint32_t instruction);

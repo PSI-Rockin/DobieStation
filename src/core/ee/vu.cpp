@@ -7,7 +7,7 @@
 #define _z(f) f&2
 #define _w(f) f&1
 
-#define printf(fmt, ...)(0)
+//#define printf(fmt, ...)(0)
 
 VectorUnit::VectorUnit(int id) : id(id)
 {
@@ -197,6 +197,20 @@ void VectorUnit::mulbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, 
             float temp = op * gpr[source].f[i];
             set_gpr_f(dest, i, temp);
             printf("(%d)%f ", i, gpr[dest].f[i]);
+        }
+    }
+    printf("\n");
+}
+
+void VectorUnit::mr32(uint8_t field, uint8_t dest, uint8_t source)
+{
+    printf("[VU] MR32");
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            float temp = gpr[source].f[(i + 1) & 0x3];
+            set_gpr_f(dest, i, temp);
         }
     }
     printf("\n");

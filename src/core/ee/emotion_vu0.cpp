@@ -170,6 +170,9 @@ void EmotionInterpreter::cop2_special2(VectorUnit &vu0, uint32_t instruction)
         case 0x1B:
             cop2_vmulabc(vu0, instruction);
             break;
+        case 0x31:
+            cop2_vmr32(vu0, instruction);
+            break;
         case 0x35:
             cop2_vsqi(vu0, instruction);
             break;
@@ -220,6 +223,14 @@ void EmotionInterpreter::cop2_vmulabc(VectorUnit &vu0, uint32_t instruction)
     uint8_t bc_reg = (instruction >> 16) & 0x1F;
     uint8_t field = (instruction >> 21) & 0xF;
     vu0.mulabc(bc, field, source, bc_reg);
+}
+
+void EmotionInterpreter::cop2_vmr32(VectorUnit &vu0, uint32_t instruction)
+{
+    uint8_t source = (instruction >> 11) & 0x1F;
+    uint8_t dest = (instruction >> 16) & 0x1F;
+    uint8_t field = (instruction >> 21) & 0xF;
+    vu0.mr32(field, dest, source);
 }
 
 void EmotionInterpreter::cop2_vsqi(VectorUnit &vu0, uint32_t instruction)

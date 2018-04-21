@@ -35,7 +35,6 @@ int SubsystemInterface::get_SIF1_size()
 void SubsystemInterface::write_SIF0(uint32_t word)
 {
     SIF0_FIFO.push(word);
-    printf("[SIF0] Word: $%08X\n", word);
 }
 
 void SubsystemInterface::write_SIF1(uint64_t *quad)
@@ -44,7 +43,6 @@ void SubsystemInterface::write_SIF1(uint64_t *quad)
     SIF1_FIFO.push(quad[0] >> 32);
     SIF1_FIFO.push(quad[1] & 0xFFFFFFFF);
     SIF1_FIFO.push(quad[1] >> 32);
-    printf("[SIF1] Quad: $%08X_%08X_%08X_%08X\n", quad[1] >> 32, quad[1], quad[0] >> 32, quad[0]);
 }
 
 uint32_t SubsystemInterface::read_SIF0()

@@ -164,7 +164,6 @@ void DMAC::process_SIF0()
             for (int i = 0; i < 4; i++)
             {
                 uint32_t word = sif->read_SIF0();
-                printf("[DMAC] Read from SIF0: $%08X\n", word);
                 e->write32(channels[SIF0].address, word);
                 channels[SIF0].address += 4;
             }
