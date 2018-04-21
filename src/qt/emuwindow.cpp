@@ -4,6 +4,9 @@
 
 #include <QPainter>
 #include <QString>
+#include <QVBoxLayout>
+#include <QMenuBar>
+#include <QFileDialog>
 
 #include "emuwindow.hpp"
 
@@ -20,27 +23,57 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
     old_frametime = chrono::system_clock::now();
     old_update_time = chrono::system_clock::now();
     framerate_avg = 0.0;
+
+    QWidget* widget = new QWidget;
+    setCentralWidget(widget);
+
+    QWidget* topFiller = new QWidget;
+    topFiller->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
+    QWidget *bottomFiller = new QWidget;
+    bottomFiller->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+
+    QVBoxLayout *layout = new QVBoxLayout;
+    layout->setMargin(5);
+    layout->addWidget(topFiller);
+    layout->addWidget(bottomFiller);
+    widget->setLayout(layout);
+
+    create_menu();
 }
 
 int EmuWindow::init(int argc, char** argv)
 {
-    if (argc < 3)
+    if (argc < 2)
     {
-        printf("Args: [BIOS] [ELF/ISO]\n");
+        printf("Args: [BIOS] (Optional)[ELF/ISO]\n");
         return 1;
     }
 
-    //Initialize emulator
-    e.reset();
     char* bios_name = argv[1];
-    char* file_name = argv[2];
+
+    char* file_name;
+    if (argc == 4)
+        file_name = argv[2];
+    else if (argc == 3 && strcmp(argv[2], "-skip") != 0)
+        file_name = argv[2];
+    else
+        file_name = nullptr;
 
     bool skip_BIOS = false;
     //Flag parsing - to be reworked
-    if (argc >= 4)
+    if (argc >= 3)
     {
-        if (strcmp(argv[3], "-skip") == 0)
-            skip_BIOS = true;
+        if (argc == 3)
+        {
+            if (strcmp(argv[2], "-skip") == 0)
+                skip_BIOS = true;
+        } 
+        else if (argc == 4)
+        {
+            if (strcmp(argv[3], "-skip") == 0)
+                skip_BIOS = true;
+        }
     }
 
     ifstream BIOS_file(bios_name, ios::binary | ios::in);
@@ -56,6 +89,28 @@ int EmuWindow::init(int argc, char** argv)
     e.load_BIOS(BIOS);
     delete[] BIOS;
     BIOS = nullptr;
+
+    if (file_name)
+    {
+        if (load_exec(file_name, skip_BIOS))
+            return 1;
+    }
+    else
+    {
+        is_exec_loaded = false;
+    }
+
+    //Initialize window
+    is_running = true;
+    setWindowTitle("DobieStation");
+    resize(640, 448);
+    show();
+    return 0;
+}
+
+int EmuWindow::load_exec(const char* file_name, bool skip_BIOS)
+{
+    e.reset();
 
     ifstream exec_file(file_name, ios::binary | ios::in);
     if (!exec_file.is_open())
@@ -98,12 +153,13 @@ int EmuWindow::init(int argc, char** argv)
         return 1;
     }
 
-    //Initialize window
-    is_running = true;
-    setWindowTitle("DobieStation");
-    resize(640, 448);
-    show();
+    is_exec_loaded = true;
     return 0;
+}
+
+bool EmuWindow::exec_loaded()
+{
+    return is_exec_loaded;
 }
 
 bool EmuWindow::running()
@@ -115,6 +171,23 @@ void EmuWindow::emulate()
 {
     e.run();
     update();
+}
+
+void EmuWindow::create_menu()
+{
+    load_rom_action = new QAction(tr("&Load ROM... (Fast)"), this);
+    connect(load_rom_action, &QAction::triggered, this, &EmuWindow::open_file_skip);
+
+    load_bios_action = new QAction(tr("&Load ROM... (Boot BIOS)"), this);
+    connect(load_bios_action, &QAction::triggered, this, &EmuWindow::open_file_no_skip);
+
+    exit_action = new QAction(tr("&Exit"), this);
+    connect(exit_action, &QAction::triggered, this, &QWidget::close);
+
+    file_menu = menuBar()->addMenu(tr("&File"));
+    file_menu->addAction(load_rom_action);
+    file_menu->addAction(load_bios_action);
+    file_menu->addAction(exit_action);
 }
 
 void EmuWindow::paintEvent(QPaintEvent *event)
@@ -188,4 +261,27 @@ void EmuWindow::limit_frame_rate()
 void EmuWindow::reset_frame_time()
 {
     old_frametime = chrono::system_clock::now();
+}
+
+#ifndef QT_NO_CONTEXTMENU
+void EmuWindow::contextMenuEvent(QContextMenuEvent* event)
+{
+    QMenu menu(this);
+    menu.addAction(load_rom_action);
+    menu.addAction(load_bios_action);
+    menu.addAction(exit_action);
+    menu.exec(event->globalPos());
+}
+#endif // QT_NO_CONTEXTMENU
+
+void EmuWindow::open_file_no_skip()
+{
+    QString file_name = QFileDialog::getOpenFileName(this, tr("Open Rom"), "", tr("ROM Files (*.elf *.iso)"));
+    load_exec(file_name.toStdString().c_str(), false);
+}
+
+void EmuWindow::open_file_skip()
+{
+    QString file_name = QFileDialog::getOpenFileName(this, tr("Open Rom"), "", tr("ROM Files (*.elf *.iso)"));
+    load_exec(file_name.toStdString().c_str(), true);
 }

@@ -190,6 +190,9 @@ void Emulator::set_skip_BIOS_hack(SKIP_HACK type)
 
 void Emulator::load_BIOS(uint8_t *BIOS_file)
 {
+    if (!BIOS)
+        BIOS = new uint8_t[1024 * 1024 * 4];
+
     memcpy(BIOS, BIOS_file, 1024 * 1024 * 4);
 }
 
