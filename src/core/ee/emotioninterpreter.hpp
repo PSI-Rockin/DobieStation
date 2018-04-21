@@ -43,6 +43,7 @@ namespace EmotionInterpreter
     void sltu(EmotionEngine& cpu, uint32_t instruction);
     void dadd(EmotionEngine& cpu, uint32_t instruction);
     void daddu(EmotionEngine& cpu, uint32_t instruction);
+    void dsub(EmotionEngine& cpu, uint32_t instruction);
     void dsubu(EmotionEngine& cpu, uint32_t instruction);
     void dsll(EmotionEngine& cpu, uint32_t instruction);
     void dsrl(EmotionEngine& cpu, uint32_t instruction);
@@ -79,6 +80,7 @@ namespace EmotionInterpreter
     void beql(EmotionEngine& cpu, uint32_t instruction);
     void bnel(EmotionEngine& cpu, uint32_t instruction);
     void blezl(EmotionEngine& cpu, uint32_t instruction);
+    void bgtzl(EmotionEngine& cpu, uint32_t instruction);
     void daddiu(EmotionEngine& cpu, uint32_t instruction);
     void ldl(EmotionEngine& cpu, uint32_t instruction);
     void ldr(EmotionEngine& cpu, uint32_t instruction);
@@ -123,6 +125,7 @@ namespace EmotionInterpreter
     void fpu_mov(Cop1& fpu, uint32_t instruction);
     void fpu_neg(Cop1& fpu, uint32_t instruction);
     void fpu_adda(Cop1& fpu, uint32_t instruction);
+    void fpu_suba(Cop1& fpu, uint32_t instruction);
     void fpu_mula(Cop1& fpu, uint32_t instruction);
     void fpu_madd(Cop1& fpu, uint32_t instruction);
     void fpu_msub(Cop1& fpu, uint32_t instruction);
@@ -158,6 +161,7 @@ namespace EmotionInterpreter
     void cop2_vrinit(VectorUnit& vu0, uint32_t instruction);
 
     void mmi(EmotionEngine& cpu, uint32_t instruction);
+    void madd(EmotionEngine& cpu, uint32_t instruction);
     void plzcw(EmotionEngine& cpu, uint32_t instruction);
     void mmi0(EmotionEngine& cpu, uint32_t instruction);
     void psubw(EmotionEngine& cpu, uint32_t instruction);
@@ -166,6 +170,7 @@ namespace EmotionInterpreter
     void pextlw(EmotionEngine& cpu, uint32_t instruction);
     void mmi1(EmotionEngine& cpu, uint32_t instruction);
     void padduw(EmotionEngine& cpu, uint32_t instruction);
+    void paddub(EmotionEngine& cpu, uint32_t instruction);
     void mmi2(EmotionEngine& cpu, uint32_t instruction);
     void pmfhi(EmotionEngine& cpu, uint32_t instruction);
     void pmflo(EmotionEngine& cpu, uint32_t instruction);

@@ -163,6 +163,16 @@ uint32_t EmotionEngine::get_PC()
     return PC;
 }
 
+uint64_t EmotionEngine::get_LO()
+{
+    return LO;
+}
+
+uint64_t EmotionEngine::get_HI()
+{
+    return HI;
+}
+
 uint8_t EmotionEngine::read8(uint32_t address)
 {
     if (address >= 0x70000000 && address < 0x70004000)

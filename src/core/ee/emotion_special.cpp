@@ -117,6 +117,9 @@ void EmotionInterpreter::special(EmotionEngine &cpu, uint32_t instruction)
         case 0x2D:
             daddu(cpu, instruction);
             break;
+        case 0x2E:
+            dsub(cpu, instruction);
+            break;
         case 0x2F:
             dsubu(cpu, instruction);
             break;
@@ -484,6 +487,16 @@ void EmotionInterpreter::daddu(EmotionEngine &cpu, uint32_t instruction)
     op1 = cpu.get_gpr<int64_t>(op1);
     op2 = cpu.get_gpr<int64_t>(op2);
     cpu.set_gpr<uint64_t>(dest, op1 + op2);
+}
+
+void EmotionInterpreter::dsub(EmotionEngine &cpu, uint32_t instruction)
+{
+    int64_t op1 = (instruction >> 21) & 0x1F;
+    int64_t op2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+    op1 = cpu.get_gpr<int64_t>(op1);
+    op2 = cpu.get_gpr<int64_t>(op2);
+    cpu.set_gpr<uint64_t>(dest, op1 - op2);
 }
 
 void EmotionInterpreter::dsubu(EmotionEngine &cpu, uint32_t instruction)

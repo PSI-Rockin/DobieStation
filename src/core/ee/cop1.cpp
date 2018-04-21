@@ -136,6 +136,14 @@ void Cop1::adda_s(int reg1, int reg2)
     printf("[FPU] adda.s: %f + %f = %f\n", op1, op2, accumulator.f);
 }
 
+void Cop1::suba_s(int reg1, int reg2)
+{
+    float op1 = convert(gpr[reg1].u);
+    float op2 = convert(gpr[reg2].u);
+    accumulator.s = op1 - op2;
+    printf("[FPU] suba.s: %f - %f = %f\n", op1, op2, accumulator.f);
+}
+
 void Cop1::mula_s(int reg1, int reg2)
 {
     float op1 = convert(gpr[reg1].u);

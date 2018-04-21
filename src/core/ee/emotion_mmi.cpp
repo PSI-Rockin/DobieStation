@@ -7,6 +7,9 @@ void EmotionInterpreter::mmi(EmotionEngine &cpu, uint32_t instruction)
     int op = instruction & 0x3F;
     switch (op)
     {
+        case 0x00:
+            madd(cpu, instruction);
+            break;
         case 0x04:
             plzcw(cpu, instruction);
             break;
@@ -46,6 +49,23 @@ void EmotionInterpreter::mmi(EmotionEngine &cpu, uint32_t instruction)
         default:
             unknown_op("mmi", instruction, op);
     }
+}
+
+void EmotionInterpreter::madd(EmotionEngine &cpu, uint32_t instruction)
+{
+    int32_t op1 = (instruction >> 21) & 0x1F;
+    int32_t op2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+    op1 = cpu.get_gpr<int32_t>(op1);
+    op2 = cpu.get_gpr<int32_t>(op2);
+    int64_t temp = (int64_t)op1 * op2;
+
+    int32_t lo = (int32_t)(temp & 0xFFFFFFFF);
+    int32_t hi = (int32_t)(temp >> 32);
+    lo += (int32_t)(cpu.get_LO() & 0xFFFFFFFF);
+    hi += (int32_t)(cpu.get_HI() & 0xFFFFFFFF);
+    cpu.set_LO_HI(lo, hi, false);
+    cpu.set_gpr<int64_t>(dest, lo);
 }
 
 /**
@@ -177,6 +197,9 @@ void EmotionInterpreter::mmi1(EmotionEngine &cpu, uint32_t instruction)
         case 0x10:
             padduw(cpu, instruction);
             break;
+        case 0x18:
+            paddub(cpu, instruction);
+            break;
         default:
             return unknown_op("mmi1", instruction, op);
     }
@@ -184,7 +207,7 @@ void EmotionInterpreter::mmi1(EmotionEngine &cpu, uint32_t instruction)
 
 /**
  * Parallel Add with Unsigned Saturation Word
- * Splits the 128-bit registers RS and RT into four words each and adds them together.
+ * Splits the 128-bit registers RS and RT into four unsigned words each and adds them together.
  * If the result is greater than 0xFFFFFFFF, it is saturated to that value.
  */
 void EmotionInterpreter::padduw(EmotionEngine &cpu, uint32_t instruction)
@@ -200,6 +223,27 @@ void EmotionInterpreter::padduw(EmotionEngine &cpu, uint32_t instruction)
         if (result > 0xFFFFFFFF)
             result = 0xFFFFFFFF;
         cpu.set_gpr<uint32_t>(dest, (uint32_t)result, i);
+    }
+}
+
+/**
+ * Parallel Add with Unsigned Saturation Byte
+ * Splits the 128-bit registers RS and RT into sixteen unsigned bytes each and adds them together.
+ * If the result is greater than 0xFF, it is saturated to that value.
+ */
+void EmotionInterpreter::paddub(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    for (int i = 0; i < 16; i++)
+    {
+        uint16_t result = cpu.get_gpr<uint8_t>(reg1, i);
+        result += cpu.get_gpr<uint8_t>(reg2, i);
+        if (result > 0xFF)
+            result = 0xFF;
+        cpu.set_gpr<uint32_t>(dest, (uint8_t)result, i);
     }
 }
 

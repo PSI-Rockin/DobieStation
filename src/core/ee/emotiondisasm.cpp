@@ -60,6 +60,8 @@ string EmotionDisasm::disasm_instr(uint32_t instruction, uint32_t instr_addr)
             return disasm_bnel(instruction, instr_addr);
         case 0x16:
             return disasm_branch_inequality("blezl", instruction, instr_addr);
+        case 0x17:
+            return disasm_branch_inequality("bgtzl", instruction, instr_addr);
         case 0x19:
             return disasm_daddiu(instruction);
         case 0x1A:
@@ -303,6 +305,8 @@ string EmotionDisasm::disasm_special(uint32_t instruction)
             return disasm_dadd(instruction);
         case 0x2D:
             return disasm_daddu(instruction);
+        case 0x2E:
+            return disasm_dsub(instruction);
         case 0x2F:
             return disasm_dsubu(instruction);
         case 0x38:
@@ -570,6 +574,11 @@ string EmotionDisasm::disasm_daddu(uint32_t instruction)
     if (RT == 0)
         return disasm_move(instruction);
     return disasm_special_simplemath("daddu", instruction);
+}
+
+string EmotionDisasm::disasm_dsub(uint32_t instruction)
+{
+    return disasm_special_simplemath("dsub", instruction);
 }
 
 string EmotionDisasm::disasm_dsubu(uint32_t instruction)
@@ -968,6 +977,8 @@ string EmotionDisasm::disasm_cop_s(uint32_t instruction)
             return disasm_fpu_neg(instruction);
         case 0x18:
             return disasm_fpu_adda(instruction);
+        case 0x19:
+            return disasm_fpu_suba(instruction);
         case 0x1A:
             return disasm_fpu_mula(instruction);
         case 0x1C:
@@ -1058,6 +1069,11 @@ string EmotionDisasm::disasm_fpu_acc(const string opcode, uint32_t instruction)
 string EmotionDisasm::disasm_fpu_adda(uint32_t instruction)
 {
     return disasm_fpu_acc("adda.s", instruction);
+}
+
+string EmotionDisasm::disasm_fpu_suba(uint32_t instruction)
+{
+    return disasm_fpu_acc("suba.s", instruction);
 }
 
 string EmotionDisasm::disasm_fpu_mula(uint32_t instruction)
@@ -1529,6 +1545,8 @@ string EmotionDisasm::disasm_mmi1(uint32_t instruction)
     {
         case 0x10:
             return disasm_special_simplemath("padduw", instruction);
+        case 0x18:
+            return disasm_special_simplemath("paddub", instruction);
         default:
             return unknown_op("mmi1", op, 2);
     }

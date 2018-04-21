@@ -46,6 +46,7 @@ class Cop1
         void mov_s(int dest, int source);
         void neg_s(int dest, int source);
         void adda_s(int reg1, int reg2);
+        void suba_s(int reg1, int reg2);
         void mula_s(int reg1, int reg2);
         void madd_s(int dest, int reg1, int reg2);
         void msub_s(int dest, int reg1, int reg2);
