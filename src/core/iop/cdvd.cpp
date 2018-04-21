@@ -21,6 +21,7 @@ void CDVD_Drive::reset()
     is_reading = false;
     is_spinning = false;
     active_N_command = NCOMMAND::NONE;
+    N_cycles_left = 0;
     N_status = 0x40;
     N_params = 0;
     N_command = 0;
@@ -29,6 +30,11 @@ void CDVD_Drive::reset()
     S_out_params = 0;
     read_bytes_left = 0;
     ISTAT = 0;
+}
+
+int CDVD_Drive::get_block_size()
+{
+    return block_size;
 }
 
 int CDVD_Drive::bytes_left()
@@ -45,7 +51,7 @@ uint32_t CDVD_Drive::read_to_RAM(uint8_t *RAM, uint32_t bytes)
         if (sectors_left == 0)
         {
             N_status = 0x4E;
-            ISTAT |= 0x3;
+            ISTAT |= 0x2;
             e->iop_request_IRQ(2);
             drive_status = PAUSED;
             active_N_command = NCOMMAND::NONE;
@@ -53,21 +59,35 @@ uint32_t CDVD_Drive::read_to_RAM(uint8_t *RAM, uint32_t bytes)
         else
         {
             active_N_command = NCOMMAND::READ;
-            VBLANKS_left = 1;
+            N_cycles_left = 10000;
         }
     }
     return block_size;
 }
 
-void CDVD_Drive::N_command_check()
+void CDVD_Drive::update(int cycles)
 {
-    if (VBLANKS_left && active_N_command != NCOMMAND::NONE)
+    if (N_cycles_left > 0 && active_N_command != NCOMMAND::NONE)
     {
-        VBLANKS_left--;
-        if (!VBLANKS_left)
+        N_cycles_left -= cycles;
+        if (N_cycles_left <= 0)
         {
             switch (active_N_command)
             {
+                case NCOMMAND::SEEK:
+                    drive_status = PAUSED;
+                    active_N_command = NCOMMAND::NONE;
+                    N_status = 0x4E;
+                    ISTAT |= 0x2;
+                    e->iop_request_IRQ(2);
+                    break;
+                case NCOMMAND::STANDBY:
+                    drive_status = PAUSED;
+                    active_N_command = NCOMMAND::NONE;
+                    N_status = 0x40;
+                    ISTAT |= 0x2;
+                    e->iop_request_IRQ(2);
+                    break;
                 case NCOMMAND::READ:
                     if (N_command == 0x06)
                         read_CD_sector();
@@ -75,10 +95,16 @@ void CDVD_Drive::N_command_check()
                         read_DVD_sector();
                     break;
                 case NCOMMAND::READ_SEEK:
-                    is_spinning = true;
                     drive_status = READING | SPINNING;
                     active_N_command = NCOMMAND::READ;
-                    VBLANKS_left = 1;
+                    N_cycles_left = 10000;
+                    break;
+                case NCOMMAND::BREAK:
+                    drive_status = PAUSED;
+                    active_N_command = NCOMMAND::NONE;
+                    N_status = 0x4E;
+                    ISTAT |= 0x2;
+                    e->iop_request_IRQ(2);
                     break;
                 default:
                     printf("[CDVD] Unrecognized active N command\n");
@@ -86,6 +112,11 @@ void CDVD_Drive::N_command_check()
             }
         }
     }
+}
+
+void CDVD_Drive::N_command_check()
+{
+
 }
 
 bool CDVD_Drive::load_disc(const char *name)
@@ -220,9 +251,25 @@ void CDVD_Drive::send_N_command(uint8_t value)
     N_command = value;
     switch (value)
     {
+        //NOPSync/NOP
+        case 0x00:
+        case 0x01:
+            e->iop_request_IRQ(2);
+            break;
+        case 0x02:
+            //Standby
+            sector_pos = 0;
+            start_seek();
+            active_N_command = NCOMMAND::STANDBY;
+            break;
         case 0x04:
             //Pause
             e->iop_request_IRQ(2);
+            break;
+        case 0x05:
+            sector_pos = *(uint32_t*)&N_command_params[0];
+            start_seek();
+            active_N_command = NCOMMAND::SEEK;
             break;
         case 0x06:
             N_command_read();
@@ -264,7 +311,12 @@ void CDVD_Drive::write_N_data(uint8_t value)
 void CDVD_Drive::write_BREAK()
 {
     printf("[CDVD] Write BREAK\n");
-    e->iop_request_IRQ(2);
+    if (N_status)
+        return;
+
+    N_cycles_left = 8;
+    active_N_command = NCOMMAND::BREAK;
+    N_status = CDVD_STATUS::STOPPED;
 }
 
 void CDVD_Drive::send_S_command(uint8_t value)
@@ -287,6 +339,20 @@ void CDVD_Drive::send_S_command(uint8_t value)
             prepare_S_outdata(8);
             for (int i = 0; i < 8; i++)
                 S_outdata[i] = 0;
+            break;
+        case 0x15:
+            printf("[CDVD] ForbidDVD\n");
+            prepare_S_outdata(1);
+            S_outdata[0] = 5;
+            break;
+        case 0x17:
+            printf("[CDVD] ReadILinkModel\n");
+            prepare_S_outdata(9);
+            break;
+        case 0x1A:
+            printf("[CDVD] BootCertify\n");
+            prepare_S_outdata(1);
+            S_outdata[0] = 1; //means OK according to PCSX2
             break;
         case 0x1B:
             printf("[CDVD] CancelPwOffReady\n");
@@ -351,12 +417,15 @@ void CDVD_Drive::start_seek()
     if (!is_spinning)
     {
         //1/3 of a second
-        VBLANKS_left = 20;
+        N_cycles_left = 1000000;
+        printf("[CDVD] Spinning\n");
+        is_spinning = true;
     }
     else
     {
+        printf("[CDVD] Seeking\n");
         //Kinda simulate seek time
-        VBLANKS_left = 5;
+        N_cycles_left = 50000;
     }
 
     //Seek anyway. The program won't know the difference
@@ -412,7 +481,7 @@ void CDVD_Drive::read_CD_sector()
 
 void CDVD_Drive::read_DVD_sector()
 {
-    printf("[CDVD] Read DVD sector\n");
+    printf("[CDVD] Read DVD sector - Sector: %d Size: %d\n", sector_pos, block_size);
     uint32_t lsn = sector_pos + 0x30000;
     read_buffer[0] = 0x20;
     read_buffer[1] = (lsn >> 16) & 0xFF;

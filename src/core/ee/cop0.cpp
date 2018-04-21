@@ -147,7 +147,7 @@ bool Cop0::int_pending()
     return false;
 }
 
-void Cop0::count_up()
+void Cop0::count_up(int cycles)
 {
-    gpr[9]++;
+    gpr[9] += cycles;
 }

@@ -9,8 +9,8 @@
 
 //#define printf(fmt, ...)(0)
 
-EmotionEngine::EmotionEngine(BIOS_HLE* b, Cop0* cp0, Cop1* fpu, Emulator* e, VectorUnit* vu0) :
-    bios(b), cp0(cp0), fpu(fpu), e(e), vu0(vu0)
+EmotionEngine::EmotionEngine(BIOS_HLE* b, Cop0* cp0, Cop1* fpu, Emulator* e, uint8_t* sp, VectorUnit* vu0) :
+    bios(b), cp0(cp0), fpu(fpu), e(e), scratchpad(sp), vu0(vu0)
 {
     reset();
 }
@@ -53,15 +53,11 @@ void EmotionEngine::run()
         printf("[$%08X] $%08X - %s\n", PC, instruction, disasm.c_str());
     }
     EmotionInterpreter::interpret(*this, instruction);
-    cp0->count_up();
+    cp0->count_up(1);
     /*if (PC == 0x00100008)
         can_disassemble = true;
     if (PC == 0x100BBC)
         print_state();*/
-    if (increment_PC)
-        PC += 4;
-    else
-        increment_PC = true;
     if (branch_on)
     {
         if (!delay_slot)
@@ -84,11 +80,10 @@ void EmotionEngine::run()
             delay_slot--;
     }
 
-    //if (PC < 0x80000000 && PC >= 0x00100000)
-        //can_disassemble = true;
-
-    //if (PC == 0x84010)
-        //print_state();
+    if (PC == 0x00236B68)
+    {
+        set_gpr<uint64_t>(16, get_gpr<uint64_t>(2) + 1);
+    }
 
     if (cp0->int_enabled())
     {
@@ -98,6 +93,51 @@ void EmotionEngine::run()
         if (cp0->cause.int1_pending)
             int1();
     }
+}
+
+int EmotionEngine::run(int cycles_to_run)
+{
+    int cycles = cycles_to_run;
+    while (cycles_to_run > 0)
+    {
+        cycles_to_run--;
+        uint32_t instruction = read32(PC);
+        if (can_disassemble)
+        {
+            std::string disasm = EmotionDisasm::disasm_instr(instruction, PC);
+            printf("[$%08X] $%08X - %s\n", PC, instruction, disasm.c_str());
+        }
+        EmotionInterpreter::interpret(*this, instruction);
+        if (increment_PC)
+            PC += 4;
+        else
+            increment_PC = true;
+
+        if (branch_on)
+        {
+            if (!delay_slot)
+            {
+                branch_on = false;
+                PC = new_PC;
+                if (PC < 0x80000000 && PC >= 0x00100000)
+                    if (e->skip_BIOS())
+                        return 0;
+            }
+            else
+                delay_slot--;
+        }
+    }
+
+    cp0->count_up(cycles);
+
+    if (cp0->int_enabled())
+    {
+        if (cp0->cause.int0_pending)
+            int0();
+        if (cp0->cause.int1_pending)
+            int1();
+    }
+    return cycles;
 }
 
 void EmotionEngine::print_state()
@@ -478,15 +518,6 @@ void EmotionEngine::syscall_exception()
     if (op != 0x7A)
         printf("[EE] SYSCALL: $%02X Called at $%08X\n", op, PC);
 
-    //InitMainThread
-    /*if (op == 0x3C)
-    {
-        if (e->skip_BIOS())
-        {
-            increment_PC = false;
-            return;
-        }
-    }*/
     //if (op == 0x7C)
         //can_disassemble = true;
     handle_exception(0x80000180, 0x08);

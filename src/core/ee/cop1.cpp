@@ -136,6 +136,14 @@ void Cop1::adda_s(int reg1, int reg2)
     printf("[FPU] adda.s: %f + %f = %f\n", op1, op2, accumulator.f);
 }
 
+void Cop1::mula_s(int reg1, int reg2)
+{
+    float op1 = convert(gpr[reg1].u);
+    float op2 = convert(gpr[reg2].u);
+    accumulator.f = op1 * op2;
+    printf("[FPU] mula.s: %f * %f = %f\n", op1, op2, accumulator.f);
+}
+
 void Cop1::madd_s(int dest, int reg1, int reg2)
 {
     float op1 = convert(gpr[reg1].u);
@@ -143,6 +151,15 @@ void Cop1::madd_s(int dest, int reg1, int reg2)
     float acc = convert(accumulator.u);
     gpr[dest].f = acc + (op1 * op2);
     printf("[FPU] madd.s: %f + %f * %f = %f\n", acc, op1, op2, gpr[dest].f);
+}
+
+void Cop1::msub_s(int dest, int reg1, int reg2)
+{
+    float op1 = convert(gpr[reg1].u);
+    float op2 = convert(gpr[reg2].u);
+    float acc = convert(accumulator.u);
+    gpr[dest].f = acc - (op1 * op2);
+    printf("[FPU] msub.s: %f - %f * %f = %f\n", acc, op1, op2, gpr[dest].f);
 }
 
 void Cop1::c_lt_s(int reg1, int reg2)
@@ -155,4 +172,10 @@ void Cop1::c_eq_s(int reg1, int reg2)
 {
     control.condition = gpr[reg1].f == gpr[reg2].f;
     printf("[FPU] c.eq.s: %f, %f\n", gpr[reg1].f, gpr[reg2].f);
+}
+
+void Cop1::c_le_s(int reg1, int reg2)
+{
+    control.condition = gpr[reg1].f <= gpr[reg2].f;
+    printf("[FPU] c.le.s: %f, %f\n", gpr[reg1].f, gpr[reg2].f);
 }

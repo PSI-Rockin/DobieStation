@@ -61,7 +61,7 @@ class Cop0
         bool int_enabled();
         bool int_pending();
 
-        void count_up();
+        void count_up(int cycles);
 };
 
 #endif // COP0_HPP

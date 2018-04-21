@@ -15,10 +15,10 @@ void GraphicsInterface::reset()
 
 void GraphicsInterface::process_PACKED(uint64_t data[])
 {
-    printf("[GIF] PACKED: $%08X_%08X_%08X_%08X\n", data[1] >> 32, data[1] & 0xFFFFFFFF, data[0] >> 32, data[0] & 0xFFFFFFFF);
+    //printf("[GIF] PACKED: $%08X_%08X_%08X_%08X\n", data[1] >> 32, data[1] & 0xFFFFFFFF, data[0] >> 32, data[0] & 0xFFFFFFFF);
     uint64_t reg_offset = (current_tag.reg_count - current_tag.regs_left) << 2;
     uint8_t reg = (current_tag.regs & (0xFUL << reg_offset)) >> reg_offset;
-    printf("[GIF] Reg: $%02X (Left: %d Count: %d)\n", reg, current_tag.regs_left, current_tag.reg_count);
+    //printf("[GIF] Reg: $%02X (Left: %d Count: %d)\n", reg, current_tag.regs_left, current_tag.reg_count);
     switch (reg)
     {
         case 0x0:
@@ -34,6 +34,14 @@ void GraphicsInterface::process_PACKED(uint64_t data[])
             uint8_t b = data[1] & 0xFF;
             uint8_t a = (data[1] >> 32) & 0xFF;
             gs->set_RGBA(r, g, b, a);
+        }
+            break;
+        case 0x3:
+            //UV - set UV coordinates
+        {
+            uint16_t u = data[0] & 0x3FFF;
+            uint16_t v = (data[0] >> 32) & 0x3FFF;
+            gs->set_UV(u, v);
         }
             break;
         case 0x4:
@@ -96,7 +104,7 @@ void GraphicsInterface::process_REGLIST(uint64_t data[])
 
 void GraphicsInterface::feed_GIF(uint64_t data[])
 {
-    printf("[GIF] $%08X_%08X_%08X_%08X\n", data[1] >> 32, data[1] & 0xFFFFFFFF, data[0] >> 32, data[0] & 0xFFFFFFFF);
+    //printf("[GIF] $%08X_%08X_%08X_%08X\n", data[1] >> 32, data[1] & 0xFFFFFFFF, data[0] >> 32, data[0] & 0xFFFFFFFF);
     if (!current_tag.data_left)
     {
         //Read the GIFtag
@@ -116,13 +124,13 @@ void GraphicsInterface::feed_GIF(uint64_t data[])
         //Q is initialized to 1.0 upon reading a GIFtag
         gs->set_Q(1.0f);
 
-        printf("[GIF] New primitive!\n");
+        /*printf("[GIF] New primitive!\n");
         printf("NLOOP: $%04X\n", current_tag.NLOOP);
         printf("EOP: %d\n", current_tag.end_of_packet);
         printf("Output PRIM: %d PRIM: $%04X\n", current_tag.output_PRIM, current_tag.PRIM);
         printf("Format: %d\n", current_tag.format);
         printf("Reg count: %d\n", current_tag.reg_count);
-        printf("Regs: $%08X_$%08X\n", current_tag.regs >> 32, current_tag.regs & 0xFFFFFFFF);
+        printf("Regs: $%08X_$%08X\n", current_tag.regs >> 32, current_tag.regs & 0xFFFFFFFF);*/
 
         if (current_tag.output_PRIM && current_tag.format != 1)
             gs->write64(0, current_tag.PRIM);

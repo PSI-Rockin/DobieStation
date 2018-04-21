@@ -13,13 +13,13 @@ void EmotionTiming::reset()
     {
         timers[i].counter = 0;
         timers[i].clocks = 0;
-        timers[i].control.enabled = false;
+        write_control(i, 0);
     }
 }
 
 void EmotionTiming::run()
 {
-    for (int i = 0; i < 4; i++)
+    /*for (int i = 0; i < 4; i++)
     {
         if (timers[i].control.enabled)
         {
@@ -44,6 +44,42 @@ void EmotionTiming::run()
                 case 3:
                     //TODO: actual value for HSYNC
                     if (timers[i].clocks >= 15000)
+                    {
+                        count_up(i, 15000);
+                    }
+                    break;
+            }
+        }
+    }*/
+}
+
+void EmotionTiming::run(int cycles)
+{
+    for (int i = 0; i < 4; i++)
+    {
+        if (timers[i].control.enabled)
+        {
+            timers[i].clocks += cycles;
+            switch (timers[i].control.mode)
+            {
+                case 0:
+                    //Bus clock
+                    while (timers[i].clocks)
+                        count_up(i, 1);
+                    break;
+                case 1:
+                    //1/16 bus clock
+                    while (timers[i].clocks >= 16)
+                        count_up(i, 16);
+                    break;
+                case 2:
+                    //1/256 bus clock
+                    while (timers[i].clocks >= 256)
+                        count_up(i, 256);
+                    break;
+                case 3:
+                    //TODO: actual value for HSYNC
+                    while (timers[i].clocks >= 15000)
                     {
                         count_up(i, 15000);
                     }
@@ -106,8 +142,7 @@ void EmotionTiming::count_up(int index, int cycles_per_count)
     //Overflow check
     if (timers[index].counter > 0xFFFF)
     {
-        if (index == 3)
-            printf("[EE Timing] Timer 3 overflow!\n");
+        //printf("[EE Timing] Timer %d overflow!\n", index);
         timers[index].counter = 0;
         if (timers[index].control.overflow_int_enable)
         {

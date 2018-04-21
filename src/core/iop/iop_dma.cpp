@@ -67,6 +67,12 @@ void IOP_DMA::run()
                 case CDVD:
                     process_CDVD();
                     break;
+                case SPU:
+                    transfer_end(SPU);
+                    break;
+                case SPU2:
+                    transfer_end(SPU2);
+                    break;
                 case SIF0:
                     process_SIF0();
                     break;
@@ -80,21 +86,19 @@ void IOP_DMA::run()
 
 void IOP_DMA::process_CDVD()
 {
+    uint32_t count = channels[CDVD].word_count * channels[CDVD].block_size * 4;
     if (cdvd->bytes_left() > 0)
     {
-        uint32_t count = channels[CDVD].word_count * channels[CDVD].block_size * 4;
         printf("[IOP DMA] CDVD bytes: $%08X\n", count);
         uint32_t bytes_read = cdvd->read_to_RAM(RAM + channels[CDVD].addr, count);
-        channels[CDVD].addr += bytes_read;
         if (count <= bytes_read)
         {
             transfer_end(CDVD);
             set_chan_block(CDVD, 0);
+            return;
         }
-        else
-        {
-            channels[CDVD].word_count -= bytes_read / (channels[CDVD].block_size * 4);
-        }
+        channels[CDVD].addr += bytes_read;
+        channels[CDVD].word_count -= bytes_read / (channels[CDVD].block_size * 4);
     }
 }
 

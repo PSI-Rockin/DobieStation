@@ -23,7 +23,7 @@ struct Timer
     uint32_t compare;
 
     //Internal variable for holding number of EE clocks
-    uint32_t clocks;
+    int clocks;
 };
 
 class INTC;
@@ -42,6 +42,7 @@ class EmotionTiming
 
         void reset();
         void run();
+        void run(int cycles);
 
         uint32_t read32(uint32_t addr);
         void write32(uint32_t addr, uint32_t value);

@@ -532,6 +532,12 @@ void GraphicsSynthesizer::set_RGBA(uint8_t r, uint8_t g, uint8_t b, uint8_t a)
     RGBAQ.a = a;
 }
 
+void GraphicsSynthesizer::set_UV(uint16_t u, uint16_t v)
+{
+    UV.u = u;
+    UV.v = v;
+}
+
 void GraphicsSynthesizer::set_Q(float q)
 {
     RGBAQ.q = q;
@@ -594,7 +600,7 @@ void GraphicsSynthesizer::vertex_kick(bool drawing_kick)
             }
             break;
         default:
-            printf("\n[GS] Unrecognized primitive %d\n", PRIM.prim_type);
+            printf("[GS] Unrecognized primitive %d\n", PRIM.prim_type);
             exit(1);
     }
     if (drawing_kick && request_draw_kick)
@@ -927,6 +933,7 @@ int32_t GraphicsSynthesizer::orient2D(const Point &v1, const Point &v2, const Po
 
 void GraphicsSynthesizer::render_triangle()
 {
+    //return;
     //printf("[GS] Rendering triangle!\n");
     uint32_t color = 0x00000000;
     color |= vtx_queue[0].rgbaq.r;
@@ -937,6 +944,8 @@ void GraphicsSynthesizer::render_triangle()
 
     int32_t x1, x2, x3, y1, y2, y3, z1, z2, z3;
     uint8_t r1, r2, r3, g1, g2, g3, b1, b2, b3, a1, a2, a3;
+    uint16_t u1, u2, u3, tex_v1, tex_v2, tex_v3;
+    float s1, s2, s3, t1, t2, t3;
     x1 = vtx_queue[2].coords[0] - current_ctx->xyoffset.x;
     y1 = vtx_queue[2].coords[1] - current_ctx->xyoffset.y;
     z1 = vtx_queue[2].coords[2];
@@ -958,9 +967,21 @@ void GraphicsSynthesizer::render_triangle()
     g3 = vtx_queue[0].rgbaq.g;
     b3 = vtx_queue[0].rgbaq.b;
     a3 = vtx_queue[0].rgbaq.a;
-    Point v1(x1, y1, z1, r1, g1, b1, a1);
-    Point v2(x2, y2, z2, r2, g2, b2, a2);
-    Point v3(x3, y3, z3, r3, g3, b3, a3);
+    u1 = vtx_queue[2].uv.u;
+    tex_v1 = vtx_queue[2].uv.v;
+    s1 = vtx_queue[2].s;
+    t1 = vtx_queue[2].t;
+    u2 = vtx_queue[1].uv.u;
+    tex_v2 = vtx_queue[1].uv.v;
+    s2 = vtx_queue[1].s;
+    t2 = vtx_queue[1].t;
+    u3 = vtx_queue[0].uv.u;
+    tex_v3 = vtx_queue[0].uv.v;
+    s3 = vtx_queue[0].s;
+    t3 = vtx_queue[0].t;
+    Point v1(x1, y1, z1, r1, g1, b1, a1, u1, tex_v1, s1, t1);
+    Point v2(x2, y2, z2, r2, g2, b2, a2, u2, tex_v2, s2, t2);
+    Point v3(x3, y3, z3, r3, g3, b3, a3, u3, tex_v3, s3, t3);
 
     //The triangle rasterization code uses an approach with barycentric coordinates
     //Clear explanation can be read below:
@@ -1005,7 +1026,34 @@ void GraphicsSynthesizer::render_triangle()
                 //Interpolate Z
                 float z = (float) v1.z * w1 + (float) v2.z * w2 + (float) v3.z * w3;
                 z /= (float) (w1 + w2 + w3);
-                if (PRIM.gourand_shading)
+                if (PRIM.texture_mapping)
+                {
+                    uint32_t u, v;
+                    float s, t;
+                    if (!PRIM.use_UV)
+                    {
+                        s = v1.s * w1 + v2.s * w2 + v3.s * w3;
+                        t = v1.t * w1 + v2.t * w2 + v3.t * w3;
+                        s /= (float) (w1 + w2 + w3);
+                        t /= (float) (w1 + w2 + w3);
+                        v = t * current_ctx->tex0.tex_height;
+                        u = s * current_ctx->tex0.tex_width;
+                    }
+                    else
+                    {
+                        float temp_u = (float) v1.u * w1 + (float) v2.u * w2 + (float) v3.u * w3;
+                        float temp_v = (float) v1.v * w1 + (float) v2.v * w2 + (float) v3.v * w3;
+                        temp_u /= (float) (w1 + w2 + w3);
+                        temp_v /= (float) (w1 + w2 + w3);
+                        u = temp_u;
+                        v = temp_v;
+                    }
+                    uint32_t tex_coord = u;
+                    tex_coord += (uint32_t)v * current_ctx->tex0.tex_width;
+                    uint32_t tex_color = tex_lookup(tex_coord);
+                    draw_pixel(x, y, tex_color, (int32_t)z, PRIM.alpha_blend);
+                }
+                else if (PRIM.gourand_shading)
                 {
                     float r = (float) v1.r * w1 + (float) v2.r * w2 + (float) v3.r * w3;
                     float g = (float) v1.g * w1 + (float) v2.g * w2 + (float) v3.g * w3;
@@ -1116,6 +1164,9 @@ void GraphicsSynthesizer::write_HWREG(uint64_t data)
         case 0x01:
             ppd = 3;
             break;
+        case 0x13:
+            ppd = 8;
+            break;
         case 0x14:
             ppd = 16;
             break;
@@ -1137,6 +1188,13 @@ void GraphicsSynthesizer::write_HWREG(uint64_t data)
                 break;
             case 0x01:
                 unpack_PSMCT24(BITBLTBUF.dest_base + (dest_addr * 4), data, i);
+                break;
+            case 0x13:
+                dest_addr += BITBLTBUF.dest_base;
+                local_mem[dest_addr] = (data >> (i * 8)) & 0xFF;
+                //printf("[GS] Write to $%08X\n", dest_addr);
+                pixels_transferred++;
+                TRXPOS.int_dest_x++;
                 break;
             case 0x14:
                 dest_addr /= 2;
@@ -1226,6 +1284,23 @@ uint32_t GraphicsSynthesizer::tex_lookup(uint32_t coord)
     {
         case 0x00:
             return get_word(tex_base + (coord << 2));
+        case 0x13:
+        {
+            uint8_t entry;
+            entry = local_mem[tex_base + coord];
+            uint32_t addr;
+            if (current_ctx->tex0.use_CSM2)
+                addr = clut_base + (entry << 2);
+            else
+            {
+                addr = clut_base + (entry << 2);
+            }
+            if (entry)
+                return 0xFFFFFFFF;
+            return 0xFF000000 | (entry) | (entry << 8) | (entry << 16);
+            //return get_word(addr);
+        }
+            break;
         case 0x14:
         {
             uint8_t entry;

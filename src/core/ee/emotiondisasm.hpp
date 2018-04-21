@@ -132,12 +132,15 @@ namespace EmotionDisasm
     std::string disasm_fpu_neg(uint32_t instruction);
     std::string disasm_fpu_acc(const std::string opcode, uint32_t instruction);
     std::string disasm_fpu_adda(uint32_t instruction);
+    std::string disasm_fpu_mula(uint32_t instruction);
     std::string disasm_fpu_madd(uint32_t instruction);
+    std::string disasm_fpu_msub(uint32_t instruction);
     std::string disasm_fpu_convert(const std::string opcode, uint32_t instruction);
     std::string disasm_fpu_cvt_w_s(uint32_t instruction);
     std::string disasm_fpu_compare(const std::string opcode, uint32_t instruction);
     std::string disasm_fpu_c_lt_s(uint32_t instruction);
     std::string disasm_fpu_c_eq_s(uint32_t instruction);
+    std::string disasm_fpu_c_le_s(uint32_t instruction);
     std::string disasm_cop_bc1(uint32_t instruction, uint32_t instr_addr);
     std::string disasm_cop_cvt_s_w(uint32_t instruction);
 

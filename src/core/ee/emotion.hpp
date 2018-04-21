@@ -29,15 +29,16 @@ class EmotionEngine
         bool can_disassemble;
         int delay_slot;
 
-        uint8_t scratchpad[1024 * 16];
+        uint8_t* scratchpad;
 
         uint32_t get_paddr(uint32_t vaddr);
         void handle_exception(uint32_t new_addr, uint8_t code);
     public:
-        EmotionEngine(BIOS_HLE* b, Cop0* cp0, Cop1* fpu, Emulator* e, VectorUnit* vu0);
+        EmotionEngine(BIOS_HLE* b, Cop0* cp0, Cop1* fpu, Emulator* e, uint8_t* sp, VectorUnit* vu0);
         static const char* REG(int id);
         void reset();
         void run();
+        int run(int cycles_to_run);
         void print_state();
         void set_disassembly(bool dis);
 

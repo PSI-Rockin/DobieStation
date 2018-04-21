@@ -9,6 +9,9 @@ struct IOP_Timer_Control
     bool zero_return;
     bool compare_interrupt_enabled;
     bool overflow_interrupt_enabled;
+    bool repeat_int;
+    bool toggle_int;
+    bool int_enable;
     bool compare_interrupt;
     bool overflow_interrupt;
 };
@@ -27,7 +30,10 @@ class IOPTiming
 {
     private:
         Emulator* e;
+        uint32_t cycles_since_IRQ;
         IOP_Timer timers[6];
+
+        void IRQ_test(int index, bool overflow);
     public:
         IOPTiming(Emulator* e);
 

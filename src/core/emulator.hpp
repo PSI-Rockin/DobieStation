@@ -10,6 +10,7 @@
 #include "ee/vu.hpp"
 
 #include "iop/cdvd.hpp"
+#include "iop/gamepad.hpp"
 #include "iop/iop.hpp"
 #include "iop/iop_dma.hpp"
 #include "iop/iop_timers.hpp"
@@ -37,6 +38,7 @@ class Emulator
         DMAC dmac;
         EmotionEngine cpu;
         EmotionTiming timers;
+        Gamepad pad;
         GraphicsSynthesizer gs;
         GraphicsInterface gif;
         IOP iop;
@@ -53,6 +55,8 @@ class Emulator
         uint8_t* RDRAM;
         uint8_t* IOP_RAM;
         uint8_t* BIOS;
+
+        uint8_t scratchpad[1024 * 16];
 
         uint32_t MCH_RICM, MCH_DRD;
         uint8_t rdram_sdevid;

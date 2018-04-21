@@ -41,7 +41,8 @@ SOURCES += ../src/qt/main.cpp \
     ../src/core/iop/cdvd.cpp \
     ../src/core/iop/sio2.cpp \
     ../src/core/ee/vu.cpp \
-    ../src/core/ee/emotion_vu0.cpp
+    ../src/core/ee/emotion_vu0.cpp \
+    ../src/core/iop/gamepad.cpp
 
 HEADERS += \
     ../src/core/ee/emotion.hpp \
@@ -67,4 +68,5 @@ HEADERS += \
     ../src/core/ee/intc.hpp \
     ../src/core/iop/cdvd.hpp \
     ../src/core/iop/sio2.hpp \
-    ../src/core/ee/vu.hpp
+    ../src/core/ee/vu.hpp \
+    ../src/core/iop/gamepad.hpp

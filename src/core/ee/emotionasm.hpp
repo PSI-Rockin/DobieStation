@@ -12,7 +12,7 @@ enum MIPS_REG
     t0, t1, t2, t3, t4, t5, t6, t7, //temporary data
     s0, s1, s2, s3, s4, s5, s6, s7, //preserved data
     t8, t9, //more temporary data
-    k0, k1, //reserved for kernal
+    k0, k1, //reserved for kernel
     gp, //global pointer
     sp, //stack pointer
     fp, //frame pointer

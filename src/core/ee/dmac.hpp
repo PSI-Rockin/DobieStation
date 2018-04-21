@@ -45,6 +45,7 @@ class SubsystemInterface;
 class DMAC
 {
     private:
+        uint8_t* RDRAM, *scratchpad;
         EmotionEngine* cpu;
         Emulator* e;
         GraphicsInterface* gif;
@@ -65,10 +66,13 @@ class DMAC
 
         void transfer_end(int index);
         void int1_check();
+
+        void fetch128(uint32_t addr, uint64_t* quad);
     public:
         DMAC(EmotionEngine* cpu, Emulator* e, GraphicsInterface* gif, SubsystemInterface* sif);
-        void reset();
+        void reset(uint8_t* RDRAM, uint8_t* scratchpad);
         void run();
+        void run(int cycles);
         void start_DMA(int index);
 
         uint32_t read_master_disable();

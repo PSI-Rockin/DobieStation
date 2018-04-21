@@ -19,13 +19,15 @@ enum CHANNELS
 };
 
 DMAC::DMAC(EmotionEngine* cpu, Emulator* e, GraphicsInterface* gif, SubsystemInterface* sif) :
-    cpu(cpu), e(e), gif(gif), sif(sif)
+    RDRAM(nullptr), scratchpad(nullptr), cpu(cpu), e(e), gif(gif), sif(sif)
 {
 
 }
 
-void DMAC::reset()
+void DMAC::reset(uint8_t* RDRAM, uint8_t* scratchpad)
 {
+    this->RDRAM = RDRAM;
+    this->scratchpad = scratchpad;
     master_disable = 0x1201; //hax
     control.master_enable = false;
     PCR = 0;
@@ -40,6 +42,22 @@ void DMAC::reset()
     interrupt_stat.bus_stat = false;
     interrupt_stat.mfifo_stat = false;
     interrupt_stat.stall_stat = false;
+}
+
+void DMAC::fetch128(uint32_t addr, uint64_t *quad)
+{
+    if (addr & (1 << 31))
+    {
+        addr &= 0x3FF0;
+        quad[0] = *(uint64_t*)&scratchpad[addr];
+        quad[1] = *(uint64_t*)&scratchpad[addr + 8];
+    }
+    else
+    {
+        addr &= 0x01FFFFF0;
+        quad[0] = *(uint64_t*)&RDRAM[addr];
+        quad[1] = *(uint64_t*)&RDRAM[addr + 8];
+    }
 }
 
 void DMAC::run()
@@ -62,6 +80,33 @@ void DMAC::run()
                     process_SIF1();
                     break;
             }
+        }
+    }
+}
+
+void DMAC::run(int cycles)
+{
+    if (!control.master_enable || (master_disable & (1 << 16)))
+        return;
+    int c;
+    for (int i = 0; i < 10; i++)
+    {
+        c = cycles;
+        while ((channels[i].control & 0x100) && c)
+        {
+            switch (i)
+            {
+                case GIF:
+                    process_GIF();
+                    break;
+                case SIF0:
+                    process_SIF0();
+                    break;
+                case SIF1:
+                    process_SIF1();
+                    break;
+            }
+            c--;
         }
     }
 }
@@ -93,13 +138,11 @@ void DMAC::process_GIF()
     if (channels[GIF].quadword_count)
     {
         uint64_t quad[2];
-        quad[0] = e->read64(channels[GIF].address);
-        quad[1] = e->read64(channels[GIF].address + 8);
+        fetch128(channels[GIF].address, quad);
         gif->send_PATH3(quad);
 
         channels[GIF].address += 16;
         channels[GIF].quadword_count--;
-        printf("[DMAC] GIF QWC: $%08X\n", channels[GIF].quadword_count);
     }
     else
     {
@@ -164,8 +207,7 @@ void DMAC::process_SIF1()
         if (sif->get_SIF1_size() <= SubsystemInterface::MAX_FIFO_SIZE - 4)
         {
             uint64_t quad[2];
-            quad[0] = e->read64(channels[SIF1].address);
-            quad[1] = e->read64(channels[SIF1].address + 8);
+            fetch128(channels[SIF1].address, quad);
             sif->write_SIF1(quad);
 
             channels[SIF1].address += 16;
@@ -185,7 +227,9 @@ void DMAC::process_SIF1()
 
 void DMAC::handle_source_chain(int index)
 {
-    uint64_t DMAtag = e->read64(channels[index].tag_address);
+    uint64_t quad[2];
+    fetch128(channels[index].tag_address, quad);
+    uint64_t DMAtag = quad[0];
     printf("[DMAC] Source DMAtag read $%08X: $%08X_%08X\n", channels[index].tag_address, DMAtag >> 32, DMAtag & 0xFFFFFFFF);
 
     //Change CTRL to have the upper 16 bits equal to bits 16-31 of the most recently read DMAtag
@@ -194,7 +238,7 @@ void DMAC::handle_source_chain(int index)
 
     uint16_t quadword_count = DMAtag & 0xFFFF;
     uint8_t id = (DMAtag >> 28) & 0x7;
-    uint32_t addr = (DMAtag >> 32) & 0x7FFFFFF0;
+    uint32_t addr = (DMAtag >> 32) & 0xFFFFFFF0;
     bool IRQ_after_transfer = DMAtag & (1UL << 31);
     bool TIE = channels[index].control & (1 << 7);
     channels[index].quadword_count = quadword_count;
@@ -265,8 +309,11 @@ uint32_t DMAC::read32(uint32_t address)
     switch (address)
     {
         case 0x1000A000:
-            printf("[DMAC] Read GIF control\n");
+            //printf("[DMAC] Read GIF control\n");
             reg = channels[GIF].control;
+            break;
+        case 0x1000A030:
+            reg = channels[GIF].tag_address;
             break;
         case 0x1000C000:
             reg = channels[SIF0].control;

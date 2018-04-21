@@ -968,14 +968,20 @@ string EmotionDisasm::disasm_cop_s(uint32_t instruction)
             return disasm_fpu_neg(instruction);
         case 0x18:
             return disasm_fpu_adda(instruction);
+        case 0x1A:
+            return disasm_fpu_mula(instruction);
         case 0x1C:
             return disasm_fpu_madd(instruction);
+        case 0x1D:
+            return disasm_fpu_msub(instruction);
         case 0x24:
             return disasm_fpu_cvt_w_s(instruction);
         case 0x32:
             return disasm_fpu_c_eq_s(instruction);
         case 0x34:
             return disasm_fpu_c_lt_s(instruction);
+        case 0x36:
+            return disasm_fpu_c_le_s(instruction);
         default:
             return unknown_op("FPU-S", op, 2);
     }
@@ -1054,9 +1060,19 @@ string EmotionDisasm::disasm_fpu_adda(uint32_t instruction)
     return disasm_fpu_acc("adda.s", instruction);
 }
 
+string EmotionDisasm::disasm_fpu_mula(uint32_t instruction)
+{
+    return disasm_fpu_acc("mula.s", instruction);
+}
+
 string EmotionDisasm::disasm_fpu_madd(uint32_t instruction)
 {
     return disasm_fpu_math("madd.s", instruction);
+}
+
+string EmotionDisasm::disasm_fpu_msub(uint32_t instruction)
+{
+    return disasm_fpu_math("msub.s", instruction);
 }
 
 string EmotionDisasm::disasm_fpu_convert(const string opcode, uint32_t instruction)
@@ -1090,6 +1106,11 @@ string EmotionDisasm::disasm_fpu_c_lt_s(uint32_t instruction)
 string EmotionDisasm::disasm_fpu_c_eq_s(uint32_t instruction)
 {
     return disasm_fpu_compare("c.eq.s", instruction);
+}
+
+string EmotionDisasm::disasm_fpu_c_le_s(uint32_t instruction)
+{
+    return disasm_fpu_compare("c.le.s", instruction);
 }
 
 string EmotionDisasm::disasm_cop_bc1(uint32_t instruction, uint32_t instr_addr)

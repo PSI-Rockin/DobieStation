@@ -4,14 +4,14 @@
 #include <sstream>
 #include "emulator.hpp"
 
-#define CYCLES_PER_FRAME 500000
+#define CYCLES_PER_FRAME 1500000
 #define VBLANK_START CYCLES_PER_FRAME * 0.8
 
 Emulator::Emulator() :
-    bios_hle(this, &gs), cdvd(this), cp0(&dmac), cpu(&bios_hle, &cp0, &fpu, this, &vu0),
+    bios_hle(this, &gs), cdvd(this), cp0(&dmac), cpu(&bios_hle, &cp0, &fpu, this, (uint8_t*)&scratchpad, &vu0),
     dmac(&cpu, this, &gif, &sif), gif(&gs), gs(&intc),
     iop(this), iop_dma(this, &cdvd, &sif), iop_timers(this), intc(&cpu),
-    timers(&intc), sio2(this), vu0(0), vu1(1)
+    timers(&intc), sio2(this, &pad), vu0(0), vu1(1)
 {
     BIOS = nullptr;
     RDRAM = nullptr;
@@ -35,7 +35,7 @@ Emulator::~Emulator()
         delete[] ELF_file;
 }
 
-void Emulator::run()
+/*void Emulator::run()
 {
     gs.start_frame();
     instructions_run = 0;
@@ -66,12 +66,61 @@ void Emulator::run()
                 }
                 //cpu.set_disassembly(true);
             }
+            //if (frames == 587)
+                //cpu.set_disassembly(true);
             frames++;
             iop_request_IRQ(0);
             gs.render_CRT();
         }
     }
     cdvd.N_command_check();
+    //VBLANK end
+    iop_request_IRQ(11);
+    gs.set_VBLANK(false);
+}*/
+
+void Emulator::run()
+{
+    gs.start_frame();
+    instructions_run = 0;
+    bool VBLANK_sent = false;
+    while (instructions_run < CYCLES_PER_FRAME)
+    {
+        int cycles = cpu.run(64);
+        instructions_run += cycles;
+        cycles >>= 1;
+        //for (int i = 0; i < cycles; i++)
+            //dmac.run();
+        dmac.run(cycles);
+        timers.run(cycles);
+        cycles >>= 2;
+        for (int i = 0; i < cycles; i++)
+        {
+            iop.run();
+            iop_dma.run();
+            iop_timers.run();
+        }
+        cdvd.update(cycles);
+        if (!VBLANK_sent && instructions_run >= VBLANK_START)
+        {
+            VBLANK_sent = true;
+            gs.set_VBLANK(true);
+            printf("VSYNC FRAMES: %d\n", frames);
+            /*if (frames >= 113)
+            {
+                if (cpu.get_PC() >= 0x00127460 && cpu.get_PC() <= 0x0012747C)
+                {
+                    cpu.set_gpr<uint64_t>(17, 1);
+                }
+                //cpu.set_disassembly(true);
+            }*/
+            if (frames == 3203)
+                cpu.set_disassembly(true);
+            frames++;
+            iop_request_IRQ(0);
+            gs.render_CRT();
+        }
+    }
     //VBLANK end
     iop_request_IRQ(11);
     gs.set_VBLANK(false);
@@ -93,7 +142,7 @@ void Emulator::reset()
     cdvd.reset();
     cp0.reset();
     cpu.reset();
-    dmac.reset();
+    dmac.reset(RDRAM, (uint8_t*)&scratchpad);
     fpu.reset();
     gs.reset();
     gif.reset();
@@ -101,6 +150,7 @@ void Emulator::reset()
     iop_dma.reset(IOP_RAM);
     iop_timers.reset();
     intc.reset();
+    pad.reset();
     sif.reset();
     sio2.reset();
     timers.reset();
@@ -617,6 +667,8 @@ uint8_t Emulator::iop_read8(uint32_t address)
         case 0x1F402018:
             printf("[CDVD] Read S data\n");
             return cdvd.read_S_data();
+        case 0x1F808264:
+            return sio2.read_serial();
         case 0x1FA00000:
             return IOP_POST;
     }
@@ -632,8 +684,14 @@ uint16_t Emulator::iop_read16(uint32_t address)
         return *(uint16_t*)&BIOS[address & 0x3FFFFF];
     switch (address)
     {
+        case 0x1F801494:
+            return iop_timers.read_control(4);
         case 0x1F8014A4:
             return iop_timers.read_control(5);
+        case 0x1F900344:
+        case 0x1F900744:
+            if (frames >= 280)
+                return 0x80;
     }
     printf("Unrecognized IOP read16 from physical addr $%08X\n", address);
     return 0;
@@ -679,18 +737,24 @@ uint32_t Emulator::iop_read32(uint32_t address)
             return iop_dma.get_DICR();
         case 0x1F801450:
             return 0;
+        case 0x1F801490:
+            return iop_timers.read_counter(4);
         case 0x1F8014A0:
             return iop_timers.read_counter(5);
         case 0x1F801528:
             return iop_dma.get_chan_control(10);
-        case 0x1F801578:
-            return 0; //No clue
         case 0x1F801570:
             return iop_dma.get_DPCR2();
         case 0x1F801574:
             return iop_dma.get_DICR2();
+        case 0x1F801578:
+            return 0; //No clue
+        case 0x1F808268:
+            return sio2.get_control();
         case 0x1F80826C:
             return sio2.get_RECV1();
+        case 0x1F808270:
+            return sio2.get_RECV2();
         case 0xFFFE0130: //Cache control?
             return 0;
     }
@@ -733,8 +797,8 @@ void Emulator::iop_write8(uint32_t address, uint8_t value)
         //POST2?
         case 0x1F802070:
             return;
-        //SIO2 DATAIN
         case 0x1F808260:
+            sio2.write_serial(value);
             return;
         case 0x1FA00000:
             //Register intended to be displayed on an external 7 segment display
@@ -786,6 +850,22 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
     {
         //printf("[IOP] Write to $%08X of $%08X\n", address, value);
         *(uint32_t*)&IOP_RAM[address] = value;
+        return;
+    }
+    //SIO2 send buffers
+    if (address >= 0x1F808200 && address < 0x1F808240)
+    {
+        int index = address - 0x1F808200;
+        sio2.set_send3(index >> 2, value);
+        return;
+    }
+    if (address >= 0x1F808240 && address < 0x1F808260)
+    {
+        int index = address - 0x1F808240;
+        if (address & 0x4)
+            sio2.set_send2(index >> 3, value);
+        else
+            sio2.set_send1(index >> 3, value);
         return;
     }
     switch (address)
@@ -855,6 +935,13 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
         case 0x1F8010B8:
             iop_dma.set_chan_control(3, value);
             return;
+        //SPU DMA
+        case 0x1F8010C0:
+            iop_dma.set_chan_addr(4, value);
+            return;
+        case 0x1F8010C8:
+            iop_dma.set_chan_control(4, value);
+            return;
         case 0x1F8010F0:
             iop_dma.set_DPCR(value);
             return;
@@ -866,11 +953,24 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
         case 0x1F801450:
             //Config reg? Do nothing to prevent log spam
             return;
+        case 0x1F801498:
+            iop_timers.write_target(4, value);
+            return;
         case 0x1F8014A0:
             iop_timers.write_counter(5, value);
             return;
         case 0x1F8014A8:
             iop_timers.write_target(5, value);
+            return;
+        //SPU2?
+        case 0x1F801500:
+            iop_dma.set_chan_addr(8, value);
+            return;
+        case 0x1F801504:
+            iop_dma.set_chan_block(8, value);
+            return;
+        case 0x1F801508:
+            iop_dma.set_chan_control(8, value);
             return;
         //SIF0 DMA
         case 0x1F801520:

@@ -19,7 +19,8 @@ enum class NCOMMAND
     STANDBY,
     STOP,
     READ_SEEK,
-    READ
+    READ,
+    BREAK
 };
 
 class CDVD_Drive
@@ -38,7 +39,6 @@ class CDVD_Drive
         uint32_t sectors_left;
         uint32_t block_size;
 
-        uint8_t VBLANKS_left;
         uint8_t read_buffer[4096];
 
         uint8_t ISTAT;
@@ -52,6 +52,7 @@ class CDVD_Drive
         uint8_t N_command_params[11];
         uint8_t N_params;
         uint8_t N_status;
+        int N_cycles_left;
 
         uint8_t S_command;
         uint8_t S_command_params[16];
@@ -75,7 +76,9 @@ class CDVD_Drive
         ~CDVD_Drive();
 
         void reset();
+        void update(int cycles);
         void N_command_check();
+        int get_block_size();
         int bytes_left();
 
         uint32_t read_to_RAM(uint8_t* RAM, uint32_t bytes);
