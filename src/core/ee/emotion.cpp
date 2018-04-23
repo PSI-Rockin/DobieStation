@@ -80,11 +80,6 @@ void EmotionEngine::run()
             delay_slot--;
     }
 
-    if (PC == 0x00236B68)
-    {
-        set_gpr<uint64_t>(16, get_gpr<uint64_t>(2) + 1);
-    }
-
     if (cp0->int_enabled())
     {
         //printf("[EE] Int enabled!\n");
@@ -108,6 +103,10 @@ int EmotionEngine::run(int cycles_to_run)
             printf("[$%08X] $%08X - %s\n", PC, instruction, disasm.c_str());
         }
         EmotionInterpreter::interpret(*this, instruction);
+        if (PC == 0x00108E0C)
+        {
+            print_state();
+        }
         if (increment_PC)
             PC += 4;
         else
@@ -530,6 +529,11 @@ void EmotionEngine::syscall_exception()
 
     //if (op == 0x7C)
         //can_disassemble = true;
+    if (op == 0x04)
+    {
+        printf("[EE] Exit syscall called!\n");
+        exit(1);
+    }
     handle_exception(0x80000180, 0x08);
 }
 
@@ -569,10 +573,17 @@ void EmotionEngine::set_int1_signal(bool value)
 void EmotionEngine::eret()
 {
     //printf("[EE] Return from exception\n");
-    uint32_t EPC = cp0->mfc(14);
-    PC = EPC;
+    if (cp0->status.error)
+    {
+        PC = cp0->ErrorEPC;
+        cp0->status.error = false;
+    }
+    else
+    {
+        PC = cp0->EPC;
+        cp0->status.exception = false;
+    }
     increment_PC = false;
-    cp0->status.exception = false;
 }
 
 void EmotionEngine::ei()

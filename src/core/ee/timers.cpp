@@ -97,6 +97,8 @@ uint32_t EmotionTiming::read32(uint32_t addr)
             return timers[0].counter;
         case 0x10000010:
             return read_control(0);
+        case 0x10001800:
+            return timers[3].counter;
         case 0x10001810:
             return read_control(3);
         default:
@@ -138,6 +140,16 @@ void EmotionTiming::count_up(int index, int cycles_per_count)
 {
     timers[index].clocks -= cycles_per_count;
     timers[index].counter++;
+
+    //Compare check
+    if (timers[index].counter == timers[index].compare)
+    {
+        if (timers[index].control.compare_int_enable)
+        {
+            timers[index].control.compare_int = true;
+            intc->assert_IRQ((int)Interrupt::TIMER0 + index);
+        }
+    }
 
     //Overflow check
     if (timers[index].counter > 0xFFFF)

@@ -30,6 +30,7 @@ void CDVD_Drive::reset()
     S_out_params = 0;
     read_bytes_left = 0;
     ISTAT = 0;
+    file_size = 0;
 }
 
 int CDVD_Drive::get_block_size()
@@ -59,7 +60,10 @@ uint32_t CDVD_Drive::read_to_RAM(uint8_t *RAM, uint32_t bytes)
         else
         {
             active_N_command = NCOMMAND::READ;
-            N_cycles_left = 10000;
+            if (N_command == 0x06)
+                N_cycles_left = 100000;
+            else
+                N_cycles_left = 10000;
         }
     }
     return block_size;
@@ -97,7 +101,10 @@ void CDVD_Drive::update(int cycles)
                 case NCOMMAND::READ_SEEK:
                     drive_status = READING | SPINNING;
                     active_N_command = NCOMMAND::READ;
-                    N_cycles_left = 10000;
+                    if (N_command == 0x06)
+                        N_cycles_left = 100000;
+                    else
+                        N_cycles_left = 10000;
                     break;
                 case NCOMMAND::BREAK:
                     drive_status = PAUSED;
@@ -124,10 +131,13 @@ bool CDVD_Drive::load_disc(const char *name)
     if (cdvd_file.is_open())
         cdvd_file.close();
 
-    cdvd_file.open(name, ios::in | ios::binary);
+    cdvd_file.open(name, ios::in | ios::binary | ifstream::ate);
     if (!cdvd_file.is_open())
         return false;
 
+    file_size = cdvd_file.tellg();
+
+    printf("[CDVD] Disc size: %lld bytes\n", file_size);
     printf("[CDVD] Locating Primary Volume Descriptor\n");
     uint8_t type = 0;
     int sector = 0x0F;
@@ -206,8 +216,10 @@ uint8_t CDVD_Drive::read_N_command()
 
 uint8_t CDVD_Drive::read_disc_type()
 {
-    //Assume it's a DVD for now
-    return 0x14;
+    //Not sure what the exact limit is. We'll just go with 1 GB for now.
+    if (file_size > (1024 * 1024 * 1024))
+        return 0x14;
+    return 0x12;
 }
 
 uint8_t CDVD_Drive::read_N_status()
@@ -425,7 +437,7 @@ void CDVD_Drive::start_seek()
     {
         printf("[CDVD] Seeking\n");
         //Kinda simulate seek time
-        N_cycles_left = 50000;
+        N_cycles_left = 100000;
     }
 
     //Seek anyway. The program won't know the difference

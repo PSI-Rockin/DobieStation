@@ -150,7 +150,6 @@ string EmotionDisasm::disasm_bne(uint32_t instruction, uint32_t instr_addr)
     return disasm_branch_equality("bne", instruction, instr_addr);
 }
 
-
 string EmotionDisasm::disasm_branch_equality(string opcode, uint32_t instruction, uint32_t instr_addr)
 {
     stringstream output;
@@ -168,8 +167,6 @@ string EmotionDisasm::disasm_branch_equality(string opcode, uint32_t instruction
 
     return opcode + " " + output.str();
 }
-
-
 
 string EmotionDisasm::disasm_addiu(uint32_t instruction)
 {
@@ -1271,6 +1268,8 @@ string EmotionDisasm::disasm_cop2_special(uint32_t instruction)
             return disasm_vmul(instruction);
         case 0x2C:
             return disasm_vsub(instruction);
+        case 0x2E:
+            return disasm_vopmsub(instruction);
         case 0x30:
             return disasm_viadd(instruction);
         default:
@@ -1323,6 +1322,11 @@ string EmotionDisasm::disasm_vsub(uint32_t instruction)
     return disasm_cop2_special_simplemath("vsub", instruction);
 }
 
+string EmotionDisasm::disasm_vopmsub(uint32_t instruction)
+{
+    return disasm_cop2_special_simplemath("vopmsub", instruction);
+}
+
 string EmotionDisasm::disasm_viadd(uint32_t instruction)
 {
     stringstream output;
@@ -1350,10 +1354,18 @@ string EmotionDisasm::disasm_cop2_special2(uint32_t instruction)
         case 0x1A:
         case 0x1B:
             return disasm_vmulabc(instruction);
+        case 0x2E:
+            return disasm_vopmula(instruction);
+        case 0x2F:
+            return "vnop";
+        case 0x30:
+            return disasm_vmove(instruction);
         case 0x31:
             return disasm_vmr32(instruction);
         case 0x35:
             return disasm_vsqi(instruction);
+        case 0x38:
+            return disasm_vdiv(instruction);
         case 0x39:
             return disasm_vsqrt(instruction);
         case 0x3A:
@@ -1410,6 +1422,20 @@ string EmotionDisasm::disasm_vmulabc(uint32_t instruction)
     return disasm_cop2_acc_bc("vmula", instruction);
 }
 
+string EmotionDisasm::disasm_vopmula(uint32_t instruction)
+{
+    stringstream output;
+    uint32_t fs = (instruction >> 11) & 0x1F;
+    uint32_t ft = (instruction >> 16) & 0x1F;
+    output << "vopmula.xyz ACC, vf" << fs << ", vf" << ft;
+    return output.str();
+}
+
+string EmotionDisasm::disasm_vmove(uint32_t instruction)
+{
+    return disasm_cop2_special2_move("vmove", instruction);
+}
+
 string EmotionDisasm::disasm_vmr32(uint32_t instruction)
 {
     return disasm_cop2_special2_move("vmr32", instruction);
@@ -1423,6 +1449,17 @@ string EmotionDisasm::disasm_vsqi(uint32_t instruction)
     string field = get_dest_field((instruction >> 21) & 0xF);
     output << "vsqi." << field;
     output << " vf" << fs << ", (vi" << it << "++)";
+    return output.str();
+}
+
+string EmotionDisasm::disasm_vdiv(uint32_t instruction)
+{
+    stringstream output;
+    uint32_t fs = (instruction >> 11) & 0x1F;
+    uint32_t ft = (instruction >> 16) & 0x1F;
+    string fsf = get_fsf((instruction >> 21) & 0x3);
+    string ftf = get_fsf((instruction >> 23) & 0x3);
+    output << "vdiv Q, vf" << fs << fsf << ", vf" << ft << ftf;
     return output.str();
 }
 
@@ -1539,6 +1576,10 @@ string EmotionDisasm::disasm_mmi0(uint32_t instruction)
             return disasm_psubb(instruction);
         case 0x12:
             return disasm_special_simplemath("pextlw", instruction);
+        case 0x16:
+            return disasm_special_simplemath("pextlh", instruction);
+        case 0x1E:
+            return disasm_pext5(instruction);
         default:
             return unknown_op("mmi0", op, 2);
     }
@@ -1549,6 +1590,13 @@ string EmotionDisasm::disasm_psubb(uint32_t instruction)
     return disasm_special_simplemath("psubb", instruction);
 }
 
+string EmotionDisasm::disasm_pext5(uint32_t instruction)
+{
+    stringstream output;
+    output << "pext5 " << EmotionEngine::REG(RD) << ", " << EmotionEngine::REG(RT);
+    return output.str();
+}
+
 string EmotionDisasm::disasm_mmi1(uint32_t instruction)
 {
     uint8_t op = (instruction >> 6) & 0x1F;
@@ -1556,6 +1604,8 @@ string EmotionDisasm::disasm_mmi1(uint32_t instruction)
     {
         case 0x10:
             return disasm_special_simplemath("padduw", instruction);
+        case 0x12:
+            return disasm_special_simplemath("pextuw", instruction);
         case 0x18:
             return disasm_special_simplemath("paddub", instruction);
         default:

@@ -28,6 +28,7 @@ class CDVD_Drive
     private:
         Emulator* e;
         std::ifstream cdvd_file;
+        uint64_t file_size;
         int read_bytes_left;
 
         uint8_t pvd_sector[2048];

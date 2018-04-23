@@ -106,14 +106,6 @@ void Emulator::run()
             VBLANK_sent = true;
             gs.set_VBLANK(true);
             printf("VSYNC FRAMES: %d\n", frames);
-            /*if (frames >= 113)
-            {
-                if (cpu.get_PC() >= 0x00127460 && cpu.get_PC() <= 0x0012747C)
-                {
-                    cpu.set_gpr<uint64_t>(17, 1);
-                }
-                //cpu.set_disassembly(true);
-            }*/
             frames++;
             iop_request_IRQ(0);
             gs.render_CRT();

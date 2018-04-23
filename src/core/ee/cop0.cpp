@@ -74,11 +74,9 @@ uint32_t Cop0::mfc(int index)
             return reg;
         }
         case 14:
-            if (status.error)
-                return ErrorEPC;
-            else
-                return EPC;
-            break;
+            return EPC;
+        case 30:
+            return ErrorEPC;
         default:
             return gpr[index];
     }
@@ -108,10 +106,10 @@ void Cop0::mtc(int index, uint32_t value)
             //No bits in CAUSE are writable
             break;
         case 14:
-            if (status.error)
-                ErrorEPC = value;
-            else
-                EPC = value;
+            EPC = value;
+            break;
+        case 30:
+            ErrorEPC = value;
             break;
         default:
             gpr[index] = value;

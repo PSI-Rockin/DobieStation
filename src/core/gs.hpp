@@ -113,6 +113,7 @@ class GraphicsSynthesizer
         //CSR/IMR stuff - to be merged into structs
         bool VBLANK_generated;
         bool VBLANK_enabled;
+        bool is_odd_frame;
 
         GSContext context1, context2;
         GSContext* current_ctx;

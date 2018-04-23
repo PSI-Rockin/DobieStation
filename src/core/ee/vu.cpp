@@ -1,5 +1,6 @@
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include "vu.hpp"
 
 #define _x(f) f&8
@@ -113,6 +114,21 @@ void VectorUnit::addq(uint8_t field, uint8_t dest, uint8_t source)
     printf("\n");
 }
 
+void VectorUnit::div(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2)
+{
+    float denom = gpr[reg2].f[ftf];
+    if (!denom)
+    {
+        printf("[VU] DIV by zero!\n");
+        exit(1);
+    }
+    Q = gpr[reg1].f[fsf];
+    Q /= denom;
+    printf("[VU] RSQRT: %f\n", Q);
+    printf("Reg1: %f\n", gpr[reg1].f[fsf]);
+    printf("Reg2: %f\n", gpr[reg2].f[ftf]);
+}
+
 void VectorUnit::ftoi4(uint8_t field, uint8_t dest, uint8_t source)
 {
     printf("[VU] FTOI4: ");
@@ -202,6 +218,20 @@ void VectorUnit::mulbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, 
     printf("\n");
 }
 
+void VectorUnit::move(uint8_t field, uint8_t dest, uint8_t source)
+{
+    printf("[VU] MOVE");
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            float temp = gpr[source].f[i];
+            set_gpr_f(dest, i, temp);
+        }
+    }
+    printf("\n");
+}
+
 void VectorUnit::mr32(uint8_t field, uint8_t dest, uint8_t source)
 {
     printf("[VU] MR32");
@@ -247,6 +277,32 @@ void VectorUnit::mulq(uint8_t field, uint8_t dest, uint8_t source)
     printf("\n");
 }
 
+/**
+ * FDx = ACCx - FSy * FTz
+ * FDy = ACCy - FSz * FTx
+ * FDz = ACCz - FSx * FTy
+ */
+void VectorUnit::opmsub(uint8_t dest, uint8_t reg1, uint8_t reg2)
+{
+    gpr[dest].f[0] = ACC.f[0] - gpr[reg1].f[1] * gpr[reg2].f[2];
+    gpr[dest].f[1] = ACC.f[1] - gpr[reg1].f[2] * gpr[reg2].f[0];
+    gpr[dest].f[2] = ACC.f[2] - gpr[reg1].f[0] * gpr[reg2].f[1];
+    printf("[VU] OPMSUB: %f, %f, %f\n", gpr[dest].f[0], gpr[dest].f[1], gpr[dest].f[2]);
+}
+
+/**
+ * ACCx = FSy * FTz
+ * ACCy = FSz * FTx
+ * ACCz = FSx * FTy
+ */
+void VectorUnit::opmula(uint8_t reg1, uint8_t reg2)
+{
+    ACC.f[0] = gpr[reg1].f[1] * gpr[reg2].f[2];
+    ACC.f[1] = gpr[reg1].f[2] * gpr[reg2].f[0];
+    ACC.f[2] = gpr[reg1].f[0] * gpr[reg2].f[1];
+    printf("[VU] OPMULA: %f, %f, %f\n", ACC.f[0], ACC.f[1], ACC.f[2]);
+}
+
 void VectorUnit::rinit(uint8_t fsf, uint8_t source)
 {
     R.u = 0x3F800000;
@@ -269,8 +325,14 @@ void VectorUnit::rnext(uint8_t field, uint8_t dest)
 
 void VectorUnit::rsqrt(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2)
 {
+    float denom = fabs(gpr[reg2].f[ftf]);
+    if (!denom)
+    {
+        printf("[VU] RSQRT by zero!\n");
+        exit(1);
+    }
     Q = gpr[reg1].f[fsf];
-    Q /= sqrt(fabs(gpr[reg2].f[ftf]));
+    Q /= sqrt(denom);
     printf("[VU] RSQRT: %f\n", Q);
     printf("Reg1: %f\n", gpr[reg1].f[fsf]);
     printf("Reg2: %f\n", gpr[reg2].f[ftf]);

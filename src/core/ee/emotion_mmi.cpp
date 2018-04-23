@@ -117,6 +117,12 @@ void EmotionInterpreter::mmi0(EmotionEngine &cpu, uint32_t instruction)
         case 0x12:
             pextlw(cpu, instruction);
             break;
+        case 0x16:
+            pextlh(cpu, instruction);
+            break;
+        case 0x1E:
+            pext5(cpu, instruction);
+            break;
         default:
             unknown_op("mmi0", instruction, op);
     }
@@ -189,6 +195,39 @@ void EmotionInterpreter::pextlw(EmotionEngine &cpu, uint32_t instruction)
     cpu.set_gpr<uint32_t>(dest, cpu.get_gpr<uint32_t>(reg1, 1), 3);
 }
 
+void EmotionInterpreter::pextlh(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    for (int i = 0; i < 4; i++)
+    {
+        cpu.set_gpr<uint16_t>(dest, cpu.get_gpr<uint16_t>(reg2, i), i << 1);
+        cpu.set_gpr<uint16_t>(dest, cpu.get_gpr<uint16_t>(reg1, i), (i << 1) + 1);
+    }
+}
+
+/**
+ * Parallel Extend from 5 Bits
+ * Splits RT into four words, each in 1-5-5-5 format. Converts each word into 8-8-8-8 format and stores it in RD.
+ */
+void EmotionInterpreter::pext5(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t source = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    for (int i = 0; i < 4; i++)
+    {
+        uint32_t packed = cpu.get_gpr<uint32_t>(source, i) & 0xFFFF;
+        uint32_t unpacked = (packed & (1 << 15)) << 16;
+        unpacked |= ((packed >> 10) & 0x1F) << 24;
+        unpacked |= ((packed >> 5) & 0x1F) << 16;
+        unpacked |= (packed & 0x1F) << 3;
+        cpu.set_gpr<uint32_t>(dest, unpacked, i);
+    }
+}
+
 void EmotionInterpreter::mmi1(EmotionEngine &cpu, uint32_t instruction)
 {
     uint8_t op = (instruction >> 6) & 0x1F;
@@ -196,6 +235,9 @@ void EmotionInterpreter::mmi1(EmotionEngine &cpu, uint32_t instruction)
     {
         case 0x10:
             padduw(cpu, instruction);
+            break;
+        case 0x12:
+            pextuw(cpu, instruction);
             break;
         case 0x18:
             paddub(cpu, instruction);
@@ -224,6 +266,18 @@ void EmotionInterpreter::padduw(EmotionEngine &cpu, uint32_t instruction)
             result = 0xFFFFFFFF;
         cpu.set_gpr<uint32_t>(dest, (uint32_t)result, i);
     }
+}
+
+void EmotionInterpreter::pextuw(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    cpu.set_gpr<uint32_t>(dest, cpu.get_gpr<uint32_t>(reg2, 2));
+    cpu.set_gpr<uint32_t>(dest, cpu.get_gpr<uint32_t>(reg1, 2), 1);
+    cpu.set_gpr<uint32_t>(dest, cpu.get_gpr<uint32_t>(reg2, 3), 2);
+    cpu.set_gpr<uint32_t>(dest, cpu.get_gpr<uint32_t>(reg1, 3), 3);
 }
 
 /**

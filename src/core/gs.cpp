@@ -68,6 +68,7 @@ void GraphicsSynthesizer::reset()
         local_mem = new uint8_t[1024 * 1024 * 4];
     if (!output_buffer)
         output_buffer = new uint32_t[640 * 448];
+    is_odd_frame = false;
     pixels_transferred = 0;
     num_vertices = 0;
     DISPLAY2.x = 0;
@@ -125,6 +126,7 @@ void GraphicsSynthesizer::set_VBLANK(bool is_VBLANK)
     {
         printf("[GS] VBLANK end\n");
         intc->assert_IRQ(3);
+        is_odd_frame = !is_odd_frame;
     }
     VBLANK_generated = is_VBLANK;
 }
@@ -232,6 +234,7 @@ uint32_t GraphicsSynthesizer::read32_privileged(uint32_t addr)
         {
             uint32_t reg = 0;
             reg |= VBLANK_generated << 3;
+            reg |= is_odd_frame << 13;
             return reg;
         }
         default:
@@ -249,6 +252,7 @@ uint64_t GraphicsSynthesizer::read64_privileged(uint32_t addr)
         {
             uint64_t reg = 0;
             reg |= VBLANK_generated << 3;
+            reg |= is_odd_frame << 13;
             return reg;
         }
         default:
@@ -638,7 +642,7 @@ void GraphicsSynthesizer::draw_pixel(int32_t x, int32_t y, uint32_t color, uint3
     bool update_frame = true;
     bool update_alpha = true;
     bool update_z = !current_ctx->zbuf.no_update;
-    if (test->alpha_test)
+    /*if (test->alpha_test)
     {
         bool fail = false;
         uint8_t alpha = color >> 24;
@@ -692,11 +696,11 @@ void GraphicsSynthesizer::draw_pixel(int32_t x, int32_t y, uint32_t color, uint3
                     break;
             }
         }
-    }
+    }*/
 
     uint32_t pos = ((x >> 4) + ((y >> 4) * current_ctx->frame.width)) * 4;
     uint32_t dest_z = get_word(current_ctx->zbuf.base_pointer + pos);
-    if (test->depth_test)
+    /*if (test->depth_test)
     {
         switch (test->depth_method)
         {
@@ -713,7 +717,7 @@ void GraphicsSynthesizer::draw_pixel(int32_t x, int32_t y, uint32_t color, uint3
                     return;
                 break;
         }
-    }
+    }*/
 
     if (alpha_blending)
     {
@@ -1157,20 +1161,29 @@ void GraphicsSynthesizer::write_HWREG(uint64_t data)
 
     switch (BITBLTBUF.dest_format)
     {
+        //PSMCT32
         case 0x00:
             ppd = 2;
             break;
+        //PSMCT24
         case 0x01:
             ppd = 3;
             break;
+        //PSMCT16
         case 0x02:
             ppd = 4;
             break;
+        //PSMCT8
         case 0x13:
             ppd = 8;
             break;
+        //PSMCT4
         case 0x14:
             ppd = 16;
+            break;
+        //PSMT4HH
+        case 0x2C:
+            ppd = 2;
             break;
         default:
             printf("[GS] Unrecognized BITBLTBUF dest format $%02X\n", BITBLTBUF.dest_format);
@@ -1183,6 +1196,7 @@ void GraphicsSynthesizer::write_HWREG(uint64_t data)
         switch (BITBLTBUF.dest_format)
         {
             case 0x00:
+            case 0x2C:
                 *(uint32_t*)&local_mem[BITBLTBUF.dest_base + (dest_addr * 4)] = (data >> (i * 32)) & 0xFFFFFFFF;
                 printf("[GS] Write to $%08X\n", BITBLTBUF.dest_base + (dest_addr * 4));
                 pixels_transferred++;
@@ -1260,7 +1274,6 @@ void GraphicsSynthesizer::unpack_PSMCT24(uint32_t dest_addr, uint64_t data, int 
 
 void GraphicsSynthesizer::host_to_host()
 {
-    return;
     exit(1);
     int ppd = 2; //pixels per doubleword
     uint32_t source_addr = (TRXPOS.source_x + (TRXPOS.source_y * BITBLTBUF.source_width)) << 1;
@@ -1333,6 +1346,20 @@ uint32_t GraphicsSynthesizer::tex_lookup(uint32_t coord)
             printf("Entry: %d\n", entry);
             printf("Offset: %d\n", current_ctx->tex0.CLUT_offset);
             printf("Format: %d\n", current_ctx->tex0.CLUT_format);*/
+            uint32_t addr;
+            if (current_ctx->tex0.use_CSM2)
+                addr = clut_base + (entry << 2);
+            else
+            {
+                addr = clut_base + ((entry & 0x7) << 2);
+                addr += (entry & 0x8) * 32; //increase distance by 64 words (256 bytes) if entry > 7
+            }
+            return get_word(addr);
+        }
+            break;
+        case 0x2C:
+        {
+            uint8_t entry = local_mem[tex_base + (coord << 2)] >> 28;
             uint32_t addr;
             if (current_ctx->tex0.use_CSM2)
                 addr = clut_base + (entry << 2);
