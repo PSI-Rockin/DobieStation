@@ -218,7 +218,7 @@ bool Emulator::skip_BIOS()
         }
         //cpu.reset();
         execute_ELF();
-        //cpu.set_disassembly(true);
+        //iop.set_disassembly(true);
         skip_BIOS_hack = NONE;
         return true;
     }
@@ -445,6 +445,8 @@ uint64_t Emulator::read64(uint32_t address)
 {
     if (address < 0x10000000)
         return *(uint64_t*)&RDRAM[address & 0x01FFFFFF];
+    if (address >= 0x10000000 && address < 0x10002000)
+        return timers.read32(address);
     if (address >= 0x1FC00000 && address < 0x20000000)
         return *(uint64_t*)&BIOS[address & 0x3FFFFF];
     if (address >= 0x10008000 && address < 0x1000F000)
@@ -599,6 +601,11 @@ void Emulator::write64(uint32_t address, uint64_t value)
     if (address < 0x10000000)
     {
         *(uint64_t*)&RDRAM[address & 0x01FFFFFF] = value;
+        return;
+    }
+    if (address >= 0x10000000 && address < 0x10002000)
+    {
+        timers.write32(address, value);
         return;
     }
     if (address >= 0x10008000 && address < 0x1000F000)
@@ -1068,4 +1075,24 @@ void Emulator::iop_ksprintf()
         msg_pointer++;
     }
     ee_log.flush();
+}
+
+void Emulator::iop_puts()
+{
+    uint32_t pointer = iop.get_gpr(5);
+    uint32_t len = iop.get_gpr(6);
+    //printf("[IOP] ($%08X, $%08X) puts: ", pointer, len);
+    /*for (int i = 4; i < 8; i++)
+    {
+        printf("$%08X", iop.get_gpr(i));
+    }*/
+    while (len)
+    {
+        ee_log << IOP_RAM[pointer & 0x1FFFFF];
+        printf("puts: %c\n", IOP_RAM[pointer & 0x1FFFFF]);
+        pointer++;
+        len--;
+    }
+    ee_log.flush();
+    //printf("\n");
 }

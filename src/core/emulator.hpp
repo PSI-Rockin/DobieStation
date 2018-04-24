@@ -109,6 +109,7 @@ class Emulator
 
         void iop_request_IRQ(int index);
         void iop_ksprintf();
+        void iop_puts();
 };
 
 #endif // EMULATOR_HPP

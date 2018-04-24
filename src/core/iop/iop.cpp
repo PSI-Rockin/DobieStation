@@ -59,22 +59,16 @@ void IOP::run()
         printf("[IOP] [$%08X] $%08X - %s\n", PC, instr, EmotionDisasm::disasm_instr(instr, PC).c_str());
     IOP_Interpreter::interpret(*this, instr);
 
-    if (PC == 0x0002B0BC)
-    {
-        for (int i = 1; i < 32; i++)
-        {
-            printf("%s - $%08X", REG(i), get_gpr(i));
-            if (i % 4 == 3)
-                printf("\n");
-            else
-                printf("\t");
-        }
-    }
-
     if (inc_PC)
         PC += 4;
     else
         inc_PC = true;
+
+    if (PC >= 0x0001356C && PC < 0x000135A4)
+    {
+        for (int i = 1; i < 32; i++)
+            printf("%s: $%08X\n", REG(i), get_gpr(i));
+    }
 
     if (will_branch)
     {
@@ -82,8 +76,10 @@ void IOP::run()
         {
             will_branch = false;
             PC = new_PC;
-            if (PC == 0x86D0 || PC == 0x90E0 || PC == 0x00008EE0)
-                e->iop_ksprintf();
+            if (PC == 0x00012C48)
+                e->iop_puts();
+            /*if (PC == 0x86D0 || PC == 0x90E0 || PC == 0x00008EE0)
+                e->iop_ksprintf();*/
         }
         else
             load_delay--;

@@ -1181,6 +1181,10 @@ void GraphicsSynthesizer::write_HWREG(uint64_t data)
         case 0x14:
             ppd = 16;
             break;
+        //PSMT4HL
+        case 0x24:
+            ppd = 2;
+            break;
         //PSMT4HH
         case 0x2C:
             ppd = 2;
@@ -1196,6 +1200,7 @@ void GraphicsSynthesizer::write_HWREG(uint64_t data)
         switch (BITBLTBUF.dest_format)
         {
             case 0x00:
+            case 0x24:
             case 0x2C:
                 *(uint32_t*)&local_mem[BITBLTBUF.dest_base + (dest_addr * 4)] = (data >> (i * 32)) & 0xFFFFFFFF;
                 printf("[GS] Write to $%08X\n", BITBLTBUF.dest_base + (dest_addr * 4));
@@ -1346,6 +1351,20 @@ uint32_t GraphicsSynthesizer::tex_lookup(uint32_t coord)
             printf("Entry: %d\n", entry);
             printf("Offset: %d\n", current_ctx->tex0.CLUT_offset);
             printf("Format: %d\n", current_ctx->tex0.CLUT_format);*/
+            uint32_t addr;
+            if (current_ctx->tex0.use_CSM2)
+                addr = clut_base + (entry << 2);
+            else
+            {
+                addr = clut_base + ((entry & 0x7) << 2);
+                addr += (entry & 0x8) * 32; //increase distance by 64 words (256 bytes) if entry > 7
+            }
+            return get_word(addr);
+        }
+            break;
+        case 0x24:
+        {
+            uint8_t entry = (local_mem[tex_base + (coord << 2)] >> 24) & 0xF;
             uint32_t addr;
             if (current_ctx->tex0.use_CSM2)
                 addr = clut_base + (entry << 2);

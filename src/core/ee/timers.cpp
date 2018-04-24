@@ -97,6 +97,14 @@ uint32_t EmotionTiming::read32(uint32_t addr)
             return timers[0].counter;
         case 0x10000010:
             return read_control(0);
+        case 0x10000800:
+            return timers[1].counter;
+        case 0x10000810:
+            return read_control(1);
+        case 0x10001000:
+            return timers[2].counter;
+        case 0x10001010:
+            return read_control(2);
         case 0x10001800:
             return timers[3].counter;
         case 0x10001810:
@@ -154,7 +162,8 @@ void EmotionTiming::count_up(int index, int cycles_per_count)
     //Overflow check
     if (timers[index].counter > 0xFFFF)
     {
-        //printf("[EE Timing] Timer %d overflow!\n", index);
+        if (index == 1)
+            printf("[EE Timing] Timer %d overflow!\n", index);
         timers[index].counter = 0;
         if (timers[index].control.overflow_int_enable)
         {

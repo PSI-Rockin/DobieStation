@@ -143,6 +143,9 @@ void EmotionInterpreter::interpret(EmotionEngine &cpu, uint32_t instruction)
         case 0x31:
             lwc1(cpu, instruction);
             break;
+        case 0x33:
+            //prefetch
+            break;
         case 0x36:
             lqc2(cpu, instruction);
             break;
@@ -347,8 +350,7 @@ void EmotionInterpreter::addi(EmotionEngine &cpu, uint32_t instruction)
     int16_t imm = (int16_t)(instruction & 0xFFFF);
     uint64_t dest = (instruction >> 16) & 0x1F;
     uint32_t source = (instruction >> 21) & 0x1F;
-    int32_t result = cpu.get_gpr<int32_t>(source);
-    result += imm;
+    int32_t result = cpu.get_gpr<int64_t>(source) + imm;
     cpu.set_gpr<int64_t>(dest, result);
 }
 
@@ -357,8 +359,7 @@ void EmotionInterpreter::addiu(EmotionEngine &cpu, uint32_t instruction)
     int16_t imm = (int16_t)(instruction & 0xFFFF);
     uint64_t dest = (instruction >> 16) & 0x1F;
     uint32_t source = (instruction >> 21) & 0x1F;
-    int32_t result = cpu.get_gpr<int32_t>(source);
-    result += imm;
+    int32_t result = cpu.get_gpr<int64_t>(source) + imm;
     cpu.set_gpr<int64_t>(dest, result);
 }
 

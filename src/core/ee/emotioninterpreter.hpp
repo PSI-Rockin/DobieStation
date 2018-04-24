@@ -168,6 +168,12 @@ namespace EmotionInterpreter
     void mmi(EmotionEngine& cpu, uint32_t instruction);
     void madd(EmotionEngine& cpu, uint32_t instruction);
     void plzcw(EmotionEngine& cpu, uint32_t instruction);
+    void psllh(EmotionEngine& cpu, uint32_t instruction);
+    void psrlh(EmotionEngine& cpu, uint32_t instruction);
+    void psrah(EmotionEngine& cpu, uint32_t instruction);
+    void psllw(EmotionEngine& cpu, uint32_t instruction);
+    void psrlw(EmotionEngine& cpu, uint32_t instruction);
+    void psraw(EmotionEngine& cpu, uint32_t instruction);
     void mmi0(EmotionEngine& cpu, uint32_t instruction);
     void psubw(EmotionEngine& cpu, uint32_t instruction);
     void psubb(EmotionEngine& cpu, uint32_t instruction);
@@ -180,6 +186,8 @@ namespace EmotionInterpreter
     void pextuw(EmotionEngine& cpu, uint32_t instruction);
     void paddub(EmotionEngine& cpu, uint32_t instruction);
     void mmi2(EmotionEngine& cpu, uint32_t instruction);
+    void psllvw(EmotionEngine& cpu, uint32_t instruction);
+    void psrlvw(EmotionEngine& cpu, uint32_t instruction);
     void pmfhi(EmotionEngine& cpu, uint32_t instruction);
     void pmflo(EmotionEngine& cpu, uint32_t instruction);
     void pcpyld(EmotionEngine& cpu, uint32_t instruction);
@@ -194,6 +202,7 @@ namespace EmotionInterpreter
     void divu1(EmotionEngine& cpu, uint32_t instruction);
 
     void mmi3(EmotionEngine& cpu, uint32_t instruction);
+    void psravw(EmotionEngine& cpu, uint32_t instruction);
     void pmthi(EmotionEngine& cpu, uint32_t instruction);
     void pmtlo(EmotionEngine& cpu, uint32_t instruction);
     void pcpyud(EmotionEngine& cpu, uint32_t instruction);

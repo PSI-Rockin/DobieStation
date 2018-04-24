@@ -110,6 +110,8 @@ string EmotionDisasm::disasm_instr(uint32_t instruction, uint32_t instr_addr)
             return disasm_loadstore("lwc0", instruction);
         case 0x31:
             return disasm_lwc1(instruction);
+        case 0x33:
+            return "pref";
         case 0x36:
             return disasm_lqc2(instruction);
         case 0x37:
@@ -1551,6 +1553,18 @@ string EmotionDisasm::disasm_mmi(uint32_t instruction, uint32_t instr_addr)
             return disasm_mmi1(instruction);
         case 0x29:
             return disasm_mmi3(instruction);
+        case 0x34:
+            return disasm_special_shift("psllh", instruction);
+        case 0x36:
+            return disasm_special_shift("psrlh", instruction);
+        case 0x37:
+            return disasm_special_shift("psrah", instruction);
+        case 0x3C:
+            return disasm_special_shift("psllw", instruction);
+        case 0x3E:
+            return disasm_special_shift("psrlw", instruction);
+        case 0x3F:
+            return disasm_special_shift("psraw", instruction);
         default:
             return unknown_op("mmi", op, 2);
     }
@@ -1618,6 +1632,10 @@ string EmotionDisasm::disasm_mmi2(uint32_t instruction)
     int op = (instruction >> 6) & 0x1F;
     switch (op)
     {
+        case 0x02:
+            return disasm_variableshift("psllvw", instruction);
+        case 0x03:
+            return disasm_variableshift("psrlvw", instruction);
         case 0x08:
             return disasm_pmfhi(instruction);
         case 0x09:
@@ -1697,6 +1715,8 @@ string EmotionDisasm::disasm_mmi3(uint32_t instruction)
 {
     switch (SA)
     {
+        case 0x03:
+            return disasm_variableshift("psravw", instruction);
         case 0x08:
             return disasm_pmthi(instruction);
         case 0x09:
