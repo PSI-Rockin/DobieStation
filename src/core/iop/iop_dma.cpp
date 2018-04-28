@@ -1,6 +1,7 @@
 #include <cstdio>
 #include "cdvd.hpp"
 #include "iop_dma.hpp"
+#include "sio2.hpp"
 #include "spu.hpp"
 
 #include "../emulator.hpp"
@@ -23,8 +24,8 @@ enum CHANNELS
     SIO2out
 };
 
-IOP_DMA::IOP_DMA(Emulator* e, CDVD_Drive* cdvd, SubsystemInterface* sif, class SPU* spu, class SPU* spu2) :
-    e(e), cdvd(cdvd), sif(sif), spu(spu), spu2(spu2)
+IOP_DMA::IOP_DMA(Emulator* e, CDVD_Drive* cdvd, SubsystemInterface* sif, SIO2* sio2, class SPU* spu, class SPU* spu2) :
+    e(e), cdvd(cdvd), sif(sif), sio2(sio2), spu(spu), spu2(spu2)
 {
 
 }
@@ -82,6 +83,12 @@ void IOP_DMA::run()
                     break;
                 case SIF1:
                     process_SIF1();
+                    break;
+                case SIO2in:
+                    process_SIO2in();
+                    break;
+                case SIO2out:
+                    process_SIO2out();
                     break;
             }
         }
@@ -185,6 +192,28 @@ void IOP_DMA::process_SIF1()
                 channels[SIF1].tag_end = true;
         }
     }
+}
+
+void IOP_DMA::process_SIO2in()
+{
+    for (int i = 0; i < 4; i++)
+    {
+        sio2->write_serial(RAM[channels[SIO2in].addr + i]);
+    }
+    channels[SIO2in].addr += 4;
+    channels[SIO2in].word_count--;
+    if (channels[SIO2in].word_count == 0)
+        transfer_end(SIO2in);
+}
+
+void IOP_DMA::process_SIO2out()
+{
+    for (int i = 0; i < 4; i++)
+        RAM[channels[SIO2out].addr + i] = sio2->read_serial();
+    channels[SIO2out].addr += 4;
+    channels[SIO2out].word_count--;
+    if (channels[SIO2out].word_count == 0)
+        transfer_end(SIO2out);
 }
 
 void IOP_DMA::transfer_end(int index)

@@ -106,16 +106,18 @@ void Gamepad::get_command(uint8_t value)
 uint8_t Gamepad::read_data(uint8_t value)
 {
     uint8_t ret = 0;
+    uint8_t buttons = 0x00;
+    uint8_t buttons2 = 0x00;
     switch (data_sent)
     {
         case 0:
             ret = 0x5A;
             break;
         case 1:
-            ret = 0xFF;
+            ret = buttons;
             break;
         case 2:
-            ret = 0xFF;
+            ret = buttons2;
             break;
     }
     data_sent++;

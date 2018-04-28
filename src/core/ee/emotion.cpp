@@ -584,12 +584,16 @@ void EmotionEngine::eret()
 
 void EmotionEngine::ei()
 {
-    cp0->status.master_int_enable = true;
+    printf("[EE] EI\n");
+    if (cp0->status.edi || cp0->status.mode == 0)
+        cp0->status.master_int_enable = true;
 }
 
 void EmotionEngine::di()
 {
-    cp0->status.master_int_enable = false;
+    printf("[EE] DI\n");
+    if (cp0->status.edi || cp0->status.mode == 0)
+        cp0->status.master_int_enable = false;
 }
 
 void EmotionEngine::cp0_bc0(int32_t offset, bool test_true, bool likely)

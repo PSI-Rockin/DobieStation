@@ -61,8 +61,10 @@ class VectorUnit
         void opmsub(uint8_t dest, uint8_t reg1, uint8_t reg2);
         void opmula(uint8_t reg1, uint8_t reg2);
         void rinit(uint8_t fsf, uint8_t source);
+        void rget(uint8_t field, uint8_t dest);
         void rnext(uint8_t field, uint8_t dest);
         void rsqrt(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2);
+        void rxor(uint8_t fsf, uint8_t source);
         void sqi(uint8_t field, uint8_t source, uint8_t base);
         void vu_sqrt(uint8_t ftf, uint8_t source);
         void sub(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2);

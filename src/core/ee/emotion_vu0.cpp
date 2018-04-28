@@ -219,8 +219,14 @@ void EmotionInterpreter::cop2_special2(VectorUnit &vu0, uint32_t instruction)
         case 0x40:
             cop2_vrnext(vu0, instruction);
             break;
+        case 0x41:
+            cop2_vrget(vu0, instruction);
+            break;
         case 0x42:
             cop2_vrinit(vu0, instruction);
+            break;
+        case 0x43:
+            cop2_vrxor(vu0, instruction);
             break;
         default:
             unknown_op("cop2 special2", instruction, op);
@@ -324,9 +330,23 @@ void EmotionInterpreter::cop2_vrnext(VectorUnit &vu0, uint32_t instruction)
     vu0.rnext(field, ft);
 }
 
+void EmotionInterpreter::cop2_vrget(VectorUnit &vu0, uint32_t instruction)
+{
+    uint32_t ft = (instruction >> 16) & 0x1F;
+    uint8_t field = (instruction >> 21) & 0xF;
+    vu0.rget(field, ft);
+}
+
 void EmotionInterpreter::cop2_vrinit(VectorUnit &vu0, uint32_t instruction)
 {
     uint32_t fs = (instruction >> 11) & 0x1F;
     uint8_t fsf = (instruction >> 21) & 0x3;
     vu0.rinit(fsf, fs);
+}
+
+void EmotionInterpreter::cop2_vrxor(VectorUnit &vu0, uint32_t instruction)
+{
+    uint32_t fs = (instruction >> 11) & 0x1F;
+    uint8_t fsf = (instruction >> 21) & 0x3;
+    vu0.rxor(fsf, fs);
 }

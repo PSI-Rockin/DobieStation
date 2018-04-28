@@ -1009,7 +1009,6 @@ int32_t GraphicsSynthesizer::orient2D(const Point &v1, const Point &v2, const Po
 
 void GraphicsSynthesizer::render_triangle()
 {
-    return;
     //printf("[GS] Rendering triangle!\n");
     uint32_t color = 0x00000000;
     color |= vtx_queue[0].rgbaq.r;
@@ -1381,13 +1380,21 @@ void GraphicsSynthesizer::tex_lookup(uint16_t u, uint16_t v, RGBAQ_REG& vtx_colo
     switch (current_ctx->clamp.wrap_s)
     {
         case 0:
-            u = u % current_ctx->tex0.tex_width;
+            u %= current_ctx->tex0.tex_width;
+            break;
+        case 1:
+            if (u > current_ctx->tex0.tex_width)
+                u = current_ctx->tex0.tex_width;
             break;
     }
     switch (current_ctx->clamp.wrap_t)
     {
         case 0:
-            v = v % current_ctx->tex0.tex_height;
+            v %= current_ctx->tex0.tex_height;
+            break;
+        case 1:
+            if (v > current_ctx->tex0.tex_height)
+                v = current_ctx->tex0.tex_height;
             break;
     }
 
@@ -1405,6 +1412,15 @@ void GraphicsSynthesizer::tex_lookup(uint16_t u, uint16_t v, RGBAQ_REG& vtx_colo
             tex_color.a = color >> 24;
         }
             break;
+        case 0x01:
+        {
+            uint32_t color = read_PSMCT32_block(tex_base, current_ctx->tex0.width, u, v);
+            tex_color.r = color & 0xFF;
+            tex_color.g = (color >> 8) & 0xFF;
+            tex_color.b = (color >> 16) & 0xFF;
+            tex_color.a = 0x80;
+        }
+            break;
         case 0x02:
         {
             uint16_t color = local_mem[tex_base + (coord << 1)];
@@ -1418,12 +1434,15 @@ void GraphicsSynthesizer::tex_lookup(uint16_t u, uint16_t v, RGBAQ_REG& vtx_colo
         {
             uint8_t entry;
             entry = local_mem[tex_base + coord];
-            uint32_t addr;
+            uint32_t color;
             if (current_ctx->tex0.use_CSM2)
-                addr = clut_base + (entry << 2);
+                color = 0;
             else
             {
-                addr = clut_base + (entry << 2);
+                int x = (entry & 0x7);
+                x += (entry & 0x10) / 2;
+                int y = (entry & 0x8) != 0;
+                color = read_PSMCT32_block(current_ctx->tex0.CLUT_base, 64, x, y);
             }
             tex_color.r = entry;
             tex_color.g = entry;

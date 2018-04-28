@@ -10,7 +10,7 @@
 Emulator::Emulator() :
     bios_hle(this, &gs), cdvd(this), cp0(&dmac), cpu(&bios_hle, &cp0, &fpu, this, (uint8_t*)&scratchpad, &vu0),
     dmac(&cpu, this, &gif, &sif), gif(&gs), gs(&intc),
-    iop(this), iop_dma(this, &cdvd, &sif, &spu, &spu2), iop_timers(this), intc(&cpu),
+    iop(this), iop_dma(this, &cdvd, &sif, &sio2, &spu, &spu2), iop_timers(this), intc(&cpu),
     timers(&intc), sio2(this, &pad), vu0(0), vu1(1)
 {
     BIOS = nullptr;
@@ -185,20 +185,28 @@ bool Emulator::skip_BIOS()
             case LOAD_DISC:
             {
                 uint32_t system_cnf_size;
-                uint8_t* system_cnf = cdvd.read_file("SYSTEM.CNF;1", system_cnf_size);
+                char* system_cnf = (char*)cdvd.read_file("SYSTEM.CNF;1", system_cnf_size);
                 if (!system_cnf)
                 {
                     printf("[Emulator] Failed to load SYSTEM.CNF!\n");
                     exit(1);
                 }
                 std::string exec_name = "";
-                int i = 0x10;
+                //Search for cdrom0:
+                int pos = 0;
+                while (strncmp("cdrom0:", system_cnf + pos, 7))
+                {
+                    pos++;
+                }
+
+                printf("[Emulator] Found 'cdrom0:'\n");
+                pos += 8;
 
                 //Search for end of file name
-                while (system_cnf[i] != ';')
+                while (system_cnf[pos] != ';')
                 {
-                    exec_name += system_cnf[i];
-                    i++;
+                    exec_name += system_cnf[pos];
+                    pos++;
                 }
                 exec_name += ";1";
                 delete[] system_cnf;
@@ -761,6 +769,10 @@ uint32_t Emulator::iop_read32(uint32_t address)
             return iop_timers.read_counter(5);
         case 0x1F801528:
             return iop_dma.get_chan_control(10);
+        case 0x1F801548:
+            return iop_dma.get_chan_control(12);
+        case 0x1F801558:
+            return iop_dma.get_chan_control(13);
         case 0x1F801570:
             return iop_dma.get_DPCR2();
         case 0x1F801574:
@@ -1012,6 +1024,26 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
             return;
         case 0x1F801538:
             iop_dma.set_chan_control(11, value);
+            return;
+        //SIO2in DMA
+        case 0x1F801540:
+            iop_dma.set_chan_addr(12, value);
+            return;
+        case 0x1F801544:
+            iop_dma.set_chan_block(12, value);
+            return;
+        case 0x1F801548:
+            iop_dma.set_chan_control(12, value);
+            return;
+        //SIO2out DMA
+        case 0x1F801550:
+            iop_dma.set_chan_addr(13, value);
+            return;
+        case 0x1F801554:
+            iop_dma.set_chan_block(13, value);
+            return;
+        case 0x1F801558:
+            iop_dma.set_chan_control(13, value);
             return;
         case 0x1F801570:
             iop_dma.set_DPCR2(value);

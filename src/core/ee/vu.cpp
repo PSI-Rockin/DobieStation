@@ -303,6 +303,18 @@ void VectorUnit::opmula(uint8_t reg1, uint8_t reg2)
     printf("[VU] OPMULA: %f, %f, %f\n", ACC.f[0], ACC.f[1], ACC.f[2]);
 }
 
+void VectorUnit::rget(uint8_t field, uint8_t dest)
+{
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            set_gpr_f(dest, i, R.f);
+        }
+    }
+    printf("[VU] RGET: %f\n", R.f);
+}
+
 void VectorUnit::rinit(uint8_t fsf, uint8_t source)
 {
     R.u = 0x3F800000;
@@ -336,6 +348,14 @@ void VectorUnit::rsqrt(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2)
     printf("[VU] RSQRT: %f\n", Q);
     printf("Reg1: %f\n", gpr[reg1].f[fsf]);
     printf("Reg2: %f\n", gpr[reg2].f[ftf]);
+}
+
+void VectorUnit::rxor(uint8_t fsf, uint8_t source)
+{
+    VU_R temp;
+    temp.u = (R.u & 0x007FFFFF) | 0x3F800000;
+    R.u = temp.u ^ (gpr[source].u[fsf] & 0x007FFFFF);
+    printf("[VU] RXOR: %f\n", R.f);
 }
 
 void VectorUnit::sqi(uint8_t field, uint8_t source, uint8_t base)

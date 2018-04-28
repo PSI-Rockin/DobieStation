@@ -53,6 +53,7 @@ uint32_t Cop0::mfc(int index)
             reg |= status.int1_mask << 11;
             reg |= status.bus_error << 12;
             reg |= status.timer_int_mask << 15;
+            reg |= status.master_int_enable << 16;
             reg |= status.edi << 17;
             reg |= status.ch << 18;
             reg |= status.bev << 22;
@@ -96,6 +97,7 @@ void Cop0::mtc(int index, uint32_t value)
             status.int1_mask = value & (1 << 11);
             status.bus_error = value & (1 << 12);
             status.timer_int_mask = value & (1 << 15);
+            status.master_int_enable = value & (1 << 16);
             status.edi = value & (1 << 17);
             status.ch = value & (1 << 18);
             status.bev = value & (1 << 22);

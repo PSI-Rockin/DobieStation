@@ -1378,8 +1378,12 @@ string EmotionDisasm::disasm_cop2_special2(uint32_t instruction)
             return disasm_viswr(instruction);
         case 0x40:
             return disasm_vrnext(instruction);
+        case 0x41:
+            return disasm_vrget(instruction);
         case 0x42:
             return disasm_vrinit(instruction);
+        case 0x43:
+            return disasm_vrxor(instruction);
         default:
             return unknown_op("cop2 special2", op, 2);
     }
@@ -1506,12 +1510,31 @@ string EmotionDisasm::disasm_vrnext(uint32_t instruction)
     return output.str();
 }
 
+string EmotionDisasm::disasm_vrget(uint32_t instruction)
+{
+    stringstream output;
+    uint32_t ft = (instruction >> 16) & 0x1F;
+    uint8_t dest_field = (instruction >> 21) & 0xF;
+    output << "vrget." << get_dest_field(dest_field);
+    output << " vf" << ft << ", R";
+    return output.str();
+}
+
 string EmotionDisasm::disasm_vrinit(uint32_t instruction)
 {
     stringstream output;
     uint32_t fs = (instruction >> 11) & 0x1F;
     string fsf = "." + get_fsf((instruction >> 21) & 0x3);
     output << "vrinit R, vf" << fs << fsf;
+    return output.str();
+}
+
+string EmotionDisasm::disasm_vrxor(uint32_t instruction)
+{
+    stringstream output;
+    uint32_t fs = (instruction >> 11) & 0x1F;
+    string fsf = "." + get_fsf((instruction >> 21) & 0x3);
+    output << "vrxor R, vf" << fs << fsf;
     return output.str();
 }
 
