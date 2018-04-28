@@ -311,6 +311,12 @@ uint32_t DMAC::read32(uint32_t address)
             //printf("[DMAC] Read GIF control\n");
             reg = channels[GIF].control;
             break;
+        case 0x1000A010:
+            reg = channels[GIF].address;
+            break;
+        case 0x1000A020:
+            reg = channels[GIF].quadword_count;
+            break;
         case 0x1000A030:
             reg = channels[GIF].tag_address;
             break;

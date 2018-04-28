@@ -189,6 +189,8 @@ namespace EmotionDisasm
     std::string disasm_psubb(uint32_t instruction);
     std::string disasm_pext5(uint32_t instruction);
     std::string disasm_mmi1(uint32_t instruction);
+    std::string disasm_pabsh(uint32_t instruction);
+    std::string disasm_pabsw(uint32_t instruction);
     std::string disasm_mmi2(uint32_t instruction);
     std::string disasm_pmfhi(uint32_t instruction);
     std::string disasm_pmflo(uint32_t instruction);

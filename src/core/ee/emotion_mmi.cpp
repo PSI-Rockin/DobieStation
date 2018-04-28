@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include "emotioninterpreter.hpp"
@@ -200,7 +201,7 @@ void EmotionInterpreter::psrlw(EmotionEngine &cpu, uint32_t instruction)
     uint32_t dest = (instruction >> 11) & 0x1F;
     uint8_t shift = (instruction >> 6) & 0x1F;
 
-    for (int i = 0; i < 8; i++)
+    for (int i = 0; i < 4; i++)
     {
         uint32_t word = cpu.get_gpr<uint32_t>(source, i);
         word >>= shift;
@@ -230,23 +231,79 @@ void EmotionInterpreter::mmi0(EmotionEngine &cpu, uint32_t instruction)
     uint8_t op = (instruction >> 6) & 0x1F;
     switch (op)
     {
+        case 0x00:
+            paddw(cpu, instruction);
+            break;
         case 0x01:
             psubw(cpu, instruction);
+            break;
+        case 0x03:
+            pmaxw(cpu, instruction);
+            break;
+        case 0x04:
+            paddh(cpu, instruction);
+            break;
+        case 0x05:
+            psubh(cpu, instruction);
+            break;
+        case 0x07:
+            pmaxh(cpu, instruction);
+            break;
+        case 0x08:
+            paddb(cpu, instruction);
             break;
         case 0x09:
             psubb(cpu, instruction);
             break;
+        case 0x10:
+            paddsw(cpu, instruction);
+            break;
+        case 0x11:
+            psubsw(cpu, instruction);
+            break;
         case 0x12:
             pextlw(cpu, instruction);
             break;
+        case 0x14:
+            paddsh(cpu, instruction);
+            break;
+        case 0x15:
+            psubsh(cpu, instruction);
+            break;
         case 0x16:
             pextlh(cpu, instruction);
+            break;
+        case 0x18:
+            paddsb(cpu, instruction);
+            break;
+        case 0x19:
+            psubsb(cpu, instruction);
+            break;
+        case 0x1A:
+            pextlb(cpu, instruction);
             break;
         case 0x1E:
             pext5(cpu, instruction);
             break;
         default:
             unknown_op("mmi0", instruction, op);
+    }
+}
+
+/**
+ * Parallel Add Word
+ */
+void EmotionInterpreter::paddw(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    for (int i = 0; i < 4; i++)
+    {
+        int32_t word = cpu.get_gpr<int32_t>(reg1, i);
+        word += cpu.get_gpr<int32_t>(reg2, i);
+        cpu.set_gpr<int32_t>(dest, word, i);
     }
 }
 
@@ -270,6 +327,97 @@ void EmotionInterpreter::psubw(EmotionEngine &cpu, uint32_t instruction)
 }
 
 /**
+ * Parallel Maximize Word
+ * Compares the four words in RS and RT each, and stores the greater of each in RD.
+ */
+void EmotionInterpreter::pmaxw(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    for (int i = 0; i < 4; i++)
+    {
+        int32_t a = cpu.get_gpr<int32_t>(reg1, i), b = cpu.get_gpr<int32_t>(reg2, i);
+        if (a > b)
+            cpu.set_gpr<int32_t>(dest, a, i);
+        else
+            cpu.set_gpr<int32_t>(dest, b, i);
+    }
+}
+
+/**
+ * Parallel Add Halfword
+ */
+void EmotionInterpreter::paddh(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    for (int i = 0; i < 8; i++)
+    {
+        int16_t halfword = cpu.get_gpr<int16_t>(reg1, i);
+        halfword += cpu.get_gpr<int16_t>(reg2, i);
+        cpu.set_gpr<int16_t>(dest, halfword, i);
+    }
+}
+
+/**
+ * Parallel Subtract Halfword
+ */
+void EmotionInterpreter::psubh(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    for (int i = 0; i < 8; i++)
+    {
+        int16_t halfword = cpu.get_gpr<int16_t>(reg1, i);
+        halfword -= cpu.get_gpr<int16_t>(reg2, i);
+        cpu.set_gpr<int16_t>(dest, halfword, i);
+    }
+}
+
+/**
+ * Parallel Maximize Halfword
+ * Compares the eight halfwords in RS and RT each, and stores the greater of each in RD.
+ */
+void EmotionInterpreter::pmaxh(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    for (int i = 0; i < 8; i++)
+    {
+        int16_t a = cpu.get_gpr<int16_t>(reg1, i), b = cpu.get_gpr<int16_t>(reg2, i);
+        if (a > b)
+            cpu.set_gpr<int16_t>(dest, a, i);
+        else
+            cpu.set_gpr<int16_t>(dest, b, i);
+    }
+}
+
+/**
+ * Parallel Add Byte
+ */
+void EmotionInterpreter::paddb(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    for (int i = 0; i < 16; i++)
+    {
+        int8_t byte = cpu.get_gpr<int8_t>(reg1, i);
+        byte += cpu.get_gpr<int8_t>(reg2, i);
+        cpu.set_gpr<int8_t>(dest, byte, i);
+    }
+}
+
+/**
  * Parallel Subtract Byte
  * Splits the 128-bit registers RS and RT into sixteen bytes each, subtracts them, and places the 128-bit result in RD.
  * NOTE: This function assumes little-endianness!
@@ -282,9 +430,9 @@ void EmotionInterpreter::psubb(EmotionEngine &cpu, uint32_t instruction)
 
     for (int i = 0; i < 16; i++)
     {
-        uint8_t byte = cpu.get_gpr<uint8_t>(reg1, i);
-        byte -= cpu.get_gpr<uint8_t>(reg2, i);
-        cpu.set_gpr<uint8_t>(dest, byte, i);
+        int8_t byte = cpu.get_gpr<int8_t>(reg1, i);
+        byte -= cpu.get_gpr<int8_t>(reg2, i);
+        cpu.set_gpr<int8_t>(dest, byte, i);
     }
 }
 
@@ -311,10 +459,13 @@ void EmotionInterpreter::pextlw(EmotionEngine &cpu, uint32_t instruction)
     uint64_t reg2 = (instruction >> 16) & 0x1F;
     uint64_t dest = (instruction >> 11) & 0x1F;
 
-    cpu.set_gpr<uint32_t>(dest, cpu.get_gpr<uint32_t>(reg2), 0);
-    cpu.set_gpr<uint32_t>(dest, cpu.get_gpr<uint32_t>(reg1), 1);
-    cpu.set_gpr<uint32_t>(dest, cpu.get_gpr<uint32_t>(reg2, 1), 2);
-    cpu.set_gpr<uint32_t>(dest, cpu.get_gpr<uint32_t>(reg1, 1), 3);
+    uint64_t dw1 = cpu.get_gpr<uint64_t>(reg1);
+    uint64_t dw2 = cpu.get_gpr<uint64_t>(reg2);
+
+    cpu.set_gpr<uint32_t>(dest, dw2 & 0xFFFFFFFF, 0);
+    cpu.set_gpr<uint32_t>(dest, dw1 & 0xFFFFFFFF, 1);
+    cpu.set_gpr<uint32_t>(dest, dw2 >> 32, 2);
+    cpu.set_gpr<uint32_t>(dest, dw1 >> 32, 3);
 }
 
 void EmotionInterpreter::pextlh(EmotionEngine &cpu, uint32_t instruction)
@@ -323,10 +474,155 @@ void EmotionInterpreter::pextlh(EmotionEngine &cpu, uint32_t instruction)
     uint64_t reg2 = (instruction >> 16) & 0x1F;
     uint64_t dest = (instruction >> 11) & 0x1F;
 
+    uint64_t dw1 = cpu.get_gpr<uint64_t>(reg1);
+    uint64_t dw2 = cpu.get_gpr<uint64_t>(reg2);
+
     for (int i = 0; i < 4; i++)
     {
-        cpu.set_gpr<uint16_t>(dest, cpu.get_gpr<uint16_t>(reg2, i), i << 1);
-        cpu.set_gpr<uint16_t>(dest, cpu.get_gpr<uint16_t>(reg1, i), (i << 1) + 1);
+        cpu.set_gpr<uint16_t>(dest, (dw2 >> (i * 16)) & 0xFFFF, (i * 2));
+        cpu.set_gpr<uint16_t>(dest, (dw1 >> (i * 16)) & 0xFFFF, (i * 2) + 1);
+    }
+}
+
+/**
+ * Parallel Add Signed Saturation Word
+ */
+void EmotionInterpreter::paddsw(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    for (int i = 0; i < 4; i++)
+    {
+        int64_t value = cpu.get_gpr<int32_t>(reg1, i);
+        value += cpu.get_gpr<int32_t>(reg2, i);
+        if (value > 0x7FFFFFFFL)
+            value = 0x7FFFFFFFL;
+        if (value < -0x80000000L)
+            value = -0x80000000L;
+        cpu.set_gpr<int32_t>(dest, (int32_t)value, i);
+    }
+}
+
+/**
+ * Parallel Subtract Signed Saturation Word
+ */
+void EmotionInterpreter::psubsw(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    for (int i = 0; i < 4; i++)
+    {
+        int64_t value = cpu.get_gpr<int32_t>(reg1, i);
+        value -= cpu.get_gpr<int32_t>(reg2, i);
+        if (value > 0x7FFFFFFFL)
+            value = 0x7FFFFFFFL;
+        if (value < -0x80000000L)
+            value = -0x80000000L;
+        cpu.set_gpr<int32_t>(dest, (int32_t)value, i);
+    }
+}
+
+/**
+ * Parallel Add Signed Saturation Halfword
+ */
+void EmotionInterpreter::paddsh(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    for (int i = 0; i < 8; i++)
+    {
+        int32_t value = cpu.get_gpr<int16_t>(reg1, i);
+        value += cpu.get_gpr<int16_t>(reg2, i);
+        if (value > 0x7FFF)
+            value = 0x7FFF;
+        if (value < -0x8000)
+            value = -0x8000;
+        cpu.set_gpr<int16_t>(dest, value & 0xFFFF, i);
+    }
+}
+
+/**
+ * Parallel Subtract Signed Saturation Halfword
+ */
+void EmotionInterpreter::psubsh(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    for (int i = 0; i < 8; i++)
+    {
+        int32_t value = cpu.get_gpr<int16_t>(reg1, i);
+        value -= cpu.get_gpr<int16_t>(reg2, i);
+        if (value > 0x7FFF)
+            value = 0x7FFF;
+        if (value < -0x8000)
+            value = -0x8000;
+        cpu.set_gpr<int16_t>(dest, value & 0xFFFF, i);
+    }
+}
+
+/**
+ * Parallel Add Signed Saturation Byte
+ */
+void EmotionInterpreter::paddsb(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    for (int i = 0; i < 16; i++)
+    {
+        int16_t value = cpu.get_gpr<int8_t>(reg1, i);
+        value += cpu.get_gpr<int8_t>(reg2, i);
+        if (value > 0x7F)
+            value = 0x7F;
+        if (value < -0x80)
+            value = -0x80;
+        cpu.set_gpr<int8_t>(dest, value & 0xFF, i);
+    }
+}
+
+/**
+ * Parallel Subtract Signed Saturation Byte
+ */
+void EmotionInterpreter::psubsb(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    for (int i = 0; i < 16; i++)
+    {
+        int16_t value = cpu.get_gpr<int8_t>(reg1, i);
+        value -= cpu.get_gpr<int8_t>(reg2, i);
+        if (value > 0x7F)
+            value = 0x7F;
+        if (value < -0x80)
+            value = -0x80;
+        cpu.set_gpr<int8_t>(dest, value & 0xFF, i);
+    }
+}
+
+void EmotionInterpreter::pextlb(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    uint64_t dw1 = cpu.get_gpr<uint64_t>(reg1);
+    uint64_t dw2 = cpu.get_gpr<uint64_t>(reg2);
+
+    for (int i = 0; i < 8; i++)
+    {
+        cpu.set_gpr<uint8_t>(dest, (dw2 >> (i * 8)) & 0xFF, (i * 2));
+        cpu.set_gpr<uint8_t>(dest, (dw1 >> (i * 8)) & 0xFF, (i * 2) + 1);
     }
 }
 
@@ -343,8 +639,8 @@ void EmotionInterpreter::pext5(EmotionEngine &cpu, uint32_t instruction)
     {
         uint32_t packed = cpu.get_gpr<uint32_t>(source, i) & 0xFFFF;
         uint32_t unpacked = (packed & (1 << 15)) << 16;
-        unpacked |= ((packed >> 10) & 0x1F) << 24;
-        unpacked |= ((packed >> 5) & 0x1F) << 16;
+        unpacked |= ((packed >> 10) & 0x1F) << 19;
+        unpacked |= ((packed >> 5) & 0x1F) << 11;
         unpacked |= (packed & 0x1F) << 3;
         cpu.set_gpr<uint32_t>(dest, unpacked, i);
     }
@@ -355,17 +651,131 @@ void EmotionInterpreter::mmi1(EmotionEngine &cpu, uint32_t instruction)
     uint8_t op = (instruction >> 6) & 0x1F;
     switch (op)
     {
+        case 0x01:
+            pabsw(cpu, instruction);
+            break;
+        case 0x03:
+            pminw(cpu, instruction);
+            break;
+        case 0x04:
+            padsbh(cpu, instruction);
+            break;
+        case 0x05:
+            pabsh(cpu, instruction);
+            break;
+        case 0x07:
+            pminh(cpu, instruction);
+            break;
         case 0x10:
             padduw(cpu, instruction);
+            break;
+        case 0x11:
+            psubuw(cpu, instruction);
             break;
         case 0x12:
             pextuw(cpu, instruction);
             break;
+        case 0x14:
+            padduh(cpu, instruction);
+            break;
+        case 0x15:
+            psubuh(cpu, instruction);
+            break;
+        case 0x16:
+            pextuh(cpu, instruction);
+            break;
         case 0x18:
             paddub(cpu, instruction);
             break;
+        case 0x19:
+            psubub(cpu, instruction);
+            break;
+        case 0x1A:
+            pextub(cpu, instruction);
+            break;
         default:
             return unknown_op("mmi1", instruction, op);
+    }
+}
+
+/**
+ * Parallel Absolute Word
+ */
+void EmotionInterpreter::pabsw(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint32_t source = (instruction >> 16) & 0x1F;
+    uint32_t dest = (instruction >> 11) & 0x1F;
+
+    for (int i = 0; i < 4; i++)
+    {
+        int32_t word = cpu.get_gpr<int32_t>(source, i);
+        if (word == -0x80000000L)
+            cpu.set_gpr<uint32_t>(dest, 0x7FFFFFFF, i);
+        else if (word < 0)
+            cpu.set_gpr<uint32_t>(dest, -word, i);
+        else
+            cpu.set_gpr<uint32_t>(dest, word, i);
+    }
+}
+
+/**
+ * Parallel Minimize Word
+ * Compares the four words in RS and RT each, and stores the lesser of each in RD.
+ */
+void EmotionInterpreter::pminw(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    for (int i = 0; i < 4; i++)
+    {
+        int32_t a = cpu.get_gpr<int32_t>(reg1, i), b = cpu.get_gpr<int32_t>(reg2, i);
+        if (a < b)
+            cpu.set_gpr<int32_t>(dest, a, i);
+        else
+            cpu.set_gpr<int32_t>(dest, b, i);
+    }
+}
+
+/**
+ * Parallel Absolute Halfword
+ */
+void EmotionInterpreter::pabsh(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint32_t source = (instruction >> 16) & 0x1F;
+    uint32_t dest = (instruction >> 11) & 0x1F;
+
+    for (int i = 0; i < 8; i++)
+    {
+        int16_t halfword = cpu.get_gpr<int16_t>(source, i);
+        if (halfword == -0x8000)
+            cpu.set_gpr<uint16_t>(dest, 0x7FFF, i);
+        else if (halfword < 0)
+            cpu.set_gpr<uint16_t>(dest, -halfword, i);
+        else
+            cpu.set_gpr<uint16_t>(dest, halfword, i);
+    }
+}
+
+/**
+ * Parallel Add/Subtract Halfword
+ */
+void EmotionInterpreter::padsbh(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    for (int i = 0; i < 4; i++)
+    {
+        int16_t hw1, hw2;
+        hw1 = cpu.get_gpr<int16_t>(reg1, i);
+        hw2 = cpu.get_gpr<int16_t>(reg1, i + 4);
+        hw1 -= cpu.get_gpr<int16_t>(reg2, i);
+        hw2 += cpu.get_gpr<int16_t>(reg2, i + 4);
+        cpu.set_gpr<int16_t>(dest, hw1, i);
+        cpu.set_gpr<int16_t>(dest, hw2, i + 4);
     }
 }
 
@@ -390,16 +800,114 @@ void EmotionInterpreter::padduw(EmotionEngine &cpu, uint32_t instruction)
     }
 }
 
+/**
+ * Parallel Subtract with Unsigned Saturation Word
+ * Splits the 128-bit registers RS and RT into four unsigned words each and subtracts them together.
+ * If the result is less than 0, it is saturated to that value.
+ */
+void EmotionInterpreter::psubuw(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    for (int i = 0; i < 4; i++)
+    {
+        uint64_t result = cpu.get_gpr<uint32_t>(reg1, i);
+        result -= cpu.get_gpr<uint32_t>(reg2, i);
+        if (result > 0xFFFFFFFF)
+            result = 0x0;
+        cpu.set_gpr<uint32_t>(dest, (uint32_t)result, i);
+    }
+}
+
+/**
+ * Parallel Minimize Halfword
+ * Compares the eight halfwords in RS and RT each, and stores the lesser of each in RD.
+ */
+void EmotionInterpreter::pminh(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    for (int i = 0; i < 8; i++)
+    {
+        int16_t a = cpu.get_gpr<int16_t>(reg1, i), b = cpu.get_gpr<int16_t>(reg2, i);
+        if (a < b)
+            cpu.set_gpr<int16_t>(dest, a, i);
+        else
+            cpu.set_gpr<int16_t>(dest, b, i);
+    }
+}
+
 void EmotionInterpreter::pextuw(EmotionEngine &cpu, uint32_t instruction)
 {
     uint64_t reg1 = (instruction >> 21) & 0x1F;
     uint64_t reg2 = (instruction >> 16) & 0x1F;
     uint64_t dest = (instruction >> 11) & 0x1F;
 
-    cpu.set_gpr<uint32_t>(dest, cpu.get_gpr<uint32_t>(reg2, 2));
-    cpu.set_gpr<uint32_t>(dest, cpu.get_gpr<uint32_t>(reg1, 2), 1);
-    cpu.set_gpr<uint32_t>(dest, cpu.get_gpr<uint32_t>(reg2, 3), 2);
-    cpu.set_gpr<uint32_t>(dest, cpu.get_gpr<uint32_t>(reg1, 3), 3);
+    uint64_t dw1 = cpu.get_gpr<uint64_t>(reg1, 1);
+    uint64_t dw2 = cpu.get_gpr<uint64_t>(reg2, 1);
+
+    cpu.set_gpr<uint32_t>(dest, dw2 & 0xFFFFFFFF, 0);
+    cpu.set_gpr<uint32_t>(dest, dw1 & 0xFFFFFFFF, 1);
+    cpu.set_gpr<uint32_t>(dest, dw2 >> 32, 2);
+    cpu.set_gpr<uint32_t>(dest, dw1 >> 32, 3);
+}
+
+/**
+ * Parallel Add with Unsigned Saturation Halfword
+ */
+void EmotionInterpreter::padduh(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    for (int i = 0; i < 8; i++)
+    {
+        uint32_t result = cpu.get_gpr<uint16_t>(reg1, i);
+        result += cpu.get_gpr<uint16_t>(reg2, i);
+        if (result > 0xFFFF)
+            result = 0xFFFF;
+        cpu.set_gpr<uint16_t>(dest, (uint16_t)result, i);
+    }
+}
+
+/**
+ * Parallel Subtract with Unsigned Saturation Halfword
+ */
+void EmotionInterpreter::psubuh(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    for (int i = 0; i < 8; i++)
+    {
+        uint32_t result = cpu.get_gpr<uint16_t>(reg1, i);
+        result -= cpu.get_gpr<uint16_t>(reg2, i);
+        if (result > 0xFFFF)
+            result = 0x0;
+        cpu.set_gpr<uint16_t>(dest, (uint16_t)result, i);
+    }
+}
+
+void EmotionInterpreter::pextuh(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    uint64_t dw1 = cpu.get_gpr<uint64_t>(reg1, 1);
+    uint64_t dw2 = cpu.get_gpr<uint64_t>(reg2, 1);
+
+    for (int i = 0; i < 4; i++)
+    {
+        cpu.set_gpr<uint16_t>(dest, (dw2 >> (i * 16)) & 0xFFFF, (i * 2));
+        cpu.set_gpr<uint16_t>(dest, (dw1 >> (i * 16)) & 0xFFFF, (i * 2) + 1);
+    }
 }
 
 /**
@@ -419,9 +927,47 @@ void EmotionInterpreter::paddub(EmotionEngine &cpu, uint32_t instruction)
         result += cpu.get_gpr<uint8_t>(reg2, i);
         if (result > 0xFF)
             result = 0xFF;
-        cpu.set_gpr<uint32_t>(dest, (uint8_t)result, i);
+        cpu.set_gpr<uint8_t>(dest, (uint8_t)result, i);
     }
 }
+
+/**
+ * Parallel Subtract with Unsigned Saturation Byte
+ * Splits the 128-bit registers RS and RT into sixteen unsigned bytes each and subtracts them together.
+ * If the result is less than 0, it is saturated to that value.
+ */
+void EmotionInterpreter::psubub(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    for (int i = 0; i < 16; i++)
+    {
+        uint16_t result = cpu.get_gpr<uint8_t>(reg1, i);
+        result -= cpu.get_gpr<uint8_t>(reg2, i);
+        if (result > 0xFF)
+            result = 0x0;
+        cpu.set_gpr<uint8_t>(dest, (uint8_t)result, i);
+    }
+}
+
+void EmotionInterpreter::pextub(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    uint64_t dw1 = cpu.get_gpr<uint64_t>(reg1, 1);
+    uint64_t dw2 = cpu.get_gpr<uint64_t>(reg2, 1);
+
+    for (int i = 0; i < 8; i++)
+    {
+        cpu.set_gpr<uint8_t>(dest, (dw2 >> (i * 8)) & 0xFF, (i * 2));
+        cpu.set_gpr<uint8_t>(dest, (dw1 >> (i * 8)) & 0xFF, (i * 2) + 1);
+    }
+}
+
 
 void EmotionInterpreter::mmi2(EmotionEngine &cpu, uint32_t instruction)
 {
@@ -448,6 +994,12 @@ void EmotionInterpreter::mmi2(EmotionEngine &cpu, uint32_t instruction)
             break;
         case 0x13:
             pxor(cpu, instruction);
+            break;
+        case 0x1A:
+            pexeh(cpu, instruction);
+            break;
+        case 0x1E:
+            pexew(cpu, instruction);
             break;
         default:
             unknown_op("mmi2", instruction, op);
@@ -543,6 +1095,45 @@ void EmotionInterpreter::pxor(EmotionEngine &cpu, uint32_t instruction)
 
     cpu.set_gpr<uint64_t>(dest, cpu.get_gpr<uint64_t>(op1) ^ cpu.get_gpr<uint64_t>(op2));
     cpu.set_gpr<uint64_t>(dest, cpu.get_gpr<uint64_t>(op1, 1) ^ cpu.get_gpr<uint64_t>(op2, 1), 1);
+}
+
+/**
+ * Parallel Exchange Even Halfword
+ * Splits RT into two doublewords. Swaps the even-positioned halfwords in each doubleword.
+ */
+void EmotionInterpreter::pexeh(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t source = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    uint16_t data[8];
+    for (int i = 0; i < 8; i++)
+        data[i] = cpu.get_gpr<uint16_t>(source, i);
+
+    std::swap(data[0], data[2]);
+    std::swap(data[4], data[6]);
+
+    for (int i = 0; i < 8; i++)
+        cpu.set_gpr<uint16_t>(dest, data[i], i);
+}
+
+/**
+ * Parallel Exchange Even Word
+ * Splits RT into four words and exchanges the even words.
+ */
+void EmotionInterpreter::pexew(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t source = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    uint32_t data[4];
+    for (int i = 0; i < 4; i++)
+        data[i] = cpu.get_gpr<uint32_t>(source, i);
+
+    std::swap(data[0], data[2]);
+
+    for (int i = 0; i < 4; i++)
+        cpu.set_gpr<uint32_t>(dest, data[i], i);
 }
 
 void EmotionInterpreter::mfhi1(EmotionEngine &cpu, uint32_t instruction)
@@ -645,8 +1236,14 @@ void EmotionInterpreter::mmi3(EmotionEngine &cpu, uint32_t instruction)
         case 0x13:
             pnor(cpu, instruction);
             break;
+        case 0x1A:
+            pexch(cpu, instruction);
+            break;
         case 0x1B:
             pcpyh(cpu, instruction);
+            break;
+        case 0x1E:
+            pexcw(cpu, instruction);
             break;
         default:
             unknown_op("mmi3", instruction, op);
@@ -723,8 +1320,28 @@ void EmotionInterpreter::pnor(EmotionEngine &cpu, uint32_t instruction)
 }
 
 /**
+ * Parallel Exchange Center Halfword
+ * Splits RT into two doublewords. The central halfwords in each doubleword are swapped.
+ */
+void EmotionInterpreter::pexch(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t source = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    uint16_t data[8];
+    for (int i = 0; i < 8; i++)
+        data[i] = cpu.get_gpr<uint16_t>(source, i);
+
+    std::swap(data[1], data[2]);
+    std::swap(data[5], data[6]);
+
+    for (int i = 0; i < 8; i++)
+        cpu.set_gpr<uint16_t>(dest, data[i], i);
+}
+
+/**
  * Parallel Copy Halfword
- * Splits RT into two 64-bit pieces. The least significant halfwords of each doubleword are copied into the
+ * Splits RT into two doublewords. The least significant halfwords of each doubleword are copied into the
  * halfwords of the two doublewords in RD.
  */
 void EmotionInterpreter::pcpyh(EmotionEngine &cpu, uint32_t instruction)
@@ -743,4 +1360,23 @@ void EmotionInterpreter::pcpyh(EmotionEngine &cpu, uint32_t instruction)
         uint16_t value = cpu.get_gpr<uint16_t>(source, 4);
         cpu.set_gpr<uint16_t>(dest, value, i);
     }
+}
+
+/**
+ * Parallel Exchange Center Word
+ * Splits RT into four words. The central words are exchanged.
+ */
+void EmotionInterpreter::pexcw(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t source = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    uint32_t data[4];
+    for (int i = 0; i < 4; i++)
+        data[i] = cpu.get_gpr<uint32_t>(source, i);
+
+    std::swap(data[1], data[2]);
+
+    for (int i = 0; i < 4; i++)
+        cpu.set_gpr<uint32_t>(dest, data[i], i);
 }

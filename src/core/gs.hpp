@@ -150,9 +150,12 @@ class GraphicsSynthesizer
         uint32_t get_word(uint32_t addr);
         void set_word(uint32_t addr, uint32_t value);
 
-        uint32_t tex_lookup(uint32_t coord);
+        uint32_t read_PSMCT32_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y);
+        void write_PSMCT32_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y, uint32_t value);
+
+        void tex_lookup(uint16_t u, uint16_t v, RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color);
         void vertex_kick(bool drawing_kick);
-        void draw_pixel(int32_t x, int32_t y, uint32_t color, uint32_t z, bool alpha_blending);
+        void draw_pixel(int32_t x, int32_t y, uint32_t z, RGBAQ_REG& color, bool alpha_blending);
         void render_primitive();
         void render_point();
         void render_line();

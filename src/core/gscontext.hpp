@@ -18,6 +18,13 @@ struct TEX0
     uint8_t CLUT_control;
 };
 
+struct CLAMP
+{
+    uint8_t wrap_s;
+    uint8_t wrap_t;
+    uint16_t min_u, max_u, min_v, max_v;
+};
+
 struct UV_REG
 {
     uint16_t u, v;
@@ -79,6 +86,7 @@ struct ZBUF
 struct GSContext
 {
     TEX0 tex0;
+    CLAMP clamp;
     XYOFFSET xyoffset;
     SCISSOR scissor;
     ALPHA alpha;
@@ -89,6 +97,7 @@ struct GSContext
     void reset();
 
     void set_tex0(uint64_t value);
+    void set_clamp(uint64_t value);
     void set_xyoffset(uint64_t value);
     void set_scissor(uint64_t value);
     void set_alpha(uint64_t value);

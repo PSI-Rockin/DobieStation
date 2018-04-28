@@ -4,6 +4,7 @@
 void GSContext::reset()
 {
     set_tex0(0);
+    set_clamp(0);
     set_xyoffset(0);
     set_scissor(0);
     set_alpha(0);
@@ -39,9 +40,24 @@ void GSContext::set_tex0(uint64_t value)
 
     printf("TEX0: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);
     printf("Tex base: $%08X\n", tex0.texture_base);
+    printf("Buffer width: %d\n", tex0.width);
     printf("Tex width: %d Height: %d\n", tex0.tex_width, tex0.tex_height);
+    printf("Use alpha: %d\n", tex0.use_alpha);
+    printf("Color function: $%02X\n", tex0.color_function);
     printf("CLUT base: $%08X\n", tex0.CLUT_base);
+    printf("CLUT format: $%02X\n", tex0.CLUT_format);
     printf("CLUT offset: $%08X\n", tex0.CLUT_offset);
+}
+
+void GSContext::set_clamp(uint64_t value)
+{
+    clamp.wrap_s = value & 0x3;
+    clamp.wrap_t = (value >> 2) & 0x3;
+    clamp.min_u = (value >> 4) & 0x3FF;
+    clamp.max_u = (value >> 14) & 0x3FF;
+    clamp.min_v = (value >> 24) & 0x3FF;
+    clamp.max_v = (value >> 34) & 0x3FF;
+    printf("CLAMP: $%08X_%08X\n", value >> 32, value);
 }
 
 void GSContext::set_xyoffset(uint64_t value)
@@ -59,6 +75,7 @@ void GSContext::set_scissor(uint64_t value)
     scissor.y1 = ((value >> 32) & 0x7FF) << 4;
     scissor.y2 = ((value >> 48) & 0x7FF) << 4;
     printf("SCISSOR: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);
+    printf("Coords: (%d, %d), (%d, %d)\n", scissor.x1, scissor.y1, scissor.x2, scissor.y2);
 }
 
 void GSContext::set_alpha(uint64_t value)
@@ -91,6 +108,8 @@ void GSContext::set_frame(uint64_t value)
     frame.format = (value >> 24) & 0x3F;
     frame.mask = value >> 32;
     printf("FRAME: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);
+    printf("Width: %d\n", frame.width);
+    printf("Format: %d\n", frame.format);
 }
 
 void GSContext::set_zbuf(uint64_t value)
@@ -99,4 +118,6 @@ void GSContext::set_zbuf(uint64_t value)
     zbuf.format = (value >> 24) & 0xF;
     zbuf.no_update = value & (1UL << 32);
     printf("ZBUF: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);
+    printf("Base pointer: $%08X\n", zbuf.base_pointer);
+    printf("Format: $%02X\n", zbuf.format);
 }

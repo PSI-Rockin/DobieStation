@@ -1584,14 +1584,40 @@ string EmotionDisasm::disasm_mmi0(uint32_t instruction)
     int op = (instruction >> 6) & 0x1F;
     switch (op)
     {
+        case 0x00:
+            return disasm_special_simplemath("paddw", instruction);
         case 0x01:
             return disasm_special_simplemath("psubw", instruction);
+        case 0x03:
+            return disasm_special_simplemath("pmaxw", instruction);
+        case 0x04:
+            return disasm_special_simplemath("paddh", instruction);
+        case 0x05:
+            return disasm_special_simplemath("psubh", instruction);
+        case 0x07:
+            return disasm_special_simplemath("pmaxh", instruction);
+        case 0x08:
+            return disasm_special_simplemath("paddb", instruction);
         case 0x09:
             return disasm_psubb(instruction);
+        case 0x10:
+            return disasm_special_simplemath("paddsw", instruction);
+        case 0x11:
+            return disasm_special_simplemath("psubsw", instruction);
         case 0x12:
             return disasm_special_simplemath("pextlw", instruction);
+        case 0x14:
+            return disasm_special_simplemath("paddsh", instruction);
+        case 0x15:
+            return disasm_special_simplemath("psubsh", instruction);
         case 0x16:
             return disasm_special_simplemath("pextlh", instruction);
+        case 0x18:
+            return disasm_special_simplemath("paddsb", instruction);
+        case 0x19:
+            return disasm_special_simplemath("psubsb", instruction);
+        case 0x1A:
+            return disasm_special_simplemath("pextlb", instruction);
         case 0x1E:
             return disasm_pext5(instruction);
         default:
@@ -1616,15 +1642,51 @@ string EmotionDisasm::disasm_mmi1(uint32_t instruction)
     uint8_t op = (instruction >> 6) & 0x1F;
     switch (op)
     {
+        case 0x01:
+            return disasm_pabsw(instruction);
+        case 0x03:
+            return disasm_special_simplemath("pminw", instruction);
+        case 0x04:
+            return disasm_special_simplemath("padsbh", instruction);
+        case 0x05:
+            return disasm_pabsh(instruction);
+        case 0x07:
+            return disasm_special_simplemath("pminh", instruction);
         case 0x10:
             return disasm_special_simplemath("padduw", instruction);
+        case 0x11:
+            return disasm_special_simplemath("psubuw", instruction);
         case 0x12:
             return disasm_special_simplemath("pextuw", instruction);
+        case 0x14:
+            return disasm_special_simplemath("padduh", instruction);
+        case 0x15:
+            return disasm_special_simplemath("psubuh", instruction);
+        case 0x16:
+            return disasm_mmi_copy("pextuh", instruction);
         case 0x18:
             return disasm_special_simplemath("paddub", instruction);
+        case 0x19:
+            return disasm_special_simplemath("psubub", instruction);
+        case 0x1A:
+            return disasm_mmi_copy("pextub", instruction);
         default:
             return unknown_op("mmi1", op, 2);
     }
+}
+
+string EmotionDisasm::disasm_pabsw(uint32_t instruction)
+{
+    stringstream output;
+    output << "pabsw " << EmotionEngine::REG(RD) << ", " << EmotionEngine::REG(RT);
+    return output.str();
+}
+
+string EmotionDisasm::disasm_pabsh(uint32_t instruction)
+{
+    stringstream output;
+    output << "pabsh " << EmotionEngine::REG(RD) << ", " << EmotionEngine::REG(RT);
+    return output.str();
 }
 
 string EmotionDisasm::disasm_mmi2(uint32_t instruction)
@@ -1646,6 +1708,10 @@ string EmotionDisasm::disasm_mmi2(uint32_t instruction)
             return disasm_pand(instruction);
         case 0x13:
             return disasm_pxor(instruction);
+        case 0x1A:
+            return disasm_mmi_copy("pexeh", instruction);
+        case 0x1E:
+            return disasm_mmi_copy("pexew", instruction);
         default:
             return unknown_op("mmi2", op, 2);
     }
@@ -1727,8 +1793,12 @@ string EmotionDisasm::disasm_mmi3(uint32_t instruction)
             return disasm_por(instruction);
         case 0x13:
             return disasm_pnor(instruction);
+        case 0x1A:
+            return disasm_mmi_copy("pexch", instruction);
         case 0x1B:
             return disasm_mmi_copy("pcpyh", instruction);
+        case 0x1E:
+            return disasm_mmi_copy("pexcw", instruction);
         default:
             return unknown_op("mmi3", SA, 2);
     }

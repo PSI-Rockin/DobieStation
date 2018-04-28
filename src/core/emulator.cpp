@@ -461,6 +461,10 @@ uint64_t Emulator::read64(uint32_t address)
 
 void Emulator::write8(uint32_t address, uint8_t value)
 {
+    if ((address & ~0x1) == 0x00E2E690)
+    {
+        printf("[EE] Write8 FRAME addr: $%02X\n", value);
+    }
     if (address < 0x10000000)
     {
         RDRAM[address & 0x01FFFFFF] = value;
@@ -489,6 +493,10 @@ void Emulator::write8(uint32_t address, uint8_t value)
 
 void Emulator::write16(uint32_t address, uint16_t value)
 {
+    if (address == 0x00E2E690)
+    {
+        printf("[EE] Write16 FRAME addr: $%04X\n", value);
+    }
     if (address < 0x10000000)
     {
         *(uint16_t*)&RDRAM[address & 0x01FFFFFF] = value;
@@ -514,6 +522,10 @@ void Emulator::write16(uint32_t address, uint16_t value)
 
 void Emulator::write32(uint32_t address, uint32_t value)
 {
+    if (address == 0x00E2E690)
+    {
+        printf("[EE] Write32 FRAME addr: $%08X\n", value);
+    }
     if (address < 0x10000000)
     {
         *(uint32_t*)&RDRAM[address & 0x01FFFFFF] = value;
@@ -598,6 +610,10 @@ void Emulator::write32(uint32_t address, uint32_t value)
 
 void Emulator::write64(uint32_t address, uint64_t value)
 {
+    if (address == 0x00E2E690)
+    {
+        printf("[EE] Write64 FRAME addr: $%08X_%08X\n", value >> 32, value);
+    }
     if (address < 0x10000000)
     {
         *(uint64_t*)&RDRAM[address & 0x01FFFFFF] = value;

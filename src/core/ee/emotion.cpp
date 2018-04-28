@@ -46,7 +46,7 @@ void EmotionEngine::reset()
 
 void EmotionEngine::run()
 {
-    uint32_t instruction = read32(PC);
+    /*uint32_t instruction = read32(PC);
     if (can_disassemble)
     {
         std::string disasm = EmotionDisasm::disasm_instr(instruction, PC);
@@ -57,7 +57,7 @@ void EmotionEngine::run()
     /*if (PC == 0x00100008)
         can_disassemble = true;
     if (PC == 0x100BBC)
-        print_state();*/
+        print_state();
     if (branch_on)
     {
         if (!delay_slot)
@@ -71,7 +71,7 @@ void EmotionEngine::run()
             {
                 can_disassemble = true;
                 print_state();
-            }*/
+            }
 
             if (PC == 0xBFC00928)
                 exit(1);
@@ -87,7 +87,7 @@ void EmotionEngine::run()
             int0();
         if (cp0->cause.int1_pending)
             int1();
-    }
+    }*/
 }
 
 int EmotionEngine::run(int cycles_to_run)
@@ -103,10 +103,6 @@ int EmotionEngine::run(int cycles_to_run)
             printf("[$%08X] $%08X - %s\n", PC, instruction, disasm.c_str());
         }
         EmotionInterpreter::interpret(*this, instruction);
-        if (PC == 0x00108E0C)
-        {
-            print_state();
-        }
         if (increment_PC)
             PC += 4;
         else

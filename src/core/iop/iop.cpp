@@ -64,12 +64,6 @@ void IOP::run()
     else
         inc_PC = true;
 
-    if (PC >= 0x0001356C && PC < 0x000135A4)
-    {
-        for (int i = 1; i < 32; i++)
-            printf("%s: $%08X\n", REG(i), get_gpr(i));
-    }
-
     if (will_branch)
     {
         if (!load_delay)

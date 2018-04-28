@@ -811,7 +811,7 @@ void EmotionInterpreter::cop(EmotionEngine &cpu, uint32_t instruction)
                     cpu.di();
                     break;
                 default:
-                    unknown_op("cop2", instruction, op2);
+                    unknown_op("cop0 type2", instruction, op2);
             }
         }
             break;
