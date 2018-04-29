@@ -106,6 +106,7 @@ class GraphicsSynthesizer
     private:
         INTC* intc;
         bool frame_complete;
+        int frame_count;
         uint32_t* output_buffer;
         uint8_t* local_mem;
         uint8_t CRT_mode;

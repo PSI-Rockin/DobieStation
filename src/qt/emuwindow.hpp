@@ -4,15 +4,18 @@
 #include <chrono>
 #include <QMainWindow>
 #include <QPaintEvent>
+
+#include "emuthread.hpp"
+
 #include "../core/emulator.hpp"
 
 class EmuWindow : public QMainWindow
 {
     Q_OBJECT
     private:
-        Emulator e;
-        bool is_running;
-        bool is_exec_loaded;
+        EmuThread emuthread;
+        std::string title;
+        QImage final_image;
         std::chrono::system_clock::time_point old_frametime;
         std::chrono::system_clock::time_point old_update_time;
         double framerate_avg;
@@ -27,20 +30,10 @@ class EmuWindow : public QMainWindow
         int init(int argc, char** argv);
         int load_exec(const char* file_name, bool skip_BIOS);
 
-        bool exec_loaded();
-        bool running();
-
-        void emulate();
-
         void create_menu();
 
         void paintEvent(QPaintEvent *event);
         void closeEvent(QCloseEvent *event);
-
-        double get_frame_rate();
-        void update_window_title();
-        void limit_frame_rate();
-        void reset_frame_time();
 
     protected:
     #ifndef QT_NO_CONTEXTMENU
@@ -48,8 +41,10 @@ class EmuWindow : public QMainWindow
     #endif
     
     signals:
-
+        void shutdown();
     public slots:
+        void update_FPS(int FPS);
+        void draw_frame(uint32_t* buffer, int inner_w, int inner_h, int final_w, int final_h);
         void open_file_no_skip();
         void open_file_skip();
 };

@@ -40,6 +40,21 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
     widget->setLayout(layout);
 
     create_menu();
+
+    connect(this, SIGNAL(shutdown()), &emuthread, SLOT(shutdown()));
+    connect(&emuthread, SIGNAL(completed_frame(uint32_t*, int, int, int, int)),
+            this, SLOT(draw_frame(uint32_t*, int, int, int, int)));
+    connect(&emuthread, SIGNAL(update_FPS(int)), this, SLOT(update_FPS(int)));
+    emuthread.pause(PAUSE_EVENT::GAME_NOT_LOADED);
+
+    emuthread.reset();
+    emuthread.start();
+
+    //Initialize window
+    title = "DobieStation";
+    setWindowTitle(QString::fromStdString(title));
+    resize(640, 448);
+    show();
 }
 
 int EmuWindow::init(int argc, char** argv)
@@ -86,7 +101,7 @@ int EmuWindow::init(int argc, char** argv)
     uint8_t* BIOS = new uint8_t[1024 * 1024 * 4];
     BIOS_file.read((char*)BIOS, 1024 * 1024 * 4);
     BIOS_file.close();
-    e.load_BIOS(BIOS);
+    emuthread.load_BIOS(BIOS);
     delete[] BIOS;
     BIOS = nullptr;
 
@@ -95,23 +110,11 @@ int EmuWindow::init(int argc, char** argv)
         if (load_exec(file_name, skip_BIOS))
             return 1;
     }
-    else
-    {
-        is_exec_loaded = false;
-    }
-
-    //Initialize window
-    is_running = true;
-    setWindowTitle("DobieStation");
-    resize(640, 448);
-    show();
     return 0;
 }
 
 int EmuWindow::load_exec(const char* file_name, bool skip_BIOS)
 {
-    e.reset();
-
     ifstream exec_file(file_name, ios::binary | ios::in);
     if (!exec_file.is_open())
     {
@@ -134,18 +137,18 @@ int EmuWindow::load_exec(const char* file_name, bool skip_BIOS)
 
         printf("Loaded %s\n", file_name);
         printf("Size: %lld\n", ELF_size);
-        e.load_ELF(ELF, ELF_size);
+        emuthread.load_ELF(ELF, ELF_size);
         delete[] ELF;
         ELF = nullptr;
         if (skip_BIOS)
-            e.set_skip_BIOS_hack(SKIP_HACK::LOAD_ELF);
+            emuthread.set_skip_BIOS_hack(SKIP_HACK::LOAD_ELF);
     }
     else if (format == ".iso")
     {
         exec_file.close();
-        e.load_CDVD(file_name);
+        emuthread.load_CDVD(file_name);
         if (skip_BIOS)
-            e.set_skip_BIOS_hack(SKIP_HACK::LOAD_DISC);
+            emuthread.set_skip_BIOS_hack(SKIP_HACK::LOAD_DISC);
     }
     else
     {
@@ -153,24 +156,10 @@ int EmuWindow::load_exec(const char* file_name, bool skip_BIOS)
         return 1;
     }
 
-    is_exec_loaded = true;
+    title = file_name;
+
+    emuthread.unpause(PAUSE_EVENT::GAME_NOT_LOADED);
     return 0;
-}
-
-bool EmuWindow::exec_loaded()
-{
-    return is_exec_loaded;
-}
-
-bool EmuWindow::running()
-{
-    return is_running;
-}
-
-void EmuWindow::emulate()
-{
-    e.run();
-    update();
 }
 
 void EmuWindow::create_menu()
@@ -190,49 +179,33 @@ void EmuWindow::create_menu()
     file_menu->addAction(exit_action);
 }
 
+void EmuWindow::draw_frame(uint32_t *buffer, int inner_w, int inner_h, int final_w, int final_h)
+{
+    if (!buffer || !inner_w || !inner_h)
+        return;
+    final_image = QImage((uint8_t*)buffer, inner_w, inner_h, QImage::Format_RGBA8888);
+    final_image = final_image.scaled(final_w, final_h);
+    resize(final_w, final_h);
+    update();
+}
+
 void EmuWindow::paintEvent(QPaintEvent *event)
 {
     QPainter painter(this);
-    uint32_t* buffer = e.get_framebuffer();
     painter.fillRect(rect(), Qt::black);
-    if (!buffer)
-        return;
-
-    //Get the resolution of the GS image
-    int inner_w, inner_h;
-    e.get_inner_resolution(inner_w, inner_h);
-
-    if (!inner_w || !inner_h)
-        return;
 
     printf("Draw image!\n");
 
-    //Scale it to the TV screen
-    QImage image((uint8_t*)buffer, inner_w, inner_h, QImage::Format_RGBA8888);
-
-    int new_w, new_h;
-    e.get_resolution(new_w, new_h);
-    image = image.scaled(new_w, new_h);
-    resize(new_w, new_h);
-
-    painter.drawPixmap(0, 0, QPixmap::fromImage(image));
+    painter.drawPixmap(0, 0, QPixmap::fromImage(final_image));
 }
 
 void EmuWindow::closeEvent(QCloseEvent *event)
 {
+    emit shutdown();
     event->accept();
-    is_running = false;
 }
 
-double EmuWindow::get_frame_rate()
-{
-    //Returns the framerate since old_frametime was set to the current time
-    chrono::system_clock::time_point now = chrono::system_clock::now();
-    chrono::duration<double> elapsed_seconds = now - old_frametime;
-    return (1 / elapsed_seconds.count());
-}
-
-void EmuWindow::update_window_title()
+void EmuWindow::update_FPS(int FPS)
 {
     /*
     Updates window title every second
@@ -240,27 +213,12 @@ void EmuWindow::update_window_title()
     */
     chrono::system_clock::time_point now = chrono::system_clock::now();
     chrono::duration<double> elapsed_update_seconds = now - old_update_time;
-
-    double framerate = get_frame_rate();
-    framerate_avg = (framerate_avg + framerate) / 2;
     if (elapsed_update_seconds.count() >= 1.0)
     {
-        int rf = (int) round(framerate_avg); // rounded framerate
-        string new_title = "DobieStation - FPS: " + to_string(rf);
+        string new_title = title + " - FPS: " + to_string(FPS);
         setWindowTitle(QString::fromStdString(new_title));
         old_update_time = chrono::system_clock::now();
-        framerate_avg = framerate;
     }
-}
-
-void EmuWindow::limit_frame_rate()
-{
-    while (get_frame_rate() > 60.0);
-}
-
-void EmuWindow::reset_frame_time()
-{
-    old_frametime = chrono::system_clock::now();
 }
 
 #ifndef QT_NO_CONTEXTMENU
@@ -276,12 +234,16 @@ void EmuWindow::contextMenuEvent(QContextMenuEvent* event)
 
 void EmuWindow::open_file_no_skip()
 {
+    emuthread.pause(PAUSE_EVENT::FILE_DIALOG);
     QString file_name = QFileDialog::getOpenFileName(this, tr("Open Rom"), "", tr("ROM Files (*.elf *.iso)"));
     load_exec(file_name.toStdString().c_str(), false);
+    emuthread.unpause(PAUSE_EVENT::FILE_DIALOG);
 }
 
 void EmuWindow::open_file_skip()
 {
+    emuthread.pause(PAUSE_EVENT::FILE_DIALOG);
     QString file_name = QFileDialog::getOpenFileName(this, tr("Open Rom"), "", tr("ROM Files (*.elf *.iso)"));
     load_exec(file_name.toStdString().c_str(), true);
+    emuthread.unpause(PAUSE_EVENT::FILE_DIALOG);
 }

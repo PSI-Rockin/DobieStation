@@ -97,6 +97,7 @@ struct GSContext
     void reset();
 
     void set_tex0(uint64_t value);
+    void set_tex2(uint64_t value);
     void set_clamp(uint64_t value);
     void set_xyoffset(uint64_t value);
     void set_scissor(uint64_t value);

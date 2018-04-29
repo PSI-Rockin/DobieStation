@@ -71,9 +71,14 @@ void GraphicsSynthesizer::reset()
     is_odd_frame = false;
     pixels_transferred = 0;
     num_vertices = 0;
+    frame_count = 0;
+    DISPLAY1.x = 0;
+    DISPLAY1.y = 0;
+    DISPLAY1.width = 0;
+    DISPLAY1.height = 0;
     DISPLAY2.x = 0;
     DISPLAY2.y = 0;
-    DISPLAY2.width = 0 << 2;
+    DISPLAY2.width = 0;
     DISPLAY2.height = 0;
     DISPFB1.frame_base = 0;
     DISPFB1.width = 0;
@@ -126,6 +131,7 @@ void GraphicsSynthesizer::set_VBLANK(bool is_VBLANK)
     {
         printf("[GS] VBLANK end\n");
         intc->assert_IRQ(3);
+        frame_count++;
         is_odd_frame = !is_odd_frame;
     }
     VBLANK_generated = is_VBLANK;
@@ -146,13 +152,12 @@ void GraphicsSynthesizer::render_CRT()
             int pixel_y = y;
             if (pixel_x >= width || pixel_y >= DISPLAY2.height)
                 continue;
-            uint32_t scaled_x = x;
-            uint32_t scaled_y = y;
+            uint32_t scaled_x = DISPFB2.x + x;
+            uint32_t scaled_y = DISPFB2.y + y;
             scaled_x *= DISPFB2.width;
             scaled_x /= width;
             uint32_t value = read_PSMCT32_block(DISPFB2.frame_base * 4, DISPFB2.width, scaled_x, scaled_y);
-            output_buffer[pixel_x + (pixel_y * width)] = value;
-            output_buffer[pixel_x + (pixel_y * width)] |= 0xFF000000;
+            output_buffer[pixel_x + (pixel_y * width)] = value | 0xFF000000;
         }
         if (SMODE2.interlaced && !SMODE2.frame_mode)
             y++;
@@ -327,6 +332,7 @@ void GraphicsSynthesizer::write64_privileged(uint32_t addr, uint64_t value)
             DISPLAY1.magnify_y = (value >> 27) & 0x3;
             DISPLAY1.width = ((value >> 32) & 0xFFF) + 1;
             DISPLAY1.height = ((value >> 44) & 0x7FF) + 1;
+            break;
         case 0x0090:
             printf("[GS] Write DISPFB2: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);
             DISPFB2.frame_base = (value & 0x3FF) * 2048;
@@ -439,6 +445,12 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
             vertex_kick(false);
             break;
         case 0x000F:
+            break;
+        case 0x0016:
+            context1.set_tex2(value);
+            break;
+        case 0x0017:
+            context2.set_tex2(value);
             break;
         case 0x0018:
             context1.set_xyoffset(value);
@@ -902,6 +914,8 @@ void GraphicsSynthesizer::draw_pixel(int32_t x, int32_t y, uint32_t z, RGBAQ_REG
         final_color &= 0x00FFFFFF;
         final_color |= alpha << 24;
         uint32_t pos = (x + (y * current_ctx->frame.width)) * 4;
+        //if (final_color & 0xFFFFFF)
+            //printf("Draw pixel: $%08X ($%08X)\n", final_color, current_ctx->frame.base_pointer + pos);
         write_PSMCT32_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, final_color);
     }
     if (update_z)
@@ -1009,13 +1023,7 @@ int32_t GraphicsSynthesizer::orient2D(const Point &v1, const Point &v2, const Po
 
 void GraphicsSynthesizer::render_triangle()
 {
-    //printf("[GS] Rendering triangle!\n");
-    uint32_t color = 0x00000000;
-    color |= vtx_queue[0].rgbaq.r;
-    color |= vtx_queue[0].rgbaq.g << 8;
-    color |= vtx_queue[0].rgbaq.b << 16;
-    color |= vtx_queue[0].rgbaq.a << 24;
-    //printf("[GS] Color: $%08X\n", color);
+    printf("[GS] Rendering triangle!\n");
 
     int32_t x1, x2, x3, y1, y2, y3, z1, z2, z3;
     uint8_t r1, r2, r3, g1, g2, g3, b1, b2, b3, a1, a2, a3;
@@ -1086,8 +1094,23 @@ void GraphicsSynthesizer::render_triangle()
     int32_t w2_row = orient2D(v3, v1, min_corner);
     int32_t w3_row = orient2D(v1, v2, min_corner);
 
+    if (!PRIM.gourand_shading)
+    {
+        //Flatten the colors
+        v1.r = v3.r;
+        v2.r = v3.r;
+
+        v1.g = v3.g;
+        v2.g = v3.g;
+
+        v1.b = v3.b;
+        v2.b = v3.b;
+
+        v1.a = v3.a;
+        v2.a = v3.a;
+    }
+
     RGBAQ_REG vtx_color, tex_color;
-    vtx_color = vtx_queue[0].rgbaq;
 
     //TODO: Parallelize this
     //Iterate through pixels in bounds
@@ -1101,50 +1124,45 @@ void GraphicsSynthesizer::render_triangle()
             //Is inside triangle?
             if ((w1 | w2 | w3) >= 0)
             {
+                int32_t divider = w1 + w2 + w3;
                 //Interpolate Z
                 float z = (float) v1.z * w1 + (float) v2.z * w2 + (float) v3.z * w3;
-                z /= (float) (w1 + w2 + w3);
+                z /= divider;
+
+                //Gourand shading calculations
+                float r = (float) v1.r * w1 + (float) v2.r * w2 + (float) v3.r * w3;
+                float g = (float) v1.g * w1 + (float) v2.g * w2 + (float) v3.g * w3;
+                float b = (float) v1.b * w1 + (float) v2.b * w2 + (float) v3.b * w3;
+                float a = (float) v1.a * w1 + (float) v2.a * w2 + (float) v3.a * w3;
+                vtx_color.r = r / divider;
+                vtx_color.g = g / divider;
+                vtx_color.b = b / divider;
+                vtx_color.a = a / divider;
+
                 if (PRIM.texture_mapping)
                 {
                     uint32_t u, v;
-                    float s, t;
                     if (!PRIM.use_UV)
                     {
+                        float s, t;
                         s = v1.s * w1 + v2.s * w2 + v3.s * w3;
                         t = v1.t * w1 + v2.t * w2 + v3.t * w3;
-                        s /= (float) (w1 + w2 + w3);
-                        t /= (float) (w1 + w2 + w3);
-                        v = t * current_ctx->tex0.tex_height;
+                        s /= divider;
+                        t /= divider;
                         u = s * current_ctx->tex0.tex_width;
+                        v = t * current_ctx->tex0.tex_height;
                     }
                     else
                     {
                         float temp_u = (float) v1.u * w1 + (float) v2.u * w2 + (float) v3.u * w3;
                         float temp_v = (float) v1.v * w1 + (float) v2.v * w2 + (float) v3.v * w3;
-                        temp_u /= (float) (w1 + w2 + w3);
-                        temp_v /= (float) (w1 + w2 + w3);
-                        u = temp_u;
-                        v = temp_v;
+                        temp_u /= divider;
+                        temp_v /= divider;
+                        u = (uint32_t)temp_u >> 4;
+                        v = (uint32_t)temp_v >> 4;
                     }
                     tex_lookup(u, v, vtx_color, tex_color);
                     draw_pixel(x, y, (uint32_t)z, tex_color, PRIM.alpha_blend);
-                }
-                else if (PRIM.gourand_shading)
-                {
-                    float r = (float) v1.r * w1 + (float) v2.r * w2 + (float) v3.r * w3;
-                    float g = (float) v1.g * w1 + (float) v2.g * w2 + (float) v3.g * w3;
-                    float b = (float) v1.b * w1 + (float) v2.b * w2 + (float) v3.b * w3;
-                    float a = (float) v1.a * w1 + (float) v2.a * w2 + (float) v3.a * w3;
-                    r /= (float) (w1 + w2 + w3);
-                    g /= (float) (w1 + w2 + w3);
-                    b /= (float) (w1 + w2 + w3);
-                    a /= (float) (w1 + w2 + w3);
-
-                    vtx_color.r = r;
-                    vtx_color.g = g;
-                    vtx_color.b = b;
-                    vtx_color.a = a;
-                    draw_pixel(x, y, (uint32_t)z, vtx_color, PRIM.alpha_blend);
                 }
                 else
                 {
@@ -1444,9 +1462,9 @@ void GraphicsSynthesizer::tex_lookup(uint16_t u, uint16_t v, RGBAQ_REG& vtx_colo
                 int y = (entry & 0x8) != 0;
                 color = read_PSMCT32_block(current_ctx->tex0.CLUT_base, 64, x, y);
             }
-            tex_color.r = entry;
-            tex_color.g = entry;
-            tex_color.b = entry;
+            tex_color.r = 0xFF;
+            tex_color.g = 0xFF;
+            tex_color.b = 0xFF;
             tex_color.a = 0x80;
             //return get_word(addr);
         }
@@ -1465,14 +1483,15 @@ void GraphicsSynthesizer::tex_lookup(uint16_t u, uint16_t v, RGBAQ_REG& vtx_colo
             printf("Entry: %d\n", entry);
             printf("Offset: %d\n", current_ctx->tex0.CLUT_offset);
             printf("Format: %d\n", current_ctx->tex0.CLUT_format);*/
-            uint32_t addr;
             uint32_t color = 0;
             if (current_ctx->tex0.use_CSM2)
-                addr = clut_base + (entry << 2);
+                color = 0;
             else
             {
                 color = read_PSMCT32_block(current_ctx->tex0.CLUT_base, 64, entry & 0x7, entry / 8);
             }
+            //printf("[GS] Read 4-bit tex entry: %d\n", entry);
+            //printf("[GS] Color: $%08X\n", color);
             tex_color.r = color & 0xFF;
             tex_color.g = (color >> 8) & 0xFF;
             tex_color.b = (color >> 16) & 0xFF;
@@ -1483,8 +1502,10 @@ void GraphicsSynthesizer::tex_lookup(uint16_t u, uint16_t v, RGBAQ_REG& vtx_colo
             break;
         case 0x24:
         {
-            //printf("[GS] Format $24: Read from $%08X\n", tex_base + (coord << 2));
+            printf("[GS] Format $24: Read from $%08X\n", tex_base + (coord << 2));
             uint8_t entry = (read_PSMCT32_block(tex_base, current_ctx->tex0.width, u, v) >> 24) & 0xF;
+            printf("[GS] Format $24: Read entry %d\n", entry);
+            entry = 0xF;
             tex_color.r = entry << 4;
             tex_color.g = entry << 4;
             tex_color.b = entry << 4;

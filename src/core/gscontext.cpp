@@ -46,6 +46,23 @@ void GSContext::set_tex0(uint64_t value)
     printf("Color function: $%02X\n", tex0.color_function);
     printf("CLUT base: $%08X\n", tex0.CLUT_base);
     printf("CLUT format: $%02X\n", tex0.CLUT_format);
+    printf("Use CSM2: %d\n", tex0.use_CSM2);
+    printf("CLUT offset: $%08X\n", tex0.CLUT_offset);
+}
+
+void GSContext::set_tex2(uint64_t value)
+{
+    tex0.format = (value >> 20) & 0x3F;
+    tex0.CLUT_base = ((value >> 37) & 0x3FFF) * 64 * 4;
+    tex0.CLUT_format = (value >> 51) & 0xF;
+    tex0.use_CSM2 = value & (1UL << 55);
+    tex0.CLUT_offset = ((value >> 56) & 0x1F) * 16;
+    tex0.CLUT_control = (value >> 61) & 0x7;
+
+    printf("TEX2: $%08X_%08X\n", value >> 32, value);
+    printf("CLUT base: $%08X\n", tex0.CLUT_base);
+    printf("CLUT format: $%02X\n", tex0.CLUT_format);
+    printf("Use CSM2: %d\n", tex0.use_CSM2);
     printf("CLUT offset: $%08X\n", tex0.CLUT_offset);
 }
 

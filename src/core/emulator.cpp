@@ -106,6 +106,7 @@ void Emulator::run()
             VBLANK_sent = true;
             gs.set_VBLANK(true);
             printf("VSYNC FRAMES: %d\n", frames);
+            //cpu.set_disassembly(frames == 261);
             frames++;
             iop_request_IRQ(0);
             gs.render_CRT();
@@ -195,9 +196,7 @@ bool Emulator::skip_BIOS()
                 //Search for cdrom0:
                 int pos = 0;
                 while (strncmp("cdrom0:", system_cnf + pos, 7))
-                {
                     pos++;
-                }
 
                 printf("[Emulator] Found 'cdrom0:'\n");
                 pos += 8;

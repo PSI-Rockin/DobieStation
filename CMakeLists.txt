@@ -39,6 +39,7 @@ set(SOURCES
         src/core/gs.cpp
         src/core/gscontext.cpp
 	src/core/sif.cpp
+	src/qt/emuthread.cpp
         src/qt/emuwindow.cpp
         src/qt/main.cpp
         )
@@ -69,6 +70,7 @@ set(HEADERS
         src/core/gs.hpp
 	src/core/gscontext.hpp
 	src/core/sif.hpp
+	src/qt/emuthread.hpp
         src/qt/emuwindow.hpp
         )
 
