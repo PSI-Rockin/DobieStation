@@ -1074,6 +1074,7 @@ void GraphicsSynthesizer::render_triangle()
     if (orient2D(v1, v2, v3) < 0)
         swap(v2, v3);
 
+    int32_t divider = orient2D(v1, v2, v3);
     //Calculate bounding box of triangle
     int32_t min_x = min({v1.x, v2.x, v3.x});
     int32_t min_y = min({v1.y, v2.y, v3.y});
@@ -1124,7 +1125,7 @@ void GraphicsSynthesizer::render_triangle()
             //Is inside triangle?
             if ((w1 | w2 | w3) >= 0)
             {
-                int32_t divider = w1 + w2 + w3;
+                //w1, w2, w3 will always sum up to the double of area of the triangle
                 //Interpolate Z
                 float z = (float) v1.z * w1 + (float) v2.z * w2 + (float) v3.z * w3;
                 z /= divider;
