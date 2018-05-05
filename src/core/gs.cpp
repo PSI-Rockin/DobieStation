@@ -996,7 +996,6 @@ void GraphicsSynthesizer::render_triangle()
     Vertex v2 = vtx_queue[1]; v2.to_relative(current_ctx->xyoffset);
     Vertex v3 = vtx_queue[0]; v3.to_relative(current_ctx->xyoffset);
 
-
     //The triangle rasterization code uses an approach with barycentric coordinates
     //Clear explanation can be read below:
     //https://fgiesen.wordpress.com/2013/02/06/the-barycentric-conspirac/
@@ -1012,20 +1011,30 @@ void GraphicsSynthesizer::render_triangle()
     int32_t max_x = max({v1.x, v2.x, v3.x});
     int32_t max_y = max({v1.y, v2.y, v3.y});
 
+    //We'll process the pixels in blocks, set the blocksize
+    const int32_t BLOCKSIZE = 1 << 3; // Must be power of 2
+
+    //Round down to make starting corner's coordinates a multiple of BLOCKSIZE with bitwise magic
+    min_x &= ~(BLOCKSIZE - 1);
+    min_y &= ~(BLOCKSIZE - 1);
+
     //Calculate incremental steps for the weights
     //Reference: https://fgiesen.wordpress.com/2013/02/10/optimizing-the-basic-rasterizer/
-    int32_t A12 = v1.y - v2.y;
-    int32_t B12 = v2.x - v1.x;
-    int32_t A23 = v2.y - v3.y;
-    int32_t B23 = v3.x - v2.x;
-    int32_t A31 = v3.y - v1.y;
-    int32_t B31 = v1.x - v3.x;
+    const int32_t A12 = v1.y - v2.y;
+    const int32_t B12 = v2.x - v1.x;
+    const int32_t A23 = v2.y - v3.y;
+    const int32_t B23 = v3.x - v2.x;
+    const int32_t A31 = v3.y - v1.y;
+    const int32_t B31 = v1.x - v3.x;
 
     Vertex min_corner;
     min_corner.x = min_x; min_corner.y = min_y;
     int32_t w1_row = orient2D(v2, v3, min_corner);
     int32_t w2_row = orient2D(v3, v1, min_corner);
     int32_t w3_row = orient2D(v1, v2, min_corner);
+    int32_t w1_row_block = w1_row;
+    int32_t w2_row_block = w2_row;
+    int32_t w3_row_block = w3_row;
 
     if (!PRIM.gourand_shading)
     {
@@ -1046,73 +1055,136 @@ void GraphicsSynthesizer::render_triangle()
     RGBAQ_REG vtx_color, tex_color;
 
     //TODO: Parallelize this
-    //Iterate through pixels in bounds
-    for (int32_t y = min_y; y <= max_y; y++)
+    //Iterate through the bounding rectangle using BLOCKSIZE * BLOCKSIZE large blocks
+    //This way we can throw out blocks which are totally outside the triangle way faster
+    //Thanks you, Dolphin code for the idea
+    for (int32_t y_block = min_y; y_block < max_y; y_block += BLOCKSIZE)
     {
-        int32_t w1 = w1_row;
-        int32_t w2 = w2_row;
-        int32_t w3 = w3_row;
-        for (int32_t x = min_x; x <= max_x; x++)
+        int32_t w1_block = w1_row_block;
+        int32_t w2_block = w2_row_block;
+        int32_t w3_block = w3_row_block;
+        for (int32_t x_block = min_x; x_block < max_x; x_block += BLOCKSIZE)
         {
-            //Is inside triangle?
-            if ((w1 | w2 | w3) >= 0)
+            //Store barycentric coordinates for the corners of a block
+            //tl = top left, tr = top right, etc.
+            int32_t w1_tl, w1_tr, w1_bl, w1_br;
+            int32_t w2_tl, w2_tr, w2_bl, w2_br;
+            int32_t w3_tl, w3_tr, w3_bl, w3_br;
+            //Calculate the weight offsets for the corners
+            w1_tl = w1_block; w2_tl = w2_block, w3_tl = w3_block;
+            w1_tr = w1_tl + (BLOCKSIZE - 1) * A23;
+            w2_tr = w2_tl + (BLOCKSIZE - 1) * A31;
+            w3_tr = w3_tl + (BLOCKSIZE - 1) * A12;
+            w1_bl = w1_tl + (BLOCKSIZE - 1) * B23;
+            w2_bl = w2_tl + (BLOCKSIZE - 1) * B31;
+            w3_bl = w3_tl + (BLOCKSIZE - 1) * B12;
+            w1_br = w1_tl + (BLOCKSIZE - 1) * B23 + (BLOCKSIZE - 1) * A23;
+            w2_br = w2_tl + (BLOCKSIZE - 1) * B31 + (BLOCKSIZE - 1) * A31;
+            w3_br = w3_tl + (BLOCKSIZE - 1) * B12 + (BLOCKSIZE - 1) * A12;
+
+            //Check if any of the corners are in the positive half-space of a weight
+            bool w1_tl_check = w1_tl > 0;
+            bool w1_tr_check = w1_tr > 0;
+            bool w1_bl_check = w1_bl > 0;
+            bool w1_br_check = w1_br > 0;
+            bool w2_tl_check = w2_tl > 0;
+            bool w2_tr_check = w2_tr > 0;
+            bool w2_bl_check = w2_bl > 0;
+            bool w2_br_check = w2_br > 0;
+            bool w3_tl_check = w3_tl > 0;
+            bool w3_tr_check = w3_tr > 0;
+            bool w3_bl_check = w3_bl > 0;
+            bool w3_br_check = w3_br > 0;
+
+
+            //Combine all checks for a barycentric coordinate into one
+            //If for one half-space checks for each corner --> all corners lie outside the triangle --> block can be skipped
+            uint8_t w1_mask = (w1_tl_check << 0) | (w1_tr_check << 1) | (w1_bl_check << 2) | (w1_br_check << 3);
+            uint8_t w2_mask = (w2_tl_check << 0) | (w2_tr_check << 1) | (w2_bl_check << 2) | (w2_br_check << 3);
+            uint8_t w3_mask = (w3_tl_check << 0) | (w3_tr_check << 1) | (w3_bl_check << 2) | (w3_br_check << 3);
+            //However in other cases, we process the block pixel-by-pixel as usual
+            //TODO: In the case where all corners lie inside the triangle the code below could be slightly simplified
+            if (w1_mask != 0 && w2_mask != 0 && w3_mask != 0)
             {
-                //w1, w2, w3 will always sum up to the double of area of the triangle
-                divider = w1 + w2 + w3;
-                //Interpolate Z
-                float z = (float) v1.z * w1 + (float) v2.z * w2 + (float) v3.z * w3;
-                z /= divider;
-
-                //Gourand shading calculations
-                float r = (float) v1.rgbaq.r * w1 + (float) v2.rgbaq.r * w2 + (float) v3.rgbaq.r * w3;
-                float g = (float) v1.rgbaq.g * w1 + (float) v2.rgbaq.g * w2 + (float) v3.rgbaq.g * w3;
-                float b = (float) v1.rgbaq.b * w1 + (float) v2.rgbaq.b * w2 + (float) v3.rgbaq.b * w3;
-                float a = (float) v1.rgbaq.a * w1 + (float) v2.rgbaq.a * w2 + (float) v3.rgbaq.a * w3;
-                vtx_color.r = r / divider;
-                vtx_color.g = g / divider;
-                vtx_color.b = b / divider;
-                vtx_color.a = a / divider;
-
-                if (PRIM.texture_mapping)
+                //Process a BLOCKSIZE * BLOCKSIZE block as normal
+                int32_t w1_row = w1_block;
+                int32_t w2_row = w2_block;
+                int32_t w3_row = w3_block;
+                for (int32_t y = y_block; y < y_block + BLOCKSIZE; y++)
                 {
-                    uint32_t u, v;
-                    if (!PRIM.use_UV)
+                    int32_t w1 = w1_row;
+                    int32_t w2 = w2_row;
+                    int32_t w3 = w3_row;
+                    for (int32_t x = x_block; x < x_block + BLOCKSIZE; x++)
                     {
-                        float s, t;
-                        s = v1.s * w1 + v2.s * w2 + v3.s * w3;
-                        t = v1.t * w1 + v2.t * w2 + v3.t * w3;
-                        s /= divider;
-                        t /= divider;
-                        u = s * current_ctx->tex0.tex_width;
-                        v = t * current_ctx->tex0.tex_height;
+                        //Is inside triangle?
+                        if ((w1 | w2 | w3) >= 0)
+                        {
+                            //Interpolate Z
+                            float z = (float) v1.z * w1 + (float) v2.z * w2 + (float) v3.z * w3;
+                            z /= divider;
+
+
+                            //Gourand shading calculations
+                            float r = (float) v1.rgbaq.r * w1 + (float) v2.rgbaq.r * w2 + (float) v3.rgbaq.r * w3;
+                            float g = (float) v1.rgbaq.g * w1 + (float) v2.rgbaq.g * w2 + (float) v3.rgbaq.g * w3;
+                            float b = (float) v1.rgbaq.b * w1 + (float) v2.rgbaq.b * w2 + (float) v3.rgbaq.b * w3;
+                            float a = (float) v1.rgbaq.a * w1 + (float) v2.rgbaq.a * w2 + (float) v3.rgbaq.a * w3;
+                            vtx_color.r = r / divider;
+                            vtx_color.g = g / divider;
+                            vtx_color.b = b / divider;
+                            vtx_color.a = a / divider;
+
+                            if (PRIM.texture_mapping)
+                            {
+                                uint32_t u, v;
+                                if (!PRIM.use_UV)
+                                {
+                                    float s, t;
+                                    s = v1.s * w1 + v2.s * w2 + v3.s * w3;
+                                    t = v1.t * w1 + v2.t * w2 + v3.t * w3;
+                                    s /= divider;
+                                    t /= divider;
+                                    u = s * current_ctx->tex0.tex_width;
+                                    v = t * current_ctx->tex0.tex_height;
+                                } else
+                                {
+                                    float temp_u = (float) v1.uv.u * w1 + (float) v2.uv.u * w2 + (float) v3.uv.u * w3;
+                                    float temp_v = (float) v1.uv.v * w1 + (float) v2.uv.v * w2 + (float) v3.uv.v * w3;
+                                    temp_u /= divider;
+                                    temp_v /= divider;
+                                    u = (uint32_t) temp_u >> 4;
+                                    v = (uint32_t) temp_v >> 4;
+                                }
+                                tex_lookup(u, v, vtx_color, tex_color);
+                                draw_pixel(x, y, (uint32_t) z, tex_color, PRIM.alpha_blend);
+                            } else
+                            {
+                                draw_pixel(x, y, (uint32_t) z, vtx_color, PRIM.alpha_blend);
+                            }
+                        }
+                        //Horizontal step
+                        w1 += A23;
+                        w2 += A31;
+                        w3 += A12;
                     }
-                    else
-                    {
-                        float temp_u = (float) v1.uv.u * w1 + (float) v2.uv.u * w2 + (float) v3.uv.u * w3;
-                        float temp_v = (float) v1.uv.v * w1 + (float) v2.uv.v * w2 + (float) v3.uv.v * w3;
-                        temp_u /= divider;
-                        temp_v /= divider;
-                        u = (uint32_t)temp_u >> 4;
-                        v = (uint32_t)temp_v >> 4;
-                    }
-                    tex_lookup(u, v, vtx_color, tex_color);
-                    draw_pixel(x, y, (uint32_t)z, tex_color, PRIM.alpha_blend);
-                }
-                else
-                {
-                    draw_pixel(x, y, (uint32_t)z, vtx_color, PRIM.alpha_blend);
+                    //Vertical step
+                    w1_row += B23;
+                    w2_row += B31;
+                    w3_row += B12;
                 }
             }
-            //Horizontal step
-            w1 += A23;
-            w2 += A31;
-            w3 += A12;
+
+            w1_block += BLOCKSIZE * A23;
+            w2_block += BLOCKSIZE * A31;
+            w3_block += BLOCKSIZE * A12;
+
         }
-        //Vertical step
-        w1_row += B23;
-        w2_row += B31;
-        w3_row += B12;
+        w1_row_block += BLOCKSIZE * B23;
+        w2_row_block += BLOCKSIZE * B31;
+        w3_row_block += BLOCKSIZE * B12;
     }
+
 }
 
 void GraphicsSynthesizer::render_sprite()
@@ -1120,7 +1192,6 @@ void GraphicsSynthesizer::render_sprite()
     printf("[GS] Rendering sprite!\n");
     Vertex v1 = vtx_queue[1]; v1.to_relative(current_ctx->xyoffset);
     Vertex v2 = vtx_queue[0]; v2.to_relative(current_ctx->xyoffset);
-
 
     RGBAQ_REG vtx_color, tex_color;
     vtx_color = vtx_queue[0].rgbaq;
