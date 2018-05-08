@@ -17,6 +17,7 @@ void SIO2::reset()
     FIFO.swap(empty);
     active_command = SIO_DEVICE::NONE;
     control = 0;
+    new_command = false;
 }
 
 uint8_t SIO2::read_serial()
@@ -54,7 +55,6 @@ void SIO2::write_serial(uint8_t value)
 {
     printf("[SIO2] DATAIN: $%02X\n", value);
 
-    //Get new command?
     if (!command_length)
     {
         if (send3[send3_port] != 0)
@@ -63,6 +63,7 @@ void SIO2::write_serial(uint8_t value)
             command_length = (send3[send3_port] >> 8) & 0x1FF;
             printf("[SIO2] Command len: %d\n", command_length);
             send3_port++;
+            new_command = true;
         }
     }
 
@@ -90,7 +91,18 @@ void SIO2::write_device(uint8_t value)
             write_device(value);
             break;
         case SIO_DEVICE::PAD:
-            FIFO.push(pad->write_SIO(value));
+        {
+            uint8_t reply;
+            if (new_command)
+            {
+                new_command = false;
+                reply = pad->start_transfer(value);
+            }
+            else
+                reply = pad->write_SIO(value);
+            printf("[SIO2] PAD reply: $%02X\n", reply);
+            FIFO.push(reply);
+        }
             break;
         case SIO_DEVICE::DUMMY:
             FIFO.push(0xFF);
@@ -110,6 +122,7 @@ void SIO2::set_control(uint32_t value)
     if (value & 0x1)
     {
         e->iop_request_IRQ(17);
+        control &= ~0x1;
     }
     else
     {
@@ -122,7 +135,7 @@ void SIO2::set_control(uint32_t value)
 uint32_t SIO2::get_RECV1()
 {
     printf("[SIO2] Read RECV1\n");
-    return 0x1D100;
+    return 0x0D102;
 }
 
 uint32_t SIO2::get_RECV2()

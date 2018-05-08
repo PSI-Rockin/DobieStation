@@ -36,6 +36,15 @@ void GraphicsInterface::process_PACKED(uint64_t data[])
             gs->set_RGBA(r, g, b, a);
         }
             break;
+        case 0x2:
+        {
+            //ST - set ST coordinates and Q
+            uint32_t s = data[0] & 0xFFFFFFFF;
+            uint32_t t = data[0] >> 32;
+            uint32_t q = data[1] & 0xFFFFFFFF;
+            gs->set_STQ(s, t, q);
+        }
+            break;
         case 0x3:
             //UV - set UV coordinates
         {

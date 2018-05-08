@@ -2,6 +2,12 @@
 #define SPU_HPP
 #include <cstdint>
 
+struct Voice
+{
+    uint16_t left_vol, right_vol;
+
+};
+
 class SPU
 {
     private:

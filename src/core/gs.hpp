@@ -154,6 +154,8 @@ class GraphicsSynthesizer
         uint32_t read_PSMCT32_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y);
         void write_PSMCT32_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y, uint32_t value);
 
+        bool depth_test(int32_t x, int32_t y, uint32_t z);
+
         void tex_lookup(uint16_t u, uint16_t v, RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color);
         void vertex_kick(bool drawing_kick);
         void draw_pixel(int32_t x, int32_t y, uint32_t z, RGBAQ_REG& color, bool alpha_blending);
@@ -190,6 +192,7 @@ class GraphicsSynthesizer
         void write64(uint32_t addr, uint64_t value);
 
         void set_RGBA(uint8_t r, uint8_t g, uint8_t b, uint8_t a);
+        void set_STQ(uint32_t s, uint32_t t, uint32_t q);
         void set_UV(uint16_t u, uint16_t v);
         void set_Q(float q);
         void set_XYZ(uint32_t x, uint32_t y, uint32_t z, bool drawing_kick);

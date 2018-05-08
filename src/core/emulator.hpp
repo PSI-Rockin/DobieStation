@@ -81,6 +81,8 @@ class Emulator
         ~Emulator();
         void run();
         void reset();
+        void press_button(PAD_BUTTON button);
+        void release_button(PAD_BUTTON button);
         bool skip_BIOS();
         void set_skip_BIOS_hack(SKIP_HACK type);
         void load_BIOS(uint8_t* BIOS);

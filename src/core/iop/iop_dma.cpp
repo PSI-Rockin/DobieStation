@@ -71,12 +71,10 @@ void IOP_DMA::run()
                     process_CDVD();
                     break;
                 case SPU:
-                    spu->set_int_flag();
-                    transfer_end(SPU);
+                    process_SPU();
                     break;
                 case SPU2:
-                    spu2->set_int_flag();
-                    transfer_end(SPU2);
+                    process_SPU2();
                     break;
                 case SIF0:
                     process_SIF0();
@@ -111,6 +109,28 @@ void IOP_DMA::process_CDVD()
         channels[CDVD].addr += bytes_read;
         channels[CDVD].word_count -= bytes_read / (channels[CDVD].block_size * 4);
     }
+}
+
+void IOP_DMA::process_SPU()
+{
+    if (!channels[SPU].word_count)
+    {
+        spu->set_int_flag();
+        transfer_end(SPU);
+    }
+    else
+        channels[SPU].word_count--;
+}
+
+void IOP_DMA::process_SPU2()
+{
+    if (!channels[SPU2].word_count)
+    {
+        spu2->set_int_flag();
+        transfer_end(SPU2);
+    }
+    else
+        channels[SPU2].word_count--;
 }
 
 void IOP_DMA::process_SIF0()

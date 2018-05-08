@@ -566,6 +566,13 @@ void GraphicsSynthesizer::set_RGBA(uint8_t r, uint8_t g, uint8_t b, uint8_t a)
     RGBAQ.a = a;
 }
 
+void GraphicsSynthesizer::set_STQ(uint32_t s, uint32_t t, uint32_t q)
+{
+    ST.s = *(float*)&s;
+    ST.t = *(float*)&t;
+    RGBAQ.q = *(float*)&q;
+}
+
 void GraphicsSynthesizer::set_UV(uint16_t u, uint16_t v)
 {
     UV.u = u;
@@ -642,6 +649,7 @@ void GraphicsSynthesizer::write_PSMCT32_block(uint32_t base, uint32_t width, uin
     addr += (block * 256);
     addr += (column * 64);
     addr += (pixel * 4);
+    addr &= 0x003FFFFC;
     //printf("Write to one-dimensional addr $%08X\n", addr);
     *(uint32_t*)&local_mem[addr] = value;
 }
@@ -724,6 +732,50 @@ void GraphicsSynthesizer::render_primitive()
     }
 }
 
+bool GraphicsSynthesizer::depth_test(int32_t x, int32_t y, uint32_t z)
+{
+    uint32_t pos = x + (y * current_ctx->frame.width);
+    switch (current_ctx->test.depth_method)
+    {
+        case 0: //FAIL
+            return false;
+        case 1: //PASS
+            return true;
+        case 2: //GEQUAL
+            switch (current_ctx->zbuf.format)
+            {
+                case 0x00:
+                    return z >= get_word(current_ctx->zbuf.base_pointer + (pos << 2));
+                case 0x01:
+                    return (z & 0xFFFFFF) >= (get_word(current_ctx->zbuf.base_pointer + (pos << 2)) & 0xFFFFFF);
+                case 0x02:
+                    return (z & 0xFFFF) >= (*(uint16_t*)&local_mem[current_ctx->zbuf.base_pointer + (pos << 1)] & 0xFFFF);
+                case 0x0A:
+                    return (int16_t)z >= *(int16_t*)&local_mem[current_ctx->zbuf.base_pointer + (pos << 1)];
+                default:
+                    printf("[GS] Unrecognized zbuf format $%02X\n", current_ctx->zbuf.format);
+                    exit(1);
+            }
+            break;
+        case 3: //GREATER
+            switch (current_ctx->zbuf.format)
+            {
+                case 0x00:
+                    return z > get_word(current_ctx->zbuf.base_pointer + (pos << 2));
+                case 0x01:
+                    return (z & 0xFFFFFF) > (get_word(current_ctx->zbuf.base_pointer + (pos << 2)) & 0xFFFFFF);
+                case 0x02:
+                    return (z & 0xFFFF) > (*(uint16_t*)&local_mem[current_ctx->zbuf.base_pointer + (pos << 1)] & 0xFFFF);
+                case 0x0A:
+                    return (int16_t)z > *(int16_t*)&local_mem[current_ctx->zbuf.base_pointer + (pos << 1)];
+                default:
+                    printf("[GS] Unrecognized zbuf format $%02X\n", current_ctx->zbuf.format);
+                    exit(1);
+            }
+            break;
+    }
+}
+
 void GraphicsSynthesizer::draw_pixel(int32_t x, int32_t y, uint32_t z, RGBAQ_REG& color, bool alpha_blending)
 {
     SCISSOR* s = &current_ctx->scissor;
@@ -790,26 +842,12 @@ void GraphicsSynthesizer::draw_pixel(int32_t x, int32_t y, uint32_t z, RGBAQ_REG
         }
     }
 
-    uint32_t pos = (x + (y * current_ctx->frame.width)) * 4;
-    uint32_t dest_z = get_word(current_ctx->zbuf.base_pointer + pos);
+    bool pass_depth_test = true;
     if (test->depth_test)
-    {
-        switch (test->depth_method)
-        {
-            case 0: //FAIL
-                return;
-            case 1: //PASS
-                break;
-            case 2: //GEQUAL
-                if (z < dest_z)
-                    return;
-                break;
-            case 3: //GREATER
-                if (z <= dest_z)
-                    return;
-                break;
-        }
-    }
+        pass_depth_test = depth_test(x, y, z);
+
+    if (!pass_depth_test)
+        return;
 
     uint32_t frame_color = read_PSMCT32_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y);
     uint32_t final_color = 0;
@@ -913,13 +951,27 @@ void GraphicsSynthesizer::draw_pixel(int32_t x, int32_t y, uint32_t z, RGBAQ_REG
             alpha = final_color >> 24;
         final_color &= 0x00FFFFFF;
         final_color |= alpha << 24;
-        uint32_t pos = (x + (y * current_ctx->frame.width)) * 4;
         //if (final_color & 0xFFFFFF)
             //printf("Draw pixel: $%08X ($%08X)\n", final_color, current_ctx->frame.base_pointer + pos);
         write_PSMCT32_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, final_color);
     }
     if (update_z)
-        set_word(current_ctx->zbuf.base_pointer + pos, z);
+    {
+        uint32_t pos = x + (y * current_ctx->frame.width);
+        switch (current_ctx->zbuf.format)
+        {
+            case 0x00:
+                *(uint32_t*)&local_mem[current_ctx->zbuf.base_pointer + (pos << 2)] = z;
+                break;
+            case 0x01:
+                *(uint32_t*)&local_mem[current_ctx->zbuf.base_pointer + (pos << 2)] = z & 0xFFFFFF;
+                break;
+            case 0x02:
+            case 0x0A:
+                *(uint16_t*)&local_mem[current_ctx->zbuf.base_pointer + (pos << 1)] = z & 0xFFFF;
+                break;
+        }
+    }
 }
 
 void GraphicsSynthesizer::render_point()
@@ -1502,9 +1554,9 @@ void GraphicsSynthesizer::tex_lookup(uint16_t u, uint16_t v, RGBAQ_REG& vtx_colo
             break;
         case 0x24:
         {
-            printf("[GS] Format $24: Read from $%08X\n", tex_base + (coord << 2));
+            //printf("[GS] Format $24: Read from $%08X\n", tex_base + (coord << 2));
             uint8_t entry = (read_PSMCT32_block(tex_base, current_ctx->tex0.width, u, v) >> 24) & 0xF;
-            printf("[GS] Format $24: Read entry %d\n", entry);
+            //printf("[GS] Format $24: Read entry %d\n", entry);
             entry = 0xF;
             tex_color.r = entry << 4;
             tex_color.g = entry << 4;

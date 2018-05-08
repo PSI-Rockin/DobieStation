@@ -106,7 +106,21 @@ void Emulator::run()
             VBLANK_sent = true;
             gs.set_VBLANK(true);
             printf("VSYNC FRAMES: %d\n", frames);
-            //cpu.set_disassembly(frames == 261);
+            //cpu.set_disassembly(frames == 700);
+            /*if (frames == 782)
+            {
+                pad.press_button(PAD_BUTTON::UP);
+                iop.set_disassembly(true);
+            }*/
+            /*if (frames >= 782)
+            {
+                int button = frames % 16;
+                if (button == 0)
+                    pad.release_button((PAD_BUTTON)15);
+                else
+                    pad.release_button((PAD_BUTTON)(button - 1));
+                pad.press_button((PAD_BUTTON)button);
+            }*/
             frames++;
             iop_request_IRQ(0);
             gs.render_CRT();
@@ -154,6 +168,16 @@ void Emulator::reset()
     IOP_I_MASK = 0;
     IOP_I_CTRL = 0;
     IOP_POST = 0;
+}
+
+void Emulator::press_button(PAD_BUTTON button)
+{
+    pad.press_button(button);
+}
+
+void Emulator::release_button(PAD_BUTTON button)
+{
+    pad.release_button(button);
 }
 
 uint32_t* Emulator::get_framebuffer()
@@ -342,6 +366,10 @@ void Emulator::execute_ELF()
 
 uint8_t Emulator::read8(uint32_t address)
 {
+    if (address >= 0x00E03180 && address < 0x00E03180 + 0x80)
+    {
+        printf("[EE] Read8 $%08X\n", address);
+    }
     if (address < 0x10000000)
         return RDRAM[address & 0x01FFFFFF];
     if (address >= 0x1FC00000 && address < 0x20000000)
@@ -361,6 +389,10 @@ uint8_t Emulator::read8(uint32_t address)
 
 uint16_t Emulator::read16(uint32_t address)
 {
+    if (address >= 0x00E03180 && address < 0x00E03180 + 0x80)
+    {
+        printf("[EE] Read16 $%08X\n", address);
+    }
     if (address < 0x10000000)
         return *(uint16_t*)&RDRAM[address & 0x01FFFFFF];
     if (address >= 0x1FC00000 && address < 0x20000000)
@@ -378,6 +410,10 @@ uint16_t Emulator::read16(uint32_t address)
 
 uint32_t Emulator::read32(uint32_t address)
 {
+    if (address >= 0x00E03180 && address < 0x00E03180 + 0x80)
+    {
+        printf("[EE] Read32 $%08X\n", address);
+    }
     if (address < 0x10000000)
         return *(uint32_t*)&RDRAM[address & 0x01FFFFFF];
     if (address >= 0x1FC00000 && address < 0x20000000)
@@ -450,6 +486,10 @@ uint32_t Emulator::read32(uint32_t address)
 
 uint64_t Emulator::read64(uint32_t address)
 {
+    if (address >= 0x00E03180 && address < 0x00E03180 + 0x80)
+    {
+        printf("[EE] Read64 $%08X\n", address);
+    }
     if (address < 0x10000000)
         return *(uint64_t*)&RDRAM[address & 0x01FFFFFF];
     if (address >= 0x10000000 && address < 0x10002000)
@@ -468,9 +508,9 @@ uint64_t Emulator::read64(uint32_t address)
 
 void Emulator::write8(uint32_t address, uint8_t value)
 {
-    if ((address & ~0x1) == 0x00E2E690)
+    if (address >= 0x1C05A3D0 && address < 0x1C05A3D0 + 0x20)
     {
-        printf("[EE] Write8 FRAME addr: $%02X\n", value);
+        printf("[EE] IOP Write8 $%08X: $%02X\n", address, value);
     }
     if (address < 0x10000000)
     {
@@ -500,9 +540,9 @@ void Emulator::write8(uint32_t address, uint8_t value)
 
 void Emulator::write16(uint32_t address, uint16_t value)
 {
-    if (address == 0x00E2E690)
+    if (address >= 0x1C05A3D0 && address < 0x1C05A3D0 + 0x20)
     {
-        printf("[EE] Write16 FRAME addr: $%04X\n", value);
+        printf("[EE] IOP Write16 $%08X: $%04X\n", address, value);
     }
     if (address < 0x10000000)
     {
@@ -529,9 +569,9 @@ void Emulator::write16(uint32_t address, uint16_t value)
 
 void Emulator::write32(uint32_t address, uint32_t value)
 {
-    if (address == 0x00E2E690)
+    if (address >= 0x1C05A3D0 && address < 0x1C05A3D0 + 0x20)
     {
-        printf("[EE] Write32 FRAME addr: $%08X\n", value);
+        printf("[EE] IOP Write32 $%08X: $%08X\n", address, value);
     }
     if (address < 0x10000000)
     {
@@ -555,6 +595,7 @@ void Emulator::write32(uint32_t address, uint32_t value)
     }
     if (address >= 0x1C000000 && address < 0x1C200000)
     {
+        printf("[EE] Write32 IOP RAM: $%08X\n", address);
         *(uint32_t*)&IOP_RAM[address & 0x1FFFFF] = value;
         return;
     }
@@ -617,9 +658,9 @@ void Emulator::write32(uint32_t address, uint32_t value)
 
 void Emulator::write64(uint32_t address, uint64_t value)
 {
-    if (address == 0x00E2E690)
+    if (address >= 0x1C05A3D0 && address < 0x1C05A3D0 + 0x20)
     {
-        printf("[EE] Write64 FRAME addr: $%08X_%08X\n", value >> 32, value);
+        printf("[EE] IOP Write64 $%08X: $%08X_%08X\n", address, value >> 32, value);
     }
     if (address < 0x10000000)
     {
@@ -756,6 +797,8 @@ uint32_t Emulator::iop_read32(uint32_t address)
             return iop_dma.get_chan_addr(3);
         case 0x1F8010B8:
             return iop_dma.get_chan_control(3);
+        case 0x1F8010C8:
+            return iop_dma.get_chan_control(4);
         case 0x1F8010F0:
             return iop_dma.get_DPCR();
         case 0x1F8010F4:
@@ -766,6 +809,8 @@ uint32_t Emulator::iop_read32(uint32_t address)
             return iop_timers.read_counter(4);
         case 0x1F8014A0:
             return iop_timers.read_counter(5);
+        case 0x1F801508:
+            return iop_dma.get_chan_control(8);
         case 0x1F801528:
             return iop_dma.get_chan_control(10);
         case 0x1F801548:
@@ -794,6 +839,10 @@ uint32_t Emulator::iop_read32(uint32_t address)
 
 void Emulator::iop_write8(uint32_t address, uint8_t value)
 {
+    if (address >= 0x005A3D0 && address < 0x005A3D0 + 0x80)
+    {
+        printf("[IOP] Write8 $%08X: $%02X\n", address, value);
+    }
     if (address < 0x00200000)
     {
         //printf("[IOP] Write to $%08X of $%02X\n", address, value);
@@ -842,6 +891,10 @@ void Emulator::iop_write8(uint32_t address, uint8_t value)
 
 void Emulator::iop_write16(uint32_t address, uint16_t value)
 {
+    if (address >= 0x005A3D0 && address < 0x005A3D0 + 0x80)
+    {
+        printf("[IOP] Write16 $%08X: $%04X\n", address, value);
+    }
     if (address < 0x00200000)
     {
         //printf("[IOP] Write16 to $%08X of $%08X\n", address, value);
@@ -850,6 +903,18 @@ void Emulator::iop_write16(uint32_t address, uint16_t value)
     }
     switch (address)
     {
+        case 0x1F8010B4:
+            iop_dma.set_chan_size(3, value);
+            return;
+        case 0x1F8010B6:
+            iop_dma.set_chan_count(3, value);
+            return;
+        case 0x1F8010C4:
+            iop_dma.set_chan_size(4, value);
+            return;
+        case 0x1F8010C6:
+            iop_dma.set_chan_count(4, value);
+            return;
         case 0x1F801484:
             iop_timers.write_control(3, value);
             return;
@@ -858,6 +923,12 @@ void Emulator::iop_write16(uint32_t address, uint16_t value)
             return;
         case 0x1F8014A4:
             iop_timers.write_control(5, value);
+            return;
+        case 0x1F801504:
+            iop_dma.set_chan_size(8, value);
+            return;
+        case 0x1F801506:
+            iop_dma.set_chan_count(8, value);
             return;
         case 0x1F801524:
             iop_dma.set_chan_size(10, value);
@@ -875,6 +946,10 @@ void Emulator::iop_write16(uint32_t address, uint16_t value)
 
 void Emulator::iop_write32(uint32_t address, uint32_t value)
 {
+    if (address >= 0x005A3D0 && address < 0x005A3D0 + 0x80)
+    {
+        printf("[IOP] Write32 $%08X: $%08X\n", address, value);
+    }
     if (address < 0x00200000)
     {
         //printf("[IOP] Write to $%08X of $%08X\n", address, value);
@@ -1133,6 +1208,13 @@ void Emulator::iop_puts()
     {
         printf("$%08X", iop.get_gpr(i));
     }*/
+
+    //Little sanity check to prevent crashing the emulator
+    if (len >= 2048)
+    {
+        printf("[IOP] puts len over 2048!\n");
+        len = 2048;
+    }
     while (len)
     {
         ee_log << IOP_RAM[pointer & 0x1FFFFF];
