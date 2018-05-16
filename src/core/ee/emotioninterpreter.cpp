@@ -508,8 +508,7 @@ void EmotionInterpreter::lq(EmotionEngine &cpu, uint32_t instruction)
     uint64_t base = (instruction >> 21) & 0x1F;
     uint32_t addr = cpu.get_gpr<uint32_t>(base) + imm;
     addr &= ~0xF;
-    cpu.set_gpr<uint64_t>(dest, cpu.read64(addr));
-    cpu.set_gpr<uint64_t>(dest, cpu.read64(addr + 8), 1);
+    cpu.set_gpr<uint128_t>(dest, cpu.read128(addr));
 }
 
 void EmotionInterpreter::sq(EmotionEngine &cpu, uint32_t instruction)
@@ -520,8 +519,7 @@ void EmotionInterpreter::sq(EmotionEngine &cpu, uint32_t instruction)
 
     uint32_t addr = cpu.get_gpr<uint32_t>(base) + imm;
     addr &= ~0xF;
-    cpu.write64(addr, cpu.get_gpr<uint64_t>(source));
-    cpu.write64(addr + 8, cpu.get_gpr<uint64_t>(source, 1));
+    cpu.write128(addr, cpu.get_gpr<uint128_t>(source));
 }
 
 void EmotionInterpreter::lb(EmotionEngine &cpu, uint32_t instruction)

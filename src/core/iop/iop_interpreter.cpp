@@ -451,7 +451,7 @@ void IOP_Interpreter::special(IOP &cpu, uint32_t instruction)
             addu(cpu, instruction);
             break;
         case 0x22:
-            add(cpu, instruction);
+            sub(cpu, instruction);
             break;
         case 0x23:
             subu(cpu, instruction);
@@ -668,6 +668,16 @@ void IOP_Interpreter::addu(IOP &cpu, uint32_t instruction)
     op1 = cpu.get_gpr(op1);
     op2 = cpu.get_gpr(op2);
     cpu.set_gpr(dest, op1 + op2);
+}
+
+void IOP_Interpreter::sub(IOP &cpu, uint32_t instruction)
+{
+    uint32_t op1 = (instruction >> 21) & 0x1F;
+    uint32_t op2 = (instruction >> 16) & 0x1F;
+    uint32_t dest = (instruction >> 11) & 0x1F;
+    op1 = cpu.get_gpr(op1);
+    op2 = cpu.get_gpr(op2);
+    cpu.set_gpr(dest, op1 - op2);
 }
 
 void IOP_Interpreter::subu(IOP &cpu, uint32_t instruction)

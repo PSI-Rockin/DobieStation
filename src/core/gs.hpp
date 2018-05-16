@@ -115,6 +115,8 @@ class GraphicsSynthesizer
         bool VBLANK_generated;
         bool VBLANK_enabled;
         bool is_odd_frame;
+        bool FINISH_enabled;
+        bool FINISH_generated;
 
         GSContext context1, context2;
         GSContext* current_ctx;

@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <queue>
 
+#include "int128.hpp"
+
 class SubsystemInterface
 {
     private:
@@ -23,7 +25,7 @@ class SubsystemInterface
         int get_SIF1_size();
 
         void write_SIF0(uint32_t word);
-        void write_SIF1(uint64_t* quad);
+        void write_SIF1(uint128_t quad);
         uint32_t read_SIF0();
         uint32_t read_SIF1();
 

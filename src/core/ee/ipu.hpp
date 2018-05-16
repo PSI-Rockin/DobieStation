@@ -1,0 +1,91 @@
+#ifndef IPU_HPP
+#define IPU_HPP
+#include <cstdint>
+#include <queue>
+
+#include "../int128.hpp"
+
+struct IPU_CTRL
+{
+    bool error_code;
+    bool start_code;
+    uint8_t intra_DC_precision;
+    bool MPEG1;
+    uint8_t picture_type;
+    bool busy;
+};
+
+//Contains information needed for the VDEC command
+struct VLC_Entry
+{
+    uint32_t key;
+    uint32_t value;
+    uint8_t bits;
+};
+
+struct VLC_Table
+{
+    const VLC_Entry entries[];
+};
+
+enum class VDEC_STATE
+{
+    ADVANCE,
+    DECODE,
+    DONE
+};
+
+enum class BDEC_STATE
+{
+    ADVANCE,
+    GET_CBP,
+    RESET_DC,
+    DONE
+};
+
+class ImageProcessingUnit
+{
+    private:
+        static VLC_Entry macroblock_increment[];
+        static VLC_Entry macroblock_I_pic[];
+        VLC_Entry* VDEC_table;
+        std::queue<uint128_t> in_FIFO;
+        std::queue<uint128_t> out_FIFO;
+
+        uint16_t VQCLUT[16];
+
+        IPU_CTRL ctrl;
+        bool command_decoding;
+        uint8_t command;
+        uint32_t command_option;
+        uint32_t command_output;
+        int bytes_left;
+
+        BDEC_STATE bdec_state;
+        VDEC_STATE vdec_state, fdec_state;
+
+        int bit_pointer;
+        void advance_stream(uint8_t amount);
+        bool get_bits(uint32_t& data, int bits);
+        void process_BDEC();
+        void process_VDEC();
+        void process_FDEC();
+    public:
+        ImageProcessingUnit();
+
+        void reset();
+        void run();
+
+        uint64_t read_command();
+        uint32_t read_control();
+        uint32_t read_BP();
+        uint64_t read_top();
+
+        void write_command(uint32_t value);
+        void write_control(uint32_t value);
+
+        bool can_write_FIFO();
+        void write_FIFO(uint128_t quad);
+};
+
+#endif // IPU_HPP

@@ -2,6 +2,8 @@
 #define GIF_HPP
 #include <cstdint>
 
+#include "int128.hpp"
+
 class GraphicsSynthesizer;
 
 struct GIFtag
@@ -25,13 +27,14 @@ class GraphicsInterface
         GIFtag current_tag;
         bool processing_GIF_prim;
 
-        void process_PACKED(uint64_t data[2]);
-        void process_REGLIST(uint64_t data[2]);
-        void feed_GIF(uint64_t data[2]);
+        void process_PACKED(uint128_t quad);
+        void process_REGLIST(uint128_t quad);
+        void feed_GIF(uint128_t quad);
     public:
         GraphicsInterface(GraphicsSynthesizer* gs);
         void reset();
-        void send_PATH3(uint64_t data[2]);
+        void send_PATH2(uint32_t data[4]);
+        void send_PATH3(uint128_t quad);
 };
 
 #endif // GIF_HPP

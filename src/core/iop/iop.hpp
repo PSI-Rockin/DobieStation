@@ -2,6 +2,7 @@
 #define IOP_HPP
 #include <cstdint>
 #include <cstdlib>
+#include <cstdio>
 #include "iop_cop0.hpp"
 
 class Emulator;
@@ -89,6 +90,8 @@ inline void IOP::set_gpr(int index, uint32_t value)
 {
     if (index)
         gpr[index] = value;
+    if (can_disassemble)
+        printf("[IOP] %s = $%08X\n", REG(index), value);
 }
 
 inline void IOP::set_LO(uint32_t value)

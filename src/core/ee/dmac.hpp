@@ -2,6 +2,8 @@
 #define DMAC_HPP
 #include <cstdint>
 
+#include "../int128.hpp"
+
 struct DMA_Channel
 {
     uint32_t control;
@@ -40,7 +42,9 @@ struct D_STAT
 class EmotionEngine;
 class Emulator;
 class GraphicsInterface;
+class ImageProcessingUnit;
 class SubsystemInterface;
+class VectorInterface;
 
 class DMAC
 {
@@ -49,7 +53,9 @@ class DMAC
         EmotionEngine* cpu;
         Emulator* e;
         GraphicsInterface* gif;
+        ImageProcessingUnit* ipu;
         SubsystemInterface* sif;
+        VectorInterface* vif0, *vif1;
         DMA_Channel channels[10];
 
         D_CTRL control;
@@ -58,7 +64,10 @@ class DMAC
 
         uint32_t master_disable;
 
+        void process_VIF0();
+        void process_VIF1();
         void process_GIF();
+        void process_IPU_TO();
         void process_SIF0();
         void process_SIF1();
 
@@ -67,9 +76,11 @@ class DMAC
         void transfer_end(int index);
         void int1_check();
 
-        void fetch128(uint32_t addr, uint64_t* quad);
+        uint128_t fetch128(uint32_t addr);
+        void store128(uint32_t addr, uint128_t data);
     public:
-        DMAC(EmotionEngine* cpu, Emulator* e, GraphicsInterface* gif, SubsystemInterface* sif);
+        DMAC(EmotionEngine* cpu, Emulator* e, GraphicsInterface* gif, ImageProcessingUnit* ipu, SubsystemInterface* sif,
+             VectorInterface* vif0, VectorInterface* vif1);
         void reset(uint8_t* RDRAM, uint8_t* scratchpad);
         void run();
         void run(int cycles);
