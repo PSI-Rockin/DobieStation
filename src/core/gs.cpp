@@ -925,9 +925,30 @@ void GraphicsSynthesizer::draw_pixel(int32_t x, int32_t y, uint32_t z, RGBAQ_REG
 void GraphicsSynthesizer::render_point()
 {
     printf("[GS] Rendering point!\n");
-    Vertex v = vtx_queue[0]; v.to_relative(current_ctx->xyoffset);
-    printf("Coords: (%d, %d, %d)\n", v.x >> 4, v.y >> 4, v.z);
-    draw_pixel(v.x, v.y, v.z, vtx_queue[0].rgbaq, PRIM.alpha_blend);
+    Vertex v1 = vtx_queue[0]; v1.to_relative(current_ctx->xyoffset);
+    printf("Coords: (%d, %d, %d)\n", v1.x >> 4, v1.y >> 4, v1.z);
+    RGBAQ_REG vtx_color, tex_color;
+    vtx_color = v1.rgbaq;
+    if (PRIM.texture_mapping)
+    {
+        uint32_t u, v;
+        if (!PRIM.use_UV)
+        {
+            u = v1.s * current_ctx->tex0.tex_width;
+            v = v1.t * current_ctx->tex0.tex_height;
+        }
+        else
+        {
+            u = (uint32_t) v1.uv.u >> 4;
+            v = (uint32_t) v1.uv.v >> 4;
+        }
+        tex_lookup(u, v, vtx_color, tex_color);
+        draw_pixel(v1.x, v1.y, v1.z, tex_color, PRIM.alpha_blend);
+    }
+    else
+    {
+        draw_pixel(v1.x, v1.y, v1.z, vtx_color, PRIM.alpha_blend);
+    }
 }
 
 void GraphicsSynthesizer::render_line()
@@ -952,6 +973,7 @@ void GraphicsSynthesizer::render_line()
     }
 
     RGBAQ_REG color = vtx_queue[0].rgbaq;
+    RGBAQ_REG tex_color;
 
     printf("Coords: (%d, %d, %d) (%d, %d, %d)\n", v1.x >> 4, v1.y >> 4, v1.z, v2.x >> 4, v2.y >> 4, v2.z);
 
@@ -960,16 +982,31 @@ void GraphicsSynthesizer::render_line()
         uint32_t z = interpolate(x, v1.z, v1.x, v2.z, v2.x);
         float t = (x - v1.x)/(float)(v2.x - v1.x);
         int32_t y = v1.y*(1.-t) + v2.y*t;
-        uint16_t pix_v = interpolate(y, v2.uv.v, v1.y, v2.uv.v, v2.y) >> 4;
-        uint16_t pix_u = interpolate(x, v1.uv.u, v1.x, v2.uv.u, v2.x) >> 4;
-        uint32_t tex_coord = current_ctx->tex0.texture_base + pix_u;
-        tex_coord += (uint32_t)pix_v * current_ctx->tex0.tex_width;
         if (PRIM.gourand_shading)
         {
             color.r = interpolate(x, v1.rgbaq.r, v1.x, v2.rgbaq.r, v2.x);
             color.g = interpolate(x, v1.rgbaq.g, v1.x, v2.rgbaq.g, v2.x);
             color.b = interpolate(x, v1.rgbaq.b, v1.x, v2.rgbaq.b, v2.x);
             color.a = interpolate(x, v1.rgbaq.a, v1.x, v2.rgbaq.a, v2.x);
+        }
+        if (PRIM.texture_mapping)
+        {
+            uint32_t u, v;
+            if (!PRIM.use_UV)
+            {
+                float tex_s, tex_t;
+                tex_s = interpolate(x, v1.s, v1.x, v2.s, v2.x);
+                tex_t = interpolate(y, v1.t, v1.y, v2.t, v2.y);
+                u = tex_s * current_ctx->tex0.tex_width;
+                v = tex_t * current_ctx->tex0.tex_height;
+            }
+            else
+            {
+                v = interpolate(y, v2.uv.v, v1.y, v2.uv.v, v2.y) >> 4;
+                u = interpolate(x, v1.uv.u, v1.x, v2.uv.u, v2.x) >> 4;
+            }
+            tex_lookup(u, v, color, tex_color);
+            color = tex_color;
         }
         if (is_steep)
             draw_pixel(y, x, z, color, PRIM.alpha_blend);
@@ -1058,6 +1095,7 @@ void GraphicsSynthesizer::render_triangle()
     //Iterate through the bounding rectangle using BLOCKSIZE * BLOCKSIZE large blocks
     //This way we can throw out blocks which are totally outside the triangle way faster
     //Thanks you, Dolphin code for the idea
+    //https://github.com/dolphin-emu/dolphin/blob/master/Source/Core/VideoBackends/Software/Rasterizer.cpp#L388
     for (int32_t y_block = min_y; y_block < max_y; y_block += BLOCKSIZE)
     {
         int32_t w1_block = w1_row_block;
@@ -1124,7 +1162,6 @@ void GraphicsSynthesizer::render_triangle()
                             float z = (float) v1.z * w1 + (float) v2.z * w2 + (float) v3.z * w3;
                             z /= divider;
 
-
                             //Gourand shading calculations
                             float r = (float) v1.rgbaq.r * w1 + (float) v2.rgbaq.r * w2 + (float) v3.rgbaq.r * w3;
                             float g = (float) v1.rgbaq.g * w1 + (float) v2.rgbaq.g * w2 + (float) v3.rgbaq.g * w3;
@@ -1147,7 +1184,8 @@ void GraphicsSynthesizer::render_triangle()
                                     t /= divider;
                                     u = s * current_ctx->tex0.tex_width;
                                     v = t * current_ctx->tex0.tex_height;
-                                } else
+                                }
+                                else
                                 {
                                     float temp_u = (float) v1.uv.u * w1 + (float) v2.uv.u * w2 + (float) v3.uv.u * w3;
                                     float temp_v = (float) v1.uv.v * w1 + (float) v2.uv.v * w2 + (float) v3.uv.v * w3;
@@ -1377,7 +1415,7 @@ void GraphicsSynthesizer::host_to_host()
     TRXDIR = 3;
 }
 
-void GraphicsSynthesizer::tex_lookup(uint16_t u, uint16_t v, RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color)
+void GraphicsSynthesizer::tex_lookup(uint16_t u, uint16_t v, const RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color)
 {
     switch (current_ctx->clamp.wrap_s)
     {
