@@ -1,6 +1,8 @@
 #ifndef EMUTHREAD_HPP
 #define EMUTHREAD_HPP
 
+#include <chrono>
+
 #include <QMutex>
 #include <QThread>
 
@@ -38,6 +40,8 @@ class EmuThread : public QThread
         void update_FPS(int FPS);
     public slots:
         void shutdown();
+        void press_key(PAD_BUTTON button);
+        void release_key(PAD_BUTTON button);
         void pause(PAUSE_EVENT event);
         void unpause(PAUSE_EVENT event);
 };

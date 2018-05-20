@@ -53,6 +53,7 @@ namespace IOP_Interpreter
     void divu(IOP& cpu, uint32_t instruction);
     void add(IOP& cpu, uint32_t instruction);
     void addu(IOP& cpu, uint32_t instruction);
+    void sub(IOP& cpu, uint32_t instruction);
     void subu(IOP& cpu, uint32_t instruction);
     void and_cpu(IOP& cpu, uint32_t instruction);
     void or_cpu(IOP& cpu, uint32_t instruction);

@@ -6,7 +6,9 @@
 #include "ee/dmac.hpp"
 #include "ee/emotion.hpp"
 #include "ee/intc.hpp"
+#include "ee/ipu.hpp"
 #include "ee/timers.hpp"
+#include "ee/vif.hpp"
 #include "ee/vu.hpp"
 
 #include "iop/cdvd.hpp"
@@ -17,6 +19,7 @@
 #include "iop/sio2.hpp"
 #include "iop/spu.hpp"
 
+#include "int128.hpp"
 #include "gs.hpp"
 #include "gif.hpp"
 #include "sif.hpp"
@@ -46,9 +49,11 @@ class Emulator
         IOP_DMA iop_dma;
         IOPTiming iop_timers;
         INTC intc;
+        ImageProcessingUnit ipu;
         SIO2 sio2;
         SPU spu, spu2;
         SubsystemInterface sif;
+        VectorInterface vif0, vif1;
         VectorUnit vu0, vu1;
 
         std::ofstream ee_log;
@@ -81,6 +86,8 @@ class Emulator
         ~Emulator();
         void run();
         void reset();
+        void press_button(PAD_BUTTON button);
+        void release_button(PAD_BUTTON button);
         bool skip_BIOS();
         void set_skip_BIOS_hack(SKIP_HACK type);
         void load_BIOS(uint8_t* BIOS);
@@ -95,10 +102,12 @@ class Emulator
         uint16_t read16(uint32_t address);
         uint32_t read32(uint32_t address);
         uint64_t read64(uint32_t address);
+        uint128_t read128(uint32_t address);
         void write8(uint32_t address, uint8_t value);
         void write16(uint32_t address, uint16_t value);
         void write32(uint32_t address, uint32_t value);
         void write64(uint32_t address, uint64_t value);
+        void write128(uint32_t address, uint128_t value);
 
         uint8_t iop_read8(uint32_t address);
         uint16_t iop_read16(uint32_t address);
@@ -110,6 +119,8 @@ class Emulator
         void iop_request_IRQ(int index);
         void iop_ksprintf();
         void iop_puts();
+
+        void test_iop();
 };
 
 #endif // EMULATOR_HPP

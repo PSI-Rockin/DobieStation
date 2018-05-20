@@ -41,6 +41,7 @@ void GSContext::set_tex0(uint64_t value)
     printf("TEX0: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);
     printf("Tex base: $%08X\n", tex0.texture_base);
     printf("Buffer width: %d\n", tex0.width);
+    printf("Tex format: $%02X\n", tex0.format);
     printf("Tex width: %d Height: %d\n", tex0.tex_width, tex0.tex_height);
     printf("Use alpha: %d\n", tex0.use_alpha);
     printf("Color function: $%02X\n", tex0.color_function);

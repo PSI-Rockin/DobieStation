@@ -89,6 +89,20 @@ void EmuThread::shutdown()
     pause_mutex.unlock();
 }
 
+void EmuThread::press_key(PAD_BUTTON button)
+{
+    pause_mutex.lock();
+    e.press_button(button);
+    pause_mutex.unlock();
+}
+
+void EmuThread::release_key(PAD_BUTTON button)
+{
+    pause_mutex.lock();
+    e.release_button(button);
+    pause_mutex.unlock();
+}
+
 void EmuThread::pause(PAUSE_EVENT event)
 {
     pause_status |= 1 << event;

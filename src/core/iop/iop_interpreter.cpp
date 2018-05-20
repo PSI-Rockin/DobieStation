@@ -116,7 +116,12 @@ void IOP_Interpreter::j(IOP &cpu, uint32_t instruction)
     {
         //if (addr == 0x0000E9D0)
             //cpu.set_disassembly(true);
-        if (addr == 0x1EC8 || addr == 0x00001F64)
+        if (addr == 0x00003F78)
+        {
+            uint32_t intr = cpu.get_gpr(4);
+            printf("[IOP] RegisterIntrHandler: $%02X\n", intr);
+        }
+        else if (addr == 0x1EC8 || addr == 0x00001F64)
         {
             uint32_t struct_ptr = cpu.get_gpr(4);
             uint16_t version = cpu.read32(struct_ptr + 8);
@@ -446,7 +451,7 @@ void IOP_Interpreter::special(IOP &cpu, uint32_t instruction)
             addu(cpu, instruction);
             break;
         case 0x22:
-            add(cpu, instruction);
+            sub(cpu, instruction);
             break;
         case 0x23:
             subu(cpu, instruction);
@@ -580,8 +585,8 @@ void IOP_Interpreter::mtlo(IOP &cpu, uint32_t instruction)
 
 void IOP_Interpreter::mult(IOP &cpu, uint32_t instruction)
 {
-    int32_t op1 = (instruction >> 21) & 0x1F;
-    int32_t op2 = (instruction >> 16) & 0x1F;
+    int64_t op1 = (instruction >> 21) & 0x1F;
+    int64_t op2 = (instruction >> 16) & 0x1F;
     op1 = cpu.get_gpr(op1);
     op2 = cpu.get_gpr(op2);
     int64_t temp = op1 * op2;
@@ -591,8 +596,8 @@ void IOP_Interpreter::mult(IOP &cpu, uint32_t instruction)
 
 void IOP_Interpreter::multu(IOP &cpu, uint32_t instruction)
 {
-    uint32_t op1 = (instruction >> 21) & 0x1F;
-    uint32_t op2 = (instruction >> 16) & 0x1F;
+    uint64_t op1 = (instruction >> 21) & 0x1F;
+    uint64_t op2 = (instruction >> 16) & 0x1F;
     op1 = cpu.get_gpr(op1);
     op2 = cpu.get_gpr(op2);
     uint64_t temp = op1 * op2;
@@ -663,6 +668,16 @@ void IOP_Interpreter::addu(IOP &cpu, uint32_t instruction)
     op1 = cpu.get_gpr(op1);
     op2 = cpu.get_gpr(op2);
     cpu.set_gpr(dest, op1 + op2);
+}
+
+void IOP_Interpreter::sub(IOP &cpu, uint32_t instruction)
+{
+    uint32_t op1 = (instruction >> 21) & 0x1F;
+    uint32_t op2 = (instruction >> 16) & 0x1F;
+    uint32_t dest = (instruction >> 11) & 0x1F;
+    op1 = cpu.get_gpr(op1);
+    op2 = cpu.get_gpr(op2);
+    cpu.set_gpr(dest, op1 - op2);
 }
 
 void IOP_Interpreter::subu(IOP &cpu, uint32_t instruction)

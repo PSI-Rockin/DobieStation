@@ -18,8 +18,9 @@ enum CHANNELS
     SPR_TO
 };
 
-DMAC::DMAC(EmotionEngine* cpu, Emulator* e, GraphicsInterface* gif, SubsystemInterface* sif) :
-    RDRAM(nullptr), scratchpad(nullptr), cpu(cpu), e(e), gif(gif), sif(sif)
+DMAC::DMAC(EmotionEngine* cpu, Emulator* e, GraphicsInterface* gif, ImageProcessingUnit* ipu, SubsystemInterface* sif,
+           VectorInterface* vif0, VectorInterface* vif1) :
+    RDRAM(nullptr), scratchpad(nullptr), cpu(cpu), e(e), gif(gif), ipu(ipu), sif(sif), vif0(vif0), vif1(vif1)
 {
 
 }
@@ -44,25 +45,37 @@ void DMAC::reset(uint8_t* RDRAM, uint8_t* scratchpad)
     interrupt_stat.stall_stat = false;
 }
 
-void DMAC::fetch128(uint32_t addr, uint64_t *quad)
+uint128_t DMAC::fetch128(uint32_t addr)
 {
     if (addr & (1 << 31))
     {
         addr &= 0x3FF0;
-        quad[0] = *(uint64_t*)&scratchpad[addr];
-        quad[1] = *(uint64_t*)&scratchpad[addr + 8];
+        return *(uint128_t*)&scratchpad[addr];
     }
     else
     {
         addr &= 0x01FFFFF0;
-        quad[0] = *(uint64_t*)&RDRAM[addr];
-        quad[1] = *(uint64_t*)&RDRAM[addr + 8];
+        return *(uint128_t*)&RDRAM[addr];
+    }
+}
+
+void DMAC::store128(uint32_t addr, uint128_t data)
+{
+    if (addr & (1 << 31))
+    {
+        addr &= 0x3FF0;
+        *(uint128_t*)&scratchpad[addr] = data;
+    }
+    else
+    {
+        addr &= 0x01FFFFF0;
+        *(uint128_t*)&RDRAM[addr] = data;
     }
 }
 
 void DMAC::run()
 {
-    if (!control.master_enable || (master_disable & (1 << 16)))
+    /*if (!control.master_enable || (master_disable & (1 << 16)))
         return;
     for (int i = 0; i < 10; i++)
     {
@@ -70,6 +83,9 @@ void DMAC::run()
         {
             switch (i)
             {
+                case VIF1:
+                    process_VIF1();
+                    break;
                 case GIF:
                     process_GIF();
                     break;
@@ -81,7 +97,7 @@ void DMAC::run()
                     break;
             }
         }
-    }
+    }*/
 }
 
 void DMAC::run(int cycles)
@@ -96,8 +112,17 @@ void DMAC::run(int cycles)
         {
             switch (i)
             {
+                case VIF0:
+                    process_VIF0();
+                    break;
+                case VIF1:
+                    process_VIF1();
+                    break;
                 case GIF:
                     process_GIF();
+                    break;
+                case IPU_TO:
+                    process_IPU_TO();
                     break;
                 case SIF0:
                     process_SIF0();
@@ -133,13 +158,52 @@ void DMAC::int1_check()
     cpu->set_int1_signal(int1_signal);
 }
 
+void DMAC::process_VIF0()
+{
+    if (channels[VIF0].quadword_count)
+    {
+        vif0->feed_DMA(fetch128(channels[VIF0].address));
+
+        channels[VIF0].address += 16;
+        channels[VIF0].quadword_count--;
+    }
+    else
+    {
+        if (channels[VIF0].tag_end)
+            transfer_end(VIF0);
+        else
+            handle_source_chain(VIF0);
+    }
+}
+
+void DMAC::process_VIF1()
+{
+    if (channels[VIF1].quadword_count)
+    {
+        vif1->feed_DMA(fetch128(channels[VIF1].address));
+
+        channels[VIF1].address += 16;
+        channels[VIF1].quadword_count--;
+    }
+    else
+    {
+        if (channels[VIF1].tag_end)
+            transfer_end(VIF1);
+        else
+        {
+            uint128_t DMAtag = fetch128(channels[VIF1].tag_address);
+            if (channels[VIF1].control & (1 << 6))
+                vif1->transfer_DMAtag(DMAtag);
+            handle_source_chain(VIF1);
+        }
+    }
+}
+
 void DMAC::process_GIF()
 {
     if (channels[GIF].quadword_count)
     {
-        uint64_t quad[2];
-        fetch128(channels[GIF].address, quad);
-        gif->send_PATH3(quad);
+        gif->send_PATH3(fetch128(channels[GIF].address));
 
         channels[GIF].address += 16;
         channels[GIF].quadword_count--;
@@ -152,6 +216,27 @@ void DMAC::process_GIF()
         }
         else
             handle_source_chain(GIF);
+    }
+}
+
+void DMAC::process_IPU_TO()
+{
+    if (channels[IPU_TO].quadword_count)
+    {
+        if (ipu->can_write_FIFO())
+        {
+            ipu->write_FIFO(fetch128(channels[IPU_TO].address));
+
+            channels[IPU_TO].address += 16;
+            channels[IPU_TO].quadword_count--;
+        }
+    }
+    else
+    {
+        if (channels[IPU_TO].tag_end)
+            transfer_end(IPU_TO);
+        else
+            handle_source_chain(IPU_TO);
     }
 }
 
@@ -205,9 +290,7 @@ void DMAC::process_SIF1()
     {
         if (sif->get_SIF1_size() <= SubsystemInterface::MAX_FIFO_SIZE - 4)
         {
-            uint64_t quad[2];
-            fetch128(channels[SIF1].address, quad);
-            sif->write_SIF1(quad);
+            sif->write_SIF1(fetch128(channels[SIF1].address));
 
             channels[SIF1].address += 16;
             channels[SIF1].quadword_count--;
@@ -226,9 +309,8 @@ void DMAC::process_SIF1()
 
 void DMAC::handle_source_chain(int index)
 {
-    uint64_t quad[2];
-    fetch128(channels[index].tag_address, quad);
-    uint64_t DMAtag = quad[0];
+    uint128_t quad = fetch128(channels[index].tag_address);
+    uint64_t DMAtag = quad._u64[0];
     printf("[DMAC] Source DMAtag read $%08X: $%08X_%08X\n", channels[index].tag_address, DMAtag >> 32, DMAtag & 0xFFFFFFFF);
 
     //Change CTRL to have the upper 16 bits equal to bits 16-31 of the most recently read DMAtag
@@ -252,19 +334,66 @@ void DMAC::handle_source_chain(int index)
         case 1:
             //cnt
             channels[index].address = channels[index].tag_address + 16;
-            channels[index].tag_address = channels[index].address + (quadword_count * 16);
+            channels[index].tag_address = channels[index].address + (channels[index].quadword_count << 4);
             break;
         case 2:
-        {
-            uint32_t temp = channels[index].tag_address;
+            //next
+            channels[index].address = channels[index].tag_address + 16;
             channels[index].tag_address = addr;
-            channels[index].address = temp + 16;
-        }
             break;
         case 3:
             //ref
             channels[index].address = addr;
             channels[index].tag_address += 16;
+            break;
+        case 5:
+        {
+            //call
+            channels[index].address = channels[index].tag_address + 16;
+
+            int asp = (channels[index].control >> 4) & 0x3;
+            uint32_t saved_addr = channels[index].address + (channels[index].quadword_count << 4);
+            switch (asp)
+            {
+                case 0:
+                    channels[index].tag_save0 = saved_addr;
+                    break;
+                case 1:
+                    channels[index].tag_save1 = saved_addr;
+                    break;
+                case 2:
+                    printf("[DMAC] DMAtag 'call' sent when ASP == 2!\n");
+                    exit(1);
+            }
+            asp++;
+            channels[index].control &= ~(0x3 << 4);
+            channels[index].control |= asp << 4;
+
+            channels[index].tag_address = addr;
+        }
+            break;
+        case 6:
+        {
+            //ret
+            channels[index].address = channels[index].tag_address + 16;
+            int asp = (channels[index].control >> 4) & 0x3;
+            switch (asp)
+            {
+                case 0:
+                    channels[index].tag_end = true;
+                    break;
+                case 1:
+                    channels[index].tag_address = channels[index].tag_save0;
+                    asp--;
+                    break;
+                case 2:
+                    channels[index].tag_address = channels[index].tag_save1;
+                    asp--;
+                    break;
+            }
+            channels[index].control &= ~(0x3 << 4);
+            channels[index].control |= asp << 4;
+        }
             break;
         case 7:
             //end
@@ -307,6 +436,15 @@ uint32_t DMAC::read32(uint32_t address)
     uint32_t reg = 0;
     switch (address)
     {
+        case 0x10009000:
+            reg = channels[VIF1].control;
+            break;
+        case 0x10009010:
+            reg = channels[VIF1].address;
+            break;
+        case 0x10009020:
+            reg = channels[VIF1].quadword_count;
+            break;
         case 0x1000A000:
             //printf("[DMAC] Read GIF control\n");
             reg = channels[GIF].control;
@@ -319,6 +457,30 @@ uint32_t DMAC::read32(uint32_t address)
             break;
         case 0x1000A030:
             reg = channels[GIF].tag_address;
+            break;
+        case 0x1000B000:
+            reg = channels[IPU_FROM].control;
+            break;
+        case 0x1000B010:
+            reg = channels[IPU_FROM].address;
+            break;
+        case 0x1000B020:
+            reg = channels[IPU_FROM].quadword_count;
+            break;
+        case 0x1000B030:
+            reg = channels[IPU_FROM].tag_address;
+            break;
+        case 0x1000B400:
+            reg = channels[IPU_TO].control;
+            break;
+        case 0x1000B410:
+            reg = channels[IPU_TO].address;
+            break;
+        case 0x1000B420:
+            reg = channels[IPU_TO].quadword_count;
+            break;
+        case 0x1000B430:
+            reg = channels[IPU_TO].tag_address;
             break;
         case 0x1000C000:
             reg = channels[SIF0].control;
@@ -371,9 +533,37 @@ void DMAC::write32(uint32_t address, uint32_t value)
             printf("[DMAC] VIF0 CTRL: $%08X\n", value);
             channels[VIF0].control = value;
             if (value & 0x100)
-            {
-                transfer_end(VIF0);
-            }
+                start_DMA(VIF0);
+            break;
+        case 0x10008010:
+            printf("[DMAC] VIF0 M_ADR: $%08X\n", value);
+            channels[VIF0].address = value & ~0xF;
+            break;
+        case 0x10008020:
+            printf("[DMAC] VIF0 QWC: $%08X\n", value);
+            channels[VIF0].quadword_count = value & 0xFFFF;
+            break;
+        case 0x10008030:
+            printf("[DMAC] VIF0 T_ADR: $%08X\n", value);
+            channels[VIF0].tag_address = value & ~0xF;
+            break;
+        case 0x10009000:
+            printf("[DMAC] VIF1 CTRL: $%08X\n", value);
+            channels[VIF1].control = value;
+            if (value & 0x100)
+                start_DMA(VIF1);
+            break;
+        case 0x10009010:
+            printf("[DMAC] VIF1 M_ADR: $%08X\n", value);
+            channels[VIF1].address = value & ~0xF;
+            break;
+        case 0x10009020:
+            printf("[DMAC] VIF1 QWC: $%08X\n", value);
+            channels[VIF1].quadword_count = value & 0xFFFF;
+            break;
+        case 0x10009030:
+            printf("[DMAC] VIF1 T_ADR: $%08X\n", value);
+            channels[VIF1].tag_address = value & ~0xF;
             break;
         case 0x1000A000:
             printf("[DMAC] GIF CTRL: $%08X\n", value);
@@ -392,6 +582,38 @@ void DMAC::write32(uint32_t address, uint32_t value)
         case 0x1000A030:
             printf("[DMAC] GIF T_ADR: $%08X\n", value);
             channels[GIF].tag_address = value & ~0xF;
+            break;
+        case 0x1000B000:
+            printf("[DMAC] IPU_FROM CTRL: $%08X\n", value);
+            channels[IPU_FROM].control = value;
+            if (value & 0x100)
+                start_DMA(IPU_FROM);
+            break;
+        case 0x1000B010:
+            printf("[DMAC] IPU_FROM M_ADR: $%08X\n", value);
+            channels[IPU_FROM].address = value & ~0xF;
+            break;
+        case 0x1000B020:
+            printf("[DMAC] IPU_FROM QWC: $%08X\n", value);
+            channels[IPU_FROM].quadword_count = value & 0xFFFF;
+            break;
+        case 0x1000B400:
+            printf("[DMAC] IPU_TO CTRL: $%08X\n", value);
+            channels[IPU_TO].control = value;
+            if (value & 0x100)
+                start_DMA(IPU_TO);
+            break;
+        case 0x1000B410:
+            printf("[DMAC] IPU_TO M_ADR: $%08X\n", value);
+            channels[IPU_TO].address = value & ~0xF;
+            break;
+        case 0x1000B420:
+            printf("[DMAC] IPU_TO QWC: $%08X\n", value);
+            channels[IPU_TO].quadword_count = value & 0xFFFF;
+            break;
+        case 0x1000B430:
+            printf("[DMAC] IPU_TO T_ADR: $%08X\n", value);
+            channels[IPU_TO].tag_address = value & ~0xF;
             break;
         case 0x1000C000:
             printf("[DMAC] SIF0 CTRL: $%08X\n", value);

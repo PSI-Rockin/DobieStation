@@ -42,6 +42,8 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
     create_menu();
 
     connect(this, SIGNAL(shutdown()), &emuthread, SLOT(shutdown()));
+    connect(this, SIGNAL(press_key(PAD_BUTTON)), &emuthread, SLOT(press_key(PAD_BUTTON)));
+    connect(this, SIGNAL(release_key(PAD_BUTTON)), &emuthread, SLOT(release_key(PAD_BUTTON)));
     connect(&emuthread, SIGNAL(completed_frame(uint32_t*, int, int, int, int)),
             this, SLOT(draw_frame(uint32_t*, int, int, int, int)));
     connect(&emuthread, SIGNAL(update_FPS(int)), this, SLOT(update_FPS(int)));
@@ -203,6 +205,46 @@ void EmuWindow::closeEvent(QCloseEvent *event)
 {
     emit shutdown();
     event->accept();
+}
+
+void EmuWindow::keyPressEvent(QKeyEvent *event)
+{
+    event->accept();
+    switch (event->key())
+    {
+        case Qt::Key_Up:
+            emit press_key(PAD_BUTTON::UP);
+            break;
+        case Qt::Key_Down:
+            emit press_key(PAD_BUTTON::DOWN);
+            break;
+        case Qt::Key_Z:
+            emit press_key(PAD_BUTTON::CIRCLE);
+            break;
+        case Qt::Key_X:
+            emit press_key(PAD_BUTTON::CROSS);
+            break;
+    }
+}
+
+void EmuWindow::keyReleaseEvent(QKeyEvent *event)
+{
+    event->accept();
+    switch (event->key())
+    {
+        case Qt::Key_Up:
+            emit release_key(PAD_BUTTON::UP);
+            break;
+        case Qt::Key_Down:
+            emit release_key(PAD_BUTTON::DOWN);
+            break;
+        case Qt::Key_Z:
+            emit release_key(PAD_BUTTON::CIRCLE);
+            break;
+        case Qt::Key_X:
+            emit release_key(PAD_BUTTON::CROSS);
+            break;
+    }
 }
 
 void EmuWindow::update_FPS(int FPS)

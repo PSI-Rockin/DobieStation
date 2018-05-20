@@ -23,7 +23,9 @@ set(SOURCES
         src/core/ee/emotioninterpreter.cpp
 	src/core/ee/emotion_vu0.cpp
 	src/core/ee/intc.cpp
+	src/core/ee/ipu.cpp
 	src/core/ee/timers.cpp
+	src/core/ee/vif.cpp
 	src/core/ee/vu.cpp
 	src/core/iop/cdvd.cpp
 	src/core/iop/gamepad.cpp
@@ -34,6 +36,7 @@ set(SOURCES
 	src/core/iop/iop_timers.cpp
 	src/core/iop/sio2.cpp
 	src/core/iop/spu.cpp
+	src/core/tests/iop/alu.cpp
         src/core/emulator.cpp
         src/core/gif.cpp
         src/core/gs.cpp
@@ -54,7 +57,9 @@ set(HEADERS
         src/core/ee/emotiondisasm.hpp
         src/core/ee/emotioninterpreter.hpp
 	src/core/ee/intc.hpp
+	src/core/ee/ipu.hpp
 	src/core/ee/timers.hpp
+	src/core/ee/vif.hpp
 	src/core/ee/vu.hpp
 	src/core/iop/cdvd.hpp
 	src/core/iop/gamepad.hpp
@@ -69,6 +74,7 @@ set(HEADERS
         src/core/gif.hpp
         src/core/gs.hpp
 	src/core/gscontext.hpp
+	src/core/int128.hpp
 	src/core/sif.hpp
 	src/qt/emuthread.hpp
         src/qt/emuwindow.hpp

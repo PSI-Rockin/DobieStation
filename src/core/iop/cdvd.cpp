@@ -61,7 +61,7 @@ uint32_t CDVD_Drive::read_to_RAM(uint8_t *RAM, uint32_t bytes)
         {
             active_N_command = NCOMMAND::READ;
             if (N_command == 0x06)
-                N_cycles_left = 100000;
+                N_cycles_left = 20000;
             else
                 N_cycles_left = 10000;
         }
@@ -102,7 +102,7 @@ void CDVD_Drive::update(int cycles)
                     drive_status = READING | SPINNING;
                     active_N_command = NCOMMAND::READ;
                     if (N_command == 0x06)
-                        N_cycles_left = 100000;
+                        N_cycles_left = 20000;
                     else
                         N_cycles_left = 10000;
                     break;
@@ -326,7 +326,7 @@ void CDVD_Drive::write_BREAK()
     if (N_status)
         return;
 
-    N_cycles_left = 8;
+    N_cycles_left = 64;
     active_N_command = NCOMMAND::BREAK;
     N_status = CDVD_STATUS::STOPPED;
 }

@@ -2,40 +2,58 @@
 #define GAMEPAD_HPP
 #include <cstdint>
 
-enum class GAMEPAD_COMMAND
+enum class PAD_BUTTON
 {
-    NONE,
-    WAITING,
-    READ_DATA,
-    CONFIG,
-    QUERY_MODEL,
-    QUERY_ACT,
-    QUERY_COMB,
-    QUERY_MODE,
-    ENABLE_VIBRATION
+    SELECT,
+    L3,
+    R3,
+    START,
+    UP,
+    RIGHT,
+    DOWN,
+    LEFT,
+    L2,
+    R2,
+    L1,
+    R1,
+    TRIANGLE,
+    CIRCLE,
+    CROSS,
+    SQUARE
 };
 
 class Gamepad
 {
     private:
-        int data_sent;
+        uint8_t command_buffer[25];
+        uint8_t rumble_values[7];
+        uint16_t buttons;
+        uint8_t command;
         int command_length;
-        int config_count;
-        GAMEPAD_COMMAND command;
+        int data_count;
 
-        void get_command(uint8_t value);
-        uint8_t read_data(uint8_t value);
-        uint8_t config(uint8_t value);
-        uint8_t query_model(uint8_t value);
-        uint8_t query_act(uint8_t value);
-        uint8_t query_comb(uint8_t value);
-        uint8_t query_mode(uint8_t value);
-        uint8_t enable_vibration(uint8_t value);
+        const static uint8_t config_exit[7];
+        const static uint8_t set_mode[7];
+        const static uint8_t query_model[7];
+        const static uint8_t query_act[2][7];
+        const static uint8_t query_comb[7];
+        const static uint8_t query_mode[7];
+
+        uint8_t LED_value;
+
+        bool analog_mode;
+        bool config_mode;
+        int halfwords_transfer;
     public:
         Gamepad();
 
-        void reset();
+        void set_result(const uint8_t* result);
 
+        void reset();
+        void press_button(PAD_BUTTON button);
+        void release_button(PAD_BUTTON button);
+
+        uint8_t start_transfer(uint8_t value);
         uint8_t write_SIO(uint8_t value);
 };
 

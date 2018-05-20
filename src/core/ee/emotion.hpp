@@ -4,6 +4,8 @@
 #include "cop0.hpp"
 #include "cop1.hpp"
 
+#include "../int128.hpp"
+
 class Emulator;
 class BIOS_HLE;
 class VectorUnit;
@@ -53,12 +55,14 @@ class EmotionEngine
         uint16_t read16(uint32_t address);
         uint32_t read32(uint32_t address);
         uint64_t read64(uint32_t address);
+        uint128_t read128(uint32_t address);
 
         void set_PC(uint32_t addr);
         void write8(uint32_t address, uint8_t value);
         void write16(uint32_t address, uint16_t value);
         void write32(uint32_t address, uint32_t value);
         void write64(uint32_t address, uint64_t value);
+        void write128(uint32_t address, uint128_t value);
 
         void jp(uint32_t new_addr);
         void branch(bool condition, int offset);

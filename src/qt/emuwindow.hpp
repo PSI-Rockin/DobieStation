@@ -34,6 +34,8 @@ class EmuWindow : public QMainWindow
 
         void paintEvent(QPaintEvent *event);
         void closeEvent(QCloseEvent *event);
+        void keyPressEvent(QKeyEvent *event);
+        void keyReleaseEvent(QKeyEvent *event);
 
     protected:
     #ifndef QT_NO_CONTEXTMENU
@@ -42,6 +44,8 @@ class EmuWindow : public QMainWindow
     
     signals:
         void shutdown();
+        void press_key(PAD_BUTTON button);
+        void release_key(PAD_BUTTON button);
     public slots:
         void update_FPS(int FPS);
         void draw_frame(uint32_t* buffer, int inner_w, int inner_h, int final_w, int final_h);

@@ -26,6 +26,7 @@ class SIO2
         std::queue<uint8_t> FIFO;
         uint32_t control;
 
+        bool new_command;
         SIO_DEVICE active_command;
         int command_length;
         int send3_port;

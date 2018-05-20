@@ -58,6 +58,8 @@ class IOP_DMA
 
         void transfer_end(int index);
         void process_CDVD();
+        void process_SPU();
+        void process_SPU2();
         void process_SIF0();
         void process_SIF1();
         void process_SIO2in();
