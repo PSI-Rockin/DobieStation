@@ -1,6 +1,8 @@
 #ifndef EMUTHREAD_HPP
 #define EMUTHREAD_HPP
 
+#include <chrono>
+
 #include <QMutex>
 #include <QThread>
 
