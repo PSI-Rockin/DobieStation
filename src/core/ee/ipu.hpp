@@ -23,11 +23,6 @@ struct VLC_Entry
     uint8_t bits;
 };
 
-struct VLC_Table
-{
-    const VLC_Entry entries[];
-};
-
 enum class VDEC_STATE
 {
     ADVANCE,
