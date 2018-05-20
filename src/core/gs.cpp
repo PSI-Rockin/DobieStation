@@ -697,6 +697,13 @@ void GraphicsSynthesizer::vertex_kick(bool drawing_kick)
                 request_draw_kick = true;
             }
             break;
+        case 2:
+            if (num_vertices == 2)
+            {
+                num_vertices--;
+                request_draw_kick = true;
+            }
+            break;
         case 3:
             if (num_vertices == 3)
             {
@@ -1497,8 +1504,12 @@ void GraphicsSynthesizer::host_to_host()
     TRXDIR = 3;
 }
 
-void GraphicsSynthesizer::tex_lookup(uint16_t u, uint16_t v, RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color)
+void GraphicsSynthesizer::tex_lookup(int16_t u, int16_t v, RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color)
 {
+    if (u & 0x2000)
+        u = -(u & 0x1FFF);
+    if (v & 0x2000)
+        v = -(v & 0x1FFF);
     switch (current_ctx->clamp.wrap_s)
     {
         case 0:
@@ -1566,9 +1577,9 @@ void GraphicsSynthesizer::tex_lookup(uint16_t u, uint16_t v, RGBAQ_REG& vtx_colo
                 int y = (entry & 0x8) != 0;
                 color = read_PSMCT32_block(current_ctx->tex0.CLUT_base, 64, x, y);
             }
-            tex_color.r = 0xFF;
-            tex_color.g = 0xFF;
-            tex_color.b = 0xFF;
+            tex_color.r = entry;
+            tex_color.g = entry;
+            tex_color.b = entry;
             tex_color.a = 0x80;
             //return get_word(addr);
         }

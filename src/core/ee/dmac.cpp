@@ -190,7 +190,12 @@ void DMAC::process_VIF1()
         if (channels[VIF1].tag_end)
             transfer_end(VIF1);
         else
+        {
+            uint128_t DMAtag = fetch128(channels[VIF1].tag_address);
+            if (channels[VIF1].control & (1 << 6))
+                vif1->transfer_DMAtag(DMAtag);
             handle_source_chain(VIF1);
+        }
     }
 }
 
@@ -329,19 +334,66 @@ void DMAC::handle_source_chain(int index)
         case 1:
             //cnt
             channels[index].address = channels[index].tag_address + 16;
-            channels[index].tag_address = channels[index].address + (quadword_count * 16);
+            channels[index].tag_address = channels[index].address + (channels[index].quadword_count << 4);
             break;
         case 2:
-        {
-            uint32_t temp = channels[index].tag_address;
+            //next
+            channels[index].address = channels[index].tag_address + 16;
             channels[index].tag_address = addr;
-            channels[index].address = temp + 16;
-        }
             break;
         case 3:
             //ref
             channels[index].address = addr;
             channels[index].tag_address += 16;
+            break;
+        case 5:
+        {
+            //call
+            channels[index].address = channels[index].tag_address + 16;
+
+            int asp = (channels[index].control >> 4) & 0x3;
+            uint32_t saved_addr = channels[index].address + (channels[index].quadword_count << 4);
+            switch (asp)
+            {
+                case 0:
+                    channels[index].tag_save0 = saved_addr;
+                    break;
+                case 1:
+                    channels[index].tag_save1 = saved_addr;
+                    break;
+                case 2:
+                    printf("[DMAC] DMAtag 'call' sent when ASP == 2!\n");
+                    exit(1);
+            }
+            asp++;
+            channels[index].control &= ~(0x3 << 4);
+            channels[index].control |= asp << 4;
+
+            channels[index].tag_address = addr;
+        }
+            break;
+        case 6:
+        {
+            //ret
+            channels[index].address = channels[index].tag_address + 16;
+            int asp = (channels[index].control >> 4) & 0x3;
+            switch (asp)
+            {
+                case 0:
+                    channels[index].tag_end = true;
+                    break;
+                case 1:
+                    channels[index].tag_address = channels[index].tag_save0;
+                    asp--;
+                    break;
+                case 2:
+                    channels[index].tag_address = channels[index].tag_save1;
+                    asp--;
+                    break;
+            }
+            channels[index].control &= ~(0x3 << 4);
+            channels[index].control |= asp << 4;
+        }
             break;
         case 7:
             //end

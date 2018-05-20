@@ -33,13 +33,57 @@ void VectorInterface::update()
                     printf("[VIF] NOP\n");
                     command_len = 1;
                     break;
+                case 0x01:
+                    printf("[VIF] Set CYCLE\n");
+                    command_len = 1;
+                    break;
+                case 0x02:
+                    printf("[VIF] Set OFFSET\n");
+                    command_len = 1;
+                    break;
+                case 0x03:
+                    printf("[VIF] Set BASE\n");
+                    command_len = 1;
+                    break;
+                case 0x04:
+                    printf("[VIF] Set ITOP\n");
+                    command_len = 1;
+                    break;
+                case 0x05:
+                    printf("[VIF] Set MODE\n");
+                    command_len = 1;
+                    break;
                 case 0x06:
                     printf("[VIF] MSKPATH3: %d\n", (value >> 15) & 0x1);
+                    command_len = 1;
+                    break;
+                case 0x07:
+                    printf("[VIF] Set MARK\n");
+                    command_len = 1;
+                    break;
+                case 0x10:
+                    printf("[VIF] FLUSHE\n");
+                    command_len = 1;
+                    break;
+                case 0x11:
+                    printf("[VIF] FLUSH\n");
                     command_len = 1;
                     break;
                 case 0x13:
                     printf("[VIF] FLUSHA\n");
                     command_len = 1;
+                    break;
+                case 0x20:
+                    printf("[VIF] Set MASK\n");
+                    command_len = 2;
+                    break;
+                case 0x30:
+                    printf("[VIF] Set ROW\n");
+                    command_len = 5;
+                    break;
+                case 0x31:
+                    printf("[VIF] Set COL\n");
+                    command_len = 5;
                     break;
                 case 0x50:
                     command_len = 1;
@@ -58,6 +102,15 @@ void VectorInterface::update()
         {
             switch (command)
             {
+                case 0x20:
+                    //STMASK
+                    break;
+                case 0x30:
+                    //STROW
+                    break;
+                case 0x31:
+                    //STCOL
+                    break;
                 case 0x50:
                     buffer[buffer_size] = value;
                     buffer_size++;
@@ -75,6 +128,15 @@ void VectorInterface::update()
         command_len--;
         FIFO.pop();
     }
+}
+
+bool VectorInterface::transfer_DMAtag(uint128_t tag)
+{
+    //This should return false if the transfer stalls due to the FIFO filling up
+    printf("[VIF] Transfer tag: $%08X_%08X_%08X_%08X\n", tag._u32[3], tag._u32[2], tag._u32[1], tag._u32[0]);
+    for (int i = 2; i < 4; i++)
+        FIFO.push(tag._u32[i]);
+    return true;
 }
 
 void VectorInterface::feed_DMA(uint128_t quad)

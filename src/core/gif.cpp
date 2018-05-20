@@ -119,7 +119,7 @@ void GraphicsInterface::process_REGLIST(uint128_t data)
 
 void GraphicsInterface::feed_GIF(uint128_t data)
 {
-    //printf("[GIF] $%08X_%08X_%08X_%08X\n", data[1] >> 32, data[1] & 0xFFFFFFFF, data[0] >> 32, data[0] & 0xFFFFFFFF);
+    //printf("[GIF] Data: $%08X_%08X_%08X_%08X\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
     uint64_t data1 = data._u64[0];
     uint64_t data2 = data._u64[1];
     if (!current_tag.data_left)

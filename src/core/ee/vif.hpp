@@ -24,6 +24,7 @@ class VectorInterface
         void reset();
         void update();
 
+        bool transfer_DMAtag(uint128_t tag);
         void feed_DMA(uint128_t quad);
 };
 

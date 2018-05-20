@@ -48,6 +48,7 @@ void Emulator::run()
         dmac.run(cycles);
         timers.run(cycles);
         ipu.run();
+        vif0.update();
         vif1.update();
         cycles >>= 2;
         for (int i = 0; i < cycles; i++)
@@ -671,6 +672,12 @@ void Emulator::write128(uint32_t address, uint128_t value)
     }
     switch (address)
     {
+        case 0x10004000:
+            vif0.feed_DMA(value);
+            return;
+        case 0x10005000:
+            vif1.feed_DMA(value);
+            return;
         case 0x10006000:
             gif.send_PATH3(value);
             return;
