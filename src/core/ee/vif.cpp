@@ -86,6 +86,7 @@ void VectorInterface::update()
                     command_len = 5;
                     break;
                 case 0x50:
+                case 0x51:
                     command_len = 1;
                     if (!imm)
                         command_len += 65536;
@@ -112,6 +113,7 @@ void VectorInterface::update()
                     //STCOL
                     break;
                 case 0x50:
+                case 0x51:
                     buffer[buffer_size] = value;
                     buffer_size++;
                     if (buffer_size == 4)

@@ -4,8 +4,8 @@
 #include <sstream>
 #include "emulator.hpp"
 
-#define CYCLES_PER_FRAME 2000000
-#define VBLANK_START CYCLES_PER_FRAME * 0.8
+#define CYCLES_PER_FRAME 4500000
+#define VBLANK_START CYCLES_PER_FRAME * 0.75
 
 Emulator::Emulator() :
     bios_hle(this, &gs), cdvd(this), cp0(&dmac), cpu(&bios_hle, &cp0, &fpu, this, (uint8_t*)&scratchpad, &vu0),
@@ -314,10 +314,6 @@ void Emulator::execute_ELF()
 
 uint8_t Emulator::read8(uint32_t address)
 {
-    if (address >= 0x00E03180 && address < 0x00E03180 + 0x80)
-    {
-        printf("[EE] Read8 $%08X\n", address);
-    }
     if (address < 0x10000000)
         return RDRAM[address & 0x01FFFFFF];
     if (address >= 0x1FC00000 && address < 0x20000000)
@@ -544,6 +540,17 @@ void Emulator::write32(uint32_t address, uint32_t value)
         timers.write32(address, value);
         return;
     }
+    if (address >= 0x1C000000 && address < 0x1C200000)
+    {
+        printf("[EE] Write32 IOP RAM: $%08X\n", address);
+        *(uint32_t*)&IOP_RAM[address & 0x1FFFFF] = value;
+        return;
+    }
+    if (address >= 0x1FFF8000 && address < 0x20000000)
+    {
+        *(uint32_t*)&BIOS[address & 0x3FFFFF] = value;
+        return;
+    }
     if ((address & (0xFF000000)) == 0x12000000)
     {
         gs.write32_privileged(address, value);
@@ -554,20 +561,9 @@ void Emulator::write32(uint32_t address, uint32_t value)
         dmac.write32(address, value);
         return;
     }
-    if (address >= 0x1C000000 && address < 0x1C200000)
-    {
-        printf("[EE] Write32 IOP RAM: $%08X\n", address);
-        *(uint32_t*)&IOP_RAM[address & 0x1FFFFF] = value;
-        return;
-    }
     if (address >= 0x1A000000 && address < 0x1FC00000)
     {
         printf("[EE] Unrecognized write32 to IOP addr $%08X of $%08X\n", address, value);
-        return;
-    }
-    if (address >= 0x1FFF8000 && address < 0x20000000)
-    {
-        *(uint32_t*)&BIOS[address & 0x3FFFFF] = value;
         return;
     }
     switch (address)
@@ -625,13 +621,19 @@ void Emulator::write32(uint32_t address, uint32_t value)
 
 void Emulator::write64(uint32_t address, uint64_t value)
 {
-    if (address >= 0x1C05A3D0 && address < 0x1C05A3D0 + 0x20)
-    {
-        printf("[EE] IOP Write64 $%08X: $%08X_%08X\n", address, value >> 32, value);
-    }
     if (address < 0x10000000)
     {
         *(uint64_t*)&RDRAM[address & 0x01FFFFFF] = value;
+        return;
+    }
+    if (address >= 0x1C000000 && address < 0x1C200000)
+    {
+        *(uint64_t*)&IOP_RAM[address & 0x1FFFFF] = value;
+        return;
+    }
+    if (address >= 0x1FFF8000 && address < 0x20000000)
+    {
+        *(uint64_t*)&BIOS[address & 0x3FFFFF] = value;
         return;
     }
     if (address >= 0x10000000 && address < 0x10002000)
@@ -647,16 +649,6 @@ void Emulator::write64(uint32_t address, uint64_t value)
     if ((address & (0xFF000000)) == 0x12000000)
     {
         gs.write64_privileged(address, value);
-        return;
-    }
-    if (address >= 0x1C000000 && address < 0x1C200000)
-    {
-        *(uint64_t*)&IOP_RAM[address & 0x1FFFFF] = value;
-        return;
-    }
-    if (address >= 0x1FFF8000 && address < 0x20000000)
-    {
-        *(uint64_t*)&BIOS[address & 0x3FFFFF] = value;
         return;
     }
     printf("Unrecognized write64 at physical addr $%08X of $%08X_%08X\n", address, value >> 32, value & 0xFFFFFFFF);

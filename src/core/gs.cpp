@@ -67,7 +67,7 @@ void GraphicsSynthesizer::reset()
     if (!local_mem)
         local_mem = new uint8_t[1024 * 1024 * 4];
     if (!output_buffer)
-        output_buffer = new uint32_t[640 * 448];
+        output_buffer = new uint32_t[1920 * 1280];
     is_odd_frame = false;
     pixels_transferred = 0;
     num_vertices = 0;
@@ -1506,10 +1506,10 @@ void GraphicsSynthesizer::host_to_host()
 
 void GraphicsSynthesizer::tex_lookup(int16_t u, int16_t v, RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color)
 {
-    if (u & 0x2000)
+    /*if (u & 0x2000)
         u = -(u & 0x1FFF);
     if (v & 0x2000)
-        v = -(v & 0x1FFF);
+        v = -(v & 0x1FFF);*/
     switch (current_ctx->clamp.wrap_s)
     {
         case 0:
