@@ -269,8 +269,9 @@ uint32_t IOP_DMA::get_DPCR2()
     uint32_t reg = 0;
     for (int i = 8; i < 16; i++)
     {
-        reg |= DPCR.priorities[i] << (i << 2);
-        reg |= DPCR.enable[i] << ((i << 2) + 3);
+        int bit = i - 8;
+        reg |= DPCR.priorities[i] << (bit << 2);
+        reg |= DPCR.enable[i] << ((bit << 2) + 3);
     }
     return reg;
 }
@@ -348,9 +349,10 @@ void IOP_DMA::set_DPCR2(uint32_t value)
     printf("[IOP DMA] Set DPCR2: $%08X\n", value);
     for (int i = 8; i < 16; i++)
     {
+        int bit = i - 8;
         bool old_enable = DPCR.enable[i];
-        DPCR.priorities[i] = (value >> (i << 2)) & 0x7;
-        DPCR.enable[i] = value & (1 << ((i << 2) + 3));
+        DPCR.priorities[i] = (value >> (bit << 2)) & 0x7;
+        DPCR.enable[i] = value & (1 << ((bit << 2) + 3));
         if (!old_enable && DPCR.enable[i])
             channels[i].tag_end = false;
     }

@@ -2,6 +2,8 @@
 #define VU_HPP
 #include <cstdint>
 
+#include "../int128.hpp"
+
 union VU_R
 {
     float f;
@@ -20,6 +22,9 @@ class VectorUnit
     private:
         int id;
 
+        uint8_t instr_mem[1024 * 16];
+        uint8_t data_mem[1024 * 16];
+
         //GPR
         VU_GPR gpr[32];
         uint16_t int_gpr[16];
@@ -32,6 +37,8 @@ class VectorUnit
         void advance_r();
     public:
         VectorUnit(int id);
+
+        void write128(uint32_t addr, uint128_t data);
 
         uint32_t get_gpr_u(int index, int field);
         void set_gpr_f(int index, int field, float value);
