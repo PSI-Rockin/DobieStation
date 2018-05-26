@@ -82,22 +82,18 @@ struct DISPLAY
 
 struct Vertex
 {
-    uint32_t coords[3];
+    int32_t x, y, z;
+
     RGBAQ_REG rgbaq;
     UV_REG uv;
     float s, t;
+    void to_relative(XYOFFSET xyoffset)
+    {
+        x -= xyoffset.x;
+        y -= xyoffset.y;
+    }
 };
 
-struct Point
-{
-    int32_t x, y, z;
-    uint8_t r, g, b, a;
-    uint16_t u, v;
-    float s, t;
-    Point(int32_t _x, int32_t _y, int32_t _z = 0, uint8_t _r = 0, uint8_t _g = 0, uint8_t _b = 0, uint8_t _a = 0,
-          uint16_t _u = 0, uint16_t _v = 0, float _s = 0, float _t = 0)
-        : x(_x), y(_y), z(_z), r(_r), g(_g), b(_b), a(_a), u(_u), v(_v), s(_s), t(_t) {}
-};
 
 class INTC;
 
@@ -158,7 +154,7 @@ class GraphicsSynthesizer
 
         bool depth_test(int32_t x, int32_t y, uint32_t z);
 
-        void tex_lookup(int16_t u, int16_t v, RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color);
+        void tex_lookup(int16_t u, int16_t v, const RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color);
         void vertex_kick(bool drawing_kick);
         void draw_pixel(int32_t x, int32_t y, uint32_t z, RGBAQ_REG& color, bool alpha_blending);
         void render_primitive();
@@ -170,7 +166,7 @@ class GraphicsSynthesizer
         void unpack_PSMCT24(uint32_t dest_addr, uint64_t data, int offset);
         void host_to_host();
 
-        int32_t orient2D(const Point& v1, const Point& v2, const Point& v3);
+        int32_t orient2D(const Vertex &v1, const Vertex &v2, const Vertex &v3);
     public:
         GraphicsSynthesizer(INTC* intc);
         ~GraphicsSynthesizer();

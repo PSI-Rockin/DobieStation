@@ -420,16 +420,16 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
             printf("UV: ($%04X, $%04X)\n", UV.u, UV.v);
             break;
         case 0x0004:
-            current_vtx.coords[0] = value & 0xFFFF;
-            current_vtx.coords[1] = (value >> 16) & 0xFFFF;
-            current_vtx.coords[2] = value >> 32;
+            current_vtx.x = value & 0xFFFF;
+            current_vtx.y = (value >> 16) & 0xFFFF;
+            current_vtx.z = value >> 32;
             vertex_kick(true);
             break;
         case 0x0005:
             //XYZ2
-            current_vtx.coords[0] = value & 0xFFFF;
-            current_vtx.coords[1] = (value >> 16) & 0xFFFF;
-            current_vtx.coords[2] = value >> 32;
+            current_vtx.x = value & 0xFFFF;
+            current_vtx.y = (value >> 16) & 0xFFFF;
+            current_vtx.z = value >> 32;
             vertex_kick(true);
             break;
         case 0x0006:
@@ -446,9 +446,9 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
             break;
         case 0x000D:
             //XYZ3
-            current_vtx.coords[0] = value & 0xFFFF;
-            current_vtx.coords[1] = (value >> 16) & 0xFFFF;
-            current_vtx.coords[2] = value >> 32;
+            current_vtx.x = value & 0xFFFF;
+            current_vtx.y = (value >> 16) & 0xFFFF;
+            current_vtx.z = value >> 32;
             vertex_kick(false);
             break;
         case 0x000F:
@@ -602,9 +602,9 @@ void GraphicsSynthesizer::set_Q(float q)
 
 void GraphicsSynthesizer::set_XYZ(uint32_t x, uint32_t y, uint32_t z, bool drawing_kick)
 {
-    current_vtx.coords[0] = x;
-    current_vtx.coords[1] = y;
-    current_vtx.coords[2] = z;
+    current_vtx.x = x;
+    current_vtx.y = y;
+    current_vtx.z = z;
     vertex_kick(drawing_kick);
 }
 
@@ -1001,84 +1001,88 @@ void GraphicsSynthesizer::draw_pixel(int32_t x, int32_t y, uint32_t z, RGBAQ_REG
 void GraphicsSynthesizer::render_point()
 {
     printf("[GS] Rendering point!\n");
-    uint32_t point[3];
-    point[0] = vtx_queue[0].coords[0] - current_ctx->xyoffset.x;
-    point[1] = vtx_queue[0].coords[1] - current_ctx->xyoffset.y;
-    point[2] = vtx_queue[0].coords[2];
-    printf("Coords: (%d, %d, %d)\n", point[0] >> 4, point[1] >> 4, point[2]);
-    draw_pixel(point[0], point[1], point[2], vtx_queue[0].rgbaq, PRIM.alpha_blend);
+    Vertex v1 = vtx_queue[0]; v1.to_relative(current_ctx->xyoffset);
+    printf("Coords: (%d, %d, %d)\n", v1.x >> 4, v1.y >> 4, v1.z);
+    RGBAQ_REG vtx_color, tex_color;
+    vtx_color = v1.rgbaq;
+    if (PRIM.texture_mapping)
+    {
+        uint32_t u, v;
+        if (!PRIM.use_UV)
+        {
+            u = v1.s * current_ctx->tex0.tex_width;
+            v = v1.t * current_ctx->tex0.tex_height;
+        }
+        else
+        {
+            u = (uint32_t) v1.uv.u >> 4;
+            v = (uint32_t) v1.uv.v >> 4;
+        }
+        tex_lookup(u, v, vtx_color, tex_color);
+        draw_pixel(v1.x, v1.y, v1.z, tex_color, PRIM.alpha_blend);
+    }
+    else
+    {
+        draw_pixel(v1.x, v1.y, v1.z, vtx_color, PRIM.alpha_blend);
+    }
 }
 
 void GraphicsSynthesizer::render_line()
 {
     printf("[GS] Rendering line!\n");
-    int32_t x1, x2, y1, y2;
-
-    int32_t u1, u2, v1, v2;
-    uint32_t z1, z2;
-    uint8_t r1, g1, b1, a1;
-    uint8_t r2, g2, b2, a2;
-    x1 = vtx_queue[1].coords[0] - current_ctx->xyoffset.x;
-    x2 = vtx_queue[0].coords[0] - current_ctx->xyoffset.x;
-    y1 = vtx_queue[1].coords[1] - current_ctx->xyoffset.y;
-    y2 = vtx_queue[0].coords[1] - current_ctx->xyoffset.y;
-    z1 = vtx_queue[1].coords[2];
-    z2 = vtx_queue[0].coords[2];
-    u1 = vtx_queue[1].uv.u;
-    u2 = vtx_queue[0].uv.u;
-    v1 = vtx_queue[1].uv.v;
-    v2 = vtx_queue[0].uv.v;
-    r1 = vtx_queue[1].rgbaq.r;
-    g1 = vtx_queue[1].rgbaq.g;
-    b1 = vtx_queue[1].rgbaq.b;
-    a1 = vtx_queue[1].rgbaq.a;
-    r2 = vtx_queue[0].rgbaq.r;
-    g2 = vtx_queue[0].rgbaq.g;
-    b2 = vtx_queue[0].rgbaq.b;
-    a2 = vtx_queue[0].rgbaq.a;
+    Vertex v1 = vtx_queue[1]; v1.to_relative(current_ctx->xyoffset);
+    Vertex v2 = vtx_queue[0]; v2.to_relative(current_ctx->xyoffset);
 
     //Transpose line if it's steep
     bool is_steep = false;
-    if (abs(x2 - x1) < abs(y2 - y1))
+    if (abs(v2.x - v1.x) < abs(v2.y - v1.y))
     {
-        swap(x1, y1);
-        swap(x2, y2);
+        swap(v1.x, v1.y);
+        swap(v2.x, v2.y);
         is_steep = true;
     }
 
     //Make line left-to-right
-    if (x1 > x2)
+    if (v1.x > v2.x)
     {
-        swap(x1, x2);
-        swap(y1, y2);
-        swap(z1, z2);
-        swap(u1, u2);
         swap(v1, v2);
-        swap(r1, r2);
-        swap(g1, g2);
-        swap(b1, b2);
-        swap(a1, a2);
     }
 
     RGBAQ_REG color = vtx_queue[0].rgbaq;
+    RGBAQ_REG tex_color;
 
-    printf("Coords: (%d, %d, %d) (%d, %d, %d)\n", x1 >> 4, y1 >> 4, z1, x2 >> 4, y2 >> 4, z2);
+    printf("Coords: (%d, %d, %d) (%d, %d, %d)\n", v1.x >> 4, v1.y >> 4, v1.z, v2.x >> 4, v2.y >> 4, v2.z);
 
-    for (int32_t x = x1; x < x2; x += 0x10)
+    for (int32_t x = v1.x; x < v2.x; x += 0x10)
     {
-        uint32_t z = interpolate(x, z1, x1, z2, x2);
-        float t = (x - x1)/(float)(x2 - x1);
-        int32_t y = y1*(1.-t) + y2*t;
-        uint16_t pix_v = interpolate(y, v1, y1, v2, y2) >> 4;
-        uint16_t pix_u = interpolate(x, u1, x1, u2, x2) >> 4;
-        uint32_t tex_coord = current_ctx->tex0.texture_base + pix_u;
-        tex_coord += (uint32_t)pix_v * current_ctx->tex0.tex_width;
+        uint32_t z = interpolate(x, v1.z, v1.x, v2.z, v2.x);
+        float t = (x - v1.x)/(float)(v2.x - v1.x);
+        int32_t y = v1.y*(1.-t) + v2.y*t;
         if (PRIM.gourand_shading)
         {
-            color.r = interpolate(x, r1, x1, r2, x2);
-            color.g = interpolate(x, g1, x1, g2, x2);
-            color.b = interpolate(x, b1, x1, b2, x2);
-            color.a = interpolate(x, a1, x1, a2, x2);
+            color.r = interpolate(x, v1.rgbaq.r, v1.x, v2.rgbaq.r, v2.x);
+            color.g = interpolate(x, v1.rgbaq.g, v1.x, v2.rgbaq.g, v2.x);
+            color.b = interpolate(x, v1.rgbaq.b, v1.x, v2.rgbaq.b, v2.x);
+            color.a = interpolate(x, v1.rgbaq.a, v1.x, v2.rgbaq.a, v2.x);
+        }
+        if (PRIM.texture_mapping)
+        {
+            uint32_t u, v;
+            if (!PRIM.use_UV)
+            {
+                float tex_s, tex_t;
+                tex_s = interpolate(x, v1.s, v1.x, v2.s, v2.x);
+                tex_t = interpolate(y, v1.t, v1.y, v2.t, v2.y);
+                u = tex_s * current_ctx->tex0.tex_width;
+                v = tex_t * current_ctx->tex0.tex_height;
+            }
+            else
+            {
+                v = interpolate(y, v2.uv.v, v1.y, v2.uv.v, v2.y) >> 4;
+                u = interpolate(x, v1.uv.u, v1.x, v2.uv.u, v2.x) >> 4;
+            }
+            tex_lookup(u, v, color, tex_color);
+            color = tex_color;
         }
         if (is_steep)
             draw_pixel(y, x, z, color, PRIM.alpha_blend);
@@ -1092,7 +1096,7 @@ void GraphicsSynthesizer::render_line()
 // 0 if they it's on the same line
 // Negative value if they are in a clockwise order
 // Basicly the cross product of (v2 - v1) and (v3 - v1) vectors
-int32_t GraphicsSynthesizer::orient2D(const Point &v1, const Point &v2, const Point &v3)
+int32_t GraphicsSynthesizer::orient2D(const Vertex &v1, const Vertex &v2, const Vertex &v3)
 {
     return (v2.x - v1.x) * (v3.y - v1.y) - (v3.x - v1.x) * (v2.y - v1.y);
 }
@@ -1102,46 +1106,9 @@ void GraphicsSynthesizer::render_triangle()
     return;
     printf("[GS] Rendering triangle!\n");
 
-    int32_t x1, x2, x3, y1, y2, y3, z1, z2, z3;
-    uint8_t r1, r2, r3, g1, g2, g3, b1, b2, b3, a1, a2, a3;
-    uint16_t u1, u2, u3, tex_v1, tex_v2, tex_v3;
-    float s1, s2, s3, t1, t2, t3;
-    x1 = vtx_queue[2].coords[0] - current_ctx->xyoffset.x;
-    y1 = vtx_queue[2].coords[1] - current_ctx->xyoffset.y;
-    z1 = vtx_queue[2].coords[2];
-    x2 = vtx_queue[1].coords[0] - current_ctx->xyoffset.x;
-    y2 = vtx_queue[1].coords[1] - current_ctx->xyoffset.y;
-    z2 = vtx_queue[1].coords[2];
-    x3 = vtx_queue[0].coords[0] - current_ctx->xyoffset.x;
-    y3 = vtx_queue[0].coords[1] - current_ctx->xyoffset.y;
-    z3 = vtx_queue[0].coords[2];
-    r1 = vtx_queue[2].rgbaq.r;
-    g1 = vtx_queue[2].rgbaq.g;
-    b1 = vtx_queue[2].rgbaq.b;
-    a1 = vtx_queue[2].rgbaq.a;
-    r2 = vtx_queue[1].rgbaq.r;
-    g2 = vtx_queue[1].rgbaq.g;
-    b2 = vtx_queue[1].rgbaq.b;
-    a2 = vtx_queue[1].rgbaq.a;
-    r3 = vtx_queue[0].rgbaq.r;
-    g3 = vtx_queue[0].rgbaq.g;
-    b3 = vtx_queue[0].rgbaq.b;
-    a3 = vtx_queue[0].rgbaq.a;
-    u1 = vtx_queue[2].uv.u;
-    tex_v1 = vtx_queue[2].uv.v;
-    s1 = vtx_queue[2].s;
-    t1 = vtx_queue[2].t;
-    u2 = vtx_queue[1].uv.u;
-    tex_v2 = vtx_queue[1].uv.v;
-    s2 = vtx_queue[1].s;
-    t2 = vtx_queue[1].t;
-    u3 = vtx_queue[0].uv.u;
-    tex_v3 = vtx_queue[0].uv.v;
-    s3 = vtx_queue[0].s;
-    t3 = vtx_queue[0].t;
-    Point v1(x1, y1, z1, r1, g1, b1, a1, u1, tex_v1, s1, t1);
-    Point v2(x2, y2, z2, r2, g2, b2, a2, u2, tex_v2, s2, t2);
-    Point v3(x3, y3, z3, r3, g3, b3, a3, u3, tex_v3, s3, t3);
+    Vertex v1 = vtx_queue[2]; v1.to_relative(current_ctx->xyoffset);
+    Vertex v2 = vtx_queue[1]; v2.to_relative(current_ctx->xyoffset);
+    Vertex v3 = vtx_queue[0]; v3.to_relative(current_ctx->xyoffset);
 
     //The triangle rasterization code uses an approach with barycentric coordinates
     //Clear explanation can be read below:
@@ -1151,159 +1118,214 @@ void GraphicsSynthesizer::render_triangle()
     if (orient2D(v1, v2, v3) < 0)
         swap(v2, v3);
 
+    int32_t divider = orient2D(v1, v2, v3);
     //Calculate bounding box of triangle
     int32_t min_x = min({v1.x, v2.x, v3.x});
     int32_t min_y = min({v1.y, v2.y, v3.y});
     int32_t max_x = max({v1.x, v2.x, v3.x});
     int32_t max_y = max({v1.y, v2.y, v3.y});
 
+    //We'll process the pixels in blocks, set the blocksize
+    const int32_t BLOCKSIZE = 1 << 3; // Must be power of 2
+
+    //Round down to make starting corner's coordinates a multiple of BLOCKSIZE with bitwise magic
+    min_x &= ~(BLOCKSIZE - 1);
+    min_y &= ~(BLOCKSIZE - 1);
+
     //Calculate incremental steps for the weights
     //Reference: https://fgiesen.wordpress.com/2013/02/10/optimizing-the-basic-rasterizer/
-    int32_t A12 = v1.y - v2.y;
-    int32_t B12 = v2.x - v1.x;
-    int32_t A23 = v2.y - v3.y;
-    int32_t B23 = v3.x - v2.x;
-    int32_t A31 = v3.y - v1.y;
-    int32_t B31 = v1.x - v3.x;
+    const int32_t A12 = v1.y - v2.y;
+    const int32_t B12 = v2.x - v1.x;
+    const int32_t A23 = v2.y - v3.y;
+    const int32_t B23 = v3.x - v2.x;
+    const int32_t A31 = v3.y - v1.y;
+    const int32_t B31 = v1.x - v3.x;
 
-    Point min_corner(min_x, min_y);
+    Vertex min_corner;
+    min_corner.x = min_x; min_corner.y = min_y;
     int32_t w1_row = orient2D(v2, v3, min_corner);
     int32_t w2_row = orient2D(v3, v1, min_corner);
     int32_t w3_row = orient2D(v1, v2, min_corner);
+    int32_t w1_row_block = w1_row;
+    int32_t w2_row_block = w2_row;
+    int32_t w3_row_block = w3_row;
 
     if (!PRIM.gourand_shading)
     {
         //Flatten the colors
-        v1.r = v3.r;
-        v2.r = v3.r;
+        v1.rgbaq.r = v3.rgbaq.r;
+        v2.rgbaq.r = v3.rgbaq.r;
 
-        v1.g = v3.g;
-        v2.g = v3.g;
+        v1.rgbaq.g = v3.rgbaq.g;
+        v2.rgbaq.g = v3.rgbaq.g;
 
-        v1.b = v3.b;
-        v2.b = v3.b;
+        v1.rgbaq.b = v3.rgbaq.b;
+        v2.rgbaq.b = v3.rgbaq.b;
 
-        v1.a = v3.a;
-        v2.a = v3.a;
+        v1.rgbaq.a = v3.rgbaq.a;
+        v2.rgbaq.a = v3.rgbaq.a;
     }
 
     RGBAQ_REG vtx_color, tex_color;
 
     //TODO: Parallelize this
-    //Iterate through pixels in bounds
-    for (int32_t y = min_y; y <= max_y; y++)
+    //Iterate through the bounding rectangle using BLOCKSIZE * BLOCKSIZE large blocks
+    //This way we can throw out blocks which are totally outside the triangle way faster
+    //Thanks you, Dolphin code for the idea
+    //https://github.com/dolphin-emu/dolphin/blob/master/Source/Core/VideoBackends/Software/Rasterizer.cpp#L388
+    for (int32_t y_block = min_y; y_block < max_y; y_block += BLOCKSIZE)
     {
-        int32_t w1 = w1_row;
-        int32_t w2 = w2_row;
-        int32_t w3 = w3_row;
-        for (int32_t x = min_x; x <= max_x; x++)
+        int32_t w1_block = w1_row_block;
+        int32_t w2_block = w2_row_block;
+        int32_t w3_block = w3_row_block;
+        for (int32_t x_block = min_x; x_block < max_x; x_block += BLOCKSIZE)
         {
-            //Is inside triangle?
-            if ((w1 | w2 | w3) >= 0)
+            //Store barycentric coordinates for the corners of a block
+            //tl = top left, tr = top right, etc.
+            int32_t w1_tl, w1_tr, w1_bl, w1_br;
+            int32_t w2_tl, w2_tr, w2_bl, w2_br;
+            int32_t w3_tl, w3_tr, w3_bl, w3_br;
+            //Calculate the weight offsets for the corners
+            w1_tl = w1_block; w2_tl = w2_block, w3_tl = w3_block;
+            w1_tr = w1_tl + (BLOCKSIZE - 1) * A23;
+            w2_tr = w2_tl + (BLOCKSIZE - 1) * A31;
+            w3_tr = w3_tl + (BLOCKSIZE - 1) * A12;
+            w1_bl = w1_tl + (BLOCKSIZE - 1) * B23;
+            w2_bl = w2_tl + (BLOCKSIZE - 1) * B31;
+            w3_bl = w3_tl + (BLOCKSIZE - 1) * B12;
+            w1_br = w1_tl + (BLOCKSIZE - 1) * B23 + (BLOCKSIZE - 1) * A23;
+            w2_br = w2_tl + (BLOCKSIZE - 1) * B31 + (BLOCKSIZE - 1) * A31;
+            w3_br = w3_tl + (BLOCKSIZE - 1) * B12 + (BLOCKSIZE - 1) * A12;
+
+            //Check if any of the corners are in the positive half-space of a weight
+            bool w1_tl_check = w1_tl > 0;
+            bool w1_tr_check = w1_tr > 0;
+            bool w1_bl_check = w1_bl > 0;
+            bool w1_br_check = w1_br > 0;
+            bool w2_tl_check = w2_tl > 0;
+            bool w2_tr_check = w2_tr > 0;
+            bool w2_bl_check = w2_bl > 0;
+            bool w2_br_check = w2_br > 0;
+            bool w3_tl_check = w3_tl > 0;
+            bool w3_tr_check = w3_tr > 0;
+            bool w3_bl_check = w3_bl > 0;
+            bool w3_br_check = w3_br > 0;
+
+
+            //Combine all checks for a barycentric coordinate into one
+            //If for one half-space checks for each corner --> all corners lie outside the triangle --> block can be skipped
+            uint8_t w1_mask = (w1_tl_check << 0) | (w1_tr_check << 1) | (w1_bl_check << 2) | (w1_br_check << 3);
+            uint8_t w2_mask = (w2_tl_check << 0) | (w2_tr_check << 1) | (w2_bl_check << 2) | (w2_br_check << 3);
+            uint8_t w3_mask = (w3_tl_check << 0) | (w3_tr_check << 1) | (w3_bl_check << 2) | (w3_br_check << 3);
+            //However in other cases, we process the block pixel-by-pixel as usual
+            //TODO: In the case where all corners lie inside the triangle the code below could be slightly simplified
+            if (w1_mask != 0 && w2_mask != 0 && w3_mask != 0)
             {
-                int32_t divider = w1 + w2 + w3;
-                //Interpolate Z
-                float z = (float) v1.z * w1 + (float) v2.z * w2 + (float) v3.z * w3;
-                z /= divider;
-
-                //Gourand shading calculations
-                float r = (float) v1.r * w1 + (float) v2.r * w2 + (float) v3.r * w3;
-                float g = (float) v1.g * w1 + (float) v2.g * w2 + (float) v3.g * w3;
-                float b = (float) v1.b * w1 + (float) v2.b * w2 + (float) v3.b * w3;
-                float a = (float) v1.a * w1 + (float) v2.a * w2 + (float) v3.a * w3;
-                vtx_color.r = r / divider;
-                vtx_color.g = g / divider;
-                vtx_color.b = b / divider;
-                vtx_color.a = a / divider;
-
-                if (PRIM.texture_mapping)
+                //Process a BLOCKSIZE * BLOCKSIZE block as normal
+                int32_t w1_row = w1_block;
+                int32_t w2_row = w2_block;
+                int32_t w3_row = w3_block;
+                for (int32_t y = y_block; y < y_block + BLOCKSIZE; y++)
                 {
-                    uint32_t u, v;
-                    if (!PRIM.use_UV)
+                    int32_t w1 = w1_row;
+                    int32_t w2 = w2_row;
+                    int32_t w3 = w3_row;
+                    for (int32_t x = x_block; x < x_block + BLOCKSIZE; x++)
                     {
-                        float s, t;
-                        s = v1.s * w1 + v2.s * w2 + v3.s * w3;
-                        t = v1.t * w1 + v2.t * w2 + v3.t * w3;
-                        s /= divider;
-                        t /= divider;
-                        u = s * current_ctx->tex0.tex_width;
-                        v = t * current_ctx->tex0.tex_height;
+                        //Is inside triangle?
+                        if ((w1 | w2 | w3) >= 0)
+                        {
+                            //Interpolate Z
+                            float z = (float) v1.z * w1 + (float) v2.z * w2 + (float) v3.z * w3;
+                            z /= divider;
+
+                            //Gourand shading calculations
+                            float r = (float) v1.rgbaq.r * w1 + (float) v2.rgbaq.r * w2 + (float) v3.rgbaq.r * w3;
+                            float g = (float) v1.rgbaq.g * w1 + (float) v2.rgbaq.g * w2 + (float) v3.rgbaq.g * w3;
+                            float b = (float) v1.rgbaq.b * w1 + (float) v2.rgbaq.b * w2 + (float) v3.rgbaq.b * w3;
+                            float a = (float) v1.rgbaq.a * w1 + (float) v2.rgbaq.a * w2 + (float) v3.rgbaq.a * w3;
+                            vtx_color.r = r / divider;
+                            vtx_color.g = g / divider;
+                            vtx_color.b = b / divider;
+                            vtx_color.a = a / divider;
+
+                            if (PRIM.texture_mapping)
+                            {
+                                uint32_t u, v;
+                                if (!PRIM.use_UV)
+                                {
+                                    float s, t;
+                                    s = v1.s * w1 + v2.s * w2 + v3.s * w3;
+                                    t = v1.t * w1 + v2.t * w2 + v3.t * w3;
+                                    s /= divider;
+                                    t /= divider;
+                                    u = s * current_ctx->tex0.tex_width;
+                                    v = t * current_ctx->tex0.tex_height;
+                                }
+                                else
+                                {
+                                    float temp_u = (float) v1.uv.u * w1 + (float) v2.uv.u * w2 + (float) v3.uv.u * w3;
+                                    float temp_v = (float) v1.uv.v * w1 + (float) v2.uv.v * w2 + (float) v3.uv.v * w3;
+                                    temp_u /= divider;
+                                    temp_v /= divider;
+                                    u = (uint32_t) temp_u >> 4;
+                                    v = (uint32_t) temp_v >> 4;
+                                }
+                                tex_lookup(u, v, vtx_color, tex_color);
+                                draw_pixel(x, y, (uint32_t) z, tex_color, PRIM.alpha_blend);
+                            } else
+                            {
+                                draw_pixel(x, y, (uint32_t) z, vtx_color, PRIM.alpha_blend);
+                            }
+                        }
+                        //Horizontal step
+                        w1 += A23;
+                        w2 += A31;
+                        w3 += A12;
                     }
-                    else
-                    {
-                        float temp_u = (float) v1.u * w1 + (float) v2.u * w2 + (float) v3.u * w3;
-                        float temp_v = (float) v1.v * w1 + (float) v2.v * w2 + (float) v3.v * w3;
-                        temp_u /= divider;
-                        temp_v /= divider;
-                        u = (uint32_t)temp_u >> 4;
-                        v = (uint32_t)temp_v >> 4;
-                    }
-                    tex_lookup(u, v, vtx_color, tex_color);
-                    draw_pixel(x, y, (uint32_t)z, tex_color, PRIM.alpha_blend);
-                }
-                else
-                {
-                    draw_pixel(x, y, (uint32_t)z, vtx_color, PRIM.alpha_blend);
+                    //Vertical step
+                    w1_row += B23;
+                    w2_row += B31;
+                    w3_row += B12;
                 }
             }
-            //Horizontal step
-            w1 += A23;
-            w2 += A31;
-            w3 += A12;
+
+            w1_block += BLOCKSIZE * A23;
+            w2_block += BLOCKSIZE * A31;
+            w3_block += BLOCKSIZE * A12;
+
         }
-        //Vertical step
-        w1_row += B23;
-        w2_row += B31;
-        w3_row += B12;
+        w1_row_block += BLOCKSIZE * B23;
+        w2_row_block += BLOCKSIZE * B31;
+        w3_row_block += BLOCKSIZE * B12;
     }
+
 }
 
 void GraphicsSynthesizer::render_sprite()
 {
     printf("[GS] Rendering sprite!\n");
-    int32_t x1, x2, y1, y2;
-    int32_t u1, u2, v1, v2;
-    uint8_t r1, r2, r3, g1, g2, g3, b1, b2, b3, a1, a2, a3;
-    float s1, s2, t1, t2, q1, q2;
-    x1 = vtx_queue[1].coords[0] - current_ctx->xyoffset.x;
-    x2 = vtx_queue[0].coords[0] - current_ctx->xyoffset.x;
-    y1 = vtx_queue[1].coords[1] - current_ctx->xyoffset.y;
-    y2 = vtx_queue[0].coords[1] - current_ctx->xyoffset.y;
-    u1 = vtx_queue[1].uv.u;
-    u2 = vtx_queue[0].uv.u;
-    v1 = vtx_queue[1].uv.v;
-    v2 = vtx_queue[0].uv.v;
-    s1 = vtx_queue[1].s;
-    s2 = vtx_queue[0].s;
-    t1 = vtx_queue[1].t;
-    t2 = vtx_queue[0].t;
-    q1 = vtx_queue[1].rgbaq.q;
-    q2 = vtx_queue[0].rgbaq.q;
-    uint32_t z = vtx_queue[0].coords[2];
+    Vertex v1 = vtx_queue[1]; v1.to_relative(current_ctx->xyoffset);
+    Vertex v2 = vtx_queue[0]; v2.to_relative(current_ctx->xyoffset);
 
     RGBAQ_REG vtx_color, tex_color;
     vtx_color = vtx_queue[0].rgbaq;
 
-    if (x1 > x2)
+    if (v1.x > v2.x)
     {
-        swap(x1, x2);
-        swap(y1, y2);
-        swap(u1, u2);
         swap(v1, v2);
-        swap(s1, s2);
-        swap(t1, t2);
     }
 
-    printf("Coords: (%d, %d) (%d, %d)\n", x1 >> 4, y1 >> 4, x2 >> 4, y2 >> 4);
+    printf("Coords: (%d, %d) (%d, %d)\n", v1.x >> 4, v1.y >> 4, v2.x >> 4, v2.y >> 4);
 
-    for (int32_t y = y1; y < y2; y += 0x10)
+    for (int32_t y = v1.y; y < v2.y; y += 0x10)
     {
-        float pix_t = interpolate_f(y, t1, y1, t2, y2);
-        uint16_t pix_v = interpolate(y, v1, y1, v2, y2) >> 4;
-        for (int32_t x = x1; x < x2; x += 0x10)
+        float pix_t = interpolate_f(y, v1.t, v1.y, v2.t, v2.y);
+        uint16_t pix_v = interpolate(y, v1.uv.v, v1.y, v2.uv.v, v2.y) >> 4;
+        for (int32_t x = v1.x; x < v2.x; x += 0x10)
         {
-            float pix_s = interpolate_f(x, s1, x1, s2, x2);
-            uint16_t pix_u = interpolate(x, u1, x1, u2, x2) >> 4;
+            float pix_s = interpolate_f(x, v1.s, v1.x, v2.s, v2.x);
+            uint16_t pix_u = interpolate(x, v1.uv.u, v1.x, v2.uv.u, v2.x) >> 4;
             if (PRIM.texture_mapping)
             {
                 if (!PRIM.use_UV)
@@ -1312,11 +1334,11 @@ void GraphicsSynthesizer::render_sprite()
                     pix_u = pix_s * current_ctx->tex0.tex_width;
                 }
                 tex_lookup(pix_u, pix_v, vtx_color, tex_color);
-                draw_pixel(x, y, z, tex_color, PRIM.alpha_blend);
+                draw_pixel(x, y, v2.z, tex_color, PRIM.alpha_blend);
             }
             else
             {
-                draw_pixel(x, y, z, vtx_color, PRIM.alpha_blend);
+                draw_pixel(x, y, v2.z, vtx_color, PRIM.alpha_blend);
             }
         }
     }
@@ -1504,7 +1526,7 @@ void GraphicsSynthesizer::host_to_host()
     TRXDIR = 3;
 }
 
-void GraphicsSynthesizer::tex_lookup(int16_t u, int16_t v, RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color)
+void GraphicsSynthesizer::tex_lookup(int16_t u, int16_t v, const RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color)
 {
     /*if (u & 0x2000)
         u = -(u & 0x1FFF);
