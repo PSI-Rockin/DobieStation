@@ -223,6 +223,34 @@ void VectorUnit::ftoi4(uint8_t field, uint8_t dest, uint8_t source)
     printf("\n");
 }
 
+void VectorUnit::ftoi12(uint8_t field, uint8_t dest, uint8_t source)
+{
+    printf("[VU] FTOI12: ");
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            gpr[dest].s[i] = (int32_t)(convert(gpr[source].u[i]) * (1.0f / 0.000244140625f));
+            printf("(%d)$%08X ", i, gpr[dest].s[i]);
+        }
+    }
+    printf("\n");
+}
+
+void VectorUnit::ftoi15(uint8_t field, uint8_t dest, uint8_t source)
+{
+    printf("[VU] FTOI15: ");
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            gpr[dest].s[i] = (int32_t)(convert(gpr[source].u[i]) * (1.0f / 0.000030517578125));
+            printf("(%d)$%08X ", i, gpr[dest].s[i]);
+        }
+    }
+    printf("\n");
+}
+
 void VectorUnit::iadd(uint8_t dest, uint8_t reg1, uint8_t reg2)
 {
     set_int(dest, int_gpr[reg1] + int_gpr[reg2]);

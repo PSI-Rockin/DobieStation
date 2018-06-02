@@ -181,6 +181,12 @@ void EmotionInterpreter::cop2_special2(VectorUnit &vu0, uint32_t instruction)
         case 0x15:
             cop2_vftoi4(vu0, instruction);
             break;
+        case 0x16:
+            cop2_vftoi12(vu0, instruction);
+            break;
+        case 0x17:
+            cop2_vftoi15(vu0, instruction);
+            break;
         case 0x18:
         case 0x19:
         case 0x1A:
@@ -273,6 +279,22 @@ void EmotionInterpreter::cop2_vftoi4(VectorUnit &vu0, uint32_t instruction)
     uint8_t dest = (instruction >> 16) & 0x1F;
     uint8_t field = (instruction >> 21) & 0xF;
     vu0.ftoi4(field, dest, source);
+}
+
+void EmotionInterpreter::cop2_vftoi12(VectorUnit &vu0, uint32_t instruction)
+{
+    uint8_t source = (instruction >> 11) & 0x1F;
+    uint8_t dest = (instruction >> 16) & 0x1F;
+    uint8_t field = (instruction >> 21) & 0xF;
+    vu0.ftoi12(field, dest, source);
+}
+
+void EmotionInterpreter::cop2_vftoi15(VectorUnit &vu0, uint32_t instruction)
+{
+    uint8_t source = (instruction >> 11) & 0x1F;
+    uint8_t dest = (instruction >> 16) & 0x1F;
+    uint8_t field = (instruction >> 21) & 0xF;
+    vu0.ftoi15(field, dest, source);
 }
 
 void EmotionInterpreter::cop2_vmulabc(VectorUnit &vu0, uint32_t instruction)

@@ -172,7 +172,12 @@ void DMAC::process_VIF0()
         if (channels[VIF0].tag_end)
             transfer_end(VIF0);
         else
+        {
+            uint128_t DMAtag = fetch128(channels[VIF0].tag_address);
+            if (channels[VIF0].control & (1 << 6))
+                vif1->transfer_DMAtag(DMAtag);
             handle_source_chain(VIF0);
+        }
     }
 }
 
@@ -215,7 +220,9 @@ void DMAC::process_GIF()
             transfer_end(GIF);
         }
         else
+        {
             handle_source_chain(GIF);
+        }
     }
 }
 

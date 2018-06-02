@@ -65,6 +65,8 @@ class VectorUnit
         void div(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2);
         void ftoi0(uint8_t field, uint8_t dest, uint8_t source);
         void ftoi4(uint8_t field, uint8_t dest, uint8_t source);
+        void ftoi12(uint8_t field, uint8_t dest, uint8_t source);
+        void ftoi15(uint8_t field, uint8_t dest, uint8_t source);
         void iadd(uint8_t dest, uint8_t reg1, uint8_t reg2);
         void iswr(uint8_t field, uint8_t source, uint8_t base);
         void itof0(uint8_t field, uint8_t dest, uint8_t source);
