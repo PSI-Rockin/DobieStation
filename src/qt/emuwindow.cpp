@@ -218,11 +218,23 @@ void EmuWindow::keyPressEvent(QKeyEvent *event)
         case Qt::Key_Down:
             emit press_key(PAD_BUTTON::DOWN);
             break;
+        case Qt::Key_Left:
+            emit press_key(PAD_BUTTON::LEFT);
+            break;
+        case Qt::Key_Right:
+            emit press_key(PAD_BUTTON::RIGHT);
+            break;
         case Qt::Key_Z:
             emit press_key(PAD_BUTTON::CIRCLE);
             break;
         case Qt::Key_X:
             emit press_key(PAD_BUTTON::CROSS);
+            break;
+        case Qt::Key_A:
+            emit press_key(PAD_BUTTON::TRIANGLE);
+            break;
+        case Qt::Key_S:
+            emit press_key(PAD_BUTTON::SQUARE);
             break;
         case Qt::Key_Return:
             emit press_key(PAD_BUTTON::START);
@@ -241,11 +253,23 @@ void EmuWindow::keyReleaseEvent(QKeyEvent *event)
         case Qt::Key_Down:
             emit release_key(PAD_BUTTON::DOWN);
             break;
+        case Qt::Key_Left:
+            emit release_key(PAD_BUTTON::LEFT);
+            break;
+        case Qt::Key_Right:
+            emit release_key(PAD_BUTTON::RIGHT);
+            break;
         case Qt::Key_Z:
             emit release_key(PAD_BUTTON::CIRCLE);
             break;
         case Qt::Key_X:
             emit release_key(PAD_BUTTON::CROSS);
+            break;
+        case Qt::Key_A:
+            emit release_key(PAD_BUTTON::TRIANGLE);
+            break;
+        case Qt::Key_S:
+            emit release_key(PAD_BUTTON::SQUARE);
             break;
         case Qt::Key_Return:
             emit release_key(PAD_BUTTON::START);
