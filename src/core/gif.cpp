@@ -173,6 +173,7 @@ void GraphicsInterface::feed_GIF(uint128_t data)
                 process_REGLIST(data);
                 break;
             case 2:
+            case 3:
                 gs->write64(0x54, data1);
                 gs->write64(0x54, data2);
                 current_tag.data_left--;

@@ -290,7 +290,7 @@ void Emulator::execute_ELF()
         }
     }
 
-    uint32_t name_offset = ELF_file[e_shoff + (e_shstrndx * 0x28) + 0x10];
+    /*uint32_t name_offset = ELF_file[e_shoff + (e_shstrndx * 0x28) + 0x10];
     printf("Name offset: $%08X\n", name_offset);
 
     for (int i = e_shoff; i < e_shoff + (e_shnum * 0x28); i += 0x28)
@@ -315,8 +315,8 @@ void Emulator::execute_ELF()
                 else
                     printf("%c", burp);
             }
-        }*/
-    }
+        }
+    }*/
     cpu.set_PC(e_entry);
 }
 
