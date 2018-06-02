@@ -114,6 +114,8 @@ int EmotionEngine::run(int cycles_to_run)
             {
                 branch_on = false;
                 PC = new_PC;
+                if (PC == 0x0029e9cc)
+                    PC = 0x0029E984;
                 if (PC < 0x80000000 && PC >= 0x00100000)
                     if (e->skip_BIOS())
                         return 0;
@@ -163,9 +165,19 @@ uint64_t EmotionEngine::get_LO()
     return LO;
 }
 
+uint64_t EmotionEngine::get_LO1()
+{
+    return LO1;
+}
+
 uint64_t EmotionEngine::get_HI()
 {
     return HI;
+}
+
+uint64_t EmotionEngine::get_HI1()
+{
+    return HI1;
 }
 
 uint8_t EmotionEngine::read8(uint32_t address)
@@ -468,6 +480,8 @@ void EmotionEngine::lqc2(uint32_t addr, int index)
     {
         uint32_t bark = read32(addr + (i << 2));
         printf("$%08X ", bark);
+        if ((bark & 0x7F800000) == 0x7F800000)
+            bark = (bark & 0x80000000) | 0x7F7FFFFF;
         vu0->set_gpr_u(index, i, bark);
     }
     printf("\n");
@@ -567,7 +581,7 @@ void EmotionEngine::int1()
 {
     if (cp0->status.int1_mask)
     {
-        //printf("[EE] INT1!\n");
+        printf("[EE] INT1!\n");
         //can_disassemble = true;
         handle_exception(0x80000200, 0);
     }
@@ -666,7 +680,7 @@ void EmotionEngine::qmtc2(int source, int cop_reg)
     printf("[EE] QMTC2: ");
     for (int i = 0; i < 4; i++)
     {
-        uint32_t bark = get_gpr<uint32_t>(source);
+        uint32_t bark = get_gpr<uint32_t>(source, i);
         printf("$%08X ", bark);
         vu0->set_gpr_u(cop_reg, i, bark);
     }

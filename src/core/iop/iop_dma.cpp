@@ -115,22 +115,32 @@ void IOP_DMA::process_SPU()
 {
     if (!channels[SPU].word_count)
     {
-        spu->set_int_flag();
         transfer_end(SPU);
+        spu->finish_DMA();
     }
     else
+    {
+        uint32_t value = *(uint32_t*)&RAM[channels[SPU].addr];
+        spu->write_DMA(value);
         channels[SPU].word_count--;
+        channels[SPU].addr += 4;
+    }
 }
 
 void IOP_DMA::process_SPU2()
 {
     if (!channels[SPU2].word_count)
     {
-        spu2->set_int_flag();
         transfer_end(SPU2);
+        spu2->finish_DMA();
     }
     else
+    {
+        uint32_t value = *(uint32_t*)&RAM[channels[SPU2].addr];
+        spu2->write_DMA(value);
         channels[SPU2].word_count--;
+        channels[SPU2].addr += 4;
+    }
 }
 
 void IOP_DMA::process_SIF0()

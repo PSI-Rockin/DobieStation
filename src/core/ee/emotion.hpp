@@ -50,7 +50,9 @@ class EmotionEngine
         template <typename T> void set_LO(int id, T value, int offset = 0);
         uint32_t get_PC();
         uint64_t get_LO();
+        uint64_t get_LO1();
         uint64_t get_HI();
+        uint64_t get_HI1();
         uint8_t read8(uint32_t address);
         uint16_t read16(uint32_t address);
         uint32_t read32(uint32_t address);

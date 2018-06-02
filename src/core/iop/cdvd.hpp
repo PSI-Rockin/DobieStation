@@ -78,7 +78,6 @@ class CDVD_Drive
 
         void reset();
         void update(int cycles);
-        void N_command_check();
         int get_block_size();
         int bytes_left();
 

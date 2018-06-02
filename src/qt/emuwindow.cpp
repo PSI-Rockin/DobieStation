@@ -224,6 +224,9 @@ void EmuWindow::keyPressEvent(QKeyEvent *event)
         case Qt::Key_X:
             emit press_key(PAD_BUTTON::CROSS);
             break;
+        case Qt::Key_Return:
+            emit press_key(PAD_BUTTON::START);
+            break;
     }
 }
 
@@ -243,6 +246,9 @@ void EmuWindow::keyReleaseEvent(QKeyEvent *event)
             break;
         case Qt::Key_X:
             emit release_key(PAD_BUTTON::CROSS);
+            break;
+        case Qt::Key_Return:
+            emit release_key(PAD_BUTTON::START);
             break;
     }
 }

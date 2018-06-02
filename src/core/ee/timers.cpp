@@ -79,9 +79,9 @@ void EmotionTiming::run(int cycles)
                     break;
                 case 3:
                     //TODO: actual value for HSYNC
-                    while (timers[i].clocks >= 15000)
+                    while (timers[i].clocks >= 8000)
                     {
-                        count_up(i, 15000);
+                        count_up(i, 8000);
                     }
                     break;
             }
@@ -117,26 +117,17 @@ uint32_t EmotionTiming::read32(uint32_t addr)
 
 void EmotionTiming::write32(uint32_t addr, uint32_t value)
 {
-    switch (addr)
+    int id = (addr >> 11) & 0x3;
+    switch (addr & 0xFF)
     {
-        case 0x10000000:
-            timers[0].counter = value & 0xFFFF;
+        case 0x00:
+            timers[id].counter = value & 0xFFFF;
             break;
-        case 0x10000010:
-            write_control(0, value);
+        case 0x10:
+            write_control(id, value);
             break;
-        case 0x10000810:
-            write_control(1, value);
-            break;
-        case 0x10001010:
-            write_control(2, value);
-            break;
-        case 0x10001810:
-            write_control(3, value);
-            break;
-        case 0x10001820:
-            printf("[EE Timing] Timer 3 compare: $%08X\n", value);
-            timers[3].compare = value & 0xFFFF;
+        case 0x20:
+            timers[id].compare = value & 0xFFFF;
             break;
         default:
             printf("[EE Timing] Unrecognized write32 to $%08X of $%08X\n", addr, value);
@@ -154,6 +145,8 @@ void EmotionTiming::count_up(int index, int cycles_per_count)
     {
         if (timers[index].control.compare_int_enable)
         {
+            if (timers[index].control.clear_on_reference)
+                timers[index].counter = 0;
             timers[index].control.compare_int = true;
             intc->assert_IRQ((int)Interrupt::TIMER0 + index);
         }
@@ -162,8 +155,6 @@ void EmotionTiming::count_up(int index, int cycles_per_count)
     //Overflow check
     if (timers[index].counter > 0xFFFF)
     {
-        if (index == 1)
-            printf("[EE Timing] Timer %d overflow!\n", index);
         timers[index].counter = 0;
         if (timers[index].control.overflow_int_enable)
         {

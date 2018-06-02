@@ -27,9 +27,11 @@ void IOPTiming::run()
         {
             timers[i].control.compare_interrupt = true;
             if (timers[i].control.compare_interrupt_enabled)
+            {
                 IRQ_test(i, false);
-            if (timers[i].control.zero_return)
-                timers[i].counter = 0;
+                if (timers[i].control.zero_return)
+                    timers[i].counter = 0;
+            }
         }
     }
 }

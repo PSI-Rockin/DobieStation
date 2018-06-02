@@ -17,10 +17,9 @@ void GraphicsInterface::process_PACKED(uint128_t data)
 {
     uint64_t data1 = data._u64[0];
     uint64_t data2 = data._u64[1];
-    printf("[GIF] PACKED: $%08X_%08X_%08X_%08X\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
+    //printf("[GIF] PACKED: $%08X_%08X_%08X_%08X\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
     uint64_t reg_offset = (current_tag.reg_count - current_tag.regs_left) << 2;
     uint8_t reg = (current_tag.regs & (0xFUL << reg_offset)) >> reg_offset;
-    //printf("[GIF] Reg: $%02X (Left: %d Count: %d)\n", reg, current_tag.regs_left, current_tag.reg_count);
     switch (reg)
     {
         case 0x0:
@@ -97,7 +96,7 @@ void GraphicsInterface::process_PACKED(uint128_t data)
 
 void GraphicsInterface::process_REGLIST(uint128_t data)
 {
-    printf("[GIF] Reglist: $%08X_%08X_%08X_%08X\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
+    //printf("[GIF] Reglist: $%08X_%08X_%08X_%08X\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
     for (int i = 0; i < 2; i++)
     {
         uint64_t reg_offset = (current_tag.reg_count - current_tag.regs_left) << 2;

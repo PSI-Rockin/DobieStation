@@ -121,11 +121,6 @@ void CDVD_Drive::update(int cycles)
     }
 }
 
-void CDVD_Drive::N_command_check()
-{
-
-}
-
 bool CDVD_Drive::load_disc(const char *name)
 {
     if (cdvd_file.is_open())

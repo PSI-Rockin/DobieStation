@@ -459,46 +459,40 @@ void EmotionInterpreter::daddiu(EmotionEngine &cpu, uint32_t instruction)
 
 void EmotionInterpreter::ldl(EmotionEngine &cpu, uint32_t instruction)
 {
+    static const uint64_t LDL_MASK[8] =
+    {	0x00ffffffffffffffULL, 0x0000ffffffffffffULL, 0x000000ffffffffffULL, 0x00000000ffffffffULL,
+        0x0000000000ffffffULL, 0x000000000000ffffULL, 0x00000000000000ffULL, 0x0000000000000000ULL
+    };
+    static const uint8_t LDL_SHIFT[8] = { 56, 48, 40, 32, 24, 16, 8, 0 };
     int16_t imm = (int16_t)(instruction & 0xFFFF);
     uint64_t dest = (instruction >> 16) & 0x1F;
     uint64_t base = (instruction >> 21) & 0x1F;
 
     uint32_t addr = cpu.get_gpr<uint32_t>(base) + imm;
-    uint64_t dword = cpu.read64(addr & ~0x7);
-    uint64_t new_reg = cpu.get_gpr<uint64_t>(dest);
-    uint8_t new_bytes = (addr & 0x7) + 1;
-    for (int i = 0; i < new_bytes; i++)
-    {
-        int offset = ((new_bytes - i - 1) << 3);
-        int reg_offset = (56 - (i << 3));
-        uint64_t byte = (dword >> offset) & 0xFF;
-        new_reg &= ~(0xFFUL << reg_offset);
-        new_reg |= byte << reg_offset;
-    }
+    uint32_t shift = addr & 0x7;
 
-    cpu.set_gpr<uint64_t>(dest, new_reg);
+    uint64_t mem = cpu.read64(addr & ~0x7);
+    uint64_t reg = cpu.get_gpr<uint64_t>(dest);
+    cpu.set_gpr<uint64_t>(dest, (reg & LDL_MASK[shift]) | (mem << LDL_SHIFT[shift]));
 }
 
 void EmotionInterpreter::ldr(EmotionEngine &cpu, uint32_t instruction)
 {
+    static const uint64_t LDR_MASK[8] =
+    {	0x0000000000000000ULL, 0xff00000000000000ULL, 0xffff000000000000ULL, 0xffffff0000000000ULL,
+        0xffffffff00000000ULL, 0xffffffffff000000ULL, 0xffffffffffff0000ULL, 0xffffffffffffff00ULL
+    };
+    static const uint8_t LDR_SHIFT[8] = { 0, 8, 16, 24, 32, 40, 48, 56 };
     int16_t imm = (int16_t)(instruction & 0xFFFF);
     uint64_t dest = (instruction >> 16) & 0x1F;
     uint64_t base = (instruction >> 21) & 0x1F;
 
     uint32_t addr = cpu.get_gpr<uint32_t>(base) + imm;
-    uint64_t dword = cpu.read64(addr & ~0x7);
-    uint64_t new_reg = cpu.get_gpr<uint64_t>(dest);
-    uint8_t new_bytes = 8 - (addr & 0x7);
-    for (int i = 0; i < new_bytes; i++)
-    {
-        int offset = 56 - (i << 3);
-        int reg_offset = ((new_bytes - i - 1) << 3);
-        uint64_t byte = (dword >> offset) & 0xFF;
-        new_reg &= ~(0xFFUL << reg_offset);
-        new_reg |= byte << reg_offset;
-    }
+    uint32_t shift = addr & 0x7;
 
-    cpu.set_gpr<uint64_t>(dest, new_reg);
+    uint64_t mem = cpu.read64(addr & ~0x7);
+    uint64_t reg = cpu.get_gpr<uint64_t>(dest);
+    cpu.set_gpr<uint64_t>(dest, (reg & LDR_MASK[shift]) | (mem >> LDR_SHIFT[shift]));
 }
 
 void EmotionInterpreter::lq(EmotionEngine &cpu, uint32_t instruction)
@@ -657,46 +651,42 @@ void EmotionInterpreter::sw(EmotionEngine &cpu, uint32_t instruction)
 
 void EmotionInterpreter::sdl(EmotionEngine &cpu, uint32_t instruction)
 {
+    static const uint64_t SDL_MASK[8] =
+    {	0xffffffffffffff00ULL, 0xffffffffffff0000ULL, 0xffffffffff000000ULL, 0xffffffff00000000ULL,
+        0xffffff0000000000ULL, 0xffff000000000000ULL, 0xff00000000000000ULL, 0x0000000000000000ULL
+    };
+    static const uint8_t SDL_SHIFT[8] = { 56, 48, 40, 32, 24, 16, 8, 0 };
     int16_t imm = (int16_t)(instruction & 0xFFFF);
     uint64_t source = (instruction >> 16) & 0x1F;
     uint64_t base = (instruction >> 21) & 0x1F;
 
     uint32_t addr = cpu.get_gpr<uint32_t>(base) + imm;
-    uint64_t reg = cpu.get_gpr<uint64_t>(source);
-    uint64_t new_dword = cpu.read64(addr & ~0x7);
-    uint8_t new_bytes = (addr & 0x7) + 1;
-    for (int i = 0; i < new_bytes; i++)
-    {
-        int offset = ((new_bytes - i - 1) << 3);
-        int reg_offset = (56 - (i << 3));
-        uint64_t byte = (reg >> reg_offset) & 0xFF;
-        new_dword &= ~(0xFFUL << offset);
-        new_dword |= byte << offset;
-    }
+    uint32_t shift = addr & 0x7;
 
-    cpu.write64(addr & ~0x7, new_dword);
+    uint64_t mem = cpu.read64(addr & ~0x7);
+    mem = (cpu.get_gpr<uint64_t>(source) >> SDL_SHIFT[shift]) |
+            (mem & SDL_MASK[shift]);
+    cpu.write64(addr & ~0x7, mem);
 }
 
 void EmotionInterpreter::sdr(EmotionEngine &cpu, uint32_t instruction)
 {
+    static const uint64_t SDR_MASK[8] =
+    {	0x0000000000000000ULL, 0x00000000000000ffULL, 0x000000000000ffffULL, 0x0000000000ffffffULL,
+        0x00000000ffffffffULL, 0x000000ffffffffffULL, 0x0000ffffffffffffULL, 0x00ffffffffffffffULL
+    };
+    static const uint8_t SDR_SHIFT[8] = { 0, 8, 16, 24, 32, 40, 48, 56 };
     int16_t imm = (int16_t)(instruction & 0xFFFF);
     uint64_t source = (instruction >> 16) & 0x1F;
     uint64_t base = (instruction >> 21) & 0x1F;
 
     uint32_t addr = cpu.get_gpr<uint32_t>(base) + imm;
-    uint64_t reg = cpu.get_gpr<uint64_t>(source);
-    uint64_t new_dword = cpu.read64(addr & ~0x7);
-    uint8_t new_bytes = 8 - (addr & 0x7);
-    for (int i = 0; i < new_bytes; i++)
-    {
-        int offset = 56 - (i << 3);
-        int reg_offset = ((new_bytes - i - 1) << 3);
-        uint64_t byte = (reg >> reg_offset) & 0xFF;
-        new_dword &= ~(0xFFUL << offset);
-        new_dword |= byte << offset;
-    }
+    uint32_t shift = addr & 0x7;
 
-    cpu.write64(addr & ~0x7, new_dword);
+    uint64_t mem = cpu.read64(addr & ~0x7);
+    mem = (cpu.get_gpr<uint64_t>(source) << SDR_SHIFT[shift]) |
+            (mem & SDR_MASK[shift]);
+    cpu.write64(addr & ~0x7, mem);
 }
 
 void EmotionInterpreter::swr(EmotionEngine &cpu, uint32_t instruction)

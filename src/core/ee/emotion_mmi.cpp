@@ -11,6 +11,9 @@ void EmotionInterpreter::mmi(EmotionEngine &cpu, uint32_t instruction)
         case 0x00:
             madd(cpu, instruction);
             break;
+        case 0x01:
+            maddu(cpu, instruction);
+            break;
         case 0x04:
             plzcw(cpu, instruction);
             break;
@@ -35,11 +38,20 @@ void EmotionInterpreter::mmi(EmotionEngine &cpu, uint32_t instruction)
         case 0x18:
             mult1(cpu, instruction);
             break;
+        case 0x19:
+            multu1(cpu, instruction);
+            break;
         case 0x1A:
             div1(cpu, instruction);
             break;
         case 0x1B:
             divu1(cpu, instruction);
+            break;
+        case 0x20:
+            madd1(cpu, instruction);
+            break;
+        case 0x21:
+            maddu1(cpu, instruction);
             break;
         case 0x28:
             mmi1(cpu, instruction);
@@ -72,19 +84,40 @@ void EmotionInterpreter::mmi(EmotionEngine &cpu, uint32_t instruction)
 
 void EmotionInterpreter::madd(EmotionEngine &cpu, uint32_t instruction)
 {
-    int32_t op1 = (instruction >> 21) & 0x1F;
-    int32_t op2 = (instruction >> 16) & 0x1F;
+    int64_t op1 = (instruction >> 21) & 0x1F;
+    int64_t op2 = (instruction >> 16) & 0x1F;
     uint64_t dest = (instruction >> 11) & 0x1F;
-    op1 = cpu.get_gpr<int32_t>(op1);
-    op2 = cpu.get_gpr<int32_t>(op2);
-    int64_t temp = (int64_t)op1 * op2;
+    op1 = (int64_t)cpu.get_gpr<int32_t>(op1);
+    op2 = (int64_t)cpu.get_gpr<int32_t>(op2);
 
-    int32_t lo = (int32_t)(temp & 0xFFFFFFFF);
-    int32_t hi = (int32_t)(temp >> 32);
-    lo += (int32_t)(cpu.get_LO() & 0xFFFFFFFF);
-    hi += (int32_t)(cpu.get_HI() & 0xFFFFFFFF);
+    uint64_t lo = (uint64_t)(uint32_t)cpu.get_LO();
+    uint64_t hi = (uint64_t)(uint32_t)cpu.get_HI();
+    int64_t temp = (int64_t)((lo | (hi << 32)) + (op1 * op2));
+
+    lo = (int64_t)(int32_t)(temp & 0xFFFFFFFF);
+    hi = (int64_t)(int32_t)(temp >> 32);
+
     cpu.set_LO_HI(lo, hi, false);
-    cpu.set_gpr<int64_t>(dest, lo);
+    cpu.set_gpr<int64_t>(dest, (int64_t)lo);
+}
+
+void EmotionInterpreter::maddu(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t op1 = (instruction >> 21) & 0x1F;
+    uint64_t op2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+    op1 = (uint64_t)cpu.get_gpr<uint32_t>(op1);
+    op2 = (uint64_t)cpu.get_gpr<uint32_t>(op2);
+
+    uint64_t lo = (uint64_t)(uint32_t)cpu.get_LO();
+    uint64_t hi = (uint64_t)(uint32_t)cpu.get_HI();
+    uint64_t temp = (int64_t)((lo | (hi << 32)) + (op1 * op2));
+
+    lo = (int64_t)(int32_t)(temp & 0xFFFFFFFF);
+    hi = (int64_t)(int32_t)(temp >> 32);
+
+    cpu.set_LO_HI(lo, hi, false);
+    cpu.set_gpr<int64_t>(dest, (int64_t)lo);
 }
 
 /**
@@ -1172,6 +1205,18 @@ void EmotionInterpreter::mult1(EmotionEngine &cpu, uint32_t instruction)
     cpu.mflo1(dest);
 }
 
+void EmotionInterpreter::multu1(EmotionEngine& cpu, uint32_t instruction)
+{
+    uint32_t op1 = (instruction >> 21) & 0x1F;
+    uint32_t op2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+    op1 = cpu.get_gpr<uint32_t>(op1);
+    op2 = cpu.get_gpr<uint32_t>(op2);
+    uint64_t temp = (uint64_t)op1 * op2;
+    cpu.set_LO_HI(temp & 0xFFFFFFFF, temp >> 32, true);
+    cpu.mflo1(dest);
+}
+
 void EmotionInterpreter::div1(EmotionEngine &cpu, uint32_t instruction)
 {
     int32_t op1 = (instruction >> 21) & 0x1F;
@@ -1211,6 +1256,44 @@ void EmotionInterpreter::divu1(EmotionEngine &cpu, uint32_t instruction)
     {
         cpu.set_LO_HI(-1, op1, true);
     }
+}
+
+void EmotionInterpreter::madd1(EmotionEngine &cpu, uint32_t instruction)
+{
+    int64_t op1 = (instruction >> 21) & 0x1F;
+    int64_t op2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+    op1 = (int64_t)cpu.get_gpr<int32_t>(op1);
+    op2 = (int64_t)cpu.get_gpr<int32_t>(op2);
+
+    uint64_t lo = (uint64_t)(uint32_t)cpu.get_LO1();
+    uint64_t hi = (uint64_t)(uint32_t)cpu.get_HI1();
+    int64_t temp = (int64_t)((lo | (hi << 32)) + (op1 * op2));
+
+    lo = (int64_t)(int32_t)(temp & 0xFFFFFFFF);
+    hi = (int64_t)(int32_t)(temp >> 32);
+
+    cpu.set_LO_HI(lo, hi, true);
+    cpu.set_gpr<int64_t>(dest, (int64_t)lo);
+}
+
+void EmotionInterpreter::maddu1(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t op1 = (instruction >> 21) & 0x1F;
+    uint64_t op2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+    op1 = (uint64_t)cpu.get_gpr<uint32_t>(op1);
+    op2 = (uint64_t)cpu.get_gpr<uint32_t>(op2);
+
+    uint64_t lo = (uint64_t)(uint32_t)cpu.get_LO1();
+    uint64_t hi = (uint64_t)(uint32_t)cpu.get_HI1();
+    uint64_t temp = (int64_t)((lo | (hi << 32)) + (op1 * op2));
+
+    lo = (int64_t)(int32_t)(temp & 0xFFFFFFFF);
+    hi = (int64_t)(int32_t)(temp >> 32);
+
+    cpu.set_LO_HI(lo, hi, true);
+    cpu.set_gpr<int64_t>(dest, (int64_t)lo);
 }
 
 void EmotionInterpreter::mmi3(EmotionEngine &cpu, uint32_t instruction)

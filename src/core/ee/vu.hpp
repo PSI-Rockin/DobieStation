@@ -1,6 +1,7 @@
 #ifndef VU_HPP
 #define VU_HPP
 #include <cstdint>
+#include <cstdio>
 
 #include "../int128.hpp"
 
@@ -32,13 +33,16 @@ class VectorUnit
         //Control registers
         VU_GPR ACC;
         VU_R R;
-        float Q;
+        VU_R Q;
 
         void advance_r();
+        float convert();
     public:
         VectorUnit(int id);
 
-        void write128(uint32_t addr, uint128_t data);
+        static float convert(uint32_t value);
+
+        template <typename T> void write_instr(uint32_t addr, T data);
 
         uint32_t get_gpr_u(int index, int field);
         void set_gpr_f(int index, int field, float value);
@@ -54,6 +58,7 @@ class VectorUnit
         void addbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
         void addq(uint8_t field, uint8_t dest, uint8_t source);
         void div(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2);
+        void ftoi0(uint8_t field, uint8_t dest, uint8_t source);
         void ftoi4(uint8_t field, uint8_t dest, uint8_t source);
         void iadd(uint8_t dest, uint8_t reg1, uint8_t reg2);
         void iswr(uint8_t field, uint8_t source, uint8_t base);
@@ -77,6 +82,13 @@ class VectorUnit
         void sub(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2);
         void subbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
 };
+
+template <typename T>
+inline void VectorUnit::write_instr(uint32_t addr, T data)
+{
+    printf("[VU] Write instr mem $%08X: $%08X\n", addr, data);
+    *(T*)&instr_mem[addr & 0x3FFF] = data;
+}
 
 inline uint32_t VectorUnit::get_gpr_u(int index, int field)
 {

@@ -130,6 +130,7 @@ namespace EmotionInterpreter
     void fpu_madd(Cop1& fpu, uint32_t instruction);
     void fpu_msub(Cop1& fpu, uint32_t instruction);
     void fpu_cvt_w_s(Cop1& fpu, uint32_t instruction);
+    void fpu_c_f_s(Cop1& fpu, uint32_t instruction);
     void fpu_c_eq_s(Cop1& fpu, uint32_t instruction);
     void fpu_c_lt_s(Cop1& fpu, uint32_t instruction);
     void fpu_c_le_s(Cop1& fpu, uint32_t instruction);
@@ -154,6 +155,7 @@ namespace EmotionInterpreter
 
     void cop2_special2(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmaddabc(VectorUnit& vu0, uint32_t instruction);
+    void cop2_vftoi0(VectorUnit& vu0, uint32_t instruction);
     void cop2_vftoi4(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmulabc(VectorUnit& vu0, uint32_t instruction);
     void cop2_vopmula(VectorUnit& vu0, uint32_t instruction);
@@ -171,6 +173,7 @@ namespace EmotionInterpreter
 
     void mmi(EmotionEngine& cpu, uint32_t instruction);
     void madd(EmotionEngine& cpu, uint32_t instruction);
+    void maddu(EmotionEngine& cpu, uint32_t instruction);
     void plzcw(EmotionEngine& cpu, uint32_t instruction);
     void psllh(EmotionEngine& cpu, uint32_t instruction);
     void psrlh(EmotionEngine& cpu, uint32_t instruction);
@@ -232,8 +235,11 @@ namespace EmotionInterpreter
     void mflo1(EmotionEngine& cpu, uint32_t instruction);
     void mtlo1(EmotionEngine& cpu, uint32_t instruction);
     void mult1(EmotionEngine& cpu, uint32_t instruction);
+    void multu1(EmotionEngine& cpu, uint32_t instruction);
     void div1(EmotionEngine& cpu, uint32_t instruction);
     void divu1(EmotionEngine& cpu, uint32_t instruction);
+    void madd1(EmotionEngine& cpu, uint32_t instruction);
+    void maddu1(EmotionEngine& cpu, uint32_t instruction);
 
     void mmi3(EmotionEngine& cpu, uint32_t instruction);
     void psravw(EmotionEngine& cpu, uint32_t instruction);

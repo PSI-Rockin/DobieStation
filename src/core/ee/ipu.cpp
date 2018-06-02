@@ -54,6 +54,10 @@ void ImageProcessingUnit::run()
                 bit_pointer = command_option & 0x7F;
             }
                 break;
+            case 0x01:
+                command_decoding = false;
+                ctrl.busy = false;
+                break;
             case 0x02:
                 if (in_FIFO.size())
                     process_BDEC();
@@ -143,26 +147,52 @@ void ImageProcessingUnit::process_BDEC()
 {
     while (true)
     {
-        switch (bdec_state)
+        switch (bdec.state)
         {
             case BDEC_STATE::ADVANCE:
                 advance_stream(command_option & 0x3F);
-                bdec_state = BDEC_STATE::GET_CBP;
+                bdec.state = BDEC_STATE::GET_CBP;
                 break;
             case BDEC_STATE::GET_CBP:
-                if (!(command_option & (1 << 27)))
+                printf("[IPU] Get CBP!\n");
+                if (!bdec.intra)
                 {
                     printf("[IPU] Non-intra macroblock in BDEC!\n");
                     exit(1);
                 }
-                bdec_state = BDEC_STATE::RESET_DC;
+                else
+                    bdec.coded_block_pattern = 0x3F;
+                bdec.state = BDEC_STATE::RESET_DC;
                 break;
             case BDEC_STATE::RESET_DC:
                 if (command_option & (1 << 26))
                 {
                     printf("[IPU] Reset DC!\n");
                 }
-                bdec_state = BDEC_STATE::DONE;
+                bdec.state = BDEC_STATE::BEGIN_DECODING;
+                break;
+            case BDEC_STATE::BEGIN_DECODING:
+                printf("[IPU] Begin decoding!\n");
+                if (bdec.coded_block_pattern & (1 << (5 - bdec.block_index)))
+                    bdec.state = BDEC_STATE::READ_COEFFS;
+                else
+                    bdec.state = BDEC_STATE::LOAD_NEXT_BLOCK;
+                break;
+            case BDEC_STATE::READ_COEFFS:
+                printf("[IPU] Read coeffs!\n");
+                bdec.read_coeff_state = BDEC_Command::INIT;
+                if (!BDEC_read_coeffs())
+                    return;
+                exit(1);
+                bdec.state = BDEC_STATE::LOAD_NEXT_BLOCK;
+                break;
+            case BDEC_STATE::LOAD_NEXT_BLOCK:
+                printf("[IPU] Load next block!\n");
+                bdec.block_index++;
+                if (bdec.block_index == 6)
+                    bdec.state = BDEC_STATE::DONE;
+                else
+                    bdec.state = BDEC_STATE::BEGIN_DECODING;
                 break;
             case BDEC_STATE::DONE:
                 printf("[IPU] BDEC successful!\n");
@@ -170,6 +200,32 @@ void ImageProcessingUnit::process_BDEC()
                 break;
         }
     }
+}
+
+bool ImageProcessingUnit::BDEC_read_coeffs()
+{
+    while (true)
+    {
+        switch (bdec.read_coeff_state)
+        {
+            case BDEC_Command::INIT:
+                printf("[IPU] READ_COEFF Init!\n");
+                if (bdec.intra)
+                    bdec.read_coeff_state = BDEC_Command::READ_DC_DIFF;
+                else
+                    bdec.read_coeff_state = BDEC_Command::CHECK_END;
+                break;
+            case BDEC_Command::READ_DC_DIFF:
+                printf("[IPU] READ_COEFF Read DC diffs!\n");
+                exit(1);
+                break;
+            case BDEC_Command::CHECK_END:
+                printf("[IPU] READ_COEFF Check end of block!\n");
+                exit(1);
+                break;
+        }
+    }
+    return true;
 }
 
 void ImageProcessingUnit::process_VDEC()
@@ -347,7 +403,10 @@ void ImageProcessingUnit::write_command(uint32_t value)
             case 0x02:
                 printf("[IPU] BDEC\n");
                 command_decoding = true;
-                bdec_state = BDEC_STATE::ADVANCE;
+                bdec.state = BDEC_STATE::ADVANCE;
+                bdec.coded_block_pattern = 0x3F;
+                bdec.block_index = 0;
+                bdec.intra = command_option & (1 << 27);
                 break;
             case 0x03:
                 printf("[IPU] VDEC\n");

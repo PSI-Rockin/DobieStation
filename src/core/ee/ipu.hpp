@@ -35,7 +35,29 @@ enum class BDEC_STATE
     ADVANCE,
     GET_CBP,
     RESET_DC,
+    BEGIN_DECODING,
+    READ_COEFFS,
+    LOAD_NEXT_BLOCK,
     DONE
+};
+
+struct BDEC_Command
+{
+    BDEC_STATE state;
+    uint8_t coded_block_pattern;
+    bool intra;
+    int block_index;
+
+    enum READ_COEFF_STATE
+    {
+        INIT,
+        READ_DC_DIFF,
+        CHECK_END,
+        READ_COEFF,
+        SKIP_EOB
+    };
+
+    READ_COEFF_STATE read_coeff_state;
 };
 
 class ImageProcessingUnit
@@ -56,13 +78,16 @@ class ImageProcessingUnit
         uint32_t command_output;
         int bytes_left;
 
-        BDEC_STATE bdec_state;
+        BDEC_Command bdec;
         VDEC_STATE vdec_state, fdec_state;
 
         int bit_pointer;
         void advance_stream(uint8_t amount);
         bool get_bits(uint32_t& data, int bits);
+
         void process_BDEC();
+        bool BDEC_read_coeffs();
+
         void process_VDEC();
         void process_FDEC();
     public:

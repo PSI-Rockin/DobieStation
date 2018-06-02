@@ -80,6 +80,11 @@ struct DISPLAY
     uint16_t width, height;
 };
 
+struct TEXCLUT_REG
+{
+    uint16_t width, x, y;
+};
+
 struct Vertex
 {
     int32_t x, y, z;
@@ -121,6 +126,7 @@ class GraphicsSynthesizer
         RGBAQ_REG RGBAQ;
         UV_REG UV;
         ST_REG ST;
+        TEXCLUT_REG TEXCLUT;
         bool DTHE;
         bool COLCLAMP;
         bool use_PRIM;
@@ -150,11 +156,15 @@ class GraphicsSynthesizer
         void set_word(uint32_t addr, uint32_t value);
 
         uint32_t read_PSMCT32_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y);
+        uint16_t read_PSMCT16_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y);
         void write_PSMCT32_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y, uint32_t value);
+        void write_PSMCT16_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y, uint16_t value);
 
         bool depth_test(int32_t x, int32_t y, uint32_t z);
 
         void tex_lookup(int16_t u, int16_t v, const RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color);
+        void clut_lookup(uint8_t entry, RGBAQ_REG& tex_color, bool eight_bit);
+        void clut_CSM2_lookup(uint8_t entry, RGBAQ_REG& tex_color);
         void vertex_kick(bool drawing_kick);
         void draw_pixel(int32_t x, int32_t y, uint32_t z, RGBAQ_REG& color, bool alpha_blending);
         void render_primitive();

@@ -986,6 +986,8 @@ string EmotionDisasm::disasm_cop_s(uint32_t instruction)
             return disasm_fpu_msub(instruction);
         case 0x24:
             return disasm_fpu_cvt_w_s(instruction);
+        case 0x30:
+            return disasm_fpu_c_f_s(instruction);
         case 0x32:
             return disasm_fpu_c_eq_s(instruction);
         case 0x34:
@@ -1111,6 +1113,11 @@ string EmotionDisasm::disasm_fpu_compare(const string opcode, uint32_t instructi
            << "f" << RT;
 
     return opcode + " " + output.str();
+}
+
+string EmotionDisasm::disasm_fpu_c_f_s(uint32_t instruction)
+{
+    return disasm_fpu_compare("c.f.s", instruction);
 }
 
 string EmotionDisasm::disasm_fpu_c_lt_s(uint32_t instruction)
@@ -1349,6 +1356,8 @@ string EmotionDisasm::disasm_cop2_special2(uint32_t instruction)
         case 0x0A:
         case 0x0B:
             return disasm_vmaddabc(instruction);
+        case 0x14:
+            return disasm_vftoi0(instruction);
         case 0x15:
             return disasm_vftoi4(instruction);
         case 0x18:
@@ -1416,6 +1425,11 @@ string EmotionDisasm::disasm_cop2_acc_bc(const string opcode, uint32_t instructi
 string EmotionDisasm::disasm_vmaddabc(uint32_t instruction)
 {
     return disasm_cop2_acc_bc("vmadda", instruction);
+}
+
+string EmotionDisasm::disasm_vftoi0(uint32_t instruction)
+{
+    return disasm_cop2_special2_move("vftoi0", instruction);
 }
 
 string EmotionDisasm::disasm_vftoi4(uint32_t instruction)

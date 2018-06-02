@@ -56,12 +56,16 @@ class Emulator
         VectorInterface vif0, vif1;
         VectorUnit vu0, vu1;
 
+        int INTC_read_count;
+        bool VBLANK_sent;
+
         std::ofstream ee_log;
         std::string ee_stdout;
 
         uint8_t* RDRAM;
         uint8_t* IOP_RAM;
         uint8_t* BIOS;
+        uint8_t* SPU_RAM;
 
         uint8_t scratchpad[1024 * 16];
 

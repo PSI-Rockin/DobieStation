@@ -4,7 +4,7 @@
 
 #include "../gif.hpp"
 
-VectorInterface::VectorInterface(GraphicsInterface* gif) : gif(gif)
+VectorInterface::VectorInterface(GraphicsInterface* gif, VectorUnit* vu) : gif(gif), vu(vu)
 {
 
 }
@@ -85,6 +85,19 @@ void VectorInterface::update()
                     printf("[VIF] Set COL\n");
                     command_len = 5;
                     break;
+                case 0x4A:
+                    printf("[VIF] MPG: $%08X\n", value);
+                    {
+                        command_len = 1;
+                        int num = (value >> 16) & 0xFF;
+                        if (!num)
+                            command_len += 512;
+                        else
+                            command_len += num << 1;
+                        printf("Command len: %d\n", command_len);
+                        mpg.addr = imm * 8;
+                    }
+                    break;
                 case 0x50:
                 case 0x51:
                     command_len = 1;
@@ -111,6 +124,16 @@ void VectorInterface::update()
                     break;
                 case 0x31:
                     //STCOL
+                    break;
+                case 0x4A:
+                    if (FIFO.size() < 2)
+                        return;
+                    vu->write_instr(mpg.addr, value);
+                    FIFO.pop();
+                    value = FIFO.front();
+                    vu->write_instr(mpg.addr + 4, value);
+                    command_len--;
+                    mpg.addr += 8;
                     break;
                 case 0x50:
                 case 0x51:
