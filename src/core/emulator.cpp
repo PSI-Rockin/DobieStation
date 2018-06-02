@@ -117,6 +117,8 @@ void Emulator::reset()
     timers.reset();
     vif0.reset();
     vif1.reset();
+    vu0.reset();
+    vu1.reset();
     MCH_DRD = 0;
     MCH_RICM = 0;
     rdram_sdevid = 0;

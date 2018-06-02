@@ -32,6 +32,8 @@ class VectorUnit
 
         //Control registers
         VU_GPR ACC;
+        uint32_t status;
+        uint32_t clip_flags;
         VU_R R;
         VU_R Q;
 
@@ -39,6 +41,8 @@ class VectorUnit
         float convert();
     public:
         VectorUnit(int id);
+
+        void reset();
 
         static float convert(uint32_t value);
 
@@ -57,11 +61,13 @@ class VectorUnit
         void add(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2);
         void addbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
         void addq(uint8_t field, uint8_t dest, uint8_t source);
+        void clip(uint8_t reg1, uint8_t reg2);
         void div(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2);
         void ftoi0(uint8_t field, uint8_t dest, uint8_t source);
         void ftoi4(uint8_t field, uint8_t dest, uint8_t source);
         void iadd(uint8_t dest, uint8_t reg1, uint8_t reg2);
         void iswr(uint8_t field, uint8_t source, uint8_t base);
+        void itof0(uint8_t field, uint8_t dest, uint8_t source);
         void maddbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
         void maddabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_reg);
         void move(uint8_t field, uint8_t dest, uint8_t source);

@@ -19,6 +19,12 @@ VectorUnit::VectorUnit(int id) : id(id)
     int_gpr[0] = 0;
 }
 
+void VectorUnit::reset()
+{
+    status = 0;
+    clip_flags = 0;
+}
+
 float VectorUnit::convert(uint32_t value)
 {
     switch(value & 0x7f800000)
@@ -59,6 +65,10 @@ uint32_t VectorUnit::cfc(int index)
         return int_gpr[index];
     switch (index)
     {
+        case 16:
+            return status;
+        case 18:
+            return clip_flags;
         case 20:
             return R.u & 0x7FFFFF;
         case 22:
@@ -124,11 +134,12 @@ void VectorUnit::addbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, 
 void VectorUnit::addq(uint8_t field, uint8_t dest, uint8_t source)
 {
     printf("[VU] ADDq: ");
+    float value = convert(Q.u);
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
         {
-            float temp = convert(Q.u) + convert(gpr[source].u[i]);
+            float temp = value + convert(gpr[source].u[i]);
             set_gpr_f(dest, i, temp);
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
@@ -136,18 +147,51 @@ void VectorUnit::addq(uint8_t field, uint8_t dest, uint8_t source)
     printf("\n");
 }
 
+void VectorUnit::clip(uint8_t reg1, uint8_t reg2)
+{
+    printf("[VU] CLIP\n");
+    clip_flags <<= 6; //Move previous clipping judgments up
+
+    //Compare x, y, z fields of FS with the w field of FT
+    float value = fabs(convert(gpr[reg2].u[3]));
+
+    float x = convert(gpr[reg1].u[0]);
+    float y = convert(gpr[reg1].u[1]);
+    float z = convert(gpr[reg1].u[2]);
+
+    clip_flags |= (x > +value);
+    clip_flags |= (x < -value) << 1;
+    clip_flags |= (y > +value) << 2;
+    clip_flags |= (y < -value) << 3;
+    clip_flags |= (z > +value) << 4;
+    clip_flags |= (z < -value) << 5;
+    clip_flags &= 0xFFFFFF;
+}
+
 void VectorUnit::div(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2)
 {
+    float num = convert(gpr[reg1].u[fsf]);
     float denom = convert(gpr[reg2].u[ftf]);
+    status = (status & 0xFCF) | ((status & 0x30) << 6);
     if (denom == 0.0)
     {
-        printf("[VU] DIV by zero!\n");
-        exit(1);
+        if (num == 0.0)
+            status |= 0x10;
+        else
+            status |= 0x20;
+
+        if ((gpr[reg1].u[fsf] & 0x80000000) != (gpr[reg2].u[ftf] & 0x80000000))
+            Q.u = 0xFF7FFFFF;
+        else
+            Q.u = 0x7F7FFFFF;
     }
-    Q.f = convert(gpr[reg1].u[fsf]) / denom;
-    Q.f = convert(Q.u);
+    else
+    {
+        Q.f = num / denom;
+        Q.f = convert(Q.u);
+    }
     printf("[VU] DIV: %f\n", Q.f);
-    printf("Reg1: %f\n", gpr[reg1].f[fsf]);
+    printf("Reg1: %f\n", num);
     printf("Reg2: %f\n", denom);
 }
 
@@ -191,6 +235,20 @@ void VectorUnit::iswr(uint8_t field, uint8_t source, uint8_t base)
     printf("[VU] ISWR to $%08X!\n", addr);
 }
 
+void VectorUnit::itof0(uint8_t field, uint8_t dest, uint8_t source)
+{
+    printf("[VU] ITOF0: ");
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            gpr[dest].f[i] = (float)gpr[source].s[i];
+            printf("(%d)%f ", i, gpr[dest].f[i]);
+        }
+    }
+    printf("\n");
+}
+
 void VectorUnit::maddbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg)
 {
     printf("[VU] MADDbc: ");
@@ -216,7 +274,7 @@ void VectorUnit::maddabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_r
         if (field & (1 << (3 - i)))
         {
             float temp = op * convert(gpr[source].u[i]);
-            ACC.f[i] += temp;
+            ACC.f[i] = temp + convert(ACC.u[i]);
             printf("(%d)%f ", i, ACC.f[i]);
         }
     }

@@ -475,16 +475,16 @@ void EmotionEngine::lwc1(uint32_t addr, int index)
 
 void EmotionEngine::lqc2(uint32_t addr, int index)
 {
-    printf("[EE] LQC2: ");
+    //printf("[EE] LQC2: ");
     for (int i = 0; i < 4; i++)
     {
         uint32_t bark = read32(addr + (i << 2));
-        printf("$%08X ", bark);
+        //printf("$%08X ", bark);
         if ((bark & 0x7F800000) == 0x7F800000)
             bark = (bark & 0x80000000) | 0x7F7FFFFF;
         vu0->set_gpr_u(index, i, bark);
     }
-    printf("\n");
+    //printf("\n");
 }
 
 void EmotionEngine::swc1(uint32_t addr, int index)
@@ -677,14 +677,14 @@ void EmotionEngine::qmfc2(int dest, int cop_reg)
 
 void EmotionEngine::qmtc2(int source, int cop_reg)
 {
-    printf("[EE] QMTC2: ");
+    //printf("[EE] QMTC2: ");
     for (int i = 0; i < 4; i++)
     {
         uint32_t bark = get_gpr<uint32_t>(source, i);
-        printf("$%08X ", bark);
+        //printf("$%08X ", bark);
         vu0->set_gpr_u(cop_reg, i, bark);
     }
-    printf("\n");
+    //printf("\n");
 }
 
 void EmotionEngine::cop2_special(uint32_t instruction)

@@ -1356,6 +1356,8 @@ string EmotionDisasm::disasm_cop2_special2(uint32_t instruction)
         case 0x0A:
         case 0x0B:
             return disasm_vmaddabc(instruction);
+        case 0x10:
+            return disasm_vitof0(instruction);
         case 0x14:
             return disasm_vftoi0(instruction);
         case 0x15:
@@ -1365,6 +1367,8 @@ string EmotionDisasm::disasm_cop2_special2(uint32_t instruction)
         case 0x1A:
         case 0x1B:
             return disasm_vmulabc(instruction);
+        case 0x1F:
+            return disasm_vclip(instruction);
         case 0x2E:
             return disasm_vopmula(instruction);
         case 0x2F:
@@ -1427,6 +1431,11 @@ string EmotionDisasm::disasm_vmaddabc(uint32_t instruction)
     return disasm_cop2_acc_bc("vmadda", instruction);
 }
 
+string EmotionDisasm::disasm_vitof0(uint32_t instruction)
+{
+    return disasm_cop2_special2_move("vitof0", instruction);
+}
+
 string EmotionDisasm::disasm_vftoi0(uint32_t instruction)
 {
     return disasm_cop2_special2_move("vftoi0", instruction);
@@ -1440,6 +1449,15 @@ string EmotionDisasm::disasm_vftoi4(uint32_t instruction)
 string EmotionDisasm::disasm_vmulabc(uint32_t instruction)
 {
     return disasm_cop2_acc_bc("vmula", instruction);
+}
+
+string EmotionDisasm::disasm_vclip(uint32_t instruction)
+{
+    stringstream output;
+    uint32_t fs = (instruction >> 11) & 0x1F;
+    uint32_t ft = (instruction >> 16) & 0x1F;
+    output << "vclipw.xyz vf" << fs << ", vf" << ft;
+    return output.str();
 }
 
 string EmotionDisasm::disasm_vopmula(uint32_t instruction)
