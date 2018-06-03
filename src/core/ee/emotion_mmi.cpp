@@ -530,10 +530,10 @@ void EmotionInterpreter::paddsw(EmotionEngine &cpu, uint32_t instruction)
     {
         int64_t value = cpu.get_gpr<int32_t>(reg1, i);
         value += cpu.get_gpr<int32_t>(reg2, i);
-        if (value > 0x7FFFFFFFL)
-            value = 0x7FFFFFFFL;
-        if (value < -0x80000000L)
-            value = -0x80000000L;
+        if (value > 0x7FFFFFFF)
+            value = 0x7FFFFFFF;
+        if (value < (int32_t)0x80000000)
+            value = (int32_t)0x80000000;
         cpu.set_gpr<int32_t>(dest, (int32_t)value, i);
     }
 }
@@ -551,10 +551,10 @@ void EmotionInterpreter::psubsw(EmotionEngine &cpu, uint32_t instruction)
     {
         int64_t value = cpu.get_gpr<int32_t>(reg1, i);
         value -= cpu.get_gpr<int32_t>(reg2, i);
-        if (value > 0x7FFFFFFFL)
-            value = 0x7FFFFFFFL;
-        if (value < -0x80000000L)
-            value = -0x80000000L;
+        if (value > 0x7FFFFFFF)
+            value = 0x7FFFFFFF;
+        if (value < (int32_t)0x80000000)
+            value = (int32_t)0x80000000;
         cpu.set_gpr<int32_t>(dest, (int32_t)value, i);
     }
 }
@@ -741,11 +741,12 @@ void EmotionInterpreter::pabsw(EmotionEngine &cpu, uint32_t instruction)
 
     for (int i = 0; i < 4; i++)
     {
-        int32_t word = cpu.get_gpr<int32_t>(source, i);
-        if (word == -0x80000000L)
+        uint32_t word = cpu.get_gpr<uint32_t>(source, i);
+        int32_t sword = cpu.get_gpr<int32_t>(source, i);
+        if (word == 0x80000000)
             cpu.set_gpr<uint32_t>(dest, 0x7FFFFFFF, i);
-        else if (word < 0)
-            cpu.set_gpr<uint32_t>(dest, -word, i);
+        else if (sword < 0)
+            cpu.set_gpr<uint32_t>(dest, -sword, i);
         else
             cpu.set_gpr<uint32_t>(dest, word, i);
     }
@@ -781,11 +782,12 @@ void EmotionInterpreter::pabsh(EmotionEngine &cpu, uint32_t instruction)
 
     for (int i = 0; i < 8; i++)
     {
-        int16_t halfword = cpu.get_gpr<int16_t>(source, i);
-        if (halfword == -0x8000)
+        int16_t shalfword = cpu.get_gpr<int16_t>(source, i);
+        uint16_t halfword = cpu.get_gpr<uint16_t>(source, i);
+        if (halfword == 0x8000)
             cpu.set_gpr<uint16_t>(dest, 0x7FFF, i);
-        else if (halfword < 0)
-            cpu.set_gpr<uint16_t>(dest, -halfword, i);
+        else if (shalfword < 0)
+            cpu.set_gpr<uint16_t>(dest, -shalfword, i);
         else
             cpu.set_gpr<uint16_t>(dest, halfword, i);
     }

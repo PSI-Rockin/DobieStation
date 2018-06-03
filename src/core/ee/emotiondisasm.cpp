@@ -1262,6 +1262,11 @@ string EmotionDisasm::disasm_cop2_special(uint32_t instruction)
         case 0x0A:
         case 0x0B:
             return disasm_vmaddbc(instruction);
+        case 0x14:
+        case 0x15:
+        case 0x16:
+        case 0x17:
+            return disasm_vminibc(instruction);
         case 0x18:
         case 0x19:
         case 0x1A:
@@ -1299,6 +1304,11 @@ string EmotionDisasm::disasm_vsubbc(uint32_t instruction)
 string EmotionDisasm::disasm_vmaddbc(uint32_t instruction)
 {
     return disasm_cop2_special_bc("vmadd", instruction);
+}
+
+string EmotionDisasm::disasm_vminibc(uint32_t instruction)
+{
+    return disasm_cop2_special_bc("vmini", instruction);
 }
 
 string EmotionDisasm::disasm_vmulbc(uint32_t instruction)
