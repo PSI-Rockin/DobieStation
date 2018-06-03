@@ -175,7 +175,7 @@ void DMAC::process_VIF0()
         {
             uint128_t DMAtag = fetch128(channels[VIF0].tag_address);
             if (channels[VIF0].control & (1 << 6))
-                vif1->transfer_DMAtag(DMAtag);
+                vif0->transfer_DMAtag(DMAtag);
             handle_source_chain(VIF0);
         }
     }
