@@ -31,7 +31,7 @@ class SPU
 
         uint32_t current_addr;
     public:
-        SPU::SPU(int id, Emulator* e);
+        SPU(int id, Emulator* e);
 
         void reset(uint8_t* RAM);
         void finish_DMA();
