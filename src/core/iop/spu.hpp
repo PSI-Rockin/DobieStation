@@ -14,10 +14,14 @@ struct SPU_STAT
     bool DMA_busy;
 };
 
+class Emulator;
+
 class SPU
 {
     private:
         int id;
+        Emulator* e;
+
         uint16_t* RAM;
         Voice voices[24];
         uint16_t core_att;
@@ -27,7 +31,7 @@ class SPU
 
         uint32_t current_addr;
     public:
-        SPU(int id);
+        SPU::SPU(int id, Emulator* e);
 
         void reset(uint8_t* RAM);
         void finish_DMA();

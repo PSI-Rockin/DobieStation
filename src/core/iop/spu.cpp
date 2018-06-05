@@ -1,8 +1,9 @@
 #include <cstdio>
 #include "spu.hpp"
+#include "../emulator.hpp"
 
-SPU::SPU(int id) : id(id)
-{
+SPU::SPU(int id, Emulator* e) : id(id), e(e)
+{ 
 
 }
 

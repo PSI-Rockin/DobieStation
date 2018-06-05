@@ -147,6 +147,7 @@ class GraphicsSynthesizer
         TRXPOS_REG TRXPOS;
         TRXREG_REG TRXREG;
         uint8_t TRXDIR;
+        uint8_t BUSDIR;
         int pixels_transferred;
 
         //Used for unpacking PSMCT24
