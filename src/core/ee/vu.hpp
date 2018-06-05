@@ -70,6 +70,7 @@ class VectorUnit
         void iadd(uint8_t dest, uint8_t reg1, uint8_t reg2);
         void iswr(uint8_t field, uint8_t source, uint8_t base);
         void itof0(uint8_t field, uint8_t dest, uint8_t source);
+        void itof12(uint8_t field, uint8_t dest, uint8_t source);
         void maddbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
         void maddabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_reg);
         void move(uint8_t field, uint8_t dest, uint8_t source);

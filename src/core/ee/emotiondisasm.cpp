@@ -1375,6 +1375,8 @@ string EmotionDisasm::disasm_cop2_special2(uint32_t instruction)
             return disasm_vmaddabc(instruction);
         case 0x10:
             return disasm_vitof0(instruction);
+        case 0x12:
+            return disasm_vitof12(instruction);
         case 0x14:
             return disasm_vftoi0(instruction);
         case 0x15:
@@ -1455,6 +1457,11 @@ string EmotionDisasm::disasm_vmaddabc(uint32_t instruction)
 string EmotionDisasm::disasm_vitof0(uint32_t instruction)
 {
     return disasm_cop2_special2_move("vitof0", instruction);
+}
+
+string EmotionDisasm::disasm_vitof12(uint32_t instruction)
+{
+    return disasm_cop2_special2_move("vitof12", instruction);
 }
 
 string EmotionDisasm::disasm_vftoi0(uint32_t instruction)
@@ -1796,6 +1803,8 @@ string EmotionDisasm::disasm_mmi2(uint32_t instruction)
             return disasm_pxor(instruction);
         case 0x1A:
             return disasm_mmi_copy("pexeh", instruction);
+        case 0x1C:
+            return disasm_special_simplemath("pmulth", instruction);
         case 0x1E:
             return disasm_mmi_copy("pexew", instruction);
         default:
