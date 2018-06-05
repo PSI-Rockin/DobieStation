@@ -462,9 +462,19 @@ void VectorUnit::rnext(uint8_t field, uint8_t dest)
 void VectorUnit::rsqrt(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2)
 {
     float denom = fabs(convert(gpr[reg2].u[ftf]));
+    float num = convert(gpr[reg1].u[fsf]);
+
+    status = (status & 0xFCF) | ((status & 0x30) << 6);
+
     if (!denom)
     {
         printf("[VU] RSQRT by zero!\n");
+
+        if (num == 0.0)
+            status |= 0x10;
+        else
+            status |= 0x20;
+        
         if ((gpr[reg1].u[fsf] & 0x80000000) != (gpr[reg2].u[ftf] & 0x80000000))
             Q.u = 0xFF7FFFFF;
         else

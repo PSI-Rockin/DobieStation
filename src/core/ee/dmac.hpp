@@ -11,7 +11,7 @@ struct DMA_Channel
     uint32_t quadword_count;
     uint32_t tag_address;
     uint32_t tag_save0, tag_save1;
-	uint32_t scratchpad_address;
+    uint32_t scratchpad_address;
 
     bool tag_end;
     bool paused;

@@ -195,9 +195,7 @@ void DMAC::process_VIF1()
 
         //Don't mask the MADR on REFE/REF/REFS as they don't follow the tag, so likely outside the MFIFO
         if (id != 0 && id != 3 && id != 4)
-        {
             channels[VIF1].address = RBOR | (channels[VIF1].address & RBSR);
-        }        
 
         if (channels[VIF1].tag_address == channels[SPR_FROM].address)
         {
@@ -245,9 +243,7 @@ void DMAC::process_GIF()
 
         //Don't mask the MADR on REFE/REF/REFS as they don't follow the tag, so likely outside the MFIFO
         if (id != 0 && id != 3 && id != 4)
-        {
             channels[GIF].address = RBOR | (channels[GIF].address & RBSR);
-        }
 
         if (channels[GIF].tag_address == channels[SPR_FROM].address)
         {
