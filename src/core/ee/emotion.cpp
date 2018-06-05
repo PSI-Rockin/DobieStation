@@ -101,6 +101,7 @@ int EmotionEngine::run(int cycles_to_run)
         {
             std::string disasm = EmotionDisasm::disasm_instr(instruction, PC);
             printf("[$%08X] $%08X - %s\n", PC, instruction, disasm.c_str());
+            //print_state();
         }
         EmotionInterpreter::interpret(*this, instruction);
         if (increment_PC)
@@ -114,6 +115,8 @@ int EmotionEngine::run(int cycles_to_run)
             {
                 branch_on = false;
                 PC = new_PC;
+                //if (PC == 0x002923D8)
+                    //can_disassemble = true;
                 if (PC == 0x0029e9cc)
                     PC = 0x0029E984;
                 if (PC < 0x80000000 && PC >= 0x00100000)
@@ -252,7 +255,7 @@ void EmotionEngine::write16(uint32_t address, uint16_t value)
 {
     if (address >= 0x70000000 && address < 0x70004000)
     {
-        *(uint32_t*)&scratchpad[address & 0x3FFC] = value;
+        *(uint16_t*)&scratchpad[address & 0x3FFE] = value;
         return;
     }
     if (address >= 0x30100000 && address < 0x31FFFFFF)
@@ -276,7 +279,7 @@ void EmotionEngine::write64(uint32_t address, uint64_t value)
 {
     if (address >= 0x70000000 && address < 0x70004000)
     {
-        *(uint64_t*)&scratchpad[address & 0x3FFC] = value;
+        *(uint64_t*)&scratchpad[address & 0x3FF8] = value;
         return;
     }
     if (address >= 0x30100000 && address < 0x31FFFFFF)
@@ -288,7 +291,7 @@ void EmotionEngine::write128(uint32_t address, uint128_t value)
 {
     if (address >= 0x70000000 && address < 0x70004000)
     {
-        *(uint128_t*)&scratchpad[address & 0x3FFC] = value;
+        *(uint128_t*)&scratchpad[address & 0x3FF0] = value;
         return;
     }
     if (address >= 0x30100000 && address < 0x31FFFFFF)

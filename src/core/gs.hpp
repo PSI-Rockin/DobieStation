@@ -3,6 +3,18 @@
 #include <cstdint>
 #include "gscontext.hpp"
 
+struct PRMODE
+{
+    bool gourand_shading;
+    bool texture_mapping;
+    bool fog;
+    bool alpha_blend;
+    bool antialiasing;
+    bool use_UV;
+    bool use_context2;
+    bool fix_fragment_value;
+};
+
 struct PRIM_REG
 {
     uint8_t prim_type;
@@ -182,6 +194,7 @@ class GraphicsSynthesizer
         GraphicsSynthesizer(INTC* intc);
         ~GraphicsSynthesizer();
         void reset();
+        void memdump();
         void start_frame();
         bool is_frame_complete();
         uint32_t* get_framebuffer();
