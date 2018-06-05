@@ -186,6 +186,16 @@ void Cop1::msub_s(int dest, int reg1, int reg2)
     printf("[FPU] msub.s: %f - %f * %f = %f\n", acc, op1, op2, gpr[dest].f);
 }
 
+void Cop1::madda_s(int reg1, int reg2)
+{
+    float op1 = convert(gpr[reg1].u);
+    float op2 = convert(gpr[reg2].u);
+    float acc = convert(accumulator.u);
+    accumulator.f = acc + (op1 * op2);
+    accumulator.f = convert(accumulator.u);
+    printf("[FPU] madda.s: %f + (%f * %f) = %f", acc, op1, op2, accumulator.f);
+}
+
 void Cop1::c_f_s()
 {
     control.condition = false;

@@ -129,6 +129,7 @@ namespace EmotionInterpreter
     void fpu_mula(Cop1& fpu, uint32_t instruction);
     void fpu_madd(Cop1& fpu, uint32_t instruction);
     void fpu_msub(Cop1& fpu, uint32_t instruction);
+    void fpu_madda(Cop1& fpu, uint32_t instruction);
     void fpu_cvt_w_s(Cop1& fpu, uint32_t instruction);
     void fpu_c_f_s(Cop1& fpu, uint32_t instruction);
     void fpu_c_eq_s(Cop1& fpu, uint32_t instruction);

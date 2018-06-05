@@ -984,6 +984,8 @@ string EmotionDisasm::disasm_cop_s(uint32_t instruction)
             return disasm_fpu_madd(instruction);
         case 0x1D:
             return disasm_fpu_msub(instruction);
+        case 0x1E:
+            return disasm_fpu_madda(instruction);
         case 0x24:
             return disasm_fpu_cvt_w_s(instruction);
         case 0x30:
@@ -1090,6 +1092,11 @@ string EmotionDisasm::disasm_fpu_madd(uint32_t instruction)
 string EmotionDisasm::disasm_fpu_msub(uint32_t instruction)
 {
     return disasm_fpu_math("msub.s", instruction);
+}
+
+string EmotionDisasm::disasm_fpu_madda(uint32_t instruction)
+{
+    return disasm_fpu_acc("madda.s", instruction);
 }
 
 string EmotionDisasm::disasm_fpu_convert(const string opcode, uint32_t instruction)

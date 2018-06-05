@@ -66,11 +66,7 @@ void Emulator::run()
             VBLANK_sent = true;
             gs.set_VBLANK(true);
             printf("VSYNC FRAMES: %d\n", frames);
-            //cpu.set_disassembly(frames == 700);
-            //if (frames >= 3700)
-                //iop.set_disassembly(true);
-            //cpu.set_disassembly(frames == 1349);
-            //cpu.set_disassembly(frames >= 1348 && frames < 1350);
+            //cpu.set_disassembly(frames >= 310);
             frames++;
             iop_request_IRQ(0);
             gs.render_CRT();
@@ -337,7 +333,7 @@ uint8_t Emulator::read8(uint32_t address)
         case 0x1F402018:
             return cdvd.read_S_data();
     }
-    printf("Unrecognized read8 at physical addr $%08X\n", address);
+    printf("[EE] Unrecognized read8 at physical addr $%08X\n", address);
     return 0;
 }
 
@@ -354,7 +350,7 @@ uint16_t Emulator::read16(uint32_t address)
         case 0x1A000006:
             return 1;
     }
-    printf("Unrecognized read16 at physical addr $%08X\n", address);
+    printf("[EE] Unrecognized read16 at physical addr $%08X\n", address);
     return 0;
 }
 
@@ -378,9 +374,15 @@ uint32_t Emulator::read32(uint32_t address)
             return ipu.read_control();
         case 0x10002020:
             return ipu.read_BP();
+        case 0x10003020:
+            printf("[GIF] Read32 GIF_CTRL\n");
+            return 0;
+        case 0x10003C00:
+            printf("[VIF] Read32 VIF1_CTRL\n");
+            return 0;
         case 0x1000F000:
             //printf("\nRead32 INTC_STAT: $%08X", intc.read_stat());
-            if (!VBLANK_sent)
+            /*if (!VBLANK_sent)
             {
                 INTC_read_count++;
                 if (INTC_read_count >= 200000)
@@ -388,7 +390,7 @@ uint32_t Emulator::read32(uint32_t address)
                     INTC_read_count = 0;
                     instructions_run = VBLANK_START;
                 }
-            }
+            }*/
             return intc.read_stat();
         case 0x1000F010:
             printf("Read32 INTC_MASK: $%08X\n", intc.read_mask());
@@ -438,7 +440,7 @@ uint32_t Emulator::read32(uint32_t address)
         case 0x1000F520:
             return dmac.read_master_disable();
     }
-    printf("Unrecognized read32 at physical addr $%08X\n", address);
+    printf("[EE] Unrecognized read32 at physical addr $%08X\n", address);
 
     return 0;
 }
@@ -464,7 +466,7 @@ uint64_t Emulator::read64(uint32_t address)
         case 0x10002030:
             return ipu.read_top();
     }
-    printf("Unrecognized read64 at physical addr $%08X\n", address);
+    printf("[EE] Unrecognized read64 at physical addr $%08X\n", address);
     return 0;
 }
 
@@ -474,7 +476,7 @@ uint128_t Emulator::read128(uint32_t address)
         return *(uint128_t*)&RDRAM[address & 0x01FFFFFF];
     if (address >= 0x1FC00000 && address < 0x20000000)
         return *(uint128_t*)&BIOS[address & 0x3FFFFF];
-    printf("Unrecognized read128 at physical addr $%08X\n", address);
+    printf("[EE] Unrecognized read128 at physical addr $%08X\n", address);
     return uint128_t::from_u32(0);
 }
 
@@ -502,7 +504,7 @@ void Emulator::write8(uint32_t address, uint8_t value)
             ee_log.flush();
             return;
     }
-    printf("Unrecognized write8 at physical addr $%08X of $%02X\n", address, value);
+    printf("[EE] Unrecognized write8 at physical addr $%08X of $%02X\n", address, value);
     //exit(1);
 }
 
@@ -528,7 +530,7 @@ void Emulator::write16(uint32_t address, uint16_t value)
         *(uint16_t*)&BIOS[address & 0x3FFFFF] = value;
         return;
     }
-    printf("Unrecognized write16 at physical addr $%08X of $%04X\n", address, value);
+    printf("[EE] Unrecognized write16 at physical addr $%08X of $%04X\n", address, value);
 }
 
 void Emulator::write32(uint32_t address, uint32_t value)
@@ -616,7 +618,7 @@ void Emulator::write32(uint32_t address, uint32_t value)
             dmac.write_master_disable(value);
             return;
     }
-    printf("Unrecognized write32 at physical addr $%08X of $%08X\n", address, value);
+    printf("[EE] Unrecognized write32 at physical addr $%08X of $%08X\n", address, value);
 
     //exit(1);
 }
@@ -653,7 +655,7 @@ void Emulator::write64(uint32_t address, uint64_t value)
         gs.write64_privileged(address, value);
         return;
     }
-    printf("Unrecognized write64 at physical addr $%08X of $%08X_%08X\n", address, value >> 32, value & 0xFFFFFFFF);
+    printf("[EE] Unrecognized write64 at physical addr $%08X of $%08X_%08X\n", address, value >> 32, value & 0xFFFFFFFF);
     //exit(1);
 }
 
@@ -684,7 +686,7 @@ void Emulator::write128(uint32_t address, uint128_t value)
         *(uint128_t*)&BIOS[address & 0x3FFFFF] = value;
         return;
     }
-    printf("Unrecognized write128 at physical addr $%08X of $%08X_%08X_%08X_%08X\n", address,
+    printf("[EE] Unrecognized write128 at physical addr $%08X of $%08X_%08X_%08X_%08X\n", address,
            value._u32[0], value._u32[1], value._u32[2], value._u32[3]);
     //exit(1);
 }
@@ -731,7 +733,7 @@ uint8_t Emulator::iop_read8(uint32_t address)
         case 0x1FA00000:
             return IOP_POST;
     }
-    printf("Unrecognized IOP read8 from physical addr $%08X\n", address);
+    printf("[IOP] Unrecognized read8 from physical addr $%08X\n", address);
     return 0;
 }
 
@@ -752,7 +754,7 @@ uint16_t Emulator::iop_read16(uint32_t address)
         case 0x1F8014A4:
             return iop_timers.read_control(5);
     }
-    printf("Unrecognized IOP read16 from physical addr $%08X\n", address);
+    printf("[IOP] Unrecognized read16 from physical addr $%08X\n", address);
     return 0;
 }
 
@@ -790,6 +792,8 @@ uint32_t Emulator::iop_read32(uint32_t address)
             return iop_dma.get_chan_addr(3);
         case 0x1F8010B8:
             return iop_dma.get_chan_control(3);
+        case 0x1F8010C0:
+            return iop_dma.get_chan_addr(4);
         case 0x1F8010C8:
             return iop_dma.get_chan_control(4);
         case 0x1F8010F0:
@@ -802,6 +806,8 @@ uint32_t Emulator::iop_read32(uint32_t address)
             return iop_timers.read_counter(4);
         case 0x1F8014A0:
             return iop_timers.read_counter(5);
+        case 0x1F801500:
+            return iop_dma.get_chan_addr(8);
         case 0x1F801508:
             return iop_dma.get_chan_control(8);
         case 0x1F801528:
@@ -825,7 +831,7 @@ uint32_t Emulator::iop_read32(uint32_t address)
         case 0xFFFE0130: //Cache control?
             return 0;
     }
-    printf("Unrecognized IOP read32 from physical addr $%08X\n", address);
+    printf("[IOP] Unrecognized read32 from physical addr $%08X\n", address);
     //exit(1);
     return 0;
 }
@@ -874,7 +880,7 @@ void Emulator::iop_write8(uint32_t address, uint8_t value)
             printf("[IOP] POST: $%02X\n", value);
             return;
     }
-    printf("Unrecognized IOP write8 to physical addr $%08X of $%02X\n", address, value);
+    printf("[IOP] Unrecognized write8 to physical addr $%08X of $%02X\n", address, value);
     //exit(1);
 }
 
@@ -935,7 +941,7 @@ void Emulator::iop_write16(uint32_t address, uint16_t value)
             iop_dma.set_chan_count(11, value);
             return;
     }
-    printf("Unrecognized IOP write16 to physical addr $%08X of $%04X\n", address, value);
+    printf("[IOP] Unrecognized write16 to physical addr $%08X of $%04X\n", address, value);
     //exit(1);
 }
 
@@ -1128,7 +1134,7 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
         case 0xFFFE0130:
             return;
     }
-    printf("Unrecognized IOP write32 to physical addr $%08X of $%08X\n", address, value);
+    printf("[IOP] Unrecognized write32 to physical addr $%08X of $%08X\n", address, value);
     //exit(1);
 }
 
