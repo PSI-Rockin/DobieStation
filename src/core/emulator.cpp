@@ -11,7 +11,7 @@ Emulator::Emulator() :
     bios_hle(this, &gs), cdvd(this), cp0(&dmac), cpu(&bios_hle, &cp0, &fpu, this, (uint8_t*)&scratchpad, &vu0),
     dmac(&cpu, this, &gif, &ipu, &sif, &vif0, &vif1), gif(&gs), gs(&intc),
     iop(this), iop_dma(this, &cdvd, &sif, &sio2, &spu, &spu2), iop_timers(this), intc(&cpu),
-    timers(&intc), sio2(this, &pad), spu(1), spu2(2), vif0(nullptr, &vu0), vif1(&gif, &vu1), vu0(0), vu1(1)
+    timers(&intc), sio2(this, &pad), spu(1, this), spu2(2, this), vif0(nullptr, &vu0), vif1(&gif, &vu1), vu0(0), vu1(1)
 {
     BIOS = nullptr;
     RDRAM = nullptr;
@@ -378,6 +378,9 @@ uint32_t Emulator::read32(uint32_t address)
             return ipu.read_control();
         case 0x10002020:
             return ipu.read_BP();
+		case 0x10003C00:
+			printf("READ VIF1_STAT\n");
+			return 0;
         case 0x1000F000:
             //printf("\nRead32 INTC_STAT: $%08X", intc.read_stat());
             if (!VBLANK_sent)
@@ -790,6 +793,8 @@ uint32_t Emulator::iop_read32(uint32_t address)
             return iop_dma.get_chan_addr(3);
         case 0x1F8010B8:
             return iop_dma.get_chan_control(3);
+        case 0x1F8010C0:
+            return iop_dma.get_chan_addr(4);
         case 0x1F8010C8:
             return iop_dma.get_chan_control(4);
         case 0x1F8010F0:
@@ -802,6 +807,8 @@ uint32_t Emulator::iop_read32(uint32_t address)
             return iop_timers.read_counter(4);
         case 0x1F8014A0:
             return iop_timers.read_counter(5);
+        case 0x1F801500:
+            return iop_dma.get_chan_addr(8);
         case 0x1F801508:
             return iop_dma.get_chan_control(8);
         case 0x1F801528:

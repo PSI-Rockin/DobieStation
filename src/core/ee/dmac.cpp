@@ -15,7 +15,8 @@ enum CHANNELS
     SIF1,
     SIF2,
     SPR_FROM,
-    SPR_TO
+    SPR_TO,
+    MFIFO_EMPTY = 14
 };
 
 DMAC::DMAC(EmotionEngine* cpu, Emulator* e, GraphicsInterface* gif, ImageProcessingUnit* ipu, SubsystemInterface* sif,
@@ -31,18 +32,15 @@ void DMAC::reset(uint8_t* RDRAM, uint8_t* scratchpad)
     this->scratchpad = scratchpad;
     master_disable = 0x1201; //hax
     control.master_enable = false;
+    mfifo_empty_triggered = false;
     PCR = 0;
-    for (int i = 0; i < 10; i++)
+
+    for (int i = 0; i < 15; i++)
     {
         channels[i].control = 0;
         interrupt_stat.channel_mask[i] = false;
         interrupt_stat.channel_stat[i] = false;
     }
-    interrupt_stat.mfifo_mask = false;
-    interrupt_stat.stall_mask = false;
-    interrupt_stat.bus_stat = false;
-    interrupt_stat.mfifo_stat = false;
-    interrupt_stat.stall_stat = false;
 }
 
 uint128_t DMAC::fetch128(uint32_t addr)
@@ -130,6 +128,12 @@ void DMAC::run(int cycles)
                 case SIF1:
                     process_SIF1();
                     break;
+                case SPR_FROM:
+                    process_SPR_FROM();
+                    break;
+                case SPR_TO:
+                    process_SPR_TO();
+                    break;
             }
             c--;
         }
@@ -147,7 +151,7 @@ void DMAC::transfer_end(int index)
 void DMAC::int1_check()
 {
     bool int1_signal = false;
-    for (int i = 0; i < 10; i++)
+    for (int i = 0; i < 15; i++)
     {
         if (interrupt_stat.channel_stat[i] & interrupt_stat.channel_mask[i])
         {
@@ -183,6 +187,33 @@ void DMAC::process_VIF0()
 
 void DMAC::process_VIF1()
 {
+    if (control.mem_drain_channel - 1 == VIF1) 
+    {
+        uint8_t id = (channels[VIF1].control >> 28) & 0x7;
+
+        channels[VIF1].tag_address = RBOR | (channels[VIF1].tag_address & RBSR);
+
+        //Don't mask the MADR on REFE/REF/REFS as they don't follow the tag, so likely outside the MFIFO
+        if (id != 0 && id != 3 && id != 4)
+        {
+            channels[VIF1].address = RBOR | (channels[VIF1].address & RBSR);
+        }        
+
+        if (channels[VIF1].tag_address == channels[SPR_FROM].address)
+        {
+            if (!mfifo_empty_triggered)
+            {
+                //Empty
+                interrupt_stat.channel_stat[MFIFO_EMPTY] = true;
+                int1_check();
+                mfifo_empty_triggered = true;
+                printf("[DMAC] MFIFO Empty\n");
+            }
+            return;
+        }
+        mfifo_empty_triggered = false;
+    }
+
     if (channels[VIF1].quadword_count)
     {
         vif1->feed_DMA(fetch128(channels[VIF1].address));
@@ -206,6 +237,33 @@ void DMAC::process_VIF1()
 
 void DMAC::process_GIF()
 {
+    if (control.mem_drain_channel - 1 == GIF)
+    {
+        uint8_t id = (channels[GIF].control >> 28) & 0x7;
+
+        channels[GIF].tag_address = RBOR | (channels[GIF].tag_address & RBSR);
+
+        //Don't mask the MADR on REFE/REF/REFS as they don't follow the tag, so likely outside the MFIFO
+        if (id != 0 && id != 3 && id != 4)
+        {
+            channels[GIF].address = RBOR | (channels[GIF].address & RBSR);
+        }
+
+        if (channels[GIF].tag_address == channels[SPR_FROM].address)
+        {
+            if (!mfifo_empty_triggered)
+            {
+                //Empty
+                interrupt_stat.channel_stat[MFIFO_EMPTY] = true;
+                int1_check();
+                mfifo_empty_triggered = true;
+                printf("[DMAC] MFIFO Empty\n");
+            }
+            return;
+        }
+        mfifo_empty_triggered = false;
+    }
+
     if (channels[GIF].quadword_count)
     {
         gif->send_PATH3(fetch128(channels[GIF].address));
@@ -311,6 +369,78 @@ void DMAC::process_SIF1()
         }
         else
             handle_source_chain(SIF1);
+    }
+}
+
+void DMAC::process_SPR_FROM()
+{
+    if (control.mem_drain_channel != 0)
+    {
+         channels[SPR_FROM].address = RBOR | (channels[SPR_FROM].address & RBSR);
+    }
+
+    if (channels[SPR_FROM].quadword_count)
+    {
+        uint128_t DMAData = fetch128(channels[SPR_FROM].scratchpad_address | (1 << 31));
+        store128(channels[SPR_FROM].address, DMAData);
+        channels[SPR_FROM].scratchpad_address += 16;
+        channels[SPR_FROM].scratchpad_address &= 0x3FFF;
+        channels[SPR_FROM].address += 16;
+        channels[SPR_FROM].quadword_count--;
+    }
+    else
+    {
+        if (channels[SPR_FROM].tag_end)
+        {
+            transfer_end(SPR_FROM);
+        }
+        else
+        {
+            uint128_t DMAtag = fetch128(channels[SPR_FROM].scratchpad_address);
+            printf("[DMAC] SPR_FROM tag: $%08X_%08X\n", DMAtag._u32[1], DMAtag._u32[0]);
+
+            channels[SPR_FROM].quadword_count = DMAtag._u32[0] & 0xFFFF;
+            channels[SPR_FROM].address = DMAtag._u32[1];
+            channels[SPR_FROM].scratchpad_address += 16;
+            channels[SPR_FROM].scratchpad_address &= 0x3FFF;
+
+            int mode = (DMAtag._u32[0] >> 28) & 0x7;
+
+            bool IRQ = (DMAtag._u32[0] & (1UL << 31));
+            bool TIE = channels[SPR_FROM].control & (1 << 7);
+            if (mode == 7 || (IRQ && TIE))
+                channels[SPR_FROM].tag_end = true;
+
+            channels[SPR_FROM].control &= 0xFFFF;
+            channels[SPR_FROM].control |= DMAtag._u32[0] & 0xFFFF0000;
+        }
+    }
+}
+
+void DMAC::process_SPR_TO()
+{
+    if (channels[SPR_TO].quadword_count)
+    {
+        uint128_t DMAData = fetch128(channels[SPR_TO].address);
+        store128(channels[SPR_TO].scratchpad_address | (1 << 31), DMAData);
+        channels[SPR_TO].scratchpad_address += 16;
+        channels[SPR_TO].address += 16;
+        channels[SPR_TO].quadword_count--;
+    }
+    else
+    {
+            if (channels[SPR_TO].tag_end)
+                transfer_end(SPR_TO);
+        else
+        {
+            uint128_t DMAtag = fetch128(channels[SPR_TO].tag_address);
+            if (channels[SPR_TO].control & (1 << 6))
+            {
+                store128(channels[SPR_TO].scratchpad_address | (1 << 31), DMAtag);
+                channels[SPR_TO].scratchpad_address += 16;
+            }
+            handle_source_chain(SPR_TO);
+        }
     }
 }
 
@@ -426,6 +556,10 @@ void DMAC::start_DMA(int index)
     printf("TTE: %d\n", channels[index].control & (1 << 6));
     int mode = (channels[index].control >> 2) & 0x3;
     channels[index].tag_end = (mode == 0); //always end transfers in normal mode
+    if (mode == 2) 
+    {
+        printf("[DMAC] D%d Unhandled Interleave Mode", index);
+    }
 }
 
 uint32_t DMAC::read_master_disable()
@@ -492,8 +626,14 @@ uint32_t DMAC::read32(uint32_t address)
         case 0x1000C000:
             reg = channels[SIF0].control;
             break;
+        case 0x1000C020:
+            reg = channels[SIF0].quadword_count;
+            break;
         case 0x1000C400:
             reg = channels[SIF1].control;
+            break;
+        case 0x1000C410:
+            reg = channels[SIF1].address;
             break;
         case 0x1000C420:
             reg = channels[SIF1].quadword_count;
@@ -501,6 +641,20 @@ uint32_t DMAC::read32(uint32_t address)
         case 0x1000C430:
             reg = channels[SIF1].tag_address;
             break;
+        case 0x1000D000:
+            reg = channels[SPR_FROM].control;
+        case 0x1000D010:
+            reg = channels[SPR_FROM].address;
+        case 0x1000D020:
+            reg = channels[SPR_FROM].quadword_count;
+        case 0x1000D400:
+            reg = channels[SPR_TO].control;
+        case 0x1000D410:
+            reg = channels[SPR_TO].address;
+        case 0x1000D420:
+            reg = channels[SPR_TO].quadword_count;
+        case 0x1000D430:
+            reg = channels[SPR_TO].tag_address;
         case 0x1000E000:
             reg |= control.master_enable;
             reg |= control.cycle_stealing << 1;
@@ -510,20 +664,20 @@ uint32_t DMAC::read32(uint32_t address)
             reg |= control.release_cycle << 8;
             break;
         case 0x1000E010:
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < 15; i++)
             {
                 reg |= interrupt_stat.channel_stat[i] << i;
                 reg |= interrupt_stat.channel_mask[i] << (i + 16);
             }
-            reg |= interrupt_stat.stall_stat << 13;
-            reg |= interrupt_stat.mfifo_stat << 14;
-            reg |= interrupt_stat.bus_stat << 15;
-
-            reg |= interrupt_stat.stall_mask << 29;
-            reg |= interrupt_stat.mfifo_mask << 30;
             break;
         case 0x1000E020:
             reg = PCR;
+            break;
+        case 0x1000E040:
+            reg = RBSR;
+            break;
+        case 0x1000E050:
+            reg = RBOR;
             break;
         default:
             printf("[DMAC] Unrecognized read32 from $%08X\n", address);
@@ -642,6 +796,10 @@ void DMAC::write32(uint32_t address, uint32_t value)
             if (value & 0x100)
                 start_DMA(SIF1);
             break;
+        case 0x1000C410:
+            printf("[DMAC] SIF1 M_ADR: $%08X\n", value);
+            channels[SIF1].address = value & ~0xF;
+            break;
         case 0x1000C420:
             printf("[DMAC] SIF1 QWC: $%08X\n", value);
             channels[SIF1].quadword_count = value & 0xFFFF;
@@ -649,6 +807,46 @@ void DMAC::write32(uint32_t address, uint32_t value)
         case 0x1000C430:
             printf("[DMAC] SIF1 T_ADR: $%08X\n", value);
             channels[SIF1].tag_address = value & ~0xF;
+            break;
+        case 0x1000D000:
+            printf("[DMAC] SPR_FROM CTRL: $%08X\n", value);
+            channels[SPR_FROM].control = value;
+            if (value & 0x100)
+                start_DMA(SPR_FROM);
+            break;
+        case 0x1000D010:
+            printf("[DMAC] SPR_FROM M_ADR: $%08X\n", value);
+            channels[SPR_FROM].address = value & ~0xF;
+            break;
+        case 0x1000D020:
+            printf("[DMAC] SPR_FROM QWC: $%08X\n", value);
+            channels[SPR_FROM].quadword_count = value & 0xFFFF;
+            break;
+        case 0x1000D080:
+            printf("[DMAC] SPR_FROM SADR: $%08X\n", value);
+            channels[SPR_FROM].scratchpad_address = value & 0x3FFC;
+            break;
+        case 0x1000D400:
+            printf("[DMAC] SPR_TO CTRL: $%08X\n", value);
+            channels[SPR_TO].control = value;
+            if (value & 0x100)
+                start_DMA(SPR_TO);
+            break;
+        case 0x1000D410:
+            printf("[DMAC] SPR_TO  M_ADR: $%08X\n", value);
+            channels[SPR_FROM].address = value & ~0xF;
+            break;
+        case 0x1000D420:
+           printf("[DMAC] SPR_TO QWC: $%08X\n", value);
+           channels[SPR_FROM].quadword_count = value & 0xFFFF;
+           break;
+        case 0x1000D430:
+           printf("[DMAC] SPR_TO T_ADR: $%08X\n", value);
+           channels[SPR_FROM].tag_address = value & ~0xF;
+           break;
+        case 0x1000D480:
+            printf("[DMAC] SPR_TO SADR: $%08X\n", value);
+            channels[SPR_TO].scratchpad_address = value & 0x3FFC;
             break;
         case 0x1000E000:
             printf("[DMAC] Write32 D_CTRL: $%08X\n", value);
@@ -661,7 +859,7 @@ void DMAC::write32(uint32_t address, uint32_t value)
             break;
         case 0x1000E010:
             printf("[DMAC] Write32 D_STAT: $%08X\n", value);
-            for (int i = 0; i < 10; i++)
+            for (int i = 0; i < 15; i++)
             {
                 if (value & (1 << i))
                     interrupt_stat.channel_stat[i] = false;
@@ -670,22 +868,20 @@ void DMAC::write32(uint32_t address, uint32_t value)
                 if (value & (1 << (i + 16)))
                     interrupt_stat.channel_mask[i] ^= 1;
             }
-
-            interrupt_stat.stall_stat &= ~(value & (1 << 13));
-            interrupt_stat.mfifo_stat &= ~(value & (1 << 14));
-            interrupt_stat.bus_stat &= ~(value & (1 << 15));
-
-            if (value & (1 << 29))
-                interrupt_stat.stall_mask ^= 1;
-            if (value & (1 << 30))
-                interrupt_stat.mfifo_mask ^= 1;
-
             int1_check();
             break;
         case 0x1000E020:
             printf("[DMAC] Write to PCR: $%08X\n", value);
             PCR = value;
             break;
+        case 0x1000E040:
+            printf("[DMAC] Write to RBSR: $%08X\n", value);
+            RBSR = value;
+            return;
+        case 0x1000E050:
+            printf("[DMAC] Write to RBOR: $%08X\n", value);
+            RBOR = value;
+            return;
         default:
             printf("[DMAC] Unrecognized write32 of $%08X to $%08X\n", value, address);
             break;

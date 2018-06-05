@@ -11,6 +11,7 @@ struct DMA_Channel
     uint32_t quadword_count;
     uint32_t tag_address;
     uint32_t tag_save0, tag_save1;
+	uint32_t scratchpad_address;
 
     bool tag_end;
     bool paused;
@@ -29,14 +30,8 @@ struct D_CTRL
 
 struct D_STAT
 {
-    bool channel_stat[10];
-    bool stall_stat;
-    bool mfifo_stat;
-    bool bus_stat;
-
-    bool channel_mask[10];
-    bool stall_mask;
-    bool mfifo_mask;
+    bool channel_stat[15];
+    bool channel_mask[15];
 };
 
 class EmotionEngine;
@@ -56,11 +51,13 @@ class DMAC
         ImageProcessingUnit* ipu;
         SubsystemInterface* sif;
         VectorInterface* vif0, *vif1;
-        DMA_Channel channels[10];
+        DMA_Channel channels[15];
 
         D_CTRL control;
         D_STAT interrupt_stat;
         uint32_t PCR;
+        uint32_t RBOR, RBSR;
+        bool mfifo_empty_triggered;
 
         uint32_t master_disable;
 
@@ -70,6 +67,8 @@ class DMAC
         void process_IPU_TO();
         void process_SIF0();
         void process_SIF1();
+        void process_SPR_FROM();
+        void process_SPR_TO();
 
         void handle_source_chain(int index);
 

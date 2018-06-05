@@ -365,6 +365,10 @@ void GraphicsSynthesizer::write64_privileged(uint32_t addr, uint64_t value)
                 VBLANK_generated = false;
             }
             break;
+        case 0x1040:
+            printf("[GS] Write64 to GS_BUSDIR: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);
+            BUSDIR = (uint8_t)value;
+            break;
         default:
             printf("[GS] Unrecognized privileged write64 to reg $%04X: $%08X_%08X\n", addr, value >> 32, value & 0xFFFFFFFF);
     }
@@ -567,10 +571,12 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
                 write_HWREG(value);
             break;
         case 0x0061:
+            printf("[GS] FINISH Write\n");
             if (FINISH_enabled)
             {
                 FINISH_enabled = false;
                 FINISH_generated = true;
+                intc->assert_IRQ((int)Interrupt::GS);
             }
             break;
         default:
