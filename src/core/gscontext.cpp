@@ -30,11 +30,11 @@ void GSContext::set_tex0(uint64_t value)
     else
         tex0.tex_height = 1 << tex0.tex_height;
 
-    tex0.use_alpha = value & (1UL << 34);
+    tex0.use_alpha = (value >> 34) & 0x1;
     tex0.color_function = (value >> 35) & 0x3;
     tex0.CLUT_base = ((value >> 37) & 0x3FFF) * 64 * 4;
     tex0.CLUT_format = (value >> 51) & 0xF;
-    tex0.use_CSM2 = value & (1UL << 55);
+    tex0.use_CSM2 = (value >> 55) & 0x1;
     tex0.CLUT_offset = ((value >> 56) & 0x1F) * 16;
     tex0.CLUT_control = (value >> 61) & 0x7;
 
@@ -56,7 +56,7 @@ void GSContext::set_tex2(uint64_t value)
     tex0.format = (value >> 20) & 0x3F;
     tex0.CLUT_base = ((value >> 37) & 0x3FFF) * 64 * 4;
     tex0.CLUT_format = (value >> 51) & 0xF;
-    tex0.use_CSM2 = value & (1UL << 55);
+    tex0.use_CSM2 = (value >> 55) & 0x1;
     tex0.CLUT_offset = ((value >> 56) & 0x1F) * 16;
     tex0.CLUT_control = (value >> 61) & 0x7;
 
@@ -134,7 +134,7 @@ void GSContext::set_zbuf(uint64_t value)
 {
     zbuf.base_pointer = (value & 0x1FF) * 2048 * 4;
     zbuf.format = (value >> 24) & 0xF;
-    zbuf.no_update = value & (1UL << 32);
+    zbuf.no_update = (value >> 32) & 0x1;
     printf("ZBUF: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);
     printf("Base pointer: $%08X\n", zbuf.base_pointer);
     printf("Format: $%02X\n", zbuf.format);
