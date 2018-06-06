@@ -11,7 +11,7 @@ Emulator::Emulator() :
     bios_hle(this, &gs), cdvd(this), cp0(&dmac), cpu(&bios_hle, &cp0, &fpu, this, (uint8_t*)&scratchpad, &vu0),
     dmac(&cpu, this, &gif, &ipu, &sif, &vif0, &vif1), gif(&gs), gs(&intc),
     iop(this), iop_dma(this, &cdvd, &sif, &sio2, &spu, &spu2), iop_timers(this), intc(&cpu),
-    timers(&intc), sio2(this, &pad), spu(1), spu2(2), vif0(nullptr, &vu0), vif1(&gif, &vu1), vu0(0), vu1(1)
+    timers(&intc), sio2(this, &pad), spu(1), spu2(2), vif0(nullptr, &vu0, 0), vif1(&gif, &vu1, 1), vu0(0), vu1(1)
 {
     BIOS = nullptr;
     RDRAM = nullptr;
