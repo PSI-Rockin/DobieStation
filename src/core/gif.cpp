@@ -60,7 +60,7 @@ void GraphicsInterface::process_PACKED(uint128_t data)
             uint32_t x = data1 & 0xFFFF;
             uint32_t y = (data1 >> 32) & 0xFFFF;
             uint32_t z = (data2 >> 4) & 0xFFFFFF;
-            bool disable_drawing = data2 & (1UL << (111 - 64));
+            bool disable_drawing = (data2 >> (111 - 64)) & 0x1;
             gs->set_XYZ(x, y, z, !disable_drawing);
         }
             break;
@@ -70,7 +70,7 @@ void GraphicsInterface::process_PACKED(uint128_t data)
             uint32_t x = data1 & 0xFFFF;
             uint32_t y = (data1 >> 32) & 0xFFFF;
             uint32_t z = (data2 >> 4) & 0xFFFFFF;
-            bool disable_drawing = data2 & (1UL << (111 - 64));
+            bool disable_drawing = (data2 >> (111 - 64)) & 0x1;
             gs->set_XYZ(x, y, z, !disable_drawing);
         }
             break;
@@ -127,7 +127,7 @@ void GraphicsInterface::feed_GIF(uint128_t data)
         processing_GIF_prim = true;
         current_tag.NLOOP = data1 & 0x7FFF;
         current_tag.end_of_packet = data1 & (1 << 15);
-        current_tag.output_PRIM = data1 & (1UL << 46);
+        current_tag.output_PRIM = (data1 >> 46) & 0x1;
         current_tag.PRIM = (data1 >> 47) & 0x7FF;
         current_tag.format = (data1 >> 58) & 0x3;
         current_tag.reg_count = data1 >> 60;

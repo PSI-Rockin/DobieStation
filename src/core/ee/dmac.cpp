@@ -193,15 +193,21 @@ void DMAC::process_VIF1()
 
         channels[VIF1].tag_address = RBOR | (channels[VIF1].tag_address & RBSR);
 
-        //Don't mask the MADR on REFE/REF/REFS as they don't follow the tag, so likely outside the MFIFO
-        if (id != 0 && id != 3 && id != 4)
-            channels[VIF1].address = RBOR | (channels[VIF1].address & RBSR);
+        uint32_t addr = channels[VIF1].tag_address;
 
-        if (channels[VIF1].tag_address == channels[SPR_FROM].address)
+        //Don't mask the MADR on REFE/REF/REFS as they don't follow the tag, so likely outside the MFIFO
+        if (channels[VIF1].quadword_count)
+        {
+            if (id != 0 && id != 3 && id != 4)
+                channels[VIF1].address = RBOR | (channels[VIF1].address & RBSR);
+
+            addr = channels[VIF1].address;
+        }
+
+        if (addr == channels[SPR_FROM].address)
         {
             if (!mfifo_empty_triggered)
             {
-                //Empty
                 interrupt_stat.channel_stat[MFIFO_EMPTY] = true;
                 int1_check();
                 mfifo_empty_triggered = true;
@@ -241,15 +247,21 @@ void DMAC::process_GIF()
 
         channels[GIF].tag_address = RBOR | (channels[GIF].tag_address & RBSR);
 
-        //Don't mask the MADR on REFE/REF/REFS as they don't follow the tag, so likely outside the MFIFO
-        if (id != 0 && id != 3 && id != 4)
-            channels[GIF].address = RBOR | (channels[GIF].address & RBSR);
+        uint32_t addr = channels[GIF].tag_address;
 
-        if (channels[GIF].tag_address == channels[SPR_FROM].address)
+        //Don't mask the MADR on REFE/REF/REFS as they don't follow the tag, so likely outside the MFIFO
+        if (channels[GIF].quadword_count)
+        {
+            if (id != 0 && id != 3 && id != 4)
+                channels[GIF].address = RBOR | (channels[GIF].address & RBSR);
+
+            addr = channels[GIF].address;
+        }
+
+        if (addr == channels[SPR_FROM].address)
         {
             if (!mfifo_empty_triggered)
             {
-                //Empty
                 interrupt_stat.channel_stat[MFIFO_EMPTY] = true;
                 int1_check();
                 mfifo_empty_triggered = true;
@@ -370,19 +382,26 @@ void DMAC::process_SIF1()
 
 void DMAC::process_SPR_FROM()
 {
-    if (control.mem_drain_channel != 0)
-    {
-         channels[SPR_FROM].address = RBOR | (channels[SPR_FROM].address & RBSR);
-    }
+    
 
     if (channels[SPR_FROM].quadword_count)
     {
+        if (control.mem_drain_channel != 0)
+        {
+            channels[SPR_FROM].address = RBOR | (channels[SPR_FROM].address & RBSR);
+        }
+
         uint128_t DMAData = fetch128(channels[SPR_FROM].scratchpad_address | (1 << 31));
         store128(channels[SPR_FROM].address, DMAData);
+
         channels[SPR_FROM].scratchpad_address += 16;
         channels[SPR_FROM].scratchpad_address &= 0x3FFF;
-        channels[SPR_FROM].address += 16;
         channels[SPR_FROM].quadword_count--;
+
+        if (control.mem_drain_channel != 0)
+            channels[SPR_FROM].address = RBOR | ((channels[SPR_FROM].address + 16) & RBSR);
+        else
+            channels[SPR_FROM].address += 16;
     }
     else
     {
