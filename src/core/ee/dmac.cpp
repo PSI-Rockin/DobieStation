@@ -582,6 +582,9 @@ uint32_t DMAC::read32(uint32_t address)
         case 0x10009020:
             reg = channels[VIF1].quadword_count;
             break;
+        case 0x10009030:
+            reg = channels[VIF1].tag_address;
+            break;
         case 0x1000A000:
             //printf("[DMAC] Read GIF control\n");
             reg = channels[GIF].control;

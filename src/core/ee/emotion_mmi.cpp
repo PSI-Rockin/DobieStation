@@ -1033,6 +1033,9 @@ void EmotionInterpreter::mmi2(EmotionEngine &cpu, uint32_t instruction)
         case 0x1A:
             pexeh(cpu, instruction);
             break;
+        case 0x1C:
+            pmulth(cpu, instruction);
+            break;
         case 0x1E:
             pexew(cpu, instruction);
             break;
@@ -1150,6 +1153,49 @@ void EmotionInterpreter::pexeh(EmotionEngine &cpu, uint32_t instruction)
 
     for (int i = 0; i < 8; i++)
         cpu.set_gpr<uint16_t>(dest, data[i], i);
+}
+
+/**
+ * Parallel Multiply Halfword
+ */
+void EmotionInterpreter::pmulth(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint128_t reg1 = cpu.get_gpr<uint128_t>((instruction >> 21) & 0x1F);
+    uint128_t reg2 = cpu.get_gpr<uint128_t>((instruction >> 16) & 0x1F);
+    uint128_t lo, hi;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    int32_t result;
+    result = (int32_t)(int16_t)reg1._u16[0] * (int16_t)reg2._u16[0];
+    lo._u32[0] = (uint32_t)result;
+    cpu.set_gpr<int32_t>(dest, result);
+
+    result = (int32_t)(int16_t)reg1._u16[1] * (int16_t)reg2._u16[1];
+    lo._u32[1] = (uint32_t)result;
+
+    result = (int32_t)(int16_t)reg1._u16[2] * (int16_t)reg2._u16[2];
+    hi._u32[0] = (uint32_t)result;
+    cpu.set_gpr<int32_t>(dest, result, 1);
+
+    result = (int32_t)(int16_t)reg1._u16[3] * (int16_t)reg2._u16[3];
+    hi._u32[1] = (uint32_t)result;
+
+    result = (int32_t)(int16_t)reg1._u16[4] * (int16_t)reg2._u16[4];
+    lo._u32[2] = (uint32_t)result;
+    cpu.set_gpr<int32_t>(dest, result, 2);
+
+    result = (int32_t)(int16_t)reg1._u16[5] * (int16_t)reg2._u16[5];
+    lo._u32[3] = (uint32_t)result;
+
+    result = (int32_t)(int16_t)reg1._u16[6] * (int16_t)reg2._u16[6];
+    hi._u32[2] = (uint32_t)result;
+    cpu.set_gpr<int32_t>(dest, result, 3);
+
+    result = (int32_t)(int16_t)reg1._u16[7] * (int16_t)reg2._u16[7];
+    hi._u32[3] = (uint32_t)result;
+
+    cpu.set_LO_HI(lo._u64[0], hi._u64[0], false);
+    cpu.set_LO_HI(lo._u64[1], hi._u64[1], true);
 }
 
 /**

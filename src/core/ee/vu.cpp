@@ -277,6 +277,20 @@ void VectorUnit::itof0(uint8_t field, uint8_t dest, uint8_t source)
     printf("\n");
 }
 
+void VectorUnit::itof12(uint8_t field, uint8_t dest, uint8_t source)
+{
+    printf("[VU] ITOF12: ");
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            gpr[dest].f[i] = (float)((float)gpr[source].s[i] * 0.0625f);
+            printf("(%d)%f ", i, gpr[dest].f[i]);
+        }
+    }
+    printf("\n");
+}
+
 void VectorUnit::maddbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg)
 {
     printf("[VU] MADDbc: ");
