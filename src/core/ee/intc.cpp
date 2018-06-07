@@ -26,6 +26,7 @@ uint32_t INTC::read_stat()
 void INTC::write_mask(uint32_t value)
 {
     INTC_MASK ^= (value & 0x7FFF);
+    printf("[INTC] New INTC_MASK: $%08X\n", INTC_MASK);
     int0_check();
 }
 

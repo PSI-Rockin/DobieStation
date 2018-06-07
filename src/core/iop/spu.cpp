@@ -1,8 +1,9 @@
 #include <cstdio>
 #include "spu.hpp"
+#include "../emulator.hpp"
 
-SPU::SPU(int id) : id(id)
-{
+SPU::SPU(int id, Emulator* e) : id(id), e(e)
+{ 
 
 }
 
@@ -57,6 +58,9 @@ uint16_t SPU::read16(uint32_t addr)
             return transfer_addr & 0xFFFF;
         case 0x1A8:
             return transfer_addr >> 16;
+        case 0x1B0:
+            printf("[SPU%d] AutoDMA\n", id);
+            return 0x0;
         case 0x344:
             reg |= status.DMA_finished << 7;
             reg |= status.DMA_busy << 10;

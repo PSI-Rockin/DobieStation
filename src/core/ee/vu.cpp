@@ -277,6 +277,20 @@ void VectorUnit::itof0(uint8_t field, uint8_t dest, uint8_t source)
     printf("\n");
 }
 
+void VectorUnit::itof12(uint8_t field, uint8_t dest, uint8_t source)
+{
+    printf("[VU] ITOF12: ");
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            gpr[dest].f[i] = (float)((float)gpr[source].s[i] * 0.0625f);
+            printf("(%d)%f ", i, gpr[dest].f[i]);
+        }
+    }
+    printf("\n");
+}
+
 void VectorUnit::maddbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg)
 {
     printf("[VU] MADDbc: ");
@@ -462,13 +476,29 @@ void VectorUnit::rnext(uint8_t field, uint8_t dest)
 void VectorUnit::rsqrt(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2)
 {
     float denom = fabs(convert(gpr[reg2].u[ftf]));
+    float num = convert(gpr[reg1].u[fsf]);
+
+    status = (status & 0xFCF) | ((status & 0x30) << 6);
+
     if (!denom)
     {
         printf("[VU] RSQRT by zero!\n");
-        exit(1);
+
+        if (num == 0.0)
+            status |= 0x10;
+        else
+            status |= 0x20;
+        
+        if ((gpr[reg1].u[fsf] & 0x80000000) != (gpr[reg2].u[ftf] & 0x80000000))
+            Q.u = 0xFF7FFFFF;
+        else
+            Q.u = 0x7F7FFFFF;
     }
-    Q.f = convert(gpr[reg1].u[fsf]);
-    Q.f /= sqrt(denom);
+    else
+    {
+        Q.f = convert(gpr[reg1].u[fsf]);
+        Q.f /= sqrt(denom);
+    }
     printf("[VU] RSQRT: %f\n", Q.f);
     printf("Reg1: %f\n", gpr[reg1].f[fsf]);
     printf("Reg2: %f\n", gpr[reg2].f[ftf]);

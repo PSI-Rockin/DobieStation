@@ -790,6 +790,8 @@ uint32_t Emulator::iop_read32(uint32_t address)
             return iop_dma.get_chan_addr(3);
         case 0x1F8010B8:
             return iop_dma.get_chan_control(3);
+        case 0x1F8010C0:
+            return iop_dma.get_chan_addr(4);
         case 0x1F8010C8:
             return iop_dma.get_chan_control(4);
         case 0x1F8010F0:
@@ -802,6 +804,8 @@ uint32_t Emulator::iop_read32(uint32_t address)
             return iop_timers.read_counter(4);
         case 0x1F8014A0:
             return iop_timers.read_counter(5);
+        case 0x1F801500:
+            return iop_dma.get_chan_addr(8);
         case 0x1F801508:
             return iop_dma.get_chan_control(8);
         case 0x1F801528:
