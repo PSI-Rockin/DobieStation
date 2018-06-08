@@ -155,6 +155,13 @@ void GraphicsSynthesizer::render_CRT()
         {
             int pixel_x = x;
             int pixel_y = y;
+
+            //HAX HAX HAX
+            //Games that have both settings on seem to expect the game height to be cut in half.
+            //This does so more gracefully than ignoring it, but causes "scanlines" to appear.
+            //TODO: investigate this more thoroughly
+            if (SMODE2.frame_mode && SMODE2.interlaced)
+                pixel_y *= 2;
             if (pixel_x >= width || pixel_y >= DISPLAY2.height)
                 continue;
             uint32_t scaled_x = DISPFB2.x + x;
@@ -338,8 +345,8 @@ void GraphicsSynthesizer::write64_privileged(uint32_t addr, uint64_t value)
             printf("[GS] Write DISPLAY1: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);
             DISPLAY1.x = value & 0xFFF;
             DISPLAY1.y = (value >> 12) & 0x7FF;
-            DISPLAY1.magnify_x = (value >> 23) & 0xF;
-            DISPLAY1.magnify_y = (value >> 27) & 0x3;
+            DISPLAY1.magnify_x = ((value >> 23) & 0xF) + 1;
+            DISPLAY1.magnify_y = ((value >> 27) & 0x3) + 1;
             DISPLAY1.width = ((value >> 32) & 0xFFF) + 1;
             DISPLAY1.height = ((value >> 44) & 0x7FF) + 1;
             break;
@@ -355,10 +362,12 @@ void GraphicsSynthesizer::write64_privileged(uint32_t addr, uint64_t value)
             printf("[GS] Write DISPLAY2: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);
             DISPLAY2.x = value & 0xFFF;
             DISPLAY2.y = (value >> 12) & 0x7FF;
-            DISPLAY2.magnify_x = (value >> 23) & 0xF;
-            DISPLAY2.magnify_y = (value >> 27) & 0x3;
+            DISPLAY2.magnify_x = ((value >> 23) & 0xF) + 1;
+            DISPLAY2.magnify_y = ((value >> 27) & 0x3) + 1;
             DISPLAY2.width = ((value >> 32) & 0xFFF) + 1;
             DISPLAY2.height = ((value >> 44) & 0x7FF) + 1;
+            printf("MAGH: %d\n", DISPLAY2.magnify_x);
+            printf("MAGV: %d\n", DISPLAY2.magnify_y);
             break;
         case 0x1000:
             printf("[GS] Write64 to GS_CSR: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);

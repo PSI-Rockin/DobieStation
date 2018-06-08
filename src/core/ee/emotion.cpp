@@ -101,9 +101,11 @@ int EmotionEngine::run(int cycles_to_run)
         {
             std::string disasm = EmotionDisasm::disasm_instr(instruction, PC);
             printf("[$%08X] $%08X - %s\n", PC, instruction, disasm.c_str());
-            //print_state();
+            print_state();
         }
         EmotionInterpreter::interpret(*this, instruction);
+        //if (PC == 0x0010F760)
+            //set_gpr<uint32_t>(4, 0);
         if (increment_PC)
             PC += 4;
         else
@@ -114,9 +116,12 @@ int EmotionEngine::run(int cycles_to_run)
             if (!delay_slot)
             {
                 branch_on = false;
+                if (!new_PC)
+                {
+                    printf("[EE] Jump to NULL from $%08X\n", PC - 8);
+                    exit(1);
+                }
                 PC = new_PC;
-                //if (PC == 0x002923D8)
-                    //can_disassemble = true;
                 if (PC == 0x0029e9cc)
                     PC = 0x0029E984;
                 if (PC < 0x80000000 && PC >= 0x00100000)
@@ -142,7 +147,7 @@ int EmotionEngine::run(int cycles_to_run)
 
 void EmotionEngine::print_state()
 {
-    for (int i = 1; i < 32; i++)
+    for (int i = 0; i < 32; i++)
     {
         printf("%s: $%08X_%08X", REG(i), get_gpr<uint32_t>(i, 1), get_gpr<uint32_t>(i));
         if ((i & 3) == 3)

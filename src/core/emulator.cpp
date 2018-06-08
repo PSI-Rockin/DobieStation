@@ -66,17 +66,15 @@ void Emulator::run()
             VBLANK_sent = true;
             gs.set_VBLANK(true);
             printf("VSYNC FRAMES: %d\n", frames);
-            //cpu.set_disassembly(frames == 700);
-            //if (frames >= 3700)
-                //iop.set_disassembly(true);
-            //cpu.set_disassembly(frames == 1349);
-            //cpu.set_disassembly(frames >= 1348 && frames < 1350);
+            //cpu.set_disassembly(frames == 1347);
+            //cpu.set_disassembly(frames == 1347);
             frames++;
             iop_request_IRQ(0);
             gs.render_CRT();
         }
     }
     //VBLANK end
+    cpu.set_disassembly(false);
     iop_request_IRQ(11);
     gs.set_VBLANK(false);
 }
@@ -480,6 +478,10 @@ uint128_t Emulator::read128(uint32_t address)
 
 void Emulator::write8(uint32_t address, uint8_t value)
 {
+    if (address == 0x002BFDA8)
+    {
+        printf("[EE] Write8 $%08X: $%02X\n", address, value);
+    }
     if (address < 0x10000000)
     {
         RDRAM[address & 0x01FFFFFF] = value;
@@ -508,6 +510,10 @@ void Emulator::write8(uint32_t address, uint8_t value)
 
 void Emulator::write16(uint32_t address, uint16_t value)
 {
+    if (address == 0x002BFDA8)
+    {
+        printf("[EE] Write16 $%08X: $%04X\n", address, value);
+    }
     if (address < 0x10000000)
     {
         *(uint16_t*)&RDRAM[address & 0x01FFFFFF] = value;
@@ -533,6 +539,10 @@ void Emulator::write16(uint32_t address, uint16_t value)
 
 void Emulator::write32(uint32_t address, uint32_t value)
 {
+    if (address == 0x002BFDA8)
+    {
+        printf("[EE] Write32 $%08X: $%08X\n", address, value);
+    }
     if (address < 0x10000000)
     {
         *(uint32_t*)&RDRAM[address & 0x01FFFFFF] = value;
@@ -623,6 +633,10 @@ void Emulator::write32(uint32_t address, uint32_t value)
 
 void Emulator::write64(uint32_t address, uint64_t value)
 {
+    if (address == 0x002BFDA8)
+    {
+        printf("[EE] Write64 $%08X: $%08X_%08X\n", address, value >> 32, value);
+    }
     if (address < 0x10000000)
     {
         *(uint64_t*)&RDRAM[address & 0x01FFFFFF] = value;
