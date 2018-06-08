@@ -72,6 +72,7 @@ class DMAC
 
         void handle_source_chain(int index);
 
+        bool mfifo_handler(int index);
         void transfer_end(int index);
         void int1_check();
 
