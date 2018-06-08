@@ -140,9 +140,9 @@ void DMAC::run(int cycles)
     }
 }
 
+//mfifo_handler will return false if the MFIFO is empty and the MFIFO is in use. Otherwise it returns true
 bool DMAC::mfifo_handler(int index)
 {
-
     if (control.mem_drain_channel - 1 == index)
     {
         uint8_t id = (channels[index].control >> 28) & 0x7;
