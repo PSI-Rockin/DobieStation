@@ -471,7 +471,7 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
         case 0x001C:
             TEXCLUT.width = (value & 0x3F) * 64;
             TEXCLUT.x = ((value >> 6) & 0x3F) * 16;
-            TEXCLUT.y = (value >> 11) & 0x3FF;
+            TEXCLUT.y = (value >> 12) & 0x3FF;
             printf("TEXCLUT: $%08X\n", value);
             printf("Width: %d\n", TEXCLUT.width);
             printf("X: %d\n", TEXCLUT.x);
