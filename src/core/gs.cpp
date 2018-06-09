@@ -89,6 +89,14 @@ void GraphicsSynthesizer::reset()
     DISPFB2.width = 0;
     DISPFB2.x = 0;
     DISPFB2.y = 0;
+    IMR.signal = true;
+    IMR.finish = true;
+    IMR.hsync = true;
+    IMR.vsync = true;
+    IMR.rawt = true;
+    FINISH_enabled = false;
+    FINISH_generated = false;
+    FINISH_requested = false;
     context1.reset();
     context2.reset();
     PSMCT24_color = 0;
@@ -133,16 +141,30 @@ void GraphicsSynthesizer::set_VBLANK(bool is_VBLANK)
     if (is_VBLANK)
     {
         printf("[GS] VBLANK start\n");
-        intc->assert_IRQ(2);
+        if (!IMR.vsync)
+            intc->assert_IRQ((int)Interrupt::GS);
+        intc->assert_IRQ((int)Interrupt::VBLANK_START);
     }
     else
     {
         printf("[GS] VBLANK end\n");
-        intc->assert_IRQ(3);
+        intc->assert_IRQ((int)Interrupt::VBLANK_END);
         frame_count++;
         is_odd_frame = !is_odd_frame;
     }
     VBLANK_generated = is_VBLANK;
+}
+
+void GraphicsSynthesizer::assert_FINISH()
+{
+    if (FINISH_requested && FINISH_enabled)
+    {
+        FINISH_generated = true;
+        FINISH_enabled = false;
+        FINISH_requested = false;
+        if (!IMR.finish)
+            intc->assert_IRQ((int)Interrupt::GS);
+    }
 }
 
 void GraphicsSynthesizer::render_CRT()
@@ -307,6 +329,14 @@ void GraphicsSynthesizer::write32_privileged(uint32_t addr, uint32_t value)
                 VBLANK_generated = false;
             }
             break;
+        case 0x1010:
+            printf("[GS] Write32 GS_IMR: $%08X\n", value);
+            IMR.signal = value & (1 << 8);
+            IMR.finish = value & (1 << 9);
+            IMR.hsync = value & (1 << 10);
+            IMR.vsync = value & (1 << 11);
+            IMR.rawt = value & (1 << 12);
+            break;
         default:
             printf("\n[GS] Unrecognized privileged write32 to reg $%04X: $%08X", addr, value);
     }
@@ -318,7 +348,7 @@ void GraphicsSynthesizer::write64_privileged(uint32_t addr, uint64_t value)
     switch (addr)
     {
         case 0x0000:
-            printf("[GS] Write PMODE: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);
+            printf("[GS] Write PMODE: $%08X_%08X\n", value >> 32, value);
             PMODE.circuit1 = value & 0x1;
             PMODE.circuit2 = value & 0x2;
             PMODE.output_switching = (value >> 2) & 0x7;
@@ -328,13 +358,13 @@ void GraphicsSynthesizer::write64_privileged(uint32_t addr, uint64_t value)
             PMODE.ALP = (value >> 8) & 0xFF;
             break;
         case 0x0020:
-            printf("[GS] Write SMODE2: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);
+            printf("[GS] Write SMODE2: $%08X_%08X\n", value >> 32, value);
             SMODE2.interlaced = value & 0x1;
             SMODE2.frame_mode = value & 0x2;
             SMODE2.power_mode = (value >> 2) & 0x3;
             break;
         case 0x0070:
-            printf("[GS] Write DISPFB1: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);
+            printf("[GS] Write DISPFB1: $%08X_%08X\n", value >> 32, value);
             DISPFB1.frame_base = (value & 0x3FF) * 2048;
             DISPFB1.width = ((value >> 9) & 0x3F) * 64;
             DISPFB1.format = (value >> 14) & 0x1F;
@@ -342,7 +372,7 @@ void GraphicsSynthesizer::write64_privileged(uint32_t addr, uint64_t value)
             DISPFB1.y = (value >> 43) & 0x7FF;
             break;
         case 0x0080:
-            printf("[GS] Write DISPLAY1: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);
+            printf("[GS] Write DISPLAY1: $%08X_%08X\n", value >> 32, value);
             DISPLAY1.x = value & 0xFFF;
             DISPLAY1.y = (value >> 12) & 0x7FF;
             DISPLAY1.magnify_x = ((value >> 23) & 0xF) + 1;
@@ -351,7 +381,7 @@ void GraphicsSynthesizer::write64_privileged(uint32_t addr, uint64_t value)
             DISPLAY1.height = ((value >> 44) & 0x7FF) + 1;
             break;
         case 0x0090:
-            printf("[GS] Write DISPFB2: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);
+            printf("[GS] Write DISPFB2: $%08X_%08X\n", value >> 32, value);
             DISPFB2.frame_base = (value & 0x3FF) * 2048;
             DISPFB2.width = ((value >> 9) & 0x3F) * 64;
             DISPFB2.format = (value >> 14) & 0x1F;
@@ -359,7 +389,7 @@ void GraphicsSynthesizer::write64_privileged(uint32_t addr, uint64_t value)
             DISPFB2.y = (value >> 43) & 0x7FF;
             break;
         case 0x00A0:
-            printf("[GS] Write DISPLAY2: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);
+            printf("[GS] Write DISPLAY2: $%08X_%08X\n", value >> 32, value);
             DISPLAY2.x = value & 0xFFF;
             DISPLAY2.y = (value >> 12) & 0x7FF;
             DISPLAY2.magnify_x = ((value >> 23) & 0xF) + 1;
@@ -370,7 +400,7 @@ void GraphicsSynthesizer::write64_privileged(uint32_t addr, uint64_t value)
             printf("MAGV: %d\n", DISPLAY2.magnify_y);
             break;
         case 0x1000:
-            printf("[GS] Write64 to GS_CSR: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);
+            printf("[GS] Write64 to GS_CSR: $%08X_%08X\n", value >> 32, value);
             if (value & 0x2)
             {
                 FINISH_enabled = true;
@@ -382,12 +412,20 @@ void GraphicsSynthesizer::write64_privileged(uint32_t addr, uint64_t value)
                 VBLANK_generated = false;
             }
             break;
+        case 0x1010:
+            printf("[GS] Write64 GS_IMR: $%08X_%08X\n", value >> 32, value);
+            IMR.signal = value & (1 << 8);
+            IMR.finish = value & (1 << 9);
+            IMR.hsync = value & (1 << 10);
+            IMR.vsync = value & (1 << 11);
+            IMR.rawt = value & (1 << 12);
+            break;
         case 0x1040:
-            printf("[GS] Write64 to GS_BUSDIR: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);
+            printf("[GS] Write64 to GS_BUSDIR: $%08X_%08X\n", value >> 32, value);
             BUSDIR = (uint8_t)value;
             break;
         default:
-            printf("[GS] Unrecognized privileged write64 to reg $%04X: $%08X_%08X\n", addr, value >> 32, value & 0xFFFFFFFF);
+            printf("[GS] Unrecognized privileged write64 to reg $%04X: $%08X_%08X\n", addr, value >> 32, value);
     }
 }
 
@@ -593,15 +631,10 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
             break;
         case 0x0061:
             printf("[GS] FINISH Write\n");
-            if (FINISH_enabled)
-            {
-                FINISH_enabled = false;
-                FINISH_generated = true;
-                intc->assert_IRQ((int)Interrupt::GS);
-            }
+            FINISH_requested = true;
             break;
         default:
-            printf("[GS] Unrecognized write64 to reg $%04X: $%08X_%08X\n", addr, value >> 32, value & 0xFFFFFFFF);
+            printf("[GS] Unrecognized write64 to reg $%04X: $%08X_%08X\n", addr, value >> 32, value);
             //exit(1);
     }
 }
@@ -918,6 +951,7 @@ bool GraphicsSynthesizer::depth_test(int32_t x, int32_t y, uint32_t z)
             }
             break;
     }
+    return false;
 }
 
 void GraphicsSynthesizer::draw_pixel(int32_t x, int32_t y, uint32_t z, RGBAQ_REG& color, bool alpha_blending)
@@ -1522,7 +1556,7 @@ void GraphicsSynthesizer::write_HWREG(uint64_t data)
                 //printf("$%08X\n", (data >> (i * 32)) & 0xFFFFFFFF);
                 break;
             case 0x01:
-                unpack_PSMCT24(BITBLTBUF.dest_base + (dest_addr * 4), data, i);
+                unpack_PSMCT24(data, i);
                 break;
             case 0x02:
                 write_PSMCT16_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.dest_y, (data >> (i * 16)) & 0xFFFF);
@@ -1629,7 +1663,7 @@ void GraphicsSynthesizer::write_HWREG(uint64_t data)
     }
 }
 
-void GraphicsSynthesizer::unpack_PSMCT24(uint32_t dest_addr, uint64_t data, int offset)
+void GraphicsSynthesizer::unpack_PSMCT24(uint64_t data, int offset)
 {
     int bytes_unpacked = 0;
     for (int i = offset * 24; bytes_unpacked < 3 && i < 64; i += 8)

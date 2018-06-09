@@ -661,18 +661,25 @@ uint32_t DMAC::read32(uint32_t address)
             break;
         case 0x1000D000:
             reg = channels[SPR_FROM].control;
+            break;
         case 0x1000D010:
             reg = channels[SPR_FROM].address;
+            break;
         case 0x1000D020:
             reg = channels[SPR_FROM].quadword_count;
+            break;
         case 0x1000D400:
             reg = channels[SPR_TO].control;
+            break;
         case 0x1000D410:
             reg = channels[SPR_TO].address;
+            break;
         case 0x1000D420:
             reg = channels[SPR_TO].quadword_count;
+            break;
         case 0x1000D430:
             reg = channels[SPR_TO].tag_address;
+            break;
         case 0x1000E000:
             reg |= control.master_enable;
             reg |= control.cycle_stealing << 1;
@@ -851,17 +858,17 @@ void DMAC::write32(uint32_t address, uint32_t value)
                 start_DMA(SPR_TO);
             break;
         case 0x1000D410:
-            printf("[DMAC] SPR_TO  M_ADR: $%08X\n", value);
+            printf("[DMAC] SPR_TO M_ADR: $%08X\n", value);
             channels[SPR_FROM].address = value & ~0xF;
             break;
         case 0x1000D420:
-           printf("[DMAC] SPR_TO QWC: $%08X\n", value);
-           channels[SPR_FROM].quadword_count = value & 0xFFFF;
-           break;
+            printf("[DMAC] SPR_TO QWC: $%08X\n", value);
+            channels[SPR_FROM].quadword_count = value & 0xFFFF;
+            break;
         case 0x1000D430:
-           printf("[DMAC] SPR_TO T_ADR: $%08X\n", value);
-           channels[SPR_FROM].tag_address = value & ~0xF;
-           break;
+            printf("[DMAC] SPR_TO T_ADR: $%08X\n", value);
+            channels[SPR_FROM].tag_address = value & ~0xF;
+            break;
         case 0x1000D480:
             printf("[DMAC] SPR_TO SADR: $%08X\n", value);
             channels[SPR_TO].scratchpad_address = value & 0x3FFC;
@@ -895,11 +902,11 @@ void DMAC::write32(uint32_t address, uint32_t value)
         case 0x1000E040:
             printf("[DMAC] Write to RBSR: $%08X\n", value);
             RBSR = value;
-            return;
+            break;
         case 0x1000E050:
             printf("[DMAC] Write to RBOR: $%08X\n", value);
             RBOR = value;
-            return;
+            break;
         default:
             printf("[DMAC] Unrecognized write32 of $%08X to $%08X\n", value, address);
             break;

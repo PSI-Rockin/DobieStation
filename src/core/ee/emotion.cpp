@@ -147,14 +147,16 @@ int EmotionEngine::run(int cycles_to_run)
 
 void EmotionEngine::print_state()
 {
-    for (int i = 0; i < 32; i++)
+    for (int i = 1; i < 32; i++)
     {
-        printf("%s: $%08X_%08X", REG(i), get_gpr<uint32_t>(i, 1), get_gpr<uint32_t>(i));
-        if ((i & 3) == 3)
+        printf("%s:$%08X_%08X_%08X_%08X", REG(i), get_gpr<uint32_t>(i, 3), get_gpr<uint32_t>(i, 2), get_gpr<uint32_t>(i, 1), get_gpr<uint32_t>(i));
+        if ((i & 1) == 1)
             printf("\n");
         else
             printf("\t");
     }
+    printf("lo:$%08X_%08X_%08X_%08X\t", LO1 >> 32, LO1, LO >> 32, LO);
+    printf("hi:$%08X_%08X_%08X_%08X\t", HI1 >> 32, HI1, HI >> 32, HI);
     printf("\n");
 }
 

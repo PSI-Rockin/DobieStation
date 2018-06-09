@@ -66,7 +66,7 @@ void Emulator::run()
             VBLANK_sent = true;
             gs.set_VBLANK(true);
             printf("VSYNC FRAMES: %d\n", frames);
-            //cpu.set_disassembly(frames == 1347);
+            //cpu.set_disassembly(frames == 223);
             //cpu.set_disassembly(frames == 1347);
             frames++;
             iop_request_IRQ(0);
@@ -478,10 +478,6 @@ uint128_t Emulator::read128(uint32_t address)
 
 void Emulator::write8(uint32_t address, uint8_t value)
 {
-    if (address == 0x002BFDA8)
-    {
-        printf("[EE] Write8 $%08X: $%02X\n", address, value);
-    }
     if (address < 0x10000000)
     {
         RDRAM[address & 0x01FFFFFF] = value;
@@ -510,10 +506,6 @@ void Emulator::write8(uint32_t address, uint8_t value)
 
 void Emulator::write16(uint32_t address, uint16_t value)
 {
-    if (address == 0x002BFDA8)
-    {
-        printf("[EE] Write16 $%08X: $%04X\n", address, value);
-    }
     if (address < 0x10000000)
     {
         *(uint16_t*)&RDRAM[address & 0x01FFFFFF] = value;
@@ -539,10 +531,6 @@ void Emulator::write16(uint32_t address, uint16_t value)
 
 void Emulator::write32(uint32_t address, uint32_t value)
 {
-    if (address == 0x002BFDA8)
-    {
-        printf("[EE] Write32 $%08X: $%08X\n", address, value);
-    }
     if (address < 0x10000000)
     {
         *(uint32_t*)&RDRAM[address & 0x01FFFFFF] = value;
@@ -633,10 +621,6 @@ void Emulator::write32(uint32_t address, uint32_t value)
 
 void Emulator::write64(uint32_t address, uint64_t value)
 {
-    if (address == 0x002BFDA8)
-    {
-        printf("[EE] Write64 $%08X: $%08X_%08X\n", address, value >> 32, value);
-    }
     if (address < 0x10000000)
     {
         *(uint64_t*)&RDRAM[address & 0x01FFFFFF] = value;
@@ -699,7 +683,7 @@ void Emulator::write128(uint32_t address, uint128_t value)
         return;
     }
     printf("Unrecognized write128 at physical addr $%08X of $%08X_%08X_%08X_%08X\n", address,
-           value._u32[0], value._u32[1], value._u32[2], value._u32[3]);
+           value._u32[3], value._u32[2], value._u32[1], value._u32[0]);
     //exit(1);
 }
 

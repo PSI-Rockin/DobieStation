@@ -123,7 +123,9 @@ void GraphicsInterface::feed_GIF(uint128_t data)
     uint64_t data2 = data._u64[1];
     if (!current_tag.data_left)
     {
-        //Read the GIFtag
+        if (current_tag.end_of_packet)
+            gs->assert_FINISH();
+        //Read new GIFtag
         processing_GIF_prim = true;
         current_tag.NLOOP = data1 & 0x7FFF;
         current_tag.end_of_packet = data1 & (1 << 15);

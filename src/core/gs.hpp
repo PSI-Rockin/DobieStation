@@ -97,6 +97,15 @@ struct TEXCLUT_REG
     uint16_t width, x, y;
 };
 
+struct GS_IMR
+{
+    bool signal;
+    bool finish;
+    bool hsync;
+    bool vsync;
+    bool rawt; //Rectangular Area Write Termination
+};
+
 struct Vertex
 {
     int32_t x, y, z;
@@ -110,7 +119,6 @@ struct Vertex
         y -= xyoffset.y;
     }
 };
-
 
 class INTC;
 
@@ -130,6 +138,9 @@ class GraphicsSynthesizer
         bool is_odd_frame;
         bool FINISH_enabled;
         bool FINISH_generated;
+        bool FINISH_requested;
+
+        GS_IMR IMR;
 
         GSContext context1, context2;
         GSContext* current_ctx;
@@ -186,7 +197,7 @@ class GraphicsSynthesizer
         void render_triangle();
         void render_sprite();
         void write_HWREG(uint64_t data);
-        void unpack_PSMCT24(uint32_t dest_addr, uint64_t data, int offset);
+        void unpack_PSMCT24(uint64_t data, int offset);
         void host_to_host();
 
         int32_t orient2D(const Vertex &v1, const Vertex &v2, const Vertex &v3);
@@ -203,6 +214,7 @@ class GraphicsSynthesizer
         void get_inner_resolution(int& w, int& h);
 
         void set_VBLANK(bool is_VBLANK);
+        void assert_FINISH();
         void dump_texture(uint32_t start_addr, uint32_t width);
 
         void set_CRT(bool interlaced, int mode, bool frame_mode);
