@@ -140,6 +140,43 @@ void DMAC::run(int cycles)
     }
 }
 
+//mfifo_handler will return false if the MFIFO is empty and the MFIFO is in use. Otherwise it returns true
+bool DMAC::mfifo_handler(int index)
+{
+    if (control.mem_drain_channel - 1 == index)
+    {
+        uint8_t id = (channels[index].control >> 28) & 0x7;
+
+        channels[index].tag_address = RBOR | (channels[index].tag_address & RBSR);
+
+        uint32_t addr = channels[index].tag_address;
+
+        //Don't mask the MADR on REFE/REF/REFS as they don't follow the tag, so likely outside the MFIFO
+        if (channels[index].quadword_count)
+        {
+            if (id != 0 && id != 3 && id != 4)
+                channels[index].address = RBOR | (channels[index].address & RBSR);
+
+            addr = channels[index].address;
+        }
+
+        if (addr == channels[SPR_FROM].address)
+        {
+            if (!mfifo_empty_triggered)
+            {
+                interrupt_stat.channel_stat[MFIFO_EMPTY] = true;
+                int1_check();
+                mfifo_empty_triggered = true;
+                printf("[DMAC] MFIFO Empty\n");
+            }
+            return false;
+        }
+        mfifo_empty_triggered = false;
+    }
+
+    return true;
+}
+
 void DMAC::transfer_end(int index)
 {
     printf("[DMAC] Transfer end: %d\n", index);
@@ -187,36 +224,8 @@ void DMAC::process_VIF0()
 
 void DMAC::process_VIF1()
 {
-    if (control.mem_drain_channel - 1 == VIF1) 
-    {
-        uint8_t id = (channels[VIF1].control >> 28) & 0x7;
-
-        channels[VIF1].tag_address = RBOR | (channels[VIF1].tag_address & RBSR);
-
-        uint32_t addr = channels[VIF1].tag_address;
-
-        //Don't mask the MADR on REFE/REF/REFS as they don't follow the tag, so likely outside the MFIFO
-        if (channels[VIF1].quadword_count)
-        {
-            if (id != 0 && id != 3 && id != 4)
-                channels[VIF1].address = RBOR | (channels[VIF1].address & RBSR);
-
-            addr = channels[VIF1].address;
-        }
-
-        if (addr == channels[SPR_FROM].address)
-        {
-            if (!mfifo_empty_triggered)
-            {
-                interrupt_stat.channel_stat[MFIFO_EMPTY] = true;
-                int1_check();
-                mfifo_empty_triggered = true;
-                printf("[DMAC] MFIFO Empty\n");
-            }
-            return;
-        }
-        mfifo_empty_triggered = false;
-    }
+    if (!mfifo_handler(VIF1))
+        return;
 
     if (channels[VIF1].quadword_count)
     {
@@ -241,36 +250,8 @@ void DMAC::process_VIF1()
 
 void DMAC::process_GIF()
 {
-    if (control.mem_drain_channel - 1 == GIF)
-    {
-        uint8_t id = (channels[GIF].control >> 28) & 0x7;
-
-        channels[GIF].tag_address = RBOR | (channels[GIF].tag_address & RBSR);
-
-        uint32_t addr = channels[GIF].tag_address;
-
-        //Don't mask the MADR on REFE/REF/REFS as they don't follow the tag, so likely outside the MFIFO
-        if (channels[GIF].quadword_count)
-        {
-            if (id != 0 && id != 3 && id != 4)
-                channels[GIF].address = RBOR | (channels[GIF].address & RBSR);
-
-            addr = channels[GIF].address;
-        }
-
-        if (addr == channels[SPR_FROM].address)
-        {
-            if (!mfifo_empty_triggered)
-            {
-                interrupt_stat.channel_stat[MFIFO_EMPTY] = true;
-                int1_check();
-                mfifo_empty_triggered = true;
-                printf("[DMAC] MFIFO Empty\n");
-            }
-            return;
-        }
-        mfifo_empty_triggered = false;
-    }
+    if (!mfifo_handler(GIF))
+        return;
 
     if (channels[GIF].quadword_count)
     {
