@@ -51,6 +51,9 @@ void EmotionInterpreter::cop2_special(VectorUnit &vu0, uint32_t instruction)
         case 0x30:
             cop2_viadd(vu0, instruction);
             break;
+        case 0x32:
+            cop2_viaddi(vu0, instruction);
+            break;
         case 0x3C:
         case 0x3D:
         case 0x3E:
@@ -159,6 +162,14 @@ void EmotionInterpreter::cop2_viadd(VectorUnit &vu0, uint32_t instruction)
     uint8_t reg1 = (instruction >> 11) & 0x1F;
     uint8_t reg2 = (instruction >> 16) & 0x1F;
     vu0.iadd(dest, reg1, reg2);
+}
+
+void EmotionInterpreter::cop2_viaddi(VectorUnit &vu0, uint32_t instruction)
+{
+    uint8_t imm = (instruction >> 6) & 0x3F;
+    uint8_t source = (instruction >> 11) & 0x1F;
+    uint8_t dest = (instruction >> 16) & 0x1F;
+    vu0.iaddi(dest, source, imm);
 }
 
 void EmotionInterpreter::cop2_special2(VectorUnit &vu0, uint32_t instruction)

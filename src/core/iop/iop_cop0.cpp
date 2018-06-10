@@ -77,5 +77,8 @@ void IOP_Cop0::mtc(int cop_reg, uint32_t value)
             status.IsC = value & (1 << 16);
             status.bev = value & (1 << 22);
             break;
+        default:
+            printf("[IOP COP0] MTC: Unknown cop_reg %d\n", cop_reg);
+            //exit(1);
     }
 }

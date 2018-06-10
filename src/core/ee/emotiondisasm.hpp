@@ -168,6 +168,7 @@ namespace EmotionDisasm
     std::string disasm_vsub(uint32_t instruction);
     std::string disasm_vopmsub(uint32_t instruction);
     std::string disasm_viadd(uint32_t instruction);
+    std::string disasm_viaddi(uint32_t instruction);
 
     std::string disasm_cop2_special2(uint32_t instruction);
     std::string disasm_cop2_special2_move(const std::string opcode, uint32_t instruction);

@@ -29,6 +29,7 @@ class IOP
 
         void reset();
         void run();
+        void print_state();
         void set_disassembly(bool dis);
 
         void jp(uint32_t addr);
@@ -90,8 +91,6 @@ inline void IOP::set_gpr(int index, uint32_t value)
 {
     if (index)
         gpr[index] = value;
-    if (can_disassemble)
-        printf("[IOP] %s = $%08X\n", REG(index), value);
 }
 
 inline void IOP::set_LO(uint32_t value)

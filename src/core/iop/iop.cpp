@@ -55,26 +55,12 @@ void IOP::run()
 {
     //bool old_int = cop0.status.IEc && (cop0.status.Im & cop0.cause.int_pending);
     uint32_t instr = read32(PC);
-    if (can_disassemble && PC != 0xB89C && PC != 0xB8A0)
-        printf("[IOP] [$%08X] $%08X - %s\n", PC, instr, EmotionDisasm::disasm_instr(instr, PC).c_str());
-    IOP_Interpreter::interpret(*this, instr);
-
-    /*if (PC == 0x00037280)
+    if (can_disassemble && PC != 0xB89C && PC != 0xB8A0 && PC != 0xB99C && PC != 0xB9A0)
     {
-        //printf("[IOP] t1 = $%08X\n", get_gpr(9));
-        if (true)
-        {
-            for (int i = 0; i < 32; i++)
-            {
-                printf("%s - $%08X", REG(i), get_gpr(i));
-                if (i % 2 == 1)
-                    printf("\n");
-                else
-                    printf("\t");
-            }
-        }
-        //set_gpr(8, 0);
-    }*/
+        printf("[IOP] [$%08X] $%08X - %s\n", PC, instr, EmotionDisasm::disasm_instr(instr, PC).c_str());
+        print_state();
+    }
+    IOP_Interpreter::interpret(*this, instr);
 
     if (inc_PC)
         PC += 4;
@@ -98,6 +84,18 @@ void IOP::run()
 
     if (cop0.status.IEc && (cop0.status.Im & cop0.cause.int_pending))
         interrupt();
+}
+
+void IOP::print_state()
+{
+    for (int i = 1; i < 32; i++)
+    {
+        printf("%s:$%08X", REG(i), get_gpr(i));
+        if (i % 4 == 3)
+            printf("\n");
+        else
+            printf("\t");
+    }
 }
 
 void IOP::set_disassembly(bool dis)

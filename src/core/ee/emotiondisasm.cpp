@@ -1293,6 +1293,8 @@ string EmotionDisasm::disasm_cop2_special(uint32_t instruction)
             return disasm_vopmsub(instruction);
         case 0x30:
             return disasm_viadd(instruction);
+        case 0x32:
+            return disasm_viaddi(instruction);
         default:
             return unknown_op("cop2 special", op, 2);
     }
@@ -1360,6 +1362,16 @@ string EmotionDisasm::disasm_viadd(uint32_t instruction)
     uint32_t is = (instruction >> 11) & 0x1F;
     uint32_t it = (instruction >> 16) & 0x1F;
     output << "viadd vi" << id << ", vi" << is << ", vi" << it;
+    return output.str();
+}
+
+string EmotionDisasm::disasm_viaddi(uint32_t instruction)
+{
+    stringstream output;
+    uint32_t imm = (instruction >> 6) & 0x3F;
+    uint32_t is = (instruction >> 11) & 0x1F;
+    uint32_t id = (instruction >> 16) & 0x1F;
+    output << "viaddi vi" << id << ", vi" << is << ", 0x" << imm;
     return output.str();
 }
 

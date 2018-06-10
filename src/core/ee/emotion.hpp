@@ -38,6 +38,7 @@ class EmotionEngine
     public:
         EmotionEngine(BIOS_HLE* b, Cop0* cp0, Cop1* fpu, Emulator* e, uint8_t* sp, VectorUnit* vu0);
         static const char* REG(int id);
+        static const char* SYSCALL(int id);
         void reset();
         void run();
         int run(int cycles_to_run);

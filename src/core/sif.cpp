@@ -47,7 +47,7 @@ void SubsystemInterface::write_SIF1(uint128_t quad)
 uint32_t SubsystemInterface::read_SIF0()
 {
     uint32_t value = SIF0_FIFO.front();
-    //printf("[SIF] Read SIF0: $%08X\n", value);
+    printf("[SIF] Read SIF0: $%08X\n", value);
     SIF0_FIFO.pop();
     return value;
 }

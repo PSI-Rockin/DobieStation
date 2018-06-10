@@ -31,6 +31,65 @@ const char* EmotionEngine::REG(int id)
     return names[id];
 }
 
+const char* EmotionEngine::SYSCALL(int id)
+{
+    //Taken from PCSX2
+    //https://github.com/PCSX2/pcsx2/blob/af3e55af63dd23075c08eb6b181a6fe62793d8c0/pcsx2/R5900OpcodeImpl.cpp#L92
+    static const char* names[256]=
+    {
+        "RFU000_FullReset", "ResetEE",				"SetGsCrt",				"RFU003",
+        "Exit",				"RFU005",				"LoadExecPS2",			"ExecPS2",
+        "RFU008",			"RFU009",				"AddSbusIntcHandler",	"RemoveSbusIntcHandler",
+        "Interrupt2Iop",	"SetVTLBRefillHandler", "SetVCommonHandler",	"SetVInterruptHandler",
+    //0x10
+        "AddIntcHandler",	"RemoveIntcHandler",	"AddDmacHandler",		"RemoveDmacHandler",
+        "_EnableIntc",		"_DisableIntc",			"_EnableDmac",			"_DisableDmac",
+        "_SetAlarm",		"_ReleaseAlarm",		"_iEnableIntc",			"_iDisableIntc",
+        "_iEnableDmac",		"_iDisableDmac",		"_iSetAlarm",			"_iReleaseAlarm",
+    //0x20
+        "CreateThread",			"DeleteThread",		"StartThread",			"ExitThread",
+        "ExitDeleteThread",		"TerminateThread",	"iTerminateThread",		"DisableDispatchThread",
+        "EnableDispatchThread",		"ChangeThreadPriority", "iChangeThreadPriority",	"RotateThreadReadyQueue",
+        "iRotateThreadReadyQueue",	"ReleaseWaitThread",	"iReleaseWaitThread",		"GetThreadId",
+    //0x30
+        "ReferThreadStatus","iReferThreadStatus",	"SleepThread",		"WakeupThread",
+        "_iWakeupThread",   "CancelWakeupThread",	"iCancelWakeupThread",	"SuspendThread",
+        "iSuspendThread",   "ResumeThread",		"iResumeThread",	"JoinThread",
+        "RFU060",	    "RFU061",			"EndOfHeap",		 "RFU063",
+    //0x40
+        "CreateSema",	    "DeleteSema",	"SignalSema",		"iSignalSema",
+        "WaitSema",	    "PollSema",		"iPollSema",		"ReferSemaStatus",
+        "iReferSemaStatus", "RFU073",		"SetOsdConfigParam", 	"GetOsdConfigParam",
+        "GetGsHParam",	    "GetGsVParam",	"SetGsHParam",		"SetGsVParam",
+    //0x50
+        "RFU080_CreateEventFlag",	"RFU081_DeleteEventFlag",
+        "RFU082_SetEventFlag",		"RFU083_iSetEventFlag",
+        "RFU084_ClearEventFlag",	"RFU085_iClearEventFlag",
+        "RFU086_WaitEventFlag",		"RFU087_PollEventFlag",
+        "RFU088_iPollEventFlag",	"RFU089_ReferEventFlagStatus",
+        "RFU090_iReferEventFlagStatus", "RFU091_GetEntryAddress",
+        "EnableIntcHandler_iEnableIntcHandler",
+        "DisableIntcHandler_iDisableIntcHandler",
+        "EnableDmacHandler_iEnableDmacHandler",
+        "DisableDmacHandler_iDisableDmacHandler",
+    //0x60
+        "KSeg0",				"EnableCache",	"DisableCache",			"GetCop0",
+        "FlushCache",			"RFU101",		"CpuConfig",			"iGetCop0",
+        "iFlushCache",			"RFU105",		"iCpuConfig", 			"sceSifStopDma",
+        "SetCPUTimerHandler",	"SetCPUTimer",	"SetOsdConfigParam2",	"SetOsdConfigParam2",
+    //0x70
+        "GsGetIMR_iGsGetIMR",				"GsGetIMR_iGsPutIMR",	"SetPgifHandler", 				"SetVSyncFlag",
+        "RFU116",							"print", 				"sceSifDmaStat_isceSifDmaStat", "sceSifSetDma_isceSifSetDma",
+        "sceSifSetDChain_isceSifSetDChain", "sceSifSetReg",			"sceSifGetReg",					"ExecOSD",
+        "Deci2Call",						"PSMode",				"MachineType",					"GetMemorySize",
+    };
+    id &= 0xFF;
+    id = (int8_t)id;
+    if (id < 0)
+        id = -id;
+    return names[id];
+}
+
 void EmotionEngine::reset()
 {
     PC = 0xBFC00000;
@@ -101,11 +160,13 @@ int EmotionEngine::run(int cycles_to_run)
         {
             std::string disasm = EmotionDisasm::disasm_instr(instruction, PC);
             printf("[$%08X] $%08X - %s\n", PC, instruction, disasm.c_str());
-            print_state();
+            //print_state();
         }
         EmotionInterpreter::interpret(*this, instruction);
-        //if (PC == 0x0010F760)
-            //set_gpr<uint32_t>(4, 0);
+        /*if (PC == 0x0011F3A8)
+            set_gpr<uint64_t>(3, 0x1E);
+        if (PC == 0x0011F3AC)
+            printf("[EE] v1: $%08X\n", get_gpr<uint32_t>(3));*/
         if (increment_PC)
             PC += 4;
         else
@@ -194,7 +255,7 @@ uint8_t EmotionEngine::read8(uint32_t address)
 {
     if (address >= 0x70000000 && address < 0x70004000)
         return scratchpad[address & 0x3FFF];
-    if (address >= 0x30100000 && address < 0x31FFFFFF)
+    if (address >= 0x30100000 && address <= 0x31FFFFFF)
         address -= 0x10000000;
     return e->read8(address & 0x1FFFFFFF);
 }
@@ -203,16 +264,16 @@ uint16_t EmotionEngine::read16(uint32_t address)
 {
     if (address >= 0x70000000 && address < 0x70004000)
         return *(uint16_t*)&scratchpad[address & 0x3FFE];
-    if (address >= 0x30100000 && address < 0x31FFFFFF)
+    if (address >= 0x30100000 && address <= 0x31FFFFFF)
         address -= 0x10000000;
     return e->read16(address & 0x1FFFFFFF);
 }
 
 uint32_t EmotionEngine::read32(uint32_t address)
-{;
+{
     if (address >= 0x70000000 && address < 0x70004000)
         return *(uint32_t*)&scratchpad[address & 0x3FFC];
-    if (address >= 0x30100000 && address < 0x31FFFFFF)
+    if (address >= 0x30100000 && address <= 0x31FFFFFF)
         address -= 0x10000000;
     return e->read32(address & 0x1FFFFFFF);
 }
@@ -221,7 +282,7 @@ uint64_t EmotionEngine::read64(uint32_t address)
 {
     if (address >= 0x70000000 && address < 0x70004000)
         return *(uint64_t*)&scratchpad[address & 0x3FF8];
-    if (address >= 0x30100000 && address < 0x31FFFFFF)
+    if (address >= 0x30100000 && address <= 0x31FFFFFF)
         address -= 0x10000000;
     return e->read64(address & 0x1FFFFFFF);
 }
@@ -230,7 +291,7 @@ uint128_t EmotionEngine::read128(uint32_t address)
 {
     if (address >= 0x70000000 && address < 0x70004000)
         return *(uint128_t*)&scratchpad[address & 0x3FF0];
-    if (address >= 0x30100000 && address < 0x31FFFFFF)
+    if (address >= 0x30100000 && address <= 0x31FFFFFF)
         address -= 0x10000000;
     return e->read128(address & 0x1FFFFFFF);
 }
@@ -253,7 +314,7 @@ void EmotionEngine::write8(uint32_t address, uint8_t value)
         scratchpad[address & 0x3FFF] = value;
         return;
     }
-    if (address >= 0x30100000 && address < 0x31FFFFFF)
+    if (address >= 0x30100000 && address <= 0x31FFFFFF)
         address -= 0x10000000;
     e->write8(address & 0x1FFFFFFF, value);
 }
@@ -265,7 +326,7 @@ void EmotionEngine::write16(uint32_t address, uint16_t value)
         *(uint16_t*)&scratchpad[address & 0x3FFE] = value;
         return;
     }
-    if (address >= 0x30100000 && address < 0x31FFFFFF)
+    if (address >= 0x30100000 && address <= 0x31FFFFFF)
         address -= 0x10000000;
     e->write16(address & 0x1FFFFFFF, value);
 }
@@ -277,7 +338,7 @@ void EmotionEngine::write32(uint32_t address, uint32_t value)
         *(uint32_t*)&scratchpad[address & 0x3FFC] = value;
         return;
     }
-    if (address >= 0x30100000 && address < 0x31FFFFFF)
+    if (address >= 0x30100000 && address <= 0x31FFFFFF)
         address -= 0x10000000;
     e->write32(address & 0x1FFFFFFF, value);
 }
@@ -289,7 +350,7 @@ void EmotionEngine::write64(uint32_t address, uint64_t value)
         *(uint64_t*)&scratchpad[address & 0x3FF8] = value;
         return;
     }
-    if (address >= 0x30100000 && address < 0x31FFFFFF)
+    if (address >= 0x30100000 && address <= 0x31FFFFFF)
         address -= 0x10000000;
     e->write64(address & 0x1FFFFFFF, value);
 }
@@ -301,7 +362,7 @@ void EmotionEngine::write128(uint32_t address, uint128_t value)
         *(uint128_t*)&scratchpad[address & 0x3FF0] = value;
         return;
     }
-    if (address >= 0x30100000 && address < 0x31FFFFFF)
+    if (address >= 0x30100000 && address <= 0x31FFFFFF)
         address -= 0x10000000;
     e->write128(address & 0x1FFFFFFF, value);
 }
@@ -566,7 +627,7 @@ void EmotionEngine::syscall_exception()
 {
     uint8_t op = read8(PC - 4);
     if (op != 0x7A)
-        printf("[EE] SYSCALL: $%02X Called at $%08X\n", op, PC);
+        printf("[EE] SYSCALL: %s (id: $%02X) called at $%08X\n", SYSCALL(op), op, PC);
 
     //if (op == 0x7C)
         //can_disassemble = true;

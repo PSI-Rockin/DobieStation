@@ -8,7 +8,7 @@
 #define _z(f) f&2
 #define _w(f) f&1
 
-#define printf(fmt, ...)(0)
+//#define printf(fmt, ...)(0)
 
 VectorUnit::VectorUnit(int id) : id(id)
 {
@@ -255,6 +255,12 @@ void VectorUnit::iadd(uint8_t dest, uint8_t reg1, uint8_t reg2)
 {
     set_int(dest, int_gpr[reg1] + int_gpr[reg2]);
     printf("[VU] IADD: $%04X\n", int_gpr[dest]);
+}
+
+void VectorUnit::iaddi(uint8_t dest, uint8_t source, uint8_t imm)
+{
+    set_int(dest, int_gpr[source] + imm);
+    printf("[VU] IADDI: $%04X\n", int_gpr[dest]);
 }
 
 void VectorUnit::iswr(uint8_t field, uint8_t source, uint8_t base)
