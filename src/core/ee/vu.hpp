@@ -47,6 +47,7 @@ class VectorUnit
         static float convert(uint32_t value);
 
         template <typename T> void write_instr(uint32_t addr, T data);
+        template <typename T> void write_data(uint32_t addr, T data);
 
         uint32_t get_gpr_u(int index, int field);
         void set_gpr_f(int index, int field, float value);
@@ -98,6 +99,13 @@ inline void VectorUnit::write_instr(uint32_t addr, T data)
 {
     printf("[VU] Write instr mem $%08X: $%08X\n", addr, data);
     *(T*)&instr_mem[addr & 0x3FFF] = data;
+}
+
+template <typename T>
+inline void VectorUnit::write_data(uint32_t addr, T data)
+{
+    printf("[VU] Write data mem $%08X: $%08X\n", addr, data);
+    *(T*)&data_mem[addr & 0x3FFF] = data;
 }
 
 inline uint32_t VectorUnit::get_gpr_u(int index, int field)

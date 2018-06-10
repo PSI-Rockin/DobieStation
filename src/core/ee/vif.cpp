@@ -4,7 +4,7 @@
 
 #include "../gif.hpp"
 
-VectorInterface::VectorInterface(GraphicsInterface* gif, VectorUnit* vu) : gif(gif), vu(vu)
+VectorInterface::VectorInterface(GraphicsInterface* gif, VectorUnit* vu, int id) : gif(gif), vu(vu), id(id)
 {
 
 }
@@ -16,16 +16,24 @@ void VectorInterface::reset()
     command_len = 0;
     command = 0;
     buffer_size = 0;
+    VIF1_TOPS = 0;
+    VIF_MODE = 0;
+    VIF_CYCLE = 0;
+    for (auto& r : VIF_R)
+        r = 0;
 }
 
 void VectorInterface::update()
 {
     while (FIFO.size())
     {
-        uint32_t value = FIFO.front();
+        value = FIFO.front();
         if (command_len == 0)
         {
             command = value >> 24;
+            int num = (value >> 16) & 0xFF;
+            if (!num)
+                num = 256;
             uint16_t imm = value & 0xFFFF;
             switch (command)
             {
@@ -87,16 +95,9 @@ void VectorInterface::update()
                     break;
                 case 0x4A:
                     printf("[VIF] MPG: $%08X\n", value);
-                    {
-                        command_len = 1;
-                        int num = (value >> 16) & 0xFF;
-                        if (!num)
-                            command_len += 512;
-                        else
-                            command_len += num << 1;
-                        printf("Command len: %d\n", command_len);
-                        mpg.addr = imm * 8;
-                    }
+                    command_len = 1 + (num << 1);
+                    printf("Command len: %d\n", command_len);
+                    mpg.addr = imm * 8;
                     break;
                 case 0x50:
                 case 0x51:
@@ -108,8 +109,33 @@ void VectorInterface::update()
                     printf("[VIF] DIRECT: %d\n", command_len);
                     break;
                 default:
-                    printf("[VIF] Unrecognized command $%02X\n", command);
-                    exit(1);
+                    if ((command & 0x60) == 0x60)
+                    {
+                        uint8_t vn = (command >> 2) & 0x03;
+                        uint8_t vl = command & 0x03;
+                        uint8_t wl = (VIF_CYCLE >> 8) & 0xFF;
+                        uint8_t cl = VIF_CYCLE & 0xFF;
+                        uint16_t len = (32 >> vl) * (vn + 1);
+                        if (wl <= cl)
+                            command_len = 1 + (int)std::ceil(len * num / 32.0f);
+                        else
+                        {
+                            uint8_t limit = (num % wl) > cl ? cl : (num % wl);
+                            uint32_t n = cl * (num / wl) + limit;
+                            command_len = 1 + (int)std::ceil(len * n / 32.0f);
+                        }
+                        printf("[VIF] UNPACK: %d\n", command_len);
+                        unpack.addr = imm & 0x3FF;
+                        if ((id == 1) && (imm & 0x8000))
+                            unpack.addr += VIF1_TOPS;
+                        unpack.addr *= 16;
+                        unpack.write_cycle_counter = 0;
+                    }
+                    else
+                    {
+                        printf("[VIF] Unrecognized command $%02X\n", command);
+                        exit(1);
+                    }
             }
         }
         else
@@ -145,6 +171,9 @@ void VectorInterface::update()
                         buffer_size = 0;
                     }
                     break;
+                case 0x6C:
+                    perform_unpack_v4_32();
+                    break;
                 default:
                     printf("[VIF] Unhandled data for command $%02X\n", command);
                     exit(1);
@@ -169,4 +198,50 @@ void VectorInterface::feed_DMA(uint128_t quad)
     printf("[VIF] Feed DMA: $%08X_%08X_%08X_%08X\n", quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
     for (int i = 0; i < 4; i++)
         FIFO.push(quad._u32[i]);
+}
+
+void VectorInterface::perform_unpack_v4_32()
+{
+    uint8_t wl = (VIF_CYCLE >> 8) & 0xFF;
+    uint8_t cl = VIF_CYCLE & 0xFF;
+    if (cl > wl)
+    {
+        if (unpack.write_cycle_counter == wl)
+        {
+            // skipping write
+            unpack.write_cycle_counter = 0;
+            unpack.addr += 16 * (cl - wl);
+        }
+    }
+    else if ((cl < wl) && (unpack.write_cycle_counter == cl))
+    {
+        // TODO: filling write
+        printf("[VIF] UNPACK: filling write not implemented\n");
+        exit(1);
+    }
+
+    for (int i = 0; i < 4; i++)
+    {
+        // addition processing
+        if (command & 0x10)
+        {
+            if (VIF_MODE == 1)
+                value += VIF_R[i];
+            else if (VIF_MODE == 2)
+            {
+                value += VIF_R[i];
+                VIF_R[i] = value;
+            }
+        }
+
+        vu->write_data(unpack.addr, value);
+        unpack.addr += 4;
+        if (i < 3)
+        {
+            FIFO.pop();
+            value = FIFO.front();
+        }
+    }
+    command_len -= 3;
+    unpack.write_cycle_counter++;
 }
