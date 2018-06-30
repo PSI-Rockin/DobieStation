@@ -8,7 +8,7 @@
 #define _z(f) f&2
 #define _w(f) f&1
 
-//#define printf(fmt, ...)(0)
+#define printf(fmt, ...)(0)
 
 VectorUnit::VectorUnit(int id) : id(id)
 {

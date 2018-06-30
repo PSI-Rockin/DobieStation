@@ -55,10 +55,10 @@ void IOP::run()
 {
     //bool old_int = cop0.status.IEc && (cop0.status.Im & cop0.cause.int_pending);
     uint32_t instr = read32(PC);
-    if (can_disassemble && PC != 0xB89C && PC != 0xB8A0 && PC != 0xB99C && PC != 0xB9A0)
+    if (can_disassemble && PC != 0xB89C && PC != 0xB8A0 && PC != 0xBB9C && PC != 0xBBA0)
     {
         printf("[IOP] [$%08X] $%08X - %s\n", PC, instr, EmotionDisasm::disasm_instr(instr, PC).c_str());
-        print_state();
+        //print_state();
     }
     IOP_Interpreter::interpret(*this, instr);
 

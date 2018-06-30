@@ -208,6 +208,7 @@ namespace EmotionInterpreter
     void paddsb(EmotionEngine& cpu, uint32_t instruction);
     void psubsb(EmotionEngine& cpu, uint32_t instruction);
     void pextlb(EmotionEngine& cpu, uint32_t instruction);
+    void ppacb(EmotionEngine& cpu, uint32_t instruction);
     void pext5(EmotionEngine& cpu, uint32_t instruction);
 
     void mmi1(EmotionEngine& cpu, uint32_t instruction);

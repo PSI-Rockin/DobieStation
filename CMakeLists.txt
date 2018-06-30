@@ -23,7 +23,18 @@ set(SOURCES
         src/core/ee/emotioninterpreter.cpp
 	src/core/ee/emotion_vu0.cpp
 	src/core/ee/intc.cpp
-	src/core/ee/ipu.cpp
+	src/core/ee/ipu/chromtable.cpp
+	src/core/ee/ipu/dct_coeff.cpp
+	src/core/ee/ipu/dct_coeff_table0.cpp
+	src/core/ee/ipu/dct_coeff_table1.cpp
+	src/core/ee/ipu/ipu.cpp
+	src/core/ee/ipu/ipu_fifo.cpp
+	src/core/ee/ipu/lumtable.cpp
+	src/core/ee/ipu/mac_addr_inc.cpp
+	src/core/ee/ipu/mac_i_pic.cpp
+	src/core/ee/ipu/mac_p_pic.cpp
+	src/core/ee/ipu/motioncode.cpp
+	src/core/ee/ipu/vlc_table.cpp
 	src/core/ee/timers.cpp
 	src/core/ee/vif.cpp
 	src/core/ee/vu.cpp
@@ -57,7 +68,18 @@ set(HEADERS
         src/core/ee/emotiondisasm.hpp
         src/core/ee/emotioninterpreter.hpp
 	src/core/ee/intc.hpp
-	src/core/ee/ipu.hpp
+	src/core/ee/ipu/chromtable.hpp
+	src/core/ee/ipu/dct_coeff.hpp
+	src/core/ee/ipu/dct_coeff_table0.hpp
+	src/core/ee/ipu/dct_coeff_table1.hpp
+	src/core/ee/ipu/ipu.hpp
+	src/core/ee/ipu/ipu_fifo.hpp
+	src/core/ee/ipu/lumtable.hpp
+	src/core/ee/ipu/mac_addr_inc.hpp
+	src/core/ee/ipu/mac_i_pic.hpp
+	src/core/ee/ipu/mac_p_pic.hpp
+	src/core/ee/ipu/motioncode.hpp
+	src/core/ee/ipu/vlc_table.hpp
 	src/core/ee/timers.hpp
 	src/core/ee/vif.hpp
 	src/core/ee/vu.hpp

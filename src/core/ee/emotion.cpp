@@ -9,8 +9,8 @@
 
 //#define printf(fmt, ...)(0)
 
-EmotionEngine::EmotionEngine(BIOS_HLE* b, Cop0* cp0, Cop1* fpu, Emulator* e, uint8_t* sp, VectorUnit* vu0) :
-    bios(b), cp0(cp0), fpu(fpu), e(e), scratchpad(sp), vu0(vu0)
+EmotionEngine::EmotionEngine(Cop0* cp0, Cop1* fpu, Emulator* e, uint8_t* sp, VectorUnit* vu0) :
+    cp0(cp0), fpu(fpu), e(e), scratchpad(sp), vu0(vu0)
 {
     reset();
 }
@@ -101,6 +101,10 @@ void EmotionEngine::reset()
     //Clear out $zero
     for (int i = 0; i < 16; i++)
         gpr[i] = 0;
+
+    deci2size = 0;
+    for (int i = 0; i < 128; i++)
+        deci2handlers[i].active = false;
 }
 
 void EmotionEngine::run()
@@ -156,17 +160,13 @@ int EmotionEngine::run(int cycles_to_run)
     {
         cycles_to_run--;
         uint32_t instruction = read32(PC);
-        if (can_disassemble)
+        if (can_disassemble && (PC < 0x81FC0 || PC >= 0x82000))
         {
             std::string disasm = EmotionDisasm::disasm_instr(instruction, PC);
             printf("[$%08X] $%08X - %s\n", PC, instruction, disasm.c_str());
             //print_state();
         }
         EmotionInterpreter::interpret(*this, instruction);
-        /*if (PC == 0x0011F3A8)
-            set_gpr<uint64_t>(3, 0x1E);
-        if (PC == 0x0011F3AC)
-            printf("[EE] v1: $%08X\n", get_gpr<uint32_t>(3));*/
         if (increment_PC)
             PC += 4;
         else
@@ -177,14 +177,17 @@ int EmotionEngine::run(int cycles_to_run)
             if (!delay_slot)
             {
                 branch_on = false;
-                if (!new_PC)
+                if (!new_PC || (new_PC & 0x3))
                 {
-                    printf("[EE] Jump to NULL from $%08X\n", PC - 8);
+                    printf("[EE] Jump to invalid address $%08X from $%08X\n", new_PC, PC - 8);
                     exit(1);
                 }
+                if (PC >= 0x82000 && new_PC == 0x81FC0)
+                    printf("[EE] Entering BIFCO loop\n");
                 PC = new_PC;
-                if (PC == 0x0029e9cc)
-                    PC = 0x0029E984;
+                //Temporary hack for Atelier Iris - Skip intro movies
+                //if (PC == 0x0029e9cc)
+                    //PC = 0x0029E984;
                 if (PC < 0x80000000 && PC >= 0x00100000)
                     if (e->skip_BIOS())
                         return 0;
@@ -551,9 +554,7 @@ void EmotionEngine::lqc2(uint32_t addr, int index)
     {
         uint32_t bark = read32(addr + (i << 2));
         //printf("$%08X ", bark);
-        if ((bark & 0x7F800000) == 0x7F800000)
-            bark = (bark & 0x80000000) | 0x7F7FFFFF;
-        vu0->set_gpr_u(index, i, bark);
+        vu0->set_gpr_f(index, i, VectorUnit::convert(bark));
     }
     //printf("\n");
 }
@@ -620,7 +621,7 @@ void EmotionEngine::handle_exception(uint32_t new_addr, uint8_t code)
 void EmotionEngine::hle_syscall()
 {
     uint8_t op = read8(PC - 4);
-    bios->hle_syscall(*this, op);
+    //bios->hle_syscall(*this, op);
 }
 
 void EmotionEngine::syscall_exception()
@@ -629,14 +630,65 @@ void EmotionEngine::syscall_exception()
     if (op != 0x7A)
         printf("[EE] SYSCALL: %s (id: $%02X) called at $%08X\n", SYSCALL(op), op, PC);
 
-    //if (op == 0x7C)
-        //can_disassemble = true;
+    if (op == 0x7C)
+    {
+        deci2call(get_gpr<uint32_t>(4), get_gpr<uint32_t>(5));
+        return;
+    }
     if (op == 0x04)
     {
+        //On a real PS2, Exit returns to OSDSYS, but that isn't functional yet.
         printf("[EE] Exit syscall called!\n");
         exit(1);
     }
     handle_exception(0x80000180, 0x08);
+}
+
+void EmotionEngine::deci2call(uint32_t func, uint32_t param)
+{
+    switch (func)
+    {
+        case 0x01:
+        {
+            printf("Deci2Open\n");
+            int id = deci2size;
+            deci2size++;
+            deci2handlers[id].active = true;
+            deci2handlers[id].device = read32(param);
+            deci2handlers[id].addr = read32(param + 4);
+            set_gpr<uint64_t>(2, id);
+        }
+            break;
+        case 0x03:
+        {
+            printf("Deci2Send\n");
+            int id = read32(param);
+            if (deci2handlers[id].active)
+            {
+                uint32_t addr = read32(deci2handlers[id].addr + 0x10);
+                printf("Str addr: $%08X\n", addr);
+                int len = read32(addr) - 0x0C;
+                uint32_t str = addr + 0x0C;
+                printf("Len: %d\n", len);
+                e->ee_deci2send(str, len);
+            }
+            set_gpr<uint64_t>(2, 1);
+        }
+            break;
+        case 0x04:
+        {
+            printf("Deci2Poll\n");
+            int id = read32(param);
+            if (deci2handlers[id].active)
+                write32(deci2handlers[id].addr + 0x0C, 0);
+            set_gpr<uint64_t>(2, 1);
+        }
+            break;
+        case 0x10:
+            printf("kputs\n");
+            e->ee_kputs(param);
+            break;
+    }
 }
 
 void EmotionEngine::int0()
@@ -690,14 +742,12 @@ void EmotionEngine::eret()
 
 void EmotionEngine::ei()
 {
-    printf("[EE] EI\n");
     if (cp0->status.edi || cp0->status.mode == 0)
         cp0->status.master_int_enable = true;
 }
 
 void EmotionEngine::di()
 {
-    printf("[EE] DI\n");
     if (cp0->status.edi || cp0->status.mode == 0)
         cp0->status.master_int_enable = false;
 }

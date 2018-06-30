@@ -1723,6 +1723,8 @@ string EmotionDisasm::disasm_mmi0(uint32_t instruction)
             return disasm_special_simplemath("psubsb", instruction);
         case 0x1A:
             return disasm_special_simplemath("pextlb", instruction);
+        case 0x1B:
+            return disasm_special_simplemath("ppacb", instruction);
         case 0x1E:
             return disasm_pext5(instruction);
         default:
@@ -1894,6 +1896,8 @@ string EmotionDisasm::disasm_mmi3(uint32_t instruction)
             return disasm_pmthi(instruction);
         case 0x09:
             return disasm_pmtlo(instruction);
+        case 0x0A:
+            return disasm_special_simplemath("pinteh", instruction);
         case 0x0E:
             return disasm_pcpyud(instruction);
         case 0x12:

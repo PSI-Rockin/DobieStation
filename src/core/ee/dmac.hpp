@@ -64,6 +64,7 @@ class DMAC
         void process_VIF0();
         void process_VIF1();
         void process_GIF();
+        void process_IPU_FROM();
         void process_IPU_TO();
         void process_SIF0();
         void process_SIF1();
@@ -89,7 +90,9 @@ class DMAC
         uint32_t read_master_disable();
         void write_master_disable(uint32_t value);
 
+        uint8_t read8(uint32_t address);
         uint32_t read32(uint32_t address);
+        void write8(uint32_t address, uint8_t value);
         void write32(uint32_t address, uint32_t value);
 };
 

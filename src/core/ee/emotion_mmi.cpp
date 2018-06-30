@@ -315,6 +315,9 @@ void EmotionInterpreter::mmi0(EmotionEngine &cpu, uint32_t instruction)
         case 0x1A:
             pextlb(cpu, instruction);
             break;
+        case 0x1B:
+            ppacb(cpu, instruction);
+            break;
         case 0x1E:
             pext5(cpu, instruction);
             break;
@@ -656,6 +659,25 @@ void EmotionInterpreter::pextlb(EmotionEngine &cpu, uint32_t instruction)
     {
         cpu.set_gpr<uint8_t>(dest, (dw2 >> (i * 8)) & 0xFF, (i * 2));
         cpu.set_gpr<uint8_t>(dest, (dw1 >> (i * 8)) & 0xFF, (i * 2) + 1);
+    }
+}
+
+/**
+ * Parallel Pack to Byte
+ * Splits RS and RT into eight halfwords each. Stores the lower 8-bits of each halfword in RD.
+ */
+void EmotionInterpreter::ppacb(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    for (int i = 0; i < 8; i++)
+    {
+        uint8_t byte1 = cpu.get_gpr<uint16_t>(reg1, i) & 0xFF;
+        uint8_t byte2 = cpu.get_gpr<uint16_t>(reg2, i) & 0xFF;
+        cpu.set_gpr<uint8_t>(dest, byte1, i + 8);
+        cpu.set_gpr<uint8_t>(dest, byte2, i);
     }
 }
 

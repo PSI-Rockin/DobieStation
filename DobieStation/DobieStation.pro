@@ -47,7 +47,18 @@ SOURCES += ../src/qt/main.cpp \
     ../src/qt/emuthread.cpp \
     ../src/core/tests/iop/alu.cpp \
     ../src/core/ee/vif.cpp \
-    ../src/core/ee/ipu.cpp
+    ../src/core/ee/ipu/ipu.cpp \
+    ../src/core/ee/ipu/vlc_table.cpp \
+    ../src/core/ee/ipu/mac_addr_inc.cpp \
+    ../src/core/ee/ipu/mac_i_pic.cpp \
+    ../src/core/ee/ipu/ipu_fifo.cpp \
+    ../src/core/ee/ipu/lumtable.cpp \
+    ../src/core/ee/ipu/dct_coeff.cpp \
+    ../src/core/ee/ipu/dct_coeff_table0.cpp \
+    ../src/core/ee/ipu/dct_coeff_table1.cpp \
+    ../src/core/ee/ipu/chromtable.cpp \
+    ../src/core/ee/ipu/mac_p_pic.cpp \
+    ../src/core/ee/ipu/motioncode.cpp
 
 HEADERS += \
     ../src/core/ee/emotion.hpp \
@@ -79,4 +90,15 @@ HEADERS += \
     ../src/qt/emuthread.hpp \
     ../src/core/ee/vif.hpp \
     ../src/core/int128.hpp \
-    ../src/core/ee/ipu.hpp
+    ../src/core/ee/ipu/ipu.hpp \
+    ../src/core/ee/ipu/vlc_table.hpp \
+    ../src/core/ee/ipu/mac_addr_inc.hpp \
+    ../src/core/ee/ipu/mac_i_pic.hpp \
+    ../src/core/ee/ipu/ipu_fifo.hpp \
+    ../src/core/ee/ipu/lumtable.hpp \
+    ../src/core/ee/ipu/dct_coeff.hpp \
+    ../src/core/ee/ipu/dct_coeff_table0.hpp \
+    ../src/core/ee/ipu/dct_coeff_table1.hpp \
+    ../src/core/ee/ipu/chromtable.hpp \
+    ../src/core/ee/ipu/mac_p_pic.hpp \
+    ../src/core/ee/ipu/motioncode.hpp

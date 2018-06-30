@@ -1,0 +1,18 @@
+#ifndef IPU_FIFO_HPP
+#define IPU_FIFO_HPP
+#include <cstdint>
+#include <queue>
+
+#include "../../int128.hpp"
+
+struct IPU_FIFO
+{
+    std::queue<uint128_t> f;
+    int bit_pointer;
+    bool get_bits(uint32_t& data, int bits);
+    void advance_stream(uint8_t amount);
+
+    void reset();
+};
+
+#endif // IPU_FIFO_HPP

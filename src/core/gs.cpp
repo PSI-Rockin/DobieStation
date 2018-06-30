@@ -614,7 +614,7 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
                 printf("Format: $%02X\n", BITBLTBUF.dest_format);
                 printf("Width: %d\n", BITBLTBUF.dest_width);
                 TRXPOS.int_dest_x = TRXPOS.dest_x;
-                TRXPOS.int_source_x = TRXPOS.int_source_x;
+                TRXPOS.int_source_x = TRXPOS.source_x;
                 //printf("Transfer addr: $%08X\n", transfer_addr);
                 if (TRXDIR == 2)
                 {

@@ -119,6 +119,9 @@ void DMAC::run(int cycles)
                 case GIF:
                     process_GIF();
                     break;
+                case IPU_FROM:
+                    process_IPU_FROM();
+                    break;
                 case IPU_TO:
                     process_IPU_TO();
                     break;
@@ -269,6 +272,30 @@ void DMAC::process_GIF()
         else
         {
             handle_source_chain(GIF);
+        }
+    }
+}
+
+void DMAC::process_IPU_FROM()
+{
+    if (channels[IPU_FROM].quadword_count)
+    {
+        if (ipu->can_read_FIFO())
+        {
+            store128(channels[IPU_FROM].address, ipu->read_FIFO());
+
+            channels[IPU_FROM].address += 16;
+            channels[IPU_FROM].quadword_count--;
+        }
+    }
+    else
+    {
+        if (channels[IPU_FROM].tag_end)
+            transfer_end(IPU_FROM);
+        else
+        {
+            printf("blorp\n");
+            exit(1);
         }
     }
 }
@@ -568,6 +595,20 @@ void DMAC::write_master_disable(uint32_t value)
     master_disable = value;
 }
 
+uint8_t DMAC::read8(uint32_t address)
+{
+    uint8_t reg = 0;
+    switch (address)
+    {
+        case 0x10009000:
+            reg = channels[VIF1].control & 0xFF;
+            break;
+        default:
+            printf("[DMAC] Unrecognized read8 from $%08X\n", address);
+    }
+    return reg;
+}
+
 uint32_t DMAC::read32(uint32_t address)
 {
     uint32_t reg = 0;
@@ -690,6 +731,20 @@ uint32_t DMAC::read32(uint32_t address)
             break;
     }
     return reg;
+}
+
+void DMAC::write8(uint32_t address, uint8_t value)
+{
+    switch (address)
+    {
+        case 0x10009000:
+            channels[VIF1].control &= ~0xFF;
+            channels[VIF1].control |= value;
+            break;
+        default:
+            printf("[DMAC] Unrecognized write8 to $%08X of $%02X\n", address, value);
+            break;
+    }
 }
 
 void DMAC::write32(uint32_t address, uint32_t value)

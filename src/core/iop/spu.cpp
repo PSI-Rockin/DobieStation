@@ -53,6 +53,7 @@ uint16_t SPU::read16(uint32_t addr)
     switch (addr)
     {
         case 0x19A:
+            printf("[SPU%d] Core Att\n", id);
             return core_att;
         case 0x1AA:
             return transfer_addr & 0xFFFF;

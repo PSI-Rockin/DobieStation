@@ -1,0 +1,20 @@
+#include "motioncode.hpp"
+
+VLC_Entry MotionCode::table[] =
+{
+    {0x1, 0x0, 1},
+    {0x2, 0x1, 3},
+    {0x3, 0xFFFF, 3},
+    {0x2, 0x2, 4},
+
+    {0x3, 0xFFFE, 4},
+    {0x2, 0x3, 5},
+    {0x3, 0xFFFD, 5},
+    {0x6, 0x4, 6}
+};
+
+MotionCode::MotionCode() :
+    VLC_Table(table, SIZE, 11)
+{
+
+}

@@ -7,6 +7,7 @@ enum class SIO_DEVICE
 {
     NONE,
     PAD,
+    MEMCARD,
     DUMMY
 };
 
@@ -22,6 +23,9 @@ class SIO2
         uint32_t send1[4];
         uint32_t send2[4];
         uint32_t send3[16];
+
+        uint32_t RECV1;
+        uint32_t RECV3;
 
         std::queue<uint8_t> FIFO;
         uint32_t control;
@@ -41,6 +45,7 @@ class SIO2
         uint32_t get_control();
         uint32_t get_RECV1();
         uint32_t get_RECV2();
+        uint32_t get_RECV3();
 
         void set_send1(int index, uint32_t value);
         void set_send2(int index, uint32_t value);

@@ -149,3 +149,9 @@ uint32_t SIO2::get_RECV2()
     printf("[SIO2] Read RECV2\n");
     return 0xF;
 }
+
+uint32_t SIO2::get_RECV3()
+{
+    printf("[SIO2] Read RECV3\n");
+    return 0;
+}

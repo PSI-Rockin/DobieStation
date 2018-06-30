@@ -2,11 +2,10 @@
 #define EMULATOR_HPP
 #include <fstream>
 
-#include "ee/bios_hle.hpp"
 #include "ee/dmac.hpp"
 #include "ee/emotion.hpp"
 #include "ee/intc.hpp"
-#include "ee/ipu.hpp"
+#include "ee/ipu/ipu.hpp"
 #include "ee/timers.hpp"
 #include "ee/vif.hpp"
 #include "ee/vu.hpp"
@@ -35,7 +34,6 @@ class Emulator
 {
     private:
         int frames;
-        BIOS_HLE bios_hle;
         Cop0 cp0;
         Cop1 fpu;
         CDVD_Drive cdvd;
@@ -78,6 +76,7 @@ class Emulator
         uint32_t IOP_I_STAT;
         uint32_t IOP_I_MASK;
         uint32_t IOP_I_CTRL;
+        int iop_i_ctrl_delay;
 
         SKIP_HACK skip_BIOS_hack;
 
@@ -112,6 +111,9 @@ class Emulator
         void write32(uint32_t address, uint32_t value);
         void write64(uint32_t address, uint64_t value);
         void write128(uint32_t address, uint128_t value);
+
+        void ee_kputs(uint32_t param);
+        void ee_deci2send(uint32_t addr, int len);
 
         uint8_t iop_read8(uint32_t address);
         uint16_t iop_read16(uint32_t address);

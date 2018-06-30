@@ -121,12 +121,14 @@ void EmotionTiming::write32(uint32_t addr, uint32_t value)
     switch (addr & 0xFF)
     {
         case 0x00:
+            printf("[EE Timing] Write32 timer %d counter: $%08X\n", id, value);
             timers[id].counter = value & 0xFFFF;
             break;
         case 0x10:
             write_control(id, value);
             break;
         case 0x20:
+            printf("[EE Timing] Write32 timer %d compare: $%08X\n", id, value);
             timers[id].compare = value & 0xFFFF;
             break;
         default:
