@@ -270,6 +270,9 @@ void EmotionInterpreter::mmi0(EmotionEngine &cpu, uint32_t instruction)
         case 0x01:
             psubw(cpu, instruction);
             break;
+        case 0x02:
+            pcgtw(cpu, instruction);
+            break;
         case 0x03:
             pmaxw(cpu, instruction);
             break;
@@ -278,6 +281,9 @@ void EmotionInterpreter::mmi0(EmotionEngine &cpu, uint32_t instruction)
             break;
         case 0x05:
             psubh(cpu, instruction);
+            break;
+        case 0x06:
+            pcgth(cpu, instruction);
             break;
         case 0x07:
             pmaxh(cpu, instruction);
@@ -288,6 +294,9 @@ void EmotionInterpreter::mmi0(EmotionEngine &cpu, uint32_t instruction)
         case 0x09:
             psubb(cpu, instruction);
             break;
+        case 0x0A:
+            pcgtb(cpu, instruction);
+            break;
         case 0x10:
             paddsw(cpu, instruction);
             break;
@@ -297,6 +306,9 @@ void EmotionInterpreter::mmi0(EmotionEngine &cpu, uint32_t instruction)
         case 0x12:
             pextlw(cpu, instruction);
             break;
+        case 0x13:
+            ppacw(cpu, instruction);
+            break;
         case 0x14:
             paddsh(cpu, instruction);
             break;
@@ -305,6 +317,9 @@ void EmotionInterpreter::mmi0(EmotionEngine &cpu, uint32_t instruction)
             break;
         case 0x16:
             pextlh(cpu, instruction);
+            break;
+        case 0x17:
+            ppach(cpu, instruction);
             break;
         case 0x18:
             paddsb(cpu, instruction);
@@ -320,6 +335,9 @@ void EmotionInterpreter::mmi0(EmotionEngine &cpu, uint32_t instruction)
             break;
         case 0x1E:
             pext5(cpu, instruction);
+            break;
+        case 0x1F:
+            ppac5(cpu, instruction);
             break;
         default:
             unknown_op("mmi0", instruction, op);
@@ -360,6 +378,31 @@ void EmotionInterpreter::psubw(EmotionEngine &cpu, uint32_t instruction)
         word -= cpu.get_gpr<int32_t>(reg2, i);
         cpu.set_gpr<int32_t>(dest, word, i);
     }
+}
+
+/**
+ * Parallel Compare for Greater Word
+ * Compares the four signed words in RS and RT. Sets 0xFFFFFFFF if RS > RT, 0 if not.
+ */
+void EmotionInterpreter::pcgtw(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    uint128_t qw1 = cpu.get_gpr<uint128_t>(reg1);
+    uint128_t qw2 = cpu.get_gpr<uint128_t>(reg2);
+    uint128_t dest_qw;
+
+    for (int i = 0; i < 4; i++)
+    {
+        if ((int32_t)qw1._u32[i] > (int32_t)qw2._u32[i])
+            dest_qw._u32[i] = 0xFFFFFFFF;
+        else
+            dest_qw._u32[i] = 0;
+    }
+
+    cpu.set_gpr<uint128_t>(dest, dest_qw);
 }
 
 /**
@@ -414,6 +457,31 @@ void EmotionInterpreter::psubh(EmotionEngine &cpu, uint32_t instruction)
         halfword -= cpu.get_gpr<int16_t>(reg2, i);
         cpu.set_gpr<int16_t>(dest, halfword, i);
     }
+}
+
+/**
+ * Parallel Compare for Greater Halfword
+ * Compares the eight signed halfwords in RS and RT. Sets 0xFFFF if RS > RT, 0 if not.
+ */
+void EmotionInterpreter::pcgth(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    uint128_t qw1 = cpu.get_gpr<uint128_t>(reg1);
+    uint128_t qw2 = cpu.get_gpr<uint128_t>(reg2);
+    uint128_t dest_qw;
+
+    for (int i = 0; i < 8; i++)
+    {
+        if ((int16_t)qw1._u16[i] > (int16_t)qw2._u16[i])
+            dest_qw._u16[i] = 0xFFFF;
+        else
+            dest_qw._u16[i] = 0;
+    }
+
+    cpu.set_gpr<uint128_t>(dest, dest_qw);
 }
 
 /**
@@ -473,20 +541,28 @@ void EmotionInterpreter::psubb(EmotionEngine &cpu, uint32_t instruction)
 }
 
 /**
- * Parallel Compare for Greater Than Byte
- * Compares the 16 bytes in RS to RT. For each byte, if RS > RT, 0xFF is stored in RD's byte. Else, 0x0 is stored.
+ * Parallel Compare for Greater Byte
+ * Compares the sixteen signed bytes in RS and RT. Sets 0xFF if RS > RT, 0 if not.
  */
 void EmotionInterpreter::pcgtb(EmotionEngine &cpu, uint32_t instruction)
 {
     uint64_t reg1 = (instruction >> 21) & 0x1F;
     uint64_t reg2 = (instruction >> 16) & 0x1F;
     uint64_t dest = (instruction >> 11) & 0x1F;
+
+    uint128_t qw1 = cpu.get_gpr<uint128_t>(reg1);
+    uint128_t qw2 = cpu.get_gpr<uint128_t>(reg2);
+    uint128_t dest_qw;
+
     for (int i = 0; i < 16; i++)
     {
-        uint8_t byte1 = cpu.get_gpr<uint8_t>(reg1, i);
-        uint8_t byte2 = cpu.get_gpr<uint8_t>(reg2, i);
-        cpu.set_gpr<uint8_t>(dest, (byte1 > byte2) * 0xFF, i);
+        if ((int8_t)qw1._u8[i] > (int8_t)qw2._u8[i])
+            dest_qw._u8[i] = 0xFF;
+        else
+            dest_qw._u8[i] = 0;
     }
+
+    cpu.set_gpr<uint128_t>(dest, dest_qw);
 }
 
 void EmotionInterpreter::pextlw(EmotionEngine &cpu, uint32_t instruction)
@@ -504,6 +580,21 @@ void EmotionInterpreter::pextlw(EmotionEngine &cpu, uint32_t instruction)
     cpu.set_gpr<uint32_t>(dest, dw1 >> 32, 3);
 }
 
+void EmotionInterpreter::ppacw(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    uint128_t qw1 = cpu.get_gpr<uint128_t>(reg1);
+    uint128_t qw2 = cpu.get_gpr<uint128_t>(reg2);
+
+    cpu.set_gpr<uint32_t>(dest, qw2._u64[0] & 0xFFFFFFFF, 0);
+    cpu.set_gpr<uint32_t>(dest, qw2._u64[1] & 0xFFFFFFFF, 1);
+    cpu.set_gpr<uint32_t>(dest, qw1._u64[0] & 0xFFFFFFFF, 2);
+    cpu.set_gpr<uint32_t>(dest, qw1._u64[1] & 0xFFFFFFFF, 3);
+}
+
 void EmotionInterpreter::pextlh(EmotionEngine &cpu, uint32_t instruction)
 {
     uint64_t reg1 = (instruction >> 21) & 0x1F;
@@ -517,6 +608,22 @@ void EmotionInterpreter::pextlh(EmotionEngine &cpu, uint32_t instruction)
     {
         cpu.set_gpr<uint16_t>(dest, (dw2 >> (i * 16)) & 0xFFFF, (i * 2));
         cpu.set_gpr<uint16_t>(dest, (dw1 >> (i * 16)) & 0xFFFF, (i * 2) + 1);
+    }
+}
+
+void EmotionInterpreter::ppach(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    uint128_t qw1 = cpu.get_gpr<uint128_t>(reg1);
+    uint128_t qw2 = cpu.get_gpr<uint128_t>(reg2);
+
+    for (int i = 0; i < 4; i++)
+    {
+        cpu.set_gpr<uint16_t>(dest, qw1._u32[i] & 0xFFFF, i + 4);
+        cpu.set_gpr<uint16_t>(dest, qw2._u32[i] & 0xFFFF, i);
     }
 }
 
@@ -672,10 +779,13 @@ void EmotionInterpreter::ppacb(EmotionEngine &cpu, uint32_t instruction)
     uint64_t reg2 = (instruction >> 16) & 0x1F;
     uint64_t dest = (instruction >> 11) & 0x1F;
 
+    uint128_t qw1 = cpu.get_gpr<uint128_t>(reg1);
+    uint128_t qw2 = cpu.get_gpr<uint128_t>(reg2);
+
     for (int i = 0; i < 8; i++)
     {
-        uint8_t byte1 = cpu.get_gpr<uint16_t>(reg1, i) & 0xFF;
-        uint8_t byte2 = cpu.get_gpr<uint16_t>(reg2, i) & 0xFF;
+        uint8_t byte1 = qw1._u16[i] & 0xFF;
+        uint8_t byte2 = qw2._u16[i] & 0xFF;
         cpu.set_gpr<uint8_t>(dest, byte1, i + 8);
         cpu.set_gpr<uint8_t>(dest, byte2, i);
     }
@@ -701,6 +811,27 @@ void EmotionInterpreter::pext5(EmotionEngine &cpu, uint32_t instruction)
     }
 }
 
+/**
+ * Parallel Pack to 5 Bits
+ * Splits RT into four words, each in 8-8-8-8 format. Truncates each word into 1-5-5-5 format.
+ */
+void EmotionInterpreter::ppac5(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t source = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    for (int i = 0; i < 4; i++)
+    {
+        uint32_t unpacked = cpu.get_gpr<uint32_t>(source, i);
+
+        uint32_t packed = (unpacked >> 3) & 0x1F;
+        packed |= ((unpacked >> 11) & 0x1F) << 5;
+        packed |= ((unpacked >> 19) & 0x1F) << 10;
+        packed |= (unpacked & (1 << 31)) >> 16;
+        cpu.set_gpr<uint32_t>(dest, packed, i);
+    }
+}
+
 void EmotionInterpreter::mmi1(EmotionEngine &cpu, uint32_t instruction)
 {
     uint8_t op = (instruction >> 6) & 0x1F;
@@ -708,6 +839,9 @@ void EmotionInterpreter::mmi1(EmotionEngine &cpu, uint32_t instruction)
     {
         case 0x01:
             pabsw(cpu, instruction);
+            break;
+        case 0x02:
+            pceqw(cpu, instruction);
             break;
         case 0x03:
             pminw(cpu, instruction);
@@ -718,8 +852,14 @@ void EmotionInterpreter::mmi1(EmotionEngine &cpu, uint32_t instruction)
         case 0x05:
             pabsh(cpu, instruction);
             break;
+        case 0x06:
+            pceqh(cpu, instruction);
+            break;
         case 0x07:
             pminh(cpu, instruction);
+            break;
+        case 0x0A:
+            pceqb(cpu, instruction);
             break;
         case 0x10:
             padduw(cpu, instruction);
@@ -775,6 +915,31 @@ void EmotionInterpreter::pabsw(EmotionEngine &cpu, uint32_t instruction)
 }
 
 /**
+ * Parallel Compare for Equal Word
+ * Compares the four words in RS and RT. Sets 0xFFFFFFFF if equal, 0 if not.
+ */
+void EmotionInterpreter::pceqw(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    uint128_t qw1 = cpu.get_gpr<uint128_t>(reg1);
+    uint128_t qw2 = cpu.get_gpr<uint128_t>(reg2);
+    uint128_t dest_qw;
+
+    for (int i = 0; i < 4; i++)
+    {
+        if (qw1._u32[i] == qw2._u32[i])
+            dest_qw._u32[i] = 0xFFFFFFFF;
+        else
+            dest_qw._u32[i] = 0;
+    }
+
+    cpu.set_gpr<uint128_t>(dest, dest_qw);
+}
+
+/**
  * Parallel Minimize Word
  * Compares the four words in RS and RT each, and stores the lesser of each in RD.
  */
@@ -813,6 +978,31 @@ void EmotionInterpreter::pabsh(EmotionEngine &cpu, uint32_t instruction)
         else
             cpu.set_gpr<uint16_t>(dest, halfword, i);
     }
+}
+
+/**
+ * Parallel Compare for Equal Halfword
+ * Compares the eight halfwords in RS and RT. Sets 0xFFFF if equal, 0 if not.
+ */
+void EmotionInterpreter::pceqh(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    uint128_t qw1 = cpu.get_gpr<uint128_t>(reg1);
+    uint128_t qw2 = cpu.get_gpr<uint128_t>(reg2);
+    uint128_t dest_qw;
+
+    for (int i = 0; i < 8; i++)
+    {
+        if (qw1._u16[i] == qw2._u16[i])
+            dest_qw._u16[i] = 0xFFFF;
+        else
+            dest_qw._u16[i] = 0;
+    }
+
+    cpu.set_gpr<uint128_t>(dest, dest_qw);
 }
 
 /**
@@ -896,6 +1086,31 @@ void EmotionInterpreter::pminh(EmotionEngine &cpu, uint32_t instruction)
         else
             cpu.set_gpr<int16_t>(dest, b, i);
     }
+}
+
+/**
+ * Parallel Compare for Equal Byte
+ * Compares the sixteen bytes in RS and RT, setting 0xFF if equal and 0 if not.
+ */
+void EmotionInterpreter::pceqb(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    uint128_t qw1 = cpu.get_gpr<uint128_t>(reg1);
+    uint128_t qw2 = cpu.get_gpr<uint128_t>(reg2);
+    uint128_t dest_qw;
+
+    for (int i = 0; i < 16; i++)
+    {
+        if (qw1._u8[i] == qw2._u8[i])
+            dest_qw._u8[i] = 0xFF;
+        else
+            dest_qw._u8[i] = 0;
+    }
+
+    cpu.set_gpr<uint128_t>(dest, dest_qw);
 }
 
 void EmotionInterpreter::pextuw(EmotionEngine &cpu, uint32_t instruction)
@@ -1043,6 +1258,9 @@ void EmotionInterpreter::mmi2(EmotionEngine &cpu, uint32_t instruction)
         case 0x09:
             pmflo(cpu, instruction);
             break;
+        case 0x0A:
+            pinth(cpu, instruction);
+            break;
         case 0x0E:
             pcpyld(cpu, instruction);
             break;
@@ -1055,11 +1273,17 @@ void EmotionInterpreter::mmi2(EmotionEngine &cpu, uint32_t instruction)
         case 0x1A:
             pexeh(cpu, instruction);
             break;
+        case 0x1B:
+            prevh(cpu, instruction);
+            break;
         case 0x1C:
             pmulth(cpu, instruction);
             break;
         case 0x1E:
             pexew(cpu, instruction);
+            break;
+        case 0x1F:
+            prot3w(cpu, instruction);
             break;
         default:
             unknown_op("mmi2", instruction, op);
@@ -1120,6 +1344,21 @@ void EmotionInterpreter::pmflo(EmotionEngine &cpu, uint32_t instruction)
     cpu.pmflo(dest);
 }
 
+void EmotionInterpreter::pinth(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    for (int i = 0; i < 4; i++)
+    {
+        uint16_t hw1 = cpu.get_gpr<uint16_t>(reg1, i + 4);
+        uint16_t hw2 = cpu.get_gpr<uint16_t>(reg2, i);
+        cpu.set_gpr<uint16_t>(dest, hw1, (i * 2) + 1);
+        cpu.set_gpr<uint16_t>(dest, hw2, i * 2);
+    }
+}
+
 /**
  * Parallel Copy from Lower Doubleword
  * The low 64 bits of RS and RT get copied to the high 64 bits and low 64 bits of RD, respectively.
@@ -1166,15 +1405,30 @@ void EmotionInterpreter::pexeh(EmotionEngine &cpu, uint32_t instruction)
     uint64_t source = (instruction >> 16) & 0x1F;
     uint64_t dest = (instruction >> 11) & 0x1F;
 
-    uint16_t data[8];
-    for (int i = 0; i < 8; i++)
-        data[i] = cpu.get_gpr<uint16_t>(source, i);
+    uint128_t data = cpu.get_gpr<uint128_t>(source);
 
-    std::swap(data[0], data[2]);
-    std::swap(data[4], data[6]);
+    std::swap(data._u16[0], data._u16[2]);
+    std::swap(data._u16[4], data._u16[6]);
 
-    for (int i = 0; i < 8; i++)
-        cpu.set_gpr<uint16_t>(dest, data[i], i);
+    cpu.set_gpr<uint128_t>(dest, data);
+}
+
+/**
+ * Parallel Reverse Halfword
+ */
+void EmotionInterpreter::prevh(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t source = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    uint128_t data = cpu.get_gpr<uint128_t>(source);
+    std::swap(data._u16[0], data._u16[3]);
+    std::swap(data._u16[1], data._u16[2]);
+
+    std::swap(data._u16[4], data._u16[7]);
+    std::swap(data._u16[5], data._u16[6]);
+
+    cpu.set_gpr<uint128_t>(dest, data);
 }
 
 /**
@@ -1229,14 +1483,28 @@ void EmotionInterpreter::pexew(EmotionEngine &cpu, uint32_t instruction)
     uint64_t source = (instruction >> 16) & 0x1F;
     uint64_t dest = (instruction >> 11) & 0x1F;
 
-    uint32_t data[4];
-    for (int i = 0; i < 4; i++)
-        data[i] = cpu.get_gpr<uint32_t>(source, i);
+    uint128_t data = cpu.get_gpr<uint128_t>(source);
+    std::swap(data._u32[0], data._u32[2]);
+    cpu.set_gpr<uint128_t>(dest, data);
+}
 
-    std::swap(data[0], data[2]);
+/**
+ * Parallel Rotate 3 Words Left
+ */
+void EmotionInterpreter::prot3w(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t source = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
 
-    for (int i = 0; i < 4; i++)
-        cpu.set_gpr<uint32_t>(dest, data[i], i);
+    uint128_t s = cpu.get_gpr<uint128_t>(source);
+    uint128_t d;
+
+    d._u32[0] = s._u32[1];
+    d._u32[1] = s._u32[2];
+    d._u32[2] = s._u32[0];
+    d._u32[3] = s._u32[3];
+
+    cpu.set_gpr<uint128_t>(dest, d);
 }
 
 void EmotionInterpreter::mfhi1(EmotionEngine &cpu, uint32_t instruction)
@@ -1380,6 +1648,9 @@ void EmotionInterpreter::mmi3(EmotionEngine &cpu, uint32_t instruction)
         case 0x09:
             pmtlo(cpu, instruction);
             break;
+        case 0x0A:
+            pinteh(cpu, instruction);
+            break;
         case 0x0E:
             pcpyud(cpu, instruction);
             break;
@@ -1433,6 +1704,21 @@ void EmotionInterpreter::pmtlo(EmotionEngine &cpu, uint32_t instruction)
 {
     uint64_t source = (instruction >> 21) & 0x1F;
     cpu.pmtlo(source);
+}
+
+void EmotionInterpreter::pinteh(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    for (int i = 0; i < 4; i++)
+    {
+        uint16_t hw1 = cpu.get_gpr<uint32_t>(reg1, i) & 0xFFFF;
+        uint16_t hw2 = cpu.get_gpr<uint32_t>(reg2, i) & 0xFFFF;
+        cpu.set_gpr<uint16_t>(dest, hw1, (i * 2) + 1);
+        cpu.set_gpr<uint16_t>(dest, hw2, i * 2);
+    }
 }
 
 /**

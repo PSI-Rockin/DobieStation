@@ -242,8 +242,6 @@ void EmotionInterpreter::movn(EmotionEngine &cpu, uint32_t instruction)
 
 void EmotionInterpreter::syscall_ee(EmotionEngine &cpu, uint32_t instruction)
 {
-    uint32_t code = (instruction >> 6) & 0xFFFFF;
-    //cpu.hle_syscall();
     cpu.syscall_exception();
 }
 

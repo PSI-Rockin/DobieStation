@@ -374,7 +374,7 @@ void EmotionInterpreter::slti(EmotionEngine &cpu, uint32_t instruction)
 
 void EmotionInterpreter::sltiu(EmotionEngine &cpu, uint32_t instruction)
 {
-    uint64_t imm = instruction & 0xFFFF;
+    uint64_t imm = (uint64_t)(int64_t)(int16_t)(instruction & 0xFFFF);
     uint64_t dest = (instruction >> 16) & 0x1F;
     uint64_t source = (instruction >> 21) & 0x1F;
     source = cpu.get_gpr<uint64_t>(source);

@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <cstdlib>
 #include "intc.hpp"
 #include "timers.hpp"
 
@@ -187,6 +188,8 @@ void EmotionTiming::write_control(int index, uint32_t value)
     printf("[EE Timing] Write32 timer %d control: $%08X\n", index, value);
     timers[index].control.mode = value & 0x3;
     timers[index].control.gate_enable = value & (1 << 2);
+    if (timers[index].control.gate_enable)
+        exit(1);
     timers[index].control.gate_VBLANK = value & (1 << 3);
     timers[index].control.gate_mode = (value >> 4) & 0x3;
     timers[index].control.clear_on_reference = value & (1 << 6);

@@ -213,7 +213,7 @@ void IOP_Interpreter::slti(IOP &cpu, uint32_t instruction)
 
 void IOP_Interpreter::sltiu(IOP &cpu, uint32_t instruction)
 {
-    uint32_t imm = instruction & 0xFFFF;
+    uint32_t imm = (uint32_t)(int32_t)(int16_t)(instruction & 0xFFFF);
     uint32_t dest = (instruction >> 16) & 0x1F;
     uint32_t source = (instruction >> 21) & 0x1F;
     source = cpu.get_gpr(source);
@@ -629,7 +629,6 @@ void IOP_Interpreter::div(IOP &cpu, uint32_t instruction)
         cpu.set_LO(op1 / op2);
         cpu.set_HI(op1 % op2);
     }
-
 }
 
 void IOP_Interpreter::divu(IOP &cpu, uint32_t instruction)

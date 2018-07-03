@@ -33,6 +33,14 @@ void IOPTiming::run()
                     timers[i].counter = 0;
             }
         }
+        if (timers[i].counter > 0xFFFFFFFF)
+        {
+            timers[i].counter -= 0xFFFFFFFF;
+            if (timers[i].control.overflow_interrupt_enabled)
+            {
+                IRQ_test(i, true);
+            }
+        }
     }
 }
 
@@ -97,6 +105,8 @@ void IOPTiming::write_control(int index, uint16_t value)
 {
     printf("[IOP Timing] Write timer %d control $%04X\n", index, value);
     timers[index].control.use_gate = value & 0x1;
+    if (timers[index].control.use_gate)
+        exit(1);
     timers[index].control.gate_mode = (value >> 1) & 0x3;
     timers[index].control.zero_return = value & (1 << 3);
     timers[index].control.compare_interrupt_enabled = value & (1 << 4);

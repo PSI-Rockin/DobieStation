@@ -4,7 +4,7 @@
 #include <sstream>
 #include "emulator.hpp"
 
-#define CYCLES_PER_FRAME 4500000
+#define CYCLES_PER_FRAME 4900000
 #define VBLANK_START CYCLES_PER_FRAME * 0.75
 
 Emulator::Emulator() :
@@ -72,12 +72,13 @@ void Emulator::run()
             VBLANK_sent = true;
             gs.set_VBLANK(true);
             printf("VSYNC FRAMES: %d\n", frames);
+            //iop.set_disassembly(frames == 52);
             frames++;
             iop_request_IRQ(0);
             gs.render_CRT();
         }
     }
-    //iop.set_disassembly(frames == 48);
+    //iop.set_disassembly(frames == 53);
     //VBLANK end
     //cpu.set_disassembly(frames == 170);
     iop_request_IRQ(11);
@@ -164,6 +165,7 @@ bool Emulator::skip_BIOS()
     //hax
     if (skip_BIOS_hack != NONE)
     {
+        //cpu.set_disassembly(true);
         switch (skip_BIOS_hack)
         {
             case LOAD_ELF:
@@ -750,30 +752,22 @@ uint8_t Emulator::iop_read8(uint32_t address)
     switch (address)
     {
         case 0x1F402004:
-            printf("[CDVD] Read N command\n");
             return cdvd.read_N_command();
         case 0x1F402005:
-            printf("[CDVD] Read N status\n");
             return cdvd.read_N_status();
         case 0x1F402008:
-            printf("[CDVD] Read ISTAT\n");
             return cdvd.read_ISTAT();
         case 0x1F40200A:
-            printf("[CDVD] Read CDVD status\n");
             return cdvd.read_drive_status();
         case 0x1F40200F:
-            printf("[CDVD] Read disc type\n");
             return cdvd.read_disc_type();
         case 0x1F402013:
             return 4;
         case 0x1F402016:
-            printf("[CDVD] Read S command\n");
             return cdvd.read_S_command();
         case 0x1F402017:
-            printf("[CDVD] Read S status\n");
             return cdvd.read_S_status();
         case 0x1F402018:
-            printf("[CDVD] Read S data\n");
             return cdvd.read_S_data();
         case 0x1F808264:
             return sio2.read_serial();

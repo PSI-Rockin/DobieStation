@@ -73,6 +73,11 @@ void IOP::run()
         {
             will_branch = false;
             PC = new_PC;
+            if (PC & 0x3)
+            {
+                printf("[IOP] Invalid PC address $%08X!\n", PC);
+                exit(1);
+            }
             if (PC == 0x00012C48 || PC == 0x0001420C || PC == 0x0001430C)
                 e->iop_puts();
             /*if (PC == 0x86D0 || PC == 0x90E0 || PC == 0x00008EE0)
@@ -215,11 +220,21 @@ uint8_t IOP::read8(uint32_t addr)
 
 uint16_t IOP::read16(uint32_t addr)
 {
+    if (addr & 0x1)
+    {
+        printf("[IOP] Invalid read16 from $%08X!\n", addr);
+        exit(1);
+    }
     return e->iop_read16(translate_addr(addr));
 }
 
 uint32_t IOP::read32(uint32_t addr)
 {
+    if (addr & 0x3)
+    {
+        printf("[IOP] Invalid read32 from $%08X!\n", addr);
+        exit(1);
+    }
     return e->iop_read32(translate_addr(addr));
 }
 
@@ -234,6 +249,11 @@ void IOP::write16(uint32_t addr, uint16_t value)
 {
     if (cop0.status.IsC)
         return;
+    if (addr & 0x1)
+    {
+        printf("[IOP] Invalid write16 to $%08X!\n", addr);
+        exit(1);
+    }
     e->iop_write16(translate_addr(addr), value);
 }
 
@@ -241,5 +261,10 @@ void IOP::write32(uint32_t addr, uint32_t value)
 {
     if (cop0.status.IsC)
         return;
+    if (addr & 0x3)
+    {
+        printf("[IOP] Invalid write32 to $%08X!\n", addr);
+        exit(1);
+    }
     e->iop_write32(translate_addr(addr), value);
 }

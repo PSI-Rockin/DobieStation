@@ -26,16 +26,20 @@ enum class NCOMMAND
 class CDVD_Drive
 {
     private:
+        uint64_t last_read;
+        uint64_t cycle_count;
         Emulator* e;
         std::ifstream cdvd_file;
         uint64_t file_size;
         int read_bytes_left;
+        int speed;
 
         uint8_t pvd_sector[2048];
         uint16_t LBA;
         uint32_t root_location;
         uint32_t root_len;
 
+        uint32_t current_sector;
         uint32_t sector_pos;
         uint32_t sectors_left;
         uint32_t block_size;
@@ -61,6 +65,8 @@ class CDVD_Drive
         uint8_t S_params;
         uint8_t S_out_params;
         uint8_t S_status;
+
+        uint32_t get_block_timing();
 
         void start_seek();
         void prepare_S_outdata(int amount);
