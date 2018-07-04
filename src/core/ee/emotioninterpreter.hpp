@@ -131,6 +131,7 @@ namespace EmotionInterpreter
     void fpu_msub(Cop1& fpu, uint32_t instruction);
     void fpu_madda(Cop1& fpu, uint32_t instruction);
     void fpu_cvt_w_s(Cop1& fpu, uint32_t instruction);
+    void fpu_max_s(Cop1& fpu, uint32_t instruction);
     void fpu_c_f_s(Cop1& fpu, uint32_t instruction);
     void fpu_c_eq_s(Cop1& fpu, uint32_t instruction);
     void fpu_c_lt_s(Cop1& fpu, uint32_t instruction);
@@ -145,6 +146,7 @@ namespace EmotionInterpreter
     void cop2_vaddbc(VectorUnit& vu0, uint32_t instruction);
     void cop2_vsubbc(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmaddbc(VectorUnit& vu0, uint32_t instruction);
+    void cop2_vminibc(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmulbc(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmulq(VectorUnit& vu0, uint32_t instruction);
     void cop2_vaddq(VectorUnit& vu0, uint32_t instruction);
@@ -156,6 +158,7 @@ namespace EmotionInterpreter
     void cop2_viaddi(VectorUnit& vu0, uint32_t instruction);
 
     void cop2_special2(VectorUnit& vu0, uint32_t instruction);
+    void cop2_vaddabc(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmaddabc(VectorUnit& vu0, uint32_t instruction);
     void cop2_vitof0(VectorUnit& vu0, uint32_t instruction);
     void cop2_vitof12(VectorUnit& vu0, uint32_t instruction);
@@ -164,7 +167,9 @@ namespace EmotionInterpreter
     void cop2_vftoi12(VectorUnit& vu0, uint32_t instruction);
     void cop2_vftoi15(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmulabc(VectorUnit& vu0, uint32_t instruction);
+    void cop2_vabs(VectorUnit& vu0, uint32_t instruction);
     void cop2_vclip(VectorUnit& vu0, uint32_t instruction);
+    void cop2_vadda(VectorUnit& vu0, uint32_t instruction);
     void cop2_vopmula(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmove(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmr32(VectorUnit& vu0, uint32_t instruction);

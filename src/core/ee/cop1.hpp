@@ -51,6 +51,7 @@ class Cop1
         void madd_s(int dest, int reg1, int reg2);
         void msub_s(int dest, int reg1, int reg2);
         void madda_s(int reg1, int reg2);
+        void max_s(int dest, int reg1, int reg2);
         void c_f_s();
         void c_lt_s(int reg1, int reg2);
         void c_eq_s(int reg1, int reg2);

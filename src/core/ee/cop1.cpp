@@ -196,6 +196,16 @@ void Cop1::madda_s(int reg1, int reg2)
     printf("[FPU] madda.s: %f + (%f * %f) = %f", acc, op1, op2, accumulator.f);
 }
 
+void Cop1::max_s(int dest, int reg1, int reg2)
+{
+    float op1 = convert(gpr[reg1].u);
+    float op2 = convert(gpr[reg2].u);
+    if (op1 > op2)
+        gpr[dest].f = op1;
+    else
+        gpr[dest].f = op2;
+}
+
 void Cop1::c_f_s()
 {
     control.condition = false;

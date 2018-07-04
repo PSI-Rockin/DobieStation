@@ -58,7 +58,10 @@ class VectorUnit
         uint32_t cfc(int index);
         void ctc(int index, uint32_t value);
 
+        void abs(uint8_t field, uint8_t dest, uint8_t source);
         void add(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2);
+        void adda(uint8_t field, uint8_t reg1, uint8_t reg2);
+        void addabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_reg);
         void addbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
         void addq(uint8_t field, uint8_t dest, uint8_t source);
         void clip(uint8_t reg1, uint8_t reg2);
@@ -74,6 +77,7 @@ class VectorUnit
         void itof12(uint8_t field, uint8_t dest, uint8_t source);
         void maddbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
         void maddabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_reg);
+        void minibc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
         void move(uint8_t field, uint8_t dest, uint8_t source);
         void mr32(uint8_t field, uint8_t dest, uint8_t source);
         void mul(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2);

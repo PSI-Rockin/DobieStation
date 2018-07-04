@@ -53,6 +53,9 @@ void EmotionInterpreter::cop_s(Cop1& fpu, uint32_t instruction)
         case 0x24:
             fpu_cvt_w_s(fpu, instruction);
             break;
+        case 0x28:
+            fpu_max_s(fpu, instruction);
+            break;
         case 0x30:
             fpu_c_f_s(fpu, instruction);
             break;
@@ -179,6 +182,14 @@ void EmotionInterpreter::fpu_cvt_w_s(Cop1 &fpu, uint32_t instruction)
     uint32_t dest = (instruction >> 6) & 0x1F;
     uint32_t source = (instruction >> 11) & 0x1F;
     fpu.cvt_w_s(dest, source);
+}
+
+void EmotionInterpreter::fpu_max_s(Cop1 &fpu, uint32_t instruction)
+{
+    uint32_t dest = (instruction >> 6) & 0x1F;
+    uint32_t reg1 = (instruction >> 11) & 0x1F;
+    uint32_t reg2 = (instruction >> 16) & 0x1F;
+    fpu.max_s(dest, reg1, reg2);
 }
 
 void EmotionInterpreter::fpu_c_f_s(Cop1 &fpu, uint32_t instruction)

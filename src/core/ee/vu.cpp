@@ -100,6 +100,18 @@ void VectorUnit::ctc(int index, uint32_t value)
     }
 }
 
+void VectorUnit::abs(uint8_t field, uint8_t dest, uint8_t source)
+{
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            float result = convert(gpr[source].u[i] & ~0x80000000);
+            set_gpr_f(dest, i, result);
+        }
+    }
+}
+
 void VectorUnit::add(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)
 {
     printf("[VU] ADD: ");
@@ -113,6 +125,29 @@ void VectorUnit::add(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)
         }
     }
     printf("\n");
+}
+
+void VectorUnit::adda(uint8_t field, uint8_t reg1, uint8_t reg2)
+{
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            ACC.f[i] = convert(gpr[reg1].u[i]) + convert(gpr[reg2].u[i]);
+        }
+    }
+}
+
+void VectorUnit::addabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_reg)
+{
+    float op = convert(gpr[bc_reg].u[bc]);
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            ACC.f[i] = op + convert(gpr[source].u[i]);
+        }
+    }
 }
 
 void VectorUnit::addbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg)
@@ -358,6 +393,22 @@ void VectorUnit::mulbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, 
         }
     }
     printf("\n");
+}
+
+void VectorUnit::minibc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg)
+{
+    float op = convert(gpr[bc_reg].u[bc]);
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            float op2 = convert(gpr[source].u[i]);
+            if (op < op2)
+                set_gpr_f(dest, i, op);
+            else
+                set_gpr_f(dest, i, op2);
+        }
+    }
 }
 
 void VectorUnit::move(uint8_t field, uint8_t dest, uint8_t source)

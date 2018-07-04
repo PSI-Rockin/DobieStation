@@ -988,6 +988,8 @@ string EmotionDisasm::disasm_cop_s(uint32_t instruction)
             return disasm_fpu_madda(instruction);
         case 0x24:
             return disasm_fpu_cvt_w_s(instruction);
+        case 0x28:
+            return disasm_fpu_math("max.s", instruction);
         case 0x30:
             return disasm_fpu_c_f_s(instruction);
         case 0x32:
@@ -1380,6 +1382,11 @@ string EmotionDisasm::disasm_cop2_special2(uint32_t instruction)
     uint16_t op = (instruction & 0x3) | ((instruction >> 4) & 0x7C);
     switch (op)
     {
+        case 0x00:
+        case 0x01:
+        case 0x02:
+        case 0x03:
+            return disasm_vaddabc(instruction);
         case 0x08:
         case 0x09:
         case 0x0A:
@@ -1402,8 +1409,12 @@ string EmotionDisasm::disasm_cop2_special2(uint32_t instruction)
         case 0x1A:
         case 0x1B:
             return disasm_vmulabc(instruction);
+        case 0x1D:
+            return disasm_vabs(instruction);
         case 0x1F:
             return disasm_vclip(instruction);
+        case 0x28:
+            return disasm_vadda(instruction);
         case 0x2E:
             return disasm_vopmula(instruction);
         case 0x2F:
@@ -1448,6 +1459,19 @@ string EmotionDisasm::disasm_cop2_special2_move(const string opcode, uint32_t in
     return output.str();
 }
 
+string EmotionDisasm::disasm_cop2_acc(const string opcode, uint32_t instruction)
+{
+    stringstream output;
+    uint32_t fs = (instruction >> 11) & 0x1F;
+    uint32_t ft = (instruction >> 16) & 0x1F;
+    uint8_t dest_field = (instruction >> 21) & 0xF;
+    string field = "." + get_dest_field(dest_field);
+    output << opcode << field;
+    output << " ACC, vf" << fs;
+    output << ", vf" << ft;
+    return output.str();
+}
+
 string EmotionDisasm::disasm_cop2_acc_bc(const string opcode, uint32_t instruction)
 {
     stringstream output;
@@ -1459,6 +1483,11 @@ string EmotionDisasm::disasm_cop2_acc_bc(const string opcode, uint32_t instructi
     output << opcode << bc_field << "." << get_dest_field(dest_field);
     output << " ACC" << ", vf" << fs << ", vf" << ft << bc_field;
     return output.str();
+}
+
+string EmotionDisasm::disasm_vaddabc(uint32_t instruction)
+{
+    return disasm_cop2_acc_bc("vadda", instruction);
 }
 
 string EmotionDisasm::disasm_vmaddabc(uint32_t instruction)
@@ -1501,6 +1530,11 @@ string EmotionDisasm::disasm_vmulabc(uint32_t instruction)
     return disasm_cop2_acc_bc("vmula", instruction);
 }
 
+string EmotionDisasm::disasm_vabs(uint32_t instruction)
+{
+    return disasm_cop2_special2_move("vabs", instruction);
+}
+
 string EmotionDisasm::disasm_vclip(uint32_t instruction)
 {
     stringstream output;
@@ -1508,6 +1542,11 @@ string EmotionDisasm::disasm_vclip(uint32_t instruction)
     uint32_t ft = (instruction >> 16) & 0x1F;
     output << "vclipw.xyz vf" << fs << ", vf" << ft;
     return output.str();
+}
+
+string EmotionDisasm::disasm_vadda(uint32_t instruction)
+{
+    return disasm_cop2_acc("vadda", instruction);
 }
 
 string EmotionDisasm::disasm_vopmula(uint32_t instruction)
