@@ -76,10 +76,13 @@ class VectorUnit
         void itof0(uint8_t field, uint8_t dest, uint8_t source);
         void itof12(uint8_t field, uint8_t dest, uint8_t source);
         void maddbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
+        void madda(uint8_t field, uint8_t reg1, uint8_t reg2);
         void maddabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_reg);
+        void maxbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
         void minibc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
         void move(uint8_t field, uint8_t dest, uint8_t source);
         void mr32(uint8_t field, uint8_t dest, uint8_t source);
+        void msubabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_reg);
         void mul(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2);
         void mulabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_reg);
         void mulbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);

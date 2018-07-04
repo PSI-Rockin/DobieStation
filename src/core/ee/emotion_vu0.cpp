@@ -24,6 +24,12 @@ void EmotionInterpreter::cop2_special(VectorUnit &vu0, uint32_t instruction)
         case 0x0B:
             cop2_vmaddbc(vu0, instruction);
             break;
+        case 0x10:
+        case 0x11:
+        case 0x12:
+        case 0x13:
+            cop2_vmaxbc(vu0, instruction);
+            break;
         case 0x14:
         case 0x15:
         case 0x16:
@@ -99,6 +105,16 @@ void EmotionInterpreter::cop2_vmaddbc(VectorUnit &vu0, uint32_t instruction)
     uint8_t bc_reg = (instruction >> 16) & 0x1F;
     uint8_t field = (instruction >> 21) & 0xF;
     vu0.maddbc(bc, field, dest, source, bc_reg);
+}
+
+void EmotionInterpreter::cop2_vmaxbc(VectorUnit &vu0, uint32_t instruction)
+{
+    uint8_t bc = instruction & 0x3;
+    uint8_t dest = (instruction >> 6) & 0x1F;
+    uint8_t source = (instruction >> 11) & 0x1F;
+    uint8_t bc_reg = (instruction >> 16) & 0x1F;
+    uint8_t field = (instruction >> 21) & 0xF;
+    vu0.maxbc(bc, field, dest, source, bc_reg);
 }
 
 void EmotionInterpreter::cop2_vminibc(VectorUnit &vu0, uint32_t instruction)
@@ -205,6 +221,12 @@ void EmotionInterpreter::cop2_special2(VectorUnit &vu0, uint32_t instruction)
         case 0x0B:
             cop2_vmaddabc(vu0, instruction);
             break;
+        case 0x0C:
+        case 0x0D:
+        case 0x0E:
+        case 0x0F:
+            cop2_vmsubabc(vu0, instruction);
+            break;
         case 0x10:
             cop2_vitof0(vu0, instruction);
             break;
@@ -237,6 +259,9 @@ void EmotionInterpreter::cop2_special2(VectorUnit &vu0, uint32_t instruction)
             break;
         case 0x28:
             cop2_vadda(vu0, instruction);
+            break;
+        case 0x29:
+            cop2_vmadda(vu0, instruction);
             break;
         case 0x2E:
             cop2_vopmula(vu0, instruction);
@@ -306,6 +331,15 @@ void EmotionInterpreter::cop2_vmaddabc(VectorUnit &vu0, uint32_t instruction)
     uint8_t bc_reg = (instruction >> 16) & 0x1F;
     uint8_t field = (instruction >> 21) & 0xF;
     vu0.maddabc(bc, field, source, bc_reg);
+}
+
+void EmotionInterpreter::cop2_vmsubabc(VectorUnit &vu0, uint32_t instruction)
+{
+    uint8_t bc = instruction & 0x3;
+    uint8_t source = (instruction >> 11) & 0x1F;
+    uint8_t bc_reg = (instruction >> 16) & 0x1F;
+    uint8_t field = (instruction >> 21) & 0xF;
+    vu0.msubabc(bc, field, source, bc_reg);
 }
 
 void EmotionInterpreter::cop2_vitof0(VectorUnit &vu0, uint32_t instruction)
@@ -386,6 +420,14 @@ void EmotionInterpreter::cop2_vadda(VectorUnit &vu0, uint32_t instruction)
     uint8_t reg2 = (instruction >> 16) & 0x1F;
     uint8_t field = (instruction >> 21) & 0xF;
     vu0.adda(field, reg1, reg2);
+}
+
+void EmotionInterpreter::cop2_vmadda(VectorUnit &vu0, uint32_t instruction)
+{
+    uint8_t reg1 = (instruction >> 11) & 0x1F;
+    uint8_t reg2 = (instruction >> 16) & 0x1F;
+    uint8_t field = (instruction >> 21) & 0xF;
+    vu0.madda(field, reg1, reg2);
 }
 
 void EmotionInterpreter::cop2_vopmula(VectorUnit &vu0, uint32_t instruction)

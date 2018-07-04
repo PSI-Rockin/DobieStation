@@ -990,6 +990,8 @@ string EmotionDisasm::disasm_cop_s(uint32_t instruction)
             return disasm_fpu_cvt_w_s(instruction);
         case 0x28:
             return disasm_fpu_math("max.s", instruction);
+        case 0x29:
+            return disasm_fpu_math("min.s", instruction);
         case 0x30:
             return disasm_fpu_c_f_s(instruction);
         case 0x32:
@@ -1271,6 +1273,11 @@ string EmotionDisasm::disasm_cop2_special(uint32_t instruction)
         case 0x0A:
         case 0x0B:
             return disasm_vmaddbc(instruction);
+        case 0x10:
+        case 0x11:
+        case 0x12:
+        case 0x13:
+            return disasm_vmaxbc(instruction);
         case 0x14:
         case 0x15:
         case 0x16:
@@ -1315,6 +1322,11 @@ string EmotionDisasm::disasm_vsubbc(uint32_t instruction)
 string EmotionDisasm::disasm_vmaddbc(uint32_t instruction)
 {
     return disasm_cop2_special_bc("vmadd", instruction);
+}
+
+string EmotionDisasm::disasm_vmaxbc(uint32_t instruction)
+{
+    return disasm_cop2_special_bc("vmax", instruction);
 }
 
 string EmotionDisasm::disasm_vminibc(uint32_t instruction)
@@ -1392,6 +1404,11 @@ string EmotionDisasm::disasm_cop2_special2(uint32_t instruction)
         case 0x0A:
         case 0x0B:
             return disasm_vmaddabc(instruction);
+        case 0x0C:
+        case 0x0D:
+        case 0x0E:
+        case 0x0F:
+            return disasm_vmsubabc(instruction);
         case 0x10:
             return disasm_vitof0(instruction);
         case 0x12:
@@ -1415,6 +1432,8 @@ string EmotionDisasm::disasm_cop2_special2(uint32_t instruction)
             return disasm_vclip(instruction);
         case 0x28:
             return disasm_vadda(instruction);
+        case 0x29:
+            return disasm_vmadda(instruction);
         case 0x2E:
             return disasm_vopmula(instruction);
         case 0x2F:
@@ -1495,6 +1514,11 @@ string EmotionDisasm::disasm_vmaddabc(uint32_t instruction)
     return disasm_cop2_acc_bc("vmadda", instruction);
 }
 
+string EmotionDisasm::disasm_vmsubabc(uint32_t instruction)
+{
+    return disasm_cop2_acc_bc("vmsuba", instruction);
+}
+
 string EmotionDisasm::disasm_vitof0(uint32_t instruction)
 {
     return disasm_cop2_special2_move("vitof0", instruction);
@@ -1547,6 +1571,11 @@ string EmotionDisasm::disasm_vclip(uint32_t instruction)
 string EmotionDisasm::disasm_vadda(uint32_t instruction)
 {
     return disasm_cop2_acc("vadda", instruction);
+}
+
+string EmotionDisasm::disasm_vmadda(uint32_t instruction)
+{
+    return disasm_cop2_acc("vmadda", instruction);
 }
 
 string EmotionDisasm::disasm_vopmula(uint32_t instruction)
