@@ -164,7 +164,7 @@ int EmotionEngine::run(int cycles_to_run)
         {
             std::string disasm = EmotionDisasm::disasm_instr(instruction, PC);
             printf("[$%08X] $%08X - %s\n", PC, instruction, disasm.c_str());
-            print_state();
+            //print_state();
         }
         EmotionInterpreter::interpret(*this, instruction);
         if (increment_PC)

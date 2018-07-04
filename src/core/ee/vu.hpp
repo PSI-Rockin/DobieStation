@@ -35,9 +35,11 @@ class VectorUnit
         uint32_t status;
         uint32_t clip_flags;
         VU_R R;
+        VU_R I;
         VU_R Q;
 
         void advance_r();
+        void print_vectors(uint8_t a, uint8_t b);
         float convert();
     public:
         VectorUnit(int id);
@@ -77,20 +79,27 @@ class VectorUnit
         void itof0(uint8_t field, uint8_t dest, uint8_t source);
         void itof4(uint8_t field, uint8_t dest, uint8_t source);
         void itof12(uint8_t field, uint8_t dest, uint8_t source);
-        void maddbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
+        void madd(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2);
         void madda(uint8_t field, uint8_t reg1, uint8_t reg2);
+        void maddai(uint8_t field, uint8_t source);
         void maddabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_reg);
+        void maddbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
         void maxbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
         void mfir(uint8_t field, uint8_t dest, uint8_t source);
         void minibc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
         void move(uint8_t field, uint8_t dest, uint8_t source);
         void mr32(uint8_t field, uint8_t dest, uint8_t source);
-        void msubbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
         void msubabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_reg);
+        void msubai(uint8_t field, uint8_t source);
+        void msubbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
+        void msubi(uint8_t field, uint8_t dest, uint8_t source);
         void mtir(uint8_t fsf, uint8_t dest, uint8_t source);
         void mul(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2);
+        void mula(uint8_t field, uint8_t reg1, uint8_t reg2);
         void mulabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_reg);
+        void mulai(uint8_t field, uint8_t source);
         void mulbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
+        void muli(uint8_t field, uint8_t dest, uint8_t source);
         void mulq(uint8_t field, uint8_t dest, uint8_t source);
         void opmsub(uint8_t dest, uint8_t reg1, uint8_t reg2);
         void opmula(uint8_t reg1, uint8_t reg2);
@@ -103,6 +112,7 @@ class VectorUnit
         void vu_sqrt(uint8_t ftf, uint8_t source);
         void sub(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2);
         void subbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
+        void subi(uint8_t field, uint8_t dest, uint8_t source);
 };
 
 template <typename T>

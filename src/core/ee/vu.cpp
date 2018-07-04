@@ -41,6 +41,17 @@ float VectorUnit::convert(uint32_t value)
     return *(float*)&value;
 }
 
+void VectorUnit::print_vectors(uint8_t a, uint8_t b)
+{
+    printf("A: ");
+    for (int i = 0; i < 4; i++)
+        printf("%f ", gpr[a].f[i]);
+    printf("\nB: ");
+    for (int i = 0; i < 4; i++)
+        printf("%f ", gpr[b].f[i]);
+    printf("\n");
+}
+
 /**
  * Code taken from PCSX2 and adapted to DobieStation
  * https://github.com/PCSX2/pcsx2/blob/1292cd505efe7c68ab87880b4fd6809a96da703c/pcsx2/VUops.cpp#L1795
@@ -71,6 +82,8 @@ uint32_t VectorUnit::cfc(int index)
             return clip_flags;
         case 20:
             return R.u & 0x7FFFFF;
+        case 21:
+            return I.u;
         case 22:
             return Q.u;
         default:
@@ -92,6 +105,10 @@ void VectorUnit::ctc(int index, uint32_t value)
         case 20:
             R.u = value;
             break;
+        case 21:
+            I.u = value;
+            printf("[VU] I = %f\n", I.f);
+            break;
         case 22:
             Q.u = value;
             break;
@@ -102,14 +119,17 @@ void VectorUnit::ctc(int index, uint32_t value)
 
 void VectorUnit::abs(uint8_t field, uint8_t dest, uint8_t source)
 {
+    printf("[VU] ABS: ");
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
         {
-            float result = convert(gpr[source].u[i] & ~0x80000000);
+            float result = fabs(convert(gpr[source].u[i]));
             set_gpr_f(dest, i, result);
+            printf("(%d)%f ", i, gpr[dest].f[i]);
         }
     }
+    printf("\n");
 }
 
 void VectorUnit::add(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)
@@ -129,25 +149,31 @@ void VectorUnit::add(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)
 
 void VectorUnit::adda(uint8_t field, uint8_t reg1, uint8_t reg2)
 {
+    printf("[VU] ADDA: ");
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
         {
             ACC.f[i] = convert(gpr[reg1].u[i]) + convert(gpr[reg2].u[i]);
+            printf("(%d)%f ", i, ACC.f[i]);
         }
     }
+    printf("\n");
 }
 
 void VectorUnit::addabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_reg)
 {
+    printf("[VU] ADDAbc: ");
     float op = convert(gpr[bc_reg].u[bc]);
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
         {
             ACC.f[i] = op + convert(gpr[source].u[i]);
+            printf("(%d)%f", i, ACC.f[i]);
         }
     }
+    printf("\n");
 }
 
 void VectorUnit::addbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg)
@@ -352,16 +378,15 @@ void VectorUnit::itof12(uint8_t field, uint8_t dest, uint8_t source)
     printf("\n");
 }
 
-void VectorUnit::maddbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg)
+void VectorUnit::madd(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)
 {
-    printf("[VU] MADDbc: ");
-    float op = convert(gpr[bc_reg].u[bc]);
+    printf("[VU] MADD: ");
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
         {
-            float temp = op * convert(gpr[source].u[i]);
-            set_gpr_f(dest, i, temp + ACC.f[i]);
+            float temp = convert(gpr[reg1].u[i]) * convert(gpr[reg2].u[i]);
+            set_gpr_f(dest, i, temp + convert(ACC.u[i]));
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
     }
@@ -370,14 +395,17 @@ void VectorUnit::maddbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source,
 
 void VectorUnit::madda(uint8_t field, uint8_t reg1, uint8_t reg2)
 {
+    printf("[VU] MADDA: ");
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
         {
             float temp = convert(gpr[reg1].u[i]) * convert(gpr[reg2].u[i]);
             ACC.f[i] = temp + convert(ACC.u[i]);
+            printf("(%d)%f ", i, ACC.f[i]);
         }
     }
+    printf("\n");
 }
 
 void VectorUnit::maddabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_reg)
@@ -396,8 +424,41 @@ void VectorUnit::maddabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_r
     printf("\n");
 }
 
+void VectorUnit::maddai(uint8_t field, uint8_t source)
+{
+    printf("[VU] MADDAi: ");
+    float op = convert(I.u);
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            float temp = op * convert(gpr[source].u[i]);
+            ACC.f[i] = temp + convert(ACC.u[i]);
+            printf("(%d)%f ", i, ACC.f[i]);
+        }
+    }
+    printf("\n");
+}
+
+void VectorUnit::maddbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg)
+{
+    printf("[VU] MADDbc: ");
+    float op = convert(gpr[bc_reg].u[bc]);
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            float temp = op * convert(gpr[source].u[i]);
+            set_gpr_f(dest, i, temp + ACC.f[i]);
+            printf("(%d)%f ", i, gpr[dest].f[i]);
+        }
+    }
+    printf("\n");
+}
+
 void VectorUnit::maxbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg)
 {
+    printf("[VU] MAXbc: ");
     float op = convert(gpr[bc_reg].u[bc]);
     for (int i = 0; i < 4; i++)
     {
@@ -408,8 +469,10 @@ void VectorUnit::maxbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, 
                 set_gpr_f(dest, i, op);
             else
                 set_gpr_f(dest, i, op2);
+            printf("(%d)%f ", i, gpr[dest].f[i]);
         }
     }
+    printf("\n");
 }
 
 void VectorUnit::mfir(uint8_t field, uint8_t dest, uint8_t source)
@@ -417,12 +480,13 @@ void VectorUnit::mfir(uint8_t field, uint8_t dest, uint8_t source)
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
-            gpr[source].s[i] = (int32_t)(int16_t)int_gpr[source];
+            gpr[dest].s[i] = (int32_t)(int16_t)int_gpr[source];
     }
 }
 
 void VectorUnit::minibc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg)
 {
+    printf("[VU] MINIbc: ");
     float op = convert(gpr[bc_reg].u[bc]);
     for (int i = 0; i < 4; i++)
     {
@@ -433,8 +497,10 @@ void VectorUnit::minibc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source,
                 set_gpr_f(dest, i, op);
             else
                 set_gpr_f(dest, i, op2);
+            printf("(%d)%f", i, gpr[dest].f[i]);
         }
     }
+    printf("\n");
 }
 
 void VectorUnit::move(uint8_t field, uint8_t dest, uint8_t source)
@@ -443,10 +509,7 @@ void VectorUnit::move(uint8_t field, uint8_t dest, uint8_t source)
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
-        {
-            float temp = convert(gpr[source].u[i]);
-            set_gpr_f(dest, i, temp);
-        }
+            set_gpr_u(dest, i, gpr[source].u[i]);
     }
     printf("\n");
 }
@@ -455,14 +518,46 @@ void VectorUnit::mr32(uint8_t field, uint8_t dest, uint8_t source)
 {
     printf("[VU] MR32");
     uint32_t x = gpr[source].u[0];
-    if (field & (1 << 3))
+    if (_x(field))
         set_gpr_f(dest, 0, convert(gpr[source].u[1]));
-    if (field & (1 << 2))
+    if (_y(field))
         set_gpr_f(dest, 1, convert(gpr[source].u[2]));
-    if (field & (1 << 1))
+    if (_z(field))
         set_gpr_f(dest, 2, convert(gpr[source].u[3]));
-    if (field & 1)
+    if (_w(field))
         set_gpr_f(dest, 3, convert(x));
+    printf("\n");
+}
+
+void VectorUnit::msubabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_reg)
+{
+    printf("[VU] MSUBAbc: ");
+    float op = convert(gpr[bc_reg].u[bc]);
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            float temp = op * convert(gpr[source].u[i]);
+            ACC.f[i] = convert(ACC.u[i]) - temp;
+            printf("(%d)%f ", i, ACC.f[i]);
+        }
+    }
+    printf("\n");
+}
+
+void VectorUnit::msubai(uint8_t field, uint8_t source)
+{
+    printf("[VU] MSUBAi: ");
+    float op = convert(I.u);
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            float temp = op * convert(gpr[source].u[i]);
+            ACC.f[i] = convert(ACC.u[i]) - temp;
+            printf("(%d)%f ", i, ACC.f[i]);
+        }
+    }
     printf("\n");
 }
 
@@ -482,18 +577,20 @@ void VectorUnit::msubbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source,
     printf("\n");
 }
 
-void VectorUnit::msubabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_reg)
+void VectorUnit::msubi(uint8_t field, uint8_t dest, uint8_t source)
 {
-    float op = convert(gpr[bc_reg].u[bc]);
+    printf("[VU] MSUBi: ");
+    float op = convert(I.u);
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
         {
             float temp = op * convert(gpr[source].u[i]);
-            ACC.f[i] = convert(ACC.u[i]) - temp;
-            printf("(%d)%f ", i, ACC.f[i]);
+            set_gpr_f(dest, i, ACC.f[i] - temp);
+            printf("(%d)%f ", i, gpr[dest].f[i]);
         }
     }
+    printf("\n");
 }
 
 void VectorUnit::mtir(uint8_t fsf, uint8_t dest, uint8_t source)
@@ -516,6 +613,21 @@ void VectorUnit::mul(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)
     printf("\n");
 }
 
+void VectorUnit::mula(uint8_t field, uint8_t reg1, uint8_t reg2)
+{
+    printf("[VU] MULA: ");
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            float temp = convert(gpr[reg1].u[i]) * convert(gpr[reg2].u[i]);
+            ACC.f[i] = temp;
+            printf("(%d)%f ", i, ACC.f[i]);
+        }
+    }
+    printf("\n");
+}
+
 void VectorUnit::mulabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_reg)
 {
     printf("[VU] MULAbc: ");
@@ -532,10 +644,42 @@ void VectorUnit::mulabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_re
     printf("\n");
 }
 
+void VectorUnit::mulai(uint8_t field, uint8_t source)
+{
+    printf("[VU] MULAi: ");
+    float op = convert(I.u);
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            float temp = convert(gpr[source].u[i]) * op;
+            ACC.f[i] = temp;
+            printf("(%d)%f ", i, ACC.f[i]);
+        }
+    }
+    printf("\n");
+}
+
 void VectorUnit::mulbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg)
 {
     printf("[VU] MULbc: ");
     float op = convert(gpr[bc_reg].u[bc]);
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            float temp = op * convert(gpr[source].u[i]);
+            set_gpr_f(dest, i, temp);
+            printf("(%d)%f ", i, gpr[dest].f[i]);
+        }
+    }
+    printf("\n");
+}
+
+void VectorUnit::muli(uint8_t field, uint8_t dest, uint8_t source)
+{
+    printf("[VU] MULi: ");
+    float op = convert(I.u);
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
@@ -571,9 +715,9 @@ void VectorUnit::mulq(uint8_t field, uint8_t dest, uint8_t source)
  */
 void VectorUnit::opmsub(uint8_t dest, uint8_t reg1, uint8_t reg2)
 {
-    gpr[dest].f[0] = convert(ACC.u[0]) - convert(gpr[reg1].u[1]) * convert(gpr[reg2].u[2]);
-    gpr[dest].f[1] = convert(ACC.u[1]) - convert(gpr[reg1].u[2]) * convert(gpr[reg2].u[0]);
-    gpr[dest].f[2] = convert(ACC.u[2]) - convert(gpr[reg1].u[0]) * convert(gpr[reg2].u[1]);
+    set_gpr_f(dest, 0, convert(ACC.u[0]) - convert(gpr[reg1].u[1]) * convert(gpr[reg2].u[2]));
+    set_gpr_f(dest, 1, convert(ACC.u[1]) - convert(gpr[reg1].u[2]) * convert(gpr[reg2].u[0]));
+    set_gpr_f(dest, 2, convert(ACC.u[2]) - convert(gpr[reg1].u[0]) * convert(gpr[reg2].u[1]));
     printf("[VU] OPMSUB: %f, %f, %f\n", gpr[dest].f[0], gpr[dest].f[1], gpr[dest].f[2]);
 }
 
@@ -694,6 +838,22 @@ void VectorUnit::subbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, 
 {
     printf("[VU] SUBbc: ");
     float op = convert(gpr[bc_reg].u[bc]);
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            float temp = convert(gpr[source].u[i]) - op;
+            set_gpr_f(dest, i, temp);
+            printf("(%d)%f ", i, gpr[dest].f[i]);
+        }
+    }
+    printf("\n");
+}
+
+void VectorUnit::subi(uint8_t field, uint8_t dest, uint8_t source)
+{
+    printf("[VU] SUBi: ");
+    float op = convert(I.u);
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))

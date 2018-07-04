@@ -155,6 +155,7 @@ namespace EmotionDisasm
     std::string disasm_cop2_intmath(const std::string opcode, uint32_t instruction);
     std::string disasm_cop2_special_simplemath(const std::string opcode, uint32_t instruction);
     std::string disasm_cop2_special_bc(const std::string opcode, uint32_t instruction);
+    std::string disasm_cop2_special_i(const std::string opcode, uint32_t instruction);
     std::string disasm_cop2_special_q(const std::string opcode, uint32_t instruction);
     std::string disasm_cop2_special(uint32_t instruction);
     std::string disasm_vaddbc(uint32_t instruction);
@@ -165,8 +166,12 @@ namespace EmotionDisasm
     std::string disasm_vminibc(uint32_t instruction);
     std::string disasm_vmulbc(uint32_t instruction);
     std::string disasm_vmulq(uint32_t instruction);
+    std::string disasm_vmuli(uint32_t instruction);
     std::string disasm_vaddq(uint32_t instruction);
+    std::string disasm_vsubi(uint32_t instruction);
+    std::string disasm_vmsubi(uint32_t instruction);
     std::string disasm_vadd(uint32_t instruction);
+    std::string disasm_vmadd(uint32_t instruction);
     std::string disasm_vmul(uint32_t instruction);
     std::string disasm_vsub(uint32_t instruction);
     std::string disasm_vopmsub(uint32_t instruction);
@@ -178,6 +183,7 @@ namespace EmotionDisasm
     std::string disasm_cop2_special2_move(const std::string opcode, uint32_t instruction);
     std::string disasm_cop2_acc(const std::string opcode, uint32_t instruction);
     std::string disasm_cop2_acc_bc(const std::string opcode, uint32_t instruction);
+    std::string disasm_cop2_acc_i(const std::string opcode, uint32_t instruction);
     std::string disasm_vaddabc(uint32_t instruction);
     std::string disasm_vmaddabc(uint32_t instruction);
     std::string disasm_vmsubabc(uint32_t instruction);
@@ -190,9 +196,13 @@ namespace EmotionDisasm
     std::string disasm_vftoi15(uint32_t instruction);
     std::string disasm_vmulabc(uint32_t instruction);
     std::string disasm_vabs(uint32_t instruction);
+    std::string disasm_vmulai(uint32_t instruction);
     std::string disasm_vclip(uint32_t instruction);
+    std::string disasm_vmaddai(uint32_t instruction);
+    std::string disasm_vmsubai(uint32_t instruction);
     std::string disasm_vadda(uint32_t instruction);
     std::string disasm_vmadda(uint32_t instruction);
+    std::string disasm_vmula(uint32_t instruction);
     std::string disasm_vopmula(uint32_t instruction);
     std::string disasm_vmove(uint32_t instruction);
     std::string disasm_vmr32(uint32_t instruction);
