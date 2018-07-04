@@ -147,6 +147,7 @@ namespace EmotionInterpreter
     void cop2_vaddbc(VectorUnit& vu0, uint32_t instruction);
     void cop2_vsubbc(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmaddbc(VectorUnit& vu0, uint32_t instruction);
+    void cop2_vmsubbc(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmaxbc(VectorUnit& vu0, uint32_t instruction);
     void cop2_vminibc(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmulbc(VectorUnit& vu0, uint32_t instruction);
@@ -158,12 +159,14 @@ namespace EmotionInterpreter
     void cop2_vopmsub(VectorUnit& vu0, uint32_t instruction);
     void cop2_viadd(VectorUnit& vu0, uint32_t instruction);
     void cop2_viaddi(VectorUnit& vu0, uint32_t instruction);
+    void cop2_viand(VectorUnit& vu0, uint32_t instruction);
 
     void cop2_special2(VectorUnit& vu0, uint32_t instruction);
     void cop2_vaddabc(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmaddabc(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmsubabc(VectorUnit& vu0, uint32_t instruction);
     void cop2_vitof0(VectorUnit& vu0, uint32_t instruction);
+    void cop2_vitof4(VectorUnit& vu0, uint32_t instruction);
     void cop2_vitof12(VectorUnit& vu0, uint32_t instruction);
     void cop2_vftoi0(VectorUnit& vu0, uint32_t instruction);
     void cop2_vftoi4(VectorUnit& vu0, uint32_t instruction);
@@ -181,6 +184,8 @@ namespace EmotionInterpreter
     void cop2_vdiv(VectorUnit& vu0, uint32_t instruction);
     void cop2_vsqrt(VectorUnit& vu0, uint32_t instruction);
     void cop2_vrsqrt(VectorUnit& vu0, uint32_t instruction);
+    void cop2_vmtir(VectorUnit& vu0, uint32_t instruction);
+    void cop2_vmfir(VectorUnit& vu0, uint32_t instruction);
     void cop2_viswr(VectorUnit& vu0, uint32_t instruction);
     void cop2_vrnext(VectorUnit& vu0, uint32_t instruction);
     void cop2_vrget(VectorUnit& vu0, uint32_t instruction);

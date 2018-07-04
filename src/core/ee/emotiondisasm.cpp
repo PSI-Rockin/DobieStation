@@ -1211,6 +1211,17 @@ string EmotionDisasm::disasm_cop2(uint32_t instruction)
     }
 }
 
+string EmotionDisasm::disasm_cop2_intmath(const string opcode, uint32_t instruction)
+{
+    stringstream output;
+    uint32_t id = (instruction >> 6) & 0x1F;
+    uint32_t is = (instruction >> 11) & 0x1F;
+    uint32_t it = (instruction >> 16) & 0x1F;
+    output << opcode;
+    output << " vi" << id << ", vi" << is << ", vi" << it;
+    return output.str();
+}
+
 string EmotionDisasm::disasm_cop2_special_simplemath(const string opcode, uint32_t instruction)
 {
     stringstream output;
@@ -1273,6 +1284,11 @@ string EmotionDisasm::disasm_cop2_special(uint32_t instruction)
         case 0x0A:
         case 0x0B:
             return disasm_vmaddbc(instruction);
+        case 0x0C:
+        case 0x0D:
+        case 0x0E:
+        case 0x0F:
+            return disasm_vmsubbc(instruction);
         case 0x10:
         case 0x11:
         case 0x12:
@@ -1304,6 +1320,8 @@ string EmotionDisasm::disasm_cop2_special(uint32_t instruction)
             return disasm_viadd(instruction);
         case 0x32:
             return disasm_viaddi(instruction);
+        case 0x34:
+            return disasm_viand(instruction);
         default:
             return unknown_op("cop2 special", op, 2);
     }
@@ -1322,6 +1340,11 @@ string EmotionDisasm::disasm_vsubbc(uint32_t instruction)
 string EmotionDisasm::disasm_vmaddbc(uint32_t instruction)
 {
     return disasm_cop2_special_bc("vmadd", instruction);
+}
+
+string EmotionDisasm::disasm_vmsubbc(uint32_t instruction)
+{
+    return disasm_cop2_special_bc("vmsub", instruction);
 }
 
 string EmotionDisasm::disasm_vmaxbc(uint32_t instruction)
@@ -1371,12 +1394,7 @@ string EmotionDisasm::disasm_vopmsub(uint32_t instruction)
 
 string EmotionDisasm::disasm_viadd(uint32_t instruction)
 {
-    stringstream output;
-    uint32_t id = (instruction >> 6) & 0x1F;
-    uint32_t is = (instruction >> 11) & 0x1F;
-    uint32_t it = (instruction >> 16) & 0x1F;
-    output << "viadd vi" << id << ", vi" << is << ", vi" << it;
-    return output.str();
+    return disasm_cop2_intmath("viadd", instruction);
 }
 
 string EmotionDisasm::disasm_viaddi(uint32_t instruction)
@@ -1387,6 +1405,11 @@ string EmotionDisasm::disasm_viaddi(uint32_t instruction)
     uint32_t id = (instruction >> 16) & 0x1F;
     output << "viaddi vi" << id << ", vi" << is << ", 0x" << imm;
     return output.str();
+}
+
+string EmotionDisasm::disasm_viand(uint32_t instruction)
+{
+    return disasm_cop2_intmath("viand", instruction);
 }
 
 string EmotionDisasm::disasm_cop2_special2(uint32_t instruction)
@@ -1411,6 +1434,8 @@ string EmotionDisasm::disasm_cop2_special2(uint32_t instruction)
             return disasm_vmsubabc(instruction);
         case 0x10:
             return disasm_vitof0(instruction);
+        case 0x11:
+            return disasm_vitof4(instruction);
         case 0x12:
             return disasm_vitof12(instruction);
         case 0x14:
@@ -1452,6 +1477,10 @@ string EmotionDisasm::disasm_cop2_special2(uint32_t instruction)
             return disasm_vrsqrt(instruction);
         case 0x3B:
             return "vwaitq";
+        case 0x3C:
+            return disasm_vmtir(instruction);
+        case 0x3D:
+            return disasm_vmfir(instruction);
         case 0x3F:
             return disasm_viswr(instruction);
         case 0x40:
@@ -1522,6 +1551,11 @@ string EmotionDisasm::disasm_vmsubabc(uint32_t instruction)
 string EmotionDisasm::disasm_vitof0(uint32_t instruction)
 {
     return disasm_cop2_special2_move("vitof0", instruction);
+}
+
+string EmotionDisasm::disasm_vitof4(uint32_t instruction)
+{
+    return disasm_cop2_special2_move("vitof4", instruction);
 }
 
 string EmotionDisasm::disasm_vitof12(uint32_t instruction)
@@ -1636,6 +1670,28 @@ string EmotionDisasm::disasm_vrsqrt(uint32_t instruction)
     string fsf = get_fsf((instruction >> 21) & 0x3);
     string ftf = get_fsf((instruction >> 23) & 0x3);
     output << "vrsqrt Q, vf" << fs << fsf << ", vf" << ft << ftf;
+    return output.str();
+}
+
+string EmotionDisasm::disasm_vmtir(uint32_t instruction)
+{
+    stringstream output;
+    uint32_t fs = (instruction >> 11) & 0x1F;
+    uint32_t it = (instruction >> 16) & 0x1F;
+    uint8_t fsf = (instruction >> 21) & 0x3;
+    output << "vmtir." << get_fsf(fsf);
+    output << " vi" << it << ", vf" << fs;
+    return output.str();
+}
+
+string EmotionDisasm::disasm_vmfir(uint32_t instruction)
+{
+    stringstream output;
+    uint32_t is = (instruction >> 11) & 0x1F;
+    uint32_t ft = (instruction >> 16) & 0x1F;
+    uint8_t dest_field = (instruction >> 21) & 0xF;
+    output << "vmfir." << get_dest_field(dest_field);
+    output << " vf" << ft << ", vi" << is;
     return output.str();
 }
 

@@ -24,6 +24,12 @@ void EmotionInterpreter::cop2_special(VectorUnit &vu0, uint32_t instruction)
         case 0x0B:
             cop2_vmaddbc(vu0, instruction);
             break;
+        case 0x0C:
+        case 0x0D:
+        case 0x0E:
+        case 0x0F:
+            cop2_vmsubbc(vu0, instruction);
+            break;
         case 0x10:
         case 0x11:
         case 0x12:
@@ -66,6 +72,9 @@ void EmotionInterpreter::cop2_special(VectorUnit &vu0, uint32_t instruction)
         case 0x32:
             cop2_viaddi(vu0, instruction);
             break;
+        case 0x34:
+            cop2_viand(vu0, instruction);
+            break;
         case 0x3C:
         case 0x3D:
         case 0x3E:
@@ -105,6 +114,16 @@ void EmotionInterpreter::cop2_vmaddbc(VectorUnit &vu0, uint32_t instruction)
     uint8_t bc_reg = (instruction >> 16) & 0x1F;
     uint8_t field = (instruction >> 21) & 0xF;
     vu0.maddbc(bc, field, dest, source, bc_reg);
+}
+
+void EmotionInterpreter::cop2_vmsubbc(VectorUnit &vu0, uint32_t instruction)
+{
+    uint8_t bc = instruction & 0x3;
+    uint8_t dest = (instruction >> 6) & 0x1F;
+    uint8_t source = (instruction >> 11) & 0x1F;
+    uint8_t bc_reg = (instruction >> 16) & 0x1F;
+    uint8_t field = (instruction >> 21) & 0xF;
+    vu0.msubbc(bc, field, dest, source, bc_reg);
 }
 
 void EmotionInterpreter::cop2_vmaxbc(VectorUnit &vu0, uint32_t instruction)
@@ -204,6 +223,14 @@ void EmotionInterpreter::cop2_viaddi(VectorUnit &vu0, uint32_t instruction)
     vu0.iaddi(dest, source, imm);
 }
 
+void EmotionInterpreter::cop2_viand(VectorUnit &vu0, uint32_t instruction)
+{
+    uint8_t dest = (instruction >> 6) & 0x1F;
+    uint8_t reg1 = (instruction >> 11) & 0x1F;
+    uint8_t reg2 = (instruction >> 16) & 0x1F;
+    vu0.iand(dest, reg1, reg2);
+}
+
 void EmotionInterpreter::cop2_special2(VectorUnit &vu0, uint32_t instruction)
 {
     uint16_t op = (instruction & 0x3) | ((instruction >> 4) & 0x7C);
@@ -229,6 +256,9 @@ void EmotionInterpreter::cop2_special2(VectorUnit &vu0, uint32_t instruction)
             break;
         case 0x10:
             cop2_vitof0(vu0, instruction);
+            break;
+        case 0x11:
+            cop2_vitof4(vu0, instruction);
             break;
         case 0x12:
             cop2_vitof12(vu0, instruction);
@@ -295,6 +325,12 @@ void EmotionInterpreter::cop2_special2(VectorUnit &vu0, uint32_t instruction)
               * As Q division latencies are not yet emulated, this instruction is just a NOP for now.
               */
             break;
+        case 0x3C:
+            cop2_vmtir(vu0, instruction);
+            break;
+        case 0x3D:
+            cop2_vmfir(vu0, instruction);
+            break;
         case 0x3F:
             cop2_viswr(vu0, instruction);
             break;
@@ -348,6 +384,14 @@ void EmotionInterpreter::cop2_vitof0(VectorUnit &vu0, uint32_t instruction)
     uint8_t dest = (instruction >> 16) & 0x1F;
     uint8_t field = (instruction >> 21) & 0xF;
     vu0.itof0(field, dest, source);
+}
+
+void EmotionInterpreter::cop2_vitof4(VectorUnit &vu0, uint32_t instruction)
+{
+    uint8_t source = (instruction >> 11) & 0x1F;
+    uint8_t dest = (instruction >> 16) & 0x1F;
+    uint8_t field = (instruction >> 21) & 0xF;
+    vu0.itof4(field, dest, source);
 }
 
 void EmotionInterpreter::cop2_vitof12(VectorUnit &vu0, uint32_t instruction)
@@ -484,6 +528,22 @@ void EmotionInterpreter::cop2_vrsqrt(VectorUnit &vu0, uint32_t instruction)
     uint8_t fsf = (instruction >> 21) & 0x3;
     uint8_t ftf = (instruction >> 23) & 0x3;
     vu0.rsqrt(ftf, fsf, reg1, reg2);
+}
+
+void EmotionInterpreter::cop2_vmtir(VectorUnit &vu0, uint32_t instruction)
+{
+    uint32_t fs = (instruction >> 11) & 0x1F;
+    uint32_t it = (instruction >> 16) & 0x1F;
+    uint8_t fsf = (instruction >> 21) & 0xF;
+    vu0.mtir(fsf, it, fs);
+}
+
+void EmotionInterpreter::cop2_vmfir(VectorUnit &vu0, uint32_t instruction)
+{
+    uint32_t is = (instruction >> 11) & 0x1F;
+    uint32_t ft = (instruction >> 16) & 0x1F;
+    uint8_t dest_field = (instruction >> 21) & 0xF;
+    vu0.mfir(dest_field, ft, is);
 }
 
 void EmotionInterpreter::cop2_viswr(VectorUnit &vu0, uint32_t instruction)

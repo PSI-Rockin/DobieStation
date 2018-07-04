@@ -152,6 +152,7 @@ namespace EmotionDisasm
     std::string get_fsf(uint8_t fsf);
     std::string disasm_cop2_qmove(const std::string opcode, uint32_t instruction);
     std::string disasm_cop2(uint32_t instruction);
+    std::string disasm_cop2_intmath(const std::string opcode, uint32_t instruction);
     std::string disasm_cop2_special_simplemath(const std::string opcode, uint32_t instruction);
     std::string disasm_cop2_special_bc(const std::string opcode, uint32_t instruction);
     std::string disasm_cop2_special_q(const std::string opcode, uint32_t instruction);
@@ -159,6 +160,7 @@ namespace EmotionDisasm
     std::string disasm_vaddbc(uint32_t instruction);
     std::string disasm_vsubbc(uint32_t instruction);
     std::string disasm_vmaddbc(uint32_t instruction);
+    std::string disasm_vmsubbc(uint32_t instruction);
     std::string disasm_vmaxbc(uint32_t instruction);
     std::string disasm_vminibc(uint32_t instruction);
     std::string disasm_vmulbc(uint32_t instruction);
@@ -170,6 +172,7 @@ namespace EmotionDisasm
     std::string disasm_vopmsub(uint32_t instruction);
     std::string disasm_viadd(uint32_t instruction);
     std::string disasm_viaddi(uint32_t instruction);
+    std::string disasm_viand(uint32_t instruction);
 
     std::string disasm_cop2_special2(uint32_t instruction);
     std::string disasm_cop2_special2_move(const std::string opcode, uint32_t instruction);
@@ -179,6 +182,7 @@ namespace EmotionDisasm
     std::string disasm_vmaddabc(uint32_t instruction);
     std::string disasm_vmsubabc(uint32_t instruction);
     std::string disasm_vitof0(uint32_t instruction);
+    std::string disasm_vitof4(uint32_t instruction);
     std::string disasm_vitof12(uint32_t instruction);
     std::string disasm_vftoi0(uint32_t instruction);
     std::string disasm_vftoi4(uint32_t instruction);
@@ -196,6 +200,8 @@ namespace EmotionDisasm
     std::string disasm_vdiv(uint32_t instruction);
     std::string disasm_vsqrt(uint32_t instruction);
     std::string disasm_vrsqrt(uint32_t instruction);
+    std::string disasm_vmtir(uint32_t instruction);
+    std::string disasm_vmfir(uint32_t instruction);
     std::string disasm_viswr(uint32_t instruction);
     std::string disasm_vrnext(uint32_t instruction);
     std::string disasm_vrget(uint32_t instruction);

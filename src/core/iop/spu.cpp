@@ -61,7 +61,7 @@ uint16_t SPU::read16(uint32_t addr)
             return transfer_addr >> 16;
         case 0x1B0:
             printf("[SPU%d] AutoDMA\n", id);
-            return 0x0;
+            return 0x7;
         case 0x344:
             reg |= status.DMA_finished << 7;
             reg |= status.DMA_busy << 10;

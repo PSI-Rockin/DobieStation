@@ -65,6 +65,8 @@ namespace IOP_Interpreter
     void regimm(IOP& cpu, uint32_t instruction);
     void bltz(IOP& cpu, uint32_t instruction);
     void bgez(IOP& cpu, uint32_t instruction);
+    void bltzal(IOP& cpu, uint32_t instruction);
+    void bgezal(IOP& cpu, uint32_t instruction);
 
     void cop(IOP& cpu, uint32_t instruction);
     void mfc(IOP& cpu, uint32_t instruction);

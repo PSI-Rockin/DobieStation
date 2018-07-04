@@ -760,6 +760,12 @@ void IOP_Interpreter::regimm(IOP &cpu, uint32_t instruction)
         case 0x01:
             bgez(cpu, instruction);
             break;
+        case 0x10:
+            bltzal(cpu, instruction);
+            break;
+        case 0x11:
+            bgezal(cpu, instruction);
+            break;
         default:
             unknown_op("regimm", op, instruction);
     }
@@ -778,6 +784,26 @@ void IOP_Interpreter::bgez(IOP &cpu, uint32_t instruction)
     int offset = (int16_t)(instruction & 0xFFFF);
     offset <<= 2;
     int32_t reg = (int32_t)cpu.get_gpr((instruction >> 21) & 0x1F);
+    cpu.branch(reg >= 0, offset);
+}
+
+void IOP_Interpreter::bltzal(IOP &cpu, uint32_t instruction)
+{
+    int32_t offset = (int16_t)(instruction & 0xFFFF);
+    offset <<= 2;
+    int32_t reg = (instruction >> 21) & 0x1F;
+    reg = (int32_t)cpu.get_gpr(reg);
+    cpu.set_gpr(31, cpu.get_PC() + 8);
+    cpu.branch(reg < 0, offset);
+}
+
+void IOP_Interpreter::bgezal(IOP &cpu, uint32_t instruction)
+{
+    int32_t offset = (int16_t)(instruction & 0xFFFF);
+    offset <<= 2;
+    int32_t reg = (instruction >> 21) & 0x1F;
+    reg = (int32_t)cpu.get_gpr(reg);
+    cpu.set_gpr(31, cpu.get_PC() + 8);
     cpu.branch(reg >= 0, offset);
 }
 
