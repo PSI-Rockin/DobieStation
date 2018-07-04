@@ -18,6 +18,7 @@ void SIO2::reset()
     active_command = SIO_DEVICE::NONE;
     control = 0;
     new_command = false;
+    RECV1 = 0x1D100;
 }
 
 uint8_t SIO2::read_serial()
@@ -98,6 +99,7 @@ void SIO2::write_device(uint8_t value)
             break;
         case SIO_DEVICE::PAD:
         {
+            RECV1 = 0x1100;
             uint8_t reply;
             if (new_command)
             {
@@ -111,7 +113,8 @@ void SIO2::write_device(uint8_t value)
         }
             break;
         case SIO_DEVICE::DUMMY:
-            FIFO.push(0xFF);
+            FIFO.push(0x00);
+            RECV1 = 0x1D100;
             break;
         default:
             printf("[SIO2] Unrecognized active command!\n");
@@ -141,7 +144,7 @@ void SIO2::set_control(uint32_t value)
 uint32_t SIO2::get_RECV1()
 {
     printf("[SIO2] Read RECV1\n");
-    return 0x0D102;
+    return RECV1;
 }
 
 uint32_t SIO2::get_RECV2()

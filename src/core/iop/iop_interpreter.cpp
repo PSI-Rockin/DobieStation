@@ -587,8 +587,8 @@ void IOP_Interpreter::mult(IOP &cpu, uint32_t instruction)
 {
     int64_t op1 = (instruction >> 21) & 0x1F;
     int64_t op2 = (instruction >> 16) & 0x1F;
-    op1 = cpu.get_gpr(op1);
-    op2 = cpu.get_gpr(op2);
+    op1 = (int32_t)cpu.get_gpr(op1);
+    op2 = (int32_t)cpu.get_gpr(op2);
     int64_t temp = op1 * op2;
     cpu.set_LO(temp & 0xFFFFFFFF);
     cpu.set_HI(temp >> 32);

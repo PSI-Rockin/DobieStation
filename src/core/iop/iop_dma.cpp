@@ -226,22 +226,28 @@ void IOP_DMA::process_SIF1()
 
 void IOP_DMA::process_SIO2in()
 {
-    for (int i = 0; i < 4; i++)
+    int size = channels[SIO2in].word_count * channels[SIO2in].block_size * 4;
+    while (size)
     {
-        sio2->write_serial(RAM[channels[SIO2in].addr + i]);
+        sio2->write_serial(RAM[channels[SIO2in].addr]);
+        channels[SIO2in].addr++;
+        size--;
     }
-    channels[SIO2in].addr += 4;
-    channels[SIO2in].word_count--;
+    channels[SIO2in].word_count = 0;
     if (channels[SIO2in].word_count == 0)
         transfer_end(SIO2in);
 }
 
 void IOP_DMA::process_SIO2out()
 {
-    for (int i = 0; i < 4; i++)
-        RAM[channels[SIO2out].addr + i] = sio2->read_serial();
-    channels[SIO2out].addr += 4;
-    channels[SIO2out].word_count--;
+    int size = channels[SIO2out].word_count * channels[SIO2out].block_size * 4;
+    while (size)
+    {
+        RAM[channels[SIO2out].addr] = sio2->read_serial();
+        channels[SIO2out].addr++;
+        size--;
+    }
+    channels[SIO2out].word_count = 0;
     if (channels[SIO2out].word_count == 0)
         transfer_end(SIO2out);
 }

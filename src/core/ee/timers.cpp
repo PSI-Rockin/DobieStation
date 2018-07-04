@@ -80,9 +80,9 @@ void EmotionTiming::run(int cycles)
                     break;
                 case 3:
                     //TODO: actual value for HSYNC
-                    while (timers[i].clocks >= 8000)
+                    while (timers[i].clocks >= 9400)
                     {
-                        count_up(i, 8000);
+                        count_up(i, 9400);
                     }
                     break;
             }

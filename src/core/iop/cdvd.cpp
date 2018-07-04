@@ -353,6 +353,7 @@ void CDVD_Drive::write_BREAK()
     N_cycles_left = 64;
     active_N_command = NCOMMAND::BREAK;
     drive_status = CDVD_STATUS::STOPPED;
+    read_bytes_left = 0;
 }
 
 void CDVD_Drive::send_S_command(uint8_t value)
@@ -481,6 +482,7 @@ void CDVD_Drive::start_seek()
             N_cycles_left = (IOP_CLOCK * 100) / 1000;
             printf("[CDVD] Full seek\n");
         }
+        //N_cycles_left = 10000;
     }
 
     //Seek anyway. The program won't know the difference
@@ -513,6 +515,7 @@ void CDVD_Drive::N_command_dvdread()
 
 void CDVD_Drive::N_command_gettoc()
 {
+    printf("[CDVD] Get TOC\n");
     sectors_left = 0;
     block_size = 2064;
     read_bytes_left = 2064;

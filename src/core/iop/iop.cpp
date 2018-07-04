@@ -58,7 +58,7 @@ void IOP::run()
     if (can_disassemble && PC != 0xB89C && PC != 0xB8A0 && PC != 0xBB9C && PC != 0xBBA0)
     {
         printf("[IOP] [$%08X] $%08X - %s\n", PC, instr, EmotionDisasm::disasm_instr(instr, PC).c_str());
-        //print_state();
+        print_state();
     }
     IOP_Interpreter::interpret(*this, instr);
 
@@ -78,6 +78,8 @@ void IOP::run()
                 printf("[IOP] Invalid PC address $%08X!\n", PC);
                 exit(1);
             }
+            //if (PC == 0x0008F2C8)
+                //can_disassemble = true;
             if (PC == 0x00012C48 || PC == 0x0001420C || PC == 0x0001430C)
                 e->iop_puts();
             /*if (PC == 0x86D0 || PC == 0x90E0 || PC == 0x00008EE0)
