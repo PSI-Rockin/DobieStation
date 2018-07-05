@@ -1446,7 +1446,8 @@ string EmotionDisasm::disasm_viadd(uint32_t instruction)
 string EmotionDisasm::disasm_viaddi(uint32_t instruction)
 {
     stringstream output;
-    uint32_t imm = (instruction >> 6) & 0x3F;
+    int8_t imm = (instruction >> 6) & 0x1F;
+    imm = ((int8_t)(imm << 3)) >> 3;
     uint32_t is = (instruction >> 11) & 0x1F;
     uint32_t id = (instruction >> 16) & 0x1F;
     output << "viaddi vi" << id << ", vi" << is << ", 0x" << imm;
