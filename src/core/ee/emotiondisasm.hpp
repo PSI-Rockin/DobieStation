@@ -168,6 +168,7 @@ namespace EmotionDisasm
     std::string disasm_vmulq(uint32_t instruction);
     std::string disasm_vmuli(uint32_t instruction);
     std::string disasm_vaddq(uint32_t instruction);
+    std::string disasm_vsubq(uint32_t instruction);
     std::string disasm_vsubi(uint32_t instruction);
     std::string disasm_vmsubi(uint32_t instruction);
     std::string disasm_vadd(uint32_t instruction);

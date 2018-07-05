@@ -154,6 +154,7 @@ namespace EmotionInterpreter
     void cop2_vmulq(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmuli(VectorUnit& vu0, uint32_t instruction);
     void cop2_vaddq(VectorUnit& vu0, uint32_t instruction);
+    void cop2_vsubq(VectorUnit& vu0, uint32_t instruction);
     void cop2_vsubi(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmsubi(VectorUnit& vu0, uint32_t instruction);
     void cop2_vadd(VectorUnit& vu0, uint32_t instruction);

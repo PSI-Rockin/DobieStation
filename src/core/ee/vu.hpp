@@ -73,7 +73,7 @@ class VectorUnit
         void ftoi12(uint8_t field, uint8_t dest, uint8_t source);
         void ftoi15(uint8_t field, uint8_t dest, uint8_t source);
         void iadd(uint8_t dest, uint8_t reg1, uint8_t reg2);
-        void iaddi(uint8_t dest, uint8_t source, uint8_t imm);
+        void iaddi(uint8_t dest, uint8_t source, int8_t imm);
         void iand(uint8_t dest, uint8_t reg1, uint8_t reg2);
         void iswr(uint8_t field, uint8_t source, uint8_t base);
         void itof0(uint8_t field, uint8_t dest, uint8_t source);
@@ -113,6 +113,7 @@ class VectorUnit
         void sub(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2);
         void subbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
         void subi(uint8_t field, uint8_t dest, uint8_t source);
+        void subq(uint8_t field, uint8_t dest, uint8_t source);
 };
 
 template <typename T>
