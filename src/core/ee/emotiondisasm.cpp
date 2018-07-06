@@ -205,6 +205,8 @@ string EmotionDisasm::disasm_regimm(uint32_t instruction, uint32_t instr_addr)
         case 0x13:
             opcode += "bgezall";
             break;
+        case 0x18:
+            return disasm_mtsab(instruction);
         case 0x19:
             return disasm_mtsah(instruction);
         default:
@@ -217,6 +219,13 @@ string EmotionDisasm::disasm_regimm(uint32_t instruction, uint32_t instr_addr)
 
     return opcode + " " + output.str();
 
+}
+
+string EmotionDisasm::disasm_mtsab(uint32_t instruction)
+{
+    stringstream output;
+    output << "mtsab " << EmotionEngine::REG(RS) << ", " << (uint16_t)IMM;
+    return output.str();
 }
 
 string EmotionDisasm::disasm_mtsah(uint32_t instruction)
@@ -1997,6 +2006,8 @@ string EmotionDisasm::disasm_mmi1(uint32_t instruction)
             return disasm_special_simplemath("psubub", instruction);
         case 0x1A:
             return disasm_mmi_copy("pextub", instruction);
+        case 0x1B:
+            return disasm_special_simplemath("qfsrv", instruction);
         default:
             return unknown_op("mmi1", op, 2);
     }

@@ -66,7 +66,7 @@ class CDVD_Drive
         uint8_t S_out_params;
         uint8_t S_status;
 
-        uint32_t get_block_timing();
+        uint32_t get_block_timing(bool mode_DVD);
 
         void start_seek();
         void prepare_S_outdata(int amount);

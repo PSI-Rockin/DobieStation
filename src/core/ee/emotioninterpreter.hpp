@@ -61,6 +61,7 @@ namespace EmotionInterpreter
     void bgezl(EmotionEngine& cpu, uint32_t instruction);
     void bgezal(EmotionEngine &cpu, uint32_t instruction);
     void bgezall(EmotionEngine &cpu, uint32_t instruction);
+    void mtsab(EmotionEngine &cpu, uint32_t instruction);
     void mtsah(EmotionEngine& cpu, uint32_t instruction);
 
     void j(EmotionEngine& cpu, uint32_t instruction);
@@ -256,6 +257,7 @@ namespace EmotionInterpreter
     void paddub(EmotionEngine& cpu, uint32_t instruction);
     void psubub(EmotionEngine& cpu, uint32_t instruction);
     void pextub(EmotionEngine& cpu, uint32_t instruction);
+    void qfsrv(EmotionEngine& cpu, uint32_t instruction);
 
     void mmi2(EmotionEngine& cpu, uint32_t instruction);
     void psllvw(EmotionEngine& cpu, uint32_t instruction);

@@ -8,13 +8,14 @@ class DCT_Coeff_Table0 : public DCT_Coeff
         static VLC_Entry table[];
         static RunLevelPair runlevel_table[];
 
-        constexpr static int SIZE = 16;
+        constexpr static int SIZE = 112;
     public:
         DCT_Coeff_Table0();
 
         bool get_end_of_block(IPU_FIFO &FIFO, uint32_t &result);
         bool get_skip_block(IPU_FIFO &FIFO);
         bool get_runlevel_pair(IPU_FIFO &FIFO, RunLevelPair &pair, bool MPEG1);
+        bool get_runlevel_pair_dc(IPU_FIFO &FIFO, RunLevelPair &pair, bool MPEG1);
 };
 
 #endif // DCT_COEFF_TABLE0_HPP

@@ -6,12 +6,13 @@ using namespace std;
 
 //Values from PCSX2 - subject to change
 static uint64_t IOP_CLOCK = 36864000;
+static const int PSX_CD_READSPEED = 153600;
 static const int PSX_DVD_READSPEED = 1382400;
 
-uint32_t CDVD_Drive::get_block_timing()
+uint32_t CDVD_Drive::get_block_timing(bool mode_DVD)
 {
     //TODO: handle block sizes and CD_ROM read speeds
-    return (IOP_CLOCK * 2064) / (speed * PSX_DVD_READSPEED);
+    return (IOP_CLOCK * block_size) / (speed * (mode_DVD ? PSX_DVD_READSPEED : PSX_CD_READSPEED));
 }
 
 CDVD_Drive::CDVD_Drive(Emulator* e) : e(e)
@@ -74,10 +75,7 @@ uint32_t CDVD_Drive::read_to_RAM(uint8_t *RAM, uint32_t bytes)
         else
         {
             active_N_command = NCOMMAND::READ;
-            if (N_command == 0x06)
-                N_cycles_left = 20000;
-            else
-                N_cycles_left = get_block_timing();
+            N_cycles_left = get_block_timing(N_command != 0x06);
         }
     }
     return block_size;
@@ -123,10 +121,7 @@ void CDVD_Drive::update(int cycles)
                     drive_status = READING | SPINNING;
                     active_N_command = NCOMMAND::READ;
                     current_sector = sector_pos;
-                    if (N_command == 0x06)
-                        N_cycles_left = 20000;
-                    else
-                        N_cycles_left = get_block_timing();
+                    N_cycles_left = get_block_timing(N_command != 0x06);
                     break;
                 case NCOMMAND::BREAK:
                     drive_status = PAUSED;
@@ -461,18 +456,19 @@ void CDVD_Drive::start_seek()
     else
     {
         printf("[CDVD] Seeking\n");
+        bool is_DVD = N_command != 0x06;
         int delta = abs((int)current_sector - (int)sector_pos);
         if (delta < 16)
         {
             printf("[CDVD] Contiguous read\n");
-            N_cycles_left = get_block_timing() * delta;
+            N_cycles_left = get_block_timing(is_DVD) * delta;
             if (!delta)
             {
                 drive_status = READING | SPINNING;
                 printf("Instant read!\n");
             }
         }
-        else if (delta < 14000)
+        else if ((is_DVD && delta < 14764) || (!is_DVD && delta < 4371))
         {
             N_cycles_left = (IOP_CLOCK * 30) / 1000;
             printf("[CDVD] Fast seek\n");
@@ -495,6 +491,7 @@ void CDVD_Drive::N_command_read()
     sectors_left = *(uint32_t*)&N_command_params[4];
     if (N_command_params[10])
         exit(1);
+    speed = 24;
     printf("[CDVD] Read; Seek pos: %d, Sectors: %d\n", sector_pos, sectors_left);
     block_size = 2048;
     start_seek();

@@ -888,6 +888,9 @@ void EmotionInterpreter::mmi1(EmotionEngine &cpu, uint32_t instruction)
         case 0x1A:
             pextub(cpu, instruction);
             break;
+        case 0x1B:
+            qfsrv(cpu, instruction);
+            break;
         default:
             return unknown_op("mmi1", instruction, op);
     }
@@ -1240,6 +1243,46 @@ void EmotionInterpreter::pextub(EmotionEngine &cpu, uint32_t instruction)
     }
 }
 
+/**
+ * Quadword Funnel Shift Right Variable
+ * Concatenates RS and RT as a 256-bit integer, then shifts it by the special register SA.
+ */
+void EmotionInterpreter::qfsrv(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t reg1 = (instruction >> 21) & 0x1F;
+    uint64_t reg2 = (instruction >> 16) & 0x1F;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    uint128_t rs = cpu.get_gpr<uint128_t>(reg1);
+    uint128_t rt = cpu.get_gpr<uint128_t>(reg2);
+
+    int shift = cpu.get_SA();
+    uint128_t dest_value;
+    if (!shift)
+        dest_value = rt;
+    else
+    {
+        uint128_t dest_value;
+        if (shift < 64)
+        {
+            dest_value._u64[0] = rt._u64[0] >> shift;
+            dest_value._u64[1] = rt._u64[1] >> shift;
+            dest_value._u64[0] |= rt._u64[1] << (64 - shift);
+            dest_value._u64[1] |= rs._u64[0] << (64 - shift);
+        }
+        else
+        {
+            dest_value._u64[0] = rt._u64[1] >> (shift - 64);
+            dest_value._u64[1] = rs._u64[0] >> (shift - 64);
+            if (shift > 64)
+            {
+                dest_value._u64[0] |= rs._u64[0] << (128u - shift);
+                dest_value._u64[1] |= rt._u64[1] << (128u - shift);
+            }
+        }
+    }
+    cpu.set_gpr<uint128_t>(dest, dest_value);
+}
 
 void EmotionInterpreter::mmi2(EmotionEngine &cpu, uint32_t instruction)
 {

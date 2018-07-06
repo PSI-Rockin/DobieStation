@@ -160,7 +160,9 @@ void ImageProcessingUnit::run()
                 }
                 break;
             case 0x09:
-                ctrl.busy = false;
+                TH0 = command_option & 0x1FF;
+                TH1 = (command_option >> 16) & 0x1FF;
+                finish_command();
                 break;
             default:
                 printf("[IPU] Unrecognized command $%02X\n", command);
@@ -190,8 +192,11 @@ bool ImageProcessingUnit::process_BDEC()
                 printf("[IPU] Get CBP!\n");
                 if (!bdec.intra)
                 {
-                    printf("[IPU] Non-intra macroblock in BDEC!\n");
-                    exit(1);
+                    uint32_t pattern;
+                    if (!cbp.get_symbol(in_FIFO, pattern))
+                        return false;
+                    bdec.coded_block_pattern = pattern;
+                    printf("CBP: %d\n", bdec.coded_block_pattern);
                 }
                 else
                     bdec.coded_block_pattern = 0x3F;
@@ -400,8 +405,31 @@ void ImageProcessingUnit::dequantize(int16_t *block)
     }
     else
     {
-        printf("[IPU] Dequantize non-intra block!\n");
-        exit(1);
+        for (int i = 0; i < 64; i++)
+        {
+            int16_t sign;
+            if (!block[i])
+                sign = 0;
+            else
+            {
+                if (block[i] > 0)
+                    sign = 1;
+                else
+                    sign = 0xFFFF;
+            }
+
+            block[i] = ((block[i] * 2) + sign) * (int16_t)nonintra_IQ[i] * q_scale;
+            block[i] /= 32;
+
+            if (sign)
+            {
+                if (block[i] & 0x1)
+                {
+                    block[i] -= sign;
+                    block[i] |= 1;
+                }
+            }
+        }
     }
 
     //Saturation step
@@ -526,8 +554,8 @@ bool ImageProcessingUnit::BDEC_read_coeffs()
                 RunLevelPair pair;
                 if (!bdec.subblock_index)
                 {
-                    printf("[IPU] Subblock index == 0\n");
-                    exit(1);
+                    if (!dct_coeff->get_runlevel_pair_dc(in_FIFO, pair, ctrl.MPEG1))
+                        return false;
                 }
                 else
                 {
@@ -570,18 +598,12 @@ bool ImageProcessingUnit::BDEC_read_diff()
                 if (bdec.cur_channel == 0)
                 {
                     if (!lum_table.get_symbol(in_FIFO, bdec.dc_size))
-                    {
-                        printf("[IPU] Symbol not found for luminance table\n");
-                        exit(1);
-                    }
+                        return false;
                 }
                 else
                 {
                     if (!chrom_table.get_symbol(in_FIFO, bdec.dc_size))
-                    {
-                        printf("[IPU] Symbol not found for chrominance table\n");
-                        exit(1);
-                    }
+                        return false;
                 }
                 bdec.read_diff_state = BDEC_Command::READ_DIFF::DIFF;
                 break;
@@ -613,16 +635,24 @@ void ImageProcessingUnit::process_VDEC()
     switch (table)
     {
         case 0:
+            printf("[IPU] MBAI\n");
             VDEC_table = &macroblock_increment;
             break;
         case 1:
+            printf("[IPU] MBT\n");
             switch (ctrl.picture_type)
             {
                 case 0x1:
+                    printf("[IPU] I pic\n");
                     VDEC_table = &macroblock_I_pic;
                     break;
                 case 0x2:
+                    printf("[IPU] P pic\n");
                     VDEC_table = &macroblock_P_pic;
+                    break;
+                case 0x3:
+                    printf("[IPU] B pic\n");
+                    VDEC_table = &macroblock_B_pic;
                     break;
                 default:
                     printf("[IPU] Unrecognized Macroblock Type %d!\n", ctrl.picture_type);
@@ -630,6 +660,7 @@ void ImageProcessingUnit::process_VDEC()
             }
             break;
         case 2:
+            printf("[IPU] MC\n");
             VDEC_table = &motioncode;
             break;
         default:
@@ -647,14 +678,12 @@ void ImageProcessingUnit::process_VDEC()
                 break;
             case VDEC_STATE::DECODE:
                 if (!VDEC_table->get_symbol(in_FIFO, command_output))
-                {
-                    printf("[IPU] No matching entry found for VDEC type %d\n", table);
-                    exit(1);
-                }
+                    return;
                 else
                     vdec_state = VDEC_STATE::DONE;
                 break;
             case VDEC_STATE::DONE:
+                printf("[IPU] VDEC done! Output: $%08X\n", command_output);
                 finish_command();
                 return;
         }
@@ -720,6 +749,9 @@ bool ImageProcessingUnit::process_CSC()
                 uint8_t* cb_block = csc.block + 0x100;
                 uint8_t* cr_block = csc.block + 0x140;
 
+                uint32_t alpha_thresh0 = (TH0 & 0xFF) | ((TH0 & 0xFF) << 8) | ((TH0 & 0xFF) << 16);
+                uint32_t alpha_thresh1 = (TH1 & 0xFF) | ((TH1 & 0xFF) << 8) | ((TH1 & 0xFF) << 16);
+
                 for (int i = 0; i < 16; i++)
                 {
                     for (int j = 0; j < 16; j++)
@@ -750,15 +782,26 @@ bool ImageProcessingUnit::process_CSC()
                         color |= ((uint8_t)g) << 8;
                         color |= ((uint8_t)b) << 16;
 
-                        pixels[index] = color | 0x80000000;
+                        uint32_t alpha;
+                        if (color < alpha_thresh0)
+                            alpha = 0;
+                        else if (color < alpha_thresh1)
+                            alpha = 1 << 30;
+                        else
+                            alpha = 1 << 31;
+
+                        pixels[index] = color | alpha;
+                        //printf("Pixel: $%08X (%d, %d)\n", pixels[index], i, j);
                     }
                 }
 
                 uint128_t quad;
-                for (int i = 0; i < 0x100; i++)
+                for (int i = 0; i < 0x100 / 4; i++)
                 {
                     for (int j = 0; j < 4; j++)
+                    {
                         quad._u32[j] = pixels[j + (i * 4)];
+                    }
                     out_FIFO.f.push(quad);
                 }
                 csc.macroblocks--;

@@ -30,6 +30,10 @@ class SPU
         uint32_t transfer_addr;
 
         uint32_t current_addr;
+
+        //Shared variables for the cores
+        static uint16_t autodma_ctrl;
+        bool ADMA_in_progress;
     public:
         SPU(int id, Emulator* e);
 

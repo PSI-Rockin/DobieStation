@@ -58,7 +58,7 @@ void IOP::run()
     if (can_disassemble && PC != 0xB89C && PC != 0xB8A0 && PC != 0xBB9C && PC != 0xBBA0)
     {
         printf("[IOP] [$%08X] $%08X - %s\n", PC, instr, EmotionDisasm::disasm_instr(instr, PC).c_str());
-        print_state();
+        //print_state();
     }
     IOP_Interpreter::interpret(*this, instr);
 

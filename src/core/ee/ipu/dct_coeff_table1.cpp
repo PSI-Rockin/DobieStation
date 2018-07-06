@@ -297,18 +297,35 @@ bool DCT_Coeff_Table1::get_runlevel_pair(IPU_FIFO &FIFO, RunLevelPair &pair, boo
 {
     VLC_Entry entry;
     if (!peek_symbol(FIFO, entry))
-    {
-        printf("[DCT_Coeff_Table0] Symbol not found\n");
-        exit(1);
         return false;
-    }
 
     int bit_count = entry.bits;
     RunLevelPair cur_pair = runlevel_table[entry.value];
     if (cur_pair.run == RUN_ESCAPE)
     {
         printf("[DCT_Coeff_Table1] RUN_ESCAPE\n");
-        exit(1);
+        uint32_t run = 0;
+        if (!peek_value(FIFO, 6, bit_count, run))
+            return false;
+
+        pair.run = run;
+
+        if (MPEG1)
+        {
+            printf("MPEG1???\n");
+            exit(1);
+        }
+
+        uint32_t level = 0;
+        if (!peek_value(FIFO, 12, bit_count, level))
+            return false;
+
+        if (level & 0x800)
+        {
+            level |= 0xF000;
+            level = (int16_t)level;
+        }
+        pair.level = level;
     }
     else
     {
@@ -324,4 +341,11 @@ bool DCT_Coeff_Table1::get_runlevel_pair(IPU_FIFO &FIFO, RunLevelPair &pair, boo
     }
     FIFO.advance_stream(bit_count);
     return true;
+}
+
+bool DCT_Coeff_Table1::get_runlevel_pair_dc(IPU_FIFO &FIFO, RunLevelPair &pair, bool MPEG1)
+{
+    //DCT_Coeff_Table1 only gets called by intra macroblocks, so this should never happen
+    exit(1);
+    return false;
 }

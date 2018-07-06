@@ -15,6 +15,7 @@ struct IOP_DMA_Channel
 {
     uint32_t addr;
     uint32_t word_count;
+    uint32_t size;
     uint16_t block_size;
     IOP_DMA_Chan_Control control;
     uint32_t tag_addr;
@@ -30,6 +31,7 @@ struct DMA_DPCR
 
 struct DMA_DICR
 {
+    bool force_IRQ[2];
     uint8_t STAT[2];
     uint8_t MASK[2];
     bool master_int_enable[2];

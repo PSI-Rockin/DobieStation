@@ -113,34 +113,33 @@ void IOP_DMA::process_CDVD()
 
 void IOP_DMA::process_SPU()
 {
-    if (!channels[SPU].word_count)
+    if (!channels[SPU].size)
     {
+        channels[SPU].word_count = 0;
         transfer_end(SPU);
         spu->finish_DMA();
+        e->iop_request_IRQ(9);
+        return;
     }
-    else
-    {
-        uint32_t value = *(uint32_t*)&RAM[channels[SPU].addr];
-        spu->write_DMA(value);
-        channels[SPU].word_count--;
-        channels[SPU].addr += 4;
-    }
+    uint32_t value = *(uint32_t*)&RAM[channels[SPU].addr];
+    spu->write_DMA(value);
+    channels[SPU].size--;
+    channels[SPU].addr += 4;
 }
 
 void IOP_DMA::process_SPU2()
 {
-    if (!channels[SPU2].word_count)
+    if (!channels[SPU2].size)
     {
+        channels[SPU2].word_count = 0;
         transfer_end(SPU2);
         spu2->finish_DMA();
+        return;
     }
-    else
-    {
-        uint32_t value = *(uint32_t*)&RAM[channels[SPU2].addr];
-        spu2->write_DMA(value);
-        channels[SPU2].word_count--;
-        channels[SPU2].addr += 4;
-    }
+    uint32_t value = *(uint32_t*)&RAM[channels[SPU2].addr];
+    spu2->write_DMA(value);
+    channels[SPU2].size--;
+    channels[SPU2].addr += 4;
 }
 
 void IOP_DMA::process_SIF0()
@@ -264,7 +263,7 @@ void IOP_DMA::transfer_end(int index)
 
     if (DICR.STAT[dicr2] & DICR.MASK[dicr2])
     {
-        printf("[IOP DMA] IRQ requested\n");
+        printf("[IOP DMA] IRQ requested: $%08X $%08X\n", DICR.STAT[dicr2], DICR.MASK[dicr2]);
         e->iop_request_IRQ(3);
     }
 }
@@ -295,6 +294,7 @@ uint32_t IOP_DMA::get_DPCR2()
 uint32_t IOP_DMA::get_DICR()
 {
     uint32_t reg = 0;
+    reg |= DICR.force_IRQ[0] << 15;
     reg |= DICR.MASK[0] << 16;
     reg |= DICR.master_int_enable[0] << 23;
     reg |= DICR.STAT[0] << 24;
@@ -312,6 +312,7 @@ uint32_t IOP_DMA::get_DICR()
 uint32_t IOP_DMA::get_DICR2()
 {
     uint32_t reg = 0;
+    reg |= DICR.force_IRQ[1] << 15;
     reg |= DICR.MASK[1] << 16;
     reg |= DICR.master_int_enable[1] << 23;
     reg |= DICR.STAT[1] << 24;
@@ -377,17 +378,23 @@ void IOP_DMA::set_DPCR2(uint32_t value)
 void IOP_DMA::set_DICR(uint32_t value)
 {
     printf("[IOP DMA] Set DICR: $%08X\n", value);
+    DICR.force_IRQ[0] = value & (1 << 15);
     DICR.MASK[0] = (value >> 16) & 0x7F;
     DICR.master_int_enable[0] = value & (1 << 23);
     DICR.STAT[0] &= ~((value >> 24) & 0x7F);
+    if (DICR.force_IRQ[0])
+        e->iop_request_IRQ(3);
 }
 
 void IOP_DMA::set_DICR2(uint32_t value)
 {
     printf("[IOP DMA] Set DICR2: $%08X\n", value);
+    DICR.force_IRQ[1] = value & (1 << 15);
     DICR.MASK[1] = (value >> 16) & 0x7F;
     DICR.master_int_enable[1] = value & (1 << 23);
     DICR.STAT[1] &= ~((value >> 24) & 0x7F);
+    if (DICR.force_IRQ[1])
+        e->iop_request_IRQ(3);
 }
 
 void IOP_DMA::set_chan_addr(int index, uint32_t value)
@@ -401,18 +408,21 @@ void IOP_DMA::set_chan_block(int index, uint32_t value)
     printf("[IOP DMA] %s block: $%08X\n", CHAN(index), value);
     channels[index].block_size = value & 0xFFFF;
     channels[index].word_count = value >> 16;
+    channels[index].size = channels[index].block_size * channels[index].word_count;
 }
 
 void IOP_DMA::set_chan_size(int index, uint16_t value)
 {
     printf("[IOP DMA] %s size: $%04X\n", CHAN(index), value);
     channels[index].block_size = value;
+    channels[index].size = channels[index].block_size * channels[index].word_count;
 }
 
 void IOP_DMA::set_chan_count(int index, uint16_t value)
 {
     printf("[IOP DMA] %s count: $%04X\n", CHAN(index), value);
     channels[index].word_count = value;
+    channels[index].size = channels[index].block_size * channels[index].word_count;
 }
 
 void IOP_DMA::set_chan_control(int index, uint32_t value)

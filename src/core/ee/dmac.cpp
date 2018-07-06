@@ -282,7 +282,9 @@ void DMAC::process_IPU_FROM()
     {
         if (ipu->can_read_FIFO())
         {
-            store128(channels[IPU_FROM].address, ipu->read_FIFO());
+            uint128_t data = ipu->read_FIFO();
+            store128(channels[IPU_FROM].address, data);
+            //printf("[IPU_FROM] Store $%08X_$%08X to $%08X\n", data._u32[1], data._u32[0], channels[IPU_FROM].address);
 
             channels[IPU_FROM].address += 16;
             channels[IPU_FROM].quadword_count--;
@@ -390,8 +392,6 @@ void DMAC::process_SIF1()
 
 void DMAC::process_SPR_FROM()
 {
-    
-
     if (channels[SPR_FROM].quadword_count)
     {
         if (control.mem_drain_channel != 0)
@@ -452,8 +452,8 @@ void DMAC::process_SPR_TO()
     }
     else
     {
-            if (channels[SPR_TO].tag_end)
-                transfer_end(SPR_TO);
+        if (channels[SPR_TO].tag_end)
+            transfer_end(SPR_TO);
         else
         {
             uint128_t DMAtag = fetch128(channels[SPR_TO].tag_address);
@@ -503,6 +503,11 @@ void DMAC::handle_source_chain(int index)
             break;
         case 3:
             //ref
+            channels[index].address = addr;
+            channels[index].tag_address += 16;
+            break;
+        case 4:
+            //refs
             channels[index].address = addr;
             channels[index].tag_address += 16;
             break;
@@ -895,15 +900,15 @@ void DMAC::write32(uint32_t address, uint32_t value)
             break;
         case 0x1000D410:
             printf("[DMAC] SPR_TO M_ADR: $%08X\n", value);
-            channels[SPR_FROM].address = value & ~0xF;
+            channels[SPR_TO].address = value & ~0xF;
             break;
         case 0x1000D420:
             printf("[DMAC] SPR_TO QWC: $%08X\n", value);
-            channels[SPR_FROM].quadword_count = value & 0xFFFF;
+            channels[SPR_TO].quadword_count = value & 0xFFFF;
             break;
         case 0x1000D430:
             printf("[DMAC] SPR_TO T_ADR: $%08X\n", value);
-            channels[SPR_FROM].tag_address = value & ~0xF;
+            channels[SPR_TO].tag_address = value & ~0xF;
             break;
         case 0x1000D480:
             printf("[DMAC] SPR_TO SADR: $%08X\n", value);

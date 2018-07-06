@@ -58,7 +58,9 @@ SOURCES += ../src/qt/main.cpp \
     ../src/core/ee/ipu/dct_coeff_table1.cpp \
     ../src/core/ee/ipu/chromtable.cpp \
     ../src/core/ee/ipu/mac_p_pic.cpp \
-    ../src/core/ee/ipu/motioncode.cpp
+    ../src/core/ee/ipu/motioncode.cpp \
+    ../src/core/ee/ipu/mac_b_pic.cpp \
+    ../src/core/ee/ipu/codedblockpattern.cpp
 
 HEADERS += \
     ../src/core/ee/emotion.hpp \
@@ -101,4 +103,6 @@ HEADERS += \
     ../src/core/ee/ipu/dct_coeff_table1.hpp \
     ../src/core/ee/ipu/chromtable.hpp \
     ../src/core/ee/ipu/mac_p_pic.hpp \
-    ../src/core/ee/ipu/motioncode.hpp
+    ../src/core/ee/ipu/motioncode.hpp \
+    ../src/core/ee/ipu/mac_b_pic.hpp \
+    ../src/core/ee/ipu/codedblockpattern.hpp

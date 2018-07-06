@@ -2,6 +2,8 @@
 #include "spu.hpp"
 #include "../emulator.hpp"
 
+uint16_t SPU::autodma_ctrl = 0;
+
 SPU::SPU(int id, Emulator* e) : id(id), e(e)
 { 
 
@@ -15,10 +17,14 @@ void SPU::reset(uint8_t* RAM)
     transfer_addr = 0;
     current_addr = 0;
     core_att = 0;
+    autodma_ctrl = 0x0;
+    ADMA_in_progress = false;
 }
 
 void SPU::finish_DMA()
 {
+    if (autodma_ctrl)
+        autodma_ctrl |= ~3;
     status.DMA_finished = true;
     status.DMA_busy = false;
 }
@@ -60,8 +66,8 @@ uint16_t SPU::read16(uint32_t addr)
         case 0x1A8:
             return transfer_addr >> 16;
         case 0x1B0:
-            printf("[SPU%d] AutoDMA\n", id);
-            return 0x0;
+            printf("[SPU%d] ADMA: $%04X\n", id, autodma_ctrl);
+            return autodma_ctrl;
         case 0x344:
             reg |= status.DMA_finished << 7;
             reg |= status.DMA_busy << 10;
@@ -99,6 +105,12 @@ void SPU::write16(uint32_t addr, uint16_t value)
             transfer_addr |= value;
             current_addr = transfer_addr;
             printf("[SPU%d] Transfer addr: $%08X (L: $%04X)\n", id, transfer_addr, value);
+            break;
+        case 0x1B0:
+            printf("[SPU%d] Write ADMA: $%04X\n", id, value);
+            autodma_ctrl = value;
+            if (!value)
+                ADMA_in_progress = false;
             break;
         default:
             printf("[SPU%d] Unrecognized write16 to addr $%08X of $%04X\n", id, addr, value);

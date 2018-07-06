@@ -10,9 +10,9 @@ VLC_Table::VLC_Table(VLC_Entry* table, int table_size, int max_bits) :
 
 bool VLC_Table::peek_symbol(IPU_FIFO &FIFO, VLC_Entry &entry)
 {
+    uint32_t key;
     for (int i = 0; i < max_bits; i++)
     {
-        uint32_t key;
         int bits = i + 1;
         if (!FIFO.get_bits(key, bits))
             return false;
@@ -28,7 +28,7 @@ bool VLC_Table::peek_symbol(IPU_FIFO &FIFO, VLC_Entry &entry)
             }
         }
     }
-    printf("[VLC Table] Symbol not found\n");
+    printf("[VLC Table] Symbol not found: $%08X\n", key);
     exit(1);
     return false;
 }

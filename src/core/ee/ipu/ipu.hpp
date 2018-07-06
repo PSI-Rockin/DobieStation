@@ -7,12 +7,14 @@
 
 #include "../../int128.hpp"
 #include "chromtable.hpp"
+#include "codedblockpattern.hpp"
 #include "dct_coeff_table0.hpp"
 #include "dct_coeff_table1.hpp"
 #include "lumtable.hpp"
 #include "mac_addr_inc.hpp"
 #include "mac_i_pic.hpp"
 #include "mac_p_pic.hpp"
+#include "mac_b_pic.hpp"
 #include "motioncode.hpp"
 
 struct IPU_CTRL
@@ -112,16 +114,19 @@ class ImageProcessingUnit
         DCT_Coeff_Table1 dct_coeff1;
         DCT_Coeff* dct_coeff;
         ChromTable chrom_table;
+        CodedBlockPattern cbp;
         LumTable lum_table;
         MacroblockAddrInc macroblock_increment;
         Macroblock_IPic macroblock_I_pic;
         Macroblock_PPic macroblock_P_pic;
+        Macroblock_BPic macroblock_B_pic;
         MotionCode motioncode;
         VLC_Table* VDEC_table;
         IPU_FIFO in_FIFO, out_FIFO;
 
         uint8_t intra_IQ[0x40], nonintra_IQ[0x40];
         uint16_t VQCLUT[16];
+        uint32_t TH0, TH1;
 
         unsigned int crcb_map[0x100];
 

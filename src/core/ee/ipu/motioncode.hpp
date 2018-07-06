@@ -7,7 +7,7 @@ class MotionCode : public VLC_Table
     private:
         static VLC_Entry table[];
 
-        constexpr static int SIZE = 8;
+        constexpr static int SIZE = 33;
     public:
         MotionCode();
 };

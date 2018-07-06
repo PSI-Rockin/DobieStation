@@ -156,10 +156,22 @@ void EmotionEngine::run()
 int EmotionEngine::run(int cycles_to_run)
 {
     int cycles = cycles_to_run;
+    static int calls = 0;
     while (cycles_to_run > 0)
     {
         cycles_to_run--;
         uint32_t instruction = read32(PC);
+        if (PC == 0x37BDD4)
+        {
+            calls++;
+            //if (calls == 3)
+                //can_disassemble = true;
+            printf("readBufBeginPut\n");
+        }
+        if (PC == 0x0037BE28)
+            printf("readBufBeginGet\n");
+        if (PC == 0x0037Be50)
+            printf("sceMpegDemuxPssRing\n");
         if (can_disassemble && (PC < 0x81FC0 || PC >= 0x82000))
         {
             std::string disasm = EmotionDisasm::disasm_instr(instruction, PC);
@@ -203,7 +215,7 @@ int EmotionEngine::run(int cycles_to_run)
     {
         if (cp0->cause.int0_pending)
             int0();
-        if (cp0->cause.int1_pending)
+        else if (cp0->cause.int1_pending)
             int1();
     }
     return cycles;
@@ -252,6 +264,11 @@ uint64_t EmotionEngine::get_HI()
 uint64_t EmotionEngine::get_HI1()
 {
     return HI1;
+}
+
+uint64_t EmotionEngine::get_SA()
+{
+    return SA;
 }
 
 uint8_t EmotionEngine::read8(uint32_t address)
@@ -505,12 +522,12 @@ void EmotionEngine::mtlo1(int index)
 
 void EmotionEngine::mfsa(int index)
 {
-    set_gpr<uint64_t>(index, SA);
+    set_gpr<uint64_t>(index, SA / 8);
 }
 
 void EmotionEngine::mtsa(int index)
 {
-    SA = get_gpr<uint64_t>(index);
+    SA = (get_gpr<uint64_t>(index) & 0xF) * 8;
 }
 
 void EmotionEngine::pmfhi(int index)

@@ -72,7 +72,9 @@ void Emulator::run()
             VBLANK_sent = true;
             gs.set_VBLANK(true);
             printf("VSYNC FRAMES: %d\n", frames);
+            //cpu.set_disassembly(frames == 105);
             //iop.set_disassembly(frames == 80);
+            //iop.set_disassembly(frames == 95);
             frames++;
             iop_request_IRQ(0);
             gs.render_CRT();
@@ -488,10 +490,6 @@ uint128_t Emulator::read128(uint32_t address)
 
 void Emulator::write8(uint32_t address, uint8_t value)
 {
-    if (address >= 0x01828C80 && address < 0x01828E80)
-    {
-        printf("[EE] Write8 to $%08X of $%02X\n", address, value);
-    }
     if (address < 0x10000000)
     {
         RDRAM[address & 0x01FFFFFF] = value;
@@ -1077,6 +1075,9 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
         case 0x1F8010C0:
             iop_dma.set_chan_addr(4, value);
             return;
+        case 0x1F8010C4:
+            iop_dma.set_chan_block(4, value);
+            return;
         case 0x1F8010C8:
             iop_dma.set_chan_control(4, value);
             return;
@@ -1100,7 +1101,7 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
         case 0x1F8014A8:
             iop_timers.write_target(5, value);
             return;
-        //SPU2?
+        //SPU2 DMA
         case 0x1F801500:
             iop_dma.set_chan_addr(8, value);
             return;

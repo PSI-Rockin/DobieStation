@@ -7,7 +7,7 @@ class MacroblockAddrInc : public VLC_Table
     private:
         static VLC_Entry table[];
 
-        constexpr static int SIZE = 3;
+        constexpr static int SIZE = 35;
     public:
         MacroblockAddrInc();
 };
