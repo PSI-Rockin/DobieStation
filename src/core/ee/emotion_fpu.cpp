@@ -111,7 +111,7 @@ void EmotionInterpreter::fpu_div(Cop1 &fpu, uint32_t instruction)
 void EmotionInterpreter::fpu_sqrt(Cop1 &fpu, uint32_t instruction)
 {
     uint32_t dest = (instruction >> 6) & 0x1F;
-    uint32_t source = (instruction >> 11) & 0x1F;
+    uint32_t source = (instruction >> 16) & 0x1F;
     fpu.sqrt_s(dest, source);
 }
 

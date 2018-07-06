@@ -1330,6 +1330,8 @@ string EmotionDisasm::disasm_cop2_special(uint32_t instruction)
             return disasm_vmuli(instruction);
         case 0x20:
             return disasm_vaddq(instruction);
+        case 0x24:
+            return disasm_vsubq(instruction);
         case 0x26:
             return disasm_vsubi(instruction);
         case 0x27:
@@ -1405,6 +1407,11 @@ string EmotionDisasm::disasm_vaddq(uint32_t instruction)
     return disasm_cop2_special_q("vadd", instruction);
 }
 
+string EmotionDisasm::disasm_vsubq(uint32_t instruction)
+{
+    return disasm_cop2_special_q("vsub", instruction);
+}
+
 string EmotionDisasm::disasm_vsubi(uint32_t instruction)
 {
     return disasm_cop2_special_i("vsub", instruction);
@@ -1448,7 +1455,8 @@ string EmotionDisasm::disasm_viadd(uint32_t instruction)
 string EmotionDisasm::disasm_viaddi(uint32_t instruction)
 {
     stringstream output;
-    uint32_t imm = (instruction >> 6) & 0x3F;
+    int8_t imm = (instruction >> 6) & 0x1F;
+    imm = ((int8_t)(imm << 3)) >> 3;
     uint32_t is = (instruction >> 11) & 0x1F;
     uint32_t id = (instruction >> 16) & 0x1F;
     output << "viaddi vi" << id << ", vi" << is << ", 0x" << imm;

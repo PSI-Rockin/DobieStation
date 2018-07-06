@@ -318,7 +318,7 @@ void VectorUnit::iadd(uint8_t dest, uint8_t reg1, uint8_t reg2)
     printf("[VU] IADD: $%04X\n", int_gpr[dest]);
 }
 
-void VectorUnit::iaddi(uint8_t dest, uint8_t source, uint8_t imm)
+void VectorUnit::iaddi(uint8_t dest, uint8_t source, int8_t imm)
 {
     set_int(dest, int_gpr[source] + imm);
     printf("[VU] IADDI: $%04X\n", int_gpr[dest]);
@@ -814,7 +814,7 @@ void VectorUnit::sqi(uint8_t field, uint8_t source, uint8_t base)
 
 void VectorUnit::vu_sqrt(uint8_t ftf, uint8_t source)
 {
-    Q.f = sqrt(convert(gpr[source].u[ftf]));
+    Q.f = sqrt(fabs(convert(gpr[source].u[ftf])));
     printf("[VU] SQRT: %f\n", Q.f);
     printf("Source: %f\n", gpr[source].f[ftf]);
 }
@@ -859,6 +859,22 @@ void VectorUnit::subi(uint8_t field, uint8_t dest, uint8_t source)
         if (field & (1 << (3 - i)))
         {
             float temp = convert(gpr[source].u[i]) - op;
+            set_gpr_f(dest, i, temp);
+            printf("(%d)%f ", i, gpr[dest].f[i]);
+        }
+    }
+    printf("\n");
+}
+
+void VectorUnit::subq(uint8_t field, uint8_t dest, uint8_t source)
+{
+    printf("[VU] SUBq: ");
+    float value = convert(Q.u);
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            float temp = convert(gpr[source].u[i]) - value;
             set_gpr_f(dest, i, temp);
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
