@@ -2,8 +2,9 @@
 #define GS_HPP
 #include <cstdint>
 #include <thread>
+#include <mutex>
 #include "gscontext.hpp"
-#include "circularFIFO.h"
+#include "circularFIFO.hpp"
 
 
 //reg reg
@@ -60,10 +61,11 @@ struct GS_IMR //Interrupt masking
 };
 struct GS_CSR//sets mode on write, obtains status on read
 {
-	bool signal;
-	bool finish;
-	bool hsint, vsint;
-	bool edwint; //Rectangular Area Write Termination Interrupt Control
+	bool signal, signal_enabled;
+	bool finish, finish_enabled;
+    bool hsint, hsint_enabled;
+    bool vsint, vsint_enabled;
+	bool edwint, edwint_enabled; //Rectangular Area Write Termination Interrupt Control
 	bool flush;
 	bool reset;
 	bool nfield;
@@ -72,12 +74,57 @@ struct GS_CSR//sets mode on write, obtains status on read
 	uint8_t rev;//revision No. of the GS?
 	uint8_t id;//ID of the GS?
 	//note: there are padding bits not included in this struct
+
+    uint64_t read_64() {
+        uint64_t reg = 0;
+        reg |= finish << 1;
+        reg |= vsint << 3;
+        reg |= field << 13;
+        return reg;
+    }
+    uint32_t read_32() {
+        return (uint32_t)read_64();
+    }
+    void write_64(uint64_t value) {
+        printf("[GS] Write64 to GS_CSR: $%08X\n", value);
+        if (value & 0x2)
+        {
+            finish_enabled = true;
+            finish = false;
+        }
+        if (value & 0x8)
+        {
+            finish_enabled = true;
+            finish = false;
+        }
+    }
+    void write_32(uint32_t value) {
+        printf("[GS] Write32 to GS_CSR: $%08X\n", value);
+        if (value & 0x2)
+        {
+            finish_enabled = true;
+            finish = false;
+        }
+        if (value & 0x8)
+        {
+            finish_enabled = true;
+            finish = false;
+        }
+    }
+    void clear() {
+        finish = false;
+        finish_enabled = false;
+        vsint = false;
+        vsint_enabled = false;
+        //the other fields are not currently in use
+    }
 };
 
 class INTC;
 
-enum GS_command:uint8_t { write64, write64_privileged, write32_privileged,
-    set_rgba, set_stq, set_uv, set_xyz, set_q };
+enum GS_command:uint8_t { write64_t, write64_privileged_t, write32_privileged_t,
+    set_rgba_t, set_stq_t, set_uv_t, set_xyz_t, set_q_t, render_crt_t, set_crt_t, memdump_t, die_t
+};
 union GS_message_payload {
     struct {
         uint32_t addr;
@@ -103,6 +150,15 @@ union GS_message_payload {
     struct {
         float q;
     } q_payload;
+    struct {
+        bool interlaced;
+        int mode;
+        bool frame_mode;
+    } crt_payload;
+    struct {
+        uint32_t* target;
+        std::mutex* target_mutex;
+    } render_payload;
     struct {} no_payload;
 };
 struct GS_message {
@@ -118,10 +174,15 @@ class GraphicsSynthesizer
         INTC* intc;
         bool frame_complete;
         int frame_count;
-        uint32_t* output_buffer;
-        uint8_t* local_mem;
+        uint32_t* output_buffer1;
+        uint32_t* output_buffer2;//double buffered to prevent mutex lock
+        std::mutex output_buffer1_mutex, output_buffer2_mutex;
+        bool using_first_buffer;
+        std::unique_lock<std::mutex> current_lock;
         uint8_t CRT_mode;
 
+        //general registers that generate interrupts- used outside of GS
+        bool SIGNAL, FINISH, LABEL;
 
         //Used for unpacking PSMCT24
         uint32_t PSMCT24_color;
@@ -138,6 +199,8 @@ class GraphicsSynthesizer
         uint8_t BUSDIR;
         gs_fifo MessageQueue; //ring buffer size
         //EXTBUF, EXTDATA, EXTWRITE, BGCOLOR, SIGLBLID not currently implemented
+
+        std::thread gsthread_id;
 		
     public:
         GraphicsSynthesizer(INTC* intc);
@@ -153,12 +216,11 @@ class GraphicsSynthesizer
 
         void set_VBLANK(bool is_VBLANK);
         void assert_FINISH();
-        void dump_texture(uint32_t start_addr, uint32_t width);
 
         void set_CRT(bool interlaced, int mode, bool frame_mode);
 
-        uint32_t read32_privileged(uint32_t addr); //fails
-        uint64_t read64_privileged(uint32_t addr); //fails
+        uint32_t read32_privileged(uint32_t addr);
+        uint64_t read64_privileged(uint32_t addr);
         void write32_privileged(uint32_t addr, uint32_t value);
         void write64_privileged(uint32_t addr, uint64_t value);
         void write64(uint32_t addr, uint64_t value);

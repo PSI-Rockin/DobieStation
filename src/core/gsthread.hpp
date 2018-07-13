@@ -154,7 +154,7 @@ class GraphicsSynthesizerThread
         void start_frame();
         bool is_frame_complete();
         uint32_t* get_framebuffer();
-        void render_CRT();
+        void render_CRT(uint32_t* target);
         void get_resolution(int& w, int& h);
         void get_inner_resolution(int& w, int& h);
 
@@ -177,10 +177,10 @@ class GraphicsSynthesizerThread
         void set_XYZ(uint32_t x, uint32_t y, uint32_t z, bool drawing_kick);
 
     public:
-        GraphicsSynthesizerThread(INTC* intc);
+        GraphicsSynthesizerThread();
         ~GraphicsSynthesizerThread();
 		
-		void event_loop(gs_fifo& fifo);
+		static void event_loop(gs_fifo& fifo);
 };
 
 inline uint32_t GraphicsSynthesizerThread::get_word(uint32_t addr)

@@ -238,7 +238,7 @@ uint8_t CDVD_Drive::read_disc_type()
 
 uint8_t CDVD_Drive::read_N_status()
 {
-    printf("[CDVD] Read N_status: $%02X\n", N_status);
+    //printf("[CDVD] Read N_status: $%02X\n", N_status);
     return N_status;
 }
 

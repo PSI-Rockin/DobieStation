@@ -53,6 +53,7 @@ set(SOURCES
         src/core/emulator.cpp
         src/core/gif.cpp
         src/core/gs.cpp
+        src/core/gsthread.cpp
         src/core/gscontext.cpp
 	src/core/sif.cpp
 	src/qt/emuthread.cpp
@@ -99,6 +100,8 @@ set(HEADERS
 	src/core/emulator.hpp
         src/core/gif.hpp
         src/core/gs.hpp
+        src/core/gsthread.hpp
+        src/core/circularFIFO.hpp
 	src/core/gscontext.hpp
 	src/core/int128.hpp
 	src/core/sif.hpp
