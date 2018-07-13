@@ -73,7 +73,6 @@ class GraphicsSynthesizerThread
     private:
         bool frame_complete;
         int frame_count;
-        uint32_t* output_buffer;
         uint8_t* local_mem;
         uint8_t CRT_mode;
 
@@ -153,14 +152,13 @@ class GraphicsSynthesizerThread
         void memdump();
         void start_frame();
         bool is_frame_complete();
-        uint32_t* get_framebuffer();
         void render_CRT(uint32_t* target);
         void get_resolution(int& w, int& h);
         void get_inner_resolution(int& w, int& h);
 
         void set_VBLANK(bool is_VBLANK);
         void assert_FINISH();
-        void dump_texture(uint32_t start_addr, uint32_t width);
+        void dump_texture(uint32_t* target, uint32_t start_addr, uint32_t width);
 
         void set_CRT(bool interlaced, int mode, bool frame_mode);
 
@@ -180,7 +178,7 @@ class GraphicsSynthesizerThread
         GraphicsSynthesizerThread();
         ~GraphicsSynthesizerThread();
 		
-		static void event_loop(gs_fifo& fifo);
+		static void event_loop(gs_fifo* fifo);
 };
 
 inline uint32_t GraphicsSynthesizerThread::get_word(uint32_t addr)

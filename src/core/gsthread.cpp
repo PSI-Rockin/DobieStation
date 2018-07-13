@@ -50,7 +50,6 @@ const unsigned int GraphicsSynthesizerThread::max_vertices[8] = {1, 2, 2, 3, 3, 
 GraphicsSynthesizerThread::GraphicsSynthesizerThread()
 {
     frame_complete = false;
-    output_buffer = nullptr;
     local_mem = nullptr;
 }
 
@@ -58,16 +57,14 @@ GraphicsSynthesizerThread::~GraphicsSynthesizerThread()
 {
     if (local_mem)
         delete[] local_mem;
-    if (output_buffer)
-        delete[] output_buffer;
 }
 
-void GraphicsSynthesizerThread::event_loop(gs_fifo& fifo) {
+void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo) {
     GraphicsSynthesizerThread gs = GraphicsSynthesizerThread();
     gs.reset();
     while (true) {
         GS_message data;
-        bool available = fifo.pop(data);
+        bool available = fifo->pop(data);
         if (available) {
             switch (data.type){
             case write64_t: {
@@ -117,8 +114,14 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo& fifo) {
             }
             case render_crt_t: {
                 auto p = data.payload.render_payload;
-                std::lock_guard<std::mutex> lock(*p.target_mutex);
+                //std::lock_guard<std::mutex> lock(*p.target_mutex);
+
+                while (!p.target_mutex->try_lock()) {
+                    printf("[GS_t] buffer lock failed!");
+                    std::this_thread::yield();
+                }
                 gs.render_CRT(p.target);
+                p.target_mutex->unlock();
                 break;
             }
             case memdump_t:
@@ -138,8 +141,6 @@ void GraphicsSynthesizerThread::reset()
 {
     if (!local_mem)
         local_mem = new uint8_t[1024 * 1024 * 4];
-    if (!output_buffer)
-        output_buffer = new uint32_t[1920 * 1280];
     is_odd_frame = false;
     pixels_transferred = 0;
     num_vertices = 0;
@@ -202,11 +203,6 @@ void GraphicsSynthesizerThread::set_CRT(bool interlaced, int mode, bool frame_mo
     SMODE2.frame_mode = frame_mode;
 }
 
-uint32_t* GraphicsSynthesizerThread::get_framebuffer()
-{
-    return output_buffer;
-}
-
 void GraphicsSynthesizerThread::set_VBLANK(bool is_VBLANK)
 {
     if (is_VBLANK)
@@ -257,12 +253,12 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
             scaled_x *= DISPFB2.width;
             scaled_x /= width;
             uint32_t value = read_PSMCT32_block(DISPFB2.frame_base * 4, DISPFB2.width, scaled_x, scaled_y);
-            output_buffer[pixel_x + (pixel_y * width)] = value | 0xFF000000;
+            target[pixel_x + (pixel_y * width)] = value | 0xFF000000;
         }
     }
 }
 
-void GraphicsSynthesizerThread::dump_texture(uint32_t start_addr, uint32_t width)
+void GraphicsSynthesizerThread::dump_texture(uint32_t* target, uint32_t start_addr, uint32_t width)
 {
     uint32_t dwidth = DISPLAY2.width >> 2;
     printf("[GS_t] Dumping texture\n");
@@ -278,8 +274,8 @@ void GraphicsSynthesizerThread::dump_texture(uint32_t start_addr, uint32_t width
             uint8_t entry;
             entry = (local_mem[start_addr + (addr / 2)] >> (i * 4)) & 0xF;
             uint32_t value = (entry << 4) | (entry << 12) | (entry << 20);
-            output_buffer[x + (y * dwidth)] = value;
-            output_buffer[x + (y * dwidth)] |= 0xFF000000;
+            target[x + (y * dwidth)] = value;
+            target[x + (y * dwidth)] |= 0xFF000000;
             x++;
         }
         p += 2;

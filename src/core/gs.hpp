@@ -165,7 +165,7 @@ struct GS_message {
     GS_command type;
     GS_message_payload payload;
 };
-typedef CircularFifo<GS_message, 10000> gs_fifo;
+typedef CircularFifo<GS_message, 1024*1024> gs_fifo;
 
 
 class GraphicsSynthesizer
@@ -193,7 +193,7 @@ class GraphicsSynthesizer
         GS_CSR CSR;
         GS_IMR IMR;
         uint8_t BUSDIR;
-        gs_fifo MessageQueue; //ring buffer size
+        gs_fifo* MessageQueue; //ring buffer size
         //EXTBUF, EXTDATA, EXTWRITE, BGCOLOR, SIGLBLID not currently implemented
 
         std::thread gsthread_id;
