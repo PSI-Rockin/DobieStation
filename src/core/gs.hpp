@@ -59,67 +59,6 @@ struct GS_IMR //Interrupt masking
     bool vsync;
     bool rawt; //Rectangular Area Write Termination
 };
-struct GS_CSR//sets mode on write, obtains status on read
-{
-	bool signal, signal_enabled;
-	bool finish, finish_enabled;
-    bool hsint, hsint_enabled;
-    bool vsint, vsint_enabled;
-	bool edwint, edwint_enabled; //Rectangular Area Write Termination Interrupt Control
-	bool flush;
-	bool reset;
-	bool nfield;
-	bool field; //"field displayed currently" AKA is_odd_frame
-	bool fifo[2];//host interface FIFO status
-	uint8_t rev;//revision No. of the GS?
-	uint8_t id;//ID of the GS?
-	//note: there are padding bits not included in this struct
-
-    uint64_t read_64() {
-        uint64_t reg = 0;
-        reg |= finish << 1;
-        reg |= vsint << 3;
-        reg |= field << 13;
-        return reg;
-    }
-    uint32_t read_32() {
-        return (uint32_t)read_64();
-    }
-    void write_64(uint64_t value) {
-        printf("[GS] Write64 to GS_CSR: $%08X\n", value);
-        if (value & 0x2)
-        {
-            finish_enabled = true;
-            finish = false;
-        }
-        if (value & 0x8)
-        {
-            vsint_enabled = true;
-            vsint = false;
-        }
-    }
-    void write_32(uint32_t value) {
-        printf("[GS] Write32 to GS_CSR: $%08X\n", value);
-        if (value & 0x2)
-        {
-            finish_enabled = true;
-            finish = false;
-        }
-        if (value & 0x8)
-        {
-            vsint_enabled = true;
-            vsint = false;
-        }
-    }
-    void clear() {
-        finish = false;
-        finish_enabled = false;
-        vsint = false;
-        vsint_enabled = false;
-        field = false;
-        //the other fields are not currently in use
-    }
-};
 
 class INTC;
 
@@ -191,7 +130,13 @@ class GraphicsSynthesizer
         DISPFB DISPFB1, DISPFB2;
         DISPLAY DISPLAY1, DISPLAY2;
 
-        GS_CSR CSR;
+        //CSR/IMR stuff - to be merged into structs
+        bool VBLANK_generated;
+        bool VBLANK_enabled;
+        bool is_odd_frame;
+        bool FINISH_enabled;
+        bool FINISH_generated;
+        bool FINISH_requested;
         GS_IMR IMR;
         uint8_t BUSDIR;
         gs_fifo* MessageQueue; //ring buffer size

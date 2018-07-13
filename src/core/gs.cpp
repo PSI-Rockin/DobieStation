@@ -82,8 +82,13 @@ void GraphicsSynthesizer::reset()
         gsthread_id.join();
     }
     gsthread_id = std::thread(&GraphicsSynthesizerThread::event_loop, MessageQueue);//pass a reference to the fifo
-    CSR.clear();
-    FINISH = false;
+
+    is_odd_frame = false;
+    VBLANK_enabled = false;
+    VBLANK_generated = false;
+    FINISH_enabled = false;
+    FINISH_generated = false;
+    FINISH_requested = false;
 }
 
 void GraphicsSynthesizer::memdump()
@@ -152,18 +157,18 @@ void GraphicsSynthesizer::set_VBLANK(bool is_VBLANK)
         printf("[GS] VBLANK end\n");
         intc->assert_IRQ((int)Interrupt::VBLANK_END);
         frame_count++;
-        CSR.field = !CSR.field;
+        is_odd_frame = !is_odd_frame;
     }
-    CSR.vsint = is_VBLANK;
+    VBLANK_generated = is_VBLANK;
 }
 
 void GraphicsSynthesizer::assert_FINISH()
 {
-    if (FINISH && CSR.finish_enabled)
+    if (FINISH_requested && FINISH_enabled)
     {
-        CSR.finish = true;
-        CSR.finish_enabled = false;
-        FINISH = false;
+        FINISH_generated = true;
+        FINISH_enabled = false;
+        FINISH_requested = false;
         if (!IMR.finish)
             intc->assert_IRQ((int)Interrupt::GS);
     }
@@ -215,7 +220,7 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value) {
     {
     case 0x0061:
         printf("[GS] FINISH Write\n");
-        FINISH = true;
+        FINISH_requested = true;
         break;
     } //Should probably have SINGAL and LABEL?
 }
@@ -282,7 +287,16 @@ void GraphicsSynthesizer::write64_privileged(uint32_t addr, uint64_t value) {
         printf("MAGV: %d\n", DISPLAY2.magnify_y);
         break;
     case 0x1000:
-        CSR.write_64(value);
+        if (value & 0x2)
+        {
+            FINISH_enabled = true;
+            FINISH_generated = false;
+        }
+        if (value & 0x8)
+        {
+            VBLANK_enabled = true;
+            VBLANK_generated = false;
+        }
         break;
     case 0x1010:
         printf("[GS] Write64 GS_IMR: $%08X_%08X\n", value >> 32, value);
@@ -315,7 +329,16 @@ void GraphicsSynthesizer::write32_privileged(uint32_t addr, uint32_t value) {
         DISPFB1.format = (value >> 14) & 0x1F;
         break;
     case 0x1000:
-        CSR.write_32(value);
+        if (value & 0x2)
+        {
+            FINISH_enabled = true;
+            FINISH_generated = false;
+        }
+        if (value & 0x8)
+        {
+            VBLANK_enabled = true;
+            VBLANK_generated = false;
+        }
         break;
     case 0x1010:
         printf("[GS] Write32 GS_IMR: $%08X\n", value);
@@ -333,13 +356,17 @@ void GraphicsSynthesizer::write32_privileged(uint32_t addr, uint32_t value) {
 //reads from local copies only
 uint32_t GraphicsSynthesizer::read32_privileged(uint32_t addr)
 {
-    printf("[GS] read32_privileged!\n");
     addr &= 0xFFFF;
     switch (addr)
     {
     case 0x1000:
     {
-        return CSR.read_32();
+        uint32_t reg = 0;
+        reg |= FINISH_generated << 1;
+        reg |= VBLANK_generated << 3;
+        reg |= is_odd_frame << 13;
+        printf("[GS] read32_privileged!: CSR = %04X\n", reg);
+        return reg;
     }
     default:
         printf("[GS] Unrecognized privileged read32 from $%04X\n", addr);
@@ -349,13 +376,17 @@ uint32_t GraphicsSynthesizer::read32_privileged(uint32_t addr)
 
 uint64_t GraphicsSynthesizer::read64_privileged(uint32_t addr)
 {
-    printf("[GS] read64_privileged!\n");
     addr &= 0xFFFF;
     switch (addr)
     {
     case 0x1000:
     {
-        return CSR.read_64();
+        uint64_t reg = 0;
+        reg |= FINISH_generated << 1;
+        reg |= VBLANK_generated << 3;
+        reg |= is_odd_frame << 13;
+        printf("[GS] read64_privileged!: CSR = %08X\n", reg);
+        return reg;
     }
     default:
         printf("[GS] Unrecognized privileged read64 from $%04X\n", addr);
