@@ -165,7 +165,7 @@ struct GS_message {
     GS_command type;
     GS_message_payload payload;
 };
-typedef CircularFifo<GS_message, 1024*1024> gs_fifo;
+typedef CircularFifo<GS_message, 1024*1024*16> gs_fifo;
 
 
 class GraphicsSynthesizer
