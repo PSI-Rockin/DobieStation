@@ -83,6 +83,7 @@ void GraphicsSynthesizer::reset()
     }
     gsthread_id = std::thread(&GraphicsSynthesizerThread::event_loop, MessageQueue);//pass a reference to the fifo
     CSR.clear();
+    FINISH = false;
 }
 
 void GraphicsSynthesizer::memdump()

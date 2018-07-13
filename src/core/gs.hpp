@@ -116,6 +116,7 @@ struct GS_CSR//sets mode on write, obtains status on read
         finish_enabled = false;
         vsint = false;
         vsint_enabled = false;
+        field = false;
         //the other fields are not currently in use
     }
 };
