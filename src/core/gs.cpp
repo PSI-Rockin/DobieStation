@@ -68,8 +68,6 @@ void GraphicsSynthesizer::reset()
     IMR.hsync = true;
     IMR.vsync = true;
     IMR.rawt = true;
-    PSMCT24_color = 0;
-    PSMCT24_unpacked_count = 0;
     set_CRT(false, 0x2, false);
     if (gsthread_id.joinable())
     {
@@ -311,6 +309,7 @@ void GraphicsSynthesizer::write32_privileged(uint32_t addr, uint32_t value) {
         DISPFB1.format = (value >> 14) & 0x1F;
         break;
     case 0x1000:
+        CSR.write_32(value);
         break;
     case 0x1010:
         printf("[GS] Write32 GS_IMR: $%08X\n", value);

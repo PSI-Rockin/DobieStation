@@ -184,10 +184,6 @@ class GraphicsSynthesizer
         //general registers that generate interrupts- used outside of GS
         bool SIGNAL, FINISH, LABEL;
 
-        //Used for unpacking PSMCT24
-        uint32_t PSMCT24_color;
-        int PSMCT24_unpacked_count;
-
         //Privileged registers
         PMODE_REG PMODE;
         SMODE SMODE2;
