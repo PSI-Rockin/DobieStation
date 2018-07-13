@@ -94,8 +94,8 @@ struct GS_CSR//sets mode on write, obtains status on read
         }
         if (value & 0x8)
         {
-            finish_enabled = true;
-            finish = false;
+            vsint_enabled = true;
+            vsint = false;
         }
     }
     void write_32(uint32_t value) {
@@ -107,8 +107,8 @@ struct GS_CSR//sets mode on write, obtains status on read
         }
         if (value & 0x8)
         {
-            finish_enabled = true;
-            finish = false;
+            vsint_enabled = true;
+            vsint = false;
         }
     }
     void clear() {

@@ -44,7 +44,7 @@ bool CircularFifo<Element, Size>::push(const Element& item)
         _tail.store(next_tail);
         return true;
     }
-
+    printf("[GS] ERROR: Queue full!");
     return false;  // full queue
 }
 
