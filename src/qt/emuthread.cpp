@@ -65,6 +65,7 @@ void EmuThread::run()
             int w, h, new_w, new_h;
             e.get_inner_resolution(w, h);
             e.get_resolution(new_w, new_h);
+            uint32_t* frame = e.get_framebuffer();
             emit completed_frame(e.get_framebuffer(), w, h, new_w, new_h);
 
             //Update FPS

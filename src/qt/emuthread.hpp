@@ -20,6 +20,7 @@ class EmuThread : public QThread
     private:
         bool abort;
         uint32_t pause_status;
+        uint32_t* frame_buffer;
         QMutex emu_mutex, load_mutex, pause_mutex;
         Emulator e;
 
