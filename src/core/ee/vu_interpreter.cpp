@@ -1,0 +1,781 @@
+#include <cstdio>
+#include <cstdlib>
+#include "vu_interpreter.hpp"
+
+void VU_Interpreter::interpret(VectorUnit &vu, uint32_t upper_instr, uint32_t lower_instr)
+{
+    //LOI
+    if (upper_instr & (1 << 31))
+        vu.set_I(lower_instr);
+    else
+        lower(vu, lower_instr);
+
+    upper(vu, upper_instr);
+
+    if (upper_instr & (1 << 30))
+        vu.end_execution();
+}
+
+void VU_Interpreter::upper(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t op = instr & 0x3F;
+    switch (op)
+    {
+        case 0x08:
+        case 0x09:
+        case 0x0A:
+        case 0x0B:
+            maddbc(vu, instr);
+            break;
+        case 0x10:
+        case 0x11:
+        case 0x12:
+        case 0x13:
+            maxbc(vu, instr);
+            break;
+        case 0x18:
+        case 0x19:
+        case 0x1A:
+        case 0x1B:
+            mulbc(vu, instr);
+            break;
+        case 0x1C:
+            mulq(vu, instr);
+            break;
+        case 0x1F:
+            minii(vu, instr);
+            break;
+        case 0x22:
+            addi(vu, instr);
+            break;
+        case 0x28:
+            add(vu, instr);
+            break;
+        case 0x29:
+            madd(vu, instr);
+            break;
+        case 0x2A:
+            mul(vu, instr);
+            break;
+        case 0x2C:
+            sub(vu, instr);
+            break;
+        case 0x2E:
+            opmsub(vu, instr);
+            break;
+        case 0x3C:
+        case 0x3D:
+        case 0x3E:
+        case 0x3F:
+            upper_special(vu, instr);
+            break;
+        default:
+            unknown_op("upper", instr, op);
+    }
+}
+
+void VU_Interpreter::maddbc(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t bc = instr & 0x3;
+    uint8_t dest = (instr >> 6) & 0x1F;
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t bc_reg = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.maddbc(bc, field, dest, source, bc_reg);
+}
+
+void VU_Interpreter::maxbc(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t bc = instr & 0x3;
+    uint8_t dest = (instr >> 6) & 0x1F;
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t bc_reg = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.maxbc(bc, field, dest, source, bc_reg);
+}
+
+void VU_Interpreter::mulbc(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t bc = instr & 0x3;
+    uint8_t dest = (instr >> 6) & 0x1F;
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t bc_reg = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.mulbc(bc, field, dest, source, bc_reg);
+}
+
+void VU_Interpreter::mulq(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t dest = (instr >> 6) & 0x1F;
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.mulq(field, dest, source);
+}
+
+void VU_Interpreter::minii(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t dest = (instr >> 6) & 0x1F;
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.minii(field, dest, source);
+}
+
+void VU_Interpreter::addi(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t dest = (instr >> 6) & 0x1F;
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.addi(field, dest, source);
+}
+
+void VU_Interpreter::add(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t dest = (instr >> 6) & 0x1F;
+    uint8_t reg1 = (instr >> 11) & 0x1F;
+    uint8_t reg2 = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.add(field, dest, reg1, reg2);
+}
+
+void VU_Interpreter::madd(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t dest = (instr >> 6) & 0x1F;
+    uint8_t reg1 = (instr >> 11) & 0x1F;
+    uint8_t reg2 = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.madd(field, dest, reg1, reg2);
+}
+
+void VU_Interpreter::mul(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t dest = (instr >> 6) & 0x1F;
+    uint8_t reg1 = (instr >> 11) & 0x1F;
+    uint8_t reg2 = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.mul(field, dest, reg1, reg2);
+}
+
+void VU_Interpreter::sub(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t dest = (instr >> 6) & 0x1F;
+    uint8_t reg1 = (instr >> 11) & 0x1F;
+    uint8_t reg2 = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.sub(field, dest, reg1, reg2);
+}
+
+void VU_Interpreter::opmsub(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t dest = (instr >> 6) & 0x1F;
+    uint8_t reg1 = (instr >> 11) & 0x1F;
+    uint8_t reg2 = (instr >> 16) & 0x1F;
+    vu.opmsub(dest, reg1, reg2);
+}
+
+void VU_Interpreter::upper_special(VectorUnit &vu, uint32_t instr)
+{
+    uint16_t op = (instr & 0x3) | ((instr >> 4) & 0x7C);
+    switch (op)
+    {
+        case 0x08:
+        case 0x09:
+        case 0x0A:
+        case 0x0B:
+            maddabc(vu, instr);
+            break;
+        case 0x10:
+            itof0(vu, instr);
+            break;
+        case 0x11:
+            itof4(vu, instr);
+            break;
+        case 0x12:
+            itof12(vu, instr);
+            break;
+        case 0x14:
+            ftoi0(vu, instr);
+            break;
+        case 0x15:
+            ftoi4(vu, instr);
+            break;
+        case 0x16:
+            ftoi12(vu, instr);
+            break;
+        case 0x17:
+            ftoi15(vu, instr);
+            break;
+        case 0x18:
+        case 0x19:
+        case 0x1A:
+        case 0x1B:
+            mulabc(vu, instr);
+            break;
+        case 0x1F:
+            clip(vu, instr);
+            break;
+        case 0x2E:
+            opmula(vu, instr);
+            break;
+        case 0x2F:
+            /**
+              * NOP
+              */
+            break;
+        default:
+            unknown_op("upper special", instr, op);
+    }
+}
+
+void VU_Interpreter::maddabc(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t bc = instr & 0x3;
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t bc_reg = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.maddabc(bc, field, source, bc_reg);
+}
+
+void VU_Interpreter::itof0(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t dest = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.itof0(field, dest, source);
+}
+
+void VU_Interpreter::itof4(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t dest = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.itof4(field, dest, source);
+}
+
+void VU_Interpreter::itof12(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t dest = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.itof12(field, dest, source);
+}
+
+void VU_Interpreter::ftoi0(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t dest = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.ftoi0(field, dest, source);
+}
+
+void VU_Interpreter::ftoi4(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t dest = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.ftoi4(field, dest, source);
+}
+
+void VU_Interpreter::ftoi12(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t dest = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.ftoi12(field, dest, source);
+}
+
+void VU_Interpreter::ftoi15(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t dest = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.ftoi15(field, dest, source);
+}
+
+void VU_Interpreter::mulabc(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t bc = instr & 0x3;
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t bc_reg = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.mulabc(bc, field, source, bc_reg);
+}
+
+void VU_Interpreter::clip(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t reg1 = (instr >> 11) & 0x1F;
+    uint8_t reg2 = (instr >> 16) & 0x1F;
+    vu.clip(reg1, reg2);
+}
+
+void VU_Interpreter::opmula(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t reg1 = (instr >> 11) & 0x1F;
+    uint8_t reg2 = (instr >> 16) & 0x1F;
+    vu.opmula(reg1, reg2);
+}
+
+void VU_Interpreter::lower(VectorUnit &vu, uint32_t instr)
+{
+    if (instr & (1 << 31))
+        lower1(vu, instr);
+    else
+        lower2(vu, instr);
+}
+
+void VU_Interpreter::lower1(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t op = instr & 0x3F;
+    switch (op)
+    {
+        case 0x30:
+            iadd(vu, instr);
+            break;
+        case 0x31:
+            isub(vu, instr);
+            break;
+        case 0x32:
+            iaddi(vu, instr);
+            break;
+        case 0x34:
+            iand(vu, instr);
+            break;
+        case 0x35:
+            ior(vu, instr);
+            break;
+        case 0x3C:
+        case 0x3D:
+        case 0x3E:
+        case 0x3F:
+            lower1_special(vu, instr);
+            break;
+        default:
+            unknown_op("lower1", instr, op);
+    }
+}
+
+void VU_Interpreter::iadd(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t dest = (instr >> 6) & 0x1F;
+    uint8_t reg1 = (instr >> 11) & 0x1F;
+    uint8_t reg2 = (instr >> 16) & 0x1F;
+    vu.iadd(dest, reg1, reg2);
+}
+
+void VU_Interpreter::isub(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t dest = (instr >> 6) & 0x1F;
+    uint8_t reg1 = (instr >> 11) & 0x1F;
+    uint8_t reg2 = (instr >> 16) & 0x1F;
+    vu.isub(dest, reg1, reg2);
+}
+
+void VU_Interpreter::iaddi(VectorUnit &vu, uint32_t instr)
+{
+    int8_t imm = (instr >> 6) & 0x1F;
+    imm = ((int8_t)(imm << 3)) >> 3;
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t dest = (instr >> 16) & 0x1F;
+
+    vu.iaddi(dest, source, imm);
+}
+
+void VU_Interpreter::iand(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t dest = (instr >> 6) & 0x1F;
+    uint8_t reg1 = (instr >> 11) & 0x1F;
+    uint8_t reg2 = (instr >> 16) & 0x1F;
+    vu.iand(dest, reg1, reg2);
+}
+
+void VU_Interpreter::ior(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t dest = (instr >> 6) & 0x1F;
+    uint8_t reg1 = (instr >> 11) & 0x1F;
+    uint8_t reg2 = (instr >> 16) & 0x1F;
+    vu.ior(dest, reg1, reg2);
+}
+
+void VU_Interpreter::lower1_special(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t op = (instr & 0x3) | ((instr >> 4) & 0x7C);
+    switch (op)
+    {
+        case 0x30:
+            move(vu, instr);
+            break;
+        case 0x34:
+            lqi(vu, instr);
+            break;
+        case 0x35:
+            sqi(vu, instr);
+            break;
+        case 0x38:
+            div(vu, instr);
+            break;
+        case 0x3B:
+            /**
+              * WAITQ
+              */
+            break;
+        case 0x3C:
+            mtir(vu, instr);
+            break;
+        case 0x3D:
+            mfir(vu, instr);
+            break;
+        case 0x3E:
+            ilwr(vu, instr);
+            break;
+        case 0x64:
+            mfp(vu, instr);
+            break;
+        case 0x68:
+            xtop(vu, instr);
+            break;
+        case 0x6C:
+            xgkick(vu, instr);
+            break;
+        case 0x72:
+            eleng(vu, instr);
+            break;
+        case 0x78:
+            esqrt(vu, instr);
+            break;
+        case 0x7B:
+            /**
+              * WAITP
+              */
+            break;
+        default:
+            unknown_op("lower1 special", instr, op);
+    }
+}
+
+void VU_Interpreter::move(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t dest = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.move(field, dest, source);
+}
+
+void VU_Interpreter::lqi(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t is = (instr >> 11) & 0x1F;
+    uint8_t ft = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.lqi(field, ft, is);
+}
+
+void VU_Interpreter::sqi(VectorUnit& vu, uint32_t instr)
+{
+    uint32_t fs = (instr >> 11) & 0x1F;
+    uint32_t it = (instr >> 16) & 0x1F;
+    uint8_t dest_field = (instr >> 21) & 0xF;
+    vu.sqi(dest_field, fs, it);
+}
+
+void VU_Interpreter::div(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t reg1 = (instr >> 11) & 0x1F;
+    uint8_t reg2 = (instr >> 16) & 0x1F;
+    uint8_t fsf = (instr >> 21) & 0x3;
+    uint8_t ftf = (instr >> 23) & 0x3;
+    vu.div(ftf, fsf, reg1, reg2);
+}
+
+void VU_Interpreter::mtir(VectorUnit &vu, uint32_t instr)
+{
+    uint32_t fs = (instr >> 11) & 0x1F;
+    uint32_t it = (instr >> 16) & 0x1F;
+    uint8_t fsf = (instr >> 21) & 0x3;
+    vu.mtir(fsf, it, fs);
+}
+
+void VU_Interpreter::mfir(VectorUnit &vu, uint32_t instr)
+{
+    uint32_t is = (instr >> 11) & 0x1F;
+    uint32_t ft = (instr >> 16) & 0x1F;
+    uint8_t dest_field = (instr >> 21) & 0xF;
+    vu.mfir(dest_field, ft, is);
+}
+
+void VU_Interpreter::ilwr(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t is = (instr >> 11) & 0x1F;
+    uint8_t it = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.ilwr(field, it, is);
+}
+
+void VU_Interpreter::mfp(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t dest = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.mfp(field, dest);
+}
+
+void VU_Interpreter::xtop(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t it = (instr >> 16) & 0x1F;
+    vu.xtop(it);
+}
+
+void VU_Interpreter::xgkick(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t is = (instr >> 11) & 0x1F;
+    vu.xgkick(is);
+}
+
+void VU_Interpreter::eleng(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t source = (instr >> 11) & 0x1F;
+    vu.eleng(source);
+}
+
+void VU_Interpreter::esqrt(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t fsf = (instr >> 21) & 0x3;
+    vu.esqrt(fsf, source);
+}
+
+void VU_Interpreter::lower2(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t op = (instr >> 25) & 0x7F;
+    switch (op)
+    {
+        case 0x00:
+            lq(vu, instr);
+            break;
+        case 0x01:
+            sq(vu, instr);
+            break;
+        case 0x04:
+            ilw(vu, instr);
+            break;
+        case 0x05:
+            isw(vu, instr);
+            break;
+        case 0x08:
+            iaddiu(vu, instr);
+            break;
+        case 0x09:
+            isubiu(vu, instr);
+            break;
+        case 0x11:
+            fcset(vu, instr);
+            break;
+        case 0x12:
+            fcand(vu, instr);
+            break;
+        case 0x1A:
+            fmand(vu, instr);
+            break;
+        case 0x20:
+            b(vu, instr);
+            break;
+        case 0x21:
+            bal(vu, instr);
+            break;
+        case 0x24:
+            jr(vu, instr);
+            break;
+        case 0x28:
+            ibeq(vu, instr);
+            break;
+        case 0x29:
+            ibne(vu, instr);
+            break;
+        case 0x2C:
+            ibltz(vu, instr);
+            break;
+        case 0x2D:
+            ibgtz(vu, instr);
+            break;
+        case 0x2E:
+            iblez(vu, instr);
+            break;
+        case 0x2F:
+            ibgez(vu, instr);
+            break;
+        default:
+            unknown_op("lower2", instr, op);
+    }
+}
+
+void VU_Interpreter::lq(VectorUnit &vu, uint32_t instr)
+{
+    int32_t imm = instr & 0x7FF;
+    imm = ((int16_t)(imm << 5)) >> 5;
+    imm *= 16;
+    uint8_t is = (instr >> 11) & 0x1F;
+    uint8_t ft = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.lq(field, ft, is, imm);
+}
+
+void VU_Interpreter::sq(VectorUnit &vu, uint32_t instr)
+{
+    int32_t imm = instr & 0x7FF;
+    imm = ((int16_t)(imm << 5)) >> 5;
+    imm *= 16;
+    uint8_t fs = (instr >> 11) & 0x1F;
+    uint8_t it = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.sq(field, fs, it, imm);
+}
+
+void VU_Interpreter::ilw(VectorUnit &vu, uint32_t instr)
+{
+    int32_t imm = instr & 0x7FF;
+    imm = ((int16_t)(imm << 5)) >> 5;
+    imm *= 16;
+    uint8_t is = (instr >> 11) & 0x1F;
+    uint8_t it = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.ilw(field, it, is, imm);
+}
+
+void VU_Interpreter::isw(VectorUnit &vu, uint32_t instr)
+{
+    int32_t imm = instr & 0x7FF;
+    imm = ((int16_t)(imm << 5)) >> 5;
+    imm *= 16;
+    uint8_t is = (instr >> 11) & 0x1F;
+    uint8_t it = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.isw(field, it, is, imm);
+}
+
+void VU_Interpreter::iaddiu(VectorUnit &vu, uint32_t instr)
+{
+    uint16_t imm = instr & 0x7FF;
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t dest = (instr >> 16) & 0x1F;
+    vu.iaddiu(dest, source, imm);
+}
+
+void VU_Interpreter::isubiu(VectorUnit &vu, uint32_t instr)
+{
+    uint16_t imm = instr & 0x7FF;
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t dest = (instr >> 16) & 0x1F;
+    vu.isubiu(dest, source, imm);
+}
+
+void VU_Interpreter::fcset(VectorUnit &vu, uint32_t instr)
+{
+    vu.fcset(instr & 0xFFFFFF);
+}
+
+void VU_Interpreter::fcand(VectorUnit &vu, uint32_t instr)
+{
+    vu.fcand(instr & 0xFFFFFF);
+}
+
+void VU_Interpreter::fmand(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t is = (instr >> 11) & 0x1F;
+    uint8_t it = (instr >> 16) & 0x1F;
+    vu.fmand(it, is);
+}
+
+void VU_Interpreter::b(VectorUnit &vu, uint32_t instr)
+{
+    int32_t imm = instr & 0x7FF;
+    imm = ((int16_t)(imm << 5)) >> 5;
+    imm *= 8;
+    vu.branch(true, imm);
+}
+
+void VU_Interpreter::bal(VectorUnit &vu, uint32_t instr)
+{
+    int32_t imm = instr & 0x7FF;
+    imm = ((int16_t)(imm << 5)) >> 5;
+    imm *= 8;
+
+    uint8_t link_reg = (instr >> 16) & 0x1F;
+    vu.set_int(link_reg, vu.get_PC() + 16);
+    vu.branch(true, imm);
+}
+
+void VU_Interpreter::jr(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t addr_reg = (instr >> 11) & 0x1F;
+    uint16_t addr = vu.get_int(addr_reg);
+    vu.jp(addr);
+}
+
+void VU_Interpreter::ibeq(VectorUnit &vu, uint32_t instr)
+{
+    int32_t imm = instr & 0x7FF;
+    imm = ((int16_t)(imm << 5)) >> 5;
+    imm *= 8;
+
+    uint16_t is = (instr >> 11) & 0x1F;
+    uint16_t it = (instr >> 16) & 0x1F;
+    is = vu.get_int(is);
+    it = vu.get_int(it);
+    printf("is: %d it: %d\n", is, it);
+    vu.branch(is == it, imm);
+}
+
+void VU_Interpreter::ibne(VectorUnit &vu, uint32_t instr)
+{
+    int32_t imm = instr & 0x7FF;
+    imm = ((int16_t)(imm << 5)) >> 5;
+    imm *= 8;
+
+    uint16_t is = (instr >> 11) & 0x1F;
+    uint16_t it = (instr >> 16) & 0x1F;
+    is = vu.get_int(is);
+    it = vu.get_int(it);
+    vu.branch(is != it, imm);
+}
+
+void VU_Interpreter::ibltz(VectorUnit &vu, uint32_t instr)
+{
+    int32_t imm = instr & 0x7FF;
+    imm = ((int16_t)(imm << 5)) >> 5;
+    imm *= 8;
+
+    int16_t reg = (int16_t)vu.get_int((instr >> 11) & 0x1F);
+    vu.branch(reg < 0, imm);
+}
+
+void VU_Interpreter::ibgtz(VectorUnit &vu, uint32_t instr)
+{
+    int32_t imm = instr & 0x7FF;
+    imm = ((int16_t)(imm << 5)) >> 5;
+    imm *= 8;
+
+    int16_t reg = (int16_t)vu.get_int((instr >> 11) & 0x1F);
+    vu.branch(reg > 0, imm);
+}
+
+void VU_Interpreter::iblez(VectorUnit &vu, uint32_t instr)
+{
+    int32_t imm = instr & 0x7FF;
+    imm = ((int16_t)(imm << 5)) >> 5;
+    imm *= 8;
+
+    int16_t reg = (int16_t)vu.get_int((instr >> 11) & 0x1F);
+    vu.branch(reg <= 0, imm);
+}
+
+void VU_Interpreter::ibgez(VectorUnit &vu, uint32_t instr)
+{
+    int32_t imm = instr & 0x7FF;
+    imm = ((int16_t)(imm << 5)) >> 5;
+    imm *= 8;
+
+    int16_t reg = (int16_t)vu.get_int((instr >> 11) & 0x1F);
+    vu.branch(reg >= 0, imm);
+}
+
+void VU_Interpreter::unknown_op(const char *type, uint32_t instruction, uint16_t op)
+{
+    printf("[VU_Interpreter] Unknown %s op $%02X: $%08X\n", type, op, instruction);
+    exit(1);
+}

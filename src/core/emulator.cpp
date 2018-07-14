@@ -53,6 +53,7 @@ void Emulator::run()
         ipu.run();
         vif0.update();
         vif1.update();
+        vu1.run(cycles);
         cycles >>= 2;
         for (int i = 0; i < cycles; i++)
         {
@@ -71,19 +72,14 @@ void Emulator::run()
         {
             VBLANK_sent = true;
             gs.set_VBLANK(true);
+            //cpu.set_disassembly(frames == 53);
             printf("VSYNC FRAMES: %d\n", frames);
-            //cpu.set_disassembly(frames == 105);
-            //iop.set_disassembly(frames == 80);
-            //iop.set_disassembly(frames == 95);
             frames++;
             iop_request_IRQ(0);
             gs.render_CRT();
         }
     }
-    //iop.set_disassembly(frames >= 69);
-    //iop.set_disassembly(frames == 53);
     //VBLANK end
-    //cpu.set_disassembly(frames == 170);
     iop_request_IRQ(11);
     gs.set_VBLANK(false);
 }
@@ -388,6 +384,8 @@ uint32_t Emulator::read32(uint32_t address)
             return ipu.read_control();
         case 0x10002020:
             return ipu.read_BP();
+        case 0x10003020:
+            return gif.read_STAT();
         case 0x1000F000:
             //printf("\nRead32 INTC_STAT: $%08X", intc.read_stat());
             if (!VBLANK_sent)
@@ -449,7 +447,6 @@ uint32_t Emulator::read32(uint32_t address)
             return dmac.read_master_disable();
     }
     printf("Unrecognized read32 at physical addr $%08X\n", address);
-
     return 0;
 }
 
@@ -490,6 +487,8 @@ uint128_t Emulator::read128(uint32_t address)
 
 void Emulator::write8(uint32_t address, uint8_t value)
 {
+    if (address == 0x00489A10)
+        printf("[EE] Write8 $%08X: $%02X\n", address, value);
     if (address < 0x10000000)
     {
         RDRAM[address & 0x01FFFFFF] = value;
@@ -523,6 +522,8 @@ void Emulator::write8(uint32_t address, uint8_t value)
 
 void Emulator::write16(uint32_t address, uint16_t value)
 {
+    if (address == 0x00489A10)
+        printf("[EE] Write16 $%08X: $%04X\n", address, value);
     if (address < 0x10000000)
     {
         *(uint16_t*)&RDRAM[address & 0x01FFFFFF] = value;
@@ -548,6 +549,8 @@ void Emulator::write16(uint32_t address, uint16_t value)
 
 void Emulator::write32(uint32_t address, uint32_t value)
 {
+    if (address == 0x00489A10)
+        printf("[EE] Write32 $%08X: $%08X\n", address, value);
     if (address < 0x10000000)
     {
         *(uint32_t*)&RDRAM[address & 0x01FFFFFF] = value;
@@ -638,6 +641,8 @@ void Emulator::write32(uint32_t address, uint32_t value)
 
 void Emulator::write64(uint32_t address, uint64_t value)
 {
+    if (address == 0x00489A10)
+        printf("[EE] Write64 $%08X: $%08X_%08X\n", address, value >> 32, value);
     if (address < 0x10000000)
     {
         *(uint64_t*)&RDRAM[address & 0x01FFFFFF] = value;
@@ -674,9 +679,32 @@ void Emulator::write64(uint32_t address, uint64_t value)
 
 void Emulator::write128(uint32_t address, uint128_t value)
 {
+    if (address == 0x00489A10)
+        printf("[EE] Write128 $%08X: $%08X_%08X_%08X_%08X\n", address,
+               value._u32[3], value._u32[2], value._u32[1], value._u32[0]);
     if (address < 0x10000000)
     {
         *(uint128_t*)&RDRAM[address & 0x01FFFFFF] = value;
+        return;
+    }
+    if (address >= 0x11000000 && address < 0x11010000)
+    {
+        if (address < 0x11004000)
+        {
+            vu0.write_instr<uint128_t>(address & 0xFFF, value);
+            return;
+        }
+        if (address < 0x11008000)
+        {
+            vu0.write_data<uint128_t>(address & 0xFFF, value);
+            return;
+        }
+        if (address < 0x1100C000)
+        {
+            vu1.write_instr<uint128_t>(address, value);
+            return;
+        }
+        vu1.write_data<uint128_t>(address, value);
         return;
     }
     switch (address)

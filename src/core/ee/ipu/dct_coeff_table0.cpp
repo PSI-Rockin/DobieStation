@@ -162,7 +162,7 @@ VLC_Entry DCT_Coeff_Table0::table[] =
     {0x15, 106, 16},
     {0x1F, 107, 16},
 
-    //102
+    //112
     {0x1E, 108, 16},
     {0x1D, 109, 16},
     {0x1C, 110, 16},
@@ -371,7 +371,7 @@ bool DCT_Coeff_Table0::get_runlevel_pair(IPU_FIFO &FIFO, RunLevelPair &pair, boo
 
         pair.run = cur_pair.run;
         if (sign)
-            pair.level = -cur_pair.level;
+            pair.level = 0 - cur_pair.level;
         else
             pair.level = cur_pair.level;
     }

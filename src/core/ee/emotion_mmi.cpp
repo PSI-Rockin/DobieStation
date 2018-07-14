@@ -1256,13 +1256,12 @@ void EmotionInterpreter::qfsrv(EmotionEngine &cpu, uint32_t instruction)
     uint128_t rs = cpu.get_gpr<uint128_t>(reg1);
     uint128_t rt = cpu.get_gpr<uint128_t>(reg2);
 
-    int shift = cpu.get_SA();
+    int shift = cpu.get_SA() * 8;
     uint128_t dest_value;
     if (!shift)
         dest_value = rt;
     else
     {
-        uint128_t dest_value;
         if (shift < 64)
         {
             dest_value._u64[0] = rt._u64[0] >> shift;
@@ -1274,10 +1273,10 @@ void EmotionInterpreter::qfsrv(EmotionEngine &cpu, uint32_t instruction)
         {
             dest_value._u64[0] = rt._u64[1] >> (shift - 64);
             dest_value._u64[1] = rs._u64[0] >> (shift - 64);
-            if (shift > 64)
+            if (shift != 64)
             {
                 dest_value._u64[0] |= rs._u64[0] << (128u - shift);
-                dest_value._u64[1] |= rt._u64[1] << (128u - shift);
+                dest_value._u64[1] |= rs._u64[1] << (128u - shift);
             }
         }
     }

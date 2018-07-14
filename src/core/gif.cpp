@@ -11,6 +11,27 @@ void GraphicsInterface::reset()
 {
     processing_GIF_prim = false;
     current_tag.data_left = 0;
+    active_paths = 0;
+}
+
+uint32_t GraphicsInterface::read_STAT()
+{
+    uint32_t reg = 0;
+
+    //OPH
+    if (active_paths)
+    {
+        reg |= 1 << 9;
+        int path = 0;
+        if (active_paths & (1 << 1))
+            path = 1;
+        else if (active_paths & (1 << 2))
+            path = 2;
+        else if (active_paths & (1 << 3))
+            path = 3;
+        reg |= path << 10;
+    }
+    return reg;
 }
 
 void GraphicsInterface::process_PACKED(uint128_t data)
@@ -123,8 +144,6 @@ void GraphicsInterface::feed_GIF(uint128_t data)
     uint64_t data2 = data._u64[1];
     if (!current_tag.data_left)
     {
-        if (current_tag.end_of_packet)
-            gs->assert_FINISH();
         //Read new GIFtag
         processing_GIF_prim = true;
         current_tag.NLOOP = data1 & 0x7FFF;
@@ -142,13 +161,17 @@ void GraphicsInterface::feed_GIF(uint128_t data)
         //Q is initialized to 1.0 upon reading a GIFtag
         gs->set_Q(1.0f);
 
-        printf("[GIF] New primitive!\n");
-        printf("NLOOP: $%04X\n", current_tag.NLOOP);
-        printf("EOP: %d\n", current_tag.end_of_packet);
-        printf("Output PRIM: %d PRIM: $%04X\n", current_tag.output_PRIM, current_tag.PRIM);
-        printf("Format: %d\n", current_tag.format);
-        printf("Reg count: %d\n", current_tag.reg_count);
-        printf("Regs: $%08X_$%08X\n", current_tag.regs >> 32, current_tag.regs & 0xFFFFFFFF);
+        //Ignore zeroed out packets
+        if (data1)
+        {
+            printf("[GIF] New primitive!\n");
+            printf("NLOOP: $%04X\n", current_tag.NLOOP);
+            printf("EOP: %d\n", current_tag.end_of_packet);
+            printf("Output PRIM: %d PRIM: $%04X\n", current_tag.output_PRIM, current_tag.PRIM);
+            printf("Format: %d\n", current_tag.format);
+            printf("Reg count: %d\n", current_tag.reg_count);
+            printf("Regs: $%08X_$%08X\n", current_tag.regs >> 32, current_tag.regs & 0xFFFFFFFF);
+        }
 
         if (current_tag.output_PRIM && current_tag.format != 1)
             gs->write64(0, current_tag.PRIM);
@@ -184,8 +207,34 @@ void GraphicsInterface::feed_GIF(uint128_t data)
                 printf("[GS] Unrecognized GIFtag format %d\n", current_tag.format);
                 break;
         }
-
+        if (!current_tag.data_left && current_tag.end_of_packet)
+            gs->assert_FINISH();
     }
+}
+
+void GraphicsInterface::activate_PATH(int index)
+{
+    active_paths |= 1 << index;
+}
+
+void GraphicsInterface::deactivate_PATH(int index)
+{
+    active_paths &= ~(1 << index);
+}
+
+bool GraphicsInterface::send_PATH(int index, uint128_t quad)
+{
+    if (active_paths & (1 * (1 << (index - 1)) - 1))
+        return false;
+    feed_GIF(quad);
+    return true;
+}
+
+//Returns true if an EOP transfer has ended - this terminates the XGKICK command
+bool GraphicsInterface::send_PATH1(uint128_t quad)
+{
+    feed_GIF(quad);
+    return !current_tag.data_left && current_tag.end_of_packet;
 }
 
 void GraphicsInterface::send_PATH2(uint32_t data[])

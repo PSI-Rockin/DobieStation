@@ -89,6 +89,8 @@ void IOP_DMA::run()
                     process_SIO2out();
                     break;
             }
+            //TODO: It's likely only one DMA can run at a time. Is this actually the case?
+            //break;
         }
     }
 }

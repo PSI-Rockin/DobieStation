@@ -74,7 +74,7 @@ void Cop1::cvt_s_w(int dest, int source)
 {
     gpr[dest].f = (float)gpr[source].s;
     gpr[dest].f = convert(gpr[dest].u);
-    printf("[FPU] CVT_S_W: %f\n", gpr[dest].f);
+    printf("[FPU] CVT_S_W: %f(%d)\n", gpr[dest].f, dest);
 }
 
 void Cop1::cvt_w_s(int dest, int source)
@@ -85,7 +85,7 @@ void Cop1::cvt_w_s(int dest, int source)
         gpr[dest].u = 0x7FFFFFFF;
     else
         gpr[dest].u = 0x80000000;
-    printf("[FPU] CVT_W_S: $%08X\n", gpr[dest].u);
+    printf("[FPU] CVT_W_S: $%08X(%d)\n", gpr[dest].u, dest);
 }
 
 void Cop1::add_s(int dest, int reg1, int reg2)
@@ -93,7 +93,7 @@ void Cop1::add_s(int dest, int reg1, int reg2)
     float op1 = convert(gpr[reg1].u);
     float op2 = convert(gpr[reg2].u);
     gpr[dest].f = op1 + op2;
-    printf("[FPU] add.s: %f + %f = %f\n", op1, op2, gpr[dest].f);
+    printf("[FPU] add.s: %f(%d) + %f(%d) = %f(%d)\n", op1, reg1, op2, reg2, gpr[dest].f, dest);
 }
 
 void Cop1::sub_s(int dest, int reg1, int reg2)
@@ -101,7 +101,7 @@ void Cop1::sub_s(int dest, int reg1, int reg2)
     float op1 = convert(gpr[reg1].u);
     float op2 = convert(gpr[reg2].u);
     gpr[dest].f = op1 - op2;
-    printf("[FPU] sub.s: %f - %f = %f\n", op1, op2, gpr[dest].f);
+    printf("[FPU] sub.s: %f(%d) - %f(%d) = %f(%d)\n", op1, reg1, op2, reg2, gpr[dest].f, dest);
 }
 
 void Cop1::mul_s(int dest, int reg1, int reg2)
@@ -109,21 +109,27 @@ void Cop1::mul_s(int dest, int reg1, int reg2)
     float op1 = convert(gpr[reg1].u);
     float op2 = convert(gpr[reg2].u);
     gpr[dest].f = op1 * op2;
-    printf("[FPU] mul.s: %f * %f = %f\n", op1, op2, gpr[dest].f);
+    printf("[FPU] mul.s: %f(%d) * %f(%d) = %f(%d)\n", op1, reg1, op2, reg2, gpr[dest].f, dest);
 }
 
 void Cop1::div_s(int dest, int reg1, int reg2)
 {
-    float numerator = convert(gpr[reg1].u);
-    float denominator = convert(gpr[reg2].u);
-    gpr[dest].f = numerator / denominator;
-    printf("[FPU] div.s: %f / %f = %f\n", numerator, denominator, gpr[dest].f);
+    uint32_t numerator = gpr[reg1].u;
+    uint32_t denominator = gpr[reg2].u;
+    if ((denominator & 0x7F800000) == 0)
+    {
+        gpr[dest].u = ((numerator ^ denominator) & 0x80000000) | 0x7F7FFFFF;
+    }
+    else
+        gpr[dest].f = convert(numerator) / convert(denominator);
+    printf("[FPU] div.s: %f(%d) / %f(%d) = %f(%d)\n", convert(numerator), reg1, convert(denominator), reg2,
+           gpr[dest].f, dest);
 }
 
 void Cop1::sqrt_s(int dest, int source)
 {
-    gpr[dest].f = sqrt(convert(gpr[source].u));
-    printf("[FPU] sqrt.s: %f = %f\n", gpr[source].f, gpr[dest].f);
+    gpr[dest].f = sqrt(fabs(convert(gpr[source].u)));
+    printf("[FPU] sqrt.s: %f(%d) = %f(%d)\n", gpr[source].f, source, gpr[dest].f, dest);
 }
 
 void Cop1::abs_s(int dest, int source)
@@ -135,7 +141,7 @@ void Cop1::abs_s(int dest, int source)
 void Cop1::mov_s(int dest, int source)
 {
     gpr[dest].u = gpr[source].u;
-    printf("[FPU] mov.s: (%d, %d)\n", dest, source);
+    printf("[FPU] mov.s: %d = %d", source, dest);
 }
 
 void Cop1::neg_s(int dest, int source)
@@ -225,17 +231,17 @@ void Cop1::c_f_s()
 void Cop1::c_lt_s(int reg1, int reg2)
 {
     control.condition = convert(gpr[reg1].u) < convert(gpr[reg2].u);
-    printf("[FPU] c.lt.s: %f, %f\n", gpr[reg1].f, gpr[reg2].f);
+    printf("[FPU] c.lt.s: %f(%d), %f(%d)\n", gpr[reg1].f, reg1, gpr[reg2].f, reg2);
 }
 
 void Cop1::c_eq_s(int reg1, int reg2)
 {
     control.condition = convert(gpr[reg1].u) == convert(gpr[reg2].u);
-    printf("[FPU] c.eq.s: %f, %f\n", gpr[reg1].f, gpr[reg2].f);
+    printf("[FPU] c.eq.s: %f(%d), %f(%d)\n", gpr[reg1].f, reg1, gpr[reg2].f, reg2);
 }
 
 void Cop1::c_le_s(int reg1, int reg2)
 {
     control.condition = convert(gpr[reg1].u) <= convert(gpr[reg2].u);
-    printf("[FPU] c.le.s: %f, %f\n", gpr[reg1].f, gpr[reg2].f);
+    printf("[FPU] c.le.s: %f(%d), %f(%d)\n", gpr[reg1].f, reg1, gpr[reg2].f, reg2);
 }

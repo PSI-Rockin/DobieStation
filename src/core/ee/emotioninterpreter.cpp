@@ -291,7 +291,7 @@ void EmotionInterpreter::mtsab(EmotionEngine &cpu, uint32_t instruction)
     reg = cpu.get_gpr<uint32_t>(reg);
 
     reg = (reg & 0xF) ^ (imm & 0xF);
-    cpu.set_SA(reg * 8);
+    cpu.set_SA(reg);
 }
 
 void EmotionInterpreter::mtsah(EmotionEngine &cpu, uint32_t instruction)
@@ -302,7 +302,7 @@ void EmotionInterpreter::mtsah(EmotionEngine &cpu, uint32_t instruction)
     reg = cpu.get_gpr<uint32_t>(reg);
 
     reg = (reg & 0x7) ^ (imm & 0x7);
-    cpu.set_SA(reg * 16);
+    cpu.set_SA(reg * 2);
 }
 
 void EmotionInterpreter::j(EmotionEngine &cpu, uint32_t instruction)

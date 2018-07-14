@@ -810,8 +810,8 @@ void GraphicsSynthesizer::write_PSMCT16_block(uint32_t base, uint32_t width, uin
     uint32_t column = (y / 2) % 4;
     uint32_t pixel = pixels[y & 0x1][(x >> 1) % 8];
 
-    printf("[GS] Write PSMCT16 (Base: $%08X Width: %d X: %d Y: %d)\n", base, width, x, y);
-    printf("Page: %d Block: %d Column: %d Pixel: %d\n", page, block, column, pixel);
+    //printf("[GS] Write PSMCT16 (Base: $%08X Width: %d X: %d Y: %d)\n", base, width, x, y);
+    //printf("Page: %d Block: %d Column: %d Pixel: %d\n", page, block, column, pixel);
 
     uint32_t addr = (page * 2048 * 4);
     addr += (block * 256);
@@ -820,7 +820,7 @@ void GraphicsSynthesizer::write_PSMCT16_block(uint32_t base, uint32_t width, uin
     if (x & 0x1)
         addr += 2;
     addr &= 0x003FFFFE;
-    printf("Write to one-dimensional addr $%08X ($%04X)\n", addr, value);
+    //printf("Write to one-dimensional addr $%08X ($%04X)\n", addr, value);
     *(uint16_t*)&local_mem[addr] = value;
 }
 
@@ -1264,6 +1264,9 @@ void GraphicsSynthesizer::render_triangle()
     Vertex v1 = vtx_queue[2]; v1.to_relative(current_ctx->xyoffset);
     Vertex v2 = vtx_queue[1]; v2.to_relative(current_ctx->xyoffset);
     Vertex v3 = vtx_queue[0]; v3.to_relative(current_ctx->xyoffset);
+
+    printf("(%d, %d, %d) (%d, %d, %d) (%d, %d, %d)\n", v1.x >> 4, v1.y >> 4, v1.z,
+           v2.x >> 4, v2.y >> 4, v2.z, v3.x >> 4, v3.y >> 4, v3.z);
 
     //The triangle rasterization code uses an approach with barycentric coordinates
     //Clear explanation can be read below:

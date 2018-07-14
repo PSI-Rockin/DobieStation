@@ -27,12 +27,23 @@ class GraphicsInterface
         GIFtag current_tag;
         bool processing_GIF_prim;
 
+        uint8_t active_paths;
+
         void process_PACKED(uint128_t quad);
         void process_REGLIST(uint128_t quad);
         void feed_GIF(uint128_t quad);
     public:
         GraphicsInterface(GraphicsSynthesizer* gs);
         void reset();
+
+        uint32_t read_STAT();
+
+        void activate_PATH(int index);
+        void deactivate_PATH(int index);
+
+        bool send_PATH(int index, uint128_t quad);
+
+        bool send_PATH1(uint128_t quad);
         void send_PATH2(uint32_t data[4]);
         void send_PATH3(uint128_t quad);
 };
