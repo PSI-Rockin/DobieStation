@@ -176,7 +176,7 @@ int EmotionEngine::run(int cycles_to_run)
         {
             std::string disasm = EmotionDisasm::disasm_instr(instruction, PC);
             printf("[$%08X] $%08X - %s\n", PC, instruction, disasm.c_str());
-            //print_state();
+            print_state();
         }
         EmotionInterpreter::interpret(*this, instruction);
         if (increment_PC)
@@ -522,12 +522,12 @@ void EmotionEngine::mtlo1(int index)
 
 void EmotionEngine::mfsa(int index)
 {
-    set_gpr<uint64_t>(index, SA / 8);
+    set_gpr<uint64_t>(index, SA);
 }
 
 void EmotionEngine::mtsa(int index)
 {
-    SA = (get_gpr<uint64_t>(index) & 0xF) * 8;
+    SA = get_gpr<uint64_t>(index) & 0xF;
 }
 
 void EmotionEngine::pmfhi(int index)

@@ -75,11 +75,17 @@ void EmotionInterpreter::cop2_special(VectorUnit &vu0, uint32_t instruction)
         case 0x2A:
             cop2_vmul(vu0, instruction);
             break;
+        case 0x2B:
+            cop2_vmax(vu0, instruction);
+            break;
         case 0x2C:
             cop2_vsub(vu0, instruction);
             break;
         case 0x2E:
             cop2_vopmsub(vu0, instruction);
+            break;
+        case 0x2F:
+            cop2_vmini(vu0, instruction);
             break;
         case 0x30:
             cop2_viadd(vu0, instruction);
@@ -246,6 +252,15 @@ void EmotionInterpreter::cop2_vmul(VectorUnit &vu0, uint32_t instruction)
     vu0.mul(field, dest, reg1, reg2);
 }
 
+void EmotionInterpreter::cop2_vmax(VectorUnit &vu0, uint32_t instruction)
+{
+    uint8_t dest = (instruction >> 6) & 0x1F;
+    uint8_t reg1 = (instruction >> 11) & 0x1F;
+    uint8_t reg2 = (instruction >> 16) & 0x1F;
+    uint8_t field = (instruction >> 21) & 0xF;
+    vu0.max(field, dest, reg1, reg2);
+}
+
 void EmotionInterpreter::cop2_vsub(VectorUnit &vu0, uint32_t instruction)
 {
     uint8_t dest = (instruction >> 6) & 0x1F;
@@ -261,6 +276,15 @@ void EmotionInterpreter::cop2_vopmsub(VectorUnit &vu0, uint32_t instruction)
     uint8_t reg1 = (instruction >> 11) & 0x1F;
     uint8_t reg2 = (instruction >> 16) & 0x1F;
     vu0.opmsub(dest, reg1, reg2);
+}
+
+void EmotionInterpreter::cop2_vmini(VectorUnit &vu0, uint32_t instruction)
+{
+    uint8_t dest = (instruction >> 6) & 0x1F;
+    uint8_t reg1 = (instruction >> 11) & 0x1F;
+    uint8_t reg2 = (instruction >> 16) & 0x1F;
+    uint8_t field = (instruction >> 21) & 0xF;
+    vu0.mini(field, dest, reg1, reg2);
 }
 
 void EmotionInterpreter::cop2_viadd(VectorUnit &vu0, uint32_t instruction)
@@ -633,7 +657,7 @@ void EmotionInterpreter::cop2_vmtir(VectorUnit &vu0, uint32_t instruction)
 {
     uint32_t fs = (instruction >> 11) & 0x1F;
     uint32_t it = (instruction >> 16) & 0x1F;
-    uint8_t fsf = (instruction >> 21) & 0xF;
+    uint8_t fsf = (instruction >> 21) & 0x3;
     vu0.mtir(fsf, it, fs);
 }
 

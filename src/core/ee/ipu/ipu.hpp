@@ -19,6 +19,7 @@
 
 struct IPU_CTRL
 {
+    uint8_t coded_block_pattern;
     bool error_code;
     bool start_code;
     uint8_t intra_DC_precision;
@@ -51,7 +52,6 @@ enum class BDEC_STATE
 struct BDEC_Command
 {
     BDEC_STATE state;
-    uint8_t coded_block_pattern;
     bool intra;
     int quantizer_step;
 

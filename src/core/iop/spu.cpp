@@ -67,7 +67,7 @@ uint16_t SPU::read16(uint32_t addr)
             return transfer_addr >> 16;
         case 0x1B0:
             printf("[SPU%d] ADMA: $%04X\n", id, autodma_ctrl);
-            return autodma_ctrl;
+            return autodma_ctrl & 0;
         case 0x344:
             reg |= status.DMA_finished << 7;
             reg |= status.DMA_busy << 10;
@@ -92,7 +92,12 @@ void SPU::write16(uint32_t addr, uint16_t value)
     {
         case 0x19A:
             printf("[SPU%d] Write Core Att: $%04X\n", id, value);
-            core_att = value;
+            core_att = value & 0x7FFF;
+            if (value & (1 << 15))
+            {
+                status.DMA_finished = false;
+                status.DMA_busy = false;
+            }
             break;
         case 0x1A8:
             transfer_addr &= 0xFFFF;

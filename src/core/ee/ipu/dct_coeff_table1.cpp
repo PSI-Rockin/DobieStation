@@ -299,6 +299,7 @@ bool DCT_Coeff_Table1::get_runlevel_pair(IPU_FIFO &FIFO, RunLevelPair &pair, boo
     if (!peek_symbol(FIFO, entry))
         return false;
 
+    printf("Key: $%08X Value: $%08X Bits: %d\n", entry.key, entry.value, entry.bits);
     int bit_count = entry.bits;
     RunLevelPair cur_pair = runlevel_table[entry.value];
     if (cur_pair.run == RUN_ESCAPE)

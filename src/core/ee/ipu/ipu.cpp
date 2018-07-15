@@ -103,10 +103,9 @@ void ImageProcessingUnit::run()
                 ctrl.busy = false;
                 in_FIFO.bit_pointer = command_option & 0x7F;
                 break;
-            /*case 0x01:
-                command_decoding = false;
-                ctrl.busy = false;
-                break;*/
+            case 0x01:
+                finish_command();
+                break;
             case 0x02:
                 if (in_FIFO.f.size())
                 {
@@ -195,11 +194,11 @@ bool ImageProcessingUnit::process_BDEC()
                     uint32_t pattern;
                     if (!cbp.get_symbol(in_FIFO, pattern))
                         return false;
-                    bdec.coded_block_pattern = pattern;
-                    printf("CBP: %d\n", bdec.coded_block_pattern);
+                    ctrl.coded_block_pattern = pattern;
+                    printf("CBP: %d\n", ctrl.coded_block_pattern);
                 }
                 else
-                    bdec.coded_block_pattern = 0x3F;
+                    ctrl.coded_block_pattern = 0x3F;
                 bdec.state = BDEC_STATE::RESET_DC;
                 break;
             case BDEC_STATE::RESET_DC:
@@ -235,7 +234,7 @@ bool ImageProcessingUnit::process_BDEC()
                 bdec.cur_block = bdec.blocks[bdec.block_index];
                 memset(bdec.cur_block, 0, sizeof(int16_t) * 64);
 
-                if (bdec.coded_block_pattern & (1 << (5 - bdec.block_index)))
+                if (ctrl.coded_block_pattern & (1 << (5 - bdec.block_index)))
                 {
                     //If block index is Cb/Cr, set the channel to the relevant chromance one
                     if (bdec.block_index > 3)
@@ -532,7 +531,7 @@ bool ImageProcessingUnit::BDEC_read_coeffs()
                 printf("[IPU] READ_COEFF Read DC diffs!\n");
                 if (!BDEC_read_diff())
                     return false;
-                bdec.cur_block[0] = bdec.dc_predictor[bdec.cur_channel] + bdec.dc_diff;
+                bdec.cur_block[0] = (int16_t)(bdec.dc_predictor[bdec.cur_channel] + bdec.dc_diff);
                 bdec.dc_predictor[bdec.cur_channel] = bdec.cur_block[0];
                 bdec.read_coeff_state = BDEC_Command::READ_COEFF::CHECK_END;
                 break;
@@ -827,6 +826,7 @@ uint32_t ImageProcessingUnit::read_control()
 {
     uint32_t reg = 0;
     reg |= in_FIFO.f.size();
+    reg |= ctrl.coded_block_pattern << 8;
     reg |= ctrl.error_code << 14;
     reg |= ctrl.start_code << 15;
     reg |= ctrl.intra_DC_precision << 16;
@@ -886,9 +886,8 @@ void ImageProcessingUnit::write_command(uint32_t value)
                 break;
             case 0x02:
                 printf("[IPU] BDEC\n");
-                command_decoding = true;
                 bdec.state = BDEC_STATE::ADVANCE;
-                bdec.coded_block_pattern = 0x3F;
+                ctrl.coded_block_pattern = 0x3F;
                 bdec.block_index = 0;
                 bdec.cur_channel = 0;
                 bdec.quantizer_step = (command_option >> 16) & 0x1F;

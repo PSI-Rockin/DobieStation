@@ -268,6 +268,7 @@ void DMAC::process_GIF()
         if (channels[GIF].tag_end)
         {
             transfer_end(GIF);
+            gif->deactivate_PATH(3);
         }
         else
         {
@@ -403,7 +404,6 @@ void DMAC::process_SPR_FROM()
         store128(channels[SPR_FROM].address, DMAData);
 
         channels[SPR_FROM].scratchpad_address += 16;
-        channels[SPR_FROM].scratchpad_address &= 0x3FFF;
         channels[SPR_FROM].quadword_count--;
 
         if (control.mem_drain_channel != 0)
@@ -796,7 +796,10 @@ void DMAC::write32(uint32_t address, uint32_t value)
             printf("[DMAC] GIF CTRL: $%08X\n", value);
             channels[GIF].control = value;
             if (value & 0x100)
+            {
                 start_DMA(GIF);
+                gif->activate_PATH(3);
+            }
             break;
         case 0x1000A010:
             printf("[DMAC] GIF M_ADR: $%08X\n", value);

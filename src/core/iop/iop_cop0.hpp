@@ -13,7 +13,6 @@ struct IOP_Cop0_Status
     uint8_t Im;
     bool IsC;
     bool bev;
-
 };
 
 struct IOP_Cop0_Cause
