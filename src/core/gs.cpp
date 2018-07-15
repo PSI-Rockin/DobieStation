@@ -190,6 +190,12 @@ void GraphicsSynthesizer::write32_privileged(uint32_t addr, uint32_t value) {
 
     reg.write32_privileged(addr, value);
 }
+uint32_t GraphicsSynthesizer::read32_privileged(uint32_t addr) {
+    return reg.read32_privileged(addr);
+}
+uint64_t GraphicsSynthesizer::read64_privileged(uint32_t addr) {
+    return reg.read64_privileged(addr);
+}
 
 void GraphicsSynthesizer::set_RGBA(uint8_t r, uint8_t g, uint8_t b, uint8_t a) {
     GS_message_payload payload;
