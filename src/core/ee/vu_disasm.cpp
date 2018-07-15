@@ -494,17 +494,17 @@ string VU_Disasm::lower2(uint32_t PC, uint32_t instr)
         case 0x24:
             return jr(instr);
         case 0x28:
-            return branch("beq", PC, instr);
+            return branch("ibeq", PC, instr);
         case 0x29:
-            return branch("bne", PC, instr);
+            return branch("ibne", PC, instr);
         case 0x2C:
-            return branch_zero("bltz", PC, instr);
+            return branch_zero("ibltz", PC, instr);
         case 0x2D:
-            return branch_zero("bgtz", PC, instr);
+            return branch_zero("ibgtz", PC, instr);
         case 0x2E:
-            return branch_zero("blez", PC, instr);
+            return branch_zero("iblez", PC, instr);
         case 0x2F:
-            return branch_zero("bgez", PC, instr);
+            return branch_zero("ibgez", PC, instr);
         default:
             return "[unknown lower2]";
     }
@@ -575,7 +575,7 @@ string VU_Disasm::lq(uint32_t instr)
     uint8_t field = (instr >> 21) & 0xF;
     output << "lq." << get_field(field) << " vf" << ft << ", 0x";
     output << setfill('0') << setw(4) << hex << imm;
-    output << "(vi" << is << ")";
+    output << "(vi" << dec << is << ")";
     return output.str();
 }
 
@@ -589,7 +589,7 @@ string VU_Disasm::sq(uint32_t instr)
     uint8_t field = (instr >> 21) & 0xF;
     output << "sq." << get_field(field) << " vf" << fs << ", 0x";
     output << setfill('0') << setw(4) << hex << imm;
-    output << "(vi" << it << ")";
+    output << "(vi" << dec << it << ")";
     return output.str();
 }
 

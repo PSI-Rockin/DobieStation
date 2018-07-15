@@ -255,7 +255,7 @@ void VectorInterface::init_UNPACK(uint32_t value)
 {
     printf("[VIF] UNPACK: $%08X\n", value);
     unpack.addr = (imm & 0x3FF) * 16;
-    unpack.sign_extend = imm & (1 << 14);
+    unpack.sign_extend = !(imm & (1 << 14));
     unpack.masked = (command >> 4) & 0x1;
     if (imm & (1 << 15))
         unpack.addr += TOPS * 16;

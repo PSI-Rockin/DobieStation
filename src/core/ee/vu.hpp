@@ -73,6 +73,8 @@ class VectorUnit
         void set_TOP_regs(uint16_t* TOP, uint16_t* ITOP);
         void set_GIF(GraphicsInterface* gif);
 
+        void flush_pipes();
+
         void run(int cycles);
         void mscal(uint32_t addr);
         void end_execution();

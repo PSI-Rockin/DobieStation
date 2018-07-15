@@ -468,6 +468,9 @@ void VU_Interpreter::lower1_special(VectorUnit &vu, uint32_t instr)
         case 0x68:
             xtop(vu, instr);
             break;
+        case 0x69:
+            xitop(vu, instr);
+            break;
         case 0x6C:
             xgkick(vu, instr);
             break;

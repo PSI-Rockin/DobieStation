@@ -90,7 +90,7 @@ void GraphicsInterface::process_PACKED(uint128_t data)
         {
             uint32_t x = data1 & 0xFFFF;
             uint32_t y = (data1 >> 32) & 0xFFFF;
-            uint32_t z = (data2 >> 4) & 0xFFFFFF;
+            uint32_t z = data2 & 0xFFFFFFFF;
             bool disable_drawing = (data2 >> (111 - 64)) & 0x1;
             gs->set_XYZ(x, y, z, !disable_drawing);
         }
@@ -233,6 +233,7 @@ bool GraphicsInterface::send_PATH(int index, uint128_t quad)
 //Returns true if an EOP transfer has ended - this terminates the XGKICK command
 bool GraphicsInterface::send_PATH1(uint128_t quad)
 {
+    printf("[GIF] Send PATH1 $%08X_%08X_%08X_%08X\n", quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
     feed_GIF(quad);
     return !current_tag.data_left && current_tag.end_of_packet;
 }

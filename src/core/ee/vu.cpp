@@ -11,7 +11,7 @@
 #define _z(f) f&2
 #define _w(f) f&1
 
-#define printf(fmt, ...)(0)
+//#define printf(fmt, ...)(0)
 
 VectorUnit::VectorUnit(int id) : id(id), gif(nullptr)
 {
@@ -49,6 +49,12 @@ void VectorUnit::set_TOP_regs(uint16_t *TOP, uint16_t *ITOP)
 void VectorUnit::set_GIF(GraphicsInterface *gif)
 {
     this->gif = gif;
+}
+
+//Propogate all pipeline updates instantly
+void VectorUnit::flush_pipes()
+{
+    waitq();
 }
 
 void VectorUnit::run(int cycles)
@@ -92,6 +98,7 @@ void VectorUnit::run(int cycles)
         uint128_t quad = read_data<uint128_t>(GIF_addr);
         if (gif->send_PATH1(quad))
         {
+            printf("[VU1] XGKICK transfer ended!\n");
             gif->deactivate_PATH(1);
             transferring_GIF = false;
         }
@@ -1149,6 +1156,7 @@ void VectorUnit::opmsub(uint8_t dest, uint8_t reg1, uint8_t reg2)
     update_mac_flags(gpr[dest].f[0], 0);
     update_mac_flags(gpr[dest].f[1], 1);
     update_mac_flags(gpr[dest].f[2], 2);
+    clear_mac_flags(3);
     printf("[VU] OPMSUB: %f, %f, %f\n", gpr[dest].f[0], gpr[dest].f[1], gpr[dest].f[2]);
 }
 
@@ -1166,6 +1174,7 @@ void VectorUnit::opmula(uint8_t reg1, uint8_t reg2)
     update_mac_flags(ACC.f[0], 0);
     update_mac_flags(ACC.f[1], 1);
     update_mac_flags(ACC.f[2], 2);
+    clear_mac_flags(3);
     printf("[VU] OPMULA: %f, %f, %f\n", ACC.f[0], ACC.f[1], ACC.f[2]);
 }
 
@@ -1367,6 +1376,18 @@ void VectorUnit::xgkick(uint8_t is)
         exit(1);
     }
     printf("[VU1] XGKICK: Addr $%08X\n", int_gpr[is] * 16);
+    while (transferring_GIF)
+    {
+        //If another XGKICK is already running, the proper behavior is to stall the VU until the transfer finishes.
+        //Here, we just finish the transfer instantly.
+        uint128_t quad = read_data<uint128_t>(GIF_addr);
+        if (gif->send_PATH1(quad))
+        {
+            gif->deactivate_PATH(1);
+            transferring_GIF = false;
+        }
+        GIF_addr += 16;
+    }
     gif->activate_PATH(1);
     transferring_GIF = true;
     GIF_addr = int_gpr[is] * 16;

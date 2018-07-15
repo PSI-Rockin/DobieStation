@@ -3,6 +3,12 @@
 
 void EmotionInterpreter::cop2_special(VectorUnit &vu0, uint32_t instruction)
 {
+    /**
+      * FIXME: IMPORTANT!
+      * We're flushing pipelines for VU0, as accurately handling COP2's pipelining is painful.
+      * I don't yet have a good solution for this that doesn't murder performance.
+      */
+    vu0.flush_pipes();
     uint8_t op = instruction & 0x3F;
     switch (op)
     {
@@ -414,10 +420,7 @@ void EmotionInterpreter::cop2_special2(VectorUnit &vu0, uint32_t instruction)
             cop2_vrsqrt(vu0, instruction);
             break;
         case 0x3B:
-            /**
-              * TODO - vwaitq
-              * As Q division latencies are not yet emulated, this instruction is just a NOP for now.
-              */
+            vu0.waitq();
             break;
         case 0x3C:
             cop2_vmtir(vu0, instruction);
