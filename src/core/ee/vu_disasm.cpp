@@ -605,7 +605,7 @@ string VU_Disasm::fcand(uint32_t instr)
 {
     stringstream output;
     uint32_t imm = instr & 0xFFFFFF;
-    output << "fcand vi01, 0x";
+    output << "fcand vi1, 0x";
     output << setfill('0') << setw(8) << hex << imm;
     return output.str();
 }

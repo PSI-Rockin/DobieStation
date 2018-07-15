@@ -450,7 +450,7 @@ void VectorUnit::esqrt(uint8_t fsf, uint8_t source)
 void VectorUnit::fcand(uint32_t value)
 {
     printf("[VU] FCAND: $%08X\n", value);
-    set_int(1, clip_flags & value);
+    set_int(1, clip_flags && value);
 }
 
 void VectorUnit::fcset(uint32_t value)
