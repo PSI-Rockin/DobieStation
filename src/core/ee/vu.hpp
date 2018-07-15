@@ -112,7 +112,6 @@ class VectorUnit
         void addq(uint8_t field, uint8_t dest, uint8_t source);
         void clip(uint8_t reg1, uint8_t reg2);
         void div(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2);
-        void waitq();
         void eleng(uint8_t source);
         void esqrt(uint8_t fsf, uint8_t source);
         void fcand(uint32_t value);
@@ -178,6 +177,7 @@ class VectorUnit
         void subbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
         void subi(uint8_t field, uint8_t dest, uint8_t source);
         void subq(uint8_t field, uint8_t dest, uint8_t source);
+        void waitq();
         void xgkick(uint8_t is);
         void xitop(uint8_t it);
         void xtop(uint8_t it);

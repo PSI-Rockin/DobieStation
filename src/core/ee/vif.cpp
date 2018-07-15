@@ -289,7 +289,7 @@ void VectorInterface::init_UNPACK(uint32_t value)
     }
 }
 
-uint128_t VectorInterface::handle_UNPACKMasking(uint128_t quad)
+uint128_t VectorInterface::handle_UNPACK_masking(uint128_t quad)
 {
     if (unpack.masked)
     {
@@ -297,20 +297,24 @@ uint128_t VectorInterface::handle_UNPACKMasking(uint128_t quad)
         
         for (int i = 0; i < 4; i++) {
             tempmask = (MASK >> ((i * 2) + std::min(unpack.blocks_written * 8, 24))) & 0x3;
-            if (tempmask == 1)
+            
+            switch (tempmask)
             {
+            case 1:
                 printf("[VIF] Writing ROW to position %d\n", i);
                 quad._u32[i] = ROW[i];
-            }
-            else if (tempmask == 2)
-            {
+                break;
+            case 2:
                 printf("[VIF] Writing COL to position %d\n", i);
                 quad._u32[i] = COL[i];
-            }
-            else if (tempmask == 3)
-            {
+                break;
+            case 3:
                 printf("[VIF] Write Protecting to position %d\n", i);
                 quad._u32[i] = vu->read_data<uint32_t>(unpack.addr + (i * 4));
+                break;
+            default:
+                //No masking, ignore
+                break;
             }
         }
     }
@@ -379,7 +383,7 @@ void VectorInterface::handle_UNPACK(uint32_t value)
                 printf("[VIF] Unhandled UNPACK cmd $%02X!\n", unpack.cmd);
                 exit(1);
         }
-        quad = handle_UNPACKMasking(quad);
+        quad = handle_UNPACK_masking(quad);
 
         unpack.blocks_written++;
         if (CYCLE.CL >= CYCLE.WL)

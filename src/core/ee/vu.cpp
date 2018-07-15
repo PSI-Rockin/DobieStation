@@ -431,16 +431,6 @@ void VectorUnit::div(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2)
     printf("Reg2: %f\n", denom);
 }
 
-void VectorUnit::waitq()
-{
-
-    while (Q.u != new_Q_instance.u)
-    {
-        update_mac_pipeline();
-        update_div_pipeline();
-    }
-}
-
 void VectorUnit::eleng(uint8_t source)
 {
     if (!id)
@@ -1358,6 +1348,15 @@ void VectorUnit::subq(uint8_t field, uint8_t dest, uint8_t source)
             clear_mac_flags(i);
     }
     printf("\n");
+}
+
+void VectorUnit::waitq()
+{
+    while (Q.u != new_Q_instance.u)
+    {
+        update_mac_pipeline();
+        update_div_pipeline();
+    }
 }
 
 void VectorUnit::xgkick(uint8_t is)
