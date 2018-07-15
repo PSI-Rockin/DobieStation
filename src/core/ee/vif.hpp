@@ -63,7 +63,7 @@ class VectorInterface
         void MSCAL(uint32_t addr);
         void init_UNPACK(uint32_t value);
         void handle_UNPACK(uint32_t value);
-        uint128_t handle_UNPACK_masking(uint128_t quad);
+        void handle_UNPACK_masking(uint128_t& quad);
 
         void disasm_micromem();
     public:

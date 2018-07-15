@@ -289,7 +289,7 @@ void VectorInterface::init_UNPACK(uint32_t value)
     }
 }
 
-uint128_t VectorInterface::handle_UNPACK_masking(uint128_t quad)
+void VectorInterface::handle_UNPACK_masking(uint128_t& quad)
 {
     if (unpack.masked)
     {
@@ -306,7 +306,7 @@ uint128_t VectorInterface::handle_UNPACK_masking(uint128_t quad)
                 break;
             case 2:
                 printf("[VIF] Writing COL to position %d\n", i);
-                quad._u32[i] = COL[i];
+                quad._u32[i] = COL[std::min(unpack.blocks_written, 3)];
                 break;
             case 3:
                 printf("[VIF] Write Protecting to position %d\n", i);
@@ -318,8 +318,6 @@ uint128_t VectorInterface::handle_UNPACK_masking(uint128_t quad)
             }
         }
     }
-    
-    return quad;
 }
 
 void VectorInterface::handle_UNPACK(uint32_t value)
@@ -383,7 +381,7 @@ void VectorInterface::handle_UNPACK(uint32_t value)
                 printf("[VIF] Unhandled UNPACK cmd $%02X!\n", unpack.cmd);
                 exit(1);
         }
-        quad = handle_UNPACK_masking(quad);
+        handle_UNPACK_masking(quad);
 
         unpack.blocks_written++;
         if (CYCLE.CL >= CYCLE.WL)
