@@ -57,6 +57,7 @@ void VectorUnit::run(int cycles)
     while (running && cycles_to_run)
     {
         update_mac_pipeline();
+        update_div_pipeline();
         uint32_t upper_instr = *(uint32_t*)&instr_mem[PC + 4];
         uint32_t lower_instr = *(uint32_t*)&instr_mem[PC];
         printf("[$%08X] $%08X:$%08X\n", PC, upper_instr, lower_instr);
@@ -135,6 +136,17 @@ void VectorUnit::update_mac_pipeline()
     MAC_pipeline[2] = MAC_pipeline[1];
     MAC_pipeline[1] = MAC_pipeline[0];
     MAC_pipeline[0] = new_MAC_flags;
+}
+
+void VectorUnit::update_div_pipeline()
+{
+    Q.f = Q_Pipeline[5];
+    Q_Pipeline[5] = Q_Pipeline[4];
+    Q_Pipeline[4] = Q_Pipeline[3];
+    Q_Pipeline[3] = Q_Pipeline[2];
+    Q_Pipeline[2] = Q_Pipeline[1];
+    Q_Pipeline[1] = Q_Pipeline[0];
+    Q_Pipeline[0] = new_Q_instance.f;
 }
 
 float VectorUnit::convert(uint32_t value)
@@ -405,16 +417,16 @@ void VectorUnit::div(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2)
             status |= 0x20;
 
         if ((gpr[reg1].u[fsf] & 0x80000000) != (gpr[reg2].u[ftf] & 0x80000000))
-            Q.u = 0xFF7FFFFF;
+            new_Q_instance.u = 0xFF7FFFFF;
         else
-            Q.u = 0x7F7FFFFF;
+            new_Q_instance.u = 0x7F7FFFFF;
     }
     else
     {
-        Q.f = num / denom;
-        Q.f = convert(Q.u);
+        new_Q_instance.f = num / denom;
+        new_Q_instance.f = convert(new_Q_instance.u);
     }
-    printf("[VU] DIV: %f\n", Q.f);
+    printf("[VU] DIV: %f\n", new_Q_instance.f);
     printf("Reg1: %f\n", num);
     printf("Reg2: %f\n", denom);
 }
@@ -607,7 +619,6 @@ void VectorUnit::isw(uint8_t field, uint8_t source, uint8_t base, int32_t offset
         {
             printf("($%02X, %d, %d)\n", field, source, base);
             write_data<uint32_t>(addr + (i * 4), int_gpr[source]);
-            break;
         }
     }
 }
@@ -616,6 +627,14 @@ void VectorUnit::iswr(uint8_t field, uint8_t source, uint8_t base)
 {
     uint32_t addr = int_gpr[base] << 4;
     printf("[VU] ISWR to $%08X!\n", addr);
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            printf("($%02X, %d, %d)\n", field, source, base);
+            write_data<uint32_t>(addr + (i * 4), int_gpr[source]);
+        }
+    }
 }
 
 void VectorUnit::itof0(uint8_t field, uint8_t dest, uint8_t source)
@@ -1199,16 +1218,16 @@ void VectorUnit::rsqrt(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2)
             status |= 0x20;
         
         if ((gpr[reg1].u[fsf] & 0x80000000) != (gpr[reg2].u[ftf] & 0x80000000))
-            Q.u = 0xFF7FFFFF;
+            new_Q_instance.u = 0xFF7FFFFF;
         else
-            Q.u = 0x7F7FFFFF;
+            new_Q_instance.u = 0x7F7FFFFF;
     }
     else
     {
-        Q.f = num;
-        Q.f /= sqrt(denom);
+        new_Q_instance.f = num;
+        new_Q_instance.f /= sqrt(denom);
     }
-    printf("[VU] RSQRT: %f\n", Q.f);
+    printf("[VU] RSQRT: %f\n", new_Q_instance.f);
     printf("Reg1: %f\n", gpr[reg1].f[fsf]);
     printf("Reg2: %f\n", gpr[reg2].f[ftf]);
 }
@@ -1251,8 +1270,8 @@ void VectorUnit::sqi(uint8_t field, uint8_t source, uint8_t base)
 
 void VectorUnit::vu_sqrt(uint8_t ftf, uint8_t source)
 {
-    Q.f = sqrt(fabs(convert(gpr[source].u[ftf])));
-    printf("[VU] SQRT: %f\n", Q.f);
+    new_Q_instance.f = sqrt(fabs(convert(gpr[source].u[ftf])));
+    printf("[VU] SQRT: %f\n", new_Q_instance.f);
     printf("Source: %f\n", gpr[source].f[ftf]);
 }
 
@@ -1329,6 +1348,15 @@ void VectorUnit::subq(uint8_t field, uint8_t dest, uint8_t source)
             clear_mac_flags(i);
     }
     printf("\n");
+}
+
+void VectorUnit::waitq()
+{
+    while (Q.u != new_Q_instance.u)
+    {
+        update_mac_pipeline();
+        update_div_pipeline();
+    }
 }
 
 void VectorUnit::xgkick(uint8_t is)

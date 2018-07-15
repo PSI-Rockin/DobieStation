@@ -28,15 +28,22 @@ void VectorInterface::reset()
 
 void VectorInterface::update()
 {
-    while (FIFO.size())
+    int runcycles = 8;
+    if (wait_for_VU)
     {
+        if (vu->is_running())
+            return;
+        wait_for_VU = false;
+        handle_wait_cmd(wait_cmd_value);
+    }
+    while(FIFO.size() && runcycles--)
+    {        
         if (wait_for_VU)
         {
             if (vu->is_running())
                 return;
             wait_for_VU = false;
             handle_wait_cmd(wait_cmd_value);
-            continue;
         }
         uint32_t value = FIFO.front();
         if (command_len <= 0)
@@ -50,14 +57,17 @@ void VectorInterface::update()
             {
                 case 0x20:
                     //STMASK
+                    printf("[VIF] New MASK: $%08X\n", value);
                     MASK = value;
                     break;
                 case 0x30:
                     //STROW
+                    printf("[VIF] ROW%d: $%08X\n", 4-command_len,value);
                     ROW[4 - command_len] = value;
                     break;
                 case 0x31:
                     //STCOL
+                    printf("[VIF] COL%d: $%08X\n", 4 - command_len, value);
                     COL[4 - command_len] = value;
                     break;
                 case 0x4A:
@@ -246,6 +256,7 @@ void VectorInterface::init_UNPACK(uint32_t value)
     printf("[VIF] UNPACK: $%08X\n", value);
     unpack.addr = (imm & 0x3FF) * 16;
     unpack.sign_extend = imm & (1 << 14);
+    unpack.masked = (command >> 4) & 0x1;
     if (imm & (1 << 15))
         unpack.addr += TOPS * 16;
     unpack.cmd = command & 0xF;
@@ -254,7 +265,7 @@ void VectorInterface::init_UNPACK(uint32_t value)
     int vl = command & 0x3;
     int vn = (command >> 2) & 0x3;
     int num = (value >> 16) & 0xFF;
-    printf("vl: %d vn: %d num: %d\n", vl, vn, num);
+    printf("vl: %d vn: %d num: %d masked: %d\n", vl, vn, num, unpack.masked);
     unpack.words_per_op = (32 >> vl) * (vn + 1);
     unpack.words_per_op = (unpack.words_per_op + 0x1F) & ~0x1F; //round up to nearest 32 before dividing
     unpack.words_per_op /= 32;
@@ -275,6 +286,37 @@ void VectorInterface::init_UNPACK(uint32_t value)
         //Fill write
         printf("[VIF] WL > CL!\n");
         exit(1);
+    }
+}
+
+void VectorInterface::handle_UNPACK_masking(uint128_t& quad)
+{
+    if (unpack.masked)
+    {
+        uint8_t tempmask;
+        
+        for (int i = 0; i < 4; i++) {
+            tempmask = (MASK >> ((i * 2) + std::min(unpack.blocks_written * 8, 24))) & 0x3;
+            
+            switch (tempmask)
+            {
+            case 1:
+                printf("[VIF] Writing ROW to position %d\n", i);
+                quad._u32[i] = ROW[i];
+                break;
+            case 2:
+                printf("[VIF] Writing COL to position %d\n", i);
+                quad._u32[i] = COL[std::min(unpack.blocks_written, 3)];
+                break;
+            case 3:
+                printf("[VIF] Write Protecting to position %d\n", i);
+                quad._u32[i] = vu->read_data<uint32_t>(unpack.addr + (i * 4));
+                break;
+            default:
+                //No masking, ignore
+                break;
+            }
+        }
     }
 }
 
@@ -309,15 +351,15 @@ void VectorInterface::handle_UNPACK(uint32_t value)
                     quad._u32[0] = x;
                     quad._u32[1] = y;
                 }
-                quad._u32[2] = 0xDEADBEEF;
-                quad._u32[3] = 0xDEADBEEF;
+                quad._u32[2] = 0;
+                quad._u32[3] = 0;  
             }
                 break;
             case 0x8:
                 //V3-32 - W is "indeterminate"
                 for (int i = 0; i < 3; i++)
                     quad._u32[i] = buffer[i];
-                quad._u32[3] = 0xDEADBEEF;
+                quad._u32[3] = 0;
                 break;
             case 0xC:
                 //V4-32
@@ -339,6 +381,8 @@ void VectorInterface::handle_UNPACK(uint32_t value)
                 printf("[VIF] Unhandled UNPACK cmd $%02X!\n", unpack.cmd);
                 exit(1);
         }
+        handle_UNPACK_masking(quad);
+
         unpack.blocks_written++;
         if (CYCLE.CL >= CYCLE.WL)
         {
