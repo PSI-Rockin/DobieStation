@@ -53,13 +53,17 @@ class VectorUnit
         VU_R Q;
         VU_R P;
 
-        uint16_t MAC_pipeline[4];
+        uint16_t MAC_pipeline[4];       
         uint16_t* MAC_flags; //pointer to last element in the pipeline; the register accessible to programs
         uint16_t new_MAC_flags; //to be placed in the pipeline
+
+        float Q_Pipeline[6];
+        VU_R new_Q_instance;
 
         void update_mac_flags(float value, int index);
         void clear_mac_flags(int index);
         void update_mac_pipeline();
+        void update_div_pipeline();
         void advance_r();
         void print_vectors(uint8_t a, uint8_t b);
         float convert();
@@ -108,6 +112,7 @@ class VectorUnit
         void addq(uint8_t field, uint8_t dest, uint8_t source);
         void clip(uint8_t reg1, uint8_t reg2);
         void div(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2);
+        void waitq();
         void eleng(uint8_t source);
         void esqrt(uint8_t fsf, uint8_t source);
         void fcand(uint32_t value);
