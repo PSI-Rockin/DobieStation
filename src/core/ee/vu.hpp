@@ -174,6 +174,7 @@ class VectorUnit
         void subi(uint8_t field, uint8_t dest, uint8_t source);
         void subq(uint8_t field, uint8_t dest, uint8_t source);
         void xgkick(uint8_t is);
+        void xitop(uint8_t it);
         void xtop(uint8_t it);
 };
 

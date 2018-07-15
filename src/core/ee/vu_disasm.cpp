@@ -76,6 +76,11 @@ string VU_Disasm::upper(uint32_t PC, uint32_t instr)
     uint8_t op = instr & 0x3F;
     switch (op)
     {
+        case 0x00:
+        case 0x01:
+        case 0x02:
+        case 0x03:
+            return upper_bc("add", instr);
         case 0x08:
         case 0x09:
         case 0x0A:
@@ -319,6 +324,8 @@ string VU_Disasm::lower1_special(uint32_t PC, uint32_t instr)
             return mfp(instr);
         case 0x68:
             return xtop(instr);
+        case 0x69:
+            return xitop(instr);
         case 0x6C:
             return xgkick(instr);
         case 0x72:
@@ -422,6 +429,14 @@ string VU_Disasm::xtop(uint32_t instr)
     stringstream output;
     uint32_t it = (instr >> 16) & 0x1F;
     output << "xtop vi" << it;
+    return output.str();
+}
+
+string VU_Disasm::xitop(uint32_t instr)
+{
+    stringstream output;
+    uint32_t it = (instr >> 16) & 0x1F;
+    output << "xitop vi" << it;
     return output.str();
 }
 

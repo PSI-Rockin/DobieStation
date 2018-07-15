@@ -981,7 +981,7 @@ void VectorUnit::msubi(uint8_t field, uint8_t dest, uint8_t source)
 
 void VectorUnit::mtir(uint8_t fsf, uint8_t dest, uint8_t source)
 {
-    printf("[VU] MTIR: %d\n", (uint16_t)gpr[source].f[fsf]);
+    printf("[VU] MTIR: %d\n", gpr[source].u[fsf] & 0xFFFF);
     set_int(dest, gpr[source].u[fsf] & 0xFFFF);
 }
 
@@ -1342,6 +1342,12 @@ void VectorUnit::xgkick(uint8_t is)
     gif->activate_PATH(1);
     transferring_GIF = true;
     GIF_addr = int_gpr[is] * 16;
+}
+
+void VectorUnit::xitop(uint8_t it)
+{
+    printf("[VU] XTIOP: $%04X (%d)\n", *VIF_ITOP, it);
+    set_int(it, *VIF_ITOP);
 }
 
 void VectorUnit::xtop(uint8_t it)
