@@ -536,7 +536,7 @@ void VectorUnit::iaddi(uint8_t dest, uint8_t source, int8_t imm)
 void VectorUnit::iaddiu(uint8_t dest, uint8_t source, uint16_t imm)
 {
     set_int(dest, int_gpr[source] + imm);
-    printf("[VU] IADDIU: $%04X (%d, %d, %d)\n", int_gpr[dest], dest, source, imm);
+    printf("[VU] IADDIU: $%04X (%d, %d, $%04X)\n", int_gpr[dest], dest, source, imm);
 }
 
 void VectorUnit::iand(uint8_t dest, uint8_t reg1, uint8_t reg2)
@@ -594,7 +594,7 @@ void VectorUnit::isub(uint8_t dest, uint8_t reg1, uint8_t reg2)
 void VectorUnit::isubiu(uint8_t dest, uint8_t source, uint16_t imm)
 {
     set_int(dest, int_gpr[source] - imm);
-    printf("[VU] ISUBIU: $%04X (%d, %d, %d)\n", int_gpr[dest], dest, source, imm);
+    printf("[VU] ISUBIU: $%04X (%d, %d, $%04X)\n", int_gpr[dest], dest, source, imm);
 }
 
 void VectorUnit::isw(uint8_t field, uint8_t source, uint8_t base, int32_t offset)
@@ -662,13 +662,13 @@ void VectorUnit::itof12(uint8_t field, uint8_t dest, uint8_t source)
 
 void VectorUnit::lq(uint8_t field, uint8_t dest, uint8_t base, int32_t offset)
 {
-    printf("[VU] LQ: ");
     uint32_t addr = (int_gpr[base] * 16) + offset;
+    printf("[VU] LQ: $%08X (%d, %d, $%08X)\n", addr, dest, base, offset);
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
         {
-            set_gpr_f(dest, i, convert(read_data<uint32_t>(addr + (i * 4))));
+            set_gpr_u(dest, i, read_data<uint32_t>(addr + (i * 4)));
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
     }
@@ -683,7 +683,7 @@ void VectorUnit::lqi(uint8_t field, uint8_t dest, uint8_t base)
     {
         if (field & (1 << (3 - i)))
         {
-            set_gpr_f(dest, i, convert(read_data<uint32_t>(addr + (i * 4))));
+            set_gpr_u(dest, i, read_data<uint32_t>(addr + (i * 4)));
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
     }
@@ -982,7 +982,7 @@ void VectorUnit::msubi(uint8_t field, uint8_t dest, uint8_t source)
 void VectorUnit::mtir(uint8_t fsf, uint8_t dest, uint8_t source)
 {
     printf("[VU] MTIR: %d\n", (uint16_t)gpr[source].f[fsf]);
-    set_int(dest, (uint16_t)gpr[source].f[fsf]);
+    set_int(dest, gpr[source].u[fsf] & 0xFFFF);
 }
 
 void VectorUnit::mul(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)

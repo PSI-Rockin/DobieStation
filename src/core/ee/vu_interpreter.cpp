@@ -48,6 +48,12 @@ void VU_Interpreter::upper(VectorUnit &vu, uint32_t instr)
         case 0x22:
             addi(vu, instr);
             break;
+        case 0x24:
+            subq(vu, instr);
+            break;
+        case 0x26:
+            subi(vu, instr);
+            break;
         case 0x28:
             add(vu, instr);
             break;
@@ -126,6 +132,22 @@ void VU_Interpreter::addi(VectorUnit &vu, uint32_t instr)
     uint8_t source = (instr >> 11) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
     vu.addi(field, dest, source);
+}
+
+void VU_Interpreter::subq(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t dest = (instr >> 6) & 0x1F;
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.subq(field, dest, source);
+}
+
+void VU_Interpreter::subi(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t dest = (instr >> 6) & 0x1F;
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.subi(field, dest, source);
 }
 
 void VU_Interpreter::add(VectorUnit &vu, uint32_t instr)
@@ -651,6 +673,7 @@ void VU_Interpreter::isw(VectorUnit &vu, uint32_t instr)
 void VU_Interpreter::iaddiu(VectorUnit &vu, uint32_t instr)
 {
     uint16_t imm = instr & 0x7FF;
+    imm |= ((instr >> 21) & 0xF) << 11;
     uint8_t source = (instr >> 11) & 0x1F;
     uint8_t dest = (instr >> 16) & 0x1F;
     vu.iaddiu(dest, source, imm);
@@ -659,6 +682,7 @@ void VU_Interpreter::iaddiu(VectorUnit &vu, uint32_t instr)
 void VU_Interpreter::isubiu(VectorUnit &vu, uint32_t instr)
 {
     uint16_t imm = instr & 0x7FF;
+    imm |= ((instr >> 21) & 0xF) << 11;
     uint8_t source = (instr >> 11) & 0x1F;
     uint8_t dest = (instr >> 16) & 0x1F;
     vu.isubiu(dest, source, imm);
@@ -696,14 +720,14 @@ void VU_Interpreter::bal(VectorUnit &vu, uint32_t instr)
     imm *= 8;
 
     uint8_t link_reg = (instr >> 16) & 0x1F;
-    vu.set_int(link_reg, vu.get_PC() + 16);
+    vu.set_int(link_reg, (vu.get_PC() + 16) / 8);
     vu.branch(true, imm);
 }
 
 void VU_Interpreter::jr(VectorUnit &vu, uint32_t instr)
 {
     uint8_t addr_reg = (instr >> 11) & 0x1F;
-    uint16_t addr = vu.get_int(addr_reg);
+    uint16_t addr = vu.get_int(addr_reg) * 8;
     vu.jp(addr);
 }
 
@@ -717,7 +741,6 @@ void VU_Interpreter::ibeq(VectorUnit &vu, uint32_t instr)
     uint16_t it = (instr >> 16) & 0x1F;
     is = vu.get_int(is);
     it = vu.get_int(it);
-    printf("is: %d it: %d\n", is, it);
     vu.branch(is == it, imm);
 }
 

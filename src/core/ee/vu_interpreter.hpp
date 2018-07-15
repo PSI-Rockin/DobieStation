@@ -13,6 +13,8 @@ namespace VU_Interpreter
     void mulq(VectorUnit& vu, uint32_t instr);
     void minii(VectorUnit& vu, uint32_t instr);
     void addi(VectorUnit& vu, uint32_t instr);
+    void subq(VectorUnit& vu, uint32_t instr);
+    void subi(VectorUnit& vu, uint32_t instr);
     void add(VectorUnit& vu, uint32_t instr);
     void madd(VectorUnit& vu, uint32_t instr);
     void mul(VectorUnit& vu, uint32_t instr);

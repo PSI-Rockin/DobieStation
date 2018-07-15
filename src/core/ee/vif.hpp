@@ -62,6 +62,8 @@ class VectorInterface
         void MSCAL(uint32_t addr);
         void init_UNPACK(uint32_t value);
         void handle_UNPACK(uint32_t value);
+
+        void disasm_micromem();
     public:
         VectorInterface(GraphicsInterface* gif, VectorUnit* vu);
 

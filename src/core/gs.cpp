@@ -1687,6 +1687,7 @@ void GraphicsSynthesizer::unpack_PSMCT24(uint64_t data, int offset)
 
 void GraphicsSynthesizer::host_to_host()
 {
+    printf("[GS] Host to host transfer unimplemented!\n");
     exit(1);
     int ppd = 2; //pixels per doubleword
     uint32_t source_addr = (TRXPOS.source_x + (TRXPOS.source_y * BITBLTBUF.source_width)) << 1;

@@ -1,5 +1,9 @@
 #include <cstdio>
 #include <cstdlib>
+#include <fstream>
+#include <iomanip>
+#include <cstring>
+#include "vu_disasm.hpp"
 #include "vif.hpp"
 
 #include "../gif.hpp"
@@ -58,14 +62,10 @@ void VectorInterface::update()
                     break;
                 case 0x4A:
                     //MPG
-                    if (FIFO.size() < 2)
-                        return;
                     vu->write_instr(mpg.addr, value);
-                    FIFO.pop();
-                    value = FIFO.front();
-                    vu->write_instr(mpg.addr + 4, value);
-                    command_len--;
-                    mpg.addr += 8;
+                    mpg.addr += 4;
+                    if (command_len <= 1)
+                        disasm_micromem();
                     break;
                 case 0x50:
                 case 0x51:
@@ -218,6 +218,8 @@ void VectorInterface::handle_wait_cmd(uint32_t value)
         case 0x17:
             MSCAL(vu->get_PC());
             break;
+        default:
+            command_len = 0;
     }
 }
 
@@ -326,7 +328,7 @@ void VectorInterface::handle_UNPACK(uint32_t value)
                 //V4-8
                 for (int i = 0; i < 4; i++)
                 {
-                    uint8_t value = (buffer[0] >> 8) & 0xFF;
+                    uint8_t value = (buffer[0] >> (i * 8)) & 0xFF;
                     if (unpack.sign_extend)
                         quad._u32[i] = (int32_t)(int8_t)value;
                     else
@@ -369,4 +371,61 @@ void VectorInterface::feed_DMA(uint128_t quad)
     //printf("[VIF] Feed DMA: $%08X_%08X_%08X_%08X\n", quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
     for (int i = 0; i < 4; i++)
         FIFO.push(quad._u32[i]);
+}
+
+void VectorInterface::disasm_micromem()
+{
+    using namespace std;
+    ofstream file("microprogram.txt");
+    if (!file.is_open())
+    {
+        printf("Failed to open\n");
+        exit(1);
+    }
+
+    //Check for branch targets
+    bool is_branch_target[0x4000 / 8];
+    memset(is_branch_target, 0, 0x4000 / 8);
+    for (int i = 0; i < 0x4000; i += 8)
+    {
+        uint32_t lower = vu->read_instr<uint32_t>(i);
+
+        //If the lower instruction is a branch, set branch target to true for the location it points to
+        if (VU_Disasm::is_branch(lower))
+        {
+            int32_t imm = lower & 0x7FF;
+            imm = ((int16_t)(imm << 5)) >> 5;
+            imm *= 8;
+
+            uint32_t addr = i + imm + 8;
+            if (addr < 0x4000)
+                is_branch_target[addr / 8] = true;
+        }
+    }
+
+    for (int i = 0; i < 0x4000; i += 8)
+    {
+        if (is_branch_target[i / 8])
+        {
+            file << endl;
+            file << "Branch target $" << setfill('0') << setw(4) << right << hex << i << ":";
+            file << endl;
+        }
+        //PC
+        file << "[$" << setfill('0') << setw(4) << right << hex << i << "] ";
+
+        //Raw instructions
+        uint32_t lower = vu->read_instr<uint32_t>(i);
+        uint32_t upper = vu->read_instr<uint32_t>(i + 4);
+
+        file << setw(8) << hex << upper << ":" << setw(8) << lower << " ";
+        file << setfill(' ') << setw(30) << left << VU_Disasm::upper(i, upper);
+
+        if (upper & (1 << 31))
+            file << VU_Disasm::loi(lower);
+        else
+            file << VU_Disasm::lower(i, lower);
+        file << endl;
+    }
+    file.close();
 }

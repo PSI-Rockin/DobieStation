@@ -76,6 +76,7 @@ class VectorUnit
 
         static float convert(uint32_t value);
 
+        template <typename T> T read_instr(uint32_t addr);
         template <typename T> T read_data(uint32_t addr);
         template <typename T> void write_instr(uint32_t addr, T data);
         template <typename T> void write_data(uint32_t addr, T data);
@@ -177,6 +178,12 @@ class VectorUnit
 };
 
 template <typename T>
+inline T VectorUnit::read_instr(uint32_t addr)
+{
+    return *(T*)&instr_mem[addr & 0x3FFF];
+}
+
+template <typename T>
 inline T VectorUnit::read_data(uint32_t addr)
 {
     return *(T*)&data_mem[addr & 0x3FFF];
@@ -185,7 +192,6 @@ inline T VectorUnit::read_data(uint32_t addr)
 template <typename T>
 inline void VectorUnit::write_instr(uint32_t addr, T data)
 {
-    printf("[VU] Write instr mem $%08X: $%08X\n", addr, data);
     *(T*)&instr_mem[addr & 0x3FFF] = data;
 }
 
