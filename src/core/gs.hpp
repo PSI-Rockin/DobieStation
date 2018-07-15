@@ -4,66 +4,15 @@
 #include <thread>
 #include <mutex>
 #include "gscontext.hpp"
+#include "gsregisters.hpp"
 #include "circularFIFO.hpp"
 
-
-//reg reg
-struct TRXREG_REG
-{
-    uint16_t width;
-    uint16_t height;
-};
-
-struct PMODE_REG
-{
-    bool circuit1;
-    bool circuit2;
-    uint8_t output_switching;
-    bool use_ALP;
-    bool out1_circuit2;
-    bool blend_with_bg;
-    uint8_t ALP;
-};
-
-struct SMODE
-{
-    bool interlaced;
-    bool frame_mode;
-    uint8_t power_mode;
-};
-
-struct DISPFB
-{
-    uint32_t frame_base;
-    uint32_t width;
-    uint8_t format;
-    uint16_t x, y;
-};
-
-struct DISPLAY
-{
-    uint16_t x, y;
-    uint8_t magnify_x, magnify_y;
-    uint16_t width, height;
-};
-
-struct TEXCLUT_REG
-{
-    uint16_t width, x, y;
-};
-struct GS_IMR //Interrupt masking
-{
-    bool signal;
-    bool finish;
-    bool hsync;
-    bool vsync;
-    bool rawt; //Rectangular Area Write Termination
-};
 
 class INTC;
 
 enum GS_command:uint8_t { write64_t, write64_privileged_t, write32_privileged_t,
-    set_rgba_t, set_stq_t, set_uv_t, set_xyz_t, set_q_t, render_crt_t, set_crt_t, memdump_t, die_t
+    set_rgba_t, set_stq_t, set_uv_t, set_xyz_t, set_q_t, set_crt_t,
+    render_crt_t, assert_finish_t, set_vblank_t, memdump_t, die_t
 };
 union GS_message_payload {
     struct {
@@ -96,6 +45,9 @@ union GS_message_payload {
         bool frame_mode;
     } crt_payload;
     struct {
+        bool vblank;
+    } vblank_payload;
+    struct {
         uint32_t* target;
         std::mutex* target_mutex;
     } render_payload;
@@ -119,29 +71,10 @@ class GraphicsSynthesizer
         std::mutex output_buffer1_mutex, output_buffer2_mutex;
         bool using_first_buffer;
         std::unique_lock<std::mutex> current_lock;
-        uint8_t CRT_mode;
 
-        //general registers that generate interrupts- used outside of GS
-        bool SIGNAL, FINISH, LABEL;
+        GS_REGISTERS reg;
 
-        //Privileged registers
-        PMODE_REG PMODE;
-        SMODE SMODE2;
-        DISPFB DISPFB1, DISPFB2;
-        DISPLAY DISPLAY1, DISPLAY2;
-
-        //CSR/IMR stuff - to be merged into structs
-        bool VBLANK_generated;
-        bool VBLANK_enabled;
-        bool is_odd_frame;
-        bool FINISH_enabled;
-        bool FINISH_generated;
-        bool FINISH_requested;
-        GS_IMR IMR;
-        uint8_t BUSDIR;
         gs_fifo* MessageQueue; //ring buffer size
-        //EXTBUF, EXTDATA, EXTWRITE, BGCOLOR, SIGLBLID not currently implemented
-
         std::thread gsthread_id;
 		
     public:

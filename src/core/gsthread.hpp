@@ -45,12 +45,22 @@ struct BITBLTBUF_REG
     uint8_t dest_format;
 };
 
+struct TRXREG_REG
+{
+    uint16_t width;
+    uint16_t height;
+};
+
 struct TRXPOS_REG
 {
     uint16_t source_x, source_y;
     uint16_t dest_x, dest_y;
     uint16_t int_source_x, int_dest_x;
     uint8_t trans_order;
+};
+struct TEXCLUT_REG
+{
+    uint16_t width, x, y;
 };
 
 
@@ -77,12 +87,6 @@ class GraphicsSynthesizerThread
         uint8_t CRT_mode;
 
         //CSR/IMR stuff - to be merged into structs
-        bool VBLANK_generated;
-        bool VBLANK_enabled;
-        bool is_odd_frame;
-        bool FINISH_enabled;
-        bool FINISH_generated;
-        bool FINISH_requested;
 
         GS_IMR IMR;
 
@@ -109,10 +113,7 @@ class GraphicsSynthesizerThread
         uint32_t PSMCT24_color;
         int PSMCT24_unpacked_count;
 
-        PMODE_REG PMODE;
-        SMODE SMODE2;
-        DISPFB DISPFB1, DISPFB2;
-        DISPLAY DISPLAY1, DISPLAY2;
+        GS_REGISTERS reg;
 
         Vertex current_vtx;
         Vertex vtx_queue[3];
@@ -150,22 +151,13 @@ class GraphicsSynthesizerThread
         //called from event loop
         void reset();
         void memdump();
-        void start_frame();
-        bool is_frame_complete();
         void render_CRT(uint32_t* target);
-        void get_resolution(int& w, int& h);
-        void get_inner_resolution(int& w, int& h);
 
         void set_VBLANK(bool is_VBLANK);
         void assert_FINISH();
         void dump_texture(uint32_t* target, uint32_t start_addr, uint32_t width);
 
-        void set_CRT(bool interlaced, int mode, bool frame_mode);
 
-        uint32_t read32_privileged(uint32_t addr);
-        uint64_t read64_privileged(uint32_t addr);
-        void write32_privileged(uint32_t addr, uint32_t value);
-        void write64_privileged(uint32_t addr, uint64_t value);
         void write64(uint32_t addr, uint64_t value);
 
         void set_RGBA(uint8_t r, uint8_t g, uint8_t b, uint8_t a);

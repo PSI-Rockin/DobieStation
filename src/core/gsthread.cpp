@@ -74,12 +74,12 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo) {
             }
             case write64_privileged_t: {
                 auto p = data.payload.write64_payload;
-                gs.write64_privileged(p.addr, p.value);
+                gs.reg.write64_privileged(p.addr, p.value);
                 break;
             }
             case write32_privileged_t: {
                 auto p = data.payload.write32_payload;
-                gs.write32_privileged(p.addr, p.value);
+                gs.reg.write32_privileged(p.addr, p.value);
                 break;
             }
             case set_rgba_t: {
@@ -109,7 +109,7 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo) {
             }
             case set_crt_t: {
                 auto p = data.payload.crt_payload;
-                gs.set_CRT(p.interlaced, p.mode, p.frame_mode);
+                gs.reg.set_CRT(p.interlaced, p.mode, p.frame_mode);
                 break;
             }
             case render_crt_t: {
@@ -124,6 +124,13 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo) {
                 p.target_mutex->unlock();
                 break;
             }
+            case assert_finish_t:
+                gs.reg.assert_FINISH();
+                break;
+            case set_vblank_t:
+                auto p = data.payload.vblank_payload;
+                gs.reg.set_VBLANK(p.vblank);
+                break;
             case memdump_t:
                 gs.memdump();
                 break;
@@ -141,42 +148,16 @@ void GraphicsSynthesizerThread::reset()
 {
     if (!local_mem)
         local_mem = new uint8_t[1024 * 1024 * 4];
-    is_odd_frame = false;
     pixels_transferred = 0;
     num_vertices = 0;
     frame_count = 0;
-    DISPLAY1.x = 0;
-    DISPLAY1.y = 0;
-    DISPLAY1.width = 0;
-    DISPLAY1.height = 0;
-    DISPLAY2.x = 0;
-    DISPLAY2.y = 0;
-    DISPLAY2.width = 0;
-    DISPLAY2.height = 0;
-    DISPFB1.frame_base = 0;
-    DISPFB1.width = 0;
-    DISPFB1.x = 0;
-    DISPFB1.y = 0;
-    DISPFB2.frame_base = 0;
-    DISPFB2.width = 0;
-    DISPFB2.x = 0;
-    DISPFB2.y = 0;
-    IMR.signal = true;
-    IMR.finish = true;
-    IMR.hsync = true;
-    IMR.vsync = true;
-    IMR.rawt = true;
-    FINISH_enabled = false;
-    FINISH_generated = false;
-    FINISH_requested = false;
+
+    reg.reset();
     context1.reset();
     context2.reset();
     PSMCT24_color = 0;
     PSMCT24_unpacked_count = 0;
     current_ctx = &context1;
-    VBLANK_enabled = false;
-    VBLANK_generated = false;
-    set_CRT(false, 0x2, false);
 }
 
 void GraphicsSynthesizerThread::memdump()
@@ -186,54 +167,11 @@ void GraphicsSynthesizerThread::memdump()
     file.close();
 }
 
-void GraphicsSynthesizerThread::start_frame()
-{
-    frame_complete = false;
-}
-
-bool GraphicsSynthesizerThread::is_frame_complete()
-{
-    return frame_complete;
-}
-
-void GraphicsSynthesizerThread::set_CRT(bool interlaced, int mode, bool frame_mode)
-{
-    SMODE2.interlaced = interlaced;
-    CRT_mode = mode;
-    SMODE2.frame_mode = frame_mode;
-}
-
-void GraphicsSynthesizerThread::set_VBLANK(bool is_VBLANK)
-{
-    if (is_VBLANK)
-    {
-        printf("[GS_t] VBLANK start\n");
-    }
-    else
-    {
-        printf("[GS_t] VBLANK end\n");
-        frame_count++;
-        is_odd_frame = !is_odd_frame;
-    }
-    VBLANK_generated = is_VBLANK;
-}
-
-
-void GraphicsSynthesizerThread::assert_FINISH()
-{
-    if (FINISH_requested && FINISH_enabled)
-    {
-        FINISH_generated = true;
-        FINISH_enabled = false;
-        FINISH_requested = false;
-    }
-}
-
 void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
 {
-    printf("DISPLAY2: (%d, %d) wh: (%d, %d)\n", DISPLAY2.x >> 2, DISPLAY2.y, DISPLAY2.width >> 2, DISPLAY2.height);
-    int width = DISPLAY2.width >> 2;
-    for (int y = 0; y < DISPLAY2.height; y++)
+    printf("DISPLAY2: (%d, %d) wh: (%d, %d)\n", reg.DISPLAY2.x >> 2, reg.DISPLAY2.y, reg.DISPLAY2.width >> 2, reg.DISPLAY2.height);
+    int width = reg.DISPLAY2.width >> 2;
+    for (int y = 0; y < reg.DISPLAY2.height; y++)
     {
         for (int x = 0; x < width; x++)
         {
@@ -244,15 +182,15 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
             //Games that have both settings on seem to expect the game height to be cut in half.
             //This does so more gracefully than ignoring it, but causes "scanlines" to appear.
             //TODO: investigate this more thoroughly
-            if (SMODE2.frame_mode && SMODE2.interlaced)
+            if (reg.SMODE2.frame_mode && reg.SMODE2.interlaced)
                 pixel_y *= 2;
-            if (pixel_x >= width || pixel_y >= DISPLAY2.height)
+            if (pixel_x >= width || pixel_y >= reg.DISPLAY2.height)
                 continue;
-            uint32_t scaled_x = DISPFB2.x + x;
-            uint32_t scaled_y = DISPFB2.y + y;
-            scaled_x *= DISPFB2.width;
+            uint32_t scaled_x = reg.DISPFB2.x + x;
+            uint32_t scaled_y = reg.DISPFB2.y + y;
+            scaled_x *= reg.DISPFB2.width;
             scaled_x /= width;
-            uint32_t value = read_PSMCT32_block(DISPFB2.frame_base * 4, DISPFB2.width, scaled_x, scaled_y);
+            uint32_t value = read_PSMCT32_block(reg.DISPFB2.frame_base * 4, reg.DISPFB2.width, scaled_x, scaled_y);
             target[pixel_x + (pixel_y * width)] = value | 0xFF000000;
         }
     }
@@ -260,7 +198,7 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
 
 void GraphicsSynthesizerThread::dump_texture(uint32_t* target, uint32_t start_addr, uint32_t width)
 {
-    uint32_t dwidth = DISPLAY2.width >> 2;
+    uint32_t dwidth = reg.DISPLAY2.width >> 2;
     printf("[GS_t] Dumping texture\n");
     int max_pixels = width * 256 / 2;
     int p = 0;
@@ -304,195 +242,13 @@ void GraphicsSynthesizerThread::dump_texture(uint32_t* target, uint32_t start_ad
     printf("[GS_t] Done dumping\n");
 }
 
-void GraphicsSynthesizerThread::get_resolution(int &w, int &h)
-{
-    w = 640;
-    switch (CRT_mode)
-    {
-        case 0x2:
-            h = 448;
-            break;
-        case 0x3:
-            h = 512;
-            break;
-        case 0x1C:
-            h = 480;
-            break;
-        default:
-            h = 448;
-    }
-}
 
-void GraphicsSynthesizerThread::get_inner_resolution(int &w, int &h)
-{
-    w = DISPLAY2.width >> 2;
-    h = DISPLAY2.height;
-}
 
-uint32_t GraphicsSynthesizerThread::read32_privileged(uint32_t addr)
-{
-    addr &= 0xFFFF;
-    switch (addr)
-    {
-        case 0x1000:
-        {
-            uint32_t reg = 0;
-            reg |= FINISH_generated << 1;
-            reg |= VBLANK_generated << 3;
-            reg |= is_odd_frame << 13;
-            return reg;
-        }
-        default:
-            printf("[GS_t] Unrecognized privileged read32 from $%04X\n", addr);
-            return 0;
-    }
-}
-
-uint64_t GraphicsSynthesizerThread::read64_privileged(uint32_t addr)
-{
-    addr &= 0xFFFF;
-    switch (addr)
-    {
-        case 0x1000:
-        {
-            uint64_t reg = 0;
-            reg |= FINISH_generated << 1;
-            reg |= VBLANK_generated << 3;
-            reg |= is_odd_frame << 13;
-            return reg;
-        }
-        default:
-            printf("[GS_t] Unrecognized privileged read64 from $%04X\n", addr);
-            return 0;
-    }
-}
-
-void GraphicsSynthesizerThread::write32_privileged(uint32_t addr, uint32_t value)
-{
-    addr &= 0xFFFF;
-    switch (addr)
-    {
-        case 0x0070:
-            printf("[GS_t] Write DISPFB1: $%08X\n", value);
-            DISPFB1.frame_base = (value & 0x3FF) * 2048;
-            DISPFB1.width = ((value >> 9) & 0x3F) * 64;
-            DISPFB1.format = (value >> 14) & 0x1F;
-            break;
-        case 0x1000:
-            printf("[GS_t] Write32 to GS_CSR: $%08X\n", value);
-            if (value & 0x2)
-            {
-                FINISH_enabled = true;
-                FINISH_generated = false;
-            }
-            if (value & 0x8)
-            {
-                VBLANK_enabled = true;
-                VBLANK_generated = false;
-            }
-            break;
-        case 0x1010:
-            printf("[GS_t] Write32 GS_IMR: $%08X\n", value);
-            IMR.signal = value & (1 << 8);
-            IMR.finish = value & (1 << 9);
-            IMR.hsync = value & (1 << 10);
-            IMR.vsync = value & (1 << 11);
-            IMR.rawt = value & (1 << 12);
-            break;
-        default:
-            printf("\n[GS_t] Unrecognized privileged write32 to reg $%04X: $%08X", addr, value);
-    }
-}
-
-void GraphicsSynthesizerThread::write64_privileged(uint32_t addr, uint64_t value)
-{
-    addr &= 0xFFFF;
-    switch (addr)
-    {
-        case 0x0000:
-            printf("[GS_t] Write PMODE: $%08X_%08X\n", value >> 32, value);
-            PMODE.circuit1 = value & 0x1;
-            PMODE.circuit2 = value & 0x2;
-            PMODE.output_switching = (value >> 2) & 0x7;
-            PMODE.use_ALP = value & (1 << 5);
-            PMODE.out1_circuit2 = value & (1 << 6);
-            PMODE.blend_with_bg = value & (1 << 7);
-            PMODE.ALP = (value >> 8) & 0xFF;
-            break;
-        case 0x0020:
-            printf("[GS_t] Write SMODE2: $%08X_%08X\n", value >> 32, value);
-            SMODE2.interlaced = value & 0x1;
-            SMODE2.frame_mode = value & 0x2;
-            SMODE2.power_mode = (value >> 2) & 0x3;
-            break;
-        case 0x0070:
-            printf("[GS_t] Write DISPFB1: $%08X_%08X\n", value >> 32, value);
-            DISPFB1.frame_base = (value & 0x3FF) * 2048;
-            DISPFB1.width = ((value >> 9) & 0x3F) * 64;
-            DISPFB1.format = (value >> 14) & 0x1F;
-            DISPFB1.x = (value >> 32) & 0x7FF;
-            DISPFB1.y = (value >> 43) & 0x7FF;
-            break;
-        case 0x0080:
-            printf("[GS_t] Write DISPLAY1: $%08X_%08X\n", value >> 32, value);
-            DISPLAY1.x = value & 0xFFF;
-            DISPLAY1.y = (value >> 12) & 0x7FF;
-            DISPLAY1.magnify_x = ((value >> 23) & 0xF) + 1;
-            DISPLAY1.magnify_y = ((value >> 27) & 0x3) + 1;
-            DISPLAY1.width = ((value >> 32) & 0xFFF) + 1;
-            DISPLAY1.height = ((value >> 44) & 0x7FF) + 1;
-            break;
-        case 0x0090:
-            printf("[GS_t] Write DISPFB2: $%08X_%08X\n", value >> 32, value);
-            DISPFB2.frame_base = (value & 0x3FF) * 2048;
-            DISPFB2.width = ((value >> 9) & 0x3F) * 64;
-            DISPFB2.format = (value >> 14) & 0x1F;
-            DISPFB2.x = (value >> 32) & 0x7FF;
-            DISPFB2.y = (value >> 43) & 0x7FF;
-            break;
-        case 0x00A0:
-            printf("[GS_t] Write DISPLAY2: $%08X_%08X\n", value >> 32, value);
-            DISPLAY2.x = value & 0xFFF;
-            DISPLAY2.y = (value >> 12) & 0x7FF;
-            DISPLAY2.magnify_x = ((value >> 23) & 0xF) + 1;
-            DISPLAY2.magnify_y = ((value >> 27) & 0x3) + 1;
-            DISPLAY2.width = ((value >> 32) & 0xFFF) + 1;
-            DISPLAY2.height = ((value >> 44) & 0x7FF) + 1;
-            printf("MAGH: %d\n", DISPLAY2.magnify_x);
-            printf("MAGV: %d\n", DISPLAY2.magnify_y);
-            break;
-        case 0x1000:
-            printf("[GS_t] Write64 to GS_CSR: $%08X_%08X\n", value >> 32, value);
-            if (value & 0x2)
-            {
-                FINISH_enabled = true;
-                FINISH_generated = false;
-            }
-            if (value & 0x8)
-            {
-                VBLANK_enabled = true;
-                VBLANK_generated = false;
-            }
-            break;
-        case 0x1010:
-            printf("[GS_t] Write64 GS_IMR: $%08X_%08X\n", value >> 32, value);
-            IMR.signal = value & (1 << 8);
-            IMR.finish = value & (1 << 9);
-            IMR.hsync = value & (1 << 10);
-            IMR.vsync = value & (1 << 11);
-            IMR.rawt = value & (1 << 12);
-            break;
-        case 0x1040:
-            printf("[GS_t] Write64 to GS_BUSDIR: $%08X_%08X\n", value >> 32, value);
-            BUSDIR = (uint8_t)value;
-            break;
-        default:
-            printf("[GS_t] Unrecognized privileged write64 to reg $%04X: $%08X_%08X\n", addr, value >> 32, value);
-    }
-}
 
 void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
 {
+    if (reg.write64(addr, value))
+        return;
     addr &= 0xFFFF;
     switch (addr)
     {
@@ -690,10 +446,6 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
         case 0x0054:
             if (TRXDIR == 0)
                 write_HWREG(value);
-            break;
-        case 0x0061:
-            printf("[GS_t] FINISH Write\n");
-            FINISH_requested = true;
             break;
         default:
             printf("[GS_t] Unrecognized write64 to reg $%04X: $%08X_%08X\n", addr, value >> 32, value);
@@ -899,54 +651,71 @@ void GraphicsSynthesizerThread::vertex_kick(bool drawing_kick)
     vtx_queue[0] = current_vtx;
 
     num_vertices++;
-    bool request_draw_kick = false;
     switch (PRIM.prim_type)
     {
-        case 0:
+        case 0: //point
             num_vertices--;
-            request_draw_kick = true;
+            if (drawing_kick)
+                render_primitive();
             break;
-        case 1:
+        case 1://linelist
             if (num_vertices == 2)
             {
                 num_vertices = 0;
-                request_draw_kick = true;
+                if (drawing_kick)
+                    render_primitive();
             }
             break;
-        case 2:
+        case 2://linestrip
             if (num_vertices == 2)
             {
                 num_vertices--;
-                request_draw_kick = true;
+                if (drawing_kick)
+                    render_primitive();
             }
             break;
-        case 3:
+        case 3://trianglelist
             if (num_vertices == 3)
             {
                 num_vertices = 0;
-                request_draw_kick = true;
+                if (drawing_kick)
+                    render_primitive();
             }
             break;
-        case 4:
+        case 4://trianglestrip
             if (num_vertices == 3)
             {
                 num_vertices--;
-                request_draw_kick = true;
+                if (drawing_kick)
+                    render_primitive();
             }
             break;
-        case 6:
+        case 5://trianglefan: WARNING UNTESTED
+            if (num_vertices == 3){
+                num_vertices--;
+                if (drawing_kick) {
+                    render_primitive();
+                    /*swap the previous verticies and the original vertex
+                    so that the remaining 2 vericies are the current and the original*/
+                    Vertex tmp = vtx_queue[1];
+                    vtx_queue[1] = vtx_queue[2];
+                    vtx_queue[1] = tmp;
+                    num_vertices--;
+                }
+            }
+            break;
+        case 6://sprite
             if (num_vertices == 2)
             {
                 num_vertices = 0;
-                request_draw_kick = true;
+                if (drawing_kick)
+                    render_primitive();
             }
             break;
         default:
             printf("[GS_t] Unrecognized primitive %d\n", PRIM.prim_type);
             exit(1);
     }
-    if (drawing_kick && request_draw_kick)
-        render_primitive();
 }
 
 void GraphicsSynthesizerThread::render_primitive()
