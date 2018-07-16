@@ -1,6 +1,12 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 
+/**
+Logs debug info only if the corresponding origin is enabled.
+You can call Logger::set(origin, true) anywhere to enable logging for that origin.
+QT and Emulator are enabled by default
+**/
+
 class Logger
 {
 public:
