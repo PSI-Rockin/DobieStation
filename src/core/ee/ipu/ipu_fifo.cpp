@@ -1,5 +1,5 @@
 #include <cstdlib>
-#include <cstdio>
+#include "../../logger.hpp"
 #include "ipu_fifo.hpp"
 
 bool IPU_FIFO::get_bits(uint32_t &data, int bits)
@@ -37,11 +37,11 @@ void IPU_FIFO::advance_stream(uint8_t amount)
         amount = 32;
 
     bit_pointer += amount;
-    //printf("Advance stream: %d + %d = %d\n", bit_pointer - amount, amount, bit_pointer);
+    //Logger::log(Logger::OTHER, "Advance stream: %d + %d = %d\n", bit_pointer - amount, amount, bit_pointer);
 
     if (bit_pointer > (f.size() * 128))
     {
-        printf("[IPU] Bit pointer exceeds FIFO size!\n");
+        Logger::log(Logger::IPU, "Bit pointer exceeds FIFO size!\n");
         exit(1);
     }
     while (bit_pointer >= 128)

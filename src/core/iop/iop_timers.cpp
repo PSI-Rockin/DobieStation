@@ -1,4 +1,4 @@
-#include <cstdio>
+#include "../logger.hpp"
 #include "../emulator.hpp"
 #include "iop_timers.hpp"
 
@@ -71,7 +71,7 @@ void IOPTiming::IRQ_test(int index, bool overflow)
 
 uint32_t IOPTiming::read_counter(int index)
 {
-    printf("[IOP Timing] Read timer %d counter: $%08X\n", index, timers[index].counter);
+    Logger::log(Logger::IOP_Timing, "Read timer %d counter: $%08X\n", index, timers[index].counter);
     return timers[index].counter;
 }
 
@@ -91,19 +91,19 @@ uint16_t IOPTiming::read_control(int index)
 
     timers[index].control.compare_interrupt = false;
     timers[index].control.overflow_interrupt = false;
-    printf("[IOP Timing] Read timer %d control: $%04X\n", index, reg);
+    Logger::log(Logger::IOP_Timing, "Read timer %d control: $%04X\n", index, reg);
     return reg;
 }
 
 void IOPTiming::write_counter(int index, uint32_t value)
 {
     timers[index].counter = value;
-    printf("[IOP Timing] Write timer %d counter: $%08X\n", index, value);
+    Logger::log(Logger::IOP_Timing, "Write timer %d counter: $%08X\n", index, value);
 }
 
 void IOPTiming::write_control(int index, uint16_t value)
 {
-    printf("[IOP Timing] Write timer %d control $%04X\n", index, value);
+    Logger::log(Logger::IOP_Timing, "Write timer %d control $%04X\n", index, value);
     timers[index].control.use_gate = value & 0x1;
     if (timers[index].control.use_gate)
         exit(1);
@@ -119,7 +119,7 @@ void IOPTiming::write_control(int index, uint16_t value)
 
 void IOPTiming::write_target(int index, uint32_t value)
 {
-    printf("[IOP Timing] Write timer %d target $%08X\n", index, value);
+    Logger::log(Logger::IOP_Timing, "Write timer %d target $%08X\n", index, value);
     timers[index].target = value;
     if (!timers[index].control.toggle_int)
         timers[index].control.int_enable = true;

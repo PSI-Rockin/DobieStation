@@ -1,5 +1,5 @@
 #include <cstdlib>
-#include <cstdio>
+#include "../../logger.hpp"
 #include "vlc_table.hpp"
 
 VLC_Table::VLC_Table(VLC_Entry* table, int table_size, int max_bits) :
@@ -28,7 +28,7 @@ bool VLC_Table::peek_symbol(IPU_FIFO &FIFO, VLC_Entry &entry)
             }
         }
     }
-    printf("[VLC Table] Symbol not found: $%08X\n", key);
+    Logger::log(Logger::IPU, "(VLC table) Symbol not found: $%08X\n", key);
     exit(1);
     return false;
 }

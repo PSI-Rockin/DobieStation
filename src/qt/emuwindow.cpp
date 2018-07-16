@@ -63,7 +63,7 @@ int EmuWindow::init(int argc, char** argv)
 {
     if (argc < 2)
     {
-        printf("Args: [BIOS] (Optional)[ELF/ISO]\n");
+        Logger::log(Logger::OTHER, "Args: [BIOS] (Optional)[ELF/ISO]\n");
         return 1;
     }
 
@@ -96,10 +96,10 @@ int EmuWindow::init(int argc, char** argv)
     ifstream BIOS_file(bios_name, ios::binary | ios::in);
     if (!BIOS_file.is_open())
     {
-        printf("Failed to load PS2 BIOS from %s\n", bios_name);
+        Logger::log(Logger::OTHER, "Failed to load PS2 BIOS from %s\n", bios_name);
         return 1;
     }
-    printf("Loaded PS2 BIOS.\n");
+    Logger::log(Logger::OTHER, "Loaded PS2 BIOS.\n");
     uint8_t* BIOS = new uint8_t[1024 * 1024 * 4];
     BIOS_file.read((char*)BIOS, 1024 * 1024 * 4);
     BIOS_file.close();
@@ -120,7 +120,7 @@ int EmuWindow::load_exec(const char* file_name, bool skip_BIOS)
     ifstream exec_file(file_name, ios::binary | ios::in);
     if (!exec_file.is_open())
     {
-        printf("Failed to load %s\n", file_name);
+        Logger::log(Logger::OTHER, "Failed to load %s\n", file_name);
         return 1;
     }
 
@@ -128,7 +128,7 @@ int EmuWindow::load_exec(const char* file_name, bool skip_BIOS)
     string file_string = file_name;
     string format = file_string.substr(file_string.length() - 4);
     transform(format.begin(), format.end(), format.begin(), ::tolower);
-    printf("%s\n", format.c_str());
+    Logger::log(Logger::OTHER, "%s\n", format.c_str());
 
     if (format == ".elf")
     {
@@ -137,8 +137,8 @@ int EmuWindow::load_exec(const char* file_name, bool skip_BIOS)
         exec_file.read((char*)ELF, ELF_size);
         exec_file.close();
 
-        printf("Loaded %s\n", file_name);
-        printf("Size: %lld\n", ELF_size);
+        Logger::log(Logger::OTHER, "Loaded %s\n", file_name);
+        Logger::log(Logger::OTHER, "Size: %lld\n", ELF_size);
         emuthread.load_ELF(ELF, ELF_size);
         delete[] ELF;
         ELF = nullptr;
@@ -154,7 +154,7 @@ int EmuWindow::load_exec(const char* file_name, bool skip_BIOS)
     }
     else
     {
-        printf("Unrecognized file format %s\n", format.c_str());
+        Logger::log(Logger::OTHER, "Unrecognized file format %s\n", format.c_str());
         return 1;
     }
 
@@ -204,7 +204,7 @@ void EmuWindow::paintEvent(QPaintEvent *event)
     QPainter painter(this);
     painter.fillRect(rect(), Qt::black);
 
-    printf("Draw image!\n");
+    Logger::log(Logger::OTHER, "Draw image!\n");
 
     painter.drawPixmap(0, 0, QPixmap::fromImage(final_image));
 }

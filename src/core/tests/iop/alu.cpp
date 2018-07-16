@@ -42,12 +42,12 @@ const static uint32_t C_GARBAGE2[4] = {0xDEADBEEF, 0xDEADBEEE, 0xDEADBEED, 0xDEA
 #define RRR_OP_DO_III(NAME, OP, d, s, t) \
     SET_U32(RD, d); SET_U32(RS, s); SET_U32(RT, t); \
     RRR(OP) \
-    test_output << "  " << #NAME << " " << std::dec << GET_S32(RS) << ", " << GET_S32(RT) << ": "; PRINT_R(RD, 1)
+    test_output << "  " << #NAME << " " << std::dec << GET_S32(RS) << ", "<< GET_S32(RT) << ": "; PRINT_R(RD, 1)
 
 #define RRR_OP_DO_MMM(NAME, OP, d, s, t) \
     SET_M(RD, d); SET_M(RS, s); SET_M(RT, t); \
     RRR(OP) \
-    test_output << "  " << #NAME << " " << #s << ", " << #t << ": "; PRINT_R(RD, 1);
+    test_output << "  " << #NAME << " " << #s << ", "<< #t << ": "; PRINT_R(RD, 1);
 
 #define TEST_RRR(NAME, OP) \
     do { \
@@ -80,12 +80,12 @@ const static uint32_t C_GARBAGE2[4] = {0xDEADBEEF, 0xDEADBEEE, 0xDEADBEED, 0xDEA
 #define RRI_OP_DO_III(OP, d, s, t) \
     SET_U32(RD, d); SET_U32(RS, s); \
     RRI(OP, t) \
-    test_output << "  " << #OP << " " << dec << GET_S32(RS) << ", " << t << ": "; PRINT_R(RD, 1)
+    test_output << "  " << #OP << " " << dec << GET_S32(RS) << ", "<< t << ": "; PRINT_R(RD, 1)
 
 #define RRI_OP_DO_MMI(OP, d, s, t) \
     SET_M(RD, d); SET_M(RS, s); \
     RRI(OP, t) \
-    test_output << "  " << #OP << " " << #s << ", " << dec << t << ": "; PRINT_R(RD, 1);
+    test_output << "  " << #OP << " " << #s << ", "<< dec << t << ": "; PRINT_R(RD, 1);
 
 #define TEST_RRI(OP) \
     do { \

@@ -1,4 +1,4 @@
-#include <cstdio>
+#include "../logger.hpp"
 #include <cstdlib>
 #include "intc.hpp"
 #include "timers.hpp"
@@ -111,7 +111,7 @@ uint32_t EmotionTiming::read32(uint32_t addr)
         case 0x10001810:
             return read_control(3);
         default:
-            printf("[EE Timing] Unrecognized read32 from $%08X\n", addr);
+            Logger::log(Logger::EE_Timing, "Unrecognized read32 from $%08X\n", addr);
             return 0;
     }
 }
@@ -122,18 +122,18 @@ void EmotionTiming::write32(uint32_t addr, uint32_t value)
     switch (addr & 0xFF)
     {
         case 0x00:
-            printf("[EE Timing] Write32 timer %d counter: $%08X\n", id, value);
+            Logger::log(Logger::EE_Timing, "Write32 timer %d counter: $%08X\n", id, value);
             timers[id].counter = value & 0xFFFF;
             break;
         case 0x10:
             write_control(id, value);
             break;
         case 0x20:
-            printf("[EE Timing] Write32 timer %d compare: $%08X\n", id, value);
+            Logger::log(Logger::EE_Timing, "Write32 timer %d compare: $%08X\n", id, value);
             timers[id].compare = value & 0xFFFF;
             break;
         default:
-            printf("[EE Timing] Unrecognized write32 to $%08X of $%08X\n", addr, value);
+            Logger::log(Logger::EE_Timing, "Unrecognized write32 to $%08X of $%08X\n", addr, value);
             break;
     }
 }
@@ -185,7 +185,7 @@ uint32_t EmotionTiming::read_control(int index)
 
 void EmotionTiming::write_control(int index, uint32_t value)
 {
-    printf("[EE Timing] Write32 timer %d control: $%08X\n", index, value);
+    Logger::log(Logger::EE_Timing, "Write32 timer %d control: $%08X\n", index, value);
     timers[index].control.mode = value & 0x3;
     timers[index].control.gate_enable = value & (1 << 2);
     if (timers[index].control.gate_enable)

@@ -2,7 +2,7 @@
 #define IOP_HPP
 #include <cstdint>
 #include <cstdlib>
-#include <cstdio>
+#include "../logger.hpp"
 #include "iop_cop0.hpp"
 
 class Emulator;

@@ -1,4 +1,4 @@
-#include <cstdio>
+#include "../logger.hpp"
 #include <cstdlib>
 #include "emotion.hpp"
 #include "emotiondisasm.hpp"
@@ -113,7 +113,7 @@ void EmotionEngine::run()
     if (can_disassemble)
     {
         std::string disasm = EmotionDisasm::disasm_instr(instruction, PC);
-        printf("[$%08X] $%08X - %s\n", PC, instruction, disasm.c_str());
+        Logger::log(Logger::OTHER, "[$%08X] $%08X - %s\n", PC, instruction, disasm.c_str());
     }
     EmotionInterpreter::interpret(*this, instruction);
     cp0->count_up(1);
@@ -145,7 +145,7 @@ void EmotionEngine::run()
 
     if (cp0->int_enabled())
     {
-        //printf("[EE] Int enabled!\n");
+        //Logger::log(EE, "Int enabled!\n");
         if (cp0->cause.int0_pending)
             int0();
         if (cp0->cause.int1_pending)
@@ -166,16 +166,16 @@ int EmotionEngine::run(int cycles_to_run)
             calls++;
             //if (calls == 3)
                 //can_disassemble = true;
-            printf("readBufBeginPut\n");
+            Logger::log(Logger::OTHER, "readBufBeginPut\n");
         }
         if (PC == 0x0037BE28)
-            printf("readBufBeginGet\n");
+            Logger::log(Logger::OTHER, "readBufBeginGet\n");
         if (PC == 0x0037Be50)
-            printf("sceMpegDemuxPssRing\n");
+            Logger::log(Logger::OTHER, "sceMpegDemuxPssRing\n");
         if (can_disassemble && (PC < 0x81FC0 || PC >= 0x82000))
         {
             std::string disasm = EmotionDisasm::disasm_instr(instruction, PC);
-            printf("[$%08X] $%08X - %s\n", PC, instruction, disasm.c_str());
+            Logger::log(Logger::OTHER, "[$%08X] $%08X - %s\n", PC, instruction, disasm.c_str());
             print_state();
         }
         EmotionInterpreter::interpret(*this, instruction);
@@ -191,11 +191,11 @@ int EmotionEngine::run(int cycles_to_run)
                 branch_on = false;
                 if (!new_PC || (new_PC & 0x3))
                 {
-                    printf("[EE] Jump to invalid address $%08X from $%08X\n", new_PC, PC - 8);
+                    Logger::log(Logger::EE, "Jump to invalid address $%08X from $%08X\n", new_PC, PC - 8);
                     exit(1);
                 }
                 if (PC >= 0x82000 && new_PC == 0x81FC0)
-                    printf("[EE] Entering BIFCO loop\n");
+                    Logger::log(Logger::EE, "Entering BIFCO loop\n");
                 PC = new_PC;
                 //Temporary hack for Atelier Iris - Skip intro movies
                 //if (PC == 0x0029e9cc)
@@ -225,15 +225,15 @@ void EmotionEngine::print_state()
 {
     for (int i = 1; i < 32; i++)
     {
-        printf("%s:$%08X_%08X_%08X_%08X", REG(i), get_gpr<uint32_t>(i, 3), get_gpr<uint32_t>(i, 2), get_gpr<uint32_t>(i, 1), get_gpr<uint32_t>(i));
+        Logger::log(Logger::OTHER, "%s:$%08X_%08X_%08X_%08X", REG(i), get_gpr<uint32_t>(i, 3), get_gpr<uint32_t>(i, 2), get_gpr<uint32_t>(i, 1), get_gpr<uint32_t>(i));
         if ((i & 1) == 1)
-            printf("\n");
+            Logger::log(Logger::OTHER, "\n");
         else
-            printf("\t");
+            Logger::log(Logger::OTHER, "\t");
     }
-    //printf("lo:$%08X_%08X_%08X_%08X\t", LO1 >> 32, LO1, LO >> 32, LO);
-    //printf("hi:$%08X_%08X_%08X_%08X\t", HI1 >> 32, HI1, HI >> 32, HI);
-    printf("\n");
+    //Logger::log(Logger::OTHER, "lo:$%08X_%08X_%08X_%08X\t", LO1 >> 32, LO1, LO >> 32, LO);
+    //Logger::log(Logger::OTHER, "hi:$%08X_%08X_%08X_%08X\t", HI1 >> 32, HI1, HI >> 32, HI);
+    Logger::log(Logger::OTHER, "\n");
 }
 
 void EmotionEngine::set_disassembly(bool dis)
@@ -428,7 +428,7 @@ void EmotionEngine::mfc(int cop_id, int reg, int cop_reg)
             bark = fpu->get_gpr(cop_reg);
             break;
         default:
-            printf("Unrecognized cop id %d in mfc\n", cop_id);
+            Logger::log(Logger::OTHER, "Unrecognized cop id %d in mfc\n", cop_id);
             exit(1);
     }
 
@@ -446,7 +446,7 @@ void EmotionEngine::mtc(int cop_id, int reg, int cop_reg)
             fpu->mtc(cop_reg, get_gpr<uint32_t>(reg));
             break;
         default:
-            printf("Unrecognized cop id %d in mtc\n", cop_id);
+            Logger::log(Logger::OTHER, "Unrecognized cop id %d in mtc\n", cop_id);
             exit(1);
     }
 }
@@ -566,14 +566,14 @@ void EmotionEngine::lwc1(uint32_t addr, int index)
 
 void EmotionEngine::lqc2(uint32_t addr, int index)
 {
-    //printf("[EE] LQC2: ");
+    //Logger::log(EE, "LQC2: ");
     for (int i = 0; i < 4; i++)
     {
         uint32_t bark = read32(addr + (i << 2));
-        //printf("$%08X ", bark);
+        //Logger::log(Logger::OTHER, "$%08X ", bark);
         vu0->set_gpr_f(index, i, VectorUnit::convert(bark));
     }
-    //printf("\n");
+    //Logger::log(Logger::OTHER, "\n");
 }
 
 void EmotionEngine::swc1(uint32_t addr, int index)
@@ -645,7 +645,7 @@ void EmotionEngine::syscall_exception()
 {
     uint8_t op = read8(PC - 4);
     if (op != 0x7A)
-        printf("[EE] SYSCALL: %s (id: $%02X) called at $%08X\n", SYSCALL(op), op, PC);
+        Logger::log(Logger::EE, "SYSCALL: %s (id: $%02X) called at $%08X\n", SYSCALL(op), op, PC);
 
     if (op == 0x7C)
     {
@@ -655,7 +655,7 @@ void EmotionEngine::syscall_exception()
     if (op == 0x04)
     {
         //On a real PS2, Exit returns to OSDSYS, but that isn't functional yet.
-        printf("[EE] Exit syscall called!\n");
+        Logger::log(Logger::EE, "Exit syscall called!\n");
         exit(1);
     }
     handle_exception(0x80000180, 0x08);
@@ -667,7 +667,7 @@ void EmotionEngine::deci2call(uint32_t func, uint32_t param)
     {
         case 0x01:
         {
-            printf("Deci2Open\n");
+            Logger::log(Logger::OTHER, "Deci2Open\n");
             int id = deci2size;
             deci2size++;
             deci2handlers[id].active = true;
@@ -678,15 +678,15 @@ void EmotionEngine::deci2call(uint32_t func, uint32_t param)
             break;
         case 0x03:
         {
-            printf("Deci2Send\n");
+            Logger::log(Logger::OTHER, "Deci2Send\n");
             int id = read32(param);
             if (deci2handlers[id].active)
             {
                 uint32_t addr = read32(deci2handlers[id].addr + 0x10);
-                printf("Str addr: $%08X\n", addr);
+                Logger::log(Logger::OTHER, "Str addr: $%08X\n", addr);
                 int len = read32(addr) - 0x0C;
                 uint32_t str = addr + 0x0C;
-                printf("Len: %d\n", len);
+                Logger::log(Logger::OTHER, "Len: %d\n", len);
                 e->ee_deci2send(str, len);
             }
             set_gpr<uint64_t>(2, 1);
@@ -694,7 +694,7 @@ void EmotionEngine::deci2call(uint32_t func, uint32_t param)
             break;
         case 0x04:
         {
-            printf("Deci2Poll\n");
+            Logger::log(Logger::OTHER, "Deci2Poll\n");
             int id = read32(param);
             if (deci2handlers[id].active)
                 write32(deci2handlers[id].addr + 0x0C, 0);
@@ -702,7 +702,7 @@ void EmotionEngine::deci2call(uint32_t func, uint32_t param)
         }
             break;
         case 0x10:
-            printf("kputs\n");
+            Logger::log(Logger::OTHER, "kputs\n");
             e->ee_kputs(param);
             break;
     }
@@ -712,7 +712,7 @@ void EmotionEngine::int0()
 {
     if (cp0->status.int0_mask)
     {
-        printf("[EE] INT0!\n");
+        Logger::log(Logger::EE, "INT0!\n");
         handle_exception(0x80000200, 0);
     }
 }
@@ -721,7 +721,7 @@ void EmotionEngine::int1()
 {
     if (cp0->status.int1_mask)
     {
-        printf("[EE] INT1!\n");
+        Logger::log(Logger::EE, "INT1!\n");
         //can_disassemble = true;
         handle_exception(0x80000200, 0);
     }
@@ -731,19 +731,19 @@ void EmotionEngine::set_int0_signal(bool value)
 {
     cp0->cause.int0_pending = value;
     if (value)
-        printf("[EE] Set INT0\n");
+        Logger::log(Logger::EE, "Set INT0\n");
 }
 
 void EmotionEngine::set_int1_signal(bool value)
 {
     cp0->cause.int1_pending = value;
     if (value)
-        printf("[EE] Set INT1\n");
+        Logger::log(Logger::EE, "Set INT1\n");
 }
 
 void EmotionEngine::eret()
 {
-    //printf("[EE] Return from exception\n");
+    //Logger::log(EE, "Return from exception\n");
     if (cp0->status.error)
     {
         PC = cp0->ErrorEPC;
@@ -815,14 +815,14 @@ void EmotionEngine::qmfc2(int dest, int cop_reg)
 
 void EmotionEngine::qmtc2(int source, int cop_reg)
 {
-    //printf("[EE] QMTC2: ");
+    //Logger::log(EE, "QMTC2: ");
     for (int i = 0; i < 4; i++)
     {
         uint32_t bark = get_gpr<uint32_t>(source, i);
-        //printf("$%08X ", bark);
+        //Logger::log(Logger::OTHER, "$%08X ", bark);
         vu0->set_gpr_u(cop_reg, i, bark);
     }
-    //printf("\n");
+    //Logger::log(Logger::OTHER, "\n");
 }
 
 void EmotionEngine::cop2_special(uint32_t instruction)

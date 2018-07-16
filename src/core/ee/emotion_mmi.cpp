@@ -1,5 +1,5 @@
 #include <algorithm>
-#include <cstdio>
+#include "../logger.hpp"
 #include <cstdlib>
 #include "emotioninterpreter.hpp"
 

@@ -1,4 +1,4 @@
-#include <cstdio>
+#include "../logger.hpp"
 #include <cstdlib>
 #include "emotioninterpreter.hpp"
 
@@ -909,7 +909,7 @@ void EmotionInterpreter::cop2_qmtc2(EmotionEngine &cpu, uint32_t instruction)
 
 void EmotionInterpreter::unknown_op(const char *type, uint32_t instruction, uint16_t op)
 {
-    printf("[EE Interpreter] Unrecognized %s op $%04X\n", type, op);
-    printf("[EE Interpreter] Instr: $%08X\n", instruction);
+    Logger::log(Logger::EE_Interpreter, "Unrecognized %s op $%04X\n", type, op);
+    Logger::log(Logger::EE_Interpreter, "Instr: $%08X\n", instruction);
     exit(1);
 }

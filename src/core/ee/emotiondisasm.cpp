@@ -224,14 +224,14 @@ string EmotionDisasm::disasm_regimm(uint32_t instruction, uint32_t instr_addr)
 string EmotionDisasm::disasm_mtsab(uint32_t instruction)
 {
     stringstream output;
-    output << "mtsab " << EmotionEngine::REG(RS) << ", " << (uint16_t)IMM;
+    output << "mtsab " << EmotionEngine::REG(RS) << ", "<< (uint16_t)IMM;
     return output.str();
 }
 
 string EmotionDisasm::disasm_mtsah(uint32_t instruction)
 {
     stringstream output;
-    output << "mtsah " << EmotionEngine::REG(RS) << ", " << (uint16_t)IMM;
+    output << "mtsah " << EmotionEngine::REG(RS) << ", "<< (uint16_t)IMM;
     return output.str();
 }
 
@@ -666,7 +666,7 @@ string EmotionDisasm::disasm_bgtz(uint32_t instruction, uint32_t instr_addr)
 string EmotionDisasm::disasm_math(const string opcode, uint32_t instruction)
 {
     stringstream output;
-    output << EmotionEngine::REG(RT) << ", " << EmotionEngine::REG(RS) << ", "
+    output << EmotionEngine::REG(RT) << ", "<< EmotionEngine::REG(RS) << ", "
            << "$" << setfill('0') << setw(4) << hex << IMM;
     return opcode + " " + output.str();
 }
@@ -1985,7 +1985,7 @@ string EmotionDisasm::disasm_psubb(uint32_t instruction)
 string EmotionDisasm::disasm_pext5(uint32_t instruction)
 {
     stringstream output;
-    output << "pext5 " << EmotionEngine::REG(RD) << ", " << EmotionEngine::REG(RT);
+    output << "pext5 " << EmotionEngine::REG(RD) << ", "<< EmotionEngine::REG(RT);
     return output.str();
 }
 
@@ -2038,14 +2038,14 @@ string EmotionDisasm::disasm_mmi1(uint32_t instruction)
 string EmotionDisasm::disasm_pabsw(uint32_t instruction)
 {
     stringstream output;
-    output << "pabsw " << EmotionEngine::REG(RD) << ", " << EmotionEngine::REG(RT);
+    output << "pabsw " << EmotionEngine::REG(RD) << ", "<< EmotionEngine::REG(RT);
     return output.str();
 }
 
 string EmotionDisasm::disasm_pabsh(uint32_t instruction)
 {
     stringstream output;
-    output << "pabsh " << EmotionEngine::REG(RD) << ", " << EmotionEngine::REG(RT);
+    output << "pabsh " << EmotionEngine::REG(RD) << ", "<< EmotionEngine::REG(RT);
     return output.str();
 }
 

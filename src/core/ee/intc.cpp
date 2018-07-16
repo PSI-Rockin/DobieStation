@@ -1,4 +1,4 @@
-#include <cstdio>
+#include "../logger.hpp"
 #include "emotion.hpp"
 #include "intc.hpp"
 
@@ -26,7 +26,7 @@ uint32_t INTC::read_stat()
 void INTC::write_mask(uint32_t value)
 {
     INTC_MASK ^= (value & 0x7FFF);
-    printf("[INTC] New INTC_MASK: $%08X\n", INTC_MASK);
+    Logger::log(Logger::INTC, "New INTC_MASK: $%08X\n", INTC_MASK);
     int0_check();
 }
 
@@ -38,7 +38,7 @@ void INTC::write_stat(uint32_t value)
 
 void INTC::assert_IRQ(int id)
 {
-    printf("[INTC] EE IRQ: %d\n", id);
+    Logger::log(Logger::INTC, "EE IRQ: %d\n", id);
     INTC_STAT |= (1 << id);
     int0_check();
 }

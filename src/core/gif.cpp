@@ -1,4 +1,4 @@
-#include <cstdio>
+#include "logger.hpp"
 #include "gif.hpp"
 #include "gs.hpp"
 
@@ -38,7 +38,7 @@ void GraphicsInterface::process_PACKED(uint128_t data)
 {
     uint64_t data1 = data._u64[0];
     uint64_t data2 = data._u64[1];
-    //printf("[GIF] PACKED: $%08X_%08X_%08X_%08X\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
+    //Logger::log(Logger::GIF, "PACKED: $%08X_%08X_%08X_%08X\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
     uint64_t reg_offset = (current_tag.reg_count - current_tag.regs_left) << 2;
     uint8_t reg = (current_tag.regs & (0xFUL << reg_offset)) >> reg_offset;
     switch (reg)
@@ -110,14 +110,14 @@ void GraphicsInterface::process_PACKED(uint128_t data)
             //NOP
             break;
         default:
-            printf("Unrecognized PACKED reg $%02X\n", reg);
+            Logger::log(Logger::GIF, "Unrecognized PACKED reg $%02X\n", reg);
             break;
     }
 }
 
 void GraphicsInterface::process_REGLIST(uint128_t data)
 {
-    //printf("[GIF] Reglist: $%08X_%08X_%08X_%08X\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
+    //Logger::log(Logger::GIF, "Reglist: $%08X_%08X_%08X_%08X\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
     for (int i = 0; i < 2; i++)
     {
         uint64_t reg_offset = (current_tag.reg_count - current_tag.regs_left) << 2;
@@ -139,7 +139,7 @@ void GraphicsInterface::process_REGLIST(uint128_t data)
 
 void GraphicsInterface::feed_GIF(uint128_t data)
 {
-    //printf("[GIF] Data: $%08X_%08X_%08X_%08X\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
+    //Logger::log(Logger::GIF, "Data: $%08X_%08X_%08X_%08X\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
     uint64_t data1 = data._u64[0];
     uint64_t data2 = data._u64[1];
     if (!current_tag.data_left)
@@ -164,13 +164,13 @@ void GraphicsInterface::feed_GIF(uint128_t data)
         //Ignore zeroed out packets
         if (data1)
         {
-            printf("[GIF] New primitive!\n");
-            printf("NLOOP: $%04X\n", current_tag.NLOOP);
-            printf("EOP: %d\n", current_tag.end_of_packet);
-            printf("Output PRIM: %d PRIM: $%04X\n", current_tag.output_PRIM, current_tag.PRIM);
-            printf("Format: %d\n", current_tag.format);
-            printf("Reg count: %d\n", current_tag.reg_count);
-            printf("Regs: $%08X_$%08X\n", current_tag.regs >> 32, current_tag.regs & 0xFFFFFFFF);
+            Logger::log(Logger::GIF, "New primitive!\n");
+            Logger::log(Logger::GIF, "NLOOP: $%04X\n", current_tag.NLOOP);
+            Logger::log(Logger::GIF, "EOP: %d\n", current_tag.end_of_packet);
+            Logger::log(Logger::GIF, "Output PRIM: %d PRIM: $%04X\n", current_tag.output_PRIM, current_tag.PRIM);
+            Logger::log(Logger::GIF, "Format: %d\n", current_tag.format);
+            Logger::log(Logger::GIF, "Reg count: %d\n", current_tag.reg_count);
+            Logger::log(Logger::GIF, "Regs: $%08X_$%08X\n", current_tag.regs >> 32, current_tag.regs & 0xFFFFFFFF);
         }
 
         if (current_tag.output_PRIM && current_tag.format != 1)
@@ -204,7 +204,7 @@ void GraphicsInterface::feed_GIF(uint128_t data)
                 current_tag.data_left--;
                 break;
             default:
-                printf("[GS] Unrecognized GIFtag format %d\n", current_tag.format);
+                Logger::log(Logger::GS, "Unrecognized GIFtag format %d\n", current_tag.format);
                 break;
         }
         if (!current_tag.data_left && current_tag.end_of_packet)

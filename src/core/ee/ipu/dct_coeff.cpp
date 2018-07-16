@@ -1,4 +1,4 @@
-#include <cstdio>
+#include "../../logger.hpp"
 #include <cstdlib>
 #include "dct_coeff.hpp"
 
@@ -12,7 +12,7 @@ bool DCT_Coeff::peek_value(IPU_FIFO &FIFO, int bits, int &bit_count, uint32_t &r
 {
     if (bits + bit_count > 32)
     {
-        printf("[DCT Coeff] Bit count > 32!\n");
+        Logger::log(Logger::IPU, "(DCT Coeff) Bit count > 32!\n");
         exit(1);
     }
     if (!FIFO.get_bits(result, bits + bit_count))
