@@ -18,6 +18,7 @@ struct UNPACK_Command
 {
     uint32_t addr;
     bool sign_extend;
+    bool masked;
     int cmd;
     int blocks_written;
     int words_per_op; //e.g. - V4-32 has four words per op
@@ -62,6 +63,7 @@ class VectorInterface
         void MSCAL(uint32_t addr);
         void init_UNPACK(uint32_t value);
         void handle_UNPACK(uint32_t value);
+        void handle_UNPACK_masking(uint128_t& quad);
 
         void disasm_micromem();
     public:

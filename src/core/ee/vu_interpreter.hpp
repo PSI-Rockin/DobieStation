@@ -48,6 +48,7 @@ namespace VU_Interpreter
     void lqi(VectorUnit& vu, uint32_t instr);
     void sqi(VectorUnit& vu, uint32_t instr);
     void div(VectorUnit& vu, uint32_t instr);
+    void waitq(VectorUnit& vu, uint32_t instr);
     void mtir(VectorUnit& vu, uint32_t instr);
     void mfir(VectorUnit& vu, uint32_t instr);
     void ilwr(VectorUnit& vu, uint32_t instr);

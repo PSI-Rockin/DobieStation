@@ -451,9 +451,7 @@ void VU_Interpreter::lower1_special(VectorUnit &vu, uint32_t instr)
             div(vu, instr);
             break;
         case 0x3B:
-            /**
-              * WAITQ
-              */
+            waitq(vu, instr);
             break;
         case 0x3C:
             mtir(vu, instr);
@@ -469,6 +467,9 @@ void VU_Interpreter::lower1_special(VectorUnit &vu, uint32_t instr)
             break;
         case 0x68:
             xtop(vu, instr);
+            break;
+        case 0x69:
+            xitop(vu, instr);
             break;
         case 0x6C:
             xgkick(vu, instr);
@@ -520,6 +521,11 @@ void VU_Interpreter::div(VectorUnit &vu, uint32_t instr)
     uint8_t fsf = (instr >> 21) & 0x3;
     uint8_t ftf = (instr >> 23) & 0x3;
     vu.div(ftf, fsf, reg1, reg2);
+}
+
+void VU_Interpreter::waitq(VectorUnit &vu, uint32_t instr)
+{
+    vu.waitq();
 }
 
 void VU_Interpreter::mtir(VectorUnit &vu, uint32_t instr)
