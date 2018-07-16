@@ -8,7 +8,7 @@ void Logger::log(Logger::LogOrigin origin, const char* fmt, ...){
     va_list args;
     va_start(args,fmt);
     if (enabled[origin]){
-        Logger::log(Logger::OTHER, "[%s] ",LogOriginNames[origin]);
+        printf("[%s] ",LogOriginNames[origin]);
         vprintf(fmt, args);
     }
     va_end(args);
