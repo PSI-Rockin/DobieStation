@@ -113,7 +113,7 @@ void EmotionEngine::run()
     if (can_disassemble)
     {
         std::string disasm = EmotionDisasm::disasm_instr(instruction, PC);
-        Logger::log(Logger::OTHER, "[$%08X] $%08X - %s\n", PC, instruction, disasm.c_str());
+        Logger::log(Logger::EE, "[$%08X] $%08X - %s\n", PC, instruction, disasm.c_str());
     }
     EmotionInterpreter::interpret(*this, instruction);
     cp0->count_up(1);
@@ -166,16 +166,16 @@ int EmotionEngine::run(int cycles_to_run)
             calls++;
             //if (calls == 3)
                 //can_disassemble = true;
-            Logger::log(Logger::OTHER, "readBufBeginPut\n");
+            Logger::log(Logger::EE, "readBufBeginPut\n");
         }
         if (PC == 0x0037BE28)
-            Logger::log(Logger::OTHER, "readBufBeginGet\n");
+            Logger::log(Logger::EE, "readBufBeginGet\n");
         if (PC == 0x0037Be50)
-            Logger::log(Logger::OTHER, "sceMpegDemuxPssRing\n");
+            Logger::log(Logger::EE, "sceMpegDemuxPssRing\n");
         if (can_disassemble && (PC < 0x81FC0 || PC >= 0x82000))
         {
             std::string disasm = EmotionDisasm::disasm_instr(instruction, PC);
-            Logger::log(Logger::OTHER, "[$%08X] $%08X - %s\n", PC, instruction, disasm.c_str());
+            Logger::log(Logger::EE, "[$%08X] $%08X - %s\n", PC, instruction, disasm.c_str());
             print_state();
         }
         EmotionInterpreter::interpret(*this, instruction);
@@ -225,15 +225,15 @@ void EmotionEngine::print_state()
 {
     for (int i = 1; i < 32; i++)
     {
-        Logger::log(Logger::OTHER, "%s:$%08X_%08X_%08X_%08X", REG(i), get_gpr<uint32_t>(i, 3), get_gpr<uint32_t>(i, 2), get_gpr<uint32_t>(i, 1), get_gpr<uint32_t>(i));
+        Logger::log(Logger::EE, "%s:$%08X_%08X_%08X_%08X", REG(i), get_gpr<uint32_t>(i, 3), get_gpr<uint32_t>(i, 2), get_gpr<uint32_t>(i, 1), get_gpr<uint32_t>(i));
         if ((i & 1) == 1)
-            Logger::log(Logger::OTHER, "\n");
+            Logger::log(Logger::EE, "\n");
         else
-            Logger::log(Logger::OTHER, "\t");
+            Logger::log(Logger::EE, "\t");
     }
-    //Logger::log(Logger::OTHER, "lo:$%08X_%08X_%08X_%08X\t", LO1 >> 32, LO1, LO >> 32, LO);
-    //Logger::log(Logger::OTHER, "hi:$%08X_%08X_%08X_%08X\t", HI1 >> 32, HI1, HI >> 32, HI);
-    Logger::log(Logger::OTHER, "\n");
+    //Logger::log(Logger::EE, "lo:$%08X_%08X_%08X_%08X\t", LO1 >> 32, LO1, LO >> 32, LO);
+    //Logger::log(Logger::EE, "hi:$%08X_%08X_%08X_%08X\t", HI1 >> 32, HI1, HI >> 32, HI);
+    Logger::log(Logger::EE, "\n");
 }
 
 void EmotionEngine::set_disassembly(bool dis)
@@ -428,7 +428,7 @@ void EmotionEngine::mfc(int cop_id, int reg, int cop_reg)
             bark = fpu->get_gpr(cop_reg);
             break;
         default:
-            Logger::log(Logger::OTHER, "Unrecognized cop id %d in mfc\n", cop_id);
+            Logger::log(Logger::EE, "Unrecognized cop id %d in mfc\n", cop_id);
             exit(1);
     }
 
@@ -446,7 +446,7 @@ void EmotionEngine::mtc(int cop_id, int reg, int cop_reg)
             fpu->mtc(cop_reg, get_gpr<uint32_t>(reg));
             break;
         default:
-            Logger::log(Logger::OTHER, "Unrecognized cop id %d in mtc\n", cop_id);
+            Logger::log(Logger::EE, "Unrecognized cop id %d in mtc\n", cop_id);
             exit(1);
     }
 }
@@ -570,10 +570,10 @@ void EmotionEngine::lqc2(uint32_t addr, int index)
     for (int i = 0; i < 4; i++)
     {
         uint32_t bark = read32(addr + (i << 2));
-        //Logger::log(Logger::OTHER, "$%08X ", bark);
+        //Logger::log(Logger::EE, "$%08X ", bark);
         vu0->set_gpr_f(index, i, VectorUnit::convert(bark));
     }
-    //Logger::log(Logger::OTHER, "\n");
+    //Logger::log(Logger::EE, "\n");
 }
 
 void EmotionEngine::swc1(uint32_t addr, int index)
@@ -667,7 +667,7 @@ void EmotionEngine::deci2call(uint32_t func, uint32_t param)
     {
         case 0x01:
         {
-            Logger::log(Logger::OTHER, "Deci2Open\n");
+            Logger::log(Logger::EE, "Deci2Open\n");
             int id = deci2size;
             deci2size++;
             deci2handlers[id].active = true;
@@ -678,15 +678,15 @@ void EmotionEngine::deci2call(uint32_t func, uint32_t param)
             break;
         case 0x03:
         {
-            Logger::log(Logger::OTHER, "Deci2Send\n");
+            Logger::log(Logger::EE, "Deci2Send\n");
             int id = read32(param);
             if (deci2handlers[id].active)
             {
                 uint32_t addr = read32(deci2handlers[id].addr + 0x10);
-                Logger::log(Logger::OTHER, "Str addr: $%08X\n", addr);
+                Logger::log(Logger::EE, "Str addr: $%08X\n", addr);
                 int len = read32(addr) - 0x0C;
                 uint32_t str = addr + 0x0C;
-                Logger::log(Logger::OTHER, "Len: %d\n", len);
+                Logger::log(Logger::EE, "Len: %d\n", len);
                 e->ee_deci2send(str, len);
             }
             set_gpr<uint64_t>(2, 1);
@@ -694,7 +694,7 @@ void EmotionEngine::deci2call(uint32_t func, uint32_t param)
             break;
         case 0x04:
         {
-            Logger::log(Logger::OTHER, "Deci2Poll\n");
+            Logger::log(Logger::EE, "Deci2Poll\n");
             int id = read32(param);
             if (deci2handlers[id].active)
                 write32(deci2handlers[id].addr + 0x0C, 0);
@@ -702,7 +702,7 @@ void EmotionEngine::deci2call(uint32_t func, uint32_t param)
         }
             break;
         case 0x10:
-            Logger::log(Logger::OTHER, "kputs\n");
+            Logger::log(Logger::EE, "kputs\n");
             e->ee_kputs(param);
             break;
     }
@@ -819,10 +819,10 @@ void EmotionEngine::qmtc2(int source, int cop_reg)
     for (int i = 0; i < 4; i++)
     {
         uint32_t bark = get_gpr<uint32_t>(source, i);
-        //Logger::log(Logger::OTHER, "$%08X ", bark);
+        //Logger::log(Logger::EE, "$%08X ", bark);
         vu0->set_gpr_u(cop_reg, i, bark);
     }
-    //Logger::log(Logger::OTHER, "\n");
+    //Logger::log(Logger::EE, "\n");
 }
 
 void EmotionEngine::cop2_special(uint32_t instruction)

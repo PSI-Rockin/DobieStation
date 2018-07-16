@@ -169,7 +169,7 @@ void GraphicsSynthesizer::assert_FINISH()
 
 void GraphicsSynthesizer::render_CRT()
 {
-    Logger::log(Logger::OTHER, "DISPLAY2: (%d, %d) wh: (%d, %d)\n", DISPLAY2.x >> 2, DISPLAY2.y, DISPLAY2.width >> 2, DISPLAY2.height);
+    Logger::log(Logger::GS, "DISPLAY2: (%d, %d) wh: (%d, %d)\n", DISPLAY2.x >> 2, DISPLAY2.y, DISPLAY2.width >> 2, DISPLAY2.height);
     int width = DISPLAY2.width >> 2;
     for (int y = 0; y < DISPLAY2.height; y++)
     {
@@ -338,7 +338,7 @@ void GraphicsSynthesizer::write32_privileged(uint32_t addr, uint32_t value)
             IMR.rawt = value & (1 << 12);
             break;
         default:
-            Logger::log(Logger::OTHER, "\n[GS] Unrecognized privileged write32 to reg $%04X: $%08X", addr, value);
+            Logger::log(Logger::GS, "Unrecognized privileged write32 to reg $%04X: $%08X", addr, value);
     }
 }
 
@@ -396,8 +396,8 @@ void GraphicsSynthesizer::write64_privileged(uint32_t addr, uint64_t value)
             DISPLAY2.magnify_y = ((value >> 27) & 0x3) + 1;
             DISPLAY2.width = ((value >> 32) & 0xFFF) + 1;
             DISPLAY2.height = ((value >> 44) & 0x7FF) + 1;
-            Logger::log(Logger::OTHER, "MAGH: %d\n", DISPLAY2.magnify_x);
-            Logger::log(Logger::OTHER, "MAGV: %d\n", DISPLAY2.magnify_y);
+            Logger::log(Logger::GS, "MAGH: %d\n", DISPLAY2.magnify_x);
+            Logger::log(Logger::GS, "MAGV: %d\n", DISPLAY2.magnify_y);
             break;
         case 0x1000:
             Logger::log(Logger::GS, "Write64 to GS_CSR: $%08X_%08X\n", value >> 32, value);
@@ -471,12 +471,12 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
             uint32_t t = (value >> 32) & 0xFFFFFF00;
             ST.t = *(float*)&t;
         }
-            Logger::log(Logger::OTHER, "ST: (%f, %f)\n", ST.s, ST.t);
+            Logger::log(Logger::GS, "ST: (%f, %f)\n", ST.s, ST.t);
             break;
         case 0x0003:
             UV.u = value & 0x3FFF;
             UV.v = (value >> 16) & 0x3FFF;
-            Logger::log(Logger::OTHER, "UV: ($%04X, $%04X)\n", UV.u, UV.v);
+            Logger::log(Logger::GS, "UV: ($%04X, $%04X)\n", UV.u, UV.v);
             break;
         case 0x0004:
             current_vtx.x = value & 0xFFFF;
@@ -525,23 +525,23 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
             context2.set_xyoffset(value);
             break;
         case 0x001A:
-            Logger::log(Logger::OTHER, "PRMODECNT: $%08X\n", value);
+            Logger::log(Logger::GS, "PRMODECNT: $%08X\n", value);
             use_PRIM = value & 0x1;
             break;
         case 0x001B:
-            Logger::log(Logger::OTHER, "PRMODE: $%08X\n", value);
+            Logger::log(Logger::GS, "PRMODE: $%08X\n", value);
             break;
         case 0x001C:
             TEXCLUT.width = (value & 0x3F) * 64;
             TEXCLUT.x = ((value >> 6) & 0x3F) * 16;
             TEXCLUT.y = (value >> 12) & 0x3FF;
-            Logger::log(Logger::OTHER, "TEXCLUT: $%08X\n", value);
-            Logger::log(Logger::OTHER, "Width: %d\n", TEXCLUT.width);
-            Logger::log(Logger::OTHER, "X: %d\n", TEXCLUT.x);
-            Logger::log(Logger::OTHER, "Y: %d\n", TEXCLUT.y);
+            Logger::log(Logger::GS, "TEXCLUT: $%08X\n", value);
+            Logger::log(Logger::GS, "Width: %d\n", TEXCLUT.width);
+            Logger::log(Logger::GS, "X: %d\n", TEXCLUT.x);
+            Logger::log(Logger::GS, "Y: %d\n", TEXCLUT.y);
             break;
         case 0x003F:
-            Logger::log(Logger::OTHER, "TEXFLUSH\n");
+            Logger::log(Logger::GS, "TEXFLUSH\n");
             break;
         case 0x0040:
             context1.set_scissor(value);
@@ -586,7 +586,7 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
             BITBLTBUF.dest_base = ((value >> 32) & 0x3FFF) * 64 * 4;
             BITBLTBUF.dest_width = ((value >> 48) & 0x3F) * 64;
             BITBLTBUF.dest_format = (value >> 56) & 0x3F;
-            Logger::log(Logger::OTHER, "BITBLTBUF: $%08X_%08X\n", value >> 32, value);
+            Logger::log(Logger::GS, "BITBLTBUF: $%08X_%08X\n", value >> 32, value);
             break;
         case 0x0051:
             TRXPOS.source_x = value & 0x7FF;
@@ -594,12 +594,12 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
             TRXPOS.dest_x = (value >> 32) & 0x7FF;
             TRXPOS.dest_y = (value >> 48) & 0x7FF;
             TRXPOS.trans_order = (value >> 59) & 0x3;
-            Logger::log(Logger::OTHER, "TRXPOS: $%08X_%08X\n", value >> 32, value);
+            Logger::log(Logger::GS, "TRXPOS: $%08X_%08X\n", value >> 32, value);
             break;
         case 0x0052:
             TRXREG.width = value & 0xFFF;
             TRXREG.height = (value >> 32) & 0xFFF;
-            Logger::log(Logger::OTHER, "TRXREG (%d, %d)\n", TRXREG.width, TRXREG.height);
+            Logger::log(Logger::GS, "TRXREG (%d, %d)\n", TRXREG.width, TRXREG.height);
             break;
         case 0x0053:
             TRXDIR = value & 0x3;
@@ -607,15 +607,15 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
             if (TRXDIR != 3)
             {
                 pixels_transferred = 0;
-                Logger::log(Logger::OTHER, "Transfer started!\n");
-                Logger::log(Logger::OTHER, "Dest base: $%08X\n", BITBLTBUF.dest_base);
-                Logger::log(Logger::OTHER, "TRXPOS: (%d, %d)\n", TRXPOS.dest_x, TRXPOS.dest_y);
-                Logger::log(Logger::OTHER, "TRXREG (%d, %d)\n", TRXREG.width, TRXREG.height);
-                Logger::log(Logger::OTHER, "Format: $%02X\n", BITBLTBUF.dest_format);
-                Logger::log(Logger::OTHER, "Width: %d\n", BITBLTBUF.dest_width);
+                Logger::log(Logger::GS, "Transfer started!\n");
+                Logger::log(Logger::GS, "Dest base: $%08X\n", BITBLTBUF.dest_base);
+                Logger::log(Logger::GS, "TRXPOS: (%d, %d)\n", TRXPOS.dest_x, TRXPOS.dest_y);
+                Logger::log(Logger::GS, "TRXREG (%d, %d)\n", TRXREG.width, TRXREG.height);
+                Logger::log(Logger::GS, "Format: $%02X\n", BITBLTBUF.dest_format);
+                Logger::log(Logger::GS, "Width: %d\n", BITBLTBUF.dest_width);
                 TRXPOS.int_dest_x = TRXPOS.dest_x;
                 TRXPOS.int_source_x = TRXPOS.source_x;
-                //Logger::log(Logger::OTHER, "Transfer addr: $%08X\n", transfer_addr);
+                //Logger::log(Logger::GS, "Transfer addr: $%08X\n", transfer_addr);
                 if (TRXDIR == 2)
                 {
                     //VRAM-to-VRAM transfer
@@ -658,7 +658,7 @@ void GraphicsSynthesizer::set_UV(uint16_t u, uint16_t v)
 {
     UV.u = u;
     UV.v = v;
-    Logger::log(Logger::OTHER, "UV: ($%04X, $%04X)\n", UV.u, UV.v);
+    Logger::log(Logger::GS, "UV: ($%04X, $%04X)\n", UV.u, UV.v);
 }
 
 void GraphicsSynthesizer::set_Q(float q)
@@ -733,7 +733,7 @@ uint16_t GraphicsSynthesizer::read_PSMCT16_block(uint32_t base, uint32_t width, 
     uint32_t pixel = pixels[y & 0x1][(x >> 1) % 0x8];
 
     //Logger::log(Logger::GS, "Read PSMCT16 (Base: $%08X Width: %d X: %d Y: %d)\n", base, width, x, y);
-    //Logger::log(Logger::OTHER, "Page: %d Block: %d Column: %d Pixel: %d\n", page, block, column, pixel);
+    //Logger::log(Logger::GS, "Page: %d Block: %d Column: %d Pixel: %d\n", page, block, column, pixel);
 
     uint32_t addr = (page * 2048 * 4);
     addr += (block * 256);
@@ -742,7 +742,7 @@ uint16_t GraphicsSynthesizer::read_PSMCT16_block(uint32_t base, uint32_t width, 
     if (x & 0x1)
         addr += 2;
     addr &= 0x003FFFFE;
-    //Logger::log(Logger::OTHER, "Addr: $%08X ($%04X)\n", addr, *(uint16_t*)&local_mem[addr]);
+    //Logger::log(Logger::GS, "Addr: $%08X ($%04X)\n", addr, *(uint16_t*)&local_mem[addr]);
     return *(uint16_t*)&local_mem[addr];
 }
 
@@ -775,8 +775,8 @@ void GraphicsSynthesizer::write_PSMCT32_block(uint32_t base, uint32_t width, uin
     addr += (pixel * 4);
     addr &= 0x003FFFFC;
     /*Logger::log(Logger::GS, "Write PSMCT32 (Base: $%08X Width: %d X: %d Y: %d)\n", base, width, x, y);
-    Logger::log(Logger::OTHER, "Page: %d Block: %d Column: %d Pixel: %d\n", page, block, column, pixel);
-    Logger::log(Logger::OTHER, "Addr: $%08X\n", addr);*/
+    Logger::log(Logger::GS, "Page: %d Block: %d Column: %d Pixel: %d\n", page, block, column, pixel);
+    Logger::log(Logger::GS, "Addr: $%08X\n", addr);*/
     *(uint32_t*)&local_mem[addr] = value;
 }
 
@@ -811,7 +811,7 @@ void GraphicsSynthesizer::write_PSMCT16_block(uint32_t base, uint32_t width, uin
     uint32_t pixel = pixels[y & 0x1][(x >> 1) % 8];
 
     //Logger::log(Logger::GS, "Write PSMCT16 (Base: $%08X Width: %d X: %d Y: %d)\n", base, width, x, y);
-    //Logger::log(Logger::OTHER, "Page: %d Block: %d Column: %d Pixel: %d\n", page, block, column, pixel);
+    //Logger::log(Logger::GS, "Page: %d Block: %d Column: %d Pixel: %d\n", page, block, column, pixel);
 
     uint32_t addr = (page * 2048 * 4);
     addr += (block * 256);
@@ -820,7 +820,7 @@ void GraphicsSynthesizer::write_PSMCT16_block(uint32_t base, uint32_t width, uin
     if (x & 0x1)
         addr += 2;
     addr &= 0x003FFFFE;
-    //Logger::log(Logger::OTHER, "Write to one-dimensional addr $%08X ($%04X)\n", addr, value);
+    //Logger::log(Logger::GS, "Write to one-dimensional addr $%08X ($%04X)\n", addr, value);
     *(uint16_t*)&local_mem[addr] = value;
 }
 
@@ -1156,7 +1156,7 @@ void GraphicsSynthesizer::render_point()
 {
     Logger::log(Logger::GS, "Rendering point!\n");
     Vertex v1 = vtx_queue[0]; v1.to_relative(current_ctx->xyoffset);
-    Logger::log(Logger::OTHER, "Coords: (%d, %d, %d)\n", v1.x >> 4, v1.y >> 4, v1.z);
+    Logger::log(Logger::GS, "Coords: (%d, %d, %d)\n", v1.x >> 4, v1.y >> 4, v1.z);
     RGBAQ_REG vtx_color, tex_color;
     vtx_color = v1.rgbaq;
     if (PRIM.texture_mapping)
@@ -1205,7 +1205,7 @@ void GraphicsSynthesizer::render_line()
     RGBAQ_REG color = vtx_queue[0].rgbaq;
     RGBAQ_REG tex_color;
 
-    Logger::log(Logger::OTHER, "Coords: (%d, %d, %d) (%d, %d, %d)\n", v1.x >> 4, v1.y >> 4, v1.z, v2.x >> 4, v2.y >> 4, v2.z);
+    Logger::log(Logger::GS, "Coords: (%d, %d, %d) (%d, %d, %d)\n", v1.x >> 4, v1.y >> 4, v1.z, v2.x >> 4, v2.y >> 4, v2.z);
 
     for (int32_t x = v1.x; x < v2.x; x += 0x10)
     {
@@ -1265,7 +1265,7 @@ void GraphicsSynthesizer::render_triangle()
     Vertex v2 = vtx_queue[1]; v2.to_relative(current_ctx->xyoffset);
     Vertex v3 = vtx_queue[0]; v3.to_relative(current_ctx->xyoffset);
 
-    Logger::log(Logger::OTHER, "(%d, %d, %d) (%d, %d, %d) (%d, %d, %d)\n", v1.x >> 4, v1.y >> 4, v1.z,
+    Logger::log(Logger::GS, "(%d, %d, %d) (%d, %d, %d) (%d, %d, %d)\n", v1.x >> 4, v1.y >> 4, v1.z,
            v2.x >> 4, v2.y >> 4, v2.z, v3.x >> 4, v3.y >> 4, v3.z);
 
     //The triangle rasterization code uses an approach with barycentric coordinates
@@ -1375,7 +1375,7 @@ void GraphicsSynthesizer::render_triangle()
             uint8_t w1_mask = (w1_tl_check << 0) | (w1_tr_check << 1) | (w1_bl_check << 2) | (w1_br_check << 3);
             uint8_t w2_mask = (w2_tl_check << 0) | (w2_tr_check << 1) | (w2_bl_check << 2) | (w2_br_check << 3);
             uint8_t w3_mask = (w3_tl_check << 0) | (w3_tr_check << 1) | (w3_bl_check << 2) | (w3_br_check << 3);
-            //However in other cases, we process the block pixel-by-pixel as usual
+            //However in GS cases, we process the block pixel-by-pixel as usual
             //TODO: In the case where all corners lie inside the triangle the code below could be slightly simplified
             if (w1_mask != 0 && w2_mask != 0 && w3_mask != 0)
             {
@@ -1475,7 +1475,7 @@ void GraphicsSynthesizer::render_sprite()
         swap(v1, v2);
     }
 
-    Logger::log(Logger::OTHER, "Coords: (%d, %d) (%d, %d)\n", v1.x >> 4, v1.y >> 4, v2.x >> 4, v2.y >> 4);
+    Logger::log(Logger::GS, "Coords: (%d, %d) (%d, %d)\n", v1.x >> 4, v1.y >> 4, v2.x >> 4, v2.y >> 4);
 
     for (int32_t y = v1.y; y < v2.y; y += 0x10)
     {
@@ -1556,7 +1556,7 @@ void GraphicsSynthesizer::write_HWREG(uint64_t data)
                 pixels_transferred++;
                 TRXPOS.int_dest_x++;
                 //Logger::log(Logger::GS, "Write to $%08X of ", BITBLTBUF.dest_base + (dest_addr * 4));
-                //Logger::log(Logger::OTHER, "$%08X\n", (data >> (i * 32)) & 0xFFFFFFFF);
+                //Logger::log(Logger::GS, "$%08X\n", (data >> (i * 32)) & 0xFFFFFFFF);
                 break;
             case 0x01:
                 unpack_PSMCT24(data, i);
@@ -1599,7 +1599,7 @@ void GraphicsSynthesizer::write_HWREG(uint64_t data)
                         & 0x00FFFFFF;
                 write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.dest_y, value);
                 //Logger::log(Logger::GS, "Write to $%08X of ", BITBLTBUF.dest_base + (dest_addr * 4));
-                //Logger::log(Logger::OTHER, "$%08X\n", value);
+                //Logger::log(Logger::GS, "$%08X\n", value);
                 pixels_transferred++;
                 TRXPOS.int_dest_x++;
             }
@@ -1621,7 +1621,7 @@ void GraphicsSynthesizer::write_HWREG(uint64_t data)
                         & 0xF0FFFFFF;
                 write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.dest_y, value);
                 //Logger::log(Logger::GS, "Write to $%08X of ", BITBLTBUF.dest_base + (dest_addr * 4));
-                //Logger::log(Logger::OTHER, "$%08X\n", value);
+                //Logger::log(Logger::GS, "$%08X\n", value);
                 pixels_transferred++;
                 TRXPOS.int_dest_x++;
             }
@@ -1643,7 +1643,7 @@ void GraphicsSynthesizer::write_HWREG(uint64_t data)
                         & 0x0FFFFFFF;
                 write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.dest_y, value);
                 //Logger::log(Logger::GS, "Write to $%08X of ", BITBLTBUF.dest_base + (dest_addr * 4));
-                //Logger::log(Logger::OTHER, "$%08X\n", value);
+                //Logger::log(Logger::GS, "$%08X\n", value);
                 pixels_transferred++;
                 TRXPOS.int_dest_x++;
             }
@@ -1693,13 +1693,13 @@ void GraphicsSynthesizer::host_to_host()
     uint32_t source_addr = (TRXPOS.source_x + (TRXPOS.source_y * BITBLTBUF.source_width)) << 1;
     source_addr += BITBLTBUF.source_base;
     uint32_t max_pixels = TRXREG.width * TRXREG.height;
-    Logger::log(Logger::OTHER, "TRXPOS Source: (%d, %d) Dest: (%d, %d)\n", TRXPOS.source_x, TRXPOS.source_y, TRXPOS.dest_x, TRXPOS.dest_y);
-    Logger::log(Logger::OTHER, "TRXREG: (%d, %d)\n", TRXREG.width, TRXREG.height);
-    Logger::log(Logger::OTHER, "Base: $%08X\n", BITBLTBUF.source_base);
-    /*Logger::log(Logger::OTHER, "Source addr: $%08X Dest addr: $%08X\n", source_addr, transfer_addr);
+    Logger::log(Logger::GS, "TRXPOS Source: (%d, %d) Dest: (%d, %d)\n", TRXPOS.source_x, TRXPOS.source_y, TRXPOS.dest_x, TRXPOS.dest_y);
+    Logger::log(Logger::GS, "TRXREG: (%d, %d)\n", TRXREG.width, TRXREG.height);
+    Logger::log(Logger::GS, "Base: $%08X\n", BITBLTBUF.source_base);
+    /*Logger::log(Logger::GS, "Source addr: $%08X Dest addr: $%08X\n", source_addr, transfer_addr);
     while (pixels_transferred < max_pixels)
     {
-        Logger::log(Logger::OTHER, "Host-host transfer from $%08X to $%08X\n", source_addr, transfer_addr);
+        Logger::log(Logger::GS, "Host-host transfer from $%08X to $%08X\n", source_addr, transfer_addr);
         uint64_t borp = *(uint64_t*)&local_mem[source_addr];
         *(uint64_t*)&local_mem[transfer_addr] = borp;
         pixels_transferred += ppd;

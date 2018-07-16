@@ -790,7 +790,7 @@ bool ImageProcessingUnit::process_CSC()
                             alpha = 1 << 31;
 
                         pixels[index] = color | alpha;
-                        //Logger::log(Logger::OTHER, "Pixel: $%08X (%d, %d)\n", pixels[index], i, j);
+                        //Logger::log(Logger::IPU, "Pixel: $%08X (%d, %d)\n", pixels[index], i, j);
                     }
                 }
 

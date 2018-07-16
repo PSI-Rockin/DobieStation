@@ -178,8 +178,8 @@ void IOP_DMA::process_SIF0()
             channels[SIF0].tag_addr += 16;
 
             Logger::log(Logger::IOP_DMA, "Read SIF0 DMAtag!\n");
-            Logger::log(Logger::OTHER, "Data: $%08X\n", data);
-            Logger::log(Logger::OTHER, "Words: $%08X\n", channels[SIF0].word_count);
+            Logger::log(Logger::IOP_DMA, "Data: $%08X\n", data);
+            Logger::log(Logger::IOP_DMA, "Words: $%08X\n", channels[SIF0].word_count);
 
             if ((data & (1 << 31)) || (data & (1 << 30)))
                 channels[SIF0].tag_end = true;
@@ -217,8 +217,8 @@ void IOP_DMA::process_SIF1()
             sif->read_SIF1();
             sif->read_SIF1();
             Logger::log(Logger::IOP_DMA, "Read SIF1 DMAtag!\n");
-            Logger::log(Logger::OTHER, "Addr: $%08X\n", channels[SIF1].addr);
-            Logger::log(Logger::OTHER, "Words: $%08X\n", channels[SIF1].word_count);
+            Logger::log(Logger::IOP_DMA, "Addr: $%08X\n", channels[SIF1].addr);
+            Logger::log(Logger::IOP_DMA, "Words: $%08X\n", channels[SIF1].word_count);
             if ((data & (1 << 31)) || (data & (1 << 30)))
                 channels[SIF1].tag_end = true;
         }

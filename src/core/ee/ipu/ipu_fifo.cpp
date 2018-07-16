@@ -37,7 +37,7 @@ void IPU_FIFO::advance_stream(uint8_t amount)
         amount = 32;
 
     bit_pointer += amount;
-    //Logger::log(Logger::OTHER, "Advance stream: %d + %d = %d\n", bit_pointer - amount, amount, bit_pointer);
+    //Logger::log(Logger::IPU, "Advance stream: %d + %d = %d\n", bit_pointer - amount, amount, bit_pointer);
 
     if (bit_pointer > (f.size() * 128))
     {

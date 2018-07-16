@@ -4,17 +4,17 @@
 class Logger
 {
 public:
-    enum LogOrigin{OTHER,
+    enum LogOrigin{QT,
         IPU, EE, VIF, VU, GIF, GS, CDVD, IOP, Emulator,
         IOP_Debug, EE_Interpreter, FPU, DMAC, GS_CONTEXT,IOP_COP0,IOP_Interpreter,
-        IOP_DMA,EE_Timing,IOP_Timing,INTC,SIO2,PAD,
+        IOP_DMA,EE_Timing,IOP_Timing,INTC,SIO2,PAD,BIOS_HLE,SPU,
         VU_Interpreter,
     OriginsCount
     };
-    static constexpr const char* origin_names[] = { "Other (Needs categorization!)",
+    static constexpr const char* origin_names[] = { "Qt",
         "IPU", "EE", "VIF", "VU", "GIF", "GS", "CDVD", "IOP", "Emulator",
         "IOP Debug", "EE Interpreter", "FPU", "DMAC", "GS Context","IOP COP0","IOP Interpreter",
-        "IOP_DMA","EE Timing","IOP Timing","INTC","SIO2","PAD",
+        "IOP_DMA","EE Timing","IOP Timing","INTC","SIO2","PAD","BIOS HLE","SPU",
         "VU_Interpreter",};
 
     //static void log(LogOrigin origin, char* format, ...);

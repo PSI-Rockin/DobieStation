@@ -97,11 +97,11 @@ void IOP::print_state()
 {
     for (int i = 1; i < 32; i++)
     {
-        Logger::log(Logger::OTHER, "%s:$%08X", REG(i), get_gpr(i));
+        Logger::log(Logger::IOP, "%s:$%08X", REG(i), get_gpr(i));
         if (i % 4 == 3)
-            Logger::log(Logger::OTHER, "\n");
+            Logger::log(Logger::IOP, "\n");
         else
-            Logger::log(Logger::OTHER, "\t");
+            Logger::log(Logger::IOP, "\t");
     }
 }
 
@@ -185,7 +185,7 @@ void IOP::mfc(int cop_id, int cop_reg, int reg)
             set_gpr(reg, cop0.mfc(cop_reg));
             break;
         default:
-            Logger::log(Logger::OTHER, "\n[IOP] MFC: Unknown COP%d", cop_id);
+            Logger::log(Logger::IOP, "\n[IOP] MFC: Unknown COP%d", cop_id);
             exit(1);
     }
 }
@@ -199,7 +199,7 @@ void IOP::mtc(int cop_id, int cop_reg, int reg)
             cop0.mtc(cop_reg, bark);
             break;
         default:
-            Logger::log(Logger::OTHER, "\n[IOP] MTC: Unknown COP%d", cop_id);
+            Logger::log(Logger::IOP, "\n[IOP] MTC: Unknown COP%d", cop_id);
             exit(1);
     }
 }

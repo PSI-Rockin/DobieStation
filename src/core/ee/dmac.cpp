@@ -143,7 +143,7 @@ void DMAC::run(int cycles)
     }
 }
 
-//mfifo_handler will return false if the MFIFO is empty and the MFIFO is in use. Otherwise it returns true
+//mfifo_handler will return false if the MFIFO is empty and the MFIFO is in use. DMACwise it returns true
 bool DMAC::mfifo_handler(int index)
 {
     if (control.mem_drain_channel - 1 == index)
@@ -297,7 +297,7 @@ void DMAC::process_IPU_FROM()
             transfer_end(IPU_FROM);
         else
         {
-            Logger::log(Logger::OTHER, "blorp\n");
+            Logger::log(Logger::DMAC, "blorp\n");
             exit(1);
         }
     }
@@ -566,22 +566,22 @@ void DMAC::handle_source_chain(int index)
             channels[index].tag_end = true;
             break;
         default:
-            Logger::log(Logger::OTHER, "\n[DMAC] Unrecognized source chain DMAtag id %d\n", id);
+            Logger::log(Logger::DMAC, "\n[DMAC] Unrecognized source chain DMAtag id %d\n", id);
             exit(1);
     }
     if (IRQ_after_transfer && TIE)
         channels[index].tag_end = true;
-    Logger::log(Logger::OTHER, "New address: $%08X\n", channels[index].address);
-    Logger::log(Logger::OTHER, "New tag addr: $%08X\n", channels[index].tag_address);
+    Logger::log(Logger::DMAC, "New address: $%08X\n", channels[index].address);
+    Logger::log(Logger::DMAC, "New tag addr: $%08X\n", channels[index].tag_address);
 }
 
 void DMAC::start_DMA(int index)
 {
     Logger::log(Logger::DMAC, "D%d started: $%08X\n", index, channels[index].control);
-    Logger::log(Logger::OTHER, "Addr: $%08X\n", channels[index].address);
-    Logger::log(Logger::OTHER, "Mode: %d\n", (channels[index].control >> 2) & 0x3);
-    Logger::log(Logger::OTHER, "ASP: %d\n", (channels[index].control >> 4) & 0x3);
-    Logger::log(Logger::OTHER, "TTE: %d\n", channels[index].control & (1 << 6));
+    Logger::log(Logger::DMAC, "Addr: $%08X\n", channels[index].address);
+    Logger::log(Logger::DMAC, "Mode: %d\n", (channels[index].control >> 2) & 0x3);
+    Logger::log(Logger::DMAC, "ASP: %d\n", (channels[index].control >> 4) & 0x3);
+    Logger::log(Logger::DMAC, "TTE: %d\n", channels[index].control & (1 << 6));
     int mode = (channels[index].control >> 2) & 0x3;
     channels[index].tag_end = (mode == 0); //always end transfers in normal mode
     if (mode == 2) 

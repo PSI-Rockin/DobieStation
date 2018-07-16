@@ -465,7 +465,7 @@ void CDVD_Drive::start_seek()
             if (!delta)
             {
                 drive_status = READING | SPINNING;
-                Logger::log(Logger::OTHER, "Instant read!\n");
+                Logger::log(Logger::CDVD, "Instant read!\n");
             }
         }
         else if ((is_DVD && delta < 14764) || (!is_DVD && delta < 4371))
@@ -503,7 +503,7 @@ void CDVD_Drive::N_command_dvdread()
     sector_pos = *(uint32_t*)&N_command_params[0];
     sectors_left = *(uint32_t*)&N_command_params[4];
     Logger::log(Logger::CDVD, "ReadDVD; Seek pos: %d, Sectors: %d\n", sector_pos, sectors_left);
-    Logger::log(Logger::OTHER, "Last read: %lld cycles ago\n", cycle_count - last_read);
+    Logger::log(Logger::CDVD, "Last read: %lld cycles ago\n", cycle_count - last_read);
     last_read = cycle_count;
     block_size = 2064;
     start_seek();
