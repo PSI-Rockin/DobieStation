@@ -20,6 +20,7 @@ public:
     //static void log(LogOrigin origin, char* format, ...);
     static void log(LogOrigin origin, const char* format, ...);
     static void toggle(LogOrigin origin, bool enable);
+    static bool get_state(LogOrigin origin);
     static void set_all(bool data[OriginsCount]);
 
 private:

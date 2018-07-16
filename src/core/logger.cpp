@@ -23,3 +23,7 @@ void Logger::set_all(bool data[OriginsCount]){
         enabled[i] = data[i];
     }
 }
+
+bool Logger::get_state(LogOrigin origin){
+    return enabled[origin];
+}
