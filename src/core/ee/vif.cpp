@@ -1,5 +1,9 @@
 #include <cstdio>
 #include <cstdlib>
+#include <fstream>
+#include <iomanip>
+#include <cstring>
+#include "vu_disasm.hpp"
 #include "vif.hpp"
 
 #include "../gif.hpp"
@@ -24,15 +28,22 @@ void VectorInterface::reset()
 
 void VectorInterface::update()
 {
-    while (FIFO.size())
+    int runcycles = 8;
+    if (wait_for_VU)
     {
+        if (vu->is_running())
+            return;
+        wait_for_VU = false;
+        handle_wait_cmd(wait_cmd_value);
+    }
+    while(FIFO.size() && runcycles--)
+    {        
         if (wait_for_VU)
         {
             if (vu->is_running())
                 return;
             wait_for_VU = false;
             handle_wait_cmd(wait_cmd_value);
-            continue;
         }
         uint32_t value = FIFO.front();
         if (command_len <= 0)
@@ -46,26 +57,25 @@ void VectorInterface::update()
             {
                 case 0x20:
                     //STMASK
+                    printf("[VIF] New MASK: $%08X\n", value);
                     MASK = value;
                     break;
                 case 0x30:
                     //STROW
+                    printf("[VIF] ROW%d: $%08X\n", 4-command_len,value);
                     ROW[4 - command_len] = value;
                     break;
                 case 0x31:
                     //STCOL
+                    printf("[VIF] COL%d: $%08X\n", 4 - command_len, value);
                     COL[4 - command_len] = value;
                     break;
                 case 0x4A:
                     //MPG
-                    if (FIFO.size() < 2)
-                        return;
                     vu->write_instr(mpg.addr, value);
-                    FIFO.pop();
-                    value = FIFO.front();
-                    vu->write_instr(mpg.addr + 4, value);
-                    command_len--;
-                    mpg.addr += 8;
+                    mpg.addr += 4;
+                    if (command_len <= 1)
+                        disasm_micromem();
                     break;
                 case 0x50:
                 case 0x51:
@@ -218,6 +228,8 @@ void VectorInterface::handle_wait_cmd(uint32_t value)
         case 0x17:
             MSCAL(vu->get_PC());
             break;
+        default:
+            command_len = 0;
     }
 }
 
@@ -243,7 +255,8 @@ void VectorInterface::init_UNPACK(uint32_t value)
 {
     printf("[VIF] UNPACK: $%08X\n", value);
     unpack.addr = (imm & 0x3FF) * 16;
-    unpack.sign_extend = imm & (1 << 14);
+    unpack.sign_extend = !(imm & (1 << 14));
+    unpack.masked = (command >> 4) & 0x1;
     if (imm & (1 << 15))
         unpack.addr += TOPS * 16;
     unpack.cmd = command & 0xF;
@@ -252,7 +265,7 @@ void VectorInterface::init_UNPACK(uint32_t value)
     int vl = command & 0x3;
     int vn = (command >> 2) & 0x3;
     int num = (value >> 16) & 0xFF;
-    printf("vl: %d vn: %d num: %d\n", vl, vn, num);
+    printf("vl: %d vn: %d num: %d masked: %d\n", vl, vn, num, unpack.masked);
     unpack.words_per_op = (32 >> vl) * (vn + 1);
     unpack.words_per_op = (unpack.words_per_op + 0x1F) & ~0x1F; //round up to nearest 32 before dividing
     unpack.words_per_op /= 32;
@@ -273,6 +286,37 @@ void VectorInterface::init_UNPACK(uint32_t value)
         //Fill write
         printf("[VIF] WL > CL!\n");
         exit(1);
+    }
+}
+
+void VectorInterface::handle_UNPACK_masking(uint128_t& quad)
+{
+    if (unpack.masked)
+    {
+        uint8_t tempmask;
+        
+        for (int i = 0; i < 4; i++) {
+            tempmask = (MASK >> ((i * 2) + std::min(unpack.blocks_written * 8, 24))) & 0x3;
+            
+            switch (tempmask)
+            {
+            case 1:
+                printf("[VIF] Writing ROW to position %d\n", i);
+                quad._u32[i] = ROW[i];
+                break;
+            case 2:
+                printf("[VIF] Writing COL to position %d\n", i);
+                quad._u32[i] = COL[std::min(unpack.blocks_written, 3)];
+                break;
+            case 3:
+                printf("[VIF] Write Protecting to position %d\n", i);
+                quad._u32[i] = vu->read_data<uint32_t>(unpack.addr + (i * 4));
+                break;
+            default:
+                //No masking, ignore
+                break;
+            }
+        }
     }
 }
 
@@ -307,15 +351,15 @@ void VectorInterface::handle_UNPACK(uint32_t value)
                     quad._u32[0] = x;
                     quad._u32[1] = y;
                 }
-                quad._u32[2] = 0xDEADBEEF;
-                quad._u32[3] = 0xDEADBEEF;
+                quad._u32[2] = 0;
+                quad._u32[3] = 0;  
             }
                 break;
             case 0x8:
                 //V3-32 - W is "indeterminate"
                 for (int i = 0; i < 3; i++)
                     quad._u32[i] = buffer[i];
-                quad._u32[3] = 0xDEADBEEF;
+                quad._u32[3] = 0;
                 break;
             case 0xC:
                 //V4-32
@@ -326,7 +370,7 @@ void VectorInterface::handle_UNPACK(uint32_t value)
                 //V4-8
                 for (int i = 0; i < 4; i++)
                 {
-                    uint8_t value = (buffer[0] >> 8) & 0xFF;
+                    uint8_t value = (buffer[0] >> (i * 8)) & 0xFF;
                     if (unpack.sign_extend)
                         quad._u32[i] = (int32_t)(int8_t)value;
                     else
@@ -337,6 +381,8 @@ void VectorInterface::handle_UNPACK(uint32_t value)
                 printf("[VIF] Unhandled UNPACK cmd $%02X!\n", unpack.cmd);
                 exit(1);
         }
+        handle_UNPACK_masking(quad);
+
         unpack.blocks_written++;
         if (CYCLE.CL >= CYCLE.WL)
         {
@@ -369,4 +415,61 @@ void VectorInterface::feed_DMA(uint128_t quad)
     //printf("[VIF] Feed DMA: $%08X_%08X_%08X_%08X\n", quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
     for (int i = 0; i < 4; i++)
         FIFO.push(quad._u32[i]);
+}
+
+void VectorInterface::disasm_micromem()
+{
+    using namespace std;
+    ofstream file("microprogram.txt");
+    if (!file.is_open())
+    {
+        printf("Failed to open\n");
+        exit(1);
+    }
+
+    //Check for branch targets
+    bool is_branch_target[0x4000 / 8];
+    memset(is_branch_target, 0, 0x4000 / 8);
+    for (int i = 0; i < 0x4000; i += 8)
+    {
+        uint32_t lower = vu->read_instr<uint32_t>(i);
+
+        //If the lower instruction is a branch, set branch target to true for the location it points to
+        if (VU_Disasm::is_branch(lower))
+        {
+            int32_t imm = lower & 0x7FF;
+            imm = ((int16_t)(imm << 5)) >> 5;
+            imm *= 8;
+
+            uint32_t addr = i + imm + 8;
+            if (addr < 0x4000)
+                is_branch_target[addr / 8] = true;
+        }
+    }
+
+    for (int i = 0; i < 0x4000; i += 8)
+    {
+        if (is_branch_target[i / 8])
+        {
+            file << endl;
+            file << "Branch target $" << setfill('0') << setw(4) << right << hex << i << ":";
+            file << endl;
+        }
+        //PC
+        file << "[$" << setfill('0') << setw(4) << right << hex << i << "] ";
+
+        //Raw instructions
+        uint32_t lower = vu->read_instr<uint32_t>(i);
+        uint32_t upper = vu->read_instr<uint32_t>(i + 4);
+
+        file << setw(8) << hex << upper << ":" << setw(8) << lower << " ";
+        file << setfill(' ') << setw(30) << left << VU_Disasm::upper(i, upper);
+
+        if (upper & (1 << 31))
+            file << VU_Disasm::loi(lower);
+        else
+            file << VU_Disasm::lower(i, lower);
+        file << endl;
+    }
+    file.close();
 }

@@ -40,6 +40,7 @@ set(SOURCES
 	src/core/ee/timers.cpp
 	src/core/ee/vif.cpp
 	src/core/ee/vu.cpp
+	src/core/ee/vu_disasm.cpp
 	src/core/ee/vu_interpreter.cpp
 	src/core/iop/cdvd.cpp
 	src/core/iop/gamepad.cpp
@@ -90,6 +91,7 @@ set(HEADERS
 	src/core/ee/timers.hpp
 	src/core/ee/vif.hpp
 	src/core/ee/vu.hpp
+	src/core/ee/vu_disasm.hpp
 	src/core/ee/vu_interpreter.hpp
 	src/core/iop/cdvd.hpp
 	src/core/iop/gamepad.hpp

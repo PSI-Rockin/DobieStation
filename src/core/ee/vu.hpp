@@ -53,13 +53,17 @@ class VectorUnit
         VU_R Q;
         VU_R P;
 
-        uint16_t MAC_pipeline[4];
+        uint16_t MAC_pipeline[4];       
         uint16_t* MAC_flags; //pointer to last element in the pipeline; the register accessible to programs
         uint16_t new_MAC_flags; //to be placed in the pipeline
+
+        float Q_Pipeline[6];
+        VU_R new_Q_instance;
 
         void update_mac_flags(float value, int index);
         void clear_mac_flags(int index);
         void update_mac_pipeline();
+        void update_div_pipeline();
         void advance_r();
         void print_vectors(uint8_t a, uint8_t b);
         float convert();
@@ -69,6 +73,8 @@ class VectorUnit
         void set_TOP_regs(uint16_t* TOP, uint16_t* ITOP);
         void set_GIF(GraphicsInterface* gif);
 
+        void flush_pipes();
+
         void run(int cycles);
         void mscal(uint32_t addr);
         void end_execution();
@@ -76,6 +82,7 @@ class VectorUnit
 
         static float convert(uint32_t value);
 
+        template <typename T> T read_instr(uint32_t addr);
         template <typename T> T read_data(uint32_t addr);
         template <typename T> void write_instr(uint32_t addr, T data);
         template <typename T> void write_data(uint32_t addr, T data);
@@ -172,9 +179,17 @@ class VectorUnit
         void subbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
         void subi(uint8_t field, uint8_t dest, uint8_t source);
         void subq(uint8_t field, uint8_t dest, uint8_t source);
+        void waitq();
         void xgkick(uint8_t is);
+        void xitop(uint8_t it);
         void xtop(uint8_t it);
 };
+
+template <typename T>
+inline T VectorUnit::read_instr(uint32_t addr)
+{
+    return *(T*)&instr_mem[addr & 0x3FFF];
+}
 
 template <typename T>
 inline T VectorUnit::read_data(uint32_t addr)
@@ -185,7 +200,6 @@ inline T VectorUnit::read_data(uint32_t addr)
 template <typename T>
 inline void VectorUnit::write_instr(uint32_t addr, T data)
 {
-    printf("[VU] Write instr mem $%08X: $%08X\n", addr, data);
     *(T*)&instr_mem[addr & 0x3FFF] = data;
 }
 
