@@ -14,10 +14,10 @@ public:
     };
     static constexpr const char* origin_names[] = { "Qt", "Emulator",
         "BIOS HLE", "IPU", "EE", "EE Timing", "EE Interpreter",
-        "VIF", "VU", "GIF","VU_Interpreter",
+        "VIF", "VU", "GIF","VU Interpreter",
         "GS", "GS Context",
         "CDVD", "IOP", "IOP Debug", "FPU", "DMAC", "IOP COP0","IOP Interpreter",
-        "IOP_DMA","IOP Timing","INTC","SIO2","PAD","SPU",};
+        "IOP DMA","IOP Timing","INTC","SIO2","PAD","SPU",};
 
     //static void log(LogOrigin origin, char* format, ...);
     static void log(LogOrigin origin, const char* format, ...);
