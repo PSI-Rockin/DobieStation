@@ -10,7 +10,7 @@ LoggerWindow::LoggerWindow(QWidget *parent) : QDialog(parent)
     QCheckBox* list[Logger::OriginsCount];
     for(int i=0;i<Logger::OriginsCount;i++){
         Logger::LogOrigin origin = (Logger::LogOrigin)i;
-        list[i] = new QCheckBox(Logger::LogOriginNames[i], this);
+        list[i] = new QCheckBox(Logger::origin_names[i], this);
         list[i]->setChecked(Logger::get_state(origin));
         layout->addWidget(list[i], i, 0);
         connect(list[i], &QCheckBox::toggled,

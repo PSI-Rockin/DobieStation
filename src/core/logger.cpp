@@ -1,14 +1,14 @@
 #include "logger.hpp"
 #include <cstdio>
 #include <cstdarg>
-constexpr const char* Logger::LogOriginNames[Logger::OriginsCount];
+constexpr const char* Logger::origin_names[Logger::OriginsCount];
 bool Logger::enabled[] = {1};//sets them all to false except for the "other" category
 
 void Logger::log(Logger::LogOrigin origin, const char* fmt, ...){
     va_list args;
     va_start(args,fmt);
     if (enabled[origin]){
-        printf("[%s] ",LogOriginNames[origin]);
+        printf("[%s] ",origin_names[origin]);
         vprintf(fmt, args);
     }
     va_end(args);

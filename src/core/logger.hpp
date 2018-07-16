@@ -11,7 +11,7 @@ public:
         VU_Interpreter,
     OriginsCount
     };
-    static constexpr const char* LogOriginNames[] = { "Other (Needs categorization!)",
+    static constexpr const char* origin_names[] = { "Other (Needs categorization!)",
         "IPU", "EE", "VIF", "VU", "GIF", "GS", "CDVD", "IOP", "Emulator",
         "IOP Debug", "EE Interpreter", "FPU", "DMAC", "GS Context","IOP COP0","IOP Interpreter",
         "IOP_DMA","EE Timing","IOP Timing","INTC","SIO2","COP2","VU1","PAD",
