@@ -1,4 +1,4 @@
-#include "logger.h"
+#include "logger.hpp"
 #include <cstdio>
 #include <cstdarg>
 bool Logger::enabled[] = {};//sets them all to false
@@ -15,8 +15,8 @@ void Logger::toggle(LogOrigin origin, bool enable)
     enabled[origin] = enable;
 }
 
-void Logger::set_all(bool data[COUNT_OF_ORIGINS]){
-    for (int i = 0; i < COUNT_OF_ORIGINS; i++){
+void Logger::set_all(bool data[LogOriginsCount]){
+    for (int i = 0; i < LogOriginsCount; i++){
         enabled[i] = data[i];
     }
 }

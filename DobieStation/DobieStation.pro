@@ -112,5 +112,5 @@ HEADERS += \
     ../src/core/ee/ipu/codedblockpattern.hpp \
     ../src/core/ee/vu_interpreter.hpp \
     ../src/core/ee/vu_disasm.hpp \
-    ../src/core/logger.h \
-    ../src/qt/loggerwindow.h
+    ../src/qt/loggerwindow.hpp \
+    ../src/core/logger.hpp

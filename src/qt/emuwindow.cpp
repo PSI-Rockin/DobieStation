@@ -166,6 +166,8 @@ int EmuWindow::load_exec(const char* file_name, bool skip_BIOS)
 
 void EmuWindow::create_menu()
 {
+    log_options_window = new LoggerWindow(this);
+
     load_rom_action = new QAction(tr("&Load ROM... (Fast)"), this);
     connect(load_rom_action, &QAction::triggered, this, &EmuWindow::open_file_skip);
 
@@ -175,10 +177,16 @@ void EmuWindow::create_menu()
     exit_action = new QAction(tr("&Exit"), this);
     connect(exit_action, &QAction::triggered, this, &QWidget::close);
 
+    logger_options_action = new QAction(tr("Logging"), this);
+    connect(logger_options_action, &QAction::triggered, log_options_window, &QDialog::show);
+
+
     file_menu = menuBar()->addMenu(tr("&File"));
     file_menu->addAction(load_rom_action);
     file_menu->addAction(load_bios_action);
     file_menu->addAction(exit_action);
+    options_menu = menuBar()->addMenu(tr("&Options"));
+    options_menu->addAction(logger_options_action);
 }
 
 void EmuWindow::draw_frame(uint32_t *buffer, int inner_w, int inner_h, int final_w, int final_h)

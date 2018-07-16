@@ -7,7 +7,7 @@ class LoggerWindow : public QDialog
 {
     Q_OBJECT
 public:
-    explicit LoggerWindow(QDialog *parent = nullptr);
+    explicit LoggerWindow(QWidget *parent = nullptr);
 
 signals:
 
