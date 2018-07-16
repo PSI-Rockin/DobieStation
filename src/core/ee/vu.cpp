@@ -1,5 +1,5 @@
 #include <cmath>
-#include <cstdio>
+#include "../logger.hpp"
 #include <cstdlib>
 #include "vu.hpp"
 #include "vu_interpreter.hpp"
@@ -66,7 +66,7 @@ void VectorUnit::run(int cycles)
         update_div_pipeline();
         uint32_t upper_instr = *(uint32_t*)&instr_mem[PC + 4];
         uint32_t lower_instr = *(uint32_t*)&instr_mem[PC];
-        printf("[$%08X] $%08X:$%08X\n", PC, upper_instr, lower_instr);
+        Logger::log(Logger::VU,"[$%08X] $%08X:$%08X\n", PC, upper_instr, lower_instr);
         VU_Interpreter::interpret(*this, upper_instr, lower_instr);
         PC += 8;
         if (branch_on)
@@ -98,7 +98,7 @@ void VectorUnit::run(int cycles)
         uint128_t quad = read_data<uint128_t>(GIF_addr);
         if (gif->send_PATH1(quad))
         {
-            printf("[VU1] XGKICK transfer ended!\n");
+            Logger::log(Logger::VU,"(VU1) XGKICK transfer ended!\n");
             gif->deactivate_PATH(1);
             transferring_GIF = false;
         }
@@ -109,7 +109,7 @@ void VectorUnit::run(int cycles)
 
 void VectorUnit::mscal(uint32_t addr)
 {
-    printf("[VU] Starting execution at $%08X!\n", addr);
+    Logger::log(Logger::VU,"Starting execution at $%08X!\n", addr);
     running = true;
     PC = addr;
 }
@@ -174,13 +174,13 @@ float VectorUnit::convert(uint32_t value)
 
 void VectorUnit::print_vectors(uint8_t a, uint8_t b)
 {
-    printf("A: ");
+    Logger::log(Logger::VU,"A: ");
     for (int i = 0; i < 4; i++)
-        printf("%f ", gpr[a].f[i]);
-    printf("\nB: ");
+        Logger::log(Logger::VU,"%f ", gpr[a].f[i]);
+    Logger::log(Logger::VU,"\nB: ");
     for (int i = 0; i < 4; i++)
-        printf("%f ", gpr[b].f[i]);
-    printf("\n");
+        Logger::log(Logger::VU,"%f ", gpr[b].f[i]);
+    Logger::log(Logger::VU,"\n");
 }
 
 /**
@@ -218,7 +218,7 @@ uint32_t VectorUnit::cfc(int index)
         case 22:
             return Q.u;
         default:
-            printf("[COP2] Unrecognized cfc2 from reg %d\n", index);
+            Logger::log(Logger::VU,"(COP2) Unrecognized cfc2 from reg %d\n", index);
     }
     return 0;
 }
@@ -227,7 +227,7 @@ void VectorUnit::ctc(int index, uint32_t value)
 {
     if (index < 16)
     {
-        printf("[COP2] Set vi%d to $%04X\n", index, value);
+        Logger::log(Logger::VU,"(COP2) Set vi%d to $%04X\n", index, value);
         set_int(index, value);
         return;
     }
@@ -238,13 +238,13 @@ void VectorUnit::ctc(int index, uint32_t value)
             break;
         case 21:
             I.u = value;
-            printf("[VU] I = %f\n", I.f);
+            Logger::log(Logger::VU,"I = %f\n", I.f);
             break;
         case 22:
             Q.u = value;
             break;
         default:
-            printf("[COP2] Unrecognized ctc2 of $%08X to reg %d\n", value, index);
+            Logger::log(Logger::VU,"(COP2) Unrecognized ctc2 of $%08X to reg %d\n", value, index);
     }
 }
 
@@ -267,22 +267,22 @@ void VectorUnit::jp(uint16_t addr)
 
 void VectorUnit::abs(uint8_t field, uint8_t dest, uint8_t source)
 {
-    printf("[VU] ABS: ");
+    Logger::log(Logger::VU,"ABS: ");
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
         {
             float result = fabs(convert(gpr[source].u[i]));
             set_gpr_f(dest, i, result);
-            printf("(%d)%f ", i, gpr[dest].f[i]);
+            Logger::log(Logger::VU,"(%d)%f ", i, gpr[dest].f[i]);
         }
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::add(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)
 {
-    printf("[VU] ADD: ");
+    Logger::log(Logger::VU,"ADD: ");
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
@@ -290,34 +290,34 @@ void VectorUnit::add(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)
             float result = convert(gpr[reg1].u[i]) + convert(gpr[reg2].u[i]);
             update_mac_flags(result, i);
             set_gpr_f(dest, i, result);
-            printf("(%d)%f ", i, gpr[dest].f[i]);
+            Logger::log(Logger::VU,"(%d)%f ", i, gpr[dest].f[i]);
         }
         else
             clear_mac_flags(i);
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::adda(uint8_t field, uint8_t reg1, uint8_t reg2)
 {
-    printf("[VU] ADDA: ");
+    Logger::log(Logger::VU,"ADDA: ");
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
         {
             ACC.f[i] = convert(gpr[reg1].u[i]) + convert(gpr[reg2].u[i]);
             update_mac_flags(ACC.f[i], i);
-            printf("(%d)%f ", i, ACC.f[i]);
+            Logger::log(Logger::VU,"(%d)%f ", i, ACC.f[i]);
         }
         else
             clear_mac_flags(i);
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::addabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_reg)
 {
-    printf("[VU] ADDAbc: ");
+    Logger::log(Logger::VU,"ADDAbc: ");
     float op = convert(gpr[bc_reg].u[bc]);
     for (int i = 0; i < 4; i++)
     {
@@ -325,17 +325,17 @@ void VectorUnit::addabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_re
         {
             ACC.f[i] = op + convert(gpr[source].u[i]);
             update_mac_flags(ACC.f[i], i);
-            printf("(%d)%f", i, ACC.f[i]);
+            Logger::log(Logger::VU,"(%d)%f", i, ACC.f[i]);
         }
         else
             clear_mac_flags(i);
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::addbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg)
 {
-    printf("[VU] ADDbc: ");
+    Logger::log(Logger::VU,"ADDbc: ");
     float op = convert(gpr[bc_reg].u[bc]);
     for (int i = 0; i < 4; i++)
     {
@@ -344,17 +344,17 @@ void VectorUnit::addbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, 
             float temp = op + convert(gpr[source].u[i]);
             update_mac_flags(temp, i);
             set_gpr_f(dest, i, temp);
-            printf("(%d)%f ", i, gpr[dest].f[i]);
+            Logger::log(Logger::VU,"(%d)%f ", i, gpr[dest].f[i]);
         }
         else
             clear_mac_flags(i);
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::addi(uint8_t field, uint8_t dest, uint8_t source)
 {
-    printf("[VU] ADDi: ");
+    Logger::log(Logger::VU,"ADDi: ");
     float op = convert(I.u);
     for (int i = 0; i < 4; i++)
     {
@@ -363,17 +363,17 @@ void VectorUnit::addi(uint8_t field, uint8_t dest, uint8_t source)
             float temp = op + convert(gpr[source].u[i]);
             update_mac_flags(temp, i);
             set_gpr_f(dest, i, temp);
-            printf("(%d)%f ", i, gpr[dest].f[i]);
+            Logger::log(Logger::VU,"(%d)%f ", i, gpr[dest].f[i]);
         }
         else
             clear_mac_flags(i);
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::addq(uint8_t field, uint8_t dest, uint8_t source)
 {
-    printf("[VU] ADDq: ");
+    Logger::log(Logger::VU,"ADDq: ");
     float value = convert(Q.u);
     for (int i = 0; i < 4; i++)
     {
@@ -382,17 +382,17 @@ void VectorUnit::addq(uint8_t field, uint8_t dest, uint8_t source)
             float temp = value + convert(gpr[source].u[i]);
             update_mac_flags(temp, i);
             set_gpr_f(dest, i, temp);
-            printf("(%d)%f ", i, gpr[dest].f[i]);
+            Logger::log(Logger::VU,"(%d)%f ", i, gpr[dest].f[i]);
         }
         else
             clear_mac_flags(i);
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::clip(uint8_t reg1, uint8_t reg2)
 {
-    printf("[VU] CLIP\n");
+    Logger::log(Logger::VU,"CLIP\n");
     clip_flags <<= 6; //Move previous clipping judgments up
 
     //Compare x, y, z fields of FS with the w field of FT
@@ -433,16 +433,16 @@ void VectorUnit::div(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2)
         new_Q_instance.f = num / denom;
         new_Q_instance.f = convert(new_Q_instance.u);
     }
-    printf("[VU] DIV: %f\n", new_Q_instance.f);
-    printf("Reg1: %f\n", num);
-    printf("Reg2: %f\n", denom);
+    Logger::log(Logger::VU,"DIV: %f\n", new_Q_instance.f);
+    Logger::log(Logger::VU,"Reg1: %f\n", num);
+    Logger::log(Logger::VU,"Reg2: %f\n", denom);
 }
 
 void VectorUnit::eleng(uint8_t source)
 {
     if (!id)
     {
-        printf("[VU] ERROR: ELENG called on VU0!\n");
+        Logger::log(Logger::VU,"ERROR: ELENG called on VU0!\n");
         exit(1);
     }
 
@@ -450,181 +450,181 @@ void VectorUnit::eleng(uint8_t source)
     P.f = pow(convert(gpr[source].u[0]), 2) + pow(convert(gpr[source].u[1]), 2) + pow(convert(gpr[source].u[2]), 2);
     P.f = sqrt(P.f);
 
-    printf("[VU] ELENG: %f (%d)\n", P.f, source);
+    Logger::log(Logger::VU,"ELENG: %f (%d)\n", P.f, source);
 }
 
 void VectorUnit::esqrt(uint8_t fsf, uint8_t source)
 {
     if (!id)
     {
-        printf("[VU] ERROR: ESQRT called on VU0!\n");
+        Logger::log(Logger::VU,"ERROR: ESQRT called on VU0!\n");
         exit(1);
     }
 
     P.f = sqrt(fabs(convert(gpr[source].u[fsf])));
 
-    printf("[VU] ESQRT: %f (%d)\n", P.f, source);
+    Logger::log(Logger::VU,"ESQRT: %f (%d)\n", P.f, source);
 }
 
 void VectorUnit::fcand(uint32_t value)
 {
-    printf("[VU] FCAND: $%08X\n", value);
+    Logger::log(Logger::VU,"FCAND: $%08X\n", value);
     set_int(1, clip_flags && value);
 }
 
 void VectorUnit::fcset(uint32_t value)
 {
-    printf("[VU] FCSET: $%08X\n", value);
+    Logger::log(Logger::VU,"FCSET: $%08X\n", value);
     clip_flags = value;
 }
 
 void VectorUnit::fmand(uint8_t dest, uint8_t source)
 {
-    printf("[VU] FMAND: $%04X\n", int_gpr[source]);
+    Logger::log(Logger::VU,"FMAND: $%04X\n", int_gpr[source]);
     set_int(dest, *MAC_flags & int_gpr[source]);
 }
 
 void VectorUnit::ftoi0(uint8_t field, uint8_t dest, uint8_t source)
 {
-    printf("[VU] FTOI0: ");
+    Logger::log(Logger::VU,"FTOI0: ");
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
         {
             gpr[dest].s[i] = (int32_t)convert(gpr[source].u[i]);
-            printf("(%d)$%08X ", i, gpr[dest].s[i]);
+            Logger::log(Logger::VU,"(%d)$%08X ", i, gpr[dest].s[i]);
         }
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::ftoi4(uint8_t field, uint8_t dest, uint8_t source)
 {
-    printf("[VU] FTOI4: ");
+    Logger::log(Logger::VU,"FTOI4: ");
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
         {
             gpr[dest].s[i] = (int32_t)(convert(gpr[source].u[i]) * (1.0f / 0.0625f));
-            printf("(%d)$%08X ", i, gpr[dest].s[i]);
+            Logger::log(Logger::VU,"(%d)$%08X ", i, gpr[dest].s[i]);
         }
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::ftoi12(uint8_t field, uint8_t dest, uint8_t source)
 {
-    printf("[VU] FTOI12: ");
+    Logger::log(Logger::VU,"FTOI12: ");
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
         {
             gpr[dest].s[i] = (int32_t)(convert(gpr[source].u[i]) * (1.0f / 0.000244140625f));
-            printf("(%d)$%08X ", i, gpr[dest].s[i]);
+            Logger::log(Logger::VU,"(%d)$%08X ", i, gpr[dest].s[i]);
         }
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::ftoi15(uint8_t field, uint8_t dest, uint8_t source)
 {
-    printf("[VU] FTOI15: ");
+    Logger::log(Logger::VU,"FTOI15: ");
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
         {
             gpr[dest].s[i] = (int32_t)(convert(gpr[source].u[i]) * (1.0f / 0.000030517578125));
-            printf("(%d)$%08X ", i, gpr[dest].s[i]);
+            Logger::log(Logger::VU,"(%d)$%08X ", i, gpr[dest].s[i]);
         }
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::iadd(uint8_t dest, uint8_t reg1, uint8_t reg2)
 {
     set_int(dest, int_gpr[reg1] + int_gpr[reg2]);
-    printf("[VU] IADD: $%04X (%d, %d, %d)\n", int_gpr[dest], dest, reg1, reg2);
+    Logger::log(Logger::VU,"IADD: $%04X (%d, %d, %d)\n", int_gpr[dest], dest, reg1, reg2);
 }
 
 void VectorUnit::iaddi(uint8_t dest, uint8_t source, int8_t imm)
 {
     set_int(dest, int_gpr[source] + imm);
-    printf("[VU] IADDI: $%04X (%d, %d, %d)\n", int_gpr[dest], dest, source, imm);
+    Logger::log(Logger::VU,"IADDI: $%04X (%d, %d, %d)\n", int_gpr[dest], dest, source, imm);
 }
 
 void VectorUnit::iaddiu(uint8_t dest, uint8_t source, uint16_t imm)
 {
     set_int(dest, int_gpr[source] + imm);
-    printf("[VU] IADDIU: $%04X (%d, %d, $%04X)\n", int_gpr[dest], dest, source, imm);
+    Logger::log(Logger::VU,"IADDIU: $%04X (%d, %d, $%04X)\n", int_gpr[dest], dest, source, imm);
 }
 
 void VectorUnit::iand(uint8_t dest, uint8_t reg1, uint8_t reg2)
 {
     set_int(dest, int_gpr[reg1] & int_gpr[reg2]);
-    printf("[VU] IAND: $%04X (%d, %d, %d)\n", int_gpr[dest], dest, reg1, reg2);
+    Logger::log(Logger::VU,"IAND: $%04X (%d, %d, %d)\n", int_gpr[dest], dest, reg1, reg2);
 }
 
 void VectorUnit::ilw(uint8_t field, uint8_t dest, uint8_t base, int32_t offset)
 {
     uint32_t addr = (int_gpr[base] << 4) + offset;
     uint128_t quad = read_data<uint128_t>(addr);
-    printf("[VU] ILW: $%08X ($%08X)\n", addr, offset);
+    Logger::log(Logger::VU,"ILW: $%08X ($%08X)\n", addr, offset);
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
         {
-            printf(" $%04X ($%02X, %d, %d)", quad._u32[i] & 0xFFFF, field, dest, base);
+            Logger::log(Logger::VU," $%04X ($%02X, %d, %d)", quad._u32[i] & 0xFFFF, field, dest, base);
             set_int(dest, quad._u32[i] & 0xFFFF);
             break;
         }
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::ilwr(uint8_t field, uint8_t dest, uint8_t base)
 {
     uint32_t addr = int_gpr[base] << 4;
     uint128_t quad = read_data<uint128_t>(addr);
-    printf("[VU] ILWR: $%08X", addr);
+    Logger::log(Logger::VU,"ILWR: $%08X", addr);
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
         {
-            printf(" $%04X ($%02X, %d, %d)", quad._u32[i] & 0xFFFF, field, dest, base);
+            Logger::log(Logger::VU," $%04X ($%02X, %d, %d)", quad._u32[i] & 0xFFFF, field, dest, base);
             set_int(dest, quad._u32[i] & 0xFFFF);
             break;
         }
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::ior(uint8_t dest, uint8_t reg1, uint8_t reg2)
 {
     set_int(dest, int_gpr[reg1] | int_gpr[reg2]);
-    printf("[VU] IOR: $%04X (%d, %d, %d)\n", int_gpr[dest], dest, reg1, reg2);
+    Logger::log(Logger::VU,"IOR: $%04X (%d, %d, %d)\n", int_gpr[dest], dest, reg1, reg2);
 }
 
 void VectorUnit::isub(uint8_t dest, uint8_t reg1, uint8_t reg2)
 {
     set_int(dest, int_gpr[reg1] - int_gpr[reg2]);
-    printf("[VU] ISUB: $%04X (%d, %d, %d)\n", int_gpr[dest], dest, reg1, reg2);
+    Logger::log(Logger::VU,"ISUB: $%04X (%d, %d, %d)\n", int_gpr[dest], dest, reg1, reg2);
 }
 
 void VectorUnit::isubiu(uint8_t dest, uint8_t source, uint16_t imm)
 {
     set_int(dest, int_gpr[source] - imm);
-    printf("[VU] ISUBIU: $%04X (%d, %d, $%04X)\n", int_gpr[dest], dest, source, imm);
+    Logger::log(Logger::VU,"ISUBIU: $%04X (%d, %d, $%04X)\n", int_gpr[dest], dest, source, imm);
 }
 
 void VectorUnit::isw(uint8_t field, uint8_t source, uint8_t base, int32_t offset)
 {
     uint32_t addr = (int_gpr[base] << 4) + offset;
-    printf("[VU] ISW: $%08X ($%08X)\n", addr, offset);
+    Logger::log(Logger::VU,"ISW: $%08X ($%08X)\n", addr, offset);
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
         {
-            printf("($%02X, %d, %d)\n", field, source, base);
+            Logger::log(Logger::VU,"($%02X, %d, %d)\n", field, source, base);
             write_data<uint32_t>(addr + (i * 4), int_gpr[source]);
         }
     }
@@ -633,12 +633,12 @@ void VectorUnit::isw(uint8_t field, uint8_t source, uint8_t base, int32_t offset
 void VectorUnit::iswr(uint8_t field, uint8_t source, uint8_t base)
 {
     uint32_t addr = int_gpr[base] << 4;
-    printf("[VU] ISWR to $%08X!\n", addr);
+    Logger::log(Logger::VU,"ISWR to $%08X!\n", addr);
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
         {
-            printf("($%02X, %d, %d)\n", field, source, base);
+            Logger::log(Logger::VU,"($%02X, %d, %d)\n", field, source, base);
             write_data<uint32_t>(addr + (i * 4), int_gpr[source]);
         }
     }
@@ -646,75 +646,75 @@ void VectorUnit::iswr(uint8_t field, uint8_t source, uint8_t base)
 
 void VectorUnit::itof0(uint8_t field, uint8_t dest, uint8_t source)
 {
-    printf("[VU] ITOF0: ");
+    Logger::log(Logger::VU,"ITOF0: ");
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
         {
             set_gpr_f(dest, i, (float)gpr[source].s[i]);
-            printf("(%d)%f ", i, gpr[dest].f[i]);
+            Logger::log(Logger::VU,"(%d)%f ", i, gpr[dest].f[i]);
         }
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::itof4(uint8_t field, uint8_t dest, uint8_t source)
 {
-    printf("[VU] ITOF4: ");
+    Logger::log(Logger::VU,"ITOF4: ");
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
         {
             gpr[dest].f[i] = (float)((float)gpr[source].s[i] * 0.0625f);
-            printf("(%d)%f ", i, gpr[dest].f[i]);
+            Logger::log(Logger::VU,"(%d)%f ", i, gpr[dest].f[i]);
         }
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::itof12(uint8_t field, uint8_t dest, uint8_t source)
 {
-    printf("[VU] ITOF12: ");
+    Logger::log(Logger::VU,"ITOF12: ");
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
         {
             gpr[dest].f[i] = (float)((float)gpr[source].s[i] * 0.000244140625f);
-            printf("(%d)%f ", i, gpr[dest].f[i]);
+            Logger::log(Logger::VU,"(%d)%f ", i, gpr[dest].f[i]);
         }
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::lq(uint8_t field, uint8_t dest, uint8_t base, int32_t offset)
 {
     uint32_t addr = (int_gpr[base] * 16) + offset;
-    printf("[VU] LQ: $%08X (%d, %d, $%08X)\n", addr, dest, base, offset);
+    Logger::log(Logger::VU,"LQ: $%08X (%d, %d, $%08X)\n", addr, dest, base, offset);
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
         {
             set_gpr_u(dest, i, read_data<uint32_t>(addr + (i * 4)));
-            printf("(%d)%f ", i, gpr[dest].f[i]);
+            Logger::log(Logger::VU,"(%d)%f ", i, gpr[dest].f[i]);
         }
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::lqi(uint8_t field, uint8_t dest, uint8_t base)
 {
-    printf("[VU] LQI: ");
+    Logger::log(Logger::VU,"LQI: ");
     uint32_t addr = int_gpr[base] * 16;
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
         {
             set_gpr_u(dest, i, read_data<uint32_t>(addr + (i * 4)));
-            printf("(%d)%f ", i, gpr[dest].f[i]);
+            Logger::log(Logger::VU,"(%d)%f ", i, gpr[dest].f[i]);
         }
     }
     set_int(base, int_gpr[base] + 1);
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 /**
@@ -724,37 +724,37 @@ void VectorUnit::lqi(uint8_t field, uint8_t dest, uint8_t base)
  */
 void VectorUnit::madd(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)
 {
-    printf("[VU] MADD: ");
+    Logger::log(Logger::VU,"MADD: ");
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
         {
             float temp = convert(gpr[reg1].u[i]) * convert(gpr[reg2].u[i]);
             set_gpr_f(dest, i, temp + convert(ACC.u[i]));
-            printf("(%d)%f ", i, gpr[dest].f[i]);
+            Logger::log(Logger::VU,"(%d)%f ", i, gpr[dest].f[i]);
         }
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::madda(uint8_t field, uint8_t reg1, uint8_t reg2)
 {
-    printf("[VU] MADDA: ");
+    Logger::log(Logger::VU,"MADDA: ");
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
         {
             float temp = convert(gpr[reg1].u[i]) * convert(gpr[reg2].u[i]);
             ACC.f[i] = temp + convert(ACC.u[i]);
-            printf("(%d)%f ", i, ACC.f[i]);
+            Logger::log(Logger::VU,"(%d)%f ", i, ACC.f[i]);
         }
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::maddabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_reg)
 {
-    printf("[VU] MADDAbc: ");
+    Logger::log(Logger::VU,"MADDAbc: ");
     float op = convert(gpr[bc_reg].u[bc]);
     for (int i = 0; i < 4; i++)
     {
@@ -762,15 +762,15 @@ void VectorUnit::maddabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_r
         {
             float temp = op * convert(gpr[source].u[i]);
             ACC.f[i] = temp + convert(ACC.u[i]);
-            printf("(%d)%f ", i, ACC.f[i]);
+            Logger::log(Logger::VU,"(%d)%f ", i, ACC.f[i]);
         }
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::maddai(uint8_t field, uint8_t source)
 {
-    printf("[VU] MADDAi: ");
+    Logger::log(Logger::VU,"MADDAi: ");
     float op = convert(I.u);
     for (int i = 0; i < 4; i++)
     {
@@ -778,15 +778,15 @@ void VectorUnit::maddai(uint8_t field, uint8_t source)
         {
             float temp = op * convert(gpr[source].u[i]);
             ACC.f[i] = temp + convert(ACC.u[i]);
-            printf("(%d)%f ", i, ACC.f[i]);
+            Logger::log(Logger::VU,"(%d)%f ", i, ACC.f[i]);
         }
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::maddbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg)
 {
-    printf("[VU] MADDbc: ");
+    Logger::log(Logger::VU,"MADDbc: ");
     float op = convert(gpr[bc_reg].u[bc]);
     for (int i = 0; i < 4; i++)
     {
@@ -794,15 +794,15 @@ void VectorUnit::maddbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source,
         {
             float temp = op * convert(gpr[source].u[i]);
             set_gpr_f(dest, i, temp + ACC.f[i]);
-            printf("(%d)%f ", i, gpr[dest].f[i]);
+            Logger::log(Logger::VU,"(%d)%f ", i, gpr[dest].f[i]);
         }
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::max(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)
 {
-    printf("[VU] MAX: ");
+    Logger::log(Logger::VU,"MAX: ");
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
@@ -813,15 +813,15 @@ void VectorUnit::max(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)
                 set_gpr_f(dest, i, op1);
             else
                 set_gpr_f(dest, i, op2);
-            printf("(%d)%f ", i, gpr[dest].f[i]);
+            Logger::log(Logger::VU,"(%d)%f ", i, gpr[dest].f[i]);
         }
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::maxbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg)
 {
-    printf("[VU] MAXbc: ");
+    Logger::log(Logger::VU,"MAXbc: ");
     float op = convert(gpr[bc_reg].u[bc]);
     for (int i = 0; i < 4; i++)
     {
@@ -832,15 +832,15 @@ void VectorUnit::maxbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, 
                 set_gpr_f(dest, i, op);
             else
                 set_gpr_f(dest, i, op2);
-            printf("(%d)%f ", i, gpr[dest].f[i]);
+            Logger::log(Logger::VU,"(%d)%f ", i, gpr[dest].f[i]);
         }
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::mfir(uint8_t field, uint8_t dest, uint8_t source)
 {
-    printf("[VU] MFIR\n");
+    Logger::log(Logger::VU,"MFIR\n");
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
@@ -850,7 +850,7 @@ void VectorUnit::mfir(uint8_t field, uint8_t dest, uint8_t source)
 
 void VectorUnit::mfp(uint8_t field, uint8_t dest)
 {
-    printf("[VU] MFP\n");
+    Logger::log(Logger::VU,"MFP\n");
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
@@ -860,7 +860,7 @@ void VectorUnit::mfp(uint8_t field, uint8_t dest)
 
 void VectorUnit::minibc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg)
 {
-    printf("[VU] MINIbc: ");
+    Logger::log(Logger::VU,"MINIbc: ");
     float op = convert(gpr[bc_reg].u[bc]);
     for (int i = 0; i < 4; i++)
     {
@@ -871,15 +871,15 @@ void VectorUnit::minibc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source,
                 set_gpr_f(dest, i, op);
             else
                 set_gpr_f(dest, i, op2);
-            printf("(%d)%f", i, gpr[dest].f[i]);
+            Logger::log(Logger::VU,"(%d)%f", i, gpr[dest].f[i]);
         }
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::mini(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)
 {
-    printf("[VU] MINI: ");
+    Logger::log(Logger::VU,"MINI: ");
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
@@ -890,15 +890,15 @@ void VectorUnit::mini(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)
                 set_gpr_f(dest, i, op1);
             else
                 set_gpr_f(dest, i, op2);
-            printf("(%d)%f ", i, gpr[dest].f[i]);
+            Logger::log(Logger::VU,"(%d)%f ", i, gpr[dest].f[i]);
         }
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::minii(uint8_t field, uint8_t dest, uint8_t source)
 {
-    printf("[VU] MINIi: ");
+    Logger::log(Logger::VU,"MINIi: ");
     float op = convert(I.u);
     for (int i = 0; i < 4; i++)
     {
@@ -909,26 +909,26 @@ void VectorUnit::minii(uint8_t field, uint8_t dest, uint8_t source)
                 set_gpr_f(dest, i, op);
             else
                 set_gpr_f(dest, i, op2);
-            printf("(%d)%f", i, gpr[dest].f[i]);
+            Logger::log(Logger::VU,"(%d)%f", i, gpr[dest].f[i]);
         }
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::move(uint8_t field, uint8_t dest, uint8_t source)
 {
-    printf("[VU] MOVE");
+    Logger::log(Logger::VU,"MOVE");
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
             set_gpr_u(dest, i, gpr[source].u[i]);
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::mr32(uint8_t field, uint8_t dest, uint8_t source)
 {
-    printf("[VU] MR32");
+    Logger::log(Logger::VU,"MR32");
     uint32_t x = gpr[source].u[0];
     if (_x(field))
         set_gpr_f(dest, 0, convert(gpr[source].u[1]));
@@ -938,12 +938,12 @@ void VectorUnit::mr32(uint8_t field, uint8_t dest, uint8_t source)
         set_gpr_f(dest, 2, convert(gpr[source].u[3]));
     if (_w(field))
         set_gpr_f(dest, 3, convert(x));
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::msubabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_reg)
 {
-    printf("[VU] MSUBAbc: ");
+    Logger::log(Logger::VU,"MSUBAbc: ");
     float op = convert(gpr[bc_reg].u[bc]);
     for (int i = 0; i < 4; i++)
     {
@@ -951,15 +951,15 @@ void VectorUnit::msubabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_r
         {
             float temp = op * convert(gpr[source].u[i]);
             ACC.f[i] = convert(ACC.u[i]) - temp;
-            printf("(%d)%f ", i, ACC.f[i]);
+            Logger::log(Logger::VU,"(%d)%f ", i, ACC.f[i]);
         }
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::msubai(uint8_t field, uint8_t source)
 {
-    printf("[VU] MSUBAi: ");
+    Logger::log(Logger::VU,"MSUBAi: ");
     float op = convert(I.u);
     for (int i = 0; i < 4; i++)
     {
@@ -967,15 +967,15 @@ void VectorUnit::msubai(uint8_t field, uint8_t source)
         {
             float temp = op * convert(gpr[source].u[i]);
             ACC.f[i] = convert(ACC.u[i]) - temp;
-            printf("(%d)%f ", i, ACC.f[i]);
+            Logger::log(Logger::VU,"(%d)%f ", i, ACC.f[i]);
         }
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::msubbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg)
 {
-    printf("[VU] MSUBbc: ");
+    Logger::log(Logger::VU,"MSUBbc: ");
     float op = convert(gpr[bc_reg].u[bc]);
     for (int i = 0; i < 4; i++)
     {
@@ -983,15 +983,15 @@ void VectorUnit::msubbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source,
         {
             float temp = op * convert(gpr[source].u[i]);
             set_gpr_f(dest, i, ACC.f[i] - temp);
-            printf("(%d)%f ", i, gpr[dest].f[i]);
+            Logger::log(Logger::VU,"(%d)%f ", i, gpr[dest].f[i]);
         }
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::msubi(uint8_t field, uint8_t dest, uint8_t source)
 {
-    printf("[VU] MSUBi: ");
+    Logger::log(Logger::VU,"MSUBi: ");
     float op = convert(I.u);
     for (int i = 0; i < 4; i++)
     {
@@ -999,21 +999,21 @@ void VectorUnit::msubi(uint8_t field, uint8_t dest, uint8_t source)
         {
             float temp = op * convert(gpr[source].u[i]);
             set_gpr_f(dest, i, ACC.f[i] - temp);
-            printf("(%d)%f ", i, gpr[dest].f[i]);
+            Logger::log(Logger::VU,"(%d)%f ", i, gpr[dest].f[i]);
         }
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::mtir(uint8_t fsf, uint8_t dest, uint8_t source)
 {
-    printf("[VU] MTIR: %d\n", gpr[source].u[fsf] & 0xFFFF);
+    Logger::log(Logger::VU,"MTIR: %d\n", gpr[source].u[fsf] & 0xFFFF);
     set_int(dest, gpr[source].u[fsf] & 0xFFFF);
 }
 
 void VectorUnit::mul(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)
 {
-    printf("[VU] MUL: ");
+    Logger::log(Logger::VU,"MUL: ");
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
@@ -1021,17 +1021,17 @@ void VectorUnit::mul(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)
             float result = convert(gpr[reg1].u[i]) * convert(gpr[reg2].u[i]);
             update_mac_flags(result, i);
             set_gpr_f(dest, i, result);
-            printf("(%d)%f ", i, gpr[dest].f[i]);
+            Logger::log(Logger::VU,"(%d)%f ", i, gpr[dest].f[i]);
         }
         else
             clear_mac_flags(i);
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::mula(uint8_t field, uint8_t reg1, uint8_t reg2)
 {
-    printf("[VU] MULA: ");
+    Logger::log(Logger::VU,"MULA: ");
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
@@ -1039,17 +1039,17 @@ void VectorUnit::mula(uint8_t field, uint8_t reg1, uint8_t reg2)
             float temp = convert(gpr[reg1].u[i]) * convert(gpr[reg2].u[i]);
             update_mac_flags(temp, i);
             ACC.f[i] = temp;
-            printf("(%d)%f ", i, ACC.f[i]);
+            Logger::log(Logger::VU,"(%d)%f ", i, ACC.f[i]);
         }
         else
             clear_mac_flags(i);
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::mulabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_reg)
 {
-    printf("[VU] MULAbc: ");
+    Logger::log(Logger::VU,"MULAbc: ");
     float op = convert(gpr[bc_reg].u[bc]);
     for (int i = 0; i < 4; i++)
     {
@@ -1058,17 +1058,17 @@ void VectorUnit::mulabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_re
             float temp = op * convert(gpr[source].u[i]);
             update_mac_flags(temp, i);
             ACC.f[i] = temp;
-            printf("(%d)%f ", i, ACC.f[i]);
+            Logger::log(Logger::VU,"(%d)%f ", i, ACC.f[i]);
         }
         else
             clear_mac_flags(i);
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::mulai(uint8_t field, uint8_t source)
 {
-    printf("[VU] MULAi: ");
+    Logger::log(Logger::VU,"MULAi: ");
     float op = convert(I.u);
     for (int i = 0; i < 4; i++)
     {
@@ -1077,17 +1077,17 @@ void VectorUnit::mulai(uint8_t field, uint8_t source)
             float temp = convert(gpr[source].u[i]) * op;
             update_mac_flags(temp, i);
             ACC.f[i] = temp;
-            printf("(%d)%f ", i, ACC.f[i]);
+            Logger::log(Logger::VU,"(%d)%f ", i, ACC.f[i]);
         }
         else
             clear_mac_flags(i);
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::mulbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg)
 {
-    printf("[VU] MULbc: ");
+    Logger::log(Logger::VU,"MULbc: ");
     float op = convert(gpr[bc_reg].u[bc]);
     for (int i = 0; i < 4; i++)
     {
@@ -1096,17 +1096,17 @@ void VectorUnit::mulbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, 
             float temp = op * convert(gpr[source].u[i]);
             update_mac_flags(temp, i);
             set_gpr_f(dest, i, temp);
-            printf("(%d)%f ", i, gpr[dest].f[i]);
+            Logger::log(Logger::VU,"(%d)%f ", i, gpr[dest].f[i]);
         }
         else
             clear_mac_flags(i);
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::muli(uint8_t field, uint8_t dest, uint8_t source)
 {
-    printf("[VU] MULi: ");
+    Logger::log(Logger::VU,"MULi: ");
     float op = convert(I.u);
     for (int i = 0; i < 4; i++)
     {
@@ -1115,17 +1115,17 @@ void VectorUnit::muli(uint8_t field, uint8_t dest, uint8_t source)
             float temp = op * convert(gpr[source].u[i]);
             update_mac_flags(temp, i);
             set_gpr_f(dest, i, temp);
-            printf("(%d)%f ", i, gpr[dest].f[i]);
+            Logger::log(Logger::VU,"(%d)%f ", i, gpr[dest].f[i]);
         }
         else
             clear_mac_flags(i);
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::mulq(uint8_t field, uint8_t dest, uint8_t source)
 {
-    printf("[VU] MULq: ");
+    Logger::log(Logger::VU,"MULq: ");
     float op = convert(Q.u);
     for (int i = 0; i < 4; i++)
     {
@@ -1134,12 +1134,12 @@ void VectorUnit::mulq(uint8_t field, uint8_t dest, uint8_t source)
             float temp = op * convert(gpr[source].u[i]);
             update_mac_flags(temp, i);
             set_gpr_f(dest, i, temp);
-            printf("(%d)%f ", i, gpr[dest].f[i]);
+            Logger::log(Logger::VU,"(%d)%f ", i, gpr[dest].f[i]);
         }
         else
             clear_mac_flags(i);
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 /**
@@ -1157,7 +1157,7 @@ void VectorUnit::opmsub(uint8_t dest, uint8_t reg1, uint8_t reg2)
     update_mac_flags(gpr[dest].f[1], 1);
     update_mac_flags(gpr[dest].f[2], 2);
     clear_mac_flags(3);
-    printf("[VU] OPMSUB: %f, %f, %f\n", gpr[dest].f[0], gpr[dest].f[1], gpr[dest].f[2]);
+    Logger::log(Logger::VU,"OPMSUB: %f, %f, %f\n", gpr[dest].f[0], gpr[dest].f[1], gpr[dest].f[2]);
 }
 
 /**
@@ -1175,7 +1175,7 @@ void VectorUnit::opmula(uint8_t reg1, uint8_t reg2)
     update_mac_flags(ACC.f[1], 1);
     update_mac_flags(ACC.f[2], 2);
     clear_mac_flags(3);
-    printf("[VU] OPMULA: %f, %f, %f\n", ACC.f[0], ACC.f[1], ACC.f[2]);
+    Logger::log(Logger::VU,"OPMULA: %f, %f, %f\n", ACC.f[0], ACC.f[1], ACC.f[2]);
 }
 
 void VectorUnit::rget(uint8_t field, uint8_t dest)
@@ -1187,14 +1187,14 @@ void VectorUnit::rget(uint8_t field, uint8_t dest)
             set_gpr_u(dest, i, R.u);
         }
     }
-    printf("[VU] RGET: %f\n", R.f);
+    Logger::log(Logger::VU,"RGET: %f\n", R.f);
 }
 
 void VectorUnit::rinit(uint8_t fsf, uint8_t source)
 {
     R.u = 0x3F800000;
     R.u |= gpr[source].u[fsf] & 0x007FFFFF;
-    printf("[VU] RINIT: %f\n", R.f);
+    Logger::log(Logger::VU,"RINIT: %f\n", R.f);
 }
 
 void VectorUnit::rnext(uint8_t field, uint8_t dest)
@@ -1207,7 +1207,7 @@ void VectorUnit::rnext(uint8_t field, uint8_t dest)
             set_gpr_u(dest, i, R.u);
         }
     }
-    printf("[VU] RNEXT: %f\n", R.f);
+    Logger::log(Logger::VU,"RNEXT: %f\n", R.f);
 }
 
 void VectorUnit::rsqrt(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2)
@@ -1219,7 +1219,7 @@ void VectorUnit::rsqrt(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2)
 
     if (!denom)
     {
-        printf("[VU] RSQRT by zero!\n");
+        Logger::log(Logger::VU,"RSQRT by zero!\n");
 
         if (num == 0.0)
             status |= 0x10;
@@ -1236,9 +1236,9 @@ void VectorUnit::rsqrt(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2)
         new_Q_instance.f = num;
         new_Q_instance.f /= sqrt(denom);
     }
-    printf("[VU] RSQRT: %f\n", new_Q_instance.f);
-    printf("Reg1: %f\n", gpr[reg1].f[fsf]);
-    printf("Reg2: %f\n", gpr[reg2].f[ftf]);
+    Logger::log(Logger::VU,"RSQRT: %f\n", new_Q_instance.f);
+    Logger::log(Logger::VU,"Reg1: %f\n", gpr[reg1].f[fsf]);
+    Logger::log(Logger::VU,"Reg2: %f\n", gpr[reg2].f[ftf]);
 }
 
 void VectorUnit::rxor(uint8_t fsf, uint8_t source)
@@ -1246,13 +1246,13 @@ void VectorUnit::rxor(uint8_t fsf, uint8_t source)
     VU_R temp;
     temp.u = (R.u & 0x007FFFFF) | 0x3F800000;
     R.u = temp.u ^ (gpr[source].u[fsf] & 0x007FFFFF);
-    printf("[VU] RXOR: %f\n", R.f);
+    Logger::log(Logger::VU,"RXOR: %f\n", R.f);
 }
 
 void VectorUnit::sq(uint8_t field, uint8_t source, uint8_t base, int32_t offset)
 {
     uint32_t addr = (int_gpr[base] << 4) + offset;
-    printf("[VU] SQ to $%08X!\n", addr);
+    Logger::log(Logger::VU,"SQ to $%08X!\n", addr);
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
@@ -1265,7 +1265,7 @@ void VectorUnit::sq(uint8_t field, uint8_t source, uint8_t base, int32_t offset)
 void VectorUnit::sqi(uint8_t field, uint8_t source, uint8_t base)
 {
     uint32_t addr = int_gpr[base] << 4;
-    printf("[VU] SQI to $%08X!\n", addr);
+    Logger::log(Logger::VU,"SQI to $%08X!\n", addr);
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
@@ -1280,13 +1280,13 @@ void VectorUnit::sqi(uint8_t field, uint8_t source, uint8_t base)
 void VectorUnit::vu_sqrt(uint8_t ftf, uint8_t source)
 {
     new_Q_instance.f = sqrt(fabs(convert(gpr[source].u[ftf])));
-    printf("[VU] SQRT: %f\n", new_Q_instance.f);
-    printf("Source: %f\n", gpr[source].f[ftf]);
+    Logger::log(Logger::VU,"SQRT: %f\n", new_Q_instance.f);
+    Logger::log(Logger::VU,"Source: %f\n", gpr[source].f[ftf]);
 }
 
 void VectorUnit::sub(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)
 {
-    printf("[VU] SUB: ");
+    Logger::log(Logger::VU,"SUB: ");
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
@@ -1294,17 +1294,17 @@ void VectorUnit::sub(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)
             float result = convert(gpr[reg1].u[i]) - convert(gpr[reg2].u[i]);
             update_mac_flags(result, i);
             set_gpr_f(dest, i, result);
-            printf("(%d)%f ", i, gpr[dest].f[i]);
+            Logger::log(Logger::VU,"(%d)%f ", i, gpr[dest].f[i]);
         }
         else
             clear_mac_flags(i);
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::subbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg)
 {
-    printf("[VU] SUBbc: ");
+    Logger::log(Logger::VU,"SUBbc: ");
     float op = convert(gpr[bc_reg].u[bc]);
     for (int i = 0; i < 4; i++)
     {
@@ -1313,17 +1313,17 @@ void VectorUnit::subbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, 
             float temp = convert(gpr[source].u[i]) - op;
             update_mac_flags(temp, i);
             set_gpr_f(dest, i, temp);
-            printf("(%d)%f ", i, gpr[dest].f[i]);
+            Logger::log(Logger::VU,"(%d)%f ", i, gpr[dest].f[i]);
         }
         else
             clear_mac_flags(i);
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::subi(uint8_t field, uint8_t dest, uint8_t source)
 {
-    printf("[VU] SUBi: ");
+    Logger::log(Logger::VU,"SUBi: ");
     float op = convert(I.u);
     for (int i = 0; i < 4; i++)
     {
@@ -1332,17 +1332,17 @@ void VectorUnit::subi(uint8_t field, uint8_t dest, uint8_t source)
             float temp = convert(gpr[source].u[i]) - op;
             update_mac_flags(temp, i);
             set_gpr_f(dest, i, temp);
-            printf("(%d)%f ", i, gpr[dest].f[i]);
+            Logger::log(Logger::VU,"(%d)%f ", i, gpr[dest].f[i]);
         }
         else
             clear_mac_flags(i);
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::subq(uint8_t field, uint8_t dest, uint8_t source)
 {
-    printf("[VU] SUBq: ");
+    Logger::log(Logger::VU,"SUBq: ");
     float value = convert(Q.u);
     for (int i = 0; i < 4; i++)
     {
@@ -1351,12 +1351,12 @@ void VectorUnit::subq(uint8_t field, uint8_t dest, uint8_t source)
             float temp = convert(gpr[source].u[i]) - value;
             update_mac_flags(temp, i);
             set_gpr_f(dest, i, temp);
-            printf("(%d)%f ", i, gpr[dest].f[i]);
+            Logger::log(Logger::VU,"(%d)%f ", i, gpr[dest].f[i]);
         }
         else
             clear_mac_flags(i);
     }
-    printf("\n");
+    Logger::log(Logger::VU,"\n");
 }
 
 void VectorUnit::waitq()
@@ -1372,10 +1372,10 @@ void VectorUnit::xgkick(uint8_t is)
 {
     if (!id)
     {
-        printf("[VU] ERROR: XGKICK called on VU0!\n");
+        Logger::log(Logger::VU,"ERROR: XGKICK called on VU0!\n");
         exit(1);
     }
-    printf("[VU1] XGKICK: Addr $%08X\n", int_gpr[is] * 16);
+    Logger::log(Logger::VU,"(VU1) XGKICK: Addr $%08X\n", int_gpr[is] * 16);
     while (transferring_GIF)
     {
         //If another XGKICK is already running, the proper behavior is to stall the VU until the transfer finishes.
@@ -1395,7 +1395,7 @@ void VectorUnit::xgkick(uint8_t is)
 
 void VectorUnit::xitop(uint8_t it)
 {
-    printf("[VU] XTIOP: $%04X (%d)\n", *VIF_ITOP, it);
+    Logger::log(Logger::VU,"XTIOP: $%04X (%d)\n", *VIF_ITOP, it);
     set_int(it, *VIF_ITOP);
 }
 
@@ -1403,9 +1403,9 @@ void VectorUnit::xtop(uint8_t it)
 {
     if (!id)
     {
-        printf("[VU] ERROR: XTOP called on VU0!\n");
+        Logger::log(Logger::VU,"ERROR: XTOP called on VU0!\n");
         exit(1);
     }
-    printf("[VU1] XTOP: $%04X (%d)\n", *VIF_TOP, it);
+    Logger::log(Logger::VU,"(VU1) XTOP: $%04X (%d)\n", *VIF_TOP, it);
     set_int(it, *VIF_TOP);
 }

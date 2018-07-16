@@ -233,7 +233,7 @@ bool GraphicsInterface::send_PATH(int index, uint128_t quad)
 //Returns true if an EOP transfer has ended - this terminates the XGKICK command
 bool GraphicsInterface::send_PATH1(uint128_t quad)
 {
-    printf("[GIF] Send PATH1 $%08X_%08X_%08X_%08X\n", quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
+    Logger::log(Logger::GIF,"Send PATH1 $%08X_%08X_%08X_%08X\n", quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
     feed_GIF(quad);
     return !current_tag.data_left && current_tag.end_of_packet;
 }
