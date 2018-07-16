@@ -1,6 +1,6 @@
 #include "loggerwindow.h"
 
-LoggerWindow::LoggerWindow(QWidget *parent) : QWidget(parent)
+LoggerWindow::LoggerWindow(QDialog *parent) : QDialog(parent)
 {
 
 }

@@ -1,13 +1,13 @@
 #ifndef LOGGERWINDOW_H
 #define LOGGERWINDOW_H
 
-#include <QWidget>
+#include <QDialog>
 
-class LoggerWindow : public QWidget
+class LoggerWindow : public QDialog
 {
     Q_OBJECT
 public:
-    explicit LoggerWindow(QWidget *parent = nullptr);
+    explicit LoggerWindow(QDialog *parent = nullptr);
 
 signals:
 

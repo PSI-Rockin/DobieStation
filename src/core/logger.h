@@ -9,11 +9,11 @@ const char* LogOriginNames[] = { "IPU", "EE", "VIF", "VU", "GIF", "GS", "CDVD", 
 class Logger
 {
 public:
-    Logger();
-    void log(LogOrigin origin, char* format, ...);
-    void toggle(LogOrigin origin, bool enable);
+    static void log(LogOrigin origin, char* format, ...);
+    static void toggle(LogOrigin origin, bool enable);
+    static void set_all(bool data[COUNT_OF_ORIGINS]);
 private:
-    bool enabled[COUNT_OF_ORIGINS];
+    static bool enabled[COUNT_OF_ORIGINS];
 };
 
 #endif // LOGGER_H

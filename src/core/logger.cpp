@@ -1,10 +1,8 @@
 #include "logger.h"
 #include <cstdio>
 #include <cstdarg>
-Logger::Logger() : enabled()
-{
+bool Logger::enabled[] = {};//sets them all to false
 
-}
 void Logger::log(LogOrigin origin, char* fmt, ...){
     va_list args;
     va_start(args,fmt);
@@ -15,4 +13,10 @@ void Logger::log(LogOrigin origin, char* fmt, ...){
 void Logger::toggle(LogOrigin origin, bool enable)
 {
     enabled[origin] = enable;
+}
+
+void Logger::set_all(bool data[COUNT_OF_ORIGINS]){
+    for (int i = 0; i < COUNT_OF_ORIGINS; i++){
+        enabled[i] = data[i];
+    }
 }
