@@ -479,9 +479,10 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
             printf("UV: ($%04X, $%04X)\n", UV.u, UV.v);
             break;
         case 0x0004:
+            //XYZF2
             current_vtx.x = value & 0xFFFF;
             current_vtx.y = (value >> 16) & 0xFFFF;
-            current_vtx.z = value >> 32;
+            current_vtx.z = (value >> 32) & 0xFFFFFF;
             vertex_kick(true);
             break;
         case 0x0005:
@@ -1712,10 +1713,6 @@ void GraphicsSynthesizer::host_to_host()
 
 void GraphicsSynthesizer::tex_lookup(int16_t u, int16_t v, const RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color)
 {
-    /*if (u & 0x2000)
-        u = -(u & 0x1FFF);
-    if (v & 0x2000)
-        v = -(v & 0x1FFF);*/
     switch (current_ctx->clamp.wrap_s)
     {
         case 0:
@@ -1760,6 +1757,7 @@ void GraphicsSynthesizer::tex_lookup(int16_t u, int16_t v, const RGBAQ_REG& vtx_
         }
             break;
         case 0x02:
+        case 0x0A:
         {
             uint16_t color = read_PSMCT16_block(tex_base, current_ctx->tex0.width, u, v);
             tex_color.r = (color & 0x1F) << 3;

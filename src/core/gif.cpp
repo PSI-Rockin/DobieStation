@@ -11,26 +11,27 @@ void GraphicsInterface::reset()
 {
     processing_GIF_prim = false;
     current_tag.data_left = 0;
-    active_paths = 0;
+    active_path = 0;
+    path_queue = 0;
 }
 
 uint32_t GraphicsInterface::read_STAT()
 {
     uint32_t reg = 0;
 
+    reg |= ((path_queue & (1 << 3)) != 0) << 6;
+    reg |= ((path_queue & (1 << 2)) != 0) << 7;
+    reg |= ((path_queue & (1 << 1)) != 0) << 8;
+
     //OPH
-    if (active_paths)
-    {
-        reg |= 1 << 9;
-        int path = 0;
-        if (active_paths & (1 << 1))
-            path = 1;
-        else if (active_paths & (1 << 2))
-            path = 2;
-        else if (active_paths & (1 << 3))
-            path = 3;
-        reg |= path << 10;
-    }
+    reg |= (active_path != 0) << 9;
+
+    //APATH
+    reg |= active_path << 10;
+
+    //Quadword count - since we don't emulate the FIFO, hack it to 16 if there's a transfer happening
+    reg |= ((active_path != 0) * 16) << 24;
+    printf("[GIF] Read GIF_STAT: $%08X\n", reg);
     return reg;
 }
 
@@ -212,20 +213,31 @@ void GraphicsInterface::feed_GIF(uint128_t data)
     }
 }
 
-void GraphicsInterface::activate_PATH(int index)
+void GraphicsInterface::request_PATH(int index)
 {
-    active_paths |= 1 << index;
+    if (!active_path)
+        active_path = index;
+    else
+        path_queue |= 1 << index;
 }
 
 void GraphicsInterface::deactivate_PATH(int index)
 {
-    active_paths &= ~(1 << index);
+    active_path = 0;
+    for (int path = 1; path <= 3; path++)
+    {
+        int bit = 1 << path;
+        if (path_queue & bit)
+        {
+            path_queue &= ~bit;
+            active_path = path;
+            break;
+        }
+    }
 }
 
 bool GraphicsInterface::send_PATH(int index, uint128_t quad)
 {
-    if (active_paths & (1 * (1 << (index - 1)) - 1))
-        return false;
     feed_GIF(quad);
     return true;
 }
@@ -233,7 +245,7 @@ bool GraphicsInterface::send_PATH(int index, uint128_t quad)
 //Returns true if an EOP transfer has ended - this terminates the XGKICK command
 bool GraphicsInterface::send_PATH1(uint128_t quad)
 {
-    printf("[GIF] Send PATH1 $%08X_%08X_%08X_%08X\n", quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
+    //printf("[GIF] Send PATH1 $%08X_%08X_%08X_%08X\n", quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
     feed_GIF(quad);
     return !current_tag.data_left && current_tag.end_of_packet;
 }

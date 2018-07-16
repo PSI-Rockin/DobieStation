@@ -258,10 +258,13 @@ void DMAC::process_GIF()
 
     if (channels[GIF].quadword_count)
     {
-        gif->send_PATH3(fetch128(channels[GIF].address));
+        if (gif->path_active(3))
+        {
+            gif->send_PATH3(fetch128(channels[GIF].address));
 
-        channels[GIF].address += 16;
-        channels[GIF].quadword_count--;
+            channels[GIF].address += 16;
+            channels[GIF].quadword_count--;
+        }
     }
     else
     {
@@ -798,7 +801,7 @@ void DMAC::write32(uint32_t address, uint32_t value)
             if (value & 0x100)
             {
                 start_DMA(GIF);
-                gif->activate_PATH(3);
+                gif->request_PATH(3);
             }
             break;
         case 0x1000A010:

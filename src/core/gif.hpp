@@ -27,7 +27,8 @@ class GraphicsInterface
         GIFtag current_tag;
         bool processing_GIF_prim;
 
-        uint8_t active_paths;
+        uint8_t active_path;
+        uint8_t path_queue;
 
         void process_PACKED(uint128_t quad);
         void process_REGLIST(uint128_t quad);
@@ -36,9 +37,11 @@ class GraphicsInterface
         GraphicsInterface(GraphicsSynthesizer* gs);
         void reset();
 
+        bool path_active(int index);
+
         uint32_t read_STAT();
 
-        void activate_PATH(int index);
+        void request_PATH(int index);
         void deactivate_PATH(int index);
 
         bool send_PATH(int index, uint128_t quad);
@@ -47,5 +50,10 @@ class GraphicsInterface
         void send_PATH2(uint32_t data[4]);
         void send_PATH3(uint128_t quad);
 };
+
+inline bool GraphicsInterface::path_active(int index)
+{
+    return active_path == index;
+}
 
 #endif // GIF_HPP
