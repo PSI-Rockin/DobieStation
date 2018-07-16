@@ -2,7 +2,7 @@
 #include <cstdio>
 #include <cstdarg>
 constexpr const char* Logger::origin_names[Logger::OriginsCount];
-bool Logger::enabled[] = {1};//sets them all to false except for the "other" category
+bool Logger::enabled[] = {1, 1};//sets them all to false except for the "Qt" and "Emulator" categories
 
 void Logger::log(Logger::LogOrigin origin, const char* fmt, ...){
     va_list args;

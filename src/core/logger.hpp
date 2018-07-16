@@ -4,18 +4,20 @@
 class Logger
 {
 public:
-    enum LogOrigin{QT,
-        IPU, EE, VIF, VU, GIF, GS, CDVD, IOP, Emulator,
-        IOP_Debug, EE_Interpreter, FPU, DMAC, GS_CONTEXT,IOP_COP0,IOP_Interpreter,
-        IOP_DMA,EE_Timing,IOP_Timing,INTC,SIO2,PAD,BIOS_HLE,SPU,
-        VU_Interpreter,
+    enum LogOrigin{QT,Emulator,
+        BIOS_HLE, IPU, EE, EE_Timing,EE_Interpreter,
+        VIF, VU, GIF,VU_Interpreter,
+        GS, GS_CONTEXT,
+        CDVD, IOP,IOP_Debug, FPU, DMAC,IOP_COP0,IOP_Interpreter,
+        IOP_DMA,IOP_Timing,INTC,SIO2,PAD,SPU,
     OriginsCount
     };
-    static constexpr const char* origin_names[] = { "Qt",
-        "IPU", "EE", "VIF", "VU", "GIF", "GS", "CDVD", "IOP", "Emulator",
-        "IOP Debug", "EE Interpreter", "FPU", "DMAC", "GS Context","IOP COP0","IOP Interpreter",
-        "IOP_DMA","EE Timing","IOP Timing","INTC","SIO2","PAD","BIOS HLE","SPU",
-        "VU_Interpreter",};
+    static constexpr const char* origin_names[] = { "Qt", "Emulator",
+        "BIOS HLE", "IPU", "EE", "EE Timing", "EE Interpreter",
+        "VIF", "VU", "GIF","VU_Interpreter",
+        "GS", "GS Context",
+        "CDVD", "IOP", "IOP Debug", "FPU", "DMAC", "IOP COP0","IOP Interpreter",
+        "IOP_DMA","IOP Timing","INTC","SIO2","PAD","SPU",};
 
     //static void log(LogOrigin origin, char* format, ...);
     static void log(LogOrigin origin, const char* format, ...);
