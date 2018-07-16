@@ -14,7 +14,7 @@ LoggerWindow::LoggerWindow(QWidget *parent) : QDialog(parent)
         list[i]->setChecked(Logger::get_state(origin));
         layout->addWidget(list[i], i, 0);
         connect(list[i], &QCheckBox::toggled,
-            [=](bool checked) { Logger::toggle(origin, checked);});
+            [=](bool checked) { Logger::set(origin, checked);});
 
     }
 }

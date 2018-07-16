@@ -13,7 +13,7 @@ void Logger::log(Logger::LogOrigin origin, const char* fmt, ...){
     }
     va_end(args);
 }
-void Logger::toggle(LogOrigin origin, bool enable)
+void Logger::set(LogOrigin origin, bool enable)
 {
     enabled[origin] = enable;
 }
