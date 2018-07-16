@@ -7,12 +7,12 @@
 LoggerWindow::LoggerWindow(QWidget *parent) : QDialog(parent)
 {
     auto layout = new QVBoxLayout(this);
-    QCheckBox* list[LogOriginsCount];
-    for(int i=0;i<LogOriginsCount;i++){
-        list[i] = new QCheckBox(LogOriginNames[i], this);
+    QCheckBox* list[Logger::OriginsCount];
+    for(int i=0;i<Logger::OriginsCount;i++){
+        list[i] = new QCheckBox(Logger::LogOriginNames[i], this);
         layout->addWidget(list[i], i, 0);
         connect(list[i], &QCheckBox::toggled,
-            [=](bool checked) { Logger::toggle((LogOrigin)i, checked);});
+            [=](bool checked) { Logger::toggle((Logger::LogOrigin)i, checked);});
 
     }
 }

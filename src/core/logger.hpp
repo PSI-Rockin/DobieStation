@@ -1,19 +1,28 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 
-enum LogOrigin{
-    IPU, EE, VIF, VU, GIF, GS, CDVD, IOP, QT,
-LogOriginsCount
-};
-static const char* LogOriginNames[] = { "IPU", "EE", "VIF", "VU", "GIF", "GS", "CDVD", "IOP", "QT"};
 class Logger
 {
 public:
-    static void log(LogOrigin origin, char* format, ...);
-    static void toggle(LogOrigin origin, bool enable);
-    static void set_all(bool data[LogOriginsCount]);
-private:
-    static bool enabled[LogOriginsCount];
-};
+    enum LogOrigin{OTHER,
+        IPU, EE, VIF, VU, GIF, GS, CDVD, IOP, Emulator,
+        IOP_Debug, EE_Interpreter, FPU, DMAC, GS_CONTEXT,IOP_COP0,IOP_Interpreter,
+        IOP_DMA,EE_Timing,IOP_Timing,INTC,SIO2,COP2,VU1,PAD,
+        VU_Interpreter,
+    OriginsCount
+    };
+    static constexpr const char* LogOriginNames[] = { "Other (Needs categorization!)",
+        "IPU", "EE", "VIF", "VU", "GIF", "GS", "CDVD", "IOP", "Emulator",
+        "IOP Debug", "EE Interpreter", "FPU", "DMAC", "GS Context","IOP COP0","IOP Interpreter",
+        "IOP_DMA","EE Timing","IOP Timing","INTC","SIO2","COP2","VU1","PAD",
+        "VU_Interpreter",};
 
+    //static void log(LogOrigin origin, char* format, ...);
+    static void log(LogOrigin origin, const char* format, ...);
+    static void toggle(LogOrigin origin, bool enable);
+    static void set_all(bool data[OriginsCount]);
+
+private:
+    static bool enabled[OriginsCount];
+};
 #endif // LOGGER_H
