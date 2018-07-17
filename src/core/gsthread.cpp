@@ -156,7 +156,8 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
                     return;
             }
         }
-        else {
+        else
+        {
             std::this_thread::yield();
         }
     }

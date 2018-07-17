@@ -164,7 +164,8 @@ uint64_t GS_REGISTERS::read64_privileged(uint32_t addr)
         return 0;
     }
 }
-bool GS_REGISTERS::write64(uint32_t addr, uint64_t value) {
+bool GS_REGISTERS::write64(uint32_t addr, uint64_t value)
+{
     addr &= 0xFFFF;
     switch (addr)
     {
@@ -175,7 +176,8 @@ bool GS_REGISTERS::write64(uint32_t addr, uint64_t value) {
     } //Should probably have SINGAL and LABEL?
     return false;
 }
-void GS_REGISTERS::reset() {
+void GS_REGISTERS::reset()
+{
     DISPLAY1.x = 0;
     DISPLAY1.y = 0;
     DISPLAY1.width = 0;
@@ -239,8 +241,10 @@ void GS_REGISTERS::get_inner_resolution(int &w, int &h)
     w = DISPLAY2.width >> 2;
     h = DISPLAY2.height;
 }
-void GS_REGISTERS::set_VBLANK(bool is_VBLANK) {
-    if (!is_VBLANK) {
+void GS_REGISTERS::set_VBLANK(bool is_VBLANK)
+{
+    if (!is_VBLANK)
+    {
         CSR.is_odd_frame = !CSR.is_odd_frame;
     }
     CSR.VBLANK_generated = is_VBLANK;
