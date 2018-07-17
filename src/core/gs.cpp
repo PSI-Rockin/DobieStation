@@ -21,17 +21,12 @@ GraphicsSynthesizer::GraphicsSynthesizer(INTC* intc) : intc(intc)
     output_buffer1 = nullptr;
     output_buffer2 = nullptr;
     message_queue = nullptr;
+    return_queue = nullptr;
     gsthread_id = std::thread();//no thread/default constructor
 }
 
 GraphicsSynthesizer::~GraphicsSynthesizer()
 {
-    if (output_buffer1)
-        delete[] output_buffer1;
-    if (output_buffer2)
-        delete[] output_buffer2;
-    if (message_queue)
-        delete message_queue;
     if (gsthread_id.joinable())
     {
         GS_message_payload payload;
@@ -39,6 +34,14 @@ GraphicsSynthesizer::~GraphicsSynthesizer()
         message_queue->push({ GS_command::die_t,payload });
         gsthread_id.join();
     }
+    if (output_buffer1)
+        delete[] output_buffer1;
+    if (output_buffer2)
+        delete[] output_buffer2;
+    if (message_queue)
+        delete message_queue;
+    if (return_queue)
+        delete message_queue;
 }
 
 void GraphicsSynthesizer::reset()
@@ -62,6 +65,13 @@ void GraphicsSynthesizer::reset()
         payload.no_payload = {0};
         message_queue->push({ GS_command::die_t,payload });
         gsthread_id.join();
+    }
+    {
+        GS_return_message data;
+        while (return_queue->pop(data));
+
+        GS_message data2;
+        while (message_queue->pop(data2));
     }
     gsthread_id = std::thread(&GraphicsSynthesizerThread::event_loop, message_queue, return_queue);//pass references to the fifos
 

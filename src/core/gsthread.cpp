@@ -316,6 +316,7 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             printf("UV: ($%04X, $%04X)\n", UV.u, UV.v);
             break;
         case 0x0004:
+            //XYZF2
             current_vtx.x = value & 0xFFFF;
             current_vtx.y = (value >> 16) & 0xFFFF;
             current_vtx.z = (value >> 32) & 0xFFFFFF;

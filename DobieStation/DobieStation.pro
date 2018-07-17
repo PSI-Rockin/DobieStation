@@ -74,7 +74,7 @@ HEADERS += \
     ../src/core/ee/cop1.hpp \
     ../src/core/ee/bios_hle.hpp \
     ../src/core/gs.hpp \
-    ../src/core/circularFifo.hpp \
+    ../src/core/circularFIFO.hpp \
     ../src/core/gsthread.hpp \
     ../src/core/gsregisters.hpp \
     ../src/core/ee/dmac.hpp \
