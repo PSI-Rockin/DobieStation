@@ -13,6 +13,14 @@ void Logger::log(Logger::LogOrigin origin, const char* fmt, ...){
     }
     va_end(args);
 }
+void Logger::log_silent(Logger::LogOrigin origin, const char* fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    if (enabled[origin]) {
+        vprintf(fmt, args);
+    }
+    va_end(args);
+}
 void Logger::set(LogOrigin origin, bool enable)
 {
     enabled[origin] = enable;

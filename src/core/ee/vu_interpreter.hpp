@@ -8,14 +8,18 @@ namespace VU_Interpreter
 
     void upper(VectorUnit& vu, uint32_t instr);
     void addbc(VectorUnit& vu, uint32_t instr);
+    void subbc(VectorUnit& vu, uint32_t instr);
     void maddbc(VectorUnit& vu, uint32_t instr);
     void maxbc(VectorUnit& vu, uint32_t instr);
+    void minibc(VectorUnit& vu, uint32_t instr);
     void mulbc(VectorUnit& vu, uint32_t instr);
     void mulq(VectorUnit& vu, uint32_t instr);
+    void muli(VectorUnit& vu, uint32_t instr);
     void minii(VectorUnit& vu, uint32_t instr);
     void addi(VectorUnit& vu, uint32_t instr);
     void subq(VectorUnit& vu, uint32_t instr);
     void subi(VectorUnit& vu, uint32_t instr);
+    void msubi(VectorUnit& vu, uint32_t instr);
     void add(VectorUnit& vu, uint32_t instr);
     void madd(VectorUnit& vu, uint32_t instr);
     void mul(VectorUnit& vu, uint32_t instr);
@@ -32,7 +36,11 @@ namespace VU_Interpreter
     void ftoi12(VectorUnit& vu, uint32_t instr);
     void ftoi15(VectorUnit& vu, uint32_t instr);
     void mulabc(VectorUnit& vu, uint32_t instr);
+    void abs(VectorUnit& vu, uint32_t instr);
+    void mulai(VectorUnit& vu, uint32_t instr);
     void clip(VectorUnit& vu, uint32_t instr);
+    void maddai(VectorUnit& vu, uint32_t instr);
+    void msubai(VectorUnit& vu, uint32_t instr);
     void opmula(VectorUnit& vu, uint32_t instr);
 
     void lower(VectorUnit& vu, uint32_t instr);
@@ -69,6 +77,7 @@ namespace VU_Interpreter
     void fcset(VectorUnit& vu, uint32_t instr);
     void fcand(VectorUnit& vu, uint32_t instr);
     void fmand(VectorUnit& vu, uint32_t instr);
+    void fcget(VectorUnit& vu, uint32_t instr);
     void b(VectorUnit& vu, uint32_t instr);
     void bal(VectorUnit& vu, uint32_t instr);
     void jr(VectorUnit& vu, uint32_t instr);

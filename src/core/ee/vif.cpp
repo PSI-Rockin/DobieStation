@@ -36,7 +36,7 @@ void VectorInterface::update()
         wait_for_VU = false;
         handle_wait_cmd(wait_cmd_value);
     }
-    while(FIFO.size() && runcycles--)
+    while (FIFO.size() && runcycles--)
     {        
         if (wait_for_VU)
         {
@@ -80,6 +80,9 @@ void VectorInterface::update()
                 case 0x50:
                 case 0x51:
                     //DIRECT/DIRECTHL
+                    if (!gif->path_active(2))
+                        return;
+
                     buffer[buffer_size] = value;
                     buffer_size++;
                     if (buffer_size == 4)
@@ -203,7 +206,7 @@ void VectorInterface::decode_cmd(uint32_t value)
             else
                 command_len += (imm * 4);
             Logger::log(Logger::VIF,"DIRECT: %d\n", command_len);
-            gif->activate_PATH(2);
+            gif->request_PATH(2);
             break;
         default:
             if ((command & 0x60) == 0x60)
@@ -295,21 +298,22 @@ void VectorInterface::handle_UNPACK_masking(uint128_t& quad)
     {
         uint8_t tempmask;
         
-        for (int i = 0; i < 4; i++) {
+        for (int i = 0; i < 4; i++)
+        {
             tempmask = (MASK >> ((i * 2) + std::min(unpack.blocks_written * 8, 24))) & 0x3;
             
             switch (tempmask)
             {
             case 1:
-                Logger::log(Logger::VIF,"Writing ROW to position %d\n", i);
+                //Logger::log(Logger::VIF,"Writing ROW to position %d\n", i);
                 quad._u32[i] = ROW[i];
                 break;
             case 2:
-                Logger::log(Logger::VIF,"Writing COL to position %d\n", i);
+                //Logger::log(Logger::VIF,"Writing COL to position %d\n", i);
                 quad._u32[i] = COL[std::min(unpack.blocks_written, 3)];
                 break;
             case 3:
-                Logger::log(Logger::VIF,"Write Protecting to position %d\n", i);
+                //Logger::log(Logger::VIF,"Write Protecting to position %d\n", i);
                 quad._u32[i] = vu->read_data<uint32_t>(unpack.addr + (i * 4));
                 break;
             default:
@@ -381,24 +385,31 @@ void VectorInterface::handle_UNPACK(uint32_t value)
                 Logger::log(Logger::VIF,"Unhandled UNPACK cmd $%02X!\n", unpack.cmd);
                 exit(1);
         }
-        handle_UNPACK_masking(quad);
 
-        unpack.blocks_written++;
-        if (CYCLE.CL >= CYCLE.WL)
-        {
-            if (unpack.blocks_written == CYCLE.CL)
-                unpack.blocks_written = 0;
-            else if (unpack.blocks_written > CYCLE.WL)
-            {
-                Logger::log(Logger::VIF,"Skip write!\n");
-                exit(1);
-            }
-        }
-        Logger::log(Logger::VIF,"Write data mem $%08X: $%08X_%08X_%08X_%08X\n", unpack.addr,
-               quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
-        vu->write_data(unpack.addr, quad);
-        unpack.addr += 16;
+        process_UNPACK_quad(quad);
     }
+}
+
+void VectorInterface::process_UNPACK_quad(uint128_t &quad)
+{
+    handle_UNPACK_masking(quad);
+
+    unpack.blocks_written++;
+    if (CYCLE.CL >= CYCLE.WL)
+    {
+        if (unpack.blocks_written == CYCLE.CL)
+            unpack.blocks_written = 0;
+        else if (unpack.blocks_written > CYCLE.WL)
+        {
+            Logger::log(Logger::VIF, "Skip write!\n");
+            exit(1);
+        }
+    }
+
+    //Logger::log(Logger::VIF, "Write data mem $%08X: $%08X_%08X_%08X_%08X\n", unpack.addr,
+           //quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
+    vu->write_data(unpack.addr, quad);
+    unpack.addr += 16;
 }
 
 bool VectorInterface::transfer_DMAtag(uint128_t tag)
@@ -472,4 +483,15 @@ void VectorInterface::disasm_micromem()
         file << endl;
     }
     file.close();
+}
+
+uint32_t VectorInterface::get_stat()
+{
+    uint32_t reg = 0;
+    reg |= ((FIFO.size() != 0) * 3);
+    reg |= vu->is_running() << 2;
+    reg |= DBF << 7;
+    reg |= ((FIFO.size() != 0) * 16) << 24;
+    //Logger::log(Logger::VIF, "Get STAT: $%08X\n", reg);
+    return reg;
 }

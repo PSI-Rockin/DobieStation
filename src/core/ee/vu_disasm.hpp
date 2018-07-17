@@ -13,7 +13,9 @@ namespace VU_Disasm
     std::string upper_q(const std::string op, uint32_t instr);
     std::string upper(uint32_t PC, uint32_t instr);
 
+    std::string upper_acc(const std::string op, uint32_t instr);
     std::string upper_acc_bc(const std::string op, uint32_t instr);
+    std::string upper_acc_i(const std::string op, uint32_t instr);
     std::string upper_conversion(const std::string op, uint32_t instr);
     std::string upper_itof(const std::string op, uint32_t instr);
     std::string upper_special(uint32_t PC, uint32_t instr);
@@ -53,6 +55,7 @@ namespace VU_Disasm
     std::string fcset(uint32_t instr);
     std::string fcand(uint32_t instr);
     std::string fmand(uint32_t instr);
+    std::string fcget(uint32_t instr);
     std::string b(uint32_t PC, uint32_t instr);
     std::string bal(uint32_t PC, uint32_t instr);
     std::string jr(uint32_t instr);

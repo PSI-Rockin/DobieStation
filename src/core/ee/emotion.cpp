@@ -7,8 +7,6 @@
 
 #include "../emulator.hpp"
 
-//#define printf(fmt, ...)(0)
-
 EmotionEngine::EmotionEngine(Cop0* cp0, Cop1* fpu, Emulator* e, uint8_t* sp, VectorUnit* vu0) :
     cp0(cp0), fpu(fpu), e(e), scratchpad(sp), vu0(vu0)
 {
@@ -176,7 +174,7 @@ int EmotionEngine::run(int cycles_to_run)
         {
             std::string disasm = EmotionDisasm::disasm_instr(instruction, PC);
             Logger::log(Logger::EE, "[$%08X] $%08X - %s\n", PC, instruction, disasm.c_str());
-            print_state();
+            //print_state();
         }
         EmotionInterpreter::interpret(*this, instruction);
         if (increment_PC)
@@ -197,6 +195,10 @@ int EmotionEngine::run(int cycles_to_run)
                 if (PC >= 0x82000 && new_PC == 0x81FC0)
                     Logger::log(Logger::EE, "Entering BIFCO loop\n");
                 PC = new_PC;
+                /*if (PC == 0x1001E0)
+                    PC = 0x100204;
+                if (PC == 0x10021C)
+                    PC = 0x10022C;*/
                 //Temporary hack for Atelier Iris - Skip intro movies
                 //if (PC == 0x0029e9cc)
                     //PC = 0x0029E984;
@@ -566,14 +568,11 @@ void EmotionEngine::lwc1(uint32_t addr, int index)
 
 void EmotionEngine::lqc2(uint32_t addr, int index)
 {
-    //Logger::log(EE, "LQC2: ");
     for (int i = 0; i < 4; i++)
     {
         uint32_t bark = read32(addr + (i << 2));
-        //Logger::log(Logger::EE, "$%08X ", bark);
         vu0->set_gpr_f(index, i, VectorUnit::convert(bark));
     }
-    //Logger::log(Logger::EE, "\n");
 }
 
 void EmotionEngine::swc1(uint32_t addr, int index)
@@ -810,19 +809,18 @@ void EmotionEngine::fpu_cvt_s_w(int dest, int source)
 void EmotionEngine::qmfc2(int dest, int cop_reg)
 {
     for (int i = 0; i < 4; i++)
-        set_gpr<uint32_t>(dest, vu0->qmfc2(cop_reg, i), i);
+    {
+        set_gpr<uint32_t>(dest, vu0->get_gpr_u(cop_reg, i), i);
+    }
 }
 
 void EmotionEngine::qmtc2(int source, int cop_reg)
 {
-    //Logger::log(EE, "QMTC2: ");
     for (int i = 0; i < 4; i++)
     {
         uint32_t bark = get_gpr<uint32_t>(source, i);
-        //Logger::log(Logger::EE, "$%08X ", bark);
         vu0->set_gpr_u(cop_reg, i, bark);
     }
-    //Logger::log(Logger::EE, "\n");
 }
 
 void EmotionEngine::cop2_special(uint32_t instruction)

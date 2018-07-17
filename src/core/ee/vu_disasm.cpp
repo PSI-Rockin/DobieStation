@@ -81,6 +81,11 @@ string VU_Disasm::upper(uint32_t PC, uint32_t instr)
         case 0x02:
         case 0x03:
             return upper_bc("add", instr);
+        case 0x04:
+        case 0x05:
+        case 0x06:
+        case 0x07:
+            return upper_bc("sub", instr);
         case 0x08:
         case 0x09:
         case 0x0A:
@@ -103,6 +108,8 @@ string VU_Disasm::upper(uint32_t PC, uint32_t instr)
             return upper_bc("mul", instr);
         case 0x1C:
             return upper_q("mul", instr);
+        case 0x1E:
+            return upper_i("mul", instr);
         case 0x1F:
             return upper_i("mini", instr);
         case 0x22:
@@ -111,6 +118,8 @@ string VU_Disasm::upper(uint32_t PC, uint32_t instr)
             return upper_q("sub", instr);
         case 0x26:
             return upper_i("sub", instr);
+        case 0x27:
+            return upper_i("msub", instr);
         case 0x28:
             return upper_simple("add", instr);
         case 0x29:
@@ -141,6 +150,17 @@ string VU_Disasm::upper_acc_bc(const string op, uint32_t instr)
 
     output << op << bc_field << "." << get_field(dest_field);
     output << " ACC" << ", vf" << fs << ", vf" << ft << bc_field;
+    return output.str();
+}
+
+string VU_Disasm::upper_acc_i(const string op, uint32_t instr)
+{
+    stringstream output;
+    uint32_t fs = (instr >> 11) & 0x1F;
+    uint32_t dest_field = (instr >> 21) & 0xF;
+
+    output << op << "i." << get_field(dest_field);
+    output << " ACC" << ", vf" << fs << ", I";
     return output.str();
 }
 
@@ -186,8 +206,16 @@ string VU_Disasm::upper_special(uint32_t PC, uint32_t instr)
         case 0x1A:
         case 0x1B:
             return upper_acc_bc("mula", instr);
+        case 0x1D:
+            return upper_conversion("abs", instr);
+        case 0x1E:
+            return upper_acc_i("mula", instr);
         case 0x1F:
             return clip(instr);
+        case 0x23:
+            return upper_acc_i("madda", instr);
+        case 0x27:
+            return upper_acc_i("msuba", instr);
         case 0x2E:
             return opmula(instr);
         case 0x2F:
@@ -487,6 +515,8 @@ string VU_Disasm::lower2(uint32_t PC, uint32_t instr)
             return fcand(instr);
         case 0x1A:
             return fmand(instr);
+        case 0x1C:
+            return fcget(instr);
         case 0x20:
             return b(PC, instr);
         case 0x21:
@@ -616,6 +646,14 @@ string VU_Disasm::fmand(uint32_t instr)
     uint32_t is = (instr >> 11) & 0x1F;
     uint32_t it = (instr >> 16) & 0x1F;
     output << "fmand vi" << it << ", vi" << is;
+    return output.str();
+}
+
+string VU_Disasm::fcget(uint32_t instr)
+{
+    stringstream output;
+    uint32_t it = (instr >> 16) & 0x1F;
+    output << "fcget vi" << it;
     return output.str();
 }
 

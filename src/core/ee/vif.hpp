@@ -64,6 +64,7 @@ class VectorInterface
         void init_UNPACK(uint32_t value);
         void handle_UNPACK(uint32_t value);
         void handle_UNPACK_masking(uint128_t& quad);
+        void process_UNPACK_quad(uint128_t& quad);
 
         void disasm_micromem();
     public:
@@ -74,6 +75,8 @@ class VectorInterface
 
         bool transfer_DMAtag(uint128_t tag);
         void feed_DMA(uint128_t quad);
+
+        uint32_t get_stat();
 };
 
 #endif // VIF_HPP

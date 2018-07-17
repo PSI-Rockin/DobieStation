@@ -2,8 +2,6 @@
 #include "../logger.hpp"
 #include "cop1.hpp"
 
-#define printf(fmt, ...)(0)
-
 Cop1::Cop1()
 {
 

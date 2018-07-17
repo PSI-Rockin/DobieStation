@@ -73,6 +73,7 @@ void Emulator::run()
             VBLANK_sent = true;
             gs.set_VBLANK(true);
             //cpu.set_disassembly(frames == 53);
+            //cpu.set_disassembly(frames == 500);
             Logger::log(Logger::Emulator, "VSYNC FRAMES: %d\n", frames);
             frames++;
             iop_request_IRQ(0);
@@ -164,7 +165,6 @@ bool Emulator::skip_BIOS()
     //hax
     if (skip_BIOS_hack != NONE)
     {
-        //cpu.set_disassembly(true);
         switch (skip_BIOS_hack)
         {
             case LOAD_ELF:
@@ -386,6 +386,8 @@ uint32_t Emulator::read32(uint32_t address)
             return ipu.read_BP();
         case 0x10003020:
             return gif.read_STAT();
+        case 0x10003C00:
+            return vif1.get_stat();
         case 0x1000F000:
             //Logger::log(Logger::Emulator, "\nRead32 INTC_STAT: $%08X", intc.read_stat());
             if (!VBLANK_sent)

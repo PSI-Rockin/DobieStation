@@ -27,6 +27,7 @@ public:
 
     //static void log(LogOrigin origin, char* format, ...);
     static void log(LogOrigin origin, const char* format, ...);
+    static void log_silent(LogOrigin origin, const char* format, ...);//logs but doesn't include the [Origin] prefix
     static void set(LogOrigin origin, bool enable);
     static bool get_state(LogOrigin origin);
     static void set_all(bool data[OriginsCount]);

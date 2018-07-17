@@ -37,6 +37,7 @@ class VectorUnit
         bool finish_on;
         int delay_slot;
 
+        int XGKICK_cycles;
         uint16_t GIF_addr;
         bool transferring_GIF;
 
@@ -97,8 +98,6 @@ class VectorUnit
         void set_int(int index, uint16_t value);
         void set_I(uint32_t value);
 
-        uint32_t qmfc2(int id, int field);
-
         uint32_t cfc(int index);
         void ctc(int index, uint32_t value);
 
@@ -117,6 +116,7 @@ class VectorUnit
         void eleng(uint8_t source);
         void esqrt(uint8_t fsf, uint8_t source);
         void fcand(uint32_t value);
+        void fcget(uint8_t dest);
         void fcset(uint32_t value);
         void fmand(uint8_t dest, uint8_t source);
         void ftoi0(uint8_t field, uint8_t dest, uint8_t source);

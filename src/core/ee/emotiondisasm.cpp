@@ -1581,7 +1581,7 @@ string EmotionDisasm::disasm_cop2_special2_move(const string opcode, uint32_t in
     uint32_t ft = (instruction >> 16) & 0x1F;
     string field = get_dest_field((instruction >> 21) & 0xF);
     output << opcode << "." << field;
-    output << " vf" << fs << ", vf" << ft;
+    output << " vf" << ft << ", vf" << fs;
     return output.str();
 }
 
