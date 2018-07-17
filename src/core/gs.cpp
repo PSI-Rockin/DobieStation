@@ -825,6 +825,7 @@ void GraphicsSynthesizer::write_PSMCT16_block(uint32_t base, uint32_t width, uin
     *(uint16_t*)&local_mem[addr] = value;
 }
 
+
 //The "vertex kick" is the name given to the process of placing a vertex in the vertex queue.
 //If drawing_kick is true, and enough vertices are available, then the polygon is rendered.
 void GraphicsSynthesizer::vertex_kick(bool drawing_kick)
@@ -838,54 +839,71 @@ void GraphicsSynthesizer::vertex_kick(bool drawing_kick)
     vtx_queue[0] = current_vtx;
 
     num_vertices++;
-    bool request_draw_kick = false;
     switch (PRIM.prim_type)
     {
-        case 0:
+        case 0: //point
             num_vertices--;
-            request_draw_kick = true;
+            if (drawing_kick)
+                render_primitive();
             break;
-        case 1:
+        case 1://linelist
             if (num_vertices == 2)
             {
                 num_vertices = 0;
-                request_draw_kick = true;
+                if (drawing_kick)
+                    render_primitive();
             }
             break;
-        case 2:
+        case 2://linestrip
             if (num_vertices == 2)
             {
                 num_vertices--;
-                request_draw_kick = true;
+                if (drawing_kick)
+                    render_primitive();
             }
             break;
-        case 3:
+        case 3://trianglelist
             if (num_vertices == 3)
             {
                 num_vertices = 0;
-                request_draw_kick = true;
+                if (drawing_kick)
+                    render_primitive();
             }
             break;
-        case 4:
+        case 4://trianglestrip
             if (num_vertices == 3)
             {
                 num_vertices--;
-                request_draw_kick = true;
+                if (drawing_kick)
+                    render_primitive();
             }
             break;
-        case 6:
+        case 5://trianglefan: WARNING UNTESTED
+            if (num_vertices == 3){
+                num_vertices--;
+                if (drawing_kick) {
+                    render_primitive();
+                    /*swap the previous verticies and the original vertex
+                    so that the remaining 2 vericies are the current and the original*/
+                    Vertex tmp = vtx_queue[1];
+                    vtx_queue[1] = vtx_queue[2];
+                    vtx_queue[1] = tmp;
+                    num_vertices--;
+                }
+            }
+            break;
+        case 6://sprite
             if (num_vertices == 2)
             {
                 num_vertices = 0;
-                request_draw_kick = true;
+                if (drawing_kick)
+                    render_primitive();
             }
             break;
         default:
             printf("[GS] Unrecognized primitive %d\n", PRIM.prim_type);
             exit(1);
     }
-    if (drawing_kick && request_draw_kick)
-        render_primitive();
 }
 
 void GraphicsSynthesizer::render_primitive()

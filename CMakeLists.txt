@@ -57,9 +57,11 @@ set(SOURCES
         src/core/gs.cpp
         src/core/gscontext.cpp
 	src/core/sif.cpp
+    src/core/logger.cpp
 	src/qt/emuthread.cpp
         src/qt/emuwindow.cpp
         src/qt/main.cpp
+        src/qt/loggerwindow.cpp
         )
 
 set(HEADERS
@@ -106,8 +108,10 @@ set(HEADERS
 	src/core/gscontext.hpp
 	src/core/int128.hpp
 	src/core/sif.hpp
+    src/core/logger.hpp
 	src/qt/emuthread.hpp
         src/qt/emuwindow.hpp
+        src/qt/loggerwindow.hpp
         )
 
 add_executable(DobieStation ${SOURCES} ${HEADERS})
