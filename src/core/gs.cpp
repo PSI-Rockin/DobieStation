@@ -887,7 +887,7 @@ void GraphicsSynthesizer::vertex_kick(bool drawing_kick)
                     so that the remaining 2 vericies are the current and the original*/
                     Vertex tmp = vtx_queue[1];
                     vtx_queue[1] = vtx_queue[2];
-                    vtx_queue[1] = tmp;
+                    vtx_queue[2] = tmp;
                     num_vertices--;
                 }
             }
