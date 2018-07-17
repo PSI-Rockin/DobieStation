@@ -75,7 +75,6 @@ void GraphicsSynthesizer::memdump()
 void GraphicsSynthesizer::start_frame()
 {
     frame_complete = false;
-    current_lock = std::unique_lock<std::mutex>();
 }
 
 bool GraphicsSynthesizer::is_frame_complete()

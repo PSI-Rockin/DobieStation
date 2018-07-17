@@ -299,7 +299,7 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
         case 0x0004:
             current_vtx.x = value & 0xFFFF;
             current_vtx.y = (value >> 16) & 0xFFFF;
-            current_vtx.z = value >> 32;
+            current_vtx.z = (value >> 32) & 0xFFFFFF;
             vertex_kick(true);
             break;
         case 0x0005:
@@ -699,7 +699,7 @@ void GraphicsSynthesizerThread::vertex_kick(bool drawing_kick)
                     so that the remaining 2 vericies are the current and the original*/
                     Vertex tmp = vtx_queue[1];
                     vtx_queue[1] = vtx_queue[2];
-                    vtx_queue[1] = tmp;
+                    vtx_queue[2] = tmp;
                     num_vertices--;
                 }
             }
