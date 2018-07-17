@@ -132,7 +132,7 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
 
                     while (!p.target_mutex->try_lock())
                     {
-                        printf("[GS_t] buffer lock failed!");
+                        printf("[GS_t] buffer lock failed!\n");
                         std::this_thread::yield();
                     }
                     gs.render_CRT(p.target);
@@ -658,7 +658,7 @@ void GraphicsSynthesizerThread::write_PSMCT16_block(uint32_t base, uint32_t widt
 
 //The "vertex kick" is the name given to the process of placing a vertex in the vertex queue.
 //If drawing_kick is true, and enough vertices are available, then the polygon is rendered.
-void GraphicsSynthesizer::vertex_kick(bool drawing_kick)
+void GraphicsSynthesizerThread::vertex_kick(bool drawing_kick)
 {
     for (int i = num_vertices; i > 0; i--)
         vtx_queue[i] = vtx_queue[i - 1];

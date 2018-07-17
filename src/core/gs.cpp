@@ -103,13 +103,13 @@ void wait_for_return(gs_return_fifo *return_queue)
             case render_complete_t:
                 return;
             default:
-                printf("[GS] Unhandled return message!");
+                printf("[GS] Unhandled return message!\n");
                 exit(1);
             }
         }
         else
         {
-            printf("[GS] GS thread has not finished rendering!");
+            printf("[GS] GS thread has not finished rendering!\n");
             std::this_thread::yield();
         }
     }
@@ -121,7 +121,7 @@ uint32_t* GraphicsSynthesizer::get_framebuffer()
     wait_for_return(return_queue);
     if (using_first_buffer) {
         while (!output_buffer1_mutex.try_lock()) {
-            printf("[GS] buffer 1 lock failed!");
+            printf("[GS] buffer 1 lock failed!\n");
             std::this_thread::yield();
         }
         current_lock = std::unique_lock<std::mutex>(output_buffer1_mutex, std::adopt_lock);
@@ -129,7 +129,7 @@ uint32_t* GraphicsSynthesizer::get_framebuffer()
     }
     else {
         while (!output_buffer2_mutex.try_lock()) {
-            printf("[GS] buffer 2 lock failed!");
+            printf("[GS] buffer 2 lock failed!\n");
             std::this_thread::yield();
         }
         current_lock = std::unique_lock<std::mutex>(output_buffer2_mutex, std::adopt_lock);
