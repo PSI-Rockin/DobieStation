@@ -1,4 +1,4 @@
-#include <cstdio>
+#include "../logger.hpp"
 #include <cstdlib>
 #include "iop.hpp"
 #include "iop_interpreter.hpp"
@@ -57,7 +57,7 @@ void IOP::run()
     uint32_t instr = read32(PC);
     if (can_disassemble && PC != 0xB89C && PC != 0xB8A0 && PC != 0xBB9C && PC != 0xBBA0)
     {
-        printf("[IOP] [$%08X] $%08X - %s\n", PC, instr, EmotionDisasm::disasm_instr(instr, PC).c_str());
+        Logger::log(Logger::IOP, "[$%08X] $%08X - %s\n", PC, instr, EmotionDisasm::disasm_instr(instr, PC).c_str());
         //print_state();
     }
     IOP_Interpreter::interpret(*this, instr);
@@ -75,7 +75,7 @@ void IOP::run()
             PC = new_PC;
             if (PC & 0x3)
             {
-                printf("[IOP] Invalid PC address $%08X!\n", PC);
+                Logger::log(Logger::IOP, "Invalid PC address $%08X!\n", PC);
                 exit(1);
             }
             //if (PC == 0x0008F2C8)
@@ -97,11 +97,11 @@ void IOP::print_state()
 {
     for (int i = 1; i < 32; i++)
     {
-        printf("%s:$%08X", REG(i), get_gpr(i));
+        Logger::log(Logger::IOP, "%s:$%08X", REG(i), get_gpr(i));
         if (i % 4 == 3)
-            printf("\n");
+            Logger::log(Logger::IOP, "\n");
         else
-            printf("\t");
+            Logger::log(Logger::IOP, "\t");
     }
 }
 
@@ -151,7 +151,7 @@ void IOP::handle_exception(uint32_t addr, uint8_t cause)
 void IOP::syscall_exception()
 {
     uint8_t op = read8(PC - 4);
-    printf("[IOP] SYSCALL: $%02X\n", op);
+    Logger::log(Logger::IOP, "SYSCALL: $%02X\n", op);
     handle_exception(0x80000080, 0x08);
     //can_disassemble = true;
 }
@@ -172,7 +172,7 @@ void IOP::interrupt_check(bool i_pass)
 
 void IOP::interrupt()
 {
-    printf("[IOP] Processing interrupt!\n");
+    Logger::log(Logger::IOP, "Processing interrupt!\n");
     handle_exception(0x80000080, 0x00);
     //can_disassemble = true;
 }
@@ -185,7 +185,7 @@ void IOP::mfc(int cop_id, int cop_reg, int reg)
             set_gpr(reg, cop0.mfc(cop_reg));
             break;
         default:
-            printf("\n[IOP] MFC: Unknown COP%d", cop_id);
+            Logger::log(Logger::IOP, "\n[IOP] MFC: Unknown COP%d", cop_id);
             exit(1);
     }
 }
@@ -199,7 +199,7 @@ void IOP::mtc(int cop_id, int cop_reg, int reg)
             cop0.mtc(cop_reg, bark);
             break;
         default:
-            printf("\n[IOP] MTC: Unknown COP%d", cop_id);
+            Logger::log(Logger::IOP, "\n[IOP] MTC: Unknown COP%d", cop_id);
             exit(1);
     }
 }
@@ -211,7 +211,7 @@ void IOP::rfe()
 
     cop0.status.IEc = cop0.status.IEp;
     cop0.status.IEp = cop0.status.IEo;
-    printf("[IOP] RFE!\n");
+    Logger::log(Logger::IOP, "RFE!\n");
     //can_disassemble = false;
 }
 
@@ -224,7 +224,7 @@ uint16_t IOP::read16(uint32_t addr)
 {
     if (addr & 0x1)
     {
-        printf("[IOP] Invalid read16 from $%08X!\n", addr);
+        Logger::log(Logger::IOP, "Invalid read16 from $%08X!\n", addr);
         exit(1);
     }
     return e->iop_read16(translate_addr(addr));
@@ -234,7 +234,7 @@ uint32_t IOP::read32(uint32_t addr)
 {
     if (addr & 0x3)
     {
-        printf("[IOP] Invalid read32 from $%08X!\n", addr);
+        Logger::log(Logger::IOP, "Invalid read32 from $%08X!\n", addr);
         exit(1);
     }
     return e->iop_read32(translate_addr(addr));
@@ -253,7 +253,7 @@ void IOP::write16(uint32_t addr, uint16_t value)
         return;
     if (addr & 0x1)
     {
-        printf("[IOP] Invalid write16 to $%08X!\n", addr);
+        Logger::log(Logger::IOP, "Invalid write16 to $%08X!\n", addr);
         exit(1);
     }
     e->iop_write16(translate_addr(addr), value);
@@ -265,7 +265,7 @@ void IOP::write32(uint32_t addr, uint32_t value)
         return;
     if (addr & 0x3)
     {
-        printf("[IOP] Invalid write32 to $%08X!\n", addr);
+        Logger::log(Logger::IOP, "Invalid write32 to $%08X!\n", addr);
         exit(1);
     }
     e->iop_write32(translate_addr(addr), value);

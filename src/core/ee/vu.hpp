@@ -1,7 +1,7 @@
 #ifndef VU_HPP
 #define VU_HPP
 #include <cstdint>
-#include <cstdio>
+#include "../logger.hpp"
 
 #include "../int128.hpp"
 

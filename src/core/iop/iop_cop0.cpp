@@ -1,4 +1,4 @@
-#include <cstdio>
+#include "../logger.hpp"
 #include <cstdlib>
 #include "iop_cop0.hpp"
 
@@ -26,7 +26,7 @@ void IOP_Cop0::reset()
 
 uint32_t IOP_Cop0::mfc(int cop_reg)
 {
-    //printf("[IOP COP0] MFC: Read from %d\n", cop_reg);
+    //Logger::log(IOP COP0, "MFC: Read from %d\n", cop_reg);
     switch (cop_reg)
     {
         case 12:
@@ -56,14 +56,14 @@ uint32_t IOP_Cop0::mfc(int cop_reg)
         case 15:
             return 0x1F;
         default:
-            printf("[IOP COP0] MFC: Unknown cop_reg %d\n", cop_reg);
+            Logger::log(Logger::IOP_COP0, "MFC: Unknown cop_reg %d\n", cop_reg);
             exit(1);
     }
 }
 
 void IOP_Cop0::mtc(int cop_reg, uint32_t value)
 {
-    //printf("[IOP COP0] MTC: Write to %d of $%08X\n", cop_reg, value);
+    //Logger::log(IOP COP0, "MTC: Write to %d of $%08X\n", cop_reg, value);
     switch (cop_reg)
     {
         case 12:
@@ -78,7 +78,7 @@ void IOP_Cop0::mtc(int cop_reg, uint32_t value)
             status.bev = value & (1 << 22);
             break;
         default:
-            printf("[IOP COP0] MTC: Unknown cop_reg %d\n", cop_reg);
+            Logger::log(Logger::IOP_COP0, "MTC: Unknown cop_reg %d\n", cop_reg);
             //exit(1);
     }
 }

@@ -1,4 +1,4 @@
-#include <cstdio>
+#include "../../logger.hpp"
 #include <cstdlib>
 #include "dct_coeff_table0.hpp"
 
@@ -299,7 +299,7 @@ bool DCT_Coeff_Table0::get_end_of_block(IPU_FIFO &FIFO, uint32_t &result)
     if (!FIFO.get_bits(result, 2))
         return false;
 
-    printf("[DCT_Coeff_Table0] EOB: $%08X\n", result);
+    Logger::log(Logger::IPU, "(DCT_Coeff_Table0) EOB: $%08X\n", result);
     result = (result == 2);
     return true;
 }
@@ -321,7 +321,7 @@ bool DCT_Coeff_Table0::get_runlevel_pair(IPU_FIFO &FIFO, RunLevelPair &pair, boo
 
     int bit_count = entry.bits;
     RunLevelPair cur_pair = runlevel_table[entry.value];
-    printf("Run level pair index: %d (Key: $%02X)\n", entry.value, entry.key);
+    Logger::log(Logger::IPU, "(DCT_Coeff_Table0) Run level pair index: %d (Key: $%02X)\n", entry.value, entry.key);
     if (cur_pair.run == RUN_ESCAPE)
     {
         uint32_t run;

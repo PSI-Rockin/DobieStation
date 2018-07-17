@@ -1,4 +1,4 @@
-#include <cstdio>
+#include "../logger.hpp"
 #include "cdvd.hpp"
 #include "iop_dma.hpp"
 #include "sio2.hpp"
@@ -100,7 +100,7 @@ void IOP_DMA::process_CDVD()
     uint32_t count = channels[CDVD].word_count * channels[CDVD].block_size * 4;
     if (cdvd->bytes_left() > 0)
     {
-        printf("[IOP DMA] CDVD bytes: $%08X\n", count);
+        Logger::log(Logger::IOP_DMA, "CDVD bytes: $%08X\n", count);
         uint32_t bytes_read = cdvd->read_to_RAM(RAM + channels[CDVD].addr, count);
         if (count <= bytes_read)
         {
@@ -177,9 +177,9 @@ void IOP_DMA::process_SIF0()
 
             channels[SIF0].tag_addr += 16;
 
-            printf("[IOP DMA] Read SIF0 DMAtag!\n");
-            printf("Data: $%08X\n", data);
-            printf("Words: $%08X\n", channels[SIF0].word_count);
+            Logger::log(Logger::IOP_DMA, "Read SIF0 DMAtag!\n");
+            Logger::log(Logger::IOP_DMA, "Data: $%08X\n", data);
+            Logger::log(Logger::IOP_DMA, "Words: $%08X\n", channels[SIF0].word_count);
 
             if ((data & (1 << 31)) || (data & (1 << 30)))
                 channels[SIF0].tag_end = true;
@@ -216,9 +216,9 @@ void IOP_DMA::process_SIF1()
             //EEtag
             sif->read_SIF1();
             sif->read_SIF1();
-            printf("[IOP DMA] Read SIF1 DMAtag!\n");
-            printf("Addr: $%08X\n", channels[SIF1].addr);
-            printf("Words: $%08X\n", channels[SIF1].word_count);
+            Logger::log(Logger::IOP_DMA, "Read SIF1 DMAtag!\n");
+            Logger::log(Logger::IOP_DMA, "Addr: $%08X\n", channels[SIF1].addr);
+            Logger::log(Logger::IOP_DMA, "Words: $%08X\n", channels[SIF1].word_count);
             if ((data & (1 << 31)) || (data & (1 << 30)))
                 channels[SIF1].tag_end = true;
         }
@@ -255,7 +255,7 @@ void IOP_DMA::process_SIO2out()
 
 void IOP_DMA::transfer_end(int index)
 {
-    printf("[IOP DMA] %s transfer ended\n", CHAN(index));
+    Logger::log(Logger::IOP_DMA, "%s transfer ended\n", CHAN(index));
     channels[index].control.busy = false;
     channels[index].tag_end = false;
     bool dicr2 = index > 7;
@@ -265,7 +265,7 @@ void IOP_DMA::transfer_end(int index)
 
     if (DICR.STAT[dicr2] & DICR.MASK[dicr2])
     {
-        printf("[IOP DMA] IRQ requested: $%08X $%08X\n", DICR.STAT[dicr2], DICR.MASK[dicr2]);
+        Logger::log(Logger::IOP_DMA, "IRQ requested: $%08X $%08X\n", DICR.STAT[dicr2], DICR.MASK[dicr2]);
         e->iop_request_IRQ(3);
     }
 }
@@ -307,7 +307,7 @@ uint32_t IOP_DMA::get_DICR()
     else
         IRQ = false;
     reg |= IRQ << 31;
-    printf("[IOP DMA] Get DICR: $%08X\n", reg);
+    Logger::log(Logger::IOP_DMA, "Get DICR: $%08X\n", reg);
     return reg;
 }
 
@@ -325,7 +325,7 @@ uint32_t IOP_DMA::get_DICR2()
     else
         IRQ = false;
     reg |= IRQ << 31;
-    printf("[IOP DMA] Get DICR2: $%08X\n", reg);
+    Logger::log(Logger::IOP_DMA, "Get DICR2: $%08X\n", reg);
     return reg;
 }
 
@@ -352,7 +352,7 @@ uint32_t IOP_DMA::get_chan_control(int index)
 
 void IOP_DMA::set_DPCR(uint32_t value)
 {
-    printf("[IOP DMA] Set DPCR: $%08X\n", value);
+    Logger::log(Logger::IOP_DMA, "Set DPCR: $%08X\n", value);
     for (int i = 0; i < 8; i++)
     {
         bool old_enable = DPCR.enable[i];
@@ -365,7 +365,7 @@ void IOP_DMA::set_DPCR(uint32_t value)
 
 void IOP_DMA::set_DPCR2(uint32_t value)
 {
-    printf("[IOP DMA] Set DPCR2: $%08X\n", value);
+    Logger::log(Logger::IOP_DMA, "Set DPCR2: $%08X\n", value);
     for (int i = 8; i < 16; i++)
     {
         int bit = i - 8;
@@ -379,7 +379,7 @@ void IOP_DMA::set_DPCR2(uint32_t value)
 
 void IOP_DMA::set_DICR(uint32_t value)
 {
-    printf("[IOP DMA] Set DICR: $%08X\n", value);
+    Logger::log(Logger::IOP_DMA, "Set DICR: $%08X\n", value);
     DICR.force_IRQ[0] = value & (1 << 15);
     DICR.MASK[0] = (value >> 16) & 0x7F;
     DICR.master_int_enable[0] = value & (1 << 23);
@@ -390,7 +390,7 @@ void IOP_DMA::set_DICR(uint32_t value)
 
 void IOP_DMA::set_DICR2(uint32_t value)
 {
-    printf("[IOP DMA] Set DICR2: $%08X\n", value);
+    Logger::log(Logger::IOP_DMA, "Set DICR2: $%08X\n", value);
     DICR.force_IRQ[1] = value & (1 << 15);
     DICR.MASK[1] = (value >> 16) & 0x7F;
     DICR.master_int_enable[1] = value & (1 << 23);
@@ -401,13 +401,13 @@ void IOP_DMA::set_DICR2(uint32_t value)
 
 void IOP_DMA::set_chan_addr(int index, uint32_t value)
 {
-    printf("[IOP DMA] %s addr: $%08X\n", CHAN(index), value);
+    Logger::log(Logger::IOP_DMA, "%s addr: $%08X\n", CHAN(index), value);
     channels[index].addr = value;
 }
 
 void IOP_DMA::set_chan_block(int index, uint32_t value)
 {
-    printf("[IOP DMA] %s block: $%08X\n", CHAN(index), value);
+    Logger::log(Logger::IOP_DMA, "%s block: $%08X\n", CHAN(index), value);
     channels[index].block_size = value & 0xFFFF;
     channels[index].word_count = value >> 16;
     channels[index].size = channels[index].block_size * channels[index].word_count;
@@ -415,21 +415,21 @@ void IOP_DMA::set_chan_block(int index, uint32_t value)
 
 void IOP_DMA::set_chan_size(int index, uint16_t value)
 {
-    printf("[IOP DMA] %s size: $%04X\n", CHAN(index), value);
+    Logger::log(Logger::IOP_DMA, "%s size: $%04X\n", CHAN(index), value);
     channels[index].block_size = value;
     channels[index].size = channels[index].block_size * channels[index].word_count;
 }
 
 void IOP_DMA::set_chan_count(int index, uint16_t value)
 {
-    printf("[IOP DMA] %s count: $%04X\n", CHAN(index), value);
+    Logger::log(Logger::IOP_DMA, "%s count: $%04X\n", CHAN(index), value);
     channels[index].word_count = value;
     channels[index].size = channels[index].block_size * channels[index].word_count;
 }
 
 void IOP_DMA::set_chan_control(int index, uint32_t value)
 {
-    printf("[IOP DMA] %s control: $%08X\n", CHAN(index), value);
+    Logger::log(Logger::IOP_DMA, "%s control: $%08X\n", CHAN(index), value);
     channels[index].control.direction_from = value & 1;
     channels[index].control.unk8 = value & (1 << 8);
     channels[index].control.sync_mode = (value >> 9) & 0x3;
@@ -439,6 +439,6 @@ void IOP_DMA::set_chan_control(int index, uint32_t value)
 
 void IOP_DMA::set_chan_tag_addr(int index, uint32_t value)
 {
-    printf("[IOP DMA] %s tag addr: $%08X\n", CHAN(index), value);
+    Logger::log(Logger::IOP_DMA, "%s tag addr: $%08X\n", CHAN(index), value);
     channels[index].tag_addr = value;
 }

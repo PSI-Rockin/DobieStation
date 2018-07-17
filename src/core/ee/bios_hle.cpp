@@ -1,4 +1,4 @@
-#include <cstdio>
+#include "../logger.hpp"
 #include "bios_hle.hpp"
 #include "emotionasm.hpp"
 
@@ -110,7 +110,7 @@ void BIOS_HLE::hle_syscall(EmotionEngine& cpu, int op)
             get_heap_end(cpu);
             break;
         case 0x64:
-            printf("\nSYSCALL: flush_cache");
+            Logger::log(Logger::BIOS_HLE, "\nSYSCALL: flush_cache");
             break;
         case 0x71:
             set_GS_IMR(cpu);
@@ -119,18 +119,18 @@ void BIOS_HLE::hle_syscall(EmotionEngine& cpu, int op)
             get_memory_size(cpu);
             break;
         default:
-            printf("\nUnrecognized HLE syscall $%02X", op);
+            Logger::log(Logger::BIOS_HLE, "\nUnrecognized HLE syscall $%02X", op);
     }
 }
 
 void BIOS_HLE::reset_EE(EmotionEngine &cpu)
 {
-    printf("\nSYSCALL: reset_EE");
+    Logger::log(Logger::BIOS_HLE, "\nSYSCALL: reset_EE");
 }
 
 void BIOS_HLE::set_GS_CRT(EmotionEngine &cpu)
 {
-    printf("\nSYSCALL: set_GS_CRT");
+    Logger::log(Logger::BIOS_HLE, "\nSYSCALL: set_GS_CRT");
     bool interlaced = cpu.get_gpr<uint64_t>(PARAM0);
     int mode = cpu.get_gpr<uint64_t>(PARAM1);
     bool frame_mode = cpu.get_gpr<uint64_t>(PARAM2);
@@ -139,13 +139,13 @@ void BIOS_HLE::set_GS_CRT(EmotionEngine &cpu)
 
 void BIOS_HLE::set_VBLANK_handler(EmotionEngine &cpu)
 {
-    printf("\nSYSCALL: set_VBLANK_handler");
-    printf("\nPARAM0: $%08X", cpu.get_gpr<uint32_t>(PARAM0));
-    printf("\nPARAM1: $%08X", cpu.get_gpr<uint32_t>(PARAM1));
-    printf("\nPARAM2: $%08X", cpu.get_gpr<uint32_t>(PARAM2));
-    printf("\nPARAM3: $%08X", cpu.get_gpr<uint32_t>(PARAM3));
-    printf("\nPARAM4: $%08X", cpu.get_gpr<uint32_t>(PARAM4));
-    printf("\nPARAM5: $%08X", cpu.get_gpr<uint32_t>(PARAM5));
+    Logger::log(Logger::BIOS_HLE, "\nSYSCALL: set_VBLANK_handler");
+    Logger::log(Logger::BIOS_HLE, "\nPARAM0: $%08X", cpu.get_gpr<uint32_t>(PARAM0));
+    Logger::log(Logger::BIOS_HLE, "\nPARAM1: $%08X", cpu.get_gpr<uint32_t>(PARAM1));
+    Logger::log(Logger::BIOS_HLE, "\nPARAM2: $%08X", cpu.get_gpr<uint32_t>(PARAM2));
+    Logger::log(Logger::BIOS_HLE, "\nPARAM3: $%08X", cpu.get_gpr<uint32_t>(PARAM3));
+    Logger::log(Logger::BIOS_HLE, "\nPARAM4: $%08X", cpu.get_gpr<uint32_t>(PARAM4));
+    Logger::log(Logger::BIOS_HLE, "\nPARAM5: $%08X", cpu.get_gpr<uint32_t>(PARAM5));
 }
 
 void BIOS_HLE::add_INTC_handler(EmotionEngine &cpu)
@@ -154,11 +154,11 @@ void BIOS_HLE::add_INTC_handler(EmotionEngine &cpu)
     uint32_t address = cpu.get_gpr<uint32_t>(PARAM1);
     uint32_t next = cpu.get_gpr<uint32_t>(PARAM2);
     uint32_t arg = cpu.get_gpr<uint32_t>(PARAM3);
-    printf("\nSYSCALL: add_INTC_handler");
-    printf("\nCause: $%08X", cause);
-    printf("\nAddr: $%08X", address);
-    printf("\nNext: $%08X", next);
-    printf("\nArg: $%08X", arg);
+    Logger::log(Logger::BIOS_HLE, "\nSYSCALL: add_INTC_handler");
+    Logger::log(Logger::BIOS_HLE, "\nCause: $%08X", cause);
+    Logger::log(Logger::BIOS_HLE, "\nAddr: $%08X", address);
+    Logger::log(Logger::BIOS_HLE, "\nNext: $%08X", next);
+    Logger::log(Logger::BIOS_HLE, "\nArg: $%08X", arg);
 
     INTC_handler handler;
     handler.cause = 1 << cause;
@@ -173,7 +173,7 @@ void BIOS_HLE::add_INTC_handler(EmotionEngine &cpu)
 void BIOS_HLE::enable_INTC(EmotionEngine &cpu)
 {
     uint32_t cause = cpu.get_gpr<uint32_t>(PARAM0);
-    printf("\nSYSCALL: enable_INTC $%08X", cause);
+    Logger::log(Logger::BIOS_HLE, "\nSYSCALL: enable_INTC $%08X", cause);
     uint32_t new_value = 1 << cause;
     uint32_t old_mask = e->read32(0x1000F010);
     bool has_changed = false;
@@ -189,11 +189,11 @@ void BIOS_HLE::enable_INTC(EmotionEngine &cpu)
 
 void BIOS_HLE::init_main_thread(EmotionEngine &cpu)
 {
-    printf("\nSYSCALL: init_main_thread");
+    Logger::log(Logger::BIOS_HLE, "\nSYSCALL: init_main_thread");
     uint32_t stack_base = cpu.get_gpr<uint32_t>(PARAM1);
     uint32_t stack_size = cpu.get_gpr<uint32_t>(PARAM2);
-    printf("\nStack base: $%08X", stack_base);
-    printf("\nStack size: $%08X", stack_size);
+    Logger::log(Logger::BIOS_HLE, "\nStack base: $%08X", stack_base);
+    Logger::log(Logger::BIOS_HLE, "\nStack size: $%08X", stack_size);
 
     uint32_t stack_addr;
     if (stack_base == 0xFFFFFFFF)
@@ -212,7 +212,7 @@ void BIOS_HLE::init_main_thread(EmotionEngine &cpu)
 
 void BIOS_HLE::init_heap(EmotionEngine &cpu)
 {
-    printf("\nSYSCALL: init_heap");
+    Logger::log(Logger::BIOS_HLE, "\nSYSCALL: init_heap");
     thread_hle* thread = &threads[0];
     uint32_t heap_base = cpu.get_gpr<uint32_t>(PARAM0);
     uint32_t heap_size = cpu.get_gpr<uint32_t>(PARAM1);
@@ -227,19 +227,19 @@ void BIOS_HLE::init_heap(EmotionEngine &cpu)
 void BIOS_HLE::get_heap_end(EmotionEngine &cpu)
 {
     thread_hle* thread = &threads[0];
-    printf("\nSYSCALL: get_heap_end: $%08X", thread->heap_base);
+    Logger::log(Logger::BIOS_HLE, "\nSYSCALL: get_heap_end: $%08X", thread->heap_base);
     cpu.set_gpr<uint64_t>(RETURN, thread->heap_base);
 }
 
 void BIOS_HLE::set_GS_IMR(EmotionEngine &cpu)
 {
     uint32_t imr = cpu.get_gpr<uint32_t>(PARAM0);
-    printf("\nSYSCALL: set_GS_IMR $%08X", imr);
+    Logger::log(Logger::BIOS_HLE, "\nSYSCALL: set_GS_IMR $%08X", imr);
 }
 
 void BIOS_HLE::get_memory_size(EmotionEngine &cpu)
 {
     //size of EE RDRAM
-    printf("\nSYSCALL: get_memory_size");
+    Logger::log(Logger::BIOS_HLE, "\nSYSCALL: get_memory_size");
     cpu.set_gpr<uint64_t>(RETURN, 0x02000000);
 }

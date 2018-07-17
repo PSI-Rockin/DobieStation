@@ -1,4 +1,4 @@
-#include <cstdio>
+#include "../logger.hpp"
 #include <cstdlib>
 #include <cstring>
 #include "gamepad.hpp"
@@ -64,20 +64,20 @@ uint8_t Gamepad::write_SIO(uint8_t value)
 {
     if (data_count > command_length)
     {
-        printf("[PAD] Transfer (%d) exceeds command length (%d)!\n", data_count + 1, command_length);
+        Logger::log(Logger::PAD, "Transfer (%d) exceeds command length (%d)!\n", data_count + 1, command_length);
         return 0;
     }
     if (data_count == 0)
     {
         if (!config_mode && (value != 'B' && value != 'C'))
         {
-            printf("[PAD] Command %c ($%02X) called while not in config mode!\n", value, value);
+            Logger::log(Logger::PAD, "Command %c ($%02X) called while not in config mode!\n", value, value);
             command_length = 0;
             data_count = 1;
             return 0xF3;
         }
 
-        printf("[PAD] New command!\n");
+        Logger::log(Logger::PAD, "New command!\n");
 
         command = value;
         data_count++;
@@ -132,7 +132,7 @@ uint8_t Gamepad::write_SIO(uint8_t value)
                 memcpy(command_buffer + 2, rumble_values, 7);
                 return 0xF3;
             default:
-                printf("[PAD] Unrecognized command %c ($%02X)\n", value, value);
+                Logger::log(Logger::PAD, "Unrecognized command %c ($%02X)\n", value, value);
                 exit(1);
         }
     }
@@ -145,7 +145,7 @@ uint8_t Gamepad::write_SIO(uint8_t value)
             if (data_count == 3)
             {
                 config_mode = value;
-                printf("[PAD] Config mode: %d\n", config_mode);
+                Logger::log(Logger::PAD, "Config mode: %d\n", config_mode);
             }
             break;
         case 'D':

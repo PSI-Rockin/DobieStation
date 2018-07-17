@@ -1,4 +1,4 @@
-#include <cstdio>
+#include "../logger.hpp"
 #include <cstdlib>
 #include "dmac.hpp"
 
@@ -170,7 +170,7 @@ bool DMAC::mfifo_handler(int index)
                 interrupt_stat.channel_stat[MFIFO_EMPTY] = true;
                 int1_check();
                 mfifo_empty_triggered = true;
-                printf("[DMAC] MFIFO Empty\n");
+                Logger::log(Logger::DMAC, "MFIFO Empty\n");
             }
             return false;
         }
@@ -182,7 +182,7 @@ bool DMAC::mfifo_handler(int index)
 
 void DMAC::transfer_end(int index)
 {
-    printf("[DMAC] Transfer end: %d\n", index);
+    Logger::log(Logger::DMAC, "Transfer end: %d\n", index);
     channels[index].control &= ~0x100;
     interrupt_stat.channel_stat[index] = true;
     int1_check();
@@ -288,7 +288,7 @@ void DMAC::process_IPU_FROM()
         {
             uint128_t data = ipu->read_FIFO();
             store128(channels[IPU_FROM].address, data);
-            //printf("[IPU_FROM] Store $%08X_$%08X to $%08X\n", data._u32[1], data._u32[0], channels[IPU_FROM].address);
+            //Logger::log(Logger::IPU_FROM, "Store $%08X_$%08X to $%08X\n", data._u32[1], data._u32[0], channels[IPU_FROM].address);
 
             channels[IPU_FROM].address += 16;
             channels[IPU_FROM].quadword_count--;
@@ -300,7 +300,7 @@ void DMAC::process_IPU_FROM()
             transfer_end(IPU_FROM);
         else
         {
-            printf("blorp\n");
+            Logger::log(Logger::DMAC, "blorp\n");
             exit(1);
         }
     }
@@ -352,7 +352,7 @@ void DMAC::process_SIF0()
         {
             uint64_t DMAtag = sif->read_SIF0();
             DMAtag |= (uint64_t)sif->read_SIF0() << 32;
-            printf("[DMAC] SIF0 tag: $%08X_%08X\n", DMAtag >> 32, DMAtag);
+            Logger::log(Logger::DMAC, "SIF0 tag: $%08X_%08X\n", DMAtag >> 32, DMAtag);
 
             channels[SIF0].quadword_count = DMAtag & 0xFFFF;
             channels[SIF0].address = DMAtag >> 32;
@@ -423,7 +423,7 @@ void DMAC::process_SPR_FROM()
         else
         {
             uint128_t DMAtag = fetch128(channels[SPR_FROM].scratchpad_address);
-            printf("[DMAC] SPR_FROM tag: $%08X_%08X\n", DMAtag._u32[1], DMAtag._u32[0]);
+            Logger::log(Logger::DMAC, "SPR_FROM tag: $%08X_%08X\n", DMAtag._u32[1], DMAtag._u32[0]);
 
             channels[SPR_FROM].quadword_count = DMAtag._u32[0] & 0xFFFF;
             channels[SPR_FROM].address = DMAtag._u32[1];
@@ -474,7 +474,7 @@ void DMAC::handle_source_chain(int index)
 {
     uint128_t quad = fetch128(channels[index].tag_address);
     uint64_t DMAtag = quad._u64[0];
-    printf("[DMAC] Source DMAtag read $%08X: $%08X_%08X\n", channels[index].tag_address, DMAtag >> 32, DMAtag & 0xFFFFFFFF);
+    Logger::log(Logger::DMAC, "Source DMAtag read $%08X: $%08X_%08X\n", channels[index].tag_address, DMAtag >> 32, DMAtag & 0xFFFFFFFF);
 
     //Change CTRL to have the upper 16 bits equal to bits 16-31 of the most recently read DMAtag
     channels[index].control &= 0xFFFF;
@@ -530,7 +530,7 @@ void DMAC::handle_source_chain(int index)
                     channels[index].tag_save1 = saved_addr;
                     break;
                 case 2:
-                    printf("[DMAC] DMAtag 'call' sent when ASP == 2!\n");
+                    Logger::log(Logger::DMAC, "DMAtag 'call' sent when ASP == 2!\n");
                     exit(1);
             }
             asp++;
@@ -569,27 +569,27 @@ void DMAC::handle_source_chain(int index)
             channels[index].tag_end = true;
             break;
         default:
-            printf("\n[DMAC] Unrecognized source chain DMAtag id %d\n", id);
+            Logger::log(Logger::DMAC, "\n[DMAC] Unrecognized source chain DMAtag id %d\n", id);
             exit(1);
     }
     if (IRQ_after_transfer && TIE)
         channels[index].tag_end = true;
-    printf("New address: $%08X\n", channels[index].address);
-    printf("New tag addr: $%08X\n", channels[index].tag_address);
+    Logger::log(Logger::DMAC, "New address: $%08X\n", channels[index].address);
+    Logger::log(Logger::DMAC, "New tag addr: $%08X\n", channels[index].tag_address);
 }
 
 void DMAC::start_DMA(int index)
 {
-    printf("[DMAC] D%d started: $%08X\n", index, channels[index].control);
-    printf("Addr: $%08X\n", channels[index].address);
-    printf("Mode: %d\n", (channels[index].control >> 2) & 0x3);
-    printf("ASP: %d\n", (channels[index].control >> 4) & 0x3);
-    printf("TTE: %d\n", channels[index].control & (1 << 6));
+    Logger::log(Logger::DMAC, "D%d started: $%08X\n", index, channels[index].control);
+    Logger::log(Logger::DMAC, "Addr: $%08X\n", channels[index].address);
+    Logger::log(Logger::DMAC, "Mode: %d\n", (channels[index].control >> 2) & 0x3);
+    Logger::log(Logger::DMAC, "ASP: %d\n", (channels[index].control >> 4) & 0x3);
+    Logger::log(Logger::DMAC, "TTE: %d\n", channels[index].control & (1 << 6));
     int mode = (channels[index].control >> 2) & 0x3;
     channels[index].tag_end = (mode == 0); //always end transfers in normal mode
     if (mode == 2) 
     {
-        printf("[DMAC] D%d Unhandled Interleave Mode", index);
+        Logger::log(Logger::DMAC, "D%d Unhandled Interleave Mode", index);
     }
 }
 
@@ -612,7 +612,7 @@ uint8_t DMAC::read8(uint32_t address)
             reg = channels[VIF1].control & 0xFF;
             break;
         default:
-            printf("[DMAC] Unrecognized read8 from $%08X\n", address);
+            Logger::log(Logger::DMAC, "Unrecognized read8 from $%08X\n", address);
     }
     return reg;
 }
@@ -635,7 +635,7 @@ uint32_t DMAC::read32(uint32_t address)
             reg = channels[VIF1].tag_address;
             break;
         case 0x1000A000:
-            //printf("[DMAC] Read GIF control\n");
+            //Logger::log(Logger::DMAC, "Read GIF control\n");
             reg = channels[GIF].control;
             break;
         case 0x1000A010:
@@ -735,7 +735,7 @@ uint32_t DMAC::read32(uint32_t address)
             reg = RBOR;
             break;
         default:
-            printf("[DMAC] Unrecognized read32 from $%08X\n", address);
+            Logger::log(Logger::DMAC, "Unrecognized read32 from $%08X\n", address);
             break;
     }
     return reg;
@@ -750,7 +750,7 @@ void DMAC::write8(uint32_t address, uint8_t value)
             channels[VIF1].control |= value;
             break;
         default:
-            printf("[DMAC] Unrecognized write8 to $%08X of $%02X\n", address, value);
+            Logger::log(Logger::DMAC, "Unrecognized write8 to $%08X of $%02X\n", address, value);
             break;
     }
 }
@@ -760,43 +760,43 @@ void DMAC::write32(uint32_t address, uint32_t value)
     switch (address)
     {
         case 0x10008000:
-            printf("[DMAC] VIF0 CTRL: $%08X\n", value);
+            Logger::log(Logger::DMAC, "VIF0 CTRL: $%08X\n", value);
             channels[VIF0].control = value;
             if (value & 0x100)
                 start_DMA(VIF0);
             break;
         case 0x10008010:
-            printf("[DMAC] VIF0 M_ADR: $%08X\n", value);
+            Logger::log(Logger::DMAC, "VIF0 M_ADR: $%08X\n", value);
             channels[VIF0].address = value & ~0xF;
             break;
         case 0x10008020:
-            printf("[DMAC] VIF0 QWC: $%08X\n", value);
+            Logger::log(Logger::DMAC, "VIF0 QWC: $%08X\n", value);
             channels[VIF0].quadword_count = value & 0xFFFF;
             break;
         case 0x10008030:
-            printf("[DMAC] VIF0 T_ADR: $%08X\n", value);
+            Logger::log(Logger::DMAC, "VIF0 T_ADR: $%08X\n", value);
             channels[VIF0].tag_address = value & ~0xF;
             break;
         case 0x10009000:
-            printf("[DMAC] VIF1 CTRL: $%08X\n", value);
+            Logger::log(Logger::DMAC, "VIF1 CTRL: $%08X\n", value);
             channels[VIF1].control = value;
             if (value & 0x100)
                 start_DMA(VIF1);
             break;
         case 0x10009010:
-            printf("[DMAC] VIF1 M_ADR: $%08X\n", value);
+            Logger::log(Logger::DMAC, "VIF1 M_ADR: $%08X\n", value);
             channels[VIF1].address = value & ~0xF;
             break;
         case 0x10009020:
-            printf("[DMAC] VIF1 QWC: $%08X\n", value);
+            Logger::log(Logger::DMAC, "VIF1 QWC: $%08X\n", value);
             channels[VIF1].quadword_count = value & 0xFFFF;
             break;
         case 0x10009030:
-            printf("[DMAC] VIF1 T_ADR: $%08X\n", value);
+            Logger::log(Logger::DMAC, "VIF1 T_ADR: $%08X\n", value);
             channels[VIF1].tag_address = value & ~0xF;
             break;
         case 0x1000A000:
-            printf("[DMAC] GIF CTRL: $%08X\n", value);
+            Logger::log(Logger::DMAC, "GIF CTRL: $%08X\n", value);
             channels[GIF].control = value;
             if (value & 0x100)
             {
@@ -805,123 +805,123 @@ void DMAC::write32(uint32_t address, uint32_t value)
             }
             break;
         case 0x1000A010:
-            printf("[DMAC] GIF M_ADR: $%08X\n", value);
+            Logger::log(Logger::DMAC, "GIF M_ADR: $%08X\n", value);
             channels[GIF].address = value & ~0xF;
             break;
         case 0x1000A020:
-            printf("[DMAC] GIF QWC: $%08X\n", value & 0xFFFF);
+            Logger::log(Logger::DMAC, "GIF QWC: $%08X\n", value & 0xFFFF);
             channels[GIF].quadword_count = value & 0xFFFF;
             break;
         case 0x1000A030:
-            printf("[DMAC] GIF T_ADR: $%08X\n", value);
+            Logger::log(Logger::DMAC, "GIF T_ADR: $%08X\n", value);
             channels[GIF].tag_address = value & ~0xF;
             break;
         case 0x1000B000:
-            printf("[DMAC] IPU_FROM CTRL: $%08X\n", value);
+            Logger::log(Logger::DMAC, "IPU_FROM CTRL: $%08X\n", value);
             channels[IPU_FROM].control = value;
             if (value & 0x100)
                 start_DMA(IPU_FROM);
             break;
         case 0x1000B010:
-            printf("[DMAC] IPU_FROM M_ADR: $%08X\n", value);
+            Logger::log(Logger::DMAC, "IPU_FROM M_ADR: $%08X\n", value);
             channels[IPU_FROM].address = value & ~0xF;
             break;
         case 0x1000B020:
-            printf("[DMAC] IPU_FROM QWC: $%08X\n", value);
+            Logger::log(Logger::DMAC, "IPU_FROM QWC: $%08X\n", value);
             channels[IPU_FROM].quadword_count = value & 0xFFFF;
             break;
         case 0x1000B400:
-            printf("[DMAC] IPU_TO CTRL: $%08X\n", value);
+            Logger::log(Logger::DMAC, "IPU_TO CTRL: $%08X\n", value);
             channels[IPU_TO].control = value;
             if (value & 0x100)
                 start_DMA(IPU_TO);
             break;
         case 0x1000B410:
-            printf("[DMAC] IPU_TO M_ADR: $%08X\n", value);
+            Logger::log(Logger::DMAC, "IPU_TO M_ADR: $%08X\n", value);
             channels[IPU_TO].address = value & ~0xF;
             break;
         case 0x1000B420:
-            printf("[DMAC] IPU_TO QWC: $%08X\n", value);
+            Logger::log(Logger::DMAC, "IPU_TO QWC: $%08X\n", value);
             channels[IPU_TO].quadword_count = value & 0xFFFF;
             break;
         case 0x1000B430:
-            printf("[DMAC] IPU_TO T_ADR: $%08X\n", value);
+            Logger::log(Logger::DMAC, "IPU_TO T_ADR: $%08X\n", value);
             channels[IPU_TO].tag_address = value & ~0xF;
             break;
         case 0x1000C000:
-            printf("[DMAC] SIF0 CTRL: $%08X\n", value);
+            Logger::log(Logger::DMAC, "SIF0 CTRL: $%08X\n", value);
             channels[SIF0].control = value;
             if (value & 0x100)
                 start_DMA(SIF0);
             break;
         case 0x1000C020:
-            printf("[DMAC] SIF0 QWC: $%08X\n", value);
+            Logger::log(Logger::DMAC, "SIF0 QWC: $%08X\n", value);
             channels[SIF0].quadword_count = value & 0xFFFF;
             break;
         case 0x1000C030:
-            printf("[DMAC] SIF0 T_ADR: $%08X\n", value);
+            Logger::log(Logger::DMAC, "SIF0 T_ADR: $%08X\n", value);
             channels[SIF0].tag_address = value & ~0xF;
             break;
         case 0x1000C400:
-            printf("[DMAC] SIF1 CTRL: $%08X\n", value);
+            Logger::log(Logger::DMAC, "SIF1 CTRL: $%08X\n", value);
             channels[SIF1].control = value;
             if (value & 0x100)
                 start_DMA(SIF1);
             break;
         case 0x1000C410:
-            printf("[DMAC] SIF1 M_ADR: $%08X\n", value);
+            Logger::log(Logger::DMAC, "SIF1 M_ADR: $%08X\n", value);
             channels[SIF1].address = value & ~0xF;
             break;
         case 0x1000C420:
-            printf("[DMAC] SIF1 QWC: $%08X\n", value);
+            Logger::log(Logger::DMAC, "SIF1 QWC: $%08X\n", value);
             channels[SIF1].quadword_count = value & 0xFFFF;
             break;
         case 0x1000C430:
-            printf("[DMAC] SIF1 T_ADR: $%08X\n", value);
+            Logger::log(Logger::DMAC, "SIF1 T_ADR: $%08X\n", value);
             channels[SIF1].tag_address = value & ~0xF;
             break;
         case 0x1000D000:
-            printf("[DMAC] SPR_FROM CTRL: $%08X\n", value);
+            Logger::log(Logger::DMAC, "SPR_FROM CTRL: $%08X\n", value);
             channels[SPR_FROM].control = value;
             if (value & 0x100)
                 start_DMA(SPR_FROM);
             break;
         case 0x1000D010:
-            printf("[DMAC] SPR_FROM M_ADR: $%08X\n", value);
+            Logger::log(Logger::DMAC, "SPR_FROM M_ADR: $%08X\n", value);
             channels[SPR_FROM].address = value & ~0xF;
             break;
         case 0x1000D020:
-            printf("[DMAC] SPR_FROM QWC: $%08X\n", value);
+            Logger::log(Logger::DMAC, "SPR_FROM QWC: $%08X\n", value);
             channels[SPR_FROM].quadword_count = value & 0xFFFF;
             break;
         case 0x1000D080:
-            printf("[DMAC] SPR_FROM SADR: $%08X\n", value);
+            Logger::log(Logger::DMAC, "SPR_FROM SADR: $%08X\n", value);
             channels[SPR_FROM].scratchpad_address = value & 0x3FFC;
             break;
         case 0x1000D400:
-            printf("[DMAC] SPR_TO CTRL: $%08X\n", value);
+            Logger::log(Logger::DMAC, "SPR_TO CTRL: $%08X\n", value);
             channels[SPR_TO].control = value;
             if (value & 0x100)
                 start_DMA(SPR_TO);
             break;
         case 0x1000D410:
-            printf("[DMAC] SPR_TO M_ADR: $%08X\n", value);
+            Logger::log(Logger::DMAC, "SPR_TO M_ADR: $%08X\n", value);
             channels[SPR_TO].address = value & ~0xF;
             break;
         case 0x1000D420:
-            printf("[DMAC] SPR_TO QWC: $%08X\n", value);
+            Logger::log(Logger::DMAC, "SPR_TO QWC: $%08X\n", value);
             channels[SPR_TO].quadword_count = value & 0xFFFF;
             break;
         case 0x1000D430:
-            printf("[DMAC] SPR_TO T_ADR: $%08X\n", value);
+            Logger::log(Logger::DMAC, "SPR_TO T_ADR: $%08X\n", value);
             channels[SPR_TO].tag_address = value & ~0xF;
             break;
         case 0x1000D480:
-            printf("[DMAC] SPR_TO SADR: $%08X\n", value);
+            Logger::log(Logger::DMAC, "SPR_TO SADR: $%08X\n", value);
             channels[SPR_TO].scratchpad_address = value & 0x3FFC;
             break;
         case 0x1000E000:
-            printf("[DMAC] Write32 D_CTRL: $%08X\n", value);
+            Logger::log(Logger::DMAC, "Write32 D_CTRL: $%08X\n", value);
             control.master_enable = value & 0x1;
             control.cycle_stealing = value & 0x2;
             control.mem_drain_channel = (value >> 2) & 0x3;
@@ -930,7 +930,7 @@ void DMAC::write32(uint32_t address, uint32_t value)
             control.release_cycle = (value >> 8) & 0x7;
             break;
         case 0x1000E010:
-            printf("[DMAC] Write32 D_STAT: $%08X\n", value);
+            Logger::log(Logger::DMAC, "Write32 D_STAT: $%08X\n", value);
             for (int i = 0; i < 15; i++)
             {
                 if (value & (1 << i))
@@ -943,19 +943,19 @@ void DMAC::write32(uint32_t address, uint32_t value)
             int1_check();
             break;
         case 0x1000E020:
-            printf("[DMAC] Write to PCR: $%08X\n", value);
+            Logger::log(Logger::DMAC, "Write to PCR: $%08X\n", value);
             PCR = value;
             break;
         case 0x1000E040:
-            printf("[DMAC] Write to RBSR: $%08X\n", value);
+            Logger::log(Logger::DMAC, "Write to RBSR: $%08X\n", value);
             RBSR = value;
             break;
         case 0x1000E050:
-            printf("[DMAC] Write to RBOR: $%08X\n", value);
+            Logger::log(Logger::DMAC, "Write to RBOR: $%08X\n", value);
             RBOR = value;
             break;
         default:
-            printf("[DMAC] Unrecognized write32 of $%08X to $%08X\n", value, address);
+            Logger::log(Logger::DMAC, "Unrecognized write32 of $%08X to $%08X\n", value, address);
             break;
     }
 }

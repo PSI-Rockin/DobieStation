@@ -1,5 +1,5 @@
 #include <cmath>
-#include <cstdio>
+#include "../../logger.hpp"
 #include <cstdlib>
 #include <cstring>
 #include "ipu.hpp"
@@ -164,7 +164,7 @@ void ImageProcessingUnit::run()
                 finish_command();
                 break;
             default:
-                printf("[IPU] Unrecognized command $%02X\n", command);
+                Logger::log(Logger::IPU, "Unrecognized command $%02X\n", command);
                 exit(1);
         }
     }
@@ -188,14 +188,14 @@ bool ImageProcessingUnit::process_BDEC()
                 bdec.state = BDEC_STATE::GET_CBP;
                 break;
             case BDEC_STATE::GET_CBP:
-                printf("[IPU] Get CBP!\n");
+                Logger::log(Logger::IPU, "Get CBP!\n");
                 if (!bdec.intra)
                 {
                     uint32_t pattern;
                     if (!cbp.get_symbol(in_FIFO, pattern))
                         return false;
                     ctrl.coded_block_pattern = pattern;
-                    printf("CBP: %d\n", ctrl.coded_block_pattern);
+                    Logger::log(Logger::IPU, "CBP: %d\n", ctrl.coded_block_pattern);
                 }
                 else
                     ctrl.coded_block_pattern = 0x3F;
@@ -204,7 +204,7 @@ bool ImageProcessingUnit::process_BDEC()
             case BDEC_STATE::RESET_DC:
                 if (command_option & (1 << 26))
                 {
-                    printf("[IPU] Reset DC!\n");
+                    Logger::log(Logger::IPU, "Reset DC!\n");
 
                     int16_t value;
                     switch (ctrl.intra_DC_precision)
@@ -219,7 +219,7 @@ bool ImageProcessingUnit::process_BDEC()
                             value = 512;
                             break;
                         default:
-                            printf("[IPU] Unrecognized DC precision %d!\n", ctrl.intra_DC_precision);
+                            Logger::log(Logger::IPU, "Unrecognized DC precision %d!\n", ctrl.intra_DC_precision);
                             exit(1);
                     }
 
@@ -229,7 +229,7 @@ bool ImageProcessingUnit::process_BDEC()
                 bdec.state = BDEC_STATE::BEGIN_DECODING;
                 break;
             case BDEC_STATE::BEGIN_DECODING:
-                printf("[IPU] Begin decoding block %d!\n", bdec.block_index);
+                Logger::log(Logger::IPU, "Begin decoding block %d!\n", bdec.block_index);
 
                 bdec.cur_block = bdec.blocks[bdec.block_index];
                 memset(bdec.cur_block, 0, sizeof(int16_t) * 64);
@@ -244,12 +244,12 @@ bool ImageProcessingUnit::process_BDEC()
 
                     if (bdec.intra && ctrl.intra_VLC_table)
                     {
-                        printf("[IPU] Use DCT coefficient table 1\n");
+                        Logger::log(Logger::IPU, "Use DCT coefficient table 1\n");
                         dct_coeff = &dct_coeff1;
                     }
                     else
                     {
-                        printf("[IPU] Use DCT coefficient table 0\n");
+                        Logger::log(Logger::IPU, "Use DCT coefficient table 0\n");
                         dct_coeff = &dct_coeff0;
                     }
 
@@ -261,14 +261,14 @@ bool ImageProcessingUnit::process_BDEC()
                 break;
             case BDEC_STATE::READ_COEFFS:
             {
-                printf("[IPU] Read coeffs!\n");
+                Logger::log(Logger::IPU, "Read coeffs!\n");
                 if (!BDEC_read_coeffs())
                     return false;
-                printf("[IPU] Inverse scan!\n");
+                Logger::log(Logger::IPU, "Inverse scan!\n");
                 inverse_scan(bdec.cur_block);
-                printf("[IPU] Dequantize!\n");
+                Logger::log(Logger::IPU, "Dequantize!\n");
                 dequantize(bdec.cur_block);
-                printf("[IPU] IDCT!\n");
+                Logger::log(Logger::IPU, "IDCT!\n");
 
                 int16_t temp[0x40];
                 memcpy(temp, bdec.cur_block, 0x40 * sizeof(int16_t));
@@ -277,7 +277,7 @@ bool ImageProcessingUnit::process_BDEC()
             }
                 break;
             case BDEC_STATE::LOAD_NEXT_BLOCK:
-                printf("[IPU] Load next block!\n");
+                Logger::log(Logger::IPU, "Load next block!\n");
                 bdec.block_index++;
                 if (bdec.block_index == 6)
                     bdec.state = BDEC_STATE::DONE;
@@ -286,7 +286,7 @@ bool ImageProcessingUnit::process_BDEC()
                 break;
             case BDEC_STATE::DONE:
             {
-                printf("[IPU] BDEC done!\n");
+                Logger::log(Logger::IPU, "BDEC done!\n");
                 uint128_t quad;
                 for (int i = 0; i < 8; i++)
                 {
@@ -324,7 +324,7 @@ bool ImageProcessingUnit::process_BDEC()
                         if (!bits)
                         {
                             ctrl.start_code = true;
-                            printf("[IPU] Start code detected!\n");
+                            Logger::log(Logger::IPU, "Start code detected!\n");
                         }
                     }
                 }
@@ -371,7 +371,7 @@ void ImageProcessingUnit::dequantize(int16_t *block)
                 block[0] *= 2;
                 break;
             default:
-                printf("[IPU] Dequantize: Intra DC precision == 3!\n");
+                Logger::log(Logger::IPU, "Dequantize: Intra DC precision == 3!\n");
                 block[0] = 0;
                 break;
         }
@@ -516,7 +516,7 @@ bool ImageProcessingUnit::BDEC_read_coeffs()
         switch (bdec.read_coeff_state)
         {
             case BDEC_Command::READ_COEFF::INIT:
-                printf("[IPU] READ_COEFF Init!\n");
+                Logger::log(Logger::IPU, "READ_COEFF Init!\n");
                 bdec.read_diff_state = BDEC_Command::READ_DIFF::SIZE;
                 bdec.subblock_index = 0;
                 if (bdec.intra)
@@ -528,7 +528,7 @@ bool ImageProcessingUnit::BDEC_read_coeffs()
                     bdec.read_coeff_state = BDEC_Command::READ_COEFF::CHECK_END;
                 break;
             case BDEC_Command::READ_COEFF::READ_DC_DIFF:
-                printf("[IPU] READ_COEFF Read DC diffs!\n");
+                Logger::log(Logger::IPU, "READ_COEFF Read DC diffs!\n");
                 if (!BDEC_read_diff())
                     return false;
                 bdec.cur_block[0] = (int16_t)(bdec.dc_predictor[bdec.cur_channel] + bdec.dc_diff);
@@ -536,7 +536,7 @@ bool ImageProcessingUnit::BDEC_read_coeffs()
                 bdec.read_coeff_state = BDEC_Command::READ_COEFF::CHECK_END;
                 break;
             case BDEC_Command::READ_COEFF::CHECK_END:
-                printf("[IPU] READ_COEFF Check end of block!\n");
+                Logger::log(Logger::IPU, "READ_COEFF Check end of block!\n");
             {
                 uint32_t end = 0;
                 if (!dct_coeff->get_end_of_block(in_FIFO, end))
@@ -548,7 +548,7 @@ bool ImageProcessingUnit::BDEC_read_coeffs()
             }
                 break;
             case BDEC_Command::READ_COEFF::COEFF:
-                printf("[IPU] READ_COEFF Read coeffs!\n");
+                Logger::log(Logger::IPU, "READ_COEFF Read coeffs!\n");
             {
                 RunLevelPair pair;
                 if (!bdec.subblock_index)
@@ -561,7 +561,7 @@ bool ImageProcessingUnit::BDEC_read_coeffs()
                     if (!dct_coeff->get_runlevel_pair(in_FIFO, pair, ctrl.MPEG1))
                         return false;
                 }
-                printf("[IPU] Run: %d Level: %d\n", pair.run, pair.level);
+                Logger::log(Logger::IPU, "Run: %d Level: %d\n", pair.run, pair.level);
                 bdec.subblock_index += pair.run;
 
                 if (bdec.subblock_index < 0x40)
@@ -570,7 +570,7 @@ bool ImageProcessingUnit::BDEC_read_coeffs()
                 }
                 else
                 {
-                    printf("[IPU] READ_COEFF Subblock index >= 0x40!\n");
+                    Logger::log(Logger::IPU, "READ_COEFF Subblock index >= 0x40!\n");
                     exit(1);
                 }
                 bdec.subblock_index++;
@@ -578,7 +578,7 @@ bool ImageProcessingUnit::BDEC_read_coeffs()
             }
                 break;
             case BDEC_Command::READ_COEFF::SKIP_END:
-                printf("[IPU] READ_COEFF Skip end!\n");
+                Logger::log(Logger::IPU, "READ_COEFF Skip end!\n");
                 if (!dct_coeff->get_skip_block(in_FIFO))
                     return false;
                 return true;
@@ -593,7 +593,7 @@ bool ImageProcessingUnit::BDEC_read_diff()
         switch (bdec.read_diff_state)
         {
             case BDEC_Command::READ_DIFF::SIZE:
-                printf("[IPU] READ_DIFF SIZE!\n");
+                Logger::log(Logger::IPU, "READ_DIFF SIZE!\n");
                 if (bdec.cur_channel == 0)
                 {
                     if (!lum_table.get_symbol(in_FIFO, bdec.dc_size))
@@ -607,7 +607,7 @@ bool ImageProcessingUnit::BDEC_read_diff()
                 bdec.read_diff_state = BDEC_Command::READ_DIFF::DIFF;
                 break;
             case BDEC_Command::READ_DIFF::DIFF:
-                printf("[IPU] READ_DIFF DIFF!\n");
+                Logger::log(Logger::IPU, "READ_DIFF DIFF!\n");
                 if (!bdec.dc_size)
                     bdec.dc_diff = 0;
                 else
@@ -634,36 +634,36 @@ void ImageProcessingUnit::process_VDEC()
     switch (table)
     {
         case 0:
-            printf("[IPU] MBAI\n");
+            Logger::log(Logger::IPU, "MBAI\n");
             VDEC_table = &macroblock_increment;
             break;
         case 1:
-            printf("[IPU] MBT\n");
+            Logger::log(Logger::IPU, "MBT\n");
             switch (ctrl.picture_type)
             {
                 case 0x1:
-                    printf("[IPU] I pic\n");
+                    Logger::log(Logger::IPU, "I pic\n");
                     VDEC_table = &macroblock_I_pic;
                     break;
                 case 0x2:
-                    printf("[IPU] P pic\n");
+                    Logger::log(Logger::IPU, "P pic\n");
                     VDEC_table = &macroblock_P_pic;
                     break;
                 case 0x3:
-                    printf("[IPU] B pic\n");
+                    Logger::log(Logger::IPU, "B pic\n");
                     VDEC_table = &macroblock_B_pic;
                     break;
                 default:
-                    printf("[IPU] Unrecognized Macroblock Type %d!\n", ctrl.picture_type);
+                    Logger::log(Logger::IPU, "Unrecognized Macroblock Type %d!\n", ctrl.picture_type);
                     exit(1);
             }
             break;
         case 2:
-            printf("[IPU] MC\n");
+            Logger::log(Logger::IPU, "MC\n");
             VDEC_table = &motioncode;
             break;
         default:
-            printf("[IPU] Unrecognized table id %d in VDEC!\n", table);
+            Logger::log(Logger::IPU, "Unrecognized table id %d in VDEC!\n", table);
             exit(1);
     }
 
@@ -682,7 +682,7 @@ void ImageProcessingUnit::process_VDEC()
                     vdec_state = VDEC_STATE::DONE;
                 break;
             case VDEC_STATE::DONE:
-                printf("[IPU] VDEC done! Output: $%08X\n", command_output);
+                Logger::log(Logger::IPU, "VDEC done! Output: $%08X\n", command_output);
                 finish_command();
                 return;
         }
@@ -706,7 +706,7 @@ void ImageProcessingUnit::process_FDEC()
                 break;
             case VDEC_STATE::DONE:
                 finish_command();
-                printf("[IPU] FDEC result: $%08X\n", command_output);
+                Logger::log(Logger::IPU, "FDEC result: $%08X\n", command_output);
                 return;
         }
     }
@@ -790,7 +790,7 @@ bool ImageProcessingUnit::process_CSC()
                             alpha = 1 << 31;
 
                         pixels[index] = color | alpha;
-                        //printf("Pixel: $%08X (%d, %d)\n", pixels[index], i, j);
+                        //Logger::log(Logger::IPU, "Pixel: $%08X (%d, %d)\n", pixels[index], i, j);
                     }
                 }
 
@@ -808,7 +808,7 @@ bool ImageProcessingUnit::process_CSC()
             }
                 break;
             case CSC_STATE::DONE:
-                printf("[IPU] CSC done!\n");
+                Logger::log(Logger::IPU, "CSC done!\n");
                 return true;
         }
     }
@@ -852,7 +852,7 @@ uint32_t ImageProcessingUnit::read_BP()
     }
     reg |= in_FIFO.bit_pointer;
     reg |= fifo_size << 8;
-    printf("[IPU] Read BP: $%08X\n", reg);
+    Logger::log(Logger::IPU, "Read BP: $%08X\n", reg);
     return reg;
 }
 
@@ -871,7 +871,7 @@ uint64_t ImageProcessingUnit::read_top()
 
 void ImageProcessingUnit::write_command(uint32_t value)
 {
-    printf("[IPU] Write command: $%08X\n", value);
+    Logger::log(Logger::IPU, "Write command: $%08X\n", value);
     if (!ctrl.busy)
     {
         ctrl.busy = true;
@@ -882,10 +882,10 @@ void ImageProcessingUnit::write_command(uint32_t value)
         switch (command)
         {
             case 0x00:
-                printf("[IPU] BCLR\n");
+                Logger::log(Logger::IPU, "BCLR\n");
                 break;
             case 0x02:
-                printf("[IPU] BDEC\n");
+                Logger::log(Logger::IPU, "BDEC\n");
                 bdec.state = BDEC_STATE::ADVANCE;
                 ctrl.coded_block_pattern = 0x3F;
                 bdec.block_index = 0;
@@ -894,44 +894,44 @@ void ImageProcessingUnit::write_command(uint32_t value)
                 bdec.intra = command_option & (1 << 27);
                 break;
             case 0x03:
-                printf("[IPU] VDEC\n");
+                Logger::log(Logger::IPU, "VDEC\n");
                 command_decoding = true;
                 vdec_state = VDEC_STATE::ADVANCE;
                 break;
             case 0x04:
-                printf("[IPU] FDEC\n");
+                Logger::log(Logger::IPU, "FDEC\n");
                 command_decoding = true;
                 fdec_state = VDEC_STATE::ADVANCE;
                 break;
             case 0x05:
-                printf("[IPU] SETIQ\n");
+                Logger::log(Logger::IPU, "SETIQ\n");
                 bytes_left = 64;
                 break;
             case 0x06:
-                printf("[IPU] SETVQ\n");
+                Logger::log(Logger::IPU, "SETVQ\n");
                 bytes_left = 32;
                 break;
             case 0x07:
-                printf("[IPU] CSC\n");
+                Logger::log(Logger::IPU, "CSC\n");
                 csc.state = CSC_STATE::BEGIN;
                 csc.macroblocks = command_option & 0x3FF;
                 csc.use_RGB16 = command_option & (1 << 27);
                 break;
             case 0x09:
-                printf("[IPU] SETTH\n");
+                Logger::log(Logger::IPU, "SETTH\n");
                 break;
         }
     }
     else
     {
-        printf("[IPU] Error - command sent while busy!\n");
+        Logger::log(Logger::IPU, "Error - command sent while busy!\n");
         exit(1);
     }
 }
 
 void ImageProcessingUnit::write_control(uint32_t value)
 {
-    printf("[IPU] Write control: $%08X\n", value);
+    Logger::log(Logger::IPU, "Write control: $%08X\n", value);
     ctrl.intra_DC_precision = (value >> 16) & 0x3;
     ctrl.alternate_scan = value & (1 << 20);
     ctrl.intra_VLC_table = value & (1 << 21);
@@ -966,10 +966,10 @@ uint128_t ImageProcessingUnit::read_FIFO()
 
 void ImageProcessingUnit::write_FIFO(uint128_t quad)
 {
-    printf("[IPU] Write FIFO: $%08X_%08X_%08X_%08X\n", quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
+    Logger::log(Logger::IPU, "Write FIFO: $%08X_%08X_%08X_%08X\n", quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
     if (in_FIFO.f.size() >= 8)
     {
-        printf("[IPU] Error: data sent to IPU exceeding FIFO limit!\n");
+        Logger::log(Logger::IPU, "Error: data sent to IPU exceeding FIFO limit!\n");
         exit(1);
     }
     in_FIFO.f.push(quad);
