@@ -121,7 +121,7 @@ void wait_for_return(gs_return_fifo *return_queue)
         }
         else
         {
-            printf("[GS] GS thread has not finished rendering!\n");
+            //printf("[GS] GS thread has not finished rendering!\n");
             std::this_thread::yield();
         }
     }
