@@ -879,11 +879,13 @@ void GraphicsSynthesizer::vertex_kick(bool drawing_kick)
             }
             break;
         case 5://trianglefan: WARNING UNTESTED
-            if (num_vertices == 3){
+            if (num_vertices == 3)
+			{
                 num_vertices--;
-                if (drawing_kick) {
+                if (drawing_kick) 
+                {
                     render_primitive();
-                    /*swap the previous verticies and the original vertex
+                    /*swap the previous vertex and the original vertex
                     so that the remaining 2 vericies are the current and the original*/
                     Vertex tmp = vtx_queue[1];
                     vtx_queue[1] = vtx_queue[2];
