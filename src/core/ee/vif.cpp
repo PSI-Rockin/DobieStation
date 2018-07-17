@@ -304,21 +304,21 @@ void VectorInterface::handle_UNPACK_masking(uint128_t& quad)
             
             switch (tempmask)
             {
-            case 1:
-                //Logger::log(Logger::VIF,"Writing ROW to position %d\n", i);
-                quad._u32[i] = ROW[i];
-                break;
-            case 2:
-                //Logger::log(Logger::VIF,"Writing COL to position %d\n", i);
-                quad._u32[i] = COL[std::min(unpack.blocks_written, 3)];
-                break;
-            case 3:
-                //Logger::log(Logger::VIF,"Write Protecting to position %d\n", i);
-                quad._u32[i] = vu->read_data<uint32_t>(unpack.addr + (i * 4));
-                break;
-            default:
-                //No masking, ignore
-                break;
+                case 1:
+                    //Logger::log(Logger::VIF,"Writing ROW to position %d\n", i);
+                    quad._u32[i] = ROW[i];
+                    break;
+                case 2:
+                    //Logger::log(Logger::VIF,"Writing COL to position %d\n", i);
+                    quad._u32[i] = COL[std::min(unpack.blocks_written, 3)];
+                    break;
+                case 3:
+                    //Logger::log(Logger::VIF,"Write Protecting to position %d\n", i);
+                    quad._u32[i] = vu->read_data<uint32_t>(unpack.addr + (i * 4));
+                    break;
+                default:
+                    //No masking, ignore
+                    break;
             }
         }
     }
