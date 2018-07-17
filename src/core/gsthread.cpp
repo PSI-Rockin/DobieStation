@@ -1539,10 +1539,6 @@ void GraphicsSynthesizerThread::host_to_host()
 
 void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, const RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color)
 {
-    /*if (u & 0x2000)
-        u = -(u & 0x1FFF);
-    if (v & 0x2000)
-        v = -(v & 0x1FFF);*/
     switch (current_ctx->clamp.wrap_s)
     {
         case 0:
@@ -1587,6 +1583,7 @@ void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, const RGBAQ_REG
         }
             break;
         case 0x02:
+        case 0x0A:
         {
             uint16_t color = read_PSMCT16_block(tex_base, current_ctx->tex0.width, u, v);
             tex_color.r = (color & 0x1F) << 3;
