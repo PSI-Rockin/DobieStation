@@ -1394,7 +1394,7 @@ void GraphicsSynthesizer::render_triangle()
             uint8_t w1_mask = (w1_tl_check << 0) | (w1_tr_check << 1) | (w1_bl_check << 2) | (w1_br_check << 3);
             uint8_t w2_mask = (w2_tl_check << 0) | (w2_tr_check << 1) | (w2_bl_check << 2) | (w2_br_check << 3);
             uint8_t w3_mask = (w3_tl_check << 0) | (w3_tr_check << 1) | (w3_bl_check << 2) | (w3_br_check << 3);
-            //However in GS cases, we process the block pixel-by-pixel as usual
+            //However in other cases, we process the block pixel-by-pixel as usual
             //TODO: In the case where all corners lie inside the triangle the code below could be slightly simplified
             if (w1_mask != 0 && w2_mask != 0 && w3_mask != 0)
             {

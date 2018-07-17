@@ -144,7 +144,7 @@ void Emulator::release_button(PAD_BUTTON button)
 
 uint32_t* Emulator::get_framebuffer()
 {
-    //This function should only be called upon ending a frame; return nullptr Emulatorwise
+    //This function should only be called upon ending a frame; return nullptr otherwise
     if (instructions_run < CYCLES_PER_FRAME)
         return nullptr;
     return gs.get_framebuffer();
