@@ -17,7 +17,7 @@ public:
     CircularFifo() : _tail(0), _head(0) {}
     virtual ~CircularFifo() {}
 
-    bool push(const Element& item); // pushByMOve?
+    void push(const Element& item); // pushByMOve?
     bool pop(Element& item);
 
     bool wasEmpty() const;
@@ -33,7 +33,7 @@ private:
 };
 
 template<typename Element, size_t Size>
-bool CircularFifo<Element, Size>::push(const Element& item)
+void CircularFifo<Element, Size>::push(const Element& item)
 {
     const auto current_tail = _tail.load(std::memory_order_relaxed);
     const auto next_tail = increment(current_tail);
@@ -41,10 +41,12 @@ bool CircularFifo<Element, Size>::push(const Element& item)
     {
         _array[current_tail] = item;
         _tail.store(next_tail, std::memory_order_release);
-        return true;
     }
-
-    return false; // full queue
+    else
+    {
+        printf("FIFO FULL!");
+        exit(1);
+    }
 
 }
 

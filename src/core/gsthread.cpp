@@ -59,69 +59,85 @@ GraphicsSynthesizerThread::~GraphicsSynthesizerThread()
         delete[] local_mem;
 }
 
-void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo) {
+void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return_fifo)
+{
     GraphicsSynthesizerThread gs = GraphicsSynthesizerThread();
     gs.reset();
-    while (true) {
+    while (true) 
+    {
         GS_message data;
         bool available = fifo->pop(data);
-        if (available) {
-            switch (data.type){
-            case write64_t: {
+        if (available) 
+        {
+            switch (data.type)
+            {
+            case write64_t: 
+            {
                 auto p = data.payload.write64_payload;
                 gs.write64(p.addr, p.value);
                 break;
             }
-            case write64_privileged_t: {
+            case write64_privileged_t: 
+            {
                 auto p = data.payload.write64_payload;
                 gs.reg.write64_privileged(p.addr, p.value);
                 break;
             }
-            case write32_privileged_t: {
+            case write32_privileged_t: 
+            {
                 auto p = data.payload.write32_payload;
                 gs.reg.write32_privileged(p.addr, p.value);
                 break;
             }
-            case set_rgba_t: {
+            case set_rgba_t: 
+            {
                 auto p = data.payload.rgba_payload;
                 gs.set_RGBA(p.r, p.g, p.b, p.a);
                 break;
             }
-            case set_stq_t: {
+            case set_stq_t:
+            {
                 auto p = data.payload.stq_payload;
                 gs.set_STQ(p.s, p.t, p.q);
                 break;
             }
-            case set_uv_t: {
+            case set_uv_t:
+            {
                 auto p = data.payload.uv_payload;
                 gs.set_UV(p.u, p.v);
                 break;
             }
-            case set_xyz_t: {
+            case set_xyz_t: 
+            {
                 auto p = data.payload.xyz_payload;
                 gs.set_XYZ(p.x, p.y, p.z, p.drawing_kick);
                 break;
             }
-            case set_q_t: {
+            case set_q_t: 
+            {
                 auto p = data.payload.q_payload;
                 gs.set_Q(p.q);
                 break;
             }
-            case set_crt_t: {
+            case set_crt_t: 
+            {
                 auto p = data.payload.crt_payload;
                 gs.reg.set_CRT(p.interlaced, p.mode, p.frame_mode);
                 break;
             }
-            case render_crt_t: {
+            case render_crt_t: 
+            {
                 auto p = data.payload.render_payload;
                 //std::lock_guard<std::mutex> lock(*p.target_mutex);
 
-                while (!p.target_mutex->try_lock()) {
+                while (!p.target_mutex->try_lock())
+                {
                     printf("[GS_t] buffer lock failed!");
                     std::this_thread::yield();
                 }
                 gs.render_CRT(p.target);
                 p.target_mutex->unlock();
+                return_fifo->push({ render_complete_t });
                 break;
             }
             case assert_finish_t:

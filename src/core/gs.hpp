@@ -60,7 +60,14 @@ struct GS_message {
     GS_command type;
     GS_message_payload payload;
 };
-typedef CircularFifo<GS_message, 1024*1024*16> gs_fifo;
+enum GS_return :uint8_t {
+    render_complete_t,
+};
+struct GS_return_message {
+    GS_return type;
+};
+typedef CircularFifo<GS_message, 1024 * 1024 * 16> gs_fifo;
+typedef CircularFifo<GS_return_message, 1024> gs_return_fifo;
 
 
 class GraphicsSynthesizer
@@ -77,7 +84,9 @@ class GraphicsSynthesizer
 
         GS_REGISTERS reg;
 
-        gs_fifo* MessageQueue; //ring buffer size
+        gs_fifo* message_queue;
+        gs_return_fifo* return_queue;
+
         std::thread gsthread_id;
 		
     public:
