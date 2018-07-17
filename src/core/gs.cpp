@@ -35,7 +35,7 @@ GraphicsSynthesizer::~GraphicsSynthesizer()
     if (gsthread_id.joinable())
     {
         GS_message_payload payload;
-        payload.no_payload = {};
+        payload.no_payload = {0};
         MessageQueue->push({ GS_command::die_t,payload });
         gsthread_id.join();
     }
@@ -57,7 +57,7 @@ void GraphicsSynthesizer::reset()
     if (gsthread_id.joinable())
     {
         GS_message_payload payload;
-        payload.no_payload = {};
+        payload.no_payload = {0};
         MessageQueue->push({ GS_command::die_t,payload });
         gsthread_id.join();
     }

@@ -1,4 +1,3 @@
-
 .DS_Store
 *.elf
 *.stash
@@ -6,8 +5,7 @@
 *.user
 *.autosave
 demos
-build-DobieStation-Desktop_Qt_5_9_1_clang_64bit-Debug
-build-DobieStation-Desktop_Qt_5_9_1_clang_64bit-Release
+build-DobieStation-*
 cmake-build-debug
 cmake-build-release
 build
@@ -15,3 +13,5 @@ build
 debug
 release
 .vs
+CmakeSettings.json
+Makefile*
