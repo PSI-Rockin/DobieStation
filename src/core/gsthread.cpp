@@ -71,87 +71,89 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
         {
             switch (data.type)
             {
-            case write64_t: 
-            {
-                auto p = data.payload.write64_payload;
-                gs.write64(p.addr, p.value);
-                break;
-            }
-            case write64_privileged_t: 
-            {
-                auto p = data.payload.write64_payload;
-                gs.reg.write64_privileged(p.addr, p.value);
-                break;
-            }
-            case write32_privileged_t: 
-            {
-                auto p = data.payload.write32_payload;
-                gs.reg.write32_privileged(p.addr, p.value);
-                break;
-            }
-            case set_rgba_t: 
-            {
-                auto p = data.payload.rgba_payload;
-                gs.set_RGBA(p.r, p.g, p.b, p.a);
-                break;
-            }
-            case set_stq_t:
-            {
-                auto p = data.payload.stq_payload;
-                gs.set_STQ(p.s, p.t, p.q);
-                break;
-            }
-            case set_uv_t:
-            {
-                auto p = data.payload.uv_payload;
-                gs.set_UV(p.u, p.v);
-                break;
-            }
-            case set_xyz_t: 
-            {
-                auto p = data.payload.xyz_payload;
-                gs.set_XYZ(p.x, p.y, p.z, p.drawing_kick);
-                break;
-            }
-            case set_q_t: 
-            {
-                auto p = data.payload.q_payload;
-                gs.set_Q(p.q);
-                break;
-            }
-            case set_crt_t: 
-            {
-                auto p = data.payload.crt_payload;
-                gs.reg.set_CRT(p.interlaced, p.mode, p.frame_mode);
-                break;
-            }
-            case render_crt_t: 
-            {
-                auto p = data.payload.render_payload;
-                //std::lock_guard<std::mutex> lock(*p.target_mutex);
-
-                while (!p.target_mutex->try_lock())
+                case write64_t:
                 {
-                    printf("[GS_t] buffer lock failed!");
-                    std::this_thread::yield();
+                    auto p = data.payload.write64_payload;
+                    gs.write64(p.addr, p.value);
+                    break;
                 }
-                gs.render_CRT(p.target);
-                p.target_mutex->unlock();
-                return_fifo->push({ render_complete_t });
-                break;
-            }
-            case assert_finish_t:
-                gs.reg.assert_FINISH();
-                break;
-            case set_vblank_t:
-                auto p = data.payload.vblank_payload;
-                gs.reg.set_VBLANK(p.vblank);
-                break;
-            case memdump_t:
-                gs.memdump();
-                break;
-            case die_t:
-                return;
+                case write64_privileged_t:
+                {
+                    auto p = data.payload.write64_payload;
+                    gs.reg.write64_privileged(p.addr, p.value);
+                    break;
+                }
+                case write32_privileged_t:
+                {
+                    auto p = data.payload.write32_payload;
+                    gs.reg.write32_privileged(p.addr, p.value);
+                    break;
+                }
+                case set_rgba_t:
+                {
+                    auto p = data.payload.rgba_payload;
+                    gs.set_RGBA(p.r, p.g, p.b, p.a);
+                    break;
+                }
+                case set_stq_t:
+                {
+                    auto p = data.payload.stq_payload;
+                    gs.set_STQ(p.s, p.t, p.q);
+                    break;
+                }
+                case set_uv_t:
+                {
+                    auto p = data.payload.uv_payload;
+                    gs.set_UV(p.u, p.v);
+                    break;
+                }
+                case set_xyz_t:
+                {
+                    auto p = data.payload.xyz_payload;
+                    gs.set_XYZ(p.x, p.y, p.z, p.drawing_kick);
+                    break;
+                }
+                case set_q_t:
+                {
+                    auto p = data.payload.q_payload;
+                    gs.set_Q(p.q);
+                    break;
+                }
+                case set_crt_t:
+                {
+                    auto p = data.payload.crt_payload;
+                    gs.reg.set_CRT(p.interlaced, p.mode, p.frame_mode);
+                    break;
+                }
+                case render_crt_t:
+                {
+                    auto p = data.payload.render_payload;
+                    //std::lock_guard<std::mutex> lock(*p.target_mutex);
+
+                    while (!p.target_mutex->try_lock())
+                    {
+                        printf("[GS_t] buffer lock failed!");
+                        std::this_thread::yield();
+                    }
+                    gs.render_CRT(p.target);
+                    p.target_mutex->unlock();
+                    return_fifo->push({ render_complete_t });
+                    break;
+                }
+                case assert_finish_t:
+                    gs.reg.assert_FINISH();
+                    break;
+                case set_vblank_t:
+                {
+                    auto p = data.payload.vblank_payload;
+                    gs.reg.set_VBLANK(p.vblank);
+                    break;
+                }
+                case memdump_t:
+                    gs.memdump();
+                    break;
+                case die_t:
+                    return;
             }
         }
         else {
@@ -656,7 +658,7 @@ void GraphicsSynthesizerThread::write_PSMCT16_block(uint32_t base, uint32_t widt
 
 //The "vertex kick" is the name given to the process of placing a vertex in the vertex queue.
 //If drawing_kick is true, and enough vertices are available, then the polygon is rendered.
-void GraphicsSynthesizerThread::vertex_kick(bool drawing_kick)
+void GraphicsSynthesizer::vertex_kick(bool drawing_kick)
 {
     for (int i = num_vertices; i > 0; i--)
         vtx_queue[i] = vtx_queue[i - 1];
@@ -667,71 +669,54 @@ void GraphicsSynthesizerThread::vertex_kick(bool drawing_kick)
     vtx_queue[0] = current_vtx;
 
     num_vertices++;
+    bool request_draw_kick = false;
     switch (PRIM.prim_type)
     {
-        case 0: //point
+        case 0:
             num_vertices--;
-            if (drawing_kick)
-                render_primitive();
+            request_draw_kick = true;
             break;
-        case 1://linelist
+        case 1:
             if (num_vertices == 2)
             {
                 num_vertices = 0;
-                if (drawing_kick)
-                    render_primitive();
+                request_draw_kick = true;
             }
             break;
-        case 2://linestrip
+        case 2:
             if (num_vertices == 2)
             {
                 num_vertices--;
-                if (drawing_kick)
-                    render_primitive();
+                request_draw_kick = true;
             }
             break;
-        case 3://trianglelist
+        case 3:
             if (num_vertices == 3)
             {
                 num_vertices = 0;
-                if (drawing_kick)
-                    render_primitive();
+                request_draw_kick = true;
             }
             break;
-        case 4://trianglestrip
+        case 4:
             if (num_vertices == 3)
             {
                 num_vertices--;
-                if (drawing_kick)
-                    render_primitive();
+                request_draw_kick = true;
             }
             break;
-        case 5://trianglefan: WARNING UNTESTED
-            if (num_vertices == 3){
-                num_vertices--;
-                if (drawing_kick) {
-                    render_primitive();
-                    /*swap the previous verticies and the original vertex
-                    so that the remaining 2 vericies are the current and the original*/
-                    Vertex tmp = vtx_queue[1];
-                    vtx_queue[1] = vtx_queue[2];
-                    vtx_queue[2] = tmp;
-                    num_vertices--;
-                }
-            }
-            break;
-        case 6://sprite
+        case 6:
             if (num_vertices == 2)
             {
                 num_vertices = 0;
-                if (drawing_kick)
-                    render_primitive();
+                request_draw_kick = true;
             }
             break;
         default:
-            printf("[GS_t] Unrecognized primitive %d\n", PRIM.prim_type);
+            printf("[GS] Unrecognized primitive %d\n", PRIM.prim_type);
             exit(1);
     }
+    if (drawing_kick && request_draw_kick)
+        render_primitive();
 }
 
 void GraphicsSynthesizerThread::render_primitive()
