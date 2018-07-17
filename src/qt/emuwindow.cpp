@@ -45,7 +45,7 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
     connect(this, SIGNAL(press_key(PAD_BUTTON)), &emuthread, SLOT(press_key(PAD_BUTTON)));
     connect(this, SIGNAL(release_key(PAD_BUTTON)), &emuthread, SLOT(release_key(PAD_BUTTON)));
     connect(&emuthread, SIGNAL(completed_frame(uint32_t*, int, int, int, int)),
-        this, SLOT(draw_frame(uint32_t*, int, int, int, int)));
+            this, SLOT(draw_frame(uint32_t*, int, int, int, int)));
     connect(&emuthread, SIGNAL(update_FPS(int)), this, SLOT(update_FPS(int)));
     emuthread.pause(PAUSE_EVENT::GAME_NOT_LOADED);
 
@@ -85,7 +85,7 @@ int EmuWindow::init(int argc, char** argv)
         {
             if (strcmp(argv[2], "-skip") == 0)
                 skip_BIOS = true;
-        }
+        } 
         else if (argc == 4)
         {
             if (strcmp(argv[3], "-skip") == 0)
@@ -220,33 +220,33 @@ void EmuWindow::keyPressEvent(QKeyEvent *event)
     event->accept();
     switch (event->key())
     {
-    case Qt::Key_Up:
-        emit press_key(PAD_BUTTON::UP);
-        break;
-    case Qt::Key_Down:
-        emit press_key(PAD_BUTTON::DOWN);
-        break;
-    case Qt::Key_Left:
-        emit press_key(PAD_BUTTON::LEFT);
-        break;
-    case Qt::Key_Right:
-        emit press_key(PAD_BUTTON::RIGHT);
-        break;
-    case Qt::Key_Z:
-        emit press_key(PAD_BUTTON::CIRCLE);
-        break;
-    case Qt::Key_X:
-        emit press_key(PAD_BUTTON::CROSS);
-        break;
-    case Qt::Key_A:
-        emit press_key(PAD_BUTTON::TRIANGLE);
-        break;
-    case Qt::Key_S:
-        emit press_key(PAD_BUTTON::SQUARE);
-        break;
-    case Qt::Key_Return:
-        emit press_key(PAD_BUTTON::START);
-        break;
+        case Qt::Key_Up:
+            emit press_key(PAD_BUTTON::UP);
+            break;
+        case Qt::Key_Down:
+            emit press_key(PAD_BUTTON::DOWN);
+            break;
+        case Qt::Key_Left:
+            emit press_key(PAD_BUTTON::LEFT);
+            break;
+        case Qt::Key_Right:
+            emit press_key(PAD_BUTTON::RIGHT);
+            break;
+        case Qt::Key_Z:
+            emit press_key(PAD_BUTTON::CIRCLE);
+            break;
+        case Qt::Key_X:
+            emit press_key(PAD_BUTTON::CROSS);
+            break;
+        case Qt::Key_A:
+            emit press_key(PAD_BUTTON::TRIANGLE);
+            break;
+        case Qt::Key_S:
+            emit press_key(PAD_BUTTON::SQUARE);
+            break;
+        case Qt::Key_Return:
+            emit press_key(PAD_BUTTON::START);
+            break;
     }
 }
 
@@ -255,33 +255,33 @@ void EmuWindow::keyReleaseEvent(QKeyEvent *event)
     event->accept();
     switch (event->key())
     {
-    case Qt::Key_Up:
-        emit release_key(PAD_BUTTON::UP);
-        break;
-    case Qt::Key_Down:
-        emit release_key(PAD_BUTTON::DOWN);
-        break;
-    case Qt::Key_Left:
-        emit release_key(PAD_BUTTON::LEFT);
-        break;
-    case Qt::Key_Right:
-        emit release_key(PAD_BUTTON::RIGHT);
-        break;
-    case Qt::Key_Z:
-        emit release_key(PAD_BUTTON::CIRCLE);
-        break;
-    case Qt::Key_X:
-        emit release_key(PAD_BUTTON::CROSS);
-        break;
-    case Qt::Key_A:
-        emit release_key(PAD_BUTTON::TRIANGLE);
-        break;
-    case Qt::Key_S:
-        emit release_key(PAD_BUTTON::SQUARE);
-        break;
-    case Qt::Key_Return:
-        emit release_key(PAD_BUTTON::START);
-        break;
+        case Qt::Key_Up:
+            emit release_key(PAD_BUTTON::UP);
+            break;
+        case Qt::Key_Down:
+            emit release_key(PAD_BUTTON::DOWN);
+            break;
+        case Qt::Key_Left:
+            emit release_key(PAD_BUTTON::LEFT);
+            break;
+        case Qt::Key_Right:
+            emit release_key(PAD_BUTTON::RIGHT);
+            break;
+        case Qt::Key_Z:
+            emit release_key(PAD_BUTTON::CIRCLE);
+            break;
+        case Qt::Key_X:
+            emit release_key(PAD_BUTTON::CROSS);
+            break;
+        case Qt::Key_A:
+            emit release_key(PAD_BUTTON::TRIANGLE);
+            break;
+        case Qt::Key_S:
+            emit release_key(PAD_BUTTON::SQUARE);
+            break;
+        case Qt::Key_Return:
+            emit release_key(PAD_BUTTON::START);
+            break;
     }
 }
 
@@ -295,7 +295,7 @@ void EmuWindow::update_FPS(int FPS)
     chrono::duration<double> elapsed_update_seconds = now - old_update_time;
     if (elapsed_update_seconds.count() >= 1.0)
     {
-        string new_title = "FPS: " + to_string(FPS) + " - " + title;
+		string new_title = "FPS: " + to_string(FPS) + " - " + title;
         setWindowTitle(QString::fromStdString(new_title));
         old_update_time = chrono::system_clock::now();
     }
