@@ -202,8 +202,8 @@ int EmotionEngine::run(int cycles_to_run)
                 if (PC == 0x10021C)
                     PC = 0x10022C;*/
                 //Temporary hack for Atelier Iris - Skip intro movies
-                if (PC == 0x0029e9cc)
-                    PC = 0x0029E984;
+                //if (PC == 0x0029e9cc)
+                    //PC = 0x0029E984;
                 if (PC < 0x80000000 && PC >= 0x00100000)
                     if (e->skip_BIOS())
                         return 0;
