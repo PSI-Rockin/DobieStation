@@ -825,7 +825,6 @@ void GraphicsSynthesizer::write_PSMCT16_block(uint32_t base, uint32_t width, uin
     *(uint16_t*)&local_mem[addr] = value;
 }
 
-
 //The "vertex kick" is the name given to the process of placing a vertex in the vertex queue.
 //If drawing_kick is true, and enough vertices are available, then the polygon is rendered.
 void GraphicsSynthesizer::vertex_kick(bool drawing_kick)
@@ -887,7 +886,7 @@ void GraphicsSynthesizer::vertex_kick(bool drawing_kick)
                     so that the remaining 2 vericies are the current and the original*/
                     Vertex tmp = vtx_queue[1];
                     vtx_queue[1] = vtx_queue[2];
-                    vtx_queue[1] = tmp;
+                    vtx_queue[2] = tmp;
                     num_vertices--;
                 }
             }
