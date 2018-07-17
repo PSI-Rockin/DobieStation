@@ -11,8 +11,6 @@
 #define _z(f) f&2
 #define _w(f) f&1
 
-//#define printf(fmt, ...)(0)
-
 VectorUnit::VectorUnit(int id) : id(id), gif(nullptr)
 {
     gpr[0].f[0] = 0.0;
@@ -37,6 +35,7 @@ void VectorUnit::reset()
     branch_on = false;
     delay_slot = 0;
     transferring_GIF = false;
+    XGKICK_cycles = 0;
     new_MAC_flags = 0;
 }
 
@@ -54,7 +53,11 @@ void VectorUnit::set_GIF(GraphicsInterface *gif)
 //Propogate all pipeline updates instantly
 void VectorUnit::flush_pipes()
 {
-    waitq();
+    while (*MAC_flags != new_MAC_flags)
+        update_mac_pipeline();
+
+    while (Q.f != new_Q_instance.f)
+        update_div_pipeline();
 }
 
 void VectorUnit::run(int cycles)
@@ -66,7 +69,7 @@ void VectorUnit::run(int cycles)
         update_div_pipeline();
         uint32_t upper_instr = *(uint32_t*)&instr_mem[PC + 4];
         uint32_t lower_instr = *(uint32_t*)&instr_mem[PC];
-        printf("[$%08X] $%08X:$%08X\n", PC, upper_instr, lower_instr);
+        //printf("[$%08X] $%08X:$%08X\n", PC, upper_instr, lower_instr);
         VU_Interpreter::interpret(*this, upper_instr, lower_instr);
         PC += 8;
         if (branch_on)
@@ -83,6 +86,7 @@ void VectorUnit::run(int cycles)
         {
             if (!delay_slot)
             {
+                printf("[VU] Ended execution!\n");
                 running = false;
                 finish_on = false;
             }
@@ -92,18 +96,23 @@ void VectorUnit::run(int cycles)
         cycles_to_run--;
     }
 
-    int GIF_cycles = cycles;
-    while (transferring_GIF && GIF_cycles)
+    if (gif->path_active(1))
     {
-        uint128_t quad = read_data<uint128_t>(GIF_addr);
-        if (gif->send_PATH1(quad))
+        XGKICK_cycles++;
+        if (XGKICK_cycles >= 5)
         {
-            printf("[VU1] XGKICK transfer ended!\n");
-            gif->deactivate_PATH(1);
-            transferring_GIF = false;
+            while (transferring_GIF)
+            {
+                uint128_t quad = read_data<uint128_t>(GIF_addr);
+                if (gif->send_PATH1(quad))
+                {
+                    printf("[VU1] XGKICK transfer ended!\n");
+                    gif->deactivate_PATH(1);
+                    transferring_GIF = false;
+                }
+                GIF_addr += 16;
+            }
         }
-        GIF_addr += 16;
-        GIF_cycles--;
     }
 }
 
@@ -196,11 +205,6 @@ void VectorUnit::advance_r()
     R.u = (R.u & 0x7FFFFF) | 0x3F800000;
 }
 
-uint32_t VectorUnit::qmfc2(int id, int field)
-{
-    return gpr[id].u[field];
-}
-
 uint32_t VectorUnit::cfc(int index)
 {
     if (index < 16)
@@ -209,6 +213,8 @@ uint32_t VectorUnit::cfc(int index)
     {
         case 16:
             return status;
+        case 17:
+            return *MAC_flags;
         case 18:
             return clip_flags;
         case 20:
@@ -264,6 +270,8 @@ void VectorUnit::jp(uint16_t addr)
     branch_on = true;
     delay_slot = 1;
 }
+
+#define printf(fmt, ...)(0)
 
 void VectorUnit::abs(uint8_t field, uint8_t dest, uint8_t source)
 {
@@ -472,6 +480,12 @@ void VectorUnit::fcand(uint32_t value)
     set_int(1, clip_flags && value);
 }
 
+void VectorUnit::fcget(uint8_t dest)
+{
+    printf("[VU] FCGET: $%08X\n", value);
+    set_int(dest, clip_flags & 0xFFF);
+}
+
 void VectorUnit::fcset(uint32_t value)
 {
     printf("[VU] FCSET: $%08X\n", value);
@@ -619,12 +633,11 @@ void VectorUnit::isubiu(uint8_t dest, uint8_t source, uint16_t imm)
 void VectorUnit::isw(uint8_t field, uint8_t source, uint8_t base, int32_t offset)
 {
     uint32_t addr = (int_gpr[base] << 4) + offset;
-    printf("[VU] ISW: $%08X ($%08X)\n", addr, offset);
+    printf("[VU] ISW: $%08X: $%04X ($%02X, %d, %d)\n", addr, int_gpr[source], field, source, base);
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
         {
-            printf("($%02X, %d, %d)\n", field, source, base);
             write_data<uint32_t>(addr + (i * 4), int_gpr[source]);
         }
     }
@@ -1258,8 +1271,10 @@ void VectorUnit::sq(uint8_t field, uint8_t source, uint8_t base, int32_t offset)
         if (field & (1 << (3 - i)))
         {
             write_data<uint32_t>(addr + (i * 4), gpr[source].u[i]);
+            printf("$%08X(%d) ", gpr[source].u[i], i);
         }
     }
+    printf("\n");
 }
 
 void VectorUnit::sqi(uint8_t field, uint8_t source, uint8_t base)
@@ -1271,8 +1286,10 @@ void VectorUnit::sqi(uint8_t field, uint8_t source, uint8_t base)
         if (field & (1 << (3 - i)))
         {
             write_data<uint32_t>(addr + (i * 4), gpr[source].u[i]);
+            printf("$%08X(%d) ", gpr[source].u[i], i);
         }
     }
+    printf("\n");
     if (base)
         int_gpr[base]++;
 }
@@ -1368,6 +1385,8 @@ void VectorUnit::waitq()
     }
 }
 
+#undef printf
+
 void VectorUnit::xgkick(uint8_t is)
 {
     if (!id)
@@ -1388,10 +1407,13 @@ void VectorUnit::xgkick(uint8_t is)
         }
         GIF_addr += 16;
     }
-    gif->activate_PATH(1);
+    XGKICK_cycles = 0;
+    gif->request_PATH(1);
     transferring_GIF = true;
     GIF_addr = int_gpr[is] * 16;
 }
+
+#define printf(fmt, ...)(0)
 
 void VectorUnit::xitop(uint8_t it)
 {

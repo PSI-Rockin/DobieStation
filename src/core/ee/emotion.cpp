@@ -176,7 +176,7 @@ int EmotionEngine::run(int cycles_to_run)
         {
             std::string disasm = EmotionDisasm::disasm_instr(instruction, PC);
             printf("[$%08X] $%08X - %s\n", PC, instruction, disasm.c_str());
-            print_state();
+            //print_state();
         }
         EmotionInterpreter::interpret(*this, instruction);
         if (increment_PC)
@@ -197,6 +197,10 @@ int EmotionEngine::run(int cycles_to_run)
                 if (PC >= 0x82000 && new_PC == 0x81FC0)
                     printf("[EE] Entering BIFCO loop\n");
                 PC = new_PC;
+                /*if (PC == 0x1001E0)
+                    PC = 0x100204;
+                if (PC == 0x10021C)
+                    PC = 0x10022C;*/
                 //Temporary hack for Atelier Iris - Skip intro movies
                 if (PC == 0x0029e9cc)
                     PC = 0x0029E984;
@@ -566,14 +570,11 @@ void EmotionEngine::lwc1(uint32_t addr, int index)
 
 void EmotionEngine::lqc2(uint32_t addr, int index)
 {
-    //printf("[EE] LQC2: ");
     for (int i = 0; i < 4; i++)
     {
         uint32_t bark = read32(addr + (i << 2));
-        //printf("$%08X ", bark);
         vu0->set_gpr_f(index, i, VectorUnit::convert(bark));
     }
-    //printf("\n");
 }
 
 void EmotionEngine::swc1(uint32_t addr, int index)
@@ -810,19 +811,18 @@ void EmotionEngine::fpu_cvt_s_w(int dest, int source)
 void EmotionEngine::qmfc2(int dest, int cop_reg)
 {
     for (int i = 0; i < 4; i++)
-        set_gpr<uint32_t>(dest, vu0->qmfc2(cop_reg, i), i);
+    {
+        set_gpr<uint32_t>(dest, vu0->get_gpr_u(cop_reg, i), i);
+    }
 }
 
 void EmotionEngine::qmtc2(int source, int cop_reg)
 {
-    //printf("[EE] QMTC2: ");
     for (int i = 0; i < 4; i++)
     {
         uint32_t bark = get_gpr<uint32_t>(source, i);
-        //printf("$%08X ", bark);
         vu0->set_gpr_u(cop_reg, i, bark);
     }
-    //printf("\n");
 }
 
 void EmotionEngine::cop2_special(uint32_t instruction)
