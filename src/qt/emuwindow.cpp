@@ -9,6 +9,7 @@
 #include <QFileDialog>
 
 #include "emuwindow.hpp"
+#include "../core/logger.hpp"
 
 using namespace std;
 

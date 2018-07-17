@@ -9,6 +9,8 @@
 
 #include "../core/emulator.hpp"
 
+#include "loggerwindow.hpp"
+
 class EmuWindow : public QMainWindow
 {
     Q_OBJECT
