@@ -10,62 +10,80 @@
 
 class INTC;
 
-enum GS_command:uint8_t { write64_t, write64_privileged_t, write32_privileged_t,
+enum GS_command:uint8_t 
+{
+	write64_t, write64_privileged_t, write32_privileged_t,
     set_rgba_t, set_stq_t, set_uv_t, set_xyz_t, set_q_t, set_crt_t,
     render_crt_t, assert_finish_t, set_vblank_t, memdump_t, die_t
 };
 
-union GS_message_payload {
-    struct {
+union GS_message_payload 
+{
+    struct 
+	{
         uint32_t addr;
         uint64_t value;
     } write64_payload;
-    struct {
+    struct 
+	{
         uint32_t addr;
         uint32_t value;
     } write32_payload;
-    struct {
+    struct 
+	{
         uint8_t r, g, b, a;
     } rgba_payload;
-    struct {
+    struct 
+	{
         uint32_t s, t, q;
     } stq_payload;
-    struct {
+    struct 
+	{
         uint16_t u, v;
     } uv_payload;
-    struct {
+    struct 
+	{
         uint32_t x, y, z;
         bool drawing_kick;
     } xyz_payload;
-    struct {
+    struct 
+	{
         float q;
     } q_payload;
-    struct {
+    struct 
+	{
         bool interlaced;
         int mode;
         bool frame_mode;
     } crt_payload;
-    struct {
+    struct 
+	{
         bool vblank;
     } vblank_payload;
-    struct {
+    struct 
+	{
         uint32_t* target;
         std::mutex* target_mutex;
     } render_payload;
-    struct {
+    struct 
+	{
         uint8_t BLANK; 
     } no_payload;//C++ doesn't like the empty struct
 };
+
 struct GS_message {
     GS_command type;
     GS_message_payload payload;
 };
+
 enum GS_return :uint8_t {
     render_complete_t,
 };
+
 struct GS_return_message {
     GS_return type;
 };
+
 typedef CircularFifo<GS_message, 1024 * 1024 * 16> gs_fifo;
 typedef CircularFifo<GS_return_message, 1024> gs_return_fifo;
 

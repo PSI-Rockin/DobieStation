@@ -41,7 +41,7 @@ GraphicsSynthesizer::~GraphicsSynthesizer()
     if (message_queue)
         delete message_queue;
     if (return_queue)
-        delete message_queue;
+        delete return_queue;
 }
 
 void GraphicsSynthesizer::reset()
