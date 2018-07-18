@@ -169,8 +169,8 @@ class GraphicsSynthesizerThread
     public:
         GraphicsSynthesizerThread();
         ~GraphicsSynthesizerThread();
-		
-		static void event_loop(gs_fifo* fifo, gs_return_fifo* return_fifo);
+        
+        static void event_loop(gs_fifo* fifo, gs_return_fifo* return_fifo);
 };
 
 inline uint32_t GraphicsSynthesizerThread::get_word(uint32_t addr)

@@ -986,13 +986,13 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
 void GraphicsSynthesizerThread::render_point()
 {
     Vertex v1 = vtx_queue[0]; v1.to_relative(current_ctx->xyoffset);
-	if (v1.x < current_ctx->scissor.x1 || v1.x > current_ctx->scissor.x2 ||
-		v1.y < current_ctx->scissor.y1 || v1.y > current_ctx->scissor.y2)
-	return;
+    if (v1.x < current_ctx->scissor.x1 || v1.x > current_ctx->scissor.x2 ||
+        v1.y < current_ctx->scissor.y1 || v1.y > current_ctx->scissor.y2)
+    return;
     printf("[GS_t] Rendering point!\n");
     printf("Coords: (%d, %d, %d)\n", v1.x >> 4, v1.y >> 4, v1.z);
     RGBAQ_REG vtx_color, tex_color;
-	
+    
     vtx_color = v1.rgbaq;
     if (PRIM.texture_mapping)
     {
@@ -1036,12 +1036,12 @@ void GraphicsSynthesizerThread::render_line()
     {
         swap(v1, v2);
     }
-	
+    
     int32_t min_x = max(v1.x, (int32_t)current_ctx->scissor.x1);
     int32_t min_y = max(v1.y, (int32_t)current_ctx->scissor.y1);
     int32_t max_x = min(v2.x, (int32_t)current_ctx->scissor.x2);
     int32_t max_y = min(v2.y, (int32_t)current_ctx->scissor.y2);
-	
+    
     RGBAQ_REG color = vtx_queue[0].rgbaq;
     RGBAQ_REG tex_color;
 
@@ -1051,7 +1051,7 @@ void GraphicsSynthesizerThread::render_line()
     {
         uint32_t z = interpolate(x, v1.z, v1.x, v2.z, v2.x);
         float t = (x - v1.x)/(float)(v2.x - v1.x);
-        int32_t y = v1.y*(1.-t) + v2.y*t;		
+        int32_t y = v1.y*(1.-t) + v2.y*t;        
         if (y < min_y || y > max_y)
             continue;
         if (PRIM.gourand_shading)
@@ -1121,7 +1121,7 @@ void GraphicsSynthesizerThread::render_triangle()
     int32_t min_y = min({v1.y, v2.y, v3.y});
     int32_t max_x = max({v1.x, v2.x, v3.x});
     int32_t max_y = max({v1.y, v2.y, v3.y});
-	
+    
     //Automatic scissoring test
     min_x = max(min_x, (int32_t)current_ctx->scissor.x1);
     min_y = max(min_y, (int32_t)current_ctx->scissor.y1);
