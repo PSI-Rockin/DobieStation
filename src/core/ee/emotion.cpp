@@ -573,7 +573,7 @@ void EmotionEngine::lqc2(uint32_t addr, int index)
     for (int i = 0; i < 4; i++)
     {
         uint32_t bark = read32(addr + (i << 2));
-        vu0->set_gpr_f(index, i, VectorUnit::convert(bark));
+        vu0->set_gpr_u(index, i, bark);
     }
 }
 

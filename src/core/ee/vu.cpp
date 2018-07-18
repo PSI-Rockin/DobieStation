@@ -482,7 +482,7 @@ void VectorUnit::fcand(uint32_t value)
 
 void VectorUnit::fcget(uint8_t dest)
 {
-    printf("[VU] FCGET: $%08X\n", value);
+    printf("[VU] FCGET: %d\n", dest);
     set_int(dest, clip_flags & 0xFFF);
 }
 
