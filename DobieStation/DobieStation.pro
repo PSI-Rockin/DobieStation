@@ -62,7 +62,9 @@ SOURCES += ../src/qt/main.cpp \
     ../src/core/ee/ipu/mac_b_pic.cpp \
     ../src/core/ee/ipu/codedblockpattern.cpp \
     ../src/core/ee/vu_interpreter.cpp \
-    ../src/core/ee/vu_disasm.cpp
+    ../src/core/ee/vu_disasm.cpp \
+    ../src/core/logger.cpp \
+    ../src/qt/loggerwindow.cpp
 
 HEADERS += \
     ../src/core/ee/emotion.hpp \
@@ -109,4 +111,6 @@ HEADERS += \
     ../src/core/ee/ipu/mac_b_pic.hpp \
     ../src/core/ee/ipu/codedblockpattern.hpp \
     ../src/core/ee/vu_interpreter.hpp \
-    ../src/core/ee/vu_disasm.hpp
+    ../src/core/ee/vu_disasm.hpp \
+    ../src/qt/loggerwindow.hpp \
+../src/core/logger.hpp
