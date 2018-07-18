@@ -957,9 +957,6 @@ bool GraphicsSynthesizer::depth_test(int32_t x, int32_t y, uint32_t z)
 
 void GraphicsSynthesizer::draw_pixel(int32_t x, int32_t y, uint32_t z, RGBAQ_REG& color, bool alpha_blending)
 {
-    SCISSOR* s = &current_ctx->scissor;
-    if (x < s->x1 || x > s->x2 || y < s->y1 || y > s->y2)
-        return;
     x >>= 4;
     y >>= 4;
     TEST* test = &current_ctx->test;
@@ -1155,10 +1152,14 @@ void GraphicsSynthesizer::draw_pixel(int32_t x, int32_t y, uint32_t z, RGBAQ_REG
 
 void GraphicsSynthesizer::render_point()
 {
-    printf("[GS] Rendering point!\n");
     Vertex v1 = vtx_queue[0]; v1.to_relative(current_ctx->xyoffset);
+    if (v1.x < current_ctx->scissor.x1 || v1.x > current_ctx->scissor.x2 ||
+            v1.y < current_ctx->scissor.y1 || v1.y > current_ctx->scissor.y2)
+        return;
+    printf("[GS] Rendering point!\n");
     printf("Coords: (%d, %d, %d)\n", v1.x >> 4, v1.y >> 4, v1.z);
     RGBAQ_REG vtx_color, tex_color;
+
     vtx_color = v1.rgbaq;
     if (PRIM.texture_mapping)
     {
@@ -1203,16 +1204,23 @@ void GraphicsSynthesizer::render_line()
         swap(v1, v2);
     }
 
+    int32_t min_x = max(v1.x, (int32_t)current_ctx->scissor.x1);
+    int32_t min_y = max(v1.y, (int32_t)current_ctx->scissor.y1);
+    int32_t max_x = min(v2.x, (int32_t)current_ctx->scissor.x2);
+    int32_t max_y = min(v2.y, (int32_t)current_ctx->scissor.y2);
+
     RGBAQ_REG color = vtx_queue[0].rgbaq;
     RGBAQ_REG tex_color;
 
     printf("Coords: (%d, %d, %d) (%d, %d, %d)\n", v1.x >> 4, v1.y >> 4, v1.z, v2.x >> 4, v2.y >> 4, v2.z);
 
-    for (int32_t x = v1.x; x < v2.x; x += 0x10)
+    for (int32_t x = min_x; x < max_x; x += 0x10)
     {
         uint32_t z = interpolate(x, v1.z, v1.x, v2.z, v2.x);
         float t = (x - v1.x)/(float)(v2.x - v1.x);
         int32_t y = v1.y*(1.-t) + v2.y*t;
+        if (y < min_y || y > max_y)
+            continue;
         if (PRIM.gourand_shading)
         {
             color.r = interpolate(x, v1.rgbaq.r, v1.x, v2.rgbaq.r, v2.x);
@@ -1283,6 +1291,12 @@ void GraphicsSynthesizer::render_triangle()
     int32_t min_y = min({v1.y, v2.y, v3.y});
     int32_t max_x = max({v1.x, v2.x, v3.x});
     int32_t max_y = max({v1.y, v2.y, v3.y});
+
+    //Automatic scissoring test
+    min_x = max(min_x, (int32_t)current_ctx->scissor.x1);
+    min_y = max(min_y, (int32_t)current_ctx->scissor.y1);
+    max_x = min(max_x, (int32_t)current_ctx->scissor.x2);
+    max_y = min(max_y, (int32_t)current_ctx->scissor.y2);
 
     //We'll process the pixels in blocks, set the blocksize
     const int32_t BLOCKSIZE = 1 << 4; // Must be power of 2
@@ -1476,13 +1490,19 @@ void GraphicsSynthesizer::render_sprite()
         swap(v1, v2);
     }
 
+    //Automatic scissoring test
+    int32_t min_y = std::max(v1.y, (int32_t)current_ctx->scissor.y1);
+    int32_t min_x = std::max(v1.x, (int32_t)current_ctx->scissor.x1);
+    int32_t max_y = std::min(v2.y, (int32_t)current_ctx->scissor.y2);
+    int32_t max_x = std::min(v2.x, (int32_t)current_ctx->scissor.x2);
+
     printf("Coords: (%d, %d) (%d, %d)\n", v1.x >> 4, v1.y >> 4, v2.x >> 4, v2.y >> 4);
 
-    for (int32_t y = v1.y; y < v2.y; y += 0x10)
+    for (int32_t y = min_y; y < max_y; y += 0x10)
     {
         float pix_t = interpolate_f(y, v1.t, v1.y, v2.t, v2.y);
         uint16_t pix_v = interpolate(y, v1.uv.v, v1.y, v2.uv.v, v2.y) >> 4;
-        for (int32_t x = v1.x; x < v2.x; x += 0x10)
+        for (int32_t x = min_x; x < max_x; x += 0x10)
         {
             float pix_s = interpolate_f(x, v1.s, v1.x, v2.s, v2.x);
             uint16_t pix_u = interpolate(x, v1.uv.u, v1.x, v2.uv.u, v2.x) >> 4;
