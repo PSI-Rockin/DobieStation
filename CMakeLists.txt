@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 11)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
+set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-pthread -O2")
 
 find_package(Qt5Core REQUIRED)
 find_package(Qt5Widgets REQUIRED)
@@ -55,6 +56,8 @@ set(SOURCES
         src/core/emulator.cpp
         src/core/gif.cpp
         src/core/gs.cpp
+        src/core/gsthread.cpp
+        src/core/gsregisters.cpp
         src/core/gscontext.cpp
 	src/core/sif.cpp
 	src/qt/emuthread.cpp
@@ -103,6 +106,9 @@ set(HEADERS
 	src/core/emulator.hpp
         src/core/gif.hpp
         src/core/gs.hpp
+        src/core/gsthread.hpp
+        src/core/gsregisters.hpp
+        src/core/circularFIFO.hpp
 	src/core/gscontext.hpp
 	src/core/int128.hpp
 	src/core/sif.hpp

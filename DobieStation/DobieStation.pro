@@ -23,6 +23,8 @@ SOURCES += ../src/qt/main.cpp \
     ../src/core/ee/bios_hle.cpp \
     ../src/core/ee/emotion_special.cpp \
     ../src/core/gs.cpp \
+    ../src/core/gsregisters.cpp \
+    ../src/core/gsthread.cpp \
     ../src/core/ee/dmac.cpp \
     ../src/qt/emuwindow.cpp \
     ../src/core/gscontext.cpp \
@@ -72,6 +74,9 @@ HEADERS += \
     ../src/core/ee/cop1.hpp \
     ../src/core/ee/bios_hle.hpp \
     ../src/core/gs.hpp \
+    ../src/core/circularFIFO.hpp \
+    ../src/core/gsthread.hpp \
+    ../src/core/gsregisters.hpp \
     ../src/core/ee/dmac.hpp \
     ../src/qt/emuwindow.hpp \
     ../src/core/gscontext.hpp \

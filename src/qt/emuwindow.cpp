@@ -287,7 +287,7 @@ void EmuWindow::update_FPS(int FPS)
     chrono::duration<double> elapsed_update_seconds = now - old_update_time;
     if (elapsed_update_seconds.count() >= 1.0)
     {
-        string new_title = title + " - FPS: " + to_string(FPS);
+        string new_title = "FPS: " + to_string(FPS) + " - " + title;
         setWindowTitle(QString::fromStdString(new_title));
         old_update_time = chrono::system_clock::now();
     }

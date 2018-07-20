@@ -1,126 +1,92 @@
 #ifndef GS_HPP
 #define GS_HPP
 #include <cstdint>
+#include <thread>
+#include <mutex>
 #include "gscontext.hpp"
+#include "gsregisters.hpp"
+#include "circularFIFO.hpp"
 
-struct PRMODE
-{
-    bool gourand_shading;
-    bool texture_mapping;
-    bool fog;
-    bool alpha_blend;
-    bool antialiasing;
-    bool use_UV;
-    bool use_context2;
-    bool fix_fragment_value;
-};
-
-struct PRIM_REG
-{
-    uint8_t prim_type;
-    bool gourand_shading;
-    bool texture_mapping;
-    bool fog;
-    bool alpha_blend;
-    bool antialiasing;
-    bool use_UV;
-    bool use_context2;
-    bool fix_fragment_value;
-};
-
-struct RGBAQ_REG
-{
-    uint8_t r, g, b, a;
-    float q;
-};
-
-struct BITBLTBUF_REG
-{
-    uint32_t source_base;
-    uint32_t source_width;
-    uint8_t source_format;
-    uint32_t dest_base;
-    uint32_t dest_width;
-    uint8_t dest_format;
-};
-
-struct TRXPOS_REG
-{
-    uint16_t source_x, source_y;
-    uint16_t dest_x, dest_y;
-    uint16_t int_source_x, int_dest_x;
-    uint8_t trans_order;
-};
-
-//reg reg
-struct TRXREG_REG
-{
-    uint16_t width;
-    uint16_t height;
-};
-
-struct PMODE_REG
-{
-    bool circuit1;
-    bool circuit2;
-    uint8_t output_switching;
-    bool use_ALP;
-    bool out1_circuit2;
-    bool blend_with_bg;
-    uint8_t ALP;
-};
-
-struct SMODE
-{
-    bool interlaced;
-    bool frame_mode;
-    uint8_t power_mode;
-};
-
-struct DISPFB
-{
-    uint32_t frame_base;
-    uint32_t width;
-    uint8_t format;
-    uint16_t x, y;
-};
-
-struct DISPLAY
-{
-    uint16_t x, y;
-    uint8_t magnify_x, magnify_y;
-    uint16_t width, height;
-};
-
-struct TEXCLUT_REG
-{
-    uint16_t width, x, y;
-};
-
-struct GS_IMR
-{
-    bool signal;
-    bool finish;
-    bool hsync;
-    bool vsync;
-    bool rawt; //Rectangular Area Write Termination
-};
-
-struct Vertex
-{
-    int32_t x, y, z;
-
-    RGBAQ_REG rgbaq;
-    UV_REG uv;
-    float s, t;
-    void to_relative(XYOFFSET xyoffset)
-    {
-        x -= xyoffset.x;
-        y -= xyoffset.y;
-    }
-};
 
 class INTC;
+
+enum GS_command:uint8_t 
+{
+	write64_t, write64_privileged_t, write32_privileged_t,
+    set_rgba_t, set_stq_t, set_uv_t, set_xyz_t, set_q_t, set_crt_t,
+    render_crt_t, assert_finish_t, set_vblank_t, memdump_t, die_t
+};
+
+union GS_message_payload 
+{
+    struct 
+	{
+        uint32_t addr;
+        uint64_t value;
+    } write64_payload;
+    struct 
+	{
+        uint32_t addr;
+        uint32_t value;
+    } write32_payload;
+    struct 
+	{
+        uint8_t r, g, b, a;
+    } rgba_payload;
+    struct 
+	{
+        uint32_t s, t, q;
+    } stq_payload;
+    struct 
+	{
+        uint16_t u, v;
+    } uv_payload;
+    struct 
+	{
+        uint32_t x, y, z;
+        bool drawing_kick;
+    } xyz_payload;
+    struct 
+	{
+        float q;
+    } q_payload;
+    struct 
+	{
+        bool interlaced;
+        int mode;
+        bool frame_mode;
+    } crt_payload;
+    struct 
+	{
+        bool vblank;
+    } vblank_payload;
+    struct 
+	{
+        uint32_t* target;
+        std::mutex* target_mutex;
+    } render_payload;
+    struct 
+	{
+        uint8_t BLANK; 
+    } no_payload;//C++ doesn't like the empty struct
+};
+
+struct GS_message {
+    GS_command type;
+    GS_message_payload payload;
+};
+
+enum GS_return :uint8_t {
+    render_complete_t,
+};
+
+struct GS_return_message {
+    GS_return type;
+};
+
+typedef CircularFifo<GS_message, 1024 * 1024 * 16> gs_fifo;
+typedef CircularFifo<GS_return_message, 1024> gs_return_fifo;
+
 
 class GraphicsSynthesizer
 {
@@ -128,79 +94,19 @@ class GraphicsSynthesizer
         INTC* intc;
         bool frame_complete;
         int frame_count;
-        uint32_t* output_buffer;
-        uint8_t* local_mem;
-        uint8_t CRT_mode;
+        uint32_t* output_buffer1;
+        uint32_t* output_buffer2;//double buffered to prevent mutex lock
+        std::mutex output_buffer1_mutex, output_buffer2_mutex;
+        bool using_first_buffer;
+        std::unique_lock<std::mutex> current_lock;
 
-        //CSR/IMR stuff - to be merged into structs
-        bool VBLANK_generated;
-        bool VBLANK_enabled;
-        bool is_odd_frame;
-        bool FINISH_enabled;
-        bool FINISH_generated;
-        bool FINISH_requested;
+        GS_REGISTERS reg;
 
-        GS_IMR IMR;
+        gs_fifo* message_queue;
+        gs_return_fifo* return_queue;
 
-        GSContext context1, context2;
-        GSContext* current_ctx;
-
-        PRIM_REG PRIM;
-        RGBAQ_REG RGBAQ;
-        UV_REG UV;
-        ST_REG ST;
-        TEXCLUT_REG TEXCLUT;
-        bool DTHE;
-        bool COLCLAMP;
-        bool use_PRIM;
-
-        BITBLTBUF_REG BITBLTBUF;
-        TRXPOS_REG TRXPOS;
-        TRXREG_REG TRXREG;
-        uint8_t TRXDIR;
-        uint8_t BUSDIR;
-        int pixels_transferred;
-
-        //Used for unpacking PSMCT24
-        uint32_t PSMCT24_color;
-        int PSMCT24_unpacked_count;
-
-        PMODE_REG PMODE;
-        SMODE SMODE2;
-        DISPFB DISPFB1, DISPFB2;
-        DISPLAY DISPLAY1, DISPLAY2;
-
-        Vertex current_vtx;
-        Vertex vtx_queue[3];
-        unsigned int num_vertices;
-
-        static const unsigned int max_vertices[8];
-
-        uint32_t get_word(uint32_t addr);
-        void set_word(uint32_t addr, uint32_t value);
-
-        uint32_t read_PSMCT32_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y);
-        uint16_t read_PSMCT16_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y);
-        void write_PSMCT32_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y, uint32_t value);
-        void write_PSMCT16_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y, uint16_t value);
-
-        bool depth_test(int32_t x, int32_t y, uint32_t z);
-
-        void tex_lookup(int16_t u, int16_t v, const RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color);
-        void clut_lookup(uint8_t entry, RGBAQ_REG& tex_color, bool eight_bit);
-        void clut_CSM2_lookup(uint8_t entry, RGBAQ_REG& tex_color);
-        void vertex_kick(bool drawing_kick);
-        void draw_pixel(int32_t x, int32_t y, uint32_t z, RGBAQ_REG& color, bool alpha_blending);
-        void render_primitive();
-        void render_point();
-        void render_line();
-        void render_triangle();
-        void render_sprite();
-        void write_HWREG(uint64_t data);
-        void unpack_PSMCT24(uint64_t data, int offset);
-        void host_to_host();
-
-        int32_t orient2D(const Vertex &v1, const Vertex &v2, const Vertex &v3);
+        std::thread gsthread_id;
+		
     public:
         GraphicsSynthesizer(INTC* intc);
         ~GraphicsSynthesizer();
@@ -215,7 +121,6 @@ class GraphicsSynthesizer
 
         void set_VBLANK(bool is_VBLANK);
         void assert_FINISH();
-        void dump_texture(uint32_t start_addr, uint32_t width);
 
         void set_CRT(bool interlaced, int mode, bool frame_mode);
 
@@ -231,15 +136,5 @@ class GraphicsSynthesizer
         void set_Q(float q);
         void set_XYZ(uint32_t x, uint32_t y, uint32_t z, bool drawing_kick);
 };
-
-inline uint32_t GraphicsSynthesizer::get_word(uint32_t addr)
-{
-    return *(uint32_t*)&local_mem[addr];
-}
-
-inline void GraphicsSynthesizer::set_word(uint32_t addr, uint32_t value)
-{
-    *(uint32_t*)&local_mem[addr] = value;
-}
 
 #endif // GS_HPP
