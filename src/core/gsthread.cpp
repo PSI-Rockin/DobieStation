@@ -8,6 +8,8 @@
 
 using namespace std;
 
+#define printf(fmt, ...)(0)
+
 /**
   * ~ GS notes ~
   * PRIM.prim_type:
@@ -197,10 +199,6 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
             int pixel_x = x;
             int pixel_y = y;
 
-            //HAX HAX HAX
-            //Games that have both settings on seem to expect the game height to be cut in half.
-            //This does so more gracefully than ignoring it, but causes "scanlines" to appear.
-            //TODO: investigate this more thoroughly
             if (reg.SMODE2.frame_mode && reg.SMODE2.interlaced)
                 pixel_y *= 2;
             if (pixel_x >= width || pixel_y >= reg.DISPLAY2.height)
@@ -211,6 +209,9 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
             scaled_x /= width;
             uint32_t value = read_PSMCT32_block(reg.DISPFB2.frame_base * 4, reg.DISPFB2.width, scaled_x, scaled_y);
             target[pixel_x + (pixel_y * width)] = value | 0xFF000000;
+
+            if (reg.SMODE2.frame_mode && reg.SMODE2.interlaced)
+                target[pixel_x + ((pixel_y + 1)  * width)] = value | 0xFF000000;
         }
     }
 }
@@ -523,7 +524,9 @@ uint32_t GraphicsSynthesizerThread::read_PSMCT32_block(uint32_t base, uint32_t w
         {2, 3, 6, 7, 10, 11, 14, 15}
     };
     uint32_t page = base / (2048 * 4);
-    page += (x / 64) % (width / 64);
+    if (width)
+        page += (x / 64) % (width / 64);
+
     page += (y / 32) * (width / 64);
     uint32_t block = (base / 256) % 32;
     block += blocks[(y / 8) % 4][(x / 8) % 8];
@@ -704,6 +707,17 @@ void GraphicsSynthesizerThread::vertex_kick(bool drawing_kick)
             {
                 num_vertices--;
                 request_draw_kick = true;
+            }
+            break;
+        case 5:
+            if (num_vertices == 3)
+            {
+                num_vertices--;
+                if (drawing_kick)
+                    render_primitive();
+
+                //Move first vertex back, so that all triangles can share it
+                vtx_queue[1] = vtx_queue[2];
             }
             break;
         case 6:
@@ -935,16 +949,51 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
                 cb = (frame_color >> 16) & 0xFF;
                 break;
             case 2:
+            case 3:
                 cr = 0;
                 cg = 0;
                 cb = 0;
                 break;
         }
 
+        int fb = (int)b1 - (int)b2;
+        int fg = (int)g1 - (int)g2;
+        int fr = (int)r1 - (int)r2;
+
+        fb = (((fb * (int)alpha) >> 7) + cb);
+        fg = (((fg * (int)alpha) >> 7) + cg);
+        fr = (((fr * (int)alpha) >> 7) + cr);
+
+        if (COLCLAMP)
+        {
+            if (fb < 0)
+                fb = 0;
+            if (fg < 0)
+                fg = 0;
+            if (fr < 0)
+                fr = 0;
+            if (fb > 0xFF)
+                fb = 0xFF;
+            if (fg > 0xFF)
+                fg = 0xFF;
+            if (fr > 0xFF)
+                fr = 0xFF;
+            if (fr > 0xFF)
+            {
+                printf("r1: %d r2: %d tempfr: %d\n", r1, r2, (((int)r1 - (int)r2) * alpha));
+            }
+        }
+        else
+        {
+            fb &= 0xFF;
+            fg &= 0xFF;
+            fr &= 0xFF;
+        }
+
         final_color |= alpha << 24;
-        final_color |= ((((b1 - b2) * alpha) >> 7) + cb) << 16;
-        final_color |= ((((g1 - g2) * alpha) >> 7) + cg) << 8;
-        final_color |= (((r1 - r2) * alpha) >> 7) + cr;
+        final_color |= fb << 16;
+        final_color |= fg << 8;
+        final_color |= fr;
     }
     else
     {
@@ -953,6 +1002,7 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
         final_color |= color.g << 8;
         final_color |= color.r;
     }
+
     if (!update_frame)
         final_color = frame_color;
     uint8_t alpha = frame_color >> 24;
@@ -980,6 +1030,7 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
                 *(uint16_t*)&local_mem[current_ctx->zbuf.base_pointer + (pos << 1)] = z & 0xFFFF;
                 break;
         }
+
     }
 }
 
@@ -1564,7 +1615,7 @@ void GraphicsSynthesizerThread::host_to_host()
     TRXDIR = 3;
 }
 
-void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, const RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color)
+void GraphicsSynthesizerThread::tex_lookup(uint16_t u, uint16_t v, const RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color)
 {
     switch (current_ctx->clamp.wrap_s)
     {

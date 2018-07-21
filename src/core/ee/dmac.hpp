@@ -61,15 +61,15 @@ class DMAC
 
         uint32_t master_disable;
 
-        void process_VIF0();
-        void process_VIF1();
-        void process_GIF();
-        void process_IPU_FROM();
-        void process_IPU_TO();
-        void process_SIF0();
-        void process_SIF1();
-        void process_SPR_FROM();
-        void process_SPR_TO();
+        void process_VIF0(int cycles);
+        void process_VIF1(int cycles);
+        void process_GIF(int cycles);
+        void process_IPU_FROM(int cycles);
+        void process_IPU_TO(int cycles);
+        void process_SIF0(int cycles);
+        void process_SIF1(int cycles);
+        void process_SPR_FROM(int cycles);
+        void process_SPR_TO(int cycles);
 
         void handle_source_chain(int index);
 
@@ -83,7 +83,6 @@ class DMAC
         DMAC(EmotionEngine* cpu, Emulator* e, GraphicsInterface* gif, ImageProcessingUnit* ipu, SubsystemInterface* sif,
              VectorInterface* vif0, VectorInterface* vif1);
         void reset(uint8_t* RDRAM, uint8_t* scratchpad);
-        void run();
         void run(int cycles);
         void start_DMA(int index);
 

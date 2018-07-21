@@ -107,57 +107,11 @@ void EmotionEngine::reset()
         deci2handlers[i].active = false;
 }
 
-void EmotionEngine::run()
-{
-    /*uint32_t instruction = read32(PC);
-    if (can_disassemble)
-    {
-        std::string disasm = EmotionDisasm::disasm_instr(instruction, PC);
-        printf("[$%08X] $%08X - %s\n", PC, instruction, disasm.c_str());
-    }
-    EmotionInterpreter::interpret(*this, instruction);
-    cp0->count_up(1);
-    /*if (PC == 0x00100008)
-        can_disassemble = true;
-    if (PC == 0x100BBC)
-        print_state();
-    if (branch_on)
-    {
-        if (!delay_slot)
-        {
-            branch_on = false;
-            PC = new_PC;
-            if (PC < 0x80000000 && PC >= 0x00100000)
-                if (e->skip_BIOS())
-                    return;
-            /*if (PC == 0x00083270)
-            {
-                can_disassemble = true;
-                print_state();
-            }
-
-            if (PC == 0xBFC00928)
-                exit(1);
-        }
-        else
-            delay_slot--;
-    }
-
-    if (cp0->int_enabled())
-    {
-        //printf("[EE] Int enabled!\n");
-        if (cp0->cause.int0_pending)
-            int0();
-        if (cp0->cause.int1_pending)
-            int1();
-    }*/
-}
-
 int EmotionEngine::run(int cycles_to_run)
 {
     int cycles = cycles_to_run;
     static int calls = 0;
-    while (cycles_to_run > 0)
+    while (cycles_to_run)
     {
         cycles_to_run--;
         uint32_t instruction = read32(PC);

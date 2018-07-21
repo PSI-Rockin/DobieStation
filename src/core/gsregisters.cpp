@@ -137,7 +137,7 @@ uint32_t GS_REGISTERS::read32_privileged(uint32_t addr)
             reg |= CSR.FINISH_generated << 1;
             reg |= CSR.VBLANK_generated << 3;
             reg |= CSR.is_odd_frame << 13;
-            printf("[GS_r] read32_privileged!: CSR = %04X\n", reg);
+            //printf("[GS_r] read32_privileged!: CSR = %04X\n", reg);
             return reg;
         }
         default:
@@ -157,7 +157,7 @@ uint64_t GS_REGISTERS::read64_privileged(uint32_t addr)
             reg |= CSR.FINISH_generated << 1;
             reg |= CSR.VBLANK_generated << 3;
             reg |= CSR.is_odd_frame << 13;
-            printf("[GS_r] read64_privileged!: CSR = %08X\n", reg);
+            //printf("[GS_r] read64_privileged!: CSR = %08X\n", reg);
             return reg;
         }
         default:

@@ -1,6 +1,8 @@
 #include <cstdio>
 #include "gscontext.hpp"
 
+#define printf(fmt, ...)(0)
+
 void GSContext::reset()
 {
     set_tex0(0);
