@@ -163,7 +163,7 @@ int EmotionEngine::run(int cycles_to_run)
         uint32_t instruction = read32(PC);
         if (PC == 0x37BDD4)
         {
-            calls++;
+            //calls++;
             //if (calls == 3)
                 //can_disassemble = true;
             printf("readBufBeginPut\n");
@@ -172,11 +172,17 @@ int EmotionEngine::run(int cycles_to_run)
             printf("readBufBeginGet\n");
         if (PC == 0x0037Be50)
             printf("sceMpegDemuxPssRing\n");
+        if (PC == 0x00218060)
+        {
+            calls++;
+            //if (calls == 3)
+                //can_disassemble = true;
+        }
         if (can_disassemble && (PC < 0x81FC0 || PC >= 0x82000))
         {
             std::string disasm = EmotionDisasm::disasm_instr(instruction, PC);
             printf("[$%08X] $%08X - %s\n", PC, instruction, disasm.c_str());
-            //print_state();
+            print_state();
         }
         EmotionInterpreter::interpret(*this, instruction);
         if (increment_PC)
@@ -196,7 +202,7 @@ int EmotionEngine::run(int cycles_to_run)
                 }
                 if (PC >= 0x82000 && new_PC == 0x81FC0)
                     printf("[EE] Entering BIFCO loop\n");
-                PC = new_PC;
+                PC = new_PC;;
                 /*if (PC == 0x1001E0)
                     PC = 0x100204;
                 if (PC == 0x10021C)
@@ -570,11 +576,14 @@ void EmotionEngine::lwc1(uint32_t addr, int index)
 
 void EmotionEngine::lqc2(uint32_t addr, int index)
 {
+    //printf("LQC2 $%08X: ", addr);
     for (int i = 0; i < 4; i++)
     {
         uint32_t bark = read32(addr + (i << 2));
+        //printf("$%08X ", bark);
         vu0->set_gpr_u(index, i, bark);
     }
+    //printf("\n");
 }
 
 void EmotionEngine::swc1(uint32_t addr, int index)
@@ -584,11 +593,14 @@ void EmotionEngine::swc1(uint32_t addr, int index)
 
 void EmotionEngine::sqc2(uint32_t addr, int index)
 {
+    //printf("SQC2 $%08X: ", addr);
     for (int i = 0; i < 4; i++)
     {
         uint32_t bark = vu0->get_gpr_u(index, i);
+        //printf("$%08X ", bark);
         write32(addr + (i << 2), bark);
     }
+    //printf("\n");
 }
 
 void EmotionEngine::set_LO_HI(uint64_t a, uint64_t b, bool hi)

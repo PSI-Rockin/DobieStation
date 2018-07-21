@@ -391,6 +391,25 @@ void CDVD_Drive::send_S_command(uint8_t value)
             prepare_S_outdata(1);
             S_outdata[0] = 0;
             break;
+        case 0x1E:
+            prepare_S_outdata(5);
+            S_outdata[0] = 0x00;
+            S_outdata[1] = 0x14;
+            S_outdata[2] = 0x00;
+            S_outdata[3] = 0x00;
+            S_outdata[4] = 0x00;
+            break;
+        case 0x22:
+            printf("[CDVD] CdReadWakeupTime\n");
+            prepare_S_outdata(10);
+            for (int i = 0; i < 10; i++)
+                S_outdata[i] = 0;
+            break;
+        case 0x24:
+            printf("[CDVD] CdRCBypassCtrl\n");
+            prepare_S_outdata(1);
+            S_outdata[0] = 0;
+            break;
         case 0x40:
             printf("[CDVD] OpenConfig\n");
             prepare_S_outdata(1);

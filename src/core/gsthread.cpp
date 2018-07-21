@@ -1052,8 +1052,8 @@ void GraphicsSynthesizerThread::render_line()
         uint32_t z = interpolate(x, v1.z, v1.x, v2.z, v2.x);
         float t = (x - v1.x)/(float)(v2.x - v1.x);
         int32_t y = v1.y*(1.-t) + v2.y*t;        
-        if (y < min_y || y > max_y)
-            continue;
+        //if (y < min_y || y > max_y)
+            //continue;
         if (PRIM.gourand_shading)
         {
             color.r = interpolate(x, v1.rgbaq.r, v1.x, v2.rgbaq.r, v2.x);
@@ -1257,11 +1257,15 @@ void GraphicsSynthesizerThread::render_triangle()
                                 uint32_t u, v;
                                 if (!PRIM.use_UV)
                                 {
-                                    float s, t;
+                                    float s, t, q;
                                     s = v1.s * w1 + v2.s * w2 + v3.s * w3;
                                     t = v1.t * w1 + v2.t * w2 + v3.t * w3;
-                                    s /= divider;
-                                    t /= divider;
+                                    q = v1.rgbaq.q * w1 + v2.rgbaq.q * w2 + v3.rgbaq.q * w3;
+
+                                    //We don't divide s and t by "divider" because dividing by Q effectively
+                                    //cancels that out
+                                    s /= q;
+                                    t /= q;
                                     u = s * current_ctx->tex0.tex_width;
                                     v = t * current_ctx->tex0.tex_height;
                                 }
@@ -1610,8 +1614,8 @@ void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, const RGBAQ_REG
         {
             uint16_t color = read_PSMCT16_block(tex_base, current_ctx->tex0.width, u, v);
             tex_color.r = (color & 0x1F) << 3;
-            tex_color.g = ((color >> 5) & 0x1F) << 11;
-            tex_color.b = ((color >> 10) & 0x1F) << 19;
+            tex_color.g = ((color >> 5) & 0x1F) << 3;
+            tex_color.b = ((color >> 10) & 0x1F) << 3;
             tex_color.a = ((color & (1 << 15)) != 0) << 7;
         }
             break;

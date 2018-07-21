@@ -81,7 +81,7 @@ void Cop1::cvt_w_s(int dest, int source)
 {
     if ((gpr[source].u & 0x7F800000) <= 0x4E800000)
         gpr[dest].s = (int32_t)gpr[source].f;
-    else if ((gpr[source].u & 0x80000000))
+    else if ((gpr[source].u & 0x80000000) == 0)
         gpr[dest].u = 0x7FFFFFFF;
     else
         gpr[dest].u = 0x80000000;

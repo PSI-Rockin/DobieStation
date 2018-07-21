@@ -37,6 +37,13 @@ void VectorUnit::reset()
     transferring_GIF = false;
     XGKICK_cycles = 0;
     new_MAC_flags = 0;
+
+    Q.u = 0;
+    I.u = 0;
+    R.u = 0;
+    P.u = 0;
+
+    flush_pipes();
 }
 
 void VectorUnit::set_TOP_regs(uint16_t *TOP, uint16_t *ITOP)

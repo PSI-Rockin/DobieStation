@@ -217,7 +217,7 @@ void EmotionInterpreter::jalr(EmotionEngine &cpu, uint32_t instruction)
     uint32_t return_reg = (instruction >> 11) & 0x1F;
     uint32_t return_addr = cpu.get_PC() + 8;
     cpu.jp(cpu.get_gpr<uint32_t>(new_addr));
-    cpu.set_gpr<uint32_t>(return_reg, return_addr);
+    cpu.set_gpr<uint64_t>(return_reg, return_addr);
 }
 
 void EmotionInterpreter::movz(EmotionEngine &cpu, uint32_t instruction)
