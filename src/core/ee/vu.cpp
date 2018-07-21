@@ -17,7 +17,7 @@ VectorUnit::VectorUnit(int id) : id(id), gif(nullptr)
     gpr[0].f[1] = 0.0;
     gpr[0].f[2] = 0.0;
     gpr[0].f[3] = 1.0;
-    int_gpr[0] = 0;
+    int_gpr[0].u = 0;
 
     VIF_TOP = nullptr;
     VIF_ITOP = nullptr;
@@ -37,13 +37,19 @@ void VectorUnit::reset()
     transferring_GIF = false;
     XGKICK_cycles = 0;
     new_MAC_flags = 0;
-
-    Q.u = 0;
-    I.u = 0;
-    R.u = 0;
-    P.u = 0;
-
+    new_Q_instance.u = 0;
     flush_pipes();
+
+    for (int i = 1; i < 32; i++) {
+        gpr[i].f[0] = 0.0;
+        gpr[i].f[1] = 0.0;
+        gpr[i].f[2] = 0.0;
+        gpr[i].f[3] = 0.0;        
+    }
+
+    for (int i = 0; i < 16; i++) {
+        int_gpr[i].u = 0;
+    }
 }
 
 void VectorUnit::set_TOP_regs(uint16_t *TOP, uint16_t *ITOP)
@@ -215,7 +221,7 @@ void VectorUnit::advance_r()
 uint32_t VectorUnit::cfc(int index)
 {
     if (index < 16)
-        return int_gpr[index];
+        return int_gpr[index].u;
     switch (index)
     {
         case 16:
@@ -246,6 +252,12 @@ void VectorUnit::ctc(int index, uint32_t value)
     }
     switch (index)
     {
+        case 16:
+            status = value;
+            break;
+        case 18:
+            clip_flags = value;
+            break;
         case 20:
             R.u = value;
             break;
@@ -254,7 +266,12 @@ void VectorUnit::ctc(int index, uint32_t value)
             printf("[VU] I = %f\n", I.f);
             break;
         case 22:
-            Q.u = value;
+            set_Q(value);
+            printf("[VU] Q = %f\n", Q.f);
+            break;
+        case 28:
+            if (value & 0x2 && id == 0)
+                reset();
             break;
         default:
             printf("[COP2] Unrecognized ctc2 of $%08X to reg %d\n", value, index);
@@ -501,8 +518,8 @@ void VectorUnit::fcset(uint32_t value)
 
 void VectorUnit::fmand(uint8_t dest, uint8_t source)
 {
-    printf("[VU] FMAND: $%04X\n", int_gpr[source]);
-    set_int(dest, *MAC_flags & int_gpr[source]);
+    printf("[VU] FMAND: $%04X\n", int_gpr[source].u);
+    set_int(dest, *MAC_flags & int_gpr[source].u);
 }
 
 void VectorUnit::ftoi0(uint8_t field, uint8_t dest, uint8_t source)
@@ -563,31 +580,31 @@ void VectorUnit::ftoi15(uint8_t field, uint8_t dest, uint8_t source)
 
 void VectorUnit::iadd(uint8_t dest, uint8_t reg1, uint8_t reg2)
 {
-    set_int(dest, int_gpr[reg1] + int_gpr[reg2]);
-    printf("[VU] IADD: $%04X (%d, %d, %d)\n", int_gpr[dest], dest, reg1, reg2);
+    set_int(dest, int_gpr[reg1].s + int_gpr[reg2].s);
+    printf("[VU] IADD: $%04X (%d, %d, %d)\n", int_gpr[dest].u, dest, reg1, reg2);
 }
 
 void VectorUnit::iaddi(uint8_t dest, uint8_t source, int8_t imm)
 {
-    set_int(dest, int_gpr[source] + imm);
-    printf("[VU] IADDI: $%04X (%d, %d, %d)\n", int_gpr[dest], dest, source, imm);
+    set_int(dest, int_gpr[source].s + imm);
+    printf("[VU] IADDI: $%04X (%d, %d, %d)\n", int_gpr[dest].u, dest, source, imm);
 }
 
 void VectorUnit::iaddiu(uint8_t dest, uint8_t source, uint16_t imm)
 {
-    set_int(dest, int_gpr[source] + imm);
-    printf("[VU] IADDIU: $%04X (%d, %d, $%04X)\n", int_gpr[dest], dest, source, imm);
+    set_int(dest, int_gpr[source].s + imm);
+    printf("[VU] IADDIU: $%04X (%d, %d, $%04X)\n", int_gpr[dest].u, dest, source, imm);
 }
 
 void VectorUnit::iand(uint8_t dest, uint8_t reg1, uint8_t reg2)
 {
-    set_int(dest, int_gpr[reg1] & int_gpr[reg2]);
-    printf("[VU] IAND: $%04X (%d, %d, %d)\n", int_gpr[dest], dest, reg1, reg2);
+    set_int(dest, int_gpr[reg1].u & int_gpr[reg2].u);
+    printf("[VU] IAND: $%04X (%d, %d, %d)\n", int_gpr[dest].u, dest, reg1, reg2);
 }
 
 void VectorUnit::ilw(uint8_t field, uint8_t dest, uint8_t base, int32_t offset)
 {
-    uint32_t addr = (int_gpr[base] << 4) + offset;
+    uint32_t addr = ((int32_t)int_gpr[base].s << 4) + offset;
     uint128_t quad = read_data<uint128_t>(addr);
     printf("[VU] ILW: $%08X ($%08X)\n", addr, offset);
     for (int i = 0; i < 4; i++)
@@ -604,7 +621,7 @@ void VectorUnit::ilw(uint8_t field, uint8_t dest, uint8_t base, int32_t offset)
 
 void VectorUnit::ilwr(uint8_t field, uint8_t dest, uint8_t base)
 {
-    uint32_t addr = int_gpr[base] << 4;
+    uint32_t addr = (uint32_t)int_gpr[base].u << 4;
     uint128_t quad = read_data<uint128_t>(addr);
     printf("[VU] ILWR: $%08X", addr);
     for (int i = 0; i < 4; i++)
@@ -621,45 +638,45 @@ void VectorUnit::ilwr(uint8_t field, uint8_t dest, uint8_t base)
 
 void VectorUnit::ior(uint8_t dest, uint8_t reg1, uint8_t reg2)
 {
-    set_int(dest, int_gpr[reg1] | int_gpr[reg2]);
-    printf("[VU] IOR: $%04X (%d, %d, %d)\n", int_gpr[dest], dest, reg1, reg2);
+    set_int(dest, int_gpr[reg1].u | int_gpr[reg2].u);
+    printf("[VU] IOR: $%04X (%d, %d, %d)\n", int_gpr[dest].u, dest, reg1, reg2);
 }
 
 void VectorUnit::isub(uint8_t dest, uint8_t reg1, uint8_t reg2)
 {
-    set_int(dest, int_gpr[reg1] - int_gpr[reg2]);
-    printf("[VU] ISUB: $%04X (%d, %d, %d)\n", int_gpr[dest], dest, reg1, reg2);
+    set_int(dest, int_gpr[reg1].s - int_gpr[reg2].s);
+    printf("[VU] ISUB: $%04X (%d, %d, %d)\n", int_gpr[dest].u, dest, reg1, reg2);
 }
 
 void VectorUnit::isubiu(uint8_t dest, uint8_t source, uint16_t imm)
 {
-    set_int(dest, int_gpr[source] - imm);
-    printf("[VU] ISUBIU: $%04X (%d, %d, $%04X)\n", int_gpr[dest], dest, source, imm);
+    set_int(dest, int_gpr[source].s - imm);
+    printf("[VU] ISUBIU: $%04X (%d, %d, $%04X)\n", int_gpr[dest].u, dest, source, imm);
 }
 
 void VectorUnit::isw(uint8_t field, uint8_t source, uint8_t base, int32_t offset)
 {
-    uint32_t addr = (int_gpr[base] << 4) + offset;
-    printf("[VU] ISW: $%08X: $%04X ($%02X, %d, %d)\n", addr, int_gpr[source], field, source, base);
+    uint32_t addr = ((int32_t)int_gpr[base].s << 4) + offset;
+    printf("[VU] ISW: $%08X: $%04X ($%02X, %d, %d)\n", addr, int_gpr[source].u, field, source, base);
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
         {
-            write_data<uint32_t>(addr + (i * 4), int_gpr[source]);
+            write_data<uint32_t>(addr + (i * 4), int_gpr[source].u);
         }
     }
 }
 
 void VectorUnit::iswr(uint8_t field, uint8_t source, uint8_t base)
 {
-    uint32_t addr = int_gpr[base] << 4;
+    uint32_t addr = (int32_t)int_gpr[base].u << 4;
     printf("[VU] ISWR to $%08X!\n", addr);
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
         {
             printf("($%02X, %d, %d)\n", field, source, base);
-            write_data<uint32_t>(addr + (i * 4), int_gpr[source]);
+            write_data<uint32_t>(addr + (i * 4), int_gpr[source].u);
         }
     }
 }
@@ -708,7 +725,7 @@ void VectorUnit::itof12(uint8_t field, uint8_t dest, uint8_t source)
 
 void VectorUnit::lq(uint8_t field, uint8_t dest, uint8_t base, int32_t offset)
 {
-    uint32_t addr = (int_gpr[base] * 16) + offset;
+    uint32_t addr = ((int32_t)int_gpr[base].s * 16) + offset;
     printf("[VU] LQ: $%08X (%d, %d, $%08X)\n", addr, dest, base, offset);
     for (int i = 0; i < 4; i++)
     {
@@ -724,7 +741,7 @@ void VectorUnit::lq(uint8_t field, uint8_t dest, uint8_t base, int32_t offset)
 void VectorUnit::lqi(uint8_t field, uint8_t dest, uint8_t base)
 {
     printf("[VU] LQI: ");
-    uint32_t addr = int_gpr[base] * 16;
+    uint32_t addr = (uint32_t)int_gpr[base].u * 16;
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
@@ -733,7 +750,7 @@ void VectorUnit::lqi(uint8_t field, uint8_t dest, uint8_t base)
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
     }
-    set_int(base, int_gpr[base] + 1);
+    set_int(base, int_gpr[base].u + 1);
     printf("\n");
 }
 
@@ -864,7 +881,7 @@ void VectorUnit::mfir(uint8_t field, uint8_t dest, uint8_t source)
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
-            gpr[dest].s[i] = (int32_t)(int16_t)int_gpr[source];
+            gpr[dest].s[i] = (int32_t)int_gpr[source].s;
     }
 }
 
@@ -1271,7 +1288,7 @@ void VectorUnit::rxor(uint8_t fsf, uint8_t source)
 
 void VectorUnit::sq(uint8_t field, uint8_t source, uint8_t base, int32_t offset)
 {
-    uint32_t addr = (int_gpr[base] << 4) + offset;
+    uint32_t addr = ((int32_t)int_gpr[base].s << 4) + offset;
     printf("[VU] SQ to $%08X!\n", addr);
     for (int i = 0; i < 4; i++)
     {
@@ -1286,7 +1303,7 @@ void VectorUnit::sq(uint8_t field, uint8_t source, uint8_t base, int32_t offset)
 
 void VectorUnit::sqi(uint8_t field, uint8_t source, uint8_t base)
 {
-    uint32_t addr = int_gpr[base] << 4;
+    uint32_t addr = (uint32_t)int_gpr[base].u << 4;
     printf("[VU] SQI to $%08X!\n", addr);
     for (int i = 0; i < 4; i++)
     {
@@ -1298,7 +1315,7 @@ void VectorUnit::sqi(uint8_t field, uint8_t source, uint8_t base)
     }
     printf("\n");
     if (base)
-        int_gpr[base]++;
+        int_gpr[base].u++;
 }
 
 void VectorUnit::vu_sqrt(uint8_t ftf, uint8_t source)
@@ -1401,7 +1418,7 @@ void VectorUnit::xgkick(uint8_t is)
         printf("[VU] ERROR: XGKICK called on VU0!\n");
         exit(1);
     }
-    printf("[VU1] XGKICK: Addr $%08X\n", int_gpr[is] * 16);
+    printf("[VU1] XGKICK: Addr $%08X\n", int_gpr[is].u * 16);
     while (transferring_GIF)
     {
         //If another XGKICK is already running, the proper behavior is to stall the VU until the transfer finishes.
@@ -1417,7 +1434,7 @@ void VectorUnit::xgkick(uint8_t is)
     XGKICK_cycles = 0;
     gif->request_PATH(1);
     transferring_GIF = true;
-    GIF_addr = int_gpr[is] * 16;
+    GIF_addr = (uint32_t)int_gpr[is].u * 16;
 }
 
 #define printf(fmt, ...)(0)

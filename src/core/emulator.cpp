@@ -2,10 +2,12 @@
 #include <cstdio>
 #include <cstdlib>
 #include <sstream>
+#include <fenv.h>
 #include "emulator.hpp"
 
 #define CYCLES_PER_FRAME 4900000
 #define VBLANK_START CYCLES_PER_FRAME * 0.75
+#pragma STDC FENV_ACCESS ON
 
 Emulator::Emulator() :
     cdvd(this), cp0(&dmac), cpu(&cp0, &fpu, this, (uint8_t*)&scratchpad, &vu0),
@@ -43,6 +45,8 @@ void Emulator::run()
     gs.start_frame();
     instructions_run = 0;
     VBLANK_sent = false;
+    const int originalRounding = fegetround();
+    fesetround(FE_TOWARDZERO);
     while (instructions_run < CYCLES_PER_FRAME)
     {
         int cycles = cpu.run(8);
@@ -80,6 +84,7 @@ void Emulator::run()
             gs.render_CRT();
         }
     }
+    fesetround(originalRounding);
     //VBLANK end
     iop_request_IRQ(11);
     gs.set_VBLANK(false);
