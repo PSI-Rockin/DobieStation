@@ -231,7 +231,7 @@ void EmotionInterpreter::bltzal(EmotionEngine &cpu, uint32_t instruction)
     offset <<= 2;
     int64_t reg = (instruction >> 21) & 0x1F;
     reg = cpu.get_gpr<int64_t>(reg);
-    cpu.set_gpr<uint32_t>(31, cpu.get_PC() + 8);
+    cpu.set_gpr<uint64_t>(31, cpu.get_PC() + 8);
     cpu.branch(reg < 0, offset);
 }
 
@@ -241,7 +241,7 @@ void EmotionInterpreter::bltzall(EmotionEngine &cpu, uint32_t instruction)
     offset <<= 2;
     int64_t reg = (instruction >> 21) & 0x1F;
     reg = cpu.get_gpr<int64_t>(reg);
-    cpu.set_gpr<uint32_t>(31, cpu.get_PC() + 8);
+    cpu.set_gpr<uint64_t>(31, cpu.get_PC() + 8);
     cpu.branch_likely(reg < 0, offset);
 }
 
@@ -269,7 +269,7 @@ void EmotionInterpreter::bgezal(EmotionEngine &cpu, uint32_t instruction)
     offset <<= 2;
     int64_t reg = (instruction >> 21) & 0x1F;
     reg = cpu.get_gpr<int64_t>(reg);
-    cpu.set_gpr<uint32_t>(31, cpu.get_PC() + 8);
+    cpu.set_gpr<uint64_t>(31, cpu.get_PC() + 8);
     cpu.branch(reg >= 0, offset);
 }
 
@@ -279,7 +279,7 @@ void EmotionInterpreter::bgezall(EmotionEngine &cpu, uint32_t instruction)
     offset <<= 2;
     int64_t reg = (instruction >> 21) & 0x1F;
     reg = cpu.get_gpr<int64_t>(reg);
-    cpu.set_gpr<uint32_t>(31, cpu.get_PC() + 8);
+    cpu.set_gpr<uint64_t>(31, cpu.get_PC() + 8);
     cpu.branch_likely(reg >= 0, offset);
 }
 

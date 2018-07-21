@@ -231,7 +231,6 @@ void EmotionInterpreter::fpu_c_le_s(Cop1 &fpu, uint32_t instruction)
 
 void EmotionInterpreter::cop_bc1(EmotionEngine &cpu, uint32_t instruction)
 {
-    const static char* ops[] = {"bc1f", "bc1t", "bc1fl", "bc1tl"};
     const static bool likely[] = {false, false, true, true};
     const static bool op_true[] = {false, true, false, true};
     int32_t offset = ((int16_t)(instruction & 0xFFFF)) << 2;

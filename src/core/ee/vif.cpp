@@ -339,6 +339,13 @@ void VectorInterface::handle_UNPACK(uint32_t value)
                 for (int i = 0; i < 4; i++)
                     quad._u32[i] = buffer[0];
                 break;
+            case 0x4:
+                //V2-32 - Z and W are "indeterminate"
+                quad._u32[0] = buffer[0];
+                quad._u32[1] = buffer[1];
+                quad._u32[2] = 0;
+                quad._u32[3] = 0;
+                break;
             case 0x5:
                 //V2-16 - Z and W are "indeterminate" (but actually determinate)
                 //TODO: find the needed values for Z and W

@@ -18,6 +18,11 @@ union VU_GPR
     int32_t s[4];
 };
 
+struct VPU_STAT
+{
+    bool vu1_running;
+};
+
 class GraphicsInterface;
 
 class VectorUnit
@@ -96,7 +101,10 @@ class VectorUnit
         void set_gpr_f(int index, int field, float value);
         void set_gpr_u(int index, int field, uint32_t value);
         void set_int(int index, uint16_t value);
+        void set_status(uint32_t value);
+        void set_R(uint32_t value);
         void set_I(uint32_t value);
+        void set_Q(uint32_t value);
 
         uint32_t cfc(int index);
         void ctc(int index, uint32_t value);
@@ -252,9 +260,24 @@ inline void VectorUnit::set_int(int index, uint16_t value)
         int_gpr[index] = value;
 }
 
+inline void VectorUnit::set_status(uint32_t value)
+{
+    status = value;
+}
+
+inline void VectorUnit::set_R(uint32_t value)
+{
+    R.u = value;
+}
+
 inline void VectorUnit::set_I(uint32_t value)
 {
     I.u = value;
+}
+
+inline void VectorUnit::set_Q(uint32_t value)
+{
+    Q.u = value;
 }
 
 #endif // VU_HPP
