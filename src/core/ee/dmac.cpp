@@ -204,11 +204,10 @@ void DMAC::process_VIF0(int cycles)
 
 void DMAC::process_VIF1(int cycles)
 {
-    if (!mfifo_handler(VIF1))
-        return;
-
     while (cycles)
     {
+        if (!mfifo_handler(VIF1))
+            return;
         cycles--;
         if (channels[VIF1].quadword_count)
         {
@@ -237,11 +236,10 @@ void DMAC::process_VIF1(int cycles)
 
 void DMAC::process_GIF(int cycles)
 {
-    if (!mfifo_handler(GIF))
-        return;
-
     while (cycles)
     {
+        if (!mfifo_handler(GIF))
+            return;
         cycles--;
         if (channels[GIF].quadword_count)
         {

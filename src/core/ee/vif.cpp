@@ -256,7 +256,7 @@ void VectorInterface::MSCAL(uint32_t addr)
 
 void VectorInterface::init_UNPACK(uint32_t value)
 {
-    printf("[VIF] UNPACK: $%08X\n", value);
+    //printf("[VIF] UNPACK: $%08X\n", value);
     unpack.addr = (imm & 0x3FF) * 16;
     unpack.sign_extend = !(imm & (1 << 14));
     unpack.masked = (command >> 4) & 0x1;
@@ -268,7 +268,7 @@ void VectorInterface::init_UNPACK(uint32_t value)
     int vl = command & 0x3;
     int vn = (command >> 2) & 0x3;
     int num = (value >> 16) & 0xFF;
-    printf("vl: %d vn: %d num: %d masked: %d\n", vl, vn, num, unpack.masked);
+    //printf("vl: %d vn: %d num: %d masked: %d\n", vl, vn, num, unpack.masked);
     unpack.words_per_op = (32 >> vl) * (vn + 1);
     unpack.words_per_op = (unpack.words_per_op + 0x1F) & ~0x1F; //round up to nearest 32 before dividing
     unpack.words_per_op /= 32;
@@ -282,7 +282,7 @@ void VectorInterface::init_UNPACK(uint32_t value)
     {
         //Skip write
         command_len = unpack.words_per_op * num;
-        printf("[VIF] Command len: %d\n", command_len);
+        //printf("[VIF] Command len: %d\n", command_len);
     }
     else
     {
@@ -437,20 +437,21 @@ void VectorInterface::feed_DMA(uint128_t quad)
 
 void VectorInterface::disasm_micromem()
 {
-    using namespace std;
-    ofstream file("microprogram.txt");
-    if (!file.is_open())
-    {
-        printf("Failed to open\n");
-        exit(1);
-    }
-
-    //Check for branch targets
+    //Check for branch targets and also see if the microprogram is the same as the one previously disassembled
+    static uint64_t last_micro[0x4000 / 8];
+    bool should_disasm = false;
     bool is_branch_target[0x4000 / 8];
     memset(is_branch_target, 0, 0x4000 / 8);
     for (int i = 0; i < 0x4000; i += 8)
     {
         uint32_t lower = vu->read_instr<uint32_t>(i);
+
+        uint64_t instr = vu->read_instr<uint64_t>(i);
+        if (instr != last_micro[i / 8])
+        {
+            should_disasm = true;
+            last_micro[i / 8] = instr;
+        }
 
         //If the lower instruction is a branch, set branch target to true for the location it points to
         if (VU_Disasm::is_branch(lower))
@@ -463,6 +464,17 @@ void VectorInterface::disasm_micromem()
             if (addr < 0x4000)
                 is_branch_target[addr / 8] = true;
         }
+    }
+
+    if (!should_disasm)
+        return;
+
+    using namespace std;
+    ofstream file("microprogram.txt");
+    if (!file.is_open())
+    {
+        printf("Failed to open\n");
+        exit(1);
     }
 
     for (int i = 0; i < 0x4000; i += 8)

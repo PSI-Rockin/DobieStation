@@ -87,6 +87,9 @@ void VU_Interpreter::upper(VectorUnit &vu, uint32_t instr)
         case 0x2A:
             mul(vu, instr);
             break;
+        case 0x2B:
+            max(vu, instr);
+            break;
         case 0x2C:
             sub(vu, instr);
             break;
@@ -245,6 +248,15 @@ void VU_Interpreter::mul(VectorUnit &vu, uint32_t instr)
     uint8_t reg2 = (instr >> 16) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
     vu.mul(field, dest, reg1, reg2);
+}
+
+void VU_Interpreter::max(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t dest = (instr >> 6) & 0x1F;
+    uint8_t reg1 = (instr >> 11) & 0x1F;
+    uint8_t reg2 = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.max(field, dest, reg1, reg2);
 }
 
 void VU_Interpreter::sub(VectorUnit &vu, uint32_t instr)
@@ -572,6 +584,9 @@ void VU_Interpreter::lower1_special(VectorUnit &vu, uint32_t instr)
         case 0x72:
             eleng(vu, instr);
             break;
+        case 0x73:
+            erleng(vu, instr);
+            break;
         case 0x78:
             esqrt(vu, instr);
             break;
@@ -676,6 +691,12 @@ void VU_Interpreter::eleng(VectorUnit &vu, uint32_t instr)
 {
     uint8_t source = (instr >> 11) & 0x1F;
     vu.eleng(source);
+}
+
+void VU_Interpreter::erleng(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t source = (instr >> 11) & 0x1F;
+    vu.erleng(source);
 }
 
 void VU_Interpreter::esqrt(VectorUnit &vu, uint32_t instr)

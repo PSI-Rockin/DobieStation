@@ -536,6 +536,7 @@ uint32_t GraphicsSynthesizerThread::read_PSMCT32_block(uint32_t base, uint32_t w
     addr += (block * 256);
     addr += (column * 64);
     addr += (pixel * 4);
+    addr &= 0x003FFFFC;
     return *(uint32_t*)&local_mem[addr];
 }
 
@@ -1673,7 +1674,7 @@ void GraphicsSynthesizerThread::tex_lookup(uint16_t u, uint16_t v, const RGBAQ_R
         case 0x13:
         {
             uint8_t entry;
-            entry = local_mem[tex_base + coord];
+            entry = local_mem[(tex_base + coord) & 0x003FFFFF];
             uint32_t color;
             if (current_ctx->tex0.use_CSM2)
             {
@@ -1693,9 +1694,9 @@ void GraphicsSynthesizerThread::tex_lookup(uint16_t u, uint16_t v, const RGBAQ_R
         {
             uint8_t entry;
             if (coord & 0x1)
-                entry = local_mem[tex_base + (coord >> 1)] >> 4;
+                entry = local_mem[(tex_base + (coord >> 1)) & 0x003FFFFF] >> 4;
             else
-                entry = local_mem[tex_base + (coord >> 1)] & 0xF;
+                entry = local_mem[(tex_base + (coord >> 1)) & 0x003FFFFF] & 0xF;
             if (current_ctx->tex0.use_CSM2)
             {
                 tex_color.r = entry << 4;

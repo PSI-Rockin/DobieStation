@@ -123,6 +123,7 @@ class VectorUnit
         void div(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2);
         void eleng(uint8_t source);
         void esqrt(uint8_t fsf, uint8_t source);
+        void erleng(uint8_t source);
         void fcand(uint32_t value);
         void fcget(uint8_t dest);
         void fcset(uint32_t value);
