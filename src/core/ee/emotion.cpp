@@ -156,7 +156,7 @@ int EmotionEngine::run(int cycles_to_run)
                 }
                 if (PC >= 0x82000 && new_PC == 0x81FC0)
                     printf("[EE] Entering BIFCO loop\n");
-                PC = new_PC;;
+                PC = new_PC;
                 /*if (PC == 0x1001E0)
                     PC = 0x100204;
                 if (PC == 0x10021C)

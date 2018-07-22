@@ -4,6 +4,14 @@
 
 struct COP1_CONTROL
 {
+    bool su;
+    bool so;
+    bool sd;
+    bool si;
+    bool u;
+    bool o;
+    bool d;
+    bool i;
     bool condition;
 };
 
@@ -22,6 +30,8 @@ class Cop1
         COP1_REG accumulator;
 
         float convert(uint32_t value);
+        void check_overflow(uint32_t& dest, bool set_flags);
+        void check_underflow(uint32_t& dest, bool set_flags);
     public:
         Cop1();
 

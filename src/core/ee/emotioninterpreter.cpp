@@ -319,7 +319,7 @@ void EmotionInterpreter::jal(EmotionEngine &cpu, uint32_t instruction)
     uint32_t PC = cpu.get_PC();
     addr += (PC + 4) & 0xF0000000;
     cpu.jp(addr);
-    cpu.set_gpr<uint32_t>(31, PC + 8);
+    cpu.set_gpr<uint64_t>(31, PC + 8);
 }
 
 void EmotionInterpreter::beq(EmotionEngine &cpu, uint32_t instruction)

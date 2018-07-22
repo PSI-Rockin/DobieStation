@@ -191,8 +191,20 @@ void GraphicsSynthesizerThread::memdump()
 void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
 {
     printf("DISPLAY2: (%d, %d) wh: (%d, %d)\n", reg.DISPLAY2.x >> 2, reg.DISPLAY2.y, reg.DISPLAY2.width >> 2, reg.DISPLAY2.height);
-    int width = reg.DISPLAY2.width >> 2;
-    for (int y = 0; y < reg.DISPLAY2.height; y++)
+    DISPLAY &currentDisplay = reg.DISPLAY1;
+    DISPFB &currentFB = reg.DISPFB1;
+    if (reg.PMODE.circuit2 == false)
+    {
+        currentDisplay = reg.DISPLAY1;
+        currentFB = reg.DISPFB1;
+    }
+    else
+    {
+        currentDisplay = reg.DISPLAY2;
+        currentFB = reg.DISPFB2;
+    }
+    int width = currentDisplay.width >> 2;
+    for (int y = 0; y < currentDisplay.height; y++)
     {
         for (int x = 0; x < width; x++)
         {
@@ -201,13 +213,13 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
 
             if (reg.SMODE2.frame_mode && reg.SMODE2.interlaced)
                 pixel_y *= 2;
-            if (pixel_x >= width || pixel_y >= reg.DISPLAY2.height)
+            if (pixel_x >= width || pixel_y >= currentDisplay.height)
                 continue;
-            uint32_t scaled_x = reg.DISPFB2.x + x;
-            uint32_t scaled_y = reg.DISPFB2.y + y;
-            scaled_x *= reg.DISPFB2.width;
+            uint32_t scaled_x = currentFB.x + x;
+            uint32_t scaled_y = currentFB.y + y;
+            scaled_x *= currentFB.width;
             scaled_x /= width;
-            uint32_t value = read_PSMCT32_block(reg.DISPFB2.frame_base * 4, reg.DISPFB2.width, scaled_x, scaled_y);
+            uint32_t value = read_PSMCT32_block(currentFB.frame_base * 4, currentFB.width, scaled_x, scaled_y);
             target[pixel_x + (pixel_y * width)] = value | 0xFF000000;
 
             if (reg.SMODE2.frame_mode && reg.SMODE2.interlaced)

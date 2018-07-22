@@ -241,8 +241,18 @@ void GS_REGISTERS::get_resolution(int &w, int &h)
 
 void GS_REGISTERS::get_inner_resolution(int &w, int &h)
 {
-    w = DISPLAY2.width >> 2;
-    h = DISPLAY2.height;
+    DISPLAY &currentDisplay = DISPLAY1;
+
+    if (PMODE.circuit2 == false)
+    {
+        currentDisplay = DISPLAY1;
+    }
+    else
+    {
+        currentDisplay = DISPLAY2;
+    }
+    w = currentDisplay.width >> 2;
+    h = currentDisplay.height;
 }
 void GS_REGISTERS::set_VBLANK(bool is_VBLANK)
 {
