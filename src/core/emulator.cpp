@@ -7,7 +7,6 @@
 
 #define CYCLES_PER_FRAME 4900000
 #define VBLANK_START CYCLES_PER_FRAME * 0.75
-#pragma STDC FENV_ACCESS ON
 
 Emulator::Emulator() :
     cdvd(this), cp0(&dmac), cpu(&cp0, &fpu, this, (uint8_t*)&scratchpad, &vu0),

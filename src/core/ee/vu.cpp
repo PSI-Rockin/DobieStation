@@ -40,14 +40,16 @@ void VectorUnit::reset()
     new_Q_instance.u = 0;
     flush_pipes();
 
-    for (int i = 1; i < 32; i++) {
+    for (int i = 1; i < 32; i++)
+    {
         gpr[i].f[0] = 0.0;
         gpr[i].f[1] = 0.0;
         gpr[i].f[2] = 0.0;
         gpr[i].f[3] = 0.0;        
     }
 
-    for (int i = 0; i < 16; i++) {
+    for (int i = 0; i < 16; i++)
+    {
         int_gpr[i].u = 0;
     }
 }
