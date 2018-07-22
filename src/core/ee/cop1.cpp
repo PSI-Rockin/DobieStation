@@ -360,18 +360,18 @@ void Cop1::c_f_s()
 
 void Cop1::c_lt_s(int reg1, int reg2)
 {
-    control.condition = gpr[reg1].f < gpr[reg2].f;
+    control.condition = convert(gpr[reg1].u) < convert(gpr[reg2].u);
     printf("[FPU] c.lt.s: %f(%d), %f(%d)\n", gpr[reg1].f, reg1, gpr[reg2].f, reg2);
 }
 
 void Cop1::c_eq_s(int reg1, int reg2)
 {
-    control.condition = gpr[reg1].f == gpr[reg2].f;
+    control.condition = convert(gpr[reg1].u) == convert(gpr[reg2].u);
     printf("[FPU] c.eq.s: %f(%d), %f(%d)\n", gpr[reg1].f, reg1, gpr[reg2].f, reg2);
 }
 
 void Cop1::c_le_s(int reg1, int reg2)
 {
-    control.condition = gpr[reg1].f <= gpr[reg2].f;
+    control.condition = convert(gpr[reg1].u) <= convert(gpr[reg2].u);
     printf("[FPU] c.le.s: %f(%d), %f(%d)\n", gpr[reg1].f, reg1, gpr[reg2].f, reg2);
 }
