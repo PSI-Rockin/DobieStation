@@ -56,6 +56,7 @@ set(SOURCES
         src/core/emulator.cpp
         src/core/gif.cpp
         src/core/gs.cpp
+	src/core/gsmem.cpp
         src/core/gsthread.cpp
         src/core/gsregisters.cpp
         src/core/gscontext.cpp
@@ -106,6 +107,7 @@ set(HEADERS
 	src/core/emulator.hpp
         src/core/gif.hpp
         src/core/gs.hpp
+	src/core/gsmem.hpp
         src/core/gsthread.hpp
         src/core/gsregisters.hpp
         src/core/circularFIFO.hpp

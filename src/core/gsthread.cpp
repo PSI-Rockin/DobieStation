@@ -5,10 +5,22 @@
 #include <fstream>
 
 #include "gsthread.hpp"
+#include "gsmem.hpp"
 
 using namespace std;
 
-#define printf(fmt, ...)(0)
+//Swizzling tables - we declare these outside the class to prevent a stack overflow
+//Globals are allocated in a different memory segment of the executable
+static uint32_t page_PSMCT32[32][32][64];
+static uint32_t page_PSMCT32Z[32][32][64];
+static uint32_t page_PSMCT16[32][64][64];
+static uint32_t page_PSMCT16S[32][64][64];
+static uint32_t page_PSMCT16Z[32][64][64];
+static uint32_t page_PSMCT16SZ[32][64][64];
+static uint32_t page_PSMCT8[32][64][128];
+static uint32_t page_PSMCT4[32][128][128];
+
+//#define printf(fmt, ...)(0)
 
 /**
   * ~ GS notes ~
@@ -53,6 +65,44 @@ GraphicsSynthesizerThread::GraphicsSynthesizerThread()
 {
     frame_complete = false;
     local_mem = nullptr;
+
+    //Initialize swizzling tables
+    for (int block = 0; block < 32; block++)
+    {
+        for (int y = 0; y < 32; y++)
+        {
+            for (int x = 0; x < 64; x++)
+            {
+                uint32_t column = columnTable32[y & 0x7][x & 0x7];
+                page_PSMCT32[block][y][x] = (blockid_PSMCT32(block, 0, x, y) << 6) + column;
+                page_PSMCT32Z[block][y][x] = (blockid_PSMCT32Z(block, 0, x, y) << 6) + column;
+            }
+        }
+
+        for (int y = 0; y < 64; y++)
+        {
+            for (int x = 0; x < 64; x++)
+            {
+                uint32_t column = columnTable16[y & 0x7][x & 0xF];
+                page_PSMCT16[block][y][x] = (blockid_PSMCT16(block, 0, x, y) << 7) + column;
+                page_PSMCT16S[block][y][x] = (blockid_PSMCT16S(block, 0, x, y) << 7) + column;
+                page_PSMCT16Z[block][y][x] = (blockid_PSMCT16Z(block, 0, x, y) << 7) + column;
+                page_PSMCT16SZ[block][y][x] = (blockid_PSMCT16SZ(block, 0, x, y) << 7) + column;
+            }
+        }
+
+        for (int y = 0; y < 64; y++)
+        {
+            for (int x = 0; x < 128; x++)
+                page_PSMCT8[block][y][x] = (blockid_PSMCT8(block, 0, x, y) << 8) + columnTable8[y & 0xF][x & 0xF];
+        }
+
+        for (int y = 0; y < 128; y++)
+        {
+            for (int x = 0; x < 128; x++)
+                page_PSMCT4[block][y][x] = (blockid_PSMCT4(block, 0, x, y) << 9) + columnTable4[y & 0xF][x & 0x1F];
+        }
+    }
 }
 
 GraphicsSynthesizerThread::~GraphicsSynthesizerThread()
@@ -274,9 +324,6 @@ void GraphicsSynthesizerThread::dump_texture(uint32_t* target, uint32_t start_ad
     printf("[GS_t] Done dumping\n");
 }
 
-
-
-
 void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
 {
     if (reg.write64(addr, value))
@@ -390,6 +437,12 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             printf("Width: %d\n", TEXCLUT.width);
             printf("X: %d\n", TEXCLUT.x);
             printf("Y: %d\n", TEXCLUT.y);
+            break;
+        case 0x003B:
+            printf("TEXA: $%08X_%08X\n", value >> 32, value);
+            TEXA.alpha0 = value & 0xFF;
+            TEXA.trans_black = value & (1 << 15);
+            TEXA.alpha1 = (value >> 32) & 0xFF;
             break;
         case 0x003F:
             printf("TEXFLUSH\n");
@@ -521,157 +574,215 @@ void GraphicsSynthesizerThread::set_XYZ(uint32_t x, uint32_t y, uint32_t z, bool
     vertex_kick(drawing_kick);
 }
 
+uint32_t GraphicsSynthesizerThread::blockid_PSMCT32(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
+{
+    return block + ((y & ~0x1F) * (width / 64)) + ((x >> 1) & ~0x1F) + blockTable32[(y >> 3) & 0x3][(x >> 3) & 0x7];
+}
+
+uint32_t GraphicsSynthesizerThread::blockid_PSMCT32Z(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
+{
+    return block + ((y & ~0x1F) * (width / 64)) + ((x >> 1) & ~0x1F) + blockTable32Z[(y >> 3) & 0x3][(x >> 3) & 0x7];
+}
+
+uint32_t GraphicsSynthesizerThread::blockid_PSMCT16(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
+{
+    return block + ((y >> 1) & ~0x1F) * (width / 64) + ((x >> 1) & ~0x1F) + blockTable16[(y >> 3) & 7][(x >> 4) & 3];
+}
+
+uint32_t GraphicsSynthesizerThread::blockid_PSMCT16S(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
+{
+    return block + ((y >> 1) & ~0x1F) * (width / 64) + ((x >> 1) & ~0x1F) + blockTable16S[(y >> 3) & 7][(x >> 4) & 3];
+}
+
+uint32_t GraphicsSynthesizerThread::blockid_PSMCT16Z(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
+{
+    return block + ((y >> 1) & ~0x1F) * (width / 64) + ((x >> 1) & ~0x1F) + blockTable16Z[(y >> 3) & 7][(x >> 4) & 3];
+}
+
+uint32_t GraphicsSynthesizerThread::blockid_PSMCT16SZ(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
+{
+    return block + ((y >> 1) & ~0x1F) * (width / 64) + ((x >> 1) & ~0x1F) + blockTable16SZ[(y >> 3) & 7][(x >> 4) & 3];
+}
+
+uint32_t GraphicsSynthesizerThread::blockid_PSMCT8(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
+{
+    return block + ((y >> 1) & ~0x1F) * (width / 128) + ((x >> 2) & ~0x1F) + blockTable8[(y >> 4) & 3][(x >> 4) & 7];
+}
+
+uint32_t GraphicsSynthesizerThread::blockid_PSMCT4(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
+{
+    return block + ((y >> 2) & ~0x1F) * (width / 128) + ((x >> 2) & ~0x1F) + blockTable4[(y >> 4) & 7][(x >> 5) & 3];
+}
+
+uint32_t GraphicsSynthesizerThread::addr_PSMCT32(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
+{
+    uint32_t page = ((block >> 5) + (y >> 5) * width + (x >> 6));
+    uint32_t addr = (page << 11) + page_PSMCT32[block & 0x1F][y & 0x1F][x & 0x3F];
+    return (addr << 2) & 0x003FFFFC;
+}
+
+uint32_t GraphicsSynthesizerThread::addr_PSMCT32Z(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
+{
+    uint32_t page = ((block >> 5) + (y >> 5) * width + (x >> 6));
+    uint32_t addr = (page << 11) + page_PSMCT32Z[block & 0x1F][y & 0x1F][x & 0x3F];
+    return (addr << 2) & 0x003FFFFC;
+}
+
+uint32_t GraphicsSynthesizerThread::addr_PSMCT16(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
+{
+    uint32_t page = ((block >> 5) + (y >> 6) * width + (x >> 6));
+    uint32_t addr = (page << 12) + page_PSMCT16[block & 0x1F][y & 0x3F][x & 0x3F];
+    return (addr << 1) & 0x003FFFFE;
+}
+
+uint32_t GraphicsSynthesizerThread::addr_PSMCT16S(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
+{
+    uint32_t page = ((block >> 5) + (y >> 6) * width + (x >> 6));
+    uint32_t addr = (page << 12) + page_PSMCT16S[block & 0x1F][y & 0x3F][x & 0x3F];
+    return (addr << 1) & 0x003FFFFE;
+}
+
+uint32_t GraphicsSynthesizerThread::addr_PSMCT16Z(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
+{
+    uint32_t page = ((block >> 5) + (y >> 6) * width + (x >> 6));
+    uint32_t addr = (page << 12) + page_PSMCT16Z[block & 0x1F][y & 0x3F][x & 0x3F];
+    return (addr << 1) & 0x003FFFFE;
+}
+
+uint32_t GraphicsSynthesizerThread::addr_PSMCT16SZ(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
+{
+    uint32_t page = ((block >> 5) + (y >> 6) * width + (x >> 6));
+    uint32_t addr = (page << 12) + page_PSMCT16SZ[block & 0x1F][y & 0x3F][x & 0x3F];
+    return (addr << 1) & 0x003FFFFE;
+}
+
+uint32_t GraphicsSynthesizerThread::addr_PSMCT8(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
+{
+    uint32_t page = ((block >> 5) + (y >> 6) * (width >> 1) + (x >> 7));
+    uint32_t addr = (page << 13) + page_PSMCT8[block & 0x1F][y & 0x3F][x & 0x7F];
+    return addr & 0x003FFFFF;
+}
+
+uint32_t GraphicsSynthesizerThread::addr_PSMCT4(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
+{
+    uint32_t page = ((block >> 5) + (y >> 7) * (width >> 1) + (x >> 7));
+    uint32_t addr = (page << 14) + page_PSMCT4[block & 0x1F][y & 0x7F][x & 0x7F];
+    return addr & 0x007FFFFF;
+}
+
 uint32_t GraphicsSynthesizerThread::read_PSMCT32_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y)
 {
-    const static int blocks[4][8] =
-    {
-        {0, 1, 4, 5, 16, 17, 20, 21},
-        {2, 3, 6, 7, 18, 19, 22, 23},
-        {8, 9, 12, 13, 24, 25, 28, 29},
-        {10, 11, 14, 15, 26, 27, 30, 31}
-    };
-    const static int pixels[2][8]
-    {
-        {0, 1, 4, 5, 8, 9, 12, 13},
-        {2, 3, 6, 7, 10, 11, 14, 15}
-    };
-    uint32_t page = base / (2048 * 4);
-    if (width)
-        page += (x / 64) % (width / 64);
+    uint32_t addr = addr_PSMCT32(base / 256, width / 64, x, y);
+    return *(uint32_t*)&local_mem[addr];
+}
 
-    page += (y / 32) * (width / 64);
-    uint32_t block = (base / 256) % 32;
-    block += blocks[(y / 8) % 4][(x / 8) % 8];
-    uint32_t column = (y / 2) % 4;
-    uint32_t pixel = pixels[y & 0x1][x % 8];
-    uint32_t addr = (page * 2048 * 4);
-    addr += (block * 256);
-    addr += (column * 64);
-    addr += (pixel * 4);
-    addr &= 0x003FFFFC;
+uint32_t GraphicsSynthesizerThread::read_PSMCT32Z_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y)
+{
+    uint32_t addr = addr_PSMCT32Z(base / 256, width / 64, x, y);
     return *(uint32_t*)&local_mem[addr];
 }
 
 uint16_t GraphicsSynthesizerThread::read_PSMCT16_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y)
 {
-    const static int blocks[8][4] =
-    {
-        {0, 2, 8, 10},
-        {1, 3, 9, 11},
-        {4, 6, 12, 14},
-        {5, 7, 13, 15},
-        {16, 18, 24, 26},
-        {17, 19, 25, 27},
-        {20, 22, 28, 30},
-        {21, 23, 29, 31}
-    };
-
-    const static int pixels[2][8] =
-    {
-        {0, 1, 4, 5, 8, 9, 12, 13},
-        {2, 3, 6, 7, 10, 11, 14, 15}
-    };
-
-    uint32_t page = base / (2048 * 4);
-    if (width)
-        page += (x / 64) % (width / 64);
-
-    page += (y / 64) * (width / 64);
-    uint32_t block = (base / 256) % 32;
-    block += blocks[(y / 8) % 8][(x / 16) % 4];
-    uint32_t column = (y / 2) % 4;
-    uint32_t pixel = pixels[y & 0x1][(x >> 1) % 0x8];
-
-    //printf("[GS_t] Read PSMCT16 (Base: $%08X Width: %d X: %d Y: %d)\n", base, width, x, y);
-    //printf("Page: %d Block: %d Column: %d Pixel: %d\n", page, block, column, pixel);
-
-    uint32_t addr = (page * 2048 * 4);
-    addr += (block * 256);
-    addr += (column * 64);
-    addr += (pixel * 4);
-    if (x & 0x1)
-        addr += 2;
-    addr &= 0x003FFFFE;
-    //printf("Addr: $%08X ($%04X)\n", addr, *(uint16_t*)&local_mem[addr]);
+    uint32_t addr = addr_PSMCT16(base / 256, width / 64, x, y);
     return *(uint16_t*)&local_mem[addr];
+}
+
+uint16_t GraphicsSynthesizerThread::read_PSMCT16S_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y)
+{
+    uint32_t addr = addr_PSMCT16S(base / 256, width / 64, x, y);
+    return *(uint16_t*)&local_mem[addr];
+}
+
+uint16_t GraphicsSynthesizerThread::read_PSMCT16Z_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y)
+{
+    uint32_t addr = addr_PSMCT16Z(base / 256, width / 64, x, y);
+    return *(uint16_t*)&local_mem[addr];
+}
+
+uint16_t GraphicsSynthesizerThread::read_PSMCT16SZ_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y)
+{
+    uint32_t addr = addr_PSMCT16SZ(base / 256, width / 64, x, y);
+    return *(uint16_t*)&local_mem[addr];
+}
+
+uint8_t GraphicsSynthesizerThread::read_PSMCT8_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y)
+{
+    uint32_t addr = addr_PSMCT8(base / 256, width / 64, x, y);
+    return local_mem[addr];
+}
+
+uint8_t GraphicsSynthesizerThread::read_PSMCT4_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y)
+{
+    uint32_t addr = addr_PSMCT4(base / 256, width / 64, x, y);
+    if (addr & 0x1)
+        return local_mem[addr >> 1] >> 4;
+    return local_mem[addr >> 1] & 0xF;
 }
 
 void GraphicsSynthesizerThread::write_PSMCT32_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y, uint32_t value)
 {
-    const static int blocks[4][8] =
-    {
-        {0, 1, 4, 5, 16, 17, 20, 21},
-        {2, 3, 6, 7, 18, 19, 22, 23},
-        {8, 9, 12, 13, 24, 25, 28, 29},
-        {10, 11, 14, 15, 26, 27, 30, 31}
-    };
-    const static int pixels[2][8]
-    {
-        {0, 1, 4, 5, 8, 9, 12, 13},
-        {2, 3, 6, 7, 10, 11, 14, 15}
-    };
-    uint32_t page = base / (2048 * 4);
-    if (width)
-        page += (x / 64) % (width / 64);
-    page += (y / 32) * (width / 64);
-    uint32_t block = (base / 256) % 32;
-    block += blocks[(y / 8) % 4][(x / 8) % 8];
-    uint32_t pixel = pixels[y & 0x1][x % 8];
-    uint32_t column = (y / 2) % 4;
-
-    uint32_t addr = (page * 2048 * 4);
-    addr += (block * 256);
-    addr += (column * 64);
-    addr += (pixel * 4);
-    addr &= 0x003FFFFC;
-    /*printf("[GS_t] Write PSMCT32 (Base: $%08X Width: %d X: %d Y: %d)\n", base, width, x, y);
-    printf("Page: %d Block: %d Column: %d Pixel: %d\n", page, block, column, pixel);
-    printf("Addr: $%08X\n", addr);*/
+    uint32_t addr = addr_PSMCT32(base / 256, width / 64, x, y);
     *(uint32_t*)&local_mem[addr] = value;
+}
+
+void GraphicsSynthesizerThread::write_PSMCT32Z_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y, uint32_t value)
+{
+    uint32_t addr = addr_PSMCT32Z(base / 256, width / 64, x, y);
+    *(uint32_t*)&local_mem[addr] = value;
+}
+
+void GraphicsSynthesizerThread::write_PSMCT24Z_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y, uint32_t value)
+{
+    uint32_t addr = addr_PSMCT32Z(base / 256, width / 64, x, y);
+    uint32_t old_mem = *(uint32_t*)&local_mem[addr];
+    *(uint32_t*)&local_mem[addr] = (old_mem & 0xFF000000) | value;
 }
 
 void GraphicsSynthesizerThread::write_PSMCT16_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y, uint16_t value)
 {
-    const static int blocks[8][4] =
-    {
-        {0, 2, 8, 10},
-        {1, 3, 9, 11},
-        {4, 6, 12, 14},
-        {5, 7, 13, 15},
-        {16, 18, 24, 26},
-        {17, 19, 25, 27},
-        {20, 22, 28, 30},
-        {21, 23, 29, 31}
-    };
-
-    const static int pixels[2][8] =
-    {
-        {0, 1, 4, 5, 8, 9, 12, 13},
-        {2, 3, 6, 7, 10, 11, 14, 15}
-    };
-
-    uint32_t page = base / (2048 * 4);
-    if (width)
-        page += (x / 64) % (width / 64);
-
-    page += (y / 64) * (width / 64);
-    uint32_t block = (base / 256) % 32;
-    block += blocks[(y / 8) % 8][(x / 16) % 4];
-    uint32_t column = (y / 2) % 4;
-    uint32_t pixel = pixels[y & 0x1][(x >> 1) % 8];
-
-    printf("[GS_t] Write PSMCT16 (Base: $%08X Width: %d X: %d Y: %d)\n", base, width, x, y);
-    printf("Page: %d Block: %d Column: %d Pixel: %d\n", page, block, column, pixel);
-
-    uint32_t addr = (page * 2048 * 4);
-    addr += (block * 256);
-    addr += (column * 64);
-    addr += (pixel * 4);
-    if (x & 0x1)
-        addr += 2;
-    addr &= 0x003FFFFE;
-    printf("Write to one-dimensional addr $%08X ($%04X)\n", addr, value);
+    uint32_t addr = addr_PSMCT16(base / 256, width / 64, x, y);
     *(uint16_t*)&local_mem[addr] = value;
+}
+
+void GraphicsSynthesizerThread::write_PSMCT16S_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y, uint16_t value)
+{
+    uint32_t addr = addr_PSMCT16S(base / 256, width / 64, x, y);
+    *(uint16_t*)&local_mem[addr] = value;
+}
+
+void GraphicsSynthesizerThread::write_PSMCT16Z_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y, uint16_t value)
+{
+    uint32_t addr = addr_PSMCT16Z(base / 256, width / 64, x, y);
+    *(uint16_t*)&local_mem[addr] = value;
+}
+
+void GraphicsSynthesizerThread::write_PSMCT16SZ_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y, uint16_t value)
+{
+    uint32_t addr = addr_PSMCT16SZ(base / 256, width / 64, x, y);
+    *(uint16_t*)&local_mem[addr] = value;
+}
+
+void GraphicsSynthesizerThread::write_PSMCT8_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y, uint8_t value)
+{
+    uint32_t addr = addr_PSMCT8(base / 256, width / 64, x, y);
+    local_mem[addr] = value;
+}
+
+void GraphicsSynthesizerThread::write_PSMCT4_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y, uint8_t value)
+{
+    uint32_t addr = addr_PSMCT4(base / 256, width / 64, x, y);
+    printf("x: %d y: %d $%08X\n", x, y, addr);
+    if (addr & 0x1)
+    {
+        local_mem[addr >> 1] &= ~0xF0;
+        local_mem[addr >> 1] |= value & 0xF0;
+    }
+    else
+    {
+        local_mem[addr >> 1] &= ~0xF;
+        local_mem[addr >> 1] |= value & 0xF;
+    }
 }
 
 //The "vertex kick" is the name given to the process of placing a vertex in the vertex queue.
@@ -685,44 +796,45 @@ void GraphicsSynthesizerThread::vertex_kick(bool drawing_kick)
     current_vtx.s = ST.s;
     current_vtx.t = ST.t;
     vtx_queue[0] = current_vtx;
+    //printf("Vkick: (%d, %d, %d)\n", current_vtx.x, current_vtx.y, current_vtx.z);
 
     num_vertices++;
     bool request_draw_kick = false;
     switch (PRIM.prim_type)
     {
-        case 0:
+        case 0: //Point
             num_vertices--;
             request_draw_kick = true;
             break;
-        case 1:
+        case 1: //Line
             if (num_vertices == 2)
             {
                 num_vertices = 0;
                 request_draw_kick = true;
             }
             break;
-        case 2:
+        case 2: //LineStrip
             if (num_vertices == 2)
             {
                 num_vertices--;
                 request_draw_kick = true;
             }
             break;
-        case 3:
+        case 3: //Triangle
             if (num_vertices == 3)
             {
                 num_vertices = 0;
                 request_draw_kick = true;
             }
             break;
-        case 4:
+        case 4: //TriangleStrip
             if (num_vertices == 3)
             {
                 num_vertices--;
                 request_draw_kick = true;
             }
             break;
-        case 5:
+        case 5: //TriangleFan
             if (num_vertices == 3)
             {
                 num_vertices--;
@@ -733,7 +845,7 @@ void GraphicsSynthesizerThread::vertex_kick(bool drawing_kick)
                 vtx_queue[1] = vtx_queue[2];
             }
             break;
-        case 6:
+        case 6: //Sprite
             if (num_vertices == 2)
             {
                 num_vertices = 0;
@@ -772,7 +884,8 @@ void GraphicsSynthesizerThread::render_primitive()
 
 bool GraphicsSynthesizerThread::depth_test(int32_t x, int32_t y, uint32_t z)
 {
-    uint32_t pos = x + (y * current_ctx->frame.width);
+    uint32_t base = current_ctx->zbuf.base_pointer;
+    uint32_t width = current_ctx->frame.width;
     switch (current_ctx->test.depth_method)
     {
         case 0: //FAIL
@@ -783,13 +896,16 @@ bool GraphicsSynthesizerThread::depth_test(int32_t x, int32_t y, uint32_t z)
             switch (current_ctx->zbuf.format)
             {
                 case 0x00:
-                    return z >= get_word(current_ctx->zbuf.base_pointer + (pos << 2));
+                    return z >= read_PSMCT32Z_block(base, width, x, y);
                 case 0x01:
-                    return (z & 0xFFFFFF) >= (get_word(current_ctx->zbuf.base_pointer + (pos << 2)) & 0xFFFFFF);
+                    z = min(z, 0xFFFFFFU);
+                    return z >= (read_PSMCT32Z_block(base, width, x, y) & 0xFFFFFF);
                 case 0x02:
-                    return (z & 0xFFFF) >= (*(uint16_t*)&local_mem[current_ctx->zbuf.base_pointer + (pos << 1)] & 0xFFFF);
+                    z = min(z, 0xFFFFU);
+                    return z >= read_PSMCT16Z_block(base, width, x, y);
                 case 0x0A:
-                    return (z & 0xFFFF) >= *(uint16_t*)&local_mem[current_ctx->zbuf.base_pointer + (pos << 1)];
+                    z = min(z, 0xFFFFU);
+                    return z >= read_PSMCT16SZ_block(base, width, x, y);
                 default:
                     printf("[GS_t] Unrecognized zbuf format $%02X\n", current_ctx->zbuf.format);
                     exit(1);
@@ -799,13 +915,16 @@ bool GraphicsSynthesizerThread::depth_test(int32_t x, int32_t y, uint32_t z)
             switch (current_ctx->zbuf.format)
             {
                 case 0x00:
-                    return z > get_word(current_ctx->zbuf.base_pointer + (pos << 2));
+                    return z > read_PSMCT32Z_block(base, width, x, y);
                 case 0x01:
-                    return (z & 0xFFFFFF) > (get_word(current_ctx->zbuf.base_pointer + (pos << 2)) & 0xFFFFFF);
+                    z = min(z, 0xFFFFFFU);
+                    return z > (read_PSMCT32Z_block(base, width, x, y) & 0xFFFFFF);
                 case 0x02:
-                    return (z & 0xFFFF) > (*(uint16_t*)&local_mem[current_ctx->zbuf.base_pointer + (pos << 1)] & 0xFFFF);
+                    z = min(z, 0xFFFFU);
+                    return z > read_PSMCT16Z_block(base, width, x, y);
                 case 0x0A:
-                    return (z & 0xFFFF) > *(uint16_t*)&local_mem[current_ctx->zbuf.base_pointer + (pos << 1)];
+                    z = min(z, 0xFFFFU);
+                    return z > read_PSMCT16SZ_block(base, width, x, y);
                 default:
                     printf("[GS_t] Unrecognized zbuf format $%02X\n", current_ctx->zbuf.format);
                     exit(1);
@@ -823,6 +942,7 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
     bool update_frame = true;
     bool update_alpha = true;
     bool update_z = !current_ctx->zbuf.no_update;
+
     if (test->alpha_test)
     {
         bool fail = false;
@@ -881,12 +1001,22 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
     bool pass_depth_test = true;
     if (test->depth_test)
         pass_depth_test = depth_test(x, y, z);
+    else
+        update_z = false;
 
     if (!pass_depth_test)
         return;
 
     uint32_t frame_color = read_PSMCT32_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y);
     uint32_t final_color = 0;
+
+    if (test->dest_alpha_test)
+    {
+        if (test->dest_alpha_method && !(frame_color & (1 << 31)))
+            return;
+        else if (!test->dest_alpha_method && (frame_color & (1 << 31)))
+            return;
+    }
 
     if (alpha_blending)
     {
@@ -991,10 +1121,6 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
                 fg = 0xFF;
             if (fr > 0xFF)
                 fr = 0xFF;
-            if (fr > 0xFF)
-            {
-                printf("r1: %d r2: %d tempfr: %d\n", r1, r2, (((int)r1 - (int)r2) * alpha));
-            }
         }
         else
         {
@@ -1028,22 +1154,21 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
     write_PSMCT32_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, final_color);
     if (update_z)
     {
-        uint32_t pos = x + (y * current_ctx->frame.width);
         switch (current_ctx->zbuf.format)
         {
             case 0x00:
-                *(uint32_t*)&local_mem[current_ctx->zbuf.base_pointer + (pos << 2)] = z;
+                write_PSMCT32Z_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z);
                 break;
             case 0x01:
-                *(uint32_t*)&local_mem[current_ctx->zbuf.base_pointer + (pos << 2)] &= ~0xFFFFFF;
-                *(uint32_t*)&local_mem[current_ctx->zbuf.base_pointer + (pos << 2)] |= z & 0xFFFFFF;
+                write_PSMCT24Z_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z & 0xFFFFFF);
                 break;
             case 0x02:
+                write_PSMCT16Z_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z & 0xFFFF);
+                break;
             case 0x0A:
-                *(uint16_t*)&local_mem[current_ctx->zbuf.base_pointer + (pos << 1)] = z & 0xFFFF;
+                write_PSMCT16SZ_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z & 0xFFFF);
                 break;
         }
-
     }
 }
 
@@ -1164,8 +1289,6 @@ int32_t GraphicsSynthesizerThread::orient2D(const Vertex &v1, const Vertex &v2, 
 void GraphicsSynthesizerThread::render_triangle()
 {
     printf("[GS_t] Rendering triangle!\n");
-
-    //return;
 
     Vertex v1 = vtx_queue[2]; v1.to_relative(current_ctx->xyoffset);
     Vertex v2 = vtx_queue[1]; v2.to_relative(current_ctx->xyoffset);
@@ -1451,6 +1574,7 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
         //PSMCT8H
         case 0x1B:
             ppd = 8;
+            printf("[GS_t] PSMCT8H: $%08X_%08X\n", data >> 32, data);
             break;
         //PSMT4HL
         case 0x24:
@@ -1467,7 +1591,6 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
 
     for (int i = 0; i < ppd; i++)
     {
-        uint32_t dest_addr = TRXPOS.int_dest_x + (TRXPOS.dest_y * BITBLTBUF.dest_width);
         switch (BITBLTBUF.dest_format)
         {
             case 0x00:
@@ -1486,27 +1609,15 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
                 TRXPOS.int_dest_x++;
                 break;
             case 0x13:
-                dest_addr += BITBLTBUF.dest_base;
-                local_mem[dest_addr] = (data >> (i * 8)) & 0xFF;
+                write_PSMCT8_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.dest_y,
+                                   (data >> (i * 8)) & 0xFF);
                 //printf("[GS_t] Write to $%08X\n", dest_addr);
                 pixels_transferred++;
                 TRXPOS.int_dest_x++;
                 break;
             case 0x14:
-                dest_addr /= 2;
-                dest_addr += BITBLTBUF.dest_base;
-                if (i & 0x1)
-                {
-                    local_mem[dest_addr] &= ~0xF0;
-                    local_mem[dest_addr] |= (data >> ((i >> 1) << 3)) & 0xF0;
-                    //printf("[GS_t] Write to $%08X:1: $%02X\n", dest_addr, local_mem[dest_addr]);
-                }
-                else
-                {
-                    local_mem[dest_addr] &= ~0xF;
-                    local_mem[dest_addr] |= (data >> ((i >> 1) << 3)) & 0xF;
-                    //printf("[GS_t] Write to $%08X:0: $%02X\n", dest_addr, local_mem[dest_addr]);
-                }
+                write_PSMCT4_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.dest_y,
+                                   data >> ((i >> 1) << 3));
                 pixels_transferred++;
                 TRXPOS.int_dest_x++;
                 break;
@@ -1518,7 +1629,6 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
                         & 0x00FFFFFF;
                 write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.dest_y, value);
                 //printf("[GS_t] Write to $%08X of ", BITBLTBUF.dest_base + (dest_addr * 4));
-                //printf("$%08X\n", value);
                 pixels_transferred++;
                 TRXPOS.int_dest_x++;
             }
@@ -1670,24 +1780,54 @@ void GraphicsSynthesizerThread::tex_lookup(uint16_t u, uint16_t v, const RGBAQ_R
             tex_color.r = color & 0xFF;
             tex_color.g = (color >> 8) & 0xFF;
             tex_color.b = (color >> 16) & 0xFF;
-            tex_color.a = 0x80;
+            tex_color.a = TEXA.alpha0;
         }
             break;
         case 0x02:
-        case 0x0A:
         {
             uint16_t color = read_PSMCT16_block(tex_base, current_ctx->tex0.width, u, v);
             tex_color.r = (color & 0x1F) << 3;
             tex_color.g = ((color >> 5) & 0x1F) << 3;
             tex_color.b = ((color >> 10) & 0x1F) << 3;
+
+            if (!(color & 0x7FFF) && TEXA.trans_black)
+                tex_color.a = 0;
+            else
+            {
+                if (color & (1 << 15))
+                    tex_color.a = TEXA.alpha1;
+                else
+                    tex_color.a = TEXA.alpha0;
+            }
             tex_color.a = ((color & (1 << 15)) != 0) << 7;
+        }
+            break;
+        case 0x09: //Invalid format??? FFX uses it
+            tex_color.r = 0;
+            tex_color.g = 0;
+            tex_color.b = 0;
+            tex_color.a = 0;
+            break;
+        case 0x0A:
+        {
+            uint16_t color = read_PSMCT16S_block(tex_base, current_ctx->tex0.width, u, v);
+            tex_color.r = (color & 0x1F) << 3;
+            tex_color.g = ((color >> 5) & 0x1F) << 3;
+            tex_color.b = ((color >> 10) & 0x1F) << 3;
+            if (!(color & 0x7FFF) && TEXA.trans_black)
+                tex_color.a = 0;
+            else
+            {
+                if (color & (1 << 15))
+                    tex_color.a = TEXA.alpha1;
+                else
+                    tex_color.a = TEXA.alpha0;
+            }
         }
             break;
         case 0x13:
         {
-            uint8_t entry;
-            entry = local_mem[(tex_base + coord) & 0x003FFFFF];
-            uint32_t color;
+            uint8_t entry = read_PSMCT8_block(tex_base, current_ctx->tex0.width, u, v);
             if (current_ctx->tex0.use_CSM2)
             {
                 tex_color.r = entry;
@@ -1704,11 +1844,7 @@ void GraphicsSynthesizerThread::tex_lookup(uint16_t u, uint16_t v, const RGBAQ_R
             break;
         case 0x14:
         {
-            uint8_t entry;
-            if (coord & 0x1)
-                entry = local_mem[(tex_base + (coord >> 1)) & 0x003FFFFF] >> 4;
-            else
-                entry = local_mem[(tex_base + (coord >> 1)) & 0x003FFFFF] & 0xF;
+            uint8_t entry = read_PSMCT4_block(tex_base, current_ctx->tex0.width, u, v);
             if (current_ctx->tex0.use_CSM2)
             {
                 tex_color.r = entry << 4;
@@ -1811,7 +1947,15 @@ void GraphicsSynthesizerThread::clut_lookup(uint8_t entry, RGBAQ_REG &tex_color,
             tex_color.r = (color & 0x1F) << 3;
             tex_color.g = ((color >> 5) & 0x1F) << 3;
             tex_color.b = ((color >> 10) & 0x1F) << 3;
-            tex_color.a = (color & 0x8000) ? 0x80 : 0x00;
+            if (!(color & 0x7FFF) && TEXA.trans_black)
+                tex_color.a = 0;
+            else
+            {
+                if (color & (1 << 15))
+                    tex_color.a = TEXA.alpha1;
+                else
+                    tex_color.a = TEXA.alpha0;
+            }
         }
             break;
         default:

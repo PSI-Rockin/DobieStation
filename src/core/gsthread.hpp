@@ -58,11 +58,17 @@ struct TRXPOS_REG
     uint16_t int_source_x, int_dest_x;
     uint8_t trans_order;
 };
+
+struct TEXA_REG
+{
+    uint8_t alpha0, alpha1;
+    bool trans_black;
+};
+
 struct TEXCLUT_REG
 {
     uint16_t width, x, y;
 };
-
 
 struct Vertex
 {
@@ -97,6 +103,7 @@ class GraphicsSynthesizerThread
         RGBAQ_REG RGBAQ;
         UV_REG UV;
         ST_REG ST;
+        TEXA_REG TEXA;
         TEXCLUT_REG TEXCLUT;
         bool DTHE;
         bool COLCLAMP;
@@ -124,10 +131,43 @@ class GraphicsSynthesizerThread
         uint32_t get_word(uint32_t addr);
         void set_word(uint32_t addr, uint32_t value);
 
+        //Swizzling routines
+        uint32_t blockid_PSMCT32(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
+        uint32_t blockid_PSMCT32Z(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
+        uint32_t blockid_PSMCT16(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
+        uint32_t blockid_PSMCT16S(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
+        uint32_t blockid_PSMCT16Z(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
+        uint32_t blockid_PSMCT16SZ(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
+        uint32_t blockid_PSMCT8(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
+        uint32_t blockid_PSMCT4(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
+
+        uint32_t addr_PSMCT32(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
+        uint32_t addr_PSMCT32Z(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
+        uint32_t addr_PSMCT16(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
+        uint32_t addr_PSMCT16S(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
+        uint32_t addr_PSMCT16Z(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
+        uint32_t addr_PSMCT16SZ(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
+        uint32_t addr_PSMCT8(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
+        uint32_t addr_PSMCT4(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
+
         uint32_t read_PSMCT32_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y);
+        uint32_t read_PSMCT32Z_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y);
         uint16_t read_PSMCT16_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y);
+        uint16_t read_PSMCT16S_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y);
+        uint16_t read_PSMCT16Z_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y);
+        uint16_t read_PSMCT16SZ_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y);
+        uint8_t read_PSMCT8_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y);
+        uint8_t read_PSMCT4_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y);
+
         void write_PSMCT32_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y, uint32_t value);
+        void write_PSMCT32Z_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y, uint32_t value);
+        void write_PSMCT24Z_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y, uint32_t value);
         void write_PSMCT16_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y, uint16_t value);
+        void write_PSMCT16S_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y, uint16_t value);
+        void write_PSMCT16Z_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y, uint16_t value);
+        void write_PSMCT16SZ_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y, uint16_t value);
+        void write_PSMCT8_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y, uint8_t value);
+        void write_PSMCT4_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y, uint8_t value);
 
         bool depth_test(int32_t x, int32_t y, uint32_t z);
 
@@ -156,7 +196,6 @@ class GraphicsSynthesizerThread
         void set_VBLANK(bool is_VBLANK);
         void assert_FINISH();
         void dump_texture(uint32_t* target, uint32_t start_addr, uint32_t width);
-
 
         void write64(uint32_t addr, uint64_t value);
 
