@@ -71,9 +71,9 @@ void DMAC::store128(uint32_t addr, uint128_t data)
     }
 }
 
-void DMAC::run()
+void DMAC::run(int cycles)
 {
-    /*if (!control.master_enable || (master_disable & (1 << 16)))
+    if (!control.master_enable || (master_disable & (1 << 16)))
         return;
     for (int i = 0; i < 10; i++)
     {
@@ -81,64 +81,34 @@ void DMAC::run()
         {
             switch (i)
             {
-                case VIF1:
-                    process_VIF1();
-                    break;
-                case GIF:
-                    process_GIF();
-                    break;
-                case SIF0:
-                    process_SIF0();
-                    break;
-                case SIF1:
-                    process_SIF1();
-                    break;
-            }
-        }
-    }*/
-}
-
-void DMAC::run(int cycles)
-{
-    if (!control.master_enable || (master_disable & (1 << 16)))
-        return;
-    int c;
-    for (int i = 0; i < 10; i++)
-    {
-        c = cycles;
-        while ((channels[i].control & 0x100) && c)
-        {
-            switch (i)
-            {
                 case VIF0:
-                    process_VIF0();
+                    process_VIF0(cycles);
                     break;
                 case VIF1:
-                    process_VIF1();
+                    process_VIF1(cycles);
                     break;
                 case GIF:
-                    process_GIF();
+                    process_GIF(cycles);
                     break;
                 case IPU_FROM:
-                    process_IPU_FROM();
+                    process_IPU_FROM(cycles);
                     break;
                 case IPU_TO:
-                    process_IPU_TO();
+                    process_IPU_TO(cycles);
                     break;
                 case SIF0:
-                    process_SIF0();
+                    process_SIF0(cycles);
                     break;
                 case SIF1:
-                    process_SIF1();
+                    process_SIF1(cycles);
                     break;
                 case SPR_FROM:
-                    process_SPR_FROM();
+                    process_SPR_FROM(cycles);
                     break;
                 case SPR_TO:
-                    process_SPR_TO();
+                    process_SPR_TO(cycles);
                     break;
             }
-            c--;
         }
     }
 }
@@ -202,270 +172,326 @@ void DMAC::int1_check()
     cpu->set_int1_signal(int1_signal);
 }
 
-void DMAC::process_VIF0()
+void DMAC::process_VIF0(int cycles)
 {
-    if (channels[VIF0].quadword_count)
+    while (cycles)
     {
-        vif0->feed_DMA(fetch128(channels[VIF0].address));
-
-        channels[VIF0].address += 16;
-        channels[VIF0].quadword_count--;
-    }
-    else
-    {
-        if (channels[VIF0].tag_end)
-            transfer_end(VIF0);
-        else
+        cycles--;
+        if (channels[VIF0].quadword_count)
         {
-            uint128_t DMAtag = fetch128(channels[VIF0].tag_address);
-            if (channels[VIF0].control & (1 << 6))
-                vif0->transfer_DMAtag(DMAtag);
-            handle_source_chain(VIF0);
-        }
-    }
-}
+            vif0->feed_DMA(fetch128(channels[VIF0].address));
 
-void DMAC::process_VIF1()
-{
-    if (!mfifo_handler(VIF1))
-        return;
-
-    if (channels[VIF1].quadword_count)
-    {
-        vif1->feed_DMA(fetch128(channels[VIF1].address));
-
-        channels[VIF1].address += 16;
-        channels[VIF1].quadword_count--;
-    }
-    else
-    {
-        if (channels[VIF1].tag_end)
-            transfer_end(VIF1);
-        else
-        {
-            uint128_t DMAtag = fetch128(channels[VIF1].tag_address);
-            if (channels[VIF1].control & (1 << 6))
-                vif1->transfer_DMAtag(DMAtag);
-            handle_source_chain(VIF1);
-        }
-    }
-}
-
-void DMAC::process_GIF()
-{
-    if (!mfifo_handler(GIF))
-        return;
-
-    if (channels[GIF].quadword_count)
-    {
-        if (gif->path_active(3))
-        {
-            gif->send_PATH3(fetch128(channels[GIF].address));
-
-            channels[GIF].address += 16;
-            channels[GIF].quadword_count--;
-        }
-    }
-    else
-    {
-        if (channels[GIF].tag_end)
-        {
-            transfer_end(GIF);
-            gif->deactivate_PATH(3);
+            channels[VIF0].address += 16;
+            channels[VIF0].quadword_count--;
         }
         else
         {
-            handle_source_chain(GIF);
-        }
-    }
-}
-
-void DMAC::process_IPU_FROM()
-{
-    if (channels[IPU_FROM].quadword_count)
-    {
-        if (ipu->can_read_FIFO())
-        {
-            uint128_t data = ipu->read_FIFO();
-            store128(channels[IPU_FROM].address, data);
-            //printf("[IPU_FROM] Store $%08X_$%08X to $%08X\n", data._u32[1], data._u32[0], channels[IPU_FROM].address);
-
-            channels[IPU_FROM].address += 16;
-            channels[IPU_FROM].quadword_count--;
-        }
-    }
-    else
-    {
-        if (channels[IPU_FROM].tag_end)
-            transfer_end(IPU_FROM);
-        else
-        {
-            printf("blorp\n");
-            exit(1);
-        }
-    }
-}
-
-void DMAC::process_IPU_TO()
-{
-    if (channels[IPU_TO].quadword_count)
-    {
-        if (ipu->can_write_FIFO())
-        {
-            ipu->write_FIFO(fetch128(channels[IPU_TO].address));
-
-            channels[IPU_TO].address += 16;
-            channels[IPU_TO].quadword_count--;
-        }
-    }
-    else
-    {
-        if (channels[IPU_TO].tag_end)
-            transfer_end(IPU_TO);
-        else
-            handle_source_chain(IPU_TO);
-    }
-}
-
-void DMAC::process_SIF0()
-{
-    if (channels[SIF0].quadword_count)
-    {
-        if (sif->get_SIF0_size() >= 4)
-        {
-            for (int i = 0; i < 4; i++)
+            if (channels[VIF0].tag_end)
             {
-                uint32_t word = sif->read_SIF0();
-                e->write32(channels[SIF0].address, word);
-                channels[SIF0].address += 4;
+                transfer_end(VIF0);
+                return;
             }
-            channels[SIF0].quadword_count--;
-        }
-    }
-    else
-    {
-        if (channels[SIF0].tag_end)
-        {
-            transfer_end(SIF0);
-        }
-        else if (sif->get_SIF0_size() >= 2)
-        {
-            uint64_t DMAtag = sif->read_SIF0();
-            DMAtag |= (uint64_t)sif->read_SIF0() << 32;
-            printf("[DMAC] SIF0 tag: $%08X_%08X\n", DMAtag >> 32, DMAtag);
-
-            channels[SIF0].quadword_count = DMAtag & 0xFFFF;
-            channels[SIF0].address = DMAtag >> 32;
-            channels[SIF0].tag_address += 16;
-
-            int mode = (DMAtag >> 28) & 0x7;
-
-            bool IRQ = (DMAtag & (1UL << 31));
-            bool TIE = channels[SIF0].control & (1 << 7);
-            if (mode == 7 || (IRQ && TIE))
-                channels[SIF0].tag_end = true;
-
-            channels[SIF0].control &= 0xFFFF;
-            channels[SIF0].control |= DMAtag & 0xFFFF0000;
+            else
+            {
+                uint128_t DMAtag = fetch128(channels[VIF0].tag_address);
+                if (channels[VIF0].control & (1 << 6))
+                    vif0->transfer_DMAtag(DMAtag);
+                handle_source_chain(VIF0);
+            }
         }
     }
 }
 
-void DMAC::process_SIF1()
+void DMAC::process_VIF1(int cycles)
 {
-    if (channels[SIF1].quadword_count)
+    while (cycles)
     {
-        if (sif->get_SIF1_size() <= SubsystemInterface::MAX_FIFO_SIZE - 4)
+        if (!mfifo_handler(VIF1))
+            return;
+        cycles--;
+        if (channels[VIF1].quadword_count)
         {
-            sif->write_SIF1(fetch128(channels[SIF1].address));
+            vif1->feed_DMA(fetch128(channels[VIF1].address));
 
-            channels[SIF1].address += 16;
-            channels[SIF1].quadword_count--;
-        }
-    }
-    else
-    {
-        if (channels[SIF1].tag_end)
-        {
-            transfer_end(SIF1);
+            channels[VIF1].address += 16;
+            channels[VIF1].quadword_count--;
         }
         else
-            handle_source_chain(SIF1);
+        {
+            if (channels[VIF1].tag_end)
+            {
+                transfer_end(VIF1);
+                return;
+            }
+            else
+            {
+                uint128_t DMAtag = fetch128(channels[VIF1].tag_address);
+                if (channels[VIF1].control & (1 << 6))
+                    vif1->transfer_DMAtag(DMAtag);
+                handle_source_chain(VIF1);
+            }
+        }
     }
 }
 
-void DMAC::process_SPR_FROM()
+void DMAC::process_GIF(int cycles)
 {
-    if (channels[SPR_FROM].quadword_count)
+    while (cycles)
     {
-        if (control.mem_drain_channel != 0)
+        if (!mfifo_handler(GIF))
+            return;
+        cycles--;
+        if (channels[GIF].quadword_count)
         {
-            channels[SPR_FROM].address = RBOR | (channels[SPR_FROM].address & RBSR);
+            if (gif->path_active(3))
+            {
+                gif->send_PATH3(fetch128(channels[GIF].address));
+
+                channels[GIF].address += 16;
+                channels[GIF].quadword_count--;
+            }
         }
-
-        uint128_t DMAData = fetch128(channels[SPR_FROM].scratchpad_address | (1 << 31));
-        store128(channels[SPR_FROM].address, DMAData);
-
-        channels[SPR_FROM].scratchpad_address += 16;
-        channels[SPR_FROM].quadword_count--;
-
-        if (control.mem_drain_channel != 0)
-            channels[SPR_FROM].address = RBOR | ((channels[SPR_FROM].address + 16) & RBSR);
         else
-            channels[SPR_FROM].address += 16;
+        {
+            if (channels[GIF].tag_end)
+            {
+                transfer_end(GIF);
+                gif->deactivate_PATH(3);
+                return;
+            }
+            else
+            {
+                handle_source_chain(GIF);
+            }
+        }
     }
-    else
+}
+
+void DMAC::process_IPU_FROM(int cycles)
+{
+    while (cycles)
     {
-        if (channels[SPR_FROM].tag_end)
+        cycles--;
+        if (channels[IPU_FROM].quadword_count)
         {
-            transfer_end(SPR_FROM);
+            if (ipu->can_read_FIFO())
+            {
+                uint128_t data = ipu->read_FIFO();
+                store128(channels[IPU_FROM].address, data);
+
+                channels[IPU_FROM].address += 16;
+                channels[IPU_FROM].quadword_count--;
+            }
         }
         else
         {
-            uint128_t DMAtag = fetch128(channels[SPR_FROM].scratchpad_address);
-            printf("[DMAC] SPR_FROM tag: $%08X_%08X\n", DMAtag._u32[1], DMAtag._u32[0]);
+            if (channels[IPU_FROM].tag_end)
+            {
+                transfer_end(IPU_FROM);
+                return;
+            }
+            else
+            {
+                printf("[DMAC] IPU_FROM uses dest chain!\n");
+                exit(1);
+            }
+        }
+    }
+}
 
-            channels[SPR_FROM].quadword_count = DMAtag._u32[0] & 0xFFFF;
-            channels[SPR_FROM].address = DMAtag._u32[1];
+void DMAC::process_IPU_TO(int cycles)
+{
+    while (cycles)
+    {
+        cycles--;
+        if (channels[IPU_TO].quadword_count)
+        {
+            if (ipu->can_write_FIFO())
+            {
+                ipu->write_FIFO(fetch128(channels[IPU_TO].address));
+
+                channels[IPU_TO].address += 16;
+                channels[IPU_TO].quadword_count--;
+            }
+        }
+        else
+        {
+            if (channels[IPU_TO].tag_end)
+            {
+                transfer_end(IPU_TO);
+                return;
+            }
+            else
+                handle_source_chain(IPU_TO);
+        }
+    }
+}
+
+void DMAC::process_SIF0(int cycles)
+{
+    while (cycles)
+    {
+        cycles--;
+        if (channels[SIF0].quadword_count)
+        {
+            if (sif->get_SIF0_size() >= 4)
+            {
+                for (int i = 0; i < 4; i++)
+                {
+                    uint32_t word = sif->read_SIF0();
+                    e->write32(channels[SIF0].address, word);
+                    channels[SIF0].address += 4;
+                }
+                channels[SIF0].quadword_count--;
+            }
+            else
+                return;
+        }
+        else
+        {
+            if (channels[SIF0].tag_end)
+            {
+                transfer_end(SIF0);
+                return;
+            }
+            else if (sif->get_SIF0_size() >= 2)
+            {
+                uint64_t DMAtag = sif->read_SIF0();
+                DMAtag |= (uint64_t)sif->read_SIF0() << 32;
+                printf("[DMAC] SIF0 tag: $%08X_%08X\n", DMAtag >> 32, DMAtag);
+
+                channels[SIF0].quadword_count = DMAtag & 0xFFFF;
+                channels[SIF0].address = DMAtag >> 32;
+                channels[SIF0].tag_address += 16;
+
+                int mode = (DMAtag >> 28) & 0x7;
+
+                bool IRQ = (DMAtag & (1UL << 31));
+                bool TIE = channels[SIF0].control & (1 << 7);
+                if (mode == 7 || (IRQ && TIE))
+                    channels[SIF0].tag_end = true;
+
+                channels[SIF0].control &= 0xFFFF;
+                channels[SIF0].control |= DMAtag & 0xFFFF0000;
+            }
+        }
+    }
+}
+
+void DMAC::process_SIF1(int cycles)
+{
+    while (cycles)
+    {
+        cycles--;
+        if (channels[SIF1].quadword_count)
+        {
+            if (sif->get_SIF1_size() <= SubsystemInterface::MAX_FIFO_SIZE - 4)
+            {
+                sif->write_SIF1(fetch128(channels[SIF1].address));
+
+                channels[SIF1].address += 16;
+                channels[SIF1].quadword_count--;
+            }
+            else
+                return;
+        }
+        else
+        {
+            if (channels[SIF1].tag_end)
+            {
+                transfer_end(SIF1);
+                return;
+            }
+            else
+                handle_source_chain(SIF1);
+        }
+    }
+}
+
+void DMAC::process_SPR_FROM(int cycles)
+{
+    while (cycles)
+    {
+        cycles--;
+        if (channels[SPR_FROM].quadword_count)
+        {
+            if (control.mem_drain_channel != 0)
+            {
+                channels[SPR_FROM].address = RBOR | (channels[SPR_FROM].address & RBSR);
+            }
+
+            uint128_t DMAData = fetch128(channels[SPR_FROM].scratchpad_address | (1 << 31));
+            store128(channels[SPR_FROM].address, DMAData);
+
             channels[SPR_FROM].scratchpad_address += 16;
-            channels[SPR_FROM].scratchpad_address &= 0x3FFF;
+            channels[SPR_FROM].quadword_count--;
 
-            int mode = (DMAtag._u32[0] >> 28) & 0x7;
+            if (control.mem_drain_channel != 0)
+                channels[SPR_FROM].address = RBOR | ((channels[SPR_FROM].address + 16) & RBSR);
+            else
+                channels[SPR_FROM].address += 16;
+        }
+        else
+        {
+            if (channels[SPR_FROM].tag_end)
+            {
+                transfer_end(SPR_FROM);
+                return;
+            }
+            else
+            {
+                uint128_t DMAtag = fetch128(channels[SPR_FROM].scratchpad_address);
+                printf("[DMAC] SPR_FROM tag: $%08X_%08X\n", DMAtag._u32[1], DMAtag._u32[0]);
 
-            bool IRQ = (DMAtag._u32[0] & (1UL << 31));
-            bool TIE = channels[SPR_FROM].control & (1 << 7);
-            if (mode == 7 || (IRQ && TIE))
-                channels[SPR_FROM].tag_end = true;
+                channels[SPR_FROM].quadword_count = DMAtag._u32[0] & 0xFFFF;
+                channels[SPR_FROM].address = DMAtag._u32[1];
+                channels[SPR_FROM].scratchpad_address += 16;
+                channels[SPR_FROM].scratchpad_address &= 0x3FFF;
 
-            channels[SPR_FROM].control &= 0xFFFF;
-            channels[SPR_FROM].control |= DMAtag._u32[0] & 0xFFFF0000;
+                int mode = (DMAtag._u32[0] >> 28) & 0x7;
+
+                bool IRQ = (DMAtag._u32[0] & (1UL << 31));
+                bool TIE = channels[SPR_FROM].control & (1 << 7);
+                if (mode == 7 || (IRQ && TIE))
+                    channels[SPR_FROM].tag_end = true;
+
+                channels[SPR_FROM].control &= 0xFFFF;
+                channels[SPR_FROM].control |= DMAtag._u32[0] & 0xFFFF0000;
+            }
         }
     }
 }
 
-void DMAC::process_SPR_TO()
+void DMAC::process_SPR_TO(int cycles)
 {
-    if (channels[SPR_TO].quadword_count)
+    while (cycles)
     {
-        uint128_t DMAData = fetch128(channels[SPR_TO].address);
-        store128(channels[SPR_TO].scratchpad_address | (1 << 31), DMAData);
-        channels[SPR_TO].scratchpad_address += 16;
-        channels[SPR_TO].address += 16;
-        channels[SPR_TO].quadword_count--;
-    }
-    else
-    {
-        if (channels[SPR_TO].tag_end)
-            transfer_end(SPR_TO);
+        cycles--;
+        if (channels[SPR_TO].quadword_count)
+        {
+            uint128_t DMAData = fetch128(channels[SPR_TO].address);
+            store128(channels[SPR_TO].scratchpad_address | (1 << 31), DMAData);
+            channels[SPR_TO].scratchpad_address += 16;
+            channels[SPR_TO].address += 16;
+            channels[SPR_TO].quadword_count--;
+        }
         else
         {
-            uint128_t DMAtag = fetch128(channels[SPR_TO].tag_address);
-            if (channels[SPR_TO].control & (1 << 6))
+            if (channels[SPR_TO].tag_end)
             {
-                store128(channels[SPR_TO].scratchpad_address | (1 << 31), DMAtag);
-                channels[SPR_TO].scratchpad_address += 16;
+                transfer_end(SPR_TO);
+                return;
             }
-            handle_source_chain(SPR_TO);
+            else
+            {
+                uint128_t DMAtag = fetch128(channels[SPR_TO].tag_address);
+                if (channels[SPR_TO].control & (1 << 6))
+                {
+                    store128(channels[SPR_TO].scratchpad_address | (1 << 31), DMAtag);
+                    channels[SPR_TO].scratchpad_address += 16;
+                }
+                handle_source_chain(SPR_TO);
+            }
         }
     }
 }
@@ -818,7 +844,7 @@ void DMAC::write32(uint32_t address, uint32_t value)
             break;
         case 0x1000B000:
             printf("[DMAC] IPU_FROM CTRL: $%08X\n", value);
-            channels[IPU_FROM].control = value;
+            channels[IPU_FROM].control = value & ~0x100;
             if (value & 0x100)
                 start_DMA(IPU_FROM);
             break;

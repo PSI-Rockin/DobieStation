@@ -23,6 +23,7 @@ namespace VU_Interpreter
     void add(VectorUnit& vu, uint32_t instr);
     void madd(VectorUnit& vu, uint32_t instr);
     void mul(VectorUnit& vu, uint32_t instr);
+    void max(VectorUnit& vu, uint32_t instr);
     void sub(VectorUnit& vu, uint32_t instr);
     void opmsub(VectorUnit& vu, uint32_t instr);
 
@@ -65,6 +66,7 @@ namespace VU_Interpreter
     void xitop(VectorUnit& vu, uint32_t instr);
     void xgkick(VectorUnit& vu, uint32_t instr);
     void eleng(VectorUnit& vu, uint32_t instr);
+    void erleng(VectorUnit& vu, uint32_t instr);
     void esqrt(VectorUnit& vu, uint32_t instr);
 
     void lower2(VectorUnit& vu, uint32_t instr);

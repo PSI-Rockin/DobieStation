@@ -18,6 +18,12 @@ union VU_GPR
     int32_t s[4];
 };
 
+union VU_I
+{
+    uint16_t u;
+    int16_t s;
+};
+
 struct VPU_STAT
 {
     bool vu1_running;
@@ -48,7 +54,7 @@ class VectorUnit
 
         //GPR
         VU_GPR gpr[32];
-        uint16_t int_gpr[16];
+        VU_I int_gpr[16];
 
         //Control registers
         VU_GPR ACC;
@@ -123,6 +129,7 @@ class VectorUnit
         void div(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2);
         void eleng(uint8_t source);
         void esqrt(uint8_t fsf, uint8_t source);
+        void erleng(uint8_t source);
         void fcand(uint32_t value);
         void fcget(uint8_t dest);
         void fcset(uint32_t value);
@@ -239,7 +246,7 @@ inline uint32_t VectorUnit::get_gpr_u(int index, int field)
 
 inline uint16_t VectorUnit::get_int(int index)
 {
-    return int_gpr[index];
+    return int_gpr[index].u;
 }
 
 inline void VectorUnit::set_gpr_f(int index, int field, float value)
@@ -257,7 +264,7 @@ inline void VectorUnit::set_gpr_u(int index, int field, uint32_t value)
 inline void VectorUnit::set_int(int index, uint16_t value)
 {
     if (index)
-        int_gpr[index] = value;
+        int_gpr[index].u = value;
 }
 
 inline void VectorUnit::set_status(uint32_t value)
@@ -277,7 +284,7 @@ inline void VectorUnit::set_I(uint32_t value)
 
 inline void VectorUnit::set_Q(uint32_t value)
 {
-    Q.u = value;
+    new_Q_instance.u = value;
 }
 
 #endif // VU_HPP

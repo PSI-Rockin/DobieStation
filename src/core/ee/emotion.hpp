@@ -50,7 +50,6 @@ class EmotionEngine
         static const char* REG(int id);
         static const char* SYSCALL(int id);
         void reset();
-        void run();
         int run(int cycles_to_run);
         void print_state();
         void set_disassembly(bool dis);

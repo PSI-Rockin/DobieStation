@@ -126,6 +126,8 @@ string VU_Disasm::upper(uint32_t PC, uint32_t instr)
             return upper_simple("madd", instr);
         case 0x2A:
             return upper_simple("mul", instr);
+        case 0x2B:
+            return upper_simple("max", instr);
         case 0x2C:
             return upper_simple("sub", instr);
         case 0x2E:
@@ -358,6 +360,8 @@ string VU_Disasm::lower1_special(uint32_t PC, uint32_t instr)
             return xgkick(instr);
         case 0x72:
             return eleng(instr);
+        case 0x73:
+            return erleng(instr);
         case 0x78:
             return esqrt(instr);
         case 0x7B:
@@ -481,6 +485,14 @@ string VU_Disasm::eleng(uint32_t instr)
     stringstream output;
     uint32_t source = (instr >> 11) & 0x1F;
     output << "eleng P, vf" << source;
+    return output.str();
+}
+
+string VU_Disasm::erleng(uint32_t instr)
+{
+    stringstream output;
+    uint32_t source = (instr >> 11) & 0x1F;
+    output << "erleng P, vf" << source;
     return output.str();
 }
 

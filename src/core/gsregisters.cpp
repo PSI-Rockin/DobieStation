@@ -137,7 +137,7 @@ uint32_t GS_REGISTERS::read32_privileged(uint32_t addr)
             reg |= CSR.FINISH_generated << 1;
             reg |= CSR.VBLANK_generated << 3;
             reg |= CSR.is_odd_frame << 13;
-            printf("[GS_r] read32_privileged!: CSR = %04X\n", reg);
+            //printf("[GS_r] read32_privileged!: CSR = %04X\n", reg);
             return reg;
         }
         default:
@@ -157,7 +157,7 @@ uint64_t GS_REGISTERS::read64_privileged(uint32_t addr)
             reg |= CSR.FINISH_generated << 1;
             reg |= CSR.VBLANK_generated << 3;
             reg |= CSR.is_odd_frame << 13;
-            printf("[GS_r] read64_privileged!: CSR = %08X\n", reg);
+            //printf("[GS_r] read64_privileged!: CSR = %08X\n", reg);
             return reg;
         }
         default:
@@ -241,8 +241,18 @@ void GS_REGISTERS::get_resolution(int &w, int &h)
 
 void GS_REGISTERS::get_inner_resolution(int &w, int &h)
 {
-    w = DISPLAY2.width >> 2;
-    h = DISPLAY2.height;
+    DISPLAY &currentDisplay = DISPLAY1;
+
+    if (PMODE.circuit2 == false)
+    {
+        currentDisplay = DISPLAY1;
+    }
+    else
+    {
+        currentDisplay = DISPLAY2;
+    }
+    w = currentDisplay.width >> 2;
+    h = currentDisplay.height;
 }
 void GS_REGISTERS::set_VBLANK(bool is_VBLANK)
 {
