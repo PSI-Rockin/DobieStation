@@ -192,7 +192,9 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
                     }
                     gs.render_CRT(p.target);
                     p.target_mutex->unlock();
-                    return_fifo->push({ render_complete_t });
+                    GS_return_message_payload return_payload;
+                    return_payload.no_payload = { 0 };
+                    return_fifo->push({ GS_return::render_complete_t,return_payload });
                     break;
                 }
                 case assert_finish_t:
@@ -218,8 +220,11 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
         }
     }
     catch (Emulation_error &e) {
-        Errors::dont_die(e.what());
-        return_fifo->push({ death_error_t });
+        GS_return_message_payload return_payload;
+        char* copied_string = new char[ERROR_STRING_MAX_LENGTH];
+        strncpy(copied_string, e.what(), ERROR_STRING_MAX_LENGTH);
+        return_payload.death_error_payload.error_str = { copied_string };
+        return_fifo->push({ GS_return::death_error_t,return_payload });
     }
 }
 

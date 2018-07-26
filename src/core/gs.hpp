@@ -80,9 +80,21 @@ enum GS_return :uint8_t {
     render_complete_t,
     death_error_t,
 };
+union GS_return_message_payload
+{
+    struct
+    {
+        const char* error_str;
+    } death_error_payload;
+    struct
+    {
+        uint8_t BLANK;
+    } no_payload;//C++ doesn't like the empty struct
+};
 
 struct GS_return_message {
     GS_return type;
+    GS_return_message_payload payload;
 };
 
 typedef CircularFifo<GS_message, 1024 * 1024 * 16> gs_fifo;

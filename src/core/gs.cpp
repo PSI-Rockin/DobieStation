@@ -115,7 +115,14 @@ void wait_for_return(gs_return_fifo *return_queue)
                 case render_complete_t:
                     return;
                 case death_error_t:
-                    Errors::die("[GS] DEATH ERROR OCCURED! (check log for details)\n");
+                {
+                    auto p = data.payload.death_error_payload;
+                    auto data = std::string(p.error_str);
+                    delete[] p.error_str;
+                    Errors::die(data.c_str());
+                    //There's probably a better way of doing this
+                    //but I don't know how to make RAII work across threads properly
+                }
                 default:
                     Errors::die("[GS] Unhandled return message!\n");
             }

@@ -3,6 +3,8 @@
 
 #include <stdexcept>
 
+#define ERROR_STRING_MAX_LENGTH 255
+
 class Errors {
     public:
         static void die(const char* format, ...);

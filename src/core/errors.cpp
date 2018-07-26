@@ -2,11 +2,11 @@
 #include <cstdarg>
 #include <string>
 void Errors::die(const char* format, ...){
-    char* output = new char[255];
+    char* output = new char[ERROR_STRING_MAX_LENGTH];
     va_list args;
     va_start(args, format);
     vprintf(format, args);
-    vsnprintf(output, 255, format, args);
+    vsnprintf(output, ERROR_STRING_MAX_LENGTH, format, args);
     va_end(args);
     std::string error_str(output);
     throw Emulation_error(error_str);
