@@ -49,43 +49,43 @@ void EmuThread::load_CDVD(const char* name)
 
 void EmuThread::run()
 {
-    forever
+    try
     {
-        emu_mutex.lock();
-        if (abort)
+        forever
         {
-            emu_mutex.unlock();
-            return;
-        }
-        else if (pause_status)
-            usleep(10000);
-        else
-        {
-            try 
+            emu_mutex.lock();
+            if (abort)
             {
-                e.run();
-                int w, h, new_w, new_h;
-                e.get_inner_resolution(w, h);
-                e.get_resolution(new_w, new_h);
-                emit completed_frame(e.get_framebuffer(), w, h, new_w, new_h);
+                emu_mutex.unlock();
+                return;
+            }
+            else if (pause_status)
+                usleep(10000);
+            else
+            {
+                    e.run();
+                    int w, h, new_w, new_h;
+                    e.get_inner_resolution(w, h);
+                    e.get_resolution(new_w, new_h);
+                    emit completed_frame(e.get_framebuffer(), w, h, new_w, new_h);
 
-                //Update FPS
-                double FPS;
-                do
-                {
-                    chrono::system_clock::time_point now = chrono::system_clock::now();
-                    chrono::duration<double> elapsed_seconds = now - old_frametime;
-                    FPS = 1 / elapsed_seconds.count();
-                } while (FPS > 60.0);
-                old_frametime = chrono::system_clock::now();
-                emit update_FPS((int)round(FPS));
-            }
-            catch (Emulation_error &e)
-            {
-                emit emu_error(std::string(e.what()));
-            }
+                    //Update FPS
+                    double FPS;
+                    do
+                    {
+                        chrono::system_clock::time_point now = chrono::system_clock::now();
+                        chrono::duration<double> elapsed_seconds = now - old_frametime;
+                        FPS = 1 / elapsed_seconds.count();
+                    } while (FPS > 60.0);
+                    old_frametime = chrono::system_clock::now();
+                    emit update_FPS((int)round(FPS));
+                }
         }
         emu_mutex.unlock();
+    }
+    catch (Emulation_error &e)
+    {
+        emit emu_error(QString(e.what()));
     }
 }
 

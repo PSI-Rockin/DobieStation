@@ -40,7 +40,7 @@ class EmuThread : public QThread
     signals:
         void completed_frame(uint32_t* buffer, int inner_w, int inner_h, int final_w, int final_h);
         void update_FPS(int FPS);
-        void emu_error(std::string err);
+        void emu_error(QString err);
     public slots:
         void shutdown();
         void press_key(PAD_BUTTON button);

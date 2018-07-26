@@ -48,6 +48,7 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
     connect(&emuthread, SIGNAL(completed_frame(uint32_t*, int, int, int, int)),
             this, SLOT(draw_frame(uint32_t*, int, int, int, int)));
     connect(&emuthread, SIGNAL(update_FPS(int)), this, SLOT(update_FPS(int)));
+    connect(&emuthread, SIGNAL(emu_error(QString)), this, SLOT(emu_error(QString)));
     emuthread.pause(PAUSE_EVENT::GAME_NOT_LOADED);
 
     emuthread.reset();
@@ -300,11 +301,11 @@ void EmuWindow::update_FPS(int FPS)
     }
 }
 
-void EmuWindow::emu_error(std::string err)
+void EmuWindow::emu_error(QString err)
 {
     QMessageBox msgBox;
     msgBox.setText("A fatal emulation error has occured");
-    msgBox.setInformativeText(QString::fromStdString(err));
+    msgBox.setInformativeText(err);
     msgBox.setStandardButtons(QMessageBox::Abort);
     msgBox.setDefaultButton(QMessageBox::Abort);
     msgBox.exec();
