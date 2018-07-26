@@ -35,6 +35,7 @@ void VectorUnit::reset()
     branch_on = false;
     delay_slot = 0;
     transferring_GIF = false;
+    XGKICK_stall = false;
     XGKICK_cycles = 0;
     new_MAC_flags = 0;
     new_Q_instance.u = 0;
@@ -82,6 +83,10 @@ void VectorUnit::run(int cycles)
     {
         update_mac_pipeline();
         update_div_pipeline();
+
+        if (XGKICK_stall)
+            break;
+
         uint32_t upper_instr = *(uint32_t*)&instr_mem[PC + 4];
         uint32_t lower_instr = *(uint32_t*)&instr_mem[PC];
         //printf("[$%08X] $%08X:$%08X\n", PC, upper_instr, lower_instr);
@@ -119,13 +124,24 @@ void VectorUnit::run(int cycles)
             while (transferring_GIF)
             {
                 uint128_t quad = read_data<uint128_t>(GIF_addr);
+                GIF_addr += 16;
                 if (gif->send_PATH1(quad))
                 {
                     printf("[VU1] XGKICK transfer ended!\n");
-                    gif->deactivate_PATH(1);
-                    transferring_GIF = false;
+                    if (XGKICK_stall)
+                    {
+                        printf("[VU1] Activating stalled XGKICK transfer\n");
+                        XGKICK_cycles = 0;
+                        XGKICK_stall = false;
+                        GIF_addr = stalled_GIF_addr;
+                        break;
+                    }
+                    else
+                    {
+                        gif->deactivate_PATH(1);
+                        transferring_GIF = false;
+                    }
                 }
-                GIF_addr += 16;
             }
         }
     }
@@ -150,11 +166,15 @@ float VectorUnit::update_mac_flags(float value, int index)
     int flag_id = 3 - index;
     new_MAC_flags &= ~(0x1111 << flag_id);
 
-    //Zero flag
-    new_MAC_flags |= (value == 0.0) << flag_id;
-
     //Sign flag
     new_MAC_flags |= ((value_u & 0x80000000) != 0) << (flag_id + 4);
+
+    //Zero flag
+    if (value == 0)
+    {
+        new_MAC_flags |= 1 << flag_id;
+        return value;
+    }
 
     switch ((value_u >> 23) & 0xFF)
     {
@@ -542,7 +562,10 @@ void VectorUnit::erleng(uint8_t source)
 void VectorUnit::fcand(uint32_t value)
 {
     printf("[VU] FCAND: $%08X\n", value);
-    set_int(1, clip_flags && value);
+    if ((clip_flags & 0xFFFFFF) & (value & 0xFFFFFF))
+        set_int(1, 1);
+    else
+        set_int(1, 0);
 }
 
 void VectorUnit::fcget(uint8_t dest)
@@ -803,8 +826,7 @@ void VectorUnit::madd(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)
         if (field & (1 << (3 - i)))
         {
             float temp = convert(gpr[reg1].u[i]) * convert(gpr[reg2].u[i]);
-            set_gpr_f(dest, i, temp + convert(ACC.u[i]));
-            update_mac_flags(gpr[dest].f[i], i);
+            set_gpr_f(dest, i, update_mac_flags(temp + convert(ACC.u[i]), i));
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
         else
@@ -941,7 +963,7 @@ void VectorUnit::mfp(uint8_t field, uint8_t dest)
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
-            gpr[dest].f[i] = P.u;
+            set_gpr_u(dest, i, P.u);
     }
 }
 
@@ -1078,6 +1100,8 @@ void VectorUnit::msubbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source,
             set_gpr_f(dest, i, update_mac_flags(ACC.f[i] - temp, i));
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
+        else
+            clear_mac_flags(i);
     }
     printf("\n");
 }
@@ -1094,6 +1118,8 @@ void VectorUnit::msubi(uint8_t field, uint8_t dest, uint8_t source)
             set_gpr_f(dest, i, update_mac_flags(ACC.f[i] - temp, i));
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
+        else
+            clear_mac_flags(i);
     }
     printf("\n");
 }
@@ -1242,9 +1268,14 @@ void VectorUnit::mulq(uint8_t field, uint8_t dest, uint8_t source)
  */
 void VectorUnit::opmsub(uint8_t dest, uint8_t reg1, uint8_t reg2)
 {
-    set_gpr_f(dest, 0, update_mac_flags(convert(ACC.u[0]) - convert(gpr[reg1].u[1]) * convert(gpr[reg2].u[2]), 0));
-    set_gpr_f(dest, 1, update_mac_flags(convert(ACC.u[1]) - convert(gpr[reg1].u[2]) * convert(gpr[reg2].u[0]), 1));
-    set_gpr_f(dest, 2, update_mac_flags(convert(ACC.u[2]) - convert(gpr[reg1].u[0]) * convert(gpr[reg2].u[1]), 2));
+    VU_GPR temp;
+    temp.f[0] = convert(ACC.u[0]) - convert(gpr[reg1].u[1]) * convert(gpr[reg2].u[2]);
+    temp.f[1] = convert(ACC.u[1]) - convert(gpr[reg1].u[2]) * convert(gpr[reg2].u[0]);
+    temp.f[2] = convert(ACC.u[2]) - convert(gpr[reg1].u[0]) * convert(gpr[reg2].u[1]);
+
+    set_gpr_f(dest, 0, update_mac_flags(temp.f[0], 0));
+    set_gpr_f(dest, 1, update_mac_flags(temp.f[1], 1));
+    set_gpr_f(dest, 2, update_mac_flags(temp.f[2], 2));
     clear_mac_flags(3);
     printf("[VU] OPMSUB: %f, %f, %f\n", gpr[dest].f[0], gpr[dest].f[1], gpr[dest].f[2]);
 }
@@ -1471,22 +1502,22 @@ void VectorUnit::xgkick(uint8_t is)
         exit(1);
     }
     printf("[VU1] XGKICK: Addr $%08X\n", int_gpr[is].u * 16);
-    while (transferring_GIF)
+
+    //If an XGKICK transfer is ongoing, completely stall the VU until the first transfer has finished.
+    //Note: a real VU executes for one or two more cycles before stalling due to pipelining.
+    if (transferring_GIF)
     {
-        //If another XGKICK is already running, the proper behavior is to stall the VU until the transfer finishes.
-        //Here, we just finish the transfer instantly.
-        uint128_t quad = read_data<uint128_t>(GIF_addr);
-        if (gif->send_PATH1(quad))
-        {
-            gif->deactivate_PATH(1);
-            transferring_GIF = false;
-        }
-        GIF_addr += 16;
+        printf("[VU1] XGKICK called during active transfer, stalling VU\n");
+        stalled_GIF_addr = (uint32_t)int_gpr[is].u * 16;
+        XGKICK_stall = true;
     }
-    XGKICK_cycles = 0;
-    gif->request_PATH(1);
-    transferring_GIF = true;
-    GIF_addr = (uint32_t)int_gpr[is].u * 16;
+    else
+    {
+        XGKICK_cycles = 0;
+        gif->request_PATH(1);
+        transferring_GIF = true;
+        GIF_addr = (uint32_t)int_gpr[is].u * 16;
+    }
 }
 
 #define printf(fmt, ...)(0)

@@ -42,6 +42,7 @@ class VectorInterface
         UNPACK_Command unpack;
 
         bool wait_for_VU;
+        bool flush_stall;
         uint32_t wait_cmd_value;
 
         uint32_t buffer[4];

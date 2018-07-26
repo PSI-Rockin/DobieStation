@@ -142,7 +142,11 @@ bool DMAC::mfifo_handler(int index)
                 mfifo_empty_triggered = true;
                 printf("[DMAC] MFIFO Empty\n");
             }
-            return false;
+            //Continue transfer if using a reference and there's QWC left
+            if (channels[index].quadword_count && (id == 0 || id == 3 || id == 4))
+                return true;
+            else
+                return false;
         }
         mfifo_empty_triggered = false;
     }
