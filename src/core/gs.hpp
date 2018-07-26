@@ -71,12 +71,14 @@ union GS_message_payload
     } no_payload;//C++ doesn't like the empty struct
 };
 
-struct GS_message {
+struct GS_message
+{
     GS_command type;
     GS_message_payload payload;
 };
 
-enum GS_return :uint8_t {
+enum GS_return :uint8_t
+{
     render_complete_t,
     death_error_t,
 };
@@ -92,7 +94,8 @@ union GS_return_message_payload
     } no_payload;//C++ doesn't like the empty struct
 };
 
-struct GS_return_message {
+struct GS_return_message
+{
     GS_return type;
     GS_return_message_payload payload;
 };

@@ -10,7 +10,8 @@ a single bigger queue if at all reasonable though
 #include <atomic>
 #include <cstddef>
 template<typename Element, size_t Size>
-class CircularFifo {
+class CircularFifo
+{
 public:
     enum { Capacity = Size + 1 };
 

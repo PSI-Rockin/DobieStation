@@ -219,7 +219,8 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
             }
         }
     }
-    catch (Emulation_error &e) {
+    catch (Emulation_error &e)
+    {
         GS_return_message_payload return_payload;
         char* copied_string = new char[ERROR_STRING_MAX_LENGTH];
         strncpy(copied_string, e.what(), ERROR_STRING_MAX_LENGTH);
