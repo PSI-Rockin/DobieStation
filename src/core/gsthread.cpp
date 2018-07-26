@@ -932,7 +932,6 @@ bool GraphicsSynthesizerThread::depth_test(int32_t x, int32_t y, uint32_t z)
                     return z > read_PSMCT16SZ_block(base, width, x, y);
                 default:
                     Errors::die("[GS_t] Unrecognized zbuf format $%02X\n", current_ctx->zbuf.format);
-                    exit(1);
             }
             break;
     }
@@ -1720,7 +1719,7 @@ void GraphicsSynthesizerThread::unpack_PSMCT24(uint64_t data, int offset)
 
 void GraphicsSynthesizerThread::host_to_host()
 {
-    exit(1);
+    Errors::die("host_to_host not implemented!");
     int ppd = 2; //pixels per doubleword
     uint32_t source_addr = (TRXPOS.source_x + (TRXPOS.source_y * BITBLTBUF.source_width)) << 1;
     source_addr += BITBLTBUF.source_base;

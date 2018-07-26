@@ -727,9 +727,8 @@ void Emulator::write128(uint32_t address, uint128_t value)
         *(uint128_t*)&BIOS[address & 0x3FFFFF] = value;
         return;
     }
-    printf("Unrecognized write128 at physical addr $%08X of $%08X_%08X_%08X_%08X\n", address,
+    Errors::dont_die("Unrecognized write128 at physical addr $%08X of $%08X_%08X_%08X_%08X\n", address,
            value._u32[3], value._u32[2], value._u32[1], value._u32[0]);
-    //exit(1);
 }
 
 void Emulator::ee_kputs(uint32_t param)

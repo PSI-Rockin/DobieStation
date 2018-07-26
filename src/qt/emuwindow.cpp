@@ -299,6 +299,17 @@ void EmuWindow::update_FPS(int FPS)
     }
 }
 
+void emu_error(std::string err);
+{
+    QMessageBox msgBox;
+    msgBox.setText("A fatal emulation error has occured");
+    msgBox.setInformativeText(err);
+    msgBox.setStandardButtons(QMessageBox::Abort);
+    msgBox.setDefaultButton(QMessageBox::Abort);
+    msgBox.exec();
+    exit(1);
+}
+
 #ifndef QT_NO_CONTEXTMENU
 void EmuWindow::contextMenuEvent(QContextMenuEvent* event)
 {
