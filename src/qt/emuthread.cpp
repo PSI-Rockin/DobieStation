@@ -49,41 +49,42 @@ void EmuThread::load_CDVD(const char* name)
 
 void EmuThread::run()
 {
-    try
+    forever
     {
-        forever
+
+        QMutexLocker locker(&emu_mutex);
+        if (abort)
+            return;
+        else if (pause_status)
+            usleep(10000);
+        else
         {
-
-            QMutexLocker locker(&emu_mutex);
-            if (abort)
-                return;
-            else if (pause_status)
-                usleep(10000);
-            else
+            try
             {
-                    e.run();
-                    int w, h, new_w, new_h;
-                    e.get_inner_resolution(w, h);
-                    e.get_resolution(new_w, new_h);
-                    emit completed_frame(e.get_framebuffer(), w, h, new_w, new_h);
+                e.run();
+                int w, h, new_w, new_h;
+                e.get_inner_resolution(w, h);
+                e.get_resolution(new_w, new_h);
+                emit completed_frame(e.get_framebuffer(), w, h, new_w, new_h);
 
-                    //Update FPS
-                    double FPS;
-                    do
-                    {
-                        chrono::system_clock::time_point now = chrono::system_clock::now();
-                        chrono::duration<double> elapsed_seconds = now - old_frametime;
-                        FPS = 1 / elapsed_seconds.count();
-                    } while (FPS > 60.0);
-                    old_frametime = chrono::system_clock::now();
-                    emit update_FPS((int)round(FPS));
-                }
+                //Update FPS
+                double FPS;
+                do
+                {
+                    chrono::system_clock::time_point now = chrono::system_clock::now();
+                    chrono::duration<double> elapsed_seconds = now - old_frametime;
+                    FPS = 1 / elapsed_seconds.count();
+                } while (FPS > 60.0);
+                old_frametime = chrono::system_clock::now();
+                emit update_FPS((int)round(FPS));
+            }
+            catch (Emulation_error &e)
+            {
+                printf("Emulation error!");
+                emit emu_error(QString(e.what()));
+                pause(PAUSE_EVENT::GAME_NOT_LOADED);
+            }
         }
-    }
-    catch (Emulation_error &e)
-    {
-        printf("Emulation error!");
-        emit emu_error(QString(e.what()));
     }
 }
 

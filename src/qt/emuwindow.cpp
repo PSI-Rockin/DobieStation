@@ -309,7 +309,6 @@ void EmuWindow::emu_error(QString err)
     msgBox.setStandardButtons(QMessageBox::Abort);
     msgBox.setDefaultButton(QMessageBox::Abort);
     msgBox.exec();
-    exit(1);
 }
 
 #ifndef QT_NO_CONTEXTMENU
