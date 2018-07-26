@@ -116,14 +116,16 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
 {
     GraphicsSynthesizerThread gs = GraphicsSynthesizerThread();
     gs.reset();
-    while (true) 
+    try
     {
-        GS_message data;
-        bool available = fifo->pop(data);
-        if (available) 
+        while (true)
         {
-            switch (data.type)
+            GS_message data;
+            bool available = fifo->pop(data);
+            if (available)
             {
+                switch (data.type)
+                {
                 case write64_t:
                 {
                     auto p = data.payload.write64_payload;
@@ -207,12 +209,17 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
                     break;
                 case die_t:
                     return;
+                }
+            }
+            else
+            {
+                std::this_thread::yield();
             }
         }
-        else
-        {
-            std::this_thread::yield();
-        }
+    }
+    catch (Emulation_error &e) {
+        Errors::dont_die(e.what());
+        return_fifo->push({ death_error_t });
     }
 }
 

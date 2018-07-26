@@ -114,6 +114,8 @@ void wait_for_return(gs_return_fifo *return_queue)
             {
                 case render_complete_t:
                     return;
+                case death_error_t:
+                    Errors::die("[GS] DEATH ERROR OCCURED! (check log for details)\n");
                 default:
                     Errors::die("[GS] Unhandled return message!\n");
             }

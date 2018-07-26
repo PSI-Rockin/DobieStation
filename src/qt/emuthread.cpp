@@ -3,7 +3,6 @@
 #include <fstream>
 
 #include "emuthread.hpp"
-#include "../core/errors.hpp"
 
 using namespace std;
 
@@ -83,7 +82,7 @@ void EmuThread::run()
             }
             catch (Emulation_error &e)
             {
-                emit emu_error(std::current_exception());
+                emit emu_error(std::string(e.what()));
             }
         }
         emu_mutex.unlock();
