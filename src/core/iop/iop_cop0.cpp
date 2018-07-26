@@ -78,6 +78,6 @@ void IOP_Cop0::mtc(int cop_reg, uint32_t value)
             status.bev = value & (1 << 22);
             break;
         default:
-            Errors::dont_die("[IOP COP0] MTC: Unknown cop_reg %d\n", cop_reg);
+            Errors::print_warning("[IOP COP0] MTC: Unknown cop_reg %d\n", cop_reg);
     }
 }

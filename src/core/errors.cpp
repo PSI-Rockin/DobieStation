@@ -13,7 +13,7 @@ void Errors::die(const char* format, ...)
     throw Emulation_error(error_str);
 }
 
-void Errors::dont_die(const char* format, ...)
+void Errors::print_warning(const char* format, ...)
 {
     /*this is 100% identical to printf
     but is intended for erorrs that we want to ignore for now*/

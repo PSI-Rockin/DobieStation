@@ -183,15 +183,14 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
                 case render_crt_t:
                 {
                     auto p = data.payload.render_payload;
-                    //std::lock_guard<std::mutex> lock(*p.target_mutex);
 
                     while (!p.target_mutex->try_lock())
                     {
                         printf("[GS_t] buffer lock failed!\n");
                         std::this_thread::yield();
                     }
+                    std::lock_guard<std::mutex> lock(*p.target_mutex, std::adopt_lock);
                     gs.render_CRT(p.target);
-                    p.target_mutex->unlock();
                     GS_return_message_payload return_payload;
                     return_payload.no_payload = { 0 };
                     return_fifo->push({ GS_return::render_complete_t,return_payload });
@@ -548,7 +547,7 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
                 write_HWREG(value);
             break;
         default:
-            Errors::dont_die("[GS_t] Unrecognized write64 to reg $%04X: $%08X_%08X\n", addr, value >> 32, value);
+            Errors::print_warning("[GS_t] Unrecognized write64 to reg $%04X: $%08X_%08X\n", addr, value >> 32, value);
     }
 }
 

@@ -9,7 +9,7 @@ class Errors
 {
     public:
         static void die(const char* format, ...);
-        static void dont_die(const char* format, ...);//ignores the error, just print it.
+        static void print_warning(const char* format, ...);//ignores the error, just print it.
 };
 class Emulation_error : public std::runtime_error
 {
