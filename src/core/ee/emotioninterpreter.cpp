@@ -606,7 +606,12 @@ void EmotionInterpreter::lwr(EmotionEngine &cpu, uint32_t instruction)
 
     uint32_t mem = cpu.read32(addr & ~0x3);
     mem = (cpu.get_gpr<uint32_t>(dest) & LWR_MASK[shift]) | (mem >> LWR_SHIFT[shift]);
-    cpu.set_gpr<int64_t>(dest, (int32_t)mem);
+
+    //Only sign-extend the loaded word if the shift is zero
+    if (!shift)
+        cpu.set_gpr<int64_t>(dest, (int32_t)mem);
+    else
+        cpu.set_gpr<uint64_t>(dest, mem);
 }
 
 void EmotionInterpreter::lwu(EmotionEngine &cpu, uint32_t instruction)

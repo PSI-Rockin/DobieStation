@@ -1,7 +1,8 @@
 #include <cstdio>
+#include <cstdlib>
 #include "gscontext.hpp"
 
-#define printf(fmt, ...)(0)
+//#define printf(fmt, ...)(0)
 
 void GSContext::reset()
 {

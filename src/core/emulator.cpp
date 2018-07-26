@@ -1,8 +1,8 @@
+#include <cfenv>
 #include <cstring>
 #include <cstdio>
 #include <cstdlib>
 #include <sstream>
-#include <fenv.h>
 #include "emulator.hpp"
 
 #define CYCLES_PER_FRAME 4900000

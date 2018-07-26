@@ -72,7 +72,7 @@ class VectorUnit
         float Q_Pipeline[6];
         VU_R new_Q_instance;
 
-        void update_mac_flags(float value, int index);
+        float update_mac_flags(float value, int index);
         void clear_mac_flags(int index);
         void update_mac_pipeline();
         void update_div_pipeline();
