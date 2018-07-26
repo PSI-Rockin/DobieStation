@@ -51,6 +51,8 @@ class VectorUnit
         int XGKICK_cycles;
         uint16_t GIF_addr;
         bool transferring_GIF;
+        bool XGKICK_stall;
+        uint16_t stalled_GIF_addr;
 
         //GPR
         VU_GPR gpr[32];

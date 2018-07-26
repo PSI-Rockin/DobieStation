@@ -25,6 +25,7 @@ void VectorInterface::reset()
     vu->set_TOP_regs(&TOP, &ITOP);
     vu->set_GIF(gif);
     wait_for_VU = false;
+    flush_stall = false;
 }
 
 void VectorInterface::update()
@@ -37,6 +38,12 @@ void VectorInterface::update()
         wait_for_VU = false;
         handle_wait_cmd(wait_cmd_value);
     }
+    /*if (flush_stall)
+    {
+        if (gif->path_active(1))
+            return;
+        flush_stall = false;
+    }*/
     while (FIFO.size() && runcycles--)
     {        
         if (wait_for_VU)
@@ -46,6 +53,12 @@ void VectorInterface::update()
             wait_for_VU = false;
             handle_wait_cmd(wait_cmd_value);
         }
+        /*if (flush_stall)
+        {
+            if (gif->path_active(1))
+                return;
+            flush_stall = false;
+        }*/
         uint32_t value = FIFO.front();
         if (command_len <= 0)
         {
@@ -156,6 +169,7 @@ void VectorInterface::decode_cmd(uint32_t value)
         case 0x11:
             printf("[VIF] FLUSH\n");
             wait_for_VU = true;
+            flush_stall = true;
             wait_cmd_value = value;
             break;
         case 0x13:
@@ -410,7 +424,7 @@ void VectorInterface::process_UNPACK_quad(uint128_t &quad)
 
     //printf("[VIF] Write data mem $%08X: $%08X_%08X_%08X_%08X\n", unpack.addr,
            //quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
-    vu->write_data(unpack.addr, quad);
+    vu->write_data<uint128_t>(unpack.addr, quad);
     unpack.addr += 16;
 }
 

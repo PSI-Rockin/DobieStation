@@ -21,7 +21,7 @@ static uint32_t page_PSMCT16SZ[32][64][64];
 static uint32_t page_PSMCT8[32][64][128];
 static uint32_t page_PSMCT4[32][128][128];
 
-//#define printf(fmt, ...)(0)
+#define printf(fmt, ...)(0)
 
 /**
   * ~ GS notes ~
@@ -784,7 +784,6 @@ void GraphicsSynthesizerThread::write_PSMCT8_block(uint32_t base, uint32_t width
 void GraphicsSynthesizerThread::write_PSMCT4_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y, uint8_t value)
 {
     uint32_t addr = addr_PSMCT4(base / 256, width / 64, x, y);
-    printf("x: %d y: %d $%08X\n", x, y, addr);
     if (addr & 0x1)
     {
         local_mem[addr >> 1] &= ~0xF0;

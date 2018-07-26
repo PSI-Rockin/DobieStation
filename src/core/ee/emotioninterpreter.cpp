@@ -612,7 +612,7 @@ void EmotionInterpreter::lwr(EmotionEngine &cpu, uint32_t instruction)
     if (!shift)
         cpu.set_gpr<int64_t>(dest, (int32_t)mem);
     else
-        cpu.set_gpr<uint64_t>(dest, mem);
+        cpu.set_gpr<uint32_t>(dest, mem);
 }
 
 void EmotionInterpreter::lwu(EmotionEngine &cpu, uint32_t instruction)

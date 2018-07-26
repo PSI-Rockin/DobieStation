@@ -41,7 +41,7 @@ void GraphicsInterface::process_PACKED(uint128_t data)
     uint64_t data2 = data._u64[1];
     //printf("[GIF] PACKED: $%08X_%08X_%08X_%08X\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
     uint64_t reg_offset = (current_tag.reg_count - current_tag.regs_left) << 2;
-    uint8_t reg = (current_tag.regs & (0xFUL << reg_offset)) >> reg_offset;
+    uint8_t reg = (current_tag.regs >> reg_offset) & 0xF;
     switch (reg)
     {
         case 0x0:
@@ -122,7 +122,7 @@ void GraphicsInterface::process_REGLIST(uint128_t data)
     for (int i = 0; i < 2; i++)
     {
         uint64_t reg_offset = (current_tag.reg_count - current_tag.regs_left) << 2;
-        uint8_t reg = (current_tag.regs & (0xFUL << reg_offset)) >> reg_offset;
+        uint8_t reg = (current_tag.regs >> reg_offset) & 0xF;
         gs->write64(reg, data._u64[i]);
 
         current_tag.regs_left--;
