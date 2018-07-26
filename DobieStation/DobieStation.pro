@@ -14,6 +14,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000
 
 SOURCES += ../src/qt/main.cpp \
+    ../src/core/errors.cpp \
     ../src/core/ee/emotion.cpp \
     ../src/core/emulator.cpp \
     ../src/core/ee/emotioninterpreter.cpp \
@@ -68,6 +69,7 @@ SOURCES += ../src/qt/main.cpp \
     ../src/core/gsmem.cpp
 
 HEADERS += \
+    ../src/core/errors.hpp \
     ../src/core/ee/emotion.hpp \
     ../src/core/emulator.hpp \
     ../src/core/ee/emotioninterpreter.hpp \

@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <sstream>
 #include "emulator.hpp"
+#include "errors.hpp"
 
 #define CYCLES_PER_FRAME 4900000
 #define VBLANK_START CYCLES_PER_FRAME * 0.75
@@ -179,8 +180,7 @@ bool Emulator::skip_BIOS()
                 char* system_cnf = (char*)cdvd.read_file("SYSTEM.CNF;1", system_cnf_size);
                 if (!system_cnf)
                 {
-                    printf("[Emulator] Failed to load SYSTEM.CNF!\n");
-                    exit(1);
+                    Errors::die("[Emulator] Failed to load SYSTEM.CNF!\n");
                 }
                 std::string exec_name = "";
                 //Search for cdrom0:
@@ -203,8 +203,7 @@ bool Emulator::skip_BIOS()
                 uint8_t* file = cdvd.read_file(exec_name, ELF_size);
                 if (!file)
                 {
-                    printf("[Emulator] Failed to load %s!\n", exec_name.c_str());
-                    exit(1);
+                    Errors::die("[Emulator] Failed to load %s!\n", exec_name.c_str());
                 }
                 load_ELF(file, ELF_size);
                 delete[] file;
@@ -259,8 +258,7 @@ void Emulator::execute_ELF()
 {
     if (!ELF_file)
     {
-        printf("[Emulator] ELF not loaded!\n");
-        exit(1);
+        Errors::die("[Emulator] ELF not loaded!\n");
     }
     printf("[Emulator] Loading ELF into memory...\n");
     uint32_t e_entry = *(uint32_t*)&ELF_file[0x18];
@@ -522,8 +520,7 @@ void Emulator::write8(uint32_t address, uint8_t value)
             ee_log.flush();
             return;
     }
-    printf("Unrecognized write8 at physical addr $%08X of $%02X\n", address, value);
-    //exit(1);
+    Errors::dont_die("Unrecognized write8 at physical addr $%08X of $%02X\n", address, value);
 }
 
 void Emulator::write16(uint32_t address, uint16_t value)
@@ -640,9 +637,7 @@ void Emulator::write32(uint32_t address, uint32_t value)
             dmac.write_master_disable(value);
             return;
     }
-    printf("Unrecognized write32 at physical addr $%08X of $%08X\n", address, value);
-
-    //exit(1);
+    Errors::dont_die("Unrecognized write32 at physical addr $%08X of $%08X\n", address, value);
 }
 
 void Emulator::write64(uint32_t address, uint64_t value)
@@ -679,8 +674,7 @@ void Emulator::write64(uint32_t address, uint64_t value)
         gs.write64_privileged(address, value);
         return;
     }
-    printf("Unrecognized write64 at physical addr $%08X of $%08X_%08X\n", address, value >> 32, value & 0xFFFFFFFF);
-    //exit(1);
+    Errors::dont_die("Unrecognized write64 at physical addr $%08X of $%08X_%08X\n", address, value >> 32, value & 0xFFFFFFFF);
 }
 
 void Emulator::write128(uint32_t address, uint128_t value)
@@ -898,8 +892,7 @@ uint32_t Emulator::iop_read32(uint32_t address)
         case 0xFFFE0130: //Cache control?
             return 0;
     }
-    printf("Unrecognized IOP read32 from physical addr $%08X\n", address);
-    //exit(1);
+    Errors::dont_die("Unrecognized IOP read32 from physical addr $%08X\n", address);
     return 0;
 }
 
@@ -947,8 +940,7 @@ void Emulator::iop_write8(uint32_t address, uint8_t value)
             printf("[IOP] POST: $%02X\n", value);
             return;
     }
-    printf("Unrecognized IOP write8 to physical addr $%08X of $%02X\n", address, value);
-    //exit(1);
+    Errors::dont_die("Unrecognized IOP write8 to physical addr $%08X of $%02X\n", address, value);
 }
 
 void Emulator::iop_write16(uint32_t address, uint16_t value)
@@ -1008,8 +1000,7 @@ void Emulator::iop_write16(uint32_t address, uint16_t value)
             iop_dma.set_chan_count(11, value);
             return;
     }
-    printf("Unrecognized IOP write16 to physical addr $%08X of $%04X\n", address, value);
-    //exit(1);
+    Errors::dont_die("Unrecognized IOP write16 to physical addr $%08X of $%04X\n", address, value);
 }
 
 void Emulator::iop_write32(uint32_t address, uint32_t value)
@@ -1206,8 +1197,7 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
         case 0xFFFE0130:
             return;
     }
-    printf("Unrecognized IOP write32 to physical addr $%08X of $%08X\n", address, value);
-    //exit(1);
+    Errors::dont_die("Unrecognized IOP write32 to physical addr $%08X of $%08X\n", address, value);
 }
 
 void Emulator::iop_request_IRQ(int index)

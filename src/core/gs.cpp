@@ -6,7 +6,7 @@
 #include "ee/intc.hpp"
 #include "gs.hpp"
 #include "gsthread.hpp"
-
+#include "errors.hpp"
 using namespace std;
 
 /**
@@ -115,8 +115,7 @@ void wait_for_return(gs_return_fifo *return_queue)
                 case render_complete_t:
                     return;
                 default:
-                    printf("[GS] Unhandled return message!\n");
-                    exit(1);
+                    Errors::die("[GS] Unhandled return message!\n");
             }
         }
         else

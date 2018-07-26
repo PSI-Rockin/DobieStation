@@ -1,6 +1,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include "ipu_fifo.hpp"
+#include "../../errors.hpp"
 
 bool IPU_FIFO::get_bits(uint32_t &data, int bits)
 {
@@ -41,8 +42,7 @@ void IPU_FIFO::advance_stream(uint8_t amount)
 
     if (bit_pointer > (f.size() * 128))
     {
-        printf("[IPU] Bit pointer exceeds FIFO size!\n");
-        exit(1);
+        Errors::die("[IPU] Bit pointer exceeds FIFO size!\n");
     }
     while (bit_pointer >= 128)
     {

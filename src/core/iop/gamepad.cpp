@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include <cstring>
 #include "gamepad.hpp"
+#include "../errors.hpp"
 
 //Reply buffers taken from PCSX2's LilyPad
 
@@ -132,8 +133,7 @@ uint8_t Gamepad::write_SIO(uint8_t value)
                 memcpy(command_buffer + 2, rumble_values, 7);
                 return 0xF3;
             default:
-                printf("[PAD] Unrecognized command %c ($%02X)\n", value, value);
-                exit(1);
+                Errors::die("[PAD] Unrecognized command %c ($%02X)\n", value, value);
         }
     }
 

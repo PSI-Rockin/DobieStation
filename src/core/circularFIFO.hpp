@@ -44,8 +44,7 @@ void CircularFifo<Element, Size>::push(const Element& item)
     }
     else
     {
-        printf("FIFO FULL!");
-        //exit(1);
+        Errors::dont_die("FIFO FULL!");
     }
 
 }

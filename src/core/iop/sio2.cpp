@@ -3,6 +3,7 @@
 #include "sio2.hpp"
 
 #include "../emulator.hpp"
+#include "../errors.hpp"
 
 using namespace std;
 
@@ -117,8 +118,7 @@ void SIO2::write_device(uint8_t value)
             RECV1 = 0x1D100;
             break;
         default:
-            printf("[SIO2] Unrecognized active command!\n");
-            exit(1);
+            Errors::die("[SIO2] Unrecognized active command!\n");
     }
 }
 

@@ -78,6 +78,7 @@ struct GS_message {
 
 enum GS_return :uint8_t {
     render_complete_t,
+    death_error_t,
 };
 
 struct GS_return_message {

@@ -6,6 +6,7 @@
 
 #include "gsthread.hpp"
 #include "gsmem.hpp"
+#include "errors.hpp"
 
 using namespace std;
 
@@ -534,8 +535,7 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
                 write_HWREG(value);
             break;
         default:
-            printf("[GS_t] Unrecognized write64 to reg $%04X: $%08X_%08X\n", addr, value >> 32, value);
-            //exit(1);
+            Errors::dont_die("[GS_t] Unrecognized write64 to reg $%04X: $%08X_%08X\n", addr, value >> 32, value);
     }
 }
 
@@ -853,8 +853,7 @@ void GraphicsSynthesizerThread::vertex_kick(bool drawing_kick)
             }
             break;
         default:
-            printf("[GS] Unrecognized primitive %d\n", PRIM.prim_type);
-            exit(1);
+            Errors::die("[GS] Unrecognized primitive %d\n", PRIM.prim_type);
     }
     if (drawing_kick && request_draw_kick)
         render_primitive();
@@ -907,8 +906,7 @@ bool GraphicsSynthesizerThread::depth_test(int32_t x, int32_t y, uint32_t z)
                     z = min(z, 0xFFFFU);
                     return z >= read_PSMCT16SZ_block(base, width, x, y);
                 default:
-                    printf("[GS_t] Unrecognized zbuf format $%02X\n", current_ctx->zbuf.format);
-                    exit(1);
+                    Errors::die("[GS_t] Unrecognized zbuf format $%02X\n", current_ctx->zbuf.format);
             }
             break;
         case 3: //GREATER
@@ -926,7 +924,7 @@ bool GraphicsSynthesizerThread::depth_test(int32_t x, int32_t y, uint32_t z)
                     z = min(z, 0xFFFFU);
                     return z > read_PSMCT16SZ_block(base, width, x, y);
                 default:
-                    printf("[GS_t] Unrecognized zbuf format $%02X\n", current_ctx->zbuf.format);
+                    Errors::die("[GS_t] Unrecognized zbuf format $%02X\n", current_ctx->zbuf.format);
                     exit(1);
             }
             break;
@@ -1585,8 +1583,7 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
             ppd = 16;
             break;
         default:
-            printf("[GS_t] Unrecognized BITBLTBUF dest format $%02X\n", BITBLTBUF.dest_format);
-            exit(1);
+            Errors::die("[GS_t] Unrecognized BITBLTBUF dest format $%02X\n", BITBLTBUF.dest_format);
     }
 
     for (int i = 0; i < ppd; i++)
@@ -1891,8 +1888,7 @@ void GraphicsSynthesizerThread::tex_lookup(uint16_t u, uint16_t v, const RGBAQ_R
         }
             break;
         default:
-            printf("[GS_t] Unrecognized texture format $%02X\n", current_ctx->tex0.format);
-            exit(1);
+            Errors::die("[GS_t] Unrecognized texture format $%02X\n", current_ctx->tex0.format);
     }
 
     switch (current_ctx->tex0.color_function)
@@ -1959,8 +1955,7 @@ void GraphicsSynthesizerThread::clut_lookup(uint8_t entry, RGBAQ_REG &tex_color,
         }
             break;
         default:
-            printf("[GS_t] Unrecognized CLUT format $%02X\n", current_ctx->tex0.CLUT_format);
-            exit(1);
+            Errors::die("[GS_t] Unrecognized CLUT format $%02X\n", current_ctx->tex0.CLUT_format);
     }
 }
 

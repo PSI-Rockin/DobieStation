@@ -4,6 +4,7 @@
 #include "vu.hpp"
 #include "vu_interpreter.hpp"
 
+#include "../errors.hpp"
 #include "../gif.hpp"
 
 #define _x(f) f&8
@@ -492,8 +493,7 @@ void VectorUnit::eleng(uint8_t source)
 {
     if (!id)
     {
-        printf("[VU] ERROR: ELENG called on VU0!\n");
-        exit(1);
+        Errors::die("[VU] ERROR: ELENG called on VU0!\n");
     }
 
     //P = sqrt(x^2 + y^2 + z^2)
@@ -508,8 +508,7 @@ void VectorUnit::esqrt(uint8_t fsf, uint8_t source)
 {
     if (!id)
     {
-        printf("[VU] ERROR: ESQRT called on VU0!\n");
-        exit(1);
+        Errors::die("[VU] ERROR: ESQRT called on VU0!\n");
     }
 
     P.f = convert(gpr[source].u[fsf]);
@@ -523,8 +522,7 @@ void VectorUnit::erleng(uint8_t source)
 {
     if (!id)
     {
-        printf("[VU] ERROR: ERLENG called on VU0!\n");
-        exit(1);
+        Errors::die("[VU] ERROR: ERLENG called on VU0!\n");
     }
 
     //P = 1 / sqrt(x^2 + y^2 + z^2)
@@ -1467,8 +1465,7 @@ void VectorUnit::xgkick(uint8_t is)
 {
     if (!id)
     {
-        printf("[VU] ERROR: XGKICK called on VU0!\n");
-        exit(1);
+        Errors::die("[VU] ERROR: XGKICK called on VU0!\n");
     }
     printf("[VU1] XGKICK: Addr $%08X\n", int_gpr[is].u * 16);
     while (transferring_GIF)
@@ -1501,8 +1498,7 @@ void VectorUnit::xtop(uint8_t it)
 {
     if (!id)
     {
-        printf("[VU] ERROR: XTOP called on VU0!\n");
-        exit(1);
+        Errors::die("[VU] ERROR: XTOP called on VU0!\n");
     }
     printf("[VU1] XTOP: $%04X (%d)\n", *VIF_TOP, it);
     set_int(it, *VIF_TOP);
