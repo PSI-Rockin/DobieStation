@@ -7,6 +7,7 @@
 #include <QVBoxLayout>
 #include <QMenuBar>
 #include <QFileDialog>
+#include <QMessageBox>
 
 #include "emuwindow.hpp"
 
@@ -299,11 +300,11 @@ void EmuWindow::update_FPS(int FPS)
     }
 }
 
-void emu_error(std::string err);
+void EmuWindow::emu_error(std::string err)
 {
     QMessageBox msgBox;
     msgBox.setText("A fatal emulation error has occured");
-    msgBox.setInformativeText(err);
+    msgBox.setInformativeText(QString::fromStdString(err));
     msgBox.setStandardButtons(QMessageBox::Abort);
     msgBox.setDefaultButton(QMessageBox::Abort);
     msgBox.exec();

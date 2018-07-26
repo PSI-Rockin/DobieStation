@@ -40,7 +40,7 @@ void SIO2::set_send1(int index, uint32_t value)
     printf("[SIO2] SEND1: $%08X (%d)\n", value, index);
     send1[index] = value;
     if (index < 0 || index >= 4)
-        exit(1);
+        Errors::die("SIO2 set_send1 index (%d) out of range (0-4)", index);
 }
 
 void SIO2::set_send2(int index, uint32_t value)
@@ -48,7 +48,7 @@ void SIO2::set_send2(int index, uint32_t value)
     printf("[SIO2] SEND2: $%08X (%d)\n", value, index);
     send2[index] = value;
     if (index < 0 || index >= 4)
-        exit(1);
+        Errors::die("SIO2 set_send2 index (%d) out of range (0-4)", index);
 }
 
 void SIO2::set_send3(int index, uint32_t value)
@@ -56,7 +56,7 @@ void SIO2::set_send3(int index, uint32_t value)
     printf("[SIO2] SEND3: $%08X (%d)\n", value, index);
     send3[index] = value;
     if (index < 0 || index >= 16)
-        exit(1);
+        Errors::die("SIO2 set_send3 index (%d) out of range (0-4)", index);
 }
 
 void SIO2::write_serial(uint8_t value)
