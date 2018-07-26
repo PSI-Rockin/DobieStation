@@ -53,12 +53,10 @@ void EmuThread::run()
     {
         forever
         {
-            emu_mutex.lock();
+
+            QMutexLocker locker(&emu_mutex);
             if (abort)
-            {
-                emu_mutex.unlock();
                 return;
-            }
             else if (pause_status)
                 usleep(10000);
             else
@@ -81,10 +79,10 @@ void EmuThread::run()
                     emit update_FPS((int)round(FPS));
                 }
         }
-        emu_mutex.unlock();
     }
     catch (Emulation_error &e)
     {
+        printf("Emulation error!");
         emit emu_error(QString(e.what()));
     }
 }

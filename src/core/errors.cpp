@@ -5,8 +5,8 @@ void Errors::die(const char* format, ...){
     char* output = new char[255];
     va_list args;
     va_start(args, format);
-    printf(format, args);
-    snprintf(output, 255, format, args);
+    vprintf(format, args);
+    vsnprintf(output, 255, format, args);
     va_end(args);
     std::string error_str(output);
     throw Emulation_error(error_str);
@@ -17,6 +17,6 @@ void Errors::dont_die(const char* format, ...) {
     but is intended for erorrs that we want to ignore for now*/
     va_list args;
     va_start(args, format);
-    printf(format, args);
+    vprintf(format, args);
     va_end(args);
 }
