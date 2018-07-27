@@ -32,12 +32,14 @@ namespace VU_Disasm
 
     std::string lower1_special(uint32_t PC, uint32_t instr);
     std::string move(uint32_t instr);
+    std::string mr32(uint32_t instr);
     std::string lqi(uint32_t instr);
     std::string sqi(uint32_t instr);
     std::string div(uint32_t instr);
     std::string mtir(uint32_t instr);
     std::string mfir(uint32_t instr);
     std::string ilwr(uint32_t instr);
+    std::string iswr(uint32_t instr);
     std::string mfp(uint32_t instr);
     std::string xtop(uint32_t instr);
     std::string xitop(uint32_t instr);
@@ -55,6 +57,7 @@ namespace VU_Disasm
     std::string sq(uint32_t instr);
     std::string fcset(uint32_t instr);
     std::string fcand(uint32_t instr);
+    std::string fcor(uint32_t instr);
     std::string fmand(uint32_t instr);
     std::string fcget(uint32_t instr);
     std::string b(uint32_t PC, uint32_t instr);

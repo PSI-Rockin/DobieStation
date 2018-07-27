@@ -548,6 +548,9 @@ void VU_Interpreter::lower1_special(VectorUnit &vu, uint32_t instr)
         case 0x30:
             move(vu, instr);
             break;
+        case 0x31:
+            mr32(vu, instr);
+            break;
         case 0x34:
             lqi(vu, instr);
             break;
@@ -568,6 +571,9 @@ void VU_Interpreter::lower1_special(VectorUnit &vu, uint32_t instr)
             break;
         case 0x3E:
             ilwr(vu, instr);
+            break;
+        case 0x3F:
+            iswr(vu, instr);
             break;
         case 0x64:
             mfp(vu, instr);
@@ -606,6 +612,14 @@ void VU_Interpreter::move(VectorUnit &vu, uint32_t instr)
     uint8_t dest = (instr >> 16) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
     vu.move(field, dest, source);
+}
+
+void VU_Interpreter::mr32(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t dest = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.mr32(field, dest, source);
 }
 
 void VU_Interpreter::lqi(VectorUnit &vu, uint32_t instr)
@@ -660,6 +674,14 @@ void VU_Interpreter::ilwr(VectorUnit &vu, uint32_t instr)
     uint8_t it = (instr >> 16) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
     vu.ilwr(field, it, is);
+}
+
+void VU_Interpreter::iswr(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t is = (instr >> 11) & 0x1F;
+    uint8_t it = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.iswr(field, it, is);
 }
 
 void VU_Interpreter::mfp(VectorUnit &vu, uint32_t instr)
@@ -734,6 +756,9 @@ void VU_Interpreter::lower2(VectorUnit &vu, uint32_t instr)
             break;
         case 0x12:
             fcand(vu, instr);
+            break;
+        case 0x13:
+            fcor(vu, instr);
             break;
         case 0x1A:
             fmand(vu, instr);
@@ -843,6 +868,11 @@ void VU_Interpreter::fcset(VectorUnit &vu, uint32_t instr)
 void VU_Interpreter::fcand(VectorUnit &vu, uint32_t instr)
 {
     vu.fcand(instr & 0xFFFFFF);
+}
+
+void VU_Interpreter::fcor(VectorUnit &vu, uint32_t instr)
+{
+    vu.fcor(instr & 0xFFFFFF);
 }
 
 void VU_Interpreter::fmand(VectorUnit &vu, uint32_t instr)

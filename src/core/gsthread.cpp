@@ -1583,6 +1583,10 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
         case 0x2C:
             ppd = 16;
             break;
+        //PSMCT24Z
+        case 0x31:
+            ppd = 3;
+            break;
         default:
             printf("[GS_t] Unrecognized BITBLTBUF dest format $%02X\n", BITBLTBUF.dest_format);
             exit(1);

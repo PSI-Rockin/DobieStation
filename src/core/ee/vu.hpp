@@ -134,6 +134,7 @@ class VectorUnit
         void erleng(uint8_t source);
         void fcand(uint32_t value);
         void fcget(uint8_t dest);
+        void fcor(uint32_t value);
         void fcset(uint32_t value);
         void fmand(uint8_t dest, uint8_t source);
         void ftoi0(uint8_t field, uint8_t dest, uint8_t source);

@@ -574,6 +574,14 @@ void VectorUnit::fcget(uint8_t dest)
     set_int(dest, clip_flags & 0xFFF);
 }
 
+void VectorUnit::fcor(uint32_t value)
+{
+    if (((clip_flags & 0xFFFFFF) | (value & 0xFFFFFF)) == 0xFFFFFF)
+        set_int(1, 1);
+    else
+        set_int(1, 0);
+}
+
 void VectorUnit::fcset(uint32_t value)
 {
     printf("[VU] FCSET: $%08X\n", value);

@@ -336,6 +336,8 @@ string VU_Disasm::lower1_special(uint32_t PC, uint32_t instr)
     {
         case 0x30:
             return move(instr);
+        case 0x31:
+            return mr32(instr);
         case 0x34:
             return lqi(instr);
         case 0x35:
@@ -350,6 +352,8 @@ string VU_Disasm::lower1_special(uint32_t PC, uint32_t instr)
             return mfir(instr);
         case 0x3E:
             return ilwr(instr);
+        case 0x3F:
+            return iswr(instr);
         case 0x64:
             return mfp(instr);
         case 0x68:
@@ -378,6 +382,17 @@ string VU_Disasm::move(uint32_t instr)
     uint32_t dest = (instr >> 16) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
     output << "move." << get_field(field);
+    output << " vf" << dest << ", vf" << source;
+    return output.str();
+}
+
+string VU_Disasm::mr32(uint32_t instr)
+{
+    stringstream output;
+    uint32_t source = (instr >> 11) & 0x1F;
+    uint32_t dest = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    output << "mr32." << get_field(field);
     output << " vf" << dest << ", vf" << source;
     return output.str();
 }
@@ -442,6 +457,17 @@ string VU_Disasm::ilwr(uint32_t instr)
     uint32_t it = (instr >> 16) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
     output << "ilwr." << get_field(field);
+    output << " vi" << it << ", (vi" << is << ")";
+    return output.str();
+}
+
+string VU_Disasm::iswr(uint32_t instr)
+{
+    stringstream output;
+    uint32_t is = (instr >> 11) & 0x1F;
+    uint32_t it = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    output << "iswr." << get_field(field);
     output << " vi" << it << ", (vi" << is << ")";
     return output.str();
 }
@@ -525,6 +551,8 @@ string VU_Disasm::lower2(uint32_t PC, uint32_t instr)
             return fcset(instr);
         case 0x12:
             return fcand(instr);
+        case 0x13:
+            return fcor(instr);
         case 0x1A:
             return fmand(instr);
         case 0x1C:
@@ -648,6 +676,15 @@ string VU_Disasm::fcand(uint32_t instr)
     stringstream output;
     uint32_t imm = instr & 0xFFFFFF;
     output << "fcand vi1, 0x";
+    output << setfill('0') << setw(8) << hex << imm;
+    return output.str();
+}
+
+string VU_Disasm::fcor(uint32_t instr)
+{
+    stringstream output;
+    uint32_t imm = instr & 0xFFFFFF;
+    output << "fcor vi1, 0x";
     output << setfill('0') << setw(8) << hex << imm;
     return output.str();
 }
