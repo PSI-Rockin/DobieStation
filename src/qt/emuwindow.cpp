@@ -24,6 +24,7 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
     old_frametime = chrono::system_clock::now();
     old_update_time = chrono::system_clock::now();
     framerate_avg = 0.0;
+    scale_factor = 1;
 
     QWidget* widget = new QWidget;
     setCentralWidget(widget);
@@ -181,6 +182,28 @@ void EmuWindow::create_menu()
     file_menu->addAction(load_rom_action);
     file_menu->addAction(load_bios_action);
     file_menu->addAction(exit_action);
+
+
+    options_menu = menuBar()->addMenu(tr("&Options"));
+    auto size_options_actions = new QAction(tr("Scale &1x"), this);
+    connect(size_options_actions, &QAction::triggered, this,
+        [this]() { this->scale_factor = 1; });
+    options_menu->addAction(size_options_actions);
+
+    size_options_actions = new QAction(tr("Scale &2x"), this);
+    connect(size_options_actions, &QAction::triggered, this,
+        [this]() { this->scale_factor = 2; });
+    options_menu->addAction(size_options_actions);
+
+    size_options_actions = new QAction(tr("Scale &3x"), this);
+    connect(size_options_actions, &QAction::triggered, this,
+        [this]() { this->scale_factor = 3; });
+    options_menu->addAction(size_options_actions);
+
+    size_options_actions = new QAction(tr("Scale &4x"), this);
+    connect(size_options_actions, &QAction::triggered, this,
+        [this]() { this->scale_factor = 4; });
+    options_menu->addAction(size_options_actions);
 }
 
 void EmuWindow::draw_frame(uint32_t *buffer, int inner_w, int inner_h, int final_w, int final_h)
@@ -188,8 +211,8 @@ void EmuWindow::draw_frame(uint32_t *buffer, int inner_w, int inner_h, int final
     if (!buffer || !inner_w || !inner_h)
         return;
     final_image = QImage((uint8_t*)buffer, inner_w, inner_h, QImage::Format_RGBA8888);
-    final_image = final_image.scaled(final_w, final_h);
-    resize(final_w, final_h);
+    final_image = final_image.scaled(final_w*scale_factor, final_h*scale_factor);
+    resize(final_w*scale_factor, final_h*scale_factor);
     update();
 }
 
