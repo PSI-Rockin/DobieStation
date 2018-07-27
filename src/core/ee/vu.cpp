@@ -909,6 +909,24 @@ void VectorUnit::maddbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source,
     printf("\n");
 }
 
+void VectorUnit::maddq(uint8_t field, uint8_t dest, uint8_t source)
+{
+    printf("[VU] MADDbc: ");
+    float op = convert(Q.u);
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            float temp = op * convert(gpr[source].u[i]);
+            set_gpr_f(dest, i, update_mac_flags(temp + ACC.f[i], i));
+            printf("(%d)%f ", i, gpr[dest].f[i]);
+        }
+        else
+            clear_mac_flags(i);
+    }
+    printf("\n");
+}
+
 void VectorUnit::max(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)
 {
     printf("[VU] MAX: ");

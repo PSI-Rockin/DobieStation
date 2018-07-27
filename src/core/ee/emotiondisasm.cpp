@@ -1332,6 +1332,8 @@ string EmotionDisasm::disasm_cop2_special(uint32_t instruction)
             return disasm_vminii(instruction);
         case 0x20:
             return disasm_vaddq(instruction);
+        case 0x21:
+            return disasm_vmaddq(instruction);
         case 0x24:
             return disasm_vsubq(instruction);
         case 0x26:
@@ -1416,6 +1418,11 @@ string EmotionDisasm::disasm_vminii(uint32_t instruction)
 string EmotionDisasm::disasm_vaddq(uint32_t instruction)
 {
     return disasm_cop2_special_q("vadd", instruction);
+}
+
+string EmotionDisasm::disasm_vmaddq(uint32_t instruction)
+{
+    return disasm_cop2_special_q("vmadd", instruction);
 }
 
 string EmotionDisasm::disasm_vsubq(uint32_t instruction)

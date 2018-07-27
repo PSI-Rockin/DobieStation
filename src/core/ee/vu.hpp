@@ -161,6 +161,7 @@ class VectorUnit
         void maddai(uint8_t field, uint8_t source);
         void maddabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_reg);
         void maddbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
+        void maddq(uint8_t field, uint8_t dest, uint8_t source);
         void max(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2);
         void maxbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
         void mfir(uint8_t field, uint8_t dest, uint8_t source);

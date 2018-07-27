@@ -1600,7 +1600,7 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
                 //printf("$%08X\n", (data >> (i * 32)) & 0xFFFFFFFF);
                 break;
             case 0x01:
-                unpack_PSMCT24(data, i);
+                unpack_PSMCT24(data, i, false);
                 break;
             case 0x02:
                 write_PSMCT16_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.dest_y, (data >> (i * 16)) & 0xFFFF);
@@ -1676,6 +1676,9 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
                 TRXPOS.int_dest_x++;
             }
                 break;
+            case 0x31:
+                unpack_PSMCT24(data, i, true);
+                break;
         }
         if (TRXPOS.int_dest_x - TRXPOS.dest_x == TRXREG.width)
         {
@@ -1694,7 +1697,7 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
     }
 }
 
-void GraphicsSynthesizerThread::unpack_PSMCT24(uint64_t data, int offset)
+void GraphicsSynthesizerThread::unpack_PSMCT24(uint64_t data, int offset, bool z_format)
 {
     int bytes_unpacked = 0;
     for (int i = offset * 24; bytes_unpacked < 3 && i < 64; i += 8)
@@ -1704,7 +1707,12 @@ void GraphicsSynthesizerThread::unpack_PSMCT24(uint64_t data, int offset)
         bytes_unpacked++;
         if (PSMCT24_unpacked_count == 3)
         {
-            write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.dest_y, PSMCT24_color);
+            if (z_format)
+                write_PSMCT24Z_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x,
+                                     TRXPOS.dest_y, PSMCT24_color);
+            else
+                write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x,
+                                    TRXPOS.dest_y, PSMCT24_color);
             PSMCT24_color = 0;
             PSMCT24_unpacked_count = 0;
             TRXPOS.int_dest_x++;
@@ -1887,6 +1895,15 @@ void GraphicsSynthesizerThread::tex_lookup(uint16_t u, uint16_t v, const RGBAQ_R
                 clut_CSM2_lookup(entry, tex_color);
             else
                 clut_lookup(entry, tex_color, false);
+        }
+            break;
+        case 0x31:
+        {
+            uint32_t color = read_PSMCT32Z_block(tex_base, current_ctx->tex0.width, u, v);
+            tex_color.r = color & 0xFF;
+            tex_color.g = (color >> 8) & 0xFF;
+            tex_color.b = (color >> 16) & 0xFF;
+            tex_color.a = TEXA.alpha0;
         }
             break;
         default:
