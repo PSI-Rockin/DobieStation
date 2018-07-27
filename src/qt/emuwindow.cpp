@@ -185,17 +185,22 @@ void EmuWindow::create_menu()
 
 
     options_menu = menuBar()->addMenu(tr("&Options"));
-    auto size_options_actions = new QAction(tr("Scale &1x"), this);
+    auto size_options_actions = new QAction(tr("scale to &Window (ignore aspect ratio)"), this);
+    connect(size_options_actions, &QAction::triggered, this,
+        [this]() { this->scale_factor = 0; });
+    options_menu->addAction(size_options_actions);
+
+    size_options_actions = new QAction(tr("scale &1x"), this);
     connect(size_options_actions, &QAction::triggered, this,
         [this]() { this->scale_factor = 1; });
     options_menu->addAction(size_options_actions);
 
-    size_options_actions = new QAction(tr("Scale &2x"), this);
+    size_options_actions = new QAction(tr("scale &2x"), this);
     connect(size_options_actions, &QAction::triggered, this,
         [this]() { this->scale_factor = 2; });
     options_menu->addAction(size_options_actions);
 
-    size_options_actions = new QAction(tr("Scale &3x"), this);
+    size_options_actions = new QAction(tr("scale &3x"), this);
     connect(size_options_actions, &QAction::triggered, this,
         [this]() { this->scale_factor = 3; });
     options_menu->addAction(size_options_actions);
@@ -211,8 +216,14 @@ void EmuWindow::draw_frame(uint32_t *buffer, int inner_w, int inner_h, int final
     if (!buffer || !inner_w || !inner_h)
         return;
     final_image = QImage((uint8_t*)buffer, inner_w, inner_h, QImage::Format_RGBA8888);
-    final_image = final_image.scaled(final_w*scale_factor, final_h*scale_factor);
-    resize(final_w*scale_factor, final_h*scale_factor);
+    if (scale_factor == 0) {
+        auto size = this->size();
+        final_image = final_image.scaled(size.width(), size.height());
+    }
+    else {
+        final_image = final_image.scaled(final_w*scale_factor, final_h*scale_factor);
+        resize(final_w*scale_factor, final_h*scale_factor);
+    }
     update();
 }
 
