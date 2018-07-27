@@ -1452,6 +1452,24 @@ void VectorUnit::sub(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)
     printf("\n");
 }
 
+void VectorUnit::subai(uint8_t field, uint8_t source)
+{
+    printf("[VU] SUBAi: ");
+    float op = convert(I.u);
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            ACC.f[i] = convert(gpr[source].u[i]) - op;
+            update_mac_flags(ACC.f[i], i);
+            printf("(%d)%f ", i, ACC.f[i]);
+        }
+        else
+            clear_mac_flags(i);
+    }
+    printf("\n");
+}
+
 void VectorUnit::subbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg)
 {
     printf("[VU] SUBbc: ");

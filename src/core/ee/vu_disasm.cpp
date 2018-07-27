@@ -112,6 +112,10 @@ string VU_Disasm::upper(uint32_t PC, uint32_t instr)
             return upper_i("mul", instr);
         case 0x1F:
             return upper_i("mini", instr);
+        case 0x20:
+            return upper_q("add", instr);
+        case 0x21:
+            return upper_q("madd", instr);
         case 0x22:
             return upper_i("add", instr);
         case 0x24:
@@ -132,6 +136,8 @@ string VU_Disasm::upper(uint32_t PC, uint32_t instr)
             return upper_simple("sub", instr);
         case 0x2E:
             return upper_simple("opmsub", instr);
+        case 0x2F:
+            return upper_simple("mini", instr);
         case 0x3C:
         case 0x3D:
         case 0x3E:
@@ -216,6 +222,8 @@ string VU_Disasm::upper_special(uint32_t PC, uint32_t instr)
             return clip(instr);
         case 0x23:
             return upper_acc_i("madda", instr);
+        case 0x26:
+            return upper_acc_i("suba", instr);
         case 0x27:
             return upper_acc_i("msuba", instr);
         case 0x2E:

@@ -66,6 +66,12 @@ void VU_Interpreter::upper(VectorUnit &vu, uint32_t instr)
         case 0x1F:
             minii(vu, instr);
             break;
+        case 0x20:
+            addq(vu, instr);
+            break;
+        case 0x21:
+            maddq(vu, instr);
+            break;
         case 0x22:
             addi(vu, instr);
             break;
@@ -95,6 +101,9 @@ void VU_Interpreter::upper(VectorUnit &vu, uint32_t instr)
             break;
         case 0x2E:
             opmsub(vu, instr);
+            break;
+        case 0x2F:
+            mini(vu, instr);
             break;
         case 0x3C:
         case 0x3D:
@@ -191,6 +200,22 @@ void VU_Interpreter::minii(VectorUnit &vu, uint32_t instr)
     vu.minii(field, dest, source);
 }
 
+void VU_Interpreter::addq(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t dest = (instr >> 6) & 0x1F;
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.addq(field, dest, source);
+}
+
+void VU_Interpreter::maddq(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t dest = (instr >> 6) & 0x1F;
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.maddq(field, dest, source);
+}
+
 void VU_Interpreter::addi(VectorUnit &vu, uint32_t instr)
 {
     uint8_t dest = (instr >> 6) & 0x1F;
@@ -276,6 +301,15 @@ void VU_Interpreter::opmsub(VectorUnit &vu, uint32_t instr)
     vu.opmsub(dest, reg1, reg2);
 }
 
+void VU_Interpreter::mini(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t dest = (instr >> 6) & 0x1F;
+    uint8_t reg1 = (instr >> 11) & 0x1F;
+    uint8_t reg2 = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.mini(field, dest, reg1, reg2);
+}
+
 void VU_Interpreter::upper_special(VectorUnit &vu, uint32_t instr)
 {
     uint16_t op = (instr & 0x3) | ((instr >> 4) & 0x7C);
@@ -325,6 +359,9 @@ void VU_Interpreter::upper_special(VectorUnit &vu, uint32_t instr)
             break;
         case 0x23:
             maddai(vu, instr);
+            break;
+        case 0x26:
+            subai(vu, instr);
             break;
         case 0x27:
             msubai(vu, instr);
@@ -443,6 +480,13 @@ void VU_Interpreter::maddai(VectorUnit &vu, uint32_t instr)
     uint8_t source = (instr >> 11) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
     vu.maddai(field, source);
+}
+
+void VU_Interpreter::subai(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.subai(field, source);
 }
 
 void VU_Interpreter::msubai(VectorUnit &vu, uint32_t instr)
