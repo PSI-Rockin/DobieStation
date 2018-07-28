@@ -19,6 +19,8 @@ struct UNPACK_Command
     uint32_t addr;
     bool sign_extend;
     bool masked;
+    int offset;
+    int num;
     int cmd;
     int blocks_written;
     int words_per_op; //e.g. - V4-32 has four words per op
