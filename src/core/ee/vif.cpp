@@ -411,20 +411,17 @@ void VectorInterface::process_UNPACK_quad(uint128_t &quad)
 {
     handle_UNPACK_masking(quad);
 
-    unpack.blocks_written++;
-    if (CYCLE.CL >= CYCLE.WL)
-    {
-        if (unpack.blocks_written == CYCLE.CL)
-            unpack.blocks_written = 0;
-        else if (unpack.blocks_written > CYCLE.WL)
-        {
-            Errors::die("[VIF] Skip write!\n");
-        }
-    }
-
     //printf("[VIF] Write data mem $%08X: $%08X_%08X_%08X_%08X\n", unpack.addr,
            //quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
     vu->write_data<uint128_t>(unpack.addr, quad);
+
+    unpack.blocks_written++;
+    if (CYCLE.CL >= CYCLE.WL && unpack.blocks_written >= CYCLE.WL)
+    {
+        if (unpack.blocks_written < CYCLE.CL)
+            unpack.addr += (CYCLE.CL - unpack.blocks_written) * 16;
+        unpack.blocks_written = 0;
+    }
     unpack.addr += 16;
 }
 

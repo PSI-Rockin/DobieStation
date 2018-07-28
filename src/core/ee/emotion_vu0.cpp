@@ -66,6 +66,9 @@ void EmotionInterpreter::cop2_special(VectorUnit &vu0, uint32_t instruction)
         case 0x20:
             cop2_vaddq(vu0, instruction);
             break;
+        case 0x21:
+            cop2_vmaddq(vu0, instruction);
+            break;
         case 0x24:
             cop2_vsubq(vu0, instruction);
             break;
@@ -216,6 +219,14 @@ void EmotionInterpreter::cop2_vaddq(VectorUnit &vu0, uint32_t instruction)
     uint8_t source = (instruction >> 11) & 0x1F;
     uint8_t field = (instruction >> 21) & 0xF;
     vu0.addq(field, dest, source);
+}
+
+void EmotionInterpreter::cop2_vmaddq(VectorUnit &vu0, uint32_t instruction)
+{
+    uint8_t dest = (instruction >> 6) & 0x1F;
+    uint8_t source = (instruction >> 11) & 0x1F;
+    uint8_t field = (instruction >> 21) & 0xF;
+    vu0.maddq(field, dest, source);
 }
 
 void EmotionInterpreter::cop2_vsubq(VectorUnit &vu0, uint32_t instruction)

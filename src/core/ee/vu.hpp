@@ -134,6 +134,7 @@ class VectorUnit
         void erleng(uint8_t source);
         void fcand(uint32_t value);
         void fcget(uint8_t dest);
+        void fcor(uint32_t value);
         void fcset(uint32_t value);
         void fmand(uint8_t dest, uint8_t source);
         void ftoi0(uint8_t field, uint8_t dest, uint8_t source);
@@ -155,12 +156,14 @@ class VectorUnit
         void itof4(uint8_t field, uint8_t dest, uint8_t source);
         void itof12(uint8_t field, uint8_t dest, uint8_t source);
         void lq(uint8_t field, uint8_t dest, uint8_t base, int32_t offset);
+        void lqd(uint8_t field, uint8_t dest, uint8_t base);
         void lqi(uint8_t field, uint8_t dest, uint8_t base);
         void madd(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2);
         void madda(uint8_t field, uint8_t reg1, uint8_t reg2);
         void maddai(uint8_t field, uint8_t source);
         void maddabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_reg);
         void maddbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
+        void maddq(uint8_t field, uint8_t dest, uint8_t source);
         void max(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2);
         void maxbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
         void mfir(uint8_t field, uint8_t dest, uint8_t source);
@@ -190,9 +193,11 @@ class VectorUnit
         void rsqrt(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2);
         void rxor(uint8_t fsf, uint8_t source);
         void sq(uint8_t field, uint8_t source, uint8_t base, int32_t offset);
+        void sqd(uint8_t field, uint8_t source, uint8_t base);
         void sqi(uint8_t field, uint8_t source, uint8_t base);
         void vu_sqrt(uint8_t ftf, uint8_t source);
         void sub(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2);
+        void subai(uint8_t field, uint8_t source);
         void subbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
         void subi(uint8_t field, uint8_t dest, uint8_t source);
         void subq(uint8_t field, uint8_t dest, uint8_t source);
