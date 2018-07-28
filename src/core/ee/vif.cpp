@@ -7,6 +7,7 @@
 #include "vif.hpp"
 
 #include "../gif.hpp"
+#include "../errors.hpp"
 
 VectorInterface::VectorInterface(GraphicsInterface* gif, VectorUnit* vu) : gif(gif), vu(vu)
 {
@@ -113,8 +114,7 @@ void VectorInterface::update()
                         handle_UNPACK(value);
                     else
                     {
-                        printf("[VIF] Unhandled data for command $%02X\n", command);
-                        exit(1);
+                        Errors::die("[VIF] Unhandled data for command $%02X\n", command);
                     }
             }
             command_len--;
@@ -227,8 +227,7 @@ void VectorInterface::decode_cmd(uint32_t value)
                 init_UNPACK(value);
             else
             {
-                printf("[VIF] Unrecognized command $%02X\n", command);
-                exit(1);
+                Errors::die("[VIF] Unrecognized command $%02X\n", command);
             }
     }
 }
@@ -289,8 +288,7 @@ void VectorInterface::init_UNPACK(uint32_t value)
 
     if (MODE)
     {
-        printf("[VIF] MODE == %d!\n", MODE);
-        exit(1);
+        Errors::die("[VIF] MODE == %d!\n", MODE);
     }
     if (CYCLE.WL <= CYCLE.CL)
     {
@@ -301,8 +299,7 @@ void VectorInterface::init_UNPACK(uint32_t value)
     else
     {
         //Fill write
-        printf("[VIF] WL > CL!\n");
-        exit(1);
+        Errors::die("[VIF] WL > CL!\n");
     }
 }
 
@@ -403,8 +400,7 @@ void VectorInterface::handle_UNPACK(uint32_t value)
                 }
                 break;
             default:
-                printf("[VIF] Unhandled UNPACK cmd $%02X!\n", unpack.cmd);
-                exit(1);
+                Errors::die("[VIF] Unhandled UNPACK cmd $%02X!\n", unpack.cmd);
         }
 
         process_UNPACK_quad(quad);
@@ -483,8 +479,7 @@ void VectorInterface::disasm_micromem()
     ofstream file("microprogram.txt");
     if (!file.is_open())
     {
-        printf("Failed to open\n");
-        exit(1);
+        Errors::die("Failed to open\n");
     }
 
     for (int i = 0; i < 0x4000; i += 8)

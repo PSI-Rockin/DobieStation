@@ -10,7 +10,8 @@ a single bigger queue if at all reasonable though
 #include <atomic>
 #include <cstddef>
 template<typename Element, size_t Size>
-class CircularFifo {
+class CircularFifo
+{
 public:
     enum { Capacity = Size + 1 };
 
@@ -44,8 +45,7 @@ void CircularFifo<Element, Size>::push(const Element& item)
     }
     else
     {
-        printf("FIFO FULL!");
-        //exit(1);
+        Errors::print_warning("FIFO FULL!");
     }
 
 }

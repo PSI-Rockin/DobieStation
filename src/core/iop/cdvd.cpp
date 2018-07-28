@@ -1,6 +1,7 @@
 #include <cstring>
 #include "../emulator.hpp"
 #include "cdvd.hpp"
+#include "../errors.hpp"
 
 using namespace std;
 
@@ -131,8 +132,7 @@ void CDVD_Drive::update(int cycles)
                     e->iop_request_IRQ(2);
                     break;
                 default:
-                    printf("[CDVD] Unrecognized active N command\n");
-                    exit(1);
+                    Errors::die("[CDVD] Unrecognized active N command\n");
             }
         }
     }
@@ -312,8 +312,7 @@ void CDVD_Drive::send_N_command(uint8_t value)
             N_command_gettoc();
             break;
         default:
-            printf("[CDVD] Unrecognized N command $%02X\n", value);
-            exit(1);
+            Errors::die("[CDVD] Unrecognized N command $%02X\n", value);
     }
     N_params = 0;
 }
@@ -329,8 +328,7 @@ void CDVD_Drive::write_N_data(uint8_t value)
     printf("[CVD] Write NDATA: $%02X\n", value);
     if (N_params > 10)
     {
-        printf("[CDVD] Excess NDATA params!\n");
-        exit(1);
+        Errors::die("[CDVD] Excess NDATA params!\n");
     }
     else
     {
@@ -426,8 +424,7 @@ void CDVD_Drive::send_S_command(uint8_t value)
             S_outdata[0] = 0;
             break;
         default:
-            printf("[CDVD] Unrecognized S command $%02X\n", value);
-            exit(1);
+            Errors::die("[CDVD] Unrecognized S command $%02X\n", value);
     }
 }
 
@@ -436,8 +433,7 @@ void CDVD_Drive::write_S_data(uint8_t value)
     printf("[CDVD] Write SDATA: $%02X (%d)\n", value, S_params);
     if (S_params > 15)
     {
-        printf("[CDVD] Excess SDATA params!\n");
-        exit(1);
+        Errors::die("[CDVD] Excess SDATA params!\n");
     }
     else
     {
@@ -450,8 +446,7 @@ void CDVD_Drive::prepare_S_outdata(int amount)
 {
     if (amount > 16)
     {
-        printf("[CDVD] Excess S outdata! (%d)\n", amount);
-        exit(1);
+        Errors::die("[CDVD] Excess S outdata! (%d)\n", amount);
     }
     S_out_params = amount;
     S_status &= ~0x40;
@@ -509,7 +504,7 @@ void CDVD_Drive::N_command_read()
     sector_pos = *(uint32_t*)&N_command_params[0];
     sectors_left = *(uint32_t*)&N_command_params[4];
     if (N_command_params[10])
-        exit(1);
+        Errors::die("CDVD N_command_params[10] is true");
     speed = 24;
     printf("[CDVD] Read; Seek pos: %d, Sectors: %d\n", sector_pos, sectors_left);
     block_size = 2048;
@@ -593,8 +588,7 @@ void CDVD_Drive::S_command_sub(uint8_t func)
             *(uint32_t*)&S_outdata[0] = 0x00020603;
             break;
         default:
-            printf("[CDVD] Unrecognized sub (0x3) S command $%02X\n", func);
-            exit(1);
+            Errors::die("[CDVD] Unrecognized sub (0x3) S command $%02X\n", func);
     }
 }
 

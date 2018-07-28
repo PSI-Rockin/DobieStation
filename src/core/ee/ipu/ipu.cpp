@@ -4,6 +4,7 @@
 #include <cstring>
 #include "ipu.hpp"
 #include "../intc.hpp"
+#include "../../errors.hpp"
 
 /**
   * The majority of this code is based upon Play!'s implementation of the IPU.
@@ -164,8 +165,7 @@ void ImageProcessingUnit::run()
                 finish_command();
                 break;
             default:
-                printf("[IPU] Unrecognized command $%02X\n", command);
-                exit(1);
+                Errors::die("[IPU] Unrecognized command $%02X\n", command);
         }
     }
 }
@@ -219,8 +219,7 @@ bool ImageProcessingUnit::process_BDEC()
                             value = 512;
                             break;
                         default:
-                            printf("[IPU] Unrecognized DC precision %d!\n", ctrl.intra_DC_precision);
-                            exit(1);
+                            Errors::die("[IPU] Unrecognized DC precision %d!\n", ctrl.intra_DC_precision);
                     }
 
                     for (int i = 0; i < 3; i++)
@@ -570,8 +569,7 @@ bool ImageProcessingUnit::BDEC_read_coeffs()
                 }
                 else
                 {
-                    printf("[IPU] READ_COEFF Subblock index >= 0x40!\n");
-                    exit(1);
+                    Errors::die("[IPU] READ_COEFF Subblock index >= 0x40!\n");
                 }
                 bdec.subblock_index++;
                 bdec.read_coeff_state = BDEC_Command::READ_COEFF::CHECK_END;
@@ -654,8 +652,7 @@ void ImageProcessingUnit::process_VDEC()
                     VDEC_table = &macroblock_B_pic;
                     break;
                 default:
-                    printf("[IPU] Unrecognized Macroblock Type %d!\n", ctrl.picture_type);
-                    exit(1);
+                    Errors::die("[IPU] Unrecognized Macroblock Type %d!\n", ctrl.picture_type);
             }
             break;
         case 2:
@@ -663,8 +660,7 @@ void ImageProcessingUnit::process_VDEC()
             VDEC_table = &motioncode;
             break;
         default:
-            printf("[IPU] Unrecognized table id %d in VDEC!\n", table);
-            exit(1);
+            Errors::die("[IPU] Unrecognized table id %d in VDEC!\n", table);
     }
 
     while (true)
@@ -924,8 +920,7 @@ void ImageProcessingUnit::write_command(uint32_t value)
     }
     else
     {
-        printf("[IPU] Error - command sent while busy!\n");
-        exit(1);
+        Errors::die("[IPU] Error - command sent while busy!\n");
     }
 }
 
@@ -969,8 +964,7 @@ void ImageProcessingUnit::write_FIFO(uint128_t quad)
     printf("[IPU] Write FIFO: $%08X_%08X_%08X_%08X\n", quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
     if (in_FIFO.f.size() >= 8)
     {
-        printf("[IPU] Error: data sent to IPU exceeding FIFO limit!\n");
-        exit(1);
+        Errors::die("[IPU] Error: data sent to IPU exceeding FIFO limit!\n");
     }
     in_FIFO.f.push(quad);
 }

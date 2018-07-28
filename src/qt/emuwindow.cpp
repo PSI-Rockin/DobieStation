@@ -7,6 +7,7 @@
 #include <QVBoxLayout>
 #include <QMenuBar>
 #include <QFileDialog>
+#include <QMessageBox>
 
 #include "emuwindow.hpp"
 
@@ -47,6 +48,7 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
     connect(&emuthread, SIGNAL(completed_frame(uint32_t*, int, int, int, int)),
             this, SLOT(draw_frame(uint32_t*, int, int, int, int)));
     connect(&emuthread, SIGNAL(update_FPS(int)), this, SLOT(update_FPS(int)));
+    connect(&emuthread, SIGNAL(emu_error(QString)), this, SLOT(emu_error(QString)));
     emuthread.pause(PAUSE_EVENT::GAME_NOT_LOADED);
 
     emuthread.reset();
@@ -297,6 +299,16 @@ void EmuWindow::update_FPS(int FPS)
         setWindowTitle(QString::fromStdString(new_title));
         old_update_time = chrono::system_clock::now();
     }
+}
+
+void EmuWindow::emu_error(QString err)
+{
+    QMessageBox msgBox;
+    msgBox.setText("A fatal emulation error has occurred");
+    msgBox.setInformativeText(err);
+    msgBox.setStandardButtons(QMessageBox::Abort);
+    msgBox.setDefaultButton(QMessageBox::Abort);
+    msgBox.exec();
 }
 
 #ifndef QT_NO_CONTEXTMENU

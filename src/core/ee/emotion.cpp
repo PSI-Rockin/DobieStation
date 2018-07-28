@@ -4,6 +4,7 @@
 #include "emotiondisasm.hpp"
 #include "emotioninterpreter.hpp"
 #include "vu.hpp"
+#include "../errors.hpp"
 
 #include "../emulator.hpp"
 
@@ -151,8 +152,7 @@ int EmotionEngine::run(int cycles_to_run)
                 branch_on = false;
                 if (!new_PC || (new_PC & 0x3))
                 {
-                    printf("[EE] Jump to invalid address $%08X from $%08X\n", new_PC, PC - 8);
-                    exit(1);
+                    Errors::die("[EE] Jump to invalid address $%08X from $%08X\n", new_PC, PC - 8);
                 }
                 if (PC >= 0x82000 && new_PC == 0x81FC0)
                     printf("[EE] Entering BIFCO loop\n");
@@ -392,8 +392,7 @@ void EmotionEngine::mfc(int cop_id, int reg, int cop_reg)
             bark = fpu->get_gpr(cop_reg);
             break;
         default:
-            printf("Unrecognized cop id %d in mfc\n", cop_id);
-            exit(1);
+            Errors::die("Unrecognized cop id %d in mfc\n", cop_id);
     }
 
     set_gpr<int64_t>(reg, (int32_t)bark);
@@ -410,8 +409,7 @@ void EmotionEngine::mtc(int cop_id, int reg, int cop_reg)
             fpu->mtc(cop_reg, get_gpr<uint32_t>(reg));
             break;
         default:
-            printf("Unrecognized cop id %d in mtc\n", cop_id);
-            exit(1);
+            Errors::die("Unrecognized cop id %d in mtc\n", cop_id);
     }
 }
 
@@ -622,8 +620,7 @@ void EmotionEngine::syscall_exception()
     if (op == 0x04)
     {
         //On a real PS2, Exit returns to OSDSYS, but that isn't functional yet.
-        printf("[EE] Exit syscall called!\n");
-        exit(1);
+        Errors::die("[EE] Exit syscall called!\n");
     }
     handle_exception(0x80000180, 0x08);
 }

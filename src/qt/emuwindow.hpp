@@ -51,6 +51,7 @@ class EmuWindow : public QMainWindow
         void draw_frame(uint32_t* buffer, int inner_w, int inner_h, int final_w, int final_h);
         void open_file_no_skip();
         void open_file_skip();
+        void emu_error(QString err);
 };
 
 #endif // EMUWINDOW_HPP

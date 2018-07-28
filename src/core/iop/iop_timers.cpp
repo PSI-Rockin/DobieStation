@@ -1,6 +1,7 @@
 #include <cstdio>
 #include "../emulator.hpp"
 #include "iop_timers.hpp"
+#include "../errors.hpp"
 
 IOPTiming::IOPTiming(Emulator* e) : e(e)
 {
@@ -106,7 +107,7 @@ void IOPTiming::write_control(int index, uint16_t value)
     printf("[IOP Timing] Write timer %d control $%04X\n", index, value);
     timers[index].control.use_gate = value & 0x1;
     if (timers[index].control.use_gate)
-        exit(1);
+        Errors::die("IOPTiming timer %d control.use_gate is true", index);
     timers[index].control.gate_mode = (value >> 1) & 0x3;
     timers[index].control.zero_return = value & (1 << 3);
     timers[index].control.compare_interrupt_enabled = value & (1 << 4);

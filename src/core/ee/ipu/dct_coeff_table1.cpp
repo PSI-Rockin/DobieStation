@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include "dct_coeff_table1.hpp"
+#include "../../errors.hpp"
 
 VLC_Entry DCT_Coeff_Table1::table[] =
 {
@@ -313,8 +314,7 @@ bool DCT_Coeff_Table1::get_runlevel_pair(IPU_FIFO &FIFO, RunLevelPair &pair, boo
 
         if (MPEG1)
         {
-            printf("MPEG1???\n");
-            exit(1);
+            Errors::die("MPEG1???\n");
         }
 
         uint32_t level = 0;
@@ -347,6 +347,6 @@ bool DCT_Coeff_Table1::get_runlevel_pair(IPU_FIFO &FIFO, RunLevelPair &pair, boo
 bool DCT_Coeff_Table1::get_runlevel_pair_dc(IPU_FIFO &FIFO, RunLevelPair &pair, bool MPEG1)
 {
     //DCT_Coeff_Table1 only gets called by intra macroblocks, so this should never happen
-    exit(1);
+    Errors::die("get_runlevel_pair_dc should never happen");
     return false;
 }

@@ -6,6 +6,7 @@
 
 #include "gsthread.hpp"
 #include "gsmem.hpp"
+#include "errors.hpp"
 
 using namespace std;
 
@@ -115,14 +116,16 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
 {
     GraphicsSynthesizerThread gs = GraphicsSynthesizerThread();
     gs.reset();
-    while (true) 
+    try
     {
-        GS_message data;
-        bool available = fifo->pop(data);
-        if (available) 
+        while (true)
         {
-            switch (data.type)
+            GS_message data;
+            bool available = fifo->pop(data);
+            if (available)
             {
+                switch (data.type)
+                {
                 case write64_t:
                 {
                     auto p = data.payload.write64_payload;
@@ -180,16 +183,17 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
                 case render_crt_t:
                 {
                     auto p = data.payload.render_payload;
-                    //std::lock_guard<std::mutex> lock(*p.target_mutex);
 
                     while (!p.target_mutex->try_lock())
                     {
                         printf("[GS_t] buffer lock failed!\n");
                         std::this_thread::yield();
                     }
+                    std::lock_guard<std::mutex> lock(*p.target_mutex, std::adopt_lock);
                     gs.render_CRT(p.target);
-                    p.target_mutex->unlock();
-                    return_fifo->push({ render_complete_t });
+                    GS_return_message_payload return_payload;
+                    return_payload.no_payload = { 0 };
+                    return_fifo->push({ GS_return::render_complete_t,return_payload });
                     break;
                 }
                 case assert_finish_t:
@@ -206,12 +210,21 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
                     break;
                 case die_t:
                     return;
+                }
+            }
+            else
+            {
+                std::this_thread::yield();
             }
         }
-        else
-        {
-            std::this_thread::yield();
-        }
+    }
+    catch (Emulation_error &e)
+    {
+        GS_return_message_payload return_payload;
+        char* copied_string = new char[ERROR_STRING_MAX_LENGTH];
+        strncpy(copied_string, e.what(), ERROR_STRING_MAX_LENGTH);
+        return_payload.death_error_payload.error_str = { copied_string };
+        return_fifo->push({ GS_return::death_error_t,return_payload });
     }
 }
 
@@ -534,8 +547,7 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
                 write_HWREG(value);
             break;
         default:
-            printf("[GS_t] Unrecognized write64 to reg $%04X: $%08X_%08X\n", addr, value >> 32, value);
-            //exit(1);
+            Errors::print_warning("[GS_t] Unrecognized write64 to reg $%04X: $%08X_%08X\n", addr, value >> 32, value);
     }
 }
 
@@ -852,8 +864,7 @@ void GraphicsSynthesizerThread::vertex_kick(bool drawing_kick)
             }
             break;
         default:
-            printf("[GS] Unrecognized primitive %d\n", PRIM.prim_type);
-            exit(1);
+            Errors::die("[GS] Unrecognized primitive %d\n", PRIM.prim_type);
     }
     if (drawing_kick && request_draw_kick)
         render_primitive();
@@ -906,8 +917,7 @@ bool GraphicsSynthesizerThread::depth_test(int32_t x, int32_t y, uint32_t z)
                     z = min(z, 0xFFFFU);
                     return z >= read_PSMCT16SZ_block(base, width, x, y);
                 default:
-                    printf("[GS_t] Unrecognized zbuf format $%02X\n", current_ctx->zbuf.format);
-                    exit(1);
+                    Errors::die("[GS_t] Unrecognized zbuf format $%02X\n", current_ctx->zbuf.format);
             }
             break;
         case 3: //GREATER
@@ -925,8 +935,7 @@ bool GraphicsSynthesizerThread::depth_test(int32_t x, int32_t y, uint32_t z)
                     z = min(z, 0xFFFFU);
                     return z > read_PSMCT16SZ_block(base, width, x, y);
                 default:
-                    printf("[GS_t] Unrecognized zbuf format $%02X\n", current_ctx->zbuf.format);
-                    exit(1);
+                    Errors::die("[GS_t] Unrecognized zbuf format $%02X\n", current_ctx->zbuf.format);
             }
             break;
     }
@@ -1588,8 +1597,7 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
             ppd = 3;
             break;
         default:
-            printf("[GS_t] Unrecognized BITBLTBUF dest format $%02X\n", BITBLTBUF.dest_format);
-            exit(1);
+            Errors::die("[GS_t] Unrecognized BITBLTBUF dest format $%02X\n", BITBLTBUF.dest_format);
     }
 
     for (int i = 0; i < ppd; i++)
@@ -1727,7 +1735,7 @@ void GraphicsSynthesizerThread::unpack_PSMCT24(uint64_t data, int offset, bool z
 
 void GraphicsSynthesizerThread::host_to_host()
 {
-    exit(1);
+    Errors::die("host_to_host not implemented!");
     int ppd = 2; //pixels per doubleword
     uint32_t source_addr = (TRXPOS.source_x + (TRXPOS.source_y * BITBLTBUF.source_width)) << 1;
     source_addr += BITBLTBUF.source_base;
@@ -1911,8 +1919,7 @@ void GraphicsSynthesizerThread::tex_lookup(uint16_t u, uint16_t v, const RGBAQ_R
         }
             break;
         default:
-            printf("[GS_t] Unrecognized texture format $%02X\n", current_ctx->tex0.format);
-            exit(1);
+            Errors::die("[GS_t] Unrecognized texture format $%02X\n", current_ctx->tex0.format);
     }
 
     switch (current_ctx->tex0.color_function)
@@ -1979,8 +1986,7 @@ void GraphicsSynthesizerThread::clut_lookup(uint8_t entry, RGBAQ_REG &tex_color,
         }
             break;
         default:
-            printf("[GS_t] Unrecognized CLUT format $%02X\n", current_ctx->tex0.CLUT_format);
-            exit(1);
+            Errors::die("[GS_t] Unrecognized CLUT format $%02X\n", current_ctx->tex0.CLUT_format);
     }
 }
 

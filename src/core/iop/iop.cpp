@@ -5,6 +5,7 @@
 
 #include "../emulator.hpp"
 #include "../ee/emotiondisasm.hpp"
+#include "../errors.hpp"
 
 IOP::IOP(Emulator* e) : e(e)
 {
@@ -75,8 +76,7 @@ void IOP::run()
             PC = new_PC;
             if (PC & 0x3)
             {
-                printf("[IOP] Invalid PC address $%08X!\n", PC);
-                exit(1);
+                Errors::die("[IOP] Invalid PC address $%08X!\n", PC);
             }
             //if (PC == 0x0008F2C8)
                 //can_disassemble = true;
@@ -185,8 +185,7 @@ void IOP::mfc(int cop_id, int cop_reg, int reg)
             set_gpr(reg, cop0.mfc(cop_reg));
             break;
         default:
-            printf("\n[IOP] MFC: Unknown COP%d", cop_id);
-            exit(1);
+            Errors::die("\n[IOP] MFC: Unknown COP%d", cop_id);
     }
 }
 
@@ -199,8 +198,7 @@ void IOP::mtc(int cop_id, int cop_reg, int reg)
             cop0.mtc(cop_reg, bark);
             break;
         default:
-            printf("\n[IOP] MTC: Unknown COP%d", cop_id);
-            exit(1);
+            Errors::die("\n[IOP] MTC: Unknown COP%d", cop_id);
     }
 }
 
@@ -224,8 +222,7 @@ uint16_t IOP::read16(uint32_t addr)
 {
     if (addr & 0x1)
     {
-        printf("[IOP] Invalid read16 from $%08X!\n", addr);
-        exit(1);
+        Errors::die("[IOP] Invalid read16 from $%08X!\n", addr);
     }
     return e->iop_read16(translate_addr(addr));
 }
@@ -234,8 +231,7 @@ uint32_t IOP::read32(uint32_t addr)
 {
     if (addr & 0x3)
     {
-        printf("[IOP] Invalid read32 from $%08X!\n", addr);
-        exit(1);
+        Errors::die("[IOP] Invalid read32 from $%08X!\n", addr);
     }
     return e->iop_read32(translate_addr(addr));
 }
@@ -253,8 +249,7 @@ void IOP::write16(uint32_t addr, uint16_t value)
         return;
     if (addr & 0x1)
     {
-        printf("[IOP] Invalid write16 to $%08X!\n", addr);
-        exit(1);
+        Errors::die("[IOP] Invalid write16 to $%08X!\n", addr);
     }
     e->iop_write16(translate_addr(addr), value);
 }
@@ -265,8 +260,7 @@ void IOP::write32(uint32_t addr, uint32_t value)
         return;
     if (addr & 0x3)
     {
-        printf("[IOP] Invalid write32 to $%08X!\n", addr);
-        exit(1);
+        Errors::die("[IOP] Invalid write32 to $%08X!\n", addr);
     }
     e->iop_write32(translate_addr(addr), value);
 }

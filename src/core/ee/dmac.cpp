@@ -3,6 +3,7 @@
 #include "dmac.hpp"
 
 #include "../emulator.hpp"
+#include "../errors.hpp"
 
 enum CHANNELS
 {
@@ -296,8 +297,7 @@ void DMAC::process_IPU_FROM(int cycles)
             }
             else
             {
-                printf("[DMAC] IPU_FROM uses dest chain!\n");
-                exit(1);
+                Errors::die("[DMAC] IPU_FROM uses dest chain!\n");
             }
         }
     }
@@ -560,8 +560,7 @@ void DMAC::handle_source_chain(int index)
                     channels[index].tag_save1 = saved_addr;
                     break;
                 case 2:
-                    printf("[DMAC] DMAtag 'call' sent when ASP == 2!\n");
-                    exit(1);
+                    Errors::die("[DMAC] DMAtag 'call' sent when ASP == 2!\n");
             }
             asp++;
             channels[index].control &= ~(0x3 << 4);
@@ -599,8 +598,7 @@ void DMAC::handle_source_chain(int index)
             channels[index].tag_end = true;
             break;
         default:
-            printf("\n[DMAC] Unrecognized source chain DMAtag id %d\n", id);
-            exit(1);
+            Errors::die("\n[DMAC] Unrecognized source chain DMAtag id %d\n", id);
     }
     if (IRQ_after_transfer && TIE)
         channels[index].tag_end = true;

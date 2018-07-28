@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include "vu_interpreter.hpp"
+#include "../errors.hpp"
 
 void VU_Interpreter::interpret(VectorUnit &vu, uint32_t upper_instr, uint32_t lower_instr)
 {
@@ -1075,6 +1076,5 @@ void VU_Interpreter::ibgez(VectorUnit &vu, uint32_t instr)
 
 void VU_Interpreter::unknown_op(const char *type, uint32_t instruction, uint16_t op)
 {
-    printf("[VU_Interpreter] Unknown %s op $%02X: $%08X\n", type, op, instruction);
-    exit(1);
+    Errors::die("[VU_Interpreter] Unknown %s op $%02X: $%08X\n", type, op, instruction);
 }

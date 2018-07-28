@@ -11,6 +11,7 @@ find_package(Qt5Core REQUIRED)
 find_package(Qt5Widgets REQUIRED)
 
 set(SOURCES
+    src/core/errors.cpp
         src/core/ee/bios_hle.cpp
         src/core/ee/cop0.cpp
         src/core/ee/cop1.cpp
@@ -67,6 +68,7 @@ set(SOURCES
         )
 
 set(HEADERS
+    src/core/errors.hpp
         src/core/ee/bios_hle.hpp
         src/core/ee/cop0.hpp
         src/core/ee/cop1.hpp

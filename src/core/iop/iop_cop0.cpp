@@ -1,6 +1,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include "iop_cop0.hpp"
+#include "../errors.hpp"
 
 IOP_Cop0::IOP_Cop0()
 {
@@ -56,8 +57,7 @@ uint32_t IOP_Cop0::mfc(int cop_reg)
         case 15:
             return 0x1F;
         default:
-            printf("[IOP COP0] MFC: Unknown cop_reg %d\n", cop_reg);
-            exit(1);
+            Errors::die("[IOP COP0] MFC: Unknown cop_reg %d\n", cop_reg);
     }
 }
 
@@ -78,7 +78,6 @@ void IOP_Cop0::mtc(int cop_reg, uint32_t value)
             status.bev = value & (1 << 22);
             break;
         default:
-            printf("[IOP COP0] MTC: Unknown cop_reg %d\n", cop_reg);
-            //exit(1);
+            Errors::print_warning("[IOP COP0] MTC: Unknown cop_reg %d\n", cop_reg);
     }
 }
