@@ -847,6 +847,5 @@ void IOP_Interpreter::mtc(IOP &cpu, uint32_t instruction)
 
 void IOP_Interpreter::unknown_op(const char *type, uint16_t op, uint32_t instruction)
 {
-    printf("\n[IOP_Interpreter] Unrecognized %s op $%02X\n", type, op);
-    Errors::die("[IOP Interpreter] Instruction: $%08X\n", instruction);
+    Errors::die("[IOP_Interpreter] Unrecognized %s op $%02X (instr: $%08X)", type, op, instruction);
 }

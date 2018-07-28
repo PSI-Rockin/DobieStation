@@ -915,6 +915,5 @@ void EmotionInterpreter::cop2_qmtc2(EmotionEngine &cpu, uint32_t instruction)
 
 void EmotionInterpreter::unknown_op(const char *type, uint32_t instruction, uint16_t op)
 {
-    printf("[EE Interpreter] Unrecognized %s op $%04X\n", type, op);
-    Errors::die("[EE Interpreter] Instr: $%08X\n", instruction);
+    Errors::die("[EE Interpreter] Unrecognized %s op $%04X (instr: $%08X)\n", type, op, instruction);
 }
