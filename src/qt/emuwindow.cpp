@@ -304,7 +304,7 @@ void EmuWindow::update_FPS(int FPS)
 void EmuWindow::emu_error(QString err)
 {
     QMessageBox msgBox;
-    msgBox.setText("A fatal emulation error has occured");
+    msgBox.setText("A fatal emulation error has occurred");
     msgBox.setInformativeText(err);
     msgBox.setStandardButtons(QMessageBox::Abort);
     msgBox.setDefaultButton(QMessageBox::Abort);

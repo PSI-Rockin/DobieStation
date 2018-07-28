@@ -7,6 +7,7 @@
 #include "vif.hpp"
 
 #include "../gif.hpp"
+#include "../errors.hpp"
 
 VectorInterface::VectorInterface(GraphicsInterface* gif, VectorUnit* vu) : gif(gif), vu(vu)
 {
