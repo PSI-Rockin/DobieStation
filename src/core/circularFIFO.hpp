@@ -9,6 +9,8 @@ a single bigger queue if at all reasonable though
 
 #include <atomic>
 #include <cstddef>
+
+#include "errors.hpp"
 template<typename Element, size_t Size>
 class CircularFifo
 {
@@ -47,9 +49,7 @@ void CircularFifo<Element, Size>::push(const Element& item)
     {
         Errors::print_warning("FIFO FULL!");
     }
-
 }
-
 
 // Pop by Consumer can only update the head (load with relaxed, store with release)
 //     the tail must be accessed with at least aquire
