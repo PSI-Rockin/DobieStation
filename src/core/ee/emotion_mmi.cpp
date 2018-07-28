@@ -59,6 +59,12 @@ void EmotionInterpreter::mmi(EmotionEngine &cpu, uint32_t instruction)
         case 0x29:
             mmi3(cpu, instruction);
             break;
+        case 0x30:
+            pmfhlfmt(cpu, instruction);
+            break;
+        case 0x31:
+            pmthllw(cpu, instruction);
+            break;
         case 0x34:
             psllh(cpu, instruction);
             break;
@@ -257,6 +263,207 @@ void EmotionInterpreter::psraw(EmotionEngine &cpu, uint32_t instruction)
         word >>= shift;
         cpu.set_gpr<int32_t>(dest, word, i);
     }
+}
+
+void EmotionInterpreter::pmfhlfmt(EmotionEngine& cpu, uint32_t instruction)
+{
+    uint8_t op = (instruction >> 6) & 0x1F;
+    switch (op)
+    {
+        case 0x00:
+            pmfhllw(cpu, instruction);
+            break;
+        case 0x01:
+            pmfhluw(cpu, instruction);
+            break;
+        case 0x02:
+            pmfhlslw(cpu, instruction);
+            break;
+        case 0x03:           
+            pmfhllh(cpu, instruction);
+            break;
+        case 0x04:
+            pmfhlsh(cpu, instruction);
+            break;
+    }
+}
+
+int64_t EmotionInterpreter::clamp_doubleword(int64_t word)
+{
+    if (word >= (int64_t)0x000000007FFFFFFF)
+    {
+        return 0x7FFFFFFF;
+    }
+    else if (word <= (int64_t)0xFFFFFFFF80000000)
+    {
+        return 0xFFFFFFFF80000000;
+    }
+    else
+    {
+        return (int64_t)(int32_t)word;
+    }
+}
+
+int16_t EmotionInterpreter::clamp_halfword(int32_t word)
+{
+    if (word > (int32_t)0x00007FFF)
+    {
+        return 0x7FFF;
+    }
+    else if (word < (int32_t)0xFFFF80000)
+    {
+        return 0x8000;
+    }
+    else
+    {
+        return (int16_t)word;
+    }
+}
+
+/*
+* Parallel Move To HI/LO Register - Load Word
+*/
+void EmotionInterpreter::pmthllw(EmotionEngine& cpu, uint32_t instruction)
+{
+    uint128_t source = cpu.get_gpr<uint128_t>((instruction >> 21) & 0x1F);
+    uint128_t lo, hi;
+
+    lo._u64[0] = cpu.get_LO();
+    lo._u64[1] = cpu.get_LO1();
+
+    hi._u64[0] = cpu.get_HI();
+    hi._u64[1] = cpu.get_HI1();
+
+    for (int i = 0; i < 2; i++)
+    {
+        lo._u32[i * 2] = source._u32[i * 2];
+        hi._u32[i * 2] = source._u32[(i * 2)+1];
+    }
+
+    cpu.set_LO_HI(lo._u64[0], hi._u64[0], false);
+    cpu.set_LO_HI(lo._u64[1], hi._u64[1], true);
+}
+
+/*
+* Parallel Move From HI/LO Register - Load Word
+*/
+void EmotionInterpreter::pmfhllw(EmotionEngine& cpu, uint32_t instruction)
+{
+    uint64_t dest = (instruction >> 11) & 0x1F;
+    uint128_t lo, hi;
+    uint128_t data;
+
+    lo._u64[0] = cpu.get_LO();
+    lo._u64[1] = cpu.get_LO1();
+
+    hi._u64[0] = cpu.get_HI();
+    hi._u64[1] = cpu.get_HI1();
+
+    for (int i = 0; i < 2; i++)
+    {
+        data._u32[i * 2] = lo._u32[i * 2];
+        data._u32[(i * 2) + 1] = hi._u32[i * 2];
+    }
+
+    cpu.set_gpr<uint128_t>(dest, data);
+}
+
+/*
+* Parallel Move From HI/LO Register - Load Word
+*/
+void EmotionInterpreter::pmfhluw(EmotionEngine& cpu, uint32_t instruction)
+{
+    uint64_t dest = (instruction >> 11) & 0x1F;
+    uint128_t lo, hi;
+    uint128_t data;
+
+    lo._u64[0] = cpu.get_LO();
+    lo._u64[1] = cpu.get_LO1();
+
+    hi._u64[0] = cpu.get_HI();
+    hi._u64[1] = cpu.get_HI1();
+
+    for (int i = 0; i < 2; i++)
+    {
+        data._u32[i * 2] = lo._u32[(i * 2) + 1];
+        data._u32[(i * 2) + 1] = hi._u32[(i * 2) + 1];
+    }
+
+    cpu.set_gpr<uint128_t>(dest, data);
+}
+
+/*
+* Parallel Move From HI/LO Register - Saturate Long Word
+*/
+void EmotionInterpreter::pmfhlslw(EmotionEngine& cpu, uint32_t instruction)
+{
+    uint64_t dest = (instruction >> 11) & 0x1F;
+    uint128_t lo, hi;
+    uint128_t data;
+
+    lo._u64[0] = cpu.get_LO();
+    lo._u64[1] = cpu.get_LO1();
+
+    hi._u64[0] = cpu.get_HI();
+    hi._u64[1] = cpu.get_HI1();
+
+    data._u64[0] = clamp_doubleword((uint64_t)lo._u32[0] | ((uint64_t)hi._u32[0] << 32));
+    data._u64[1] = clamp_doubleword((uint64_t)lo._u32[2] | ((uint64_t)hi._u32[2] << 32));
+    
+    cpu.set_gpr<uint128_t>(dest, data);
+}
+
+/*
+ * Parallel Move From HI/LO Register - Load Halfword
+ */
+void EmotionInterpreter::pmfhllh(EmotionEngine& cpu, uint32_t instruction)
+{
+    uint64_t dest = (instruction >> 11) & 0x1F;
+    uint128_t lo, hi;
+    uint128_t data;
+
+    lo._u64[0] = cpu.get_LO();
+    lo._u64[1] = cpu.get_LO1();
+
+    hi._u64[0] = cpu.get_HI();
+    hi._u64[1] = cpu.get_HI1();
+
+    for (int i = 0; i < 4; i++)
+    {
+        data._u16[i * 2] = lo._u16[i * 2];
+        data._u16[(i * 2) + 1] = hi._u16[i * 2];
+    }
+
+    std::swap(data._u16[1], data._u16[2]);
+    std::swap(data._u16[5], data._u16[6]);
+
+    cpu.set_gpr<uint128_t>(dest, data);
+}
+
+/*
+* Parallel Move From HI/LO Register - Saturate Halfword
+*/
+void EmotionInterpreter::pmfhlsh(EmotionEngine& cpu, uint32_t instruction)
+{
+    uint64_t dest = (instruction >> 11) & 0x1F;
+    uint128_t lo, hi;
+    uint128_t data;
+
+    lo._u64[0] = cpu.get_LO();
+    lo._u64[1] = cpu.get_LO1();
+
+    hi._u64[0] = cpu.get_HI();
+    hi._u64[1] = cpu.get_HI1();
+
+    data._u16[0] = clamp_halfword(lo._u32[0]);
+    data._u16[1] = clamp_halfword(lo._u32[1]);
+    data._u16[2] = clamp_halfword(hi._u32[0]);
+    data._u16[3] = clamp_halfword(hi._u32[1]);
+    data._u16[4] = clamp_halfword(lo._u32[2]);
+    data._u16[5] = clamp_halfword(lo._u32[3]);
+    data._u16[6] = clamp_halfword(hi._u32[2]);
+    data._u16[7] = clamp_halfword(hi._u32[3]);
+    cpu.set_gpr<uint128_t>(dest, data);
 }
 
 void EmotionInterpreter::mmi0(EmotionEngine &cpu, uint32_t instruction)
@@ -1288,11 +1495,17 @@ void EmotionInterpreter::mmi2(EmotionEngine &cpu, uint32_t instruction)
     uint8_t op = (instruction >> 6) & 0x1F;
     switch (op)
     {
+        case 0x00:
+            pmaddw(cpu, instruction);
+            break;
         case 0x02:
             psllvw(cpu, instruction);
             break;
         case 0x03:
             psrlvw(cpu, instruction);
+            break;
+        case 0x04:
+            pmsubw(cpu, instruction);
             break;
         case 0x08:
             pmfhi(cpu, instruction);
@@ -1303,14 +1516,32 @@ void EmotionInterpreter::mmi2(EmotionEngine &cpu, uint32_t instruction)
         case 0x0A:
             pinth(cpu, instruction);
             break;
+        case 0x0C:
+            pmultw(cpu, instruction);
+            break;
+        case 0x0D:
+            pdivw(cpu, instruction);
+            break;
         case 0x0E:
             pcpyld(cpu, instruction);
+            break;
+        case 0x10:
+            pmaddh(cpu, instruction);
+            break;
+        case 0x11:
+            phmadh(cpu, instruction);
             break;
         case 0x12:
             pand(cpu, instruction);
             break;
         case 0x13:
             pxor(cpu, instruction);
+            break;
+        case 0x14:
+            pmsubh(cpu, instruction);
+            break;
+        case 0x15:
+            phmsbh(cpu, instruction);
             break;
         case 0x1A:
             pexeh(cpu, instruction);
@@ -1321,6 +1552,9 @@ void EmotionInterpreter::mmi2(EmotionEngine &cpu, uint32_t instruction)
         case 0x1C:
             pmulth(cpu, instruction);
             break;
+        case 0x1D:
+            pdivbw(cpu, instruction);
+            break;
         case 0x1E:
             pexew(cpu, instruction);
             break;
@@ -1330,6 +1564,60 @@ void EmotionInterpreter::mmi2(EmotionEngine &cpu, uint32_t instruction)
         default:
             unknown_op("mmi2", instruction, op);
     }
+}
+
+/**
+* Parallel Multiply-Add Word
+- Note! It looks like the PS2 has a multiplication error when calculating the value for HI.
+  With some tinkering depending on the mutliplication operands we can get this accurate on the autotests.
+*/
+void EmotionInterpreter::pmaddw(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint128_t reg1 = cpu.get_gpr<uint128_t>((instruction >> 21) & 0x1F);
+    uint128_t reg2 = cpu.get_gpr<uint128_t>((instruction >> 16) & 0x1F);
+    uint32_t dest = (instruction >> 11) & 0x1F;
+    uint128_t lo, hi;    
+    int64_t result, result2;
+    int64_t op1, op2;
+    lo._u64[0] = cpu.get_LO();
+    lo._u64[1] = cpu.get_LO1();
+
+    hi._u64[0] = cpu.get_HI();
+    hi._u64[1] = cpu.get_HI1();
+
+    op1 = (int64_t)reg1._s32[0];
+    op2 = (int64_t)reg2._s32[0];
+    result = op1 * op2;
+        
+    result2 = result + ((int64_t)hi._s32[0] << 32);
+
+    //This gets around some one bit errors in the calculation for hi
+    if (((op2 & 0x7FFFFFFF) == 0 || (op2 & 0x7FFFFFFF) == 0x7FFFFFFF) && op1 != op2)
+        result2 += 0x70000000;
+
+    //4294967296 would be the full >> 32, but there seems to be an error amount
+    result2 = (int32_t)(result2 / 4294967295);
+
+    lo._s64[0] = (int32_t)(result & 0xffffffff) + lo._s32[0];
+    hi._s64[0] = (int32_t)result2;
+
+    op1 = (int64_t)reg1._s32[2];
+    op2 = (int64_t)reg2._s32[2];
+    result = op1 * op2;
+    
+    result2 = result + ((int64_t)hi._s32[2] << 32);
+    //4294967296 would be the full >> 32, but there seems to be an error amount
+    result2 = (int32_t)(result2 / 4294967295);
+    lo._s64[1] = (int32_t)(result & 0xffffffff) + lo._s32[2];
+    hi._s64[1] = (int32_t)result2;
+   
+    cpu.set_gpr<uint32_t>(dest, lo._u32[0]);
+    cpu.set_gpr<uint32_t>(dest, hi._u32[0], 1);
+    cpu.set_gpr<uint32_t>(dest, lo._u32[2], 2);
+    cpu.set_gpr<uint32_t>(dest, hi._u32[2], 3);    
+
+    cpu.set_LO_HI(lo._u64[0], hi._u64[0], false);
+    cpu.set_LO_HI(lo._u64[1], hi._u64[1], true);
 }
 
 /**
@@ -1373,6 +1661,57 @@ void EmotionInterpreter::psrlvw(EmotionEngine &cpu, uint32_t instruction)
     uint32_t hi_word = cpu.get_gpr<uint64_t>(source, 1) & 0xFFFFFFFF;
     cpu.set_gpr<int64_t>(dest, (int32_t)(hi_word >> t), 1);
 }
+
+/**
+* Parallel Multiply-Subtract Word
+- Note! It looks like the PS2 has a multiplication error when calculating the value for HI.
+  With some tinkering depending on the mutliplication operands we can get this accurate on the autotests.
+*/
+void EmotionInterpreter::pmsubw(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint128_t reg1 = cpu.get_gpr<uint128_t>((instruction >> 21) & 0x1F);
+    uint128_t reg2 = cpu.get_gpr<uint128_t>((instruction >> 16) & 0x1F);
+    uint32_t dest = (instruction >> 11) & 0x1F;
+    uint128_t lo, hi;
+    int64_t result, result2;
+    int64_t op1, op2;
+    lo._u64[0] = cpu.get_LO();
+    lo._u64[1] = cpu.get_LO1();
+
+    hi._u64[0] = cpu.get_HI();
+    hi._u64[1] = cpu.get_HI1();
+
+    op1 = (int64_t)reg1._s32[0];
+    op2 = (int64_t)reg2._s32[0];
+    result = op1 * op2;
+
+    result2 = ((int64_t)hi._s32[0] << 32) - result;
+
+    //4294967296 would be the full >> 32, but there seems to be an error amount
+    result2 = (int32_t)(result2 / 4294967295);
+
+    lo._s64[0] = lo._s32[0] - (int32_t)(result & 0xffffffff);
+    hi._s64[0] = (int32_t)result2;
+
+    op1 = (int64_t)reg1._s32[2];
+    op2 = (int64_t)reg2._s32[2];
+    result = op1 * op2;
+
+    result2 = ((int64_t)hi._s32[2] << 32) - result;
+    //4294967296 would be the full >> 32, but there seems to be an error amount
+    result2 = (int32_t)(result2 / 4294967295);
+    lo._s64[1] = lo._s32[2] - (int32_t)(result & 0xffffffff);
+    hi._s64[1] = (int32_t)result2;
+
+    cpu.set_gpr<uint32_t>(dest, lo._u32[0]);
+    cpu.set_gpr<uint32_t>(dest, hi._u32[0], 1);
+    cpu.set_gpr<uint32_t>(dest, lo._u32[2], 2);
+    cpu.set_gpr<uint32_t>(dest, hi._u32[2], 3);
+
+    cpu.set_LO_HI(lo._u64[0], hi._u64[0], false);
+    cpu.set_LO_HI(lo._u64[1], hi._u64[1], true);
+}
+
 
 void EmotionInterpreter::pmfhi(EmotionEngine &cpu, uint32_t instruction)
 {
@@ -1418,6 +1757,77 @@ void EmotionInterpreter::pcpyld(EmotionEngine &cpu, uint32_t instruction)
     cpu.set_gpr<uint64_t>(dest, high, 1);
 }
 
+/**
+* Parallel Multiply-Add Halfword
+*/
+void EmotionInterpreter::pmaddh(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint128_t reg1 = cpu.get_gpr<uint128_t>((instruction >> 21) & 0x1F);
+    uint128_t reg2 = cpu.get_gpr<uint128_t>((instruction >> 16) & 0x1F);
+    uint128_t lo, hi;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    lo._u64[0] = cpu.get_LO();
+    lo._u64[1] = cpu.get_LO1();
+
+    hi._u64[0] = cpu.get_HI();
+    hi._u64[1] = cpu.get_HI1();
+
+    lo._u32[0] = (int32_t)((int32_t)lo._u32[0] + (int16_t)reg1._u16[0] * (int16_t)reg2._u16[0]);
+    lo._u32[1] = (int32_t)((int32_t)lo._u32[1] + (int16_t)reg1._u16[1] * (int16_t)reg2._u16[1]);
+    cpu.set_gpr<uint32_t>(dest, lo._u32[0]);
+
+    hi._u32[0] = (int32_t)((int32_t)hi._u32[0] + (int16_t)reg1._u16[2] * (int16_t)reg2._u16[2]);
+    hi._u32[1] = (int32_t)((int32_t)hi._u32[1] + (int16_t)reg1._u16[3] * (int16_t)reg2._u16[3]);
+    cpu.set_gpr<uint32_t>(dest, hi._u32[0], 1);
+
+    lo._u32[2] = (int32_t)((int32_t)lo._u32[2] + (int16_t)reg1._u16[4] * (int16_t)reg2._u16[4]);
+    lo._u32[3] = (int32_t)((int32_t)lo._u32[3] + (int16_t)reg1._u16[5] * (int16_t)reg2._u16[5]);
+    cpu.set_gpr<uint32_t>(dest, lo._u32[2], 2);
+
+    hi._u32[2] = (int32_t)((int32_t)hi._u32[2] + (int16_t)reg1._u16[6] * (int16_t)reg2._u16[6]);
+    hi._u32[3] = (int32_t)((int32_t)hi._u32[3] + (int16_t)reg1._u16[7] * (int16_t)reg2._u16[7]);
+    cpu.set_gpr<uint32_t>(dest, hi._u32[2], 3);
+    
+    cpu.set_LO_HI(lo._u64[0], hi._u64[0], false);
+    cpu.set_LO_HI(lo._u64[1], hi._u64[1], true);
+}
+
+/**
+* Parallel Horizontal Multiply-Add Halfword
+*/
+void EmotionInterpreter::phmadh(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint128_t reg1 = cpu.get_gpr<uint128_t>((instruction >> 21) & 0x1F);
+    uint128_t reg2 = cpu.get_gpr<uint128_t>((instruction >> 16) & 0x1F);
+    uint128_t lo, hi;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+    int32_t mul1;
+
+    mul1 = (int16_t)reg1._u16[1] * (int16_t)reg2._u16[1];
+    lo._u32[0] = (int32_t)(mul1 + (int16_t)reg1._u16[0] * (int16_t)reg2._u16[0]);
+    lo._u32[1] = mul1;
+    cpu.set_gpr<uint32_t>(dest, lo._u32[0]);
+
+    mul1 = (int16_t)reg1._u16[3] * (int16_t)reg2._u16[3];
+    hi._u32[0] = (int32_t)(mul1 + (int16_t)reg1._u16[2] * (int16_t)reg2._u16[2]);
+    hi._u32[1] = mul1;
+    cpu.set_gpr<uint32_t>(dest, hi._u32[0], 1);
+
+    mul1 = (int16_t)reg1._u16[5] * (int16_t)reg2._u16[5];
+    lo._u32[2] = (int32_t)(mul1 + (int16_t)reg1._u16[4] * (int16_t)reg2._u16[4]);
+    lo._u32[3] = mul1;
+    cpu.set_gpr<uint32_t>(dest, lo._u32[2], 2);
+
+    mul1 = (int16_t)reg1._u16[7] * (int16_t)reg2._u16[7];
+    hi._u32[2] = (int32_t)(mul1 + (int16_t)reg1._u16[6] * (int16_t)reg2._u16[6]);
+    hi._u32[3] = mul1;
+    cpu.set_gpr<uint32_t>(dest, hi._u32[2], 3);
+
+    cpu.set_LO_HI(lo._u64[0], hi._u64[0], false);
+    cpu.set_LO_HI(lo._u64[1], hi._u64[1], true);
+}
+
 void EmotionInterpreter::pand(EmotionEngine &cpu, uint32_t instruction)
 {
     uint64_t op1 = (instruction >> 21) & 0x1F;
@@ -1436,6 +1846,77 @@ void EmotionInterpreter::pxor(EmotionEngine &cpu, uint32_t instruction)
 
     cpu.set_gpr<uint64_t>(dest, cpu.get_gpr<uint64_t>(op1) ^ cpu.get_gpr<uint64_t>(op2));
     cpu.set_gpr<uint64_t>(dest, cpu.get_gpr<uint64_t>(op1, 1) ^ cpu.get_gpr<uint64_t>(op2, 1), 1);
+}
+
+/**
+* Parallel Multiply-Subtract Halfword
+*/
+void EmotionInterpreter::pmsubh(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint128_t reg1 = cpu.get_gpr<uint128_t>((instruction >> 21) & 0x1F);
+    uint128_t reg2 = cpu.get_gpr<uint128_t>((instruction >> 16) & 0x1F);
+    uint128_t lo, hi;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    lo._u64[0] = cpu.get_LO();
+    lo._u64[1] = cpu.get_LO1();
+
+    hi._u64[0] = cpu.get_HI();
+    hi._u64[1] = cpu.get_HI1();
+
+    lo._u32[0] = (int32_t)((int32_t)lo._u32[0] - (int16_t)reg1._u16[0] * (int16_t)reg2._u16[0]);
+    lo._u32[1] = (int32_t)((int32_t)lo._u32[1] - (int16_t)reg1._u16[1] * (int16_t)reg2._u16[1]);
+    cpu.set_gpr<uint32_t>(dest, lo._u32[0]);
+
+    hi._u32[0] = (int32_t)((int32_t)hi._u32[0] - (int16_t)reg1._u16[2] * (int16_t)reg2._u16[2]);
+    hi._u32[1] = (int32_t)((int32_t)hi._u32[1] - (int16_t)reg1._u16[3] * (int16_t)reg2._u16[3]);
+    cpu.set_gpr<uint32_t>(dest, hi._u32[0], 1);
+
+    lo._u32[2] = (int32_t)((int32_t)lo._u32[2] - (int16_t)reg1._u16[4] * (int16_t)reg2._u16[4]);
+    lo._u32[3] = (int32_t)((int32_t)lo._u32[3] - (int16_t)reg1._u16[5] * (int16_t)reg2._u16[5]);
+    cpu.set_gpr<uint32_t>(dest, lo._u32[2], 2);
+
+    hi._u32[2] = (int32_t)((int32_t)hi._u32[2] - (int16_t)reg1._u16[6] * (int16_t)reg2._u16[6]);
+    hi._u32[3] = (int32_t)((int32_t)hi._u32[3] - (int16_t)reg1._u16[7] * (int16_t)reg2._u16[7]);
+    cpu.set_gpr<uint32_t>(dest, hi._u32[2], 3);
+
+    cpu.set_LO_HI(lo._u64[0], hi._u64[0], false);
+    cpu.set_LO_HI(lo._u64[1], hi._u64[1], true);
+}
+
+/**
+* Parallel Horizontal Multiply-Subtract Halfword
+*/
+void EmotionInterpreter::phmsbh(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint128_t reg1 = cpu.get_gpr<uint128_t>((instruction >> 21) & 0x1F);
+    uint128_t reg2 = cpu.get_gpr<uint128_t>((instruction >> 16) & 0x1F);
+    uint128_t lo, hi;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+    int32_t mul1;
+
+    mul1 = (int16_t)reg1._u16[1] * (int16_t)reg2._u16[1];
+    lo._u32[0] = (int32_t)(mul1 - (int16_t)reg1._u16[0] * (int16_t)reg2._u16[0]);
+    lo._u32[1] = ~mul1;
+    cpu.set_gpr<uint32_t>(dest, lo._u32[0]);
+
+    mul1 = (int16_t)reg1._u16[3] * (int16_t)reg2._u16[3];
+    hi._u32[0] = (int32_t)(mul1 - (int16_t)reg1._u16[2] * (int16_t)reg2._u16[2]);
+    hi._u32[1] = ~mul1;
+    cpu.set_gpr<uint32_t>(dest, hi._u32[0], 1);
+
+    mul1 = (int16_t)reg1._u16[5] * (int16_t)reg2._u16[5];
+    lo._u32[2] = (int32_t)(mul1 - (int16_t)reg1._u16[4] * (int16_t)reg2._u16[4]);
+    lo._u32[3] = ~mul1;
+    cpu.set_gpr<uint32_t>(dest, lo._u32[2], 2);
+
+    mul1 = (int16_t)reg1._u16[7] * (int16_t)reg2._u16[7];
+    hi._u32[2] = (int32_t)(mul1 - (int16_t)reg1._u16[6] * (int16_t)reg2._u16[6]);
+    hi._u32[3] = ~mul1;
+    cpu.set_gpr<uint32_t>(dest, hi._u32[2], 3);
+
+    cpu.set_LO_HI(lo._u64[0], hi._u64[0], false);
+    cpu.set_LO_HI(lo._u64[1], hi._u64[1], true);
 }
 
 /**
@@ -1517,6 +1998,102 @@ void EmotionInterpreter::pmulth(EmotionEngine &cpu, uint32_t instruction)
 }
 
 /**
+* Parallel Divide with Broadcast Word
+*/
+void EmotionInterpreter::pdivbw(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint128_t reg1 = cpu.get_gpr<uint128_t>((instruction >> 21) & 0x1F);
+    uint128_t reg2 = cpu.get_gpr<uint128_t>((instruction >> 16) & 0x1F);
+    uint128_t lo, hi;
+
+    for (int i = 0; i < 4; i++)
+    {
+        if (reg1._u32[i] == 0x80000000 && reg2._u16[0] == 0xffff)
+        {
+            lo._u32[i] = 0x80000000;
+            hi._u32[i] = 0;
+        }
+        else if (reg2._u16[0] != 0)
+        {
+            lo._u32[i] = (int32_t)reg1._u32[i] / (int16_t)reg2._u16[0];
+            hi._u32[i] = (int32_t)reg1._u32[i] % (int16_t)reg2._u16[0];
+        }
+        else
+        {
+            if ((int32_t)reg1._u32[i] < 0)
+                lo._u32[i] = 1;
+            else
+                lo._u32[i] = -1;
+            hi._u32[i] = (int32_t)reg1._u32[i];
+        }
+    }
+
+    cpu.set_LO_HI(lo._u64[0], hi._u64[0], false);
+    cpu.set_LO_HI(lo._u64[1], hi._u64[1], true);
+}
+
+/**
+* Parallel Multiply Word
+*/
+void EmotionInterpreter::pmultw(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint128_t reg1 = cpu.get_gpr<uint128_t>((instruction >> 21) & 0x1F);
+    uint128_t reg2 = cpu.get_gpr<uint128_t>((instruction >> 16) & 0x1F);
+    uint128_t lo, hi;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    int64_t result;
+    result = (int64_t)reg1._s32[0] * (int64_t)reg2._s32[0];
+    lo._s64[0] = (int32_t)result;
+    hi._s64[0] = (int32_t)(result >> 32);
+    cpu.set_gpr<int64_t>(dest, result);
+
+    result = (int64_t)reg1._s32[2] * (int64_t)reg2._s32[2];
+    lo._s64[1] = (int32_t)result;
+    hi._s64[1] = (int32_t)(result >> 32);
+    cpu.set_gpr<int64_t>(dest, result, 1);
+
+
+    cpu.set_LO_HI(lo._u64[0], hi._u64[0], false);
+    cpu.set_LO_HI(lo._u64[1], hi._u64[1], true);
+}
+
+/**
+* Parallel Divide Word
+*/
+void EmotionInterpreter::pdivw(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint128_t reg1 = cpu.get_gpr<uint128_t>((instruction >> 21) & 0x1F);
+    uint128_t reg2 = cpu.get_gpr<uint128_t>((instruction >> 16) & 0x1F);
+    uint128_t lo, hi;
+
+    for (int i = 0; i < 4; i+=2)
+    {
+        if (reg1._u32[i] == 0x80000000 && reg2._u32[i] == 0xffffffff)
+        {
+            lo._u64[i/2] = (int64_t)(int32_t)0x80000000;
+            hi._u64[i/2] = 0;
+        }
+        else if (reg2._u32[i] != 0)
+        {
+            lo._u64[i/2] = (int64_t)((int32_t)reg1._u32[i] / (int32_t)reg2._u32[i]);
+            hi._u64[i/2] = (int64_t)((int32_t)reg1._u32[i] % (int32_t)reg2._u32[i]);
+        }
+        else
+        {
+            if ((int32_t)reg1._u32[i] < 0)
+                lo._u64[i/2] = 1;
+            else
+                lo._u64[i/2] = (int64_t)-1;
+            hi._u64[i/2] = (int64_t)(int32_t)reg1._u32[i];
+        }
+    }
+
+    cpu.set_LO_HI(lo._u64[0], hi._u64[0], false);
+    cpu.set_LO_HI(lo._u64[1], hi._u64[1], true);
+}
+
+/**
  * Parallel Exchange Even Word
  * Splits RT into four words and exchanges the even words.
  */
@@ -1581,7 +2158,7 @@ void EmotionInterpreter::mult1(EmotionEngine &cpu, uint32_t instruction)
     op1 = cpu.get_gpr<int32_t>(op1);
     op2 = cpu.get_gpr<int32_t>(op2);
     int64_t temp = (int64_t)op1 * op2;
-    cpu.set_LO_HI((int32_t)(temp & 0xFFFFFFFF), (int32_t)(temp >> 32), true);
+    cpu.set_LO_HI((int64_t)(int32_t)(temp & 0xFFFFFFFF), (int64_t)(int32_t)(temp >> 32), true);
     cpu.mflo1(dest);
 }
 
@@ -1593,7 +2170,7 @@ void EmotionInterpreter::multu1(EmotionEngine& cpu, uint32_t instruction)
     op1 = cpu.get_gpr<uint32_t>(op1);
     op2 = cpu.get_gpr<uint32_t>(op2);
     uint64_t temp = (uint64_t)op1 * op2;
-    cpu.set_LO_HI(temp & 0xFFFFFFFF, temp >> 32, true);
+    cpu.set_LO_HI((int64_t)(int32_t)temp & 0xFFFFFFFF, (int64_t)(int32_t)temp >> 32, true);
     cpu.mflo1(dest);
 }
 
@@ -1605,11 +2182,11 @@ void EmotionInterpreter::div1(EmotionEngine &cpu, uint32_t instruction)
     op2 = cpu.get_gpr<int32_t>(op2);
     if (op1 == 0x80000000 && op2 == 0xFFFFFFFF)
     {
-        cpu.set_LO_HI((int32_t)0x80000000, 0, true);
+        cpu.set_LO_HI((int64_t)(int32_t)0x80000000, 0, true);
     }
     else if (op2)
     {
-        cpu.set_LO_HI(op1 / op2, op1 % op2, true);
+        cpu.set_LO_HI((int64_t)(int32_t)(op1 / op2), (int64_t)(int32_t)(op1 % op2), true);
     }
     else
     {
@@ -1618,7 +2195,7 @@ void EmotionInterpreter::div1(EmotionEngine &cpu, uint32_t instruction)
             lo = -1;
         else
             lo = 1;
-        cpu.set_LO_HI(lo, op1, true);
+        cpu.set_LO_HI(lo, (int64_t)(int32_t)op1, true);
     }
 }
 
@@ -1630,11 +2207,11 @@ void EmotionInterpreter::divu1(EmotionEngine &cpu, uint32_t instruction)
     op2 = cpu.get_gpr<uint32_t>(op2);
     if (op2)
     {
-        cpu.set_LO_HI(op1 / op2, op1 % op2, true);
+        cpu.set_LO_HI((int64_t)(int32_t)(op1 / op2), (int64_t)(int32_t)(op1 % op2), true);
     }
     else
     {
-        cpu.set_LO_HI(-1, op1, true);
+        cpu.set_LO_HI((int64_t)-1, op1, true);
     }
 }
 
@@ -1681,6 +2258,9 @@ void EmotionInterpreter::mmi3(EmotionEngine &cpu, uint32_t instruction)
     uint8_t op = (instruction >> 6) & 0x1F;
     switch (op)
     {
+        case 0x00:
+            pmadduw(cpu, instruction);
+            break;
         case 0x03:
             psravw(cpu, instruction);
             break;
@@ -1692,6 +2272,12 @@ void EmotionInterpreter::mmi3(EmotionEngine &cpu, uint32_t instruction)
             break;
         case 0x0A:
             pinteh(cpu, instruction);
+            break;
+        case 0x0C:
+            pmultuw(cpu, instruction);
+            break;
+        case 0x0D:
+            pdivuw(cpu, instruction);
             break;
         case 0x0E:
             pcpyud(cpu, instruction);
@@ -1714,6 +2300,37 @@ void EmotionInterpreter::mmi3(EmotionEngine &cpu, uint32_t instruction)
         default:
             unknown_op("mmi3", instruction, op);
     }
+}
+
+/**
+* Parallel Multiply-Add Unsigned word
+*/
+void EmotionInterpreter::pmadduw(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint128_t reg1 = cpu.get_gpr<uint128_t>((instruction >> 21) & 0x1F);
+    uint128_t reg2 = cpu.get_gpr<uint128_t>((instruction >> 16) & 0x1F);
+    uint128_t lo, hi;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+    uint64_t result;
+
+    lo._u64[0] = cpu.get_LO();
+    lo._u64[1] = cpu.get_LO1();
+
+    hi._u64[0] = cpu.get_HI();
+    hi._u64[1] = cpu.get_HI1();
+
+    result = ((uint64_t)lo._u32[0] | (uint64_t)hi._u32[0] << 32) + ((uint64_t)reg1._u32[0] * (uint64_t)reg2._u32[0]);
+    lo._u64[0] = (int64_t)(int32_t)(result & 0xffffffff);
+    hi._u64[0] = (int64_t)(int32_t)(result >> 32);
+    cpu.set_gpr<uint64_t>(dest, result);
+
+    result = ((uint64_t)lo._u32[2] | (uint64_t)hi._u32[2] << 32) + ((uint64_t)reg1._u32[2] * (uint64_t)reg2._u32[2]);
+    lo._u64[1] = (int64_t)(int32_t)(result & 0xffffffff);
+    hi._u64[1] = (int64_t)(int32_t)(result >> 32);
+    cpu.set_gpr<uint64_t>(dest, result, 1);
+
+    cpu.set_LO_HI(lo._u64[0], hi._u64[0], false);
+    cpu.set_LO_HI(lo._u64[1], hi._u64[1], true);
 }
 
 /**
@@ -1761,6 +2378,59 @@ void EmotionInterpreter::pinteh(EmotionEngine &cpu, uint32_t instruction)
         cpu.set_gpr<uint16_t>(dest, hw1, (i * 2) + 1);
         cpu.set_gpr<uint16_t>(dest, hw2, i * 2);
     }
+}
+
+/**
+* Parallel Multiply Unsigned Word
+*/
+void EmotionInterpreter::pmultuw(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint128_t reg1 = cpu.get_gpr<uint128_t>((instruction >> 21) & 0x1F);
+    uint128_t reg2 = cpu.get_gpr<uint128_t>((instruction >> 16) & 0x1F);
+    uint128_t lo, hi;
+    uint64_t dest = (instruction >> 11) & 0x1F;
+
+    uint64_t result;
+    result = (uint64_t)reg1._u32[0] * (uint64_t)reg2._u32[0];
+    lo._s64[0] = (int32_t)result;
+    hi._s64[0] = (int32_t)(result >> 32);
+    cpu.set_gpr<int64_t>(dest, result);
+
+    result = (uint64_t)reg1._u32[2] * (uint64_t)reg2._u32[2];
+    lo._s64[1] = (int32_t)result;
+    hi._s64[1] = (int32_t)(result >> 32);
+    cpu.set_gpr<int64_t>(dest, result, 1);
+
+
+    cpu.set_LO_HI(lo._u64[0], hi._u64[0], false);
+    cpu.set_LO_HI(lo._u64[1], hi._u64[1], true);
+}
+
+/**
+* Parallel Divide Unsigned Word
+*/
+void EmotionInterpreter::pdivuw(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint128_t reg1 = cpu.get_gpr<uint128_t>((instruction >> 21) & 0x1F);
+    uint128_t reg2 = cpu.get_gpr<uint128_t>((instruction >> 16) & 0x1F);
+    uint128_t lo, hi;
+
+    for (int i = 0; i < 4; i += 2)
+    {
+        if (reg2._u32[i] != 0)
+        {
+            lo._u64[i/2] = (int64_t)(int32_t)(reg1._u32[i] / reg2._u32[i]);
+            hi._u64[i/2] = (int64_t)(int32_t)(reg1._u32[i] % reg2._u32[i]);
+        }
+        else
+        {
+            lo._u64[i/2] = (int64_t)-1;
+            hi._u64[i/2] = (int64_t)(int32_t)reg1._u32[i];
+        }
+    }
+
+    cpu.set_LO_HI(lo._u64[0], hi._u64[0], false);
+    cpu.set_LO_HI(lo._u64[1], hi._u64[1], true);
 }
 
 /**

@@ -557,8 +557,8 @@ void EmotionEngine::sqc2(uint32_t addr, int index)
 
 void EmotionEngine::set_LO_HI(uint64_t a, uint64_t b, bool hi)
 {
-    a = (int64_t)(int32_t)a;
-    b = (int64_t)(int32_t)b;
+    a = (int64_t)a;
+    b = (int64_t)b;
     if (hi)
     {
         LO1 = a;

@@ -16,9 +16,13 @@ union uint128_t
     };
 
     uint64_t _u64[2];
+    int64_t  _s64[2];
     uint32_t _u32[4];
+    int32_t  _s32[4];
     uint16_t _u16[8];
-    uint8_t _u8[16];
+    int16_t  _s16[8];
+    uint8_t  _u8[16];
+    int8_t   _s8[16];
 
     // Explicit conversion from u64. Zero-extends the source through 128 bits.
     static uint128_t from_u64(uint64_t src)

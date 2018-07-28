@@ -225,6 +225,8 @@ namespace EmotionDisasm
     std::string disasm_vrxor(uint32_t instruction);
 
     std::string disasm_mmi_copy(const std::string opcode, uint32_t instruction);
+    std::string disasm_mmi_copy_hilo(const std::string opcode, uint32_t instruction);
+    std::string disasm_mmi_copyto_hilo(const std::string opcode, uint32_t instruction);
     std::string disasm_mmi(uint32_t instruction, uint32_t instr_addr);
     std::string disasm_plzcw(uint32_t instruction);
     std::string disasm_mmi0(uint32_t instruction);
@@ -247,6 +249,7 @@ namespace EmotionDisasm
     std::string disasm_div1(uint32_t instruction);
     std::string disasm_divu1(uint32_t instruction);
     std::string disasm_mmi3(uint32_t instruction);
+    std::string disasm_pmfhlfmt(uint32_t instruction);
     std::string disasm_pmthi(uint32_t instruction);
     std::string disasm_pmtlo(uint32_t instruction);
     std::string disasm_pcpyud(uint32_t instruction);
