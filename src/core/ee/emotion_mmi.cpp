@@ -1663,7 +1663,7 @@ void EmotionInterpreter::psrlvw(EmotionEngine &cpu, uint32_t instruction)
 }
 
 /**
-* Parallel Multply-Subtract Word
+* Parallel Multiply-Subtract Word
 - Note! It looks like the PS2 has a multiplication error when calculating the value for HI.
   With some tinkering depending on the mutliplication operands we can get this accurate on the autotests.
 */
@@ -1758,7 +1758,7 @@ void EmotionInterpreter::pcpyld(EmotionEngine &cpu, uint32_t instruction)
 }
 
 /**
-* Parallel Multply-Add Halfword
+* Parallel Multiply-Add Halfword
 */
 void EmotionInterpreter::pmaddh(EmotionEngine &cpu, uint32_t instruction)
 {
@@ -1794,7 +1794,7 @@ void EmotionInterpreter::pmaddh(EmotionEngine &cpu, uint32_t instruction)
 }
 
 /**
-* Parallel Horizontal Multply-Add Halfword
+* Parallel Horizontal Multiply-Add Halfword
 */
 void EmotionInterpreter::phmadh(EmotionEngine &cpu, uint32_t instruction)
 {
@@ -1849,7 +1849,7 @@ void EmotionInterpreter::pxor(EmotionEngine &cpu, uint32_t instruction)
 }
 
 /**
-* Parallel Multply-Subtract Halfword
+* Parallel Multiply-Subtract Halfword
 */
 void EmotionInterpreter::pmsubh(EmotionEngine &cpu, uint32_t instruction)
 {
@@ -1885,7 +1885,7 @@ void EmotionInterpreter::pmsubh(EmotionEngine &cpu, uint32_t instruction)
 }
 
 /**
-* Parallel Horizontal Multply-Subtract Halfword
+* Parallel Horizontal Multiply-Subtract Halfword
 */
 void EmotionInterpreter::phmsbh(EmotionEngine &cpu, uint32_t instruction)
 {
@@ -2303,7 +2303,7 @@ void EmotionInterpreter::mmi3(EmotionEngine &cpu, uint32_t instruction)
 }
 
 /**
-* Parallel Multply-Add Unsigned word
+* Parallel Multiply-Add Unsigned word
 */
 void EmotionInterpreter::pmadduw(EmotionEngine &cpu, uint32_t instruction)
 {
