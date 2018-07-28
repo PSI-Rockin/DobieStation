@@ -572,6 +572,14 @@ void VectorUnit::fcget(uint8_t dest)
     set_int(dest, clip_flags & 0xFFF);
 }
 
+void VectorUnit::fcor(uint32_t value)
+{
+    if (((clip_flags & 0xFFFFFF) | (value & 0xFFFFFF)) == 0xFFFFFF)
+        set_int(1, 1);
+    else
+        set_int(1, 0);
+}
+
 void VectorUnit::fcset(uint32_t value)
 {
     printf("[VU] FCSET: $%08X\n", value);
@@ -800,6 +808,22 @@ void VectorUnit::lq(uint8_t field, uint8_t dest, uint8_t base, int32_t offset)
     printf("\n");
 }
 
+void VectorUnit::lqd(uint8_t field, uint8_t dest, uint8_t base)
+{
+    printf("[VU] LQD: ");
+    set_int(base, int_gpr[base].u - 1);
+    uint32_t addr = (uint32_t)int_gpr[base].u * 16;
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            set_gpr_u(dest, i, read_data<uint32_t>(addr + (i * 4)));
+            printf("(%d)%f ", i, gpr[dest].f[i]);
+        }
+    }
+    printf("\n");
+}
+
 void VectorUnit::lqi(uint8_t field, uint8_t dest, uint8_t base)
 {
     printf("[VU] LQI: ");
@@ -893,6 +917,24 @@ void VectorUnit::maddbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source,
 {
     printf("[VU] MADDbc: ");
     float op = convert(gpr[bc_reg].u[bc]);
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            float temp = op * convert(gpr[source].u[i]);
+            set_gpr_f(dest, i, update_mac_flags(temp + ACC.f[i], i));
+            printf("(%d)%f ", i, gpr[dest].f[i]);
+        }
+        else
+            clear_mac_flags(i);
+    }
+    printf("\n");
+}
+
+void VectorUnit::maddq(uint8_t field, uint8_t dest, uint8_t source)
+{
+    printf("[VU] MADDbc: ");
+    float op = convert(Q.u);
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
@@ -1382,6 +1424,23 @@ void VectorUnit::sq(uint8_t field, uint8_t source, uint8_t base, int32_t offset)
     printf("\n");
 }
 
+void VectorUnit::sqd(uint8_t field, uint8_t source, uint8_t base)
+{
+    if (base)
+        int_gpr[base].u--;
+    uint32_t addr = (uint32_t)int_gpr[base].u << 4;
+    printf("[VU] SQD to $%08X!\n", addr);
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            write_data<uint32_t>(addr + (i * 4), gpr[source].u[i]);
+            printf("$%08X(%d) ", gpr[source].u[i], i);
+        }
+    }
+    printf("\n");
+}
+
 void VectorUnit::sqi(uint8_t field, uint8_t source, uint8_t base)
 {
     uint32_t addr = (uint32_t)int_gpr[base].u << 4;
@@ -1417,6 +1476,24 @@ void VectorUnit::sub(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)
             update_mac_flags(result, i);
             set_gpr_f(dest, i, result);
             printf("(%d)%f ", i, gpr[dest].f[i]);
+        }
+        else
+            clear_mac_flags(i);
+    }
+    printf("\n");
+}
+
+void VectorUnit::subai(uint8_t field, uint8_t source)
+{
+    printf("[VU] SUBAi: ");
+    float op = convert(I.u);
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            ACC.f[i] = convert(gpr[source].u[i]) - op;
+            update_mac_flags(ACC.f[i], i);
+            printf("(%d)%f ", i, ACC.f[i]);
         }
         else
             clear_mac_flags(i);

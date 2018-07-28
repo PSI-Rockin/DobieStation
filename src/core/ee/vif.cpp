@@ -7,7 +7,6 @@
 #include "vif.hpp"
 
 #include "../gif.hpp"
-#include "../errors.hpp"
 
 VectorInterface::VectorInterface(GraphicsInterface* gif, VectorUnit* vu) : gif(gif), vu(vu)
 {
@@ -114,7 +113,8 @@ void VectorInterface::update()
                         handle_UNPACK(value);
                     else
                     {
-                        Errors::die("[VIF] Unhandled data for command $%02X\n", command);
+                        printf("[VIF] Unhandled data for command $%02X\n", command);
+                        exit(1);
                     }
             }
             command_len--;
@@ -227,7 +227,8 @@ void VectorInterface::decode_cmd(uint32_t value)
                 init_UNPACK(value);
             else
             {
-                Errors::die("[VIF] Unrecognized command $%02X\n", command);
+                printf("[VIF] Unrecognized command $%02X\n", command);
+                exit(1);
             }
     }
 }
@@ -288,7 +289,8 @@ void VectorInterface::init_UNPACK(uint32_t value)
 
     if (MODE)
     {
-        Errors::die("[VIF] MODE == %d!\n", MODE);
+        printf("[VIF] MODE == %d!\n", MODE);
+        exit(1);
     }
     if (CYCLE.WL <= CYCLE.CL)
     {
@@ -299,7 +301,8 @@ void VectorInterface::init_UNPACK(uint32_t value)
     else
     {
         //Fill write
-        Errors::die("[VIF] WL > CL!\n");
+        printf("[VIF] WL > CL!\n");
+        exit(1);
     }
 }
 
@@ -400,7 +403,8 @@ void VectorInterface::handle_UNPACK(uint32_t value)
                 }
                 break;
             default:
-                Errors::die("[VIF] Unhandled UNPACK cmd $%02X!\n", unpack.cmd);
+                printf("[VIF] Unhandled UNPACK cmd $%02X!\n", unpack.cmd);
+                exit(1);
         }
 
         process_UNPACK_quad(quad);
@@ -411,20 +415,17 @@ void VectorInterface::process_UNPACK_quad(uint128_t &quad)
 {
     handle_UNPACK_masking(quad);
 
-    unpack.blocks_written++;
-    if (CYCLE.CL >= CYCLE.WL)
-    {
-        if (unpack.blocks_written == CYCLE.CL)
-            unpack.blocks_written = 0;
-        else if (unpack.blocks_written > CYCLE.WL)
-        {
-            Errors::die("[VIF] Skip write!\n");
-        }
-    }
-
     //printf("[VIF] Write data mem $%08X: $%08X_%08X_%08X_%08X\n", unpack.addr,
            //quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
     vu->write_data<uint128_t>(unpack.addr, quad);
+
+    unpack.blocks_written++;
+    if (CYCLE.CL >= CYCLE.WL && unpack.blocks_written >= CYCLE.WL)
+    {
+        if (unpack.blocks_written < CYCLE.CL)
+            unpack.addr += (CYCLE.CL - unpack.blocks_written) * 16;
+        unpack.blocks_written = 0;
+    }
     unpack.addr += 16;
 }
 
@@ -482,7 +483,8 @@ void VectorInterface::disasm_micromem()
     ofstream file("microprogram.txt");
     if (!file.is_open())
     {
-        Errors::die("Failed to open\n");
+        printf("Failed to open\n");
+        exit(1);
     }
 
     for (int i = 0; i < 0x4000; i += 8)
