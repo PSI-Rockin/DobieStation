@@ -39,6 +39,12 @@ void VU_Interpreter::upper(VectorUnit &vu, uint32_t instr)
         case 0x0B:
             maddbc(vu, instr);
             break;
+        case 0x0C:
+        case 0x0D:
+        case 0x0E:
+        case 0x0F:
+            msubbc(vu, instr);
+            break;
         case 0x10:
         case 0x11:
         case 0x12:
@@ -144,6 +150,16 @@ void VU_Interpreter::maddbc(VectorUnit &vu, uint32_t instr)
     uint8_t bc_reg = (instr >> 16) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
     vu.maddbc(bc, field, dest, source, bc_reg);
+}
+
+void VU_Interpreter::msubbc(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t bc = instr & 0x3;
+    uint8_t dest = (instr >> 6) & 0x1F;
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t bc_reg = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.msubbc(bc, field, dest, source, bc_reg);
 }
 
 void VU_Interpreter::maxbc(VectorUnit &vu, uint32_t instr)
@@ -366,6 +382,9 @@ void VU_Interpreter::upper_special(VectorUnit &vu, uint32_t instr)
         case 0x27:
             msubai(vu, instr);
             break;
+        case 0x2A:
+            mula(vu, instr);
+            break;
         case 0x2E:
             opmula(vu, instr);
             break;
@@ -494,6 +513,14 @@ void VU_Interpreter::msubai(VectorUnit &vu, uint32_t instr)
     uint8_t source = (instr >> 11) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
     vu.msubai(field, source);
+}
+
+void VU_Interpreter::mula(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t reg1 = (instr >> 11) & 0x1F;
+    uint8_t reg2 = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.mula(field, reg1, reg2);
 }
 
 void VU_Interpreter::opmula(VectorUnit &vu, uint32_t instr)

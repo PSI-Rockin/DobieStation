@@ -91,6 +91,11 @@ string VU_Disasm::upper(uint32_t PC, uint32_t instr)
         case 0x0A:
         case 0x0B:
             return upper_bc("madd", instr);
+        case 0x0C:
+        case 0x0D:
+        case 0x0E:
+        case 0x0F:
+            return upper_bc("msub", instr);
         case 0x10:
         case 0x11:
         case 0x12:
@@ -146,6 +151,19 @@ string VU_Disasm::upper(uint32_t PC, uint32_t instr)
         default:
             return "[unknown upper]";
     }
+}
+
+string VU_Disasm::upper_acc(const string op, uint32_t instr)
+{
+    stringstream output;
+    uint32_t fs = (instr >> 11) & 0x1F;
+    uint32_t ft = (instr >> 16) & 0x1F;
+    uint8_t dest_field = (instr >> 21) & 0xF;
+    string field = "." + get_field(dest_field);
+    output << op << field;
+    output << " ACC, vf" << fs;
+    output << ", vf" << ft;
+    return output.str();
 }
 
 string VU_Disasm::upper_acc_bc(const string op, uint32_t instr)
@@ -226,6 +244,8 @@ string VU_Disasm::upper_special(uint32_t PC, uint32_t instr)
             return upper_acc_i("suba", instr);
         case 0x27:
             return upper_acc_i("msuba", instr);
+        case 0x2A:
+            return upper_acc("mula", instr);
         case 0x2E:
             return opmula(instr);
         case 0x2F:

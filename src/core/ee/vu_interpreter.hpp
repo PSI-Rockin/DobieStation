@@ -10,6 +10,7 @@ namespace VU_Interpreter
     void addbc(VectorUnit& vu, uint32_t instr);
     void subbc(VectorUnit& vu, uint32_t instr);
     void maddbc(VectorUnit& vu, uint32_t instr);
+    void msubbc(VectorUnit& vu, uint32_t instr);
     void maxbc(VectorUnit& vu, uint32_t instr);
     void minibc(VectorUnit& vu, uint32_t instr);
     void mulbc(VectorUnit& vu, uint32_t instr);
@@ -46,6 +47,7 @@ namespace VU_Interpreter
     void maddai(VectorUnit& vu, uint32_t instr);
     void subai(VectorUnit& vu, uint32_t instr);
     void msubai(VectorUnit& vu, uint32_t instr);
+    void mula(VectorUnit& vu, uint32_t instr);
     void opmula(VectorUnit& vu, uint32_t instr);
 
     void lower(VectorUnit& vu, uint32_t instr);
