@@ -1876,6 +1876,22 @@ string EmotionDisasm::disasm_mmi_copy(const string opcode, uint32_t instruction)
     return opcode + " " + output.str();
 }
 
+string EmotionDisasm::disasm_mmi_copy_hilo(const string opcode, uint32_t instruction)
+{
+    stringstream output;
+    output << EmotionEngine::REG(RD) << ", hi, lo";
+
+    return opcode + " " + output.str();
+}
+
+string EmotionDisasm::disasm_mmi_copyto_hilo(const string opcode, uint32_t instruction)
+{
+    stringstream output;
+    output << EmotionEngine::REG(RS) << ", hi, lo";
+
+    return opcode + " " + output.str();
+}
+
 string EmotionDisasm::disasm_mmi(uint32_t instruction, uint32_t instr_addr)
 {
     int op = instruction & 0x3F;
@@ -1905,6 +1921,10 @@ string EmotionDisasm::disasm_mmi(uint32_t instruction, uint32_t instr_addr)
             return disasm_mmi1(instruction);
         case 0x29:
             return disasm_mmi3(instruction);
+        case 0x30:
+            return disasm_pmfhlfmt(instruction);
+        case 0x31:
+            return disasm_mmi_copyto_hilo("pmthl.lw", instruction);
         case 0x34:
             return disasm_special_shift("psllh", instruction);
         case 0x36:
@@ -2068,28 +2088,46 @@ string EmotionDisasm::disasm_mmi2(uint32_t instruction)
     int op = (instruction >> 6) & 0x1F;
     switch (op)
     {
+        case 0x00:
+            return disasm_special_simplemath("pmaddw", instruction);
         case 0x02:
             return disasm_variableshift("psllvw", instruction);
         case 0x03:
             return disasm_variableshift("psrlvw", instruction);
+        case 0x04:
+            return disasm_special_simplemath("pmsubw", instruction);
         case 0x08:
             return disasm_pmfhi(instruction);
         case 0x09:
             return disasm_pmflo(instruction);
         case 0x0A:
             return disasm_special_simplemath("pinth", instruction);
+        case 0x0C:
+            return disasm_special_simplemath("pmultw", instruction);
+        case 0x0D:
+            return disasm_special_simplemath("pdivw", instruction);
         case 0x0E:
             return disasm_pcpyld(instruction);
+        case 0x10:
+            return disasm_special_simplemath("pmaddh", instruction);
+        case 0x11:
+            return disasm_special_simplemath("phmadh", instruction);
         case 0x12:
             return disasm_pand(instruction);
         case 0x13:
             return disasm_pxor(instruction);
+        case 0x14:
+            return disasm_special_simplemath("pmsubh", instruction);
+        case 0x15:
+            return disasm_special_simplemath("phmsbh", instruction);
         case 0x1A:
             return disasm_mmi_copy("pexeh", instruction);
         case 0x1B:
             return disasm_mmi_copy("prevh", instruction);
         case 0x1C:
             return disasm_special_simplemath("pmulth", instruction);
+        case 0x1D:
+            return disasm_special_simplemath("pdivbw", instruction);
         case 0x1E:
             return disasm_mmi_copy("pexew", instruction);
         case 0x1F:
@@ -2163,6 +2201,8 @@ string EmotionDisasm::disasm_mmi3(uint32_t instruction)
 {
     switch (SA)
     {
+        case 0x00:
+            return disasm_special_simplemath("pmadduw", instruction);
         case 0x03:
             return disasm_variableshift("psravw", instruction);
         case 0x08:
@@ -2171,6 +2211,10 @@ string EmotionDisasm::disasm_mmi3(uint32_t instruction)
             return disasm_pmtlo(instruction);
         case 0x0A:
             return disasm_special_simplemath("pinteh", instruction);
+        case 0x0C:
+            return disasm_special_simplemath("pmultuw", instruction);
+        case 0x0D:
+            return disasm_special_simplemath("pdivuw", instruction);
         case 0x0E:
             return disasm_pcpyud(instruction);
         case 0x12:
@@ -2185,6 +2229,30 @@ string EmotionDisasm::disasm_mmi3(uint32_t instruction)
             return disasm_mmi_copy("pexcw", instruction);
         default:
             return unknown_op("mmi3", SA, 2);
+    }
+}
+
+string EmotionDisasm::disasm_pmfhlfmt(uint32_t instruction)
+{
+    switch (SA)
+    {
+        case 0x00:
+            return disasm_mmi_copy_hilo("pmfhl.lw", instruction);
+            break;
+        case 0x01:
+            return disasm_mmi_copy_hilo("pmfhl.uw", instruction);
+            break;
+        case 0x02:
+            return disasm_mmi_copy_hilo("pmfhls.lw", instruction);
+            break;
+        case 0x03:
+            return disasm_mmi_copy_hilo("pmfhl.lh", instruction);
+            break;
+        case 0x04:
+            return disasm_mmi_copy_hilo("pmfhl.sh", instruction);
+            break;
+        default:
+            return unknown_op("mmi pmhfl.#", SA, 2);
     }
 }
 

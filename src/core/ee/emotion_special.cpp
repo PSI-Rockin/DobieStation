@@ -307,7 +307,7 @@ void EmotionInterpreter::mult(EmotionEngine &cpu, uint32_t instruction)
     op1 = cpu.get_gpr<int32_t>(op1);
     op2 = cpu.get_gpr<int32_t>(op2);
     int64_t temp = (int64_t)op1 * op2;
-    cpu.set_LO_HI((int32_t)(temp & 0xFFFFFFFF), (int32_t)(temp >> 32));
+    cpu.set_LO_HI((int64_t)(int32_t)(temp & 0xFFFFFFFF), (int64_t)(int32_t)(temp >> 32));
     cpu.mflo(dest);
 }
 
@@ -319,7 +319,7 @@ void EmotionInterpreter::multu(EmotionEngine& cpu, uint32_t instruction)
     op1 = cpu.get_gpr<uint32_t>(op1);
     op2 = cpu.get_gpr<uint32_t>(op2);
     uint64_t temp = (uint64_t)op1 * op2;
-    cpu.set_LO_HI(temp & 0xFFFFFFFF, temp >> 32);
+    cpu.set_LO_HI((int64_t)(int32_t)(temp & 0xFFFFFFFF), (int64_t)(int32_t)(temp >> 32));
     cpu.mflo(dest);
 }
 
@@ -331,11 +331,11 @@ void EmotionInterpreter::div(EmotionEngine &cpu, uint32_t instruction)
     op2 = cpu.get_gpr<int32_t>(op2);
     if (op1 == 0x80000000 && op2 == 0xFFFFFFFF)
     {
-        cpu.set_LO_HI((int32_t)0x80000000, 0);
+        cpu.set_LO_HI((int64_t)(int32_t)0x80000000, 0);
     }
     else if (op2)
     {
-        cpu.set_LO_HI(op1 / op2, op1 % op2);
+        cpu.set_LO_HI((int64_t)(int32_t)(op1 / op2), (int64_t)(int32_t)(op1 % op2));
     }
     else
     {
@@ -344,7 +344,7 @@ void EmotionInterpreter::div(EmotionEngine &cpu, uint32_t instruction)
             lo = -1;
         else
             lo = 1;
-        cpu.set_LO_HI(lo, op1);
+        cpu.set_LO_HI(lo, (int64_t)(int32_t)op1);
     }
 }
 
@@ -356,11 +356,11 @@ void EmotionInterpreter::divu(EmotionEngine &cpu, uint32_t instruction)
     op2 = cpu.get_gpr<uint32_t>(op2);
     if (op2)
     {
-        cpu.set_LO_HI(op1 / op2, op1 % op2);
+        cpu.set_LO_HI((int64_t)(int32_t)(op1 / op2), (int64_t)(int32_t)(op1 % op2));
     }
     else
     {
-        cpu.set_LO_HI(-1, op1);
+        cpu.set_LO_HI((int64_t)-1, (int64_t)(int32_t)op1);
     }
 }
 
