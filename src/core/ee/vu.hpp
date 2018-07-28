@@ -156,6 +156,7 @@ class VectorUnit
         void itof4(uint8_t field, uint8_t dest, uint8_t source);
         void itof12(uint8_t field, uint8_t dest, uint8_t source);
         void lq(uint8_t field, uint8_t dest, uint8_t base, int32_t offset);
+        void lqd(uint8_t field, uint8_t dest, uint8_t base);
         void lqi(uint8_t field, uint8_t dest, uint8_t base);
         void madd(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2);
         void madda(uint8_t field, uint8_t reg1, uint8_t reg2);
@@ -192,6 +193,7 @@ class VectorUnit
         void rsqrt(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2);
         void rxor(uint8_t fsf, uint8_t source);
         void sq(uint8_t field, uint8_t source, uint8_t base, int32_t offset);
+        void sqd(uint8_t field, uint8_t source, uint8_t base);
         void sqi(uint8_t field, uint8_t source, uint8_t base);
         void vu_sqrt(uint8_t ftf, uint8_t source);
         void sub(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2);

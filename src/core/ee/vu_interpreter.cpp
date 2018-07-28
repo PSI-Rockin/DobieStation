@@ -601,6 +601,12 @@ void VU_Interpreter::lower1_special(VectorUnit &vu, uint32_t instr)
         case 0x35:
             sqi(vu, instr);
             break;
+        case 0x36:
+            lqd(vu, instr);
+            break;
+        case 0x37:
+            sqd(vu, instr);
+            break;
         case 0x38:
             div(vu, instr);
             break;
@@ -680,6 +686,22 @@ void VU_Interpreter::sqi(VectorUnit& vu, uint32_t instr)
     uint32_t it = (instr >> 16) & 0x1F;
     uint8_t dest_field = (instr >> 21) & 0xF;
     vu.sqi(dest_field, fs, it);
+}
+
+void VU_Interpreter::lqd(VectorUnit &vu, uint32_t instr)
+{
+    uint32_t fs = (instr >> 11) & 0x1F;
+    uint32_t it = (instr >> 16) & 0x1F;
+    uint8_t dest_field = (instr >> 21) & 0xF;
+    vu.lqd(dest_field, fs, it);
+}
+
+void VU_Interpreter::sqd(VectorUnit &vu, uint32_t instr)
+{
+    uint32_t fs = (instr >> 11) & 0x1F;
+    uint32_t it = (instr >> 16) & 0x1F;
+    uint8_t dest_field = (instr >> 21) & 0xF;
+    vu.sqd(dest_field, fs, it);
 }
 
 void VU_Interpreter::div(VectorUnit &vu, uint32_t instr)

@@ -350,6 +350,10 @@ string VU_Disasm::lower1_special(uint32_t PC, uint32_t instr)
             return lqi(instr);
         case 0x35:
             return sqi(instr);
+        case 0x36:
+            return lqd(instr);
+        case 0x37:
+            return sqd(instr);
         case 0x38:
             return div(instr);
         case 0x3B:
@@ -424,6 +428,28 @@ string VU_Disasm::sqi(uint32_t instr)
     uint8_t field = (instr >> 21) & 0xF;
     output << "sqi." << get_field(field);
     output << " vf" << fs << ", (vi" << it << "++)";
+    return output.str();
+}
+
+string VU_Disasm::lqd(uint32_t instr)
+{
+    stringstream output;
+    uint32_t is = (instr >> 11) & 0x1F;
+    uint32_t ft = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    output << "lqd." << get_field(field);
+    output << " vf" << ft << ", (--vi" << is << ")";
+    return output.str();
+}
+
+string VU_Disasm::sqd(uint32_t instr)
+{
+    stringstream output;
+    uint32_t fs = (instr >> 11) & 0x1F;
+    uint32_t it = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    output << "sqd." << get_field(field);
+    output << " vf" << fs << ", (--vi" << it << ")";
     return output.str();
 }
 

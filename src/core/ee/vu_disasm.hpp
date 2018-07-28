@@ -35,6 +35,8 @@ namespace VU_Disasm
     std::string mr32(uint32_t instr);
     std::string lqi(uint32_t instr);
     std::string sqi(uint32_t instr);
+    std::string lqd(uint32_t instr);
+    std::string sqd(uint32_t instr);
     std::string div(uint32_t instr);
     std::string mtir(uint32_t instr);
     std::string mfir(uint32_t instr);

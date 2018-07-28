@@ -810,6 +810,22 @@ void VectorUnit::lq(uint8_t field, uint8_t dest, uint8_t base, int32_t offset)
     printf("\n");
 }
 
+void VectorUnit::lqd(uint8_t field, uint8_t dest, uint8_t base)
+{
+    printf("[VU] LQD: ");
+    set_int(base, int_gpr[base].u - 1);
+    uint32_t addr = (uint32_t)int_gpr[base].u * 16;
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            set_gpr_u(dest, i, read_data<uint32_t>(addr + (i * 4)));
+            printf("(%d)%f ", i, gpr[dest].f[i]);
+        }
+    }
+    printf("\n");
+}
+
 void VectorUnit::lqi(uint8_t field, uint8_t dest, uint8_t base)
 {
     printf("[VU] LQI: ");
@@ -1399,6 +1415,23 @@ void VectorUnit::sq(uint8_t field, uint8_t source, uint8_t base, int32_t offset)
 {
     uint32_t addr = ((int32_t)int_gpr[base].s << 4) + offset;
     printf("[VU] SQ to $%08X!\n", addr);
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            write_data<uint32_t>(addr + (i * 4), gpr[source].u[i]);
+            printf("$%08X(%d) ", gpr[source].u[i], i);
+        }
+    }
+    printf("\n");
+}
+
+void VectorUnit::sqd(uint8_t field, uint8_t source, uint8_t base)
+{
+    if (base)
+        int_gpr[base].u--;
+    uint32_t addr = (uint32_t)int_gpr[base].u << 4;
+    printf("[VU] SQD to $%08X!\n", addr);
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
