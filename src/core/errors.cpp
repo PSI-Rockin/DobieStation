@@ -10,6 +10,7 @@ void Errors::die(const char* format, ...)
     vsnprintf(output, ERROR_STRING_MAX_LENGTH, format, args);
     va_end(args);
     std::string error_str(output);
+	delete[] output;
     throw Emulation_error(error_str);
 }
 
