@@ -1434,7 +1434,7 @@ void GraphicsSynthesizerThread::render_triangle()
                         if ((w1 | w2 | w3) >= 0)
                         {
                             //Interpolate Z
-                            float z = (float) v1.z * w1 + (float) v2.z * w2 + (float) v3.z * w3;
+                            double z = (double) v1.z * w1 + (double) v2.z * w2 + (double) v3.z * w3;
                             z /= divider;
 
                             //Gourand shading calculations

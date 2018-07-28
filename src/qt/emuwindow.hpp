@@ -21,9 +21,11 @@ class EmuWindow : public QMainWindow
         double framerate_avg;
 
         QMenu* file_menu;
+        QMenu* options_menu;
         QAction* load_rom_action;
         QAction* load_bios_action;
         QAction* exit_action;
+        int scale_factor;
 
     public:
         explicit EmuWindow(QWidget *parent = nullptr);

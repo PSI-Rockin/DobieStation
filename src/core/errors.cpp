@@ -8,7 +8,6 @@ void Errors::die(const char* format, ...)
     va_list args;
     va_start(args, format);
     vsnprintf(output, ERROR_STRING_MAX_LENGTH, format, args);
-    std::string error_str(output);
     va_end(args);
     throw Emulation_error(output);
 }
