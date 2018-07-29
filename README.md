@@ -33,3 +33,6 @@ Compatibility not guaranteed, but some demos do work.
 
 ## Contributing
 First, review the [Contribution Guide](../master/CONTRIBUTING.md). Once you have done so, take a look at the issue tracker to look for tasks you may be interested in.
+
+## Legal
+DobieStation uses `arg.h` by [Christoph "20h" Lohmann](http://www.r-36.net).

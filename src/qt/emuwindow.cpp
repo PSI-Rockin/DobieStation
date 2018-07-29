@@ -11,6 +11,8 @@
 
 #include "emuwindow.hpp"
 
+#include "arg.h"
+
 using namespace std;
 
 ifstream::pos_type filesize(const char* filename)
@@ -64,37 +66,26 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
 
 int EmuWindow::init(int argc, char** argv)
 {
+    bool skip_BIOS = false;
+    char* argv0; // Program name; AKA argv[0]
+
+    ARGBEGIN {
+        case 's':
+            skip_BIOS = true;
+            break;
+        default:
+            printf("Args: [BIOS] (Optional)[ELF/ISO]\n");
+            return 1;
+    } ARGEND
+
     if (argc < 2)
     {
         printf("Args: [BIOS] (Optional)[ELF/ISO]\n");
         return 1;
     }
 
-    char* bios_name = argv[1];
-
-    char* file_name;
-    if (argc == 4)
-        file_name = argv[2];
-    else if (argc == 3 && strcmp(argv[2], "-skip") != 0)
-        file_name = argv[2];
-    else
-        file_name = nullptr;
-
-    bool skip_BIOS = false;
-    //Flag parsing - to be reworked
-    if (argc >= 3)
-    {
-        if (argc == 3)
-        {
-            if (strcmp(argv[2], "-skip") == 0)
-                skip_BIOS = true;
-        } 
-        else if (argc == 4)
-        {
-            if (strcmp(argv[3], "-skip") == 0)
-                skip_BIOS = true;
-        }
-    }
+    char* bios_name = argv[0];
+    char* file_name = argv[1];
 
     ifstream BIOS_file(bios_name, ios::binary | ios::in);
     if (!BIOS_file.is_open())
