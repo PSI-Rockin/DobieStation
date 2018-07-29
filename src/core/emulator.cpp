@@ -13,7 +13,7 @@ Emulator::Emulator() :
     cdvd(this), cp0(&dmac), cpu(&cp0, &fpu, this, (uint8_t*)&scratchpad, &vu0),
     dmac(&cpu, this, &gif, &ipu, &sif, &vif0, &vif1), gif(&gs), gs(&intc),
     iop(this), iop_dma(this, &cdvd, &sif, &sio2, &spu, &spu2), iop_timers(this), intc(&cpu), ipu(&intc),
-    timers(&intc), sio2(this, &pad), spu(1, this), spu2(2, this), vif0(nullptr, &vu0), vif1(&gif, &vu1), vu0(0), vu1(1)
+    timers(&intc), sio2(this, &pad), spu(1, this), spu2(2, this), vif0(nullptr, &vu0, &intc, 0), vif1(&gif, &vu1, &intc, 1), vu0(0), vu1(1)
 {
     BIOS = nullptr;
     RDRAM = nullptr;
@@ -396,6 +396,10 @@ uint32_t Emulator::read32(uint32_t address)
             return gif.read_STAT();
         case 0x10003C00:
             return vif1.get_stat();
+        case 0x10003C20:
+            return vif1.get_err();
+        case 0x10003C30:
+            return vif1.get_mark();
         case 0x1000F000:
             //printf("\nRead32 INTC_STAT: $%08X", intc.read_stat());
             if (!VBLANK_sent)
@@ -538,6 +542,11 @@ void Emulator::write16(uint32_t address, uint16_t value)
         *(uint16_t*)&RDRAM[address & 0x01FFFFFF] = value;
         return;
     }
+    if (address >= 0x10008000 && address < 0x1000F000)
+    {
+        dmac.write16(address, value);
+        return;
+    }
     if (address >= 0x1C000000 && address < 0x1C200000)
     {
         *(uint16_t*)&IOP_RAM[address & 0x1FFFFF] = value;
@@ -602,6 +611,15 @@ void Emulator::write32(uint32_t address, uint32_t value)
             return;
         case 0x10002010:
             ipu.write_control(value);
+            return;
+        case 0x10003C10:
+            vif1.set_fbrst(value);
+            return;
+        case 0x10003C20:
+            vif1.set_err(value);
+            return;
+        case 0x10003C30:
+            vif1.set_mark(value);
             return;
         case 0x1000F000:
             printf("Write32 INTC_STAT: $%08X\n", value);

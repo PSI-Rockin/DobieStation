@@ -123,6 +123,8 @@ string VU_Disasm::upper(uint32_t PC, uint32_t instr)
             return upper_q("madd", instr);
         case 0x22:
             return upper_i("add", instr);
+        case 0x23:
+            return upper_i("madd", instr);
         case 0x24:
             return upper_q("sub", instr);
         case 0x26:
@@ -139,6 +141,8 @@ string VU_Disasm::upper(uint32_t PC, uint32_t instr)
             return upper_simple("max", instr);
         case 0x2C:
             return upper_simple("sub", instr);
+        case 0x2D:
+            return upper_simple("msub", instr);
         case 0x2E:
             return upper_simple("opmsub", instr);
         case 0x2F:
@@ -206,6 +210,11 @@ string VU_Disasm::upper_special(uint32_t PC, uint32_t instr)
     uint16_t op = (instr & 0x3) | ((instr >> 4) & 0x7C);
     switch (op)
     {
+        case 0x00:
+        case 0x01:
+        case 0x02:
+        case 0x03:
+            return upper_acc_bc("addabc", instr);
         case 0x08:
         case 0x09:
         case 0x0A:
@@ -244,6 +253,10 @@ string VU_Disasm::upper_special(uint32_t PC, uint32_t instr)
             return upper_acc_i("suba", instr);
         case 0x27:
             return upper_acc_i("msuba", instr);
+        case 0x28:
+            return upper_acc("adda", instr);
+        case 0x29:
+            return upper_acc("madda", instr);
         case 0x2A:
             return upper_acc("mula", instr);
         case 0x2E:
@@ -386,6 +399,12 @@ string VU_Disasm::lower1_special(uint32_t PC, uint32_t instr)
             return ilwr(instr);
         case 0x3F:
             return iswr(instr);
+        case 0x40:
+            return rnext(instr);
+        case 0x41:
+            return rget(instr);
+        case 0x42:
+            return rinit(instr);
         case 0x64:
             return mfp(instr);
         case 0x68:
@@ -526,6 +545,36 @@ string VU_Disasm::iswr(uint32_t instr)
     return output.str();
 }
 
+string VU_Disasm::rnext(uint32_t instr)
+{
+    stringstream output;
+    uint32_t dest = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    output << "rnext." << get_field(field);
+    output << " vf" << dest;
+    return output.str();
+}
+
+string VU_Disasm::rget(uint32_t instr)
+{
+    stringstream output;
+    uint32_t dest = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    output << "rget." << get_field(field);
+    output << " vf" << dest;
+    return output.str();
+}
+
+string VU_Disasm::rinit(uint32_t instr)
+{
+    stringstream output;
+    uint32_t source = (instr >> 11) & 0x1F;
+    uint32_t fsf = (instr >> 21) & 0x3;
+    output << "rinit";
+    output << " vf" << source << "."<< get_fsf(fsf);
+    return output.str();
+}
+
 string VU_Disasm::mfp(uint32_t instr)
 {
     stringstream output;
@@ -617,6 +666,8 @@ string VU_Disasm::lower2(uint32_t PC, uint32_t instr)
             return bal(PC, instr);
         case 0x24:
             return jr(instr);
+        case 0x25:
+            return jalr(instr);
         case 0x28:
             return branch("ibeq", PC, instr);
         case 0x29:
@@ -790,5 +841,14 @@ string VU_Disasm::jr(uint32_t instr)
     stringstream output;
     uint32_t addr_reg = (instr >> 11) & 0x1F;
     output << "jr vi" << addr_reg;
+    return output.str();
+}
+
+string VU_Disasm::jalr(uint32_t instr)
+{
+    stringstream output;
+    uint32_t addr_reg = (instr >> 11) & 0x1F;
+    uint32_t link_reg = (instr >> 16) & 0x1F;
+    output << "jalr vi" << link_reg << " vi " << addr_reg;
     return output.str();
 }

@@ -161,10 +161,12 @@ class VectorUnit
         void lqi(uint8_t field, uint8_t dest, uint8_t base);
         void madd(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2);
         void madda(uint8_t field, uint8_t reg1, uint8_t reg2);
+        void addai(uint8_t field, uint8_t source);
         void maddai(uint8_t field, uint8_t source);
         void maddabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_reg);
         void maddbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
         void maddq(uint8_t field, uint8_t dest, uint8_t source);
+        void maddi(uint8_t field, uint8_t dest, uint8_t source);
         void max(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2);
         void maxbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
         void mfir(uint8_t field, uint8_t dest, uint8_t source);
@@ -176,6 +178,7 @@ class VectorUnit
         void mr32(uint8_t field, uint8_t dest, uint8_t source);
         void msubabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_reg);
         void msubai(uint8_t field, uint8_t source);
+        void msub(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2);
         void msubbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
         void msubi(uint8_t field, uint8_t dest, uint8_t source);
         void mtir(uint8_t fsf, uint8_t dest, uint8_t source);

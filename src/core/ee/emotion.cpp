@@ -133,11 +133,23 @@ int EmotionEngine::run(int cycles_to_run)
             //if (calls == 3)
                 //can_disassemble = true;
         }
-        if (can_disassemble && (PC < 0x81FC0 || PC >= 0x82000))
+        if ((PC < 0x81FC0 || PC >= 0x81FE0))
         {
-            std::string disasm = EmotionDisasm::disasm_instr(instruction, PC);
-            printf("[$%08X] $%08X - %s\n", PC, instruction, disasm.c_str());
-            print_state();
+            if (can_disassemble) {
+                std::string disasm = EmotionDisasm::disasm_instr(instruction, PC);
+                printf("[$%08X] $%08X - %s\n", PC, instruction, disasm.c_str());
+                print_state();
+            }
+        }
+        else
+        {
+            //When the EE is in it's "Wait loop" located at 0x81FC0, it will loop
+            //indefinitely until an interrupt/exception happens.  We can just skip
+            //any processing of CPU commands until the interrupt occurs
+            if ((PC >= 0x81FC0 && PC < 0x81FE0) && !branch_on)
+            {
+                break;
+            }
         }
         EmotionInterpreter::interpret(*this, instruction);
         if (increment_PC)

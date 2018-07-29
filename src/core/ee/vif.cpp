@@ -9,7 +9,8 @@
 #include "../gif.hpp"
 #include "../errors.hpp"
 
-VectorInterface::VectorInterface(GraphicsInterface* gif, VectorUnit* vu) : gif(gif), vu(vu)
+
+VectorInterface::VectorInterface(GraphicsInterface* gif, VectorUnit* vu, INTC* intc, int id) : gif(gif), vu(vu), intc(intc), id(id)
 {
 
 }
@@ -28,6 +29,25 @@ void VectorInterface::reset()
     flush_stall = false;
 }
 
+bool VectorInterface::check_vif_stall(uint32_t value)
+{
+    //Do not stall if the next command is MARK
+    if (vif_ibit_detected && value != 0x7)
+    {
+        printf("[VIF] VIF%x Stalled\n", get_id());
+        vif_ibit_detected = false;
+        vif_int_stalled = true;
+        vif_interrupt = true;
+
+        if (get_id())
+            intc->assert_IRQ((int)Interrupt::VIF1);
+        else
+            intc->assert_IRQ((int)Interrupt::VIF0);
+        return true;
+    }
+    return false;
+}
+
 void VectorInterface::update()
 {
     int runcycles = 8;
@@ -44,7 +64,7 @@ void VectorInterface::update()
             return;
         flush_stall = false;
     }*/
-    while (FIFO.size() && runcycles--)
+    while (FIFO.size() && !vif_int_stalled && runcycles--)
     {        
         if (wait_for_VU)
         {
@@ -62,6 +82,8 @@ void VectorInterface::update()
         uint32_t value = FIFO.front();
         if (command_len <= 0)
         {
+            if (check_vif_stall(value))
+                return;
             buffer_size = 0;
             decode_cmd(value);
         }
@@ -121,12 +143,30 @@ void VectorInterface::update()
         }
         FIFO.pop();
     }
+
+    //Need to check again if it is the end of the packet
+    if (command_len <= 0)
+    {
+        if (FIFO.size())
+            check_vif_stall(FIFO.front());
+        else
+            check_vif_stall(0);
+    }
 }
 
 void VectorInterface::decode_cmd(uint32_t value)
 {
-    command = value >> 24;
+    command = (value >> 24) & 0x7F;
     imm = value & 0xFFFF;
+
+    if (value & 0x80000000)
+    {
+        if (!VIF_ERR.mask_interrupt)
+            vif_ibit_detected = true;
+        else
+            Errors::die("[VIF] Stall detected when VIF_ERR.MI1 set\n", command);
+    }
+
     switch (command)
     {
         case 0x00:
@@ -160,6 +200,8 @@ void VectorInterface::decode_cmd(uint32_t value)
             break;
         case 0x07:
             printf("[VIF] Set MARK: $%08X\n", value);
+            MARK = value;
+            mark_detected = true;
             break;
         case 0x10:
             printf("[VIF] FLUSHE\n");
@@ -273,18 +315,30 @@ void VectorInterface::init_UNPACK(uint32_t value)
     unpack.addr = (imm & 0x3FF) * 16;
     unpack.sign_extend = !(imm & (1 << 14));
     unpack.masked = (command >> 4) & 0x1;
+    unpack.num = (value >> 16) & 0xFF;
+    if (!unpack.num)
+        unpack.num = 256;
     if (imm & (1 << 15))
         unpack.addr += TOPS * 16;
     unpack.cmd = command & 0xF;
     unpack.blocks_written = 0;
     buffer_size = 0;
+    unpack.offset = 0;
     int vl = command & 0x3;
     int vn = (command >> 2) & 0x3;
-    int num = (value >> 16) & 0xFF;
-    //printf("vl: %d vn: %d num: %d masked: %d\n", vl, vn, num, unpack.masked);
-    unpack.words_per_op = (32 >> vl) * (vn + 1);
+
+    if (vl == 3 && vn == 3)
+        unpack.words_per_op = 16;
+    else
+        unpack.words_per_op = (32 >> vl) * (vn + 1);
+
+    command_len = unpack.words_per_op * unpack.num;
     unpack.words_per_op = (unpack.words_per_op + 0x1F) & ~0x1F; //round up to nearest 32 before dividing
+    command_len = (command_len + 0x1F) & ~0x1F;
     unpack.words_per_op /= 32;
+    command_len /= 32;
+
+    
 
     if (MODE)
     {
@@ -293,7 +347,7 @@ void VectorInterface::init_UNPACK(uint32_t value)
     if (CYCLE.WL <= CYCLE.CL)
     {
         //Skip write
-        command_len = unpack.words_per_op * num;
+        //command_len = unpack.words_per_op * unpack.num;
         //printf("[VIF] Command len: %d\n", command_len);
     }
     else
@@ -301,6 +355,7 @@ void VectorInterface::init_UNPACK(uint32_t value)
         //Fill write
         Errors::die("[VIF] WL > CL!\n");
     }
+    printf("[VIF] UNPACK V%d-%d num: %d masked: %d word per op: %d command_len = %d\n", (vn + 1), (32 >> vl), unpack.num, unpack.masked, unpack.words_per_op, command_len);
 }
 
 void VectorInterface::handle_UNPACK_masking(uint128_t& quad)
@@ -337,29 +392,72 @@ void VectorInterface::handle_UNPACK_masking(uint128_t& quad)
 
 void VectorInterface::handle_UNPACK(uint32_t value)
 {
+    int bufferpos = 0;
     buffer[buffer_size] = value;
     buffer_size++;
-    if (buffer_size >= unpack.words_per_op)
+
+    while((buffer_size >= unpack.words_per_op) && unpack.num)
     {
         uint128_t quad;
-        buffer_size = 0;
+        
         switch (unpack.cmd)
         {
             case 0x0:
                 //S-32
                 for (int i = 0; i < 4; i++)
                     quad._u32[i] = buffer[0];
+                buffer_size -= 1;
+                break;
+            case 0x1:
+                //S-16
+                for (int i = 0; i < 4; i++)
+                {
+                    if (unpack.sign_extend)
+                    {
+                        quad._u32[i] = (int32_t)(int16_t)(unpack.offset ? (buffer[0] >> 16) : buffer[0]);
+                    }
+                    else
+                    {
+                        quad._u32[i] = (uint16_t)(unpack.offset ? (buffer[0] >> 16) : buffer[0]);
+                    }
+                }
+                if (unpack.offset++)
+                {
+                    unpack.offset = 0;
+                    buffer_size -= 1;
+                }
+                break;
+            case 0x2:
+                //S-8
+                for (int i = 0; i < 4; i++)
+                {
+                    if (unpack.sign_extend)
+                    {
+                        quad._u32[i] = (int32_t)(int8_t)(unpack.offset ? (buffer[0] >> (unpack.offset * 8)) : buffer[0]);
+                    }
+                    else
+                    {
+                        quad._u32[i] = (uint8_t)(unpack.offset ? (buffer[0] >> (unpack.offset * 8)) : buffer[0]);
+                    }
+                }
+                if (unpack.offset++ == 3)
+                {
+                    unpack.offset = 0;
+                    buffer_size -= 1;
+                }
                 break;
             case 0x4:
                 //V2-32 - Z and W are "indeterminate"
+                //Indeterminate data is the x vector and 0 respectively
                 quad._u32[0] = buffer[0];
                 quad._u32[1] = buffer[1];
-                quad._u32[2] = 0;
+                quad._u32[2] = buffer[0];
                 quad._u32[3] = 0;
+                buffer_size -= 2;
                 break;
             case 0x5:
-                //V2-16 - Z and W are "indeterminate" (but actually determinate)
-                //TODO: find the needed values for Z and W
+                //V2-16 - Z and W are "indeterminate"
+                //Indeterminate data is just the x and y vectors respectively
             {
                 uint16_t x = buffer[0] & 0xFFFF;
                 uint16_t y = buffer[0] >> 16;
@@ -367,26 +465,179 @@ void VectorInterface::handle_UNPACK(uint32_t value)
                 {
                     quad._u32[0] = (int32_t)(int16_t)x;
                     quad._u32[1] = (int32_t)(int16_t)y;
+                    quad._u32[2] = (int32_t)(int16_t)x;
+                    quad._u32[3] = (int32_t)(int16_t)y;
                 }
                 else
                 {
                     quad._u32[0] = x;
                     quad._u32[1] = y;
+                    quad._u32[2] = x;
+                    quad._u32[3] = y;
                 }
-                quad._u32[2] = 0;
-                quad._u32[3] = 0;  
+                 
+                buffer_size -= 1;
+            }
+                break;
+            case 0x6:
+                //V2-8 - Z and W are "indeterminate"
+                //Indeterminate data is just the x and y vectors respectively
+            {
+                uint8_t x = (buffer[0] >> (unpack.offset * 16)) & 0xFF;
+                uint8_t y = (buffer[0] >> ((unpack.offset * 16) + 8));
+                if (unpack.sign_extend)
+                {
+                    quad._u32[0] = (int32_t)(int8_t)x;
+                    quad._u32[1] = (int32_t)(int8_t)y;
+                    quad._u32[2] = (int32_t)(int8_t)x;
+                    quad._u32[3] = (int32_t)(int8_t)y;
+                }
+                else
+                {
+                    quad._u32[0] = x;
+                    quad._u32[1] = y;
+                    quad._u32[2] = x;
+                    quad._u32[3] = y;
+                }
+
+                if (unpack.offset++)
+                {
+                    unpack.offset = 0;
+                    buffer_size -= 1;
+                }
             }
                 break;
             case 0x8:
                 //V3-32 - W is "indeterminate"
+                //Indeterminate data is the first vector of the next num
+                //The first num uses 0, the last num uses the next VIFCode
+                //We can't read the next VIFCode so we will just use 0
+                if (buffer_size < 4 && unpack.num > 1 && unpack.offset > 0)
+                    return;
+
                 for (int i = 0; i < 3; i++)
                     quad._u32[i] = buffer[i];
-                quad._u32[3] = 0;
+               
+                if (buffer_size >= 4)
+                {
+                    quad._u32[3] = buffer[3];
+                    buffer[0] = buffer[3];
+                }
+                else
+                    quad._u32[3] = 0;
+                buffer_size -= 3;
+                unpack.offset++;
+                break;
+            case 0x9:
+                //V3-16 - W is "indeterminate"
+                //Indeterminate data is the first vector of the next num
+                //If the data is aligned to the word write 0
+                //FIXME: It could be the first vector of the next unpack
+                for (int i = 0; i < 3; i++)
+                {            
+                    if (unpack.sign_extend)
+                    {
+                        quad._u32[i] = (int32_t)(int16_t)(unpack.offset ? (buffer[bufferpos] >> 16) : buffer[bufferpos]);
+                    }
+                    else
+                    {
+                        quad._u32[i] = (uint16_t)(unpack.offset ? (buffer[bufferpos] >> 16) : buffer[bufferpos]);
+                    }
+
+                    if (unpack.offset++)
+                    {
+                        unpack.offset = 0;
+                        bufferpos++;
+                        buffer_size -= 1;
+                    }
+                }
+                if (buffer_size >= 1)
+                {
+                    if (unpack.sign_extend)
+                    {
+                        quad._u32[3] = (int32_t)(int16_t)(unpack.offset ? (buffer[bufferpos] >> 16) : buffer[bufferpos]);
+                    }
+                    else
+                    {
+                        quad._u32[3] = (uint16_t)(unpack.offset ? (buffer[bufferpos] >> 16) : buffer[bufferpos]);
+                    }
+                }
+                else
+                {
+                    quad._u32[3] = 0;
+                }
+
+                if (buffer_size < 2 && unpack.offset)
+                {
+                    buffer[0] = buffer[bufferpos];
+                }
+                break;
+            case 0xA:
+                //V3-8 - W is "indeterminate"
+                //Indeterminate data is the first vector of the next num
+                //If the data is aligned to the word write 0
+                //FIXME: It could be the first vector of the next unpack
+
+                //Check we have enough data before continuing
+                if ((buffer_size * 4) - unpack.offset < 3)
+                    return;
+
+                for (int i = 0; i < 3; i++)
+                {
+                    if (unpack.sign_extend)
+                    {
+                        quad._u32[i] = (int32_t)(int8_t)(unpack.offset ? (buffer[bufferpos] >> (unpack.offset * 8)) : buffer[bufferpos]);
+                    }
+                    else
+                    {
+                        quad._u32[i] = (uint8_t)(unpack.offset ? (buffer[bufferpos] >> (unpack.offset * 8)) : buffer[bufferpos]);
+                    }
+
+                    if (unpack.offset++ == 3)
+                    {
+                        unpack.offset = 0;
+                        bufferpos++;
+                        buffer_size -= 1;
+                    }
+                }
+                if (buffer_size >= 1)
+                {
+                    if (unpack.sign_extend)
+                    {
+                        quad._u32[3] = (int32_t)(int8_t)(unpack.offset ? (buffer[bufferpos] >> ((unpack.offset) * 8)) : buffer[bufferpos]);
+                    }
+                    else
+                    {
+                        quad._u32[3] = (uint8_t)(unpack.offset ? (buffer[bufferpos] >> (unpack.offset * 8)) : buffer[bufferpos]);
+                    }
+                }
+                else
+                {
+                    quad._u32[3] = 0;
+                }
+
+                if (buffer_size == 1 && unpack.offset)
+                {
+                    buffer[0] = buffer[bufferpos];
+                }
                 break;
             case 0xC:
                 //V4-32
                 for (int i = 0; i < 4; i++)
                     quad._u32[i] = buffer[i];
+                buffer_size -= 4;
+                break;
+            case 0xD:
+                //V4-16
+                for (int i = 0; i < 4; i++)
+                {
+                    uint16_t value = (buffer[i/2] >> ((i % 2) * 16)) & 0xFFFF;
+                    if (unpack.sign_extend)
+                        quad._u32[i] = (int32_t)(int16_t)value;
+                    else
+                        quad._u32[i] = value;
+                }
+                buffer_size -= 2;
                 break;
             case 0xE:
                 //V4-8
@@ -398,6 +649,23 @@ void VectorInterface::handle_UNPACK(uint32_t value)
                     else
                         quad._u32[i] = value;
                 }
+                buffer_size -= 1;
+                break;
+            case 0xF:
+                //V4-5
+            {
+                uint16_t data = (buffer[0] >> (unpack.offset * 16)) & 0xFFFF;
+                quad._u32[0] = (data & 0x1F) << 3;
+                quad._u32[1] = ((data >> 5) & 0x1F) << 3;
+                quad._u32[2] = ((data >> 10) & 0x1F) << 3;
+                quad._u32[3] = ((data >> 15) & 0x1) << 7;
+
+                if (unpack.offset++)
+                {
+                    unpack.offset = 0;
+                    buffer_size -= 1;
+                }
+            }
                 break;
             default:
                 Errors::die("[VIF] Unhandled UNPACK cmd $%02X!\n", unpack.cmd);
@@ -423,6 +691,7 @@ void VectorInterface::process_UNPACK_quad(uint128_t &quad)
         unpack.blocks_written = 0;
     }
     unpack.addr += 16;
+    unpack.num -= 1;
 }
 
 bool VectorInterface::transfer_DMAtag(uint128_t tag)
@@ -517,12 +786,56 @@ void VectorInterface::disasm_micromem()
 uint32_t VectorInterface::get_stat()
 {
     uint32_t reg = 0;
-    reg |= ((FIFO.size() != 0) * 3);
+    reg |= vif_int_stalled ? 0 : ((FIFO.size() != 0) * 3);
     reg |= vu->is_running() << 2;
+    reg |= mark_detected << 6;
     reg |= DBF << 7;
-
-    //Round up to nearest quad
+    reg |= vif_int_stalled << 10;
+    reg |= vif_interrupt << 11;
     reg |= ((FIFO.size() + 3) / 4) << 24;
-    //printf("[VIF] Get STAT: $%08X\n", reg);
+    printf("[VIF] Get STAT: $%08X\n", reg);
     return reg;
+}
+
+uint32_t VectorInterface::get_mark()
+{
+    printf("[VIF] Get MARK: $%x\n", MARK);
+    return MARK;
+}
+
+uint32_t VectorInterface::get_err()
+{
+    uint32_t reg = 0;
+    reg |= VIF_ERR.mask_interrupt;
+    reg |= VIF_ERR.mask_dmatag_error << 1;
+    reg |= VIF_ERR.mask_vifcode_error << 2;
+    printf("[VIF] Get ERR: $%08X\n", reg);
+    return reg;
+}
+
+void VectorInterface::set_mark(uint32_t value)
+{
+    MARK = value;
+    mark_detected = false;
+    printf("[VIF] Set MARK: $%x\n", MARK);
+}
+
+void VectorInterface::set_err(uint32_t value)
+{
+    VIF_ERR.mask_interrupt = value & 0x1;
+    VIF_ERR.mask_dmatag_error = value & 0x2;
+    VIF_ERR.mask_vifcode_error = value & 0x4;
+    printf("[VIF] Set ERR: $%x\n", value);
+}
+
+void VectorInterface::set_fbrst(uint32_t value)
+{
+    printf("[VIF] Set FBRST: $%x\n", value);
+
+    if (value & 0x8)
+    {
+        printf("[VIF] VIF%x Resumed\n", get_id());
+        vif_int_stalled = false;
+        vif_interrupt = false;
+    }
 }
