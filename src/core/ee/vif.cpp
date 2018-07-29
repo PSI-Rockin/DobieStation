@@ -201,6 +201,7 @@ void VectorInterface::decode_cmd(uint32_t value)
             break;
         case 0x06:
             printf("[VIF] MSKPATH3: %d\n", (value >> 15) & 0x1);
+            gif->set_path3_vifmask((value >> 15) & 0x1);
             break;
         case 0x07:
             printf("[VIF] Set MARK: $%08X\n", value);
@@ -225,6 +226,11 @@ void VectorInterface::decode_cmd(uint32_t value)
             break;
         case 0x14:
             printf("[VIF] MSCAL\n");
+            wait_for_VU = true;
+            wait_cmd_value = value;
+            break;
+        case 0x15:
+            printf("[VIF] MSCALF\n");
             wait_for_VU = true;
             wait_cmd_value = value;
             break;
@@ -285,6 +291,7 @@ void VectorInterface::handle_wait_cmd(uint32_t value)
     switch (command)
     {
         case 0x14:
+        case 0x15:
             MSCAL(imm * 8);
             break;
         case 0x17:

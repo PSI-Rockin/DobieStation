@@ -10,8 +10,8 @@
 
 //#define printf(fmt, ...)(0)
 
-EmotionEngine::EmotionEngine(Cop0* cp0, Cop1* fpu, Emulator* e, uint8_t* sp, VectorUnit* vu0) :
-    cp0(cp0), fpu(fpu), e(e), scratchpad(sp), vu0(vu0)
+EmotionEngine::EmotionEngine(Cop0* cp0, Cop1* fpu, Emulator* e, uint8_t* sp, VectorUnit* vu0, VectorUnit* vu1) :
+    cp0(cp0), fpu(fpu), e(e), scratchpad(sp), vu0(vu0), vu1(vu1)
 {
     reset();
 }
@@ -765,6 +765,20 @@ void EmotionEngine::fpu_bc1(int32_t offset, bool test_true, bool likely)
         passed = fpu->get_condition();
     else
         passed = !fpu->get_condition();
+
+    if (likely)
+        branch_likely(passed, offset);
+    else
+        branch(passed, offset);
+}
+
+void EmotionEngine::cop2_bc2(int32_t offset, bool test_true, bool likely)
+{
+    bool passed = false;
+    if (test_true)
+        passed = vu1->is_running();
+    else
+        passed = !vu1->is_running();
 
     if (likely)
         branch_likely(passed, offset);

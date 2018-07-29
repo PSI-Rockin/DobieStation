@@ -215,6 +215,11 @@ string VU_Disasm::upper_special(uint32_t PC, uint32_t instr)
         case 0x02:
         case 0x03:
             return upper_acc_bc("addabc", instr);
+        case 0x04:
+        case 0x05:
+        case 0x06:
+        case 0x07:
+            return upper_acc_bc("subabc", instr);
         case 0x08:
         case 0x09:
         case 0x0A:
@@ -259,6 +264,8 @@ string VU_Disasm::upper_special(uint32_t PC, uint32_t instr)
             return upper_acc("madda", instr);
         case 0x2A:
             return upper_acc("mula", instr);
+        case 0x2C:
+            return upper_acc("suba", instr);
         case 0x2E:
             return opmula(instr);
         case 0x2F:
@@ -656,6 +663,8 @@ string VU_Disasm::lower2(uint32_t PC, uint32_t instr)
             return fcand(instr);
         case 0x13:
             return fcor(instr);
+        case 0x18:
+            return fmeq(instr);
         case 0x1A:
             return fmand(instr);
         case 0x1C:
@@ -791,6 +800,15 @@ string VU_Disasm::fcor(uint32_t instr)
     uint32_t imm = instr & 0xFFFFFF;
     output << "fcor vi1, 0x";
     output << setfill('0') << setw(8) << hex << imm;
+    return output.str();
+}
+
+string VU_Disasm::fmeq(uint32_t instr)
+{
+    stringstream output;
+    uint32_t is = (instr >> 11) & 0x1F;
+    uint32_t it = (instr >> 16) & 0x1F;
+    output << "fmeq vi" << it << ", vi" << is;
     return output.str();
 }
 

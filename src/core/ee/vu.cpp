@@ -148,6 +148,13 @@ void VectorUnit::run(int cycles)
     }
 }
 
+void VectorUnit::callmsr()
+{
+    printf("[VU] Starting execution at $%08X!\n", CMSAR0 * 8);
+    running = true;
+    PC = CMSAR0 * 8;
+}
+
 void VectorUnit::mscal(uint32_t addr)
 {
     printf("[VU] Starting execution at $%08X!\n", addr);
@@ -276,6 +283,8 @@ uint32_t VectorUnit::cfc(int index)
             return I.u;
         case 22:
             return Q.u;
+        case 27:
+            return CMSAR0;
         default:
             printf("[COP2] Unrecognized cfc2 from reg %d\n", index);
     }
@@ -308,6 +317,9 @@ void VectorUnit::ctc(int index, uint32_t value)
         case 22:
             set_Q(value);
             printf("[VU] Q = %f\n", Q.f);
+            break;
+        case 27:
+            CMSAR0 = value;
             break;
         case 28:
             if (value & 0x2 && id == 0)
@@ -608,6 +620,15 @@ void VectorUnit::fcset(uint32_t value)
     clip_flags = value;
 }
 
+void VectorUnit::fmeq(uint8_t dest, uint8_t source)
+{
+    printf("[VU] FMEQ: $%04X\n", int_gpr[source].u);
+    if((*MAC_flags & 0xFFFF) == (int_gpr[source].u & 0xFFFF))
+        set_int(dest, 1);
+    else
+        set_int(dest, 0);
+}
+
 void VectorUnit::fmand(uint8_t dest, uint8_t source)
 {
     printf("[VU] FMAND: $%04X\n", int_gpr[source].u);
@@ -663,7 +684,7 @@ void VectorUnit::ftoi15(uint8_t field, uint8_t dest, uint8_t source)
     {
         if (field & (1 << (3 - i)))
         {
-            gpr[dest].s[i] = (int32_t)(convert(gpr[source].u[i]) * (1.0f / 0.000030517578125));
+            gpr[dest].s[i] = (int32_t)(convert(gpr[source].u[i]) * (1.0f / 0.000030517578125f));
             printf("(%d)$%08X ", i, gpr[dest].s[i]);
         }
     }
@@ -809,6 +830,20 @@ void VectorUnit::itof12(uint8_t field, uint8_t dest, uint8_t source)
         if (field & (1 << (3 - i)))
         {
             gpr[dest].f[i] = (float)((float)gpr[source].s[i] * 0.000244140625f);
+            printf("(%d)%f ", i, gpr[dest].f[i]);
+        }
+    }
+    printf("\n");
+}
+
+void VectorUnit::itof15(uint8_t field, uint8_t dest, uint8_t source)
+{
+    printf("[VU] ITOF12: ");
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            gpr[dest].f[i] = (float)((float)gpr[source].s[i] * 0.000030517578125f);
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
     }
@@ -1533,6 +1568,41 @@ void VectorUnit::sub(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)
             update_mac_flags(result, i);
             set_gpr_f(dest, i, result);
             printf("(%d)%f ", i, gpr[dest].f[i]);
+        }
+        else
+            clear_mac_flags(i);
+    }
+    printf("\n");
+}
+
+void VectorUnit::suba(uint8_t field, uint8_t reg1, uint8_t reg2)
+{
+    printf("[VU] SUBA: ");
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            ACC.f[i] = convert(gpr[reg1].u[i]) - convert(gpr[reg2].u[i]);
+            ACC.f[i] = update_mac_flags(ACC.f[i], i);
+            printf("(%d)%f ", i, ACC.f[i]);
+        }
+        else
+            clear_mac_flags(i);
+    }
+    printf("\n");
+}
+
+void VectorUnit::subabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_reg)
+{
+    printf("[VU] SUBAbc: ");
+    float op = convert(gpr[bc_reg].u[bc]);
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            ACC.f[i] = convert(gpr[source].u[i]) - op;
+            ACC.f[i] = update_mac_flags(ACC.f[i], i);
+            printf("(%d)%f", i, ACC.f[i]);
         }
         else
             clear_mac_flags(i);
