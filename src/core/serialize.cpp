@@ -1,4 +1,5 @@
 #include <fstream>
+#include <cstring>
 #include "emulator.hpp"
 
 #define VER_MAJOR 0
