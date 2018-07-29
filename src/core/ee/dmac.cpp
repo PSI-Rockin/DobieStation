@@ -797,21 +797,21 @@ void DMAC::write16(uint32_t address, uint16_t value)
 {
     switch (address)
     {
-    case 0x10008000:
-        channels[VIF0].control &= ~0xFFFF;
-        channels[VIF0].control |= value;
-        break;
-    case 0x10009000:
-        channels[VIF1].control &= ~0xFFFF;
-        channels[VIF1].control |= value;
-        break;
-    case 0x1000A000:
-        channels[GIF].control &= ~0xFFFF;
-        channels[GIF].control |= value;
-        break;
-    default:
-        printf("[DMAC] Unrecognized write16 to $%08X of $%04X\n", address, value);
-        break;
+        case 0x10008000:
+            channels[VIF0].control &= ~0xFFFF;
+            channels[VIF0].control |= value;
+            break;
+        case 0x10009000:
+            channels[VIF1].control &= ~0xFFFF;
+            channels[VIF1].control |= value;
+            break;
+        case 0x1000A000:
+            channels[GIF].control &= ~0xFFFF;
+            channels[GIF].control |= value;
+            break;
+        default:
+            printf("[DMAC] Unrecognized write16 to $%08X of $%04X\n", address, value);
+            break;
     }
 }
 

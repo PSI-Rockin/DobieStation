@@ -143,6 +143,9 @@ int EmotionEngine::run(int cycles_to_run)
         }
         else
         {
+            //When the EE is in it's "Wait loop" located at 0x81FC0, it will loop
+            //indefinitely until an interrupt/exception happens.  We can just skip
+            //any processing of CPU commands until the interrupt occurs
             if ((PC >= 0x81FC0 && PC < 0x81FE0) && !branch_on)
             {
                 break;

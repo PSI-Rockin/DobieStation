@@ -667,7 +667,7 @@ string VU_Disasm::lower2(uint32_t PC, uint32_t instr)
         case 0x24:
             return jr(instr);
         case 0x25:
-            return jr(instr);
+            return jalr(instr);
         case 0x28:
             return branch("ibeq", PC, instr);
         case 0x29:
