@@ -34,17 +34,15 @@ bool VectorInterface::check_vif_stall(uint32_t value)
     //Do not stall if the next command is MARK
     if (vif_ibit_detected && value != 0x7)
     {
+        printf("[VIF] VIF%x Stalled\n", get_id());
         vif_ibit_detected = false;
         vif_int_stalled = true;
-        printf("[VIF] VIF%x Stalled\n", get_id());
-        if (!VIF_ERR.mask_interrupt)
-        {
-            vif_interrupt = true;
-            if (get_id())
-                intc->assert_IRQ((int)Interrupt::VIF1);
-            else
-                intc->assert_IRQ((int)Interrupt::VIF0);
-        }
+        vif_interrupt = true;
+
+        if (get_id())
+            intc->assert_IRQ((int)Interrupt::VIF1);
+        else
+            intc->assert_IRQ((int)Interrupt::VIF0);
         return true;
     }
     return false;
@@ -163,7 +161,8 @@ void VectorInterface::decode_cmd(uint32_t value)
 
     if (value & 0x80000000)
     {
-        vif_ibit_detected = true;
+        if (!VIF_ERR.mask_interrupt)
+            vif_ibit_detected = true;
     }
 
     switch (command)
