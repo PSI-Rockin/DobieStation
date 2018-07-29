@@ -26,6 +26,10 @@ void VectorInterface::reset()
     vu->set_TOP_regs(&TOP, &ITOP);
     vu->set_GIF(gif);
     wait_for_VU = false;
+    vif_int_stalled = false;
+    vif_ibit_detected = false;
+    vif_interrupt = false;
+    mark_detected = false;
     flush_stall = false;
 }
 
