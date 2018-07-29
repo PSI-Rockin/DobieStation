@@ -399,12 +399,12 @@ string VU_Disasm::lower1_special(uint32_t PC, uint32_t instr)
             return ilwr(instr);
         case 0x3F:
             return iswr(instr);
+        case 0x40:
+            return rnext(instr);
         case 0x41:
             return rget(instr);
-            break;
         case 0x42:
             return rinit(instr);
-            break;
         case 0x64:
             return mfp(instr);
         case 0x68:
