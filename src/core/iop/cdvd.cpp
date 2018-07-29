@@ -323,7 +323,7 @@ uint8_t CDVD_Drive::read_drive_status()
 
 void CDVD_Drive::write_N_data(uint8_t value)
 {
-    printf("[CVD] Write NDATA: $%02X\n", value);
+    printf("[CDVD] Write NDATA: $%02X\n", value);
     if (N_params > 10)
     {
         Errors::die("[CDVD] Excess NDATA params!\n");

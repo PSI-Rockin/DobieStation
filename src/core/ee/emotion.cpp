@@ -174,8 +174,8 @@ int EmotionEngine::run(int cycles_to_run)
                 if (PC == 0x10021C)
                     PC = 0x10022C;*/
                 //Temporary hack for Atelier Iris - Skip intro movies
-                //if (PC == 0x0029e9cc)
-                    //PC = 0x0029E984;
+                if (PC == 0x0029e9cc)
+                    PC = 0x0029E984;
                 if (PC < 0x80000000 && PC >= 0x00100000)
                     if (e->skip_BIOS())
                         return 0;
@@ -394,7 +394,7 @@ void EmotionEngine::branch_likely(bool condition, int offset)
 
 void EmotionEngine::mfc(int cop_id, int reg, int cop_reg)
 {
-    int64_t bark;
+    int64_t bark = 0;
     switch (cop_id)
     {
         case 0:
@@ -610,12 +610,6 @@ void EmotionEngine::handle_exception(uint32_t new_addr, uint8_t code)
     delay_slot = 0;
     PC = new_addr;
     increment_PC = false;
-}
-
-void EmotionEngine::hle_syscall()
-{
-    uint8_t op = read8(PC - 4);
-    //bios->hle_syscall(*this, op);
 }
 
 void EmotionEngine::syscall_exception()

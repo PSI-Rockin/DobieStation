@@ -281,7 +281,7 @@ void Emulator::execute_ELF()
     printf("Section header entries: %d\n", e_shnum);
     printf("Section header names index: %d\n", e_shstrndx);
 
-    for (int i = e_phoff; i < e_phoff + (e_phnum * 0x20); i += 0x20)
+    for (unsigned int i = e_phoff; i < e_phoff + (e_phnum * 0x20); i += 0x20)
     {
         uint32_t p_offset = *(uint32_t*)&ELF_file[i + 0x4];
         uint32_t p_paddr = *(uint32_t*)&ELF_file[i + 0xC];
@@ -296,41 +296,13 @@ void Emulator::execute_ELF()
         printf("p_memsz: $%08X\n", p_memsz);
 
         int mem_w = p_paddr;
-        for (int file_w = p_offset; file_w < (p_offset + p_filesz); file_w += 4)
+        for (unsigned int file_w = p_offset; file_w < (p_offset + p_filesz); file_w += 4)
         {
             uint32_t word = *(uint32_t*)&ELF_file[file_w];
             write32(mem_w, word);
             mem_w += 4;
         }
     }
-
-    /*uint32_t name_offset = ELF_file[e_shoff + (e_shstrndx * 0x28) + 0x10];
-    printf("Name offset: $%08X\n", name_offset);
-
-    for (int i = e_shoff; i < e_shoff + (e_shnum * 0x28); i += 0x28)
-    {
-        uint32_t sh_name = *(uint32_t*)&ELF_file[i];
-        uint32_t sh_type = *(uint32_t*)&ELF_file[i + 0x4];
-        uint32_t sh_offset = *(uint32_t*)&ELF_file[i + 0x10];
-        uint32_t sh_size = *(uint32_t*)&ELF_file[i + 0x14];
-        printf("\nSection header\n");
-        printf("sh_type: $%08X\n", sh_type);
-        printf("sh_offset: $%08X\n", sh_offset);
-        printf("sh_size: $%08X\n", sh_size);
-
-        /*if (sh_type == 0x3)
-        {
-            printf("Debug symbols found\n");
-            for (int j = sh_offset; j < sh_offset + sh_size; j++)
-            {
-                unsigned char burp = ELF_file[j];
-                if (!burp)
-                    printf("\n");
-                else
-                    printf("%c", burp);
-            }
-        }
-    }*/
     cpu.set_PC(e_entry);
 }
 

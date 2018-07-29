@@ -71,7 +71,6 @@ void EmuThread::run()
 {
     forever
     {
-
         QMutexLocker locker(&emu_mutex);
         if (abort)
             return;

@@ -239,6 +239,7 @@ void EmuWindow::draw_frame(uint32_t *buffer, int inner_w, int inner_h, int final
 
 void EmuWindow::paintEvent(QPaintEvent *event)
 {
+    event->accept();
     QPainter painter(this);
     painter.fillRect(rect(), Qt::black);
 

@@ -37,10 +37,10 @@ class EmuWindow : public QMainWindow
 
         void create_menu();
 
-        void paintEvent(QPaintEvent *event);
-        void closeEvent(QCloseEvent *event);
-        void keyPressEvent(QKeyEvent *event);
-        void keyReleaseEvent(QKeyEvent *event);
+        void paintEvent(QPaintEvent *event) override;
+        void closeEvent(QCloseEvent *event) override;
+        void keyPressEvent(QKeyEvent *event) override;
+        void keyReleaseEvent(QKeyEvent *event) override;
 
     protected:
     #ifndef QT_NO_CONTEXTMENU

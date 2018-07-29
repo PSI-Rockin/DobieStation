@@ -553,6 +553,13 @@ void VectorInterface::load_state(ifstream &state)
     state.read((char*)&ROW, sizeof(ROW));
     state.read((char*)&COL, sizeof(COL));
     state.read((char*)&command_len, sizeof(command_len));
+
+    state.read((char*)&vif_ibit_detected, sizeof(vif_ibit_detected));
+    state.read((char*)&vif_interrupt, sizeof(vif_interrupt));
+    state.read((char*)&vif_int_stalled, sizeof(vif_int_stalled));
+
+    state.read((char*)&mark_detected, sizeof(mark_detected));
+    state.read((char*)&VIF_ERR, sizeof(VIF_ERR));
 }
 
 void VectorInterface::save_state(ofstream &state)
@@ -593,6 +600,13 @@ void VectorInterface::save_state(ofstream &state)
     state.write((char*)&ROW, sizeof(ROW));
     state.write((char*)&COL, sizeof(COL));
     state.write((char*)&command_len, sizeof(command_len));
+
+    state.write((char*)&vif_ibit_detected, sizeof(vif_ibit_detected));
+    state.write((char*)&vif_interrupt, sizeof(vif_interrupt));
+    state.write((char*)&vif_int_stalled, sizeof(vif_int_stalled));
+
+    state.write((char*)&mark_detected, sizeof(mark_detected));
+    state.write((char*)&VIF_ERR, sizeof(VIF_ERR));
 }
 
 void CDVD_Drive::load_state(ifstream &state)
