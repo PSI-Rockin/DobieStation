@@ -404,6 +404,24 @@ void VectorUnit::addabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_re
     printf("\n");
 }
 
+void VectorUnit::addai(uint8_t field, uint8_t source)
+{
+    printf("[VU] ADDAi: ");
+    float op = convert(I.u);
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            float temp = op + convert(gpr[source].u[i]);
+            ACC.f[i] = update_mac_flags(temp, i);            
+            printf("(%d)%f ", i, ACC.f[i]);
+        }
+        else
+            clear_mac_flags(i);
+    }
+    printf("\n");
+}
+
 void VectorUnit::addbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg)
 {
     printf("[VU] ADDbc: ");
@@ -933,8 +951,26 @@ void VectorUnit::maddbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source,
 
 void VectorUnit::maddq(uint8_t field, uint8_t dest, uint8_t source)
 {
-    printf("[VU] MADDbc: ");
+    printf("[VU] MADDq: ");
     float op = convert(Q.u);
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            float temp = op * convert(gpr[source].u[i]);
+            set_gpr_f(dest, i, update_mac_flags(temp + ACC.f[i], i));
+            printf("(%d)%f ", i, gpr[dest].f[i]);
+        }
+        else
+            clear_mac_flags(i);
+    }
+    printf("\n");
+}
+
+void VectorUnit::maddi(uint8_t field, uint8_t dest, uint8_t source)
+{
+    printf("[VU] MADDi: ");
+    float op = convert(I.u);
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
@@ -1121,6 +1157,23 @@ void VectorUnit::msubai(uint8_t field, uint8_t source)
             ACC.f[i] = convert(ACC.u[i]) - temp;
             update_mac_flags(ACC.f[i], i);
             printf("(%d)%f ", i, ACC.f[i]);
+        }
+        else
+            clear_mac_flags(i);
+    }
+    printf("\n");
+}
+
+void VectorUnit::msub(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)
+{
+    printf("[VU] MSUB: ");
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            float temp = convert(gpr[reg1].u[i]) * convert(gpr[reg2].u[i]);            
+            set_gpr_f(dest, i, update_mac_flags(convert(ACC.u[i]) - temp, i));
+            printf("(%d)%f ", i, gpr[dest].f[i]);
         }
         else
             clear_mac_flags(i);

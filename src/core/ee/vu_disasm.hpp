@@ -42,6 +42,9 @@ namespace VU_Disasm
     std::string mfir(uint32_t instr);
     std::string ilwr(uint32_t instr);
     std::string iswr(uint32_t instr);
+    std::string rnext(uint32_t instr);
+    std::string rget(uint32_t instr);
+    std::string rinit(uint32_t instr);
     std::string mfp(uint32_t instr);
     std::string xtop(uint32_t instr);
     std::string xitop(uint32_t instr);
@@ -65,6 +68,7 @@ namespace VU_Disasm
     std::string b(uint32_t PC, uint32_t instr);
     std::string bal(uint32_t PC, uint32_t instr);
     std::string jr(uint32_t instr);
+    std::string jalr(uint32_t instr);
 };
 
 #endif // VU_DISASM_HPP

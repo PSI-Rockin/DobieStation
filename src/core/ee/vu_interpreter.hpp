@@ -20,6 +20,7 @@ namespace VU_Interpreter
     void addq(VectorUnit& vu, uint32_t instr);
     void maddq(VectorUnit& vu, uint32_t instr);
     void addi(VectorUnit& vu, uint32_t instr);
+    void maddi(VectorUnit& vu, uint32_t instr);
     void subq(VectorUnit& vu, uint32_t instr);
     void subi(VectorUnit& vu, uint32_t instr);
     void msubi(VectorUnit& vu, uint32_t instr);
@@ -28,10 +29,12 @@ namespace VU_Interpreter
     void mul(VectorUnit& vu, uint32_t instr);
     void max(VectorUnit& vu, uint32_t instr);
     void sub(VectorUnit& vu, uint32_t instr);
+    void msub(VectorUnit& vu, uint32_t instr);
     void opmsub(VectorUnit& vu, uint32_t instr);
     void mini(VectorUnit& vu, uint32_t instr);
 
     void upper_special(VectorUnit& vu, uint32_t instr);
+    void addabc(VectorUnit& vu, uint32_t instr);
     void maddabc(VectorUnit& vu, uint32_t instr);
     void itof0(VectorUnit& vu, uint32_t instr);
     void itof4(VectorUnit& vu, uint32_t instr);
@@ -44,10 +47,13 @@ namespace VU_Interpreter
     void abs(VectorUnit& vu, uint32_t instr);
     void mulai(VectorUnit& vu, uint32_t instr);
     void clip(VectorUnit& vu, uint32_t instr);
+    void addai(VectorUnit& vu, uint32_t instr);
     void maddai(VectorUnit& vu, uint32_t instr);
     void subai(VectorUnit& vu, uint32_t instr);
     void msubai(VectorUnit& vu, uint32_t instr);
     void mula(VectorUnit& vu, uint32_t instr);
+    void adda(VectorUnit &vu, uint32_t instr);
+    void madda(VectorUnit &vu, uint32_t instr);
     void opmula(VectorUnit& vu, uint32_t instr);
 
     void lower(VectorUnit& vu, uint32_t instr);
@@ -71,6 +77,9 @@ namespace VU_Interpreter
     void mfir(VectorUnit& vu, uint32_t instr);
     void ilwr(VectorUnit& vu, uint32_t instr);
     void iswr(VectorUnit& vu, uint32_t instr);
+    void rnext(VectorUnit &vu, uint32_t instr);
+    void rget(VectorUnit &vu, uint32_t instr);
+    void rinit(VectorUnit &vu, uint32_t instr);
     void mfp(VectorUnit& vu, uint32_t instr);
     void xtop(VectorUnit& vu, uint32_t instr);
     void xitop(VectorUnit& vu, uint32_t instr);
@@ -94,6 +103,7 @@ namespace VU_Interpreter
     void b(VectorUnit& vu, uint32_t instr);
     void bal(VectorUnit& vu, uint32_t instr);
     void jr(VectorUnit& vu, uint32_t instr);
+    void jalr(VectorUnit &vu, uint32_t instr);
     void ibeq(VectorUnit& vu, uint32_t instr);
     void ibne(VectorUnit& vu, uint32_t instr);
     void ibltz(VectorUnit& vu, uint32_t instr);

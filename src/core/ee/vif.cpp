@@ -9,7 +9,8 @@
 #include "../gif.hpp"
 #include "../errors.hpp"
 
-VectorInterface::VectorInterface(GraphicsInterface* gif, VectorUnit* vu) : gif(gif), vu(vu)
+
+VectorInterface::VectorInterface(GraphicsInterface* gif, VectorUnit* vu, INTC* intc, int id) : gif(gif), vu(vu), intc(intc), id(id)
 {
 
 }
@@ -28,6 +29,27 @@ void VectorInterface::reset()
     flush_stall = false;
 }
 
+bool VectorInterface::check_vif_stall(uint32_t value)
+{
+    //Do not stall if the next command is MARK
+    if (vif_ibit_detected && value != 0x7)
+    {
+        vif_ibit_detected = false;
+        vif_int_stalled = true;
+        printf("[VIF] VIF%x Stalled\n", get_id());
+        if (!VIF_ERR.mask_interrupt)
+        {
+            vif_interrupt = true;
+            if (get_id())
+                intc->assert_IRQ((int)Interrupt::VIF1);
+            else
+                intc->assert_IRQ((int)Interrupt::VIF0);
+        }
+        return true;
+    }
+    return false;
+}
+
 void VectorInterface::update()
 {
     int runcycles = 8;
@@ -44,7 +66,7 @@ void VectorInterface::update()
             return;
         flush_stall = false;
     }*/
-    while (FIFO.size() && runcycles--)
+    while (FIFO.size() && !vif_int_stalled && runcycles--)
     {        
         if (wait_for_VU)
         {
@@ -62,6 +84,8 @@ void VectorInterface::update()
         uint32_t value = FIFO.front();
         if (command_len <= 0)
         {
+            if (check_vif_stall(value))
+                return;
             buffer_size = 0;
             decode_cmd(value);
         }
@@ -121,12 +145,27 @@ void VectorInterface::update()
         }
         FIFO.pop();
     }
+
+    //Need to check again if it is the end of the packet
+    if (command_len <= 0)
+    {
+        if (FIFO.size())
+            check_vif_stall(FIFO.front());
+        else
+            check_vif_stall(0);
+    }
 }
 
 void VectorInterface::decode_cmd(uint32_t value)
 {
-    command = value >> 24;
+    command = (value >> 24) & 0x7F;
     imm = value & 0xFFFF;
+
+    if (value & 0x80)
+    {
+        vif_ibit_detected = true;
+    }
+
     switch (command)
     {
         case 0x00:
@@ -160,6 +199,8 @@ void VectorInterface::decode_cmd(uint32_t value)
             break;
         case 0x07:
             printf("[VIF] Set MARK: $%08X\n", value);
+            MARK = value;
+            mark_detected = true;
             break;
         case 0x10:
             printf("[VIF] FLUSHE\n");
@@ -284,9 +325,12 @@ void VectorInterface::init_UNPACK(uint32_t value)
     unpack.offset = 0;
     int vl = command & 0x3;
     int vn = (command >> 2) & 0x3;
-    
-    
-    unpack.words_per_op = (32 >> vl) * (vn + 1);
+
+    if (vl == 3 && vn == 3)
+        unpack.words_per_op = 16;
+    else
+        unpack.words_per_op = (32 >> vl) * (vn + 1);
+
     command_len = unpack.words_per_op * unpack.num;
     unpack.words_per_op = (unpack.words_per_op + 0x1F) & ~0x1F; //round up to nearest 32 before dividing
     command_len = (command_len + 0x1F) & ~0x1F;
@@ -606,6 +650,22 @@ void VectorInterface::handle_UNPACK(uint32_t value)
                 }
                 buffer_size -= 1;
                 break;
+            case 0xF:
+                //V4-5
+            {
+                uint16_t data = (buffer[0] >> (unpack.offset * 16)) & 0xFFFF;
+                quad._u32[0] = (data & 0x1F) << 3;
+                quad._u32[1] = ((data >> 5) & 0x1F) << 3;
+                quad._u32[2] = ((data >> 10) & 0x1F) << 3;
+                quad._u32[3] = ((data >> 15) & 0x1) << 7;
+
+                if (unpack.offset++)
+                {
+                    unpack.offset = 0;
+                    buffer_size -= 1;
+                }
+            }
+                break;
             default:
                 Errors::die("[VIF] Unhandled UNPACK cmd $%02X!\n", unpack.cmd);
         }
@@ -722,8 +782,54 @@ uint32_t VectorInterface::get_stat()
     uint32_t reg = 0;
     reg |= ((FIFO.size() != 0) * 3);
     reg |= vu->is_running() << 2;
+    reg |= mark_detected << 6;
     reg |= DBF << 7;
+    reg |= vif_int_stalled << 10;
+    reg |= vif_interrupt << 11;
     reg |= ((FIFO.size() != 0) * 16) << 24;
-    //printf("[VIF] Get STAT: $%08X\n", reg);
+    printf("[VIF] Get STAT: $%08X\n", reg);
     return reg;
+}
+
+uint32_t VectorInterface::get_mark()
+{
+    printf("[VIF] Get MARK: $%x\n", MARK);
+    return MARK;
+}
+
+uint32_t VectorInterface::get_err()
+{
+    uint32_t reg = 0;
+    reg |= VIF_ERR.mask_interrupt;
+    reg |= VIF_ERR.mask_dmatag_error << 1;
+    reg |= VIF_ERR.mask_vifcode_error << 2;
+    printf("[VIF] Get ERR: $%08X\n", reg);
+    return reg;
+}
+
+void VectorInterface::set_mark(uint32_t value)
+{
+    MARK = value;
+    mark_detected = false;
+    printf("[VIF] Set MARK: $%x\n", MARK);
+}
+
+void VectorInterface::set_err(uint32_t value)
+{
+    VIF_ERR.mask_interrupt = value & 0x1;
+    VIF_ERR.mask_dmatag_error = value & 0x2;
+    VIF_ERR.mask_vifcode_error = value & 0x4;
+    printf("[VIF] Set ERR: $%x\n", value);
+}
+
+void VectorInterface::set_fbrst(uint32_t value)
+{
+    printf("[VIF] Set FBRST: $%x\n", value);
+
+    if (value & 0x8)
+    {
+        printf("[VIF] VIF%x Resumed\n", get_id());
+        vif_int_stalled = false;
+        vif_interrupt = false;
+    }
 }
