@@ -212,7 +212,6 @@ void GS_REGISTERS::reset()
     set_CRT(false, 0x2, false);
 }
 
-
 void GS_REGISTERS::set_CRT(bool interlaced, int mode, bool frame_mode)
 {
     SMODE2.interlaced = interlaced;
@@ -254,6 +253,7 @@ void GS_REGISTERS::get_inner_resolution(int &w, int &h)
     w = currentDisplay.width >> 2;
     h = currentDisplay.height;
 }
+
 void GS_REGISTERS::set_VBLANK(bool is_VBLANK)
 {
     if (!is_VBLANK)
@@ -262,6 +262,7 @@ void GS_REGISTERS::set_VBLANK(bool is_VBLANK)
     }
     CSR.VBLANK_generated = is_VBLANK;
 }
+
 bool GS_REGISTERS::assert_FINISH()//returns true if the interrupt should be processed
 {
     if (CSR.FINISH_requested && CSR.FINISH_enabled)

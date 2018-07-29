@@ -9,7 +9,6 @@ GraphicsInterface::GraphicsInterface(GraphicsSynthesizer *gs) : gs(gs)
 
 void GraphicsInterface::reset()
 {
-    processing_GIF_prim = false;
     current_tag.data_left = 0;
     active_path = 0;
     path_queue = 0;
@@ -146,7 +145,6 @@ void GraphicsInterface::feed_GIF(uint128_t data)
     if (!current_tag.data_left)
     {
         //Read new GIFtag
-        processing_GIF_prim = true;
         current_tag.NLOOP = data1 & 0x7FFF;
         current_tag.end_of_packet = data1 & (1 << 15);
         current_tag.output_PRIM = (data1 >> 46) & 0x1;
@@ -179,11 +177,6 @@ void GraphicsInterface::feed_GIF(uint128_t data)
     }
     else
     {
-        /*if (!current_tag.data_left)
-        {
-            processing_GIF_prim = false;
-            return;
-        }*/
         switch (current_tag.format)
         {
             case 0:

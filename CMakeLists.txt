@@ -61,6 +61,7 @@ set(SOURCES
         src/core/gsthread.cpp
         src/core/gsregisters.cpp
         src/core/gscontext.cpp
+	src/core/serialize.cpp
 	src/core/sif.cpp
 	src/qt/emuthread.cpp
         src/qt/emuwindow.cpp

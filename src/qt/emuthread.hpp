@@ -35,6 +35,9 @@ class EmuThread : public QThread
         void load_BIOS(uint8_t* BIOS);
         void load_ELF(uint8_t* ELF, uint64_t ELF_size);
         void load_CDVD(const char* name);
+
+        bool load_state(const char* name);
+        bool save_state(const char* name);
     protected:
         void run() override;
     signals:

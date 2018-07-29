@@ -51,7 +51,6 @@ class CDVD_Drive
         uint8_t drive_status;
 
         bool is_spinning;
-        bool is_reading;
         NCOMMAND active_N_command;
         uint8_t N_command;
         uint8_t N_command_params[11];
@@ -106,6 +105,9 @@ class CDVD_Drive
         void send_S_command(uint8_t value);
         void write_S_data(uint8_t value);
         void write_ISTAT(uint8_t value);
+
+        void load_state(std::ifstream& state);
+        void save_state(std::ofstream& state);
 };
 
 #endif // CDVD_HPP

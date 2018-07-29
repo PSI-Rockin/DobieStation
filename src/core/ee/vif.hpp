@@ -2,6 +2,7 @@
 #define VIF_HPP
 #include <cstdint>
 #include <queue>
+#include <fstream>
 
 #include "intc.hpp"
 #include "vu.hpp"
@@ -94,7 +95,7 @@ class VectorInterface
         void update();
 
         bool transfer_DMAtag(uint128_t tag);
-        void feed_DMA(uint128_t quad);
+        bool feed_DMA(uint128_t quad);
 
         uint32_t get_stat();
         uint32_t get_mark();
@@ -103,6 +104,9 @@ class VectorInterface
         void set_mark(uint32_t value);
         void set_err(uint32_t value);
         void set_fbrst(uint32_t value);
+
+        void load_state(std::ifstream& state);
+        void save_state(std::ofstream& state);
 };
 
 inline int VectorInterface::get_id()

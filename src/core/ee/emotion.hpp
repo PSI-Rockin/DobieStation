@@ -1,6 +1,7 @@
 #ifndef EMOTION_HPP
 #define EMOTION_HPP
 #include <cstdint>
+#include <fstream>
 #include "cop0.hpp"
 #include "cop1.hpp"
 
@@ -126,6 +127,9 @@ class EmotionEngine
         void qmfc2(int dest, int cop_reg);
         void qmtc2(int source, int cop_reg);
         void cop2_special(uint32_t instruction);
+
+        void load_state(std::ifstream& state);
+        void save_state(std::ofstream& state);
 };
 
 template <typename T>

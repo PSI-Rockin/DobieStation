@@ -12,7 +12,6 @@ static const int PSX_DVD_READSPEED = 1382400;
 
 uint32_t CDVD_Drive::get_block_timing(bool mode_DVD)
 {
-    //TODO: handle block sizes and CD_ROM read speeds
     return (IOP_CLOCK * block_size) / (speed * (mode_DVD ? PSX_DVD_READSPEED : PSX_CD_READSPEED));
 }
 
@@ -34,7 +33,6 @@ void CDVD_Drive::reset()
     cycle_count = 0;
     last_read = 0;
     drive_status = STOPPED;
-    is_reading = false;
     is_spinning = false;
     active_N_command = NCOMMAND::NONE;
     N_cycles_left = 0;
@@ -456,7 +454,6 @@ void CDVD_Drive::prepare_S_outdata(int amount)
 void CDVD_Drive::start_seek()
 {
     N_status = 0;
-    is_reading = false;
     drive_status = PAUSED;
 
     if (!is_spinning)

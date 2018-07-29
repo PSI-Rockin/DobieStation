@@ -15,6 +15,7 @@ class EmuWindow : public QMainWindow
     private:
         EmuThread emuthread;
         std::string title;
+        std::string ROM_path;
         QImage final_image;
         std::chrono::system_clock::time_point old_frametime;
         std::chrono::system_clock::time_point old_update_time;
@@ -24,6 +25,8 @@ class EmuWindow : public QMainWindow
         QMenu* options_menu;
         QAction* load_rom_action;
         QAction* load_bios_action;
+        QAction* load_state_action;
+        QAction* save_state_action;
         QAction* exit_action;
         int scale_factor;
 
@@ -53,6 +56,8 @@ class EmuWindow : public QMainWindow
         void draw_frame(uint32_t* buffer, int inner_w, int inner_h, int final_w, int final_h);
         void open_file_no_skip();
         void open_file_skip();
+        void load_state();
+        void save_state();
         void emu_error(QString err);
 };
 

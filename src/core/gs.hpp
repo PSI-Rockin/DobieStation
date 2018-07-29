@@ -7,14 +7,15 @@
 #include "gsregisters.hpp"
 #include "circularFIFO.hpp"
 
-
 class INTC;
 
+//Commands sent from the main thread to the GS thread.
 enum GS_command:uint8_t 
 {
 	write64_t, write64_privileged_t, write32_privileged_t,
     set_rgba_t, set_stq_t, set_uv_t, set_xyz_t, set_q_t, set_crt_t,
-    render_crt_t, assert_finish_t, set_vblank_t, memdump_t, die_t
+    render_crt_t, assert_finish_t, set_vblank_t, memdump_t, die_t,
+    savestate_t, loadstate_t
 };
 
 union GS_message_payload 
@@ -65,6 +66,14 @@ union GS_message_payload
         uint32_t* target;
         std::mutex* target_mutex;
     } render_payload;
+    struct
+    {
+        std::ofstream* state;
+    } savestate_payload;
+    struct
+    {
+        std::ifstream* state;
+    } loadstate_payload;
     struct 
 	{
         uint8_t BLANK; 
@@ -77,11 +86,15 @@ struct GS_message
     GS_message_payload payload;
 };
 
+//Commands sent from the GS thread to the main thread.
 enum GS_return :uint8_t
 {
     render_complete_t,
     death_error_t,
+    savestate_done_t,
+    loadstate_done_t
 };
+
 union GS_return_message_payload
 {
     struct
@@ -103,7 +116,6 @@ struct GS_return_message
 typedef CircularFifo<GS_message, 1024 * 1024 * 16> gs_fifo;
 typedef CircularFifo<GS_return_message, 1024> gs_return_fifo;
 
-
 class GraphicsSynthesizer
 {
     private:
@@ -122,7 +134,6 @@ class GraphicsSynthesizer
         gs_return_fifo* return_queue;
 
         std::thread gsthread_id;
-		
     public:
         GraphicsSynthesizer(INTC* intc);
         ~GraphicsSynthesizer();
@@ -151,6 +162,9 @@ class GraphicsSynthesizer
         void set_UV(uint16_t u, uint16_t v);
         void set_Q(float q);
         void set_XYZ(uint32_t x, uint32_t y, uint32_t z, bool drawing_kick);
+
+        void load_state(std::ifstream& state);
+        void save_state(std::ofstream& state);
 };
 
 #endif // GS_HPP

@@ -11,7 +11,7 @@ using namespace std;
 
 /**
 This is a manager for the gsthread. It deals with communication
-in/out of the GS, mostly with the GIF but also with the privilaged
+in/out of the GS, mostly with the GIF but also with the privileged
 registers.
 **/
 
@@ -106,6 +106,7 @@ void GraphicsSynthesizer::set_CRT(bool interlaced, int mode, bool frame_mode)
 void wait_for_return(gs_return_fifo *return_queue)
 {
     GS_return_message data;
+    printf("wait for return\n");
     while (true)
     {
         if (return_queue->pop(data))
@@ -123,6 +124,9 @@ void wait_for_return(gs_return_fifo *return_queue)
                     //There's probably a better way of doing this
                     //but I don't know how to make RAII work across threads properly
                 }
+                case loadstate_done_t:
+                case savestate_done_t:
+                    return;
                 default:
                     Errors::die("[GS] Unhandled return message!\n");
             }
@@ -133,8 +137,8 @@ void wait_for_return(gs_return_fifo *return_queue)
             std::this_thread::yield();
         }
     }
-
 }
+
 uint32_t* GraphicsSynthesizer::get_framebuffer()
 {
     uint32_t* out;
@@ -225,6 +229,7 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
     //also check for interrupt pre-processing
     reg.write64(addr, value);
 }
+
 void GraphicsSynthesizer::write64_privileged(uint32_t addr, uint64_t value)
 {
     GS_message_payload payload;
@@ -233,6 +238,7 @@ void GraphicsSynthesizer::write64_privileged(uint32_t addr, uint64_t value)
 
     reg.write64_privileged(addr, value);
 }
+
 void GraphicsSynthesizer::write32_privileged(uint32_t addr, uint32_t value)
 {
     GS_message_payload payload;
@@ -241,10 +247,12 @@ void GraphicsSynthesizer::write32_privileged(uint32_t addr, uint32_t value)
 
     reg.write32_privileged(addr, value);
 }
+
 uint32_t GraphicsSynthesizer::read32_privileged(uint32_t addr)
 {
     return reg.read32_privileged(addr);
 }
+
 uint64_t GraphicsSynthesizer::read64_privileged(uint32_t addr)
 {
     return reg.read64_privileged(addr);
@@ -256,27 +264,49 @@ void GraphicsSynthesizer::set_RGBA(uint8_t r, uint8_t g, uint8_t b, uint8_t a)
     payload.rgba_payload = { r, g, b, a };
     message_queue->push({ GS_command::set_rgba_t,payload });
 }
+
 void GraphicsSynthesizer::set_STQ(uint32_t s, uint32_t t, uint32_t q)
 {
     GS_message_payload payload;
     payload.stq_payload = { s, t, q };
     message_queue->push({ GS_command::set_stq_t,payload });
 }
+
 void GraphicsSynthesizer::set_UV(uint16_t u, uint16_t v)
 {
     GS_message_payload payload;
     payload.uv_payload = { u, v };
     message_queue->push({ GS_command::set_uv_t,payload });
 }
+
 void GraphicsSynthesizer::set_Q(float q)
 {
     GS_message_payload payload;
     payload.q_payload = { 1 };
     message_queue->push({ GS_command::set_q_t,payload });
 }
+
 void GraphicsSynthesizer::set_XYZ(uint32_t x, uint32_t y, uint32_t z, bool drawing_kick)
 {
     GS_message_payload payload;
     payload.xyz_payload = { x, y, z, drawing_kick };
     message_queue->push({ GS_command::set_xyz_t,payload });
+}
+
+void GraphicsSynthesizer::load_state(ifstream &state)
+{
+    GS_message_payload payload;
+    payload.loadstate_payload = {&state};
+    message_queue->push({ GS_command::loadstate_t, payload});
+    wait_for_return(return_queue);
+    state.read((char*)&reg, sizeof(reg));
+}
+
+void GraphicsSynthesizer::save_state(ofstream &state)
+{
+    GS_message_payload payload;
+    payload.savestate_payload = {&state};
+    message_queue->push({ GS_command::savestate_t,payload });
+    wait_for_return(return_queue);
+    state.write((char*)&reg, sizeof(reg));
 }

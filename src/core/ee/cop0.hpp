@@ -1,6 +1,7 @@
 #ifndef COP0_HPP
 #define COP0_HPP
 #include <cstdint>
+#include <fstream>
 
 enum COP0_REG
 {
@@ -62,6 +63,9 @@ class Cop0
         bool int_pending();
 
         void count_up(int cycles);
+
+        void load_state(std::ifstream &state);
+        void save_state(std::ofstream& state);
 };
 
 #endif // COP0_HPP

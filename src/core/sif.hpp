@@ -1,6 +1,7 @@
 #ifndef SIF_HPP
 #define SIF_HPP
 #include <cstdint>
+#include <fstream>
 #include <queue>
 
 #include "int128.hpp"
@@ -43,6 +44,9 @@ class SubsystemInterface
 
         void set_control_EE(uint32_t value);
         void set_control_IOP(uint32_t value);
+
+        void load_state(std::ifstream& state);
+        void save_state(std::ofstream& state);
 };
 
 #endif // SIF_HPP

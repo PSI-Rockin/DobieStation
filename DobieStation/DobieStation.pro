@@ -66,7 +66,8 @@ SOURCES += ../src/qt/main.cpp \
     ../src/core/ee/ipu/codedblockpattern.cpp \
     ../src/core/ee/vu_interpreter.cpp \
     ../src/core/ee/vu_disasm.cpp \
-    ../src/core/gsmem.cpp
+    ../src/core/gsmem.cpp \
+    ../src/core/serialize.cpp
 
 HEADERS += \
     ../src/core/errors.hpp \

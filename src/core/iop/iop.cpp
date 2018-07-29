@@ -33,7 +33,7 @@ void IOP::reset()
     cop0.reset();
     PC = 0xBFC00000;
     gpr[0] = 0;
-    load_delay = 0;
+    branch_delay = 0;
     will_branch = false;
     inc_PC = true;
     can_disassemble = false;
@@ -70,7 +70,7 @@ void IOP::run()
 
     if (will_branch)
     {
-        if (!load_delay)
+        if (!branch_delay)
         {
             will_branch = false;
             PC = new_PC;
@@ -86,7 +86,7 @@ void IOP::run()
                 e->iop_ksprintf();*/
         }
         else
-            load_delay--;
+            branch_delay--;
     }
 
     if (cop0.status.IEc && (cop0.status.Im & cop0.cause.int_pending))
@@ -116,7 +116,7 @@ void IOP::jp(uint32_t addr)
     {
         new_PC = addr;
         will_branch = true;
-        load_delay = 1;
+        branch_delay = 1;
     }
 }
 
@@ -144,7 +144,7 @@ void IOP::handle_exception(uint32_t addr, uint8_t cause)
     cop0.status.IEp = cop0.status.IEc;
     cop0.status.IEc = false;
     PC = addr;
-    load_delay = 0;
+    branch_delay = 0;
     will_branch = false;
 }
 

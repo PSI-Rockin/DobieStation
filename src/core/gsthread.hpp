@@ -204,6 +204,8 @@ class GraphicsSynthesizerThread
         void set_Q(float q);
         void set_XYZ(uint32_t x, uint32_t y, uint32_t z, bool drawing_kick);
 
+        void load_state(std::ifstream* state);
+        void save_state(std::ofstream* state);
     public:
         GraphicsSynthesizerThread();
         ~GraphicsSynthesizerThread();

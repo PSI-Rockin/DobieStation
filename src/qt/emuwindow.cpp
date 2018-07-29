@@ -162,6 +162,7 @@ int EmuWindow::load_exec(const char* file_name, bool skip_BIOS)
     }
 
     title = file_name;
+    ROM_path = file_name;
 
     emuthread.unpause(PAUSE_EVENT::GAME_NOT_LOADED);
     return 0;
@@ -175,14 +176,21 @@ void EmuWindow::create_menu()
     load_bios_action = new QAction(tr("&Load ROM... (Boot BIOS)"), this);
     connect(load_bios_action, &QAction::triggered, this, &EmuWindow::open_file_no_skip);
 
+    load_state_action = new QAction(tr("&Load State"), this);
+    connect(load_state_action, &QAction::triggered, this, &EmuWindow::load_state);
+
+    save_state_action = new QAction(tr("&Save State"), this);
+    connect(save_state_action, &QAction::triggered, this, &EmuWindow::save_state);
+
     exit_action = new QAction(tr("&Exit"), this);
     connect(exit_action, &QAction::triggered, this, &QWidget::close);
 
     file_menu = menuBar()->addMenu(tr("&File"));
     file_menu->addAction(load_rom_action);
     file_menu->addAction(load_bios_action);
+    file_menu->addAction(load_state_action);
+    file_menu->addAction(save_state_action);
     file_menu->addAction(exit_action);
-
 
     options_menu = menuBar()->addMenu(tr("&Options"));
     auto size_options_actions = new QAction(tr("Scale to &Window (ignore aspect ratio)"), this);
@@ -340,11 +348,13 @@ void EmuWindow::update_FPS(int FPS)
 void EmuWindow::emu_error(QString err)
 {
     QMessageBox msgBox;
-    msgBox.setText("A fatal emulation error has occurred");
+    msgBox.setText("Emulation has been terminated");
     msgBox.setInformativeText(err);
     msgBox.setStandardButtons(QMessageBox::Abort);
     msgBox.setDefaultButton(QMessageBox::Abort);
     msgBox.exec();
+    ROM_path = "";
+    setWindowTitle("DobieStation");
 }
 
 #ifndef QT_NO_CONTEXTMENU
@@ -371,5 +381,25 @@ void EmuWindow::open_file_skip()
     emuthread.pause(PAUSE_EVENT::FILE_DIALOG);
     QString file_name = QFileDialog::getOpenFileName(this, tr("Open Rom"), "", tr("ROM Files (*.elf *.iso)"));
     load_exec(file_name.toStdString().c_str(), true);
+    emuthread.unpause(PAUSE_EVENT::FILE_DIALOG);
+}
+
+void EmuWindow::load_state()
+{
+    emuthread.pause(PAUSE_EVENT::FILE_DIALOG);
+    string path = ROM_path.substr(0, ROM_path.length() - 4);
+    path += ".snp";
+    if (!emuthread.load_state(path.c_str()))
+        printf("Failed to load %s\n", path.c_str());
+    emuthread.unpause(PAUSE_EVENT::FILE_DIALOG);
+}
+
+void EmuWindow::save_state()
+{
+    emuthread.pause(PAUSE_EVENT::FILE_DIALOG);
+    string path = ROM_path.substr(0, ROM_path.length() - 4);
+    path += ".snp";
+    if (!emuthread.save_state(path.c_str()))
+        printf("Failed to save %s\n", path.c_str());
     emuthread.unpause(PAUSE_EVENT::FILE_DIALOG);
 }
