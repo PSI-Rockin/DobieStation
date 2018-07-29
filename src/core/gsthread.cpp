@@ -126,90 +126,106 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
             {
                 switch (data.type)
                 {
-                case write64_t:
-                {
-                    auto p = data.payload.write64_payload;
-                    gs.write64(p.addr, p.value);
-                    break;
-                }
-                case write64_privileged_t:
-                {
-                    auto p = data.payload.write64_payload;
-                    gs.reg.write64_privileged(p.addr, p.value);
-                    break;
-                }
-                case write32_privileged_t:
-                {
-                    auto p = data.payload.write32_payload;
-                    gs.reg.write32_privileged(p.addr, p.value);
-                    break;
-                }
-                case set_rgba_t:
-                {
-                    auto p = data.payload.rgba_payload;
-                    gs.set_RGBA(p.r, p.g, p.b, p.a);
-                    break;
-                }
-                case set_stq_t:
-                {
-                    auto p = data.payload.stq_payload;
-                    gs.set_STQ(p.s, p.t, p.q);
-                    break;
-                }
-                case set_uv_t:
-                {
-                    auto p = data.payload.uv_payload;
-                    gs.set_UV(p.u, p.v);
-                    break;
-                }
-                case set_xyz_t:
-                {
-                    auto p = data.payload.xyz_payload;
-                    gs.set_XYZ(p.x, p.y, p.z, p.drawing_kick);
-                    break;
-                }
-                case set_q_t:
-                {
-                    auto p = data.payload.q_payload;
-                    gs.set_Q(p.q);
-                    break;
-                }
-                case set_crt_t:
-                {
-                    auto p = data.payload.crt_payload;
-                    gs.reg.set_CRT(p.interlaced, p.mode, p.frame_mode);
-                    break;
-                }
-                case render_crt_t:
-                {
-                    auto p = data.payload.render_payload;
-
-                    while (!p.target_mutex->try_lock())
+                    case write64_t:
                     {
-                        printf("[GS_t] buffer lock failed!\n");
-                        std::this_thread::yield();
+                        auto p = data.payload.write64_payload;
+                        gs.write64(p.addr, p.value);
+                        break;
                     }
-                    std::lock_guard<std::mutex> lock(*p.target_mutex, std::adopt_lock);
-                    gs.render_CRT(p.target);
-                    GS_return_message_payload return_payload;
-                    return_payload.no_payload = { 0 };
-                    return_fifo->push({ GS_return::render_complete_t,return_payload });
-                    break;
-                }
-                case assert_finish_t:
-                    gs.reg.assert_FINISH();
-                    break;
-                case set_vblank_t:
-                {
-                    auto p = data.payload.vblank_payload;
-                    gs.reg.set_VBLANK(p.vblank);
-                    break;
-                }
-                case memdump_t:
-                    gs.memdump();
-                    break;
-                case die_t:
-                    return;
+                    case write64_privileged_t:
+                    {
+                        auto p = data.payload.write64_payload;
+                        gs.reg.write64_privileged(p.addr, p.value);
+                        break;
+                    }
+                    case write32_privileged_t:
+                    {
+                        auto p = data.payload.write32_payload;
+                        gs.reg.write32_privileged(p.addr, p.value);
+                        break;
+                    }
+                    case set_rgba_t:
+                    {
+                        auto p = data.payload.rgba_payload;
+                        gs.set_RGBA(p.r, p.g, p.b, p.a);
+                        break;
+                    }
+                    case set_stq_t:
+                    {
+                        auto p = data.payload.stq_payload;
+                        gs.set_STQ(p.s, p.t, p.q);
+                        break;
+                    }
+                    case set_uv_t:
+                    {
+                        auto p = data.payload.uv_payload;
+                        gs.set_UV(p.u, p.v);
+                        break;
+                    }
+                    case set_xyz_t:
+                    {
+                        auto p = data.payload.xyz_payload;
+                        gs.set_XYZ(p.x, p.y, p.z, p.drawing_kick);
+                        break;
+                    }
+                    case set_q_t:
+                    {
+                        auto p = data.payload.q_payload;
+                        gs.set_Q(p.q);
+                        break;
+                    }
+                    case set_crt_t:
+                    {
+                        auto p = data.payload.crt_payload;
+                        gs.reg.set_CRT(p.interlaced, p.mode, p.frame_mode);
+                        break;
+                    }
+                    case render_crt_t:
+                    {
+                        auto p = data.payload.render_payload;
+
+                        while (!p.target_mutex->try_lock())
+                        {
+                            printf("[GS_t] buffer lock failed!\n");
+                            std::this_thread::yield();
+                        }
+                        std::lock_guard<std::mutex> lock(*p.target_mutex, std::adopt_lock);
+                        gs.render_CRT(p.target);
+                        GS_return_message_payload return_payload;
+                        return_payload.no_payload = { 0 };
+                        return_fifo->push({ GS_return::render_complete_t,return_payload });
+                        break;
+                    }
+                    case assert_finish_t:
+                        gs.reg.assert_FINISH();
+                        break;
+                    case set_vblank_t:
+                    {
+                        auto p = data.payload.vblank_payload;
+                        gs.reg.set_VBLANK(p.vblank);
+                        break;
+                    }
+                    case memdump_t:
+                        gs.memdump();
+                        break;
+                    case die_t:
+                        return;
+                    case loadstate_t:
+                    {
+                        gs.load_state(data.payload.loadstate_payload.state);
+                        GS_return_message_payload return_payload;
+                        return_payload.no_payload = { 0 };
+                        return_fifo->push({ GS_return::loadstate_done_t,return_payload });
+                    }
+                        break;
+                    case savestate_t:
+                    {
+                        gs.save_state(data.payload.savestate_payload.state);
+                        GS_return_message_payload return_payload;
+                        return_payload.no_payload = { 0 };
+                        return_fifo->push({ GS_return::savestate_done_t,return_payload });
+                    }
+                        break;
                 }
             }
             else
@@ -1997,4 +2013,80 @@ void GraphicsSynthesizerThread::clut_CSM2_lookup(uint8_t entry, RGBAQ_REG &tex_c
     tex_color.g = ((color >> 5) & 0x1F) << 3;
     tex_color.b = ((color >> 10) & 0x1F) << 3;
     tex_color.a = (color & 0x8000) ? 0x80 : 0x00;
+}
+
+void GraphicsSynthesizerThread::load_state(ifstream *state)
+{
+    state->read((char*)local_mem, 1024 * 1024 * 4);
+    state->read((char*)&IMR, sizeof(IMR));
+    state->read((char*)&context1, sizeof(context1));
+    state->read((char*)&context2, sizeof(context2));
+
+    int current_ctx_id = 1;
+    state->read((char*)&current_ctx_id, sizeof(current_ctx_id));
+    if (current_ctx_id == 1)
+        current_ctx = &context1;
+    else
+        current_ctx = &context2;
+
+    state->read((char*)&PRIM, sizeof(PRIM));
+    state->read((char*)&RGBAQ, sizeof(RGBAQ));
+    state->read((char*)&UV, sizeof(UV));
+    state->read((char*)&ST, sizeof(ST));
+    state->read((char*)&TEXA, sizeof(TEXA));
+    state->read((char*)&TEXCLUT, sizeof(TEXCLUT));
+    state->read((char*)&DTHE, sizeof(DTHE));
+    state->read((char*)&COLCLAMP, sizeof(COLCLAMP));
+
+    state->read((char*)&BITBLTBUF, sizeof(BITBLTBUF));
+    state->read((char*)&TRXPOS, sizeof(TRXPOS));
+    state->read((char*)&TRXREG, sizeof(TRXREG));
+    state->read((char*)&TRXDIR, sizeof(TRXDIR));
+    state->read((char*)&BUSDIR, sizeof(BUSDIR));
+    state->read((char*)&pixels_transferred, sizeof(pixels_transferred));
+
+    state->read((char*)&PSMCT24_color, sizeof(PSMCT24_color));
+    state->read((char*)&PSMCT24_unpacked_count, sizeof(PSMCT24_unpacked_count));
+
+    state->read((char*)&reg, sizeof(reg));
+    state->read((char*)&current_vtx, sizeof(current_vtx));
+    state->read((char*)&vtx_queue, sizeof(vtx_queue));
+    state->read((char*)&num_vertices, sizeof(num_vertices));
+}
+
+void GraphicsSynthesizerThread::save_state(ofstream *state)
+{
+    state->write((char*)local_mem, 1024 * 1024 * 4);
+    state->write((char*)&IMR, sizeof(IMR));
+    state->write((char*)&context1, sizeof(context1));
+    state->write((char*)&context2, sizeof(context2));
+
+    int current_ctx_id = 1;
+    if (current_ctx == &context2)
+        current_ctx_id = 2;
+    state->write((char*)&current_ctx_id, sizeof(current_ctx_id));
+
+    state->write((char*)&PRIM, sizeof(PRIM));
+    state->write((char*)&RGBAQ, sizeof(RGBAQ));
+    state->write((char*)&UV, sizeof(UV));
+    state->write((char*)&ST, sizeof(ST));
+    state->write((char*)&TEXA, sizeof(TEXA));
+    state->write((char*)&TEXCLUT, sizeof(TEXCLUT));
+    state->write((char*)&DTHE, sizeof(DTHE));
+    state->write((char*)&COLCLAMP, sizeof(COLCLAMP));
+
+    state->write((char*)&BITBLTBUF, sizeof(BITBLTBUF));
+    state->write((char*)&TRXPOS, sizeof(TRXPOS));
+    state->write((char*)&TRXREG, sizeof(TRXREG));
+    state->write((char*)&TRXDIR, sizeof(TRXDIR));
+    state->write((char*)&BUSDIR, sizeof(BUSDIR));
+    state->write((char*)&pixels_transferred, sizeof(pixels_transferred));
+
+    state->write((char*)&PSMCT24_color, sizeof(PSMCT24_color));
+    state->write((char*)&PSMCT24_unpacked_count, sizeof(PSMCT24_unpacked_count));
+
+    state->write((char*)&reg, sizeof(reg));
+    state->write((char*)&current_vtx, sizeof(current_vtx));
+    state->write((char*)&vtx_queue, sizeof(vtx_queue));
+    state->write((char*)&num_vertices, sizeof(num_vertices));
 }

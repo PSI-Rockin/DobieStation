@@ -1,6 +1,7 @@
 #ifndef GIF_HPP
 #define GIF_HPP
 #include <cstdint>
+#include <fstream>
 
 #include "int128.hpp"
 
@@ -25,7 +26,6 @@ class GraphicsInterface
     private:
         GraphicsSynthesizer* gs;
         GIFtag current_tag;
-        bool processing_GIF_prim;
 
         uint8_t active_path;
         uint8_t path_queue;
@@ -49,6 +49,9 @@ class GraphicsInterface
         bool send_PATH1(uint128_t quad);
         void send_PATH2(uint32_t data[4]);
         void send_PATH3(uint128_t quad);
+
+        void load_state(std::ifstream& state);
+        void save_state(std::ofstream& state);
 };
 
 inline bool GraphicsInterface::path_active(int index)

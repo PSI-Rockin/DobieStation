@@ -47,6 +47,26 @@ void EmuThread::load_CDVD(const char* name)
     load_mutex.unlock();
 }
 
+bool EmuThread::load_state(const char *name)
+{
+    load_mutex.lock();
+    bool fail = false;
+    if (!e.request_load_state(name))
+        fail = true;
+    load_mutex.unlock();
+    return fail;
+}
+
+bool EmuThread::save_state(const char *name)
+{
+    load_mutex.lock();
+    bool fail = false;
+    if (!e.request_save_state(name))
+        fail = true;
+    load_mutex.unlock();
+    return fail;
+}
+
 void EmuThread::run()
 {
     forever
@@ -80,7 +100,7 @@ void EmuThread::run()
             }
             catch (Emulation_error &e)
             {
-                printf("Emulation error!");
+                printf("Fatal emulation error occurred, stopping execution\n%s\n", e.what());
                 emit emu_error(QString(e.what()));
                 pause(PAUSE_EVENT::GAME_NOT_LOADED);
             }

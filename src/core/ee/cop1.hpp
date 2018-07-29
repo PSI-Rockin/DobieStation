@@ -1,6 +1,7 @@
 #ifndef COP1_HPP
 #define COP1_HPP
 #include <cstdint>
+#include <fstream>
 
 struct COP1_CONTROL
 {
@@ -67,6 +68,9 @@ class Cop1
         void c_lt_s(int reg1, int reg2);
         void c_eq_s(int reg1, int reg2);
         void c_le_s(int reg1, int reg2);
+
+        void load_state(std::ifstream& state);
+        void save_state(std::ofstream& state);
 };
 
 #endif // COP1_HPP

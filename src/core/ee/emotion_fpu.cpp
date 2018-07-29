@@ -2,7 +2,6 @@
 #include <cstdlib>
 #include "emotioninterpreter.hpp"
 
-
 void EmotionInterpreter::cop_s(Cop1& fpu, uint32_t instruction)
 {
     uint8_t op = instruction & 0x3F;

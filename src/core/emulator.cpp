@@ -6,7 +6,7 @@
 #include "emulator.hpp"
 #include "errors.hpp"
 
-#define CYCLES_PER_FRAME 4900000
+#define CYCLES_PER_FRAME 4900000 * 0.3
 #define VBLANK_START CYCLES_PER_FRAME * 0.75
 
 Emulator::Emulator() :
@@ -47,6 +47,10 @@ void Emulator::run()
     VBLANK_sent = false;
     const int originalRounding = fegetround();
     fesetround(FE_TOWARDZERO);
+    if (save_requested)
+        save_state(savestate_path.c_str());
+    if (load_requested)
+        load_state(savestate_path.c_str());
     while (instructions_run < CYCLES_PER_FRAME)
     {
         int cycles = cpu.run(8);
@@ -92,6 +96,8 @@ void Emulator::run()
 
 void Emulator::reset()
 {
+    save_requested = false;
+    load_requested = false;
     iop_i_ctrl_delay = 0;
     ee_stdout = "";
     frames = 0;

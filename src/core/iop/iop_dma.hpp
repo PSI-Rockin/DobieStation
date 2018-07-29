@@ -1,6 +1,7 @@
 #ifndef IOP_DMA_HPP
 #define IOP_DMA_HPP
 #include <cstdint>
+#include <fstream>
 
 struct IOP_DMA_Chan_Control
 {
@@ -93,6 +94,9 @@ class IOP_DMA
         void set_chan_count(int index, uint16_t value);
         void set_chan_control(int index, uint32_t value);
         void set_chan_tag_addr(int index, uint32_t value);
+
+        void load_state(std::ifstream& state);
+        void save_state(std::ofstream& state);
 };
 
 #endif // IOP_DMA_HPP

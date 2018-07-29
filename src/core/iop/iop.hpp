@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstdio>
+#include <fstream>
 #include "iop_cop0.hpp"
 
 class Emulator;
@@ -17,7 +18,7 @@ class IOP
         uint32_t LO, HI;
 
         uint32_t new_PC;
-        int load_delay;
+        int branch_delay;
         bool can_disassemble;
         bool will_branch;
         bool inc_PC;
@@ -60,6 +61,9 @@ class IOP
         void write8(uint32_t addr, uint8_t value);
         void write16(uint32_t addr, uint16_t value);
         void write32(uint32_t addr, uint32_t value);
+
+        void load_state(std::ifstream& state);
+        void save_state(std::ofstream& state);
 };
 
 inline uint32_t IOP::get_PC()

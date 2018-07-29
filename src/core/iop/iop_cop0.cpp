@@ -57,7 +57,8 @@ uint32_t IOP_Cop0::mfc(int cop_reg)
         case 15:
             return 0x1F;
         default:
-            Errors::die("[IOP COP0] MFC: Unknown cop_reg %d\n", cop_reg);
+            Errors::print_warning("[IOP COP0] MFC: Unknown cop_reg %d\n", cop_reg);
+            return 0;
     }
 }
 

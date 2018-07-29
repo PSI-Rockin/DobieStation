@@ -33,6 +33,8 @@ enum SKIP_HACK
 class Emulator
 {
     private:
+        bool save_requested, load_requested;
+        std::string savestate_path;
         int frames;
         Cop0 cp0;
         Cop1 fpu;
@@ -100,6 +102,11 @@ class Emulator
         uint32_t* get_framebuffer();
         void get_resolution(int& w, int& h);
         void get_inner_resolution(int& w, int& h);
+
+        bool request_load_state(const char* file_name);
+        bool request_save_state(const char* file_name);
+        void load_state(const char* file_name);
+        void save_state(const char* file_name);
 
         uint8_t read8(uint32_t address);
         uint16_t read16(uint32_t address);

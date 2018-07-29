@@ -2,6 +2,7 @@
 #define VU_HPP
 #include <cstdint>
 #include <cstdio>
+#include <fstream>
 
 #include "../int128.hpp"
 
@@ -205,6 +206,9 @@ class VectorUnit
         void xgkick(uint8_t is);
         void xitop(uint8_t it);
         void xtop(uint8_t it);
+
+        void load_state(std::ifstream& state);
+        void save_state(std::ofstream& state);
 };
 
 template <typename T>

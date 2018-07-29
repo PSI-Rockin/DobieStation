@@ -1,6 +1,7 @@
 #ifndef INTC_HPP
 #define INTC_HPP
 #include <cstdint>
+#include <fstream>
 
 class EmotionEngine;
 
@@ -42,6 +43,9 @@ class INTC
 
         void assert_IRQ(int id);
         void deassert_IRQ(int id);
+
+        void load_state(std::ifstream& state);
+        void save_state(std::ofstream& state);
 };
 
 #endif // INTC_HPP

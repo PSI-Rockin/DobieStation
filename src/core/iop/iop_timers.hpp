@@ -1,6 +1,7 @@
 #ifndef IOP_TIMERS_HPP
 #define IOP_TIMERS_HPP
 #include <cstdint>
+#include <fstream>
 
 struct IOP_Timer_Control
 {
@@ -45,6 +46,9 @@ class IOPTiming
         void write_counter(int index, uint32_t value);
         void write_control(int index, uint16_t value);
         void write_target(int index, uint32_t value);
+
+        void load_state(std::ifstream& state);
+        void save_state(std::ofstream& state);
 };
 
 #endif // IOP_TIMERS_HPP

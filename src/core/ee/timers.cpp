@@ -190,7 +190,7 @@ void EmotionTiming::write_control(int index, uint32_t value)
     timers[index].control.mode = value & 0x3;
     timers[index].control.gate_enable = value & (1 << 2);
     if (timers[index].control.gate_enable)
-        Errors::die("EmotionTiming timer %d control.gate_enable is true", index);
+        Errors::die("[EE Timing] Timer %d control.gate_enable is true", index);
     timers[index].control.gate_VBLANK = value & (1 << 3);
     timers[index].control.gate_mode = (value >> 4) & 0x3;
     timers[index].control.clear_on_reference = value & (1 << 6);

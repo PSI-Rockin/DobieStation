@@ -18,8 +18,8 @@ void VectorInterface::reset()
 {
     std::queue<uint32_t> empty;
     FIFO.swap(empty);
-    command_len = 0;
     command = 0;
+    command_len = 0;
     buffer_size = 0;
     DBF = false;
     vu->set_TOP_regs(&TOP, &ITOP);
@@ -429,16 +429,21 @@ bool VectorInterface::transfer_DMAtag(uint128_t tag)
 {
     //This should return false if the transfer stalls due to the FIFO filling up
     printf("[VIF] Transfer tag: $%08X_%08X_%08X_%08X\n", tag._u32[3], tag._u32[2], tag._u32[1], tag._u32[0]);
+    if (FIFO.size() > 62)
+        return false;
     for (int i = 2; i < 4; i++)
         FIFO.push(tag._u32[i]);
     return true;
 }
 
-void VectorInterface::feed_DMA(uint128_t quad)
+bool VectorInterface::feed_DMA(uint128_t quad)
 {
     //printf("[VIF] Feed DMA: $%08X_%08X_%08X_%08X\n", quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
+    if (FIFO.size() > 60)
+        return false;
     for (int i = 0; i < 4; i++)
         FIFO.push(quad._u32[i]);
+    return true;
 }
 
 void VectorInterface::disasm_micromem()
@@ -515,7 +520,9 @@ uint32_t VectorInterface::get_stat()
     reg |= ((FIFO.size() != 0) * 3);
     reg |= vu->is_running() << 2;
     reg |= DBF << 7;
-    reg |= ((FIFO.size() != 0) * 16) << 24;
+
+    //Round up to nearest quad
+    reg |= ((FIFO.size() + 3) / 4) << 24;
     //printf("[VIF] Get STAT: $%08X\n", reg);
     return reg;
 }

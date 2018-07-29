@@ -184,7 +184,9 @@ void DMAC::process_VIF0(int cycles)
         cycles--;
         if (channels[VIF0].quadword_count)
         {
-            vif0->feed_DMA(fetch128(channels[VIF0].address));
+            //If FIFO is too full to hold an extra quad, stall
+            if (!vif0->feed_DMA(fetch128(channels[VIF0].address)))
+                return;
 
             channels[VIF0].address += 16;
             channels[VIF0].quadword_count--;
@@ -200,7 +202,11 @@ void DMAC::process_VIF0(int cycles)
             {
                 uint128_t DMAtag = fetch128(channels[VIF0].tag_address);
                 if (channels[VIF0].control & (1 << 6))
-                    vif0->transfer_DMAtag(DMAtag);
+                {
+                    //If FIFO is too full to hold tag, stall
+                    if (!vif0->transfer_DMAtag(DMAtag))
+                        return;
+                }
                 handle_source_chain(VIF0);
             }
         }
@@ -216,7 +222,8 @@ void DMAC::process_VIF1(int cycles)
         cycles--;
         if (channels[VIF1].quadword_count)
         {
-            vif1->feed_DMA(fetch128(channels[VIF1].address));
+            if (!vif1->feed_DMA(fetch128(channels[VIF1].address)))
+                return;
 
             channels[VIF1].address += 16;
             channels[VIF1].quadword_count--;
@@ -232,7 +239,10 @@ void DMAC::process_VIF1(int cycles)
             {
                 uint128_t DMAtag = fetch128(channels[VIF1].tag_address);
                 if (channels[VIF1].control & (1 << 6))
-                    vif1->transfer_DMAtag(DMAtag);
+                {
+                    if (!vif1->transfer_DMAtag(DMAtag))
+                        return;
+                }
                 handle_source_chain(VIF1);
             }
         }
