@@ -240,7 +240,7 @@ inline void VectorUnit::write_data(uint32_t addr, T data)
 
 inline bool VectorUnit::is_running()
 {
-    return running;
+    return running || transferring_GIF;
 }
 
 inline int VectorUnit::get_id()

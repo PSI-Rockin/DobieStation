@@ -216,15 +216,20 @@ void GraphicsInterface::request_PATH(int index)
 
 void GraphicsInterface::deactivate_PATH(int index)
 {
-    active_path = 0;
-    for (int path = 1; path <= 3; path++)
+    path_queue &= ~(1 << index);
+    if (active_path == index)
     {
-        int bit = 1 << path;
-        if (path_queue & bit)
+        active_path = 0;
+
+        for (int path = 1; path <= 3; path++)
         {
-            path_queue &= ~bit;
-            active_path = path;
-            break;
+            int bit = 1 << path;
+            if (path_queue & bit)
+            {
+                path_queue &= ~bit;
+                active_path = path;
+                break;
+            }
         }
     }
 }

@@ -161,7 +161,7 @@ void VectorInterface::decode_cmd(uint32_t value)
     command = (value >> 24) & 0x7F;
     imm = value & 0xFFFF;
 
-    if (value & 0x80)
+    if (value & 0x80000000)
     {
         vif_ibit_detected = true;
     }
@@ -785,7 +785,7 @@ void VectorInterface::disasm_micromem()
 uint32_t VectorInterface::get_stat()
 {
     uint32_t reg = 0;
-    reg |= ((FIFO.size() != 0) * 3);
+    reg |= vif_int_stalled ? 0 : ((FIFO.size() != 0) * 3);
     reg |= vu->is_running() << 2;
     reg |= mark_detected << 6;
     reg |= DBF << 7;
