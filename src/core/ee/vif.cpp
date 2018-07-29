@@ -163,6 +163,8 @@ void VectorInterface::decode_cmd(uint32_t value)
     {
         if (!VIF_ERR.mask_interrupt)
             vif_ibit_detected = true;
+        else
+            Errors::die("[VIF] Stall detected when VIF_ERR.MI1 set\n", command);
     }
 
     switch (command)
