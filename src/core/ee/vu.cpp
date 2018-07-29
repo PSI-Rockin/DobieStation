@@ -322,6 +322,8 @@ void VectorUnit::branch(bool condition, int32_t imm)
 {
     if (condition)
     {
+        if(branch_on)
+            Errors::die("[VU%d] Branch in Jump/Branch Delay Slot!\n", get_id());
         branch_on = true;
         delay_slot = 1;
         new_PC = PC + imm + 8;
@@ -330,6 +332,8 @@ void VectorUnit::branch(bool condition, int32_t imm)
 
 void VectorUnit::jp(uint16_t addr)
 {
+    if (branch_on)
+        Errors::die("[VU%d] Jump in Jump/Branch Delay Slot!\n", get_id());
     new_PC = addr;
     branch_on = true;
     delay_slot = 1;
