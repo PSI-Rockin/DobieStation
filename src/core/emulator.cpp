@@ -10,7 +10,7 @@
 #define VBLANK_START CYCLES_PER_FRAME * 0.75
 
 Emulator::Emulator() :
-    cdvd(this), cp0(&dmac), cpu(&cp0, &fpu, this, (uint8_t*)&scratchpad, &vu0),
+    cdvd(this), cp0(&dmac), cpu(&cp0, &fpu, this, (uint8_t*)&scratchpad, &vu0, &vu1),
     dmac(&cpu, this, &gif, &ipu, &sif, &vif0, &vif1), gif(&gs), gs(&intc),
     iop(this), iop_dma(this, &cdvd, &sif, &sio2, &spu, &spu2), iop_timers(this), intc(&cpu), ipu(&intc),
     timers(&intc), sio2(this, &pad), spu(1, this), spu2(2, this), vif0(nullptr, &vu0, &intc, 0), vif1(&gif, &vu1, &intc, 1), vu0(0), vu1(1)
@@ -331,6 +331,8 @@ uint16_t Emulator::read16(uint32_t address)
 {
     if (address < 0x10000000)
         return *(uint16_t*)&RDRAM[address & 0x01FFFFFF];
+    if (address >= 0x10000000 && address < 0x10002000)
+        return (uint16_t)timers.read32(address);
     if (address >= 0x1FC00000 && address < 0x20000000)
         return *(uint16_t*)&BIOS[address & 0x3FFFFF];
     if (address >= 0x1C000000 && address < 0x1C200000)

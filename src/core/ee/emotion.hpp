@@ -26,6 +26,7 @@ class EmotionEngine
         Cop0* cp0;
         Cop1* fpu;
         VectorUnit* vu0;
+        VectorUnit* vu1;
 
         //Each register is 128-bit
         uint8_t gpr[32 * sizeof(uint64_t) * 2];
@@ -47,7 +48,7 @@ class EmotionEngine
         void handle_exception(uint32_t new_addr, uint8_t code);
         void deci2call(uint32_t func, uint32_t param);
     public:
-        EmotionEngine(Cop0* cp0, Cop1* fpu, Emulator* e, uint8_t* sp, VectorUnit* vu0);
+        EmotionEngine(Cop0* cp0, Cop1* fpu, Emulator* e, uint8_t* sp, VectorUnit* vu0, VectorUnit* vu1);
         static const char* REG(int id);
         static const char* SYSCALL(int id);
         void reset();
@@ -108,6 +109,7 @@ class EmotionEngine
         void set_SA(uint64_t value);
         void set_LO_HI(uint64_t a, uint64_t b, bool hi = false);
 
+        void hle_syscall();
         void syscall_exception();
         void int0();
         void int1();
@@ -121,6 +123,7 @@ class EmotionEngine
 
         void fpu_cop_s(uint32_t instruction);
         void fpu_bc1(int32_t offset, bool test_true, bool likely);
+        void cop2_bc2(int32_t offset, bool test_true, bool likely);
         void fpu_cvt_s_w(int dest, int source);
 
         void qmfc2(int dest, int cop_reg);

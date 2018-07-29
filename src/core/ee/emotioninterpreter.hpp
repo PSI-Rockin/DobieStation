@@ -125,12 +125,14 @@ namespace EmotionInterpreter
     void fpu_abs(Cop1& fpu, uint32_t instruction);
     void fpu_mov(Cop1& fpu, uint32_t instruction);
     void fpu_neg(Cop1& fpu, uint32_t instruction);
+    void fpu_rsqrt(Cop1& fpu, uint32_t instruction);
     void fpu_adda(Cop1& fpu, uint32_t instruction);
     void fpu_suba(Cop1& fpu, uint32_t instruction);
     void fpu_mula(Cop1& fpu, uint32_t instruction);
     void fpu_madd(Cop1& fpu, uint32_t instruction);
     void fpu_msub(Cop1& fpu, uint32_t instruction);
     void fpu_madda(Cop1& fpu, uint32_t instruction);
+    void fpu_msuba(Cop1& fpu, uint32_t instruction);
     void fpu_cvt_w_s(Cop1& fpu, uint32_t instruction);
     void fpu_max_s(Cop1& fpu, uint32_t instruction);
     void fpu_min_s(Cop1& fpu, uint32_t instruction);
@@ -139,6 +141,7 @@ namespace EmotionInterpreter
     void fpu_c_lt_s(Cop1& fpu, uint32_t instruction);
     void fpu_c_le_s(Cop1& fpu, uint32_t instruction);
     void cop_bc1(EmotionEngine& cpu, uint32_t instruction);
+    void cop2_bc2(EmotionEngine& cpu, uint32_t instruction);
     void cop_cvt_s_w(EmotionEngine& cpu, uint32_t instruction);
 
     void cop2_qmfc2(EmotionEngine& cpu, uint32_t instruction);
@@ -170,6 +173,8 @@ namespace EmotionInterpreter
     void cop2_viadd(VectorUnit& vu0, uint32_t instruction);
     void cop2_viaddi(VectorUnit& vu0, uint32_t instruction);
     void cop2_viand(VectorUnit& vu0, uint32_t instruction);
+    void cop2_vcallms(VectorUnit& vu0, uint32_t instruction);
+    void cop2_vcallmsr(VectorUnit& vu0, uint32_t instruction);
 
     void cop2_special2(VectorUnit& vu0, uint32_t instruction);
     void cop2_vaddabc(VectorUnit& vu0, uint32_t instruction);
@@ -191,10 +196,13 @@ namespace EmotionInterpreter
     void cop2_vadda(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmadda(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmula(VectorUnit& vu0, uint32_t instruction);
+    void cop2_vsuba(VectorUnit& vu0, uint32_t instruction);
     void cop2_vopmula(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmove(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmr32(VectorUnit& vu0, uint32_t instruction);
+    void cop2_vlqi(VectorUnit& vu0, uint32_t instruction);
     void cop2_vsqi(VectorUnit& vu0, uint32_t instruction);
+    void cop2_vlqd(VectorUnit& vu0, uint32_t instruction);
     void cop2_vdiv(VectorUnit& vu0, uint32_t instruction);
     void cop2_vsqrt(VectorUnit& vu0, uint32_t instruction);
     void cop2_vrsqrt(VectorUnit& vu0, uint32_t instruction);

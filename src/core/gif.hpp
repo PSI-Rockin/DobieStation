@@ -29,6 +29,7 @@ class GraphicsInterface
 
         uint8_t active_path;
         uint8_t path_queue;
+        bool path3_vif_masked;
 
         void process_PACKED(uint128_t quad);
         void process_REGLIST(uint128_t quad);
@@ -43,6 +44,7 @@ class GraphicsInterface
 
         void request_PATH(int index);
         void deactivate_PATH(int index);
+        void set_path3_vifmask(int value);
 
         bool send_PATH(int index, uint128_t quad);
 
