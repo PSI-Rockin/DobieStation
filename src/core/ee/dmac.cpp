@@ -646,6 +646,9 @@ uint8_t DMAC::read8(uint32_t address)
     uint8_t reg = 0;
     switch (address)
     {
+        case 0x10008000:
+            reg = channels[VIF0].control & 0xFF;
+            break;
         case 0x10009000:
             reg = channels[VIF1].control & 0xFF;
             break;
@@ -660,6 +663,18 @@ uint32_t DMAC::read32(uint32_t address)
     uint32_t reg = 0;
     switch (address)
     {
+        case 0x10008000:
+            reg = channels[VIF0].control;
+            break;
+        case 0x10008010:
+            reg = channels[VIF0].address;
+            break;
+        case 0x10008020:
+            reg = channels[VIF0].quadword_count;
+            break;
+        case 0x10008030:
+            reg = channels[VIF0].tag_address;
+            break;
         case 0x10009000:
             reg = channels[VIF1].control;
             break;
@@ -783,6 +798,10 @@ void DMAC::write8(uint32_t address, uint8_t value)
 {
     switch (address)
     {
+        case 0x10008000:
+            channels[VIF0].control &= ~0xFF;
+            channels[VIF0].control |= value;
+            break;
         case 0x10009000:
             channels[VIF1].control &= ~0xFF;
             channels[VIF1].control |= value;

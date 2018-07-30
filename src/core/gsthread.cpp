@@ -1587,6 +1587,10 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
         case 0x02:
             ppd = 4;
             break;
+        //PSMCT16S
+        case 0x0A:
+            ppd = 4;
+            break;
         //PSMCT8
         case 0x13:
             ppd = 8;
@@ -1632,6 +1636,11 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
                 break;
             case 0x02:
                 write_PSMCT16_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.dest_y, (data >> (i * 16)) & 0xFFFF);
+                pixels_transferred++;
+                TRXPOS.int_dest_x++;
+                break;
+            case 0xA:
+                write_PSMCT16S_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.dest_y, (data >> (i * 16)) & 0xFFFF);
                 pixels_transferred++;
                 TRXPOS.int_dest_x++;
                 break;

@@ -56,12 +56,14 @@ class Cop1
         void abs_s(int dest, int source);
         void mov_s(int dest, int source);
         void neg_s(int dest, int source);
+        void rsqrt_s(int dest, int reg1, int reg2);
         void adda_s(int reg1, int reg2);
         void suba_s(int reg1, int reg2);
         void mula_s(int reg1, int reg2);
         void madd_s(int dest, int reg1, int reg2);
         void msub_s(int dest, int reg1, int reg2);
         void madda_s(int reg1, int reg2);
+        void msuba_s(int reg1, int reg2);
         void max_s(int dest, int reg1, int reg2);
         void min_s(int dest, int reg1, int reg2);
         void c_f_s();

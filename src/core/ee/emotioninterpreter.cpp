@@ -837,6 +837,9 @@ void EmotionInterpreter::cop(EmotionEngine &cpu, uint32_t instruction)
         case 0x108:
             cop_bc1(cpu, instruction);
             break;
+        case 0x208:
+            cop2_bc2(cpu, instruction);
+            break;
         case 0x110:
             cpu.fpu_cop_s(instruction);
             break;

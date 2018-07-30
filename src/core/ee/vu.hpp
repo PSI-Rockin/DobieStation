@@ -44,9 +44,10 @@ class VectorUnit
         uint8_t data_mem[1024 * 16];
 
         bool running;
-        uint16_t PC, new_PC;
+        uint16_t PC, new_PC, secondbranch_PC;
         bool branch_on;
         bool finish_on;
+        bool second_branch_pending;
         int delay_slot;
 
         int XGKICK_cycles;
@@ -60,6 +61,7 @@ class VectorUnit
         VU_I int_gpr[16];
 
         //Control registers
+        uint32_t CMSAR0;
         VU_GPR ACC;
         uint32_t status;
         uint32_t clip_flags;
@@ -91,6 +93,7 @@ class VectorUnit
         void flush_pipes();
 
         void run(int cycles);
+        void callmsr();
         void mscal(uint32_t addr);
         void end_execution();
         void reset();
@@ -137,6 +140,7 @@ class VectorUnit
         void fcget(uint8_t dest);
         void fcor(uint32_t value);
         void fcset(uint32_t value);
+        void fmeq(uint8_t dest, uint8_t source);
         void fmand(uint8_t dest, uint8_t source);
         void ftoi0(uint8_t field, uint8_t dest, uint8_t source);
         void ftoi4(uint8_t field, uint8_t dest, uint8_t source);
@@ -156,6 +160,7 @@ class VectorUnit
         void itof0(uint8_t field, uint8_t dest, uint8_t source);
         void itof4(uint8_t field, uint8_t dest, uint8_t source);
         void itof12(uint8_t field, uint8_t dest, uint8_t source);
+        void itof15(uint8_t field, uint8_t dest, uint8_t source);
         void lq(uint8_t field, uint8_t dest, uint8_t base, int32_t offset);
         void lqd(uint8_t field, uint8_t dest, uint8_t base);
         void lqi(uint8_t field, uint8_t dest, uint8_t base);
@@ -176,6 +181,7 @@ class VectorUnit
         void minii(uint8_t field, uint8_t dest, uint8_t source);
         void move(uint8_t field, uint8_t dest, uint8_t source);
         void mr32(uint8_t field, uint8_t dest, uint8_t source);
+        void msuba(uint8_t field, uint8_t reg1, uint8_t reg2);
         void msubabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_reg);
         void msubai(uint8_t field, uint8_t source);
         void msub(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2);
@@ -201,6 +207,8 @@ class VectorUnit
         void sqi(uint8_t field, uint8_t source, uint8_t base);
         void vu_sqrt(uint8_t ftf, uint8_t source);
         void sub(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2);
+        void suba(uint8_t field, uint8_t reg1, uint8_t reg2);
+        void subabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_reg);
         void subai(uint8_t field, uint8_t source);
         void subbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
         void subi(uint8_t field, uint8_t dest, uint8_t source);

@@ -255,6 +255,30 @@ void Cop1::neg_s(int dest, int source)
     printf("[FPU] neg.s: %f = -%f\n", gpr[source].f, gpr[dest].f);
 }
 
+void Cop1::rsqrt_s(int dest, int reg1, int reg2)
+{
+    if ((gpr[reg2].u & 0x7F800000) == 0)
+        gpr[dest].u = (gpr[reg1].u ^ gpr[reg2].u) & 0x80000000;
+    else
+    {
+        if (gpr[reg2].u & 0x80000000)
+        {
+            printf("[FPU] Negative RSqrt Fs = %x\n", gpr[reg2].u);
+            control.i = true;
+            control.si = true;
+        }
+        COP1_REG temp;
+        temp.f = sqrt(fabs(convert(gpr[reg2].u)));
+        gpr[dest].f = convert(gpr[reg1].u) / convert(temp.u);
+    }
+
+    control.d = false;
+    check_overflow(gpr[dest].u, false);
+    check_underflow(gpr[dest].u, false);
+    printf("[FPU] rsqrt.s: %f(%d) = %f(%d)\n", gpr[source].f, source, gpr[dest].f, dest);
+}
+
+
 void Cop1::adda_s(int reg1, int reg2)
 {
     float op1 = convert(gpr[reg1].u);
@@ -324,6 +348,18 @@ void Cop1::madda_s(int reg1, int reg2)
     check_overflow(accumulator.u, true);
     check_underflow(accumulator.u, true);
     printf("[FPU] madda.s: %f + (%f * %f) = %f", acc, op1, op2, accumulator.f);
+}
+
+void Cop1::msuba_s(int reg1, int reg2)
+{
+    float op1 = convert(gpr[reg1].u);
+    float op2 = convert(gpr[reg2].u);
+    float acc = accumulator.f;
+    accumulator.f -= op1 * op2;
+
+    check_overflow(accumulator.u, true);
+    check_underflow(accumulator.u, true);
+    printf("[FPU] msuba.s: %f + (%f * %f) = %f", acc, op1, op2, accumulator.f);
 }
 
 void Cop1::max_s(int dest, int reg1, int reg2)
