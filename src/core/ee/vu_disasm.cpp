@@ -517,9 +517,9 @@ string VU_Disasm::div(uint32_t instr)
 string VU_Disasm::vu_sqrt(uint32_t instr)
 {
     stringstream output;
-    uint32_t fs = (instr >> 16) & 0x1F;
-    string ftf = get_fsf((instr >> 23) & 0x3);
-    output << "sqrt Q, vf" << ftf;
+    uint32_t ft = (instr >> 16) & 0x1F;
+    uint8_t ftf = (instr >> 23) & 0x3;
+    output << "sqrt Q, vf" << ft << "." << get_fsf(ftf);
     return output.str();
 }
 
