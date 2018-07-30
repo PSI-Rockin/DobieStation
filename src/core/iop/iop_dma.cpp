@@ -115,14 +115,14 @@ void IOP_DMA::process_CDVD()
 
 void IOP_DMA::process_SPU()
 {
-    static int cycles = 16;
+    static int cycles = 50;
     if (cycles)
     {
         cycles--;
         return;
     }
     if (spu->running_ADMA())
-        cycles = 16;
+        cycles = 50;
     if (!channels[SPU].size)
     {
         channels[SPU].word_count = 0;
@@ -138,14 +138,14 @@ void IOP_DMA::process_SPU()
 
 void IOP_DMA::process_SPU2()
 {
-    static int cycles = 16;
+    static int cycles = 50;
     if (cycles)
     {
         cycles--;
         return;
     }
     if (spu2->running_ADMA())
-        cycles = 16;
+        cycles = 50;
     if (!channels[SPU2].size)
     {
         channels[SPU2].word_count = 0;

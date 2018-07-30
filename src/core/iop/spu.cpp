@@ -37,7 +37,7 @@ void SPU::start_DMA(int size)
     size <<= 1;
     if (autodma_ctrl & (1 << (id - 1)))
     {
-        printf("ADMA: %d\n", size);
+        printf("ADMA size: $%08X\n", size);
         ADMA_left = size;
     }
     else
@@ -50,11 +50,13 @@ void SPU::write_DMA(uint32_t value)
     //RAM[current_addr] = value & 0xFFFF;
     //RAM[current_addr + 1] = value >> 16;
     current_addr += 2;
-    if (ADMA_left >= 0x200)
+    if (ADMA_left >= 0x100)
     {
         ADMA_left -= 2;
-        if (ADMA_left <= 0)
+        if (ADMA_left < 0x100)
+        {
             autodma_ctrl |= ~3;
+        }
     }
     status.DMA_busy = true;
     status.DMA_finished = false;
@@ -87,7 +89,7 @@ uint16_t SPU::read16(uint32_t addr)
         case 0x1A8:
             return transfer_addr >> 16;
         case 0x1B0:
-            printf("[SPU%d] ADMA: $%04X\n", id, autodma_ctrl);
+            printf("[SPU%d] ADMA stat: $%04X\n", id, autodma_ctrl);
             return autodma_ctrl;
         case 0x344:
             reg |= status.DMA_finished << 7;
