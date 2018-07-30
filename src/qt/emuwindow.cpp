@@ -69,7 +69,7 @@ int EmuWindow::init(int argc, char** argv)
     bool skip_BIOS = false;
     char* argv0; // Program name; AKA argv[0]
 
-    char* bios_name, *file_name;
+    char* bios_name = nullptr, *file_name = nullptr;
 
     ARGBEGIN {
         case 'b':
