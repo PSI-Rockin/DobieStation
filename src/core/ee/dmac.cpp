@@ -878,7 +878,6 @@ void DMAC::write32(uint32_t address, uint32_t value)
             break;
         case 0x1000B000:
             printf("[DMAC] IPU_FROM CTRL: $%08X\n", value);
-            value &= ~0x100;
             channels[IPU_FROM].control = value;
             if (value & 0x100)
                 start_DMA(IPU_FROM);

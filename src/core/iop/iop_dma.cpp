@@ -115,12 +115,19 @@ void IOP_DMA::process_CDVD()
 
 void IOP_DMA::process_SPU()
 {
+    static int cycles = 16;
+    if (cycles)
+    {
+        cycles--;
+        return;
+    }
+    if (spu->running_ADMA())
+        cycles = 16;
     if (!channels[SPU].size)
     {
         channels[SPU].word_count = 0;
         transfer_end(SPU);
         spu->finish_DMA();
-        e->iop_request_IRQ(9);
         return;
     }
     uint32_t value = *(uint32_t*)&RAM[channels[SPU].addr];
@@ -131,6 +138,14 @@ void IOP_DMA::process_SPU()
 
 void IOP_DMA::process_SPU2()
 {
+    static int cycles = 16;
+    if (cycles)
+    {
+        cycles--;
+        return;
+    }
+    if (spu2->running_ADMA())
+        cycles = 16;
     if (!channels[SPU2].size)
     {
         channels[SPU2].word_count = 0;
@@ -331,11 +346,13 @@ uint32_t IOP_DMA::get_DICR2()
 
 uint32_t IOP_DMA::get_chan_addr(int index)
 {
+    printf("[IOP DMA] Read %s addr: $%08X\n", CHAN(index), channels[index].addr);
     return channels[index].addr;
 }
 
 uint32_t IOP_DMA::get_chan_block(int index)
 {
+    printf("[IOP DMA] Read %s block: $%08X\n", CHAN(index), channels[index].word_count | (channels[index].block_size << 16));
     return channels[index].word_count | (channels[index].block_size << 16);
 }
 
@@ -347,6 +364,7 @@ uint32_t IOP_DMA::get_chan_control(int index)
     reg |= channels[index].control.sync_mode << 9;
     reg |= channels[index].control.busy << 24;
     reg |= channels[index].control.unk30 << 30;
+    printf("[IOP DMA] Read %s control: $%08X\n", CHAN(index), reg);
     return reg;
 }
 
@@ -434,6 +452,13 @@ void IOP_DMA::set_chan_control(int index, uint32_t value)
     channels[index].control.unk8 = value & (1 << 8);
     channels[index].control.sync_mode = (value >> 9) & 0x3;
     channels[index].control.busy = value & (1 << 24);
+    if (channels[index].control.busy)
+    {
+        if (index == SPU)
+            spu->start_DMA(channels[index].size);
+        if (index == SPU2)
+            spu2->start_DMA(channels[index].size);
+    }
     channels[index].control.unk30 = value & (1 << 30);
 }
 

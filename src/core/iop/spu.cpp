@@ -18,15 +18,30 @@ void SPU::reset(uint8_t* RAM)
     current_addr = 0;
     core_att = 0;
     autodma_ctrl = 0x0;
-    ADMA_in_progress = false;
+    ADMA_left = 0;
+}
+
+bool SPU::running_ADMA()
+{
+    return ADMA_left >= 0;
 }
 
 void SPU::finish_DMA()
 {
-    if (autodma_ctrl)
-        autodma_ctrl |= ~3;
     status.DMA_finished = true;
     status.DMA_busy = false;
+}
+
+void SPU::start_DMA(int size)
+{
+    size <<= 1;
+    if (autodma_ctrl & (1 << (id - 1)))
+    {
+        printf("ADMA: %d\n", size);
+        ADMA_left = size;
+    }
+    else
+        ADMA_left = 0;
 }
 
 void SPU::write_DMA(uint32_t value)
@@ -35,6 +50,12 @@ void SPU::write_DMA(uint32_t value)
     //RAM[current_addr] = value & 0xFFFF;
     //RAM[current_addr + 1] = value >> 16;
     current_addr += 2;
+    if (ADMA_left >= 0x200)
+    {
+        ADMA_left -= 2;
+        if (ADMA_left <= 0)
+            autodma_ctrl |= ~3;
+    }
     status.DMA_busy = true;
     status.DMA_finished = false;
 }
@@ -67,7 +88,7 @@ uint16_t SPU::read16(uint32_t addr)
             return transfer_addr >> 16;
         case 0x1B0:
             printf("[SPU%d] ADMA: $%04X\n", id, autodma_ctrl);
-            return autodma_ctrl & 0;
+            return autodma_ctrl;
         case 0x344:
             reg |= status.DMA_finished << 7;
             reg |= status.DMA_busy << 10;
@@ -114,8 +135,6 @@ void SPU::write16(uint32_t addr, uint16_t value)
         case 0x1B0:
             printf("[SPU%d] Write ADMA: $%04X\n", id, value);
             autodma_ctrl = value;
-            if (!value)
-                ADMA_in_progress = false;
             break;
         default:
             printf("[SPU%d] Unrecognized write16 to addr $%08X of $%04X\n", id, addr, value);

@@ -69,7 +69,15 @@ int EmuWindow::init(int argc, char** argv)
     bool skip_BIOS = false;
     char* argv0; // Program name; AKA argv[0]
 
+    char* bios_name, *file_name;
+
     ARGBEGIN {
+        case 'b':
+            bios_name = ARGF();
+            break;
+        case 'f':
+            file_name = ARGF();
+            break;
         case 's':
             skip_BIOS = true;
             break;
@@ -77,15 +85,6 @@ int EmuWindow::init(int argc, char** argv)
             printf("Args: [BIOS] (Optional)[ELF/ISO]\n");
             return 1;
     } ARGEND
-
-    if (argc < 2)
-    {
-        printf("Args: [BIOS] (Optional)[ELF/ISO]\n");
-        return 1;
-    }
-
-    char* bios_name = argv[0];
-    char* file_name = argv[1];
 
     ifstream BIOS_file(bios_name, ios::binary | ios::in);
     if (!BIOS_file.is_open())

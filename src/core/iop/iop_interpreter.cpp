@@ -134,7 +134,8 @@ void IOP_Interpreter::j(IOP &cpu, uint32_t instruction)
         }
         else
         {
-            printf("[IOP] Jump to module function $%02X at $%08X\n", next_instr & 0xFF, addr);
+            printf("[IOP] Call $%02X: $%08X ($%08X, args:", next_instr & 0xFF, addr, PC);
+            printf("%08X %08X %08X %08X)\n", cpu.get_gpr(4), cpu.get_gpr(5), cpu.get_gpr(6), cpu.get_gpr(7));
         }
     }
     cpu.jp(addr);
