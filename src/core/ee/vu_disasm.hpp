@@ -39,6 +39,7 @@ namespace VU_Disasm
     std::string sqd(uint32_t instr);
     std::string div(uint32_t instr);
     std::string vu_sqrt(uint32_t instr);
+    std::string rsqrt(uint32_t instr);
     std::string mtir(uint32_t instr);
     std::string mfir(uint32_t instr);
     std::string ilwr(uint32_t instr);
@@ -53,6 +54,7 @@ namespace VU_Disasm
     std::string eleng(uint32_t instr);
     std::string erleng(uint32_t instr);
     std::string esqrt(uint32_t instr);
+    std::string ersqrt(uint32_t instr);
 
     std::string lower2(uint32_t PC, uint32_t instr);
     std::string loadstore_imm(const std::string op, uint32_t instr);

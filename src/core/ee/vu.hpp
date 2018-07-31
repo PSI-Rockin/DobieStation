@@ -137,6 +137,7 @@ class VectorUnit
         void eleng(uint8_t source);
         void esqrt(uint8_t fsf, uint8_t source);
         void erleng(uint8_t source);
+        void ersqrt(uint8_t fsf, uint8_t source);
         void fcand(uint32_t value);
         void fcget(uint8_t dest);
         void fcor(uint32_t value);

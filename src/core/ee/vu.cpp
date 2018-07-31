@@ -617,6 +617,25 @@ void VectorUnit::erleng(uint8_t source)
     printf("[VU] ERLENG: %f (%d)\n", P.f, source);
 }
 
+void VectorUnit::ersqrt(uint8_t fsf, uint8_t source)
+{
+    if (!id)
+    {
+        Errors::die("[VU] ERROR: ERSQRT called on VU0!\n");
+    }
+
+    P.f = convert(gpr[source].u[fsf]);
+    if (P.f >= 0.0)
+    {
+        P.f = sqrt(P.f);
+        if (P.f != 0)
+            P.f = 1.0f / P.f;
+    }
+
+
+    printf("[VU] ERSQRT: %f (%d)\n", P.f, source);
+}
+
 void VectorUnit::fcand(uint32_t value)
 {
     printf("[VU] FCAND: $%08X\n", value);
