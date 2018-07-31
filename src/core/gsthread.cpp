@@ -4,6 +4,7 @@
 #include <cstring>
 #include <cmath>
 #include <fstream>
+#include <cmath>
 
 #include "gsthread.hpp"
 #include "gsmem.hpp"
