@@ -21,7 +21,6 @@ static uint32_t page_PSMCT16SZ[32][64][64];
 static uint32_t page_PSMCT8[32][64][128];
 static uint32_t page_PSMCT4[32][128][128];
 
-#define printf(fmt, ...)(0)
 
 /**
   * ~ GS notes ~
@@ -1466,10 +1465,12 @@ void GraphicsSynthesizerThread::render_triangle()
                             float g = (float) v1.rgbaq.g * w1 + (float) v2.rgbaq.g * w2 + (float) v3.rgbaq.g * w3;
                             float b = (float) v1.rgbaq.b * w1 + (float) v2.rgbaq.b * w2 + (float) v3.rgbaq.b * w3;
                             float a = (float) v1.rgbaq.a * w1 + (float) v2.rgbaq.a * w2 + (float) v3.rgbaq.a * w3;
+                            float q = (float) v1.rgbaq.q * w1 + (float) v2.rgbaq.q * w2 + (float) v3.rgbaq.q * w3;
                             vtx_color.r = r / divider;
                             vtx_color.g = g / divider;
                             vtx_color.b = b / divider;
                             vtx_color.a = a / divider;
+                            vtx_color.q = q / divider;
 
                             if (PRIM.texture_mapping)
                             {
@@ -1787,14 +1788,13 @@ void GraphicsSynthesizerThread::host_to_host()
 
 void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, const RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color)
 {
-    //LOD calculations currently give a bad result, unsure why
-    /*double LOD;
+    double LOD;
     if (current_ctx->tex1.LOD_method == 0)
         LOD = (log2(1.0 / abs(vtx_color.q)) * pow(2, current_ctx->tex1.L)) + current_ctx->tex1.K;
     else
-        LOD = current_ctx->tex1.K;*/
-
-    if (current_ctx->tex1.filter_larger)// && LOD <= 0.0)
+        LOD = current_ctx->tex1.K;
+    
+    if (current_ctx->tex1.filter_larger && LOD <= 0.0)
     {
         RGBAQ_REG a, b, c, d;
         int16_t uu = (u - 8) >> 4;
