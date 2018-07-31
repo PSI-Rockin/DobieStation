@@ -1816,7 +1816,10 @@ void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, const RGBAQ_REG
         LOD = (log2(1.0 / fabs(vtx_color.q)) * pow(2, current_ctx->tex1.L)) + current_ctx->tex1.K;
     else
         LOD = current_ctx->tex1.K;
-    
+
+    if (LOD < 1.0 / pow(2, 7)) //ps2 precision limit
+        LOD = 0.0;
+
     if (current_ctx->tex1.filter_larger && LOD <= 0.0)
     {
         RGBAQ_REG a, b, c, d;
