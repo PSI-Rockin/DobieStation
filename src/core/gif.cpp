@@ -2,7 +2,6 @@
 #include "gif.hpp"
 #include "gs.hpp"
 
-#define printf(fmt,...) (0)
 GraphicsInterface::GraphicsInterface(GraphicsSynthesizer *gs) : gs(gs)
 {
 
