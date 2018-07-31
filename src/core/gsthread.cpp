@@ -1791,11 +1791,21 @@ void GraphicsSynthesizerThread::tex_lookup(uint16_t u, uint16_t v, const RGBAQ_R
 {
     if (current_ctx->tex1.filter_larger)
     {
-        RGBAQ_REG top_left, top_right, bottom_left, bottom_right;
-        tex_lookup_int(u >> 4, v >> 4, vtx_color, top_left);
-        tex_lookup_int(u >> 4, v >> 4, vtx_color, top_right);
-        tex_lookup_int(u >> 4, v >> 4, vtx_color, bottom_left);
-        tex_lookup_int(u >> 4, v >> 4, vtx_color, bottom_right);
+        RGBAQ_REG a, b, c, d;
+        uint16_t uu = (u - 16) >> 4;
+        uint16_t vv = (v - 16) >> 4;
+        tex_lookup_int(uu, vv, vtx_color, a);
+        tex_lookup_int(uu+1, vv, vtx_color, b);
+        tex_lookup_int(uu, vv+1, vtx_color, c);
+        tex_lookup_int(uu+1, vv+1, vtx_color, d);
+        double alpha = ((u - 16) & 0xF) * (1.0 / ((double)0xF));
+        double beta = ((v - 16) & 0xF) * (1.0 / ((double)0xF));
+        double alpha_s = 1.0 - alpha;
+        double beta_s = 1.0 - beta;
+        tex_color.r = alpha_s * beta_s*a.r + alpha * beta_s*b.r + alpha_s * beta*c.r + alpha * beta*d.r;
+        tex_color.g = alpha_s * beta_s*a.g + alpha * beta_s*b.g + alpha_s * beta*c.g + alpha * beta*d.g;
+        tex_color.b = alpha_s * beta_s*a.b + alpha * beta_s*b.b + alpha_s * beta*c.b + alpha * beta*d.b;
+        tex_color.a = alpha_s * beta_s*a.a + alpha * beta_s*b.a + alpha_s * beta*c.a + alpha * beta*d.a;
     }
     else
         tex_lookup_int(u >> 4, v >> 4, vtx_color, tex_color);
