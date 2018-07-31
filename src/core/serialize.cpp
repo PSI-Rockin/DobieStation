@@ -331,7 +331,7 @@ void VectorUnit::load_state(ifstream &state)
     state.read((char*)&second_branch_pending, sizeof(second_branch_pending));
     state.read((char*)&branch_on, sizeof(branch_on));
     state.read((char*)&finish_on, sizeof(finish_on));
-    state.read((char*)&delay_slot, sizeof(delay_slot));    
+    state.read((char*)&delay_slot, sizeof(delay_slot));
 }
 
 void VectorUnit::save_state(ofstream &state)
