@@ -128,31 +128,34 @@ void VectorUnit::run(int cycles)
     if (get_id() == 1)
     {
         if (gif->path_active(1))
+            handle_XGKICK();
+    }
+}
+
+void VectorUnit::handle_XGKICK()
+{
+    XGKICK_cycles++;
+    if (XGKICK_cycles >= 5)
+    {
+        while (transferring_GIF)
         {
-            XGKICK_cycles++;
-            if (XGKICK_cycles >= 5)
+            uint128_t quad = read_data<uint128_t>(GIF_addr);
+            GIF_addr += 16;
+            if (gif->send_PATH1(quad))
             {
-                while (transferring_GIF)
+                printf("[VU1] XGKICK transfer ended!\n");
+                if (XGKICK_stall)
                 {
-                    uint128_t quad = read_data<uint128_t>(GIF_addr);
-                    GIF_addr += 16;
-                    if (gif->send_PATH1(quad))
-                    {
-                        printf("[VU1] XGKICK transfer ended!\n");
-                        if (XGKICK_stall)
-                        {
-                            printf("[VU1] Activating stalled XGKICK transfer\n");
-                            XGKICK_cycles = 0;
-                            XGKICK_stall = false;
-                            GIF_addr = stalled_GIF_addr;
-                            break;
-                        }
-                        else
-                        {
-                            gif->deactivate_PATH(1);
-                            transferring_GIF = false;
-                        }
-                    }
+                    printf("[VU1] Activating stalled XGKICK transfer\n");
+                    XGKICK_cycles = 0;
+                    XGKICK_stall = false;
+                    GIF_addr = stalled_GIF_addr;
+                    break;
+                }
+                else
+                {
+                    gif->deactivate_PATH(1);
+                    transferring_GIF = false;
                 }
             }
         }
@@ -330,7 +333,7 @@ void VectorUnit::ctc(int index, uint32_t value)
             printf("[VU] Q = %f\n", Q.f);
             break;
         case 27:
-            CMSAR0 = value;
+            CMSAR0 = (uint16_t)value;
             break;
         case 28:
             if (value & 0x2 && id == 0)

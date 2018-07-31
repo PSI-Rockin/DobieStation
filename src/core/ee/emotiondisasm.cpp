@@ -1532,7 +1532,7 @@ string EmotionDisasm::disasm_vcallms(uint32_t instruction)
     stringstream output;
     uint32_t imm = (instruction >> 6) & 0x7FFF;
     imm *= 8;
-    output << "vcallms addr 0x" << imm;
+    output << "vcallms 0x" << setfill('0') << setw(8) << hex << imm;
     return output.str();
 }
 
