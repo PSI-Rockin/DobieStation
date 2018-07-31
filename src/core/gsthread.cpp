@@ -1743,12 +1743,13 @@ void GraphicsSynthesizerThread::unpack_PSMCT24(uint64_t data, int offset, bool z
         bytes_unpacked++;
         if (PSMCT24_unpacked_count == 3)
         {
-            if (z_format)
+            //These cause the textures in Atelier Iris to disappear, unknown root cause
+            /*if (z_format)
                 write_PSMCT24Z_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x,
                                      TRXPOS.dest_y, PSMCT24_color);
             else
                 write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x,
-                                    TRXPOS.dest_y, PSMCT24_color);
+                                    TRXPOS.dest_y, PSMCT24_color);*/
             PSMCT24_color = 0;
             PSMCT24_unpacked_count = 0;
             TRXPOS.int_dest_x++;
@@ -1783,6 +1784,7 @@ void GraphicsSynthesizerThread::host_to_host()
 
 void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, const RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color)
 {
+    //LOD calculations currently give a bad result, unsure why
     /*double LOD;
     if (current_ctx->tex1.LOD_method == 0)
         LOD = (log2(1.0 / abs(vtx_color.q)) * pow(2, current_ctx->tex1.L)) + current_ctx->tex1.K;
