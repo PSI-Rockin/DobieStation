@@ -60,7 +60,7 @@ void GSContext::set_tex1(uint64_t value)
     tex1.filter_larger = (value>>5) & 0x1;
     tex1.filter_smaller = (value>>6) & 0x7; //check for >6?
     tex1.MTBA = (value>>9) & 0x1;
-    tex1.L = (value>19) & 0x3;
+    tex1.L = (value>>19) & 0x3;
 
     bool k_sign = (value >> 43) & 0x1; // sign bit, 7 bits integer, 4 bits decimal.
     uint16_t k_amount = (value >> 32) & 0x7FF;

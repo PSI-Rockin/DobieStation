@@ -1818,18 +1818,17 @@ void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, const RGBAQ_REG
 
     switch (current_ctx->tex0.color_function)
     {
-        //Modulate
-    case 0:
-        tex_color.r = ((uint16_t)tex_color.r * vtx_color.r) >> 7;
-        tex_color.g = ((uint16_t)tex_color.g * vtx_color.g) >> 7;
-        tex_color.b = ((uint16_t)tex_color.b * vtx_color.b) >> 7;
-        tex_color.a = ((uint16_t)tex_color.a * vtx_color.a) >> 7;
-        break;
-        //Decal
-    case 1:
-        break;
+        case 0: //Modulate
+            tex_color.r = ((uint16_t)tex_color.r * vtx_color.r) >> 7;
+            tex_color.g = ((uint16_t)tex_color.g * vtx_color.g) >> 7;
+            tex_color.b = ((uint16_t)tex_color.b * vtx_color.b) >> 7;
+            tex_color.a = ((uint16_t)tex_color.a * vtx_color.a) >> 7;
+            break;
+        case 1: //Decal
+            break;
     }
 }
+
 void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, const RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color)
 {
     switch (current_ctx->clamp.wrap_s)
