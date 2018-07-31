@@ -297,6 +297,7 @@ void VectorUnit::load_state(ifstream &state)
     state.read((char*)&I.u, sizeof(I.u));
     state.read((char*)&Q.u, sizeof(Q.u));
     state.read((char*)&P.u, sizeof(P.u));
+    state.read((char*)&CMSAR0, sizeof(CMSAR0));
 
     //Pipelines
     state.read((char*)&new_MAC_flags, sizeof(new_MAC_flags));
@@ -326,9 +327,11 @@ void VectorUnit::load_state(ifstream &state)
     state.read((char*)&running, sizeof(running));
     state.read((char*)&PC, sizeof(PC));
     state.read((char*)&new_PC, sizeof(new_PC));
+    state.read((char*)&secondbranch_PC, sizeof(secondbranch_PC));
+    state.read((char*)&second_branch_pending, sizeof(second_branch_pending));
     state.read((char*)&branch_on, sizeof(branch_on));
     state.read((char*)&finish_on, sizeof(finish_on));
-    state.read((char*)&delay_slot, sizeof(delay_slot));
+    state.read((char*)&delay_slot, sizeof(delay_slot));    
 }
 
 void VectorUnit::save_state(ofstream &state)
@@ -342,6 +345,7 @@ void VectorUnit::save_state(ofstream &state)
     state.write((char*)&I.u, sizeof(I.u));
     state.write((char*)&Q.u, sizeof(Q.u));
     state.write((char*)&P.u, sizeof(P.u));
+    state.write((char*)&CMSAR0, sizeof(CMSAR0));
 
     //Pipelines
     state.write((char*)&new_MAC_flags, sizeof(new_MAC_flags));
@@ -371,6 +375,8 @@ void VectorUnit::save_state(ofstream &state)
     state.write((char*)&running, sizeof(running));
     state.write((char*)&PC, sizeof(PC));
     state.write((char*)&new_PC, sizeof(new_PC));
+    state.write((char*)&secondbranch_PC, sizeof(secondbranch_PC));
+    state.write((char*)&second_branch_pending, sizeof(second_branch_pending));
     state.write((char*)&branch_on, sizeof(branch_on));
     state.write((char*)&finish_on, sizeof(finish_on));
     state.write((char*)&delay_slot, sizeof(delay_slot));
@@ -455,6 +461,7 @@ void GraphicsInterface::load_state(ifstream &state)
     state.read((char*)&current_tag, sizeof(current_tag));
     state.read((char*)&active_path, sizeof(active_path));
     state.read((char*)&path_queue, sizeof(path_queue));
+    state.read((char*)&path3_vif_masked, sizeof(path3_vif_masked));
 }
 
 void GraphicsInterface::save_state(ofstream &state)
@@ -462,6 +469,7 @@ void GraphicsInterface::save_state(ofstream &state)
     state.write((char*)&current_tag, sizeof(current_tag));
     state.write((char*)&active_path, sizeof(active_path));
     state.write((char*)&path_queue, sizeof(path_queue));
+    state.write((char*)&path3_vif_masked, sizeof(path3_vif_masked));
 }
 
 void SubsystemInterface::load_state(ifstream &state)
