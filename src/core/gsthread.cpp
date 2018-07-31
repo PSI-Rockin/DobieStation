@@ -1791,10 +1791,28 @@ void GraphicsSynthesizerThread::tex_lookup(uint16_t u, uint16_t v, const RGBAQ_R
 {
     if (current_ctx->tex1.filter_larger)
     {
-        return tex_lookup_int(u >> 4, v >> 4, vtx_color, tex_color);
+        RGBAQ_REG top_left, top_right, bottom_left, bottom_right;
+        tex_lookup_int(u >> 4, v >> 4, vtx_color, top_left);
+        tex_lookup_int(u >> 4, v >> 4, vtx_color, top_right);
+        tex_lookup_int(u >> 4, v >> 4, vtx_color, bottom_left);
+        tex_lookup_int(u >> 4, v >> 4, vtx_color, bottom_right);
     }
     else
-        return tex_lookup_int(u >> 4, v >> 4, vtx_color, tex_color);
+        tex_lookup_int(u >> 4, v >> 4, vtx_color, tex_color);
+
+    switch (current_ctx->tex0.color_function)
+    {
+        //Modulate
+    case 0:
+        tex_color.r = ((uint16_t)tex_color.r * vtx_color.r) >> 7;
+        tex_color.g = ((uint16_t)tex_color.g * vtx_color.g) >> 7;
+        tex_color.b = ((uint16_t)tex_color.b * vtx_color.b) >> 7;
+        tex_color.a = ((uint16_t)tex_color.a * vtx_color.a) >> 7;
+        break;
+        //Decal
+    case 1:
+        break;
+    }
 }
 void GraphicsSynthesizerThread::tex_lookup_int(uint16_t u, uint16_t v, const RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color)
 {
@@ -1959,20 +1977,6 @@ void GraphicsSynthesizerThread::tex_lookup_int(uint16_t u, uint16_t v, const RGB
             break;
         default:
             Errors::die("[GS_t] Unrecognized texture format $%02X\n", current_ctx->tex0.format);
-    }
-
-    switch (current_ctx->tex0.color_function)
-    {
-        //Modulate
-        case 0:
-            tex_color.r = ((uint16_t)tex_color.r * vtx_color.r) >> 7;
-            tex_color.g = ((uint16_t)tex_color.g * vtx_color.g) >> 7;
-            tex_color.b = ((uint16_t)tex_color.b * vtx_color.b) >> 7;
-            tex_color.a = ((uint16_t)tex_color.a * vtx_color.a) >> 7;
-            break;
-        //Decal
-        case 1:
-            break;
     }
 }
 

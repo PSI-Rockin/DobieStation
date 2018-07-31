@@ -4,7 +4,7 @@
 
 #include "../emulator.hpp"
 #include "../errors.hpp"
-
+#define printf(fmt,...) (0)
 enum CHANNELS
 {
     VIF0,
