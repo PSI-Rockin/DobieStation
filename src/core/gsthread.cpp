@@ -1290,10 +1290,8 @@ void GraphicsSynthesizerThread::render_line()
                 float tex_s, tex_t;
                 tex_s = interpolate(x, v1.s, v1.x, v2.s, v2.x);
                 tex_t = interpolate(y, v1.t, v1.y, v2.t, v2.y);
-                u = tex_s * current_ctx->tex0.tex_width;
-                v = tex_t * current_ctx->tex0.tex_height;
-                u <<= 4;
-                v <<= 4;
+                u = (tex_s * current_ctx->tex0.tex_width) * 16.0;
+                v = (tex_t * current_ctx->tex0.tex_height) * 16.0;
             }
             else
             {
@@ -1487,10 +1485,8 @@ void GraphicsSynthesizerThread::render_triangle()
                                     //cancels that out
                                     s /= q;
                                     t /= q;
-                                    u = s * current_ctx->tex0.tex_width;
-                                    v = t * current_ctx->tex0.tex_height;
-                                    u <<= 4;
-                                    v <<= 4;
+                                    u = (s * current_ctx->tex0.tex_width) * 16.0;
+                                    v = (t * current_ctx->tex0.tex_height) * 16.0;
                                 }
                                 else
                                 {
@@ -1567,10 +1563,8 @@ void GraphicsSynthesizerThread::render_sprite()
             {
                 if (!PRIM.use_UV)
                 {
-                    pix_v = pix_t * current_ctx->tex0.tex_height;
-                    pix_u = pix_s * current_ctx->tex0.tex_width;
-                    pix_u <<= 4;
-                    pix_v <<= 4;
+                    pix_v = (pix_t * current_ctx->tex0.tex_height)*16;
+                    pix_u = (pix_s * current_ctx->tex0.tex_width)*16;
                 }
                 tex_lookup(pix_u, pix_v, vtx_color, tex_color);
                 draw_pixel(x, y, v2.z, tex_color, PRIM.alpha_blend);
@@ -1787,19 +1781,25 @@ void GraphicsSynthesizerThread::host_to_host()
     TRXDIR = 3;
 }
 
-void GraphicsSynthesizerThread::tex_lookup(uint16_t u, uint16_t v, const RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color)
+void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, const RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color)
 {
-    if (current_ctx->tex1.filter_larger)
+    /*double LOD;
+    if (current_ctx->tex1.LOD_method == 0)
+        LOD = (log2(1.0 / abs(vtx_color.q)) * pow(2, current_ctx->tex1.L)) + current_ctx->tex1.K;
+    else
+        LOD = current_ctx->tex1.K;*/
+
+    if (current_ctx->tex1.filter_larger)// && LOD <= 0.0)
     {
         RGBAQ_REG a, b, c, d;
-        uint16_t uu = (u - 16) >> 4;
-        uint16_t vv = (v - 16) >> 4;
+        int16_t uu = (u - 8) >> 4;
+        int16_t vv = (v - 8) >> 4;
         tex_lookup_int(uu, vv, vtx_color, a);
         tex_lookup_int(uu+1, vv, vtx_color, b);
         tex_lookup_int(uu, vv+1, vtx_color, c);
         tex_lookup_int(uu+1, vv+1, vtx_color, d);
-        double alpha = ((u - 16) & 0xF) * (1.0 / ((double)0xF));
-        double beta = ((v - 16) & 0xF) * (1.0 / ((double)0xF));
+        double alpha = ((u - 8) & 0xF) * (1.0 / ((double)0xF));
+        double beta = ((v - 8) & 0xF) * (1.0 / ((double)0xF));
         double alpha_s = 1.0 - alpha;
         double beta_s = 1.0 - beta;
         tex_color.r = alpha_s * beta_s*a.r + alpha * beta_s*b.r + alpha_s * beta*c.r + alpha * beta*d.r;
@@ -1824,7 +1824,7 @@ void GraphicsSynthesizerThread::tex_lookup(uint16_t u, uint16_t v, const RGBAQ_R
         break;
     }
 }
-void GraphicsSynthesizerThread::tex_lookup_int(uint16_t u, uint16_t v, const RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color)
+void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, const RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color)
 {
     switch (current_ctx->clamp.wrap_s)
     {
@@ -1834,6 +1834,8 @@ void GraphicsSynthesizerThread::tex_lookup_int(uint16_t u, uint16_t v, const RGB
         case 1:
             if (u > current_ctx->tex0.tex_width)
                 u = current_ctx->tex0.tex_width;
+            else if (u < 0)
+                u = 0;
             break;
     }
     switch (current_ctx->clamp.wrap_t)
@@ -1844,6 +1846,8 @@ void GraphicsSynthesizerThread::tex_lookup_int(uint16_t u, uint16_t v, const RGB
         case 1:
             if (v > current_ctx->tex0.tex_height)
                 v = current_ctx->tex0.tex_height;
+            else if (v < 0)
+                v = 0;
             break;
     }
 
