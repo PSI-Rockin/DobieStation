@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
+#include <cmath>
 
 #include "gsthread.hpp"
 #include "gsmem.hpp"
