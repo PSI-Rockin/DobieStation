@@ -1220,11 +1220,13 @@ void GraphicsSynthesizerThread::render_point()
         {
             u = v1.s * current_ctx->tex0.tex_width;
             v = v1.t * current_ctx->tex0.tex_height;
+            u <<= 4;
+            v <<= 4;
         }
         else
         {
-            u = (uint32_t) v1.uv.u >> 4;
-            v = (uint32_t) v1.uv.v >> 4;
+            u = (uint32_t) v1.uv.u;
+            v = (uint32_t) v1.uv.v;
         }
         tex_lookup(u, v, vtx_color, tex_color);
         draw_pixel(v1.x, v1.y, v1.z, tex_color, PRIM.alpha_blend);
@@ -1290,11 +1292,13 @@ void GraphicsSynthesizerThread::render_line()
                 tex_t = interpolate(y, v1.t, v1.y, v2.t, v2.y);
                 u = tex_s * current_ctx->tex0.tex_width;
                 v = tex_t * current_ctx->tex0.tex_height;
+                u <<= 4;
+                v <<= 4;
             }
             else
             {
-                v = interpolate(y, v2.uv.v, v1.y, v2.uv.v, v2.y) >> 4;
-                u = interpolate(x, v1.uv.u, v1.x, v2.uv.u, v2.x) >> 4;
+                v = interpolate(y, v2.uv.v, v1.y, v2.uv.v, v2.y);
+                u = interpolate(x, v1.uv.u, v1.x, v2.uv.u, v2.x);
             }
             tex_lookup(u, v, color, tex_color);
             color = tex_color;
@@ -1485,6 +1489,8 @@ void GraphicsSynthesizerThread::render_triangle()
                                     t /= q;
                                     u = s * current_ctx->tex0.tex_width;
                                     v = t * current_ctx->tex0.tex_height;
+                                    u <<= 4;
+                                    v <<= 4;
                                 }
                                 else
                                 {
@@ -1492,8 +1498,8 @@ void GraphicsSynthesizerThread::render_triangle()
                                     float temp_v = (float) v1.uv.v * w1 + (float) v2.uv.v * w2 + (float) v3.uv.v * w3;
                                     temp_u /= divider;
                                     temp_v /= divider;
-                                    u = (uint32_t) temp_u >> 4;
-                                    v = (uint32_t) temp_v >> 4;
+                                    u = (uint32_t) temp_u;
+                                    v = (uint32_t) temp_v;
                                 }
                                 tex_lookup(u, v, vtx_color, tex_color);
                                 draw_pixel(x, y, (uint32_t) z, tex_color, PRIM.alpha_blend);
@@ -1552,17 +1558,19 @@ void GraphicsSynthesizerThread::render_sprite()
     for (int32_t y = min_y; y < max_y; y += 0x10)
     {
         float pix_t = interpolate_f(y, v1.t, v1.y, v2.t, v2.y);
-        uint16_t pix_v = interpolate(y, v1.uv.v, v1.y, v2.uv.v, v2.y) >> 4;
+        uint16_t pix_v = interpolate(y, v1.uv.v, v1.y, v2.uv.v, v2.y);
         for (int32_t x = min_x; x < max_x; x += 0x10)
         {
             float pix_s = interpolate_f(x, v1.s, v1.x, v2.s, v2.x);
-            uint16_t pix_u = interpolate(x, v1.uv.u, v1.x, v2.uv.u, v2.x) >> 4;
+            uint16_t pix_u = interpolate(x, v1.uv.u, v1.x, v2.uv.u, v2.x);
             if (PRIM.texture_mapping)
             {
                 if (!PRIM.use_UV)
                 {
                     pix_v = pix_t * current_ctx->tex0.tex_height;
                     pix_u = pix_s * current_ctx->tex0.tex_width;
+                    pix_u <<= 4;
+                    pix_v <<= 4;
                 }
                 tex_lookup(pix_u, pix_v, vtx_color, tex_color);
                 draw_pixel(x, y, v2.z, tex_color, PRIM.alpha_blend);
@@ -1780,6 +1788,15 @@ void GraphicsSynthesizerThread::host_to_host()
 }
 
 void GraphicsSynthesizerThread::tex_lookup(uint16_t u, uint16_t v, const RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color)
+{
+    if (current_ctx->tex1.filter_larger)
+    {
+        return tex_lookup_int(u >> 4, v >> 4, vtx_color, tex_color);
+    }
+    else
+        return tex_lookup_int(u >> 4, v >> 4, vtx_color, tex_color);
+}
+void GraphicsSynthesizerThread::tex_lookup_int(uint16_t u, uint16_t v, const RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color)
 {
     switch (current_ctx->clamp.wrap_s)
     {
