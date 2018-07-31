@@ -439,6 +439,12 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             break;
         case 0x000F:
             break;
+        case 0x0014:
+            context1.set_tex1(value);
+            break;
+        case 0x0015:
+            context2.set_tex1(value);
+            break;
         case 0x0016:
             context1.set_tex2(value);
             break;

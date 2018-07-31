@@ -18,6 +18,17 @@ struct TEX0
     uint8_t CLUT_control;
 };
 
+struct TEX1
+{
+    bool LOD_method;
+    uint8_t max_MIP_level; //0 - 6
+    bool filter_larger;
+    uint8_t filter_smaller; //0 - 6
+    bool MTBA; //base address specification of MIPMAPs (0 = specified, 1 = automatic)
+    uint8_t L;//2 bits
+    double K;//sign bit, 7 bits integer, 4 bits decimal.
+};
+
 struct CLAMP
 {
     uint8_t wrap_s;
@@ -86,6 +97,7 @@ struct ZBUF
 struct GSContext
 {
     TEX0 tex0;
+    TEX1 tex1;
     CLAMP clamp;
     XYOFFSET xyoffset;
     SCISSOR scissor;
@@ -97,6 +109,7 @@ struct GSContext
     void reset();
 
     void set_tex0(uint64_t value);
+    void set_tex1(uint64_t value);
     void set_tex2(uint64_t value);
     void set_clamp(uint64_t value);
     void set_xyoffset(uint64_t value);
