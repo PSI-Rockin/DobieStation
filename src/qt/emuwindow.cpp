@@ -81,8 +81,14 @@ int EmuWindow::init(int argc, char** argv)
         case 's':
             skip_BIOS = true;
             break;
+        case 'h':
         default:
-            printf("Args: [BIOS] (Optional)[ELF/ISO]\n");
+            printf("usage: %s [options]\n\n", argv0);
+            printf("options:\n");
+            printf("-b {BIOS}\tspecify BIOS\n");
+            printf("-f {ELF/ISO}\tspecify ELF/ISO\n");
+            printf("-h\t\tshow this message\n");
+            printf("-s\t\tskip BIOS\n");
             return 1;
     } ARGEND
 
