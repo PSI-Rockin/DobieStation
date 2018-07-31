@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <cmath>
 #include <fstream>
 
 #include "gsthread.hpp"
@@ -1812,7 +1813,7 @@ void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, const RGBAQ_REG
 {
     double LOD;
     if (current_ctx->tex1.LOD_method == 0)
-        LOD = (log2(1.0 / abs(vtx_color.q)) * pow(2, current_ctx->tex1.L)) + current_ctx->tex1.K;
+        LOD = (log2(1.0 / fabs(vtx_color.q)) * pow(2, current_ctx->tex1.L)) + current_ctx->tex1.K;
     else
         LOD = current_ctx->tex1.K;
     
