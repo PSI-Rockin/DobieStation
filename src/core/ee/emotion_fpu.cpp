@@ -31,6 +31,9 @@ void EmotionInterpreter::cop_s(Cop1& fpu, uint32_t instruction)
         case 0x7:
             fpu_neg(fpu, instruction);
             break;
+        case 0x16:
+            fpu_rsqrt(fpu, instruction);
+            break;
         case 0x18:
             fpu_adda(fpu, instruction);
             break;
@@ -48,6 +51,9 @@ void EmotionInterpreter::cop_s(Cop1& fpu, uint32_t instruction)
             break;
         case 0x1E:
             fpu_madda(fpu, instruction);
+            break;
+        case 0x1F:
+            fpu_msuba(fpu, instruction);
             break;
         case 0x24:
             fpu_cvt_w_s(fpu, instruction);
@@ -135,6 +141,14 @@ void EmotionInterpreter::fpu_neg(Cop1 &fpu, uint32_t instruction)
     fpu.neg_s(dest, source);
 }
 
+void EmotionInterpreter::fpu_rsqrt(Cop1 &fpu, uint32_t instruction)
+{
+    uint32_t dest = (instruction >> 6) & 0x1F;
+    uint32_t reg1 = (instruction >> 11) & 0x1F;
+    uint32_t reg2 = (instruction >> 16) & 0x1F;
+    fpu.rsqrt_s(dest, reg1, reg2);
+}
+
 void EmotionInterpreter::fpu_adda(Cop1 &fpu, uint32_t instruction)
 {
     uint32_t reg1 = (instruction >> 11) & 0x1F;
@@ -177,6 +191,13 @@ void EmotionInterpreter::fpu_madda(Cop1 &fpu, uint32_t instruction)
     uint32_t reg1 = (instruction >> 11) & 0x1F;
     uint32_t reg2 = (instruction >> 16) & 0x1F;
     fpu.madda_s(reg1, reg2);
+}
+
+void EmotionInterpreter::fpu_msuba(Cop1 &fpu, uint32_t instruction)
+{
+    uint32_t reg1 = (instruction >> 11) & 0x1F;
+    uint32_t reg2 = (instruction >> 16) & 0x1F;
+    fpu.msuba_s(reg1, reg2);
 }
 
 void EmotionInterpreter::fpu_cvt_w_s(Cop1 &fpu, uint32_t instruction)

@@ -18,6 +18,9 @@ uint32_t GraphicsInterface::read_STAT()
 {
     uint32_t reg = 0;
 
+    //VIFMASK
+    reg |= path3_vif_masked << 1;
+
     reg |= ((path_queue & (1 << 3)) != 0) << 6;
     reg |= ((path_queue & (1 << 2)) != 0) << 7;
     reg |= ((path_queue & (1 << 1)) != 0) << 8;
@@ -204,6 +207,11 @@ void GraphicsInterface::feed_GIF(uint128_t data)
         if (!current_tag.data_left && current_tag.end_of_packet)
             gs->assert_FINISH();
     }
+}
+
+void GraphicsInterface::set_path3_vifmask(int value)
+{
+    path3_vif_masked = value;
 }
 
 void GraphicsInterface::request_PATH(int index)

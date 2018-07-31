@@ -35,10 +35,12 @@ namespace VU_Interpreter
 
     void upper_special(VectorUnit& vu, uint32_t instr);
     void addabc(VectorUnit& vu, uint32_t instr);
+    void subabc(VectorUnit& vu, uint32_t instr);
     void maddabc(VectorUnit& vu, uint32_t instr);
     void itof0(VectorUnit& vu, uint32_t instr);
     void itof4(VectorUnit& vu, uint32_t instr);
     void itof12(VectorUnit& vu, uint32_t instr);
+    void itof15(VectorUnit& vu, uint32_t instr);
     void ftoi0(VectorUnit& vu, uint32_t instr);
     void ftoi4(VectorUnit& vu, uint32_t instr);
     void ftoi12(VectorUnit& vu, uint32_t instr);
@@ -54,6 +56,8 @@ namespace VU_Interpreter
     void mula(VectorUnit& vu, uint32_t instr);
     void adda(VectorUnit &vu, uint32_t instr);
     void madda(VectorUnit &vu, uint32_t instr);
+    void suba(VectorUnit &vu, uint32_t instr);
+    void msuba(VectorUnit &vu, uint32_t instr);
     void opmula(VectorUnit& vu, uint32_t instr);
 
     void lower(VectorUnit& vu, uint32_t instr);
@@ -70,8 +74,10 @@ namespace VU_Interpreter
     void lqi(VectorUnit& vu, uint32_t instr);
     void sqi(VectorUnit& vu, uint32_t instr);
     void lqd(VectorUnit& vu, uint32_t instr);
+    void lqd(VectorUnit& vu, uint32_t instr);
     void sqd(VectorUnit& vu, uint32_t instr);
     void div(VectorUnit& vu, uint32_t instr);
+    void vu_sqrt(VectorUnit &vu, uint32_t instr);
     void waitq(VectorUnit& vu, uint32_t instr);
     void mtir(VectorUnit& vu, uint32_t instr);
     void mfir(VectorUnit& vu, uint32_t instr);
@@ -98,6 +104,7 @@ namespace VU_Interpreter
     void fcset(VectorUnit& vu, uint32_t instr);
     void fcand(VectorUnit& vu, uint32_t instr);
     void fcor(VectorUnit& vu, uint32_t instr);
+    void fmeq(VectorUnit& vu, uint32_t instr);
     void fmand(VectorUnit& vu, uint32_t instr);
     void fcget(VectorUnit& vu, uint32_t instr);
     void b(VectorUnit& vu, uint32_t instr);

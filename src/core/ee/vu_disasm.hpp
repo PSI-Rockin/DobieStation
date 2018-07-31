@@ -38,6 +38,7 @@ namespace VU_Disasm
     std::string lqd(uint32_t instr);
     std::string sqd(uint32_t instr);
     std::string div(uint32_t instr);
+    std::string vu_sqrt(uint32_t instr);
     std::string mtir(uint32_t instr);
     std::string mfir(uint32_t instr);
     std::string ilwr(uint32_t instr);
@@ -63,6 +64,7 @@ namespace VU_Disasm
     std::string fcset(uint32_t instr);
     std::string fcand(uint32_t instr);
     std::string fcor(uint32_t instr);
+    std::string fmeq(uint32_t instr);
     std::string fmand(uint32_t instr);
     std::string fcget(uint32_t instr);
     std::string b(uint32_t PC, uint32_t instr);
