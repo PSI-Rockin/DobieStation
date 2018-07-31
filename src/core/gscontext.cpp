@@ -53,6 +53,19 @@ void GSContext::set_tex0(uint64_t value)
     printf("Use CSM2: %d\n", tex0.use_CSM2);
     printf("CLUT offset: $%08X\n", tex0.CLUT_offset);
 }
+void GSContext::set_tex1(uint64_t value)
+{
+    tex1.LOD_method = value & 0x1;
+    tex1.max_MIP_level = (value>>2) & 0x7; //check for >6?
+    tex1.filter_larger = (value>>5) & 0x1;
+    tex1.filter_smaller = (value>>6) & 0x7; //check for >6?
+    tex1.MTBA = (value>>9) & 0x1;
+    tex1.L = (value>>19) & 0x3;
+
+    bool k_sign = (value >> 43) & 0x1; // sign bit, 7 bits integer, 4 bits decimal.
+    uint16_t k_amount = (value >> 32) & 0x7FF;
+    tex1.K = (k_sign ? -1.0 : 1.0) * ((double)k_amount * 1.0 / 16.0);
+}
 
 void GSContext::set_tex2(uint64_t value)
 {

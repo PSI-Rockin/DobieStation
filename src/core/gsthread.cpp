@@ -439,6 +439,12 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             break;
         case 0x000F:
             break;
+        case 0x0014:
+            context1.set_tex1(value);
+            break;
+        case 0x0015:
+            context2.set_tex1(value);
+            break;
         case 0x0016:
             context1.set_tex2(value);
             break;
@@ -1214,11 +1220,13 @@ void GraphicsSynthesizerThread::render_point()
         {
             u = v1.s * current_ctx->tex0.tex_width;
             v = v1.t * current_ctx->tex0.tex_height;
+            u <<= 4;
+            v <<= 4;
         }
         else
         {
-            u = (uint32_t) v1.uv.u >> 4;
-            v = (uint32_t) v1.uv.v >> 4;
+            u = (uint32_t) v1.uv.u;
+            v = (uint32_t) v1.uv.v;
         }
         tex_lookup(u, v, vtx_color, tex_color);
         draw_pixel(v1.x, v1.y, v1.z, tex_color, PRIM.alpha_blend);
@@ -1282,13 +1290,13 @@ void GraphicsSynthesizerThread::render_line()
                 float tex_s, tex_t;
                 tex_s = interpolate(x, v1.s, v1.x, v2.s, v2.x);
                 tex_t = interpolate(y, v1.t, v1.y, v2.t, v2.y);
-                u = tex_s * current_ctx->tex0.tex_width;
-                v = tex_t * current_ctx->tex0.tex_height;
+                u = (tex_s * current_ctx->tex0.tex_width) * 16.0;
+                v = (tex_t * current_ctx->tex0.tex_height) * 16.0;
             }
             else
             {
-                v = interpolate(y, v2.uv.v, v1.y, v2.uv.v, v2.y) >> 4;
-                u = interpolate(x, v1.uv.u, v1.x, v2.uv.u, v2.x) >> 4;
+                v = interpolate(y, v2.uv.v, v1.y, v2.uv.v, v2.y);
+                u = interpolate(x, v1.uv.u, v1.x, v2.uv.u, v2.x);
             }
             tex_lookup(u, v, color, tex_color);
             color = tex_color;
@@ -1458,10 +1466,12 @@ void GraphicsSynthesizerThread::render_triangle()
                             float g = (float) v1.rgbaq.g * w1 + (float) v2.rgbaq.g * w2 + (float) v3.rgbaq.g * w3;
                             float b = (float) v1.rgbaq.b * w1 + (float) v2.rgbaq.b * w2 + (float) v3.rgbaq.b * w3;
                             float a = (float) v1.rgbaq.a * w1 + (float) v2.rgbaq.a * w2 + (float) v3.rgbaq.a * w3;
+                            float q = v1.rgbaq.q * w1 + v2.rgbaq.q * w2 + v3.rgbaq.q * w3;
                             vtx_color.r = r / divider;
                             vtx_color.g = g / divider;
                             vtx_color.b = b / divider;
                             vtx_color.a = a / divider;
+                            vtx_color.q = q / divider;
 
                             if (PRIM.texture_mapping)
                             {
@@ -1477,8 +1487,8 @@ void GraphicsSynthesizerThread::render_triangle()
                                     //cancels that out
                                     s /= q;
                                     t /= q;
-                                    u = s * current_ctx->tex0.tex_width;
-                                    v = t * current_ctx->tex0.tex_height;
+                                    u = (s * current_ctx->tex0.tex_width) * 16.0;
+                                    v = (t * current_ctx->tex0.tex_height) * 16.0;
                                 }
                                 else
                                 {
@@ -1486,8 +1496,8 @@ void GraphicsSynthesizerThread::render_triangle()
                                     float temp_v = (float) v1.uv.v * w1 + (float) v2.uv.v * w2 + (float) v3.uv.v * w3;
                                     temp_u /= divider;
                                     temp_v /= divider;
-                                    u = (uint32_t) temp_u >> 4;
-                                    v = (uint32_t) temp_v >> 4;
+                                    u = (uint32_t) temp_u;
+                                    v = (uint32_t) temp_v;
                                 }
                                 tex_lookup(u, v, vtx_color, tex_color);
                                 draw_pixel(x, y, (uint32_t) z, tex_color, PRIM.alpha_blend);
@@ -1546,17 +1556,17 @@ void GraphicsSynthesizerThread::render_sprite()
     for (int32_t y = min_y; y < max_y; y += 0x10)
     {
         float pix_t = interpolate_f(y, v1.t, v1.y, v2.t, v2.y);
-        uint16_t pix_v = interpolate(y, v1.uv.v, v1.y, v2.uv.v, v2.y) >> 4;
+        uint16_t pix_v = interpolate(y, v1.uv.v, v1.y, v2.uv.v, v2.y);
         for (int32_t x = min_x; x < max_x; x += 0x10)
         {
             float pix_s = interpolate_f(x, v1.s, v1.x, v2.s, v2.x);
-            uint16_t pix_u = interpolate(x, v1.uv.u, v1.x, v2.uv.u, v2.x) >> 4;
+            uint16_t pix_u = interpolate(x, v1.uv.u, v1.x, v2.uv.u, v2.x);
             if (PRIM.texture_mapping)
             {
                 if (!PRIM.use_UV)
                 {
-                    pix_v = pix_t * current_ctx->tex0.tex_height;
-                    pix_u = pix_s * current_ctx->tex0.tex_width;
+                    pix_v = (pix_t * current_ctx->tex0.tex_height)*16;
+                    pix_u = (pix_s * current_ctx->tex0.tex_width)*16;
                 }
                 tex_lookup(pix_u, pix_v, vtx_color, tex_color);
                 draw_pixel(x, y, v2.z, tex_color, PRIM.alpha_blend);
@@ -1747,8 +1757,12 @@ void GraphicsSynthesizerThread::unpack_PSMCT24(uint64_t data, int offset, bool z
                 write_PSMCT24Z_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x,
                                      TRXPOS.dest_y, PSMCT24_color);
             else
+            {
+                PSMCT24_color |= read_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x,
+                    TRXPOS.dest_y) & 0xFF000000;
                 write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x,
-                                    TRXPOS.dest_y, PSMCT24_color);
+                    TRXPOS.dest_y, PSMCT24_color);
+            }
             PSMCT24_color = 0;
             PSMCT24_unpacked_count = 0;
             TRXPOS.int_dest_x++;
@@ -1794,7 +1808,49 @@ void GraphicsSynthesizerThread::host_to_host()
     TRXDIR = 3;
 }
 
-void GraphicsSynthesizerThread::tex_lookup(uint16_t u, uint16_t v, const RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color)
+void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, const RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color)
+{
+    double LOD;
+    if (current_ctx->tex1.LOD_method == 0)
+        LOD = (log2(1.0 / abs(vtx_color.q)) * pow(2, current_ctx->tex1.L)) + current_ctx->tex1.K;
+    else
+        LOD = current_ctx->tex1.K;
+    
+    if (current_ctx->tex1.filter_larger && LOD <= 0.0)
+    {
+        RGBAQ_REG a, b, c, d;
+        int16_t uu = (u - 8) >> 4;
+        int16_t vv = (v - 8) >> 4;
+        tex_lookup_int(uu, vv, vtx_color, a);
+        tex_lookup_int(uu+1, vv, vtx_color, b);
+        tex_lookup_int(uu, vv+1, vtx_color, c);
+        tex_lookup_int(uu+1, vv+1, vtx_color, d);
+        double alpha = ((u - 8) & 0xF) * (1.0 / ((double)0xF));
+        double beta = ((v - 8) & 0xF) * (1.0 / ((double)0xF));
+        double alpha_s = 1.0 - alpha;
+        double beta_s = 1.0 - beta;
+        tex_color.r = alpha_s * beta_s*a.r + alpha * beta_s*b.r + alpha_s * beta*c.r + alpha * beta*d.r;
+        tex_color.g = alpha_s * beta_s*a.g + alpha * beta_s*b.g + alpha_s * beta*c.g + alpha * beta*d.g;
+        tex_color.b = alpha_s * beta_s*a.b + alpha * beta_s*b.b + alpha_s * beta*c.b + alpha * beta*d.b;
+        tex_color.a = alpha_s * beta_s*a.a + alpha * beta_s*b.a + alpha_s * beta*c.a + alpha * beta*d.a;
+    }
+    else
+        tex_lookup_int(u >> 4, v >> 4, vtx_color, tex_color);
+
+    switch (current_ctx->tex0.color_function)
+    {
+        case 0: //Modulate
+            tex_color.r = ((uint16_t)tex_color.r * vtx_color.r) >> 7;
+            tex_color.g = ((uint16_t)tex_color.g * vtx_color.g) >> 7;
+            tex_color.b = ((uint16_t)tex_color.b * vtx_color.b) >> 7;
+            tex_color.a = ((uint16_t)tex_color.a * vtx_color.a) >> 7;
+            break;
+        case 1: //Decal
+            break;
+    }
+}
+
+void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, const RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color)
 {
     switch (current_ctx->clamp.wrap_s)
     {
@@ -1804,6 +1860,8 @@ void GraphicsSynthesizerThread::tex_lookup(uint16_t u, uint16_t v, const RGBAQ_R
         case 1:
             if (u > current_ctx->tex0.tex_width)
                 u = current_ctx->tex0.tex_width;
+            else if (u < 0)
+                u = 0;
             break;
     }
     switch (current_ctx->clamp.wrap_t)
@@ -1814,6 +1872,8 @@ void GraphicsSynthesizerThread::tex_lookup(uint16_t u, uint16_t v, const RGBAQ_R
         case 1:
             if (v > current_ctx->tex0.tex_height)
                 v = current_ctx->tex0.tex_height;
+            else if (v < 0)
+                v = 0;
             break;
     }
 
@@ -1957,20 +2017,6 @@ void GraphicsSynthesizerThread::tex_lookup(uint16_t u, uint16_t v, const RGBAQ_R
             break;
         default:
             Errors::die("[GS_t] Unrecognized texture format $%02X\n", current_ctx->tex0.format);
-    }
-
-    switch (current_ctx->tex0.color_function)
-    {
-        //Modulate
-        case 0:
-            tex_color.r = ((uint16_t)tex_color.r * vtx_color.r) >> 7;
-            tex_color.g = ((uint16_t)tex_color.g * vtx_color.g) >> 7;
-            tex_color.b = ((uint16_t)tex_color.b * vtx_color.b) >> 7;
-            tex_color.a = ((uint16_t)tex_color.a * vtx_color.a) >> 7;
-            break;
-        //Decal
-        case 1:
-            break;
     }
 }
 
