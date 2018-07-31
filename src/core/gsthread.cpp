@@ -1597,6 +1597,10 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
         case 0x02:
             ppd = 4;
             break;
+        //PSMCT16S
+        case 0x0A:
+            ppd = 4;
+            break;
         //PSMCT8
         case 0x13:
             ppd = 8;
@@ -1608,7 +1612,6 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
         //PSMCT8H
         case 0x1B:
             ppd = 8;
-            printf("[GS_t] PSMCT8H: $%08X_%08X\n", data >> 32, data);
             break;
         //PSMT4HL
         case 0x24:
@@ -1642,6 +1645,11 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
                 break;
             case 0x02:
                 write_PSMCT16_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.dest_y, (data >> (i * 16)) & 0xFFFF);
+                pixels_transferred++;
+                TRXPOS.int_dest_x++;
+                break;
+            case 0xA:
+                write_PSMCT16S_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.dest_y, (data >> (i * 16)) & 0xFFFF);
                 pixels_transferred++;
                 TRXPOS.int_dest_x++;
                 break;
@@ -1765,24 +1773,37 @@ void GraphicsSynthesizerThread::unpack_PSMCT24(uint64_t data, int offset, bool z
 
 void GraphicsSynthesizerThread::host_to_host()
 {
-    Errors::die("host_to_host not implemented!");
-    int ppd = 2; //pixels per doubleword
-    uint32_t source_addr = (TRXPOS.source_x + (TRXPOS.source_y * BITBLTBUF.source_width)) << 1;
-    source_addr += BITBLTBUF.source_base;
     uint32_t max_pixels = TRXREG.width * TRXREG.height;
-    printf("TRXPOS Source: (%d, %d) Dest: (%d, %d)\n", TRXPOS.source_x, TRXPOS.source_y, TRXPOS.dest_x, TRXPOS.dest_y);
-    printf("TRXREG: (%d, %d)\n", TRXREG.width, TRXREG.height);
-    printf("Base: $%08X\n", BITBLTBUF.source_base);
-    /*printf("Source addr: $%08X Dest addr: $%08X\n", source_addr, transfer_addr);
+
     while (pixels_transferred < max_pixels)
     {
-        printf("Host-host transfer from $%08X to $%08X\n", source_addr, transfer_addr);
-        uint64_t borp = *(uint64_t*)&local_mem[source_addr];
-        *(uint64_t*)&local_mem[transfer_addr] = borp;
-        pixels_transferred += ppd;
-        transfer_addr += 8;
-        source_addr += 8;
-    }*/
+        uint32_t data;
+        switch (BITBLTBUF.source_format)
+        {
+            case 0x00:
+                data = read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                                          TRXPOS.int_source_x, TRXPOS.source_y);
+                write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.dest_y, data);
+                pixels_transferred++;
+                TRXPOS.int_dest_x++;
+                TRXPOS.int_source_x++;
+                break;
+            default:
+                Errors::die("[GS_t] Unrecognized host-to-host format $%02X", BITBLTBUF.source_format);
+        }
+
+        if (TRXPOS.int_dest_x - TRXPOS.dest_x == TRXREG.width)
+        {
+            TRXPOS.int_dest_x = TRXPOS.dest_x;
+            TRXPOS.dest_y++;
+        }
+
+        if (TRXPOS.int_source_x - TRXPOS.source_x == TRXREG.width)
+        {
+            TRXPOS.int_source_x = TRXPOS.source_x;
+            TRXPOS.source_y++;
+        }
+    }
     pixels_transferred = 0;
     TRXDIR = 3;
 }

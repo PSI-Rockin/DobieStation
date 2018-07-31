@@ -916,6 +916,8 @@ string EmotionDisasm::disasm_cop(uint32_t instruction, uint32_t instr_addr)
             return disasm_cop_ctc(instruction);
         case 0x108:
             return disasm_cop_bc1(instruction, instr_addr);
+        case 0x208:
+            return disasm_cop2_bc2(instruction, instr_addr);
         case 0x110:
             return disasm_cop_s(instruction);
         case 0x114:
@@ -983,6 +985,8 @@ string EmotionDisasm::disasm_cop_s(uint32_t instruction)
             return disasm_fpu_mov(instruction);
         case 0x7:
             return disasm_fpu_neg(instruction);
+        case 0x16:
+            return disasm_fpu_rsqrt(instruction);
         case 0x18:
             return disasm_fpu_adda(instruction);
         case 0x19:
@@ -995,6 +999,8 @@ string EmotionDisasm::disasm_cop_s(uint32_t instruction)
             return disasm_fpu_msub(instruction);
         case 0x1E:
             return disasm_fpu_madda(instruction);
+        case 0x1F:
+            return disasm_fpu_msuba(instruction);
         case 0x24:
             return disasm_fpu_cvt_w_s(instruction);
         case 0x28:
@@ -1073,6 +1079,11 @@ string EmotionDisasm::disasm_fpu_neg(uint32_t instruction)
     return disasm_fpu_singleop_math("neg.s", instruction);
 }
 
+string EmotionDisasm::disasm_fpu_rsqrt(uint32_t instruction)
+{
+    return disasm_fpu_singleop_math("rsqrt.s", instruction);
+}
+
 string EmotionDisasm::disasm_fpu_acc(const string opcode, uint32_t instruction)
 {
     stringstream output;
@@ -1110,6 +1121,11 @@ string EmotionDisasm::disasm_fpu_msub(uint32_t instruction)
 string EmotionDisasm::disasm_fpu_madda(uint32_t instruction)
 {
     return disasm_fpu_acc("madda.s", instruction);
+}
+
+string EmotionDisasm::disasm_fpu_msuba(uint32_t instruction)
+{
+    return disasm_fpu_acc("msuba.s", instruction);
 }
 
 string EmotionDisasm::disasm_fpu_convert(const string opcode, uint32_t instruction)
@@ -1165,6 +1181,22 @@ string EmotionDisasm::disasm_cop_bc1(uint32_t instruction, uint32_t instr_addr)
     uint8_t op = RT;
     if (op > 3)
         return unknown_op("BC1", op, 2);
+    opcode = ops[op];
+    output << "$" << setfill('0') << setw(8) << hex << (instr_addr + 4 + offset);
+
+    return opcode + " " + output.str();
+}
+
+string EmotionDisasm::disasm_cop2_bc2(uint32_t instruction, uint32_t instr_addr)
+{
+
+    stringstream output;
+    string opcode = "";
+    const static char* ops[] = { "bc2f", "bc2fl", "bc2t", "bc2tl" };
+    int32_t offset = IMM << 2;
+    uint8_t op = RT;
+    if (op > 3)
+        return unknown_op("BC2", op, 2);
     opcode = ops[op];
     output << "$" << setfill('0') << setw(8) << hex << (instr_addr + 4 + offset);
 
@@ -1358,6 +1390,10 @@ string EmotionDisasm::disasm_cop2_special(uint32_t instruction)
             return disasm_viadd(instruction);
         case 0x32:
             return disasm_viaddi(instruction);
+        case 0x38:
+            return disasm_vcallms(instruction);
+        case 0x39:
+            return disasm_vcallmsr(instruction);
         case 0x34:
             return disasm_viand(instruction);
         default:
@@ -1491,6 +1527,22 @@ string EmotionDisasm::disasm_viaddi(uint32_t instruction)
     return output.str();
 }
 
+string EmotionDisasm::disasm_vcallms(uint32_t instruction)
+{
+    stringstream output;
+    uint32_t imm = (instruction >> 6) & 0x7FFF;
+    imm *= 8;
+    output << "vcallms 0x" << setfill('0') << setw(8) << hex << imm;
+    return output.str();
+}
+
+string EmotionDisasm::disasm_vcallmsr(uint32_t instruction)
+{
+    stringstream output;
+    output << "vcallmsr CMSAR0";
+    return output.str();
+}
+
 string EmotionDisasm::disasm_viand(uint32_t instruction)
 {
     return disasm_cop2_intmath("viand", instruction);
@@ -1551,6 +1603,8 @@ string EmotionDisasm::disasm_cop2_special2(uint32_t instruction)
             return disasm_vmadda(instruction);
         case 0x2A:
             return disasm_vmula(instruction);
+        case 0x2C:
+            return disasm_vadda(instruction);
         case 0x2E:
             return disasm_vopmula(instruction);
         case 0x2F:
@@ -1559,8 +1613,12 @@ string EmotionDisasm::disasm_cop2_special2(uint32_t instruction)
             return disasm_vmove(instruction);
         case 0x31:
             return disasm_vmr32(instruction);
+        case 0x34:
+            return disasm_vlqi(instruction);
         case 0x35:
             return disasm_vsqi(instruction);
+        case 0x36:
+            return disasm_vlqd(instruction);
         case 0x38:
             return disasm_vdiv(instruction);
         case 0x39:
@@ -1735,6 +1793,11 @@ string EmotionDisasm::disasm_vmula(uint32_t instruction)
     return disasm_cop2_acc("vmula", instruction);
 }
 
+string EmotionDisasm::disasm_vsuba(uint32_t instruction)
+{
+    return disasm_cop2_acc("vsuba", instruction);
+}
+
 string EmotionDisasm::disasm_vopmula(uint32_t instruction)
 {
     stringstream output;
@@ -1754,6 +1817,17 @@ string EmotionDisasm::disasm_vmr32(uint32_t instruction)
     return disasm_cop2_special2_move("vmr32", instruction);
 }
 
+string EmotionDisasm::disasm_vlqi(uint32_t instruction)
+{
+    stringstream output;
+    uint32_t is = (instruction >> 11) & 0x1F;
+    uint32_t dest = (instruction >> 16) & 0x1F;
+    string field = get_dest_field((instruction >> 21) & 0xF);
+    output << "vlqi." << field;
+    output << " vf" << dest << ", (vi" << is << "++)";
+    return output.str();
+}
+
 string EmotionDisasm::disasm_vsqi(uint32_t instruction)
 {
     stringstream output;
@@ -1762,6 +1836,17 @@ string EmotionDisasm::disasm_vsqi(uint32_t instruction)
     string field = get_dest_field((instruction >> 21) & 0xF);
     output << "vsqi." << field;
     output << " vf" << fs << ", (vi" << it << "++)";
+    return output.str();
+}
+
+string EmotionDisasm::disasm_vlqd(uint32_t instruction)
+{
+    stringstream output;
+    uint32_t is = (instruction >> 11) & 0x1F;
+    uint32_t dest = (instruction >> 16) & 0x1F;
+    string field = get_dest_field((instruction >> 21) & 0xF);
+    output << "vlqd." << field;
+    output << " vf" << dest << ", (vi" << is << "++)";
     return output.str();
 }
 

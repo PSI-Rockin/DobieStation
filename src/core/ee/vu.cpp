@@ -34,6 +34,8 @@ void VectorUnit::reset()
     running = false;
     finish_on = false;
     branch_on = false;
+    second_branch_pending = false;
+    secondbranch_PC = 0;
     delay_slot = 0;
     transferring_GIF = false;
     XGKICK_stall = false;
@@ -98,7 +100,13 @@ void VectorUnit::run(int cycles)
             if (!delay_slot)
             {
                 PC = new_PC;
-                branch_on = false;
+                if(second_branch_pending)
+                {
+                    new_PC = secondbranch_PC;
+                    second_branch_pending = false;
+                }
+                else
+                    branch_on = false;
             }
             else
                 delay_slot--;
@@ -117,35 +125,48 @@ void VectorUnit::run(int cycles)
         cycles_to_run--;
     }
 
-    if (gif->path_active(1))
+    if (get_id() == 1)
     {
-        XGKICK_cycles++;
-        if (XGKICK_cycles >= 5)
+        if (gif->path_active(1))
+            handle_XGKICK();
+    }
+}
+
+void VectorUnit::handle_XGKICK()
+{
+    XGKICK_cycles++;
+    if (XGKICK_cycles >= 5)
+    {
+        while (transferring_GIF)
         {
-            while (transferring_GIF)
+            uint128_t quad = read_data<uint128_t>(GIF_addr);
+            GIF_addr += 16;
+            if (gif->send_PATH1(quad))
             {
-                uint128_t quad = read_data<uint128_t>(GIF_addr);
-                GIF_addr += 16;
-                if (gif->send_PATH1(quad))
+                printf("[VU1] XGKICK transfer ended!\n");
+                if (XGKICK_stall)
                 {
-                    printf("[VU1] XGKICK transfer ended!\n");
-                    if (XGKICK_stall)
-                    {
-                        printf("[VU1] Activating stalled XGKICK transfer\n");
-                        XGKICK_cycles = 0;
-                        XGKICK_stall = false;
-                        GIF_addr = stalled_GIF_addr;
-                        break;
-                    }
-                    else
-                    {
-                        gif->deactivate_PATH(1);
-                        transferring_GIF = false;
-                    }
+                    printf("[VU1] Activating stalled XGKICK transfer\n");
+                    XGKICK_cycles = 0;
+                    XGKICK_stall = false;
+                    GIF_addr = stalled_GIF_addr;
+                    break;
+                }
+                else
+                {
+                    gif->deactivate_PATH(1);
+                    transferring_GIF = false;
                 }
             }
         }
     }
+}
+
+void VectorUnit::callmsr()
+{
+    printf("[VU] Starting execution at $%08X!\n", CMSAR0 * 8);
+    running = true;
+    PC = CMSAR0 * 8;
 }
 
 void VectorUnit::mscal(uint32_t addr)
@@ -276,6 +297,8 @@ uint32_t VectorUnit::cfc(int index)
             return I.u;
         case 22:
             return Q.u;
+        case 27:
+            return CMSAR0;
         default:
             printf("[COP2] Unrecognized cfc2 from reg %d\n", index);
     }
@@ -309,6 +332,9 @@ void VectorUnit::ctc(int index, uint32_t value)
             set_Q(value);
             printf("[VU] Q = %f\n", Q.f);
             break;
+        case 27:
+            CMSAR0 = (uint16_t)value;
+            break;
         case 28:
             if (value & 0x2 && id == 0)
                 reset();
@@ -322,21 +348,33 @@ void VectorUnit::branch(bool condition, int32_t imm)
 {
     if (condition)
     {
-        if(branch_on)
-            Errors::die("[VU%d] Branch in Jump/Branch Delay Slot!\n", get_id());
-        branch_on = true;
-        delay_slot = 1;
-        new_PC = PC + imm + 8;
+        if (branch_on)
+        {
+            second_branch_pending = true;
+            secondbranch_PC = PC + imm + 8;
+        }
+        else
+        {
+            branch_on = true;
+            delay_slot = 1;
+            new_PC = PC + imm + 8;
+        }
     }
 }
 
 void VectorUnit::jp(uint16_t addr)
 {
     if (branch_on)
-        Errors::die("[VU%d] Jump in Jump/Branch Delay Slot!\n", get_id());
-    new_PC = addr;
-    branch_on = true;
-    delay_slot = 1;
+    {
+        second_branch_pending = true;
+        secondbranch_PC = addr;
+    }
+    else
+    {
+        new_PC = addr;
+        branch_on = true;
+        delay_slot = 1;
+    }
 }
 
 #define printf(fmt, ...)(0)
@@ -608,6 +646,15 @@ void VectorUnit::fcset(uint32_t value)
     clip_flags = value;
 }
 
+void VectorUnit::fmeq(uint8_t dest, uint8_t source)
+{
+    printf("[VU] FMEQ: $%04X\n", int_gpr[source].u);
+    if((*MAC_flags & 0xFFFF) == (int_gpr[source].u & 0xFFFF))
+        set_int(dest, 1);
+    else
+        set_int(dest, 0);
+}
+
 void VectorUnit::fmand(uint8_t dest, uint8_t source)
 {
     printf("[VU] FMAND: $%04X\n", int_gpr[source].u);
@@ -663,7 +710,7 @@ void VectorUnit::ftoi15(uint8_t field, uint8_t dest, uint8_t source)
     {
         if (field & (1 << (3 - i)))
         {
-            gpr[dest].s[i] = (int32_t)(convert(gpr[source].u[i]) * (1.0f / 0.000030517578125));
+            gpr[dest].s[i] = (int32_t)(convert(gpr[source].u[i]) * (1.0f / 0.000030517578125f));
             printf("(%d)$%08X ", i, gpr[dest].s[i]);
         }
     }
@@ -809,6 +856,20 @@ void VectorUnit::itof12(uint8_t field, uint8_t dest, uint8_t source)
         if (field & (1 << (3 - i)))
         {
             gpr[dest].f[i] = (float)((float)gpr[source].s[i] * 0.000244140625f);
+            printf("(%d)%f ", i, gpr[dest].f[i]);
+        }
+    }
+    printf("\n");
+}
+
+void VectorUnit::itof15(uint8_t field, uint8_t dest, uint8_t source)
+{
+    printf("[VU] ITOF12: ");
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            gpr[dest].f[i] = (float)((float)gpr[source].s[i] * 0.000030517578125f);
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
     }
@@ -1185,6 +1246,24 @@ void VectorUnit::msub(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)
     printf("\n");
 }
 
+void VectorUnit::msuba(uint8_t field, uint8_t reg1, uint8_t reg2)
+{
+    printf("[VU] MSUBA: ");
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            float temp = convert(gpr[reg1].u[i]) * convert(gpr[reg2].u[i]);
+            ACC.f[i] = convert(ACC.u[i]) - temp;
+            update_mac_flags(ACC.f[i], i);
+            printf("(%d)%f ", i, ACC.f[i]);
+        }
+        else
+            clear_mac_flags(i);
+    }
+    printf("\n");
+}
+
 void VectorUnit::msubbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg)
 {
     printf("[VU] MSUBbc: ");
@@ -1533,6 +1612,41 @@ void VectorUnit::sub(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)
             update_mac_flags(result, i);
             set_gpr_f(dest, i, result);
             printf("(%d)%f ", i, gpr[dest].f[i]);
+        }
+        else
+            clear_mac_flags(i);
+    }
+    printf("\n");
+}
+
+void VectorUnit::suba(uint8_t field, uint8_t reg1, uint8_t reg2)
+{
+    printf("[VU] SUBA: ");
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            ACC.f[i] = convert(gpr[reg1].u[i]) - convert(gpr[reg2].u[i]);
+            ACC.f[i] = update_mac_flags(ACC.f[i], i);
+            printf("(%d)%f ", i, ACC.f[i]);
+        }
+        else
+            clear_mac_flags(i);
+    }
+    printf("\n");
+}
+
+void VectorUnit::subabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_reg)
+{
+    printf("[VU] SUBAbc: ");
+    float op = convert(gpr[bc_reg].u[bc]);
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            ACC.f[i] = convert(gpr[source].u[i]) - op;
+            ACC.f[i] = update_mac_flags(ACC.f[i], i);
+            printf("(%d)%f", i, ACC.f[i]);
         }
         else
             clear_mac_flags(i);
