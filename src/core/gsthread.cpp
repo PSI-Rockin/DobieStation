@@ -21,6 +21,7 @@ static uint32_t page_PSMCT16SZ[32][64][64];
 static uint32_t page_PSMCT8[32][64][128];
 static uint32_t page_PSMCT4[32][128][128];
 
+#define printf(fmt, ...)(0)
 
 /**
   * ~ GS notes ~
@@ -1465,7 +1466,7 @@ void GraphicsSynthesizerThread::render_triangle()
                             float g = (float) v1.rgbaq.g * w1 + (float) v2.rgbaq.g * w2 + (float) v3.rgbaq.g * w3;
                             float b = (float) v1.rgbaq.b * w1 + (float) v2.rgbaq.b * w2 + (float) v3.rgbaq.b * w3;
                             float a = (float) v1.rgbaq.a * w1 + (float) v2.rgbaq.a * w2 + (float) v3.rgbaq.a * w3;
-                            float q = (float) v1.rgbaq.q * w1 + (float) v2.rgbaq.q * w2 + (float) v3.rgbaq.q * w3;
+                            float q = v1.rgbaq.q * w1 + v2.rgbaq.q * w2 + v3.rgbaq.q * w3;
                             vtx_color.r = r / divider;
                             vtx_color.g = g / divider;
                             vtx_color.b = b / divider;

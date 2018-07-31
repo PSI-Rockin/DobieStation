@@ -9,6 +9,7 @@
 #include "../gif.hpp"
 #include "../errors.hpp"
 
+
 VectorInterface::VectorInterface(GraphicsInterface* gif, VectorUnit* vu, INTC* intc, int id) : gif(gif), vu(vu), intc(intc), id(id)
 {
 
