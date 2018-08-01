@@ -5,6 +5,12 @@
 
 void VU_Interpreter::interpret(VectorUnit &vu, uint32_t upper_instr, uint32_t lower_instr)
 {
+    //WaitQ, DIV, RSQRT, SQRT
+    if (((lower_instr & 0x800007FC) == 0x800003BC))
+    {
+        vu.waitq();
+    }
+
     upper(vu, upper_instr);
 
     //LOI
@@ -403,6 +409,9 @@ void VU_Interpreter::upper_special(VectorUnit &vu, uint32_t instr)
         case 0x1B:
             mulabc(vu, instr);
             break;
+        case 0x1C:
+            mulaq(vu, instr);
+            break;
         case 0x1D:
             abs(vu, instr);
             break;
@@ -550,6 +559,13 @@ void VU_Interpreter::mulabc(VectorUnit &vu, uint32_t instr)
     uint8_t bc_reg = (instr >> 16) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
     vu.mulabc(bc, field, source, bc_reg);
+}
+
+void VU_Interpreter::mulaq(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.mulaq(field, source);
 }
 
 void VU_Interpreter::abs(VectorUnit &vu, uint32_t instr)
@@ -854,10 +870,10 @@ void VU_Interpreter::sqi(VectorUnit& vu, uint32_t instr)
 
 void VU_Interpreter::lqd(VectorUnit &vu, uint32_t instr)
 {
-    uint32_t fs = (instr >> 11) & 0x1F;
-    uint32_t it = (instr >> 16) & 0x1F;
+    uint32_t is = (instr >> 11) & 0x1F;
+    uint32_t ft = (instr >> 16) & 0x1F;
     uint8_t dest_field = (instr >> 21) & 0xF;
-    vu.lqd(dest_field, fs, it);
+    vu.lqd(dest_field, ft, is);
 }
 
 void VU_Interpreter::sqd(VectorUnit &vu, uint32_t instr)
@@ -1034,6 +1050,9 @@ void VU_Interpreter::lower2(VectorUnit &vu, uint32_t instr)
         case 0x13:
             fcor(vu, instr);
             break;
+        case 0x16:
+            fsand(vu, instr);
+            break;
         case 0x18:
             fmeq(vu, instr);
             break;
@@ -1153,6 +1172,13 @@ void VU_Interpreter::fcand(VectorUnit &vu, uint32_t instr)
 void VU_Interpreter::fcor(VectorUnit &vu, uint32_t instr)
 {
     vu.fcor(instr & 0xFFFFFF);
+}
+
+void VU_Interpreter::fsand(VectorUnit &vu, uint32_t instr)
+{
+    uint32_t imm = ((instr >> 10) & 0x800) | (instr & 0x7FF);
+    uint8_t dest = (instr >> 16) & 0x1F;
+    vu.fsand(dest, imm);
 }
 
 void VU_Interpreter::fmeq(VectorUnit &vu, uint32_t instr)

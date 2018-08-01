@@ -194,6 +194,17 @@ string VU_Disasm::upper_acc_i(const string op, uint32_t instr)
     return output.str();
 }
 
+string VU_Disasm::upper_acc_q(const string op, uint32_t instr)
+{
+    stringstream output;
+    uint32_t fs = (instr >> 11) & 0x1F;
+    uint32_t dest_field = (instr >> 21) & 0xF;
+
+    output << op << "q." << get_field(dest_field);
+    output << " ACC" << ", vf" << fs << ", Q";
+    return output.str();
+}
+
 string VU_Disasm::upper_conversion(const string op, uint32_t instr)
 {
     stringstream output;
@@ -246,6 +257,8 @@ string VU_Disasm::upper_special(uint32_t PC, uint32_t instr)
         case 0x1A:
         case 0x1B:
             return upper_acc_bc("mula", instr);
+        case 0x1C:
+            return upper_acc_q("mula", instr);
         case 0x1D:
             return upper_conversion("abs", instr);
         case 0x1E:
@@ -699,6 +712,8 @@ string VU_Disasm::lower2(uint32_t PC, uint32_t instr)
             return fcand(instr);
         case 0x13:
             return fcor(instr);
+        case 0x16:
+            return fsand(instr);
         case 0x18:
             return fmeq(instr);
         case 0x1A:
@@ -835,6 +850,16 @@ string VU_Disasm::fcor(uint32_t instr)
     stringstream output;
     uint32_t imm = instr & 0xFFFFFF;
     output << "fcor vi1, 0x";
+    output << setfill('0') << setw(8) << hex << imm;
+    return output.str();
+}
+
+string VU_Disasm::fsand(uint32_t instr)
+{
+    stringstream output;
+    uint32_t imm = ((instr >> 10) & 0x800) | (instr & 0x7FF);
+    uint32_t dest = (instr >> 16) & 0x1F;
+    output << "fsand vi" << dest << ", 0x";
     output << setfill('0') << setw(8) << hex << imm;
     return output.str();
 }

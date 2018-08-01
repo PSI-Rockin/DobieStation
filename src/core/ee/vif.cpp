@@ -9,6 +9,7 @@
 #include "../gif.hpp"
 #include "../errors.hpp"
 
+#define printf(fmt, ...)(0)
 
 VectorInterface::VectorInterface(GraphicsInterface* gif, VectorUnit* vu, INTC* intc, int id) : gif(gif), vu(vu), intc(intc), id(id)
 {
@@ -23,6 +24,8 @@ void VectorInterface::reset()
     command_len = 0;
     buffer_size = 0;
     DBF = false;
+    MODE = 0;
+    MASK = 0;
     vu->set_TOP_regs(&TOP, &ITOP);
     vu->set_GIF(gif);
     wait_for_VU = false;
@@ -349,16 +352,9 @@ void VectorInterface::init_UNPACK(uint32_t value)
     unpack.words_per_op /= 32;
     command_len /= 32;
 
-    
-
-    if (MODE)
-    {
-        Errors::die("[VIF] MODE == %d!\n", MODE);
-    }
     if (CYCLE.WL <= CYCLE.CL)
     {
         //Skip write
-        //command_len = unpack.words_per_op * unpack.num;
         //printf("[VIF] Command len: %d\n", command_len);
     }
     else
@@ -396,6 +392,38 @@ void VectorInterface::handle_UNPACK_masking(uint128_t& quad)
                 default:
                     //No masking, ignore
                     break;
+            }
+        }
+    }
+}
+
+void VectorInterface::handle_UNPACK_mode(uint128_t& quad)
+{
+    if (MODE)
+    {
+        uint8_t tempmask;
+
+        for (int i = 0; i < 4; i++)
+        {
+            tempmask = (MASK >> ((i * 2) + std::min(unpack.blocks_written * 8, 24))) & 0x3;
+
+            if (!tempmask || !unpack.masked)
+            {
+                switch (MODE)
+                {
+                    case 1:
+                        //Offset mode - VU Mem = Input + Row
+                        quad._u32[i] += ROW[i];
+                        break;
+                    case 2:
+                        //Difference mode - VU Mem = Row = Input + Row
+                        quad._u32[i] += ROW[i];
+                        ROW[i] = quad._u32[i];
+                        break;
+                    default:
+                        //Do nothing
+                        break;
+                }
             }
         }
     }
@@ -689,6 +717,7 @@ void VectorInterface::handle_UNPACK(uint32_t value)
 void VectorInterface::process_UNPACK_quad(uint128_t &quad)
 {
     handle_UNPACK_masking(quad);
+    handle_UNPACK_mode(quad);
 
     //printf("[VIF] Write data mem $%08X: $%08X_%08X_%08X_%08X\n", unpack.addr,
            //quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);

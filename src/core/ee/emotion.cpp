@@ -456,7 +456,13 @@ void EmotionEngine::cfc(int cop_id, int reg, int cop_reg)
             bark = (int32_t)fpu->cfc(cop_reg);
             break;
         case 2:
-            bark = (int32_t)vu0->cfc(cop_reg);
+            if (cop_reg == 29)
+            {
+                bark = vu0->is_running();
+                bark |= vu1->is_running() << 8;
+            }
+            else
+                bark = (int32_t)vu0->cfc(cop_reg);
             break;
     }
     set_gpr<int64_t>(reg, bark);

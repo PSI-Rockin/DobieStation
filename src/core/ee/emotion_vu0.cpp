@@ -8,7 +8,8 @@ void EmotionInterpreter::cop2_special(VectorUnit &vu0, uint32_t instruction)
       * We're flushing pipelines for VU0, as accurately handling COP2's pipelining is painful.
       * I don't yet have a good solution for this that doesn't murder performance.
       */
-    vu0.flush_pipes();
+    vu0.update_mac_pipeline();
+    vu0.update_div_pipeline();
     uint8_t op = instruction & 0x3F;
     switch (op)
     {
