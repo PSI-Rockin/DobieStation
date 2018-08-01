@@ -10,7 +10,7 @@ struct IPU_FIFO
     std::queue<uint128_t> f;
     int bit_pointer;
     bool get_bits(uint32_t& data, int bits);
-    void advance_stream(uint8_t amount);
+    bool advance_stream(uint8_t amount);
 
     void reset();
 };

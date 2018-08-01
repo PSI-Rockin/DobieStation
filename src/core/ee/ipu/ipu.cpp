@@ -87,6 +87,7 @@ void ImageProcessingUnit::reset()
     ctrl.MPEG1 = false;
     ctrl.picture_type = 0;
     ctrl.busy = false;
+    ctrl.coded_block_pattern = 0;
     command = 0;
     command_option = 0;
     bytes_left = 0;
@@ -184,7 +185,8 @@ bool ImageProcessingUnit::process_BDEC()
         switch (bdec.state)
         {
             case BDEC_STATE::ADVANCE:
-                in_FIFO.advance_stream(command_option & 0x3F);
+                if (!in_FIFO.advance_stream(command_option & 0x3F))
+                    return false;
                 bdec.state = BDEC_STATE::GET_CBP;
                 break;
             case BDEC_STATE::GET_CBP:
@@ -614,7 +616,8 @@ bool ImageProcessingUnit::BDEC_read_diff()
                     if (!in_FIFO.get_bits(result, bdec.dc_size))
                         return false;
 
-                    in_FIFO.advance_stream(bdec.dc_size);
+                    if (!in_FIFO.advance_stream(bdec.dc_size))
+                        return false;
 
                     int16_t half_range = 1 << (bdec.dc_size - 1);
                     bdec.dc_diff = (int16_t)result;
@@ -668,7 +671,8 @@ void ImageProcessingUnit::process_VDEC()
         switch (vdec_state)
         {
             case VDEC_STATE::ADVANCE:
-                in_FIFO.advance_stream(command_option & 0x3F);
+                if (!in_FIFO.advance_stream(command_option & 0x3F))
+                    return;
                 vdec_state = VDEC_STATE::DECODE;
                 break;
             case VDEC_STATE::DECODE:
@@ -692,7 +696,8 @@ void ImageProcessingUnit::process_FDEC()
         switch (fdec_state)
         {
             case VDEC_STATE::ADVANCE:
-                in_FIFO.advance_stream(command_option & 0x3F);
+                if (!in_FIFO.advance_stream(command_option & 0x3F))
+                    return;
                 fdec_state = VDEC_STATE::DECODE;
                 break;
             case VDEC_STATE::DECODE:
@@ -731,7 +736,8 @@ bool ImageProcessingUnit::process_CSC()
                     uint32_t value;
                     if (!in_FIFO.get_bits(value, 8))
                         return false;
-                    in_FIFO.advance_stream(8);
+                    if (!in_FIFO.advance_stream(8))
+                        return false;
                     csc.block[csc.block_index] = value & 0xFF;
                     csc.block_index++;
                 }
@@ -822,7 +828,7 @@ uint32_t ImageProcessingUnit::read_control()
 {
     uint32_t reg = 0;
     reg |= in_FIFO.f.size();
-    reg |= ctrl.coded_block_pattern << 8;
+    reg |= (ctrl.coded_block_pattern & 0x3F) << 8;
     reg |= ctrl.error_code << 14;
     reg |= ctrl.start_code << 15;
     reg |= ctrl.intra_DC_precision << 16;

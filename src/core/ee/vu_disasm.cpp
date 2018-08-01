@@ -400,6 +400,8 @@ string VU_Disasm::lower1_special(uint32_t PC, uint32_t instr)
             return div(instr);
         case 0x39:
             return vu_sqrt(instr);
+        case 0x3A:
+            return rsqrt(instr);
         case 0x3B:
             return "waitq";
         case 0x3C:
@@ -430,6 +432,8 @@ string VU_Disasm::lower1_special(uint32_t PC, uint32_t instr)
             return erleng(instr);
         case 0x78:
             return esqrt(instr);
+        case 0x79:
+            return ersqrt(instr);
         case 0x7B:
             return "waitp";
         default:
@@ -520,6 +524,17 @@ string VU_Disasm::vu_sqrt(uint32_t instr)
     uint32_t ft = (instr >> 16) & 0x1F;
     uint8_t ftf = (instr >> 23) & 0x3;
     output << "sqrt Q, vf" << ft << "." << get_fsf(ftf);
+    return output.str();
+}
+
+string VU_Disasm::rsqrt(uint32_t instr)
+{
+    stringstream output;
+    uint32_t fs = (instr >> 11) & 0x1F;
+    uint8_t fsf = (instr >> 21) & 0x3;
+    uint32_t ft = (instr >> 16) & 0x1F;
+    uint8_t ftf = (instr >> 23) & 0x3;
+    output << "rsqrt Q, vf" << ft << "." << get_fsf(fsf) << " vf" << ft << "." << get_fsf(ftf);
     return output.str();
 }
 
@@ -650,6 +665,14 @@ string VU_Disasm::esqrt(uint32_t instr)
     stringstream output;
     uint32_t source = (instr >> 11) & 0x1F;
     output << "esqrt P, vf" << source << "." << get_fsf((instr >> 21) & 0x3);
+    return output.str();
+}
+
+string VU_Disasm::ersqrt(uint32_t instr)
+{
+    stringstream output;
+    uint32_t source = (instr >> 11) & 0x1F;
+    output << "ersqrt P, vf" << source << "." << get_fsf((instr >> 21) & 0x3);
     return output.str();
 }
 

@@ -759,6 +759,9 @@ void VU_Interpreter::lower1_special(VectorUnit &vu, uint32_t instr)
         case 0x39:
             vu_sqrt(vu, instr);
             break;
+        case 0x3A:
+            rsqrt(vu, instr);
+            break;
         case 0x3B:
             waitq(vu, instr);
             break;
@@ -803,6 +806,9 @@ void VU_Interpreter::lower1_special(VectorUnit &vu, uint32_t instr)
             break;
         case 0x78:
             esqrt(vu, instr);
+            break;
+        case 0x79:
+            ersqrt(vu, instr);
             break;
         case 0x7B:
             /**
@@ -876,6 +882,15 @@ void VU_Interpreter::vu_sqrt(VectorUnit &vu, uint32_t instr)
     uint8_t source = (instr >> 16) & 0x1F;
     uint8_t ftf = (instr >> 23) & 0x3;
     vu.vu_sqrt(ftf, source);
+}
+
+void VU_Interpreter::rsqrt(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t reg1 = (instr >> 11) & 0x1F;
+    uint8_t reg2 = (instr >> 16) & 0x1F;
+    uint8_t fsf = (instr >> 21) & 0x3;
+    uint8_t ftf = (instr >> 23) & 0x3;
+    vu.rsqrt(ftf, fsf, reg1, reg2);
 }
 
 void VU_Interpreter::waitq(VectorUnit &vu, uint32_t instr)
@@ -978,6 +993,13 @@ void VU_Interpreter::esqrt(VectorUnit &vu, uint32_t instr)
     uint8_t source = (instr >> 11) & 0x1F;
     uint8_t fsf = (instr >> 21) & 0x3;
     vu.esqrt(fsf, source);
+}
+
+void VU_Interpreter::ersqrt(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t fsf = (instr >> 21) & 0x3;
+    vu.ersqrt(fsf, source);
 }
 
 void VU_Interpreter::lower2(VectorUnit &vu, uint32_t instr)

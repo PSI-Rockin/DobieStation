@@ -78,6 +78,7 @@ namespace VU_Interpreter
     void sqd(VectorUnit& vu, uint32_t instr);
     void div(VectorUnit& vu, uint32_t instr);
     void vu_sqrt(VectorUnit &vu, uint32_t instr);
+    void rsqrt(VectorUnit &vu, uint32_t instr);
     void waitq(VectorUnit& vu, uint32_t instr);
     void mtir(VectorUnit& vu, uint32_t instr);
     void mfir(VectorUnit& vu, uint32_t instr);
@@ -93,6 +94,7 @@ namespace VU_Interpreter
     void eleng(VectorUnit& vu, uint32_t instr);
     void erleng(VectorUnit& vu, uint32_t instr);
     void esqrt(VectorUnit& vu, uint32_t instr);
+    void ersqrt(VectorUnit& vu, uint32_t instr);
 
     void lower2(VectorUnit& vu, uint32_t instr);
     void lq(VectorUnit& vu, uint32_t instr);
