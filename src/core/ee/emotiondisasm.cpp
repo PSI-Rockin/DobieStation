@@ -1574,6 +1574,8 @@ string EmotionDisasm::disasm_cop2_special2(uint32_t instruction)
             return disasm_vitof4(instruction);
         case 0x12:
             return disasm_vitof12(instruction);
+        case 0x13:
+            return disasm_vitof15(instruction);
         case 0x14:
             return disasm_vftoi0(instruction);
         case 0x15:
@@ -1722,6 +1724,11 @@ string EmotionDisasm::disasm_vitof4(uint32_t instruction)
 string EmotionDisasm::disasm_vitof12(uint32_t instruction)
 {
     return disasm_cop2_special2_move("vitof12", instruction);
+}
+
+string EmotionDisasm::disasm_vitof15(uint32_t instruction)
+{
+    return disasm_cop2_special2_move("vitof15", instruction);
 }
 
 string EmotionDisasm::disasm_vftoi0(uint32_t instruction)

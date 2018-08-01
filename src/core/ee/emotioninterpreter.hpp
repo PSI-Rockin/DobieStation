@@ -183,6 +183,7 @@ namespace EmotionInterpreter
     void cop2_vitof0(VectorUnit& vu0, uint32_t instruction);
     void cop2_vitof4(VectorUnit& vu0, uint32_t instruction);
     void cop2_vitof12(VectorUnit& vu0, uint32_t instruction);
+    void cop2_vitof15(VectorUnit& vu0, uint32_t instruction);
     void cop2_vftoi0(VectorUnit& vu0, uint32_t instruction);
     void cop2_vftoi4(VectorUnit& vu0, uint32_t instruction);
     void cop2_vftoi12(VectorUnit& vu0, uint32_t instruction);

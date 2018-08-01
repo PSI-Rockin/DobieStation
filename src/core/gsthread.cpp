@@ -1789,6 +1789,14 @@ void GraphicsSynthesizerThread::host_to_host()
                 TRXPOS.int_dest_x++;
                 TRXPOS.int_source_x++;
                 break;
+            case 0x14:
+                data = read_PSMCT4_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                                          TRXPOS.int_source_x, TRXPOS.source_y);
+                write_PSMCT4_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.dest_y, data);
+                pixels_transferred++;
+                TRXPOS.int_dest_x++;
+                TRXPOS.int_source_x++;
+                break;
             default:
                 Errors::die("[GS_t] Unrecognized host-to-host format $%02X", BITBLTBUF.source_format);
         }
@@ -1878,7 +1886,6 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, const RGBAQ
             break;
     }
 
-    uint32_t coord = u + (v * current_ctx->tex0.width);
     uint32_t tex_base = current_ctx->tex0.texture_base;
     switch (current_ctx->tex0.format)
     {

@@ -201,6 +201,7 @@ namespace EmotionDisasm
     std::string disasm_vitof0(uint32_t instruction);
     std::string disasm_vitof4(uint32_t instruction);
     std::string disasm_vitof12(uint32_t instruction);
+    std::string disasm_vitof15(uint32_t instruction);
     std::string disasm_vftoi0(uint32_t instruction);
     std::string disasm_vftoi4(uint32_t instruction);
     std::string disasm_vftoi12(uint32_t instruction);
