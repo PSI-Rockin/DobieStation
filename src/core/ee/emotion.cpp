@@ -8,6 +8,8 @@
 
 #include "../emulator.hpp"
 
+#define SKIPMPEG_ON
+
 //#define printf(fmt, ...)(0)
 
 EmotionEngine::EmotionEngine(Cop0* cp0, Cop1* fpu, Emulator* e, uint8_t* sp, VectorUnit* vu0, VectorUnit* vu1) :
@@ -135,7 +137,8 @@ int EmotionEngine::run(int cycles_to_run)
         }
         if ((PC < 0x81FC0 || PC >= 0x81FE0))
         {
-            if (can_disassemble) {
+            if (can_disassemble)
+            {
                 std::string disasm = EmotionDisasm::disasm_instr(instruction, PC);
                 printf("[$%08X] $%08X - %s\n", PC, instruction, disasm.c_str());
                 print_state();
@@ -368,6 +371,25 @@ void EmotionEngine::jp(uint32_t new_addr)
     branch_on = true;
     new_PC = new_addr;
     delay_slot = 1;
+
+#ifdef SKIPMPEG_ON
+    //skipmpeg - many thanks to PCSX2 for the code :)
+    //We want to search for this pattern:
+    //lw reg, 0x40(a0); jr ra; lw v0, 0(reg)
+    //The idea is that if the function returns 1, the movie is over.
+    if (read32(new_PC + 4) == 0x03E00008)
+    {
+        uint32_t code = read32(new_PC);
+        uint32_t p1 = 0x8c800040;
+        uint32_t p2 = 0x8c020000 | (code & 0x1f0000) << 5;
+        if ((code & 0xffe0ffff)   != p1) return;
+        if (read32(new_PC + 8) != p2) return;
+
+        branch_on = false;
+        delay_slot = 0;
+        set_gpr<uint64_t>(2, 1); //v0 = 1
+    }
+#endif
 }
 
 void EmotionEngine::branch(bool condition, int offset)
