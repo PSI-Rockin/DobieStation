@@ -65,7 +65,6 @@ union GS_message_payload
 	{
         uint32_t* target;
         std::mutex* target_mutex;
-        bool invert; //invert to look at in-progress frame buffer
     } render_payload;
     struct
     {
@@ -93,7 +92,8 @@ enum GS_return :uint8_t
     render_complete_t,
     death_error_t,
     savestate_done_t,
-    loadstate_done_t
+    loadstate_done_t,
+    gsdump_render_partial_done_t,
 };
 
 union GS_return_message_payload
@@ -102,6 +102,10 @@ union GS_return_message_payload
     {
         const char* error_str;
     } death_error_payload;
+    struct
+    {
+        uint16_t x, y;
+    } xy_payload;
     struct
     {
         uint8_t BLANK;
@@ -144,7 +148,7 @@ class GraphicsSynthesizer
         bool is_frame_complete();
         uint32_t* get_framebuffer();
         void render_CRT();
-        void render_partial_frame();
+        uint32_t* render_partial_frame(uint16_t& width, uint16_t& height);
         void get_resolution(int& w, int& h);
         void get_inner_resolution(int& w, int& h);
 

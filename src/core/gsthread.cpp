@@ -196,7 +196,7 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
                             std::this_thread::yield();
                         }
                         std::lock_guard<std::mutex> lock(*p.target_mutex, std::adopt_lock);
-                        gs.render_CRT(p.target, p.invert);
+                        gs.render_CRT(p.target);
                         GS_return_message_payload return_payload;
                         return_payload.no_payload = { 0 };
                         return_fifo->push({ GS_return::render_complete_t,return_payload });
@@ -212,8 +212,23 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
                         break;
                     }
                     case memdump_t:
-                        gs.memdump();
+                    {
+                        auto p = data.payload.render_payload;
+
+                        while (!p.target_mutex->try_lock())
+                        {
+                            printf("[GS_t] buffer lock failed!\n");
+                            std::this_thread::yield();
+                        }
+                        std::lock_guard<std::mutex> lock(*p.target_mutex, std::adopt_lock);
+                        uint16_t width, height;
+                        gs.memdump(p.target, width, height);
+                        GS_return_message_payload return_payload;
+                        SCISSOR s = gs.current_ctx->scissor;
+                        return_payload.xy_payload = { width, height };
+                        return_fifo->push({ GS_return::gsdump_render_partial_done_t,return_payload });
                         break;
+                    }
                     case die_t:
                         return;
                     case loadstate_t:
@@ -288,19 +303,33 @@ void GraphicsSynthesizerThread::reset()
     current_ctx = &context1;
 }
 
-void GraphicsSynthesizerThread::memdump()
+void GraphicsSynthesizerThread::memdump(uint32_t* target, uint16_t& width, uint16_t& height)
 {
-    ofstream file("memdump.bin", std::ios::binary);
-    file.write((char*)local_mem, 1024 * 1024 * 4);
-    file.close();
+    SCISSOR s = current_ctx->scissor;
+    width = min(static_cast<uint16_t>(s.x2 - s.x1), (uint16_t)current_ctx->frame.width);
+    height = min(static_cast<uint16_t>(s.y2 - s.y1), (uint16_t)480);
+    int yy = 0;
+    for (int y = s.y1; y < s.y2; y++)
+    {
+        int xx = 0;
+        for (int x = s.x1; x < s.x2; x++)
+        {
+            uint32_t value = read_PSMCT32_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y);
+            target[xx + (yy * width)] = value | 0xFF000000;
+            xx++;
+            if (xx > width) break;
+        }
+        yy++;
+        if (yy > height) break;
+    }
 }
 
-void GraphicsSynthesizerThread::render_CRT(uint32_t* target, bool invert)
+void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
 {
     printf("DISPLAY2: (%d, %d) wh: (%d, %d)\n", reg.DISPLAY2.x >> 2, reg.DISPLAY2.y, reg.DISPLAY2.width >> 2, reg.DISPLAY2.height);
     DISPLAY &currentDisplay = reg.DISPLAY1;
     DISPFB &currentFB = reg.DISPFB1;
-    if (reg.PMODE.circuit2 == invert)
+    if (reg.PMODE.circuit2 == false)
     {
         currentDisplay = reg.DISPLAY1;
         currentFB = reg.DISPFB1;

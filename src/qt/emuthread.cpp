@@ -94,7 +94,7 @@ void EmuThread::gsdump_run()
     printf("gsdump frame\n");
     try
     {
-        int draws_sent = 10;
+        int draws_sent = 100;
         while (true)
         {
             GS_message data;
@@ -105,15 +105,17 @@ void EmuThread::gsdump_run()
                     e.get_gs().send_message(data);
                     if (frame_advance && data.payload.xyz_payload.drawing_kick && --draws_sent <= 0)
                     {
-                        e.get_gs().render_partial_frame();
-                        goto render_partial_label;
+                        uint16_t w, h;
+                        uint32_t* frame = e.get_gs().render_partial_frame(w, h);
+                        emit completed_frame(frame, w, h, w, h);
+                        pause(PAUSE_EVENT::FRAME_ADVANCE);
+                        return;
                     }
                     break;
                 case render_crt_t:
                 {
                     printf("gsdump frame render\n");
                     e.get_gs().render_CRT();
-                render_partial_label:
                     int w, h, new_w, new_h;
                     e.get_inner_resolution(w, h);
                     e.get_resolution(new_w, new_h);

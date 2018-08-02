@@ -103,46 +103,38 @@ void GraphicsSynthesizer::set_CRT(bool interlaced, int mode, bool frame_mode)
     send_message({ GS_command::set_crt_t,payload });
 }
 
-void wait_for_return(gs_return_fifo *return_queue)
+void wait_for_return(gs_return_fifo *return_queue, GS_return type, GS_return_message &data)
 {
-    GS_return_message data;
     printf("wait for return\n");
     while (true)
     {
         if (return_queue->pop(data))
         {
-            switch (data.type)
+            if (data.type == death_error_t)
             {
-                case render_complete_t:
-                    return;
-                case death_error_t:
-                {
-                    auto p = data.payload.death_error_payload;
-                    auto data = std::string(p.error_str);
-                    delete[] p.error_str;
-                    Errors::die(data.c_str());
-                    //There's probably a better way of doing this
-                    //but I don't know how to make RAII work across threads properly
-                }
-                case loadstate_done_t:
-                case savestate_done_t:
-                    return;
-                default:
-                    Errors::die("[GS] Unhandled return message!\n");
+                auto p = data.payload.death_error_payload;
+                auto data = std::string(p.error_str);
+                delete[] p.error_str;
+                Errors::die(data.c_str());
+                //There's probably a better way of doing this
+                //but I don't know how to make RAII work across threads properly
             }
+
+            if (data.type == type)
+                return;
+            else
+                Errors::die("[GS] return message expected %d but was %d!\n", type, data.type);
         }
         else
-        {
-            //printf("[GS] GS thread has not finished rendering!\n");
             std::this_thread::yield();
-        }
     }
 }
 
 uint32_t* GraphicsSynthesizer::get_framebuffer()
 {
     uint32_t* out;
-    wait_for_return(return_queue);
+    GS_return_message data;
+    wait_for_return(return_queue, GS_return::render_complete_t, data);
     if (using_first_buffer)
     {
         while (!output_buffer1_mutex.try_lock())
@@ -204,20 +196,39 @@ void GraphicsSynthesizer::render_CRT()
 {
     GS_message_payload payload;
     if (using_first_buffer)
-        payload.render_payload = { output_buffer1, &output_buffer1_mutex, false };
+        payload.render_payload = { output_buffer1, &output_buffer1_mutex };
     else
-        payload.render_payload = { output_buffer2, &output_buffer2_mutex, false }; ;
+        payload.render_payload = { output_buffer2, &output_buffer2_mutex }; ;
     send_message({ GS_command::render_crt_t,payload });
 }
 
-void GraphicsSynthesizer::render_partial_frame()
+uint32_t* GraphicsSynthesizer::render_partial_frame(uint16_t& width, uint16_t& height)
 {
     GS_message_payload payload;
     if (using_first_buffer)
-        payload.render_payload = { output_buffer1, &output_buffer1_mutex, true };
+        payload.render_payload = { output_buffer1, &output_buffer1_mutex };
     else
-        payload.render_payload = { output_buffer2, &output_buffer2_mutex, true }; ;
-    send_message({ GS_command::render_crt_t,payload });
+        payload.render_payload = { output_buffer2, &output_buffer2_mutex }; ;
+    send_message({ GS_command::memdump_t,payload });
+
+    GS_return_message data;
+    wait_for_return(return_queue, GS_return::gsdump_render_partial_done_t, data);
+    width = data.payload.xy_payload.x;
+    height = data.payload.xy_payload.y;
+
+
+    if (using_first_buffer)
+    {
+        using_first_buffer = false;
+        current_lock = std::unique_lock<std::mutex>(output_buffer1_mutex);
+        return output_buffer1;
+    }
+    else
+    {
+        using_first_buffer = true;
+        current_lock = std::unique_lock<std::mutex>(output_buffer2_mutex);
+        return output_buffer2;
+    }
 }
 
 void GraphicsSynthesizer::get_resolution(int &w, int &h)
@@ -308,7 +319,8 @@ void GraphicsSynthesizer::load_state(ifstream &state)
     GS_message_payload payload;
     payload.loadstate_payload = {&state};
     send_message({ GS_command::loadstate_t, payload});
-    wait_for_return(return_queue);
+    GS_return_message data;
+    wait_for_return(return_queue, GS_return::loadstate_done_t, data);
     state.read((char*)&reg, sizeof(reg));
 }
 
@@ -317,7 +329,8 @@ void GraphicsSynthesizer::save_state(ofstream &state)
     GS_message_payload payload;
     payload.savestate_payload = {&state};
     send_message({ GS_command::savestate_t,payload });
-    wait_for_return(return_queue);
+    GS_return_message data;
+    wait_for_return(return_queue, GS_return::savestate_done_t, data);
     state.write((char*)&reg, sizeof(reg));
 }
 void GraphicsSynthesizer::send_message(GS_message message)
