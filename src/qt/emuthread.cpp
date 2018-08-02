@@ -94,7 +94,7 @@ void EmuThread::gsdump_run()
     printf("gsdump frame\n");
     try
     {
-        int draws_sent = 100;
+        int draws_sent = 10;
         while (true)
         {
             GS_message data;

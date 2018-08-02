@@ -127,9 +127,8 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
             bool available = fifo->pop(data);
             if (available)
             {
-                if (gsdump_recording) {
+                if (gsdump_recording)
                     gsdump_file.write((char*)&data, sizeof(data));
-                }
                 switch (data.type)
                 {
                     case write64_t:
@@ -250,7 +249,8 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
                     case gsdump_t:
                     {
                         printf("gs dump! ");
-                        if (!gsdump_recording) {
+                        if (!gsdump_recording)
+                        {
                             printf("(start)\n");
                             gsdump_file.open("gsdump.gsd", ios::out | ios::binary);
                             if (!gsdump_file.is_open())
