@@ -118,6 +118,7 @@ void VectorUnit::run(int cycles)
                 printf("[VU] Ended execution!\n");
                 running = false;
                 finish_on = false;
+                flush_pipes();
             }
             else
                 delay_slot--;
@@ -164,16 +165,22 @@ void VectorUnit::handle_XGKICK()
 
 void VectorUnit::callmsr()
 {
-    printf("[VU] Starting execution at $%08X!\n", CMSAR0 * 8);
-    running = true;
-    PC = CMSAR0 * 8;
+    printf("[VU%d] CallMSR Starting execution at $%08X! Cur PC %x\n", get_id(), CMSAR0 * 8, PC);
+    if (running == false)
+    {
+        running = true;
+        PC = CMSAR0 * 8;
+    }
 }
 
 void VectorUnit::mscal(uint32_t addr)
 {
-    printf("[VU] Starting execution at $%08X!\n", addr);
-    running = true;
-    PC = addr;
+    printf("[VU%d] CallMS Starting execution at $%08X! Cur PC %x\n", get_id(), addr, PC);
+    if (running == false)
+    {
+        running = true;
+        PC = addr;
+    }
 }
 
 void VectorUnit::end_execution()
@@ -220,12 +227,33 @@ void VectorUnit::clear_mac_flags(int index)
     new_MAC_flags &= ~(0x1111 << (3 - index));
 }
 
+void VectorUnit::update_status()
+{
+    status &= ~0x3F;
+
+    status |= (*MAC_flags & 0x000F) ? 1 : 0;
+    status |= (*MAC_flags & 0x00F0) ? 2 : 0;
+    status |= (*MAC_flags & 0x0F00) ? 4 : 0;
+    status |= (*MAC_flags & 0xF000) ? 8 : 0;
+
+    status |= (status & 0x3F) << 6;
+}
+
 void VectorUnit::update_mac_pipeline()
 {
+    bool updatestatus = false;
+
+    //Pipeline has updated, so the status needs to update
+    if (MAC_pipeline[3] != MAC_pipeline[2])
+        updatestatus = true;
+
     MAC_pipeline[3] = MAC_pipeline[2];
     MAC_pipeline[2] = MAC_pipeline[1];
     MAC_pipeline[1] = MAC_pipeline[0];
     MAC_pipeline[0] = new_MAC_flags;
+
+    if(updatestatus)
+        update_status();
 }
 
 void VectorUnit::update_div_pipeline()
@@ -473,7 +501,7 @@ void VectorUnit::addbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, 
         if (field & (1 << (3 - i)))
         {
             float temp = op + convert(gpr[source].u[i]);
-            update_mac_flags(temp, i);
+            temp = update_mac_flags(temp, i);
             set_gpr_f(dest, i, temp);
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
@@ -492,7 +520,7 @@ void VectorUnit::addi(uint8_t field, uint8_t dest, uint8_t source)
         if (field & (1 << (3 - i)))
         {
             float temp = op + convert(gpr[source].u[i]);
-            update_mac_flags(temp, i);
+            temp = update_mac_flags(temp, i);
             set_gpr_f(dest, i, temp);
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
@@ -511,7 +539,7 @@ void VectorUnit::addq(uint8_t field, uint8_t dest, uint8_t source)
         if (field & (1 << (3 - i)))
         {
             float temp = value + convert(gpr[source].u[i]);
-            update_mac_flags(temp, i);
+            temp = update_mac_flags(temp, i);
             set_gpr_f(dest, i, temp);
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
@@ -678,6 +706,18 @@ void VectorUnit::fmand(uint8_t dest, uint8_t source)
 {
     printf("[VU] FMAND: $%04X\n", int_gpr[source].u);
     set_int(dest, *MAC_flags & int_gpr[source].u);
+}
+
+void VectorUnit::fmor(uint8_t dest, uint8_t source)
+{
+    printf("[VU] FMOR: $%04X\n", int_gpr[source].u);
+    set_int(dest, *MAC_flags | int_gpr[source].u);
+}
+
+void VectorUnit::fsand(uint8_t dest, uint32_t value)
+{
+    printf("[VU] FSAND: $%08X\n", value);
+    set_int(dest, status & value);
 }
 
 void VectorUnit::ftoi0(uint8_t field, uint8_t dest, uint8_t source)
@@ -883,7 +923,7 @@ void VectorUnit::itof12(uint8_t field, uint8_t dest, uint8_t source)
 
 void VectorUnit::itof15(uint8_t field, uint8_t dest, uint8_t source)
 {
-    printf("[VU] ITOF12: ");
+    printf("[VU] ITOF15: ");
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
@@ -968,7 +1008,7 @@ void VectorUnit::madda(uint8_t field, uint8_t reg1, uint8_t reg2)
         {
             float temp = convert(gpr[reg1].u[i]) * convert(gpr[reg2].u[i]);
             ACC.f[i] = temp + convert(ACC.u[i]);
-            update_mac_flags(ACC.f[i], i);
+            ACC.f[i] = update_mac_flags(ACC.f[i], i);
             printf("(%d)%f ", i, ACC.f[i]);
         }
         else
@@ -987,7 +1027,7 @@ void VectorUnit::maddabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_r
         {
             float temp = op * convert(gpr[source].u[i]);
             ACC.f[i] = temp + convert(ACC.u[i]);
-            update_mac_flags(ACC.f[i], i);
+            ACC.f[i] = update_mac_flags(ACC.f[i], i);
             printf("(%d)%f ", i, ACC.f[i]);
         }
         else
@@ -1006,7 +1046,7 @@ void VectorUnit::maddai(uint8_t field, uint8_t source)
         {
             float temp = op * convert(gpr[source].u[i]);
             ACC.f[i] = temp + convert(ACC.u[i]);
-            update_mac_flags(ACC.f[i], i);
+            ACC.f[i] = update_mac_flags(ACC.f[i], i);
             printf("(%d)%f ", i, ACC.f[i]);
         }
         else
@@ -1220,7 +1260,7 @@ void VectorUnit::msubabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_r
         {
             float temp = op * convert(gpr[source].u[i]);
             ACC.f[i] = convert(ACC.u[i]) - temp;
-            update_mac_flags(ACC.f[i], i);
+            ACC.f[i] = update_mac_flags(ACC.f[i], i);
             printf("(%d)%f ", i, ACC.f[i]);
         }
         else
@@ -1239,7 +1279,7 @@ void VectorUnit::msubai(uint8_t field, uint8_t source)
         {
             float temp = op * convert(gpr[source].u[i]);
             ACC.f[i] = convert(ACC.u[i]) - temp;
-            update_mac_flags(ACC.f[i], i);
+            ACC.f[i] = update_mac_flags(ACC.f[i], i);
             printf("(%d)%f ", i, ACC.f[i]);
         }
         else
@@ -1274,7 +1314,7 @@ void VectorUnit::msuba(uint8_t field, uint8_t reg1, uint8_t reg2)
         {
             float temp = convert(gpr[reg1].u[i]) * convert(gpr[reg2].u[i]);
             ACC.f[i] = convert(ACC.u[i]) - temp;
-            update_mac_flags(ACC.f[i], i);
+            ACC.f[i] = update_mac_flags(ACC.f[i], i);
             printf("(%d)%f ", i, ACC.f[i]);
         }
         else
@@ -1333,7 +1373,7 @@ void VectorUnit::mul(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)
         if (field & (1 << (3 - i)))
         {
             float result = convert(gpr[reg1].u[i]) * convert(gpr[reg2].u[i]);
-            update_mac_flags(result, i);
+            result = update_mac_flags(result, i);
             set_gpr_f(dest, i, result);
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
@@ -1351,7 +1391,7 @@ void VectorUnit::mula(uint8_t field, uint8_t reg1, uint8_t reg2)
         if (field & (1 << (3 - i)))
         {
             float temp = convert(gpr[reg1].u[i]) * convert(gpr[reg2].u[i]);
-            update_mac_flags(temp, i);
+            temp = update_mac_flags(temp, i);
             ACC.f[i] = temp;
             printf("(%d)%f ", i, ACC.f[i]);
         }
@@ -1370,7 +1410,7 @@ void VectorUnit::mulabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_re
         if (field & (1 << (3 - i)))
         {
             float temp = op * convert(gpr[source].u[i]);
-            update_mac_flags(temp, i);
+            temp = update_mac_flags(temp, i);
             ACC.f[i] = temp;
             printf("(%d)%f ", i, ACC.f[i]);
         }
@@ -1389,8 +1429,26 @@ void VectorUnit::mulai(uint8_t field, uint8_t source)
         if (field & (1 << (3 - i)))
         {
             float temp = convert(gpr[source].u[i]) * op;
-            update_mac_flags(temp, i);
+            temp = update_mac_flags(temp, i);
             ACC.f[i] = temp;
+            printf("(%d)%f ", i, ACC.f[i]);
+        }
+        else
+            clear_mac_flags(i);
+    }
+    printf("\n");
+}
+
+void VectorUnit::mulaq(uint8_t field, uint8_t source)
+{
+    printf("[VU] MULAq: ");
+    float op = convert(Q.u);
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            float temp = convert(gpr[source].u[i]) * op;            
+            ACC.f[i] = update_mac_flags(temp, i);
             printf("(%d)%f ", i, ACC.f[i]);
         }
         else
@@ -1408,7 +1466,7 @@ void VectorUnit::mulbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, 
         if (field & (1 << (3 - i)))
         {
             float temp = op * convert(gpr[source].u[i]);
-            update_mac_flags(temp, i);
+            temp = update_mac_flags(temp, i);
             set_gpr_f(dest, i, temp);
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
@@ -1427,7 +1485,7 @@ void VectorUnit::muli(uint8_t field, uint8_t dest, uint8_t source)
         if (field & (1 << (3 - i)))
         {
             float temp = op * convert(gpr[source].u[i]);
-            update_mac_flags(temp, i);
+            temp = update_mac_flags(temp, i);
             set_gpr_f(dest, i, temp);
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
@@ -1446,7 +1504,7 @@ void VectorUnit::mulq(uint8_t field, uint8_t dest, uint8_t source)
         if (field & (1 << (3 - i)))
         {
             float temp = op * convert(gpr[source].u[i]);
-            update_mac_flags(temp, i);
+            temp = update_mac_flags(temp, i);
             set_gpr_f(dest, i, temp);
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
@@ -1486,9 +1544,9 @@ void VectorUnit::opmula(uint8_t reg1, uint8_t reg2)
     ACC.f[1] = convert(gpr[reg1].u[2]) * convert(gpr[reg2].u[0]);
     ACC.f[2] = convert(gpr[reg1].u[0]) * convert(gpr[reg2].u[1]);
 
-    update_mac_flags(ACC.f[0], 0);
-    update_mac_flags(ACC.f[1], 1);
-    update_mac_flags(ACC.f[2], 2);
+    ACC.f[0] = update_mac_flags(ACC.f[0], 0);
+    ACC.f[1] = update_mac_flags(ACC.f[1], 1);
+    ACC.f[2] = update_mac_flags(ACC.f[2], 2);
     clear_mac_flags(3);
     printf("[VU] OPMULA: %f, %f, %f\n", ACC.f[0], ACC.f[1], ACC.f[2]);
 }
@@ -1628,7 +1686,7 @@ void VectorUnit::sub(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)
         if (field & (1 << (3 - i)))
         {
             float result = convert(gpr[reg1].u[i]) - convert(gpr[reg2].u[i]);
-            update_mac_flags(result, i);
+            result = update_mac_flags(result, i);
             set_gpr_f(dest, i, result);
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
@@ -1682,7 +1740,7 @@ void VectorUnit::subai(uint8_t field, uint8_t source)
         if (field & (1 << (3 - i)))
         {
             ACC.f[i] = convert(gpr[source].u[i]) - op;
-            update_mac_flags(ACC.f[i], i);
+            ACC.f[i] = update_mac_flags(ACC.f[i], i);
             printf("(%d)%f ", i, ACC.f[i]);
         }
         else
@@ -1700,7 +1758,7 @@ void VectorUnit::subbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, 
         if (field & (1 << (3 - i)))
         {
             float temp = convert(gpr[source].u[i]) - op;
-            update_mac_flags(temp, i);
+            temp = update_mac_flags(temp, i);
             set_gpr_f(dest, i, temp);
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
@@ -1719,7 +1777,7 @@ void VectorUnit::subi(uint8_t field, uint8_t dest, uint8_t source)
         if (field & (1 << (3 - i)))
         {
             float temp = convert(gpr[source].u[i]) - op;
-            update_mac_flags(temp, i);
+            temp = update_mac_flags(temp, i);
             set_gpr_f(dest, i, temp);
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
@@ -1738,7 +1796,7 @@ void VectorUnit::subq(uint8_t field, uint8_t dest, uint8_t source)
         if (field & (1 << (3 - i)))
         {
             float temp = convert(gpr[source].u[i]) - value;
-            update_mac_flags(temp, i);
+            temp = update_mac_flags(temp, i);
             set_gpr_f(dest, i, temp);
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
