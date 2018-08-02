@@ -53,7 +53,7 @@ T interpolate(int32_t x, T u1, int32_t x1, T u2, int32_t x2)
 }
 
 template <typename T>
-T stepsize(T u1, int32_t x1, T u2, int32_t x2, int32_t mult)
+T stepsize(T u1, int32_t x1, T u2, int32_t x2, int64_t mult)
 {
     return ((u2 - u1) * mult)/(x2 - x1);
 }
@@ -1564,14 +1564,14 @@ void GraphicsSynthesizerThread::render_sprite()
     printf("Coords: (%d, %d) (%d, %d)\n", v1.x >> 4, v1.y >> 4, v2.x >> 4, v2.y >> 4);
 
     float pix_t = interpolate_f(min_y, v1.t, v1.y, v2.t, v2.y);
-    uint32_t pix_v = (uint32_t)interpolate(min_y, v1.uv.v, v1.y, v2.uv.v, v2.y) << 8;
+    int32_t pix_v = (int32_t)interpolate(min_y, v1.uv.v, v1.y, v2.uv.v, v2.y) << 16;
     float pix_s_init = interpolate_f(min_x, v1.s, v1.x, v2.s, v2.x);
-    uint32_t pix_u_init = (uint32_t)interpolate(min_x, v1.uv.u, v1.x, v2.uv.u, v2.x) << 8;
+    int32_t pix_u_init = (int32_t)interpolate(min_x, v1.uv.u, v1.x, v2.uv.u, v2.x) << 16;
 
     float pix_t_step = stepsize(v1.t, v1.y, v2.t, v2.y, 0x10);
-    uint32_t pix_v_step = stepsize((uint32_t)v1.uv.v, v1.y, (uint32_t)v2.uv.v, v2.y, 0x10'00);
+    int32_t pix_v_step = stepsize((int32_t)v1.uv.v, v1.y, (int32_t)v2.uv.v, v2.y, 0x10'0000);
     float pix_s_step = stepsize(v1.s, v1.x, v2.s, v2.x, 0x10);
-    uint32_t pix_u_step = stepsize((uint32_t)v1.uv.u, v1.x, (uint32_t)v2.uv.u, v2.x, 0x10'00);
+    int32_t pix_u_step = stepsize((int32_t)v1.uv.u, v1.x, (int32_t)v2.uv.u, v2.x, 0x10'0000);
 
     bool tmp_tex = PRIM.texture_mapping;
     bool tmp_uv = !PRIM.use_UV;//allow for loop unswitching
@@ -1591,7 +1591,7 @@ void GraphicsSynthesizerThread::render_sprite()
                     tex_lookup(pix_u, pix_v, vtx_color, tex_color);
                 }
                 else
-                    tex_lookup(pix_u >> 8, pix_v >> 8, vtx_color, tex_color);
+                    tex_lookup(pix_u >> 16 , pix_v >> 16, vtx_color, tex_color);
                 draw_pixel(x, y, v2.z, tex_color, PRIM.alpha_blend);
             }
             else
