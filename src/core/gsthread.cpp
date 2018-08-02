@@ -1561,28 +1561,34 @@ void GraphicsSynthesizerThread::render_sprite()
     printf("Coords: (%d, %d) (%d, %d)\n", v1.x >> 4, v1.y >> 4, v2.x >> 4, v2.y >> 4);
 
     float pix_t = interpolate_f(min_y, v1.t, v1.y, v2.t, v2.y);
-    uint16_t pix_v = interpolate(min_y, v1.uv.v, v1.y, v2.uv.v, v2.y);
+    uint32_t pix_v = interpolate(min_y, v1.uv.v, v1.y, v2.uv.v, v2.y);
     float pix_s_init = interpolate_f(min_x, v1.s, v1.x, v2.s, v2.x);
-    uint16_t pix_u_init = interpolate(min_x, v1.uv.u, v1.x, v2.uv.u, v2.x);
+    uint32_t pix_u_init = interpolate(min_x, v1.uv.u, v1.x, v2.uv.u, v2.x);
 
     float pix_t_step = stepsize(v1.t, v1.y, v2.t, v2.y, 0x10);
-    uint16_t pix_v_step = stepsize(v1.uv.v, v1.y, v2.uv.v, v2.y, 0x10);
+    uint32_t pix_v_step = stepsize((uint32_t)v1.uv.v, v1.y, (uint32_t)v2.uv.v, v2.y, 0x10'00);
     float pix_s_step = stepsize(v1.s, v1.x, v2.s, v2.x, 0x10);
-    uint16_t pix_u_step = stepsize(v1.uv.u, v1.x, v2.uv.u, v2.x, 0x10);
+    uint32_t pix_u_step = stepsize((uint32_t)v1.uv.u, v1.x, (uint32_t)v2.uv.u, v2.x, 0x10'00);
+
+    bool tmp_tex = PRIM.texture_mapping;
+    bool tmp_uv = !PRIM.use_UV;//allow for loop unswitching
+
     for (int32_t y = min_y; y < max_y; y += 0x10)
     {
         float pix_s = pix_s_init;
-        uint16_t pix_u = pix_u_init;
+        uint32_t pix_u = pix_u_init;
         for (int32_t x = min_x; x < max_x; x += 0x10)
         {
-            if (PRIM.texture_mapping)
+            if (tmp_tex)
             {
-                if (!PRIM.use_UV)
+                if (tmp_uv)
                 {
                     pix_v = (pix_t * current_ctx->tex0.tex_height)*16;
                     pix_u = (pix_s * current_ctx->tex0.tex_width)*16;
+                    tex_lookup(pix_u, pix_v, vtx_color, tex_color);
                 }
-                tex_lookup(pix_u, pix_v, vtx_color, tex_color);
+                else
+                    tex_lookup(pix_u >> 8, pix_v >> 8, vtx_color, tex_color);
                 draw_pixel(x, y, v2.z, tex_color, PRIM.alpha_blend);
             }
             else
