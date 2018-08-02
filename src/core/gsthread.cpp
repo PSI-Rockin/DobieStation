@@ -1397,6 +1397,9 @@ void GraphicsSynthesizerThread::render_triangle()
 
     RGBAQ_REG vtx_color, tex_color;
 
+    bool tmp_tex = PRIM.texture_mapping;
+    bool tmp_uv = !PRIM.use_UV;//allow for loop unswitching
+
     //TODO: Parallelize this
     //Iterate through the bounding rectangle using BLOCKSIZE * BLOCKSIZE large blocks
     //This way we can throw out blocks which are totally outside the triangle way faster
@@ -1480,10 +1483,10 @@ void GraphicsSynthesizerThread::render_triangle()
                             vtx_color.a = a / divider;
                             vtx_color.q = q / divider;
 
-                            if (PRIM.texture_mapping)
+                            if (tmp_tex)
                             {
                                 uint32_t u, v;
-                                if (!PRIM.use_UV)
+                                if (tmp_uv)
                                 {
                                     float s, t, q;
                                     s = v1.s * w1 + v2.s * w2 + v3.s * w3;
@@ -1561,9 +1564,9 @@ void GraphicsSynthesizerThread::render_sprite()
     printf("Coords: (%d, %d) (%d, %d)\n", v1.x >> 4, v1.y >> 4, v2.x >> 4, v2.y >> 4);
 
     float pix_t = interpolate_f(min_y, v1.t, v1.y, v2.t, v2.y);
-    uint32_t pix_v = interpolate(min_y, v1.uv.v, v1.y, v2.uv.v, v2.y);
+    uint32_t pix_v = (uint32_t)interpolate(min_y, v1.uv.v, v1.y, v2.uv.v, v2.y) << 8;
     float pix_s_init = interpolate_f(min_x, v1.s, v1.x, v2.s, v2.x);
-    uint32_t pix_u_init = interpolate(min_x, v1.uv.u, v1.x, v2.uv.u, v2.x);
+    uint32_t pix_u_init = (uint32_t)interpolate(min_x, v1.uv.u, v1.x, v2.uv.u, v2.x) << 8;
 
     float pix_t_step = stepsize(v1.t, v1.y, v2.t, v2.y, 0x10);
     uint32_t pix_v_step = stepsize((uint32_t)v1.uv.v, v1.y, (uint32_t)v2.uv.v, v2.y, 0x10'00);
@@ -1844,11 +1847,11 @@ void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, const RGBAQ_REG
 {
     double LOD;
     if (current_ctx->tex1.LOD_method == 0)
-        LOD = ldexp(log2(1.0 / fabs(vtx_color.q)), current_ctx->tex1.L) + current_ctx->tex1.K;
+        LOD = ldexp(-log2(fabs(vtx_color.q)), current_ctx->tex1.L) + current_ctx->tex1.K;
     else
         LOD = current_ctx->tex1.K;
 
-    if (LOD < 1.0 / pow(2, 7)) //ps2 precision limit
+    if (LOD < 1.0 / 128.0) //ps2 precision limit
         LOD = 0.0;
 
     if (current_ctx->tex1.filter_larger && LOD <= 0.0)
