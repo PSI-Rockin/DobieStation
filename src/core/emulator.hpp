@@ -33,7 +33,7 @@ enum SKIP_HACK
 class Emulator
 {
     private:
-        bool save_requested, load_requested;
+        bool save_requested, load_requested, gsdump_requested;
         std::string savestate_path;
         int frames;
         Cop0 cp0;
@@ -105,6 +105,7 @@ class Emulator
 
         bool request_load_state(const char* file_name);
         bool request_save_state(const char* file_name);
+        void request_gsdump_toggle();
         void load_state(const char* file_name);
         void save_state(const char* file_name);
 
@@ -134,6 +135,7 @@ class Emulator
         void iop_puts();
 
         void test_iop();
+        GraphicsSynthesizer& get_gs();//used for gs dumps
 };
 
 #endif // EMULATOR_HPP

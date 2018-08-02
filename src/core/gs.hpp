@@ -165,6 +165,7 @@ class GraphicsSynthesizer
 
         void load_state(std::ifstream& state);
         void save_state(std::ofstream& state);
+        void send_message(GS_message message);
 };
 
 #endif // GS_HPP

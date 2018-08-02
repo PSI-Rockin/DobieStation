@@ -234,16 +234,26 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
                     }
                     case gsdump_t:
                     {
-                        if (gsdump_recording) {
+                        printf("gs dump! ");
+                        if (!gsdump_recording) {
+                            printf("(start)\n");
                             gsdump_file.open("gsdump.gsd", ios::out | ios::binary);
+                            if (!gsdump_file.is_open())
+                                Errors::die("gs dump file failed to open");
                             gsdump_recording = true;
                             gs.save_state(&gsdump_file);
+                            gsdump_file.write((char*)&gs.reg, sizeof(gs.reg));//this is for the emuthread's gs faker
                         }
-                        else {
+                        else
+                        {
+                            printf("(end)\n");
                             gsdump_file.close();
                             gsdump_recording = false;
                         }
+                        break;
                     }
+                    default:
+                        Errors::die("corrupted command sent to GS thread");
                 }
             }
             else

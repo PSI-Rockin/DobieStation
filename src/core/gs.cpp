@@ -31,7 +31,7 @@ GraphicsSynthesizer::~GraphicsSynthesizer()
     {
         GS_message_payload payload;
         payload.no_payload = {0};
-        message_queue->push({ GS_command::die_t,payload });
+        send_message({ GS_command::die_t,payload });
         gsthread_id.join();
     }
     if (output_buffer1)
@@ -63,7 +63,7 @@ void GraphicsSynthesizer::reset()
     {
         GS_message_payload payload;
         payload.no_payload = {0};
-        message_queue->push({ GS_command::die_t,payload });
+        send_message({ GS_command::die_t,payload });
         gsthread_id.join();
     }
     {
@@ -81,7 +81,7 @@ void GraphicsSynthesizer::memdump()
 {
     GS_message_payload payload;
     payload.no_payload = { };
-    message_queue->push({ GS_command::memdump_t,payload });
+    send_message({ GS_command::memdump_t,payload });
 }
 
 void GraphicsSynthesizer::start_frame()
@@ -100,7 +100,7 @@ void GraphicsSynthesizer::set_CRT(bool interlaced, int mode, bool frame_mode)
 
     GS_message_payload payload;
     payload.crt_payload = { interlaced, mode, frame_mode };
-    message_queue->push({ GS_command::set_crt_t,payload });
+    send_message({ GS_command::set_crt_t,payload });
 }
 
 void wait_for_return(gs_return_fifo *return_queue)
@@ -171,7 +171,7 @@ void GraphicsSynthesizer::set_VBLANK(bool is_VBLANK)
 {
     GS_message_payload payload;
     payload.vblank_payload = { is_VBLANK };
-    message_queue->push({ GS_command::set_vblank_t,payload });
+    send_message({ GS_command::set_vblank_t,payload });
 
     reg.set_VBLANK(is_VBLANK);
 
@@ -194,7 +194,7 @@ void GraphicsSynthesizer::assert_FINISH()
 {
     GS_message_payload payload;
     payload.no_payload = { };
-    message_queue->push({ GS_command::assert_finish_t,payload });
+    send_message({ GS_command::assert_finish_t,payload });
 
     if (reg.assert_FINISH())
         intc->assert_IRQ((int)Interrupt::GS);
@@ -207,7 +207,7 @@ void GraphicsSynthesizer::render_CRT()
         payload.render_payload = { output_buffer1, &output_buffer1_mutex };
     else
         payload.render_payload = { output_buffer2, &output_buffer2_mutex }; ;
-    message_queue->push({ GS_command::render_crt_t,payload });
+    send_message({ GS_command::render_crt_t,payload });
 }
 
 void GraphicsSynthesizer::get_resolution(int &w, int &h)
@@ -224,7 +224,7 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
 {
     GS_message_payload payload;
     payload.write64_payload = { addr, value };
-    message_queue->push({ GS_command::write64_t,payload });
+    send_message({ GS_command::write64_t,payload });
 
     //also check for interrupt pre-processing
     reg.write64(addr, value);
@@ -234,7 +234,7 @@ void GraphicsSynthesizer::write64_privileged(uint32_t addr, uint64_t value)
 {
     GS_message_payload payload;
     payload.write64_payload = { addr, value };
-    message_queue->push({ GS_command::write64_privileged_t,payload });
+    send_message({ GS_command::write64_privileged_t,payload });
 
     reg.write64_privileged(addr, value);
 }
@@ -243,7 +243,7 @@ void GraphicsSynthesizer::write32_privileged(uint32_t addr, uint32_t value)
 {
     GS_message_payload payload;
     payload.write32_payload = { addr, value };
-    message_queue->push({ GS_command::write32_privileged_t,payload });
+    send_message({ GS_command::write32_privileged_t,payload });
 
     reg.write32_privileged(addr, value);
 }
@@ -262,42 +262,42 @@ void GraphicsSynthesizer::set_RGBA(uint8_t r, uint8_t g, uint8_t b, uint8_t a)
 {
     GS_message_payload payload;
     payload.rgba_payload = { r, g, b, a };
-    message_queue->push({ GS_command::set_rgba_t,payload });
+    send_message({ GS_command::set_rgba_t,payload });
 }
 
 void GraphicsSynthesizer::set_STQ(uint32_t s, uint32_t t, uint32_t q)
 {
     GS_message_payload payload;
     payload.stq_payload = { s, t, q };
-    message_queue->push({ GS_command::set_stq_t,payload });
+    send_message({ GS_command::set_stq_t,payload });
 }
 
 void GraphicsSynthesizer::set_UV(uint16_t u, uint16_t v)
 {
     GS_message_payload payload;
     payload.uv_payload = { u, v };
-    message_queue->push({ GS_command::set_uv_t,payload });
+    send_message({ GS_command::set_uv_t,payload });
 }
 
 void GraphicsSynthesizer::set_Q(float q)
 {
     GS_message_payload payload;
     payload.q_payload = { 1 };
-    message_queue->push({ GS_command::set_q_t,payload });
+    send_message({ GS_command::set_q_t,payload });
 }
 
 void GraphicsSynthesizer::set_XYZ(uint32_t x, uint32_t y, uint32_t z, bool drawing_kick)
 {
     GS_message_payload payload;
     payload.xyz_payload = { x, y, z, drawing_kick };
-    message_queue->push({ GS_command::set_xyz_t,payload });
+    send_message({ GS_command::set_xyz_t,payload });
 }
 
 void GraphicsSynthesizer::load_state(ifstream &state)
 {
     GS_message_payload payload;
     payload.loadstate_payload = {&state};
-    message_queue->push({ GS_command::loadstate_t, payload});
+    send_message({ GS_command::loadstate_t, payload});
     wait_for_return(return_queue);
     state.read((char*)&reg, sizeof(reg));
 }
@@ -306,7 +306,11 @@ void GraphicsSynthesizer::save_state(ofstream &state)
 {
     GS_message_payload payload;
     payload.savestate_payload = {&state};
-    message_queue->push({ GS_command::savestate_t,payload });
+    send_message({ GS_command::savestate_t,payload });
     wait_for_return(return_queue);
     state.write((char*)&reg, sizeof(reg));
+}
+void GraphicsSynthesizer::send_message(GS_message message)
+{
+    message_queue->push(message);
 }

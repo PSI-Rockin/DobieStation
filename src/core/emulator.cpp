@@ -42,6 +42,13 @@ Emulator::~Emulator()
 
 void Emulator::run()
 {
+    if (gsdump_requested)
+    {
+        gsdump_requested = false;
+        GS_message_payload p;
+        p.no_payload = { 0 };
+        gs.send_message({ gsdump_t, p });
+    }
     gs.start_frame();
     instructions_run = 0;
     VBLANK_sent = false;
@@ -99,6 +106,7 @@ void Emulator::reset()
 {
     save_requested = false;
     load_requested = false;
+    gsdump_requested = false;
     iop_i_ctrl_delay = 0;
     ee_stdout = "";
     frames = 0;
@@ -1281,4 +1289,14 @@ void Emulator::iop_puts()
     }
     ee_log.flush();
     //printf("\n");
+}
+
+GraphicsSynthesizer& Emulator::get_gs()
+{
+    return gs;
+}
+
+void Emulator::request_gsdump_toggle()
+{
+    gsdump_requested = true;
 }
