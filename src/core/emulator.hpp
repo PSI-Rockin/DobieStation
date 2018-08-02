@@ -33,7 +33,7 @@ enum SKIP_HACK
 class Emulator
 {
     private:
-        bool save_requested, load_requested, gsdump_requested;
+        std::atomic_bool save_requested, load_requested, gsdump_requested;
         std::string savestate_path;
         int frames;
         Cop0 cp0;

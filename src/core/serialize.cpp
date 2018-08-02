@@ -14,8 +14,8 @@ bool Emulator::request_load_state(const char *file_name)
     if (!state.is_open())
         return false;
     state.close();
-    load_requested = true;
     savestate_path = file_name;
+    load_requested = true;
     return true;
 }
 
@@ -25,8 +25,8 @@ bool Emulator::request_save_state(const char *file_name)
     if (!state.is_open())
         return false;
     state.close();
-    save_requested = true;
     savestate_path = file_name;
+    save_requested = true;
     return true;
 }
 
