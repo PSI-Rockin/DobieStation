@@ -84,6 +84,7 @@ class VectorInterface
         void init_UNPACK(uint32_t value);
         void handle_UNPACK(uint32_t value);
         void handle_UNPACK_masking(uint128_t& quad);
+        void handle_UNPACK_mode(uint128_t& quad);
         void process_UNPACK_quad(uint128_t& quad);
 
         void disasm_micromem();

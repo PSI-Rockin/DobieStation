@@ -48,6 +48,7 @@ namespace VU_Interpreter
     void mulabc(VectorUnit& vu, uint32_t instr);
     void abs(VectorUnit& vu, uint32_t instr);
     void mulai(VectorUnit& vu, uint32_t instr);
+    void mulaq(VectorUnit& vu, uint32_t instr);
     void clip(VectorUnit& vu, uint32_t instr);
     void addai(VectorUnit& vu, uint32_t instr);
     void maddai(VectorUnit& vu, uint32_t instr);
@@ -106,6 +107,7 @@ namespace VU_Interpreter
     void fcset(VectorUnit& vu, uint32_t instr);
     void fcand(VectorUnit& vu, uint32_t instr);
     void fcor(VectorUnit& vu, uint32_t instr);
+    void fsand(VectorUnit& vu, uint32_t instr);
     void fmeq(VectorUnit& vu, uint32_t instr);
     void fmand(VectorUnit& vu, uint32_t instr);
     void fcget(VectorUnit& vu, uint32_t instr);

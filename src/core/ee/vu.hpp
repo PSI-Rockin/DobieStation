@@ -79,8 +79,8 @@ class VectorUnit
 
         float update_mac_flags(float value, int index);
         void clear_mac_flags(int index);
-        void update_mac_pipeline();
-        void update_div_pipeline();
+        
+        void update_status();
         void advance_r();
         void print_vectors(uint8_t a, uint8_t b);
         float convert();
@@ -90,6 +90,8 @@ class VectorUnit
         void set_TOP_regs(uint16_t* TOP, uint16_t* ITOP);
         void set_GIF(GraphicsInterface* gif);
 
+        void update_mac_pipeline();
+        void update_div_pipeline();
         void flush_pipes();
 
         void run(int cycles);
@@ -144,6 +146,7 @@ class VectorUnit
         void fcset(uint32_t value);
         void fmeq(uint8_t dest, uint8_t source);
         void fmand(uint8_t dest, uint8_t source);
+        void fsand(uint8_t dest, uint32_t value);
         void ftoi0(uint8_t field, uint8_t dest, uint8_t source);
         void ftoi4(uint8_t field, uint8_t dest, uint8_t source);
         void ftoi12(uint8_t field, uint8_t dest, uint8_t source);
@@ -194,6 +197,7 @@ class VectorUnit
         void mula(uint8_t field, uint8_t reg1, uint8_t reg2);
         void mulabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_reg);
         void mulai(uint8_t field, uint8_t source);
+        void mulaq(uint8_t field, uint8_t source);
         void mulbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
         void muli(uint8_t field, uint8_t dest, uint8_t source);
         void mulq(uint8_t field, uint8_t dest, uint8_t source);
