@@ -77,13 +77,6 @@ void GraphicsSynthesizer::reset()
 
 }
 
-void GraphicsSynthesizer::memdump()
-{
-    GS_message_payload payload;
-    payload.no_payload = { };
-    send_message({ GS_command::memdump_t,payload });
-}
-
 void GraphicsSynthesizer::start_frame()
 {
     frame_complete = false;
@@ -336,4 +329,10 @@ void GraphicsSynthesizer::save_state(ofstream &state)
 void GraphicsSynthesizer::send_message(GS_message message)
 {
     message_queue->push(message);
+}
+void GraphicsSynthesizer::send_dump_request()
+{
+    GS_message_payload p;
+    p.no_payload = { 0 };
+    send_message({ gsdump_t, p });
 }

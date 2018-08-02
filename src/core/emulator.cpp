@@ -45,9 +45,7 @@ void Emulator::run()
     if (gsdump_requested)
     {
         gsdump_requested = false;
-        GS_message_payload p;
-        p.no_payload = { 0 };
-        gs.send_message({ gsdump_t, p });
+        gs.send_dump_request();
     }
     gs.start_frame();
     instructions_run = 0;

@@ -142,8 +142,8 @@ class GraphicsSynthesizer
     public:
         GraphicsSynthesizer(INTC* intc);
         ~GraphicsSynthesizer();
+        void send_message(GS_message message);
         void reset();
-        void memdump();
         void start_frame();
         bool is_frame_complete();
         uint32_t* get_framebuffer();
@@ -171,7 +171,8 @@ class GraphicsSynthesizer
 
         void load_state(std::ifstream& state);
         void save_state(std::ofstream& state);
-        void send_message(GS_message message);
+        void send_dump_request();
+        
 };
 
 #endif // GS_HPP
