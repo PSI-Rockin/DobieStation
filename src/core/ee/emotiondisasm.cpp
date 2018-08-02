@@ -1589,6 +1589,8 @@ string EmotionDisasm::disasm_cop2_special2(uint32_t instruction)
         case 0x1A:
         case 0x1B:
             return disasm_vmulabc(instruction);
+        case 0x1C:
+            return disasm_vmulaq(instruction);
         case 0x1D:
             return disasm_vabs(instruction);
         case 0x1E:
@@ -1696,6 +1698,17 @@ string EmotionDisasm::disasm_cop2_acc_i(const string opcode, uint32_t instructio
     return output.str();
 }
 
+string EmotionDisasm::disasm_cop2_acc_q(const string opcode, uint32_t instruction)
+{
+    stringstream output;
+    uint32_t fs = (instruction >> 11) & 0x1F;
+    uint8_t dest_field = (instruction >> 21) & 0xF;
+
+    output << opcode << "q." << get_dest_field(dest_field);
+    output << " ACC" << ", vf" << fs << ", Q";
+    return output.str();
+}
+
 string EmotionDisasm::disasm_vaddabc(uint32_t instruction)
 {
     return disasm_cop2_acc_bc("vadda", instruction);
@@ -1754,6 +1767,11 @@ string EmotionDisasm::disasm_vftoi15(uint32_t instruction)
 string EmotionDisasm::disasm_vmulabc(uint32_t instruction)
 {
     return disasm_cop2_acc_bc("vmula", instruction);
+}
+
+string EmotionDisasm::disasm_vmulaq(uint32_t instruction)
+{
+    return disasm_cop2_acc_q("vmulaq", instruction);
 }
 
 string EmotionDisasm::disasm_vabs(uint32_t instruction)

@@ -88,6 +88,7 @@ namespace VU_Interpreter
     void rnext(VectorUnit &vu, uint32_t instr);
     void rget(VectorUnit &vu, uint32_t instr);
     void rinit(VectorUnit &vu, uint32_t instr);
+    void rxor(VectorUnit& vu, uint32_t instr);
     void mfp(VectorUnit& vu, uint32_t instr);
     void xtop(VectorUnit& vu, uint32_t instr);
     void xitop(VectorUnit& vu, uint32_t instr);
@@ -110,6 +111,7 @@ namespace VU_Interpreter
     void fsand(VectorUnit& vu, uint32_t instr);
     void fmeq(VectorUnit& vu, uint32_t instr);
     void fmand(VectorUnit& vu, uint32_t instr);
+    void fmor(VectorUnit& vu, uint32_t instr);
     void fcget(VectorUnit& vu, uint32_t instr);
     void b(VectorUnit& vu, uint32_t instr);
     void bal(VectorUnit& vu, uint32_t instr);

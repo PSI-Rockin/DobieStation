@@ -708,6 +708,12 @@ void VectorUnit::fmand(uint8_t dest, uint8_t source)
     set_int(dest, *MAC_flags & int_gpr[source].u);
 }
 
+void VectorUnit::fmor(uint8_t dest, uint8_t source)
+{
+    printf("[VU] FMOR: $%04X\n", int_gpr[source].u);
+    set_int(dest, *MAC_flags | int_gpr[source].u);
+}
+
 void VectorUnit::fsand(uint8_t dest, uint32_t value)
 {
     printf("[VU] FSAND: $%08X\n", value);

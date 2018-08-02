@@ -146,6 +146,7 @@ class VectorUnit
         void fcset(uint32_t value);
         void fmeq(uint8_t dest, uint8_t source);
         void fmand(uint8_t dest, uint8_t source);
+        void fmor(uint8_t dest, uint8_t source);
         void fsand(uint8_t dest, uint32_t value);
         void ftoi0(uint8_t field, uint8_t dest, uint8_t source);
         void ftoi4(uint8_t field, uint8_t dest, uint8_t source);

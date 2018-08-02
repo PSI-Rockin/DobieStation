@@ -431,6 +431,8 @@ string VU_Disasm::lower1_special(uint32_t PC, uint32_t instr)
             return rget(instr);
         case 0x42:
             return rinit(instr);
+        case 0x43:
+            return rxor(instr);
         case 0x64:
             return mfp(instr);
         case 0x68:
@@ -547,7 +549,7 @@ string VU_Disasm::rsqrt(uint32_t instr)
     uint8_t fsf = (instr >> 21) & 0x3;
     uint32_t ft = (instr >> 16) & 0x1F;
     uint8_t ftf = (instr >> 23) & 0x3;
-    output << "rsqrt Q, vf" << ft << "." << get_fsf(fsf) << " vf" << ft << "." << get_fsf(ftf);
+    output << "rsqrt Q, vf" << fs << "." << get_fsf(fsf) << " vf" << ft << "." << get_fsf(ftf);
     return output.str();
 }
 
@@ -599,7 +601,7 @@ string VU_Disasm::rnext(uint32_t instr)
     uint32_t dest = (instr >> 16) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
     output << "rnext." << get_field(field);
-    output << " vf" << dest;
+    output << " vf" << dest << ", R";
     return output.str();
 }
 
@@ -609,7 +611,7 @@ string VU_Disasm::rget(uint32_t instr)
     uint32_t dest = (instr >> 16) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
     output << "rget." << get_field(field);
-    output << " vf" << dest;
+    output << " vf" << dest << ", R";
     return output.str();
 }
 
@@ -618,8 +620,18 @@ string VU_Disasm::rinit(uint32_t instr)
     stringstream output;
     uint32_t source = (instr >> 11) & 0x1F;
     uint32_t fsf = (instr >> 21) & 0x3;
-    output << "rinit";
+    output << "rinit R,";
     output << " vf" << source << "."<< get_fsf(fsf);
+    return output.str();
+}
+
+string VU_Disasm::rxor(uint32_t instr)
+{
+    stringstream output;
+    uint32_t dest = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    output << "rxor." << get_field(field);
+    output << " R, vf" << dest;
     return output.str();
 }
 
@@ -718,6 +730,8 @@ string VU_Disasm::lower2(uint32_t PC, uint32_t instr)
             return fmeq(instr);
         case 0x1A:
             return fmand(instr);
+        case 0x1B:
+            return fmor(instr);
         case 0x1C:
             return fcget(instr);
         case 0x20:
@@ -879,6 +893,15 @@ string VU_Disasm::fmand(uint32_t instr)
     uint32_t is = (instr >> 11) & 0x1F;
     uint32_t it = (instr >> 16) & 0x1F;
     output << "fmand vi" << it << ", vi" << is;
+    return output.str();
+}
+
+string VU_Disasm::fmor(uint32_t instr)
+{
+    stringstream output;
+    uint32_t is = (instr >> 11) & 0x1F;
+    uint32_t it = (instr >> 16) & 0x1F;
+    output << "fmor vi" << it << ", vi" << is;
     return output.str();
 }
 

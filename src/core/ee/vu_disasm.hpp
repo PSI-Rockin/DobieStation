@@ -48,6 +48,7 @@ namespace VU_Disasm
     std::string rnext(uint32_t instr);
     std::string rget(uint32_t instr);
     std::string rinit(uint32_t instr);
+    std::string rxor(uint32_t instr);
     std::string mfp(uint32_t instr);
     std::string xtop(uint32_t instr);
     std::string xitop(uint32_t instr);
@@ -70,6 +71,7 @@ namespace VU_Disasm
     std::string fsand(uint32_t instr);
     std::string fmeq(uint32_t instr);
     std::string fmand(uint32_t instr);
+    std::string fmor(uint32_t instr);
     std::string fcget(uint32_t instr);
     std::string b(uint32_t PC, uint32_t instr);
     std::string bal(uint32_t PC, uint32_t instr);

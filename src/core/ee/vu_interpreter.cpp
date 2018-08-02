@@ -802,6 +802,9 @@ void VU_Interpreter::lower1_special(VectorUnit &vu, uint32_t instr)
         case 0x42:
             rinit(vu, instr);
             break;
+        case 0x43:
+            rxor(vu, instr);
+            break;
         case 0x64:
             mfp(vu, instr);
             break;
@@ -967,6 +970,13 @@ void VU_Interpreter::rinit(VectorUnit &vu, uint32_t instr)
     vu.rinit(fsf, source);
 }
 
+void VU_Interpreter::rxor(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t dest = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.rxor(field, dest);
+}
+
 void VU_Interpreter::mfp(VectorUnit &vu, uint32_t instr)
 {
     uint8_t dest = (instr >> 16) & 0x1F;
@@ -1058,6 +1068,9 @@ void VU_Interpreter::lower2(VectorUnit &vu, uint32_t instr)
             break;
         case 0x1A:
             fmand(vu, instr);
+            break;
+        case 0x1B:
+            fmor(vu, instr);
             break;
         case 0x1C:
             fcget(vu, instr);
@@ -1193,6 +1206,13 @@ void VU_Interpreter::fmand(VectorUnit &vu, uint32_t instr)
     uint8_t is = (instr >> 11) & 0x1F;
     uint8_t it = (instr >> 16) & 0x1F;
     vu.fmand(it, is);
+}
+
+void VU_Interpreter::fmor(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t is = (instr >> 11) & 0x1F;
+    uint8_t it = (instr >> 16) & 0x1F;
+    vu.fmor(it, is);
 }
 
 void VU_Interpreter::fcget(VectorUnit &vu, uint32_t instr)
