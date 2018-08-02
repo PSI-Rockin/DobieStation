@@ -117,6 +117,8 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
 {
     GraphicsSynthesizerThread gs = GraphicsSynthesizerThread();
     gs.reset();
+    bool gsdump_recording = false;
+    ofstream gsdump_file;
     try
     {
         while (true)
@@ -125,6 +127,9 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
             bool available = fifo->pop(data);
             if (available)
             {
+                if (gsdump_recording) {
+                    gsdump_file.write((char*)&data, sizeof(data));
+                }
                 switch (data.type)
                 {
                     case write64_t:
@@ -217,16 +222,28 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
                         GS_return_message_payload return_payload;
                         return_payload.no_payload = { 0 };
                         return_fifo->push({ GS_return::loadstate_done_t,return_payload });
-                    }
                         break;
+                    }
                     case savestate_t:
                     {
                         gs.save_state(data.payload.savestate_payload.state);
                         GS_return_message_payload return_payload;
                         return_payload.no_payload = { 0 };
                         return_fifo->push({ GS_return::savestate_done_t,return_payload });
-                    }
                         break;
+                    }
+                    case gsdump_t:
+                    {
+                        if (gsdump_recording) {
+                            gsdump_file.open("gsdump.gsd", ios::out | ios::binary);
+                            gsdump_recording = true;
+                            gs.save_state(&gsdump_file);
+                        }
+                        else {
+                            gsdump_file.close();
+                            gsdump_recording = false;
+                        }
+                    }
                 }
             }
             else
