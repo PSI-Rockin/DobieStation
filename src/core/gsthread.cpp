@@ -196,7 +196,7 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
                             std::this_thread::yield();
                         }
                         std::lock_guard<std::mutex> lock(*p.target_mutex, std::adopt_lock);
-                        gs.render_CRT(p.target);
+                        gs.render_CRT(p.target, p.invert);
                         GS_return_message_payload return_payload;
                         return_payload.no_payload = { 0 };
                         return_fifo->push({ GS_return::render_complete_t,return_payload });
@@ -295,12 +295,12 @@ void GraphicsSynthesizerThread::memdump()
     file.close();
 }
 
-void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
+void GraphicsSynthesizerThread::render_CRT(uint32_t* target, bool invert)
 {
     printf("DISPLAY2: (%d, %d) wh: (%d, %d)\n", reg.DISPLAY2.x >> 2, reg.DISPLAY2.y, reg.DISPLAY2.width >> 2, reg.DISPLAY2.height);
     DISPLAY &currentDisplay = reg.DISPLAY1;
     DISPFB &currentFB = reg.DISPFB1;
-    if (reg.PMODE.circuit2 == false)
+    if (reg.PMODE.circuit2 == invert)
     {
         currentDisplay = reg.DISPLAY1;
         currentFB = reg.DISPFB1;

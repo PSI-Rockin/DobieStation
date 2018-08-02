@@ -15,7 +15,7 @@ enum GS_command:uint8_t
 	write64_t, write64_privileged_t, write32_privileged_t,
     set_rgba_t, set_stq_t, set_uv_t, set_xyz_t, set_q_t, set_crt_t,
     render_crt_t, assert_finish_t, set_vblank_t, memdump_t, die_t,
-    savestate_t, loadstate_t, gsdump_t,
+    savestate_t, loadstate_t, gsdump_t
 };
 
 union GS_message_payload 
@@ -65,6 +65,7 @@ union GS_message_payload
 	{
         uint32_t* target;
         std::mutex* target_mutex;
+        bool invert; //invert to look at in-progress frame buffer
     } render_payload;
     struct
     {
@@ -143,6 +144,7 @@ class GraphicsSynthesizer
         bool is_frame_complete();
         uint32_t* get_framebuffer();
         void render_CRT();
+        void render_partial_frame();
         void get_resolution(int& w, int& h);
         void get_inner_resolution(int& w, int& h);
 

@@ -11,6 +11,7 @@ EmuThread::EmuThread()
     abort = false;
     pause_status = 0x0;
     gsdump_reading = false;
+    frame_advance = false;
 }
 
 void EmuThread::reset()
@@ -93,16 +94,26 @@ void EmuThread::gsdump_run()
     printf("gsdump frame\n");
     try
     {
+        int draws_sent = 10;
         while (true)
         {
             GS_message data;
             gsdump.read((char*)&data, sizeof(data));
             switch (data.type)
             {
+                case set_xyz_t:
+                    e.get_gs().send_message(data);
+                    if (frame_advance && data.payload.xyz_payload.drawing_kick && --draws_sent <= 0)
+                    {
+                        e.get_gs().render_partial_frame();
+                        goto render_partial_label;
+                    }
+                    break;
                 case render_crt_t:
                 {
                     printf("gsdump frame render\n");
                     e.get_gs().render_CRT();
+                render_partial_label:
                     int w, h, new_w, new_h;
                     e.get_inner_resolution(w, h);
                     e.get_resolution(new_w, new_h);
@@ -113,7 +124,9 @@ void EmuThread::gsdump_run()
                     return;
                 }
                 case gsdump_t:
-                    Errors::die("gs dump ended successfully!");
+                    pause(PAUSE_EVENT::GAME_NOT_LOADED);
+                    printf("gsdump ended successfully\n");
+                    break;
                 case savestate_t:
                 case loadstate_t:
                     Errors::die("savestate save/load during gsdump not supported!");
@@ -144,6 +157,8 @@ void EmuThread::run()
             gsdump_run();
         else
         {
+            if (frame_advance)
+                pause(PAUSE_EVENT::FRAME_ADVANCE);
             try
             {
                 e.run();

@@ -232,6 +232,13 @@ void EmuWindow::create_menu()
     connect(size_options_actions, &QAction::triggered, this,
         [this]() { this->scale_factor = 4; });
     options_menu->addAction(size_options_actions);
+
+    options_menu->addSeparator();
+
+    auto frame_action = new QAction(tr("&Frame Advance (10x draws for gs dumps)"), this);
+    connect(frame_action, &QAction::triggered, this,
+        [this]() { this->emuthread.frame_advance ^= true; });
+    options_menu->addAction(frame_action);
 }
 
 void EmuWindow::draw_frame(uint32_t *buffer, int inner_w, int inner_h, int final_w, int final_h)

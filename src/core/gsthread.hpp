@@ -191,7 +191,7 @@ class GraphicsSynthesizerThread
         //called from event loop
         void reset();
         void memdump();
-        void render_CRT(uint32_t* target);
+        void render_CRT(uint32_t* target, bool invert);
 
         void set_VBLANK(bool is_VBLANK);
         void assert_FINISH();

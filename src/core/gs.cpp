@@ -204,9 +204,19 @@ void GraphicsSynthesizer::render_CRT()
 {
     GS_message_payload payload;
     if (using_first_buffer)
-        payload.render_payload = { output_buffer1, &output_buffer1_mutex };
+        payload.render_payload = { output_buffer1, &output_buffer1_mutex, false };
     else
-        payload.render_payload = { output_buffer2, &output_buffer2_mutex }; ;
+        payload.render_payload = { output_buffer2, &output_buffer2_mutex, false }; ;
+    send_message({ GS_command::render_crt_t,payload });
+}
+
+void GraphicsSynthesizer::render_partial_frame()
+{
+    GS_message_payload payload;
+    if (using_first_buffer)
+        payload.render_payload = { output_buffer1, &output_buffer1_mutex, true };
+    else
+        payload.render_payload = { output_buffer2, &output_buffer2_mutex, true }; ;
     send_message({ GS_command::render_crt_t,payload });
 }
 
