@@ -42,11 +42,6 @@ Emulator::~Emulator()
 
 void Emulator::run()
 {
-    if (gsdump_requested)
-    {
-        gsdump_requested = false;
-        gs.send_dump_request();
-    }
     gs.start_frame();
     instructions_run = 0;
     VBLANK_sent = false;
@@ -56,6 +51,11 @@ void Emulator::run()
         save_state(savestate_path.c_str());
     if (load_requested)
         load_state(savestate_path.c_str());
+    if (gsdump_requested)
+    {
+        gsdump_requested = false;
+        gs.send_dump_request();
+    }
     while (instructions_run < CYCLES_PER_FRAME)
     {
         int cycles = cpu.run(8);

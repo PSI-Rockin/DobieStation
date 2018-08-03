@@ -127,8 +127,11 @@ void EmuThread::gsdump_run()
                 }
                 case gsdump_t:
                     pause(PAUSE_EVENT::GAME_NOT_LOADED);
-                    printf("gsdump ended successfully\n");
-                    break;
+                    if (gsdump.peek() != EOF)
+                        Errors::die("gsdump ended before end of file!");
+                    gsdump.close();
+                    Errors::die("gsdump ended successfully\n");
+                    return;
                 case savestate_t:
                 case loadstate_t:
                     Errors::die("savestate save/load during gsdump not supported!");

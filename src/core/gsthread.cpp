@@ -223,7 +223,6 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
                         uint16_t width, height;
                         gs.memdump(p.target, width, height);
                         GS_return_message_payload return_payload;
-                        SCISSOR s = gs.current_ctx->scissor;
                         return_payload.xy_payload = { width, height };
                         return_fifo->push({ GS_return::gsdump_render_partial_done_t,return_payload });
                         break;
