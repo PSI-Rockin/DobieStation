@@ -282,7 +282,7 @@ void GraphicsSynthesizer::set_UV(uint16_t u, uint16_t v)
 void GraphicsSynthesizer::set_Q(float q)
 {
     GS_message_payload payload;
-    payload.q_payload = { 1 };
+    payload.q_payload = { q };
     message_queue->push({ GS_command::set_q_t,payload });
 }
 
