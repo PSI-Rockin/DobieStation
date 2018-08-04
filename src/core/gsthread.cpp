@@ -55,6 +55,8 @@ T interpolate(int32_t x, T u1, int32_t x1, T u2, int32_t x2)
 template <typename T>
 T stepsize(T u1, int32_t x1, T u2, int32_t x2, int64_t mult)
 {
+    if (!(x2 - x1))
+        return ((u2 - u1) * mult);
     return ((u2 - u1) * mult)/(x2 - x1);
 }
 
