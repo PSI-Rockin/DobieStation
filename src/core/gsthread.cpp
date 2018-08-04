@@ -1266,9 +1266,9 @@ void GraphicsSynthesizerThread::render_line()
     }
     
     int32_t min_x = max(v1.x, (int32_t)current_ctx->scissor.x1);
-    int32_t min_y = max(v1.y, (int32_t)current_ctx->scissor.y1);
+    //int32_t min_y = max(v1.y, (int32_t)current_ctx->scissor.y1);
     int32_t max_x = min(v2.x, (int32_t)current_ctx->scissor.x2);
-    int32_t max_y = min(v2.y, (int32_t)current_ctx->scissor.y2);
+    //int32_t max_y = min(v2.y, (int32_t)current_ctx->scissor.y2);
     
     RGBAQ_REG color = vtx_queue[0].rgbaq;
     RGBAQ_REG tex_color;
@@ -1569,9 +1569,9 @@ void GraphicsSynthesizerThread::render_sprite()
     int32_t pix_u_init = (int32_t)interpolate(min_x, v1.uv.u, v1.x, v2.uv.u, v2.x) << 16;
 
     float pix_t_step = stepsize(v1.t, v1.y, v2.t, v2.y, 0x10);
-    int32_t pix_v_step = stepsize((int32_t)v1.uv.v, v1.y, (int32_t)v2.uv.v, v2.y, 0x10'0000);
+    int32_t pix_v_step = stepsize((int32_t)v1.uv.v, v1.y, (int32_t)v2.uv.v, v2.y, 0x100000);
     float pix_s_step = stepsize(v1.s, v1.x, v2.s, v2.x, 0x10);
-    int32_t pix_u_step = stepsize((int32_t)v1.uv.u, v1.x, (int32_t)v2.uv.u, v2.x, 0x10'0000);
+    int32_t pix_u_step = stepsize((int32_t)v1.uv.u, v1.x, (int32_t)v2.uv.u, v2.x, 0x100000);
 
     bool tmp_tex = PRIM.texture_mapping;
     bool tmp_uv = !PRIM.use_UV;//allow for loop unswitching
@@ -1608,7 +1608,7 @@ void GraphicsSynthesizerThread::render_sprite()
 
 void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
 {
-    int ppd; //pixels per doubleword (64-bits)
+    int ppd = 0; //pixels per doubleword (64-bits)
 
     switch (BITBLTBUF.dest_format)
     {
@@ -1760,7 +1760,7 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
         }
     }
 
-    uint32_t max_pixels = TRXREG.width * TRXREG.height;
+    int max_pixels = TRXREG.width * TRXREG.height;
     if (pixels_transferred >= max_pixels)
     {
         //Deactivate the transmisssion
@@ -1800,7 +1800,7 @@ void GraphicsSynthesizerThread::unpack_PSMCT24(uint64_t data, int offset, bool z
 
 void GraphicsSynthesizerThread::host_to_host()
 {
-    uint32_t max_pixels = TRXREG.width * TRXREG.height;
+    int max_pixels = TRXREG.width * TRXREG.height;
 
     while (pixels_transferred < max_pixels)
     {
@@ -1859,10 +1859,10 @@ void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, const RGBAQ_REG
         RGBAQ_REG a, b, c, d;
         int16_t uu = (u - 8) >> 4;
         int16_t vv = (v - 8) >> 4;
-        tex_lookup_int(uu, vv, vtx_color, a);
-        tex_lookup_int(uu+1, vv, vtx_color, b);
-        tex_lookup_int(uu, vv+1, vtx_color, c);
-        tex_lookup_int(uu+1, vv+1, vtx_color, d);
+        tex_lookup_int(uu, vv, a);
+        tex_lookup_int(uu+1, vv, b);
+        tex_lookup_int(uu, vv+1, c);
+        tex_lookup_int(uu+1, vv+1, d);
         double alpha = ((u - 8) & 0xF) * (1.0 / ((double)0xF));
         double beta = ((v - 8) & 0xF) * (1.0 / ((double)0xF));
         double alpha_s = 1.0 - alpha;
@@ -1873,7 +1873,7 @@ void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, const RGBAQ_REG
         tex_color.a = alpha_s * beta_s*a.a + alpha * beta_s*b.a + alpha_s * beta*c.a + alpha * beta*d.a;
     }
     else
-        tex_lookup_int(u >> 4, v >> 4, vtx_color, tex_color);
+        tex_lookup_int(u >> 4, v >> 4, tex_color);
 
     switch (current_ctx->tex0.color_function)
     {
@@ -1888,7 +1888,7 @@ void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, const RGBAQ_REG
     }
 }
 
-void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, const RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color)
+void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, RGBAQ_REG& tex_color)
 {
     switch (current_ctx->clamp.wrap_s)
     {

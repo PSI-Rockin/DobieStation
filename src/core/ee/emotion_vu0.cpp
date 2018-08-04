@@ -451,7 +451,7 @@ void EmotionInterpreter::cop2_special2(VectorUnit &vu0, uint32_t instruction)
             cop2_vmula(vu0, instruction);
             break;
         case 0x2C:
-            cop2_vadda(vu0, instruction);
+            cop2_vsuba(vu0, instruction);
             break;
         case 0x2E:
             cop2_vopmula(vu0, instruction);

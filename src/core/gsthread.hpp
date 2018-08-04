@@ -172,7 +172,7 @@ class GraphicsSynthesizerThread
         bool depth_test(int32_t x, int32_t y, uint32_t z);
 
         void tex_lookup(int16_t u, int16_t v, const RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color);
-        void tex_lookup_int(int16_t u, int16_t v, const RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color);
+        void tex_lookup_int(int16_t u, int16_t v, RGBAQ_REG& tex_color);
         void clut_lookup(uint8_t entry, RGBAQ_REG& tex_color, bool eight_bit);
         void clut_CSM2_lookup(uint8_t entry, RGBAQ_REG& tex_color);
         void vertex_kick(bool drawing_kick);
