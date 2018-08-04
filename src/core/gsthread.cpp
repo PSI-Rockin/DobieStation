@@ -1569,9 +1569,9 @@ void GraphicsSynthesizerThread::render_sprite()
     int32_t pix_u_init = (int32_t)interpolate(min_x, v1.uv.u, v1.x, v2.uv.u, v2.x) << 16;
 
     float pix_t_step = stepsize(v1.t, v1.y, v2.t, v2.y, 0x10);
-    int32_t pix_v_step = stepsize((int32_t)v1.uv.v, v1.y, (int32_t)v2.uv.v, v2.y, 0x10'0000);
+    int32_t pix_v_step = stepsize((int32_t)v1.uv.v, v1.y, (int32_t)v2.uv.v, v2.y, 0x100000);//0x10'0000
     float pix_s_step = stepsize(v1.s, v1.x, v2.s, v2.x, 0x10);
-    int32_t pix_u_step = stepsize((int32_t)v1.uv.u, v1.x, (int32_t)v2.uv.u, v2.x, 0x10'0000);
+    int32_t pix_u_step = stepsize((int32_t)v1.uv.u, v1.x, (int32_t)v2.uv.u, v2.x, 0x100000);//0x10'0000
 
     bool tmp_tex = PRIM.texture_mapping;
     bool tmp_uv = !PRIM.use_UV;//allow for loop unswitching
