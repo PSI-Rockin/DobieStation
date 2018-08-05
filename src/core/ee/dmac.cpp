@@ -536,8 +536,8 @@ void DMAC::handle_source_chain(int index)
             break;
         case 1:
             //cnt
-            channels[index].tag_address += 16;
-            channels[index].address = channels[index].tag_address;
+            channels[index].address = channels[index].tag_address + 16;
+            channels[index].tag_address = channels[index].address + (channels[index].quadword_count << 4);
             break;
         case 2:
             //next
