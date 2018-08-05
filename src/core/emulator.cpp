@@ -363,13 +363,13 @@ uint32_t Emulator::read32(uint32_t address)
     if (address >= 0x1C000000 && address < 0x1C200000)
         return *(uint32_t*)&IOP_RAM[address & 0x1FFFFF];
     if (address >= 0x11000000 && address < 0x11004000)
-        return vu0.read_instr<uint64_t>(address);
+        return vu0.read_instr<uint32_t>(address);
     if (address >= 0x11004000 && address < 0x11008000)
-        return vu0.read_data<uint64_t>(address);
+        return vu0.read_data<uint32_t>(address);
     if (address >= 0x11008000 && address < 0x1100C000)
-        return vu1.read_instr<uint64_t>(address);
+        return vu1.read_instr<uint32_t>(address);
     if (address >= 0x1100C000 && address < 0x11010000)
-        return vu1.read_data<uint64_t>(address);
+        return vu1.read_data<uint32_t>(address);
     switch (address)
     {
         case 0x10002010:
