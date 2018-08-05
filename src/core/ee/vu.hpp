@@ -70,7 +70,9 @@ class VectorUnit
         VU_R Q;
         VU_R P;
 
-        uint16_t MAC_pipeline[4];       
+        uint32_t CLIP_pipeline[4];
+        uint16_t MAC_pipeline[4];   
+        uint32_t* CLIP_flags;
         uint16_t* MAC_flags; //pointer to last element in the pipeline; the register accessible to programs
         uint16_t new_MAC_flags; //to be placed in the pipeline
 
@@ -124,8 +126,8 @@ class VectorUnit
         uint32_t cfc(int index);
         void ctc(int index, uint32_t value);
 
-        void branch(bool condition, int32_t imm);
-        void jp(uint16_t addr);
+        void branch(bool condition, int16_t imm, bool link, uint8_t linkreg = 0);
+        void jp(uint16_t addr, bool link, uint8_t linkreg = 0);
 
         void abs(uint8_t field, uint8_t dest, uint8_t source);
         void add(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2);
@@ -156,18 +158,18 @@ class VectorUnit
         void iaddi(uint8_t dest, uint8_t source, int8_t imm);
         void iaddiu(uint8_t dest, uint8_t source, uint16_t imm);
         void iand(uint8_t dest, uint8_t reg1, uint8_t reg2);
-        void ilw(uint8_t field, uint8_t dest, uint8_t base, int32_t offset);
+        void ilw(uint8_t field, uint8_t dest, uint8_t base, int16_t offset);
         void ilwr(uint8_t field, uint8_t dest, uint8_t base);
         void ior(uint8_t dest, uint8_t reg1, uint8_t reg2);
         void isub(uint8_t dest, uint8_t reg1, uint8_t reg2);
         void isubiu(uint8_t dest, uint8_t source, uint16_t imm);
-        void isw(uint8_t field, uint8_t source, uint8_t base, int32_t offset);
+        void isw(uint8_t field, uint8_t source, uint8_t base, int16_t offset);
         void iswr(uint8_t field, uint8_t source, uint8_t base);
         void itof0(uint8_t field, uint8_t dest, uint8_t source);
         void itof4(uint8_t field, uint8_t dest, uint8_t source);
         void itof12(uint8_t field, uint8_t dest, uint8_t source);
         void itof15(uint8_t field, uint8_t dest, uint8_t source);
-        void lq(uint8_t field, uint8_t dest, uint8_t base, int32_t offset);
+        void lq(uint8_t field, uint8_t dest, uint8_t base, int16_t offset);
         void lqd(uint8_t field, uint8_t dest, uint8_t base);
         void lqi(uint8_t field, uint8_t dest, uint8_t base);
         void madd(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2);
@@ -209,7 +211,7 @@ class VectorUnit
         void rnext(uint8_t field, uint8_t dest);
         void rsqrt(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2);
         void rxor(uint8_t fsf, uint8_t source);
-        void sq(uint8_t field, uint8_t source, uint8_t base, int32_t offset);
+        void sq(uint8_t field, uint8_t source, uint8_t base, int16_t offset);
         void sqd(uint8_t field, uint8_t source, uint8_t base);
         void sqi(uint8_t field, uint8_t source, uint8_t base);
         void vu_sqrt(uint8_t ftf, uint8_t source);

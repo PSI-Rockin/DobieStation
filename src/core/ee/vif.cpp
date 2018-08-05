@@ -39,7 +39,7 @@ void VectorInterface::reset()
 bool VectorInterface::check_vif_stall(uint32_t value)
 {
     //Do not stall if the next command is MARK
-    if (vif_ibit_detected && value != 0x7)
+    if (vif_ibit_detected && command_len <= 0 && value != 0x7)
     {
         printf("[VIF] VIF%x Stalled\n", get_id());
         vif_ibit_detected = false;
@@ -55,23 +55,17 @@ bool VectorInterface::check_vif_stall(uint32_t value)
     return false;
 }
 
-void VectorInterface::update()
+void VectorInterface::update(int cycles)
 {
-    int runcycles = 8;
-    if (wait_for_VU)
-    {
-        if (vu->is_running())
-            return;
-        wait_for_VU = false;
-        handle_wait_cmd(wait_cmd_value);
-    }
+    int runcycles = cycles;
+   
     /*if (flush_stall)
     {
         if (gif->path_active(1))
             return;
         flush_stall = false;
     }*/
-    while (FIFO.size() && !vif_int_stalled && runcycles--)
+    while (!vif_int_stalled && runcycles--)
     {        
         if (wait_for_VU)
         {
@@ -80,12 +74,20 @@ void VectorInterface::update()
             wait_for_VU = false;
             handle_wait_cmd(wait_cmd_value);
         }
-        /*if (flush_stall)
+		/*if (flush_stall)
         {
             if (gif->path_active(1))
                 return;
             flush_stall = false;
         }*/
+        if (FIFO.size())
+            check_vif_stall(FIFO.front());
+        else
+        {
+            check_vif_stall(0);
+            return;
+        }
+
         uint32_t value = FIFO.front();
         if (command_len <= 0)
         {
@@ -149,15 +151,6 @@ void VectorInterface::update()
             command_len--;
         }
         FIFO.pop();
-    }
-
-    //Need to check again if it is the end of the packet
-    if (command_len <= 0)
-    {
-        if (FIFO.size())
-            check_vif_stall(FIFO.front());
-        else
-            check_vif_stall(0);
     }
 }
 
@@ -362,7 +355,7 @@ void VectorInterface::init_UNPACK(uint32_t value)
         //Fill write
         Errors::die("[VIF] WL > CL!\n");
     }
-    printf("[VIF] UNPACK V%d-%d num: %d masked: %d word per op: %d command_len = %d\n", (vn + 1), (32 >> vl), unpack.num, unpack.masked, unpack.words_per_op, command_len);
+    printf("[VIF] UNPACK V%d-%d addr: %x num: %d masked: %d word per op: %d command_len = %d\n", (vn + 1), (32 >> vl), unpack.addr, unpack.num, unpack.masked, unpack.words_per_op, command_len);
 }
 
 void VectorInterface::handle_UNPACK_masking(uint128_t& quad)
@@ -418,6 +411,9 @@ void VectorInterface::handle_UNPACK_mode(uint128_t& quad)
                     case 2:
                         //Difference mode - VU Mem = Row = Input + Row
                         quad._u32[i] += ROW[i];
+                        ROW[i] = quad._u32[i];
+                        break;
+                    case 3:
                         ROW[i] = quad._u32[i];
                         break;
                     default:
@@ -491,7 +487,7 @@ void VectorInterface::handle_UNPACK(uint32_t value)
                 quad._u32[0] = buffer[0];
                 quad._u32[1] = buffer[1];
                 quad._u32[2] = buffer[0];
-                quad._u32[3] = 0;
+                quad._u32[3] = buffer[1];
                 buffer_size -= 2;
                 break;
             case 0x5:
@@ -841,6 +837,16 @@ uint32_t VectorInterface::get_mark()
 {
     printf("[VIF] Get MARK: $%x\n", MARK);
     return MARK;
+}
+
+uint32_t VectorInterface::get_mode()
+{
+    return MODE;
+}
+
+uint32_t VectorInterface::get_row(uint32_t address)
+{
+    return ROW[(address & 0xF0) >> 4];
 }
 
 uint32_t VectorInterface::get_err()

@@ -11,6 +11,7 @@ void EmotionInterpreter::cop2_special(VectorUnit &vu0, uint32_t instruction)
     vu0.update_mac_pipeline();
     vu0.update_div_pipeline();
     uint8_t op = instruction & 0x3F;
+    printf("[COP2] Issued %x", instruction);
     switch (op)
     {
         case 0x00:
@@ -376,11 +377,15 @@ void EmotionInterpreter::cop2_vcallms(VectorUnit &vu0, uint32_t instruction)
 {
     uint32_t imm = (instruction >> 6) & 0x7FFF;
     imm *= 8;
+    while (vu0.is_running())
+        vu0.run(8);
     vu0.mscal(imm);
 }
 
 void EmotionInterpreter::cop2_vcallmsr(VectorUnit &vu0, uint32_t instruction)
 {
+    while (vu0.is_running())
+        vu0.run(8);
     vu0.callmsr();
 }
 

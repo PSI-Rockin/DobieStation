@@ -16,6 +16,7 @@ struct DMA_Channel
 
     bool tag_end;
     bool paused;
+    uint8_t tag_id;
 };
 
 //Regs
@@ -73,7 +74,8 @@ class DMAC
         void process_SPR_TO(int cycles);
 
         void handle_source_chain(int index);
-
+        void advance_source_dma(int index);
+        void advance_dest_dma(int index);
         bool mfifo_handler(int index);
         void transfer_end(int index);
         void int1_check();

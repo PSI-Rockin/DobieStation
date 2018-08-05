@@ -24,6 +24,7 @@ VectorUnit::VectorUnit(int id) : id(id), gif(nullptr)
     VIF_ITOP = nullptr;
 
     MAC_flags = &MAC_pipeline[3];
+    CLIP_flags = &CLIP_pipeline[3];
 }
 
 void VectorUnit::reset()
@@ -95,6 +96,7 @@ void VectorUnit::run(int cycles)
         //printf("[$%08X] $%08X:$%08X\n", PC, upper_instr, lower_instr);
         VU_Interpreter::interpret(*this, upper_instr, lower_instr);
         PC += 8;
+
         if (branch_on)
         {
             if (!delay_slot)
@@ -252,6 +254,11 @@ void VectorUnit::update_mac_pipeline()
     MAC_pipeline[1] = MAC_pipeline[0];
     MAC_pipeline[0] = new_MAC_flags;
 
+    CLIP_pipeline[3] = CLIP_pipeline[2];
+    CLIP_pipeline[2] = CLIP_pipeline[1];
+    CLIP_pipeline[1] = CLIP_pipeline[0];
+    CLIP_pipeline[0] = clip_flags;
+
     if(updatestatus)
         update_status();
 }
@@ -318,7 +325,7 @@ uint32_t VectorUnit::cfc(int index)
         case 17:
             return *MAC_flags;
         case 18:
-            return clip_flags;
+            return *CLIP_flags;
         case 20:
             return R.u & 0x7FFFFF;
         case 21:
@@ -372,7 +379,7 @@ void VectorUnit::ctc(int index, uint32_t value)
     }
 }
 
-void VectorUnit::branch(bool condition, int32_t imm)
+void VectorUnit::branch(bool condition, int16_t imm, bool link, uint8_t linkreg)
 {
     if (condition)
     {
@@ -380,28 +387,36 @@ void VectorUnit::branch(bool condition, int32_t imm)
         {
             second_branch_pending = true;
             secondbranch_PC = PC + imm + 8;
+            if(link)
+                set_int(linkreg, (new_PC + 8) / 8);
         }
         else
         {
             branch_on = true;
             delay_slot = 1;
             new_PC = PC + imm + 8;
+            if (link)
+                set_int(linkreg, (PC + 16) / 8);
         }
     }
 }
 
-void VectorUnit::jp(uint16_t addr)
+void VectorUnit::jp(uint16_t addr, bool link, uint8_t linkreg)
 {
     if (branch_on)
     {
         second_branch_pending = true;
         secondbranch_PC = addr;
+        if (link)
+            set_int(linkreg, (new_PC + 8) / 8);
     }
     else
     {
         new_PC = addr;
         branch_on = true;
         delay_slot = 1;
+        if (link)
+            set_int(linkreg, (PC + 16) / 8);
     }
 }
 
@@ -464,7 +479,7 @@ void VectorUnit::addabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_re
     {
         if (field & (1 << (3 - i)))
         {
-            ACC.f[i] = op + convert(gpr[source].u[i]);
+            ACC.f[i] = convert(gpr[source].u[i]) + op;
             ACC.f[i] = update_mac_flags(ACC.f[i], i);
             printf("(%d)%f", i, ACC.f[i]);
         }
@@ -482,7 +497,7 @@ void VectorUnit::addai(uint8_t field, uint8_t source)
     {
         if (field & (1 << (3 - i)))
         {
-            float temp = op + convert(gpr[source].u[i]);
+            float temp = convert(gpr[source].u[i]) + op;
             ACC.f[i] = update_mac_flags(temp, i);            
             printf("(%d)%f ", i, ACC.f[i]);
         }
@@ -500,9 +515,8 @@ void VectorUnit::addbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, 
     {
         if (field & (1 << (3 - i)))
         {
-            float temp = op + convert(gpr[source].u[i]);
-            temp = update_mac_flags(temp, i);
-            set_gpr_f(dest, i, temp);
+            float temp = convert(gpr[source].u[i]) + op;
+            set_gpr_f(dest, i, update_mac_flags(temp, i));
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
         else
@@ -519,9 +533,8 @@ void VectorUnit::addi(uint8_t field, uint8_t dest, uint8_t source)
     {
         if (field & (1 << (3 - i)))
         {
-            float temp = op + convert(gpr[source].u[i]);
-            temp = update_mac_flags(temp, i);
-            set_gpr_f(dest, i, temp);
+            float temp = convert(gpr[source].u[i]) + op;
+            set_gpr_f(dest, i, update_mac_flags(temp, i));
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
         else
@@ -533,14 +546,13 @@ void VectorUnit::addi(uint8_t field, uint8_t dest, uint8_t source)
 void VectorUnit::addq(uint8_t field, uint8_t dest, uint8_t source)
 {
     printf("[VU] ADDq: ");
-    float value = convert(Q.u);
+    float op = convert(Q.u);
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
         {
-            float temp = value + convert(gpr[source].u[i]);
-            temp = update_mac_flags(temp, i);
-            set_gpr_f(dest, i, temp);
+            float temp = convert(gpr[source].u[i]) + op;
+            set_gpr_f(dest, i, update_mac_flags(temp, i));
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
         else
@@ -582,7 +594,7 @@ void VectorUnit::div(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2)
         else
             status |= 0x20;
 
-        if ((gpr[reg1].u[fsf] & 0x80000000) != (gpr[reg2].u[ftf] & 0x80000000))
+        if ((gpr[reg1].u[fsf] & 0x80000000) ^ (gpr[reg2].u[ftf] & 0x80000000))
             new_Q_instance.u = 0xFF7FFFFF;
         else
             new_Q_instance.u = 0x7F7FFFFF;
@@ -620,8 +632,7 @@ void VectorUnit::esqrt(uint8_t fsf, uint8_t source)
     }
 
     P.f = convert(gpr[source].u[fsf]);
-    if (P.f >= 0.0)
-        P.f = sqrt(P.f);
+    P.f = sqrt(fabs(P.f));
 
     printf("[VU] ESQRT: %f (%d)\n", P.f, source);
 }
@@ -653,12 +664,10 @@ void VectorUnit::ersqrt(uint8_t fsf, uint8_t source)
     }
 
     P.f = convert(gpr[source].u[fsf]);
-    if (P.f >= 0.0)
-    {
-        P.f = sqrt(P.f);
-        if (P.f != 0)
-            P.f = 1.0f / P.f;
-    }
+
+    P.f = sqrt(fabs(P.f));
+    if (P.f != 0)
+        P.f = 1.0f / P.f;
 
 
     printf("[VU] ERSQRT: %f (%d)\n", P.f, source);
@@ -667,7 +676,7 @@ void VectorUnit::ersqrt(uint8_t fsf, uint8_t source)
 void VectorUnit::fcand(uint32_t value)
 {
     printf("[VU] FCAND: $%08X\n", value);
-    if ((clip_flags & 0xFFFFFF) & (value & 0xFFFFFF))
+    if ((*CLIP_flags & 0xFFFFFF) & (value & 0xFFFFFF))
         set_int(1, 1);
     else
         set_int(1, 0);
@@ -676,12 +685,12 @@ void VectorUnit::fcand(uint32_t value)
 void VectorUnit::fcget(uint8_t dest)
 {
     printf("[VU] FCGET: %d\n", dest);
-    set_int(dest, clip_flags & 0xFFF);
+    set_int(dest, *CLIP_flags & 0xFFF);
 }
 
 void VectorUnit::fcor(uint32_t value)
 {
-    if (((clip_flags & 0xFFFFFF) | (value & 0xFFFFFF)) == 0xFFFFFF)
+    if (((*CLIP_flags & 0xFFFFFF) | (value & 0xFFFFFF)) == 0xFFFFFF)
         set_int(1, 1);
     else
         set_int(1, 0);
@@ -800,9 +809,9 @@ void VectorUnit::iand(uint8_t dest, uint8_t reg1, uint8_t reg2)
     printf("[VU] IAND: $%04X (%d, %d, %d)\n", int_gpr[dest].u, dest, reg1, reg2);
 }
 
-void VectorUnit::ilw(uint8_t field, uint8_t dest, uint8_t base, int32_t offset)
+void VectorUnit::ilw(uint8_t field, uint8_t dest, uint8_t base, int16_t offset)
 {
-    uint32_t addr = ((int32_t)int_gpr[base].s << 4) + offset;
+    uint16_t addr = (int_gpr[base].s * 16) + offset;
     uint128_t quad = read_data<uint128_t>(addr);
     printf("[VU] ILW: $%08X ($%08X)\n", addr, offset);
     for (int i = 0; i < 4; i++)
@@ -852,9 +861,9 @@ void VectorUnit::isubiu(uint8_t dest, uint8_t source, uint16_t imm)
     printf("[VU] ISUBIU: $%04X (%d, %d, $%04X)\n", int_gpr[dest].u, dest, source, imm);
 }
 
-void VectorUnit::isw(uint8_t field, uint8_t source, uint8_t base, int32_t offset)
+void VectorUnit::isw(uint8_t field, uint8_t source, uint8_t base, int16_t offset)
 {
-    uint32_t addr = ((int32_t)int_gpr[base].s << 4) + offset;
+    uint16_t addr = (int_gpr[base].s * 16) + offset;
     printf("[VU] ISW: $%08X: $%04X ($%02X, %d, %d)\n", addr, int_gpr[source].u, field, source, base);
     for (int i = 0; i < 4; i++)
     {
@@ -867,7 +876,7 @@ void VectorUnit::isw(uint8_t field, uint8_t source, uint8_t base, int32_t offset
 
 void VectorUnit::iswr(uint8_t field, uint8_t source, uint8_t base)
 {
-    uint32_t addr = (int32_t)int_gpr[base].u << 4;
+    uint16_t addr = int_gpr[base].u * 16;
     printf("[VU] ISWR to $%08X!\n", addr);
     for (int i = 0; i < 4; i++)
     {
@@ -935,9 +944,9 @@ void VectorUnit::itof15(uint8_t field, uint8_t dest, uint8_t source)
     printf("\n");
 }
 
-void VectorUnit::lq(uint8_t field, uint8_t dest, uint8_t base, int32_t offset)
+void VectorUnit::lq(uint8_t field, uint8_t dest, uint8_t base, int16_t offset)
 {
-    uint32_t addr = ((int32_t)int_gpr[base].s * 16) + offset;
+    uint16_t addr = (int_gpr[base].s * 16) + offset;
     printf("[VU] LQ: $%08X (%d, %d, $%08X)\n", addr, dest, base, offset);
     for (int i = 0; i < 4; i++)
     {
@@ -953,7 +962,8 @@ void VectorUnit::lq(uint8_t field, uint8_t dest, uint8_t base, int32_t offset)
 void VectorUnit::lqd(uint8_t field, uint8_t dest, uint8_t base)
 {
     printf("[VU] LQD: ");
-    set_int(base, int_gpr[base].u - 1);
+    if (base)
+        int_gpr[base].u--;
     uint32_t addr = (uint32_t)int_gpr[base].u * 16;
     for (int i = 0; i < 4; i++)
     {
@@ -978,7 +988,8 @@ void VectorUnit::lqi(uint8_t field, uint8_t dest, uint8_t base)
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
     }
-    set_int(base, int_gpr[base].u + 1);
+    if (base)
+        int_gpr[base].u++;
     printf("\n");
 }
 
@@ -989,8 +1000,8 @@ void VectorUnit::madd(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)
     {
         if (field & (1 << (3 - i)))
         {
-            float temp = convert(gpr[reg1].u[i]) * convert(gpr[reg2].u[i]);
-            set_gpr_f(dest, i, update_mac_flags(temp + convert(ACC.u[i]), i));
+            float temp = convert(ACC.u[i]) + convert(gpr[reg1].u[i]) * convert(gpr[reg2].u[i]);
+            set_gpr_f(dest, i, update_mac_flags(temp, i));
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
         else
@@ -1006,9 +1017,8 @@ void VectorUnit::madda(uint8_t field, uint8_t reg1, uint8_t reg2)
     {
         if (field & (1 << (3 - i)))
         {
-            float temp = convert(gpr[reg1].u[i]) * convert(gpr[reg2].u[i]);
-            ACC.f[i] = temp + convert(ACC.u[i]);
-            ACC.f[i] = update_mac_flags(ACC.f[i], i);
+            float temp = convert(ACC.u[i]) + convert(gpr[reg1].u[i]) * convert(gpr[reg2].u[i]);
+            ACC.f[i] = update_mac_flags(temp, i);
             printf("(%d)%f ", i, ACC.f[i]);
         }
         else
@@ -1025,9 +1035,8 @@ void VectorUnit::maddabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_r
     {
         if (field & (1 << (3 - i)))
         {
-            float temp = op * convert(gpr[source].u[i]);
-            ACC.f[i] = temp + convert(ACC.u[i]);
-            ACC.f[i] = update_mac_flags(ACC.f[i], i);
+            float temp = convert(ACC.u[i]) + convert(gpr[source].u[i]) * op;
+            ACC.f[i] = update_mac_flags(temp, i);
             printf("(%d)%f ", i, ACC.f[i]);
         }
         else
@@ -1044,9 +1053,8 @@ void VectorUnit::maddai(uint8_t field, uint8_t source)
     {
         if (field & (1 << (3 - i)))
         {
-            float temp = op * convert(gpr[source].u[i]);
-            ACC.f[i] = temp + convert(ACC.u[i]);
-            ACC.f[i] = update_mac_flags(ACC.f[i], i);
+            float temp = convert(ACC.u[i]) + convert(gpr[source].u[i]) * op;
+            ACC.f[i] = update_mac_flags(temp, i);
             printf("(%d)%f ", i, ACC.f[i]);
         }
         else
@@ -1063,8 +1071,8 @@ void VectorUnit::maddbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source,
     {
         if (field & (1 << (3 - i)))
         {
-            float temp = op * convert(gpr[source].u[i]);
-            set_gpr_f(dest, i, update_mac_flags(temp + ACC.f[i], i));
+            float temp = convert(ACC.u[i]) + convert(gpr[source].u[i]) * op;
+            set_gpr_f(dest, i, update_mac_flags(temp, i));
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
         else
@@ -1081,8 +1089,8 @@ void VectorUnit::maddq(uint8_t field, uint8_t dest, uint8_t source)
     {
         if (field & (1 << (3 - i)))
         {
-            float temp = op * convert(gpr[source].u[i]);
-            set_gpr_f(dest, i, update_mac_flags(temp + ACC.f[i], i));
+            float temp = convert(ACC.u[i]) + convert(gpr[source].u[i]) * op;
+            set_gpr_f(dest, i, update_mac_flags(temp, i));
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
         else
@@ -1099,8 +1107,8 @@ void VectorUnit::maddi(uint8_t field, uint8_t dest, uint8_t source)
     {
         if (field & (1 << (3 - i)))
         {
-            float temp = op * convert(gpr[source].u[i]);
-            set_gpr_f(dest, i, update_mac_flags(temp + ACC.f[i], i));
+            float temp = convert(ACC.u[i]) + convert(gpr[source].u[i]) * op;
+            set_gpr_f(dest, i, update_mac_flags(temp, i));
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
         else
@@ -1227,10 +1235,13 @@ void VectorUnit::minii(uint8_t field, uint8_t dest, uint8_t source)
 void VectorUnit::move(uint8_t field, uint8_t dest, uint8_t source)
 {
     printf("[VU] MOVE");
-    for (int i = 0; i < 4; i++)
+    if (dest != 0)
     {
-        if (field & (1 << (3 - i)))
-            set_gpr_u(dest, i, gpr[source].u[i]);
+        for (int i = 0; i < 4; i++)
+        {
+            if (field & (1 << (3 - i)))
+                set_gpr_u(dest, i, gpr[source].u[i]);
+        }
     }
     printf("\n");
 }
@@ -1258,9 +1269,8 @@ void VectorUnit::msubabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_r
     {
         if (field & (1 << (3 - i)))
         {
-            float temp = op * convert(gpr[source].u[i]);
-            ACC.f[i] = convert(ACC.u[i]) - temp;
-            ACC.f[i] = update_mac_flags(ACC.f[i], i);
+            float temp = convert(ACC.u[i]) - convert(gpr[source].u[i]) * op;
+            ACC.f[i] = update_mac_flags(temp, i);
             printf("(%d)%f ", i, ACC.f[i]);
         }
         else
@@ -1277,9 +1287,8 @@ void VectorUnit::msubai(uint8_t field, uint8_t source)
     {
         if (field & (1 << (3 - i)))
         {
-            float temp = op * convert(gpr[source].u[i]);
-            ACC.f[i] = convert(ACC.u[i]) - temp;
-            ACC.f[i] = update_mac_flags(ACC.f[i], i);
+            float temp = convert(ACC.u[i]) - convert(gpr[source].u[i]) * op;
+            ACC.f[i] = update_mac_flags(temp, i);
             printf("(%d)%f ", i, ACC.f[i]);
         }
         else
@@ -1295,8 +1304,8 @@ void VectorUnit::msub(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)
     {
         if (field & (1 << (3 - i)))
         {
-            float temp = convert(gpr[reg1].u[i]) * convert(gpr[reg2].u[i]);            
-            set_gpr_f(dest, i, update_mac_flags(convert(ACC.u[i]) - temp, i));
+            float temp = convert(ACC.u[i]) - convert(gpr[reg1].u[i]) * convert(gpr[reg2].u[i]);
+            set_gpr_f(dest, i, update_mac_flags(temp, i));
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
         else
@@ -1312,9 +1321,8 @@ void VectorUnit::msuba(uint8_t field, uint8_t reg1, uint8_t reg2)
     {
         if (field & (1 << (3 - i)))
         {
-            float temp = convert(gpr[reg1].u[i]) * convert(gpr[reg2].u[i]);
-            ACC.f[i] = convert(ACC.u[i]) - temp;
-            ACC.f[i] = update_mac_flags(ACC.f[i], i);
+            float temp = convert(ACC.u[i]) - convert(gpr[reg1].u[i]) * convert(gpr[reg2].u[i]);
+            ACC.f[i] = update_mac_flags(temp, i);
             printf("(%d)%f ", i, ACC.f[i]);
         }
         else
@@ -1331,8 +1339,8 @@ void VectorUnit::msubbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source,
     {
         if (field & (1 << (3 - i)))
         {
-            float temp = op * convert(gpr[source].u[i]);
-            set_gpr_f(dest, i, update_mac_flags(ACC.f[i] - temp, i));
+            float temp = convert(ACC.u[i]) - convert(gpr[source].u[i]) * op;
+            set_gpr_f(dest, i, update_mac_flags(temp, i));
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
         else
@@ -1349,8 +1357,8 @@ void VectorUnit::msubi(uint8_t field, uint8_t dest, uint8_t source)
     {
         if (field & (1 << (3 - i)))
         {
-            float temp = op * convert(gpr[source].u[i]);
-            set_gpr_f(dest, i, update_mac_flags(ACC.f[i] - temp, i));
+            float temp = convert(ACC.u[i]) - convert(gpr[source].u[i]) * op;
+            set_gpr_f(dest, i, update_mac_flags(temp, i));
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
         else
@@ -1373,8 +1381,7 @@ void VectorUnit::mul(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)
         if (field & (1 << (3 - i)))
         {
             float result = convert(gpr[reg1].u[i]) * convert(gpr[reg2].u[i]);
-            result = update_mac_flags(result, i);
-            set_gpr_f(dest, i, result);
+            set_gpr_f(dest, i, update_mac_flags(result, i));
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
         else
@@ -1391,8 +1398,7 @@ void VectorUnit::mula(uint8_t field, uint8_t reg1, uint8_t reg2)
         if (field & (1 << (3 - i)))
         {
             float temp = convert(gpr[reg1].u[i]) * convert(gpr[reg2].u[i]);
-            temp = update_mac_flags(temp, i);
-            ACC.f[i] = temp;
+            ACC.f[i] = update_mac_flags(temp, i);
             printf("(%d)%f ", i, ACC.f[i]);
         }
         else
@@ -1409,9 +1415,8 @@ void VectorUnit::mulabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_re
     {
         if (field & (1 << (3 - i)))
         {
-            float temp = op * convert(gpr[source].u[i]);
-            temp = update_mac_flags(temp, i);
-            ACC.f[i] = temp;
+            float temp = convert(gpr[source].u[i]) * op;
+            ACC.f[i] = update_mac_flags(temp, i);
             printf("(%d)%f ", i, ACC.f[i]);
         }
         else
@@ -1429,8 +1434,7 @@ void VectorUnit::mulai(uint8_t field, uint8_t source)
         if (field & (1 << (3 - i)))
         {
             float temp = convert(gpr[source].u[i]) * op;
-            temp = update_mac_flags(temp, i);
-            ACC.f[i] = temp;
+            ACC.f[i] = update_mac_flags(temp, i);
             printf("(%d)%f ", i, ACC.f[i]);
         }
         else
@@ -1465,9 +1469,8 @@ void VectorUnit::mulbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, 
     {
         if (field & (1 << (3 - i)))
         {
-            float temp = op * convert(gpr[source].u[i]);
-            temp = update_mac_flags(temp, i);
-            set_gpr_f(dest, i, temp);
+            float temp = convert(gpr[source].u[i]) * op;
+            set_gpr_f(dest, i, update_mac_flags(temp, i));
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
         else
@@ -1484,9 +1487,8 @@ void VectorUnit::muli(uint8_t field, uint8_t dest, uint8_t source)
     {
         if (field & (1 << (3 - i)))
         {
-            float temp = op * convert(gpr[source].u[i]);
-            temp = update_mac_flags(temp, i);
-            set_gpr_f(dest, i, temp);
+            float temp = convert(gpr[source].u[i]) * op;
+            set_gpr_f(dest, i, update_mac_flags(temp, i));
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
         else
@@ -1503,9 +1505,8 @@ void VectorUnit::mulq(uint8_t field, uint8_t dest, uint8_t source)
     {
         if (field & (1 << (3 - i)))
         {
-            float temp = op * convert(gpr[source].u[i]);
-            temp = update_mac_flags(temp, i);
-            set_gpr_f(dest, i, temp);
+            float temp = convert(gpr[source].u[i]) * op;
+            set_gpr_f(dest, i, update_mac_flags(temp, i));
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
         else
@@ -1590,24 +1591,38 @@ void VectorUnit::rsqrt(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2)
 
     status = (status & 0xFCF) | ((status & 0x30) << 6);
 
-    if (!denom)
+    if (denom == 0.0)
     {
         printf("[VU] RSQRT by zero!\n");
+        status |= 0x20;
 
         if (num == 0.0)
+        {
+            if ((gpr[reg1].u[fsf] & 0x80000000) ^ (gpr[reg2].u[ftf] & 0x80000000))
+                new_Q_instance.u = 0x80000000;
+            else
+                new_Q_instance.u = 0;
+
             status |= 0x10;
+        }
         else
-            status |= 0x20;
+        {
+            if ((gpr[reg1].u[fsf] & 0x80000000) ^ (gpr[reg2].u[ftf] & 0x80000000))
+                new_Q_instance.u = 0xFF7FFFFF;
+            else
+                new_Q_instance.u = 0x7F7FFFFF;
+        }
         
-        if ((gpr[reg1].u[fsf] & 0x80000000) != (gpr[reg2].u[ftf] & 0x80000000))
-            new_Q_instance.u = 0xFF7FFFFF;
-        else
-            new_Q_instance.u = 0x7F7FFFFF;
+        
     }
     else
     {
+        if(denom < 0.0)
+            status |= 0x10;
+
         new_Q_instance.f = num;
-        new_Q_instance.f /= sqrt(denom);
+        new_Q_instance.f /= sqrt(fabs(denom));
+        new_Q_instance.f = convert(new_Q_instance.u);
     }
     printf("[VU] RSQRT: %f\n", new_Q_instance.f);
     printf("Reg1: %f\n", gpr[reg1].f[fsf]);
@@ -1616,15 +1631,13 @@ void VectorUnit::rsqrt(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2)
 
 void VectorUnit::rxor(uint8_t fsf, uint8_t source)
 {
-    VU_R temp;
-    temp.u = (R.u & 0x007FFFFF) | 0x3F800000;
-    R.u = temp.u ^ (gpr[source].u[fsf] & 0x007FFFFF);
+    R.u = 0x3F800000 | ((R.u ^ gpr[source].u[fsf]) & 0x007FFFFF);
     printf("[VU] RXOR: %f\n", R.f);
 }
 
-void VectorUnit::sq(uint8_t field, uint8_t source, uint8_t base, int32_t offset)
+void VectorUnit::sq(uint8_t field, uint8_t source, uint8_t base, int16_t offset)
 {
-    uint32_t addr = ((int32_t)int_gpr[base].s << 4) + offset;
+    uint32_t addr = ((int32_t)int_gpr[base].s *16) + offset;
     printf("[VU] SQ to $%08X!\n", addr);
     for (int i = 0; i < 4; i++)
     {
@@ -1673,7 +1686,12 @@ void VectorUnit::sqi(uint8_t field, uint8_t source, uint8_t base)
 
 void VectorUnit::vu_sqrt(uint8_t ftf, uint8_t source)
 {
+    status = (status & 0xfcf) | ((status & 0x30) << 6);
+    if (convert(gpr[source].u[ftf]) < 0.0)
+        status |= 0x10;
+
     new_Q_instance.f = sqrt(fabs(convert(gpr[source].u[ftf])));
+    new_Q_instance.f = convert(new_Q_instance.u);
     printf("[VU] SQRT: %f\n", new_Q_instance.f);
     printf("Source: %f\n", gpr[source].f[ftf]);
 }
@@ -1686,8 +1704,7 @@ void VectorUnit::sub(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)
         if (field & (1 << (3 - i)))
         {
             float result = convert(gpr[reg1].u[i]) - convert(gpr[reg2].u[i]);
-            result = update_mac_flags(result, i);
-            set_gpr_f(dest, i, result);
+            set_gpr_f(dest, i, update_mac_flags(result, i));
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
         else
@@ -1758,8 +1775,7 @@ void VectorUnit::subbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, 
         if (field & (1 << (3 - i)))
         {
             float temp = convert(gpr[source].u[i]) - op;
-            temp = update_mac_flags(temp, i);
-            set_gpr_f(dest, i, temp);
+            set_gpr_f(dest, i, update_mac_flags(temp, i));
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
         else
@@ -1777,8 +1793,7 @@ void VectorUnit::subi(uint8_t field, uint8_t dest, uint8_t source)
         if (field & (1 << (3 - i)))
         {
             float temp = convert(gpr[source].u[i]) - op;
-            temp = update_mac_flags(temp, i);
-            set_gpr_f(dest, i, temp);
+            set_gpr_f(dest, i, update_mac_flags(temp, i));
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
         else
@@ -1790,14 +1805,13 @@ void VectorUnit::subi(uint8_t field, uint8_t dest, uint8_t source)
 void VectorUnit::subq(uint8_t field, uint8_t dest, uint8_t source)
 {
     printf("[VU] SUBq: ");
-    float value = convert(Q.u);
+    float op = convert(Q.u);
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))
         {
-            float temp = convert(gpr[source].u[i]) - value;
-            temp = update_mac_flags(temp, i);
-            set_gpr_f(dest, i, temp);
+            float temp = convert(gpr[source].u[i]) - op;
+            set_gpr_f(dest, i, update_mac_flags(temp, i));
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
         else
@@ -1823,14 +1837,14 @@ void VectorUnit::xgkick(uint8_t is)
     {
         Errors::die("[VU] ERROR: XGKICK called on VU0!\n");
     }
-    printf("[VU1] XGKICK: Addr $%08X\n", int_gpr[is].u * 16);
+    printf("[VU1] XGKICK: Addr $%08X\n", (int_gpr[is].u & 0x3ff) * 16);
 
     //If an XGKICK transfer is ongoing, completely stall the VU until the first transfer has finished.
     //Note: a real VU executes for one or two more cycles before stalling due to pipelining.
     if (transferring_GIF)
     {
         printf("[VU1] XGKICK called during active transfer, stalling VU\n");
-        stalled_GIF_addr = (uint32_t)int_gpr[is].u * 16;
+        stalled_GIF_addr = (uint32_t)(int_gpr[is].u & 0x3ff) * 16;
         XGKICK_stall = true;
     }
     else
@@ -1838,7 +1852,7 @@ void VectorUnit::xgkick(uint8_t is)
         XGKICK_cycles = 0;
         gif->request_PATH(1);
         transferring_GIF = true;
-        GIF_addr = (uint32_t)int_gpr[is].u * 16;
+        GIF_addr = (uint32_t)(int_gpr[is].u & 0x3ff) * 16;
     }
 }
 
