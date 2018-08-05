@@ -113,6 +113,8 @@ string VU_Disasm::upper(uint32_t PC, uint32_t instr)
             return upper_bc("mul", instr);
         case 0x1C:
             return upper_q("mul", instr);
+        case 0x1D:
+            return upper_i("max", instr);
         case 0x1E:
             return upper_i("mul", instr);
         case 0x1F:
@@ -236,6 +238,11 @@ string VU_Disasm::upper_special(uint32_t PC, uint32_t instr)
         case 0x0A:
         case 0x0B:
             return upper_acc_bc("madda", instr);
+        case 0x0C:
+        case 0x0D:
+        case 0x0E:
+        case 0x0F:
+            return upper_acc_bc("msuba", instr);
         case 0x10:
             return upper_conversion("itof0", instr);
         case 0x11:

@@ -208,6 +208,9 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
                     case assert_finish_t:
                         gs.reg.assert_FINISH();
                         break;
+                    case assert_vsync_t:
+                        gs.reg.assert_VSYNC();
+                        break;
                     case set_vblank_t:
                     {
                         auto p = data.payload.vblank_payload;

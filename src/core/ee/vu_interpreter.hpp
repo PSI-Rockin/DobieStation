@@ -5,6 +5,7 @@
 namespace VU_Interpreter
 {
     void interpret(VectorUnit& vu, uint32_t upper_instr, uint32_t lower_instr);
+    bool check_swapops(VectorUnit& vu, uint32_t upper_instr, uint32_t lower_instr);
 
     void upper(VectorUnit& vu, uint32_t instr);
     void addbc(VectorUnit& vu, uint32_t instr);
@@ -28,6 +29,7 @@ namespace VU_Interpreter
     void madd(VectorUnit& vu, uint32_t instr);
     void mul(VectorUnit& vu, uint32_t instr);
     void max(VectorUnit& vu, uint32_t instr);
+    void maxi(VectorUnit& vu, uint32_t instr);
     void sub(VectorUnit& vu, uint32_t instr);
     void msub(VectorUnit& vu, uint32_t instr);
     void opmsub(VectorUnit& vu, uint32_t instr);
@@ -37,6 +39,7 @@ namespace VU_Interpreter
     void addabc(VectorUnit& vu, uint32_t instr);
     void subabc(VectorUnit& vu, uint32_t instr);
     void maddabc(VectorUnit& vu, uint32_t instr);
+    void msubabc(VectorUnit& vu, uint32_t instr);
     void itof0(VectorUnit& vu, uint32_t instr);
     void itof4(VectorUnit& vu, uint32_t instr);
     void itof12(VectorUnit& vu, uint32_t instr);

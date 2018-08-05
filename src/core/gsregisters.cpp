@@ -260,7 +260,17 @@ void GS_REGISTERS::set_VBLANK(bool is_VBLANK)
     {
         CSR.is_odd_frame = !CSR.is_odd_frame;
     }
-    CSR.VBLANK_generated = is_VBLANK;
+}
+
+bool GS_REGISTERS::assert_VSYNC()//returns true if the interrupt should be processed
+{
+    if (CSR.VBLANK_enabled)
+    {
+        CSR.VBLANK_generated = true;
+        CSR.VBLANK_enabled = false;
+        return !IMR.vsync;
+    }
+    return false;
 }
 
 bool GS_REGISTERS::assert_FINISH()//returns true if the interrupt should be processed

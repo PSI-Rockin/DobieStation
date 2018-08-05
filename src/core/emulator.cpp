@@ -59,8 +59,8 @@ void Emulator::run()
         dmac.run(cycles);
         timers.run(cycles);
         ipu.run();
-        vif0.update();
-        vif1.update();
+        vif0.update(cycles);
+        vif1.update(cycles);
         vu0.run(cycles);
         vu1.run(cycles);
         cycles >>= 2;
@@ -84,6 +84,7 @@ void Emulator::run()
             //cpu.set_disassembly(frames == 53);
             //cpu.set_disassembly(frames == 500);
             printf("VSYNC FRAMES: %d\n", frames);
+            gs.assert_VSYNC();
             frames++;
             iop_request_IRQ(0);
             gs.render_CRT();
@@ -361,6 +362,14 @@ uint32_t Emulator::read32(uint32_t address)
         return dmac.read32(address);
     if (address >= 0x1C000000 && address < 0x1C200000)
         return *(uint32_t*)&IOP_RAM[address & 0x1FFFFF];
+    if (address >= 0x11000000 && address < 0x11004000)
+        return vu0.read_instr<uint32_t>(address);
+    if (address >= 0x11004000 && address < 0x11008000)
+        return vu0.read_data<uint32_t>(address);
+    if (address >= 0x11008000 && address < 0x1100C000)
+        return vu1.read_instr<uint32_t>(address);
+    if (address >= 0x1100C000 && address < 0x11010000)
+        return vu1.read_data<uint32_t>(address);
     switch (address)
     {
         case 0x10002010:
@@ -369,12 +378,26 @@ uint32_t Emulator::read32(uint32_t address)
             return ipu.read_BP();
         case 0x10003020:
             return gif.read_STAT();
+        case 0x10003850:
+            return vif0.get_mode();
+        case 0x10003900:
+        case 0x10003910:
+        case 0x10003920:
+        case 0x10003930:
+            return vif0.get_row(address);
         case 0x10003C00:
             return vif1.get_stat();
         case 0x10003C20:
             return vif1.get_err();
         case 0x10003C30:
             return vif1.get_mark();
+        case 0x10003C50:
+            return vif1.get_mode();
+        case 0x10003D00:
+        case 0x10003D10:
+        case 0x10003D20:
+        case 0x10003D30:
+            return vif1.get_row(address);
         case 0x1000F000:
             //printf("\nRead32 INTC_STAT: $%08X", intc.read_stat());
             if (!VBLANK_sent)
@@ -671,6 +694,26 @@ void Emulator::write64(uint32_t address, uint64_t value)
     if ((address & (0xFF000000)) == 0x12000000)
     {
         gs.write64_privileged(address, value);
+        return;
+    }
+    if (address >= 0x11000000 && address < 0x11004000)
+    {
+        vu0.write_instr<uint64_t>(address, value);
+        return;
+    }
+    if (address >= 0x11004000 && address < 0x11008000)
+    {
+        vu0.write_data<uint64_t>(address, value);
+        return;
+    }
+    if (address >= 0x11008000 && address < 0x1100C000)
+    {
+        vu1.write_instr<uint64_t>(address, value);
+        return;
+    }
+    if (address >= 0x1100C000 && address < 0x11010000)
+    {
+        vu1.write_data<uint64_t>(address, value);
         return;
     }
     Errors::print_warning("Unrecognized write64 at physical addr $%08X of $%08X_%08X\n", address, value >> 32, value & 0xFFFFFFFF);
