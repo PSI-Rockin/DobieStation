@@ -181,6 +181,7 @@ class VectorUnit
         void maddq(uint8_t field, uint8_t dest, uint8_t source);
         void maddi(uint8_t field, uint8_t dest, uint8_t source);
         void max(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2);
+        void maxi(uint8_t field, uint8_t dest, uint8_t source);
         void maxbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
         void mfir(uint8_t field, uint8_t dest, uint8_t source);
         void mfp(uint8_t field, uint8_t dest);
@@ -234,25 +235,37 @@ class VectorUnit
 template <typename T>
 inline T VectorUnit::read_instr(uint32_t addr)
 {
-    return *(T*)&instr_mem[addr & 0x3FFF];
+    uint16_t mask = 0x3fff;
+    if (get_id() == 0)
+        mask = 0xfff;
+    return *(T*)&instr_mem[addr & mask];
 }
 
 template <typename T>
 inline T VectorUnit::read_data(uint32_t addr)
 {
-    return *(T*)&data_mem[addr & 0x3FFF];
+    uint16_t mask = 0x3fff;
+    if (get_id() == 0)
+        mask = 0xfff;
+    return *(T*)&data_mem[addr & mask];
 }
 
 template <typename T>
 inline void VectorUnit::write_instr(uint32_t addr, T data)
 {
-    *(T*)&instr_mem[addr & 0x3FFF] = data;
+    uint16_t mask = 0x3fff;
+    if (get_id() == 0)
+        mask = 0xfff;
+     *(T*)&instr_mem[addr & mask] = data;
 }
 
 template <typename T>
 inline void VectorUnit::write_data(uint32_t addr, T data)
 {
-    *(T*)&data_mem[addr & 0x3FFF] = data;
+    uint16_t mask = 0x3fff;
+    if (get_id() == 0)
+        mask = 0xfff;
+    *(T*)&data_mem[addr & mask] = data;
 }
 
 inline bool VectorUnit::is_running()

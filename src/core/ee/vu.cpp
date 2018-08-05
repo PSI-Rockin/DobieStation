@@ -386,7 +386,7 @@ void VectorUnit::branch(bool condition, int16_t imm, bool link, uint8_t linkreg)
         if (branch_on)
         {
             second_branch_pending = true;
-            secondbranch_PC = PC + imm + 8;
+            secondbranch_PC = ((int16_t)PC + imm + 8) & 0x3fff;
             if(link)
                 set_int(linkreg, (new_PC + 8) / 8);
         }
@@ -394,7 +394,7 @@ void VectorUnit::branch(bool condition, int16_t imm, bool link, uint8_t linkreg)
         {
             branch_on = true;
             delay_slot = 1;
-            new_PC = PC + imm + 8;
+            new_PC = ((int16_t)PC + imm + 8) & 0x3fff;
             if (link)
                 set_int(linkreg, (PC + 16) / 8);
         }
@@ -406,13 +406,13 @@ void VectorUnit::jp(uint16_t addr, bool link, uint8_t linkreg)
     if (branch_on)
     {
         second_branch_pending = true;
-        secondbranch_PC = addr;
+        secondbranch_PC = addr & 0x3FFF;
         if (link)
             set_int(linkreg, (new_PC + 8) / 8);
     }
     else
     {
-        new_PC = addr;
+        new_PC = addr & 0x3FFF;
         branch_on = true;
         delay_slot = 1;
         if (link)
@@ -1126,6 +1126,25 @@ void VectorUnit::max(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)
         {
             float op1 = convert(gpr[reg1].u[i]);
             float op2 = convert(gpr[reg2].u[i]);
+            if (op1 > op2)
+                set_gpr_f(dest, i, op1);
+            else
+                set_gpr_f(dest, i, op2);
+            printf("(%d)%f ", i, gpr[dest].f[i]);
+        }
+    }
+    printf("\n");
+}
+
+void VectorUnit::maxi(uint8_t field, uint8_t dest, uint8_t source)
+{
+    printf("[VU] MAXi: ");
+    float op1 = convert(I.u);
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            float op2 = convert(gpr[source].u[i]);
             if (op1 > op2)
                 set_gpr_f(dest, i, op1);
             else

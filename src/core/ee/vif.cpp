@@ -104,8 +104,6 @@ void VectorInterface::update(int cycles)
         uint32_t value = FIFO.front();
         if (command_len <= 0)
         {
-            if (check_vif_stall(value))
-                return;
             buffer_size = 0;
             decode_cmd(value);
         }
@@ -799,7 +797,14 @@ void VectorInterface::disasm_micromem()
         return;
 
     using namespace std;
-    ofstream file("microprogram.txt");
+
+    ofstream file;
+
+    if (get_id())
+        file.open("microprogram1.txt");
+    else
+        file.open("microprogram0.txt");
+
     if (!file.is_open())
     {
         Errors::die("Failed to open\n");
