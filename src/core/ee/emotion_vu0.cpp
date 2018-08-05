@@ -376,6 +376,7 @@ void EmotionInterpreter::cop2_vcallms(VectorUnit &vu0, uint32_t instruction)
 {
     uint32_t imm = (instruction >> 6) & 0x7FFF;
     imm *= 8;
+    //TODO: Proper handling of EE stalling so we don't completely free the emulation of everything until VU0 is done.
     while (vu0.is_running())
         vu0.run(8);
     vu0.mscal(imm);
@@ -383,6 +384,7 @@ void EmotionInterpreter::cop2_vcallms(VectorUnit &vu0, uint32_t instruction)
 
 void EmotionInterpreter::cop2_vcallmsr(VectorUnit &vu0, uint32_t instruction)
 {
+    //TODO: As in VCALLMS
     while (vu0.is_running())
         vu0.run(8);
     vu0.callmsr();

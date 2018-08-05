@@ -520,7 +520,6 @@ void DMAC::advance_source_dma(int index)
                 break;
         }
     }
-
 }
 
 void DMAC::advance_dest_dma(int index)
@@ -540,7 +539,6 @@ void DMAC::advance_dest_dma(int index)
                 break;
         }
     }
-
 }
 
 void DMAC::handle_source_chain(int index)

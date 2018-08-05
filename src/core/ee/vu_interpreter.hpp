@@ -5,6 +5,7 @@
 namespace VU_Interpreter
 {
     void interpret(VectorUnit& vu, uint32_t upper_instr, uint32_t lower_instr);
+    bool check_swapops(VectorUnit& vu, uint32_t upper_instr, uint32_t lower_instr);
 
     void upper(VectorUnit& vu, uint32_t instr);
     void addbc(VectorUnit& vu, uint32_t instr);

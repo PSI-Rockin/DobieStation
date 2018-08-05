@@ -7,15 +7,7 @@
 
 void VU_Interpreter::interpret(VectorUnit &vu, uint32_t upper_instr, uint32_t lower_instr)
 {
-    uint8_t upperfd, lowerfs, lowerft;
-    bool swapops = false;
-
-    upperfd = ((upper_instr >> 2) & 0xf) == 0xf ? ((upper_instr >> 16) & 0x1F) : ((upper_instr >> 6) & 0x1F);
-    lowerfs = (upper_instr >> 11) & 0x1F;
-    lowerft = (lower_instr >> 16) & 0x1F;
-    
-    if (upperfd == lowerfs || upperfd == lowerft)
-        swapops = true;
+    bool swapops = check_swapops(vu, upper_instr, lower_instr);
 
     //WaitQ, DIV, RSQRT, SQRT
     if (((lower_instr & 0x800007FC) == 0x800003BC))
@@ -37,6 +29,20 @@ void VU_Interpreter::interpret(VectorUnit &vu, uint32_t upper_instr, uint32_t lo
 
     if (upper_instr & (1 << 30))
         vu.end_execution();
+}
+
+bool VU_Interpreter::check_swapops(VectorUnit &vu, uint32_t upper_instr, uint32_t lower_instr)
+{
+    uint8_t upperfd, lowerfs, lowerft;
+
+    upperfd = ((upper_instr >> 2) & 0xf) == 0xf ? ((upper_instr >> 16) & 0x1F) : ((upper_instr >> 6) & 0x1F);
+    lowerfs = (upper_instr >> 11) & 0x1F;
+    lowerft = (lower_instr >> 16) & 0x1F;
+
+    if (upperfd == lowerfs || upperfd == lowerft)
+        return true;
+    else
+        return false;
 }
 
 void VU_Interpreter::upper(VectorUnit &vu, uint32_t instr)
