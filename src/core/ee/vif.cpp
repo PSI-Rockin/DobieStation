@@ -29,28 +29,38 @@ void VectorInterface::reset()
     vu->set_TOP_regs(&TOP, &ITOP);
     vu->set_GIF(gif);
     wait_for_VU = false;
-    vif_int_stalled = false;
+    vif_stalled = false;
     vif_ibit_detected = false;
     vif_interrupt = false;
+    vif_stop = false;
     mark_detected = false;
     flush_stall = false;
 }
 
 bool VectorInterface::check_vif_stall(uint32_t value)
 {
+    
     //Do not stall if the next command is MARK
-    if (vif_ibit_detected && command_len <= 0 && value != 0x7)
+    if (command_len <= 0)
     {
-        printf("[VIF] VIF%x Stalled\n", get_id());
-        vif_ibit_detected = false;
-        vif_int_stalled = true;
-        vif_interrupt = true;
+        if (vif_ibit_detected && value != 0x7)
+        {
+            printf("[VIF] VIF%x Stalled\n", get_id());
+            vif_ibit_detected = false;
+            vif_stalled = true;
+            vif_interrupt = true;
 
-        if (get_id())
-            intc->assert_IRQ((int)Interrupt::VIF1);
-        else
-            intc->assert_IRQ((int)Interrupt::VIF0);
-        return true;
+            if (get_id())
+                intc->assert_IRQ((int)Interrupt::VIF1);
+            else
+                intc->assert_IRQ((int)Interrupt::VIF0);
+            return true;
+        }
+        if (vif_stop)
+        {
+            vif_stalled = true;
+            return true;
+        }
     }
     return false;
 }
@@ -65,7 +75,7 @@ void VectorInterface::update(int cycles)
             return;
         flush_stall = false;
     }*/
-    while (!vif_int_stalled && runcycles--)
+    while (!vif_stalled && runcycles--)
     {        
         if (wait_for_VU)
         {
@@ -81,7 +91,10 @@ void VectorInterface::update(int cycles)
             flush_stall = false;
         }*/
         if (FIFO.size())
-            check_vif_stall(FIFO.front());
+        {
+            if (check_vif_stall(FIFO.front()))
+                return;
+        }
         else
         {
             check_vif_stall(0);
@@ -822,11 +835,12 @@ void VectorInterface::disasm_micromem()
 uint32_t VectorInterface::get_stat()
 {
     uint32_t reg = 0;
-    reg |= vif_int_stalled ? 0 : ((FIFO.size() != 0) * 3);
+    reg |= vif_stalled ? 0 : ((FIFO.size() != 0) * 3);
     reg |= vu->is_running() << 2;
     reg |= mark_detected << 6;
     reg |= DBF << 7;
-    reg |= vif_int_stalled << 10;
+    reg |= vif_stop << 8;
+    reg |= vif_stalled << 10;
     reg |= vif_interrupt << 11;
     reg |= ((FIFO.size() + 3) / 4) << 24;
     printf("[VIF] Get STAT: $%08X\n", reg);
@@ -881,7 +895,13 @@ void VectorInterface::set_fbrst(uint32_t value)
     if (value & 0x8)
     {
         printf("[VIF] VIF%x Resumed\n", get_id());
-        vif_int_stalled = false;
+        vif_stalled = false;
         vif_interrupt = false;
+        vif_stop = false;
+    }
+    if (value & 0x4)
+    {
+        printf("[VIF] VIF%x Stopped\n", get_id());
+        vif_stop = true;
     }
 }
