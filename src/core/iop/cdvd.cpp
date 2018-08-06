@@ -500,11 +500,19 @@ void CDVD_Drive::N_command_read()
 {
     sector_pos = *(uint32_t*)&N_command_params[0];
     sectors_left = *(uint32_t*)&N_command_params[4];
-    if (N_command_params[10])
-        Errors::die("CDVD N_command_params[10] is true");
+    switch (N_command_params[10])
+    {
+        case 1:
+            block_size = 2328;
+            break;
+        case 2:
+            block_size = 2340;
+            break;
+        default:
+            block_size = 2048;
+    }
     speed = 24;
     printf("[CDVD] Read; Seek pos: %d, Sectors: %d\n", sector_pos, sectors_left);
-    block_size = 2048;
     start_seek();
     active_N_command = NCOMMAND::READ_SEEK;
 }
