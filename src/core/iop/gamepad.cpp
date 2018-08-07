@@ -7,7 +7,8 @@
 //Reply buffers taken from PCSX2's LilyPad
 
 const uint8_t Gamepad::config_exit[7] = {0x5A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-const uint8_t Gamepad::set_mode[7] = {0x5A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+const uint8_t Gamepad::set_mode_DS2[7] = {0x5A, 0x03, 0x02, 0x00, 0x02, 0x01, 0x00};
+const uint8_t Gamepad::set_mode_DS1[7] = {0x5A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 const uint8_t Gamepad::query_model[7] = {0x5A, 0x01, 0x02, 0x00, 0x02, 0x01, 0x00};
 const uint8_t Gamepad::query_act[2][7] =
 {
@@ -113,7 +114,7 @@ uint8_t Gamepad::write_SIO(uint8_t value)
 
                 break;
             case 'D': //0x44 - set mode and lock
-                set_result(set_mode);
+                set_result(set_mode_DS2);
                 return 0xF3;
             case 'E': //0x45 - query model and mode
                 set_result(query_model);

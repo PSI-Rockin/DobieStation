@@ -33,7 +33,8 @@ class Gamepad
         int data_count;
 
         const static uint8_t config_exit[7];
-        const static uint8_t set_mode[7];
+        const static uint8_t set_mode_DS2[7];
+        const static uint8_t set_mode_DS1[7];
         const static uint8_t query_model[7];
         const static uint8_t query_act[2][7];
         const static uint8_t query_comb[7];
