@@ -197,6 +197,6 @@ void EmotionTiming::write_control(int index, uint32_t value)
     timers[index].control.enabled = value & (1 << 7);
     timers[index].control.compare_int_enable = value & (1 << 8);
     timers[index].control.overflow_int_enable = value & (1 << 9);
-    timers[index].control.compare_int &= ~(value & (1 << 10));
-    timers[index].control.overflow_int &= ~(value & (1 << 11));
+    timers[index].control.compare_int &= !(value & (1 << 10));
+    timers[index].control.overflow_int &= !(value & (1 << 11));
 }

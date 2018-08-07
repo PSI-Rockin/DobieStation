@@ -122,6 +122,12 @@ void SPU::write16(uint32_t addr, uint16_t value)
                 status.DMA_busy = false;
             }
             break;
+        case 0x19C:
+            printf("[SPU%d] Write IRQA_H: $%04X\n", id, value);
+            break;
+        case 0x19E:
+            printf("[SPU%d] Write IRQA_L: $%04X\n", id, value);
+            break;
         case 0x1A8:
             transfer_addr &= 0xFFFF;
             transfer_addr |= (value & 0xF) << 16;

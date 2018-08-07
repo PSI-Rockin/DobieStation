@@ -14,7 +14,7 @@ enum GS_command:uint8_t
 {
 	write64_t, write64_privileged_t, write32_privileged_t,
     set_rgba_t, set_stq_t, set_uv_t, set_xyz_t, set_q_t, set_crt_t,
-    render_crt_t, assert_finish_t, set_vblank_t, memdump_t, die_t,
+    render_crt_t, assert_finish_t, assert_vsync_t, set_vblank_t, memdump_t, die_t,
     savestate_t, loadstate_t, gsdump_t
 };
 
@@ -154,6 +154,7 @@ class GraphicsSynthesizer
 
         void set_VBLANK(bool is_VBLANK);
         void assert_FINISH();
+        void assert_VSYNC();
 
         void set_CRT(bool interlaced, int mode, bool frame_mode);
 

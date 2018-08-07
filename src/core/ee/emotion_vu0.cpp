@@ -8,9 +8,9 @@ void EmotionInterpreter::cop2_special(VectorUnit &vu0, uint32_t instruction)
       * We're flushing pipelines for VU0, as accurately handling COP2's pipelining is painful.
       * I don't yet have a good solution for this that doesn't murder performance.
       */
-    vu0.update_mac_pipeline();
-    vu0.update_div_pipeline();
+    vu0.flush_pipes();
     uint8_t op = instruction & 0x3F;
+
     switch (op)
     {
         case 0x00:
@@ -102,6 +102,9 @@ void EmotionInterpreter::cop2_special(VectorUnit &vu0, uint32_t instruction)
             break;
         case 0x30:
             cop2_viadd(vu0, instruction);
+            break;
+        case 0x31:
+            cop2_visub(vu0, instruction);
             break;
         case 0x32:
             cop2_viaddi(vu0, instruction);
@@ -343,6 +346,14 @@ void EmotionInterpreter::cop2_viadd(VectorUnit &vu0, uint32_t instruction)
     vu0.iadd(dest, reg1, reg2);
 }
 
+void EmotionInterpreter::cop2_visub(VectorUnit &vu0, uint32_t instruction)
+{
+    uint8_t dest = (instruction >> 6) & 0x1F;
+    uint8_t reg1 = (instruction >> 11) & 0x1F;
+    uint8_t reg2 = (instruction >> 16) & 0x1F;
+    vu0.isub(dest, reg1, reg2);
+}
+
 void EmotionInterpreter::cop2_viaddi(VectorUnit &vu0, uint32_t instruction)
 {
     int8_t imm = (instruction >> 6) & 0x1F;
@@ -365,11 +376,17 @@ void EmotionInterpreter::cop2_vcallms(VectorUnit &vu0, uint32_t instruction)
 {
     uint32_t imm = (instruction >> 6) & 0x7FFF;
     imm *= 8;
+    //TODO: Proper handling of EE stalling so we don't completely freeze the emulation of everything until VU0 is done.
+    while (vu0.is_running())
+        vu0.run(8);
     vu0.mscal(imm);
 }
 
 void EmotionInterpreter::cop2_vcallmsr(VectorUnit &vu0, uint32_t instruction)
 {
+    //TODO: As in VCALLMS
+    while (vu0.is_running())
+        vu0.run(8);
     vu0.callmsr();
 }
 
@@ -426,6 +443,9 @@ void EmotionInterpreter::cop2_special2(VectorUnit &vu0, uint32_t instruction)
         case 0x1B:
             cop2_vmulabc(vu0, instruction);
             break;
+        case 0x1C:
+            cop2_vmulaq(vu0, instruction);
+            break;
         case 0x1D:
             cop2_vabs(vu0, instruction);
             break;
@@ -451,7 +471,7 @@ void EmotionInterpreter::cop2_special2(VectorUnit &vu0, uint32_t instruction)
             cop2_vmula(vu0, instruction);
             break;
         case 0x2C:
-            cop2_vadda(vu0, instruction);
+            cop2_vsuba(vu0, instruction);
             break;
         case 0x2E:
             cop2_vopmula(vu0, instruction);
@@ -612,6 +632,13 @@ void EmotionInterpreter::cop2_vmulabc(VectorUnit &vu0, uint32_t instruction)
     uint8_t bc_reg = (instruction >> 16) & 0x1F;
     uint8_t field = (instruction >> 21) & 0xF;
     vu0.mulabc(bc, field, source, bc_reg);
+}
+
+void EmotionInterpreter::cop2_vmulaq(VectorUnit &vu0, uint32_t instruction)
+{
+    uint8_t source = (instruction >> 11) & 0x1F;
+    uint8_t field = (instruction >> 21) & 0xF;
+    vu0.mulaq(field, source);
 }
 
 void EmotionInterpreter::cop2_vabs(VectorUnit &vu0, uint32_t instruction)

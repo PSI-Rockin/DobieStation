@@ -185,6 +185,7 @@ namespace EmotionDisasm
     std::string disasm_vopmsub(uint32_t instruction);
     std::string disasm_vmini(uint32_t instruction);
     std::string disasm_viadd(uint32_t instruction);
+    std::string disasm_visub(uint32_t instruction);
     std::string disasm_viaddi(uint32_t instruction);
     std::string disasm_vcallms(uint32_t instruction);
     std::string disasm_vcallmsr(uint32_t instruction);

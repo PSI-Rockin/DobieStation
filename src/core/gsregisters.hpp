@@ -84,6 +84,7 @@ struct GS_REGISTERS
     void get_inner_resolution(int &w, int &h);
     void set_VBLANK(bool is_VBLANK);
     bool assert_FINISH();
+    bool assert_VSYNC();
 
 };
 #endif // GSREGISTERS_HPP

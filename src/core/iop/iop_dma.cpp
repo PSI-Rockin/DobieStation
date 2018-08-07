@@ -276,11 +276,10 @@ void IOP_DMA::transfer_end(int index)
     bool dicr2 = index > 7;
     if (dicr2)
         index -= 8;
-    DICR.STAT[dicr2] |= (1 << index);
-
-    if (DICR.STAT[dicr2] & DICR.MASK[dicr2])
+    if (DICR.MASK[dicr2] & (1 << index))
     {
         printf("[IOP DMA] IRQ requested: $%08X $%08X\n", DICR.STAT[dicr2], DICR.MASK[dicr2]);
+        DICR.STAT[dicr2] |= 1 << index;
         e->iop_request_IRQ(3);
     }
 }

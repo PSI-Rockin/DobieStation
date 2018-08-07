@@ -1388,6 +1388,8 @@ string EmotionDisasm::disasm_cop2_special(uint32_t instruction)
             return disasm_vmini(instruction);
         case 0x30:
             return disasm_viadd(instruction);
+        case 0x31:
+            return disasm_visub(instruction);
         case 0x32:
             return disasm_viaddi(instruction);
         case 0x38:
@@ -1514,6 +1516,11 @@ string EmotionDisasm::disasm_vmini(uint32_t instruction)
 string EmotionDisasm::disasm_viadd(uint32_t instruction)
 {
     return disasm_cop2_intmath("viadd", instruction);
+}
+
+string EmotionDisasm::disasm_visub(uint32_t instruction)
+{
+    return disasm_cop2_intmath("visub", instruction);
 }
 
 string EmotionDisasm::disasm_viaddi(uint32_t instruction)

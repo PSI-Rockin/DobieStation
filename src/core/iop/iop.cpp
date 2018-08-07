@@ -162,12 +162,6 @@ void IOP::interrupt_check(bool i_pass)
         cop0.cause.int_pending |= 0x4;
     else
         cop0.cause.int_pending &= ~0x4;
-
-    /*if (!edge && i_pass true)
-    {
-        if (cop0.status.IEc && (cop0.cause.int_pending & cop0.status.Im))
-            interrupt();
-    }*/
 }
 
 void IOP::interrupt()

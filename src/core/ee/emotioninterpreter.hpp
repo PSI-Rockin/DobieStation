@@ -171,6 +171,7 @@ namespace EmotionInterpreter
     void cop2_vopmsub(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmini(VectorUnit& vu0, uint32_t instruction);
     void cop2_viadd(VectorUnit& vu0, uint32_t instruction);
+    void cop2_visub(VectorUnit& vu0, uint32_t instruction);
     void cop2_viaddi(VectorUnit& vu0, uint32_t instruction);
     void cop2_viand(VectorUnit& vu0, uint32_t instruction);
     void cop2_vcallms(VectorUnit& vu0, uint32_t instruction);
@@ -189,6 +190,7 @@ namespace EmotionInterpreter
     void cop2_vftoi12(VectorUnit& vu0, uint32_t instruction);
     void cop2_vftoi15(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmulabc(VectorUnit& vu0, uint32_t instruction);
+    void cop2_vmulaq(VectorUnit& vu0, uint32_t instruction);
     void cop2_vabs(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmulai(VectorUnit& vu0, uint32_t instruction);
     void cop2_vclip(VectorUnit& vu0, uint32_t instruction);

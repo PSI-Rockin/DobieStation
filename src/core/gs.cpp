@@ -175,6 +175,16 @@ void GraphicsSynthesizer::set_VBLANK(bool is_VBLANK)
     }
 }
 
+void GraphicsSynthesizer::assert_VSYNC()
+{
+    GS_message_payload payload;
+    payload.no_payload = {};
+    message_queue->push({ GS_command::assert_vsync_t,payload });
+
+    if (reg.assert_VSYNC())
+        intc->assert_IRQ((int)Interrupt::GS);
+}
+
 void GraphicsSynthesizer::assert_FINISH()
 {
     GS_message_payload payload;
@@ -296,7 +306,7 @@ void GraphicsSynthesizer::set_UV(uint16_t u, uint16_t v)
 void GraphicsSynthesizer::set_Q(float q)
 {
     GS_message_payload payload;
-    payload.q_payload = { 1 };
+    payload.q_payload = { q };
     send_message({ GS_command::set_q_t,payload });
 }
 

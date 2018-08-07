@@ -52,6 +52,14 @@ T interpolate(int32_t x, T u1, int32_t x1, T u2, int32_t x2)
     return bark / (x2 - x1);
 }
 
+template <typename T>
+T stepsize(T u1, int32_t x1, T u2, int32_t x2, int64_t mult)
+{
+    if (!(x2 - x1))
+        return ((u2 - u1) * mult);
+    return ((u2 - u1) * mult)/(x2 - x1);
+}
+
 float interpolate_f(int32_t x, float u1, int32_t x1, float u2, int32_t x2)
 {
     float bark = u1 * (x2 - x);
@@ -203,6 +211,9 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
                     }
                     case assert_finish_t:
                         gs.reg.assert_FINISH();
+                        break;
+                    case assert_vsync_t:
+                        gs.reg.assert_VSYNC();
                         break;
                     case set_vblank_t:
                     {
@@ -1315,9 +1326,9 @@ void GraphicsSynthesizerThread::render_line()
     }
     
     int32_t min_x = max(v1.x, (int32_t)current_ctx->scissor.x1);
-    int32_t min_y = max(v1.y, (int32_t)current_ctx->scissor.y1);
+    //int32_t min_y = max(v1.y, (int32_t)current_ctx->scissor.y1);
     int32_t max_x = min(v2.x, (int32_t)current_ctx->scissor.x2);
-    int32_t max_y = min(v2.y, (int32_t)current_ctx->scissor.y2);
+    //int32_t max_y = min(v2.y, (int32_t)current_ctx->scissor.y2);
     
     RGBAQ_REG color = vtx_queue[0].rgbaq;
     RGBAQ_REG tex_color;
@@ -1446,6 +1457,9 @@ void GraphicsSynthesizerThread::render_triangle()
 
     RGBAQ_REG vtx_color, tex_color;
 
+    bool tmp_tex = PRIM.texture_mapping;
+    bool tmp_uv = !PRIM.use_UV;//allow for loop unswitching
+
     //TODO: Parallelize this
     //Iterate through the bounding rectangle using BLOCKSIZE * BLOCKSIZE large blocks
     //This way we can throw out blocks which are totally outside the triangle way faster
@@ -1529,10 +1543,10 @@ void GraphicsSynthesizerThread::render_triangle()
                             vtx_color.a = a / divider;
                             vtx_color.q = q / divider;
 
-                            if (PRIM.texture_mapping)
+                            if (tmp_tex)
                             {
                                 uint32_t u, v;
-                                if (!PRIM.use_UV)
+                                if (tmp_uv)
                                 {
                                     float s, t, q;
                                     s = v1.s * w1 + v2.s * w2 + v3.s * w3;
@@ -1609,35 +1623,52 @@ void GraphicsSynthesizerThread::render_sprite()
 
     printf("Coords: (%d, %d) (%d, %d)\n", v1.x >> 4, v1.y >> 4, v2.x >> 4, v2.y >> 4);
 
+    float pix_t = interpolate_f(min_y, v1.t, v1.y, v2.t, v2.y);
+    int32_t pix_v = (int32_t)interpolate(min_y, v1.uv.v, v1.y, v2.uv.v, v2.y) << 16;
+    float pix_s_init = interpolate_f(min_x, v1.s, v1.x, v2.s, v2.x);
+    int32_t pix_u_init = (int32_t)interpolate(min_x, v1.uv.u, v1.x, v2.uv.u, v2.x) << 16;
+
+    float pix_t_step = stepsize(v1.t, v1.y, v2.t, v2.y, 0x10);
+    int32_t pix_v_step = stepsize((int32_t)v1.uv.v, v1.y, (int32_t)v2.uv.v, v2.y, 0x100000);
+    float pix_s_step = stepsize(v1.s, v1.x, v2.s, v2.x, 0x10);
+    int32_t pix_u_step = stepsize((int32_t)v1.uv.u, v1.x, (int32_t)v2.uv.u, v2.x, 0x100000);
+
+    bool tmp_tex = PRIM.texture_mapping;
+    bool tmp_uv = !PRIM.use_UV;//allow for loop unswitching
+
     for (int32_t y = min_y; y < max_y; y += 0x10)
     {
-        float pix_t = interpolate_f(y, v1.t, v1.y, v2.t, v2.y);
-        uint16_t pix_v = interpolate(y, v1.uv.v, v1.y, v2.uv.v, v2.y);
+        float pix_s = pix_s_init;
+        uint32_t pix_u = pix_u_init;
         for (int32_t x = min_x; x < max_x; x += 0x10)
         {
-            float pix_s = interpolate_f(x, v1.s, v1.x, v2.s, v2.x);
-            uint16_t pix_u = interpolate(x, v1.uv.u, v1.x, v2.uv.u, v2.x);
-            if (PRIM.texture_mapping)
+            if (tmp_tex)
             {
-                if (!PRIM.use_UV)
+                if (tmp_uv)
                 {
                     pix_v = (pix_t * current_ctx->tex0.tex_height)*16;
                     pix_u = (pix_s * current_ctx->tex0.tex_width)*16;
+                    tex_lookup(pix_u, pix_v, vtx_color, tex_color);
                 }
-                tex_lookup(pix_u, pix_v, vtx_color, tex_color);
+                else
+                    tex_lookup(pix_u >> 16 , pix_v >> 16, vtx_color, tex_color);
                 draw_pixel(x, y, v2.z, tex_color, PRIM.alpha_blend);
             }
             else
             {
                 draw_pixel(x, y, v2.z, vtx_color, PRIM.alpha_blend);
             }
+            pix_s += pix_s_step;
+            pix_u += pix_u_step;
         }
+        pix_t += pix_t_step;
+        pix_v += pix_v_step;
     }
 }
 
 void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
 {
-    int ppd; //pixels per doubleword (64-bits)
+    int ppd = 0; //pixels per doubleword (64-bits)
 
     switch (BITBLTBUF.dest_format)
     {
@@ -1789,7 +1820,7 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
         }
     }
 
-    uint32_t max_pixels = TRXREG.width * TRXREG.height;
+    int max_pixels = TRXREG.width * TRXREG.height;
     if (pixels_transferred >= max_pixels)
     {
         //Deactivate the transmisssion
@@ -1829,7 +1860,7 @@ void GraphicsSynthesizerThread::unpack_PSMCT24(uint64_t data, int offset, bool z
 
 void GraphicsSynthesizerThread::host_to_host()
 {
-    uint32_t max_pixels = TRXREG.width * TRXREG.height;
+    int max_pixels = TRXREG.width * TRXREG.height;
 
     while (pixels_transferred < max_pixels)
     {
@@ -1876,11 +1907,11 @@ void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, const RGBAQ_REG
 {
     double LOD;
     if (current_ctx->tex1.LOD_method == 0)
-        LOD = (log2(1.0 / fabs(vtx_color.q)) * pow(2, current_ctx->tex1.L)) + current_ctx->tex1.K;
+        LOD = ldexp(-log2(fabs(vtx_color.q)), current_ctx->tex1.L) + current_ctx->tex1.K;
     else
         LOD = current_ctx->tex1.K;
 
-    if (LOD < 1.0 / pow(2, 7)) //ps2 precision limit
+    if (LOD < 1.0 / 128.0) //ps2 precision limit
         LOD = 0.0;
 
     if (current_ctx->tex1.filter_larger && LOD <= 0.0)
@@ -1888,10 +1919,10 @@ void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, const RGBAQ_REG
         RGBAQ_REG a, b, c, d;
         int16_t uu = (u - 8) >> 4;
         int16_t vv = (v - 8) >> 4;
-        tex_lookup_int(uu, vv, vtx_color, a);
-        tex_lookup_int(uu+1, vv, vtx_color, b);
-        tex_lookup_int(uu, vv+1, vtx_color, c);
-        tex_lookup_int(uu+1, vv+1, vtx_color, d);
+        tex_lookup_int(uu, vv, a);
+        tex_lookup_int(uu+1, vv, b);
+        tex_lookup_int(uu, vv+1, c);
+        tex_lookup_int(uu+1, vv+1, d);
         double alpha = ((u - 8) & 0xF) * (1.0 / ((double)0xF));
         double beta = ((v - 8) & 0xF) * (1.0 / ((double)0xF));
         double alpha_s = 1.0 - alpha;
@@ -1902,7 +1933,7 @@ void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, const RGBAQ_REG
         tex_color.a = alpha_s * beta_s*a.a + alpha * beta_s*b.a + alpha_s * beta*c.a + alpha * beta*d.a;
     }
     else
-        tex_lookup_int(u >> 4, v >> 4, vtx_color, tex_color);
+        tex_lookup_int(u >> 4, v >> 4, tex_color);
 
     switch (current_ctx->tex0.color_function)
     {
@@ -1917,7 +1948,7 @@ void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, const RGBAQ_REG
     }
 }
 
-void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, const RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color)
+void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, RGBAQ_REG& tex_color)
 {
     switch (current_ctx->clamp.wrap_s)
     {

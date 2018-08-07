@@ -53,8 +53,9 @@ class VectorInterface
         UNPACK_Command unpack;
 
         bool vif_ibit_detected;
-        bool vif_int_stalled;
+        bool vif_stalled;
         bool vif_interrupt;
+        bool vif_stop;
         
         bool wait_for_VU;
         bool flush_stall;
@@ -93,7 +94,7 @@ class VectorInterface
         int get_id();
 
         void reset();
-        void update();
+        void update(int cycles);
 
         bool transfer_DMAtag(uint128_t tag);
         bool feed_DMA(uint128_t quad);
@@ -101,6 +102,8 @@ class VectorInterface
         uint32_t get_stat();
         uint32_t get_mark();
         uint32_t get_err();
+        uint32_t get_mode();
+        uint32_t get_row(uint32_t address);
 
         void set_mark(uint32_t value);
         void set_err(uint32_t value);
