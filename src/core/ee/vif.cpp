@@ -9,7 +9,7 @@
 #include "../gif.hpp"
 #include "../errors.hpp"
 
-#define printf(fmt, ...)(0)
+//#define printf(fmt, ...)(0)
 
 VectorInterface::VectorInterface(GraphicsInterface* gif, VectorUnit* vu, INTC* intc, int id) : gif(gif), vu(vu), intc(intc), id(id)
 {
@@ -26,6 +26,7 @@ void VectorInterface::reset()
     DBF = false;
     MODE = 0;
     MASK = 0;
+    CODE = 0;
     vu->set_TOP_regs(&TOP, &ITOP);
     vu->set_GIF(gif);
     wait_for_VU = false;
@@ -41,7 +42,7 @@ bool VectorInterface::check_vif_stall(uint32_t value)
 {
     
     //Do not stall if the next command is MARK
-    if (command_len <= 0)
+    if (command == 0)
     {
         if (vif_ibit_detected && value != 0x7)
         {
@@ -69,12 +70,6 @@ void VectorInterface::update(int cycles)
 {
     int runcycles = cycles;
    
-    /*if (flush_stall)
-    {
-        if (gif->path_active(1))
-            return;
-        flush_stall = false;
-    }*/
     while (!vif_stalled && runcycles--)
     {        
         if (wait_for_VU)
@@ -102,7 +97,7 @@ void VectorInterface::update(int cycles)
         }
 
         uint32_t value = FIFO.front();
-        if (command_len <= 0)
+        if (command == 0)
         {
             buffer_size = 0;
             decode_cmd(value);
@@ -111,57 +106,71 @@ void VectorInterface::update(int cycles)
         {
             switch (command)
             {
-                case 0x20:
-                    //STMASK
-                    printf("[VIF] New MASK: $%08X\n", value);
-                    MASK = value;
-                    break;
-                case 0x30:
-                    //STROW
-                    printf("[VIF] ROW%d: $%08X\n", 4-command_len,value);
-                    ROW[4 - command_len] = value;
-                    break;
-                case 0x31:
-                    //STCOL
-                    printf("[VIF] COL%d: $%08X\n", 4 - command_len, value);
-                    COL[4 - command_len] = value;
-                    break;
-                case 0x4A:
-                    //MPG
-                    vu->write_instr(mpg.addr, value);
-                    mpg.addr += 4;
-                    if (command_len <= 1)
-                        disasm_micromem();
-                    break;
-                case 0x50:
-                case 0x51:
-                    //DIRECT/DIRECTHL
-                    if (!gif->path_active(2))
-                        return;
+            case 0x20:
+                //STMASK
+                printf("[VIF] New MASK: $%08X\n", value);
+                MASK = value;
+                command = 0;
+                break;
+            case 0x30:
+                //STROW
+                printf("[VIF] ROW%d: $%08X\n", 4 - command_len, value);
+                ROW[4 - command_len] = value;
+                if (command_len <= 1)
+                    command = 0;
+                break;
+            case 0x31:
+                //STCOL
+                printf("[VIF] COL%d: $%08X\n", 4 - command_len, value);
+                COL[4 - command_len] = value;
+                if (command_len <= 1)
+                    command = 0;
+                break;
+            case 0x4A:
+                //MPG
+                vu->write_instr(mpg.addr, value);
+                mpg.addr += 4;
+                if (command_len <= 1)
+                {
+                    disasm_micromem();
+                    command = 0;
+                }
+                break;
+            case 0x50:
+            case 0x51:
+                //DIRECT/DIRECTHL
+                if (!gif->path_active(2))
+                    return;
 
-                    buffer[buffer_size] = value;
-                    buffer_size++;
-                    if (buffer_size == 4)
-                    {
-                        gif->send_PATH2(buffer);
-                        buffer_size = 0;
-                    }
+                buffer[buffer_size] = value;
+                buffer_size++;
+                if (buffer_size == 4)
+                {
+                    gif->send_PATH2(buffer);
+                    buffer_size = 0;
+                }
 
-                    //If we've run out of data, deactivate the PATH2 transfer
-                    if (command_len <= 1)
-                        gif->deactivate_PATH(2);
-                    break;
-                default:
-                    if ((command & 0x60) == 0x60)
-                        handle_UNPACK(value);
-                    else
-                    {
-                        Errors::die("[VIF] Unhandled data for command $%02X\n", command);
-                    }
+                //If we've run out of data, deactivate the PATH2 transfer
+                if (command_len <= 1)
+                {
+                    gif->deactivate_PATH(2);
+                    command = 0;
+                }
+                break;
+            default:
+                if ((command & 0x60) == 0x60)
+                    handle_UNPACK(value);
+                else
+                {
+                    Errors::die("[VIF] Unhandled data for command $%02X\n", command);
+                }
             }
-            command_len--;
         }
-        FIFO.pop();
+        if (command_len)
+        {
+            command_len--;
+            FIFO.pop();
+        }
     }
 }
 
@@ -169,7 +178,7 @@ void VectorInterface::decode_cmd(uint32_t value)
 {
     command = (value >> 24) & 0x7F;
     imm = value & 0xFFFF;
-
+    CODE = value;
     if (value & 0x80000000)
     {
         if (!VIF_ERR.mask_interrupt)
@@ -178,90 +187,105 @@ void VectorInterface::decode_cmd(uint32_t value)
             Errors::die("[VIF] Stall detected when VIF_ERR.MI1 set\n", command);
     }
 
+    command_len = 1;
+
     switch (command)
     {
         case 0x00:
             printf("[VIF] NOP\n");
+            command = 0;
             break;
         case 0x01:
             printf("[VIF] Set CYCLE: $%08X\n", value);
             CYCLE.CL = imm & 0xFF;
             CYCLE.WL = imm >> 8;
+            command = 0;
             break;
         case 0x02:
             printf("[VIF] Set OFFSET: $%08X\n", value);
             OFST = value & 0x3FF;
             TOPS = BASE;
             DBF = false;
+            command = 0;
             break;
         case 0x03:
             printf("[VIF] Set BASE: $%08X\n", value);
             BASE = value & 0x3FF;
+            command = 0;
             break;
         case 0x04:
             printf("[VIF] Set ITOP: $%08X\n", value);
             ITOPS = value & 0x3FF;
+            command = 0;
             break;
         case 0x05:
             printf("[VIF] Set MODE: $%08X\n", value);
             MODE = value & 0x3;
+            command = 0;
             break;
         case 0x06:
             printf("[VIF] MSKPATH3: %d\n", (value >> 15) & 0x1);
             gif->set_path3_vifmask((value >> 15) & 0x1);
+            command = 0;
             break;
         case 0x07:
             printf("[VIF] Set MARK: $%08X\n", value);
-            MARK = value;
+            MARK = imm;
             mark_detected = true;
+            command = 0;
             break;
         case 0x10:
             printf("[VIF] FLUSHE\n");
             wait_for_VU = true;
             wait_cmd_value = value;
+            command = 0;
             break;
         case 0x11:
             printf("[VIF] FLUSH\n");
             wait_for_VU = true;
             flush_stall = true;
             wait_cmd_value = value;
+            command = 0;
             break;
         case 0x13:
             printf("[VIF] FLUSHA\n");
             wait_for_VU = true;
             wait_cmd_value = value;
+            command = 0;
             break;
         case 0x14:
             printf("[VIF] MSCAL\n");
             wait_for_VU = true;
             wait_cmd_value = value;
+            command = 0;
             break;
         case 0x15:
             printf("[VIF] MSCALF\n");
             wait_for_VU = true;
             wait_cmd_value = value;
+            command = 0;
             break;
         case 0x17:
             printf("[VIF] MSCNT\n");
             wait_for_VU = true;
             wait_cmd_value = value;
+            command = 0;
             break;
         case 0x20:
             printf("[VIF] Set MASK: $%08X\n", value);
-            command_len = 1;
+            command_len++;
             break;
         case 0x30:
             printf("[VIF] Set ROW: $%08X\n", value);
-            command_len = 4;
+            command_len += 4;
             break;
         case 0x31:
             printf("[VIF] Set COL: $%08X\n", value);
-            command_len = 4;
+            command_len += 4;
             break;
         case 0x4A:
             printf("[VIF] MPG: $%08X\n", value);
             {
-                command_len = 0;
                 int num = (value >> 16) & 0xFF;
                 if (!num)
                     command_len += 512;
@@ -273,7 +297,6 @@ void VectorInterface::decode_cmd(uint32_t value)
             break;
         case 0x50:
         case 0x51:
-            command_len = 0;
             if (!imm)
                 command_len += 65536;
             else
@@ -305,8 +328,9 @@ void VectorInterface::handle_wait_cmd(uint32_t value)
             MSCAL(vu->get_PC());
             break;
         default:
-            command_len = 0;
+            break;
     }
+    command = 0;
 }
 
 void VectorInterface::MSCAL(uint32_t addr)
@@ -329,6 +353,7 @@ void VectorInterface::MSCAL(uint32_t addr)
 
 void VectorInterface::init_UNPACK(uint32_t value)
 {
+    uint32_t data_read;
     //printf("[VIF] UNPACK: $%08X\n", value);
     unpack.addr = (imm & 0x3FF) * 16;
     unpack.sign_extend = !(imm & (1 << 14));
@@ -350,28 +375,34 @@ void VectorInterface::init_UNPACK(uint32_t value)
     else
         unpack.words_per_op = (32 >> vl) * (vn + 1);
 
-    command_len = unpack.words_per_op * unpack.num;
-    unpack.words_per_op = (unpack.words_per_op + 0x1F) & ~0x1F; //round up to nearest 32 before dividing
-    command_len = (command_len + 0x1F) & ~0x1F;
-    unpack.words_per_op /= 32;
-    command_len /= 32;
-
     if (CYCLE.WL <= CYCLE.CL)
     {
         //Skip write
         //printf("[VIF] Command len: %d\n", command_len);
+        data_read = unpack.num;
     }
     else
     {
         //Fill write
-        Errors::die("[VIF] WL > CL!\n");
+       // Errors::die("[VIF] WL > CL!\n");
+        data_read = CYCLE.CL * (unpack.num / CYCLE.WL) + std::min((int)(unpack.num % CYCLE.WL), (int)CYCLE.CL);
     }
+
+    data_read = unpack.words_per_op * data_read;
+    unpack.words_per_op = (unpack.words_per_op + 0x1F) & ~0x1F; //round up to nearest 32 before dividing
+    data_read = (data_read + 0x1F) & ~0x1F;
+    unpack.words_per_op /= 32;
+    data_read /= 32;
+
+    command_len += data_read;
+
+    
     printf("[VIF] UNPACK V%d-%d addr: %x num: %d masked: %d word per op: %d command_len = %d\n", (vn + 1), (32 >> vl), unpack.addr, unpack.num, unpack.masked, unpack.words_per_op, command_len);
 }
 
 void VectorInterface::handle_UNPACK_masking(uint128_t& quad)
 {
-    if (unpack.masked)
+    if (unpack.masked || is_fillingwrite())
     {
         uint8_t tempmask;
         
@@ -436,289 +467,314 @@ void VectorInterface::handle_UNPACK_mode(uint128_t& quad)
     }
 }
 
+bool VectorInterface::is_fillingwrite()
+{
+    if (CYCLE.CL < CYCLE.WL && unpack.blocks_written >= CYCLE.CL)
+        return true;
+
+    return false;
+}
+
 void VectorInterface::handle_UNPACK(uint32_t value)
 {
     int bufferpos = 0;
     buffer[buffer_size] = value;
     buffer_size++;
 
-    while((buffer_size >= unpack.words_per_op) && unpack.num)
+    while((is_fillingwrite() || (buffer_size >= unpack.words_per_op)) && unpack.num)
     {
         uint128_t quad;
-        
-        switch (unpack.cmd)
+        if (unpack.blocks_written < CYCLE.CL)
         {
-            case 0x0:
-                //S-32
-                for (int i = 0; i < 4; i++)
-                    quad._u32[i] = buffer[0];
-                buffer_size -= 1;
-                break;
-            case 0x1:
-                //S-16
-                for (int i = 0; i < 4; i++)
-                {
-                    if (unpack.sign_extend)
-                    {
-                        quad._u32[i] = (int32_t)(int16_t)(unpack.offset ? (buffer[0] >> 16) : buffer[0]);
-                    }
-                    else
-                    {
-                        quad._u32[i] = (uint16_t)(unpack.offset ? (buffer[0] >> 16) : buffer[0]);
-                    }
-                }
-                if (unpack.offset++)
-                {
-                    unpack.offset = 0;
-                    buffer_size -= 1;
-                }
-                break;
-            case 0x2:
-                //S-8
-                for (int i = 0; i < 4; i++)
-                {
-                    if (unpack.sign_extend)
-                    {
-                        quad._u32[i] = (int32_t)(int8_t)(unpack.offset ? (buffer[0] >> (unpack.offset * 8)) : buffer[0]);
-                    }
-                    else
-                    {
-                        quad._u32[i] = (uint8_t)(unpack.offset ? (buffer[0] >> (unpack.offset * 8)) : buffer[0]);
-                    }
-                }
-                if (unpack.offset++ == 3)
-                {
-                    unpack.offset = 0;
-                    buffer_size -= 1;
-                }
-                break;
-            case 0x4:
-                //V2-32 - Z and W are "indeterminate"
-                //Indeterminate data is the x vector and 0 respectively
-                quad._u32[0] = buffer[0];
-                quad._u32[1] = buffer[1];
-                quad._u32[2] = buffer[0];
-                quad._u32[3] = buffer[1];
-                buffer_size -= 2;
-                break;
-            case 0x5:
-                //V2-16 - Z and W are "indeterminate"
-                //Indeterminate data is just the x and y vectors respectively
+            switch (unpack.cmd)
             {
-                uint16_t x = buffer[0] & 0xFFFF;
-                uint16_t y = buffer[0] >> 16;
-                if (unpack.sign_extend)
-                {
-                    quad._u32[0] = (int32_t)(int16_t)x;
-                    quad._u32[1] = (int32_t)(int16_t)y;
-                    quad._u32[2] = (int32_t)(int16_t)x;
-                    quad._u32[3] = (int32_t)(int16_t)y;
-                }
-                else
-                {
-                    quad._u32[0] = x;
-                    quad._u32[1] = y;
-                    quad._u32[2] = x;
-                    quad._u32[3] = y;
-                }
-                 
-                buffer_size -= 1;
-            }
-                break;
-            case 0x6:
-                //V2-8 - Z and W are "indeterminate"
-                //Indeterminate data is just the x and y vectors respectively
-            {
-                uint8_t x = (buffer[0] >> (unpack.offset * 16)) & 0xFF;
-                uint8_t y = (buffer[0] >> ((unpack.offset * 16) + 8));
-                if (unpack.sign_extend)
-                {
-                    quad._u32[0] = (int32_t)(int8_t)x;
-                    quad._u32[1] = (int32_t)(int8_t)y;
-                    quad._u32[2] = (int32_t)(int8_t)x;
-                    quad._u32[3] = (int32_t)(int8_t)y;
-                }
-                else
-                {
-                    quad._u32[0] = x;
-                    quad._u32[1] = y;
-                    quad._u32[2] = x;
-                    quad._u32[3] = y;
-                }
-
-                if (unpack.offset++)
-                {
-                    unpack.offset = 0;
+                case 0x0:
+                    //S-32
+                    for (int i = 0; i < 4; i++)
+                        quad._u32[i] = buffer[0];
                     buffer_size -= 1;
-                }
-            }
-                break;
-            case 0x8:
-                //V3-32 - W is "indeterminate"
-                //Indeterminate data is the first vector of the next num
-                //The first num uses 0, the last num uses the next VIFCode
-                //We can't read the next VIFCode so we will just use 0
-                if (buffer_size < 4 && unpack.num > 1 && unpack.offset > 0)
-                    return;
-
-                for (int i = 0; i < 3; i++)
-                    quad._u32[i] = buffer[i];
-               
-                if (buffer_size >= 4)
-                {
-                    quad._u32[3] = buffer[3];
-                    buffer[0] = buffer[3];
-                }
-                else
-                    quad._u32[3] = 0;
-                buffer_size -= 3;
-                unpack.offset++;
-                break;
-            case 0x9:
-                //V3-16 - W is "indeterminate"
-                //Indeterminate data is the first vector of the next num
-                //If the data is aligned to the word write 0
-                //FIXME: It could be the first vector of the next unpack
-                for (int i = 0; i < 3; i++)
-                {            
-                    if (unpack.sign_extend)
+                    break;
+                case 0x1:
+                    //S-16
+                    for (int i = 0; i < 4; i++)
                     {
-                        quad._u32[i] = (int32_t)(int16_t)(unpack.offset ? (buffer[bufferpos] >> 16) : buffer[bufferpos]);
-                    }
-                    else
-                    {
-                        quad._u32[i] = (uint16_t)(unpack.offset ? (buffer[bufferpos] >> 16) : buffer[bufferpos]);
+                        if (unpack.sign_extend)
+                        {
+                            quad._u32[i] = (int32_t)(int16_t)(unpack.offset ? (buffer[0] >> 16) : buffer[0]);
+                        }
+                        else
+                        {
+                            quad._u32[i] = (uint16_t)(unpack.offset ? (buffer[0] >> 16) : buffer[0]);
+                        }
                     }
 
                     if (unpack.offset++)
                     {
                         unpack.offset = 0;
-                        bufferpos++;
                         buffer_size -= 1;
                     }
-                }
-                if (buffer_size >= 1)
-                {
-                    if (unpack.sign_extend)
+                    break;
+                case 0x2:
+                    //S-8
+                    for (int i = 0; i < 4; i++)
                     {
-                        quad._u32[3] = (int32_t)(int16_t)(unpack.offset ? (buffer[bufferpos] >> 16) : buffer[bufferpos]);
-                    }
-                    else
-                    {
-                        quad._u32[3] = (uint16_t)(unpack.offset ? (buffer[bufferpos] >> 16) : buffer[bufferpos]);
-                    }
-                }
-                else
-                {
-                    quad._u32[3] = 0;
-                }
-
-                if (buffer_size < 2 && unpack.offset)
-                {
-                    buffer[0] = buffer[bufferpos];
-                }
-                break;
-            case 0xA:
-                //V3-8 - W is "indeterminate"
-                //Indeterminate data is the first vector of the next num
-                //If the data is aligned to the word write 0
-                //FIXME: It could be the first vector of the next unpack
-
-                //Check we have enough data before continuing
-                if ((buffer_size * 4) - unpack.offset < 3)
-                    return;
-
-                for (int i = 0; i < 3; i++)
-                {
-                    if (unpack.sign_extend)
-                    {
-                        quad._u32[i] = (int32_t)(int8_t)(unpack.offset ? (buffer[bufferpos] >> (unpack.offset * 8)) : buffer[bufferpos]);
-                    }
-                    else
-                    {
-                        quad._u32[i] = (uint8_t)(unpack.offset ? (buffer[bufferpos] >> (unpack.offset * 8)) : buffer[bufferpos]);
+                        if (unpack.sign_extend)
+                        {
+                            quad._u32[i] = (int32_t)(int8_t)(unpack.offset ? (buffer[0] >> (unpack.offset * 8)) : buffer[0]);
+                        }
+                        else
+                        {
+                            quad._u32[i] = (uint8_t)(unpack.offset ? (buffer[0] >> (unpack.offset * 8)) : buffer[0]);
+                        }
                     }
 
                     if (unpack.offset++ == 3)
                     {
                         unpack.offset = 0;
-                        bufferpos++;
                         buffer_size -= 1;
                     }
-                }
-                if (buffer_size >= 1)
-                {
-                    if (unpack.sign_extend)
+                    break;
+                case 0x4:
+                    //V2-32 - Z and W are "indeterminate"
+                    //Indeterminate data is the x vector and 0 respectively
+                    quad._u32[0] = buffer[0];
+                    quad._u32[1] = buffer[1];
+                    quad._u32[2] = buffer[0];
+                    quad._u32[3] = buffer[1];
+
+                    buffer_size -= 2;
+                    break;
+                case 0x5:
+                    //V2-16 - Z and W are "indeterminate"
+                    //Indeterminate data is just the x and y vectors respectively
                     {
-                        quad._u32[3] = (int32_t)(int8_t)(unpack.offset ? (buffer[bufferpos] >> ((unpack.offset) * 8)) : buffer[bufferpos]);
+                        uint16_t x = buffer[0] & 0xFFFF;
+                        uint16_t y = buffer[0] >> 16;
+                        if (unpack.sign_extend)
+                        {
+                            quad._u32[0] = (int32_t)(int16_t)x;
+                            quad._u32[1] = (int32_t)(int16_t)y;
+                            quad._u32[2] = (int32_t)(int16_t)x;
+                            quad._u32[3] = (int32_t)(int16_t)y;
+                        }
+                        else
+                        {
+                            quad._u32[0] = x;
+                            quad._u32[1] = y;
+                            quad._u32[2] = x;
+                            quad._u32[3] = y;
+                        }
+
+                        buffer_size -= 1;
+                    }
+                    break;
+                case 0x6:
+                    //V2-8 - Z and W are "indeterminate"
+                    //Indeterminate data is just the x and y vectors respectively
+                    {
+                        uint8_t x = (buffer[0] >> (unpack.offset * 16)) & 0xFF;
+                        uint8_t y = (buffer[0] >> ((unpack.offset * 16) + 8));
+                        if (unpack.sign_extend)
+                        {
+                            quad._u32[0] = (int32_t)(int8_t)x;
+                            quad._u32[1] = (int32_t)(int8_t)y;
+                            quad._u32[2] = (int32_t)(int8_t)x;
+                            quad._u32[3] = (int32_t)(int8_t)y;
+                        }
+                        else
+                        {
+                            quad._u32[0] = x;
+                            quad._u32[1] = y;
+                            quad._u32[2] = x;
+                            quad._u32[3] = y;
+                        }
+
+                        if (unpack.offset++)
+                        {
+                            unpack.offset = 0;
+                            buffer_size -= 1;
+                        }
+                    }
+                    break;
+                case 0x8:
+                    //V3-32 - W is "indeterminate"
+                    //Indeterminate data is the first vector of the next num
+                    //The first num uses 0, the last num uses the next VIFCode
+                    //We can't read the next VIFCode so we will just use 0
+                    if (buffer_size < 4 && unpack.num > 1 && unpack.offset > 0)
+                        return;
+
+                    for (int i = 0; i < 3; i++)
+                        quad._u32[i] = buffer[i];
+
+                    if (buffer_size >= 4)
+                    {
+                        quad._u32[3] = buffer[3];
+                        buffer[0] = buffer[3];
+                    }
+                    else
+                        quad._u32[3] = 0;
+
+                    buffer_size -= 3;
+                    unpack.offset++;
+                    break;
+                case 0x9:
+                    //V3-16 - W is "indeterminate"
+                    //Indeterminate data is the first vector of the next num
+                    //If the data is aligned to the word write 0
+                    //FIXME: It could be the first vector of the next unpack
+                    for (int i = 0; i < 3; i++)
+                    {
+                        if (unpack.sign_extend)
+                        {
+                            quad._u32[i] = (int32_t)(int16_t)(unpack.offset ? (buffer[bufferpos] >> 16) : buffer[bufferpos]);
+                        }
+                        else
+                        {
+                            quad._u32[i] = (uint16_t)(unpack.offset ? (buffer[bufferpos] >> 16) : buffer[bufferpos]);
+                        }
+
+                        if (unpack.offset++)
+                        {
+                            unpack.offset = 0;
+                            bufferpos++;
+                            buffer_size -= 1;
+                        }
+                    }
+
+                    if (buffer_size >= 1)
+                    {
+                        if (unpack.sign_extend)
+                        {
+                            quad._u32[3] = (int32_t)(int16_t)(unpack.offset ? (buffer[bufferpos] >> 16) : buffer[bufferpos]);
+                        }
+                        else
+                        {
+                            quad._u32[3] = (uint16_t)(unpack.offset ? (buffer[bufferpos] >> 16) : buffer[bufferpos]);
+                        }
                     }
                     else
                     {
-                        quad._u32[3] = (uint8_t)(unpack.offset ? (buffer[bufferpos] >> (unpack.offset * 8)) : buffer[bufferpos]);
+                        quad._u32[3] = 0;
                     }
-                }
-                else
-                {
-                    quad._u32[3] = 0;
-                }
 
-                if (buffer_size == 1 && unpack.offset)
-                {
-                    buffer[0] = buffer[bufferpos];
-                }
-                break;
-            case 0xC:
-                //V4-32
-                for (int i = 0; i < 4; i++)
-                    quad._u32[i] = buffer[i];
-                buffer_size -= 4;
-                break;
-            case 0xD:
-                //V4-16
-                for (int i = 0; i < 4; i++)
-                {
-                    uint16_t value = (buffer[i/2] >> ((i % 2) * 16)) & 0xFFFF;
-                    if (unpack.sign_extend)
-                        quad._u32[i] = (int32_t)(int16_t)value;
-                    else
-                        quad._u32[i] = value;
-                }
-                buffer_size -= 2;
-                break;
-            case 0xE:
-                //V4-8
-                for (int i = 0; i < 4; i++)
-                {
-                    uint8_t value = (buffer[0] >> (i * 8)) & 0xFF;
-                    if (unpack.sign_extend)
-                        quad._u32[i] = (int32_t)(int8_t)value;
-                    else
-                        quad._u32[i] = value;
-                }
-                buffer_size -= 1;
-                break;
-            case 0xF:
-                //V4-5
-            {
-                uint16_t data = (buffer[0] >> (unpack.offset * 16)) & 0xFFFF;
-                quad._u32[0] = (data & 0x1F) << 3;
-                quad._u32[1] = ((data >> 5) & 0x1F) << 3;
-                quad._u32[2] = ((data >> 10) & 0x1F) << 3;
-                quad._u32[3] = ((data >> 15) & 0x1) << 7;
+                    if (buffer_size < 2 && unpack.offset)
+                    {
+                        buffer[0] = buffer[bufferpos];
+                    }
+                    break;
+                case 0xA:
+                    //V3-8 - W is "indeterminate"
+                    //Indeterminate data is the first vector of the next num
+                    //If the data is aligned to the word write 0
+                    //FIXME: It could be the first vector of the next unpack
 
-                if (unpack.offset++)
-                {
-                    unpack.offset = 0;
+                    //Check we have enough data before continuing
+                    if ((buffer_size * 4) - unpack.offset < 3)
+                        return;
+
+                    for (int i = 0; i < 3; i++)
+                    {
+                        if (unpack.sign_extend)
+                        {
+                            quad._u32[i] = (int32_t)(int8_t)(unpack.offset ? (buffer[bufferpos] >> (unpack.offset * 8)) : buffer[bufferpos]);
+                        }
+                        else
+                        {
+                            quad._u32[i] = (uint8_t)(unpack.offset ? (buffer[bufferpos] >> (unpack.offset * 8)) : buffer[bufferpos]);
+                        }
+
+                        if (unpack.offset++ == 3)
+                        {
+                            unpack.offset = 0;
+                            bufferpos++;
+                            buffer_size -= 1;
+                        }
+                    }
+
+                    if (buffer_size >= 1)
+                    {
+                        if (unpack.sign_extend)
+                        {
+                            quad._u32[3] = (int32_t)(int8_t)(unpack.offset ? (buffer[bufferpos] >> ((unpack.offset) * 8)) : buffer[bufferpos]);
+                        }
+                        else
+                        {
+                            quad._u32[3] = (uint8_t)(unpack.offset ? (buffer[bufferpos] >> (unpack.offset * 8)) : buffer[bufferpos]);
+                        }
+                    }
+                    else
+                    {
+                        quad._u32[3] = 0;
+                    }
+
+                    if (buffer_size == 1 && unpack.offset)
+                    {
+                        buffer[0] = buffer[bufferpos];
+                    }
+                    break;
+                case 0xC:
+                    //V4-32
+                    for (int i = 0; i < 4; i++)
+                        quad._u32[i] = buffer[i];
+                    buffer_size -= 4;
+                    break;
+                case 0xD:
+                    //V4-16
+                    for (int i = 0; i < 4; i++)
+                    {
+                        uint16_t value = (buffer[i / 2] >> ((i % 2) * 16)) & 0xFFFF;
+                        if (unpack.sign_extend)
+                            quad._u32[i] = (int32_t)(int16_t)value;
+                        else
+                            quad._u32[i] = value;
+                    }
+
+                    buffer_size -= 2;
+                    break;
+                case 0xE:
+                    //V4-8
+                    for (int i = 0; i < 4; i++)
+                    {
+                        uint8_t value = (buffer[0] >> (i * 8)) & 0xFF;
+                        if (unpack.sign_extend)
+                            quad._u32[i] = (int32_t)(int8_t)value;
+                        else
+                            quad._u32[i] = value;
+                    }
+
                     buffer_size -= 1;
-                }
+                    break;
+                case 0xF:
+                    //V4-5
+                    {
+                        uint16_t data = (buffer[0] >> (unpack.offset * 16)) & 0xFFFF;
+                        quad._u32[0] = (data & 0x1F) << 3;
+                        quad._u32[1] = ((data >> 5) & 0x1F) << 3;
+                        quad._u32[2] = ((data >> 10) & 0x1F) << 3;
+                        quad._u32[3] = ((data >> 15) & 0x1) << 7;
+
+                        if (unpack.offset++)
+                        {
+                            unpack.offset = 0;
+                            buffer_size -= 1;
+                        }
+                    }
+                    break;
+                default:
+                    Errors::die("[VIF] Unhandled UNPACK cmd $%02X!\n", unpack.cmd);
             }
-                break;
-            default:
-                Errors::die("[VIF] Unhandled UNPACK cmd $%02X!\n", unpack.cmd);
+        }
+        else //Filling Write
+        {
+            quad._u64[0] = 0;
+            quad._u64[1] = 0;
         }
 
         process_UNPACK_quad(quad);
     }
+    if (unpack.num == 0)
+        command = 0;
 }
 
 void VectorInterface::process_UNPACK_quad(uint128_t &quad)
@@ -726,19 +782,21 @@ void VectorInterface::process_UNPACK_quad(uint128_t &quad)
     handle_UNPACK_masking(quad);
     handle_UNPACK_mode(quad);
 
-    //printf("[VIF] Write data mem $%08X: $%08X_%08X_%08X_%08X\n", unpack.addr,
-           //quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
-    vu->write_data<uint128_t>(unpack.addr, quad);
-
     unpack.blocks_written++;
-    if (CYCLE.CL >= CYCLE.WL && unpack.blocks_written >= CYCLE.WL)
-    {
-        if (unpack.blocks_written < CYCLE.CL)
-            unpack.addr += (CYCLE.CL - unpack.blocks_written) * 16;
-        unpack.blocks_written = 0;
-    }
+
+    //printf("[VIF] Write data mem $%08X: $%08X_%08X_%08X_%08X\n", unpack.addr,
+    //quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
+    vu->write_data<uint128_t>(unpack.addr, quad);
     unpack.addr += 16;
     unpack.num -= 1;
+    
+    if (unpack.blocks_written >= CYCLE.WL)
+    {
+        if (CYCLE.CL > CYCLE.WL && unpack.blocks_written >= CYCLE.WL)
+            unpack.addr += (CYCLE.CL - unpack.blocks_written) * 16;
+
+        unpack.blocks_written = 0;
+    }
 }
 
 bool VectorInterface::transfer_DMAtag(uint128_t tag)
@@ -866,6 +924,11 @@ uint32_t VectorInterface::get_mode()
 uint32_t VectorInterface::get_row(uint32_t address)
 {
     return ROW[(address & 0xF0) >> 4];
+}
+
+uint32_t VectorInterface::get_code()
+{
+    return CODE;
 }
 
 uint32_t VectorInterface::get_err()

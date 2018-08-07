@@ -442,6 +442,13 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
         case 0x0009:
             context2.set_clamp(value);
             break;
+        case 0x000C:
+            //XYZ3F
+            current_vtx.x = value & 0xFFFF;
+            current_vtx.y = (value >> 16) & 0xFFFF;
+            current_vtx.z = (value >> 32) & 0xFFFFFF;
+            vertex_kick(false);
+            break;
         case 0x000D:
             //XYZ3
             current_vtx.x = value & 0xFFFF;
