@@ -62,6 +62,8 @@ string EmotionDisasm::disasm_instr(uint32_t instruction, uint32_t instr_addr)
             return disasm_branch_inequality("blezl", instruction, instr_addr);
         case 0x17:
             return disasm_branch_inequality("bgtzl", instruction, instr_addr);
+        case 0x18:
+            return disasm_daddi(instruction);
         case 0x19:
             return disasm_daddiu(instruction);
         case 0x1A:
@@ -731,6 +733,11 @@ string EmotionDisasm::disasm_beql(uint32_t instruction, uint32_t instr_addr)
 string EmotionDisasm::disasm_bnel(uint32_t instruction, uint32_t instr_addr)
 {
     return disasm_branch_equality("bnel", instruction, instr_addr);
+}
+
+string EmotionDisasm::disasm_daddi(uint32_t instruction)
+{
+    return disasm_math("daddi", instruction);
 }
 
 string EmotionDisasm::disasm_daddiu(uint32_t instruction)

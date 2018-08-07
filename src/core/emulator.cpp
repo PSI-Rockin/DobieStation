@@ -393,6 +393,8 @@ uint32_t Emulator::read32(uint32_t address)
             return vif1.get_mark();
         case 0x10003C50:
             return vif1.get_mode();
+        case 0x10003C80:
+            return vif1.get_code();
         case 0x10003D00:
         case 0x10003D10:
         case 0x10003D20:

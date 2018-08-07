@@ -85,6 +85,7 @@ namespace EmotionDisasm
     std::string disasm_lui(uint32_t instruction);
     std::string disasm_beql(uint32_t instruction, uint32_t instr_addr);
     std::string disasm_bnel(uint32_t instruction, uint32_t instr_addr);
+    std::string disasm_daddi(uint32_t instruction);
     std::string disasm_daddiu(uint32_t instruction);
     std::string disasm_loadstore(const std::string opcode, uint32_t instruction);
     std::string disasm_cop2_loadstore(const std::string opcode, uint32_t instruction);
