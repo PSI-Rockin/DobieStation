@@ -165,7 +165,6 @@ void VectorInterface::update(int cycles)
                     Errors::die("[VIF] Unhandled data for command $%02X\n", command);
                 }
             }
-            
         }
         if (command_len)
         {
@@ -274,7 +273,7 @@ void VectorInterface::decode_cmd(uint32_t value)
             break;
         case 0x20:
             printf("[VIF] Set MASK: $%08X\n", value);
-            command_len += 1;
+            command_len++;
             break;
         case 0x30:
             printf("[VIF] Set ROW: $%08X\n", value);
@@ -774,7 +773,7 @@ void VectorInterface::handle_UNPACK(uint32_t value)
 
         process_UNPACK_quad(quad);
     }
-    if(unpack.num == 0)
+    if (unpack.num == 0)
         command = 0;
 }
 
