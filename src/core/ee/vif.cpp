@@ -508,6 +508,7 @@ void VectorInterface::handle_UNPACK(uint32_t value)
                             quad._u32[i] = (uint16_t)(unpack.offset ? (buffer[0] >> 16) : buffer[0]);
                         }
                     }
+
                     if (unpack.offset++)
                     {
                         unpack.offset = 0;
@@ -527,6 +528,7 @@ void VectorInterface::handle_UNPACK(uint32_t value)
                             quad._u32[i] = (uint8_t)(unpack.offset ? (buffer[0] >> (unpack.offset * 8)) : buffer[0]);
                         }
                     }
+
                     if (unpack.offset++ == 3)
                     {
                         unpack.offset = 0;
@@ -540,60 +542,61 @@ void VectorInterface::handle_UNPACK(uint32_t value)
                     quad._u32[1] = buffer[1];
                     quad._u32[2] = buffer[0];
                     quad._u32[3] = buffer[1];
+
                     buffer_size -= 2;
                     break;
                 case 0x5:
                     //V2-16 - Z and W are "indeterminate"
                     //Indeterminate data is just the x and y vectors respectively
-                {
-                    uint16_t x = buffer[0] & 0xFFFF;
-                    uint16_t y = buffer[0] >> 16;
-                    if (unpack.sign_extend)
                     {
-                        quad._u32[0] = (int32_t)(int16_t)x;
-                        quad._u32[1] = (int32_t)(int16_t)y;
-                        quad._u32[2] = (int32_t)(int16_t)x;
-                        quad._u32[3] = (int32_t)(int16_t)y;
-                    }
-                    else
-                    {
-                        quad._u32[0] = x;
-                        quad._u32[1] = y;
-                        quad._u32[2] = x;
-                        quad._u32[3] = y;
-                    }
+                        uint16_t x = buffer[0] & 0xFFFF;
+                        uint16_t y = buffer[0] >> 16;
+                        if (unpack.sign_extend)
+                        {
+                            quad._u32[0] = (int32_t)(int16_t)x;
+                            quad._u32[1] = (int32_t)(int16_t)y;
+                            quad._u32[2] = (int32_t)(int16_t)x;
+                            quad._u32[3] = (int32_t)(int16_t)y;
+                        }
+                        else
+                        {
+                            quad._u32[0] = x;
+                            quad._u32[1] = y;
+                            quad._u32[2] = x;
+                            quad._u32[3] = y;
+                        }
 
-                    buffer_size -= 1;
-                }
-                break;
+                        buffer_size -= 1;
+                    }
+                    break;
                 case 0x6:
                     //V2-8 - Z and W are "indeterminate"
                     //Indeterminate data is just the x and y vectors respectively
-                {
-                    uint8_t x = (buffer[0] >> (unpack.offset * 16)) & 0xFF;
-                    uint8_t y = (buffer[0] >> ((unpack.offset * 16) + 8));
-                    if (unpack.sign_extend)
                     {
-                        quad._u32[0] = (int32_t)(int8_t)x;
-                        quad._u32[1] = (int32_t)(int8_t)y;
-                        quad._u32[2] = (int32_t)(int8_t)x;
-                        quad._u32[3] = (int32_t)(int8_t)y;
-                    }
-                    else
-                    {
-                        quad._u32[0] = x;
-                        quad._u32[1] = y;
-                        quad._u32[2] = x;
-                        quad._u32[3] = y;
-                    }
+                        uint8_t x = (buffer[0] >> (unpack.offset * 16)) & 0xFF;
+                        uint8_t y = (buffer[0] >> ((unpack.offset * 16) + 8));
+                        if (unpack.sign_extend)
+                        {
+                            quad._u32[0] = (int32_t)(int8_t)x;
+                            quad._u32[1] = (int32_t)(int8_t)y;
+                            quad._u32[2] = (int32_t)(int8_t)x;
+                            quad._u32[3] = (int32_t)(int8_t)y;
+                        }
+                        else
+                        {
+                            quad._u32[0] = x;
+                            quad._u32[1] = y;
+                            quad._u32[2] = x;
+                            quad._u32[3] = y;
+                        }
 
-                    if (unpack.offset++)
-                    {
-                        unpack.offset = 0;
-                        buffer_size -= 1;
+                        if (unpack.offset++)
+                        {
+                            unpack.offset = 0;
+                            buffer_size -= 1;
+                        }
                     }
-                }
-                break;
+                    break;
                 case 0x8:
                     //V3-32 - W is "indeterminate"
                     //Indeterminate data is the first vector of the next num
@@ -612,6 +615,7 @@ void VectorInterface::handle_UNPACK(uint32_t value)
                     }
                     else
                         quad._u32[3] = 0;
+
                     buffer_size -= 3;
                     unpack.offset++;
                     break;
@@ -638,6 +642,7 @@ void VectorInterface::handle_UNPACK(uint32_t value)
                             buffer_size -= 1;
                         }
                     }
+
                     if (buffer_size >= 1)
                     {
                         if (unpack.sign_extend)
@@ -687,6 +692,7 @@ void VectorInterface::handle_UNPACK(uint32_t value)
                             buffer_size -= 1;
                         }
                     }
+
                     if (buffer_size >= 1)
                     {
                         if (unpack.sign_extend)
@@ -724,6 +730,7 @@ void VectorInterface::handle_UNPACK(uint32_t value)
                         else
                             quad._u32[i] = value;
                     }
+
                     buffer_size -= 2;
                     break;
                 case 0xE:
@@ -736,23 +743,24 @@ void VectorInterface::handle_UNPACK(uint32_t value)
                         else
                             quad._u32[i] = value;
                     }
+
                     buffer_size -= 1;
                     break;
                 case 0xF:
                     //V4-5
-                {
-                    uint16_t data = (buffer[0] >> (unpack.offset * 16)) & 0xFFFF;
-                    quad._u32[0] = (data & 0x1F) << 3;
-                    quad._u32[1] = ((data >> 5) & 0x1F) << 3;
-                    quad._u32[2] = ((data >> 10) & 0x1F) << 3;
-                    quad._u32[3] = ((data >> 15) & 0x1) << 7;
-
-                    if (unpack.offset++)
                     {
-                        unpack.offset = 0;
-                        buffer_size -= 1;
+                        uint16_t data = (buffer[0] >> (unpack.offset * 16)) & 0xFFFF;
+                        quad._u32[0] = (data & 0x1F) << 3;
+                        quad._u32[1] = ((data >> 5) & 0x1F) << 3;
+                        quad._u32[2] = ((data >> 10) & 0x1F) << 3;
+                        quad._u32[3] = ((data >> 15) & 0x1) << 7;
+
+                        if (unpack.offset++)
+                        {
+                            unpack.offset = 0;
+                            buffer_size -= 1;
+                        }
                     }
-                }
                     break;
                 default:
                     Errors::die("[VIF] Unhandled UNPACK cmd $%02X!\n", unpack.cmd);
@@ -787,6 +795,7 @@ void VectorInterface::process_UNPACK_quad(uint128_t &quad)
     {
         if (CYCLE.CL > CYCLE.WL && unpack.blocks_written >= CYCLE.WL)
             unpack.addr += (CYCLE.CL - unpack.blocks_written) * 16;
+
         unpack.blocks_written = 0;
     }
 }
