@@ -6,10 +6,12 @@
 
 //Reply buffers taken from PCSX2's LilyPad
 
+uint8_t Gamepad::mask_mode[7] = {0x5A, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0x5A};
+const uint8_t Gamepad::vref_param[7] = {0x5A, 0x00, 0x00, 0x02, 0x00, 0x00, 0x5A};
 const uint8_t Gamepad::config_exit[7] = {0x5A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-const uint8_t Gamepad::set_mode_DS2[7] = {0x5A, 0x03, 0x02, 0x00, 0x02, 0x01, 0x00};
-const uint8_t Gamepad::set_mode_DS1[7] = {0x5A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
-const uint8_t Gamepad::query_model[7] = {0x5A, 0x01, 0x02, 0x00, 0x02, 0x01, 0x00};
+const uint8_t Gamepad::set_mode[7] = {0x5A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+const uint8_t Gamepad::query_model_DS2[7] = {0x5A, 0x03, 0x02, 0x00, 0x02, 0x01, 0x00};
+const uint8_t Gamepad::query_model_DS1[7] = {0x5A, 0x01, 0x02, 0x00, 0x02, 0x01, 0x00};
 const uint8_t Gamepad::query_act[2][7] =
 {
     {0x5A, 0x00, 0x00, 0x01, 0x02, 0x00, 0x0A},
@@ -17,6 +19,7 @@ const uint8_t Gamepad::query_act[2][7] =
 };
 const uint8_t Gamepad::query_comb[7] = {0x5A, 0x00, 0x00, 0x02, 0x00, 0x01, 0x00};
 const uint8_t Gamepad::query_mode[7] = {0x5A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+const uint8_t Gamepad::native_mode[7] = {0x5A, 0x00, 0x00, 0x00, 0x00, 0x00, 0x5A};
 
 Gamepad::Gamepad()
 {
@@ -34,6 +37,8 @@ void Gamepad::reset()
     halfwords_transfer = 1;
     command = 0;
     data_count = 0;
+    mask[0] = 0xFF;
+    mask[1] = 0xFF;
     for (int i = 0; i < 7; i++)
         rumble_values[i] = 0xFF;
 }
@@ -111,13 +116,32 @@ uint8_t Gamepad::write_SIO(uint8_t value)
                     command_length = 5;
                     return 0x41;
                 }
-
                 break;
+            case '@': //0x40 - set VREF param
+                set_result(vref_param);
+                return 0xF3;
+            case 'A': //0x41 - query masked mode
+                if (!analog_mode)
+                {
+                    mask_mode[3] = 0;
+                    mask_mode[2] = 0;
+                    mask_mode[1] = 0;
+                    mask_mode[6] = 0;
+                }
+                else
+                {
+                    mask_mode[1] = mask[0];
+                    mask_mode[2] = mask[1];
+                    mask_mode[3] = 0x03;
+                    mask_mode[6] = 0x5A;
+                }
+                set_result(mask_mode);
+                return 0xF3;
             case 'D': //0x44 - set mode and lock
-                set_result(set_mode_DS2);
+                set_result(set_mode);
                 return 0xF3;
             case 'E': //0x45 - query model and mode
-                set_result(query_model);
+                set_result(query_model_DS2);
                 command_buffer[5] = analog_mode;
                 return 0xF3;
             case 'F': //0x46 - query act
@@ -132,6 +156,9 @@ uint8_t Gamepad::write_SIO(uint8_t value)
             case 'M': //0x4D - vibration toggle
                 command_length = 9;
                 memcpy(command_buffer + 2, rumble_values, 7);
+                return 0xF3;
+            case 'O': //0x4F - set DS2 native mode
+                set_result(native_mode);
                 return 0xF3;
             default:
                 Errors::die("[PAD] Unrecognized command %c ($%02X)\n", value, value);
@@ -175,6 +202,17 @@ uint8_t Gamepad::write_SIO(uint8_t value)
         case 'M':
             if (data_count >= 3)
                 rumble_values[data_count - 2] = value;
+            break;
+        case 'O':
+            if (data_count == 3 || data_count == 4)
+                mask[data_count - 3] = value;
+            else if (data_count == 5)
+            {
+                if (!(value & 0x1))
+                    analog_mode = false;
+                else
+                    analog_mode = true;
+            }
             break;
     }
 

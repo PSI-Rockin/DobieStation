@@ -32,13 +32,17 @@ class Gamepad
         int command_length;
         int data_count;
 
+        uint8_t mask[2];
+        static uint8_t mask_mode[7];
+        const static uint8_t vref_param[7];
         const static uint8_t config_exit[7];
-        const static uint8_t set_mode_DS2[7];
-        const static uint8_t set_mode_DS1[7];
-        const static uint8_t query_model[7];
+        const static uint8_t set_mode[7];
+        const static uint8_t query_model_DS2[7];
+        const static uint8_t query_model_DS1[7];
         const static uint8_t query_act[2][7];
         const static uint8_t query_comb[7];
         const static uint8_t query_mode[7];
+        const static uint8_t native_mode[7];
 
         uint8_t LED_value;
 
