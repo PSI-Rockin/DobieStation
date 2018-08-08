@@ -150,8 +150,6 @@ class GraphicsSynthesizerThread
         uint32_t addr_PSMCT8(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
         uint32_t addr_PSMCT4(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
 
-        uint32_t read_frame_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y);
-
         uint32_t read_PSMCT32_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y);
         uint32_t read_PSMCT32Z_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y);
         uint16_t read_PSMCT16_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y);

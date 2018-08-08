@@ -287,6 +287,7 @@ uint32_t convert_color_up(uint16_t col)
     uint32_t a = ((col >> 15) & 0x1) << 7;
     return (r | (g << 8) | (b << 16) | (a << 24));
 }
+
 uint16_t convert_color_down(uint32_t col)
 {
     uint32_t r = (col & 0xFF) >> 3;
