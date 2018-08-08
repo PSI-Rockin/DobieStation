@@ -1109,10 +1109,10 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
             frame_color = read_PSMCT32_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y);
             break;
         case 0x2:
-            frame_color = read_PSMCT16_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y);
+            frame_color = convert_color_up(read_PSMCT16_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y));
             break;
         case 0xA:
-            frame_color = read_PSMCT16S_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y);
+            frame_color = convert_color_up(read_PSMCT16S_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y));
             break;
         case 0x13:
         case 0x14:
@@ -1128,10 +1128,10 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
             frame_color = read_PSMCT32Z_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y);
             break;
         case 0x32:
-            frame_color = read_PSMCT16Z_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y);
+            frame_color = convert_color_up(read_PSMCT16Z_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y));
             break;
         case 0x3A:
-            frame_color = read_PSMCT16SZ_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y);
+            frame_color = convert_color_up(read_PSMCT16SZ_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y));
             break;
         default:
             Errors::die("Unknown FRAME format (%d) read attempted", current_ctx->frame.format);
