@@ -279,14 +279,16 @@ void GraphicsSynthesizerThread::memdump()
     file.close();
 }
 
-uint32_t convert_color_up(uint16_t col) {
+uint32_t convert_color_up(uint16_t col)
+{
     uint32_t r = (col & 0x1F)<<3;
     uint32_t g = ((col>>5) & 0x1F)<<3;
     uint32_t b = ((col>>10) & 0x1F)<<3;
     uint32_t a = ((col >> 15) & 0x1) << 7;
     return (r | (g << 8) | (b << 16) | (a << 24));
 }
-uint16_t convert_color_down(uint32_t col) {
+uint16_t convert_color_down(uint32_t col)
+{
     uint32_t r = (col & 0xFF) >> 3;
     uint32_t g = ((col >> 8) & 0xFF) >> 3;
     uint32_t b = ((col >> 16) & 0xFF) >> 3;
@@ -343,7 +345,6 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
                 default:
                     Errors::die("Unknown framebuffer format (%d)", currentFB.format);
             }
-            
              
             target[pixel_x + (pixel_y * width)] = value | 0xFF000000;
 
@@ -1910,10 +1911,8 @@ void GraphicsSynthesizerThread::unpack_PSMCT24(uint64_t data, int offset, bool z
                 write_PSMCT24Z_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x,
                                      TRXPOS.dest_y, PSMCT24_color);
             else
-            {
                 write_PSMCT24_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x,
                     TRXPOS.dest_y, PSMCT24_color);
-            }
             PSMCT24_color = 0;
             PSMCT24_unpacked_count = 0;
             TRXPOS.int_dest_x++;
