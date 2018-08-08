@@ -3,15 +3,20 @@
 #include "vu_interpreter.hpp"
 #include "../errors.hpp"
 
+#define printf(fmt, ...)(0)
+
 void VU_Interpreter::interpret(VectorUnit &vu, uint32_t upper_instr, uint32_t lower_instr)
 {
+    bool swapops = check_swapops(vu, upper_instr, lower_instr);
+
     //WaitQ, DIV, RSQRT, SQRT
     if (((lower_instr & 0x800007FC) == 0x800003BC))
     {
         vu.waitq();
     }
 
-    upper(vu, upper_instr);
+    if(!swapops)
+        upper(vu, upper_instr);
 
     //LOI
     if (upper_instr & (1 << 31))
@@ -19,8 +24,25 @@ void VU_Interpreter::interpret(VectorUnit &vu, uint32_t upper_instr, uint32_t lo
     else
         lower(vu, lower_instr);
 
+    if (swapops)
+        upper(vu, upper_instr);
+
     if (upper_instr & (1 << 30))
         vu.end_execution();
+}
+
+bool VU_Interpreter::check_swapops(VectorUnit &vu, uint32_t upper_instr, uint32_t lower_instr)
+{
+    uint8_t upperfd, lowerfs, lowerft;
+
+    upperfd = ((upper_instr >> 2) & 0xf) == 0xf ? ((upper_instr >> 16) & 0x1F) : ((upper_instr >> 6) & 0x1F);
+    lowerfs = (upper_instr >> 11) & 0x1F;
+    lowerft = (lower_instr >> 16) & 0x1F;
+
+    if (upperfd == lowerfs || upperfd == lowerft)
+        return true;
+    else
+        return false;
 }
 
 void VU_Interpreter::upper(VectorUnit &vu, uint32_t instr)
@@ -72,6 +94,9 @@ void VU_Interpreter::upper(VectorUnit &vu, uint32_t instr)
             break;
         case 0x1C:
             mulq(vu, instr);
+            break;
+        case 0x1D:
+            maxi(vu, instr);
             break;
         case 0x1E:
             muli(vu, instr);
@@ -211,6 +236,14 @@ void VU_Interpreter::mulq(VectorUnit &vu, uint32_t instr)
     uint8_t source = (instr >> 11) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
     vu.mulq(field, dest, source);
+}
+
+void VU_Interpreter::maxi(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t dest = (instr >> 6) & 0x1F;
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.maxi(field, dest, source);
 }
 
 void VU_Interpreter::muli(VectorUnit &vu, uint32_t instr)
@@ -379,6 +412,12 @@ void VU_Interpreter::upper_special(VectorUnit &vu, uint32_t instr)
         case 0x0B:
             maddabc(vu, instr);
             break;
+        case 0x0C:
+        case 0x0D:
+        case 0x0E:
+        case 0x0F:
+            msubabc(vu, instr);
+            break;
         case 0x10:
             itof0(vu, instr);
             break;
@@ -486,6 +525,15 @@ void VU_Interpreter::maddabc(VectorUnit &vu, uint32_t instr)
     uint8_t bc_reg = (instr >> 16) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
     vu.maddabc(bc, field, source, bc_reg);
+}
+
+void VU_Interpreter::msubabc(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t bc = instr & 0x3;
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t bc_reg = (instr >> 16) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.msubabc(bc, field, source, bc_reg);
 }
 
 void VU_Interpreter::itof0(VectorUnit &vu, uint32_t instr)
@@ -1112,7 +1160,7 @@ void VU_Interpreter::lower2(VectorUnit &vu, uint32_t instr)
 
 void VU_Interpreter::lq(VectorUnit &vu, uint32_t instr)
 {
-    int32_t imm = instr & 0x7FF;
+    int16_t imm = instr & 0x7FF;
     imm = ((int16_t)(imm << 5)) >> 5;
     imm *= 16;
     uint8_t is = (instr >> 11) & 0x1F;
@@ -1123,7 +1171,7 @@ void VU_Interpreter::lq(VectorUnit &vu, uint32_t instr)
 
 void VU_Interpreter::sq(VectorUnit &vu, uint32_t instr)
 {
-    int32_t imm = instr & 0x7FF;
+    int16_t imm = instr & 0x7FF;
     imm = ((int16_t)(imm << 5)) >> 5;
     imm *= 16;
     uint8_t fs = (instr >> 11) & 0x1F;
@@ -1134,7 +1182,7 @@ void VU_Interpreter::sq(VectorUnit &vu, uint32_t instr)
 
 void VU_Interpreter::ilw(VectorUnit &vu, uint32_t instr)
 {
-    int32_t imm = instr & 0x7FF;
+    int16_t imm = instr & 0x7FF;
     imm = ((int16_t)(imm << 5)) >> 5;
     imm *= 16;
     uint8_t is = (instr >> 11) & 0x1F;
@@ -1145,7 +1193,7 @@ void VU_Interpreter::ilw(VectorUnit &vu, uint32_t instr)
 
 void VU_Interpreter::isw(VectorUnit &vu, uint32_t instr)
 {
-    int32_t imm = instr & 0x7FF;
+    int16_t imm = instr & 0x7FF;
     imm = ((int16_t)(imm << 5)) >> 5;
     imm *= 16;
     uint8_t is = (instr >> 11) & 0x1F;
@@ -1223,28 +1271,30 @@ void VU_Interpreter::fcget(VectorUnit &vu, uint32_t instr)
 
 void VU_Interpreter::b(VectorUnit &vu, uint32_t instr)
 {
-    int32_t imm = instr & 0x7FF;
+    int16_t imm = instr & 0x7FF;
     imm = ((int16_t)(imm << 5)) >> 5;
     imm *= 8;
-    vu.branch(true, imm);
+    printf("[VU] B $%x (Imm $%x)\n", vu.get_PC() + 16 + imm, imm);
+    vu.branch(true, imm, false);
 }
 
 void VU_Interpreter::bal(VectorUnit &vu, uint32_t instr)
 {
-    int32_t imm = instr & 0x7FF;
+    int16_t imm = instr & 0x7FF;
     imm = ((int16_t)(imm << 5)) >> 5;
     imm *= 8;
 
     uint8_t link_reg = (instr >> 16) & 0x1F;
-    vu.set_int(link_reg, (vu.get_PC() + 16) / 8);
-    vu.branch(true, imm);
+    printf("[VU] BAL $%x (Imm $%x)\n", vu.get_PC() + 16 + imm, imm);
+    vu.branch(true, imm, true, link_reg);
 }
 
 void VU_Interpreter::jr(VectorUnit &vu, uint32_t instr)
 {
     uint8_t addr_reg = (instr >> 11) & 0x1F;
     uint16_t addr = vu.get_int(addr_reg) * 8;
-    vu.jp(addr);
+    printf("[VU] JR vi%d ($%x)\n", addr_reg, addr);
+    vu.jp(addr, false);
 }
 
 void VU_Interpreter::jalr(VectorUnit &vu, uint32_t instr)
@@ -1253,13 +1303,13 @@ void VU_Interpreter::jalr(VectorUnit &vu, uint32_t instr)
     uint16_t addr = vu.get_int(addr_reg) * 8;
 
     uint8_t link_reg = (instr >> 16) & 0x1F;
-    vu.set_int(link_reg, (vu.get_PC() + 16) / 8);
-    vu.jp(addr);
+    printf("[VU] JR vi%d ($%x) link vi%d\n", addr_reg, addr, link_reg);
+    vu.jp(addr, true, link_reg);
 }
 
 void VU_Interpreter::ibeq(VectorUnit &vu, uint32_t instr)
 {
-    int32_t imm = instr & 0x7FF;
+    int16_t imm = instr & 0x7FF;
     imm = ((int16_t)(imm << 5)) >> 5;
     imm *= 8;
 
@@ -1267,12 +1317,13 @@ void VU_Interpreter::ibeq(VectorUnit &vu, uint32_t instr)
     uint16_t it = (instr >> 16) & 0x1F;
     is = vu.get_int(is);
     it = vu.get_int(it);
-    vu.branch(is == it, imm);
+    printf("[VU] IBEQ vi%d($%08X)==vi%d($%08X) $%x (Imm $%x)\n", (instr >> 11) & 0x1F, is, (instr >> 16) & 0x1F, it, vu.get_PC() + 16 + imm, imm);
+    vu.branch(is == it, imm, false);
 }
 
 void VU_Interpreter::ibne(VectorUnit &vu, uint32_t instr)
 {
-    int32_t imm = instr & 0x7FF;
+    int16_t imm = instr & 0x7FF;
     imm = ((int16_t)(imm << 5)) >> 5;
     imm *= 8;
 
@@ -1280,47 +1331,52 @@ void VU_Interpreter::ibne(VectorUnit &vu, uint32_t instr)
     uint16_t it = (instr >> 16) & 0x1F;
     is = vu.get_int(is);
     it = vu.get_int(it);
-    vu.branch(is != it, imm);
+    printf("[VU] IBNE vi%d($%08X)!=vi%d($%08X) $%x (Imm $%x)\n", (instr >> 11) & 0x1F, is, (instr >> 16) & 0x1F, it, vu.get_PC() + 16 + imm, imm);
+    vu.branch(is != it, imm, false);
 }
 
 void VU_Interpreter::ibltz(VectorUnit &vu, uint32_t instr)
 {
-    int32_t imm = instr & 0x7FF;
+    int16_t imm = instr & 0x7FF;
     imm = ((int16_t)(imm << 5)) >> 5;
     imm *= 8;
 
     int16_t reg = (int16_t)vu.get_int((instr >> 11) & 0x1F);
-    vu.branch(reg < 0, imm);
+    printf("[VU] IBLTZ vi%d($%08X) < 0 $%x (Imm $%x)\n", (instr >> 11) & 0x1F, reg, vu.get_PC() + 16 + imm, imm);
+    vu.branch(reg < 0, imm, false);
 }
 
 void VU_Interpreter::ibgtz(VectorUnit &vu, uint32_t instr)
 {
-    int32_t imm = instr & 0x7FF;
+    int16_t imm = instr & 0x7FF;
     imm = ((int16_t)(imm << 5)) >> 5;
     imm *= 8;
 
     int16_t reg = (int16_t)vu.get_int((instr >> 11) & 0x1F);
-    vu.branch(reg > 0, imm);
+    printf("[VU] IBGTZ vi%d($%08X) > 0 $%x (Imm $%x)\n", (instr >> 11) & 0x1F, reg, vu.get_PC() + 16 + imm, imm);
+    vu.branch(reg > 0, imm, false);
 }
 
 void VU_Interpreter::iblez(VectorUnit &vu, uint32_t instr)
 {
-    int32_t imm = instr & 0x7FF;
+    int16_t imm = instr & 0x7FF;
     imm = ((int16_t)(imm << 5)) >> 5;
     imm *= 8;
 
     int16_t reg = (int16_t)vu.get_int((instr >> 11) & 0x1F);
-    vu.branch(reg <= 0, imm);
+    printf("[VU] IBLEZ vi%d($%08X) <= 0 $%x (Imm $%x)\n", (instr >> 11) & 0x1F, reg, vu.get_PC() + 16 + imm, imm);
+    vu.branch(reg <= 0, imm, false);
 }
 
 void VU_Interpreter::ibgez(VectorUnit &vu, uint32_t instr)
 {
-    int32_t imm = instr & 0x7FF;
+    int16_t imm = instr & 0x7FF;
     imm = ((int16_t)(imm << 5)) >> 5;
     imm *= 8;
 
     int16_t reg = (int16_t)vu.get_int((instr >> 11) & 0x1F);
-    vu.branch(reg >= 0, imm);
+    printf("[VU] IBGEZ vi%d($%08X) >= 0 $%x (Imm $%x)\n", (instr >> 11) & 0x1F, reg, vu.get_PC() + 16 + imm, imm);
+    vu.branch(reg >= 0, imm, false);
 }
 
 void VU_Interpreter::unknown_op(const char *type, uint32_t instruction, uint16_t op)

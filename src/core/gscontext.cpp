@@ -138,7 +138,7 @@ void GSContext::set_test(uint64_t value)
 void GSContext::set_frame(uint64_t value)
 {
     frame.base_pointer = (value & 0x1FF) * 2048 * 4;
-    frame.width = ((value >> 16) & 0x1F) * 64;
+    frame.width = ((value >> 16) & 0x3F) * 64;
     frame.format = (value >> 24) & 0x3F;
     frame.mask = value >> 32;
     printf("FRAME: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);

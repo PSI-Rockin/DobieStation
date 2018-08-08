@@ -53,8 +53,9 @@ class VectorInterface
         UNPACK_Command unpack;
 
         bool vif_ibit_detected;
-        bool vif_int_stalled;
+        bool vif_stalled;
         bool vif_interrupt;
+        bool vif_stop;
         
         bool wait_for_VU;
         bool flush_stall;
@@ -72,6 +73,7 @@ class VectorInterface
         uint16_t TOPS, TOP, ITOPS, ITOP;
         uint8_t MODE;
         uint32_t MASK;
+        uint32_t CODE;
         uint32_t ROW[4];
         uint32_t COL[4];
         uint32_t MARK;
@@ -82,6 +84,7 @@ class VectorInterface
         void handle_wait_cmd(uint32_t value);
         void MSCAL(uint32_t addr);
         void init_UNPACK(uint32_t value);
+        bool is_fillingwrite();
         void handle_UNPACK(uint32_t value);
         void handle_UNPACK_masking(uint128_t& quad);
         void handle_UNPACK_mode(uint128_t& quad);
@@ -93,7 +96,7 @@ class VectorInterface
         int get_id();
 
         void reset();
-        void update();
+        void update(int cycles);
 
         bool transfer_DMAtag(uint128_t tag);
         bool feed_DMA(uint128_t quad);
@@ -101,6 +104,9 @@ class VectorInterface
         uint32_t get_stat();
         uint32_t get_mark();
         uint32_t get_err();
+        uint32_t get_mode();
+        uint32_t get_row(uint32_t address);
+        uint32_t get_code();
 
         void set_mark(uint32_t value);
         void set_err(uint32_t value);

@@ -208,6 +208,9 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
                     case assert_finish_t:
                         gs.reg.assert_FINISH();
                         break;
+                    case assert_vsync_t:
+                        gs.reg.assert_VSYNC();
+                        break;
                     case set_vblank_t:
                     {
                         auto p = data.payload.vblank_payload;
@@ -472,6 +475,13 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             break;
         case 0x0009:
             context2.set_clamp(value);
+            break;
+        case 0x000C:
+            //XYZ3F
+            current_vtx.x = value & 0xFFFF;
+            current_vtx.y = (value >> 16) & 0xFFFF;
+            current_vtx.z = (value >> 32) & 0xFFFFFF;
+            vertex_kick(false);
             break;
         case 0x000D:
             //XYZ3

@@ -190,6 +190,16 @@ void GraphicsSynthesizer::set_VBLANK(bool is_VBLANK)
     }
 }
 
+void GraphicsSynthesizer::assert_VSYNC()
+{
+    GS_message_payload payload;
+    payload.no_payload = {};
+    message_queue->push({ GS_command::assert_vsync_t,payload });
+
+    if (reg.assert_VSYNC())
+        intc->assert_IRQ((int)Interrupt::GS);
+}
+
 void GraphicsSynthesizer::assert_FINISH()
 {
     GS_message_payload payload;

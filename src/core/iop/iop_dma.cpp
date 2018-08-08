@@ -188,7 +188,7 @@ void IOP_DMA::process_SIF0()
             sif->write_SIF0(*(uint32_t*)&RAM[channels[SIF0].tag_addr + 12]);
 
             channels[SIF0].addr = data & 0xFFFFFF;
-            channels[SIF0].word_count = (words + 3) & 0xFFFFFFFC; //round to nearest 4?
+            channels[SIF0].word_count = (words + 3) & 0xFFFFC; //round to nearest 4?
 
             channels[SIF0].tag_addr += 16;
 
@@ -226,7 +226,7 @@ void IOP_DMA::process_SIF1()
             //Read IOP DMAtag
             uint32_t data = sif->read_SIF1();
             channels[SIF1].addr = data & 0xFFFFFF;
-            channels[SIF1].word_count = sif->read_SIF1();
+            channels[SIF1].word_count = sif->read_SIF1() & 0xFFFFC;
 
             //EEtag
             sif->read_SIF1();

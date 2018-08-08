@@ -82,6 +82,7 @@ namespace EmotionInterpreter
     void bnel(EmotionEngine& cpu, uint32_t instruction);
     void blezl(EmotionEngine& cpu, uint32_t instruction);
     void bgtzl(EmotionEngine& cpu, uint32_t instruction);
+    void daddi(EmotionEngine& cpu, uint32_t instruction);
     void daddiu(EmotionEngine& cpu, uint32_t instruction);
     void ldl(EmotionEngine& cpu, uint32_t instruction);
     void ldr(EmotionEngine& cpu, uint32_t instruction);

@@ -24,9 +24,9 @@ void GS_REGISTERS::write64_privileged(uint32_t addr, uint64_t value)
             break;
         case 0x0070:
             printf("[GS_r] Write DISPFB1: $%08X_%08X\n", value >> 32, value);
-            DISPFB1.frame_base = (value & 0x3FF) * 2048;
+            DISPFB1.frame_base = (value & 0x1FF) * 2048;
             DISPFB1.width = ((value >> 9) & 0x3F) * 64;
-            DISPFB1.format = (value >> 14) & 0x1F;
+            DISPFB1.format = (value >> 15) & 0x1F;
             DISPFB1.x = (value >> 32) & 0x7FF;
             DISPFB1.y = (value >> 43) & 0x7FF;
             break;
@@ -41,9 +41,9 @@ void GS_REGISTERS::write64_privileged(uint32_t addr, uint64_t value)
             break;
         case 0x0090:
             printf("[GS_r] Write DISPFB2: $%08X_%08X\n", value >> 32, value);
-            DISPFB2.frame_base = (value & 0x3FF) * 2048;
+            DISPFB2.frame_base = (value & 0x1FF) * 2048;
             DISPFB2.width = ((value >> 9) & 0x3F) * 64;
-            DISPFB2.format = (value >> 14) & 0x1F;
+            DISPFB2.format = (value >> 15) & 0x1F;
             DISPFB2.x = (value >> 32) & 0x7FF;
             DISPFB2.y = (value >> 43) & 0x7FF;
             break;
@@ -95,9 +95,15 @@ void GS_REGISTERS::write32_privileged(uint32_t addr, uint32_t value)
     {
         case 0x0070:
             printf("[GS_r] Write DISPFB1: $%08X\n", value);
-            DISPFB1.frame_base = (value & 0x3FF) * 2048;
+            DISPFB1.frame_base = (value & 0x1FF) * 2048;
             DISPFB1.width = ((value >> 9) & 0x3F) * 64;
-            DISPFB1.format = (value >> 14) & 0x1F;
+            DISPFB1.format = (value >> 15) & 0x1F;
+            break;
+        case 0x0090:
+            printf("[GS_r] Write DISPFB2: $%08X\n", value);
+            DISPFB2.frame_base = (value & 0x1FF) * 2048;
+            DISPFB2.width = ((value >> 9) & 0x3F) * 64;
+            DISPFB2.format = (value >> 15) & 0x1F;
             break;
         case 0x1000:
             printf("[GS_r] Write32 to GS_CSR: $%08X\n", value);
@@ -260,7 +266,17 @@ void GS_REGISTERS::set_VBLANK(bool is_VBLANK)
     {
         CSR.is_odd_frame = !CSR.is_odd_frame;
     }
-    CSR.VBLANK_generated = is_VBLANK;
+}
+
+bool GS_REGISTERS::assert_VSYNC()//returns true if the interrupt should be processed
+{
+    if (CSR.VBLANK_enabled)
+    {
+        CSR.VBLANK_generated = true;
+        CSR.VBLANK_enabled = false;
+        return !IMR.vsync;
+    }
+    return false;
 }
 
 bool GS_REGISTERS::assert_FINISH()//returns true if the interrupt should be processed
