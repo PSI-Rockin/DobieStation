@@ -22,6 +22,13 @@ enum class PAD_BUTTON
     SQUARE
 };
 
+enum PAD_MODE
+{
+    DIGITAL = 0x41,
+    ANALOG = 0x73,
+    DS2_NATIVE = 0x79
+};
+
 class Gamepad
 {
     private:
@@ -46,7 +53,7 @@ class Gamepad
 
         uint8_t LED_value;
 
-        bool analog_mode;
+        PAD_MODE pad_mode;
         bool config_mode;
         int halfwords_transfer;
     public:

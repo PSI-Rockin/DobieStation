@@ -33,7 +33,7 @@ void Gamepad::reset()
     config_mode = false;
     buttons = 0xFFFF;
     command_length = 0;
-    analog_mode = false;
+    pad_mode = DIGITAL;
     halfwords_transfer = 1;
     command = 0;
     data_count = 0;
@@ -102,26 +102,31 @@ uint8_t Gamepad::write_SIO(uint8_t value)
                 command_buffer[2] = 0x5A;
                 command_buffer[3] = buttons & 0xFF;
                 command_buffer[4] = buttons >> 8;
-                if (analog_mode)
+                if (pad_mode != DIGITAL)
                 {
                     command_length = 9;
                     command_buffer[5] = 0x80;
                     command_buffer[6] = 0x80;
                     command_buffer[7] = 0x80;
                     command_buffer[8] = 0x80;
-                    return 0x73;
+                    if (pad_mode != ANALOG)
+                    {
+                        //Pressure values?
+                        for (int i = 9; i < 21; i++)
+                            command_buffer[i] = 0x0;
+                        command_length = 21;
+                    }
                 }
                 else
                 {
                     command_length = 5;
-                    return 0x41;
                 }
-                break;
+                return pad_mode;
             case '@': //0x40 - set VREF param
                 set_result(vref_param);
                 return 0xF3;
             case 'A': //0x41 - query masked mode
-                if (!analog_mode)
+                if (pad_mode == DIGITAL)
                 {
                     mask_mode[3] = 0;
                     mask_mode[2] = 0;
@@ -142,7 +147,7 @@ uint8_t Gamepad::write_SIO(uint8_t value)
                 return 0xF3;
             case 'E': //0x45 - query model and mode
                 set_result(query_model_DS2);
-                command_buffer[5] = analog_mode;
+                command_buffer[5] = (pad_mode & 0xF) != 0x1;
                 return 0xF3;
             case 'F': //0x46 - query act
                 set_result(query_act[0]);
@@ -181,7 +186,10 @@ uint8_t Gamepad::write_SIO(uint8_t value)
             {
                 if (value < 2)
                 {
-                    analog_mode = value;
+                    if (value)
+                        pad_mode = ANALOG;
+                    else
+                        pad_mode = DIGITAL;
                 }
             }
             break;
@@ -209,9 +217,11 @@ uint8_t Gamepad::write_SIO(uint8_t value)
             else if (data_count == 5)
             {
                 if (!(value & 0x1))
-                    analog_mode = false;
+                    pad_mode = DIGITAL;
+                else if (!(value & 0x2))
+                    pad_mode = ANALOG;
                 else
-                    analog_mode = true;
+                    pad_mode = DS2_NATIVE;
             }
             break;
     }
