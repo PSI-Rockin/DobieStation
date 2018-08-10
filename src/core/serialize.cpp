@@ -4,7 +4,7 @@
 
 #define VER_MAJOR 0
 #define VER_MINOR 0
-#define VER_REV 1
+#define VER_REV 2
 
 using namespace std;
 
@@ -560,6 +560,7 @@ void VectorInterface::load_state(ifstream &state)
     state.read((char*)&MASK, sizeof(MASK));
     state.read((char*)&ROW, sizeof(ROW));
     state.read((char*)&COL, sizeof(COL));
+    state.read((char*)&CODE, sizeof(CODE));
     state.read((char*)&command_len, sizeof(command_len));
 
     state.read((char*)&vif_ibit_detected, sizeof(vif_ibit_detected));
@@ -608,6 +609,7 @@ void VectorInterface::save_state(ofstream &state)
     state.write((char*)&MASK, sizeof(MASK));
     state.write((char*)&ROW, sizeof(ROW));
     state.write((char*)&COL, sizeof(COL));
+    state.write((char*)&CODE, sizeof(CODE));
     state.write((char*)&command_len, sizeof(command_len));
 
     state.write((char*)&vif_ibit_detected, sizeof(vif_ibit_detected));

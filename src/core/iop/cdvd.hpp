@@ -36,13 +36,13 @@ class CDVD_Drive
 
         uint8_t pvd_sector[2048];
         uint16_t LBA;
-        uint32_t root_location;
-        uint32_t root_len;
+        uint64_t root_location;
+        uint64_t root_len;
 
-        uint32_t current_sector;
-        uint32_t sector_pos;
-        uint32_t sectors_left;
-        uint32_t block_size;
+        uint64_t current_sector;
+        uint64_t sector_pos;
+        uint64_t sectors_left;
+        uint64_t block_size;
 
         uint8_t read_buffer[4096];
 

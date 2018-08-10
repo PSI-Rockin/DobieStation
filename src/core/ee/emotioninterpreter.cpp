@@ -76,6 +76,9 @@ void EmotionInterpreter::interpret(EmotionEngine &cpu, uint32_t instruction)
         case 0x17:
             bgtzl(cpu, instruction);
             break;
+        case 0x18:
+            daddi(cpu, instruction);
+            break;
         case 0x19:
             daddiu(cpu, instruction);
             break;
@@ -461,6 +464,16 @@ void EmotionInterpreter::bgtzl(EmotionEngine &cpu, uint32_t instruction)
     int64_t reg = (instruction >> 21) & 0x1F;
     reg = cpu.get_gpr<int64_t>(reg);
     cpu.branch_likely(reg > 0, offset);
+}
+
+void EmotionInterpreter::daddi(EmotionEngine &cpu, uint32_t instruction)
+{
+    int16_t imm = (int16_t)(instruction & 0xFFFF);
+    int64_t source = (instruction >> 21) & 0x1F;
+    uint64_t dest = (instruction >> 16) & 0x1F;
+    source = cpu.get_gpr<int64_t>(source);
+    //TODO: 64bit Arithmetic Overflow
+    cpu.set_gpr<uint64_t>(dest, source + imm);
 }
 
 void EmotionInterpreter::daddiu(EmotionEngine &cpu, uint32_t instruction)
