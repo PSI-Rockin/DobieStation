@@ -344,7 +344,7 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
                     value = convert_color_up(read_PSMCT16S_block(currentFB.frame_base * 4, currentFB.width, scaled_x, scaled_y));
                     break;
                 default:
-                    Errors::die("Unknown framebuffer format (%d)", currentFB.format);
+                    Errors::die("Unknown framebuffer format (%x)", currentFB.format);
             }
              
             target[pixel_x + (pixel_y * width)] = value | 0xFF000000;
@@ -1114,13 +1114,6 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
         case 0xA:
             frame_color = convert_color_up(read_PSMCT16S_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y));
             break;
-        case 0x13:
-        case 0x14:
-        case 0x1B:
-        case 0x1C:
-        case 0x2C:
-            Errors::die("Reserved FRAME format (%d) read attempted", current_ctx->frame.format);
-            break;
         case 0x30:
             frame_color = read_PSMCT32Z_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y);
             break;
@@ -1134,7 +1127,7 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
             frame_color = convert_color_up(read_PSMCT16SZ_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y));
             break;
         default:
-            Errors::die("Unknown FRAME format (%d) read attempted", current_ctx->frame.format);
+            Errors::die("Unknown FRAME format (%x) read attempted", current_ctx->frame.format);
             break;
     }
     uint32_t final_color = 0;
@@ -1294,13 +1287,6 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
         case 0xA:
             write_PSMCT16S_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, convert_color_down(final_color));
             break;
-        case 0x13:
-        case 0x14:
-        case 0x1B:
-        case 0x1C:
-        case 0x2C:
-            Errors::die("Reserved FRAME format (%d) write attempted", current_ctx->frame.format);
-            break;
         case 0x30:
             write_PSMCT32Z_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, final_color);
             break;
@@ -1314,7 +1300,7 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
             write_PSMCT16SZ_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, convert_color_down(final_color));
             break;
         default:
-            Errors::die("Unknown FRAME format (%d) write attempted", current_ctx->frame.format);
+            Errors::die("Unknown FRAME format (%x) write attempted", current_ctx->frame.format);
             break;
     }
     if (update_z)
