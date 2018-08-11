@@ -72,6 +72,7 @@ class CDVD_Drive
 
         void read_CD_sector();
         void read_DVD_sector();
+        void get_dual_layer_info(bool& dual_layer, uint64_t& sector);
 
         void N_command_read();
         void N_command_dvdread();

@@ -2064,6 +2064,25 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, RGBAQ_REG& 
             tex_color.a = TEXA.alpha0;
         }
             break;
+        case 0x32:
+        {
+            uint16_t color = read_PSMCT16Z_block(tex_base, current_ctx->tex0.width, u, v);
+            tex_color.r = (color & 0x1F) << 3;
+            tex_color.g = ((color >> 5) & 0x1F) << 3;
+            tex_color.b = ((color >> 10) & 0x1F) << 3;
+
+            if (!(color & 0x7FFF) && TEXA.trans_black)
+                tex_color.a = 0;
+            else
+            {
+                if (color & (1 << 15))
+                    tex_color.a = TEXA.alpha1;
+                else
+                    tex_color.a = TEXA.alpha0;
+            }
+            tex_color.a = ((color & (1 << 15)) != 0) << 7;
+        }
+            break;
         default:
             Errors::die("[GS_t] Unrecognized texture format $%02X\n", current_ctx->tex0.format);
     }

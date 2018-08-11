@@ -6,8 +6,12 @@
 #include "emulator.hpp"
 #include "errors.hpp"
 
-#define CYCLES_PER_FRAME 4900000 * 0.3
+#define CYCLES_PER_FRAME 4900000
 #define VBLANK_START CYCLES_PER_FRAME * 0.75
+
+//These constants are used for the fast boot hack for .isos
+#define EELOAD_START 0x82000
+#define EELOAD_SIZE 0x20000
 
 Emulator::Emulator() :
     cdvd(this), cp0(&dmac), cpu(&cp0, &fpu, this, (uint8_t*)&scratchpad, &vu0, &vu1),
@@ -175,58 +179,66 @@ void Emulator::get_inner_resolution(int &w, int &h)
 
 bool Emulator::skip_BIOS()
 {
-    //hax
-    if (skip_BIOS_hack != NONE)
+    if (skip_BIOS_hack == LOAD_ELF)
     {
-        switch (skip_BIOS_hack)
-        {
-            case LOAD_ELF:
-                break;
-            case LOAD_DISC:
-            {
-                uint32_t system_cnf_size;
-                char* system_cnf = (char*)cdvd.read_file("SYSTEM.CNF;1", system_cnf_size);
-                if (!system_cnf)
-                {
-                    Errors::die("[Emulator] Failed to load SYSTEM.CNF!\n");
-                }
-                std::string exec_name = "";
-                //Search for cdrom0:
-                int pos = 0;
-                while (strncmp("cdrom0:", system_cnf + pos, 7))
-                    pos++;
-
-                printf("[Emulator] Found 'cdrom0:'\n");
-                pos += 8;
-
-                //Search for end of file name
-                while (system_cnf[pos] != ';')
-                {
-                    exec_name += system_cnf[pos];
-                    pos++;
-                }
-                exec_name += ";1";
-                delete[] system_cnf;
-                printf("[Emulator] Loading %s\n", exec_name.c_str());
-                uint8_t* file = cdvd.read_file(exec_name, ELF_size);
-                if (!file)
-                {
-                    Errors::die("[Emulator] Failed to load %s!\n", exec_name.c_str());
-                }
-                load_ELF(file, ELF_size);
-                delete[] file;
-            }
-                break;
-            default:
-                return false;
-        }
-        //cpu.reset();
         execute_ELF();
-        //iop.set_disassembly(true);
         skip_BIOS_hack = NONE;
         return true;
     }
     return false;
+}
+
+void Emulator::fast_boot()
+{
+    if (skip_BIOS_hack == LOAD_DISC)
+    {
+        //First we need to determine the name of the game executable
+        //This is done by finding SYSTEM.CNF on the game disc, then getting the name of the executable it points to.
+        uint32_t system_cnf_size;
+        char* system_cnf = (char*)cdvd.read_file("SYSTEM.CNF;1", system_cnf_size);
+        if (!system_cnf)
+        {
+            Errors::die("[Emulator] Failed to load SYSTEM.CNF!\n");
+        }
+        std::string exec_name = "";
+        //Search for cdrom0:
+        int pos = 0;
+        while (strncmp("cdrom0:", system_cnf + pos, 7))
+            pos++;
+
+        printf("[Emulator] Found 'cdrom0:'\n");
+        pos += 8;
+
+        //Search for end of file name
+        while (system_cnf[pos] != ';')
+        {
+            exec_name += system_cnf[pos];
+            pos++;
+        }
+
+        std::string path = "cdrom0:\\";
+        path += exec_name;
+
+        //Next we need to find the string "rom0:OSDSYS"
+        for (uint32_t str = EELOAD_START; str < EELOAD_START + EELOAD_SIZE; str += 8)
+        {
+            if (!strcmp((char*)&RDRAM[str], "rom0:OSDSYS"))
+            {
+                //String found. Now we need to find the location in memory pointing to it...
+                for (uint32_t ptr = str - 4; ptr >= EELOAD_START; ptr -= 4)
+                {
+                    if (read32(ptr) == str)
+                    {
+                        uint32_t argv = cpu.get_gpr<uint32_t>(5) + 0x40;
+                        strcpy((char*)&RDRAM[argv], path.c_str());
+                        write32(ptr, argv);
+                    }
+                }
+            }
+        }
+
+        skip_BIOS_hack = NONE;
+    }
 }
 
 void Emulator::set_skip_BIOS_hack(SKIP_HACK type)

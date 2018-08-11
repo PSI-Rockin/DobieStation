@@ -94,6 +94,7 @@ class Emulator
         void press_button(PAD_BUTTON button);
         void release_button(PAD_BUTTON button);
         bool skip_BIOS();
+        void fast_boot();
         void set_skip_BIOS_hack(SKIP_HACK type);
         void load_BIOS(uint8_t* BIOS);
         void load_ELF(uint8_t* ELF, uint32_t size);

@@ -149,10 +149,8 @@ int EmotionEngine::run(int cycles_to_run)
             //When the EE is in it's "Wait loop" located at 0x81FC0, it will loop
             //indefinitely until an interrupt/exception happens.  We can just skip
             //any processing of CPU commands until the interrupt occurs
-            if ((PC >= 0x81FC0 && PC < 0x81FE0) && !branch_on)
-            {
+            if (!branch_on)
                 break;
-            }
         }
         EmotionInterpreter::interpret(*this, instruction);
         if (increment_PC)
@@ -172,13 +170,12 @@ int EmotionEngine::run(int cycles_to_run)
                 if (PC >= 0x82000 && new_PC == 0x81FC0)
                     printf("[EE] Entering BIFCO loop\n");
                 PC = new_PC;
-                /*if (PC == 0x1001E0)
-                    PC = 0x100204;
-                if (PC == 0x10021C)
-                    PC = 0x10022C;*/
-                //Temporary hack for Atelier Iris - Skip intro movies
-                //if (PC == 0x0029e9cc)
-                    //PC = 0x0029E984;
+
+                //This hack is used for ISOs.
+                if (PC == 0x82388)
+                    e->fast_boot();
+
+                //And this is for ELFs.
                 if (PC < 0x80000000 && PC >= 0x00100000)
                     if (e->skip_BIOS())
                         return 0;
@@ -653,7 +650,7 @@ void EmotionEngine::syscall_exception()
     }
     if (op == 0x04)
     {
-        //On a real PS2, Exit returns to OSDSYS, but that isn't functional yet.
+        //On a real PS2, Exit returns to OSDSYS.
         Errors::die("[EE] Exit syscall called!\n");
     }
     handle_exception(0x80000180, 0x08);

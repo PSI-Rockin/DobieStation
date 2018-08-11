@@ -185,11 +185,11 @@ uint8_t* CDVD_Drive::read_file(string name, uint32_t& file_size)
     printf("[CDVD] Finding %s...\n", name.c_str());
     while (bytes < root_len)
     {
-        int directory_len = root_extent[bytes + 32];
+        uint64_t directory_len = root_extent[bytes + 32];
         if (name.length() == directory_len)
         {
             bool match = true;
-            for (int i = 0; i < directory_len; i++)
+            for (unsigned int i = 0; i < directory_len; i++)
             {
                 if (name[i] != root_extent[bytes + 33 + i])
                 {
@@ -376,6 +376,8 @@ void CDVD_Drive::send_S_command(uint8_t value)
         case 0x17:
             printf("[CDVD] ReadILinkModel\n");
             prepare_S_outdata(9);
+            for (int i = 0; i < 9; i++)
+                S_outdata[i] = 0;
             break;
         case 0x1A:
             printf("[CDVD] BootCertify\n");
@@ -414,7 +416,13 @@ void CDVD_Drive::send_S_command(uint8_t value)
         case 0x41:
             printf("[CDVD] ReadConfig\n");
             prepare_S_outdata(16);
-            memset(S_outdata, 0, 16);
+            for (int i = 0; i < 16; i++)
+                S_outdata[i] = 0;
+            break;
+        case 0x42:
+            printf("[CDVD] WriteConfig\n");
+            prepare_S_outdata(1);
+            S_outdata[0] = 0;
             break;
         case 0x43:
             printf("[CDVD] CloseConfig\n");
@@ -512,7 +520,7 @@ void CDVD_Drive::N_command_read()
             block_size = 2048;
     }
     speed = 24;
-    printf("[CDVD] Read; Seek pos: %d, Sectors: %d\n", sector_pos, sectors_left);
+    printf("[CDVD] Read; Seek pos: %lld, Sectors: %lld\n", sector_pos, sectors_left);
     start_seek();
     active_N_command = NCOMMAND::READ_SEEK;
 }
@@ -521,7 +529,7 @@ void CDVD_Drive::N_command_dvdread()
 {
     sector_pos = *(uint32_t*)&N_command_params[0];
     sectors_left = *(uint32_t*)&N_command_params[4];
-    printf("[CDVD] ReadDVD; Seek pos: %d, Sectors: %d\n", sector_pos, sectors_left);
+    printf("[CDVD] ReadDVD; Seek pos: %lld, Sectors: %lld\n", sector_pos, sectors_left);
     printf("Last read: %lld cycles ago\n", cycle_count - last_read);
     last_read = cycle_count;
     block_size = 2064;
@@ -550,7 +558,7 @@ void CDVD_Drive::N_command_gettoc()
 
 void CDVD_Drive::read_CD_sector()
 {
-    printf("[CDVD] Read CD sector - Sector: %d Size: %d\n", current_sector, block_size);
+    printf("[CDVD] Read CD sector - Sector: %lld Size: %lld\n", current_sector, block_size);
     cdvd_file.read((char*)read_buffer, block_size);
     read_bytes_left = block_size;
     current_sector++;
@@ -559,9 +567,25 @@ void CDVD_Drive::read_CD_sector()
 
 void CDVD_Drive::read_DVD_sector()
 {
-    printf("[CDVD] Read DVD sector - Sector: %d Size: %d\n", current_sector, block_size);
-    uint32_t lsn = current_sector + 0x30000;
-    read_buffer[0] = 0x20;
+    printf("[CDVD] Read DVD sector - Sector: %lld Size: %lld\n", current_sector, block_size);
+
+    int layer_num;
+    uint32_t lsn;
+    bool dual_layer;
+    uint64_t layer2_start;
+    get_dual_layer_info(dual_layer, layer2_start);
+
+    if (dual_layer && current_sector >= layer2_start && false)
+    {
+        layer_num = 1;
+        lsn = current_sector - layer2_start + 0x30000;
+    }
+    else
+    {
+        layer_num = 0;
+        lsn = current_sector + 0x30000;
+    }
+    read_buffer[0] = 0x20 | layer_num;
     read_buffer[1] = (lsn >> 16) & 0xFF;
     read_buffer[2] = (lsn >> 8) & 0xFF;
     read_buffer[3] = lsn & 0xFF;
@@ -581,6 +605,22 @@ void CDVD_Drive::read_DVD_sector()
     read_bytes_left = 2064;
     current_sector++;
     sectors_left--;
+}
+
+void CDVD_Drive::get_dual_layer_info(bool &dual_layer, uint64_t &sector)
+{
+    dual_layer = false;
+    sector = 0;
+
+    uint64_t volume_size = *(uint32_t*)&pvd_sector[80] * 2048;
+    printf("Volume size: %lld\n", volume_size);
+
+    //If the size of the volume is less than the size of the file, there must be more than one volume
+    if (volume_size < file_size)
+    {
+        dual_layer = true;
+        sector = volume_size / 2048;
+    }
 }
 
 void CDVD_Drive::S_command_sub(uint8_t func)
