@@ -279,6 +279,24 @@ void GraphicsSynthesizerThread::memdump()
     file.close();
 }
 
+uint32_t convert_color_up(uint16_t col)
+{
+    uint32_t r = (col & 0x1F)<<3;
+    uint32_t g = ((col>>5) & 0x1F)<<3;
+    uint32_t b = ((col>>10) & 0x1F)<<3;
+    uint32_t a = ((col >> 15) & 0x1) << 7;
+    return (r | (g << 8) | (b << 16) | (a << 24));
+}
+
+uint16_t convert_color_down(uint32_t col)
+{
+    uint32_t r = (col & 0xFF) >> 3;
+    uint32_t g = ((col >> 8) & 0xFF) >> 3;
+    uint32_t b = ((col >> 16) & 0xFF) >> 3;
+    uint32_t a = ((col >> 24) & 0xFF) >> 7;
+    return (r | (g << 5) | (b << 10) | (a << 15));
+}
+
 void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
 {
     printf("DISPLAY2: (%d, %d) wh: (%d, %d)\n", reg.DISPLAY2.x >> 2, reg.DISPLAY2.y, reg.DISPLAY2.width >> 2, reg.DISPLAY2.height);
@@ -310,7 +328,25 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
             uint32_t scaled_y = currentFB.y + y;
             scaled_x *= currentFB.width;
             scaled_x /= width;
-            uint32_t value = read_PSMCT32_block(currentFB.frame_base * 4, currentFB.width, scaled_x, scaled_y);
+            uint32_t value;
+            switch (currentFB.format)
+            {
+                case 0x0:
+                   value = read_PSMCT32_block(currentFB.frame_base * 4, currentFB.width, scaled_x, scaled_y);
+                   break;
+                case 0x1://PSMCT24
+                    value = read_PSMCT32_block(currentFB.frame_base * 4, currentFB.width, scaled_x, scaled_y);
+                    break;
+                case 0x2:
+                    value = convert_color_up(read_PSMCT16_block(currentFB.frame_base * 4, currentFB.width, scaled_x, scaled_y));
+                    break;
+                case 0xA:
+                    value = convert_color_up(read_PSMCT16S_block(currentFB.frame_base * 4, currentFB.width, scaled_x, scaled_y));
+                    break;
+                default:
+                    Errors::die("Unknown framebuffer format (%x)", currentFB.format);
+            }
+             
             target[pixel_x + (pixel_y * width)] = value | 0xFF000000;
 
             if (reg.SMODE2.frame_mode && reg.SMODE2.interlaced)
@@ -785,6 +821,13 @@ void GraphicsSynthesizerThread::write_PSMCT32Z_block(uint32_t base, uint32_t wid
     *(uint32_t*)&local_mem[addr] = value;
 }
 
+void GraphicsSynthesizerThread::write_PSMCT24_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y, uint32_t value)
+{
+    uint32_t addr = addr_PSMCT32(base / 256, width / 64, x, y);
+    uint32_t old_mem = *(uint32_t*)&local_mem[addr];
+    *(uint32_t*)&local_mem[addr] = (old_mem & 0xFF000000) | value;
+}
+
 void GraphicsSynthesizerThread::write_PSMCT24Z_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y, uint32_t value)
 {
     uint32_t addr = addr_PSMCT32Z(base / 256, width / 64, x, y);
@@ -1056,7 +1099,37 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
     if (!pass_depth_test)
         return;
 
-    uint32_t frame_color = read_PSMCT32_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y);
+    uint32_t frame_color = 0;
+    switch (current_ctx->frame.format)
+    {
+        case 0x0:
+            frame_color = read_PSMCT32_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y);
+            break;
+        case 0x1://24
+            frame_color = read_PSMCT32_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y);
+            break;
+        case 0x2:
+            frame_color = convert_color_up(read_PSMCT16_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y));
+            break;
+        case 0xA:
+            frame_color = convert_color_up(read_PSMCT16S_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y));
+            break;
+        case 0x30:
+            frame_color = read_PSMCT32Z_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y);
+            break;
+        case 0x31://24Z
+            frame_color = read_PSMCT32Z_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y);
+            break;
+        case 0x32:
+            frame_color = convert_color_up(read_PSMCT16Z_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y));
+            break;
+        case 0x3A:
+            frame_color = convert_color_up(read_PSMCT16SZ_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y));
+            break;
+        default:
+            Errors::die("Unknown FRAME format (%x) read attempted", current_ctx->frame.format);
+            break;
+    }
     uint32_t final_color = 0;
 
     if (test->dest_alpha_test)
@@ -1200,7 +1273,36 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
     final_color |= alpha << 24;
 
     //printf("[GS_t] Write $%08X (%d, %d)\n", final_color, x, y);
-    write_PSMCT32_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, final_color);
+    switch (current_ctx->frame.format)
+    {
+        case 0x0:
+            write_PSMCT32_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, final_color);
+            break;
+        case 0x1:
+            write_PSMCT24_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, final_color);
+            break;
+        case 0x2:
+            write_PSMCT16_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, convert_color_down(final_color));
+            break;
+        case 0xA:
+            write_PSMCT16S_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, convert_color_down(final_color));
+            break;
+        case 0x30:
+            write_PSMCT32Z_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, final_color);
+            break;
+        case 0x31:
+            write_PSMCT24Z_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, final_color);
+            break;
+        case 0x32:
+            write_PSMCT16Z_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, convert_color_down(final_color));
+            break;
+        case 0x3A:
+            write_PSMCT16SZ_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, convert_color_down(final_color));
+            break;
+        default:
+            Errors::die("Unknown FRAME format (%x) write attempted", current_ctx->frame.format);
+            break;
+    }
     if (update_z)
     {
         switch (current_ctx->zbuf.format)
@@ -1796,12 +1898,8 @@ void GraphicsSynthesizerThread::unpack_PSMCT24(uint64_t data, int offset, bool z
                 write_PSMCT24Z_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x,
                                      TRXPOS.dest_y, PSMCT24_color);
             else
-            {
-                PSMCT24_color |= read_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x,
-                    TRXPOS.dest_y) & 0xFF000000;
-                write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x,
+                write_PSMCT24_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x,
                     TRXPOS.dest_y, PSMCT24_color);
-            }
             PSMCT24_color = 0;
             PSMCT24_unpacked_count = 0;
             TRXPOS.int_dest_x++;
