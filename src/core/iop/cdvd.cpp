@@ -179,7 +179,7 @@ uint8_t* CDVD_Drive::read_file(string name, uint32_t& file_size)
     cdvd_file.seekg(root_location);
     cdvd_file.read((char*)root_extent, root_len);
     uint32_t bytes = 0;
-    uint32_t file_location = 0;
+    uint64_t file_location = 0;
     uint8_t* file;
     file_size = 0;
     printf("[CDVD] Finding %s...\n", name.c_str());
@@ -200,7 +200,8 @@ uint8_t* CDVD_Drive::read_file(string name, uint32_t& file_size)
             if (match)
             {
                 printf("[CDVD] Match found!\n");
-                file_location = *(uint32_t*)&root_extent[bytes + 2] * LBA;
+                file_location = *(uint32_t*)&root_extent[bytes + 2];
+                file_location *= LBA;
                 file_size = *(uint32_t*)&root_extent[bytes + 10];
                 printf("[CDVD] Location: $%08X\n", file_location);
                 printf("[CDVD] Size: $%08X\n", file_size);

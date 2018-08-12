@@ -216,6 +216,8 @@ void Emulator::fast_boot()
             pos++;
         }
 
+        delete[] system_cnf;
+
         std::string path = "cdrom0:\\";
         path += exec_name + ";1";
 
