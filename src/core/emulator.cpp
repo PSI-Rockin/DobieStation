@@ -217,7 +217,7 @@ void Emulator::fast_boot()
         }
 
         std::string path = "cdrom0:\\";
-        path += exec_name;
+        path += exec_name + ";1";
 
         //Next we need to find the string "rom0:OSDSYS"
         for (uint32_t str = EELOAD_START; str < EELOAD_START + EELOAD_SIZE; str += 8)
