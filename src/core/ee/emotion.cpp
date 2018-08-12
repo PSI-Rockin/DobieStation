@@ -141,7 +141,7 @@ int EmotionEngine::run(int cycles_to_run)
             {
                 std::string disasm = EmotionDisasm::disasm_instr(instruction, PC);
                 printf("[$%08X] $%08X - %s\n", PC, instruction, disasm.c_str());
-                print_state();
+                //print_state();
             }
         }
         else
@@ -170,10 +170,6 @@ int EmotionEngine::run(int cycles_to_run)
                 if (PC >= 0x82000 && new_PC == 0x81FC0)
                     printf("[EE] Entering BIFCO loop\n");
                 PC = new_PC;
-
-                //This hack is used for ISOs.
-                if (PC == 0x82388)
-                    e->fast_boot();
 
                 //And this is for ELFs.
                 if (PC < 0x80000000 && PC >= 0x00100000)
@@ -749,6 +745,9 @@ void EmotionEngine::eret()
         PC = cp0->EPC;
         cp0->status.exception = false;
     }
+    //This hack is used for ISOs.
+    if (PC == 0x82000)
+        e->fast_boot();
     increment_PC = false;
 }
 
