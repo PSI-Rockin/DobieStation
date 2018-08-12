@@ -98,10 +98,6 @@ void GraphicsInterface::process_PACKED(uint128_t data)
             gs->set_XYZ(x, y, z, !disable_drawing);
         }
             break;
-        case 0x6:
-        case 0x7:
-            gs->write64(reg, data1);
-            break;
         case 0xE:
         {
             //A+D: output data to address
@@ -113,7 +109,7 @@ void GraphicsInterface::process_PACKED(uint128_t data)
             //NOP
             break;
         default:
-            printf("Unrecognized PACKED reg $%02X\n", reg);
+            gs->write64(reg, data1);
             break;
     }
 }
