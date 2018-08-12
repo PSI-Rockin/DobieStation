@@ -34,12 +34,18 @@ class SPU
         //Shared variables for the cores
         static uint16_t autodma_ctrl;
         int ADMA_left;
+
+        int cycles;
+
+        void gen_sample();
     public:
         SPU(int id, Emulator* e);
 
         bool running_ADMA();
 
         void reset(uint8_t* RAM);
+        void update(int cycles_to_run);
+
         void start_DMA(int size);
         void finish_DMA();
 

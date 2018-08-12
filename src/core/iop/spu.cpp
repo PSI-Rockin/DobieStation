@@ -21,6 +21,23 @@ void SPU::reset(uint8_t* RAM)
     ADMA_left = 0;
 }
 
+void SPU::update(int cycles_to_run)
+{
+    cycles += cycles_to_run;
+
+    //Generate a sample every 768 IOP cycles
+    if (cycles >= 768)
+    {
+        cycles -= 768;
+        gen_sample();
+    }
+}
+
+void SPU::gen_sample()
+{
+
+}
+
 bool SPU::running_ADMA()
 {
     return ADMA_left >= 0;
@@ -56,6 +73,7 @@ void SPU::write_DMA(uint32_t value)
         if (ADMA_left < 0x100)
         {
             autodma_ctrl |= ~3;
+            ADMA_left = 0;
         }
     }
     status.DMA_busy = true;

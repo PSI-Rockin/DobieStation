@@ -80,11 +80,14 @@ void Emulator::run()
                     iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
             }
         }
+        spu.update(cycles);
+        spu2.update(cycles);
         cdvd.update(cycles);
         if (!VBLANK_sent && instructions_run >= VBLANK_START)
         {
             VBLANK_sent = true;
             gs.set_VBLANK(true);
+            timers.gate(true, true);
             //cpu.set_disassembly(frames == 53);
             //cpu.set_disassembly(frames == 500);
             printf("VSYNC FRAMES: %d\n", frames);
@@ -98,6 +101,7 @@ void Emulator::run()
     //VBLANK end
     iop_request_IRQ(11);
     gs.set_VBLANK(false);
+    timers.gate(true, false);
 }
 
 void Emulator::reset()

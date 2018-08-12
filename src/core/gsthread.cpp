@@ -332,8 +332,8 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
             switch (currentFB.format)
             {
                 case 0x0:
-                   value = read_PSMCT32_block(currentFB.frame_base * 4, currentFB.width, scaled_x, scaled_y);
-                   break;
+                    value = read_PSMCT32_block(currentFB.frame_base * 4, currentFB.width, scaled_x, scaled_y);
+                    break;
                 case 0x1://PSMCT24
                     value = read_PSMCT32_block(currentFB.frame_base * 4, currentFB.width, scaled_x, scaled_y);
                     break;

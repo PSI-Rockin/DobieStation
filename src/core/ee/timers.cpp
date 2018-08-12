@@ -15,51 +15,16 @@ void EmotionTiming::reset()
     {
         timers[i].counter = 0;
         timers[i].clocks = 0;
+        timers[i].gated = false;
         write_control(i, 0);
     }
-}
-
-void EmotionTiming::run()
-{
-    /*for (int i = 0; i < 4; i++)
-    {
-        if (timers[i].control.enabled)
-        {
-            timers[i].clocks++;
-            switch (timers[i].control.mode)
-            {
-                case 0:
-                    //Bus clock
-                    if (timers[i].clocks >= 2)
-                        count_up(i, 2);
-                    break;
-                case 1:
-                    //1/16 bus clock
-                    if (timers[i].clocks >= 32)
-                        count_up(i, 32);
-                    break;
-                case 2:
-                    //1/256 bus clock
-                    if (timers[i].clocks >= 512)
-                        count_up(i, 512);
-                    break;
-                case 3:
-                    //TODO: actual value for HSYNC
-                    if (timers[i].clocks >= 15000)
-                    {
-                        count_up(i, 15000);
-                    }
-                    break;
-            }
-        }
-    }*/
 }
 
 void EmotionTiming::run(int cycles)
 {
     for (int i = 0; i < 4; i++)
     {
-        if (timers[i].control.enabled)
+        if (timers[i].control.enabled && !timers[i].gated)
         {
             timers[i].clocks += cycles;
             switch (timers[i].control.mode)
@@ -85,6 +50,38 @@ void EmotionTiming::run(int cycles)
                     {
                         count_up(i, 9400);
                     }
+                    break;
+            }
+        }
+    }
+}
+
+void EmotionTiming::gate(bool VSYNC, bool high)
+{
+    for (int i = 0; i < 4; i++)
+    {
+        TimerControl* ctrl = &timers[i].control;
+        if (ctrl->gate_enable && ctrl->gate_VBLANK == VSYNC)
+        {
+            switch (ctrl->gate_mode)
+            {
+                case 0:
+                    //Pause on HIGH
+                    timers[i].gated = high;
+                    break;
+                case 1:
+                    //Reset on HIGH
+                    if (high)
+                        timers[i].counter = 0;
+                    break;
+                case 2:
+                    //Reset on LOW
+                    if (!high)
+                        timers[i].counter = 0;
+                    break;
+                case 3:
+                    //Reset on HIGH or LOW
+                    timers[i].counter = 0;
                     break;
             }
         }
@@ -189,8 +186,6 @@ void EmotionTiming::write_control(int index, uint32_t value)
     printf("[EE Timing] Write32 timer %d control: $%08X\n", index, value);
     timers[index].control.mode = value & 0x3;
     timers[index].control.gate_enable = value & (1 << 2);
-    if (timers[index].control.gate_enable)
-        Errors::die("[EE Timing] Timer %d control.gate_enable is true", index);
     timers[index].control.gate_VBLANK = value & (1 << 3);
     timers[index].control.gate_mode = (value >> 4) & 0x3;
     timers[index].control.clear_on_reference = value & (1 << 6);
@@ -199,4 +194,7 @@ void EmotionTiming::write_control(int index, uint32_t value)
     timers[index].control.overflow_int_enable = value & (1 << 9);
     timers[index].control.compare_int &= !(value & (1 << 10));
     timers[index].control.overflow_int &= !(value & (1 << 11));
+
+    if (timers[index].control.gate_enable && timers[index].control.mode != 3 && !timers[index].control.gate_VBLANK)
+        Errors::die("[EE Timing] Timer %d HSYNC gate is on", index);
 }

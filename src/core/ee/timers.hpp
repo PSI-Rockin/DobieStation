@@ -25,6 +25,9 @@ struct Timer
 
     //Internal variable for holding number of EE clocks
     int clocks;
+
+    //Indicates if the timer is paused by a gate
+    bool gated;
 };
 
 class INTC;
@@ -42,8 +45,9 @@ class EmotionTiming
         EmotionTiming(INTC* intc);
 
         void reset();
-        void run();
         void run(int cycles);
+
+        void gate(bool VSYNC, bool high);
 
         uint32_t read32(uint32_t addr);
         void write32(uint32_t addr, uint32_t value);
