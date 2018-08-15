@@ -314,6 +314,9 @@ void EmuWindow::keyPressEvent(QKeyEvent *event)
         case Qt::Key_Period:
             emuthread.unpause(PAUSE_EVENT::FRAME_ADVANCE);
             break;
+        case Qt::Key_F1:
+            emuthread.gsdump_single_frame();
+            break;
     }
 }
 

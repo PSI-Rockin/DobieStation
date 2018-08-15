@@ -89,6 +89,14 @@ void EmuThread::gsdump_write_toggle()
     e.request_gsdump_toggle();
     load_mutex.unlock();
 }
+
+void EmuThread::gsdump_single_frame()
+{
+    load_mutex.lock();
+    e.request_gsdump_single_frame();
+    load_mutex.unlock();
+}
+
 void EmuThread::gsdump_run()
 {
     printf("gsdump frame\n");

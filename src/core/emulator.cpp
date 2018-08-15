@@ -55,7 +55,22 @@ void Emulator::run()
     {
         gsdump_requested = false;
         gs.send_dump_request();
+        gsdump_running = !gsdump_running;
     }
+    else if (gsdump_single_frame)
+    {
+        gs.send_dump_request();
+        if (gsdump_running)
+        {
+            gsdump_running = false;
+            gsdump_single_frame = false;
+        }
+        else
+        {
+            gsdump_running = true;
+        }
+    }
+    
     while (instructions_run < CYCLES_PER_FRAME)
     {
         int cycles = cpu.run(8);
@@ -1342,4 +1357,8 @@ GraphicsSynthesizer& Emulator::get_gs()
 void Emulator::request_gsdump_toggle()
 {
     gsdump_requested = true;
+}
+void Emulator::request_gsdump_single_frame()
+{
+    gsdump_single_frame = true;
 }

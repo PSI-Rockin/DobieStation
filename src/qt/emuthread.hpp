@@ -44,6 +44,7 @@ class EmuThread : public QThread
         bool save_state(const char* name);
         bool gsdump_read(const char* name);
         void gsdump_write_toggle();
+        void gsdump_single_frame();
         bool frame_advance;
     protected:
         void run() override;
