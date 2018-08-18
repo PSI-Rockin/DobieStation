@@ -14,7 +14,7 @@ void IOPTiming::reset()
     for (int i = 0; i < 6; i++)
     {
         timers[i].counter = 0;
-        timers[i].clocks = 0;        
+        timers[i].clocks = 0;
         write_control(i, 0);
     }
 }
