@@ -69,7 +69,7 @@ int EmuWindow::init(int argc, char** argv)
     bool skip_BIOS = false;
     char* argv0; // Program name; AKA argv[0]
 
-    char* bios_name = nullptr, *file_name = nullptr;
+    char* bios_name = nullptr, *file_name = nullptr, *gsdump = nullptr;
 
     ARGBEGIN {
         case 'b':
@@ -81,6 +81,9 @@ int EmuWindow::init(int argc, char** argv)
         case 's':
             skip_BIOS = true;
             break;
+        case 'g':
+            gsdump = ARGF();
+            break;
         case 'h':
         default:
             printf("usage: %s [options]\n\n", argv0);
@@ -89,9 +92,14 @@ int EmuWindow::init(int argc, char** argv)
             printf("-f {ELF/ISO}\tspecify ELF/ISO\n");
             printf("-h\t\tshow this message\n");
             printf("-s\t\tskip BIOS\n");
+            printf("-g {.GSD}\t\trun a gsdump\n");
             return 1;
     } ARGEND
 
+    if (gsdump)
+    {
+        return run_gsdump(gsdump);
+    }
     ifstream BIOS_file(bios_name, ios::binary | ios::in);
     if (!BIOS_file.is_open())
     {
@@ -114,6 +122,12 @@ int EmuWindow::init(int argc, char** argv)
     return 0;
 }
 
+int EmuWindow::run_gsdump(const char* file_name)
+{
+    emuthread.gsdump_read(file_name);
+    emuthread.unpause(PAUSE_EVENT::GAME_NOT_LOADED);
+    return 0;
+}
 int EmuWindow::load_exec(const char* file_name, bool skip_BIOS)
 {
     ifstream exec_file(file_name, ios::binary | ios::in);
@@ -166,10 +180,10 @@ int EmuWindow::load_exec(const char* file_name, bool skip_BIOS)
 
 void EmuWindow::create_menu()
 {
-    load_rom_action = new QAction(tr("&Load ROM... (Fast)"), this);
+    load_rom_action = new QAction(tr("Load ROM... (&Fast)"), this);
     connect(load_rom_action, &QAction::triggered, this, &EmuWindow::open_file_skip);
 
-    load_bios_action = new QAction(tr("&Load ROM... (Boot BIOS)"), this);
+    load_bios_action = new QAction(tr("Load ROM... (&Boot BIOS)"), this);
     connect(load_bios_action, &QAction::triggered, this, &EmuWindow::open_file_no_skip);
 
     load_state_action = new QAction(tr("&Load State"), this);
@@ -181,12 +195,17 @@ void EmuWindow::create_menu()
     exit_action = new QAction(tr("&Exit"), this);
     connect(exit_action, &QAction::triggered, this, &QWidget::close);
 
+    auto gsdump_action = new QAction(tr("&GS dump toggle"), this);
+    connect(gsdump_action, &QAction::triggered, this,
+        [this]() { this->emuthread.gsdump_write_toggle(); });
+
     file_menu = menuBar()->addMenu(tr("&File"));
     file_menu->addAction(load_rom_action);
     file_menu->addAction(load_bios_action);
     file_menu->addAction(load_state_action);
     file_menu->addAction(save_state_action);
     file_menu->addAction(exit_action);
+    file_menu->addAction(gsdump_action);
 
     options_menu = menuBar()->addMenu(tr("&Options"));
     auto size_options_actions = new QAction(tr("Scale to &Window (ignore aspect ratio)"), this);
@@ -213,6 +232,13 @@ void EmuWindow::create_menu()
     connect(size_options_actions, &QAction::triggered, this,
         [this]() { this->scale_factor = 4; });
     options_menu->addAction(size_options_actions);
+
+    options_menu->addSeparator();
+
+    auto frame_action = new QAction(tr("&Frame Advance (10x draws for gs dumps)"), this);
+    connect(frame_action, &QAction::triggered, this,
+        [this]() { this->emuthread.frame_advance ^= true; });
+    options_menu->addAction(frame_action);
 }
 
 void EmuWindow::draw_frame(uint32_t *buffer, int inner_w, int inner_h, int final_w, int final_h)
@@ -284,6 +310,12 @@ void EmuWindow::keyPressEvent(QKeyEvent *event)
             break;
         case Qt::Key_Space:
             emit press_key(PAD_BUTTON::SELECT);
+            break;
+        case Qt::Key_Period:
+            emuthread.unpause(PAUSE_EVENT::FRAME_ADVANCE);
+            break;
+        case Qt::Key_F1:
+            emuthread.gsdump_single_frame();
             break;
     }
 }

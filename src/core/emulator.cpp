@@ -55,6 +55,26 @@ void Emulator::run()
         save_state(savestate_path.c_str());
     if (load_requested)
         load_state(savestate_path.c_str());
+    if (gsdump_requested)
+    {
+        gsdump_requested = false;
+        gs.send_dump_request();
+        gsdump_running = !gsdump_running;
+    }
+    else if (gsdump_single_frame)
+    {
+        gs.send_dump_request();
+        if (gsdump_running)
+        {
+            gsdump_running = false;
+            gsdump_single_frame = false;
+        }
+        else
+        {
+            gsdump_running = true;
+        }
+    }
+    
     while (instructions_run < CYCLES_PER_FRAME)
     {
         int cycles = cpu.run(8);
@@ -109,6 +129,7 @@ void Emulator::reset()
 {
     save_requested = false;
     load_requested = false;
+    gsdump_requested = false;
     iop_i_ctrl_delay = 0;
     ee_stdout = "";
     frames = 0;
@@ -1345,4 +1366,18 @@ void Emulator::iop_puts()
     }
     ee_log.flush();
     //printf("\n");
+}
+
+GraphicsSynthesizer& Emulator::get_gs()
+{
+    return gs;
+}
+
+void Emulator::request_gsdump_toggle()
+{
+    gsdump_requested = true;
+}
+void Emulator::request_gsdump_single_frame()
+{
+    gsdump_single_frame = true;
 }

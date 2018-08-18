@@ -125,6 +125,8 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
 {
     GraphicsSynthesizerThread gs = GraphicsSynthesizerThread();
     gs.reset();
+    bool gsdump_recording = false;
+    ofstream gsdump_file;
     try
     {
         while (true)
@@ -133,6 +135,8 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
             bool available = fifo->pop(data);
             if (available)
             {
+                if (gsdump_recording)
+                    gsdump_file.write((char*)&data, sizeof(data));
                 switch (data.type)
                 {
                     case write64_t:
@@ -218,8 +222,22 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
                         break;
                     }
                     case memdump_t:
-                        gs.memdump();
+                    {
+                        auto p = data.payload.render_payload;
+
+                        while (!p.target_mutex->try_lock())
+                        {
+                            printf("[GS_t] buffer lock failed!\n");
+                            std::this_thread::yield();
+                        }
+                        std::lock_guard<std::mutex> lock(*p.target_mutex, std::adopt_lock);
+                        uint16_t width, height;
+                        gs.memdump(p.target, width, height);
+                        GS_return_message_payload return_payload;
+                        return_payload.xy_payload = { width, height };
+                        return_fifo->push({ GS_return::gsdump_render_partial_done_t,return_payload });
                         break;
+                    }
                     case die_t:
                         return;
                     case loadstate_t:
@@ -228,16 +246,39 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
                         GS_return_message_payload return_payload;
                         return_payload.no_payload = { 0 };
                         return_fifo->push({ GS_return::loadstate_done_t,return_payload });
-                    }
                         break;
+                    }
                     case savestate_t:
                     {
                         gs.save_state(data.payload.savestate_payload.state);
                         GS_return_message_payload return_payload;
                         return_payload.no_payload = { 0 };
                         return_fifo->push({ GS_return::savestate_done_t,return_payload });
-                    }
                         break;
+                    }
+                    case gsdump_t:
+                    {
+                        printf("gs dump! ");
+                        if (!gsdump_recording)
+                        {
+                            printf("(start)\n");
+                            gsdump_file.open("gsdump.gsd", ios::out | ios::binary);
+                            if (!gsdump_file.is_open())
+                                Errors::die("gs dump file failed to open");
+                            gsdump_recording = true;
+                            gs.save_state(&gsdump_file);
+                            gsdump_file.write((char*)&gs.reg, sizeof(gs.reg));//this is for the emuthread's gs faker
+                        }
+                        else
+                        {
+                            printf("(end)\n");
+                            gsdump_file.close();
+                            gsdump_recording = false;
+                        }
+                        break;
+                    }
+                    default:
+                        Errors::die("corrupted command sent to GS thread");
                 }
             }
             else
@@ -272,11 +313,25 @@ void GraphicsSynthesizerThread::reset()
     current_ctx = &context1;
 }
 
-void GraphicsSynthesizerThread::memdump()
+void GraphicsSynthesizerThread::memdump(uint32_t* target, uint16_t& width, uint16_t& height)
 {
-    ofstream file("memdump.bin", std::ios::binary);
-    file.write((char*)local_mem, 1024 * 1024 * 4);
-    file.close();
+    SCISSOR s = current_ctx->scissor;
+    width = min(static_cast<uint16_t>(s.x2 - s.x1), (uint16_t)current_ctx->frame.width);
+    height = min(static_cast<uint16_t>(s.y2 - s.y1), (uint16_t)480);
+    int yy = 0;
+    for (int y = s.y1; y < s.y2; y++)
+    {
+        int xx = 0;
+        for (int x = s.x1; x < s.x2; x++)
+        {
+            uint32_t value = read_PSMCT32_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y);
+            target[xx + (yy * width)] = value | 0xFF000000;
+            xx++;
+            if (xx > width) break;
+        }
+        yy++;
+        if (yy > height) break;
+    }
 }
 
 uint32_t convert_color_up(uint16_t col)

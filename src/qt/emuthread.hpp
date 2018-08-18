@@ -13,7 +13,8 @@
 enum PAUSE_EVENT
 {
     GAME_NOT_LOADED,
-    FILE_DIALOG
+    FILE_DIALOG,
+    FRAME_ADVANCE,
 };
 
 class EmuThread : public QThread
@@ -26,6 +27,9 @@ class EmuThread : public QThread
         Emulator e;
 
         std::chrono::system_clock::time_point old_frametime;
+        std::ifstream gsdump;
+        std::atomic_bool gsdump_reading;
+        void gsdump_run();
     public:
         EmuThread();
 
@@ -38,6 +42,10 @@ class EmuThread : public QThread
 
         bool load_state(const char* name);
         bool save_state(const char* name);
+        bool gsdump_read(const char* name);
+        void gsdump_write_toggle();
+        void gsdump_single_frame();
+        bool frame_advance;
     protected:
         void run() override;
     signals:

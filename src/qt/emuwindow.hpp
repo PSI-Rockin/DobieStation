@@ -34,6 +34,7 @@ class EmuWindow : public QMainWindow
         explicit EmuWindow(QWidget *parent = nullptr);
         int init(int argc, char** argv);
         int load_exec(const char* file_name, bool skip_BIOS);
+        int run_gsdump(const char* file_name);
 
         void create_menu();
 

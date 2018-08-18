@@ -15,7 +15,7 @@ enum GS_command:uint8_t
 	write64_t, write64_privileged_t, write32_privileged_t,
     set_rgba_t, set_stq_t, set_uv_t, set_xyz_t, set_q_t, set_crt_t,
     render_crt_t, assert_finish_t, assert_vsync_t, set_vblank_t, memdump_t, die_t,
-    savestate_t, loadstate_t
+    savestate_t, loadstate_t, gsdump_t
 };
 
 union GS_message_payload 
@@ -92,7 +92,8 @@ enum GS_return :uint8_t
     render_complete_t,
     death_error_t,
     savestate_done_t,
-    loadstate_done_t
+    loadstate_done_t,
+    gsdump_render_partial_done_t,
 };
 
 union GS_return_message_payload
@@ -101,6 +102,10 @@ union GS_return_message_payload
     {
         const char* error_str;
     } death_error_payload;
+    struct
+    {
+        uint16_t x, y;
+    } xy_payload;
     struct
     {
         uint8_t BLANK;
@@ -137,12 +142,13 @@ class GraphicsSynthesizer
     public:
         GraphicsSynthesizer(INTC* intc);
         ~GraphicsSynthesizer();
+        void send_message(GS_message message);
         void reset();
-        void memdump();
         void start_frame();
         bool is_frame_complete();
         uint32_t* get_framebuffer();
         void render_CRT();
+        uint32_t* render_partial_frame(uint16_t& width, uint16_t& height);
         void get_resolution(int& w, int& h);
         void get_inner_resolution(int& w, int& h);
 
@@ -166,6 +172,8 @@ class GraphicsSynthesizer
 
         void load_state(std::ifstream& state);
         void save_state(std::ofstream& state);
+        void send_dump_request();
+        
 };
 
 #endif // GS_HPP
