@@ -263,6 +263,8 @@ string EmotionDisasm::disasm_special(uint32_t instruction)
             return disasm_movn(instruction);
         case 0x0C:
             return disasm_syscall_ee(instruction);
+        case 0x0D:
+            return "break";
         case 0x0F:
             return "sync";
         case 0x10:

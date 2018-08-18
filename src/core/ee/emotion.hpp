@@ -111,6 +111,7 @@ class EmotionEngine
 
         void hle_syscall();
         void syscall_exception();
+        void break_exception();
         void int0();
         void int1();
         void set_int0_signal(bool value);

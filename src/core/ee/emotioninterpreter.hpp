@@ -18,6 +18,7 @@ namespace EmotionInterpreter
     void movz(EmotionEngine& cpu, uint32_t instruction);
     void movn(EmotionEngine& cpu, uint32_t instruction);
     void syscall_ee(EmotionEngine& cpu, uint32_t instruction);
+    void break_ee(EmotionEngine& cpu, uint32_t instruction);
     void mfhi(EmotionEngine& cpu, uint32_t instruction);
     void mthi(EmotionEngine& cpu, uint32_t instruction);
     void mflo(EmotionEngine& cpu, uint32_t instruction);

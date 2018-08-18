@@ -652,6 +652,11 @@ void EmotionEngine::syscall_exception()
     handle_exception(0x80000180, 0x08);
 }
 
+void EmotionEngine::break_exception()
+{
+    Errors::die("[EE] BREAK opcode called (PC: $%08X)", PC);
+}
+
 void EmotionEngine::deci2call(uint32_t func, uint32_t param)
 {
     switch (func)

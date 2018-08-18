@@ -40,6 +40,9 @@ void EmotionInterpreter::special(EmotionEngine &cpu, uint32_t instruction)
         case 0x0C:
             syscall_ee(cpu, instruction);
             break;
+        case 0x0D:
+            break_ee(cpu, instruction);
+            break;
         case 0x0F:
             break;
         case 0x10:
@@ -243,6 +246,11 @@ void EmotionInterpreter::movn(EmotionEngine &cpu, uint32_t instruction)
 void EmotionInterpreter::syscall_ee(EmotionEngine &cpu, uint32_t instruction)
 {
     cpu.syscall_exception();
+}
+
+void EmotionInterpreter::break_ee(EmotionEngine &cpu, uint32_t instruction)
+{
+    cpu.break_exception();
 }
 
 void EmotionInterpreter::mfhi(EmotionEngine &cpu, uint32_t instruction)

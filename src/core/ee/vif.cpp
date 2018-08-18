@@ -68,7 +68,9 @@ bool VectorInterface::check_vif_stall(uint32_t value)
 
 void VectorInterface::update(int cycles)
 {
-    int runcycles = cycles;
+    //Since the loop processes per-word, we need to multiply cycles by 4
+    //This allows us to process one quadword per bus cycle
+    int runcycles = cycles << 2;
    
     while (!vif_stalled && runcycles--)
     {        
