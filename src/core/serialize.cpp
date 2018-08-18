@@ -4,7 +4,7 @@
 
 #define VER_MAJOR 0
 #define VER_MINOR 0
-#define VER_REV 3
+#define VER_REV 4
 
 using namespace std;
 
@@ -648,6 +648,7 @@ void CDVD_Drive::load_state(ifstream &state)
     state.read((char*)&S_params, sizeof(S_params));
     state.read((char*)&S_out_params, sizeof(S_out_params));
     state.read((char*)&S_status, sizeof(S_status));
+    state.read((char*)&rtc, sizeof(rtc));
 }
 
 void CDVD_Drive::save_state(ofstream &state)
@@ -677,4 +678,5 @@ void CDVD_Drive::save_state(ofstream &state)
     state.write((char*)&S_params, sizeof(S_params));
     state.write((char*)&S_out_params, sizeof(S_out_params));
     state.write((char*)&S_status, sizeof(S_status));
+    state.write((char*)&rtc, sizeof(rtc));
 }

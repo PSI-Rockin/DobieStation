@@ -23,6 +23,17 @@ enum class NCOMMAND
     BREAK
 };
 
+struct RTC
+{
+    int vsyncs;
+    int second;
+    int minute;
+    int hour;
+    int day;
+    int month;
+    int year;
+};
+
 class CDVD_Drive
 {
     private:
@@ -57,6 +68,7 @@ class CDVD_Drive
         uint8_t N_params;
         uint8_t N_status;
         int N_cycles_left;
+        RTC rtc;
 
         uint8_t S_command;
         uint8_t S_command_params[16];
@@ -83,6 +95,7 @@ class CDVD_Drive
         ~CDVD_Drive();
 
         void reset();
+        void vsync();
         void update(int cycles);
         int get_block_size();
         int bytes_left();
