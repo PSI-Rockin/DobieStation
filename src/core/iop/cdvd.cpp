@@ -1,4 +1,5 @@
 #include <cstring>
+#include <ctime>
 #include "../emulator.hpp"
 #include "cdvd.hpp"
 #include "../errors.hpp"
@@ -9,6 +10,11 @@ using namespace std;
 static uint64_t IOP_CLOCK = 36864000;
 static const int PSX_CD_READSPEED = 153600;
 static const int PSX_DVD_READSPEED = 1382400;
+
+//Values taken from PCSX2
+static const uint8_t monthmap[13] = { 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 };
+#define btoi(b) ((b)/16*10 + (b)%16)    /* BCD to u_char */
+#define itob(i) ((i)/10*16 + (i)%10)    /* u_char to BCD */
 
 uint32_t CDVD_Drive::get_block_timing(bool mode_DVD)
 {
@@ -45,6 +51,65 @@ void CDVD_Drive::reset()
     read_bytes_left = 0;
     ISTAT = 0;
     file_size = 0;
+    time_t raw_time;
+    struct tm * time;
+    std::time(&raw_time);
+    time = std::gmtime(&raw_time);
+    rtc.vsyncs = 0;
+    rtc.second = time->tm_sec;
+    rtc.minute = time->tm_min;
+    rtc.hour = time->tm_hour+9;
+    rtc.day = time->tm_mday;
+    rtc.month = time->tm_mon+1; //Jan = 0
+    rtc.year = time->tm_year - 100; //Returns Years since 1900
+
+    if (rtc.hour >= 24)
+    {
+        rtc.hour -= 24;
+        rtc.day++;
+        if (rtc.day > (rtc.month == 2 && rtc.year % 4 == 0 ? 29 : monthmap[rtc.month - 1]))
+        {
+            rtc.month++;
+            if (rtc.month > 12)
+            {
+                rtc.month = 1;
+                rtc.year++;
+            }
+            rtc.day = 1;
+        }
+    }
+}
+
+//TODO: Support PAL framerates
+void CDVD_Drive::vsync()
+{
+    rtc.vsyncs++;
+    if (rtc.vsyncs < 60) return;
+    rtc.vsyncs = 0;
+
+    rtc.second++;
+    if (rtc.second < 60) return;
+    rtc.second = 0;
+
+    rtc.minute++;
+    if (rtc.minute < 60) return;
+    rtc.minute = 0;
+
+    rtc.hour++;
+    if (rtc.hour < 24) return;
+    rtc.hour = 0;
+
+    rtc.day++;
+    if (rtc.day <= (rtc.month == 2 && rtc.year % 4 == 0 ? 29 : monthmap[rtc.month - 1])) return;
+    rtc.day = 1;
+
+    rtc.month++;
+    if (rtc.month < 13) return;
+    rtc.month = 1;
+
+    rtc.year++;
+    if (rtc.year < 100) return;
+    rtc.year = 0;
 }
 
 int CDVD_Drive::get_block_size()
@@ -366,8 +431,25 @@ void CDVD_Drive::send_S_command(uint8_t value)
         case 0x08:
             printf("[CDVD] ReadClock\n");
             prepare_S_outdata(8);
-            for (int i = 0; i < 8; i++)
-                S_outdata[i] = 0;
+            S_outdata[0] = 0;
+            S_outdata[1] = itob(rtc.second);
+            S_outdata[2] = itob(rtc.minute);
+            S_outdata[3] = itob(rtc.hour);
+            S_outdata[4] = 0;
+            S_outdata[5] = itob(rtc.day);
+            S_outdata[6] = itob(rtc.month);
+            S_outdata[7] = itob(rtc.year);
+            break;
+        case 0x09:
+            printf("[CDVD] WriteClock\n");
+            prepare_S_outdata(1);
+            S_outdata[0] = 0;
+            rtc.second = S_command_params[0];
+            rtc.minute = S_command_params[1] % 60;
+            rtc.hour = S_command_params[2] % 24;
+            rtc.day = S_command_params[4];
+            rtc.month = S_command_params[5] & 0x7F;
+            rtc.year = S_command_params[6];
             break;
         case 0x15:
             printf("[CDVD] ForbidDVD\n");
