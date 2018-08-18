@@ -14,33 +14,92 @@ void IOPTiming::reset()
     for (int i = 0; i < 6; i++)
     {
         timers[i].counter = 0;
-        timers[i].clocks = 0;
+        timers[i].clocks = 0;        
         write_control(i, 0);
+    }
+}
+
+void IOPTiming::count_up(int index, int cycles_per_count)
+{
+    timers[index].clocks -= cycles_per_count;
+    timers[index].counter++;
+    if (timers[index].counter == timers[index].target)
+    {
+        timers[index].control.compare_interrupt = true;
+        if (timers[index].control.compare_interrupt_enabled)
+        {
+            IRQ_test(index, false);
+            if (timers[index].control.zero_return)
+                timers[index].counter = 0;
+        }
+    }
+
+    uint32_t overflow = (index > 2) ? 0xFFFFFFFF : 0xFFFF;
+
+    if (timers[index].counter > overflow)
+    {
+        timers[index].counter -= overflow;
+        if (timers[index].control.overflow_interrupt_enabled)
+        {
+            IRQ_test(index, true);
+        }
     }
 }
 
 void IOPTiming::run()
 {
-    for (int i = 4; i < 6; i++)
+    int clock_scale;
+
+    for (int i = 0; i < 6; i++)
     {
-        timers[i].counter++;
-        if (timers[i].counter == timers[i].target)
+        timers[i].clocks++;
+        if (timers[i].control.extern_signal)
         {
-            timers[i].control.compare_interrupt = true;
-            if (timers[i].control.compare_interrupt_enabled)
+            switch (i)
             {
-                IRQ_test(i, false);
-                if (timers[i].control.zero_return)
-                    timers[i].counter = 0;
+                case 0:
+                    //Pixel Clock
+                    clock_scale = 3; //Actually too slow, it's more 2.73, but it's an easy value to use.
+                    break;
+                case 1:
+                    //HBlank
+                    clock_scale = 2350;
+                    break;
+                case 3:
+                    //HBlank
+                    clock_scale = 2350;
+                    break;
+                default:
+                    //IOP Clock
+                    clock_scale = 1;
+                    break;
             }
         }
-        if (timers[i].counter > 0xFFFFFFFF)
+        else
+            clock_scale = 1;
+
+        switch (timers[i].control.prescale)
         {
-            timers[i].counter -= 0xFFFFFFFF;
-            if (timers[i].control.overflow_interrupt_enabled)
-            {
-                IRQ_test(i, true);
-            }
+            case 0:
+                //IOP clock
+                if (timers[i].clocks >= clock_scale)
+                    count_up(i, 1 * clock_scale);
+                break;
+            case 1:
+                //1/8 IOP clock
+                if (timers[i].clocks >= (8 * clock_scale))
+                    count_up(i, 8 * clock_scale);
+                break;
+            case 2:
+                //1/16 IOP clock
+                if (timers[i].clocks >= (16 * clock_scale))
+                    count_up(i, 16 * clock_scale);
+                break;
+            case 3:
+                //1/256 IOP clock
+                if (timers[i].clocks >= (256 * clock_scale))
+                    count_up(i, 256 * clock_scale);
+                break;
         }
     }
 }
@@ -51,6 +110,18 @@ void IOPTiming::IRQ_test(int index, bool overflow)
     {
         switch (index)
         {
+            case 0:
+                e->iop_request_IRQ(4);
+                break;
+            case 1:
+                e->iop_request_IRQ(5);
+                break;
+            case 2:
+                e->iop_request_IRQ(6);
+                break;
+            case 3:
+                e->iop_request_IRQ(14);
+                break;
             case 4:
                 e->iop_request_IRQ(15);
                 break;
@@ -86,9 +157,14 @@ uint16_t IOPTiming::read_control(int index)
     reg |= timers[index].control.overflow_interrupt_enabled << 5;
     reg |= timers[index].control.repeat_int << 6;
     reg |= timers[index].control.toggle_int << 7;
+    reg |= timers[index].control.extern_signal << 8;
     reg |= timers[index].control.int_enable << 10;
     reg |= timers[index].control.compare_interrupt << 11;
     reg |= timers[index].control.overflow_interrupt << 12;
+    if (index < 4)
+        reg |= timers[index].control.prescale << 9;
+    else
+        reg |= timers[index].control.prescale << 13;
 
     timers[index].control.compare_interrupt = false;
     timers[index].control.overflow_interrupt = false;
@@ -115,6 +191,12 @@ void IOPTiming::write_control(int index, uint16_t value)
     timers[index].control.repeat_int = value & (1 << 6);
     timers[index].control.toggle_int = value & (1 << 7);
     timers[index].control.int_enable = true;
+    timers[index].control.extern_signal = value & (1 << 8);
+    if (index < 4)
+        timers[index].control.prescale = (value >> 9) & 0x1;
+    else
+        timers[index].control.prescale = (value >> 13) & 0x3;
+
     timers[index].counter = 0;
 }
 
