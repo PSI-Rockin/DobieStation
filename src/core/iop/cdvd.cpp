@@ -533,6 +533,7 @@ void CDVD_Drive::N_command_dvdread()
     printf("[CDVD] ReadDVD; Seek pos: %lld, Sectors: %lld\n", sector_pos, sectors_left);
     printf("Last read: %lld cycles ago\n", cycle_count - last_read);
     last_read = cycle_count;
+    speed = 4;
     block_size = 2064;
     start_seek();
     active_N_command = NCOMMAND::READ_SEEK;

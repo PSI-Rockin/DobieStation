@@ -115,14 +115,6 @@ void IOP_DMA::process_CDVD()
 
 void IOP_DMA::process_SPU()
 {
-    static int cycles = 50;
-    if (cycles)
-    {
-        cycles--;
-        return;
-    }
-    if (spu->running_ADMA())
-        cycles = 50;
     if (!channels[SPU].size)
     {
         channels[SPU].word_count = 0;
@@ -130,22 +122,35 @@ void IOP_DMA::process_SPU()
         spu->finish_DMA();
         return;
     }
-    uint32_t value = *(uint32_t*)&RAM[channels[SPU].addr];
-    spu->write_DMA(value);
-    channels[SPU].size--;
-    channels[SPU].addr += 4;
+
+    if (spu->running_ADMA())
+    {
+        if (spu->can_write_ADMA())
+        {
+            //Transfer 512 bytes of data (128 words) at once
+            spu->write_ADMA(RAM + channels[SPU].addr);
+            printf("[IOP DMA] SPU transfer: $%08X\n", channels[SPU].size * 2);
+            if (!spu->running_ADMA())
+            {
+                transfer_end(SPU);
+                spu->finish_DMA();
+            }
+            channels[SPU].size -= (0x200 / 4);
+            channels[SPU].addr += 0x200;
+        }
+    }
+    else
+    {
+        //Normal DMA transfer
+        uint32_t value = *(uint32_t*)&RAM[channels[SPU].addr];
+        spu->write_DMA(value);
+        channels[SPU].size--;
+        channels[SPU].addr += 4;
+    }
 }
 
 void IOP_DMA::process_SPU2()
 {
-    static int cycles = 50;
-    if (cycles)
-    {
-        cycles--;
-        return;
-    }
-    if (spu2->running_ADMA())
-        cycles = 50;
     if (!channels[SPU2].size)
     {
         channels[SPU2].word_count = 0;
@@ -153,10 +158,30 @@ void IOP_DMA::process_SPU2()
         spu2->finish_DMA();
         return;
     }
-    uint32_t value = *(uint32_t*)&RAM[channels[SPU2].addr];
-    spu2->write_DMA(value);
-    channels[SPU2].size--;
-    channels[SPU2].addr += 4;
+
+    if (spu2->running_ADMA())
+    {
+        if (spu2->can_write_ADMA())
+        {
+            //Transfer 512 bytes of data (128 words) at once
+            spu2->write_ADMA(RAM + channels[SPU2].addr);
+            channels[SPU2].size -= (0x200 / 4);
+            channels[SPU2].addr += 0x200;
+            if (!spu2->running_ADMA())
+            {
+                transfer_end(SPU2);
+                spu2->finish_DMA();
+            }
+        }
+    }
+    else
+    {
+        //Normal DMA transfer
+        uint32_t value = *(uint32_t*)&RAM[channels[SPU2].addr];
+        spu2->write_DMA(value);
+        channels[SPU2].size--;
+        channels[SPU2].addr += 4;
+    }
 }
 
 void IOP_DMA::process_SIF0()
@@ -454,9 +479,9 @@ void IOP_DMA::set_chan_control(int index, uint32_t value)
     if (channels[index].control.busy)
     {
         if (index == SPU)
-            spu->start_DMA(channels[index].size);
+            spu->start_DMA(channels[index].size * 2);
         if (index == SPU2)
-            spu2->start_DMA(channels[index].size);
+            spu2->start_DMA(channels[index].size * 2);
     }
     channels[index].control.unk30 = value & (1 << 30);
 }

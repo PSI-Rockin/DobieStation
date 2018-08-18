@@ -31,7 +31,7 @@ void DMAC::reset(uint8_t* RDRAM, uint8_t* scratchpad)
 {
     this->RDRAM = RDRAM;
     this->scratchpad = scratchpad;
-    master_disable = 0x1201; //hax
+    master_disable = 0x1201; //SCPH-39001 requires this value to be set, possibly other BIOSes too
     control.master_enable = false;
     mfifo_empty_triggered = false;
     PCR = 0;
@@ -719,7 +719,6 @@ uint32_t DMAC::read32(uint32_t address)
             reg = channels[VIF1].tag_address;
             break;
         case 0x1000A000:
-            //printf("[DMAC] Read GIF control\n");
             reg = channels[GIF].control;
             break;
         case 0x1000A010:

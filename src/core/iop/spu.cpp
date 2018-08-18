@@ -2,6 +2,14 @@
 #include "spu.hpp"
 #include "../emulator.hpp"
 
+/**
+ * Notes on "AutoDMA", as it seems to not be documented anywhere else
+ * ADMA is a way of streaming raw PCM to the SPUs.
+ * 0x200 (512) bytes are transferred at a 48000 Hz rate
+ * Bits 0 and 1 of the ADMA control register determine if the core is transferring data via AutoDMA.
+ * Bit 2 seems to be some sort of finish flag?
+ */
+
 uint16_t SPU::autodma_ctrl = 0;
 
 SPU::SPU(int id, Emulator* e) : id(id), e(e)
@@ -19,6 +27,8 @@ void SPU::reset(uint8_t* RAM)
     core_att = 0;
     autodma_ctrl = 0x0;
     ADMA_left = 0;
+    can_write_adma = false;
+    input_pos = 0;
 }
 
 void SPU::update(int cycles_to_run)
@@ -35,12 +45,20 @@ void SPU::update(int cycles_to_run)
 
 void SPU::gen_sample()
 {
-
+    input_pos++;
+    if (ADMA_left >= 0x200 && !can_write_adma)
+        can_write_adma = true;
+    input_pos &= 0x1FF;
 }
 
 bool SPU::running_ADMA()
 {
-    return ADMA_left >= 0;
+    return ADMA_left >= 0x200;
+}
+
+bool SPU::can_write_ADMA()
+{
+    return can_write_adma;
 }
 
 void SPU::finish_DMA()
@@ -51,14 +69,15 @@ void SPU::finish_DMA()
 
 void SPU::start_DMA(int size)
 {
-    size <<= 1;
     if (autodma_ctrl & (1 << (id - 1)))
     {
-        printf("ADMA size: $%08X\n", size);
+        printf("ADMA started with size: $%08X\n", size);
         ADMA_left = size;
+        if (size >= 0x200)
+            ADMA_left -= 0x100;
+        can_write_adma = false;
     }
-    else
-        ADMA_left = 0;
+    status.DMA_finished = false;
 }
 
 void SPU::write_DMA(uint32_t value)
@@ -67,17 +86,21 @@ void SPU::write_DMA(uint32_t value)
     //RAM[current_addr] = value & 0xFFFF;
     //RAM[current_addr + 1] = value >> 16;
     current_addr += 2;
-    if (ADMA_left >= 0x100)
-    {
-        ADMA_left -= 2;
-        if (ADMA_left < 0x100)
-        {
-            autodma_ctrl |= ~3;
-            ADMA_left = 0;
-        }
-    }
     status.DMA_busy = true;
     status.DMA_finished = false;
+}
+
+void SPU::write_ADMA(uint8_t *RAM)
+{
+    printf("[SPU%d] ADMA transfer: $%08X\n", id, ADMA_left);
+    can_write_adma = false;
+    ADMA_left -= 0x100;
+    if (ADMA_left < 0x200)
+    {
+        printf("[SPU%d] ADMA finished!\n", id);
+        autodma_ctrl |= ~3;
+        ADMA_left = 0;
+    }
 }
 
 uint16_t SPU::read_mem()
@@ -161,6 +184,8 @@ void SPU::write16(uint32_t addr, uint16_t value)
         case 0x1B0:
             printf("[SPU%d] Write ADMA: $%04X\n", id, value);
             autodma_ctrl = value;
+            if (!value)
+                ADMA_left = 0;
             break;
         default:
             printf("[SPU%d] Unrecognized write16 to addr $%08X of $%04X\n", id, addr, value);

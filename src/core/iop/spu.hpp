@@ -31,9 +31,11 @@ class SPU
 
         uint32_t current_addr;
 
-        //Shared variables for the cores
+        //ADMA bullshit
         static uint16_t autodma_ctrl;
         int ADMA_left;
+        bool can_write_adma;
+        int input_pos;
 
         int cycles;
 
@@ -42,6 +44,7 @@ class SPU
         SPU(int id, Emulator* e);
 
         bool running_ADMA();
+        bool can_write_ADMA();
 
         void reset(uint8_t* RAM);
         void update(int cycles_to_run);
@@ -51,6 +54,7 @@ class SPU
 
         uint16_t read_mem();
         void write_DMA(uint32_t value);
+        void write_ADMA(uint8_t* RAM);
         void write_mem(uint16_t value);
 
         uint16_t read16(uint32_t addr);

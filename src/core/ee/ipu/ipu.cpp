@@ -6,6 +6,8 @@
 #include "../intc.hpp"
 #include "../../errors.hpp"
 
+#define printf(fmt, ...)(0)
+
 /**
   * The majority of this code is based upon Play!'s implementation of the IPU.
   * All the relevant files are located in the following links:
