@@ -2170,7 +2170,7 @@ void EmotionInterpreter::multu1(EmotionEngine& cpu, uint32_t instruction)
     op1 = cpu.get_gpr<uint32_t>(op1);
     op2 = cpu.get_gpr<uint32_t>(op2);
     uint64_t temp = (uint64_t)op1 * op2;
-    cpu.set_LO_HI((int64_t)(int32_t)temp & 0xFFFFFFFF, (int64_t)(int32_t)temp >> 32, true);
+    cpu.set_LO_HI((int64_t)(int32_t)(temp & 0xFFFFFFFF), (int64_t)temp >> 32, true);
     cpu.mflo1(dest);
 }
 
@@ -2211,7 +2211,7 @@ void EmotionInterpreter::divu1(EmotionEngine &cpu, uint32_t instruction)
     }
     else
     {
-        cpu.set_LO_HI((int64_t)-1, op1, true);
+        cpu.set_LO_HI((int64_t)-1, (int64_t)(int32_t)op1, true);
     }
 }
 
