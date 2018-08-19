@@ -434,6 +434,16 @@ void DMAC::process_SPR_FROM(int cycles)
             channels[SPR_FROM].scratchpad_address += 16;
             advance_dest_dma(SPR_FROM);
 
+            if ((channels[SPR_FROM].control >> 2) & 0x3 == 0x2)
+            {
+                channels[SPR_FROM].interleaved_qwc--;
+                if (!channels[SPR_FROM].interleaved_qwc)
+                {
+                    channels[SPR_FROM].interleaved_qwc = SQWC.transfer_qwc;
+                    channels[SPR_FROM].address += SQWC.skip_qwc * 16;
+                }
+            }
+
             if (control.mem_drain_channel != 0)
                 channels[SPR_FROM].address = RBOR | (channels[SPR_FROM].address & RBSR);
         }
@@ -480,6 +490,16 @@ void DMAC::process_SPR_TO(int cycles)
             channels[SPR_TO].scratchpad_address += 16;
 
             advance_source_dma(SPR_TO);
+
+            if((channels[SPR_TO].control >> 2) & 0x3 == 0x2)
+            {
+                channels[SPR_TO].interleaved_qwc--;
+                if (!channels[SPR_TO].interleaved_qwc)
+                {
+                    channels[SPR_TO].interleaved_qwc = SQWC.transfer_qwc;
+                    channels[SPR_TO].address += SQWC.skip_qwc * 16;
+                }
+            }
         }
         else
         {
@@ -655,10 +675,11 @@ void DMAC::start_DMA(int index)
     printf("ASP: %d\n", (channels[index].control >> 4) & 0x3);
     printf("TTE: %d\n", channels[index].control & (1 << 6));
     int mode = (channels[index].control >> 2) & 0x3;
-    channels[index].tag_end = (mode == 0); //always end transfers in normal mode
+    channels[index].tag_end = !(mode & 0x1); //always end transfers in normal and interleave mode
     if (mode == 2) 
     {
         printf("[DMAC] D%d Unhandled Interleave Mode", index);
+        channels[index].interleaved_qwc = SQWC.transfer_qwc;
     }
 }
 
@@ -1057,6 +1078,11 @@ void DMAC::write32(uint32_t address, uint32_t value)
         case 0x1000E020:
             printf("[DMAC] Write to PCR: $%08X\n", value);
             PCR = value;
+            break;
+        case 0x1000E030:
+            printf("[DMAC] Write to SQWC: $%08X\n", value);
+            SQWC.skip_qwc = value & 0xFF;
+            SQWC.transfer_qwc = (value >> 16) & 0xFF;
             break;
         case 0x1000E040:
             printf("[DMAC] Write to RBSR: $%08X\n", value);
