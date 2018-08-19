@@ -158,11 +158,15 @@ namespace EmotionInterpreter
     void cop2_vminibc(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmulbc(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmulq(VectorUnit& vu0, uint32_t instruction);
+    void cop2_vmaxi(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmuli(VectorUnit& vu0, uint32_t instruction);
     void cop2_vminii(VectorUnit& vu0, uint32_t instruction);
     void cop2_vaddq(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmaddq(VectorUnit& vu0, uint32_t instruction);
+    void cop2_vaddi(VectorUnit& vu0, uint32_t instruction);
+    void cop2_vmaddi(VectorUnit& vu0, uint32_t instruction);
     void cop2_vsubq(VectorUnit& vu0, uint32_t instruction);
+    void cop2_vmsubq(VectorUnit& vu0, uint32_t instruction);
     void cop2_vsubi(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmsubi(VectorUnit& vu0, uint32_t instruction);
     void cop2_vadd(VectorUnit& vu0, uint32_t instruction);

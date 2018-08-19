@@ -878,9 +878,11 @@ void VU_Interpreter::lower1_special(VectorUnit &vu, uint32_t instr)
             ersqrt(vu, instr);
             break;
         case 0x7B:
-            /**
-              * WAITP
-              */
+            //waitp should wait for the P pipeline to finish, which isn't emulated. For now, let's just flush the pipes.
+            vu.flush_pipes();
+            break;
+        case 0x7E:
+            eexp(vu, instr);
             break;
         default:
             unknown_op("lower1 special", instr, op);
@@ -1074,6 +1076,13 @@ void VU_Interpreter::ersqrt(VectorUnit &vu, uint32_t instr)
     uint8_t source = (instr >> 11) & 0x1F;
     uint8_t fsf = (instr >> 21) & 0x3;
     vu.ersqrt(fsf, source);
+}
+
+void VU_Interpreter::eexp(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t fsf = (instr >> 21) & 0x3;
+    vu.eexp(fsf, source);
 }
 
 void VU_Interpreter::lower2(VectorUnit &vu, uint32_t instr)

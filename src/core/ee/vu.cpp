@@ -609,11 +609,35 @@ void VectorUnit::div(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2)
     printf("Reg2: %f\n", denom);
 }
 
+void VectorUnit::eexp(uint8_t fsf, uint8_t source)
+{
+    //P = exp(-reg)
+    //In reality, VU1 uses an approximation to derive the result. This is shown here.
+    const static float coeffs[] =
+    {
+        0.249998688697815, 0.031257584691048,
+        0.002591371303424, 0.000171562001924,
+        0.000005430199963, 0.000000690600018
+    };
+    if (!id)
+        Errors::die("[VU] EEXP called on VU0!");
+
+    if (gpr[source].u[fsf] & 0x80000000)
+        Errors::die("[VU] EEXP called with sign bit set");
+
+    float value = 1;
+    float x = convert(gpr[source].u[fsf]);
+    for (int exp = 1; exp <= 6; exp++)
+        value += coeffs[exp - 1] * pow(x, exp);
+
+    P.f = 1.0 / value;
+}
+
 void VectorUnit::eleng(uint8_t source)
 {
     if (!id)
     {
-        Errors::die("[VU] ERROR: ELENG called on VU0!\n");
+        Errors::die("[VU] ELENG called on VU0!\n");
     }
 
     //P = sqrt(x^2 + y^2 + z^2)
@@ -628,7 +652,7 @@ void VectorUnit::esqrt(uint8_t fsf, uint8_t source)
 {
     if (!id)
     {
-        Errors::die("[VU] ERROR: ESQRT called on VU0!\n");
+        Errors::die("[VU] ESQRT called on VU0!\n");
     }
 
     P.f = convert(gpr[source].u[fsf]);
@@ -641,7 +665,7 @@ void VectorUnit::erleng(uint8_t source)
 {
     if (!id)
     {
-        Errors::die("[VU] ERROR: ERLENG called on VU0!\n");
+        Errors::die("[VU] ERLENG called on VU0!\n");
     }
 
     //P = 1 / sqrt(x^2 + y^2 + z^2)
@@ -660,7 +684,7 @@ void VectorUnit::ersqrt(uint8_t fsf, uint8_t source)
 {
     if (!id)
     {
-        Errors::die("[VU] ERROR: ERSQRT called on VU0!\n");
+        Errors::die("[VU] ERSQRT called on VU0!\n");
     }
 
     P.f = convert(gpr[source].u[fsf]);
@@ -1372,6 +1396,24 @@ void VectorUnit::msubi(uint8_t field, uint8_t dest, uint8_t source)
 {
     printf("[VU] MSUBi: ");
     float op = convert(I.u);
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            float temp = convert(ACC.u[i]) - convert(gpr[source].u[i]) * op;
+            set_gpr_f(dest, i, update_mac_flags(temp, i));
+            printf("(%d)%f ", i, gpr[dest].f[i]);
+        }
+        else
+            clear_mac_flags(i);
+    }
+    printf("\n");
+}
+
+void VectorUnit::msubq(uint8_t field, uint8_t dest, uint8_t source)
+{
+    printf("[VU] MSUBq: ");
+    float op = convert(Q.u);
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))

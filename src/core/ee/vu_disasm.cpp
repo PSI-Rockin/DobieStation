@@ -458,6 +458,8 @@ string VU_Disasm::lower1_special(uint32_t PC, uint32_t instr)
             return ersqrt(instr);
         case 0x7B:
             return "waitp";
+        case 0x7E:
+            return eexp(instr);
         default:
             return "[unknown lower1 special]";
     }
@@ -705,6 +707,14 @@ string VU_Disasm::ersqrt(uint32_t instr)
     stringstream output;
     uint32_t source = (instr >> 11) & 0x1F;
     output << "ersqrt P, vf" << source << "." << get_fsf((instr >> 21) & 0x3);
+    return output.str();
+}
+
+string VU_Disasm::eexp(uint32_t instr)
+{
+    stringstream output;
+    uint32_t source = (instr >> 11) & 0x1F;
+    output << "eexp P, vf" << source << "." << get_fsf((instr >> 21) & 0x3);
     return output.str();
 }
 

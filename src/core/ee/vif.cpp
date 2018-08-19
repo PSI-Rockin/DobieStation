@@ -825,11 +825,12 @@ bool VectorInterface::feed_DMA(uint128_t quad)
 void VectorInterface::disasm_micromem()
 {
     //Check for branch targets and also see if the microprogram is the same as the one previously disassembled
+    int size = (vu->get_id()) ? 0x4000 : 0x1000;
     static uint64_t last_micro[0x4000 / 8];
     bool should_disasm = false;
     bool is_branch_target[0x4000 / 8];
-    memset(is_branch_target, 0, 0x4000 / 8);
-    for (int i = 0; i < 0x4000; i += 8)
+    memset(is_branch_target, 0, size / 8);
+    for (int i = 0; i < size; i += 8)
     {
         uint32_t lower = vu->read_instr<uint32_t>(i);
 
@@ -848,7 +849,7 @@ void VectorInterface::disasm_micromem()
             imm *= 8;
 
             uint32_t addr = i + imm + 8;
-            if (addr < 0x4000)
+            if (addr < size)
                 is_branch_target[addr / 8] = true;
         }
     }
@@ -870,7 +871,7 @@ void VectorInterface::disasm_micromem()
         Errors::die("Failed to open\n");
     }
 
-    for (int i = 0; i < 0x4000; i += 8)
+    for (int i = 0; i < size; i += 8)
     {
         if (is_branch_target[i / 8])
         {

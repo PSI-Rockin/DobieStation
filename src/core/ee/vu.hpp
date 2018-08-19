@@ -138,6 +138,7 @@ class VectorUnit
         void addq(uint8_t field, uint8_t dest, uint8_t source);
         void clip(uint8_t reg1, uint8_t reg2);
         void div(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2);
+        void eexp(uint8_t fsf, uint8_t source);
         void eleng(uint8_t source);
         void esqrt(uint8_t fsf, uint8_t source);
         void erleng(uint8_t source);
@@ -196,6 +197,7 @@ class VectorUnit
         void msub(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2);
         void msubbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
         void msubi(uint8_t field, uint8_t dest, uint8_t source);
+        void msubq(uint8_t field, uint8_t dest, uint8_t source);
         void mtir(uint8_t fsf, uint8_t dest, uint8_t source);
         void mul(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2);
         void mula(uint8_t field, uint8_t reg1, uint8_t reg2);

@@ -53,7 +53,7 @@ void SPU::gen_sample()
 
 bool SPU::running_ADMA()
 {
-    return ADMA_left >= 0x200;
+    return ADMA_left > 0;
 }
 
 bool SPU::can_write_ADMA()
@@ -74,7 +74,7 @@ void SPU::start_DMA(int size)
         printf("ADMA started with size: $%08X\n", size);
         ADMA_left = size;
         if (size >= 0x200)
-            ADMA_left -= 0x100;
+            ADMA_left -= 0x200;
         can_write_adma = false;
     }
     status.DMA_finished = false;
@@ -94,7 +94,7 @@ void SPU::write_ADMA(uint8_t *RAM)
 {
     printf("[SPU%d] ADMA transfer: $%08X\n", id, ADMA_left);
     can_write_adma = false;
-    ADMA_left -= 0x100;
+    ADMA_left -= 0x200;
     if (ADMA_left < 0x200)
     {
         printf("[SPU%d] ADMA finished!\n", id);

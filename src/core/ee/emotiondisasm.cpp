@@ -1367,6 +1367,8 @@ string EmotionDisasm::disasm_cop2_special(uint32_t instruction)
             return disasm_vmulbc(instruction);
         case 0x1C:
             return disasm_vmulq(instruction);
+        case 0x1D:
+            return disasm_vmaxi(instruction);
         case 0x1E:
             return disasm_vmuli(instruction);
         case 0x1F:
@@ -1375,8 +1377,14 @@ string EmotionDisasm::disasm_cop2_special(uint32_t instruction)
             return disasm_vaddq(instruction);
         case 0x21:
             return disasm_vmaddq(instruction);
+        case 0x22:
+            return disasm_vaddi(instruction);
+        case 0x23:
+            return disasm_vmaddi(instruction);
         case 0x24:
             return disasm_vsubq(instruction);
+        case 0x25:
+            return disasm_vmsubq(instruction);
         case 0x26:
             return disasm_vsubi(instruction);
         case 0x27:
@@ -1452,6 +1460,11 @@ string EmotionDisasm::disasm_vmulq(uint32_t instruction)
     return disasm_cop2_special_q("vmul", instruction);
 }
 
+string EmotionDisasm::disasm_vmaxi(uint32_t instruction)
+{
+    return disasm_cop2_special_i("vmax", instruction);
+}
+
 string EmotionDisasm::disasm_vmuli(uint32_t instruction)
 {
     return disasm_cop2_special_i("vmul", instruction);
@@ -1472,9 +1485,24 @@ string EmotionDisasm::disasm_vmaddq(uint32_t instruction)
     return disasm_cop2_special_q("vmadd", instruction);
 }
 
+string EmotionDisasm::disasm_vaddi(uint32_t instruction)
+{
+    return disasm_cop2_special_i("vadd", instruction);
+}
+
+string EmotionDisasm::disasm_vmaddi(uint32_t instruction)
+{
+    return disasm_cop2_special_i("vmadd", instruction);
+}
+
 string EmotionDisasm::disasm_vsubq(uint32_t instruction)
 {
     return disasm_cop2_special_q("vsub", instruction);
+}
+
+string EmotionDisasm::disasm_vmsubq(uint32_t instruction)
+{
+    return disasm_cop2_special_q("vmsub", instruction);
 }
 
 string EmotionDisasm::disasm_vsubi(uint32_t instruction)
