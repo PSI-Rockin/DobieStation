@@ -4,7 +4,7 @@
 
 #define VER_MAJOR 0
 #define VER_MINOR 0
-#define VER_REV 4
+#define VER_REV 5
 
 using namespace std;
 
@@ -423,6 +423,7 @@ void DMAC::load_state(ifstream &state)
     state.read((char*)&PCR, sizeof(PCR));
     state.read((char*)&RBOR, sizeof(RBOR));
     state.read((char*)&RBSR, sizeof(RBSR));
+    state.read((char*)&SQWC, sizeof(SQWC));
     state.read((char*)&mfifo_empty_triggered, sizeof(mfifo_empty_triggered));
     state.read((char*)&master_disable, sizeof(master_disable));
 }
@@ -436,6 +437,7 @@ void DMAC::save_state(ofstream &state)
     state.write((char*)&PCR, sizeof(PCR));
     state.write((char*)&RBOR, sizeof(RBOR));
     state.write((char*)&RBSR, sizeof(RBSR));
+    state.write((char*)&SQWC, sizeof(SQWC));
     state.write((char*)&mfifo_empty_triggered, sizeof(mfifo_empty_triggered));
     state.write((char*)&master_disable, sizeof(master_disable));
 }

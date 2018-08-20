@@ -16,6 +16,7 @@ struct DMA_Channel
 
     bool tag_end;
     bool paused;
+    uint8_t interleaved_qwc;
     uint8_t tag_id;
 };
 
@@ -34,6 +35,12 @@ struct D_STAT
 {
     bool channel_stat[15];
     bool channel_mask[15];
+};
+
+struct D_SQWC
+{
+    uint8_t skip_qwc;
+    uint8_t transfer_qwc;
 };
 
 class EmotionEngine;
@@ -58,6 +65,7 @@ class DMAC
         D_CTRL control;
         D_STAT interrupt_stat;
         uint32_t PCR;
+        D_SQWC SQWC;
         uint32_t RBOR, RBSR;
         bool mfifo_empty_triggered;
 
