@@ -263,7 +263,6 @@ void EmuWindow::paintEvent(QPaintEvent *event)
 {
     event->accept();
     QPainter painter(this);
-    painter.fillRect(rect(), Qt::black);
 
     printf("Draw image!\n");
 
