@@ -60,7 +60,7 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
     //Initialize window
     title = "DobieStation";
     setWindowTitle(QString::fromStdString(title));
-    resize(640, 448);
+    resize(640, 448 + menuBar()->geometry().height());
     show();
 }
 
@@ -254,7 +254,7 @@ void EmuWindow::draw_frame(uint32_t *buffer, int inner_w, int inner_h, int final
     else
     {
         final_image = final_image.scaled(final_w*scale_factor, final_h*scale_factor);
-        resize(final_w*scale_factor, final_h*scale_factor);
+        resize(final_w*scale_factor, final_h*scale_factor + menuBar()->geometry().height());
     }
     update();
 }
@@ -267,7 +267,7 @@ void EmuWindow::paintEvent(QPaintEvent *event)
 
     printf("Draw image!\n");
 
-    painter.drawPixmap(0, 0, QPixmap::fromImage(final_image));
+    painter.drawPixmap(0, menuBar()->geometry().height(), QPixmap::fromImage(final_image));
 }
 
 void EmuWindow::closeEvent(QCloseEvent *event)
