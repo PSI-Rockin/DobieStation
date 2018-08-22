@@ -126,6 +126,8 @@ void ImageProcessingUnit::run()
                     process_FDEC();
                 break;
             case 0x05:
+                if (!in_FIFO.advance_stream(command_option & 0x3F))
+                    return;
                 while (bytes_left && in_FIFO.f.size())
                 {
                     uint128_t quad = in_FIFO.f.front();

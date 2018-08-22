@@ -73,8 +73,6 @@ void SPU::start_DMA(int size)
     {
         printf("ADMA started with size: $%08X\n", size);
         ADMA_left = size;
-        if (size >= 0x200)
-            ADMA_left -= 0x200;
         can_write_adma = false;
     }
     status.DMA_finished = false;

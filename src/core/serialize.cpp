@@ -4,7 +4,7 @@
 
 #define VER_MAJOR 0
 #define VER_MINOR 0
-#define VER_REV 5
+#define VER_REV 6
 
 using namespace std;
 
@@ -302,7 +302,8 @@ void VectorUnit::load_state(ifstream &state)
     //Pipelines
     state.read((char*)&new_MAC_flags, sizeof(new_MAC_flags));
     state.read((char*)&MAC_pipeline, sizeof(MAC_pipeline));
-    state.read((char*)&Q_Pipeline, sizeof(Q_Pipeline));
+    state.read((char*)&cycle_count, sizeof(cycle_count));
+    state.read((char*)&finish_DIV_event, sizeof(finish_DIV_event));
     state.read((char*)&new_Q_instance.u, sizeof(new_Q_instance.u));
 
     //XGKICK
@@ -350,7 +351,8 @@ void VectorUnit::save_state(ofstream &state)
     //Pipelines
     state.write((char*)&new_MAC_flags, sizeof(new_MAC_flags));
     state.write((char*)&MAC_pipeline, sizeof(MAC_pipeline));
-    state.write((char*)&Q_Pipeline, sizeof(Q_Pipeline));
+    state.write((char*)&cycle_count, sizeof(cycle_count));
+    state.write((char*)&finish_DIV_event, sizeof(finish_DIV_event));
     state.write((char*)&new_Q_instance.u, sizeof(new_Q_instance.u));
 
     //XGKICK

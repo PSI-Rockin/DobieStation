@@ -38,6 +38,8 @@ class VectorUnit
         GraphicsInterface* gif;
         int id;
 
+        uint64_t cycle_count;
+
         uint16_t *VIF_TOP, *VIF_ITOP;
 
         uint8_t instr_mem[1024 * 16];
@@ -76,11 +78,14 @@ class VectorUnit
         uint16_t* MAC_flags; //pointer to last element in the pipeline; the register accessible to programs
         uint16_t new_MAC_flags; //to be placed in the pipeline
 
-        float Q_Pipeline[6];
         VU_R new_Q_instance;
+        uint64_t finish_DIV_event;
 
         float update_mac_flags(float value, int index);
         void clear_mac_flags(int index);
+
+        //Updates new_Q_instance
+        void start_DIV_unit(int latency);
         
         void update_status();
         void advance_r();
@@ -93,7 +98,6 @@ class VectorUnit
         void set_GIF(GraphicsInterface* gif);
 
         void update_mac_pipeline();
-        void update_div_pipeline();
         void flush_pipes();
 
         void run(int cycles);

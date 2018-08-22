@@ -32,6 +32,7 @@ void VectorUnit::reset()
     status = 0;
     clip_flags = 0;
     PC = 0;
+    cycle_count = 1; //Set to 1 to prevent spurious events from occurring during execution
     running = false;
     finish_on = false;
     branch_on = false;
@@ -43,6 +44,7 @@ void VectorUnit::reset()
     XGKICK_cycles = 0;
     new_MAC_flags = 0;
     new_Q_instance.u = 0;
+    finish_DIV_event = 0;
     flush_pipes();
 
     for (int i = 1; i < 32; i++)
@@ -76,8 +78,7 @@ void VectorUnit::flush_pipes()
     while (*MAC_flags != new_MAC_flags)
         update_mac_pipeline();
 
-    while (Q.f != new_Q_instance.f)
-        update_div_pipeline();
+    Q.u = new_Q_instance.u;
 }
 
 void VectorUnit::run(int cycles)
@@ -85,8 +86,10 @@ void VectorUnit::run(int cycles)
     int cycles_to_run = cycles;
     while (running && cycles_to_run)
     {
+        cycle_count++;
         update_mac_pipeline();
-        update_div_pipeline();
+        if (cycle_count == finish_DIV_event)
+            Q.u = new_Q_instance.u;
 
         if (XGKICK_stall)
             break;
@@ -102,7 +105,7 @@ void VectorUnit::run(int cycles)
             if (!delay_slot)
             {
                 PC = new_PC;
-                if(second_branch_pending)
+                if (second_branch_pending)
                 {
                     new_PC = secondbranch_PC;
                     second_branch_pending = false;
@@ -263,15 +266,9 @@ void VectorUnit::update_mac_pipeline()
         update_status();
 }
 
-void VectorUnit::update_div_pipeline()
+void VectorUnit::start_DIV_unit(int latency)
 {
-    Q.f = Q_Pipeline[5];
-    Q_Pipeline[5] = Q_Pipeline[4];
-    Q_Pipeline[4] = Q_Pipeline[3];
-    Q_Pipeline[3] = Q_Pipeline[2];
-    Q_Pipeline[2] = Q_Pipeline[1];
-    Q_Pipeline[1] = Q_Pipeline[0];
-    Q_Pipeline[0] = new_Q_instance.f;
+    finish_DIV_event = cycle_count + latency;
 }
 
 float VectorUnit::convert(uint32_t value)
@@ -604,6 +601,7 @@ void VectorUnit::div(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2)
         new_Q_instance.f = num / denom;
         new_Q_instance.f = convert(new_Q_instance.u);
     }
+    start_DIV_unit(7);
     printf("[VU] DIV: %f\n", new_Q_instance.f);
     printf("Reg1: %f\n", num);
     printf("Reg2: %f\n", denom);
@@ -1673,8 +1671,6 @@ void VectorUnit::rsqrt(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2)
             else
                 new_Q_instance.u = 0x7F7FFFFF;
         }
-        
-        
     }
     else
     {
@@ -1685,6 +1681,7 @@ void VectorUnit::rsqrt(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2)
         new_Q_instance.f /= sqrt(fabs(denom));
         new_Q_instance.f = convert(new_Q_instance.u);
     }
+    start_DIV_unit(13);
     printf("[VU] RSQRT: %f\n", new_Q_instance.f);
     printf("Reg1: %f\n", gpr[reg1].f[fsf]);
     printf("Reg2: %f\n", gpr[reg2].f[ftf]);
@@ -1753,6 +1750,7 @@ void VectorUnit::vu_sqrt(uint8_t ftf, uint8_t source)
 
     new_Q_instance.f = sqrt(fabs(convert(gpr[source].u[ftf])));
     new_Q_instance.f = convert(new_Q_instance.u);
+    start_DIV_unit(7);
     printf("[VU] SQRT: %f\n", new_Q_instance.f);
     printf("Source: %f\n", gpr[source].f[ftf]);
 }
@@ -1883,11 +1881,12 @@ void VectorUnit::subq(uint8_t field, uint8_t dest, uint8_t source)
 
 void VectorUnit::waitq()
 {
-    while (Q.u != new_Q_instance.u)
+    while (cycle_count < finish_DIV_event)
     {
+        cycle_count++;
         update_mac_pipeline();
-        update_div_pipeline();
     }
+    Q.u = new_Q_instance.u;
 }
 
 #undef printf
