@@ -434,7 +434,7 @@ void DMAC::process_SPR_FROM(int cycles)
             channels[SPR_FROM].scratchpad_address += 16;
             advance_dest_dma(SPR_FROM);
 
-            if ((channels[SPR_FROM].control >> 2) & 0x3 == 0x2)
+            if (((channels[SPR_FROM].control >> 2) & 0x3) == 0x2)
             {
                 channels[SPR_FROM].interleaved_qwc--;
                 if (!channels[SPR_FROM].interleaved_qwc)
@@ -491,7 +491,7 @@ void DMAC::process_SPR_TO(int cycles)
 
             advance_source_dma(SPR_TO);
 
-            if((channels[SPR_TO].control >> 2) & 0x3 == 0x2)
+            if (((channels[SPR_TO].control >> 2) & 0x3) == 0x2)
             {
                 channels[SPR_TO].interleaved_qwc--;
                 if (!channels[SPR_TO].interleaved_qwc)
@@ -676,10 +676,21 @@ void DMAC::start_DMA(int index)
     printf("TTE: %d\n", channels[index].control & (1 << 6));
     int mode = (channels[index].control >> 2) & 0x3;
     channels[index].tag_end = !(mode & 0x1); //always end transfers in normal and interleave mode
-    if (mode == 2) 
+    switch (mode)
     {
-        printf("[DMAC] D%d Unhandled Interleave Mode", index);
-        channels[index].interleaved_qwc = SQWC.transfer_qwc;
+        case 1: //Chain
+            //If QWC > 0 and the current tag in CHCR is a terminal tag, end the transfer
+            if (channels[index].quadword_count > 0)
+            {
+                int tag = channels[index].control >> 24;
+                if (tag == 0 || tag == 7)
+                    channels[index].tag_end = true;
+            }
+            break;
+        case 2: //Interleave
+            printf("[DMAC] D%d Interleave mode", index);
+            channels[index].interleaved_qwc = SQWC.transfer_qwc;
+            break;
     }
 }
 

@@ -46,7 +46,7 @@ void SPU::update(int cycles_to_run)
 void SPU::gen_sample()
 {
     input_pos++;
-    if (ADMA_left >= 0x200 && !can_write_adma)
+    if (ADMA_left >= 0x40 && !can_write_adma && autodma_ctrl & (1 << (id - 1)))
         can_write_adma = true;
     input_pos &= 0x1FF;
 }
@@ -75,6 +75,8 @@ void SPU::start_DMA(int size)
         ADMA_left = size;
         can_write_adma = false;
     }
+    else
+        ADMA_left = -1;
     status.DMA_finished = false;
 }
 
@@ -92,8 +94,8 @@ void SPU::write_ADMA(uint8_t *RAM)
 {
     printf("[SPU%d] ADMA transfer: $%08X\n", id, ADMA_left);
     can_write_adma = false;
-    ADMA_left -= 0x200;
-    if (ADMA_left < 0x200)
+    ADMA_left -= 0x40;
+    if (ADMA_left < 0x40)
     {
         printf("[SPU%d] ADMA finished!\n", id);
         autodma_ctrl |= ~3;
@@ -182,8 +184,6 @@ void SPU::write16(uint32_t addr, uint16_t value)
         case 0x1B0:
             printf("[SPU%d] Write ADMA: $%04X\n", id, value);
             autodma_ctrl = value;
-            if (!value)
-                ADMA_left = 0;
             break;
         default:
             printf("[SPU%d] Unrecognized write16 to addr $%08X of $%04X\n", id, addr, value);

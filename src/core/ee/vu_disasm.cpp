@@ -968,6 +968,6 @@ string VU_Disasm::jalr(uint32_t instr)
     stringstream output;
     uint32_t addr_reg = (instr >> 11) & 0x1F;
     uint32_t link_reg = (instr >> 16) & 0x1F;
-    output << "jalr vi" << link_reg << " vi " << addr_reg;
+    output << "jalr vi" << link_reg << ", vi" << addr_reg;
     return output.str();
 }

@@ -8,7 +8,7 @@
 
 #include "../emulator.hpp"
 
-#define SKIPMPEG_ON
+//#define SKIPMPEG_ON
 
 //#define printf(fmt, ...)(0)
 
