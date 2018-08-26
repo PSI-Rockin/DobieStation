@@ -451,6 +451,17 @@ void CDVD_Drive::send_S_command(uint8_t value)
             rtc.month = S_command_params[5] & 0x7F;
             rtc.year = S_command_params[6];
             break;
+        case 0x12:
+            printf("[CDVD] sceCdReadILinkId\n");
+            prepare_S_outdata(9);
+            for (int i = 0; i < 9; i++)
+                S_outdata[i] = 0;
+            break;
+        case 0x13:
+            printf("[CDVD] sceCdWriteILinkId\n");
+            prepare_S_outdata(1);
+            S_outdata[0] = 0;
+            break;
         case 0x15:
             printf("[CDVD] ForbidDVD\n");
             prepare_S_outdata(1);
