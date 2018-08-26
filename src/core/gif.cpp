@@ -262,5 +262,6 @@ void GraphicsInterface::send_PATH2(uint32_t data[])
 
 void GraphicsInterface::send_PATH3(uint128_t data)
 {
+    //printf("[GIF] Send PATH3 $%08X_%08X_%08X_%08X\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
     feed_GIF(data);
 }

@@ -113,28 +113,10 @@ void EmotionEngine::reset()
 int EmotionEngine::run(int cycles_to_run)
 {
     int cycles = cycles_to_run;
-    static int calls = 0;
     while (cycles_to_run)
     {
         cycles_to_run--;
         uint32_t instruction = read32(PC);
-        if (PC == 0x37BDD4)
-        {
-            //calls++;
-            //if (calls == 3)
-                //can_disassemble = true;
-            printf("readBufBeginPut\n");
-        }
-        if (PC == 0x0037BE28)
-            printf("readBufBeginGet\n");
-        if (PC == 0x0037Be50)
-            printf("sceMpegDemuxPssRing\n");
-        if (PC == 0x00218060)
-        {
-            calls++;
-            //if (calls == 3)
-                //can_disassemble = true;
-        }
         if ((PC < 0x81FC0 || PC >= 0x81FE0))
         {
             if (can_disassemble)

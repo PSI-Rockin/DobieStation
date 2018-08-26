@@ -322,18 +322,24 @@ bool ImageProcessingUnit::process_BDEC()
                 }
 
                 if (/*check_start_code*/ true)
+                    bdec.state = BDEC_STATE::CHECK_START_CODE;
+                else
+                    return true;
+            }
+            case BDEC_STATE::CHECK_START_CODE:
+            {
+                uint32_t bits;
+                if (in_FIFO.get_bits(bits, 8))
                 {
-                    uint32_t bits;
-                    if (in_FIFO.get_bits(bits, 8))
+                    if (!bits)
                     {
-                        if (!bits)
-                        {
-                            ctrl.start_code = true;
-                            printf("[IPU] Start code detected!\n");
-                        }
+                        ctrl.start_code = true;
+                        printf("[IPU] Start code detected!\n");
                     }
+                    return true;
                 }
-                return true;
+                else
+                    return false;
             }
         }
     }

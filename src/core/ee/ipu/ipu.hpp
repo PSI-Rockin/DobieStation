@@ -46,7 +46,8 @@ enum class BDEC_STATE
     BEGIN_DECODING,
     READ_COEFFS,
     LOAD_NEXT_BLOCK,
-    DONE
+    DONE,
+    CHECK_START_CODE
 };
 
 struct BDEC_Command

@@ -109,8 +109,7 @@ void Emulator::run()
             gs.set_VBLANK(true);
             timers.gate(true, true);
             cdvd.vsync();
-            //cpu.set_disassembly(frames == 53);
-            //cpu.set_disassembly(frames == 500);
+            //cpu.set_disassembly(frames == 290);
             printf("VSYNC FRAMES: %d\n", frames);
             gs.assert_VSYNC();
             frames++;
@@ -607,7 +606,7 @@ void Emulator::write16(uint32_t address, uint16_t value)
 
 void Emulator::write32(uint32_t address, uint32_t value)
 {
-    if (address == 0x00489A10)
+    if (address == 0x01FFFBD4)
         printf("[EE] Write32 $%08X: $%08X\n", address, value);
     if (address < 0x10000000)
     {
@@ -706,8 +705,10 @@ void Emulator::write32(uint32_t address, uint32_t value)
 
 void Emulator::write64(uint32_t address, uint64_t value)
 {
-    if (address == 0x00489A10)
+    if (address == 0x01FFFBD0)
+    {
         printf("[EE] Write64 $%08X: $%08X_%08X\n", address, value >> 32, value);
+    }
     if (address < 0x10000000)
     {
         *(uint64_t*)&RDRAM[address & 0x01FFFFFF] = value;
@@ -763,7 +764,7 @@ void Emulator::write64(uint32_t address, uint64_t value)
 
 void Emulator::write128(uint32_t address, uint128_t value)
 {
-    if (address == 0x00489A10)
+    if (address == 0x01FFFBD0)
         printf("[EE] Write128 $%08X: $%08X_%08X_%08X_%08X\n", address,
                value._u32[3], value._u32[2], value._u32[1], value._u32[0]);
     if (address < 0x10000000)

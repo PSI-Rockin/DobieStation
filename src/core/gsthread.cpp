@@ -1822,7 +1822,8 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
             ppd = 3;
             break;
         default:
-            Errors::die("[GS_t] Unrecognized BITBLTBUF dest format $%02X\n", BITBLTBUF.dest_format);
+            Errors::print_warning("[GS_t] Unrecognized BITBLTBUF dest format $%02X\n", BITBLTBUF.dest_format);
+            return;
     }
 
     for (int i = 0; i < ppd; i++)
