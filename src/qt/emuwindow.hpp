@@ -60,6 +60,7 @@ class EmuWindow : public QMainWindow
         void load_state();
         void save_state();
         void emu_error(QString err);
+        void emu_nonfatal_error(QString err);
 };
 
 #endif // EMUWINDOW_HPP

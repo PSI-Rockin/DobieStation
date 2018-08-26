@@ -52,6 +52,7 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
             this, SLOT(draw_frame(uint32_t*, int, int, int, int)));
     connect(&emuthread, SIGNAL(update_FPS(int)), this, SLOT(update_FPS(int)));
     connect(&emuthread, SIGNAL(emu_error(QString)), this, SLOT(emu_error(QString)));
+    connect(&emuthread, SIGNAL(emu_nonfatal_error(QString)), this, SLOT(emu_nonfatal_error(QString)));
     emuthread.pause(PAUSE_EVENT::GAME_NOT_LOADED);
 
     emuthread.reset();
@@ -384,6 +385,17 @@ void EmuWindow::emu_error(QString err)
     msgBox.exec();
     ROM_path = "";
     setWindowTitle("DobieStation");
+}
+
+void EmuWindow::emu_nonfatal_error(QString err)
+{
+    QMessageBox msgBox;
+    msgBox.setText("Error");
+    msgBox.setInformativeText(err);
+    msgBox.setStandardButtons(QMessageBox::Ok);
+    msgBox.setDefaultButton(QMessageBox::Ok);
+    msgBox.exec();
+    emuthread.unpause(MESSAGE_BOX);
 }
 
 #ifndef QT_NO_CONTEXTMENU

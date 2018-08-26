@@ -4,7 +4,7 @@
 
 #define VER_MAJOR 0
 #define VER_MINOR 0
-#define VER_REV 6
+#define VER_REV 7
 
 using namespace std;
 
@@ -32,10 +32,14 @@ bool Emulator::request_save_state(const char *file_name)
 
 void Emulator::load_state(const char *file_name)
 {
+    load_requested = false;
     printf("[Emulator] Loading state...\n");
     ifstream state(file_name, ios::binary);
     if (!state.is_open())
-        Errors::die("Failed to load save state");
+    {
+        Errors::nonfatal("Failed to load save state");
+        return;
+    }
 
     //Perform sanity checks
     char dobie_buffer[5];
@@ -43,7 +47,8 @@ void Emulator::load_state(const char *file_name)
     if (strncmp(dobie_buffer, "DOBIE", 5))
     {
         state.close();
-        Errors::die("Save state invalid");
+        Errors::nonfatal("Save state invalid");
+        return;
     }
 
     uint32_t major, minor, rev;
@@ -54,7 +59,8 @@ void Emulator::load_state(const char *file_name)
     if (major != VER_MAJOR || minor != VER_MINOR || rev != VER_REV)
     {
         state.close();
-        Errors::die("Save state doesn't match version");
+        Errors::nonfatal("Save state doesn't match version");
+        return;
     }
 
     reset();
@@ -107,15 +113,18 @@ void Emulator::load_state(const char *file_name)
 
     state.close();
     printf("[Emulator] Success!\n");
-    load_requested = false;
 }
 
 void Emulator::save_state(const char *file_name)
 {
+    save_requested = false;
     printf("[Emulator] Saving state...\n");
     ofstream state(file_name, ios::binary);
     if (!state.is_open())
-        Errors::die("Failed to save state");
+    {
+        Errors::nonfatal("Failed to save state");
+        return;
+    }
 
     uint32_t major = VER_MAJOR;
     uint32_t minor = VER_MINOR;
@@ -175,7 +184,6 @@ void Emulator::save_state(const char *file_name)
 
     state.close();
     printf("Success!\n");
-    save_requested = false;
 }
 
 void EmotionEngine::load_state(ifstream &state)

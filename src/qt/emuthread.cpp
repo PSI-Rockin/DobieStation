@@ -156,7 +156,14 @@ void EmuThread::gsdump_run()
         emit emu_error(QString(e.what()));
         pause(PAUSE_EVENT::GAME_NOT_LOADED);
     }
+    catch (nonfatal_error &e)
+    {
+        printf("Nonfatal emulation occurred running gsdump\n%s\n", e.what());
+        emit emu_nonfatal_error(QString(e.what()));
+        pause(PAUSE_EVENT::MESSAGE_BOX);
+    }
 }
+
 void EmuThread::run()
 {
     forever
@@ -190,6 +197,12 @@ void EmuThread::run()
                 } while (FPS > 60.0);
                 old_frametime = chrono::system_clock::now();
                 emit update_FPS((int)round(FPS));
+            }
+            catch (nonfatal_error &e)
+            {
+                printf("Nonfatal emulation error occurred\n%s\n", e.what());
+                emit emu_nonfatal_error(QString(e.what()));
+                pause(PAUSE_EVENT::MESSAGE_BOX);
             }
             catch (Emulation_error &e)
             {

@@ -326,6 +326,7 @@ bool ImageProcessingUnit::process_BDEC()
                 else
                     return true;
             }
+                break;
             case BDEC_STATE::CHECK_START_CODE:
             {
                 uint32_t bits;

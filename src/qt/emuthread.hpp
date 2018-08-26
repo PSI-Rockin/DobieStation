@@ -14,6 +14,7 @@ enum PAUSE_EVENT
 {
     GAME_NOT_LOADED,
     FILE_DIALOG,
+    MESSAGE_BOX,
     FRAME_ADVANCE,
 };
 
@@ -52,6 +53,7 @@ class EmuThread : public QThread
         void completed_frame(uint32_t* buffer, int inner_w, int inner_h, int final_w, int final_h);
         void update_FPS(int FPS);
         void emu_error(QString err);
+        void emu_nonfatal_error(QString err);
     public slots:
         void shutdown();
         void press_key(PAD_BUTTON button);
