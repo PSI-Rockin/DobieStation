@@ -745,6 +745,12 @@ void VectorUnit::fmor(uint8_t dest, uint8_t source)
     set_int(dest, *MAC_flags | int_gpr[source].u);
 }
 
+void VectorUnit::fsset(uint32_t value)
+{
+    printf("[VU] FSSET: $%08X\n", value);
+    status = (status & 0x3f) | (value & 0xfc0);
+}
+
 void VectorUnit::fsand(uint8_t dest, uint32_t value)
 {
     printf("[VU] FSAND: $%08X\n", value);
@@ -1067,6 +1073,24 @@ void VectorUnit::maddabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_r
     printf("\n");
 }
 
+void VectorUnit::maddaq(uint8_t field, uint8_t source)
+{
+    printf("[VU] MADDAq: ");
+    float op = convert(Q.u);
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            float temp = convert(ACC.u[i]) + convert(gpr[source].u[i]) * op;
+            ACC.f[i] = update_mac_flags(temp, i);
+            printf("(%d)%f ", i, ACC.f[i]);
+        }
+        else
+            clear_mac_flags(i);
+    }
+    printf("\n");
+}
+
 void VectorUnit::maddai(uint8_t field, uint8_t source)
 {
     printf("[VU] MADDAi: ");
@@ -1306,6 +1330,24 @@ void VectorUnit::msubabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_r
 {
     printf("[VU] MSUBAbc: ");
     float op = convert(gpr[bc_reg].u[bc]);
+    for (int i = 0; i < 4; i++)
+    {
+        if (field & (1 << (3 - i)))
+        {
+            float temp = convert(ACC.u[i]) - convert(gpr[source].u[i]) * op;
+            ACC.f[i] = update_mac_flags(temp, i);
+            printf("(%d)%f ", i, ACC.f[i]);
+        }
+        else
+            clear_mac_flags(i);
+    }
+    printf("\n");
+}
+
+void VectorUnit::msubaq(uint8_t field, uint8_t source)
+{
+    printf("[VU] MSUBAq: ");
+    float op = convert(Q.u);
     for (int i = 0; i < 4; i++)
     {
         if (field & (1 << (3 - i)))

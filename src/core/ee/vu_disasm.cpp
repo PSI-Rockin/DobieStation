@@ -274,8 +274,12 @@ string VU_Disasm::upper_special(uint32_t PC, uint32_t instr)
             return upper_acc_i("mula", instr);
         case 0x1F:
             return clip(instr);
+        case 0x21:
+            return upper_acc_q("madda", instr);
         case 0x23:
             return upper_acc_i("madda", instr);
+        case 0x25:
+            return upper_acc_q("msuba", instr);
         case 0x26:
             return upper_acc_i("suba", instr);
         case 0x27:
@@ -743,6 +747,8 @@ string VU_Disasm::lower2(uint32_t PC, uint32_t instr)
             return fcand(instr);
         case 0x13:
             return fcor(instr);
+        case 0x15:
+            return fsset(instr);
         case 0x16:
             return fsand(instr);
         case 0x18:
@@ -883,6 +889,15 @@ string VU_Disasm::fcor(uint32_t instr)
     stringstream output;
     uint32_t imm = instr & 0xFFFFFF;
     output << "fcor vi1, 0x";
+    output << setfill('0') << setw(8) << hex << imm;
+    return output.str();
+}
+
+string VU_Disasm::fsset(uint32_t instr)
+{
+    stringstream output;
+    uint32_t imm = ((instr >> 10) & 0x800) | (instr & 0x7FF);
+    output << "fsset 0x";
     output << setfill('0') << setw(8) << hex << imm;
     return output.str();
 }

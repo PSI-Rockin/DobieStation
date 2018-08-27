@@ -69,6 +69,7 @@ namespace VU_Disasm
     std::string fcset(uint32_t instr);
     std::string fcand(uint32_t instr);
     std::string fcor(uint32_t instr);
+    std::string fsset(uint32_t instr);
     std::string fsand(uint32_t instr);
     std::string fmeq(uint32_t instr);
     std::string fmand(uint32_t instr);
