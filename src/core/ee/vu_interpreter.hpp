@@ -23,6 +23,7 @@ namespace VU_Interpreter
     void addi(VectorUnit& vu, uint32_t instr);
     void maddi(VectorUnit& vu, uint32_t instr);
     void subq(VectorUnit& vu, uint32_t instr);
+    void msubq(VectorUnit& vu, uint32_t instr);
     void subi(VectorUnit& vu, uint32_t instr);
     void msubi(VectorUnit& vu, uint32_t instr);
     void add(VectorUnit& vu, uint32_t instr);

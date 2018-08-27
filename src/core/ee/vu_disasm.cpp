@@ -129,6 +129,8 @@ string VU_Disasm::upper(uint32_t PC, uint32_t instr)
             return upper_i("madd", instr);
         case 0x24:
             return upper_q("sub", instr);
+        case 0x25:
+            return upper_q("msub", instr);
         case 0x26:
             return upper_i("sub", instr);
         case 0x27:

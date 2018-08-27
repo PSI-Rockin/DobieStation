@@ -119,6 +119,9 @@ void VU_Interpreter::upper(VectorUnit &vu, uint32_t instr)
         case 0x24:
             subq(vu, instr);
             break;
+        case 0x25:
+            msubq(vu, instr);
+            break;
         case 0x26:
             subi(vu, instr);
             break;
@@ -300,6 +303,14 @@ void VU_Interpreter::subq(VectorUnit &vu, uint32_t instr)
     uint8_t source = (instr >> 11) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
     vu.subq(field, dest, source);
+}
+
+void VU_Interpreter::msubq(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t dest = (instr >> 6) & 0x1F;
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+    vu.msubq(field, dest, source);
 }
 
 void VU_Interpreter::subi(VectorUnit &vu, uint32_t instr)

@@ -2290,6 +2290,24 @@ void GraphicsSynthesizerThread::clut_lookup(uint8_t entry, RGBAQ_REG &tex_color,
             }
         }
             break;
+        //PSMCT16S
+        case 0x0A:
+        {
+            uint16_t color = read_PSMCT16S_block(current_ctx->tex0.CLUT_base, 64, x, y);
+            tex_color.r = (color & 0x1F) << 3;
+            tex_color.g = ((color >> 5) & 0x1F) << 3;
+            tex_color.b = ((color >> 10) & 0x1F) << 3;
+            if (!(color & 0x7FFF) && TEXA.trans_black)
+                tex_color.a = 0;
+            else
+            {
+                if (color & (1 << 15))
+                    tex_color.a = TEXA.alpha1;
+                else
+                    tex_color.a = TEXA.alpha0;
+            }
+        }
+            break;
         default:
             Errors::die("[GS_t] Unrecognized CLUT format $%02X\n", current_ctx->tex0.CLUT_format);
     }

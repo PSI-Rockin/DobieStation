@@ -40,16 +40,17 @@ void VectorInterface::reset()
 
 bool VectorInterface::check_vif_stall(uint32_t value)
 {
-    
-    //Do not stall if the next command is MARK
     if (command == 0)
     {
-        if (vif_ibit_detected && value != 0x7)
+        if (vif_ibit_detected)
         {
             printf("[VIF] VIF%x Stalled\n", get_id());
             vif_ibit_detected = false;
-            vif_stalled = true;
             vif_interrupt = true;
+
+            //Do not stall if the command is MARK
+            if (((value >> 24) & 0x7f) != 0x7)
+                vif_stalled = true;
 
             if (get_id())
                 intc->assert_IRQ((int)Interrupt::VIF1);
@@ -87,16 +88,9 @@ void VectorInterface::update(int cycles)
                 return;
             flush_stall = false;
         }*/
-        if (FIFO.size())
-        {
-            if (check_vif_stall(FIFO.front()))
-                return;
-        }
-        else
-        {
-            check_vif_stall(0);
+
+        if(check_vif_stall(CODE) || !FIFO.size())
             return;
-        }
 
         uint32_t value = FIFO.front();
         if (command == 0)
