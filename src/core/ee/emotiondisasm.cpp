@@ -1602,6 +1602,11 @@ string EmotionDisasm::disasm_cop2_special2(uint32_t instruction)
         case 0x02:
         case 0x03:
             return disasm_vaddabc(instruction);
+        case 0x04:
+        case 0x05:
+        case 0x06:
+        case 0x07:
+            return disasm_vsubabc(instruction);
         case 0x08:
         case 0x09:
         case 0x0A:
@@ -1756,6 +1761,11 @@ string EmotionDisasm::disasm_cop2_acc_q(const string opcode, uint32_t instructio
 string EmotionDisasm::disasm_vaddabc(uint32_t instruction)
 {
     return disasm_cop2_acc_bc("vadda", instruction);
+}
+
+string EmotionDisasm::disasm_vsubabc(uint32_t instruction)
+{
+    return disasm_cop2_acc_bc("vsuba", instruction);
 }
 
 string EmotionDisasm::disasm_vmaddabc(uint32_t instruction)

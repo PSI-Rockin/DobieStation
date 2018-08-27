@@ -203,6 +203,7 @@ namespace EmotionDisasm
     std::string disasm_cop2_acc_i(const std::string opcode, uint32_t instruction);
     std::string disasm_cop2_acc_q(const std::string opcode, uint32_t instruction);
     std::string disasm_vaddabc(uint32_t instruction);
+    std::string disasm_vsubabc(uint32_t instruction);
     std::string disasm_vmaddabc(uint32_t instruction);
     std::string disasm_vmsubabc(uint32_t instruction);
     std::string disasm_vitof0(uint32_t instruction);

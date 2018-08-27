@@ -50,6 +50,26 @@ enum class BDEC_STATE
     CHECK_START_CODE
 };
 
+enum class IDEC_STATE
+{
+    DELAY,
+    ADVANCE,
+    MACRO_I_TYPE,
+    DCT_TYPE,
+    QSC,
+    INIT_BDEC
+};
+
+struct IDEC_Command
+{
+    IDEC_STATE state;
+    int delay;
+    uint32_t macro_type;
+
+    bool decodes_dct;
+    uint32_t qsc;
+};
+
 struct BDEC_Command
 {
     BDEC_STATE state;
@@ -144,6 +164,7 @@ class ImageProcessingUnit
         uint32_t command_output;
         int bytes_left;
 
+        IDEC_Command idec;
         BDEC_Command bdec;
         VDEC_STATE vdec_state, fdec_state;
         CSC_Command csc;
@@ -151,6 +172,8 @@ class ImageProcessingUnit
         double IDCT_table[8][8];
 
         void finish_command();
+
+        bool process_IDEC();
 
         bool process_BDEC();
         void inverse_scan(int16_t* block);

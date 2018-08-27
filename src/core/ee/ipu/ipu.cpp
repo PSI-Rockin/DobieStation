@@ -108,7 +108,11 @@ void ImageProcessingUnit::run()
                 in_FIFO.bit_pointer = command_option & 0x7F;
                 break;
             case 0x01:
-                finish_command();
+                if (in_FIFO.f.size())
+                {
+                    if (process_IDEC())
+                        finish_command();
+                }
                 break;
             case 0x02:
                 if (in_FIFO.f.size())
@@ -180,6 +184,52 @@ void ImageProcessingUnit::finish_command()
     ctrl.busy = false;
     command_decoding = false;
     intc->assert_IRQ((int)Interrupt::IPU);
+}
+
+bool ImageProcessingUnit::process_IDEC()
+{
+    Errors::die("[IPU] IDEC called");
+    while (true)
+    {
+        switch (idec.state)
+        {
+            case IDEC_STATE::DELAY:
+                idec.delay--;
+                if (idec.delay > 0)
+                    return false;
+                idec.state = IDEC_STATE::ADVANCE;
+                break;
+            case IDEC_STATE::ADVANCE:
+                if (!in_FIFO.advance_stream(command_option & 0x3F))
+                    return false;
+                idec.state = IDEC_STATE::MACRO_I_TYPE;
+                break;
+            case IDEC_STATE::MACRO_I_TYPE:
+                if (!macroblock_I_pic.get_symbol(in_FIFO, idec.macro_type))
+                    return false;
+                idec.state = IDEC_STATE::DCT_TYPE;
+                break;
+            case IDEC_STATE::DCT_TYPE:
+                if (idec.decodes_dct)
+                    Errors::die("[IPU] IDEC decodes DCT");
+                idec.state = IDEC_STATE::QSC;
+                break;
+            case IDEC_STATE::QSC:
+                if (idec.macro_type & 0x10)
+                {
+                    if (!in_FIFO.get_bits(idec.qsc, 5))
+                        return false;
+                    in_FIFO.advance_stream(5);
+                }
+                idec.state = IDEC_STATE::INIT_BDEC;
+                break;
+            case IDEC_STATE::INIT_BDEC:
+                bdec.state = BDEC_STATE::GET_CBP;
+                bdec.intra = true;
+                bdec.quantizer_step = idec.qsc;
+                break;
+        }
+    }
 }
 
 bool ImageProcessingUnit::process_BDEC()
@@ -896,6 +946,13 @@ void ImageProcessingUnit::write_command(uint32_t value)
         {
             case 0x00:
                 printf("[IPU] BCLR\n");
+                break;
+            case 0x01:
+                printf("[IPU] IDEC\n");
+                idec.state = IDEC_STATE::DELAY;
+                idec.delay = 1000;
+                idec.macro_type = 0;
+                idec.decodes_dct = command_option & (1 << 24);
                 break;
             case 0x02:
                 printf("[IPU] BDEC\n");

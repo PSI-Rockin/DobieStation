@@ -445,6 +445,12 @@ void EmotionInterpreter::cop2_special2(VectorUnit &vu0, uint32_t instruction)
         case 0x03:
             cop2_vaddabc(vu0, instruction);
             break;
+        case 0x04:
+        case 0x05:
+        case 0x06:
+        case 0x07:
+            cop2_vsubabc(vu0, instruction);
+            break;
         case 0x08:
         case 0x09:
         case 0x0A:
@@ -585,6 +591,15 @@ void EmotionInterpreter::cop2_vaddabc(VectorUnit &vu0, uint32_t instruction)
     uint8_t bc_reg = (instruction >> 16) & 0x1F;
     uint8_t field = (instruction >> 21) & 0xF;
     vu0.addabc(bc, field, source, bc_reg);
+}
+
+void EmotionInterpreter::cop2_vsubabc(VectorUnit &vu0, uint32_t instruction)
+{
+    uint8_t bc = instruction & 0x3;
+    uint8_t source = (instruction >> 11) & 0x1F;
+    uint8_t bc_reg = (instruction >> 16) & 0x1F;
+    uint8_t field = (instruction >> 21) & 0xF;
+    vu0.subabc(bc, field, source, bc_reg);
 }
 
 void EmotionInterpreter::cop2_vmaddabc(VectorUnit &vu0, uint32_t instruction)
