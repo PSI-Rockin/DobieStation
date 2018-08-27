@@ -306,6 +306,12 @@ void EmuWindow::keyPressEvent(QKeyEvent *event)
         case Qt::Key_S:
             emit press_key(PAD_BUTTON::SQUARE);
             break;
+        case Qt::Key_Q:
+            emit press_key(PAD_BUTTON::L1);
+            break;
+        case Qt::Key_W:
+            emit press_key(PAD_BUTTON::R1);
+            break;
         case Qt::Key_Return:
             emit press_key(PAD_BUTTON::START);
             break;
@@ -349,6 +355,12 @@ void EmuWindow::keyReleaseEvent(QKeyEvent *event)
             break;
         case Qt::Key_S:
             emit release_key(PAD_BUTTON::SQUARE);
+            break;
+        case Qt::Key_Q:
+            emit release_key(PAD_BUTTON::L1);
+            break;
+        case Qt::Key_W:
+            emit release_key(PAD_BUTTON::R1);
             break;
         case Qt::Key_Return:
             emit release_key(PAD_BUTTON::START);
