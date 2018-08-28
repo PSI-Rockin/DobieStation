@@ -38,6 +38,7 @@ void DMAC::reset(uint8_t* RDRAM, uint8_t* scratchpad)
 
     for (int i = 0; i < 15; i++)
     {
+        channels[i].started = false;
         channels[i].control = 0;
         interrupt_stat.channel_mask[i] = false;
         interrupt_stat.channel_stat[i] = false;
