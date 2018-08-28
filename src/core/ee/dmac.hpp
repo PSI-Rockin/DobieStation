@@ -18,6 +18,8 @@ struct DMA_Channel
     bool paused;
     uint8_t interleaved_qwc;
     uint8_t tag_id;
+
+    bool started;
 };
 
 //Regs

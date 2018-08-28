@@ -48,59 +48,12 @@ void IOPTiming::count_up(int index, int cycles_per_count)
 
 void IOPTiming::run()
 {
-    int clock_scale;
-
     for (int i = 0; i < 6; i++)
     {
         timers[i].clocks++;
-        if (timers[i].control.extern_signal)
-        {
-            switch (i)
-            {
-                case 0:
-                    //Pixel Clock
-                    clock_scale = 3; //Actually too slow, it's more 2.73, but it's an easy value to use.
-                    break;
-                case 1:
-                    //HBlank
-                    clock_scale = 2350;
-                    break;
-                case 3:
-                    //HBlank
-                    clock_scale = 2350;
-                    break;
-                default:
-                    //IOP Clock
-                    clock_scale = 1;
-                    break;
-            }
-        }
-        else
-            clock_scale = 1;
 
-        switch (timers[i].control.prescale)
-        {
-            case 0:
-                //IOP clock
-                if (timers[i].clocks >= clock_scale)
-                    count_up(i, 1 * clock_scale);
-                break;
-            case 1:
-                //1/8 IOP clock
-                if (timers[i].clocks >= (8 * clock_scale))
-                    count_up(i, 8 * clock_scale);
-                break;
-            case 2:
-                //1/16 IOP clock
-                if (timers[i].clocks >= (16 * clock_scale))
-                    count_up(i, 16 * clock_scale);
-                break;
-            case 3:
-                //1/256 IOP clock
-                if (timers[i].clocks >= (256 * clock_scale))
-                    count_up(i, 256 * clock_scale);
-                break;
-        }
+        if (timers[i].clocks >= timers[i].clock_scale)
+            count_up(i, timers[i].clock_scale);
     }
 }
 
@@ -108,27 +61,9 @@ void IOPTiming::IRQ_test(int index, bool overflow)
 {
     if (timers[index].control.int_enable)
     {
-        switch (index)
-        {
-            case 0:
-                e->iop_request_IRQ(4);
-                break;
-            case 1:
-                e->iop_request_IRQ(5);
-                break;
-            case 2:
-                e->iop_request_IRQ(6);
-                break;
-            case 3:
-                e->iop_request_IRQ(14);
-                break;
-            case 4:
-                e->iop_request_IRQ(15);
-                break;
-            case 5:
-                e->iop_request_IRQ(16);
-                break;
-        }
+        const static int IRQs[] = {4, 5, 6, 14, 15, 16};
+        e->iop_request_IRQ(IRQs[index]);
+
         if (overflow)
             timers[index].control.overflow_interrupt = true;
         else
@@ -198,6 +133,53 @@ void IOPTiming::write_control(int index, uint16_t value)
         timers[index].control.prescale = (value >> 13) & 0x3;
 
     timers[index].counter = 0;
+
+    uint32_t clock_scale;
+
+    if (timers[index].control.extern_signal)
+    {
+        switch (index)
+        {
+            case 0:
+                //Pixel Clock
+                clock_scale = 3; //Actually too slow, it's more 2.73, but it's an easy value to use.
+                break;
+            case 1:
+                //HBlank
+                clock_scale = 2350;
+                break;
+            case 3:
+                //HBlank
+                clock_scale = 2350;
+                break;
+            default:
+                //IOP Clock
+                clock_scale = 1;
+                break;
+        }
+    }
+    else
+        clock_scale = 1;
+
+    switch (timers[index].control.prescale)
+    {
+        case 0:
+            //IOP clock
+            timers[index].clock_scale = clock_scale;
+            break;
+        case 1:
+            //1/8 IOP clock
+            timers[index].clock_scale = clock_scale * 8;
+            break;
+        case 2:
+            //1/16 IOP clock
+            timers[index].clock_scale = clock_scale * 16;
+            break;
+        case 3:
+            //1/256 IOP clock
+            timers[index].clock_scale = clock_scale * 256;
+            break;
+    }
 }
 
 void IOPTiming::write_target(int index, uint32_t value)

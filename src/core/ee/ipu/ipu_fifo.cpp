@@ -13,28 +13,32 @@ bool IPU_FIFO::get_bits(uint32_t &data, int bits)
         return false;
     }
 
-    std::queue<uint128_t> temp_fifo = f;
-    uint8_t temp[32];
-    *(uint128_t*)&temp[0] = temp_fifo.front();
-    //if (((bit_pointer & ~0x1F) / 8) + 8 >= 16)
-    if (temp_fifo.size() > 1)
+    if (bit_cache_dirty)
     {
-        temp_fifo.pop();
-        *(uint128_t*)&temp[16] = temp_fifo.front();
-    }
+        std::queue<uint128_t> temp_fifo = f;
+        uint8_t temp[32];
+        *(uint128_t*)&temp[0] = temp_fifo.front();
+        if (temp_fifo.size() > 1)
+        {
+            temp_fifo.pop();
+            *(uint128_t*)&temp[16] = temp_fifo.front();
+        }
 
-    uint8_t blorp[8];
-    int index = (bit_pointer & ~0x1F) / 8;
+        uint8_t blorp[8];
+        int index = (bit_pointer & ~0x1F) / 8;
 
-    //MPEG is big-endian...
-    for (int i = 0; i < 8; i++)
-    {
-        int fifo_index = index + i;
-        blorp[7 - i] = temp[fifo_index];
+        //MPEG is big-endian...
+        for (int i = 0; i < 8; i++)
+        {
+            int fifo_index = index + i;
+            blorp[7 - i] = temp[fifo_index];
+        }
+        bit_cache_dirty = false;
+        cached_bits = *(uint64_t*)&blorp[0];
     }
     int shift = 64 - (bit_pointer % 32) - bits;
     uint64_t mask = ~0x0ULL >> (64 - bits);
-    data = (*(uint64_t*)&blorp[0] >> shift) & mask;
+    data = (cached_bits >> shift) & mask;
 
     return true;
 }
@@ -52,12 +56,16 @@ bool IPU_FIFO::advance_stream(uint8_t amount)
         return false;
     }
 
+    uint32_t old_words = bit_pointer / 32;
+    uint32_t new_words = (bit_pointer + amount) / 32;
+    bit_cache_dirty |= (old_words != new_words);
     bit_pointer += amount;
 
     while (bit_pointer >= 128)
     {
         bit_pointer -= 128;
         f.pop();
+        bit_cache_dirty = true;
     }
     return true;
 }
@@ -67,4 +75,6 @@ void IPU_FIFO::reset()
     std::queue<uint128_t> empty;
     f.swap(empty);
     bit_pointer = 0;
+    cached_bits = 0;
+    bit_cache_dirty = true;
 }

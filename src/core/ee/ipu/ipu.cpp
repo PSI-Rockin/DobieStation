@@ -188,7 +188,6 @@ void ImageProcessingUnit::finish_command()
 
 bool ImageProcessingUnit::process_IDEC()
 {
-    Errors::die("[IPU] IDEC called");
     while (true)
     {
         switch (idec.state)
@@ -200,21 +199,25 @@ bool ImageProcessingUnit::process_IDEC()
                 idec.state = IDEC_STATE::ADVANCE;
                 break;
             case IDEC_STATE::ADVANCE:
+                printf("[IPU] Advance stream\n");
                 if (!in_FIFO.advance_stream(command_option & 0x3F))
                     return false;
                 idec.state = IDEC_STATE::MACRO_I_TYPE;
                 break;
             case IDEC_STATE::MACRO_I_TYPE:
+                printf("[IPU] Decode macroblock I type\n");
                 if (!macroblock_I_pic.get_symbol(in_FIFO, idec.macro_type))
                     return false;
                 idec.state = IDEC_STATE::DCT_TYPE;
                 break;
             case IDEC_STATE::DCT_TYPE:
+                printf("[IPU] Decode DCT\n");
                 if (idec.decodes_dct)
                     Errors::die("[IPU] IDEC decodes DCT");
                 idec.state = IDEC_STATE::QSC;
                 break;
             case IDEC_STATE::QSC:
+                printf("[IPU] Decode QSC\n");
                 if (idec.macro_type & 0x10)
                 {
                     if (!in_FIFO.get_bits(idec.qsc, 5))
@@ -224,10 +227,84 @@ bool ImageProcessingUnit::process_IDEC()
                 idec.state = IDEC_STATE::INIT_BDEC;
                 break;
             case IDEC_STATE::INIT_BDEC:
-                bdec.state = BDEC_STATE::GET_CBP;
+                //We don't need to advance, and the macroblock is always intra so no need to check for a CBP.
+                printf("[IPU] Init BDEC\n");
+                bdec.state = BDEC_STATE::RESET_DC;
                 bdec.intra = true;
                 bdec.quantizer_step = idec.qsc;
+                bdec.out_fifo = &idec.temp_fifo;
+                ctrl.coded_block_pattern = 0x3F;
+                bdec.block_index = 0;
+                bdec.cur_channel = 0;
+                bdec.reset_dc = idec.blocks_decoded == 0;
+                bdec.check_start_code = false;
+                idec.state = IDEC_STATE::READ_BLOCK;
                 break;
+            case IDEC_STATE::READ_BLOCK:
+                printf("[IPU] Read macroblock\n");
+                if (!process_BDEC())
+                    return false;
+                idec.blocks_decoded++;
+                idec.state = IDEC_STATE::INIT_CSC;
+                break;
+            case IDEC_STATE::INIT_CSC:
+                //BDEC outputs in RAW16. CSC works in RAW8, so we need to convert appropriately.
+                printf("[IPU] Init CSC\n");
+                for (int i = 0; i < BLOCK_SIZE / 8; i++)
+                {
+                    uint128_t quad = idec.temp_fifo.f.front();
+                    idec.temp_fifo.f.pop();
+
+                    int offset = i * 8;
+
+                    for (int j = 0; j < 8; j++)
+                    {
+                        int16_t data = quad._s16[j];
+                        if (data < 0)
+                            data = 0;
+                        if (data > 255)
+                            data = 255;
+                        csc.block[offset + j] = (uint8_t)data;
+                    }
+                }
+                csc.state = CSC_STATE::CONVERT;
+                csc.block_index = 0;
+                csc.macroblocks = 1;
+
+                idec.state = IDEC_STATE::EXEC_CSC;
+                break;
+            case IDEC_STATE::EXEC_CSC:
+                printf("[IPU] Exec CSC\n");
+                if (!process_CSC())
+                    return false;
+                idec.state = IDEC_STATE::CHECK_START_CODE;
+                break;
+            case IDEC_STATE::CHECK_START_CODE:
+            {
+                printf("[IPU] Check start code\n");
+                uint32_t code;
+                if (!in_FIFO.get_bits(code, 23))
+                    return false;
+                if (!code)
+                    idec.state = IDEC_STATE::DONE;
+                else
+                    idec.state = IDEC_STATE::MACRO_INC;
+            }
+                break;
+            case IDEC_STATE::MACRO_INC:
+            {
+                printf("[IPU] Macroblock increment\n");
+                uint32_t inc;
+                if (!macroblock_increment.get_symbol(in_FIFO, inc))
+                    return false;
+                if ((inc & 0xFFFF) != 1)
+                    Errors::die("[IPU] IDEC macroblock increment != 1");
+                idec.state = IDEC_STATE::MACRO_I_TYPE;
+            }
+                break;
+            case IDEC_STATE::DONE:
+                printf("[IPU] IDEC done!\n");
+                return true;
         }
     }
 }
@@ -258,7 +335,7 @@ bool ImageProcessingUnit::process_BDEC()
                 bdec.state = BDEC_STATE::RESET_DC;
                 break;
             case BDEC_STATE::RESET_DC:
-                if (command_option & (1 << 26))
+                if (bdec.reset_dc)
                 {
                     printf("[IPU] Reset DC!\n");
 
@@ -346,32 +423,32 @@ bool ImageProcessingUnit::process_BDEC()
                 for (int i = 0; i < 8; i++)
                 {
                     memcpy(quad._u8, bdec.blocks[0] + (i * 8), sizeof(int16_t) * 8);
-                    out_FIFO.f.push(quad);
+                    bdec.out_fifo->f.push(quad);
                     memcpy(quad._u8, bdec.blocks[1] + (i * 8), sizeof(int16_t) * 8);
-                    out_FIFO.f.push(quad);
+                    bdec.out_fifo->f.push(quad);
                 }
 
                 for (int i = 0; i < 8; i++)
                 {
                     memcpy(quad._u8, bdec.blocks[2] + (i * 8), sizeof(int16_t) * 8);
-                    out_FIFO.f.push(quad);
+                    bdec.out_fifo->f.push(quad);
                     memcpy(quad._u8, bdec.blocks[3] + (i * 8), sizeof(int16_t) * 8);
-                    out_FIFO.f.push(quad);
+                    bdec.out_fifo->f.push(quad);
                 }
 
                 for (int i = 0; i < 8; i++)
                 {
                     memcpy(quad._u8, bdec.blocks[4] + (i * 8), sizeof(int16_t) * 8);
-                    out_FIFO.f.push(quad);
+                    bdec.out_fifo->f.push(quad);
                 }
 
                 for (int i = 0; i < 8; i++)
                 {
                     memcpy(quad._u8, bdec.blocks[5] + (i * 8), sizeof(int16_t) * 8);
-                    out_FIFO.f.push(quad);
+                    bdec.out_fifo->f.push(quad);
                 }
 
-                if (/*check_start_code*/ true)
+                if (bdec.check_start_code)
                     bdec.state = BDEC_STATE::CHECK_START_CODE;
                 else
                     return true;
@@ -953,15 +1030,19 @@ void ImageProcessingUnit::write_command(uint32_t value)
                 idec.delay = 1000;
                 idec.macro_type = 0;
                 idec.decodes_dct = command_option & (1 << 24);
+                idec.blocks_decoded = 0;
                 break;
             case 0x02:
                 printf("[IPU] BDEC\n");
                 bdec.state = BDEC_STATE::ADVANCE;
+                bdec.out_fifo = &out_FIFO;
                 ctrl.coded_block_pattern = 0x3F;
                 bdec.block_index = 0;
                 bdec.cur_channel = 0;
                 bdec.quantizer_step = (command_option >> 16) & 0x1F;
+                bdec.reset_dc = command_option & (1 << 26);
                 bdec.intra = command_option & (1 << 27);
+                bdec.check_start_code = true;
                 break;
             case 0x03:
                 printf("[IPU] VDEC\n");
@@ -1041,4 +1122,5 @@ void ImageProcessingUnit::write_FIFO(uint128_t quad)
         Errors::die("[IPU] Error: data sent to IPU exceeding FIFO limit!\n");
     }
     in_FIFO.f.push(quad);
+    in_FIFO.bit_cache_dirty = true;
 }

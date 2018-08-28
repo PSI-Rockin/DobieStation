@@ -92,7 +92,7 @@ void SPU::write_DMA(uint32_t value)
 
 void SPU::write_ADMA(uint8_t *RAM)
 {
-    printf("[SPU%d] ADMA transfer: $%08X\n", id, ADMA_left);
+    //printf("[SPU%d] ADMA transfer: $%08X\n", id, ADMA_left);
     can_write_adma = false;
     ADMA_left -= 0x40;
     if (ADMA_left < 0x40)

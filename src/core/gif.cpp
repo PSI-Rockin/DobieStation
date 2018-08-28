@@ -160,7 +160,7 @@ void GraphicsInterface::feed_GIF(uint128_t data)
         gs->set_Q(1.0f);
 
         //Ignore zeroed out packets
-        if (data1)
+        /*if (data1)
         {
             printf("[GIF] New primitive!\n");
             printf("NLOOP: $%04X\n", current_tag.NLOOP);
@@ -169,7 +169,7 @@ void GraphicsInterface::feed_GIF(uint128_t data)
             printf("Format: %d\n", current_tag.format);
             printf("Reg count: %d\n", current_tag.reg_count);
             printf("Regs: $%08X_$%08X\n", current_tag.regs >> 32, current_tag.regs & 0xFFFFFFFF);
-        }
+        }*/
 
         if (current_tag.output_PRIM && current_tag.format != 1)
             gs->write64(0, current_tag.PRIM);

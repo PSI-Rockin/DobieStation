@@ -57,7 +57,13 @@ enum class IDEC_STATE
     MACRO_I_TYPE,
     DCT_TYPE,
     QSC,
-    INIT_BDEC
+    INIT_BDEC,
+    READ_BLOCK,
+    INIT_CSC,
+    EXEC_CSC,
+    CHECK_START_CODE,
+    MACRO_INC,
+    DONE
 };
 
 struct IDEC_Command
@@ -68,12 +74,19 @@ struct IDEC_Command
 
     bool decodes_dct;
     uint32_t qsc;
+
+    IPU_FIFO temp_fifo;
+
+    int blocks_decoded;
 };
 
 struct BDEC_Command
 {
     BDEC_STATE state;
+    IPU_FIFO* out_fifo;
     bool intra;
+    bool reset_dc;
+    bool check_start_code;
     int quantizer_step;
 
     int block_index;

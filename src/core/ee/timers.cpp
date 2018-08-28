@@ -27,31 +27,7 @@ void EmotionTiming::run(int cycles)
         if (timers[i].control.enabled && !timers[i].gated)
         {
             timers[i].clocks += cycles;
-            switch (timers[i].control.mode)
-            {
-                case 0:
-                    //Bus clock
-                    while (timers[i].clocks)
-                        count_up(i, 1);
-                    break;
-                case 1:
-                    //1/16 bus clock
-                    while (timers[i].clocks >= 16)
-                        count_up(i, 16);
-                    break;
-                case 2:
-                    //1/256 bus clock
-                    while (timers[i].clocks >= 256)
-                        count_up(i, 256);
-                    break;
-                case 3:
-                    //TODO: actual value for HSYNC
-                    while (timers[i].clocks >= 9400)
-                    {
-                        count_up(i, 9400);
-                    }
-                    break;
-            }
+            count_up(i);
         }
     }
 }
@@ -136,31 +112,34 @@ void EmotionTiming::write32(uint32_t addr, uint32_t value)
     }
 }
 
-void EmotionTiming::count_up(int index, int cycles_per_count)
+void EmotionTiming::count_up(int index)
 {
-    timers[index].clocks -= cycles_per_count;
-    timers[index].counter++;
-
-    //Compare check
-    if (timers[index].counter == timers[index].compare)
+    while (timers[index].clocks >= timers[index].clock_scale)
     {
-        if (timers[index].control.compare_int_enable)
+        timers[index].clocks -= timers[index].clock_scale;
+        timers[index].counter++;
+
+        //Compare check
+        if (timers[index].counter == timers[index].compare)
         {
-            if (timers[index].control.clear_on_reference)
-                timers[index].counter = 0;
-            timers[index].control.compare_int = true;
-            intc->assert_IRQ((int)Interrupt::TIMER0 + index);
+            if (timers[index].control.compare_int_enable)
+            {
+                if (timers[index].control.clear_on_reference)
+                    timers[index].counter = 0;
+                timers[index].control.compare_int = true;
+                intc->assert_IRQ((int)Interrupt::TIMER0 + index);
+            }
         }
-    }
 
-    //Overflow check
-    if (timers[index].counter > 0xFFFF)
-    {
-        timers[index].counter = 0;
-        if (timers[index].control.overflow_int_enable)
+        //Overflow check
+        if (timers[index].counter > 0xFFFF)
         {
-            timers[index].control.overflow_int = true;
-            intc->assert_IRQ((int)Interrupt::TIMER0 + index);
+            timers[index].counter = 0;
+            if (timers[index].control.overflow_int_enable)
+            {
+                timers[index].control.overflow_int = true;
+                intc->assert_IRQ((int)Interrupt::TIMER0 + index);
+            }
         }
     }
 }
@@ -197,4 +176,24 @@ void EmotionTiming::write_control(int index, uint32_t value)
 
     if (timers[index].control.gate_enable && timers[index].control.mode != 3 && !timers[index].control.gate_VBLANK)
         Errors::die("[EE Timing] Timer %d HSYNC gate is on", index);
+
+    switch (timers[index].control.mode)
+    {
+        case 0:
+            //Bus clock
+            timers[index].clock_scale = 1;
+            break;
+        case 1:
+            //1/16 bus clock
+            timers[index].clock_scale = 16;
+            break;
+        case 2:
+            //1/256 bus clock
+            timers[index].clock_scale = 256;
+            break;
+        case 3:
+            //TODO: actual value for HSYNC
+            timers[index].clock_scale = 9400;
+            break;
+    }
 }

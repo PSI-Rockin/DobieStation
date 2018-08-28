@@ -129,7 +129,7 @@ void IOP_DMA::process_SPU()
         {
             //Transfer 512 bytes of data (128 words) at once
             spu->write_ADMA(RAM + channels[SPU].addr);
-            printf("[IOP DMA] SPU transfer: $%08X\n", channels[SPU].size * 2);
+            //printf("[IOP DMA] SPU transfer: $%08X\n", channels[SPU].size * 2);
             if (!spu->running_ADMA())
             {
                 transfer_end(SPU);

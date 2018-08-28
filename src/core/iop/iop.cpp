@@ -80,8 +80,8 @@ void IOP::run()
             }
             //if (PC == 0x0008F2C8)
                 //can_disassemble = true;
-            if (PC == 0x00012C48 || PC == 0x0001420C || PC == 0x0001430C)
-                e->iop_puts();
+            //if (PC == 0x00012C48 || PC == 0x0001420C || PC == 0x0001430C)
+                //e->iop_puts();
             /*if (PC == 0x86D0 || PC == 0x90E0 || PC == 0x00008EE0)
                 e->iop_ksprintf();*/
         }
@@ -151,7 +151,7 @@ void IOP::handle_exception(uint32_t addr, uint8_t cause)
 void IOP::syscall_exception()
 {
     uint8_t op = read8(PC - 4);
-    printf("[IOP] SYSCALL: $%02X\n", op);
+    //printf("[IOP] SYSCALL: $%02X\n", op);
     handle_exception(0x80000080, 0x08);
     //can_disassemble = true;
 }

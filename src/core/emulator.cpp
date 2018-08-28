@@ -77,7 +77,7 @@ void Emulator::run()
     
     while (instructions_run < CYCLES_PER_FRAME)
     {
-        int cycles = cpu.run(8);
+        int cycles = cpu.run(16);
         instructions_run += cycles;
         cycles >>= 1;
         dmac.run(cycles);

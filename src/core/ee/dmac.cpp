@@ -78,7 +78,7 @@ void DMAC::run(int cycles)
         return;
     for (int i = 0; i < 10; i++)
     {
-        if (channels[i].control & 0x100)
+        if (channels[i].started)
         {
             switch (i)
             {
@@ -159,6 +159,7 @@ void DMAC::transfer_end(int index)
 {
     printf("[DMAC] Transfer end: %d\n", index);
     channels[index].control &= ~0x100;
+    channels[index].started = false;
     interrupt_stat.channel_stat[index] = true;
     int1_check();
 }
@@ -663,17 +664,13 @@ void DMAC::handle_source_chain(int index)
     }
     if (IRQ_after_transfer && TIE)
         channels[index].tag_end = true;
-    printf("New address: $%08X\n", channels[index].address);
-    printf("New tag addr: $%08X\n", channels[index].tag_address);
+    //printf("New address: $%08X\n", channels[index].address);
+    //printf("New tag addr: $%08X\n", channels[index].tag_address);
 }
 
 void DMAC::start_DMA(int index)
 {
     printf("[DMAC] D%d started: $%08X\n", index, channels[index].control);
-    printf("Addr: $%08X\n", channels[index].address);
-    printf("Mode: %d\n", (channels[index].control >> 2) & 0x3);
-    printf("ASP: %d\n", (channels[index].control >> 4) & 0x3);
-    printf("TTE: %d\n", channels[index].control & (1 << 6));
     int mode = (channels[index].control >> 2) & 0x3;
     channels[index].tag_end = !(mode & 0x1); //always end transfers in normal and interleave mode
     switch (mode)
@@ -692,6 +689,7 @@ void DMAC::start_DMA(int index)
             channels[index].interleaved_qwc = SQWC.transfer_qwc;
             break;
     }
+    channels[index].started = true;
 }
 
 uint32_t DMAC::read_master_disable()
@@ -908,6 +906,8 @@ void DMAC::write32(uint32_t address, uint32_t value)
             channels[VIF0].control = value;
             if (value & 0x100)
                 start_DMA(VIF0);
+            else if (master_disable & (1 << 16))
+                channels[VIF0].started = false;
             break;
         case 0x10008010:
             printf("[DMAC] VIF0 M_ADR: $%08X\n", value);
@@ -926,6 +926,8 @@ void DMAC::write32(uint32_t address, uint32_t value)
             channels[VIF1].control = value;
             if (value & 0x100)
                 start_DMA(VIF1);
+            else if (master_disable & (1 << 16))
+                channels[VIF1].started = false;
             break;
         case 0x10009010:
             printf("[DMAC] VIF1 M_ADR: $%08X\n", value);
@@ -947,6 +949,11 @@ void DMAC::write32(uint32_t address, uint32_t value)
                 start_DMA(GIF);
                 gif->request_PATH(3);
             }
+            else if (master_disable & (1 << 16))
+            {
+                channels[GIF].started = false;
+                gif->deactivate_PATH(3);
+            }
             break;
         case 0x1000A010:
             printf("[DMAC] GIF M_ADR: $%08X\n", value);
@@ -965,6 +972,8 @@ void DMAC::write32(uint32_t address, uint32_t value)
             channels[IPU_FROM].control = value;
             if (value & 0x100)
                 start_DMA(IPU_FROM);
+            else if (master_disable & (1 << 16))
+                channels[IPU_FROM].started = false;
             break;
         case 0x1000B010:
             printf("[DMAC] IPU_FROM M_ADR: $%08X\n", value);
@@ -979,6 +988,8 @@ void DMAC::write32(uint32_t address, uint32_t value)
             channels[IPU_TO].control = value;
             if (value & 0x100)
                 start_DMA(IPU_TO);
+            else if (master_disable & (1 << 16))
+                channels[IPU_TO].started = false;
             break;
         case 0x1000B410:
             printf("[DMAC] IPU_TO M_ADR: $%08X\n", value);
@@ -997,6 +1008,8 @@ void DMAC::write32(uint32_t address, uint32_t value)
             channels[SIF0].control = value;
             if (value & 0x100)
                 start_DMA(SIF0);
+            else if (master_disable & (1 << 16))
+                channels[SIF0].started = false;
             break;
         case 0x1000C010:
             printf("[DMAC] SIF0 M_ADR: $%08X\n", value);
@@ -1011,6 +1024,8 @@ void DMAC::write32(uint32_t address, uint32_t value)
             channels[SIF1].control = value;
             if (value & 0x100)
                 start_DMA(SIF1);
+            else if (master_disable & (1 << 16))
+                channels[SIF1].started = false;
             break;
         case 0x1000C410:
             printf("[DMAC] SIF1 M_ADR: $%08X\n", value);
@@ -1029,6 +1044,8 @@ void DMAC::write32(uint32_t address, uint32_t value)
             channels[SPR_FROM].control = value;
             if (value & 0x100)
                 start_DMA(SPR_FROM);
+            else if (master_disable & (1 << 16))
+                channels[SPR_FROM].started = false;
             break;
         case 0x1000D010:
             printf("[DMAC] SPR_FROM M_ADR: $%08X\n", value);
@@ -1047,6 +1064,8 @@ void DMAC::write32(uint32_t address, uint32_t value)
             channels[SPR_TO].control = value;
             if (value & 0x100)
                 start_DMA(SPR_TO);
+            else if (master_disable & (1 << 16))
+                channels[SPR_TO].started = false;
             break;
         case 0x1000D410:
             printf("[DMAC] SPR_TO M_ADR: $%08X\n", value);

@@ -28,6 +28,8 @@ struct Timer
 
     //Indicates if the timer is paused by a gate
     bool gated;
+
+    uint32_t clock_scale;
 };
 
 class INTC;
@@ -40,7 +42,7 @@ class EmotionTiming
 
         uint32_t read_control(int index);
         void write_control(int index, uint32_t value);
-        void count_up(int index, int cycles_per_count);
+        void count_up(int index);
     public:
         EmotionTiming(INTC* intc);
 
