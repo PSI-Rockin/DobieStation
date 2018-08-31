@@ -229,12 +229,12 @@ string VU_Disasm::upper_special(uint32_t PC, uint32_t instr)
         case 0x01:
         case 0x02:
         case 0x03:
-            return upper_acc_bc("addabc", instr);
+            return upper_acc_bc("adda", instr);
         case 0x04:
         case 0x05:
         case 0x06:
         case 0x07:
-            return upper_acc_bc("subabc", instr);
+            return upper_acc_bc("suba", instr);
         case 0x08:
         case 0x09:
         case 0x0A:

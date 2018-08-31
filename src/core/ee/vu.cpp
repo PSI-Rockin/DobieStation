@@ -12,6 +12,19 @@
 #define _z(f) f&2
 #define _w(f) f&1
 
+#define _ft_ ((instr >> 16) & 0x1F)
+#define _fs_ ((instr >> 11) & 0x1F)
+#define _fd_ ((instr >> 6) & 0x1F)
+
+#define _field ((instr >> 21) & 0xF)
+
+#define _it_ (_ft_ & 0xF)
+#define _is_ (_fs_ & 0xF)
+#define _id_ (_fd_ & 0xF)
+
+#define _fsf_ ((instr >> 21) & 0x3)
+#define _ftf_ ((instr >> 23) & 0x3)
+
 VectorUnit::VectorUnit(int id) : id(id), gif(nullptr)
 {
     gpr[0].f[0] = 0.0;
@@ -75,7 +88,7 @@ void VectorUnit::set_GIF(GraphicsInterface *gif)
 //Propogate all pipeline updates instantly
 void VectorUnit::flush_pipes()
 {
-    while (*MAC_flags != new_MAC_flags)
+    for (int i = 0; i < 4; i++)
         update_mac_pipeline();
 
     Q.u = new_Q_instance.u;
@@ -98,6 +111,9 @@ void VectorUnit::run(int cycles)
         uint32_t lower_instr = *(uint32_t*)&instr_mem[PC];
         //printf("[$%08X] $%08X:$%08X\n", PC, upper_instr, lower_instr);
         VU_Interpreter::interpret(*this, upper_instr, lower_instr);
+
+        check_for_FMAC_stall();
+
         PC += 8;
 
         if (branch_on)
@@ -168,6 +184,75 @@ void VectorUnit::handle_XGKICK()
     }
 }
 
+void VectorUnit::check_for_FMAC_stall()
+{
+    /*if (PC == 0x1858)
+            {
+                update_mac_pipeline();
+                update_mac_pipeline();
+                update_mac_pipeline();
+                cycle_count += 3;
+            }
+            if (PC == 0xd38 || PC == 0x1788 || PC == 0x1ed0)
+            {
+                update_mac_pipeline();
+                cycle_count++;
+            }
+            if (PC == 0xd60 || PC == 0x17b0 || PC == 0x1ef8)
+            {
+                update_mac_pipeline();
+                update_mac_pipeline();
+                cycle_count += 2;
+            }
+    return;*/
+    for (int i = 0; i < 3; i++)
+    {
+        uint8_t write0 = (MAC_pipeline[i] >> 16) & 0xFF;
+        uint8_t write1 = (MAC_pipeline[i] >> 24) & 0xFF;
+        uint8_t write0_field = (MAC_pipeline[i] >> 32) & 0xF;
+        uint8_t write1_field = (MAC_pipeline[i] >> 36) & 0xF;
+        bool stall_found = false;
+        for (int j = 0; j < 2; j++)
+        {
+            if (decoder.vf_read0[j] && (decoder.vf_read0[j] == write0 || decoder.vf_read0[j] == write1))
+            {
+                if (decoder.vf_read0_field[j] & write0_field)
+                {
+                    stall_found = true;
+                    break;
+                }
+                if (decoder.vf_read0_field[j] & write1_field)
+                {
+                    stall_found = true;
+                    break;
+                }
+            }
+            if (decoder.vf_read1[j] && (decoder.vf_read1[j] == write0 || decoder.vf_read1[j] == write1))
+            {
+                if (decoder.vf_read1_field[j] & write0_field)
+                {
+                    stall_found = true;
+                    break;
+                }
+                if (decoder.vf_read1_field[j] & write1_field)
+                {
+                    stall_found = true;
+                    break;
+                }
+            }
+        }
+        if (stall_found)
+        {
+            printf("FMAC stall at $%08X for %d cycles!", PC, 3 - i);
+            int delay = 3 - i;
+            for (int j = 0; j < delay; j++)
+                update_mac_pipeline();
+            cycle_count += delay;
+            break;
+        }
+    }
+}
+
 void VectorUnit::callmsr()
 {
     printf("[VU%d] CallMSR Starting execution at $%08X! Cur PC %x\n", get_id(), CMSAR0 * 8, PC);
@@ -198,29 +283,38 @@ float VectorUnit::update_mac_flags(float value, int index)
 {
     uint32_t value_u = *(uint32_t*)&value;
     int flag_id = 3 - index;
-    new_MAC_flags &= ~(0x1111 << flag_id);
 
     //Sign flag
-    new_MAC_flags |= ((value_u & 0x80000000) != 0) << (flag_id + 4);
+    if (value_u & 0x80000000)
+        new_MAC_flags |= 0x10 << flag_id;
+    else
+        new_MAC_flags &= ~(0x10 << flag_id);
 
-    //Zero flag
+    //Zero flag, clear under/overflow
     if (value == 0)
     {
         new_MAC_flags |= 1 << flag_id;
+        new_MAC_flags &= ~(0x1100 << flag_id);
         return value;
     }
 
     switch ((value_u >> 23) & 0xFF)
     {
-        //Underflow
+        //Underflow, set zero
         case 0:
-            new_MAC_flags |= 1 << (flag_id + 8);
+            new_MAC_flags |= 0x101 << flag_id;
+            new_MAC_flags &= ~(0x1000 << flag_id);
             value_u = value_u & 0x80000000;
             break;
         //Overflow
         case 255:
-            new_MAC_flags |= 1 << (flag_id + 12);
+            new_MAC_flags |= 0x1000 << flag_id;
+            new_MAC_flags &= ~(0x100 << flag_id);
             value_u = (value_u & 0x80000000) | 0x7F7FFFFF;
+            break;
+        //Clear all but sign
+        default:
+            new_MAC_flags &= ~(0x1101 << flag_id);
             break;
     }
 
@@ -256,6 +350,9 @@ void VectorUnit::update_mac_pipeline()
     MAC_pipeline[2] = MAC_pipeline[1];
     MAC_pipeline[1] = MAC_pipeline[0];
     MAC_pipeline[0] = new_MAC_flags;
+
+    MAC_pipeline[0] |= ((uint32_t)decoder.vf_write[0] << 16) | ((uint32_t)decoder.vf_write[1] << 24);
+    MAC_pipeline[0] |= ((uint64_t)decoder.vf_write_field[0] << 32UL) | ((uint64_t)decoder.vf_write_field[1] << 36UL);
 
     CLIP_pipeline[3] = CLIP_pipeline[2];
     CLIP_pipeline[2] = CLIP_pipeline[1];
@@ -320,7 +417,7 @@ uint32_t VectorUnit::cfc(int index)
         case 16:
             return status;
         case 17:
-            return *MAC_flags;
+            return *MAC_flags & 0xFFFF;
         case 18:
             return *CLIP_flags;
         case 20:
@@ -736,13 +833,14 @@ void VectorUnit::fmeq(uint8_t dest, uint8_t source)
 void VectorUnit::fmand(uint8_t dest, uint8_t source)
 {
     printf("[VU] FMAND: $%04X\n", int_gpr[source].u);
-    set_int(dest, *MAC_flags & int_gpr[source].u);
+    printf("MAC flags: $%08X\n", *MAC_flags);
+    set_int(dest, (*MAC_flags & 0xFFFF) & int_gpr[source].u);
 }
 
 void VectorUnit::fmor(uint8_t dest, uint8_t source)
 {
     printf("[VU] FMOR: $%04X\n", int_gpr[source].u);
-    set_int(dest, *MAC_flags | int_gpr[source].u);
+    set_int(dest, (*MAC_flags & 0xFFFF) | int_gpr[source].u);
 }
 
 void VectorUnit::fsset(uint32_t value)
@@ -965,7 +1063,7 @@ void VectorUnit::itof15(uint8_t field, uint8_t dest, uint8_t source)
     {
         if (field & (1 << (3 - i)))
         {
-            gpr[dest].f[i] = (float)((float)gpr[source].s[i] * 0.000030517578125f);
+            gpr[dest].f[i] = (float)((float)gpr[source].s[i] * 0.000030517578125);
             printf("(%d)%f ", i, gpr[dest].f[i]);
         }
     }
@@ -1220,13 +1318,13 @@ void VectorUnit::maxbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, 
     printf("\n");
 }
 
-void VectorUnit::mfir(uint8_t field, uint8_t dest, uint8_t source)
+void VectorUnit::mfir(uint32_t instr)
 {
     printf("[VU] MFIR\n");
     for (int i = 0; i < 4; i++)
     {
-        if (field & (1 << (3 - i)))
-            gpr[dest].s[i] = (int32_t)int_gpr[source].s;
+        if (_field & (1 << (3 - i)))
+            gpr[_ft_].s[i] = (int32_t)int_gpr[_is_].s;
     }
 }
 
@@ -1380,16 +1478,16 @@ void VectorUnit::msubai(uint8_t field, uint8_t source)
     printf("\n");
 }
 
-void VectorUnit::msub(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)
+void VectorUnit::msub(uint32_t instr)
 {
     printf("[VU] MSUB: ");
     for (int i = 0; i < 4; i++)
     {
-        if (field & (1 << (3 - i)))
+        if (_field & (1 << (3 - i)))
         {
-            float temp = convert(ACC.u[i]) - convert(gpr[reg1].u[i]) * convert(gpr[reg2].u[i]);
-            set_gpr_f(dest, i, update_mac_flags(temp, i));
-            printf("(%d)%f ", i, gpr[dest].f[i]);
+            float temp = convert(ACC.u[i]) - convert(gpr[_fs_].u[i]) * convert(gpr[_ft_].u[i]);
+            set_gpr_f(_fd_, i, update_mac_flags(temp, i));
+            printf("(%d)%f ", i, gpr[_fd_].f[i]);
         }
         else
             clear_mac_flags(i);
@@ -1468,10 +1566,10 @@ void VectorUnit::msubq(uint8_t field, uint8_t dest, uint8_t source)
     printf("\n");
 }
 
-void VectorUnit::mtir(uint8_t fsf, uint8_t dest, uint8_t source)
+void VectorUnit::mtir(uint32_t instr)
 {
-    printf("[VU] MTIR: %d\n", gpr[source].u[fsf] & 0xFFFF);
-    set_int(dest, gpr[source].u[fsf] & 0xFFFF);
+    printf("[VU] MTIR: %d\n", gpr[_fs_].u[_fsf_] & 0xFFFF);
+    set_int(_it_, gpr[_fs_].u[_fsf_] & 0xFFFF);
 }
 
 void VectorUnit::mul(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2)
@@ -1528,7 +1626,7 @@ void VectorUnit::mulabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_re
 
 void VectorUnit::mulai(uint8_t field, uint8_t source)
 {
-    printf("[VU] MULAi: ");
+    printf("[VU] MULAi: (%f)", I.f);
     float op = convert(I.u);
     for (int i = 0; i < 4; i++)
     {
@@ -1962,7 +2060,7 @@ void VectorUnit::xgkick(uint8_t is)
 
 void VectorUnit::xitop(uint8_t it)
 {
-    printf("[VU] XTIOP: $%04X (%d)\n", *VIF_ITOP, it);
+    printf("[VU] XITOP: $%04X (%d)\n", *VIF_ITOP, it);
     set_int(it, *VIF_ITOP);
 }
 

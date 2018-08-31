@@ -209,7 +209,7 @@ void GS_REGISTERS::reset()
     IMR.vsync = true;
     IMR.rawt = true;
     CSR.is_odd_frame = false;
-    CSR.VBLANK_enabled = false;
+    CSR.VBLANK_enabled = true;
     CSR.VBLANK_generated = false;
     CSR.FINISH_enabled = false;
     CSR.FINISH_generated = false;

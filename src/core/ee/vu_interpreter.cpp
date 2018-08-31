@@ -3,10 +3,22 @@
 #include "vu_interpreter.hpp"
 #include "../errors.hpp"
 
-#define printf(fmt, ...)(0)
+//#define printf(fmt, ...)(0)
 
 void VU_Interpreter::interpret(VectorUnit &vu, uint32_t upper_instr, uint32_t lower_instr)
 {
+    vu.decoder.vf_read0[0] = 0; vu.decoder.vf_read0[1] = 0;
+    vu.decoder.vf_read0_field[0] = 0; vu.decoder.vf_read0_field[1] = 0;
+
+    vu.decoder.vf_read1[0] = 0; vu.decoder.vf_read1[1] = 0;
+    vu.decoder.vf_read1_field[0] = 0; vu.decoder.vf_read1_field[1] = 0;
+
+    vu.decoder.vf_write[0] = 0; vu.decoder.vf_write[1] = 0;
+    vu.decoder.vf_write_field[0] = 0; vu.decoder.vf_write_field[1] = 0;
+
+    vu.decoder.vi_read0 = 0; vu.decoder.vi_read1 = 0;
+    vu.decoder.vi_write = 0;
+
     bool swapops = check_swapops(vu, upper_instr, lower_instr);
 
     //WaitQ, DIV, RSQRT, SQRT
@@ -15,7 +27,7 @@ void VU_Interpreter::interpret(VectorUnit &vu, uint32_t upper_instr, uint32_t lo
         vu.waitq();
     }
 
-    if(!swapops)
+    if (!swapops)
         upper(vu, upper_instr);
 
     //LOI
@@ -39,7 +51,7 @@ bool VU_Interpreter::check_swapops(VectorUnit &vu, uint32_t upper_instr, uint32_
     lowerfs = (upper_instr >> 11) & 0x1F;
     lowerft = (lower_instr >> 16) & 0x1F;
 
-    if (upperfd == lowerfs || upperfd == lowerft)
+    if ((upperfd == lowerfs || upperfd == lowerft) && !(upper_instr & (1 << 31)))
         return true;
     else
         return false;
@@ -380,7 +392,13 @@ void VU_Interpreter::msub(VectorUnit &vu, uint32_t instr)
     uint8_t reg1 = (instr >> 11) & 0x1F;
     uint8_t reg2 = (instr >> 16) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
-    vu.msub(field, dest, reg1, reg2);
+    vu.decoder.vf_write[0] = dest;
+    vu.decoder.vf_read0[0] = reg1;
+    vu.decoder.vf_read1[0] = reg2;
+    vu.decoder.vf_write_field[0] = field;
+    vu.decoder.vf_read0_field[0] = field;
+    vu.decoder.vf_read1_field[0] = field;
+    vu.msub(instr);
 }
 
 void VU_Interpreter::opmsub(VectorUnit &vu, uint32_t instr)
@@ -508,6 +526,7 @@ void VU_Interpreter::upper_special(VectorUnit &vu, uint32_t instr)
             opmula(vu, instr);
             break;
         case 0x2F:
+        case 0x30:
             /**
               * NOP
               */
@@ -1003,7 +1022,10 @@ void VU_Interpreter::mtir(VectorUnit &vu, uint32_t instr)
     uint32_t fs = (instr >> 11) & 0x1F;
     uint32_t it = (instr >> 16) & 0x1F;
     uint8_t fsf = (instr >> 21) & 0x3;
-    vu.mtir(fsf, it, fs);
+    vu.decoder.vf_read0[1] = fs;
+    vu.decoder.vf_read0_field[1] = 1 << (3 - fsf);
+    vu.decoder.vi_write = it;
+    vu.mtir(instr);
 }
 
 void VU_Interpreter::mfir(VectorUnit &vu, uint32_t instr)
@@ -1011,7 +1033,10 @@ void VU_Interpreter::mfir(VectorUnit &vu, uint32_t instr)
     uint32_t is = (instr >> 11) & 0x1F;
     uint32_t ft = (instr >> 16) & 0x1F;
     uint8_t dest_field = (instr >> 21) & 0xF;
-    vu.mfir(dest_field, ft, is);
+    vu.decoder.vi_read0 = is;
+    vu.decoder.vf_write[1] = ft;
+    vu.decoder.vf_write_field[1] = dest_field;
+    vu.mfir(instr);
 }
 
 void VU_Interpreter::ilwr(VectorUnit &vu, uint32_t instr)

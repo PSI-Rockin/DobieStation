@@ -845,7 +845,7 @@ void EmotionInterpreter::cop2_vmtir(VectorUnit &vu0, uint32_t instruction)
     uint32_t fs = (instruction >> 11) & 0x1F;
     uint32_t it = (instruction >> 16) & 0x1F;
     uint8_t fsf = (instruction >> 21) & 0x3;
-    vu0.mtir(fsf, it, fs);
+    vu0.mtir(instruction);
 }
 
 void EmotionInterpreter::cop2_vmfir(VectorUnit &vu0, uint32_t instruction)
@@ -853,7 +853,7 @@ void EmotionInterpreter::cop2_vmfir(VectorUnit &vu0, uint32_t instruction)
     uint32_t is = (instruction >> 11) & 0x1F;
     uint32_t ft = (instruction >> 16) & 0x1F;
     uint8_t dest_field = (instruction >> 21) & 0xF;
-    vu0.mfir(dest_field, ft, is);
+    vu0.mfir(instruction);
 }
 
 void EmotionInterpreter::cop2_viswr(VectorUnit &vu0, uint32_t instruction)

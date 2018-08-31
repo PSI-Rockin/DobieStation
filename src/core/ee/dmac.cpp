@@ -671,6 +671,8 @@ void DMAC::handle_source_chain(int index)
 
 void DMAC::start_DMA(int index)
 {
+    if (channels[index].started)
+        return;
     printf("[DMAC] D%d started: $%08X\n", index, channels[index].control);
     int mode = (channels[index].control >> 2) & 0x3;
     channels[index].tag_end = !(mode & 0x1); //always end transfers in normal and interleave mode

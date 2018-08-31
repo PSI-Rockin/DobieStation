@@ -30,6 +30,18 @@ struct VPU_STAT
     bool vu1_running;
 };
 
+struct DecodedRegs
+{
+    //0 = lower, 1 = upper
+    uint8_t vf_write[2];
+    uint8_t vf_write_field[2];
+
+    uint8_t vf_read0[2], vf_read1[2];
+    uint8_t vf_read0_field[2], vf_read1_field[2];
+
+    uint8_t vi_read0, vi_read1, vi_write;
+};
+
 class GraphicsInterface;
 
 class VectorUnit
@@ -73,9 +85,9 @@ class VectorUnit
         VU_R P;
 
         uint32_t CLIP_pipeline[4];
-        uint16_t MAC_pipeline[4];   
+        uint64_t MAC_pipeline[4];
         uint32_t* CLIP_flags;
-        uint16_t* MAC_flags; //pointer to last element in the pipeline; the register accessible to programs
+        uint64_t* MAC_flags; //pointer to last element in the pipeline; the register accessible to programs
         uint16_t new_MAC_flags; //to be placed in the pipeline
 
         VU_R new_Q_instance;
@@ -86,6 +98,8 @@ class VectorUnit
 
         //Updates new_Q_instance
         void start_DIV_unit(int latency);
+
+        void check_for_FMAC_stall();
         
         void update_status();
         void advance_r();
@@ -93,6 +107,8 @@ class VectorUnit
         float convert();
     public:
         VectorUnit(int id);
+
+        DecodedRegs decoder;
 
         void set_TOP_regs(uint16_t* TOP, uint16_t* ITOP);
         void set_GIF(GraphicsInterface* gif);
@@ -190,7 +206,8 @@ class VectorUnit
         void max(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2);
         void maxi(uint8_t field, uint8_t dest, uint8_t source);
         void maxbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
-        void mfir(uint8_t field, uint8_t dest, uint8_t source);
+        //void mfir(uint8_t field, uint8_t dest, uint8_t source);
+        void mfir(uint32_t instr);
         void mfp(uint8_t field, uint8_t dest);
         void mini(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2);
         void minibc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
@@ -201,11 +218,13 @@ class VectorUnit
         void msubabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_reg);
         void msubaq(uint8_t field, uint8_t source);
         void msubai(uint8_t field, uint8_t source);
-        void msub(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2);
+        //void msub(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2);
+        void msub(uint32_t instr);
         void msubbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
         void msubi(uint8_t field, uint8_t dest, uint8_t source);
         void msubq(uint8_t field, uint8_t dest, uint8_t source);
-        void mtir(uint8_t fsf, uint8_t dest, uint8_t source);
+        //void mtir(uint8_t fsf, uint8_t dest, uint8_t source);
+        void mtir(uint32_t instr);
         void mul(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2);
         void mula(uint8_t field, uint8_t reg1, uint8_t reg2);
         void mulabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_reg);

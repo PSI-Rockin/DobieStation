@@ -212,14 +212,19 @@ void GraphicsInterface::set_path3_vifmask(int value)
 
 void GraphicsInterface::request_PATH(int index)
 {
+    printf("[GIF] PATH%d requested\n", index);
     if (!active_path)
+    {
         active_path = index;
+        printf("[GIF] Active!\n");
+    }
     else
         path_queue |= 1 << index;
 }
 
 void GraphicsInterface::deactivate_PATH(int index)
 {
+    printf("[GIF] PATH%d deactivated\n", index);
     path_queue &= ~(1 << index);
     if (active_path == index)
     {
