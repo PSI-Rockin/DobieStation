@@ -166,12 +166,12 @@ void EmotionInterpreter::cop2_vaddbc(VectorUnit &vu0, uint32_t instruction)
 
 void EmotionInterpreter::cop2_vsubbc(VectorUnit &vu0, uint32_t instruction)
 {
-    uint8_t bc = instruction & 0x3;
+    /*uint8_t bc = instruction & 0x3;
     uint8_t dest = (instruction >> 6) & 0x1F;
     uint8_t source = (instruction >> 11) & 0x1F;
     uint8_t bc_reg = (instruction >> 16) & 0x1F;
-    uint8_t field = (instruction >> 21) & 0xF;
-    vu0.subbc(bc, field, dest, source, bc_reg);
+    uint8_t field = (instruction >> 21) & 0xF;*/
+    vu0.subbc(instruction);
 }
 
 void EmotionInterpreter::cop2_vmaddbc(VectorUnit &vu0, uint32_t instruction)
@@ -290,10 +290,10 @@ void EmotionInterpreter::cop2_vmaddi(VectorUnit &vu0, uint32_t instruction)
 
 void EmotionInterpreter::cop2_vsubq(VectorUnit &vu0, uint32_t instruction)
 {
-    uint8_t dest = (instruction >> 6) & 0x1F;
+    /*uint8_t dest = (instruction >> 6) & 0x1F;
     uint8_t source = (instruction >> 11) & 0x1F;
-    uint8_t field = (instruction >> 21) & 0xF;
-    vu0.subq(field, dest, source);
+    uint8_t field = (instruction >> 21) & 0xF;*/
+    vu0.subq(instruction);
 }
 
 void EmotionInterpreter::cop2_vmsubq(VectorUnit &vu0, uint32_t instruction)
@@ -306,10 +306,10 @@ void EmotionInterpreter::cop2_vmsubq(VectorUnit &vu0, uint32_t instruction)
 
 void EmotionInterpreter::cop2_vsubi(VectorUnit &vu0, uint32_t instruction)
 {
-    uint8_t dest = (instruction >> 6) & 0x1F;
+    /*uint8_t dest = (instruction >> 6) & 0x1F;
     uint8_t source = (instruction >> 11) & 0x1F;
-    uint8_t field = (instruction >> 21) & 0xF;
-    vu0.subi(field, dest, source);
+    uint8_t field = (instruction >> 21) & 0xF;*/
+    vu0.subi(instruction);
 }
 
 void EmotionInterpreter::cop2_vmsubi(VectorUnit &vu0, uint32_t instruction)
@@ -358,11 +358,11 @@ void EmotionInterpreter::cop2_vmax(VectorUnit &vu0, uint32_t instruction)
 
 void EmotionInterpreter::cop2_vsub(VectorUnit &vu0, uint32_t instruction)
 {
-    uint8_t dest = (instruction >> 6) & 0x1F;
+    /*uint8_t dest = (instruction >> 6) & 0x1F;
     uint8_t reg1 = (instruction >> 11) & 0x1F;
     uint8_t reg2 = (instruction >> 16) & 0x1F;
-    uint8_t field = (instruction >> 21) & 0xF;
-    vu0.sub(field, dest, reg1, reg2);
+    uint8_t field = (instruction >> 21) & 0xF;*/
+    vu0.sub(instruction);
 }
 
 void EmotionInterpreter::cop2_vopmsub(VectorUnit &vu0, uint32_t instruction)
@@ -595,11 +595,11 @@ void EmotionInterpreter::cop2_vaddabc(VectorUnit &vu0, uint32_t instruction)
 
 void EmotionInterpreter::cop2_vsubabc(VectorUnit &vu0, uint32_t instruction)
 {
-    uint8_t bc = instruction & 0x3;
+    /*uint8_t bc = instruction & 0x3;
     uint8_t source = (instruction >> 11) & 0x1F;
     uint8_t bc_reg = (instruction >> 16) & 0x1F;
-    uint8_t field = (instruction >> 21) & 0xF;
-    vu0.subabc(bc, field, source, bc_reg);
+    uint8_t field = (instruction >> 21) & 0xF;*/
+    vu0.subabc(instruction);
 }
 
 void EmotionInterpreter::cop2_vmaddabc(VectorUnit &vu0, uint32_t instruction)
@@ -622,66 +622,66 @@ void EmotionInterpreter::cop2_vmsubabc(VectorUnit &vu0, uint32_t instruction)
 
 void EmotionInterpreter::cop2_vitof0(VectorUnit &vu0, uint32_t instruction)
 {
-    uint8_t source = (instruction >> 11) & 0x1F;
+    /*uint8_t source = (instruction >> 11) & 0x1F;
     uint8_t dest = (instruction >> 16) & 0x1F;
-    uint8_t field = (instruction >> 21) & 0xF;
-    vu0.itof0(field, dest, source);
+    uint8_t field = (instruction >> 21) & 0xF;*/
+    vu0.itof0(instruction);
 }
 
 void EmotionInterpreter::cop2_vitof4(VectorUnit &vu0, uint32_t instruction)
 {
-    uint8_t source = (instruction >> 11) & 0x1F;
+    /*uint8_t source = (instruction >> 11) & 0x1F;
     uint8_t dest = (instruction >> 16) & 0x1F;
-    uint8_t field = (instruction >> 21) & 0xF;
-    vu0.itof4(field, dest, source);
+    uint8_t field = (instruction >> 21) & 0xF;*/
+    vu0.itof4(instruction);
 }
 
 void EmotionInterpreter::cop2_vitof12(VectorUnit &vu0, uint32_t instruction)
 {
-    uint8_t source = (instruction >> 11) & 0x1F;
+    /*uint8_t source = (instruction >> 11) & 0x1F;
     uint8_t dest = (instruction >> 16) & 0x1F;
-    uint8_t field = (instruction >> 21) & 0xF;
-    vu0.itof12(field, dest, source);
+    uint8_t field = (instruction >> 21) & 0xF;*/
+    vu0.itof12(instruction);
 }
 
 void EmotionInterpreter::cop2_vitof15(VectorUnit &vu0, uint32_t instruction)
 {
-    uint8_t source = (instruction >> 11) & 0x1F;
+    /*uint8_t source = (instruction >> 11) & 0x1F;
     uint8_t dest = (instruction >> 16) & 0x1F;
-    uint8_t field = (instruction >> 21) & 0xF;
-    vu0.itof15(field, dest, source);
+    uint8_t field = (instruction >> 21) & 0xF;*/
+    vu0.itof15(instruction);
 }
 
 void EmotionInterpreter::cop2_vftoi0(VectorUnit &vu0, uint32_t instruction)
 {
-    uint8_t source = (instruction >> 11) & 0x1F;
+    /*uint8_t source = (instruction >> 11) & 0x1F;
     uint8_t dest = (instruction >> 16) & 0x1F;
-    uint8_t field = (instruction >> 21) & 0xF;
-    vu0.ftoi0(field, dest, source);
+    uint8_t field = (instruction >> 21) & 0xF;*/
+    vu0.ftoi0(instruction);
 }
 
 void EmotionInterpreter::cop2_vftoi4(VectorUnit &vu0, uint32_t instruction)
 {
-    uint8_t source = (instruction >> 11) & 0x1F;
+    /*uint8_t source = (instruction >> 11) & 0x1F;
     uint8_t dest = (instruction >> 16) & 0x1F;
-    uint8_t field = (instruction >> 21) & 0xF;
-    vu0.ftoi4(field, dest, source);
+    uint8_t field = (instruction >> 21) & 0xF;*/
+    vu0.ftoi4(instruction);
 }
 
 void EmotionInterpreter::cop2_vftoi12(VectorUnit &vu0, uint32_t instruction)
 {
-    uint8_t source = (instruction >> 11) & 0x1F;
+    /*uint8_t source = (instruction >> 11) & 0x1F;
     uint8_t dest = (instruction >> 16) & 0x1F;
-    uint8_t field = (instruction >> 21) & 0xF;
-    vu0.ftoi12(field, dest, source);
+    uint8_t field = (instruction >> 21) & 0xF;*/
+    vu0.ftoi12(instruction);
 }
 
 void EmotionInterpreter::cop2_vftoi15(VectorUnit &vu0, uint32_t instruction)
 {
-    uint8_t source = (instruction >> 11) & 0x1F;
+    /*uint8_t source = (instruction >> 11) & 0x1F;
     uint8_t dest = (instruction >> 16) & 0x1F;
-    uint8_t field = (instruction >> 21) & 0xF;
-    vu0.ftoi15(field, dest, source);
+    uint8_t field = (instruction >> 21) & 0xF;*/
+    vu0.ftoi15(instruction);
 }
 
 void EmotionInterpreter::cop2_vmulabc(VectorUnit &vu0, uint32_t instruction)
@@ -762,10 +762,10 @@ void EmotionInterpreter::cop2_vmula(VectorUnit &vu0, uint32_t instruction)
 
 void EmotionInterpreter::cop2_vsuba(VectorUnit &vu0, uint32_t instruction)
 {
-    uint8_t reg1 = (instruction >> 11) & 0x1F;
+    /*uint8_t reg1 = (instruction >> 11) & 0x1F;
     uint8_t reg2 = (instruction >> 16) & 0x1F;
-    uint8_t field = (instruction >> 21) & 0xF;
-    vu0.suba(field, reg1, reg2);
+    uint8_t field = (instruction >> 21) & 0xF;*/
+    vu0.suba(instruction);
 }
 
 void EmotionInterpreter::cop2_vopmula(VectorUnit &vu0, uint32_t instruction)
