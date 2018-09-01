@@ -231,7 +231,16 @@ void VU_Interpreter::msubbc(VectorUnit &vu, uint32_t instr)
     uint8_t source = (instr >> 11) & 0x1F;
     uint8_t bc_reg = (instr >> 16) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
-    vu.msubbc(bc, field, dest, source, bc_reg);
+
+    vu.decoder.vf_write[0] = dest;
+    vu.decoder.vf_write_field[0] = field;
+
+    vu.decoder.vf_read0[0] = source;
+    vu.decoder.vf_read0_field[0] = field;
+
+    vu.decoder.vf_read1[0] = bc_reg;
+    vu.decoder.vf_read1_field[0] = 1 << (3 - bc);
+    vu.msubbc(instr);
 }
 
 void VU_Interpreter::maxbc(VectorUnit &vu, uint32_t instr)
@@ -357,7 +366,13 @@ void VU_Interpreter::msubq(VectorUnit &vu, uint32_t instr)
     uint8_t dest = (instr >> 6) & 0x1F;
     uint8_t source = (instr >> 11) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
-    vu.msubq(field, dest, source);
+
+    vu.decoder.vf_write[0] = dest;
+    vu.decoder.vf_write_field[0] = field;
+
+    vu.decoder.vf_read0[0] = source;
+    vu.decoder.vf_read0_field[0] = field;
+    vu.msubq(instr);
 }
 
 void VU_Interpreter::subi(VectorUnit &vu, uint32_t instr)
@@ -379,7 +394,13 @@ void VU_Interpreter::msubi(VectorUnit &vu, uint32_t instr)
     uint8_t dest = (instr >> 6) & 0x1F;
     uint8_t source = (instr >> 11) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
-    vu.msubi(field, dest, source);
+
+    vu.decoder.vf_write[0] = dest;
+    vu.decoder.vf_write_field[0] = field;
+
+    vu.decoder.vf_read0[0] = source;
+    vu.decoder.vf_read0_field[0] = field;
+    vu.msubi(instr);
 }
 
 void VU_Interpreter::add(VectorUnit &vu, uint32_t instr)
@@ -646,7 +667,13 @@ void VU_Interpreter::msubabc(VectorUnit &vu, uint32_t instr)
     uint8_t source = (instr >> 11) & 0x1F;
     uint8_t bc_reg = (instr >> 16) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
-    vu.msubabc(bc, field, source, bc_reg);
+
+    vu.decoder.vf_read0[0] = source;
+    vu.decoder.vf_read0_field[0] = field;
+
+    vu.decoder.vf_read1[0] = bc_reg;
+    vu.decoder.vf_read1_field[0] = 1 << (3 - bc);
+    vu.msubabc(instr);
 }
 
 void VU_Interpreter::itof0(VectorUnit &vu, uint32_t instr)
@@ -826,7 +853,10 @@ void VU_Interpreter::msubaq(VectorUnit &vu, uint32_t instr)
 {
     uint8_t source = (instr >> 11) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
-    vu.msubaq(field, source);
+
+    vu.decoder.vf_read0[0] = source;
+    vu.decoder.vf_read0_field[0] = field;
+    vu.msubaq(instr);
 }
 
 void VU_Interpreter::subai(VectorUnit &vu, uint32_t instr)
@@ -843,7 +873,10 @@ void VU_Interpreter::msubai(VectorUnit &vu, uint32_t instr)
 {
     uint8_t source = (instr >> 11) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
-    vu.msubai(field, source);
+
+    vu.decoder.vf_read0[0] = source;
+    vu.decoder.vf_read0_field[0] = field;
+    vu.msubai(instr);
 }
 
 void VU_Interpreter::mula(VectorUnit &vu, uint32_t instr)
@@ -906,7 +939,13 @@ void VU_Interpreter::msuba(VectorUnit &vu, uint32_t instr)
     uint8_t reg1 = (instr >> 11) & 0x1F;
     uint8_t reg2 = (instr >> 16) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
-    vu.msuba(field, reg1, reg2);
+
+    vu.decoder.vf_read0[0] = reg1;
+    vu.decoder.vf_read0_field[0] = field;
+
+    vu.decoder.vf_read1[0] = reg2;
+    vu.decoder.vf_read1_field[0] = field;
+    vu.msuba(instr);
 }
 
 void VU_Interpreter::lower(VectorUnit &vu, uint32_t instr)
@@ -1090,7 +1129,13 @@ void VU_Interpreter::move(VectorUnit &vu, uint32_t instr)
     uint8_t source = (instr >> 11) & 0x1F;
     uint8_t dest = (instr >> 16) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
-    vu.move(field, dest, source);
+
+    vu.decoder.vf_write[0] = dest;
+    vu.decoder.vf_write_field[0] = field;
+
+    vu.decoder.vf_read0[0] = source;
+    vu.decoder.vf_read0_field[0] = field;
+    vu.move(instr);
 }
 
 void VU_Interpreter::mr32(VectorUnit &vu, uint32_t instr)
@@ -1098,7 +1143,13 @@ void VU_Interpreter::mr32(VectorUnit &vu, uint32_t instr)
     uint8_t source = (instr >> 11) & 0x1F;
     uint8_t dest = (instr >> 16) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
-    vu.mr32(field, dest, source);
+
+    vu.decoder.vf_write[0] = dest;
+    vu.decoder.vf_write_field[0] = field;
+
+    vu.decoder.vf_read0[0] = source;
+    vu.decoder.vf_read0_field[0] = field;
+    vu.mr32(instr);
 }
 
 void VU_Interpreter::lqi(VectorUnit &vu, uint32_t instr)
