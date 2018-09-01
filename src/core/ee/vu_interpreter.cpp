@@ -1343,14 +1343,23 @@ void VU_Interpreter::div(VectorUnit &vu, uint32_t instr)
     uint8_t reg2 = (instr >> 16) & 0x1F;
     uint8_t fsf = (instr >> 21) & 0x3;
     uint8_t ftf = (instr >> 23) & 0x3;
-    vu.div(ftf, fsf, reg1, reg2);
+
+    vu.decoder.vf_read0[1] = reg1;
+    vu.decoder.vf_read0_field[1] = 1 << (3 - fsf);
+
+    vu.decoder.vf_read1[1] = reg2;
+    vu.decoder.vf_read1_field[1] = 1 << (3 - ftf);
+    vu.div(instr);
 }
 
 void VU_Interpreter::vu_sqrt(VectorUnit &vu, uint32_t instr)
 {
     uint8_t source = (instr >> 16) & 0x1F;
     uint8_t ftf = (instr >> 23) & 0x3;
-    vu.vu_sqrt(ftf, source);
+
+    vu.decoder.vf_read0[1] = source;
+    vu.decoder.vf_read0_field[1] = 1 << (3 - ftf);
+    vu.vu_sqrt(instr);
 }
 
 void VU_Interpreter::rsqrt(VectorUnit &vu, uint32_t instr)
@@ -1359,7 +1368,13 @@ void VU_Interpreter::rsqrt(VectorUnit &vu, uint32_t instr)
     uint8_t reg2 = (instr >> 16) & 0x1F;
     uint8_t fsf = (instr >> 21) & 0x3;
     uint8_t ftf = (instr >> 23) & 0x3;
-    vu.rsqrt(ftf, fsf, reg1, reg2);
+
+    vu.decoder.vf_read0[1] = reg1;
+    vu.decoder.vf_read0_field[1] = 1 << (3 - fsf);
+
+    vu.decoder.vf_read1[1] = reg2;
+    vu.decoder.vf_read1_field[1] = 1 << (3 - ftf);
+    vu.rsqrt(instr);
 }
 
 void VU_Interpreter::waitq(VectorUnit &vu, uint32_t instr)
@@ -1409,28 +1424,40 @@ void VU_Interpreter::rnext(VectorUnit &vu, uint32_t instr)
 {
     uint8_t dest = (instr >> 16) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
-    vu.rnext(field, dest);
+
+    vu.decoder.vf_write[1] = dest;
+    vu.decoder.vf_write_field[1] = field;
+    vu.rnext(instr);
 }
 
 void VU_Interpreter::rget(VectorUnit &vu, uint32_t instr)
 {
     uint8_t dest = (instr >> 16) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
-    vu.rget(field, dest);
+
+    vu.decoder.vf_write[1] = dest;
+    vu.decoder.vf_write_field[1] = field;
+    vu.rget(instr);
 }
 
 void VU_Interpreter::rinit(VectorUnit &vu, uint32_t instr)
 {
     uint8_t source = (instr >> 11) & 0x1F;
     uint8_t fsf = (instr >> 21) & 0x3;
-    vu.rinit(fsf, source);
+
+    vu.decoder.vf_read0[1] = source;
+    vu.decoder.vf_read0_field[1] = 1 << (3 - fsf);
+    vu.rinit(instr);
 }
 
 void VU_Interpreter::rxor(VectorUnit &vu, uint32_t instr)
 {
-    uint8_t dest = (instr >> 16) & 0x1F;
-    uint8_t field = (instr >> 21) & 0xF;
-    vu.rxor(field, dest);
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t fsf = (instr >> 21) & 0x3;
+
+    vu.decoder.vf_read0[1] = source;
+    vu.decoder.vf_read0_field[1] = 1 << (3 - fsf);
+    vu.rxor(instr);
 }
 
 void VU_Interpreter::mfp(VectorUnit &vu, uint32_t instr)
@@ -1464,34 +1491,49 @@ void VU_Interpreter::xgkick(VectorUnit &vu, uint32_t instr)
 void VU_Interpreter::eleng(VectorUnit &vu, uint32_t instr)
 {
     uint8_t source = (instr >> 11) & 0x1F;
-    vu.eleng(source);
+
+    vu.decoder.vf_read0[1] = source;
+    vu.decoder.vf_read0_field[1] = 0xE; //xyz
+    vu.eleng(instr);
 }
 
 void VU_Interpreter::erleng(VectorUnit &vu, uint32_t instr)
 {
     uint8_t source = (instr >> 11) & 0x1F;
-    vu.erleng(source);
+
+    vu.decoder.vf_read0[1] = source;
+    vu.decoder.vf_read0_field[1] = 0xE; //xyz
+    vu.erleng(instr);
 }
 
 void VU_Interpreter::esqrt(VectorUnit &vu, uint32_t instr)
 {
     uint8_t source = (instr >> 11) & 0x1F;
     uint8_t fsf = (instr >> 21) & 0x3;
-    vu.esqrt(fsf, source);
+
+    vu.decoder.vf_read0[1] = source;
+    vu.decoder.vf_read0_field[1] = 1 << (3 - fsf);
+    vu.esqrt(instr);
 }
 
 void VU_Interpreter::ersqrt(VectorUnit &vu, uint32_t instr)
 {
     uint8_t source = (instr >> 11) & 0x1F;
     uint8_t fsf = (instr >> 21) & 0x3;
-    vu.ersqrt(fsf, source);
+
+    vu.decoder.vf_read0[1] = source;
+    vu.decoder.vf_read0_field[1] = 1 << (3 - fsf);
+    vu.ersqrt(instr);
 }
 
 void VU_Interpreter::eexp(VectorUnit &vu, uint32_t instr)
 {
     uint8_t source = (instr >> 11) & 0x1F;
     uint8_t fsf = (instr >> 21) & 0x3;
-    vu.eexp(fsf, source);
+
+    vu.decoder.vf_read0[1] = source;
+    vu.decoder.vf_read0_field[1] = 1 << (3 - fsf);
+    vu.eexp(instr);
 }
 
 void VU_Interpreter::lower2(VectorUnit &vu, uint32_t instr)

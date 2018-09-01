@@ -679,10 +679,10 @@ void VectorUnit::clip(uint32_t instr)
     clip_flags &= 0xFFFFFF;
 }
 
-void VectorUnit::div(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2)
+void VectorUnit::div(uint32_t instr)
 {
-    float num = convert(gpr[reg1].u[fsf]);
-    float denom = convert(gpr[reg2].u[ftf]);
+    float num = convert(gpr[_fs_].u[_fsf_]);
+    float denom = convert(gpr[_ft_].u[_ftf_]);
     status = (status & 0xFCF) | ((status & 0x30) << 6);
     if (denom == 0.0)
     {
@@ -691,7 +691,7 @@ void VectorUnit::div(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2)
         else
             status |= 0x20;
 
-        if ((gpr[reg1].u[fsf] & 0x80000000) ^ (gpr[reg2].u[ftf] & 0x80000000))
+        if ((gpr[_fs_].u[_fsf_] & 0x80000000) ^ (gpr[_ft_].u[_ftf_] & 0x80000000))
             new_Q_instance.u = 0xFF7FFFFF;
         else
             new_Q_instance.u = 0x7F7FFFFF;
@@ -707,7 +707,7 @@ void VectorUnit::div(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2)
     printf("Reg2: %f\n", denom);
 }
 
-void VectorUnit::eexp(uint8_t fsf, uint8_t source)
+void VectorUnit::eexp(uint32_t instr)
 {
     //P = exp(-reg)
     //In reality, VU1 uses an approximation to derive the result. This is shown here.
@@ -720,22 +720,22 @@ void VectorUnit::eexp(uint8_t fsf, uint8_t source)
     if (!id)
         Errors::die("[VU] EEXP called on VU0!");
 
-    if (gpr[source].u[fsf] & 0x80000000)
+    if (gpr[_fs_].u[_fsf_] & 0x80000000)
     {
         Errors::print_warning("[VU] EEXP called with sign bit set");
-        P.f = convert(gpr[source].u[fsf]);
+        P.f = convert(gpr[_fs_].u[_fsf_]);
         return;
     }
 
     float value = 1;
-    float x = convert(gpr[source].u[fsf]);
+    float x = convert(gpr[_fs_].u[_fsf_]);
     for (int exp = 1; exp <= 6; exp++)
         value += coeffs[exp - 1] * pow(x, exp);
 
     P.f = 1.0 / value;
 }
 
-void VectorUnit::eleng(uint8_t source)
+void VectorUnit::eleng(uint32_t instr)
 {
     if (!id)
     {
@@ -743,27 +743,27 @@ void VectorUnit::eleng(uint8_t source)
     }
 
     //P = sqrt(x^2 + y^2 + z^2)
-    P.f = pow(convert(gpr[source].u[0]), 2) + pow(convert(gpr[source].u[1]), 2) + pow(convert(gpr[source].u[2]), 2);
+    P.f = pow(convert(gpr[_fs_].u[0]), 2) + pow(convert(gpr[_fs_].u[1]), 2) + pow(convert(gpr[_fs_].u[2]), 2);
     if (P.f >= 0.0)
         P.f = sqrt(P.f);
 
-    printf("[VU] ELENG: %f (%d)\n", P.f, source);
+    printf("[VU] ELENG: %f (%d)\n", P.f, _fs_);
 }
 
-void VectorUnit::esqrt(uint8_t fsf, uint8_t source)
+void VectorUnit::esqrt(uint32_t instr)
 {
     if (!id)
     {
         Errors::die("[VU] ESQRT called on VU0!\n");
     }
 
-    P.f = convert(gpr[source].u[fsf]);
+    P.f = convert(gpr[_fs_].u[_fsf_]);
     P.f = sqrt(fabs(P.f));
 
-    printf("[VU] ESQRT: %f (%d)\n", P.f, source);
+    printf("[VU] ESQRT: %f (%d)\n", P.f, _fs_);
 }
 
-void VectorUnit::erleng(uint8_t source)
+void VectorUnit::erleng(uint32_t instr)
 {
     if (!id)
     {
@@ -771,7 +771,7 @@ void VectorUnit::erleng(uint8_t source)
     }
 
     //P = 1 / sqrt(x^2 + y^2 + z^2)
-    P.f = pow(convert(gpr[source].u[0]), 2) + pow(convert(gpr[source].u[1]), 2) + pow(convert(gpr[source].u[2]), 2);
+    P.f = pow(convert(gpr[_fs_].u[0]), 2) + pow(convert(gpr[_fs_].u[1]), 2) + pow(convert(gpr[_fs_].u[2]), 2);
     if (P.f >= 0.0)
     {
         P.f = sqrt(P.f);
@@ -779,24 +779,24 @@ void VectorUnit::erleng(uint8_t source)
             P.f = 1.0f / P.f;
     }
 
-    printf("[VU] ERLENG: %f (%d)\n", P.f, source);
+    printf("[VU] ERLENG: %f (%d)\n", P.f, _fs_);
 }
 
-void VectorUnit::ersqrt(uint8_t fsf, uint8_t source)
+void VectorUnit::ersqrt(uint32_t instr)
 {
     if (!id)
     {
         Errors::die("[VU] ERSQRT called on VU0!\n");
     }
 
-    P.f = convert(gpr[source].u[fsf]);
+    P.f = convert(gpr[_fs_].u[_fsf_]);
 
     P.f = sqrt(fabs(P.f));
     if (P.f != 0)
         P.f = 1.0f / P.f;
 
 
-    printf("[VU] ERSQRT: %f (%d)\n", P.f, source);
+    printf("[VU] ERSQRT: %f (%d)\n", P.f, _fs_);
 }
 
 void VectorUnit::fcand(uint32_t value)
@@ -1759,42 +1759,42 @@ void VectorUnit::opmula(uint32_t instr)
     printf("[VU] OPMULA: %f, %f, %f\n", ACC.f[0], ACC.f[1], ACC.f[2]);
 }
 
-void VectorUnit::rget(uint8_t field, uint8_t dest)
+void VectorUnit::rget(uint32_t instr)
 {
     for (int i = 0; i < 4; i++)
     {
-        if (field & (1 << (3 - i)))
+        if (_field & (1 << (3 - i)))
         {
-            set_gpr_u(dest, i, R.u);
+            set_gpr_u(_ft_, i, R.u);
         }
     }
     printf("[VU] RGET: %f\n", R.f);
 }
 
-void VectorUnit::rinit(uint8_t fsf, uint8_t source)
+void VectorUnit::rinit(uint32_t instr)
 {
     R.u = 0x3F800000;
-    R.u |= gpr[source].u[fsf] & 0x007FFFFF;
+    R.u |= gpr[_fs_].u[_fsf_] & 0x007FFFFF;
     printf("[VU] RINIT: %f\n", R.f);
 }
 
-void VectorUnit::rnext(uint8_t field, uint8_t dest)
+void VectorUnit::rnext(uint32_t instr)
 {
     advance_r();
     for (int i = 0; i < 4; i++)
     {
-        if (field & (1 << (3 - i)))
+        if (_field & (1 << (3 - i)))
         {
-            set_gpr_u(dest, i, R.u);
+            set_gpr_u(_ft_, i, R.u);
         }
     }
     printf("[VU] RNEXT: %f\n", R.f);
 }
 
-void VectorUnit::rsqrt(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2)
+void VectorUnit::rsqrt(uint32_t instr)
 {
-    float denom = fabs(convert(gpr[reg2].u[ftf]));
-    float num = convert(gpr[reg1].u[fsf]);
+    float denom = fabs(convert(gpr[_ft_].u[_ftf_]));
+    float num = convert(gpr[_fs_].u[_fsf_]);
 
     status = (status & 0xFCF) | ((status & 0x30) << 6);
 
@@ -1805,7 +1805,7 @@ void VectorUnit::rsqrt(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2)
 
         if (num == 0.0)
         {
-            if ((gpr[reg1].u[fsf] & 0x80000000) ^ (gpr[reg2].u[ftf] & 0x80000000))
+            if ((gpr[_fs_].u[_fsf_] & 0x80000000) ^ (gpr[_ft_].u[_ftf_] & 0x80000000))
                 new_Q_instance.u = 0x80000000;
             else
                 new_Q_instance.u = 0;
@@ -1814,7 +1814,7 @@ void VectorUnit::rsqrt(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2)
         }
         else
         {
-            if ((gpr[reg1].u[fsf] & 0x80000000) ^ (gpr[reg2].u[ftf] & 0x80000000))
+            if ((gpr[_fs_].u[_fsf_] & 0x80000000) ^ (gpr[_ft_].u[_ftf_] & 0x80000000))
                 new_Q_instance.u = 0xFF7FFFFF;
             else
                 new_Q_instance.u = 0x7F7FFFFF;
@@ -1831,13 +1831,13 @@ void VectorUnit::rsqrt(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2)
     }
     start_DIV_unit(13);
     printf("[VU] RSQRT: %f\n", new_Q_instance.f);
-    printf("Reg1: %f\n", gpr[reg1].f[fsf]);
-    printf("Reg2: %f\n", gpr[reg2].f[ftf]);
+    printf("Reg1: %f\n", gpr[_fs_].f[_fsf_]);
+    printf("Reg2: %f\n", gpr[_ft_].f[_ftf_]);
 }
 
-void VectorUnit::rxor(uint8_t fsf, uint8_t source)
+void VectorUnit::rxor(uint32_t instr)
 {
-    R.u = 0x3F800000 | ((R.u ^ gpr[source].u[fsf]) & 0x007FFFFF);
+    R.u = 0x3F800000 | ((R.u ^ gpr[_fs_].u[_fsf_]) & 0x007FFFFF);
     printf("[VU] RXOR: %f\n", R.f);
 }
 
@@ -1891,17 +1891,17 @@ void VectorUnit::sqi(uint32_t instr)
         int_gpr[_it_].u++;
 }
 
-void VectorUnit::vu_sqrt(uint8_t ftf, uint8_t source)
+void VectorUnit::vu_sqrt(uint32_t instr)
 {
     status = (status & 0xfcf) | ((status & 0x30) << 6);
-    if (convert(gpr[source].u[ftf]) < 0.0)
+    if (convert(gpr[_ft_].u[_ftf_]) < 0.0)
         status |= 0x10;
 
-    new_Q_instance.f = sqrt(fabs(convert(gpr[source].u[ftf])));
+    new_Q_instance.f = sqrt(fabs(convert(gpr[_ft_].u[_ftf_])));
     new_Q_instance.f = convert(new_Q_instance.u);
     start_DIV_unit(7);
     printf("[VU] SQRT: %f\n", new_Q_instance.f);
-    printf("Source: %f\n", gpr[source].f[ftf]);
+    printf("Source: %f\n", gpr[_ft_].f[_ftf_]);
 }
 
 void VectorUnit::sub(uint32_t instr)

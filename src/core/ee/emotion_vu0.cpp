@@ -817,27 +817,27 @@ void EmotionInterpreter::cop2_vlqd(VectorUnit &vu0, uint32_t instruction)
 
 void EmotionInterpreter::cop2_vdiv(VectorUnit &vu0, uint32_t instruction)
 {
-    uint8_t reg1 = (instruction >> 11) & 0x1F;
+    /*uint8_t reg1 = (instruction >> 11) & 0x1F;
     uint8_t reg2 = (instruction >> 16) & 0x1F;
     uint8_t fsf = (instruction >> 21) & 0x3;
-    uint8_t ftf = (instruction >> 23) & 0x3;
-    vu0.div(ftf, fsf, reg1, reg2);
+    uint8_t ftf = (instruction >> 23) & 0x3;*/
+    vu0.div(instruction);
 }
 
 void EmotionInterpreter::cop2_vsqrt(VectorUnit &vu0, uint32_t instruction)
 {
-    uint8_t reg = (instruction >> 16) & 0x1F;
-    uint8_t ftf = (instruction >> 23) & 0x3;
-    vu0.vu_sqrt(ftf, reg);
+    /*uint8_t reg = (instruction >> 16) & 0x1F;
+    uint8_t ftf = (instruction >> 23) & 0x3;*/
+    vu0.vu_sqrt(instruction);
 }
 
 void EmotionInterpreter::cop2_vrsqrt(VectorUnit &vu0, uint32_t instruction)
 {
-    uint8_t reg1 = (instruction >> 11) & 0x1F;
+    /*uint8_t reg1 = (instruction >> 11) & 0x1F;
     uint8_t reg2 = (instruction >> 16) & 0x1F;
     uint8_t fsf = (instruction >> 21) & 0x3;
-    uint8_t ftf = (instruction >> 23) & 0x3;
-    vu0.rsqrt(ftf, fsf, reg1, reg2);
+    uint8_t ftf = (instruction >> 23) & 0x3;*/
+    vu0.rsqrt(instruction);
 }
 
 void EmotionInterpreter::cop2_vmtir(VectorUnit &vu0, uint32_t instruction)
@@ -866,28 +866,28 @@ void EmotionInterpreter::cop2_viswr(VectorUnit &vu0, uint32_t instruction)
 
 void EmotionInterpreter::cop2_vrnext(VectorUnit &vu0, uint32_t instruction)
 {
-    uint32_t ft = (instruction >> 16) & 0x1F;
-    uint8_t field = (instruction >> 21) & 0xF;
-    vu0.rnext(field, ft);
+    /*uint32_t ft = (instruction >> 16) & 0x1F;
+    uint8_t field = (instruction >> 21) & 0xF;*/
+    vu0.rnext(instruction);
 }
 
 void EmotionInterpreter::cop2_vrget(VectorUnit &vu0, uint32_t instruction)
 {
-    uint32_t ft = (instruction >> 16) & 0x1F;
-    uint8_t field = (instruction >> 21) & 0xF;
-    vu0.rget(field, ft);
+    /*uint32_t ft = (instruction >> 16) & 0x1F;
+    uint8_t field = (instruction >> 21) & 0xF;*/
+    vu0.rget(instruction);
 }
 
 void EmotionInterpreter::cop2_vrinit(VectorUnit &vu0, uint32_t instruction)
 {
-    uint32_t fs = (instruction >> 11) & 0x1F;
-    uint8_t fsf = (instruction >> 21) & 0x3;
-    vu0.rinit(fsf, fs);
+    /*uint32_t fs = (instruction >> 11) & 0x1F;
+    uint8_t fsf = (instruction >> 21) & 0x3;*/
+    vu0.rinit(instruction);
 }
 
 void EmotionInterpreter::cop2_vrxor(VectorUnit &vu0, uint32_t instruction)
 {
-    uint32_t fs = (instruction >> 11) & 0x1F;
-    uint8_t fsf = (instruction >> 21) & 0x3;
-    vu0.rxor(fsf, fs);
+    /*uint32_t fs = (instruction >> 11) & 0x1F;
+    uint8_t fsf = (instruction >> 21) & 0x3;*/
+    vu0.rxor(instruction);
 }

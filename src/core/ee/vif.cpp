@@ -798,9 +798,9 @@ void VectorInterface::process_UNPACK_quad(uint128_t &quad)
 bool VectorInterface::transfer_DMAtag(uint128_t tag)
 {
     //This should return false if the transfer stalls due to the FIFO filling up
-    printf("[VIF] Transfer tag: $%08X_%08X_%08X_%08X\n", tag._u32[3], tag._u32[2], tag._u32[1], tag._u32[0]);
     if (FIFO.size() > 62)
         return false;
+    printf("[VIF] Transfer tag: $%08X_%08X_%08X_%08X\n", tag._u32[3], tag._u32[2], tag._u32[1], tag._u32[0]);
     for (int i = 2; i < 4; i++)
         FIFO.push(tag._u32[i]);
     return true;
