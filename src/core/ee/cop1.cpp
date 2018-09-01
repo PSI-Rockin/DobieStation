@@ -342,7 +342,6 @@ void Cop1::madda_s(int reg1, int reg2)
 {
     float op1 = convert(gpr[reg1].u);
     float op2 = convert(gpr[reg2].u);
-    float acc = accumulator.f;
     accumulator.f += op1 * op2;
 
     check_overflow(accumulator.u, true);
@@ -354,7 +353,6 @@ void Cop1::msuba_s(int reg1, int reg2)
 {
     float op1 = convert(gpr[reg1].u);
     float op2 = convert(gpr[reg2].u);
-    float acc = accumulator.f;
     accumulator.f -= op1 * op2;
 
     check_overflow(accumulator.u, true);
