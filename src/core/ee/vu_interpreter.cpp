@@ -39,6 +39,8 @@ void VU_Interpreter::interpret(VectorUnit &vu, uint32_t upper_instr, uint32_t lo
     if (swapops)
         upper(vu, upper_instr);
 
+    vu.check_for_FMAC_stall();
+
     if (upper_instr & (1 << 30))
         vu.end_execution();
 }
@@ -182,7 +184,15 @@ void VU_Interpreter::addbc(VectorUnit &vu, uint32_t instr)
     uint8_t source = (instr >> 11) & 0x1F;
     uint8_t bc_reg = (instr >> 16) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
-    vu.addbc(bc, field, dest, source, bc_reg);
+    vu.decoder.vf_write[0] = dest;
+    vu.decoder.vf_write_field[0] = field;
+
+    vu.decoder.vf_read0[0] = source;
+    vu.decoder.vf_read0_field[0] = field;
+
+    vu.decoder.vf_read1[0] = bc_reg;
+    vu.decoder.vf_read1_field[0] = 1 << (3 - bc);
+    vu.addbc(instr);
 }
 
 void VU_Interpreter::subbc(VectorUnit &vu, uint32_t instr)
@@ -282,7 +292,12 @@ void VU_Interpreter::addq(VectorUnit &vu, uint32_t instr)
     uint8_t dest = (instr >> 6) & 0x1F;
     uint8_t source = (instr >> 11) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
-    vu.addq(field, dest, source);
+
+    vu.decoder.vf_write[0] = dest;
+    vu.decoder.vf_write_field[0] = field;
+    vu.decoder.vf_read0[0] = source;
+    vu.decoder.vf_read0_field[0] = field;
+    vu.addq(instr);
 }
 
 void VU_Interpreter::maddq(VectorUnit &vu, uint32_t instr)
@@ -298,7 +313,12 @@ void VU_Interpreter::addi(VectorUnit &vu, uint32_t instr)
     uint8_t dest = (instr >> 6) & 0x1F;
     uint8_t source = (instr >> 11) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
-    vu.addi(field, dest, source);
+
+    vu.decoder.vf_write[0] = dest;
+    vu.decoder.vf_write_field[0] = field;
+    vu.decoder.vf_read0[0] = source;
+    vu.decoder.vf_read0_field[0] = field;
+    vu.addi(instr);
 }
 
 void VU_Interpreter::maddi(VectorUnit &vu, uint32_t instr)
@@ -347,7 +367,16 @@ void VU_Interpreter::add(VectorUnit &vu, uint32_t instr)
     uint8_t reg1 = (instr >> 11) & 0x1F;
     uint8_t reg2 = (instr >> 16) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
-    vu.add(field, dest, reg1, reg2);
+
+    vu.decoder.vf_write[0] = dest;
+    vu.decoder.vf_write_field[0] = field;
+
+    vu.decoder.vf_read0[0] = reg1;
+    vu.decoder.vf_read0_field[0] = field;
+
+    vu.decoder.vf_read1[0] = reg2;
+    vu.decoder.vf_read1_field[0] = field;
+    vu.add(instr);
 }
 
 void VU_Interpreter::madd(VectorUnit &vu, uint32_t instr)
@@ -548,7 +577,13 @@ void VU_Interpreter::addabc(VectorUnit &vu, uint32_t instr)
     uint8_t source = (instr >> 11) & 0x1F;
     uint8_t bc_reg = (instr >> 16) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
-    vu.addabc(bc, field, source, bc_reg);
+
+    vu.decoder.vf_read0[0] = source;
+    vu.decoder.vf_read0_field[0] = field;
+
+    vu.decoder.vf_read1[0] = bc_reg;
+    vu.decoder.vf_read1_field[0] = 1 << (3 - bc);
+    vu.addabc(instr);
 }
 
 void VU_Interpreter::subabc(VectorUnit &vu, uint32_t instr)
@@ -663,7 +698,13 @@ void VU_Interpreter::abs(VectorUnit &vu, uint32_t instr)
     uint8_t source = (instr >> 11) & 0x1F;
     uint8_t dest = (instr >> 16) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
-    vu.abs(field, dest, source);
+
+    vu.decoder.vf_write[0] = dest;
+    vu.decoder.vf_write_field[0] = field;
+
+    vu.decoder.vf_read0[0] = source;
+    vu.decoder.vf_read0_field[0] = field;
+    vu.abs(instr);
 }
 
 void VU_Interpreter::mulai(VectorUnit &vu, uint32_t instr)
@@ -677,14 +718,23 @@ void VU_Interpreter::clip(VectorUnit &vu, uint32_t instr)
 {
     uint8_t reg1 = (instr >> 11) & 0x1F;
     uint8_t reg2 = (instr >> 16) & 0x1F;
-    vu.clip(reg1, reg2);
+
+    vu.decoder.vf_read0[0] = reg1;
+    vu.decoder.vf_read0_field[0] = 0xE; //xyz
+
+    vu.decoder.vf_read1[0] = reg2;
+    vu.decoder.vf_read1_field[0] = 0x1; //w
+    vu.clip(instr);
 }
 
 void VU_Interpreter::addai(VectorUnit &vu, uint32_t instr)
 {
     uint8_t source = (instr >> 11) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
-    vu.addai(field, source);
+
+    vu.decoder.vf_read0[0] = source;
+    vu.decoder.vf_read0_field[0] = field;
+    vu.addai(instr);
 }
 
 void VU_Interpreter::maddaq(VectorUnit &vu, uint32_t instr)
@@ -735,7 +785,13 @@ void VU_Interpreter::adda(VectorUnit &vu, uint32_t instr)
     uint8_t reg1 = (instr >> 11) & 0x1F;
     uint8_t reg2 = (instr >> 16) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
-    vu.adda(field, reg1, reg2);
+
+    vu.decoder.vf_read0[0] = reg1;
+    vu.decoder.vf_read0_field[0] = field;
+
+    vu.decoder.vf_read1[0] = reg2;
+    vu.decoder.vf_read1_field[0] = field;
+    vu.adda(instr);
 }
 
 void VU_Interpreter::suba(VectorUnit &vu, uint32_t instr)

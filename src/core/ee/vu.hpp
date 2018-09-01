@@ -98,8 +98,6 @@ class VectorUnit
 
         //Updates new_Q_instance
         void start_DIV_unit(int latency);
-
-        void check_for_FMAC_stall();
         
         void update_status();
         void advance_r();
@@ -114,6 +112,7 @@ class VectorUnit
         void set_GIF(GraphicsInterface* gif);
 
         void update_mac_pipeline();
+        void check_for_FMAC_stall();
         void flush_pipes();
 
         void run(int cycles);
@@ -149,7 +148,7 @@ class VectorUnit
         void branch(bool condition, int16_t imm, bool link, uint8_t linkreg = 0);
         void jp(uint16_t addr, bool link, uint8_t linkreg = 0);
 
-        void abs(uint8_t field, uint8_t dest, uint8_t source);
+        /*void abs(uint8_t field, uint8_t dest, uint8_t source);
         void add(uint8_t field, uint8_t dest, uint8_t reg1, uint8_t reg2);
         void adda(uint8_t field, uint8_t reg1, uint8_t reg2);
         void addabc(uint8_t bc, uint8_t field, uint8_t source, uint8_t bc_reg);
@@ -157,7 +156,16 @@ class VectorUnit
         void addbc(uint8_t bc, uint8_t field, uint8_t dest, uint8_t source, uint8_t bc_reg);
         void addi(uint8_t field, uint8_t dest, uint8_t source);
         void addq(uint8_t field, uint8_t dest, uint8_t source);
-        void clip(uint8_t reg1, uint8_t reg2);
+        void clip(uint8_t reg1, uint8_t reg2);*/
+        void abs(uint32_t instr);
+        void add(uint32_t instr);
+        void adda(uint32_t instr);
+        void addabc(uint32_t instr);
+        void addai(uint32_t instr);
+        void addbc(uint32_t instr);
+        void addi(uint32_t instr);
+        void addq(uint32_t instr);
+        void clip(uint32_t instr);
         void div(uint8_t ftf, uint8_t fsf, uint8_t reg1, uint8_t reg2);
         void eexp(uint8_t fsf, uint8_t source);
         void eleng(uint8_t source);
