@@ -90,6 +90,10 @@ class VectorUnit
         uint64_t* MAC_flags; //pointer to last element in the pipeline; the register accessible to programs
         uint16_t new_MAC_flags; //to be placed in the pipeline
 
+        int int_branch_delay;
+        uint16_t int_backup_reg;
+        uint8_t int_backup_id;
+
         VU_R new_Q_instance;
         uint64_t finish_DIV_event;
 
@@ -98,6 +102,7 @@ class VectorUnit
 
         //Updates new_Q_instance
         void start_DIV_unit(int latency);
+        void set_int_branch_delay(uint8_t reg);
         
         void update_status();
         void advance_r();
@@ -156,6 +161,8 @@ class VectorUnit
         void addbc(uint32_t instr);
         void addi(uint32_t instr);
         void addq(uint32_t instr);
+        void b(uint32_t instr);
+        void bal(uint32_t instr);
         void clip(uint32_t instr);
         void div(uint32_t instr);
         void eexp(uint32_t instr);
@@ -163,34 +170,42 @@ class VectorUnit
         void esqrt(uint32_t instr);
         void erleng(uint32_t instr);
         void ersqrt(uint32_t instr);
-        void fcand(uint32_t value);
-        void fcget(uint8_t dest);
-        void fcor(uint32_t value);
-        void fcset(uint32_t value);
-        void fmeq(uint8_t dest, uint8_t source);
-        void fmand(uint8_t dest, uint8_t source);
-        void fmor(uint8_t dest, uint8_t source);
-        void fsset(uint32_t value);
-        void fsand(uint8_t dest, uint32_t value);
+        void fcand(uint32_t instr);
+        void fcget(uint32_t instr);
+        void fcor(uint32_t instr);
+        void fcset(uint32_t instr);
+        void fmeq(uint32_t instr);
+        void fmand(uint32_t instr);
+        void fmor(uint32_t instr);
+        void fsset(uint32_t instr);
+        void fsand(uint32_t instr);
         void ftoi0(uint32_t instr);
         void ftoi4(uint32_t instr);
         void ftoi12(uint32_t instr);
         void ftoi15(uint32_t instr);
-        void iadd(uint8_t dest, uint8_t reg1, uint8_t reg2);
-        void iaddi(uint8_t dest, uint8_t source, int8_t imm);
-        void iaddiu(uint8_t dest, uint8_t source, uint16_t imm);
-        void iand(uint8_t dest, uint8_t reg1, uint8_t reg2);
-        void ilw(uint8_t field, uint8_t dest, uint8_t base, int16_t offset);
-        void ilwr(uint8_t field, uint8_t dest, uint8_t base);
-        void ior(uint8_t dest, uint8_t reg1, uint8_t reg2);
-        void isub(uint8_t dest, uint8_t reg1, uint8_t reg2);
-        void isubiu(uint8_t dest, uint8_t source, uint16_t imm);
-        void isw(uint8_t field, uint8_t source, uint8_t base, int16_t offset);
-        void iswr(uint8_t field, uint8_t source, uint8_t base);
+        void iadd(uint32_t instr);
+        void iaddi(uint32_t instr);
+        void iaddiu(uint32_t instr);
+        void iand(uint32_t instr);
+        void ibeq(uint32_t instr);
+        void ibgez(uint32_t instr);
+        void ibgtz(uint32_t instr);
+        void iblez(uint32_t instr);
+        void ibltz(uint32_t instr);
+        void ibne(uint32_t instr);
+        void ilw(uint32_t instr);
+        void ilwr(uint32_t instr);
+        void ior(uint32_t instr);
+        void isub(uint32_t instr);
+        void isubiu(uint32_t instr);
+        void isw(uint32_t instr);
+        void iswr(uint32_t instr);
         void itof0(uint32_t instr);
         void itof4(uint32_t instr);
         void itof12(uint32_t instr);
         void itof15(uint32_t instr);
+        void jr(uint32_t instr);
+        void jalr(uint32_t instr);
         void lq(uint32_t instr);
         void lqd(uint32_t instr);
         void lqi(uint32_t instr);
@@ -229,6 +244,7 @@ class VectorUnit
         void mulbc(uint32_t instr);
         void muli(uint32_t instr);
         void mulq(uint32_t instr);
+        void nop(uint32_t instr);
         void opmsub(uint32_t instr);
         void opmula(uint32_t instr);
         void rinit(uint32_t instr);
@@ -247,10 +263,11 @@ class VectorUnit
         void subbc(uint32_t instr);
         void subi(uint32_t instr);
         void subq(uint32_t instr);
-        void waitq();
-        void xgkick(uint8_t is);
-        void xitop(uint8_t it);
-        void xtop(uint8_t it);
+        void waitp(uint32_t instr);
+        void waitq(uint32_t instr);
+        void xgkick(uint32_t instr);
+        void xitop(uint32_t instr);
+        void xtop(uint32_t instr);
 
         void load_state(std::ifstream& state);
         void save_state(std::ofstream& state);

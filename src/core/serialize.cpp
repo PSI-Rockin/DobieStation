@@ -299,6 +299,7 @@ void VectorUnit::load_state(ifstream &state)
     for (int i = 0; i < 32; i++)
         state.read((char*)&gpr[i].u, sizeof(uint32_t) * 4);
     state.read((char*)&int_gpr, sizeof(int_gpr));
+    state.read((char*)&decoder, sizeof(decoder));
 
     state.read((char*)&ACC.u, sizeof(uint32_t) * 4);
     state.read((char*)&R.u, sizeof(R.u));
@@ -313,6 +314,10 @@ void VectorUnit::load_state(ifstream &state)
     state.read((char*)&cycle_count, sizeof(cycle_count));
     state.read((char*)&finish_DIV_event, sizeof(finish_DIV_event));
     state.read((char*)&new_Q_instance.u, sizeof(new_Q_instance.u));
+
+    state.read((char*)&int_branch_delay, sizeof(int_branch_delay));
+    state.read((char*)&int_backup_reg, sizeof(int_backup_reg));
+    state.read((char*)&int_backup_id, sizeof(int_backup_id));
 
     //XGKICK
     state.read((char*)&XGKICK_cycles, sizeof(XGKICK_cycles));
@@ -348,6 +353,7 @@ void VectorUnit::save_state(ofstream &state)
     for (int i = 0; i < 32; i++)
         state.write((char*)&gpr[i].u, sizeof(uint32_t) * 4);
     state.write((char*)&int_gpr, sizeof(int_gpr));
+    state.write((char*)&decoder, sizeof(decoder));
 
     state.write((char*)&ACC.u, sizeof(uint32_t) * 4);
     state.write((char*)&R.u, sizeof(R.u));
@@ -362,6 +368,9 @@ void VectorUnit::save_state(ofstream &state)
     state.write((char*)&cycle_count, sizeof(cycle_count));
     state.write((char*)&finish_DIV_event, sizeof(finish_DIV_event));
     state.write((char*)&new_Q_instance.u, sizeof(new_Q_instance.u));
+    state.write((char*)&int_branch_delay, sizeof(int_branch_delay));
+    state.write((char*)&int_backup_reg, sizeof(int_backup_reg));
+    state.write((char*)&int_backup_id, sizeof(int_backup_id));
 
     //XGKICK
     state.write((char*)&XGKICK_cycles, sizeof(XGKICK_cycles));
