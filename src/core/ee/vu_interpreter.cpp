@@ -34,6 +34,12 @@ void interpret(VectorUnit &vu, uint32_t upper_instr, uint32_t lower_instr)
     //Get upper op
     upper(vu, upper_instr);
 
+    //Get lower op
+    if (!(upper_instr & (1 << 31)))
+        lower(vu, lower_instr);
+
+    vu.check_for_FMAC_stall();
+
     //LOI - upper op always executes first
     if (upper_instr & (1 << 31))
     {
@@ -42,9 +48,6 @@ void interpret(VectorUnit &vu, uint32_t upper_instr, uint32_t lower_instr)
     }
     else
     {
-        //Get lower op
-        lower(vu, lower_instr);
-
         //If the upper op is writing to a reg the lower op is reading from, the lower op executes first
         int write = vu.decoder.vf_write[0];
         int read0 = vu.decoder.vf_read0[1];
@@ -60,8 +63,6 @@ void interpret(VectorUnit &vu, uint32_t upper_instr, uint32_t lower_instr)
             (vu.*lower_op)(lower_instr);
         }
     }
-
-    vu.check_for_FMAC_stall();
 
     if (upper_instr & (1 << 30))
         vu.end_execution();
