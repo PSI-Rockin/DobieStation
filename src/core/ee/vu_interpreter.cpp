@@ -1291,11 +1291,11 @@ void move(VectorUnit &vu, uint32_t instr)
     uint8_t dest = (instr >> 16) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
 
-    vu.decoder.vf_write[0] = dest;
-    vu.decoder.vf_write_field[0] = field;
+    vu.decoder.vf_write[1] = dest;
+    vu.decoder.vf_write_field[1] = field;
 
-    vu.decoder.vf_read0[0] = source;
-    vu.decoder.vf_read0_field[0] = field;
+    vu.decoder.vf_read0[1] = source;
+    vu.decoder.vf_read0_field[1] = field;
     lower_op = &VectorUnit::move;
 }
 
@@ -1305,11 +1305,11 @@ void mr32(VectorUnit &vu, uint32_t instr)
     uint8_t dest = (instr >> 16) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
 
-    vu.decoder.vf_write[0] = dest;
-    vu.decoder.vf_write_field[0] = field;
+    vu.decoder.vf_write[1] = dest;
+    vu.decoder.vf_write_field[1] = field;
 
-    vu.decoder.vf_read0[0] = source;
-    vu.decoder.vf_read0_field[0] = field;
+    vu.decoder.vf_read0[1] = source;
+    vu.decoder.vf_read0_field[1] = field;
     lower_op = &VectorUnit::mr32;
 }
 
@@ -1483,8 +1483,8 @@ void mfp(VectorUnit &vu, uint32_t instr)
     uint8_t dest = (instr >> 16) & 0x1F;
     uint8_t field = (instr >> 21) & 0xF;
 
-    vu.decoder.vf_write[0] = dest;
-    vu.decoder.vf_write_field[0] = field;
+    vu.decoder.vf_write[1] = dest;
+    vu.decoder.vf_write_field[1] = field;
     lower_op = &VectorUnit::mfp;
 }
 

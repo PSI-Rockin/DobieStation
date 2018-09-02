@@ -32,7 +32,7 @@ struct VPU_STAT
 
 struct DecodedRegs
 {
-    //0 = lower, 1 = upper
+    //0 = upper, 1 = lower
     uint8_t vf_write[2];
     uint8_t vf_write_field[2];
 
