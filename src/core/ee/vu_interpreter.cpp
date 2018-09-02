@@ -52,7 +52,7 @@ void interpret(VectorUnit &vu, uint32_t upper_instr, uint32_t lower_instr)
         int write = vu.decoder.vf_write[0];
         int read0 = vu.decoder.vf_read0[1];
         int read1 = vu.decoder.vf_read1[1];
-        if (write == read0 || write == read1)
+        if (write && (write == read0 || write == read1))
         {
             (vu.*lower_op)(lower_instr);
             (vu.*upper_op)(upper_instr);
