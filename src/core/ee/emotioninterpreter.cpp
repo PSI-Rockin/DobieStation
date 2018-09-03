@@ -875,7 +875,19 @@ void EmotionInterpreter::cop_mfc(EmotionEngine& cpu, uint32_t instruction)
     int cop_id = (instruction >> 26) & 0x3;
     int emotion_reg = (instruction >> 16) & 0x1F;
     int cop_reg = (instruction >> 11) & 0x1F;
-    cpu.mfc(cop_id, emotion_reg, cop_reg);
+    //Special case for MFPS/MFPC
+    if (cop_id == 0 && cop_reg == 25)
+    {
+        if (instruction & 0x1)
+        {
+            int pc_reg = (instruction >> 1) & 0x1F;
+            cpu.mfpc(pc_reg, emotion_reg);
+        }
+        else
+            cpu.mfps(emotion_reg);
+    }
+    else
+        cpu.mfc(cop_id, emotion_reg, cop_reg);
 }
 
 void EmotionInterpreter::cop_mtc(EmotionEngine& cpu, uint32_t instruction)
@@ -883,7 +895,20 @@ void EmotionInterpreter::cop_mtc(EmotionEngine& cpu, uint32_t instruction)
     int cop_id = (instruction >> 26) & 0x3;
     int emotion_reg = (instruction >> 16) & 0x1F;
     int cop_reg = (instruction >> 11) & 0x1F;
-    cpu.mtc(cop_id, emotion_reg, cop_reg);
+
+    //Special case for MTPS/MTPC
+    if (cop_id == 0 && cop_reg == 25)
+    {
+        if (instruction & 0x1)
+        {
+            int pc_reg = (instruction >> 1) & 0x1F;
+            cpu.mtpc(pc_reg, emotion_reg);
+        }
+        else
+            cpu.mtps(emotion_reg);
+    }
+    else
+        cpu.mtc(cop_id, emotion_reg, cop_reg);
 }
 
 void EmotionInterpreter::cop_cfc(EmotionEngine &cpu, uint32_t instruction)

@@ -675,7 +675,7 @@ void VectorUnit::b(uint32_t instr)
     int16_t imm = instr & 0x7FF;
     imm = ((int16_t)(imm << 5)) >> 5;
     imm *= 8;
-    printf("[VU] B $%x (Imm $%x)\n", vu.get_PC() + 16 + imm, imm);
+    printf("[VU] B $%x (Imm $%x)\n", get_PC() + 16 + imm, imm);
     branch(true, imm, false);
 }
 
@@ -686,7 +686,7 @@ void VectorUnit::bal(uint32_t instr)
     imm *= 8;
 
     uint8_t link_reg = (instr >> 16) & 0x1F;
-    printf("[VU] BAL $%x (Imm $%x)\n", vu.get_PC() + 16 + imm, imm);
+    printf("[VU] BAL $%x (Imm $%x)\n", get_PC() + 16 + imm, imm);
     branch(true, imm, true, link_reg);
 }
 

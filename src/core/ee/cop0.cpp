@@ -33,6 +33,10 @@ void Cop0::reset()
     cause.bd2 = false;
     cause.bd = false;
 
+    PCCR = 0;
+    PCR0 = 0;
+    PCR1 = 0;
+
     //Set processor revision id
     gpr[15] = 0x00002E20;
 }
@@ -150,4 +154,30 @@ bool Cop0::int_pending()
 void Cop0::count_up(int cycles)
 {
     gpr[9] += cycles;
+
+    //Performance counter registers
+    if (/*PCCR & (1 << 31)*/ true)
+    {
+        int event = (PCCR >> 5) & 0x1F;
+
+        bool can_count = false;
+        switch (event)
+        {
+            case 1: //Processor cycle
+            case 2: //Single/double instruction issue
+            case 3: //Branch issued/mispredicted
+            case 12: //Instruction completed
+            case 13: //Non-delay slot instruction completed
+            case 14: //COP2/COP1 instruction completed
+            case 15: //Load/store instruction completed
+                can_count = true;
+                break;
+        }
+
+        if (can_count)
+        {
+            PCR0 += cycles;
+            PCR1 += cycles;
+        }
+    }
 }

@@ -764,6 +764,35 @@ void EmotionEngine::cp0_bc0(int32_t offset, bool test_true, bool likely)
         branch(passed, offset);
 }
 
+void EmotionEngine::mtps(int reg)
+{
+    cp0->PCCR = get_gpr<uint32_t>(reg);
+}
+
+void EmotionEngine::mtpc(int pc_reg, int reg)
+{
+    if (pc_reg)
+        cp0->PCR1 = get_gpr<uint32_t>(reg);
+    else
+        cp0->PCR0 = get_gpr<uint32_t>(reg);
+}
+
+void EmotionEngine::mfps(int reg)
+{
+    set_gpr<int64_t>(reg, (int32_t)cp0->PCCR);
+}
+
+void EmotionEngine::mfpc(int pc_reg, int reg)
+{
+    int32_t pcr = 0;
+    if (pc_reg)
+        pcr = (int32_t)cp0->PCR1;
+    else
+        pcr = (int32_t)cp0->PCR0;
+    printf("[EE] MFPC %d: $%08X\n", pc_reg, pcr);
+    set_gpr<int64_t>(reg, pcr);
+}
+
 void EmotionEngine::fpu_cop_s(uint32_t instruction)
 {
     EmotionInterpreter::cop_s(*fpu, instruction);

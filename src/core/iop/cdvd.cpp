@@ -708,7 +708,6 @@ void CDVD_Drive::get_dual_layer_info(bool &dual_layer, uint64_t &sector)
     sector = 0;
 
     uint64_t volume_size = *(uint32_t*)&pvd_sector[80] * 2048;
-    printf("Volume size: %lld\n", volume_size);
 
     //If the size of the volume is less than the size of the file, there must be more than one volume
     if (volume_size < file_size)

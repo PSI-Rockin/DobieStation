@@ -6,6 +6,14 @@ struct Voice
 {
     uint16_t left_vol, right_vol;
     uint16_t pitch;
+
+    uint32_t start_addr;
+    uint32_t current_addr;
+    uint32_t loop_addr;
+
+    uint32_t counter;
+    int block_pos;
+    int loop_code;
 };
 
 struct SPU_STAT
@@ -27,6 +35,8 @@ class SPU
         uint16_t core_att;
         SPU_STAT status;
 
+        uint16_t spdif_irq;
+
         uint32_t transfer_addr;
 
         uint32_t current_addr;
@@ -39,7 +49,18 @@ class SPU
 
         int cycles;
 
+        uint32_t IRQA;
+        uint32_t ENDX;
+
         void gen_sample();
+
+        void key_on_voice(int v);
+        void key_off_voice(int v);
+
+        void spu_irq();
+
+        void write_voice_reg(uint32_t addr, uint16_t value);
+        void write_voice_addr(uint32_t addr, uint16_t value);
     public:
         SPU(int id, Emulator* e);
 

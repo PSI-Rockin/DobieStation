@@ -50,6 +50,7 @@ class Cop0
         COP0_STATUS status;
         COP0_CAUSE cause;
         uint32_t EPC, ErrorEPC;
+        uint32_t PCCR, PCR0, PCR1;
         Cop0(DMAC* dmac);
 
         void reset();

@@ -121,6 +121,10 @@ class EmotionEngine
         void ei();
         void di();
         void cp0_bc0(int32_t offset, bool test_true, bool likely);
+        void mtps(int reg);
+        void mtpc(int pc_reg, int reg);
+        void mfps(int reg);
+        void mfpc(int pc_reg, int reg);
 
         void fpu_cop_s(uint32_t instruction);
         void fpu_bc1(int32_t offset, bool test_true, bool likely);
