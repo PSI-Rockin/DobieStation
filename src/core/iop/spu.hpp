@@ -42,9 +42,8 @@ class SPU
         uint32_t current_addr;
 
         //ADMA bullshit
-        static uint16_t autodma_ctrl;
+        uint16_t autodma_ctrl;
         int ADMA_left;
-        bool can_write_adma;
         int input_pos;
 
         int cycles;
@@ -74,6 +73,7 @@ class SPU
         void finish_DMA();
 
         uint16_t read_mem();
+        void process_ADMA();
         void write_DMA(uint32_t value);
         void write_ADMA(uint8_t* RAM);
         void write_mem(uint16_t value);
