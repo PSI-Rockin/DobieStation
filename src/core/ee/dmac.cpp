@@ -1126,7 +1126,7 @@ void DMAC::write32(uint32_t address, uint32_t value)
             else
             {
                 channels[SIF1].control &= (value & 0x100) | 0xFFFFFEFF;
-                channels[SIF1].started = false;
+                channels[SIF1].started = (channels[SIF1].control & 0x100);
             }
             break;
         case 0x1000C410:
