@@ -4,7 +4,7 @@
 
 #define VER_MAJOR 0
 #define VER_MINOR 0
-#define VER_REV 7
+#define VER_REV 8
 
 using namespace std;
 
@@ -479,7 +479,7 @@ void IOP_DMA::save_state(ofstream &state)
 
 void GraphicsInterface::load_state(ifstream &state)
 {
-    state.read((char*)&current_tag, sizeof(current_tag));
+    state.read((char*)&path, sizeof(path));
     state.read((char*)&active_path, sizeof(active_path));
     state.read((char*)&path_queue, sizeof(path_queue));
     state.read((char*)&path3_vif_masked, sizeof(path3_vif_masked));
@@ -487,7 +487,7 @@ void GraphicsInterface::load_state(ifstream &state)
 
 void GraphicsInterface::save_state(ofstream &state)
 {
-    state.write((char*)&current_tag, sizeof(current_tag));
+    state.write((char*)&path, sizeof(path));
     state.write((char*)&active_path, sizeof(active_path));
     state.write((char*)&path_queue, sizeof(path_queue));
     state.write((char*)&path3_vif_masked, sizeof(path3_vif_masked));

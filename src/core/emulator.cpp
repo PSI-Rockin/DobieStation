@@ -644,6 +644,9 @@ void Emulator::write32(uint32_t address, uint32_t value)
         case 0x10002010:
             ipu.write_control(value);
             return;
+        case 0x10003010:
+            gif.write_MODE(value);
+            return;
         case 0x10003C10:
             vif1.set_fbrst(value);
             return;

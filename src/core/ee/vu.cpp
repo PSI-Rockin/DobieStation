@@ -167,7 +167,7 @@ void VectorUnit::run(int cycles)
         cycles_to_run--;
     }
 
-    if (id == 1)
+    if (id == 1 && transferring_GIF)
     {
         if (gif->path_active(1))
         {
@@ -765,6 +765,21 @@ void VectorUnit::eexp(uint32_t instr)
         value += coeffs[exp - 1] * pow(x, exp);
 
     P.f = 1.0 / value;
+}
+
+void VectorUnit::ercpr(uint32_t instr)
+{
+    if (!id)
+    {
+        Errors::die("[VU] ERCPR called on VU0!\n");
+    }
+
+    P.f = convert(gpr[_fs_].u[_fsf_]);
+
+    if (P.f != 0)
+        P.f = 1.0f / P.f;
+
+    printf("[VU] ERCPR: %f (%d)\n", P.f, _fs_);
 }
 
 void VectorUnit::eleng(uint32_t instr)
@@ -2242,7 +2257,7 @@ void VectorUnit::xgkick(uint32_t instr)
     else
     {
         XGKICK_cycles = 0;
-        gif->request_PATH(1);
+        gif->request_PATH(1, true);
         transferring_GIF = true;
         GIF_addr = (uint32_t)(int_gpr[_is_].u & 0x3ff) * 16;
     }

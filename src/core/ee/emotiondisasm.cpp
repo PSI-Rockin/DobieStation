@@ -1185,7 +1185,7 @@ string EmotionDisasm::disasm_cop_bc1(uint32_t instruction, uint32_t instr_addr)
 
     stringstream output;
     string opcode = "";
-    const static char* ops[] = {"bc1f", "bc1fl", "bc1t", "bc1tl"};
+    const static char* ops[] = {"bc1f", "bc1t", "bc1fl", "bc1tl"};
     int32_t offset = IMM << 2;
     uint8_t op = RT;
     if (op > 3)

@@ -166,6 +166,7 @@ class VectorUnit
         void clip(uint32_t instr);
         void div(uint32_t instr);
         void eexp(uint32_t instr);
+        void ercpr(uint32_t instr);
         void eleng(uint32_t instr);
         void esqrt(uint32_t instr);
         void erleng(uint32_t instr);

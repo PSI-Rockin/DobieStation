@@ -30,6 +30,7 @@ void VectorInterface::reset()
     vu->set_TOP_regs(&TOP, &ITOP);
     vu->set_GIF(gif);
     wait_for_VU = false;
+    wait_for_PATH3 = false;
     vif_stalled = false;
     vif_ibit_detected = false;
     vif_interrupt = false;
@@ -81,6 +82,12 @@ void VectorInterface::update(int cycles)
                 return;
             wait_for_VU = false;
             handle_wait_cmd(wait_cmd_value);
+        }
+        if (wait_for_PATH3)
+        {
+            if (gif->path_active(3))
+                return;
+            wait_for_PATH3 = false;
         }
 		/*if (flush_stall)
         {
@@ -246,6 +253,7 @@ void VectorInterface::decode_cmd(uint32_t value)
         case 0x13:
             printf("[VIF] FLUSHA\n");
             wait_for_VU = true;
+            wait_for_PATH3 = true;
             wait_cmd_value = value;
             command = 0;
             break;
@@ -298,7 +306,7 @@ void VectorInterface::decode_cmd(uint32_t value)
             else
                 command_len += (imm * 4);
             printf("[VIF] DIRECT: %d\n", command_len);
-            gif->request_PATH(2);
+            gif->request_PATH(2, command == 0x50);
             break;
         default:
             if ((command & 0x60) == 0x60)
@@ -788,7 +796,7 @@ void VectorInterface::process_UNPACK_quad(uint128_t &quad)
     
     if (unpack.blocks_written >= CYCLE.WL)
     {
-        if (CYCLE.CL > CYCLE.WL && unpack.blocks_written >= CYCLE.WL)
+        if (CYCLE.CL > CYCLE.WL)
             unpack.addr += (CYCLE.CL - unpack.blocks_written) * 16;
 
         unpack.blocks_written = 0;

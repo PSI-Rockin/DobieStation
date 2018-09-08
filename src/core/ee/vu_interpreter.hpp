@@ -99,6 +99,7 @@ namespace VU_Interpreter
     void xitop(VectorUnit& vu, uint32_t instr);
     void xgkick(VectorUnit& vu, uint32_t instr);
     void eleng(VectorUnit& vu, uint32_t instr);
+    void ercpr(VectorUnit& vu, uint32_t instr);
     void erleng(VectorUnit& vu, uint32_t instr);
     void esqrt(VectorUnit& vu, uint32_t instr);
     void ersqrt(VectorUnit& vu, uint32_t instr);

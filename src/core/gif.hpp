@@ -21,15 +21,25 @@ struct GIFtag
     uint32_t data_left;
 };
 
+struct GIFPath
+{
+    GIFtag current_tag;
+};
+
 class GraphicsInterface
 {
     private:
         GraphicsSynthesizer* gs;
-        GIFtag current_tag;
+        
+        GIFPath path[4];
 
         uint8_t active_path;
         uint8_t path_queue;
+        //4 = Idle, Others match tag ID's
+        uint8_t path_status[4];
         bool path3_vif_masked;
+        bool path3_mode_masked;
+        bool intermittent_mode;
 
         void process_PACKED(uint128_t quad);
         void process_REGLIST(uint128_t quad);
@@ -41,10 +51,13 @@ class GraphicsInterface
         bool path_active(int index);
 
         uint32_t read_STAT();
+        void write_MODE(uint32_t value);
 
-        void request_PATH(int index);
+        void request_PATH(int index, bool canInterruptPath3);
         void deactivate_PATH(int index);
         void set_path3_vifmask(int value);
+        bool path3_masked(int index);
+        bool interrupt_path3(int index);
 
         bool send_PATH(int index, uint128_t quad);
 
@@ -58,7 +71,11 @@ class GraphicsInterface
 
 inline bool GraphicsInterface::path_active(int index)
 {
-    return active_path == index;
+    if (index != 3)
+    {
+        interrupt_path3(index);
+    }
+    return (active_path == index) && !path3_masked(index);
 }
 
 #endif // GIF_HPP

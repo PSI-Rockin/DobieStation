@@ -920,7 +920,7 @@ void DMAC::write16(uint32_t address, uint16_t value)
                 if (value & 0x100)
                 {
                     start_DMA(GIF);
-                    gif->request_PATH(3);
+                    gif->request_PATH(3, false);
                 }
                 else
                 {
@@ -1010,7 +1010,7 @@ void DMAC::write32(uint32_t address, uint32_t value)
                 if (value & 0x100)
                 {
                     start_DMA(GIF);
-                    gif->request_PATH(3);
+                    gif->request_PATH(3, false);
                 }
                 else
                 {

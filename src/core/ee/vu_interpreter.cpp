@@ -1272,6 +1272,9 @@ void lower1_special(VectorUnit &vu, uint32_t instr)
         case 0x79:
             ersqrt(vu, instr);
             break;
+        case 0x7A:
+            ercpr(vu, instr);
+            break;
         case 0x7B:
             //waitp should always execute before upper
             vu.waitp(instr);
@@ -1504,6 +1507,16 @@ void xgkick(VectorUnit &vu, uint32_t instr)
 {
     uint8_t is = (instr >> 11) & 0x1F;
     lower_op = &VectorUnit::xgkick;
+}
+
+void ercpr(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t fsf = (instr >> 21) & 0x3;
+
+    vu.decoder.vf_read0[1] = source;
+    vu.decoder.vf_read0_field[1] = 1 << (3 - fsf);
+    lower_op = &VectorUnit::ercpr;
 }
 
 void eleng(VectorUnit &vu, uint32_t instr)
