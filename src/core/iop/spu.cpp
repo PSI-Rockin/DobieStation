@@ -387,10 +387,6 @@ void SPU::write16(uint32_t addr, uint16_t value)
         case 0x342:
             ENDX &= 0xFFFF;
             break;
-        case 0x5B0:
-            printf("[SPU%d] Write ADMA: $%04X\n", id, value);
-            autodma_ctrl = value;
-            break;
         default:
             printf("[SPU%d] Unrecognized write16 to addr $%08X of $%04X\n", id, addr, value);
     }

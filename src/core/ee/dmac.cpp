@@ -1211,6 +1211,7 @@ void DMAC::write32(uint32_t address, uint32_t value)
             control.release_cycle = (value >> 8) & 0x7;
             break;
         case 0x1000E010:
+        case 0x1000E100:
             printf("[DMAC] Write32 D_STAT: $%08X\n", value);
             for (int i = 0; i < 15; i++)
             {
