@@ -54,6 +54,7 @@ namespace VU_Disasm
     std::string xitop(uint32_t instr);
     std::string xgkick(uint32_t instr);
     std::string eleng(uint32_t instr);
+    std::string ercpr(uint32_t instr);
     std::string erleng(uint32_t instr);
     std::string esqrt(uint32_t instr);
     std::string ersqrt(uint32_t instr);

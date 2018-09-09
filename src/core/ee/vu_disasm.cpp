@@ -462,6 +462,8 @@ string VU_Disasm::lower1_special(uint32_t PC, uint32_t instr)
             return esqrt(instr);
         case 0x79:
             return ersqrt(instr);
+        case 0x7A:
+            return ercpr(instr);
         case 0x7B:
             return "waitp";
         case 0x7E:
@@ -689,6 +691,14 @@ string VU_Disasm::eleng(uint32_t instr)
     stringstream output;
     uint32_t source = (instr >> 11) & 0x1F;
     output << "eleng P, vf" << source;
+    return output.str();
+}
+
+string VU_Disasm::ercpr(uint32_t instr)
+{
+    stringstream output;
+    uint32_t source = (instr >> 11) & 0x1F;
+    output << "ercpr P, vf" << source << "." << get_fsf((instr >> 21) & 0x3);
     return output.str();
 }
 

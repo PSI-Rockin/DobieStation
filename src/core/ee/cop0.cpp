@@ -156,12 +156,14 @@ void Cop0::count_up(int cycles)
     gpr[9] += cycles;
 
     //Performance counter registers
-    if (/*PCCR & (1 << 31)*/ true)
+    if (PCCR & (1 << 31))
     {
-        int event = (PCCR >> 5) & 0x1F;
+        int event0 = (PCCR >> 5) & 0x1F;
+        int event1 = (PCCR >> 15) & 0x1F;
 
-        bool can_count = false;
-        switch (event)
+        bool can_count0 = false;
+        bool can_count1 = false;
+        switch (event0)
         {
             case 1: //Processor cycle
             case 2: //Single/double instruction issue
@@ -170,14 +172,27 @@ void Cop0::count_up(int cycles)
             case 13: //Non-delay slot instruction completed
             case 14: //COP2/COP1 instruction completed
             case 15: //Load/store instruction completed
-                can_count = true;
+                can_count0 = true;
                 break;
         }
 
-        if (can_count)
+        switch (event1)
         {
-            PCR0 += cycles;
-            PCR1 += cycles;
+            case 1: //Processor cycle
+            case 2: //Single/double instruction issue
+            case 3: //Branch issued/mispredicted
+            case 12: //Instruction completed
+            case 13: //Non-delay slot instruction completed
+            case 14: //COP2/COP1 instruction completed
+            case 15: //Load/store instruction completed
+            can_count1 = true;
+            break;
         }
+
+        if (can_count0)
+            PCR0 += cycles;
+
+        if (can_count1)
+            PCR1 += cycles;
     }
 }

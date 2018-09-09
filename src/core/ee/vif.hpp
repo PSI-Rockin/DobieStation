@@ -58,6 +58,7 @@ class VectorInterface
         bool vif_stop;
         
         bool wait_for_VU;
+        bool wait_for_PATH3;
         bool flush_stall;
         uint32_t wait_cmd_value;
 

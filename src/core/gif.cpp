@@ -9,9 +9,20 @@ GraphicsInterface::GraphicsInterface(GraphicsSynthesizer *gs) : gs(gs)
 
 void GraphicsInterface::reset()
 {
-    current_tag.data_left = 0;
+    path[0].current_tag.data_left = 0;
+    path[1].current_tag.data_left = 0;
+    path[2].current_tag.data_left = 0;
+    path[3].current_tag.data_left = 0;
     active_path = 0;
     path_queue = 0;
+    path_status[0] = 4;
+    path_status[1] = 4;
+    path_status[2] = 4;
+    path_status[3] = 4;
+
+    intermittent_mode = false;
+    path3_vif_masked = false;
+    path3_mode_masked = false;
 }
 
 uint32_t GraphicsInterface::read_STAT()
@@ -37,13 +48,19 @@ uint32_t GraphicsInterface::read_STAT()
     return reg;
 }
 
+void GraphicsInterface::write_MODE(uint32_t value)
+{
+    intermittent_mode = value & 0x4;
+    path3_mode_masked = value & 0x1;
+}
+
 void GraphicsInterface::process_PACKED(uint128_t data)
 {
     uint64_t data1 = data._u64[0];
     uint64_t data2 = data._u64[1];
     //printf("[GIF] PACKED: $%08X_%08X_%08X_%08X\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
-    uint64_t reg_offset = (current_tag.reg_count - current_tag.regs_left) << 2;
-    uint8_t reg = (current_tag.regs >> reg_offset) & 0xF;
+    uint64_t reg_offset = (path[active_path].current_tag.reg_count - path[active_path].current_tag.regs_left) << 2;
+    uint8_t reg = (path[active_path].current_tag.regs >> reg_offset) & 0xF;
     switch (reg)
     {
         case 0x0:
@@ -119,18 +136,18 @@ void GraphicsInterface::process_REGLIST(uint128_t data)
     //printf("[GIF] Reglist: $%08X_%08X_%08X_%08X\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
     for (int i = 0; i < 2; i++)
     {
-        uint64_t reg_offset = (current_tag.reg_count - current_tag.regs_left) << 2;
-        uint8_t reg = (current_tag.regs >> reg_offset) & 0xF;
+        uint64_t reg_offset = (path[active_path].current_tag.reg_count - path[active_path].current_tag.regs_left) << 2;
+        uint8_t reg = (path[active_path].current_tag.regs >> reg_offset) & 0xF;
         gs->write64(reg, data._u64[i]);
 
-        current_tag.regs_left--;
-        if (!current_tag.regs_left)
+        path[active_path].current_tag.regs_left--;
+        if (!path[active_path].current_tag.regs_left)
         {
-            current_tag.regs_left = current_tag.reg_count;
-            current_tag.data_left--;
+            path[active_path].current_tag.regs_left = path[active_path].current_tag.reg_count;
+            path[active_path].current_tag.data_left--;
 
             //If NREGS * NLOOP is odd, discard the last 64 bits of data
-            if (!current_tag.data_left && i == 0)
+            if (!path[active_path].current_tag.data_left && i == 0)
                 return;
         }
     }
@@ -141,20 +158,21 @@ void GraphicsInterface::feed_GIF(uint128_t data)
     //printf("[GIF] Data: $%08X_%08X_%08X_%08X\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
     uint64_t data1 = data._u64[0];
     uint64_t data2 = data._u64[1];
-    if (!current_tag.data_left)
+    if (!path[active_path].current_tag.data_left)
     {
+        path_status[active_path] = path[active_path].current_tag.format;
         //Read new GIFtag
-        current_tag.NLOOP = data1 & 0x7FFF;
-        current_tag.end_of_packet = data1 & (1 << 15);
-        current_tag.output_PRIM = (data1 >> 46) & 0x1;
-        current_tag.PRIM = (data1 >> 47) & 0x7FF;
-        current_tag.format = (data1 >> 58) & 0x3;
-        current_tag.reg_count = data1 >> 60;
-        if (!current_tag.reg_count)
-            current_tag.reg_count = 16;
-        current_tag.regs = data2;
-        current_tag.regs_left = current_tag.reg_count;
-        current_tag.data_left = current_tag.NLOOP;
+        path[active_path].current_tag.NLOOP = data1 & 0x7FFF;
+        path[active_path].current_tag.end_of_packet = data1 & (1 << 15);
+        path[active_path].current_tag.output_PRIM = (data1 >> 46) & 0x1;
+        path[active_path].current_tag.PRIM = (data1 >> 47) & 0x7FF;
+        path[active_path].current_tag.format = (data1 >> 58) & 0x3;
+        path[active_path].current_tag.reg_count = data1 >> 60;
+        if (!path[active_path].current_tag.reg_count)
+            path[active_path].current_tag.reg_count = 16;
+        path[active_path].current_tag.regs = data2;
+        path[active_path].current_tag.regs_left = path[active_path].current_tag.reg_count;
+        path[active_path].current_tag.data_left = path[active_path].current_tag.NLOOP;
 
         //Q is initialized to 1.0 upon reading a GIFtag
         gs->set_Q(1.0f);
@@ -171,20 +189,20 @@ void GraphicsInterface::feed_GIF(uint128_t data)
             printf("Regs: $%08X_$%08X\n", current_tag.regs >> 32, current_tag.regs & 0xFFFFFFFF);
         }*/
 
-        if (current_tag.output_PRIM && current_tag.format != 1)
-            gs->write64(0, current_tag.PRIM);
+        if (path[active_path].current_tag.output_PRIM && path[active_path].current_tag.format != 1)
+            gs->write64(0, path[active_path].current_tag.PRIM);
     }
     else
     {
-        switch (current_tag.format)
+        switch (path[active_path].current_tag.format)
         {
             case 0:
                 process_PACKED(data);
-                current_tag.regs_left--;
-                if (!current_tag.regs_left)
+                path[active_path].current_tag.regs_left--;
+                if (!path[active_path].current_tag.regs_left)
                 {
-                    current_tag.regs_left = current_tag.reg_count;
-                    current_tag.data_left--;
+                    path[active_path].current_tag.regs_left = path[active_path].current_tag.reg_count;
+                    path[active_path].current_tag.data_left--;
                 }
                 break;
             case 1:
@@ -194,14 +212,17 @@ void GraphicsInterface::feed_GIF(uint128_t data)
             case 3:
                 gs->write64(0x54, data1);
                 gs->write64(0x54, data2);
-                current_tag.data_left--;
+                path[active_path].current_tag.data_left--;
                 break;
             default:
-                printf("[GS] Unrecognized GIFtag format %d\n", current_tag.format);
+                printf("[GS] Unrecognized GIFtag format %d\n", path[active_path].current_tag.format);
                 break;
         }
-        if (!current_tag.data_left && current_tag.end_of_packet)
+        if (!path[active_path].current_tag.data_left && path[active_path].current_tag.end_of_packet)
+        {
+            path_status[active_path] = 4;
             gs->assert_FINISH();
+        }
     }
 }
 
@@ -210,16 +231,51 @@ void GraphicsInterface::set_path3_vifmask(int value)
     path3_vif_masked = value;
 }
 
-void GraphicsInterface::request_PATH(int index)
+bool GraphicsInterface::path3_masked(int index)
 {
-    printf("[GIF] PATH%d requested\n", index);
-    if (!active_path)
+    if (index != 3)
+        return false;
+
+    bool masked = false;
+    if (path3_vif_masked || path3_mode_masked)
+    {
+        masked = (path_status[3] == 4);
+        //printf("[GIF] PATH3 Masked\n");
+        return masked;
+    }
+    return false;
+}
+
+bool GraphicsInterface::interrupt_path3(int index)
+{
+    //Can't interrupt other paths
+    if (active_path != 3)
+        return false;
+
+    if ((intermittent_mode && path_status[3] >= 2) || path_status[3] == 4) //IMAGE MODE or IDLE
+    {
+        printf("[GIF] Interrupting PATH3 with PATH%d\n", index);
+        deactivate_PATH(3);
+        //printf("Active Path Now %d\n", active_path);
+        path_queue |= 1 << 3;
+        return true;
+    }
+    return false;
+}
+
+void GraphicsInterface::request_PATH(int index, bool canInterruptPath3)
+{
+    printf("[GIF] PATH%d requested active path %d\n", index, active_path);
+    if (!active_path || (canInterruptPath3 && interrupt_path3(index)))
     {
         active_path = index;
-        printf("[GIF] Active!\n");
+        printf("[GIF] PATH%d Active!\n", active_path);
     }
     else
+    {
         path_queue |= 1 << index;
+        printf("[GIF] PATH%d Queued!\n", index);
+    }
 }
 
 void GraphicsInterface::deactivate_PATH(int index)
@@ -237,6 +293,7 @@ void GraphicsInterface::deactivate_PATH(int index)
             {
                 path_queue &= ~bit;
                 active_path = path;
+                printf("[GIF] PATH%d Activated from queue\n", active_path);
                 break;
             }
         }
@@ -254,7 +311,7 @@ bool GraphicsInterface::send_PATH1(uint128_t quad)
 {
     //printf("[GIF] Send PATH1 $%08X_%08X_%08X_%08X\n", quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
     feed_GIF(quad);
-    return !current_tag.data_left && current_tag.end_of_packet;
+    return !path[1].current_tag.data_left && path[1].current_tag.end_of_packet;
 }
 
 void GraphicsInterface::send_PATH2(uint32_t data[])
@@ -262,6 +319,7 @@ void GraphicsInterface::send_PATH2(uint32_t data[])
     uint128_t blorp;
     for (int i = 0; i < 4; i++)
         blorp._u32[i] = data[i];
+    //printf("[GIF] Send PATH2 $%08X_%08X_%08X_%08X\n", blorp._u32[3], blorp._u32[2], blorp._u32[1], blorp._u32[0]);
     feed_GIF(blorp);
 }
 

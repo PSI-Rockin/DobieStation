@@ -10,8 +10,6 @@
  * Bit 2 seems to be some sort of finish flag?
  */
 
-uint16_t SPU::autodma_ctrl = 0;
-
 SPU::SPU(int id, Emulator* e) : id(id), e(e)
 { 
 
@@ -27,7 +25,6 @@ void SPU::reset(uint8_t* RAM)
     core_att = 0;
     autodma_ctrl = 0x0;
     ADMA_left = 0;
-    can_write_adma = false;
     input_pos = 0;
 
     spdif_irq = 0;
@@ -117,20 +114,23 @@ void SPU::gen_sample()
             }
         }
     }
-    input_pos++;
-    if (ADMA_left >= 0x40 && !can_write_adma && autodma_ctrl & (1 << (id - 1)))
-        can_write_adma = true;
-    input_pos &= 0x1FF;
+
+    if (ADMA_left > 0 && autodma_ctrl & (1 << (id - 1)))
+    {
+        input_pos++;
+        process_ADMA();
+        input_pos &= 0x1FF;
+    }
 }
 
 bool SPU::running_ADMA()
 {
-    return ADMA_left > 0;
+    return (autodma_ctrl & (1 << (id - 1)));
 }
 
 bool SPU::can_write_ADMA()
 {
-    return can_write_adma;
+    return (input_pos <= 128 || input_pos >= 384) && (ADMA_left < 0x400);
 }
 
 void SPU::finish_DMA()
@@ -144,11 +144,7 @@ void SPU::start_DMA(int size)
     if (autodma_ctrl & (1 << (id - 1)))
     {
         printf("ADMA started with size: $%08X\n", size);
-        ADMA_left = size;
-        can_write_adma = false;
     }
-    else
-        ADMA_left = -1;
     status.DMA_finished = false;
 }
 
@@ -165,14 +161,24 @@ void SPU::write_DMA(uint32_t value)
 
 void SPU::write_ADMA(uint8_t *RAM)
 {
-    //printf("[SPU%d] ADMA transfer: $%08X\n", id, ADMA_left);
-    can_write_adma = false;
-    ADMA_left -= 0x40;
-    if (ADMA_left < 0x40)
+   // printf("[SPU%d] ADMA transfer: $%08X\n", id, ADMA_left);
+    ADMA_left += 2;
+    status.DMA_busy = true;
+    status.DMA_finished = false;
+}
+
+void SPU::process_ADMA() 
+{
+    if (input_pos == 128 || input_pos == 384)
     {
-        printf("[SPU%d] ADMA finished!\n", id);
-        autodma_ctrl |= ~3;
-        ADMA_left = 0;
+        ADMA_left -= std::min(ADMA_left, 0x200);
+
+        if (ADMA_left < 0x200)
+        {
+            autodma_ctrl |= 0x4;
+        }
+        else
+            autodma_ctrl &= ~0x4;
     }
 }
 
