@@ -78,6 +78,7 @@ void SPU::gen_sample()
             //Read header
             if (voices[i].block_pos == 0)
             {
+                voices[i].current_addr &= 0xFFFFF;
                 uint16_t header = RAM[voices[i].current_addr];
                 voices[i].loop_code = (header >> 8) & 0x3;
                 bool loop_start = header & (1 << 10);
