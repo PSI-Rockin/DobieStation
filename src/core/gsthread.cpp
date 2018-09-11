@@ -311,6 +311,7 @@ void GraphicsSynthesizerThread::reset()
     PSMCT24_color = 0;
     PSMCT24_unpacked_count = 0;
     current_ctx = &context1;
+    current_PRMODE = &PRIM;
 }
 
 void GraphicsSynthesizerThread::memdump(uint32_t* target, uint16_t& width, uint16_t& height)
@@ -464,18 +465,22 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
     switch (addr)
     {
         case 0x0000:
-            PRIM.prim_type = value & 0x7;
+            prim_type = value & 0x7;
             PRIM.gourand_shading = value & (1 << 3);
             PRIM.texture_mapping = value & (1 << 4);
             PRIM.fog = value & (1 << 5);
-            PRIM.alpha_blend = value & (1 << 6);
             PRIM.antialiasing = value & (1 << 7);
+            PRIM.alpha_blend = (value & (1 << 6)) | PRIM.antialiasing;
             PRIM.use_UV = value & (1 << 8);
             PRIM.use_context2 = value & (1 << 9);
-            if (PRIM.use_context2)
-                current_ctx = &context2;
-            else
-                current_ctx = &context1;
+
+            if (current_PRMODE == &PRIM)
+            {
+                if (PRIM.use_context2)
+                    current_ctx = &context2;
+                else
+                    current_ctx = &context1;
+            }
             PRIM.fix_fragment_value = value & (1 << 10);
             num_vertices = 0;
             printf("[GS_t] PRIM: $%08X\n", value);
@@ -569,10 +574,36 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             break;
         case 0x001A:
             printf("PRMODECNT: $%08X\n", value);
-            use_PRIM = value & 0x1;
+            {
+                if (value & 0x1)
+                    current_PRMODE = &PRIM;
+                else
+                    current_PRMODE = &PRMODE;
+
+                if (current_PRMODE->use_context2)
+                    current_ctx = &context2;
+                else
+                    current_ctx = &context1;
+            }
             break;
         case 0x001B:
             printf("PRMODE: $%08X\n", value);
+            PRMODE.gourand_shading = value & (1 << 3);
+            PRMODE.texture_mapping = value & (1 << 4);
+            PRMODE.fog = value & (1 << 5);
+            PRMODE.antialiasing = value & (1 << 7);
+            PRMODE.alpha_blend = (value & (1 << 6)) | PRMODE.antialiasing;
+            PRMODE.use_UV = value & (1 << 8);
+            PRMODE.use_context2 = value & (1 << 9);
+
+            if (current_PRMODE == &PRMODE)
+            {
+                if (PRMODE.use_context2)
+                    current_ctx = &context2;
+                else
+                    current_ctx = &context1;
+            }
+            PRMODE.fix_fragment_value = value & (1 << 10);
             break;
         case 0x001C:
             TEXCLUT.width = (value & 0x3F) * 64;
@@ -615,6 +646,10 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             break;
         case 0x0048:
             context2.set_test(value);
+            break;
+        case 0x0049:
+            printf("[GS_t] PABE: $%02X\n", value);
+            PABE = value & 0x1;
             break;
         case 0x004C:
             context1.set_frame(value);
@@ -950,7 +985,7 @@ void GraphicsSynthesizerThread::vertex_kick(bool drawing_kick)
 
     num_vertices++;
     bool request_draw_kick = false;
-    switch (PRIM.prim_type)
+    switch (prim_type)
     {
         case 0: //Point
             num_vertices--;
@@ -1003,7 +1038,7 @@ void GraphicsSynthesizerThread::vertex_kick(bool drawing_kick)
             }
             break;
         default:
-            Errors::die("[GS] Unrecognized primitive %d\n", PRIM.prim_type);
+            Errors::die("[GS] Unrecognized primitive %d\n", prim_type);
     }
     if (drawing_kick && request_draw_kick)
         render_primitive();
@@ -1011,7 +1046,7 @@ void GraphicsSynthesizerThread::vertex_kick(bool drawing_kick)
 
 void GraphicsSynthesizerThread::render_primitive()
 {
-    switch (PRIM.prim_type)
+    switch (prim_type)
     {
         case 0:
             render_point();
@@ -1195,7 +1230,8 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
             return;
     }
 
-    if (alpha_blending)
+    //PABE - MSB of source alpha must be set to enable alpha blending
+    if (alpha_blending && (!PABE || (color.a & 0x80)))
     {
         uint32_t r1, g1, b1;
         uint32_t r2, g2, b2;
@@ -1383,16 +1419,16 @@ void GraphicsSynthesizerThread::render_point()
     Vertex v1 = vtx_queue[0]; v1.to_relative(current_ctx->xyoffset);
     if (v1.x < current_ctx->scissor.x1 || v1.x > current_ctx->scissor.x2 ||
         v1.y < current_ctx->scissor.y1 || v1.y > current_ctx->scissor.y2)
-    return;
+        return;
     printf("[GS_t] Rendering point!\n");
     printf("Coords: (%d, %d, %d)\n", v1.x >> 4, v1.y >> 4, v1.z);
     RGBAQ_REG vtx_color, tex_color;
     
     vtx_color = v1.rgbaq;
-    if (PRIM.texture_mapping)
+    if (current_PRMODE->texture_mapping)
     {
         uint32_t u, v;
-        if (!PRIM.use_UV)
+        if (!current_PRMODE->use_UV)
         {
             u = v1.s * current_ctx->tex0.tex_width;
             v = v1.t * current_ctx->tex0.tex_height;
@@ -1405,11 +1441,11 @@ void GraphicsSynthesizerThread::render_point()
             v = (uint32_t) v1.uv.v;
         }
         tex_lookup(u, v, vtx_color, tex_color);
-        draw_pixel(v1.x, v1.y, v1.z, tex_color, PRIM.alpha_blend);
+        draw_pixel(v1.x, v1.y, v1.z, tex_color, current_PRMODE->alpha_blend);
     }
     else
     {
-        draw_pixel(v1.x, v1.y, v1.z, vtx_color, PRIM.alpha_blend);
+        draw_pixel(v1.x, v1.y, v1.z, vtx_color, current_PRMODE->alpha_blend);
     }
 }
 
@@ -1451,17 +1487,17 @@ void GraphicsSynthesizerThread::render_line()
         int32_t y = v1.y*(1.-t) + v2.y*t;        
         //if (y < min_y || y > max_y)
             //continue;
-        if (PRIM.gourand_shading)
+        if (current_PRMODE->gourand_shading)
         {
             color.r = interpolate(x, v1.rgbaq.r, v1.x, v2.rgbaq.r, v2.x);
             color.g = interpolate(x, v1.rgbaq.g, v1.x, v2.rgbaq.g, v2.x);
             color.b = interpolate(x, v1.rgbaq.b, v1.x, v2.rgbaq.b, v2.x);
             color.a = interpolate(x, v1.rgbaq.a, v1.x, v2.rgbaq.a, v2.x);
         }
-        if (PRIM.texture_mapping)
+        if (current_PRMODE->texture_mapping)
         {
             uint32_t u, v;
-            if (!PRIM.use_UV)
+            if (!current_PRMODE->use_UV)
             {
                 float tex_s, tex_t;
                 tex_s = interpolate(x, v1.s, v1.x, v2.s, v2.x);
@@ -1478,9 +1514,9 @@ void GraphicsSynthesizerThread::render_line()
             color = tex_color;
         }
         if (is_steep)
-            draw_pixel(y, x, z, color, PRIM.alpha_blend);
+            draw_pixel(y, x, z, color, current_PRMODE->alpha_blend);
         else
-            draw_pixel(x, y, z, color, PRIM.alpha_blend);
+            draw_pixel(x, y, z, color, current_PRMODE->alpha_blend);
     }
 }
 
@@ -1548,7 +1584,7 @@ void GraphicsSynthesizerThread::render_triangle()
     int32_t w2_row_block = w2_row;
     int32_t w3_row_block = w3_row;
 
-    if (!PRIM.gourand_shading)
+    if (!current_PRMODE->gourand_shading)
     {
         //Flatten the colors
         v1.rgbaq.r = v3.rgbaq.r;
@@ -1566,8 +1602,8 @@ void GraphicsSynthesizerThread::render_triangle()
 
     RGBAQ_REG vtx_color, tex_color;
 
-    bool tmp_tex = PRIM.texture_mapping;
-    bool tmp_uv = !PRIM.use_UV;//allow for loop unswitching
+    bool tmp_tex = current_PRMODE->texture_mapping;
+    bool tmp_uv = !current_PRMODE->use_UV;//allow for loop unswitching
 
     //TODO: Parallelize this
     //Iterate through the bounding rectangle using BLOCKSIZE * BLOCKSIZE large blocks
@@ -1679,11 +1715,11 @@ void GraphicsSynthesizerThread::render_triangle()
                                     v = (uint32_t) temp_v;
                                 }
                                 tex_lookup(u, v, vtx_color, tex_color);
-                                draw_pixel(x, y, (uint32_t) z, tex_color, PRIM.alpha_blend);
+                                draw_pixel(x, y, (uint32_t) z, tex_color, current_PRMODE->alpha_blend);
                             }
                             else
                             {
-                                draw_pixel(x, y, (uint32_t) z, vtx_color, PRIM.alpha_blend);
+                                draw_pixel(x, y, (uint32_t) z, vtx_color, current_PRMODE->alpha_blend);
                             }
                         }
                         //Horizontal step
@@ -1742,8 +1778,8 @@ void GraphicsSynthesizerThread::render_sprite()
     float pix_s_step = stepsize(v1.s, v1.x, v2.s, v2.x, 0x10);
     int32_t pix_u_step = stepsize((int32_t)v1.uv.u, v1.x, (int32_t)v2.uv.u, v2.x, 0x100000);
 
-    bool tmp_tex = PRIM.texture_mapping;
-    bool tmp_uv = !PRIM.use_UV;//allow for loop unswitching
+    bool tmp_tex = current_PRMODE->texture_mapping;
+    bool tmp_uv = !current_PRMODE->use_UV;//allow for loop unswitching
 
     for (int32_t y = min_y; y < max_y; y += 0x10)
     {
@@ -1761,11 +1797,11 @@ void GraphicsSynthesizerThread::render_sprite()
                 }
                 else
                     tex_lookup(pix_u >> 16 , pix_v >> 16, vtx_color, tex_color);
-                draw_pixel(x, y, v2.z, tex_color, PRIM.alpha_blend);
+                draw_pixel(x, y, v2.z, tex_color, current_PRMODE->alpha_blend);
             }
             else
             {
-                draw_pixel(x, y, v2.z, vtx_color, PRIM.alpha_blend);
+                draw_pixel(x, y, v2.z, vtx_color, current_PRMODE->alpha_blend);
             }
             pix_s += pix_s_step;
             pix_u += pix_u_step;
@@ -2009,6 +2045,15 @@ void GraphicsSynthesizerThread::host_to_host()
     TRXDIR = 3;
 }
 
+uint8_t GraphicsSynthesizerThread::get_16bit_alpha(uint16_t color)
+{
+    if (!(color & 0x7FFF) && TEXA.trans_black)
+        return 0;
+    if (color & (1 << 15))
+        return TEXA.alpha1;
+    return TEXA.alpha0;
+}
+
 void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, const RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color)
 {
     double LOD;
@@ -2044,13 +2089,44 @@ void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, const RGBAQ_REG
     switch (current_ctx->tex0.color_function)
     {
         case 0: //Modulate
-            tex_color.r = ((uint16_t)tex_color.r * vtx_color.r) >> 7;
-            tex_color.g = ((uint16_t)tex_color.g * vtx_color.g) >> 7;
-            tex_color.b = ((uint16_t)tex_color.b * vtx_color.b) >> 7;
-            tex_color.a = ((uint16_t)tex_color.a * vtx_color.a) >> 7;
+            tex_color.r = (tex_color.r * vtx_color.r) >> 7;
+            tex_color.g = (tex_color.g * vtx_color.g) >> 7;
+            tex_color.b = (tex_color.b * vtx_color.b) >> 7;
+            if (current_ctx->tex0.use_alpha)
+                tex_color.a = (tex_color.a * vtx_color.a) >> 7;
+            else
+                tex_color.a = vtx_color.a;
+
+            //Clamp texture colors
+            if (tex_color.r > 0xFF)
+                tex_color.r = 0xFF;
+            if (tex_color.g > 0xFF)
+                tex_color.g = 0xFF;
+            if (tex_color.b > 0xFF)
+                tex_color.b = 0xFF;
+            if (tex_color.a > 0xFF)
+                tex_color.a = 0xFF;
             break;
         case 1: //Decal
+            if (!current_ctx->tex0.use_alpha)
+                tex_color.a = vtx_color.a;
             break;
+        case 3: //Highlight2
+            tex_color.r = ((tex_color.r * vtx_color.r) >> 7) + vtx_color.a;
+            tex_color.g = ((tex_color.g * vtx_color.g) >> 7) + vtx_color.a;
+            tex_color.b = ((tex_color.b * vtx_color.b) >> 7) + vtx_color.a;
+            if (!current_ctx->tex0.use_alpha)
+                tex_color.a = vtx_color.a;
+
+            if (tex_color.r > 0xFF)
+                tex_color.r = 0xFF;
+            if (tex_color.g > 0xFF)
+                tex_color.g = 0xFF;
+            if (tex_color.b > 0xFF)
+                tex_color.b = 0xFF;
+            break;
+        default:
+            Errors::die("[GS_t] Unrecognized texture color function $%02X", current_ctx->tex0.color_function);
     }
 }
 
@@ -2108,17 +2184,7 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, RGBAQ_REG& 
             tex_color.r = (color & 0x1F) << 3;
             tex_color.g = ((color >> 5) & 0x1F) << 3;
             tex_color.b = ((color >> 10) & 0x1F) << 3;
-
-            if (!(color & 0x7FFF) && TEXA.trans_black)
-                tex_color.a = 0;
-            else
-            {
-                if (color & (1 << 15))
-                    tex_color.a = TEXA.alpha1;
-                else
-                    tex_color.a = TEXA.alpha0;
-            }
-            tex_color.a = ((color & (1 << 15)) != 0) << 7;
+            tex_color.a = get_16bit_alpha(color);
         }
             break;
         case 0x09: //Invalid format??? FFX uses it
@@ -2133,15 +2199,7 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, RGBAQ_REG& 
             tex_color.r = (color & 0x1F) << 3;
             tex_color.g = ((color >> 5) & 0x1F) << 3;
             tex_color.b = ((color >> 10) & 0x1F) << 3;
-            if (!(color & 0x7FFF) && TEXA.trans_black)
-                tex_color.a = 0;
-            else
-            {
-                if (color & (1 << 15))
-                    tex_color.a = TEXA.alpha1;
-                else
-                    tex_color.a = TEXA.alpha0;
-            }
+            tex_color.a = get_16bit_alpha(color);
         }
             break;
         case 0x13:
@@ -2224,17 +2282,7 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, RGBAQ_REG& 
             tex_color.r = (color & 0x1F) << 3;
             tex_color.g = ((color >> 5) & 0x1F) << 3;
             tex_color.b = ((color >> 10) & 0x1F) << 3;
-
-            if (!(color & 0x7FFF) && TEXA.trans_black)
-                tex_color.a = 0;
-            else
-            {
-                if (color & (1 << 15))
-                    tex_color.a = TEXA.alpha1;
-                else
-                    tex_color.a = TEXA.alpha0;
-            }
-            tex_color.a = ((color & (1 << 15)) != 0) << 7;
+            tex_color.a = get_16bit_alpha(color);
         }
             break;
         default:
@@ -2279,15 +2327,7 @@ void GraphicsSynthesizerThread::clut_lookup(uint8_t entry, RGBAQ_REG &tex_color,
             tex_color.r = (color & 0x1F) << 3;
             tex_color.g = ((color >> 5) & 0x1F) << 3;
             tex_color.b = ((color >> 10) & 0x1F) << 3;
-            if (!(color & 0x7FFF) && TEXA.trans_black)
-                tex_color.a = 0;
-            else
-            {
-                if (color & (1 << 15))
-                    tex_color.a = TEXA.alpha1;
-                else
-                    tex_color.a = TEXA.alpha0;
-            }
+            tex_color.a = get_16bit_alpha(color);
         }
             break;
         //PSMCT16S
@@ -2297,15 +2337,7 @@ void GraphicsSynthesizerThread::clut_lookup(uint8_t entry, RGBAQ_REG &tex_color,
             tex_color.r = (color & 0x1F) << 3;
             tex_color.g = ((color >> 5) & 0x1F) << 3;
             tex_color.b = ((color >> 10) & 0x1F) << 3;
-            if (!(color & 0x7FFF) && TEXA.trans_black)
-                tex_color.a = 0;
-            else
-            {
-                if (color & (1 << 15))
-                    tex_color.a = TEXA.alpha1;
-                else
-                    tex_color.a = TEXA.alpha0;
-            }
+            tex_color.a = get_16bit_alpha(color);
         }
             break;
         default:
@@ -2337,6 +2369,13 @@ void GraphicsSynthesizerThread::load_state(ifstream *state)
         current_ctx = &context2;
 
     state->read((char*)&PRIM, sizeof(PRIM));
+    state->read((char*)&PRMODE, sizeof(PRMODE));
+    int current_PRMODE_id = 1;
+    state->read((char*)&current_PRMODE_id, sizeof(current_PRMODE_id));
+    if (current_PRMODE_id == 1)
+        current_PRMODE = &PRIM;
+    else
+        current_PRMODE = &PRMODE;
     state->read((char*)&RGBAQ, sizeof(RGBAQ));
     state->read((char*)&UV, sizeof(UV));
     state->read((char*)&ST, sizeof(ST));
@@ -2344,6 +2383,7 @@ void GraphicsSynthesizerThread::load_state(ifstream *state)
     state->read((char*)&TEXCLUT, sizeof(TEXCLUT));
     state->read((char*)&DTHE, sizeof(DTHE));
     state->read((char*)&COLCLAMP, sizeof(COLCLAMP));
+    state->read((char*)&PABE, sizeof(PABE));
 
     state->read((char*)&BITBLTBUF, sizeof(BITBLTBUF));
     state->read((char*)&TRXPOS, sizeof(TRXPOS));
@@ -2374,6 +2414,13 @@ void GraphicsSynthesizerThread::save_state(ofstream *state)
     state->write((char*)&current_ctx_id, sizeof(current_ctx_id));
 
     state->write((char*)&PRIM, sizeof(PRIM));
+    state->write((char*)&PRMODE, sizeof(PRMODE));
+
+    int current_PRMODE_id = 1;
+    if (current_PRMODE == &PRMODE)
+        current_PRMODE_id = 2;
+    state->write((char*)&current_PRMODE_id, sizeof(current_PRMODE_id));
+
     state->write((char*)&RGBAQ, sizeof(RGBAQ));
     state->write((char*)&UV, sizeof(UV));
     state->write((char*)&ST, sizeof(ST));
@@ -2381,6 +2428,7 @@ void GraphicsSynthesizerThread::save_state(ofstream *state)
     state->write((char*)&TEXCLUT, sizeof(TEXCLUT));
     state->write((char*)&DTHE, sizeof(DTHE));
     state->write((char*)&COLCLAMP, sizeof(COLCLAMP));
+    state->write((char*)&PABE, sizeof(PABE));
 
     state->write((char*)&BITBLTBUF, sizeof(BITBLTBUF));
     state->write((char*)&TRXPOS, sizeof(TRXPOS));

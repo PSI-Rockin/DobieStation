@@ -571,7 +571,8 @@ void CDVD_Drive::start_seek()
         printf("[CDVD] Seeking\n");
         bool is_DVD = N_command != 0x06;
         int delta = abs((int)current_sector - (int)sector_pos);
-        if (delta < 16)
+        printf("[CDVD] Seek delta: %d\n", delta);
+        if ((is_DVD && delta < 16) || (!is_DVD && delta < 8))
         {
             printf("[CDVD] Contiguous read\n");
             N_cycles_left = get_block_timing(is_DVD) * delta;

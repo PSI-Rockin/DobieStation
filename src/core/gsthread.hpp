@@ -4,21 +4,8 @@
 #include "gscontext.hpp"
 #include "gs.hpp"
 
-struct PRMODE
+struct PRMODE_REG
 {
-    bool gourand_shading;
-    bool texture_mapping;
-    bool fog;
-    bool alpha_blend;
-    bool antialiasing;
-    bool use_UV;
-    bool use_context2;
-    bool fix_fragment_value;
-};
-
-struct PRIM_REG
-{
-    uint8_t prim_type;
     bool gourand_shading;
     bool texture_mapping;
     bool fog;
@@ -31,7 +18,8 @@ struct PRIM_REG
 
 struct RGBAQ_REG
 {
-    uint8_t r, g, b, a;
+    //We make them 16-bit to handle potential overflows
+    uint16_t r, g, b, a;
     float q;
 };
 
@@ -99,7 +87,9 @@ class GraphicsSynthesizerThread
         GSContext context1, context2;
         GSContext* current_ctx;
 
-        PRIM_REG PRIM;
+        uint8_t prim_type;
+        PRMODE_REG PRIM, PRMODE;
+        PRMODE_REG* current_PRMODE;
         RGBAQ_REG RGBAQ;
         UV_REG UV;
         ST_REG ST;
@@ -107,7 +97,7 @@ class GraphicsSynthesizerThread
         TEXCLUT_REG TEXCLUT;
         bool DTHE;
         bool COLCLAMP;
-        bool use_PRIM;
+        bool PABE;
 
         BITBLTBUF_REG BITBLTBUF;
         TRXPOS_REG TRXPOS;
@@ -172,6 +162,7 @@ class GraphicsSynthesizerThread
 
         bool depth_test(int32_t x, int32_t y, uint32_t z);
 
+        uint8_t get_16bit_alpha(uint16_t color);
         void tex_lookup(int16_t u, int16_t v, const RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color);
         void tex_lookup_int(int16_t u, int16_t v, RGBAQ_REG& tex_color);
         void clut_lookup(uint8_t entry, RGBAQ_REG& tex_color, bool eight_bit);
