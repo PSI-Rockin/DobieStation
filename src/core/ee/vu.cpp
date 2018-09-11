@@ -219,30 +219,42 @@ void VectorUnit::check_for_FMAC_stall()
         bool stall_found = false;
         for (int j = 0; j < 2; j++)
         {
-            if (decoder.vf_read0[j] && (decoder.vf_read0[j] == write0 || decoder.vf_read0[j] == write1))
+            if (decoder.vf_read0[j])
             {
-                if (decoder.vf_read0_field[j] & write0_field)
+                if (decoder.vf_read0[j] == write0)
                 {
-                    stall_found = true;
-                    break;
+                    if (decoder.vf_read0_field[j] & write0_field)
+                    {
+                        stall_found = true;
+                        break;
+                    }
                 }
-                if (decoder.vf_read0_field[j] & write1_field)
+                else if (decoder.vf_read0[j] == write1)
                 {
-                    stall_found = true;
-                    break;
+                    if (decoder.vf_read0_field[j] & write1_field)
+                    {
+                        stall_found = true;
+                        break;
+                    }
                 }
             }
-            if (decoder.vf_read1[j] && (decoder.vf_read1[j] == write0 || decoder.vf_read1[j] == write1))
+            if (decoder.vf_read1[j])
             {
-                if (decoder.vf_read1_field[j] & write0_field)
+                if (decoder.vf_read1[j] == write0)
                 {
-                    stall_found = true;
-                    break;
+                    if (decoder.vf_read1_field[j] & write0_field)
+                    {
+                        stall_found = true;
+                        break;
+                    }
                 }
-                if (decoder.vf_read1_field[j] & write1_field)
+                else if (decoder.vf_read1[j] == write1)
                 {
-                    stall_found = true;
-                    break;
+                    if (decoder.vf_read1_field[j] & write1_field)
+                    {
+                        stall_found = true;
+                        break;
+                    }
                 }
             }
         }
@@ -253,6 +265,8 @@ void VectorUnit::check_for_FMAC_stall()
             for (int j = 0; j < delay; j++)
                 update_mac_pipeline();
             cycle_count += delay;
+            if (cycle_count >= finish_DIV_event && (cycle_count - delay) < finish_DIV_event)
+                Q.u = new_Q_instance.u;
             break;
         }
     }

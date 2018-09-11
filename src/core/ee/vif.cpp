@@ -135,7 +135,7 @@ void VectorInterface::update(int cycles)
                 mpg.addr += 4;
                 if (command_len <= 1)
                 {
-                    disasm_micromem();
+                    //disasm_micromem();
                     command = 0;
                 }
                 break;
@@ -298,6 +298,8 @@ void VectorInterface::decode_cmd(uint32_t value)
                 printf("Command len: %d\n", command_len);
                 mpg.addr = imm * 8;
             }
+            wait_for_VU = true;
+            wait_cmd_value = value;
             break;
         case 0x50:
         case 0x51:
@@ -320,7 +322,7 @@ void VectorInterface::decode_cmd(uint32_t value)
 
 void VectorInterface::handle_wait_cmd(uint32_t value)
 {
-    command = value >> 24;
+    command = (value >> 24) & 0x7F;
     imm = value & 0xFFFF;
     switch (command)
     {
@@ -334,7 +336,11 @@ void VectorInterface::handle_wait_cmd(uint32_t value)
         default:
             break;
     }
-    command = 0;
+    if (command_len == 0)
+    {
+        command = 0;
+    }
+    
 }
 
 void VectorInterface::MSCAL(uint32_t addr)

@@ -1312,7 +1312,7 @@ void mr32(VectorUnit &vu, uint32_t instr)
     vu.decoder.vf_write_field[1] = field;
 
     vu.decoder.vf_read0[1] = source;
-    vu.decoder.vf_read0_field[1] = field;
+    vu.decoder.vf_read0_field[1] = (field >> 1) | ((field & 0x1) << 3);
     lower_op = &VectorUnit::mr32;
 }
 
