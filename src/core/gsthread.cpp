@@ -22,7 +22,7 @@ static uint32_t page_PSMCT16SZ[32][64][64];
 static uint32_t page_PSMCT8[32][64][128];
 static uint32_t page_PSMCT4[32][128][128];
 
-#define printf(fmt, ...)(0)
+//#define printf(fmt, ...)(0)
 
 /**
   * ~ GS notes ~
@@ -110,7 +110,7 @@ GraphicsSynthesizerThread::GraphicsSynthesizerThread()
         for (int y = 0; y < 128; y++)
         {
             for (int x = 0; x < 128; x++)
-                page_PSMCT4[block][y][x] = (blockid_PSMCT4(block, 0, x, y) << 9) + columnTable4[y & 0xF][x & 0x1F];
+                page_PSMCT4[block][y][x] = (blockid_PSMCT4(block, 0, x, y) << 9) + columnTable4[y & 15][x & 31];
         }
     }
 }
@@ -181,6 +181,13 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
                         gs.set_XYZ(p.x, p.y, p.z, p.drawing_kick);
                         break;
                     }
+                    case set_xyzf_t:
+                    {
+                        auto p = data.payload.xyzf_payload;
+                        gs.set_XYZF(p.x, p.y, p.z, p.fog, p.drawing_kick);
+                        break;
+                    }
+                        break;
                     case set_q_t:
                     {
                         auto p = data.payload.q_payload;
@@ -517,6 +524,7 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             current_vtx.x = value & 0xFFFF;
             current_vtx.y = (value >> 16) & 0xFFFF;
             current_vtx.z = (value >> 32) & 0xFFFFFF;
+            FOG = (value >> 56) & 0xFF;
             vertex_kick(true);
             break;
         case 0x0005:
@@ -538,11 +546,15 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
         case 0x0009:
             context2.set_clamp(value);
             break;
+        case 0x000A:
+            FOG = (value >> 56) & 0xFF;
+            break;
         case 0x000C:
             //XYZ3F
             current_vtx.x = value & 0xFFFF;
             current_vtx.y = (value >> 16) & 0xFFFF;
             current_vtx.z = (value >> 32) & 0xFFFFFF;
+            FOG = (value >> 56) & 0xFF;
             vertex_kick(false);
             break;
         case 0x000D:
@@ -620,6 +632,12 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             TEXA.trans_black = value & (1 << 15);
             TEXA.alpha1 = (value >> 32) & 0xFF;
             break;
+        case 0x003D:
+            printf("FOGCOL: $%08X\n", value);
+            FOGCOL.r = value & 0xFF;
+            FOGCOL.g = (value >> 8) & 0xFF;
+            FOGCOL.b = (value >> 16) & 0xFF;
+            break;
         case 0x003F:
             printf("TEXFLUSH\n");
             break;
@@ -650,6 +668,12 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
         case 0x0049:
             printf("[GS_t] PABE: $%02X\n", value);
             PABE = value & 0x1;
+            break;
+        case 0x004A:
+            context1.FBA = value & 0x1;
+            break;
+        case 0x004B:
+            context2.FBA = value & 0x1;
             break;
         case 0x004C:
             context1.set_frame(value);
@@ -753,6 +777,15 @@ void GraphicsSynthesizerThread::set_XYZ(uint32_t x, uint32_t y, uint32_t z, bool
     vertex_kick(drawing_kick);
 }
 
+void GraphicsSynthesizerThread::set_XYZF(uint32_t x, uint32_t y, uint32_t z, uint8_t fog, bool drawing_kick)
+{
+    current_vtx.x = x;
+    current_vtx.y = y;
+    current_vtx.z = z;
+    FOG = fog;
+    vertex_kick(drawing_kick);
+}
+
 uint32_t GraphicsSynthesizerThread::blockid_PSMCT32(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
 {
     return block + ((y & ~0x1F) * (width / 64)) + ((x >> 1) & ~0x1F) + blockTable32[(y >> 3) & 0x3][(x >> 3) & 0x7];
@@ -790,7 +823,7 @@ uint32_t GraphicsSynthesizerThread::blockid_PSMCT8(uint32_t block, uint32_t widt
 
 uint32_t GraphicsSynthesizerThread::blockid_PSMCT4(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
 {
-    return block + ((y >> 2) & ~0x1F) * (width / 128) + ((x >> 2) & ~0x1F) + blockTable4[(y >> 4) & 7][(x >> 5) & 3];
+    return block + ((y >> 2) & ~0x1f) * (width >> 7) + ((x >> 2) & ~0x1f) + blockTable4[(y >> 4) & 7][(x >> 5) & 3];
 }
 
 uint32_t GraphicsSynthesizerThread::addr_PSMCT32(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
@@ -845,7 +878,7 @@ uint32_t GraphicsSynthesizerThread::addr_PSMCT8(uint32_t block, uint32_t width, 
 uint32_t GraphicsSynthesizerThread::addr_PSMCT4(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
 {
     uint32_t page = ((block >> 5) + (y >> 7) * (width >> 1) + (x >> 7));
-    uint32_t addr = (page << 14) + page_PSMCT4[block & 0x1F][y & 0x7F][x & 0x7F];
+    uint32_t addr = (page << 14) + page_PSMCT4[block & 0x1f][y & 0x7f][x & 0x7f];
     return addr & 0x007FFFFF;
 }
 
@@ -894,9 +927,8 @@ uint8_t GraphicsSynthesizerThread::read_PSMCT8_block(uint32_t base, uint32_t wid
 uint8_t GraphicsSynthesizerThread::read_PSMCT4_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y)
 {
     uint32_t addr = addr_PSMCT4(base / 256, width / 64, x, y);
-    if (addr & 0x1)
-        return local_mem[addr >> 1] >> 4;
-    return local_mem[addr >> 1] & 0xF;
+    printf("Read PSMCT4: (%d, %d, $%08X:%d)\n", x, y, addr >> 1, addr & 0x1);
+    return (local_mem[addr >> 1] >> ((addr & 1) << 2)) & 0x0f;
 }
 
 void GraphicsSynthesizerThread::write_PSMCT32_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y, uint32_t value)
@@ -958,16 +990,9 @@ void GraphicsSynthesizerThread::write_PSMCT8_block(uint32_t base, uint32_t width
 void GraphicsSynthesizerThread::write_PSMCT4_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y, uint8_t value)
 {
     uint32_t addr = addr_PSMCT4(base / 256, width / 64, x, y);
-    if (addr & 0x1)
-    {
-        local_mem[addr >> 1] &= ~0xF0;
-        local_mem[addr >> 1] |= value & 0xF0;
-    }
-    else
-    {
-        local_mem[addr >> 1] &= ~0xF;
-        local_mem[addr >> 1] |= value & 0xF;
-    }
+    int shift = (addr & 1) << 2;
+    addr >>= 1;
+    local_mem[addr] = (uint8_t)((local_mem[addr] & (0xf0 >> shift)) | ((value & 0x0f) << shift));
 }
 
 //The "vertex kick" is the name given to the process of placing a vertex in the vertex queue.
@@ -1196,7 +1221,9 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
             frame_color = read_PSMCT32_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y);
             break;
         case 0x1://24
-            frame_color = read_PSMCT32_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y);
+            frame_color = read_PSMCT32_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y)
+                          & 0xFFFFFF;
+            frame_color |= 1 << 31;
             break;
         case 0x2:
             frame_color = convert_color_up(read_PSMCT16_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y));
@@ -1208,7 +1235,9 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
             frame_color = read_PSMCT32Z_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y);
             break;
         case 0x31://24Z
-            frame_color = read_PSMCT32Z_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y);
+            frame_color = read_PSMCT32Z_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y)
+                          & 0xFFFFFF;
+            frame_color |= 1 << 31;
             break;
         case 0x32:
             frame_color = convert_color_up(read_PSMCT16Z_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y));
@@ -1358,10 +1387,16 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
     if (!update_frame)
         final_color = frame_color;
     uint8_t alpha = frame_color >> 24;
-    if (update_alpha && current_ctx->frame.format != 1)
+    if (update_alpha && current_ctx->frame.format != 1 && current_ctx->frame.format != 0x31)
         alpha = final_color >> 24;
     final_color &= 0x00FFFFFF;
     final_color |= alpha << 24;
+
+    //FBA performs "alpha correction" - MSB of alpha is always set when writing to frame buffer
+    final_color |= current_ctx->FBA << 31;
+
+    uint32_t mask = current_ctx->frame.mask;
+    final_color = (final_color & ~mask) | (frame_color & mask);
 
     //printf("[GS_t] Write $%08X (%d, %d)\n", final_color, x, y);
     switch (current_ctx->frame.format)
@@ -1895,7 +1930,7 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
                 break;
             case 0x14:
                 write_PSMCT4_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.dest_y,
-                                   data >> ((i >> 1) << 3));
+                                   (data >> ((i >> 1) << 3)) & 0xF);
                 pixels_transferred++;
                 TRXPOS.int_dest_x++;
                 break;
@@ -2065,7 +2100,7 @@ void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, const RGBAQ_REG
     if (LOD < 1.0 / 128.0) //ps2 precision limit
         LOD = 0.0;
 
-    if (current_ctx->tex1.filter_larger && LOD <= 0.0)
+    if (current_ctx->tex1.filter_larger && LOD <= 0.0 && false)
     {
         RGBAQ_REG a, b, c, d;
         int16_t uu = (u - 8) >> 4;
@@ -2127,6 +2162,14 @@ void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, const RGBAQ_REG
             break;
         default:
             Errors::die("[GS_t] Unrecognized texture color function $%02X", current_ctx->tex0.color_function);
+    }
+
+    if (current_PRMODE->fog)
+    {
+        uint16_t fog2 = 0xFF - FOG;
+        tex_color.r = ((tex_color.r * FOG) >> 8) + ((fog2 * FOGCOL.r) >> 8);
+        tex_color.g = ((tex_color.g * FOG) >> 8) + ((fog2 * FOGCOL.g) >> 8);
+        tex_color.b = ((tex_color.b * FOG) >> 8) + ((fog2 * FOGCOL.b) >> 8);
     }
 }
 
@@ -2383,6 +2426,8 @@ void GraphicsSynthesizerThread::load_state(ifstream *state)
     state->read((char*)&TEXCLUT, sizeof(TEXCLUT));
     state->read((char*)&DTHE, sizeof(DTHE));
     state->read((char*)&COLCLAMP, sizeof(COLCLAMP));
+    state->read((char*)&FOG, sizeof(FOG));
+    state->read((char*)&FOGCOL, sizeof(FOGCOL));
     state->read((char*)&PABE, sizeof(PABE));
 
     state->read((char*)&BITBLTBUF, sizeof(BITBLTBUF));
@@ -2428,6 +2473,8 @@ void GraphicsSynthesizerThread::save_state(ofstream *state)
     state->write((char*)&TEXCLUT, sizeof(TEXCLUT));
     state->write((char*)&DTHE, sizeof(DTHE));
     state->write((char*)&COLCLAMP, sizeof(COLCLAMP));
+    state->write((char*)&FOG, sizeof(FOG));
+    state->write((char*)&FOGCOL, sizeof(FOGCOL));
     state->write((char*)&PABE, sizeof(PABE));
 
     state->write((char*)&BITBLTBUF, sizeof(BITBLTBUF));

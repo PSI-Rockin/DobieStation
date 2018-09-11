@@ -917,7 +917,7 @@ uint32_t VectorInterface::get_stat()
     reg |= vif_stalled << 10;
     reg |= vif_interrupt << 11;
     reg |= ((FIFO.size() + 3) / 4) << 24;
-    printf("[VIF] Get STAT: $%08X\n", reg);
+    //printf("[VIF] Get STAT: $%08X\n", reg);
     return reg;
 }
 

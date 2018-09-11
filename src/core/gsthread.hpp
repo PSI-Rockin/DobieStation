@@ -88,6 +88,7 @@ class GraphicsSynthesizerThread
         GSContext* current_ctx;
 
         uint8_t prim_type;
+        uint16_t FOG;
         PRMODE_REG PRIM, PRMODE;
         PRMODE_REG* current_PRMODE;
         RGBAQ_REG RGBAQ;
@@ -97,6 +98,7 @@ class GraphicsSynthesizerThread
         TEXCLUT_REG TEXCLUT;
         bool DTHE;
         bool COLCLAMP;
+        RGBAQ_REG FOGCOL;
         bool PABE;
 
         BITBLTBUF_REG BITBLTBUF;
@@ -196,6 +198,7 @@ class GraphicsSynthesizerThread
         void set_UV(uint16_t u, uint16_t v);
         void set_Q(float q);
         void set_XYZ(uint32_t x, uint32_t y, uint32_t z, bool drawing_kick);
+        void set_XYZF(uint32_t x, uint32_t y, uint32_t z, uint8_t fog, bool drawing_kick);
 
         void load_state(std::ifstream* state);
         void save_state(std::ofstream* state);

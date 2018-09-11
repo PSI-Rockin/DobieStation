@@ -44,7 +44,7 @@ uint32_t GraphicsInterface::read_STAT()
 
     //Quadword count - since we don't emulate the FIFO, hack it to 16 if there's a transfer happening
     reg |= ((active_path != 0) * 16) << 24;
-    printf("[GIF] Read GIF_STAT: $%08X\n", reg);
+    //printf("[GIF] Read GIF_STAT: $%08X\n", reg);
     return reg;
 }
 
@@ -102,7 +102,8 @@ void GraphicsInterface::process_PACKED(uint128_t data)
             uint32_t y = (data1 >> 32) & 0xFFFF;
             uint32_t z = (data2 >> 4) & 0xFFFFFF;
             bool disable_drawing = (data2 >> (111 - 64)) & 0x1;
-            gs->set_XYZ(x, y, z, !disable_drawing);
+            uint8_t fog = (data2 >> (100 - 64)) & 0xFF;
+            gs->set_XYZF(x, y, z, fog, !disable_drawing);
         }
             break;
         case 0x5:
@@ -113,6 +114,13 @@ void GraphicsInterface::process_PACKED(uint128_t data)
             uint32_t z = data2 & 0xFFFFFFFF;
             bool disable_drawing = (data2 >> (111 - 64)) & 0x1;
             gs->set_XYZ(x, y, z, !disable_drawing);
+        }
+            break;
+        case 0xA:
+        {
+            //FOG
+            uint64_t value = data2 << 20;
+            gs->write64(0xA, value);
         }
             break;
         case 0xE:

@@ -105,6 +105,7 @@ struct GSContext
     TEST test;
     FRAME frame;
     ZBUF zbuf;
+    bool FBA;
 
     void reset();
 

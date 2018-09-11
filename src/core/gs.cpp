@@ -317,6 +317,13 @@ void GraphicsSynthesizer::set_XYZ(uint32_t x, uint32_t y, uint32_t z, bool drawi
     send_message({ GS_command::set_xyz_t,payload });
 }
 
+void GraphicsSynthesizer::set_XYZF(uint32_t x, uint32_t y, uint32_t z, uint8_t fog, bool drawing_kick)
+{
+    GS_message_payload payload;
+    payload.xyzf_payload = { x, y, z, fog, drawing_kick };
+    send_message({ GS_command::set_xyzf_t,payload });
+}
+
 void GraphicsSynthesizer::load_state(ifstream &state)
 {
     GS_message_payload payload;
