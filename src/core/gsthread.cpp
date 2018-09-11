@@ -927,7 +927,7 @@ uint8_t GraphicsSynthesizerThread::read_PSMCT8_block(uint32_t base, uint32_t wid
 uint8_t GraphicsSynthesizerThread::read_PSMCT4_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y)
 {
     uint32_t addr = addr_PSMCT4(base / 256, width / 64, x, y);
-    printf("Read PSMCT4: (%d, %d, $%08X:%d)\n", x, y, addr >> 1, addr & 0x1);
+    //printf("Read PSMCT4: (%d, %d, $%08X:%d)\n", x, y, addr >> 1, addr & 0x1);
     return (local_mem[addr >> 1] >> ((addr & 1) << 2)) & 0x0f;
 }
 
