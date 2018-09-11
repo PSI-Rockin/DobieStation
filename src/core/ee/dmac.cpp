@@ -567,7 +567,7 @@ void DMAC::handle_source_chain(int index)
 {
     uint128_t quad = fetch128(channels[index].tag_address);
     uint64_t DMAtag = quad._u64[0];
-    printf("[DMAC] Ch.%d Source DMAtag read $%08X: $%08X_%08X\n", index, channels[index].tag_address, DMAtag >> 32, DMAtag & 0xFFFFFFFF);
+    //printf("[DMAC] Ch.%d Source DMAtag read $%08X: $%08X_%08X\n", index, channels[index].tag_address, DMAtag >> 32, DMAtag & 0xFFFFFFFF);
 
     //Change CTRL to have the upper 16 bits equal to bits 16-31 of the most recently read DMAtag
     channels[index].control &= 0xFFFF;
@@ -661,7 +661,7 @@ void DMAC::handle_source_chain(int index)
             channels[index].tag_end = true;
             break;
         default:
-            Errors::die("\n[DMAC] Unrecognized source chain DMAtag id %d\n", channels[index].tag_id);
+            Errors::die("[DMAC] Unrecognized source chain DMAtag id %d", channels[index].tag_id);
     }
     if (IRQ_after_transfer && TIE)
         channels[index].tag_end = true;

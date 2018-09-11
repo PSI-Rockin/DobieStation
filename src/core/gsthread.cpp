@@ -22,7 +22,7 @@ static uint32_t page_PSMCT16SZ[32][64][64];
 static uint32_t page_PSMCT8[32][64][128];
 static uint32_t page_PSMCT4[32][128][128];
 
-//#define printf(fmt, ...)(0)
+#define printf(fmt, ...)(0)
 
 /**
   * ~ GS notes ~
@@ -476,8 +476,8 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             PRIM.gourand_shading = value & (1 << 3);
             PRIM.texture_mapping = value & (1 << 4);
             PRIM.fog = value & (1 << 5);
+            PRIM.alpha_blend = value & (1 << 6);
             PRIM.antialiasing = value & (1 << 7);
-            PRIM.alpha_blend = (value & (1 << 6)) | PRIM.antialiasing;
             PRIM.use_UV = value & (1 << 8);
             PRIM.use_context2 = value & (1 << 9);
 
@@ -603,8 +603,8 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             PRMODE.gourand_shading = value & (1 << 3);
             PRMODE.texture_mapping = value & (1 << 4);
             PRMODE.fog = value & (1 << 5);
+            PRMODE.alpha_blend = value & (1 << 6);
             PRMODE.antialiasing = value & (1 << 7);
-            PRMODE.alpha_blend = (value & (1 << 6)) | PRMODE.antialiasing;
             PRMODE.use_UV = value & (1 << 8);
             PRMODE.use_context2 = value & (1 << 9);
 
@@ -947,6 +947,7 @@ void GraphicsSynthesizerThread::write_PSMCT24_block(uint32_t base, uint32_t widt
 {
     uint32_t addr = addr_PSMCT32(base / 256, width / 64, x, y);
     uint32_t old_mem = *(uint32_t*)&local_mem[addr];
+    value &= 0xFFFFFF;
     *(uint32_t*)&local_mem[addr] = (old_mem & 0xFF000000) | value;
 }
 
@@ -954,6 +955,7 @@ void GraphicsSynthesizerThread::write_PSMCT24Z_block(uint32_t base, uint32_t wid
 {
     uint32_t addr = addr_PSMCT32Z(base / 256, width / 64, x, y);
     uint32_t old_mem = *(uint32_t*)&local_mem[addr];
+    value &= 0xFFFFFF;
     *(uint32_t*)&local_mem[addr] = (old_mem & 0xFF000000) | value;
 }
 
@@ -1215,6 +1217,7 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
         return;
 
     uint32_t frame_color = 0;
+    bool frame_24bit = false;
     switch (current_ctx->frame.format)
     {
         case 0x0:
@@ -1224,6 +1227,7 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
             frame_color = read_PSMCT32_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y)
                           & 0xFFFFFF;
             frame_color |= 1 << 31;
+            frame_24bit = true;
             break;
         case 0x2:
             frame_color = convert_color_up(read_PSMCT16_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y));
@@ -1238,6 +1242,7 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
             frame_color = read_PSMCT32Z_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y)
                           & 0xFFFFFF;
             frame_color |= 1 << 31;
+            frame_24bit = true;
             break;
         case 0x32:
             frame_color = convert_color_up(read_PSMCT16Z_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y));
@@ -1251,7 +1256,7 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
     }
     uint32_t final_color = 0;
 
-    if (test->dest_alpha_test)
+    if (test->dest_alpha_test && !frame_24bit)
     {
         if (test->dest_alpha_method && !(frame_color & (1 << 31)))
             return;
@@ -1387,7 +1392,7 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
     if (!update_frame)
         final_color = frame_color;
     uint8_t alpha = frame_color >> 24;
-    if (update_alpha && current_ctx->frame.format != 1 && current_ctx->frame.format != 0x31)
+    if (update_alpha && !frame_24bit)
         alpha = final_color >> 24;
     final_color &= 0x00FFFFFF;
     final_color |= alpha << 24;
@@ -2100,7 +2105,7 @@ void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, const RGBAQ_REG
     if (LOD < 1.0 / 128.0) //ps2 precision limit
         LOD = 0.0;
 
-    if (current_ctx->tex1.filter_larger && LOD <= 0.0 && false)
+    if (current_ctx->tex1.filter_larger && LOD <= 0.0)
     {
         RGBAQ_REG a, b, c, d;
         int16_t uu = (u - 8) >> 4;

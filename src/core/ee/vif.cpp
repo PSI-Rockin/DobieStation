@@ -195,7 +195,7 @@ void VectorInterface::decode_cmd(uint32_t value)
     switch (command)
     {
         case 0x00:
-            printf("[VIF] NOP\n");
+            //printf("[VIF] NOP\n");
             command = 0;
             break;
         case 0x01:
@@ -295,7 +295,7 @@ void VectorInterface::decode_cmd(uint32_t value)
                     command_len += 512;
                 else
                     command_len += num << 1;
-                printf("Command len: %d\n", command_len);
+                //printf("Command len: %d\n", command_len);
                 mpg.addr = imm * 8;
             }
             wait_for_VU = true;
@@ -406,8 +406,7 @@ void VectorInterface::init_UNPACK(uint32_t value)
 
     command_len += data_read;
 
-    
-    printf("[VIF] UNPACK V%d-%d addr: %x num: %d masked: %d word per op: %d command_len = %d\n", (vn + 1), (32 >> vl), unpack.addr, unpack.num, unpack.masked, unpack.words_per_op, command_len);
+    //printf("[VIF] UNPACK V%d-%d addr: %x num: %d masked: %d word per op: %d command_len = %d\n", (vn + 1), (32 >> vl), unpack.addr, unpack.num, unpack.masked, unpack.words_per_op, command_len);
 }
 
 void VectorInterface::handle_UNPACK_masking(uint128_t& quad)
@@ -814,7 +813,7 @@ bool VectorInterface::transfer_DMAtag(uint128_t tag)
     //This should return false if the transfer stalls due to the FIFO filling up
     if (FIFO.size() > 62)
         return false;
-    printf("[VIF] Transfer tag: $%08X_%08X_%08X_%08X\n", tag._u32[3], tag._u32[2], tag._u32[1], tag._u32[0]);
+    //printf("[VIF] Transfer tag: $%08X_%08X_%08X_%08X\n", tag._u32[3], tag._u32[2], tag._u32[1], tag._u32[0]);
     for (int i = 2; i < 4; i++)
         FIFO.push(tag._u32[i]);
     return true;
