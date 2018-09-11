@@ -223,10 +223,18 @@ void DMAC::process_VIF1(int cycles)
         cycles--;
         if (channels[VIF1].quadword_count)
         {
-            if (!vif1->feed_DMA(fetch128(channels[VIF1].address)))
-                return;
+            if (channels[VIF1].control & 0x1)
+            {
+                if (!vif1->feed_DMA(fetch128(channels[VIF1].address)))
+                    return;
 
-            advance_source_dma(VIF1);
+                advance_source_dma(VIF1);
+            }
+            else
+            {
+                channels[VIF1].quadword_count--;
+                channels[VIF1].address += 16;
+            }
         }
         else
         {
