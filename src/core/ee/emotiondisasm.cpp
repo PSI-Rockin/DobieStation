@@ -1657,7 +1657,9 @@ string EmotionDisasm::disasm_cop2_special2(uint32_t instruction)
         case 0x2A:
             return disasm_vmula(instruction);
         case 0x2C:
-            return disasm_vadda(instruction);
+            return disasm_vsuba(instruction);
+        case 0x2D:
+            return disasm_vmsuba(instruction);
         case 0x2E:
             return disasm_vopmula(instruction);
         case 0x2F:
@@ -1875,6 +1877,11 @@ string EmotionDisasm::disasm_vmula(uint32_t instruction)
 string EmotionDisasm::disasm_vsuba(uint32_t instruction)
 {
     return disasm_cop2_acc("vsuba", instruction);
+}
+
+string EmotionDisasm::disasm_vmsuba(uint32_t instruction)
+{
+    return disasm_cop2_acc("vmsuba", instruction);
 }
 
 string EmotionDisasm::disasm_vopmula(uint32_t instruction)

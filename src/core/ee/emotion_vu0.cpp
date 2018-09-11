@@ -523,6 +523,9 @@ void EmotionInterpreter::cop2_special2(VectorUnit &vu0, uint32_t instruction)
         case 0x2C:
             cop2_vsuba(vu0, instruction);
             break;
+        case 0x2D:
+            cop2_vmsuba(vu0, instruction);
+            break;
         case 0x2E:
             cop2_vopmula(vu0, instruction);
             break;
@@ -766,6 +769,14 @@ void EmotionInterpreter::cop2_vsuba(VectorUnit &vu0, uint32_t instruction)
     uint8_t reg2 = (instruction >> 16) & 0x1F;
     uint8_t field = (instruction >> 21) & 0xF;*/
     vu0.suba(instruction);
+}
+
+void EmotionInterpreter::cop2_vmsuba(VectorUnit &vu0, uint32_t instruction)
+{
+    /*uint8_t reg1 = (instruction >> 11) & 0x1F;
+    uint8_t reg2 = (instruction >> 16) & 0x1F;
+    uint8_t field = (instruction >> 21) & 0xF;*/
+    vu0.msuba(instruction);
 }
 
 void EmotionInterpreter::cop2_vopmula(VectorUnit &vu0, uint32_t instruction)

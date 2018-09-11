@@ -223,6 +223,7 @@ namespace EmotionDisasm
     std::string disasm_vmsubai(uint32_t instruction);
     std::string disasm_vadda(uint32_t instruction);
     std::string disasm_vsuba(uint32_t instruction);
+    std::string disasm_vmsuba(uint32_t instruction);
     std::string disasm_vmadda(uint32_t instruction);
     std::string disasm_vmula(uint32_t instruction);
     std::string disasm_vopmula(uint32_t instruction);
