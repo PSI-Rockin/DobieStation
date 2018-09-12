@@ -85,7 +85,7 @@ void VectorInterface::update(int cycles)
         }
         if (wait_for_PATH3)
         {
-            if (gif->path_active(3))
+            if (gif->path_activepath3(3))
                 return;
             wait_for_PATH3 = false;
         }
@@ -230,6 +230,7 @@ void VectorInterface::decode_cmd(uint32_t value)
             printf("[VIF] MSKPATH3: %d\n", (value >> 15) & 0x1);
             gif->set_path3_vifmask((value >> 15) & 0x1);
             command = 0;
+            gif->resume_path3();
             break;
         case 0x07:
             printf("[VIF] Set MARK: $%08X\n", value);
