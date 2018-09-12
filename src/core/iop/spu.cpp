@@ -239,11 +239,11 @@ uint16_t SPU::read16(uint32_t addr)
             printf("[SPU%d] ADMA stat: $%04X\n", id, autodma_ctrl);
             return autodma_ctrl;
         case 0x340:
-            reg = ENDX & 0xFFFF;
+            reg = ENDX >> 16;
             printf("[SPU%d] ENDXL: $%04X\n", id, reg);
             break;
         case 0x342:
-            reg = ENDX >> 16;
+            reg = ENDX & 0xFFFF;
             printf("[SPU%d] ENDXH: $%04X\n", id, reg);
             break;
         case 0x344:
@@ -407,7 +407,7 @@ void SPU::write_voice_reg(uint32_t addr, uint16_t value)
             break;
         case 4:
             printf("[SPU%d] V%d PITCH: $%04X\n", id, v, value);
-            voices[v].pitch = value & 0xFFF;
+            voices[v].pitch = value & 0x3FFF;
             break;
         case 6:
             printf("[SPU%d] V%d ADSR1: $%04X\n", id, v, value);

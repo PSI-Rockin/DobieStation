@@ -596,7 +596,21 @@ void CDVD_Drive::start_seek()
     }
 
     //Seek anyway. The program won't know the difference
-    cdvd_file.seekg(sector_pos * 2048);
+    uint32_t seek_to = sector_pos;
+    uint32_t block_count = file_size / LBA;
+    int32_t seek_to_int = (int32_t)seek_to;
+
+    //If sector number is negative, start at end of disc and work our way backwards
+    if (seek_to_int < 0)
+    {
+        seek_to = block_count + seek_to_int;
+        Errors::print_warning("[CDVD] Negative sector seek, converting to end-of-disc offset\n");
+    }
+
+    if (seek_to > block_count)
+        Errors::die("[CDVD] Invalid sector read $%08X (max size: $%08X)", seek_to, block_count);
+
+    cdvd_file.seekg(seek_to * 2048);
 }
 
 void CDVD_Drive::N_command_read()

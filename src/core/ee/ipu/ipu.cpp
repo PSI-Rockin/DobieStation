@@ -881,8 +881,7 @@ bool ImageProcessingUnit::process_CSC()
                     uint32_t value;
                     if (!in_FIFO.get_bits(value, 8))
                         return false;
-                    if (!in_FIFO.advance_stream(8))
-                        return false;
+                    in_FIFO.advance_stream(8);
                     csc.block[csc.block_index] = value & 0xFF;
                     csc.block_index++;
                 }
@@ -1073,7 +1072,7 @@ void ImageProcessingUnit::write_command(uint32_t value)
             case 0x07:
                 printf("[IPU] CSC\n");
                 csc.state = CSC_STATE::BEGIN;
-                csc.macroblocks = command_option & 0x3FF;
+                csc.macroblocks = command_option & 0x7FF;
                 csc.use_RGB16 = command_option & (1 << 27);
                 break;
             case 0x09:
@@ -1100,8 +1099,9 @@ void ImageProcessingUnit::write_control(uint32_t value)
     {
         ctrl.busy = false;
         command_decoding = false;
-        in_FIFO.bit_pointer = 0;
-        bytes_left = 0;
+        command = 0;
+        in_FIFO.reset();
+        out_FIFO.reset();
     }
 }
 

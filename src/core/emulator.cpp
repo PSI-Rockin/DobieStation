@@ -410,10 +410,14 @@ uint32_t Emulator::read32(uint32_t address)
         return vu1.read_data<uint32_t>(address);
     switch (address)
     {
+        case 0x10002000:
+            return ipu.read_command();
         case 0x10002010:
             return ipu.read_control();
         case 0x10002020:
             return ipu.read_BP();
+        case 0x10002030:
+            return ipu.read_top();
         case 0x10003020:
             return gif.read_STAT();
         case 0x10003850:
@@ -520,6 +524,10 @@ uint64_t Emulator::read64(uint32_t address)
     {
         case 0x10002000:
             return ipu.read_command();
+        case 0x10002010:
+            return ipu.read_control();
+        case 0x10002020:
+            return ipu.read_BP();
         case 0x10002030:
             return ipu.read_top();
     }

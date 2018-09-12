@@ -2158,6 +2158,24 @@ void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, const RGBAQ_REG
             if (!current_ctx->tex0.use_alpha)
                 tex_color.a = vtx_color.a;
             break;
+        case 2: //Highlight
+            tex_color.r = ((tex_color.r * vtx_color.r) >> 7) + vtx_color.a;
+            tex_color.g = ((tex_color.g * vtx_color.g) >> 7) + vtx_color.a;
+            tex_color.b = ((tex_color.b * vtx_color.b) >> 7) + vtx_color.a;
+            if (!current_ctx->tex0.use_alpha)
+                tex_color.a = vtx_color.a;
+            else
+                tex_color.a += vtx_color.a;
+
+            if (tex_color.r > 0xFF)
+                tex_color.r = 0xFF;
+            if (tex_color.g > 0xFF)
+                tex_color.g = 0xFF;
+            if (tex_color.b > 0xFF)
+                tex_color.b = 0xFF;
+            if (tex_color.a > 0xFF)
+                tex_color.a = 0xFF;
+            break;
         case 3: //Highlight2
             tex_color.r = ((tex_color.r * vtx_color.r) >> 7) + vtx_color.a;
             tex_color.g = ((tex_color.g * vtx_color.g) >> 7) + vtx_color.a;
@@ -2334,6 +2352,15 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, RGBAQ_REG& 
         case 0x32:
         {
             uint16_t color = read_PSMCT16Z_block(tex_base, current_ctx->tex0.width, u, v);
+            tex_color.r = (color & 0x1F) << 3;
+            tex_color.g = ((color >> 5) & 0x1F) << 3;
+            tex_color.b = ((color >> 10) & 0x1F) << 3;
+            tex_color.a = get_16bit_alpha(color);
+        }
+            break;
+        case 0x3A:
+        {
+            uint16_t color = read_PSMCT16SZ_block(tex_base, current_ctx->tex0.width, u, v);
             tex_color.r = (color & 0x1F) << 3;
             tex_color.g = ((color >> 5) & 0x1F) << 3;
             tex_color.b = ((color >> 10) & 0x1F) << 3;

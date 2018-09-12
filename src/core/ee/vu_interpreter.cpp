@@ -38,7 +38,7 @@ void interpret(VectorUnit &vu, uint32_t upper_instr, uint32_t lower_instr)
     if (!(upper_instr & (1 << 31)))
         lower(vu, lower_instr);
 
-    vu.check_for_FMAC_stall();
+    //vu.check_for_FMAC_stall();
 
     //LOI - upper op always executes first
     if (upper_instr & (1 << 31))

@@ -262,7 +262,7 @@ bool GraphicsInterface::interrupt_path3(int index)
 
     if ((intermittent_mode && path_status[3] >= 2) || path_status[3] == 4) //IMAGE MODE or IDLE
     {
-        printf("[GIF] Interrupting PATH3 with PATH%d\n", index);
+        //printf("[GIF] Interrupting PATH3 with PATH%d\n", index);
         deactivate_PATH(3);
         //printf("Active Path Now %d\n", active_path);
         path_queue |= 1 << 3;
@@ -273,22 +273,22 @@ bool GraphicsInterface::interrupt_path3(int index)
 
 void GraphicsInterface::request_PATH(int index, bool canInterruptPath3)
 {
-    printf("[GIF] PATH%d requested active path %d\n", index, active_path);
+    //printf("[GIF] PATH%d requested active path %d\n", index, active_path);
     if (!active_path || (canInterruptPath3 && interrupt_path3(index)))
     {
         active_path = index;
-        printf("[GIF] PATH%d Active!\n", active_path);
+        //printf("[GIF] PATH%d Active!\n", active_path);
     }
     else
     {
         path_queue |= 1 << index;
-        printf("[GIF] PATH%d Queued!\n", index);
+        //printf("[GIF] PATH%d Queued!\n", index);
     }
 }
 
 void GraphicsInterface::deactivate_PATH(int index)
 {
-    printf("[GIF] PATH%d deactivated\n", index);
+    //printf("[GIF] PATH%d deactivated\n", index);
     path_queue &= ~(1 << index);
     if (active_path == index)
     {
@@ -301,7 +301,7 @@ void GraphicsInterface::deactivate_PATH(int index)
             {
                 path_queue &= ~bit;
                 active_path = path;
-                printf("[GIF] PATH%d Activated from queue\n", active_path);
+                //printf("[GIF] PATH%d Activated from queue\n", active_path);
                 break;
             }
         }

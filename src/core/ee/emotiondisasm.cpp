@@ -1399,6 +1399,8 @@ string EmotionDisasm::disasm_cop2_special(uint32_t instruction)
             return disasm_vmax(instruction);
         case 0x2C:
             return disasm_vsub(instruction);
+        case 0x2D:
+            return disasm_vmsub(instruction);
         case 0x2E:
             return disasm_vopmsub(instruction);
         case 0x2F:
@@ -1538,6 +1540,11 @@ string EmotionDisasm::disasm_vmax(uint32_t instruction)
 string EmotionDisasm::disasm_vsub(uint32_t instruction)
 {
     return disasm_cop2_special_simplemath("vsub", instruction);
+}
+
+string EmotionDisasm::disasm_vmsub(uint32_t instruction)
+{
+    return disasm_cop2_special_simplemath("vmsub", instruction);
 }
 
 string EmotionDisasm::disasm_vopmsub(uint32_t instruction)

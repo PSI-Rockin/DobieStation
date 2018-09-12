@@ -122,11 +122,8 @@ void VectorUnit::run(int cycles)
 
         if (transferring_GIF)
         {
-            if (id == 1)
-            {
-                if (gif->path_active(1))
-                    handle_XGKICK();
-            }
+            if (gif->path_active(1))
+                handle_XGKICK();
         }
 
         uint32_t upper_instr = *(uint32_t*)&instr_mem[PC + 4];
@@ -167,7 +164,7 @@ void VectorUnit::run(int cycles)
         cycles_to_run--;
     }
 
-    if (id == 1 && transferring_GIF)
+    if (transferring_GIF)
     {
         if (gif->path_active(1))
         {
@@ -186,7 +183,7 @@ void VectorUnit::handle_XGKICK()
     GIF_addr += 16;
     if (gif->send_PATH1(quad))
     {
-        printf("[VU1] XGKICK transfer ended!\n");
+        //printf("[VU1] XGKICK transfer ended!\n");
         if (XGKICK_stall)
         {
             printf("[VU1] Activating stalled XGKICK transfer\n");
@@ -2250,8 +2247,6 @@ void VectorUnit::waitq(uint32_t instr)
     Q.u = new_Q_instance.u;
 }
 
-#undef printf
-
 void VectorUnit::xgkick(uint32_t instr)
 {
     if (!id)
@@ -2276,8 +2271,6 @@ void VectorUnit::xgkick(uint32_t instr)
         GIF_addr = (uint32_t)(int_gpr[_is_].u & 0x3ff) * 16;
     }
 }
-
-#define printf(fmt, ...)(0)
 
 void VectorUnit::xitop(uint32_t instr)
 {
