@@ -2064,6 +2064,14 @@ void GraphicsSynthesizerThread::host_to_host()
                 TRXPOS.int_dest_x++;
                 TRXPOS.int_source_x++;
                 break;
+            case 0x13:
+                data = read_PSMCT8_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                                         TRXPOS.int_source_x, TRXPOS.source_y);
+                write_PSMCT8_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.dest_y, data);
+                pixels_transferred++;
+                TRXPOS.int_dest_x++;
+                TRXPOS.int_source_x++;
+                break;
             case 0x14:
                 data = read_PSMCT4_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
                                           TRXPOS.int_source_x, TRXPOS.source_y);
