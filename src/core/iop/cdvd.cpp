@@ -671,7 +671,7 @@ void CDVD_Drive::read_DVD_sector()
     uint64_t layer2_start;
     get_dual_layer_info(dual_layer, layer2_start);
 
-    if (dual_layer && current_sector >= layer2_start)
+    if (dual_layer && current_sector >= layer2_start && false)
     {
         layer_num = 1;
         lsn = current_sector - layer2_start + 0x30000;
