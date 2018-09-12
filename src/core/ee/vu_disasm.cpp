@@ -4,7 +4,10 @@
 
 using namespace std;
 
-string VU_Disasm::get_field(uint8_t field)
+namespace VU_Disasm
+{
+
+string get_field(uint8_t field)
 {
     const static char vectors[] = {'w', 'z', 'y', 'x'};
     string out;
@@ -16,13 +19,13 @@ string VU_Disasm::get_field(uint8_t field)
     return out;
 }
 
-string VU_Disasm::get_fsf(int fsf)
+string get_fsf(int fsf)
 {
     const static string vectors[] = {"x", "y", "z", "w"};
     return vectors[fsf];
 }
 
-string VU_Disasm::upper_simple(const string op, uint32_t instr)
+string upper_simple(const string op, uint32_t instr)
 {
     stringstream output;
     uint32_t dest = (instr >> 6) & 0x1F;
@@ -35,7 +38,7 @@ string VU_Disasm::upper_simple(const string op, uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::upper_bc(const string op, uint32_t instr)
+string upper_bc(const string op, uint32_t instr)
 {
     stringstream output;
     string bc_field = get_fsf(instr & 0x3);
@@ -49,7 +52,7 @@ string VU_Disasm::upper_bc(const string op, uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::upper_i(const string op, uint32_t instr)
+string upper_i(const string op, uint32_t instr)
 {
     stringstream output;
     uint32_t fd = (instr >> 6) & 0x1F;
@@ -60,7 +63,7 @@ string VU_Disasm::upper_i(const string op, uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::upper_q(const string op, uint32_t instr)
+string upper_q(const string op, uint32_t instr)
 {
     stringstream output;
     uint32_t fd = (instr >> 6) & 0x1F;
@@ -71,7 +74,7 @@ string VU_Disasm::upper_q(const string op, uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::upper(uint32_t PC, uint32_t instr)
+string upper(uint32_t PC, uint32_t instr)
 {
     uint8_t op = instr & 0x3F;
     switch (op)
@@ -161,7 +164,7 @@ string VU_Disasm::upper(uint32_t PC, uint32_t instr)
     }
 }
 
-string VU_Disasm::upper_acc(const string op, uint32_t instr)
+string upper_acc(const string op, uint32_t instr)
 {
     stringstream output;
     uint32_t fs = (instr >> 11) & 0x1F;
@@ -174,7 +177,7 @@ string VU_Disasm::upper_acc(const string op, uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::upper_acc_bc(const string op, uint32_t instr)
+string upper_acc_bc(const string op, uint32_t instr)
 {
     stringstream output;
     string bc_field = get_fsf(instr & 0x3);
@@ -187,7 +190,7 @@ string VU_Disasm::upper_acc_bc(const string op, uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::upper_acc_i(const string op, uint32_t instr)
+string upper_acc_i(const string op, uint32_t instr)
 {
     stringstream output;
     uint32_t fs = (instr >> 11) & 0x1F;
@@ -198,7 +201,7 @@ string VU_Disasm::upper_acc_i(const string op, uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::upper_acc_q(const string op, uint32_t instr)
+string upper_acc_q(const string op, uint32_t instr)
 {
     stringstream output;
     uint32_t fs = (instr >> 11) & 0x1F;
@@ -209,7 +212,7 @@ string VU_Disasm::upper_acc_q(const string op, uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::upper_conversion(const string op, uint32_t instr)
+string upper_conversion(const string op, uint32_t instr)
 {
     stringstream output;
     uint32_t source = (instr >> 11) & 0x1F;
@@ -220,7 +223,7 @@ string VU_Disasm::upper_conversion(const string op, uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::upper_special(uint32_t PC, uint32_t instr)
+string upper_special(uint32_t PC, uint32_t instr)
 {
     uint16_t op = (instr & 0x3) | ((instr >> 4) & 0x7C);
     switch (op)
@@ -303,7 +306,7 @@ string VU_Disasm::upper_special(uint32_t PC, uint32_t instr)
     }
 }
 
-string VU_Disasm::clip(uint32_t instr)
+string clip(uint32_t instr)
 {
     stringstream output;
     uint32_t fs = (instr >> 11) & 0x1F;
@@ -312,7 +315,7 @@ string VU_Disasm::clip(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::opmula(uint32_t instr)
+string opmula(uint32_t instr)
 {
     stringstream output;
     uint32_t fs = (instr >> 11) & 0x1F;
@@ -321,14 +324,14 @@ string VU_Disasm::opmula(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::loi(uint32_t lower)
+string loi(uint32_t lower)
 {
     stringstream output;
     output << "loi 0x" << setfill('0') << setw(8) << hex << lower;
     return output.str();
 }
 
-bool VU_Disasm::is_branch(uint32_t instr)
+bool is_branch(uint32_t instr)
 {
     if (instr & (1 << 31))
         return false;
@@ -349,7 +352,7 @@ bool VU_Disasm::is_branch(uint32_t instr)
     }
 }
 
-string VU_Disasm::lower(uint32_t PC, uint32_t instr)
+string lower(uint32_t PC, uint32_t instr)
 {
     if (instr == 0x8000033C)
         return "nop";
@@ -358,7 +361,7 @@ string VU_Disasm::lower(uint32_t PC, uint32_t instr)
     return lower2(PC, instr);
 }
 
-string VU_Disasm::lower1(uint32_t PC, uint32_t instr)
+string lower1(uint32_t PC, uint32_t instr)
 {
     uint8_t op = instr & 0x3F;
     switch (op)
@@ -383,7 +386,7 @@ string VU_Disasm::lower1(uint32_t PC, uint32_t instr)
     }
 }
 
-string VU_Disasm::lower1_regi(const string op, uint32_t instr)
+string lower1_regi(const string op, uint32_t instr)
 {
     stringstream output;
     uint32_t dest = (instr >> 6) & 0x1F;
@@ -393,7 +396,7 @@ string VU_Disasm::lower1_regi(const string op, uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::lower1_immi(const string op, uint32_t instr)
+string lower1_immi(const string op, uint32_t instr)
 {
     stringstream output;
     int32_t imm = (instr >> 6) & 0x1F;
@@ -405,7 +408,7 @@ string VU_Disasm::lower1_immi(const string op, uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::lower1_special(uint32_t PC, uint32_t instr)
+string lower1_special(uint32_t PC, uint32_t instr)
 {
     uint8_t op = (instr & 0x3) | ((instr >> 4) & 0x7C);
     switch (op)
@@ -473,7 +476,7 @@ string VU_Disasm::lower1_special(uint32_t PC, uint32_t instr)
     }
 }
 
-string VU_Disasm::move(uint32_t instr)
+string move(uint32_t instr)
 {
     stringstream output;
     uint32_t source = (instr >> 11) & 0x1F;
@@ -484,7 +487,7 @@ string VU_Disasm::move(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::mr32(uint32_t instr)
+string mr32(uint32_t instr)
 {
     stringstream output;
     uint32_t source = (instr >> 11) & 0x1F;
@@ -495,7 +498,7 @@ string VU_Disasm::mr32(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::lqi(uint32_t instr)
+string lqi(uint32_t instr)
 {
     stringstream output;
     uint32_t is = (instr >> 11) & 0x1F;
@@ -506,7 +509,7 @@ string VU_Disasm::lqi(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::sqi(uint32_t instr)
+string sqi(uint32_t instr)
 {
     stringstream output;
     uint32_t fs = (instr >> 11) & 0x1F;
@@ -517,7 +520,7 @@ string VU_Disasm::sqi(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::lqd(uint32_t instr)
+string lqd(uint32_t instr)
 {
     stringstream output;
     uint32_t is = (instr >> 11) & 0x1F;
@@ -528,7 +531,7 @@ string VU_Disasm::lqd(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::sqd(uint32_t instr)
+string sqd(uint32_t instr)
 {
     stringstream output;
     uint32_t fs = (instr >> 11) & 0x1F;
@@ -539,7 +542,7 @@ string VU_Disasm::sqd(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::div(uint32_t instr)
+string div(uint32_t instr)
 {
     stringstream output;
     uint32_t fs = (instr >> 11) & 0x1F;
@@ -550,7 +553,7 @@ string VU_Disasm::div(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::vu_sqrt(uint32_t instr)
+string vu_sqrt(uint32_t instr)
 {
     stringstream output;
     uint32_t ft = (instr >> 16) & 0x1F;
@@ -559,7 +562,7 @@ string VU_Disasm::vu_sqrt(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::rsqrt(uint32_t instr)
+string rsqrt(uint32_t instr)
 {
     stringstream output;
     uint32_t fs = (instr >> 11) & 0x1F;
@@ -570,7 +573,7 @@ string VU_Disasm::rsqrt(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::mtir(uint32_t instr)
+string mtir(uint32_t instr)
 {
     stringstream output;
     uint32_t fs = (instr >> 11) & 0x1F;
@@ -580,7 +583,7 @@ string VU_Disasm::mtir(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::mfir(uint32_t instr)
+string mfir(uint32_t instr)
 {
     stringstream output;
     uint32_t is = (instr >> 11) & 0x1F;
@@ -590,7 +593,7 @@ string VU_Disasm::mfir(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::ilwr(uint32_t instr)
+string ilwr(uint32_t instr)
 {
     stringstream output;
     uint32_t is = (instr >> 11) & 0x1F;
@@ -601,7 +604,7 @@ string VU_Disasm::ilwr(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::iswr(uint32_t instr)
+string iswr(uint32_t instr)
 {
     stringstream output;
     uint32_t is = (instr >> 11) & 0x1F;
@@ -612,7 +615,7 @@ string VU_Disasm::iswr(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::rnext(uint32_t instr)
+string rnext(uint32_t instr)
 {
     stringstream output;
     uint32_t dest = (instr >> 16) & 0x1F;
@@ -622,7 +625,7 @@ string VU_Disasm::rnext(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::rget(uint32_t instr)
+string rget(uint32_t instr)
 {
     stringstream output;
     uint32_t dest = (instr >> 16) & 0x1F;
@@ -632,7 +635,7 @@ string VU_Disasm::rget(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::rinit(uint32_t instr)
+string rinit(uint32_t instr)
 {
     stringstream output;
     uint32_t source = (instr >> 11) & 0x1F;
@@ -642,7 +645,7 @@ string VU_Disasm::rinit(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::rxor(uint32_t instr)
+string rxor(uint32_t instr)
 {
     stringstream output;
     uint32_t dest = (instr >> 16) & 0x1F;
@@ -652,7 +655,7 @@ string VU_Disasm::rxor(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::mfp(uint32_t instr)
+string mfp(uint32_t instr)
 {
     stringstream output;
     uint32_t dest = (instr >> 16) & 0x1F;
@@ -662,7 +665,7 @@ string VU_Disasm::mfp(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::xtop(uint32_t instr)
+string xtop(uint32_t instr)
 {
     stringstream output;
     uint32_t it = (instr >> 16) & 0x1F;
@@ -670,7 +673,7 @@ string VU_Disasm::xtop(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::xitop(uint32_t instr)
+string xitop(uint32_t instr)
 {
     stringstream output;
     uint32_t it = (instr >> 16) & 0x1F;
@@ -678,7 +681,7 @@ string VU_Disasm::xitop(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::xgkick(uint32_t instr)
+string xgkick(uint32_t instr)
 {
     stringstream output;
     uint32_t is = (instr >> 11) & 0x1F;
@@ -686,7 +689,7 @@ string VU_Disasm::xgkick(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::eleng(uint32_t instr)
+string eleng(uint32_t instr)
 {
     stringstream output;
     uint32_t source = (instr >> 11) & 0x1F;
@@ -694,7 +697,7 @@ string VU_Disasm::eleng(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::ercpr(uint32_t instr)
+string ercpr(uint32_t instr)
 {
     stringstream output;
     uint32_t source = (instr >> 11) & 0x1F;
@@ -702,7 +705,7 @@ string VU_Disasm::ercpr(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::erleng(uint32_t instr)
+string erleng(uint32_t instr)
 {
     stringstream output;
     uint32_t source = (instr >> 11) & 0x1F;
@@ -710,7 +713,7 @@ string VU_Disasm::erleng(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::esqrt(uint32_t instr)
+string esqrt(uint32_t instr)
 {
     stringstream output;
     uint32_t source = (instr >> 11) & 0x1F;
@@ -718,7 +721,7 @@ string VU_Disasm::esqrt(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::ersqrt(uint32_t instr)
+string ersqrt(uint32_t instr)
 {
     stringstream output;
     uint32_t source = (instr >> 11) & 0x1F;
@@ -726,7 +729,15 @@ string VU_Disasm::ersqrt(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::eexp(uint32_t instr)
+string esin(uint32_t instr)
+{
+    stringstream output;
+    uint32_t source = (instr >> 11) & 0x1F;
+    output << "esin P, vf" << source << "." << get_fsf((instr >> 21) & 0x3);
+    return output.str();
+}
+
+string eexp(uint32_t instr)
 {
     stringstream output;
     uint32_t source = (instr >> 11) & 0x1F;
@@ -734,7 +745,7 @@ string VU_Disasm::eexp(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::lower2(uint32_t PC, uint32_t instr)
+string lower2(uint32_t PC, uint32_t instr)
 {
     uint8_t op = (instr >> 25) & 0x7F;
     switch (op)
@@ -794,7 +805,7 @@ string VU_Disasm::lower2(uint32_t PC, uint32_t instr)
     }
 }
 
-string VU_Disasm::loadstore_imm(const string op, uint32_t instr)
+string loadstore_imm(const string op, uint32_t instr)
 {
     stringstream output;
     int32_t imm = instr & 0x7FF;
@@ -809,7 +820,7 @@ string VU_Disasm::loadstore_imm(const string op, uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::arithu(const string op, uint32_t instr)
+string arithu(const string op, uint32_t instr)
 {
     stringstream output;
     uint32_t imm = instr & 0x7FF;
@@ -821,7 +832,7 @@ string VU_Disasm::arithu(const string op, uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::branch(const string op, uint32_t PC, uint32_t instr)
+string branch(const string op, uint32_t PC, uint32_t instr)
 {
     stringstream output;
     int32_t imm = instr & 0x7FF;
@@ -836,7 +847,7 @@ string VU_Disasm::branch(const string op, uint32_t PC, uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::branch_zero(const string op, uint32_t PC, uint32_t instr)
+string branch_zero(const string op, uint32_t PC, uint32_t instr)
 {
     stringstream output;
     int32_t imm = instr & 0x7FF;
@@ -849,7 +860,7 @@ string VU_Disasm::branch_zero(const string op, uint32_t PC, uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::lq(uint32_t instr)
+string lq(uint32_t instr)
 {
     stringstream output;
     int32_t imm = instr & 0x7FF;
@@ -863,7 +874,7 @@ string VU_Disasm::lq(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::sq(uint32_t instr)
+string sq(uint32_t instr)
 {
     stringstream output;
     int32_t imm = instr & 0x7FF;
@@ -877,7 +888,7 @@ string VU_Disasm::sq(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::fcset(uint32_t instr)
+string fcset(uint32_t instr)
 {
     stringstream output;
     uint32_t imm = instr & 0xFFFFFF;
@@ -885,7 +896,7 @@ string VU_Disasm::fcset(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::fcand(uint32_t instr)
+string fcand(uint32_t instr)
 {
     stringstream output;
     uint32_t imm = instr & 0xFFFFFF;
@@ -894,7 +905,7 @@ string VU_Disasm::fcand(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::fcor(uint32_t instr)
+string fcor(uint32_t instr)
 {
     stringstream output;
     uint32_t imm = instr & 0xFFFFFF;
@@ -903,7 +914,7 @@ string VU_Disasm::fcor(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::fsset(uint32_t instr)
+string fsset(uint32_t instr)
 {
     stringstream output;
     uint32_t imm = ((instr >> 10) & 0x800) | (instr & 0x7FF);
@@ -912,7 +923,7 @@ string VU_Disasm::fsset(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::fsand(uint32_t instr)
+string fsand(uint32_t instr)
 {
     stringstream output;
     uint32_t imm = ((instr >> 10) & 0x800) | (instr & 0x7FF);
@@ -922,7 +933,7 @@ string VU_Disasm::fsand(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::fmeq(uint32_t instr)
+string fmeq(uint32_t instr)
 {
     stringstream output;
     uint32_t is = (instr >> 11) & 0x1F;
@@ -931,7 +942,7 @@ string VU_Disasm::fmeq(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::fmand(uint32_t instr)
+string fmand(uint32_t instr)
 {
     stringstream output;
     uint32_t is = (instr >> 11) & 0x1F;
@@ -940,7 +951,7 @@ string VU_Disasm::fmand(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::fmor(uint32_t instr)
+string fmor(uint32_t instr)
 {
     stringstream output;
     uint32_t is = (instr >> 11) & 0x1F;
@@ -949,7 +960,7 @@ string VU_Disasm::fmor(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::fcget(uint32_t instr)
+string fcget(uint32_t instr)
 {
     stringstream output;
     uint32_t it = (instr >> 16) & 0x1F;
@@ -957,7 +968,7 @@ string VU_Disasm::fcget(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::b(uint32_t PC, uint32_t instr)
+string b(uint32_t PC, uint32_t instr)
 {
     stringstream output;
     int32_t imm = instr & 0x7FF;
@@ -969,7 +980,7 @@ string VU_Disasm::b(uint32_t PC, uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::bal(uint32_t PC, uint32_t instr)
+string bal(uint32_t PC, uint32_t instr)
 {
     stringstream output;
     int32_t imm = instr & 0x7FF;
@@ -982,7 +993,7 @@ string VU_Disasm::bal(uint32_t PC, uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::jr(uint32_t instr)
+string jr(uint32_t instr)
 {
     stringstream output;
     uint32_t addr_reg = (instr >> 11) & 0x1F;
@@ -990,7 +1001,7 @@ string VU_Disasm::jr(uint32_t instr)
     return output.str();
 }
 
-string VU_Disasm::jalr(uint32_t instr)
+string jalr(uint32_t instr)
 {
     stringstream output;
     uint32_t addr_reg = (instr >> 11) & 0x1F;
@@ -998,3 +1009,5 @@ string VU_Disasm::jalr(uint32_t instr)
     output << "jalr vi" << link_reg << ", vi" << addr_reg;
     return output.str();
 }
+
+}; //VU_Disasm

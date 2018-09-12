@@ -38,7 +38,7 @@ void interpret(VectorUnit &vu, uint32_t upper_instr, uint32_t lower_instr)
     if (!(upper_instr & (1 << 31)))
         lower(vu, lower_instr);
 
-    //vu.check_for_FMAC_stall();
+    vu.check_for_FMAC_stall();
 
     //LOI - upper op always executes first
     if (upper_instr & (1 << 31))
@@ -1280,6 +1280,9 @@ void lower1_special(VectorUnit &vu, uint32_t instr)
             vu.waitp(instr);
             lower_op = &VectorUnit::nop;
             break;
+        case 0x7C:
+            esin(vu, instr);
+            break;
         case 0x7E:
             eexp(vu, instr);
             break;
@@ -1555,6 +1558,16 @@ void ersqrt(VectorUnit &vu, uint32_t instr)
     vu.decoder.vf_read0[1] = source;
     vu.decoder.vf_read0_field[1] = 1 << (3 - fsf);
     lower_op = &VectorUnit::ersqrt;
+}
+
+void esin(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t fsf = (instr >> 21) & 0x3;
+
+    vu.decoder.vf_read0[1] = source;
+    vu.decoder.vf_read0_field[1] = 1 << (3 - fsf);
+    lower_op = &VectorUnit::esin;
 }
 
 void eexp(VectorUnit &vu, uint32_t instr)

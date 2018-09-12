@@ -579,6 +579,9 @@ void EmotionInterpreter::cop2_special2(VectorUnit &vu0, uint32_t instruction)
         case 0x3D:
             cop2_vmfir(vu0, instruction);
             break;
+        case 0x3E:
+            cop2_vilwr(vu0, instruction);
+            break;
         case 0x3F:
             cop2_viswr(vu0, instruction);
             break;
@@ -877,6 +880,14 @@ void EmotionInterpreter::cop2_vmfir(VectorUnit &vu0, uint32_t instruction)
     uint32_t ft = (instruction >> 16) & 0x1F;
     uint8_t dest_field = (instruction >> 21) & 0xF;*/
     vu0.mfir(instruction);
+}
+
+void EmotionInterpreter::cop2_vilwr(VectorUnit &vu0, uint32_t instruction)
+{
+    /*uint32_t is = (instruction >> 11) & 0x1F;
+    uint32_t it = (instruction >> 16) & 0x1F;
+    uint8_t dest_field = (instruction >> 21) & 0xF;*/
+    vu0.ilwr(instruction);
 }
 
 void EmotionInterpreter::cop2_viswr(VectorUnit &vu0, uint32_t instruction)

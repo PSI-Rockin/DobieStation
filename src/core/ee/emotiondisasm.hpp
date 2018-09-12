@@ -238,6 +238,7 @@ namespace EmotionDisasm
     std::string disasm_vrsqrt(uint32_t instruction);
     std::string disasm_vmtir(uint32_t instruction);
     std::string disasm_vmfir(uint32_t instruction);
+    std::string disasm_vilwr(uint32_t instruction);
     std::string disasm_viswr(uint32_t instruction);
     std::string disasm_vrnext(uint32_t instruction);
     std::string disasm_vrget(uint32_t instruction);

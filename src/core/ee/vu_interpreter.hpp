@@ -103,6 +103,7 @@ namespace VU_Interpreter
     void erleng(VectorUnit& vu, uint32_t instr);
     void esqrt(VectorUnit& vu, uint32_t instr);
     void ersqrt(VectorUnit& vu, uint32_t instr);
+    void esin(VectorUnit& vu, uint32_t instr);
     void eexp(VectorUnit& vu, uint32_t instr);
 
     void lower2(VectorUnit& vu, uint32_t instr);

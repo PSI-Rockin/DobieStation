@@ -778,6 +778,19 @@ void VectorUnit::eexp(uint32_t instr)
     P.f = 1.0 / value;
 }
 
+void VectorUnit::esin(uint32_t instr)
+{
+    const static float coeffs[] =
+    {
+        -0.166666567325592, 0.008333025500178,
+        -0.000198074136279, 0.000002601886990
+    };
+    float x = convert(gpr[_fs_].u[_fsf_]);
+    P.f = x;
+    for (int c = 0; c < 4; c++) //Hah, c++
+        P.f += coeffs[c] * pow(x, (2 * c) + 3);
+}
+
 void VectorUnit::ercpr(uint32_t instr)
 {
     if (!id)

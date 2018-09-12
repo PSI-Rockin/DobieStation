@@ -220,6 +220,7 @@ namespace EmotionInterpreter
     void cop2_vrsqrt(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmtir(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmfir(VectorUnit& vu0, uint32_t instruction);
+    void cop2_vilwr(VectorUnit& vu0, uint32_t instruction);
     void cop2_viswr(VectorUnit& vu0, uint32_t instruction);
     void cop2_vrnext(VectorUnit& vu0, uint32_t instruction);
     void cop2_vrget(VectorUnit& vu0, uint32_t instruction);
