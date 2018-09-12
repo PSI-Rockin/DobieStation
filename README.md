@@ -1,5 +1,7 @@
 # DobieStation
-A young PS2 emulator with plans for an optimized Android port, as well as a fast, accurate, and easy-to-use PC port. Some homebrew can run, and several games boot as well, but nothing is playable yet. Not intended for general use.
+A young PS2 emulator with plans for an optimized Android port, as well as a fast, accurate, and easy-to-use PC port.
+
+A large portion of the PS2's library can boot or get to menus. Some titles can even go in-game, including high-profile ones such as Final Fantasy X and Shadow of the Colossus. Not intended for general use.
 
 Discord: https://discord.gg/zbEXKfN
 
@@ -22,9 +24,14 @@ make
 ```
 
 ## Using the Emulator
-DobieStation requires a copy of the PS2 BIOS, which must be dumped from your PS2. DobieStation takes the name of a BIOS file as an argument from the command. Optionally, you may also enter the name of an ELF/ISO file. The "-skip" flag will tell DobieStation to stop booting the BIOS and execute the ELF/ISO.
+DobieStation requires a copy of the PS2 BIOS, which must be dumped from your PS2.
 
-If you only enter the BIOS at the command line, ELFs and ISOs can be loaded from the menubar.
+The various command line options are as follows:
+```
+-b [BIOS file] - Takes the form of /path/to/bios.bin. Required for booting DobieStation.
+-f [file] (optional) - The ELF or ISO that DobieStation loads. Takes the form of /path/to/game.iso or /path/to/homebrew.elf.
+-s (optional) - Skip the BIOS boot animation when starting DobieStation with an ISO/ELF loaded.
+```
 
 ### PS2 Homebrew
 Want to test DobieStation? Check out this repository: https://github.com/PSI-Rockin/ps2demos
