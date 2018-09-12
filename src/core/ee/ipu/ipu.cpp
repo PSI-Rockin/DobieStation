@@ -134,14 +134,16 @@ void ImageProcessingUnit::run()
                     return;
                 while (bytes_left && in_FIFO.f.size())
                 {
-                    uint128_t quad = in_FIFO.f.front();
-                    in_FIFO.f.pop();
+                    uint32_t value;
+                    if (!in_FIFO.get_bits(value, 8))
+                        break;
+                    in_FIFO.advance_stream(8);
                     int index = 64 - bytes_left;
                     if (command_option & (1 << 27))
-                        *(uint128_t*)&nonintra_IQ[index] = quad;
+                        nonintra_IQ[index] = value & 0xFF;
                     else
-                        *(uint128_t*)&intra_IQ[index] = quad;
-                    bytes_left -= 16;
+                        intra_IQ[index] = value & 0xFF;
+                    bytes_left--;
                 }
                 if (bytes_left <= 0)
                     ctrl.busy = false;
@@ -213,7 +215,12 @@ bool ImageProcessingUnit::process_IDEC()
             case IDEC_STATE::DCT_TYPE:
                 printf("[IPU] Decode DCT\n");
                 if (idec.decodes_dct)
-                    Errors::die("[IPU] IDEC decodes DCT");
+                {
+                    uint32_t value;
+                    if (!in_FIFO.get_bits(value, 1))
+                        return false;
+                    in_FIFO.advance_stream(1);
+                }
                 idec.state = IDEC_STATE::QSC;
                 break;
             case IDEC_STATE::QSC:
@@ -522,7 +529,7 @@ void ImageProcessingUnit::dequantize(int16_t *block)
                 sign = 0;
             else
             {
-                if (block[i] > 1)
+                if (block[i] > 0)
                     sign = 1;
                 else
                     sign = (int16_t)0xFFFF;
@@ -561,7 +568,7 @@ void ImageProcessingUnit::dequantize(int16_t *block)
 
             if (sign)
             {
-                if (block[i] & 0x1)
+                if (!(block[i] & 0x1))
                 {
                     block[i] -= sign;
                     block[i] |= 1;
@@ -1029,6 +1036,7 @@ void ImageProcessingUnit::write_command(uint32_t value)
                 idec.state = IDEC_STATE::DELAY;
                 idec.delay = 1000;
                 idec.macro_type = 0;
+                idec.qsc = (command_option >> 16) & 0x1F;
                 idec.decodes_dct = command_option & (1 << 24);
                 idec.blocks_decoded = 0;
                 break;
