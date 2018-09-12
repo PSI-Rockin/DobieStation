@@ -671,7 +671,7 @@ void CDVD_Drive::read_DVD_sector()
     uint64_t layer2_start;
     get_dual_layer_info(dual_layer, layer2_start);
 
-    if (dual_layer && current_sector >= layer2_start && false)
+    if (dual_layer && current_sector >= layer2_start)
     {
         layer_num = 1;
         lsn = current_sector - layer2_start + 0x30000;
@@ -708,15 +708,16 @@ void CDVD_Drive::get_dual_layer_info(bool &dual_layer, uint64_t &sector)
     dual_layer = false;
     sector = 0;
 
-    uint64_t volume_size = *(uint32_t*)&pvd_sector[80] * LBA;
+    uint64_t volume_size = pvd_sector[80]
+            + (pvd_sector[81] << 8)
+            + (pvd_sector[82] << 16)
+            + (pvd_sector[83] << 24);
 
     //If the size of the volume is less than the size of the file, there must be more than one volume
-    if (volume_size < file_size)
+    if (volume_size < (file_size / LBA))
     {
-        //if (file_size < (uint64_t)(4.7 * 1024 * 1024 * 1024))
-            //Errors::die("[CDVD] Detected dual-layer on single layer DVD (%lld, %lld)", volume_size, file_size);
         dual_layer = true;
-        sector = volume_size / LBA;
+        sector = volume_size;
     }
 }
 
