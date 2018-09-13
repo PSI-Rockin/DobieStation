@@ -169,12 +169,8 @@ void SPU::write_DMA(uint32_t value)
 void SPU::write_ADMA(uint8_t *RAM)
 {
    // printf("[SPU%d] ADMA transfer: $%08X\n", id, ADMA_left);
-    if ((current_addr == IRQA || (current_addr + 1) == IRQA) && (core_att & (1 << 6)))
-        spu_irq();
-
     ADMA_left += 2;
-    current_addr += 2;
-    current_addr &= 0x000FFFFF;    
+
     status.DMA_busy = true;
     status.DMA_finished = false;
 }
