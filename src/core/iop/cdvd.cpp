@@ -1,7 +1,9 @@
 #include <cstring>
 #include <ctime>
-#include "../emulator.hpp"
+#include <string>
 #include "cdvd.hpp"
+
+#include "../emulator.hpp"
 #include "../errors.hpp"
 
 using namespace std;
