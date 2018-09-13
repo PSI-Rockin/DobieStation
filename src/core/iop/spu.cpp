@@ -9,6 +9,7 @@
  * Bits 0 and 1 of the ADMA control register determine if the core is transferring data via AutoDMA.
  * Bit 2 seems to be some sort of finish flag?
  */
+uint16_t SPU::spdif_irq = 0;
 
 SPU::SPU(int id, Emulator* e) : id(id), e(e)
 { 
@@ -26,7 +27,8 @@ void SPU::reset(uint8_t* RAM)
     autodma_ctrl = 0x0;
     ADMA_left = 0;
     input_pos = 0;
-
+    key_on = 0;
+    key_off = 0xFFFFFF;
     spdif_irq = 0;
 
     for (int i = 0; i < 24; i++)
@@ -46,11 +48,11 @@ void SPU::reset(uint8_t* RAM)
 
 void SPU::spu_irq()
 {
-    if (spdif_irq & (4 << id))
+    if (spdif_irq & (2 << id))
         return;
 
     printf("[SPU%d] IRQA interrupt!\n", id);
-    spdif_irq |= 4 << id;
+    spdif_irq |= 2 << id;
     e->iop_request_IRQ(9);
 }
 
@@ -84,9 +86,9 @@ void SPU::gen_sample()
                 bool loop_start = header & (1 << 10);
 
                 if (loop_start)
-                    voices[i].loop_addr = voices[i].start_addr;
+                    voices[i].loop_addr = voices[i].current_addr;
             }
-            if (voices[i].current_addr == IRQA && core_att & (1 << 6))
+            if (voices[i].current_addr == IRQA && (core_att & (1 << 6)))
                 spu_irq();
             voices[i].block_pos++;
             voices[i].current_addr++;
@@ -154,6 +156,10 @@ void SPU::write_DMA(uint32_t value)
     //printf("[SPU%d] Write mem $%08X ($%08X)\n", id, value, current_addr);
     RAM[current_addr] = value & 0xFFFF;
     RAM[current_addr + 1] = value >> 16;
+
+    if ((current_addr == IRQA || (current_addr + 1) == IRQA) && (core_att & (1 << 6)))
+        spu_irq();
+
     current_addr += 2;
     current_addr &= 0x000FFFFF;
     status.DMA_busy = true;
@@ -163,7 +169,12 @@ void SPU::write_DMA(uint32_t value)
 void SPU::write_ADMA(uint8_t *RAM)
 {
    // printf("[SPU%d] ADMA transfer: $%08X\n", id, ADMA_left);
+    if ((current_addr == IRQA || (current_addr + 1) == IRQA) && (core_att & (1 << 6)))
+        spu_irq();
+
     ADMA_left += 2;
+    current_addr += 2;
+    current_addr &= 0x000FFFFF;    
     status.DMA_busy = true;
     status.DMA_finished = false;
 }
@@ -185,6 +196,9 @@ void SPU::process_ADMA()
 
 uint16_t SPU::read_mem()
 {
+    printf("[SPU%d] Read mem $%04X ($%08X)\n", id, RAM[current_addr], current_addr);
+    if (current_addr == IRQA && (core_att & (1 << 6)))
+        spu_irq();
     current_addr++;
     return RAM[current_addr - 1];
 }
@@ -193,6 +207,8 @@ void SPU::write_mem(uint16_t value)
 {
     printf("[SPU%d] Write mem $%04X ($%08X)\n", id, value, current_addr);
     RAM[current_addr] = value;
+    if (current_addr == IRQA && (core_att & (1 << 6)))
+        spu_irq();
     current_addr++;
 }
 
@@ -200,12 +216,22 @@ uint16_t SPU::read16(uint32_t addr)
 {
     uint16_t reg = 0;
     addr &= 0x7FF;
-    if (addr == 0x7C2)
+    if (addr >= 0x760)
     {
-        printf("[SPU] Read SPDIF_IRQ: $%04X\n", spdif_irq);
-        return spdif_irq;
+        if (addr == 0x7C2)
+        {
+            printf("[SPU] Read SPDIF_IRQ: $%04X\n", spdif_irq);
+            return spdif_irq;
+        }
+        printf("[SPU] Read high addr $%04X\n", addr);
+        return 0;
     }
+   
     addr &= 0x3FF;
+    if (addr < 0x180)
+    {
+        return read_voice_reg(addr);
+    }
     if (addr >= 0x1C0 && addr < 0x1C0 + (0xC * 24))
     {
         int v = (addr - 0x1C0) / 0xC;
@@ -213,38 +239,84 @@ uint16_t SPU::read16(uint32_t addr)
         switch (reg)
         {
             case 0:
+                printf("[SPU%d] Read Voice %d SSAH: $%04X\n", id, v, (voices[v].start_addr >> 16) & 0x3F);
                 return (voices[v].start_addr >> 16) & 0x3F;
             case 2:
+                printf("[SPU%d] Read Voice %d SSAL: $%04X\n", id, v, voices[v].start_addr & 0xFFFF);
                 return voices[v].start_addr & 0xFFFF;
             case 4:
+                printf("[SPU%d] Read Voice %d LSAXH: $%04X\n", id, v, (voices[v].loop_addr >> 16) & 0x3F);
                 return (voices[v].loop_addr >> 16) & 0x3F;
             case 6:
+                printf("[SPU%d] Read Voice %d LSAXL: $%04X\n", id, v, voices[v].loop_addr & 0xFFFF);
                 return voices[v].loop_addr & 0xFFFF;
             case 8:
+                printf("[SPU%d] Read Voice %d NAXH: $%04X\n", id, v, (voices[v].current_addr >> 16) & 0x3F);
                 return (voices[v].current_addr >> 16) & 0x3F;
             case 10:
+                printf("[SPU%d] Read Voice %d NAXL: $%04X\n", id, v, voices[v].current_addr & 0xFFFF);
                 return voices[v].current_addr & 0xFFFF;
         }
     }
     switch (addr)
     {
+        case 0x188:
+            printf("[SPU%d] Read VMIXLH: $%04X\n", id, voice_mixdry_left >> 16);
+            return voice_mixdry_left >> 16;
+        case 0x18A:
+            printf("[SPU%d] Read VMIXLL: $%04X\n", id, voice_mixdry_left & 0xFFFF);
+            return voice_mixdry_left & 0xFFFF;
+        case 0x18C:
+            printf("[SPU%d] Read VMIXELH: $%04X\n", id, voice_mixwet_left >> 16);
+            return voice_mixwet_left >> 16;
+        case 0x18E:
+            printf("[SPU%d] Read VMIXELL: $%04X\n", id, voice_mixwet_left & 0xFFFF);
+            return voice_mixwet_left & 0xFFFF;
+        case 0x190:
+            printf("[SPU%d] Read VMIXRH: $%04X\n", id, voice_mixdry_right >> 16);
+            return voice_mixdry_right >> 16;
+        case 0x192:
+            printf("[SPU%d] Read VMIXRL: $%04X\n", id, voice_mixdry_right & 0xFFFF);
+            return voice_mixdry_right & 0xFFFF;
+        case 0x194:
+            printf("[SPU%d] Read VMIXERH: $%04X\n", id, voice_mixwet_right >> 16);
+            return voice_mixwet_right >> 16;
+        case 0x196:
+            printf("[SPU%d] Read VMIXERL: $%04X\n", id, voice_mixwet_right & 0xFFFF);
+            return voice_mixwet_right & 0xFFFF;
         case 0x19A:
-            printf("[SPU%d] Core Att\n", id);
+            printf("[SPU%d] Read Core Att\n", id);
             return core_att;
-        case 0x1AA:
-            return transfer_addr & 0xFFFF;
+        case 0x1A0:
+            printf("[SPU%d] Read KON1: $%04X\n", id, (key_off >> 16));
+            return (key_on >> 16);
+        case 0x1A2:
+            printf("[SPU%d] Read KON0: $%04X\n", id, (key_on & 0xFFFF));
+            return (key_on & 0xFFFF);
+        case 0x1A4:
+            printf("[SPU%d] Read KOFF1: $%04X\n", id, (key_off >> 16));
+            return (key_off >> 16);
+        case 0x1A6:
+            printf("[SPU%d] Read KOFF0: $%04X\n", id, (key_off & 0xFFFF));
+            return (key_off & 0xFFFF);
         case 0x1A8:
+            printf("[SPU%d] Read TSAH: $%04X\n", id, transfer_addr >> 16);
             return transfer_addr >> 16;
+        case 0x1AA:
+            printf("[SPU%d] Read TSAL: $%04X\n", id, transfer_addr & 0xFFFF);
+            return transfer_addr & 0xFFFF;
+        case 0x1AC:            
+            return read_mem();
         case 0x1B0:
-            printf("[SPU%d] ADMA stat: $%04X\n", id, autodma_ctrl);
+            printf("[SPU%d] Read ADMA stat: $%04X\n", id, autodma_ctrl);
             return autodma_ctrl;
         case 0x340:
             reg = ENDX >> 16;
-            printf("[SPU%d] ENDXL: $%04X\n", id, reg);
+            printf("[SPU%d] Read ENDXH: $%04X\n", id, reg);
             break;
         case 0x342:
             reg = ENDX & 0xFFFF;
-            printf("[SPU%d] ENDXH: $%04X\n", id, reg);
+            printf("[SPU%d] Read ENDXL: $%04X\n", id, reg);
             break;
         case 0x344:
             reg |= status.DMA_finished << 7;
@@ -258,13 +330,49 @@ uint16_t SPU::read16(uint32_t addr)
     return reg;
 }
 
+uint16_t SPU::read_voice_reg(uint32_t addr)
+{
+    int v = addr / 0x10;
+    int reg = addr & 0xF;
+    switch (reg)
+    {
+    case 0:
+        printf("[SPU%d] Read V%d VOLL: $%04X\n", id, v, voices[v].left_vol);
+        return voices[v].left_vol;
+    case 2:
+        printf("[SPU%d] Read V%d VOLR: $%04X\n", id, v, voices[v].right_vol);
+        return voices[v].right_vol;
+    case 4:
+        printf("[SPU%d] ReadV%d PITCH: $%04X\n", id, v, voices[v].pitch);
+        return voices[v].pitch;
+    case 6:
+        printf("[SPU%d] Read V%d ADSR1: $%04X\n", id, v, voices[v].adsr1);
+        return voices[v].adsr1;
+    case 8:
+        printf("[SPU%d] Read V%d ADSR2: $%04X\n", id, v, voices[v].adsr2);
+        return voices[v].adsr2;
+    case 10:
+        printf("[SPU%d] Read V%d ENVX: $%04X\n", id, v, voices[v].current_envelope);
+        return voices[v].current_envelope;
+    default:
+        printf("[SPU%d] V%d Read $%08X\n", id, v, addr);
+        return 0;
+    }
+}
+
 void SPU::write16(uint32_t addr, uint16_t value)
 {
     addr &= 0x7FF;
-    if (addr == 0x7C2)
+
+    if (addr >= 0x760)
     {
-        printf("[SPU] Write SPDIF_IRQ: $%04X\n", value);
-        spdif_irq = value;
+        if (addr == 0x7C2)
+        {
+            printf("[SPU] Write SPDIF_IRQ: $%04X\n", value);
+            spdif_irq = value;
+            return;
+        }
+        printf("[SPU] Write high addr $%04X: $%04X\n", addr, value);
         return;
     }
     addr &= 0x3FF;
@@ -282,22 +390,22 @@ void SPU::write16(uint32_t addr, uint16_t value)
             case 0: //SSAH
                 voices[v].start_addr &= 0xFFFF;
                 voices[v].start_addr |= (value & 0x3F) << 16;
-                printf("[SPU%d] V%d SSA: $%08X (H: $%04X)\n", id, v, voices[v].start_addr, value);
+                printf("[SPU%d] Write V%d SSA: $%08X (H: $%04X)\n", id, v, voices[v].start_addr, value);
                 break;
             case 2: //SSAL
                 voices[v].start_addr &= ~0xFFFF;
                 voices[v].start_addr |= value;
-                printf("[SPU%d] V%d SSA: $%08X (L: $%04X)\n", id, v, voices[v].start_addr, value);
+                printf("[SPU%d] Write V%d SSA: $%08X (L: $%04X)\n", id, v, voices[v].start_addr, value);
                 break;
             case 4: //LSAXH
                 voices[v].loop_addr &= 0xFFFF;
                 voices[v].loop_addr |= (value & 0x3F) << 16;
-                printf("[SPU%d] V%d LSAX: $%08X (H: $%04X)\n", id, v, voices[v].loop_addr, value);
+                printf("[SPU%d] Write V%d LSAX: $%08X (H: $%04X)\n", id, v, voices[v].loop_addr, value);
                 break;
             case 6: //LSAXL
                 voices[v].loop_addr &= ~0xFFFF;
                 voices[v].loop_addr |= value;
-                printf("[SPU%d] V%d LSAX: $%08X (L: $%04X)\n", id, v, voices[v].loop_addr, value);
+                printf("[SPU%d] Write V%d LSAX: $%08X (L: $%04X)\n", id, v, voices[v].loop_addr, value);
                 break;
             default:
                 printf("[SPU%d] Write voice %d: $%04X ($%08X)\n", id, (addr - 0x1C0) / 0xC, value, addr);
@@ -306,12 +414,52 @@ void SPU::write16(uint32_t addr, uint16_t value)
     }
     switch (addr)
     {
+        case 0x188:
+            printf("[SPU%d] Write VMIXLH: $%04X\n", id, value);
+            voice_mixdry_left &= 0xFFFF;
+            voice_mixdry_left |= value << 16;
+            break;
+        case 0x18A:
+            printf("[SPU%d] Write VMIXLL: $%04X\n", id, value);
+            voice_mixdry_left &= ~0xFFFF;
+            voice_mixdry_left |= value;
+            break;
+        case 0x18C:
+            printf("[SPU%d] Write VMIXELH: $%04X\n", id, value);
+            voice_mixwet_left &= 0xFFFF;
+            voice_mixwet_left |= value << 16;
+            break;
+        case 0x18E:
+            printf("[SPU%d] Write VMIXELL: $%04X\n", id, value);
+            voice_mixwet_left &= ~0xFFFF;
+            voice_mixwet_left |= value;
+            break;
+        case 0x190:
+            printf("[SPU%d] Write VMIXRH: $%04X\n", id, value);
+            voice_mixdry_right &= 0xFFFF;
+            voice_mixdry_right |= value << 16;
+            break;
+        case 0x192:
+            printf("[SPU%d] Write VMIXRL: $%04X\n", id, value);
+            voice_mixdry_right &= ~0xFFFF;
+            voice_mixdry_right |= value;
+            break;
+        case 0x194:
+            printf("[SPU%d] Write VMIXERH: $%04X\n", id, value);
+            voice_mixwet_right &= 0xFFFF;
+            voice_mixwet_right |= value << 16;
+            break;
+        case 0x196:
+            printf("[SPU%d] Write VMIXERL: $%04X\n", id, value);
+            voice_mixwet_right &= ~0xFFFF;
+            voice_mixwet_right |= value;
+            break;
         case 0x19A:
             printf("[SPU%d] Write Core Att: $%04X\n", id, value);
             if (core_att & (1 << 6))
             {
                 if (!(value & (1 << 6)))
-                    spdif_irq &= ~(4 << id);
+                    spdif_irq &= ~(2 << id);
             }
             core_att = value & 0x7FFF;
             if (value & (1 << 15))
@@ -331,7 +479,9 @@ void SPU::write16(uint32_t addr, uint16_t value)
             IRQA |= value & 0xFFFF;
             break;
         case 0x1A0:
-            printf("[SPU%d] KON0: $%04X\n", id, value);
+            printf("[SPU%d] Write KON0: $%04X\n", id, value);
+            key_on &= ~0xFFFF;
+            key_on |= value;
             for (int i = 0; i < 16; i++)
             {
                 if (value & (1 << i))
@@ -339,7 +489,9 @@ void SPU::write16(uint32_t addr, uint16_t value)
             }
             break;
         case 0x1A2:
-            printf("[SPU%d] KON1: $%04X\n", id, value);
+            printf("[SPU%d] Write KON1: $%04X\n", id, value);
+            key_on &= ~0xFF0000;
+            key_on |= (value & 0xFF) << 16;
             for (int i = 0; i < 8; i++)
             {
                 if (value & (1 << i))
@@ -347,7 +499,9 @@ void SPU::write16(uint32_t addr, uint16_t value)
             }
             break;
         case 0x1A4:
-            printf("[SPU%d] KOFF0: $%04X\n", id, value);
+            printf("[SPU%d] Write KOFF0: $%04X\n", id, value);
+            key_off &= ~0xFFFF;
+            key_off |= value;
             for (int i = 0; i < 16; i++)
             {
                 if (value & (1 << i))
@@ -355,7 +509,9 @@ void SPU::write16(uint32_t addr, uint16_t value)
             }
             break;
         case 0x1A6:
-            printf("[SPU%d] KOFF1: $%04X\n", id, value);
+            printf("[SPU%d] Write KOFF1: $%04X\n", id, value);
+            key_off &= ~0xFF0000;
+            key_off |= (value & 0xFF) << 16;
             for (int i = 0; i < 8; i++)
             {
                 if (value & (1 << i))
@@ -366,17 +522,16 @@ void SPU::write16(uint32_t addr, uint16_t value)
             transfer_addr &= 0xFFFF;
             transfer_addr |= (value & 0x3F) << 16;
             current_addr = transfer_addr;
-            printf("[SPU%d] Transfer addr: $%08X (H: $%04X)\n", id, transfer_addr, value);
+            printf("[SPU%d] Write Transfer addr: $%08X (H: $%04X)\n", id, transfer_addr, value);
             break;
         case 0x1AA:
             transfer_addr &= ~0xFFFF;
             transfer_addr |= value;
             current_addr = transfer_addr;
-            printf("[SPU%d] Transfer addr: $%08X (L: $%04X)\n", id, transfer_addr, value);
+            printf("[SPU%d] Write Transfer addr: $%08X (L: $%04X)\n", id, transfer_addr, value);
             break;
         case 0x1AC:
-            RAM[current_addr] = value;
-            current_addr++;
+            write_mem(value);
             break;
         case 0x1B0:
             printf("[SPU%d] Write ADMA: $%04X\n", id, value);
@@ -400,20 +555,26 @@ void SPU::write_voice_reg(uint32_t addr, uint16_t value)
     switch (reg)
     {
         case 0:
-            printf("[SPU%d] V%d VOLL: $%04X\n", id, v, value);
+            printf("[SPU%d] Write V%d VOLL: $%04X\n", id, v, value);
             break;
         case 2:
-            printf("[SPU%d] V%d VOLR: $%04X\n", id, v, value);
+            printf("[SPU%d] Write V%d VOLR: $%04X\n", id, v, value);
             break;
         case 4:
-            printf("[SPU%d] V%d PITCH: $%04X\n", id, v, value);
+            printf("[SPU%d] Write V%d PITCH: $%04X\n", id, v, value);
             voices[v].pitch = value & 0x3FFF;
             break;
         case 6:
-            printf("[SPU%d] V%d ADSR1: $%04X\n", id, v, value);
+            printf("[SPU%d] Write V%d ADSR1: $%04X\n", id, v, value);
+            voices[v].adsr1 = value;
             break;
         case 8:
-            printf("[SPU%d] V%d ADSR2: $%04X\n", id, v, value);
+            printf("[SPU%d] Write V%d ADSR2: $%04X\n", id, v, value);
+            voices[v].adsr2 = value;
+            break;
+        case 10:
+            printf("[SPU%d] Write V%d ENVX: $%04X\n", id, v, value);
+            voices[v].current_envelope = value;
             break;
         default:
             printf("[SPU%d] V%d write $%08X: $%04X\n", id, v, addr, value);

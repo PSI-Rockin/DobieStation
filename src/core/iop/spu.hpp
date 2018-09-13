@@ -6,6 +6,8 @@ struct Voice
 {
     uint16_t left_vol, right_vol;
     uint16_t pitch;
+    uint16_t adsr1, adsr2;
+    uint16_t current_envelope;
 
     uint32_t start_addr;
     uint32_t current_addr;
@@ -35,14 +37,17 @@ class SPU
         uint16_t core_att;
         SPU_STAT status;
 
-        uint16_t spdif_irq;
+        static uint16_t spdif_irq;
 
         uint32_t transfer_addr;
 
         uint32_t current_addr;
 
+        uint32_t voice_mixdry_left;
+        uint32_t voice_mixdry_right;
+        uint32_t voice_mixwet_left;
+        uint32_t voice_mixwet_right;
         //ADMA bullshit
-        uint16_t autodma_ctrl;
         int ADMA_left;
         int input_pos;
 
@@ -50,6 +55,8 @@ class SPU
 
         uint32_t IRQA;
         uint32_t ENDX;
+        uint32_t key_on;
+        uint32_t key_off;
 
         void gen_sample();
 
@@ -58,9 +65,12 @@ class SPU
 
         void spu_irq();
 
+        uint16_t read_voice_reg(uint32_t addr);
         void write_voice_reg(uint32_t addr, uint16_t value);
         void write_voice_addr(uint32_t addr, uint16_t value);
     public:
+
+        uint16_t autodma_ctrl;
         SPU(int id, Emulator* e);
 
         bool running_ADMA();
