@@ -48,6 +48,7 @@ class SPU
         uint32_t voice_mixwet_left;
         uint32_t voice_mixwet_right;
         //ADMA bullshit
+        uint16_t autodma_ctrl;
         int ADMA_left;
         int input_pos;
 
@@ -69,8 +70,6 @@ class SPU
         void write_voice_reg(uint32_t addr, uint16_t value);
         void write_voice_addr(uint32_t addr, uint16_t value);
     public:
-
-        uint16_t autodma_ctrl;
         SPU(int id, Emulator* e);
 
         bool running_ADMA();
