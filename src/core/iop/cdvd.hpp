@@ -77,6 +77,8 @@ class CDVD_Drive
         uint8_t S_out_params;
         uint8_t S_status;
 
+        uint8_t cdkey[16];
+
         uint32_t get_block_timing(bool mode_DVD);
 
         void start_seek();
@@ -89,10 +91,13 @@ class CDVD_Drive
         void N_command_read();
         void N_command_dvdread();
         void N_command_gettoc();
+        void N_command_readkey(uint32_t arg);
         void S_command_sub(uint8_t func);
     public:
         CDVD_Drive(Emulator* e);
         ~CDVD_Drive();
+
+        std::string get_serial();
 
         void reset();
         void vsync();
@@ -112,6 +117,7 @@ class CDVD_Drive
         uint8_t read_S_command();
         uint8_t read_S_data();
         uint8_t read_ISTAT();
+        uint8_t read_cdkey(int index);
 
         void send_N_command(uint8_t value);
         void write_N_data(uint8_t value);

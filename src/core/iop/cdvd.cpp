@@ -80,6 +80,26 @@ void CDVD_Drive::reset()
     }
 }
 
+string CDVD_Drive::get_serial()
+{
+    if (!cdvd_file.is_open())
+        return "";
+
+    uint32_t cnf_size;
+    char* cnf = (char*)read_file("SYSTEM.CNF;1", cnf_size);
+    int pos = 0;
+    if (!cnf)
+        return "h";
+    while (strncmp("cdrom0:\\", cnf + pos, 7))
+        pos++;
+
+    pos += 8;
+
+    string blorp(cnf + pos, cnf + pos + 11);
+    delete[] cnf;
+    return blorp;
+}
+
 //TODO: Support PAL framerates
 void CDVD_Drive::vsync()
 {
@@ -242,6 +262,7 @@ bool CDVD_Drive::load_disc(const char *name)
     printf("[CDVD] Root dir len: %d\n", *(uint16_t*)&pvd_sector[156]);
     printf("[CDVD] Extent loc: $%08X\n", root_location);
     printf("[CDVD] Extent len: $%08X\n", root_len);
+
     return true;
 }
 
@@ -347,6 +368,11 @@ uint8_t CDVD_Drive::read_ISTAT()
     return ISTAT;
 }
 
+uint8_t CDVD_Drive::read_cdkey(int index)
+{
+    return cdkey[index];
+}
+
 void CDVD_Drive::send_N_command(uint8_t value)
 {
     N_command = value;
@@ -385,6 +411,16 @@ void CDVD_Drive::send_N_command(uint8_t value)
         case 0x09:
             printf("[CDVD] GetTOC\n");
             N_command_gettoc();
+            break;
+        case 0x0C:
+        {
+            uint32_t arg = N_command_params[3] |
+                    (N_command_params[4]<<8) |
+                    (N_command_params[5]<<16) |
+                    (N_command_params[6]<<24);
+            printf("[CDVD] ReadKey: $%08X\n", arg);
+            N_command_readkey(arg);
+        }
             break;
         default:
             Errors::die("[CDVD] Unrecognized N command $%02X\n", value);
@@ -603,7 +639,6 @@ void CDVD_Drive::start_seek()
             N_cycles_left = (IOP_CLOCK * 100) / 1000;
             printf("[CDVD] Full seek\n");
         }
-        //N_cycles_left = 10000;
     }
 
     //Seek anyway. The program won't know the difference
@@ -675,6 +710,52 @@ void CDVD_Drive::N_command_gettoc()
     read_buffer[17] = 0x03;
     N_status = 0;
     drive_status = READING;
+}
+
+void CDVD_Drive::N_command_readkey(uint32_t arg)
+{
+    //Code referenced/taken from PCSX2
+    //This performs some kind of encryption/checksum with the game's serial?
+    memset(cdkey, 0, 16);
+    string serial = get_serial();
+
+    int32_t letters = (int32_t)((serial[3] & 0x7F) << 0) |
+                (int32_t)((serial[2] & 0x7F) << 7) |
+                (int32_t)((serial[1] & 0x7F) << 14) |
+                (int32_t)((serial[0] & 0x7F) << 21);
+    int32_t code = (int32_t)stoi(serial.substr(5, 3) + serial.substr(9, 2));
+
+    uint32_t key_0_3 = ((code & 0x1FC00) >> 10) | ((0x01FFFFFF & letters) <<  7);
+    uint32_t key_4   = ((code & 0x0001F) <<  3) | ((0x0E000000 & letters) >> 25);
+    uint32_t key_14  = ((code & 0x003E0) >>  2) | 0x04;
+
+    cdkey[0] = (key_0_3&0x000000FF)>> 0;
+    cdkey[1] = (key_0_3&0x0000FF00)>> 8;
+    cdkey[2] = (key_0_3&0x00FF0000)>>16;
+    cdkey[3] = (key_0_3&0xFF000000)>>24;
+    cdkey[4] = key_4;
+
+    switch (arg)
+    {
+        case 75:
+            cdkey[14] = key_14;
+            cdkey[15] = 0x05;
+            break;
+        case 4246:
+            cdkey[0] = 0x07;
+            cdkey[1] = 0xF7;
+            cdkey[2] = 0xF2;
+            cdkey[3] = 0x01;
+            cdkey[4] = 0x00;
+            cdkey[15] = 0x01;
+            break;
+        default:
+            cdkey[15] = 0x01;
+            break;
+    }
+
+    ISTAT |= 0x2;
+    e->iop_request_IRQ(2);
 }
 
 void CDVD_Drive::read_CD_sector()

@@ -868,6 +868,26 @@ uint8_t Emulator::iop_read8(uint32_t address)
             return cdvd.read_S_status();
         case 0x1F402018:
             return cdvd.read_S_data();
+        case 0x1F402020:
+        case 0x1F402021:
+        case 0x1F402022:
+        case 0x1F402023:
+        case 0x1F402024:
+            return cdvd.read_cdkey(address - 0x1F402020);
+        case 0x1F402028:
+        case 0x1F402029:
+        case 0x1F40202A:
+        case 0x1F40202B:
+        case 0x1F40202C:
+            return cdvd.read_cdkey(address - 0x1F402023);
+        case 0x1F402030:
+        case 0x1F402031:
+        case 0x1F402032:
+        case 0x1F402033:
+        case 0x1F402034:
+            return cdvd.read_cdkey(address - 0x1F402026);
+        case 0x1F402038:
+            return cdvd.read_cdkey(15);
         case 0x1F808264:
             return sio2.read_serial();
         case 0x1FA00000:
