@@ -170,6 +170,13 @@ void CDVD_Drive::update(int cycles)
                     ISTAT |= 0x2;
                     e->iop_request_IRQ(2);
                     break;
+                case NCOMMAND::STOP:
+                    is_spinning = false;
+                    drive_status = STOPPED;
+                    N_status = 0x40;
+                    ISTAT |= 0x2;
+                    e->iop_request_IRQ(2);
+                    break;
                 case NCOMMAND::READ:
                     if (!read_bytes_left)
                     {
@@ -355,6 +362,10 @@ void CDVD_Drive::send_N_command(uint8_t value)
             sector_pos = 0;
             start_seek();
             active_N_command = NCOMMAND::STANDBY;
+            break;
+        case 0x03:
+            N_cycles_left = IOP_CLOCK / 6;
+            active_N_command = NCOMMAND::STOP;
             break;
         case 0x04:
             //Pause
