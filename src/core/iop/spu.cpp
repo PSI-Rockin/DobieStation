@@ -39,6 +39,7 @@ void SPU::reset(uint8_t* RAM)
         voices[i].loop_addr = 0;
         voices[i].pitch = 0;
         voices[i].block_pos = 0;
+        voices[i].loop_addr_specified = false;
     }
 
     IRQA = 0x800;
@@ -85,7 +86,7 @@ void SPU::gen_sample()
                 voices[i].loop_code = (header >> 8) & 0x3;
                 bool loop_start = header & (1 << 10);
 
-                if (loop_start)
+                if (loop_start && !voices[i].loop_addr_specified)
                     voices[i].loop_addr = voices[i].current_addr;
             }
             if (voices[i].current_addr == IRQA && (core_att & (1 << 6)))
@@ -396,11 +397,13 @@ void SPU::write16(uint32_t addr, uint16_t value)
             case 4: //LSAXH
                 voices[v].loop_addr &= 0xFFFF;
                 voices[v].loop_addr |= (value & 0x3F) << 16;
+                voices[v].loop_addr_specified = true;
                 printf("[SPU%d] Write V%d LSAX: $%08X (H: $%04X)\n", id, v, voices[v].loop_addr, value);
                 break;
             case 6: //LSAXL
                 voices[v].loop_addr &= ~0xFFFF;
                 voices[v].loop_addr |= value;
+                voices[v].loop_addr_specified = true;
                 printf("[SPU%d] Write V%d LSAX: $%08X (L: $%04X)\n", id, v, voices[v].loop_addr, value);
                 break;
             default:
@@ -582,6 +585,7 @@ void SPU::key_on_voice(int v)
     //Copy start addr to current addr, clear ENDX bit, and set envelope to Attack mode
     voices[v].current_addr = voices[v].start_addr;
     voices[v].block_pos = 0;
+    voices[v].loop_addr_specified = false;
     ENDX &= ~(1 << v);
 }
 
