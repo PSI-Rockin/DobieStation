@@ -52,6 +52,13 @@ struct XYOFFSET
     uint16_t y;
 };
 
+//Contains levels 1-6 (0 is specified in TEX0)
+struct MIPTBL
+{
+    uint32_t texture_base[6];
+    uint32_t width[6];
+};
+
 struct SCISSOR
 {
     uint16_t x1, x2, y1, y2;
@@ -100,6 +107,7 @@ struct GSContext
     TEX1 tex1;
     CLAMP clamp;
     XYOFFSET xyoffset;
+    MIPTBL miptbl;
     SCISSOR scissor;
     ALPHA alpha;
     TEST test;
@@ -114,6 +122,8 @@ struct GSContext
     void set_tex2(uint64_t value);
     void set_clamp(uint64_t value);
     void set_xyoffset(uint64_t value);
+    void set_miptbl1(uint64_t value);
+    void set_miptbl2(uint64_t value);
     void set_scissor(uint64_t value);
     void set_alpha(uint64_t value);
     void set_test(uint64_t value);

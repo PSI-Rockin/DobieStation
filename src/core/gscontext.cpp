@@ -53,6 +53,7 @@ void GSContext::set_tex0(uint64_t value)
     printf("Use CSM2: %d\n", tex0.use_CSM2);
     printf("CLUT offset: $%08X\n", tex0.CLUT_offset);
 }
+
 void GSContext::set_tex1(uint64_t value)
 {
     tex1.LOD_method = value & 0x1;
@@ -99,6 +100,28 @@ void GSContext::set_xyoffset(uint64_t value)
     xyoffset.x = value & 0xFFFF;
     xyoffset.y = (value >> 32) & 0xFFFF;
     printf("XYOFFSET: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);
+}
+
+void GSContext::set_miptbl1(uint64_t value)
+{
+    miptbl.texture_base[0] = (value & 0x3FFF) * 64 * 4;
+    miptbl.texture_base[1] = ((value >> 20) & 0x3FFF) * 64 * 4;
+    miptbl.texture_base[2] = ((value >> 40) & 0x3FFF) * 64 * 4;
+
+    miptbl.width[0] = ((value >> 14) & 0x3F) * 64;
+    miptbl.width[1] = ((value >> 34) & 0x3F) * 64;
+    miptbl.width[2] = ((value >> 54) & 0x3F) * 64;
+}
+
+void GSContext::set_miptbl2(uint64_t value)
+{
+    miptbl.texture_base[3] = (value & 0x3FFF) * 64 * 4;
+    miptbl.texture_base[4] = ((value >> 20) & 0x3FFF) * 64 * 4;
+    miptbl.texture_base[5] = ((value >> 40) & 0x3FFF) * 64 * 4;
+
+    miptbl.width[3] = ((value >> 14) & 0x3F) * 64;
+    miptbl.width[4] = ((value >> 34) & 0x3F) * 64;
+    miptbl.width[5] = ((value >> 54) & 0x3F) * 64;
 }
 
 void GSContext::set_scissor(uint64_t value)

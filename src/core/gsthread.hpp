@@ -60,7 +60,8 @@ struct TEXCLUT_REG
 
 struct Vertex
 {
-    int32_t x, y, z;
+    int32_t x, y;
+    uint32_t z;
 
     RGBAQ_REG rgbaq;
     UV_REG uv;
@@ -70,6 +71,18 @@ struct Vertex
         x -= xyoffset.x;
         y -= xyoffset.y;
     }
+};
+
+struct TexLookupInfo
+{
+    //int32_t u, v;
+    RGBAQ_REG vtx_color, tex_color;
+    float LOD;
+    int mipmap_level;
+
+    uint32_t tex_base;
+    uint32_t buffer_width;
+    uint16_t tex_width, tex_height;
 };
 
 class GraphicsSynthesizerThread
@@ -165,8 +178,9 @@ class GraphicsSynthesizerThread
         bool depth_test(int32_t x, int32_t y, uint32_t z);
 
         uint8_t get_16bit_alpha(uint16_t color);
-        void tex_lookup(int16_t u, int16_t v, const RGBAQ_REG& vtx_color, RGBAQ_REG& tex_color);
-        void tex_lookup_int(int16_t u, int16_t v, RGBAQ_REG& tex_color);
+        void calculate_LOD(TexLookupInfo& info);
+        void tex_lookup(int16_t u, int16_t v, TexLookupInfo& info);
+        void tex_lookup_int(int16_t u, int16_t v, TexLookupInfo& info);
         void clut_lookup(uint8_t entry, RGBAQ_REG& tex_color, bool eight_bit);
         void clut_CSM2_lookup(uint8_t entry, RGBAQ_REG& tex_color);
         void vertex_kick(bool drawing_kick);
