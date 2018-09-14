@@ -1,5 +1,6 @@
 #include <cstdio>
 #include "gsregisters.hpp"
+#include "errors.hpp"
 
 void GS_REGISTERS::write64_privileged(uint32_t addr, uint64_t value)
 {
@@ -60,6 +61,8 @@ void GS_REGISTERS::write64_privileged(uint32_t addr, uint64_t value)
             break;
         case 0x1000:
             printf("[GS_r] Write64 to GS_CSR: $%08X_%08X\n", value >> 32, value);
+            CSR.SIGNAL_generated &= ~(value & 1);
+            CSR.SIGNAL_stall &= ~(value & 0x1);
             if (value & 0x2)
             {
                 CSR.FINISH_enabled = true;
@@ -82,6 +85,10 @@ void GS_REGISTERS::write64_privileged(uint32_t addr, uint64_t value)
         case 0x1040:
             printf("[GS_r] Write64 to GS_BUSDIR: $%08X_%08X\n", value >> 32, value);
             BUSDIR = (uint8_t)value;
+            break;
+        case 0x1080:
+            SIGLBLID.sig_id = value & 0xFFFFFFFF;
+            SIGLBLID.lbl_id = value >> 32;
             break;
         default:
             printf("[GS_r] Unrecognized privileged write64 to reg $%04X: $%08X_%08X\n", addr, value >> 32, value);
@@ -107,6 +114,8 @@ void GS_REGISTERS::write32_privileged(uint32_t addr, uint32_t value)
             break;
         case 0x1000:
             printf("[GS_r] Write32 to GS_CSR: $%08X\n", value);
+            CSR.SIGNAL_generated &= ~(value & 1);
+            CSR.SIGNAL_stall &= ~(value & 1);
             if (value & 0x2)
             {
                 CSR.FINISH_enabled = true;
@@ -126,6 +135,9 @@ void GS_REGISTERS::write32_privileged(uint32_t addr, uint32_t value)
             IMR.vsync = value & (1 << 11);
             IMR.rawt = value & (1 << 12);
             break;
+        case 0x1080:
+            SIGLBLID.sig_id = value;
+            break;
         default:
             printf("\n[GS_r] Unrecognized privileged write32 to reg $%04X: $%08X", addr, value);
     }
@@ -140,12 +152,15 @@ uint32_t GS_REGISTERS::read32_privileged(uint32_t addr)
         case 0x1000:
         {
             uint32_t reg = 0;
+            reg |= CSR.SIGNAL_generated;
             reg |= CSR.FINISH_generated << 1;
             reg |= CSR.VBLANK_generated << 3;
             reg |= CSR.is_odd_frame << 13;
             //printf("[GS_r] read32_privileged!: CSR = %04X\n", reg);
             return reg;
         }
+        case 0x1080:
+            return SIGLBLID.sig_id;
         default:
             printf("[GS_r] Unrecognized privileged read32 from $%04X\n", addr);
             return 0;
@@ -160,10 +175,18 @@ uint64_t GS_REGISTERS::read64_privileged(uint32_t addr)
         case 0x1000:
         {
             uint64_t reg = 0;
+            reg |= CSR.SIGNAL_generated;
             reg |= CSR.FINISH_generated << 1;
             reg |= CSR.VBLANK_generated << 3;
             reg |= CSR.is_odd_frame << 13;
             //printf("[GS_r] read64_privileged!: CSR = %08X\n", reg);
+            return reg;
+        }
+        case 0x1080:
+        {
+            uint64_t reg = 0;
+            reg |= SIGLBLID.sig_id;
+            reg |= (uint64_t)SIGLBLID.lbl_id << 32UL;
             return reg;
         }
         default:
@@ -177,11 +200,29 @@ bool GS_REGISTERS::write64(uint32_t addr, uint64_t value)
     addr &= 0xFFFF;
     switch (addr)
     {
+        case 0x0060:
+            printf("[GS] SIGNAL requested!\n");
+            if (CSR.SIGNAL_generated)
+            {
+                printf("[GS] Second SIGNAL requested before acknowledged!\n");
+                CSR.SIGNAL_stall = true;
+                SIGLBLID.backup_sig_id = value;
+            }
+            else
+            {
+                CSR.SIGNAL_generated = true;
+                SIGLBLID.sig_id = value;
+            }
+            return true;
         case 0x0061:
             printf("[GS] FINISH Write\n");
             CSR.FINISH_requested = true;
             return true;
-    } //Should probably have SINGAL and LABEL?
+        case 0x0062:
+            printf("[GS] LABEL requested!\n");
+            SIGLBLID.lbl_id = value;
+            return true;
+    }
     return false;
 }
 
@@ -209,11 +250,16 @@ void GS_REGISTERS::reset()
     IMR.vsync = true;
     IMR.rawt = true;
     CSR.is_odd_frame = false;
+    CSR.SIGNAL_generated = false;
+    CSR.SIGNAL_stall = false;
     CSR.VBLANK_enabled = true;
     CSR.VBLANK_generated = false;
     CSR.FINISH_enabled = false;
     CSR.FINISH_generated = false;
     CSR.FINISH_requested = false;
+
+    SIGLBLID.lbl_id = 0;
+    SIGLBLID.sig_id = 0;
 
     set_CRT(false, 0x2, false);
 }

@@ -74,7 +74,6 @@ void GraphicsSynthesizer::reset()
         while (message_queue->pop(data2));
     }
     gsthread_id = std::thread(&GraphicsSynthesizerThread::event_loop, message_queue, return_queue);//pass references to the fifos
-
 }
 
 void GraphicsSynthesizer::start_frame()
@@ -219,7 +218,6 @@ uint32_t* GraphicsSynthesizer::render_partial_frame(uint16_t& width, uint16_t& h
     width = data.payload.xy_payload.x;
     height = data.payload.xy_payload.y;
 
-
     if (using_first_buffer)
     {
         using_first_buffer = false;
@@ -250,6 +248,13 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
     payload.write64_payload = { addr, value };
     send_message({ GS_command::write64_t,payload });
 
+    //We need a check for SIGNAL here so that we can fire the interrupt
+    if (addr == 0x60)
+    {
+        if (!reg.IMR.signal && !reg.CSR.SIGNAL_generated)
+            intc->assert_IRQ((int)Interrupt::GS);
+    }
+
     //also check for interrupt pre-processing
     reg.write64(addr, value);
 }
@@ -260,7 +265,15 @@ void GraphicsSynthesizer::write64_privileged(uint32_t addr, uint64_t value)
     payload.write64_payload = { addr, value };
     send_message({ GS_command::write64_privileged_t,payload });
 
+    bool old_IMR = reg.IMR.signal;
     reg.write64_privileged(addr, value);
+
+    //When SIGNAL is written to twice, the interrupt will not be processed until IMR.signal is flipped from 1 to 0.
+    if (old_IMR && !reg.IMR.signal && reg.CSR.SIGNAL_stall)
+    {
+        intc->assert_IRQ((int)Interrupt::GS);
+        reg.SIGLBLID.sig_id = reg.SIGLBLID.backup_sig_id;
+    }
 }
 
 void GraphicsSynthesizer::write32_privileged(uint32_t addr, uint32_t value)
@@ -343,10 +356,12 @@ void GraphicsSynthesizer::save_state(ofstream &state)
     wait_for_return(return_queue, GS_return::savestate_done_t, data);
     state.write((char*)&reg, sizeof(reg));
 }
+
 void GraphicsSynthesizer::send_message(GS_message message)
 {
     message_queue->push(message);
 }
+
 void GraphicsSynthesizer::send_dump_request()
 {
     GS_message_payload p;

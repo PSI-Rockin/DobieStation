@@ -3,9 +3,8 @@
 #include <cstdint>
 #include <fstream>
 
+#include "gs.hpp"
 #include "int128.hpp"
-
-class GraphicsSynthesizer;
 
 struct GIFtag
 {
@@ -77,7 +76,7 @@ inline bool GraphicsInterface::path_active(int index)
     {
         interrupt_path3(index);
     }
-    return (active_path == index) && !path3_masked(index);
+    return (active_path == index) && !path3_masked(index) && !gs->stalled();
 }
 
 inline bool GraphicsInterface::path_activepath3(int index)
@@ -86,7 +85,7 @@ inline bool GraphicsInterface::path_activepath3(int index)
     {
         interrupt_path3(index);
     }
-    return ((active_path == index) || (path_queue & (1 << 3))) && !path3_masked(index);
+    return ((active_path == index) || (path_queue & (1 << 3))) && !path3_masked(index) && !gs->stalled();
 }
 
 inline void GraphicsInterface::resume_path3()

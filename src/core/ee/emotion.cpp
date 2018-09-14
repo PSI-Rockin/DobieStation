@@ -639,6 +639,11 @@ void EmotionEngine::break_exception()
     Errors::die("[EE] BREAK opcode called (PC: $%08X)", PC);
 }
 
+void EmotionEngine::trap_exception()
+{
+    Errors::die("[EE] TRAP opcode called (PC: $%08X)", PC);
+}
+
 void EmotionEngine::deci2call(uint32_t func, uint32_t param)
 {
     switch (func)

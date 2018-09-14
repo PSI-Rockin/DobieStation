@@ -2309,6 +2309,16 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupIn
             else if (u < 0)
                 u = 0;
             break;
+        case 2:
+            if (u > (current_ctx->clamp.max_u >> info.mipmap_level))
+                u = current_ctx->clamp.max_u >> info.mipmap_level;
+            else if (u < (current_ctx->clamp.min_u >> info.mipmap_level))
+                u = current_ctx->clamp.min_u >> info.mipmap_level;
+            break;
+        case 3:
+            //Mask should only apply to integer component
+            u = (u & (current_ctx->clamp.min_u | 0xF)) | current_ctx->clamp.max_u;
+            break;
     }
     switch (current_ctx->clamp.wrap_t)
     {
@@ -2320,6 +2330,15 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupIn
                 v = info.tex_height;
             else if (v < 0)
                 v = 0;
+            break;
+        case 2:
+            if (v > (current_ctx->clamp.max_v >> info.mipmap_level))
+                v = current_ctx->clamp.max_v >> info.mipmap_level;
+            else if (v < (current_ctx->clamp.min_v >> info.mipmap_level))
+                v = (current_ctx->clamp.min_v >> info.mipmap_level);
+            break;
+        case 3:
+            v = (v & (current_ctx->clamp.min_v | 0xF)) | current_ctx->clamp.max_v;
             break;
     }
 

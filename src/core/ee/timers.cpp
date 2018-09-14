@@ -72,18 +72,26 @@ uint32_t EmotionTiming::read32(uint32_t addr)
             return timers[0].counter;
         case 0x10000010:
             return read_control(0);
+        case 0x10000020:
+            return timers[0].compare;
         case 0x10000800:
             return timers[1].counter;
         case 0x10000810:
             return read_control(1);
+        case 0x10000820:
+            return timers[1].compare;
         case 0x10001000:
             return timers[2].counter;
         case 0x10001010:
             return read_control(2);
+        case 0x10001020:
+            return timers[2].compare;
         case 0x10001800:
             return timers[3].counter;
         case 0x10001810:
             return read_control(3);
+        case 0x10001820:
+            return timers[3].compare;
         default:
             printf("[EE Timing] Unrecognized read32 from $%08X\n", addr);
             return 0;

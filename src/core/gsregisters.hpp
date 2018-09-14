@@ -4,6 +4,7 @@ As such they are evaluated on both the GS thread and the GS manager.
 #ifndef GSREGISTERS_HPP
 #define GSREGISTERS_HPP
 #include <cstdint>
+
 struct PMODE_REG
 {
     bool circuit1;
@@ -48,6 +49,8 @@ struct GS_IMR //Interrupt masking
 
 struct GS_CSR
 {
+    bool SIGNAL_generated;
+    bool SIGNAL_stall; //Used only by main/GIF thread
     bool VBLANK_generated;
     bool VBLANK_enabled;
     bool is_odd_frame;
@@ -56,9 +59,15 @@ struct GS_CSR
     bool FINISH_requested;
 };
 
+struct GS_SIGLBLID
+{
+    uint32_t sig_id;
+    uint32_t backup_sig_id;
+    uint32_t lbl_id;
+};
+
 struct GS_REGISTERS
 {
-
     //Privileged registers
     PMODE_REG PMODE;
     SMODE SMODE2;
@@ -68,8 +77,9 @@ struct GS_REGISTERS
     GS_CSR CSR;
     uint8_t BUSDIR;
     uint8_t CRT_mode;
+    GS_SIGLBLID SIGLBLID;
     
-    //EXTBUF, EXTDATA, EXTWRITE, BGCOLOR, SIGLBLID not currently implemented
+    //EXTBUF, EXTDATA, EXTWRITE, BGCOLOR not currently implemented
 
     uint32_t read32_privileged(uint32_t addr);
     uint64_t read64_privileged(uint32_t addr);

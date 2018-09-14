@@ -158,6 +158,8 @@ class GraphicsSynthesizer
         void get_resolution(int& w, int& h);
         void get_inner_resolution(int& w, int& h);
 
+        bool stalled();
+
         void set_VBLANK(bool is_VBLANK);
         void assert_FINISH();
         void assert_VSYNC();
@@ -182,5 +184,10 @@ class GraphicsSynthesizer
         void send_dump_request();
         
 };
+
+inline bool GraphicsSynthesizer::stalled()
+{
+    return reg.CSR.SIGNAL_stall;
+}
 
 #endif // GS_HPP

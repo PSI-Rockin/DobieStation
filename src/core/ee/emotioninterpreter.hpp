@@ -46,6 +46,7 @@ namespace EmotionInterpreter
     void daddu(EmotionEngine& cpu, uint32_t instruction);
     void dsub(EmotionEngine& cpu, uint32_t instruction);
     void dsubu(EmotionEngine& cpu, uint32_t instruction);
+    void teq(EmotionEngine& cpu, uint32_t instruction);
     void dsll(EmotionEngine& cpu, uint32_t instruction);
     void dsrl(EmotionEngine& cpu, uint32_t instruction);
     void dsra(EmotionEngine& cpu, uint32_t instruction);

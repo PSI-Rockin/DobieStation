@@ -126,6 +126,9 @@ void EmotionInterpreter::special(EmotionEngine &cpu, uint32_t instruction)
         case 0x2F:
             dsubu(cpu, instruction);
             break;
+        case 0x34:
+            teq(cpu, instruction);
+            break;
         case 0x38:
             dsll(cpu, instruction);
             break;
@@ -527,6 +530,14 @@ void EmotionInterpreter::dsubu(EmotionEngine &cpu, uint32_t instruction)
     op1 = cpu.get_gpr<int64_t>(op1);
     op2 = cpu.get_gpr<int64_t>(op2);
     cpu.set_gpr<uint64_t>(dest, op1 - op2);
+}
+
+void EmotionInterpreter::teq(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint64_t op1 = (instruction >> 21) & 0x1F;
+    uint64_t op2 = (instruction >> 16) & 0x1F;
+    if (cpu.get_gpr<uint64_t>(op1) == cpu.get_gpr<uint64_t>(op2))
+        cpu.trap_exception();
 }
 
 void EmotionInterpreter::dsll(EmotionEngine &cpu, uint32_t instruction)
