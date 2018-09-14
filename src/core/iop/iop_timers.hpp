@@ -47,6 +47,7 @@ class IOPTiming
         void run();
         uint32_t read_counter(int index);
         uint16_t read_control(int index);
+        uint32_t read_target(int index);
 
         void write_counter(int index, uint32_t value);
         void write_control(int index, uint16_t value);

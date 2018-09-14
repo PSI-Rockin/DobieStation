@@ -82,6 +82,12 @@ uint32_t IOPTiming::read_counter(int index)
     return timers[index].counter;
 }
 
+uint32_t IOPTiming::read_target(int index)
+{
+    printf("[IOP Timing] Read timer %d target: $%08X\n", index, timers[index].target);
+    return timers[index].target;
+}
+
 uint16_t IOPTiming::read_control(int index)
 {
     uint16_t reg = 0;
