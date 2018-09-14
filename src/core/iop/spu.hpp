@@ -12,6 +12,7 @@ struct Voice
     uint32_t start_addr;
     uint32_t current_addr;
     uint32_t loop_addr;
+    bool loop_addr_specified;
 
     uint32_t counter;
     int block_pos;
