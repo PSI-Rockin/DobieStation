@@ -579,9 +579,9 @@ void SPU::write_voice_reg(uint32_t addr, uint16_t value)
 
 void SPU::key_on_voice(int v)
 {
-    //Copy start addr to loop addr, clear ENDX bit, and set envelope to Attack mode
+    //Copy start addr to current addr, clear ENDX bit, and set envelope to Attack mode
     voices[v].current_addr = voices[v].start_addr;
-    voices[v].loop_addr = voices[v].start_addr;
+    voices[v].block_pos = 0;
     ENDX &= ~(1 << v);
 }
 

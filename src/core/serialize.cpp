@@ -4,7 +4,7 @@
 
 #define VER_MAJOR 0
 #define VER_MINOR 0
-#define VER_REV 11
+#define VER_REV 12
 
 using namespace std;
 
@@ -351,7 +351,8 @@ void VectorUnit::load_state(ifstream &state)
     state.read((char*)&second_branch_pending, sizeof(second_branch_pending));
     state.read((char*)&branch_on, sizeof(branch_on));
     state.read((char*)&finish_on, sizeof(finish_on));
-    state.read((char*)&delay_slot, sizeof(delay_slot));
+    state.read((char*)&branch_delay_slot, sizeof(branch_delay_slot));
+    state.read((char*)&ebit_delay_slot, sizeof(ebit_delay_slot));
 }
 
 void VectorUnit::save_state(ofstream &state)
@@ -404,7 +405,8 @@ void VectorUnit::save_state(ofstream &state)
     state.write((char*)&second_branch_pending, sizeof(second_branch_pending));
     state.write((char*)&branch_on, sizeof(branch_on));
     state.write((char*)&finish_on, sizeof(finish_on));
-    state.write((char*)&delay_slot, sizeof(delay_slot));
+    state.write((char*)&branch_delay_slot, sizeof(branch_delay_slot));
+    state.write((char*)&ebit_delay_slot, sizeof(ebit_delay_slot));
 }
 
 void INTC::load_state(ifstream &state)

@@ -30,6 +30,8 @@
 #define _Imm11_		(int32_t)(instr & 0x400 ? 0xfffffc00 | (instr & 0x3ff) : instr & 0x3ff)
 #define _UImm11_	(int32_t)(instr & 0x7ff)
 
+uint32_t VectorUnit::FBRST = 0;
+
 VectorUnit::VectorUnit(int id) : id(id), gif(nullptr)
 {
     gpr[0].f[0] = 0.0;
@@ -56,7 +58,8 @@ void VectorUnit::reset()
     branch_on = false;
     second_branch_pending = false;
     secondbranch_PC = 0;
-    delay_slot = 0;
+    branch_delay_slot = 0;
+    ebit_delay_slot = 0;
     transferring_GIF = false;
     XGKICK_stall = false;
     XGKICK_cycles = 0;
@@ -135,7 +138,7 @@ void VectorUnit::run(int cycles)
 
         if (branch_on)
         {
-            if (!delay_slot)
+            if (!branch_delay_slot)
             {
                 PC = new_PC;
                 if (second_branch_pending)
@@ -147,11 +150,11 @@ void VectorUnit::run(int cycles)
                     branch_on = false;
             }
             else
-                delay_slot--;
+                branch_delay_slot--;
         }
         if (finish_on)
         {
-            if (!delay_slot)
+            if (!ebit_delay_slot)
             {
                 printf("[VU] Ended execution!\n");
                 running = false;
@@ -159,7 +162,7 @@ void VectorUnit::run(int cycles)
                 flush_pipes();
             }
             else
-                delay_slot--;
+                ebit_delay_slot--;
         }
         cycles_to_run--;
     }
@@ -264,9 +267,31 @@ void VectorUnit::check_for_FMAC_stall()
             cycle_count += delay;
             if (cycle_count >= finish_DIV_event && (cycle_count - delay) < finish_DIV_event)
                 Q.u = new_Q_instance.u;
+            int_branch_delay = 0;
             break;
         }
     }
+}
+
+void VectorUnit::backup_vf(bool newvf, int index)
+{
+    if (newvf)
+        backup_newgpr = gpr[index];
+    else
+        backup_oldgpr = gpr[index];
+}
+
+void VectorUnit::restore_vf(bool newvf, int index)
+{
+    if (newvf)
+        gpr[index] = backup_newgpr;
+    else
+        gpr[index] = backup_oldgpr;
+}
+
+uint32_t VectorUnit::read_fbrst()
+{
+    return FBRST;
 }
 
 void VectorUnit::callmsr()
@@ -291,7 +316,7 @@ void VectorUnit::mscal(uint32_t addr)
 
 void VectorUnit::end_execution()
 {
-    delay_slot = 1;
+    ebit_delay_slot = 1;
     finish_on = true;
 }
 
@@ -454,6 +479,8 @@ uint32_t VectorUnit::cfc(int index)
             return Q.u;
         case 27:
             return CMSAR0;
+        case 28:
+            return FBRST;
         default:
             printf("[COP2] Unrecognized cfc2 from reg %d\n", index);
     }
@@ -493,6 +520,7 @@ void VectorUnit::ctc(int index, uint32_t value)
         case 28:
             if (value & 0x2 && id == 0)
                 reset();
+            FBRST = value & ~0x33;
             break;
         default:
             printf("[COP2] Unrecognized ctc2 of $%08X to reg %d\n", value, index);
@@ -513,7 +541,7 @@ void VectorUnit::branch(bool condition, int16_t imm, bool link, uint8_t linkreg)
         else
         {
             branch_on = true;
-            delay_slot = 1;
+            branch_delay_slot = 1;
             new_PC = ((int16_t)PC + imm + 8) & 0x3fff;
             if (link)
                 set_int(linkreg, (PC + 16) / 8);
@@ -534,7 +562,7 @@ void VectorUnit::jp(uint16_t addr, bool link, uint8_t linkreg)
     {
         new_PC = addr & 0x3FFF;
         branch_on = true;
-        delay_slot = 1;
+        branch_delay_slot = 1;
         if (link)
             set_int(linkreg, (PC + 16) / 8);
     }
