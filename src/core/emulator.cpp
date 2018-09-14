@@ -909,10 +909,54 @@ uint16_t Emulator::iop_read16(uint32_t address)
         return spu2.read16(address);
     switch (address)
     {
+        case 0x1F801100:
+            return iop_timers.read_counter(0);
+        case 0x1F801104:
+            return iop_timers.read_control(0);
+        case 0x1F801108:
+            return iop_timers.read_target(0);
+        case 0x1F801110:
+            return iop_timers.read_counter(1);
+        case 0x1F801114:
+            return iop_timers.read_control(1);
+        case 0x1F801118:
+            return iop_timers.read_target(1);
+        case 0x1F801120:
+            return iop_timers.read_counter(2);
+        case 0x1F801124:
+            return iop_timers.read_control(2);
+        case 0x1F801128:
+            return iop_timers.read_target(2);
+        case 0x1F801480:
+            return iop_timers.read_counter(3) & 0xFFFF;
+        case 0x1F801482:
+            return iop_timers.read_counter(3) >> 16;
+        case 0x1F801484:
+            return iop_timers.read_control(3);
+        case 0x1F801488:
+            return iop_timers.read_target(3) & 0xFFFF;
+        case 0x1F80148A:
+            return iop_timers.read_target(3) >> 16;
+        case 0x1F801490:
+            return iop_timers.read_counter(4) & 0xFFFF;
+        case 0x1F801492:
+            return iop_timers.read_counter(4) >> 16;
         case 0x1F801494:
             return iop_timers.read_control(4);
+        case 0x1F801498:
+            return iop_timers.read_target(4) & 0xFFFF;
+        case 0x1F80149A:
+            return iop_timers.read_target(4) >> 16;
+        case 0x1F8014A0:
+            return iop_timers.read_counter(5) & 0xFFFF;
+        case 0x1F8014A2:
+            return iop_timers.read_counter(5) >> 16;
         case 0x1F8014A4:
             return iop_timers.read_control(5);
+        case 0x1F8014A8:
+            return iop_timers.read_target(5) & 0xFFFF;
+        case 0x1F8014AA:
+            return iop_timers.read_target(5) >> 16;
     }
     printf("Unrecognized IOP read16 from physical addr $%08X\n", address);
     return 0;
@@ -960,12 +1004,44 @@ uint32_t Emulator::iop_read32(uint32_t address)
             return iop_dma.get_DPCR();
         case 0x1F8010F4:
             return iop_dma.get_DICR();
+        case 0x1F801100:
+            return iop_timers.read_counter(0);
+        case 0x1F801104:
+            return iop_timers.read_control(0);
+        case 0x1F801108:
+            return iop_timers.read_target(0);
+        case 0x1F801110:
+            return iop_timers.read_counter(1);
+        case 0x1F801114:
+            return iop_timers.read_control(1);
+        case 0x1F801118:
+            return iop_timers.read_target(1);
+        case 0x1F801120:
+            return iop_timers.read_counter(2);
+        case 0x1F801124:
+            return iop_timers.read_control(2);
+        case 0x1F801128:
+            return iop_timers.read_target(2);
         case 0x1F801450:
             return 0;
+        case 0x1F801480:
+            return iop_timers.read_counter(3);
+        case 0x1F801484:            
+            return iop_timers.read_control(3);
+        case 0x1F801488:            
+            return iop_timers.read_target(3);
         case 0x1F801490:
             return iop_timers.read_counter(4);
+        case 0x1F801494:
+            return iop_timers.read_control(4);
+        case 0x1F801498:
+            return iop_timers.read_target(4);
         case 0x1F8014A0:
             return iop_timers.read_counter(5);
+        case 0x1F8014A4:
+            return iop_timers.read_control(5);
+        case 0x1F8014A8:
+            return iop_timers.read_target(5);
         case 0x1F801500:
             return iop_dma.get_chan_addr(8);
         case 0x1F801508:
@@ -1076,14 +1152,77 @@ void Emulator::iop_write16(uint32_t address, uint16_t value)
         case 0x1F8010C6:
             iop_dma.set_chan_count(4, value);
             return;
+        case 0x1F801100:
+            iop_timers.write_counter(0, value);
+            return;
+        case 0x1F801104:
+            iop_timers.write_control(0, value);
+            return;
+        case 0x1F801108:
+            iop_timers.write_target(0, value);
+            return;
+        case 0x1F801110:
+            iop_timers.write_counter(1, value);
+            return;
+        case 0x1F801114:
+            iop_timers.write_control(1, value);
+            return;
+        case 0x1F801118:
+            iop_timers.write_target(1, value);
+            return;
+        case 0x1F801120:
+            iop_timers.write_counter(2, value);
+            return;
+        case 0x1F801124:
+            iop_timers.write_control(2, value);
+            return;
+        case 0x1F801128:
+            iop_timers.write_target(2, value);
+            return;
+        case 0x1F801480:
+            iop_timers.write_counter(3, value | (iop_timers.read_counter(3) & 0xFFFF0000));
+            return;
+        case 0x1F801482:
+            iop_timers.write_counter(3, ((uint32_t)value << 16) | (iop_timers.read_counter(3) & 0xFFFF));
+            return;
         case 0x1F801484:
             iop_timers.write_control(3, value);
+            return;
+        case 0x1F801488:
+            iop_timers.write_target(3, value | (iop_timers.read_target(3) & 0xFFFF0000));
+            return;
+        case 0x1F80148A:
+            iop_timers.write_target(3, ((uint32_t)value << 16) | (iop_timers.read_target(3) & 0xFFFF));
+            return;
+        case 0x1F801490:
+            iop_timers.write_counter(4, value | (iop_timers.read_counter(4) & 0xFFFF0000));
+            return;
+        case 0x1F801492:
+            iop_timers.write_counter(4, ((uint32_t)value << 16) | (iop_timers.read_counter(4) & 0xFFFF));
             return;
         case 0x1F801494:
             iop_timers.write_control(4, value);
             return;
+        case 0x1F801498:
+            iop_timers.write_target(4, value | (iop_timers.read_target(4) & 0xFFFF0000));
+            return;
+        case 0x1F80149A:
+            iop_timers.write_target(4, (uint32_t)(value << 16) | (iop_timers.read_target(4) & 0xFFFF));
+            return;
+        case 0x1F8014A0:
+            iop_timers.write_counter(5, value | (iop_timers.read_counter(5) & 0xFFFF0000));
+            return;
+        case 0x1F8014A2:
+            iop_timers.write_counter(5, ((uint32_t)value << 16) | (iop_timers.read_counter(5) & 0xFFFF));
+            return;
         case 0x1F8014A4:
             iop_timers.write_control(5, value);
+            return;
+        case 0x1F8014A8:
+            iop_timers.write_target(5, value | (iop_timers.read_target(5) & 0xFFFF0000));
+            return;
+        case 0x1F8014AA:
+            iop_timers.write_target(5, ((uint32_t)value << 16) | (iop_timers.read_target(5) & 0xFFFF));
             return;
         case 0x1F801504:
             iop_dma.set_chan_size(8, value);
@@ -1213,16 +1352,61 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
         case 0x1F8010F4:
             iop_dma.set_DICR(value);
             return;
+        case 0x1F801100:
+            iop_timers.write_counter(0, value);
+            return;
+        case 0x1F801104:
+            iop_timers.write_control(0, value);
+            return;
+        case 0x1F801108:
+            iop_timers.write_target(0, value);
+            return;
+        case 0x1F801110:
+            iop_timers.write_counter(1, value);
+            return;
+        case 0x1F801114:
+            iop_timers.write_control(1, value);
+            return;
+        case 0x1F801118:
+            iop_timers.write_target(1, value);
+            return;
+        case 0x1F801120:
+            iop_timers.write_counter(2, value);
+            return;
+        case 0x1F801124:
+            iop_timers.write_control(2, value);
+            return;
+        case 0x1F801128:
+            iop_timers.write_target(2, value);
+            return;
         case 0x1F801404:
             return;
         case 0x1F801450:
             //Config reg? Do nothing to prevent log spam
+            return;
+        case 0x1F801480:
+            iop_timers.write_counter(3, value);
+            return;
+        case 0x1F801484:
+            iop_timers.write_control(3, value);
+            return;
+        case 0x1F801488:
+            iop_timers.write_target(3, value);
+            return;
+        case 0x1F801490:
+            iop_timers.write_counter(4, value);
+            return;
+        case 0x1F801494:
+            iop_timers.write_control(4, value);
             return;
         case 0x1F801498:
             iop_timers.write_target(4, value);
             return;
         case 0x1F8014A0:
             iop_timers.write_counter(5, value);
+            return;
+        case 0x1F8014A4:
+            iop_timers.write_control(5, value);
             return;
         case 0x1F8014A8:
             iop_timers.write_target(5, value);
