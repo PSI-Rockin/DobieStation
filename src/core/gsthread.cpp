@@ -442,9 +442,12 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
                 if (reg.PMODE.blend_with_bg)
                     output2 = reg.BGCOLOR;
 
-                int alpha = output1 >> 24;
+                int alpha = (output1 >> 24) * 2;
                 if (reg.PMODE.use_ALP)
                     alpha = reg.PMODE.ALP;
+
+                if (alpha > 0xFF)
+                    alpha = 0xFF;
 
                 uint32_t r1, g1, b1, r2, g2, b2, r, g, b;
                 uint32_t final_color;
@@ -452,18 +455,15 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
                 g1 = (output1 >> 8) & 0xFF; g2 = (output2 >> 8) & 0xFF;
                 b1 = (output1 >> 16) & 0xFF; b2 = (output2 >> 16) & 0xFF;
 
-                r = ((r1 * alpha) + (r2 * (0xFF - alpha))) * 0x100;
-                r /= 0xFF;
+                r = ((r1 * alpha) + (r2 * (0xFF - alpha))) >> 8;
                 if (r > 0xFF)
                     r = 0xFF;
 
-                g = ((g1 * alpha) + (g2 * (0xFF - alpha))) * 0x100;
-                g /= 0xFF;
+                g = ((g1 * alpha) + (g2 * (0xFF - alpha))) >> 8;
                 if (g > 0xFF)
                     g = 0xFF;
 
-                b = ((b1 * alpha) + (g2 * (0xFF - alpha))) * 0x100;
-                b /= 0xFF;
+                b = ((b1 * alpha) + (b2 * (0xFF - alpha))) >> 8;
                 if (b > 0xFF)
                     b = 0xFF;
 
