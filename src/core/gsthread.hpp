@@ -92,6 +92,8 @@ class GraphicsSynthesizerThread
         int frame_count;
         uint8_t* local_mem;
         uint8_t CRT_mode;
+        uint8_t clut_cache[1024];
+        uint32_t CBP0, CBP1;
 
         //CSR/IMR stuff - to be merged into structs
 
@@ -175,15 +177,16 @@ class GraphicsSynthesizerThread
         void write_PSMCT8_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y, uint8_t value);
         void write_PSMCT4_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y, uint8_t value);
 
-        bool depth_test(int32_t x, int32_t y, uint32_t z);
-
         uint8_t get_16bit_alpha(uint16_t color);
         void calculate_LOD(TexLookupInfo& info);
         void tex_lookup(int16_t u, int16_t v, TexLookupInfo& info);
         void tex_lookup_int(int16_t u, int16_t v, TexLookupInfo& info);
         void clut_lookup(uint8_t entry, RGBAQ_REG& tex_color, bool eight_bit);
         void clut_CSM2_lookup(uint8_t entry, RGBAQ_REG& tex_color);
+        void reload_clut(GSContext& context);
+
         void vertex_kick(bool drawing_kick);
+        bool depth_test(int32_t x, int32_t y, uint32_t z);
         void draw_pixel(int32_t x, int32_t y, uint32_t z, RGBAQ_REG& color, bool alpha_blending);
         void render_primitive();
         void render_point();

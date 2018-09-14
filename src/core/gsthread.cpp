@@ -596,9 +596,11 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             break;
         case 0x0006:
             context1.set_tex0(value);
+            reload_clut(context1);
             break;
         case 0x0007:
             context2.set_tex0(value);
+            reload_clut(context2);
             break;
         case 0x0008:
             context1.set_clamp(value);
@@ -634,9 +636,11 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             break;
         case 0x0016:
             context1.set_tex2(value);
+            reload_clut(context1);
             break;
         case 0x0017:
             context2.set_tex2(value);
+            reload_clut(context2);
             break;
         case 0x0018:
             context1.set_xyoffset(value);
@@ -2547,28 +2551,15 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupIn
 
 void GraphicsSynthesizerThread::clut_lookup(uint8_t entry, RGBAQ_REG &tex_color, bool eight_bit)
 {
-    uint32_t x, y;
-    if (eight_bit)
-    {
-        x = entry & 0x7;
-        if (entry & 0x10)
-            x += 8;
-        y = (entry & 0xE0) / 0x10;
-        if (entry & 0x8)
-            y++;
-    }
-    else
-    {
-        x = entry & 0x7;
-        y = entry / 8;
-    }
+    uint32_t clut_addr = current_ctx->tex0.CLUT_offset;
+
     switch (current_ctx->tex0.CLUT_format)
     {
         //PSMCT32
         case 0x00:
         case 0x01:
         {
-            uint32_t color = read_PSMCT32_block(current_ctx->tex0.CLUT_base, 64, x, y);
+            uint32_t color = *(uint32_t*)&clut_cache[((clut_addr + entry) << 2) & 0x3FF];
             tex_color.r = color & 0xFF;
             tex_color.g = (color >> 8) & 0xFF;
             tex_color.b = (color >> 16) & 0xFF;
@@ -2577,18 +2568,10 @@ void GraphicsSynthesizerThread::clut_lookup(uint8_t entry, RGBAQ_REG &tex_color,
             break;
         //PSMCT16
         case 0x02:
-        {
-            uint16_t color = read_PSMCT16_block(current_ctx->tex0.CLUT_base, 64, x, y);
-            tex_color.r = (color & 0x1F) << 3;
-            tex_color.g = ((color >> 5) & 0x1F) << 3;
-            tex_color.b = ((color >> 10) & 0x1F) << 3;
-            tex_color.a = get_16bit_alpha(color);
-        }
-            break;
         //PSMCT16S
         case 0x0A:
         {
-            uint16_t color = read_PSMCT16S_block(current_ctx->tex0.CLUT_base, 64, x, y);
+            uint16_t color = *(uint16_t*)&clut_cache[((clut_addr + entry) << 1) & 0x3FF];
             tex_color.r = (color & 0x1F) << 3;
             tex_color.g = ((color >> 5) & 0x1F) << 3;
             tex_color.b = ((color >> 10) & 0x1F) << 3;
@@ -2607,6 +2590,108 @@ void GraphicsSynthesizerThread::clut_CSM2_lookup(uint8_t entry, RGBAQ_REG &tex_c
     tex_color.g = ((color >> 5) & 0x1F) << 3;
     tex_color.b = ((color >> 10) & 0x1F) << 3;
     tex_color.a = (color & 0x8000) ? 0x80 : 0x00;
+}
+
+void GraphicsSynthesizerThread::reload_clut(GSContext& context)
+{
+    int eight_bit = false;
+    switch (context.tex0.format)
+    {
+        case 0x13: //8-bit textures
+        case 0x1B:
+            eight_bit = true;
+            break;
+        case 0x14: //4-bit textures
+        case 0x24:
+        case 0x2C:
+            eight_bit = false;
+            break;
+        default:
+            if (context.tex0.CLUT_control)
+                Errors::die("[GS_t] Non 4/8-bit texture reloading CLUT!");
+            return;
+    }
+
+    uint32_t clut_addr = context.tex0.CLUT_base;
+    int cache_addr = context.tex0.CLUT_offset;
+    bool reload = false;
+
+    switch (context.tex0.CLUT_control)
+    {
+        case 1: //Load new CLUT
+            reload = true;
+            break;
+        case 2: //Load new CLUT and CBP0
+            reload = true;
+            CBP0 = clut_addr;
+            break;
+        case 3: //Load new CLUT and CBP1
+            reload = true;
+            CBP1 = clut_addr;
+            break;
+        case 4: //Load new CLUT if CBP != CBP0
+            reload = clut_addr != CBP0;
+            break;
+        case 5: //Load new CLUT if CBP != CBP1
+            reload = clut_addr != CBP1;
+            break;
+        default:
+            return;
+    }
+
+    int entries = (eight_bit) ? 256 : 16;
+
+    if (reload)
+    {
+        printf("[GS_t] Reloading CLUT cache!\n");
+        for (int i = 0; i < entries; i++)
+        {
+            uint32_t x, y;
+            if (eight_bit)
+            {
+                x = i & 0x7;
+                if (i & 0x10)
+                    x += 8;
+                y = (i & 0xE0) / 0x10;
+                if (i & 0x8)
+                    y++;
+            }
+            else
+            {
+                x = i & 0x7;
+                y = i / 8;
+            }
+
+            switch (context.tex0.CLUT_format)
+            {
+                case 0x00:
+                case 0x01:
+                {
+                    uint32_t value = read_PSMCT32_block(clut_addr, 64, x, y);
+                    *(uint32_t*)&clut_cache[cache_addr] = value;
+                    //printf("[GS_t] Reload cache $%04X: $%08X\n", cache_addr, value);
+                }
+                    cache_addr += 4;
+                    break;
+                case 0x02:
+                {
+                    uint16_t value = read_PSMCT16_block(clut_addr, 64, x, y);
+                    *(uint16_t*)&clut_cache[cache_addr] = value;
+                }
+                    cache_addr += 2;
+                    break;
+                case 0x0A:
+                {
+                    uint16_t value = read_PSMCT16S_block(clut_addr, 64, x, y);
+                    *(uint16_t*)&clut_cache[cache_addr] = value;
+                }
+                    cache_addr += 2;
+                    break;
+            }
+
+            cache_addr &= 0x3FF;
+        }
+    }
 }
 
 void GraphicsSynthesizerThread::load_state(ifstream *state)
