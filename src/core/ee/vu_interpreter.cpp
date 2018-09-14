@@ -39,7 +39,7 @@ void interpret(VectorUnit &vu, uint32_t upper_instr, uint32_t lower_instr)
         lower(vu, lower_instr);
 
     vu.check_for_FMAC_stall();
-
+    
     //LOI - upper op always executes first
     if (upper_instr & (1 << 31))
     {
@@ -49,13 +49,23 @@ void interpret(VectorUnit &vu, uint32_t upper_instr, uint32_t lower_instr)
     else
     {
         //If the upper op is writing to a reg the lower op is reading from, the lower op executes first
+        //Also used to handle if upper and lower write to the same register, upper gets priority
         int write = vu.decoder.vf_write[0];
+        int write1 = vu.decoder.vf_write[1];
         int read0 = vu.decoder.vf_read0[1];
         int read1 = vu.decoder.vf_read1[1];
-        if (write && (write == read0 || write == read1))
+        if (write && ((write == read0 || write == read1) || (write == write1)))
         {
-            (vu.*lower_op)(lower_instr);
+            vu.backup_vf(false, write);
+
             (vu.*upper_op)(upper_instr);
+
+            vu.backup_vf(true, write);
+            vu.restore_vf(false, write);
+
+            (vu.*lower_op)(lower_instr);
+
+            vu.restore_vf(true, write);
         }
         else
         {
@@ -63,6 +73,15 @@ void interpret(VectorUnit &vu, uint32_t upper_instr, uint32_t lower_instr)
             (vu.*lower_op)(lower_instr);
         }
     }
+
+    if (upper_instr & (1 << 27))
+    {
+        if(vu.read_fbrst() & (1 << (3 + (vu.get_id() * 8))))
+            Errors::die("VU%d Using T-Bit\n", vu.get_id());
+    }
+
+    if (upper_instr & (1 << 29))
+        Errors::die("VU%d Using M-Bit\n", vu.get_id());
 
     if (upper_instr & (1 << 30))
         vu.end_execution();

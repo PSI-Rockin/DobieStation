@@ -62,7 +62,7 @@ class VectorUnit
         bool branch_on;
         bool finish_on;
         bool second_branch_pending;
-        int delay_slot;
+        int branch_delay_slot, ebit_delay_slot;
 
         int XGKICK_cycles;
         uint16_t GIF_addr;
@@ -71,10 +71,13 @@ class VectorUnit
         uint16_t stalled_GIF_addr;
 
         //GPR
+        VU_GPR backup_newgpr;
+        VU_GPR backup_oldgpr;
         VU_GPR gpr[32];
         VU_I int_gpr[16];
 
         //Control registers
+        static uint32_t FBRST;
         uint32_t CMSAR0;
         VU_GPR ACC;
         uint32_t status;
@@ -126,6 +129,10 @@ class VectorUnit
         void mscal(uint32_t addr);
         void end_execution();
         void reset();
+
+        void backup_vf(bool newvf, int index);
+        void restore_vf(bool newvf, int index);
+        uint32_t read_fbrst();
 
         static float convert(uint32_t value);
 
