@@ -1,6 +1,7 @@
 #ifndef SIO2_HPP
 #define SIO2_HPP
 #include <cstdint>
+#include <fstream>
 #include <queue>
 
 enum class SIO_DEVICE
@@ -53,6 +54,8 @@ class SIO2
 
         void set_control(uint32_t value);
         void write_serial(uint8_t value);
+
+
 };
 
 #endif // SIO2_HPP

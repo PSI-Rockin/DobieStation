@@ -4,7 +4,7 @@
 
 #define VER_MAJOR 0
 #define VER_MINOR 0
-#define VER_REV 10
+#define VER_REV 11
 
 using namespace std;
 
@@ -231,6 +231,9 @@ void Cop0::load_state(ifstream &state)
     state.read((char*)&cause, sizeof(cause));
     state.read((char*)&EPC, sizeof(EPC));
     state.read((char*)&ErrorEPC, sizeof(ErrorEPC));
+    state.read((char*)&PCCR, sizeof(PCCR));
+    state.read((char*)&PCR0, sizeof(PCR0));
+    state.read((char*)&PCR1, sizeof(PCR1));
 }
 
 void Cop0::save_state(ofstream &state)
@@ -240,6 +243,9 @@ void Cop0::save_state(ofstream &state)
     state.write((char*)&cause, sizeof(cause));
     state.write((char*)&EPC, sizeof(EPC));
     state.write((char*)&ErrorEPC, sizeof(ErrorEPC));
+    state.write((char*)&PCCR, sizeof(PCCR));
+    state.write((char*)&PCR0, sizeof(PCR0));
+    state.write((char*)&PCR1, sizeof(PCR1));
 }
 
 void Cop1::load_state(ifstream &state)

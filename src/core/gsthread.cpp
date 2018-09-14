@@ -360,23 +360,28 @@ uint16_t convert_color_down(uint32_t col)
     return (r | (g << 5) | (b << 10) | (a << 15));
 }
 
-void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
+uint32_t GraphicsSynthesizerThread::get_CRT_color(DISPFB &dispfb, uint32_t x, uint32_t y)
 {
-    printf("DISPLAY2: (%d, %d) wh: (%d, %d)\n", reg.DISPLAY2.x >> 2, reg.DISPLAY2.y, reg.DISPLAY2.width >> 2, reg.DISPLAY2.height);
-    DISPLAY &currentDisplay = reg.DISPLAY1;
-    DISPFB &currentFB = reg.DISPFB1;
-    if (reg.PMODE.circuit2 == false)
+    switch (dispfb.format)
     {
-        currentDisplay = reg.DISPLAY1;
-        currentFB = reg.DISPFB1;
+        case 0x0:
+            return read_PSMCT32_block(dispfb.frame_base * 4, dispfb.width, x, y);
+        case 0x1://PSMCT24
+            return (read_PSMCT32_block(dispfb.frame_base * 4, dispfb.width, x, y) & 0xFFFFFF) | (1 << 31);
+        case 0x2:
+            return convert_color_up(read_PSMCT16_block(dispfb.frame_base * 4, dispfb.width, x, y));
+        case 0xA:
+            return convert_color_up(read_PSMCT16S_block(dispfb.frame_base * 4, dispfb.width, x, y));
+        default:
+            Errors::die("Unknown framebuffer format (%x)", dispfb.format);
+            return 0;
     }
-    else
-    {
-        currentDisplay = reg.DISPLAY2;
-        currentFB = reg.DISPFB2;
-    }
-    int width = currentDisplay.width >> 2;
-    for (int y = 0; y < currentDisplay.height; y++)
+}
+
+void GraphicsSynthesizerThread::render_single_CRT(uint32_t *target, DISPFB &dispfb, DISPLAY &display)
+{
+    int width = display.width >> 2;
+    for (int y = 0; y < display.height; y++)
     {
         for (int x = 0; x < width; x++)
         {
@@ -385,35 +390,90 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
 
             if (reg.SMODE2.frame_mode && reg.SMODE2.interlaced)
                 pixel_y *= 2;
-            if (pixel_x >= width || pixel_y >= currentDisplay.height)
+            if (pixel_x >= width || pixel_y >= display.height)
                 continue;
-            uint32_t scaled_x = currentFB.x + x;
-            uint32_t scaled_y = currentFB.y + y;
-            scaled_x *= currentFB.width;
-            scaled_x /= width;
-            uint32_t value;
-            switch (currentFB.format)
-            {
-                case 0x0:
-                    value = read_PSMCT32_block(currentFB.frame_base * 4, currentFB.width, scaled_x, scaled_y);
-                    break;
-                case 0x1://PSMCT24
-                    value = read_PSMCT32_block(currentFB.frame_base * 4, currentFB.width, scaled_x, scaled_y);
-                    break;
-                case 0x2:
-                    value = convert_color_up(read_PSMCT16_block(currentFB.frame_base * 4, currentFB.width, scaled_x, scaled_y));
-                    break;
-                case 0xA:
-                    value = convert_color_up(read_PSMCT16S_block(currentFB.frame_base * 4, currentFB.width, scaled_x, scaled_y));
-                    break;
-                default:
-                    Errors::die("Unknown framebuffer format (%x)", currentFB.format);
-            }
-             
+            uint32_t scaled_x = dispfb.x + x;
+            uint32_t scaled_y = dispfb.y + y;
+            scaled_x = (scaled_x * dispfb.width) / width;
+            uint32_t value = get_CRT_color(dispfb, scaled_x, scaled_y);
+
             target[pixel_x + (pixel_y * width)] = value | 0xFF000000;
 
             if (reg.SMODE2.frame_mode && reg.SMODE2.interlaced)
-                target[pixel_x + ((pixel_y + 1)  * width)] = value | 0xFF000000;
+                target[pixel_x + ((pixel_y + 1) * width)] = value | 0xFF000000;
+        }
+    }
+}
+
+void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
+{
+    //Circuit 1 only
+    if (reg.PMODE.circuit1 && !reg.PMODE.circuit2)
+        render_single_CRT(target, reg.DISPFB1, reg.DISPLAY1);
+    //Circuit 2 only
+    else if (!reg.PMODE.circuit1 && reg.PMODE.circuit2)
+        render_single_CRT(target, reg.DISPFB2, reg.DISPLAY2);
+    //Circuits 1 and 2 (merge circuit)
+    else
+    {
+        int width = reg.DISPLAY1.width >> 2;
+        for (int y = 0; y < reg.DISPLAY1.height; y++)
+        {
+            for (int x = 0; x < width; x++)
+            {
+                int pixel_x = x;
+                int pixel_y = y;
+
+                if (reg.SMODE2.frame_mode && reg.SMODE2.interlaced)
+                    pixel_y *= 2;
+                if (pixel_x >= width || pixel_y >= reg.DISPLAY1.height)
+                    continue;
+                uint32_t scaled_x1 = reg.DISPFB1.x + x;
+                uint32_t scaled_x2 = reg.DISPFB2.x + x;
+                uint32_t scaled_y1 = reg.DISPFB1.y + y;
+                uint32_t scaled_y2 = reg.DISPFB2.y + y;
+
+                scaled_x1 = (scaled_x1 * reg.DISPFB1.width) / width;
+                scaled_x2 = (scaled_x2 * reg.DISPFB2.width) / width;
+
+                uint32_t output1 = get_CRT_color(reg.DISPFB1, scaled_x1, scaled_y1);
+                uint32_t output2 = get_CRT_color(reg.DISPFB2, scaled_x2, scaled_y2);
+
+                if (reg.PMODE.blend_with_bg)
+                    output2 = reg.BGCOLOR;
+
+                int alpha = output1 >> 24;
+                if (reg.PMODE.use_ALP)
+                    alpha = reg.PMODE.ALP;
+
+                uint32_t r1, g1, b1, r2, g2, b2, r, g, b;
+                uint32_t final_color;
+                r1 = output1 & 0xFF; r2 = output2 & 0xFF;
+                g1 = (output1 >> 8) & 0xFF; g2 = (output2 >> 8) & 0xFF;
+                b1 = (output1 >> 16) & 0xFF; b2 = (output2 >> 16) & 0xFF;
+
+                r = ((r1 * alpha) + (r2 * (0xFF - alpha))) * 0x100;
+                r /= 0xFF;
+                if (r > 0xFF)
+                    r = 0xFF;
+
+                g = ((g1 * alpha) + (g2 * (0xFF - alpha))) * 0x100;
+                g /= 0xFF;
+                if (g > 0xFF)
+                    g = 0xFF;
+
+                b = ((b1 * alpha) + (g2 * (0xFF - alpha))) * 0x100;
+                b /= 0xFF;
+                if (b > 0xFF)
+                    b = 0xFF;
+
+                final_color = 0xFF000000 | r | (g << 8) | (b << 16);
+
+                target[pixel_x + (pixel_y * width)] = final_color;
+
+                if (reg.SMODE2.frame_mode && reg.SMODE2.interlaced)
+                    target[pixel_x + ((pixel_y + 1) * width)] = final_color;
+            }
         }
     }
 }

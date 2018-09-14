@@ -59,6 +59,10 @@ void GS_REGISTERS::write64_privileged(uint32_t addr, uint64_t value)
             printf("MAGH: %d\n", DISPLAY2.magnify_x);
             printf("MAGV: %d\n", DISPLAY2.magnify_y);
             break;
+        case 0x00E0:
+            printf("[GS_r] Write BGCOLOR: $%08X\n", value);
+            BGCOLOR = value & 0xFFFFFF;
+            break;
         case 0x1000:
             printf("[GS_r] Write64 to GS_CSR: $%08X_%08X\n", value >> 32, value);
             CSR.SIGNAL_generated &= ~(value & 1);
@@ -111,6 +115,10 @@ void GS_REGISTERS::write32_privileged(uint32_t addr, uint32_t value)
             DISPFB2.frame_base = (value & 0x1FF) * 2048;
             DISPFB2.width = ((value >> 9) & 0x3F) * 64;
             DISPFB2.format = (value >> 15) & 0x1F;
+            break;
+        case 0x00E0:
+            printf("[GS_r] Write BGCOLOR: $%08X\n", value);
+            BGCOLOR = value & 0xFFFFFF;
             break;
         case 0x1000:
             printf("[GS_r] Write32 to GS_CSR: $%08X\n", value);
@@ -294,7 +302,7 @@ void GS_REGISTERS::get_inner_resolution(int &w, int &h)
 {
     DISPLAY &currentDisplay = DISPLAY1;
 
-    if (PMODE.circuit2 == false)
+    if (PMODE.circuit1 == true)
     {
         currentDisplay = DISPLAY1;
     }

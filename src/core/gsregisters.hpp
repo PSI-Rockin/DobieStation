@@ -78,8 +78,9 @@ struct GS_REGISTERS
     uint8_t BUSDIR;
     uint8_t CRT_mode;
     GS_SIGLBLID SIGLBLID;
+    uint32_t BGCOLOR;
     
-    //EXTBUF, EXTDATA, EXTWRITE, BGCOLOR not currently implemented
+    //EXTBUF, EXTDATA, EXTWRITE not currently implemented
 
     uint32_t read32_privileged(uint32_t addr);
     uint64_t read64_privileged(uint32_t addr);
