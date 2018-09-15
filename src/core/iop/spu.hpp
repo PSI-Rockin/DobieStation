@@ -65,6 +65,7 @@ class SPU
         void key_on_voice(int v);
         void key_off_voice(int v);
 
+        void spu_check_irq(uint32_t address);
         void spu_irq(int index);
 
         uint16_t read_voice_reg(uint32_t addr);

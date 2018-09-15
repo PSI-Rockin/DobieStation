@@ -48,6 +48,15 @@ void SPU::reset(uint8_t* RAM)
     ENDX = 0;
 }
 
+void SPU::spu_check_irq(uint32_t address)
+{
+    for (int j = 0; j < 2; j++)
+    {
+        if (address == IRQA[j] && (core_att[j] & (1 << 6)))
+            spu_irq(j);
+    }
+}
+
 void SPU::spu_irq(int index)
 {
     if (spdif_irq & (4 << index))
@@ -90,11 +99,8 @@ void SPU::gen_sample()
                 if (loop_start && !voices[i].loop_addr_specified)
                     voices[i].loop_addr = voices[i].current_addr;
             }
-            for (int j = 0; j < 2; j++)
-            {
-                if (voices[i].current_addr == IRQA[j] && (core_att[j] & (1 << 6)))
-                    spu_irq(j);
-            }
+
+            spu_check_irq(voices[i].current_addr);
             voices[i].block_pos++;
             voices[i].current_addr++;
 
@@ -162,12 +168,8 @@ void SPU::write_DMA(uint32_t value)
     RAM[current_addr] = value & 0xFFFF;
     RAM[current_addr + 1] = value >> 16;
 
-    for (int j = 0; j < 2; j++)
-    {
-        if ((current_addr == IRQA[j] || (current_addr + 1) == IRQA[j]) && (core_att[j] & (1 << 6)))
-            spu_irq(j);
-    }
-
+    spu_check_irq(current_addr);
+    spu_check_irq(current_addr+1);
     current_addr += 2;
     current_addr &= 0x000FFFFF;
     status.DMA_busy = true;
@@ -201,12 +203,10 @@ void SPU::process_ADMA()
 uint16_t SPU::read_mem()
 {
     printf("[SPU%d] Read mem $%04X ($%08X)\n", id, RAM[current_addr], current_addr);
-    for (int j = 0; j < 2; j++)
-    {
-        if (current_addr == IRQA[j] && (core_att[j] & (1 << 6)))
-            spu_irq(j);
-    }
+
+    spu_check_irq(current_addr);
     current_addr++;
+
     return RAM[current_addr - 1];
 }
 
@@ -214,11 +214,8 @@ void SPU::write_mem(uint16_t value)
 {
     printf("[SPU%d] Write mem $%04X ($%08X)\n", id, value, current_addr);
     RAM[current_addr] = value;
-    for (int j = 0; j < 2; j++)
-    {
-        if (current_addr == IRQA[j] && (core_att[j] & (1 << 6)))
-            spu_irq(j);
-    }
+    
+    spu_check_irq(current_addr);
     current_addr++;
 }
 
