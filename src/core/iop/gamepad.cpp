@@ -38,6 +38,7 @@ void Gamepad::reset()
     data_count = 0;
     mask[0] = 0xFF;
     mask[1] = 0xFF;
+    mode_lock = 0;
     reset_vibrate();
 }
 
@@ -204,13 +205,20 @@ uint8_t Gamepad::write_SIO(uint8_t value)
         case 'D':
             if (data_count == 3)
             {
-                if (value < 2)
+                if (value < 2 && !mode_lock)
                 {
                     if (value)
                         pad_mode = ANALOG;
                     else
                         pad_mode = DIGITAL;
                 }
+            }
+            else if (data_count == 4)
+            {
+                if (value == 3)
+                    mode_lock = 3;
+                else
+                    mode_lock = 0;
             }
             break;
         case 'F':

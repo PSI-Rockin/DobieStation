@@ -34,6 +34,7 @@ class Gamepad
     private:
         uint8_t command_buffer[25];
         uint8_t rumble_values[8];
+        uint8_t mode_lock;
         uint16_t buttons;
         uint8_t button_pressure[16];
         uint8_t command;
