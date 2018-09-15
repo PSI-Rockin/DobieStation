@@ -53,7 +53,7 @@ class VectorInterface
         UNPACK_Command unpack;
 
         bool vif_ibit_detected;
-        bool vif_stalled;
+        uint8_t vif_stalled;
         bool vif_interrupt;
         bool vif_stop;
         
