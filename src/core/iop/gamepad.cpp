@@ -109,7 +109,7 @@ uint8_t Gamepad::write_SIO(uint8_t value)
                     command_buffer[6] = 0x80;
                     command_buffer[7] = 0x80;
                     command_buffer[8] = 0x80;
-                    if (pad_mode != ANALOG)
+                    if (pad_mode != ANALOG && !config_mode)
                     {
                         //Pressure values?
                         for (int i = 9; i < 21; i++)
