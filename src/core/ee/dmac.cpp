@@ -681,6 +681,12 @@ void DMAC::start_DMA(int index)
 {
     printf("[DMAC] D%d started: $%08X\n", index, channels[index].control);
     int mode = (channels[index].control >> 2) & 0x3;
+    if (mode == 3)
+    {
+        //Strange invalid mode... FFXII sets VIF1 DMA to this mode. Having it mean chain is what works best.
+        channels[index].control &= ~(1 << 3);
+        mode = 1;
+    }
     channels[index].tag_end = !(mode & 0x1); //always end transfers in normal and interleave mode
     switch (mode)
     {
@@ -721,6 +727,16 @@ uint8_t DMAC::read8(uint32_t address)
             break;
         case 0x10009000:
             reg = channels[VIF1].control & 0xFF;
+            break;
+        case 0x10009001:
+            reg = (channels[VIF1].control >> 8) & 0xFF;
+            break;
+        case 0x1000E000:
+            reg = control.master_enable;
+            reg |= control.cycle_stealing << 1;
+            reg |= control.mem_drain_channel << 2;
+            reg |= control.stall_source_channel << 4;
+            reg |= control.stall_dest_channel << 6;
             break;
         default:
             printf("[DMAC] Unrecognized read8 from $%08X\n", address);
@@ -863,6 +879,7 @@ uint32_t DMAC::read32(uint32_t address)
             printf("[DMAC] Unrecognized read32 from $%08X\n", address);
             break;
     }
+    //printf("[DMAC] Read32 $%08X: $%08X\n", address, reg);
     return reg;
 }
 
@@ -877,6 +894,16 @@ void DMAC::write8(uint32_t address, uint8_t value)
         case 0x10009000:
             channels[VIF1].control &= ~0xFF;
             channels[VIF1].control |= value;
+            break;
+        case 0x10009001:
+            write32(0x10009000, (channels[VIF1].control & 0xFFFF00FF) | (value << 8));
+            break;
+        case 0x1000E000:
+            control.master_enable = value & 0x1;
+            control.cycle_stealing = value & 0x2;
+            control.mem_drain_channel = (value >> 2) & 0x3;
+            control.stall_source_channel = (value >> 4) & 0x3;
+            control.stall_dest_channel = (value >> 6) & 0x3;
             break;
         default:
             printf("[DMAC] Unrecognized write8 to $%08X of $%02X\n", address, value);
