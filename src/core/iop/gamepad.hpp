@@ -33,7 +33,7 @@ class Gamepad
 {
     private:
         uint8_t command_buffer[25];
-        uint8_t rumble_values[7];
+        uint8_t rumble_values[8];
         uint16_t buttons;
         uint8_t button_pressure[16];
         uint8_t command;
@@ -54,10 +54,11 @@ class Gamepad
 
         PAD_MODE pad_mode;
         bool config_mode;
+
+        void reset_vibrate();
+        void set_result(const uint8_t* result);
     public:
         Gamepad();
-
-        void set_result(const uint8_t* result);
 
         void reset();
         void press_button(PAD_BUTTON button);

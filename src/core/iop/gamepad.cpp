@@ -38,8 +38,7 @@ void Gamepad::reset()
     data_count = 0;
     mask[0] = 0xFF;
     mask[1] = 0xFF;
-    for (int i = 0; i < 7; i++)
-        rumble_values[i] = 0xFF;
+    reset_vibrate();
 }
 
 void Gamepad::press_button(PAD_BUTTON button)
@@ -59,6 +58,13 @@ void Gamepad::set_result(const uint8_t *result)
     int len = sizeof(result);
     memcpy(command_buffer + 2, result, len);
     command_length = len + 2;
+}
+
+void Gamepad::reset_vibrate()
+{
+    rumble_values[0] = 0x5A;
+    for (int i = 1; i < 8; ++i)
+        rumble_values[i] = 0xFF;
 }
 
 uint8_t Gamepad::start_transfer(uint8_t value)
@@ -156,6 +162,7 @@ uint8_t Gamepad::write_SIO(uint8_t value)
                 return 0xF3;
             case 'D': //0x44 - set mode and lock
                 set_result(set_mode);
+                reset_vibrate();
                 return 0xF3;
             case 'E': //0x45 - query model and mode
                 set_result(query_model_DS2);
@@ -173,6 +180,7 @@ uint8_t Gamepad::write_SIO(uint8_t value)
             case 'M': //0x4D - vibration toggle
                 command_length = 9;
                 memcpy(command_buffer + 2, rumble_values, 7);
+                reset_vibrate();
                 return 0xF3;
             case 'O': //0x4F - set DS2 native mode
                 set_result(native_mode);
