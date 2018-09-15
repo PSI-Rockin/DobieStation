@@ -11,6 +11,12 @@
 
 class GraphicsInterface;
 
+enum VIF_STALL
+{
+    STALL_IBIT = 1,
+    STALL_MSKPATH3 = 2
+};
+
 struct MPG_Command
 {
     uint32_t addr;
@@ -53,7 +59,7 @@ class VectorInterface
         UNPACK_Command unpack;
 
         bool vif_ibit_detected;
-        bool vif_stalled;
+        uint8_t vif_stalled;
         bool vif_interrupt;
         bool vif_stop;
         

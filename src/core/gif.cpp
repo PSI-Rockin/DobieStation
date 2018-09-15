@@ -52,6 +52,7 @@ void GraphicsInterface::write_MODE(uint32_t value)
 {
     intermittent_mode = value & 0x4;
     path3_mode_masked = value & 0x1;
+    resume_path3();
 }
 
 void GraphicsInterface::process_PACKED(uint128_t data)
@@ -188,13 +189,13 @@ void GraphicsInterface::feed_GIF(uint128_t data)
         //Ignore zeroed out packets
         /*if (data1)
         {
-            printf("[GIF] New primitive!\n");
-            printf("NLOOP: $%04X\n", current_tag.NLOOP);
-            printf("EOP: %d\n", current_tag.end_of_packet);
-            printf("Output PRIM: %d PRIM: $%04X\n", current_tag.output_PRIM, current_tag.PRIM);
-            printf("Format: %d\n", current_tag.format);
-            printf("Reg count: %d\n", current_tag.reg_count);
-            printf("Regs: $%08X_$%08X\n", current_tag.regs >> 32, current_tag.regs & 0xFFFFFFFF);
+            printf("[GIF] PATH%d New primitive!\n", active_path);
+            printf("NLOOP: $%04X\n", path[active_path].current_tag.NLOOP);
+            printf("EOP: %d\n", path[active_path].current_tag.end_of_packet);
+            printf("Output PRIM: %d PRIM: $%04X\n", path[active_path].current_tag.output_PRIM, path[active_path].current_tag.PRIM);
+            printf("Format: %d\n", path[active_path].current_tag.format);
+            printf("Reg count: %d\n", path[active_path].current_tag.reg_count);
+            printf("Regs: $%08X_$%08X\n", path[active_path].current_tag.regs >> 32, path[active_path].current_tag.regs & 0xFFFFFFFF);
         }*/
 
         if (path[active_path].current_tag.output_PRIM && path[active_path].current_tag.format != 1)
@@ -226,11 +227,11 @@ void GraphicsInterface::feed_GIF(uint128_t data)
                 printf("[GS] Unrecognized GIFtag format %d\n", path[active_path].current_tag.format);
                 break;
         }
-        if (!path[active_path].current_tag.data_left && path[active_path].current_tag.end_of_packet)
-        {
-            path_status[active_path] = 4;
-            gs->assert_FINISH();
-        }
+    }
+    if (!path[active_path].current_tag.data_left && path[active_path].current_tag.end_of_packet)
+    {
+        path_status[active_path] = 4;
+        gs->assert_FINISH();
     }
 }
 
@@ -249,9 +250,8 @@ bool GraphicsInterface::path3_masked(int index)
     {
         masked = (path_status[3] == 4);
         //printf("[GIF] PATH3 Masked\n");
-        return masked;
     }
-    return false;
+    return masked;
 }
 
 bool GraphicsInterface::interrupt_path3(int index)
@@ -260,7 +260,10 @@ bool GraphicsInterface::interrupt_path3(int index)
     if (active_path != 3)
         return false;
 
-    if ((intermittent_mode && path_status[3] >= 2) || path_status[3] == 4) //IMAGE MODE or IDLE
+    if (index == 3)
+        return true;
+
+    if ((intermittent_mode && path_status[3] >= 2) || path3_masked(3)) //IMAGE MODE or IDLE
     {
         //printf("[GIF] Interrupting PATH3 with PATH%d\n", index);
         deactivate_PATH(3);

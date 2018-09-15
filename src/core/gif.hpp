@@ -90,10 +90,13 @@ inline bool GraphicsInterface::path_activepath3(int index)
 
 inline void GraphicsInterface::resume_path3()
 {
-    if (path3_vif_masked)
+    if (path3_vif_masked || path3_mode_masked)
         return;
-    if (active_path == 3 || (path_queue & (1 << 3)))
+    if (active_path == 3 || (path_queue & (1 << 3)) && path_status[3] == 4)
+    {
+        //printf("[GIF] Resuming PATH3\n");
         path_status[3] = 0; //Force it to be busy so if VIF puts the mask back on quickly, it doesn't instantly mask it
+    }
 }
 
 #endif // GIF_HPP
