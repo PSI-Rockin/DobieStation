@@ -51,7 +51,7 @@ bool VectorInterface::check_vif_stall(uint32_t value)
 
             //Do not stall if the command is MARK
             if (((value >> 24) & 0x7f) != 0x7)
-                vif_stalled |= 0x1;
+                vif_stalled |= STALL_IBIT;
 
             if (get_id())
                 intc->assert_IRQ((int)Interrupt::VIF1);
@@ -61,7 +61,7 @@ bool VectorInterface::check_vif_stall(uint32_t value)
         }
         if (vif_stop)
         {
-            vif_stalled |= 0x1;
+            vif_stalled |= STALL_IBIT;
             return true;
         }
     }
@@ -74,10 +74,10 @@ void VectorInterface::update(int cycles)
     //This allows us to process one quadword per bus cycle
     int runcycles = cycles << 2;
    
-    if (vif_stalled & 0x2)
+    if (vif_stalled & STALL_MSKPATH3)
     {
         gif->resume_path3();
-        vif_stalled &= ~0x2;
+        vif_stalled &= ~STALL_MSKPATH3;
     }
 
     while (!vif_stalled && runcycles--)
@@ -236,7 +236,7 @@ void VectorInterface::decode_cmd(uint32_t value)
             printf("[VIF] MSKPATH3: %d\n", (value >> 15) & 0x1);
             gif->set_path3_vifmask((value >> 15) & 0x1);
             command = 0;
-            vif_stalled |= 0x2;
+            vif_stalled |= STALL_MSKPATH3;
             break;
         case 0x07:
             printf("[VIF] Set MARK: $%08X\n", value);
@@ -915,12 +915,12 @@ void VectorInterface::disasm_micromem()
 uint32_t VectorInterface::get_stat()
 {
     uint32_t reg = 0;
-    reg |= (vif_stalled & 0x1) ? 0 : ((FIFO.size() != 0) * 3);
+    reg |= (vif_stalled & STALL_IBIT) ? 0 : ((FIFO.size() != 0) * 3);
     reg |= vu->is_running() << 2;
     reg |= mark_detected << 6;
     reg |= DBF << 7;
     reg |= vif_stop << 8;
-    reg |= (vif_stalled & 0x1) << 10;
+    reg |= (vif_stalled & STALL_IBIT) << 10;
     reg |= vif_interrupt << 11;
     reg |= ((FIFO.size() + 3) / 4) << 24;
     //printf("[VIF] Get STAT: $%08X\n", reg);
@@ -980,7 +980,7 @@ void VectorInterface::set_fbrst(uint32_t value)
     if (value & 0x8)
     {
         printf("[VIF] VIF%x Resumed\n", get_id());
-        vif_stalled &= ~0x1;
+        vif_stalled &= ~STALL_IBIT;
         vif_interrupt = false;
         vif_stop = false;
     }

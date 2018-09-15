@@ -11,6 +11,12 @@
 
 class GraphicsInterface;
 
+enum VIF_STALL
+{
+    STALL_IBIT = 1,
+    STALL_MSKPATH3 = 2
+};
+
 struct MPG_Command
 {
     uint32_t addr;
