@@ -10,7 +10,8 @@
  * Bit 2 seems to be some sort of finish flag?
  */
 uint16_t SPU::spdif_irq = 0;
-
+uint16_t SPU::core_att[2];
+uint32_t SPU::IRQA[2];
 SPU::SPU(int id, Emulator* e) : id(id), e(e)
 { 
 
@@ -23,7 +24,7 @@ void SPU::reset(uint8_t* RAM)
     status.DMA_finished = false;
     transfer_addr = 0;
     current_addr = 0;
-    core_att = 0;
+    core_att[id-1] = 0;
     autodma_ctrl = 0x0;
     ADMA_left = 0;
     input_pos = 0;
@@ -42,18 +43,27 @@ void SPU::reset(uint8_t* RAM)
         voices[i].loop_addr_specified = false;
     }
 
-    IRQA = 0x800;
+    IRQA[id-1] = 0x800;
 
     ENDX = 0;
 }
 
-void SPU::spu_irq()
+void SPU::spu_check_irq(uint32_t address)
 {
-    if (spdif_irq & (2 << id))
+    for (int j = 0; j < 2; j++)
+    {
+        if (address == IRQA[j] && (core_att[j] & (1 << 6)))
+            spu_irq(j);
+    }
+}
+
+void SPU::spu_irq(int index)
+{
+    if (spdif_irq & (4 << index))
         return;
 
-    printf("[SPU%d] IRQA interrupt!\n", id);
-    spdif_irq |= 2 << id;
+    printf("[SPU%d] IRQA interrupt!\n", index);
+    spdif_irq |= 4 << index;
     e->iop_request_IRQ(9);
 }
 
@@ -89,8 +99,8 @@ void SPU::gen_sample()
                 if (loop_start && !voices[i].loop_addr_specified)
                     voices[i].loop_addr = voices[i].current_addr;
             }
-            if (voices[i].current_addr == IRQA && (core_att & (1 << 6)))
-                spu_irq();
+
+            spu_check_irq(voices[i].current_addr);
             voices[i].block_pos++;
             voices[i].current_addr++;
 
@@ -158,9 +168,8 @@ void SPU::write_DMA(uint32_t value)
     RAM[current_addr] = value & 0xFFFF;
     RAM[current_addr + 1] = value >> 16;
 
-    if ((current_addr == IRQA || (current_addr + 1) == IRQA) && (core_att & (1 << 6)))
-        spu_irq();
-
+    spu_check_irq(current_addr);
+    spu_check_irq(current_addr+1);
     current_addr += 2;
     current_addr &= 0x000FFFFF;
     status.DMA_busy = true;
@@ -194,9 +203,10 @@ void SPU::process_ADMA()
 uint16_t SPU::read_mem()
 {
     printf("[SPU%d] Read mem $%04X ($%08X)\n", id, RAM[current_addr], current_addr);
-    if (current_addr == IRQA && (core_att & (1 << 6)))
-        spu_irq();
+
+    spu_check_irq(current_addr);
     current_addr++;
+
     return RAM[current_addr - 1];
 }
 
@@ -204,8 +214,8 @@ void SPU::write_mem(uint16_t value)
 {
     printf("[SPU%d] Write mem $%04X ($%08X)\n", id, value, current_addr);
     RAM[current_addr] = value;
-    if (current_addr == IRQA && (core_att & (1 << 6)))
-        spu_irq();
+    
+    spu_check_irq(current_addr);
     current_addr++;
 }
 
@@ -283,7 +293,7 @@ uint16_t SPU::read16(uint32_t addr)
             return voice_mixwet_right & 0xFFFF;
         case 0x19A:
             printf("[SPU%d] Read Core Att\n", id);
-            return core_att;
+            return core_att[id-1];
         case 0x1A0:
             printf("[SPU%d] Read KON1: $%04X\n", id, (key_off >> 16));
             return (key_on >> 16);
@@ -455,12 +465,12 @@ void SPU::write16(uint32_t addr, uint16_t value)
             break;
         case 0x19A:
             printf("[SPU%d] Write Core Att: $%04X\n", id, value);
-            if (core_att & (1 << 6))
+            if (core_att[id - 1] & (1 << 6))
             {
                 if (!(value & (1 << 6)))
                     spdif_irq &= ~(2 << id);
             }
-            core_att = value & 0x7FFF;
+            core_att[id - 1] = value & 0x7FFF;
             if (value & (1 << 15))
             {
                 status.DMA_finished = false;
@@ -469,13 +479,13 @@ void SPU::write16(uint32_t addr, uint16_t value)
             break;
         case 0x19C:
             printf("[SPU%d] Write IRQA_H: $%04X\n", id, value);
-            IRQA &= 0xFFFF;
-            IRQA |= (value & 0x3F) << 16;
+            IRQA[id - 1] &= 0xFFFF;
+            IRQA[id - 1] |= (value & 0x3F) << 16;
             break;
         case 0x19E:
             printf("[SPU%d] Write IRQA_L: $%04X\n", id, value);
-            IRQA &= ~0xFFFF;
-            IRQA |= value & 0xFFFF;
+            IRQA[id - 1] &= ~0xFFFF;
+            IRQA[id - 1] |= value & 0xFFFF;
             break;
         case 0x1A0:
             printf("[SPU%d] Write KON0: $%04X\n", id, value);

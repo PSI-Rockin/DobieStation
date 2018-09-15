@@ -35,7 +35,7 @@ class SPU
 
         uint16_t* RAM;
         Voice voices[24];
-        uint16_t core_att;
+        static uint16_t core_att[2];
         SPU_STAT status;
 
         static uint16_t spdif_irq;
@@ -55,7 +55,7 @@ class SPU
 
         int cycles;
 
-        uint32_t IRQA;
+        static uint32_t IRQA[2];
         uint32_t ENDX;
         uint32_t key_on;
         uint32_t key_off;
@@ -65,7 +65,8 @@ class SPU
         void key_on_voice(int v);
         void key_off_voice(int v);
 
-        void spu_irq();
+        void spu_check_irq(uint32_t address);
+        void spu_irq(int index);
 
         uint16_t read_voice_reg(uint32_t addr);
         void write_voice_reg(uint32_t addr, uint16_t value);
