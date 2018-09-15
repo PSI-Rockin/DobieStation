@@ -45,11 +45,13 @@ void Gamepad::reset()
 void Gamepad::press_button(PAD_BUTTON button)
 {
     buttons &= ~(1 << (int)button);
+    button_pressure[(int)button] = 0xFF;
 }
 
 void Gamepad::release_button(PAD_BUTTON button)
 {
     buttons |= 1 << (int)button;
+    button_pressure[(int)button] = 0;
 }
 
 void Gamepad::set_result(const uint8_t *result)
@@ -110,9 +112,20 @@ uint8_t Gamepad::write_SIO(uint8_t value)
                     command_buffer[8] = 0x80;
                     if (pad_mode != ANALOG && !config_mode)
                     {
-                        //Pressure values?
-                        for (int i = 9; i < 21; i++)
-                            command_buffer[i] = 0x0;
+                        command_buffer[9] = button_pressure[(int)PAD_BUTTON::RIGHT];
+                        command_buffer[10] = button_pressure[(int)PAD_BUTTON::LEFT];
+                        command_buffer[11] = button_pressure[(int)PAD_BUTTON::UP];
+                        command_buffer[12] = button_pressure[(int)PAD_BUTTON::DOWN];
+
+                        command_buffer[13] = button_pressure[(int)PAD_BUTTON::TRIANGLE];
+                        command_buffer[14] = button_pressure[(int)PAD_BUTTON::CIRCLE];
+                        command_buffer[15] = button_pressure[(int)PAD_BUTTON::CROSS];
+                        command_buffer[16] = button_pressure[(int)PAD_BUTTON::SQUARE];
+
+                        command_buffer[17] = button_pressure[(int)PAD_BUTTON::L1];
+                        command_buffer[18] = button_pressure[(int)PAD_BUTTON::R1];
+                        command_buffer[19] = button_pressure[(int)PAD_BUTTON::L2];
+                        command_buffer[20] = button_pressure[(int)PAD_BUTTON::R2];
                         command_length = 21;
                     }
                 }
