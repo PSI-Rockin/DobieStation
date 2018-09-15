@@ -881,6 +881,21 @@ void VectorUnit::erleng(uint32_t instr)
     printf("[VU] ERLENG: %f (%d)\n", P.f, _fs_);
 }
 
+void VectorUnit::ersadd(uint32_t instr)
+{
+    if (!id)
+    {
+        Errors::die("[VU] ERSADD called on VU0!");
+    }
+
+    //P = 1 / (x^2 + y^2 + z^2)
+    P.f = pow(convert(gpr[_fs_].u[0]), 2) + pow(convert(gpr[_fs_].u[1]), 2) + pow(convert(gpr[_fs_].u[2]), 2);
+    if (P.f != 0)
+        P.f = 1.0f / P.f;
+
+    printf("[VU] ERSADD: %f (%d)\n", P.f, _fs_);
+}
+
 void VectorUnit::ersqrt(uint32_t instr)
 {
     if (!id)

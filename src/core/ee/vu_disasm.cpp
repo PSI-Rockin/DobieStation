@@ -457,6 +457,8 @@ string lower1_special(uint32_t PC, uint32_t instr)
             return xitop(instr);
         case 0x6C:
             return xgkick(instr);
+        case 0x71:
+            return ersadd(instr);
         case 0x72:
             return eleng(instr);
         case 0x73:
@@ -686,6 +688,14 @@ string xgkick(uint32_t instr)
     stringstream output;
     uint32_t is = (instr >> 11) & 0x1F;
     output << "xgkick vi" << is;
+    return output.str();
+}
+
+string ersadd(uint32_t instr)
+{
+    stringstream output;
+    uint32_t source = (instr >> 11) & 0x1F;
+    output << "ersadd P, vf" << source;
     return output.str();
 }
 
