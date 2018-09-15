@@ -1,5 +1,5 @@
-#include <cstdio>
 #include <cstdlib>
+#include <cstdio>
 #include <cstring>
 #include "gamepad.hpp"
 #include "../errors.hpp"
@@ -34,7 +34,6 @@ void Gamepad::reset()
     buttons = 0xFFFF;
     command_length = 0;
     pad_mode = DIGITAL;
-    halfwords_transfer = 1;
     command = 0;
     data_count = 0;
     mask[0] = 0xFF;
@@ -197,7 +196,7 @@ uint8_t Gamepad::write_SIO(uint8_t value)
             if (data_count == 3)
             {
                 if (value < 2)
-                    set_result(query_act[1]);
+                    set_result(query_act[value]);
             }
             break;
         case 'L':

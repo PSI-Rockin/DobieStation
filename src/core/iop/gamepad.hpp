@@ -51,11 +51,8 @@ class Gamepad
         const static uint8_t query_mode[7];
         const static uint8_t native_mode[7];
 
-        uint8_t LED_value;
-
         PAD_MODE pad_mode;
         bool config_mode;
-        int halfwords_transfer;
     public:
         Gamepad();
 
