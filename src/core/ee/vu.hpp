@@ -43,12 +43,14 @@ struct DecodedRegs
 };
 
 class GraphicsInterface;
+class Emulator;
 
 class VectorUnit
 {
     private:
         GraphicsInterface* gif;
         int id;
+        Emulator* e;
 
         uint64_t cycle_count;
 
@@ -112,9 +114,13 @@ class VectorUnit
         void print_vectors(uint8_t a, uint8_t b);
         float convert();
     public:
-        VectorUnit(int id);
+        VectorUnit(int id, Emulator* e);
 
         DecodedRegs decoder;
+
+        void clear_interlock();
+        bool check_interlock();
+        bool is_interlocked();
 
         void set_TOP_regs(uint16_t* TOP, uint16_t* ITOP);
         void set_GIF(GraphicsInterface* gif);
@@ -143,6 +149,7 @@ class VectorUnit
 
         bool is_running();
         uint16_t get_PC();
+        void set_PC(uint32_t newPC);
         uint32_t get_gpr_u(int index, int field);
         uint16_t get_int(int index);
         int get_id();
@@ -332,6 +339,11 @@ inline int VectorUnit::get_id()
 inline uint16_t VectorUnit::get_PC()
 {
     return PC;
+}
+
+inline void VectorUnit::set_PC(uint32_t newPC)
+{
+    PC = newPC;
 }
 
 inline uint32_t VectorUnit::get_gpr_u(int index, int field)

@@ -66,6 +66,9 @@ class EmotionEngine
         uint64_t get_HI();
         uint64_t get_HI1();
         uint64_t get_SA();
+        bool check_interlock();
+        void clear_interlock();
+        bool vu0_wait(bool is_interlocked);
 
         uint8_t read8(uint32_t address);
         uint16_t read16(uint32_t address);
@@ -83,8 +86,8 @@ class EmotionEngine
         void jp(uint32_t new_addr);
         void branch(bool condition, int offset);
         void branch_likely(bool condition, int offset);
-        void cfc(int cop_id, int reg, int cop_reg);
-        void ctc(int cop_id, int reg, int cop_reg);
+        void cfc(int cop_id, int reg, int cop_reg, uint32_t instruction);
+        void ctc(int cop_id, int reg, int cop_reg, uint32_t instruction);
         void mfc(int cop_id, int reg, int cop_reg);
         void mtc(int cop_id, int reg, int cop_reg);
         void lwc1(uint32_t addr, int index);
@@ -134,7 +137,7 @@ class EmotionEngine
 
         void qmfc2(int dest, int cop_reg);
         void qmtc2(int source, int cop_reg);
-        void cop2_special(uint32_t instruction);
+        void cop2_special(EmotionEngine &cpu, uint32_t instruction);
 
         void load_state(std::ifstream& state);
         void save_state(std::ofstream& state);

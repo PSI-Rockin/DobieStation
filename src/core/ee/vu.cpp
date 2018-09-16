@@ -4,6 +4,7 @@
 #include "vu.hpp"
 #include "vu_interpreter.hpp"
 
+#include "../emulator.hpp"
 #include "../errors.hpp"
 #include "../gif.hpp"
 
@@ -32,7 +33,7 @@
 
 uint32_t VectorUnit::FBRST = 0;
 
-VectorUnit::VectorUnit(int id) : id(id), gif(nullptr)
+VectorUnit::VectorUnit(int id, Emulator* e) : id(id), e(e), gif(nullptr)
 {
     gpr[0].f[0] = 0.0;
     gpr[0].f[1] = 0.0;
@@ -86,6 +87,20 @@ void VectorUnit::reset()
     }
 }
 
+void VectorUnit::clear_interlock()
+{
+    e->clear_cop2_interlock();
+}
+
+bool VectorUnit::check_interlock()
+{
+    return e->interlock_cop2_check(false);
+}
+
+bool VectorUnit::is_interlocked()
+{
+    return e->check_cop2_interlock();
+}
 void VectorUnit::set_TOP_regs(uint16_t *TOP, uint16_t *ITOP)
 {
     VIF_TOP = TOP;
@@ -350,7 +365,7 @@ float VectorUnit::update_mac_flags(float value, int index)
         //Overflow
         case 255:
             new_MAC_flags |= 0x1000 << flag_id;
-            new_MAC_flags &= ~(0x100 << flag_id);
+            new_MAC_flags &= ~(0x101 << flag_id);
             value_u = (value_u & 0x80000000) | 0x7F7FFFFF;
             break;
         //Clear all but sign
@@ -446,6 +461,7 @@ void VectorUnit::print_vectors(uint8_t a, uint8_t b)
     printf("\n");
 }
 
+
 /**
  * Code taken from PCSX2 and adapted to DobieStation
  * https://github.com/PCSX2/pcsx2/blob/1292cd505efe7c68ab87880b4fd6809a96da703c/pcsx2/VUops.cpp#L1795
@@ -520,7 +536,7 @@ void VectorUnit::ctc(int index, uint32_t value)
         case 28:
             if (value & 0x2 && id == 0)
                 reset();
-            FBRST = value & ~0x33;
+            FBRST = value & ~0x303;
             break;
         default:
             printf("[COP2] Unrecognized ctc2 of $%08X to reg %d\n", value, index);

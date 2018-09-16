@@ -195,6 +195,26 @@ void EmotionEngine::set_disassembly(bool dis)
     can_disassemble = dis;
 }
 
+void EmotionEngine::clear_interlock()
+{
+    e->clear_cop2_interlock();
+}
+
+bool EmotionEngine::vu0_wait(bool is_interlocked)
+{
+    if(is_interlocked)
+        e->interlock_cop2_check(true);
+    return vu0->is_running();
+}
+
+bool EmotionEngine::check_interlock()
+{
+    if (!vu0->is_running())
+        return false;
+
+    return e->interlock_cop2_check(true);
+}
+
 uint32_t EmotionEngine::get_PC()
 {
     return PC;
@@ -434,7 +454,7 @@ void EmotionEngine::mtc(int cop_id, int reg, int cop_reg)
     }
 }
 
-void EmotionEngine::cfc(int cop_id, int reg, int cop_reg)
+void EmotionEngine::cfc(int cop_id, int reg, int cop_reg, uint32_t instruction)
 {
     int32_t bark = 0;
     switch (cop_id)
@@ -443,6 +463,16 @@ void EmotionEngine::cfc(int cop_id, int reg, int cop_reg)
             bark = (int32_t)fpu->cfc(cop_reg);
             break;
         case 2:
+            int interlock = instruction & 0x1;
+            if (interlock)
+            {
+                if (vu0_wait(true))
+                {
+                    set_PC(get_PC() - 4);
+                    return;
+                }
+                clear_interlock();
+            }
             if (cop_reg == 29)
             {
                 bark = vu0->is_running();
@@ -455,7 +485,7 @@ void EmotionEngine::cfc(int cop_id, int reg, int cop_reg)
     set_gpr<int64_t>(reg, bark);
 }
 
-void EmotionEngine::ctc(int cop_id, int reg, int cop_reg)
+void EmotionEngine::ctc(int cop_id, int reg, int cop_reg, uint32_t instruction)
 {
     uint32_t bark = get_gpr<uint32_t>(reg);
     switch (cop_id)
@@ -464,6 +494,16 @@ void EmotionEngine::ctc(int cop_id, int reg, int cop_reg)
             fpu->ctc(cop_reg, bark);
             break;
         case 2:
+            int interlock = instruction & 0x1;
+            if (interlock)
+            {
+                if (check_interlock())
+                {
+                    set_PC(get_PC() - 4);
+                    return;
+                }
+                clear_interlock();
+            }
             vu0->ctc(cop_reg, bark);
             break;
     }
@@ -865,7 +905,7 @@ void EmotionEngine::qmtc2(int source, int cop_reg)
     }
 }
 
-void EmotionEngine::cop2_special(uint32_t instruction)
+void EmotionEngine::cop2_special(EmotionEngine &cpu, uint32_t instruction)
 {
-    EmotionInterpreter::cop2_special(*vu0, instruction);
+    EmotionInterpreter::cop2_special(cpu, *vu0, instruction);
 }

@@ -802,7 +802,7 @@ void EmotionInterpreter::cop(EmotionEngine &cpu, uint32_t instruction)
     uint8_t cop_id = ((instruction >> 26) & 0x3);
     if (cop_id == 2 && op >= 0x10)
     {
-        cpu.cop2_special(instruction);
+        cpu.cop2_special(cpu, instruction);
         return;
     }
     switch (op | (cop_id * 0x100))
@@ -916,7 +916,7 @@ void EmotionInterpreter::cop_cfc(EmotionEngine &cpu, uint32_t instruction)
     int cop_id = (instruction >> 26) & 0x3;
     int emotion_reg = (instruction >> 16) & 0x1F;
     int cop_reg = (instruction >> 11) & 0x1F;
-    cpu.cfc(cop_id, emotion_reg, cop_reg);
+    cpu.cfc(cop_id, emotion_reg, cop_reg, instruction);
 }
 
 void EmotionInterpreter::cop_ctc(EmotionEngine &cpu, uint32_t instruction)
@@ -924,7 +924,7 @@ void EmotionInterpreter::cop_ctc(EmotionEngine &cpu, uint32_t instruction)
     int cop_id = (instruction >> 26) & 0x3;
     int emotion_reg = (instruction >> 16) & 0x1F;
     int cop_reg = (instruction >> 11) & 0x1F;
-    cpu.ctc(cop_id, emotion_reg, cop_reg);
+    cpu.ctc(cop_id, emotion_reg, cop_reg, instruction);
 }
 
 void EmotionInterpreter::cop_bc0(EmotionEngine &cpu, uint32_t instruction)
@@ -944,6 +944,16 @@ void EmotionInterpreter::cop2_qmfc2(EmotionEngine &cpu, uint32_t instruction)
 {
     int dest = (instruction >> 16) & 0x1F;
     int cop_reg = (instruction >> 11) & 0x1F;
+    int interlock = (instruction & 0x1);
+    if (interlock)
+    {
+        if (cpu.vu0_wait(true))
+        {
+            cpu.set_PC(cpu.get_PC() - 4);
+            return;
+        }
+        cpu.clear_interlock();
+    }
     cpu.qmfc2(dest, cop_reg);
 }
 
@@ -951,6 +961,18 @@ void EmotionInterpreter::cop2_qmtc2(EmotionEngine &cpu, uint32_t instruction)
 {
     int source = (instruction >> 16) & 0x1F;
     int cop_reg = (instruction >> 11) & 0x1F;
+    int interlock = (instruction & 0x1);
+
+    if (interlock)
+    {
+        if (cpu.check_interlock())
+        {
+            cpu.set_PC(cpu.get_PC() - 4);
+            return;
+        }
+        cpu.clear_interlock();
+    }
+
     cpu.qmtc2(source, cop_reg);
 }
 
