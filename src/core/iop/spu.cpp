@@ -137,16 +137,6 @@ void SPU::gen_sample()
     }
 }
 
-bool SPU::running_ADMA()
-{
-    return (autodma_ctrl & (1 << (id - 1)));
-}
-
-bool SPU::can_write_ADMA()
-{
-    return (input_pos <= 128 || input_pos >= 384) && (ADMA_left < 0x400);
-}
-
 void SPU::finish_DMA()
 {
     status.DMA_finished = true;
