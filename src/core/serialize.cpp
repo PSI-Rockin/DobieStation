@@ -4,7 +4,7 @@
 
 #define VER_MAJOR 0
 #define VER_MINOR 0
-#define VER_REV 12
+#define VER_REV 13
 
 using namespace std;
 
@@ -197,11 +197,12 @@ void EmotionEngine::load_state(ifstream &state)
     state.read((char*)&new_PC, sizeof(uint32_t));
     state.read((char*)&SA, sizeof(uint64_t));
 
-    state.read((char*)&increment_PC, sizeof(bool));
-    state.read((char*)&branch_on, sizeof(bool));
-    state.read((char*)&delay_slot, sizeof(int));
+    //state.read((char*)&IRQ_raised, sizeof(IRQ_raised));
+    state.read((char*)&wait_for_IRQ, sizeof(wait_for_IRQ));
+    state.read((char*)&branch_on, sizeof(branch_on));
+    state.read((char*)&delay_slot, sizeof(delay_slot));
 
-    state.read((char*)&deci2size, sizeof(int));
+    state.read((char*)&deci2size, sizeof(deci2size));
     state.read((char*)&deci2handlers, sizeof(Deci2Handler) * deci2size);
 }
 
@@ -216,11 +217,12 @@ void EmotionEngine::save_state(ofstream &state)
     state.write((char*)&new_PC, sizeof(uint32_t));
     state.write((char*)&SA, sizeof(uint64_t));
 
-    state.write((char*)&increment_PC, sizeof(bool));
-    state.write((char*)&branch_on, sizeof(bool));
-    state.write((char*)&delay_slot, sizeof(int));
+    //state.write((char*)&IRQ_raised, sizeof(IRQ_raised));
+    state.write((char*)&wait_for_IRQ, sizeof(wait_for_IRQ));
+    state.write((char*)&branch_on, sizeof(branch_on));
+    state.write((char*)&delay_slot, sizeof(delay_slot));
 
-    state.write((char*)&deci2size, sizeof(int));
+    state.write((char*)&deci2size, sizeof(deci2size));
     state.write((char*)&deci2handlers, sizeof(Deci2Handler) * deci2size);
 }
 
@@ -274,7 +276,7 @@ void IOP::load_state(ifstream &state)
 
     state.read((char*)&branch_delay, sizeof(branch_delay));
     state.read((char*)&will_branch, sizeof(branch_delay));
-    state.read((char*)&inc_PC, sizeof(inc_PC));
+    state.read((char*)&wait_for_IRQ, sizeof(wait_for_IRQ));
 
     //COP0
     state.read((char*)&cop0.status, sizeof(cop0.status));
@@ -292,7 +294,7 @@ void IOP::save_state(ofstream &state)
 
     state.write((char*)&branch_delay, sizeof(branch_delay));
     state.write((char*)&will_branch, sizeof(branch_delay));
-    state.write((char*)&inc_PC, sizeof(inc_PC));
+    state.write((char*)&wait_for_IRQ, sizeof(wait_for_IRQ));
 
     //COP0
     state.write((char*)&cop0.status, sizeof(cop0.status));
@@ -413,12 +415,16 @@ void INTC::load_state(ifstream &state)
 {
     state.read((char*)&INTC_MASK, sizeof(INTC_MASK));
     state.read((char*)&INTC_STAT, sizeof(INTC_STAT));
+    state.read((char*)&stat_speedhack_active, sizeof(stat_speedhack_active));
+    state.read((char*)&read_stat_count, sizeof(read_stat_count));
 }
 
 void INTC::save_state(ofstream &state)
 {
     state.write((char*)&INTC_MASK, sizeof(INTC_MASK));
     state.write((char*)&INTC_STAT, sizeof(INTC_STAT));
+    state.write((char*)&stat_speedhack_active, sizeof(stat_speedhack_active));
+    state.write((char*)&read_stat_count, sizeof(read_stat_count));
 }
 
 void EmotionTiming::load_state(ifstream &state)
@@ -434,11 +440,15 @@ void EmotionTiming::save_state(ofstream &state)
 void IOPTiming::load_state(ifstream &state)
 {
     state.read((char*)&timers, sizeof(timers));
+    state.read((char*)&cycle_count, sizeof(cycle_count));
+    state.read((char*)&next_event, sizeof(next_event));
 }
 
 void IOPTiming::save_state(ofstream &state)
 {
     state.write((char*)&timers, sizeof(timers));
+    state.write((char*)&cycle_count, sizeof(cycle_count));
+    state.write((char*)&next_event, sizeof(next_event));
 }
 
 void DMAC::load_state(ifstream &state)

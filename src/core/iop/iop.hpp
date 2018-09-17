@@ -21,7 +21,7 @@ class IOP
         int branch_delay;
         bool can_disassemble;
         bool will_branch;
-        bool inc_PC;
+        bool wait_for_IRQ;
 
         uint32_t translate_addr(uint32_t addr);
     public:
@@ -29,7 +29,9 @@ class IOP
         static const char* REG(int id);
 
         void reset();
-        void run();
+        void run(int cycles);
+        void halt();
+        void unhalt();
         void print_state();
         void set_disassembly(bool dis);
 
@@ -65,6 +67,16 @@ class IOP
         void load_state(std::ifstream& state);
         void save_state(std::ofstream& state);
 };
+
+inline void IOP::halt()
+{
+    wait_for_IRQ = true;
+}
+
+inline void IOP::unhalt()
+{
+    wait_for_IRQ = false;
+}
 
 inline uint32_t IOP::get_PC()
 {

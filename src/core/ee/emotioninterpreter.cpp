@@ -5,8 +5,6 @@
 
 void EmotionInterpreter::interpret(EmotionEngine &cpu, uint32_t instruction)
 {
-    if (!instruction)
-        return;
     int op = instruction >> 26;
     switch (op)
     {

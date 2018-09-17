@@ -1,6 +1,7 @@
+#include <algorithm>
 #include <cstdio>
-#include "../emulator.hpp"
 #include "iop_timers.hpp"
+#include "../emulator.hpp"
 #include "../errors.hpp"
 
 IOPTiming::IOPTiming(Emulator* e) : e(e)
@@ -15,7 +16,111 @@ void IOPTiming::reset()
     {
         timers[i].counter = 0;
         timers[i].clocks = 0;
-        write_control(i, 0);
+        timers[i].clock_scale = 1;
+        timers[i].control.gate_mode = 0;
+        timers[i].control.use_gate = 0;
+        timers[i].last_update = 0;
+        timers[i].control.zero_return = false;
+        timers[i].control.compare_interrupt_enabled = false;
+        timers[i].control.overflow_interrupt_enabled = false;
+        timers[i].control.repeat_int = false;
+        timers[i].control.toggle_int = false;
+        timers[i].control.int_enable = false;
+        timers[i].control.extern_signal = false;
+        timers[i].control.compare_interrupt = false;
+        timers[i].control.overflow_interrupt = false;
+    }
+
+    cycle_count = 0;
+    next_event = 0xFFFFFFFF;
+}
+
+void IOPTiming::update_timers()
+{
+    for (int i = 0; i < 6; i++)
+    {
+        uint64_t delta = cycle_count - timers[i].last_update;
+        uint64_t counter_delta = delta / timers[i].clock_scale;
+
+        //Keep track of cycles between counter updates
+        if (timers[i].clock_scale > 1)
+        {
+            uint64_t clock_delta = delta & (timers[i].clock_scale - 1);
+
+            timers[i].clocks += clock_delta;
+            if (timers[i].clocks > timers[i].clock_scale)
+            {
+                timers[i].clocks -= timers[i].clock_scale;
+                counter_delta++;
+            }
+        }
+
+        //Target check
+        if (timers[i].counter < timers[i].target && timers[i].counter + counter_delta >= timers[i].target)
+        {
+            timers[i].control.compare_interrupt = true;
+            if (timers[i].control.compare_interrupt_enabled)
+            {
+                IRQ_test(i, false);
+                if (timers[i].control.zero_return)
+                    timers[i].counter = 0;
+            }
+        }
+
+        timers[i].counter += counter_delta;
+
+        //Overflow check
+        uint32_t overflow = (i > 2) ? 0xFFFFFFFF : 0xFFFF;
+        if (timers[i].counter > overflow)
+        {
+            while (timers[i].counter > overflow)
+                timers[i].counter -= overflow;
+            if (timers[i].control.overflow_interrupt_enabled)
+            {
+                IRQ_test(i, true);
+            }
+        }
+
+        timers[i].last_update = cycle_count;
+    }
+}
+
+void IOPTiming::reschedule()
+{
+    uint64_t next_event_delta = 0x100000;
+    for (int i = 0; i < 6; i++)
+    {
+        uint64_t overflow_mask = (i > 2) ? 0xFFFFFFFF : 0xFFFF;
+        uint64_t overflow_delta = ((overflow_mask - timers[i].counter) * timers[i].clock_scale) - timers[i].clocks;
+
+        uint64_t target_delta = 0xFFFFFFFF;
+
+        //Don't calculate target delta if the counter is higher, as overflow delta will be reached next
+        if (timers[i].target > timers[i].counter)
+            target_delta = ((timers[i].target - timers[i].counter) * timers[i].clock_scale) - timers[i].clocks;
+
+        next_event_delta = std::min({next_event_delta, overflow_delta, target_delta});
+    }
+
+    next_event = cycle_count + next_event_delta;
+}
+
+void IOPTiming::run(int cycles)
+{
+    /*while (cycles--)
+    {
+        for (int i = 0; i < 6; i++)
+        {
+            timers[i].clocks++;
+            if (timers[i].clocks >= timers[i].clock_scale)
+                count_up(i, timers[i].clock_scale);
+        }
+    }*/
+    cycle_count += cycles;
+    if (cycle_count >= next_event)
+    {
+        update_timers();
+        reschedule();
     }
 }
 
@@ -34,8 +139,8 @@ void IOPTiming::count_up(int index, int cycles_per_count)
         }
     }
 
+    //Overflow check
     uint32_t overflow = (index > 2) ? 0xFFFFFFFF : 0xFFFF;
-
     if (timers[index].counter > overflow)
     {
         timers[index].counter -= overflow;
@@ -43,17 +148,6 @@ void IOPTiming::count_up(int index, int cycles_per_count)
         {
             IRQ_test(index, true);
         }
-    }
-}
-
-void IOPTiming::run()
-{
-    for (int i = 0; i < 6; i++)
-    {
-        timers[i].clocks++;
-
-        if (timers[i].clocks >= timers[i].clock_scale)
-            count_up(i, timers[i].clock_scale);
     }
 }
 
@@ -78,6 +172,7 @@ void IOPTiming::IRQ_test(int index, bool overflow)
 
 uint32_t IOPTiming::read_counter(int index)
 {
+    update_timers();
     printf("[IOP Timing] Read timer %d counter: $%08X\n", index, timers[index].counter);
     return timers[index].counter;
 }
@@ -115,12 +210,16 @@ uint16_t IOPTiming::read_control(int index)
 
 void IOPTiming::write_counter(int index, uint32_t value)
 {
+    update_timers();
+    reschedule();
     timers[index].counter = value;
+    timers[index].last_update = cycle_count;
     printf("[IOP Timing] Write timer %d counter: $%08X\n", index, value);
 }
 
 void IOPTiming::write_control(int index, uint16_t value)
 {
+    update_timers();
     printf("[IOP Timing] Write timer %d control $%04X\n", index, value);
     timers[index].control.use_gate = value & 0x1;
     if (timers[index].control.use_gate)
@@ -139,6 +238,7 @@ void IOPTiming::write_control(int index, uint16_t value)
         timers[index].control.prescale = (value >> 13) & 0x3;
 
     timers[index].counter = 0;
+    timers[index].last_update = cycle_count;
 
     uint32_t clock_scale;
 
@@ -186,10 +286,14 @@ void IOPTiming::write_control(int index, uint16_t value)
             timers[index].clock_scale = clock_scale * 256;
             break;
     }
+
+    reschedule();
 }
 
 void IOPTiming::write_target(int index, uint32_t value)
 {
+    update_timers();
+    reschedule();
     printf("[IOP Timing] Write timer %d target $%08X\n", index, value);
     timers[index].target = value;
     if (!timers[index].control.toggle_int)

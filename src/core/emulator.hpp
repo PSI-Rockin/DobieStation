@@ -15,6 +15,7 @@
 #include "iop/iop.hpp"
 #include "iop/iop_dma.hpp"
 #include "iop/iop_timers.hpp"
+#include "iop/memcard.hpp"
 #include "iop/sio2.hpp"
 #include "iop/spu.hpp"
 
@@ -50,13 +51,13 @@ class Emulator
         IOPTiming iop_timers;
         INTC intc;
         ImageProcessingUnit ipu;
+        Memcard memcard;
         SIO2 sio2;
         SPU spu, spu2;
         SubsystemInterface sif;
         VectorInterface vif0, vif1;
         VectorUnit vu0, vu1;
 
-        int INTC_read_count;
         bool VBLANK_sent;
 
         std::ofstream ee_log;

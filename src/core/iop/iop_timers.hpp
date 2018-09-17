@@ -25,6 +25,7 @@ struct IOP_Timer
     IOP_Timer_Control control;
     uint32_t target;
     uint32_t clocks;
+    uint64_t last_update;
 
     uint32_t clock_scale;
 };
@@ -38,13 +39,18 @@ class IOPTiming
         uint32_t cycles_since_IRQ;
         IOP_Timer timers[6];
 
+        uint64_t cycle_count;
+        uint64_t next_event;
+
+        void update_timers();
+        void reschedule();
         void IRQ_test(int index, bool overflow);
     public:
         IOPTiming(Emulator* e);
 
         void reset();
         void count_up(int index, int cycles_per_count);
-        void run();
+        void run(int cycles);
         uint32_t read_counter(int index);
         uint16_t read_control(int index);
         uint32_t read_target(int index);

@@ -14,12 +14,14 @@ enum class SIO_DEVICE
 
 class Emulator;
 class Gamepad;
+class Memcard;
 
 class SIO2
 {
     private:
         Emulator* e;
         Gamepad* pad;
+        Memcard* memcard;
 
         uint32_t send1[4];
         uint32_t send2[4];
@@ -38,7 +40,7 @@ class SIO2
 
         void write_device(uint8_t value);
     public:
-        SIO2(Emulator* e, Gamepad* pad);
+        SIO2(Emulator* e, Gamepad* pad, Memcard* memcard);
 
         void reset();
 
@@ -54,8 +56,6 @@ class SIO2
 
         void set_control(uint32_t value);
         void write_serial(uint8_t value);
-
-
 };
 
 #endif // SIO2_HPP

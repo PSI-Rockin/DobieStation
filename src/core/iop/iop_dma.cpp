@@ -24,6 +24,10 @@ enum CHANNELS
     SIO2out
 };
 
+//Most channels aren't implemented, so we only loop through this array to save some time.
+const uint8_t IOP_DMA::IMPLEMENTED[] =
+{CDVD, SPU, SPU2, SIF0, SIF1, SIO2in, SIO2out};
+
 IOP_DMA::IOP_DMA(Emulator* e, CDVD_Drive* cdvd, SubsystemInterface* sif, SIO2* sio2, class SPU* spu, class SPU* spu2) :
     e(e), cdvd(cdvd), sif(sif), sio2(sio2), spu(spu), spu2(spu2)
 {
@@ -59,38 +63,42 @@ void IOP_DMA::reset(uint8_t* RAM)
     DICR.master_int_enable[1] = false;
 }
 
-void IOP_DMA::run()
+void IOP_DMA::run(int cycles)
 {
-    for (int i = 0; i < 16; i++)
+    while (cycles--)
     {
-        if (DPCR.enable[i] && channels[i].control.busy)
+        for (int i = 0; i < sizeof(IMPLEMENTED); i++)
         {
-            switch (i)
+            int index = IMPLEMENTED[i];
+            if (DPCR.enable[index] && channels[index].control.busy)
             {
-                case CDVD:
-                    process_CDVD();
-                    break;
-                case SPU:
-                    process_SPU();
-                    break;
-                case SPU2:
-                    process_SPU2();
-                    break;
-                case SIF0:
-                    process_SIF0();
-                    break;
-                case SIF1:
-                    process_SIF1();
-                    break;
-                case SIO2in:
-                    process_SIO2in();
-                    break;
-                case SIO2out:
-                    process_SIO2out();
-                    break;
+                switch (index)
+                {
+                    case CDVD:
+                        process_CDVD();
+                        break;
+                    case SPU:
+                        process_SPU();
+                        break;
+                    case SPU2:
+                        process_SPU2();
+                        break;
+                    case SIF0:
+                        process_SIF0();
+                        break;
+                    case SIF1:
+                        process_SIF1();
+                        break;
+                    case SIO2in:
+                        process_SIO2in();
+                        break;
+                    case SIO2out:
+                        process_SIO2out();
+                        break;
+                }
+                //TODO: It's likely only one DMA can run at a time. Is this actually the case?
+                //break;
             }
-            //TODO: It's likely only one DMA can run at a time. Is this actually the case?
-            //break;
         }
     }
 }
@@ -336,7 +344,7 @@ uint32_t IOP_DMA::get_DICR()
     else
         IRQ = false;
     reg |= IRQ << 31;
-    printf("[IOP DMA] Get DICR: $%08X\n", reg);
+    //printf("[IOP DMA] Get DICR: $%08X\n", reg);
     return reg;
 }
 
@@ -354,7 +362,7 @@ uint32_t IOP_DMA::get_DICR2()
     else
         IRQ = false;
     reg |= IRQ << 31;
-    printf("[IOP DMA] Get DICR2: $%08X\n", reg);
+    //printf("[IOP DMA] Get DICR2: $%08X\n", reg);
     return reg;
 }
 
@@ -384,7 +392,7 @@ uint32_t IOP_DMA::get_chan_control(int index)
 
 void IOP_DMA::set_DPCR(uint32_t value)
 {
-    printf("[IOP DMA] Set DPCR: $%08X\n", value);
+    //printf("[IOP DMA] Set DPCR: $%08X\n", value);
     for (int i = 0; i < 8; i++)
     {
         bool old_enable = DPCR.enable[i];
@@ -397,7 +405,7 @@ void IOP_DMA::set_DPCR(uint32_t value)
 
 void IOP_DMA::set_DPCR2(uint32_t value)
 {
-    printf("[IOP DMA] Set DPCR2: $%08X\n", value);
+    //printf("[IOP DMA] Set DPCR2: $%08X\n", value);
     for (int i = 8; i < 16; i++)
     {
         int bit = i - 8;
@@ -411,7 +419,7 @@ void IOP_DMA::set_DPCR2(uint32_t value)
 
 void IOP_DMA::set_DICR(uint32_t value)
 {
-    printf("[IOP DMA] Set DICR: $%08X\n", value);
+    //printf("[IOP DMA] Set DICR: $%08X\n", value);
     DICR.force_IRQ[0] = value & (1 << 15);
     DICR.MASK[0] = (value >> 16) & 0x7F;
     DICR.master_int_enable[0] = value & (1 << 23);
@@ -422,7 +430,7 @@ void IOP_DMA::set_DICR(uint32_t value)
 
 void IOP_DMA::set_DICR2(uint32_t value)
 {
-    printf("[IOP DMA] Set DICR2: $%08X\n", value);
+    //printf("[IOP DMA] Set DICR2: $%08X\n", value);
     DICR.force_IRQ[1] = value & (1 << 15);
     DICR.MASK[1] = (value >> 16) & 0x7F;
     DICR.master_int_enable[1] = value & (1 << 23);

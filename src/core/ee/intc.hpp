@@ -30,6 +30,9 @@ class INTC
         EmotionEngine* cpu;
         uint32_t INTC_MASK, INTC_STAT;
 
+        int read_stat_count;
+        bool stat_speedhack_active;
+
         void int0_check();
     public:
         INTC(EmotionEngine* cpu);

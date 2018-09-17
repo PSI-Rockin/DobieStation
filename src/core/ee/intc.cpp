@@ -11,6 +11,9 @@ void INTC::reset()
 {
     INTC_MASK = 0;
     INTC_STAT = 0;
+
+    read_stat_count = 0;
+    stat_speedhack_active = false;
 }
 
 uint32_t INTC::read_mask()
@@ -20,6 +23,12 @@ uint32_t INTC::read_mask()
 
 uint32_t INTC::read_stat()
 {
+    read_stat_count++;
+    if (read_stat_count >= 1000)
+    {
+        cpu->halt();
+        stat_speedhack_active = true;
+    }
     return INTC_STAT;
 }
 
@@ -51,5 +60,8 @@ void INTC::deassert_IRQ(int id)
 
 void INTC::int0_check()
 {
+    if (stat_speedhack_active)
+        cpu->unhalt();
+    read_stat_count = 0;
     cpu->set_int0_signal(INTC_STAT & INTC_MASK);
 }

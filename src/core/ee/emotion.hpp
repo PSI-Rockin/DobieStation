@@ -34,7 +34,7 @@ class EmotionEngine
         uint32_t PC, new_PC;
         uint64_t SA;
 
-        bool increment_PC;
+        bool wait_for_IRQ;
         bool branch_on;
         bool can_disassemble;
         int delay_slot;
@@ -53,6 +53,8 @@ class EmotionEngine
         static const char* SYSCALL(int id);
         void reset();
         int run(int cycles_to_run);
+        void halt();
+        void unhalt();
         void print_state();
         void set_disassembly(bool dis);
 
@@ -151,6 +153,16 @@ inline void EmotionEngine::set_gpr(int id, T value, int offset)
 {
     if (id)
         *(T*)&gpr[(id * sizeof(uint64_t) * 2) + (offset * sizeof(T))] = value;
+}
+
+inline void EmotionEngine::halt()
+{
+    wait_for_IRQ = true;
+}
+
+inline void EmotionEngine::unhalt()
+{
+    wait_for_IRQ = false;
 }
 
 #endif // EMOTION_HPP

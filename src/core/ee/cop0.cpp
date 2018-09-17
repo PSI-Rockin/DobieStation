@@ -87,6 +87,7 @@ uint32_t Cop0::mfc(int index)
     }
 }
 
+//Returns true if we need to check for interrupts
 void Cop0::mtc(int index, uint32_t value)
 {
     //printf("[COP0] Move to reg%d: $%08X\n", index, value);
@@ -135,11 +136,6 @@ bool Cop0::get_condition()
 bool Cop0::int1_raised()
 {
     return int_enabled() && (gpr[CAUSE] & (1 << 11));
-}
-
-bool Cop0::int_enabled()
-{
-    return status.master_int_enable && status.int_enable && !status.exception && !status.error;
 }
 
 bool Cop0::int_pending()
