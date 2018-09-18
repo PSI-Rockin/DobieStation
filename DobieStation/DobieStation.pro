@@ -67,7 +67,8 @@ SOURCES += ../src/qt/main.cpp \
     ../src/core/ee/vu_interpreter.cpp \
     ../src/core/ee/vu_disasm.cpp \
     ../src/core/gsmem.cpp \
-    ../src/core/serialize.cpp
+    ../src/core/serialize.cpp \
+    ../src/core/iop/memcard.cpp
 
 HEADERS += \
     ../src/core/errors.hpp \
@@ -119,4 +120,5 @@ HEADERS += \
     ../src/core/ee/ipu/codedblockpattern.hpp \
     ../src/core/ee/vu_interpreter.hpp \
     ../src/core/ee/vu_disasm.hpp \
-    ../src/core/gsmem.hpp
+    ../src/core/gsmem.hpp \
+    ../src/core/iop/memcard.hpp

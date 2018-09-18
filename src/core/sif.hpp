@@ -49,4 +49,14 @@ class SubsystemInterface
         void save_state(std::ofstream& state);
 };
 
+inline int SubsystemInterface::get_SIF0_size()
+{
+    return SIF0_FIFO.size();
+}
+
+inline int SubsystemInterface::get_SIF1_size()
+{
+    return SIF1_FIFO.size();
+}
+
 #endif // SIF_HPP

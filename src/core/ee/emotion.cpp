@@ -97,8 +97,8 @@ void EmotionEngine::reset()
 {
     PC = 0xBFC00000;
     branch_on = false;
-    increment_PC = true;
     can_disassemble = false;
+    wait_for_IRQ = false;
     delay_slot = 0;
 
     //Clear out $zero
@@ -113,57 +113,47 @@ void EmotionEngine::reset()
 int EmotionEngine::run(int cycles_to_run)
 {
     int cycles = cycles_to_run;
-    while (cycles_to_run)
+    if (!wait_for_IRQ)
     {
-        cycles_to_run--;
-        uint32_t instruction = read32(PC);
-        if ((PC < 0x81FC0 || PC >= 0x81FE0))
+        while (cycles_to_run)
         {
+            cycles_to_run--;
+            uint32_t instruction = read32(PC);
             if (can_disassemble)
             {
                 std::string disasm = EmotionDisasm::disasm_instr(instruction, PC);
                 printf("[$%08X] $%08X - %s\n", PC, instruction, disasm.c_str());
                 //print_state();
             }
-        }
-        else
-        {
-            //When the EE is in it's "Wait loop" located at 0x81FC0, it will loop
-            //indefinitely until an interrupt/exception happens.  We can just skip
-            //any processing of CPU commands until the interrupt occurs
-            if (!branch_on)
-                break;
-        }
-        EmotionInterpreter::interpret(*this, instruction);
-        if (increment_PC)
+            EmotionInterpreter::interpret(*this, instruction);
             PC += 4;
-        else
-            increment_PC = true;
 
-        if (branch_on)
-        {
-            if (!delay_slot)
+            if (branch_on)
             {
-                branch_on = false;
-                if (!new_PC || (new_PC & 0x3))
+                if (!delay_slot)
                 {
-                    Errors::die("[EE] Jump to invalid address $%08X from $%08X\n", new_PC, PC - 8);
+                    branch_on = false;
+                    if (!new_PC || (new_PC & 0x3))
+                    {
+                        Errors::die("[EE] Jump to invalid address $%08X from $%08X\n", new_PC, PC - 8);
+                    }
+                    PC = new_PC;
                 }
-                if (PC >= 0x82000 && new_PC == 0x81FC0)
-                    printf("[EE] Entering BIFCO loop\n");
-                PC = new_PC;
-
-                //And this is for ELFs.
-                if (PC < 0x80000000 && PC >= 0x00100000)
-                    if (e->skip_BIOS())
-                        return 0;
+                else
+                    delay_slot--;
             }
             else
-                delay_slot--;
+            {
+                if (cp0->int_enabled())
+                {
+                    if (cp0->cause.int0_pending)
+                        int0();
+                    else if (cp0->cause.int1_pending)
+                        int1();
+                }
+            }
         }
     }
-
-    cp0->count_up(cycles);
 
     if (cp0->int_enabled())
     {
@@ -172,6 +162,9 @@ int EmotionEngine::run(int cycles_to_run)
         else if (cp0->cause.int1_pending)
             int1();
     }
+
+    cp0->count_up(cycles);
+
     return cycles;
 }
 
@@ -664,7 +657,7 @@ void EmotionEngine::handle_exception(uint32_t new_addr, uint8_t code)
     branch_on = false;
     delay_slot = 0;
     PC = new_addr;
-    increment_PC = false;
+    unhalt();
 }
 
 void EmotionEngine::syscall_exception()
@@ -683,7 +676,7 @@ void EmotionEngine::syscall_exception()
         //On a real PS2, Exit returns to OSDSYS.
         Errors::die("[EE] Exit syscall called!\n");
     }
-    handle_exception(0x80000180, 0x08);
+    handle_exception(0x8000017C, 0x08);
 }
 
 void EmotionEngine::break_exception()
@@ -792,7 +785,17 @@ void EmotionEngine::eret()
     //This hack is used for ISOs.
     if (PC == 0x82000)
         e->fast_boot();
-    increment_PC = false;
+
+    //BIFC0 speedhack
+    if (PC >= 0x81FC0 && PC < 0x81FE0)
+    {
+        printf("[EE] Entering BIFCO loop\n");
+        halt();
+    }
+    //And this is for ELFs.
+    if (PC >= 0x00100000 && PC < 0x00100010)
+        e->skip_BIOS();
+    PC -= 4;
 }
 
 void EmotionEngine::ei()

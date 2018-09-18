@@ -17,7 +17,8 @@ Emulator::Emulator() :
     cdvd(this), cp0(&dmac), cpu(&cp0, &fpu, this, (uint8_t*)&scratchpad, &vu0, &vu1),
     dmac(&cpu, this, &gif, &ipu, &sif, &vif0, &vif1), gif(&gs), gs(&intc),
     iop(this), iop_dma(this, &cdvd, &sif, &sio2, &spu, &spu2), iop_timers(this), intc(&cpu), ipu(&intc),
-    timers(&intc), sio2(this, &pad), spu(1, this), spu2(2, this), vif0(nullptr, &vu0, &intc, 0), vif1(&gif, &vu1, &intc, 1), vu0(0, this), vu1(1, this)
+    timers(&intc), sio2(this, &pad, &memcard), spu(1, this), spu2(2, this), vif0(nullptr, &vu0, &intc, 0),
+    vif1(&gif, &vu1, &intc, 1), vu0(0, this), vu1(1, this)
 {
     BIOS = nullptr;
     RDRAM = nullptr;
@@ -77,7 +78,7 @@ void Emulator::run()
     
     while (instructions_run < CYCLES_PER_FRAME)
     {
-        int cycles = cpu.run(8);
+        int cycles = cpu.run(16);
         instructions_run += cycles;
         cycles >>= 1;
         dmac.run(cycles);
@@ -88,11 +89,11 @@ void Emulator::run()
         vu0.run(cycles);
         vu1.run(cycles);
         cycles >>= 2;
+        iop_timers.run(cycles);
+        iop_dma.run(cycles);
+        iop.run(cycles);
         for (int i = 0; i < cycles; i++)
         {
-            iop.run();
-            iop_dma.run();
-            iop_timers.run();
             if (iop_i_ctrl_delay)
             {
                 iop_i_ctrl_delay--;
@@ -109,6 +110,7 @@ void Emulator::run()
             gs.set_VBLANK(true);
             timers.gate(true, true);
             cdvd.vsync();
+            //cpu.set_disassembly(frames == 263);
             printf("VSYNC FRAMES: %d\n", frames);
             gs.assert_VSYNC();
             frames++;
@@ -141,7 +143,6 @@ void Emulator::reset()
     if (!SPU_RAM)
         SPU_RAM = new uint8_t[1024 * 1024 * 2];
 
-    INTC_read_count = 0;
     cdvd.reset();
     cp0.reset();
     cpu.reset();
@@ -478,15 +479,6 @@ uint32_t Emulator::read32(uint32_t address)
             return vif1.get_row(address);
         case 0x1000F000:
             //printf("\nRead32 INTC_STAT: $%08X", intc.read_stat());
-            if (!VBLANK_sent)
-            {
-                INTC_read_count++;
-                if (INTC_read_count >= 200000)
-                {
-                    INTC_read_count = 0;
-                    instructions_run = VBLANK_START;
-                }
-            }
             return intc.read_stat();
         case 0x1000F010:
             printf("Read32 INTC_MASK: $%08X\n", intc.read_mask());
@@ -1344,12 +1336,12 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
         case 0x1F801060:
             return;
         case 0x1F801070:
-            printf("[IOP] I_STAT: $%08X\n", value);
+            //printf("[IOP] I_STAT: $%08X\n", value);
             IOP_I_STAT &= value;
             iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
             return;
         case 0x1F801074:
-            printf("[IOP] I_MASK: $%08X\n", value);
+            //printf("[IOP] I_MASK: $%08X\n", value);
             IOP_I_MASK = value;
             iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
             return;

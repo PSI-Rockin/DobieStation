@@ -54,6 +54,7 @@ class IOP_DMA
         SIO2* sio2;
         SPU *spu, *spu2;
         IOP_DMA_Channel channels[16];
+        static const uint8_t IMPLEMENTED[];
 
         //Merge of DxCR, DxCR2, DxCR3 for easier processing
         DMA_DPCR DPCR;
@@ -72,7 +73,7 @@ class IOP_DMA
         IOP_DMA(Emulator* e, CDVD_Drive* cdvd, SubsystemInterface* sif, SIO2* sio2, SPU* spu, SPU* spu2);
 
         void reset(uint8_t* RAM);
-        void run();
+        void run(int cycles);
 
         uint32_t get_DPCR();
         uint32_t get_DPCR2();

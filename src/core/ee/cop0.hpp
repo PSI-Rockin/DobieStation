@@ -69,4 +69,9 @@ class Cop0
         void save_state(std::ofstream& state);
 };
 
+inline bool Cop0::int_enabled()
+{
+    return status.master_int_enable && status.int_enable && !status.exception && !status.error;
+}
+
 #endif // COP0_HPP

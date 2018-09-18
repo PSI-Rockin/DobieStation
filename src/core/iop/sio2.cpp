@@ -1,5 +1,6 @@
 #include <cstdio>
 #include "gamepad.hpp"
+#include "memcard.hpp"
 #include "sio2.hpp"
 
 #include "../emulator.hpp"
@@ -7,7 +8,7 @@
 
 using namespace std;
 
-SIO2::SIO2(Emulator* e, Gamepad* pad) : e(e), pad(pad)
+SIO2::SIO2(Emulator* e, Gamepad* pad, Memcard* memcard) : e(e), pad(pad), memcard(memcard)
 {
 
 }

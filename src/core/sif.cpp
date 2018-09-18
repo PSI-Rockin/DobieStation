@@ -22,16 +22,6 @@ void SubsystemInterface::reset()
     control = 0;
 }
 
-int SubsystemInterface::get_SIF0_size()
-{
-    return SIF0_FIFO.size();
-}
-
-int SubsystemInterface::get_SIF1_size()
-{
-    return SIF1_FIFO.size();
-}
-
 void SubsystemInterface::write_SIF0(uint32_t word)
 {
     SIF0_FIFO.push(word);

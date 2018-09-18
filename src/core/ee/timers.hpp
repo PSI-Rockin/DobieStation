@@ -30,6 +30,7 @@ struct Timer
     bool gated;
 
     uint32_t clock_scale;
+    uint64_t last_update;
 };
 
 class INTC;
@@ -40,8 +41,14 @@ class EmotionTiming
         INTC* intc;
         Timer timers[4];
 
+        uint64_t cycle_count;
+        uint64_t next_event;
+
         uint32_t read_control(int index);
         void write_control(int index, uint32_t value);
+
+        void update_timers();
+        void reschedule();
         void count_up(int index);
     public:
         EmotionTiming(INTC* intc);

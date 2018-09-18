@@ -138,6 +138,8 @@ void IOP_Interpreter::j(IOP &cpu, uint32_t instruction)
             printf("%08X %08X %08X %08X)\n", cpu.get_gpr(4), cpu.get_gpr(5), cpu.get_gpr(6), cpu.get_gpr(7));
         }
     }*/
+    if (addr == PC)
+        cpu.halt();
     cpu.jp(addr);
 }
 

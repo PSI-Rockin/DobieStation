@@ -35,7 +35,6 @@ void IOP::reset()
     gpr[0] = 0;
     branch_delay = 0;
     will_branch = false;
-    inc_PC = true;
     can_disassemble = false;
 }
 
@@ -52,41 +51,37 @@ uint32_t IOP::translate_addr(uint32_t addr)
     return addr;
 }
 
-void IOP::run()
+void IOP::run(int cycles)
 {
-    //bool old_int = cop0.status.IEc && (cop0.status.Im & cop0.cause.int_pending);
-    uint32_t instr = read32(PC);
-    if (can_disassemble && PC != 0xB89C && PC != 0xB8A0 && PC != 0xBB9C && PC != 0xBBA0)
+    if (!wait_for_IRQ)
     {
-        printf("[IOP] [$%08X] $%08X - %s\n", PC, instr, EmotionDisasm::disasm_instr(instr, PC).c_str());
-        //print_state();
-    }
-    IOP_Interpreter::interpret(*this, instr);
-
-    if (inc_PC)
-        PC += 4;
-    else
-        inc_PC = true;
-
-    if (will_branch)
-    {
-        if (!branch_delay)
+        while (cycles--)
         {
-            will_branch = false;
-            PC = new_PC;
-            if (PC & 0x3)
+            uint32_t instr = read32(PC);
+            if (can_disassemble && PC != 0xB89C && PC != 0xB8A0 && PC != 0xBB9C && PC != 0xBBA0)
             {
-                Errors::die("[IOP] Invalid PC address $%08X!\n", PC);
+                printf("[IOP] [$%08X] $%08X - %s\n", PC, instr, EmotionDisasm::disasm_instr(instr, PC).c_str());
+                //print_state();
             }
-            //if (PC == 0x0008F2C8)
-                //can_disassemble = true;
-            //if (PC == 0x00012C48 || PC == 0x0001420C || PC == 0x0001430C)
-                //e->iop_puts();
-            /*if (PC == 0x86D0 || PC == 0x90E0 || PC == 0x00008EE0)
-                e->iop_ksprintf();*/
+            IOP_Interpreter::interpret(*this, instr);
+
+            PC += 4;
+
+            if (will_branch)
+            {
+                if (!branch_delay)
+                {
+                    will_branch = false;
+                    PC = new_PC;
+                    if (PC & 0x3)
+                    {
+                        Errors::die("[IOP] Invalid PC address $%08X!\n", PC);
+                    }
+                }
+                else
+                    branch_delay--;
+            }
         }
-        else
-            branch_delay--;
     }
 
     if (cop0.status.IEc && (cop0.status.Im & cop0.cause.int_pending))
@@ -128,7 +123,6 @@ void IOP::branch(bool condition, int32_t offset)
 
 void IOP::handle_exception(uint32_t addr, uint8_t cause)
 {
-    inc_PC = false;
     cop0.cause.code = cause;
     if (will_branch)
     {
@@ -143,17 +137,16 @@ void IOP::handle_exception(uint32_t addr, uint8_t cause)
     cop0.status.IEo = cop0.status.IEp;
     cop0.status.IEp = cop0.status.IEc;
     cop0.status.IEc = false;
-    PC = addr;
+
+    //We do this to offset PC being incremented
+    PC = addr - 4;
     branch_delay = 0;
     will_branch = false;
 }
 
 void IOP::syscall_exception()
 {
-    uint8_t op = read8(PC - 4);
-    //printf("[IOP] SYSCALL: $%02X\n", op);
     handle_exception(0x80000080, 0x08);
-    //can_disassemble = true;
 }
 
 void IOP::interrupt_check(bool i_pass)
@@ -168,7 +161,7 @@ void IOP::interrupt()
 {
     printf("[IOP] Processing interrupt!\n");
     handle_exception(0x80000080, 0x00);
-    //can_disassemble = true;
+    unhalt();
 }
 
 void IOP::mfc(int cop_id, int cop_reg, int reg)

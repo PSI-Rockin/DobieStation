@@ -93,4 +93,14 @@ class SPU
         void write16(uint32_t addr, uint16_t value);
 };
 
+inline bool SPU::running_ADMA()
+{
+    return (autodma_ctrl & (1 << (id - 1)));
+}
+
+inline bool SPU::can_write_ADMA()
+{
+    return (input_pos <= 128 || input_pos >= 384) && (ADMA_left < 0x400);
+}
+
 #endif // SPU_HPP
