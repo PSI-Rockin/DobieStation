@@ -55,19 +55,19 @@ void IOPTiming::update_timers()
             }
         }
 
+        timers[i].counter += counter_delta;
+
         //Target check
-        if (timers[i].counter < timers[i].target && timers[i].counter + counter_delta >= timers[i].target)
+        if ((timers[i].counter - counter_delta) < timers[i].target && timers[i].counter >= timers[i].target)
         {
             timers[i].control.compare_interrupt = true;
             if (timers[i].control.compare_interrupt_enabled)
             {
                 IRQ_test(i, false);
                 if (timers[i].control.zero_return)
-                    timers[i].counter = 0;
+                    timers[i].counter -= timers[i].target;
             }
         }
-
-        timers[i].counter += counter_delta;
 
         //Overflow check
         uint32_t overflow = (i > 2) ? 0xFFFFFFFF : 0xFFFF;
@@ -90,7 +90,7 @@ void IOPTiming::reschedule()
     uint64_t next_event_delta = 0x100000;
     for (int i = 0; i < 6; i++)
     {
-        uint64_t overflow_mask = (i > 2) ? 0xFFFFFFFF : 0xFFFF;
+        uint64_t overflow_mask = (i > 2) ? 0x100000000UL : 0x10000;
         uint64_t overflow_delta = ((overflow_mask - timers[i].counter) * timers[i].clock_scale) - timers[i].clocks;
 
         uint64_t target_delta = 0xFFFFFFFF;
@@ -211,10 +211,10 @@ uint16_t IOPTiming::read_control(int index)
 void IOPTiming::write_counter(int index, uint32_t value)
 {
     update_timers();
-    reschedule();
     timers[index].counter = value;
     timers[index].last_update = cycle_count;
     printf("[IOP Timing] Write timer %d counter: $%08X\n", index, value);
+    reschedule();
 }
 
 void IOPTiming::write_control(int index, uint16_t value)
@@ -238,7 +238,6 @@ void IOPTiming::write_control(int index, uint16_t value)
         timers[index].control.prescale = (value >> 13) & 0x3;
 
     timers[index].counter = 0;
-    timers[index].last_update = cycle_count;
 
     uint32_t clock_scale;
 
@@ -287,15 +286,18 @@ void IOPTiming::write_control(int index, uint16_t value)
             break;
     }
 
+    if (clock_scale == 1)
+        timers[index].clocks = 0;
+
     reschedule();
 }
 
 void IOPTiming::write_target(int index, uint32_t value)
 {
     update_timers();
-    reschedule();
     printf("[IOP Timing] Write timer %d target $%08X\n", index, value);
     timers[index].target = value;
     if (!timers[index].control.toggle_int)
         timers[index].control.int_enable = true;
+    reschedule();
 }

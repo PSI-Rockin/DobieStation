@@ -61,19 +61,19 @@ void EmotionTiming::update_timers()
             }
         }
 
+        timers[i].counter += counter_delta;
+
         //Target check
-        if (timers[i].counter < timers[i].compare && timers[i].counter + counter_delta >= timers[i].compare)
+        if ((timers[i].counter - counter_delta) < timers[i].compare && timers[i].counter >= timers[i].compare)
         {
             if (timers[i].control.compare_int_enable)
             {
                 if (timers[i].control.clear_on_reference)
-                    timers[i].counter = 0;
+                    timers[i].counter -= timers[i].compare;
                 timers[i].control.compare_int = true;
                 intc->assert_IRQ((int)Interrupt::TIMER0 + i);
             }
         }
-
-        timers[i].counter += counter_delta;
 
         //Overflow check
         if (timers[i].counter > 0xFFFF)
@@ -98,7 +98,7 @@ void EmotionTiming::reschedule()
     {
         if (timers[i].gated || !timers[i].control.enabled)
             continue;
-        uint64_t overflow_mask = 0xFFFF;
+        uint64_t overflow_mask = 0x10000;
         uint64_t overflow_delta = ((overflow_mask - timers[i].counter) * timers[i].clock_scale) - timers[i].clocks;
 
         uint64_t target_delta = 0xFFFFFFFF;
@@ -120,6 +120,7 @@ void EmotionTiming::gate(bool VSYNC, bool high)
         TimerControl* ctrl = &timers[i].control;
         if (ctrl->gate_enable && ctrl->gate_VBLANK == VSYNC)
         {
+            update_timers();
             switch (ctrl->gate_mode)
             {
                 case 0:
@@ -141,6 +142,7 @@ void EmotionTiming::gate(bool VSYNC, bool high)
                     timers[i].counter = 0;
                     break;
             }
+            reschedule();
         }
     }
 }
@@ -295,4 +297,7 @@ void EmotionTiming::write_control(int index, uint32_t value)
             timers[index].clock_scale = 9400;
             break;
     }
+
+    if (timers[index].clock_scale == 1)
+        timers[index].clocks = 0;
 }
