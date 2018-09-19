@@ -40,6 +40,8 @@ class GraphicsInterface
         bool path3_mode_masked;
         bool intermittent_mode;
 
+        float internal_Q;
+
         void process_PACKED(uint128_t quad);
         void process_REGLIST(uint128_t quad);
         void feed_GIF(uint128_t quad);

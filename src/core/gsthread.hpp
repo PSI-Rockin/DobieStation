@@ -44,6 +44,7 @@ struct TRXPOS_REG
     uint16_t source_x, source_y;
     uint16_t dest_x, dest_y;
     uint16_t int_source_x, int_dest_x;
+    uint16_t int_source_y, int_dest_y;
     uint8_t trans_order;
 };
 
@@ -213,10 +214,9 @@ class GraphicsSynthesizerThread
 
         void write64(uint32_t addr, uint64_t value);
 
-        void set_RGBA(uint8_t r, uint8_t g, uint8_t b, uint8_t a);
-        void set_STQ(uint32_t s, uint32_t t, uint32_t q);
+        void set_RGBA(uint8_t r, uint8_t g, uint8_t b, uint8_t a, float q);
+        void set_ST(uint32_t s, uint32_t t);
         void set_UV(uint16_t u, uint16_t v);
-        void set_Q(float q);
         void set_XYZ(uint32_t x, uint32_t y, uint32_t z, bool drawing_kick);
         void set_XYZF(uint32_t x, uint32_t y, uint32_t z, uint8_t fog, bool drawing_kick);
 

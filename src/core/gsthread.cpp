@@ -160,13 +160,13 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
                     case set_rgba_t:
                     {
                         auto p = data.payload.rgba_payload;
-                        gs.set_RGBA(p.r, p.g, p.b, p.a);
+                        gs.set_RGBA(p.r, p.g, p.b, p.a, p.q);
                         break;
                     }
-                    case set_stq_t:
+                    case set_st_t:
                     {
-                        auto p = data.payload.stq_payload;
-                        gs.set_STQ(p.s, p.t, p.q);
+                        auto p = data.payload.st_payload;
+                        gs.set_ST(p.s, p.t);
                         break;
                     }
                     case set_uv_t:
@@ -188,12 +188,6 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
                         break;
                     }
                         break;
-                    case set_q_t:
-                    {
-                        auto p = data.payload.q_payload;
-                        gs.set_Q(p.q);
-                        break;
-                    }
                     case set_crt_t:
                     {
                         auto p = data.payload.crt_payload;
@@ -799,6 +793,8 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
                 printf("Width: %d\n", BITBLTBUF.dest_width);
                 TRXPOS.int_dest_x = TRXPOS.dest_x;
                 TRXPOS.int_source_x = TRXPOS.source_x;
+                TRXPOS.int_dest_y = TRXPOS.dest_y;
+                TRXPOS.int_source_y = TRXPOS.dest_y;
                 //printf("Transfer addr: $%08X\n", transfer_addr);
                 if (TRXDIR == 2)
                 {
@@ -818,19 +814,20 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
     }
 }
 
-void GraphicsSynthesizerThread::set_RGBA(uint8_t r, uint8_t g, uint8_t b, uint8_t a)
+void GraphicsSynthesizerThread::set_RGBA(uint8_t r, uint8_t g, uint8_t b, uint8_t a, float q)
 {
     RGBAQ.r = r;
     RGBAQ.g = g;
     RGBAQ.b = b;
     RGBAQ.a = a;
+    RGBAQ.q = q;
 }
 
-void GraphicsSynthesizerThread::set_STQ(uint32_t s, uint32_t t, uint32_t q)
+void GraphicsSynthesizerThread::set_ST(uint32_t s, uint32_t t)
 {
     ST.s = *(float*)&s;
     ST.t = *(float*)&t;
-    RGBAQ.q = *(float*)&q;
+    printf("ST: (%f, %f) ($%08X $%08X)\n", ST.s, ST.t, s, t);
 }
 
 void GraphicsSynthesizerThread::set_UV(uint16_t u, uint16_t v)
@@ -838,11 +835,6 @@ void GraphicsSynthesizerThread::set_UV(uint16_t u, uint16_t v)
     UV.u = u;
     UV.v = v;
     printf("UV: ($%04X, $%04X)\n", UV.u, UV.v);
-}
-
-void GraphicsSynthesizerThread::set_Q(float q)
-{
-    RGBAQ.q = q;
 }
 
 void GraphicsSynthesizerThread::set_XYZ(uint32_t x, uint32_t y, uint32_t z, bool drawing_kick)
@@ -1911,8 +1903,8 @@ void GraphicsSynthesizerThread::render_sprite()
                 calculate_LOD(tex_info);
                 if (tmp_uv)
                 {
-                    pix_v = (pix_t * tex_info.tex_height) * 16;
-                    pix_u = (pix_s * tex_info.tex_width) * 16;
+                    pix_v = (pix_t * tex_info.tex_height) * 16.0;
+                    pix_u = (pix_s * tex_info.tex_width) * 16.0;
                     tex_lookup(pix_u, pix_v, tex_info);
                 }
                 else
@@ -1987,7 +1979,7 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
         switch (BITBLTBUF.dest_format)
         {
             case 0x00:
-                write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.dest_y, (data >> (i * 32)) & 0xFFFFFFFF);
+                write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.int_dest_y, (data >> (i * 32)) & 0xFFFFFFFF);
                 pixels_transferred++;
                 TRXPOS.int_dest_x++;
                 //printf("[GS_t] Write to $%08X of ", BITBLTBUF.dest_base + (dest_addr * 4));
@@ -1997,17 +1989,17 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
                 unpack_PSMCT24(data, i, false);
                 break;
             case 0x02:
-                write_PSMCT16_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.dest_y, (data >> (i * 16)) & 0xFFFF);
+                write_PSMCT16_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.int_dest_y, (data >> (i * 16)) & 0xFFFF);
                 pixels_transferred++;
                 TRXPOS.int_dest_x++;
                 break;
             case 0xA:
-                write_PSMCT16S_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.dest_y, (data >> (i * 16)) & 0xFFFF);
+                write_PSMCT16S_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.int_dest_y, (data >> (i * 16)) & 0xFFFF);
                 pixels_transferred++;
                 TRXPOS.int_dest_x++;
                 break;
             case 0x13:
-                write_PSMCT8_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.dest_y,
+                write_PSMCT8_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.int_dest_y,
                                    (data >> (i * 8)) & 0xFF);
                 //printf("[GS_t] Write to $%08X\n", dest_addr);
                 pixels_transferred++;
@@ -2020,7 +2012,7 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
                     value >>= 4;
                 else
                     value &= 0xF;
-                write_PSMCT4_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.dest_y,
+                write_PSMCT4_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.int_dest_y,
                                    value);
                 pixels_transferred++;
                 TRXPOS.int_dest_x++;
@@ -2030,9 +2022,9 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
             {
                 uint32_t value = (data >> (i << 3)) & 0xFF;
                 value <<= 24;
-                value |= read_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.dest_y)
+                value |= read_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.int_dest_y)
                         & 0x00FFFFFF;
-                write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.dest_y, value);
+                write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.int_dest_y, value);
                 //printf("[GS_t] Write to $%08X of ", BITBLTBUF.dest_base + (dest_addr * 4));
                 pixels_transferred++;
                 TRXPOS.int_dest_x++;
@@ -2051,9 +2043,9 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
                     value = (data >> ((i >> 1) << 3)) & 0xF;
                     value <<= 24;
                 }
-                value |= read_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.dest_y)
+                value |= read_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.int_dest_y)
                         & 0xF0FFFFFF;
-                write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.dest_y, value);
+                write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.int_dest_y, value);
                 //printf("[GS_t] Write to $%08X of ", BITBLTBUF.dest_base + (dest_addr * 4));
                 //printf("$%08X\n", value);
                 pixels_transferred++;
@@ -2073,9 +2065,9 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
                     value = (data >> ((i >> 1) << 3)) & 0xF;
                     value <<= 28;
                 }
-                value |= read_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.dest_y)
+                value |= read_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.int_dest_y)
                         & 0x0FFFFFFF;
-                write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.dest_y, value);
+                write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.int_dest_y, value);
                 //printf("[GS_t] Write to $%08X of ", BITBLTBUF.dest_base + (dest_addr * 4));
                 //printf("$%08X\n", value);
                 pixels_transferred++;
@@ -2089,7 +2081,7 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
         if (TRXPOS.int_dest_x - TRXPOS.dest_x == TRXREG.width)
         {
             TRXPOS.int_dest_x = TRXPOS.dest_x;
-            TRXPOS.dest_y++;
+            TRXPOS.int_dest_y++;
         }
     }
 
@@ -2115,10 +2107,10 @@ void GraphicsSynthesizerThread::unpack_PSMCT24(uint64_t data, int offset, bool z
         {
             if (z_format)
                 write_PSMCT24Z_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x,
-                                     TRXPOS.dest_y, PSMCT24_color);
+                                     TRXPOS.int_dest_y, PSMCT24_color);
             else
                 write_PSMCT24_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x,
-                    TRXPOS.dest_y, PSMCT24_color);
+                    TRXPOS.int_dest_y, PSMCT24_color);
             PSMCT24_color = 0;
             PSMCT24_unpacked_count = 0;
             TRXPOS.int_dest_x++;
@@ -2139,7 +2131,7 @@ void GraphicsSynthesizerThread::host_to_host()
             case 0x00:
                 data = read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
                                           TRXPOS.int_source_x, TRXPOS.source_y);
-                write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.dest_y, data);
+                write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.int_dest_y, data);
                 pixels_transferred++;
                 TRXPOS.int_dest_x++;
                 TRXPOS.int_source_x++;
@@ -2147,7 +2139,7 @@ void GraphicsSynthesizerThread::host_to_host()
             case 0x13:
                 data = read_PSMCT8_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
                                          TRXPOS.int_source_x, TRXPOS.source_y);
-                write_PSMCT8_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.dest_y, data);
+                write_PSMCT8_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.int_dest_y, data);
                 pixels_transferred++;
                 TRXPOS.int_dest_x++;
                 TRXPOS.int_source_x++;
@@ -2155,7 +2147,7 @@ void GraphicsSynthesizerThread::host_to_host()
             case 0x14:
                 data = read_PSMCT4_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
                                           TRXPOS.int_source_x, TRXPOS.source_y);
-                write_PSMCT4_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.dest_y, data);
+                write_PSMCT4_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.int_dest_y, data);
                 pixels_transferred++;
                 TRXPOS.int_dest_x++;
                 TRXPOS.int_source_x++;
@@ -2167,7 +2159,7 @@ void GraphicsSynthesizerThread::host_to_host()
         if (TRXPOS.int_dest_x - TRXPOS.dest_x == TRXREG.width)
         {
             TRXPOS.int_dest_x = TRXPOS.dest_x;
-            TRXPOS.dest_y++;
+            TRXPOS.int_dest_y++;
         }
 
         if (TRXPOS.int_source_x - TRXPOS.source_x == TRXREG.width)

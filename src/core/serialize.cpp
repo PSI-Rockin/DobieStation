@@ -4,7 +4,7 @@
 
 #define VER_MAJOR 0
 #define VER_MINOR 0
-#define VER_REV 14
+#define VER_REV 15
 
 using namespace std;
 
@@ -505,6 +505,7 @@ void GraphicsInterface::load_state(ifstream &state)
     state.read((char*)&active_path, sizeof(active_path));
     state.read((char*)&path_queue, sizeof(path_queue));
     state.read((char*)&path3_vif_masked, sizeof(path3_vif_masked));
+    state.read((char*)&internal_Q, sizeof(internal_Q));
 }
 
 void GraphicsInterface::save_state(ofstream &state)
@@ -513,6 +514,7 @@ void GraphicsInterface::save_state(ofstream &state)
     state.write((char*)&active_path, sizeof(active_path));
     state.write((char*)&path_queue, sizeof(path_queue));
     state.write((char*)&path3_vif_masked, sizeof(path3_vif_masked));
+    state.write((char*)&internal_Q, sizeof(internal_Q));
 }
 
 void SubsystemInterface::load_state(ifstream &state)

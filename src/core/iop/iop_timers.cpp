@@ -212,7 +212,6 @@ void IOPTiming::write_counter(int index, uint32_t value)
 {
     update_timers();
     timers[index].counter = value;
-    timers[index].last_update = cycle_count;
     printf("[IOP Timing] Write timer %d counter: $%08X\n", index, value);
     reschedule();
 }
