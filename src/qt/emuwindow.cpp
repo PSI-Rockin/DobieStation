@@ -109,17 +109,19 @@ int EmuWindow::init(int argc, char** argv)
     {
         return run_gsdump(gsdump);
     }
+
     ifstream BIOS_file(bios_name, ios::binary | ios::in);
-    if (!BIOS_file.is_open())
+    if (!BIOS_file.is_open() || (filesize(bios_name) == 0))
     {
         printf("Failed to load PS2 BIOS from %s\n", bios_name);
         return 1;
     }
-    printf("Loaded PS2 BIOS.\n");
+    
     uint8_t* BIOS = new uint8_t[1024 * 1024 * 4];
     BIOS_file.read((char*)BIOS, 1024 * 1024 * 4);
     BIOS_file.close();
     emuthread.load_BIOS(BIOS);
+    printf("Loaded PS2 BIOS.\n");
     delete[] BIOS;
     BIOS = nullptr;
 
