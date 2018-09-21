@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 
+#include <QApplication>
 #include <QPainter>
 #include <QString>
 #include <QVBoxLayout>
@@ -14,6 +15,7 @@
 #include "arg.h"
 
 using namespace std;
+char* bios_name = nullptr;
 
 ifstream::pos_type filesize(const char* filename)
 {
@@ -73,7 +75,10 @@ int EmuWindow::init(int argc, char** argv)
     bool skip_BIOS = false;
     char* argv0; // Program name; AKA argv[0]
 
-    char* bios_name = nullptr, *file_name = nullptr, *gsdump = nullptr;
+    char *file_name = nullptr, *gsdump = nullptr;
+
+    // Load before the arguments, so the arguments override the config.
+    load_settings();
 
     ARGBEGIN {
         case 'b':
@@ -117,6 +122,9 @@ int EmuWindow::init(int argc, char** argv)
     emuthread.load_BIOS(BIOS);
     delete[] BIOS;
     BIOS = nullptr;
+
+    // Save at the end of init, so our arguments are saved.
+    save_settings();
 
     if (file_name)
     {
@@ -209,6 +217,7 @@ void EmuWindow::create_menu()
     file_menu->addAction(load_state_action);
     file_menu->addAction(save_state_action);
     file_menu->addAction(exit_action);
+    file_menu->addSeparator();
     file_menu->addAction(gsdump_action);
 
     options_menu = menuBar()->addMenu(tr("&Options"));
