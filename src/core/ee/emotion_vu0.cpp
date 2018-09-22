@@ -433,22 +433,24 @@ void EmotionInterpreter::cop2_vcallms(VectorUnit &vu0, uint32_t instruction, Emo
     uint32_t imm = (instruction >> 6) & 0x7FFF;
     imm *= 8;
 
-    if (cpu.vu0_wait(false))
+    if (cpu.vu0_wait())
     {
         cpu.set_PC(cpu.get_PC() - 4);
         return;
     }
+    cpu.clear_interlock();
 
     vu0.mscal(imm);
 }
 
 void EmotionInterpreter::cop2_vcallmsr(VectorUnit &vu0, uint32_t instruction, EmotionEngine &cpu)
 {
-    if (cpu.vu0_wait(false))
+    if (cpu.vu0_wait())
     {
         cpu.set_PC(cpu.get_PC() - 4);
         return;
     }
+    cpu.clear_interlock();
 
     vu0.callmsr();
 }

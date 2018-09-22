@@ -70,7 +70,7 @@ class EmotionEngine
         uint64_t get_SA();
         bool check_interlock();
         void clear_interlock();
-        bool vu0_wait(bool is_interlocked);
+        bool vu0_wait();
 
         uint8_t read8(uint32_t address);
         uint16_t read16(uint32_t address);
@@ -140,6 +140,7 @@ class EmotionEngine
         void qmfc2(int dest, int cop_reg);
         void qmtc2(int source, int cop_reg);
         void cop2_special(EmotionEngine &cpu, uint32_t instruction);
+        void cop2_updatevu0();
 
         void load_state(std::ifstream& state);
         void save_state(std::ofstream& state);

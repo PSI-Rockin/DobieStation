@@ -83,6 +83,8 @@ class VectorUnit
         uint32_t CMSAR0;
         VU_GPR ACC;
         uint32_t status;
+        int status_pipe;
+        uint32_t status_value;
         uint32_t clip_flags;
         VU_R R;
         VU_R I;

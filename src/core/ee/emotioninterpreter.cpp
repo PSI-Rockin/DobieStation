@@ -798,6 +798,11 @@ void EmotionInterpreter::cop(EmotionEngine &cpu, uint32_t instruction)
 {
     uint16_t op = (instruction >> 21) & 0x1F;
     uint8_t cop_id = ((instruction >> 26) & 0x3);
+    
+    if (cop_id == 2)
+    {
+        cpu.cop2_updatevu0();
+    }
     if (cop_id == 2 && op >= 0x10)
     {
         cpu.cop2_special(cpu, instruction);
@@ -945,7 +950,7 @@ void EmotionInterpreter::cop2_qmfc2(EmotionEngine &cpu, uint32_t instruction)
     int interlock = (instruction & 0x1);
     if (interlock)
     {
-        if (cpu.vu0_wait(true))
+        if (cpu.vu0_wait())
         {
             cpu.set_PC(cpu.get_PC() - 4);
             return;

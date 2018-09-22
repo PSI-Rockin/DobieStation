@@ -51,6 +51,7 @@ VectorUnit::VectorUnit(int id, Emulator* e) : id(id), e(e), gif(nullptr)
 void VectorUnit::reset()
 {
     status = 0;
+    status_pipe = 0;
     clip_flags = 0;
     PC = 0;
     cycle_count = 1; //Set to 1 to prevent spurious events from occurring during execution
@@ -225,10 +226,18 @@ void VectorUnit::handle_XGKICK()
  */
 void VectorUnit::check_for_FMAC_stall()
 {
+    if (decoder.vf_read0[0] == 0 && decoder.vf_read1[0] == 0
+        && decoder.vf_read0[1] == 0 && decoder.vf_read1[1] == 0)
+        return;
+
     for (int i = 0; i < 3; i++)
     {
         uint8_t write0 = (MAC_pipeline[i] >> 16) & 0xFF;
         uint8_t write1 = (MAC_pipeline[i] >> 24) & 0xFF;
+
+        if (write0 == 0 && write1 == 0)
+            continue;
+
         uint8_t write0_field = (MAC_pipeline[i] >> 32) & 0xF;
         uint8_t write1_field = (MAC_pipeline[i] >> 36) & 0xF;
         bool stall_found = false;
@@ -417,6 +426,13 @@ void VectorUnit::update_mac_pipeline()
 
     if(updatestatus)
         update_status();
+
+    if (status_pipe > 0)
+    {
+        status_pipe--;
+        if (!status_pipe)
+            status = (status & 0x3F) | (status_value & 0xFC0);
+    }
 }
 
 void VectorUnit::start_DIV_unit(int latency)
@@ -983,7 +999,8 @@ void VectorUnit::fmor(uint32_t instr)
 void VectorUnit::fsset(uint32_t instr)
 {
     printf("[VU] FSSET: $%08X\n", instr);
-    status = (status & 0x3F) | (instr & 0xFC0);
+    status_value = (instr & 0xFC0);
+    status_pipe = 4;
 }
 
 void VectorUnit::fsand(uint32_t instr)

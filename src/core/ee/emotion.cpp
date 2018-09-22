@@ -193,10 +193,10 @@ void EmotionEngine::clear_interlock()
     e->clear_cop2_interlock();
 }
 
-bool EmotionEngine::vu0_wait(bool is_interlocked)
+bool EmotionEngine::vu0_wait()
 {
-    if(is_interlocked)
-        e->interlock_cop2_check(true);
+    //Must interlock as if there is an Mbit it will stall
+    e->interlock_cop2_check(true);
     return vu0->is_running();
 }
 
@@ -459,7 +459,7 @@ void EmotionEngine::cfc(int cop_id, int reg, int cop_reg, uint32_t instruction)
             int interlock = instruction & 0x1;
             if (interlock)
             {
-                if (vu0_wait(true))
+                if (vu0_wait())
                 {
                     set_PC(get_PC() - 4);
                     return;
@@ -906,6 +906,12 @@ void EmotionEngine::qmtc2(int source, int cop_reg)
         uint32_t bark = get_gpr<uint32_t>(source, i);
         vu0->set_gpr_u(cop_reg, i, bark);
     }
+}
+
+void EmotionEngine::cop2_updatevu0()
+{
+    if (vu0->is_running())
+        vu0->run(16);
 }
 
 void EmotionEngine::cop2_special(EmotionEngine &cpu, uint32_t instruction)
