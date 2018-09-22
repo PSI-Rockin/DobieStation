@@ -295,18 +295,18 @@ uint64_t GraphicsSynthesizer::read64_privileged(uint32_t addr)
     return reg.read64_privileged(addr);
 }
 
-void GraphicsSynthesizer::set_RGBA(uint8_t r, uint8_t g, uint8_t b, uint8_t a)
+void GraphicsSynthesizer::set_RGBA(uint8_t r, uint8_t g, uint8_t b, uint8_t a, float q)
 {
     GS_message_payload payload;
-    payload.rgba_payload = { r, g, b, a };
+    payload.rgba_payload = { r, g, b, a, q};
     send_message({ GS_command::set_rgba_t,payload });
 }
 
-void GraphicsSynthesizer::set_STQ(uint32_t s, uint32_t t, uint32_t q)
+void GraphicsSynthesizer::set_ST(uint32_t s, uint32_t t)
 {
     GS_message_payload payload;
-    payload.stq_payload = { s, t, q };
-    send_message({ GS_command::set_stq_t,payload });
+    payload.st_payload = { s, t };
+    send_message({ GS_command::set_st_t,payload });
 }
 
 void GraphicsSynthesizer::set_UV(uint16_t u, uint16_t v)
@@ -314,13 +314,6 @@ void GraphicsSynthesizer::set_UV(uint16_t u, uint16_t v)
     GS_message_payload payload;
     payload.uv_payload = { u, v };
     send_message({ GS_command::set_uv_t,payload });
-}
-
-void GraphicsSynthesizer::set_Q(float q)
-{
-    GS_message_payload payload;
-    payload.q_payload = { q };
-    send_message({ GS_command::set_q_t,payload });
 }
 
 void GraphicsSynthesizer::set_XYZ(uint32_t x, uint32_t y, uint32_t z, bool drawing_kick)

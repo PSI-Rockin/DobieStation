@@ -13,7 +13,7 @@ class INTC;
 enum GS_command:uint8_t 
 {
 	write64_t, write64_privileged_t, write32_privileged_t,
-    set_rgba_t, set_stq_t, set_uv_t, set_xyz_t, set_xyzf_t, set_q_t, set_crt_t,
+    set_rgba_t, set_st_t, set_uv_t, set_xyz_t, set_xyzf_t, set_crt_t,
     render_crt_t, assert_finish_t, assert_vsync_t, set_vblank_t, memdump_t, die_t,
     savestate_t, loadstate_t, gsdump_t
 };
@@ -33,11 +33,12 @@ union GS_message_payload
     struct 
 	{
         uint8_t r, g, b, a;
+        float q;
     } rgba_payload;
     struct 
 	{
-        uint32_t s, t, q;
-    } stq_payload;
+        uint32_t s, t;
+    } st_payload;
     struct 
 	{
         uint16_t u, v;
@@ -53,10 +54,6 @@ union GS_message_payload
         uint8_t fog;
         bool drawing_kick;
     } xyzf_payload;
-    struct 
-	{
-        float q;
-    } q_payload;
     struct 
 	{
         bool interlaced;
@@ -172,10 +169,9 @@ class GraphicsSynthesizer
         void write64_privileged(uint32_t addr, uint64_t value);
         void write64(uint32_t addr, uint64_t value);
 
-        void set_RGBA(uint8_t r, uint8_t g, uint8_t b, uint8_t a);
-        void set_STQ(uint32_t s, uint32_t t, uint32_t q);
+        void set_RGBA(uint8_t r, uint8_t g, uint8_t b, uint8_t a, float q);
+        void set_ST(uint32_t s, uint32_t t);
         void set_UV(uint16_t u, uint16_t v);
-        void set_Q(float q);
         void set_XYZ(uint32_t x, uint32_t y, uint32_t z, bool drawing_kick);
         void set_XYZF(uint32_t x, uint32_t y, uint32_t z, uint8_t fog, bool drawing_kick);
 

@@ -76,16 +76,17 @@ void GraphicsInterface::process_PACKED(uint128_t data)
             uint8_t g = (data1 >> 32) & 0xFF;
             uint8_t b = data2 & 0xFF;
             uint8_t a = (data2 >> 32) & 0xFF;
-            gs->set_RGBA(r, g, b, a);
+            gs->set_RGBA(r, g, b, a, internal_Q);
         }
             break;
         case 0x2:
         {
             //ST - set ST coordinates and Q
-            uint32_t s = data1 & 0xFFFFFFFF;
-            uint32_t t = data1 >> 32;
-            uint32_t q = data2 & 0xFFFFFFFF;
-            gs->set_STQ(s, t, q);
+            uint32_t s = data1 & 0xFFFFFF00;
+            uint32_t t = (data1 >> 32) & 0xFFFFFF00;
+            uint32_t q = data2 & 0xFFFFFF00;
+            internal_Q = *(float*)&q;
+            gs->set_ST(s, t);
         }
             break;
         case 0x3:
@@ -184,7 +185,7 @@ void GraphicsInterface::feed_GIF(uint128_t data)
         path[active_path].current_tag.data_left = path[active_path].current_tag.NLOOP;
 
         //Q is initialized to 1.0 upon reading a GIFtag
-        gs->set_Q(1.0f);
+        internal_Q = 1.0f;
 
         //Ignore zeroed out packets
         /*if (data1)

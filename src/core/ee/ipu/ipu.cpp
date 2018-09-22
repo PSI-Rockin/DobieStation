@@ -102,11 +102,6 @@ void ImageProcessingUnit::run()
     {
         switch (command)
         {
-            case 0x00:
-                in_FIFO.reset();
-                ctrl.busy = false;
-                in_FIFO.bit_pointer = command_option & 0x7F;
-                break;
             case 0x01:
                 if (in_FIFO.f.size())
                 {
@@ -169,11 +164,6 @@ void ImageProcessingUnit::run()
                     if (process_CSC())
                         finish_command();
                 }
-                break;
-            case 0x09:
-                TH0 = command_option & 0x1FF;
-                TH1 = (command_option >> 16) & 0x1FF;
-                finish_command();
                 break;
             default:
                 Errors::die("[IPU] Unrecognized command $%02X\n", command);
@@ -1029,6 +1019,9 @@ void ImageProcessingUnit::write_command(uint32_t value)
         {
             case 0x00:
                 printf("[IPU] BCLR\n");
+                in_FIFO.reset();
+                in_FIFO.bit_pointer = command_option & 0x7F;
+                finish_command();
                 break;
             case 0x01:
                 printf("[IPU] IDEC\n");
@@ -1077,6 +1070,9 @@ void ImageProcessingUnit::write_command(uint32_t value)
                 break;
             case 0x09:
                 printf("[IPU] SETTH\n");
+                TH0 = command_option & 0x1FF;
+                TH1 = (command_option >> 16) & 0x1FF;
+                finish_command();
                 break;
         }
     }
