@@ -1,4 +1,4 @@
-#ifndef EMUWINDOW_HPP
+﻿#ifndef EMUWINDOW_HPP
 #define EMUWINDOW_HPP
 
 #include <chrono>

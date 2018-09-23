@@ -1,4 +1,4 @@
-#ifndef GSTHREAD_HPP
+﻿#ifndef GSTHREAD_HPP
 #define GSTHREAD_HPP
 #include <cstdint>
 #include "gscontext.hpp"
@@ -184,11 +184,11 @@ class GraphicsSynthesizerThread
         void tex_lookup_int(int16_t u, int16_t v, TexLookupInfo& info);
         void clut_lookup(uint8_t entry, RGBAQ_REG& tex_color);
         void clut_CSM2_lookup(uint8_t entry, RGBAQ_REG& tex_color);
-        void reload_clut(GSContext& context);
+        void reload_clut(const GSContext& context);
 
         void vertex_kick(bool drawing_kick);
         bool depth_test(int32_t x, int32_t y, uint32_t z);
-        void draw_pixel(int32_t x, int32_t y, uint32_t z, RGBAQ_REG& color, bool alpha_blending);
+        void draw_pixel(int32_t x, int32_t y, uint32_t z, const RGBAQ_REG& color, bool alpha_blending);
         void render_primitive();
         void render_point();
         void render_line();
@@ -204,8 +204,8 @@ class GraphicsSynthesizerThread
         void reset();
         void memdump(uint32_t* target, uint16_t& width, uint16_t& height);
 
-        uint32_t get_CRT_color(DISPFB& dispfb, uint32_t x, uint32_t y);
-        void render_single_CRT(uint32_t* target, DISPFB& dispfb, DISPLAY& display);
+        uint32_t get_CRT_color(const DISPFB& dispfb, uint32_t x, uint32_t y);
+        void render_single_CRT(uint32_t* target, DISPFB& dispfb, const DISPLAY& display);
         void render_CRT(uint32_t* target);
 
         void set_VBLANK(bool is_VBLANK);

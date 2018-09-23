@@ -1,4 +1,4 @@
-#ifndef GS_HPP
+﻿#ifndef GS_HPP
 #define GS_HPP
 #include <cstdint>
 #include <thread>
@@ -145,7 +145,7 @@ class GraphicsSynthesizer
     public:
         GraphicsSynthesizer(INTC* intc);
         ~GraphicsSynthesizer();
-        void send_message(GS_message message);
+        void send_message(const GS_message& message);
         void reset();
         void start_frame();
         bool is_frame_complete();

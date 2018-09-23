@@ -1,4 +1,4 @@
-#include <algorithm>
+﻿#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -34,14 +34,11 @@ GraphicsSynthesizer::~GraphicsSynthesizer()
         send_message({ GS_command::die_t,payload });
         gsthread_id.join();
     }
-    if (output_buffer1)
-        delete[] output_buffer1;
-    if (output_buffer2)
-        delete[] output_buffer2;
-    if (message_queue)
-        delete message_queue;
-    if (return_queue)
-        delete return_queue;
+	
+    delete[] output_buffer1;
+    delete[] output_buffer2;
+    delete message_queue;
+	delete return_queue;
 }
 
 void GraphicsSynthesizer::reset()
@@ -350,7 +347,7 @@ void GraphicsSynthesizer::save_state(ofstream &state)
     state.write((char*)&reg, sizeof(reg));
 }
 
-void GraphicsSynthesizer::send_message(GS_message message)
+void GraphicsSynthesizer::send_message(const GS_message& message)
 {
     message_queue->push(message);
 }

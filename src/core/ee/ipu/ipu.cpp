@@ -1,4 +1,4 @@
-#include <cmath>
+﻿#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -602,7 +602,7 @@ void ImageProcessingUnit::prepare_IDCT()
     }
 }
 
-void ImageProcessingUnit::perform_IDCT(int16_t* pUV, int16_t* pXY)
+void ImageProcessingUnit::perform_IDCT(const int16_t* pUV, int16_t* pXY)
 {
     int i, j, k, v;
     double partial_product;

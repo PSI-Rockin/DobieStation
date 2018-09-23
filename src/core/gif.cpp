@@ -1,4 +1,4 @@
-#include <cstdio>
+﻿#include <cstdio>
 #include "gif.hpp"
 #include "gs.hpp"
 
@@ -326,7 +326,7 @@ bool GraphicsInterface::send_PATH1(uint128_t quad)
     return !path[1].current_tag.data_left && path[1].current_tag.end_of_packet;
 }
 
-void GraphicsInterface::send_PATH2(uint32_t data[])
+void GraphicsInterface::send_PATH2(const uint32_t data[])
 {
     uint128_t blorp;
     for (int i = 0; i < 4; i++)

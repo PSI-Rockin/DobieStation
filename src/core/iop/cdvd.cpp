@@ -1,4 +1,4 @@
-#include <cstring>
+﻿#include <cstring>
 #include <ctime>
 #include <string>
 #include "cdvd.hpp"
@@ -241,7 +241,7 @@ bool CDVD_Drive::load_disc(const char *name)
 
     file_size = cdvd_file.tellg();
 
-    printf("[CDVD] Disc size: %lld bytes\n", file_size);
+    printf("[CDVD] Disc size: %llu bytes\n", file_size);
     printf("[CDVD] Locating Primary Volume Descriptor\n");
     uint8_t type = 0;
     int sector = 0x0F;
@@ -262,8 +262,8 @@ bool CDVD_Drive::load_disc(const char *name)
     root_location = *(uint32_t*)&pvd_sector[156 + 2] * LBA;
     root_len = *(uint32_t*)&pvd_sector[156 + 10];
     printf("[CDVD] Root dir len: %d\n", *(uint16_t*)&pvd_sector[156]);
-    printf("[CDVD] Extent loc: $%08X\n", root_location);
-    printf("[CDVD] Extent len: $%08X\n", root_len);
+    printf("[CDVD] Extent loc: $%08llX\n", root_location);
+    printf("[CDVD] Extent len: $%08llX\n", root_len);
 
     return true;
 }
@@ -298,7 +298,7 @@ uint8_t* CDVD_Drive::read_file(string name, uint32_t& file_size)
                 file_location = *(uint32_t*)&root_extent[bytes + 2];
                 file_location *= LBA;
                 file_size = *(uint32_t*)&root_extent[bytes + 10];
-                printf("[CDVD] Location: $%08X\n", file_location);
+                printf("[CDVD] Location: $%08llX\n", file_location);
                 printf("[CDVD] Size: $%08X\n", file_size);
 
                 file = new uint8_t[file_size];
@@ -687,7 +687,7 @@ void CDVD_Drive::N_command_dvdread()
     sector_pos = *(uint32_t*)&N_command_params[0];
     sectors_left = *(uint32_t*)&N_command_params[4];
     printf("[CDVD] ReadDVD; Seek pos: %lld, Sectors: %lld\n", sector_pos, sectors_left);
-    printf("Last read: %lld cycles ago\n", cycle_count - last_read);
+    printf("Last read: %llu cycles ago\n", cycle_count - last_read);
     last_read = cycle_count;
     speed = 4;
     block_size = 2064;
@@ -762,7 +762,7 @@ void CDVD_Drive::N_command_readkey(uint32_t arg)
 
 void CDVD_Drive::read_CD_sector()
 {
-    printf("[CDVD] Read CD sector - Sector: %lld Size: %lld\n", current_sector, block_size);
+    printf("[CDVD] Read CD sector - Sector: %llu Size: %llu\n", current_sector, block_size);
     cdvd_file.read((char*)read_buffer, block_size);
     read_bytes_left = block_size;
     current_sector++;
@@ -771,7 +771,7 @@ void CDVD_Drive::read_CD_sector()
 
 void CDVD_Drive::read_DVD_sector()
 {
-    printf("[CDVD] Read DVD sector - Sector: %lld Size: %lld\n", current_sector, block_size);
+    printf("[CDVD] Read DVD sector - Sector: %llu Size: %llu\n", current_sector, block_size);
 
     int layer_num;
     uint32_t lsn;

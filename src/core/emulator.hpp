@@ -1,4 +1,4 @@
-#ifndef EMULATOR_HPP
+﻿#ifndef EMULATOR_HPP
 #define EMULATOR_HPP
 #include <fstream>
 
@@ -97,8 +97,8 @@ class Emulator
         bool skip_BIOS();
         void fast_boot();
         void set_skip_BIOS_hack(SKIP_HACK type);
-        void load_BIOS(uint8_t* BIOS);
-        void load_ELF(uint8_t* ELF, uint32_t size);
+        void load_BIOS(const uint8_t* BIOS);
+        void load_ELF(const uint8_t* ELF, uint32_t size);
         bool load_CDVD(const char* name);
         void execute_ELF();
         uint32_t* get_framebuffer();

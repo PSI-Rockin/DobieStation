@@ -1,4 +1,4 @@
-#include <cfenv>
+﻿#include <cfenv>
 #include <cstring>
 #include <cstdio>
 #include <cstdlib>
@@ -33,16 +33,11 @@ Emulator::~Emulator()
 {
     if (ee_log.is_open())
         ee_log.close();
-    if (RDRAM)
-        delete[] RDRAM;
-    if (IOP_RAM)
-        delete[] IOP_RAM;
-    if (BIOS)
-        delete[] BIOS;
-    if (SPU_RAM)
-        delete[] SPU_RAM;
-    if (ELF_file)
-        delete[] ELF_file;
+    delete[] RDRAM;
+    delete[] IOP_RAM;
+    delete[] BIOS;
+    delete[] SPU_RAM;
+    delete[] ELF_file;
 }
 
 void Emulator::run()
@@ -273,7 +268,7 @@ void Emulator::set_skip_BIOS_hack(SKIP_HACK type)
     skip_BIOS_hack = type;
 }
 
-void Emulator::load_BIOS(uint8_t *BIOS_file)
+void Emulator::load_BIOS(const uint8_t *BIOS_file)
 {
     if (!BIOS)
         BIOS = new uint8_t[1024 * 1024 * 4];
@@ -281,7 +276,7 @@ void Emulator::load_BIOS(uint8_t *BIOS_file)
     memcpy(BIOS, BIOS_file, 1024 * 1024 * 4);
 }
 
-void Emulator::load_ELF(uint8_t *ELF, uint32_t size)
+void Emulator::load_ELF(const uint8_t *ELF, uint32_t size)
 {
     if (ELF[0] != 0x7F || ELF[1] != 'E' || ELF[2] != 'L' || ELF[3] != 'F')
     {
@@ -289,8 +284,7 @@ void Emulator::load_ELF(uint8_t *ELF, uint32_t size)
         return;
     }
     printf("Valid elf\n");
-    if (ELF_file)
-        delete[] ELF_file;
+    delete[] ELF_file;
     ELF_file = new uint8_t[size];
     ELF_size = size;
     memcpy(ELF_file, ELF, size);
@@ -1516,7 +1510,7 @@ void Emulator::iop_ksprintf()
                     break;
                 case 'd':
                     ee_log << *(int32_t*)&IOP_RAM[arg_pointer];
-                    printf("[IOP Debug] %d\n", *(uint32_t*)&IOP_RAM[arg_pointer]);
+                    printf("[IOP Debug] %u\n", *(uint32_t*)&IOP_RAM[arg_pointer]);
                     break;
                 case 'x':
                 case 'X':

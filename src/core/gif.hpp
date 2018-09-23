@@ -1,4 +1,4 @@
-#ifndef GIF_HPP
+﻿#ifndef GIF_HPP
 #define GIF_HPP
 #include <cstdint>
 #include <fstream>
@@ -65,7 +65,7 @@ class GraphicsInterface
         bool send_PATH(int index, uint128_t quad);
 
         bool send_PATH1(uint128_t quad);
-        void send_PATH2(uint32_t data[4]);
+        void send_PATH2(const uint32_t data[4]);
         void send_PATH3(uint128_t quad);
 
         void load_state(std::ifstream& state);

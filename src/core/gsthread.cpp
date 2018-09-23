@@ -1,4 +1,4 @@
-#include <algorithm>
+﻿#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -117,8 +117,7 @@ GraphicsSynthesizerThread::GraphicsSynthesizerThread()
 
 GraphicsSynthesizerThread::~GraphicsSynthesizerThread()
 {
-    if (local_mem)
-        delete[] local_mem;
+    delete[] local_mem;
 }
 
 void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return_fifo)
@@ -354,7 +353,7 @@ uint16_t convert_color_down(uint32_t col)
     return (r | (g << 5) | (b << 10) | (a << 15));
 }
 
-uint32_t GraphicsSynthesizerThread::get_CRT_color(DISPFB &dispfb, uint32_t x, uint32_t y)
+uint32_t GraphicsSynthesizerThread::get_CRT_color(const DISPFB &dispfb, uint32_t x, uint32_t y)
 {
     switch (dispfb.format)
     {
@@ -372,7 +371,7 @@ uint32_t GraphicsSynthesizerThread::get_CRT_color(DISPFB &dispfb, uint32_t x, ui
     }
 }
 
-void GraphicsSynthesizerThread::render_single_CRT(uint32_t *target, DISPFB &dispfb, DISPLAY &display)
+void GraphicsSynthesizerThread::render_single_CRT(uint32_t *target, DISPFB &dispfb, const DISPLAY &display)
 {
     int width = display.width >> 2;
     for (int y = 0; y < display.height; y++)
@@ -1211,7 +1210,7 @@ bool GraphicsSynthesizerThread::depth_test(int32_t x, int32_t y, uint32_t z)
     return false;
 }
 
-void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGBAQ_REG& color, bool alpha_blending)
+void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, const RGBAQ_REG& color, bool alpha_blending)
 {
     x >>= 4;
     y >>= 4;
@@ -2574,7 +2573,7 @@ void GraphicsSynthesizerThread::clut_CSM2_lookup(uint8_t entry, RGBAQ_REG &tex_c
     tex_color.a = get_16bit_alpha(color);
 }
 
-void GraphicsSynthesizerThread::reload_clut(GSContext& context)
+void GraphicsSynthesizerThread::reload_clut(const GSContext& context)
 {
     int eight_bit = false;
     switch (context.tex0.format)

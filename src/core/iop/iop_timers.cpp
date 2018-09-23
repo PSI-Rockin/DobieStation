@@ -1,4 +1,4 @@
-#include <algorithm>
+﻿#include <algorithm>
 #include <cstdio>
 #include "iop_timers.hpp"
 #include "../emulator.hpp"
@@ -173,7 +173,7 @@ void IOPTiming::IRQ_test(int index, bool overflow)
 uint32_t IOPTiming::read_counter(int index)
 {
     update_timers();
-    printf("[IOP Timing] Read timer %d counter: $%08X\n", index, timers[index].counter);
+    printf("[IOP Timing] Read timer %d counter: $%08llX\n", index, timers[index].counter);
     return timers[index].counter;
 }
 

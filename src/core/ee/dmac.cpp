@@ -1,4 +1,4 @@
-#include <cstdio>
+﻿#include <cstdio>
 #include <cstdlib>
 #include "dmac.hpp"
 
@@ -378,7 +378,7 @@ void DMAC::process_SIF0(int cycles)
             {
                 uint64_t DMAtag = sif->read_SIF0();
                 DMAtag |= (uint64_t)sif->read_SIF0() << 32;
-                printf("[DMAC] SIF0 tag: $%08X_%08X\n", DMAtag >> 32, DMAtag);
+                printf("[DMAC] SIF0 tag: $%08llX_%08llX\n", DMAtag >> 32, DMAtag);
 
                 channels[SIF0].quadword_count = DMAtag & 0xFFFF;
                 channels[SIF0].address = DMAtag >> 32;
