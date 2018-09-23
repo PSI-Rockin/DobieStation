@@ -18,7 +18,7 @@ Emulator::Emulator() :
     dmac(&cpu, this, &gif, &ipu, &sif, &vif0, &vif1), gif(&gs), gs(&intc),
     iop(this), iop_dma(this, &cdvd, &sif, &sio2, &spu, &spu2), iop_timers(this), intc(&cpu), ipu(&intc),
     timers(&intc), sio2(this, &pad, &memcard), spu(1, this), spu2(2, this), vif0(nullptr, &vu0, &intc, 0),
-    vif1(&gif, &vu1, &intc, 1), vu0(0), vu1(1)
+    vif1(&gif, &vu1, &intc, 1), vu0(0, this), vu1(1, this)
 {
     BIOS = nullptr;
     RDRAM = nullptr;
@@ -172,6 +172,7 @@ void Emulator::reset()
     IOP_I_MASK = 0;
     IOP_I_CTRL = 0;
     IOP_POST = 0;
+    clear_cop2_interlock();
 }
 
 void Emulator::press_button(PAD_BUTTON button)
@@ -345,6 +346,39 @@ void Emulator::execute_ELF()
         }
     }
     cpu.set_PC(e_entry);
+}
+
+void Emulator::clear_cop2_interlock()
+{
+    cop2_interlock = false;
+    vu_interlock = false;
+}
+
+bool Emulator::check_cop2_interlock()
+{
+   return vu_interlock;
+}
+
+bool Emulator::interlock_cop2_check(bool isCOP2)
+{
+    if (isCOP2)
+    {
+        cop2_interlock = true;
+        //If the interlock is set on COP2 and not the VU (yet) then wait
+        if (!vu_interlock)
+            return true;
+        else 
+            return false;
+    }
+    else
+    {
+        vu_interlock = true;
+        //If the interlock is set on VU0 and not COP2 (yet) then wait
+        if (!cop2_interlock)
+            return true;
+        else
+            return false;
+    }
 }
 
 uint8_t Emulator::read8(uint32_t address)

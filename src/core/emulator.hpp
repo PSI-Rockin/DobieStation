@@ -59,6 +59,7 @@ class Emulator
         VectorUnit vu0, vu1;
 
         bool VBLANK_sent;
+        bool cop2_interlock, vu_interlock;
 
         std::ofstream ee_log;
         std::string ee_stdout;
@@ -111,6 +112,10 @@ class Emulator
         void request_gsdump_single_frame();
         void load_state(const char* file_name);
         void save_state(const char* file_name);
+
+        bool interlock_cop2_check(bool isCOP2);
+        void clear_cop2_interlock();
+        bool check_cop2_interlock();
 
         uint8_t read8(uint32_t address);
         uint16_t read16(uint32_t address);
