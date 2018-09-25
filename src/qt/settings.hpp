@@ -3,7 +3,13 @@
 
 #include <QString>
 
-extern bool load_settings();
-extern bool save_settings();
+namespace Settings
+{
+    extern QString bios_path;
+
+    extern char *as_char(QString q_str);
+    extern bool load();
+    extern bool save();
+};
 
 #endif

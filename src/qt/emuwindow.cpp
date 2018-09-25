@@ -15,7 +15,6 @@
 #include "arg.h"
 
 using namespace std;
-char* bios_name = nullptr;
 
 ifstream::pos_type filesize(const char* filename)
 {
@@ -75,14 +74,18 @@ int EmuWindow::init(int argc, char** argv)
     bool skip_BIOS = false;
     char* argv0; // Program name; AKA argv[0]
 
-    char *file_name = nullptr, *gsdump = nullptr;
+    char* bios_name = nullptr, *file_name = nullptr, *gsdump = nullptr;
 
     // Load before the arguments, so the arguments override the config.
-    load_settings();
+    Settings::load();
+    if (!Settings::bios_path.isEmpty()) bios_name = Settings::as_char(Settings::bios_path);
 
     ARGBEGIN {
         case 'b':
             bios_name = ARGF();
+
+            // Save the bios path in settings, converting to a QString along the way.
+            Settings::bios_path = QString::fromLocal8Bit(bios_name);
             break;
         case 'f':
             file_name = ARGF();
@@ -111,7 +114,9 @@ int EmuWindow::init(int argc, char** argv)
     }
 
     ifstream BIOS_file(bios_name, ios::binary | ios::in);
-    if (!BIOS_file.is_open() || (filesize(bios_name) == 0))
+
+    // Try to head off loading a bad bios file.
+    if (!BIOS_file.is_open() || (filesize(bios_name) <= 0))
     {
         printf("Failed to load PS2 BIOS from %s\n", bios_name);
         return 1;
@@ -120,13 +125,20 @@ int EmuWindow::init(int argc, char** argv)
     uint8_t* BIOS = new uint8_t[1024 * 1024 * 4];
     BIOS_file.read((char*)BIOS, 1024 * 1024 * 4);
     BIOS_file.close();
+
+    // Was there an error reading the file?
+    if (!BIOS_file.good())
+    {
+        printf("Failed to load PS2 BIOS from %s\n", bios_name);
+        return 1;
+    }
+
     emuthread.load_BIOS(BIOS);
-    printf("Loaded PS2 BIOS.\n");
     delete[] BIOS;
     BIOS = nullptr;
 
     // Save at the end of init, so our arguments are saved.
-    save_settings();
+    Settings::save();
 
     if (file_name)
     {
