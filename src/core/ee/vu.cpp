@@ -4,6 +4,7 @@
 #include "vu.hpp"
 #include "vu_interpreter.hpp"
 
+#include "../emulator.hpp"
 #include "../errors.hpp"
 #include "../gif.hpp"
 
@@ -32,7 +33,7 @@
 
 uint32_t VectorUnit::FBRST = 0;
 
-VectorUnit::VectorUnit(int id) : id(id), gif(nullptr)
+VectorUnit::VectorUnit(int id, Emulator* e) : id(id), e(e), gif(nullptr)
 {
     gpr[0].f[0] = 0.0;
     gpr[0].f[1] = 0.0;
@@ -50,6 +51,7 @@ VectorUnit::VectorUnit(int id) : id(id), gif(nullptr)
 void VectorUnit::reset()
 {
     status = 0;
+    status_pipe = 0;
     clip_flags = 0;
     PC = 0;
     cycle_count = 1; //Set to 1 to prevent spurious events from occurring during execution
@@ -86,6 +88,20 @@ void VectorUnit::reset()
     }
 }
 
+void VectorUnit::clear_interlock()
+{
+    e->clear_cop2_interlock();
+}
+
+bool VectorUnit::check_interlock()
+{
+    return e->interlock_cop2_check(false);
+}
+
+bool VectorUnit::is_interlocked()
+{
+    return e->check_cop2_interlock();
+}
 void VectorUnit::set_TOP_regs(uint16_t *TOP, uint16_t *ITOP)
 {
     VIF_TOP = TOP;
@@ -210,10 +226,18 @@ void VectorUnit::handle_XGKICK()
  */
 void VectorUnit::check_for_FMAC_stall()
 {
+    if (decoder.vf_read0[0] == 0 && decoder.vf_read1[0] == 0
+        && decoder.vf_read0[1] == 0 && decoder.vf_read1[1] == 0)
+        return;
+
     for (int i = 0; i < 3; i++)
     {
         uint8_t write0 = (MAC_pipeline[i] >> 16) & 0xFF;
         uint8_t write1 = (MAC_pipeline[i] >> 24) & 0xFF;
+
+        if (write0 == 0 && write1 == 0)
+            continue;
+
         uint8_t write0_field = (MAC_pipeline[i] >> 32) & 0xF;
         uint8_t write1_field = (MAC_pipeline[i] >> 36) & 0xF;
         bool stall_found = false;
@@ -350,7 +374,7 @@ float VectorUnit::update_mac_flags(float value, int index)
         //Overflow
         case 255:
             new_MAC_flags |= 0x1000 << flag_id;
-            new_MAC_flags &= ~(0x100 << flag_id);
+            new_MAC_flags &= ~(0x101 << flag_id);
             value_u = (value_u & 0x80000000) | 0x7F7FFFFF;
             break;
         //Clear all but sign
@@ -402,6 +426,13 @@ void VectorUnit::update_mac_pipeline()
 
     if(updatestatus)
         update_status();
+
+    if (status_pipe > 0)
+    {
+        status_pipe--;
+        if (!status_pipe)
+            status = (status & 0x3F) | (status_value & 0xFC0);
+    }
 }
 
 void VectorUnit::start_DIV_unit(int latency)
@@ -445,6 +476,7 @@ void VectorUnit::print_vectors(uint8_t a, uint8_t b)
         printf("%f ", gpr[b].f[i]);
     printf("\n");
 }
+
 
 /**
  * Code taken from PCSX2 and adapted to DobieStation
@@ -520,7 +552,7 @@ void VectorUnit::ctc(int index, uint32_t value)
         case 28:
             if (value & 0x2 && id == 0)
                 reset();
-            FBRST = value & ~0x33;
+            FBRST = value & ~0x303;
             break;
         default:
             printf("[COP2] Unrecognized ctc2 of $%08X to reg %d\n", value, index);
@@ -967,7 +999,8 @@ void VectorUnit::fmor(uint32_t instr)
 void VectorUnit::fsset(uint32_t instr)
 {
     printf("[VU] FSSET: $%08X\n", instr);
-    status = (status & 0x3F) | (instr & 0xFC0);
+    status_value = (instr & 0xFC0);
+    status_pipe = 4;
 }
 
 void VectorUnit::fsand(uint32_t instr)

@@ -1418,6 +1418,7 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
         int fg = (int)g1 - (int)g2;
         int fr = (int)r1 - (int)r2;
 
+        //Color values are 9-bit after an alpha blending operation
         fb = (((fb * (int)alpha) >> 7) + cb);
         fg = (((fg * (int)alpha) >> 7) + cg);
         fr = (((fr * (int)alpha) >> 7) + cr);
@@ -1535,12 +1536,12 @@ void GraphicsSynthesizerThread::render_point()
     tex_info.vtx_color = v1.rgbaq;
     if (current_PRMODE->texture_mapping)
     {
-        uint32_t u, v;
+        int32_t u, v;
         calculate_LOD(tex_info);
         if (!current_PRMODE->use_UV)
         {
-            u = v1.s * tex_info.tex_width;
-            v = v1.t * tex_info.tex_height;
+            u = (v1.s * tex_info.tex_width) / v1.rgbaq.q;
+            v = (v1.t * tex_info.tex_height) / v1.rgbaq.q;
             u <<= 4;
             v <<= 4;
         }
@@ -1605,13 +1606,13 @@ void GraphicsSynthesizerThread::render_line()
         }
         if (current_PRMODE->texture_mapping)
         {
-            uint32_t u, v;
+            int32_t u, v;
             calculate_LOD(tex_info);
             if (!current_PRMODE->use_UV)
             {
                 float tex_s, tex_t;
-                tex_s = interpolate(x, v1.s, v1.x, v2.s, v2.x);
-                tex_t = interpolate(y, v1.t, v1.y, v2.t, v2.y);
+                tex_s = interpolate_f(x, v1.s, v1.x, v2.s, v2.x);
+                tex_t = interpolate_f(y, v1.t, v1.y, v2.t, v2.y);
                 u = (tex_s * tex_info.tex_width) * 16.0;
                 v = (tex_t * tex_info.tex_height) * 16.0;
             }
@@ -1800,7 +1801,7 @@ void GraphicsSynthesizerThread::render_triangle()
 
                             if (tmp_tex)
                             {
-                                uint32_t u, v;
+                                int32_t u, v;
                                 calculate_LOD(tex_info);
                                 if (tmp_uv)
                                 {
@@ -2130,7 +2131,7 @@ void GraphicsSynthesizerThread::host_to_host()
         {
             case 0x00:
                 data = read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
-                                          TRXPOS.int_source_x, TRXPOS.source_y);
+                                          TRXPOS.int_source_x, TRXPOS.int_source_y);
                 write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.int_dest_y, data);
                 pixels_transferred++;
                 TRXPOS.int_dest_x++;
@@ -2138,7 +2139,7 @@ void GraphicsSynthesizerThread::host_to_host()
                 break;
             case 0x13:
                 data = read_PSMCT8_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
-                                         TRXPOS.int_source_x, TRXPOS.source_y);
+                                         TRXPOS.int_source_x, TRXPOS.int_source_y);
                 write_PSMCT8_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.int_dest_y, data);
                 pixels_transferred++;
                 TRXPOS.int_dest_x++;
@@ -2146,7 +2147,7 @@ void GraphicsSynthesizerThread::host_to_host()
                 break;
             case 0x14:
                 data = read_PSMCT4_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
-                                          TRXPOS.int_source_x, TRXPOS.source_y);
+                                          TRXPOS.int_source_x, TRXPOS.int_source_y);
                 write_PSMCT4_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.int_dest_y, data);
                 pixels_transferred++;
                 TRXPOS.int_dest_x++;
@@ -2165,7 +2166,7 @@ void GraphicsSynthesizerThread::host_to_host()
         if (TRXPOS.int_source_x - TRXPOS.source_x == TRXREG.width)
         {
             TRXPOS.int_source_x = TRXPOS.source_x;
-            TRXPOS.source_y++;
+            TRXPOS.int_source_y++;
         }
     }
     pixels_transferred = 0;
@@ -2174,10 +2175,10 @@ void GraphicsSynthesizerThread::host_to_host()
 
 uint8_t GraphicsSynthesizerThread::get_16bit_alpha(uint16_t color)
 {
-    if (!(color & 0x7FFF) && TEXA.trans_black)
-        return 0;
     if (color & (1 << 15))
         return TEXA.alpha1;
+    if (!(color & 0xFFFF) && TEXA.trans_black)
+        return 0;
     return TEXA.alpha0;
 }
 
@@ -2357,7 +2358,7 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupIn
     switch (current_ctx->clamp.wrap_s)
     {
         case 0:
-            u %= info.tex_width;
+            u &= info.tex_width - 1;
             break;
         case 1:
             if (u > info.tex_width)
@@ -2379,7 +2380,7 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupIn
     switch (current_ctx->clamp.wrap_t)
     {
         case 0:
-            v %= info.tex_height;
+            v &= info.tex_height - 1;
             break;
         case 1:
             if (v > info.tex_height)
@@ -2417,7 +2418,11 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupIn
             info.tex_color.r = color & 0xFF;
             info.tex_color.g = (color >> 8) & 0xFF;
             info.tex_color.b = (color >> 16) & 0xFF;
-            info.tex_color.a = TEXA.alpha0;
+
+            if (!(color & 0xFFFFFF) && TEXA.trans_black)
+                info.tex_color.a = 0;
+            else
+                info.tex_color.a = TEXA.alpha0;
         }
             break;
         case 0x02:
@@ -2497,7 +2502,10 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupIn
             info.tex_color.r = color & 0xFF;
             info.tex_color.g = (color >> 8) & 0xFF;
             info.tex_color.b = (color >> 16) & 0xFF;
-            info.tex_color.a = TEXA.alpha0;
+            if (!(color & 0xFFFFFF) && TEXA.trans_black)
+                info.tex_color.a = 0;
+            else
+                info.tex_color.a = TEXA.alpha0;
         }
             break;
         case 0x32:

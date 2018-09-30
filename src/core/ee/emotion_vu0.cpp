@@ -1,7 +1,7 @@
 #include "emotioninterpreter.hpp"
 #include "vu.hpp"
 
-void EmotionInterpreter::cop2_special(VectorUnit &vu0, uint32_t instruction)
+void EmotionInterpreter::cop2_special(EmotionEngine &cpu, VectorUnit &vu0, uint32_t instruction)
 {
     /**
       * FIXME: IMPORTANT!
@@ -128,10 +128,10 @@ void EmotionInterpreter::cop2_special(VectorUnit &vu0, uint32_t instruction)
             cop2_viand(vu0, instruction);
             break;
         case 0x38:
-            cop2_vcallms(vu0, instruction);
+            cop2_vcallms(vu0, instruction, cpu);
             break;
         case 0x39:
-            cop2_vcallmsr(vu0, instruction);
+            cop2_vcallmsr(vu0, instruction, cpu);
             break;
         case 0x3C:
         case 0x3D:
@@ -428,21 +428,30 @@ void EmotionInterpreter::cop2_viand(VectorUnit &vu0, uint32_t instruction)
     vu0.iand(instruction);
 }
 
-void EmotionInterpreter::cop2_vcallms(VectorUnit &vu0, uint32_t instruction)
+void EmotionInterpreter::cop2_vcallms(VectorUnit &vu0, uint32_t instruction, EmotionEngine &cpu)
 {
     uint32_t imm = (instruction >> 6) & 0x7FFF;
     imm *= 8;
-    //TODO: Proper handling of EE stalling so we don't completely freeze the emulation of everything until VU0 is done.
-    while (vu0.is_running())
-        vu0.run(8);
+
+    if (cpu.vu0_wait())
+    {
+        cpu.set_PC(cpu.get_PC() - 4);
+        return;
+    }
+    cpu.clear_interlock();
+
     vu0.mscal(imm);
 }
 
-void EmotionInterpreter::cop2_vcallmsr(VectorUnit &vu0, uint32_t instruction)
+void EmotionInterpreter::cop2_vcallmsr(VectorUnit &vu0, uint32_t instruction, EmotionEngine &cpu)
 {
-    //TODO: As in VCALLMS
-    while (vu0.is_running())
-        vu0.run(8);
+    if (cpu.vu0_wait())
+    {
+        cpu.set_PC(cpu.get_PC() - 4);
+        return;
+    }
+    cpu.clear_interlock();
+
     vu0.callmsr();
 }
 

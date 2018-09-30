@@ -967,7 +967,7 @@ void DMAC::write16(uint32_t address, uint16_t value)
             {
                 channels[GIF].control &= (value & 0x100) | 0xFFFFFEFF;
                 channels[GIF].started = (channels[GIF].control & 0x100);
-                if(!channels[GIF].started)
+                if (!channels[GIF].started)
                     gif->deactivate_PATH(3);
             }
             break;
@@ -1057,7 +1057,8 @@ void DMAC::write32(uint32_t address, uint32_t value)
             {
                 channels[GIF].control &= (value & 0x100) | 0xFFFFFEFF;
                 channels[GIF].started = (channels[GIF].control & 0x100);
-                gif->deactivate_PATH(3);
+                if (!channels[GIF].started)
+                    gif->deactivate_PATH(3);
             }
             break;
         case 0x1000A010:
