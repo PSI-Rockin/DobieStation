@@ -10,6 +10,9 @@ set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-pthread -O2")
 find_package(Qt5Core REQUIRED)
 find_package(Qt5Widgets REQUIRED)
 
+install (TARGETS DobieStation DESTINATION bin)
+
+
 set(SOURCES
     src/core/errors.cpp
         src/core/ee/bios_hle.cpp
