@@ -72,7 +72,7 @@ void VectorInterface::update(int cycles)
 {
     //Since the loop processes per-word, we need to multiply cycles by 4
     //This allows us to process one quadword per bus cycle
-    int runcycles = cycles << 2;
+    int run_cycles = cycles << 2;
    
     if (vif_stalled & STALL_MSKPATH3)
     {
@@ -80,7 +80,7 @@ void VectorInterface::update(int cycles)
         vif_stalled &= ~STALL_MSKPATH3;
     }
 
-    while (!vif_stalled && runcycles--)
+    while (!vif_stalled && run_cycles--)
     {        
         if (wait_for_VU)
         {
@@ -418,7 +418,7 @@ void VectorInterface::init_UNPACK(uint32_t value)
 
 void VectorInterface::handle_UNPACK_masking(uint128_t& quad)
 {
-    if (unpack.masked || is_fillingwrite())
+    if (unpack.masked || is_filling_write())
     {
         uint8_t tempmask;
         
@@ -483,7 +483,7 @@ void VectorInterface::handle_UNPACK_mode(uint128_t& quad)
     }
 }
 
-bool VectorInterface::is_fillingwrite()
+bool VectorInterface::is_filling_write()
 {
     if (CYCLE.CL < CYCLE.WL && unpack.blocks_written >= CYCLE.CL)
         return true;
@@ -497,7 +497,7 @@ void VectorInterface::handle_UNPACK(uint32_t value)
     buffer[buffer_size] = value;
     buffer_size++;
 
-    while((is_fillingwrite() || (buffer_size >= unpack.words_per_op)) && unpack.num)
+    while((is_filling_write() || (buffer_size >= unpack.words_per_op)) && unpack.num)
     {
         uint128_t quad;
         if (unpack.blocks_written < CYCLE.CL)

@@ -60,7 +60,7 @@ class VectorUnit
         uint8_t data_mem[1024 * 16];
 
         bool running;
-        uint16_t PC, new_PC, secondbranch_PC;
+        uint16_t PC, new_PC, second_branch_PC;
         bool branch_on;
         bool finish_on;
         bool second_branch_pending;

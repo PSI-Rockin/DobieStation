@@ -23,9 +23,9 @@ public:
     void push(const Element& item); // pushByMOve?
     bool pop(Element& item);
 
-    bool wasEmpty() const;
-    bool wasFull() const;
-    bool isLockFree() const;
+    bool was_empty() const;
+    bool was_full() const;
+    bool is_lock_free() const;
 
 private:
     size_t increment(size_t idx) const;
@@ -66,7 +66,7 @@ bool CircularFifo<Element, Size>::pop(Element& item)
 }
 
 template<typename Element, size_t Size>
-bool CircularFifo<Element, Size>::wasEmpty() const
+bool CircularFifo<Element, Size>::was_empty() const
 {
     // snapshot with acceptance of that this comparison operation is not atomic
     return (_head.load() == _tail.load());
@@ -75,7 +75,7 @@ bool CircularFifo<Element, Size>::wasEmpty() const
 
 // snapshot with acceptance that this comparison is not atomic
 template<typename Element, size_t Size>
-bool CircularFifo<Element, Size>::wasFull() const
+bool CircularFifo<Element, Size>::was_full() const
 {
     const auto next_tail = increment(_tail.load()); // aquire, we dont know who call
     return (next_tail == _head.load());
@@ -83,7 +83,7 @@ bool CircularFifo<Element, Size>::wasFull() const
 
 
 template<typename Element, size_t Size>
-bool CircularFifo<Element, Size>::isLockFree() const
+bool CircularFifo<Element, Size>::is_lock_free() const
 {
     return (_tail.is_lock_free() && _head.is_lock_free());
 }
