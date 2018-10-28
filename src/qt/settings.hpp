@@ -7,7 +7,7 @@ namespace Settings
 {
     extern QString bios_path;
 
-    extern char *as_char(QString q_str);
+    extern char* as_char(QString q_str);
     extern bool load();
     extern bool save();
 };

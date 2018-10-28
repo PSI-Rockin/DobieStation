@@ -84,7 +84,7 @@ int EmuWindow::init(int argc, char** argv)
         case 'b':
             bios_name = ARGF();
 
-            // Save the bios path in settings, converting to a QString along the way.
+            // Store the bios path, converting to a QString along the way.
             Settings::bios_path = QString::fromLocal8Bit(bios_name);
             break;
         case 'f':
