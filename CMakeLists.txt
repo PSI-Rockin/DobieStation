@@ -125,3 +125,5 @@ set(HEADERS
 
 add_executable(DobieStation ${SOURCES} ${HEADERS})
 target_link_libraries(DobieStation Qt5::Core Qt5::Widgets)
+install (TARGETS DobieStation DESTINATION bin)
+

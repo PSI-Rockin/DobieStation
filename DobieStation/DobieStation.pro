@@ -13,6 +13,9 @@ QMAKE_CFLAGS_RELEASE -= -O3
 DEFINES += QT_DEPRECATED_WARNINGS
 DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000
 
+target.path = /usr/local/bin/
+INSTALLS += target
+
 SOURCES += ../src/qt/main.cpp \
     ../src/core/errors.cpp \
     ../src/core/ee/emotion.cpp \
