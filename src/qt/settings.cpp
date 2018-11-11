@@ -21,6 +21,7 @@ namespace Settings
 
         bios_path = conf.value("bios", "").toString();
         printf("Loaded config! Bios: %s\n", qPrintable(bios_path));
+        return true;
     }
 
     bool save()
@@ -31,5 +32,6 @@ namespace Settings
         conf.sync();
 
         printf("Saved config! Bios: %s\n", qPrintable(bios_path));
+        return true;
     }
 };
