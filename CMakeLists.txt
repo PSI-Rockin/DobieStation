@@ -67,6 +67,7 @@ set(SOURCES
 	src/qt/emuthread.cpp
         src/qt/emuwindow.cpp
         src/qt/main.cpp
+	src/qt/settings.cpp
         )
 
 set(HEADERS
@@ -121,6 +122,7 @@ set(HEADERS
 	src/core/sif.hpp
 	src/qt/emuthread.hpp
         src/qt/emuwindow.hpp
+	src/qt/settings.hpp
         )
 
 add_executable(DobieStation ${SOURCES} ${HEADERS})

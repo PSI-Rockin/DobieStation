@@ -7,6 +7,7 @@
 
 #include "emuthread.hpp"
 
+#include "../qt/settings.hpp"
 #include "../core/emulator.hpp"
 
 class EmuWindow : public QMainWindow
