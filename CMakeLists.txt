@@ -7,6 +7,7 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-pthread -O2")
 
+
 find_package(Qt5Core REQUIRED)
 find_package(Qt5Widgets REQUIRED)
 
@@ -122,10 +123,16 @@ set(HEADERS
 	src/core/sif.hpp
 	src/qt/emuthread.hpp
         src/qt/emuwindow.hpp
-	src/qt/settings.hpp
-        )
+	src/qt/settings.hpp)
 
 add_executable(DobieStation ${SOURCES} ${HEADERS})
 target_link_libraries(DobieStation Qt5::Core Qt5::Widgets)
-install (TARGETS DobieStation DESTINATION bin)
 
+if(UNIX AND NOT APPLE)
+set(LINUX TRUE)
+endif()
+
+if(LINUX)
+install (TARGETS DobieStation DESTINATION bin)
+install (FILES build/DobieStation.desktop DESTINATION share/applications)
+endif ()
