@@ -1,0 +1,10 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=DobieStation
+Comment=
+Exec=DobieStation
+Icon=/home/kenshen/DobieStation/build/dobie_station.png
+Path=
+Terminal=false
+StartupNotify=false
