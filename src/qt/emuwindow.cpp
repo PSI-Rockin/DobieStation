@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 
+#include <QApplication>
 #include <QPainter>
 #include <QString>
 #include <QVBoxLayout>
@@ -75,9 +76,16 @@ int EmuWindow::init(int argc, char** argv)
 
     char* bios_name = nullptr, *file_name = nullptr, *gsdump = nullptr;
 
+    // Load before the arguments, so the arguments override the config.
+    Settings::load();
+    if (!Settings::bios_path.isEmpty()) bios_name = Settings::as_char(Settings::bios_path);
+
     ARGBEGIN {
         case 'b':
             bios_name = ARGF();
+
+            // Store the bios path, converting to a QString along the way.
+            Settings::bios_path = QString::fromLocal8Bit(bios_name);
             break;
         case 'f':
             file_name = ARGF();
@@ -104,19 +112,33 @@ int EmuWindow::init(int argc, char** argv)
     {
         return run_gsdump(gsdump);
     }
+
     ifstream BIOS_file(bios_name, ios::binary | ios::in);
-    if (!BIOS_file.is_open())
+
+    // Try to head off loading a bad bios file.
+    if (!BIOS_file.is_open() || (filesize(bios_name) <= 0))
     {
         printf("Failed to load PS2 BIOS from %s\n", bios_name);
         return 1;
     }
-    printf("Loaded PS2 BIOS.\n");
+    
     uint8_t* BIOS = new uint8_t[1024 * 1024 * 4];
     BIOS_file.read((char*)BIOS, 1024 * 1024 * 4);
     BIOS_file.close();
+
+    // Was there an error reading the file?
+    if (!BIOS_file.good())
+    {
+        printf("Failed to load PS2 BIOS from %s\n", bios_name);
+        return 1;
+    }
+
     emu_thread.load_BIOS(BIOS);
     delete[] BIOS;
     BIOS = nullptr;
+
+    // Save at the end of init, so our arguments are saved.
+    Settings::save();
 
     if (file_name)
     {
@@ -209,6 +231,7 @@ void EmuWindow::create_menu()
     file_menu->addAction(load_state_action);
     file_menu->addAction(save_state_action);
     file_menu->addAction(exit_action);
+    file_menu->addSeparator();
     file_menu->addAction(gsdump_action);
 
     options_menu = menuBar()->addMenu(tr("&Options"));

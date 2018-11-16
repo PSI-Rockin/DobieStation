@@ -2130,6 +2130,7 @@ void GraphicsSynthesizerThread::host_to_host()
         switch (BITBLTBUF.source_format)
         {
             case 0x00:
+            case 0x01: //PSMCT24
                 data = read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
                                           TRXPOS.int_source_x, TRXPOS.int_source_y);
                 write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.int_dest_y, data);

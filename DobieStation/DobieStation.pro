@@ -13,6 +13,9 @@ QMAKE_CFLAGS_RELEASE -= -O3
 DEFINES += QT_DEPRECATED_WARNINGS
 DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000
 
+target.path = /usr/local/bin/
+INSTALLS += target
+
 SOURCES += ../src/qt/main.cpp \
     ../src/core/errors.cpp \
     ../src/core/ee/emotion.cpp \
@@ -68,7 +71,8 @@ SOURCES += ../src/qt/main.cpp \
     ../src/core/ee/vu_disasm.cpp \
     ../src/core/gsmem.cpp \
     ../src/core/serialize.cpp \
-    ../src/core/iop/memcard.cpp
+    ../src/core/iop/memcard.cpp \
+    ../src/qt/settings.cpp
 
 HEADERS += \
     ../src/core/errors.hpp \
@@ -121,4 +125,5 @@ HEADERS += \
     ../src/core/ee/vu_interpreter.hpp \
     ../src/core/ee/vu_disasm.hpp \
     ../src/core/gsmem.hpp \
-    ../src/core/iop/memcard.hpp
+    ../src/core/iop/memcard.hpp \
+    ../src/qt/settings.hpp
