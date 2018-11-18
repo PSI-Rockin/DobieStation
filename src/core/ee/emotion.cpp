@@ -654,6 +654,12 @@ void EmotionEngine::handle_exception(uint32_t new_addr, uint8_t code)
         cp0->mtc(14, PC);
     }
 
+    if (cp0->status.bev)
+    {
+        new_addr |= 0xBFC00000;
+        new_addr += 0x200;
+    }
+
     branch_on = false;
     delay_slot = 0;
     PC = new_addr;
