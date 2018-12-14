@@ -1657,6 +1657,8 @@ string disasm_cop2_special2(uint32_t instruction)
             return disasm_vmulai(instruction);
         case 0x1F:
             return disasm_vclip(instruction);
+        case 0x20:
+            return disasm_vaddaq(instruction);
         case 0x21:
             return disasm_vmaddaq(instruction);
         case 0x23:
@@ -1862,6 +1864,11 @@ string disasm_vclip(uint32_t instruction)
     uint32_t ft = (instruction >> 16) & 0x1F;
     output << "vclipw.xyz vf" << fs << ", vf" << ft;
     return output.str();
+}
+
+string disasm_vaddaq(uint32_t instruction)
+{
+    return disasm_cop2_acc_q("vadda", instruction);
 }
 
 string disasm_vmaddaq(uint32_t instruction)

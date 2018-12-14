@@ -306,6 +306,8 @@ void GraphicsSynthesizerThread::reset()
     num_vertices = 0;
     frame_count = 0;
 
+    COLCLAMP = true;
+
     reg.reset();
     context1.reset();
     context2.reset();

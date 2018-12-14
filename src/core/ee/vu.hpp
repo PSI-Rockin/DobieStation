@@ -174,6 +174,7 @@ class VectorUnit
         void adda(uint32_t instr);
         void addabc(uint32_t instr);
         void addai(uint32_t instr);
+        void addaq(uint32_t instr);
         void addbc(uint32_t instr);
         void addi(uint32_t instr);
         void addq(uint32_t instr);

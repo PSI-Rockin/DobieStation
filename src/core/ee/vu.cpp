@@ -687,6 +687,24 @@ void VectorUnit::addai(uint32_t instr)
     printf("\n");
 }
 
+void VectorUnit::addaq(uint32_t instr)
+{
+    printf("[VU] ADDAq: ");
+    float op = convert(Q.u);
+    for (int i = 0; i < 4; i++)
+    {
+        if (_field & (1 << (3 - i)))
+        {
+            float temp = convert(gpr[_fs_].u[i]) + op;
+            ACC.f[i] = update_mac_flags(temp, i);
+            printf("(%d)%f ", i, ACC.f[i]);
+        }
+        else
+            clear_mac_flags(i);
+    }
+    printf("\n");
+}
+
 void VectorUnit::addbc(uint32_t instr)
 {
     printf("[VU] ADDbc: ");
