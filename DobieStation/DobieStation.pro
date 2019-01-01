@@ -72,7 +72,8 @@ SOURCES += ../src/qt/main.cpp \
     ../src/core/gsmem.cpp \
     ../src/core/serialize.cpp \
     ../src/core/iop/memcard.cpp \
-    ../src/qt/settings.cpp
+    ../src/qt/settings.cpp \
+    ../src/core/jitcommon/jitcache.cpp
 
 HEADERS += \
     ../src/core/errors.hpp \
@@ -126,4 +127,5 @@ HEADERS += \
     ../src/core/ee/vu_disasm.hpp \
     ../src/core/gsmem.hpp \
     ../src/core/iop/memcard.hpp \
-    ../src/qt/settings.hpp
+    ../src/qt/settings.hpp \
+    ../src/core/jitcommon/jitcache.hpp
