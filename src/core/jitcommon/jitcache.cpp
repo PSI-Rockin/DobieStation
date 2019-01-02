@@ -56,6 +56,19 @@ void JitCache::flush_all_blocks()
     current_block = nullptr;
 }
 
+int JitCache::find_block(uint32_t pc)
+{
+    for (unsigned int i = 0; i < blocks.size(); i++)
+    {
+        if (pc == blocks[i].start_pc)
+        {
+            current_block = &blocks[i];
+            return i;
+        }
+    }
+    return -1;
+}
+
 uint8_t* JitCache::get_current_block_start()
 {
     return current_block->block_start;

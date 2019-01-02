@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include "vu.hpp"
 #include "vu_interpreter.hpp"
+#include "vu_jit.hpp"
 
 #include "../emulator.hpp"
 #include "../errors.hpp"
@@ -219,7 +220,7 @@ void VectorUnit::run_jit(int cycles)
     int cycles_to_run = cycles;
     while (running && cycles_to_run)
     {
-
+        cycles_to_run -= VU_JIT::run(this);
     }
 }
 

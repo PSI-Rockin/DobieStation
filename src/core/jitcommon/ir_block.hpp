@@ -1,22 +1,23 @@
 #ifndef IR_BLOCK_HPP
 #define IR_BLOCK_HPP
 #include <list>
+#include "ir_instr.hpp"
 
-struct IR_Instruction
+namespace IR
 {
 
-};
-
-class IR_Block
+class Block
 {
     private:
-        std::list<IR_Instruction> instructions;
+        std::list<Instruction> instructions;
         int cycle_count;
     public:
-        IR_Block();
+        Block();
 
-        void add_instr(IR_Instruction& instr);
+        void add_instr(Instruction& instr);
         void add_cycle();
+};
+
 };
 
 #endif // IR_BLOCK_HPP

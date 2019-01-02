@@ -23,6 +23,8 @@ class JitCache
         void free_block(uint32_t pc);
         void flush_all_blocks();
 
+        int find_block(uint32_t pc);
+
         uint8_t* get_current_block_start();
 
         void set_current_block_rx();

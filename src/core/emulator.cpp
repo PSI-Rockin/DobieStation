@@ -87,7 +87,7 @@ void Emulator::run()
         vif0.update(cycles);
         vif1.update(cycles);
         vu0.run(cycles);
-        vu1.run(cycles);
+        vu1.run_jit(cycles);
         cycles >>= 2;
         iop_timers.run(cycles);
         iop_dma.run(cycles);

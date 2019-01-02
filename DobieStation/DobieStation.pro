@@ -76,7 +76,9 @@ SOURCES += ../src/qt/main.cpp \
     ../src/core/jitcommon/jitcache.cpp \
     ../src/core/jitcommon/emitter64.cpp \
     ../src/core/ee/vu_jittrans.cpp \
-    ../src/core/jitcommon/ir_block.cpp
+    ../src/core/jitcommon/ir_block.cpp \
+    ../src/core/jitcommon/ir_instr.cpp \
+    ../src/core/ee/vu_jit.cpp
 
 HEADERS += \
     ../src/core/errors.hpp \
@@ -134,4 +136,6 @@ HEADERS += \
     ../src/core/jitcommon/jitcache.hpp \
     ../src/core/jitcommon/emitter64.hpp \
     ../src/core/ee/vu_jittrans.hpp \
-    ../src/core/jitcommon/ir_block.hpp
+    ../src/core/jitcommon/ir_block.hpp \
+    ../src/core/jitcommon/ir_instr.hpp \
+    ../src/core/ee/vu_jit.hpp

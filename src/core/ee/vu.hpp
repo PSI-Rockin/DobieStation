@@ -165,6 +165,8 @@ class VectorUnit
         void set_I(uint32_t value);
         void set_Q(uint32_t value);
 
+        uint8_t* get_instr_mem();
+
         uint32_t cfc(int index);
         void ctc(int index, uint32_t value);
 
@@ -403,6 +405,11 @@ inline void VectorUnit::set_I(uint32_t value)
 inline void VectorUnit::set_Q(uint32_t value)
 {
     new_Q_instance.u = value;
+}
+
+inline uint8_t* VectorUnit::get_instr_mem()
+{
+    return (uint8_t*)instr_mem;
 }
 
 #endif // VU_HPP
