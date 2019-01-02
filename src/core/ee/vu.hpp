@@ -132,6 +132,7 @@ class VectorUnit
         void flush_pipes();
 
         void run(int cycles);
+        void run_jit(int cycles);
         void handle_XGKICK();
         void callmsr();
         void mscal(uint32_t addr);

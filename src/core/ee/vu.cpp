@@ -196,6 +196,15 @@ void VectorUnit::run(int cycles)
     }
 }
 
+void VectorUnit::run_jit(int cycles)
+{
+    int cycles_to_run = cycles;
+    while (running && cycles_to_run)
+    {
+
+    }
+}
+
 void VectorUnit::handle_XGKICK()
 {
     uint128_t quad = read_data<uint128_t>(GIF_addr);

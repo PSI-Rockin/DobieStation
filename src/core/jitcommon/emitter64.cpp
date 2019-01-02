@@ -1,0 +1,52 @@
+#include "emitter64.hpp"
+
+Emitter64::Emitter64(JitCache* cache) : cache(cache)
+{
+
+}
+
+void Emitter64::rex_extend_gpr(REG_64 reg)
+{
+    //REX - bit 0 set allows access to r8-r15
+    if (reg & 0x8)
+        cache->write(0x41);
+}
+
+void Emitter64::rexw_r_rm(REG_64 reg, REG_64 rm)
+{
+    uint8_t rex = 0x48;
+    if (reg & 0x8)
+        rex |= 0x4;
+    if (rm & 0x8)
+        rex |= 0x1;
+    cache->write<uint8_t>(rex);
+}
+
+void Emitter64::modrm(uint8_t mode, uint8_t reg, uint8_t rm)
+{
+    cache->write<uint8_t>((mode << 6) | (reg << 3) | rm);
+}
+
+void Emitter64::MOV64_MR(REG_64 source, REG_64 dest)
+{
+    rexw_r_rm(source, dest);
+    cache->write<uint8_t>(0x89);
+    modrm(0b11, source, dest);
+}
+
+void Emitter64::PUSH(REG_64 reg)
+{
+    rex_extend_gpr(reg);
+    cache->write<uint8_t>(0x50 + (reg & 0x7));
+}
+
+void Emitter64::POP(REG_64 reg)
+{
+    rex_extend_gpr(reg);
+    cache->write<uint8_t>(0x58 + (reg & 0x7));
+}
+
+void Emitter64::RET()
+{
+    cache->write<uint8_t>(0xC3);
+}
