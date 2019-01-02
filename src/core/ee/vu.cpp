@@ -33,6 +33,24 @@
 
 uint32_t VectorUnit::FBRST = 0;
 
+/**
+ * The VU max and min instructions support denormals.
+ * Because of this, we must compare registers as signed integers instead of floats.
+ */
+int32_t vu_max(int32_t a, int32_t b)
+{
+    if (a < 0 && b < 0)
+        return std::min(a, b);
+    return std::max(a, b);
+}
+
+int32_t vu_min(int32_t a, int32_t b)
+{
+    if (a < 0 && b < 0)
+        return std::max(a, b);
+    return std::min(a, b);
+}
+
 VectorUnit::VectorUnit(int id, Emulator* e) : id(id), e(e), gif(nullptr)
 {
     gpr[0].f[0] = 0.0;
@@ -1590,12 +1608,9 @@ void VectorUnit::max(uint32_t instr)
     {
         if (_field & (1 << (3 - i)))
         {
-            float op1 = convert(gpr[_fs_].u[i]);
-            float op2 = convert(gpr[_ft_].u[i]);
-            if (op1 > op2)
-                set_gpr_f(_fd_, i, op1);
-            else
-                set_gpr_f(_fd_, i, op2);
+            int32_t op1 = gpr[_fs_].s[i];
+            int32_t op2 = gpr[_ft_].s[i];
+            set_gpr_s(_fd_, i, vu_max(op1, op2));
             printf("(%d)%f ", i, gpr[_fd_].f[i]);
         }
     }
@@ -1605,16 +1620,13 @@ void VectorUnit::max(uint32_t instr)
 void VectorUnit::maxi(uint32_t instr)
 {
     printf("[VU] MAXi: ");
-    float op1 = convert(I.u);
+    int32_t op1 = (int32_t)I.u;
     for (int i = 0; i < 4; i++)
     {
         if (_field & (1 << (3 - i)))
         {
-            float op2 = convert(gpr[_fs_].u[i]);
-            if (op1 > op2)
-                set_gpr_f(_fd_, i, op1);
-            else
-                set_gpr_f(_fd_, i, op2);
+            int32_t op2 = gpr[_ft_].s[i];
+            set_gpr_s(_fd_, i, vu_max(op1, op2));
             printf("(%d)%f ", i, gpr[_fd_].f[i]);
         }
     }
@@ -1624,16 +1636,13 @@ void VectorUnit::maxi(uint32_t instr)
 void VectorUnit::maxbc(uint32_t instr)
 {
     printf("[VU] MAXbc: ");
-    float op = convert(gpr[_ft_].u[_bc_]);
+    int32_t op2 = gpr[_ft_].s[_bc_];
     for (int i = 0; i < 4; i++)
     {
         if (_field & (1 << (3 - i)))
         {
-            float op2 = convert(gpr[_fs_].u[i]);
-            if (op > op2)
-                set_gpr_f(_fd_, i, op);
-            else
-                set_gpr_f(_fd_, i, op2);
+            int32_t op1 = gpr[_fs_].s[i];
+            set_gpr_s(_fd_, i, vu_max(op1, op2));
             printf("(%d)%f ", i, gpr[_fd_].f[i]);
         }
     }
@@ -1667,12 +1676,9 @@ void VectorUnit::mini(uint32_t instr)
     {
         if (_field & (1 << (3 - i)))
         {
-            float op1 = convert(gpr[_fs_].u[i]);
-            float op2 = convert(gpr[_ft_].u[i]);
-            if (op1 < op2)
-                set_gpr_f(_fd_, i, op1);
-            else
-                set_gpr_f(_fd_, i, op2);
+            int32_t op1 = gpr[_fs_].s[i];
+            int32_t op2 = gpr[_ft_].s[i];
+            set_gpr_s(_fd_, i, vu_min(op1, op2));
             printf("(%d)%f ", i, gpr[_fd_].f[i]);
         }
     }
@@ -1682,16 +1688,13 @@ void VectorUnit::mini(uint32_t instr)
 void VectorUnit::minibc(uint32_t instr)
 {
     printf("[VU] MINIbc: ");
-    float op = convert(gpr[_ft_].u[_bc_]);
+    int32_t op1 = gpr[_ft_].s[_bc_];
     for (int i = 0; i < 4; i++)
     {
         if (_field & (1 << (3 - i)))
         {
-            float op2 = convert(gpr[_fs_].u[i]);
-            if (op < op2)
-                set_gpr_f(_fd_, i, op);
-            else
-                set_gpr_f(_fd_, i, op2);
+            int32_t op2 = gpr[_fs_].s[i];
+            set_gpr_s(_fd_, i, vu_min(op1, op2));
             printf("(%d)%f", i, gpr[_fd_].f[i]);
         }
     }
@@ -1701,16 +1704,13 @@ void VectorUnit::minibc(uint32_t instr)
 void VectorUnit::minii(uint32_t instr)
 {
     printf("[VU] MINIi: ");
-    float op = convert(I.u);
+    int32_t op1 = (int32_t)I.u;
     for (int i = 0; i < 4; i++)
     {
         if (_field & (1 << (3 - i)))
         {
-            float op2 = convert(gpr[_fs_].u[i]);
-            if (op < op2)
-                set_gpr_f(_fd_, i, op);
-            else
-                set_gpr_f(_fd_, i, op2);
+            int32_t op2 = gpr[_fs_].s[i];
+            set_gpr_s(_fd_, i, vu_min(op1, op2));
             printf("(%d)%f", i, gpr[_fd_].f[i]);
         }
     }

@@ -158,6 +158,7 @@ class VectorUnit
         int get_id();
         void set_gpr_f(int index, int field, float value);
         void set_gpr_u(int index, int field, uint32_t value);
+        void set_gpr_s(int index, int field, int32_t value);
         void set_int(int index, uint16_t value);
         void set_status(uint32_t value);
         void set_R(uint32_t value);
@@ -370,6 +371,12 @@ inline void VectorUnit::set_gpr_u(int index, int field, uint32_t value)
 {
     if (index)
         gpr[index].u[field] = value;
+}
+
+inline void VectorUnit::set_gpr_s(int index, int field, int32_t value)
+{
+    if (index)
+        gpr[index].s[field] = value;
 }
 
 inline void VectorUnit::set_int(int index, uint16_t value)
