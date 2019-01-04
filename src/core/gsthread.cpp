@@ -725,6 +725,17 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
         case 0x0043:
             context2.set_alpha(value);
             break;
+        case 0x0044:
+            for (int y = 0; y < 4; y++)
+            {
+                for (int x = 0; x < 4; x++)
+                {
+                    uint8_t element = value >> ((x + (y * 4)) * 4);
+                    element &= 0x7;
+                    dither_mtx[y][x] = element;
+                }
+            }
+            break;
         case 0x0045:
             DTHE = value & 0x1;
             break;
@@ -1425,6 +1436,24 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
         fg = (((fg * (int)alpha) >> 7) + cg);
         fr = (((fr * (int)alpha) >> 7) + cr);
 
+        //Dithering
+        if (DTHE)
+        {
+            uint8_t dither = dither_mtx[y % 4][x % 4];
+            if (dither & 0x4)
+            {
+                fb -= dither;
+                fg -= dither;
+                fr -= dither;
+            }
+            else
+            {
+                fb += dither;
+                fg += dither;
+                fr += dither;
+            }
+        }
+
         if (COLCLAMP)
         {
             if (fb < 0)
@@ -1454,6 +1483,45 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
     }
     else
     {
+        //Dithering
+        if (DTHE)
+        {
+            uint8_t dither = dither_mtx[y % 4][x % 4];
+            if (dither & 0x4)
+            {
+                color.b -= dither;
+                color.g -= dither;
+                color.r -= dither;
+            }
+            else
+            {
+                color.b += dither;
+                color.g += dither;
+                color.r += dither;
+            }
+
+            if (COLCLAMP)
+            {
+                if (color.b < 0)
+                    color.b = 0;
+                if (color.g < 0)
+                    color.g = 0;
+                if (color.r < 0)
+                    color.r = 0;
+                if (color.b > 0xFF)
+                    color.b = 0xFF;
+                if (color.g > 0xFF)
+                    color.g = 0xFF;
+                if (color.r > 0xFF)
+                    color.r = 0xFF;
+            }
+            else
+            {
+                color.b &= 0xFF;
+                color.g &= 0xFF;
+                color.r &= 0xFF;
+            }
+        }
         final_color |= color.a << 24;
         final_color |= color.b << 16;
         final_color |= color.g << 8;

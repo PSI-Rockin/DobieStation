@@ -19,7 +19,7 @@ struct PRMODE_REG
 struct RGBAQ_REG
 {
     //We make them 16-bit to handle potential overflows
-    uint16_t r, g, b, a;
+    int16_t r, g, b, a;
     float q;
 };
 
@@ -116,6 +116,8 @@ class GraphicsSynthesizerThread
         bool COLCLAMP;
         RGBAQ_REG FOGCOL;
         bool PABE;
+
+        uint8_t dither_mtx[4][4];
 
         BITBLTBUF_REG BITBLTBUF;
         TRXPOS_REG TRXPOS;
