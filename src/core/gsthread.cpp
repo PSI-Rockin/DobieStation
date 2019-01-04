@@ -1440,17 +1440,18 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
         if (DTHE)
         {
             uint8_t dither = dither_mtx[y % 4][x % 4];
+            uint8_t dither_amount = dither & 0x3;
             if (dither & 0x4)
             {
-                fb -= dither;
-                fg -= dither;
-                fr -= dither;
+                fb -= dither_amount;
+                fg -= dither_amount;
+                fr -= dither_amount;
             }
             else
             {
-                fb += dither;
-                fg += dither;
-                fr += dither;
+                fb += dither_amount;
+                fg += dither_amount;
+                fr += dither_amount;
             }
         }
 
@@ -1487,17 +1488,18 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
         if (DTHE)
         {
             uint8_t dither = dither_mtx[y % 4][x % 4];
+            uint8_t dither_amount = dither & 0x3;
             if (dither & 0x4)
             {
-                color.b -= dither;
-                color.g -= dither;
-                color.r -= dither;
+                color.b -= dither_amount;
+                color.g -= dither_amount;
+                color.r -= dither_amount;
             }
             else
             {
-                color.b += dither;
-                color.g += dither;
-                color.r += dither;
+                color.b += dither_amount;
+                color.g += dither_amount;
+                color.r += dither_amount;
             }
 
             if (COLCLAMP)
