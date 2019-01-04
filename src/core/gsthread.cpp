@@ -1088,6 +1088,7 @@ void GraphicsSynthesizerThread::vertex_kick(bool drawing_kick)
     current_vtx.uv = UV;
     current_vtx.s = ST.s;
     current_vtx.t = ST.t;
+    current_vtx.fog = FOG;
     vtx_queue[0] = current_vtx;
     //printf("Vkick: (%d, %d, %d)\n", current_vtx.x, current_vtx.y, current_vtx.z);
 
@@ -1606,6 +1607,7 @@ void GraphicsSynthesizerThread::render_point()
     TexLookupInfo tex_info;
     
     tex_info.vtx_color = v1.rgbaq;
+    tex_info.fog = v1.fog;
     if (current_PRMODE->texture_mapping)
     {
         int32_t u, v;
@@ -1669,6 +1671,7 @@ void GraphicsSynthesizerThread::render_line()
         int32_t y = v1.y*(1.-t) + v2.y*t;        
         //if (y < min_y || y > max_y)
             //continue;
+        tex_info.fog = interpolate(x, v1.fog, v1.x, v2.fog, v2.x);
         if (current_PRMODE->gourand_shading)
         {
             tex_info.vtx_color.r = interpolate(x, v1.rgbaq.r, v1.x, v2.rgbaq.r, v2.x);
@@ -1865,11 +1868,13 @@ void GraphicsSynthesizerThread::render_triangle()
                             float b = (float) v1.rgbaq.b * w1 + (float) v2.rgbaq.b * w2 + (float) v3.rgbaq.b * w3;
                             float a = (float) v1.rgbaq.a * w1 + (float) v2.rgbaq.a * w2 + (float) v3.rgbaq.a * w3;
                             float q = v1.rgbaq.q * w1 + v2.rgbaq.q * w2 + v3.rgbaq.q * w3;
+                            float fog = (float) v1.fog * w1 + (float) v2.fog * w2 + (float) v3.fog * w3;
                             tex_info.vtx_color.r = r / divider;
                             tex_info.vtx_color.g = g / divider;
                             tex_info.vtx_color.b = b / divider;
                             tex_info.vtx_color.a = a / divider;
                             tex_info.vtx_color.q = q / divider;
+                            tex_info.fog = fog / divider;
 
                             if (tmp_tex)
                             {
@@ -1973,6 +1978,7 @@ void GraphicsSynthesizerThread::render_sprite()
         {
             if (tmp_tex)
             {
+                tex_info.fog = v2.fog;
                 calculate_LOD(tex_info);
                 if (tmp_uv)
                 {
@@ -2419,10 +2425,11 @@ void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, TexLookupInfo& 
 
     if (current_PRMODE->fog)
     {
-        uint16_t fog2 = 0xFF - FOG;
-        info.tex_color.r = ((info.tex_color.r * FOG) >> 8) + ((fog2 * FOGCOL.r) >> 8);
-        info.tex_color.g = ((info.tex_color.g * FOG) >> 8) + ((fog2 * FOGCOL.g) >> 8);
-        info.tex_color.b = ((info.tex_color.b * FOG) >> 8) + ((fog2 * FOGCOL.b) >> 8);
+        uint16_t fog = info.fog;
+        uint16_t fog2 = 0xFF - info.fog;
+        info.tex_color.r = ((info.tex_color.r * fog) >> 8) + ((fog2 * FOGCOL.r) >> 8);
+        info.tex_color.g = ((info.tex_color.g * fog) >> 8) + ((fog2 * FOGCOL.g) >> 8);
+        info.tex_color.b = ((info.tex_color.b * fog) >> 8) + ((fog2 * FOGCOL.b) >> 8);
     }
 }
 

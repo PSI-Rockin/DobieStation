@@ -67,6 +67,7 @@ struct Vertex
     RGBAQ_REG rgbaq;
     UV_REG uv;
     float s, t;
+    uint8_t fog;
     void to_relative(XYOFFSET xyoffset)
     {
         x -= xyoffset.x;
@@ -84,6 +85,8 @@ struct TexLookupInfo
     uint32_t tex_base;
     uint32_t buffer_width;
     uint16_t tex_width, tex_height;
+
+    uint8_t fog;
 };
 
 class GraphicsSynthesizerThread
