@@ -74,6 +74,11 @@ uint8_t* JitCache::get_current_block_start()
     return current_block->block_start;
 }
 
+uint8_t* JitCache::get_current_addr()
+{
+    return current_block->mem;
+}
+
 //Replace a block's write privileges with executable privileges.
 //This is to prevent the security risks that RWX memory has.
 void JitCache::set_current_block_rx()

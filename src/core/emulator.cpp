@@ -6,7 +6,9 @@
 #include "emulator.hpp"
 #include "errors.hpp"
 
-#define CYCLES_PER_FRAME 4900000
+#include "ee/vu_jit.hpp"
+
+#define CYCLES_PER_FRAME 4900000 * 0.3
 #define VBLANK_START CYCLES_PER_FRAME * 0.75
 
 //These constants are used for the fast boot hack for .isos
@@ -165,6 +167,8 @@ void Emulator::reset()
     vif1.reset();
     vu0.reset();
     vu1.reset();
+    VU_JIT::reset();
+
     MCH_DRD = 0;
     MCH_RICM = 0;
     rdram_sdevid = 0;

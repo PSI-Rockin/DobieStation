@@ -139,3 +139,6 @@ HEADERS += \
     ../src/core/jitcommon/ir_block.hpp \
     ../src/core/jitcommon/ir_instr.hpp \
     ../src/core/ee/vu_jit.hpp
+
+DISTFILES += \
+    ../src/core/jitcommon/ir_instrlist.inc

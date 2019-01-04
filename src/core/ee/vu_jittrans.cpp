@@ -9,7 +9,7 @@ uint32_t branch_offset(uint32_t instr, uint32_t PC)
     int16_t imm = instr & 0x7FF;
     imm = ((int16_t)(imm << 5)) >> 5;
     imm *= 8;
-    return PC + imm + 16;
+    return PC + imm + 8;
 }
 
 IR::Block translate(uint32_t PC, uint8_t* instr_mem)
@@ -33,7 +33,9 @@ IR::Block translate(uint32_t PC, uint8_t* instr_mem)
         //LOI - upper goes first, lower gets loaded into I register
         if (upper & (1 << 31))
         {
-            IR::Instruction loi(IR::Opcode::LoadConst, VU_SpecialReg::I, lower);
+            IR::Instruction loi(IR::Opcode::LoadConst);
+            loi.set_dest(VU_SpecialReg::I);
+            loi.set_source_u32(lower);
             for (unsigned int i = 0; i < upper_instrs.size(); i++)
                 block.add_instr(upper_instrs[i]);
             block.add_instr(loi);
@@ -129,14 +131,25 @@ void lower1(std::vector<IR::Instruction> &instrs, uint32_t lower)
 void lower2(std::vector<IR::Instruction> &instrs, uint32_t lower, uint32_t PC)
 {
     uint8_t op = (lower >> 25) & 0x7F;
+    IR::Instruction instr;
     switch (op)
     {
         case 0x20:
-            instrs.push_back(IR::Instruction(IR::Opcode::Jump, branch_offset(lower, PC)));
+            //B
+            instr.op = IR::Opcode::Jump;
+            instr.set_jump_dest(branch_offset(lower, PC));
+            break;
+        case 0x21:
+            //BAL
+            instr.op = IR::Opcode::JumpAndLink;
+            instr.set_jump_dest(branch_offset(lower, PC));
+            instr.set_return_addr((PC + 16) / 8);
+            instr.set_link_register((lower >> 16) & 0x1F);
             break;
         default:
             Errors::die("[VU_JIT] Unrecognized lower2 op $%02X", op);
     }
+    instrs.push_back(instr);
 }
 
 };

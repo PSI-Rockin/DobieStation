@@ -1,0 +1,8 @@
+INSTR(Null)
+INSTR(LoadConst)
+INSTR(Jump)
+INSTR(JumpAndLink)
+INSTR(BranchEqual)
+INSTR(BranchNotEqual)
+INSTR(BranchGreater)
+INSTR(BranchGreaterOrEqual)

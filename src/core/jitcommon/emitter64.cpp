@@ -12,6 +12,14 @@ void Emitter64::rex_extend_gpr(REG_64 reg)
         cache->write(0x41);
 }
 
+void Emitter64::rexw_rm(REG_64 rm)
+{
+    uint8_t rex = 0x48;
+    if (rm & 0x8)
+        rex |= 0x1;
+    cache->write<uint8_t>(rex);
+}
+
 void Emitter64::rexw_r_rm(REG_64 reg, REG_64 rm)
 {
     uint8_t rex = 0x48;
@@ -34,6 +42,13 @@ void Emitter64::MOV64_MR(REG_64 source, REG_64 dest)
     modrm(0b11, source, dest);
 }
 
+void Emitter64::MOV64_OI(uint64_t imm, REG_64 dest)
+{
+    rexw_rm(dest);
+    cache->write<uint8_t>(0xB8 + (dest & 0x7));
+    cache->write<uint64_t>(imm);
+}
+
 void Emitter64::PUSH(REG_64 reg)
 {
     rex_extend_gpr(reg);
@@ -44,6 +59,14 @@ void Emitter64::POP(REG_64 reg)
 {
     rex_extend_gpr(reg);
     cache->write<uint8_t>(0x58 + (reg & 0x7));
+}
+
+void Emitter64::CALL(uint64_t func)
+{
+    int offset = func;
+    offset -= (uint64_t)cache->get_current_addr();
+    cache->write<uint8_t>(0xE8);
+    cache->write<uint32_t>(offset - 5);
 }
 
 void Emitter64::RET()

@@ -1,31 +1,44 @@
 #ifndef IR_INSTR_HPP
 #define IR_INSTR_HPP
 #include <cstdint>
+#include <vector>
 
 namespace IR
 {
 
 enum Opcode
 {
-    Null,
-    LoadConst,
-    Jump,
-    JumpAndLink,
-    BranchEqual,
-    BranchNotEqual,
-    BranchGreater,
-    BranchGreaterOrEqual
+#define INSTR(name) name,
+#include "ir_instrlist.inc"
+#undef INSTR
 };
 
-struct Instruction
+class Instruction
 {
-    Opcode op;
-    uint64_t args[5];
+    private:
+        uint32_t jump_dest;
+        int link_register;
+        uint32_t return_addr;
 
-    Instruction(Opcode op = Null, uint64_t a0 = 0, uint64_t a1 = 0,
-                uint64_t a2 = 0, uint64_t a3 = 0, uint64_t a4 = 0);
+        int dest;
+        uint64_t source;
+    public:
+        Opcode op;
 
-    bool is_jump();
+        Instruction(Opcode op = Null);
+
+        uint32_t get_jump_dest();
+        int get_link_register();
+        uint32_t get_return_addr();
+        int get_dest();
+        uint32_t get_source_u32();
+
+        void set_jump_dest(uint32_t addr);
+        void set_link_register(int index);
+        void set_return_addr(uint32_t addr);
+        void set_dest(int index);
+        void set_source_u32(uint32_t value);
+        bool is_jump();
 };
 
 };

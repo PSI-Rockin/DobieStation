@@ -26,6 +26,7 @@ class JitCache
         int find_block(uint32_t pc);
 
         uint8_t* get_current_block_start();
+        uint8_t* get_current_addr();
 
         void set_current_block_rx();
 

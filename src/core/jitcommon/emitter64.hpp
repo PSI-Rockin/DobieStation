@@ -28,12 +28,14 @@ class Emitter64
         JitCache* cache;
 
         void rex_extend_gpr(REG_64 reg);
+        void rexw_rm(REG_64 rm);
         void rexw_r_rm(REG_64 reg, REG_64 rm);
         void modrm(uint8_t mode, uint8_t reg, uint8_t rm);
     public:
         Emitter64(JitCache* cache);
 
         void MOV64_MR(REG_64 source, REG_64 dest);
+        void MOV64_OI(uint64_t imm, REG_64 dest);
 
         void PUSH(REG_64 reg);
         void POP(REG_64 reg);

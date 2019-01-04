@@ -3,13 +3,59 @@
 namespace IR
 {
 
-Instruction::Instruction(Opcode op, uint64_t a0, uint64_t a1, uint64_t a2, uint64_t a3, uint64_t a4) : op(op)
+Instruction::Instruction(Opcode op) : op(op)
 {
-    args[0] = a0;
-    args[1] = a1;
-    args[2] = a2;
-    args[3] = a3;
-    args[4] = a4;
+
+}
+
+uint32_t Instruction::get_jump_dest()
+{
+    return jump_dest;
+}
+
+int Instruction::get_link_register()
+{
+    return link_register;
+}
+
+uint32_t Instruction::get_return_addr()
+{
+    return return_addr;
+}
+
+int Instruction::get_dest()
+{
+    return dest;
+}
+
+uint32_t Instruction::get_source_u32()
+{
+    return source;
+}
+
+void Instruction::set_jump_dest(uint32_t addr)
+{
+    jump_dest = addr;
+}
+
+void Instruction::set_link_register(int index)
+{
+    link_register = index;
+}
+
+void Instruction::set_return_addr(uint32_t addr)
+{
+    return_addr = addr;
+}
+
+void Instruction::set_dest(int index)
+{
+    dest = index;
+}
+
+void Instruction::set_source_u32(uint32_t value)
+{
+    source = value;
 }
 
 bool Instruction::is_jump()

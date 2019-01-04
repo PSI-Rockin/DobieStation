@@ -7,6 +7,7 @@ namespace VU_JIT
 {
 
 int run(VectorUnit* vu);
+void reset();
 
 };
 
