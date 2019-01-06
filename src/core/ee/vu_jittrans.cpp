@@ -35,7 +35,7 @@ IR::Block translate(uint32_t PC, uint8_t* instr_mem)
         {
             IR::Instruction loi(IR::Opcode::LoadConst);
             loi.set_dest(VU_SpecialReg::I);
-            loi.set_source_u32(lower);
+            loi.set_source(lower);
             for (unsigned int i = 0; i < upper_instrs.size(); i++)
                 block.add_instr(upper_instrs[i]);
             block.add_instr(loi);
@@ -79,31 +79,47 @@ IR::Block translate(uint32_t PC, uint8_t* instr_mem)
 void translate_upper(std::vector<IR::Instruction>& instrs, uint32_t upper)
 {
     uint8_t op = upper & 0x3F;
+    IR::Instruction instr;
     switch (op)
     {
+        case 0x18:
+        case 0x19:
+        case 0x1A:
+        case 0x1B:
+            //MULbc
+            instr.op = IR::Opcode::VMulVectorByScalar;
+            instr.set_dest((upper >> 6) & 0x1F);
+            instr.set_source((upper >> 11) & 0x1F);
+            instr.set_source2((upper >> 16) & 0x1F);
+            instr.set_bc(upper & 0x3);
+            instr.set_dest_field((upper >> 21) & 0xF);
+            break;
         case 0x3C:
         case 0x3D:
         case 0x3E:
         case 0x3F:
             upper_special(instrs, upper);
-            break;
+            return;
         default:
             Errors::die("[VU_JIT] Unrecognized upper op $%02X", op);
     }
+    instrs.push_back(instr);
 }
 
 void upper_special(std::vector<IR::Instruction> &instrs, uint32_t upper)
 {
     uint8_t op = (upper & 0x3) | ((upper >> 4) & 0x7C);
+    IR::Instruction instr;
     switch (op)
     {
         case 0x2F:
         case 0x30:
             //NOP - no need to add an instruction
-            break;
+            return;
         default:
             Errors::die("[VU_JIT] Unrecognized upper special op $%02X", op);
     }
+    instrs.push_back(instr);
 }
 
 void translate_lower(std::vector<IR::Instruction>& instrs, uint32_t lower, uint32_t PC)
@@ -121,11 +137,13 @@ void translate_lower(std::vector<IR::Instruction>& instrs, uint32_t lower, uint3
 void lower1(std::vector<IR::Instruction> &instrs, uint32_t lower)
 {
     uint8_t op = lower & 0x3F;
+    IR::Instruction instr;
     switch (op)
     {
         default:
             Errors::die("[VU_JIT] Unrecognized lower1 op $%02X", op);
     }
+    instrs.push_back(instr);
 }
 
 void lower2(std::vector<IR::Instruction> &instrs, uint32_t lower, uint32_t PC)
@@ -134,6 +152,17 @@ void lower2(std::vector<IR::Instruction> &instrs, uint32_t lower, uint32_t PC)
     IR::Instruction instr;
     switch (op)
     {
+        case 0x08:
+            //IADDIU
+            instr.op = IR::Opcode::AddUnsignedImm;
+            instr.set_dest((lower >> 16) & 0xF);
+            instr.set_source((lower >> 11) & 0xF);
+        {
+            uint16_t imm = lower & 0x7FF;
+            imm |= ((lower >> 21) & 0xF) << 11;
+            instr.set_source2(imm);
+        }
+            break;
         case 0x20:
             //B
             instr.op = IR::Opcode::Jump;
@@ -144,7 +173,12 @@ void lower2(std::vector<IR::Instruction> &instrs, uint32_t lower, uint32_t PC)
             instr.op = IR::Opcode::JumpAndLink;
             instr.set_jump_dest(branch_offset(lower, PC));
             instr.set_return_addr((PC + 16) / 8);
-            instr.set_link_register((lower >> 16) & 0x1F);
+            instr.set_dest((lower >> 16) & 0xF);
+            break;
+        case 0x24:
+            //JR
+            instr.op = IR::Opcode::JumpIndirect;
+            instr.set_source((lower >> 11) & 0xF);
             break;
         default:
             Errors::die("[VU_JIT] Unrecognized lower2 op $%02X", op);

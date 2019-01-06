@@ -12,7 +12,8 @@ union VU_R
     uint32_t u;
 };
 
-union VU_GPR
+//The GPRs need to be aligned on a 16-byte boundary so that SSE instructions can work on them.
+union alignas(16) VU_GPR
 {
     float f[4];
     uint32_t u[4];
@@ -44,6 +45,7 @@ struct DecodedRegs
 
 class GraphicsInterface;
 class Emulator;
+class VU_JIT64;
 
 class VectorUnit
 {
@@ -295,6 +297,8 @@ class VectorUnit
 
         void load_state(std::ifstream& state);
         void save_state(std::ofstream& state);
+
+        friend class VU_JIT64;
 };
 
 template <typename T>

@@ -35,6 +35,13 @@ void Emitter64::modrm(uint8_t mode, uint8_t reg, uint8_t rm)
     cache->write<uint8_t>((mode << 6) | (reg << 3) | rm);
 }
 
+void Emitter64::MOV32_MI_MEM(uint32_t imm, REG_64 indir_dest)
+{
+    cache->write<uint8_t>(0xC7);
+    modrm(0, 0, indir_dest);
+    cache->write<uint32_t>(imm);
+}
+
 void Emitter64::MOV64_MR(REG_64 source, REG_64 dest)
 {
     rexw_r_rm(source, dest);

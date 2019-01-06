@@ -17,27 +17,32 @@ class Instruction
 {
     private:
         uint32_t jump_dest;
-        int link_register;
         uint32_t return_addr;
 
         int dest;
-        uint64_t source;
+        uint64_t source, source2;
+        uint8_t bc, dest_field;
     public:
         Opcode op;
 
         Instruction(Opcode op = Null);
 
         uint32_t get_jump_dest();
-        int get_link_register();
         uint32_t get_return_addr();
         int get_dest();
-        uint32_t get_source_u32();
+        uint64_t get_source();
+        uint64_t get_source2();
+        uint8_t get_bc();
+        uint8_t get_dest_field();
 
         void set_jump_dest(uint32_t addr);
-        void set_link_register(int index);
         void set_return_addr(uint32_t addr);
         void set_dest(int index);
-        void set_source_u32(uint32_t value);
+        void set_source(uint64_t value);
+        void set_source2(uint64_t value);
+        void set_bc(uint8_t value);
+        void set_dest_field(uint8_t value);
+
         bool is_jump();
 };
 

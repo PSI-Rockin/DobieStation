@@ -78,7 +78,8 @@ SOURCES += ../src/qt/main.cpp \
     ../src/core/ee/vu_jittrans.cpp \
     ../src/core/jitcommon/ir_block.cpp \
     ../src/core/jitcommon/ir_instr.cpp \
-    ../src/core/ee/vu_jit.cpp
+    ../src/core/ee/vu_jit.cpp \
+    ../src/core/ee/vu_jit64.cpp
 
 HEADERS += \
     ../src/core/errors.hpp \
@@ -138,7 +139,8 @@ HEADERS += \
     ../src/core/ee/vu_jittrans.hpp \
     ../src/core/jitcommon/ir_block.hpp \
     ../src/core/jitcommon/ir_instr.hpp \
-    ../src/core/ee/vu_jit.hpp
+    ../src/core/ee/vu_jit.hpp \
+    ../src/core/ee/vu_jit64.hpp
 
 DISTFILES += \
     ../src/core/jitcommon/ir_instrlist.inc

@@ -22,6 +22,26 @@ enum REG_64
     R15 = 15
 };
 
+enum REG_64_SSE
+{
+    XMM0 = 0,
+    XMM1,
+    XMM2,
+    XMM3,
+    XMM4,
+    XMM5,
+    XMM6,
+    XMM7,
+    XMM8,
+    XMM9,
+    XMM10,
+    XMM11,
+    XMM12,
+    XMM13,
+    XMM14,
+    XMM15
+};
+
 class Emitter64
 {
     private:
@@ -34,6 +54,7 @@ class Emitter64
     public:
         Emitter64(JitCache* cache);
 
+        void MOV32_MI_MEM(uint32_t imm, REG_64 indir_dest);
         void MOV64_MR(REG_64 source, REG_64 dest);
         void MOV64_OI(uint64_t imm, REG_64 dest);
 
