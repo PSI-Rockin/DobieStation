@@ -59,7 +59,7 @@ void VectorUnit::reset()
     finish_on = false;
     branch_on = false;
     second_branch_pending = false;
-    secondbranch_PC = 0;
+    second_branch_PC = 0;
     branch_delay_slot = 0;
     ebit_delay_slot = 0;
     transferring_GIF = false;
@@ -159,7 +159,7 @@ void VectorUnit::run(int cycles)
                 PC = new_PC;
                 if (second_branch_pending)
                 {
-                    new_PC = secondbranch_PC;
+                    new_PC = second_branch_PC;
                     second_branch_pending = false;
                 }
                 else
@@ -566,7 +566,7 @@ void VectorUnit::branch(bool condition, int16_t imm, bool link, uint8_t linkreg)
         if (branch_on)
         {
             second_branch_pending = true;
-            secondbranch_PC = ((int16_t)PC + imm + 8) & 0x3fff;
+            second_branch_PC = ((int16_t)PC + imm + 8) & 0x3fff;
             if(link)
                 set_int(linkreg, (new_PC + 8) / 8);
         }
@@ -586,7 +586,7 @@ void VectorUnit::jp(uint16_t addr, bool link, uint8_t linkreg)
     if (branch_on)
     {
         second_branch_pending = true;
-        secondbranch_PC = addr & 0x3FFF;
+        second_branch_PC = addr & 0x3FFF;
         if (link)
             set_int(linkreg, (new_PC + 8) / 8);
     }

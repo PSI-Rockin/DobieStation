@@ -35,7 +35,7 @@ class Emulator
 {
     private:
         std::atomic_bool save_requested, load_requested, gsdump_requested, gsdump_single_frame, gsdump_running;
-        std::string savestate_path;
+        std::string save_state_path;
         int frames;
         Cop0 cp0;
         Cop1 fpu;
@@ -74,7 +74,7 @@ class Emulator
         uint32_t MCH_RICM, MCH_DRD;
         uint8_t rdram_sdevid;
 
-        uint32_t instructions_run;
+        uint32_t instructions_ran;
 
         uint8_t IOP_POST;
         uint32_t IOP_I_STAT;

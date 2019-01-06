@@ -10,15 +10,15 @@
 class INTC;
 
 //Commands sent from the main thread to the GS thread.
-enum GS_command:uint8_t 
+enum GSCommand:uint8_t 
 {
 	write64_t, write64_privileged_t, write32_privileged_t,
     set_rgba_t, set_st_t, set_uv_t, set_xyz_t, set_xyzf_t, set_crt_t,
     render_crt_t, assert_finish_t, assert_vsync_t, set_vblank_t, memdump_t, die_t,
-    savestate_t, loadstate_t, gsdump_t
+    save_state_t, load_state_t, gsdump_t
 };
 
-union GS_message_payload 
+union GSMessagePayload 
 {
     struct 
 	{
@@ -72,34 +72,34 @@ union GS_message_payload
     struct
     {
         std::ofstream* state;
-    } savestate_payload;
+    } save_state_payload;
     struct
     {
         std::ifstream* state;
-    } loadstate_payload;
+    } load_state_payload;
     struct 
 	{
         uint8_t BLANK; 
     } no_payload;//C++ doesn't like the empty struct
 };
 
-struct GS_message
+struct GSMessage
 {
-    GS_command type;
-    GS_message_payload payload;
+    GSCommand type;
+    GSMessagePayload payload;
 };
 
 //Commands sent from the GS thread to the main thread.
-enum GS_return :uint8_t
+enum GSReturn :uint8_t
 {
     render_complete_t,
     death_error_t,
-    savestate_done_t,
-    loadstate_done_t,
+    save_state_done_t,
+    load_state_done_t,
     gsdump_render_partial_done_t,
 };
 
-union GS_return_message_payload
+union GSReturnMessagePayload
 {
     struct
     {
@@ -115,14 +115,14 @@ union GS_return_message_payload
     } no_payload;//C++ doesn't like the empty struct
 };
 
-struct GS_return_message
+struct GSReturnMessage
 {
-    GS_return type;
-    GS_return_message_payload payload;
+    GSReturn type;
+    GSReturnMessagePayload payload;
 };
 
-typedef CircularFifo<GS_message, 1024 * 1024 * 16> gs_fifo;
-typedef CircularFifo<GS_return_message, 1024> gs_return_fifo;
+typedef CircularFifo<GSMessage, 1024 * 1024 * 16> gs_fifo;
+typedef CircularFifo<GSReturnMessage, 1024> gs_return_fifo;
 
 class GraphicsSynthesizer
 {
@@ -145,7 +145,7 @@ class GraphicsSynthesizer
     public:
         GraphicsSynthesizer(INTC* intc);
         ~GraphicsSynthesizer();
-        void send_message(GS_message message);
+        void send_message(GSMessage message);
         void reset();
         void start_frame();
         bool is_frame_complete();

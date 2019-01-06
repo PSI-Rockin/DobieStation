@@ -131,7 +131,7 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
     {
         while (true)
         {
-            GS_message data;
+            GSMessage data;
             bool available = fifo->pop(data);
             if (available)
             {
@@ -205,9 +205,9 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
                         }
                         std::lock_guard<std::mutex> lock(*p.target_mutex, std::adopt_lock);
                         gs.render_CRT(p.target);
-                        GS_return_message_payload return_payload;
+                        GSReturnMessagePayload return_payload;
                         return_payload.no_payload = { 0 };
-                        return_fifo->push({ GS_return::render_complete_t,return_payload });
+                        return_fifo->push({ GSReturn::render_complete_t,return_payload });
                         break;
                     }
                     case assert_finish_t:
@@ -234,27 +234,27 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
                         std::lock_guard<std::mutex> lock(*p.target_mutex, std::adopt_lock);
                         uint16_t width, height;
                         gs.memdump(p.target, width, height);
-                        GS_return_message_payload return_payload;
+                        GSReturnMessagePayload return_payload;
                         return_payload.xy_payload = { width, height };
-                        return_fifo->push({ GS_return::gsdump_render_partial_done_t,return_payload });
+                        return_fifo->push({ GSReturn::gsdump_render_partial_done_t,return_payload });
                         break;
                     }
                     case die_t:
                         return;
-                    case loadstate_t:
+                    case load_state_t:
                     {
-                        gs.load_state(data.payload.loadstate_payload.state);
-                        GS_return_message_payload return_payload;
+                        gs.load_state(data.payload.load_state_payload.state);
+                        GSReturnMessagePayload return_payload;
                         return_payload.no_payload = { 0 };
-                        return_fifo->push({ GS_return::loadstate_done_t,return_payload });
+                        return_fifo->push({ GSReturn::load_state_done_t,return_payload });
                         break;
                     }
-                    case savestate_t:
+                    case save_state_t:
                     {
-                        gs.save_state(data.payload.savestate_payload.state);
-                        GS_return_message_payload return_payload;
+                        gs.save_state(data.payload.save_state_payload.state);
+                        GSReturnMessagePayload return_payload;
                         return_payload.no_payload = { 0 };
-                        return_fifo->push({ GS_return::savestate_done_t,return_payload });
+                        return_fifo->push({ GSReturn::save_state_done_t,return_payload });
                         break;
                     }
                     case gsdump_t:
@@ -290,11 +290,11 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
     }
     catch (Emulation_error &e)
     {
-        GS_return_message_payload return_payload;
+        GSReturnMessagePayload return_payload;
         char* copied_string = new char[ERROR_STRING_MAX_LENGTH];
         strncpy(copied_string, e.what(), ERROR_STRING_MAX_LENGTH);
         return_payload.death_error_payload.error_str = { copied_string };
-        return_fifo->push({ GS_return::death_error_t,return_payload });
+        return_fifo->push({ GSReturn::death_error_t,return_payload });
     }
 }
 

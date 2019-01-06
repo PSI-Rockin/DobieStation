@@ -13,7 +13,7 @@ void Errors::die(const char* format, ...)
     throw Emulation_error(output);
 }
 
-void Errors::nonfatal(const char *format, ...)
+void Errors::non_fatal(const char *format, ...)
 {
     //Display an error without terminating emulation
     char output[ERROR_STRING_MAX_LENGTH];
@@ -21,7 +21,7 @@ void Errors::nonfatal(const char *format, ...)
     va_start(args, format);
     vsnprintf(output, ERROR_STRING_MAX_LENGTH, format, args);
     va_end(args);
-    throw nonfatal_error(output);
+    throw non_fatal_error(output);
 }
 
 void Errors::print_warning(const char* format, ...)
