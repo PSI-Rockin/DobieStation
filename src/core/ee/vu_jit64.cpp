@@ -33,6 +33,20 @@ VU_JIT64::VU_JIT64() : emitter(&cache)
 
 }
 
+uint8_t convert_field(uint8_t value)
+{
+    uint8_t result = 0;
+    if (value & 0x8)
+        result |= 0x1;
+    if (value & 0x4)
+        result |= 0x2;
+    if (value & 0x2)
+        result |= 0x4;
+    if (value & 0x1)
+        result |= 0x8;
+    return result;
+}
+
 void vu_set_int(VectorUnit& vu, int dest, uint16_t value)
 {
     vu.set_int(dest, value);
@@ -54,8 +68,12 @@ void VU_JIT64::reset()
     }
 
     //Lock special registers to prevent them from being used
-    int_regs[REG_64::RAX].locked = true;
     int_regs[REG_64::RSP].locked = true;
+
+    //Scratchpad registers
+    int_regs[REG_64::RAX].locked = true;
+    xmm_regs[REG_64::XMM0].locked = true;
+    xmm_regs[REG_64::XMM1].locked = true;
     cache.flush_all_blocks();
 }
 
@@ -68,7 +86,7 @@ void VU_JIT64::load_const(VectorUnit &vu, IR::Instruction &instr)
 void VU_JIT64::move_int_reg(VectorUnit &vu, IR::Instruction &instr)
 {
     REG_64 dest = alloc_int_reg(vu, instr.get_dest(), false);
-    REG_64 source = alloc_int_reg(vu, instr.get_source(), dest);
+    REG_64 source = alloc_int_reg(vu, instr.get_source(), true);
     emitter.MOV16_REG(source, dest);
 }
 
@@ -86,13 +104,13 @@ void VU_JIT64::jump_and_link(VectorUnit& vu, IR::Instruction& instr)
     emitter.MOV32_MI_MEM(instr.get_jump_dest(), REG_64::RAX);
 
     //Then set the link register
-    REG_64 link = alloc_int_reg(vu, instr.get_dest());
-    emitter.MOV64_OI(instr.get_return_addr(), link);
+    REG_64 link = alloc_int_reg(vu, instr.get_dest(), false);
+    emitter.MOV16_REG_IMM(instr.get_return_addr(), link);
 }
 
 void VU_JIT64::jump_indirect(VectorUnit &vu, IR::Instruction &instr)
 {
-    REG_64 return_reg = alloc_int_reg(vu, instr.get_source());
+    REG_64 return_reg = alloc_int_reg(vu, instr.get_source(), true);
 
     //Multiply the address by eight
     emitter.SHL32_REG_IMM(3, return_reg);
@@ -104,7 +122,7 @@ void VU_JIT64::jump_indirect(VectorUnit &vu, IR::Instruction &instr)
 void VU_JIT64::add_unsigned_imm(VectorUnit &vu, IR::Instruction &instr)
 {
     REG_64 dest = alloc_int_reg(vu, instr.get_dest(), false);
-    REG_64 source = alloc_int_reg(vu, instr.get_source());
+    REG_64 source = alloc_int_reg(vu, instr.get_source(), true);
     uint16_t imm = instr.get_source2();
 
     emitter.MOV16_REG(source, dest);
@@ -113,7 +131,19 @@ void VU_JIT64::add_unsigned_imm(VectorUnit &vu, IR::Instruction &instr)
 
 void VU_JIT64::mul_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
 {
+    REG_64 temp = REG_64::XMM0;
+    REG_64 source = alloc_sse_reg(vu, instr.get_source(), true);
+    REG_64 bc_reg = alloc_sse_reg(vu, instr.get_source2(), true);
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), false);
+
+    uint8_t bc = instr.get_bc();
+    bc |= (bc << 6) | (bc << 4) | (bc << 2);
+
+    uint8_t field = convert_field(instr.get_dest_field());
+
+    emitter.SHUFPS(bc, bc_reg, temp);
+    emitter.MULPS(source, temp);
+    emitter.BLENDPS(field, temp, dest);
 }
 
 REG_64 VU_JIT64::alloc_int_reg(VectorUnit &vu, int vi_reg, bool load_state)
@@ -169,6 +199,8 @@ REG_64 VU_JIT64::alloc_int_reg(VectorUnit &vu, int vi_reg, bool load_state)
         emitter.MOV64_FROM_MEM(REG_64::RAX, (REG_64)reg);
     }
 
+    int_regs[reg].modified = !load_state;
+
     int_regs[reg].vu_reg = vi_reg;
     int_regs[reg].used = true;
     int_regs[reg].age = 0;
@@ -200,6 +232,9 @@ REG_64 VU_JIT64::alloc_sse_reg(VectorUnit &vu, int vf_reg, bool load_state)
     int age = 0;
     for (int i = 0; i < 16; i++)
     {
+        if (xmm_regs[i].locked)
+            continue;
+
         if (!xmm_regs[i].used)
         {
             xmm = i;
@@ -228,6 +263,8 @@ REG_64 VU_JIT64::alloc_sse_reg(VectorUnit &vu, int vf_reg, bool load_state)
         emitter.MOVAPS_FROM_MEM(REG_64::RAX, (REG_64)xmm);
     }
 
+    xmm_regs[xmm].modified = !load_state;
+
     xmm_regs[xmm].vu_reg = vf_reg;
     xmm_regs[xmm].used = true;
     xmm_regs[xmm].age = 0;
@@ -242,14 +279,14 @@ void VU_JIT64::flush_regs(VectorUnit &vu)
     {
         int vf_reg = xmm_regs[i].vu_reg;
         int vi_reg = int_regs[i].vu_reg;
-        if (xmm_regs[i].used && vf_reg)
+        if (xmm_regs[i].used && vf_reg && xmm_regs[i].modified)
         {
             xmm_regs[i].used = false;
             emitter.load_addr((uint64_t)&vu.gpr[vf_reg], REG_64::RAX);
             emitter.MOVAPS_TO_MEM((REG_64)i, REG_64::RAX);
         }
 
-        if (int_regs[i].used && vi_reg)
+        if (int_regs[i].used && vi_reg && int_regs[i].modified)
         {
             int_regs[i].used = false;
             emitter.load_addr((uint64_t)&vu.int_gpr[vi_reg], REG_64::RAX);
@@ -285,7 +322,7 @@ void VU_JIT64::recompile_block(VectorUnit& vu, IR::Block& block)
                 jump_and_link(vu, instr);
                 break;
             case IR::Opcode::VMulVectorByScalar:
-                //mul_vector_by_scalar(vu, instr);
+                mul_vector_by_scalar(vu, instr);
                 break;
             case IR::Opcode::JumpIndirect:
                 jump_indirect(vu, instr);

@@ -193,3 +193,31 @@ void Emitter64::RET()
 {
     cache->write<uint8_t>(0xC3);
 }
+
+void Emitter64::BLENDPS(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x3A);
+    cache->write<uint8_t>(0x0C);
+    modrm(0b11, xmm_dest, xmm_source);
+    cache->write<uint8_t>(imm);
+}
+
+void Emitter64::MULPS(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x59);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
+void Emitter64::SHUFPS(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest)
+{
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0xC6);
+    modrm(0b11, xmm_dest, xmm_source);
+    cache->write<uint8_t>(imm);
+}

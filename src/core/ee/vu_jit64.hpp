@@ -9,6 +9,7 @@ struct AllocReg
 {
     bool used;
     bool locked; //Prevent the register from being allocated
+    bool modified;
     int age;
     int vu_reg;
 };
@@ -34,8 +35,8 @@ class VU_JIT64
 
         void mul_vector_by_scalar(VectorUnit& vu, IR::Instruction& instr);
 
-        REG_64 alloc_int_reg(VectorUnit& vu, int vi_reg, bool load_state = true);
-        REG_64 alloc_sse_reg(VectorUnit& vu, int vf_reg, bool load_state = true);
+        REG_64 alloc_int_reg(VectorUnit& vu, int vi_reg, bool load_state);
+        REG_64 alloc_sse_reg(VectorUnit& vu, int vf_reg, bool load_state);
         void flush_regs(VectorUnit& vu);
 
         void recompile_block(VectorUnit& vu, IR::Block& block);

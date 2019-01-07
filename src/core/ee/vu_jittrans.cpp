@@ -161,14 +161,17 @@ void lower2(std::vector<IR::Instruction> &instrs, uint32_t lower, uint32_t PC)
             uint16_t imm = lower & 0x7FF;
             imm |= ((lower >> 21) & 0xF) << 11;
             instr.set_source2(imm);
-        }
             if (instr.get_source() != instr.get_dest())
             {
                 if (!instr.get_source())
+                {
                     instr.op = IR::Opcode::LoadConst;
+                    instr.set_source(imm);
+                }
             }
             else
                 instr.op = IR::Opcode::MoveIntReg;
+        }
             break;
         case 0x20:
             //B

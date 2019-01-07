@@ -61,6 +61,10 @@ class Emitter64
         void POP(REG_64 reg);
         void CALL(uint64_t addr);
         void RET();
+
+        void BLENDPS(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest);
+        void MULPS(REG_64 xmm_source, REG_64 xmm_dest);
+        void SHUFPS(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest);
 };
 
 #endif // EMITTER64_HPP
