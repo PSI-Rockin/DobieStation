@@ -20,7 +20,7 @@ union alignas(16) VU_GPR
     int32_t s[4];
 };
 
-union VU_I
+union alignas(8) VU_I
 {
     uint16_t u;
     int16_t s;
@@ -62,7 +62,7 @@ class VectorUnit
         uint8_t data_mem[1024 * 16];
 
         bool running;
-        uint16_t PC, new_PC, secondbranch_PC;
+        uint32_t PC, new_PC, secondbranch_PC;
         bool branch_on;
         bool finish_on;
         bool second_branch_pending;
@@ -298,7 +298,9 @@ class VectorUnit
         void load_state(std::ifstream& state);
         void save_state(std::ofstream& state);
 
+        //Friends needed for JIT convenience
         friend class VU_JIT64;
+        friend void flush_regs(VU_JIT64& jit, VectorUnit& vu);
 };
 
 template <typename T>

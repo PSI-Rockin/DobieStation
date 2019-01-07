@@ -1,5 +1,7 @@
 INSTR(Null)
 INSTR(LoadConst)
+INSTR(LoadFloatConst)
+INSTR(MoveIntReg)
 INSTR(AddUnsignedImm)
 INSTR(Jump)
 INSTR(JumpIndirect)

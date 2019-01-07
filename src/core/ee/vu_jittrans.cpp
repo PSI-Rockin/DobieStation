@@ -33,7 +33,7 @@ IR::Block translate(uint32_t PC, uint8_t* instr_mem)
         //LOI - upper goes first, lower gets loaded into I register
         if (upper & (1 << 31))
         {
-            IR::Instruction loi(IR::Opcode::LoadConst);
+            IR::Instruction loi(IR::Opcode::LoadFloatConst);
             loi.set_dest(VU_SpecialReg::I);
             loi.set_source(lower);
             for (unsigned int i = 0; i < upper_instrs.size(); i++)
@@ -162,6 +162,13 @@ void lower2(std::vector<IR::Instruction> &instrs, uint32_t lower, uint32_t PC)
             imm |= ((lower >> 21) & 0xF) << 11;
             instr.set_source2(imm);
         }
+            if (instr.get_source() != instr.get_dest())
+            {
+                if (!instr.get_source())
+                    instr.op = IR::Opcode::LoadConst;
+            }
+            else
+                instr.op = IR::Opcode::MoveIntReg;
             break;
         case 0x20:
             //B

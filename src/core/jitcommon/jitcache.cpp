@@ -33,6 +33,9 @@ void JitCache::alloc_block(uint32_t pc)
 
     new_block.mem = new_block.block_start;
 
+    new_block.pool_start = &new_block.block_start[START_OF_POOL];
+    new_block.pool_size = 0;
+
     blocks.push_back(new_block);
     current_block = &blocks[blocks.size() - 1];
 }
@@ -74,6 +77,11 @@ uint8_t* JitCache::get_current_block_start()
     return current_block->block_start;
 }
 
+uint8_t* JitCache::get_current_block_pos()
+{
+    return current_block->mem;
+}
+
 uint8_t* JitCache::get_current_addr()
 {
     return current_block->mem;
@@ -90,4 +98,29 @@ void JitCache::set_current_block_rx()
     if (error == -1)
         Errors::die("[JIT] set_current_block_rx failed");
 #endif
+}
+
+void JitCache::print_current_block()
+{
+    uint8_t* ptr = current_block->block_start;
+    uint8_t* end = current_block->mem;
+    printf("[JIT Cache] Block: ");
+    while (ptr != end)
+    {
+        printf("%02X ", *ptr);
+        ptr++;
+    }
+    printf("\n");
+}
+
+void JitCache::print_literal_pool()
+{
+    int offset = 0;
+    while (offset < current_block->pool_size)
+    {
+        printf("$%02X ", current_block->pool_start[offset]);
+        offset++;
+        if (offset % 16 == 0)
+            printf("\n");
+    }
 }
