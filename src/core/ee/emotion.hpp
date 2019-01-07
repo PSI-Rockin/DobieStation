@@ -72,6 +72,8 @@ class EmotionEngine
         void clear_interlock();
         bool vu0_wait();
 
+        uint32_t translate_address(uint32_t address, bool write);
+
         uint8_t read8(uint32_t address);
         uint16_t read16(uint32_t address);
         uint32_t read32(uint32_t address);

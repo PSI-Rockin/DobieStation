@@ -238,13 +238,19 @@ uint64_t EmotionEngine::get_SA()
     return SA;
 }
 
+uint32_t EmotionEngine::translate_address(uint32_t address, const bool write)
+{
+    (void)write;
+    if (address >= 0x30100000 && address <= 0x31FFFFFF)
+        address -= 0x10000000;
+    return address & 0x1FFFFFFF;
+}
+
 uint8_t EmotionEngine::read8(uint32_t address)
 {
     if (address >= 0x70000000 && address < 0x70004000)
         return scratchpad[address & 0x3FFF];
-    if (address >= 0x30100000 && address <= 0x31FFFFFF)
-        address -= 0x10000000;
-    return e->read8(address & 0x1FFFFFFF);
+    return e->read8(translate_address(address, false));
 }
 
 uint16_t EmotionEngine::read16(uint32_t address)
@@ -253,9 +259,7 @@ uint16_t EmotionEngine::read16(uint32_t address)
         Errors::die("[EE] Read16 from invalid address $%08X", address);
     if (address >= 0x70000000 && address < 0x70004000)
         return *(uint16_t*)&scratchpad[address & 0x3FFE];
-    if (address >= 0x30100000 && address <= 0x31FFFFFF)
-        address -= 0x10000000;
-    return e->read16(address & 0x1FFFFFFF);
+    return e->read16(translate_address(address, false));
 }
 
 uint32_t EmotionEngine::read32(uint32_t address)
@@ -264,9 +268,7 @@ uint32_t EmotionEngine::read32(uint32_t address)
         Errors::die("[EE] Read32 from invalid address $%08X", address);
     if (address >= 0x70000000 && address < 0x70004000)
         return *(uint32_t*)&scratchpad[address & 0x3FFC];
-    if (address >= 0x30100000 && address <= 0x31FFFFFF)
-        address -= 0x10000000;
-    return e->read32(address & 0x1FFFFFFF);
+    return e->read32(translate_address(address, false));
 }
 
 uint64_t EmotionEngine::read64(uint32_t address)
@@ -275,18 +277,14 @@ uint64_t EmotionEngine::read64(uint32_t address)
         Errors::die("[EE] Read64 from invalid address $%08X", address);
     if (address >= 0x70000000 && address < 0x70004000)
         return *(uint64_t*)&scratchpad[address & 0x3FF8];
-    if (address >= 0x30100000 && address <= 0x31FFFFFF)
-        address -= 0x10000000;
-    return e->read64(address & 0x1FFFFFFF);
+    return e->read64(translate_address(address, false));
 }
 
 uint128_t EmotionEngine::read128(uint32_t address)
 {
     if (address >= 0x70000000 && address < 0x70004000)
         return *(uint128_t*)&scratchpad[address & 0x3FF0];
-    if (address >= 0x30100000 && address <= 0x31FFFFFF)
-        address -= 0x10000000;
-    return e->read128(address & 0x1FFFFFF0);
+    return e->read128(translate_address(address, false));
 }
 
 /*void EmotionEngine::set_gpr_lo(int index, uint64_t value)
@@ -307,9 +305,7 @@ void EmotionEngine::write8(uint32_t address, uint8_t value)
         scratchpad[address & 0x3FFF] = value;
         return;
     }
-    if (address >= 0x30100000 && address <= 0x31FFFFFF)
-        address -= 0x10000000;
-    e->write8(address & 0x1FFFFFFF, value);
+    e->write8(translate_address(address, true), value);
 }
 
 void EmotionEngine::write16(uint32_t address, uint16_t value)
@@ -321,9 +317,7 @@ void EmotionEngine::write16(uint32_t address, uint16_t value)
         *(uint16_t*)&scratchpad[address & 0x3FFE] = value;
         return;
     }
-    if (address >= 0x30100000 && address <= 0x31FFFFFF)
-        address -= 0x10000000;
-    e->write16(address & 0x1FFFFFFF, value);
+    e->write16(translate_address(address, true), value);
 }
 
 void EmotionEngine::write32(uint32_t address, uint32_t value)
@@ -335,9 +329,7 @@ void EmotionEngine::write32(uint32_t address, uint32_t value)
         *(uint32_t*)&scratchpad[address & 0x3FFC] = value;
         return;
     }
-    if (address >= 0x30100000 && address <= 0x31FFFFFF)
-        address -= 0x10000000;
-    e->write32(address & 0x1FFFFFFF, value);
+    e->write32(translate_address(address, true), value);
 }
 
 void EmotionEngine::write64(uint32_t address, uint64_t value)
@@ -349,9 +341,7 @@ void EmotionEngine::write64(uint32_t address, uint64_t value)
         *(uint64_t*)&scratchpad[address & 0x3FF8] = value;
         return;
     }
-    if (address >= 0x30100000 && address <= 0x31FFFFFF)
-        address -= 0x10000000;
-    e->write64(address & 0x1FFFFFFF, value);
+    e->write64(translate_address(address, true), value);
 }
 
 void EmotionEngine::write128(uint32_t address, uint128_t value)
@@ -361,9 +351,7 @@ void EmotionEngine::write128(uint32_t address, uint128_t value)
         *(uint128_t*)&scratchpad[address & 0x3FF0] = value;
         return;
     }
-    if (address >= 0x30100000 && address <= 0x31FFFFFF)
-        address -= 0x10000000;
-    e->write128(address & 0x1FFFFFF0, value);
+    e->write128(translate_address(address, true), value);
 }
 
 void EmotionEngine::jp(uint32_t new_addr)
