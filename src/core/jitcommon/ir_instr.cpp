@@ -23,6 +23,11 @@ int Instruction::get_dest()
     return dest;
 }
 
+int Instruction::get_base()
+{
+    return base;
+}
+
 uint64_t Instruction::get_source()
 {
     return source;
@@ -56,6 +61,11 @@ void Instruction::set_return_addr(uint32_t addr)
 void Instruction::set_dest(int index)
 {
     dest = index;
+}
+
+void Instruction::set_base(int index)
+{
+    base = index;
 }
 
 void Instruction::set_source(uint64_t value)

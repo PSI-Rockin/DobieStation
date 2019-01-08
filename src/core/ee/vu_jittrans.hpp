@@ -6,7 +6,8 @@
 
 enum VU_SpecialReg
 {
-    I = 32,
+    ACC = 32,
+    I,
     Q
 };
 
@@ -19,6 +20,7 @@ namespace VU_JitTranslator
 
     void translate_lower(std::vector<IR::Instruction>& instrs, uint32_t lower, uint32_t PC);
     void lower1(std::vector<IR::Instruction>& instrs, uint32_t lower);
+    void lower1_special(std::vector<IR::Instruction>& instrs, uint32_t lower);
     void lower2(std::vector<IR::Instruction>& instrs, uint32_t lower, uint32_t PC);
 };
 

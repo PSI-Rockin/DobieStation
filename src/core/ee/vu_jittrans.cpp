@@ -18,6 +18,7 @@ IR::Block translate(uint32_t PC, uint8_t* instr_mem)
 
     bool block_end = false;
     bool delay_slot = false;
+    bool ebit = false;
     while (!block_end)
     {
         std::vector<IR::Instruction> upper_instrs;
@@ -64,9 +65,16 @@ IR::Block translate(uint32_t PC, uint8_t* instr_mem)
         //End of microprogram delay slot
         if (upper & (1 << 30))
         {
+            ebit = true;
             if (delay_slot)
                 Errors::die("[VU JIT] End microprogram in delay slot");
             delay_slot = true;
+        }
+        else if (ebit)
+        {
+            IR::Instruction instr(IR::Opcode::Stop);
+            instr.set_jump_dest(PC + 8);
+            block.add_instr(instr);
         }
 
         PC += 8;
@@ -82,6 +90,18 @@ void translate_upper(std::vector<IR::Instruction>& instrs, uint32_t upper)
     IR::Instruction instr;
     switch (op)
     {
+        case 0x08:
+        case 0x09:
+        case 0x0A:
+        case 0x0B:
+            //MADDbc
+            instr.op = IR::Opcode::VMaddVectorByScalar;
+            instr.set_dest((upper >> 6) & 0x1F);
+            instr.set_source((upper >> 11) & 0x1F);
+            instr.set_source2((upper >> 16) & 0x1F);
+            instr.set_bc(upper & 0x3);
+            instr.set_dest_field((upper >> 21) & 0xF);
+            break;
         case 0x18:
         case 0x19:
         case 0x1A:
@@ -112,6 +132,30 @@ void upper_special(std::vector<IR::Instruction> &instrs, uint32_t upper)
     IR::Instruction instr;
     switch (op)
     {
+        case 0x08:
+        case 0x09:
+        case 0x0A:
+        case 0x0B:
+            //MADDAbc
+            instr.op = IR::Opcode::VMaddVectorByScalar;
+            instr.set_dest(VU_SpecialReg::ACC);
+            instr.set_source((upper >> 11) & 0x1F);
+            instr.set_source2((upper >> 16) & 0x1F);
+            instr.set_bc(upper & 0x3);
+            instr.set_dest_field((upper >> 21) & 0xF);
+            break;
+        case 0x18:
+        case 0x19:
+        case 0x1A:
+        case 0x1B:
+            //MULAbc
+            instr.op = IR::Opcode::VMulVectorByScalar;
+            instr.set_dest(VU_SpecialReg::ACC);
+            instr.set_source((upper >> 11) & 0x1F);
+            instr.set_source2((upper >> 16) & 0x1F);
+            instr.set_bc(upper & 0x3);
+            instr.set_dest_field((upper >> 21) & 0xF);
+            break;
         case 0x2F:
         case 0x30:
             //NOP - no need to add an instruction
@@ -140,8 +184,40 @@ void lower1(std::vector<IR::Instruction> &instrs, uint32_t lower)
     IR::Instruction instr;
     switch (op)
     {
+        case 0x3C:
+        case 0x3D:
+        case 0x3E:
+        case 0x3F:
+            lower1_special(instrs, lower);
+            return;
         default:
             Errors::die("[VU_JIT] Unrecognized lower1 op $%02X", op);
+    }
+    instrs.push_back(instr);
+}
+
+void lower1_special(std::vector<IR::Instruction> &instrs, uint32_t lower)
+{
+    uint8_t op = (lower & 0x3) | ((lower >> 4) & 0x7C);
+    IR::Instruction instr;
+    switch (op)
+    {
+        case 0x34:
+            //LQI
+            instr.op = IR::Opcode::LoadQuadInc;
+            instr.set_dest_field((lower >> 21) & 0xF);
+            instr.set_dest((lower >> 16) & 0x1F);
+            instr.set_base((lower >> 11) & 0x1F);
+            break;
+        case 0x35:
+            //SQI
+            instr.op = IR::Opcode::StoreQuadInc;
+            instr.set_dest_field((lower >> 21) & 0xF);
+            instr.set_base((lower >> 16) & 0x1F);
+            instr.set_source((lower >> 11) & 0x1F);
+            break;
+        default:
+            Errors::die("[VU_JIT] Unrecognized lower1 special op $%02X", op);
     }
     instrs.push_back(instr);
 }

@@ -87,6 +87,28 @@ void Emitter64::ADD16_REG_IMM(uint16_t imm, REG_64 dest)
     cache->write<uint16_t>(imm);
 }
 
+void Emitter64::ADD64_REG(REG_64 source, REG_64 dest)
+{
+    rexw_r_rm(source, dest);
+    cache->write<uint8_t>(0x01);
+    modrm(0b11, source, dest);
+}
+
+void Emitter64::INC16(REG_64 dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_rm(dest);
+    cache->write<uint8_t>(0xFF);
+    modrm(0b11, 0, dest);
+}
+
+void Emitter64::AND16_AX(uint16_t imm)
+{
+    cache->write<uint8_t>(0x66);
+    cache->write<uint8_t>(0x25);
+    cache->write<uint16_t>(imm);
+}
+
 void Emitter64::SHL32_REG_IMM(uint8_t shift, REG_64 dest)
 {
     rex_rm(dest);
@@ -103,6 +125,14 @@ void Emitter64::MOV16_REG(REG_64 source, REG_64 dest)
     modrm(0b11, source, dest);
 }
 
+void Emitter64::MOVZX32_REG(REG_64 source, REG_64 dest)
+{
+    rex_r_rm(dest, source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0xB7);
+    modrm(0b11, dest, source);
+}
+
 void Emitter64::MOV16_REG_IMM(uint16_t imm, REG_64 dest)
 {
     cache->write<uint8_t>(0x66);
@@ -111,11 +141,21 @@ void Emitter64::MOV16_REG_IMM(uint16_t imm, REG_64 dest)
     cache->write<uint16_t>(imm);
 }
 
-void Emitter64::MOV32_MI_MEM(uint32_t imm, REG_64 indir_dest)
+void Emitter64::MOV16_TO_MEM(REG_64 source, REG_64 indir_dest)
 {
+    cache->write<uint8_t>(0x66);
+    rex_r(source);
+    cache->write<uint8_t>(0x89);
+    modrm(0, source, indir_dest);
+}
+
+void Emitter64::MOV16_IMM_MEM(uint16_t imm, REG_64 indir_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_rm(indir_dest);
     cache->write<uint8_t>(0xC7);
     modrm(0, 0, indir_dest);
-    cache->write<uint32_t>(imm);
+    cache->write<uint16_t>(imm);
 }
 
 void Emitter64::MOV32_TO_MEM(REG_64 source, REG_64 indir_dest)
@@ -192,6 +232,14 @@ void Emitter64::CALL(uint64_t func)
 void Emitter64::RET()
 {
     cache->write<uint8_t>(0xC3);
+}
+
+void Emitter64::ADDPS(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x58);
+    modrm(0b11, xmm_dest, xmm_source);
 }
 
 void Emitter64::BLENDPS(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest)

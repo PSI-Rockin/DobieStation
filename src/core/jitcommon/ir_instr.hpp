@@ -19,7 +19,7 @@ class Instruction
         uint32_t jump_dest;
         uint32_t return_addr;
 
-        int dest;
+        int dest, base;
         uint64_t source, source2;
         uint8_t bc, dest_field;
     public:
@@ -30,6 +30,7 @@ class Instruction
         uint32_t get_jump_dest();
         uint32_t get_return_addr();
         int get_dest();
+        int get_base();
         uint64_t get_source();
         uint64_t get_source2();
         uint8_t get_bc();
@@ -38,6 +39,7 @@ class Instruction
         void set_jump_dest(uint32_t addr);
         void set_return_addr(uint32_t addr);
         void set_dest(int index);
+        void set_base(int index);
         void set_source(uint64_t value);
         void set_source2(uint64_t value);
         void set_bc(uint8_t value);

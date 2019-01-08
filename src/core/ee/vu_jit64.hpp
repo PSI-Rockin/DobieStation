@@ -14,6 +14,13 @@ struct AllocReg
     int vu_reg;
 };
 
+enum class REG_STATE
+{
+    READ,
+    WRITE,
+    READ_WRITE
+};
+
 class VU_JIT64
 {
     private:
@@ -25,7 +32,11 @@ class VU_JIT64
         int abi_int_count;
         int abi_xmm_count;
 
+        uint64_t get_vf_addr(VectorUnit& vu, int index);
+
         void load_const(VectorUnit& vu, IR::Instruction& instr);
+        void load_quad_inc(VectorUnit& vu, IR::Instruction& instr);
+        void store_quad_inc(VectorUnit& vu, IR::Instruction& instr);
         void move_int_reg(VectorUnit& vu, IR::Instruction& instr);
         void jump(VectorUnit& vu, IR::Instruction& instr);
         void jump_and_link(VectorUnit& vu, IR::Instruction& instr);
@@ -34,9 +45,12 @@ class VU_JIT64
         void add_unsigned_imm(VectorUnit& vu, IR::Instruction& instr);
 
         void mul_vector_by_scalar(VectorUnit& vu, IR::Instruction& instr);
+        void madd_vector_by_scalar(VectorUnit& vu, IR::Instruction& instr);
 
-        REG_64 alloc_int_reg(VectorUnit& vu, int vi_reg, bool load_state);
-        REG_64 alloc_sse_reg(VectorUnit& vu, int vf_reg, bool load_state);
+        void stop(VectorUnit& vu, IR::Instruction& instr);
+
+        REG_64 alloc_int_reg(VectorUnit& vu, int vi_reg, REG_STATE state);
+        REG_64 alloc_sse_reg(VectorUnit& vu, int vf_reg, REG_STATE state);
         void flush_regs(VectorUnit& vu);
 
         void recompile_block(VectorUnit& vu, IR::Block& block);

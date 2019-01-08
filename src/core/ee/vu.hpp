@@ -52,6 +52,7 @@ class VectorUnit
     private:
         GraphicsInterface* gif;
         int id;
+        uint16_t mem_mask; //0xFFF for VU0, 0x3FFF for VU1
         Emulator* e;
 
         uint64_t cycle_count;
@@ -62,7 +63,7 @@ class VectorUnit
         uint8_t data_mem[1024 * 16];
 
         bool running;
-        uint32_t PC, new_PC, secondbranch_PC;
+        uint16_t PC, new_PC, secondbranch_PC;
         bool branch_on;
         bool finish_on;
         bool second_branch_pending;
@@ -139,6 +140,7 @@ class VectorUnit
         void callmsr();
         void mscal(uint32_t addr);
         void end_execution();
+        void stop();
         void reset();
 
         void backup_vf(bool newvf, int index);
@@ -306,37 +308,25 @@ class VectorUnit
 template <typename T>
 inline T VectorUnit::read_instr(uint32_t addr)
 {
-    uint16_t mask = 0x3fff;
-    if (get_id() == 0)
-        mask = 0xfff;
-    return *(T*)&instr_mem[addr & mask];
+    return *(T*)&instr_mem[addr & mem_mask];
 }
 
 template <typename T>
 inline T VectorUnit::read_data(uint32_t addr)
 {
-    uint16_t mask = 0x3fff;
-    if (get_id() == 0)
-        mask = 0xfff;
-    return *(T*)&data_mem[addr & mask];
+    return *(T*)&data_mem[addr & mem_mask];
 }
 
 template <typename T>
 inline void VectorUnit::write_instr(uint32_t addr, T data)
 {
-    uint16_t mask = 0x3fff;
-    if (get_id() == 0)
-        mask = 0xfff;
-     *(T*)&instr_mem[addr & mask] = data;
+    *(T*)&instr_mem[addr & mem_mask] = data;
 }
 
 template <typename T>
 inline void VectorUnit::write_data(uint32_t addr, T data)
 {
-    uint16_t mask = 0x3fff;
-    if (get_id() == 0)
-        mask = 0xfff;
-    *(T*)&data_mem[addr & mask] = data;
+    *(T*)&data_mem[addr & mem_mask] = data;
 }
 
 inline bool VectorUnit::is_running()

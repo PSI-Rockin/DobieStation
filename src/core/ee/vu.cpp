@@ -60,6 +60,11 @@ VectorUnit::VectorUnit(int id, Emulator* e) : id(id), e(e), gif(nullptr)
     gpr[0].f[3] = 1.0;
     int_gpr[0].u = 0;
 
+    if (id == 0)
+        mem_mask = 0xFFF;
+    else
+        mem_mask = 0x3FFF;
+
     VIF_TOP = nullptr;
     VIF_ITOP = nullptr;
 
@@ -370,6 +375,11 @@ void VectorUnit::end_execution()
 {
     ebit_delay_slot = 1;
     finish_on = true;
+}
+
+void VectorUnit::stop()
+{
+    running = false;
 }
 
 float VectorUnit::update_mac_flags(float value, int index)

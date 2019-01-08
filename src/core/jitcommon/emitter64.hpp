@@ -42,12 +42,19 @@ class Emitter64
         void load_addr(uint64_t addr, REG_64 dest);
 
         void ADD16_REG_IMM(uint16_t imm, REG_64 dest);
+        void ADD64_REG(REG_64 source, REG_64 dest);
+
+        void INC16(REG_64 dest);
+
+        void AND16_AX(uint16_t imm);
 
         void SHL32_REG_IMM(uint8_t shift, REG_64 dest);
 
         void MOV16_REG(REG_64 source, REG_64 dest);
+        void MOVZX32_REG(REG_64 source, REG_64 dest);
         void MOV16_REG_IMM(uint16_t imm, REG_64 dest);
-        void MOV32_MI_MEM(uint32_t imm, REG_64 indir_dest);
+        void MOV16_TO_MEM(REG_64 source, REG_64 indir_dest);
+        void MOV16_IMM_MEM(uint16_t imm, REG_64 indir_dest);
         void MOV32_TO_MEM(REG_64 source, REG_64 indir_dest);
         void MOV64_MR(REG_64 source, REG_64 dest);
         void MOV64_OI(uint64_t imm, REG_64 dest);
@@ -62,6 +69,7 @@ class Emitter64
         void CALL(uint64_t addr);
         void RET();
 
+        void ADDPS(REG_64 xmm_source, REG_64 xmm_dest);
         void BLENDPS(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest);
         void MULPS(REG_64 xmm_source, REG_64 xmm_dest);
         void SHUFPS(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest);
