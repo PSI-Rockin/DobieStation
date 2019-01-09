@@ -6,7 +6,7 @@
 
 #include "../int128.hpp"
 
-union VU_R
+union alignas(16) VU_R
 {
     float f;
     uint32_t u;

@@ -41,6 +41,7 @@ class Emitter64
 
         void load_addr(uint64_t addr, REG_64 dest);
 
+        void ADD16_REG(REG_64 source, REG_64 dest);
         void ADD16_REG_IMM(uint16_t imm, REG_64 dest);
         void ADD64_REG(REG_64 source, REG_64 dest);
 
@@ -54,6 +55,7 @@ class Emitter64
         void MOVZX32_REG(REG_64 source, REG_64 dest);
         void MOV16_REG_IMM(uint16_t imm, REG_64 dest);
         void MOV16_TO_MEM(REG_64 source, REG_64 indir_dest);
+        void MOV16_FROM_MEM(REG_64 indir_source, REG_64 dest);
         void MOV16_IMM_MEM(uint16_t imm, REG_64 indir_dest);
         void MOV32_TO_MEM(REG_64 source, REG_64 indir_dest);
         void MOV64_MR(REG_64 source, REG_64 dest);

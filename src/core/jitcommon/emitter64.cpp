@@ -78,6 +78,14 @@ void Emitter64::load_addr(uint64_t addr, REG_64 dest)
     cache->write<uint32_t>(offset - 7);
 }
 
+void Emitter64::ADD16_REG(REG_64 source, REG_64 dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(source, dest);
+    cache->write<uint8_t>(0x01);
+    modrm(0b11, source, dest);
+}
+
 void Emitter64::ADD16_REG_IMM(uint16_t imm, REG_64 dest)
 {
     cache->write<uint8_t>(0x66);
@@ -147,6 +155,14 @@ void Emitter64::MOV16_TO_MEM(REG_64 source, REG_64 indir_dest)
     rex_r(source);
     cache->write<uint8_t>(0x89);
     modrm(0, source, indir_dest);
+}
+
+void Emitter64::MOV16_FROM_MEM(REG_64 indir_source, REG_64 dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r(dest);
+    cache->write<uint8_t>(0x8B);
+    modrm(0, dest, indir_source);
 }
 
 void Emitter64::MOV16_IMM_MEM(uint16_t imm, REG_64 indir_dest)

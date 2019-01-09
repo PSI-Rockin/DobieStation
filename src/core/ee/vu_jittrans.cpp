@@ -184,6 +184,13 @@ void lower1(std::vector<IR::Instruction> &instrs, uint32_t lower)
     IR::Instruction instr;
     switch (op)
     {
+        case 0x30:
+            //IADD
+            instr.op = IR::Opcode::AddIntRegReg;
+            instr.set_dest((lower >> 6) & 0xF);
+            instr.set_source((lower >> 11) & 0xF);
+            instr.set_source2((lower >> 16) & 0xF);
+            break;
         case 0x3C:
         case 0x3D:
         case 0x3E:
@@ -216,6 +223,11 @@ void lower1_special(std::vector<IR::Instruction> &instrs, uint32_t lower)
             instr.set_base((lower >> 16) & 0x1F);
             instr.set_source((lower >> 11) & 0x1F);
             break;
+        case 0x68:
+            //XTOP
+            instr.op = IR::Opcode::MoveXTOP;
+            instr.set_dest((lower >> 16) & 0xF);
+            break;
         default:
             Errors::die("[VU_JIT] Unrecognized lower1 special op $%02X", op);
     }
@@ -228,26 +240,49 @@ void lower2(std::vector<IR::Instruction> &instrs, uint32_t lower, uint32_t PC)
     IR::Instruction instr;
     switch (op)
     {
+        case 0x00:
+            //LQ
+        {
+            int16_t imm = (int16_t)((lower & 0x400) ? (lower & 0x3ff) | 0xfc00 : (lower & 0x3ff));
+            instr.op = IR::Opcode::LoadQuad;
+            instr.set_dest_field((lower >> 21) & 0xF);
+            instr.set_dest((lower >> 16) & 0x1F);
+            instr.set_source((lower >> 11) & 0x1F);
+            instr.set_source2((int64_t)imm);
+        }
+            break;
+        case 0x04:
+            //ILW
+        {
+            int16_t imm = lower & 0x7FF;
+            imm = ((int16_t)(imm << 5)) >> 5;
+            imm *= 16;
+            instr.op = IR::Opcode::LoadInt;
+            instr.set_base((lower >> 16) & 0xF);
+            instr.set_dest((lower >> 11) & 0xF);
+            instr.set_source((int64_t)imm);
+        }
+            break;
         case 0x08:
             //IADDIU
+        {
             instr.op = IR::Opcode::AddUnsignedImm;
             instr.set_dest((lower >> 16) & 0xF);
             instr.set_source((lower >> 11) & 0xF);
-        {
             uint16_t imm = lower & 0x7FF;
             imm |= ((lower >> 21) & 0xF) << 11;
             instr.set_source2(imm);
-            if (instr.get_source() != instr.get_dest())
+            if (!instr.get_source())
             {
-                if (!instr.get_source())
-                {
-                    instr.op = IR::Opcode::LoadConst;
-                    instr.set_source(imm);
-                }
+                instr.op = IR::Opcode::LoadConst;
+                instr.set_source(imm);
             }
-            else
-                instr.op = IR::Opcode::MoveIntReg;
         }
+            break;
+        case 0x11:
+            //FCSET
+            instr.op = IR::Opcode::SetClipFlags;
+            instr.set_source(lower & 0xFFFFFF);
             break;
         case 0x20:
             //B
@@ -265,6 +300,13 @@ void lower2(std::vector<IR::Instruction> &instrs, uint32_t lower, uint32_t PC)
             //JR
             instr.op = IR::Opcode::JumpIndirect;
             instr.set_source((lower >> 11) & 0xF);
+            break;
+        case 0x29:
+            //IBNE
+            instr.op = IR::Opcode::BranchNotEqual;
+            instr.set_source((lower >> 11) & 0xF);
+            instr.set_source2((lower >> 16) & 0xF);
+            instr.set_jump_dest(branch_offset(lower, PC));
             break;
         default:
             Errors::die("[VU_JIT] Unrecognized lower2 op $%02X", op);
