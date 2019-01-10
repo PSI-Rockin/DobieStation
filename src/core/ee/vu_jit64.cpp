@@ -117,7 +117,6 @@ void VU_JIT64::load_int(VectorUnit &vu, IR::Instruction &instr)
 {
     uint8_t field = convert_field(instr.get_dest_field());
     REG_64 dest = alloc_int_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
-    REG_64 base = alloc_int_reg(vu, instr.get_base(), REG_STATE::READ);
 
     int field_offset = 0;
     if (field & 0x2)
@@ -127,26 +126,46 @@ void VU_JIT64::load_int(VectorUnit &vu, IR::Instruction &instr)
     if (field & 0x8)
         field_offset = 12;
 
-    emitter.MOVZX32_REG(base, REG_64::RAX);
-    emitter.SHL32_REG_IMM(4, REG_64::RAX);
-    emitter.AND16_AX(vu.mem_mask);
+    if (instr.get_base())
+    {
+        REG_64 base = alloc_int_reg(vu, instr.get_base(), REG_STATE::READ);
+        emitter.MOVZX32_REG(base, REG_64::RAX);
+        emitter.SHL32_REG_IMM(4, REG_64::RAX);
+        emitter.ADD16_REG_IMM(instr.get_source(), REG_64::RAX);
+        emitter.AND16_AX(vu.mem_mask);
 
-    emitter.load_addr((uint64_t)&vu.data_mem[field_offset], REG_64::R15);
-    emitter.ADD64_REG(REG_64::RAX, REG_64::R15);
-    emitter.MOV16_FROM_MEM(REG_64::RAX, dest);
+        emitter.load_addr((uint64_t)&vu.data_mem[field_offset], REG_64::R15);
+        emitter.ADD64_REG(REG_64::RAX, REG_64::R15);
+        emitter.MOV16_FROM_MEM(REG_64::R15, dest);
+    }
+    else
+    {
+        uint16_t offset = instr.get_source() & 0x3FFF;
+        emitter.load_addr((uint64_t)&vu.data_mem[field_offset + offset], REG_64::R15);
+        emitter.MOV16_FROM_MEM(REG_64::R15, dest);
+    }
 }
 
 void VU_JIT64::load_quad(VectorUnit &vu, IR::Instruction &instr)
 {
     uint8_t field = convert_field(instr.get_dest_field());
-    REG_64 base = alloc_int_reg(vu, instr.get_base(), REG_STATE::READ);
 
-    emitter.MOVZX32_REG(base, REG_64::RAX);
-    emitter.SHL32_REG_IMM(4, REG_64::RAX);
-    emitter.ADD16_REG_IMM(instr.get_source2(), REG_64::RAX);
+    if (instr.get_base())
+    {
+        REG_64 base = alloc_int_reg(vu, instr.get_base(), REG_STATE::READ);
+        emitter.MOVZX32_REG(base, REG_64::RAX);
+        emitter.SHL32_REG_IMM(4, REG_64::RAX);
+        emitter.ADD16_REG_IMM(instr.get_source(), REG_64::RAX);
+        emitter.AND16_AX(vu.mem_mask);
 
-    emitter.load_addr((uint64_t)&vu.data_mem, REG_64::R15);
-    emitter.ADD64_REG(REG_64::RAX, REG_64::R15);
+        emitter.load_addr((uint64_t)&vu.data_mem, REG_64::R15);
+        emitter.ADD64_REG(REG_64::RAX, REG_64::R15);
+    }
+    else
+    {
+        uint16_t offset = instr.get_source() & 0x3FFF;
+        emitter.load_addr((uint64_t)&vu.data_mem[offset], REG_64::R15);
+    }
 
     if (field == 0xF)
     {

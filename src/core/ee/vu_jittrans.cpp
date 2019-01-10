@@ -244,11 +244,12 @@ void lower2(std::vector<IR::Instruction> &instrs, uint32_t lower, uint32_t PC)
             //LQ
         {
             int16_t imm = (int16_t)((lower & 0x400) ? (lower & 0x3ff) | 0xfc00 : (lower & 0x3ff));
+            imm *= 16;
             instr.op = IR::Opcode::LoadQuad;
             instr.set_dest_field((lower >> 21) & 0xF);
             instr.set_dest((lower >> 16) & 0x1F);
-            instr.set_source((lower >> 11) & 0x1F);
-            instr.set_source2((int64_t)imm);
+            instr.set_base((lower >> 11) & 0x1F);
+            instr.set_source((int64_t)imm);
         }
             break;
         case 0x04:
