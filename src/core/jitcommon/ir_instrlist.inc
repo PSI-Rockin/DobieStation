@@ -12,7 +12,6 @@ INSTR(MoveIntReg)
 
 INSTR(ShiftLeft)
 INSTR(AddIntReg)
-INSTR(AddIntRegReg)
 INSTR(AddUnsignedImm)
 
 INSTR(Jump)
@@ -27,6 +26,7 @@ INSTR(BranchGreaterOrEqual)
 
 INSTR(VMulVectorByScalar)
 INSTR(VMaddVectorByScalar)
+INSTR(VMaddAccByScalar)
 
 INSTR(SetClipFlags)
 

@@ -8,7 +8,9 @@ enum VU_SpecialReg
 {
     ACC = 32,
     I,
-    Q
+    Q,
+    P,
+    R
 };
 
 namespace VU_JitTranslator

@@ -107,7 +107,7 @@ void VU_JIT64::load_const(VectorUnit &vu, IR::Instruction &instr)
 
 void VU_JIT64::load_float_const(VectorUnit &vu, IR::Instruction &instr)
 {
-    REG_64 dest = alloc_sse_reg(vu, instr.get_dest());
+    REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::WRITE);
 
     emitter.load_addr(get_vf_addr(vu, instr.get_dest()), REG_64::RAX);
     emitter.MOVAPS_FROM_MEM(REG_64::RAX, dest);
@@ -116,7 +116,6 @@ void VU_JIT64::load_float_const(VectorUnit &vu, IR::Instruction &instr)
 void VU_JIT64::load_int(VectorUnit &vu, IR::Instruction &instr)
 {
     uint8_t field = convert_field(instr.get_dest_field());
-    REG_64 dest = alloc_int_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
 
     int field_offset = 0;
     if (field & 0x2)
@@ -128,10 +127,15 @@ void VU_JIT64::load_int(VectorUnit &vu, IR::Instruction &instr)
 
     if (instr.get_base())
     {
+        //IMPORTANT
+        //Dest must be allocated after base in case base == dest (this is so that the base address can load)
         REG_64 base = alloc_int_reg(vu, instr.get_base(), REG_STATE::READ);
-        emitter.MOVZX32_REG(base, REG_64::RAX);
+        REG_64 dest = alloc_int_reg(vu, instr.get_dest(), REG_STATE::WRITE);
+        emitter.MOVZX64_REG(base, REG_64::RAX);
         emitter.SHL32_REG_IMM(4, REG_64::RAX);
-        emitter.ADD16_REG_IMM(instr.get_source(), REG_64::RAX);
+
+        if (instr.get_source())
+            emitter.ADD16_REG_IMM(instr.get_source(), REG_64::RAX);
         emitter.AND16_AX(vu.mem_mask);
 
         emitter.load_addr((uint64_t)&vu.data_mem[field_offset], REG_64::R15);
@@ -140,8 +144,9 @@ void VU_JIT64::load_int(VectorUnit &vu, IR::Instruction &instr)
     }
     else
     {
-        uint16_t offset = instr.get_source() & 0x3FFF;
-        emitter.load_addr((uint64_t)&vu.data_mem[field_offset + offset], REG_64::R15);
+        REG_64 dest = alloc_int_reg(vu, instr.get_dest(), REG_STATE::WRITE);
+        uint16_t offset = (instr.get_source() + field_offset) & 0x3FFF;
+        emitter.load_addr((uint64_t)&vu.data_mem[offset], REG_64::R15);
         emitter.MOV16_FROM_MEM(REG_64::R15, dest);
     }
 }
@@ -153,9 +158,11 @@ void VU_JIT64::load_quad(VectorUnit &vu, IR::Instruction &instr)
     if (instr.get_base())
     {
         REG_64 base = alloc_int_reg(vu, instr.get_base(), REG_STATE::READ);
-        emitter.MOVZX32_REG(base, REG_64::RAX);
+        emitter.MOVZX64_REG(base, REG_64::RAX);
         emitter.SHL32_REG_IMM(4, REG_64::RAX);
-        emitter.ADD16_REG_IMM(instr.get_source(), REG_64::RAX);
+
+        if (instr.get_source())
+            emitter.ADD16_REG_IMM(instr.get_source(), REG_64::RAX);
         emitter.AND16_AX(vu.mem_mask);
 
         emitter.load_addr((uint64_t)&vu.data_mem, REG_64::R15);
@@ -187,7 +194,7 @@ void VU_JIT64::load_quad_inc(VectorUnit &vu, IR::Instruction &instr)
     REG_64 base = alloc_int_reg(vu, instr.get_base(), REG_STATE::READ_WRITE);
 
     //addr = (int_reg * 16) & mem_mask
-    emitter.MOVZX32_REG(base, REG_64::RAX);
+    emitter.MOVZX64_REG(base, REG_64::RAX);
     emitter.SHL32_REG_IMM(4, REG_64::RAX);
     emitter.AND16_AX(vu.mem_mask);
 
@@ -219,7 +226,7 @@ void VU_JIT64::store_quad_inc(VectorUnit &vu, IR::Instruction &instr)
     REG_64 base = alloc_int_reg(vu, instr.get_base(), REG_STATE::READ_WRITE);
 
     //addr = (int_reg * 16) & mem_mask
-    emitter.MOVZX32_REG(base, REG_64::RAX);
+    emitter.MOVZX64_REG(base, REG_64::RAX);
     emitter.SHL32_REG_IMM(4, REG_64::RAX);
     emitter.AND16_AX(vu.mem_mask);
 
@@ -270,15 +277,43 @@ void VU_JIT64::jump_indirect(VectorUnit &vu, IR::Instruction &instr)
     emitter.MOV16_TO_MEM(return_reg, REG_64::RAX);
 }
 
-void VU_JIT64::add_int_reg_reg(VectorUnit &vu, IR::Instruction &instr)
+void VU_JIT64::add_int_reg(VectorUnit &vu, IR::Instruction &instr)
 {
-    REG_64 dest = alloc_int_reg(vu, instr.get_dest());
-    REG_64 op1 = alloc_int_reg(vu, instr.get_source());
-    REG_64 op2 = alloc_int_reg(vu, instr.get_source2());
+    //If RD == RS, RD += RT
+    if (instr.get_dest() == instr.get_source())
+    {
+        //IF RD == RS == RT, RD <<= 1
+        if (instr.get_dest() == instr.get_source2())
+        {
+            REG_64 dest = alloc_int_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
+            emitter.SHL16_REG_1(dest);
+        }
+        else
+        {
+            REG_64 dest = alloc_int_reg(vu, instr.get_dest(), REG_STATE::WRITE);
+            REG_64 op2 = alloc_int_reg(vu, instr.get_source2(), REG_STATE::READ);
 
-    emitter.MOV16_REG(op1, REG_64::RAX);
-    emitter.ADD16_REG(op2, REG_64::RAX);
-    emitter.MOV16_REG(REG_64::RAX, dest);
+            emitter.ADD16_REG(op2, dest);
+        }
+    }
+    //If RD == RT, RD += RS
+    else if (instr.get_dest() == instr.get_source2())
+    {
+        REG_64 dest = alloc_int_reg(vu, instr.get_dest(), REG_STATE::WRITE);
+        REG_64 op1 = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
+
+        emitter.ADD16_REG(op1, dest);
+    }
+    //RD = RS + RT
+    else
+    {
+        REG_64 dest = alloc_int_reg(vu, instr.get_dest(), REG_STATE::WRITE);
+        REG_64 op1 = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
+        REG_64 op2 = alloc_int_reg(vu, instr.get_source2(), REG_STATE::READ);
+
+        emitter.MOV16_REG(op1, dest);
+        emitter.ADD16_REG(op2, dest);
+    }
 }
 
 void VU_JIT64::add_unsigned_imm(VectorUnit &vu, IR::Instruction &instr)
@@ -302,7 +337,6 @@ void VU_JIT64::add_unsigned_imm(VectorUnit &vu, IR::Instruction &instr)
 void VU_JIT64::mul_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
 {
     uint8_t field = convert_field(instr.get_dest_field());
-    REG_64 temp = REG_64::XMM0;
     REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ_WRITE);
     REG_64 bc_reg = alloc_sse_reg(vu, instr.get_source2(), REG_STATE::READ_WRITE);
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
@@ -310,9 +344,18 @@ void VU_JIT64::mul_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     uint8_t bc = instr.get_bc();
     bc |= (bc << 6) | (bc << 4) | (bc << 2);
 
-    emitter.SHUFPS(bc, bc_reg, temp);
-    emitter.MULPS(source, temp);
-    emitter.BLENDPS(field, temp, dest);
+    if (field == 0xF)
+    {
+        emitter.SHUFPS(bc, bc_reg, dest);
+        emitter.MULPS(source, dest);
+    }
+    else
+    {
+        REG_64 temp = REG_64::XMM0;
+        emitter.SHUFPS(bc, bc_reg, temp);
+        emitter.MULPS(source, temp);
+        emitter.BLENDPS(field, temp, dest);
+    }
 }
 
 void VU_JIT64::madd_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
@@ -322,14 +365,39 @@ void VU_JIT64::madd_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ_WRITE);
     REG_64 bc_reg = alloc_sse_reg(vu, instr.get_source2(), REG_STATE::READ_WRITE);
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
+    REG_64 acc = alloc_sse_reg(vu, VU_SpecialReg::ACC, REG_STATE::READ);
 
     uint8_t bc = instr.get_bc();
     bc |= (bc << 6) | (bc << 4) | (bc << 2);
 
     emitter.SHUFPS(bc, bc_reg, temp);
     emitter.MULPS(source, temp);
-    emitter.ADDPS(dest, temp);
+    emitter.ADDPS(acc, temp);
     emitter.BLENDPS(field, temp, dest);
+}
+
+void VU_JIT64::madd_acc_by_scalar(VectorUnit &vu, IR::Instruction &instr)
+{
+    uint8_t field = convert_field(instr.get_dest_field());
+
+    REG_64 temp = REG_64::XMM0;
+    REG_64 bc_reg = alloc_sse_reg(vu, instr.get_source2(), REG_STATE::READ);
+    REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ);
+    REG_64 dest = alloc_sse_reg(vu, VU_SpecialReg::ACC, REG_STATE::READ_WRITE);
+
+    uint8_t bc = instr.get_bc();
+    bc |= (bc << 6) | (bc << 4) | (bc << 2);
+
+    emitter.SHUFPS(bc, bc_reg, temp);
+    emitter.MULPS(source, temp);
+
+    if (field == 0xF)
+        emitter.ADDPS(temp, dest);
+    else
+    {
+        emitter.ADDPS(dest, temp);
+        emitter.BLENDPS(field, temp, dest);
+    }
 }
 
 void VU_JIT64::move_xtop(VectorUnit &vu, IR::Instruction &instr)
@@ -362,6 +430,7 @@ REG_64 VU_JIT64::alloc_int_reg(VectorUnit &vu, int vi_reg, REG_STATE state)
         {
             if (state != REG_STATE::READ)
                 int_regs[i].modified = true;
+            int_regs[i].age = 0;
             return (REG_64)i;
         }
     }
@@ -426,6 +495,7 @@ REG_64 VU_JIT64::alloc_sse_reg(VectorUnit &vu, int vf_reg, REG_STATE state)
         {
             if (state != REG_STATE::READ)
                 xmm_regs[i].modified = true;
+            xmm_regs[i].age = 0;
             return (REG_64)i;
         }
     }
@@ -552,20 +622,27 @@ void VU_JIT64::recompile_block(VectorUnit& vu, IR::Block& block)
             case IR::Opcode::JumpAndLink:
                 jump_and_link(vu, instr);
                 break;
+            case IR::Opcode::JumpIndirect:
+                jump_indirect(vu, instr);
+                break;
+            case IR::Opcode::BranchNotEqual:
+                break;
             case IR::Opcode::VMulVectorByScalar:
                 mul_vector_by_scalar(vu, instr);
                 break;
             case IR::Opcode::VMaddVectorByScalar:
                 madd_vector_by_scalar(vu, instr);
                 break;
-            case IR::Opcode::JumpIndirect:
-                jump_indirect(vu, instr);
+            case IR::Opcode::VMaddAccByScalar:
+                madd_acc_by_scalar(vu, instr);
                 break;
-            case IR::Opcode::AddIntRegReg:
-                add_int_reg_reg(vu, instr);
+            case IR::Opcode::AddIntReg:
+                add_int_reg(vu, instr);
                 break;
             case IR::Opcode::AddUnsignedImm:
                 add_unsigned_imm(vu, instr);
+                break;
+            case IR::SetClipFlags:
                 break;
             case IR::MoveXTOP:
                 move_xtop(vu, instr);
@@ -602,8 +679,8 @@ uint8_t* VU_JIT64::exec_block(VectorUnit& vu)
         IR::Block block = VU_JitTranslator::translate(vu.PC, vu.get_instr_mem());
         recompile_block(vu, block);
     }
-    //if (vu.PC == 0xC38)
-        //Errors::die("hi");
+    if (vu.PC == 0x2A0)
+        Errors::die("hi");
     return cache.get_current_block_start();
 }
 

@@ -49,10 +49,11 @@ class Emitter64
 
         void AND16_AX(uint16_t imm);
 
+        void SHL16_REG_1(REG_64 dest);
         void SHL32_REG_IMM(uint8_t shift, REG_64 dest);
 
         void MOV16_REG(REG_64 source, REG_64 dest);
-        void MOVZX32_REG(REG_64 source, REG_64 dest);
+        void MOVZX64_REG(REG_64 source, REG_64 dest);
         void MOV16_REG_IMM(uint16_t imm, REG_64 dest);
         void MOV16_TO_MEM(REG_64 source, REG_64 indir_dest);
         void MOV16_FROM_MEM(REG_64 indir_source, REG_64 dest);

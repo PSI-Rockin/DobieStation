@@ -137,7 +137,7 @@ void upper_special(std::vector<IR::Instruction> &instrs, uint32_t upper)
         case 0x0A:
         case 0x0B:
             //MADDAbc
-            instr.op = IR::Opcode::VMaddVectorByScalar;
+            instr.op = IR::Opcode::VMaddAccByScalar;
             instr.set_dest(VU_SpecialReg::ACC);
             instr.set_source((upper >> 11) & 0x1F);
             instr.set_source2((upper >> 16) & 0x1F);
@@ -186,7 +186,7 @@ void lower1(std::vector<IR::Instruction> &instrs, uint32_t lower)
     {
         case 0x30:
             //IADD
-            instr.op = IR::Opcode::AddIntRegReg;
+            instr.op = IR::Opcode::AddIntReg;
             instr.set_dest((lower >> 6) & 0xF);
             instr.set_source((lower >> 11) & 0xF);
             instr.set_source2((lower >> 16) & 0xF);
@@ -259,8 +259,8 @@ void lower2(std::vector<IR::Instruction> &instrs, uint32_t lower, uint32_t PC)
             imm = ((int16_t)(imm << 5)) >> 5;
             imm *= 16;
             instr.op = IR::Opcode::LoadInt;
-            instr.set_base((lower >> 16) & 0xF);
-            instr.set_dest((lower >> 11) & 0xF);
+            instr.set_dest((lower >> 16) & 0xF);
+            instr.set_base((lower >> 11) & 0xF);
             instr.set_source((int64_t)imm);
         }
             break;

@@ -47,11 +47,12 @@ class VU_JIT64
         void jump_and_link(VectorUnit& vu, IR::Instruction& instr);
         void jump_indirect(VectorUnit& vu, IR::Instruction& instr);
 
-        void add_int_reg_reg(VectorUnit& vu, IR::Instruction& instr);
+        void add_int_reg(VectorUnit& vu, IR::Instruction& instr);
         void add_unsigned_imm(VectorUnit& vu, IR::Instruction& instr);
 
         void mul_vector_by_scalar(VectorUnit& vu, IR::Instruction& instr);
         void madd_vector_by_scalar(VectorUnit& vu, IR::Instruction& instr);
+        void madd_acc_by_scalar(VectorUnit& vu, IR::Instruction& instr);
 
         void move_xtop(VectorUnit& vu, IR::Instruction& instr);
         void stop(VectorUnit& vu, IR::Instruction& instr);

@@ -117,6 +117,14 @@ void Emitter64::AND16_AX(uint16_t imm)
     cache->write<uint16_t>(imm);
 }
 
+void Emitter64::SHL16_REG_1(REG_64 dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_rm(dest);
+    cache->write<uint8_t>(0xD1);
+    modrm(0b11, 4, dest);
+}
+
 void Emitter64::SHL32_REG_IMM(uint8_t shift, REG_64 dest)
 {
     rex_rm(dest);
@@ -133,9 +141,9 @@ void Emitter64::MOV16_REG(REG_64 source, REG_64 dest)
     modrm(0b11, source, dest);
 }
 
-void Emitter64::MOVZX32_REG(REG_64 source, REG_64 dest)
+void Emitter64::MOVZX64_REG(REG_64 source, REG_64 dest)
 {
-    rex_r_rm(dest, source);
+    rexw_r_rm(dest, source);
     cache->write<uint8_t>(0x0F);
     cache->write<uint8_t>(0xB7);
     modrm(0b11, dest, source);
@@ -152,7 +160,7 @@ void Emitter64::MOV16_REG_IMM(uint16_t imm, REG_64 dest)
 void Emitter64::MOV16_TO_MEM(REG_64 source, REG_64 indir_dest)
 {
     cache->write<uint8_t>(0x66);
-    rex_r(source);
+    rex_r_rm(source, indir_dest);
     cache->write<uint8_t>(0x89);
     modrm(0, source, indir_dest);
 }
@@ -160,7 +168,7 @@ void Emitter64::MOV16_TO_MEM(REG_64 source, REG_64 indir_dest)
 void Emitter64::MOV16_FROM_MEM(REG_64 indir_source, REG_64 dest)
 {
     cache->write<uint8_t>(0x66);
-    rex_r(dest);
+    rex_r_rm(dest, indir_source);
     cache->write<uint8_t>(0x8B);
     modrm(0, dest, indir_source);
 }
@@ -176,7 +184,7 @@ void Emitter64::MOV16_IMM_MEM(uint16_t imm, REG_64 indir_dest)
 
 void Emitter64::MOV32_TO_MEM(REG_64 source, REG_64 indir_dest)
 {
-    rex_r(source);
+    rex_r_rm(source, indir_dest);
     cache->write<uint8_t>(0x89);
     modrm(0, source, indir_dest);
 }
@@ -197,14 +205,14 @@ void Emitter64::MOV64_OI(uint64_t imm, REG_64 dest)
 
 void Emitter64::MOV64_FROM_MEM(REG_64 indir_source, REG_64 dest)
 {
-    rexw_r(dest);
+    rexw_r_rm(dest, indir_source);
     cache->write<uint8_t>(0x8B);
     modrm(0, dest, indir_source);
 }
 
 void Emitter64::MOV64_TO_MEM(REG_64 source, REG_64 indir_dest)
 {
-    rexw_r(source);
+    rexw_r_rm(source, indir_dest);
     cache->write<uint8_t>(0x89);
     modrm(0, source, indir_dest);
 }
