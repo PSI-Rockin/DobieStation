@@ -99,6 +99,38 @@ uint64_t VU_JIT64::get_vf_addr(VectorUnit &vu, int index)
     }
 }
 
+void VU_JIT64::handle_cond_branch(VectorUnit& vu)
+{
+    //Load the "branch happened" variable
+    emitter.load_addr((uint64_t)&vu.branch_on, REG_64::RAX);
+    emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::RAX);
+
+    //The branch will point to two locations: one where the PC is set to the branch destination,
+    //and another where PC = PC + 16. Our generated code will jump if the branch *fails*.
+    //This is to allow for future optimizations where the recompiler may generate code beyond
+    //the branch (assuming that the branch fails).
+    emitter.TEST16_REG(REG_64::RAX, REG_64::RAX);
+
+    //Because we don't know where the branch will jump to, we defer it.
+    //Once the "branch succeeded" case has been finished recompiling, we can rewrite the branch offset.
+    uint8_t* offset_addr = emitter.JE_NEAR_DEFERRED();
+    emitter.load_addr((uint64_t)&vu.PC, REG_64::RAX);
+    emitter.MOV16_IMM_MEM(cond_branch_dest, REG_64::RAX);
+    cleanup_recompiler(vu, false);
+
+    //...Which we do here.
+    uint8_t* jump_dest_addr = cache.get_current_block_pos();
+    cache.set_current_block_pos(offset_addr);
+    int jump_offset = jump_dest_addr - offset_addr - 4;
+    cache.write<uint32_t>(jump_offset);
+
+    //And here we recompile the "branch failed" case.
+    cache.set_current_block_pos(jump_dest_addr);
+    emitter.load_addr((uint64_t)&vu.PC, REG_64::RAX);
+    emitter.MOV16_IMM_MEM(cond_branch_fail_dest, REG_64::RAX);
+    cleanup_recompiler(vu, true);
+}
+
 void VU_JIT64::load_const(VectorUnit &vu, IR::Instruction &instr)
 {
     REG_64 dest = alloc_int_reg(vu, instr.get_dest(), REG_STATE::WRITE);
@@ -277,6 +309,22 @@ void VU_JIT64::jump_indirect(VectorUnit &vu, IR::Instruction &instr)
     emitter.MOV16_TO_MEM(return_reg, REG_64::RAX);
 }
 
+void VU_JIT64::branch_not_equal(VectorUnit &vu, IR::Instruction &instr)
+{
+    REG_64 op1 = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
+    REG_64 op2 = alloc_int_reg(vu, instr.get_source2(), REG_STATE::READ);
+
+    emitter.MOV16_REG(op1, REG_64::RAX);
+    emitter.XOR16_REG(op2, REG_64::RAX);
+
+    emitter.load_addr((uint64_t)&vu.branch_on, REG_64::R15);
+    emitter.MOV16_TO_MEM(REG_64::RAX, REG_64::R15);
+
+    cond_branch = true;
+    cond_branch_dest = instr.get_jump_dest();
+    cond_branch_fail_dest = instr.get_jump_fail_dest();
+}
+
 void VU_JIT64::add_int_reg(VectorUnit &vu, IR::Instruction &instr)
 {
     //If RD == RS, RD += RT
@@ -405,7 +453,7 @@ void VU_JIT64::move_xtop(VectorUnit &vu, IR::Instruction &instr)
     REG_64 dest = alloc_int_reg(vu, instr.get_dest(), REG_STATE::WRITE);
 
     //VIF_TOP is a pointer, so we have to do two moves from memory
-    emitter.load_addr((uint64_t)vu.VIF_TOP, REG_64::RAX);
+    emitter.load_addr((uint64_t)&vu.VIF_TOP, REG_64::RAX);
     emitter.MOV64_FROM_MEM(REG_64::RAX, REG_64::RAX);
     emitter.MOV16_FROM_MEM(REG_64::RAX, dest);
 }
@@ -573,17 +621,80 @@ void VU_JIT64::flush_regs(VectorUnit &vu)
             emitter.load_addr((uint64_t)&vu.int_gpr[vi_reg], REG_64::RAX);
             emitter.MOV16_TO_MEM((REG_64)i, REG_64::RAX);
         }
+    }
+}
 
-        xmm_regs[i].age = 0;
-        int_regs[i].age = 0;
-        xmm_regs[i].used = false;
-        int_regs[i].used = false;
+void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
+{
+    switch (instr.op)
+    {
+        case IR::Opcode::LoadConst:
+            load_const(vu, instr);
+            break;
+        case IR::Opcode::LoadFloatConst:
+            load_float_const(vu, instr);
+            break;
+        case IR::Opcode::LoadInt:
+            load_int(vu, instr);
+            break;
+        case IR::Opcode::LoadQuad:
+            load_quad(vu, instr);
+            break;
+        case IR::Opcode::LoadQuadInc:
+            load_quad_inc(vu, instr);
+            break;
+        case IR::Opcode::StoreQuadInc:
+            store_quad_inc(vu, instr);
+            break;
+        case IR::Opcode::MoveIntReg:
+            move_int_reg(vu, instr);
+            break;
+        case IR::Opcode::Jump:
+            jump(vu, instr);
+            break;
+        case IR::Opcode::JumpAndLink:
+            jump_and_link(vu, instr);
+            break;
+        case IR::Opcode::JumpIndirect:
+            jump_indirect(vu, instr);
+            break;
+        case IR::Opcode::BranchNotEqual:
+            branch_not_equal(vu, instr);
+            break;
+        case IR::Opcode::VMulVectorByScalar:
+            mul_vector_by_scalar(vu, instr);
+            break;
+        case IR::Opcode::VMaddVectorByScalar:
+            madd_vector_by_scalar(vu, instr);
+            break;
+        case IR::Opcode::VMaddAccByScalar:
+            madd_acc_by_scalar(vu, instr);
+            break;
+        case IR::Opcode::AddIntReg:
+            add_int_reg(vu, instr);
+            break;
+        case IR::Opcode::AddUnsignedImm:
+            add_unsigned_imm(vu, instr);
+            break;
+        case IR::SetClipFlags:
+            break;
+        case IR::MoveXTOP:
+            move_xtop(vu, instr);
+            break;
+        case IR::Opcode::Stop:
+            stop(vu, instr);
+            break;
+        default:
+            Errors::die("[VU_JIT64] Unknown IR instruction");
     }
 }
 
 void VU_JIT64::recompile_block(VectorUnit& vu, IR::Block& block)
 {
     cache.alloc_block(vu.get_PC());
+
+    cond_branch = false;
+    cycle_count = block.get_cycle_count();
 
     //Prologue
     emitter.PUSH(REG_64::RBP);
@@ -592,77 +703,13 @@ void VU_JIT64::recompile_block(VectorUnit& vu, IR::Block& block)
     while (block.get_instruction_count() > 0)
     {
         IR::Instruction instr = block.get_next_instr();
-
-        switch (instr.op)
-        {
-            case IR::Opcode::LoadConst:
-                load_const(vu, instr);
-                break;
-            case IR::Opcode::LoadFloatConst:
-                load_float_const(vu, instr);
-                break;
-            case IR::Opcode::LoadInt:
-                load_int(vu, instr);
-                break;
-            case IR::Opcode::LoadQuad:
-                load_quad(vu, instr);
-                break;
-            case IR::Opcode::LoadQuadInc:
-                load_quad_inc(vu, instr);
-                break;
-            case IR::Opcode::StoreQuadInc:
-                store_quad_inc(vu, instr);
-                break;
-            case IR::Opcode::MoveIntReg:
-                move_int_reg(vu, instr);
-                break;
-            case IR::Opcode::Jump:
-                jump(vu, instr);
-                break;
-            case IR::Opcode::JumpAndLink:
-                jump_and_link(vu, instr);
-                break;
-            case IR::Opcode::JumpIndirect:
-                jump_indirect(vu, instr);
-                break;
-            case IR::Opcode::BranchNotEqual:
-                break;
-            case IR::Opcode::VMulVectorByScalar:
-                mul_vector_by_scalar(vu, instr);
-                break;
-            case IR::Opcode::VMaddVectorByScalar:
-                madd_vector_by_scalar(vu, instr);
-                break;
-            case IR::Opcode::VMaddAccByScalar:
-                madd_acc_by_scalar(vu, instr);
-                break;
-            case IR::Opcode::AddIntReg:
-                add_int_reg(vu, instr);
-                break;
-            case IR::Opcode::AddUnsignedImm:
-                add_unsigned_imm(vu, instr);
-                break;
-            case IR::SetClipFlags:
-                break;
-            case IR::MoveXTOP:
-                move_xtop(vu, instr);
-                break;
-            case IR::Opcode::Stop:
-                stop(vu, instr);
-                break;
-            default:
-                Errors::die("[VU_JIT64] Unknown IR instruction");
-        }
+        emit_instruction(vu, instr);
     }
 
-    flush_regs(vu);
-
-    //Return the amount of cycles to update the VUs with
-    emitter.MOV16_REG_IMM(block.get_cycle_count(), REG_64::RAX);
-
-    //Epilogue
-    emitter.POP(REG_64::RBP);
-    emitter.RET();
+    if (cond_branch)
+        handle_cond_branch(vu);
+    else
+        cleanup_recompiler(vu, true);
 
     //Switch the block's privileges from RW to RX.
     cache.set_current_block_rx();
@@ -679,9 +726,32 @@ uint8_t* VU_JIT64::exec_block(VectorUnit& vu)
         IR::Block block = VU_JitTranslator::translate(vu.PC, vu.get_instr_mem());
         recompile_block(vu, block);
     }
-    if (vu.PC == 0x2A0)
-        Errors::die("hi");
+    //if (vu.PC == 0x2A0)
+        //Errors::die("hi");
     return cache.get_current_block_start();
+}
+
+void VU_JIT64::cleanup_recompiler(VectorUnit& vu, bool clear_regs)
+{
+    flush_regs(vu);
+
+    if (clear_regs)
+    {
+        for (int i = 0; i < 16; i++)
+        {
+            int_regs[i].age = 0;
+            int_regs[i].used = false;
+            xmm_regs[i].age = 0;
+            xmm_regs[i].used = false;
+        }
+    }
+
+    //Return the amount of cycles to update the VUs with
+    emitter.MOV16_REG_IMM(cycle_count, REG_64::RAX);
+
+    //Epilogue
+    emitter.POP(REG_64::RBP);
+    emitter.RET();
 }
 
 void VU_JIT64::prepare_abi(VectorUnit& vu, uint64_t value)

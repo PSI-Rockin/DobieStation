@@ -82,9 +82,9 @@ uint8_t* JitCache::get_current_block_pos()
     return current_block->mem;
 }
 
-uint8_t* JitCache::get_current_addr()
+void JitCache::set_current_block_pos(uint8_t *pos)
 {
-    return current_block->mem;
+    current_block->mem = pos;
 }
 
 //Replace a block's write privileges with executable privileges.

@@ -13,6 +13,11 @@ uint32_t Instruction::get_jump_dest()
     return jump_dest;
 }
 
+uint32_t Instruction::get_jump_fail_dest()
+{
+    return jump_fail_dest;
+}
+
 uint32_t Instruction::get_return_addr()
 {
     return return_addr;
@@ -51,6 +56,11 @@ uint8_t Instruction::get_dest_field()
 void Instruction::set_jump_dest(uint32_t addr)
 {
     jump_dest = addr;
+}
+
+void Instruction::set_jump_fail_dest(uint32_t addr)
+{
+    jump_fail_dest = addr;
 }
 
 void Instruction::set_return_addr(uint32_t addr)

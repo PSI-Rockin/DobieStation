@@ -117,6 +117,23 @@ void Emitter64::AND16_AX(uint16_t imm)
     cache->write<uint16_t>(imm);
 }
 
+void Emitter64::CMP16_IMM(uint16_t imm, REG_64 op)
+{
+    cache->write<uint8_t>(0x66);
+    rex_rm(op);
+    cache->write<uint8_t>(0x81);
+    modrm(0b11, 7, op);
+    cache->write<uint16_t>(imm);
+}
+
+void Emitter64::CMP16_REG(REG_64 op2, REG_64 op1)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(op2, op1);
+    cache->write<uint8_t>(0x39);
+    modrm(0b11, op2, op1);
+}
+
 void Emitter64::SHL16_REG_1(REG_64 dest)
 {
     cache->write<uint8_t>(0x66);
@@ -133,20 +150,35 @@ void Emitter64::SHL32_REG_IMM(uint8_t shift, REG_64 dest)
     cache->write<uint8_t>(shift);
 }
 
+void Emitter64::TEST16_REG(REG_64 op2, REG_64 op1)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(op2, op1);
+    cache->write<uint8_t>(0x85);
+    modrm(0b11, op2, op1);
+}
+
+void Emitter64::XOR16_REG(REG_64 source, REG_64 dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(source, dest);
+    cache->write<uint8_t>(0x31);
+    modrm(0b11, source, dest);
+}
+
+void Emitter64::MOV8_TO_MEM(REG_64 source, REG_64 indir_dest)
+{
+    rex_r_rm(source, indir_dest);
+    cache->write<uint8_t>(0x88);
+    modrm(0, source, indir_dest);
+}
+
 void Emitter64::MOV16_REG(REG_64 source, REG_64 dest)
 {
     cache->write<uint8_t>(0x66);
     rex_r_rm(source, dest);
     cache->write<uint8_t>(0x89);
     modrm(0b11, source, dest);
-}
-
-void Emitter64::MOVZX64_REG(REG_64 source, REG_64 dest)
-{
-    rexw_r_rm(dest, source);
-    cache->write<uint8_t>(0x0F);
-    cache->write<uint8_t>(0xB7);
-    modrm(0b11, dest, source);
 }
 
 void Emitter64::MOV16_REG_IMM(uint16_t imm, REG_64 dest)
@@ -217,6 +249,14 @@ void Emitter64::MOV64_TO_MEM(REG_64 source, REG_64 indir_dest)
     modrm(0, source, indir_dest);
 }
 
+void Emitter64::MOVZX64_REG(REG_64 source, REG_64 dest)
+{
+    rexw_r_rm(dest, source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0xB7);
+    modrm(0b11, dest, source);
+}
+
 void Emitter64::MOVAPS_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest)
 {
     rex_r_rm(xmm_dest, indir_source);
@@ -231,6 +271,16 @@ void Emitter64::MOVAPS_TO_MEM(REG_64 xmm_source, REG_64 indir_dest)
     cache->write<uint8_t>(0x0F);
     cache->write<uint8_t>(0x29);
     modrm(0, xmm_source, indir_dest);
+}
+
+uint8_t* Emitter64::JE_NEAR_DEFERRED()
+{
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x84);
+    uint8_t* addr = cache->get_current_block_pos();
+
+    cache->write<uint32_t>(0);
+    return addr;
 }
 
 void Emitter64::PUSH(REG_64 reg)
@@ -248,7 +298,7 @@ void Emitter64::POP(REG_64 reg)
 void Emitter64::CALL(uint64_t func)
 {
     int offset = func;
-    offset -= (uint64_t)cache->get_current_addr();
+    offset -= (uint64_t)cache->get_current_block_pos();
     cache->write<uint8_t>(0xE8);
     cache->write<uint32_t>(offset - 5);
 }

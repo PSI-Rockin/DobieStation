@@ -33,7 +33,7 @@ class JitCache
 
         uint8_t* get_current_block_start();
         uint8_t* get_current_block_pos();
-        uint8_t* get_current_addr();
+        void set_current_block_pos(uint8_t* pos);
 
         void set_current_block_rx();
         void print_current_block();

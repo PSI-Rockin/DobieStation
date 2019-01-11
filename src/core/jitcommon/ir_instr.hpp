@@ -16,7 +16,7 @@ enum Opcode
 class Instruction
 {
     private:
-        uint32_t jump_dest;
+        uint32_t jump_dest, jump_fail_dest;
         uint32_t return_addr;
 
         int dest, base;
@@ -28,6 +28,7 @@ class Instruction
         Instruction(Opcode op = Null);
 
         uint32_t get_jump_dest();
+        uint32_t get_jump_fail_dest();
         uint32_t get_return_addr();
         int get_dest();
         int get_base();
@@ -37,6 +38,7 @@ class Instruction
         uint8_t get_dest_field();
 
         void set_jump_dest(uint32_t addr);
+        void set_jump_fail_dest(uint32_t addr);
         void set_return_addr(uint32_t addr);
         void set_dest(int index);
         void set_base(int index);

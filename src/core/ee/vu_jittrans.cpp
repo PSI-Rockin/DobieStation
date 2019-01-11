@@ -308,6 +308,7 @@ void lower2(std::vector<IR::Instruction> &instrs, uint32_t lower, uint32_t PC)
             instr.set_source((lower >> 11) & 0xF);
             instr.set_source2((lower >> 16) & 0xF);
             instr.set_jump_dest(branch_offset(lower, PC));
+            instr.set_jump_fail_dest(PC + 16);
             break;
         default:
             Errors::die("[VU_JIT] Unrecognized lower2 op $%02X", op);
