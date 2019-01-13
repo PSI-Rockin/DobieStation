@@ -48,9 +48,14 @@ uint8_t Instruction::get_bc()
     return bc;
 }
 
-uint8_t Instruction::get_dest_field()
+uint8_t Instruction::get_field()
 {
-    return dest_field;
+    return field;
+}
+
+uint8_t Instruction::get_field2()
+{
+    return field2;
 }
 
 void Instruction::set_jump_dest(uint32_t addr)
@@ -93,9 +98,14 @@ void Instruction::set_bc(uint8_t value)
     bc = value;
 }
 
-void Instruction::set_dest_field(uint8_t value)
+void Instruction::set_field(uint8_t value)
 {
-    dest_field = value;
+    field = value;
+}
+
+void Instruction::set_field2(uint8_t value)
+{
+    field2 = value;
 }
 
 bool Instruction::is_jump()

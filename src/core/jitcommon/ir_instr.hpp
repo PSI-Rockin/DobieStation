@@ -21,7 +21,7 @@ class Instruction
 
         int dest, base;
         uint64_t source, source2;
-        uint8_t bc, dest_field;
+        uint8_t bc, field, field2;
     public:
         Opcode op;
 
@@ -35,7 +35,8 @@ class Instruction
         uint64_t get_source();
         uint64_t get_source2();
         uint8_t get_bc();
-        uint8_t get_dest_field();
+        uint8_t get_field();
+        uint8_t get_field2();
 
         void set_jump_dest(uint32_t addr);
         void set_jump_fail_dest(uint32_t addr);
@@ -45,7 +46,8 @@ class Instruction
         void set_source(uint64_t value);
         void set_source2(uint64_t value);
         void set_bc(uint8_t value);
-        void set_dest_field(uint8_t value);
+        void set_field(uint8_t value);
+        void set_field2(uint8_t value);
 
         bool is_jump();
 };

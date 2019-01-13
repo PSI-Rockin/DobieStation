@@ -2,6 +2,7 @@
 #define VU_JIT64_HPP
 #include "../jitcommon/emitter64.hpp"
 #include "../jitcommon/ir_block.hpp"
+#include "vu_jittrans.hpp"
 
 class VectorUnit;
 
@@ -12,6 +13,11 @@ struct AllocReg
     bool modified;
     int age;
     int vu_reg;
+};
+
+struct alignas(16) FtoiTable
+{
+    float t[4][4];
 };
 
 enum class REG_STATE
@@ -28,6 +34,9 @@ class VU_JIT64
         AllocReg int_regs[16];
         JitCache cache;
         Emitter64 emitter;
+        VU_JitTranslator ir;
+
+        FtoiTable ftoi_table;
 
         int abi_int_count;
         int abi_xmm_count;
@@ -37,6 +46,7 @@ class VU_JIT64
         uint16_t cond_branch_dest, cond_branch_fail_dest;
 
         void handle_cond_branch(VectorUnit& vu);
+        void update_mac_flags(VectorUnit& vu, int vf_reg, uint8_t field);
 
         uint64_t get_vf_addr(VectorUnit& vu, int index);
 
@@ -58,11 +68,21 @@ class VU_JIT64
         void add_int_reg(VectorUnit& vu, IR::Instruction& instr);
         void add_unsigned_imm(VectorUnit& vu, IR::Instruction& instr);
 
+        void add_vectors(VectorUnit& vu, IR::Instruction& instr);
+        void add_vector_by_scalar(VectorUnit& vu, IR::Instruction& instr);
+        void mul_vectors(VectorUnit& vu, IR::Instruction& instr);
         void mul_vector_by_scalar(VectorUnit& vu, IR::Instruction& instr);
         void madd_vector_by_scalar(VectorUnit& vu, IR::Instruction& instr);
         void madd_acc_by_scalar(VectorUnit& vu, IR::Instruction& instr);
+        void div(VectorUnit& vu, IR::Instruction& instr);
 
+        void float_to_fixed(VectorUnit& vu, IR::Instruction& instr, int table_entry);
+
+        void set_clip_flags(VectorUnit& vu, IR::Instruction& instr);
+
+        void stall_q_pipeline(VectorUnit& vu, IR::Instruction& instr);
         void move_xtop(VectorUnit& vu, IR::Instruction& instr);
+        void xgkick(VectorUnit& vu, IR::Instruction& instr);
         void stop(VectorUnit& vu, IR::Instruction& instr);
 
         REG_64 alloc_int_reg(VectorUnit& vu, int vi_reg, REG_STATE state = REG_STATE::READ_WRITE);

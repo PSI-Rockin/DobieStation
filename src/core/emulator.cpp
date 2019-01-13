@@ -8,7 +8,7 @@
 
 #include "ee/vu_jit.hpp"
 
-#define CYCLES_PER_FRAME 4900000 * 0.3
+#define CYCLES_PER_FRAME 4900000
 #define VBLANK_START CYCLES_PER_FRAME * 0.75
 
 //These constants are used for the fast boot hack for .isos
@@ -89,7 +89,8 @@ void Emulator::run()
         vif0.update(cycles);
         vif1.update(cycles);
         vu0.run(cycles);
-        vu1.run_jit(cycles);
+        vu1.run(cycles);
+        //vu1.run_jit(cycles);
         cycles >>= 2;
         iop_timers.run(cycles);
         iop_dma.run(cycles);
@@ -112,7 +113,7 @@ void Emulator::run()
             gs.set_VBLANK(true);
             timers.gate(true, true);
             cdvd.vsync();
-            //cpu.set_disassembly(frames == 263);
+            //cpu.set_disassembly(frames == 50);
             printf("VSYNC FRAMES: %d\n", frames);
             gs.assert_VSYNC();
             frames++;

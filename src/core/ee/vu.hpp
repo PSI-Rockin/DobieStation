@@ -10,6 +10,7 @@ union alignas(16) VU_R
 {
     float f;
     uint32_t u;
+    char padding[16];
 };
 
 //The GPRs need to be aligned on a 16-byte boundary so that SSE instructions can work on them.

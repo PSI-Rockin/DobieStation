@@ -17,8 +17,8 @@ struct JitBlock
 class JitCache
 {
     private:
-        constexpr static int BLOCK_SIZE = 1024 * 8;
-        constexpr static int START_OF_POOL = 1024 * 4;
+        constexpr static int BLOCK_SIZE = 1024 * 16;
+        constexpr static int START_OF_POOL = 1024 * 8;
         std::vector<JitBlock> blocks;
 
         JitBlock* current_block;

@@ -60,11 +60,14 @@ class Emitter64
         void XOR16_REG(REG_64 source, REG_64 dest);
 
         void MOV8_TO_MEM(REG_64 source, REG_64 indir_dest);
+        void MOV8_IMM_MEM(uint8_t imm, REG_64 indir_dest);
         void MOV16_REG(REG_64 source, REG_64 dest);
         void MOV16_REG_IMM(uint16_t imm, REG_64 dest);
         void MOV16_TO_MEM(REG_64 source, REG_64 indir_dest);
         void MOV16_FROM_MEM(REG_64 indir_source, REG_64 dest);
         void MOV16_IMM_MEM(uint16_t imm, REG_64 indir_dest);
+        void MOV32_IMM_MEM(uint32_t imm, REG_64 indir_dest);
+        void MOV32_FROM_MEM(REG_64 indir_source, REG_64 dest);
         void MOV32_TO_MEM(REG_64 source, REG_64 indir_dest);
         void MOV64_MR(REG_64 source, REG_64 dest);
         void MOV64_OI(uint64_t imm, REG_64 dest);
@@ -72,6 +75,9 @@ class Emitter64
         void MOV64_TO_MEM(REG_64 source, REG_64 indir_dest);
         void MOVZX64_REG(REG_64 source, REG_64 dest);
 
+        void MOVD_FROM_XMM(REG_64 xmm_source, REG_64 dest);
+        void MOVD_TO_XMM(REG_64 source, REG_64 xmm_dest);
+        void MOVAPS_REG(REG_64 xmm_source, REG_64 xmm_dest);
         void MOVAPS_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest);
         void MOVAPS_TO_MEM(REG_64 xmm_source, REG_64 indir_dest);
 
@@ -82,10 +88,16 @@ class Emitter64
         void CALL(uint64_t addr);
         void RET();
 
+        void DIVSS(REG_64 xmm_source, REG_64 xmm_dest);
+
         void ADDPS(REG_64 xmm_source, REG_64 xmm_dest);
         void BLENDPS(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest);
+        void INSERTPS(uint8_t count_s, uint8_t count_d, uint8_t zmask, REG_64 xmm_source, REG_64 xmm_dest);
         void MULPS(REG_64 xmm_source, REG_64 xmm_dest);
         void SHUFPS(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest);
+
+        //Convert truncated floats into 32-bit signed integers
+        void CVTTPS2DQ(REG_64 xmm_source, REG_64 xmm_dest);
 };
 
 #endif // EMITTER64_HPP

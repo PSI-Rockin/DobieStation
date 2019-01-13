@@ -223,9 +223,17 @@ void VectorUnit::run(int cycles)
 void VectorUnit::run_jit(int cycles)
 {
     int cycles_to_run = cycles;
-    while (running && cycles_to_run)
+    while (running && cycles_to_run > 0)
     {
         cycles_to_run -= VU_JIT::run(this);
+    }
+
+    //TODO: Make XGKICK update on a semi-synchronous basis, rather than instantly
+    if (transferring_GIF)
+    {
+        gif->request_PATH(1, true);
+        while (gif->path_active(1))
+            handle_XGKICK();
     }
 }
 
