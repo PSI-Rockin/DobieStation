@@ -1,8 +1,6 @@
 #include <cmath>
 
-#include "vu_jittrans.hpp"
 #include "vu_jit64.hpp"
-#include "vu.hpp"
 
 #include "../errors.hpp"
 
@@ -38,6 +36,9 @@ VU_JIT64::VU_JIT64() : emitter(&cache)
         ftoi_table.t[1][i] = pow(2, 4);
         ftoi_table.t[2][i] = pow(2, 12);
         ftoi_table.t[3][i] = pow(2, 15);
+
+        clamp_constant.u[i] = 0xFF7FFFFF;
+        abs_constant.u[i] = 0x7FFFFFFF;
     }
 }
 
@@ -107,6 +108,7 @@ uint64_t VU_JIT64::get_vf_addr(VectorUnit &vu, int index)
         default:
             Errors::die("[VU_JIT64] get_vf_addr error: Unrecognized reg %d", index);
     }
+    return 0;
 }
 
 void VU_JIT64::handle_cond_branch(VectorUnit& vu)
@@ -143,7 +145,24 @@ void VU_JIT64::handle_cond_branch(VectorUnit& vu)
 
 void VU_JIT64::update_mac_flags(VectorUnit &vu, int vf_reg, uint8_t field)
 {
-    REG_64 reg = alloc_sse_reg(vu, vf_reg, REG_STATE::READ);
+    REG_64 xmm_source = alloc_sse_reg(vu, vf_reg, REG_STATE::READ);
+    REG_64 temp = REG_64::XMM0;
+
+    emitter.load_addr((uint64_t)vu.MAC_flags, REG_64::R15);
+    emitter.MOV32_FROM_MEM(REG_64::R15, REG_64::RAX);
+
+    //Clear the MAC flags
+    emitter.AND32_REG_IMM(0, REG_64::RAX);
+
+    //Shuffle the vector from WZYX to XYZW
+    emitter.MOVAPS_REG(xmm_source, temp);
+    emitter.PSHUFD(0x1B, temp, temp);
+
+    //Get the sign bits
+    emitter.MOVMSKPS(temp, REG_64::RAX);
+    emitter.SHL32_REG_IMM(4, REG_64::RAX);
+
+    emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
 }
 
 void VU_JIT64::load_const(VectorUnit &vu, IR::Instruction &instr)
@@ -154,7 +173,7 @@ void VU_JIT64::load_const(VectorUnit &vu, IR::Instruction &instr)
 
 void VU_JIT64::load_float_const(VectorUnit &vu, IR::Instruction &instr)
 {
-    if (instr.get_dest() < 32)
+    if (instr.get_dest() < 33)
         Errors::die("[VU_JIT64] Unrecognized vf%d in load_float_const", instr.get_dest());
 
     //Load 32-bit constant into a special register
@@ -183,7 +202,7 @@ void VU_JIT64::load_int(VectorUnit &vu, IR::Instruction &instr)
         REG_64 base = alloc_int_reg(vu, instr.get_base(), REG_STATE::READ);
         REG_64 dest = alloc_int_reg(vu, instr.get_dest(), REG_STATE::WRITE);
         emitter.MOVZX64_REG(base, REG_64::RAX);
-        emitter.SHL32_REG_IMM(4, REG_64::RAX);
+        emitter.SHL16_REG_IMM(4, REG_64::RAX);
 
         if (instr.get_source())
             emitter.ADD16_REG_IMM(instr.get_source(), REG_64::RAX);
@@ -202,6 +221,45 @@ void VU_JIT64::load_int(VectorUnit &vu, IR::Instruction &instr)
     }
 }
 
+void VU_JIT64::store_int(VectorUnit &vu, IR::Instruction &instr)
+{
+    uint8_t field = convert_field(instr.get_field());
+
+    int field_offset = 0;
+    if (field & 0x2)
+        field_offset = 4;
+    if (field & 0x4)
+        field_offset = 8;
+    if (field & 0x8)
+        field_offset = 12;
+
+    if (instr.get_base())
+    {
+        //IMPORTANT
+        //Dest must be allocated after base in case base == dest (this is so that the base address can load)
+        //Errors::die("$%02X", field);
+        REG_64 base = alloc_int_reg(vu, instr.get_base(), REG_STATE::READ);
+        REG_64 source = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
+        emitter.MOVZX64_REG(base, REG_64::RAX);
+        emitter.SHL16_REG_IMM(4, REG_64::RAX);
+
+        if (instr.get_source2())
+            emitter.ADD16_REG_IMM(instr.get_source2(), REG_64::RAX);
+        emitter.AND16_AX(vu.mem_mask);
+
+        emitter.load_addr((uint64_t)&vu.data_mem[field_offset], REG_64::R15);
+        emitter.ADD64_REG(REG_64::RAX, REG_64::R15);
+        emitter.MOV16_TO_MEM(source, REG_64::R15);
+    }
+    else
+    {
+        REG_64 source = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
+        uint16_t offset = (instr.get_source2() + field_offset) & 0x3FFF;
+        emitter.load_addr((uint64_t)&vu.data_mem[offset], REG_64::R15);
+        emitter.MOV16_TO_MEM(source, REG_64::R15);
+    }
+}
+
 void VU_JIT64::load_quad(VectorUnit &vu, IR::Instruction &instr)
 {
     uint8_t field = convert_field(instr.get_field());
@@ -210,7 +268,7 @@ void VU_JIT64::load_quad(VectorUnit &vu, IR::Instruction &instr)
     {
         REG_64 base = alloc_int_reg(vu, instr.get_base(), REG_STATE::READ);
         emitter.MOVZX64_REG(base, REG_64::RAX);
-        emitter.SHL32_REG_IMM(4, REG_64::RAX);
+        emitter.SHL16_REG_IMM(4, REG_64::RAX);
         if (instr.get_source())
             emitter.ADD16_REG_IMM(instr.get_source(), REG_64::RAX);
 
@@ -246,7 +304,7 @@ void VU_JIT64::load_quad_inc(VectorUnit &vu, IR::Instruction &instr)
 
     //addr = (int_reg * 16) & mem_mask
     emitter.MOVZX64_REG(base, REG_64::RAX);
-    emitter.SHL32_REG_IMM(4, REG_64::RAX);
+    emitter.SHL16_REG_IMM(4, REG_64::RAX);
     emitter.AND16_AX(vu.mem_mask);
 
     //vf_reg.field = *(_XMM*)&vu.data_mem[addr]
@@ -279,7 +337,7 @@ void VU_JIT64::store_quad_inc(VectorUnit &vu, IR::Instruction &instr)
 
     //addr = (int_reg * 16) & mem_mask
     emitter.MOVZX64_REG(base, REG_64::RAX);
-    emitter.SHL32_REG_IMM(4, REG_64::RAX);
+    emitter.SHL16_REG_IMM(4, REG_64::RAX);
     emitter.AND16_AX(vu.mem_mask);
 
     emitter.load_addr((uint64_t)&vu.data_mem, REG_64::R15);
@@ -330,11 +388,28 @@ void VU_JIT64::jump_indirect(VectorUnit &vu, IR::Instruction &instr)
 {
     REG_64 return_reg = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
 
-    //Multiply the address by eight
-    emitter.SHL32_REG_IMM(3, return_reg);
+    emitter.MOV16_REG(return_reg, REG_64::RAX);
 
-    emitter.load_addr((uint64_t)&vu.PC, REG_64::RAX);
-    emitter.MOV16_TO_MEM(return_reg, REG_64::RAX);
+    //Multiply the address by eight
+    emitter.SHL16_REG_IMM(3, REG_64::RAX);
+    emitter.AND16_AX(vu.mem_mask);
+
+    emitter.load_addr((uint64_t)&vu.PC, REG_64::R15);
+    emitter.MOV16_TO_MEM(REG_64::RAX, REG_64::R15);
+}
+
+void VU_JIT64::branch_equal(VectorUnit &vu, IR::Instruction &instr)
+{
+    REG_64 op1 = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
+    REG_64 op2 = alloc_int_reg(vu, instr.get_source2(), REG_STATE::READ);
+
+    emitter.load_addr((uint64_t)&vu.branch_on, REG_64::RAX);
+    emitter.CMP16_REG(op2, op1);
+    emitter.SETE_MEM(REG_64::RAX);
+
+    cond_branch = true;
+    cond_branch_dest = instr.get_jump_dest();
+    cond_branch_fail_dest = instr.get_jump_fail_dest();
 }
 
 void VU_JIT64::branch_not_equal(VectorUnit &vu, IR::Instruction &instr)
@@ -342,15 +417,54 @@ void VU_JIT64::branch_not_equal(VectorUnit &vu, IR::Instruction &instr)
     REG_64 op1 = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
     REG_64 op2 = alloc_int_reg(vu, instr.get_source2(), REG_STATE::READ);
 
-    emitter.MOV16_REG(op1, REG_64::RAX);
-    emitter.XOR16_REG(op2, REG_64::RAX);
-
-    emitter.load_addr((uint64_t)&vu.branch_on, REG_64::R15);
-    emitter.MOV16_TO_MEM(REG_64::RAX, REG_64::R15);
+    emitter.load_addr((uint64_t)&vu.branch_on, REG_64::RAX);
+    emitter.CMP16_REG(op2, op1);
+    emitter.SETNE_MEM(REG_64::RAX);
 
     cond_branch = true;
     cond_branch_dest = instr.get_jump_dest();
     cond_branch_fail_dest = instr.get_jump_fail_dest();
+}
+
+void VU_JIT64::branch_greater_or_equal_than_zero(VectorUnit &vu, IR::Instruction &instr)
+{
+    REG_64 op = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
+
+    emitter.load_addr((uint64_t)&vu.branch_on, REG_64::RAX);
+    emitter.CMP16_IMM(0, op);
+    emitter.SETGE_MEM(REG_64::RAX);
+
+    cond_branch = true;
+    cond_branch_dest = instr.get_jump_dest();
+    cond_branch_fail_dest = instr.get_jump_fail_dest();
+}
+
+void VU_JIT64::or_int(VectorUnit &vu, IR::Instruction &instr)
+{
+    //If RD == RS, RD |= RT
+    if (instr.get_dest() == instr.get_source())
+    {
+        REG_64 op2 = alloc_int_reg(vu, instr.get_source2(), REG_STATE::READ);
+        REG_64 dest = alloc_int_reg(vu, instr.get_dest(), REG_STATE::WRITE);
+
+        emitter.OR16_REG(op2, dest);
+    }
+    //If RD == RT, RD |= RS
+    else if (instr.get_dest() == instr.get_source2())
+    {
+        REG_64 op1 = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
+        REG_64 dest = alloc_int_reg(vu, instr.get_dest(), REG_STATE::WRITE);
+
+        emitter.OR16_REG(op1, dest);
+    }
+    else
+    {
+        REG_64 op1 = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
+        REG_64 op2 = alloc_int_reg(vu, instr.get_source2(), REG_STATE::READ);
+        REG_64 dest = alloc_int_reg(vu, instr.get_dest(), REG_STATE::WRITE);
+        emitter.MOV16_REG(op1, dest);
+        emitter.OR16_REG(op2, dest);
+    }
 }
 
 void VU_JIT64::add_int_reg(VectorUnit &vu, IR::Instruction &instr)
@@ -410,11 +524,41 @@ void VU_JIT64::add_unsigned_imm(VectorUnit &vu, IR::Instruction &instr)
     }
 }
 
+void VU_JIT64::abs(VectorUnit &vu, IR::Instruction &instr)
+{
+    uint8_t field = convert_field(instr.get_field());
+    REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ_WRITE);
+    REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
+
+    REG_64 temp = REG_64::XMM0;
+
+    //xmm_dest = xmm_source & 0x7FFF_FFFF
+    emitter.load_addr((uint64_t)&abs_constant, REG_64::RAX);
+    emitter.MOVAPS_FROM_MEM(REG_64::RAX, temp);
+    emitter.PAND_XMM(source, temp);
+    emitter.BLENDPS(field, temp, dest);
+}
+
+void VU_JIT64::max_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
+{
+    uint8_t field = convert_field(instr.get_field());
+    REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ_WRITE);
+    REG_64 bc_reg = alloc_sse_reg(vu, instr.get_source2(), REG_STATE::READ_WRITE);
+    REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
+
+    uint8_t bc = instr.get_bc();
+    bc |= (bc << 6) | (bc << 4) | (bc << 2);
+
+    REG_64 temp = REG_64::XMM0;
+    emitter.MOVAPS_REG(bc_reg, temp);
+    emitter.SHUFPS(bc, temp, temp);
+    emitter.PMAXSD_XMM(source, temp);
+    emitter.BLENDPS(field, temp, dest);
+}
+
 void VU_JIT64::add_vectors(VectorUnit &vu, IR::Instruction &instr)
 {
     uint8_t field = convert_field(instr.get_field());
-
-    printf("[VU_JIT64] Add vectors: %d, %d, %d\n", instr.get_dest(), instr.get_source(), instr.get_source2());
 
     REG_64 op1 = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ_WRITE);
     REG_64 op2 = alloc_sse_reg(vu, instr.get_source2(), REG_STATE::READ_WRITE);
@@ -441,6 +585,41 @@ void VU_JIT64::add_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     emitter.SHUFPS(bc, temp, temp);
     emitter.ADDPS(source, temp);
     emitter.BLENDPS(field, temp, dest);
+}
+
+void VU_JIT64::sub_vectors(VectorUnit &vu, IR::Instruction &instr)
+{
+    uint8_t field = convert_field(instr.get_field());
+
+    REG_64 op1 = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ_WRITE);
+    REG_64 op2 = alloc_sse_reg(vu, instr.get_source2(), REG_STATE::READ_WRITE);
+    REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
+    REG_64 temp = REG_64::XMM0;
+
+    emitter.MOVAPS_REG(op1, temp);
+    emitter.SUBPS(op2, temp);
+    emitter.BLENDPS(field, temp, dest);
+}
+
+void VU_JIT64::sub_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
+{
+    uint8_t field = convert_field(instr.get_field());
+    REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ_WRITE);
+    REG_64 bc_reg = alloc_sse_reg(vu, instr.get_source2(), REG_STATE::READ_WRITE);
+    REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
+
+    uint8_t bc = instr.get_bc();
+    bc |= (bc << 6) | (bc << 4) | (bc << 2);
+
+    REG_64 temp = REG_64::XMM0;
+    REG_64 temp2 = REG_64::XMM1;
+    emitter.MOVAPS_REG(bc_reg, temp);
+    emitter.MOVAPS_REG(source, temp2);
+    emitter.SHUFPS(bc, temp, temp);
+    emitter.SUBPS(temp, temp2);
+    emitter.BLENDPS(field, temp2, dest);
+
+    update_mac_flags(vu, instr.get_dest(), instr.get_field());
 }
 
 void VU_JIT64::mul_vectors(VectorUnit &vu, IR::Instruction &instr)
@@ -472,6 +651,42 @@ void VU_JIT64::mul_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     emitter.SHUFPS(bc, temp, temp);
     emitter.MULPS(source, temp);
     emitter.BLENDPS(field, temp, dest);
+}
+
+void VU_JIT64::madd_vectors(VectorUnit &vu, IR::Instruction &instr)
+{
+    uint8_t field = convert_field(instr.get_field());
+
+    REG_64 op1 = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ_WRITE);
+    REG_64 op2 = alloc_sse_reg(vu, instr.get_source2(), REG_STATE::READ_WRITE);
+    REG_64 acc = alloc_sse_reg(vu, VU_SpecialReg::ACC, REG_STATE::READ_WRITE);
+    REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
+    REG_64 temp = REG_64::XMM0;
+
+    emitter.MOVAPS_REG(op1, temp);
+    emitter.MULPS(op2, temp);
+    emitter.ADDPS(acc, temp);
+    emitter.BLENDPS(field, temp, dest);
+}
+
+void VU_JIT64::madd_acc_and_vectors(VectorUnit &vu, IR::Instruction &instr)
+{
+    uint8_t field = convert_field(instr.get_field());
+
+    REG_64 op1 = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ_WRITE);
+    REG_64 op2 = alloc_sse_reg(vu, instr.get_source2(), REG_STATE::READ_WRITE);
+    REG_64 dest = alloc_sse_reg(vu, VU_SpecialReg::ACC, REG_STATE::READ_WRITE);
+    REG_64 temp = REG_64::XMM0;
+
+    emitter.MOVAPS_REG(op1, temp);
+    emitter.MULPS(op2, temp);
+    if (field == 0xF)
+        emitter.ADDPS(temp, dest);
+    else
+    {
+        emitter.ADDPS(dest, temp);
+        emitter.BLENDPS(field, temp, dest);
+    }
 }
 
 void VU_JIT64::madd_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
@@ -518,6 +733,55 @@ void VU_JIT64::madd_acc_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     }
 }
 
+void VU_JIT64::msub_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
+{
+    uint8_t field = convert_field(instr.get_field());
+    REG_64 temp = REG_64::XMM0;
+    REG_64 temp2 = REG_64::XMM1;
+    REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ_WRITE);
+    REG_64 bc_reg = alloc_sse_reg(vu, instr.get_source2(), REG_STATE::READ_WRITE);
+    REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
+    REG_64 acc = alloc_sse_reg(vu, VU_SpecialReg::ACC, REG_STATE::READ);
+
+    uint8_t bc = instr.get_bc();
+    bc |= (bc << 6) | (bc << 4) | (bc << 2);
+
+    emitter.MOVAPS_REG(bc_reg, temp);
+    emitter.MOVAPS_REG(acc, temp2);
+
+    emitter.SHUFPS(bc, temp, temp);
+    emitter.MULPS(source, temp);
+    emitter.SUBPS(temp, temp2);
+    emitter.BLENDPS(field, temp2, dest);
+}
+
+void VU_JIT64::msub_acc_by_scalar(VectorUnit &vu, IR::Instruction &instr)
+{
+    uint8_t field = convert_field(instr.get_field());
+
+    REG_64 temp = REG_64::XMM0;
+    REG_64 temp2 = REG_64::XMM1;
+    REG_64 bc_reg = alloc_sse_reg(vu, instr.get_source2(), REG_STATE::READ);
+    REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ);
+    REG_64 dest = alloc_sse_reg(vu, VU_SpecialReg::ACC, REG_STATE::READ_WRITE);
+
+    uint8_t bc = instr.get_bc();
+    bc |= (bc << 6) | (bc << 4) | (bc << 2);
+
+    emitter.MOVAPS_REG(bc_reg, temp);
+    emitter.SHUFPS(bc, temp, temp);
+    emitter.MULPS(source, temp);
+
+    if (field == 0xF)
+        emitter.SUBPS(temp, dest);
+    else
+    {
+        emitter.MOVAPS_REG(dest, temp2);
+        emitter.SUBPS(temp, temp2);
+        emitter.BLENDPS(field, temp2, dest);
+    }
+}
+
 void VU_JIT64::div(VectorUnit &vu, IR::Instruction &instr)
 {
     REG_64 num = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ);
@@ -532,11 +796,31 @@ void VU_JIT64::div(VectorUnit &vu, IR::Instruction &instr)
     emitter.INSERTPS(num_field, 0, 0b1110, num, temp);
     emitter.INSERTPS(denom_field, 0, 0b1110, denom, temp2);
 
-    emitter.DIVSS(temp2, temp);
+    emitter.DIVPS(temp2, temp);
 
-    emitter.load_addr((uint64_t)&vu.new_Q_instance.u, REG_64::RAX);
-    emitter.MOVD_FROM_XMM(temp, REG_64::R15);
-    emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
+    emitter.load_addr((uint64_t)&vu.new_Q_instance, REG_64::RAX);
+    emitter.MOVAPS_TO_MEM(temp, REG_64::RAX);
+}
+
+void VU_JIT64::fixed_to_float(VectorUnit &vu, IR::Instruction &instr, int table_entry)
+{
+    uint8_t field = convert_field(instr.get_field());
+    REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ_WRITE);
+    REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
+    REG_64 temp = REG_64::XMM0;
+
+    emitter.MOVAPS_REG(source, temp);
+
+    if (table_entry)
+        Errors::die("[VU_JIT64] table_entry not implemented for fixed_to_float");
+
+    if (field == 0xF)
+        emitter.CVTDQ2PS(temp, dest);
+    else
+    {
+        emitter.CVTDQ2PS(temp, temp);
+        emitter.BLENDPS(field, temp, dest);
+    }
 }
 
 void VU_JIT64::float_to_fixed(VectorUnit &vu, IR::Instruction &instr, int table_entry)
@@ -569,6 +853,46 @@ void VU_JIT64::float_to_fixed(VectorUnit &vu, IR::Instruction &instr, int table_
     }
 }
 
+void VU_JIT64::move_to_int(VectorUnit &vu, IR::Instruction &instr)
+{
+    uint8_t field = instr.get_field();
+    REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ);
+    REG_64 dest = alloc_int_reg(vu, instr.get_dest(), REG_STATE::WRITE);
+
+    if (field == 0)
+        emitter.MOVD_FROM_XMM(source, dest);
+    else
+    {
+        REG_64 temp = REG_64::XMM0;
+        emitter.INSERTPS(field, 0, 0b1110, source, temp);
+        emitter.MOVD_FROM_XMM(temp, dest);
+    }
+
+    //Unsure if this is necessary
+    emitter.AND32_REG_IMM(0xFFFF, dest);
+}
+
+void VU_JIT64::mac_and(VectorUnit &vu, IR::Instruction &instr)
+{
+    *vu.MAC_flags = 0x80;
+    emitter.load_addr((uint64_t)vu.MAC_flags, REG_64::RAX);
+    emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::RAX);
+
+    if (instr.get_dest() == instr.get_source())
+    {
+        REG_64 dest = alloc_int_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
+        emitter.AND16_REG(REG_64::RAX, dest);
+    }
+    else
+    {
+        REG_64 source = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
+        REG_64 dest = alloc_int_reg(vu, instr.get_dest(), REG_STATE::WRITE);
+
+        emitter.AND16_REG(REG_64::RAX, source);
+        emitter.MOV16_REG(source, dest);
+    }
+}
+
 void VU_JIT64::set_clip_flags(VectorUnit &vu, IR::Instruction &instr)
 {
     emitter.load_addr((uint64_t)&vu.clip_flags, REG_64::RAX);
@@ -578,25 +902,19 @@ void VU_JIT64::set_clip_flags(VectorUnit &vu, IR::Instruction &instr)
 void VU_JIT64::stall_q_pipeline(VectorUnit &vu, IR::Instruction &instr)
 {
     //Store the pipelined Q inside the Q available to the program
-    emitter.load_addr((uint64_t)&vu.new_Q_instance.u, REG_64::RAX);
+    emitter.load_addr((uint64_t)&vu.new_Q_instance, REG_64::RAX);
     emitter.MOV32_FROM_MEM(REG_64::RAX, REG_64::R15);
 
-    emitter.load_addr((uint64_t)&vu.Q, REG_64::RAX);
-    emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
+    REG_64 q_reg = alloc_sse_reg(vu, VU_SpecialReg::Q, REG_STATE::WRITE);
+    emitter.MOVD_TO_XMM(REG_64::R15, q_reg);
 }
 
 void VU_JIT64::move_xtop(VectorUnit &vu, IR::Instruction &instr)
 {
     REG_64 dest = alloc_int_reg(vu, instr.get_dest(), REG_STATE::WRITE);
 
-    //Errors::die("$%llX\n", (uint64_t)vu.VIF_TOP);
-
-    //VIF_TOP is a pointer, so we have to do two moves from memory
     emitter.load_addr((uint64_t)vu.VIF_TOP, REG_64::RAX);
     emitter.MOV16_FROM_MEM(REG_64::RAX, dest);
-
-    printf("$%llX\n", &vu.int_gpr[14]);
-    printf("$%04X\n", *vu.VIF_TOP);
 }
 
 void VU_JIT64::xgkick(VectorUnit &vu, IR::Instruction &instr)
@@ -606,7 +924,7 @@ void VU_JIT64::xgkick(VectorUnit &vu, IR::Instruction &instr)
 
     REG_64 base = alloc_int_reg(vu, instr.get_base(), REG_STATE::READ);
     emitter.MOV16_REG(base, REG_64::RAX);
-    emitter.SHL32_REG_IMM(4, REG_64::RAX);
+    emitter.SHL16_REG_IMM(4, REG_64::RAX);
     emitter.AND16_AX(vu.mem_mask);
 
     emitter.load_addr((uint64_t)&vu.GIF_addr, REG_64::R15);
@@ -779,6 +1097,18 @@ void VU_JIT64::flush_regs(VectorUnit &vu)
     }
 }
 
+void VU_JIT64::flush_sse_reg(VectorUnit &vu, int vf_reg)
+{
+    for (int i = 0; i < 16; i++)
+    {
+        if (xmm_regs[i].used && xmm_regs[i].vu_reg == vf_reg)
+        {
+            emitter.load_addr(get_vf_addr(vu, vf_reg), REG_64::RAX);
+            emitter.MOVAPS_TO_MEM((REG_64)i, REG_64::RAX);
+        }
+    }
+}
+
 void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
 {
     switch (instr.op)
@@ -791,6 +1121,9 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
             break;
         case IR::Opcode::LoadInt:
             load_int(vu, instr);
+            break;
+        case IR::Opcode::StoreInt:
+            store_int(vu, instr);
             break;
         case IR::Opcode::LoadQuad:
             load_quad(vu, instr);
@@ -813,8 +1146,20 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
         case IR::Opcode::JumpIndirect:
             jump_indirect(vu, instr);
             break;
+        case IR::Opcode::BranchEqual:
+            branch_equal(vu, instr);
+            break;
         case IR::Opcode::BranchNotEqual:
             branch_not_equal(vu, instr);
+            break;
+        case IR::Opcode::BranchGreaterOrEqualThanZero:
+            branch_greater_or_equal_than_zero(vu, instr);
+            break;
+        case IR::Opcode::VAbs:
+            abs(vu, instr);
+            break;
+        case IR::Opcode::VMaxVectorByScalar:
+            max_vector_by_scalar(vu, instr);
             break;
         case IR::Opcode::VAddVectors:
             add_vectors(vu, instr);
@@ -822,11 +1167,23 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
         case IR::Opcode::VAddVectorByScalar:
             add_vector_by_scalar(vu, instr);
             break;
+        case IR::Opcode::VSubVectors:
+            sub_vectors(vu, instr);
+            break;
+        case IR::Opcode::VSubVectorByScalar:
+            sub_vector_by_scalar(vu, instr);
+            break;
         case IR::Opcode::VMulVectors:
             mul_vectors(vu, instr);
             break;
         case IR::Opcode::VMulVectorByScalar:
             mul_vector_by_scalar(vu, instr);
+            break;
+        case IR::Opcode::VMaddVectors:
+            madd_vectors(vu, instr);
+            break;
+        case IR::Opcode::VMaddAccAndVectors:
+            madd_acc_and_vectors(vu, instr);
             break;
         case IR::Opcode::VMaddVectorByScalar:
             madd_vector_by_scalar(vu, instr);
@@ -834,8 +1191,17 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
         case IR::Opcode::VMaddAccByScalar:
             madd_acc_by_scalar(vu, instr);
             break;
+        case IR::Opcode::VMsubVectorByScalar:
+            msub_vector_by_scalar(vu, instr);
+            break;
+        case IR::Opcode::VMsubAccByScalar:
+            msub_acc_by_scalar(vu, instr);
+            break;
         case IR::Opcode::VDiv:
             div(vu, instr);
+            break;
+        case IR::Opcode::VFixedToFloat0:
+            fixed_to_float(vu, instr, 0);
             break;
         case IR::Opcode::VFloatToFixed0:
             float_to_fixed(vu, instr, 0);
@@ -843,11 +1209,20 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
         case IR::Opcode::VFloatToFixed4:
             float_to_fixed(vu, instr, 1);
             break;
+        case IR::Opcode::OrInt:
+            or_int(vu, instr);
+            break;
         case IR::Opcode::AddIntReg:
             add_int_reg(vu, instr);
             break;
         case IR::Opcode::AddUnsignedImm:
             add_unsigned_imm(vu, instr);
+            break;
+        case IR::Opcode::VMoveToInt:
+            move_to_int(vu, instr);
+            break;
+        case IR::Opcode::VMacAnd:
+            mac_and(vu, instr);
             break;
         case IR::Opcode::SetClipFlags:
             set_clip_flags(vu, instr);
@@ -902,7 +1277,7 @@ uint8_t* VU_JIT64::exec_block(VectorUnit& vu)
     //printf("[VU_JIT64] Executing block at $%04X\n", vu.PC);
     if (cache.find_block(vu.PC) == -1)
     {
-        printf("[VU_JIT64] Block not found: recompiling\n");
+        printf("[VU_JIT64] Block not found at $%04X: recompiling\n", vu.PC);
         IR::Block block = ir.translate(vu.PC, vu.get_instr_mem());
         recompile_block(vu, block);
     }

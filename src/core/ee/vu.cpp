@@ -79,6 +79,7 @@ void VectorUnit::reset()
     clip_flags = 0;
     PC = 0;
     cycle_count = 1; //Set to 1 to prevent spurious events from occurring during execution
+    //run_event = 0;
     running = false;
     finish_on = false;
     branch_on = false;
@@ -232,8 +233,11 @@ void VectorUnit::run_jit(int cycles)
     if (transferring_GIF)
     {
         gif->request_PATH(1, true);
-        while (gif->path_active(1))
+        while (cycles > 0 && gif->path_active(1))
+        {
+            cycles--;
             handle_XGKICK();
+        }
     }
 }
 
@@ -1473,6 +1477,7 @@ void VectorUnit::lqi(uint32_t instr)
             printf("(%d)%f ", i, gpr[_ft_].f[i]);
         }
     }
+    printf("\n(%d: $%04X)", _is_, int_gpr[_is_]);
     if (_is_)
         int_gpr[_is_].u++;
     printf("\n");

@@ -36,7 +36,15 @@ IR::Block VU_JitTranslator::translate(uint32_t PC, uint8_t* instr_mem)
             loi.set_dest(VU_SpecialReg::I);
             loi.set_source(lower);
             for (unsigned int i = 0; i < upper_instrs.size(); i++)
+            {
                 block.add_instr(upper_instrs[i]);
+                if (upper_instrs[i].is_jump())
+                {
+                    if (delay_slot)
+                        Errors::die("[VU JIT] Branch in delay slot");
+                    delay_slot = true;
+                }
+            }
             block.add_instr(loi);
         }
         else
@@ -45,7 +53,15 @@ IR::Block VU_JitTranslator::translate(uint32_t PC, uint8_t* instr_mem)
 
             //TODO: Check for upper/lower op swapping
             for (unsigned int i = 0; i < upper_instrs.size(); i++)
+            {
                 block.add_instr(upper_instrs[i]);
+                if (upper_instrs[i].is_jump())
+                {
+                    if (delay_slot)
+                        Errors::die("[VU JIT] Branch in delay slot");
+                    delay_slot = true;
+                }
+            }
 
             if (lower_instrs.size())
             {
@@ -90,6 +106,44 @@ void VU_JitTranslator::manage_pipelining()
         q_pipeline_delay--;
 }
 
+void VU_JitTranslator::op_vectors(IR::Instruction &instr, uint32_t upper)
+{
+    instr.set_dest((upper >> 6) & 0x1F);
+    instr.set_source((upper >> 11) & 0x1F);
+    instr.set_source2((upper >> 16) & 0x1F);
+    instr.set_field((upper >> 21) & 0xF);
+}
+
+void VU_JitTranslator::op_acc_and_vectors(IR::Instruction &instr, uint32_t upper)
+{
+    op_vectors(instr, upper);
+    instr.set_dest(VU_SpecialReg::ACC);
+}
+
+void VU_JitTranslator::op_vector_by_scalar(IR::Instruction &instr, uint32_t upper, VU_SpecialReg scalar)
+{
+    instr.set_dest((upper >> 6) & 0x1F);
+    instr.set_source((upper >> 11) & 0x1F);
+    instr.set_field((upper >> 21) & 0xF);
+
+    if (scalar == VU_Regular)
+    {
+        instr.set_source2((upper >> 16) & 0x1F);
+        instr.set_bc(upper & 0x3);
+    }
+    else
+    {
+        instr.set_source2(scalar);
+        instr.set_bc(0);
+    }
+}
+
+void VU_JitTranslator::op_acc_by_scalar(IR::Instruction &instr, uint32_t upper, VU_SpecialReg scalar)
+{
+    op_vector_by_scalar(instr, upper, scalar);
+    instr.set_dest(VU_SpecialReg::ACC);
+}
+
 void VU_JitTranslator::translate_upper(std::vector<IR::Instruction>& instrs, uint32_t upper)
 {
     uint8_t op = upper & 0x3F;
@@ -102,11 +156,15 @@ void VU_JitTranslator::translate_upper(std::vector<IR::Instruction>& instrs, uin
         case 0x03:
             //ADDbc
             instr.op = IR::Opcode::VAddVectorByScalar;
-            instr.set_dest((upper >> 6) & 0x1F);
-            instr.set_source((upper >> 11) & 0x1F);
-            instr.set_source2((upper >> 16) & 0x1F);
-            instr.set_bc(upper & 0x3);
-            instr.set_field((upper >> 21) & 0xF);
+            op_vector_by_scalar(instr, upper);
+            break;
+        case 0x04:
+        case 0x05:
+        case 0x06:
+        case 0x07:
+            //SUBbc
+            instr.op = IR::Opcode::VSubVectorByScalar;
+            op_vector_by_scalar(instr, upper);
             break;
         case 0x08:
         case 0x09:
@@ -114,11 +172,15 @@ void VU_JitTranslator::translate_upper(std::vector<IR::Instruction>& instrs, uin
         case 0x0B:
             //MADDbc
             instr.op = IR::Opcode::VMaddVectorByScalar;
-            instr.set_dest((upper >> 6) & 0x1F);
-            instr.set_source((upper >> 11) & 0x1F);
-            instr.set_source2((upper >> 16) & 0x1F);
-            instr.set_bc(upper & 0x3);
-            instr.set_field((upper >> 21) & 0xF);
+            op_vector_by_scalar(instr, upper);
+            break;
+        case 0x10:
+        case 0x11:
+        case 0x12:
+        case 0x13:
+            //MAXbc
+            instr.op = IR::Opcode::VMaxVectorByScalar;
+            op_vector_by_scalar(instr, upper);
             break;
         case 0x18:
         case 0x19:
@@ -126,45 +188,47 @@ void VU_JitTranslator::translate_upper(std::vector<IR::Instruction>& instrs, uin
         case 0x1B:
             //MULbc
             instr.op = IR::Opcode::VMulVectorByScalar;
-            instr.set_dest((upper >> 6) & 0x1F);
-            instr.set_source((upper >> 11) & 0x1F);
-            instr.set_source2((upper >> 16) & 0x1F);
-            instr.set_bc(upper & 0x3);
-            instr.set_field((upper >> 21) & 0xF);
+            op_vector_by_scalar(instr, upper);
             break;
         case 0x1C:
             //MULq
             instr.op = IR::Opcode::VMulVectorByScalar;
-            instr.set_dest((upper >> 6) & 0x1F);
-            instr.set_source((upper >> 11) & 0x1F);
-            instr.set_source2(VU_SpecialReg::Q);
-            instr.set_bc(0);
-            instr.set_field((upper >> 21) & 0xF);
+            op_vector_by_scalar(instr, upper, VU_SpecialReg::Q);
             break;
         case 0x1E:
             //MULi
             instr.op = IR::Opcode::VMulVectorByScalar;
-            instr.set_dest((upper >> 6) & 0x1F);
-            instr.set_source((upper >> 11) & 0x1F);
-            instr.set_source2(VU_SpecialReg::I);
-            instr.set_bc(0);
-            instr.set_field((upper >> 21) & 0xF);
+            op_vector_by_scalar(instr, upper, VU_SpecialReg::I);
+            break;
+        case 0x26:
+            //SUBi
+            instr.op = IR::Opcode::VSubVectorByScalar;
+            op_vector_by_scalar(instr, upper, VU_SpecialReg::I);
+            break;
+        case 0x27:
+            //MSUBi
+            instr.op = IR::Opcode::VMsubVectorByScalar;
+            op_vector_by_scalar(instr, upper, VU_SpecialReg::I);
             break;
         case 0x28:
             //ADD
             instr.op = IR::Opcode::VAddVectors;
-            instr.set_dest((upper >> 6) & 0x1F);
-            instr.set_source((upper >> 11) & 0x1F);
-            instr.set_source2((upper >> 16) & 0x1F);
-            instr.set_field((upper >> 21) & 0xF);
+            op_vectors(instr, upper);
+            break;
+        case 0x29:
+            //MADD
+            instr.op = IR::Opcode::VMaddVectors;
+            op_vectors(instr, upper);
             break;
         case 0x2A:
             //MUL
             instr.op = IR::Opcode::VMulVectors;
-            instr.set_dest((upper >> 6) & 0x1F);
-            instr.set_source((upper >> 11) & 0x1F);
-            instr.set_source2((upper >> 16) & 0x1F);
-            instr.set_field((upper >> 21) & 0xF);
+            op_vectors(instr, upper);
+            break;
+        case 0x2C:
+            //SUB
+            instr.op = IR::Opcode::VSubVectors;
+            op_vectors(instr, upper);
             break;
         case 0x3C:
         case 0x3D:
@@ -190,10 +254,13 @@ void VU_JitTranslator::upper_special(std::vector<IR::Instruction> &instrs, uint3
         case 0x0B:
             //MADDAbc
             instr.op = IR::Opcode::VMaddAccByScalar;
-            instr.set_dest(VU_SpecialReg::ACC);
+            op_acc_by_scalar(instr, upper);
+            break;
+        case 0x10:
+            //ITOF0
+            instr.op = IR::Opcode::VFixedToFloat0;
             instr.set_source((upper >> 11) & 0x1F);
-            instr.set_source2((upper >> 16) & 0x1F);
-            instr.set_bc(upper & 0x3);
+            instr.set_dest((upper >> 16) & 0x1F);
             instr.set_field((upper >> 21) & 0xF);
             break;
         case 0x14:
@@ -216,11 +283,39 @@ void VU_JitTranslator::upper_special(std::vector<IR::Instruction> &instrs, uint3
         case 0x1B:
             //MULAbc
             instr.op = IR::Opcode::VMulVectorByScalar;
-            instr.set_dest(VU_SpecialReg::ACC);
+            op_acc_by_scalar(instr, upper);
+            break;
+        case 0x1D:
+            //ABS
+            instr.op = IR::Opcode::VAbs;
             instr.set_source((upper >> 11) & 0x1F);
-            instr.set_source2((upper >> 16) & 0x1F);
-            instr.set_bc(upper & 0x3);
+            instr.set_dest((upper >> 16) & 0x1F);
             instr.set_field((upper >> 21) & 0xF);
+            break;
+        case 0x1E:
+            //MULAi
+            instr.op = IR::Opcode::VMulVectorByScalar;
+            op_acc_by_scalar(instr, upper, VU_SpecialReg::I);
+            break;
+        case 0x23:
+            //MADDAi
+            instr.op = IR::Opcode::VMaddAccByScalar;
+            op_acc_by_scalar(instr, upper, VU_SpecialReg::I);
+            break;
+        case 0x27:
+            //MSUBAi
+            instr.op = IR::Opcode::VMsubAccByScalar;
+            op_acc_by_scalar(instr, upper, VU_SpecialReg::I);
+            break;
+        case 0x29:
+            //MADDA
+            instr.op = IR::Opcode::VMaddAccAndVectors;
+            op_acc_and_vectors(instr, upper);
+            break;
+        case 0x2A:
+            //MULA
+            instr.op = IR::Opcode::VMulVectors;
+            op_acc_and_vectors(instr, upper);
             break;
         case 0x2F:
         case 0x30:
@@ -256,6 +351,19 @@ void VU_JitTranslator::lower1(std::vector<IR::Instruction> &instrs, uint32_t low
             instr.set_dest((lower >> 6) & 0xF);
             instr.set_source((lower >> 11) & 0xF);
             instr.set_source2((lower >> 16) & 0xF);
+            break;
+        case 0x35:
+            //IOR
+            instr.op = IR::Opcode::OrInt;
+            instr.set_dest((lower >> 6) & 0xF);
+            instr.set_source((lower >> 11) & 0xF);
+            instr.set_source2((lower >> 16) & 0xF);
+
+            //Don't add the instruction if the destination is 0 or if RD == RS == RT
+            if (instr.get_dest() == 0)
+                return;
+            if (instr.get_dest() == instr.get_source() && instr.get_dest() == instr.get_source2())
+                return;
             break;
         case 0x3C:
         case 0x3D:
@@ -308,6 +416,13 @@ void VU_JitTranslator::lower1_special(std::vector<IR::Instruction> &instrs, uint
             //WAITq
             instr.op = IR::Opcode::StallQPipeline;
             break;
+        case 0x3C:
+            //MTIR
+            instr.op = IR::Opcode::VMoveToInt;
+            instr.set_source((lower >> 11) & 0x1F);
+            instr.set_dest((lower >> 16) & 0xF);
+            instr.set_field((lower >> 21) & 0x3);
+            break;
         case 0x68:
             //XTOP
             instr.op = IR::Opcode::MoveXTOP;
@@ -355,6 +470,19 @@ void VU_JitTranslator::lower2(std::vector<IR::Instruction> &instrs, uint32_t low
             instr.set_source((int64_t)imm);
         }
             break;
+        case 0x05:
+            //ISW
+        {
+            int16_t imm = lower & 0x7FF;
+            imm = ((int16_t)(imm << 5)) >> 5;
+            imm *= 16;
+            instr.op = IR::Opcode::StoreInt;
+            instr.set_field((lower >> 21) & 0xF);
+            instr.set_source((lower >> 16) & 0xF);
+            instr.set_base((lower >> 11) & 0xF);
+            instr.set_source2((int64_t)imm);
+        }
+            break;
         case 0x08:
         case 0x09:
             //IADDIU/ISUBIU
@@ -380,6 +508,12 @@ void VU_JitTranslator::lower2(std::vector<IR::Instruction> &instrs, uint32_t low
             instr.op = IR::Opcode::SetClipFlags;
             instr.set_source(lower & 0xFFFFFF);
             break;
+        case 0x1A:
+            //FMAND
+            instr.op = IR::Opcode::VMacAnd;
+            instr.set_source((lower >> 11) & 0xF);
+            instr.set_dest((lower >> 16) & 0xF);
+            break;
         case 0x20:
             //B
             instr.op = IR::Opcode::Jump;
@@ -397,11 +531,26 @@ void VU_JitTranslator::lower2(std::vector<IR::Instruction> &instrs, uint32_t low
             instr.op = IR::Opcode::JumpIndirect;
             instr.set_source((lower >> 11) & 0xF);
             break;
+        case 0x28:
+            //IBEQ
+            instr.op = IR::Opcode::BranchEqual;
+            instr.set_source((lower >> 11) & 0xF);
+            instr.set_source2((lower >> 16) & 0xF);
+            instr.set_jump_dest(branch_offset(lower, PC));
+            instr.set_jump_fail_dest(PC + 16);
+            break;
         case 0x29:
             //IBNE
             instr.op = IR::Opcode::BranchNotEqual;
             instr.set_source((lower >> 11) & 0xF);
             instr.set_source2((lower >> 16) & 0xF);
+            instr.set_jump_dest(branch_offset(lower, PC));
+            instr.set_jump_fail_dest(PC + 16);
+            break;
+        case 0x2F:
+            //IBGEZ
+            instr.op = IR::Opcode::BranchGreaterOrEqualThanZero;
+            instr.set_source((lower >> 11) & 0xF);
             instr.set_jump_dest(branch_offset(lower, PC));
             instr.set_jump_fail_dest(PC + 16);
             break;

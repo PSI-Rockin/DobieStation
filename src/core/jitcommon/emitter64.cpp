@@ -117,6 +117,22 @@ void Emitter64::AND16_AX(uint16_t imm)
     cache->write<uint16_t>(imm);
 }
 
+void Emitter64::AND16_REG(REG_64 source, REG_64 dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(source, dest);
+    cache->write<uint8_t>(0x21);
+    modrm(0b11, source, dest);
+}
+
+void Emitter64::AND32_REG_IMM(uint32_t imm, REG_64 dest)
+{
+    rex_rm(dest);
+    cache->write<uint8_t>(0x81);
+    modrm(0b11, 4, dest);
+    cache->write<uint32_t>(imm);
+}
+
 void Emitter64::CMP16_IMM(uint16_t imm, REG_64 op)
 {
     cache->write<uint8_t>(0x66);
@@ -134,12 +150,61 @@ void Emitter64::CMP16_REG(REG_64 op2, REG_64 op1)
     modrm(0b11, op2, op1);
 }
 
+void Emitter64::NOT16(REG_64 dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_rm(dest);
+    cache->write<uint8_t>(0xF7);
+    modrm(0b11, 2, dest);
+}
+
+void Emitter64::OR16_REG(REG_64 source, REG_64 dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(source, dest);
+    cache->write<uint8_t>(0x09);
+    modrm(0b11, source, dest);
+}
+
+void Emitter64::SETE_MEM(REG_64 indir_dest)
+{
+    rex_rm(indir_dest);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x94);
+    modrm(0, 0, indir_dest);
+}
+
+void Emitter64::SETGE_MEM(REG_64 indir_dest)
+{
+    rex_rm(indir_dest);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x9D);
+    modrm(0, 0, indir_dest);
+}
+
+void Emitter64::SETNE_MEM(REG_64 indir_dest)
+{
+    rex_rm(indir_dest);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x95);
+    modrm(0, 0, indir_dest);
+}
+
 void Emitter64::SHL16_REG_1(REG_64 dest)
 {
     cache->write<uint8_t>(0x66);
     rex_rm(dest);
     cache->write<uint8_t>(0xD1);
     modrm(0b11, 4, dest);
+}
+
+void Emitter64::SHL16_REG_IMM(uint8_t shift, REG_64 dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_rm(dest);
+    cache->write<uint8_t>(0xC1);
+    modrm(0b11, 4, dest);
+    cache->write<uint8_t>(shift);
 }
 
 void Emitter64::SHL32_REG_IMM(uint8_t shift, REG_64 dest)
@@ -322,6 +387,14 @@ void Emitter64::MOVAPS_TO_MEM(REG_64 xmm_source, REG_64 indir_dest)
     modrm(0, xmm_source, indir_dest);
 }
 
+void Emitter64::MOVMSKPS(REG_64 xmm_source, REG_64 dest)
+{
+    rex_r_rm(dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x50);
+    modrm(0b11, dest, xmm_source);
+}
+
 uint8_t* Emitter64::JE_NEAR_DEFERRED()
 {
     cache->write<uint8_t>(0x0F);
@@ -357,9 +430,37 @@ void Emitter64::RET()
     cache->write<uint8_t>(0xC3);
 }
 
-void Emitter64::DIVSS(REG_64 xmm_source, REG_64 xmm_dest)
+void Emitter64::PAND_XMM(REG_64 xmm_source, REG_64 xmm_dest)
 {
-    cache->write<uint8_t>(0xF3);
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0xDB);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
+void Emitter64::PMAXSD_XMM(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x38);
+    cache->write<uint8_t>(0x3D);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
+void Emitter64::PSHUFD(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x70);
+    modrm(0b11, xmm_dest, xmm_source);
+    cache->write<uint8_t>(imm);
+}
+
+void Emitter64::DIVPS(REG_64 xmm_source, REG_64 xmm_dest)
+{
     rex_r_rm(xmm_dest, xmm_source);
     cache->write<uint8_t>(0x0F);
     cache->write<uint8_t>(0x5E);
@@ -415,6 +516,22 @@ void Emitter64::SHUFPS(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest)
     cache->write<uint8_t>(0xC6);
     modrm(0b11, xmm_dest, xmm_source);
     cache->write<uint8_t>(imm);
+}
+
+void Emitter64::SUBPS(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x5C);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
+void Emitter64::CVTDQ2PS(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x5B);
+    modrm(0b11, xmm_dest, xmm_source);
 }
 
 void Emitter64::CVTTPS2DQ(REG_64 xmm_source, REG_64 xmm_dest)

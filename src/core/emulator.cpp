@@ -89,8 +89,8 @@ void Emulator::run()
         vif0.update(cycles);
         vif1.update(cycles);
         vu0.run(cycles);
-        vu1.run(cycles);
-        //vu1.run_jit(cycles);
+        //vu1.run(cycles);
+        vu1.run_jit(cycles);
         cycles >>= 2;
         iop_timers.run(cycles);
         iop_dma.run(cycles);
@@ -113,7 +113,7 @@ void Emulator::run()
             gs.set_VBLANK(true);
             timers.gate(true, true);
             cdvd.vsync();
-            //cpu.set_disassembly(frames == 50);
+            //cpu.set_disassembly(frames == 25);
             printf("VSYNC FRAMES: %d\n", frames);
             gs.assert_VSYNC();
             frames++;

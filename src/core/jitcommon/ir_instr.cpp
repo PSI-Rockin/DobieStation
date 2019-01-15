@@ -117,7 +117,7 @@ bool Instruction::is_jump()
             op == Opcode::BranchEqual ||
             op == Opcode::BranchNotEqual ||
             op == Opcode::BranchGreater ||
-            op == Opcode::BranchGreaterOrEqual;
+            op == Opcode::BranchGreaterOrEqualThanZero;
 }
 
 };

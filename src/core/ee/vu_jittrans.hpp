@@ -6,6 +6,7 @@
 
 enum VU_SpecialReg
 {
+    VU_Regular = 0,
     ACC = 32,
     I,
     Q,
@@ -19,6 +20,11 @@ class VU_JitTranslator
         int q_pipeline_delay;
 
         void manage_pipelining();
+
+        void op_vectors(IR::Instruction& instr, uint32_t upper);
+        void op_acc_and_vectors(IR::Instruction& instr, uint32_t upper);
+        void op_vector_by_scalar(IR::Instruction& instr, uint32_t upper, VU_SpecialReg scalar = VU_Regular);
+        void op_acc_by_scalar(IR::Instruction& instr, uint32_t upper, VU_SpecialReg scalar = VU_Regular);
 
         void translate_upper(std::vector<IR::Instruction>& instrs, uint32_t upper);
         void upper_special(std::vector<IR::Instruction>& instrs, uint32_t upper);

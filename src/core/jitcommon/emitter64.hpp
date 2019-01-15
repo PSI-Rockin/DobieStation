@@ -48,11 +48,22 @@ class Emitter64
         void INC16(REG_64 dest);
 
         void AND16_AX(uint16_t imm);
+        void AND16_REG(REG_64 source, REG_64 dest);
+        void AND32_REG_IMM(uint32_t imm, REG_64 dest);
 
         void CMP16_IMM(uint16_t imm, REG_64 op);
         void CMP16_REG(REG_64 op2, REG_64 op1);
 
+        void NOT16(REG_64 dest);
+
+        void OR16_REG(REG_64 source, REG_64 dest);
+
+        void SETE_MEM(REG_64 indir_dest);
+        void SETGE_MEM(REG_64 indir_dest);
+        void SETNE_MEM(REG_64 indir_dest);
+
         void SHL16_REG_1(REG_64 dest);
+        void SHL16_REG_IMM(uint8_t shift, REG_64 dest);
         void SHL32_REG_IMM(uint8_t shift, REG_64 dest);
 
         void TEST16_REG(REG_64 op2, REG_64 op1);
@@ -80,6 +91,7 @@ class Emitter64
         void MOVAPS_REG(REG_64 xmm_source, REG_64 xmm_dest);
         void MOVAPS_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest);
         void MOVAPS_TO_MEM(REG_64 xmm_source, REG_64 indir_dest);
+        void MOVMSKPS(REG_64 xmm_source, REG_64 dest);
 
         uint8_t* JE_NEAR_DEFERRED();
 
@@ -88,13 +100,21 @@ class Emitter64
         void CALL(uint64_t addr);
         void RET();
 
-        void DIVSS(REG_64 xmm_source, REG_64 xmm_dest);
+        void PAND_XMM(REG_64 xmm_source, REG_64 xmm_dest);
+        void PMAXSD_XMM(REG_64 xmm_source, REG_64 xmm_dest);
+        void PSHUFD(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest);
+
+        void DIVPS(REG_64 xmm_source, REG_64 xmm_dest);
 
         void ADDPS(REG_64 xmm_source, REG_64 xmm_dest);
         void BLENDPS(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest);
         void INSERTPS(uint8_t count_s, uint8_t count_d, uint8_t zmask, REG_64 xmm_source, REG_64 xmm_dest);
         void MULPS(REG_64 xmm_source, REG_64 xmm_dest);
         void SHUFPS(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest);
+        void SUBPS(REG_64 xmm_source, REG_64 xmm_dest);
+
+        //Convert 32-bit signed integers into floats
+        void CVTDQ2PS(REG_64 xmm_source, REG_64 xmm_dest);
 
         //Convert truncated floats into 32-bit signed integers
         void CVTTPS2DQ(REG_64 xmm_source, REG_64 xmm_dest);

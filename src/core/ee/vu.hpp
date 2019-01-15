@@ -56,7 +56,8 @@ class VectorUnit
         uint16_t mem_mask; //0xFFF for VU0, 0x3FFF for VU1
         Emulator* e;
 
-        uint64_t cycle_count;
+        uint64_t cycle_count; //Increments when "running" is true
+        //uint64_t run_event; //If less than cycle_count, the VU is allowed to run
 
         uint16_t *VIF_TOP, *VIF_ITOP;
 
@@ -65,7 +66,7 @@ class VectorUnit
 
         bool running;
         uint16_t PC, new_PC, secondbranch_PC;
-        uint16_t branch_on;
+        bool branch_on;
         bool finish_on;
         bool second_branch_pending;
         int branch_delay_slot, ebit_delay_slot;
@@ -303,7 +304,6 @@ class VectorUnit
 
         //Friends needed for JIT convenience
         friend class VU_JIT64;
-        friend void flush_regs(VU_JIT64& jit, VectorUnit& vu);
 };
 
 template <typename T>
