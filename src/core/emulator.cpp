@@ -113,7 +113,7 @@ void Emulator::run()
             gs.set_VBLANK(true);
             timers.gate(true, true);
             cdvd.vsync();
-            //cpu.set_disassembly(frames == 25);
+            //cpu.set_disassembly(frames == 3037);
             printf("VSYNC FRAMES: %d\n", frames);
             gs.assert_VSYNC();
             frames++;

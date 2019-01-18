@@ -27,6 +27,11 @@ union alignas(8) VU_I
     int16_t s;
 };
 
+struct alignas(16) VU_Mem
+{
+    uint8_t m[1024 * 16];
+};
+
 struct VPU_STAT
 {
     bool vu1_running;
@@ -42,6 +47,8 @@ struct DecodedRegs
     uint8_t vf_read0_field[2], vf_read1_field[2];
 
     uint8_t vi_read0, vi_read1, vi_write;
+
+    void reset();
 };
 
 class GraphicsInterface;
@@ -57,12 +64,11 @@ class VectorUnit
         Emulator* e;
 
         uint64_t cycle_count; //Increments when "running" is true
-        //uint64_t run_event; //If less than cycle_count, the VU is allowed to run
+        uint64_t run_event; //If less than cycle_count, the VU is allowed to run
 
         uint16_t *VIF_TOP, *VIF_ITOP;
 
-        uint8_t instr_mem[1024 * 16];
-        uint8_t data_mem[1024 * 16];
+        VU_Mem instr_mem, data_mem;
 
         bool running;
         uint16_t PC, new_PC, secondbranch_PC;
@@ -309,25 +315,25 @@ class VectorUnit
 template <typename T>
 inline T VectorUnit::read_instr(uint32_t addr)
 {
-    return *(T*)&instr_mem[addr & mem_mask];
+    return *(T*)&instr_mem.m[addr & mem_mask];
 }
 
 template <typename T>
 inline T VectorUnit::read_data(uint32_t addr)
 {
-    return *(T*)&data_mem[addr & mem_mask];
+    return *(T*)&data_mem.m[addr & mem_mask];
 }
 
 template <typename T>
 inline void VectorUnit::write_instr(uint32_t addr, T data)
 {
-    *(T*)&instr_mem[addr & mem_mask] = data;
+    *(T*)&instr_mem.m[addr & mem_mask] = data;
 }
 
 template <typename T>
 inline void VectorUnit::write_data(uint32_t addr, T data)
 {
-    *(T*)&data_mem[addr & mem_mask] = data;
+    *(T*)&data_mem.m[addr & mem_mask] = data;
 }
 
 inline bool VectorUnit::is_running()
@@ -406,7 +412,7 @@ inline void VectorUnit::set_Q(uint32_t value)
 
 inline uint8_t* VectorUnit::get_instr_mem()
 {
-    return (uint8_t*)instr_mem;
+    return (uint8_t*)instr_mem.m;
 }
 
 #endif // VU_HPP

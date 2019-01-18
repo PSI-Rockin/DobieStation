@@ -13,7 +13,7 @@ namespace VU_JIT
 
 VU_JIT64 jit64;
 
-int run(VectorUnit *vu)
+uint16_t run(VectorUnit *vu)
 {
     return jit64.run(*vu);
 }

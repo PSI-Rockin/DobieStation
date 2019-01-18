@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <cstring>
 #include "vu_disasm.hpp"
+#include "vu_jit.hpp"
 #include "vif.hpp"
 
 #include "../gif.hpp"
@@ -305,6 +306,9 @@ void VectorInterface::decode_cmd(uint32_t value)
                 //printf("Command len: %d\n", command_len);
                 mpg.addr = imm * 8;
             }
+
+            VU_JIT::reset();
+
             wait_for_VU = true;
             wait_cmd_value = value;
             break;

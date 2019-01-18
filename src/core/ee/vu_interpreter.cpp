@@ -5,8 +5,8 @@
 
 #define printf(fmt, ...)(0)
 
-namespace VU_Interpreter {
-
+namespace VU_Interpreter
+{
 typedef void(VectorUnit::*vu_op)(uint32_t);
 vu_op upper_op, lower_op;
 
@@ -29,18 +29,7 @@ void interpret(VectorUnit &vu, uint32_t upper_instr, uint32_t lower_instr)
         vu.waitq(0);
     }
 
-    //Reset decoder
-    vu.decoder.vf_read0[0] = 0; vu.decoder.vf_read0[1] = 0;
-    vu.decoder.vf_read0_field[0] = 0; vu.decoder.vf_read0_field[1] = 0;
-
-    vu.decoder.vf_read1[0] = 0; vu.decoder.vf_read1[1] = 0;
-    vu.decoder.vf_read1_field[0] = 0; vu.decoder.vf_read1_field[1] = 0;
-
-    vu.decoder.vf_write[0] = 0; vu.decoder.vf_write[1] = 0;
-    vu.decoder.vf_write_field[0] = 0; vu.decoder.vf_write_field[1] = 0;
-
-    vu.decoder.vi_read0 = 0; vu.decoder.vi_read1 = 0;
-    vu.decoder.vi_write = 0;
+    vu.decoder.reset();
 
     //Get upper op
     upper(vu, upper_instr);

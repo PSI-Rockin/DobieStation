@@ -66,6 +66,8 @@ namespace VU_Interpreter
     void msuba(VectorUnit &vu, uint32_t instr);
     void opmula(VectorUnit& vu, uint32_t instr);
 
+    bool updates_mac_flags(uint32_t upper_instr);
+
     void lower(VectorUnit& vu, uint32_t instr);
     void lower1(VectorUnit& vu, uint32_t instr);
     void iadd(VectorUnit& vu, uint32_t instr);

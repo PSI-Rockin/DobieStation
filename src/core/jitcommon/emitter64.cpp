@@ -71,6 +71,9 @@ int Emitter64::get_rip_offset(uint64_t addr)
 
 void Emitter64::load_addr(uint64_t addr, REG_64 dest)
 {
+    uint8_t* start = cache->get_current_block_start();
+    uint8_t* pos = cache->get_current_block_pos();
+    printf("[E64] Addr: $%llX Position: $%08X\n", addr, pos - start);
     int offset = get_rip_offset(addr);
     rexw_r(dest);
     cache->write<uint8_t>(0x8B);
@@ -179,6 +182,14 @@ void Emitter64::SETGE_MEM(REG_64 indir_dest)
     rex_rm(indir_dest);
     cache->write<uint8_t>(0x0F);
     cache->write<uint8_t>(0x9D);
+    modrm(0, 0, indir_dest);
+}
+
+void Emitter64::SETLE_MEM(REG_64 indir_dest)
+{
+    rex_rm(indir_dest);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x9E);
     modrm(0, 0, indir_dest);
 }
 

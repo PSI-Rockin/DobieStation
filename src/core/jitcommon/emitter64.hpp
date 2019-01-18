@@ -60,6 +60,7 @@ class Emitter64
 
         void SETE_MEM(REG_64 indir_dest);
         void SETGE_MEM(REG_64 indir_dest);
+        void SETLE_MEM(REG_64 indir_dest);
         void SETNE_MEM(REG_64 indir_dest);
 
         void SHL16_REG_1(REG_64 dest);

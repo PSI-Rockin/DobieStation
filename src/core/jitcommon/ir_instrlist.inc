@@ -11,6 +11,7 @@ INSTR(StoreQuadInc)
 
 INSTR(MoveIntReg)
 
+INSTR(AndInt)
 INSTR(OrInt)
 INSTR(ShiftLeft)
 INSTR(AddIntReg)
@@ -25,6 +26,7 @@ INSTR(BranchEqual)
 INSTR(BranchNotEqual)
 INSTR(BranchGreater)
 INSTR(BranchGreaterOrEqualThanZero)
+INSTR(BranchLessOrEqualThanZero)
 
 INSTR(VAbs)
 INSTR(VMaxVectorByScalar)
@@ -44,16 +46,20 @@ INSTR(VMsubAccByScalar)
 INSTR(VDiv)
 
 INSTR(VFixedToFloat0)
+INSTR(VFixedToFloat12)
 INSTR(VFloatToFixed0)
 INSTR(VFloatToFixed4)
 
 INSTR(VMoveToInt)
+INSTR(VMoveFromInt)
+INSTR(VMoveFloat)
 
 INSTR(VMacAnd)
 INSTR(SetClipFlags)
-INSTR(UpdateMacFlags)
+INSTR(AndClipFlags)
 
-INSTR(StallQPipeline)
+INSTR(UpdateQ)
+INSTR(UpdateMacFlags)
 INSTR(UpdateMacPipeline)
 INSTR(MoveXTOP)
 INSTR(MoveXITOP)

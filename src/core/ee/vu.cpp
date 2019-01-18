@@ -52,6 +52,21 @@ int32_t vu_min(int32_t a, int32_t b)
     return std::min(a, b);
 }
 
+void DecodedRegs::reset()
+{
+    vf_read0[0] = 0; vf_read0[1] = 0;
+    vf_read0_field[0] = 0; vf_read0_field[1] = 0;
+
+    vf_read1[0] = 0; vf_read1[1] = 0;
+    vf_read1_field[0] = 0; vf_read1_field[1] = 0;
+
+    vf_write[0] = 0; vf_write[1] = 0;
+    vf_write_field[0] = 0; vf_write_field[1] = 0;
+
+    vi_read0 = 0; vi_read1 = 0;
+    vi_write = 0;
+}
+
 VectorUnit::VectorUnit(int id, Emulator* e) : id(id), e(e), gif(nullptr)
 {
     gpr[0].f[0] = 0.0;
@@ -79,7 +94,7 @@ void VectorUnit::reset()
     clip_flags = 0;
     PC = 0;
     cycle_count = 1; //Set to 1 to prevent spurious events from occurring during execution
-    //run_event = 0;
+    run_event = 0;
     running = false;
     finish_on = false;
     branch_on = false;
@@ -170,8 +185,8 @@ void VectorUnit::run(int cycles)
                 handle_XGKICK();
         }
 
-        uint32_t upper_instr = *(uint32_t*)&instr_mem[PC + 4];
-        uint32_t lower_instr = *(uint32_t*)&instr_mem[PC];
+        uint32_t upper_instr = *(uint32_t*)&instr_mem.m[PC + 4];
+        uint32_t lower_instr = *(uint32_t*)&instr_mem.m[PC];
         //printf("[$%08X] $%08X:$%08X\n", PC, upper_instr, lower_instr);
         VU_Interpreter::interpret(*this, upper_instr, lower_instr);
 
@@ -223,10 +238,11 @@ void VectorUnit::run(int cycles)
 
 void VectorUnit::run_jit(int cycles)
 {
-    int cycles_to_run = cycles;
-    while (running && cycles_to_run > 0)
+    cycle_count += cycles;
+    if (running)
     {
-        cycles_to_run -= VU_JIT::run(this);
+        while (run_event < cycle_count)
+            run_event += VU_JIT::run(this);
     }
 
     //TODO: Make XGKICK update on a semi-synchronous basis, rather than instantly
@@ -369,6 +385,7 @@ void VectorUnit::callmsr()
     if (running == false)
     {
         running = true;
+        run_event = cycle_count;
         PC = CMSAR0 * 8;
     }
 }
@@ -379,6 +396,7 @@ void VectorUnit::mscal(uint32_t addr)
     if (running == false)
     {
         running = true;
+        run_event = cycle_count;
         PC = addr;
     }
 }

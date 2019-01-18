@@ -46,9 +46,11 @@ class VU_JIT64
         int abi_int_count;
         int abi_xmm_count;
 
-        int cycle_count;
+        bool should_update_mac;
+
         bool cond_branch;
         uint16_t cond_branch_dest, cond_branch_fail_dest;
+        uint16_t cycle_count;
 
         void handle_cond_branch(VectorUnit& vu);
         void update_mac_flags(VectorUnit& vu, int vf_reg, uint8_t field);
@@ -61,6 +63,7 @@ class VU_JIT64
         void load_int(VectorUnit& vu, IR::Instruction& instr);
         void store_int(VectorUnit& vu, IR::Instruction& instr);
         void load_quad(VectorUnit& vu, IR::Instruction& instr);
+        void store_quad(VectorUnit& vu, IR::Instruction& instr);
         void load_quad_inc(VectorUnit& vu, IR::Instruction& instr);
         void store_quad_inc(VectorUnit& vu, IR::Instruction& instr);
         void move_int_reg(VectorUnit& vu, IR::Instruction& instr);
@@ -71,8 +74,10 @@ class VU_JIT64
 
         void branch_equal(VectorUnit& vu, IR::Instruction& instr);
         void branch_not_equal(VectorUnit& vu, IR::Instruction& instr);
+        void branch_less_or_equal_than_zero(VectorUnit& vu, IR::Instruction& instr);
         void branch_greater_or_equal_than_zero(VectorUnit& vu, IR::Instruction& instr);
 
+        void and_int(VectorUnit& vu, IR::Instruction& instr);
         void or_int(VectorUnit& vu, IR::Instruction& instr);
         void add_int_reg(VectorUnit& vu, IR::Instruction& instr);
         void add_unsigned_imm(VectorUnit& vu, IR::Instruction& instr);
@@ -98,11 +103,15 @@ class VU_JIT64
         void float_to_fixed(VectorUnit& vu, IR::Instruction& instr, int table_entry);
 
         void move_to_int(VectorUnit& vu, IR::Instruction& instr);
+        void move_from_int(VectorUnit& vu, IR::Instruction& instr);
+        void move_float(VectorUnit& vu, IR::Instruction& instr);
 
         void mac_and(VectorUnit& vu, IR::Instruction& instr);
         void set_clip_flags(VectorUnit& vu, IR::Instruction& instr);
+        void and_clip_flags(VectorUnit& vu, IR::Instruction& instr);
 
-        void stall_q_pipeline(VectorUnit& vu, IR::Instruction& instr);
+        void update_q(VectorUnit& vu, IR::Instruction& instr);
+        void update_mac_pipeline(VectorUnit& vu);
         void move_xtop(VectorUnit& vu, IR::Instruction& instr);
         void xgkick(VectorUnit& vu, IR::Instruction& instr);
         void stop(VectorUnit& vu, IR::Instruction& instr);
@@ -123,7 +132,7 @@ class VU_JIT64
         VU_JIT64();
 
         void reset();
-        int run(VectorUnit& vu);
+        uint16_t run(VectorUnit& vu);
 };
 
 #endif // VU_JIT64_HPP
