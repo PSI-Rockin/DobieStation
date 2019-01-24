@@ -46,6 +46,8 @@ class VU_JitTranslator
         void op_vector_by_scalar(IR::Instruction& instr, uint32_t upper, VU_SpecialReg scalar = VU_Regular);
         void op_acc_by_scalar(IR::Instruction& instr, uint32_t upper, VU_SpecialReg scalar = VU_Regular);
 
+        void op_conversion(IR::Instruction& instr, uint32_t upper);
+
         void translate_upper(std::vector<IR::Instruction>& instrs, uint32_t upper);
         void upper_special(std::vector<IR::Instruction>& instrs, uint32_t upper);
 

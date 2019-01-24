@@ -49,6 +49,7 @@ class Emitter64
 
         void AND16_AX(uint16_t imm);
         void AND16_REG(REG_64 source, REG_64 dest);
+        void AND32_EAX(uint32_t imm);
         void AND32_REG_IMM(uint32_t imm, REG_64 dest);
 
         void CMP16_IMM(uint16_t imm, REG_64 op);
@@ -57,19 +58,26 @@ class Emitter64
         void NOT16(REG_64 dest);
 
         void OR16_REG(REG_64 source, REG_64 dest);
+        void OR32_REG(REG_64 source, REG_64 dest);
 
         void SETE_MEM(REG_64 indir_dest);
+        void SETG_MEM(REG_64 indir_dest);
         void SETGE_MEM(REG_64 indir_dest);
         void SETLE_MEM(REG_64 indir_dest);
+        void SETNE_REG(REG_64 dest);
         void SETNE_MEM(REG_64 indir_dest);
 
         void SHL16_REG_1(REG_64 dest);
         void SHL16_REG_IMM(uint8_t shift, REG_64 dest);
         void SHL32_REG_IMM(uint8_t shift, REG_64 dest);
 
+        void SUB32_REG(REG_64 source, REG_64 dest);
+
         void TEST16_REG(REG_64 op2, REG_64 op1);
+        void TEST32_EAX(uint32_t imm);
 
         void XOR16_REG(REG_64 source, REG_64 dest);
+        void XOR32_REG(REG_64 source, REG_64 dest);
 
         void MOV8_TO_MEM(REG_64 source, REG_64 indir_dest);
         void MOV8_IMM_MEM(uint8_t imm, REG_64 indir_dest);
@@ -78,6 +86,8 @@ class Emitter64
         void MOV16_TO_MEM(REG_64 source, REG_64 indir_dest);
         void MOV16_FROM_MEM(REG_64 indir_source, REG_64 dest);
         void MOV16_IMM_MEM(uint16_t imm, REG_64 indir_dest);
+        void MOV32_REG(REG_64 source, REG_64 dest);
+        void MOV32_REG_IMM(uint32_t imm, REG_64 dest);
         void MOV32_IMM_MEM(uint32_t imm, REG_64 indir_dest);
         void MOV32_FROM_MEM(REG_64 indir_source, REG_64 dest);
         void MOV32_TO_MEM(REG_64 source, REG_64 indir_dest);
@@ -94,7 +104,11 @@ class Emitter64
         void MOVAPS_TO_MEM(REG_64 xmm_source, REG_64 indir_dest);
         void MOVMSKPS(REG_64 xmm_source, REG_64 dest);
 
+        uint8_t* JMP_NEAR_DEFERRED();
         uint8_t* JE_NEAR_DEFERRED();
+        uint8_t* JNE_NEAR_DEFERRED();
+
+        void set_jump_dest(uint8_t* jump);
 
         void PUSH(REG_64 reg);
         void POP(REG_64 reg);
@@ -103,16 +117,24 @@ class Emitter64
 
         void PAND_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void PMAXSD_XMM(REG_64 xmm_source, REG_64 xmm_dest);
+        void PMINSD_XMM(REG_64 xmm_source, REG_64 xmm_dest);
+        void PMINSD_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest);
+        void PMINUD_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest);
         void PSHUFD(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest);
 
         void DIVPS(REG_64 xmm_source, REG_64 xmm_dest);
 
         void ADDPS(REG_64 xmm_source, REG_64 xmm_dest);
         void BLENDPS(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest);
+        void CMPEQPS(REG_64 xmm_source, REG_64 xmm_dest);
+        void CMPNLEPS(REG_64 xmm_source, REG_64 xmm_dest);
+        void DPPS(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest);
         void INSERTPS(uint8_t count_s, uint8_t count_d, uint8_t zmask, REG_64 xmm_source, REG_64 xmm_dest);
         void MULPS(REG_64 xmm_source, REG_64 xmm_dest);
         void SHUFPS(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest);
+        void SQRTPS(REG_64 xmm_source, REG_64 xmm_dest);
         void SUBPS(REG_64 xmm_source, REG_64 xmm_dest);
+        void XORPS(REG_64 xmm_source, REG_64 xmm_dest);
 
         //Convert 32-bit signed integers into floats
         void CVTDQ2PS(REG_64 xmm_source, REG_64 xmm_dest);

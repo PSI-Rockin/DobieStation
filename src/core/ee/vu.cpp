@@ -185,6 +185,13 @@ void VectorUnit::run(int cycles)
                 handle_XGKICK();
         }
 
+        if (PC == 0x3A8)
+        {
+            for (int i = 1; i <= 3; i++)
+                printf("vf%d: (%f, %f, %f, %f)\n", i, gpr[i].f[3], gpr[i].f[2], gpr[i].f[1], gpr[i].f[0]);
+            printf("mac: $%04X\n", MAC_pipeline[3] & 0xFFFF);
+        }
+
         uint32_t upper_instr = *(uint32_t*)&instr_mem.m[PC + 4];
         uint32_t lower_instr = *(uint32_t*)&instr_mem.m[PC];
         //printf("[$%08X] $%08X:$%08X\n", PC, upper_instr, lower_instr);
@@ -239,13 +246,23 @@ void VectorUnit::run(int cycles)
 void VectorUnit::run_jit(int cycles)
 {
     cycle_count += cycles;
-    if (running)
+    while (running && !XGKICK_stall && run_event < cycle_count)
     {
-        while (run_event < cycle_count)
-            run_event += VU_JIT::run(this);
+        run_event += VU_JIT::run(this);
+        /*if (PC > 0x2100 && PC < 0x2300)
+        {
+            for (int i = 0; i < 32; i++)
+            {
+                printf("vf%d: (%f, %f, %f, %f)\n", i, gpr[i].f[3], gpr[i].f[2], gpr[i].f[1], gpr[i].f[0]);
+                printf("vf%d: ($%08X, $%08X, $%08X, $%08X)\n", i, gpr[i].u[3], gpr[i].u[2], gpr[i].u[1], gpr[i].u[0]);
+            }
+            printf("mac: $%04X $%04X $%04X $%04X\n", MAC_pipeline[0], MAC_pipeline[1], MAC_pipeline[2], *MAC_flags & 0xFFFF);
+            for (int i = 0; i < 16; i++)
+                printf("vi%d: $%04X\n", i, int_gpr[i].u);
+            printf("clip: $%08X ($%04X)\n", clip_flags, 0 - ((clip_flags & 0x3FFFF) != 0));
+        }*/
     }
 
-    //TODO: Make XGKICK update on a semi-synchronous basis, rather than instantly
     if (transferring_GIF)
     {
         gif->request_PATH(1, true);
@@ -263,13 +280,14 @@ void VectorUnit::handle_XGKICK()
     GIF_addr += 16;
     if (gif->send_PATH1(quad))
     {
-        //printf("[VU1] XGKICK transfer ended!\n");
+        printf("[VU1] XGKICK transfer ended!\n");
         if (XGKICK_stall)
         {
-            printf("[VU1] Activating stalled XGKICK transfer\n");
+            //printf("[VU1] Activating stalled XGKICK transfer\n");
             XGKICK_cycles = 0;
             XGKICK_stall = false;
             GIF_addr = stalled_GIF_addr;
+            run_event = cycle_count;
         }
         else
         {
@@ -385,9 +403,9 @@ void VectorUnit::callmsr()
     if (running == false)
     {
         running = true;
-        run_event = cycle_count;
         PC = CMSAR0 * 8;
     }
+    run_event = cycle_count;
 }
 
 void VectorUnit::mscal(uint32_t addr)
@@ -396,9 +414,9 @@ void VectorUnit::mscal(uint32_t addr)
     if (running == false)
     {
         running = true;
-        run_event = cycle_count;
         PC = addr;
     }
+    run_event = cycle_count;
 }
 
 void VectorUnit::end_execution()
@@ -410,6 +428,7 @@ void VectorUnit::end_execution()
 void VectorUnit::stop()
 {
     running = false;
+    flush_pipes();
 }
 
 float VectorUnit::update_mac_flags(float value, int index)
@@ -849,7 +868,7 @@ void VectorUnit::bal(uint32_t instr)
 
 void VectorUnit::clip(uint32_t instr)
 {
-    printf("[VU] CLIP\n");
+    printf("[VU] CLIP $%08X (%d, %d)\n", instr, _fs_, _ft_);
     clip_flags <<= 6; //Move previous clipping judgments up
 
     //Compare x, y, z fields of FS with the w field of FT
@@ -859,6 +878,8 @@ void VectorUnit::clip(uint32_t instr)
     float y = convert(gpr[_fs_].u[1]);
     float z = convert(gpr[_fs_].u[2]);
 
+    printf("Compare: (%f, %f, %f) %f\n", x, y, z, value);
+
     clip_flags |= (x > +value);
     clip_flags |= (x < -value) << 1;
     clip_flags |= (y > +value) << 2;
@@ -866,6 +887,8 @@ void VectorUnit::clip(uint32_t instr)
     clip_flags |= (z > +value) << 4;
     clip_flags |= (z < -value) << 5;
     clip_flags &= 0xFFFFFF;
+
+    printf("New flags: $%08X\n", clip_flags);
 }
 
 void VectorUnit::div(uint32_t instr)
@@ -2099,6 +2122,13 @@ void VectorUnit::opmsub(uint32_t instr)
     set_gpr_f(_fd_, 0, update_mac_flags(temp.f[0], 0));
     set_gpr_f(_fd_, 1, update_mac_flags(temp.f[1], 1));
     set_gpr_f(_fd_, 2, update_mac_flags(temp.f[2], 2));
+
+    /*if (_fd_ == 1 && (PC == 0x510))
+    {
+        clear_mac_flags(0);
+        clear_mac_flags(1);
+        clear_mac_flags(2);
+    }*/
     clear_mac_flags(3);
     printf("[VU] OPMSUB: %f, %f, %f\n", gpr[_fd_].f[0], gpr[_fd_].f[1], gpr[_fd_].f[2]);
 }
