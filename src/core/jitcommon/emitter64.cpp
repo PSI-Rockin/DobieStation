@@ -254,6 +254,15 @@ void Emitter64::SHL32_REG_IMM(uint8_t shift, REG_64 dest)
     cache->write<uint8_t>(shift);
 }
 
+void Emitter64::SUB16_REG_IMM(uint16_t imm, REG_64 dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_rm(dest);
+    cache->write<uint8_t>(0x81);
+    modrm(0b11, 5, dest);
+    cache->write<uint16_t>(imm);
+}
+
 void Emitter64::SUB32_REG(REG_64 source, REG_64 dest)
 {
     rex_r_rm(source, dest);
@@ -408,6 +417,14 @@ void Emitter64::MOV64_TO_MEM(REG_64 source, REG_64 indir_dest)
     rexw_r_rm(source, indir_dest);
     cache->write<uint8_t>(0x89);
     modrm(0, source, indir_dest);
+}
+
+void Emitter64::MOVSX64_REG(REG_64 source, REG_64 dest)
+{
+    rexw_r_rm(dest, source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0xBE);
+    modrm(0b11, dest, source);
 }
 
 void Emitter64::MOVZX64_REG(REG_64 source, REG_64 dest)

@@ -17,6 +17,7 @@ INSTR(ShiftLeft)
 INSTR(AddIntReg)
 INSTR(SubIntReg)
 INSTR(AddUnsignedImm)
+INSTR(SubUnsignedImm)
 
 INSTR(Jump)
 INSTR(JumpIndirect)

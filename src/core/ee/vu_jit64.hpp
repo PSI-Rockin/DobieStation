@@ -85,6 +85,7 @@ class VU_JIT64
         void add_int_reg(VectorUnit& vu, IR::Instruction& instr);
         void sub_int_reg(VectorUnit& vu, IR::Instruction& instr);
         void add_unsigned_imm(VectorUnit& vu, IR::Instruction& instr);
+        void sub_unsigned_imm(VectorUnit& vu, IR::Instruction& instr);
 
         void abs(VectorUnit& vu, IR::Instruction& instr);
         void max_vector_by_scalar(VectorUnit& vu, IR::Instruction& instr);

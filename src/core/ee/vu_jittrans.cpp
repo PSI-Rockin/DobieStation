@@ -631,6 +631,11 @@ void VU_JitTranslator::lower1(std::vector<IR::Instruction> &instrs, uint32_t low
             instr.set_source((lower >> 11) & 0xF);
             instr.set_dest((lower >> 16) & 0xF);
             instr.set_source2((int64_t)imm);
+            if (!instr.get_source())
+            {
+                instr.op = IR::Opcode::LoadConst;
+                instr.set_source((int64_t)imm);
+            }
         }
             break;
         case 0x34:
@@ -725,7 +730,7 @@ void VU_JitTranslator::lower1_special(std::vector<IR::Instruction> &instrs, uint
             instr.op = IR::Opcode::VMoveFromInt;
             instr.set_source((lower >> 11) & 0xF);
             instr.set_dest((lower >> 16) & 0x1F);
-            instr.set_field((lower >> 21) & 0x3);
+            instr.set_field((lower >> 21) & 0xF);
             break;
         case 0x3E:
             //ILWR
@@ -836,16 +841,16 @@ void VU_JitTranslator::lower2(std::vector<IR::Instruction> &instrs, uint32_t low
         case 0x09:
             //IADDIU/ISUBIU
         {
-            instr.op = IR::Opcode::AddUnsignedImm;
+            if (op == 0x08)
+                instr.op = IR::Opcode::AddUnsignedImm;
+            else
+                instr.op = IR::Opcode::SubUnsignedImm;
             instr.set_dest((lower >> 16) & 0xF);
             instr.set_source((lower >> 11) & 0xF);
             uint16_t imm = lower & 0x7FF;
             imm |= ((lower >> 21) & 0xF) << 11;
-
-            if (op == 0x09)
-                imm = (imm ^ 0xFFFF) + 1;
             instr.set_source2(imm);
-            if (!instr.get_source())
+            if (!instr.get_source() && op == 0x08)
             {
                 instr.op = IR::Opcode::LoadConst;
                 instr.set_source(imm);

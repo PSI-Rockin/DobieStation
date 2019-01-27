@@ -185,13 +185,6 @@ void VectorUnit::run(int cycles)
                 handle_XGKICK();
         }
 
-        if (PC == 0x3A8)
-        {
-            for (int i = 1; i <= 3; i++)
-                printf("vf%d: (%f, %f, %f, %f)\n", i, gpr[i].f[3], gpr[i].f[2], gpr[i].f[1], gpr[i].f[0]);
-            printf("mac: $%04X\n", MAC_pipeline[3] & 0xFFFF);
-        }
-
         uint32_t upper_instr = *(uint32_t*)&instr_mem.m[PC + 4];
         uint32_t lower_instr = *(uint32_t*)&instr_mem.m[PC];
         //printf("[$%08X] $%08X:$%08X\n", PC, upper_instr, lower_instr);
@@ -1049,7 +1042,6 @@ void VectorUnit::ersqrt(uint32_t instr)
     P.f = sqrt(fabs(P.f));
     if (P.f != 0)
         P.f = 1.0f / P.f;
-
 
     printf("[VU] ERSQRT: %f (%d)\n", P.f, _fs_);
 }

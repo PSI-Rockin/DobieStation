@@ -188,7 +188,6 @@ void VU_JIT64::update_mac_flags(VectorUnit &vu, REG_64 xmm_reg, uint8_t field)
 
     //Get the sign bits
     emitter.MOVMSKPS(temp, REG_64::RAX);
-    emitter.AND32_EAX(field);
     emitter.SHL32_REG_IMM(4, REG_64::RAX);
 
     //Get zero bits
@@ -237,7 +236,6 @@ void VU_JIT64::load_int(VectorUnit &vu, IR::Instruction &instr)
     {
         //IMPORTANT
         //Dest must be allocated after base in case base == dest (this is so that the base address can load)
-        //Errors::die("$%02X", field);
         REG_64 base = alloc_int_reg(vu, instr.get_base(), REG_STATE::READ);
         REG_64 dest = alloc_int_reg(vu, instr.get_dest(), REG_STATE::WRITE);
         emitter.MOVZX64_REG(base, REG_64::RAX);
@@ -263,6 +261,7 @@ void VU_JIT64::load_int(VectorUnit &vu, IR::Instruction &instr)
 void VU_JIT64::store_int(VectorUnit &vu, IR::Instruction &instr)
 {
     uint8_t field = convert_field(instr.get_field());
+    REG_64 source = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
 
     int field_offset = 0;
     if (field & 0x2)
@@ -274,11 +273,7 @@ void VU_JIT64::store_int(VectorUnit &vu, IR::Instruction &instr)
 
     if (instr.get_base())
     {
-        //IMPORTANT
-        //Dest must be allocated after base in case base == dest (this is so that the base address can load)
-        //Errors::die("$%02X", field);
         REG_64 base = alloc_int_reg(vu, instr.get_base(), REG_STATE::READ);
-        REG_64 source = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
         emitter.MOVZX64_REG(base, REG_64::RAX);
         emitter.SHL16_REG_IMM(4, REG_64::RAX);
 
@@ -288,18 +283,16 @@ void VU_JIT64::store_int(VectorUnit &vu, IR::Instruction &instr)
 
         emitter.load_addr((uint64_t)&vu.data_mem.m[field_offset], REG_64::R15);
         emitter.ADD64_REG(REG_64::RAX, REG_64::R15);
-
-        //Zero-extend the upper 16 bits
-        emitter.MOVZX64_REG(source, REG_64::RAX);
-        emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
     }
     else
     {
-        REG_64 source = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
         uint16_t offset = (instr.get_source2() + field_offset) & 0x3FFF;
         emitter.load_addr((uint64_t)&vu.data_mem.m[offset], REG_64::R15);
-        emitter.MOV16_TO_MEM(source, REG_64::R15);
     }
+
+    //Zero-extend the upper 16 bits
+    emitter.MOVZX64_REG(source, REG_64::RAX);
+    emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
 }
 
 void VU_JIT64::load_quad(VectorUnit &vu, IR::Instruction &instr)
@@ -689,6 +682,24 @@ void VU_JIT64::add_unsigned_imm(VectorUnit &vu, IR::Instruction &instr)
 
         emitter.MOV16_REG(source, dest);
         emitter.ADD16_REG_IMM(imm, dest);
+    }
+}
+
+void VU_JIT64::sub_unsigned_imm(VectorUnit &vu, IR::Instruction &instr)
+{
+    uint16_t imm = instr.get_source2();
+    if (instr.get_dest() == instr.get_source())
+    {
+        REG_64 dest = alloc_int_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
+        emitter.SUB16_REG_IMM(imm, dest);
+    }
+    else
+    {
+        REG_64 dest = alloc_int_reg(vu, instr.get_dest(), REG_STATE::WRITE);
+        REG_64 source = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
+
+        emitter.MOV16_REG(source, dest);
+        emitter.SUB16_REG_IMM(imm, dest);
     }
 }
 
@@ -1226,29 +1237,31 @@ void VU_JIT64::move_to_int(VectorUnit &vu, IR::Instruction &instr)
 
 void VU_JIT64::move_from_int(VectorUnit &vu, IR::Instruction &instr)
 {
-    uint8_t field = instr.get_field();
+    uint8_t field = convert_field(instr.get_field());
     REG_64 source = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
-    REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::WRITE);
+    REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
     REG_64 temp = REG_64::XMM0;
 
-    emitter.MOVD_TO_XMM(source, temp);
+    //The 16-bit integer must be sign extended
+    emitter.MOVSX64_REG(source, REG_64::RAX);
+    emitter.MOVD_TO_XMM(REG_64::RAX, temp);
+    emitter.SHUFPS(0, temp, temp);
     emitter.BLENDPS(field, temp, dest);
 }
 
 void VU_JIT64::move_float(VectorUnit &vu, IR::Instruction &instr)
 {
     uint8_t field = convert_field(instr.get_field());
+    REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ);
 
     if (field == 0xF)
     {
-        REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ);
         REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::WRITE);
 
         emitter.MOVAPS_REG(source, dest);
     }
     else
     {
-        REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ_WRITE);
         REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
 
         emitter.BLENDPS(field, source, dest);
@@ -1258,20 +1271,19 @@ void VU_JIT64::move_float(VectorUnit &vu, IR::Instruction &instr)
 void VU_JIT64::mac_and(VectorUnit &vu, IR::Instruction &instr)
 {
     emitter.load_addr((uint64_t)vu.MAC_flags, REG_64::RAX);
-    emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::RAX);
+    emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::R15);
 
     if (instr.get_dest() == instr.get_source())
     {
         REG_64 dest = alloc_int_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
-        emitter.AND16_REG(REG_64::RAX, dest);
+        emitter.AND16_REG(REG_64::R15, dest);
     }
     else
     {
         REG_64 source = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
         REG_64 dest = alloc_int_reg(vu, instr.get_dest(), REG_STATE::WRITE);
 
-        emitter.MOV16_REG(source, REG_64::R15);
-        emitter.AND16_REG(REG_64::RAX, REG_64::R15);
+        emitter.AND16_REG(source, REG_64::R15);
         emitter.MOV16_REG(REG_64::R15, dest);
     }
 }
@@ -1796,6 +1808,9 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
         case IR::Opcode::AddUnsignedImm:
             add_unsigned_imm(vu, instr);
             break;
+        case IR::Opcode::SubUnsignedImm:
+            sub_unsigned_imm(vu, instr);
+            break;
         case IR::Opcode::VMoveToInt:
             move_to_int(vu, instr);
             break;
@@ -1885,7 +1900,7 @@ uint8_t* VU_JIT64::exec_block(VectorUnit& vu)
     //printf("[VU_JIT64] Executing block at $%04X\n", vu.PC);
     if (cache.find_block(vu.PC) == -1)
     {
-        printf("[VU_JIT64] Block not found at $%04X: recompiling\n", vu.PC);
+        //printf("[VU_JIT64] Block not found at $%04X: recompiling\n", vu.PC);
         IR::Block block = ir.translate(vu, vu.get_instr_mem());
         recompile_block(vu, block);
     }

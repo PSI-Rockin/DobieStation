@@ -71,6 +71,7 @@ class Emitter64
         void SHL16_REG_IMM(uint8_t shift, REG_64 dest);
         void SHL32_REG_IMM(uint8_t shift, REG_64 dest);
 
+        void SUB16_REG_IMM(uint16_t imm, REG_64 dest);
         void SUB32_REG(REG_64 source, REG_64 dest);
 
         void TEST16_REG(REG_64 op2, REG_64 op1);
@@ -95,6 +96,8 @@ class Emitter64
         void MOV64_OI(uint64_t imm, REG_64 dest);
         void MOV64_FROM_MEM(REG_64 indir_source, REG_64 dest);
         void MOV64_TO_MEM(REG_64 source, REG_64 indir_dest);
+
+        void MOVSX64_REG(REG_64 source, REG_64 dest);
         void MOVZX64_REG(REG_64 source, REG_64 dest);
 
         void MOVD_FROM_XMM(REG_64 xmm_source, REG_64 dest);
