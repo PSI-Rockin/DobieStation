@@ -142,7 +142,7 @@ void VectorInterface::update(int cycles)
                 mpg.addr += 4;
                 if (command_len <= 1)
                 {
-                    //disasm_micromem();
+                    disasm_micromem();
                     command = 0;
                 }
                 break;

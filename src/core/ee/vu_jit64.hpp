@@ -116,6 +116,7 @@ class VU_JIT64
         void move_to_int(VectorUnit& vu, IR::Instruction& instr);
         void move_from_int(VectorUnit& vu, IR::Instruction& instr);
         void move_float(VectorUnit& vu, IR::Instruction& instr);
+        void move_rotated_float(VectorUnit& vu, IR::Instruction& instr);
 
         void mac_and(VectorUnit& vu, IR::Instruction& instr);
         void set_clip_flags(VectorUnit& vu, IR::Instruction& instr);

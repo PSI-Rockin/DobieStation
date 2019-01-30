@@ -32,14 +32,19 @@ class VU_JitTranslator
     private:
         int q_pipeline_delay;
 
+        int cycles_this_block;
+
         VU_InstrInfo instr_info[1024 * 16];
         uint16_t end_PC;
+        bool has_q_stalled;
 
         bool updates_mac_flags(uint32_t upper_instr);
         bool updates_mac_flags_special(uint32_t upper_instr);
 
         void interpreter_pass(VectorUnit& vu, uint8_t *instr_mem);
         void flag_pass(VectorUnit& vu, uint8_t *instr_mem);
+
+        void check_q_stall(std::vector<IR::Instruction>& instrs);
 
         void op_vectors(IR::Instruction& instr, uint32_t upper);
         void op_acc_and_vectors(IR::Instruction& instr, uint32_t upper);

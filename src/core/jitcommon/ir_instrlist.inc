@@ -1,4 +1,5 @@
 INSTR(Null)
+
 INSTR(LoadConst)
 INSTR(LoadFloatConst)
 
@@ -65,17 +66,21 @@ INSTR(VFloatToFixed15)
 INSTR(VMoveToInt)
 INSTR(VMoveFromInt)
 INSTR(VMoveFloat)
+INSTR(VMoveRotatedFloat)
 
 INSTR(VMacAnd)
 INSTR(SetClipFlags)
 INSTR(GetClipFlags)
 INSTR(AndClipFlags)
+INSTR(OrClipFlags)
 
 INSTR(VMoveFromP)
 INSTR(VEleng)
 INSTR(VErleng)
 INSTR(VESqrt)
 
+INSTR(StartQEvent)
+INSTR(UpdateQPipeline)
 INSTR(UpdateQ)
 INSTR(UpdateMacFlags)
 INSTR(UpdateMacPipeline)

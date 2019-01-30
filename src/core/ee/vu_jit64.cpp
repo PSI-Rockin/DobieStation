@@ -1268,6 +1268,24 @@ void VU_JIT64::move_float(VectorUnit &vu, IR::Instruction &instr)
     }
 }
 
+void VU_JIT64::move_rotated_float(VectorUnit &vu, IR::Instruction &instr)
+{
+    uint8_t field = convert_field(instr.get_field());
+    REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ_WRITE);
+    REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
+
+    //xyzw = yzwx
+    uint8_t rot = (1 << 0) | (2 << 2) | (3 << 4) | (0 << 6);
+    if (field == 0xF)
+        emitter.PSHUFD(rot, source, dest);
+    else
+    {
+        REG_64 temp = REG_64::XMM0;
+        emitter.PSHUFD(rot, source, temp);
+        emitter.BLENDPS(field, temp, dest);
+    }
+}
+
 void VU_JIT64::mac_and(VectorUnit &vu, IR::Instruction &instr)
 {
     emitter.load_addr((uint64_t)vu.MAC_flags, REG_64::RAX);
@@ -1820,6 +1838,9 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
         case IR::Opcode::VMoveFloat:
             move_float(vu, instr);
             break;
+        case IR::Opcode::VMoveRotatedFloat:
+            move_rotated_float(vu, instr);
+            break;
         case IR::Opcode::VMacAnd:
             mac_and(vu, instr);
             break;
@@ -1900,7 +1921,7 @@ uint8_t* VU_JIT64::exec_block(VectorUnit& vu)
     //printf("[VU_JIT64] Executing block at $%04X\n", vu.PC);
     if (cache.find_block(vu.PC) == -1)
     {
-        //printf("[VU_JIT64] Block not found at $%04X: recompiling\n", vu.PC);
+        printf("[VU_JIT64] Block not found at $%04X: recompiling\n", vu.PC);
         IR::Block block = ir.translate(vu, vu.get_instr_mem());
         recompile_block(vu, block);
     }

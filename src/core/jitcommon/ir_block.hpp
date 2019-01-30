@@ -15,11 +15,12 @@ class Block
         Block();
 
         void add_instr(Instruction& instr);
-        void add_cycle();
 
         unsigned int get_instruction_count();
         int get_cycle_count();
         Instruction get_next_instr();
+
+        void set_cycle_count(int cycles);
 };
 
 };

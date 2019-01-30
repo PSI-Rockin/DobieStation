@@ -17,7 +17,10 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem)
     bool block_end = false;
     bool delay_slot = false;
     bool ebit = false;
+
+    has_q_stalled = false;
     q_pipeline_delay = 0;
+    cycles_this_block = 0;
 
     interpreter_pass(vu, instr_mem);
 
@@ -129,8 +132,10 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem)
         }
 
         PC += 8;
-        block.add_cycle();
+        cycles_this_block++;
     }
+
+    block.set_cycle_count(cycles_this_block);
 
     return block;
 }
@@ -288,6 +293,18 @@ void VU_JitTranslator::flag_pass(VectorUnit &vu, uint8_t *instr_mem)
     }
 }
 
+void VU_JitTranslator::check_q_stall(std::vector<IR::Instruction> &instrs)
+{
+    if (!has_q_stalled)
+    {
+        IR::Instruction q;
+        q.op = IR::Opcode::UpdateQPipeline;
+        q.set_source(cycles_this_block);
+        instrs.push_back(q);
+        cycles_this_block = 0;
+    }
+}
+
 void VU_JitTranslator::op_vectors(IR::Instruction &instr, uint32_t upper)
 {
     instr.set_dest((upper >> 6) & 0x1F);
@@ -397,6 +414,7 @@ void VU_JitTranslator::translate_upper(std::vector<IR::Instruction>& instrs, uin
             break;
         case 0x1C:
             //MULq
+            check_q_stall(instrs);
             instr.op = IR::Opcode::VMulVectorByScalar;
             op_vector_by_scalar(instr, upper, VU_SpecialReg::Q);
             break;
@@ -414,6 +432,12 @@ void VU_JitTranslator::translate_upper(std::vector<IR::Instruction>& instrs, uin
             //MINIi
             instr.op = IR::Opcode::VMinVectorByScalar;
             op_vector_by_scalar(instr, upper, VU_SpecialReg::I);
+            break;
+        case 0x21:
+            //MADDq
+            check_q_stall(instrs);
+            instr.op = IR::Opcode::VMaddVectorByScalar;
+            op_vector_by_scalar(instr, upper, VU_SpecialReg::Q);
             break;
         case 0x22:
             //ADDi
@@ -692,6 +716,13 @@ void VU_JitTranslator::lower1_special(std::vector<IR::Instruction> &instrs, uint
             if (!instr.get_dest() && !instr.get_source())
                 return;
             break;
+        case 0x31:
+            //MR32
+            instr.op = IR::Opcode::VMoveRotatedFloat;
+            instr.set_source((lower >> 11) & 0x1F);
+            instr.set_dest((lower >> 16) & 0x1F);
+            instr.set_field((lower >> 21) & 0xF);
+            break;
         case 0x34:
             //LQI
             instr.op = IR::Opcode::LoadQuadInc;
@@ -714,9 +745,11 @@ void VU_JitTranslator::lower1_special(std::vector<IR::Instruction> &instrs, uint
             instr.set_field((lower >> 21) & 0x3);
             instr.set_field2((lower >> 23) & 0x3);
             q_pipeline_delay = 7;
+            has_q_stalled = true;
             break;
         case 0x3B:
             //WAITq - the stall is handled by the interpreter pass, so we can just return
+            has_q_stalled = true;
             return;
         case 0x3C:
             //MTIR
@@ -867,6 +900,10 @@ void VU_JitTranslator::lower2(std::vector<IR::Instruction> &instrs, uint32_t low
             instr.op = IR::Opcode::AndClipFlags;
             instr.set_source(lower & 0xFFFFFF);
             break;
+        /*case 0x13:
+            //FCOR
+            instr.op = IR::Opcode::OrClipFlags;
+            break;*/
         case 0x1A:
             //FMAND
             instr.op = IR::Opcode::VMacAnd;
