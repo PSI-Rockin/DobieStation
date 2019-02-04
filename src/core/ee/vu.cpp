@@ -239,6 +239,15 @@ void VectorUnit::run(int cycles)
 void VectorUnit::run_jit(int cycles)
 {
     cycle_count += cycles;
+    if ((!running || XGKICK_stall) && transferring_GIF)
+    {
+        gif->request_PATH(1, true);
+        while (cycles > 0 && gif->path_active(1))
+        {
+            cycles--;
+            handle_XGKICK();
+        }
+    }
     while (running && !XGKICK_stall && run_event < cycle_count)
     {
         run_event += VU_JIT::run(this);
@@ -254,16 +263,6 @@ void VectorUnit::run_jit(int cycles)
                 printf("vi%d: $%04X\n", i, int_gpr[i].u);
             printf("clip: $%08X ($%04X)\n", clip_flags, 0 - ((clip_flags & 0x3FFFF) != 0));
         }*/
-    }
-
-    if (transferring_GIF)
-    {
-        gif->request_PATH(1, true);
-        while (cycles > 0 && gif->path_active(1))
-        {
-            cycles--;
-            handle_XGKICK();
-        }
     }
 }
 

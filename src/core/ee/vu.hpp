@@ -310,6 +310,10 @@ class VectorUnit
 
         //Friends needed for JIT convenience
         friend class VU_JIT64;
+
+        friend void vu_start_q_event(VectorUnit& vu, int latency, int cycles);
+        friend void vu_check_q_pipeline(VectorUnit& vu, int cycles);
+        friend void vu_update_xgkick(VectorUnit& vu, int cycles);
 };
 
 template <typename T>

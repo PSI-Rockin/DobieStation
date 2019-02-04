@@ -21,6 +21,7 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem)
     has_q_stalled = false;
     q_pipeline_delay = 0;
     cycles_this_block = 0;
+    cycles_since_xgkick_update = 0;
 
     interpreter_pass(vu, instr_mem);
 
@@ -133,8 +134,13 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem)
 
         PC += 8;
         cycles_this_block++;
+        cycles_since_xgkick_update++;
     }
 
+    IR::Instruction update;
+    update.op = IR::Opcode::UpdateXgkick;
+    update.set_source(cycles_since_xgkick_update);
+    block.add_instr(update);
     block.set_cycle_count(cycles_this_block);
 
     return block;
@@ -293,6 +299,15 @@ void VU_JitTranslator::flag_pass(VectorUnit &vu, uint8_t *instr_mem)
     }
 }
 
+void VU_JitTranslator::update_xgkick(std::vector<IR::Instruction> &instrs)
+{
+    IR::Instruction update;
+    update.op = IR::Opcode::UpdateXgkick;
+    update.set_source(cycles_since_xgkick_update);
+    cycles_since_xgkick_update = 0;
+    instrs.push_back(update);
+}
+
 void VU_JitTranslator::check_q_stall(std::vector<IR::Instruction> &instrs)
 {
     if (!has_q_stalled)
@@ -303,6 +318,17 @@ void VU_JitTranslator::check_q_stall(std::vector<IR::Instruction> &instrs)
         instrs.push_back(q);
         cycles_this_block = 0;
     }
+}
+
+void VU_JitTranslator::start_q_event(std::vector<IR::Instruction> &instrs, int latency)
+{
+    IR::Instruction q;
+    q.op = IR::Opcode::StartQEvent;
+    q.set_source(latency);
+    q.set_source2(cycles_this_block);
+    instrs.push_back(q);
+    q_pipeline_delay = latency;
+    cycles_this_block = 0;
 }
 
 void VU_JitTranslator::op_vectors(IR::Instruction &instr, uint32_t upper)
@@ -432,6 +458,12 @@ void VU_JitTranslator::translate_upper(std::vector<IR::Instruction>& instrs, uin
             //MINIi
             instr.op = IR::Opcode::VMinVectorByScalar;
             op_vector_by_scalar(instr, upper, VU_SpecialReg::I);
+            break;
+        case 0x20:
+            //ADDq
+            check_q_stall(instrs);
+            instr.op = IR::Opcode::VAddVectorByScalar;
+            op_vector_by_scalar(instr, upper, VU_SpecialReg::Q);
             break;
         case 0x21:
             //MADDq
@@ -732,19 +764,45 @@ void VU_JitTranslator::lower1_special(std::vector<IR::Instruction> &instrs, uint
             break;
         case 0x35:
             //SQI
+            update_xgkick(instrs);
             instr.op = IR::Opcode::StoreQuadInc;
+            instr.set_field((lower >> 21) & 0xF);
+            instr.set_base((lower >> 16) & 0xF);
+            instr.set_source((lower >> 11) & 0x1F);
+            break;
+        case 0x36:
+            //LQD
+            instr.op = IR::Opcode::LoadQuadDec;
+            instr.set_field((lower >> 21) & 0xF);
+            instr.set_dest((lower >> 16) & 0x1F);
+            instr.set_base((lower >> 11) & 0xF);
+            break;
+        case 0x37:
+            //SQD
+            update_xgkick(instrs);
+            instr.op = IR::Opcode::StoreQuadDec;
             instr.set_field((lower >> 21) & 0xF);
             instr.set_base((lower >> 16) & 0xF);
             instr.set_source((lower >> 11) & 0x1F);
             break;
         case 0x38:
             //DIV
+            start_q_event(instrs, 7);
             instr.op = IR::Opcode::VDiv;
             instr.set_source((lower >> 11) & 0x1F);
             instr.set_source2((lower >> 16) & 0x1F);
             instr.set_field((lower >> 21) & 0x3);
             instr.set_field2((lower >> 23) & 0x3);
-            q_pipeline_delay = 7;
+            has_q_stalled = true;
+            break;
+        case 0x3A:
+            //RSQRT
+            start_q_event(instrs, 13);
+            instr.op = IR::Opcode::VRsqrt;
+            instr.set_source((lower >> 11) & 0x1F);
+            instr.set_source2((lower >> 16) & 0x1F);
+            instr.set_field((lower >> 21) & 0x3);
+            instr.set_field2((lower >> 23) & 0x3);
             has_q_stalled = true;
             break;
         case 0x3B:
@@ -772,6 +830,15 @@ void VU_JitTranslator::lower1_special(std::vector<IR::Instruction> &instrs, uint
             instr.set_dest((lower >> 16) & 0xF);
             instr.set_field((lower >> 21) & 0xF);
             instr.set_source(0);
+            break;
+        case 0x3F:
+            //ISWR
+            update_xgkick(instrs);
+            instr.op = IR::Opcode::StoreInt;
+            instr.set_field((lower >> 21) & 0xF);
+            instr.set_source((lower >> 16) & 0xF);
+            instr.set_base((lower >> 11) & 0xF);
+            instr.set_source2(0);
             break;
         case 0x64:
             //MFP
@@ -805,6 +872,12 @@ void VU_JitTranslator::lower1_special(std::vector<IR::Instruction> &instrs, uint
             instr.set_source((lower >> 11) & 0x1F);
             instr.set_field((lower >> 21) & 0x3);
             break;
+        case 0x79:
+            //ERSQRT
+            instr.op = IR::Opcode::VERsqrt;
+            instr.set_source((lower >> 11) & 0x1F);
+            instr.set_field((lower >> 21) & 0x3);
+            break;
         case 0x7B:
             //WAITp - TODO
             return;
@@ -835,6 +908,7 @@ void VU_JitTranslator::lower2(std::vector<IR::Instruction> &instrs, uint32_t low
         case 0x01:
             //SQ
         {
+            update_xgkick(instrs);
             int16_t imm = (int16_t)((lower & 0x400) ? (lower & 0x3ff) | 0xfc00 : (lower & 0x3ff));
             imm *= 16;
             instr.op = IR::Opcode::StoreQuad;
@@ -860,6 +934,7 @@ void VU_JitTranslator::lower2(std::vector<IR::Instruction> &instrs, uint32_t low
         case 0x05:
             //ISW
         {
+            update_xgkick(instrs);
             int16_t imm = lower & 0x7FF;
             imm = ((int16_t)(imm << 5)) >> 5;
             imm *= 16;
@@ -900,10 +975,11 @@ void VU_JitTranslator::lower2(std::vector<IR::Instruction> &instrs, uint32_t low
             instr.op = IR::Opcode::AndClipFlags;
             instr.set_source(lower & 0xFFFFFF);
             break;
-        /*case 0x13:
+        case 0x13:
             //FCOR
             instr.op = IR::Opcode::OrClipFlags;
-            break;*/
+            instr.set_source(lower & 0xFFFFFF);
+            break;
         case 0x1A:
             //FMAND
             instr.op = IR::Opcode::VMacAnd;

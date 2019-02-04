@@ -33,6 +33,7 @@ class VU_JitTranslator
         int q_pipeline_delay;
 
         int cycles_this_block;
+        int cycles_since_xgkick_update;
 
         VU_InstrInfo instr_info[1024 * 16];
         uint16_t end_PC;
@@ -44,7 +45,9 @@ class VU_JitTranslator
         void interpreter_pass(VectorUnit& vu, uint8_t *instr_mem);
         void flag_pass(VectorUnit& vu, uint8_t *instr_mem);
 
+        void update_xgkick(std::vector<IR::Instruction>& instrs);
         void check_q_stall(std::vector<IR::Instruction>& instrs);
+        void start_q_event(std::vector<IR::Instruction>& instrs, int latency);
 
         void op_vectors(IR::Instruction& instr, uint32_t upper);
         void op_acc_and_vectors(IR::Instruction& instr, uint32_t upper);

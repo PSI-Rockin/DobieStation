@@ -54,12 +54,17 @@ class Emitter64
 
         void CMP16_IMM(uint16_t imm, REG_64 op);
         void CMP16_REG(REG_64 op2, REG_64 op1);
+        void CMP32_EAX(uint32_t imm);
+
+        void DEC16(REG_64 dest);
 
         void NOT16(REG_64 dest);
 
         void OR16_REG(REG_64 source, REG_64 dest);
         void OR32_REG(REG_64 source, REG_64 dest);
+        void OR32_EAX(uint32_t imm);
 
+        void SETE_REG(REG_64 dest);
         void SETE_MEM(REG_64 indir_dest);
         void SETG_MEM(REG_64 indir_dest);
         void SETGE_MEM(REG_64 indir_dest);

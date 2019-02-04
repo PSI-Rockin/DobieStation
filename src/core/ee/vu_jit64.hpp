@@ -53,6 +53,8 @@ class VU_JIT64
         uint16_t cycle_count;
 
         void clamp_result(REG_64 xmm_reg);
+        void sse_abs(REG_64 source, REG_64 dest);
+        void sse_div_check(REG_64 num, REG_64 denom, VU_R& dest);
 
         void handle_cond_branch(VectorUnit& vu);
         void update_mac_flags(VectorUnit& vu, REG_64 xmm_reg, uint8_t field);
@@ -68,6 +70,9 @@ class VU_JIT64
         void store_quad(VectorUnit& vu, IR::Instruction& instr);
         void load_quad_inc(VectorUnit& vu, IR::Instruction& instr);
         void store_quad_inc(VectorUnit& vu, IR::Instruction& instr);
+        void load_quad_dec(VectorUnit& vu, IR::Instruction& instr);
+        void store_quad_dec(VectorUnit& vu, IR::Instruction& instr);
+
         void move_int_reg(VectorUnit& vu, IR::Instruction& instr);
 
         void jump(VectorUnit& vu, IR::Instruction& instr);
@@ -109,6 +114,7 @@ class VU_JIT64
 
         void clip(VectorUnit& vu, IR::Instruction& instr);
         void div(VectorUnit& vu, IR::Instruction& instr);
+        void rsqrt(VectorUnit& vu, IR::Instruction& instr);
 
         void fixed_to_float(VectorUnit& vu, IR::Instruction& instr, int table_entry);
         void float_to_fixed(VectorUnit& vu, IR::Instruction& instr, int table_entry);
@@ -122,17 +128,22 @@ class VU_JIT64
         void set_clip_flags(VectorUnit& vu, IR::Instruction& instr);
         void get_clip_flags(VectorUnit& vu, IR::Instruction& instr);
         void and_clip_flags(VectorUnit& vu, IR::Instruction& instr);
+        void or_clip_flags(VectorUnit& vu, IR::Instruction& instr);
 
         void move_from_p(VectorUnit& vu, IR::Instruction& instr);
 
         void eleng(VectorUnit& vu, IR::Instruction& instr);
         void erleng(VectorUnit& vu, IR::Instruction& instr);
         void esqrt(VectorUnit& vu, IR::Instruction& instr);
+        void ersqrt(VectorUnit& vu, IR::Instruction& instr);
 
+        void start_q_event(VectorUnit& vu, IR::Instruction& instr);
+        void check_q_pipeline(VectorUnit& vu, IR::Instruction& instr);
         void update_q(VectorUnit& vu, IR::Instruction& instr);
         void update_mac_pipeline(VectorUnit& vu);
         void move_xtop(VectorUnit& vu, IR::Instruction& instr);
         void xgkick(VectorUnit& vu, IR::Instruction& instr);
+        void update_xgkick(VectorUnit& vu, IR::Instruction& instr);
         void stop(VectorUnit& vu, IR::Instruction& instr);
 
         int search_for_register(AllocReg* regs, int vu_reg);

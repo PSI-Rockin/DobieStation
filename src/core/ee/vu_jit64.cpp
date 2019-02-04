@@ -1,6 +1,7 @@
 #include <cmath>
 
 #include "vu_jit64.hpp"
+#include "../gif.hpp"
 
 #include "../errors.hpp"
 
@@ -86,6 +87,33 @@ void vu_clip(VectorUnit& vu, uint32_t imm)
     vu.clip(imm);
 }
 
+void vu_start_q_event(VectorUnit& vu, int latency, int cycles)
+{
+    vu.cycle_count += cycles;
+    vu.finish_DIV_event = vu.cycle_count + latency;
+}
+
+void vu_check_q_pipeline(VectorUnit& vu, int cycles)
+{
+    if (vu.cycle_count < vu.finish_DIV_event && (vu.cycle_count + cycles) >= vu.finish_DIV_event)
+        vu.Q.u = vu.new_Q_instance.u;
+
+    vu.cycle_count += cycles;
+}
+
+void vu_update_xgkick(VectorUnit& vu, int cycles)
+{
+    if (vu.transferring_GIF)
+    {
+        vu.gif->request_PATH(1, true);
+        while (cycles > 0 && vu.gif->path_active(1))
+        {
+            cycles--;
+            vu.handle_XGKICK();
+        }
+    }
+}
+
 void VU_JIT64::reset()
 {
     abi_int_count = 0;
@@ -145,6 +173,41 @@ void VU_JIT64::clamp_result(REG_64 xmm_reg)
 
     //reg = min_unsigned(reg, 0xFF7FFFFF)
     emitter.PMINUD_XMM_FROM_MEM(REG_64::R15, xmm_reg);
+}
+
+/**
+ * This should not be used if source and dest are the same variable.
+ */
+void VU_JIT64::sse_abs(REG_64 source, REG_64 dest)
+{
+    emitter.load_addr((uint64_t)&abs_constant, REG_64::RAX);
+    emitter.MOVAPS_FROM_MEM(REG_64::RAX, dest);
+    emitter.PAND_XMM(source, dest);
+}
+
+void VU_JIT64::sse_div_check(REG_64 num, REG_64 denom, VU_R& dest)
+{
+    //Division by zero check
+    emitter.MOVD_FROM_XMM(denom, REG_64::RAX);
+    emitter.TEST32_EAX(0x7FFFFFFF);
+
+    uint8_t* normal_div = emitter.JNE_NEAR_DEFERRED();
+
+    //Load MAX_FLT to destination
+    emitter.load_addr((uint64_t)&max_flt_constant, REG_64::R15);
+    emitter.MOVAPS_FROM_MEM(REG_64::R15, num);
+    emitter.load_addr((uint64_t)&dest, REG_64::RAX);
+    emitter.MOVAPS_TO_MEM(num, REG_64::RAX);
+
+    uint8_t* div_by_zero_end = emitter.JMP_NEAR_DEFERRED();
+    emitter.set_jump_dest(normal_div);
+
+    emitter.DIVPS(denom, num);
+
+    emitter.load_addr((uint64_t)&dest, REG_64::RAX);
+    emitter.MOVAPS_TO_MEM(num, REG_64::RAX);
+
+    emitter.set_jump_dest(div_by_zero_end);
 }
 
 void VU_JIT64::handle_cond_branch(VectorUnit& vu)
@@ -432,6 +495,67 @@ void VU_JIT64::store_quad_inc(VectorUnit &vu, IR::Instruction &instr)
         emitter.INC16(base);
 }
 
+void VU_JIT64::load_quad_dec(VectorUnit &vu, IR::Instruction &instr)
+{
+    uint8_t field = convert_field(instr.get_field());
+    REG_64 base = alloc_int_reg(vu, instr.get_base(), REG_STATE::READ_WRITE);
+
+    if (instr.get_base())
+        emitter.DEC16(base);
+
+    //addr = (int_reg * 16) & mem_mask
+    emitter.MOVZX64_REG(base, REG_64::RAX);
+    emitter.SHL32_REG_IMM(4, REG_64::RAX);
+    emitter.AND32_EAX(vu.mem_mask);
+
+    //vf_reg.field = *(_XMM*)&vu.data_mem.m[addr]
+    emitter.load_addr((uint64_t)&vu.data_mem.m, REG_64::R15);
+    emitter.ADD64_REG(REG_64::RAX, REG_64::R15);
+
+    if (field == 0xF)
+    {
+        REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::WRITE);
+        emitter.MOVAPS_FROM_MEM(REG_64::R15, dest);
+    }
+    else
+    {
+        REG_64 temp = REG_64::XMM0;
+        REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
+        emitter.MOVAPS_FROM_MEM(REG_64::R15, temp);
+        emitter.BLENDPS(field, temp, dest);
+    }
+}
+
+void VU_JIT64::store_quad_dec(VectorUnit &vu, IR::Instruction &instr)
+{
+    uint8_t field = convert_field(instr.get_field());
+    REG_64 temp = REG_64::XMM0;
+    REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ);
+    REG_64 base = alloc_int_reg(vu, instr.get_base(), REG_STATE::READ_WRITE);
+
+    if (instr.get_base())
+        emitter.DEC16(base);
+
+    //addr = (int_reg * 16) & mem_mask
+    emitter.MOVZX64_REG(base, REG_64::RAX);
+    emitter.SHL16_REG_IMM(4, REG_64::RAX);
+    emitter.AND16_AX(vu.mem_mask);
+
+    emitter.load_addr((uint64_t)&vu.data_mem.m, REG_64::R15);
+    emitter.ADD64_REG(REG_64::RAX, REG_64::R15);
+
+    if (field == 0xF)
+    {
+        emitter.MOVAPS_TO_MEM(source, REG_64::R15);
+    }
+    else
+    {
+        emitter.MOVAPS_FROM_MEM(REG_64::R15, temp);
+        emitter.BLENDPS(field, source, temp);
+        emitter.MOVAPS_TO_MEM(temp, REG_64::R15);
+    }
+}
+
 void VU_JIT64::move_int_reg(VectorUnit &vu, IR::Instruction &instr)
 {
     REG_64 dest = alloc_int_reg(vu, instr.get_dest(), REG_STATE::WRITE);
@@ -711,10 +835,7 @@ void VU_JIT64::abs(VectorUnit &vu, IR::Instruction &instr)
 
     REG_64 temp = REG_64::XMM0;
 
-    //xmm_dest = xmm_source & 0x7FFF_FFFF
-    emitter.load_addr((uint64_t)&abs_constant, REG_64::RAX);
-    emitter.MOVAPS_FROM_MEM(REG_64::RAX, temp);
-    emitter.PAND_XMM(source, temp);
+    sse_abs(source, temp);
     emitter.BLENDPS(field, temp, dest);
 }
 
@@ -1120,31 +1241,34 @@ void VU_JIT64::div(VectorUnit &vu, IR::Instruction &instr)
     uint8_t num_field = instr.get_field();
     uint8_t denom_field = instr.get_field2();
 
-    //Division by zero check
-    emitter.MOVD_FROM_XMM(denom, REG_64::RAX);
-    emitter.TEST32_EAX(0x7FFFFFFF);
-
-    uint8_t* normal_div = emitter.JNE_NEAR_DEFERRED();
-
-    //Load MAX_FLT to Q
-    emitter.load_addr((uint64_t)&max_flt_constant, REG_64::R15);
-    emitter.MOVAPS_FROM_MEM(REG_64::R15, temp);
-    emitter.load_addr((uint64_t)&vu.new_Q_instance, REG_64::RAX);
-    emitter.MOVAPS_TO_MEM(temp, REG_64::RAX);
-
-    uint8_t* div_by_zero_end = emitter.JMP_NEAR_DEFERRED();
-    emitter.set_jump_dest(normal_div);
-
     //Insert the float value in num/denom into bits 0-31 in temp/temp2, then zero out bits 32-127
     emitter.INSERTPS(num_field, 0, 0b1110, num, temp);
     emitter.INSERTPS(denom_field, 0, 0b1110, denom, temp2);
 
-    emitter.DIVPS(temp2, temp);
+    sse_div_check(temp, temp2, vu.new_Q_instance);
+}
 
-    emitter.load_addr((uint64_t)&vu.new_Q_instance, REG_64::RAX);
-    emitter.MOVAPS_TO_MEM(temp, REG_64::RAX);
+void VU_JIT64::rsqrt(VectorUnit &vu, IR::Instruction &instr)
+{
+    REG_64 num = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ);
+    REG_64 denom = alloc_sse_reg(vu, instr.get_source2(), REG_STATE::READ);
+    REG_64 temp = REG_64::XMM0;
+    REG_64 temp2 = REG_64::XMM1;
 
-    emitter.set_jump_dest(div_by_zero_end);
+    uint8_t num_field = instr.get_field();
+    uint8_t denom_field = instr.get_field2();
+
+    //Clear the negative bit in the denominator
+    sse_abs(denom, temp2);
+
+    //Insert the float value in num/denom into bits 0-31 in temp/temp2, then zero out bits 32-127
+    emitter.INSERTPS(num_field, 0, 0b1110, num, temp);
+    emitter.INSERTPS(denom_field, 0, 0b1110, temp2, temp2);
+
+    //denom = sqrt(denom)
+    emitter.SQRTPS(temp2, temp2);
+
+    sse_div_check(temp, temp2, vu.new_Q_instance);
 }
 
 void VU_JIT64::fixed_to_float(VectorUnit &vu, IR::Instruction &instr, int table_entry)
@@ -1335,6 +1459,21 @@ void VU_JIT64::and_clip_flags(VectorUnit &vu, IR::Instruction &instr)
     emitter.MOV32_REG(REG_64::RAX, vi1);
 }
 
+void VU_JIT64::or_clip_flags(VectorUnit &vu, IR::Instruction &instr)
+{
+    REG_64 vi1 = alloc_int_reg(vu, 1, REG_STATE::WRITE);
+
+    //vi1 = (flags | imm) == 0xFFFFFF
+    emitter.load_addr((uint64_t)&vu.clip_flags, REG_64::RAX);
+    emitter.MOV32_FROM_MEM(REG_64::RAX, REG_64::RAX);
+    emitter.OR32_EAX(instr.get_source());
+    emitter.AND32_EAX(0xFFFFFF);
+    emitter.CMP32_EAX(0xFFFFFF);
+    emitter.SETE_REG(REG_64::RAX);
+    emitter.AND32_EAX(0x1);
+    emitter.MOV32_REG(REG_64::RAX, vi1);
+}
+
 void VU_JIT64::move_from_p(VectorUnit &vu, IR::Instruction &instr)
 {
     uint8_t field = convert_field(instr.get_field());
@@ -1396,6 +1535,41 @@ void VU_JIT64::esqrt(VectorUnit &vu, IR::Instruction &instr)
 
     emitter.load_addr((uint64_t)&vu.P, REG_64::RAX);
     emitter.MOVAPS_TO_MEM(temp, REG_64::RAX);
+}
+
+void VU_JIT64::ersqrt(VectorUnit &vu, IR::Instruction &instr)
+{
+    uint8_t field = instr.get_field();
+    REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ);
+    REG_64 denom = REG_64::XMM0;
+    REG_64 num = REG_64::XMM1;
+
+    emitter.SQRTPS(source, denom);
+    emitter.INSERTPS(field, 0, 0, denom, denom);
+
+    //Divide 1.0 by sqrt(source)
+    emitter.MOV32_REG_IMM(0x3F800000, REG_64::RAX);
+    emitter.MOVD_TO_XMM(REG_64::RAX, num);
+
+    emitter.DIVPS(denom, num);
+
+    emitter.load_addr((uint64_t)&vu.P, REG_64::RAX);
+    emitter.MOVAPS_TO_MEM(num, REG_64::RAX);
+}
+
+void VU_JIT64::start_q_event(VectorUnit &vu, IR::Instruction &instr)
+{
+    prepare_abi(vu, (uint64_t)&vu);
+    prepare_abi(vu, instr.get_source());
+    prepare_abi(vu, instr.get_source2());
+    call_abi_func((uint64_t)vu_start_q_event);
+}
+
+void VU_JIT64::check_q_pipeline(VectorUnit &vu, IR::Instruction &instr)
+{
+    prepare_abi(vu, (uint64_t)&vu);
+    prepare_abi(vu, instr.get_source());
+    call_abi_func((uint64_t)vu_check_q_pipeline);
 }
 
 void VU_JIT64::update_q(VectorUnit &vu, IR::Instruction &instr)
@@ -1461,6 +1635,21 @@ void VU_JIT64::xgkick(VectorUnit &vu, IR::Instruction &instr)
     emitter.MOV16_TO_MEM(REG_64::RAX, REG_64::R15);
 
     emitter.set_jump_dest(stall_addr);
+}
+
+void VU_JIT64::update_xgkick(VectorUnit &vu, IR::Instruction &instr)
+{
+    flush_regs(vu);
+    for (int i = 0; i < 16; i++)
+    {
+        xmm_regs[i].used = false;
+        xmm_regs[i].age = 0;
+        int_regs[i].used = false;
+        int_regs[i].age = 0;
+    }
+    prepare_abi(vu, (uint64_t)&vu);
+    prepare_abi(vu, instr.get_source());
+    call_abi_func((uint64_t)vu_update_xgkick);
 }
 
 void VU_JIT64::stop(VectorUnit &vu, IR::Instruction &instr)
@@ -1700,6 +1889,12 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
         case IR::Opcode::StoreQuadInc:
             store_quad_inc(vu, instr);
             break;
+        case IR::Opcode::LoadQuadDec:
+            load_quad_dec(vu, instr);
+            break;
+        case IR::Opcode::StoreQuadDec:
+            store_quad_dec(vu, instr);
+            break;
         case IR::Opcode::MoveIntReg:
             move_int_reg(vu, instr);
             break;
@@ -1787,6 +1982,9 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
         case IR::Opcode::VDiv:
             div(vu, instr);
             break;
+        case IR::Opcode::VRsqrt:
+            rsqrt(vu, instr);
+            break;
         case IR::Opcode::VFixedToFloat0:
             fixed_to_float(vu, instr, 0);
             break;
@@ -1853,6 +2051,9 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
         case IR::Opcode::AndClipFlags:
             and_clip_flags(vu, instr);
             break;
+        case IR::Opcode::OrClipFlags:
+            or_clip_flags(vu, instr);
+            break;
         case IR::Opcode::VEleng:
             eleng(vu, instr);
             break;
@@ -1862,8 +2063,17 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
         case IR::Opcode::VESqrt:
             esqrt(vu, instr);
             break;
+        case IR::Opcode::VERsqrt:
+            ersqrt(vu, instr);
+            break;
         case IR::Opcode::VMoveFromP:
             move_from_p(vu, instr);
+            break;
+        case IR::Opcode::StartQEvent:
+            start_q_event(vu, instr);
+            break;
+        case IR::Opcode::UpdateQPipeline:
+            check_q_pipeline(vu, instr);
             break;
         case IR::Opcode::UpdateQ:
             update_q(vu, instr);
@@ -1879,6 +2089,9 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
             break;
         case IR::Opcode::Xgkick:
             xgkick(vu, instr);
+            break;
+        case IR::Opcode::UpdateXgkick:
+            update_xgkick(vu, instr);
             break;
         case IR::Opcode::Stop:
             stop(vu, instr);
