@@ -19,6 +19,7 @@ void GraphicsInterface::reset()
     path_status[1] = 4;
     path_status[2] = 4;
     path_status[3] = 4;
+    path3_fifo_size = 0;
 
     intermittent_mode = false;
     path3_vif_masked = false;
@@ -50,9 +51,13 @@ uint32_t GraphicsInterface::read_STAT()
 
 void GraphicsInterface::write_MODE(uint32_t value)
 {
+    bool old_mask = path3_masked(3);
     intermittent_mode = value & 0x4;
     path3_mode_masked = value & 0x1;
     resume_path3();
+
+    if (old_mask && !path3_masked(3) && path_active(3))
+        flush_path3_fifo();
 }
 
 void GraphicsInterface::process_PACKED(uint128_t data)
@@ -238,7 +243,11 @@ void GraphicsInterface::feed_GIF(uint128_t data)
 
 void GraphicsInterface::set_path3_vifmask(int value)
 {
+    bool old_mask = path3_masked(3);
     path3_vif_masked = value;
+
+    if (old_mask && !path3_masked(3) && path_active(3))
+        flush_path3_fifo();
 }
 
 bool GraphicsInterface::path3_masked(int index)
@@ -281,6 +290,8 @@ void GraphicsInterface::request_PATH(int index, bool canInterruptPath3)
     if (!active_path || (canInterruptPath3 && interrupt_path3(index)))
     {
         active_path = index;
+        if (path_active(3) && !path3_masked(3))
+            flush_path3_fifo();
         //printf("[GIF] PATH%d Active!\n", active_path);
     }
     else
@@ -305,6 +316,8 @@ void GraphicsInterface::deactivate_PATH(int index)
             {
                 path_queue &= ~bit;
                 active_path = path;
+                if (active_path == 3 && !path3_masked(3))
+                    flush_path3_fifo();
                 //printf("[GIF] PATH%d Activated from queue\n", active_path);
                 break;
             }
@@ -338,5 +351,23 @@ void GraphicsInterface::send_PATH2(uint32_t data[])
 void GraphicsInterface::send_PATH3(uint128_t data)
 {
     //printf("[GIF] Send PATH3 $%08X_%08X_%08X_%08X\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
-    feed_GIF(data);
+    if (!path3_masked(3))
+        feed_GIF(data);
+    else if (path3_fifo_size < 16)
+    {
+        path3_fifo[path3_fifo_size] = data;
+        path3_fifo_size++;
+    }
+}
+
+void GraphicsInterface::flush_path3_fifo()
+{
+    for (int i = 0; i < path3_fifo_size; i++)
+        feed_GIF(path3_fifo[i]);
+    path3_fifo_size = 0;
+}
+
+bool GraphicsInterface::fifo_full()
+{
+    return path3_fifo_size == 16;
 }

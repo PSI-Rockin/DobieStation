@@ -266,7 +266,7 @@ void DMAC::process_GIF(int cycles)
         cycles--;
         if (channels[GIF].quadword_count)
         {
-            if (gif->path_active(3))
+            if (gif->path_active(3) && !gif->fifo_full())
             {
                 gif->send_PATH3(fetch128(channels[GIF].address));
 

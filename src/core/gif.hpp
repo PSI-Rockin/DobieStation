@@ -32,6 +32,9 @@ class GraphicsInterface
         
         GIFPath path[4];
 
+        uint128_t path3_fifo[16];
+        int path3_fifo_size;
+
         uint8_t active_path;
         uint8_t path_queue;
         //4 = Idle, Others match tag ID's
@@ -45,10 +48,13 @@ class GraphicsInterface
         void process_PACKED(uint128_t quad);
         void process_REGLIST(uint128_t quad);
         void feed_GIF(uint128_t quad);
+
+        void flush_path3_fifo();
     public:
         GraphicsInterface(GraphicsSynthesizer* gs);
         void reset();
 
+        bool fifo_full();
         bool path_active(int index);
         bool path_activepath3(int index);
         void resume_path3();
@@ -78,7 +84,7 @@ inline bool GraphicsInterface::path_active(int index)
     {
         interrupt_path3(index);
     }
-    return (active_path == index) && !path3_masked(index) && !gs->stalled();
+    return (active_path == index) && !gs->stalled();
 }
 
 inline bool GraphicsInterface::path_activepath3(int index)
@@ -87,7 +93,7 @@ inline bool GraphicsInterface::path_activepath3(int index)
     {
         interrupt_path3(index);
     }
-    return ((active_path == index) || (path_queue & (1 << 3))) && !path3_masked(index) && !gs->stalled();
+    return ((active_path == index) || (path_queue & (1 << 3))) && !gs->stalled();
 }
 
 inline void GraphicsInterface::resume_path3()
