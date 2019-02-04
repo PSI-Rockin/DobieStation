@@ -56,7 +56,7 @@ void GraphicsInterface::write_MODE(uint32_t value)
     path3_mode_masked = value & 0x1;
     resume_path3();
 
-    if (old_mask && !path3_masked(3) && path_active(3))
+    if (old_mask && !path3_masked(3) && (path_active(3) || active_path == 0))
         flush_path3_fifo();
 }
 
@@ -246,7 +246,7 @@ void GraphicsInterface::set_path3_vifmask(int value)
     bool old_mask = path3_masked(3);
     path3_vif_masked = value;
 
-    if (old_mask && !path3_masked(3) && path_active(3))
+    if (old_mask && !path3_masked(3) && (path_active(3) || active_path == 0))
         flush_path3_fifo();
 }
 

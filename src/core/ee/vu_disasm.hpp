@@ -69,6 +69,7 @@ namespace VU_Disasm
     std::string branch_zero(const std::string op, uint32_t PC, uint32_t instr);
     std::string lq(uint32_t instr);
     std::string sq(uint32_t instr);
+    std::string fceq(uint32_t instr);
     std::string fcset(uint32_t instr);
     std::string fcand(uint32_t instr);
     std::string fcor(uint32_t instr);

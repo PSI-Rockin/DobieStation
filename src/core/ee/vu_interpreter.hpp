@@ -114,6 +114,7 @@ namespace VU_Interpreter
     void isw(VectorUnit& vu, uint32_t instr);
     void iaddiu(VectorUnit& vu, uint32_t instr);
     void isubiu(VectorUnit& vu, uint32_t instr);
+    void fceq(VectorUnit& vu, uint32_t instr);
     void fcset(VectorUnit& vu, uint32_t instr);
     void fcand(VectorUnit& vu, uint32_t instr);
     void fcor(VectorUnit& vu, uint32_t instr);

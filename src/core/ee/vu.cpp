@@ -972,6 +972,15 @@ void VectorUnit::fcand(uint32_t value)
         set_int(1, 0);
 }
 
+void VectorUnit::fceq(uint32_t instr)
+{
+    printf("[VU] FCEQ: $%08X\n", instr);
+    if ((*CLIP_flags & 0xFFFFFF) == (instr & 0xFFFFFF))
+        set_int(1, 1);
+    else
+        set_int(1, 0);
+}
+
 void VectorUnit::fcget(uint32_t instr)
 {
     printf("[VU] FCGET: %d\n", _it_);

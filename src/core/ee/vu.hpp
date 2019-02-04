@@ -191,6 +191,7 @@ class VectorUnit
         void ersadd(uint32_t instr);
         void ersqrt(uint32_t instr);
         void fcand(uint32_t instr);
+        void fceq(uint32_t instr);
         void fcget(uint32_t instr);
         void fcor(uint32_t instr);
         void fcset(uint32_t instr);
