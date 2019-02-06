@@ -78,6 +78,7 @@ class VU_JIT64
         void jump(VectorUnit& vu, IR::Instruction& instr);
         void jump_and_link(VectorUnit& vu, IR::Instruction& instr);
         void jump_indirect(VectorUnit& vu, IR::Instruction& instr);
+        void jump_and_link_indirect(VectorUnit& vu, IR::Instruction& instr);
 
         void branch_equal(VectorUnit& vu, IR::Instruction& instr);
         void branch_not_equal(VectorUnit& vu, IR::Instruction& instr);
@@ -96,6 +97,7 @@ class VU_JIT64
         void max_vector_by_scalar(VectorUnit& vu, IR::Instruction& instr);
         void max_vectors(VectorUnit& vu, IR::Instruction& instr);
         void min_vector_by_scalar(VectorUnit& vu, IR::Instruction& instr);
+        void min_vectors(VectorUnit& vu, IR::Instruction& instr);
 
         void add_vectors(VectorUnit& vu, IR::Instruction& instr);
         void add_vector_by_scalar(VectorUnit& vu, IR::Instruction& instr);
@@ -124,11 +126,13 @@ class VU_JIT64
         void move_float(VectorUnit& vu, IR::Instruction& instr);
         void move_rotated_float(VectorUnit& vu, IR::Instruction& instr);
 
+        void mac_eq(VectorUnit& vu, IR::Instruction& instr);
         void mac_and(VectorUnit& vu, IR::Instruction& instr);
         void set_clip_flags(VectorUnit& vu, IR::Instruction& instr);
         void get_clip_flags(VectorUnit& vu, IR::Instruction& instr);
         void and_clip_flags(VectorUnit& vu, IR::Instruction& instr);
         void or_clip_flags(VectorUnit& vu, IR::Instruction& instr);
+        void and_stat_flags(VectorUnit& vu, IR::Instruction& instr);
 
         void move_from_p(VectorUnit& vu, IR::Instruction& instr);
 

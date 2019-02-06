@@ -8,7 +8,7 @@
 
 #include "ee/vu_jit.hpp"
 
-#define CYCLES_PER_FRAME 4900000 * 0.3
+#define CYCLES_PER_FRAME 4900000
 #define VBLANK_START CYCLES_PER_FRAME * 0.75
 
 //These constants are used for the fast boot hack for .isos
