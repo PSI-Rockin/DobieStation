@@ -508,20 +508,41 @@ void IOP_DMA::save_state(ofstream &state)
 
 void GraphicsInterface::load_state(ifstream &state)
 {
+    int size;
+    uint128_t FIFO_buffer[16];
+    state.read((char*)&size, sizeof(size));
+    state.read((char*)&FIFO_buffer, sizeof(uint128_t) * size);
+    for (int i = 0; i < size; i++)
+        FIFO.push(FIFO_buffer[i]);
+
     state.read((char*)&path, sizeof(path));
     state.read((char*)&active_path, sizeof(active_path));
     state.read((char*)&path_queue, sizeof(path_queue));
     state.read((char*)&path3_vif_masked, sizeof(path3_vif_masked));
     state.read((char*)&internal_Q, sizeof(internal_Q));
+    state.read((char*)&path3_dma_waiting, sizeof(path3_dma_waiting));
 }
 
 void GraphicsInterface::save_state(ofstream &state)
 {
+    int size = FIFO.size();
+    uint128_t FIFO_buffer[16];
+    for (int i = 0; i < size; i++)
+    {
+        FIFO_buffer[i] = FIFO.front();
+        FIFO.pop();
+    }
+    state.write((char*)&size, sizeof(size));
+    state.write((char*)&FIFO_buffer, sizeof(uint128_t) * size);
+    for (int i = 0; i < size; i++)
+        FIFO.push(FIFO_buffer[i]);
+
     state.write((char*)&path, sizeof(path));
     state.write((char*)&active_path, sizeof(active_path));
     state.write((char*)&path_queue, sizeof(path_queue));
     state.write((char*)&path3_vif_masked, sizeof(path3_vif_masked));
     state.write((char*)&internal_Q, sizeof(internal_Q));
+    state.write((char*)&path3_dma_waiting, sizeof(path3_dma_waiting));
 }
 
 void SubsystemInterface::load_state(ifstream &state)

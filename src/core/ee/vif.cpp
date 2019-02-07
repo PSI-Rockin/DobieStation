@@ -91,7 +91,7 @@ void VectorInterface::update(int cycles)
         }
         if (wait_for_PATH3)
         {
-            if (gif->path_activepath3(3) && !gif->fifo_full())
+            if (gif->path_activepath3(3))
                 return;
             wait_for_PATH3 = false;
         }

@@ -86,6 +86,7 @@ void Emulator::run()
         ipu.run();
         vif0.update(cycles);
         vif1.update(cycles);
+        gif.run(cycles);
         vu0.run(cycles);
         vu1.run(cycles);
         cycles >>= 2;
