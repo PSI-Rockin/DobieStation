@@ -200,6 +200,10 @@ void VU_JIT64::sse_div_check(REG_64 num, REG_64 denom, VU_R& dest)
 
     uint8_t* normal_div = emitter.JNE_NEAR_DEFERRED();
 
+    //If negative, load MIN_FLT.
+    emitter.TEST32_EAX(0x80000000);
+    uint8_t* load_min = emitter.JNE_NEAR_DEFERRED();
+
     //Load MAX_FLT to destination
     emitter.load_addr((uint64_t)&max_flt_constant, REG_64::R15);
     emitter.MOVAPS_FROM_MEM(REG_64::R15, num);
@@ -207,6 +211,17 @@ void VU_JIT64::sse_div_check(REG_64 num, REG_64 denom, VU_R& dest)
     emitter.MOVAPS_TO_MEM(num, REG_64::RAX);
 
     uint8_t* div_by_zero_end = emitter.JMP_NEAR_DEFERRED();
+
+    emitter.set_jump_dest(load_min);
+
+    //Load MIN_FLT to destination
+    emitter.load_addr((uint64_t)&min_flt_constant, REG_64::R15);
+    emitter.MOVAPS_FROM_MEM(REG_64::R15, num);
+    emitter.load_addr((uint64_t)&dest, REG_64::RAX);
+    emitter.MOVAPS_TO_MEM(num, REG_64::RAX);
+
+    uint8_t* div_by_zero_end2 = emitter.JMP_NEAR_DEFERRED();
+
     emitter.set_jump_dest(normal_div);
 
     emitter.DIVPS(denom, num);
@@ -215,6 +230,7 @@ void VU_JIT64::sse_div_check(REG_64 num, REG_64 denom, VU_R& dest)
     emitter.MOVAPS_TO_MEM(num, REG_64::RAX);
 
     emitter.set_jump_dest(div_by_zero_end);
+    emitter.set_jump_dest(div_by_zero_end2);
 }
 
 void VU_JIT64::handle_cond_branch(VectorUnit& vu)
@@ -911,7 +927,6 @@ void VU_JIT64::min_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
 
 void VU_JIT64::min_vectors(VectorUnit &vu, IR::Instruction &instr)
 {
-    return;
     uint8_t field = convert_field(instr.get_field());
 
     REG_64 op1 = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ_WRITE);
@@ -1388,7 +1403,7 @@ void VU_JIT64::move_to_int(VectorUnit &vu, IR::Instruction &instr)
     else
     {
         REG_64 temp = REG_64::XMM0;
-        emitter.INSERTPS(field, 0, 0b1110, source, temp);
+        emitter.INSERTPS(field, 0, 0, source, temp);
         emitter.MOVD_FROM_XMM(temp, dest);
     }
 

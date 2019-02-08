@@ -451,7 +451,7 @@ void Emitter64::MOVSX64_REG(REG_64 source, REG_64 dest)
 {
     rexw_r_rm(dest, source);
     cache->write<uint8_t>(0x0F);
-    cache->write<uint8_t>(0xBE);
+    cache->write<uint8_t>(0xBF);
     modrm(0b11, dest, source);
 }
 
