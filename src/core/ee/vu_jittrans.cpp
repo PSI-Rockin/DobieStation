@@ -134,6 +134,7 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem)
 
         PC += 8;
         cycles_this_block++;
+        printf("Cycles: %d\n", cycles_this_block);
         cycles_since_xgkick_update++;
     }
 
@@ -314,6 +315,7 @@ void VU_JitTranslator::check_q_stall(std::vector<IR::Instruction> &instrs)
     {
         IR::Instruction q;
         q.op = IR::Opcode::UpdateQPipeline;
+        printf("update q pipeline %d cycles\n", cycles_this_block);
         q.set_source(cycles_this_block);
         instrs.push_back(q);
         cycles_this_block = 0;
@@ -558,12 +560,36 @@ void VU_JitTranslator::upper_special(std::vector<IR::Instruction> &instrs, uint3
     IR::Instruction instr;
     switch (op)
     {
+        case 0x00:
+        case 0x01:
+        case 0x02:
+        case 0x03:
+            //ADDAbc
+            instr.op = IR::Opcode::VAddVectorByScalar;
+            op_acc_by_scalar(instr, upper);
+            break;
+        case 0x04:
+        case 0x05:
+        case 0x06:
+        case 0x07:
+            //SUBAbc
+            instr.op = IR::Opcode::VSubVectorByScalar;
+            op_acc_by_scalar(instr, upper);
+            break;
         case 0x08:
         case 0x09:
         case 0x0A:
         case 0x0B:
             //MADDAbc
             instr.op = IR::Opcode::VMaddAccByScalar;
+            op_acc_by_scalar(instr, upper);
+            break;
+        case 0x0C:
+        case 0x0D:
+        case 0x0E:
+        case 0x0F:
+            //MSUBAbc
+            instr.op = IR::Opcode::VMsubAccByScalar;
             op_acc_by_scalar(instr, upper);
             break;
         case 0x10:
@@ -917,6 +943,11 @@ void VU_JitTranslator::lower1_special(std::vector<IR::Instruction> &instrs, uint
             instr.op = IR::Opcode::MoveXTOP;
             instr.set_dest((lower >> 16) & 0xF);
             break;
+        case 0x69:
+            //XITOP
+            instr.op = IR::Opcode::MoveXITOP;
+            instr.set_dest((lower >> 16) & 0xF);
+            break;
         case 0x6C:
             //XGKICK
             instr.op = IR::Opcode::Xgkick;
@@ -1109,6 +1140,13 @@ void VU_JitTranslator::lower2(std::vector<IR::Instruction> &instrs, uint32_t low
             instr.op = IR::Opcode::BranchNotEqual;
             instr.set_source((lower >> 11) & 0xF);
             instr.set_source2((lower >> 16) & 0xF);
+            instr.set_jump_dest(branch_offset(lower, PC));
+            instr.set_jump_fail_dest(PC + 16);
+            break;
+        case 0x2C:
+            //IBLTZ
+            instr.op = IR::Opcode::BranchLessThanZero;
+            instr.set_source((lower >> 11) & 0xF);
             instr.set_jump_dest(branch_offset(lower, PC));
             instr.set_jump_fail_dest(PC + 16);
             break;

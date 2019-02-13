@@ -233,6 +233,14 @@ void Emitter64::SETGE_MEM(REG_64 indir_dest)
     modrm(0, 0, indir_dest);
 }
 
+void Emitter64::SETL_MEM(REG_64 indir_dest)
+{
+    rex_rm(indir_dest);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x9C);
+    modrm(0, 0, indir_dest);
+}
+
 void Emitter64::SETLE_MEM(REG_64 indir_dest)
 {
     rex_rm(indir_dest);
@@ -585,6 +593,15 @@ void Emitter64::PAND_XMM(REG_64 xmm_source, REG_64 xmm_dest)
     cache->write<uint8_t>(0x0F);
     cache->write<uint8_t>(0xDB);
     modrm(0b11, xmm_dest, xmm_source);
+}
+
+void Emitter64::PAND_XMM_MEM(REG_64 indir_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, indir_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0xDB);
+    modrm(0, xmm_dest, indir_source);
 }
 
 void Emitter64::PMAXSD_XMM(REG_64 xmm_source, REG_64 xmm_dest)

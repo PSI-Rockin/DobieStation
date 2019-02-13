@@ -68,6 +68,7 @@ class Emitter64
         void SETE_MEM(REG_64 indir_dest);
         void SETG_MEM(REG_64 indir_dest);
         void SETGE_MEM(REG_64 indir_dest);
+        void SETL_MEM(REG_64 indir_dest);
         void SETLE_MEM(REG_64 indir_dest);
         void SETNE_REG(REG_64 dest);
         void SETNE_MEM(REG_64 indir_dest);
@@ -124,6 +125,7 @@ class Emitter64
         void RET();
 
         void PAND_XMM(REG_64 xmm_source, REG_64 xmm_dest);
+        void PAND_XMM_MEM(REG_64 indir_source, REG_64 xmm_dest);
         void PMAXSD_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void PMINSD_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void PMINSD_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest);

@@ -82,6 +82,7 @@ class VU_JIT64
 
         void branch_equal(VectorUnit& vu, IR::Instruction& instr);
         void branch_not_equal(VectorUnit& vu, IR::Instruction& instr);
+        void branch_less_than_zero(VectorUnit& vu, IR::Instruction& instr);
         void branch_greater_than_zero(VectorUnit& vu, IR::Instruction& instr);
         void branch_less_or_equal_than_zero(VectorUnit& vu, IR::Instruction& instr);
         void branch_greater_or_equal_than_zero(VectorUnit& vu, IR::Instruction& instr);
@@ -146,6 +147,7 @@ class VU_JIT64
         void update_q(VectorUnit& vu, IR::Instruction& instr);
         void update_mac_pipeline(VectorUnit& vu);
         void move_xtop(VectorUnit& vu, IR::Instruction& instr);
+        void move_xitop(VectorUnit& vu, IR::Instruction& instr);
         void xgkick(VectorUnit& vu, IR::Instruction& instr);
         void update_xgkick(VectorUnit& vu, IR::Instruction& instr);
         void stop(VectorUnit& vu, IR::Instruction& instr);

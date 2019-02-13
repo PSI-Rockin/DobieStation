@@ -29,6 +29,7 @@ INSTR(JumpAndLinkIndirect)
 
 INSTR(BranchEqual)
 INSTR(BranchNotEqual)
+INSTR(BranchLessThanZero)
 INSTR(BranchGreaterThanZero)
 INSTR(BranchGreaterOrEqualThanZero)
 INSTR(BranchLessOrEqualThanZero)
