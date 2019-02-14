@@ -142,6 +142,8 @@ class VU_JIT64
         void esqrt(VectorUnit& vu, IR::Instruction& instr);
         void ersqrt(VectorUnit& vu, IR::Instruction& instr);
 
+        void rinit(VectorUnit& vu, IR::Instruction& instr);
+
         void start_q_event(VectorUnit& vu, IR::Instruction& instr);
         void check_q_pipeline(VectorUnit& vu, IR::Instruction& instr);
         void update_q(VectorUnit& vu, IR::Instruction& instr);

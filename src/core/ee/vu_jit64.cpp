@@ -163,6 +163,10 @@ uint64_t VU_JIT64::get_vf_addr(VectorUnit &vu, int index)
             return (uint64_t)&vu.I;
         case VU_SpecialReg::Q:
             return (uint64_t)&vu.Q;
+        case VU_SpecialReg::P:
+            return (uint64_t)&vu.P;
+        case VU_SpecialReg::R:
+            return (uint64_t)&vu.R;
         default:
             Errors::die("[VU_JIT64] get_vf_addr error: Unrecognized reg %d", index);
     }
@@ -1675,6 +1679,22 @@ void VU_JIT64::ersqrt(VectorUnit &vu, IR::Instruction &instr)
     emitter.MOVAPS_TO_MEM(num, REG_64::RAX);
 }
 
+void VU_JIT64::rinit(VectorUnit &vu, IR::Instruction &instr)
+{
+    uint8_t field = instr.get_field();
+    REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ);
+    REG_64 temp = REG_64::XMM0;
+
+    //R = 0x3F800000 | (reg[field] & 0x007FFFFF)
+    emitter.INSERTPS(field, 0, 0, source, temp);
+    emitter.MOVD_FROM_XMM(temp, REG_64::RAX);
+    emitter.AND32_EAX(0x007FFFFF);
+    emitter.OR32_EAX(0x3F800000);
+
+    emitter.load_addr((uint64_t)&vu.R, REG_64::R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
+}
+
 void VU_JIT64::start_q_event(VectorUnit &vu, IR::Instruction &instr)
 {
     prepare_abi(vu, (uint64_t)&vu);
@@ -2207,6 +2227,9 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
             break;
         case IR::Opcode::VERsqrt:
             ersqrt(vu, instr);
+            break;
+        case IR::Opcode::VRInit:
+            rinit(vu, instr);
             break;
         case IR::Opcode::VMoveFromP:
             move_from_p(vu, instr);

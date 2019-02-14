@@ -87,6 +87,8 @@ INSTR(VErleng)
 INSTR(VESqrt)
 INSTR(VERsqrt)
 
+INSTR(VRInit)
+
 INSTR(StartQEvent)
 INSTR(UpdateQPipeline)
 INSTR(UpdateQ)

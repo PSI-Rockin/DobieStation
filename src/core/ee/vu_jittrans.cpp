@@ -930,6 +930,12 @@ void VU_JitTranslator::lower1_special(std::vector<IR::Instruction> &instrs, uint
             instr.set_base((lower >> 11) & 0xF);
             instr.set_source2(0);
             break;
+        case 0x42:
+            //RINIT
+            instr.op = IR::Opcode::VRInit;
+            instr.set_source((lower >> 11) & 0x1F);
+            instr.set_field((lower >> 21) & 0x3);
+            break;
         case 0x64:
             //MFP
             instr.op = IR::Opcode::VMoveFromP;

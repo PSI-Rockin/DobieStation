@@ -664,14 +664,10 @@ void VectorUnit::branch(bool condition, int16_t imm, bool link, uint8_t linkreg)
             branch_on = true;
             branch_delay_slot = 1;
             new_PC = ((int16_t)PC + imm + 8) & 0x3fff;
-            if (get_id() == 1)
-                printf("[VU1] New block at $%04X\n", new_PC);
             if (link)
                 set_int(linkreg, (PC + 16) / 8);
         }
     }
-    else if (get_id() == 1)
-        printf("[VU1] New block at $%04X\n", PC + 16);
 }
 
 void VectorUnit::jp(uint16_t addr, bool link, uint8_t linkreg)
@@ -688,8 +684,6 @@ void VectorUnit::jp(uint16_t addr, bool link, uint8_t linkreg)
         new_PC = addr & 0x3FFF;
         branch_on = true;
         branch_delay_slot = 1;
-        if (get_id() == 1)
-            printf("[VU1] New block at $%04X\n", new_PC);
         if (link)
             set_int(linkreg, (PC + 16) / 8);
     }
