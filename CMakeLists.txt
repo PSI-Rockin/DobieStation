@@ -44,6 +44,9 @@ set(SOURCES
 	src/core/ee/vu.cpp
 	src/core/ee/vu_disasm.cpp
 	src/core/ee/vu_interpreter.cpp
+	src/core/ee/vu_jit.cpp
+	src/core/ee/vu_jit64.cpp
+	src/core/ee/vu_jittrans.cpp
 	src/core/iop/cdvd.cpp
 	src/core/iop/gamepad.cpp
 	src/core/iop/iop.cpp
@@ -54,6 +57,10 @@ set(SOURCES
 	src/core/iop/memcard.cpp
 	src/core/iop/sio2.cpp
 	src/core/iop/spu.cpp
+	src/core/jitcommon/emitter64.cpp
+	src/core/jitcommon/ir_block.cpp
+	src/core/jitcommon/ir_instr.cpp
+	src/core/jitcommon/jitcache.cpp
 	src/core/tests/iop/alu.cpp
         src/core/emulator.cpp
         src/core/gif.cpp
@@ -100,6 +107,9 @@ set(HEADERS
 	src/core/ee/vu.hpp
 	src/core/ee/vu_disasm.hpp
 	src/core/ee/vu_interpreter.hpp
+	src/core/ee/vu_jit.hpp
+	src/core/ee/vu_jit64.hpp
+	src/core/ee/vu_jittrans.hpp
 	src/core/iop/cdvd.hpp
 	src/core/iop/gamepad.hpp
 	src/core/iop/iop.hpp
@@ -110,6 +120,10 @@ set(HEADERS
 	src/core/iop/memcard.hpp
 	src/core/iop/sio2.hpp
 	src/core/iop/spu.hpp
+	src/core/jitcommon/emitter64.hpp
+	src/core/jitcommon/ir_block.hpp
+	src/core/jitcommon/ir_instr.hpp
+	src/core/jitcommon/jitcache.hpp
 	src/core/emulator.hpp
         src/core/gif.hpp
         src/core/gs.hpp
