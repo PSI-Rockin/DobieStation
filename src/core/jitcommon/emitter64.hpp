@@ -1,5 +1,6 @@
 #ifndef EMITTER64_HPP
 #define EMITTER64_HPP
+#include <cstdint>
 #include "jitcache.hpp"
 
 enum REG_64
