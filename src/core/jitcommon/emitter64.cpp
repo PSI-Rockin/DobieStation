@@ -725,6 +725,22 @@ void Emitter64::INSERTPS(uint8_t count_s, uint8_t count_d, uint8_t zmask, REG_64
     cache->write<uint8_t>(imm);
 }
 
+void Emitter64::MAXPS(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x5F);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
+void Emitter64::MINPS(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x5D);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
 void Emitter64::MULPS(REG_64 xmm_source, REG_64 xmm_dest)
 {
     rex_r_rm(xmm_dest, xmm_source);

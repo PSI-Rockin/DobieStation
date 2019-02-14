@@ -134,7 +134,6 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem)
 
         PC += 8;
         cycles_this_block++;
-        printf("Cycles: %d\n", cycles_this_block);
         cycles_since_xgkick_update++;
     }
 
@@ -315,7 +314,6 @@ void VU_JitTranslator::check_q_stall(std::vector<IR::Instruction> &instrs)
     {
         IR::Instruction q;
         q.op = IR::Opcode::UpdateQPipeline;
-        printf("update q pipeline %d cycles\n", cycles_this_block);
         q.set_source(cycles_this_block);
         instrs.push_back(q);
         cycles_this_block = 0;

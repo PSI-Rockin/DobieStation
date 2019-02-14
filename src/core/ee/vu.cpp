@@ -190,6 +190,15 @@ void VectorUnit::run(int cycles)
         //printf("[$%08X] $%08X:$%08X\n", PC, upper_instr, lower_instr);
         VU_Interpreter::interpret(*this, upper_instr, lower_instr);
 
+        /*if (PC == 0x13B8 || PC == 0x1380)
+        {
+            for (int i = 0; i < 32; i++)
+            {
+                printf("vf%d: (%f, %f, %f, %f)\n", i, gpr[i].f[3], gpr[i].f[2], gpr[i].f[1], gpr[i].f[0]);
+                printf("vf%d: ($%08X, $%08X, $%08X, $%08X)\n", i, gpr[i].u[3], gpr[i].u[2], gpr[i].u[1], gpr[i].u[0]);
+            }
+        }*/
+
         PC += 8;
 
         if (branch_on)
@@ -252,18 +261,16 @@ void VectorUnit::run_jit(int cycles)
     {
         run_event += VU_JIT::run(this);
 
-        /*if ((PC > 0x2100 && PC < 0x2300) || true)
+        /*if (PC > 0x1200 && PC < 0x1500)
         {
             for (int i = 0; i < 32; i++)
             {
                 printf("vf%d: (%f, %f, %f, %f)\n", i, gpr[i].f[3], gpr[i].f[2], gpr[i].f[1], gpr[i].f[0]);
-                //printf("vf%d: ($%08X, $%08X, $%08X, $%08X)\n", i, gpr[i].u[3], gpr[i].u[2], gpr[i].u[1], gpr[i].u[0]);
+                printf("vf%d: ($%08X, $%08X, $%08X, $%08X)\n", i, gpr[i].u[3], gpr[i].u[2], gpr[i].u[1], gpr[i].u[0]);
             }
-            printf("Q: %f newQ: %f\n", Q.f, new_Q_instance.f);
-            printf("run event: %lld div event: %lld\n", run_event, finish_DIV_event);
             //printf("mac: $%04X $%04X $%04X $%04X\n", MAC_pipeline[0], MAC_pipeline[1], MAC_pipeline[2], *MAC_flags & 0xFFFF);
-            for (int i = 0; i < 16; i++)
-                printf("vi%d: $%04X\n", i, int_gpr[i].u);
+            //for (int i = 0; i < 16; i++)
+                //printf("vi%d: $%04X\n", i, int_gpr[i].u);
             //printf("clip: $%08X ($%04X)\n", clip_flags, 0 - ((clip_flags & 0x3FFFF) != 0));
         }*/
     }
@@ -657,10 +664,14 @@ void VectorUnit::branch(bool condition, int16_t imm, bool link, uint8_t linkreg)
             branch_on = true;
             branch_delay_slot = 1;
             new_PC = ((int16_t)PC + imm + 8) & 0x3fff;
+            if (get_id() == 1)
+                printf("[VU1] New block at $%04X\n", new_PC);
             if (link)
                 set_int(linkreg, (PC + 16) / 8);
         }
     }
+    else if (get_id() == 1)
+        printf("[VU1] New block at $%04X\n", PC + 16);
 }
 
 void VectorUnit::jp(uint16_t addr, bool link, uint8_t linkreg)
@@ -677,6 +688,8 @@ void VectorUnit::jp(uint16_t addr, bool link, uint8_t linkreg)
         new_PC = addr & 0x3FFF;
         branch_on = true;
         branch_delay_slot = 1;
+        if (get_id() == 1)
+            printf("[VU1] New block at $%04X\n", new_PC);
         if (link)
             set_int(linkreg, (PC + 16) / 8);
     }

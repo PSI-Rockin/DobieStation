@@ -30,6 +30,8 @@ class SIO2
         uint32_t RECV1;
         uint32_t RECV3;
 
+        int port;
+
         std::queue<uint8_t> FIFO;
         uint32_t control;
 

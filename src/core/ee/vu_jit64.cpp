@@ -899,7 +899,7 @@ void VU_JIT64::max_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     REG_64 temp = REG_64::XMM0;
     emitter.MOVAPS_REG(bc_reg, temp);
     emitter.SHUFPS(bc, temp, temp);
-    emitter.PMAXSD_XMM(source, temp);
+    emitter.MAXPS(source, temp);
     emitter.BLENDPS(field, temp, dest);
 }
 
@@ -913,7 +913,7 @@ void VU_JIT64::max_vectors(VectorUnit &vu, IR::Instruction &instr)
     REG_64 temp = REG_64::XMM0;
 
     emitter.MOVAPS_REG(op1, temp);
-    emitter.PMAXSD_XMM(op2, temp);
+    emitter.MAXPS(op2, temp);
     emitter.BLENDPS(field, temp, dest);
 }
 
@@ -930,7 +930,7 @@ void VU_JIT64::min_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     REG_64 temp = REG_64::XMM0;
     emitter.MOVAPS_REG(bc_reg, temp);
     emitter.SHUFPS(bc, temp, temp);
-    emitter.PMINSD_XMM(source, temp);
+    emitter.MINPS(source, temp);
     emitter.BLENDPS(field, temp, dest);
 }
 
@@ -944,7 +944,7 @@ void VU_JIT64::min_vectors(VectorUnit &vu, IR::Instruction &instr)
     REG_64 temp = REG_64::XMM0;
 
     emitter.MOVAPS_REG(op1, temp);
-    emitter.PMINSD_XMM(op2, temp);
+    emitter.MINPS(op2, temp);
     emitter.BLENDPS(field, temp, dest);
 }
 
@@ -1886,7 +1886,7 @@ REG_64 VU_JIT64::alloc_sse_reg(VectorUnit &vu, int vf_reg, REG_STATE state)
     //If the chosen register is used, flush it back to the VU state.
     if (xmm_regs[xmm].used && xmm_regs[xmm].modified && xmm_regs[xmm].vu_reg)
     {
-        printf("[VU_JIT64] Flushing xmm reg %d! (vf%d)\n", xmm, xmm_regs[xmm].vu_reg);
+        //printf("[VU_JIT64] Flushing xmm reg %d! (vf%d)\n", xmm, xmm_regs[xmm].vu_reg);
         int old_vf_reg = xmm_regs[xmm].vu_reg;
         emitter.load_addr(get_vf_addr(vu, old_vf_reg), REG_64::RAX);
         emitter.MOVAPS_TO_MEM((REG_64)xmm, REG_64::RAX);
@@ -1917,7 +1917,7 @@ REG_64 VU_JIT64::alloc_sse_scratchpad(VectorUnit &vu, int vf_reg)
     int xmm = search_for_register(xmm_regs, vf_reg);
     if (xmm_regs[xmm].used && xmm_regs[xmm].modified && xmm_regs[xmm].vu_reg)
     {
-        printf("[VU_JIT64] Flushing xmm reg %d! (vf%d)\n", xmm, xmm_regs[xmm].vu_reg);
+        //printf("[VU_JIT64] Flushing xmm reg %d! (vf%d)\n", xmm, xmm_regs[xmm].vu_reg);
         int old_vf_reg = xmm_regs[xmm].vu_reg;
         emitter.load_addr(get_vf_addr(vu, old_vf_reg), REG_64::RAX);
         emitter.MOVAPS_TO_MEM((REG_64)xmm, REG_64::RAX);
@@ -1953,7 +1953,7 @@ REG_64 VU_JIT64::alloc_sse_scratchpad(VectorUnit &vu, int vf_reg)
 void VU_JIT64::flush_regs(VectorUnit &vu)
 {
     //Store the contents of all allocated x64 registers into the VU state.
-    printf("[VU_JIT64] Flushing regs\n");
+    //printf("[VU_JIT64] Flushing regs\n");
     for (int i = 0; i < 16; i++)
     {
         int vf_reg = xmm_regs[i].vu_reg;

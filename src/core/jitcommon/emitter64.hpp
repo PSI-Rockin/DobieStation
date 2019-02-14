@@ -140,6 +140,8 @@ class Emitter64
         void CMPNLEPS(REG_64 xmm_source, REG_64 xmm_dest);
         void DPPS(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest);
         void INSERTPS(uint8_t count_s, uint8_t count_d, uint8_t zmask, REG_64 xmm_source, REG_64 xmm_dest);
+        void MAXPS(REG_64 xmm_source, REG_64 xmm_dest);
+        void MINPS(REG_64 xmm_source, REG_64 xmm_dest);
         void MULPS(REG_64 xmm_source, REG_64 xmm_dest);
         void SHUFPS(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest);
         void SQRTPS(REG_64 xmm_source, REG_64 xmm_dest);
