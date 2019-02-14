@@ -2297,18 +2297,6 @@ void VU_JIT64::recompile_block(VectorUnit& vu, IR::Block& block)
     //cache.print_literal_pool();
 }
 
-uint8_t* VU_JIT64::exec_block(VectorUnit& vu)
-{
-    //printf("[VU_JIT64] Executing block at $%04X\n", vu.PC);
-    if (cache.find_block(vu.PC) == -1)
-    {
-        printf("[VU_JIT64] Block not found at $%04X: recompiling\n", vu.PC);
-        IR::Block block = ir.translate(vu, vu.get_instr_mem());
-        recompile_block(vu, block);
-    }
-    return cache.get_current_block_start();
-}
-
 void VU_JIT64::cleanup_recompiler(VectorUnit& vu, bool clear_regs)
 {
     flush_regs(vu);
@@ -2375,6 +2363,19 @@ void VU_JIT64::call_abi_func(uint64_t addr)
     abi_xmm_count = 0;
 }
 
+extern "C"
+uint8_t* exec_block(VU_JIT64& jit, VectorUnit& vu)
+{
+    //printf("[VU_JIT64] Executing block at $%04X\n", vu.PC);
+    if (jit.cache.find_block(vu.PC) == -1)
+    {
+        printf("[VU_JIT64] Block not found at $%04X: recompiling\n", vu.PC);
+        IR::Block block = jit.ir.translate(vu, vu.get_instr_mem());
+        jit.recompile_block(vu, block);
+    }
+    return jit.cache.get_current_block_start();
+}
+
 uint16_t VU_JIT64::run(VectorUnit& vu)
 {
     __asm__ (
@@ -2385,7 +2386,7 @@ uint16_t VU_JIT64::run(VectorUnit& vu)
         "pushq %r15\n"
         "pushq %rdi\n"
 
-        "callq __ZN8VU_JIT6410exec_blockER10VectorUnit\n"
+        "callq _exec_block\n"
         "callq *%rax\n"
 
         "popq %rdi\n"

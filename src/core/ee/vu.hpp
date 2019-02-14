@@ -54,6 +54,9 @@ struct DecodedRegs
 class GraphicsInterface;
 class Emulator;
 class VU_JIT64;
+class VectorUnit;
+
+extern "C" uint8_t* exec_block(VU_JIT64& jit, VectorUnit& vu);
 
 class VectorUnit
 {
@@ -315,6 +318,7 @@ class VectorUnit
         friend void vu_check_q_pipeline(VectorUnit& vu, int cycles);
         friend void vu_update_xgkick(VectorUnit& vu, int cycles);
         friend void vu_update_pipelines(VectorUnit& vu);
+        friend uint8_t* exec_block(VU_JIT64& jit, VectorUnit& vu);
 };
 
 template <typename T>

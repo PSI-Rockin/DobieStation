@@ -27,6 +27,8 @@ enum class REG_STATE
     READ_WRITE
 };
 
+extern "C" uint8_t* exec_block(VU_JIT64& jit, VectorUnit& vu);
+
 class VU_JIT64
 {
     private:
@@ -163,7 +165,7 @@ class VU_JIT64
 
         void emit_instruction(VectorUnit& vu, IR::Instruction& instr);
         void recompile_block(VectorUnit& vu, IR::Block& block);
-        uint8_t* exec_block(VectorUnit& vu);
+        //uint8_t* exec_block(VectorUnit& vu);
         void cleanup_recompiler(VectorUnit& vu, bool clear_regs);
 
         void prepare_abi(VectorUnit& vu, uint64_t value);
@@ -173,6 +175,8 @@ class VU_JIT64
 
         void reset();
         uint16_t run(VectorUnit& vu);
+
+        friend uint8_t* exec_block(VU_JIT64& jit, VectorUnit& vu);
 };
 
 #endif // VU_JIT64_HPP
