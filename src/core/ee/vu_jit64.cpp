@@ -2346,6 +2346,7 @@ void VU_JIT64::prepare_abi(VectorUnit& vu, uint64_t value)
 
 void VU_JIT64::call_abi_func(uint64_t addr)
 {
+    const static REG_64 saved_regs[] = {RCX, RDX, R8, R9, R10, R11};
     emitter.PUSH(REG_64::RCX);
     emitter.PUSH(REG_64::RDX);
     emitter.PUSH(REG_64::R8);
@@ -2386,7 +2387,11 @@ uint16_t VU_JIT64::run(VectorUnit& vu)
         "pushq %r15\n"
         "pushq %rdi\n"
 
+#ifdef __APPLE__
         "callq _exec_block\n"
+#else
+        "callq exec_block\n"
+#endif
         "callq *%rax\n"
 
         "popq %rdi\n"
