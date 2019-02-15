@@ -266,11 +266,19 @@ void DMAC::process_GIF(int cycles)
         cycles--;
         if (channels[GIF].quadword_count)
         {
-            if (gif->path_active(3) && !gif->fifo_full())
+            if (gif->path_active(3) && !gif->fifo_full() && !gif->fifo_draining())
             {
+                //printf("Sending GIF PATH3 DMA\n");
+                gif->dma_waiting(false);
+
                 gif->send_PATH3(fetch128(channels[GIF].address));
 
                 advance_source_dma(GIF);
+            }
+            else
+            {
+                gif->dma_waiting(true);
+                return;
             }
         }
         else
@@ -278,6 +286,7 @@ void DMAC::process_GIF(int cycles)
             if (channels[GIF].tag_end)
             {
                 transfer_end(GIF);
+               // printf("GIF PATH3 DMA Ending\n");
                 gif->deactivate_PATH(3);
                 return;
             }
