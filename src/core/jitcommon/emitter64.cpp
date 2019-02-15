@@ -104,6 +104,14 @@ void Emitter64::ADD64_REG(REG_64 source, REG_64 dest)
     modrm(0b11, source, dest);
 }
 
+void Emitter64::ADD64_REG_IMM(uint32_t imm, REG_64 dest)
+{
+    rexw_rm(dest);
+    cache->write<uint8_t>(0x81);
+    modrm(0b11, 0, dest);
+    cache->write<uint32_t>(imm);
+}
+
 void Emitter64::INC16(REG_64 dest)
 {
     cache->write<uint8_t>(0x66);
@@ -304,6 +312,14 @@ void Emitter64::SUB32_REG(REG_64 source, REG_64 dest)
     rex_r_rm(source, dest);
     cache->write<uint8_t>(0x29);
     modrm(0b11, source, dest);
+}
+
+void Emitter64::SUB64_REG_IMM(uint32_t imm, REG_64 dest)
+{
+    rexw_rm(dest);
+    cache->write<uint8_t>(0x81);
+    modrm(0b11, 5, dest);
+    cache->write<uint32_t>(imm);
 }
 
 void Emitter64::TEST16_REG(REG_64 op2, REG_64 op1)
@@ -579,6 +595,12 @@ void Emitter64::CALL(uint64_t func)
     offset -= (uint64_t)cache->get_current_block_pos();
     cache->write<uint8_t>(0xE8);
     cache->write<uint32_t>(offset - 5);
+}
+
+void Emitter64::CALL_INDIR(REG_64 source)
+{
+    cache->write<uint8_t>(0xFF);
+    modrm(0b11, 2, source);
 }
 
 void Emitter64::RET()

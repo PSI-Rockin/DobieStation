@@ -45,6 +45,7 @@ class Emitter64
         void ADD16_REG(REG_64 source, REG_64 dest);
         void ADD16_REG_IMM(uint16_t imm, REG_64 dest);
         void ADD64_REG(REG_64 source, REG_64 dest);
+        void ADD64_REG_IMM(uint32_t imm, REG_64 dest);
 
         void INC16(REG_64 dest);
 
@@ -80,6 +81,7 @@ class Emitter64
 
         void SUB16_REG_IMM(uint16_t imm, REG_64 dest);
         void SUB32_REG(REG_64 source, REG_64 dest);
+        void SUB64_REG_IMM(uint32_t imm, REG_64 dest);
 
         void TEST16_REG(REG_64 op2, REG_64 op1);
         void TEST32_EAX(uint32_t imm);
@@ -123,6 +125,7 @@ class Emitter64
         void PUSH(REG_64 reg);
         void POP(REG_64 reg);
         void CALL(uint64_t addr);
+        void CALL_INDIR(REG_64 source);
         void RET();
 
         void PAND_XMM(REG_64 xmm_source, REG_64 xmm_dest);
