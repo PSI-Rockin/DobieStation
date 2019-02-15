@@ -48,7 +48,7 @@ void JitCache::flush_all_blocks()
     {
 #ifdef _WIN32
         //Errors::die("[JIT] flush_all_blocks not implemented for WIN32");
-        VirtualFree(blocks[i].block_start, BLOCK_SIZE, MEM_RELEASE);
+        VirtualFree(blocks[i].block_start, 0, MEM_RELEASE);
 #else
         munmap(blocks[i].block_start, BLOCK_SIZE);
 #endif
