@@ -5,14 +5,17 @@ EXTERN exec_block:PROC
 
 .code
 
-run_vu_jit PROC
+run_vu_jit PROC FRAME
     push rbp
+    .pushreg rbp
     mov rbp, rsp
+    .setframe rbp, 0
+    .endprolog
     push rsi
     push rbx
     push rcx
     push rdx
-	push r11
+    push r11
     push r12
     push r13
     push r14
@@ -31,7 +34,7 @@ run_vu_jit PROC
     pop r14
     pop r13
     pop r12
-	pop r11
+    pop r11
     pop rdx
     pop rcx
     pop rbx
