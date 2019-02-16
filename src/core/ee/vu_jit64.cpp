@@ -1192,6 +1192,30 @@ void VU_JIT64::madd_acc_by_scalar(VectorUnit &vu, IR::Instruction &instr)
         update_mac_flags(vu, dest, field);
 }
 
+void VU_JIT64::msub_vectors(VectorUnit &vu, IR::Instruction &instr)
+{
+    uint8_t field = convert_field(instr.get_field());
+
+    REG_64 op1 = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ_WRITE);
+    REG_64 op2 = alloc_sse_reg(vu, instr.get_source2(), REG_STATE::READ_WRITE);
+    REG_64 acc = alloc_sse_reg(vu, VU_SpecialReg::ACC, REG_STATE::READ_WRITE);
+    REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
+    REG_64 temp = REG_64::XMM0;
+    REG_64 temp2 = REG_64::XMM1;
+
+    emitter.MOVAPS_REG(acc, temp2);
+    emitter.MOVAPS_REG(op1, temp);
+    emitter.MULPS(op2, temp);
+    emitter.SUBPS(temp, temp2);
+    clamp_result(temp2);
+
+    if (instr.get_dest())
+        emitter.BLENDPS(field, temp2, dest);
+
+    if (should_update_mac)
+        update_mac_flags(vu, temp2, field);
+}
+
 void VU_JIT64::msub_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
 {
     uint8_t field = convert_field(instr.get_field());
@@ -2119,6 +2143,9 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
             break;
         case IR::Opcode::VMaddAccByScalar:
             madd_acc_by_scalar(vu, instr);
+            break;
+        case IR::Opcode::VMsubVectors:
+            msub_vectors(vu, instr);
             break;
         case IR::Opcode::VMsubVectorByScalar:
             msub_vector_by_scalar(vu, instr);

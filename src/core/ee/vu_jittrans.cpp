@@ -528,6 +528,11 @@ void VU_JitTranslator::translate_upper(std::vector<IR::Instruction>& instrs, uin
             instr.op = IR::Opcode::VSubVectors;
             op_vectors(instr, upper);
             break;
+        case 0x2D:
+            //MSUB
+            instr.op = IR::Opcode::VMsubVectors;
+            op_vectors(instr, upper);
+            break;
         case 0x2E:
             //OPMSUB
             instr.op = IR::Opcode::VOpMsub;
@@ -637,6 +642,12 @@ void VU_JitTranslator::upper_special(std::vector<IR::Instruction> &instrs, uint3
             //MULAbc
             instr.op = IR::Opcode::VMulVectorByScalar;
             op_acc_by_scalar(instr, upper);
+            break;
+        case 0x1C:
+            //MULAq
+            check_q_stall(instrs);
+            instr.op = IR::Opcode::VMulVectorByScalar;
+            op_acc_by_scalar(instr, upper, VU_SpecialReg::Q);
             break;
         case 0x1D:
             //ABS

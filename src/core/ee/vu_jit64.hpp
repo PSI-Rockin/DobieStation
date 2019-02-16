@@ -112,6 +112,7 @@ class VU_JIT64
         void madd_acc_and_vectors(VectorUnit& vu, IR::Instruction& instr);
         void madd_vector_by_scalar(VectorUnit& vu, IR::Instruction& instr);
         void madd_acc_by_scalar(VectorUnit& vu, IR::Instruction& instr);
+        void msub_vectors(VectorUnit& vu, IR::Instruction& instr);
         void msub_vector_by_scalar(VectorUnit& vu, IR::Instruction& instr);
         void msub_acc_by_scalar(VectorUnit& vu, IR::Instruction& instr);
         void opmula(VectorUnit& vu, IR::Instruction& instr);
