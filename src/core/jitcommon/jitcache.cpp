@@ -96,7 +96,9 @@ void JitCache::set_current_block_rx()
 #ifdef _WIN32
     //Errors::die("[JIT] set_current_block_rx not implemented for WIN32");
     DWORD old_protect;
-    bool error = VirtualProtect(current_block->block_start, BLOCK_SIZE, PAGE_EXECUTE_READ, &old_protect);
+    bool pass = VirtualProtect(current_block->block_start, BLOCK_SIZE, PAGE_EXECUTE_READ, &old_protect);
+    if(!pass)
+        Errors::die("[JIT] set_current_block_rx failed");
 #else
     int error = mprotect(current_block->block_start, BLOCK_SIZE, PROT_READ | PROT_EXEC);
     if (error == -1)
