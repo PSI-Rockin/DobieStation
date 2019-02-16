@@ -24,7 +24,7 @@ void JitCache::alloc_block(uint32_t pc)
     new_block.start_pc = pc;
 #ifdef _WIN32
     //Errors::die("[JIT] alloc_block not implemented for WIN32");
-    new_block.block_start = (uint8_t *)VirtualAlloc(0, BLOCK_SIZE, MEM_COMMIT, PAGE_READWRITE);
+    new_block.block_start = (uint8_t *)VirtualAlloc(NULL, BLOCK_SIZE, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
 #else
     new_block.block_start = (uint8_t*)mmap(NULL, BLOCK_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 #endif
@@ -95,8 +95,8 @@ void JitCache::set_current_block_rx()
 {
 #ifdef _WIN32
     //Errors::die("[JIT] set_current_block_rx not implemented for WIN32");
-    PDWORD old_protect;
-    int error = VirtualProtect(current_block->block_start, BLOCK_SIZE, PAGE_EXECUTE_READ, old_protect);
+    DWORD old_protect;
+    bool error = VirtualProtect(current_block->block_start, BLOCK_SIZE, PAGE_EXECUTE_READ, &old_protect);
 #else
     int error = mprotect(current_block->block_start, BLOCK_SIZE, PROT_READ | PROT_EXEC);
     if (error == -1)

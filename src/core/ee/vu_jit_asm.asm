@@ -9,10 +9,10 @@ run_vu_jit PROC
     push rbp
     mov rbp, rsp
     push rsi
-	push rax
     push rbx
     push rcx
     push rdx
+	push r11
     push r12
     push r13
     push r14
@@ -31,10 +31,10 @@ run_vu_jit PROC
     pop r14
     pop r13
     pop r12
+	pop r11
     pop rdx
     pop rcx
     pop rbx
-	pop rax
     pop rsi
     pop rbp
     ret
