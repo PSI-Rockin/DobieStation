@@ -88,12 +88,6 @@ void SIO2::write_serial(uint8_t value)
 
 void SIO2::write_device(uint8_t value)
 {
-    if (port)
-    {
-        RECV1 = 0x1D100;
-        FIFO.push(0x00);
-        return;
-    }
     switch (active_command)
     {
         case SIO_DEVICE::NONE:
@@ -112,6 +106,11 @@ void SIO2::write_device(uint8_t value)
         case SIO_DEVICE::PAD:
         {
             RECV1 = 0x1100;
+            if (port)
+            {
+                FIFO.push(0x00);
+                return;
+            }
             uint8_t reply;
             if (new_command)
             {
