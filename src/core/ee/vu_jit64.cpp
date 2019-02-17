@@ -2343,6 +2343,12 @@ void VU_JIT64::cleanup_recompiler(VectorUnit& vu, bool clear_regs)
         }
     }
 
+    //Mask PC because devs like to branch outside of memory...
+    emitter.load_addr((uint64_t)&vu.PC, REG_64::R15);
+    emitter.MOV16_FROM_MEM(REG_64::R15, REG_64::RAX);
+    emitter.AND32_EAX(vu.mem_mask);
+    emitter.MOV16_TO_MEM(REG_64::RAX, REG_64::R15);
+
     //Return the amount of cycles to update the VUs with
     emitter.MOV16_REG_IMM(cycle_count, REG_64::RAX);
     emitter.load_addr((uint64_t)&cycle_count, REG_64::R15);
