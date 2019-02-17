@@ -29,6 +29,10 @@
  * https://en.wikipedia.org/wiki/X86_calling_conventions#x86-64_calling_conventions
  */
 
+#ifdef _WIN32
+    extern "C" void run_vu_jit();
+#endif
+
 VU_JIT64::VU_JIT64() : emitter(&cache)
 {
     for (int i = 0; i < 4; i++)
@@ -2351,10 +2355,17 @@ void VU_JIT64::cleanup_recompiler(VectorUnit& vu, bool clear_regs)
 
 void VU_JIT64::prepare_abi(VectorUnit& vu, uint64_t value)
 {
+#ifdef _WIN32
+    const static REG_64 regs[] = { RCX, RDX, R8, R9 };
+
+    if (abi_int_count >= 4)
+        Errors::die("[VU_JIT64] ABI integer arguments exceeded 4!");
+#else
     const static REG_64 regs[] = {RDI, RSI, RDX, RCX, R8, R9};
 
     if (abi_int_count >= 6)
         Errors::die("[VU_JIT64] ABI integer arguments exceeded 6!");
+#endif    
 
     REG_64 arg = regs[abi_int_count];
 
@@ -2380,7 +2391,14 @@ void VU_JIT64::call_abi_func(uint64_t addr)
     emitter.PUSH(REG_64::R9);
     emitter.PUSH(REG_64::R10);
     emitter.PUSH(REG_64::R11);
+#ifdef _WIN32
+    emitter.SUB64_REG_IMM(32, REG_64::RSP);
+    emitter.MOV64_OI(addr, REG_64::RAX);
+    emitter.CALL_INDIR(REG_64::RAX);
+    emitter.ADD64_REG_IMM(32, REG_64::RSP);
+#else
     emitter.CALL(addr);
+#endif    
     emitter.POP(REG_64::R11);
     emitter.POP(REG_64::R10);
     emitter.POP(REG_64::R9);
@@ -2406,7 +2424,10 @@ uint8_t* exec_block(VU_JIT64& jit, VectorUnit& vu)
 
 uint16_t VU_JIT64::run(VectorUnit& vu)
 {
-    __asm__ (
+#ifdef _WIN32
+    run_vu_jit();
+#else
+   __asm__ (
         "pushq %rbx\n"
         "pushq %r12\n"
         "pushq %r13\n"
@@ -2428,5 +2449,7 @@ uint16_t VU_JIT64::run(VectorUnit& vu)
         "popq %r12\n"
         "popq %rbx\n"
     );
+#endif
+    
     return cycle_count;
 }
