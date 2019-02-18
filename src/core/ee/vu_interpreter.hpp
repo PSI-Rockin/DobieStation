@@ -6,6 +6,9 @@ namespace VU_Interpreter
 {
     void interpret(VectorUnit& vu, uint32_t upper_instr, uint32_t lower_instr);
 
+    void call_upper(VectorUnit& vu, uint32_t instr);
+    void call_lower(VectorUnit& vu, uint32_t instr);
+
     void upper(VectorUnit& vu, uint32_t instr);
     void addbc(VectorUnit& vu, uint32_t instr);
     void subbc(VectorUnit& vu, uint32_t instr);

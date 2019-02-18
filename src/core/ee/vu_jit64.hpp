@@ -171,6 +171,7 @@ class VU_JIT64
 
         void prepare_abi(VectorUnit& vu, uint64_t value);
         void call_abi_func(uint64_t addr);
+        void fallback_interpreter(VectorUnit& vu, IR::Instruction& instr);
     public:
         VU_JIT64();
 

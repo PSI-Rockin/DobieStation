@@ -1,6 +1,7 @@
 #include <cmath>
 
 #include "vu_jit64.hpp"
+#include "vu_interpreter.hpp"
 #include "../gif.hpp"
 
 #include "../errors.hpp"
@@ -122,6 +123,18 @@ void vu_update_xgkick(VectorUnit& vu, int cycles)
             vu.handle_XGKICK();
         }
     }
+}
+
+void interpreter_upper(VectorUnit& vu, uint32_t instr)
+{
+    VU_Interpreter::upper(vu, instr);
+    VU_Interpreter::call_upper(vu, instr);
+}
+
+void interpreter_lower(VectorUnit& vu, uint32_t instr)
+{
+    VU_Interpreter::lower(vu, instr);
+    VU_Interpreter::call_lower(vu, instr);
 }
 
 void VU_JIT64::reset()
@@ -281,6 +294,12 @@ void VU_JIT64::update_mac_flags(VectorUnit &vu, REG_64 xmm_reg, uint8_t field)
     emitter.SHL32_REG_IMM(4, REG_64::RAX);
 
     //Get zero bits
+    //First remove sign bit
+    emitter.load_addr((uint64_t)&abs_constant, REG_64::R15);
+    emitter.MOVAPS_FROM_MEM(REG_64::R15, temp2);
+    emitter.PAND_XMM(temp2, temp);
+
+    //Then compare with 0
     emitter.XORPS(temp2, temp2);
     emitter.CMPEQPS(temp2, temp);
     emitter.MOVMSKPS(temp, REG_64::R15);
@@ -2295,6 +2314,9 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
         case IR::Opcode::Stop:
             stop(vu, instr);
             break;
+        case IR::Opcode::FallbackInterpreter:
+            fallback_interpreter(vu, instr);
+            break;
         default:
             Errors::die("[VU_JIT64] Unknown IR instruction");
     }
@@ -2413,6 +2435,31 @@ void VU_JIT64::call_abi_func(uint64_t addr)
     emitter.POP(REG_64::RCX);
     abi_int_count = 0;
     abi_xmm_count = 0;
+}
+
+void VU_JIT64::fallback_interpreter(VectorUnit &vu, IR::Instruction &instr)
+{
+    flush_regs(vu);
+    for (int i = 0; i < 16; i++)
+    {
+        int_regs[i].age = 0;
+        int_regs[i].used = false;
+        xmm_regs[i].age = 0;
+        xmm_regs[i].used = false;
+    }
+
+    uint32_t instr_word = instr.get_source();
+
+    //VU_Interpreter::upper/lower
+    prepare_abi(vu, (uint64_t)&vu);
+    prepare_abi(vu, instr_word);
+
+    bool is_upper = instr.get_field();
+
+    if (is_upper)
+        call_abi_func((uint64_t)&interpreter_upper);
+    else
+        call_abi_func((uint64_t)&interpreter_lower);
 }
 
 extern "C"

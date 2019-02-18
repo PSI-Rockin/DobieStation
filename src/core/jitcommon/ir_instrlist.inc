@@ -100,3 +100,5 @@ INSTR(MoveXITOP)
 INSTR(Xgkick)
 INSTR(UpdateXgkick)
 INSTR(Stop)
+
+INSTR(FallbackInterpreter)

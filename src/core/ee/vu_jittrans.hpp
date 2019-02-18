@@ -45,6 +45,7 @@ class VU_JitTranslator
         void interpreter_pass(VectorUnit& vu, uint8_t *instr_mem);
         void flag_pass(VectorUnit& vu, uint8_t *instr_mem);
 
+        void fallback_interpreter(IR::Instruction& instr, uint32_t instr_word, bool is_upper);
         void update_xgkick(std::vector<IR::Instruction>& instrs);
         void check_q_stall(std::vector<IR::Instruction>& instrs);
         void start_q_event(std::vector<IR::Instruction>& instrs, int latency);

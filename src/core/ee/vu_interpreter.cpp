@@ -10,6 +10,16 @@ namespace VU_Interpreter
 typedef void(VectorUnit::*vu_op)(uint32_t);
 vu_op upper_op, lower_op;
 
+void call_upper(VectorUnit &vu, uint32_t instr)
+{
+    (vu.*upper_op)(instr);
+}
+
+void call_lower(VectorUnit &vu, uint32_t instr)
+{
+    (vu.*lower_op)(instr);
+}
+
 void interpret(VectorUnit &vu, uint32_t upper_instr, uint32_t lower_instr)
 {
     if (vu.get_id() == 0 && vu.is_interlocked())

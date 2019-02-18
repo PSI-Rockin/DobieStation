@@ -299,6 +299,13 @@ void VU_JitTranslator::flag_pass(VectorUnit &vu, uint8_t *instr_mem)
     }
 }
 
+void VU_JitTranslator::fallback_interpreter(IR::Instruction &instr, uint32_t instr_word, bool is_upper)
+{
+    instr.op = IR::Opcode::FallbackInterpreter;
+    instr.set_source(instr_word);
+    instr.set_field(is_upper);
+}
+
 void VU_JitTranslator::update_xgkick(std::vector<IR::Instruction> &instrs)
 {
     IR::Instruction update;
@@ -663,9 +670,7 @@ void VU_JitTranslator::upper_special(std::vector<IR::Instruction> &instrs, uint3
             break;
         case 0x1F:
             //CLIP
-            instr.op = IR::Opcode::VClip;
-            instr.set_source((upper >> 11) & 0x1F);
-            instr.set_source2((upper >> 16) & 0x1F);
+            fallback_interpreter(instr, upper, true);
             break;
         case 0x20:
             //ADDAq
