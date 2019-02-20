@@ -146,6 +146,7 @@ void VU_JIT64::reset()
         xmm_regs[i].used = false;
         xmm_regs[i].locked = false;
         xmm_regs[i].age = 0;
+        xmm_regs[i].needs_clamping = false;
 
         int_regs[i].used = false;
         int_regs[i].locked = false;
@@ -205,7 +206,6 @@ void VU_JIT64::clamp_vfreg(REG_64 xmm_reg)
 
         set_clamping(xmm_reg, false);
     }
-
 }
 
 void VU_JIT64::sse_abs(REG_64 source, REG_64 dest)
@@ -1552,6 +1552,8 @@ void VU_JIT64::float_to_fixed(VectorUnit &vu, IR::Instruction &instr, int table_
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
     REG_64 temp = REG_64::XMM0;
 
+    clamp_vfreg(source);
+
     emitter.MOVAPS_REG(source, temp);
 
     if (table_entry)
@@ -1761,6 +1763,8 @@ void VU_JIT64::eleng(VectorUnit &vu, IR::Instruction &instr)
     REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ);
     REG_64 temp = REG_64::XMM0;
 
+    clamp_vfreg(source);
+
     emitter.MOVAPS_REG(source, temp);
 
     //(x^2 + y^2 + z^2) -> P
@@ -1778,6 +1782,8 @@ void VU_JIT64::erleng(VectorUnit &vu, IR::Instruction &instr)
     REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ);
     REG_64 temp = REG_64::XMM0;
     REG_64 temp2 = REG_64::XMM1;
+
+    clamp_vfreg(source);
 
     emitter.MOVAPS_REG(source, temp);
 
@@ -1800,6 +1806,8 @@ void VU_JIT64::esqrt(VectorUnit &vu, IR::Instruction &instr)
     REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ);
     REG_64 temp = REG_64::XMM0;
 
+    clamp_vfreg(source);
+
     emitter.SQRTPS(source, temp);
     emitter.INSERTPS(field, 0, 0, temp, temp);
 
@@ -1813,6 +1821,8 @@ void VU_JIT64::ersqrt(VectorUnit &vu, IR::Instruction &instr)
     REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ);
     REG_64 denom = REG_64::XMM0;
     REG_64 num = REG_64::XMM1;
+
+    clamp_vfreg(source);
 
     emitter.SQRTPS(source, denom);
     emitter.INSERTPS(field, 0, 0, denom, denom);
@@ -1832,6 +1842,8 @@ void VU_JIT64::rinit(VectorUnit &vu, IR::Instruction &instr)
     uint8_t field = instr.get_field();
     REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ);
     REG_64 temp = REG_64::XMM0;
+
+    clamp_vfreg(source);
 
     //R = 0x3F800000 | (reg[field] & 0x007FFFFF)
     emitter.INSERTPS(field, 0, 0, source, temp);
