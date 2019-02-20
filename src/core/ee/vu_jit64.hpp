@@ -12,6 +12,7 @@ struct AllocReg
     bool modified;
     int age;
     int vu_reg;
+    bool needs_clamping;
 };
 
 struct alignas(16) FtoiTable
@@ -54,7 +55,7 @@ class VU_JIT64
         uint16_t cond_branch_dest, cond_branch_fail_dest;
         uint16_t cycle_count;
 
-        void clamp_result(REG_64 xmm_reg);
+        void clamp_vfreg(REG_64 xmm_reg);
         void sse_abs(REG_64 source, REG_64 dest);
         void sse_div_check(REG_64 num, REG_64 denom, VU_R& dest);
 
@@ -161,6 +162,8 @@ class VU_JIT64
         REG_64 alloc_int_reg(VectorUnit& vu, int vi_reg, REG_STATE state = REG_STATE::READ_WRITE);
         REG_64 alloc_sse_reg(VectorUnit& vu, int vf_reg, REG_STATE state = REG_STATE::READ_WRITE);
         REG_64 alloc_sse_scratchpad(VectorUnit& vu, int vf_reg);
+        void VU_JIT64::set_clamping(int xmmreg, bool value);
+        bool VU_JIT64::needs_clamping(int xmmreg);
         void flush_regs(VectorUnit& vu);
         void flush_sse_reg(VectorUnit& vu, int vf_reg);
 
