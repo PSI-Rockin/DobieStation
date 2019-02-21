@@ -262,7 +262,7 @@ int VU_JitTranslator::is_flag_instruction(uint32_t lower_instr)
 
 void VU_JitTranslator::update_pipeline(VectorUnit &vu, int cycles)
 {
-    for (int i; i < cycles; i++)
+    for (int i = 0; i < cycles; i++)
     {
         stall_pipe[3] = stall_pipe[2];
         stall_pipe[2] = stall_pipe[1];
