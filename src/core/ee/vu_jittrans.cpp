@@ -1148,6 +1148,7 @@ void VU_JitTranslator::lower1_special(std::vector<IR::Instruction> &instrs, uint
             fallback_interpreter(instr, lower, false);
             Errors::print_warning("[VU_JIT] Unrecognized lower1 special op SQRT\n");
             has_q_stalled = true;
+            break;
         case 0x3A:
             //RSQRT
             start_q_event(instrs, 13);
