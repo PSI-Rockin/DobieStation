@@ -338,18 +338,9 @@ void VU_JitTranslator::analyze_FMAC_stalls(VectorUnit &vu, uint16_t PC)
         }
         if (stall_found)
         {
-           // printf("BANANA FMAC stall at $%08X for %d cycles!\n", PC, 3 - i);
-            int delay = 3 - i;
-            
-            instr_info[PC].stall_amount = delay;
-            
-            /*for (int j = 0; j < delay; j++)
-                update_mac_pipeline();
-            cycle_count += delay;
-            if (cycle_count >= finish_DIV_event && (cycle_count - delay) < finish_DIV_event)
-                Q.u = new_Q_instance.u;
-            int_branch_delay = 0;*/
-            return;
+           // printf("[VU_JIT]FMAC stall at $%08X for %d cycles!\n", PC, 3 - i);
+            instr_info[PC].stall_amount = 3 - i;
+            break;
         }
     }
 }
@@ -429,9 +420,10 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem)
         {
             if (q_pipe_delay > 0)
             {
-                //printf("BANANA Q pipe delay of %d stall amount of %d\n", q_pipe_delay, instr_info[PC].stall_amount);
+                //printf("[VU_JIT] Q pipe delay of %d stall amount of %d\n", q_pipe_delay, instr_info[PC].stall_amount);
                 if (instr_info[PC].stall_amount < q_pipe_delay)
                     instr_info[PC].stall_amount = q_pipe_delay;
+
                 instr_info[PC].update_q_pipeline = true;
             }
 
@@ -454,7 +446,6 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem)
             delay_slot = true;
         }
 
-        
         PC += 8;
     }
 
@@ -538,6 +529,7 @@ void VU_JitTranslator::flag_pass(VectorUnit &vu)
             }
             needs_update = false;
         }
+
         i -= 8;
     }
 }
@@ -1150,6 +1142,12 @@ void VU_JitTranslator::lower1_special(std::vector<IR::Instruction> &instrs, uint
             instr.set_field2((lower >> 23) & 0x3);
             has_q_stalled = true;
             break;
+        case 0x39:
+            //SQRT
+            start_q_event(instrs, 7);
+            fallback_interpreter(instr, lower, false);
+            Errors::print_warning("[VU_JIT] Unrecognized lower1 special op SQRT\n");
+            has_q_stalled = true;
         case 0x3A:
             //RSQRT
             start_q_event(instrs, 13);
