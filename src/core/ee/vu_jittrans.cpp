@@ -478,7 +478,6 @@ void VU_JitTranslator::flag_pass(VectorUnit &vu)
     uint16_t i = end_PC;
     while (i >= start_pc && i <= end_PC)
     {
-      
         //Update any instructions succeeded by a flag instruction to get the correct instance
         if (instr_info[i].flag_instruction)
         {
@@ -500,6 +499,13 @@ void VU_JitTranslator::flag_pass(VectorUnit &vu)
             needs_update = true;
         }
 
+        //Update the flags at the beginning of a block also, I'm scared of subroutines checking flags
+        if (i <= (start_pc + 32))
+        {
+            needs_update = true;
+        }
+
+        //Always update the pipe for flag instances
         if (mac_instruction_found)
         {
             needs_update = true;
@@ -508,7 +514,6 @@ void VU_JitTranslator::flag_pass(VectorUnit &vu)
                 mac_instruction_found = false;
         }
 
-        //Always update the pipe for flag instances
         if (clip_instruction_found)
         {
             needs_update = true;
@@ -517,12 +522,12 @@ void VU_JitTranslator::flag_pass(VectorUnit &vu)
                 clip_instruction_found = false;
         }
 
+        //Always update for clip instructions also, probably not needed but just in case
         if (instr_info[i].has_clip_result)
         {
             needs_update = true;
         }
-        
-        //needs_update = true;
+
         if (needs_update)
         {
             instr_info[i].advance_mac_pipeline = true;
@@ -797,7 +802,9 @@ void VU_JitTranslator::translate_upper(std::vector<IR::Instruction>& instrs, uin
             upper_special(instrs, upper);
             return;
         default:
-            Errors::die("[VU_JIT] Unrecognized upper op $%02X", op);
+            //Errors::die("[VU_JIT] Unrecognized upper op $%02X", op);
+            fallback_interpreter(instr, upper, true);
+            Errors::print_warning("[VU_JIT] Unrecognized upper op $%02X\n", op);
     }
     instrs.push_back(instr);
 }
@@ -985,7 +992,9 @@ void VU_JitTranslator::upper_special(std::vector<IR::Instruction> &instrs, uint3
             //NOP - no need to add an instruction
             return;
         default:
-            Errors::die("[VU_JIT] Unrecognized upper special op $%02X", op);
+            //Errors::die("[VU_JIT] Unrecognized upper special op $%02X", op);
+            fallback_interpreter(instr, upper, true);
+            Errors::print_warning("[VU_JIT] Unrecognized upper special op $%02X\n", op);
     }
     instrs.push_back(instr);
 }
@@ -1070,7 +1079,9 @@ void VU_JitTranslator::lower1(std::vector<IR::Instruction> &instrs, uint32_t low
             lower1_special(instrs, lower);
             return;
         default:
-            Errors::die("[VU_JIT] Unrecognized lower1 op $%02X", op);
+            //Errors::die("[VU_JIT] Unrecognized lower1 op $%02X", op);
+            fallback_interpreter(instr, lower, false);
+            Errors::print_warning("[VU_JIT] Unrecognized lower1 op $%02X\n", op);
     }
     instrs.push_back(instr);
 }
@@ -1237,7 +1248,9 @@ void VU_JitTranslator::lower1_special(std::vector<IR::Instruction> &instrs, uint
             //WAITp - TODO
             return;
         default:
-            Errors::die("[VU_JIT] Unrecognized lower1 special op $%02X", op);
+            //Errors::die("[VU_JIT] Unrecognized lower1 special op $%02X", op);
+            fallback_interpreter(instr, lower, false);
+            Errors::print_warning("[VU_JIT] Unrecognized lower1 special op $%02X\n", op);
     }
     instrs.push_back(instr);
 }
@@ -1430,7 +1443,9 @@ void VU_JitTranslator::lower2(std::vector<IR::Instruction> &instrs, uint32_t low
             instr.set_jump_fail_dest(PC + 16);
             break;
         default:
-            Errors::die("[VU_JIT] Unrecognized lower2 op $%02X", op);
+            //Errors::die("[VU_JIT] Unrecognized lower2 op $%02X", op);
+            fallback_interpreter(instr, lower, false);
+            Errors::print_warning("[VU_JIT] Unrecognized lower2 op $%02X\n", op);
     }
     instrs.push_back(instr);
 }
