@@ -58,14 +58,6 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem)
             IR::Instruction mac_update(IR::Opcode::UpdateMacPipeline);
             mac_update.set_source((uint64_t)(instr_info[PC].stall_amount + 1));
             block.add_instr(mac_update);
-
-            //Handle the stall if there is one
-            /*if (instr_info[PC].stall_amount)
-            {
-                IR::Instruction mac_update2(IR::Opcode::UpdateMacPipeline);
-                mac_update2.set_source((uint64_t)instr_info[PC].stall_amount);
-                block.add_instr(mac_update2);
-            }*/
         }
 
         if (instr_info[PC].update_mac_pipeline)
@@ -135,8 +127,6 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem)
             }
         }
 
-        
-
         //End of microprogram delay slot
         if (upper & (1 << 30))
         {
@@ -152,7 +142,6 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem)
             block.add_instr(instr);
         }
 
-       
         PC += 8;
     }
 
@@ -177,6 +166,8 @@ int VU_JitTranslator::fdiv_pipe_cycles(uint32_t lower_instr)
                 return 7;
             case 0x3A:
                 return 13;
+            default:
+                return 0;
 
         }
     }
@@ -276,11 +267,9 @@ void VU_JitTranslator::update_pipeline(VectorUnit &vu, int cycles)
         stall_pipe[3] = stall_pipe[2];
         stall_pipe[2] = stall_pipe[1];
         stall_pipe[1] = stall_pipe[0];
-        stall_pipe[0] = new_stall_value;
 
         stall_pipe[0] = ((uint32_t)vu.decoder.vf_write[0] << 16) | ((uint32_t)vu.decoder.vf_write[1] << 24);
         stall_pipe[0] |= ((uint64_t)vu.decoder.vf_write_field[0] << 32UL) | ((uint64_t)vu.decoder.vf_write_field[1] << 36UL);
-        //new_stall_value = 0;
     }
 }
 
@@ -373,7 +362,6 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem)
     bool block_end = false;
     bool delay_slot = false;
     int q_pipe_delay = 0;
-    //vu.decoder.reset();
 
     uint16_t PC = vu.get_PC();
     while (!block_end)
@@ -390,8 +378,9 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem)
 
         if (delay_slot)
             block_end = true;
-        //printf("BANANA Decoding $%X\n", PC);
-        update_pipeline(vu, 1);
+
+        if(PC != vu.get_PC())
+            update_pipeline(vu, 1);
 
         vu.decoder.reset();
 
@@ -418,11 +407,8 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem)
                 delay_slot = true;
             }
 
-            //Update FMAC stalls and FDIV stalls
             int write = vu.decoder.vf_write[0];
             int write1 = vu.decoder.vf_write[1];
-            int write_field = vu.decoder.vf_write_field[0];
-            int write1_field = vu.decoder.vf_write_field[1];
             int read0 = vu.decoder.vf_read0[1];
             int read1 = vu.decoder.vf_read1[1];
 
@@ -448,20 +434,15 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem)
                     instr_info[PC].stall_amount = q_pipe_delay;
                 instr_info[PC].update_q_pipeline = true;
             }
-            
 
             q_pipe_delay = fdiv_pipe_cycles(lower);
             if(!q_pipe_delay)
                 instr_info[PC].update_q_pipeline = true;
-            
         }
         else if (q_pipe_delay > 0)
         {
             q_pipe_delay -= instr_info[PC].stall_amount + 1;
         }
-
-       /* new_stall_value = ((uint32_t)vu.decoder.vf_write[0] << 16) | ((uint32_t)vu.decoder.vf_write[1] << 24);
-        new_stall_value |= ((uint64_t)vu.decoder.vf_write_field[0] << 32UL) | ((uint64_t)vu.decoder.vf_write_field[1] << 36UL);*/
 
         if(instr_info[PC].stall_amount)
             update_pipeline(vu, instr_info[PC].stall_amount);

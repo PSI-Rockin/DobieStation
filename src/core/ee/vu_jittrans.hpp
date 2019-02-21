@@ -44,7 +44,6 @@ class VU_JitTranslator
         int cycles_since_xgkick_update;
 
         uint64_t stall_pipe[4];
-        uint64_t new_stall_value;
 
         VU_InstrInfo instr_info[1024 * 16];
         uint16_t end_PC;
