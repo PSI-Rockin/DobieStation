@@ -317,7 +317,7 @@ class VectorUnit
         friend void vu_start_q_event(VectorUnit& vu, int latency, int cycles);
         friend void vu_check_q_pipeline(VectorUnit& vu, int cycles);
         friend void vu_update_xgkick(VectorUnit& vu, int cycles);
-        friend void vu_update_pipelines(VectorUnit& vu);
+        friend void vu_update_pipelines(VectorUnit& vu, int cycles);
         friend uint8_t* exec_block(VU_JIT64& jit, VectorUnit& vu);
 };
 

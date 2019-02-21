@@ -16,14 +16,22 @@ enum VU_SpecialReg
     R
 };
 
+enum VU_FlagInstrType
+{
+    FlagInstr_None,
+    FlagInstr_Mac,
+    FlagInstr_Clip
+};
+
 struct VU_InstrInfo
 {
     bool swap_ops;
     bool update_q_pipeline;
-    bool reads_mac_flags;
-    bool reads_clip_flags;
-    bool updates_mac_pipeline;
-    bool updates_clip_pipeline;
+    bool update_mac_pipeline;
+    bool has_mac_result;
+    bool has_clip_result;
+    int flag_instruction;
+    bool advance_mac_pipeline;
     int stall_amount;
 };
 
@@ -35,15 +43,22 @@ class VU_JitTranslator
         int cycles_this_block;
         int cycles_since_xgkick_update;
 
+        uint64_t stall_pipe[4];
+        uint64_t new_stall_value;
+
         VU_InstrInfo instr_info[1024 * 16];
         uint16_t end_PC;
         bool has_q_stalled;
 
+        int fdiv_pipe_cycles(uint32_t lower_instr);
+        int is_flag_instruction(uint32_t lower_instr);
         bool updates_mac_flags(uint32_t upper_instr);
         bool updates_mac_flags_special(uint32_t upper_instr);
 
+        void update_pipeline(VectorUnit &vu, int cycles);
+        void analyze_FMAC_stalls(VectorUnit &vu, uint16_t PC);
         void interpreter_pass(VectorUnit& vu, uint8_t *instr_mem);
-        void flag_pass(VectorUnit& vu, uint8_t *instr_mem);
+        void flag_pass(VectorUnit& vu);
 
         void fallback_interpreter(IR::Instruction& instr, uint32_t instr_word, bool is_upper);
         void update_xgkick(std::vector<IR::Instruction>& instrs);

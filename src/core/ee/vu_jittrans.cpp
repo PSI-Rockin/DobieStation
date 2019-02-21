@@ -24,6 +24,7 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem)
     cycles_since_xgkick_update = 0;
 
     interpreter_pass(vu, instr_mem);
+    flag_pass(vu);
 
     uint16_t PC = vu.get_PC();
     while (!block_end)
@@ -35,20 +36,50 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem)
 
         uint32_t upper = *(uint32_t*)&instr_mem[PC + 4];
         uint32_t lower = *(uint32_t*)&instr_mem[PC];
-
+        
         if (q_pipeline_delay)
         {
-            q_pipeline_delay--;
-            if (!q_pipeline_delay)
+            q_pipeline_delay -= instr_info[PC].stall_amount+1;
+            if (q_pipeline_delay <= 0)
             {
                 IR::Instruction stall(IR::Opcode::UpdateQ);
                 block.add_instr(stall);
+                q_pipeline_delay = 0;
             }
         }
 
+        cycles_this_block += instr_info[PC].stall_amount + 1;
+        cycles_since_xgkick_update += instr_info[PC].stall_amount + 1;
+
         translate_upper(upper_instrs, upper);
-        IR::Instruction mac_update(IR::Opcode::UpdateMacPipeline);
-        block.add_instr(mac_update);
+
+        if (instr_info[PC].advance_mac_pipeline)
+        {
+            IR::Instruction mac_update(IR::Opcode::UpdateMacPipeline);
+            mac_update.set_source((uint64_t)(instr_info[PC].stall_amount + 1));
+            block.add_instr(mac_update);
+
+            //Handle the stall if there is one
+            /*if (instr_info[PC].stall_amount)
+            {
+                IR::Instruction mac_update2(IR::Opcode::UpdateMacPipeline);
+                mac_update2.set_source((uint64_t)instr_info[PC].stall_amount);
+                block.add_instr(mac_update2);
+            }*/
+        }
+
+        if (instr_info[PC].update_mac_pipeline)
+        {
+            IR::Instruction update(IR::Opcode::UpdateMacFlags);
+            block.add_instr(update);
+        }
+
+        if (instr_info[PC].update_q_pipeline)
+        {
+            IR::Instruction stall(IR::Opcode::UpdateQ);
+            block.add_instr(stall);
+            q_pipeline_delay = 0;
+        }
 
         //LOI - upper goes first, lower gets loaded into I register
         if (upper & (1 << 31))
@@ -61,14 +92,7 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem)
             block.add_instr(loi);
         }
         else
-        {
-            if (instr_info[PC].update_q_pipeline)
-            {
-                IR::Instruction stall(IR::Opcode::UpdateQ);
-                block.add_instr(stall);
-                q_pipeline_delay = 0;
-            }
-
+        {         
             translate_lower(lower_instrs, lower, PC);
 
             if (instr_info[PC].swap_ops)
@@ -111,11 +135,7 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem)
             }
         }
 
-        if (instr_info[PC].updates_mac_pipeline)
-        {
-            IR::Instruction update(IR::Opcode::UpdateMacFlags);
-            block.add_instr(update);
-        }
+        
 
         //End of microprogram delay slot
         if (upper & (1 << 30))
@@ -132,9 +152,8 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem)
             block.add_instr(instr);
         }
 
+       
         PC += 8;
-        cycles_this_block++;
-        cycles_since_xgkick_update++;
     }
 
     IR::Instruction update;
@@ -144,6 +163,24 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem)
     block.set_cycle_count(cycles_this_block);
 
     return block;
+}
+
+int VU_JitTranslator::fdiv_pipe_cycles(uint32_t lower_instr)
+{
+    if (((lower_instr >> 31) & 0x1))
+    {
+        uint32_t op = ((lower_instr >> 4) & 0x7C) | (lower_instr & 0x3);
+        switch (op)
+        {
+            case 0x38:
+            case 0x39:
+                return 7;
+            case 0x3A:
+                return 13;
+
+        }
+    }
+    return 0;
 }
 
 bool VU_JitTranslator::updates_mac_flags(uint32_t upper_instr)
@@ -207,13 +244,136 @@ bool VU_JitTranslator::updates_mac_flags_special(uint32_t upper_instr)
     }
 }
 
+int VU_JitTranslator::is_flag_instruction(uint32_t lower_instr)
+{
+    if (!(lower_instr & (1 << 31)))
+    {
+        uint8_t op = (lower_instr >> 25) & 0x7F;
+
+        switch (op)
+        {
+            case 0x11:
+            case 0x12:
+            case 0x13:
+            case 0x1C:
+                return FlagInstr_Clip;
+            case 0x16:
+            case 0x18:
+            case 0x1A:
+            case 0x1B:
+                return FlagInstr_Mac;
+            default:
+                return FlagInstr_None;
+        }
+    }
+    return FlagInstr_None;
+}
+
+void VU_JitTranslator::update_pipeline(VectorUnit &vu, int cycles)
+{
+    for (int i; i < cycles; i++)
+    {
+        stall_pipe[3] = stall_pipe[2];
+        stall_pipe[2] = stall_pipe[1];
+        stall_pipe[1] = stall_pipe[0];
+        stall_pipe[0] = new_stall_value;
+
+        stall_pipe[0] = ((uint32_t)vu.decoder.vf_write[0] << 16) | ((uint32_t)vu.decoder.vf_write[1] << 24);
+        stall_pipe[0] |= ((uint64_t)vu.decoder.vf_write_field[0] << 32UL) | ((uint64_t)vu.decoder.vf_write_field[1] << 36UL);
+        //new_stall_value = 0;
+    }
+}
+
 /**
- * Determine which operations affect the pipelines, cause FMAC stalls, or need to be swapped
+ * Determine FMAC stalls
+ */
+void VU_JitTranslator::analyze_FMAC_stalls(VectorUnit &vu, uint16_t PC)
+{
+    if (vu.decoder.vf_read0[0] == 0 && vu.decoder.vf_read1[0] == 0
+        && vu.decoder.vf_read0[1] == 0 && vu.decoder.vf_read1[1] == 0)
+    {
+        return;
+    }
+
+    for (int i = 0; i < 3; i++)
+    {
+        uint8_t write0 = (stall_pipe[i] >> 16) & 0xFF;
+        uint8_t write1 = (stall_pipe[i] >> 24) & 0xFF;
+
+        if (write0 == 0 && write1 == 0)
+            continue;
+
+        uint8_t write0_field = (stall_pipe[i] >> 32) & 0xF;
+        uint8_t write1_field = (stall_pipe[i] >> 36) & 0xF;
+        bool stall_found = false;
+        for (int j = 0; j < 2; j++)
+        {
+            if (vu.decoder.vf_read0[j])
+            {
+                if (vu.decoder.vf_read0[j] == write0)
+                {
+                    if (vu.decoder.vf_read0_field[j] & write0_field)
+                    {
+                        stall_found = true;
+                        break;
+                    }
+                }
+                else if (vu.decoder.vf_read0[j] == write1)
+                {
+                    if (vu.decoder.vf_read0_field[j] & write1_field)
+                    {
+                        stall_found = true;
+                        break;
+                    }
+                }
+            }
+            if (vu.decoder.vf_read1[j])
+            {
+                if (vu.decoder.vf_read1[j] == write0)
+                {
+                    if (vu.decoder.vf_read1_field[j] & write0_field)
+                    {
+                        stall_found = true;
+                        break;
+                    }
+                }
+                else if (vu.decoder.vf_read1[j] == write1)
+                {
+                    if (vu.decoder.vf_read1_field[j] & write1_field)
+                    {
+                        stall_found = true;
+                        break;
+                    }
+                }
+            }
+        }
+        if (stall_found)
+        {
+           // printf("BANANA FMAC stall at $%08X for %d cycles!\n", PC, 3 - i);
+            int delay = 3 - i;
+            
+            instr_info[PC].stall_amount = delay;
+            
+            /*for (int j = 0; j < delay; j++)
+                update_mac_pipeline();
+            cycle_count += delay;
+            if (cycle_count >= finish_DIV_event && (cycle_count - delay) < finish_DIV_event)
+                Q.u = new_Q_instance.u;
+            int_branch_delay = 0;*/
+            return;
+        }
+    }
+}
+
+/**
+ * Determine base operation information and which instructions need to be swapped
  */
 void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem)
 {
     bool block_end = false;
     bool delay_slot = false;
+    int q_pipe_delay = 0;
+    //vu.decoder.reset();
 
     uint16_t PC = vu.get_PC();
     while (!block_end)
@@ -221,32 +381,35 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem)
         instr_info[PC].stall_amount = 0;
         instr_info[PC].swap_ops = false;
         instr_info[PC].update_q_pipeline = false;
+        instr_info[PC].update_mac_pipeline = false;
+        instr_info[PC].advance_mac_pipeline = false;
+        instr_info[PC].flag_instruction = FlagInstr_None;
 
         uint32_t upper = *(uint32_t*)&instr_mem[PC + 4];
         uint32_t lower = *(uint32_t*)&instr_mem[PC];
 
         if (delay_slot)
             block_end = true;
+        //printf("BANANA Decoding $%X\n", PC);
+        update_pipeline(vu, 1);
 
         vu.decoder.reset();
 
-        instr_info[PC].updates_mac_pipeline = updates_mac_flags(upper);
+        instr_info[PC].has_mac_result = updates_mac_flags(upper);
 
         if ((upper & 0x7FF) == 0x1FF)
-            instr_info[PC].updates_clip_pipeline = true;
+            instr_info[PC].has_clip_result = true;
         else
-            instr_info[PC].updates_clip_pipeline = false;
+            instr_info[PC].has_clip_result = false;
 
         VU_Interpreter::upper(vu, upper);
 
+        //Handle lower op if there is one
         if (!(upper & (1 << 31)))
         {
             VU_Interpreter::lower(vu, lower);
 
-            //WaitQ, DIV, RSQRT, SQRT
-            if (((lower & 0x800007FC) == 0x800003BC))
-                instr_info[PC].update_q_pipeline = true;
-
+            instr_info[PC].flag_instruction = is_flag_instruction(lower);
             //Branch instructions
             if ((lower & 0xC0000000) == 0x40000000)
             {
@@ -255,19 +418,53 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem)
                 delay_slot = true;
             }
 
+            //Update FMAC stalls and FDIV stalls
             int write = vu.decoder.vf_write[0];
             int write1 = vu.decoder.vf_write[1];
+            int write_field = vu.decoder.vf_write_field[0];
+            int write1_field = vu.decoder.vf_write_field[1];
             int read0 = vu.decoder.vf_read0[1];
             int read1 = vu.decoder.vf_read1[1];
 
             //If an upper op writes to a register a lower op reads from, the lower op executes first
             //Additionally, if an upper op and a lower op write to the same register, the upper op
             //has priority.
-            if (write && ((write == read0 || write == read1) || (write == write1)))
-                instr_info[PC].swap_ops = true;
+            if (!(upper & (1 << 31)))
+            {
+                if (write && ((write == read0 || write == read1) || (write == write1)))
+                    instr_info[PC].swap_ops = true;
+            }
         }
-        else
-            VU_Interpreter::upper(vu, upper);
+
+        analyze_FMAC_stalls(vu, PC);
+
+        //WaitQ, DIV, RSQRT, SQRT
+        if (((lower & 0x800007FC) == 0x800003BC))
+        {
+            if (q_pipe_delay > 0)
+            {
+                //printf("BANANA Q pipe delay of %d stall amount of %d\n", q_pipe_delay, instr_info[PC].stall_amount);
+                if (instr_info[PC].stall_amount < q_pipe_delay)
+                    instr_info[PC].stall_amount = q_pipe_delay;
+                instr_info[PC].update_q_pipeline = true;
+            }
+            
+
+            q_pipe_delay = fdiv_pipe_cycles(lower);
+            if(!q_pipe_delay)
+                instr_info[PC].update_q_pipeline = true;
+            
+        }
+        else if (q_pipe_delay > 0)
+        {
+            q_pipe_delay -= instr_info[PC].stall_amount + 1;
+        }
+
+       /* new_stall_value = ((uint32_t)vu.decoder.vf_write[0] << 16) | ((uint32_t)vu.decoder.vf_write[1] << 24);
+        new_stall_value |= ((uint64_t)vu.decoder.vf_write_field[0] << 32UL) | ((uint64_t)vu.decoder.vf_write_field[1] << 36UL);*/
+
+        if(instr_info[PC].stall_amount)
+            update_pipeline(vu, instr_info[PC].stall_amount);
 
         if (upper & (1 << 30))
         {
@@ -276,6 +473,7 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem)
             delay_slot = true;
         }
 
+        
         PC += 8;
     }
 
@@ -285,16 +483,75 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem)
 /**
  * Determine when MAC, clip, and status flags need to be updated.
  */
-void VU_JitTranslator::flag_pass(VectorUnit &vu, uint8_t *instr_mem)
+void VU_JitTranslator::flag_pass(VectorUnit &vu)
 {
     uint16_t start_pc = vu.get_PC();
+    bool clip_instruction_found = false;
+    bool mac_instruction_found = false;
+    bool final_mac_instance_found = false;
+    bool needs_update = false;
+    int mac_cycles = 0;
+    int clip_cycles = 0;
 
-    //First we need to "look ahead" the end of a block
-
+    //Start from the end of the block
     uint16_t i = end_PC;
-    while (i >= start_pc)
+    while (i >= start_pc && i <= end_PC)
     {
+      
+        //Update any instructions succeeded by a flag instruction to get the correct instance
+        if (instr_info[i].flag_instruction)
+        {
+            if (instr_info[i].flag_instruction == FlagInstr_Clip)
+            {
+                clip_instruction_found = true;
+                clip_cycles = 5;
+            }
+            if (instr_info[i].flag_instruction == FlagInstr_Mac)
+            {
+                mac_instruction_found = true;
+                mac_cycles = 5;
+            }
+        }
 
+        //Update the flags at the end of the block ready for the next block in case of flag read instruction
+        if (i >= (end_PC - 32) || final_mac_instance_found == false)
+        {
+            needs_update = true;
+        }
+
+        if (mac_instruction_found)
+        {
+            needs_update = true;
+            mac_cycles -= instr_info[i].stall_amount;
+            if (mac_cycles <= 0)
+                mac_instruction_found = false;
+        }
+
+        //Always update the pipe for flag instances
+        if (clip_instruction_found)
+        {
+            needs_update = true;
+            clip_cycles -= instr_info[i].stall_amount;
+            if (clip_cycles <= 0)
+                clip_instruction_found = false;
+        }
+
+        if (instr_info[i].has_clip_result)
+        {
+            needs_update = true;
+        }
+        
+        //needs_update = true;
+        if (needs_update)
+        {
+            instr_info[i].advance_mac_pipeline = true;
+            if (instr_info[i].has_mac_result)
+            {
+                final_mac_instance_found = true;
+                instr_info[i].update_mac_pipeline = true;
+            }
+            needs_update = false;
+        }
         i -= 8;
     }
 }

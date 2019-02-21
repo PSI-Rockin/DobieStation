@@ -79,19 +79,22 @@ void vu_set_int(VectorUnit& vu, int dest, uint16_t value)
     vu.set_int(dest, value);
 }
 
-void vu_update_pipelines(VectorUnit& vu)
+void vu_update_pipelines(VectorUnit& vu, int cycles)
 {
-    vu.MAC_pipeline[3] = vu.MAC_pipeline[2];
-    vu.MAC_pipeline[2] = vu.MAC_pipeline[1];
-    vu.MAC_pipeline[1] = vu.MAC_pipeline[0];
-    vu.MAC_pipeline[0] = vu.new_MAC_flags;
+    for (int i = 0; i < cycles; i++)
+    {
+        vu.MAC_pipeline[3] = vu.MAC_pipeline[2];
+        vu.MAC_pipeline[2] = vu.MAC_pipeline[1];
+        vu.MAC_pipeline[1] = vu.MAC_pipeline[0];
+        vu.MAC_pipeline[0] = vu.new_MAC_flags;
 
-    vu.CLIP_pipeline[3] = vu.CLIP_pipeline[2];
-    vu.CLIP_pipeline[2] = vu.CLIP_pipeline[1];
-    vu.CLIP_pipeline[1] = vu.CLIP_pipeline[0];
-    vu.CLIP_pipeline[0] = vu.clip_flags;
+        vu.CLIP_pipeline[3] = vu.CLIP_pipeline[2];
+        vu.CLIP_pipeline[2] = vu.CLIP_pipeline[1];
+        vu.CLIP_pipeline[1] = vu.CLIP_pipeline[0];
+        vu.CLIP_pipeline[0] = vu.clip_flags;
 
-    vu.update_status();
+        vu.update_status();
+    }
 }
 
 void vu_clip(VectorUnit& vu, uint32_t imm)
@@ -1879,9 +1882,10 @@ void VU_JIT64::update_q(VectorUnit &vu, IR::Instruction &instr)
     set_clamping(q_reg, true);
 }
 
-void VU_JIT64::update_mac_pipeline(VectorUnit &vu)
+void VU_JIT64::update_mac_pipeline(VectorUnit &vu, IR::Instruction &instr)
 {
     prepare_abi(vu, (uint64_t)&vu);
+    prepare_abi(vu, instr.get_source());
     call_abi_func((uint64_t)vu_update_pipelines);
 }
 
@@ -2427,7 +2431,7 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
             should_update_mac = true;
             break;
         case IR::Opcode::UpdateMacPipeline:
-            update_mac_pipeline(vu);
+            update_mac_pipeline(vu, instr);
             break;
         case IR::Opcode::MoveXTOP:
             move_xtop(vu, instr);
