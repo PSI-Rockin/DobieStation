@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.1)
 project(DobieStation)
 
+add_subdirectory(ext/libdeflate)
+
 set(CMAKE_CXX_STANDARD 11)
 
 set(CMAKE_AUTOMOC ON)
@@ -128,6 +130,6 @@ set(HEADERS
         )
 
 add_executable(DobieStation ${SOURCES} ${HEADERS})
-target_link_libraries(DobieStation Qt5::Core Qt5::Widgets deflate)
+target_link_libraries(DobieStation Qt5::Core Qt5::Widgets Ext::libdeflate)
 install (TARGETS DobieStation DESTINATION bin)
 
