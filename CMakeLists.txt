@@ -45,6 +45,7 @@ set(SOURCES
 	src/core/ee/vu_disasm.cpp
 	src/core/ee/vu_interpreter.cpp
 	src/core/iop/cdvd.cpp
+		src/core/iop/cso_reader.cpp
 	src/core/iop/gamepad.cpp
 	src/core/iop/iop.cpp
 	src/core/iop/iop_cop0.cpp
@@ -101,6 +102,7 @@ set(HEADERS
 	src/core/ee/vu_disasm.hpp
 	src/core/ee/vu_interpreter.hpp
 	src/core/iop/cdvd.hpp
+		src/core/iop/cso_reader.hpp
 	src/core/iop/gamepad.hpp
 	src/core/iop/iop.hpp
 	src/core/iop/iop_cop0.hpp
@@ -126,6 +128,6 @@ set(HEADERS
         )
 
 add_executable(DobieStation ${SOURCES} ${HEADERS})
-target_link_libraries(DobieStation Qt5::Core Qt5::Widgets)
+target_link_libraries(DobieStation Qt5::Core Qt5::Widgets deflate)
 install (TARGETS DobieStation DESTINATION bin)
 

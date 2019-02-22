@@ -187,7 +187,14 @@ int EmuWindow::load_exec(const char* file_name, bool skip_BIOS)
     else if (format == ".iso")
     {
         exec_file.close();
-        emu_thread.load_CDVD(file_name);
+        emu_thread.load_CDVD(file_name, CDVD_CONTAINER::ISO);
+        if (skip_BIOS)
+            emu_thread.set_skip_BIOS_hack(SKIP_HACK::LOAD_DISC);
+    }
+    else if (format == ".cso")
+    {
+        exec_file.close();
+        emu_thread.load_CDVD(file_name, CDVD_CONTAINER::CISO);
         if (skip_BIOS)
             emu_thread.set_skip_BIOS_hack(SKIP_HACK::LOAD_DISC);
     }
@@ -455,7 +462,7 @@ void EmuWindow::contextMenuEvent(QContextMenuEvent* event)
 void EmuWindow::open_file_no_skip()
 {
     emu_thread.pause(PAUSE_EVENT::FILE_DIALOG);
-    QString file_name = QFileDialog::getOpenFileName(this, tr("Open Rom"), "", tr("ROM Files (*.elf *.iso)"));
+    QString file_name = QFileDialog::getOpenFileName(this, tr("Open Rom"), "", tr("ROM Files (*.elf *.iso *.cso)"));
     load_exec(file_name.toStdString().c_str(), false);
     emu_thread.unpause(PAUSE_EVENT::FILE_DIALOG);
 }
@@ -463,7 +470,7 @@ void EmuWindow::open_file_no_skip()
 void EmuWindow::open_file_skip()
 {
     emu_thread.pause(PAUSE_EVENT::FILE_DIALOG);
-    QString file_name = QFileDialog::getOpenFileName(this, tr("Open Rom"), "", tr("ROM Files (*.elf *.iso)"));
+    QString file_name = QFileDialog::getOpenFileName(this, tr("Open Rom"), "", tr("ROM Files (*.elf *.iso *.cso)"));
     load_exec(file_name.toStdString().c_str(), true);
     emu_thread.unpause(PAUSE_EVENT::FILE_DIALOG);
 }
