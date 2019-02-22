@@ -1,13 +1,17 @@
 project(libdeflate C)
 set(CMAKE_C_STANDARD 99)
 
-add_definitions(-O2 -fomit-frame-pointer)
-add_definitions(-Wall -Wundef)
-add_definitions(-Wpedantic -Wdeclaration-after-statement -Wmissing-prototypes -Wstrict-prototypes -Wvla)
-add_definitions(-fvisibility=hidden -D_ANSI_SOURCE)
+if (MSVC)
+	add_definitions(/MD /O2)
+else()
+	add_definitions(-O2 -fomit-frame-pointer)
+	add_definitions(-Wall -Wundef)
+	add_definitions(-Wpedantic -Wdeclaration-after-statement -Wmissing-prototypes -Wstrict-prototypes -Wvla)
+	add_definitions(-fvisibility=hidden -D_ANSI_SOURCE)
 
-if (MINGW)
-	add_definitions(-Wno-pedantic-ms-format)
+	if (MINGW)
+		add_definitions(-Wno-pedantic-ms-format)
+	endif()
 endif()
 
 set(COMMON_HEADERS
