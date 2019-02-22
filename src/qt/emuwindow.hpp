@@ -38,6 +38,7 @@ class EmuWindow : public QMainWindow
         int run_gsdump(const char* file_name);
 
         void create_menu();
+        bool load_bios();
 
         void paintEvent(QPaintEvent *event) override;
         void closeEvent(QCloseEvent *event) override;
@@ -60,6 +61,7 @@ class EmuWindow : public QMainWindow
         void open_file_skip();
         void load_state();
         void save_state();
+        void bios_error(QString err);
         void emu_error(QString err);
         void emu_non_fatal_error(QString err);
 };
