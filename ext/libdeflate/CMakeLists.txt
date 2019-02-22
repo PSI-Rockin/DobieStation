@@ -72,7 +72,5 @@ add_library(deflate STATIC ${LIB_SRC} ${LIB_HEADERS} ${COMMON_HEADERS})
 add_library(Ext::libdeflate ALIAS deflate)
 
 target_include_directories(deflate
-	PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_include_directories(deflate
 	PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
 	PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/common)
