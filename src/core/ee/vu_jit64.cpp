@@ -2439,6 +2439,8 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
         case IR::Opcode::VMoveFromP:
             move_from_p(vu, instr);
             break;
+        case IR::Opcode::UpdateQ:
+            update_q(vu, instr);
         case IR::Opcode::UpdateP:
             update_p(vu, instr);
             break;
@@ -2470,7 +2472,7 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
             fallback_interpreter(vu, instr);
             break;
         default:
-            Errors::die("[VU_JIT64] Unknown IR instruction");
+            Errors::die("[VU_JIT64] Unknown IR instruction %d", instr.op);
     }
 }
 
