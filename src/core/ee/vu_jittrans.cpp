@@ -508,9 +508,9 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
         {
             if (p_pipe_delay > 0)
             {
-                //printf("[VU_JIT] Q pipe delay of %d stall amount of %d\n", q_pipe_delay, instr_info[PC].stall_amount);
-                if (instr_info[PC].stall_amount < p_pipe_delay)
-                    instr_info[PC].stall_amount = p_pipe_delay;
+                //printf("[VU_JIT] P pipe delay of %d stall amount of %d\n", q_pipe_delay, instr_info[PC].stall_amount);
+                if (instr_info[PC].stall_amount < (p_pipe_delay-1))
+                    instr_info[PC].stall_amount = (p_pipe_delay-1);
 
                 instr_info[PC].update_p_pipeline = true;
             }

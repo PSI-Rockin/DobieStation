@@ -2462,6 +2462,8 @@ void VectorUnit::subq(uint32_t instr)
 
 void VectorUnit::waitp(uint32_t instr)
 {
+    //Stalls actually release 1 cycle before writeback, but should be safe to write back early if we are stalling
+    finish_EFU_event -= 1;
     while (cycle_count < finish_EFU_event)
     {
         cycle_count++;
