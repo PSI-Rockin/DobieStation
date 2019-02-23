@@ -38,6 +38,8 @@ void VectorInterface::reset()
     vif_stop = false;
     mark_detected = false;
     flush_stall = false;
+    if(vu->get_id() == 1)
+        VU_JIT::reset();
 }
 
 bool VectorInterface::check_vif_stall(uint32_t value)
@@ -144,6 +146,11 @@ void VectorInterface::update(int cycles)
                 {
                     disasm_micromem();
                     command = 0;
+                    //Calculate the current program crc for the VU JIT after all microprograms have transferred
+                    if (vu->get_id() == 1)
+                    {
+                        VU_JIT::set_current_program(crc_microprogram());
+                    }
                 }
                 break;
             case 0x50:
@@ -307,7 +314,7 @@ void VectorInterface::decode_cmd(uint32_t value)
                 mpg.addr = imm * 8;
             }
 
-            VU_JIT::reset();
+           // VU_JIT::reset();
 
             wait_for_VU = true;
             wait_cmd_value = value;
@@ -914,6 +921,24 @@ void VectorInterface::disasm_micromem()
         file << endl;
     }
     file.close();
+}
+
+#define POLY 0x82f63b78
+
+uint32_t VectorInterface::crc_microprogram()
+{
+    int k;
+    uint32_t crc = 0;
+    int len = 0x4000;
+    int addr = 0x0000;
+
+    crc = ~crc;
+    while (len--) {
+        crc ^= vu->read_instr<uint8_t>(addr++);
+        for (int k = 0; k < 8; k++)
+            crc = crc & 1 ? (crc >> 1) ^ POLY : crc >> 1;
+    }
+    return ~crc;
 }
 
 uint32_t VectorInterface::get_stat()

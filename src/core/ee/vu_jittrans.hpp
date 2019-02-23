@@ -33,11 +33,17 @@ struct VU_InstrInfo
     int flag_instruction;
     bool advance_mac_pipeline;
     int stall_amount;
+    int q_pipe_delay_int_pass;
+    int q_pipe_delay_trans_pass;
+    uint64_t stall_state[4];
+    uint8_t decoder_vf_write[2];
+    uint8_t decoder_vf_write_field[2];
 };
 
 class VU_JitTranslator
 {
     private:
+        bool trans_delay_slot;
         int q_pipeline_delay;
 
         int cycles_this_block;
@@ -47,6 +53,7 @@ class VU_JitTranslator
 
         VU_InstrInfo instr_info[1024 * 16];
         uint16_t end_PC;
+        uint16_t cur_PC;
         bool has_q_stalled;
 
         int fdiv_pipe_cycles(uint32_t lower_instr);
@@ -56,7 +63,7 @@ class VU_JitTranslator
 
         void update_pipeline(VectorUnit &vu, int cycles);
         void analyze_FMAC_stalls(VectorUnit &vu, uint16_t PC);
-        void interpreter_pass(VectorUnit& vu, uint8_t *instr_mem);
+        void interpreter_pass(VectorUnit& vu, uint8_t *instr_mem, uint32_t prev_pc);
         void flag_pass(VectorUnit& vu);
 
         void fallback_interpreter(IR::Instruction& instr, uint32_t instr_word, bool is_upper);
@@ -79,7 +86,8 @@ class VU_JitTranslator
         void lower1_special(std::vector<IR::Instruction>& instrs, uint32_t lower);
         void lower2(std::vector<IR::Instruction>& instrs, uint32_t lower, uint32_t PC);
     public:
-        IR::Block translate(VectorUnit& vu, uint8_t *instr_mem);
+        IR::Block translate(VectorUnit& vu, uint8_t *instr_mem, uint32_t prev_pc);
+        void reset_instr_info();
 };
 
 #endif // VU_JITTRANS_HPP

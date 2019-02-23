@@ -140,7 +140,7 @@ void interpreter_lower(VectorUnit& vu, uint32_t instr)
     VU_Interpreter::call_lower(vu, instr);
 }
 
-void VU_JIT64::reset()
+void VU_JIT64::reset(bool clear_cache)
 {
     abi_int_count = 0;
     abi_xmm_count = 0;
@@ -166,9 +166,22 @@ void VU_JIT64::reset()
     int_regs[REG_64::RSI].locked = true;
     xmm_regs[REG_64::XMM0].locked = true;
     xmm_regs[REG_64::XMM1].locked = true;
-    cache.flush_all_blocks();
+
+    if(clear_cache)
+        cache.flush_all_blocks();
+
+    ir.reset_instr_info();
 
     should_update_mac = false;
+    prev_pc = 0xFFFFFFFFF;
+    current_program = 0;
+}
+
+void VU_JIT64::set_current_program(uint32_t crc)
+{
+    reset(false);
+    current_program = crc;
+
 }
 
 uint64_t VU_JIT64::get_vf_addr(VectorUnit &vu, int index)
@@ -1928,6 +1941,26 @@ void VU_JIT64::xgkick(VectorUnit &vu, IR::Instruction &instr)
     emitter.load_addr((uint64_t)&vu.stalled_GIF_addr, REG_64::R15);
     emitter.MOV16_TO_MEM(REG_64::RAX, REG_64::R15);
 
+    //If we're in a delay slot, there's no more XGKicks
+    if (!instr.get_dest())
+    {
+        emitter.load_addr((uint64_t)&vu.PC, REG_64::RAX);
+        emitter.MOV16_IMM_MEM(instr.get_source() + 8, REG_64::RAX);
+
+        emitter.load_addr((uint64_t)&prev_pc, REG_64::RAX);
+        emitter.MOV16_IMM_MEM(instr.get_source() + 8, REG_64::RAX);
+
+        //Return the amount of cycles to update the VUs with
+        emitter.MOV16_REG_IMM(cycle_count, REG_64::RAX);
+        emitter.load_addr((uint64_t)&cycle_count, REG_64::R15);
+        emitter.MOV16_TO_MEM(REG_64::RAX, REG_64::R15);
+
+        cleanup_recompiler(vu, false);
+        //Epilogue
+        emitter.POP(REG_64::RBP);
+        emitter.RET();
+    }
+
     //Jump after the stall handling code is done
     uint8_t* stall_addr = emitter.JMP_NEAR_DEFERRED();
 
@@ -1969,6 +2002,16 @@ void VU_JIT64::stop(VectorUnit &vu, IR::Instruction &instr)
 
     emitter.load_addr((uint64_t)&vu.PC, REG_64::RAX);
     emitter.MOV16_IMM_MEM(instr.get_jump_dest(), REG_64::RAX);
+
+    //We're at the end of a program, so the next call doesn't need to know the previous state
+    emitter.load_addr((uint64_t)&prev_pc, REG_64::RAX);
+    emitter.MOV32_IMM_MEM(0xFFFFFFFF, REG_64::RAX);
+}
+
+void VU_JIT64::save_pc(VectorUnit &vu, IR::Instruction &instr)
+{
+    emitter.load_addr((uint64_t)&prev_pc, REG_64::RAX);
+    emitter.MOV32_IMM_MEM(instr.get_jump_dest(), REG_64::RAX);
 }
 
 int VU_JIT64::search_for_register(AllocReg *regs, int vu_reg)
@@ -2448,6 +2491,9 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
         case IR::Opcode::Stop:
             stop(vu, instr);
             break;
+        case IR::Opcode::SavePC:
+            save_pc(vu, instr);
+            break;
         case IR::Opcode::FallbackInterpreter:
             fallback_interpreter(vu, instr);
             break;
@@ -2458,7 +2504,7 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
 
 void VU_JIT64::recompile_block(VectorUnit& vu, IR::Block& block)
 {
-    cache.alloc_block(vu.get_PC());
+    cache.alloc_block(vu.get_PC(), prev_pc, current_program);
 
     cond_branch = false;
     cycle_count = block.get_cycle_count();
@@ -2599,11 +2645,11 @@ void VU_JIT64::fallback_interpreter(VectorUnit &vu, IR::Instruction &instr)
 extern "C"
 uint8_t* exec_block(VU_JIT64& jit, VectorUnit& vu)
 {
-    //printf("[VU_JIT64] Executing block at $%04X\n", vu.PC);
-    if (jit.cache.find_block(vu.PC) == -1)
+    //printf("[VU_JIT64] Executing block at $%04X, Prev PC $%04X Current Program %08X: recompiling\n", vu.PC, jit.prev_pc, jit.current_program);
+    if (jit.cache.find_block(vu.PC, jit.prev_pc, jit.current_program) == -1)
     {
-        printf("[VU_JIT64] Block not found at $%04X: recompiling\n", vu.PC);
-        IR::Block block = jit.ir.translate(vu, vu.get_instr_mem());
+        //printf("[VU_JIT64] Block not found at $%04X, Prev PC $%04X Current Program %08X: recompiling\n", vu.PC, jit.prev_pc, jit.current_program);
+        IR::Block block = jit.ir.translate(vu, vu.get_instr_mem(), jit.prev_pc);
         jit.recompile_block(vu, block);
     }
     return jit.cache.get_current_block_start();

@@ -49,6 +49,8 @@ class VU_JIT64
         int abi_int_count;
         int abi_xmm_count;
 
+        uint32_t current_program;
+        uint32_t prev_pc;
         bool should_update_mac;
 
         bool cond_branch;
@@ -157,6 +159,7 @@ class VU_JIT64
         void xgkick(VectorUnit& vu, IR::Instruction& instr);
         void update_xgkick(VectorUnit& vu, IR::Instruction& instr);
         void stop(VectorUnit& vu, IR::Instruction& instr);
+        void save_pc(VectorUnit& vu, IR::Instruction& instr);
 
         int search_for_register(AllocReg* regs, int vu_reg);
         REG_64 alloc_int_reg(VectorUnit& vu, int vi_reg, REG_STATE state = REG_STATE::READ_WRITE);
@@ -178,7 +181,8 @@ class VU_JIT64
     public:
         VU_JIT64();
 
-        void reset();
+        void reset(bool clear_cache = true);
+        void set_current_program(uint32_t crc);
         uint16_t run(VectorUnit& vu);
 
         friend uint8_t* exec_block(VU_JIT64& jit, VectorUnit& vu);

@@ -10,36 +10,44 @@ uint32_t branch_offset(uint32_t instr, uint32_t PC)
     return PC + imm + 8;
 }
 
-IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem)
+void VU_JitTranslator::reset_instr_info()
+{
+    memset(instr_info, 0, sizeof(VU_InstrInfo));
+}
+
+IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32_t prev_pc)
 {
     IR::Block block;
 
     bool block_end = false;
-    bool delay_slot = false;
     bool ebit = false;
 
+    trans_delay_slot = false;
     has_q_stalled = false;
     q_pipeline_delay = 0;
     cycles_this_block = 0;
     cycles_since_xgkick_update = 0;
 
-    interpreter_pass(vu, instr_mem);
+    interpreter_pass(vu, instr_mem, prev_pc);
     flag_pass(vu);
 
-    uint16_t PC = vu.get_PC();
+    if(prev_pc != 0xFFFFFFFF)
+        q_pipeline_delay = instr_info[prev_pc].q_pipe_delay_trans_pass;
+
+    cur_PC = vu.get_PC();
     while (!block_end)
     {
         std::vector<IR::Instruction> upper_instrs;
         std::vector<IR::Instruction> lower_instrs;
-        if (delay_slot)
+        if (trans_delay_slot)
             block_end = true;
 
-        uint32_t upper = *(uint32_t*)&instr_mem[PC + 4];
-        uint32_t lower = *(uint32_t*)&instr_mem[PC];
+        uint32_t upper = *(uint32_t*)&instr_mem[cur_PC + 4];
+        uint32_t lower = *(uint32_t*)&instr_mem[cur_PC];
         
         if (q_pipeline_delay)
         {
-            q_pipeline_delay -= instr_info[PC].stall_amount+1;
+            q_pipeline_delay -= instr_info[cur_PC].stall_amount+1;
             if (q_pipeline_delay <= 0)
             {
                 IR::Instruction stall(IR::Opcode::UpdateQ);
@@ -48,25 +56,25 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem)
             }
         }
 
-        cycles_this_block += instr_info[PC].stall_amount + 1;
-        cycles_since_xgkick_update += instr_info[PC].stall_amount + 1;
+        cycles_this_block += instr_info[cur_PC].stall_amount + 1;
+        cycles_since_xgkick_update += instr_info[cur_PC].stall_amount + 1;
 
         translate_upper(upper_instrs, upper);
 
-        if (instr_info[PC].advance_mac_pipeline)
+        if (instr_info[cur_PC].advance_mac_pipeline)
         {
             IR::Instruction mac_update(IR::Opcode::UpdateMacPipeline);
-            mac_update.set_source((uint64_t)(instr_info[PC].stall_amount + 1));
+            mac_update.set_source((uint64_t)(instr_info[cur_PC].stall_amount + 1));
             block.add_instr(mac_update);
         }
 
-        if (instr_info[PC].update_mac_pipeline)
+        if (instr_info[cur_PC].update_mac_pipeline)
         {
             IR::Instruction update(IR::Opcode::UpdateMacFlags);
             block.add_instr(update);
         }
 
-        if (instr_info[PC].update_q_pipeline)
+        if (instr_info[cur_PC].update_q_pipeline)
         {
             IR::Instruction stall(IR::Opcode::UpdateQ);
             block.add_instr(stall);
@@ -85,19 +93,20 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem)
         }
         else
         {         
-            translate_lower(lower_instrs, lower, PC);
+            translate_lower(lower_instrs, lower, cur_PC);
 
-            if (instr_info[PC].swap_ops)
+            if (instr_info[cur_PC].swap_ops)
             {
                 //Lower op first
                 for (unsigned int i = 0; i < lower_instrs.size(); i++)
                 {
                     block.add_instr(lower_instrs[i]);
+
                     if (lower_instrs[i].is_jump())
                     {
-                        if (delay_slot)
+                        if (trans_delay_slot)
                             Errors::die("[VU JIT] Branch in delay slot");
-                        delay_slot = true;
+                        trans_delay_slot = true;
                     }
                 }
 
@@ -119,9 +128,9 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem)
                     block.add_instr(lower_instrs[i]);
                     if (lower_instrs[i].is_jump())
                     {
-                        if (delay_slot)
+                        if (trans_delay_slot)
                             Errors::die("[VU JIT] Branch in delay slot");
-                        delay_slot = true;
+                        trans_delay_slot = true;
                     }
                 }
             }
@@ -131,19 +140,39 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem)
         if (upper & (1 << 30))
         {
             ebit = true;
-            if (delay_slot)
+            if (trans_delay_slot)
                 Errors::die("[VU JIT] End microprogram in delay slot");
-            delay_slot = true;
+            trans_delay_slot = true;
         }
         else if (ebit)
         {
             IR::Instruction instr(IR::Opcode::Stop);
-            instr.set_jump_dest(PC + 8);
+            instr.set_jump_dest(cur_PC + 8);
             block.add_instr(instr);
         }
+        else if (block_end)
+        {
+            if (q_pipeline_delay)
+            {
+                if (!has_q_stalled)
+                {
+                    IR::Instruction q;
+                    q.op = IR::Opcode::UpdateQPipeline;
+                    q.set_source(cycles_this_block);
+                    block.add_instr(q);
+                    cycles_this_block = 0;
+                }
+            }
+            //Save end PC for block, helps us remember where the next block jumped from
+            IR::Instruction savepc;
+            savepc.op = IR::Opcode::SavePC;
+            savepc.set_jump_dest(cur_PC);
+            block.add_instr(savepc);
+        }
 
-        PC += 8;
+        cur_PC += 8;
     }
+    instr_info[cur_PC - 8].q_pipe_delay_trans_pass = q_pipeline_delay;
 
     IR::Instruction update;
     update.op = IR::Opcode::UpdateXgkick;
@@ -348,11 +377,40 @@ void VU_JitTranslator::analyze_FMAC_stalls(VectorUnit &vu, uint16_t PC)
 /**
  * Determine base operation information and which instructions need to be swapped
  */
-void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem)
+void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint32_t prev_pc)
 {
     bool block_end = false;
     bool delay_slot = false;
     int q_pipe_delay = 0;
+    
+    //Restore state from end of the block we jumped from
+    if (prev_pc != 0xFFFFFFFF)
+    {        
+        printf("[VU_JIT64] Restoring state from %x\n", prev_pc);
+        stall_pipe[0] = instr_info[prev_pc].stall_state[0];
+        stall_pipe[1] = instr_info[prev_pc].stall_state[1];
+        stall_pipe[2] = instr_info[prev_pc].stall_state[2];
+        stall_pipe[3] = instr_info[prev_pc].stall_state[3];
+
+        vu.decoder.vf_write[0] = instr_info[prev_pc].decoder_vf_write[0];
+        vu.decoder.vf_write[1] = instr_info[prev_pc].decoder_vf_write[1];
+        vu.decoder.vf_write_field[0] = instr_info[prev_pc].decoder_vf_write_field[0];
+        vu.decoder.vf_write_field[1] = instr_info[prev_pc].decoder_vf_write_field[1];
+
+        q_pipe_delay = instr_info[prev_pc].q_pipe_delay_int_pass;
+    }
+    else //Else it's a new block so there is no previous state
+    {
+        stall_pipe[0] = 0;
+        stall_pipe[1] = 0;
+        stall_pipe[2] = 0;
+        stall_pipe[3] = 0;
+
+        vu.decoder.vf_write[0] = 0;
+        vu.decoder.vf_write[1] = 0;
+        vu.decoder.vf_write_field[0] = 0;
+        vu.decoder.vf_write_field[1] = 0;
+    }
 
     uint16_t PC = vu.get_PC();
     while (!block_end)
@@ -370,8 +428,7 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem)
         if (delay_slot)
             block_end = true;
 
-        if(PC != vu.get_PC())
-            update_pipeline(vu, 1);
+        update_pipeline(vu, 1);
 
         vu.decoder.reset();
 
@@ -450,6 +507,19 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem)
     }
 
     end_PC = PC - 8;
+
+    //Save the state at the end of the block
+    instr_info[end_PC].stall_state[0] = stall_pipe[0];
+    instr_info[end_PC].stall_state[1] = stall_pipe[1];
+    instr_info[end_PC].stall_state[2] = stall_pipe[2];
+    instr_info[end_PC].stall_state[3] = stall_pipe[3];
+
+    instr_info[end_PC].decoder_vf_write[0] = vu.decoder.vf_write[0];
+    instr_info[end_PC].decoder_vf_write[1] = vu.decoder.vf_write[1];
+    instr_info[end_PC].decoder_vf_write_field [0] = vu.decoder.vf_write_field[0];
+    instr_info[end_PC].decoder_vf_write_field[1] = vu.decoder.vf_write_field[1];
+
+    instr_info[end_PC].q_pipe_delay_int_pass = q_pipe_delay;
 }
 
 /**
@@ -1220,6 +1290,9 @@ void VU_JitTranslator::lower1_special(std::vector<IR::Instruction> &instrs, uint
             //XGKICK
             instr.op = IR::Opcode::Xgkick;
             instr.set_base((lower >> 11) & 0xF);
+            instr.set_source(cur_PC);
+            instr.set_dest(trans_delay_slot);
+            cycles_since_xgkick_update = 0;
             break;
         case 0x72:
             //ELENG
