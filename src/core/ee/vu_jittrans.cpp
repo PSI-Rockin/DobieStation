@@ -23,17 +23,12 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
     bool ebit = false;
 
     trans_delay_slot = false;
-    has_q_stalled = false;
-    q_pipeline_delay = 0;
     cycles_this_block = 0;
     cycles_since_xgkick_update = 0;
 
     interpreter_pass(vu, instr_mem, prev_pc);
     flag_pass(vu);
-
-    if(prev_pc != 0xFFFFFFFF)
-        q_pipeline_delay = instr_info[prev_pc].q_pipe_delay_trans_pass;
-
+       
     cur_PC = vu.get_PC();
     while (!block_end)
     {
@@ -45,17 +40,6 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
         uint32_t upper = *(uint32_t*)&instr_mem[cur_PC + 4];
         uint32_t lower = *(uint32_t*)&instr_mem[cur_PC];
         
-        if (q_pipeline_delay)
-        {
-            q_pipeline_delay -= instr_info[cur_PC].stall_amount+1;
-            if (q_pipeline_delay <= 0)
-            {
-                IR::Instruction stall(IR::Opcode::UpdateQ);
-                block.add_instr(stall);
-                q_pipeline_delay = 0;
-            }
-        }
-
         cycles_this_block += instr_info[cur_PC].stall_amount + 1;
         cycles_since_xgkick_update += instr_info[cur_PC].stall_amount + 1;
 
@@ -78,7 +62,12 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
         {
             IR::Instruction stall(IR::Opcode::UpdateQ);
             block.add_instr(stall);
-            q_pipeline_delay = 0;
+        }
+
+        if (instr_info[cur_PC].update_p_pipeline)
+        {
+            IR::Instruction stall(IR::Opcode::UpdateP);
+            block.add_instr(stall);
         }
 
         //LOI - upper goes first, lower gets loaded into I register
@@ -152,17 +141,6 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
         }
         else if (block_end)
         {
-            if (q_pipeline_delay)
-            {
-                if (!has_q_stalled)
-                {
-                    IR::Instruction q;
-                    q.op = IR::Opcode::UpdateQPipeline;
-                    q.set_source(cycles_this_block);
-                    block.add_instr(q);
-                    cycles_this_block = 0;
-                }
-            }
             //Save end PC for block, helps us remember where the next block jumped from
             IR::Instruction savepc;
             savepc.op = IR::Opcode::SavePC;
@@ -172,7 +150,6 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
 
         cur_PC += 8;
     }
-    instr_info[cur_PC - 8].q_pipe_delay_trans_pass = q_pipeline_delay;
 
     IR::Instruction update;
     update.op = IR::Opcode::UpdateXgkick;
@@ -185,7 +162,7 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
 
 int VU_JitTranslator::fdiv_pipe_cycles(uint32_t lower_instr)
 {
-    if (((lower_instr >> 31) & 0x1))
+    if (lower_instr & (1 << 31))
     {
         uint32_t op = ((lower_instr >> 4) & 0x7C) | (lower_instr & 0x3);
         switch (op)
@@ -198,6 +175,33 @@ int VU_JitTranslator::fdiv_pipe_cycles(uint32_t lower_instr)
             default:
                 return 0;
 
+        }
+    }
+    return 0;
+}
+
+int VU_JitTranslator::efu_pipe_cycles(uint32_t lower_instr)
+{
+    if (lower_instr & (1 << 31))
+    {
+        uint32_t op = ((lower_instr >> 4) & 0x7C) | (lower_instr & 0x3);
+        switch (op)
+        {
+            case 0x71:
+            case 0x72:
+            case 0x79:
+                return 18;
+            case 0x73:
+                return 24;
+            case 0x78:
+            case 0x7A:
+                return 12;
+            case 0x7C:
+                return 29;
+            case 0x7E:
+                return 44;
+            default:
+                return 0;
         }
     }
     return 0;
@@ -382,6 +386,7 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
     bool block_end = false;
     bool delay_slot = false;
     int q_pipe_delay = 0;
+    int p_pipe_delay = 0;
     
     //Restore state from end of the block we jumped from
     if (prev_pc != 0xFFFFFFFF)
@@ -398,6 +403,7 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
         vu.decoder.vf_write_field[1] = instr_info[prev_pc].decoder_vf_write_field[1];
 
         q_pipe_delay = instr_info[prev_pc].q_pipe_delay_int_pass;
+        p_pipe_delay = instr_info[prev_pc].p_pipe_delay_int_pass;
     }
     else //Else it's a new block so there is no previous state
     {
@@ -485,13 +491,43 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
             }
 
             q_pipe_delay = fdiv_pipe_cycles(lower);
-            if(!q_pipe_delay)
-                instr_info[PC].update_q_pipeline = true;
         }
         else if (q_pipe_delay > 0)
         {
             q_pipe_delay -= instr_info[PC].stall_amount + 1;
+
+            if(q_pipe_delay <= 0)
+            {
+                instr_info[PC].update_q_pipeline = true;
+                q_pipe_delay = 0;
+            }
         }
+
+        //WaitP, EATAN, EEXP, ELENG, ERCPR, ERLENG, ERSADD, ERSQRT, ESADD, ESIN, ESQRT, ESUM
+        if ((lower & (1 << 31)) && ((lower >> 8) & 0x7) == 0x7)
+        {
+            if (p_pipe_delay > 0)
+            {
+                //printf("[VU_JIT] Q pipe delay of %d stall amount of %d\n", q_pipe_delay, instr_info[PC].stall_amount);
+                if (instr_info[PC].stall_amount < p_pipe_delay)
+                    instr_info[PC].stall_amount = p_pipe_delay;
+
+                instr_info[PC].update_p_pipeline = true;
+            }
+
+            p_pipe_delay = efu_pipe_cycles(lower);
+        }
+        else if (p_pipe_delay > 0)
+        {
+            p_pipe_delay -= instr_info[PC].stall_amount + 1;
+
+            if (p_pipe_delay <= 0)
+            {
+                instr_info[PC].update_p_pipeline = true;
+                p_pipe_delay = 0;
+            }
+        }
+
 
         if(instr_info[PC].stall_amount)
             update_pipeline(vu, instr_info[PC].stall_amount);
@@ -520,6 +556,7 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
     instr_info[end_PC].decoder_vf_write_field[1] = vu.decoder.vf_write_field[1];
 
     instr_info[end_PC].q_pipe_delay_int_pass = q_pipe_delay;
+    instr_info[end_PC].p_pipe_delay_int_pass = p_pipe_delay;
 }
 
 /**
@@ -618,29 +655,6 @@ void VU_JitTranslator::update_xgkick(std::vector<IR::Instruction> &instrs)
     update.set_source(cycles_since_xgkick_update);
     cycles_since_xgkick_update = 0;
     instrs.push_back(update);
-}
-
-void VU_JitTranslator::check_q_stall(std::vector<IR::Instruction> &instrs)
-{
-    if (!has_q_stalled)
-    {
-        IR::Instruction q;
-        q.op = IR::Opcode::UpdateQPipeline;
-        q.set_source(cycles_this_block);
-        instrs.push_back(q);
-        cycles_this_block = 0;
-    }
-}
-
-void VU_JitTranslator::start_q_event(std::vector<IR::Instruction> &instrs, int latency)
-{
-    IR::Instruction q;
-    q.op = IR::Opcode::StartQEvent;
-    q.set_source(latency);
-    q.set_source2(cycles_this_block);
-    instrs.push_back(q);
-    q_pipeline_delay = latency;
-    cycles_this_block = 0;
 }
 
 void VU_JitTranslator::op_vectors(IR::Instruction &instr, uint32_t upper)
@@ -752,7 +766,6 @@ void VU_JitTranslator::translate_upper(std::vector<IR::Instruction>& instrs, uin
             break;
         case 0x1C:
             //MULq
-            check_q_stall(instrs);
             instr.op = IR::Opcode::VMulVectorByScalar;
             op_vector_by_scalar(instr, upper, VU_SpecialReg::Q);
             break;
@@ -773,13 +786,11 @@ void VU_JitTranslator::translate_upper(std::vector<IR::Instruction>& instrs, uin
             break;
         case 0x20:
             //ADDq
-            check_q_stall(instrs);
             instr.op = IR::Opcode::VAddVectorByScalar;
             op_vector_by_scalar(instr, upper, VU_SpecialReg::Q);
             break;
         case 0x21:
             //MADDq
-            check_q_stall(instrs);
             instr.op = IR::Opcode::VMaddVectorByScalar;
             op_vector_by_scalar(instr, upper, VU_SpecialReg::Q);
             break;
@@ -795,13 +806,11 @@ void VU_JitTranslator::translate_upper(std::vector<IR::Instruction>& instrs, uin
             break;
         case 0x24:
             //SUBq
-            check_q_stall(instrs);
             instr.op = IR::Opcode::VSubVectorByScalar;
             op_vector_by_scalar(instr, upper, VU_SpecialReg::Q);
             break;
         case 0x25:
             //MSUBq
-            check_q_stall(instrs);
             instr.op = IR::Opcode::VMsubVectorByScalar;
             op_vector_by_scalar(instr, upper, VU_SpecialReg::Q);
             break;
@@ -959,7 +968,6 @@ void VU_JitTranslator::upper_special(std::vector<IR::Instruction> &instrs, uint3
             break;
         case 0x1C:
             //MULAq
-            check_q_stall(instrs);
             instr.op = IR::Opcode::VMulVectorByScalar;
             op_acc_by_scalar(instr, upper, VU_SpecialReg::Q);
             break;
@@ -981,13 +989,11 @@ void VU_JitTranslator::upper_special(std::vector<IR::Instruction> &instrs, uint3
             break;
         case 0x20:
             //ADDAq
-            check_q_stall(instrs);
             instr.op = IR::Opcode::VAddVectorByScalar;
             op_acc_by_scalar(instr, upper, VU_SpecialReg::Q);
             break;
         case 0x21:
             //MADDAq
-            check_q_stall(instrs);
             instr.op = IR::Opcode::VMaddAccByScalar;
             op_acc_by_scalar(instr, upper, VU_SpecialReg::Q);
             break;
@@ -1003,13 +1009,11 @@ void VU_JitTranslator::upper_special(std::vector<IR::Instruction> &instrs, uint3
             break;
         case 0x24:
             //SUBAq
-            check_q_stall(instrs);
             instr.op = IR::Opcode::VSubVectorByScalar;
             op_acc_by_scalar(instr, upper, VU_SpecialReg::Q);
             break;
         case 0x25:
             //MSUBAq
-            check_q_stall(instrs);
             instr.op = IR::Opcode::VMsubAccByScalar;
             op_acc_by_scalar(instr, upper, VU_SpecialReg::Q);
             break;
@@ -1204,34 +1208,27 @@ void VU_JitTranslator::lower1_special(std::vector<IR::Instruction> &instrs, uint
             break;
         case 0x38:
             //DIV
-            start_q_event(instrs, 7);
             instr.op = IR::Opcode::VDiv;
             instr.set_source((lower >> 11) & 0x1F);
             instr.set_source2((lower >> 16) & 0x1F);
             instr.set_field((lower >> 21) & 0x3);
             instr.set_field2((lower >> 23) & 0x3);
-            has_q_stalled = true;
             break;
         case 0x39:
             //SQRT
-            start_q_event(instrs, 7);
             fallback_interpreter(instr, lower, false);
             Errors::print_warning("[VU_JIT] Unrecognized lower1 special op SQRT\n");
-            has_q_stalled = true;
             break;
         case 0x3A:
             //RSQRT
-            start_q_event(instrs, 13);
             instr.op = IR::Opcode::VRsqrt;
             instr.set_source((lower >> 11) & 0x1F);
             instr.set_source2((lower >> 16) & 0x1F);
             instr.set_field((lower >> 21) & 0x3);
             instr.set_field2((lower >> 23) & 0x3);
-            has_q_stalled = true;
             break;
         case 0x3B:
             //WAITq - the stall is handled by the interpreter pass, so we can just return
-            has_q_stalled = true;
             return;
         case 0x3C:
             //MTIR
@@ -1294,6 +1291,11 @@ void VU_JitTranslator::lower1_special(std::vector<IR::Instruction> &instrs, uint
             instr.set_source(cur_PC);
             instr.set_dest(trans_delay_slot);
             break;
+        case 0x71:
+            //ERSADD
+            fallback_interpreter(instr, lower, false);
+            Errors::print_warning("[VU_JIT] Unrecognized lower1 special op ERSADD\n", op);
+            break;
         case 0x72:
             //ELENG
             instr.op = IR::Opcode::VEleng;
@@ -1316,9 +1318,24 @@ void VU_JitTranslator::lower1_special(std::vector<IR::Instruction> &instrs, uint
             instr.set_source((lower >> 11) & 0x1F);
             instr.set_field((lower >> 21) & 0x3);
             break;
+        case 0x7A:
+            //ERCPR
+            fallback_interpreter(instr, lower, false);
+            Errors::print_warning("[VU_JIT] Unrecognized lower1 special op ERCPR\n", op);
+            break;
         case 0x7B:
-            //WAITp - TODO
+            //WAITp - the stall is handled by the interpreter pass, so we can just return
             return;
+        case 0x7C:
+            //ESIN
+            fallback_interpreter(instr, lower, false);
+            Errors::print_warning("[VU_JIT] Unrecognized lower1 special op ESIN\n", op);
+            break;
+        case 0x7E:
+            //EEXP
+            fallback_interpreter(instr, lower, false);
+            Errors::print_warning("[VU_JIT] Unrecognized lower1 special op EEXP\n", op);
+            break;
         default:
             //Errors::die("[VU_JIT] Unrecognized lower1 special op $%02X", op);
             fallback_interpreter(instr, lower, false);

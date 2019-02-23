@@ -102,19 +102,6 @@ void vu_clip(VectorUnit& vu, uint32_t imm)
     vu.clip(imm);
 }
 
-void vu_start_q_event(VectorUnit& vu, int latency, int cycles)
-{
-    vu.run_event += cycles;
-    vu.finish_DIV_event = vu.run_event + latency;
-}
-
-void vu_check_q_pipeline(VectorUnit& vu, int cycles)
-{
-    vu.run_event += cycles;
-    if (vu.run_event >= vu.finish_DIV_event)
-        vu.Q.u = vu.new_Q_instance.u;
-}
-
 void vu_update_xgkick(VectorUnit& vu, int cycles)
 {
     if (vu.transferring_GIF)
@@ -1765,10 +1752,10 @@ void VU_JIT64::move_from_p(VectorUnit &vu, IR::Instruction &instr)
 {
     uint8_t field = convert_field(instr.get_field());
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
+    REG_64 p_reg = alloc_sse_reg(vu, VU_SpecialReg::P, REG_STATE::READ);
 
     REG_64 temp = REG_64::XMM0;
-    emitter.load_addr((uint64_t)&vu.P, REG_64::RAX);
-    emitter.MOVAPS_FROM_MEM(REG_64::RAX, temp);
+    emitter.MOVAPS_REG(p_reg, temp);
     emitter.SHUFPS(0, temp, temp);
     emitter.BLENDPS(field, temp, dest);
     set_clamping(dest, true);
@@ -1789,7 +1776,7 @@ void VU_JIT64::eleng(VectorUnit &vu, IR::Instruction &instr)
     //sqrt(P)
     emitter.SQRTPS(temp, temp);
 
-    emitter.load_addr((uint64_t)&vu.P, REG_64::RAX);
+    emitter.load_addr((uint64_t)&vu.new_P_instance, REG_64::RAX);
     emitter.MOVAPS_TO_MEM(temp, REG_64::RAX);
 }
 
@@ -1812,7 +1799,7 @@ void VU_JIT64::erleng(VectorUnit &vu, IR::Instruction &instr)
     emitter.MOVD_TO_XMM(REG_64::RAX, temp2);
     emitter.DIVPS(temp, temp2);
 
-    emitter.load_addr((uint64_t)&vu.P, REG_64::RAX);
+    emitter.load_addr((uint64_t)&vu.new_P_instance, REG_64::RAX);
     emitter.MOVAPS_TO_MEM(temp2, REG_64::RAX);
 }
 
@@ -1827,7 +1814,7 @@ void VU_JIT64::esqrt(VectorUnit &vu, IR::Instruction &instr)
     emitter.SQRTPS(source, temp);
     emitter.INSERTPS(field, 0, 0, temp, temp);
 
-    emitter.load_addr((uint64_t)&vu.P, REG_64::RAX);
+    emitter.load_addr((uint64_t)&vu.new_P_instance, REG_64::RAX);
     emitter.MOVAPS_TO_MEM(temp, REG_64::RAX);
 }
 
@@ -1849,7 +1836,7 @@ void VU_JIT64::ersqrt(VectorUnit &vu, IR::Instruction &instr)
 
     emitter.DIVPS(denom, num);
 
-    emitter.load_addr((uint64_t)&vu.P, REG_64::RAX);
+    emitter.load_addr((uint64_t)&vu.new_P_instance, REG_64::RAX);
     emitter.MOVAPS_TO_MEM(num, REG_64::RAX);
 }
 
@@ -1871,21 +1858,6 @@ void VU_JIT64::rinit(VectorUnit &vu, IR::Instruction &instr)
     emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
 }
 
-void VU_JIT64::start_q_event(VectorUnit &vu, IR::Instruction &instr)
-{
-    prepare_abi(vu, (uint64_t)&vu);
-    prepare_abi(vu, instr.get_source());
-    prepare_abi(vu, instr.get_source2());
-    call_abi_func((uint64_t)vu_start_q_event);
-}
-
-void VU_JIT64::check_q_pipeline(VectorUnit &vu, IR::Instruction &instr)
-{
-    prepare_abi(vu, (uint64_t)&vu);
-    prepare_abi(vu, instr.get_source());
-    call_abi_func((uint64_t)vu_check_q_pipeline);
-}
-
 void VU_JIT64::update_q(VectorUnit &vu, IR::Instruction &instr)
 {
     //Store the pipelined Q inside the Q available to the program
@@ -1893,6 +1865,15 @@ void VU_JIT64::update_q(VectorUnit &vu, IR::Instruction &instr)
     emitter.load_addr((uint64_t)&vu.new_Q_instance, REG_64::RAX);
     emitter.MOVAPS_FROM_MEM(REG_64::RAX, q_reg);
     set_clamping(q_reg, true);
+}
+
+void VU_JIT64::update_p(VectorUnit &vu, IR::Instruction &instr)
+{
+    //Store the pipelined P inside the P available to the program
+    REG_64 p_reg = alloc_sse_reg(vu, VU_SpecialReg::P, REG_STATE::WRITE);
+    emitter.load_addr((uint64_t)&vu.new_P_instance, REG_64::RAX);
+    emitter.MOVAPS_FROM_MEM(REG_64::RAX, p_reg);
+    set_clamping(p_reg, true);
 }
 
 void VU_JIT64::update_mac_pipeline(VectorUnit &vu, IR::Instruction &instr)
@@ -1956,9 +1937,6 @@ void VU_JIT64::xgkick(VectorUnit &vu, IR::Instruction &instr)
         emitter.MOV16_TO_MEM(REG_64::RAX, REG_64::R15);
 
         cleanup_recompiler(vu, false);
-        //Epilogue
-        emitter.POP(REG_64::RBP);
-        emitter.RET();
     }
 
     //Jump after the stall handling code is done
@@ -2461,14 +2439,8 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
         case IR::Opcode::VMoveFromP:
             move_from_p(vu, instr);
             break;
-        case IR::Opcode::StartQEvent:
-            start_q_event(vu, instr);
-            break;
-        case IR::Opcode::UpdateQPipeline:
-            check_q_pipeline(vu, instr);
-            break;
-        case IR::Opcode::UpdateQ:
-            update_q(vu, instr);
+        case IR::Opcode::UpdateP:
+            update_p(vu, instr);
             break;
         case IR::Opcode::UpdateMacFlags:
             should_update_mac = true;

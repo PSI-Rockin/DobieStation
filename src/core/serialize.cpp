@@ -4,7 +4,7 @@
 
 #define VER_MAJOR 0
 #define VER_MINOR 0
-#define VER_REV 16
+#define VER_REV 17
 
 using namespace std;
 
@@ -322,6 +322,10 @@ void VectorUnit::load_state(ifstream &state)
     state.read((char*)&cycle_count, sizeof(cycle_count));
     state.read((char*)&finish_DIV_event, sizeof(finish_DIV_event));
     state.read((char*)&new_Q_instance.u, sizeof(new_Q_instance.u));
+    state.read((char*)&DIV_event_started, sizeof(DIV_event_started));
+    state.read((char*)&finish_EFU_event, sizeof(finish_EFU_event));
+    state.read((char*)&new_P_instance.u, sizeof(new_P_instance.u));
+    state.read((char*)&EFU_event_started, sizeof(EFU_event_started));    
 
     state.read((char*)&int_branch_delay, sizeof(int_branch_delay));
     state.read((char*)&int_backup_reg, sizeof(int_backup_reg));
@@ -381,6 +385,11 @@ void VectorUnit::save_state(ofstream &state)
     state.write((char*)&cycle_count, sizeof(cycle_count));
     state.write((char*)&finish_DIV_event, sizeof(finish_DIV_event));
     state.write((char*)&new_Q_instance.u, sizeof(new_Q_instance.u));
+    state.write((char*)&DIV_event_started, sizeof(DIV_event_started));
+    state.write((char*)&finish_EFU_event, sizeof(finish_EFU_event));
+    state.write((char*)&new_P_instance.u, sizeof(new_P_instance.u));
+    state.write((char*)&EFU_event_started, sizeof(EFU_event_started));
+
     state.write((char*)&int_branch_delay, sizeof(int_branch_delay));
     state.write((char*)&int_backup_reg, sizeof(int_backup_reg));
     state.write((char*)&int_backup_id, sizeof(int_backup_id));

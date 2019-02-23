@@ -27,6 +27,7 @@ struct VU_InstrInfo
 {
     bool swap_ops;
     bool update_q_pipeline;
+    bool update_p_pipeline;
     bool update_mac_pipeline;
     bool has_mac_result;
     bool has_clip_result;
@@ -35,6 +36,8 @@ struct VU_InstrInfo
     int stall_amount;
     int q_pipe_delay_int_pass;
     int q_pipe_delay_trans_pass;
+    int p_pipe_delay_int_pass;
+    int p_pipe_delay_trans_pass;
     uint64_t stall_state[4];
     uint8_t decoder_vf_write[2];
     uint8_t decoder_vf_write_field[2];
@@ -44,7 +47,6 @@ class VU_JitTranslator
 {
     private:
         bool trans_delay_slot;
-        int q_pipeline_delay;
 
         int cycles_this_block;
         int cycles_since_xgkick_update;
@@ -54,9 +56,9 @@ class VU_JitTranslator
         VU_InstrInfo instr_info[1024 * 16];
         uint16_t end_PC;
         uint16_t cur_PC;
-        bool has_q_stalled;
 
         int fdiv_pipe_cycles(uint32_t lower_instr);
+        int efu_pipe_cycles(uint32_t lower_instr);
         int is_flag_instruction(uint32_t lower_instr);
         bool updates_mac_flags(uint32_t upper_instr);
         bool updates_mac_flags_special(uint32_t upper_instr);
@@ -68,8 +70,6 @@ class VU_JitTranslator
 
         void fallback_interpreter(IR::Instruction& instr, uint32_t instr_word, bool is_upper);
         void update_xgkick(std::vector<IR::Instruction>& instrs);
-        void check_q_stall(std::vector<IR::Instruction>& instrs);
-        void start_q_event(std::vector<IR::Instruction>& instrs, int latency);
 
         void op_vectors(IR::Instruction& instr, uint32_t upper);
         void op_acc_and_vectors(IR::Instruction& instr, uint32_t upper);

@@ -90,9 +90,8 @@ INSTR(VERsqrt)
 
 INSTR(VRInit)
 
-INSTR(StartQEvent)
-INSTR(UpdateQPipeline)
 INSTR(UpdateQ)
+INSTR(UpdateP)
 INSTR(UpdateMacFlags)
 INSTR(UpdateMacPipeline)
 INSTR(MoveXTOP)

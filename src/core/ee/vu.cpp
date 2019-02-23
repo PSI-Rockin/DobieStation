@@ -160,7 +160,11 @@ void VectorUnit::flush_pipes()
         update_mac_pipeline();
 
     finish_DIV_event = cycle_count;
+    finish_EFU_event = cycle_count;
+    DIV_event_started = false;
+    EFU_event_started = false;
     Q.u = new_Q_instance.u;
+    P.u = new_P_instance.u;
 }
 
 void VectorUnit::run(int cycles)
@@ -170,8 +174,7 @@ void VectorUnit::run(int cycles)
     {
         cycle_count++;
         update_mac_pipeline();
-        if (cycle_count == finish_DIV_event)
-            Q.u = new_Q_instance.u;
+        update_DIV_EFU_pipes();
 
         if (int_branch_delay)
             int_branch_delay--;
@@ -370,8 +373,7 @@ void VectorUnit::check_for_FMAC_stall()
             for (int j = 0; j < delay; j++)
                 update_mac_pipeline();
             cycle_count += delay;
-            if (cycle_count >= finish_DIV_event && (cycle_count - delay) < finish_DIV_event)
-                Q.u = new_Q_instance.u;
+            update_DIV_EFU_pipes();
             int_branch_delay = 0;
             break;
         }
@@ -524,9 +526,37 @@ void VectorUnit::update_mac_pipeline()
     }
 }
 
+void VectorUnit::update_DIV_EFU_pipes()
+{
+    if (DIV_event_started)
+    {
+        if (cycle_count >= finish_DIV_event)
+        {
+            DIV_event_started = false;
+            Q.u = new_Q_instance.u;
+        }
+    }
+
+    if (EFU_event_started)
+    {
+        if (cycle_count >= finish_EFU_event)
+        {
+            EFU_event_started = false;
+            P.u = new_P_instance.u;
+        }
+    }
+}
+
 void VectorUnit::start_DIV_unit(int latency)
 {
     finish_DIV_event = cycle_count + latency;
+    DIV_event_started = true;
+}
+
+void VectorUnit::start_EFU_unit(int latency)
+{
+    finish_EFU_event = cycle_count + latency;
+    EFU_event_started = true;
 }
 
 void VectorUnit::set_int_branch_delay(uint8_t reg)
@@ -937,7 +967,7 @@ void VectorUnit::eexp(uint32_t instr)
     if (gpr[_fs_].u[_fsf_] & 0x80000000)
     {
         Errors::print_warning("[VU] EEXP called with sign bit set");
-        P.f = convert(gpr[_fs_].u[_fsf_]);
+        new_P_instance.f = convert(gpr[_fs_].u[_fsf_]);
         return;
     }
 
@@ -946,7 +976,8 @@ void VectorUnit::eexp(uint32_t instr)
     for (int exp = 1; exp <= 6; exp++)
         value += coeffs[exp - 1] * pow(x, exp);
 
-    P.f = 1.0 / value;
+    new_P_instance.f = 1.0 / value;
+    start_EFU_unit(44);
 }
 
 void VectorUnit::esin(uint32_t instr)
@@ -957,9 +988,11 @@ void VectorUnit::esin(uint32_t instr)
         -0.000198074136279, 0.000002601886990
     };
     float x = convert(gpr[_fs_].u[_fsf_]);
-    P.f = x;
+    new_P_instance.f = x;
     for (int c = 0; c < 4; c++) //Hah, c++
-        P.f += coeffs[c] * pow(x, (2 * c) + 3);
+        new_P_instance.f += coeffs[c] * pow(x, (2 * c) + 3);
+
+    start_EFU_unit(29);
 }
 
 void VectorUnit::ercpr(uint32_t instr)
@@ -969,11 +1002,12 @@ void VectorUnit::ercpr(uint32_t instr)
         Errors::die("[VU] ERCPR called on VU0!\n");
     }
 
-    P.f = convert(gpr[_fs_].u[_fsf_]);
+    new_P_instance.f = convert(gpr[_fs_].u[_fsf_]);
 
-    if (P.f != 0)
-        P.f = 1.0f / P.f;
+    if (new_P_instance.f != 0)
+        new_P_instance.f = 1.0f / new_P_instance.f;
 
+    start_EFU_unit(12);
     printf("[VU] ERCPR: %f (%d)\n", P.f, _fs_);
 }
 
@@ -985,10 +1019,11 @@ void VectorUnit::eleng(uint32_t instr)
     }
 
     //P = sqrt(x^2 + y^2 + z^2)
-    P.f = pow(convert(gpr[_fs_].u[0]), 2) + pow(convert(gpr[_fs_].u[1]), 2) + pow(convert(gpr[_fs_].u[2]), 2);
-    if (P.f >= 0.0)
-        P.f = sqrt(P.f);
+    new_P_instance.f = pow(convert(gpr[_fs_].u[0]), 2) + pow(convert(gpr[_fs_].u[1]), 2) + pow(convert(gpr[_fs_].u[2]), 2);
+    if (new_P_instance.f >= 0.0)
+        new_P_instance.f = sqrt(new_P_instance.f);
 
+    start_EFU_unit(18);
     printf("[VU] ELENG: %f (%d)\n", P.f, _fs_);
 }
 
@@ -999,9 +1034,10 @@ void VectorUnit::esqrt(uint32_t instr)
         Errors::die("[VU] ESQRT called on VU0!\n");
     }
 
-    P.f = convert(gpr[_fs_].u[_fsf_]);
-    P.f = sqrt(fabs(P.f));
+    new_P_instance.f = convert(gpr[_fs_].u[_fsf_]);
+    new_P_instance.f = sqrt(fabs(new_P_instance.f));
 
+    start_EFU_unit(12);
     printf("[VU] ESQRT: %f (%d)\n", P.f, _fs_);
 }
 
@@ -1013,14 +1049,15 @@ void VectorUnit::erleng(uint32_t instr)
     }
 
     //P = 1 / sqrt(x^2 + y^2 + z^2)
-    P.f = pow(convert(gpr[_fs_].u[0]), 2) + pow(convert(gpr[_fs_].u[1]), 2) + pow(convert(gpr[_fs_].u[2]), 2);
-    if (P.f >= 0.0)
+    new_P_instance.f = pow(convert(gpr[_fs_].u[0]), 2) + pow(convert(gpr[_fs_].u[1]), 2) + pow(convert(gpr[_fs_].u[2]), 2);
+    if (new_P_instance.f >= 0.0)
     {
-        P.f = sqrt(P.f);
-        if (P.f != 0)
-            P.f = 1.0f / P.f;
+        new_P_instance.f = sqrt(new_P_instance.f);
+        if (new_P_instance.f != 0)
+            new_P_instance.f = 1.0f / new_P_instance.f;
     }
 
+    start_EFU_unit(24);
     printf("[VU] ERLENG: %f (%d)\n", P.f, _fs_);
 }
 
@@ -1032,10 +1069,11 @@ void VectorUnit::ersadd(uint32_t instr)
     }
 
     //P = 1 / (x^2 + y^2 + z^2)
-    P.f = pow(convert(gpr[_fs_].u[0]), 2) + pow(convert(gpr[_fs_].u[1]), 2) + pow(convert(gpr[_fs_].u[2]), 2);
-    if (P.f != 0)
-        P.f = 1.0f / P.f;
+    new_P_instance.f = pow(convert(gpr[_fs_].u[0]), 2) + pow(convert(gpr[_fs_].u[1]), 2) + pow(convert(gpr[_fs_].u[2]), 2);
+    if (new_P_instance.f != 0)
+        new_P_instance.f = 1.0f / new_P_instance.f;
 
+    start_EFU_unit(18);
     printf("[VU] ERSADD: %f (%d)\n", P.f, _fs_);
 }
 
@@ -1046,12 +1084,13 @@ void VectorUnit::ersqrt(uint32_t instr)
         Errors::die("[VU] ERSQRT called on VU0!\n");
     }
 
-    P.f = convert(gpr[_fs_].u[_fsf_]);
+    new_P_instance.f = convert(gpr[_fs_].u[_fsf_]);
 
-    P.f = sqrt(fabs(P.f));
-    if (P.f != 0)
-        P.f = 1.0f / P.f;
+    new_P_instance.f = sqrt(fabs(P.f));
+    if (new_P_instance.f != 0)
+        new_P_instance.f = 1.0f / new_P_instance.f;
 
+    start_EFU_unit(18);
     printf("[VU] ERSQRT: %f (%d)\n", P.f, _fs_);
 }
 
@@ -2423,7 +2462,12 @@ void VectorUnit::subq(uint32_t instr)
 
 void VectorUnit::waitp(uint32_t instr)
 {
-    flush_pipes();
+    while (cycle_count < finish_EFU_event)
+    {
+        cycle_count++;
+        update_mac_pipeline();
+    }
+    update_DIV_EFU_pipes();
 }
 
 void VectorUnit::waitq(uint32_t instr)
@@ -2433,7 +2477,7 @@ void VectorUnit::waitq(uint32_t instr)
         cycle_count++;
         update_mac_pipeline();
     }
-    Q.u = new_Q_instance.u;
+    update_DIV_EFU_pipes();
 }
 
 void VectorUnit::xgkick(uint32_t instr)
