@@ -150,6 +150,7 @@ class VU_JIT64
 
         void rinit(VectorUnit& vu, IR::Instruction& instr);
 
+        void backup_vi(VectorUnit& vu, IR::Instruction& instr);
         void update_q(VectorUnit& vu, IR::Instruction& instr);
         void update_p(VectorUnit& vu, IR::Instruction& instr);
         void update_mac_pipeline(VectorUnit& vu, IR::Instruction &instr);

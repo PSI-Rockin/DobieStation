@@ -320,6 +320,7 @@ class VectorUnit
 
         //Friends needed for JIT convenience
         friend class VU_JIT64;
+        friend class VU_JitTranslator;
 
         friend void vu_update_xgkick(VectorUnit& vu, int cycles);
         friend void vu_update_pipelines(VectorUnit& vu, int cycles);
