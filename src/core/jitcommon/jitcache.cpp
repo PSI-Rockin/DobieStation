@@ -72,7 +72,7 @@ int JitCache::find_block(uint32_t pc, uint32_t prev_pc, uint32_t program)
     {
         for (int i = blocks.size() - 1; i >= 0; i--)
         {
-            if (program == blocks[i].program && pc == blocks[i].start_pc && prev_pc == blocks[i].from_pc)
+            if (pc == blocks[i].start_pc && prev_pc == blocks[i].from_pc && program == blocks[i].program)
             {
                 //printf("[VU_JIT64] Block found at %d\n", i);
                 current_block = &blocks[i];
