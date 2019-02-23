@@ -116,13 +116,19 @@ class VectorUnit
         uint8_t int_backup_id;
 
         VU_R new_Q_instance;
+        VU_R new_P_instance;
         uint64_t finish_DIV_event;
+        bool DIV_event_started;
+        uint64_t finish_EFU_event;
+        bool EFU_event_started;
 
         float update_mac_flags(float value, int index);
         void clear_mac_flags(int index);
 
         //Updates new_Q_instance
         void start_DIV_unit(int latency);
+        //Updates new_P_Instance
+        void start_EFU_unit(int latency);
         void set_int_branch_delay(uint8_t reg);
         
         void update_status();
@@ -142,6 +148,7 @@ class VectorUnit
         void set_GIF(GraphicsInterface* gif);
 
         void update_mac_pipeline();
+        void update_DIV_EFU_pipes();
         void check_for_FMAC_stall();
         void flush_pipes();
 
@@ -314,10 +321,8 @@ class VectorUnit
         //Friends needed for JIT convenience
         friend class VU_JIT64;
 
-        friend void vu_start_q_event(VectorUnit& vu, int latency, int cycles);
-        friend void vu_check_q_pipeline(VectorUnit& vu, int cycles);
         friend void vu_update_xgkick(VectorUnit& vu, int cycles);
-        friend void vu_update_pipelines(VectorUnit& vu);
+        friend void vu_update_pipelines(VectorUnit& vu, int cycles);
         friend uint8_t* exec_block(VU_JIT64& jit, VectorUnit& vu);
 };
 

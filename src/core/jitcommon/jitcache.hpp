@@ -6,6 +6,8 @@ struct JitBlock
 {
     //Variables needed for code execution
     uint32_t start_pc;
+    uint32_t from_pc;
+    uint32_t program;
     uint8_t* block_start;
     uint8_t* mem;
 
@@ -25,11 +27,11 @@ class JitCache
     public:
         JitCache();
 
-        void alloc_block(uint32_t pc);
+        void alloc_block(uint32_t pc, uint32_t prev_pc = 0, uint32_t program = 0);
         void free_block(uint32_t pc);
         void flush_all_blocks();
 
-        int find_block(uint32_t pc);
+        int find_block(uint32_t pc, uint32_t prev_pc = 0, uint32_t program = 0);
 
         uint8_t* get_current_block_start();
         uint8_t* get_current_block_pos();

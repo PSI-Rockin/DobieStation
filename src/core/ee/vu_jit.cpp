@@ -23,4 +23,9 @@ void reset()
     jit64.reset();
 }
 
+void set_current_program(uint32_t crc)
+{
+    jit64.set_current_program(crc);
+}
+
 };

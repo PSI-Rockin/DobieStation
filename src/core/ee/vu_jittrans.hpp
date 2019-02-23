@@ -16,39 +16,60 @@ enum VU_SpecialReg
     R
 };
 
+enum VU_FlagInstrType
+{
+    FlagInstr_None,
+    FlagInstr_Mac,
+    FlagInstr_Clip
+};
+
 struct VU_InstrInfo
 {
     bool swap_ops;
     bool update_q_pipeline;
-    bool reads_mac_flags;
-    bool reads_clip_flags;
-    bool updates_mac_pipeline;
-    bool updates_clip_pipeline;
+    bool update_p_pipeline;
+    bool update_mac_pipeline;
+    bool has_mac_result;
+    bool has_clip_result;
+    int flag_instruction;
+    bool advance_mac_pipeline;
     int stall_amount;
+    int q_pipe_delay_int_pass;
+    int q_pipe_delay_trans_pass;
+    int p_pipe_delay_int_pass;
+    int p_pipe_delay_trans_pass;
+    uint64_t stall_state[4];
+    uint8_t decoder_vf_write[2];
+    uint8_t decoder_vf_write_field[2];
 };
 
 class VU_JitTranslator
 {
     private:
-        int q_pipeline_delay;
+        bool trans_delay_slot;
 
         int cycles_this_block;
         int cycles_since_xgkick_update;
 
+        uint64_t stall_pipe[4];
+
         VU_InstrInfo instr_info[1024 * 16];
         uint16_t end_PC;
-        bool has_q_stalled;
+        uint16_t cur_PC;
 
+        int fdiv_pipe_cycles(uint32_t lower_instr);
+        int efu_pipe_cycles(uint32_t lower_instr);
+        int is_flag_instruction(uint32_t lower_instr);
         bool updates_mac_flags(uint32_t upper_instr);
         bool updates_mac_flags_special(uint32_t upper_instr);
 
-        void interpreter_pass(VectorUnit& vu, uint8_t *instr_mem);
-        void flag_pass(VectorUnit& vu, uint8_t *instr_mem);
+        void update_pipeline(VectorUnit &vu, int cycles);
+        void analyze_FMAC_stalls(VectorUnit &vu, uint16_t PC);
+        void interpreter_pass(VectorUnit& vu, uint8_t *instr_mem, uint32_t prev_pc);
+        void flag_pass(VectorUnit& vu);
 
         void fallback_interpreter(IR::Instruction& instr, uint32_t instr_word, bool is_upper);
         void update_xgkick(std::vector<IR::Instruction>& instrs);
-        void check_q_stall(std::vector<IR::Instruction>& instrs);
-        void start_q_event(std::vector<IR::Instruction>& instrs, int latency);
 
         void op_vectors(IR::Instruction& instr, uint32_t upper);
         void op_acc_and_vectors(IR::Instruction& instr, uint32_t upper);
@@ -65,7 +86,8 @@ class VU_JitTranslator
         void lower1_special(std::vector<IR::Instruction>& instrs, uint32_t lower);
         void lower2(std::vector<IR::Instruction>& instrs, uint32_t lower, uint32_t PC);
     public:
-        IR::Block translate(VectorUnit& vu, uint8_t *instr_mem);
+        IR::Block translate(VectorUnit& vu, uint8_t *instr_mem, uint32_t prev_pc);
+        void reset_instr_info();
 };
 
 #endif // VU_JITTRANS_HPP

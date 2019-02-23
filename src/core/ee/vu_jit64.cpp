@@ -79,37 +79,27 @@ void vu_set_int(VectorUnit& vu, int dest, uint16_t value)
     vu.set_int(dest, value);
 }
 
-void vu_update_pipelines(VectorUnit& vu)
+void vu_update_pipelines(VectorUnit& vu, int cycles)
 {
-    vu.MAC_pipeline[3] = vu.MAC_pipeline[2];
-    vu.MAC_pipeline[2] = vu.MAC_pipeline[1];
-    vu.MAC_pipeline[1] = vu.MAC_pipeline[0];
-    vu.MAC_pipeline[0] = vu.new_MAC_flags;
+    for (int i = 0; i < cycles; i++)
+    {
+        vu.MAC_pipeline[3] = vu.MAC_pipeline[2];
+        vu.MAC_pipeline[2] = vu.MAC_pipeline[1];
+        vu.MAC_pipeline[1] = vu.MAC_pipeline[0];
+        vu.MAC_pipeline[0] = vu.new_MAC_flags;
 
-    vu.CLIP_pipeline[3] = vu.CLIP_pipeline[2];
-    vu.CLIP_pipeline[2] = vu.CLIP_pipeline[1];
-    vu.CLIP_pipeline[1] = vu.CLIP_pipeline[0];
-    vu.CLIP_pipeline[0] = vu.clip_flags;
+        vu.CLIP_pipeline[3] = vu.CLIP_pipeline[2];
+        vu.CLIP_pipeline[2] = vu.CLIP_pipeline[1];
+        vu.CLIP_pipeline[1] = vu.CLIP_pipeline[0];
+        vu.CLIP_pipeline[0] = vu.clip_flags;
 
-    vu.update_status();
+        vu.update_status();
+    }
 }
 
 void vu_clip(VectorUnit& vu, uint32_t imm)
 {
     vu.clip(imm);
-}
-
-void vu_start_q_event(VectorUnit& vu, int latency, int cycles)
-{
-    vu.run_event += cycles;
-    vu.finish_DIV_event = vu.run_event + latency;
-}
-
-void vu_check_q_pipeline(VectorUnit& vu, int cycles)
-{
-    vu.run_event += cycles;
-    if (vu.run_event >= vu.finish_DIV_event)
-        vu.Q.u = vu.new_Q_instance.u;
 }
 
 void vu_update_xgkick(VectorUnit& vu, int cycles)
@@ -137,7 +127,7 @@ void interpreter_lower(VectorUnit& vu, uint32_t instr)
     VU_Interpreter::call_lower(vu, instr);
 }
 
-void VU_JIT64::reset()
+void VU_JIT64::reset(bool clear_cache)
 {
     abi_int_count = 0;
     abi_xmm_count = 0;
@@ -163,9 +153,22 @@ void VU_JIT64::reset()
     int_regs[REG_64::RSI].locked = true;
     xmm_regs[REG_64::XMM0].locked = true;
     xmm_regs[REG_64::XMM1].locked = true;
-    cache.flush_all_blocks();
+
+    if(clear_cache)
+        cache.flush_all_blocks();
+
+    ir.reset_instr_info();
 
     should_update_mac = false;
+    prev_pc = 0xFFFFFFFFF;
+    current_program = 0;
+}
+
+void VU_JIT64::set_current_program(uint32_t crc)
+{
+    reset(false);
+    current_program = crc;
+
 }
 
 uint64_t VU_JIT64::get_vf_addr(VectorUnit &vu, int index)
@@ -1749,10 +1752,10 @@ void VU_JIT64::move_from_p(VectorUnit &vu, IR::Instruction &instr)
 {
     uint8_t field = convert_field(instr.get_field());
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
+    REG_64 p_reg = alloc_sse_reg(vu, VU_SpecialReg::P, REG_STATE::READ);
 
     REG_64 temp = REG_64::XMM0;
-    emitter.load_addr((uint64_t)&vu.P, REG_64::RAX);
-    emitter.MOVAPS_FROM_MEM(REG_64::RAX, temp);
+    emitter.MOVAPS_REG(p_reg, temp);
     emitter.SHUFPS(0, temp, temp);
     emitter.BLENDPS(field, temp, dest);
     set_clamping(dest, true);
@@ -1773,7 +1776,7 @@ void VU_JIT64::eleng(VectorUnit &vu, IR::Instruction &instr)
     //sqrt(P)
     emitter.SQRTPS(temp, temp);
 
-    emitter.load_addr((uint64_t)&vu.P, REG_64::RAX);
+    emitter.load_addr((uint64_t)&vu.new_P_instance, REG_64::RAX);
     emitter.MOVAPS_TO_MEM(temp, REG_64::RAX);
 }
 
@@ -1796,7 +1799,7 @@ void VU_JIT64::erleng(VectorUnit &vu, IR::Instruction &instr)
     emitter.MOVD_TO_XMM(REG_64::RAX, temp2);
     emitter.DIVPS(temp, temp2);
 
-    emitter.load_addr((uint64_t)&vu.P, REG_64::RAX);
+    emitter.load_addr((uint64_t)&vu.new_P_instance, REG_64::RAX);
     emitter.MOVAPS_TO_MEM(temp2, REG_64::RAX);
 }
 
@@ -1811,7 +1814,7 @@ void VU_JIT64::esqrt(VectorUnit &vu, IR::Instruction &instr)
     emitter.SQRTPS(source, temp);
     emitter.INSERTPS(field, 0, 0, temp, temp);
 
-    emitter.load_addr((uint64_t)&vu.P, REG_64::RAX);
+    emitter.load_addr((uint64_t)&vu.new_P_instance, REG_64::RAX);
     emitter.MOVAPS_TO_MEM(temp, REG_64::RAX);
 }
 
@@ -1833,7 +1836,7 @@ void VU_JIT64::ersqrt(VectorUnit &vu, IR::Instruction &instr)
 
     emitter.DIVPS(denom, num);
 
-    emitter.load_addr((uint64_t)&vu.P, REG_64::RAX);
+    emitter.load_addr((uint64_t)&vu.new_P_instance, REG_64::RAX);
     emitter.MOVAPS_TO_MEM(num, REG_64::RAX);
 }
 
@@ -1855,21 +1858,6 @@ void VU_JIT64::rinit(VectorUnit &vu, IR::Instruction &instr)
     emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
 }
 
-void VU_JIT64::start_q_event(VectorUnit &vu, IR::Instruction &instr)
-{
-    prepare_abi(vu, (uint64_t)&vu);
-    prepare_abi(vu, instr.get_source());
-    prepare_abi(vu, instr.get_source2());
-    call_abi_func((uint64_t)vu_start_q_event);
-}
-
-void VU_JIT64::check_q_pipeline(VectorUnit &vu, IR::Instruction &instr)
-{
-    prepare_abi(vu, (uint64_t)&vu);
-    prepare_abi(vu, instr.get_source());
-    call_abi_func((uint64_t)vu_check_q_pipeline);
-}
-
 void VU_JIT64::update_q(VectorUnit &vu, IR::Instruction &instr)
 {
     //Store the pipelined Q inside the Q available to the program
@@ -1879,9 +1867,19 @@ void VU_JIT64::update_q(VectorUnit &vu, IR::Instruction &instr)
     set_clamping(q_reg, true);
 }
 
-void VU_JIT64::update_mac_pipeline(VectorUnit &vu)
+void VU_JIT64::update_p(VectorUnit &vu, IR::Instruction &instr)
+{
+    //Store the pipelined P inside the P available to the program
+    REG_64 p_reg = alloc_sse_reg(vu, VU_SpecialReg::P, REG_STATE::WRITE);
+    emitter.load_addr((uint64_t)&vu.new_P_instance, REG_64::RAX);
+    emitter.MOVAPS_FROM_MEM(REG_64::RAX, p_reg);
+    set_clamping(p_reg, true);
+}
+
+void VU_JIT64::update_mac_pipeline(VectorUnit &vu, IR::Instruction &instr)
 {
     prepare_abi(vu, (uint64_t)&vu);
+    prepare_abi(vu, instr.get_source());
     call_abi_func((uint64_t)vu_update_pipelines);
 }
 
@@ -1924,6 +1922,18 @@ void VU_JIT64::xgkick(VectorUnit &vu, IR::Instruction &instr)
     emitter.load_addr((uint64_t)&vu.stalled_GIF_addr, REG_64::R15);
     emitter.MOV16_TO_MEM(REG_64::RAX, REG_64::R15);
 
+    //If we're in a delay slot, there's no more XGKicks
+    if (!instr.get_dest())
+    {
+        emitter.load_addr((uint64_t)&vu.PC, REG_64::RAX);
+        emitter.MOV16_IMM_MEM(instr.get_source() + 8, REG_64::RAX);
+
+        emitter.load_addr((uint64_t)&prev_pc, REG_64::RAX);
+        emitter.MOV32_IMM_MEM(instr.get_source() + 8, REG_64::RAX);
+
+        cleanup_recompiler(vu, false);
+    }
+
     //Jump after the stall handling code is done
     uint8_t* stall_addr = emitter.JMP_NEAR_DEFERRED();
 
@@ -1965,6 +1975,16 @@ void VU_JIT64::stop(VectorUnit &vu, IR::Instruction &instr)
 
     emitter.load_addr((uint64_t)&vu.PC, REG_64::RAX);
     emitter.MOV16_IMM_MEM(instr.get_jump_dest(), REG_64::RAX);
+
+    //We're at the end of a program, so the next call doesn't need to know the previous state
+    emitter.load_addr((uint64_t)&prev_pc, REG_64::RAX);
+    emitter.MOV32_IMM_MEM(0xFFFFFFFF, REG_64::RAX);
+}
+
+void VU_JIT64::save_pc(VectorUnit &vu, IR::Instruction &instr)
+{
+    emitter.load_addr((uint64_t)&prev_pc, REG_64::RAX);
+    emitter.MOV32_IMM_MEM(instr.get_jump_dest(), REG_64::RAX);
 }
 
 int VU_JIT64::search_for_register(AllocReg *regs, int vu_reg)
@@ -2414,20 +2434,16 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
         case IR::Opcode::VMoveFromP:
             move_from_p(vu, instr);
             break;
-        case IR::Opcode::StartQEvent:
-            start_q_event(vu, instr);
-            break;
-        case IR::Opcode::UpdateQPipeline:
-            check_q_pipeline(vu, instr);
-            break;
         case IR::Opcode::UpdateQ:
             update_q(vu, instr);
+        case IR::Opcode::UpdateP:
+            update_p(vu, instr);
             break;
         case IR::Opcode::UpdateMacFlags:
             should_update_mac = true;
             break;
         case IR::Opcode::UpdateMacPipeline:
-            update_mac_pipeline(vu);
+            update_mac_pipeline(vu, instr);
             break;
         case IR::Opcode::MoveXTOP:
             move_xtop(vu, instr);
@@ -2444,17 +2460,20 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
         case IR::Opcode::Stop:
             stop(vu, instr);
             break;
+        case IR::Opcode::SavePC:
+            save_pc(vu, instr);
+            break;
         case IR::Opcode::FallbackInterpreter:
             fallback_interpreter(vu, instr);
             break;
         default:
-            Errors::die("[VU_JIT64] Unknown IR instruction");
+            Errors::die("[VU_JIT64] Unknown IR instruction %d", instr.op);
     }
 }
 
 void VU_JIT64::recompile_block(VectorUnit& vu, IR::Block& block)
 {
-    cache.alloc_block(vu.get_PC());
+    cache.alloc_block(vu.get_PC(), prev_pc, current_program);
 
     cond_branch = false;
     cycle_count = block.get_cycle_count();
@@ -2595,11 +2614,11 @@ void VU_JIT64::fallback_interpreter(VectorUnit &vu, IR::Instruction &instr)
 extern "C"
 uint8_t* exec_block(VU_JIT64& jit, VectorUnit& vu)
 {
-    //printf("[VU_JIT64] Executing block at $%04X\n", vu.PC);
-    if (jit.cache.find_block(vu.PC) == -1)
+    //printf("[VU_JIT64] Executing block at $%04X, Prev PC $%04X Current Program %08X: recompiling\n", vu.PC, jit.prev_pc, jit.current_program);
+    if (jit.cache.find_block(vu.PC, jit.prev_pc, jit.current_program) == -1)
     {
-        printf("[VU_JIT64] Block not found at $%04X: recompiling\n", vu.PC);
-        IR::Block block = jit.ir.translate(vu, vu.get_instr_mem());
+        //printf("[VU_JIT64] Block not found at $%04X, Prev PC $%04X Current Program %08X: recompiling\n", vu.PC, jit.prev_pc, jit.current_program);
+        IR::Block block = jit.ir.translate(vu, vu.get_instr_mem(), jit.prev_pc);
         jit.recompile_block(vu, block);
     }
     return jit.cache.get_current_block_start();
