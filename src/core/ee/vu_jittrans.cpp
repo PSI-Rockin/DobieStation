@@ -1288,11 +1288,11 @@ void VU_JitTranslator::lower1_special(std::vector<IR::Instruction> &instrs, uint
             break;
         case 0x6C:
             //XGKICK
+            update_xgkick(instrs);
             instr.op = IR::Opcode::Xgkick;
             instr.set_base((lower >> 11) & 0xF);
             instr.set_source(cur_PC);
             instr.set_dest(trans_delay_slot);
-            cycles_since_xgkick_update = 0;
             break;
         case 0x72:
             //ELENG
