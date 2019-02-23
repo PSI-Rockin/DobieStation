@@ -11,6 +11,7 @@
 #include <QMessageBox>
 
 #include "emuwindow.hpp"
+#include "settingswindow.hpp"
 
 #include "arg.h"
 
@@ -198,23 +199,30 @@ void EmuWindow::create_menu()
     save_state_action = new QAction(tr("&Save State"), this);
     connect(save_state_action, &QAction::triggered, this, &EmuWindow::save_state);
 
-    exit_action = new QAction(tr("&Exit"), this);
-    connect(exit_action, &QAction::triggered, this, &QWidget::close);
-
     auto gsdump_action = new QAction(tr("&GS dump toggle"), this);
     connect(gsdump_action, &QAction::triggered, this,
         [this]() { this->emu_thread.gsdump_write_toggle(); });
+
+    exit_action = new QAction(tr("&Exit"), this);
+    connect(exit_action, &QAction::triggered, this, &QWidget::close);
 
     file_menu = menuBar()->addMenu(tr("&File"));
     file_menu->addAction(load_rom_action);
     file_menu->addAction(load_bios_action);
     file_menu->addAction(load_state_action);
     file_menu->addAction(save_state_action);
-    file_menu->addAction(exit_action);
     file_menu->addSeparator();
     file_menu->addAction(gsdump_action);
+    file_menu->addSeparator();
+    file_menu->addAction(exit_action);
 
     options_menu = menuBar()->addMenu(tr("&Options"));
+    auto settings_action = new QAction(tr("&Settings"), this);
+    connect(settings_action, &QAction::triggered, this, &EmuWindow::open_settings_window);
+    options_menu->addAction(settings_action);
+
+    options_menu->addSeparator();
+
     auto size_options_actions = new QAction(tr("Scale to &Window (ignore aspect ratio)"), this);
     connect(size_options_actions, &QAction::triggered, this,
         [this]() { this->scale_factor = 0; });
@@ -271,6 +279,15 @@ bool EmuWindow::load_bios()
     emu_thread.load_BIOS(reinterpret_cast<uint8_t*>(data.data()));
 
     return true;
+}
+
+void EmuWindow::open_settings_window()
+{
+    if (!settings_window)
+        settings_window = new SettingsWindow(this);
+
+    settings_window->show();
+    settings_window->raise();
 }
 
 void EmuWindow::draw_frame(uint32_t *buffer, int inner_w, int inner_h, int final_w, int final_h)

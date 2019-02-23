@@ -76,6 +76,7 @@ set(SOURCES
 	src/core/sif.cpp
 	src/qt/emuthread.cpp
         src/qt/emuwindow.cpp
+        src/qt/settingswindow.cpp
         src/qt/main.cpp
 	src/qt/settings.cpp
         )
@@ -140,6 +141,7 @@ set(HEADERS
 	src/core/sif.hpp
 	src/qt/emuthread.hpp
         src/qt/emuwindow.hpp
+        src/qt/settingswindow.hpp
 	src/qt/settings.hpp
         )
 

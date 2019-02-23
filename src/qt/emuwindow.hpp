@@ -10,6 +10,8 @@
 #include "../qt/settings.hpp"
 #include "../core/emulator.hpp"
 
+class SettingsWindow;
+
 class EmuWindow : public QMainWindow
 {
     Q_OBJECT
@@ -29,6 +31,9 @@ class EmuWindow : public QMainWindow
         QAction* load_state_action;
         QAction* save_state_action;
         QAction* exit_action;
+
+        SettingsWindow* settings_window = nullptr;
+
         int scale_factor;
 
     public:
@@ -38,7 +43,9 @@ class EmuWindow : public QMainWindow
         int run_gsdump(const char* file_name);
 
         void create_menu();
+
         bool load_bios();
+        void open_settings_window();
 
         void paintEvent(QPaintEvent *event) override;
         void closeEvent(QCloseEvent *event) override;
