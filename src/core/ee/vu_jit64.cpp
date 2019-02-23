@@ -1931,11 +1931,6 @@ void VU_JIT64::xgkick(VectorUnit &vu, IR::Instruction &instr)
         emitter.load_addr((uint64_t)&prev_pc, REG_64::RAX);
         emitter.MOV32_IMM_MEM(instr.get_source() + 8, REG_64::RAX);
 
-        //Return the amount of cycles to update the VUs with
-        emitter.MOV16_REG_IMM(cycle_count, REG_64::RAX);
-        emitter.load_addr((uint64_t)&cycle_count, REG_64::R15);
-        emitter.MOV16_TO_MEM(REG_64::RAX, REG_64::R15);
-
         cleanup_recompiler(vu, false);
     }
 
