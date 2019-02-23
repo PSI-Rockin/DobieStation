@@ -68,13 +68,16 @@ void JitCache::flush_all_blocks()
 
 int JitCache::find_block(uint32_t pc, uint32_t prev_pc, uint32_t program)
 {
-    for (int i = blocks.size() - 1; i >= 0 ; i--)
+    if (blocks.size() > 0)
     {
-        if (program == blocks[i].program && pc == blocks[i].start_pc && prev_pc == blocks[i].from_pc)
+        for (int i = blocks.size() - 1; i >= 0; i--)
         {
-            //printf("[VU_JIT64] Block found at %d\n", i);
-            current_block = &blocks[i];
-            return i;
+            if (program == blocks[i].program && pc == blocks[i].start_pc && prev_pc == blocks[i].from_pc)
+            {
+                //printf("[VU_JIT64] Block found at %d\n", i);
+                current_block = &blocks[i];
+                return i;
+            }
         }
     }
     //printf("[VU_JIT64] Block not found\n");
