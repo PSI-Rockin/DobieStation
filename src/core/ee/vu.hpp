@@ -114,6 +114,7 @@ class VectorUnit
         int int_branch_delay;
         uint16_t int_backup_reg;
         uint8_t int_backup_id;
+        uint8_t int_backup_id_rec;
 
         VU_R new_Q_instance;
         VU_R new_P_instance;

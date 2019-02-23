@@ -426,6 +426,8 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
         vu.decoder.vf_write_field[1] = 0;
     }
 
+    vu.int_backup_id_rec = 0;
+
     uint16_t PC = vu.get_PC();
     while (!block_end)
     {
@@ -480,29 +482,21 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
                     Errors::die("[VU_IR] End block in delay slot");
                 delay_slot = true;
 
-                if (PC > vu.get_PC())
+                //Conditional branches only
+                if (((lower >> 25) & 0xF) >= 0x8 && PC > vu.get_PC())
                 {
                     //Reg used in branch was modified on the previous instruction
                     if (instr_info[PC - 8].decoder_vi_write != 0)
                     {
                         if (instr_info[PC - 8].decoder_vi_write == vu.decoder.vi_read0)
-                            vu.int_backup_id = vu.decoder.vi_read0;
+                            vu.int_backup_id_rec = vu.decoder.vi_read0;
 
                         if (instr_info[PC - 8].decoder_vi_write == vu.decoder.vi_read1)
-                            vu.int_backup_id = vu.decoder.vi_read1;
+                            vu.int_backup_id_rec = vu.decoder.vi_read1;
 
                         int backup_pc = ((PC - 40) < vu.get_PC()) ? vu.get_PC() : (PC - 40);
-                        instr_info[backup_pc].backup_vi = vu.int_backup_id;
+                        instr_info[backup_pc].backup_vi = vu.int_backup_id_rec;
                     }
-                }
-            }
-            else
-            {
-                //First instruction wasn't a branch, so we don't need any backed up reg
-                if (PC == vu.get_PC())
-                {
-                    instr_info[PC].backup_vi = 0;
-                    vu.int_backup_id = 0;
                 }
             }
 
@@ -513,14 +507,6 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
             {
                 if (write && ((write == read0 || write == read1) || (write == write1)))
                     instr_info[PC].swap_ops = true;
-            }
-        }
-        else
-        {
-            if (PC == vu.get_PC())
-            {
-                instr_info[PC].backup_vi = 0;
-                vu.int_backup_id = 0;
             }
         }
 
@@ -587,12 +573,6 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
                 Errors::die("[VU_IR] End block in delay slot");
             delay_slot = true;
         }
-
-        /*if (block_end && vu.decoder.vi_write && !e_bit)
-        {
-            instr_info[PC].backup_vi = vu.decoder.vi_write;
-            vu.int_backup_id = vu.decoder.vi_write;
-        }*/
 
         PC += 8;
     }

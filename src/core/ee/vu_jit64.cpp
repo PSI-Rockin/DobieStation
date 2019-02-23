@@ -160,7 +160,7 @@ void VU_JIT64::reset(bool clear_cache)
     ir.reset_instr_info();
 
     should_update_mac = false;
-    prev_pc = 0xFFFFFFFFF;
+    prev_pc = 0xFFFFFFFF;
     current_program = 0;
 }
 
@@ -677,14 +677,14 @@ void VU_JIT64::branch_equal(VectorUnit &vu, IR::Instruction &instr)
     REG_64 op1;
     REG_64 op2;
 
-    if (!vu.int_backup_id || (instr.get_source() != vu.int_backup_id && instr.get_source2() != vu.int_backup_id))
+    if (!vu.int_backup_id_rec || (instr.get_source() != vu.int_backup_id_rec && instr.get_source2() != vu.int_backup_id_rec))
     {
         op1 = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
         op2 = alloc_int_reg(vu, instr.get_source2(), REG_STATE::READ);
     }
     else
     {
-        if (instr.get_source() == vu.int_backup_id)
+        if (instr.get_source() == vu.int_backup_id_rec)
         {
             op1 = REG_64::R15;
             op2 = alloc_int_reg(vu, instr.get_source2(), REG_STATE::READ);
@@ -714,14 +714,14 @@ void VU_JIT64::branch_not_equal(VectorUnit &vu, IR::Instruction &instr)
     REG_64 op1;
     REG_64 op2;
 
-    if (!vu.int_backup_id || (instr.get_source() != vu.int_backup_id && instr.get_source2() != vu.int_backup_id))
+    if (!vu.int_backup_id_rec || (instr.get_source() != vu.int_backup_id_rec && instr.get_source2() != vu.int_backup_id_rec))
     {
         op1 = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
         op2 = alloc_int_reg(vu, instr.get_source2(), REG_STATE::READ);
     }
     else
     {
-        if (instr.get_source() == vu.int_backup_id)
+        if (instr.get_source() == vu.int_backup_id_rec)
         {
             op1 = REG_64::R15;
             op2 = alloc_int_reg(vu, instr.get_source2(), REG_STATE::READ);
@@ -750,7 +750,7 @@ void VU_JIT64::branch_less_than_zero(VectorUnit &vu, IR::Instruction &instr)
 {
     REG_64 op;
 
-    if (!vu.int_backup_id || instr.get_source() != vu.int_backup_id)
+    if (!vu.int_backup_id_rec || instr.get_source() != vu.int_backup_id_rec)
     {
         op = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
     }
@@ -776,7 +776,7 @@ void VU_JIT64::branch_greater_than_zero(VectorUnit &vu, IR::Instruction &instr)
 {
     REG_64 op;
 
-    if (!vu.int_backup_id || instr.get_source() != vu.int_backup_id)
+    if (!vu.int_backup_id_rec || instr.get_source() != vu.int_backup_id_rec)
     {
         op = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
     }
@@ -802,7 +802,7 @@ void VU_JIT64::branch_less_or_equal_than_zero(VectorUnit &vu, IR::Instruction &i
 {
     REG_64 op;
 
-    if (!vu.int_backup_id || instr.get_source() != vu.int_backup_id)
+    if (!vu.int_backup_id_rec || instr.get_source() != vu.int_backup_id_rec)
     {
         op = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
     }
@@ -828,7 +828,7 @@ void VU_JIT64::branch_greater_or_equal_than_zero(VectorUnit &vu, IR::Instruction
 {
     REG_64 op;
 
-    if (!vu.int_backup_id || instr.get_source() != vu.int_backup_id)
+    if (!vu.int_backup_id_rec || instr.get_source() != vu.int_backup_id_rec)
     {
         op = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
     }
@@ -1962,9 +1962,9 @@ void VU_JIT64::backup_vi(VectorUnit& vu, IR::Instruction& instr)
     emitter.load_addr((uint64_t)&vu.int_backup_reg, REG_64::RAX);
     emitter.MOV16_TO_MEM(int_reg, REG_64::RAX);
     emitter.load_addr((uint64_t)&vu.int_backup_id, REG_64::RAX);
-    emitter.MOV16_IMM_MEM(instr.get_source(), REG_64::RAX);
+    emitter.MOV8_IMM_MEM(instr.get_source(), REG_64::RAX);
 
-    vu.int_backup_id = instr.get_source();
+    vu.int_backup_id_rec = instr.get_source();
 }
 
 void VU_JIT64::update_q(VectorUnit &vu, IR::Instruction &instr)
