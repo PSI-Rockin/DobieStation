@@ -2624,33 +2624,42 @@ uint8_t* exec_block(VU_JIT64& jit, VectorUnit& vu)
     return jit.cache.get_current_block_start();
 }
 
+#ifndef _WIN32
+void run_block(VectorUnit& vu, uint8_t* block)
+{
+    __asm__ volatile (
+         "pushq %rbx\n"
+         "pushq %r12\n"
+         "pushq %r13\n"
+         "pushq %r14\n"
+         "pushq %r15\n"
+         "pushq %rdi\n"
+    );
+
+    __asm__ volatile (
+         "callq *%0"
+                :
+    : "r" (block)
+    );
+
+    __asm__ volatile (
+         "popq %rdi\n"
+         "popq %r15\n"
+         "popq %r14\n"
+         "popq %r13\n"
+         "popq %r12\n"
+         "popq %rbx\n"
+     );
+}
+#endif
+
 uint16_t VU_JIT64::run(VectorUnit& vu)
 {
 #ifdef _WIN32
     run_vu_jit();
 #else
-   __asm__ (
-        "pushq %rbx\n"
-        "pushq %r12\n"
-        "pushq %r13\n"
-        "pushq %r14\n"
-        "pushq %r15\n"
-        "pushq %rdi\n"
-
-#ifdef __APPLE__
-        "callq _exec_block\n"
-#else
-        "callq exec_block\n"
-#endif
-        "callq *%rax\n"
-
-        "popq %rdi\n"
-        "popq %r15\n"
-        "popq %r14\n"
-        "popq %r13\n"
-        "popq %r12\n"
-        "popq %rbx\n"
-    );
+    uint8_t* block = exec_block(*this, vu);
+    run_block(vu, block);
 #endif
     
     return cycle_count;
