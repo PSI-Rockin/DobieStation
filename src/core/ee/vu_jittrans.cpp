@@ -392,7 +392,6 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
 {
     bool block_end = false;
     bool delay_slot = false;
-    bool e_bit = false;
     int q_pipe_delay = 0;
     int p_pipe_delay = 0;
     
@@ -568,7 +567,6 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
 
         if (upper & (1 << 30))
         {
-            e_bit = true;
             if (delay_slot)
                 Errors::die("[VU_IR] End block in delay slot");
             delay_slot = true;
