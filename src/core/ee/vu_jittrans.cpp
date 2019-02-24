@@ -1,3 +1,4 @@
+#include <cstring>
 #include "vu_jittrans.hpp"
 #include "vu_interpreter.hpp"
 #include "../errors.hpp"
