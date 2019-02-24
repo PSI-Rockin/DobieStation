@@ -1956,6 +1956,38 @@ void VU_JIT64::rinit(VectorUnit &vu, IR::Instruction &instr)
     emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
 }
 
+void VU_JIT64::backup_vf(VectorUnit& vu, IR::Instruction& instr)
+{
+    REG_64 vf_reg = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ_WRITE);
+
+    if (!instr.get_dest())
+    {
+        emitter.load_addr((uint64_t)&vu.backup_oldgpr, REG_64::RAX);
+    }
+    else
+    {
+        emitter.load_addr((uint64_t)&vu.backup_newgpr, REG_64::RAX);
+    }
+
+    emitter.MOVAPS_TO_MEM(vf_reg, REG_64::RAX);
+}
+
+void VU_JIT64::restore_vf(VectorUnit& vu, IR::Instruction& instr)
+{
+    REG_64 vf_reg = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ_WRITE);
+
+    if (!instr.get_dest())
+    {
+        emitter.load_addr((uint64_t)&vu.backup_oldgpr, REG_64::RAX);
+    }
+    else
+    {
+        emitter.load_addr((uint64_t)&vu.backup_newgpr, REG_64::RAX);
+    }
+
+    emitter.MOVAPS_FROM_MEM(REG_64::RAX, vf_reg);
+}
+
 void VU_JIT64::backup_vi(VectorUnit& vu, IR::Instruction& instr)
 {
     REG_64 int_reg = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
@@ -2542,6 +2574,12 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
             break;
         case IR::Opcode::VMoveFromP:
             move_from_p(vu, instr);
+            break;
+        case IR::Opcode::BackupVF:
+            backup_vf(vu, instr);
+            break;
+        case IR::Opcode::RestoreVF:
+            restore_vf(vu, instr);
             break;
         case IR::Opcode::BackupVI:
             backup_vi(vu, instr);

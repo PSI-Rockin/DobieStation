@@ -93,7 +93,26 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
 
             if (instr_info[cur_PC].swap_ops)
             {
-                //Lower op first
+                IR::Instruction backup_old(IR::Opcode::BackupVF);
+                backup_old.set_source(instr_info[cur_PC].decoder_vf_write[0]);
+                backup_old.set_dest(0); //0 = OldVF
+                block.add_instr(backup_old);
+
+                for (unsigned int i = 0; i < upper_instrs.size(); i++)
+                {
+                    block.add_instr(upper_instrs[i]);
+                }
+
+                IR::Instruction backup_new(IR::Opcode::BackupVF);
+                backup_new.set_source(instr_info[cur_PC].decoder_vf_write[0]);
+                backup_new.set_dest(1); //1 = NewVF
+                block.add_instr(backup_new);
+
+                IR::Instruction restore_old(IR::Opcode::RestoreVF);
+                restore_old.set_source(instr_info[cur_PC].decoder_vf_write[0]);
+                restore_old.set_dest(0); //0 = OldVF
+                block.add_instr(restore_old);
+               
                 for (unsigned int i = 0; i < lower_instrs.size(); i++)
                 {
                     block.add_instr(lower_instrs[i]);
@@ -106,10 +125,10 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
                     }
                 }
 
-                for (unsigned int i = 0; i < upper_instrs.size(); i++)
-                {
-                    block.add_instr(upper_instrs[i]);
-                }
+                IR::Instruction restore_new(IR::Opcode::RestoreVF);
+                restore_new.set_source(instr_info[cur_PC].decoder_vf_write[0]);
+                restore_new.set_dest(1); //1 = NewVF
+                block.add_instr(restore_new);
             }
             else
             {
@@ -505,7 +524,10 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
             if (!(upper & (1 << 31)))
             {
                 if (write && ((write == read0 || write == read1) || (write == write1)))
+                {
                     instr_info[PC].swap_ops = true;
+                    instr_info[PC].decoder_vf_write[0] = write;
+                }
             }
         }
 
