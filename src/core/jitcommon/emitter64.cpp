@@ -579,13 +579,13 @@ void Emitter64::set_jump_dest(uint8_t *jump)
 
 void Emitter64::PUSH(REG_64 reg)
 {
-    rex_r(reg);
+    rex_rm(reg);
     cache->write<uint8_t>(0x50 + (reg & 0x7));
 }
 
 void Emitter64::POP(REG_64 reg)
 {
-    rex_r(reg);
+    rex_rm(reg);
     cache->write<uint8_t>(0x58 + (reg & 0x7));
 }
 

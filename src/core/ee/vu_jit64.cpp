@@ -2488,6 +2488,7 @@ void VU_JIT64::recompile_block(VectorUnit& vu, IR::Block& block)
     emitter.PUSH(REG_64::R14);
     emitter.PUSH(REG_64::R15);
     emitter.PUSH(REG_64::RDI);
+    emitter.PUSH(REG_64::RSI);
 
     while (block.get_instruction_count() > 0)
     {
@@ -2502,7 +2503,7 @@ void VU_JIT64::recompile_block(VectorUnit& vu, IR::Block& block)
 
     //Switch the block's privileges from RW to RX.
     cache.set_current_block_rx();
-    //cache.print_current_block();
+    cache.print_current_block();
     //cache.print_literal_pool();
 }
 
@@ -2532,6 +2533,7 @@ void VU_JIT64::cleanup_recompiler(VectorUnit& vu, bool clear_regs)
     emitter.load_addr((uint64_t)&cycle_count, REG_64::R15);
     emitter.MOV16_TO_MEM(REG_64::RAX, REG_64::R15);
 
+    emitter.POP(REG_64::RSI);
     emitter.POP(REG_64::RDI);
     emitter.POP(REG_64::R15);
     emitter.POP(REG_64::R14);
