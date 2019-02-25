@@ -559,7 +559,7 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
         }
 
         //WaitP, EATAN, EEXP, ELENG, ERCPR, ERLENG, ERSADD, ERSQRT, ESADD, ESIN, ESQRT, ESUM
-        if ((lower & (1 << 31)) && ((lower >> 8) & 0x7) == 0x7)
+        if ((lower & (1 << 31)) && ((lower >> 2) & 0x1CF) == 0x1CF)
         {
             if (p_pipe_delay > 0)
             {

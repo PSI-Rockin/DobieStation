@@ -39,7 +39,7 @@ void interpret(VectorUnit &vu, uint32_t upper_instr, uint32_t lower_instr)
         vu.waitq(0);
     }
 
-    if ((lower_instr & (1 << 31)) && ((lower_instr >> 8) & 0x7) == 0x7)
+    if ((lower_instr & (1 << 31)) && ((lower_instr >> 2) & 0x1CF) == 0x1CF)
     {
         vu.waitp(0);
     }

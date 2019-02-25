@@ -1086,7 +1086,7 @@ void VectorUnit::ersqrt(uint32_t instr)
 
     new_P_instance.f = convert(gpr[_fs_].u[_fsf_]);
 
-    new_P_instance.f = sqrt(fabs(P.f));
+    new_P_instance.f = sqrt(fabs(new_P_instance.f));
     if (new_P_instance.f != 0)
         new_P_instance.f = 1.0f / new_P_instance.f;
 
@@ -2462,6 +2462,8 @@ void VectorUnit::subq(uint32_t instr)
 
 void VectorUnit::waitp(uint32_t instr)
 {
+    if (!EFU_event_started)
+        return;
     //Stalls actually release 1 cycle before writeback, but should be safe to write back early if we are stalling
     finish_EFU_event -= 1;
     while (cycle_count < finish_EFU_event)
@@ -2474,6 +2476,9 @@ void VectorUnit::waitp(uint32_t instr)
 
 void VectorUnit::waitq(uint32_t instr)
 {
+    if (!DIV_event_started)
+        return;
+
     while (cycle_count < finish_DIV_event)
     {
         cycle_count++;

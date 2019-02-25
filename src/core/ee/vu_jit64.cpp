@@ -2701,8 +2701,11 @@ void VU_JIT64::prepare_abi(VectorUnit& vu, uint64_t value)
     if (int_regs[arg].used)
     {
         int vi_reg = int_regs[arg].vu_reg;
-        emitter.load_addr((uint64_t)&vu.int_gpr[vi_reg], REG_64::RAX);
-        emitter.MOV64_TO_MEM(arg, REG_64::RAX);
+        if (int_regs[arg].modified)
+        {
+            emitter.load_addr((uint64_t)&vu.int_gpr[vi_reg], REG_64::RAX);
+            emitter.MOV64_TO_MEM(arg, REG_64::RAX);
+        }
         int_regs[arg].used = false;
         int_regs[arg].age = 0;
     }
@@ -2713,12 +2716,11 @@ void VU_JIT64::prepare_abi(VectorUnit& vu, uint64_t value)
 void VU_JIT64::call_abi_func(uint64_t addr)
 {
     const static REG_64 saved_regs[] = {RCX, RDX, R8, R9, R10, R11};
-    emitter.PUSH(REG_64::RCX);
-    emitter.PUSH(REG_64::RDX);
-    emitter.PUSH(REG_64::R8);
-    emitter.PUSH(REG_64::R9);
-    emitter.PUSH(REG_64::R10);
-    emitter.PUSH(REG_64::R11);
+
+    for (int i = 0; i < abi_int_count; i++)
+    {
+        emitter.PUSH((REG_64)i);
+    }
 #ifdef _WIN32
     emitter.SUB64_REG_IMM(32, REG_64::RSP);
     emitter.MOV64_OI(addr, REG_64::RAX);
@@ -2727,12 +2729,11 @@ void VU_JIT64::call_abi_func(uint64_t addr)
 #else
     emitter.CALL(addr);
 #endif    
-    emitter.POP(REG_64::R11);
-    emitter.POP(REG_64::R10);
-    emitter.POP(REG_64::R9);
-    emitter.POP(REG_64::R8);
-    emitter.POP(REG_64::RDX);
-    emitter.POP(REG_64::RCX);
+
+    for (int i = 0; i < abi_int_count; i++)
+    {
+        emitter.POP((REG_64)i);
+    }
     abi_int_count = 0;
     abi_xmm_count = 0;
 }
