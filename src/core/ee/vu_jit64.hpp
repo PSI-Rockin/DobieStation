@@ -167,15 +167,17 @@ class VU_JIT64
         REG_64 alloc_int_reg(VectorUnit& vu, int vi_reg, REG_STATE state = REG_STATE::READ_WRITE);
         REG_64 alloc_sse_reg(VectorUnit& vu, int vf_reg, REG_STATE state = REG_STATE::READ_WRITE);
         REG_64 alloc_sse_scratchpad(VectorUnit& vu, int vf_reg);
-        void VU_JIT64::set_clamping(int xmmreg, bool value);
-        bool VU_JIT64::needs_clamping(int xmmreg);
+        void set_clamping(int xmmreg, bool value);
+        bool needs_clamping(int xmmreg);
         void flush_regs(VectorUnit& vu);
         void flush_sse_reg(VectorUnit& vu, int vf_reg);
 
+        void emit_prologue();
         void emit_instruction(VectorUnit& vu, IR::Instruction& instr);
         void recompile_block(VectorUnit& vu, IR::Block& block);
         //uint8_t* exec_block(VectorUnit& vu);
         void cleanup_recompiler(VectorUnit& vu, bool clear_regs);
+        void emit_epilogue();
 
         void prepare_abi(VectorUnit& vu, uint64_t value);
         void call_abi_func(uint64_t addr);
