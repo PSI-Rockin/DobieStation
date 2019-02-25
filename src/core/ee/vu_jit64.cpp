@@ -2482,6 +2482,13 @@ void VU_JIT64::recompile_block(VectorUnit& vu, IR::Block& block)
     emitter.PUSH(REG_64::RBP);
     emitter.MOV64_MR(REG_64::RSP, REG_64::RBP);
 
+    emitter.PUSH(REG_64::RBX);
+    emitter.PUSH(REG_64::R12);
+    emitter.PUSH(REG_64::R13);
+    emitter.PUSH(REG_64::R14);
+    emitter.PUSH(REG_64::R15);
+    emitter.PUSH(REG_64::RDI);
+
     while (block.get_instruction_count() > 0)
     {
         IR::Instruction instr = block.get_next_instr();
@@ -2524,6 +2531,13 @@ void VU_JIT64::cleanup_recompiler(VectorUnit& vu, bool clear_regs)
     emitter.MOV16_REG_IMM(cycle_count, REG_64::RAX);
     emitter.load_addr((uint64_t)&cycle_count, REG_64::R15);
     emitter.MOV16_TO_MEM(REG_64::RAX, REG_64::R15);
+
+    emitter.POP(REG_64::RDI);
+    emitter.POP(REG_64::R15);
+    emitter.POP(REG_64::R14);
+    emitter.POP(REG_64::R13);
+    emitter.POP(REG_64::R12);
+    emitter.POP(REG_64::RBX);
 
     //Epilogue
     emitter.POP(REG_64::RBP);
@@ -2624,50 +2638,18 @@ uint8_t* exec_block(VU_JIT64& jit, VectorUnit& vu)
     return jit.cache.get_current_block_start();
 }
 
-#ifndef _WIN32
-void run_block(uint8_t* block)
-{
-    uint8_t* blorp;
-    __asm__ volatile (
-         "movq %1, %0"
-                : "=r" (blorp)
-                : "r" (block)
-    );
-    __asm__ volatile (
-         "pushq %rbx\n"
-         "pushq %r12\n"
-         "pushq %r13\n"
-         "pushq %r14\n"
-         "pushq %r15\n"
-         "pushq %rdi\n"
-         "pushq %rsi\n"
-    );
-
-    __asm__ volatile (
-         "callq *%0"
-                :
-    : "r" (blorp)
-    );
-
-    __asm__ volatile (
-         "popq %rsi\n"
-         "popq %rdi\n"
-         "popq %r15\n"
-         "popq %r14\n"
-         "popq %r13\n"
-         "popq %r12\n"
-         "popq %rbx\n"
-     );
-}
-#endif
-
 uint16_t VU_JIT64::run(VectorUnit& vu)
 {
 #ifdef _WIN32
     run_vu_jit();
 #else
     uint8_t* block = exec_block(*this, vu);
-    run_block(block);
+
+    __asm__ volatile (
+        "callq *%0"
+                :
+                : "r" (block)
+    );
 #endif
     
     return cycle_count;
