@@ -2584,13 +2584,13 @@ void VU_JIT64::call_abi_func(uint64_t addr)
     emitter.PUSH(REG_64::R9);
     emitter.PUSH(REG_64::R10);
     emitter.PUSH(REG_64::R11);
+    emitter.MOV64_OI(addr, REG_64::RAX);
 #ifdef _WIN32
     emitter.SUB64_REG_IMM(32, REG_64::RSP);
-    emitter.MOV64_OI(addr, REG_64::RAX);
     emitter.CALL_INDIR(REG_64::RAX);
     emitter.ADD64_REG_IMM(32, REG_64::RSP);
 #else
-    emitter.CALL(addr);
+    emitter.CALL_INDIR(REG_64::RAX);
 #endif    
     emitter.POP(REG_64::R11);
     emitter.POP(REG_64::R10);
