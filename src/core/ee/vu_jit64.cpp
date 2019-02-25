@@ -2717,9 +2717,9 @@ void VU_JIT64::call_abi_func(uint64_t addr)
 {
     const static REG_64 saved_regs[] = {RCX, RDX, R8, R9, R10, R11};
 
-    for (int i = 0; i < abi_int_count; i++)
+    for (int i = 0; i < sizeof(saved_regs); i++)
     {
-        emitter.PUSH((REG_64)i);
+        emitter.PUSH(saved_regs[i]);
     }
 #ifdef _WIN32
     emitter.SUB64_REG_IMM(32, REG_64::RSP);
@@ -2730,9 +2730,9 @@ void VU_JIT64::call_abi_func(uint64_t addr)
     emitter.CALL(addr);
 #endif    
 
-    for (int i = 0; i < abi_int_count; i++)
+    for (int i = sizeof(saved_regs)-1; i >=-0 ; i--)
     {
-        emitter.POP((REG_64)i);
+        emitter.POP(saved_regs[i]);
     }
     abi_int_count = 0;
     abi_xmm_count = 0;
