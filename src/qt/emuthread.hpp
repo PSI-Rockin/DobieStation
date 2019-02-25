@@ -39,7 +39,7 @@ class EmuThread : public QThread
         void set_skip_BIOS_hack(SKIP_HACK skip);
         void load_BIOS(uint8_t* BIOS);
         void load_ELF(uint8_t* ELF, uint64_t ELF_size);
-        void load_CDVD(const char* name);
+        void load_CDVD(const char* name, CDVD_CONTAINER type);
 
         bool load_state(const char* name);
         bool save_state(const char* name);

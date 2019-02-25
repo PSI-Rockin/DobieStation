@@ -41,11 +41,11 @@ void EmuThread::load_ELF(uint8_t *ELF, uint64_t ELF_size)
     load_mutex.unlock();
 }
 
-void EmuThread::load_CDVD(const char* name)
+void EmuThread::load_CDVD(const char* name, CDVD_CONTAINER type)
 {
     load_mutex.lock();
     e.reset();
-    e.load_CDVD(name);
+    e.load_CDVD(name, type);
     load_mutex.unlock();
 }
 

@@ -1,8 +1,16 @@
 #ifndef CDVD_HPP
 #define CDVD_HPP
+
+#include "cso_reader.hpp"
 #include <fstream>
 
 class Emulator;
+
+enum CDVD_CONTAINER
+{
+    ISO,
+    CISO
+};
 
 enum CDVD_STATUS
 {
@@ -40,7 +48,9 @@ class CDVD_Drive
         uint64_t last_read;
         uint64_t cycle_count;
         Emulator* e;
+        CDVD_CONTAINER container;
         std::ifstream cdvd_file;
+        CSO_Reader cso_file;
         uint64_t file_size;
         int read_bytes_left;
         int speed;
@@ -80,6 +90,13 @@ class CDVD_Drive
         uint8_t cdkey[16];
 
         uint32_t get_block_timing(bool mode_DVD);
+        
+        bool container_open(const char* file_path);
+        void container_close();
+        bool container_isopen();
+        void container_seek(std::ios::streamoff ofs, std::ios::seekdir whence = std::ios::beg);
+        uint64_t container_tell();
+        size_t container_read(void* dst, size_t size);
 
         void start_seek();
         void prepare_S_outdata(int amount);
@@ -107,7 +124,7 @@ class CDVD_Drive
 
         uint32_t read_to_RAM(uint8_t* RAM, uint32_t bytes);
         uint8_t* read_file(std::string name, uint32_t& file_size);
-        bool load_disc(const char* name);
+        bool load_disc(const char* name, CDVD_CONTAINER container);
 
         uint8_t read_drive_status();
         uint8_t read_N_command();

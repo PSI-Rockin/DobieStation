@@ -298,9 +298,9 @@ void Emulator::load_ELF(uint8_t *ELF, uint32_t size)
     memcpy(ELF_file, ELF, size);
 }
 
-bool Emulator::load_CDVD(const char *name)
+bool Emulator::load_CDVD(const char *name, CDVD_CONTAINER type)
 {
-    return cdvd.load_disc(name);
+    return cdvd.load_disc(name, type);
 }
 
 void Emulator::execute_ELF()

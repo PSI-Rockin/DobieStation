@@ -1,0 +1,13 @@
+# build artifacts
+DobieStation
+*.exe
+*.o
+*.a
+*.lib
+
+# moc artifacts
+application/*.cpp
+application/*.h
+
+# Dobie artifacts
+ee_log.txt
