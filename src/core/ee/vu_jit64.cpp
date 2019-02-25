@@ -2627,6 +2627,12 @@ uint8_t* exec_block(VU_JIT64& jit, VectorUnit& vu)
 #ifndef _WIN32
 void run_block(uint8_t* block)
 {
+    uint8_t* blorp;
+    __asm__ volatile (
+         "movq %1, %0"
+                : "=r" (blorp)
+                : "r" (block)
+    );
     __asm__ volatile (
          "pushq %rbx\n"
          "pushq %r12\n"
@@ -2640,7 +2646,7 @@ void run_block(uint8_t* block)
     __asm__ volatile (
          "callq *%0"
                 :
-    : "r" (block)
+    : "r" (blorp)
     );
 
     __asm__ volatile (
