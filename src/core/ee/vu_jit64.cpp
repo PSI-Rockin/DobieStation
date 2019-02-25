@@ -2782,7 +2782,7 @@ void VU_JIT64::call_abi_func(uint64_t addr)
     if (sp_offset)
         emitter.ADD64_REG_IMM(sp_offset, REG_64::RSP);
 
-    for (int i = num_of_regs - 1; i >= 0; i--)
+    for (int i = total_regs - 1; i >= 0; i--)
     {
         if (int_regs[saved_regs[i]].used)
             emitter.POP(saved_regs[i]);
