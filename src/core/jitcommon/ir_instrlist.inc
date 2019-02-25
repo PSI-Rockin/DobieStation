@@ -90,6 +90,9 @@ INSTR(VERsqrt)
 
 INSTR(VRInit)
 
+INSTR(BackupVF)
+INSTR(RestoreVF)
+INSTR(BackupVI)
 INSTR(UpdateQ)
 INSTR(UpdateP)
 INSTR(UpdateMacFlags)

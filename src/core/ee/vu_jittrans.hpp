@@ -34,6 +34,7 @@ struct VU_InstrInfo
     int flag_instruction;
     bool advance_mac_pipeline;
     int stall_amount;
+    int backup_vi;
     int q_pipe_delay_int_pass;
     int q_pipe_delay_trans_pass;
     int p_pipe_delay_int_pass;
@@ -41,6 +42,9 @@ struct VU_InstrInfo
     uint64_t stall_state[4];
     uint8_t decoder_vf_write[2];
     uint8_t decoder_vf_write_field[2];
+    uint8_t decoder_vi_read0;
+    uint8_t decoder_vi_read1;
+    uint8_t decoder_vi_write;
 };
 
 class VU_JitTranslator

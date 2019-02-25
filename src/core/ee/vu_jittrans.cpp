@@ -71,6 +71,13 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
             block.add_instr(stall);
         }
 
+        if (instr_info[cur_PC].backup_vi)
+        {
+            IR::Instruction backup(IR::Opcode::BackupVI);
+            backup.set_source(instr_info[cur_PC].backup_vi);
+            block.add_instr(backup);
+        }
+
         //LOI - upper goes first, lower gets loaded into I register
         if (upper & (1 << 31))
         {
@@ -87,7 +94,28 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
 
             if (instr_info[cur_PC].swap_ops)
             {
-                //Lower op first
+                int vf_reg = instr_info[cur_PC].decoder_vf_write[0];
+
+                IR::Instruction backup_old(IR::Opcode::BackupVF);
+                backup_old.set_source(vf_reg);
+                backup_old.set_dest(0); //0 = OldVF
+                block.add_instr(backup_old);
+
+                for (unsigned int i = 0; i < upper_instrs.size(); i++)
+                {
+                    block.add_instr(upper_instrs[i]);
+                }
+
+                IR::Instruction backup_new(IR::Opcode::BackupVF);
+                backup_new.set_source(vf_reg);
+                backup_new.set_dest(1); //1 = NewVF
+                block.add_instr(backup_new);
+
+                IR::Instruction restore_old(IR::Opcode::RestoreVF);
+                restore_old.set_source(vf_reg);
+                restore_old.set_dest(0); //0 = OldVF
+                block.add_instr(restore_old);
+               
                 for (unsigned int i = 0; i < lower_instrs.size(); i++)
                 {
                     block.add_instr(lower_instrs[i]);
@@ -100,10 +128,10 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
                     }
                 }
 
-                for (unsigned int i = 0; i < upper_instrs.size(); i++)
-                {
-                    block.add_instr(upper_instrs[i]);
-                }
+                IR::Instruction restore_new(IR::Opcode::RestoreVF);
+                restore_new.set_source(vf_reg);
+                restore_new.set_dest(1); //1 = NewVF
+                block.add_instr(restore_new);
             }
             else
             {
@@ -419,9 +447,12 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
         vu.decoder.vf_write_field[1] = 0;
     }
 
+    vu.int_backup_id_rec = 0;
+
     uint16_t PC = vu.get_PC();
     while (!block_end)
     {
+        instr_info[PC].backup_vi = 0;
         instr_info[PC].stall_amount = 0;
         instr_info[PC].swap_ops = false;
         instr_info[PC].update_q_pipeline = false;
@@ -454,18 +485,41 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
             VU_Interpreter::lower(vu, lower);
 
             instr_info[PC].flag_instruction = is_flag_instruction(lower);
+
+            int write = vu.decoder.vf_write[0];
+            int write1 = vu.decoder.vf_write[1];
+            int read0 = vu.decoder.vf_read0[1];
+            int read1 = vu.decoder.vf_read1[1];
+
+            instr_info[PC].decoder_vi_read0 = vu.decoder.vi_read0;
+            instr_info[PC].decoder_vi_read1 = vu.decoder.vi_read1;
+            instr_info[PC].decoder_vi_write = vu.decoder.vi_write;
+
+
             //Branch instructions
             if ((lower & 0xC0000000) == 0x40000000)
             {
                 if (delay_slot)
                     Errors::die("[VU_IR] End block in delay slot");
                 delay_slot = true;
-            }
 
-            int write = vu.decoder.vf_write[0];
-            int write1 = vu.decoder.vf_write[1];
-            int read0 = vu.decoder.vf_read0[1];
-            int read1 = vu.decoder.vf_read1[1];
+                //Conditional branches only
+                if (((lower >> 25) & 0xF) >= 0x8 && PC > vu.get_PC())
+                {
+                    //Reg used in branch was modified on the previous instruction
+                    if (instr_info[PC - 8].decoder_vi_write != 0)
+                    {
+                        if (instr_info[PC - 8].decoder_vi_write == vu.decoder.vi_read0)
+                            vu.int_backup_id_rec = vu.decoder.vi_read0;
+
+                        if (instr_info[PC - 8].decoder_vi_write == vu.decoder.vi_read1)
+                            vu.int_backup_id_rec = vu.decoder.vi_read1;
+
+                        int backup_pc = ((PC - 40) < vu.get_PC()) ? vu.get_PC() : (PC - 40);
+                        instr_info[backup_pc].backup_vi = vu.int_backup_id_rec;
+                    }
+                }
+            }
 
             //If an upper op writes to a register a lower op reads from, the lower op executes first
             //Additionally, if an upper op and a lower op write to the same register, the upper op
@@ -473,7 +527,10 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
             if (!(upper & (1 << 31)))
             {
                 if (write && ((write == read0 || write == read1) || (write == write1)))
+                {
                     instr_info[PC].swap_ops = true;
+                    instr_info[PC].decoder_vf_write[0] = write;
+                }
             }
         }
 
@@ -505,7 +562,7 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
         }
 
         //WaitP, EATAN, EEXP, ELENG, ERCPR, ERLENG, ERSADD, ERSQRT, ESADD, ESIN, ESQRT, ESUM
-        if ((lower & (1 << 31)) && ((lower >> 8) & 0x7) == 0x7)
+        if ((lower & (1 << 31)) && ((lower >> 2) & 0x1CF) == 0x1CF)
         {
             if (p_pipe_delay > 0)
             {

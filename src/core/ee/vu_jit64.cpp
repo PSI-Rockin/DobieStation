@@ -160,7 +160,7 @@ void VU_JIT64::reset(bool clear_cache)
     ir.reset_instr_info();
 
     should_update_mac = false;
-    prev_pc = 0xFFFFFFFFF;
+    prev_pc = 0xFFFFFFFF;
     current_program = 0;
 }
 
@@ -674,8 +674,31 @@ void VU_JIT64::jump_and_link_indirect(VectorUnit &vu, IR::Instruction &instr)
 
 void VU_JIT64::branch_equal(VectorUnit &vu, IR::Instruction &instr)
 {
-    REG_64 op1 = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
-    REG_64 op2 = alloc_int_reg(vu, instr.get_source2(), REG_STATE::READ);
+    REG_64 op1;
+    REG_64 op2;
+
+    if (!vu.int_backup_id_rec || (instr.get_source() != vu.int_backup_id_rec && instr.get_source2() != vu.int_backup_id_rec))
+    {
+        op1 = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
+        op2 = alloc_int_reg(vu, instr.get_source2(), REG_STATE::READ);
+    }
+    else
+    {
+        if (instr.get_source() == vu.int_backup_id_rec)
+        {
+            op1 = REG_64::R15;
+            op2 = alloc_int_reg(vu, instr.get_source2(), REG_STATE::READ);
+        }
+        else
+        {
+            op1 = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
+            op2 = REG_64::R15;
+        }
+        emitter.load_addr((uint64_t)&vu.int_backup_reg, REG_64::RAX);
+        emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::R15);
+        emitter.load_addr((uint64_t)&vu.int_backup_id, REG_64::RAX);
+        emitter.MOV16_IMM_MEM(0, REG_64::RAX);
+    }
 
     emitter.load_addr((uint64_t)&vu.branch_on, REG_64::RAX);
     emitter.CMP16_REG(op2, op1);
@@ -688,8 +711,31 @@ void VU_JIT64::branch_equal(VectorUnit &vu, IR::Instruction &instr)
 
 void VU_JIT64::branch_not_equal(VectorUnit &vu, IR::Instruction &instr)
 {
-    REG_64 op1 = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
-    REG_64 op2 = alloc_int_reg(vu, instr.get_source2(), REG_STATE::READ);
+    REG_64 op1;
+    REG_64 op2;
+
+    if (!vu.int_backup_id_rec || (instr.get_source() != vu.int_backup_id_rec && instr.get_source2() != vu.int_backup_id_rec))
+    {
+        op1 = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
+        op2 = alloc_int_reg(vu, instr.get_source2(), REG_STATE::READ);
+    }
+    else
+    {
+        if (instr.get_source() == vu.int_backup_id_rec)
+        {
+            op1 = REG_64::R15;
+            op2 = alloc_int_reg(vu, instr.get_source2(), REG_STATE::READ);
+        }
+        else
+        {
+            op1 = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
+            op2 = REG_64::R15;
+        }
+        emitter.load_addr((uint64_t)&vu.int_backup_reg, REG_64::RAX);
+        emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::R15);
+        emitter.load_addr((uint64_t)&vu.int_backup_id, REG_64::RAX);
+        emitter.MOV16_IMM_MEM(0, REG_64::RAX);
+    }
 
     emitter.load_addr((uint64_t)&vu.branch_on, REG_64::RAX);
     emitter.CMP16_REG(op2, op1);
@@ -702,7 +748,20 @@ void VU_JIT64::branch_not_equal(VectorUnit &vu, IR::Instruction &instr)
 
 void VU_JIT64::branch_less_than_zero(VectorUnit &vu, IR::Instruction &instr)
 {
-    REG_64 op = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
+    REG_64 op;
+
+    if (!vu.int_backup_id_rec || instr.get_source() != vu.int_backup_id_rec)
+    {
+        op = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
+    }
+    else
+    {
+        op = REG_64::R15;
+        emitter.load_addr((uint64_t)&vu.int_backup_reg, REG_64::RAX);
+        emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::R15);
+        emitter.load_addr((uint64_t)&vu.int_backup_id, REG_64::RAX);
+        emitter.MOV16_IMM_MEM(0, REG_64::RAX);
+    }
 
     emitter.load_addr((uint64_t)&vu.branch_on, REG_64::RAX);
     emitter.CMP16_IMM(0, op);
@@ -715,7 +774,20 @@ void VU_JIT64::branch_less_than_zero(VectorUnit &vu, IR::Instruction &instr)
 
 void VU_JIT64::branch_greater_than_zero(VectorUnit &vu, IR::Instruction &instr)
 {
-    REG_64 op = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
+    REG_64 op;
+
+    if (!vu.int_backup_id_rec || instr.get_source() != vu.int_backup_id_rec)
+    {
+        op = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
+    }
+    else
+    {
+        op = REG_64::R15;
+        emitter.load_addr((uint64_t)&vu.int_backup_reg, REG_64::RAX);
+        emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::R15);
+        emitter.load_addr((uint64_t)&vu.int_backup_id, REG_64::RAX);
+        emitter.MOV16_IMM_MEM(0, REG_64::RAX);
+    }
 
     emitter.load_addr((uint64_t)&vu.branch_on, REG_64::RAX);
     emitter.CMP16_IMM(0, op);
@@ -728,7 +800,20 @@ void VU_JIT64::branch_greater_than_zero(VectorUnit &vu, IR::Instruction &instr)
 
 void VU_JIT64::branch_less_or_equal_than_zero(VectorUnit &vu, IR::Instruction &instr)
 {
-    REG_64 op = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
+    REG_64 op;
+
+    if (!vu.int_backup_id_rec || instr.get_source() != vu.int_backup_id_rec)
+    {
+        op = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
+    }
+    else
+    {
+        op = REG_64::R15;
+        emitter.load_addr((uint64_t)&vu.int_backup_reg, REG_64::RAX);
+        emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::R15);
+        emitter.load_addr((uint64_t)&vu.int_backup_id, REG_64::RAX);
+        emitter.MOV16_IMM_MEM(0, REG_64::RAX);
+    }
 
     emitter.load_addr((uint64_t)&vu.branch_on, REG_64::RAX);
     emitter.CMP16_IMM(0, op);
@@ -741,7 +826,20 @@ void VU_JIT64::branch_less_or_equal_than_zero(VectorUnit &vu, IR::Instruction &i
 
 void VU_JIT64::branch_greater_or_equal_than_zero(VectorUnit &vu, IR::Instruction &instr)
 {
-    REG_64 op = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
+    REG_64 op;
+
+    if (!vu.int_backup_id_rec || instr.get_source() != vu.int_backup_id_rec)
+    {
+        op = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
+    }
+    else
+    {
+        op = REG_64::R15;
+        emitter.load_addr((uint64_t)&vu.int_backup_reg, REG_64::RAX);
+        emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::R15);
+        emitter.load_addr((uint64_t)&vu.int_backup_id, REG_64::RAX);
+        emitter.MOV16_IMM_MEM(0, REG_64::RAX);
+    }
 
     emitter.load_addr((uint64_t)&vu.branch_on, REG_64::RAX);
     emitter.CMP16_IMM(0, op);
@@ -1858,6 +1956,49 @@ void VU_JIT64::rinit(VectorUnit &vu, IR::Instruction &instr)
     emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
 }
 
+void VU_JIT64::backup_vf(VectorUnit& vu, IR::Instruction& instr)
+{
+    REG_64 vf_reg = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ_WRITE);
+
+    if (!instr.get_dest())
+    {
+        emitter.load_addr((uint64_t)&vu.backup_oldgpr, REG_64::RAX);
+    }
+    else
+    {
+        emitter.load_addr((uint64_t)&vu.backup_newgpr, REG_64::RAX);
+    }
+
+    emitter.MOVAPS_TO_MEM(vf_reg, REG_64::RAX);
+}
+
+void VU_JIT64::restore_vf(VectorUnit& vu, IR::Instruction& instr)
+{
+    REG_64 vf_reg = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ_WRITE);
+
+    if (!instr.get_dest())
+    {
+        emitter.load_addr((uint64_t)&vu.backup_oldgpr, REG_64::RAX);
+    }
+    else
+    {
+        emitter.load_addr((uint64_t)&vu.backup_newgpr, REG_64::RAX);
+    }
+
+    emitter.MOVAPS_FROM_MEM(REG_64::RAX, vf_reg);
+}
+
+void VU_JIT64::backup_vi(VectorUnit& vu, IR::Instruction& instr)
+{
+    REG_64 int_reg = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
+    emitter.load_addr((uint64_t)&vu.int_backup_reg, REG_64::RAX);
+    emitter.MOV16_TO_MEM(int_reg, REG_64::RAX);
+    emitter.load_addr((uint64_t)&vu.int_backup_id, REG_64::RAX);
+    emitter.MOV8_IMM_MEM(instr.get_source(), REG_64::RAX);
+
+    vu.int_backup_id_rec = instr.get_source();
+}
+
 void VU_JIT64::update_q(VectorUnit &vu, IR::Instruction &instr)
 {
     //Store the pipelined Q inside the Q available to the program
@@ -2449,8 +2590,18 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
         case IR::Opcode::VMoveFromP:
             move_from_p(vu, instr);
             break;
+        case IR::Opcode::BackupVF:
+            backup_vf(vu, instr);
+            break;
+        case IR::Opcode::RestoreVF:
+            restore_vf(vu, instr);
+            break;
+        case IR::Opcode::BackupVI:
+            backup_vi(vu, instr);
+            break;
         case IR::Opcode::UpdateQ:
             update_q(vu, instr);
+            break;
         case IR::Opcode::UpdateP:
             update_p(vu, instr);
             break;
@@ -2588,8 +2739,11 @@ void VU_JIT64::prepare_abi(VectorUnit& vu, uint64_t value)
     if (int_regs[arg].used)
     {
         int vi_reg = int_regs[arg].vu_reg;
-        emitter.load_addr((uint64_t)&vu.int_gpr[vi_reg], REG_64::RAX);
-        emitter.MOV64_TO_MEM(arg, REG_64::RAX);
+        if (int_regs[arg].modified)
+        {
+            emitter.load_addr((uint64_t)&vu.int_gpr[vi_reg], REG_64::RAX);
+            emitter.MOV64_TO_MEM(arg, REG_64::RAX);
+        }
         int_regs[arg].used = false;
         int_regs[arg].age = 0;
     }
@@ -2600,26 +2754,39 @@ void VU_JIT64::prepare_abi(VectorUnit& vu, uint64_t value)
 void VU_JIT64::call_abi_func(uint64_t addr)
 {
     const static REG_64 saved_regs[] = {RCX, RDX, R8, R9, R10, R11};
-    emitter.PUSH(REG_64::RCX);
-    emitter.PUSH(REG_64::RDX);
-    emitter.PUSH(REG_64::R8);
-    emitter.PUSH(REG_64::R9);
-    emitter.PUSH(REG_64::R10);
-    emitter.PUSH(REG_64::R11);
-    emitter.MOV64_OI(addr, REG_64::RAX);
+    int total_regs = sizeof(saved_regs) / sizeof(REG_64);
+    int regs_used = 0;
+    int sp_offset = 0;
+
+    for (int i = 0; i < total_regs; i++)
+    {
+        if (int_regs[saved_regs[i]].used)
+        {
+            emitter.PUSH(saved_regs[i]);
+            regs_used++;
+        }
+    }
+  
+    //Align stack pointer on 16-byte boundary
+    if (regs_used & 1)
+        sp_offset += 8;
 #ifdef _WIN32
-    emitter.SUB64_REG_IMM(32, REG_64::RSP);
+    //x64 Windows requires a 32-byte "shadow region" to store the four argument registers, even if not all are used
+    sp_offset += 32;
+#endif
+    emitter.MOV64_OI(addr, REG_64::RAX);
+  
+    if (sp_offset)
+        emitter.SUB64_REG_IMM(sp_offset, REG_64::RSP);
     emitter.CALL_INDIR(REG_64::RAX);
-    emitter.ADD64_REG_IMM(32, REG_64::RSP);
-#else
-    emitter.CALL_INDIR(REG_64::RAX);
-#endif    
-    emitter.POP(REG_64::R11);
-    emitter.POP(REG_64::R10);
-    emitter.POP(REG_64::R9);
-    emitter.POP(REG_64::R8);
-    emitter.POP(REG_64::RDX);
-    emitter.POP(REG_64::RCX);
+    if (sp_offset)
+        emitter.ADD64_REG_IMM(sp_offset, REG_64::RSP);
+
+    for (int i = total_regs - 1; i >= 0; i--)
+    {
+        if (int_regs[saved_regs[i]].used)
+            emitter.POP(saved_regs[i]);
+    }
     abi_int_count = 0;
     abi_xmm_count = 0;
 }
