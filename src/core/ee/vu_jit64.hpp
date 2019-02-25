@@ -169,10 +169,12 @@ class VU_JIT64
         void flush_regs(VectorUnit& vu);
         void flush_sse_reg(VectorUnit& vu, int vf_reg);
 
+        void emit_prologue();
         void emit_instruction(VectorUnit& vu, IR::Instruction& instr);
         void recompile_block(VectorUnit& vu, IR::Block& block);
         //uint8_t* exec_block(VectorUnit& vu);
         void cleanup_recompiler(VectorUnit& vu, bool clear_regs);
+        void emit_epilogue();
 
         void prepare_abi(VectorUnit& vu, uint64_t value);
         void call_abi_func(uint64_t addr);

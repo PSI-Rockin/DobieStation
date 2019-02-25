@@ -2205,6 +2205,21 @@ void VU_JIT64::flush_sse_reg(VectorUnit &vu, int vf_reg)
     }
 }
 
+void VU_JIT64::emit_prologue()
+{
+#ifdef _WIN32
+    Errors::die("[VU_JIT64] emit_prologue not implemented for _WIN32");
+#else
+    emitter.PUSH(REG_64::RBX);
+    emitter.PUSH(REG_64::R12);
+    emitter.PUSH(REG_64::R13);
+    emitter.PUSH(REG_64::R14);
+    emitter.PUSH(REG_64::R15);
+    emitter.PUSH(REG_64::RDI);
+    emitter.PUSH(REG_64::RSI);
+#endif
+}
+
 void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
 {
     switch (instr.op)
@@ -2482,13 +2497,9 @@ void VU_JIT64::recompile_block(VectorUnit& vu, IR::Block& block)
     emitter.PUSH(REG_64::RBP);
     emitter.MOV64_MR(REG_64::RSP, REG_64::RBP);
 
-    emitter.PUSH(REG_64::RBX);
-    emitter.PUSH(REG_64::R12);
-    emitter.PUSH(REG_64::R13);
-    emitter.PUSH(REG_64::R14);
-    emitter.PUSH(REG_64::R15);
-    emitter.PUSH(REG_64::RDI);
-    emitter.PUSH(REG_64::RSI);
+#ifndef _MSC_VER
+    emit_prologue();
+#endif
 
     while (block.get_instruction_count() > 0)
     {
@@ -2503,7 +2514,7 @@ void VU_JIT64::recompile_block(VectorUnit& vu, IR::Block& block)
 
     //Switch the block's privileges from RW to RX.
     cache.set_current_block_rx();
-    cache.print_current_block();
+    //cache.print_current_block();
     //cache.print_literal_pool();
 }
 
@@ -2533,6 +2544,20 @@ void VU_JIT64::cleanup_recompiler(VectorUnit& vu, bool clear_regs)
     emitter.load_addr((uint64_t)&cycle_count, REG_64::R15);
     emitter.MOV16_TO_MEM(REG_64::RAX, REG_64::R15);
 
+#ifndef _MSC_VER
+    emit_epilogue();
+#endif
+
+    //Epilogue
+    emitter.POP(REG_64::RBP);
+    emitter.RET();
+}
+
+void VU_JIT64::emit_epilogue()
+{
+#ifdef _WIN32
+    Errors::die("[VU_JIT64] emit_epilogue not implemented for _WIN32");
+#else
     emitter.POP(REG_64::RSI);
     emitter.POP(REG_64::RDI);
     emitter.POP(REG_64::R15);
@@ -2540,10 +2565,7 @@ void VU_JIT64::cleanup_recompiler(VectorUnit& vu, bool clear_regs)
     emitter.POP(REG_64::R13);
     emitter.POP(REG_64::R12);
     emitter.POP(REG_64::RBX);
-
-    //Epilogue
-    emitter.POP(REG_64::RBP);
-    emitter.RET();
+#endif
 }
 
 void VU_JIT64::prepare_abi(VectorUnit& vu, uint64_t value)
@@ -2642,7 +2664,7 @@ uint8_t* exec_block(VU_JIT64& jit, VectorUnit& vu)
 
 uint16_t VU_JIT64::run(VectorUnit& vu)
 {
-#ifdef _WIN32
+#ifdef _MSC_VER
     run_vu_jit();
 #else
     uint8_t* block = exec_block(*this, vu);
