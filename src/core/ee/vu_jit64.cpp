@@ -2625,7 +2625,7 @@ uint8_t* exec_block(VU_JIT64& jit, VectorUnit& vu)
 }
 
 #ifndef _WIN32
-void run_block(VectorUnit& vu, uint8_t* block)
+void run_block(uint8_t* block)
 {
     __asm__ volatile (
          "pushq %rbx\n"
@@ -2661,7 +2661,7 @@ uint16_t VU_JIT64::run(VectorUnit& vu)
     run_vu_jit();
 #else
     uint8_t* block = exec_block(*this, vu);
-    run_block(vu, block);
+    run_block(block);
 #endif
     
     return cycle_count;
