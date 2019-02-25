@@ -2634,6 +2634,7 @@ void run_block(VectorUnit& vu, uint8_t* block)
          "pushq %r14\n"
          "pushq %r15\n"
          "pushq %rdi\n"
+         "pushq %rsi\n"
     );
 
     __asm__ volatile (
@@ -2643,6 +2644,7 @@ void run_block(VectorUnit& vu, uint8_t* block)
     );
 
     __asm__ volatile (
+         "popq %rsi\n"
          "popq %rdi\n"
          "popq %r15\n"
          "popq %r14\n"
