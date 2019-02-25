@@ -2205,6 +2205,21 @@ void VU_JIT64::flush_sse_reg(VectorUnit &vu, int vf_reg)
     }
 }
 
+void VU_JIT64::emit_prologue()
+{
+#ifdef _WIN32
+    Errors::die("[VU_JIT64] emit_prologue not implemented for _WIN32");
+#else
+    emitter.PUSH(REG_64::RBX);
+    emitter.PUSH(REG_64::R12);
+    emitter.PUSH(REG_64::R13);
+    emitter.PUSH(REG_64::R14);
+    emitter.PUSH(REG_64::R15);
+    emitter.PUSH(REG_64::RDI);
+    emitter.PUSH(REG_64::RSI);
+#endif
+}
+
 void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
 {
     switch (instr.op)
@@ -2482,6 +2497,10 @@ void VU_JIT64::recompile_block(VectorUnit& vu, IR::Block& block)
     emitter.PUSH(REG_64::RBP);
     emitter.MOV64_MR(REG_64::RSP, REG_64::RBP);
 
+#ifndef _MSC_VER
+    emit_prologue();
+#endif
+
     while (block.get_instruction_count() > 0)
     {
         IR::Instruction instr = block.get_next_instr();
@@ -2525,9 +2544,28 @@ void VU_JIT64::cleanup_recompiler(VectorUnit& vu, bool clear_regs)
     emitter.load_addr((uint64_t)&cycle_count, REG_64::R15);
     emitter.MOV16_TO_MEM(REG_64::RAX, REG_64::R15);
 
+#ifndef _MSC_VER
+    emit_epilogue();
+#endif
+
     //Epilogue
     emitter.POP(REG_64::RBP);
     emitter.RET();
+}
+
+void VU_JIT64::emit_epilogue()
+{
+#ifdef _WIN32
+    Errors::die("[VU_JIT64] emit_epilogue not implemented for _WIN32");
+#else
+    emitter.POP(REG_64::RSI);
+    emitter.POP(REG_64::RDI);
+    emitter.POP(REG_64::R15);
+    emitter.POP(REG_64::R14);
+    emitter.POP(REG_64::R13);
+    emitter.POP(REG_64::R12);
+    emitter.POP(REG_64::RBX);
+#endif
 }
 
 void VU_JIT64::prepare_abi(VectorUnit& vu, uint64_t value)
@@ -2568,13 +2606,13 @@ void VU_JIT64::call_abi_func(uint64_t addr)
     emitter.PUSH(REG_64::R9);
     emitter.PUSH(REG_64::R10);
     emitter.PUSH(REG_64::R11);
+    emitter.MOV64_OI(addr, REG_64::RAX);
 #ifdef _WIN32
     emitter.SUB64_REG_IMM(32, REG_64::RSP);
-    emitter.MOV64_OI(addr, REG_64::RAX);
     emitter.CALL_INDIR(REG_64::RAX);
     emitter.ADD64_REG_IMM(32, REG_64::RSP);
 #else
-    emitter.CALL(addr);
+    emitter.CALL_INDIR(REG_64::RAX);
 #endif    
     emitter.POP(REG_64::R11);
     emitter.POP(REG_64::R10);
@@ -2626,30 +2664,15 @@ uint8_t* exec_block(VU_JIT64& jit, VectorUnit& vu)
 
 uint16_t VU_JIT64::run(VectorUnit& vu)
 {
-#ifdef _WIN32
+#ifdef _MSC_VER
     run_vu_jit();
 #else
-   __asm__ (
-        "pushq %rbx\n"
-        "pushq %r12\n"
-        "pushq %r13\n"
-        "pushq %r14\n"
-        "pushq %r15\n"
-        "pushq %rdi\n"
+    uint8_t* block = exec_block(*this, vu);
 
-#ifdef __APPLE__
-        "callq _exec_block\n"
-#else
-        "callq exec_block\n"
-#endif
-        "callq *%rax\n"
-
-        "popq %rdi\n"
-        "popq %r15\n"
-        "popq %r14\n"
-        "popq %r13\n"
-        "popq %r12\n"
-        "popq %rbx\n"
+    __asm__ volatile (
+        "callq *%0"
+                :
+                : "r" (block)
     );
 #endif
     
