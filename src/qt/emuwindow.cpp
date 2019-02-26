@@ -3,7 +3,6 @@
 #include <iostream>
 
 #include <QApplication>
-#include <QPainter>
 #include <QString>
 #include <QVBoxLayout>
 #include <QMenuBar>
@@ -12,6 +11,7 @@
 
 #include "emuwindow.hpp"
 #include "settingswindow.hpp"
+#include "renderwidget.hpp"
 
 #include "arg.h"
 
@@ -30,28 +30,34 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
     framerate_avg = 0.0;
     scale_factor = 1;
 
-    QWidget* widget = new QWidget;
-    setCentralWidget(widget);
+    render_widget = new RenderWidget;
 
-    QWidget* topFiller = new QWidget;
-    topFiller->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    QPalette palette;
+    palette.setColor(QPalette::Background, Qt::black);
+    render_widget->setPalette(palette);
+    render_widget->setAutoFillBackground(true);
 
-    QWidget *bottomFiller = new QWidget;
-    bottomFiller->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    render_widget->connect(
+        &emu_thread, SIGNAL(completed_frame(uint32_t*, int, int, int, int)),
+        render_widget, SLOT(draw_frame(uint32_t*, int, int, int, int))
+    );
 
-    QVBoxLayout *layout = new QVBoxLayout;
-    layout->setMargin(5);
-    layout->addWidget(topFiller);
-    layout->addWidget(bottomFiller);
-    widget->setLayout(layout);
+    QWidget* game_list_widget = new QWidget;
+
+    stack_widget = new QStackedWidget;
+    stack_widget->addWidget(game_list_widget);
+    stack_widget->addWidget(render_widget);
+    stack_widget->setMinimumWidth(640);
+    stack_widget->setMinimumHeight(448);
+
+    setCentralWidget(stack_widget);
+    stack_widget->resize(640, 448);
 
     create_menu();
 
     connect(this, SIGNAL(shutdown()), &emu_thread, SLOT(shutdown()));
     connect(this, SIGNAL(press_key(PAD_BUTTON)), &emu_thread, SLOT(press_key(PAD_BUTTON)));
     connect(this, SIGNAL(release_key(PAD_BUTTON)), &emu_thread, SLOT(release_key(PAD_BUTTON)));
-    connect(&emu_thread, SIGNAL(completed_frame(uint32_t*, int, int, int, int)),
-            this, SLOT(draw_frame(uint32_t*, int, int, int, int)));
     connect(&emu_thread, SIGNAL(update_FPS(int)), this, SLOT(update_FPS(int)));
     connect(&emu_thread, SIGNAL(emu_error(QString)), this, SLOT(emu_error(QString)));
     connect(&emu_thread, SIGNAL(emu_non_fatal_error(QString)), this, SLOT(emu_non_fatal_error(QString)));
@@ -63,10 +69,7 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
     //Initialize window
     title = "DobieStation";
     setWindowTitle(QString::fromStdString(title));
-    if (menuBar()->isNativeMenuBar())
-        resize(640, 448);
-    else
-        resize(640, 448 + menuBar()->geometry().height());
+
     show();
 }
 
@@ -182,6 +185,9 @@ int EmuWindow::load_exec(const char* file_name, bool skip_BIOS)
     ROM_path = file_name;
 
     emu_thread.unpause(PAUSE_EVENT::GAME_NOT_LOADED);
+
+    stack_widget->setCurrentIndex(1);
+
     return 0;
 }
 
@@ -224,8 +230,7 @@ void EmuWindow::create_menu()
     options_menu->addSeparator();
 
     auto size_options_actions = new QAction(tr("Scale to &Window (ignore aspect ratio)"), this);
-    connect(size_options_actions, &QAction::triggered, this,
-        [this]() { this->scale_factor = 0; });
+    connect(size_options_actions, SIGNAL(triggered()), render_widget, SLOT(toggle_aspect_ratio()));
     options_menu->addAction(size_options_actions);
 
     size_options_actions = new QAction(tr("Scale &1x"), this);
@@ -288,40 +293,6 @@ void EmuWindow::open_settings_window()
 
     settings_window->show();
     settings_window->raise();
-}
-
-void EmuWindow::draw_frame(uint32_t *buffer, int inner_w, int inner_h, int final_w, int final_h)
-{
-    if (!buffer || !inner_w || !inner_h)
-        return;
-    final_image = QImage((uint8_t*)buffer, inner_w, inner_h, QImage::Format_RGBA8888);
-    if (scale_factor == 0)
-    {
-        auto size = this->size();
-        final_image = final_image.scaled(size.width(), size.height());
-    }
-    else
-    {
-        final_image = final_image.scaled(final_w*scale_factor, final_h*scale_factor);
-        if (menuBar()->isNativeMenuBar())
-            resize(final_w*scale_factor, final_h*scale_factor);
-        else
-            resize(final_w*scale_factor, final_h*scale_factor + menuBar()->geometry().height());
-    }
-    update();
-}
-
-void EmuWindow::paintEvent(QPaintEvent *event)
-{
-    event->accept();
-    QPainter painter(this);
-
-    printf("Draw image!\n");
-
-    if (menuBar()->isNativeMenuBar())
-        painter.drawPixmap(0, 0, QPixmap::fromImage(final_image));
-    else
-        painter.drawPixmap(0, menuBar()->geometry().height(), QPixmap::fromImage(final_image));
 }
 
 void EmuWindow::closeEvent(QCloseEvent *event)
@@ -460,6 +431,7 @@ void EmuWindow::emu_error(QString err)
     msgBox.exec();
     ROM_path = "";
     setWindowTitle("DobieStation");
+    stack_widget->setCurrentIndex(0);
 }
 
 void EmuWindow::emu_non_fatal_error(QString err)

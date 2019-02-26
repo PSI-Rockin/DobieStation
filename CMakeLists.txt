@@ -77,6 +77,7 @@ set(SOURCES
 	src/qt/emuthread.cpp
         src/qt/emuwindow.cpp
         src/qt/settingswindow.cpp
+        src/qt/renderwidget.cpp
         src/qt/main.cpp
 	src/qt/settings.cpp
         )
@@ -142,6 +143,7 @@ set(HEADERS
 	src/qt/emuthread.hpp
         src/qt/emuwindow.hpp
         src/qt/settingswindow.hpp
+        src/qt/renderwidget.hpp
 	src/qt/settings.hpp
         )
 
