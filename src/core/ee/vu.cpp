@@ -104,7 +104,7 @@ void VectorUnit::reset()
     ebit_delay_slot = 0;
     transferring_GIF = false;
     XGKICK_stall = false;
-    XGKICK_cycles = 0;
+    XGKICK_delay = 0;
     new_MAC_flags = 0;
     new_Q_instance.u = 0;
     finish_DIV_event = 0;
@@ -242,9 +242,14 @@ void VectorUnit::run(int cycles)
             while (cycles_to_run && transferring_GIF)
             {
                 cycles_to_run--;
-                handle_XGKICK();
+                if (XGKICK_delay)
+                    XGKICK_delay--;
+                else
+                    handle_XGKICK();
             }
         }
+        else
+            XGKICK_delay = std::max(0, XGKICK_delay - cycles_to_run);
     }
 }
 
@@ -289,7 +294,7 @@ void VectorUnit::handle_XGKICK()
         if (XGKICK_stall)
         {
             //printf("[VU1] Activating stalled XGKICK transfer\n");
-            XGKICK_cycles = 0;
+            XGKICK_delay = 0;
             XGKICK_stall = false;
             GIF_addr = stalled_GIF_addr;
             run_event = cycle_count;
@@ -2499,13 +2504,14 @@ void VectorUnit::xgkick(uint32_t instr)
     //Note: a real VU executes for one or two more cycles before stalling due to pipelining.
     if (transferring_GIF)
     {
+        XGKICK_delay = 0;
         printf("[VU1] XGKICK called during active transfer, stalling VU\n");
         stalled_GIF_addr = (uint32_t)(int_gpr[_is_].u & 0x3ff) * 16;
         XGKICK_stall = true;
     }
     else
     {
-        XGKICK_cycles = 0;
+        XGKICK_delay = XGKICK_INIT_DELAY;
         gif->request_PATH(1, true);
         transferring_GIF = true;
         GIF_addr = (uint32_t)(int_gpr[_is_].u & 0x3ff) * 16;

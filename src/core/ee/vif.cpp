@@ -927,7 +927,6 @@ void VectorInterface::disasm_micromem()
 
 uint32_t VectorInterface::crc_microprogram()
 {
-    int k;
     uint32_t crc = 0;
     int len = 0x4000;
     int addr = 0x0000;

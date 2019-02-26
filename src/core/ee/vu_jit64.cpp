@@ -107,10 +107,15 @@ void vu_update_xgkick(VectorUnit& vu, int cycles)
     if (vu.transferring_GIF)
     {
         vu.gif->request_PATH(1, true);
+        if (!vu.gif->path_active(1))
+            vu.XGKICK_delay = std::max(0, vu.XGKICK_delay - cycles);
         while (cycles > 0 && vu.gif->path_active(1))
         {
             cycles--;
-            vu.handle_XGKICK();
+            if (vu.XGKICK_delay)
+                vu.XGKICK_delay--;
+            else
+                vu.handle_XGKICK();
         }
     }
 }
@@ -2063,6 +2068,9 @@ void VU_JIT64::xgkick(VectorUnit &vu, IR::Instruction &instr)
     emitter.load_addr((uint64_t)&vu.stalled_GIF_addr, REG_64::R15);
     emitter.MOV16_TO_MEM(REG_64::RAX, REG_64::R15);
 
+    emitter.load_addr((uint64_t)&vu.XGKICK_delay, REG_64::R15);
+    emitter.MOV32_IMM_MEM(0, REG_64::R15);
+
     //If we're in a delay slot, there's no more XGKicks
     if (!instr.get_dest())
     {
@@ -2090,6 +2098,9 @@ void VU_JIT64::xgkick(VectorUnit &vu, IR::Instruction &instr)
 
     emitter.load_addr((uint64_t)&vu.GIF_addr, REG_64::R15);
     emitter.MOV16_TO_MEM(REG_64::RAX, REG_64::R15);
+
+    emitter.load_addr((uint64_t)&vu.XGKICK_delay, REG_64::R15);
+    emitter.MOV32_IMM_MEM(XGKICK_INIT_DELAY, REG_64::R15);
 
     emitter.set_jump_dest(stall_addr);
 }
@@ -2357,7 +2368,6 @@ void VU_JIT64::emit_prologue()
     emitter.PUSH(REG_64::R14);
     emitter.PUSH(REG_64::R15);
     emitter.PUSH(REG_64::RDI);
-    emitter.PUSH(REG_64::RSI);
 #endif
 }
 
@@ -2645,12 +2655,11 @@ void VU_JIT64::recompile_block(VectorUnit& vu, IR::Block& block)
     cycle_count = block.get_cycle_count();
 
     //Prologue
-    emitter.PUSH(REG_64::RBP);
-    emitter.MOV64_MR(REG_64::RSP, REG_64::RBP);
-
 #ifndef _MSC_VER
     emit_prologue();
 #endif
+    emitter.PUSH(REG_64::RBP);
+    emitter.MOV64_MR(REG_64::RSP, REG_64::RBP);
 
     while (block.get_instruction_count() > 0)
     {
@@ -2695,12 +2704,11 @@ void VU_JIT64::cleanup_recompiler(VectorUnit& vu, bool clear_regs)
     emitter.load_addr((uint64_t)&cycle_count, REG_64::R15);
     emitter.MOV16_TO_MEM(REG_64::RAX, REG_64::R15);
 
+    //Epilogue
+    emitter.POP(REG_64::RBP);
 #ifndef _MSC_VER
     emit_epilogue();
 #endif
-
-    //Epilogue
-    emitter.POP(REG_64::RBP);
     emitter.RET();
 }
 
@@ -2709,7 +2717,6 @@ void VU_JIT64::emit_epilogue()
 #ifdef _WIN32
     Errors::die("[VU_JIT64] emit_epilogue not implemented for _WIN32");
 #else
-    emitter.POP(REG_64::RSI);
     emitter.POP(REG_64::RDI);
     emitter.POP(REG_64::R15);
     emitter.POP(REG_64::R14);
