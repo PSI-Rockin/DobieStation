@@ -1,4 +1,5 @@
 #include <cmath>
+#include <algorithm>
 
 #include "vu_jit64.hpp"
 #include "vu_interpreter.hpp"
