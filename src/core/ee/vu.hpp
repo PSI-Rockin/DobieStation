@@ -77,7 +77,7 @@ class VectorUnit
 
         bool running;
         uint16_t PC, new_PC, secondbranch_PC;
-        bool branch_on;
+        bool branch_on, branch_on_delay;
         bool finish_on;
         bool second_branch_pending;
         int branch_delay_slot, ebit_delay_slot;

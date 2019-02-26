@@ -298,6 +298,15 @@ void Emitter64::SHL32_REG_IMM(uint8_t shift, REG_64 dest)
     cache->write<uint8_t>(shift);
 }
 
+void Emitter64::SHR16_REG_IMM(uint8_t shift, REG_64 dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_rm(dest);
+    cache->write<uint8_t>(0xC1);
+    modrm(0b11, 5, dest);
+    cache->write<uint8_t>(shift);
+}
+
 void Emitter64::SUB16_REG_IMM(uint16_t imm, REG_64 dest)
 {
     cache->write<uint8_t>(0x66);

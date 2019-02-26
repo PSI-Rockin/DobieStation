@@ -103,5 +103,6 @@ INSTR(Xgkick)
 INSTR(UpdateXgkick)
 INSTR(Stop)
 INSTR(SavePC)
+INSTR(MoveDelayedBranch)
 
 INSTR(FallbackInterpreter)

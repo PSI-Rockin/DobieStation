@@ -184,7 +184,9 @@ void VectorUnit::run(int cycles)
 
         if (transferring_GIF)
         {
-            if (gif->path_active(1))
+            if (XGKICK_delay)
+                XGKICK_delay--;
+            else if(gif->path_active(1))
                 handle_XGKICK();
         }
 
@@ -2504,7 +2506,6 @@ void VectorUnit::xgkick(uint32_t instr)
     //Note: a real VU executes for one or two more cycles before stalling due to pipelining.
     if (transferring_GIF)
     {
-        XGKICK_delay = 0;
         printf("[VU1] XGKICK called during active transfer, stalling VU\n");
         stalled_GIF_addr = (uint32_t)(int_gpr[_is_].u & 0x3ff) * 16;
         XGKICK_stall = true;
