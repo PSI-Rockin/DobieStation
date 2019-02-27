@@ -180,8 +180,6 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
                     block.add_instr(lower_instrs[i]);
                     if (lower_instrs[i].is_jump())
                     {
-                        //if (trans_branch_delay_slot)
-                            ///Errors::die("[VU JIT] Branch in delay slot");
                         trans_branch_delay_slot = true;
                     }
                 }
@@ -660,8 +658,6 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
 
         if (upper & (1 << 30))
         {
-            /*if (branch_delay_slot)
-                Errors::die("[VU_IR] End block in delay slot");*/
             ebit_delay_slot = true;
         }
 
