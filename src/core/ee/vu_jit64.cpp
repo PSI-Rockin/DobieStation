@@ -748,6 +748,41 @@ void VU_JIT64::jump_and_link_indirect(VectorUnit &vu, IR::Instruction &instr)
     vu_branch = true;
 }
 
+void VU_JIT64::handle_branch_destinations(VectorUnit& vu, IR::Instruction& instr)
+{
+    emitter.load_addr((uint64_t)&vu_branch_delay_dest, REG_64::RAX);
+    emitter.MOV16_IMM_MEM(instr.get_jump_dest(), REG_64::RAX);
+
+    if (instr.get_bc())
+    {
+        emitter.load_addr((uint64_t)&vu.branch_on, REG_64::RAX);
+        emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::RAX);
+
+        emitter.TEST16_REG(REG_64::RAX, REG_64::RAX);
+        uint8_t* offset_addr = emitter.JE_NEAR_DEFERRED();
+        //First branch is taken, so we set the fail destination according to that destination
+        emitter.load_addr((uint64_t)&vu_branch_dest, REG_64::RAX);
+        emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::R15);
+        emitter.ADD16_REG_IMM(8, REG_64::R15);
+        emitter.load_addr((uint64_t)&vu_branch_delay_fail_dest, REG_64::RAX);
+        emitter.MOV16_TO_MEM(REG_64::R15, REG_64::RAX);
+
+        uint8_t* skip_addr = emitter.JMP_NEAR_DEFERRED();
+
+        emitter.set_jump_dest(offset_addr);
+        //First branch was not taken, so the destination is as normal
+        emitter.load_addr((uint64_t)&vu_branch_delay_fail_dest, REG_64::RAX);
+        emitter.MOV16_IMM_MEM(instr.get_jump_fail_dest(), REG_64::RAX);
+
+        emitter.set_jump_dest(skip_addr);
+    }
+    else
+    {
+        emitter.load_addr((uint64_t)&vu_branch_delay_fail_dest, REG_64::RAX);
+        emitter.MOV16_IMM_MEM(instr.get_jump_fail_dest(), REG_64::RAX);
+    }
+}
+
 void VU_JIT64::branch_equal(VectorUnit &vu, IR::Instruction &instr)
 {
     REG_64 op1;
@@ -780,38 +815,9 @@ void VU_JIT64::branch_equal(VectorUnit &vu, IR::Instruction &instr)
     emitter.CMP16_REG(op2, op1);
     emitter.SETE_MEM(REG_64::RAX);
 
+    handle_branch_destinations(vu, instr);
+
     vu_branch = true;
-    emitter.load_addr((uint64_t)&vu_branch_delay_dest, REG_64::RAX);
-    emitter.MOV16_IMM_MEM(instr.get_jump_dest(), REG_64::RAX);
-
-    if (instr.get_bc())
-    {
-        emitter.load_addr((uint64_t)&vu.branch_on, REG_64::RAX);
-        emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::RAX);
-
-        emitter.TEST16_REG(REG_64::RAX, REG_64::RAX);
-        uint8_t* offset_addr = emitter.JE_NEAR_DEFERRED();
-        //First branch is taken, so we set the fail destination according to that destination
-        emitter.load_addr((uint64_t)&vu_branch_dest, REG_64::RAX);
-        emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::R15);
-        emitter.ADD16_REG_IMM(8, REG_64::R15);
-        emitter.load_addr((uint64_t)&vu_branch_delay_fail_dest, REG_64::RAX);
-        emitter.MOV16_TO_MEM(REG_64::R15, REG_64::RAX);
-
-        uint8_t* skip_addr = emitter.JMP_NEAR_DEFERRED();
-
-        emitter.set_jump_dest(offset_addr);
-        //First branch was not taken, so the destination is as normal
-        emitter.load_addr((uint64_t)&vu_branch_delay_fail_dest, REG_64::RAX);
-        emitter.MOV16_IMM_MEM(instr.get_jump_fail_dest(), REG_64::RAX);
-
-        emitter.set_jump_dest(skip_addr);
-    }
-    else
-    {
-        emitter.load_addr((uint64_t)&vu_branch_delay_fail_dest, REG_64::RAX);
-        emitter.MOV16_IMM_MEM(instr.get_jump_fail_dest(), REG_64::RAX);
-    }
 }
 
 void VU_JIT64::branch_not_equal(VectorUnit &vu, IR::Instruction &instr)
@@ -846,38 +852,9 @@ void VU_JIT64::branch_not_equal(VectorUnit &vu, IR::Instruction &instr)
     emitter.CMP16_REG(op2, op1);
     emitter.SETNE_MEM(REG_64::RAX);
 
+    handle_branch_destinations(vu, instr);
+
     vu_branch = true;
-    emitter.load_addr((uint64_t)&vu_branch_delay_dest, REG_64::RAX);
-    emitter.MOV16_IMM_MEM(instr.get_jump_dest(), REG_64::RAX);
-
-    if (instr.get_bc())
-    {
-        emitter.load_addr((uint64_t)&vu.branch_on, REG_64::RAX);
-        emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::RAX);
-
-        emitter.TEST16_REG(REG_64::RAX, REG_64::RAX);
-        uint8_t* offset_addr = emitter.JE_NEAR_DEFERRED();
-        //First branch is taken, so we set the fail destination according to that destination
-        emitter.load_addr((uint64_t)&vu_branch_dest, REG_64::RAX);
-        emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::R15);
-        emitter.ADD16_REG_IMM(8, REG_64::R15);
-        emitter.load_addr((uint64_t)&vu_branch_delay_fail_dest, REG_64::RAX);
-        emitter.MOV16_TO_MEM(REG_64::R15, REG_64::RAX);
-
-        uint8_t* skip_addr = emitter.JMP_NEAR_DEFERRED();
-
-        emitter.set_jump_dest(offset_addr);
-        //First branch was not taken, so the destination is as normal
-        emitter.load_addr((uint64_t)&vu_branch_delay_fail_dest, REG_64::RAX);
-        emitter.MOV16_IMM_MEM(instr.get_jump_fail_dest(), REG_64::RAX);
-
-        emitter.set_jump_dest(skip_addr);
-    }
-    else
-    {
-        emitter.load_addr((uint64_t)&vu_branch_delay_fail_dest, REG_64::RAX);
-        emitter.MOV16_IMM_MEM(instr.get_jump_fail_dest(), REG_64::RAX);
-    }
 }
 
 void VU_JIT64::branch_less_than_zero(VectorUnit &vu, IR::Instruction &instr)
@@ -901,38 +878,9 @@ void VU_JIT64::branch_less_than_zero(VectorUnit &vu, IR::Instruction &instr)
     emitter.CMP16_IMM(0, op);
     emitter.SETL_MEM(REG_64::RAX);
 
+    handle_branch_destinations(vu, instr);
+
     vu_branch = true;
-    emitter.load_addr((uint64_t)&vu_branch_delay_dest, REG_64::RAX);
-    emitter.MOV16_IMM_MEM(instr.get_jump_dest(), REG_64::RAX);
-    
-    if (instr.get_bc())
-    {
-        emitter.load_addr((uint64_t)&vu.branch_on, REG_64::RAX);
-        emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::RAX);
-
-        emitter.TEST16_REG(REG_64::RAX, REG_64::RAX);
-        uint8_t* offset_addr = emitter.JE_NEAR_DEFERRED();
-        //First branch is taken, so we set the fail destination according to that destination
-        emitter.load_addr((uint64_t)&vu_branch_dest, REG_64::RAX);
-        emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::R15);
-        emitter.ADD16_REG_IMM(8, REG_64::R15);
-        emitter.load_addr((uint64_t)&vu_branch_delay_fail_dest, REG_64::RAX);
-        emitter.MOV16_TO_MEM(REG_64::R15, REG_64::RAX);
-
-        uint8_t* skip_addr = emitter.JMP_NEAR_DEFERRED();
-
-        emitter.set_jump_dest(offset_addr);
-        //First branch was not taken, so the destination is as normal
-        emitter.load_addr((uint64_t)&vu_branch_delay_fail_dest, REG_64::RAX);
-        emitter.MOV16_IMM_MEM(instr.get_jump_fail_dest(), REG_64::RAX);
-
-        emitter.set_jump_dest(skip_addr);
-    }
-    else
-    {
-        emitter.load_addr((uint64_t)&vu_branch_delay_fail_dest, REG_64::RAX);
-        emitter.MOV16_IMM_MEM(instr.get_jump_fail_dest(), REG_64::RAX);
-    }
 }
 
 void VU_JIT64::branch_greater_than_zero(VectorUnit &vu, IR::Instruction &instr)
@@ -956,38 +904,9 @@ void VU_JIT64::branch_greater_than_zero(VectorUnit &vu, IR::Instruction &instr)
     emitter.CMP16_IMM(0, op);
     emitter.SETG_MEM(REG_64::RAX);
 
+    handle_branch_destinations(vu, instr);
+
     vu_branch = true;
-    emitter.load_addr((uint64_t)&vu_branch_delay_dest, REG_64::RAX);
-    emitter.MOV16_IMM_MEM(instr.get_jump_dest(), REG_64::RAX);
-    
-    if (instr.get_bc())
-    {
-        emitter.load_addr((uint64_t)&vu.branch_on, REG_64::RAX);
-        emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::RAX);
-
-        emitter.TEST16_REG(REG_64::RAX, REG_64::RAX);
-        uint8_t* offset_addr = emitter.JE_NEAR_DEFERRED();
-        //First branch is taken, so we set the fail destination according to that destination
-        emitter.load_addr((uint64_t)&vu_branch_dest, REG_64::RAX);
-        emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::R15);
-        emitter.ADD16_REG_IMM(8, REG_64::R15);
-        emitter.load_addr((uint64_t)&vu_branch_delay_fail_dest, REG_64::RAX);
-        emitter.MOV16_TO_MEM(REG_64::R15, REG_64::RAX);
-
-        uint8_t* skip_addr = emitter.JMP_NEAR_DEFERRED();
-
-        emitter.set_jump_dest(offset_addr);
-        //First branch was not taken, so the destination is as normal
-        emitter.load_addr((uint64_t)&vu_branch_delay_fail_dest, REG_64::RAX);
-        emitter.MOV16_IMM_MEM(instr.get_jump_fail_dest(), REG_64::RAX);
-
-        emitter.set_jump_dest(skip_addr);
-    }
-    else
-    {
-        emitter.load_addr((uint64_t)&vu_branch_delay_fail_dest, REG_64::RAX);
-        emitter.MOV16_IMM_MEM(instr.get_jump_fail_dest(), REG_64::RAX);
-    }
 }
 
 void VU_JIT64::branch_less_or_equal_than_zero(VectorUnit &vu, IR::Instruction &instr)
@@ -1011,38 +930,9 @@ void VU_JIT64::branch_less_or_equal_than_zero(VectorUnit &vu, IR::Instruction &i
     emitter.CMP16_IMM(0, op);
     emitter.SETLE_MEM(REG_64::RAX);
 
+    handle_branch_destinations(vu, instr);
+
     vu_branch = true;
-    emitter.load_addr((uint64_t)&vu_branch_delay_dest, REG_64::RAX);
-    emitter.MOV16_IMM_MEM(instr.get_jump_dest(), REG_64::RAX);
-    
-    if (instr.get_bc())
-    {
-        emitter.load_addr((uint64_t)&vu.branch_on, REG_64::RAX);
-        emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::RAX);
-
-        emitter.TEST16_REG(REG_64::RAX, REG_64::RAX);
-        uint8_t* offset_addr = emitter.JE_NEAR_DEFERRED();
-        //First branch is taken, so we set the fail destination according to that destination
-        emitter.load_addr((uint64_t)&vu_branch_dest, REG_64::RAX);
-        emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::R15);
-        emitter.ADD16_REG_IMM(8, REG_64::R15);
-        emitter.load_addr((uint64_t)&vu_branch_delay_fail_dest, REG_64::RAX);
-        emitter.MOV16_TO_MEM(REG_64::R15, REG_64::RAX);
-
-        uint8_t* skip_addr = emitter.JMP_NEAR_DEFERRED();
-
-        emitter.set_jump_dest(offset_addr);
-        //First branch was not taken, so the destination is as normal
-        emitter.load_addr((uint64_t)&vu_branch_delay_fail_dest, REG_64::RAX);
-        emitter.MOV16_IMM_MEM(instr.get_jump_fail_dest(), REG_64::RAX);
-
-        emitter.set_jump_dest(skip_addr);
-    }
-    else
-    {
-        emitter.load_addr((uint64_t)&vu_branch_delay_fail_dest, REG_64::RAX);
-        emitter.MOV16_IMM_MEM(instr.get_jump_fail_dest(), REG_64::RAX);
-    }
 }
 
 void VU_JIT64::branch_greater_or_equal_than_zero(VectorUnit &vu, IR::Instruction &instr)
@@ -1066,38 +956,9 @@ void VU_JIT64::branch_greater_or_equal_than_zero(VectorUnit &vu, IR::Instruction
     emitter.CMP16_IMM(0, op);
     emitter.SETGE_MEM(REG_64::RAX);
 
+    handle_branch_destinations(vu, instr);
+
     vu_branch = true;
-    emitter.load_addr((uint64_t)&vu_branch_delay_dest, REG_64::RAX);
-    emitter.MOV16_IMM_MEM(instr.get_jump_dest(), REG_64::RAX);
-    
-    if (instr.get_bc())
-    {
-        emitter.load_addr((uint64_t)&vu.branch_on, REG_64::RAX);
-        emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::RAX);
-
-        emitter.TEST16_REG(REG_64::RAX, REG_64::RAX);
-        uint8_t* offset_addr = emitter.JE_NEAR_DEFERRED();
-        //First branch is taken, so we set the fail destination according to that destination
-        emitter.load_addr((uint64_t)&vu_branch_dest, REG_64::RAX);
-        emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::R15);
-        emitter.ADD16_REG_IMM(8, REG_64::R15);
-        emitter.load_addr((uint64_t)&vu_branch_delay_fail_dest, REG_64::RAX);
-        emitter.MOV16_TO_MEM(REG_64::R15, REG_64::RAX);
-
-        uint8_t* skip_addr = emitter.JMP_NEAR_DEFERRED();
-
-        emitter.set_jump_dest(offset_addr);
-        //First branch was not taken, so the destination is as normal
-        emitter.load_addr((uint64_t)&vu_branch_delay_fail_dest, REG_64::RAX);
-        emitter.MOV16_IMM_MEM(instr.get_jump_fail_dest(), REG_64::RAX);
-
-        emitter.set_jump_dest(skip_addr);
-    }
-    else
-    {
-        emitter.load_addr((uint64_t)&vu_branch_delay_fail_dest, REG_64::RAX);
-        emitter.MOV16_IMM_MEM(instr.get_jump_fail_dest(), REG_64::RAX);
-    }
 }
 
 void VU_JIT64::and_int(VectorUnit &vu, IR::Instruction &instr)

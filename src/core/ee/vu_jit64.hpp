@@ -87,6 +87,7 @@ class VU_JIT64
         void jump_indirect(VectorUnit& vu, IR::Instruction& instr);
         void jump_and_link_indirect(VectorUnit& vu, IR::Instruction& instr);
 
+        void handle_branch_destinations(VectorUnit& vu, IR::Instruction& instr);
         void branch_equal(VectorUnit& vu, IR::Instruction& instr);
         void branch_not_equal(VectorUnit& vu, IR::Instruction& instr);
         void branch_less_than_zero(VectorUnit& vu, IR::Instruction& instr);
