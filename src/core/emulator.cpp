@@ -94,15 +94,10 @@ void Emulator::run()
         cycles >>= 2;
         iop_timers.run(cycles);
         iop_dma.run(cycles);
-        iop.run(cycles);
         for (int i = 0; i < cycles; i++)
         {
-            if (iop_i_ctrl_delay)
-            {
-                iop_i_ctrl_delay--;
-                if (!iop_i_ctrl_delay)
-                    iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
-            }
+            iop.run(1);
+            iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
         }
         spu.update(cycles);
         spu2.update(cycles);
@@ -1317,28 +1312,11 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
             printf("[IOP] Write BD4: $%08X\n", value);
             sif.set_control_IOP(value);
             return;
-        case 0x1F801000:
-            return;
-        case 0x1F801004:
-            return;
-        case 0x1F801008:
-            return;
-        case 0x1F80100C:
-            return;
-        //BIOS ROM delay?
         case 0x1F801010:
+            printf("[IOP] SIF2/GPU SSBUS: $%08X\n", value);
             return;
         case 0x1F801014:
-            return;
-        case 0x1F801018:
-            return;
-        case 0x1F80101C:
-            return;
-        //Common delay?
-        case 0x1F801020:
-            return;
-        //RAM size?
-        case 0x1F801060:
+            printf("[IOP] SPU SSBUS: $%08X\n", value);
             return;
         case 0x1F801070:
             //printf("[IOP] I_STAT: $%08X\n", value);

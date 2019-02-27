@@ -43,6 +43,8 @@ const char* IOP_DMA::CHAN(int index)
 
 void IOP_DMA::reset(uint8_t* RAM)
 {
+    spu_delay = 0;
+    spu2_delay = 0;
     this->RAM = RAM;
     for (int i = 0; i < 16; i++)
     {
@@ -144,11 +146,17 @@ void IOP_DMA::process_SPU()
     }
     else
     {
-        //Normal DMA transfer
-        uint32_t value = *(uint32_t*)&RAM[channels[SPU].addr];
-        spu->write_DMA(value);
-        channels[SPU].size--;
-        channels[SPU].addr += 4;
+        if (!spu_delay)
+        {
+            //Normal DMA transfer
+            uint32_t value = *(uint32_t*)&RAM[channels[SPU].addr];
+            spu->write_DMA(value);
+            channels[SPU].size--;
+            channels[SPU].addr += 4;
+            spu_delay = 3;
+        }
+        else
+            spu_delay--;
     }
 }
 
@@ -174,11 +182,17 @@ void IOP_DMA::process_SPU2()
     }
     else
     {
-        //Normal DMA transfer
-        uint32_t value = *(uint32_t*)&RAM[channels[SPU2].addr];
-        spu2->write_DMA(value);
-        channels[SPU2].size--;
-        channels[SPU2].addr += 4;
+        if (!spu2_delay)
+        {
+            //Normal DMA transfer
+            uint32_t value = *(uint32_t*)&RAM[channels[SPU2].addr];
+            spu2->write_DMA(value);
+            channels[SPU2].size--;
+            channels[SPU2].addr += 4;
+            spu2_delay = 3;
+        }
+        else
+            spu2_delay--;
     }
 }
 
@@ -392,7 +406,7 @@ uint32_t IOP_DMA::get_chan_control(int index)
 
 void IOP_DMA::set_DPCR(uint32_t value)
 {
-    //printf("[IOP DMA] Set DPCR: $%08X\n", value);
+    printf("[IOP DMA] Set DPCR: $%08X\n", value);
     for (int i = 0; i < 8; i++)
     {
         bool old_enable = DPCR.enable[i];
@@ -405,7 +419,7 @@ void IOP_DMA::set_DPCR(uint32_t value)
 
 void IOP_DMA::set_DPCR2(uint32_t value)
 {
-    //printf("[IOP DMA] Set DPCR2: $%08X\n", value);
+    printf("[IOP DMA] Set DPCR2: $%08X\n", value);
     for (int i = 8; i < 16; i++)
     {
         int bit = i - 8;
@@ -477,9 +491,15 @@ void IOP_DMA::set_chan_control(int index, uint32_t value)
     if (channels[index].control.busy)
     {
         if (index == SPU)
+        {
             spu->start_DMA(channels[index].size * 2);
+            spu_delay = 3;
+        }
         if (index == SPU2)
+        {
             spu2->start_DMA(channels[index].size * 2);
+            spu2_delay = 3;
+        }
     }
     channels[index].control.unk30 = value & (1 << 30);
 }

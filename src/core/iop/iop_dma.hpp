@@ -56,6 +56,8 @@ class IOP_DMA
         IOP_DMA_Channel channels[16];
         static const uint8_t IMPLEMENTED[];
 
+        int spu_delay, spu2_delay;
+
         //Merge of DxCR, DxCR2, DxCR3 for easier processing
         DMA_DPCR DPCR;
         DMA_DICR DICR;
