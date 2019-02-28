@@ -357,7 +357,7 @@ void VectorUnit::load_state(ifstream &state)
     state.read((char*)&running, sizeof(running));
     state.read((char*)&PC, sizeof(PC));
     state.read((char*)&new_PC, sizeof(new_PC));
-    state.read((char*)&second_branch_PC, sizeof(second_branch_PC));
+    state.read((char*)&secondbranch_PC, sizeof(secondbranch_PC));
     state.read((char*)&second_branch_pending, sizeof(second_branch_pending));
     state.read((char*)&branch_on, sizeof(branch_on));
     state.read((char*)&branch_on_delay, sizeof(branch_on_delay));
@@ -420,7 +420,7 @@ void VectorUnit::save_state(ofstream &state)
     state.write((char*)&running, sizeof(running));
     state.write((char*)&PC, sizeof(PC));
     state.write((char*)&new_PC, sizeof(new_PC));
-    state.write((char*)&second_branch_PC, sizeof(second_branch_PC));
+    state.write((char*)&secondbranch_PC, sizeof(secondbranch_PC));
     state.write((char*)&second_branch_pending, sizeof(second_branch_pending));
     state.write((char*)&branch_on, sizeof(branch_on));
     state.write((char*)&branch_on_delay, sizeof(branch_on_delay));

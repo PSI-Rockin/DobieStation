@@ -13,7 +13,7 @@ find_package(Qt5Core REQUIRED)
 find_package(Qt5Widgets REQUIRED)
 
 set(SOURCES
-    src/core/errors.cpp
+    	src/core/errors.cpp
         src/core/ee/bios_hle.cpp
         src/core/ee/cop0.cpp
         src/core/ee/cop1.cpp
@@ -50,7 +50,7 @@ set(SOURCES
 	src/core/ee/vu_jit64.cpp
 	src/core/ee/vu_jittrans.cpp
 	src/core/iop/cdvd.cpp
-		src/core/iop/cso_reader.cpp
+	src/core/iop/cso_reader.cpp
 	src/core/iop/gamepad.cpp
 	src/core/iop/iop.cpp
 	src/core/iop/iop_cop0.cpp
@@ -81,7 +81,7 @@ set(SOURCES
         )
 
 set(HEADERS
-    src/core/errors.hpp
+    	src/core/errors.hpp
         src/core/ee/bios_hle.hpp
         src/core/ee/cop0.hpp
         src/core/ee/cop1.hpp
@@ -114,7 +114,7 @@ set(HEADERS
 	src/core/ee/vu_jit64.hpp
 	src/core/ee/vu_jittrans.hpp
 	src/core/iop/cdvd.hpp
-		src/core/iop/cso_reader.hpp
+	src/core/iop/cso_reader.hpp
 	src/core/iop/gamepad.hpp
 	src/core/iop/iop.hpp
 	src/core/iop/iop_cop0.hpp
