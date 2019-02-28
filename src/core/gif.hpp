@@ -60,6 +60,7 @@ class GraphicsInterface
         bool fifo_empty();
         bool fifo_draining();
         void dma_waiting(bool dma_waiting);
+        int get_active_path();
         bool path_active(int index);
         bool path_activepath3(int index);
         void resume_path3();
@@ -83,6 +84,11 @@ class GraphicsInterface
         void save_state(std::ofstream& state);
 };
 
+inline int GraphicsInterface::get_active_path()
+{
+    return active_path;
+}
+
 inline bool GraphicsInterface::path_active(int index)
 {
     if (index != 3)
@@ -98,8 +104,6 @@ inline bool GraphicsInterface::path_activepath3(int index)
     {
         interrupt_path3(index);
     }
-    if (path3_vif_masked || path3_mode_masked)
-        return false;
     return ((active_path == index) || (path_queue & (1 << 3))) && !gs->stalled();
 }
 

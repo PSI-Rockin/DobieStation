@@ -842,6 +842,8 @@ void Emulator::write128(uint32_t address, uint128_t value)
 
 void Emulator::ee_kputs(uint32_t param)
 {
+    if (param > 1024 * 1024 * 32)
+        return;
     param = *(uint32_t*)&RDRAM[param];
     printf("Param: $%08X\n", param);
     char c;

@@ -87,7 +87,8 @@ void VectorInterface::update(int cycles)
     {
         if (flush_stall)
         {
-            if (gif->path_active(1) || gif->path_active(2))
+            int active_path = gif->get_active_path();
+            if (active_path == 1 || active_path == 2)
                 return;
             flush_stall = false;
         }
