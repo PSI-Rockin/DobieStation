@@ -98,6 +98,8 @@ inline bool GraphicsInterface::path_activepath3(int index)
     {
         interrupt_path3(index);
     }
+    if (path3_vif_masked || path3_mode_masked)
+        return false;
     return ((active_path == index) || (path_queue & (1 << 3))) && !gs->stalled();
 }
 
