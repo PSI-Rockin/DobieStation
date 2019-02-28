@@ -98,12 +98,13 @@ void VectorInterface::update(int cycles)
                 return;
             wait_for_PATH3 = false;
         }
-		/*if (flush_stall)
+
+        if (flush_stall)
         {
-            if (gif->path_active(1))
+            if (gif->path_active(1) || gif->path_active(2))
                 return;
             flush_stall = false;
-        }*/
+        }
 
         if(check_vif_stall(CODE) || !FIFO.size())
             return;
