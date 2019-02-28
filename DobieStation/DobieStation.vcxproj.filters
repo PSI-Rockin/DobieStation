@@ -35,6 +35,9 @@
       <Extensions>*</Extensions>
       <ParseFiles>false</ParseFiles>
     </Filter>
+    <Filter Include="Header Files\External">
+      <UniqueIdentifier>{7e283ab3-3afb-4444-8383-d6252a528b7a}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\core\tests\iop\alu.cpp">
@@ -229,6 +232,9 @@
     <ClCompile Include="..\src\core\ee\vu_jittrans.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\core\iop\cso_reader.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\core\ee\bios_hle.hpp">
@@ -407,6 +413,12 @@
     </ClInclude>
     <ClInclude Include="..\src\core\ee\vu_jittrans.hpp">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\core\iop\cso_reader.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\ext\libdeflate\libdeflate.h">
+      <Filter>Header Files\External</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
