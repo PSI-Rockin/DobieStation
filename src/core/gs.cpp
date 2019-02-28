@@ -29,9 +29,9 @@ GraphicsSynthesizer::~GraphicsSynthesizer()
 {
     if (gsthread_id.joinable())
     {
-        GS_message_payload payload;
+        GSMessagePayload payload;
         payload.no_payload = {0};
-        send_message({ GS_command::die_t,payload });
+        send_message({ GSCommand::die_t,payload });
         gsthread_id.join();
     }
     if (output_buffer1)
@@ -61,16 +61,16 @@ void GraphicsSynthesizer::reset()
     reg.reset();
     if (gsthread_id.joinable())
     {
-        GS_message_payload payload;
+        GSMessagePayload payload;
         payload.no_payload = {0};
-        send_message({ GS_command::die_t,payload });
+        send_message({ GSCommand::die_t,payload });
         gsthread_id.join();
     }
     {
-        GS_return_message data;
+        GSReturnMessage data;
         while (return_queue->pop(data));
 
-        GS_message data2;
+        GSMessage data2;
         while (message_queue->pop(data2));
     }
     gsthread_id = std::thread(&GraphicsSynthesizerThread::event_loop, message_queue, return_queue);//pass references to the fifos
@@ -90,12 +90,12 @@ void GraphicsSynthesizer::set_CRT(bool interlaced, int mode, bool frame_mode)
 {
     reg.set_CRT(interlaced, mode, frame_mode);
 
-    GS_message_payload payload;
+    GSMessagePayload payload;
     payload.crt_payload = { interlaced, mode, frame_mode };
-    send_message({ GS_command::set_crt_t,payload });
+    send_message({ GSCommand::set_crt_t,payload });
 }
 
-void wait_for_return(gs_return_fifo *return_queue, GS_return type, GS_return_message &data)
+void wait_for_return(gs_return_fifo *return_queue, GSReturn type, GSReturnMessage &data)
 {
     printf("wait for return\n");
     while (true)
@@ -125,8 +125,8 @@ void wait_for_return(gs_return_fifo *return_queue, GS_return type, GS_return_mes
 uint32_t* GraphicsSynthesizer::get_framebuffer()
 {
     uint32_t* out;
-    GS_return_message data;
-    wait_for_return(return_queue, GS_return::render_complete_t, data);
+    GSReturnMessage data;
+    wait_for_return(return_queue, GSReturn::render_complete_t, data);
     if (using_first_buffer)
     {
         while (!output_buffer1_mutex.try_lock())
@@ -153,9 +153,9 @@ uint32_t* GraphicsSynthesizer::get_framebuffer()
 
 void GraphicsSynthesizer::set_VBLANK(bool is_VBLANK)
 {
-    GS_message_payload payload;
+    GSMessagePayload payload;
     payload.vblank_payload = { is_VBLANK };
-    send_message({ GS_command::set_vblank_t,payload });
+    send_message({ GSCommand::set_vblank_t,payload });
 
     reg.set_VBLANK(is_VBLANK);
 
@@ -176,9 +176,9 @@ void GraphicsSynthesizer::set_VBLANK(bool is_VBLANK)
 
 void GraphicsSynthesizer::assert_VSYNC()
 {
-    GS_message_payload payload;
+    GSMessagePayload payload;
     payload.no_payload = {};
-    message_queue->push({ GS_command::assert_vsync_t,payload });
+    message_queue->push({ GSCommand::assert_vsync_t,payload });
 
     if (reg.assert_VSYNC())
         intc->assert_IRQ((int)Interrupt::GS);
@@ -186,9 +186,9 @@ void GraphicsSynthesizer::assert_VSYNC()
 
 void GraphicsSynthesizer::assert_FINISH()
 {
-    GS_message_payload payload;
+    GSMessagePayload payload;
     payload.no_payload = { };
-    send_message({ GS_command::assert_finish_t,payload });
+    send_message({ GSCommand::assert_finish_t,payload });
 
     if (reg.assert_FINISH())
         intc->assert_IRQ((int)Interrupt::GS);
@@ -196,25 +196,25 @@ void GraphicsSynthesizer::assert_FINISH()
 
 void GraphicsSynthesizer::render_CRT()
 {
-    GS_message_payload payload;
+    GSMessagePayload payload;
     if (using_first_buffer)
         payload.render_payload = { output_buffer1, &output_buffer1_mutex };
     else
         payload.render_payload = { output_buffer2, &output_buffer2_mutex }; ;
-    send_message({ GS_command::render_crt_t,payload });
+    send_message({ GSCommand::render_crt_t,payload });
 }
 
 uint32_t* GraphicsSynthesizer::render_partial_frame(uint16_t& width, uint16_t& height)
 {
-    GS_message_payload payload;
+    GSMessagePayload payload;
     if (using_first_buffer)
         payload.render_payload = { output_buffer1, &output_buffer1_mutex };
     else
         payload.render_payload = { output_buffer2, &output_buffer2_mutex }; ;
-    send_message({ GS_command::memdump_t,payload });
+    send_message({ GSCommand::memdump_t,payload });
 
-    GS_return_message data;
-    wait_for_return(return_queue, GS_return::gsdump_render_partial_done_t, data);
+    GSReturnMessage data;
+    wait_for_return(return_queue, GSReturn::gsdump_render_partial_done_t, data);
     width = data.payload.xy_payload.x;
     height = data.payload.xy_payload.y;
 
@@ -244,9 +244,9 @@ void GraphicsSynthesizer::get_inner_resolution(int &w, int &h)
 
 void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
 {
-    GS_message_payload payload;
+    GSMessagePayload payload;
     payload.write64_payload = { addr, value };
-    send_message({ GS_command::write64_t,payload });
+    send_message({ GSCommand::write64_t,payload });
 
     //We need a check for SIGNAL here so that we can fire the interrupt
     if (addr == 0x60)
@@ -261,9 +261,9 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
 
 void GraphicsSynthesizer::write64_privileged(uint32_t addr, uint64_t value)
 {
-    GS_message_payload payload;
+    GSMessagePayload payload;
     payload.write64_payload = { addr, value };
-    send_message({ GS_command::write64_privileged_t,payload });
+    send_message({ GSCommand::write64_privileged_t,payload });
 
     bool old_IMR = reg.IMR.signal;
     reg.write64_privileged(addr, value);
@@ -278,9 +278,9 @@ void GraphicsSynthesizer::write64_privileged(uint32_t addr, uint64_t value)
 
 void GraphicsSynthesizer::write32_privileged(uint32_t addr, uint32_t value)
 {
-    GS_message_payload payload;
+    GSMessagePayload payload;
     payload.write32_payload = { addr, value };
-    send_message({ GS_command::write32_privileged_t,payload });
+    send_message({ GSCommand::write32_privileged_t,payload });
 
     reg.write32_privileged(addr, value);
 }
@@ -297,67 +297,67 @@ uint64_t GraphicsSynthesizer::read64_privileged(uint32_t addr)
 
 void GraphicsSynthesizer::set_RGBA(uint8_t r, uint8_t g, uint8_t b, uint8_t a, float q)
 {
-    GS_message_payload payload;
+    GSMessagePayload payload;
     payload.rgba_payload = { r, g, b, a, q};
-    send_message({ GS_command::set_rgba_t,payload });
+    send_message({ GSCommand::set_rgba_t,payload });
 }
 
 void GraphicsSynthesizer::set_ST(uint32_t s, uint32_t t)
 {
-    GS_message_payload payload;
+    GSMessagePayload payload;
     payload.st_payload = { s, t };
-    send_message({ GS_command::set_st_t,payload });
+    send_message({ GSCommand::set_st_t,payload });
 }
 
 void GraphicsSynthesizer::set_UV(uint16_t u, uint16_t v)
 {
-    GS_message_payload payload;
+    GSMessagePayload payload;
     payload.uv_payload = { u, v };
-    send_message({ GS_command::set_uv_t,payload });
+    send_message({ GSCommand::set_uv_t,payload });
 }
 
 void GraphicsSynthesizer::set_XYZ(uint32_t x, uint32_t y, uint32_t z, bool drawing_kick)
 {
-    GS_message_payload payload;
+    GSMessagePayload payload;
     payload.xyz_payload = { x, y, z, drawing_kick };
-    send_message({ GS_command::set_xyz_t,payload });
+    send_message({ GSCommand::set_xyz_t,payload });
 }
 
 void GraphicsSynthesizer::set_XYZF(uint32_t x, uint32_t y, uint32_t z, uint8_t fog, bool drawing_kick)
 {
-    GS_message_payload payload;
+    GSMessagePayload payload;
     payload.xyzf_payload = { x, y, z, fog, drawing_kick };
-    send_message({ GS_command::set_xyzf_t,payload });
+    send_message({ GSCommand::set_xyzf_t,payload });
 }
 
 void GraphicsSynthesizer::load_state(ifstream &state)
 {
-    GS_message_payload payload;
-    payload.loadstate_payload = {&state};
-    send_message({ GS_command::loadstate_t, payload});
-    GS_return_message data;
-    wait_for_return(return_queue, GS_return::loadstate_done_t, data);
+    GSMessagePayload payload;
+    payload.load_state_payload = {&state};
+    send_message({ GSCommand::load_state_t, payload});
+    GSReturnMessage data;
+    wait_for_return(return_queue, GSReturn::load_state_done_t, data);
     state.read((char*)&reg, sizeof(reg));
 }
 
 void GraphicsSynthesizer::save_state(ofstream &state)
 {
-    GS_message_payload payload;
-    payload.savestate_payload = {&state};
-    send_message({ GS_command::savestate_t,payload });
-    GS_return_message data;
-    wait_for_return(return_queue, GS_return::savestate_done_t, data);
+    GSMessagePayload payload;
+    payload.save_state_payload = {&state};
+    send_message({ GSCommand::save_state_t,payload });
+    GSReturnMessage data;
+    wait_for_return(return_queue, GSReturn::save_state_done_t, data);
     state.write((char*)&reg, sizeof(reg));
 }
 
-void GraphicsSynthesizer::send_message(GS_message message)
+void GraphicsSynthesizer::send_message(GSMessage message)
 {
     message_queue->push(message);
 }
 
 void GraphicsSynthesizer::send_dump_request()
 {
-    GS_message_payload p;
+    GSMessagePayload p;
     p.no_payload = { 0 };
     send_message({ gsdump_t, p });
 }

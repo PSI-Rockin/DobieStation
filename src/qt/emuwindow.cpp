@@ -46,18 +46,18 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
 
     create_menu();
 
-    connect(this, SIGNAL(shutdown()), &emuthread, SLOT(shutdown()));
-    connect(this, SIGNAL(press_key(PAD_BUTTON)), &emuthread, SLOT(press_key(PAD_BUTTON)));
-    connect(this, SIGNAL(release_key(PAD_BUTTON)), &emuthread, SLOT(release_key(PAD_BUTTON)));
-    connect(&emuthread, SIGNAL(completed_frame(uint32_t*, int, int, int, int)),
+    connect(this, SIGNAL(shutdown()), &emu_thread, SLOT(shutdown()));
+    connect(this, SIGNAL(press_key(PAD_BUTTON)), &emu_thread, SLOT(press_key(PAD_BUTTON)));
+    connect(this, SIGNAL(release_key(PAD_BUTTON)), &emu_thread, SLOT(release_key(PAD_BUTTON)));
+    connect(&emu_thread, SIGNAL(completed_frame(uint32_t*, int, int, int, int)),
             this, SLOT(draw_frame(uint32_t*, int, int, int, int)));
-    connect(&emuthread, SIGNAL(update_FPS(int)), this, SLOT(update_FPS(int)));
-    connect(&emuthread, SIGNAL(emu_error(QString)), this, SLOT(emu_error(QString)));
-    connect(&emuthread, SIGNAL(emu_nonfatal_error(QString)), this, SLOT(emu_nonfatal_error(QString)));
-    emuthread.pause(PAUSE_EVENT::GAME_NOT_LOADED);
+    connect(&emu_thread, SIGNAL(update_FPS(int)), this, SLOT(update_FPS(int)));
+    connect(&emu_thread, SIGNAL(emu_error(QString)), this, SLOT(emu_error(QString)));
+    connect(&emu_thread, SIGNAL(emu_non_fatal_error(QString)), this, SLOT(emu_non_fatal_error(QString)));
+    emu_thread.pause(PAUSE_EVENT::GAME_NOT_LOADED);
 
-    emuthread.reset();
-    emuthread.start();
+    emu_thread.reset();
+    emu_thread.start();
 
     //Initialize window
     title = "DobieStation";
@@ -133,7 +133,7 @@ int EmuWindow::init(int argc, char** argv)
         return 1;
     }
 
-    emuthread.load_BIOS(BIOS);
+    emu_thread.load_BIOS(BIOS);
     delete[] BIOS;
     BIOS = nullptr;
 
@@ -150,8 +150,8 @@ int EmuWindow::init(int argc, char** argv)
 
 int EmuWindow::run_gsdump(const char* file_name)
 {
-    emuthread.gsdump_read(file_name);
-    emuthread.unpause(PAUSE_EVENT::GAME_NOT_LOADED);
+    emu_thread.gsdump_read(file_name);
+    emu_thread.unpause(PAUSE_EVENT::GAME_NOT_LOADED);
     return 0;
 }
 int EmuWindow::load_exec(const char* file_name, bool skip_BIOS)
@@ -178,18 +178,25 @@ int EmuWindow::load_exec(const char* file_name, bool skip_BIOS)
 
         printf("Loaded %s\n", file_name);
         printf("Size: %lld\n", ELF_size);
-        emuthread.load_ELF(ELF, ELF_size);
+        emu_thread.load_ELF(ELF, ELF_size);
         delete[] ELF;
         ELF = nullptr;
         if (skip_BIOS)
-            emuthread.set_skip_BIOS_hack(SKIP_HACK::LOAD_ELF);
+            emu_thread.set_skip_BIOS_hack(SKIP_HACK::LOAD_ELF);
     }
     else if (format == ".iso")
     {
         exec_file.close();
-        emuthread.load_CDVD(file_name);
+        emu_thread.load_CDVD(file_name, CDVD_CONTAINER::ISO);
         if (skip_BIOS)
-            emuthread.set_skip_BIOS_hack(SKIP_HACK::LOAD_DISC);
+            emu_thread.set_skip_BIOS_hack(SKIP_HACK::LOAD_DISC);
+    }
+    else if (format == ".cso")
+    {
+        exec_file.close();
+        emu_thread.load_CDVD(file_name, CDVD_CONTAINER::CISO);
+        if (skip_BIOS)
+            emu_thread.set_skip_BIOS_hack(SKIP_HACK::LOAD_DISC);
     }
     else
     {
@@ -200,7 +207,7 @@ int EmuWindow::load_exec(const char* file_name, bool skip_BIOS)
     title = file_name;
     ROM_path = file_name;
 
-    emuthread.unpause(PAUSE_EVENT::GAME_NOT_LOADED);
+    emu_thread.unpause(PAUSE_EVENT::GAME_NOT_LOADED);
     return 0;
 }
 
@@ -223,7 +230,7 @@ void EmuWindow::create_menu()
 
     auto gsdump_action = new QAction(tr("&GS dump toggle"), this);
     connect(gsdump_action, &QAction::triggered, this,
-        [this]() { this->emuthread.gsdump_write_toggle(); });
+        [this]() { this->emu_thread.gsdump_write_toggle(); });
 
     file_menu = menuBar()->addMenu(tr("&File"));
     file_menu->addAction(load_rom_action);
@@ -264,7 +271,7 @@ void EmuWindow::create_menu()
 
     auto frame_action = new QAction(tr("&Frame Advance (10x draws for gs dumps)"), this);
     connect(frame_action, &QAction::triggered, this,
-        [this]() { this->emuthread.frame_advance ^= true; });
+        [this]() { this->emu_thread.frame_advance ^= true; });
     options_menu->addAction(frame_action);
 }
 
@@ -350,10 +357,10 @@ void EmuWindow::keyPressEvent(QKeyEvent *event)
             emit press_key(PAD_BUTTON::SELECT);
             break;
         case Qt::Key_Period:
-            emuthread.unpause(PAUSE_EVENT::FRAME_ADVANCE);
+            emu_thread.unpause(PAUSE_EVENT::FRAME_ADVANCE);
             break;
         case Qt::Key_F1:
-            emuthread.gsdump_single_frame();
+            emu_thread.gsdump_single_frame();
             break;
     }
 }
@@ -430,7 +437,7 @@ void EmuWindow::emu_error(QString err)
     setWindowTitle("DobieStation");
 }
 
-void EmuWindow::emu_nonfatal_error(QString err)
+void EmuWindow::emu_non_fatal_error(QString err)
 {
     QMessageBox msgBox;
     msgBox.setText("Error");
@@ -438,7 +445,7 @@ void EmuWindow::emu_nonfatal_error(QString err)
     msgBox.setStandardButtons(QMessageBox::Ok);
     msgBox.setDefaultButton(QMessageBox::Ok);
     msgBox.exec();
-    emuthread.unpause(MESSAGE_BOX);
+    emu_thread.unpause(MESSAGE_BOX);
 }
 
 #ifndef QT_NO_CONTEXTMENU
@@ -454,36 +461,36 @@ void EmuWindow::contextMenuEvent(QContextMenuEvent* event)
 
 void EmuWindow::open_file_no_skip()
 {
-    emuthread.pause(PAUSE_EVENT::FILE_DIALOG);
-    QString file_name = QFileDialog::getOpenFileName(this, tr("Open Rom"), "", tr("ROM Files (*.elf *.iso)"));
+    emu_thread.pause(PAUSE_EVENT::FILE_DIALOG);
+    QString file_name = QFileDialog::getOpenFileName(this, tr("Open Rom"), "", tr("ROM Files (*.elf *.iso *.cso)"));
     load_exec(file_name.toStdString().c_str(), false);
-    emuthread.unpause(PAUSE_EVENT::FILE_DIALOG);
+    emu_thread.unpause(PAUSE_EVENT::FILE_DIALOG);
 }
 
 void EmuWindow::open_file_skip()
 {
-    emuthread.pause(PAUSE_EVENT::FILE_DIALOG);
-    QString file_name = QFileDialog::getOpenFileName(this, tr("Open Rom"), "", tr("ROM Files (*.elf *.iso)"));
+    emu_thread.pause(PAUSE_EVENT::FILE_DIALOG);
+    QString file_name = QFileDialog::getOpenFileName(this, tr("Open Rom"), "", tr("ROM Files (*.elf *.iso *.cso)"));
     load_exec(file_name.toStdString().c_str(), true);
-    emuthread.unpause(PAUSE_EVENT::FILE_DIALOG);
+    emu_thread.unpause(PAUSE_EVENT::FILE_DIALOG);
 }
 
 void EmuWindow::load_state()
 {
-    emuthread.pause(PAUSE_EVENT::FILE_DIALOG);
+    emu_thread.pause(PAUSE_EVENT::FILE_DIALOG);
     string path = ROM_path.substr(0, ROM_path.length() - 4);
     path += ".snp";
-    if (!emuthread.load_state(path.c_str()))
+    if (!emu_thread.load_state(path.c_str()))
         printf("Failed to load %s\n", path.c_str());
-    emuthread.unpause(PAUSE_EVENT::FILE_DIALOG);
+    emu_thread.unpause(PAUSE_EVENT::FILE_DIALOG);
 }
 
 void EmuWindow::save_state()
 {
-    emuthread.pause(PAUSE_EVENT::FILE_DIALOG);
+    emu_thread.pause(PAUSE_EVENT::FILE_DIALOG);
     string path = ROM_path.substr(0, ROM_path.length() - 4);
     path += ".snp";
-    if (!emuthread.save_state(path.c_str()))
+    if (!emu_thread.save_state(path.c_str()))
         printf("Failed to save %s\n", path.c_str());
-    emuthread.unpause(PAUSE_EVENT::FILE_DIALOG);
+    emu_thread.unpause(PAUSE_EVENT::FILE_DIALOG);
 }

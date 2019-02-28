@@ -50,14 +50,14 @@ Emulator::~Emulator()
 void Emulator::run()
 {
     gs.start_frame();
-    instructions_run = 0;
+    instructions_ran = 0;
     VBLANK_sent = false;
     const int originalRounding = fegetround();
     fesetround(FE_TOWARDZERO);
     if (save_requested)
-        save_state(savestate_path.c_str());
+        save_state(save_state_path.c_str());
     if (load_requested)
-        load_state(savestate_path.c_str());
+        load_state(save_state_path.c_str());
     if (gsdump_requested)
     {
         gsdump_requested = false;
@@ -78,16 +78,17 @@ void Emulator::run()
         }
     }
     
-    while (instructions_run < CYCLES_PER_FRAME)
+    while (instructions_ran < CYCLES_PER_FRAME)
     {
         int cycles = cpu.run(16);
-        instructions_run += cycles;
+        instructions_ran += cycles;
         cycles >>= 1;
         dmac.run(cycles);
         timers.run(cycles);
         ipu.run();
         vif0.update(cycles);
         vif1.update(cycles);
+        gif.run(cycles);
         vu0.run(cycles);
         //vu1.run(cycles);
         vu1.run_jit(cycles);
@@ -102,7 +103,7 @@ void Emulator::run()
         spu.update(cycles);
         spu2.update(cycles);
         cdvd.update(cycles);
-        if (!VBLANK_sent && instructions_run >= VBLANK_START)
+        if (!VBLANK_sent && instructions_ran >= VBLANK_START)
         {
             VBLANK_sent = true;
             gs.set_VBLANK(true);
@@ -188,7 +189,7 @@ void Emulator::release_button(PAD_BUTTON button)
 uint32_t* Emulator::get_framebuffer()
 {
     //This function should only be called upon ending a frame; return nullptr otherwise
-    if (instructions_run < CYCLES_PER_FRAME)
+    if (instructions_ran < CYCLES_PER_FRAME)
         return nullptr;
     return gs.get_framebuffer();
 }
@@ -297,9 +298,9 @@ void Emulator::load_ELF(uint8_t *ELF, uint32_t size)
     memcpy(ELF_file, ELF, size);
 }
 
-bool Emulator::load_CDVD(const char *name)
+bool Emulator::load_CDVD(const char *name, CDVD_CONTAINER type)
 {
-    return cdvd.load_disc(name);
+    return cdvd.load_disc(name, type);
 }
 
 void Emulator::execute_ELF()

@@ -19,10 +19,13 @@ void GraphicsInterface::reset()
     path_status[1] = 4;
     path_status[2] = 4;
     path_status[3] = 4;
+    std::queue<uint128_t> empty;
+    FIFO.swap(empty);
 
     intermittent_mode = false;
     path3_vif_masked = false;
     path3_mode_masked = false;
+    path3_dma_waiting = false;
 }
 
 uint32_t GraphicsInterface::read_STAT()
@@ -50,6 +53,7 @@ uint32_t GraphicsInterface::read_STAT()
 
 void GraphicsInterface::write_MODE(uint32_t value)
 {
+    //printf("GIF PATH3Mask MODE set to %d\n", value & 0x1);
     intermittent_mode = value & 0x4;
     path3_mode_masked = value & 0x1;
     resume_path3();
@@ -236,8 +240,23 @@ void GraphicsInterface::feed_GIF(uint128_t data)
     }
 }
 
+void GraphicsInterface::run(int cycles)
+{        
+    if (!path3_masked(3) && !fifo_empty())
+    {
+        request_PATH(3, false);
+        //printf("GIF PATH3 should be flushing FIFO active = %d mask off, cycles = %d\n", path_active(3), cycles);
+    }
+    while (path_active(3) && !path3_masked(3) && cycles && !fifo_empty())
+    {
+        flush_path3_fifo();
+        cycles--;
+    }
+}
+
 void GraphicsInterface::set_path3_vifmask(int value)
 {
+   // printf("GIF PATH3Mask VIF set to %d\n", value);
     path3_vif_masked = value;
 }
 
@@ -251,6 +270,11 @@ bool GraphicsInterface::path3_masked(int index)
     {
         masked = (path_status[3] == 4);
         //printf("[GIF] PATH3 Masked\n");
+        if (masked && fifo_full())
+        {
+            deactivate_PATH(3);
+            
+        }
     }
     return masked;
 }
@@ -338,5 +362,44 @@ void GraphicsInterface::send_PATH2(uint32_t data[])
 void GraphicsInterface::send_PATH3(uint128_t data)
 {
     //printf("[GIF] Send PATH3 $%08X_%08X_%08X_%08X\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
-    feed_GIF(data);
+    if (!path3_masked(3))
+        feed_GIF(data);
+    else if (FIFO.size() < 16)
+    {
+        //printf("Adding data to GIF FIFO\n");
+        FIFO.push(data);
+    }
+}
+
+void GraphicsInterface::flush_path3_fifo()
+{
+    //printf("Flushing GIF FIFO\n");
+    feed_GIF(FIFO.front());
+    FIFO.pop();
+
+    if ((fifo_empty() && !path3_dma_waiting) || path3_masked(3))
+    {
+        //printf("GIF Deactivating PATH at FIFO flush end\n");
+        deactivate_PATH(3);
+    }
+}
+
+bool GraphicsInterface::fifo_full()
+{
+    return FIFO.size() == 16;
+}
+
+bool GraphicsInterface::fifo_empty()
+{
+    return FIFO.size() == 0;
+}
+
+bool GraphicsInterface::fifo_draining()
+{
+    return !fifo_empty() && !path3_masked(3);
+}
+
+void GraphicsInterface::dma_waiting(bool dma_waiting)
+{
+    path3_dma_waiting = dma_waiting;
 }

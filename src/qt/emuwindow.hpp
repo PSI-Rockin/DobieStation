@@ -14,7 +14,7 @@ class EmuWindow : public QMainWindow
 {
     Q_OBJECT
     private:
-        EmuThread emuthread;
+        EmuThread emu_thread;
         std::string title;
         std::string ROM_path;
         QImage final_image;
@@ -61,7 +61,7 @@ class EmuWindow : public QMainWindow
         void load_state();
         void save_state();
         void emu_error(QString err);
-        void emu_nonfatal_error(QString err);
+        void emu_non_fatal_error(QString err);
 };
 
 #endif // EMUWINDOW_HPP

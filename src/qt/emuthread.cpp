@@ -41,11 +41,11 @@ void EmuThread::load_ELF(uint8_t *ELF, uint64_t ELF_size)
     load_mutex.unlock();
 }
 
-void EmuThread::load_CDVD(const char* name)
+void EmuThread::load_CDVD(const char* name, CDVD_CONTAINER type)
 {
     load_mutex.lock();
     e.reset();
-    e.load_CDVD(name);
+    e.load_CDVD(name, type);
     load_mutex.unlock();
 }
 
@@ -105,7 +105,7 @@ void EmuThread::gsdump_run()
         int draws_sent = 10;
         while (true)
         {
-            GS_message data;
+            GSMessage data;
             gsdump.read((char*)&data, sizeof(data));
             switch (data.type)
             {
@@ -140,9 +140,9 @@ void EmuThread::gsdump_run()
                     gsdump.close();
                     Errors::die("gsdump ended successfully\n");
                     return;
-                case savestate_t:
-                case loadstate_t:
-                    Errors::die("savestate save/load during gsdump not supported!");
+                case save_state_t:
+                case load_state_t:
+                    Errors::die("save_state save/load during gsdump not supported!");
                 default:
                     e.get_gs().send_message(data);
             }
@@ -156,10 +156,10 @@ void EmuThread::gsdump_run()
         emit emu_error(QString(e.what()));
         pause(PAUSE_EVENT::GAME_NOT_LOADED);
     }
-    catch (nonfatal_error &e)
+    catch (non_fatal_error &e)
     {
-        printf("Nonfatal emulation occurred running gsdump\n%s\n", e.what());
-        emit emu_nonfatal_error(QString(e.what()));
+        printf("non_fatal emulation occurred running gsdump\n%s\n", e.what());
+        emit emu_non_fatal_error(QString(e.what()));
         pause(PAUSE_EVENT::MESSAGE_BOX);
     }
 }
@@ -198,10 +198,10 @@ void EmuThread::run()
                 old_frametime = chrono::system_clock::now();
                 emit update_FPS((int)round(FPS));
             }
-            catch (nonfatal_error &e)
+            catch (non_fatal_error &e)
             {
-                printf("Nonfatal emulation error occurred\n%s\n", e.what());
-                emit emu_nonfatal_error(QString(e.what()));
+                printf("non_fatal emulation error occurred\n%s\n", e.what());
+                emit emu_non_fatal_error(QString(e.what()));
                 pause(PAUSE_EVENT::MESSAGE_BOX);
             }
             catch (Emulation_error &e)

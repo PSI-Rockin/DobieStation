@@ -1660,6 +1660,9 @@ void lower2(VectorUnit &vu, uint32_t instr)
         case 0x09:
             isubiu(vu, instr);
             break;
+        case 0x10:
+            fceq(vu, instr);
+            break;
         case 0x11:
             fcset(vu, instr);
             break;
@@ -1785,6 +1788,11 @@ void isubiu(VectorUnit &vu, uint32_t instr)
     uint8_t dest = (instr >> 16) & 0x1F;*/
     vu.decoder.vi_write = (instr >> 16) & 0xF;
     lower_op = &VectorUnit::isubiu;
+}
+
+void fceq(VectorUnit &vu, uint32_t instr)
+{
+    lower_op = &VectorUnit::fceq;
 }
 
 void fcset(VectorUnit &vu, uint32_t instr)

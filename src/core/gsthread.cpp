@@ -131,7 +131,7 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
     {
         while (true)
         {
-            GS_message data;
+            GSMessage data;
             bool available = fifo->pop(data);
             if (available)
             {
@@ -205,9 +205,9 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
                         }
                         std::lock_guard<std::mutex> lock(*p.target_mutex, std::adopt_lock);
                         gs.render_CRT(p.target);
-                        GS_return_message_payload return_payload;
+                        GSReturnMessagePayload return_payload;
                         return_payload.no_payload = { 0 };
-                        return_fifo->push({ GS_return::render_complete_t,return_payload });
+                        return_fifo->push({ GSReturn::render_complete_t,return_payload });
                         break;
                     }
                     case assert_finish_t:
@@ -234,27 +234,27 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
                         std::lock_guard<std::mutex> lock(*p.target_mutex, std::adopt_lock);
                         uint16_t width, height;
                         gs.memdump(p.target, width, height);
-                        GS_return_message_payload return_payload;
+                        GSReturnMessagePayload return_payload;
                         return_payload.xy_payload = { width, height };
-                        return_fifo->push({ GS_return::gsdump_render_partial_done_t,return_payload });
+                        return_fifo->push({ GSReturn::gsdump_render_partial_done_t,return_payload });
                         break;
                     }
                     case die_t:
                         return;
-                    case loadstate_t:
+                    case load_state_t:
                     {
-                        gs.load_state(data.payload.loadstate_payload.state);
-                        GS_return_message_payload return_payload;
+                        gs.load_state(data.payload.load_state_payload.state);
+                        GSReturnMessagePayload return_payload;
                         return_payload.no_payload = { 0 };
-                        return_fifo->push({ GS_return::loadstate_done_t,return_payload });
+                        return_fifo->push({ GSReturn::load_state_done_t,return_payload });
                         break;
                     }
-                    case savestate_t:
+                    case save_state_t:
                     {
-                        gs.save_state(data.payload.savestate_payload.state);
-                        GS_return_message_payload return_payload;
+                        gs.save_state(data.payload.save_state_payload.state);
+                        GSReturnMessagePayload return_payload;
                         return_payload.no_payload = { 0 };
-                        return_fifo->push({ GS_return::savestate_done_t,return_payload });
+                        return_fifo->push({ GSReturn::save_state_done_t,return_payload });
                         break;
                     }
                     case gsdump_t:
@@ -290,11 +290,11 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
     }
     catch (Emulation_error &e)
     {
-        GS_return_message_payload return_payload;
+        GSReturnMessagePayload return_payload;
         char* copied_string = new char[ERROR_STRING_MAX_LENGTH];
         strncpy(copied_string, e.what(), ERROR_STRING_MAX_LENGTH);
         return_payload.death_error_payload.error_str = { copied_string };
-        return_fifo->push({ GS_return::death_error_t,return_payload });
+        return_fifo->push({ GSReturn::death_error_t,return_payload });
     }
 }
 
@@ -725,6 +725,17 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
         case 0x0043:
             context2.set_alpha(value);
             break;
+        case 0x0044:
+            for (int y = 0; y < 4; y++)
+            {
+                for (int x = 0; x < 4; x++)
+                {
+                    uint8_t element = value >> ((x + (y * 4)) * 4);
+                    element &= 0x7;
+                    dither_mtx[y][x] = element;
+                }
+            }
+            break;
         case 0x0045:
             DTHE = value & 0x1;
             break;
@@ -1077,6 +1088,7 @@ void GraphicsSynthesizerThread::vertex_kick(bool drawing_kick)
     current_vtx.uv = UV;
     current_vtx.s = ST.s;
     current_vtx.t = ST.t;
+    current_vtx.fog = FOG;
     vtx_queue[0] = current_vtx;
     //printf("Vkick: (%d, %d, %d)\n", current_vtx.x, current_vtx.y, current_vtx.z);
 
@@ -1425,6 +1437,25 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
         fg = (((fg * (int)alpha) >> 7) + cg);
         fr = (((fr * (int)alpha) >> 7) + cr);
 
+        //Dithering
+        if (DTHE)
+        {
+            uint8_t dither = dither_mtx[y % 4][x % 4];
+            uint8_t dither_amount = dither & 0x3;
+            if (dither & 0x4)
+            {
+                fb -= dither_amount;
+                fg -= dither_amount;
+                fr -= dither_amount;
+            }
+            else
+            {
+                fb += dither_amount;
+                fg += dither_amount;
+                fr += dither_amount;
+            }
+        }
+
         if (COLCLAMP)
         {
             if (fb < 0)
@@ -1454,6 +1485,46 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
     }
     else
     {
+        //Dithering
+        if (DTHE)
+        {
+            uint8_t dither = dither_mtx[y % 4][x % 4];
+            uint8_t dither_amount = dither & 0x3;
+            if (dither & 0x4)
+            {
+                color.b -= dither_amount;
+                color.g -= dither_amount;
+                color.r -= dither_amount;
+            }
+            else
+            {
+                color.b += dither_amount;
+                color.g += dither_amount;
+                color.r += dither_amount;
+            }
+
+            if (COLCLAMP)
+            {
+                if (color.b < 0)
+                    color.b = 0;
+                if (color.g < 0)
+                    color.g = 0;
+                if (color.r < 0)
+                    color.r = 0;
+                if (color.b > 0xFF)
+                    color.b = 0xFF;
+                if (color.g > 0xFF)
+                    color.g = 0xFF;
+                if (color.r > 0xFF)
+                    color.r = 0xFF;
+            }
+            else
+            {
+                color.b &= 0xFF;
+                color.g &= 0xFF;
+                color.r &= 0xFF;
+            }
+        }
         final_color |= color.a << 24;
         final_color |= color.b << 16;
         final_color |= color.g << 8;
@@ -1536,6 +1607,7 @@ void GraphicsSynthesizerThread::render_point()
     TexLookupInfo tex_info;
     
     tex_info.vtx_color = v1.rgbaq;
+    tex_info.fog = v1.fog;
     if (current_PRMODE->texture_mapping)
     {
         int32_t u, v;
@@ -1599,6 +1671,7 @@ void GraphicsSynthesizerThread::render_line()
         int32_t y = v1.y*(1.-t) + v2.y*t;        
         //if (y < min_y || y > max_y)
             //continue;
+        tex_info.fog = interpolate(x, v1.fog, v1.x, v2.fog, v2.x);
         if (current_PRMODE->gourand_shading)
         {
             tex_info.vtx_color.r = interpolate(x, v1.rgbaq.r, v1.x, v2.rgbaq.r, v2.x);
@@ -1795,11 +1868,13 @@ void GraphicsSynthesizerThread::render_triangle()
                             float b = (float) v1.rgbaq.b * w1 + (float) v2.rgbaq.b * w2 + (float) v3.rgbaq.b * w3;
                             float a = (float) v1.rgbaq.a * w1 + (float) v2.rgbaq.a * w2 + (float) v3.rgbaq.a * w3;
                             float q = v1.rgbaq.q * w1 + v2.rgbaq.q * w2 + v3.rgbaq.q * w3;
+                            float fog = (float) v1.fog * w1 + (float) v2.fog * w2 + (float) v3.fog * w3;
                             tex_info.vtx_color.r = r / divider;
                             tex_info.vtx_color.g = g / divider;
                             tex_info.vtx_color.b = b / divider;
                             tex_info.vtx_color.a = a / divider;
                             tex_info.vtx_color.q = q / divider;
+                            tex_info.fog = fog / divider;
 
                             if (tmp_tex)
                             {
@@ -1903,6 +1978,7 @@ void GraphicsSynthesizerThread::render_sprite()
         {
             if (tmp_tex)
             {
+                tex_info.fog = v2.fog;
                 calculate_LOD(tex_info);
                 if (tmp_uv)
                 {
@@ -2349,10 +2425,11 @@ void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, TexLookupInfo& 
 
     if (current_PRMODE->fog)
     {
-        uint16_t fog2 = 0xFF - FOG;
-        info.tex_color.r = ((info.tex_color.r * FOG) >> 8) + ((fog2 * FOGCOL.r) >> 8);
-        info.tex_color.g = ((info.tex_color.g * FOG) >> 8) + ((fog2 * FOGCOL.g) >> 8);
-        info.tex_color.b = ((info.tex_color.b * FOG) >> 8) + ((fog2 * FOGCOL.b) >> 8);
+        uint16_t fog = info.fog;
+        uint16_t fog2 = 0xFF - info.fog;
+        info.tex_color.r = ((info.tex_color.r * fog) >> 8) + ((fog2 * FOGCOL.r) >> 8);
+        info.tex_color.g = ((info.tex_color.g * fog) >> 8) + ((fog2 * FOGCOL.g) >> 8);
+        info.tex_color.b = ((info.tex_color.b * fog) >> 8) + ((fog2 * FOGCOL.b) >> 8);
     }
 }
 

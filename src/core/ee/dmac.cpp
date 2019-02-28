@@ -266,11 +266,19 @@ void DMAC::process_GIF(int cycles)
         cycles--;
         if (channels[GIF].quadword_count)
         {
-            if (gif->path_active(3))
+            if (gif->path_active(3) && !gif->fifo_full() && !gif->fifo_draining())
             {
+                //printf("Sending GIF PATH3 DMA\n");
+                gif->dma_waiting(false);
+
                 gif->send_PATH3(fetch128(channels[GIF].address));
 
                 advance_source_dma(GIF);
+            }
+            else
+            {
+                gif->dma_waiting(true);
+                return;
             }
         }
         else
@@ -278,6 +286,7 @@ void DMAC::process_GIF(int cycles)
             if (channels[GIF].tag_end)
             {
                 transfer_end(GIF);
+               // printf("GIF PATH3 DMA Ending\n");
                 gif->deactivate_PATH(3);
                 return;
             }
@@ -378,7 +387,7 @@ void DMAC::process_SIF0(int cycles)
             {
                 uint64_t DMAtag = sif->read_SIF0();
                 DMAtag |= (uint64_t)sif->read_SIF0() << 32;
-                printf("[DMAC] SIF0 tag: $%08X_%08X\n", DMAtag >> 32, DMAtag);
+                printf("[DMAC] SIF0 tag: $%08lX_%08lX\n", DMAtag >> 32, DMAtag & 0xFFFFFFFF);
 
                 channels[SIF0].quadword_count = DMAtag & 0xFFFF;
                 channels[SIF0].address = DMAtag >> 32;

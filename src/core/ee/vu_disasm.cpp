@@ -772,6 +772,8 @@ string lower2(uint32_t PC, uint32_t instr)
             return arithu("iaddiu", instr);
         case 0x09:
             return arithu("isubiu", instr);
+        case 0x10:
+            return fceq(instr);
         case 0x11:
             return fcset(instr);
         case 0x12:
@@ -895,6 +897,15 @@ string sq(uint32_t instr)
     output << "sq." << get_field(field) << " vf" << fs << ", 0x";
     output << setfill('0') << setw(4) << hex << imm;
     output << "(vi" << dec << it << ")";
+    return output.str();
+}
+
+string fceq(uint32_t instr)
+{
+    stringstream output;
+    uint32_t imm = instr & 0xFFFFFF;
+    output << "fceq vi1, 0x";
+    output << setfill('0') << setw(8) << hex << imm;
     return output.str();
 }
 

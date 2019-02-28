@@ -1,6 +1,7 @@
 #ifndef GIF_HPP
 #define GIF_HPP
 #include <cstdint>
+#include <queue>
 #include <fstream>
 
 #include "gs.hpp"
@@ -32,6 +33,8 @@ class GraphicsInterface
         
         GIFPath path[4];
 
+        std::queue<uint128_t> FIFO;
+
         uint8_t active_path;
         uint8_t path_queue;
         //4 = Idle, Others match tag ID's
@@ -39,16 +42,24 @@ class GraphicsInterface
         bool path3_vif_masked;
         bool path3_mode_masked;
         bool intermittent_mode;
+        bool path3_dma_waiting;
 
         float internal_Q;
 
         void process_PACKED(uint128_t quad);
         void process_REGLIST(uint128_t quad);
         void feed_GIF(uint128_t quad);
+
+        void flush_path3_fifo();
     public:
         GraphicsInterface(GraphicsSynthesizer* gs);
         void reset();
+        void run(int cycles);
 
+        bool fifo_full();
+        bool fifo_empty();
+        bool fifo_draining();
+        void dma_waiting(bool dma_waiting);
         bool path_active(int index);
         bool path_activepath3(int index);
         void resume_path3();
@@ -78,7 +89,7 @@ inline bool GraphicsInterface::path_active(int index)
     {
         interrupt_path3(index);
     }
-    return (active_path == index) && !path3_masked(index) && !gs->stalled();
+    return (active_path == index) && !gs->stalled();
 }
 
 inline bool GraphicsInterface::path_activepath3(int index)
@@ -87,17 +98,18 @@ inline bool GraphicsInterface::path_activepath3(int index)
     {
         interrupt_path3(index);
     }
-    return ((active_path == index) || (path_queue & (1 << 3))) && !path3_masked(index) && !gs->stalled();
+    return ((active_path == index) || (path_queue & (1 << 3))) && !gs->stalled();
 }
 
 inline void GraphicsInterface::resume_path3()
 {
     if (path3_vif_masked || path3_mode_masked)
         return;
-    if ((active_path == 3 || (path_queue & (1 << 3))) && path_status[3] == 4)
+    if ((path3_dma_waiting || FIFO.size()) && path_status[3] == 4)
     {
         //printf("[GIF] Resuming PATH3\n");
         path_status[3] = 0; //Force it to be busy so if VIF puts the mask back on quickly, it doesn't instantly mask it
+        request_PATH(3, false);
     }
 }
 

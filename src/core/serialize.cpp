@@ -14,7 +14,7 @@ bool Emulator::request_load_state(const char *file_name)
     if (!state.is_open())
         return false;
     state.close();
-    savestate_path = file_name;
+    save_state_path = file_name;
     load_requested = true;
     return true;
 }
@@ -25,7 +25,7 @@ bool Emulator::request_save_state(const char *file_name)
     if (!state.is_open())
         return false;
     state.close();
-    savestate_path = file_name;
+    save_state_path = file_name;
     save_requested = true;
     return true;
 }
@@ -37,7 +37,7 @@ void Emulator::load_state(const char *file_name)
     ifstream state(file_name, ios::binary);
     if (!state.is_open())
     {
-        Errors::nonfatal("Failed to load save state");
+        Errors::non_fatal("Failed to load save state");
         return;
     }
 
@@ -47,7 +47,7 @@ void Emulator::load_state(const char *file_name)
     if (strncmp(dobie_buffer, "DOBIE", 5))
     {
         state.close();
-        Errors::nonfatal("Save state invalid");
+        Errors::non_fatal("Save state invalid");
         return;
     }
 
@@ -59,7 +59,7 @@ void Emulator::load_state(const char *file_name)
     if (major != VER_MAJOR || minor != VER_MINOR || rev != VER_REV)
     {
         state.close();
-        Errors::nonfatal("Save state doesn't match version");
+        Errors::non_fatal("Save state doesn't match version");
         return;
     }
 
@@ -122,7 +122,7 @@ void Emulator::save_state(const char *file_name)
     ofstream state(file_name, ios::binary);
     if (!state.is_open())
     {
-        Errors::nonfatal("Failed to save state");
+        Errors::non_fatal("Failed to save state");
         return;
     }
 
@@ -357,7 +357,7 @@ void VectorUnit::load_state(ifstream &state)
     state.read((char*)&running, sizeof(running));
     state.read((char*)&PC, sizeof(PC));
     state.read((char*)&new_PC, sizeof(new_PC));
-    state.read((char*)&secondbranch_PC, sizeof(secondbranch_PC));
+    state.read((char*)&second_branch_PC, sizeof(second_branch_PC));
     state.read((char*)&second_branch_pending, sizeof(second_branch_pending));
     state.read((char*)&branch_on, sizeof(branch_on));
     state.read((char*)&branch_on_delay, sizeof(branch_on_delay));
@@ -420,7 +420,7 @@ void VectorUnit::save_state(ofstream &state)
     state.write((char*)&running, sizeof(running));
     state.write((char*)&PC, sizeof(PC));
     state.write((char*)&new_PC, sizeof(new_PC));
-    state.write((char*)&secondbranch_PC, sizeof(secondbranch_PC));
+    state.write((char*)&second_branch_PC, sizeof(second_branch_PC));
     state.write((char*)&second_branch_pending, sizeof(second_branch_pending));
     state.write((char*)&branch_on, sizeof(branch_on));
     state.write((char*)&branch_on_delay, sizeof(branch_on_delay));
@@ -519,20 +519,41 @@ void IOP_DMA::save_state(ofstream &state)
 
 void GraphicsInterface::load_state(ifstream &state)
 {
+    int size;
+    uint128_t FIFO_buffer[16];
+    state.read((char*)&size, sizeof(size));
+    state.read((char*)&FIFO_buffer, sizeof(uint128_t) * size);
+    for (int i = 0; i < size; i++)
+        FIFO.push(FIFO_buffer[i]);
+
     state.read((char*)&path, sizeof(path));
     state.read((char*)&active_path, sizeof(active_path));
     state.read((char*)&path_queue, sizeof(path_queue));
     state.read((char*)&path3_vif_masked, sizeof(path3_vif_masked));
     state.read((char*)&internal_Q, sizeof(internal_Q));
+    state.read((char*)&path3_dma_waiting, sizeof(path3_dma_waiting));
 }
 
 void GraphicsInterface::save_state(ofstream &state)
 {
+    int size = FIFO.size();
+    uint128_t FIFO_buffer[16];
+    for (int i = 0; i < size; i++)
+    {
+        FIFO_buffer[i] = FIFO.front();
+        FIFO.pop();
+    }
+    state.write((char*)&size, sizeof(size));
+    state.write((char*)&FIFO_buffer, sizeof(uint128_t) * size);
+    for (int i = 0; i < size; i++)
+        FIFO.push(FIFO_buffer[i]);
+
     state.write((char*)&path, sizeof(path));
     state.write((char*)&active_path, sizeof(active_path));
     state.write((char*)&path_queue, sizeof(path_queue));
     state.write((char*)&path3_vif_masked, sizeof(path3_vif_masked));
     state.write((char*)&internal_Q, sizeof(internal_Q));
+    state.write((char*)&path3_dma_waiting, sizeof(path3_dma_waiting));
 }
 
 void SubsystemInterface::load_state(ifstream &state)
