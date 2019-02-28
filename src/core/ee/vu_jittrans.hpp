@@ -25,6 +25,8 @@ enum VU_FlagInstrType
 
 struct VU_InstrInfo
 {
+    bool branch_delay_slot;
+    bool ebit_delay_slot;
     bool swap_ops;
     bool update_q_pipeline;
     bool update_p_pipeline;
@@ -50,7 +52,8 @@ struct VU_InstrInfo
 class VU_JitTranslator
 {
     private:
-        bool trans_delay_slot;
+        bool trans_branch_delay_slot;
+        bool trans_ebit_delay_slot;
 
         int cycles_this_block;
         int cycles_since_xgkick_update;

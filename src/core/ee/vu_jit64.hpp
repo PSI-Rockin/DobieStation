@@ -53,15 +53,17 @@ class VU_JIT64
         uint32_t prev_pc;
         bool should_update_mac;
 
-        bool cond_branch;
-        uint16_t cond_branch_dest, cond_branch_fail_dest;
+        bool vu_branch;
+        bool end_of_program;
+        uint16_t vu_branch_dest, vu_branch_fail_dest;
+        uint16_t vu_branch_delay_dest, vu_branch_delay_fail_dest;
         uint16_t cycle_count;
 
         void clamp_vfreg(REG_64 xmm_reg);
         void sse_abs(REG_64 source, REG_64 dest);
         void sse_div_check(REG_64 num, REG_64 denom, VU_R& dest);
 
-        void handle_cond_branch(VectorUnit& vu);
+        void handle_branch(VectorUnit& vu);
         void update_mac_flags(VectorUnit& vu, REG_64 xmm_reg, uint8_t field);
 
         uint64_t get_vf_addr(VectorUnit& vu, int index);
@@ -85,6 +87,7 @@ class VU_JIT64
         void jump_indirect(VectorUnit& vu, IR::Instruction& instr);
         void jump_and_link_indirect(VectorUnit& vu, IR::Instruction& instr);
 
+        void handle_branch_destinations(VectorUnit& vu, IR::Instruction& instr);
         void branch_equal(VectorUnit& vu, IR::Instruction& instr);
         void branch_not_equal(VectorUnit& vu, IR::Instruction& instr);
         void branch_less_than_zero(VectorUnit& vu, IR::Instruction& instr);
@@ -162,6 +165,7 @@ class VU_JIT64
         void update_xgkick(VectorUnit& vu, IR::Instruction& instr);
         void stop(VectorUnit& vu, IR::Instruction& instr);
         void save_pc(VectorUnit& vu, IR::Instruction& instr);
+        void move_delayed_branch(VectorUnit& vu, IR::Instruction& instr);
 
         int search_for_register(AllocReg* regs, int vu_reg);
         REG_64 alloc_int_reg(VectorUnit& vu, int vi_reg, REG_STATE state = REG_STATE::READ_WRITE);
