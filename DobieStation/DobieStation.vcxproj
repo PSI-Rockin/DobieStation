@@ -86,7 +86,7 @@
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>$(QTDIR)\lib\Qt5Multimedia.lib;$(QTDIR)\lib\Qt5Widgets.lib;$(QTDIR)\lib\Qt5Gui.lib;$(QTDIR)\lib\Qt5Network.lib;$(QTDIR)\lib\Qt5Core.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>.\libdeflate\release\libdeflate.lib;$(QTDIR)\lib\Qt5Multimedia.lib;$(QTDIR)\lib\Qt5Widgets.lib;$(QTDIR)\lib\Qt5Gui.lib;$(QTDIR)\lib\Qt5Network.lib;$(QTDIR)\lib\Qt5Core.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(QTDIR)\lib;$(QTDIR)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>"/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' publicKeyToken='6595b64144ccf1df' language='*' processorArchitecture='*'" %(AdditionalOptions)</AdditionalOptions>
       <DataExecutionPrevention>true</DataExecutionPrevention>
@@ -139,7 +139,7 @@
       <ProgramDataBaseFileName>$(IntDir)vc$(PlatformToolsetVersion).pdb</ProgramDataBaseFileName>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>$(QTDIR)\lib\Qt5Multimediad.lib;$(QTDIR)\lib\Qt5Widgetsd.lib;$(QTDIR)\lib\Qt5Guid.lib;$(QTDIR)\lib\Qt5Networkd.lib;$(QTDIR)\lib\Qt5Cored.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>.\libdeflate\debug\libdeflate.lib;$(QTDIR)\lib\Qt5Multimediad.lib;$(QTDIR)\lib\Qt5Widgetsd.lib;$(QTDIR)\lib\Qt5Guid.lib;$(QTDIR)\lib\Qt5Networkd.lib;$(QTDIR)\lib\Qt5Cored.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalLibraryDirectories>$(QTDIR)\lib;$(QTDIR)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalOptions>"/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' publicKeyToken='6595b64144ccf1df' language='*' processorArchitecture='*'" %(AdditionalOptions)</AdditionalOptions>
       <DataExecutionPrevention>true</DataExecutionPrevention>
@@ -171,6 +171,7 @@
     </QtMoc>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\core\iop\cso_reader.cpp" />
     <ClCompile Include="..\src\core\tests\iop\alu.cpp" />
     <ClCompile Include="..\src\core\ee\bios_hle.cpp" />
     <ClCompile Include="..\src\core\iop\cdvd.cpp" />
@@ -237,6 +238,7 @@
     <ClCompile Include="..\src\core\ee\vu_jittrans.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\ext\libdeflate\libdeflate.h" />
     <ClInclude Include="..\src\core\ee\bios_hle.hpp" />
     <ClInclude Include="..\src\core\iop\cdvd.hpp" />
     <ClInclude Include="..\src\core\ee\ipu\chromtable.hpp" />
@@ -248,6 +250,7 @@
     <ClInclude Include="..\src\core\ee\ipu\dct_coeff_table0.hpp" />
     <ClInclude Include="..\src\core\ee\ipu\dct_coeff_table1.hpp" />
     <ClInclude Include="..\src\core\ee\dmac.hpp" />
+    <ClInclude Include="..\src\core\iop\cso_reader.hpp" />
     <ClInclude Include="..\src\core\jitcommon\emitter64.hpp" />
     <ClInclude Include="..\src\core\ee\emotion.hpp" />
     <ClInclude Include="..\src\core\ee\emotionasm.hpp" />
