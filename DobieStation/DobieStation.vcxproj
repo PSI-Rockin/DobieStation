@@ -1,0 +1,341 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{353E9072-F9AB-35F7-8AFF-FAC3EA8AFEE0}</ProjectGuid>
+    <RootNamespace>DobieStation</RootNamespace>
+    <Keyword>Qt4VSv1.0</Keyword>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
+    <PlatformToolset>v141</PlatformToolset>
+    <OutputDirectory>release\</OutputDirectory>
+    <ATLMinimizesCRunTimeLibraryUsage>false</ATLMinimizesCRunTimeLibraryUsage>
+    <CharacterSet>NotSet</CharacterSet>
+    <ConfigurationType>Application</ConfigurationType>
+    <IntermediateDirectory>release\</IntermediateDirectory>
+    <PrimaryOutput>DobieStation</PrimaryOutput>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
+    <PlatformToolset>v141</PlatformToolset>
+    <OutputDirectory>debug\</OutputDirectory>
+    <ATLMinimizesCRunTimeLibraryUsage>false</ATLMinimizesCRunTimeLibraryUsage>
+    <CharacterSet>NotSet</CharacterSet>
+    <ConfigurationType>Application</ConfigurationType>
+    <IntermediateDirectory>debug\</IntermediateDirectory>
+    <PrimaryOutput>DobieStation</PrimaryOutput>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <PropertyGroup Condition="'$(QtMsBuild)'=='' or !Exists('$(QtMsBuild)\qt.targets')">
+    <QtMsBuild>$(MSBuildProjectDirectory)\QtMsBuild</QtMsBuild>
+  </PropertyGroup>
+  <Target Name="QtMsBuildNotFound" BeforeTargets="CustomBuild;ClCompile" Condition="!Exists('$(QtMsBuild)\qt.targets') or !Exists('$(QtMsBuild)\qt.props')">
+    <Message Importance="High" Text="QtMsBuild: could not locate qt.targets, qt.props; project may not build correctly." />
+  </Target>
+  <ImportGroup Condition="Exists('$(QtMsBuild)\qt.props')">
+    <Import Project="$(QtMsBuild)\qt.props" />
+  </ImportGroup>
+  <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.props" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" />
+  </ImportGroup>
+  <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" />
+  </ImportGroup>
+  <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">release\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(Platform)\$(Configuration)\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">DobieStation</TargetName>
+    <IgnoreImportLibrary Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</IgnoreImportLibrary>
+    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">debug\</OutDir>
+    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(Platform)\$(Configuration)\</IntDir>
+    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">DobieStation</TargetName>
+    <IgnoreImportLibrary Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</IgnoreImportLibrary>
+  </PropertyGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>.\GeneratedFiles\$(ConfigurationName);.\GeneratedFiles;.;$(QTDIR)\include;$(QTDIR)\include\QtMultimedia;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtANGLE;$(QTDIR)\include\QtNetwork;$(QTDIR)\include\QtCore;release;\include;$(QTDIR)\mkspecs\win32-msvc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>-Zc:rvalueCast -Zc:inline -Zc:strictStrings -Zc:throwingNew -Zc:referenceBinding -w34100 -w34189 -w44996 -w44456 -w44457 -w44458 %(AdditionalOptions)</AdditionalOptions>
+      <AssemblerListingLocation>release\</AssemblerListingLocation>
+      <BrowseInformation>false</BrowseInformation>
+      <DebugInformationFormat>None</DebugInformationFormat>
+      <DisableSpecificWarnings>4577;4467;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <Optimization>MaxSpeed</Optimization>
+      <PreprocessorDefinitions>_CONSOLE;UNICODE;_UNICODE;WIN32;WIN64;QT_DEPRECATED_WARNINGS;QT_DISABLE_DEPRECATED_BEFORE=0x060000;QT_NO_DEBUG;QT_MULTIMEDIA_LIB;QT_WIDGETS_LIB;QT_GUI_LIB;QT_NETWORK_LIB;QT_CORE_LIB;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessToFile>false</PreprocessToFile>
+      <ProgramDataBaseFileName>$(IntDir)vc$(PlatformToolsetVersion).pdb</ProgramDataBaseFileName>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
+      <WarningLevel>Level3</WarningLevel>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>.\libdeflate\release\libdeflate.lib;$(QTDIR)\lib\Qt5Multimedia.lib;$(QTDIR)\lib\Qt5Widgets.lib;$(QTDIR)\lib\Qt5Gui.lib;$(QTDIR)\lib\Qt5Network.lib;$(QTDIR)\lib\Qt5Core.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(QTDIR)\lib;$(QTDIR)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>"/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' publicKeyToken='6595b64144ccf1df' language='*' processorArchitecture='*'" %(AdditionalOptions)</AdditionalOptions>
+      <DataExecutionPrevention>true</DataExecutionPrevention>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <IgnoreImportLibrary>true</IgnoreImportLibrary>
+      <LinkIncremental>false</LinkIncremental>
+      <OutputFile>$(OutDir)\DobieStation.exe</OutputFile>
+      <RandomizedBaseAddress>true</RandomizedBaseAddress>
+      <SubSystem>Console</SubSystem>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+    </Link>
+    <Midl>
+      <DefaultCharType>Unsigned</DefaultCharType>
+      <EnableErrorChecks>None</EnableErrorChecks>
+      <WarningLevel>0</WarningLevel>
+    </Midl>
+    <ResourceCompile>
+      <PreprocessorDefinitions>_CONSOLE;UNICODE;_UNICODE;WIN32;WIN64;QT_DEPRECATED_WARNINGS;QT_DISABLE_DEPRECATED_BEFORE=0x060000;QT_NO_DEBUG;QT_MULTIMEDIA_LIB;QT_WIDGETS_LIB;QT_GUI_LIB;QT_NETWORK_LIB;QT_CORE_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+    <QtMoc>
+      <QTDIR>$(QTDIR)</QTDIR>
+      <OutputFile>$(Configuration)\moc_%(Filename).cpp</OutputFile>
+      <Define>UNICODE;_UNICODE;WIN32;WIN64;QT_DEPRECATED_WARNINGS;QT_DISABLE_DEPRECATED_BEFORE=0x060000;QT_NO_DEBUG;QT_MULTIMEDIA_LIB;QT_WIDGETS_LIB;QT_GUI_LIB;QT_NETWORK_LIB;QT_CORE_LIB</Define>
+      <CompilerFlavor>msvc</CompilerFlavor>
+      <Include>$(Configuration)/moc_predefs.h</Include>
+      <ExecutionDescription>Moc'ing %(Identity)...</ExecutionDescription>
+      <InputFile>%(FullPath)</InputFile>
+      <DynamicSource>output</DynamicSource>
+      <IncludePath>.\GeneratedFiles\$(ConfigurationName);.\GeneratedFiles;$(QTDIR)\mkspecs/win32-msvc;.;$(QTDIR)\include;$(QTDIR)\include/QtMultimedia;$(QTDIR)\include/QtWidgets;$(QTDIR)\include/QtGui;$(QTDIR)\include/QtANGLE;$(QTDIR)\include/QtNetwork;$(QTDIR)\include/QtCore</IncludePath>
+    </QtMoc>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile>
+      <AdditionalIncludeDirectories>.\GeneratedFiles\$(ConfigurationName);.\GeneratedFiles;.;$(QTDIR)\include;$(QTDIR)\include\QtMultimedia;$(QTDIR)\include\QtWidgets;$(QTDIR)\include\QtGui;$(QTDIR)\include\QtANGLE;$(QTDIR)\include\QtNetwork;$(QTDIR)\include\QtCore;debug;\include;$(QTDIR)\mkspecs\win32-msvc;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalOptions>-Zc:rvalueCast -Zc:inline -Zc:strictStrings -Zc:throwingNew -Zc:referenceBinding -w34100 -w34189 -w44996 -w44456 -w44457 -w44458 %(AdditionalOptions)</AdditionalOptions>
+      <AssemblerListingLocation>debug\</AssemblerListingLocation>
+      <BrowseInformation>false</BrowseInformation>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <DisableSpecificWarnings>4577;4467;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <Optimization>Disabled</Optimization>
+      <PreprocessorDefinitions>_CONSOLE;UNICODE;_UNICODE;WIN32;WIN64;QT_DEPRECATED_WARNINGS;QT_DISABLE_DEPRECATED_BEFORE=0x060000;QT_MULTIMEDIA_LIB;QT_WIDGETS_LIB;QT_GUI_LIB;QT_NETWORK_LIB;QT_CORE_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessToFile>false</PreprocessToFile>
+      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
+      <WarningLevel>Level3</WarningLevel>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <ProgramDataBaseFileName>$(IntDir)vc$(PlatformToolsetVersion).pdb</ProgramDataBaseFileName>
+    </ClCompile>
+    <Link>
+      <AdditionalDependencies>.\libdeflate\debug\libdeflate.lib;$(QTDIR)\lib\Qt5Multimediad.lib;$(QTDIR)\lib\Qt5Widgetsd.lib;$(QTDIR)\lib\Qt5Guid.lib;$(QTDIR)\lib\Qt5Networkd.lib;$(QTDIR)\lib\Qt5Cored.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(QTDIR)\lib;$(QTDIR)\lib;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+      <AdditionalOptions>"/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' publicKeyToken='6595b64144ccf1df' language='*' processorArchitecture='*'" %(AdditionalOptions)</AdditionalOptions>
+      <DataExecutionPrevention>true</DataExecutionPrevention>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <IgnoreImportLibrary>true</IgnoreImportLibrary>
+      <OutputFile>$(OutDir)\DobieStation.exe</OutputFile>
+      <RandomizedBaseAddress>true</RandomizedBaseAddress>
+      <SubSystem>Console</SubSystem>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+    </Link>
+    <Midl>
+      <DefaultCharType>Unsigned</DefaultCharType>
+      <EnableErrorChecks>None</EnableErrorChecks>
+      <WarningLevel>0</WarningLevel>
+    </Midl>
+    <ResourceCompile>
+      <PreprocessorDefinitions>_CONSOLE;UNICODE;_UNICODE;WIN32;WIN64;QT_DEPRECATED_WARNINGS;QT_DISABLE_DEPRECATED_BEFORE=0x060000;QT_MULTIMEDIA_LIB;QT_WIDGETS_LIB;QT_GUI_LIB;QT_NETWORK_LIB;QT_CORE_LIB;_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+    </ResourceCompile>
+    <QtMoc>
+      <QTDIR>$(QTDIR)</QTDIR>
+      <OutputFile>$(Configuration)\moc_%(Filename).cpp</OutputFile>
+      <Define>UNICODE;_UNICODE;WIN32;WIN64;QT_DEPRECATED_WARNINGS;QT_DISABLE_DEPRECATED_BEFORE=0x060000;QT_MULTIMEDIA_LIB;QT_WIDGETS_LIB;QT_GUI_LIB;QT_NETWORK_LIB;QT_CORE_LIB</Define>
+      <CompilerFlavor>msvc</CompilerFlavor>
+      <Include>$(Configuration)/moc_predefs.h</Include>
+      <ExecutionDescription>Moc'ing %(Identity)...</ExecutionDescription>
+      <InputFile>%(FullPath)</InputFile>
+      <DynamicSource>output</DynamicSource>
+      <IncludePath>.\GeneratedFiles\$(ConfigurationName);.\GeneratedFiles;$(QTDIR)\mkspecs/win32-msvc;.;$(QTDIR)\include;$(QTDIR)\include/QtMultimedia;$(QTDIR)\include/QtWidgets;$(QTDIR)\include/QtGui;$(QTDIR)\include/QtANGLE;$(QTDIR)\include/QtNetwork;$(QTDIR)\include/QtCore</IncludePath>
+    </QtMoc>
+  </ItemDefinitionGroup>
+  <ItemGroup>
+    <ClCompile Include="..\src\core\iop\cso_reader.cpp" />
+    <ClCompile Include="..\src\core\tests\iop\alu.cpp" />
+    <ClCompile Include="..\src\core\ee\bios_hle.cpp" />
+    <ClCompile Include="..\src\core\iop\cdvd.cpp" />
+    <ClCompile Include="..\src\core\ee\ipu\chromtable.cpp" />
+    <ClCompile Include="..\src\core\ee\ipu\codedblockpattern.cpp" />
+    <ClCompile Include="..\src\core\ee\cop0.cpp" />
+    <ClCompile Include="..\src\core\ee\cop1.cpp" />
+    <ClCompile Include="..\src\core\ee\ipu\dct_coeff.cpp" />
+    <ClCompile Include="..\src\core\ee\ipu\dct_coeff_table0.cpp" />
+    <ClCompile Include="..\src\core\ee\ipu\dct_coeff_table1.cpp" />
+    <ClCompile Include="..\src\core\ee\dmac.cpp" />
+    <ClCompile Include="..\src\core\jitcommon\emitter64.cpp" />
+    <ClCompile Include="..\src\core\ee\emotion.cpp" />
+    <ClCompile Include="..\src\core\ee\emotion_fpu.cpp" />
+    <ClCompile Include="..\src\core\ee\emotion_mmi.cpp" />
+    <ClCompile Include="..\src\core\ee\emotion_special.cpp" />
+    <ClCompile Include="..\src\core\ee\emotion_vu0.cpp" />
+    <ClCompile Include="..\src\core\ee\emotionasm.cpp" />
+    <ClCompile Include="..\src\core\ee\emotiondisasm.cpp" />
+    <ClCompile Include="..\src\core\ee\emotioninterpreter.cpp" />
+    <ClCompile Include="..\src\core\emulator.cpp" />
+    <ClCompile Include="..\src\qt\emuthread.cpp" />
+    <ClCompile Include="..\src\qt\emuwindow.cpp" />
+    <ClCompile Include="..\src\core\errors.cpp" />
+    <ClCompile Include="..\src\core\iop\gamepad.cpp" />
+    <ClCompile Include="..\src\core\gif.cpp" />
+    <ClCompile Include="..\src\core\gs.cpp" />
+    <ClCompile Include="..\src\core\gscontext.cpp" />
+    <ClCompile Include="..\src\core\gsmem.cpp" />
+    <ClCompile Include="..\src\core\gsregisters.cpp" />
+    <ClCompile Include="..\src\core\gsthread.cpp" />
+    <ClCompile Include="..\src\core\ee\intc.cpp" />
+    <ClCompile Include="..\src\core\iop\iop.cpp" />
+    <ClCompile Include="..\src\core\iop\iop_cop0.cpp" />
+    <ClCompile Include="..\src\core\iop\iop_dma.cpp" />
+    <ClCompile Include="..\src\core\iop\iop_interpreter.cpp" />
+    <ClCompile Include="..\src\core\iop\iop_timers.cpp" />
+    <ClCompile Include="..\src\core\ee\ipu\ipu.cpp" />
+    <ClCompile Include="..\src\core\ee\ipu\ipu_fifo.cpp" />
+    <ClCompile Include="..\src\core\jitcommon\ir_block.cpp" />
+    <ClCompile Include="..\src\core\jitcommon\ir_instr.cpp" />
+    <ClCompile Include="..\src\core\jitcommon\jitcache.cpp" />
+    <ClCompile Include="..\src\core\ee\ipu\lumtable.cpp" />
+    <ClCompile Include="..\src\core\ee\ipu\mac_addr_inc.cpp" />
+    <ClCompile Include="..\src\core\ee\ipu\mac_b_pic.cpp" />
+    <ClCompile Include="..\src\core\ee\ipu\mac_i_pic.cpp" />
+    <ClCompile Include="..\src\core\ee\ipu\mac_p_pic.cpp" />
+    <ClCompile Include="..\src\qt\main.cpp" />
+    <ClCompile Include="..\src\core\iop\memcard.cpp" />
+    <ClCompile Include="..\src\core\ee\ipu\motioncode.cpp" />
+    <ClCompile Include="..\src\core\serialize.cpp" />
+    <ClCompile Include="..\src\qt\settings.cpp" />
+    <ClCompile Include="..\src\core\sif.cpp" />
+    <ClCompile Include="..\src\core\iop\sio2.cpp" />
+    <ClCompile Include="..\src\core\iop\spu.cpp" />
+    <ClCompile Include="..\src\core\ee\timers.cpp" />
+    <ClCompile Include="..\src\core\ee\vif.cpp" />
+    <ClCompile Include="..\src\core\ee\ipu\vlc_table.cpp" />
+    <ClCompile Include="..\src\core\ee\vu.cpp" />
+    <ClCompile Include="..\src\core\ee\vu_disasm.cpp" />
+    <ClCompile Include="..\src\core\ee\vu_interpreter.cpp" />
+    <ClCompile Include="..\src\core\ee\vu_jit.cpp" />
+    <ClCompile Include="..\src\core\ee\vu_jit64.cpp" />
+    <ClCompile Include="..\src\core\ee\vu_jittrans.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="..\ext\libdeflate\libdeflate.h" />
+    <ClInclude Include="..\src\core\ee\bios_hle.hpp" />
+    <ClInclude Include="..\src\core\iop\cdvd.hpp" />
+    <ClInclude Include="..\src\core\ee\ipu\chromtable.hpp" />
+    <ClInclude Include="..\src\core\circularFIFO.hpp" />
+    <ClInclude Include="..\src\core\ee\ipu\codedblockpattern.hpp" />
+    <ClInclude Include="..\src\core\ee\cop0.hpp" />
+    <ClInclude Include="..\src\core\ee\cop1.hpp" />
+    <ClInclude Include="..\src\core\ee\ipu\dct_coeff.hpp" />
+    <ClInclude Include="..\src\core\ee\ipu\dct_coeff_table0.hpp" />
+    <ClInclude Include="..\src\core\ee\ipu\dct_coeff_table1.hpp" />
+    <ClInclude Include="..\src\core\ee\dmac.hpp" />
+    <ClInclude Include="..\src\core\iop\cso_reader.hpp" />
+    <ClInclude Include="..\src\core\jitcommon\emitter64.hpp" />
+    <ClInclude Include="..\src\core\ee\emotion.hpp" />
+    <ClInclude Include="..\src\core\ee\emotionasm.hpp" />
+    <ClInclude Include="..\src\core\ee\emotiondisasm.hpp" />
+    <ClInclude Include="..\src\core\ee\emotioninterpreter.hpp" />
+    <ClInclude Include="..\src\core\emulator.hpp" />
+    <QtMoc Include="..\src\qt\emuthread.hpp">
+    </QtMoc>
+    <QtMoc Include="..\src\qt\emuwindow.hpp">
+    </QtMoc>
+    <ClInclude Include="..\src\core\errors.hpp" />
+    <ClInclude Include="..\src\core\iop\gamepad.hpp" />
+    <ClInclude Include="..\src\core\gif.hpp" />
+    <ClInclude Include="..\src\core\gs.hpp" />
+    <ClInclude Include="..\src\core\gscontext.hpp" />
+    <ClInclude Include="..\src\core\gsmem.hpp" />
+    <ClInclude Include="..\src\core\gsregisters.hpp" />
+    <ClInclude Include="..\src\core\gsthread.hpp" />
+    <ClInclude Include="..\src\core\int128.hpp" />
+    <ClInclude Include="..\src\core\ee\intc.hpp" />
+    <ClInclude Include="..\src\core\iop\iop.hpp" />
+    <ClInclude Include="..\src\core\iop\iop_cop0.hpp" />
+    <ClInclude Include="..\src\core\iop\iop_dma.hpp" />
+    <ClInclude Include="..\src\core\iop\iop_interpreter.hpp" />
+    <ClInclude Include="..\src\core\iop\iop_timers.hpp" />
+    <ClInclude Include="..\src\core\ee\ipu\ipu.hpp" />
+    <ClInclude Include="..\src\core\ee\ipu\ipu_fifo.hpp" />
+    <ClInclude Include="..\src\core\jitcommon\ir_block.hpp" />
+    <ClInclude Include="..\src\core\jitcommon\ir_instr.hpp" />
+    <ClInclude Include="..\src\core\jitcommon\jitcache.hpp" />
+    <ClInclude Include="..\src\core\ee\ipu\lumtable.hpp" />
+    <ClInclude Include="..\src\core\ee\ipu\mac_addr_inc.hpp" />
+    <ClInclude Include="..\src\core\ee\ipu\mac_b_pic.hpp" />
+    <ClInclude Include="..\src\core\ee\ipu\mac_i_pic.hpp" />
+    <ClInclude Include="..\src\core\ee\ipu\mac_p_pic.hpp" />
+    <ClInclude Include="..\src\core\iop\memcard.hpp" />
+    <ClInclude Include="..\src\core\ee\ipu\motioncode.hpp" />
+    <ClInclude Include="..\src\qt\settings.hpp" />
+    <ClInclude Include="..\src\core\sif.hpp" />
+    <ClInclude Include="..\src\core\iop\sio2.hpp" />
+    <ClInclude Include="..\src\core\iop\spu.hpp" />
+    <ClInclude Include="..\src\core\ee\timers.hpp" />
+    <ClInclude Include="..\src\core\ee\vif.hpp" />
+    <ClInclude Include="..\src\core\ee\ipu\vlc_table.hpp" />
+    <ClInclude Include="..\src\core\ee\vu.hpp" />
+    <ClInclude Include="..\src\core\ee\vu_disasm.hpp" />
+    <ClInclude Include="..\src\core\ee\vu_interpreter.hpp" />
+    <ClInclude Include="..\src\core\ee\vu_jit.hpp" />
+    <ClInclude Include="..\src\core\ee\vu_jit64.hpp" />
+    <ClInclude Include="..\src\core\ee\vu_jittrans.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <CustomBuild Include="debug\moc_predefs.h.cbt">
+      <FileType>Document</FileType>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</ExcludedFromBuild>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(QTDIR)\mkspecs\features\data\dummy.cpp;%(AdditionalInputs)</AdditionalInputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">cl -Bx"$(QTDIR)\bin\qmake.exe" -nologo -Zc:wchar_t -FS -Zc:rvalueCast -Zc:inline -Zc:strictStrings -Zc:throwingNew -Zc:referenceBinding -Zi -MDd -W3 -w34100 -w34189 -w44996 -w44456 -w44457 -w44458 -wd4577 -wd4467 -E $(QTDIR)\mkspecs\features\data\dummy.cpp 2&gt;NUL &gt;debug\moc_predefs.h</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">Generate moc_predefs.h</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">debug\moc_predefs.h;%(Outputs)</Outputs>
+    </CustomBuild>
+    <CustomBuild Include="release\moc_predefs.h.cbt">
+      <FileType>Document</FileType>
+      <AdditionalInputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(QTDIR)\mkspecs\features\data\dummy.cpp;%(AdditionalInputs)</AdditionalInputs>
+      <Command Condition="'$(Configuration)|$(Platform)'=='Release|x64'">cl -Bx"$(QTDIR)\bin\qmake.exe" -nologo -Zc:wchar_t -FS -Zc:rvalueCast -Zc:inline -Zc:strictStrings -Zc:throwingNew -Zc:referenceBinding -O2 -MD -W3 -w34100 -w34189 -w44996 -w44456 -w44457 -w44458 -wd4577 -wd4467 -E $(QTDIR)\mkspecs\features\data\dummy.cpp 2&gt;NUL &gt;release\moc_predefs.h</Command>
+      <Message Condition="'$(Configuration)|$(Platform)'=='Release|x64'">Generate moc_predefs.h</Message>
+      <Outputs Condition="'$(Configuration)|$(Platform)'=='Release|x64'">release\moc_predefs.h;%(Outputs)</Outputs>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
+    </CustomBuild>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\src\core\jitcommon\ir_instrlist.inc" />
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="..\src\core\ee\vu_jit_asm.asm" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Condition="Exists('$(QtMsBuild)\qt.targets')">
+    <Import Project="$(QtMsBuild)\qt.targets" />
+  </ImportGroup>
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
+  </ImportGroup>
+  <ProjectExtensions>
+    <VisualStudio>
+      <UserProperties Qt5Version_x0020_x64="$(DefaultQtVersion)" />
+    </VisualStudio>
+  </ProjectExtensions>
+</Project>

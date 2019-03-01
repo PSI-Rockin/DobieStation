@@ -4,7 +4,7 @@
 
 #define VER_MAJOR 0
 #define VER_MINOR 0
-#define VER_REV 17
+#define VER_REV 18
 
 using namespace std;
 
@@ -322,6 +322,10 @@ void VectorUnit::load_state(ifstream &state)
     state.read((char*)&cycle_count, sizeof(cycle_count));
     state.read((char*)&finish_DIV_event, sizeof(finish_DIV_event));
     state.read((char*)&new_Q_instance.u, sizeof(new_Q_instance.u));
+    state.read((char*)&DIV_event_started, sizeof(DIV_event_started));
+    state.read((char*)&finish_EFU_event, sizeof(finish_EFU_event));
+    state.read((char*)&new_P_instance.u, sizeof(new_P_instance.u));
+    state.read((char*)&EFU_event_started, sizeof(EFU_event_started));    
 
     state.read((char*)&int_branch_delay, sizeof(int_branch_delay));
     state.read((char*)&int_backup_reg, sizeof(int_backup_reg));
@@ -332,7 +336,7 @@ void VectorUnit::load_state(ifstream &state)
     state.read((char*)&status_pipe, sizeof(status_pipe));
 
     //XGKICK
-    state.read((char*)&XGKICK_cycles, sizeof(XGKICK_cycles));
+    state.read((char*)&XGKICK_delay, sizeof(XGKICK_delay));
     state.read((char*)&GIF_addr, sizeof(GIF_addr));
     state.read((char*)&transferring_GIF, sizeof(transferring_GIF));
     state.read((char*)&XGKICK_stall, sizeof(XGKICK_stall));
@@ -353,9 +357,10 @@ void VectorUnit::load_state(ifstream &state)
     state.read((char*)&running, sizeof(running));
     state.read((char*)&PC, sizeof(PC));
     state.read((char*)&new_PC, sizeof(new_PC));
-    state.read((char*)&second_branch_PC, sizeof(second_branch_PC));
+    state.read((char*)&secondbranch_PC, sizeof(secondbranch_PC));
     state.read((char*)&second_branch_pending, sizeof(second_branch_pending));
     state.read((char*)&branch_on, sizeof(branch_on));
+    state.read((char*)&branch_on_delay, sizeof(branch_on_delay));
     state.read((char*)&finish_on, sizeof(finish_on));
     state.read((char*)&branch_delay_slot, sizeof(branch_delay_slot));
     state.read((char*)&ebit_delay_slot, sizeof(ebit_delay_slot));
@@ -381,6 +386,11 @@ void VectorUnit::save_state(ofstream &state)
     state.write((char*)&cycle_count, sizeof(cycle_count));
     state.write((char*)&finish_DIV_event, sizeof(finish_DIV_event));
     state.write((char*)&new_Q_instance.u, sizeof(new_Q_instance.u));
+    state.write((char*)&DIV_event_started, sizeof(DIV_event_started));
+    state.write((char*)&finish_EFU_event, sizeof(finish_EFU_event));
+    state.write((char*)&new_P_instance.u, sizeof(new_P_instance.u));
+    state.write((char*)&EFU_event_started, sizeof(EFU_event_started));
+
     state.write((char*)&int_branch_delay, sizeof(int_branch_delay));
     state.write((char*)&int_backup_reg, sizeof(int_backup_reg));
     state.write((char*)&int_backup_id, sizeof(int_backup_id));
@@ -389,7 +399,7 @@ void VectorUnit::save_state(ofstream &state)
     state.write((char*)&status_pipe, sizeof(status_pipe));
 
     //XGKICK
-    state.write((char*)&XGKICK_cycles, sizeof(XGKICK_cycles));
+    state.write((char*)&XGKICK_delay, sizeof(XGKICK_delay));
     state.write((char*)&GIF_addr, sizeof(GIF_addr));
     state.write((char*)&transferring_GIF, sizeof(transferring_GIF));
     state.write((char*)&XGKICK_stall, sizeof(XGKICK_stall));
@@ -410,9 +420,10 @@ void VectorUnit::save_state(ofstream &state)
     state.write((char*)&running, sizeof(running));
     state.write((char*)&PC, sizeof(PC));
     state.write((char*)&new_PC, sizeof(new_PC));
-    state.write((char*)&second_branch_PC, sizeof(second_branch_PC));
+    state.write((char*)&secondbranch_PC, sizeof(secondbranch_PC));
     state.write((char*)&second_branch_pending, sizeof(second_branch_pending));
     state.write((char*)&branch_on, sizeof(branch_on));
+    state.write((char*)&branch_on_delay, sizeof(branch_on_delay));
     state.write((char*)&finish_on, sizeof(finish_on));
     state.write((char*)&branch_delay_slot, sizeof(branch_delay_slot));
     state.write((char*)&ebit_delay_slot, sizeof(ebit_delay_slot));

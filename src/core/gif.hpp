@@ -60,6 +60,7 @@ class GraphicsInterface
         bool fifo_empty();
         bool fifo_draining();
         void dma_waiting(bool dma_waiting);
+        int get_active_path();
         bool path_active(int index);
         bool path_activepath3(int index);
         void resume_path3();
@@ -82,6 +83,11 @@ class GraphicsInterface
         void load_state(std::ifstream& state);
         void save_state(std::ofstream& state);
 };
+
+inline int GraphicsInterface::get_active_path()
+{
+    return active_path;
+}
 
 inline bool GraphicsInterface::path_active(int index)
 {

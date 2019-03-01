@@ -7,8 +7,11 @@ Based off reference by unknownbrackets:
 */
 
 #include "cso_reader.hpp"
-
+#ifdef _WIN32
+#include <../ext/libdeflate/libdeflate.h>
+#else
 #include <libdeflate.h>
+#endif
 #include <cstring>
 #include <cassert>
 

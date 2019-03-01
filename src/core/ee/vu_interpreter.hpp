@@ -6,6 +6,9 @@ namespace VU_Interpreter
 {
     void interpret(VectorUnit& vu, uint32_t upper_instr, uint32_t lower_instr);
 
+    void call_upper(VectorUnit& vu, uint32_t instr);
+    void call_lower(VectorUnit& vu, uint32_t instr);
+
     void upper(VectorUnit& vu, uint32_t instr);
     void addbc(VectorUnit& vu, uint32_t instr);
     void subbc(VectorUnit& vu, uint32_t instr);
@@ -65,6 +68,8 @@ namespace VU_Interpreter
     void suba(VectorUnit &vu, uint32_t instr);
     void msuba(VectorUnit &vu, uint32_t instr);
     void opmula(VectorUnit& vu, uint32_t instr);
+
+    bool updates_mac_flags(uint32_t upper_instr);
 
     void lower(VectorUnit& vu, uint32_t instr);
     void lower1(VectorUnit& vu, uint32_t instr);

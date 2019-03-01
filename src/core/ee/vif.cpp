@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <cstring>
 #include "vu_disasm.hpp"
+#include "vu_jit.hpp"
 #include "vif.hpp"
 
 #include "../gif.hpp"
@@ -37,6 +38,8 @@ void VectorInterface::reset()
     vif_stop = false;
     mark_detected = false;
     flush_stall = false;
+    if(vu->get_id() == 1)
+        VU_JIT::reset();
 }
 
 bool VectorInterface::check_vif_stall(uint32_t value)
@@ -81,7 +84,7 @@ void VectorInterface::update(int cycles)
     }
 
     while (!vif_stalled && run_cycles--)
-    {        
+    {
         if (wait_for_VU)
         {
             if (vu->is_running())
@@ -89,18 +92,21 @@ void VectorInterface::update(int cycles)
             wait_for_VU = false;
             handle_wait_cmd(wait_cmd_value);
         }
+
+        if (flush_stall)
+        {
+            int active_path = gif->get_active_path();
+            if (active_path == 1 || active_path == 2)
+                return;
+            flush_stall = false;
+        }
+
         if (wait_for_PATH3)
         {
             if (gif->path_activepath3(3))
                 return;
             wait_for_PATH3 = false;
         }
-		/*if (flush_stall)
-        {
-            if (gif->path_active(1))
-                return;
-            flush_stall = false;
-        }*/
 
         if(check_vif_stall(CODE) || !FIFO.size())
             return;
@@ -115,64 +121,69 @@ void VectorInterface::update(int cycles)
         {
             switch (command)
             {
-            case 0x20:
-                //STMASK
-                printf("[VIF] New MASK: $%08X\n", value);
-                MASK = value;
-                command = 0;
-                break;
-            case 0x30:
-                //STROW
-                printf("[VIF] ROW%d: $%08X\n", 4 - command_len, value);
-                ROW[4 - command_len] = value;
-                if (command_len <= 1)
+                case 0x20:
+                    //STMASK
+                    printf("[VIF] New MASK: $%08X\n", value);
+                    MASK = value;
                     command = 0;
-                break;
-            case 0x31:
-                //STCOL
-                printf("[VIF] COL%d: $%08X\n", 4 - command_len, value);
-                COL[4 - command_len] = value;
-                if (command_len <= 1)
-                    command = 0;
-                break;
-            case 0x4A:
-                //MPG
-                vu->write_instr(mpg.addr, value);
-                mpg.addr += 4;
-                if (command_len <= 1)
-                {
-                    //disasm_micromem();
-                    command = 0;
-                }
-                break;
-            case 0x50:
-            case 0x51:
-                //DIRECT/DIRECTHL
-                if (!gif->path_active(2))
-                    return;
+                    break;
+                case 0x30:
+                    //STROW
+                    printf("[VIF] ROW%d: $%08X\n", 4 - command_len, value);
+                    ROW[4 - command_len] = value;
+                    if (command_len <= 1)
+                        command = 0;
+                    break;
+                case 0x31:
+                    //STCOL
+                    printf("[VIF] COL%d: $%08X\n", 4 - command_len, value);
+                    COL[4 - command_len] = value;
+                    if (command_len <= 1)
+                        command = 0;
+                    break;
+                case 0x4A:
+                    //MPG
+                    vu->write_instr(mpg.addr, value);
+                    mpg.addr += 4;
+                    if (command_len <= 1)
+                    {
+                        disasm_micromem();
+                        command = 0;
+                        //Calculate the current program crc for the VU JIT after all microprograms have transferred
+                        if (vu->get_id() == 1)
+                        {
+                            VU_JIT::set_current_program(crc_microprogram());
+                        }
+                    }
+                    break;
+                case 0x50:
+                case 0x51:
+                    //DIRECT/DIRECTHL
+                    if (!gif->path_active(2))
+                        return;
 
-                buffer[buffer_size] = value;
-                buffer_size++;
-                if (buffer_size == 4)
-                {
-                    gif->send_PATH2(buffer);
-                    buffer_size = 0;
-                }
+                    buffer[buffer_size] = value;
+                    buffer_size++;
+                    if (buffer_size == 4)
+                    {
+                        gif->send_PATH2(buffer);
+                        buffer_size = 0;
+                    }
 
-                //If we've run out of data, deactivate the PATH2 transfer
-                if (command_len <= 1)
-                {
-                    gif->deactivate_PATH(2);
-                    command = 0;
-                }
-                break;
-            default:
-                if ((command & 0x60) == 0x60)
-                    handle_UNPACK(value);
-                else
-                {
-                    Errors::die("[VIF] Unhandled data for command $%02X\n", command);
-                }
+                    //If we've run out of data, deactivate the PATH2 transfer
+                    if (command_len <= 1)
+                    {
+                        gif->deactivate_PATH(2);
+                        command = 0;
+                    }
+                    break;
+                default:
+                    if ((command & 0x60) == 0x60)
+                        handle_UNPACK(value);
+                    else
+                    {
+                        Errors::die("[VIF] Unhandled data for command $%02X\n", command);
+                    }
             }
         }
         if (command_len)
@@ -260,6 +271,7 @@ void VectorInterface::decode_cmd(uint32_t value)
         case 0x13:
             printf("[VIF] FLUSHA\n");
             wait_for_VU = true;
+            flush_stall = true;
             wait_for_PATH3 = true;
             wait_cmd_value = value;
             command = 0;
@@ -273,6 +285,7 @@ void VectorInterface::decode_cmd(uint32_t value)
         case 0x15:
             printf("[VIF] MSCALF\n");
             wait_for_VU = true;
+            flush_stall = true;
             wait_cmd_value = value;
             command = 0;
             break;
@@ -305,6 +318,9 @@ void VectorInterface::decode_cmd(uint32_t value)
                 //printf("Command len: %d\n", command_len);
                 mpg.addr = imm * 8;
             }
+
+            VU_JIT::reset();
+
             wait_for_VU = true;
             wait_cmd_value = value;
             break;
@@ -371,7 +387,7 @@ void VectorInterface::MSCAL(uint32_t addr)
 void VectorInterface::init_UNPACK(uint32_t value)
 {
     uint32_t data_read;
-    //printf("[VIF] UNPACK: $%08X\n", value);
+    printf("[VIF] UNPACK: $%08X\n", value);
     unpack.addr = (imm & 0x3FF) * 16;
     unpack.sign_extend = !(imm & (1 << 14));
     unpack.masked = (command >> 4) & 0x1;
@@ -828,9 +844,9 @@ bool VectorInterface::transfer_DMAtag(uint128_t tag)
 
 bool VectorInterface::feed_DMA(uint128_t quad)
 {
-    printf("[VIF] Feed DMA: $%08X_%08X_%08X_%08X\n", quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
     if (FIFO.size() > 60)
         return false;
+    printf("[VIF] Feed DMA: $%08X_%08X_%08X_%08X\n", quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
     for (int i = 0; i < 4; i++)
         FIFO.push(quad._u32[i]);
     return true;
@@ -910,6 +926,23 @@ void VectorInterface::disasm_micromem()
         file << endl;
     }
     file.close();
+}
+
+#define POLY 0x82f63b78
+
+uint32_t VectorInterface::crc_microprogram()
+{
+    uint32_t crc = 0;
+    int len = 0x4000;
+    int addr = 0x0000;
+
+    crc = ~crc;
+    while (len--) {
+        crc ^= vu->read_instr<uint8_t>(addr++);
+        for (int k = 0; k < 8; k++)
+            crc = crc & 1 ? (crc >> 1) ^ POLY : crc >> 1;
+    }
+    return ~crc;
 }
 
 uint32_t VectorInterface::get_stat()

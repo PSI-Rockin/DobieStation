@@ -6,6 +6,8 @@
 #include "emulator.hpp"
 #include "errors.hpp"
 
+#include "ee/vu_jit.hpp"
+
 #define CYCLES_PER_FRAME 4900000
 #define VBLANK_START CYCLES_PER_FRAME * 0.75
 
@@ -88,19 +90,15 @@ void Emulator::run()
         vif1.update(cycles);
         gif.run(cycles);
         vu0.run(cycles);
-        vu1.run(cycles);
+        //vu1.run(cycles);
+        vu1.run_jit(cycles);
         cycles >>= 2;
         iop_timers.run(cycles);
         iop_dma.run(cycles);
-        iop.run(cycles);
         for (int i = 0; i < cycles; i++)
         {
-            if (iop_i_ctrl_delay)
-            {
-                iop_i_ctrl_delay--;
-                if (!iop_i_ctrl_delay)
-                    iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
-            }
+            iop.run(1);
+            iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
         }
         spu.update(cycles);
         spu2.update(cycles);
@@ -111,7 +109,7 @@ void Emulator::run()
             gs.set_VBLANK(true);
             timers.gate(true, true);
             cdvd.vsync();
-            //cpu.set_disassembly(frames == 263);
+            //cpu.set_disassembly(frames == 3037);
             printf("VSYNC FRAMES: %d\n", frames);
             gs.assert_VSYNC();
             frames++;
@@ -166,6 +164,8 @@ void Emulator::reset()
     vif1.reset();
     vu0.reset();
     vu1.reset();
+    VU_JIT::reset();
+
     MCH_DRD = 0;
     MCH_RICM = 0;
     rdram_sdevid = 0;
@@ -842,6 +842,8 @@ void Emulator::write128(uint32_t address, uint128_t value)
 
 void Emulator::ee_kputs(uint32_t param)
 {
+    if (param > 1024 * 1024 * 32)
+        return;
     param = *(uint32_t*)&RDRAM[param];
     printf("Param: $%08X\n", param);
     char c;
@@ -1313,28 +1315,11 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
             printf("[IOP] Write BD4: $%08X\n", value);
             sif.set_control_IOP(value);
             return;
-        case 0x1F801000:
-            return;
-        case 0x1F801004:
-            return;
-        case 0x1F801008:
-            return;
-        case 0x1F80100C:
-            return;
-        //BIOS ROM delay?
         case 0x1F801010:
+            printf("[IOP] SIF2/GPU SSBUS: $%08X\n", value);
             return;
         case 0x1F801014:
-            return;
-        case 0x1F801018:
-            return;
-        case 0x1F80101C:
-            return;
-        //Common delay?
-        case 0x1F801020:
-            return;
-        //RAM size?
-        case 0x1F801060:
+            printf("[IOP] SPU SSBUS: $%08X\n", value);
             return;
         case 0x1F801070:
             //printf("[IOP] I_STAT: $%08X\n", value);

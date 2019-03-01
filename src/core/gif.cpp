@@ -89,6 +89,15 @@ void GraphicsInterface::process_PACKED(uint128_t data)
             uint32_t s = data1 & 0xFFFFFF00;
             uint32_t t = (data1 >> 32) & 0xFFFFFF00;
             uint32_t q = data2 & 0xFFFFFF00;
+
+            if ((s & 0x7F800000) == 0x7F800000)
+                s = (s & 0x80000000) | 0x7F7FFFFF;
+
+            if ((t & 0x7F800000) == 0x7F800000)
+                t = (t & 0x80000000) | 0x7F7FFFFF;
+
+            if ((q & 0x7F800000) == 0x7F800000)
+                q = (q & 0x80000000) | 0x7F7FFFFF;
             internal_Q = *(float*)&q;
             gs->set_ST(s, t);
         }
@@ -288,13 +297,17 @@ bool GraphicsInterface::interrupt_path3(int index)
     if (index == 3)
         return true;
 
-    if ((intermittent_mode && path_status[3] >= 2) || path3_masked(3)) //IMAGE MODE or IDLE
+    //Only interrupt PATH3 if there's something else in the queue
+    if ((path_queue & (1 << 1)) || (path_queue & (1 << 2)))
     {
-        //printf("[GIF] Interrupting PATH3 with PATH%d\n", index);
-        deactivate_PATH(3);
-        //printf("Active Path Now %d\n", active_path);
-        path_queue |= 1 << 3;
-        return true;
+        if ((intermittent_mode && path_status[3] >= 2) || path3_masked(3)) //IMAGE MODE or IDLE
+        {
+            //printf("[GIF] Interrupting PATH3 with PATH%d\n", index);
+            deactivate_PATH(3);
+            //printf("Active Path Now %d\n", active_path);
+            path_queue |= 1 << 3;
+            return true;
+        }
     }
     return false;
 }
@@ -366,7 +379,7 @@ void GraphicsInterface::send_PATH3(uint128_t data)
         feed_GIF(data);
     else if (FIFO.size() < 16)
     {
-        //printf("Adding data to GIF FIFO\n");
+        //printf("Adding data to GIF FIFO (size: %d)\n", FIFO.size());
         FIFO.push(data);
     }
 }

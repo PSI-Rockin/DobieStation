@@ -21,6 +21,7 @@ void SIO2::reset()
     control = 0;
     new_command = false;
     RECV1 = 0x1D100;
+    port = 0;
 }
 
 uint8_t SIO2::read_serial()
@@ -71,6 +72,9 @@ void SIO2::write_serial(uint8_t value)
             printf("[SIO2] Get new send3 port: $%08X\n", send3[send3_port]);
             command_length = (send3[send3_port] >> 8) & 0x1FF;
             printf("[SIO2] Command len: %d\n", command_length);
+
+            port = send3[send3_port] & 0x1;
+            printf("[SIO2] Port: %d\n", port);
             send3_port++;
             new_command = true;
         }
@@ -102,6 +106,11 @@ void SIO2::write_device(uint8_t value)
         case SIO_DEVICE::PAD:
         {
             RECV1 = 0x1100;
+            if (port)
+            {
+                FIFO.push(0x00);
+                return;
+            }
             uint8_t reply;
             if (new_command)
             {

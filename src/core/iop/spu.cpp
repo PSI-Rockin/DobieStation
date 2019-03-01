@@ -554,10 +554,10 @@ void SPU::write_voice_reg(uint32_t addr, uint16_t value)
     switch (reg)
     {
         case 0:
-            printf("[SPU%d] Write V%d VOLL: $%04X\n", id, v, value);
+            //printf("[SPU%d] Write V%d VOLL: $%04X\n", id, v, value);
             break;
         case 2:
-            printf("[SPU%d] Write V%d VOLR: $%04X\n", id, v, value);
+            //printf("[SPU%d] Write V%d VOLR: $%04X\n", id, v, value);
             break;
         case 4:
             printf("[SPU%d] Write V%d PITCH: $%04X\n", id, v, value);

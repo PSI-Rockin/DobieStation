@@ -2576,6 +2576,15 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupIn
                 clut_lookup(entry, info.tex_color);
         }
             break;
+        case 0x30:
+        {
+            uint32_t color = read_PSMCT32Z_block(tex_base, width, u, v);
+            info.tex_color.r = color & 0xFF;
+            info.tex_color.g = (color >> 8) & 0xFF;
+            info.tex_color.b = (color >> 16) & 0xFF;
+            info.tex_color.a = color >> 24;
+        }
+            break;
         case 0x31:
         {
             uint32_t color = read_PSMCT32Z_block(tex_base, width, u, v);

@@ -571,7 +571,7 @@ string rsqrt(uint32_t instr)
     uint8_t fsf = (instr >> 21) & 0x3;
     uint32_t ft = (instr >> 16) & 0x1F;
     uint8_t ftf = (instr >> 23) & 0x3;
-    output << "rsqrt Q, vf" << fs << "." << get_fsf(fsf) << " vf" << ft << "." << get_fsf(ftf);
+    output << "rsqrt Q, vf" << fs << "." << get_fsf(fsf) << ", vf" << ft << "." << get_fsf(ftf);
     return output.str();
 }
 
