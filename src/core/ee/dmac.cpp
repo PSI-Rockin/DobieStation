@@ -740,6 +740,9 @@ uint8_t DMAC::read8(uint32_t address)
         case 0x10009001:
             reg = (channels[VIF1].control >> 8) & 0xFF;
             break;
+        case 0x1000D001:
+            reg = (channels[SPR_FROM].control >> 8) & 0xFF;
+            break;
         case 0x1000E000:
             reg = control.master_enable;
             reg |= control.cycle_stealing << 1;
@@ -906,6 +909,9 @@ void DMAC::write8(uint32_t address, uint8_t value)
             break;
         case 0x10009001:
             write32(0x10009000, (channels[VIF1].control & 0xFFFF00FF) | (value << 8));
+            break;
+        case 0x1000D001:
+            write32(0x1000D000, (channels[SPR_FROM].control & 0xFFFF00FF) | (value << 8));
             break;
         case 0x1000E000:
             control.master_enable = value & 0x1;
