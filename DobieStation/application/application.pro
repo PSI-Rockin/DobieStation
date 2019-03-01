@@ -86,7 +86,9 @@ SOURCES += ../../src/qt/main.cpp \
     ../../src/core/jitcommon/ir_block.cpp \
     ../../src/core/jitcommon/ir_instr.cpp \
     ../../src/core/ee/vu_jit.cpp \
-    ../../src/core/ee/vu_jit64.cpp
+    ../../src/core/ee/vu_jit64.cpp \
+    ../../src/qt/renderwidget.cpp \
+    ../../src/qt/settingswindow.cpp
 
 HEADERS += \
     ../../src/core/errors.hpp \
@@ -148,4 +150,6 @@ HEADERS += \
     ../../src/core/jitcommon/ir_block.hpp \
     ../../src/core/jitcommon/ir_instr.hpp \
     ../../src/core/ee/vu_jit.hpp \
-    ../../src/core/ee/vu_jit64.hpp
+    ../../src/core/ee/vu_jit64.hpp \
+    ../../src/qt/renderwidget.hpp \
+    ../../src/qt/settingswindow.hpp
