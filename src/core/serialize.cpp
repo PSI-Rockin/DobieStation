@@ -4,7 +4,7 @@
 
 #define VER_MAJOR 0
 #define VER_MINOR 0
-#define VER_REV 18
+#define VER_REV 19
 
 using namespace std;
 
