@@ -85,20 +85,20 @@ void VectorInterface::update(int cycles)
 
     while (!vif_stalled && run_cycles--)
     {
-        if (flush_stall)
-        {
-            int active_path = gif->get_active_path();
-            if (active_path == 1 || active_path == 2)
-                return;
-            flush_stall = false;
-        }
-
         if (wait_for_VU)
         {
             if (vu->is_running())
                 return;
             wait_for_VU = false;
             handle_wait_cmd(wait_cmd_value);
+        }
+
+        if (flush_stall)
+        {
+            int active_path = gif->get_active_path();
+            if (active_path == 1 || active_path == 2)
+                return;
+            flush_stall = false;
         }
 
         if (wait_for_PATH3)
