@@ -277,6 +277,8 @@ string upper_special(uint32_t PC, uint32_t instr)
             return upper_acc_i("mula", instr);
         case 0x1F:
             return clip(instr);
+        case 0x20:
+            return upper_acc_q("adda", instr);
         case 0x21:
             return upper_acc_q("madda", instr);
         case 0x23:
