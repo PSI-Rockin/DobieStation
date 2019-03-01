@@ -89,6 +89,15 @@ void GraphicsInterface::process_PACKED(uint128_t data)
             uint32_t s = data1 & 0xFFFFFF00;
             uint32_t t = (data1 >> 32) & 0xFFFFFF00;
             uint32_t q = data2 & 0xFFFFFF00;
+
+            if ((s & 0x7F800000) == 0x7F800000)
+                s = (s & 0x80000000) | 0x7F7FFFFF;
+
+            if ((t & 0x7F800000) == 0x7F800000)
+                t = (t & 0x80000000) | 0x7F7FFFFF;
+
+            if ((q & 0x7F800000) == 0x7F800000)
+                q = (q & 0x80000000) | 0x7F7FFFFF;
             internal_Q = *(float*)&q;
             gs->set_ST(s, t);
         }
