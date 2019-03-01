@@ -41,6 +41,7 @@ struct VU_InstrInfo
     int q_pipe_delay_trans_pass;
     int p_pipe_delay_int_pass;
     int p_pipe_delay_trans_pass;
+    uint64_t pipeline_state[2];
     uint64_t stall_state[4];
     uint8_t decoder_vf_write[2];
     uint8_t decoder_vf_write_field[2];

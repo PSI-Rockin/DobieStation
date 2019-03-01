@@ -2244,6 +2244,17 @@ void VU_JIT64::save_pc(VectorUnit &vu, IR::Instruction &instr)
     emitter.MOV32_IMM_MEM(instr.get_jump_dest(), REG_64::RAX);
 }
 
+void VU_JIT64::save_pipeline_state(VectorUnit &vu, IR::Instruction &instr)
+{
+    emitter.load_addr((uint64_t)&vu.pipeline_state[0], REG_64::RAX);
+    emitter.MOV64_OI(instr.get_source(), REG_64::R15);
+    emitter.MOV64_TO_MEM(REG_64::R15, REG_64::RAX);
+
+    emitter.load_addr((uint64_t)&vu.pipeline_state[1], REG_64::RAX);
+    emitter.MOV64_OI(instr.get_source2(), REG_64::R15);
+    emitter.MOV64_TO_MEM(REG_64::R15, REG_64::RAX);
+}
+
 void VU_JIT64::move_delayed_branch(VectorUnit &vu, IR::Instruction &instr)
 {
     //Copy over delayed branch information in to immediate branch information
@@ -2767,6 +2778,9 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
         case IR::Opcode::SavePC:
             save_pc(vu, instr);
             break;
+        case IR::Opcode::SavePipelineState:
+            save_pipeline_state(vu, instr);
+            break;
         case IR::Opcode::MoveDelayedBranch:
             move_delayed_branch(vu, instr);
             break;
@@ -2780,7 +2794,7 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
 
 void VU_JIT64::recompile_block(VectorUnit& vu, IR::Block& block)
 {
-    cache.alloc_block(vu.get_PC(), prev_pc, current_program);
+    cache.alloc_block(vu.get_PC(), prev_pc, current_program, vu.pipeline_state[0], vu.pipeline_state[1]);
 
     vu_branch = false;
     end_of_program = false;
@@ -2959,7 +2973,7 @@ extern "C"
 uint8_t* exec_block(VU_JIT64& jit, VectorUnit& vu)
 {
     //printf("[VU_JIT64] Executing block at $%04X, Prev PC $%04X Current Program %08X: recompiling\n", vu.PC, jit.prev_pc, jit.current_program);
-    if (jit.cache.find_block(vu.PC, jit.prev_pc, jit.current_program) == -1)
+    if (jit.cache.find_block(vu.PC, jit.prev_pc, jit.current_program, vu.pipeline_state[0], vu.pipeline_state[1]) == -1)
     {
         //printf("[VU_JIT64] Block not found at $%04X, Prev PC $%04X Current Program %08X: recompiling\n", vu.PC, jit.prev_pc, jit.current_program);
         IR::Block block = jit.ir.translate(vu, vu.get_instr_mem(), jit.prev_pc);

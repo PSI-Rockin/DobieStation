@@ -112,6 +112,7 @@ class VectorUnit
         uint32_t* CLIP_flags;
         uint64_t* MAC_flags; //pointer to last element in the pipeline; the register accessible to programs
         uint16_t new_MAC_flags; //to be placed in the pipeline
+        uint64_t pipeline_state[2];
 
         int int_branch_delay;
         uint16_t int_backup_reg;

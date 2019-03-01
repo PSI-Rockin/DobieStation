@@ -108,6 +108,8 @@ void VectorUnit::reset()
     new_MAC_flags = 0;
     new_Q_instance.u = 0;
     finish_DIV_event = 0;
+    pipeline_state[0] = 0;
+    pipeline_state[1] = 0;
     flush_pipes();
 
     int_backup_id = 0;

@@ -198,6 +198,21 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
             IR::Instruction instr(IR::Opcode::Stop);
             instr.set_jump_dest(cur_PC + 8);
             block.add_instr(instr);
+            
+            //Clear the pipeline state, stalls won't happen in a new microprogram
+            IR::Instruction pipeline;
+            pipeline.op = IR::Opcode::SavePipelineState;
+            pipeline.set_source(0);
+            pipeline.set_source2(0);
+            block.add_instr(pipeline);
+
+            //Flush P & Q Pipelines on E-Bit.  Not perfect emulation but close enough
+            IR::Instruction q_stall(IR::Opcode::UpdateQ);
+            block.add_instr(q_stall);
+
+            IR::Instruction p_stall(IR::Opcode::UpdateP);
+            block.add_instr(p_stall);
+
             //The branch will be taken instantly as we finish, I think
             //Only when in the delay slot of the ebit
             //if the branch was the ebit, this has already been done
@@ -215,6 +230,13 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
             savepc.op = IR::Opcode::SavePC;
             savepc.set_jump_dest(cur_PC);
             block.add_instr(savepc);
+
+            //Save the pipeline state, helps choose the correct block to load/compile next
+            IR::Instruction pipeline;
+            pipeline.op = IR::Opcode::SavePipelineState;
+            pipeline.set_source(instr_info[cur_PC].pipeline_state[0]);
+            pipeline.set_source2(instr_info[cur_PC].pipeline_state[1]);
+            block.add_instr(pipeline);
         }
 
         cur_PC += 8;
@@ -370,8 +392,8 @@ void VU_JitTranslator::update_pipeline(VectorUnit &vu, int cycles)
         stall_pipe[2] = stall_pipe[1];
         stall_pipe[1] = stall_pipe[0];
 
-        stall_pipe[0] = ((uint32_t)vu.decoder.vf_write[0] << 16) | ((uint32_t)vu.decoder.vf_write[1] << 24);
-        stall_pipe[0] |= ((uint64_t)vu.decoder.vf_write_field[0] << 32UL) | ((uint64_t)vu.decoder.vf_write_field[1] << 36UL);
+        stall_pipe[0] = ((uint64_t)(vu.decoder.vf_write[0] & 0x1F)) | ((uint64_t)(vu.decoder.vf_write[1] & 0x1F) << 5);
+        stall_pipe[0] |= ((uint64_t)(vu.decoder.vf_write_field[0] & 0xF) << 10) | ((uint64_t)(vu.decoder.vf_write_field[1] & 0xF) << 14);
     }
 }
 
@@ -388,14 +410,14 @@ void VU_JitTranslator::analyze_FMAC_stalls(VectorUnit &vu, uint16_t PC)
 
     for (int i = 0; i < 3; i++)
     {
-        uint8_t write0 = (stall_pipe[i] >> 16) & 0xFF;
-        uint8_t write1 = (stall_pipe[i] >> 24) & 0xFF;
+        uint8_t write0 = stall_pipe[i] & 0x1F;
+        uint8_t write1 = (stall_pipe[i] >> 5) & 0x1F;
 
         if (write0 == 0 && write1 == 0)
             continue;
 
-        uint8_t write0_field = (stall_pipe[i] >> 32) & 0xF;
-        uint8_t write1_field = (stall_pipe[i] >> 36) & 0xF;
+        uint8_t write0_field = (stall_pipe[i] >> 10) & 0xF;
+        uint8_t write1_field = (stall_pipe[i] >> 14) & 0xF;
         bool stall_found = false;
         for (int j = 0; j < 2; j++)
         {
@@ -462,22 +484,21 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
     if (prev_pc != 0xFFFFFFFF)
     {        
         printf("[VU_JIT64] Restoring state from %x\n", prev_pc);
-        stall_pipe[0] = instr_info[prev_pc].stall_state[0];
-        stall_pipe[1] = instr_info[prev_pc].stall_state[1];
-        stall_pipe[2] = instr_info[prev_pc].stall_state[2];
-        stall_pipe[3] = instr_info[prev_pc].stall_state[3];
+        stall_pipe[0] = vu.pipeline_state[0] & 0x3FFFF;
+        stall_pipe[1] = (vu.pipeline_state[0] >> 18) & 0x3FFFF;
+        stall_pipe[2] = (vu.pipeline_state[0] >> 36) & 0x3FFFF; 
+        stall_pipe[3] = vu.pipeline_state[1] & 0x3FFFF;
 
-        vu.decoder.vf_write[0] = instr_info[prev_pc].decoder_vf_write[0];
-        vu.decoder.vf_write[1] = instr_info[prev_pc].decoder_vf_write[1];
-        vu.decoder.vf_write_field[0] = instr_info[prev_pc].decoder_vf_write_field[0];
-        vu.decoder.vf_write_field[1] = instr_info[prev_pc].decoder_vf_write_field[1];
+        vu.decoder.vf_write[0] = vu.pipeline_state[0] & 0x1F;
+        vu.decoder.vf_write[1] = ((vu.pipeline_state[0] >> 5) & 0x1F);
+        vu.decoder.vf_write_field[0] = ((vu.pipeline_state[0] >> 10) & 0xF);
+        vu.decoder.vf_write_field[1] = ((vu.pipeline_state[0] >> 14) & 0xF);
 
-        q_pipe_delay = instr_info[prev_pc].q_pipe_delay_int_pass;
-        p_pipe_delay = instr_info[prev_pc].p_pipe_delay_int_pass;
+        q_pipe_delay = ((vu.pipeline_state[1] >> 18) & 0xF);
+        p_pipe_delay = ((vu.pipeline_state[1] >> 22) & 0x3F);
 
         branch_delay_slot = instr_info[prev_pc].branch_delay_slot;
         ebit_delay_slot = instr_info[prev_pc].ebit_delay_slot;
-
     }
     else //Else it's a new block so there is no previous state
     {
@@ -667,18 +688,14 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
     end_PC = PC - 8;
 
     //Save the state at the end of the block
-    instr_info[end_PC].stall_state[0] = stall_pipe[0];
-    instr_info[end_PC].stall_state[1] = stall_pipe[1];
-    instr_info[end_PC].stall_state[2] = stall_pipe[2];
-    instr_info[end_PC].stall_state[3] = stall_pipe[3];
+    instr_info[end_PC].pipeline_state[0] = stall_pipe[0] & 0x3FFFF;
+    instr_info[end_PC].pipeline_state[0] |= (stall_pipe[1] & 0x3FFFF) << 18;
+    instr_info[end_PC].pipeline_state[0] |= (stall_pipe[2] & 0x3FFFF) << 36;
+    instr_info[end_PC].pipeline_state[1] = stall_pipe[3] & 0x3FFFF;
 
-    instr_info[end_PC].decoder_vf_write[0] = vu.decoder.vf_write[0];
-    instr_info[end_PC].decoder_vf_write[1] = vu.decoder.vf_write[1];
-    instr_info[end_PC].decoder_vf_write_field [0] = vu.decoder.vf_write_field[0];
-    instr_info[end_PC].decoder_vf_write_field[1] = vu.decoder.vf_write_field[1];
+    instr_info[end_PC].pipeline_state[1] |= (q_pipe_delay & 0xF) << 18;
+    instr_info[end_PC].pipeline_state[1] |= (p_pipe_delay & 0x3F) << 22;
 
-    instr_info[end_PC].q_pipe_delay_int_pass = q_pipe_delay;
-    instr_info[end_PC].p_pipe_delay_int_pass = p_pipe_delay;
     instr_info[end_PC].branch_delay_slot = branch_delay_slot;
     instr_info[end_PC].ebit_delay_slot = ebit_delay_slot;
 }

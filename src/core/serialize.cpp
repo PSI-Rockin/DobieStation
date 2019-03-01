@@ -335,6 +335,8 @@ void VectorUnit::load_state(ifstream &state)
     state.read((char*)&status_value, sizeof(status_value));
     state.read((char*)&status_pipe, sizeof(status_pipe));
 
+    state.read((char*)&pipeline_state, sizeof(pipeline_state));
+
     //XGKICK
     state.read((char*)&XGKICK_delay, sizeof(XGKICK_delay));
     state.read((char*)&GIF_addr, sizeof(GIF_addr));
@@ -397,6 +399,8 @@ void VectorUnit::save_state(ofstream &state)
     state.write((char*)&status, sizeof(status));
     state.write((char*)&status_value, sizeof(status_value));
     state.write((char*)&status_pipe, sizeof(status_pipe));
+
+    state.write((char*)&pipeline_state, sizeof(pipeline_state));
 
     //XGKICK
     state.write((char*)&XGKICK_delay, sizeof(XGKICK_delay));
