@@ -320,7 +320,7 @@ void GraphicsInterface::request_PATH(int index, bool canInterruptPath3)
 
 void GraphicsInterface::deactivate_PATH(int index)
 {
-    printf("[GIF] PATH%d deactivated\n", index);
+    //printf("[GIF] PATH%d deactivated\n", index);
     path_queue &= ~(1 << index);
     if (active_path == index)
     {
@@ -333,7 +333,7 @@ void GraphicsInterface::deactivate_PATH(int index)
             {
                 path_queue &= ~bit;
                 active_path = path;
-                printf("[GIF] PATH%d Activated from queue\n", active_path);
+                //printf("[GIF] PATH%d Activated from queue\n", active_path);
                 break;
             }
         }
@@ -370,7 +370,7 @@ void GraphicsInterface::send_PATH3(uint128_t data)
         feed_GIF(data);
     else if (FIFO.size() < 16)
     {
-        printf("Adding data to GIF FIFO (size: %d)\n", FIFO.size());
+        //printf("Adding data to GIF FIFO (size: %d)\n", FIFO.size());
         FIFO.push(data);
     }
 }
