@@ -263,9 +263,7 @@ void EmuWindow::create_menu()
 
 bool EmuWindow::load_bios()
 {
-    QSettings& settings = Settings::get_instance();
-
-    QFile bios_file(settings.value("bios", "").toString());
+    QFile bios_file(Settings::get_bios_path());
     if (!bios_file.open(QIODevice::ReadOnly))
     {
         bios_error("Failed to to open bios file\n");
