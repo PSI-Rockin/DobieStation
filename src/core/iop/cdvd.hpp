@@ -102,6 +102,7 @@ class CDVD_Drive
         void prepare_S_outdata(int amount);
 
         void read_CD_sector();
+        void fill_CDROM_sector();
         void read_DVD_sector();
         void get_dual_layer_info(bool& dual_layer, uint64_t& sector);
 

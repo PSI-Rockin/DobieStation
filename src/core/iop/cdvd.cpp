@@ -33,7 +33,6 @@ CDVD_Drive::~CDVD_Drive()
     container_close();
 }
 
-
 bool CDVD_Drive::container_open(const char* file_path)
 {
     if (container == CDVD_CONTAINER::ISO)
@@ -853,10 +852,43 @@ void CDVD_Drive::N_command_readkey(uint32_t arg)
 void CDVD_Drive::read_CD_sector()
 {
     printf("[CDVD] Read CD sector - Sector: %lu Size: %lu\n", current_sector, block_size);
-    container_read(read_buffer, block_size);
+    switch (block_size)
+    {
+        case 2340:
+            fill_CDROM_sector();
+            break;
+        default:
+            container_read(read_buffer, block_size);
+            break;
+    }
+    //container_read(read_buffer, block_size);
     read_bytes_left = block_size;
     current_sector++;
     sectors_left--;
+}
+
+void CDVD_Drive::fill_CDROM_sector()
+{
+    uint8_t temp_buffer[2352];
+
+    uint64_t read_sector = current_sector + 150;
+    uint32_t minutes = read_sector / 4500;
+    read_sector -= (minutes * 4500);
+    uint32_t seconds = read_sector / 75;
+    uint32_t fragments = read_sector - (seconds * 75);
+
+    printf("Minutes: %d Seconds: %d Fragments: %d\n", minutes, seconds, fragments);
+
+    memset(temp_buffer, 0, 2340);
+    for (int i = 0x1; i < 0xB; i++)
+        temp_buffer[i] = 0xFF;
+    temp_buffer[0xC] = itob(minutes);
+    temp_buffer[0xD] = itob(seconds);
+    temp_buffer[0xE] = itob(fragments);
+    temp_buffer[0xF] = 1;
+    container_read(&temp_buffer[0x10 + 0x8], 2048);
+
+    memcpy(read_buffer, temp_buffer + 0xC, 2340);
 }
 
 void CDVD_Drive::read_DVD_sector()
