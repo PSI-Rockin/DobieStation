@@ -457,7 +457,13 @@ void EmuWindow::contextMenuEvent(QContextMenuEvent* event)
 void EmuWindow::open_file_no_skip()
 {
     emu_thread.pause(PAUSE_EVENT::FILE_DIALOG);
-    QString file_name = QFileDialog::getOpenFileName(this, tr("Open Rom"), "", tr("ROM Files (*.elf *.iso *.cso)"));
+    QString file_name = QFileDialog::getOpenFileName(
+        this, tr("Open Rom"), Settings::get_last_used_path(),
+        tr("ROM Files (*.elf *.iso *.cso)")
+    );
+
+    Settings::set_last_used_path(file_name);
+
     load_exec(file_name.toStdString().c_str(), false);
     emu_thread.unpause(PAUSE_EVENT::FILE_DIALOG);
 }
@@ -465,7 +471,13 @@ void EmuWindow::open_file_no_skip()
 void EmuWindow::open_file_skip()
 {
     emu_thread.pause(PAUSE_EVENT::FILE_DIALOG);
-    QString file_name = QFileDialog::getOpenFileName(this, tr("Open Rom"), "", tr("ROM Files (*.elf *.iso *.cso)"));
+    QString file_name = QFileDialog::getOpenFileName(
+        this, tr("Open Rom"), Settings::get_last_used_path(),
+        tr("ROM Files (*.elf *.iso *.cso)")
+    );
+
+    Settings::set_last_used_path(file_name);
+
     load_exec(file_name.toStdString().c_str(), true);
     emu_thread.unpause(PAUSE_EVENT::FILE_DIALOG);
 }

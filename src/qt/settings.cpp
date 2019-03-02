@@ -1,3 +1,5 @@
+#include <QDir>
+
 #include "settings.hpp"
 
 namespace Settings
@@ -14,6 +16,14 @@ namespace Settings
         settings.setValue("bios", bios);
     }
 
+    void set_last_used_path(QString path)
+    {
+        QFileInfo info(path);
+
+        if(!info.path().isEmpty())
+            settings.setValue("last_directory", info.path());
+    }
+
     void set_vu1_jit_enabled(bool enabled)
     {
         settings.setValue("vu1_jit", enabled);
@@ -24,9 +34,18 @@ namespace Settings
         return settings.value("bios", "").toString();
     }
 
+    QString get_last_used_path()
+    {
+        QString path = settings.value(
+            "last_directory", QDir::homePath()
+        ).toString();
+
+        return path;
+    }
+
     bool get_vu1_jit_enabled()
     {
-        return settings.value("vu1_jit", "").toBool();
+        return settings.value("vu1_jit", true).toBool();
     }
 
     void save()

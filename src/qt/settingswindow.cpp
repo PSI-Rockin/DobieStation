@@ -68,8 +68,11 @@ GeneralTab::GeneralTab(QWidget* parent)
 void GeneralTab::browse_for_bios()
 {
     QString path = QFileDialog::getOpenFileName(
-        this, tr("Open Bios"), "", tr("Bios File (*.bin)")
+        this, tr("Open Bios"), Settings::get_last_used_path(),
+        tr("Bios File (*.bin)")
     );
+
+    Settings::set_last_used_path(path);
 
     if(!path.isEmpty())
         bios_path = path;
