@@ -1511,7 +1511,7 @@ void VU_JitTranslator::lower1_special(std::vector<IR::Instruction> &instrs, uint
             instr.set_base((lower >> 11) & 0xF);
             instr.set_source(cur_PC);
             instr.set_dest(trans_branch_delay_slot);
-            instr.set_jump_dest(trans_branch_delay_slot);
+            instr.set_jump_dest(trans_ebit_delay_slot);
             break;
         case 0x71:
             //ERSADD
