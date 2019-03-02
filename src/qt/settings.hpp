@@ -1,15 +1,19 @@
 #ifndef SETTINGS_H
 #define SETTINGS_H
 
+#include <QSettings>
 #include <QString>
 
 namespace Settings
 {
-    extern QString bios_path;
+    QSettings& get_instance();
 
-    extern char* as_char(QString q_str);
-    extern bool load();
-    extern bool save();
+    void set_bios_path(QString bios);
+    void set_vu1_jit_enabled(bool enabled);
+
+    QString get_bios_path();
+    bool get_vu1_jit_enabled();
+
+    void save();
 };
-
 #endif

@@ -83,10 +83,7 @@ int EmuWindow::init(int argc, char** argv)
     ARGBEGIN {
         case 'b':
             bios_name = ARGF();
-
-            // Store the bios path, converting to a QString along the way.
-            Settings::bios_path = QString::fromLocal8Bit(bios_name);
-            Settings::save();
+            Settings::set_bios_path(QString::fromLocal8Bit(bios_name));
             break;
         case 'f':
             file_name = ARGF();
@@ -119,6 +116,9 @@ int EmuWindow::init(int argc, char** argv)
         if (load_exec(file_name, skip_BIOS))
             return 1;
     }
+
+    Settings::save();
+
     return 0;
 }
 
@@ -263,9 +263,9 @@ void EmuWindow::create_menu()
 
 bool EmuWindow::load_bios()
 {
-    Settings::load();
+    QSettings& settings = Settings::get_instance();
 
-    QFile bios_file(Settings::bios_path);
+    QFile bios_file(settings.value("bios", "").toString());
     if (!bios_file.open(QIODevice::ReadOnly))
     {
         bios_error("Failed to to open bios file\n");

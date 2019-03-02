@@ -8,6 +8,7 @@ class GeneralTab : public QWidget
     Q_OBJECT
 public:
     QString bios_path = nullptr;
+    bool vu1_jit = false;
 
     explicit GeneralTab(QWidget* parent = nullptr);
 private slots:

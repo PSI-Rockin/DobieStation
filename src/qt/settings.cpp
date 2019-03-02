@@ -1,37 +1,37 @@
-#include <QSettings>
-#include <QString>
-
 #include "settings.hpp"
 
 namespace Settings
 {
-    QString bios_path;
+    static QSettings settings("PSI", "Dobiestation");
 
-    // If we had a files for QT helper functions, this could go there, but here works for now.
-    // https://wiki.qt.io/Technical_FAQ#How_can_I_convert_a_QString_to_char.2A_and_vice_versa.3F
-    char* as_char(QString q_str)
+    QSettings& get_instance()
     {
-        QByteArray ba = q_str.toLocal8Bit();
-        return ba.data();
+        return settings;
     }
 
-    bool load()
+    void set_bios_path(QString bios)
     {
-        QSettings conf("PSI", "Dobiestation");
-
-        bios_path = conf.value("bios", "").toString();
-        printf("Loaded config! Bios: %s\n", qPrintable(bios_path));
-        return true;
+        settings.setValue("bios", bios);
     }
 
-    bool save()
+    void set_vu1_jit_enabled(bool enabled)
     {
-        QSettings conf("PSI", "Dobiestation");
+        settings.setValue("vu1_jit", enabled);
+    }
 
-        conf.setValue("bios", bios_path);
-        conf.sync();
+    QString get_bios_path()
+    {
+        return settings.value("bios", "").toString();
+    }
 
-        printf("Saved config! Bios: %s\n", qPrintable(bios_path));
-        return true;
+    bool get_vu1_jit_enabled()
+    {
+        return settings.value("vu1_jit", "").toBool();
+    }
+
+    void save()
+    {
+        settings.sync();
+        printf("saved!\n");
     }
 };
