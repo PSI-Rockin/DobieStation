@@ -109,14 +109,19 @@ void vu_update_xgkick(VectorUnit& vu, int cycles)
     {
         vu.gif->request_PATH(1, true);
         if (!vu.gif->path_active(1))
-            vu.XGKICK_delay = std::max(0, vu.XGKICK_delay - cycles);
-        while (cycles > 0 && vu.gif->path_active(1))
         {
-            cycles--;
-            if (vu.XGKICK_delay)
-                vu.XGKICK_delay--;
-            else
-                vu.handle_XGKICK();
+            vu.XGKICK_delay = std::max(0, vu.XGKICK_delay - cycles);
+        }
+        else
+        {
+            while (cycles > 0 && vu.gif->path_active(1))
+            {
+                cycles--;
+                if (vu.XGKICK_delay)
+                    vu.XGKICK_delay--;
+                else
+                    vu.handle_XGKICK();
+            }
         }
     }
 }

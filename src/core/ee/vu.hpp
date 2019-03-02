@@ -6,7 +6,7 @@
 
 #include "../int128.hpp"
 
-#define XGKICK_INIT_DELAY 3
+#define XGKICK_INIT_DELAY 2
 
 union alignas(16) VU_R
 {
@@ -64,6 +64,7 @@ class VectorUnit
 {
     private:
         GraphicsInterface* gif;
+        VectorUnit* vu1;
         int id;
         uint16_t mem_mask; //0xFFF for VU0, 0x3FFF for VU1
         Emulator* e;
@@ -163,7 +164,8 @@ class VectorUnit
         void mscal(uint32_t addr);
         void end_execution();
         void stop();
-        void reset();
+        void reset(bool softreset = false);
+        void vu1_link(VectorUnit* vu1ptr);
 
         void backup_vf(bool newvf, int index);
         void restore_vf(bool newvf, int index);
@@ -178,6 +180,7 @@ class VectorUnit
 
         bool is_running();
         uint16_t get_PC();
+        uint64_t get_CycleCount();
         void set_PC(uint32_t newPC);
         uint32_t get_gpr_u(int index, int field);
         uint16_t get_int(int index);
@@ -369,6 +372,11 @@ inline int VectorUnit::get_id()
 inline uint16_t VectorUnit::get_PC()
 {
     return PC;
+}
+
+inline uint64_t VectorUnit::get_CycleCount()
+{
+    return cycle_count;
 }
 
 inline void VectorUnit::set_PC(uint32_t newPC)

@@ -28,6 +28,7 @@ Emulator::Emulator() :
     SPU_RAM = nullptr;
     ELF_file = nullptr;
     ELF_size = 0;
+    vu0.vu1_link(&vu1);
     ee_log.open("ee_log.txt", std::ios::out);
 }
 
@@ -89,7 +90,10 @@ void Emulator::run()
         vif0.update(cycles);
         vif1.update(cycles);
         gif.run(cycles);
-        vu0.run(cycles);
+        if ((vu1.get_CycleCount() - vu0.get_CycleCount()) >= 0)
+        {
+            vu0.run(cycles);
+        }
         //vu1.run(cycles);
         vu1.run_jit(cycles);
         cycles >>= 2;

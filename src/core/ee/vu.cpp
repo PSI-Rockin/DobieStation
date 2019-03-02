@@ -87,14 +87,15 @@ VectorUnit::VectorUnit(int id, Emulator* e) : id(id), e(e), gif(nullptr)
     CLIP_flags = &CLIP_pipeline[3];
 }
 
-void VectorUnit::reset()
+void VectorUnit::reset(bool softreset)
 {
     status = 0;
     status_pipe = 0;
     clip_flags = 0;
     PC = 0;
-    cycle_count = 1; //Set to 1 to prevent spurious events from occurring during execution
-    run_event = 0;
+    I.u = 0;
+    
+    decoder.reset();
     running = false;
     finish_on = false;
     branch_on = false;
@@ -107,6 +108,7 @@ void VectorUnit::reset()
     XGKICK_delay = 0;
     new_MAC_flags = 0;
     new_Q_instance.u = 0;
+    new_P_instance.u = 0;
     finish_DIV_event = 0;
     pipeline_state[0] = 0;
     pipeline_state[1] = 0;
@@ -128,6 +130,16 @@ void VectorUnit::reset()
     {
         int_gpr[i].u = 0;
     }
+
+    if (!softreset)
+    {
+        cycle_count = 1; //Set to 1 to prevent spurious events from occurring during execution
+        run_event = cycle_count;
+    }
+}
+void VectorUnit::vu1_link(VectorUnit* vu1ptr)
+{
+    vu1 = vu1ptr;
 }
 
 void VectorUnit::clear_interlock()
@@ -171,76 +183,86 @@ void VectorUnit::flush_pipes()
 
 void VectorUnit::run(int cycles)
 {
-    int cycles_to_run = cycles;
-    while (running && cycles_to_run)
+    int cycles_to_run = 0;
+    if (!running)
     {
-        cycle_count++;
-        update_mac_pipeline();
-        update_DIV_EFU_pipes();
+        cycle_count += cycles;
+    }
+    else
+    {
+        cycles_to_run = cycle_count + cycles;
 
-        if (int_branch_delay)
-            int_branch_delay--;
-
-        if (XGKICK_stall)
-            break;
-
-        if (transferring_GIF)
+        while (running && cycles_to_run > cycle_count)
         {
-            if (XGKICK_delay)
-                XGKICK_delay--;
-            else if(gif->path_active(1))
-                handle_XGKICK();
-        }
+            cycle_count++;
+            update_mac_pipeline();
+            update_DIV_EFU_pipes();
 
-        uint32_t upper_instr = *(uint32_t*)&instr_mem.m[PC + 4];
-        uint32_t lower_instr = *(uint32_t*)&instr_mem.m[PC];
-        //printf("[$%08X] $%08X:$%08X\n", PC, upper_instr, lower_instr);
-        VU_Interpreter::interpret(*this, upper_instr, lower_instr);
+            if (int_branch_delay)
+                int_branch_delay--;
 
-        /*if (PC == 0x13B8 || PC == 0x1380)
-        {
-            for (int i = 0; i < 32; i++)
+            if (XGKICK_stall)
+                break;
+
+            if (transferring_GIF)
             {
-                printf("vf%d: (%f, %f, %f, %f)\n", i, gpr[i].f[3], gpr[i].f[2], gpr[i].f[1], gpr[i].f[0]);
-                printf("vf%d: ($%08X, $%08X, $%08X, $%08X)\n", i, gpr[i].u[3], gpr[i].u[2], gpr[i].u[1], gpr[i].u[0]);
+                if (XGKICK_delay)
+                    XGKICK_delay--;
+                else if (gif->path_active(1))
+                    handle_XGKICK();
             }
-        }*/
 
-        PC += 8;
+            uint32_t upper_instr = *(uint32_t*)&instr_mem.m[PC + 4];
+            uint32_t lower_instr = *(uint32_t*)&instr_mem.m[PC];
+            //printf("[$%08X] $%08X:$%08X\n", PC, upper_instr, lower_instr);
+            VU_Interpreter::interpret(*this, upper_instr, lower_instr);
 
-        if (branch_on)
-        {
-            if (!branch_delay_slot)
+            /*if (PC == 0x13B8 || PC == 0x1380)
             {
-                PC = new_PC;
-                if (second_branch_pending)
+                for (int i = 0; i < 32; i++)
                 {
-                    new_PC = secondbranch_PC;
-                    second_branch_pending = false;
+                    printf("vf%d: (%f, %f, %f, %f)\n", i, gpr[i].f[3], gpr[i].f[2], gpr[i].f[1], gpr[i].f[0]);
+                    printf("vf%d: ($%08X, $%08X, $%08X, $%08X)\n", i, gpr[i].u[3], gpr[i].u[2], gpr[i].u[1], gpr[i].u[0]);
+                }
+            }*/
+
+            PC += 8;
+
+            if (branch_on)
+            {
+                if (!branch_delay_slot)
+                {
+                    PC = new_PC;
+                    if (second_branch_pending)
+                    {
+                        new_PC = secondbranch_PC;
+                        second_branch_pending = false;
+                    }
+                    else
+                        branch_on = false;
                 }
                 else
-                    branch_on = false;
+                    branch_delay_slot--;
             }
-            else
-                branch_delay_slot--;
-        }
-        if (finish_on)
-        {
-            if (!ebit_delay_slot)
+            if (finish_on)
             {
-                printf("[VU] Ended execution!\n");
-                running = false;
-                finish_on = false;
-                flush_pipes();
+                if (!ebit_delay_slot)
+                {
+                    printf("[VU] Ended execution!\n");
+                    running = false;
+                    finish_on = false;
+                    flush_pipes();
+                }
+                else
+                    ebit_delay_slot--;
             }
-            else
-                ebit_delay_slot--;
         }
-        cycles_to_run--;
+        if(cycles_to_run > cycle_count)
+            cycle_count += cycles_to_run - cycle_count;
     }
-
     if (transferring_GIF)
     {
+        cycles_to_run = cycles;
         if (gif->path_active(1))
         {
             while (cycles_to_run && transferring_GIF)
@@ -260,12 +282,13 @@ void VectorUnit::run(int cycles)
 void VectorUnit::run_jit(int cycles)
 {
     cycle_count += cycles;
-    if ((!running || XGKICK_stall) && transferring_GIF)
+    if ((!running || XGKICK_stall) && transferring_GIF && run_event < cycle_count)
     {
         gif->request_PATH(1, true);
-        while (cycles > 0 && gif->path_active(1))
+        int kick_cycles = cycle_count - run_event;
+        while (kick_cycles > 0 && gif->path_active(1))
         {
-            cycles--;
+            kick_cycles--;
             handle_XGKICK();
         }
     }
@@ -679,7 +702,9 @@ void VectorUnit::ctc(int index, uint32_t value)
             break;
         case 28:
             if (value & 0x2 && id == 0)
-                reset();
+                reset(true);
+            if (value & 0x200)
+                vu1->reset(true);
             FBRST = value & ~0x303;
             break;
         default:
