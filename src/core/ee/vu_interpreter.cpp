@@ -727,6 +727,9 @@ void upper_special(VectorUnit &vu, uint32_t instr)
         case 0x1F:
             clip(vu, instr);
             break;
+        case 0x20:
+            addaq(vu, instr);
+            break;
         case 0x21:
             maddaq(vu, instr);
             break;
@@ -1009,6 +1012,16 @@ void addai(VectorUnit &vu, uint32_t instr)
     vu.decoder.vf_read0[0] = source;
     vu.decoder.vf_read0_field[0] = field;
     upper_op = &VectorUnit::addai;
+}
+
+void addaq(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+
+    vu.decoder.vf_read0[0] = source;
+    vu.decoder.vf_read0_field[0] = field;
+    upper_op = &VectorUnit::addaq;
 }
 
 void maddaq(VectorUnit &vu, uint32_t instr)

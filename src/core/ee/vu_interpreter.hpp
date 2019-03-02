@@ -57,6 +57,7 @@ namespace VU_Interpreter
     void mulaq(VectorUnit& vu, uint32_t instr);
     void clip(VectorUnit& vu, uint32_t instr);
     void addai(VectorUnit& vu, uint32_t instr);
+    void addaq(VectorUnit& vu, uint32_t instr);
     void maddaq(VectorUnit& vu, uint32_t instr);
     void maddai(VectorUnit& vu, uint32_t instr);
     void msubaq(VectorUnit& vu, uint32_t instr);

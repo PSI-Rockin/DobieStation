@@ -16,3 +16,4 @@ release
 CmakeSettings.json
 Makefile*
 *.snp
+*.cso
