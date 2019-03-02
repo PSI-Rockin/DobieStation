@@ -525,6 +525,8 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
         instr_info[PC].update_mac_pipeline = false;
         instr_info[PC].advance_mac_pipeline = false;
         instr_info[PC].flag_instruction = FlagInstr_None;
+        instr_info[PC].branch_delay_slot = false;
+        instr_info[PC].ebit_delay_slot = false;
 
         uint32_t upper = *(uint32_t*)&instr_mem[PC + 4];
         uint32_t lower = *(uint32_t*)&instr_mem[PC];
@@ -573,6 +575,8 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
                 if (block_end)
                     Errors::print_warning("[VU_IR] Branch in delay slot\n");
                 branch_delay_slot = true;
+                //In case of branch on XGKick stall
+                instr_info[PC].branch_delay_slot = branch_delay_slot;
 
                 //Conditional branches only
                 if (((lower >> 25) & 0xF) >= 0x8 && PC > vu.get_PC())
@@ -680,6 +684,8 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
         if (upper & (1 << 30))
         {
             ebit_delay_slot = true;
+            //In case of E-Bit on XGKick stall
+            instr_info[PC].ebit_delay_slot = ebit_delay_slot;
         }
 
         PC += 8;
@@ -1505,6 +1511,7 @@ void VU_JitTranslator::lower1_special(std::vector<IR::Instruction> &instrs, uint
             instr.set_base((lower >> 11) & 0xF);
             instr.set_source(cur_PC);
             instr.set_dest(trans_branch_delay_slot);
+            instr.set_jump_dest(trans_branch_delay_slot);
             break;
         case 0x71:
             //ERSADD

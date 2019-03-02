@@ -1145,6 +1145,9 @@ void VU_JIT64::max_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     REG_64 bc_reg = alloc_sse_reg(vu, instr.get_source2(), REG_STATE::READ_WRITE);
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
 
+    clamp_vfreg(source);
+    clamp_vfreg(bc_reg);
+
     uint8_t bc = instr.get_bc();
     bc |= (bc << 6) | (bc << 4) | (bc << 2);
 
@@ -1164,6 +1167,9 @@ void VU_JIT64::max_vectors(VectorUnit &vu, IR::Instruction &instr)
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
     REG_64 temp = REG_64::XMM0;
 
+    clamp_vfreg(op1);
+    clamp_vfreg(op2);
+
     emitter.MOVAPS_REG(op1, temp);
     emitter.MAXPS(op2, temp);
     emitter.BLENDPS(field, temp, dest);
@@ -1175,6 +1181,9 @@ void VU_JIT64::min_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ_WRITE);
     REG_64 bc_reg = alloc_sse_reg(vu, instr.get_source2(), REG_STATE::READ_WRITE);
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
+
+    clamp_vfreg(source);
+    clamp_vfreg(bc_reg);
 
     uint8_t bc = instr.get_bc();
     bc |= (bc << 6) | (bc << 4) | (bc << 2);
@@ -1194,6 +1203,9 @@ void VU_JIT64::min_vectors(VectorUnit &vu, IR::Instruction &instr)
     REG_64 op2 = alloc_sse_reg(vu, instr.get_source2(), REG_STATE::READ_WRITE);
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
     REG_64 temp = REG_64::XMM0;
+
+    clamp_vfreg(op1);
+    clamp_vfreg(op2);
 
     emitter.MOVAPS_REG(op1, temp);
     emitter.MINPS(op2, temp);
@@ -2175,7 +2187,7 @@ void VU_JIT64::xgkick(VectorUnit &vu, IR::Instruction &instr)
     emitter.MOV16_TO_MEM(REG_64::RAX, REG_64::R15);
 
     //If we're in a delay slot, there's no more XGKicks
-    if (!instr.get_dest())
+    if (!instr.get_dest() && !instr.get_jump_dest())
     {
         emitter.load_addr((uint64_t)&vu.PC, REG_64::RAX);
         emitter.MOV16_IMM_MEM(instr.get_source() + 8, REG_64::RAX);
