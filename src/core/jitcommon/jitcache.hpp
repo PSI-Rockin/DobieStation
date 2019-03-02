@@ -10,6 +10,8 @@ struct JitBlock
     uint32_t program;
     uint8_t* block_start;
     uint8_t* mem;
+    uint64_t param1;
+    uint64_t param2;
 
     //Related to the literal pool
     uint8_t* pool_start;
@@ -27,11 +29,11 @@ class JitCache
     public:
         JitCache();
 
-        void alloc_block(uint32_t pc, uint32_t prev_pc = 0, uint32_t program = 0);
+        void alloc_block(uint32_t pc, uint32_t prev_pc = 0, uint32_t program = 0, uint64_t param1 = 0, uint64_t param2 = 0);
         void free_block(uint32_t pc);
         void flush_all_blocks();
 
-        int find_block(uint32_t pc, uint32_t prev_pc = 0, uint32_t program = 0);
+        int find_block(uint32_t pc, uint32_t prev_pc = 0, uint32_t program = 0, uint64_t param1 = 0, uint64_t param2 = 0);
 
         uint8_t* get_current_block_start();
         uint8_t* get_current_block_pos();

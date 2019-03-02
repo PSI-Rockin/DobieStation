@@ -15,7 +15,7 @@ JitCache::JitCache()
 }
 
 //Allocate a block with read and write, but not executable, privileges.
-void JitCache::alloc_block(uint32_t pc, uint32_t prev_pc, uint32_t program)
+void JitCache::alloc_block(uint32_t pc, uint32_t prev_pc, uint32_t program, uint64_t param1, uint64_t param2)
 {
     JitBlock new_block;
 
@@ -24,6 +24,8 @@ void JitCache::alloc_block(uint32_t pc, uint32_t prev_pc, uint32_t program)
     new_block.start_pc = pc;
     new_block.from_pc = prev_pc;
     new_block.program = program;
+    new_block.param1 = param1;
+    new_block.param2 = param2;
 #ifdef _WIN32
     //Errors::die("[JIT] alloc_block not implemented for WIN32");
     new_block.block_start = (uint8_t *)VirtualAlloc(NULL, BLOCK_SIZE, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
@@ -66,13 +68,13 @@ void JitCache::flush_all_blocks()
     current_block = nullptr;
 }
 
-int JitCache::find_block(uint32_t pc, uint32_t prev_pc, uint32_t program)
+int JitCache::find_block(uint32_t pc, uint32_t prev_pc, uint32_t program, uint64_t param1, uint64_t param2)
 {
     if (blocks.size() > 0)
     {
         for (int i = blocks.size() - 1; i >= 0; i--)
         {
-            if (pc == blocks[i].start_pc && prev_pc == blocks[i].from_pc && program == blocks[i].program)
+            if (pc == blocks[i].start_pc && prev_pc == blocks[i].from_pc && param1 == blocks[i].param1 && param2 == blocks[i].param2 && program == blocks[i].program)
             {
                 //printf("[VU_JIT64] Block found at %d\n", i);
                 current_block = &blocks[i];

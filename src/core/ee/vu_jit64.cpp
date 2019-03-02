@@ -1145,6 +1145,9 @@ void VU_JIT64::max_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     REG_64 bc_reg = alloc_sse_reg(vu, instr.get_source2(), REG_STATE::READ_WRITE);
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
 
+    clamp_vfreg(source);
+    clamp_vfreg(bc_reg);
+
     uint8_t bc = instr.get_bc();
     bc |= (bc << 6) | (bc << 4) | (bc << 2);
 
@@ -1164,6 +1167,9 @@ void VU_JIT64::max_vectors(VectorUnit &vu, IR::Instruction &instr)
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
     REG_64 temp = REG_64::XMM0;
 
+    clamp_vfreg(op1);
+    clamp_vfreg(op2);
+
     emitter.MOVAPS_REG(op1, temp);
     emitter.MAXPS(op2, temp);
     emitter.BLENDPS(field, temp, dest);
@@ -1175,6 +1181,9 @@ void VU_JIT64::min_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ_WRITE);
     REG_64 bc_reg = alloc_sse_reg(vu, instr.get_source2(), REG_STATE::READ_WRITE);
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
+
+    clamp_vfreg(source);
+    clamp_vfreg(bc_reg);
 
     uint8_t bc = instr.get_bc();
     bc |= (bc << 6) | (bc << 4) | (bc << 2);
@@ -1194,6 +1203,9 @@ void VU_JIT64::min_vectors(VectorUnit &vu, IR::Instruction &instr)
     REG_64 op2 = alloc_sse_reg(vu, instr.get_source2(), REG_STATE::READ_WRITE);
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
     REG_64 temp = REG_64::XMM0;
+
+    clamp_vfreg(op1);
+    clamp_vfreg(op2);
 
     emitter.MOVAPS_REG(op1, temp);
     emitter.MINPS(op2, temp);
@@ -2175,7 +2187,7 @@ void VU_JIT64::xgkick(VectorUnit &vu, IR::Instruction &instr)
     emitter.MOV16_TO_MEM(REG_64::RAX, REG_64::R15);
 
     //If we're in a delay slot, there's no more XGKicks
-    if (!instr.get_dest())
+    if (!instr.get_dest() && !instr.get_jump_dest())
     {
         emitter.load_addr((uint64_t)&vu.PC, REG_64::RAX);
         emitter.MOV16_IMM_MEM(instr.get_source() + 8, REG_64::RAX);
@@ -2242,6 +2254,17 @@ void VU_JIT64::save_pc(VectorUnit &vu, IR::Instruction &instr)
 {
     emitter.load_addr((uint64_t)&prev_pc, REG_64::RAX);
     emitter.MOV32_IMM_MEM(instr.get_jump_dest(), REG_64::RAX);
+}
+
+void VU_JIT64::save_pipeline_state(VectorUnit &vu, IR::Instruction &instr)
+{
+    emitter.load_addr((uint64_t)&vu.pipeline_state[0], REG_64::RAX);
+    emitter.MOV64_OI(instr.get_source(), REG_64::R15);
+    emitter.MOV64_TO_MEM(REG_64::R15, REG_64::RAX);
+
+    emitter.load_addr((uint64_t)&vu.pipeline_state[1], REG_64::RAX);
+    emitter.MOV64_OI(instr.get_source2(), REG_64::R15);
+    emitter.MOV64_TO_MEM(REG_64::R15, REG_64::RAX);
 }
 
 void VU_JIT64::move_delayed_branch(VectorUnit &vu, IR::Instruction &instr)
@@ -2767,6 +2790,9 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
         case IR::Opcode::SavePC:
             save_pc(vu, instr);
             break;
+        case IR::Opcode::SavePipelineState:
+            save_pipeline_state(vu, instr);
+            break;
         case IR::Opcode::MoveDelayedBranch:
             move_delayed_branch(vu, instr);
             break;
@@ -2780,7 +2806,7 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
 
 void VU_JIT64::recompile_block(VectorUnit& vu, IR::Block& block)
 {
-    cache.alloc_block(vu.get_PC(), prev_pc, current_program);
+    cache.alloc_block(vu.get_PC(), prev_pc, current_program, vu.pipeline_state[0], vu.pipeline_state[1]);
 
     vu_branch = false;
     end_of_program = false;
@@ -2959,7 +2985,7 @@ extern "C"
 uint8_t* exec_block(VU_JIT64& jit, VectorUnit& vu)
 {
     //printf("[VU_JIT64] Executing block at $%04X, Prev PC $%04X Current Program %08X: recompiling\n", vu.PC, jit.prev_pc, jit.current_program);
-    if (jit.cache.find_block(vu.PC, jit.prev_pc, jit.current_program) == -1)
+    if (jit.cache.find_block(vu.PC, jit.prev_pc, jit.current_program, vu.pipeline_state[0], vu.pipeline_state[1]) == -1)
     {
         //printf("[VU_JIT64] Block not found at $%04X, Prev PC $%04X Current Program %08X: recompiling\n", vu.PC, jit.prev_pc, jit.current_program);
         IR::Block block = jit.ir.translate(vu, vu.get_instr_mem(), jit.prev_pc);
