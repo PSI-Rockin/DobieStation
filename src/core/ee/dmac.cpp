@@ -735,7 +735,7 @@ void DMAC::write_master_disable(uint32_t value)
 uint8_t DMAC::read8(uint32_t address)
 {
     int shift = (address & 0x3) * 8;
-    return (read32(address) >> shift) & 0xFF;
+    return (read32(address & ~0x3) >> shift) & 0xFF;
 }
 
 uint32_t DMAC::read32(uint32_t address)
