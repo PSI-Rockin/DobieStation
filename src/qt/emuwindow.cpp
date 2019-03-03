@@ -198,14 +198,32 @@ void EmuWindow::create_menu()
     load_bios_action = new QAction(tr("Load ROM... (&Boot BIOS)"), this);
     connect(load_bios_action, &QAction::triggered, this, &EmuWindow::open_file_no_skip);
 
+    auto load_gsdump_action = new QAction(tr("Load &GSDump..."), this);
+    connect(load_gsdump_action, &QAction::triggered, this, [=] (){
+        emu_thread.pause(PAUSE_EVENT::FILE_DIALOG);
+
+        QString file_name = QFileDialog::getOpenFileName(
+            this, tr("Open Rom"), QDir::currentPath(),
+            tr("GSDumps (*.gsd)")
+        );
+
+        if (!file_name.isEmpty())
+        {
+            stack_widget->setCurrentIndex(1);
+            run_gsdump(file_name.toLocal8Bit());
+        }
+
+        emu_thread.unpause(PAUSE_EVENT::FILE_DIALOG);
+    });
+
     load_state_action = new QAction(tr("&Load State"), this);
     connect(load_state_action, &QAction::triggered, this, &EmuWindow::load_state);
 
     save_state_action = new QAction(tr("&Save State"), this);
     connect(save_state_action, &QAction::triggered, this, &EmuWindow::save_state);
 
-    auto gsdump_action = new QAction(tr("&GS dump toggle"), this);
-    connect(gsdump_action, &QAction::triggered, this,
+    auto toggle_gsdump_action = new QAction(tr("GS dump &toggle"), this);
+    connect(toggle_gsdump_action, &QAction::triggered, this,
         [this]() { this->emu_thread.gsdump_write_toggle(); });
 
     exit_action = new QAction(tr("&Exit"), this);
@@ -214,10 +232,12 @@ void EmuWindow::create_menu()
     file_menu = menuBar()->addMenu(tr("&File"));
     file_menu->addAction(load_rom_action);
     file_menu->addAction(load_bios_action);
+    file_menu->addAction(load_gsdump_action);
+    file_menu->addSeparator();
     file_menu->addAction(load_state_action);
     file_menu->addAction(save_state_action);
     file_menu->addSeparator();
-    file_menu->addAction(gsdump_action);
+    file_menu->addAction(toggle_gsdump_action);
     file_menu->addSeparator();
     file_menu->addAction(exit_action);
 
