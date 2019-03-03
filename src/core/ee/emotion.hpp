@@ -4,6 +4,7 @@
 #include <fstream>
 #include "cop0.hpp"
 #include "cop1.hpp"
+#include "emotion_breakpoint.hpp"
 
 #include "../int128.hpp"
 
@@ -27,6 +28,7 @@ class EmotionEngine
         Cop1* fpu;
         VectorUnit* vu0;
         VectorUnit* vu1;
+        EEBreakpointList* ee_breakpoints = nullptr;
 
         //Each register is 128-bit
         uint8_t gpr[32 * sizeof(uint64_t) * 2];
@@ -48,8 +50,9 @@ class EmotionEngine
         void handle_exception(uint32_t new_addr, uint8_t code);
         void deci2call(uint32_t func, uint32_t param);
     public:
-        EmotionEngine(Cop0* cp0, Cop1* fpu, Emulator* e, uint8_t* sp, VectorUnit* vu0, VectorUnit* vu1);
+        EmotionEngine(Cop0* cp0, Cop1* fpu, Emulator* e, uint8_t* sp, VectorUnit* vu0, VectorUnit* vu1, EEBreakpointList* ee_breakpoints);
         static const char* REG(int id);
+        static const char* COP0_REG(int id);
         static const char* SYSCALL(int id);
         void reset();
         int run(int cycles_to_run);
@@ -58,6 +61,8 @@ class EmotionEngine
         void print_state();
         void set_disassembly(bool dis);
 
+        Cop0* get_cop0();
+        Cop1* get_fpu();
         template <typename T> T get_gpr(int id, int offset = 0);
         template <typename T> T get_LO(int offset = 0);
         template <typename T> void set_gpr(int id, T value, int offset = 0);

@@ -12,10 +12,10 @@
 
 //#define printf(fmt, ...)(0)
 
-EmotionEngine::EmotionEngine(Cop0* cp0, Cop1* fpu, Emulator* e, uint8_t* sp, VectorUnit* vu0, VectorUnit* vu1) :
-    cp0(cp0), fpu(fpu), e(e), scratchpad(sp), vu0(vu0), vu1(vu1)
+EmotionEngine::EmotionEngine(Cop0* cp0, Cop1* fpu, Emulator* e, uint8_t* sp, VectorUnit* vu0, VectorUnit* vu1, EEBreakpointList* ee_breakpoints) :
+    cp0(cp0), fpu(fpu), e(e), scratchpad(sp), vu0(vu0), vu1(vu1), ee_breakpoints(ee_breakpoints)
 {
-    reset();
+
 }
 
 const char* EmotionEngine::REG(int id)
@@ -31,6 +31,22 @@ const char* EmotionEngine::REG(int id)
         "t8", "t9", "k0", "k1",
         "gp", "sp", "fp", "ra"
     };
+    return names[id];
+}
+
+const char* EmotionEngine::COP0_REG(int id)
+{
+    static const char* names[] =
+            {
+                    "Index", "Random", "EntryLo0", "EntryLo1",
+                    "Context", "PageMask", "Wired", "---",
+                    "BadVAddr", "Count", "EntryHi", "Compare",
+                    "Status", "Cause", "EPC", "PRid",
+                    "Config", "---", "---", "---",
+                    "---", "---", "---", "BadPAddr",
+                    "Debug", "PCCR/PCR0/PCR1", "---", "---",
+                    "TagLo", "TagHi", "ErrorEPC", "---"
+            };
     return names[id];
 }
 
@@ -100,6 +116,7 @@ void EmotionEngine::reset()
     can_disassemble = false;
     wait_for_IRQ = false;
     delay_slot = 0;
+    ee_breakpoints->set_ee(this);
 
     //Clear out $zero
     for (int i = 0; i < 16; i++)
@@ -157,6 +174,9 @@ int EmotionEngine::run(int cycles_to_run)
                         int1();
                 }
             }
+
+            if(ee_breakpoints->debug_enable)
+                ee_breakpoints->do_breakpoints(this);
         }
     }
 
@@ -928,4 +948,14 @@ void EmotionEngine::cop2_updatevu0()
 void EmotionEngine::cop2_special(EmotionEngine &cpu, uint32_t instruction)
 {
     EmotionInterpreter::cop2_special(cpu, *vu0, instruction);
+}
+
+Cop0* EmotionEngine::get_cop0()
+{
+    return cp0;
+}
+
+Cop1* EmotionEngine::get_fpu()
+{
+    return fpu;
 }

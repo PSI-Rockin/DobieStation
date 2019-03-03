@@ -8,6 +8,7 @@
 #include "emuthread.hpp"
 
 #include "../qt/settings.hpp"
+#include "../qt/ee_debugwindow.hpp"
 #include "../core/emulator.hpp"
 
 class EmuWindow : public QMainWindow
@@ -29,6 +30,9 @@ class EmuWindow : public QMainWindow
         QAction* load_state_action;
         QAction* save_state_action;
         QAction* exit_action;
+        QAction* open_debugger_action;
+        EEDebugWindow debugger;
+
         int scale_factor;
 
     public:
@@ -60,6 +64,7 @@ class EmuWindow : public QMainWindow
         void open_file_skip();
         void load_state();
         void save_state();
+        void show_debugger();
         void emu_error(QString err);
         void emu_non_fatal_error(QString err);
 };

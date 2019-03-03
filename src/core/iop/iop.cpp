@@ -7,7 +7,7 @@
 #include "../ee/emotiondisasm.hpp"
 #include "../errors.hpp"
 
-IOP::IOP(Emulator* e) : e(e)
+IOP::IOP(Emulator* e, IOPBreakpointList* iop_breakpoints) : e(e), iop_breakpoints(iop_breakpoints)
 {
 
 }
@@ -33,9 +33,12 @@ void IOP::reset()
     cop0.reset();
     PC = 0xBFC00000;
     gpr[0] = 0;
+    wait_for_IRQ = false;
     branch_delay = 0;
     will_branch = false;
     can_disassemble = false;
+
+    iop_breakpoints->set_iop(this);
 }
 
 uint32_t IOP::translate_addr(uint32_t addr)
@@ -81,6 +84,9 @@ void IOP::run(int cycles)
                 else
                     branch_delay--;
             }
+
+            if(iop_breakpoints->debug_enable)
+                iop_breakpoints->do_breakpoints(this);
         }
     }
 

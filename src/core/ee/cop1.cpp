@@ -77,6 +77,11 @@ uint32_t Cop1::get_gpr(int index)
     return gpr[index].u;
 }
 
+float Cop1::get_gpr_f(int index)
+{
+    return gpr[index].f;
+}
+
 void Cop1::mtc(int index, uint32_t value)
 {
     printf("[FPU] MTC1: %d, $%08X\n", index, value);

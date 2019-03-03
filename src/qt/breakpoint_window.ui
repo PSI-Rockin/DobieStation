@@ -1,0 +1,150 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>breakpoint_window</class>
+ <widget class="QDialog" name="breakpoint_window">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>324</width>
+    <height>279</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Dialog</string>
+  </property>
+  <layout class="QGridLayout" name="gridLayout">
+   <item row="5" column="0">
+    <widget class="QLabel" name="reg_label">
+     <property name="text">
+      <string>Register</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="2">
+    <widget class="QComboBox" name="reg_type_combo"/>
+   </item>
+   <item row="0" column="0">
+    <widget class="QLabel" name="address_label">
+     <property name="text">
+      <string>Address</string>
+     </property>
+    </widget>
+   </item>
+   <item row="6" column="2">
+    <widget class="QCheckBox" name="clear_checkbox">
+     <property name="text">
+      <string>Clear after hit?</string>
+     </property>
+    </widget>
+   </item>
+   <item row="4" column="0">
+    <widget class="QLabel" name="reg_type_label">
+     <property name="text">
+      <string>Register Type</string>
+     </property>
+    </widget>
+   </item>
+   <item row="7" column="2">
+    <spacer name="verticalSpacer">
+     <property name="orientation">
+      <enum>Qt::Vertical</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>20</width>
+       <height>40</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item row="8" column="2" colspan="5">
+    <widget class="QDialogButtonBox" name="ok_cancel_button">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="standardButtons">
+      <set>QDialogButtonBox::Cancel|QDialogButtonBox::Ok</set>
+     </property>
+    </widget>
+   </item>
+   <item row="0" column="2">
+    <widget class="QLineEdit" name="address_line"/>
+   </item>
+   <item row="2" column="2">
+    <widget class="QComboBox" name="comparison_combo"/>
+   </item>
+   <item row="3" column="0">
+    <widget class="QLabel" name="value_label">
+     <property name="text">
+      <string>Value</string>
+     </property>
+    </widget>
+   </item>
+   <item row="2" column="0">
+    <widget class="QLabel" name="comparison_label">
+     <property name="text">
+      <string>Comparison</string>
+     </property>
+    </widget>
+   </item>
+   <item row="1" column="2">
+    <widget class="QComboBox" name="data_type_combo"/>
+   </item>
+   <item row="1" column="0">
+    <widget class="QLabel" name="data_type_label">
+     <property name="text">
+      <string>Data Type</string>
+     </property>
+    </widget>
+   </item>
+   <item row="3" column="2">
+    <widget class="QLineEdit" name="value_line"/>
+   </item>
+   <item row="5" column="2">
+    <widget class="QComboBox" name="reg_combo"/>
+   </item>
+  </layout>
+ </widget>
+ <tabstops>
+  <tabstop>address_line</tabstop>
+  <tabstop>data_type_combo</tabstop>
+  <tabstop>comparison_combo</tabstop>
+  <tabstop>value_line</tabstop>
+ </tabstops>
+ <resources/>
+ <connections>
+  <connection>
+   <sender>ok_cancel_button</sender>
+   <signal>accepted()</signal>
+   <receiver>breakpoint_window</receiver>
+   <slot>accept()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>248</x>
+     <y>254</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>157</x>
+     <y>274</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>ok_cancel_button</sender>
+   <signal>rejected()</signal>
+   <receiver>breakpoint_window</receiver>
+   <slot>reject()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>316</x>
+     <y>260</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>286</x>
+     <y>274</y>
+    </hint>
+   </hints>
+  </connection>
+ </connections>
+</ui>

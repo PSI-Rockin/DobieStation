@@ -128,6 +128,11 @@ void VectorUnit::reset()
     {
         int_gpr[i].u = 0;
     }
+
+    for (int i = 0; i < 4; i++)
+    {
+        MAC_pipeline[i] = 0;
+    }
 }
 
 void VectorUnit::clear_interlock()

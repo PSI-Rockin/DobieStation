@@ -5,6 +5,8 @@
 
 namespace EmotionDisasm
 {
+    bool is_function_call(uint32_t instruction);
+    bool is_function_return(uint32_t instruction);
     std::string disasm_instr(uint32_t instruction, uint32_t instr_addr);
 
     std::string disasm_special(uint32_t instruction);

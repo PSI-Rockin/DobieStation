@@ -9,6 +9,7 @@
 
 #include "../core/emulator.hpp"
 #include "../core/errors.hpp"
+#include "../core/ee/emotion_breakpoint.hpp"
 
 enum PAUSE_EVENT
 {
@@ -46,6 +47,8 @@ class EmuThread : public QThread
         bool gsdump_read(const char* name);
         void gsdump_write_toggle();
         void gsdump_single_frame();
+        EEBreakpointList* get_ee_breakpoint_list();
+        IOPBreakpointList* get_iop_breakpoint_list();
         bool frame_advance;
     protected:
         void run() override;

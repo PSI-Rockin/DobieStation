@@ -244,3 +244,13 @@ void EmuThread::unpause(PAUSE_EVENT event)
 {
     pause_status &= ~(1 << event);
 }
+
+EEBreakpointList *EmuThread::get_ee_breakpoint_list()
+{
+    return e.get_ee_breakpoint_list();
+}
+
+IOPBreakpointList *EmuThread::get_iop_breakpoint_list()
+{
+    return e.get_iop_breakpoint_list();
+}
