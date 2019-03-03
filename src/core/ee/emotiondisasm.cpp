@@ -13,7 +13,39 @@ using namespace std;
 
 namespace EmotionDisasm
 {
+// is an instruction a function call?  recognizes jal xxxx and jalr xx ra as function calls
+bool is_function_call(uint32_t instruction)
+{
+    uint32_t op = instruction >> 26;
+    if (op == 3) return true; // jal
 
+    if (op == 0)
+    { // special opcode
+        uint32_t special = instruction & 0x3f;
+        if (special == 8)
+        {
+            uint32_t rd = (instruction >> 11) & 0x3f;
+            if (rd == 31) return true; // jalr xx ra
+        }
+    }
+    return false;
+}
+
+// is it jr ra?
+bool is_function_return(uint32_t instruction)
+{
+    uint32_t op = instruction >> 26;
+    if (op == 0)
+    {
+        uint32_t special = instruction & 0x3f;
+        if (special == 8)
+        {
+            uint32_t rs = (instruction >> 21) & 0x3f;
+            if (rs == 31) return true;
+        }
+    }
+    return false;
+}
 
 string disasm_instr(uint32_t instruction, uint32_t instr_addr)
 {

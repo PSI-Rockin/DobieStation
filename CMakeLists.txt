@@ -6,6 +6,7 @@ add_subdirectory(ext/libdeflate)
 set(CMAKE_CXX_STANDARD 11)
 
 set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTOUIC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-pthread -O2")
 
@@ -21,6 +22,7 @@ set(SOURCES
         src/core/ee/emotion.cpp
         src/core/ee/emotion_fpu.cpp
         src/core/ee/emotion_mmi.cpp
+        src/core/ee/emotion_breakpoint.cpp
         src/core/ee/emotion_special.cpp
         src/core/ee/emotionasm.cpp
         src/core/ee/emotiondisasm.cpp
@@ -76,6 +78,9 @@ set(SOURCES
 	src/core/sif.cpp
 	src/qt/emuthread.cpp
         src/qt/emuwindow.cpp
+        src/qt/ee_debugwindow.cpp
+        src/qt/breakpoint_window.cpp
+        src/qt/and_breakpoint_window.cpp
         src/qt/main.cpp
 	src/qt/settings.cpp
         )
@@ -90,6 +95,7 @@ set(HEADERS
         src/core/ee/emotionasm.hpp
         src/core/ee/emotiondisasm.hpp
         src/core/ee/emotioninterpreter.hpp
+        src/core/ee/emotion_breakpoint.hpp
 	src/core/ee/intc.hpp
 	src/core/ee/ipu/chromtable.hpp
 	src/core/ee/ipu/codedblockpattern.hpp
@@ -140,6 +146,9 @@ set(HEADERS
 	src/core/sif.hpp
 	src/qt/emuthread.hpp
         src/qt/emuwindow.hpp
+        src/qt/ee_debugwindow.hpp
+        src/qt/breakpoint_window.hpp
+        src/qt/and_breakpoint_window.hpp
 	src/qt/settings.hpp
         )
 

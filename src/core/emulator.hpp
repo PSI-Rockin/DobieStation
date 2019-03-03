@@ -43,6 +43,8 @@ class Emulator
         DMAC dmac;
         EmotionEngine cpu;
         EmotionTiming timers;
+        EEBreakpointList ee_breakpoints;
+        IOPBreakpointList iop_breakpoints;
         Gamepad pad;
         GraphicsSynthesizer gs;
         GraphicsInterface gif;
@@ -144,6 +146,8 @@ class Emulator
 
         void test_iop();
         GraphicsSynthesizer& get_gs();//used for gs dumps
+        EEBreakpointList* get_ee_breakpoint_list();
+        IOPBreakpointList* get_iop_breakpoint_list();
 };
 
 #endif // EMULATOR_HPP

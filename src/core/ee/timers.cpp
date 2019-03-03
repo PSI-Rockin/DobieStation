@@ -18,7 +18,10 @@ void EmotionTiming::reset()
         timers[i].clocks = 0;
         timers[i].gated = false;
         timers[i].last_update = 0;
+        timers[i].compare = 0;
         timers[i].control.enabled = false;
+        timers[i].control.gate_enable = false;
+        timers[i].control.gate_VBLANK = false;
     }
 
     cycle_count = 0;

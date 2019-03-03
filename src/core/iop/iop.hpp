@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <fstream>
 #include "iop_cop0.hpp"
+#include "src/core/ee/emotion_breakpoint.hpp"
 
 class Emulator;
 
@@ -13,6 +14,7 @@ class IOP
     private:
         Emulator* e;
         IOP_Cop0 cop0;
+        IOPBreakpointList* iop_breakpoints = nullptr;
         uint32_t gpr[32];
         uint32_t PC;
         uint32_t LO, HI;
@@ -25,7 +27,7 @@ class IOP
 
         uint32_t translate_addr(uint32_t addr);
     public:
-        IOP(Emulator* e);
+        IOP(Emulator* e, IOPBreakpointList* iop_breakpoint);
         static const char* REG(int id);
 
         void reset();

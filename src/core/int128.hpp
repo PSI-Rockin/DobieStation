@@ -1,6 +1,7 @@
 #ifndef INT128_HPP
 #define INT128_HPP
 #include <cstdint>
+#include <string>
 
 /**
  * These 128-bit integer definitions were taken from PCSX2 and modified for DobieStation.
@@ -9,6 +10,14 @@
  */
 union uint128_t
 {
+    uint128_t() = default;
+
+    explicit uint128_t(uint64_t v)
+    {
+        hi = 0;
+        lo = v;
+    }
+
     struct
     {
         uint64_t lo;
@@ -55,6 +64,34 @@ union uint128_t
     bool operator!=(const uint128_t &right) const
     {
         return (lo != right.lo) || (hi != right.hi);
+    }
+
+    bool operator>(const uint128_t &rhs) const
+    {
+        if(hi == rhs.hi)
+            return lo > rhs.lo;
+        return hi > rhs.hi;
+    }
+
+    bool operator<(const uint128_t &rhs) const
+    {
+        if(hi == rhs.hi)
+            return lo < rhs.lo;
+        return hi < rhs.hi;
+    }
+
+    bool operator>=(const uint128_t &rhs) const
+    {
+        if(hi == rhs.hi)
+            return lo >= rhs.lo;
+        return hi >= rhs.hi;
+    }
+
+    bool operator<=(const uint128_t &rhs) const
+    {
+        if(hi == rhs.hi)
+            return lo <= rhs.lo;
+        return hi <= rhs.hi;
     }
 };
 

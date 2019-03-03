@@ -44,6 +44,12 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
     layout->addWidget(bottomFiller);
     widget->setLayout(layout);
 
+    auto ee_breakpoint_list = emu_thread.get_ee_breakpoint_list();
+    auto iop_breakpoint_list = emu_thread.get_iop_breakpoint_list();
+    debugger.set_breakpoint_list(ee_breakpoint_list); // debug window -> breakpoint list
+    debugger.set_breakpoint_list(iop_breakpoint_list);
+    ee_breakpoint_list->attach_to_ui(&debugger);      // breakpoint list -> debug window
+    iop_breakpoint_list->attach_to_ui(&debugger);
     create_menu();
 
     connect(this, SIGNAL(shutdown()), &emu_thread, SLOT(shutdown()));
@@ -58,7 +64,6 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
 
     emu_thread.reset();
     emu_thread.start();
-
     //Initialize window
     title = "DobieStation";
     setWindowTitle(QString::fromStdString(title));
@@ -225,6 +230,9 @@ void EmuWindow::create_menu()
     save_state_action = new QAction(tr("&Save State"), this);
     connect(save_state_action, &QAction::triggered, this, &EmuWindow::save_state);
 
+    open_debugger_action = new QAction(tr("&Open Debugger"), this);
+    connect(open_debugger_action, &QAction::triggered, this, &EmuWindow::show_debugger);
+
     exit_action = new QAction(tr("&Exit"), this);
     connect(exit_action, &QAction::triggered, this, &QWidget::close);
 
@@ -237,6 +245,7 @@ void EmuWindow::create_menu()
     file_menu->addAction(load_bios_action);
     file_menu->addAction(load_state_action);
     file_menu->addAction(save_state_action);
+    file_menu->addAction(open_debugger_action);
     file_menu->addAction(exit_action);
     file_menu->addSeparator();
     file_menu->addAction(gsdump_action);
@@ -493,4 +502,8 @@ void EmuWindow::save_state()
     if (!emu_thread.save_state(path.c_str()))
         printf("Failed to save %s\n", path.c_str());
     emu_thread.unpause(PAUSE_EVENT::FILE_DIALOG);
+}
+
+void EmuWindow::show_debugger() {
+    debugger.show();
 }

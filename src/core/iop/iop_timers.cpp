@@ -15,6 +15,7 @@ void IOPTiming::reset()
     for (int i = 0; i < 6; i++)
     {
         timers[i].counter = 0;
+        timers[i].target = 0;
         timers[i].clocks = 0;
         timers[i].clock_scale = 1;
         timers[i].control.gate_mode = 0;

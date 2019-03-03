@@ -16,9 +16,9 @@
 #define EELOAD_SIZE 0x20000
 
 Emulator::Emulator() :
-    cdvd(this), cp0(&dmac), cpu(&cp0, &fpu, this, (uint8_t*)&scratchpad, &vu0, &vu1),
+    cdvd(this), cp0(&dmac), cpu(&cp0, &fpu, this, (uint8_t*)&scratchpad, &vu0, &vu1, &ee_breakpoints),
     dmac(&cpu, this, &gif, &ipu, &sif, &vif0, &vif1), gif(&gs), gs(&intc),
-    iop(this), iop_dma(this, &cdvd, &sif, &sio2, &spu, &spu2), iop_timers(this), intc(&cpu), ipu(&intc),
+    iop(this, &iop_breakpoints), iop_dma(this, &cdvd, &sif, &sio2, &spu, &spu2), iop_timers(this), intc(&cpu), ipu(&intc),
     timers(&intc), sio2(this, &pad, &memcard), spu(1, this), spu2(2, this), vif0(nullptr, &vu0, &intc, 0),
     vif1(&gif, &vu1, &intc, 1), vu0(0, this), vu1(1, this)
 {
@@ -28,6 +28,7 @@ Emulator::Emulator() :
     SPU_RAM = nullptr;
     ELF_file = nullptr;
     ELF_size = 0;
+    gsdump_single_frame = false;
     ee_log.open("ee_log.txt", std::ios::out);
 }
 
@@ -1587,6 +1588,16 @@ void Emulator::iop_puts()
 GraphicsSynthesizer& Emulator::get_gs()
 {
     return gs;
+}
+
+EEBreakpointList* Emulator::get_ee_breakpoint_list()
+{
+    return &ee_breakpoints;
+}
+
+IOPBreakpointList* Emulator::get_iop_breakpoint_list()
+{
+    return &iop_breakpoints;
 }
 
 void Emulator::request_gsdump_toggle()

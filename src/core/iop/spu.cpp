@@ -31,6 +31,7 @@ void SPU::reset(uint8_t* RAM)
     key_on = 0;
     key_off = 0xFFFFFF;
     spdif_irq = 0;
+    cycles = 0;
 
     for (int i = 0; i < 24; i++)
     {
