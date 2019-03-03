@@ -47,11 +47,10 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
     stack_widget = new QStackedWidget;
     stack_widget->addWidget(game_list_widget);
     stack_widget->addWidget(render_widget);
-    stack_widget->setMinimumWidth(640);
-    stack_widget->setMinimumHeight(448);
+    stack_widget->setMinimumWidth(RenderWidget::DEFAULT_WIDTH);
+    stack_widget->setMinimumHeight(RenderWidget::DEFAULT_HEIGHT);
 
     setCentralWidget(stack_widget);
-    stack_widget->resize(640, 448);
 
     create_menu();
 
@@ -229,29 +228,38 @@ void EmuWindow::create_menu()
 
     options_menu->addSeparator();
 
-    auto size_options_actions = new QAction(tr("Scale to &Window (ignore aspect ratio)"), this);
+    scale_menu = options_menu->addMenu(tr("&Scale"));
+    auto size_options_actions = new QAction(tr("&Ignore aspect ratio"), this);
     connect(size_options_actions, SIGNAL(triggered()), render_widget, SLOT(toggle_aspect_ratio()));
-    options_menu->addAction(size_options_actions);
+    scale_menu->addAction(size_options_actions);
 
-    size_options_actions = new QAction(tr("Scale &1x"), this);
-    connect(size_options_actions, &QAction::triggered, this,
-        [this]() { this->scale_factor = 1; });
-    options_menu->addAction(size_options_actions);
+    scale_menu->addSeparator();
 
-    size_options_actions = new QAction(tr("Scale &2x"), this);
-    connect(size_options_actions, &QAction::triggered, this,
-        [this]() { this->scale_factor = 2; });
-    options_menu->addAction(size_options_actions);
+    for (int factor = 1; factor <= RenderWidget::MAX_SCALING; factor++)
+    {
+        auto scale_action = new QAction(
+            QString("&%1x").arg(factor), this
+        );
 
-    size_options_actions = new QAction(tr("Scale &3x"), this);
-    connect(size_options_actions, &QAction::triggered, this,
-        [this]() { this->scale_factor = 3; });
-    options_menu->addAction(size_options_actions);
+        connect(scale_action, &QAction::triggered, this, [=]() {
+            // Force the widget to the new size
+            this->stack_widget->setMinimumSize(
+                RenderWidget::DEFAULT_WIDTH * factor,
+                RenderWidget::DEFAULT_HEIGHT * factor
+            );
 
-    size_options_actions = new QAction(tr("Scale &4x"), this);
-    connect(size_options_actions, &QAction::triggered, this,
-        [this]() { this->scale_factor = 4; });
-    options_menu->addAction(size_options_actions);
+            this->adjustSize();
+
+            // reset it so the user can resize the window
+            // normally
+            this->stack_widget->setMinimumSize(
+                RenderWidget::DEFAULT_WIDTH,
+                RenderWidget::DEFAULT_HEIGHT
+            );
+        });
+
+        scale_menu->addAction(scale_action);
+    }
 
     emulation_menu = menuBar()->addMenu(tr("Emulation"));
 

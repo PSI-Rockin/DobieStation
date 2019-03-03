@@ -11,6 +11,7 @@
 #include "../core/emulator.hpp"
 
 class SettingsWindow;
+class RenderWidget;
 
 class EmuWindow : public QMainWindow
 {
@@ -26,13 +27,14 @@ class EmuWindow : public QMainWindow
         QMenu* file_menu;
         QMenu* options_menu;
         QMenu* emulation_menu;
+        QMenu* scale_menu;
         QAction* load_rom_action;
         QAction* load_bios_action;
         QAction* load_state_action;
         QAction* save_state_action;
         QAction* exit_action;
         QStackedWidget* stack_widget;
-        QWidget* render_widget;
+        RenderWidget* render_widget;
 
         SettingsWindow* settings_window = nullptr;
 
