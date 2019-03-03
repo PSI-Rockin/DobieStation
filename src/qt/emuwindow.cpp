@@ -248,6 +248,7 @@ void EmuWindow::create_menu()
                 RenderWidget::DEFAULT_HEIGHT * factor
             );
 
+            this->showNormal();
             this->adjustSize();
 
             // reset it so the user can resize the window
