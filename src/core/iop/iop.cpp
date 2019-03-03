@@ -196,7 +196,7 @@ void IOP::rfe()
 
     cop0.status.IEc = cop0.status.IEp;
     cop0.status.IEp = cop0.status.IEo;
-    printf("[IOP] RFE!\n");
+    //printf("[IOP] RFE!\n");
     //can_disassemble = false;
 }
 

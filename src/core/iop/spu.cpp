@@ -258,28 +258,28 @@ uint16_t SPU::read16(uint32_t addr)
     switch (addr)
     {
         case 0x188:
-            printf("[SPU%d] Read VMIXLH: $%04X\n", id, voice_mixdry_left >> 16);
+            //printf("[SPU%d] Read VMIXLH: $%04X\n", id, voice_mixdry_left >> 16);
             return voice_mixdry_left >> 16;
         case 0x18A:
-            printf("[SPU%d] Read VMIXLL: $%04X\n", id, voice_mixdry_left & 0xFFFF);
+            //printf("[SPU%d] Read VMIXLL: $%04X\n", id, voice_mixdry_left & 0xFFFF);
             return voice_mixdry_left & 0xFFFF;
         case 0x18C:
-            printf("[SPU%d] Read VMIXELH: $%04X\n", id, voice_mixwet_left >> 16);
+            //printf("[SPU%d] Read VMIXELH: $%04X\n", id, voice_mixwet_left >> 16);
             return voice_mixwet_left >> 16;
         case 0x18E:
-            printf("[SPU%d] Read VMIXELL: $%04X\n", id, voice_mixwet_left & 0xFFFF);
+            //printf("[SPU%d] Read VMIXELL: $%04X\n", id, voice_mixwet_left & 0xFFFF);
             return voice_mixwet_left & 0xFFFF;
         case 0x190:
-            printf("[SPU%d] Read VMIXRH: $%04X\n", id, voice_mixdry_right >> 16);
+            //printf("[SPU%d] Read VMIXRH: $%04X\n", id, voice_mixdry_right >> 16);
             return voice_mixdry_right >> 16;
         case 0x192:
-            printf("[SPU%d] Read VMIXRL: $%04X\n", id, voice_mixdry_right & 0xFFFF);
+            //printf("[SPU%d] Read VMIXRL: $%04X\n", id, voice_mixdry_right & 0xFFFF);
             return voice_mixdry_right & 0xFFFF;
         case 0x194:
-            printf("[SPU%d] Read VMIXERH: $%04X\n", id, voice_mixwet_right >> 16);
+            //printf("[SPU%d] Read VMIXERH: $%04X\n", id, voice_mixwet_right >> 16);
             return voice_mixwet_right >> 16;
         case 0x196:
-            printf("[SPU%d] Read VMIXERL: $%04X\n", id, voice_mixwet_right & 0xFFFF);
+            //printf("[SPU%d] Read VMIXERL: $%04X\n", id, voice_mixwet_right & 0xFFFF);
             return voice_mixwet_right & 0xFFFF;
         case 0x19A:
             printf("[SPU%d] Read Core Att\n", id);
@@ -309,11 +309,11 @@ uint16_t SPU::read16(uint32_t addr)
             return autodma_ctrl;
         case 0x340:
             reg = ENDX >> 16;
-            printf("[SPU%d] Read ENDXH: $%04X\n", id, reg);
+            //printf("[SPU%d] Read ENDXH: $%04X\n", id, reg);
             break;
         case 0x342:
             reg = ENDX & 0xFFFF;
-            printf("[SPU%d] Read ENDXL: $%04X\n", id, reg);
+            //printf("[SPU%d] Read ENDXL: $%04X\n", id, reg);
             break;
         case 0x344:
             reg |= status.DMA_finished << 7;

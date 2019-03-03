@@ -26,7 +26,7 @@ void SIO2::reset()
 
 uint8_t SIO2::read_serial()
 {
-    printf("[SIO2] Read FIFO\n");
+    //printf("[SIO2] Read FIFO\n");
     uint8_t value = FIFO.front();
     FIFO.pop();
     return value;
@@ -39,7 +39,7 @@ uint32_t SIO2::get_control()
 
 void SIO2::set_send1(int index, uint32_t value)
 {
-    printf("[SIO2] SEND1: $%08X (%d)\n", value, index);
+    //printf("[SIO2] SEND1: $%08X (%d)\n", value, index);
     send1[index] = value;
     if (index < 0 || index >= 4)
         Errors::die("SIO2 set_send1 index (%d) out of range (0-4)", index);
@@ -47,7 +47,7 @@ void SIO2::set_send1(int index, uint32_t value)
 
 void SIO2::set_send2(int index, uint32_t value)
 {
-    printf("[SIO2] SEND2: $%08X (%d)\n", value, index);
+    //printf("[SIO2] SEND2: $%08X (%d)\n", value, index);
     send2[index] = value;
     if (index < 0 || index >= 4)
         Errors::die("SIO2 set_send2 index (%d) out of range (0-4)", index);
@@ -55,7 +55,7 @@ void SIO2::set_send2(int index, uint32_t value)
 
 void SIO2::set_send3(int index, uint32_t value)
 {
-    printf("[SIO2] SEND3: $%08X (%d)\n", value, index);
+    //printf("[SIO2] SEND3: $%08X (%d)\n", value, index);
     send3[index] = value;
     if (index < 0 || index >= 16)
         Errors::die("SIO2 set_send3 index (%d) out of range (0-4)", index);
@@ -63,7 +63,7 @@ void SIO2::set_send3(int index, uint32_t value)
 
 void SIO2::write_serial(uint8_t value)
 {
-    printf("[SIO2] DATAIN: $%02X\n", value);
+    //printf("[SIO2] DATAIN: $%02X\n", value);
 
     if (!command_length)
     {
@@ -119,7 +119,7 @@ void SIO2::write_device(uint8_t value)
             }
             else
                 reply = pad->write_SIO(value);
-            printf("[SIO2] PAD reply: $%02X\n", reply);
+            //printf("[SIO2] PAD reply: $%02X\n", reply);
             FIFO.push(reply);
         }
             break;
@@ -153,18 +153,18 @@ void SIO2::set_control(uint32_t value)
 
 uint32_t SIO2::get_RECV1()
 {
-    printf("[SIO2] Read RECV1\n");
+    //printf("[SIO2] Read RECV1\n");
     return RECV1;
 }
 
 uint32_t SIO2::get_RECV2()
 {
-    printf("[SIO2] Read RECV2\n");
+    //printf("[SIO2] Read RECV2\n");
     return 0xF;
 }
 
 uint32_t SIO2::get_RECV3()
 {
-    printf("[SIO2] Read RECV3\n");
+    //printf("[SIO2] Read RECV3\n");
     return 0;
 }

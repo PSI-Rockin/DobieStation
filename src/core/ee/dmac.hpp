@@ -93,6 +93,7 @@ class DMAC
         uint128_t fetch128(uint32_t addr);
         void store128(uint32_t addr, uint128_t data);
     public:
+        static const char* CHAN(int index);
         DMAC(EmotionEngine* cpu, Emulator* e, GraphicsInterface* gif, ImageProcessingUnit* ipu, SubsystemInterface* sif,
              VectorInterface* vif0, VectorInterface* vif1);
         void reset(uint8_t* RDRAM, uint8_t* scratchpad);
