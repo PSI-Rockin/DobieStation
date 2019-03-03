@@ -25,6 +25,7 @@ class EmuWindow : public QMainWindow
 
         QMenu* file_menu;
         QMenu* options_menu;
+        QMenu* emulation_menu;
         QAction* load_rom_action;
         QAction* load_bios_action;
         QAction* load_state_action;

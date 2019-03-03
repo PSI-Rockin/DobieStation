@@ -253,12 +253,27 @@ void EmuWindow::create_menu()
         [this]() { this->scale_factor = 4; });
     options_menu->addAction(size_options_actions);
 
-    options_menu->addSeparator();
+    emulation_menu = menuBar()->addMenu(tr("Emulation"));
+
+    auto pause_action = new QAction(tr("&Pause"), this);
+    connect(pause_action, &QAction::triggered, this, [=] (){
+        this->emu_thread.pause(PAUSE_EVENT::USER_REQUESTED);
+    });
+    emulation_menu->addAction(pause_action);
+
+    auto unpause_action = new QAction(tr("&Unpause"), this);
+    connect(unpause_action, &QAction::triggered, this, [=] (){
+        this->emu_thread.unpause(PAUSE_EVENT::USER_REQUESTED);
+    });
+    emulation_menu->addAction(unpause_action);
+
+    emulation_menu->addSeparator();
 
     auto frame_action = new QAction(tr("&Frame Advance (10x draws for gs dumps)"), this);
-    connect(frame_action, &QAction::triggered, this,
-        [this]() { this->emu_thread.frame_advance ^= true; });
-    options_menu->addAction(frame_action);
+    connect(frame_action, &QAction::triggered, this, [=] (){
+        this->emu_thread.frame_advance ^= true;
+    });
+    emulation_menu->addAction(frame_action);
 }
 
 bool EmuWindow::load_bios()
