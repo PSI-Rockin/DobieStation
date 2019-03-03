@@ -47,3 +47,8 @@ void RenderWidget::toggle_aspect_ratio()
 {
     respect_aspect_ratio = !respect_aspect_ratio;
 }
+
+bool RenderWidget::get_respect_aspect_ratio() const
+{
+    return respect_aspect_ratio;
+}

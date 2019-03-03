@@ -229,9 +229,19 @@ void EmuWindow::create_menu()
     options_menu->addSeparator();
 
     scale_menu = options_menu->addMenu(tr("&Scale"));
-    auto size_options_actions = new QAction(tr("&Ignore aspect ratio"), this);
-    connect(size_options_actions, SIGNAL(triggered()), render_widget, SLOT(toggle_aspect_ratio()));
-    scale_menu->addAction(size_options_actions);
+
+    auto ignore_aspect_ratio_action =
+        new QAction(tr("&Ignore aspect ratio"), this);
+    ignore_aspect_ratio_action->setCheckable(true);
+
+    connect(ignore_aspect_ratio_action, &QAction::triggered, render_widget, [=] (){
+        render_widget->toggle_aspect_ratio();
+        ignore_aspect_ratio_action->setChecked(
+            !render_widget->get_respect_aspect_ratio()
+        );
+    });
+
+    scale_menu->addAction(ignore_aspect_ratio_action);
 
     scale_menu->addSeparator();
 
@@ -243,17 +253,17 @@ void EmuWindow::create_menu()
 
         connect(scale_action, &QAction::triggered, this, [=]() {
             // Force the widget to the new size
-            this->stack_widget->setMinimumSize(
+            stack_widget->setMinimumSize(
                 RenderWidget::DEFAULT_WIDTH * factor,
                 RenderWidget::DEFAULT_HEIGHT * factor
             );
 
-            this->showNormal();
-            this->adjustSize();
+            showNormal();
+            adjustSize();
 
             // reset it so the user can resize the window
             // normally
-            this->stack_widget->setMinimumSize(
+            stack_widget->setMinimumSize(
                 RenderWidget::DEFAULT_WIDTH,
                 RenderWidget::DEFAULT_HEIGHT
             );
@@ -266,13 +276,13 @@ void EmuWindow::create_menu()
 
     auto pause_action = new QAction(tr("&Pause"), this);
     connect(pause_action, &QAction::triggered, this, [=] (){
-        this->emu_thread.pause(PAUSE_EVENT::USER_REQUESTED);
+        emu_thread.pause(PAUSE_EVENT::USER_REQUESTED);
     });
     emulation_menu->addAction(pause_action);
 
     auto unpause_action = new QAction(tr("&Unpause"), this);
     connect(unpause_action, &QAction::triggered, this, [=] (){
-        this->emu_thread.unpause(PAUSE_EVENT::USER_REQUESTED);
+        emu_thread.unpause(PAUSE_EVENT::USER_REQUESTED);
     });
     emulation_menu->addAction(unpause_action);
 
@@ -280,7 +290,7 @@ void EmuWindow::create_menu()
 
     auto frame_action = new QAction(tr("&Frame Advance (10x draws for gs dumps)"), this);
     connect(frame_action, &QAction::triggered, this, [=] (){
-        this->emu_thread.frame_advance ^= true;
+        emu_thread.frame_advance ^= true;
     });
     emulation_menu->addAction(frame_action);
 }
