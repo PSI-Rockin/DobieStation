@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include "iop_interpreter.hpp"
 #include "../errors.hpp"
+#include "../logger.hpp"
 
 void IOP_Interpreter::interpret(IOP &cpu, uint32_t instruction)
 {
@@ -120,7 +121,7 @@ void IOP_Interpreter::j(IOP &cpu, uint32_t instruction)
         if (addr == 0x00003F78)
         {
             uint32_t intr = cpu.get_gpr(4);
-            printf("[IOP] RegisterIntrHandler: $%02X\n", intr);
+            ds_log->iop->info("RegisterIntrHandler: ${:02X}.\n", intr);
         }
         else if (addr == 0x1EC8 || addr == 0x00001F64)
         {
@@ -130,12 +131,12 @@ void IOP_Interpreter::j(IOP &cpu, uint32_t instruction)
             name[8] = 0;
             for (int i = 0; i < 8; i++)
                 name[i] = cpu.read8(struct_ptr + 12 + i);
-            printf("[IOP] RegisterLibraryEntries: %s version %d.0%d\n", name, version >> 8, version & 0xFF);
+            ds_log->iop->info("RegisterLibraryEntries: {} version {}.0{}.\n", name, version >> 8, version & 0xFF);
         }
         else
         {
-            printf("[IOP] Call $%02X: $%08X ($%08X, args:", next_instr & 0xFF, addr, PC);
-            printf("%08X %08X %08X %08X)\n", cpu.get_gpr(4), cpu.get_gpr(5), cpu.get_gpr(6), cpu.get_gpr(7));
+            ds_log->iop->info("Call ${:02X}: ${:08X} (${:08X}, args:\n", next_instr & 0xFF, addr, PC);
+            ds_log->iop->info("{:08X} {:08X} {:08X} {:08X})\n", cpu.get_gpr(4), cpu.get_gpr(5), cpu.get_gpr(6), cpu.get_gpr(7));
         }
     }*/
     if (addr == PC)

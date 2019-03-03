@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.1)
 project(DobieStation)
 
 add_subdirectory(ext/libdeflate)
+add_subdirectory(ext/spdlog)
+include_directories(ext/spdlog/include/)
 
 set(CMAKE_CXX_STANDARD 11)
 
@@ -75,6 +77,7 @@ set(SOURCES
 	src/core/scheduler.cpp
 	src/core/serialize.cpp
 	src/core/sif.cpp
+	src/core/logger.cpp
 	src/qt/emuthread.cpp
         src/qt/emuwindow.cpp
         src/qt/settingswindow.cpp
@@ -144,6 +147,7 @@ set(HEADERS
 	src/core/int128.hpp
 	src/core/scheduler.hpp
 	src/core/sif.hpp
+	src/core/logger.hpp
 	src/qt/emuthread.hpp
         src/qt/emuwindow.hpp
         src/qt/settingswindow.hpp

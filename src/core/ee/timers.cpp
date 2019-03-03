@@ -4,6 +4,7 @@
 #include "intc.hpp"
 #include "timers.hpp"
 #include "../errors.hpp"
+#include "../logger.hpp"
 
 EmotionTiming::EmotionTiming(INTC* intc) : intc(intc)
 {
@@ -183,7 +184,7 @@ uint32_t EmotionTiming::read32(uint32_t addr)
         case 0x10001820:
             return timers[3].compare;
         default:
-            printf("[EE Timing] Unrecognized read32 from $%08X\n", addr);
+            ds_log->ee_timing->info("Unrecognized read32 from ${:08X}.\n", addr);
             return 0;
     }
 }
@@ -195,7 +196,7 @@ void EmotionTiming::write32(uint32_t addr, uint32_t value)
     {
         case 0x00:
             update_timers();
-            printf("[EE Timing] Write32 timer %d counter: $%08X\n", id, value);
+            ds_log->ee_timing->info("Write32 timer {} counter: ${:08X}.\n", id, value);
             timers[id].counter = value & 0xFFFF;
             reschedule();
             break;
@@ -205,13 +206,13 @@ void EmotionTiming::write32(uint32_t addr, uint32_t value)
             reschedule();
             break;
         case 0x20:
-            printf("[EE Timing] Write32 timer %d compare: $%08X\n", id, value);
+            ds_log->ee_timing->info("Write32 timer {} compare: ${:08X}.\n", id, value);
             update_timers();
             timers[id].compare = value & 0xFFFF;
             reschedule();
             break;
         default:
-            printf("[EE Timing] Unrecognized write32 to $%08X of $%08X\n", addr, value);
+            ds_log->ee_timing->info("Unrecognized write32 to ${:08X} of ${:08X}.\n", addr, value);
             break;
     }
 }
@@ -266,7 +267,7 @@ uint32_t EmotionTiming::read_control(int index)
 
 void EmotionTiming::write_control(int index, uint32_t value)
 {
-    printf("[EE Timing] Write32 timer %d control: $%08X\n", index, value);
+    ds_log->ee_timing->info(" Write32 timer {} control: ${:08X}.\n", index, value);
     timers[index].control.mode = value & 0x3;
     timers[index].control.gate_enable = value & (1 << 2);
     timers[index].control.gate_VBLANK = value & (1 << 3);

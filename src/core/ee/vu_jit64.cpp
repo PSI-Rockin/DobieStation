@@ -6,6 +6,7 @@
 #include "../gif.hpp"
 
 #include "../errors.hpp"
+#include "../logger.hpp"
 
 /**
  * Calling convention notes (needed for calling C++ functions within generated code)
@@ -71,7 +72,7 @@ uint8_t convert_field(uint8_t value)
 
 void vu_stop_execution(VectorUnit& vu)
 {
-    //printf("[VU_JIT64] Stopped execution\n");
+    ds_log->vu_jit64->debug("Stopped execution.\n");
     vu.stop();
 }
 
@@ -2440,13 +2441,13 @@ REG_64 VU_JIT64::alloc_int_reg(VectorUnit &vu, int vi_reg, REG_STATE state)
 
     if (int_regs[reg].used && int_regs[reg].modified && int_regs[reg].vu_reg)
     {
-        //printf("[VU_JIT64] Flushing int reg %d! (old int reg: %d)\n", reg, int_regs[reg].vu_reg);
+        ds_log->vu_jit64->debug("Flushing int reg {}! (old int reg: {}).\n", reg, int_regs[reg].vu_reg);
         int old_vi_reg = int_regs[reg].vu_reg;
         emitter.load_addr((uint64_t)&vu.int_gpr[old_vi_reg], REG_64::RAX);
         emitter.MOV64_TO_MEM((REG_64)reg, REG_64::RAX);
     }
 
-    //printf("[VU_JIT64] Allocating int reg %d (vi%d)\n", reg, vi_reg);
+    ds_log->vu_jit64->debug("Allocating int reg {} (vi{}).\n", reg, vi_reg);
 
     if (state != REG_STATE::WRITE)
     {
@@ -2492,18 +2493,18 @@ REG_64 VU_JIT64::alloc_sse_reg(VectorUnit &vu, int vf_reg, REG_STATE state)
     //If the chosen register is used, flush it back to the VU state.
     if (xmm_regs[xmm].used && xmm_regs[xmm].modified && xmm_regs[xmm].vu_reg)
     {
-        //printf("[VU_JIT64] Flushing xmm reg %d! (vf%d)\n", xmm, xmm_regs[xmm].vu_reg);
+        ds_log->vu_jit64->debug("Flushing xmm reg {! (vf{}).\n", xmm, xmm_regs[xmm].vu_reg);
         int old_vf_reg = xmm_regs[xmm].vu_reg;
         emitter.load_addr(get_vf_addr(vu, old_vf_reg), REG_64::RAX);
         emitter.MOVAPS_TO_MEM((REG_64)xmm, REG_64::RAX);
     }
 
-    //printf("[VU_JIT64] Allocating xmm reg %d (vf%d)\n", xmm, vf_reg);
+    ds_log->vu_jit64->debug("Allocating xmm reg {} (vf{}).\n", xmm, vf_reg);
 
     if (state != REG_STATE::WRITE)
     {
         //Store the VU state register inside the newly allocated XMM register.
-        //printf("[VU_JIT64] Loading xmm reg with VU state\n");
+        ds_log->vu_jit64->debug("Loading xmm reg with VU state.\n");
         emitter.load_addr(get_vf_addr(vu, vf_reg), REG_64::RAX);
         emitter.MOVAPS_FROM_MEM(REG_64::RAX, (REG_64)xmm);
     }
@@ -2524,7 +2525,7 @@ REG_64 VU_JIT64::alloc_sse_scratchpad(VectorUnit &vu, int vf_reg)
     int xmm = search_for_register(xmm_regs, vf_reg);
     if (xmm_regs[xmm].used && xmm_regs[xmm].modified && xmm_regs[xmm].vu_reg)
     {
-        //printf("[VU_JIT64] Flushing xmm reg %d! (vf%d)\n", xmm, xmm_regs[xmm].vu_reg);
+        ds_log->vu_jit64->debug("Flushing xmm reg {! (vf{}).\n", xmm, xmm_regs[xmm].vu_reg);
         int old_vf_reg = xmm_regs[xmm].vu_reg;
         emitter.load_addr(get_vf_addr(vu, old_vf_reg), REG_64::RAX);
         emitter.MOVAPS_TO_MEM((REG_64)xmm, REG_64::RAX);
@@ -2580,7 +2581,7 @@ bool VU_JIT64::needs_clamping(int xmmreg, uint8_t field)
 void VU_JIT64::flush_regs(VectorUnit &vu)
 {
     //Store the contents of all allocated x64 registers into the VU state.
-    //printf("[VU_JIT64] Flushing regs\n");
+    ds_log->vu_jit64->debug("Flushing regs.\n");
     for (int i = 0; i < 16; i++)
     {
         int vf_reg = xmm_regs[i].vu_reg;
@@ -3097,10 +3098,10 @@ void VU_JIT64::fallback_interpreter(VectorUnit &vu, IR::Instruction &instr)
 extern "C"
 uint8_t* exec_block(VU_JIT64& jit, VectorUnit& vu)
 {
-    //printf("[VU_JIT64] Executing block at $%04X, Prev PC $%04X Current Program %08X: recompiling\n", vu.PC, jit.prev_pc, jit.current_program);
+    ds_log->vu_jit64->debug("Executing block at ${:04X}, Prev PC ${:04X} Current Program {:08X}: recompiling.\n", vu.PC, jit.prev_pc, jit.current_program);
     if (jit.cache.find_block(BlockState { vu.get_PC(), jit.prev_pc, jit.current_program, vu.pipeline_state[0], vu.pipeline_state[1] }) == nullptr)
     {
-        //printf("[VU_JIT64] Block not found at $%04X, Prev PC $%04X Current Program %08X: recompiling\n", vu.PC, jit.prev_pc, jit.current_program);
+        ds_log->vu_jit64->debug("Block not found at ${:04X}, Prev PC ${:04X} Current Program {:08X}: recompiling.\n", vu.PC, jit.prev_pc, jit.current_program);
         IR::Block block = jit.ir.translate(vu, vu.get_instr_mem(), jit.prev_pc);
         jit.recompile_block(vu, block);
     }

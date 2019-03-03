@@ -4,6 +4,7 @@
 
 #include "../emulator.hpp"
 #include "../errors.hpp"
+#include "../logger.hpp"
 
 enum DMAC_CHANNELS
 {
@@ -150,7 +151,7 @@ bool DMAC::mfifo_handler(int index)
                 interrupt_stat.channel_stat[MFIFO_EMPTY] = true;
                 int1_check();
                 mfifo_empty_triggered = true;
-                printf("[DMAC] MFIFO Empty\n");
+                ds_log->dmac->info("MFIFO Empty.\n");
             }
             //Continue transfer if using a reference and there's QWC left
             if (channels[index].quadword_count && (id == 0 || id == 3 || id == 4))
@@ -166,7 +167,7 @@ bool DMAC::mfifo_handler(int index)
 
 void DMAC::transfer_end(int index)
 {
-    printf("[DMAC] %s transfer ended\n", CHAN(index));
+    ds_log->dmac->info("{} transfer ended.\n", CHAN(index));
     channels[index].control &= ~0x100;
     channels[index].started = false;
     interrupt_stat.channel_stat[index] = true;
@@ -290,7 +291,7 @@ void DMAC::process_GIF(int cycles)
                         return;
                     }
                 }
-                //printf("Sending GIF PATH3 DMA\n");
+                ds_log->dmac->debug("Sending GIF PATH3 DMA.\n");
                 gif->dma_waiting(false);
 
                 gif->send_PATH3(fetch128(channels[GIF].address));
@@ -414,7 +415,7 @@ void DMAC::process_SIF0(int cycles)
             {
                 uint64_t DMAtag = sif->read_SIF0();
                 DMAtag |= (uint64_t)sif->read_SIF0() << 32;
-                printf("[DMAC] SIF0 tag: $%08lX_%08lX\n", DMAtag >> 32, DMAtag & 0xFFFFFFFF);
+                ds_log->dmac->info("SIF0 tag: ${:08X}_{:08X}.\n", DMAtag >> 32, DMAtag & 0xFFFFFFFF);
 
                 channels[SIF0].quadword_count = DMAtag & 0xFFFF;
                 channels[SIF0].address = DMAtag >> 32;
@@ -508,7 +509,7 @@ void DMAC::process_SPR_FROM(int cycles)
             else
             {
                 uint128_t DMAtag = fetch128(channels[SPR_FROM].scratchpad_address | (1 << 31));
-                printf("[DMAC] SPR_FROM tag: $%08X_%08X\n", DMAtag._u32[1], DMAtag._u32[0]);
+                ds_log->dmac->info("SPR_FROM tag: ${:08X}_{:08X}.\n", DMAtag._u32[1], DMAtag._u32[0]);
 
                 channels[SPR_FROM].quadword_count = DMAtag._u32[0] & 0xFFFF;
                 channels[SPR_FROM].address = DMAtag._u32[1];
@@ -616,7 +617,7 @@ void DMAC::handle_source_chain(int index)
 {
     uint128_t quad = fetch128(channels[index].tag_address);
     uint64_t DMAtag = quad._u64[0];
-    //printf("[DMAC] Ch.%d Source DMAtag read $%08X: $%08X_%08X\n", index, channels[index].tag_address, DMAtag >> 32, DMAtag & 0xFFFFFFFF);
+    ds_log->dmac->debug("Ch.{} Source DMAtag read ${:08X}: ${:08X}_{:08X}.\n", index, channels[index].tag_address, DMAtag >> 32, DMAtag & 0xFFFFFFFF);
 
     //Change CTRL to have the upper 16 bits equal to bits 16-31 of the most recently read DMAtag
     channels[index].control &= 0xFFFF;
@@ -716,13 +717,13 @@ void DMAC::handle_source_chain(int index)
     }
     if (IRQ_after_transfer && TIE)
         channels[index].tag_end = true;
-    //printf("New address: $%08X\n", channels[index].address);
-    //printf("New tag addr: $%08X\n", channels[index].tag_address);
+    //ds_log->dmac->debug("New address: ${:08X}.\n", channels[index].address);
+    //ds_log->dmac->debug("New tag addr: ${:08X}.\n", channels[index].tag_address);
 }
 
 void DMAC::start_DMA(int index)
 {
-    printf("[DMAC] %s DMA started: $%08X\n", CHAN(index), channels[index].control);
+    ds_log->dmac->info("{} DMA started: ${:08X}.\n", CHAN(index), channels[index].control);
     int mode = (channels[index].control >> 2) & 0x3;
     if (mode == 3)
     {
@@ -897,10 +898,10 @@ uint32_t DMAC::read32(uint32_t address)
             reg = RBOR;
             break;
         default:
-            printf("[DMAC] Unrecognized read32 from $%08X\n", address);
+            ds_log->dmac->info("nrecognized read32 from ${:08X}.\n", address);
             break;
     }
-    //printf("[DMAC] Read32 $%08X: $%08X\n", address, reg);
+    //ds_log->dmac->info("Read32 ${:08X}: ${:08X}.\n", address, reg);
     return reg;
 }
 
@@ -939,7 +940,7 @@ void DMAC::write8(uint32_t address, uint8_t value)
             control.stall_dest_channel = (value >> 6) & 0x3;
             break;
         default:
-            printf("[DMAC] Unrecognized write8 to $%08X of $%02X\n", address, value);
+            ds_log->dmac->info("Unrecognized write8 to ${:08X} of ${:02X}.\n", address, value);
             break;
     }
 }
@@ -970,7 +971,7 @@ void DMAC::write16(uint32_t address, uint16_t value)
             write32(address, (channels[SPR_TO].control & 0xFFFF0000) | value);
             break;
         default:
-            printf("[DMAC] Unrecognized write16 to $%08X of $%04X\n", address, value);
+            ds_log->dmac->info("Unrecognized write16 to ${:08X} of ${:04X}.\n", address, value);
             break;
     }
 }
@@ -980,7 +981,7 @@ void DMAC::write32(uint32_t address, uint32_t value)
     switch (address)
     {
         case 0x10008000:
-            printf("[DMAC] VIF0 CTRL: $%08X\n", value);
+            ds_log->dmac->info("VIF0 CTRL: ${:08X}.\n", value);
             if (!(channels[VIF0].control & 0x100))
             {
                 channels[VIF0].control = value;
@@ -996,19 +997,19 @@ void DMAC::write32(uint32_t address, uint32_t value)
             }
             break;
         case 0x10008010:
-            printf("[DMAC] VIF0 M_ADR: $%08X\n", value);
+            ds_log->dmac->info("VIF0 M_ADR: ${:08X}.\n", value);
             channels[VIF0].address = value & ~0xF;
             break;
         case 0x10008020:
-            printf("[DMAC] VIF0 QWC: $%08X\n", value);
+            ds_log->dmac->info("VIF0 QWC: ${:08X}.\n", value);
             channels[VIF0].quadword_count = value & 0xFFFF;
             break;
         case 0x10008030:
-            printf("[DMAC] VIF0 T_ADR: $%08X\n", value);
+            ds_log->dmac->info("VIF0 T_ADR: ${:08X}.\n", value);
             channels[VIF0].tag_address = value & ~0xF;
             break;
         case 0x10009000:
-            printf("[DMAC] VIF1 CTRL: $%08X\n", value);
+            ds_log->dmac->info("VIF1 CTRL: ${:08X}.\n", value);
             if (!(channels[VIF1].control & 0x100))
             {
                 channels[VIF1].control = value;
@@ -1024,19 +1025,19 @@ void DMAC::write32(uint32_t address, uint32_t value)
             }
             break;
         case 0x10009010:
-            printf("[DMAC] VIF1 M_ADR: $%08X\n", value);
+            ds_log->dmac->info("VIF1 M_ADR: ${:08X}.\n", value);
             channels[VIF1].address = value & ~0xF;
             break;
         case 0x10009020:
-            printf("[DMAC] VIF1 QWC: $%08X\n", value);
+            ds_log->dmac->info("VIF1 QWC: ${:08X}.\n", value);
             channels[VIF1].quadword_count = value & 0xFFFF;
             break;
         case 0x10009030:
-            printf("[DMAC] VIF1 T_ADR: $%08X\n", value);
+            ds_log->dmac->info("VIF1 T_ADR: ${:08X}.\n", value);
             channels[VIF1].tag_address = value & ~0xF;
             break;
         case 0x1000A000:
-            printf("[DMAC] GIF CTRL: $%08X\n", value);
+            ds_log->dmac->info("GIF CTRL: ${:08X}.\n", value);
             if (!(channels[GIF].control & 0x100))
             {
                 channels[GIF].control = value;
@@ -1060,19 +1061,19 @@ void DMAC::write32(uint32_t address, uint32_t value)
             }
             break;
         case 0x1000A010:
-            printf("[DMAC] GIF M_ADR: $%08X\n", value);
+            ds_log->dmac->info("GIF M_ADR: ${:08X}.\n", value);
             channels[GIF].address = value & ~0xF;
             break;
         case 0x1000A020:
-            printf("[DMAC] GIF QWC: $%08X\n", value & 0xFFFF);
+            ds_log->dmac->info("GIF QWC: ${:08X}.\n", value & 0xFFFF);
             channels[GIF].quadword_count = value & 0xFFFF;
             break;
         case 0x1000A030:
-            printf("[DMAC] GIF T_ADR: $%08X\n", value);
+            ds_log->dmac->info("GIF T_ADR: ${:08X}.\n", value);
             channels[GIF].tag_address = value & ~0xF;
             break;
         case 0x1000B000:
-            printf("[DMAC] IPU_FROM CTRL: $%08X\n", value);
+            ds_log->dmac->info("IPU_FROM CTRL: ${:08X}.\n", value);
             if (!(channels[IPU_FROM].control & 0x100))
             {
                 channels[IPU_FROM].control = value;
@@ -1088,15 +1089,15 @@ void DMAC::write32(uint32_t address, uint32_t value)
             }
             break;
         case 0x1000B010:
-            printf("[DMAC] IPU_FROM M_ADR: $%08X\n", value);
+            ds_log->dmac->info("IPU_FROM M_ADR: ${:08X}.\n", value);
             channels[IPU_FROM].address = value & ~0xF;
             break;
         case 0x1000B020:
-            printf("[DMAC] IPU_FROM QWC: $%08X\n", value);
+            ds_log->dmac->info("IPU_FROM QWC: ${:08X}.\n", value);
             channels[IPU_FROM].quadword_count = value & 0xFFFF;
             break;
         case 0x1000B400:
-            printf("[DMAC] IPU_TO CTRL: $%08X\n", value);
+            ds_log->dmac->info("IPU_TO CTRL: ${:08X}.\n", value);
             if (!(channels[IPU_TO].control & 0x100))
             {
                 channels[IPU_TO].control = value;
@@ -1112,19 +1113,19 @@ void DMAC::write32(uint32_t address, uint32_t value)
             }
             break;
         case 0x1000B410:
-            printf("[DMAC] IPU_TO M_ADR: $%08X\n", value);
+            ds_log->dmac->info("IPU_TO M_ADR: ${:08X}.\n", value);
             channels[IPU_TO].address = value & ~0xF;
             break;
         case 0x1000B420:
-            printf("[DMAC] IPU_TO QWC: $%08X\n", value);
+            ds_log->dmac->info("IPU_TO QWC: ${:08X}.\n", value);
             channels[IPU_TO].quadword_count = value & 0xFFFF;
             break;
         case 0x1000B430:
-            printf("[DMAC] IPU_TO T_ADR: $%08X\n", value);
+            ds_log->dmac->info("IPU_TO T_ADR: ${:08X}.\n", value);
             channels[IPU_TO].tag_address = value & ~0xF;
             break;
         case 0x1000C000:
-            printf("[DMAC] SIF0 CTRL: $%08X\n", value);
+            ds_log->dmac->info("SIF0 CTRL: ${:08X}.\n", value);
             if (!(channels[SIF0].control & 0x100))
             {
                 channels[SIF0].control = value;
@@ -1140,15 +1141,15 @@ void DMAC::write32(uint32_t address, uint32_t value)
             }
             break;
         case 0x1000C010:
-            printf("[DMAC] SIF0 M_ADR: $%08X\n", value);
+            ds_log->dmac->info("SIF0 M_ADR: ${:08X}.\n", value);
             channels[SIF0].address = value & ~0xF;
             break;
         case 0x1000C020:
-            printf("[DMAC] SIF0 QWC: $%08X\n", value);
+            ds_log->dmac->info("SIF0 QWC: ${:08X}.\n", value);
             channels[SIF0].quadword_count = value & 0xFFFF;
             break;
         case 0x1000C400:
-            printf("[DMAC] SIF1 CTRL: $%08X\n", value);
+            ds_log->dmac->info("SIF1 CTRL: ${:08X}.\n", value);
             if (!(channels[SIF1].control & 0x100))
             {
                 channels[SIF1].control = value;
@@ -1164,19 +1165,19 @@ void DMAC::write32(uint32_t address, uint32_t value)
             }
             break;
         case 0x1000C410:
-            printf("[DMAC] SIF1 M_ADR: $%08X\n", value);
+            ds_log->dmac->info("SIF1 M_ADR: ${:08X}.\n", value);
             channels[SIF1].address = value & ~0xF;
             break;
         case 0x1000C420:
-            printf("[DMAC] SIF1 QWC: $%08X\n", value);
+            ds_log->dmac->info("SIF1 QWC: ${:08X}.\n", value);
             channels[SIF1].quadword_count = value & 0xFFFF;
             break;
         case 0x1000C430:
-            printf("[DMAC] SIF1 T_ADR: $%08X\n", value);
+            ds_log->dmac->info("SIF1 T_ADR: ${:08X}.\n", value);
             channels[SIF1].tag_address = value & ~0xF;
             break;
         case 0x1000D000:
-            printf("[DMAC] SPR_FROM CTRL: $%08X\n", value);
+            ds_log->dmac->info("SPR_FROM CTRL: ${:08X}.\n", value);
             if (!(channels[SPR_FROM].control & 0x100))
             {
                 channels[SPR_FROM].control = value;
@@ -1192,19 +1193,19 @@ void DMAC::write32(uint32_t address, uint32_t value)
             }
             break;
         case 0x1000D010:
-            printf("[DMAC] SPR_FROM M_ADR: $%08X\n", value);
+            ds_log->dmac->info("SPR_FROM M_ADR: ${:08X}.\n", value);
             channels[SPR_FROM].address = value & ~0xF;
             break;
         case 0x1000D020:
-            printf("[DMAC] SPR_FROM QWC: $%08X\n", value);
+            ds_log->dmac->info("SPR_FROM QWC: ${:08X}.\n", value);
             channels[SPR_FROM].quadword_count = value & 0xFFFF;
             break;
         case 0x1000D080:
-            printf("[DMAC] SPR_FROM SADR: $%08X\n", value);
+            ds_log->dmac->info("SPR_FROM SADR: ${:08X}.\n", value);
             channels[SPR_FROM].scratchpad_address = value & 0x3FFC;
             break;
         case 0x1000D400:
-            printf("[DMAC] SPR_TO CTRL: $%08X\n", value);
+            ds_log->dmac->info("SPR_TO CTRL: ${:08X}.\n", value);
             if (!(channels[SPR_TO].control & 0x100))
             {
                 channels[SPR_TO].control = value;
@@ -1220,23 +1221,23 @@ void DMAC::write32(uint32_t address, uint32_t value)
             }
             break;
         case 0x1000D410:
-            printf("[DMAC] SPR_TO M_ADR: $%08X\n", value);
+            ds_log->dmac->info("SPR_TO M_ADR: ${:08X}.\n", value);
             channels[SPR_TO].address = value & ~0xF;
             break;
         case 0x1000D420:
-            printf("[DMAC] SPR_TO QWC: $%08X\n", value);
+            ds_log->dmac->info("SPR_TO QWC: ${:08X}.\n", value);
             channels[SPR_TO].quadword_count = value & 0xFFFF;
             break;
         case 0x1000D430:
-            printf("[DMAC] SPR_TO T_ADR: $%08X\n", value);
+            ds_log->dmac->info("SPR_TO T_ADR: ${:08X}.\n", value);
             channels[SPR_TO].tag_address = value & ~0xF;
             break;
         case 0x1000D480:
-            printf("[DMAC] SPR_TO SADR: $%08X\n", value);
+            ds_log->dmac->info("SPR_TO SADR: ${:08X}.\n", value);
             channels[SPR_TO].scratchpad_address = value & 0x3FFC;
             break;
         case 0x1000E000:
-            printf("[DMAC] Write32 D_CTRL: $%08X\n", value);
+            ds_log->dmac->info("Write32 D_CTRL: ${:08X}.\n", value);
             control.master_enable = value & 0x1;
             control.cycle_stealing = value & 0x2;
             control.mem_drain_channel = (value >> 2) & 0x3;
@@ -1246,7 +1247,7 @@ void DMAC::write32(uint32_t address, uint32_t value)
             break;
         case 0x1000E010:
         case 0x1000E100:
-            printf("[DMAC] Write32 D_STAT: $%08X\n", value);
+            ds_log->dmac->info("Write32 D_STAT: ${:08X}.\n", value);
             for (int i = 0; i < 15; i++)
             {
                 if (value & (1 << i))
@@ -1259,28 +1260,28 @@ void DMAC::write32(uint32_t address, uint32_t value)
             int1_check();
             break;
         case 0x1000E020:
-            printf("[DMAC] Write to PCR: $%08X\n", value);
+            ds_log->dmac->info("Write to PCR: ${:08X}.\n", value);
             PCR = value;
             break;
         case 0x1000E030:
-            printf("[DMAC] Write to SQWC: $%08X\n", value);
+            ds_log->dmac->info("Write to SQWC: ${:08X}\n", value);
             SQWC.skip_qwc = value & 0xFF;
             SQWC.transfer_qwc = (value >> 16) & 0xFF;
             break;
         case 0x1000E040:
-            printf("[DMAC] Write to RBSR: $%08X\n", value);
+            ds_log->dmac->info("Write to RBSR: ${:08X}\n", value);
             RBSR = value;
             break;
         case 0x1000E050:
-            printf("[DMAC] Write to RBOR: $%08X\n", value);
+            ds_log->dmac->info("Write to RBOR: ${:08X}\n", value);
             RBOR = value;
             break;
         case 0x1000E060:
-            printf("[DMAC] Write to STADR: $%08X\n", value);
+            ds_log->dmac->info("Write to STADR: ${:08X}\n", value);
             STADR = value;
             break;
         default:
-            printf("[DMAC] Unrecognized write32 of $%08X to $%08X\n", value, address);
+            ds_log->dmac->info("Unrecognized write32 of ${:08X} to ${:08X}\n", value, address);
             break;
     }
 }

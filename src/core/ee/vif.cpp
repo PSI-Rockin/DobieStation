@@ -5,8 +5,7 @@
 
 #include "../gif.hpp"
 #include "../errors.hpp"
-
-#define printf(fmt, ...)(0)
+#include "../logger.hpp"
 
 VectorInterface::VectorInterface(GraphicsInterface* gif, VectorUnit* vu, INTC* intc, int id) : gif(gif), vu(vu), intc(intc), id(id)
 {
@@ -50,7 +49,7 @@ bool VectorInterface::check_vif_stall(uint32_t value)
     {
         if (vif_ibit_detected)
         {
-            printf("[VIF] VIF%x Stalled\n", get_id());
+            ds_log->vif->info("VIF{:x} Stalled.\n", get_id());
             vif_ibit_detected = false;
             vif_interrupt = true;
 
@@ -126,20 +125,20 @@ void VectorInterface::update(int cycles)
             {
                 case 0x20:
                     //STMASK
-                    printf("[VIF] New MASK: $%08X\n", value);
+                    ds_log->vif->info("New MASK: ${:08X}.\n", value);
                     MASK = value;
                     command = 0;
                     break;
                 case 0x30:
                     //STROW
-                    printf("[VIF] ROW%d: $%08X\n", 4 - command_len, value);
+                    ds_log->vif->info("ROW{}: ${:08X}.\n", 4 - command_len, value);
                     ROW[4 - command_len] = value;
                     if (command_len <= 1)
                         command = 0;
                     break;
                 case 0x31:
                     //STCOL
-                    printf("[VIF] COL%d: $%08X\n", 4 - command_len, value);
+                    ds_log->vif->info("COL{}: ${:08X}.\n", 4 - command_len, value);
                     COL[4 - command_len] = value;
                     if (command_len <= 1)
                         command = 0;
@@ -207,64 +206,64 @@ void VectorInterface::decode_cmd(uint32_t value)
     switch (command)
     {
         case 0x00:
-            //printf("[VIF] NOP\n");
+            ds_log->vif->debug("NOP.\n");
             command = 0;
             break;
         case 0x01:
-            printf("[VIF] Set CYCLE: $%08X\n", value);
+            ds_log->vif->info("Set CYCLE: ${:08X}.\n", value);
             CYCLE.CL = imm & 0xFF;
             CYCLE.WL = imm >> 8;
             command = 0;
             break;
         case 0x02:
-            printf("[VIF] Set OFFSET: $%08X\n", value);
+            ds_log->vif->info("Set OFFSET: ${:08X}.\n", value);
             OFST = value & 0x3FF;
             TOPS = BASE;
             DBF = false;
             command = 0;
             break;
         case 0x03:
-            printf("[VIF] Set BASE: $%08X\n", value);
+            ds_log->vif->info("Set BASE: ${:08X}.\n", value);
             BASE = value & 0x3FF;
             command = 0;
             break;
         case 0x04:
-            printf("[VIF] Set ITOP: $%08X\n", value);
+            ds_log->vif->info("Set ITOP: ${:08X}.\n", value);
             ITOPS = value & 0x3FF;
             command = 0;
             break;
         case 0x05:
-            printf("[VIF] Set MODE: $%08X\n", value);
+            ds_log->vif->info("Set MODE: ${:08X}.\n", value);
             MODE = value & 0x3;
             command = 0;
             break;
         case 0x06:
-            printf("[VIF] MSKPATH3: %d\n", (value >> 15) & 0x1);
+            ds_log->vif->info("MSKPATH3: {}\n", (value >> 15) & 0x1);
             gif->set_path3_vifmask((value >> 15) & 0x1);
             command = 0;
             vif_stalled |= STALL_MSKPATH3;
             break;
         case 0x07:
-            printf("[VIF] Set MARK: $%08X\n", value);
+            ds_log->vif->info("Set MARK: ${:08X}\n", value);
             MARK = imm;
             mark_detected = true;
             command = 0;
             break;
         case 0x10:
-            printf("[VIF] FLUSHE\n");
+            ds_log->vif->info("FLUSHE.\n");
             wait_for_VU = true;
             wait_cmd_value = value;
             command = 0;
             break;
         case 0x11:
-            printf("[VIF] FLUSH\n");
+            ds_log->vif->info("FLUSH.\n");
             wait_for_VU = true;
             flush_stall = true;
             wait_cmd_value = value;
             command = 0;
             break;
         case 0x13:
-            printf("[VIF] FLUSHA\n");
+            ds_log->vif->info("FLUSHA.\n");
             wait_for_VU = true;
             flush_stall = true;
             wait_for_PATH3 = true;
@@ -272,45 +271,45 @@ void VectorInterface::decode_cmd(uint32_t value)
             command = 0;
             break;
         case 0x14:
-            printf("[VIF] MSCAL\n");
+            ds_log->vif->info("MSCAL.\n");
             wait_for_VU = true;
             wait_cmd_value = value;
             command = 0;
             break;
         case 0x15:
-            printf("[VIF] MSCALF\n");
+            ds_log->vif->info("MSCALF.\n");
             wait_for_VU = true;
             flush_stall = true;
             wait_cmd_value = value;
             command = 0;
             break;
         case 0x17:
-            printf("[VIF] MSCNT\n");
+            ds_log->vif->info("MSCNT.\n");
             wait_for_VU = true;
             wait_cmd_value = value;
             command = 0;
             break;
         case 0x20:
-            printf("[VIF] Set MASK: $%08X\n", value);
+            ds_log->vif->info("Set MASK: ${:08X}.\n", value);
             command_len++;
             break;
         case 0x30:
-            printf("[VIF] Set ROW: $%08X\n", value);
+            ds_log->vif->info("Set ROW: ${:08X}.\n", value);
             command_len += 4;
             break;
         case 0x31:
-            printf("[VIF] Set COL: $%08X\n", value);
+            ds_log->vif->info("Set COL: ${:08X}.\n", value);
             command_len += 4;
             break;
         case 0x4A:
-            printf("[VIF] MPG: $%08X\n", value);
+            ds_log->vif->info("MPG: ${:08X}.\n", value);
             {
                 int num = (value >> 16) & 0xFF;
                 if (!num)
                     command_len += 512;
                 else
                     command_len += num << 1;
-                //printf("Command len: %d\n", command_len);
+                ds_log->vif->debug("Command len: {}.\n", command_len);
                 mpg.addr = imm * 8;
             }
 
@@ -323,7 +322,7 @@ void VectorInterface::decode_cmd(uint32_t value)
                 command_len += 65536;
             else
                 command_len += (imm * 4);
-            printf("[VIF] DIRECT: %d\n", command_len);
+            ds_log->vif->info("DIRECT: {}.\n", command_len);
             gif->request_PATH(2, command == 0x50);
             break;
         default:
@@ -380,7 +379,7 @@ void VectorInterface::MSCAL(uint32_t addr)
 void VectorInterface::init_UNPACK(uint32_t value)
 {
     uint32_t data_read;
-    printf("[VIF] UNPACK: $%08X\n", value);
+    ds_log->vif->info("UNPACK: ${:08X}.\n", value);
     unpack.addr = (imm & 0x3FF) * 16;
     unpack.sign_extend = !(imm & (1 << 14));
     unpack.masked = (command >> 4) & 0x1;
@@ -404,7 +403,7 @@ void VectorInterface::init_UNPACK(uint32_t value)
     if (CYCLE.WL <= CYCLE.CL)
     {
         //Skip write
-        //printf("[VIF] Command len: %d\n", command_len);
+        ds_log->vif->debug("Command len: {}.\n", command_len);
         data_read = unpack.num;
     }
     else
@@ -422,7 +421,7 @@ void VectorInterface::init_UNPACK(uint32_t value)
 
     command_len += data_read;
 
-    //printf("[VIF] UNPACK V%d-%d addr: %x num: %d masked: %d word per op: %d command_len = %d\n", (vn + 1), (32 >> vl), unpack.addr, unpack.num, unpack.masked, unpack.words_per_op, command_len);
+    //ds_log->vif->debug("UNPACK V{}-{} addr: {:x} num: {} masked: {} word per op: {} command_len = {}.\n", (vn + 1), (32 >> vl), unpack.addr, unpack.num, unpack.masked, unpack.words_per_op, command_len);
 }
 
 void VectorInterface::handle_UNPACK_masking(uint128_t& quad)
@@ -438,15 +437,15 @@ void VectorInterface::handle_UNPACK_masking(uint128_t& quad)
             switch (tempmask)
             {
                 case 1:
-                    //printf("[VIF] Writing ROW to position %d\n", i);
+                    //ds_log->vif->debug("Writing ROW to position {}\n", i);
                     quad._u32[i] = ROW[i];
                     break;
                 case 2:
-                    //printf("[VIF] Writing COL to position %d\n", i);
+                    //ds_log->vif->debug("Writing COL to position {}.\n", i);
                     quad._u32[i] = COL[std::min(unpack.blocks_written, 3)];
                     break;
                 case 3:
-                    //printf("[VIF] Write Protecting to position %d\n", i);
+                    //ds_log->vif->debug("Write Protecting to position {}.\n", i);
                     quad._u32[i] = vu->read_data<uint32_t>(unpack.addr + (i * 4));
                     break;
                 default:
@@ -810,8 +809,7 @@ void VectorInterface::process_UNPACK_quad(uint128_t &quad)
 
     unpack.blocks_written++;
 
-    //printf("[VIF] Write data mem $%08X: $%08X_%08X_%08X_%08X\n", unpack.addr,
-    //quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
+    ds_log->vif->debug("Write data mem ${:08X}: ${:08X}_{:08X}_{:08X}_{:08X}.\n", unpack.addr, quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
     vu->write_data<uint128_t>(unpack.addr, quad);
     unpack.addr += 16;
     unpack.num -= 1;
@@ -830,7 +828,7 @@ bool VectorInterface::transfer_DMAtag(uint128_t tag)
     //This should return false if the transfer stalls due to the FIFO filling up
     if (FIFO.size() > 62)
         return false;
-    printf("[VIF] Transfer tag: $%08X_%08X_%08X_%08X\n", tag._u32[3], tag._u32[2], tag._u32[1], tag._u32[0]);
+    ds_log->vif->info("Transfer tag: ${:08X}_{:08X}_{:08X}_{:08X}.\n", tag._u32[3], tag._u32[2], tag._u32[1], tag._u32[0]);
     for (int i = 2; i < 4; i++)
         FIFO.push(tag._u32[i]);
     return true;
@@ -840,7 +838,7 @@ bool VectorInterface::feed_DMA(uint128_t quad)
 {
     if (FIFO.size() > 60)
         return false;
-    printf("[VIF] Feed DMA: $%08X_%08X_%08X_%08X\n", quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
+    ds_log->vif->info("Feed DMA: ${:08X}_{:08X}_{:08X}_{:08X}.\n", quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
     for (int i = 0; i < 4; i++)
         FIFO.push(quad._u32[i]);
     return true;
@@ -857,13 +855,13 @@ uint32_t VectorInterface::get_stat()
     reg |= (vif_stalled & STALL_IBIT) << 10;
     reg |= vif_interrupt << 11;
     reg |= ((FIFO.size() + 3) / 4) << 24;
-    //printf("[VIF] Get STAT: $%08X\n", reg);
+    ds_log->vif->debug("Get STAT: ${:08X}.\n", reg);
     return reg;
 }
 
 uint32_t VectorInterface::get_mark()
 {
-    printf("[VIF] Get MARK: $%x\n", MARK);
+    ds_log->vif->info("Get MARK: ${:x}.\n", MARK);
     return MARK;
 }
 
@@ -893,7 +891,7 @@ uint32_t VectorInterface::get_err()
     reg |= VIF_ERR.mask_interrupt;
     reg |= VIF_ERR.mask_dmatag_error << 1;
     reg |= VIF_ERR.mask_vifcode_error << 2;
-    printf("[VIF] Get ERR: $%08X\n", reg);
+    ds_log->vif->info("Get ERR: ${:08X}.\n", reg);
     return reg;
 }
 
@@ -901,7 +899,7 @@ void VectorInterface::set_mark(uint32_t value)
 {
     MARK = value;
     mark_detected = false;
-    printf("[VIF] Set MARK: $%x\n", MARK);
+    ds_log->vif->info("Set MARK: ${:x}.\n", MARK);
 }
 
 void VectorInterface::set_err(uint32_t value)
@@ -909,23 +907,23 @@ void VectorInterface::set_err(uint32_t value)
     VIF_ERR.mask_interrupt = value & 0x1;
     VIF_ERR.mask_dmatag_error = value & 0x2;
     VIF_ERR.mask_vifcode_error = value & 0x4;
-    printf("[VIF] Set ERR: $%x\n", value);
+    ds_log->vif->info("Set ERR: ${:x}.\n", value);
 }
 
 void VectorInterface::set_fbrst(uint32_t value)
 {
-    printf("[VIF] Set FBRST: $%x\n", value);
+    ds_log->vif->info("Set FBRST: ${:x}.\n", value);
 
     if (value & 0x8)
     {
-        printf("[VIF] VIF%x Resumed\n", get_id());
+        ds_log->vif->info("VIF{} Resumed.\n", get_id());
         vif_stalled &= ~STALL_IBIT;
         vif_interrupt = false;
         vif_stop = false;
     }
     if (value & 0x4)
     {
-        printf("[VIF] VIF%x Stopped\n", get_id());
+        ds_log->vif->info("VIF{} Stopped.\n", get_id());
         vif_stop = true;
     }
 }

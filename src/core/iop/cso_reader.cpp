@@ -11,6 +11,8 @@ Based off reference by unknownbrackets:
 #include <cstring>
 #include <cassert>
 
+#include "../logger.hpp"
+
 constexpr uint32_t FOURCC(const char chars[4])
 {
     return
@@ -124,7 +126,7 @@ bool CSO_Reader::read_block_internal(uint32_t block)
         m_file.read((char*)m_frame, len);
         if ((uint64_t)m_file.gcount() != len)
         {
-            fprintf(stderr, "read error reading (uncompressed) block %d\n", block);
+            ds_log->cdvd->error("read error reading (uncompressed) block {}.\n", block);
             m_curframe = 0xFFFFFFFF;
             return false;
         }
@@ -135,7 +137,7 @@ bool CSO_Reader::read_block_internal(uint32_t block)
         m_file.read((char*)m_readbuf, len);
         if ((uint64_t)m_file.gcount() != len)
         {
-            fprintf(stderr, "read error reading (compressed) block %d\n", block);
+            ds_log->cdvd->error("read error reading (compressed) block {}\n", block);
             return false;
         }
         
@@ -143,14 +145,14 @@ bool CSO_Reader::read_block_internal(uint32_t block)
         auto res = libdeflate_deflate_decompress(m_inflate, m_readbuf, len, m_frame, m_framesize, &read);
         if (res != LIBDEFLATE_SUCCESS)
         {
-            fprintf(stderr, "libdeflate error on block %d: %d\n", block, res);
+            ds_log->cdvd->error("libdeflate error on block {}: {}.\n", block, res);
             m_curframe = 0xFFFFFFFF;
             return false;
         }
         
         if (read < m_blocksize)
         {
-            fprintf(stderr, "compressed sector %d decoded to less than the blocksize\n", block);
+            ds_log->cdvd->error("compressed sector {} decoded to less than the blocksize.\n", block);
             m_curframe = 0xFFFFFFFF;
             return false;
         }
@@ -199,7 +201,7 @@ bool CSO_Reader::open(const char* path)
     m_file = std::ifstream(path, std::ios::binary | std::ios::ate);
     if (!m_file.is_open())
     {
-        fprintf(stderr, "failed to open file\n");
+        ds_log->cdvd->error("failed to open file.\n");
         return false;
     }
     auto file_len = m_file.tellg();
@@ -217,12 +219,12 @@ bool CSO_Reader::open(const char* path)
     // validate header
     if (header.magic != FOURCC("CISO"))
     {
-        fprintf(stderr, "file is not a CSO!\n");
+        ds_log->cdvd->error("file is not a CSO!\n");
         return false;
     }
     if (header.version > 1)
     {
-        fprintf(stderr, "unsupported CSO version or corrupt file\n");
+        ds_log->cdvd->error("unsupported CSO version or corrupt file.\n");
         return false;
     }
     
@@ -240,7 +242,7 @@ bool CSO_Reader::open(const char* path)
     m_file.read((char*)m_indices, num_entries * sizeof(uint32_t));
     if ((uint32_t)m_file.gcount() != num_entries * sizeof(uint32_t))
     {
-        fprintf(stderr, "failed to read CSO indices\n");
+        ds_log->cdvd->error("failed to read CSO indices.\n");
         close();
         return false;
     }
@@ -249,7 +251,7 @@ bool CSO_Reader::open(const char* path)
     uint32_t lastidx = m_indices[0];
     if ((lastidx & ~IDX_COMPRESS_BIT) << header.index_shift < 0x18)
     {
-        fprintf(stderr, "CSO indices are corrupted (starts within header)\n");
+        ds_log->cdvd->error("CSO indices are corrupted (starts within header).\n");
         close();
         return false;
     }
@@ -260,7 +262,7 @@ bool CSO_Reader::open(const char* path)
         uint32_t lastpos = (lastidx & ~IDX_COMPRESS_BIT) << header.index_shift;
         if (lastpos > file_len)
         {
-            fprintf(stderr, "CSO indices are corrupted (outside file)\n");
+            ds_log->cdvd->error("CSO indices are corrupted (outside file).\n");
             close();
             return false;
         }
@@ -270,19 +272,19 @@ bool CSO_Reader::open(const char* path)
         uint32_t len = pos - lastpos;
         if (len <= 0)
         {
-            fprintf(stderr, "CSO indices are corrupted (out of order)\n");
+            ds_log->cdvd->error("CSO indices are corrupted (out of order).\n");
             close();
             return false;
         }
         else if (len > framesize)
         {
-            fprintf(stderr, "CSO indices are corrupted (index too large)\n");
+            ds_log->cdvd->error("CSO indices are corrupted (index too large).\n");
             close();
             return false;
         }
         else if ((lastidx & IDX_COMPRESS_BIT) && len < header.block_len)
         {
-            fprintf(stderr, "CSO indices are corrupted (uncompressed index smaller than block size)\n");
+            ds_log->cdvd->error("CSO indices are corrupted (uncompressed index smaller than block size).\n");
             close();
             return false;
         }
@@ -301,7 +303,7 @@ bool CSO_Reader::open(const char* path)
     m_inflate = libdeflate_alloc_decompressor();
     if (!m_inflate)
     {
-        fprintf(stderr, "failed to allocate decompressor\n");
+        ds_log->cdvd->error("failed to allocate decompressor.\n");
         close();
         return false;
     }

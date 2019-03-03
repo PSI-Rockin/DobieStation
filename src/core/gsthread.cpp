@@ -8,6 +8,7 @@
 #include "gsthread.hpp"
 #include "gsmem.hpp"
 #include "errors.hpp"
+#include "logger.hpp"
 
 using namespace std;
 
@@ -21,8 +22,6 @@ static uint32_t page_PSMCT16Z[32][64][64];
 static uint32_t page_PSMCT16SZ[32][64][64];
 static uint32_t page_PSMCT8[32][64][128];
 static uint32_t page_PSMCT4[32][128][128];
-
-#define printf(fmt, ...)(0)
 
 /**
   * ~ GS notes ~
@@ -227,7 +226,7 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
 
                         while (!p.target_mutex->try_lock())
                         {
-                            printf("[GS_t] buffer lock failed!\n");
+                            ds_log->gs_t->debug("buffer lock failed!\n");
                             std::this_thread::yield();
                         }
                         std::lock_guard<std::mutex> lock(*p.target_mutex, std::adopt_lock);
@@ -258,10 +257,10 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
                     }
                     case gsdump_t:
                     {
-                        printf("gs dump! ");
+                        ds_log->gs_t->debug("gs dump!\n");
                         if (!gsdump_recording)
                         {
-                            printf("(start)\n");
+                            ds_log->gs_t->debug("(start)\n");
                             gsdump_file.open("gsdump.gsd", ios::out | ios::binary);
                             if (!gsdump_file.is_open())
                                 Errors::die("gs dump file failed to open");
@@ -518,7 +517,7 @@ void GraphicsSynthesizerThread::dump_texture(uint32_t* target, uint32_t start_ad
             x++;
         }
     }*/
-    printf("[GS_t] Done dumping\n");
+    ds_log->gs_t->debug("Done dumping\n");
 }
 
 void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
@@ -547,7 +546,7 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             }
             PRIM.fix_fragment_value = value & (1 << 10);
             num_vertices = 0;
-            printf("[GS_t] PRIM: $%08X\n", value);
+            ds_log->gs_t->debug("PRIM: {:08X}\n", value);
             break;
         case 0x0001:
         {
@@ -558,7 +557,7 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
 
             uint32_t q = value >> 32;
             RGBAQ.q = *(float*)&q;
-            printf("[GS_t] RGBAQ: $%08X_%08X\n", value >> 32, value);
+            ds_log->gs_t->debug("RGBAQ: {:08X}_{:08X}\n", value >> 32, value);
         }
             break;
         case 0x0002:
@@ -569,12 +568,12 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             uint32_t t = (value >> 32) & 0xFFFFFF00;
             ST.t = *(float*)&t;
         }
-            printf("ST: (%f, %f)\n", ST.s, ST.t);
+            ds_log->gs_t->debug("ST: ({}, {})\n", ST.s, ST.t);
             break;
         case 0x0003:
             UV.u = value & 0x3FFF;
             UV.v = (value >> 16) & 0x3FFF;
-            printf("UV: ($%04X, $%04X)\n", UV.u, UV.v);
+            ds_log->gs_t->debug("UV: ({:04X}, {:04X})\n", UV.u, UV.v);
             break;
         case 0x0004:
             //XYZF2
@@ -646,7 +645,7 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             context2.set_xyoffset(value);
             break;
         case 0x001A:
-            printf("PRMODECNT: $%08X\n", value);
+            ds_log->gs_t->debug("PRMODECNT: {:08X}\n", value);
             {
                 if (value & 0x1)
                     current_PRMODE = &PRIM;
@@ -660,7 +659,7 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             }
             break;
         case 0x001B:
-            printf("PRMODE: $%08X\n", value);
+            ds_log->gs_t->debug("PRMODE: {:08X}\n", value);
             PRMODE.gourand_shading = value & (1 << 3);
             PRMODE.texture_mapping = value & (1 << 4);
             PRMODE.fog = value & (1 << 5);
@@ -682,10 +681,10 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             TEXCLUT.width = (value & 0x3F) * 64;
             TEXCLUT.x = ((value >> 6) & 0x3F) * 16;
             TEXCLUT.y = (value >> 12) & 0x3FF;
-            printf("TEXCLUT: $%08X\n", value);
-            printf("Width: %d\n", TEXCLUT.width);
-            printf("X: %d\n", TEXCLUT.x);
-            printf("Y: %d\n", TEXCLUT.y);
+            ds_log->gs_t->debug("TEXCLUT: {:08X}\n", value);
+            ds_log->gs_t->debug("Width: {}\n", TEXCLUT.width);
+            ds_log->gs_t->debug("X: {}\n", TEXCLUT.x);
+            ds_log->gs_t->debug("Y: {}\n", TEXCLUT.y);
             break;
         case 0x0022:
             SCANMSK = value & 0x3;
@@ -703,19 +702,19 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             context2.set_miptbl2(value);
             break;
         case 0x003B:
-            printf("TEXA: $%08X_%08X\n", value >> 32, value);
+            ds_log->gs_t->debug("TEXA: {:08X}_{:08X}\n", value >> 32, value);
             TEXA.alpha0 = value & 0xFF;
             TEXA.trans_black = value & (1 << 15);
             TEXA.alpha1 = (value >> 32) & 0xFF;
             break;
         case 0x003D:
-            printf("FOGCOL: $%08X\n", value);
+            ds_log->gs_t->debug("FOGCOL: {:08X}\n", value);
             FOGCOL.r = value & 0xFF;
             FOGCOL.g = (value >> 8) & 0xFF;
             FOGCOL.b = (value >> 16) & 0xFF;
             break;
         case 0x003F:
-            printf("TEXFLUSH\n");
+            ds_log->gs_t->debug("TEXFLUSH\n");
             break;
         case 0x0040:
             context1.set_scissor(value);
@@ -753,7 +752,7 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             context2.set_test(value);
             break;
         case 0x0049:
-            printf("[GS_t] PABE: $%02X\n", value);
+            ds_log->gs_t->debug("PABE: {:02X}\n", value);
             PABE = value & 0x1;
             break;
         case 0x004A:
@@ -781,7 +780,7 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             BITBLTBUF.dest_base = ((value >> 32) & 0x3FFF) * 64 * 4;
             BITBLTBUF.dest_width = ((value >> 48) & 0x3F) * 64;
             BITBLTBUF.dest_format = (value >> 56) & 0x3F;
-            printf("BITBLTBUF: $%08X_%08X\n", value >> 32, value);
+            ds_log->gs_t->debug("BITBLTBUF: {:08X}_{:08X}\n", value >> 32, value);
             break;
         case 0x0051:
             TRXPOS.source_x = value & 0x7FF;
@@ -789,12 +788,12 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             TRXPOS.dest_x = (value >> 32) & 0x7FF;
             TRXPOS.dest_y = (value >> 48) & 0x7FF;
             TRXPOS.trans_order = (value >> 59) & 0x3;
-            printf("TRXPOS: $%08X_%08X\n", value >> 32, value);
+            ds_log->gs_t->debug("TRXPOS: {:08X}_{:08X}\n", value >> 32, value);
             break;
         case 0x0052:
             TRXREG.width = value & 0xFFF;
             TRXREG.height = (value >> 32) & 0xFFF;
-            printf("TRXREG (%d, %d)\n", TRXREG.width, TRXREG.height);
+            ds_log->gs_t->debug("TRXREG ({}, {})\n\n", TRXREG.width, TRXREG.height);
             break;
         case 0x0053:
             TRXDIR = value & 0x3;
@@ -802,17 +801,17 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             if (TRXDIR != 3)
             {
                 pixels_transferred = 0;
-                printf("Transfer started!\n");
-                printf("Dest base: $%08X\n", BITBLTBUF.dest_base);
-                printf("TRXPOS: (%d, %d)\n", TRXPOS.dest_x, TRXPOS.dest_y);
-                printf("TRXREG (%d, %d)\n", TRXREG.width, TRXREG.height);
-                printf("Format: $%02X\n", BITBLTBUF.dest_format);
-                printf("Width: %d\n", BITBLTBUF.dest_width);
+                ds_log->gs_t->debug("Transfer started!\n");
+                ds_log->gs_t->debug("Dest base: {:08X}\n", BITBLTBUF.dest_base);
+                ds_log->gs_t->debug("TRXPOS: ({}, {})\n", TRXPOS.dest_x, TRXPOS.dest_y);
+                ds_log->gs_t->debug("TRXREG ({}, {})\n", TRXREG.width, TRXREG.height);
+                ds_log->gs_t->debug("Format: {:02X}\n", BITBLTBUF.dest_format);
+                ds_log->gs_t->debug("Width: {}\n", BITBLTBUF.dest_width);
                 TRXPOS.int_dest_x = TRXPOS.dest_x;
                 TRXPOS.int_source_x = TRXPOS.source_x;
                 TRXPOS.int_dest_y = TRXPOS.dest_y;
                 TRXPOS.int_source_y = TRXPOS.dest_y;
-                //printf("Transfer addr: $%08X\n", transfer_addr);
+                //ds_log->gs_t->debug("Transfer addr: {:08X}\n", transfer_addr);
                 if (TRXDIR == 2)
                 {
                     //VRAM-to-VRAM transfer
@@ -844,14 +843,14 @@ void GraphicsSynthesizerThread::set_ST(uint32_t s, uint32_t t)
 {
     ST.s = *(float*)&s;
     ST.t = *(float*)&t;
-    printf("ST: (%f, %f) ($%08X $%08X)\n", ST.s, ST.t, s, t);
+    ds_log->gs_t->debug("ST: ({}, {}) ({:08X} {:08X})\n", ST.s, ST.t, s, t);
 }
 
 void GraphicsSynthesizerThread::set_UV(uint16_t u, uint16_t v)
 {
     UV.u = u;
     UV.v = v;
-    printf("UV: ($%04X, $%04X)\n", UV.u, UV.v);
+    ds_log->gs_t->debug("UV: ({:04X}, {:04X})\n", UV.u, UV.v);
 }
 
 void GraphicsSynthesizerThread::set_XYZ(uint32_t x, uint32_t y, uint32_t z, bool drawing_kick)
@@ -1554,7 +1553,7 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
     uint32_t mask = current_ctx->frame.mask;
     final_color = (final_color & ~mask) | (frame_color & mask);
 
-    //printf("[GS_t] Write $%08X (%d, %d)\n", final_color, x, y);
+    //ds_log->gs_t->debug("Write {:08X} ({}, {})\n\n", final_color, x, y);
     switch (current_ctx->frame.format)
     {
         case 0x0:
@@ -1611,8 +1610,8 @@ void GraphicsSynthesizerThread::render_point()
     if (v1.x < current_ctx->scissor.x1 || v1.x > current_ctx->scissor.x2 ||
         v1.y < current_ctx->scissor.y1 || v1.y > current_ctx->scissor.y2)
         return;
-    printf("[GS_t] Rendering point!\n");
-    printf("Coords: (%d, %d, %d)\n", v1.x >> 4, v1.y >> 4, v1.z);
+    ds_log->gs_t->debug("Rendering point!\n");
+    ds_log->gs_t->debug("Coords: ({}, {}, {})\n", v1.x >> 4, v1.y >> 4, v1.z);
     TexLookupInfo tex_info;
     
     tex_info.vtx_color = v1.rgbaq;
@@ -1644,7 +1643,7 @@ void GraphicsSynthesizerThread::render_point()
 
 void GraphicsSynthesizerThread::render_line()
 {
-    printf("[GS_t] Rendering line!\n");
+    ds_log->gs_t->debug("Rendering line!\n");
     Vertex v1 = vtx_queue[1]; v1.to_relative(current_ctx->xyoffset);
     Vertex v2 = vtx_queue[0]; v2.to_relative(current_ctx->xyoffset);
 
@@ -1671,7 +1670,7 @@ void GraphicsSynthesizerThread::render_line()
     TexLookupInfo tex_info;
     tex_info.vtx_color = vtx_queue[0].rgbaq;
 
-    printf("Coords: (%d, %d, %d) (%d, %d, %d)\n", v1.x >> 4, v1.y >> 4, v1.z, v2.x >> 4, v2.y >> 4, v2.z);
+    ds_log->gs_t->debug("Coords: ({}, {}, {}) ({}, {}, {})\n", v1.x >> 4, v1.y >> 4, v1.z, v2.x >> 4, v2.y >> 4, v2.z);
 
     for (int32_t x = min_x; x < max_x; x += 0x10)
     {
@@ -1727,7 +1726,7 @@ int32_t GraphicsSynthesizerThread::orient2D(const Vertex &v1, const Vertex &v2, 
 
 void GraphicsSynthesizerThread::render_triangle()
 {
-    printf("[GS_t] Rendering triangle!\n");
+    ds_log->gs_t->debug("Rendering triangle!\n");
 
     Vertex v1 = vtx_queue[2]; v1.to_relative(current_ctx->xyoffset);
     Vertex v2 = vtx_queue[1]; v2.to_relative(current_ctx->xyoffset);
@@ -1946,7 +1945,7 @@ void GraphicsSynthesizerThread::render_triangle()
 
 void GraphicsSynthesizerThread::render_sprite()
 {
-    printf("[GS_t] Rendering sprite!\n");
+    ds_log->gs_t->debug("Rendering sprite!\n");
     Vertex v1 = vtx_queue[1]; v1.to_relative(current_ctx->xyoffset);
     Vertex v2 = vtx_queue[0]; v2.to_relative(current_ctx->xyoffset);
 
@@ -1964,7 +1963,7 @@ void GraphicsSynthesizerThread::render_sprite()
     int32_t max_y = std::min(v2.y, (int32_t)current_ctx->scissor.y2 + 0x10);
     int32_t max_x = std::min(v2.x, (int32_t)current_ctx->scissor.x2 + 0x10);
 
-    printf("Coords: (%d, %d) (%d, %d)\n", min_x >> 4, min_y >> 4, max_x >> 4, max_y >> 4);
+    ds_log->gs_t->debug("Coords: ({}, {}) ({}, {})\n", min_x >> 4, min_y >> 4, max_x >> 4, max_y >> 4);
 
     float pix_t = interpolate_f(min_y, v1.t, v1.y, v2.t, v2.y);
     int32_t pix_v = (int32_t)interpolate(min_y, v1.uv.v, v1.y, v2.uv.v, v2.y) << 16;
@@ -2070,8 +2069,8 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
                 write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.int_dest_y, (data >> (i * 32)) & 0xFFFFFFFF);
                 pixels_transferred++;
                 TRXPOS.int_dest_x++;
-                //printf("[GS_t] Write to $%08X of ", BITBLTBUF.dest_base + (dest_addr * 4));
-                //printf("$%08X\n", (data >> (i * 32)) & 0xFFFFFFFF);
+                //ds_log->gs_t->debug("Write to {:08X} of \n", BITBLTBUF.dest_base + (dest_addr * 4));
+                //ds_log->gs_t->debug("{:08X}\n", (data >> (i * 32)) & 0xFFFFFFFF);
                 break;
             case 0x01:
                 unpack_PSMCT24(data, i, false);
@@ -2089,7 +2088,7 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
             case 0x13:
                 write_PSMCT8_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.int_dest_y,
                                    (data >> (i * 8)) & 0xFF);
-                //printf("[GS_t] Write to $%08X\n", dest_addr);
+                //ds_log->gs_t->debug("Write to {:08X}\n", dest_addr);
                 pixels_transferred++;
                 TRXPOS.int_dest_x++;
                 break;
@@ -2113,7 +2112,7 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
                 value |= read_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.int_dest_y)
                         & 0x00FFFFFF;
                 write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.int_dest_y, value);
-                //printf("[GS_t] Write to $%08X of ", BITBLTBUF.dest_base + (dest_addr * 4));
+                //ds_log->gs_t->debug("Write to {:08X} of \n", BITBLTBUF.dest_base + (dest_addr * 4));
                 pixels_transferred++;
                 TRXPOS.int_dest_x++;
             }
@@ -2134,8 +2133,8 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
                 value |= read_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.int_dest_y)
                         & 0xF0FFFFFF;
                 write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.int_dest_y, value);
-                //printf("[GS_t] Write to $%08X of ", BITBLTBUF.dest_base + (dest_addr * 4));
-                //printf("$%08X\n", value);
+                //ds_log->gs_t->debug("Write to $%{:08X} of \n", BITBLTBUF.dest_base + (dest_addr * 4));
+                //ds_log->gs_t->debug("{:08X}\n", value);
                 pixels_transferred++;
                 TRXPOS.int_dest_x++;
             }
@@ -2156,8 +2155,8 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
                 value |= read_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.int_dest_y)
                         & 0x0FFFFFFF;
                 write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.int_dest_y, value);
-                //printf("[GS_t] Write to $%08X of ", BITBLTBUF.dest_base + (dest_addr * 4));
-                //printf("$%08X\n", value);
+                //ds_log->gs_t->debug("Write to $%{:08X} of \n", BITBLTBUF.dest_base + (dest_addr * 4));
+                //ds_log->gs_t->debug("{:08X}\n", value);
                 pixels_transferred++;
                 TRXPOS.int_dest_x++;
             }
@@ -2177,7 +2176,7 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
     if (pixels_transferred >= max_pixels)
     {
         //Deactivate the transmisssion
-        printf("[GS_t] HWREG transfer ended\n");
+        ds_log->gs_t->debug("HWREG transfer ended\n");
         TRXDIR = 3;
         pixels_transferred = 0;
     }
@@ -2793,7 +2792,7 @@ void GraphicsSynthesizerThread::reload_clut(const GSContext& context)
 
     if (reload)
     {
-        printf("[GS_t] Reloading CLUT cache!\n");
+        ds_log->gs_t->debug("Reloading CLUT cache!\n");
         for (int i = 0; i < entries; i++)
         {
             if (context.tex0.use_CSM2)
@@ -2828,7 +2827,7 @@ void GraphicsSynthesizerThread::reload_clut(const GSContext& context)
                     {
                         uint32_t value = read_PSMCT32_block(clut_addr, 64, x, y);
                         *(uint32_t*)&clut_cache[cache_addr] = value;
-                        //printf("[GS_t] Reload cache $%04X: $%08X\n", cache_addr, value);
+                        //ds_log->gs_t->debug("Reload cache ${:04X}: {:08X}\n", cache_addr, value);
                     }
                         cache_addr += 4;
                         break;

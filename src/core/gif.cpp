@@ -1,6 +1,7 @@
 #include <cstdio>
 #include "gif.hpp"
 #include "gs.hpp"
+#include "logger.hpp"
 
 GraphicsInterface::GraphicsInterface(GraphicsSynthesizer *gs) : gs(gs)
 {
@@ -47,13 +48,13 @@ uint32_t GraphicsInterface::read_STAT()
 
     //Quadword count - since we don't emulate the FIFO, hack it to 16 if there's a transfer happening
     reg |= ((active_path != 0) * 16) << 24;
-    //printf("[GIF] Read GIF_STAT: $%08X\n", reg);
+    //ds_log->gif->debug("Read GIF_STAT: {:08X}\n", reg);
     return reg;
 }
 
 void GraphicsInterface::write_MODE(uint32_t value)
 {
-    //printf("GIF PATH3Mask MODE set to %d\n", value & 0x1);
+    //ds_log->gif->debug("GIF PATH3Mask MODE set to {}\n", value & 0x1);
     intermittent_mode = value & 0x4;
     path3_mode_masked = value & 0x1;
     resume_path3();
@@ -63,7 +64,7 @@ void GraphicsInterface::process_PACKED(uint128_t data)
 {
     uint64_t data1 = data._u64[0];
     uint64_t data2 = data._u64[1];
-    //printf("[GIF] PACKED: $%08X_%08X_%08X_%08X\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
+    //ds_log->gif->debug("PACKED: ${:08X}_{:08X}_{:08X}_{:08X}\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
     uint64_t reg_offset = (path[active_path].current_tag.reg_count - path[active_path].current_tag.regs_left) << 2;
     uint8_t reg = (path[active_path].current_tag.regs >> reg_offset) & 0xF;
     switch (reg)
@@ -156,7 +157,7 @@ void GraphicsInterface::process_PACKED(uint128_t data)
 
 void GraphicsInterface::process_REGLIST(uint128_t data)
 {
-    //printf("[GIF] Reglist: $%08X_%08X_%08X_%08X\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
+    //ds_log->gif->debug("Reglist: ${:08X}_{:08X}_{:08X}_{:08X}\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
     for (int i = 0; i < 2; i++)
     {
         uint64_t reg_offset = (path[active_path].current_tag.reg_count - path[active_path].current_tag.regs_left) << 2;
@@ -178,7 +179,7 @@ void GraphicsInterface::process_REGLIST(uint128_t data)
 
 void GraphicsInterface::feed_GIF(uint128_t data)
 {
-    //printf("[GIF] Data: $%08X_%08X_%08X_%08X\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
+    //ds_log->gif->debug("Data: ${:08X}_{:08X}_{:08X}_{:08X}\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
     uint64_t data1 = data._u64[0];
     uint64_t data2 = data._u64[1];
     if (!path[active_path].current_tag.data_left)
@@ -203,13 +204,13 @@ void GraphicsInterface::feed_GIF(uint128_t data)
         //Ignore zeroed out packets
         /*if (data1)
         {
-            printf("[GIF] PATH%d New primitive!\n", active_path);
-            printf("NLOOP: $%04X\n", path[active_path].current_tag.NLOOP);
-            printf("EOP: %d\n", path[active_path].current_tag.end_of_packet);
-            printf("Output PRIM: %d PRIM: $%04X\n", path[active_path].current_tag.output_PRIM, path[active_path].current_tag.PRIM);
-            printf("Format: %d\n", path[active_path].current_tag.format);
-            printf("Reg count: %d\n", path[active_path].current_tag.reg_count);
-            printf("Regs: $%08X_$%08X\n", path[active_path].current_tag.regs >> 32, path[active_path].current_tag.regs & 0xFFFFFFFF);
+            ds_log->gif->debug("PATH{} New primitive!\n", active_path);
+            ds_log->gif->debug("NLOOP: {:04X}\n", path[active_path].current_tag.NLOOP);
+            ds_log->gif->debug("EOP: {}\n", path[active_path].current_tag.end_of_packet);
+            ds_log->gif->debug("Output PRIM: {} PRIM: {:04X}\n", path[active_path].current_tag.output_PRIM, path[active_path].current_tag.PRIM);
+            ds_log->gif->debug("Format: {}\n", path[active_path].current_tag.format);
+            ds_log->gif->debug("Reg count: {}\n", path[active_path].current_tag.reg_count);
+            ds_log->gif->debug("Regs: $%08X_{:08X}\n", path[active_path].current_tag.regs >> 32, path[active_path].current_tag.regs & 0xFFFFFFFF);
         }*/
 
         if (path[active_path].current_tag.output_PRIM && path[active_path].current_tag.format != 1)
@@ -238,7 +239,7 @@ void GraphicsInterface::feed_GIF(uint128_t data)
                 path[active_path].current_tag.data_left--;
                 break;
             default:
-                printf("[GS] Unrecognized GIFtag format %d\n", path[active_path].current_tag.format);
+                ds_log->gif->warn("Unrecognized GIFtag format {}\n", path[active_path].current_tag.format);
                 break;
         }
     }
@@ -254,7 +255,7 @@ void GraphicsInterface::run(int cycles)
     if (!path3_masked(3) && !fifo_empty())
     {
         request_PATH(3, false);
-        //printf("GIF PATH3 should be flushing FIFO active = %d mask off, cycles = %d\n", path_active(3), cycles);
+        //ds_log->gif->debug("GIF PATH3 should be flushing FIFO active = {} mask off, cycles = {}\n", path_active(3), cycles);
     }
     while (path_active(3) && !path3_masked(3) && cycles && !fifo_empty())
     {
@@ -265,7 +266,7 @@ void GraphicsInterface::run(int cycles)
 
 void GraphicsInterface::set_path3_vifmask(int value)
 {
-   // printf("GIF PATH3Mask VIF set to %d\n", value);
+   // ds_log->gif->debug("GIF PATH3Mask VIF set to %d\n\n", value);
     path3_vif_masked = value;
 }
 
@@ -283,7 +284,7 @@ bool GraphicsInterface::path3_masked(int index)
     if (path3_vif_masked || path3_mode_masked)
     {
         masked = (path_status[3] == 4);
-        //printf("[GIF] PATH3 Masked\n");
+        //ds_log->gif->debug("PATH3 Masked\n");
         if (masked && fifo_full())
         {
             deactivate_PATH(3);
@@ -304,9 +305,9 @@ bool GraphicsInterface::interrupt_path3(int index)
 
     if ((intermittent_mode && path_status[3] >= 2) || path3_masked(3)) //IMAGE MODE or IDLE
     {
-        //printf("[GIF] Interrupting PATH3 with PATH%d\n", index);
+        //ds_log->gif->debug("Interrupting PATH3 with PATH{}\n", index);
         deactivate_PATH(3);
-        //printf("Active Path Now %d\n", active_path);
+        //ds_log->gif->debug("Active Path Now {}\n", active_path);
         path_queue |= 1 << 3;
         return true;
     }
@@ -315,22 +316,22 @@ bool GraphicsInterface::interrupt_path3(int index)
 
 void GraphicsInterface::request_PATH(int index, bool canInterruptPath3)
 {
-    //printf("[GIF] PATH%d requested active path %d\n", index, active_path);
+    //ds_log->gif->debug("PATH{} requested active path {}\n", index, active_path);
     if (!active_path || active_path == index || (canInterruptPath3 && interrupt_path3(index)))
     {
         active_path = index;
-        //printf("[GIF] PATH%d Active!\n", active_path);
+        //ds_log->gif->debug("PATH{} Active!\n", active_path);
     }
     else
     {
         path_queue |= 1 << index;
-        //printf("[GIF] PATH%d Queued!\n", index);
+        //ds_log->gif->debug("PATH{} Queued!\n", index);
     }
 }
 
 void GraphicsInterface::deactivate_PATH(int index)
 {
-    //printf("[GIF] PATH%d deactivated\n", index);
+    //ds_log->gif->debug("PATH{} deactivated\n", index);
     path_queue &= ~(1 << index);
     if (active_path == index)
     {
@@ -343,7 +344,7 @@ void GraphicsInterface::deactivate_PATH(int index)
             {
                 path_queue &= ~bit;
                 active_path = path;
-                //printf("[GIF] PATH%d Activated from queue\n", active_path);
+                //ds_log->gif->debug("PATH{} Activated from queue\n", active_path);
                 break;
             }
         }
@@ -359,7 +360,7 @@ bool GraphicsInterface::send_PATH(int index, uint128_t quad)
 //Returns true if an EOP transfer has ended - this terminates the XGKICK command
 bool GraphicsInterface::send_PATH1(uint128_t quad)
 {
-    //printf("[GIF] Send PATH1 $%08X_%08X_%08X_%08X\n", quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
+    //ds_log->gif->debug("Send PATH1 ${:08X}_{:08X}_{:08X}_{:08X}\n", quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
     feed_GIF(quad);
     return !path[1].current_tag.data_left && path[1].current_tag.end_of_packet;
 }
@@ -369,31 +370,31 @@ void GraphicsInterface::send_PATH2(uint32_t data[])
     uint128_t blorp;
     for (int i = 0; i < 4; i++)
         blorp._u32[i] = data[i];
-    //printf("[GIF] Send PATH2 $%08X_%08X_%08X_%08X\n", blorp._u32[3], blorp._u32[2], blorp._u32[1], blorp._u32[0]);
+    //ds_log->gif->debug("Send PATH2 ${:08X}_{:08X}_{:08X}_{:08X}\n", blorp._u32[3], blorp._u32[2], blorp._u32[1], blorp._u32[0]);
     feed_GIF(blorp);
 }
 
 void GraphicsInterface::send_PATH3(uint128_t data)
 {
-    //printf("[GIF] Send PATH3 $%08X_%08X_%08X_%08X\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
+    //ds_log->gif->debug("[GIF] Send PATH3 ${:08X}_{:08X}_{:08X}_{:08X}\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
     if (!path3_masked(3))
         feed_GIF(data);
     else if (FIFO.size() < 16)
     {
-        //printf("Adding data to GIF FIFO (size: %d)\n", FIFO.size());
+        //ds_log->gif->debug("Adding data to GIF FIFO (size: {})\n", FIFO.size());
         FIFO.push(data);
     }
 }
 
 void GraphicsInterface::flush_path3_fifo()
 {
-    //printf("Flushing GIF FIFO\n");
+    //ds_log->gif->debug("Flushing GIF FIFO.\n");
     feed_GIF(FIFO.front());
     FIFO.pop();
 
     if ((fifo_empty() && !path3_dma_waiting) || path3_masked(3))
     {
-        //printf("GIF Deactivating PATH at FIFO flush end\n");
+        //ds_log->gif->debug("GIF Deactivating PATH at FIFO flush end.\n");
         deactivate_PATH(3);
     }
 }

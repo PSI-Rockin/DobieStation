@@ -7,6 +7,7 @@
 #include "errors.hpp"
 
 #include "ee/vu_jit.hpp"
+#include "logger.hpp"
 
 #define CYCLES_PER_FRAME 4900000
 #define VBLANK_START_CYCLES CYCLES_PER_FRAME * 0.75
@@ -29,6 +30,8 @@ Emulator::Emulator() :
     ELF_file = nullptr;
     ELF_size = 0;
     gsdump_single_frame = false;
+
+    ds_log = new ds_logger;
     ee_log.open("ee_log.txt", std::ios::out);
     set_vu1_mode(VU_MODE::DONT_CARE);
 }
@@ -272,7 +275,7 @@ void Emulator::fast_boot()
         while (strncmp("cdrom0:", system_cnf + pos, 7))
             pos++;
 
-        printf("[Emulator] Found 'cdrom0:'\n");
+        ds_log->main->info("Found 'cdrom0:'\n");
         pos += 8;
 
         //Search for end of file name
@@ -340,10 +343,10 @@ void Emulator::load_ELF(const uint8_t *ELF, uint32_t size)
 {
     if (ELF[0] != 0x7F || ELF[1] != 'E' || ELF[2] != 'L' || ELF[3] != 'F')
     {
-        printf("Invalid elf\n");
+        ds_log->main->warn("Invalid elf!\n");
         return;
     }
-    printf("Valid elf\n");
+    ds_log->main->info("Valid elf.\n");
     delete[] ELF_file;
     ELF_file = new uint8_t[size];
     ELF_size = size;
@@ -361,7 +364,7 @@ void Emulator::execute_ELF()
     {
         Errors::die("[Emulator] ELF not loaded!\n");
     }
-    printf("[Emulator] Loading ELF into memory...\n");
+    ds_log->main->info("Loading ELF into memory...\n");
     uint32_t e_entry = *(uint32_t*)&ELF_file[0x18];
     uint32_t e_phoff = *(uint32_t*)&ELF_file[0x1C];
     uint32_t e_shoff = *(uint32_t*)&ELF_file[0x20];
@@ -369,12 +372,12 @@ void Emulator::execute_ELF()
     uint16_t e_shnum = *(uint16_t*)&ELF_file[0x30];
     uint16_t e_shstrndx = *(uint16_t*)&ELF_file[0x32];
 
-    printf("Entry: $%08X\n", e_entry);
-    printf("Program header start: $%08X\n", e_phoff);
-    printf("Section header start: $%08X\n", e_shoff);
-    printf("Program header entries: %d\n", e_phnum);
-    printf("Section header entries: %d\n", e_shnum);
-    printf("Section header names index: %d\n", e_shstrndx);
+    ds_log->main->info("Entry: {:08X}\n", e_entry);
+    ds_log->main->info("Program header start: {:08X}\n", e_phoff);
+    ds_log->main->info("Section header start: {:08X}\n", e_shoff);
+    ds_log->main->info("Program header entries: {}\n", e_phnum);
+    ds_log->main->info("Section header entries: {}\n", e_shnum);
+    ds_log->main->info("Section header names index: {}\n", e_shstrndx);
 
     for (unsigned int i = e_phoff; i < e_phoff + (e_phnum * 0x20); i += 0x20)
     {
@@ -382,13 +385,13 @@ void Emulator::execute_ELF()
         uint32_t p_paddr = *(uint32_t*)&ELF_file[i + 0xC];
         uint32_t p_filesz = *(uint32_t*)&ELF_file[i + 0x10];
         uint32_t p_memsz = *(uint32_t*)&ELF_file[i + 0x14];
-        printf("\nProgram header\n");
-        printf("p_type: $%08X\n", *(uint32_t*)&ELF_file[i]);
-        printf("p_offset: $%08X\n", p_offset);
-        printf("p_vaddr: $%08X\n", *(uint32_t*)&ELF_file[i + 0x8]);
-        printf("p_paddr: $%08X\n", p_paddr);
-        printf("p_filesz: $%08X\n", p_filesz);
-        printf("p_memsz: $%08X\n", p_memsz);
+        ds_log->main->info("\nProgram header\n");
+        ds_log->main->info("p_type: ${:08X}\n", *(uint32_t*)&ELF_file[i]);
+        ds_log->main->info("p_offset: ${:08X}\n", p_offset);
+        ds_log->main->info("p_vaddr: ${:08X}\n", *(uint32_t*)&ELF_file[i + 0x8]);
+        ds_log->main->info("p_paddr: ${:08X}\n", p_paddr);
+        ds_log->main->info("p_filesz: ${:08X}\n", p_filesz);
+        ds_log->main->info("p_memsz: ${:08X}\n", p_memsz);
 
         int mem_w = p_paddr;
         for (unsigned int file_w = p_offset; file_w < (p_offset + p_filesz); file_w += 4)
@@ -453,7 +456,7 @@ uint8_t Emulator::read8(uint32_t address)
         case 0x1F402018:
             return cdvd.read_S_data();
     }
-    printf("Unrecognized read8 at physical addr $%08X\n", address);
+    ds_log->main->info("Unrecognized read8 at physical addr ${:08X}\n", address);
     return 0;
 }
 
@@ -474,7 +477,7 @@ uint16_t Emulator::read16(uint32_t address)
         case 0x1A000006:
             return 1;
     }
-    printf("Unrecognized read16 at physical addr $%08X\n", address);
+    ds_log->main->info("Unrecognized read16 at physical addr $${:08X}\n", address);
     return 0;
 }
 
@@ -542,7 +545,7 @@ uint32_t Emulator::read32(uint32_t address)
             //printf("\nRead32 INTC_STAT: $%08X", intc.read_stat());
             return intc.read_stat();
         case 0x1000F010:
-            printf("Read32 INTC_MASK: $%08X\n", intc.read_mask());
+            ds_log->main->info("Read32 INTC_MASK: ${:08X}\n", intc.read_mask());
             return intc.read_mask();
         case 0x1000F130:
             return 0;
@@ -555,19 +558,19 @@ uint32_t Emulator::read32(uint32_t address)
         case 0x1000F230:
             return sif.get_smflag();
         case 0x1000F240:
-            printf("[EE] Read BD4: $%08X\n", sif.get_control() | 0xF0000102);
+            ds_log->ee->info("Read BD4: ${:08X}\n", sif.get_control() | 0xF0000102);
             return sif.get_control() | 0xF0000102;
         case 0x1000F430:
-            //printf("Read from MCH_RICM\n");
+            ds_log->main->info("Read from MCH_RICM\n");
             return 0;
         case 0x1000F440:
-            //printf("Read from MCH_DRD\n");
+            ds_log->main->info("Read from MCH_DRD\n");
             if (!((MCH_RICM >> 6) & 0xF))
             {
                 switch ((MCH_RICM >> 16) & 0xFFF)
                 {
                     case 0x21:
-                        //printf("Init\n");
+                        ds_log->main->debug("Init\n");
                         if (rdram_sdevid < 2)
                         {
                             rdram_sdevid++;
@@ -575,13 +578,13 @@ uint32_t Emulator::read32(uint32_t address)
                         }
                         return 0;
                     case 0x23:
-                        //printf("ConfigA\n");
+                        ds_log->main->debug("ConfigA\n");
                         return 0x0D0D;
                     case 0x24:
-                        //printf("ConfigB\n");
+                        ds_log->main->debug("ConfigB\n");
                         return 0x0090;
                     case 0x40:
-                        //printf("Devid\n");
+                        ds_log->main->debug("Devid\n");
                         return MCH_RICM & 0x1F;
                 }
             }
@@ -589,7 +592,7 @@ uint32_t Emulator::read32(uint32_t address)
         case 0x1000F520:
             return dmac.read_master_disable();
     }
-    printf("Unrecognized read32 at physical addr $%08X\n", address);
+    ds_log->main->info("Unrecognized read32 at physical addr ${:08X}\n", address);
     return 0;
 }
 
@@ -618,7 +621,7 @@ uint64_t Emulator::read64(uint32_t address)
         case 0x10002030:
             return ipu.read_top();
     }
-    printf("Unrecognized read64 at physical addr $%08X\n", address);
+    ds_log->main->info("Unrecognized read64 at physical addr ${:08X}\n", address);
     return 0;
 }
 
@@ -628,7 +631,7 @@ uint128_t Emulator::read128(uint32_t address)
         return *(uint128_t*)&RDRAM[address & 0x01FFFFFF];
     if (address >= 0x1FC00000 && address < 0x20000000)
         return *(uint128_t*)&BIOS[address & 0x3FFFFF];
-    printf("Unrecognized read128 at physical addr $%08X\n", address);
+    ds_log->main->info("Unrecognized read128 at physical addr ${:08X}\n", address);
     return uint128_t::from_u32(0);
 }
 
@@ -683,7 +686,7 @@ void Emulator::write16(uint32_t address, uint16_t value)
     }
     if (address >= 0x1A000000 && address < 0x1FC00000)
     {
-        printf("[EE] Unrecognized write16 to IOP addr $%08X of $%04X\n", address, value);
+        ds_log->ee->info("[EE] Unrecognized write16 to IOP addr ${:08X} of ${:04X}\n", address, value);
         return;
     }
     if (address >= 0x1FFF8000 && address < 0x20000000)
@@ -691,7 +694,7 @@ void Emulator::write16(uint32_t address, uint16_t value)
         *(uint16_t*)&BIOS[address & 0x3FFFFF] = value;
         return;
     }
-    printf("Unrecognized write16 at physical addr $%08X of $%04X\n", address, value);
+    ds_log->main->info("Unrecognized write16 at physical addr ${:08X} of ${:04X}\n", address, value);
 }
 
 void Emulator::write32(uint32_t address, uint32_t value)
@@ -728,7 +731,7 @@ void Emulator::write32(uint32_t address, uint32_t value)
     }
     if (address >= 0x1A000000 && address < 0x1FC00000)
     {
-        printf("[EE] Unrecognized write32 to IOP addr $%08X of $%08X\n", address, value);
+        ds_log->ee->info("Unrecognized write32 to IOP addr {:08X} of ${:08X}\n", address, value);
         return;
     }
     if (address >= 0x11000000 && address < 0x11004000)
@@ -776,11 +779,11 @@ void Emulator::write32(uint32_t address, uint32_t value)
             vif1.set_mark(value);
             return;
         case 0x1000F000:
-            printf("Write32 INTC_STAT: $%08X\n", value);
+            ds_log->main->info("Write32 INTC_STAT: {:08X}\n", value);
             intc.write_stat(value);
             return;
         case 0x1000F010:
-            printf("Write32 INTC_MASK: $%08X\n", value);
+            ds_log->main->info("Write32 INTC_MASK: {:08X}\n", value);
             intc.write_mask(value);
             return;
         case 0x1000F200:
@@ -789,26 +792,26 @@ void Emulator::write32(uint32_t address, uint32_t value)
         case 0x1000F210:
             return;
         case 0x1000F220:
-            printf("[EE] Write32 msflag: $%08X\n", value);
+            ds_log->ee->info("[EE] Write32 msflag: {:08X}\n", value);
             sif.set_msflag(value);
             return;
         case 0x1000F230:
-            printf("[EE] Write32 smflag: $%08X\n", value);
+            ds_log->ee->info("[EE] Write32 smflag: {:08X}\n", value);
             sif.reset_smflag(value);
             return;
         case 0x1000F240:
-            printf("[EE] Write BD4: $%08X\n", value);
+            ds_log->ee->info("[EE] Write BD4: {:08X}\n", value);
             sif.set_control_EE(value);
             return;
         case 0x1000F430:
-            //printf("Write to MCH_RICM: $%08X\n", value);
+            ds_log->main->debug("Write to MCH_RICM: ${:08X}\n", value);
             if ((((value >> 16) & 0xFFF) == 0x21) && (((value >> 6) & 0xF) == 1) &&
                     (((MCH_DRD >> 7) & 1) == 0))
                 rdram_sdevid = 0;
             MCH_RICM = value & ~0x80000000;
             return;
         case 0x1000F440:
-            //printf("Write to MCH_DRD: $%08X\n", value);
+            ds_log->main->debug("Write to MCH_DRD: ${:08X}\n", value);
             MCH_DRD = value;
             return;
         case 0x1000F590:
@@ -929,7 +932,7 @@ void Emulator::ee_kputs(uint32_t param)
     if (param > 1024 * 1024 * 32)
         return;
     param = *(uint32_t*)&RDRAM[param];
-    printf("Param: $%08X\n", param);
+    ds_log->main->info("Param: ${:08X}\n", param);
     char c;
     do
     {
@@ -1013,7 +1016,7 @@ uint8_t Emulator::iop_read8(uint32_t address)
     }
     if (address >= iop_scratchpad_start && address < iop_scratchpad_start + 0x400)
         return iop_scratchpad[address & 0x3FF];
-    printf("Unrecognized IOP read8 from physical addr $%08X\n", address);
+    ds_log->iop->info("Unrecognized IOP read8 from physical addr ${:08X}\n", address);
     return 0;
 }
 
@@ -1080,7 +1083,7 @@ uint16_t Emulator::iop_read16(uint32_t address)
     }
     if (address >= iop_scratchpad_start && address < iop_scratchpad_start + 0x400)
         return *(uint16_t*)&iop_scratchpad[address & 0x3FF];
-    printf("Unrecognized IOP read16 from physical addr $%08X\n", address);
+    ds_log->iop->info("Unrecognized IOP read16 from physical addr ${:08X}\n", address);
     return 0;
 }
 
@@ -1101,7 +1104,7 @@ uint32_t Emulator::iop_read32(uint32_t address)
         case 0x1D000030:
             return sif.get_smflag();
         case 0x1D000040:
-            printf("[IOP] Read BD4: $%08X\n", sif.get_control() | 0xF0000002);
+            ds_log->iop->info("Read BD4: ${:08X}\n", sif.get_control() | 0xF0000002);
             return sif.get_control() | 0xF0000002;
         case 0x1F801070:
             return IOP_I_STAT;
@@ -1203,7 +1206,7 @@ void Emulator::iop_write8(uint32_t address, uint8_t value)
 {
     if (address < 0x00200000)
     {
-        //printf("[IOP] Write to $%08X of $%02X\n", address, value);
+        //ds_log->iop->info("Write to ${:08X} of ${:02X}\n", address, value);
         IOP_RAM[address] = value;
         return;
     }
@@ -1216,7 +1219,7 @@ void Emulator::iop_write8(uint32_t address, uint8_t value)
             cdvd.write_N_data(value);
             return;
         case 0x1F402006:
-            printf("[CDVD] Write to mode: $%02X\n", value);
+            ds_log->cdvd->info("Write to mode: ${:02X}\n", value);
             return;
         case 0x1F402007:
             cdvd.write_BREAK();
@@ -1240,7 +1243,7 @@ void Emulator::iop_write8(uint32_t address, uint8_t value)
             //Register intended to be displayed on an external 7 segment display
             //Used to indicate how far along the boot process is
             IOP_POST = value;
-            printf("[IOP] POST: $%02X\n", value);
+            ds_log->iop->info("POST: ${:02X}\n", value);
             return;
     }
     if (address >= iop_scratchpad_start && address < iop_scratchpad_start + 0x400)
@@ -1415,26 +1418,26 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
             sif.reset_msflag(value);
             return;
         case 0x1D000030:
-            printf("[IOP] Set smflag: $%08X\n", value);
+            ds_log->iop->info("Set smflag: ${:08X}\n", value);
             sif.set_smflag(value);
             return;
         case 0x1D000040:
-            printf("[IOP] Write BD4: $%08X\n", value);
+            ds_log->iop->info("Write BD4: ${:08X}\n", value);
             sif.set_control_IOP(value);
             return;
         case 0x1F801010:
-            printf("[IOP] SIF2/GPU SSBUS: $%08X\n", value);
+            ds_log->iop->info("SIF2/GPU SSBUS: ${:08X}\n", value);
             return;
         case 0x1F801014:
-            printf("[IOP] SPU SSBUS: $%08X\n", value);
+            ds_log->iop->info("SPU SSBUS: ${:08X}\n", value);
             return;
         case 0x1F801070:
-            //printf("[IOP] I_STAT: $%08X\n", value);
+            //ds_log->iop->info("I_STAT: ${:08X}\n", value);
             IOP_I_STAT &= value;
             iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
             return;
         case 0x1F801074:
-            //printf("[IOP] I_MASK: $%08X\n", value);
+            //ds_log->iop->info("I_MASK: ${:08X}\n", value);
             IOP_I_MASK = value;
             iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
             return;
@@ -1443,7 +1446,7 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
                 iop_i_ctrl_delay = 4;
             IOP_I_CTRL = value & 0x1;
             //iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
-            //printf("[IOP] I_CTRL: $%08X\n", value);
+            //ds_log->iop->info("I_CTRL: $${:08X}\n", value);
             return;
         //CDVD DMA
         case 0x1F8010B0:
@@ -1617,7 +1620,7 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
 
 void Emulator::iop_request_IRQ(int index)
 {
-    printf("[IOP] Requesting IRQ %d\n", index);
+    ds_log->iop->info("Requesting IRQ {}\n", index);
     uint32_t new_stat = IOP_I_STAT | (1 << index);
     IOP_I_STAT = new_stat;
     iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
@@ -1629,7 +1632,7 @@ void Emulator::iop_ksprintf()
     uint32_t arg_pointer = iop.get_gpr(7);
 
     uint32_t width;
-    printf("[IOP Debug] ksprintf: %s\n", (char*)&IOP_RAM[msg_pointer]);
+    ds_log->iop->debug("ksprintf: {}\n", (char*)&IOP_RAM[msg_pointer]);
     while (IOP_RAM[msg_pointer])
     {
         char c = IOP_RAM[msg_pointer];
@@ -1654,12 +1657,12 @@ void Emulator::iop_ksprintf()
                     break;
                 case 'd':
                     ee_log << *(int32_t*)&IOP_RAM[arg_pointer];
-                    printf("[IOP Debug] %d\n", *(uint32_t*)&IOP_RAM[arg_pointer]);
+                    ds_log->iop->debug("{}\n", *(uint32_t*)&IOP_RAM[arg_pointer]);
                     break;
                 case 'x':
                 case 'X':
                     ee_log << std::hex << *(uint32_t*)&IOP_RAM[arg_pointer];
-                    printf("[IOP Debug] $%08X\n", *(uint32_t*)&IOP_RAM[arg_pointer]);
+                    ds_log->iop->debug("${:08X}\n", *(uint32_t*)&IOP_RAM[arg_pointer]);
                     break;
                 default:
                     break;
@@ -1677,27 +1680,27 @@ void Emulator::iop_puts()
 {
     uint32_t pointer = iop.get_gpr(5);
     uint32_t len = iop.get_gpr(6);
-    //printf("[IOP] ($%08X, $%08X) puts: ", pointer, len);
+    //ds_log->iop->debug("(${:08X}, ${:08X}) puts: \n", pointer, len);
     /*for (int i = 4; i < 8; i++)
     {
-        printf("$%08X", iop.get_gpr(i));
+        ds_log->iop->debug("${:08X}\n", iop.get_gpr(i));
     }*/
 
     //Little sanity check to prevent crashing the emulator
     if (len >= 2048)
     {
-        printf("[IOP] puts len over 2048!\n");
+        ds_log->iop->warn("puts len over 2048!\n");
         len = 2048;
     }
     while (len)
     {
         ee_log << IOP_RAM[pointer & 0x1FFFFF];
-        printf("puts: %c\n", IOP_RAM[pointer & 0x1FFFFF]);
+        ds_log->iop->debug("puts: {}\n", IOP_RAM[pointer & 0x1FFFFF]);
         pointer++;
         len--;
     }
     ee_log.flush();
-    //printf("\n");
+    //ds_log->iop->debug("\n\n");
 }
 
 GraphicsSynthesizer& Emulator::get_gs()

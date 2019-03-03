@@ -1,8 +1,7 @@
 #include <cmath>
 #include <cstdio>
 #include "cop1.hpp"
-
-#define printf(fmt, ...)(0)
+#include "../logger.hpp"
 
 Cop1::Cop1()
 {
@@ -29,7 +28,7 @@ void Cop1::check_overflow(uint32_t& dest, bool set_flags)
 {
     if ((dest & ~0x80000000) == 0x7F800000)
     {
-        printf("[FPU] Overflow Dest = %x\n", dest);
+        ds_log->fpu->debug("Overflow Dest = {:x}\n", dest);
         dest = (dest & 0x80000000) | 0x7F7FFFFF;
        
         if (set_flags)
@@ -44,7 +43,7 @@ void Cop1::check_underflow(uint32_t& dest, bool set_flags)
 {
     if ((dest & 0x7F800000) == 0 && (dest & 0x7FFFFF) != 0)
     {
-        printf("[FPU] Underflow Dest = %x\n", dest);
+        ds_log->fpu->debug("Underflow Dest = {:x}\n", dest);
         dest &= 0x80000000;
         
         if (set_flags)
@@ -79,7 +78,7 @@ uint32_t Cop1::get_gpr(int index)
 
 void Cop1::mtc(int index, uint32_t value)
 {
-    printf("[FPU] MTC1: %d, $%08X\n", index, value);
+    ds_log->fpu->debug("MTC1: {}, ${:08X}\n", index, value);
     gpr[index].u = value;
 }
 
@@ -100,7 +99,7 @@ uint32_t Cop1::cfc(int index)
             reg |= control.d << 16;
             reg |= control.i << 17;
             reg |= control.condition << 23;
-            printf("[FPU] Read Control Flag %x\n", control.condition);
+            ds_log->fpu->debug("Read Control Flag {:x}\n", control.condition);
             return reg;
         default:
             return 0;
@@ -109,7 +108,7 @@ uint32_t Cop1::cfc(int index)
 
 void Cop1::ctc(int index, uint32_t value)
 {
-    printf("[FPU] CTC1: $%08X (%d)\n", value, index);
+    ds_log->fpu->debug("CTC1: ${:08X} ({})\n", value, index);
     switch (index)
     {
         case 31:
@@ -130,7 +129,7 @@ void Cop1::cvt_s_w(int dest, int source)
 {
     gpr[dest].f = (float)gpr[source].s;
     gpr[dest].f = convert(gpr[dest].u);
-    printf("[FPU] CVT_S_W: %f(%d)\n", gpr[dest].f, dest);
+    ds_log->fpu->debug("CVT_S_W: {}({})\n", gpr[dest].f, dest);
 }
 
 void Cop1::cvt_w_s(int dest, int source)
@@ -141,7 +140,7 @@ void Cop1::cvt_w_s(int dest, int source)
         gpr[dest].u = 0x7FFFFFFF;
     else
         gpr[dest].u = 0x80000000;
-    printf("[FPU] CVT_W_S: $%08X(%d)\n", gpr[dest].u, dest);
+    ds_log->fpu->debug("CVT_W_S: ${:08X}({})\n", gpr[dest].u, dest);
 }
 
 void Cop1::add_s(int dest, int reg1, int reg2)
@@ -153,7 +152,7 @@ void Cop1::add_s(int dest, int reg1, int reg2)
     check_overflow(gpr[dest].u, true);
     check_underflow(gpr[dest].u, true);
 
-    printf("[FPU] add.s: %f(%d) + %f(%d) = %f(%d)\n", op1, reg1, op2, reg2, gpr[dest].f, dest);
+    ds_log->fpu->debug("add.s: {}({}) + {}({}) = {}({})\n", op1, reg1, op2, reg2, gpr[dest].f, dest);
 }
 
 void Cop1::sub_s(int dest, int reg1, int reg2)
@@ -165,7 +164,7 @@ void Cop1::sub_s(int dest, int reg1, int reg2)
     check_overflow(gpr[dest].u, true);
     check_underflow(gpr[dest].u, true);
 
-    printf("[FPU] sub.s: %f(%d) - %f(%d) = %f(%d)\n", op1, reg1, op2, reg2, gpr[dest].f, dest);
+    ds_log->fpu->debug("sub.s: {}({}) - {}({}) = {}({})\n", op1, reg1, op2, reg2, gpr[dest].f, dest);
 }
 
 void Cop1::mul_s(int dest, int reg1, int reg2)
@@ -176,7 +175,7 @@ void Cop1::mul_s(int dest, int reg1, int reg2)
 
     check_overflow(gpr[dest].u, true);
     check_underflow(gpr[dest].u, true);
-    printf("[FPU] mul.s: %f(%d) * %f(%d) = %f(%d)\n", op1, reg1, op2, reg2, gpr[dest].f, dest);
+    ds_log->fpu->debug("mul.s: {}({}) * {}({}) = {}({})\n", op1, reg1, op2, reg2, gpr[dest].f, dest);
 }
 
 void Cop1::div_s(int dest, int reg1, int reg2)
@@ -187,13 +186,13 @@ void Cop1::div_s(int dest, int reg1, int reg2)
     {
         if ((numerator & 0x7F800000) == 0)
         {
-            printf("[FPU] DIV 0/0 Fs = %x Ft = %x\n", numerator, denominator);
+            ds_log->fpu->debug("DIV 0/0 Fs = {:x} Ft = {:x}\n", numerator, denominator);
             control.i = true;
             control.si = true;
         }
         else
         {
-            printf("[FPU] DIV #/0 Fs = %x Ft = %x\n", numerator, denominator);
+            ds_log->fpu->debug("DIV #/0 Fs = {:x} Ft = {:x}\n", numerator, denominator);
             control.d = true;
             control.sd = true;
         }
@@ -205,7 +204,7 @@ void Cop1::div_s(int dest, int reg1, int reg2)
     check_overflow(gpr[dest].u, false);
     check_underflow(gpr[dest].u, false);
 
-    printf("[FPU] div.s: %f(%d) / %f(%d) = %f(%d)\n", convert(numerator), reg1, convert(denominator), reg2,
+    ds_log->fpu->debug("div.s: {}({}) / {}({}) = {}({})\n", convert(numerator), reg1, convert(denominator), reg2,
            gpr[dest].f, dest);
 }
 
@@ -217,7 +216,7 @@ void Cop1::sqrt_s(int dest, int source)
     {
         if (gpr[source].u & 0x80000000)
         {
-            printf("[FPU] Negative Sqrt Fs = %x\n", gpr[source].u);
+            ds_log->fpu->debug("Negative Sqrt Fs = {:x}\n", gpr[source].u);
             control.i = true;
             control.si = true;
         }
@@ -226,7 +225,7 @@ void Cop1::sqrt_s(int dest, int source)
     }
 
     control.d = false;
-    printf("[FPU] sqrt.s: %f(%d) = %f(%d)\n", gpr[source].f, source, gpr[dest].f, dest);
+    ds_log->fpu->debug("sqrt.s: {}({}) = {}({})\n", gpr[source].f, source, gpr[dest].f, dest);
 }
 
 void Cop1::abs_s(int dest, int source)
@@ -236,13 +235,13 @@ void Cop1::abs_s(int dest, int source)
     control.u = false;
     control.o = false;
 
-    printf("[FPU] abs.s: %f = -%f\n", gpr[source].f, gpr[dest].f);
+    ds_log->fpu->debug("abs.s: {} = -{}\n", gpr[source].f, gpr[dest].f);
 }
 
 void Cop1::mov_s(int dest, int source)
 {
     gpr[dest].u = gpr[source].u;
-    printf("[FPU] mov.s: %d = %d", source, dest);
+    ds_log->fpu->debug("mov.s: {} = {}\n", source, dest);
 }
 
 void Cop1::neg_s(int dest, int source)
@@ -252,7 +251,7 @@ void Cop1::neg_s(int dest, int source)
     control.u = false;
     control.o = false;
 
-    printf("[FPU] neg.s: %f = -%f\n", gpr[source].f, gpr[dest].f);
+    ds_log->fpu->debug("neg.s: {} = -{}\n", gpr[source].f, gpr[dest].f);
 }
 
 void Cop1::rsqrt_s(int dest, int reg1, int reg2)
@@ -263,7 +262,7 @@ void Cop1::rsqrt_s(int dest, int reg1, int reg2)
     {
         if (gpr[reg2].u & 0x80000000)
         {
-            printf("[FPU] Negative RSqrt Fs = %x\n", gpr[reg2].u);
+            ds_log->fpu->debug("Negative RSqrt Fs = {:x}\n", gpr[reg2].u);
             control.i = true;
             control.si = true;
         }
@@ -275,7 +274,7 @@ void Cop1::rsqrt_s(int dest, int reg1, int reg2)
     control.d = false;
     check_overflow(gpr[dest].u, false);
     check_underflow(gpr[dest].u, false);
-    printf("[FPU] rsqrt.s: %f(%d) = %f(%d)\n", gpr[source].f, source, gpr[dest].f, dest);
+    //ds_log->fpu->debug("rsqrt.s: {}({}) = {}({})\n", gpr[source].f, source, gpr[dest].f, dest);
 }
 
 
@@ -287,7 +286,7 @@ void Cop1::adda_s(int reg1, int reg2)
 
     check_overflow(accumulator.u, true);
     check_underflow(accumulator.u, true);
-    printf("[FPU] adda.s: %f + %f = %f\n", op1, op2, accumulator.f);
+    ds_log->fpu->debug("adda.s: {} + {} = {}\n", op1, op2, accumulator.f);
 }
 
 void Cop1::suba_s(int reg1, int reg2)
@@ -299,7 +298,7 @@ void Cop1::suba_s(int reg1, int reg2)
     check_overflow(accumulator.u, true);
     check_underflow(accumulator.u, true);
 
-    printf("[FPU] suba.s: %f - %f = %f\n", op1, op2, accumulator.f);
+    ds_log->fpu->debug("suba.s: {} - {} = {}\n", op1, op2, accumulator.f);
 }
 
 void Cop1::mula_s(int reg1, int reg2)
@@ -310,7 +309,7 @@ void Cop1::mula_s(int reg1, int reg2)
 
     check_overflow(accumulator.u, true);
     check_underflow(accumulator.u, true);
-    printf("[FPU] mula.s: %f * %f = %f\n", op1, op2, accumulator.f);
+    ds_log->fpu->debug("mula.s: {} * {} = {}\n", op1, op2, accumulator.f);
 }
 
 void Cop1::madd_s(int dest, int reg1, int reg2)
@@ -322,7 +321,7 @@ void Cop1::madd_s(int dest, int reg1, int reg2)
     
     check_overflow(gpr[dest].u, true);
     check_underflow(gpr[dest].u, true);
-    printf("[FPU] madd.s: %f + %f * %f = %f\n", acc, op1, op2, gpr[dest].f);
+    ds_log->fpu->debug("madd.s: {} + {} * {} = {}\n", acc, op1, op2, gpr[dest].f);
 }
 
 void Cop1::msub_s(int dest, int reg1, int reg2)
@@ -335,7 +334,7 @@ void Cop1::msub_s(int dest, int reg1, int reg2)
     check_overflow(gpr[dest].u, true);
     check_underflow(gpr[dest].u, true);
 
-    printf("[FPU] msub.s: %f - %f * %f = %f\n", acc, op1, op2, gpr[dest].f);
+    ds_log->fpu->debug("msub.s: {} - {} * {} = {}\n", acc, op1, op2, gpr[dest].f);
 }
 
 void Cop1::madda_s(int reg1, int reg2)
@@ -346,7 +345,7 @@ void Cop1::madda_s(int reg1, int reg2)
 
     check_overflow(accumulator.u, true);
     check_underflow(accumulator.u, true);
-    printf("[FPU] madda.s: %f + (%f * %f) = %f", acc, op1, op2, accumulator.f);
+    //ds_log->fpu->debug("madda.s: {} + ({} * {}) = {}\n", acc, op1, op2, accumulator.f);
 }
 
 void Cop1::msuba_s(int reg1, int reg2)
@@ -357,12 +356,12 @@ void Cop1::msuba_s(int reg1, int reg2)
 
     check_overflow(accumulator.u, true);
     check_underflow(accumulator.u, true);
-    printf("[FPU] msuba.s: %f + (%f * %f) = %f", acc, op1, op2, accumulator.f);
+   // ds_log->fpu->debug("msuba.s: {} + ({} * {}) = {}\n", acc, op1, op2, accumulator.f);
 }
 
 void Cop1::max_s(int dest, int reg1, int reg2)
 {
-    printf("[FPU] max.s: %f(%d) >= %f(%d)", gpr[reg1].f, reg1, gpr[reg2].f, reg2);
+    ds_log->fpu->debug("max.s: {}({}) >= {}({})\n", gpr[reg1].f, reg1, gpr[reg2].f, reg2);
     if (gpr[reg1].f >= gpr[reg2].f)
         gpr[dest].f = gpr[reg1].f;
     else
@@ -370,12 +369,12 @@ void Cop1::max_s(int dest, int reg1, int reg2)
 
     control.u = false;
     control.o = false;
-    printf(" Result = %f(%d)\n", gpr[dest].f, dest);
+    ds_log->fpu->debug(" Result = {}({})\n", gpr[dest].f, dest);
 }
 
 void Cop1::min_s(int dest, int reg1, int reg2)
 {
-    printf("[FPU] min.s: %f(%d) <= %f(%d)", gpr[reg1].f, reg1, gpr[reg2].f, reg2);
+    ds_log->fpu->debug("min.s: {}({}) <= {}({})\n", gpr[reg1].f, reg1, gpr[reg2].f, reg2);
     if (gpr[reg1].f <= gpr[reg2].f)
         gpr[dest].f = gpr[reg1].f;
     else
@@ -383,29 +382,29 @@ void Cop1::min_s(int dest, int reg1, int reg2)
 
     control.u = false;
     control.o = false;
-    printf(" Result = %f(%d)\n", gpr[dest].f, dest);
+    ds_log->fpu->debug("Result = {}({})\n", gpr[dest].f, dest);
 }
 
 void Cop1::c_f_s()
 {
     control.condition = false;
-    printf("[FPU] c.f.s\n");
+    ds_log->fpu->debug("c.f.s\n");
 }
 
 void Cop1::c_lt_s(int reg1, int reg2)
 {
     control.condition = convert(gpr[reg1].u) < convert(gpr[reg2].u);
-    printf("[FPU] c.lt.s: %f(%d), %f(%d)\n", gpr[reg1].f, reg1, gpr[reg2].f, reg2);
+    ds_log->fpu->debug("c.lt.s: {}({}), {}({})\n", gpr[reg1].f, reg1, gpr[reg2].f, reg2);
 }
 
 void Cop1::c_eq_s(int reg1, int reg2)
 {
     control.condition = convert(gpr[reg1].u) == convert(gpr[reg2].u);
-    printf("[FPU] c.eq.s: %f(%d), %f(%d)\n", gpr[reg1].f, reg1, gpr[reg2].f, reg2);
+    ds_log->fpu->debug("c.eq.s: {}({}), {}({})\n", gpr[reg1].f, reg1, gpr[reg2].f, reg2);
 }
 
 void Cop1::c_le_s(int reg1, int reg2)
 {
     control.condition = convert(gpr[reg1].u) <= convert(gpr[reg2].u);
-    printf("[FPU] c.le.s: %f(%d), %f(%d)\n", gpr[reg1].f, reg1, gpr[reg2].f, reg2);
+    ds_log->fpu->debug("c.le.s: {}({}), {}({})\n", gpr[reg1].f, reg1, gpr[reg2].f, reg2);
 }

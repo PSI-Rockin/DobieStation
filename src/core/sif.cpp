@@ -1,5 +1,6 @@
 #include <cstdio>
 #include "sif.hpp"
+#include "logger.hpp"
 
 #include "iop/iop_dma.hpp"
 
@@ -32,7 +33,7 @@ void SubsystemInterface::write_SIF0(uint32_t word)
 
 void SubsystemInterface::write_SIF1(uint128_t quad)
 {
-    //printf("[SIF] Write SIF1: $%08X_%08X_%08X_%08X\n", quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
+    //ds_log->sif->debug("Write SIF1: ${:08X}_%{:08X}_{:08X}_{:08X}\n", quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
     for (int i = 0; i < 4; i++)
         SIF1_FIFO.push(quad._u32[i]);
     iop_dma->set_DMA_request(IOP_SIF1);
@@ -41,7 +42,7 @@ void SubsystemInterface::write_SIF1(uint128_t quad)
 uint32_t SubsystemInterface::read_SIF0()
 {
     uint32_t value = SIF0_FIFO.front();
-    //printf("[SIF] Read SIF0: $%08X\n", value);
+    //ds_log->sif->debug("Read SIF0: ${:08X}\n", value);
     SIF0_FIFO.pop();
     iop_dma->set_DMA_request(IOP_SIF0);
     return value;

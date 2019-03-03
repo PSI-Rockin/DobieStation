@@ -12,6 +12,7 @@
 
 #include "../emulator.hpp"
 #include "../errors.hpp"
+#include "../logger.hpp"
 #include "../gif.hpp"
 
 #define _x(f) f&8
@@ -66,7 +67,7 @@ VU_I VuIntBranchPipeline::get_branch_condition_reg(uint8_t reg, VU_I current_val
                 if (reg == pipeline[i].write_reg)
                 {
                     current_value = pipeline[i].old_value;
-                    printf("[VU%d] Integer branch using register from %d instructions ago (PC = 0x%x), vi%d now 0x%x!\n", vu_id, i+1, PC, reg, current_value.s);
+                    ds_log->vu->info("[VU{}] Integer branch using register from {} instructions ago (PC = 0x{:x}), vi{} now 0x{:x}!\n", vu_id, i+1, PC, reg, current_value.s);
                 }
 
             }
@@ -364,7 +365,7 @@ void VectorUnit::run(int cycles)
         {
             if (!ebit_delay_slot)
             {
-                printf("[VU] Ended execution!\n");
+                ds_log->vu->info("Ended execution!\n");
                 running = false;
                 finish_on = false;
                 flush_pipes();
@@ -527,10 +528,10 @@ void VectorUnit::handle_XGKICK()
     GIF_addr += 16;
     if (gif->send_PATH1(quad))
     {
-        printf("[VU1] XGKICK transfer ended!\n");
+        ds_log->vu1->info("XGKICK transfer ended!\n");
         if (XGKICK_stall)
         {
-            //printf("[VU1] Activating stalled XGKICK transfer\n");
+            ds_log->vu1->debug("Activating stalled XGKICK transfer.\n");
             XGKICK_delay = 0;
             XGKICK_stall = false;
             GIF_addr = stalled_GIF_addr;
@@ -611,7 +612,7 @@ void VectorUnit::check_for_FMAC_stall()
         {
             if (ILW_pipeline[i] == decoder.vi_read0 || ILW_pipeline[i] == decoder.vi_read1)
             {
-                printf("[VU%d] Load hazard stall on vi%d at PC = 0x%x\n", id, ILW_pipeline[i], PC);
+                ds_log->vu->info("[{}] Load hazard stall on vi{} at PC = 0x{:x}\.\n", id, ILW_pipeline[i], PC);
                 stall_found = true;
             }
         }
@@ -820,7 +821,7 @@ uint32_t VectorUnit::crc_microprogram()
 void VectorUnit::start_program(uint32_t addr)
 {
     uint32_t new_addr = addr & mem_mask;
-    printf("[VU%d] CallMS Starting execution at $%08X! Cur PC %x\n", get_id(), new_addr, PC);
+    ds_log->vu->info("[{}] CallMS Starting execution at ${:08X}! Cur PC {:x}.\n", get_id(), addr, PC);
 
     //Enable this if disabling micromem disasm
     /*if (get_id() == 1 && is_dirty())
@@ -1089,7 +1090,7 @@ uint32_t VectorUnit::cfc(int index)
         case 28:
             return FBRST;
         default:
-            printf("[COP2] Unrecognized cfc2 from reg %d\n", index);
+            ds_log->cop->info("[2] Unrecognized cfc2 from reg {}.\n", index);
     }
     return 0;
 }
@@ -1098,7 +1099,7 @@ void VectorUnit::ctc(int index, uint32_t value)
 {
     if (index < 16)
     {
-        printf("[COP2] Set vi%d to $%04X\n", index, value);
+        ds_log->cop->info("[2] Set vi{} to ${:04X}.\n", index, value);
         set_int(index, value);
         return;
     }
@@ -1115,11 +1116,11 @@ void VectorUnit::ctc(int index, uint32_t value)
             break;
         case 21:
             I.u = value;
-            printf("[VU] I = %f\n", I.f);
+            ds_log->vu->info("I = {}.\n", I.f);
             break;
         case 22:
             set_Q(value);
-            printf("[VU] Q = %f\n", Q.f);
+            ds_log->vu->info("Q = {}.\n", Q.f);
             break;
         case 27:
             CMSAR0 = (uint16_t)value;
@@ -1130,7 +1131,7 @@ void VectorUnit::ctc(int index, uint32_t value)
             FBRST = value & ~0x303;
             break;
         default:
-            printf("[COP2] Unrecognized ctc2 of $%08X to reg %d\n", value, index);
+            ds_log->cop->info("[2] Unrecognized ctc2 of ${:08X} to reg {}.\n", value, index);
     }
 }
 
@@ -1341,7 +1342,7 @@ void VectorUnit::b(uint32_t instr)
     int16_t imm = instr & 0x7FF;
     imm = ((int16_t)(imm << 5)) >> 5;
     imm *= 8;
-    printf("[VU] B $%x (Imm $%x)\n", get_PC() + 16 + imm, imm);
+    ds_log->vu->debug("B ${:x} (Imm ${:x})\n", get_PC() + 16 + imm, imm);
     branch(true, imm, false);
 }
 
@@ -1352,13 +1353,13 @@ void VectorUnit::bal(uint32_t instr)
     imm *= 8;
 
     uint8_t link_reg = (instr >> 16) & 0x1F;
-    printf("[VU] BAL $%x (Imm $%x)\n", get_PC() + 16 + imm, imm);
+    ds_log->vu->debug("BAL ${:x} (Imm ${:x}).\n", get_PC() + 16 + imm, imm);
     branch(true, imm, true, link_reg);
 }
 
 void VectorUnit::clip(uint32_t instr)
 {
-    printf("[VU] CLIP $%08X (%d, %d)\n", instr, _fs_, _ft_);
+    ds_log->vu->debug("CLIP ${:08X} ({}, {}).\n", instr, _fs_, _ft_);
     clip_flags <<= 6; //Move previous clipping judgments up
 
     //Compare x, y, z fields of FS with the w field of FT
@@ -1368,7 +1369,7 @@ void VectorUnit::clip(uint32_t instr)
     float y = convert(gpr[_fs_].u[1]);
     float z = convert(gpr[_fs_].u[2]);
 
-    printf("Compare: (%f, %f, %f) %f\n", x, y, z, value);
+    ds_log->vu->debug("Compare: ({}, {}, {}) {}.\n", x, y, z, value);
 
     clip_flags |= (x > +value);
     clip_flags |= (x < -value) << 1;
@@ -1378,7 +1379,7 @@ void VectorUnit::clip(uint32_t instr)
     clip_flags |= (z < -value) << 5;
     clip_flags &= 0xFFFFFF;
 
-    printf("New flags: $%08X\n", clip_flags);
+    ds_log->vu->debug("New flags: ${:08X}.\n", clip_flags);
 }
 
 void VectorUnit::div(uint32_t instr)

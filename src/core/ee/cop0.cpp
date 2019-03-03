@@ -1,6 +1,7 @@
 #include <cstdio>
 #include "cop0.hpp"
 #include "dmac.hpp"
+#include "../logger.hpp"
 
 Cop0::Cop0(DMAC* dmac) : dmac(dmac)
 {}
@@ -43,7 +44,7 @@ void Cop0::reset()
 
 uint32_t Cop0::mfc(int index)
 {
-    //printf("[COP0] Move from reg%d\n", index);
+    ds_log->cop->debug("[0] Move from reg{}\n", index);
     switch (index)
     {
         case 12:
@@ -90,7 +91,7 @@ uint32_t Cop0::mfc(int index)
 //Returns true if we need to check for interrupts
 void Cop0::mtc(int index, uint32_t value)
 {
-    //printf("[COP0] Move to reg%d: $%08X\n", index, value);
+    ds_log->cop->debug("[0] Move to reg{}: ${:08X}\n", index, value);
     switch (index)
     {
         case 12:

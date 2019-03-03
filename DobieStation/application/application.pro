@@ -11,6 +11,8 @@ LIBS += -L../libdeflate
 win32:LIBS += -llibdeflate
 else:LIBS += -ldeflate
 
+INCLUDEPATH += ../../ext/spdlog/include
+
 QMAKE_CFLAGS_RELEASE -= -O
 QMAKE_CFLAGS_RELEASE -= -O1
 QMAKE_CFLAGS_RELEASE *= -O2
@@ -77,6 +79,7 @@ SOURCES += ../../src/qt/main.cpp \
     ../../src/core/ee/vu_interpreter.cpp \
     ../../src/core/ee/vu_disasm.cpp \
     ../../src/core/gsmem.cpp \
+    ../../src/core/logger.cpp \
     ../../src/core/serialize.cpp \
     ../../src/core/iop/memcard.cpp \
     ../../src/qt/settings.cpp \
@@ -127,6 +130,7 @@ HEADERS += \
     ../../src/core/iop/spu.hpp \
     ../../src/qt/emuthread.hpp \
     ../../src/core/ee/vif.hpp \
+    ../../src/core/logger.hpp \
     ../../src/core/int128.hpp \
     ../../src/core/ee/ipu/ipu.hpp \
     ../../src/core/ee/ipu/vlc_table.hpp \

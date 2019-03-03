@@ -15,6 +15,7 @@
 #include "renderwidget.hpp"
 #include "gamelistwidget.hpp"
 #include "bios.hpp"
+#include "../core/logger.hpp"
 
 #include "arg.h"
 
@@ -184,6 +185,109 @@ int EmuWindow::load_exec(const char* file_name, bool skip_BIOS)
     return 0;
 }
 
+// SPDLOG_LEVEL_TRACE,
+// SPDLOG_LEVEL_DEBUG,
+// SPDLOG_LEVEL_INFO,
+// SPDLOG_LEVEL_WARN,
+// SPDLOG_LEVEL_ERROR,
+// SPDLOG_LEVEL_CRITICAL,
+// SPDLOG_LEVEL_OFF
+
+void EmuWindow::create_log_submenu(const QString& log_name, std::shared_ptr<spdlog::logger> my_log)
+{
+    auto log_submenu = log_menu->addMenu(log_name);
+
+    auto log_level_group = new QActionGroup(this);
+
+    auto level_trace = new QAction(tr("Trace"), log_level_group);
+    level_trace->setCheckable(true);
+    connect(level_trace, &QAction::triggered, this, 
+    [my_log]() {my_log->set_level(spdlog::level::trace);} );
+
+    auto level_debug = new QAction(tr("Debug"), log_level_group);
+    level_debug->setCheckable(true);
+    connect(level_debug, &QAction::triggered, this, 
+    [my_log]() {my_log->set_level(spdlog::level::debug);});
+
+    auto level_info = new QAction(tr("Info"), log_level_group);
+    level_info->setCheckable(true);
+    connect(level_info, &QAction::triggered, this, 
+    [my_log]() {my_log->set_level(spdlog::level::info);});
+
+    auto level_warn = new QAction(tr("Warn"), log_level_group);
+    level_warn->setCheckable(true);
+    connect(level_warn, &QAction::triggered, this, 
+    [my_log]() {my_log->set_level(spdlog::level::warn);});
+
+    auto level_err = new QAction(tr("Error"), log_level_group);
+    level_err->setCheckable(true);
+    connect(level_err, &QAction::triggered, this, 
+    [my_log]() {my_log->set_level(spdlog::level::err);});
+
+    auto level_critical = new QAction(tr("Critical"), log_level_group);
+    level_critical->setCheckable(true);
+    connect(level_critical, &QAction::triggered, this, 
+    [my_log]() {my_log->set_level(spdlog::level::critical);});
+
+    auto level_off = new QAction(tr("Off"), log_level_group);
+    level_off->setCheckable(true);
+    connect(level_off, &QAction::triggered, this, 
+    [my_log]() {my_log->set_level(spdlog::level::off);});
+
+    switch(my_log->level())
+    {
+        case spdlog::level::trace: level_trace->setChecked(true); break;
+        case spdlog::level::debug: level_debug->setChecked(true); break;
+        case spdlog::level::info: level_info->setChecked(true); break;
+        case spdlog::level::warn: level_warn->setChecked(true); break;
+        case spdlog::level::err: level_err->setChecked(true); break;
+        case spdlog::level::critical: level_critical->setChecked(true); break;
+        case spdlog::level::off: level_off->setChecked(true); break;
+        default: level_debug->setChecked(true); break;
+    }
+
+    log_submenu->addAction(level_trace);
+    log_submenu->addAction(level_debug);
+    log_submenu->addAction(level_info);
+    log_submenu->addAction(level_warn);
+    log_submenu->addAction(level_err);
+    log_submenu->addAction(level_critical);
+    log_submenu->addAction(level_off);
+}
+
+void EmuWindow::create_log_menu()
+{
+    log_menu = menuBar()->addMenu(tr("&Logging"));
+    create_log_submenu(tr("EE"), ds_log->ee);
+    create_log_submenu(tr("EE Timing"), ds_log->ee_timing);
+
+    create_log_submenu(tr("IOP"), ds_log->iop);
+    create_log_submenu(tr("IOP DMA"), ds_log->iop_dma);
+    create_log_submenu(tr("IOP Timing"), ds_log->iop_timing);
+
+    create_log_submenu(tr("CDVD"), ds_log->cdvd);
+    create_log_submenu(tr("IPU"), ds_log->ipu);
+    create_log_submenu(tr("PAD"), ds_log->pad);
+    create_log_submenu(tr("SPU"), ds_log->spu);
+    create_log_submenu(tr("GIF"), ds_log->gif);
+
+    create_log_submenu(tr("GS"), ds_log->gs);
+    create_log_submenu(tr("GS_r"), ds_log->gs_r);
+    create_log_submenu(tr("GS_t"), ds_log->gs_t);
+
+    create_log_submenu(tr("DMAC"), ds_log->dmac);
+    create_log_submenu(tr("SIO2"), ds_log->sio2);
+    create_log_submenu(tr("SIF"), ds_log->sif);
+    create_log_submenu(tr("VIF"), ds_log->vif);
+
+    create_log_submenu(tr("VU"), ds_log->vu);
+    create_log_submenu(tr("VU0"), ds_log->vu0);
+    create_log_submenu(tr("VU1"), ds_log->vu1);
+    create_log_submenu(tr("VU JIT"), ds_log->vu_jit);
+    create_log_submenu(tr("VU JIT64"), ds_log->vu_jit64);
+    create_log_submenu(tr("Misc"), ds_log->main);
+}
+
 void EmuWindow::create_menu()
 {
     load_rom_action = new QAction(tr("Load ROM... (&Fast)"), this);
@@ -341,6 +445,8 @@ void EmuWindow::create_menu()
             !render_widget->get_respect_aspect_ratio()
         );
     });
+    
+    create_log_menu();
 
     window_menu = menuBar()->addMenu(tr("&Window"));
     window_menu->addAction(ignore_aspect_ratio_action);

@@ -1,5 +1,6 @@
 #include <cstdint>
 #include "cop2.hpp"
+#include "../logger.hpp"
 
 Cop2::Cop2(VectorUnit *vu0, VectorUnit *vu1) : vu0(vu0), vu1(vu1)
 {
@@ -38,6 +39,6 @@ void Cop2::ctc2(int index, uint32_t value)
             vu0->set_Q(value);
             break;
         default:
-            printf("[COP2] Unrecognized ctc2 of $%08X to reg %d\n", value, index);
+            ds_log->cop->debug("[2] Unrecognized ctc2 of ${:08X} to reg {}\n", value, index);
     }
 }

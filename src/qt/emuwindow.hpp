@@ -9,6 +9,7 @@
 
 #include "../qt/settings.hpp"
 #include "../core/emulator.hpp"
+#include "../core/logger.hpp"
 
 class SettingsWindow;
 class RenderWidget;
@@ -28,6 +29,7 @@ class EmuWindow : public QMainWindow
         QMenu* options_menu;
         QMenu* emulation_menu;
         QMenu* window_menu;
+        QMenu* log_menu;
         QAction* load_rom_action;
         QAction* load_bios_action;
         QAction* load_state_action;
@@ -46,6 +48,8 @@ class EmuWindow : public QMainWindow
         int init(int argc, char** argv);
         int load_exec(const char* file_name, bool skip_BIOS);
 
+        void create_log_submenu(const QString& log_name, std::shared_ptr<spdlog::logger> log);
+        void create_log_menu();
         void create_menu();
 
         bool load_bios();

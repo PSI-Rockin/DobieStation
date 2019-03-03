@@ -6,6 +6,7 @@
 
 #include "../emulator.hpp"
 #include "../errors.hpp"
+#include "../logger.hpp"
 
 using namespace std;
 
@@ -330,8 +331,8 @@ bool CDVD_Drive::load_disc(const char *name, CDVD_CONTAINER a_container)
     if (!container_open(name))
         return false;
 
-    printf("[CDVD] Disc size: %lu bytes\n", file_size);
-    printf("[CDVD] Locating Primary Volume Descriptor\n");
+    ds_log->cdvd->info("Disc size: {} bytes.\n", file_size);
+    ds_log->cdvd->info("Locating Primary Volume Descriptor.\n");
     uint8_t type = 0;
     int sector = 0x0F;
     while (type != 1)
@@ -340,19 +341,19 @@ bool CDVD_Drive::load_disc(const char *name, CDVD_CONTAINER a_container)
         container_seek(sector * 2048);
         container_read(&type, sizeof(uint8_t));
     }
-    printf("[CDVD] Primary Volume Descriptor found at sector %d\n", sector);
+    ds_log->cdvd->info("Primary Volume Descriptor found at sector {}.\n", sector);
 
     container_seek(sector * 2048);
     container_read(pvd_sector, 2048);
 
     LBA = *(uint16_t*)&pvd_sector[128];
-    printf("[CDVD] PVD LBA: $%08X\n", LBA);
+    ds_log->cdvd->info("PVD LBA: ${:08X}\n", LBA);
 
     root_location = *(uint32_t*)&pvd_sector[156 + 2] * LBA;
     root_len = *(uint32_t*)&pvd_sector[156 + 10];
-    printf("[CDVD] Root dir len: %d\n", *(uint16_t*)&pvd_sector[156]);
-    printf("[CDVD] Extent loc: $%08lX\n", root_location);
-    printf("[CDVD] Extent len: $%08lX\n", root_len);
+    ds_log->cdvd->info("Root dir len: {}\n", *(uint16_t*)&pvd_sector[156]);
+    ds_log->cdvd->info("Extent loc: ${:08X}\n", root_location);
+    ds_log->cdvd->info("Extent len: ${:08X}\n", root_len);
 
     return true;
 }
@@ -366,7 +367,7 @@ uint8_t* CDVD_Drive::read_file(string name, uint32_t& file_size)
     uint64_t file_location = 0;
     uint8_t* file;
     file_size = 0;
-    printf("[CDVD] Finding %s...\n", name.c_str());
+    ds_log->cdvd->info("Finding {}...\n", name.c_str());
     while (bytes < root_len)
     {
         uint64_t directory_len = root_extent[bytes + 32];
@@ -383,12 +384,12 @@ uint8_t* CDVD_Drive::read_file(string name, uint32_t& file_size)
             }
             if (match)
             {
-                printf("[CDVD] Match found!\n");
+                ds_log->cdvd->info("Match found!\n");
                 file_location = *(uint32_t*)&root_extent[bytes + 2];
                 file_location *= LBA;
                 file_size = *(uint32_t*)&root_extent[bytes + 10];
-                printf("[CDVD] Location: $%08lX\n", file_location);
-                printf("[CDVD] Size: $%08X\n", file_size);
+                ds_log->cdvd->info("Location: ${:08X}\n", file_location);
+                ds_log->cdvd->info("Size: ${:08X}\n", file_size);
 
                 file = new uint8_t[file_size];
                 container_seek(file_location);
@@ -406,14 +407,14 @@ uint8_t* CDVD_Drive::read_file(string name, uint32_t& file_size)
 
 uint8_t CDVD_Drive::read_N_command()
 {
-    printf("[CDVD] Read N_command: $%02X\n", N_command);
+    ds_log->cdvd->debug("Read N_command: ${:02X}\n", N_command);
     return N_command;
 }
 
 uint8_t CDVD_Drive::read_disc_type()
 {
     //Not sure what the exact limit is. We'll just go with 1 GB for now.
-    printf("[CDVD] Read disc type\n");
+    ds_log->cdvd->debug("Read disc type.\n");
     if (file_size > (1024 * 1024 * 1024))
         return 0x14;
     return 0x12;
@@ -421,19 +422,19 @@ uint8_t CDVD_Drive::read_disc_type()
 
 uint8_t CDVD_Drive::read_N_status()
 {
-    //printf("[CDVD] Read N_status: $%02X\n", N_status);
+    //ds_log->cdvd->debug("Read N_status: ${:02X}\n", N_status);
     return N_status;
 }
 
 uint8_t CDVD_Drive::read_S_status()
 {
-    printf("[CDVD] Read S_status: $%02X\n", S_status);
+    ds_log->cdvd->debug("Read S_status: ${:02X}\n", S_status);
     return S_status;
 }
 
 uint8_t CDVD_Drive::read_S_command()
 {
-    printf("[CDVD] Read S_command: $%02X\n", S_command);
+    ds_log->cdvd->debug("Read S_command: ${:02X}\n", S_command);
     return S_command;
 }
 
@@ -442,7 +443,7 @@ uint8_t CDVD_Drive::read_S_data()
     if (S_out_params <= 0)
         return 0;
     uint8_t value = S_outdata[S_params];
-    printf("[CDVD] Read S data: $%02X\n", value);
+    ds_log->cdvd->debug("Read S data: ${:02X}\n", value);
     S_params++;
     S_out_params--;
     if (S_out_params == 0)
@@ -455,7 +456,7 @@ uint8_t CDVD_Drive::read_S_data()
 
 uint8_t CDVD_Drive::read_ISTAT()
 {
-    printf("[CDVD] Read ISTAT: $%02X\n", ISTAT);
+    ds_log->cdvd->debug("Read ISTAT: ${:02X}\n", ISTAT);
     return ISTAT;
 }
 
@@ -500,7 +501,7 @@ void CDVD_Drive::send_N_command(uint8_t value)
             N_command_dvdread();
             break;
         case 0x09:
-            printf("[CDVD] GetTOC\n");
+            ds_log->cdvd->debug("GetTOC.\n");
             N_command_gettoc();
             break;
         case 0x0C:
@@ -509,7 +510,7 @@ void CDVD_Drive::send_N_command(uint8_t value)
                     (N_command_params[4]<<8) |
                     (N_command_params[5]<<16) |
                     (N_command_params[6]<<24);
-            printf("[CDVD] ReadKey: $%08X\n", arg);
+            ds_log->cdvd->debug("ReadKey: ${:08X}\n", arg);
             N_command_readkey(arg);
         }
             break;
@@ -521,13 +522,13 @@ void CDVD_Drive::send_N_command(uint8_t value)
 
 uint8_t CDVD_Drive::read_drive_status()
 {
-    printf("[CDVD] Read drive status: $%02X\n", drive_status);
+    ds_log->cdvd->debug("Read drive status: ${:02X}\n", drive_status);
     return drive_status;
 }
 
 void CDVD_Drive::write_N_data(uint8_t value)
 {
-    printf("[CDVD] Write NDATA: $%02X\n", value);
+    ds_log->cdvd->debug("Write NDATA: ${:02X}\n", value);
     if (N_params > 10)
     {
         Errors::die("[CDVD] Excess NDATA params!\n");
@@ -541,7 +542,7 @@ void CDVD_Drive::write_N_data(uint8_t value)
 
 void CDVD_Drive::write_BREAK()
 {
-    printf("[CDVD] Write BREAK\n");
+    ds_log->cdvd->debug("Write BREAK.\n");
     if (N_status || active_N_command == NCOMMAND::BREAK)
         return;
 
@@ -553,7 +554,7 @@ void CDVD_Drive::write_BREAK()
 
 void CDVD_Drive::send_S_command(uint8_t value)
 {
-    printf("[CDVD] Send S command: $%02X\n", value);
+    ds_log->cdvd->debug("Send S command: ${:02X}\n", value);
     S_status &= ~0x40;
     S_command = value;
     switch (value)
@@ -562,12 +563,12 @@ void CDVD_Drive::send_S_command(uint8_t value)
             S_command_sub(S_command_params[0]);
             break;
         case 0x05:
-            printf("[CDVD] Media Change?\n");
+            ds_log->cdvd->debug("Media Change?\n");
             prepare_S_outdata(1);
             S_outdata[0] = 0;
             break;
         case 0x08:
-            printf("[CDVD] ReadClock\n");
+            ds_log->cdvd->debug("ReadClock\n");
             prepare_S_outdata(8);
             S_outdata[0] = 0;
             S_outdata[1] = itob(rtc.second);
@@ -579,7 +580,7 @@ void CDVD_Drive::send_S_command(uint8_t value)
             S_outdata[7] = itob(rtc.year);
             break;
         case 0x09:
-            printf("[CDVD] WriteClock\n");
+            ds_log->cdvd->debug("WriteClock\n");
             prepare_S_outdata(1);
             S_outdata[0] = 0;
             rtc.second = S_command_params[0];
@@ -590,34 +591,34 @@ void CDVD_Drive::send_S_command(uint8_t value)
             rtc.year = S_command_params[6];
             break;
         case 0x12:
-            printf("[CDVD] sceCdReadILinkId\n");
+            ds_log->cdvd->debug("sceCdReadILinkId\n");
             prepare_S_outdata(9);
             for (int i = 0; i < 9; i++)
                 S_outdata[i] = 0;
             break;
         case 0x13:
-            printf("[CDVD] sceCdWriteILinkId\n");
+            ds_log->cdvd->debug("sceCdWriteILinkId\n");
             prepare_S_outdata(1);
             S_outdata[0] = 0;
             break;
         case 0x15:
-            printf("[CDVD] ForbidDVD\n");
+            ds_log->cdvd->debug("ForbidDVD\n");
             prepare_S_outdata(1);
             S_outdata[0] = 5;
             break;
         case 0x17:
-            printf("[CDVD] ReadILinkModel\n");
+            ds_log->cdvd->info("ReadILinkModel\n");
             prepare_S_outdata(9);
             for (int i = 0; i < 9; i++)
                 S_outdata[i] = 0;
             break;
         case 0x1A:
-            printf("[CDVD] BootCertify\n");
+            ds_log->cdvd->debug("BootCertify\n");
             prepare_S_outdata(1);
             S_outdata[0] = 1; //means OK according to PCSX2
             break;
         case 0x1B:
-            printf("[CDVD] CancelPwOffReady\n");
+            ds_log->cdvd->debug("CancelPwOffReady\n");
             prepare_S_outdata(1);
             S_outdata[0] = 0;
             break;
@@ -630,34 +631,34 @@ void CDVD_Drive::send_S_command(uint8_t value)
             S_outdata[4] = 0x00;
             break;
         case 0x22:
-            printf("[CDVD] CdReadWakeupTime\n");
+            ds_log->cdvd->debug("CdReadWakeupTime\n");
             prepare_S_outdata(10);
             for (int i = 0; i < 10; i++)
                 S_outdata[i] = 0;
             break;
         case 0x24:
-            printf("[CDVD] CdRCBypassCtrl\n");
+            ds_log->cdvd->debug("CdRCBypassCtrl\n");
             prepare_S_outdata(1);
             S_outdata[0] = 0;
             break;
         case 0x40:
-            printf("[CDVD] OpenConfig\n");
+            ds_log->cdvd->debug("OpenConfig\n");
             prepare_S_outdata(1);
             S_outdata[0] = 0;
             break;
         case 0x41:
-            printf("[CDVD] ReadConfig\n");
+            ds_log->cdvd->debug("ReadConfig\n");
             prepare_S_outdata(16);
             for (int i = 0; i < 16; i++)
                 S_outdata[i] = 0;
             break;
         case 0x42:
-            printf("[CDVD] WriteConfig\n");
+            ds_log->cdvd->debug("WriteConfig\n");
             prepare_S_outdata(1);
             S_outdata[0] = 0;
             break;
         case 0x43:
-            printf("[CDVD] CloseConfig\n");
+            ds_log->cdvd->debug("CloseConfig\n");
             prepare_S_outdata(1);
             S_outdata[0] = 0;
             break;
@@ -668,7 +669,7 @@ void CDVD_Drive::send_S_command(uint8_t value)
 
 void CDVD_Drive::write_S_data(uint8_t value)
 {
-    printf("[CDVD] Write SDATA: $%02X (%d)\n", value, S_params);
+    ds_log->cdvd->debug("Write SDATA: ${:02X} ({})\n", value, S_params);
     if (S_params > 15)
     {
         Errors::die("[CDVD] Excess SDATA params!\n");
@@ -703,34 +704,34 @@ void CDVD_Drive::start_seek()
         //1/3 of a second
         cycles_to_seek = IOP_CLOCK / 3;
         //cycles_to_seek = 1000000;
-        printf("[CDVD] Spinning\n");
+        ds_log->cdvd->debug("Spinning.\n");
         is_spinning = true;
     }
     else
     {
-        printf("[CDVD] Seeking\n");
+        ds_log->cdvd->debug("Seeking.\n");
         bool is_DVD = N_command != 0x06;
         int delta = abs((int)current_sector - (int)sector_pos);
-        printf("[CDVD] Seek delta: %d\n", delta);
+        ds_log->cdvd->debug("Seek delta: {}\n", delta);
         if ((is_DVD && delta < 16) || (!is_DVD && delta < 8))
         {
-            printf("[CDVD] Contiguous read\n");
+            ds_log->cdvd->debug("Contiguous read.\n");
             cycles_to_seek = get_block_timing(is_DVD) * delta;
             if (!delta)
             {
                 drive_status = READING | SPINNING;
-                printf("Instant read!\n");
+                ds_log->cdvd->debug("Instant read!\n");
             }
         }
         else if ((is_DVD && delta < 14764) || (!is_DVD && delta < 4371))
         {
             cycles_to_seek = (IOP_CLOCK * 30) / 1000;
-            printf("[CDVD] Fast seek\n");
+            ds_log->cdvd->debug("Fast seek.\n");
         }
         else
         {
             cycles_to_seek = (IOP_CLOCK * 100) / 1000;
-            printf("[CDVD] Full seek\n");
+            ds_log->cdvd->debug("Full seek.\n");
         }
     }
 
@@ -770,7 +771,7 @@ void CDVD_Drive::N_command_read()
             block_size = 2048;
     }
     speed = 24;
-    printf("[CDVD] Read; Seek pos: %lu, Sectors: %lu\n", sector_pos, sectors_left);
+    ds_log->cdvd->debug("Read; Seek pos: {}, Sectors: {}\n", sector_pos, sectors_left);
     start_seek();
     active_N_command = NCOMMAND::READ_SEEK;
 }
@@ -779,8 +780,8 @@ void CDVD_Drive::N_command_dvdread()
 {
     sector_pos = *(uint32_t*)&N_command_params[0];
     sectors_left = *(uint32_t*)&N_command_params[4];
-    printf("[CDVD] ReadDVD; Seek pos: %lu, Sectors: %lu\n", sector_pos, sectors_left);
-    printf("Last read: %lu cycles ago\n", cycle_count - last_read);
+    ds_log->cdvd->debug("ReadDVD; Seek pos: {}, Sectors: {}\n", sector_pos, sectors_left);
+    ds_log->cdvd->debug("Last read: {} cycles ago.\n", cycle_count - last_read);
     last_read = cycle_count;
     speed = 4;
     block_size = 2064;
@@ -790,7 +791,7 @@ void CDVD_Drive::N_command_dvdread()
 
 void CDVD_Drive::N_command_gettoc()
 {
-    printf("[CDVD] Get TOC\n");
+    ds_log->cdvd->debug("Get TOC.\n");
     sectors_left = 0;
     block_size = 2064;
     read_bytes_left = 2064;
@@ -856,7 +857,7 @@ void CDVD_Drive::N_command_readkey(uint32_t arg)
 
 void CDVD_Drive::read_CD_sector()
 {
-    printf("[CDVD] Read CD sector - Sector: %lu Size: %lu\n", current_sector, block_size);
+    ds_log->cdvd->debug("Read CD sector - Sector: {} Size: {}\n", current_sector, block_size);
     switch (block_size)
     {
         case 2340:
@@ -883,7 +884,7 @@ void CDVD_Drive::fill_CDROM_sector()
     uint32_t seconds = read_sector / 75;
     uint32_t fragments = read_sector - (seconds * 75);
 
-    printf("Minutes: %d Seconds: %d Fragments: %d\n", minutes, seconds, fragments);
+    ds_log->cdvd->debug("Minutes: {} Seconds: {} Fragments: {}\n", minutes, seconds, fragments);
 
     memset(temp_buffer, 0, 2340);
     for (int i = 0x1; i < 0xB; i++)
@@ -899,7 +900,7 @@ void CDVD_Drive::fill_CDROM_sector()
 
 void CDVD_Drive::read_DVD_sector()
 {
-    printf("[CDVD] Read DVD sector - Sector: %lu Size: %lu\n", current_sector, block_size);
+    ds_log->cdvd->debug("Read DVD sector - Sector: {} Size: {}\n", current_sector, block_size);
 
     int layer_num;
     uint32_t lsn;
@@ -964,7 +965,7 @@ void CDVD_Drive::S_command_sub(uint8_t func)
     switch (func)
     {
         case 0x00:
-            printf("[CDVD] GetMecaconVersion\n");
+            ds_log->cdvd->debug("GetMecaconVersion.\n");
             prepare_S_outdata(4);
             *(uint32_t*)&S_outdata[0] = 0x00020603;
             break;
@@ -975,7 +976,7 @@ void CDVD_Drive::S_command_sub(uint8_t func)
 
 void CDVD_Drive::write_ISTAT(uint8_t value)
 {
-    printf("[CDVD] Write ISTAT: $%02X\n", value);
+    ds_log->cdvd->debug("Write ISTAT: ${:02X}\n", value);
     ISTAT &= ~value;
 }
 

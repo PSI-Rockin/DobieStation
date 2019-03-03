@@ -1,4 +1,5 @@
 #include "settings.hpp"
+#include "../core/logger.hpp"
 
 Settings::Settings()
 {

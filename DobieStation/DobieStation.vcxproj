@@ -72,7 +72,7 @@
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
       <WarningLevel>Level3</WarningLevel>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalIncludeDirectories>$(ProjectDir)\..\src\qt;$(ProjectDir)\..\ext\libdeflate;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\..\src\qt;$(ProjectDir)\..\ext\libdeflate;$(ProjectDir)\..\ext\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
     </ClCompile>
     <Link>
@@ -114,10 +114,10 @@
       <WarningLevel>Level3</WarningLevel>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <ProgramDataBaseFileName>$(IntDir)vc$(PlatformToolsetVersion).pdb</ProgramDataBaseFileName>
-      <AdditionalIncludeDirectories>$(ProjectDir)\..\src\qt;$(ProjectDir)\..\ext\libdeflate;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)\..\src\qt;$(ProjectDir)\..\ext\libdeflate;$(ProjectDir)\..\ext\spdlog\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>.\libdeflate\release\libdeflate.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>.\libdeflate\debug\libdeflate.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalOptions>"/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' publicKeyToken='6595b64144ccf1df' language='*' processorArchitecture='*'" %(AdditionalOptions)</AdditionalOptions>
       <DataExecutionPrevention>true</DataExecutionPrevention>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -139,6 +139,7 @@
   <!-- cpp files -->
   <ItemGroup>
     <ClCompile Include="..\src\core\iop\cso_reader.cpp" />
+    <ClCompile Include="..\src\core\logger.cpp" />
     <ClCompile Include="..\src\core\tests\iop\alu.cpp" />
     <ClCompile Include="..\src\core\ee\bios_hle.cpp" />
     <ClCompile Include="..\src\core\iop\cdvd.cpp" />
@@ -164,7 +165,7 @@
     <ClCompile Include="..\src\qt\emuwindow.cpp" />
     <ClCompile Include="..\src\qt\renderwidget.cpp" />
     <ClCompile Include="..\src\qt\settingswindow.cpp" />
-	<ClCompile Include="..\src\qt\gamelistwidget.cpp" />
+    <ClCompile Include="..\src\qt\gamelistwidget.cpp" />
     <ClCompile Include="..\src\qt\bios.cpp" />
     <ClCompile Include="..\src\core\errors.cpp" />
     <ClCompile Include="..\src\core\iop\gamepad.cpp" />
@@ -207,24 +208,24 @@
     <ClCompile Include="..\src\core\ee\vu_jit.cpp" />
     <ClCompile Include="..\src\core\ee\vu_jit64.cpp" />
     <ClCompile Include="..\src\core\ee\vu_jittrans.cpp" />
-	<ClCompile Include="..\src\core\scheduler.cpp" />
+    <ClCompile Include="..\src\core\scheduler.cpp" />
   </ItemGroup>
   <!-- moc files -->
   <ItemGroup>
-	<QtMoc Include="..\src\qt\settings.hpp" />
+    <QtMoc Include="..\src\qt\settings.hpp" />
     <QtMoc Include="..\src\qt\emuthread.hpp" />
     <QtMoc Include="..\src\qt\emuwindow.hpp" />
     <QtMoc Include="..\src\qt\renderwidget.hpp" />
     <QtMoc Include="..\src\qt\settingswindow.hpp" />
-	<QtMoc Include="..\src\qt\gamelistwidget.hpp" />
+    <QtMoc Include="..\src\qt\gamelistwidget.hpp" />
   </ItemGroup>
   <ItemGroup>
-	<ClCompile Include="$(QtMocOutPrefix)settings.cpp" />
+    <ClCompile Include="$(QtMocOutPrefix)settings.cpp" />
     <ClCompile Include="$(QtMocOutPrefix)emuthread.cpp" />
     <ClCompile Include="$(QtMocOutPrefix)emuwindow.cpp" />
-	<ClCompile Include="$(QtMocOutPrefix)renderwidget.cpp" />
+    <ClCompile Include="$(QtMocOutPrefix)renderwidget.cpp" />
     <ClCompile Include="$(QtMocOutPrefix)settingswindow.cpp" />
-	<ClCompile Include="$(QtMocOutPrefix)gamelistwidget.cpp" />
+    <ClCompile Include="$(QtMocOutPrefix)gamelistwidget.cpp" />
   </ItemGroup>
   <!-- headers -->
   <ItemGroup>
@@ -246,6 +247,7 @@
     <ClInclude Include="..\src\core\ee\emotiondisasm.hpp" />
     <ClInclude Include="..\src\core\ee\emotioninterpreter.hpp" />
     <ClInclude Include="..\src\core\emulator.hpp" />
+    <ClInclude Include="..\src\core\logger.hpp" />
     <ClInclude Include="..\src\qt\bios.hpp" />
     <ClInclude Include="..\src\core\errors.hpp" />
     <ClInclude Include="..\src\core\iop\gamepad.hpp" />
@@ -286,7 +288,7 @@
     <ClInclude Include="..\src\core\ee\vu_jit.hpp" />
     <ClInclude Include="..\src\core\ee\vu_jit64.hpp" />
     <ClInclude Include="..\src\core\ee\vu_jittrans.hpp" />
-	<ClInclude Include="..\src\core\scheduler.hpp" />
+    <ClInclude Include="..\src\core\scheduler.hpp" />
   </ItemGroup>
   <!-- jit stuff -->
   <ItemGroup>

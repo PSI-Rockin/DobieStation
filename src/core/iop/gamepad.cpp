@@ -3,6 +3,7 @@
 #include <cstring>
 #include "gamepad.hpp"
 #include "../errors.hpp"
+#include "../logger.hpp"
 
 //Reply buffers taken from PCSX2's LilyPad
 
@@ -88,20 +89,20 @@ uint8_t Gamepad::write_SIO(uint8_t value)
 {
     if (data_count > command_length)
     {
-        printf("[PAD] Transfer (%d) exceeds command length (%d)!\n", data_count + 1, command_length);
+        ds_log->pad->info("Transfer ({}) exceeds command length ({})!\n", data_count + 1, command_length);
         return 0;
     }
     if (data_count == 0)
     {
         if (!config_mode && (value != 'B' && value != 'C'))
         {
-            printf("[PAD] Command %c ($%02X) called while not in config mode!\n", value, value);
+            ds_log->pad->info("Command {} (${:02X}) called while not in config mode!\n", value, value);
             command_length = 0;
             data_count = 1;
             return 0xF3;
         }
 
-        printf("[PAD] New command!\n");
+        ds_log->pad->info("New command!\n");
 
         command = value;
         data_count++;
@@ -208,7 +209,7 @@ uint8_t Gamepad::write_SIO(uint8_t value)
             if (data_count == 3)
             {
                 config_mode = value;
-                printf("[PAD] Config mode: %d\n", config_mode);
+                ds_log->pad->info("Config mode: {}\n", config_mode);
             }
             break;
         case 'D':

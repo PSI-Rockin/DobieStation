@@ -8,6 +8,7 @@
 #include "../emulator.hpp"
 #include "../ee/emotiondisasm.hpp"
 #include "../errors.hpp"
+#include "../logger.hpp"
 
 IOP::IOP(Emulator* e) : e(e)
 {
@@ -70,7 +71,7 @@ void IOP::run(int cycles)
             uint32_t instr = read_instr(PC);
             if (can_disassemble)
             {
-                printf("[IOP] [$%08X] $%08X - %s\n", PC, instr, EmotionDisasm::disasm_instr(instr, PC).c_str());
+                ds_log->iop->info("[${:08X}] ${:08X} - {}\n", PC, instr, EmotionDisasm::disasm_instr(instr, PC).c_str());
                 //print_state();
             }
             IOP_Interpreter::interpret(*this, instr);
@@ -104,11 +105,11 @@ void IOP::print_state()
 {
     for (int i = 1; i < 32; i++)
     {
-        printf("%s:$%08X", REG(i), get_gpr(i));
+        ds_log->iop->info("{}:${:08X}", REG(i), get_gpr(i));
         if (i % 4 == 3)
-            printf("\n");
+            ds_log->iop->info("\n");
         else
-            printf("\t");
+            ds_log->iop->info("\t");
     }
 }
 
@@ -171,7 +172,7 @@ void IOP::interrupt_check(bool i_pass)
 
 void IOP::interrupt()
 {
-    printf("[IOP] Processing interrupt!\n");
+    ds_log->iop->info("Processing interrupt!\n");
     handle_exception(0x80000080, 0x00);
     unhalt();
 }
@@ -208,7 +209,7 @@ void IOP::rfe()
 
     cop0.status.IEc = cop0.status.IEp;
     cop0.status.IEp = cop0.status.IEo;
-    //printf("[IOP] RFE!\n");
+    //ds_log->iop->info("RFE!\n");
     //can_disassemble = false;
 }
 

@@ -3,8 +3,6 @@
 #include "vu_interpreter.hpp"
 #include "../errors.hpp"
 
-#define printf(fmt, ...)(0)
-
 #define _ft_ ((instr >> 16) & 0x1F)
 #define _fs_ ((instr >> 11) & 0x1F)
 #define _fd_ ((instr >> 6) & 0x1F)

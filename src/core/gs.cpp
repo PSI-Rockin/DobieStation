@@ -7,6 +7,8 @@
 #include "gs.hpp"
 #include "gsthread.hpp"
 #include "errors.hpp"
+#include "logger.hpp"
+
 using namespace std;
 
 /**
@@ -93,7 +95,7 @@ void GraphicsSynthesizer::set_CRT(bool interlaced, int mode, bool frame_mode)
 
 void wait_for_return(gs_return_fifo *return_queue, GSReturn type, GSReturnMessage &data)
 {
-    printf("wait for return\n");
+    ds_log->main->info("wait for return\n");
     while (true)
     {
         if (return_queue->pop(data))
@@ -127,7 +129,7 @@ uint32_t* GraphicsSynthesizer::get_framebuffer()
     {
         while (!output_buffer1_mutex.try_lock())
         {
-            printf("[GS] buffer 1 lock failed!\n");
+             ds_log->gs->warn("buffer 1 lock failed!\n");
             std::this_thread::yield();
         }
         current_lock = std::unique_lock<std::mutex>(output_buffer1_mutex, std::adopt_lock);
@@ -137,7 +139,7 @@ uint32_t* GraphicsSynthesizer::get_framebuffer()
     {
         while (!output_buffer2_mutex.try_lock())
         {
-            printf("[GS] buffer 2 lock failed!\n");
+             ds_log->gs->warn("buffer 2 lock failed!\n");
             std::this_thread::yield();
         }
         current_lock = std::unique_lock<std::mutex>(output_buffer2_mutex, std::adopt_lock);
@@ -157,14 +159,14 @@ void GraphicsSynthesizer::set_VBLANK(bool is_VBLANK)
 
     if (is_VBLANK)
     {
-        printf("[GS] VBLANK start\n");
+         ds_log->gs->info("VBLANK start\n");
         if (!reg.IMR.vsync)
             intc->assert_IRQ((int)Interrupt::GS);
         intc->assert_IRQ((int)Interrupt::VBLANK_START);
     }
     else
     {
-        printf("[GS] VBLANK end\n");
+         ds_log->gs->info("VBLANK end\n");
         intc->assert_IRQ((int)Interrupt::VBLANK_END);
         frame_count++;
     }

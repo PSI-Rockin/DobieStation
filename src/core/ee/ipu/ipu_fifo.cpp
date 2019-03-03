@@ -2,6 +2,7 @@
 #include <cstdio>
 #include "ipu_fifo.hpp"
 #include "../../errors.hpp"
+#include "../../logger.hpp"
 
 bool IPU_FIFO::get_bits(uint32_t &data, int bits)
 {
@@ -48,7 +49,7 @@ bool IPU_FIFO::advance_stream(uint8_t amount)
     if (amount > 32)
         amount = 32;
     
-    //printf("Advance stream: %d + %d = %d\n", bit_pointer - amount, amount, bit_pointer);
+    //ds_log->ipu->info("Advance stream: {} + {} = {}\n", bit_pointer - amount, amount, bit_pointer);
 
     if ((bit_pointer + amount) > (f.size() * 128))
     {

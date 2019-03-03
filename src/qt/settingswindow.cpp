@@ -117,7 +117,7 @@ PathTab::PathTab(QWidget* parent)
     connect(browse_button, &QAbstractButton::clicked, [=]() {
         QString path = QFileDialog::getOpenFileName(
             this, tr("Open Bios"), Settings::instance().last_used_directory,
-            tr("Bios File (*.bin)")
+            tr("Bios File (*.bin *.rom0)")
         );
 
         Settings::instance().set_bios_path(path);

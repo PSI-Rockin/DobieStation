@@ -1,8 +1,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include "gscontext.hpp"
-
-#define printf(fmt, ...)(0)
+#include "logger.hpp"
 
 void GSContext::reset()
 {
@@ -41,17 +40,17 @@ void GSContext::set_tex0(uint64_t value)
     tex0.CLUT_offset = ((value >> 56) & 0x1F) * 16;
     tex0.CLUT_control = (value >> 61) & 0x7;
 
-    printf("TEX0: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);
-    printf("Tex base: $%08X\n", tex0.texture_base);
-    printf("Buffer width: %d\n", tex0.width);
-    printf("Tex format: $%02X\n", tex0.format);
-    printf("Tex width: %d Height: %d\n", tex0.tex_width, tex0.tex_height);
-    printf("Use alpha: %d\n", tex0.use_alpha);
-    printf("Color function: $%02X\n", tex0.color_function);
-    printf("CLUT base: $%08X\n", tex0.CLUT_base);
-    printf("CLUT format: $%02X\n", tex0.CLUT_format);
-    printf("Use CSM2: %d\n", tex0.use_CSM2);
-    printf("CLUT offset: $%08X\n", tex0.CLUT_offset);
+    ds_log->gs->debug("TEX0: {:08x}_{:08x}\n", value >> 32, value & 0xFFFFFFFF);
+    ds_log->gs->debug("Tex base: {:08x}\n", tex0.texture_base);
+    ds_log->gs->debug("Buffer width: {}\n", tex0.width);
+    ds_log->gs->debug("Tex format: {:#02x}\n", tex0.format);
+    ds_log->gs->debug("Tex width: {} Height: {}\n", tex0.tex_width, tex0.tex_height);
+    ds_log->gs->debug("Use alpha: {}\n", tex0.use_alpha);
+    ds_log->gs->debug("Color function: {:#02x}\n", tex0.color_function);
+    ds_log->gs->debug("CLUT base: {:08x}\n", tex0.CLUT_base);
+    ds_log->gs->debug("CLUT format: {:#02x}\n", tex0.CLUT_format);
+    ds_log->gs->debug("Use CSM2: {}\n", tex0.use_CSM2);
+    ds_log->gs->debug("CLUT offset: {:08x}\n", tex0.CLUT_offset);
 }
 
 void GSContext::set_tex1(uint64_t value)
@@ -77,11 +76,11 @@ void GSContext::set_tex2(uint64_t value)
     tex0.CLUT_offset = ((value >> 56) & 0x1F) * 16;
     tex0.CLUT_control = (value >> 61) & 0x7;
 
-    printf("TEX2: $%08X_%08X\n", value >> 32, value);
-    printf("CLUT base: $%08X\n", tex0.CLUT_base);
-    printf("CLUT format: $%02X\n", tex0.CLUT_format);
-    printf("Use CSM2: %d\n", tex0.use_CSM2);
-    printf("CLUT offset: $%08X\n", tex0.CLUT_offset);
+    ds_log->gs->debug("TEX2: {:08x}_{:08x}\n", value >> 32, value);
+    ds_log->gs->debug("CLUT base: {:08x}\n", tex0.CLUT_base);
+    ds_log->gs->debug("CLUT format: {:#02x}\n", tex0.CLUT_format);
+    ds_log->gs->debug("Use CSM2: {}\n", tex0.use_CSM2);
+    ds_log->gs->debug("CLUT offset: {:08x}\n", tex0.CLUT_offset);
 }
 
 void GSContext::set_clamp(uint64_t value)
@@ -92,14 +91,14 @@ void GSContext::set_clamp(uint64_t value)
     clamp.max_u = (value >> 14) & 0x3FF;
     clamp.min_v = (value >> 24) & 0x3FF;
     clamp.max_v = (value >> 34) & 0x3FF;
-    printf("CLAMP: $%08X_%08X\n", value >> 32, value);
+    ds_log->gs->debug("CLAMP: {:08x}_{:08x}\n", value >> 32, value);
 }
 
 void GSContext::set_xyoffset(uint64_t value)
 {
     xyoffset.x = value & 0xFFFF;
     xyoffset.y = (value >> 32) & 0xFFFF;
-    printf("XYOFFSET: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);
+    ds_log->gs->debug("XYOFFSET: {:08x}_{:08x}\n", value >> 32, value & 0xFFFFFFFF);
 }
 
 void GSContext::set_miptbl1(uint64_t value)
@@ -131,8 +130,8 @@ void GSContext::set_scissor(uint64_t value)
     scissor.x2 = ((value >> 16) & 0x7FF) << 4;
     scissor.y1 = ((value >> 32) & 0x7FF) << 4;
     scissor.y2 = ((value >> 48) & 0x7FF) << 4;
-    printf("SCISSOR: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);
-    printf("Coords: (%d, %d), (%d, %d)\n", scissor.x1, scissor.y1, scissor.x2, scissor.y2);
+    ds_log->gs->debug("SCISSOR: {:08x}_{:08x}\n", value >> 32, value & 0xFFFFFFFF);
+    ds_log->gs->debug("Coords: ({}, {}), ({}, {})\n", scissor.x1, scissor.y1, scissor.x2, scissor.y2);
 }
 
 void GSContext::set_alpha(uint64_t value)
@@ -142,7 +141,7 @@ void GSContext::set_alpha(uint64_t value)
     alpha.spec_C = (value >> 4) & 0x3;
     alpha.spec_D = (value >> 6) & 0x3;
     alpha.fixed_alpha = (value >> 32) & 0xFF;
-    printf("ALPHA: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);
+    ds_log->gs->debug("ALPHA: {:08x}_{:08x}\n", value >> 32, value & 0xFFFFFFFF);
 }
 
 void GSContext::set_test(uint64_t value)
@@ -155,7 +154,7 @@ void GSContext::set_test(uint64_t value)
     test.dest_alpha_method = value & (1 << 15);
     test.depth_test = value & (1 << 16);
     test.depth_method = (value >> 17) & 0x3;
-    printf("TEST: $%08X\n", value & 0xFFFFFFFF);
+    ds_log->gs->debug("TEST: {:08x}\n", value & 0xFFFFFFFF);
 }
 
 void GSContext::set_frame(uint64_t value)
@@ -164,9 +163,9 @@ void GSContext::set_frame(uint64_t value)
     frame.width = ((value >> 16) & 0x3F) * 64;
     frame.format = (value >> 24) & 0x3F;
     frame.mask = value >> 32;
-    printf("FRAME: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);
-    printf("Width: %d\n", frame.width);
-    printf("Format: %d\n", frame.format);
+    ds_log->gs->debug("FRAME: {:08x}_{:08x}\n", value >> 32, value & 0xFFFFFFFF);
+    ds_log->gs->debug("Width: {}\n", frame.width);
+    ds_log->gs->debug("Format: {}\n", frame.format);
 }
 
 void GSContext::set_zbuf(uint64_t value)
@@ -174,7 +173,7 @@ void GSContext::set_zbuf(uint64_t value)
     zbuf.base_pointer = (value & 0x1FF) * 2048 * 4;
     zbuf.format = (value >> 24) & 0xF;
     zbuf.no_update = (value >> 32) & 0x1;
-    printf("ZBUF: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);
-    printf("Base pointer: $%08X\n", zbuf.base_pointer);
-    printf("Format: $%02X\n", zbuf.format);
+    ds_log->gs->debug("ZBUF: {:08x}_{:08x}\n", value >> 32, value & 0xFFFFFFFF);
+    ds_log->gs->debug("Base pointer: {:08x}\n", zbuf.base_pointer);
+    ds_log->gs->debug("Format: {:#02x}\n", zbuf.format);
 }

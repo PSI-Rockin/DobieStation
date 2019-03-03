@@ -5,6 +5,7 @@
 
 #include "../emulator.hpp"
 #include "../errors.hpp"
+#include "../logger.hpp"
 
 using namespace std;
 
@@ -26,7 +27,7 @@ void SIO2::reset()
 
 uint8_t SIO2::read_serial()
 {
-    //printf("[SIO2] Read FIFO\n");
+    //ds_log->sio2->debug("Read FIFO.\n");
     uint8_t value = FIFO.front();
     FIFO.pop();
     return value;
@@ -39,7 +40,7 @@ uint32_t SIO2::get_control()
 
 void SIO2::set_send1(int index, uint32_t value)
 {
-    //printf("[SIO2] SEND1: $%08X (%d)\n", value, index);
+    //ds_log->sio2->debug("SEND1: ${:08X }({})\n", value, index);
     send1[index] = value;
     if (index < 0 || index >= 4)
         Errors::die("SIO2 set_send1 index (%d) out of range (0-4)", index);
@@ -47,7 +48,7 @@ void SIO2::set_send1(int index, uint32_t value)
 
 void SIO2::set_send2(int index, uint32_t value)
 {
-    //printf("[SIO2] SEND2: $%08X (%d)\n", value, index);
+    //ds_log->sio2->debug("SEND2: ${:08X} ({}).\n", value, index);
     send2[index] = value;
     if (index < 0 || index >= 4)
         Errors::die("SIO2 set_send2 index (%d) out of range (0-4)", index);
@@ -55,7 +56,7 @@ void SIO2::set_send2(int index, uint32_t value)
 
 void SIO2::set_send3(int index, uint32_t value)
 {
-    //printf("[SIO2] SEND3: $%08X (%d)\n", value, index);
+    //ds_log->sio2->debug("SEND3: ${:08X} ({}).\n", value, index);
     send3[index] = value;
     if (index < 0 || index >= 16)
         Errors::die("SIO2 set_send3 index (%d) out of range (0-4)", index);
@@ -63,18 +64,18 @@ void SIO2::set_send3(int index, uint32_t value)
 
 void SIO2::write_serial(uint8_t value)
 {
-    //printf("[SIO2] DATAIN: $%02X\n", value);
+    //ds_log->sio2->debug("DATAIN: ${:02X}.\n", value);
 
     if (!command_length)
     {
         if (send3[send3_port] != 0)
         {
-            printf("[SIO2] Get new send3 port: $%08X\n", send3[send3_port]);
+            ds_log->sio2->info("Get new send3 port: ${:08X}.\n", send3[send3_port]);
             command_length = (send3[send3_port] >> 8) & 0x1FF;
-            printf("[SIO2] Command len: %d\n", command_length);
+            ds_log->sio2->info("Command len: {}.\n", command_length);
 
             port = send3[send3_port] & 0x1;
-            printf("[SIO2] Port: %d\n", port);
+            ds_log->sio2->info("Port: {}.\n", port);
             send3_port++;
             new_command = true;
         }
@@ -119,7 +120,7 @@ void SIO2::write_device(uint8_t value)
             }
             else
                 reply = pad->write_SIO(value);
-            //printf("[SIO2] PAD reply: $%02X\n", reply);
+            //ds_log->sio2->debug("PAD reply: ${:02X}.\n", reply);
             FIFO.push(reply);
         }
             break;
@@ -134,7 +135,7 @@ void SIO2::write_device(uint8_t value)
 
 void SIO2::set_control(uint32_t value)
 {
-    printf("[SIO2] Set control: $%08X\n", value);
+    ds_log->sio2->info("Set control: ${:08X}.\n", value);
 
     control = value & 0x1;
 
@@ -153,18 +154,18 @@ void SIO2::set_control(uint32_t value)
 
 uint32_t SIO2::get_RECV1()
 {
-    //printf("[SIO2] Read RECV1\n");
+    //ds_log->sio2->debug("Read RECV1.\n");
     return RECV1;
 }
 
 uint32_t SIO2::get_RECV2()
 {
-    //printf("[SIO2] Read RECV2\n");
+    //ds_log->sio2->debug("Read RECV2.\n");
     return 0xF;
 }
 
 uint32_t SIO2::get_RECV3()
 {
-    //printf("[SIO2] Read RECV3\n");
+    //ds_log->sio2->debug("Read RECV3.\n");
     return 0;
 }

@@ -12,8 +12,11 @@ environment:
     QTDIR: C:\Qt\5.12\msvc2017_64
 before_build:
 - cmd: call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat" %arch%
+install:
+- git submodule update --init --recursive
 build:
   verbosity: normal
+  project: Dobiestation\DobieStation.sln
 after_build:
 - cmd: 7z a Dobiestation.zip Dobiestation/release/
 artifacts:

@@ -3,6 +3,7 @@
 #include "iop_timers.hpp"
 #include "../emulator.hpp"
 #include "../errors.hpp"
+#include "../logger.hpp"
 
 IOPTiming::IOPTiming(Emulator* e) : e(e)
 {
@@ -174,13 +175,13 @@ void IOPTiming::IRQ_test(int index, bool overflow)
 uint32_t IOPTiming::read_counter(int index)
 {
     update_timers();
-    //printf("[IOP Timing] Read timer %d counter: $%08lX\n", index, timers[index].counter);
+    //ds_log->iop_timing->info("Read timer {} counter: ${:08X}.\n", index, timers[index].counter);
     return timers[index].counter;
 }
 
 uint32_t IOPTiming::read_target(int index)
 {
-    printf("[IOP Timing] Read timer %d target: $%08X\n", index, timers[index].target);
+    ds_log->iop_timing->info("Read timer {} target: ${:08X}.\n", index, timers[index].target);
     return timers[index].target;
 }
 
@@ -205,7 +206,7 @@ uint16_t IOPTiming::read_control(int index)
 
     timers[index].control.compare_interrupt = false;
     timers[index].control.overflow_interrupt = false;
-    printf("[IOP Timing] Read timer %d control: $%04X\n", index, reg);
+    ds_log->iop_timing->info("Read timer {} control: ${:04X}.\n", index, reg);
     return reg;
 }
 
@@ -213,17 +214,17 @@ void IOPTiming::write_counter(int index, uint32_t value)
 {
     update_timers();
     timers[index].counter = value;
-    printf("[IOP Timing] Write timer %d counter: $%08X\n", index, value);
+    ds_log->iop_timing->info("Write timer {} counter: ${:08X}.\n", index, value);
     reschedule();
 }
 
 void IOPTiming::write_control(int index, uint16_t value)
 {
     update_timers();
-    printf("[IOP Timing] Write timer %d control $%04X\n", index, value);
+    ds_log->iop_timing->info("Write timer {} control ${:04X}.\n", index, value);
     timers[index].control.use_gate = value & 0x1;
     if (timers[index].control.use_gate)
-        Errors::die("IOPTiming timer %d control.use_gate is true", index);
+        Errors::die("[IOP Timing] timer %d control.use_gate is true", index);
     timers[index].control.gate_mode = (value >> 1) & 0x3;
     timers[index].control.zero_return = value & (1 << 3);
     timers[index].control.compare_interrupt_enabled = value & (1 << 4);
@@ -295,7 +296,7 @@ void IOPTiming::write_control(int index, uint16_t value)
 void IOPTiming::write_target(int index, uint32_t value)
 {
     update_timers();
-    printf("[IOP Timing] Write timer %d target $%08X\n", index, value);
+    ds_log->iop_timing->info("Write timer {} target ${:08X}.\n", index, value);
     timers[index].target = value;
     if (!timers[index].control.toggle_int)
         timers[index].control.int_enable = true;

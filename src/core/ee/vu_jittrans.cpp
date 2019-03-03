@@ -2,6 +2,7 @@
 #include "vu_jittrans.hpp"
 #include "vu_interpreter.hpp"
 #include "../errors.hpp"
+#include "../logger.hpp"
 
 uint32_t branch_offset(uint32_t instr, uint32_t PC)
 {
@@ -467,7 +468,7 @@ void VU_JitTranslator::analyze_FMAC_stalls(VectorUnit &vu, uint16_t PC)
 
         if (stall_found)
         {
-           // printf("[VU_JIT]FMAC stall at $%08X for %d cycles!\n", PC, 3 - i);
+            ds_log->vu_jit->debug("FMAC stall at $%08X for {} cycles!\n", PC, 3 - i);
             instr_info[PC].stall_amount = 3 - i;
             break;
         }
@@ -484,7 +485,7 @@ void VU_JitTranslator::handle_vu_stalls(VectorUnit &vu, uint16_t PC, uint32_t lo
         instr_info[PC].q_pipeline_instr = true;
         if (q_pipe_delay > 0)
         {
-            //printf("[VU_JIT] Q pipe delay of %d stall amount of %d\n", q_pipe_delay, instr_info[PC].stall_amount);
+            ds_log->vu_jit->debug("[VU_JIT] Q pipe delay of {} stall amount of {}.\n", q_pipe_delay, instr_info[PC].stall_amount);
             if (instr_info[PC].stall_amount < q_pipe_delay)
                 instr_info[PC].stall_amount = q_pipe_delay;
 
@@ -500,7 +501,7 @@ void VU_JitTranslator::handle_vu_stalls(VectorUnit &vu, uint16_t PC, uint32_t lo
         instr_info[PC].p_pipeline_instr = true;
         if (p_pipe_delay > 0)
         {
-            //printf("[VU_JIT] P pipe delay of %d stall amount of %d\n", q_pipe_delay, instr_info[PC].stall_amount);
+            ds_log->vu_jit->debug("P pipe delay of {} stall amount of {}.\n", q_pipe_delay, instr_info[PC].stall_amount);
             if (instr_info[PC].stall_amount < (p_pipe_delay - 1))
                 instr_info[PC].stall_amount = (p_pipe_delay - 1);
 
@@ -524,7 +525,7 @@ void VU_JitTranslator::handle_vu_stalls(VectorUnit &vu, uint16_t PC, uint32_t lo
                     instr_info[PC].use_backup_vi = true;
                     vu.int_backup_id_rec = vu.int_backup_id;
 
-                    printf("[VU_JIT] Using backed up VI%d at PC %x\n", vu.int_backup_id_rec, PC);
+                    ds_log->vu_jit64->info("Using backed up VI{} at PC {:x}.\n", vu.int_backup_id_rec, PC);
                 }
             }
             else
@@ -558,7 +559,7 @@ void VU_JitTranslator::handle_vu_stalls(VectorUnit &vu, uint16_t PC, uint32_t lo
                                 break;
                             }
                         }
-                        printf("[VU_JIT] Backing up VI%d at %x for PC %x\n", vu.int_backup_id_rec, backup_pc, PC);
+                        ds_log->vu_jit->debug("Backing up VI{} at {:x} for PC {:x}.\n", vu.int_backup_id_rec, backup_pc, PC);
                         instr_info[backup_pc].backup_vi = vu.int_backup_id_rec;
                     }
                 }
@@ -600,7 +601,7 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
     //Restore state from end of the block we jumped from
     if (prev_pc != 0xFFFFFFFF)
     {        
-        printf("[VU_JIT64] Restoring state from %x\n", prev_pc);
+        ds_log->vu_jit64->info("Restoring state from {:x}.\n", prev_pc);
         stall_pipe[0] = vu.pipeline_state[0] & 0x7FFFFF;
         stall_pipe[1] = (vu.pipeline_state[0] >> 23) & 0x7FFFFF;
         stall_pipe[2] = (vu.pipeline_state[0] >> 46) & 0x7FFFFF;
