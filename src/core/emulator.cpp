@@ -156,6 +156,7 @@ void Emulator::reset()
     intc.reset();
     ipu.reset();
     pad.reset();
+    scheduler.reset();
     sif.reset();
     sio2.reset();
     spu.reset(SPU_RAM);

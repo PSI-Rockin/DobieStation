@@ -23,6 +23,7 @@
 #include "gs.hpp"
 #include "gif.hpp"
 #include "sif.hpp"
+#include "scheduler.hpp"
 
 enum SKIP_HACK
 {
@@ -52,6 +53,7 @@ class Emulator
         INTC intc;
         ImageProcessingUnit ipu;
         Memcard memcard;
+        Scheduler scheduler;
         SIO2 sio2;
         SPU spu, spu2;
         SubsystemInterface sif;
