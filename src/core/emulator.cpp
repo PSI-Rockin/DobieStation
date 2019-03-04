@@ -394,6 +394,8 @@ uint8_t Emulator::read8(uint32_t address)
         return dmac.read8(address);
     switch (address)
     {
+        case 0x1F40200F:
+            return cdvd.read_disc_type();
         case 0x1F402017:
             return cdvd.read_S_status();
         case 0x1F402018:
