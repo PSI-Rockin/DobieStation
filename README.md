@@ -33,8 +33,6 @@ The various command line options are as follows:
 -s (optional) - Skip the BIOS boot animation when starting DobieStation with an ISO/ELF loaded.
 ```
 
-For now, the `-s` flag is needed for a successful boot to occur, so use it when testing.
-
 The key bindings are as follows:
 
 | Keyboard         | DualShock 2 |
