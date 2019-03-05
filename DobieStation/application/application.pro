@@ -88,7 +88,8 @@ SOURCES += ../../src/qt/main.cpp \
     ../../src/core/ee/vu_jit.cpp \
     ../../src/core/ee/vu_jit64.cpp \
     ../../src/qt/renderwidget.cpp \
-    ../../src/qt/settingswindow.cpp
+    ../../src/qt/settingswindow.cpp \
+    ../../src/qt/bios.cpp
 
 HEADERS += \
     ../../src/core/errors.hpp \
@@ -152,4 +153,5 @@ HEADERS += \
     ../../src/core/ee/vu_jit.hpp \
     ../../src/core/ee/vu_jit64.hpp \
     ../../src/qt/renderwidget.hpp \
-    ../../src/qt/settingswindow.hpp
+    ../../src/qt/settingswindow.hpp \
+    ../../src/qt/bios.hpp

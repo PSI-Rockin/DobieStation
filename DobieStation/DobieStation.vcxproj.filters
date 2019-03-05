@@ -246,6 +246,9 @@
     <ClCompile Include="..\src\qt\settingswindow.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\qt\bios.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\core\ee\bios_hle.hpp">
@@ -426,6 +429,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\core\iop\cso_reader.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\qt\bios.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

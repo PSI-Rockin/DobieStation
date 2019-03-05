@@ -2,12 +2,17 @@
 #define SETTINGSWINDOW_HPP
 
 #include <QDialog>
+#include <QLabel>
+
+#include "bios.hpp"
 
 class GeneralTab : public QWidget
 {
     Q_OBJECT
+private:
+    QLabel* bios_info = nullptr;
 public:
-    QString bios_path = nullptr;
+    BiosReader bios_reader;
     bool vu1_jit = false;
 
     explicit GeneralTab(QWidget* parent = nullptr);

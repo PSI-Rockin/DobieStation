@@ -164,6 +164,7 @@
     <ClCompile Include="..\src\qt\emuwindow.cpp" />
     <ClCompile Include="..\src\qt\renderwidget.cpp" />
     <ClCompile Include="..\src\qt\settingswindow.cpp" />
+    <ClCompile Include="..\src\qt\bios.cpp" />
     <ClCompile Include="..\src\core\errors.cpp" />
     <ClCompile Include="..\src\core\iop\gamepad.cpp" />
     <ClCompile Include="..\src\core\gif.cpp" />
@@ -239,6 +240,7 @@
     <ClInclude Include="..\src\core\ee\emotiondisasm.hpp" />
     <ClInclude Include="..\src\core\ee\emotioninterpreter.hpp" />
     <ClInclude Include="..\src\core\emulator.hpp" />
+    <ClInclude Include="..\src\qt\bios.hpp" />
     <ClInclude Include="..\src\core\errors.hpp" />
     <ClInclude Include="..\src\core\iop\gamepad.hpp" />
     <ClInclude Include="..\src\core\gif.hpp" />

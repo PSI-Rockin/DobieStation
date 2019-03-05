@@ -18,13 +18,12 @@
 GeneralTab::GeneralTab(QWidget* parent)
     : QWidget(parent)
 {
-    bios_path = Settings::get_bios_path();
-
     QPushButton* browse_button = new QPushButton(tr("Browse"), this);
     connect(browse_button, &QAbstractButton::clicked, this,
         &GeneralTab::browse_for_bios);
 
-    QLabel* bios_info = new QLabel("Not a valid bios file", this);
+    bios_reader = BiosReader(Settings::get_bios_path());
+    bios_info = new QLabel(bios_reader.to_string(), this);
 
     QGridLayout* bios_layout = new QGridLayout(this);
     bios_layout->addWidget(bios_info, 0, 0);
@@ -63,6 +62,8 @@ GeneralTab::GeneralTab(QWidget* parent)
     layout->addWidget(vu1_groupbox);
 
     setLayout(layout);
+
+    setMinimumWidth(400);
 }
 
 void GeneralTab::browse_for_bios()
@@ -74,8 +75,12 @@ void GeneralTab::browse_for_bios()
 
     Settings::set_last_used_path(path);
 
-    if(!path.isEmpty())
-        bios_path = path;
+    if (!path.isEmpty())
+    {
+        bios_reader = BiosReader(path);
+
+        bios_info->setText(bios_reader.to_string());
+    }
 }
 
 SettingsWindow::SettingsWindow(QWidget *parent)
@@ -103,7 +108,7 @@ SettingsWindow::SettingsWindow(QWidget *parent)
 
 void SettingsWindow::save_and_reject()
 {
-    Settings::set_bios_path(general_tab->bios_path);
+    Settings::set_bios_path(general_tab->bios_reader.path());
     Settings::set_vu1_jit_enabled(general_tab->vu1_jit);
     Settings::save();
 

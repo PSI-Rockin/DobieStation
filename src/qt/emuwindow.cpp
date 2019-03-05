@@ -12,6 +12,7 @@
 #include "emuwindow.hpp"
 #include "settingswindow.hpp"
 #include "renderwidget.hpp"
+#include "bios.hpp"
 
 #include "arg.h"
 
@@ -317,23 +318,15 @@ void EmuWindow::create_menu()
 
 bool EmuWindow::load_bios()
 {
-    QFile bios_file(Settings::get_bios_path());
-    if (!bios_file.open(QIODevice::ReadOnly))
+    BiosReader bios_file(Settings::get_bios_path());
+    if (!bios_file.is_valid())
     {
-        bios_error("Failed to to open bios file\n");
+        bios_error(bios_file.to_string());
 
         return false;
     }
 
-    QByteArray data(bios_file.read(1024 * 1024 * 4));
-    if (!data.contains("KERNEL"))
-    {
-        bios_error("Not a valid bios file\n");
-
-        return false;
-    }
-
-    emu_thread.load_BIOS(reinterpret_cast<uint8_t*>(data.data()));
+    emu_thread.load_BIOS(bios_file.data());
 
     return true;
 }
