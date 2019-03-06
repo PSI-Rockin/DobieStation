@@ -77,51 +77,45 @@ void Emulator::run()
             gsdump_running = true;
         }
     }
+
+    frame_ended = false;
+
+    scheduler.add_ee_event(&Emulator::vblank_start, VBLANK_START);
+    scheduler.add_ee_event(&Emulator::vblank_end, CYCLES_PER_FRAME);
     
-    while (instructions_ran < CYCLES_PER_FRAME)
+    while (!frame_ended)
     {
-        int cycles = cpu.run(16);
-        instructions_ran += cycles;
-        cycles >>= 1;
-        dmac.run(cycles);
-        timers.run(cycles);
+        int ee_cycles = scheduler.calculate_run_cycles();
+        cpu.run(ee_cycles);
+        instructions_ran += ee_cycles;
+
+        int bus_cycles = scheduler.get_bus_run_cycles();
+        int iop_cycles = scheduler.get_iop_run_cycles();
+        dmac.run(bus_cycles);
+        timers.run(bus_cycles);
         ipu.run();
-        vif0.update(cycles);
-        vif1.update(cycles);
-        gif.run(cycles);
-        vu0.run(cycles);
-        //vu1.run(cycles);
-        vu1.run_jit(cycles);
-        cycles >>= 2;
-        iop_timers.run(cycles);
-        iop_dma.run(cycles);
-        for (int i = 0; i < cycles; i++)
+        vif0.update(bus_cycles);
+        vif1.update(bus_cycles);
+        gif.run(bus_cycles);
+        vu0.run(bus_cycles);
+        //vu1.run(bus_cycles);
+        vu1.run_jit(bus_cycles);
+
+        iop_timers.run(iop_cycles);
+        iop_dma.run(iop_cycles);
+        for (int i = 0; i < iop_cycles; i++)
         {
             iop.run(1);
             iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
         }
-        spu.update(cycles);
-        spu2.update(cycles);
-        cdvd.update(cycles);
-        if (!VBLANK_sent && instructions_ran >= VBLANK_START)
-        {
-            VBLANK_sent = true;
-            gs.set_VBLANK(true);
-            timers.gate(true, true);
-            cdvd.vsync();
-            //cpu.set_disassembly(frames == 3037);
-            printf("VSYNC FRAMES: %d\n", frames);
-            gs.assert_VSYNC();
-            frames++;
-            iop_request_IRQ(0);
-            gs.render_CRT();
-        }
+        spu.update(iop_cycles);
+        spu2.update(iop_cycles);
+        cdvd.update(iop_cycles);
+
+        scheduler.update_cycle_counts();
+        scheduler.process_events(this);
     }
     fesetround(originalRounding);
-    //VBLANK end
-    iop_request_IRQ(11);
-    gs.set_VBLANK(false);
-    timers.gate(true, false);
 }
 
 void Emulator::reset()
@@ -175,6 +169,29 @@ void Emulator::reset()
     IOP_I_CTRL = 0;
     IOP_POST = 0;
     clear_cop2_interlock();
+}
+
+void Emulator::vblank_start()
+{
+    VBLANK_sent = true;
+    gs.set_VBLANK(true);
+    timers.gate(true, true);
+    cdvd.vsync();
+    //cpu.set_disassembly(frames == 3037);
+    printf("VSYNC FRAMES: %d\n", frames);
+    gs.assert_VSYNC();
+    frames++;
+    iop_request_IRQ(0);
+    gs.render_CRT();
+}
+
+void Emulator::vblank_end()
+{
+    //VBLANK end
+    iop_request_IRQ(11);
+    gs.set_VBLANK(false);
+    timers.gate(true, false);
+    frame_ended = true;
 }
 
 void Emulator::press_button(PAD_BUTTON button)

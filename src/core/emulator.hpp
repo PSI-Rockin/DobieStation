@@ -90,6 +90,8 @@ class Emulator
         uint32_t ELF_size;
 
         void iop_IRQ_check(uint32_t new_stat, uint32_t new_mask);
+
+        bool frame_ended;
     public:
         Emulator();
         ~Emulator();
@@ -107,6 +109,9 @@ class Emulator
         uint32_t* get_framebuffer();
         void get_resolution(int& w, int& h);
         void get_inner_resolution(int& w, int& h);
+
+        void vblank_start();
+        void vblank_end();
 
         bool request_load_state(const char* file_name);
         bool request_save_state(const char* file_name);
