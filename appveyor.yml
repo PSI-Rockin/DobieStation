@@ -1,0 +1,21 @@
+version: 0.0.{build}
+skip_tags: true
+image: Visual Studio 2017
+configuration: Release
+platform: x64
+environment:
+  matrix:
+  - qt: 5.12
+    arch: x64
+    APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+    cc: VS2017
+    QTDIR: C:\Qt\5.12\msvc2017_64
+before_build:
+- cmd: call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat" %arch%
+build:
+  verbosity: normal
+after_build:
+- cmd: 7z a Dobiestation.zip Dobiestation/release/
+artifacts:
+- path: Dobiestation.zip
+  type: WebDeployPackage
