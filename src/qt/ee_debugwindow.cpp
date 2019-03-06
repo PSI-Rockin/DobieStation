@@ -1,13 +1,14 @@
 #include <QtGui/QFontDatabase>
 #include <QMenu>
-#include <src/core/ee/emotion.hpp>
-#include "src/core/int128.hpp"
+#include <QTableWidget>
+#include "../core/ee/emotion.hpp"
+#include "../core/int128.hpp"
 #include "ee_debugwindow.hpp"
 #include "../core/ee/emotiondisasm.hpp"
 #include "../core/iop/iop.hpp"
-#include "../build/ui_ee_debugwindow.h" // TODO REMOVE ME!!!
-#include "src/qt/breakpoint_window.hpp"
-#include "src/qt/and_breakpoint_window.hpp"
+#include "breakpoint_window.hpp"
+#include "and_breakpoint_window.hpp"
+#include "ui_ee_debugwindow.h"
 
 #define EE_DEBUGGER_DISASSEMBLY_SIZE (1024)
 #define EE_DEBUGGER_MAX_BREAKPOINTS 1024

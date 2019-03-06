@@ -2,7 +2,7 @@
 #define BREAKPOINT_WINDOW_H
 
 #include <QDialog>
-#include "src/core/int128.hpp"
+#include "../core/int128.hpp"
 #include "../core/ee/emotion_breakpoint.hpp"
 
 namespace Ui {

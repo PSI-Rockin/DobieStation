@@ -7,7 +7,7 @@
 #include <atomic>
 #include <iomanip>
 #include <sstream>
-#include <src/core/errors.hpp>
+#include "../errors.hpp"
 
 class IOP;
 class EmotionEngine;

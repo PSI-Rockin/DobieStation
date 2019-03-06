@@ -5,7 +5,7 @@
 #include <cstdio>
 #include <fstream>
 #include "iop_cop0.hpp"
-#include "src/core/ee/emotion_breakpoint.hpp"
+#include "../ee/emotion_breakpoint.hpp"
 
 class Emulator;
 

@@ -2,8 +2,8 @@
 #include "emotion_breakpoint.hpp"
 #include "emotion.hpp"
 #include "emotiondisasm.hpp"
-#include "src/core/iop/iop.hpp"
-#include "src/core/errors.hpp"
+#include "../iop/iop.hpp"
+#include "../errors.hpp"
 
 const char* mem_compare_kind_names[6] = {"=","!=","<", "<=",">",">="};
 const char* mem_compare_type_names[6] = {"u8", "u16", "u32", "float", "u64", "u128"};

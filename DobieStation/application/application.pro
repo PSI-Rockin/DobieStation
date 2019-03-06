@@ -22,11 +22,16 @@ DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000
 target.path = /usr/local/bin/
 INSTALLS += target
 
+FORMS += ../../src/qt/and_breakpoint_window.ui \
+    ../../src/qt/breakpoint_window.ui \
+    ../../src/qt/ee_debugwindow.ui 
+
 SOURCES += ../../src/qt/main.cpp \
     ../../src/core/errors.cpp \
     ../../src/core/ee/emotion.cpp \
     ../../src/core/emulator.cpp \
     ../../src/core/ee/emotioninterpreter.cpp \
+    ../../src/core/ee/emotion_breakpoint.cpp \
     ../../src/core/ee/cop0.cpp \
     ../../src/core/ee/cop1.cpp \
     ../../src/core/ee/emotion_mmi.cpp \
@@ -80,6 +85,9 @@ SOURCES += ../../src/qt/main.cpp \
     ../../src/core/serialize.cpp \
     ../../src/core/iop/memcard.cpp \
     ../../src/qt/settings.cpp \
+    ../../src/qt/and_breakpoint_window.cpp \
+    ../../src/qt/breakpoint_window.cpp \
+    ../../src/qt/ee_debugwindow.cpp \
     ../../src/core/jitcommon/jitcache.cpp \
     ../../src/core/jitcommon/emitter64.cpp \
     ../../src/core/ee/vu_jittrans.cpp \
@@ -93,6 +101,7 @@ HEADERS += \
     ../../src/core/ee/emotion.hpp \
     ../../src/core/emulator.hpp \
     ../../src/core/ee/emotioninterpreter.hpp \
+    ../../src/core/ee/emotion_breakpoint.hpp \
     ../../src/core/ee/cop0.hpp \
     ../../src/core/ee/cop1.hpp \
     ../../src/core/ee/bios_hle.hpp \
@@ -142,6 +151,9 @@ HEADERS += \
     ../../src/core/gsmem.hpp \
     ../../src/core/iop/memcard.hpp \
     ../../src/qt/settings.hpp \
+    ../../src/qt/and_breakpoint_window.hpp \
+    ../../src/qt/breakpoint_window.hpp \
+    ../../src/qt/ee_debugwindow.hpp \
     ../../src/core/jitcommon/jitcache.hpp \
     ../../src/core/jitcommon/emitter64.hpp \
     ../../src/core/ee/vu_jittrans.hpp \
