@@ -17,6 +17,8 @@ namespace Ui {
 class EEDebugWindow;
 }
 
+class EmuThread;
+
 class EEDebugWindow : public QWidget, public EmotionDebugUI
 {
 
@@ -29,13 +31,14 @@ class EEDebugWindow : public QWidget, public EmotionDebugUI
     Q_OBJECT
 
 public:
-    explicit EEDebugWindow(QWidget *parent = 0);
+    explicit EEDebugWindow(EmuThread* emu_thread, QWidget *parent = 0);
     ~EEDebugWindow();
 
     void set_breakpoint_list(EEBreakpointList *list);
     void set_breakpoint_list(IOPBreakpointList *list);
     void notify_breakpoint_hit(EmotionEngine *ee);
     void notify_breakpoint_hit(IOP* iop);
+    void notify_breakpoint_hit();
     void update_ui();
     void set_ee(EmotionEngine* e);
     void set_iop(IOP* iop);
@@ -77,6 +80,7 @@ private:
     IOP* iop = nullptr;
     EEBreakpointList *ee_breakpoint_list;
     IOPBreakpointList *iop_breakpoint_list;
+    EmuThread* emu_thread;
     uint32_t ee_disassembly_location, iop_disassembly_location;
     uint32_t ee_memory_location, iop_memory_location;
     uint32_t ee_most_recent_pc, iop_most_recent_pc;
@@ -107,6 +111,7 @@ private:
 private slots:
     void breakpoint_hit(EmotionEngine *ee);
     void breakpoint_hit(IOP *iop);
+    void pause_hit();
     void memory_context_menu(const QPoint &pos);
     void instruction_context_menu(const QPoint &pos);
     void register_context_menu(const QPoint &qpos);
@@ -115,6 +120,7 @@ private slots:
 signals:
     void breakpoint_signal(EmotionEngine *ee);
     void breakpoint_signal(IOP *iop);
+    void pause_signal();
 
 };
 

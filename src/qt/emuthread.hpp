@@ -17,6 +17,7 @@ enum PAUSE_EVENT
     FILE_DIALOG,
     MESSAGE_BOX,
     FRAME_ADVANCE,
+    DEBUGGER
 };
 
 class EmuThread : public QThread
@@ -49,6 +50,7 @@ class EmuThread : public QThread
         void gsdump_single_frame();
         EEBreakpointList* get_ee_breakpoint_list();
         IOPBreakpointList* get_iop_breakpoint_list();
+        bool is_paused();
         bool frame_advance;
     protected:
         void run() override;

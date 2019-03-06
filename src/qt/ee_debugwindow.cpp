@@ -9,11 +9,12 @@
 #include "breakpoint_window.hpp"
 #include "and_breakpoint_window.hpp"
 #include "ui_ee_debugwindow.h"
+#include "emuthread.hpp"
 
-#define EE_DEBUGGER_DISASSEMBLY_SIZE (1024)
-#define EE_DEBUGGER_MAX_BREAKPOINTS 1024
-#define EE_DEBUGGER_MEMORY_SIZE (1024)
-#define EE_DEBUGGER_STACK_SIZE (1024)
+#define EE_DEBUGGER_DISASSEMBLY_SIZE (256)
+#define EE_DEBUGGER_MAX_BREAKPOINTS 256
+#define EE_DEBUGGER_MEMORY_SIZE (256)
+#define EE_DEBUGGER_STACK_SIZE (256)
 
 static const char* breakpoint_names[] = {"And", "Memory", "Register", "PC", "Step"};
 
@@ -381,14 +382,16 @@ void EEDebugWindow::update_breakpoints()
 }
 
 
-EEDebugWindow::EEDebugWindow(QWidget *parent) :
+EEDebugWindow::EEDebugWindow(EmuThread* emu_thread, QWidget *parent) :
         QWidget(parent),
+        emu_thread(emu_thread),
         ui(new Ui::EEDebugWindow)
 {
     ui->setupUi(this);
     setWindowTitle("EE Debugger");
     connect(this, SIGNAL(breakpoint_signal(EmotionEngine*)), this, SLOT(breakpoint_hit(EmotionEngine*)));
     connect(this, SIGNAL(breakpoint_signal(IOP*)), this, SLOT(breakpoint_hit(IOP*)));
+    connect(this, SIGNAL(pause_signal()), this, SLOT(pause_hit()));
     ui->memory_table->setContextMenuPolicy(Qt::CustomContextMenu);
     ui->disassembly_table->setContextMenuPolicy(Qt::CustomContextMenu);
     ui->register_table->setContextMenuPolicy(Qt::CustomContextMenu);
@@ -661,10 +664,13 @@ void EEDebugWindow::on_memory_go_button_clicked()
 
 void EEDebugWindow::on_break_continue_button_clicked()
 {
+    printf("break handler...\n");
     if(emulation_running())
-        add_breakpoint(new EmotionBreakpoints::Step());
+        emu_thread->pause(DEBUGGER);
+        //add_breakpoint(new EmotionBreakpoints::Step());
     else
         resume_emulator();
+    printf("break handler returning!\n");
 }
 
 void EEDebugWindow::on_step_button_clicked()
@@ -764,12 +770,19 @@ void EEDebugWindow::on_add_breakpoint_combo_activated(int index)
 // causes the breakpoint_hit function to be called in the UI thread
 void EEDebugWindow::notify_breakpoint_hit(EmotionEngine *ee)
 {
+    printf("notification from emulator thread\n");
     emit breakpoint_signal(ee);
+    printf("returning from emulator thread notify\n");
 }
 
 void EEDebugWindow::notify_breakpoint_hit(IOP *iop)
 {
     emit breakpoint_signal(iop);
+}
+
+void EEDebugWindow::notify_breakpoint_hit()
+{
+    emit pause_signal();
 }
 
 
@@ -778,6 +791,7 @@ void EEDebugWindow::notify_breakpoint_hit(IOP *iop)
 // emulator thread is suspended at this point
 void EEDebugWindow::breakpoint_hit(EmotionEngine *ee)
 {
+    printf("ui thread update starting...\n");
     ee_running = false;
     current_cpu = DebuggerCpu::EE;
     ee_most_recent_pc = ee->get_PC();
@@ -788,6 +802,7 @@ void EEDebugWindow::breakpoint_hit(EmotionEngine *ee)
     update_ui();
     ui->cpu_combo->setCurrentIndex((uint32_t)DebuggerCpu::EE);
     ui->disassembly_table->scrollToItem(ui->disassembly_table->item(EE_DEBUGGER_DISASSEMBLY_SIZE/2,0), QAbstractItemView::PositionAtCenter);
+    printf("ui thread done updating!\n");
 }
 
 void EEDebugWindow::breakpoint_hit(IOP *iop)
@@ -801,6 +816,18 @@ void EEDebugWindow::breakpoint_hit(IOP *iop)
     iop_disassembly_location = iop_most_recent_pc;
     update_ui();
     ui->cpu_combo->setCurrentIndex((uint32_t)DebuggerCpu::IOP);
+    ui->disassembly_table->scrollToItem(ui->disassembly_table->item(EE_DEBUGGER_DISASSEMBLY_SIZE/2,0), QAbstractItemView::PositionAtCenter);
+}
+
+void EEDebugWindow::pause_hit()
+{
+    ee_most_recent_pc = ee->get_PC();
+    ee_breakpoint_list->clear_old_breakpoints(); // important to run this in UI thread!!
+    iop_most_recent_pc = iop->get_PC();
+    iop_breakpoint_list->clear_old_breakpoints(); // important to run this in UI thread!!
+    ee_disassembly_location = ee_most_recent_pc;
+    iop_disassembly_location = iop_most_recent_pc;
+    update_ui();
     ui->disassembly_table->scrollToItem(ui->disassembly_table->item(EE_DEBUGGER_DISASSEMBLY_SIZE/2,0), QAbstractItemView::PositionAtCenter);
 }
 
@@ -821,6 +848,7 @@ void EEDebugWindow::resume_emulator()
 {
     update_breakpoints(); // flush out old breakpoints from UI while emulator runs
 
+    emu_thread->unpause(DEBUGGER);
     if(!ee_running)
     {
         ee_breakpoint_list->send_continue();
@@ -856,7 +884,7 @@ void EEDebugWindow::set_iop(IOP* i)
 
 bool EEDebugWindow::emulation_running()
 {
-    return ee_running && iop_running;
+    return ee_running && iop_running && !emu_thread->is_paused();
 }
 
 

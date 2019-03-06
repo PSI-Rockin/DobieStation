@@ -22,7 +22,7 @@ ifstream::pos_type filesize(const char* filename)
     return in.tellg();
 }
 
-EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
+EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent), debugger(&emu_thread)
 {
     old_frametime = chrono::system_clock::now();
     old_update_time = chrono::system_clock::now();

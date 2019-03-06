@@ -172,7 +172,10 @@ void EmuThread::run()
         if (abort)
             return;
         else if (pause_status)
+        {
             usleep(10000);
+            get_ee_breakpoint_list()->get_ui()->notify_breakpoint_hit();
+        }
         else if (gsdump_reading)
             gsdump_run();
         else
@@ -243,6 +246,11 @@ void EmuThread::pause(PAUSE_EVENT event)
 void EmuThread::unpause(PAUSE_EVENT event)
 {
     pause_status &= ~(1 << event);
+}
+
+bool EmuThread::is_paused()
+{
+    return (bool)pause_status;
 }
 
 EEBreakpointList *EmuThread::get_ee_breakpoint_list()

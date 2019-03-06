@@ -110,6 +110,8 @@ public:
 
     virtual void set_iop(IOP* iop) = 0;
     virtual void notify_breakpoint_hit(IOP* iop) = 0;
+
+    virtual void notify_breakpoint_hit() = 0;
 };
 
 // shared between the debugger and the emulator
@@ -171,6 +173,10 @@ public:
     bool breakpoint_uses_instruction_addr(DebuggerBreakpoint* bp, uint32_t addr);
     void clear_old_breakpoints();
     void send_continue();
+    EmotionDebugUI* get_ui()
+    {
+        return debug_ui;
+    }
 
     std::atomic_bool debug_enable; // flag to enable/disable checking breakpoints.  avoids overhead of syscall in mutex::unlock when no breakpoints!
 
