@@ -35,7 +35,15 @@ DebuggerBreakpoint* breakpoint_window::make_pc_breakpoint()
     if(this->result() == QDialog::Rejected)
         return nullptr;
 
-    return new EmotionBreakpoints::PC(get_address(), ui->clear_checkbox->isChecked());
+
+    uint32_t addr = get_address();
+    if(addr & 0x3)
+    {
+        QMessageBox box;
+        box.critical(0,"Error", "address is not aligned!");
+        return nullptr;
+    }
+    return new EmotionBreakpoints::PC(addr, ui->clear_checkbox->isChecked());
 }
 
 
@@ -302,7 +310,15 @@ DebuggerBreakpoint* breakpoint_window::make_memory_breakpoint(bool limit_to_32)
         case EmotionBreakpoints::MemoryComparisonType::FLOAT:
         {
             float v = get_value<float>();
-            return new EmotionBreakpoints::Memory<float>(get_address(), v, data_type, data_kind, clear);
+            uint32_t addr = get_address();
+            if(addr & 3)
+            {
+                QMessageBox box;
+                box.critical(0,"Error", "address is not aligned!");
+                box.exec();
+                return nullptr;
+            }
+            return new EmotionBreakpoints::Memory<float>(addr, v, data_type, data_kind, clear);
         }
 
         case EmotionBreakpoints::MemoryComparisonType::U8:
@@ -314,25 +330,53 @@ DebuggerBreakpoint* breakpoint_window::make_memory_breakpoint(bool limit_to_32)
         case EmotionBreakpoints::MemoryComparisonType::U16:
         {
             uint16_t v = get_value<uint16_t>();
-            return new EmotionBreakpoints::Memory<uint16_t>(get_address(), v, data_type, data_kind, clear);
+            uint32_t addr = get_address();
+            if(addr & 1)
+            {
+                QMessageBox box;
+                box.critical(0,"Error", "address is not aligned!");
+                return nullptr;
+            }
+            return new EmotionBreakpoints::Memory<uint16_t>(addr, v, data_type, data_kind, clear);
         }
 
         case EmotionBreakpoints::MemoryComparisonType::U32:
         {
             uint32_t v = get_value<uint32_t>();
-            return new EmotionBreakpoints::Memory<uint32_t>(get_address(), v, data_type, data_kind, clear);
+            uint32_t addr = get_address();
+            if(addr & 3)
+            {
+                QMessageBox box;
+                box.critical(0,"Error", "address is not aligned!");
+                return nullptr;
+            }
+            return new EmotionBreakpoints::Memory<uint32_t>(addr, v, data_type, data_kind, clear);
         }
 
         case EmotionBreakpoints::MemoryComparisonType::U64:
         {
             uint64_t v = get_value<uint64_t>();
-            return new EmotionBreakpoints::Memory<uint64_t>(get_address(), v, data_type, data_kind, clear);
+            uint32_t addr = get_address();
+            if(addr & 7)
+            {
+                QMessageBox box;
+                box.critical(0,"Error", "address is not aligned!");
+                return nullptr;
+            }
+            return new EmotionBreakpoints::Memory<uint64_t>(addr, v, data_type, data_kind, clear);
         }
 
         case EmotionBreakpoints::MemoryComparisonType::U128:
         {
             uint128_t v = get_value<uint128_t>();
-            return new EmotionBreakpoints::Memory<uint128_t>(get_address(), v, data_type, data_kind, clear);
+            uint32_t addr = get_address();
+            if(addr & 15)
+            {
+                QMessageBox box;
+                box.critical(0,"Error", "address is not aligned!");
+                return nullptr;
+            }
+            return new EmotionBreakpoints::Memory<uint128_t>(addr, v, data_type, data_kind, clear);
         }
     }
 }
