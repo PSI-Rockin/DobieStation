@@ -276,6 +276,7 @@
   </ItemGroup>
   <!-- jit stuff -->
   <ItemGroup>
+    <None Include="..\README.md" />
     <None Include="..\src\core\jitcommon\ir_instrlist.inc" />
   </ItemGroup>
   <ItemGroup>
