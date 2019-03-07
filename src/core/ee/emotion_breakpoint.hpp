@@ -111,7 +111,7 @@ public:
     virtual void set_iop(IOP* iop) = 0;
     virtual void notify_breakpoint_hit(IOP* iop) = 0;
 
-    virtual void notify_breakpoint_hit() = 0;
+    virtual void notify_pause_hit() = 0;
 };
 
 // shared between the debugger and the emulator

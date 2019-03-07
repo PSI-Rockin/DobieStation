@@ -22,7 +22,7 @@ bool is_function_call(uint32_t instruction)
     if (op == 0)
     { // special opcode
         uint32_t special = instruction & 0x3f;
-        if (special == 8)
+        if (special == 9)
         {
             uint32_t rd = (instruction >> 11) & 0x3f;
             if (rd == 31) return true; // jalr xx ra

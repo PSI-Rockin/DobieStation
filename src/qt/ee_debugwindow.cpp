@@ -666,7 +666,11 @@ void EEDebugWindow::on_break_continue_button_clicked()
 {
     printf("break handler...\n");
     if(emulation_running())
+    {
+        waiting_for_pause = true;
         emu_thread->pause(DEBUGGER);
+    }
+
         //add_breakpoint(new EmotionBreakpoints::Step());
     else
         resume_emulator();
@@ -697,7 +701,8 @@ void EEDebugWindow::on_next_button_clicked()
 
         if(EmotionDisasm::is_function_call(last_instruction))
         {
-            add_breakpoint(new EmotionBreakpoints::PC(get_current_cpu_recent_pc() + 4));
+            printf("is function call, break on PC = 0x%x\n", get_current_cpu_recent_pc() + 4);
+            add_breakpoint(new EmotionBreakpoints::PC(get_current_cpu_recent_pc() + 4, true));
             resume_emulator();
         }
         else
@@ -780,9 +785,13 @@ void EEDebugWindow::notify_breakpoint_hit(IOP *iop)
     emit breakpoint_signal(iop);
 }
 
-void EEDebugWindow::notify_breakpoint_hit()
+void EEDebugWindow::notify_pause_hit()
 {
-    emit pause_signal();
+    if(waiting_for_pause)
+    {
+        emit pause_signal();
+        waiting_for_pause = false;
+    }
 }
 
 
@@ -1000,11 +1009,15 @@ void EEDebugWindow::on_cpu_combo_activated(int index)
     if((DebuggerCpu)index == DebuggerCpu::EE)
     {
         current_cpu = DebuggerCpu::EE;
+        ee_most_recent_pc = ee->get_PC();
+        ee_disassembly_location = ee_most_recent_pc;
         update_ui();
     }
     else
     {
         current_cpu = DebuggerCpu::IOP;
+        iop_most_recent_pc = iop->get_PC();
+        iop_disassembly_location = iop_most_recent_pc;
         update_ui();
     }
 

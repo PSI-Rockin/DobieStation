@@ -38,7 +38,7 @@ public:
     void set_breakpoint_list(IOPBreakpointList *list);
     void notify_breakpoint_hit(EmotionEngine *ee);
     void notify_breakpoint_hit(IOP* iop);
-    void notify_breakpoint_hit();
+    void notify_pause_hit();
     void update_ui();
     void set_ee(EmotionEngine* e);
     void set_iop(IOP* iop);
@@ -86,6 +86,7 @@ private:
     uint32_t ee_most_recent_pc, iop_most_recent_pc;
     bool ee_running = true;
     bool iop_running = true;
+    bool waiting_for_pause = true;
 
     DebuggerCpu current_cpu = DebuggerCpu::EE;
 

@@ -174,7 +174,7 @@ void EmuThread::run()
         else if (pause_status)
         {
             usleep(10000);
-            get_ee_breakpoint_list()->get_ui()->notify_breakpoint_hit();
+            get_ee_breakpoint_list()->get_ui()->notify_pause_hit();
         }
         else if (gsdump_reading)
             gsdump_run();
