@@ -428,6 +428,7 @@
     <None Include="..\src\core\jitcommon\ir_instrlist.inc">
       <Filter>Distribution Files</Filter>
     </None>
+    <None Include="..\README.md" />
   </ItemGroup>
   <ItemGroup>
     <MASM Include="..\src\core\ee\vu_jit_asm.asm">
