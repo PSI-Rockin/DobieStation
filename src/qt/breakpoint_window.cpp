@@ -169,7 +169,7 @@ DebuggerBreakpoint* breakpoint_window::make_memory_breakpoint(uint32_t addr, boo
     char buff[64];
     sprintf(buff, "0x%x", addr);
     address_line->setText(QString(buff));
-    make_memory_breakpoint(limit_to_32);
+    return make_memory_breakpoint(limit_to_32);
 }
 
 DebuggerBreakpoint *breakpoint_window::make_register_breakpoint(std::vector<EERegisterDefinition>* available_regs)
