@@ -235,6 +235,13 @@ void EmuThread::release_key(PAD_BUTTON button)
     pause_mutex.unlock();
 }
 
+void EmuThread::update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t val)
+{
+    pause_mutex.lock();
+    e.update_joystick(joystick, axis, val);
+    pause_mutex.unlock();
+}
+
 void EmuThread::pause(PAUSE_EVENT event)
 {
     pause_status |= 1 << event;

@@ -63,6 +63,7 @@ class EmuWindow : public QMainWindow
         void shutdown();
         void press_key(PAD_BUTTON button);
         void release_key(PAD_BUTTON button);
+        void update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t val);
     public slots:
         void update_FPS(int FPS);
         void open_file_no_skip();

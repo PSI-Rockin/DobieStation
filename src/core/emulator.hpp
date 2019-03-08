@@ -98,6 +98,7 @@ class Emulator
         void reset();
         void press_button(PAD_BUTTON button);
         void release_button(PAD_BUTTON button);
+        void update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t val);
         bool skip_BIOS();
         void fast_boot();
         void set_skip_BIOS_hack(SKIP_HACK type);

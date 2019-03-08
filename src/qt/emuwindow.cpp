@@ -58,6 +58,9 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
     connect(this, SIGNAL(shutdown()), &emu_thread, SLOT(shutdown()));
     connect(this, SIGNAL(press_key(PAD_BUTTON)), &emu_thread, SLOT(press_key(PAD_BUTTON)));
     connect(this, SIGNAL(release_key(PAD_BUTTON)), &emu_thread, SLOT(release_key(PAD_BUTTON)));
+    connect(this, SIGNAL(update_joystick(JOYSTICK, JOYSTICK_AXIS, uint8_t)),
+        &emu_thread, SLOT(update_joystick(JOYSTICK, JOYSTICK_AXIS, uint8_t))
+    );
     connect(&emu_thread, SIGNAL(update_FPS(int)), this, SLOT(update_FPS(int)));
     connect(&emu_thread, SIGNAL(emu_error(QString)), this, SLOT(emu_error(QString)));
     connect(&emu_thread, SIGNAL(emu_non_fatal_error(QString)), this, SLOT(emu_non_fatal_error(QString)));
@@ -390,6 +393,18 @@ void EmuWindow::keyPressEvent(QKeyEvent *event)
         case Qt::Key_Period:
             emu_thread.unpause(PAUSE_EVENT::FRAME_ADVANCE);
             break;
+        case Qt::Key_J:
+            emit update_joystick(JOYSTICK::LEFT, JOYSTICK_AXIS::X, 0x00);
+            break;
+        case Qt::Key_L:
+            emit update_joystick(JOYSTICK::LEFT, JOYSTICK_AXIS::X, 0xFF);
+            break;
+        case Qt::Key_I:
+            emit update_joystick(JOYSTICK::LEFT, JOYSTICK_AXIS::Y, 0x00);
+            break;
+        case Qt::Key_K:
+            emit update_joystick(JOYSTICK::LEFT, JOYSTICK_AXIS::Y, 0xFF);
+            break;
         case Qt::Key_F1:
             emu_thread.gsdump_single_frame();
             break;
@@ -436,6 +451,14 @@ void EmuWindow::keyReleaseEvent(QKeyEvent *event)
             break;
         case Qt::Key_Space:
             emit release_key(PAD_BUTTON::SELECT);
+            break;
+        case Qt::Key_J:
+        case Qt::Key_L:
+            emit update_joystick(JOYSTICK::LEFT, JOYSTICK_AXIS::X, 0x80);
+            break;
+        case Qt::Key_K:
+        case Qt::Key_I:
+            emit update_joystick(JOYSTICK::LEFT, JOYSTICK_AXIS::Y, 0x80);
             break;
     }
 }

@@ -189,6 +189,11 @@ void Emulator::release_button(PAD_BUTTON button)
     pad.release_button(button);
 }
 
+void Emulator::update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t val)
+{
+    pad.update_joystick(joystick, axis, val);
+}
+
 uint32_t* Emulator::get_framebuffer()
 {
     //This function should only be called upon ending a frame; return nullptr otherwise
