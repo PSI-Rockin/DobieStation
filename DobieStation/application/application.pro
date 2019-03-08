@@ -22,10 +22,6 @@ DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000
 target.path = /usr/local/bin/
 INSTALLS += target
 
-FORMS += ../../src/qt/and_breakpoint_window.ui \
-    ../../src/qt/breakpoint_window.ui \
-    ../../src/qt/ee_debugwindow.ui 
-
 SOURCES += ../../src/qt/main.cpp \
     ../../src/core/errors.cpp \
     ../../src/core/ee/emotion.cpp \

@@ -192,9 +192,13 @@
     <ClCompile Include="..\src\core\ee\emotionasm.cpp" />
     <ClCompile Include="..\src\core\ee\emotiondisasm.cpp" />
     <ClCompile Include="..\src\core\ee\emotioninterpreter.cpp" />
+    <ClCompile Include="..\src\core\ee\emotion_breakpoint.cpp" />
     <ClCompile Include="..\src\core\emulator.cpp" />
     <ClCompile Include="..\src\qt\emuthread.cpp" />
     <ClCompile Include="..\src\qt\emuwindow.cpp" />
+    <ClCompile Include="..\src\qt\ee_debugwindow.cpp" />
+    <ClCompile Include="..\src\qt\breakpoint_window.cpp" />
+    <ClCompile Include="..\src\qt\and_breakpoint_window.cpp" />
     <ClCompile Include="..\src\core\errors.cpp" />
     <ClCompile Include="..\src\core\iop\gamepad.cpp" />
     <ClCompile Include="..\src\core\gif.cpp" />
@@ -257,9 +261,16 @@
     <ClInclude Include="..\src\core\ee\emotiondisasm.hpp" />
     <ClInclude Include="..\src\core\ee\emotioninterpreter.hpp" />
     <ClInclude Include="..\src\core\emulator.hpp" />
+    <ClInclude Include="..\src\core\emotion_breakpoint.hpp" />
     <QtMoc Include="..\src\qt\emuthread.hpp">
     </QtMoc>
     <QtMoc Include="..\src\qt\emuwindow.hpp">
+    </QtMoc>
+    <QtMoc Include="..\src\qt\ee_debugwindow.hpp">
+    </QtMoc>
+    <QtMoc Include="..\src\qt\breakpoint_window.hpp">
+    </QtMoc>
+    <QtMoc Include="..\src\qt\and_breakpoint_window.hpp">
     </QtMoc>
     <ClInclude Include="..\src\core\errors.hpp" />
     <ClInclude Include="..\src\core\iop\gamepad.hpp" />

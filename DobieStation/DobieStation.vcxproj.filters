@@ -100,6 +100,9 @@
     <ClCompile Include="..\src\core\ee\emotioninterpreter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\core\ee\emotion_breakpoint.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\core\emulator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -107,6 +110,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\qt\emuwindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\qt\ee_debugwindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\qt\breakpoint_window.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\qt\and_breakpoint_window.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\core\errors.cpp">
@@ -285,6 +297,9 @@
     <ClInclude Include="..\src\core\ee\emotioninterpreter.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\core\ee\emotion_breakpoint.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\core\emulator.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -292,6 +307,15 @@
       <Filter>Header Files</Filter>
     </QtMoc>
     <QtMoc Include="..\src\qt\emuwindow.hpp">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="..\src\qt\ee_debugwindow.hpp">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="..\src\qt\breakpoint_window.hpp">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="..\src\qt\and_breakpoint_window.hpp">
       <Filter>Header Files</Filter>
     </QtMoc>
     <ClInclude Include="..\src\core\errors.hpp">
