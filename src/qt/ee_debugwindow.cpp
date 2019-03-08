@@ -1,3 +1,16 @@
+#include <QtCore/QVariant>
+#include <QtWidgets/QApplication>
+#include <QtWidgets/QComboBox>
+#include <QtWidgets/QGridLayout>
+#include <QtWidgets/QGroupBox>
+#include <QtWidgets/QHeaderView>
+#include <QtWidgets/QLabel>
+#include <QtWidgets/QLineEdit>
+#include <QtWidgets/QPushButton>
+#include <QtWidgets/QSpacerItem>
+#include <QtWidgets/QTableWidget>
+#include <QtWidgets/QWidget>
+
 #include <QtGui/QFontDatabase>
 #include <QMenu>
 #include <QTableWidget>
@@ -8,7 +21,6 @@
 #include "../core/iop/iop.hpp"
 #include "breakpoint_window.hpp"
 #include "and_breakpoint_window.hpp"
-#include "ui_ee_debugwindow.h"
 #include "emuthread.hpp"
 
 #define EE_DEBUGGER_DISASSEMBLY_SIZE (256)
@@ -20,7 +32,137 @@ static const char* breakpoint_names[] = {"And", "Memory", "Register", "PC", "Ste
 
 
 
+void EEDebugWindow::build_ui()
+{
+    this->resize(1600, 900);
+    main_grid_layout = new QGridLayout(this);
 
+    registers_group = new QGroupBox(this);
+    registers_grid_layout = new QGridLayout(registers_group);
+    register_table = new QTableWidget(registers_group);
+    register_table->setContextMenuPolicy(Qt::CustomContextMenu);
+    registers_grid_layout->addWidget(register_table, 0, 0, 1, 1);
+    main_grid_layout->addWidget(registers_group, 0, 2, 1, 1);
+
+    stack_layout = new QGridLayout();
+    stack_group = new QGroupBox(this);
+    stack_grid_layout = new QGridLayout(stack_group);
+    stack_table = new QTableWidget(stack_group);
+    stack_table->setContextMenuPolicy(Qt::CustomContextMenu);
+    stack_grid_layout->addWidget(stack_table, 0, 1, 1, 1);
+    stack_layout->addWidget(stack_group, 0, 0, 1, 1);
+    main_grid_layout->addLayout(stack_layout, 1, 0, 1, 1);
+
+
+    control_breakpoint_layout = new QGridLayout();
+    control_group = new QGroupBox(this);
+    control_grid_layout = new QGridLayout(control_group);
+    add_breakpoint_combo = new QComboBox(control_group);
+    control_grid_layout->addWidget(add_breakpoint_combo, 0, 4, 1, 1);
+    step_button = new QPushButton(control_group);
+    control_grid_layout->addWidget(step_button, 0, 1, 1, 1);
+    break_continue_button = new QPushButton(control_group);
+    control_grid_layout->addWidget(break_continue_button, 0, 0, 1, 1);
+    next_button = new QPushButton(control_group);
+    control_grid_layout->addWidget(next_button, 1, 0, 1, 1);
+    finish_button = new QPushButton(control_group);
+    control_grid_layout->addWidget(finish_button, 1, 1, 1, 1);
+    cpu_combo = new QComboBox(control_group);
+    control_grid_layout->addWidget(cpu_combo, 1, 4, 1, 1);
+    control_breakpoint_layout->addWidget(control_group, 0, 0, 1, 1);
+
+    breakpoint_group = new QGroupBox(this);
+    breakpoint_grid_layout = new QGridLayout(breakpoint_group);
+    breakpoint_table = new QTableWidget(breakpoint_group);
+    breakpoint_table->setContextMenuPolicy(Qt::CustomContextMenu);
+    breakpoint_grid_layout->addWidget(breakpoint_table, 0, 0, 1, 1);
+    control_breakpoint_layout->addWidget(breakpoint_group, 1, 0, 1, 1);
+    main_grid_layout->addLayout(control_breakpoint_layout, 1, 2, 1, 1);
+
+    memory_group = new QGroupBox(this);
+    memory_grid_layout = new QGridLayout(memory_group);
+    memory_seek_ledit = new QLineEdit(memory_group);
+    memory_seek_ledit->setMinimumSize(QSize(100, 0));
+    memory_grid_layout->addWidget(memory_seek_ledit, 3, 1, 1, 1);
+    memory_up = new QPushButton(memory_group);
+    memory_grid_layout->addWidget(memory_up, 0, 2, 1, 1);
+    memory_seek_to = new QLabel(memory_group);
+    memory_grid_layout->addWidget(memory_seek_to, 3, 0, 1, 1);
+    memory_spacer = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
+    memory_grid_layout->addItem(memory_spacer, 1, 2, 1, 1);
+    memory_down = new QPushButton(memory_group);
+    memory_grid_layout->addWidget(memory_down, 2, 2, 1, 1);
+    memory_table = new QTableWidget(memory_group);
+    memory_table->setContextMenuPolicy(Qt::CustomContextMenu);
+    memory_grid_layout->addWidget(memory_table, 0, 0, 3, 2);
+    memory_go_button = new QPushButton(memory_group);
+    memory_go_button->setMinimumSize(QSize(1, 1));
+    memory_grid_layout->addWidget(memory_go_button, 3, 2, 1, 1);
+    main_grid_layout->addWidget(memory_group, 0, 0, 1, 1);
+
+    disassembly_group = new QGroupBox(this);
+    disassembly_grid_layout = new QGridLayout(disassembly_group);
+    disassembly_seek_ledit = new QLineEdit(disassembly_group);
+    disassembly_seek_ledit->setMinimumSize(QSize(100, 0));
+    disassembly_grid_layout->addWidget(disassembly_seek_ledit, 4, 1, 1, 1);
+    disassembly_down_button = new QPushButton(disassembly_group);
+    disassembly_grid_layout->addWidget(disassembly_down_button, 2, 3, 1, 1);
+    seek_to_label = new QLabel(disassembly_group);
+    disassembly_grid_layout->addWidget(seek_to_label, 4, 0, 1, 1);
+    disassembly_go_button = new QPushButton(disassembly_group);
+    disassembly_go_button->setMinimumSize(QSize(70, 20));
+    disassembly_grid_layout->addWidget(disassembly_go_button, 4, 2, 1, 1);
+    disassembly_up_button = new QPushButton(disassembly_group);
+    disassembly_grid_layout->addWidget(disassembly_up_button, 0, 3, 1, 1);
+    disassembly_spacer = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
+    disassembly_grid_layout->addItem(disassembly_spacer, 1, 3, 1, 1);
+    disassembly_seek_to_pc_button = new QPushButton(disassembly_group);
+    disassembly_grid_layout->addWidget(disassembly_seek_to_pc_button, 4, 3, 1, 1);
+    disassembly_table = new QTableWidget(disassembly_group);
+    disassembly_table->setContextMenuPolicy(Qt::CustomContextMenu);
+    disassembly_grid_layout->addWidget(disassembly_table, 0, 0, 3, 3);
+    main_grid_layout->addWidget(disassembly_group, 0, 1, 2, 1);
+
+    this->setWindowTitle(QApplication::translate("EEDebugWindow", "Form", nullptr));
+    registers_group->setTitle(QApplication::translate("EEDebugWindow", "Registers", nullptr));
+    stack_group->setTitle(QApplication::translate("EEDebugWindow", "Stack", nullptr));
+    control_group->setTitle(QApplication::translate("EEDebugWindow", "Control", nullptr));
+    step_button->setText(QApplication::translate("EEDebugWindow", "Step", nullptr));
+    break_continue_button->setText(QApplication::translate("EEDebugWindow", "Continue/Break", nullptr));
+    next_button->setText(QApplication::translate("EEDebugWindow", "Next", nullptr));
+    finish_button->setText(QApplication::translate("EEDebugWindow", "Finish", nullptr));
+    breakpoint_group->setTitle(QApplication::translate("EEDebugWindow", "Breakpoints", nullptr));
+    memory_group->setTitle(QApplication::translate("EEDebugWindow", "Memory", nullptr));
+    memory_up->setText(QApplication::translate("EEDebugWindow", "Up 2k", nullptr));
+    memory_seek_to->setText(QApplication::translate("EEDebugWindow", "Seek to:", nullptr));
+    memory_down->setText(QApplication::translate("EEDebugWindow", "Down 2k", nullptr));
+    memory_go_button->setText(QApplication::translate("EEDebugWindow", "Go", nullptr));
+    disassembly_group->setTitle(QApplication::translate("EEDebugWindow", "Disassembly", nullptr));
+    disassembly_down_button->setText(QApplication::translate("EEDebugWindow", "Down 2k", nullptr));
+    seek_to_label->setText(QApplication::translate("EEDebugWindow", "Seek to:", nullptr));
+    disassembly_go_button->setText(QApplication::translate("EEDebugWindow", "Go", nullptr));
+    disassembly_up_button->setText(QApplication::translate("EEDebugWindow", "Up 2k", nullptr));
+    disassembly_seek_to_pc_button->setText(QApplication::translate("EEDebugWindow", "Seek to PC", nullptr));
+
+    connect(disassembly_up_button, SIGNAL(clicked()), this, SLOT(on_disassembly_up_button_clicked()));
+    connect(disassembly_down_button, SIGNAL(clicked()), this, SLOT(on_disassembly_down_button_clicked()));
+    connect(disassembly_seek_to_pc_button, SIGNAL(clicked()), this, SLOT(on_disassembly_seek_to_pc_button_clicked()));
+    connect(disassembly_go_button, SIGNAL(clicked()), this, SLOT(on_disassembly_go_button_clicked()));
+    connect(disassembly_table, SIGNAL(cellDoubleClicked(int, int)), this, SLOT(on_disassembly_table_cellDoubleClicked(int, int)));
+
+    connect(memory_up, SIGNAL(clicked()), this, SLOT(on_memory_up_clicked()));
+    connect(memory_down, SIGNAL(clicked()), this, SLOT(on_memory_down_clicked()));
+    connect(memory_go_button, SIGNAL(clicked()), this, SLOT(on_memory_go_button_clicked()));
+    connect(memory_seek_ledit, SIGNAL(returnPressed()), this, SLOT(on_memory_seek_ledit_returnPressed()));
+
+    connect(break_continue_button, SIGNAL(clicked()), this, SLOT(on_break_continue_button_clicked()));
+    connect(step_button, SIGNAL(clicked()), this, SLOT(on_step_button_clicked()));
+    connect(next_button, SIGNAL(clicked()), this, SLOT(on_next_button_clicked()));
+    connect(finish_button, SIGNAL(clicked()), this, SLOT(on_finish_button_clicked()));
+    connect(add_breakpoint_combo, SIGNAL(activated(int )), this, SLOT(on_add_breakpoint_combo_activated(int)));
+    connect(cpu_combo, SIGNAL(activated(int)), this, SLOT(on_cpu_combo_activated(int)));
+    connect(breakpoint_table, SIGNAL(cellDoubleClicked(int, int)), this, SLOT(on_breakpoint_table_cellDoubleClicked(int, int)));
+}
 // set formatting for qtable (monospaced font, no borders)
 static void setup_qtable(QTableWidget* table, uint32_t size)
 {
@@ -109,27 +251,27 @@ void EEDebugWindow::set_breakpoint_list(IOPBreakpointList *list)
 void EEDebugWindow::update_break_continue_button()
 {
     if(emulation_running())
-        ui->break_continue_button->setText("Break");
+        break_continue_button->setText("Break");
     else
-        ui->break_continue_button->setText("Continue");
+        break_continue_button->setText("Continue");
 }
 
 void EEDebugWindow::setup_ui_formatting()
 {
-    setup_qtable(ui->disassembly_table, EE_DEBUGGER_DISASSEMBLY_SIZE);
-    setup_qtable(ui->breakpoint_table, EE_DEBUGGER_MAX_BREAKPOINTS);
-    setup_qtable(ui->memory_table, EE_DEBUGGER_MEMORY_SIZE);
-    setup_qtable(ui->register_table, ee_registers.size() + 1); // +1 for the PC
-    setup_qtable(ui->stack_table, EE_DEBUGGER_STACK_SIZE);
+    setup_qtable(disassembly_table, EE_DEBUGGER_DISASSEMBLY_SIZE);
+    setup_qtable(breakpoint_table, EE_DEBUGGER_MAX_BREAKPOINTS);
+    setup_qtable(memory_table, EE_DEBUGGER_MEMORY_SIZE);
+    setup_qtable(register_table, ee_registers.size() + 1); // +1 for the PC
+    setup_qtable(stack_table, EE_DEBUGGER_STACK_SIZE);
 
-    ui->add_breakpoint_combo->addItem("Add Breakpoint...");
+    add_breakpoint_combo->addItem("Add Breakpoint...");
     for(auto name : breakpoint_names)
     {
-        ui->add_breakpoint_combo->addItem(QString(name));
+        add_breakpoint_combo->addItem(QString(name));
     }
 
-    ui->cpu_combo->addItem("EE");
-    ui->cpu_combo->addItem("IOP");
+    cpu_combo->addItem("EE");
+    cpu_combo->addItem("IOP");
 }
 
 void EEDebugWindow::update_ui()
@@ -145,7 +287,7 @@ void EEDebugWindow::update_ui()
 void EEDebugWindow::update_registers()
 {
     uint32_t r = 0;
-    auto set_next = [&r, this](QString q){ui->register_table->item(r++,0)->setText(q);};
+    auto set_next = [&r, this](QString q){register_table->item(r++,0)->setText(q);};
 
     if(current_cpu == DebuggerCpu::EE)
     {
@@ -155,9 +297,9 @@ void EEDebugWindow::update_registers()
         for(auto& reg : ee_registers)
         {
             if(ee_breakpoint_list->get_breakpoints_at_register(reg).empty())
-                ui->register_table->item(r,0)->setBackgroundColor(Qt::white);
+                register_table->item(r,0)->setBackgroundColor(Qt::white);
             else
-                ui->register_table->item(r,0)->setBackgroundColor(Qt::green);
+                register_table->item(r,0)->setBackgroundColor(Qt::green);
 
             switch(reg.kind)
             {
@@ -202,9 +344,9 @@ void EEDebugWindow::update_registers()
         for(auto& reg : iop_registers)
         {
             if(iop_breakpoint_list->get_breakpoints_at_register(reg).empty())
-                ui->register_table->item(r,0)->setBackgroundColor(Qt::white);
+                register_table->item(r,0)->setBackgroundColor(Qt::white);
             else
-                ui->register_table->item(r,0)->setBackgroundColor(Qt::green);
+                register_table->item(r,0)->setBackgroundColor(Qt::green);
 
             switch(reg.kind)
             {
@@ -229,7 +371,7 @@ void EEDebugWindow::update_registers()
 void EEDebugWindow::update_disassembly()
 {
     uint32_t r = 0;
-    auto set_next = [&r, this](QString q){ui->disassembly_table->item(r++,0)->setText(q);};
+    auto set_next = [&r, this](QString q){disassembly_table->item(r++,0)->setText(q);};
     uint32_t start_addr = get_current_cpu_disassembly_location() - EE_DEBUGGER_DISASSEMBLY_SIZE * 2;
     uint32_t end_addr = start_addr + EE_DEBUGGER_DISASSEMBLY_SIZE * 4;
     for (int i = 0; i < EE_DEBUGGER_DISASSEMBLY_SIZE * 4; i += 4)
@@ -260,7 +402,7 @@ void EEDebugWindow::update_disassembly()
         } catch(std::exception& e) {
             table_str = (addr_str + " bad memory!");
         }
-        ui->disassembly_table->item(r,0)->setBackgroundColor(Qt::white);
+        disassembly_table->item(r,0)->setBackgroundColor(Qt::white);
         set_next(table_str);
     }
 
@@ -271,7 +413,7 @@ void EEDebugWindow::update_disassembly()
         if(addr >= start_addr && addr < end_addr)
         {
              uint32_t row = (addr - start_addr)/4;
-             ui->disassembly_table->item(row,0)->setBackgroundColor(Qt::green);
+             disassembly_table->item(row,0)->setBackgroundColor(Qt::green);
         }
     }
 }
@@ -280,7 +422,7 @@ void EEDebugWindow::update_disassembly()
 void EEDebugWindow::update_memory()
 {
     uint32_t r = 0;
-    auto set_next = [&r, this](QString q){ui->memory_table->item(r++,0)->setText(q);};
+    auto set_next = [&r, this](QString q){memory_table->item(r++,0)->setText(q);};
 
     uint32_t start_addr = get_current_cpu_memory_location() - EE_DEBUGGER_MEMORY_SIZE * 2;
     uint32_t end_addr = start_addr + EE_DEBUGGER_MEMORY_SIZE*4;
@@ -305,10 +447,10 @@ void EEDebugWindow::update_memory()
         {
             table_str = (addr_str + "bad memory!");
         }
-        ui->memory_table->item(r,0)->setBackgroundColor(Qt::white);
+        memory_table->item(r,0)->setBackgroundColor(Qt::white);
         set_next(table_str);
     }
-    //ui->memory_table->scrollToItem(ui->memory_table->item(EE_DEBUGGER_MEMORY_SIZE/2,0), QAbstractItemView::PositionAtCenter);
+    //memory_table->scrollToItem(memory_table->item(EE_DEBUGGER_MEMORY_SIZE/2,0), QAbstractItemView::PositionAtCenter);
 
     auto addr_to_highlight = get_current_cpu_breakpoints()->get_memory_address_list();
     for(auto addr : addr_to_highlight)
@@ -316,7 +458,7 @@ void EEDebugWindow::update_memory()
         if(addr >= start_addr && addr < end_addr)
         {
             uint32_t row = (addr - start_addr)/4;
-            ui->memory_table->item(row,0)->setBackgroundColor(Qt::green);
+            memory_table->item(row,0)->setBackgroundColor(Qt::green);
         }
     }
 }
@@ -324,7 +466,7 @@ void EEDebugWindow::update_memory()
 void EEDebugWindow::update_stack()
 {
     uint32_t r = 0;
-    auto set_next = [&r, this](QString q){ui->stack_table->item(r++,0)->setText(q);};
+    auto set_next = [&r, this](QString q){stack_table->item(r++,0)->setText(q);};
 
     uint32_t sp = 0;
     if(current_cpu == DebuggerCpu::EE)
@@ -359,45 +501,44 @@ void EEDebugWindow::update_stack()
 void EEDebugWindow::update_breakpoints()
 {
     uint32_t r = 0;
-    auto set_next = [&r, this](QString q){ui->breakpoint_table->item(r++,0)->setText(q);};
+    auto set_next = [&r, this](QString q){breakpoint_table->item(r++,0)->setText(q);};
 
     BreakpointList* breakpoints = get_current_cpu_breakpoints();
 
     for (auto& bp : breakpoints->get_breakpoints())
     {
         if(breakpoints->get_breakpoint_status()[r])
-            ui->breakpoint_table->item(r,0)->setBackgroundColor(Qt::lightGray);
+            breakpoint_table->item(r,0)->setBackgroundColor(Qt::lightGray);
         else
-            ui->breakpoint_table->item(r,0)->setBackgroundColor(Qt::white);
+            breakpoint_table->item(r,0)->setBackgroundColor(Qt::white);
         set_next(QString::number(r) + ": " + QString(bp->get_description().c_str()));
     }
 
     for(uint32_t i = breakpoints->get_breakpoints().size(); i < EE_DEBUGGER_MAX_BREAKPOINTS; i++)
     {
-        ui->breakpoint_table->item(i,0)->setBackgroundColor(Qt::white);
+        breakpoint_table->item(i,0)->setBackgroundColor(Qt::white);
         set_next(QString(""));
     }
 
-    ui->breakpoint_table->scrollToItem(ui->breakpoint_table->item(0,0), QAbstractItemView::PositionAtTop);
+    breakpoint_table->scrollToItem(breakpoint_table->item(0,0), QAbstractItemView::PositionAtTop);
 }
 
 
 EEDebugWindow::EEDebugWindow(EmuThread* emu_thread, QWidget *parent) :
         QWidget(parent),
-        emu_thread(emu_thread),
-        ui(new Ui::EEDebugWindow)
+        emu_thread(emu_thread)
 {
-    ui->setupUi(this);
+    build_ui();
     setWindowTitle("EE Debugger");
     connect(this, SIGNAL(breakpoint_signal(EmotionEngine*)), this, SLOT(breakpoint_hit(EmotionEngine*)));
     connect(this, SIGNAL(breakpoint_signal(IOP*)), this, SLOT(breakpoint_hit(IOP*)));
     connect(this, SIGNAL(pause_signal()), this, SLOT(pause_hit()));
-    ui->memory_table->setContextMenuPolicy(Qt::CustomContextMenu);
-    ui->disassembly_table->setContextMenuPolicy(Qt::CustomContextMenu);
-    ui->register_table->setContextMenuPolicy(Qt::CustomContextMenu);
-    connect(ui->memory_table, SIGNAL(customContextMenuRequested(const QPoint&)), this, SLOT(memory_context_menu(const QPoint &)));
-    connect(ui->disassembly_table, SIGNAL(customContextMenuRequested(const QPoint&)), this, SLOT(instruction_context_menu(const QPoint &)));
-    connect(ui->register_table, SIGNAL(customContextMenuRequested(const QPoint&)), this, SLOT(register_context_menu(const QPoint &)));
+    memory_table->setContextMenuPolicy(Qt::CustomContextMenu);
+    disassembly_table->setContextMenuPolicy(Qt::CustomContextMenu);
+    register_table->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(memory_table, SIGNAL(customContextMenuRequested(const QPoint&)), this, SLOT(memory_context_menu(const QPoint &)));
+    connect(disassembly_table, SIGNAL(customContextMenuRequested(const QPoint&)), this, SLOT(instruction_context_menu(const QPoint &)));
+    connect(register_table, SIGNAL(customContextMenuRequested(const QPoint&)), this, SLOT(register_context_menu(const QPoint &)));
     ee_running = true;
     iop_running = true;
 
@@ -446,7 +587,7 @@ EEDebugWindow::EEDebugWindow(EmuThread* emu_thread, QWidget *parent) :
 void EEDebugWindow::memory_context_menu(const QPoint &pos)
 {
     if(emulation_running()) return;
-    int32_t row = ui->memory_table->currentRow();
+    int32_t row = memory_table->currentRow();
     uint32_t addr = get_current_cpu_memory_location() - EE_DEBUGGER_MEMORY_SIZE * 2 + row * 4;
 
 
@@ -496,7 +637,7 @@ void EEDebugWindow::memory_context_menu(const QPoint &pos)
 void EEDebugWindow::instruction_context_menu(const QPoint &pos)
 {
     if(emulation_running()) return;
-    int32_t row = ui->disassembly_table->currentRow();
+    int32_t row = disassembly_table->currentRow();
     uint32_t addr = get_current_cpu_disassembly_location() - EE_DEBUGGER_DISASSEMBLY_SIZE * 2 + row * 4;
     auto bps = get_current_cpu_breakpoints()->get_breakpoints_at_instruction_addr(addr);
 
@@ -539,7 +680,7 @@ void EEDebugWindow::instruction_context_menu(const QPoint &pos)
 void EEDebugWindow::register_context_menu(const QPoint &qpos)
 {
     if(emulation_running()) return;
-    int32_t row = ui->register_table->currentRow();
+    int32_t row = register_table->currentRow();
     QMenu menu;
     if(current_cpu == DebuggerCpu::EE)
     {
@@ -612,7 +753,7 @@ void EEDebugWindow::register_context_menu(const QPoint &qpos)
 
 EEDebugWindow::~EEDebugWindow()
 {
-    delete ui;
+
 }
 
 void EEDebugWindow::on_disassembly_up_button_clicked()
@@ -635,10 +776,10 @@ void EEDebugWindow::on_disassembly_seek_to_pc_button_clicked()
 
 void EEDebugWindow::on_disassembly_go_button_clicked()
 {
-    QString dest = ui->disassembly_seek_ledit->text();
+    QString dest = disassembly_seek_ledit->text();
     get_current_cpu_disassembly_location() = hex_address_to_u32(dest);
     update_disassembly();
-    ui->disassembly_table->scrollToItem(ui->disassembly_table->item(EE_DEBUGGER_DISASSEMBLY_SIZE/2,0), QAbstractItemView::PositionAtCenter);
+    disassembly_table->scrollToItem(disassembly_table->item(EE_DEBUGGER_DISASSEMBLY_SIZE/2,0), QAbstractItemView::PositionAtCenter);
 }
 
 void EEDebugWindow::on_memory_up_clicked()
@@ -655,10 +796,10 @@ void EEDebugWindow::on_memory_down_clicked()
 
 void EEDebugWindow::on_memory_go_button_clicked()
 {
-    QString dest = ui->memory_seek_ledit->text();
+    QString dest = memory_seek_ledit->text();
     get_current_cpu_memory_location() = hex_address_to_u32(dest);
     update_memory();
-    ui->memory_table->scrollToItem(ui->memory_table->item(EE_DEBUGGER_MEMORY_SIZE/2,0), QAbstractItemView::PositionAtCenter);
+    memory_table->scrollToItem(memory_table->item(EE_DEBUGGER_MEMORY_SIZE/2,0), QAbstractItemView::PositionAtCenter);
 }
 
 
@@ -766,7 +907,7 @@ void EEDebugWindow::on_add_breakpoint_combo_activated(int index)
         }
 
     }
-    ui->add_breakpoint_combo->setCurrentIndex(0); // back to "add breakpoint..."
+    add_breakpoint_combo->setCurrentIndex(0); // back to "add breakpoint..."
 
 }
 
@@ -809,8 +950,8 @@ void EEDebugWindow::breakpoint_hit(EmotionEngine *ee)
     // todo : is this what we want?
     ee_disassembly_location = ee_most_recent_pc;
     update_ui();
-    ui->cpu_combo->setCurrentIndex((uint32_t)DebuggerCpu::EE);
-    ui->disassembly_table->scrollToItem(ui->disassembly_table->item(EE_DEBUGGER_DISASSEMBLY_SIZE/2,0), QAbstractItemView::PositionAtCenter);
+    cpu_combo->setCurrentIndex((uint32_t)DebuggerCpu::EE);
+    disassembly_table->scrollToItem(disassembly_table->item(EE_DEBUGGER_DISASSEMBLY_SIZE/2,0), QAbstractItemView::PositionAtCenter);
     printf("ui thread done updating!\n");
 }
 
@@ -824,8 +965,8 @@ void EEDebugWindow::breakpoint_hit(IOP *iop)
     // todo : is this what we want?
     iop_disassembly_location = iop_most_recent_pc;
     update_ui();
-    ui->cpu_combo->setCurrentIndex((uint32_t)DebuggerCpu::IOP);
-    ui->disassembly_table->scrollToItem(ui->disassembly_table->item(EE_DEBUGGER_DISASSEMBLY_SIZE/2,0), QAbstractItemView::PositionAtCenter);
+    cpu_combo->setCurrentIndex((uint32_t)DebuggerCpu::IOP);
+    disassembly_table->scrollToItem(disassembly_table->item(EE_DEBUGGER_DISASSEMBLY_SIZE/2,0), QAbstractItemView::PositionAtCenter);
 }
 
 void EEDebugWindow::pause_hit()
@@ -837,7 +978,7 @@ void EEDebugWindow::pause_hit()
     ee_disassembly_location = ee_most_recent_pc;
     iop_disassembly_location = iop_most_recent_pc;
     update_ui();
-    ui->disassembly_table->scrollToItem(ui->disassembly_table->item(EE_DEBUGGER_DISASSEMBLY_SIZE/2,0), QAbstractItemView::PositionAtCenter);
+    disassembly_table->scrollToItem(disassembly_table->item(EE_DEBUGGER_DISASSEMBLY_SIZE/2,0), QAbstractItemView::PositionAtCenter);
 }
 
 void EEDebugWindow::add_breakpoint(DebuggerBreakpoint *breakpoint)

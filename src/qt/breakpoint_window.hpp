@@ -2,6 +2,16 @@
 #define BREAKPOINT_WINDOW_H
 
 #include <QDialog>
+#include <QtCore/QVariant>
+#include <QtWidgets/QApplication>
+#include <QtWidgets/QCheckBox>
+#include <QtWidgets/QComboBox>
+#include <QtWidgets/QDialog>
+#include <QtWidgets/QDialogButtonBox>
+#include <QtWidgets/QGridLayout>
+#include <QtWidgets/QLabel>
+#include <QtWidgets/QLineEdit>
+#include <QtWidgets/QSpacerItem>
 #include "../core/int128.hpp"
 #include "../core/ee/emotion_breakpoint.hpp"
 
@@ -30,6 +40,7 @@ private slots:
     void on_reg_type_combo_currentIndexChanged(int index);
 
 private:
+    void build_ui();
     void setup_comparison_combo_boxes(bool limit_to_32 = false);
     uint32_t get_address();
     DebuggerBreakpoint* make_register_breakpoint(EERegisterDefinition& def,
@@ -48,6 +59,23 @@ private:
     std::vector<IOPRegisterDefinition>* iop_regs = nullptr;
     std::vector<uint64_t> combo_reg_idx;
     bool register_selected = false;
+
+    QGridLayout *grid_layout;
+    QLabel *reg_label;
+    QComboBox *reg_type_combo;
+    QLabel *address_label;
+    QCheckBox *clear_checkbox;
+    QLabel *reg_type_label;
+    QSpacerItem *verticalSpacer;
+    QDialogButtonBox *ok_cancel_button;
+    QLineEdit *address_line;
+    QComboBox *comparison_combo;
+    QLabel *value_label;
+    QLabel *comparison_label;
+    QComboBox *data_type_combo;
+    QLabel *data_type_label;
+    QLineEdit *value_line;
+    QComboBox *reg_combo;
 };
 
 #endif // BREAKPOINT_WINDOW_H

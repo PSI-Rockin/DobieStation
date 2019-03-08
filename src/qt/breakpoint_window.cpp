@@ -1,34 +1,95 @@
 #include <QtWidgets/QMessageBox>
 #include "breakpoint_window.hpp"
-#include "ui_breakpoint_window.h"
-
-
 
 breakpoint_window::breakpoint_window(QWidget *parent) :
-    QDialog(parent),
-    ui(new Ui::breakpoint_window)
+    QDialog(parent)
 {
-    ui->setupUi(this);
+    build_ui();
 }
 
 breakpoint_window::~breakpoint_window()
 {
-    delete ui;
+
+}
+
+void breakpoint_window::build_ui()
+{
+    resize(324, 279);
+    grid_layout = new QGridLayout(this);
+    
+    reg_label = new QLabel(this);
+    grid_layout->addWidget(reg_label, 5, 0, 1, 1);
+
+    reg_type_combo = new QComboBox(this);
+    grid_layout->addWidget(reg_type_combo, 4, 2, 1, 1);
+
+    address_label = new QLabel(this);
+    grid_layout->addWidget(address_label, 0, 0, 1, 1);
+
+    clear_checkbox = new QCheckBox(this);
+    grid_layout->addWidget(clear_checkbox, 6, 2, 1, 1);
+
+    reg_type_label = new QLabel(this);
+    grid_layout->addWidget(reg_type_label, 4, 0, 1, 1);
+
+    verticalSpacer = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
+    grid_layout->addItem(verticalSpacer, 7, 2, 1, 1);
+
+    ok_cancel_button = new QDialogButtonBox(this);
+    ok_cancel_button->setOrientation(Qt::Horizontal);
+    ok_cancel_button->setStandardButtons(QDialogButtonBox::Cancel|QDialogButtonBox::Ok);
+    grid_layout->addWidget(ok_cancel_button, 8, 2, 1, 5);
+
+    address_line = new QLineEdit(this);
+    grid_layout->addWidget(address_line, 0, 2, 1, 1);
+
+    comparison_combo = new QComboBox(this);
+    grid_layout->addWidget(comparison_combo, 2, 2, 1, 1);
+
+    value_label = new QLabel(this);
+    grid_layout->addWidget(value_label, 3, 0, 1, 1);
+
+    comparison_label = new QLabel(this);
+    grid_layout->addWidget(comparison_label, 2, 0, 1, 1);
+
+    data_type_combo = new QComboBox(this);
+    grid_layout->addWidget(data_type_combo, 1, 2, 1, 1);
+
+    data_type_label = new QLabel(this);
+    grid_layout->addWidget(data_type_label, 1, 0, 1, 1);
+
+    value_line = new QLineEdit(this);
+    grid_layout->addWidget(value_line, 3, 2, 1, 1);
+
+    reg_combo = new QComboBox(this);
+    grid_layout->addWidget(reg_combo, 5, 2, 1, 1);
+    
+    reg_label->setText("Register");
+    address_label->setText("Address");
+    clear_checkbox->setText("Clear after hit?");
+    reg_type_label->setText("Register Type");
+    value_label->setText("Value");
+    comparison_label->setText("Comparison");
+    data_type_label->setText("Data Type");
+    connect(ok_cancel_button, SIGNAL(accepted()), this, SLOT(accept()));
+    connect(ok_cancel_button, SIGNAL(rejected()), this, SLOT(reject()));
+    connect(reg_type_combo, SIGNAL(activated(int)), this, SLOT(on_reg_type_combo_currentIndexChanged(int)));
+    on_reg_type_combo_currentIndexChanged(0); // populate list initially
 }
 
 DebuggerBreakpoint* breakpoint_window::make_pc_breakpoint()
 {
     setWindowTitle("PC Breakpoint");
-    ui->comparison_combo->hide();
-    ui->comparison_label->hide();
-    ui->reg_type_label->hide();
-    ui->reg_type_combo->hide();
-    ui->reg_label->hide();
-    ui->reg_combo->hide();
-    ui->data_type_combo->hide();
-    ui->data_type_label->hide();
-    ui->value_label->hide();
-    ui->value_line->hide();
+    comparison_combo->hide();
+    comparison_label->hide();
+    reg_type_label->hide();
+    reg_type_combo->hide();
+    reg_label->hide();
+    reg_combo->hide();
+    data_type_combo->hide();
+    data_type_label->hide();
+    value_label->hide();
+    value_line->hide();
 
     this->exec();
 
@@ -43,14 +104,14 @@ DebuggerBreakpoint* breakpoint_window::make_pc_breakpoint()
         box.critical(0,"Error", "address is not aligned!");
         return nullptr;
     }
-    return new EmotionBreakpoints::PC(addr, ui->clear_checkbox->isChecked());
+    return new EmotionBreakpoints::PC(addr, clear_checkbox->isChecked());
 }
 
 
 
 uint32_t breakpoint_window::get_address()
 {
-    QString addr_str = ui->address_line->text();
+    QString addr_str = address_line->text();
     char* charp = addr_str.toUtf8().data();
     return strtoul(charp, nullptr, 16);
 }
@@ -58,13 +119,13 @@ uint32_t breakpoint_window::get_address()
 template<>
 float breakpoint_window::get_value<float>()
 {
-    return ui->value_line->text().toFloat();
+    return value_line->text().toFloat();
 }
 
 template<>
 uint128_t breakpoint_window::get_value<uint128_t>()
 {
-    QString value_str = ui->value_line->text();
+    QString value_str = value_line->text();
     QString lo = value_str.right(16);
     uint128_t r;
     r.lo = strtoull(lo.toUtf8().data(), nullptr, 16);
@@ -82,7 +143,7 @@ uint128_t breakpoint_window::get_value<uint128_t>()
 template<typename T>
 T breakpoint_window::get_value()
 {
-    QString value_str = ui->value_line->text();
+    QString value_str = value_line->text();
     char* charp = value_str.toUtf8().data();
     uint64_t v = strtoull(charp, nullptr, 16);
 
@@ -107,7 +168,7 @@ DebuggerBreakpoint* breakpoint_window::make_memory_breakpoint(uint32_t addr, boo
 {
     char buff[64];
     sprintf(buff, "0x%x", addr);
-    ui->address_line->setText(QString(buff));
+    address_line->setText(QString(buff));
     make_memory_breakpoint(limit_to_32);
 }
 
@@ -115,23 +176,23 @@ DebuggerBreakpoint *breakpoint_window::make_register_breakpoint(std::vector<EERe
 {
     ee_regs = available_regs;
     setWindowTitle("Register Breakpoint");
-    ui->address_line->hide();
-    ui->address_label->hide();
+    address_line->hide();
+    address_label->hide();
     setup_comparison_combo_boxes();
 
     // set up the register combos
     for(auto name : ee_register_kind_names)
-        ui->reg_type_combo->addItem(QString(name));
+        reg_type_combo->addItem(QString(name));
 
     this->exec();
 
     if(this->result() == QDialog::Rejected || !register_selected)
         return nullptr;
 
-    auto data_type = (EmotionBreakpoints::MemoryComparisonType)ui->data_type_combo->currentIndex();
-    auto data_kind = (EmotionBreakpoints::MemoryComparisonKind)ui->comparison_combo->currentIndex();
-    bool clear = ui->clear_checkbox->isChecked();
-    auto reg_def = (*available_regs)[combo_reg_idx[ui->reg_combo->currentIndex()]];
+    auto data_type = (EmotionBreakpoints::MemoryComparisonType)data_type_combo->currentIndex();
+    auto data_kind = (EmotionBreakpoints::MemoryComparisonKind)comparison_combo->currentIndex();
+    bool clear = clear_checkbox->isChecked();
+    auto reg_def = (*available_regs)[combo_reg_idx[reg_combo->currentIndex()]];
 
     return make_register_breakpoint(reg_def, data_type, data_kind, clear);
 }
@@ -140,23 +201,23 @@ DebuggerBreakpoint *breakpoint_window::make_register_breakpoint(std::vector<IOPR
 {
     iop_regs = available_regs;
     setWindowTitle("Register Breakpoint");
-    ui->address_line->hide();
-    ui->address_label->hide();
+    address_line->hide();
+    address_label->hide();
     setup_comparison_combo_boxes(true);
 
     // set up the register combos
     for(auto name : iop_register_kind_names)
-        ui->reg_type_combo->addItem(QString(name));
+        reg_type_combo->addItem(QString(name));
 
     this->exec();
 
     if(this->result() == QDialog::Rejected || !register_selected)
         return nullptr;
 
-    auto data_type = (EmotionBreakpoints::MemoryComparisonType)ui->data_type_combo->currentIndex();
-    auto data_kind = (EmotionBreakpoints::MemoryComparisonKind)ui->comparison_combo->currentIndex();
-    bool clear = ui->clear_checkbox->isChecked();
-    auto reg_def = (*available_regs)[combo_reg_idx[ui->reg_combo->currentIndex()]];
+    auto data_type = (EmotionBreakpoints::MemoryComparisonType)data_type_combo->currentIndex();
+    auto data_kind = (EmotionBreakpoints::MemoryComparisonKind)comparison_combo->currentIndex();
+    bool clear = clear_checkbox->isChecked();
+    auto reg_def = (*available_regs)[combo_reg_idx[reg_combo->currentIndex()]];
 
     return make_register_breakpoint(reg_def, data_type, data_kind, clear);
 }
@@ -164,12 +225,12 @@ DebuggerBreakpoint *breakpoint_window::make_register_breakpoint(std::vector<IOPR
 DebuggerBreakpoint *breakpoint_window::make_register_breakpoint(EERegisterDefinition &def)
 {
     setWindowTitle("Register Breakpoint");
-    ui->address_line->hide();
-    ui->address_label->hide();
-    ui->reg_combo->hide();
-    ui->reg_type_combo->hide();
-    ui->reg_type_label->hide();
-    ui->reg_label->setText("Register: " + QString(def.get_name().c_str()));
+    address_line->hide();
+    address_label->hide();
+    reg_combo->hide();
+    reg_type_combo->hide();
+    reg_type_label->hide();
+    reg_label->setText("Register: " + QString(def.get_name().c_str()));
     setup_comparison_combo_boxes();
 
     this->exec();
@@ -177,9 +238,9 @@ DebuggerBreakpoint *breakpoint_window::make_register_breakpoint(EERegisterDefini
     if(this->result() == QDialog::Rejected)
         return nullptr;
 
-    auto data_type = (EmotionBreakpoints::MemoryComparisonType)ui->data_type_combo->currentIndex();
-    auto data_kind = (EmotionBreakpoints::MemoryComparisonKind)ui->comparison_combo->currentIndex();
-    bool clear = ui->clear_checkbox->isChecked();
+    auto data_type = (EmotionBreakpoints::MemoryComparisonType)data_type_combo->currentIndex();
+    auto data_kind = (EmotionBreakpoints::MemoryComparisonKind)comparison_combo->currentIndex();
+    bool clear = clear_checkbox->isChecked();
 
     return make_register_breakpoint(def, data_type, data_kind, clear);
 }
@@ -187,12 +248,12 @@ DebuggerBreakpoint *breakpoint_window::make_register_breakpoint(EERegisterDefini
 DebuggerBreakpoint *breakpoint_window::make_register_breakpoint(IOPRegisterDefinition &def)
 {
     setWindowTitle("Register Breakpoint");
-    ui->address_line->hide();
-    ui->address_label->hide();
-    ui->reg_combo->hide();
-    ui->reg_type_combo->hide();
-    ui->reg_type_label->hide();
-    ui->reg_label->setText("Register: " + QString(def.get_name().c_str()));
+    address_line->hide();
+    address_label->hide();
+    reg_combo->hide();
+    reg_type_combo->hide();
+    reg_type_label->hide();
+    reg_label->setText("Register: " + QString(def.get_name().c_str()));
     setup_comparison_combo_boxes(true);
 
     this->exec();
@@ -200,9 +261,9 @@ DebuggerBreakpoint *breakpoint_window::make_register_breakpoint(IOPRegisterDefin
     if(this->result() == QDialog::Rejected)
         return nullptr;
 
-    auto data_type = (EmotionBreakpoints::MemoryComparisonType)ui->data_type_combo->currentIndex();
-    auto data_kind = (EmotionBreakpoints::MemoryComparisonKind)ui->comparison_combo->currentIndex();
-    bool clear = ui->clear_checkbox->isChecked();
+    auto data_type = (EmotionBreakpoints::MemoryComparisonType)data_type_combo->currentIndex();
+    auto data_kind = (EmotionBreakpoints::MemoryComparisonKind)comparison_combo->currentIndex();
+    bool clear = clear_checkbox->isChecked();
 
     return make_register_breakpoint(def, data_type, data_kind, clear);
 }
@@ -291,10 +352,10 @@ DebuggerBreakpoint* breakpoint_window::make_register_breakpoint(IOPRegisterDefin
 DebuggerBreakpoint* breakpoint_window::make_memory_breakpoint(bool limit_to_32)
 {
     setWindowTitle("Memory Breakpoint");
-    ui->reg_type_label->hide();
-    ui->reg_type_combo->hide();
-    ui->reg_label->hide();
-    ui->reg_combo->hide();
+    reg_type_label->hide();
+    reg_type_combo->hide();
+    reg_label->hide();
+    reg_combo->hide();
     setup_comparison_combo_boxes(limit_to_32);
 
     this->exec();
@@ -302,9 +363,9 @@ DebuggerBreakpoint* breakpoint_window::make_memory_breakpoint(bool limit_to_32)
     if(this->result() == QDialog::Rejected)
         return nullptr;
 
-    auto data_type = (EmotionBreakpoints::MemoryComparisonType)ui->data_type_combo->currentIndex();
-    auto data_kind = (EmotionBreakpoints::MemoryComparisonKind)ui->comparison_combo->currentIndex();
-    bool clear = ui->clear_checkbox->isChecked();
+    auto data_type = (EmotionBreakpoints::MemoryComparisonType)data_type_combo->currentIndex();
+    auto data_kind = (EmotionBreakpoints::MemoryComparisonKind)comparison_combo->currentIndex();
+    bool clear = clear_checkbox->isChecked();
     switch(data_type)
     {
         case EmotionBreakpoints::MemoryComparisonType::FLOAT:
@@ -385,24 +446,24 @@ DebuggerBreakpoint* breakpoint_window::make_memory_breakpoint(bool limit_to_32)
 void breakpoint_window::setup_comparison_combo_boxes(bool limit_to_32)
 {
     for(auto name : mem_compare_kind_names)
-        ui->comparison_combo->addItem(QString(name));
+        comparison_combo->addItem(QString(name));
 
     if(limit_to_32)
     {
         for(uint32_t i = 0; i < (uint32_t)EmotionBreakpoints::MemoryComparisonType::U64; i++)
-            ui->data_type_combo->addItem(QString(mem_compare_type_names[i]));
+            data_type_combo->addItem(QString(mem_compare_type_names[i]));
     }
     else
     {
         for(auto name : mem_compare_type_names)
-            ui->data_type_combo->addItem(QString(name));
+            data_type_combo->addItem(QString(name));
     }
 
 }
 
 void breakpoint_window::on_reg_type_combo_currentIndexChanged(int index)
 {
-    ui->reg_combo->clear();
+    reg_combo->clear();
     combo_reg_idx.clear();
 
     if(ee_regs)
@@ -413,7 +474,7 @@ void breakpoint_window::on_reg_type_combo_currentIndexChanged(int index)
             auto& reg = (*ee_regs)[i];
             if(reg.kind == kind)
             {
-                ui->reg_combo->addItem(reg.get_name().c_str());
+                reg_combo->addItem(reg.get_name().c_str());
                 combo_reg_idx.push_back(i);
             }
 
@@ -428,7 +489,7 @@ void breakpoint_window::on_reg_type_combo_currentIndexChanged(int index)
             auto& reg = (*iop_regs)[i];
             if(reg.kind == kind)
             {
-                ui->reg_combo->addItem(reg.get_name().c_str());
+                reg_combo->addItem(reg.get_name().c_str());
                 combo_reg_idx.push_back(i);
             }
 
