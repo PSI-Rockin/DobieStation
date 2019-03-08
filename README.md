@@ -23,6 +23,14 @@ cmake ..
 make
 ```
 
+### Building with Visual Studio
+Dobiestation is known to compile on 2015 and 2017.
+
+Before opening Visual Studio, you must set the `QTDIR` environment variable to your 64 bit QT install.
+For example on Visual Studio 2017: `C:\path\to\qt\5.12.1\msvc2017_64`
+
+Once the variable is set open `DobieStation\DobieStation.sln` in Visual Studio.
+
 ## Using the Emulator
 DobieStation requires a copy of the PS2 BIOS, which must be dumped from your PS2.
 
