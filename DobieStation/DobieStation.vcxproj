@@ -212,10 +212,16 @@
   <ItemGroup>
     <QtMoc Include="..\src\qt\emuthread.hpp" />
     <QtMoc Include="..\src\qt\emuwindow.hpp" />
+    <QtMoc Include="..\src\qt\ee_debugwindow.hpp" />
+    <QtMoc Include="..\src\qt\breakpoint_window.hpp" />
+    <QtMoc Include="..\src\qt\and_breakpoint_window.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(QtMocOutPrefix)emuthread.cpp" />
     <ClCompile Include="$(QtMocOutPrefix)emuwindow.cpp" />
+    <ClCompile Include="$(QtMocOutPrefix)ee_debugwindow.cpp" />
+    <ClCompile Include="$(QtMocOutPrefix)breakpoint_window.cpp" />
+    <ClCompile Include="$(QtMocOutPrefix)and_breakpoint_window.cpp" />
   </ItemGroup>
   <!-- headers -->
   <ItemGroup>

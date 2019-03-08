@@ -252,6 +252,12 @@
     </ClCompile>
     <ClCompile Include="$(QtMocOutPrefix)emuwindow.cpp">
       <Filter>Generated Files</Filter>
+    <ClCompile Include="$(QtMocOutPrefix)ee_debugwindow.cpp">
+      <Filter>Generated Files</Filter>
+    <ClCompile Include="$(QtMocOutPrefix)breakpoint_window.cpp">
+      <Filter>Generated Files</Filter>
+    <ClCompile Include="$(QtMocOutPrefix)and_breakpoint_window.cpp">
+      <Filter>Generated Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
