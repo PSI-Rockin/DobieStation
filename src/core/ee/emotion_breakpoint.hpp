@@ -7,6 +7,7 @@
 #include <atomic>
 #include <iomanip>
 #include <sstream>
+#include <condition_variable>
 #include "../errors.hpp"
 
 class IOP;
@@ -185,6 +186,7 @@ protected:
     std::vector<DebuggerBreakpoint *> breakpoints;
     std::vector<bool> breakpoint_triggered;
     std::mutex break_mutex; // used to stop the emulation thread when we are waiting for "continue"
+    std::condition_variable break_cv;
     EmotionDebugUI *debug_ui = nullptr; // notify callback when we hit a breakpoint
 };
 
@@ -228,8 +230,6 @@ namespace EmotionBreakpoints
         U64,
         U128
     };
-
-
 
     template <typename T>
     static bool compare_memory(T a, T b, MemoryComparisonKind kind)

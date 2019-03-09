@@ -492,7 +492,6 @@ bool EmotionBreakpoints::Finish::check(IOP *emu)
 BreakpointList::BreakpointList()
 {
     debug_enable = false;
-    break_mutex.lock();
 }
 
 void EEBreakpointList::do_breakpoints(EmotionEngine *emu)
@@ -519,7 +518,8 @@ void EEBreakpointList::do_breakpoints(EmotionEngine *emu)
             debug_ui->notify_breakpoint_hit(emu);
 
         printf("[EE-Debugger] break\n");
-        break_mutex.lock();
+        std::unique_lock<std::mutex> lk(break_mutex);
+        break_cv.wait(lk);
         printf("[EE-Debugger] resume\n");
     }
 }
@@ -546,7 +546,8 @@ void IOPBreakpointList::do_breakpoints(IOP *iop)
             debug_ui->notify_breakpoint_hit(iop);
 
         printf("[IOP-Debugger] break\n");
-        break_mutex.lock();
+        std::unique_lock<std::mutex> lk(break_mutex);
+        break_cv.wait(lk);
         printf("[IOP-Debugger] resume\n");
     }
 }
@@ -588,7 +589,7 @@ void BreakpointList::send_continue()
 {
     for (auto &&i : breakpoint_triggered)
         i = false;
-    break_mutex.unlock(); // resume emulator
+    break_cv.notify_all();
 }
 
 // return a list of all memory addresses which are breakpoint related

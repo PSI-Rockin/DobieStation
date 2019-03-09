@@ -74,7 +74,6 @@ void breakpoint_window::build_ui()
     connect(ok_cancel_button, SIGNAL(accepted()), this, SLOT(accept()));
     connect(ok_cancel_button, SIGNAL(rejected()), this, SLOT(reject()));
     connect(reg_type_combo, SIGNAL(activated(int)), this, SLOT(on_reg_type_combo_currentIndexChanged(int)));
-    on_reg_type_combo_currentIndexChanged(0); // populate list initially
 }
 
 DebuggerBreakpoint* breakpoint_window::make_pc_breakpoint()
@@ -184,6 +183,7 @@ DebuggerBreakpoint *breakpoint_window::make_register_breakpoint(std::vector<EERe
     for(auto name : ee_register_kind_names)
         reg_type_combo->addItem(QString(name));
 
+    on_reg_type_combo_currentIndexChanged(0);
     this->exec();
 
     if(this->result() == QDialog::Rejected || !register_selected)
@@ -209,6 +209,7 @@ DebuggerBreakpoint *breakpoint_window::make_register_breakpoint(std::vector<IOPR
     for(auto name : iop_register_kind_names)
         reg_type_combo->addItem(QString(name));
 
+    on_reg_type_combo_currentIndexChanged(0);
     this->exec();
 
     if(this->result() == QDialog::Rejected || !register_selected)
@@ -233,6 +234,7 @@ DebuggerBreakpoint *breakpoint_window::make_register_breakpoint(EERegisterDefini
     reg_label->setText("Register: " + QString(def.get_name().c_str()));
     setup_comparison_combo_boxes();
 
+    on_reg_type_combo_currentIndexChanged(0);
     this->exec();
 
     if(this->result() == QDialog::Rejected)
@@ -256,6 +258,7 @@ DebuggerBreakpoint *breakpoint_window::make_register_breakpoint(IOPRegisterDefin
     reg_label->setText("Register: " + QString(def.get_name().c_str()));
     setup_comparison_combo_boxes(true);
 
+    on_reg_type_combo_currentIndexChanged(0);
     this->exec();
 
     if(this->result() == QDialog::Rejected)

@@ -41,6 +41,7 @@ void EEDebugWindow::build_ui()
     registers_grid_layout = new QGridLayout(registers_group);
     register_table = new QTableWidget(registers_group);
     register_table->setContextMenuPolicy(Qt::CustomContextMenu);
+    register_table->setWordWrap(false);
     registers_grid_layout->addWidget(register_table, 0, 0, 1, 1);
     main_grid_layout->addWidget(registers_group, 0, 2, 1, 1);
 
@@ -48,6 +49,7 @@ void EEDebugWindow::build_ui()
     stack_group = new QGroupBox(this);
     stack_grid_layout = new QGridLayout(stack_group);
     stack_table = new QTableWidget(stack_group);
+    stack_table->setWordWrap(false);
     stack_table->setContextMenuPolicy(Qt::CustomContextMenu);
     stack_grid_layout->addWidget(stack_table, 0, 1, 1, 1);
     stack_layout->addWidget(stack_group, 0, 0, 1, 1);
@@ -74,6 +76,7 @@ void EEDebugWindow::build_ui()
     breakpoint_group = new QGroupBox(this);
     breakpoint_grid_layout = new QGridLayout(breakpoint_group);
     breakpoint_table = new QTableWidget(breakpoint_group);
+    breakpoint_table->setWordWrap(false);
     breakpoint_table->setContextMenuPolicy(Qt::CustomContextMenu);
     breakpoint_grid_layout->addWidget(breakpoint_table, 0, 0, 1, 1);
     control_breakpoint_layout->addWidget(breakpoint_group, 1, 0, 1, 1);
@@ -93,6 +96,7 @@ void EEDebugWindow::build_ui()
     memory_down = new QPushButton(memory_group);
     memory_grid_layout->addWidget(memory_down, 2, 2, 1, 1);
     memory_table = new QTableWidget(memory_group);
+    memory_table->setWordWrap(false);
     memory_table->setContextMenuPolicy(Qt::CustomContextMenu);
     memory_grid_layout->addWidget(memory_table, 0, 0, 3, 2);
     memory_go_button = new QPushButton(memory_group);
@@ -119,6 +123,7 @@ void EEDebugWindow::build_ui()
     disassembly_seek_to_pc_button = new QPushButton(disassembly_group);
     disassembly_grid_layout->addWidget(disassembly_seek_to_pc_button, 4, 3, 1, 1);
     disassembly_table = new QTableWidget(disassembly_group);
+    disassembly_table->setWordWrap(false);
     disassembly_table->setContextMenuPolicy(Qt::CustomContextMenu);
     disassembly_grid_layout->addWidget(disassembly_table, 0, 0, 3, 3);
     main_grid_layout->addWidget(disassembly_group, 0, 1, 2, 1);

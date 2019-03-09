@@ -24,6 +24,7 @@ ifstream::pos_type filesize(const char* filename)
 
 EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent), debugger(&emu_thread)
 {
+    debugger.setParent(this, Qt::Window);
     old_frametime = chrono::system_clock::now();
     old_update_time = chrono::system_clock::now();
     framerate_avg = 0.0;
@@ -506,4 +507,5 @@ void EmuWindow::save_state()
 
 void EmuWindow::show_debugger() {
     debugger.show();
+    debugger.update_ui();
 }
