@@ -76,8 +76,6 @@ class Emulator
         uint32_t MCH_RICM, MCH_DRD;
         uint8_t rdram_sdevid;
 
-        uint32_t instructions_ran;
-
         uint8_t IOP_POST;
         uint32_t IOP_I_STAT;
         uint32_t IOP_I_MASK;
