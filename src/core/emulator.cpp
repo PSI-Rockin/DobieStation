@@ -51,7 +51,6 @@ Emulator::~Emulator()
 void Emulator::run()
 {
     gs.start_frame();
-    instructions_ran = 0;
     VBLANK_sent = false;
     const int originalRounding = fegetround();
     fesetround(FE_TOWARDZERO);
@@ -87,11 +86,10 @@ void Emulator::run()
     while (!frame_ended)
     {
         int ee_cycles = scheduler.calculate_run_cycles();
-        cpu.run(ee_cycles);
-        instructions_ran += ee_cycles;
-
         int bus_cycles = scheduler.get_bus_run_cycles();
         int iop_cycles = scheduler.get_iop_run_cycles();
+
+        cpu.run(ee_cycles);
         dmac.run(bus_cycles);
         timers.run(bus_cycles);
         ipu.run();
@@ -210,7 +208,7 @@ void Emulator::release_button(PAD_BUTTON button)
 uint32_t* Emulator::get_framebuffer()
 {
     //This function should only be called upon ending a frame; return nullptr otherwise
-    if (instructions_ran < CYCLES_PER_FRAME)
+    if (!frame_ended)
         return nullptr;
     return gs.get_framebuffer();
 }
