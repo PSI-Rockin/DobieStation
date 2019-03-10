@@ -2204,7 +2204,7 @@ void GraphicsSynthesizerThread::host_to_host()
 
     while (pixels_transferred < max_pixels)
     {
-        uint32_t data;
+        uint32_t data, src_data, dst_data;
         switch (BITBLTBUF.source_format)
         {
             case 0x00:
@@ -2225,9 +2225,29 @@ void GraphicsSynthesizerThread::host_to_host()
                 TRXPOS.int_source_x++;
                 break;
             case 0x14:
-                data = read_PSMCT4_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                src_data = read_PSMCT4_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
                                           TRXPOS.int_source_x, TRXPOS.int_source_y);
-                write_PSMCT4_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.int_dest_y, data);
+                dst_data = read_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width,
+                        TRXPOS.int_dest_x, TRXPOS.int_dest_y);
+
+                if(BITBLTBUF.dest_format == 0x2C) // to PSMT4HH
+                {
+                    uint32_t combined_data = (src_data <<  28) + (dst_data & 0x0fffffff);
+                    write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.int_dest_y, combined_data);
+                }
+                else if(BITBLTBUF.dest_format == 0x24) // to PSMT4HL
+                {
+                    uint32_t combined_data = (src_data << 24) + (dst_data & 0xf0ffffff);
+                    write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.int_dest_y, combined_data);
+                }
+                else if(BITBLTBUF.dest_format == 0x14) // TO PSMT4
+                {
+                    write_PSMCT4_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.int_dest_y, src_data);
+                }
+                else
+                {
+                    Errors::die("[GS_t] Unsupported host-to-host destination format $%02X", BITBLTBUF.dest_format);
+                }
                 pixels_transferred++;
                 TRXPOS.int_dest_x++;
                 TRXPOS.int_source_x++;
