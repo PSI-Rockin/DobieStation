@@ -590,9 +590,13 @@ void EmuWindow::open_file_no_skip()
         tr("ROM Files (*.elf *.iso *.cso)")
     );
 
-    Settings::instance().add_rom_path(file_name);
+    if (!file_name.isEmpty())
+    {
+        Settings::instance().add_rom_path(file_name);
 
-    load_exec(file_name.toStdString().c_str(), false);
+        load_exec(file_name.toStdString().c_str(), false);
+    }
+
     emu_thread.unpause(PAUSE_EVENT::FILE_DIALOG);
 }
 
@@ -604,9 +608,12 @@ void EmuWindow::open_file_skip()
         tr("ROM Files (*.elf *.iso *.cso)")
     );
 
-    Settings::instance().add_rom_path(file_name);
+    if (!file_name.isEmpty())
+    {
+        Settings::instance().add_rom_path(file_name);
+        load_exec(file_name.toStdString().c_str(), true);
+    }
 
-    load_exec(file_name.toStdString().c_str(), true);
     emu_thread.unpause(PAUSE_EVENT::FILE_DIALOG);
 }
 

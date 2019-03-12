@@ -7,18 +7,21 @@ Settings::Settings()
 {
     connect(this, &Settings::rom_directory_added, this, [=](QString directory) {
         last_used_path = directory;
+        qsettings.setValue("last_used_dir", last_used_path);
     });
 
     connect(this, &Settings::rom_path_added, this, [=](QString path) {
         QFileInfo file_info(path);
 
         last_used_path = file_info.absoluteDir().path();
+        qsettings.setValue("last_used_dir", last_used_path);
     });
 
     connect(this, &Settings::bios_changed, this, [=](QString path) {
         QFileInfo file_info(path);
 
         last_used_path = file_info.absoluteDir().path();
+        qsettings.setValue("last_used_dir", last_used_path);
     });
 
     reset();
