@@ -284,6 +284,7 @@ int VU_JitTranslator::efu_pipe_cycles(uint32_t lower_instr)
                 return 18;
             case 0x73:
                 return 24;
+            case 0x76:
             case 0x78:
             case 0x7A:
                 return 12;

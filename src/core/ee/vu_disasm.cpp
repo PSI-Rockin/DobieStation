@@ -465,6 +465,8 @@ string lower1_special(uint32_t PC, uint32_t instr)
             return eleng(instr);
         case 0x73:
             return erleng(instr);
+        case 0x76:
+            return esum(instr);
         case 0x78:
             return esqrt(instr);
         case 0x79:
@@ -706,6 +708,14 @@ string eleng(uint32_t instr)
     stringstream output;
     uint32_t source = (instr >> 11) & 0x1F;
     output << "eleng P, vf" << source;
+    return output.str();
+}
+
+string esum(uint32_t instr)
+{
+    stringstream output;
+    uint32_t source = (instr >> 11) & 0x1F;
+    output << "esum P, vf" << source;
     return output.str();
 }
 

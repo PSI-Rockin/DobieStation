@@ -1050,6 +1050,19 @@ void VectorUnit::esqrt(uint32_t instr)
     printf("[VU] ESQRT: %f (%d)\n", P.f, _fs_);
 }
 
+void VectorUnit::esum(uint32_t instr)
+{
+    if (!id)
+        Errors::die("[VU] ESUM called on VU0!");
+
+    new_P_instance.f = 0.0;
+    for (int i = 0; i < 4; i++)
+        new_P_instance.f += convert(gpr[_fs_].u[i]);
+
+    start_EFU_unit(12);
+    printf("[VU] ESUM: %f (%d)\n", new_P_instance.f, _fs_);
+}
+
 void VectorUnit::erleng(uint32_t instr)
 {
     if (!id)

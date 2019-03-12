@@ -1320,6 +1320,9 @@ void lower1_special(VectorUnit &vu, uint32_t instr)
         case 0x73:
             erleng(vu, instr);
             break;
+        case 0x76:
+            esum(vu, instr);
+            break;
         case 0x78:
             esqrt(vu, instr);
             break;
@@ -1608,6 +1611,15 @@ void erleng(VectorUnit &vu, uint32_t instr)
     vu.decoder.vf_read0[1] = source;
     vu.decoder.vf_read0_field[1] = 0xE; //xyz
     lower_op = &VectorUnit::erleng;
+}
+
+void esum(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t source = (instr >> 11) & 0x1F;
+
+    vu.decoder.vf_read0[1] = source;
+    vu.decoder.vf_read0_field[1] = 0xF; //xyzw
+    lower_op = &VectorUnit::esum;
 }
 
 void esqrt(VectorUnit &vu, uint32_t instr)
