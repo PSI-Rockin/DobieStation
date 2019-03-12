@@ -86,7 +86,9 @@ int EmuWindow::init(int argc, char** argv)
     ARGBEGIN {
         case 'b':
             bios_name = ARGF();
-            Settings::set_bios_path(QString::fromLocal8Bit(bios_name));
+            Settings::instance().set_bios_path(
+                QString::fromLocal8Bit(bios_name)
+            );
             break;
         case 'f':
             file_name = ARGF();
@@ -120,7 +122,7 @@ int EmuWindow::init(int argc, char** argv)
             return 1;
     }
 
-    Settings::save();
+    Settings::instance().save();
 
     return 0;
 }
@@ -213,6 +215,7 @@ void EmuWindow::create_menu()
 
         if (!file_name.isEmpty())
         {
+            Settings::instance().add_rom_path(file_name);
             stack_widget->setCurrentIndex(1);
             run_gsdump(file_name.toLocal8Bit());
         }
@@ -237,6 +240,61 @@ void EmuWindow::create_menu()
     file_menu->addAction(load_rom_action);
     file_menu->addAction(load_bios_action);
     file_menu->addAction(load_gsdump_action);
+
+    auto recent_menu = file_menu->addMenu(tr("&Recent"));
+    auto default_action = new QAction(tr("No recent roms..."));
+
+    if (Settings::instance().recent_roms.isEmpty())
+    {
+        recent_menu->addAction(default_action);
+    }
+
+    for (auto& recent_file : Settings::instance().recent_roms)
+    {
+        auto recent_item_action = new QAction(recent_file);
+        connect(recent_item_action, &QAction::triggered, this, [=]() {
+            load_exec(recent_item_action->text().toLocal8Bit(), true);
+        });
+        recent_menu->addAction(recent_item_action);
+    }
+
+    connect(&Settings::instance(), &Settings::rom_path_added, this, [=](QString path) {
+        auto new_action = new QAction(path);
+        auto top_action = recent_menu->actions().first();
+
+        connect(new_action, &QAction::triggered, this, [=]() {
+            load_exec(new_action->text().toLocal8Bit(), true);
+        });
+
+        recent_menu->insertAction(top_action, new_action);
+
+        if (recent_menu->actions().contains(default_action))
+        {
+            printf("remove action");
+            recent_menu->removeAction(default_action);
+        }
+    });
+
+    recent_menu->addSeparator();
+
+    auto clear_action = new QAction(tr("Clear List"));
+    default_action->setEnabled(false);
+
+    connect(clear_action, &QAction::triggered, this, [=]() {
+        Settings::instance().clear_rom_paths();
+        for (auto& old_action : recent_menu->actions())
+        {
+            recent_menu->removeAction(old_action);
+        }
+
+        recent_menu->addAction(default_action);
+        recent_menu->addSeparator();
+        recent_menu->addAction(clear_action);
+    });
+
+    recent_menu->addAction(clear_action);
+
+    file_menu->addMenu(recent_menu);
     file_menu->addSeparator();
     file_menu->addAction(load_state_action);
     file_menu->addAction(save_state_action);
@@ -321,7 +379,7 @@ void EmuWindow::create_menu()
 
 bool EmuWindow::load_bios()
 {
-    BiosReader bios_file(Settings::get_bios_path());
+    BiosReader bios_file(Settings::instance().bios_path);
     if (!bios_file.is_valid())
     {
         bios_error(bios_file.to_string());
@@ -528,11 +586,11 @@ void EmuWindow::open_file_no_skip()
 {
     emu_thread.pause(PAUSE_EVENT::FILE_DIALOG);
     QString file_name = QFileDialog::getOpenFileName(
-        this, tr("Open Rom"), Settings::get_last_used_path(),
+        this, tr("Open Rom"), Settings::instance().bios_path,
         tr("ROM Files (*.elf *.iso *.cso)")
     );
 
-    Settings::set_last_used_path(file_name);
+    Settings::instance().add_rom_path(file_name);
 
     load_exec(file_name.toStdString().c_str(), false);
     emu_thread.unpause(PAUSE_EVENT::FILE_DIALOG);
@@ -542,11 +600,11 @@ void EmuWindow::open_file_skip()
 {
     emu_thread.pause(PAUSE_EVENT::FILE_DIALOG);
     QString file_name = QFileDialog::getOpenFileName(
-        this, tr("Open Rom"), Settings::get_last_used_path(),
+        this, tr("Open Rom"), Settings::instance().last_used_path,
         tr("ROM Files (*.elf *.iso *.cso)")
     );
 
-    Settings::set_last_used_path(file_name);
+    Settings::instance().add_rom_path(file_name);
 
     load_exec(file_name.toStdString().c_str(), true);
     emu_thread.unpause(PAUSE_EVENT::FILE_DIALOG);

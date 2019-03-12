@@ -209,12 +209,14 @@
   </ItemGroup>
   <!-- moc files -->
   <ItemGroup>
+	<QtMoc Include="..\src\qt\settings.hpp" />
     <QtMoc Include="..\src\qt\emuthread.hpp" />
     <QtMoc Include="..\src\qt\emuwindow.hpp" />
     <QtMoc Include="..\src\qt\renderwidget.hpp" />
     <QtMoc Include="..\src\qt\settingswindow.hpp" />
   </ItemGroup>
   <ItemGroup>
+	<ClCompile Include="$(QtMocOutPrefix)settings.cpp" />
     <ClCompile Include="$(QtMocOutPrefix)emuthread.cpp" />
     <ClCompile Include="$(QtMocOutPrefix)emuwindow.cpp" />
 	<ClCompile Include="$(QtMocOutPrefix)renderwidget.cpp" />
@@ -268,7 +270,6 @@
     <ClInclude Include="..\src\core\ee\ipu\mac_p_pic.hpp" />
     <ClInclude Include="..\src\core\iop\memcard.hpp" />
     <ClInclude Include="..\src\core\ee\ipu\motioncode.hpp" />
-    <ClInclude Include="..\src\qt\settings.hpp" />
     <ClInclude Include="..\src\core\sif.hpp" />
     <ClInclude Include="..\src\core\iop\sio2.hpp" />
     <ClInclude Include="..\src\core\iop\spu.hpp" />

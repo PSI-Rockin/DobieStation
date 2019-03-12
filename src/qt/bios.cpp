@@ -3,11 +3,6 @@
 
 #include "bios.hpp"
 
-BiosReader::BiosReader()
-    : valid(false)
-{
-}
-
 BiosReader::BiosReader(QString path)
     : bios_path(path), valid(false)
 {
@@ -109,19 +104,6 @@ QByteArray BiosReader::get_module(QString name) const
     }
 
     return bios_data.mid(pos, module_size);
-}
-
-BiosReader& BiosReader::operator=(const BiosReader&& other)
-{
-    bios_data = other.bios_data;
-    valid = other.valid;
-    bios_path = other.bios_path;
-    romdir = other.romdir;
-    bios_date = other.bios_date;
-    bios_ver = other.bios_ver;
-    bios_country = other.bios_country;
-
-    return *this;
 }
 
 QString BiosReader::to_string() const

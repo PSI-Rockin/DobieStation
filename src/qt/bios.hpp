@@ -21,10 +21,8 @@ private:
 
     bool valid;
 public:
-    BiosReader();
+    BiosReader() = delete;
     BiosReader(QString path);
-
-    BiosReader& operator=(const BiosReader&& other);
 
     QString to_string() const;
     QString path() const;

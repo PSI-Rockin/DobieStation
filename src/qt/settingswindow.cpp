@@ -21,16 +21,22 @@ GeneralTab::GeneralTab(QWidget* parent)
     QRadioButton* jit_checkbox = new QRadioButton(tr("JIT"));
     QRadioButton* interpreter_checkbox = new QRadioButton(tr("Interpreter"));
 
-    vu1_jit = Settings::get_vu1_jit_enabled();
+    bool vu1_jit = Settings::instance().vu1_jit_enabled;
     jit_checkbox->setChecked(vu1_jit);
     interpreter_checkbox->setChecked(!vu1_jit);
 
     connect(jit_checkbox, &QRadioButton::clicked, this, [=] (){
-        vu1_jit = true;
+        Settings::instance().vu1_jit_enabled = true;
     });
 
     connect(interpreter_checkbox, &QRadioButton::clicked, this, [=] (){
-        vu1_jit = false;
+        Settings::instance().vu1_jit_enabled = false;
+    });
+
+    connect(&Settings::instance(), &Settings::reload, this, [=]() {
+        bool vu1_jit_enabled = Settings::instance().vu1_jit_enabled;
+        jit_checkbox->setChecked(vu1_jit_enabled);
+        interpreter_checkbox->setChecked(!vu1_jit_enabled);
     });
 
     QVBoxLayout* vu1_layout = new QVBoxLayout;
@@ -54,6 +60,7 @@ PathTab::PathTab(QWidget* parent)
 {
     path_list = new QListWidget;
     path_list->setSpacing(1);
+    path_list->insertItems(0, Settings::instance().rom_directories);
 
     QVBoxLayout* edit_layout = new QVBoxLayout;
     edit_layout->addWidget(path_list);
@@ -64,16 +71,37 @@ PathTab::PathTab(QWidget* parent)
     connect(remove_directory, &QAbstractButton::clicked, this, [=]() {
         int row = path_list->currentRow();
 
-        path_list->takeItem(row);
+        auto widget = path_list->takeItem(row);
+        if (!widget)
+            return;
+
+        Settings::instance().remove_rom_directory(widget->text());
     });
 
     connect(add_directory, &QAbstractButton::clicked, this, [=]() {
         QString path = QFileDialog::getExistingDirectory(
-            this, tr("Open Rom Directory"), Settings::get_last_used_path()
+            this, tr("Open Rom Directory"),
+            Settings::instance().last_used_path
         );
 
-        if (!path.isEmpty())
-            path_list->insertItems(path_list->count(), { path });
+        Settings::instance().add_rom_directory(path);
+    });
+
+    connect(&Settings::instance(), &Settings::rom_directory_added, this, [=](QString path) {
+        path_list->insertItems(path_list->count(), { path });
+    });
+
+    connect(&Settings::instance(), &Settings::bios_changed, this, [=](QString path) {
+        BiosReader bios_reader(path);
+        bios_info->setText(bios_reader.to_string());
+    });
+
+    connect(&Settings::instance(), &Settings::reload, this, [=]() {
+        BiosReader bios_reader(Settings::instance().bios_path);
+        bios_info->setText(bios_reader.to_string());
+
+        path_list->clear();
+        path_list->insertItems(0, Settings::instance().rom_directories);
     });
 
     QHBoxLayout* button_layout = new QHBoxLayout;
@@ -84,10 +112,16 @@ PathTab::PathTab(QWidget* parent)
     edit_layout->addLayout(button_layout);
 
     QPushButton* browse_button = new QPushButton(tr("Browse"));
-    connect(browse_button, &QAbstractButton::clicked,
-        this, &PathTab::browse_for_bios);
+    connect(browse_button, &QAbstractButton::clicked, this, [=]() {
+        QString path = QFileDialog::getOpenFileName(
+            this, tr("Open Bios"), Settings::instance().last_used_path,
+            tr("Bios File (*.bin)")
+        );
 
-    bios_reader = BiosReader(Settings::get_bios_path());
+        Settings::instance().set_bios_path(path);
+    });
+
+    BiosReader bios_reader(Settings::instance().bios_path);
     bios_info = new QLabel(bios_reader.to_string());
 
     QGridLayout* bios_layout = new QGridLayout;
@@ -110,23 +144,6 @@ PathTab::PathTab(QWidget* parent)
     setLayout(layout);
 }
 
-void PathTab::browse_for_bios()
-{
-    QString path = QFileDialog::getOpenFileName(
-        this, tr("Open Bios"), Settings::get_last_used_path(),
-        tr("Bios File (*.bin)")
-    );
-
-    Settings::set_last_used_path(path);
-
-    if (!path.isEmpty())
-    {
-        bios_reader = BiosReader(path);
-
-        bios_info->setText(bios_reader.to_string());
-    }
-}
-
 SettingsWindow::SettingsWindow(QWidget *parent)
     : QDialog(parent)
 {
@@ -140,23 +157,21 @@ SettingsWindow::SettingsWindow(QWidget *parent)
     tab_widget->addTab(general_tab, tr("General"));
     tab_widget->addTab(path_tab, tr("Paths"));
 
-    QDialogButtonBox* close_button =
-        new QDialogButtonBox(QDialogButtonBox::Close, this);
-    connect(close_button, &QDialogButtonBox::rejected, this,
-        &SettingsWindow::save_and_reject);
+    QDialogButtonBox* close_buttons = new QDialogButtonBox(
+        QDialogButtonBox::Close | QDialogButtonBox::Ok, this
+    );
+    connect(close_buttons, &QDialogButtonBox::accepted, this, [=]() {
+        Settings::instance().save();
+        accept();
+    });
+    connect(close_buttons, &QDialogButtonBox::rejected, this, [=]() {
+        Settings::instance().reset();
+        reject();
+    });
 
     QVBoxLayout* layout = new QVBoxLayout;
     layout->addWidget(tab_widget);
-    layout->addWidget(close_button);
+    layout->addWidget(close_buttons);
 
     setLayout(layout);
-}
-
-void SettingsWindow::save_and_reject()
-{
-    Settings::set_bios_path(path_tab->bios_reader.path());
-    Settings::set_vu1_jit_enabled(general_tab->vu1_jit);
-    Settings::save();
-
-    reject();
 }
