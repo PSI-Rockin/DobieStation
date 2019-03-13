@@ -104,6 +104,7 @@ namespace VU_Interpreter
     void xtop(VectorUnit& vu, uint32_t instr);
     void xitop(VectorUnit& vu, uint32_t instr);
     void xgkick(VectorUnit& vu, uint32_t instr);
+    void esadd(VectorUnit& vu, uint32_t instr);
     void ersadd(VectorUnit& vu, uint32_t instr);
     void eleng(VectorUnit& vu, uint32_t instr);
     void ercpr(VectorUnit& vu, uint32_t instr);

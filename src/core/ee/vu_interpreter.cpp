@@ -1311,6 +1311,9 @@ void lower1_special(VectorUnit &vu, uint32_t instr)
         case 0x6C:
             xgkick(vu, instr);
             break;
+        case 0x70:
+            esadd(vu, instr);
+            break;
         case 0x71:
             ersadd(vu, instr);
             break;
@@ -1574,6 +1577,15 @@ void xgkick(VectorUnit &vu, uint32_t instr)
 {
     uint8_t is = (instr >> 11) & 0x1F;
     lower_op = &VectorUnit::xgkick;
+}
+
+void esadd(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t source = (instr >> 11) & 0x1F;
+
+    vu.decoder.vf_read0[1] = source;
+    vu.decoder.vf_read0_field[1] = 0xE; //xyz
+    lower_op = &VectorUnit::esadd;
 }
 
 void ercpr(VectorUnit &vu, uint32_t instr)

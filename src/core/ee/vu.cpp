@@ -1116,6 +1116,20 @@ void VectorUnit::ersqrt(uint32_t instr)
     printf("[VU] ERSQRT: %f (%d)\n", P.f, _fs_);
 }
 
+void VectorUnit::esadd(uint32_t instr)
+{
+    if (!id)
+    {
+        Errors::die("[VU] ESADD called on VU0!");
+    }
+
+    //P = x^2 + y^2 + z^2
+    new_P_instance.f = pow(convert(gpr[_fs_].u[0]), 2) + pow(convert(gpr[_fs_].u[1]), 2) + pow(convert(gpr[_fs_].u[2]), 2);
+
+    start_EFU_unit(11);
+    printf("[VU] ESADD: %f (%d)\n", P.f, _fs_);
+}
+
 void VectorUnit::fcand(uint32_t value)
 {
     printf("[VU] FCAND: $%08X\n", value);

@@ -278,6 +278,8 @@ int VU_JitTranslator::efu_pipe_cycles(uint32_t lower_instr)
         uint32_t op = ((lower_instr >> 4) & 0x7C) | (lower_instr & 0x3);
         switch (op)
         {
+            case 0x70:
+                return 11;
             case 0x71:
             case 0x72:
             case 0x79:
@@ -1513,6 +1515,11 @@ void VU_JitTranslator::lower1_special(std::vector<IR::Instruction> &instrs, uint
             instr.set_source(cur_PC);
             instr.set_dest(trans_branch_delay_slot);
             instr.set_jump_dest(trans_ebit_delay_slot);
+            break;
+        case 0x70:
+            //ESADD
+            fallback_interpreter(instr, lower, false);
+            Errors::print_warning("[VU_JIT] Unrecognized lower1 special op ESADD\n", op);
             break;
         case 0x71:
             //ERSADD
