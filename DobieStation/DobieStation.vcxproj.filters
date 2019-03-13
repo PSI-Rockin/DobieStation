@@ -240,6 +240,16 @@
     </ClCompile>
     <ClCompile Include="$(QtMocOutPrefix)emuwindow.cpp">
       <Filter>Generated Files</Filter>
+	</ClCompile>
+	<ClCompile Include="$(QtMocOutPrefix)renderwidget.cpp">
+      <Filter>Generated Files</Filter>
+	</ClCompile>
+	<ClCompile Include="$(QtMocOutPrefix)settingswindow.cpp">
+      <Filter>Generated Files</Filter>
+	</ClCompile>
+	<ClCompile Include="$(QtMocOutPrefix)settings.cpp">
+      <Filter>Generated Files</Filter>
+	</ClCompile>
     <ClCompile Include="..\src\qt\renderwidget.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -302,12 +312,6 @@
     <ClInclude Include="..\src\core\emulator.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <QtMoc Include="..\src\qt\emuthread.hpp">
-      <Filter>Header Files</Filter>
-    </QtMoc>
-    <QtMoc Include="..\src\qt\emuwindow.hpp">
-      <Filter>Header Files</Filter>
-    </QtMoc>
     <ClInclude Include="..\src\core\errors.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -389,9 +393,6 @@
     <ClInclude Include="..\src\core\ee\ipu\motioncode.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\qt\settings.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\core\sif.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -451,6 +452,15 @@
       <Filter>Header Files</Filter>
     </QtMoc>
     <QtMoc Include="..\src\qt\settingswindow.hpp">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="..\src\qt\emuthread.hpp">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="..\src\qt\emuwindow.hpp">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+	<QtMoc Include="..\src\qt\settings.hpp">
       <Filter>Header Files</Filter>
     </QtMoc>
   </ItemGroup>
