@@ -210,17 +210,23 @@ bool GS_REGISTERS::write64(uint32_t addr, uint64_t value)
     {
         case 0x0060:
             printf("[GS] SIGNAL requested!\n");
+        {
+            uint32_t mask = value >> 32;
+            uint32_t new_signal = value & mask;
             if (CSR.SIGNAL_generated)
             {
                 printf("[GS] Second SIGNAL requested before acknowledged!\n");
                 CSR.SIGNAL_stall = true;
-                SIGLBLID.backup_sig_id = value;
+                SIGLBLID.backup_sig_id &= ~mask;
+                SIGLBLID.backup_sig_id |= new_signal;
             }
             else
             {
                 CSR.SIGNAL_generated = true;
-                SIGLBLID.sig_id = value;
+                SIGLBLID.sig_id &= ~mask;
+                SIGLBLID.sig_id |= new_signal;
             }
+        }
             return true;
         case 0x0061:
             printf("[GS] FINISH Write\n");
@@ -228,7 +234,12 @@ bool GS_REGISTERS::write64(uint32_t addr, uint64_t value)
             return true;
         case 0x0062:
             printf("[GS] LABEL requested!\n");
-            SIGLBLID.lbl_id = value;
+        {
+            uint32_t mask = value >> 32;
+            uint32_t new_label = value & mask;
+            SIGLBLID.lbl_id &= ~mask;
+            SIGLBLID.lbl_id |= new_label;
+        }
             return true;
     }
     return false;
