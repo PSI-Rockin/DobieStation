@@ -492,10 +492,10 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
         stall_pipe[2] = (vu.pipeline_state[0] >> 36) & 0x3FFFF; 
         stall_pipe[3] = vu.pipeline_state[1] & 0x3FFFF;
 
-        vu.decoder.vf_write[0] = vu.pipeline_state[0] & 0x1F;
-        vu.decoder.vf_write[1] = ((vu.pipeline_state[0] >> 5) & 0x1F);
-        vu.decoder.vf_write_field[0] = ((vu.pipeline_state[0] >> 10) & 0xF);
-        vu.decoder.vf_write_field[1] = ((vu.pipeline_state[0] >> 14) & 0xF);
+        vu.decoder.vf_write[0] = (vu.pipeline_state[1] >> 28) & 0x1F;
+        vu.decoder.vf_write[1] = ((vu.pipeline_state[1] >> 33) & 0x1F);
+        vu.decoder.vf_write_field[0] = ((vu.pipeline_state[1] >> 38) & 0xF);
+        vu.decoder.vf_write_field[1] = ((vu.pipeline_state[1] >> 42) & 0xF);
 
         q_pipe_delay = ((vu.pipeline_state[1] >> 18) & 0xF);
         p_pipe_delay = ((vu.pipeline_state[1] >> 22) & 0x3F);
@@ -704,6 +704,11 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
 
     instr_info[end_PC].pipeline_state[1] |= (q_pipe_delay & 0xF) << 18;
     instr_info[end_PC].pipeline_state[1] |= (p_pipe_delay & 0x3F) << 22;
+
+    instr_info[end_PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vf_write[0] & 0x1F) << 28;
+    instr_info[end_PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vf_write[1] & 0x1F) << 33;
+    instr_info[end_PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vf_write_field[0] & 0xF) << 38;
+    instr_info[end_PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vf_write_field[1] & 0xF) << 42;
 
     instr_info[end_PC].branch_delay_slot = branch_delay_slot;
     instr_info[end_PC].ebit_delay_slot = ebit_delay_slot;
