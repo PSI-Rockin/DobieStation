@@ -2246,6 +2246,7 @@ void GraphicsSynthesizerThread::local_to_local()
         switch (BITBLTBUF.source_format)
         {
             case 0x00:
+            case 0x01:
                 data = read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
                                           TRXPOS.int_source_x, TRXPOS.int_source_y);
                 break;
@@ -2261,6 +2262,10 @@ void GraphicsSynthesizerThread::local_to_local()
         {
             case 0x00:
                 write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width,
+                                    TRXPOS.int_dest_x, TRXPOS.int_dest_y, data);
+                break;
+            case 0x01:
+                write_PSMCT24_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width,
                                     TRXPOS.int_dest_x, TRXPOS.int_dest_y, data);
                 break;
             case 0x14:
