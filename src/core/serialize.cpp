@@ -4,7 +4,7 @@
 
 #define VER_MAJOR 0
 #define VER_MINOR 0
-#define VER_REV 19
+#define VER_REV 20
 
 using namespace std;
 
@@ -74,6 +74,8 @@ void Emulator::load_state(const char *file_name)
     state.read((char*)IOP_RAM, 1024 * 1024 * 2);
     state.read((char*)SPU_RAM, 1024 * 1024 * 2);
     state.read((char*)scratchpad, 1024 * 16);
+    state.read((char*)iop_scratchpad, 1024);
+    state.read((char*)&iop_scratchpad_start, sizeof(iop_scratchpad_start));
 
     //CPUs
     cpu.load_state(state);
@@ -145,6 +147,8 @@ void Emulator::save_state(const char *file_name)
     state.write((char*)IOP_RAM, 1024 * 1024 * 2);
     state.write((char*)SPU_RAM, 1024 * 1024 * 2);
     state.write((char*)scratchpad, 1024 * 16);
+    state.write((char*)iop_scratchpad, 1024);
+    state.write((char*)&iop_scratchpad_start, sizeof(iop_scratchpad_start));
 
     //CPUs
     cpu.save_state(state);

@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+	<!-- Heavily inspired by code at https://github.com/dolphin-emu/dolphin/blob/master/Source/VSProps/QtCompile.props -->
+	<PropertyGroup Label="UserMacros">
+			<!-- variables -->
+			<QTDIR>$(QTDIR)</QTDIR>
+			<QTDIR Condition="Exists('$(QTDIR)') And !HasTrailingSlash('$(QTDIR)')">$(QTDIR)\</QTDIR>
+			<QtDirValid>false</QtDirValid>
+			<QtDirValid Condition="Exists('$(QTDIR)')">true</QtDirValid>
+			<QtToolOutDir>$(IntDir)</QtToolOutDir>
+			<QtIncludeDir>$(QTDIR)include\</QtIncludeDir>
+			<QtLibDir>$(QTDIR)lib\</QtLibDir>
+			<QtBinDir>$(QTDIR)bin\</QtBinDir>
+			<QtPluginsDir>$(QTDIR)plugins\</QtPluginsDir>
+			<QtMocOutPrefix>$(QtToolOutDir)moc_</QtMocOutPrefix>
+			<QtDebugSuffix>d</QtDebugSuffix>
+			<QtLibSuffix Condition="'$(Configuration)'=='Debug'">$(QtDebugSuffix)</QtLibSuffix>
+			<QtPluginFolder>QtPlugins</QtPluginFolder>
+			<BinaryOutputDir>$(ProjectDir)$(OutputDirectory)</BinaryOutputDir>
+	</PropertyGroup>
+	<ItemDefinitionGroup>
+		<ClCompile>
+			<!-- preprocessor -->
+			<PreprocessorDefinitions Condition="'$(Configuration)'=='Release'">QT_NO_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+		
+			<PreprocessorDefinitions>QT_MULTIMEDIA_LIB;QT_WIDGETS_LIB;QT_GUI_LIB;QT_NETWORK_LIB;QT_CORE_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+		  
+			<!-- includes -->
+			<AdditionalIncludeDirectories>$(ProjectDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+			<AdditionalIncludeDirectories>$(QtToolOutDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+			<AdditionalIncludeDirectories>$(QtIncludeDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+			
+			<!-- QT modules -->
+			<AdditionalIncludeDirectories>$(QtIncludeDir)QtCore;$(QtIncludeDir)QtGui;$(QtIncludeDir)QtWidgets;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+			
+			<!-- flags -->
+			<AdditionalOptions>%(AdditionalOptions) /wd4946</AdditionalOptions>
+		</ClCompile>
+		<Link>
+		  <AdditionalLibraryDirectories>$(QtLibDir);%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
+		  <AdditionalDependencies>qtmain$(QtLibSuffix).lib;Qt5Core$(QtLibSuffix).lib;Qt5Gui$(QtLibSuffix).lib;Qt5Widgets$(QtLibSuffix).lib;%(AdditionalDependencies)</AdditionalDependencies>
+		  <SubSystem>Windows</SubSystem>
+		</Link>
+	</ItemDefinitionGroup>
+	<PropertyGroup>
+		<MocDefines>-DQT_USE_QSTRINGBUILDER -DQT_NO_CAST_FROM_ASCII -DQT_NO_CAST_TO_ASCII -DQT_DLL -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB -D_SECURE_SCL=0 -D_ARCH_64=1 -D_M_X86_64=1 -D_M_X86=1 -DUSE_UPNP -D_CRT_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_DEPRECATE -D_UNICODE -DUNICODE</MocDefines>
+		<MocDefines Condition="'$(Configuration)'=='Release'">-DQT_NO_DEBUG -DNDEBUG $(MocDefines)</MocDefines>
+		<MocIncludes>"-I$(QtIncludeDir)QtWidgets" "-I$(QtIncludeDir)QtGui" "-I$(QtIncludeDir)QtCore" "-I$(QtIncludeDir) " "-I$(QtToolOutDir) " -I.</MocIncludes>
+		<MocIncludes>"-I$(ExternalsDir)xxhash" "-I$(ExternalsDir)zlib" "-I$(ExternalsDir)SFML\include" "-I$(ExternalsDir)mbedtls\include" "-I$(ExternalsDir)miniupnpc\src" "-I$(ExternalsDir)LZO" "-I$(ExternalsDir)libusbx\libusb" "-I$(ExternalsDir)libpng" "-I$(ExternalsDir)GL" "-I$(ExternalsDir)Bochs_disasm" "-I$(ExternalsDir) " "-I$(CoreDir) " $(MocIncludes)</MocIncludes>
+	</PropertyGroup>
+	<Target Name="QtMoc"
+		BeforeTargets="ClCompile"
+		Condition="'@(QtMoc)'!=''"
+		Inputs="%(QtMoc.Identity);%(QtMoc.AdditionalDependencies);$(MSBuildProjectFile)"
+		Outputs="$(QtToolOutDir)moc_%(QtMoc.Filename).cpp">
+		<Message Text="moc %(QtMoc.Filename)" Importance="High" />
+		<Error Condition="!$(QtDirValid)" Text="QT not found! Try installing it or setting QTDIR $(QTDIR)" />
+		<MakeDir Directories="$(QtToolOutDir)" />
+		<Exec Command="&quot;$(QtBinDir)moc.exe&quot; &quot;%(QtMoc.FullPath)&quot; -o &quot;$(QtToolOutDir)moc_%(QtMoc.Filename).cpp&quot; -f%(QtMoc.Filename)%(QtMoc.Extension) $(MocDefines) $(MocIncludes)" />
+	</Target>
+	<ItemGroup>
+		<MocOutputs Include="$(QtToolOutDir)moc_*.cpp" />
+	</ItemGroup>
+	<Target Name="QtMocClean">
+		<Delete Files="@(MocOutputs)" />
+	</Target>
+	<ItemGroup>
+		<PropertyPageSchema Include="$(MSBuildThisFileDirectory)$(MSBuildThisFileName).xml" />
+		<AvailableItemName Include="QtMoc">
+			<Targets>QtMoc</Targets>
+		</AvailableItemName>
+	</ItemGroup>
+  <ItemGroup>
+    <QtLibNames Include="Qt5Core$(QtLibSuffix);Qt5Gui$(QtLibSuffix);Qt5Widgets$(QtLibSuffix)" />
+    <QtDlls Include="@(QtLibNames -> '$(QtBinDir)%(Identity).dll')" />
+    <QtAllPlugins Include="$(QtPluginsDir)**\*$(QtLibSuffix).dll" />
+    <QtPlugins Condition="'$(Configuration)'=='Debug'" Include="@(QtAllPlugins)" />
+    <QtPlugins Condition="'$(Configuration)'=='Release'" Exclude="$(QtPluginsDir)**\*$(QtDebugSuffix).dll" Include="@(QtAllPlugins)" />
+    <QtPluginsDest Include="@(QtPlugins -> '$(BinaryOutputDir)$(QtPluginFolder)\%(RecursiveDir)%(Filename)%(Extension)')" />
+  </ItemGroup>
+  <PropertyGroup>
+    <QtConfFile>$(BinaryOutputDir)qt.conf</QtConfFile>
+  </PropertyGroup>
+  <Target Name="QtCopyBinaries"
+    AfterTargets="Build"
+    Inputs="@(QtDlls);@(QtPlugins)"
+    Outputs="@(QtDlls -> '$(BinaryOutputDir)%(RecursiveDir)%(Filename)%(Extension)');@(QtPlugins -> '$(BinaryOutputDir)$(QtPluginFolder)\%(RecursiveDir)%(Filename)%(Extension)')">
+    <Message Text="Copying Qt .dlls" Importance="High" />
+    <Copy
+      SourceFiles="@(QtDlls)"
+      DestinationFolder="$(BinaryOutputDir)"
+      SkipUnchangedFiles="true"
+    />
+    <Copy
+      SourceFiles="@(QtPlugins)"
+      DestinationFiles="@(QtPluginsDest)"
+      SkipUnchangedFiles="true"
+    />
+  </Target>
+  <Target Name="QtCreateConf"
+    BeforeTargets="QtCopyBinaries"
+    Condition="!Exists('$(QtConfFile)')">
+    <WriteLinesToFile
+      File="$(QtConfFile)"
+      Lines="[Paths];Plugins = ./$(QtPluginFolder)"
+      Overwrite="true"
+    />
+  </Target>
+</Project>

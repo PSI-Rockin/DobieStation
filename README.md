@@ -23,6 +23,14 @@ cmake ..
 make
 ```
 
+### Building with Visual Studio
+Dobiestation is known to compile on 2015 and 2017.
+
+Before opening Visual Studio, you must set the `QTDIR` environment variable to your 64 bit QT install.
+For example on Visual Studio 2017: `C:\path\to\qt\5.12.1\msvc2017_64`
+
+Once the variable is set open `DobieStation\DobieStation.sln` in Visual Studio.
+
 ## Using the Emulator
 DobieStation requires a copy of the PS2 BIOS, which must be dumped from your PS2.
 
@@ -32,6 +40,32 @@ The various command line options are as follows:
 -f [file] (optional) - The ELF or ISO that DobieStation loads. Takes the form of /path/to/game.iso or /path/to/homebrew.elf.
 -s (optional) - Skip the BIOS boot animation when starting DobieStation with an ISO/ELF loaded.
 ```
+
+The key bindings are as follows:
+
+| Keyboard         | DualShock 2 |
+| ---------------- | ----------- |
+| <kbd>A</kbd>     | Triangle    |
+| <kbd>S</kbd>     | Square      |
+| <kbd>Z</kbd>     | Circle      |
+| <kbd>X</kbd>     | Cross       |
+| <kbd>Enter</kbd> | Start       |
+| <kbd>Shift</kbd> | Select      |
+| <kbd>Q</kbd>     | L1          |
+| N/A              | L2          |
+| N/A              | L3          |
+| <kbd>W</kbd>     | R1          |
+| N/A              | R2          |
+| N/A              | R3          |
+| <kbd>↑</kbd>     | D-pad up    |
+| <kbd>↓</kbd>     | D-pad down  |
+| <kbd>←</kbd>     | D-pad left  |
+| <kbd>→</kbd>     | D-pad right |
+
+| Keyboard      | DobieStation               |
+| ------------- | -------------------------- |
+| <kbd>F1</kbd> | Dump current frame from GS |
+| <kbd>.</kbd>  | Advance a single frame     |
 
 ### PS2 Homebrew
 Want to test DobieStation? Check out this repository: https://github.com/PSI-Rockin/ps2demos

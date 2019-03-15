@@ -72,6 +72,9 @@ class Emulator
         uint8_t* SPU_RAM;
 
         uint8_t scratchpad[1024 * 16];
+        uint8_t iop_scratchpad[1024];
+
+        uint32_t iop_scratchpad_start;
 
         uint32_t MCH_RICM, MCH_DRD;
         uint8_t rdram_sdevid;

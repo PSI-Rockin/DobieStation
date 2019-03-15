@@ -813,7 +813,7 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
                 {
                     //VRAM-to-VRAM transfer
                     //More than likely not instantaneous
-                    host_to_host();
+                    local_to_local();
                     TRXDIR = 3;
                 }
             }
@@ -1340,9 +1340,8 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
 
     if (test->dest_alpha_test && !frame_24bit)
     {
-        if (test->dest_alpha_method && !(frame_color & (1 << 31)))
-            return;
-        else if (!test->dest_alpha_method && (frame_color & (1 << 31)))
+        bool alpha = frame_color & (1 << 31);
+        if (test->dest_alpha_method ^ alpha)
             return;
     }
 
@@ -2198,9 +2197,48 @@ void GraphicsSynthesizerThread::unpack_PSMCT24(uint64_t data, int offset, bool z
     }
 }
 
-void GraphicsSynthesizerThread::host_to_host()
+void GraphicsSynthesizerThread::local_to_local()
 {
+    printf("[GS_t] Local to local transfer\n");
+    printf("(%d, %d) -> (%d, %d)\n", TRXPOS.source_x, TRXPOS.source_y, TRXPOS.dest_x, TRXPOS.dest_y);
     int max_pixels = TRXREG.width * TRXREG.height;
+
+    uint16_t start_x = 0, start_y = 0;
+    int x_step = 0, y_step = 0;
+
+    switch (TRXPOS.trans_order)
+    {
+        case 0x00:
+            //Upper-left to bottom-right
+            start_x = TRXPOS.int_dest_x = TRXPOS.dest_x;
+            start_y = TRXPOS.int_dest_y = TRXPOS.dest_y;
+            x_step = 1;
+            y_step = 1;
+            break;
+        case 0x01:
+            //Bottom-left to upper-right
+            start_x = TRXPOS.int_dest_x = TRXPOS.dest_x;
+            start_y = TRXPOS.int_dest_y = TRXPOS.dest_y + TRXREG.height - 1;
+            x_step = 1;
+            y_step = -1;
+            break;
+        case 0x02:
+            //Upper-right to bottom-left
+            start_x = TRXPOS.int_dest_x = TRXPOS.dest_x + TRXREG.width - 1;
+            start_y = TRXPOS.int_dest_y = TRXPOS.dest_y;
+            x_step = -1;
+            y_step = 1;
+            break;
+        case 0x03:
+            //Bottom-right to upper-left
+            start_x = TRXPOS.int_dest_x = TRXPOS.dest_x + TRXREG.width - 1;
+            start_y = TRXPOS.int_dest_y = TRXPOS.dest_y + TRXREG.height - 1;
+            x_step = -1;
+            y_step = -1;
+            break;
+        default:
+            Errors::die("[GS_t] Unrecognized local-to-local transmission order $%02X", TRXPOS.trans_order);
+    }
 
     while (pixels_transferred < max_pixels)
     {
@@ -2208,44 +2246,61 @@ void GraphicsSynthesizerThread::host_to_host()
         switch (BITBLTBUF.source_format)
         {
             case 0x00:
-            case 0x01: //PSMCT24
+            case 0x01:
                 data = read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
                                           TRXPOS.int_source_x, TRXPOS.int_source_y);
-                write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.int_dest_y, data);
-                pixels_transferred++;
-                TRXPOS.int_dest_x++;
-                TRXPOS.int_source_x++;
-                break;
-            case 0x13:
-                data = read_PSMCT8_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
-                                         TRXPOS.int_source_x, TRXPOS.int_source_y);
-                write_PSMCT8_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.int_dest_y, data);
-                pixels_transferred++;
-                TRXPOS.int_dest_x++;
-                TRXPOS.int_source_x++;
                 break;
             case 0x14:
                 data = read_PSMCT4_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
-                                          TRXPOS.int_source_x, TRXPOS.int_source_y);
-                write_PSMCT4_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width, TRXPOS.int_dest_x, TRXPOS.int_dest_y, data);
-                pixels_transferred++;
-                TRXPOS.int_dest_x++;
-                TRXPOS.int_source_x++;
+                                         TRXPOS.int_source_x, TRXPOS.int_source_y);
                 break;
             default:
-                Errors::die("[GS_t] Unrecognized host-to-host format $%02X", BITBLTBUF.source_format);
+                Errors::die("[GS_t] Unrecognized local-to-local source format $%02X", BITBLTBUF.source_format);
         }
 
-        if (TRXPOS.int_dest_x - TRXPOS.dest_x == TRXREG.width)
+        switch (BITBLTBUF.dest_format)
         {
-            TRXPOS.int_dest_x = TRXPOS.dest_x;
-            TRXPOS.int_dest_y++;
+            case 0x00:
+                write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width,
+                                    TRXPOS.int_dest_x, TRXPOS.int_dest_y, data);
+                break;
+            case 0x01:
+                write_PSMCT24_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width,
+                                    TRXPOS.int_dest_x, TRXPOS.int_dest_y, data);
+                break;
+            case 0x14:
+                write_PSMCT4_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width,
+                                    TRXPOS.int_dest_x, TRXPOS.int_dest_y, data);
+                break;
+            case 0x24:
+                data <<= 24;
+                data |= read_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width,
+                                           TRXPOS.int_dest_x, TRXPOS.int_dest_y) & 0xF0FFFFFF;
+                write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width,
+                                    TRXPOS.int_dest_x, TRXPOS.int_dest_y, data);
+                break;
+            case 0x2C:
+                data <<= 28;
+                data |= read_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width,
+                                           TRXPOS.int_dest_x, TRXPOS.int_dest_y) & 0x0FFFFFFF;
+                write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width,
+                                    TRXPOS.int_dest_x, TRXPOS.int_dest_y, data);
+                break;
+            default:
+                Errors::die("[GS_t] Unrecognized local-to-local dest format $%02X", BITBLTBUF.dest_format);
         }
 
-        if (TRXPOS.int_source_x - TRXPOS.source_x == TRXREG.width)
+        pixels_transferred++;
+        TRXPOS.int_source_x++;
+        TRXPOS.int_dest_x += x_step;
+
+        if (pixels_transferred % TRXREG.width == 0)
         {
             TRXPOS.int_source_x = TRXPOS.source_x;
             TRXPOS.int_source_y++;
+
+            TRXPOS.int_dest_x = start_x;
+            TRXPOS.int_dest_y += y_step;
         }
     }
     pixels_transferred = 0;

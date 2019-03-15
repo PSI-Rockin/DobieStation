@@ -167,6 +167,8 @@ void Emulator::reset()
     IOP_I_CTRL = 0;
     IOP_POST = 0;
     clear_cop2_interlock();
+
+    iop_scratchpad_start = 0x1F800000;
 }
 
 void Emulator::vblank_start()
@@ -410,6 +412,8 @@ uint8_t Emulator::read8(uint32_t address)
         return dmac.read8(address);
     switch (address)
     {
+        case 0x1F40200F:
+            return cdvd.read_disc_type();
         case 0x1F402017:
             return cdvd.read_S_status();
         case 0x1F402018:
@@ -938,6 +942,8 @@ uint8_t Emulator::iop_read8(uint32_t address)
         case 0x1FA00000:
             return IOP_POST;
     }
+    if (address >= iop_scratchpad_start && address < iop_scratchpad_start + 0x400)
+        return iop_scratchpad[address & 0x3FF];
     printf("Unrecognized IOP read8 from physical addr $%08X\n", address);
     return 0;
 }
@@ -1003,6 +1009,8 @@ uint16_t Emulator::iop_read16(uint32_t address)
         case 0x1F8014AA:
             return iop_timers.read_target(5) >> 16;
     }
+    if (address >= iop_scratchpad_start && address < iop_scratchpad_start + 0x400)
+        return *(uint16_t*)&iop_scratchpad[address & 0x3FF];
     printf("Unrecognized IOP read16 from physical addr $%08X\n", address);
     return 0;
 }
@@ -1114,6 +1122,8 @@ uint32_t Emulator::iop_read32(uint32_t address)
         case 0xFFFE0130: //Cache control?
             return 0;
     }
+    if (address >= iop_scratchpad_start && address < iop_scratchpad_start + 0x400)
+        return *(uint32_t*)&iop_scratchpad[address & 0x3FF];
     Errors::print_warning("Unrecognized IOP read32 from physical addr $%08X\n", address);
     return 0;
 }
@@ -1161,6 +1171,11 @@ void Emulator::iop_write8(uint32_t address, uint8_t value)
             IOP_POST = value;
             printf("[IOP] POST: $%02X\n", value);
             return;
+    }
+    if (address >= iop_scratchpad_start && address < iop_scratchpad_start + 0x400)
+    {
+        iop_scratchpad[address & 0x3FF] = value;
+        return;
     }
     Errors::print_warning("Unrecognized IOP write8 to physical addr $%08X of $%02X\n", address, value);
 }
@@ -1284,6 +1299,11 @@ void Emulator::iop_write16(uint32_t address, uint16_t value)
         case 0x1F801536:
             iop_dma.set_chan_count(11, value);
             return;
+    }
+    if (address >= iop_scratchpad_start && address < iop_scratchpad_start + 0x400)
+    {
+        *(uint16_t*)&iop_scratchpad[address & 0x3FF] = value;
+        return;
     }
     Errors::print_warning("Unrecognized IOP write16 to physical addr $%08X of $%04X\n", address, value);
 }
@@ -1509,6 +1529,17 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
         //Cache control?
         case 0xFFFE0130:
             return;
+    }
+    if (address == 0xFFFE0144)
+    {
+        printf("[IOP] Scratchpad start: $%08X\n", value);
+        iop_scratchpad_start = value;
+        return;
+    }
+    if (address >= iop_scratchpad_start && address < iop_scratchpad_start + 0x400)
+    {
+        *(uint32_t*)&iop_scratchpad[address & 0x3FF] = value;
+        return;
     }
     Errors::print_warning("Unrecognized IOP write32 to physical addr $%08X of $%08X\n", address, value);
 }

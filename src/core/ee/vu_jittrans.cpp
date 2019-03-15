@@ -278,12 +278,15 @@ int VU_JitTranslator::efu_pipe_cycles(uint32_t lower_instr)
         uint32_t op = ((lower_instr >> 4) & 0x7C) | (lower_instr & 0x3);
         switch (op)
         {
+            case 0x70:
+                return 11;
             case 0x71:
             case 0x72:
             case 0x79:
                 return 18;
             case 0x73:
                 return 24;
+            case 0x76:
             case 0x78:
             case 0x7A:
                 return 12;
@@ -489,10 +492,10 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
         stall_pipe[2] = (vu.pipeline_state[0] >> 36) & 0x3FFFF; 
         stall_pipe[3] = vu.pipeline_state[1] & 0x3FFFF;
 
-        vu.decoder.vf_write[0] = vu.pipeline_state[0] & 0x1F;
-        vu.decoder.vf_write[1] = ((vu.pipeline_state[0] >> 5) & 0x1F);
-        vu.decoder.vf_write_field[0] = ((vu.pipeline_state[0] >> 10) & 0xF);
-        vu.decoder.vf_write_field[1] = ((vu.pipeline_state[0] >> 14) & 0xF);
+        vu.decoder.vf_write[0] = (vu.pipeline_state[1] >> 28) & 0x1F;
+        vu.decoder.vf_write[1] = ((vu.pipeline_state[1] >> 33) & 0x1F);
+        vu.decoder.vf_write_field[0] = ((vu.pipeline_state[1] >> 38) & 0xF);
+        vu.decoder.vf_write_field[1] = ((vu.pipeline_state[1] >> 42) & 0xF);
 
         q_pipe_delay = ((vu.pipeline_state[1] >> 18) & 0xF);
         p_pipe_delay = ((vu.pipeline_state[1] >> 22) & 0x3F);
@@ -701,6 +704,11 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
 
     instr_info[end_PC].pipeline_state[1] |= (q_pipe_delay & 0xF) << 18;
     instr_info[end_PC].pipeline_state[1] |= (p_pipe_delay & 0x3F) << 22;
+
+    instr_info[end_PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vf_write[0] & 0x1F) << 28;
+    instr_info[end_PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vf_write[1] & 0x1F) << 33;
+    instr_info[end_PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vf_write_field[0] & 0xF) << 38;
+    instr_info[end_PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vf_write_field[1] & 0xF) << 42;
 
     instr_info[end_PC].branch_delay_slot = branch_delay_slot;
     instr_info[end_PC].ebit_delay_slot = ebit_delay_slot;
@@ -1512,6 +1520,11 @@ void VU_JitTranslator::lower1_special(std::vector<IR::Instruction> &instrs, uint
             instr.set_source(cur_PC);
             instr.set_dest(trans_branch_delay_slot);
             instr.set_jump_dest(trans_ebit_delay_slot);
+            break;
+        case 0x70:
+            //ESADD
+            fallback_interpreter(instr, lower, false);
+            Errors::print_warning("[VU_JIT] Unrecognized lower1 special op ESADD\n", op);
             break;
         case 0x71:
             //ERSADD
