@@ -276,6 +276,8 @@ void GS_REGISTERS::reset()
     CSR.FINISH_enabled = false;
     CSR.FINISH_generated = false;
     CSR.FINISH_requested = false;
+    PMODE.circuit1 = false;
+    PMODE.circuit2 = false;
 
     SIGLBLID.lbl_id = 0;
     SIGLBLID.sig_id = 0;

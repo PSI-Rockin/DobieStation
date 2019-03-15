@@ -28,6 +28,7 @@ Emulator::Emulator() :
     SPU_RAM = nullptr;
     ELF_file = nullptr;
     ELF_size = 0;
+    gsdump_single_frame = false;
     ee_log.open("ee_log.txt", std::ios::out);
 }
 

@@ -31,16 +31,11 @@ void SPU::reset(uint8_t* RAM)
     key_on = 0;
     key_off = 0xFFFFFF;
     spdif_irq = 0;
+    cycles = 0;
 
     for (int i = 0; i < 24; i++)
     {
-        voices[i].counter = 0;
-        voices[i].current_addr = 0;
-        voices[i].start_addr = 0;
-        voices[i].loop_addr = 0;
-        voices[i].pitch = 0;
-        voices[i].block_pos = 0;
-        voices[i].loop_addr_specified = false;
+        voices[i].reset();
     }
 
     IRQA[id-1] = 0x800;
