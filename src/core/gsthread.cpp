@@ -315,6 +315,8 @@ void GraphicsSynthesizerThread::reset()
     PSMCT24_unpacked_count = 0;
     current_ctx = &context1;
     current_PRMODE = &PRIM;
+    PRIM.reset();
+    PRMODE.reset();
 }
 
 void GraphicsSynthesizerThread::memdump(uint32_t* target, uint16_t& width, uint16_t& height)

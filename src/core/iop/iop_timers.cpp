@@ -29,6 +29,7 @@ void IOPTiming::reset()
         timers[i].control.extern_signal = false;
         timers[i].control.compare_interrupt = false;
         timers[i].control.overflow_interrupt = false;
+        timers[i].target = 0;
     }
 
     cycle_count = 0;

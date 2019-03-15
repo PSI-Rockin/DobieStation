@@ -14,6 +14,17 @@ struct PRMODE_REG
     bool use_UV;
     bool use_context2;
     bool fix_fragment_value;
+    void reset()
+    {
+        gourand_shading = false;
+        texture_mapping = false;
+        fog = false;
+        alpha_blend = false;
+        antialiasing = false;
+        use_UV = false;
+        use_context2 = false;
+        fix_fragment_value = false;
+    }
 };
 
 struct RGBAQ_REG

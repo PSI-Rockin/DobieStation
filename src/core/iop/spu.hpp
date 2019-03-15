@@ -17,6 +17,23 @@ struct Voice
     uint32_t counter;
     int block_pos;
     int loop_code;
+
+    void reset()
+    {
+        left_vol = 0;
+        right_vol = 0;
+        pitch = 0;
+        adsr1 = 0;
+        adsr2 = 0;
+        current_envelope = 0;
+        start_addr = 0;
+        current_addr = 0;
+        loop_addr = 0;
+        loop_addr_specified = false;
+        counter = 0;
+        block_pos = 0;
+        loop_code = 0;
+    }
 };
 
 struct SPU_STAT
