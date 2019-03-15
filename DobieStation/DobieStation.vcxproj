@@ -164,6 +164,7 @@
     <ClCompile Include="..\src\qt\emuwindow.cpp" />
     <ClCompile Include="..\src\qt\renderwidget.cpp" />
     <ClCompile Include="..\src\qt\settingswindow.cpp" />
+	<ClCompile Include="..\src\qt\gamelistwidget.cpp" />
     <ClCompile Include="..\src\qt\bios.cpp" />
     <ClCompile Include="..\src\core\errors.cpp" />
     <ClCompile Include="..\src\core\iop\gamepad.cpp" />
@@ -214,6 +215,7 @@
     <QtMoc Include="..\src\qt\emuwindow.hpp" />
     <QtMoc Include="..\src\qt\renderwidget.hpp" />
     <QtMoc Include="..\src\qt\settingswindow.hpp" />
+	<QtMoc Include="..\src\qt\gamelistwidget.hpp" />
   </ItemGroup>
   <ItemGroup>
 	<ClCompile Include="$(QtMocOutPrefix)settings.cpp" />
@@ -221,6 +223,7 @@
     <ClCompile Include="$(QtMocOutPrefix)emuwindow.cpp" />
 	<ClCompile Include="$(QtMocOutPrefix)renderwidget.cpp" />
     <ClCompile Include="$(QtMocOutPrefix)settingswindow.cpp" />
+	<ClCompile Include="$(QtMocOutPrefix)gamelistwidget.cpp" />
   </ItemGroup>
   <!-- headers -->
   <ItemGroup>

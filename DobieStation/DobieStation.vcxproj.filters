@@ -250,10 +250,16 @@
 	<ClCompile Include="$(QtMocOutPrefix)settings.cpp">
       <Filter>Generated Files</Filter>
 	</ClCompile>
+	<ClCompile Include="$(QtMocOutPrefix)gamelistwidget.cpp">
+      <Filter>Generated Files</Filter>
+	</ClCompile>
     <ClCompile Include="..\src\qt\renderwidget.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\qt\settingswindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+	<ClCompile Include="..\src\qt\gamelistwidget.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\qt\bios.cpp">
@@ -461,6 +467,9 @@
       <Filter>Header Files</Filter>
     </QtMoc>
 	<QtMoc Include="..\src\qt\settings.hpp">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+	<QtMoc Include="..\src\qt\gamelistwidget.hpp">
       <Filter>Header Files</Filter>
     </QtMoc>
   </ItemGroup>

@@ -8,10 +8,12 @@
 #include <QMenuBar>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QTableWidget>
 
 #include "emuwindow.hpp"
 #include "settingswindow.hpp"
 #include "renderwidget.hpp"
+#include "gamelistwidget.hpp"
 #include "bios.hpp"
 
 #include "arg.h"
@@ -43,7 +45,10 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
         render_widget, SLOT(draw_frame(uint32_t*, int, int, int, int))
     );
 
-    QWidget* game_list_widget = new QWidget;
+    GameListWidget* game_list_widget = new GameListWidget;
+	connect(game_list_widget, &GameListWidget::game_double_clicked, this, [=](QString path) {
+		load_exec(path.toLocal8Bit(), true);
+	});
 
     stack_widget = new QStackedWidget;
     stack_widget->addWidget(game_list_widget);
