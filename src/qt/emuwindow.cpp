@@ -40,15 +40,14 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
     render_widget->setPalette(palette);
     render_widget->setAutoFillBackground(true);
 
-    render_widget->connect(
-        &emu_thread, SIGNAL(completed_frame(uint32_t*, int, int, int, int)),
-        render_widget, SLOT(draw_frame(uint32_t*, int, int, int, int))
+    connect(&emu_thread, &EmuThread::completed_frame,
+        render_widget, &RenderWidget::draw_frame
     );
 
     GameListWidget* game_list_widget = new GameListWidget;
-	connect(game_list_widget, &GameListWidget::game_double_clicked, this, [=](QString path) {
-		load_exec(path.toLocal8Bit(), true);
-	});
+    connect(game_list_widget, &GameListWidget::game_double_clicked, this, [=](QString path) {
+        load_exec(path.toLocal8Bit(), true);
+    });
 
     stack_widget = new QStackedWidget;
     stack_widget->addWidget(game_list_widget);
@@ -375,6 +374,15 @@ void EmuWindow::create_menu()
 
     emulation_menu->addSeparator();
 
+    auto shutdown_action = new QAction(tr("&Shutdown"), this);
+    connect(shutdown_action, &QAction::triggered, this, [=]() {
+        emu_thread.pause(PAUSE_EVENT::GAME_NOT_LOADED);
+        stack_widget->setCurrentIndex(0);
+    });
+    emulation_menu->addAction(shutdown_action);
+
+    emulation_menu->addSeparator();
+
     auto frame_action = new QAction(tr("&Frame Advance (10x draws for gs dumps)"), this);
     connect(frame_action, &QAction::triggered, this, [=] (){
         emu_thread.frame_advance ^= true;
@@ -598,7 +606,6 @@ void EmuWindow::open_file_no_skip()
     if (!file_name.isEmpty())
     {
         Settings::instance().add_rom_path(file_name);
-
         load_exec(file_name.toStdString().c_str(), false);
     }
 
