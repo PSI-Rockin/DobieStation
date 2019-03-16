@@ -182,6 +182,7 @@ namespace EmotionInterpreter
     void cop2_visub(VectorUnit& vu0, uint32_t instruction);
     void cop2_viaddi(VectorUnit& vu0, uint32_t instruction);
     void cop2_viand(VectorUnit& vu0, uint32_t instruction);
+    void cop2_vior(VectorUnit& vu0, uint32_t instruction);
     void cop2_vcallms(VectorUnit& vu0, uint32_t instruction, EmotionEngine &cpu);
     void cop2_vcallmsr(VectorUnit& vu0, uint32_t instruction, EmotionEngine &cpu);
 

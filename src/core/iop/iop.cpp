@@ -37,8 +37,8 @@ void IOP::reset()
     branch_delay = 0;
     will_branch = false;
     can_disassemble = false;
-
     iop_breakpoints->set_iop(this);
+    wait_for_IRQ = false;
 }
 
 uint32_t IOP::translate_addr(uint32_t addr)

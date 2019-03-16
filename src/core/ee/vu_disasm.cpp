@@ -459,12 +459,16 @@ string lower1_special(uint32_t PC, uint32_t instr)
             return xitop(instr);
         case 0x6C:
             return xgkick(instr);
+        case 0x70:
+            return esadd(instr);
         case 0x71:
             return ersadd(instr);
         case 0x72:
             return eleng(instr);
         case 0x73:
             return erleng(instr);
+        case 0x76:
+            return esum(instr);
         case 0x78:
             return esqrt(instr);
         case 0x79:
@@ -693,6 +697,14 @@ string xgkick(uint32_t instr)
     return output.str();
 }
 
+string esadd(uint32_t instr)
+{
+    stringstream output;
+    uint32_t source = (instr >> 11) & 0x1F;
+    output << "esadd P, vf" << source;
+    return output.str();
+}
+
 string ersadd(uint32_t instr)
 {
     stringstream output;
@@ -706,6 +718,14 @@ string eleng(uint32_t instr)
     stringstream output;
     uint32_t source = (instr >> 11) & 0x1F;
     output << "eleng P, vf" << source;
+    return output.str();
+}
+
+string esum(uint32_t instr)
+{
+    stringstream output;
+    uint32_t source = (instr >> 11) & 0x1F;
+    output << "esum P, vf" << source;
     return output.str();
 }
 

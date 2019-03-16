@@ -127,6 +127,9 @@ void EmotionInterpreter::cop2_special(EmotionEngine &cpu, VectorUnit &vu0, uint3
         case 0x34:
             cop2_viand(vu0, instruction);
             break;
+        case 0x35:
+            cop2_vior(vu0, instruction);
+            break;
         case 0x38:
             cop2_vcallms(vu0, instruction, cpu);
             break;
@@ -426,6 +429,11 @@ void EmotionInterpreter::cop2_viand(VectorUnit &vu0, uint32_t instruction)
     uint8_t reg1 = (instruction >> 11) & 0x1F;
     uint8_t reg2 = (instruction >> 16) & 0x1F;*/
     vu0.iand(instruction);
+}
+
+void EmotionInterpreter::cop2_vior(VectorUnit &vu0, uint32_t instruction)
+{
+    vu0.ior(instruction);
 }
 
 void EmotionInterpreter::cop2_vcallms(VectorUnit &vu0, uint32_t instruction, EmotionEngine &cpu)

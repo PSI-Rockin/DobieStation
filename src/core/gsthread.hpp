@@ -14,6 +14,17 @@ struct PRMODE_REG
     bool use_UV;
     bool use_context2;
     bool fix_fragment_value;
+    void reset()
+    {
+        gourand_shading = false;
+        texture_mapping = false;
+        fog = false;
+        alpha_blend = false;
+        antialiasing = false;
+        use_UV = false;
+        use_context2 = false;
+        fix_fragment_value = false;
+    }
 };
 
 struct RGBAQ_REG
@@ -201,7 +212,7 @@ class GraphicsSynthesizerThread
         void render_sprite();
         void write_HWREG(uint64_t data);
         void unpack_PSMCT24(uint64_t data, int offset, bool z_format);
-        void host_to_host();
+        void local_to_local();
 
         int32_t orient2D(const Vertex &v1, const Vertex &v2, const Vertex &v3);
 

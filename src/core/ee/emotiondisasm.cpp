@@ -1447,12 +1447,14 @@ string disasm_cop2_special(uint32_t instruction)
             return disasm_visub(instruction);
         case 0x32:
             return disasm_viaddi(instruction);
+        case 0x34:
+            return disasm_viand(instruction);
+        case 0x35:
+            return disasm_cop2_intmath("vior", instruction);
         case 0x38:
             return disasm_vcallms(instruction);
         case 0x39:
             return disasm_vcallmsr(instruction);
-        case 0x34:
-            return disasm_viand(instruction);
         default:
             return unknown_op("cop2 special", op, 2);
     }
