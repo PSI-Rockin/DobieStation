@@ -49,8 +49,97 @@ struct DecodedRegs
     uint8_t vf_read0_field[2], vf_read1_field[2];
 
     uint8_t vi_read0, vi_read1, vi_write;
+    uint8_t vi_write_from_load; // register which written from a load-from-memory instruction
 
     void reset();
+};
+
+struct VuIntBranchPipelineEntry
+{
+    uint8_t write_reg;   // reg that was overwritten
+    VU_I    old_value;   // value that was overwritten
+    bool    read_and_write;
+
+    void clear()
+    {
+        write_reg = 0;
+        old_value = {0};
+        read_and_write = false;
+    }
+};
+
+struct VuIntBranchPipeline
+{
+    static constexpr int length = 5;           // how far back to go behind the branch
+    VuIntBranchPipelineEntry pipeline[length]; // the previous integer operations (0 is most recent)
+    VuIntBranchPipelineEntry next;             // the currently executing integer op
+
+    // completely reset pipeline to VU power on state
+    void reset()
+    {
+//        last_op_read_write = false;
+//        current_op_read_write = false;
+//        next.clear();
+        flush();
+    }
+
+    // inform pipeline of a register write
+    void write_reg(uint8_t reg, VU_I old_value, bool also_read)
+    {
+        next.old_value = old_value;
+        next.write_reg = reg;
+        next.read_and_write = also_read;
+    }
+
+    // execute single instruction
+    void update()
+    {
+        pipeline[0] = next;
+        for(int i = 0; i < length - 1; i++)
+            pipeline[i+1] = pipeline[i];
+
+
+        next.clear();
+    }
+
+    // flushes the old stuff out, doesn't affect the current instruction
+    void flush()
+    {
+        for(auto& p : pipeline)
+            p.clear();
+    }
+
+
+    // check if reading a given integer register for branch condition will cause strange behavior
+    // if so, writes the correct value to destination
+    bool check_branch_condition_reg(uint8_t reg, VU_I& destination, uint8_t vu_id, uint16_t PC)
+    {
+        bool hazard = false; // is there any hazard at all?
+
+        // first check to see if there's a conflict
+        if (reg && reg == pipeline[0].write_reg)
+        {
+            // if so
+            hazard = true;
+            destination = pipeline[0].old_value;
+            // now we want the OLDEST write in the pipeline:
+            if (pipeline[0].read_and_write)
+            {
+                for (int i = 0; i < length; i++)
+                {
+                    if (reg == pipeline[i].write_reg)
+                    {
+                        destination = pipeline[i].old_value;
+                        printf("[VU%d] Integer branch using register from %d instructions ago (PC = 0x%x), vi%d now 0x%x!\n", vu_id, i+1, PC, reg, destination.s);
+                    }
+
+                }
+            }
+        }
+
+
+        return hazard;
+    }
 };
 
 class GraphicsInterface;
@@ -113,6 +202,8 @@ class VectorUnit
         uint64_t* MAC_flags; //pointer to last element in the pipeline; the register accessible to programs
         uint16_t new_MAC_flags; //to be placed in the pipeline
         uint64_t pipeline_state[2];
+        VuIntBranchPipeline int_branch_pipeline;
+        uint16_t ILW_pipeline[4]; // for integer load stalls
 
         int int_branch_delay;
         uint16_t int_backup_reg;
@@ -134,6 +225,8 @@ class VectorUnit
         //Updates new_P_Instance
         void start_EFU_unit(int latency);
         void set_int_branch_delay(uint8_t reg);
+        void write_int(uint8_t reg, uint8_t read0 = 0, uint8_t readq1 = 0);
+        VU_I read_int_for_branch_condition(uint8_t reg);
         
         void update_status();
         void advance_r();

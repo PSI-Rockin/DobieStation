@@ -1,6 +1,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <cassert>
 #include "vu.hpp"
 #include "vu_interpreter.hpp"
 #include "vu_jit.hpp"
@@ -65,6 +66,7 @@ void DecodedRegs::reset()
 
     vi_read0 = 0; vi_read1 = 0;
     vi_write = 0;
+    vi_write_from_load = 0;
 }
 
 VectorUnit::VectorUnit(int id, Emulator* e) : id(id), e(e), gif(nullptr)
@@ -114,9 +116,11 @@ void VectorUnit::reset()
     for(int i = 0; i < 4; i++) {
         MAC_pipeline[i] = 0;
         CLIP_pipeline[i] = 0;
+        ILW_pipeline[i] = 0;
     }
 
     flush_pipes();
+    int_branch_pipeline.reset();
 
     int_backup_id = 0;
     int_backup_reg = 0;
@@ -167,6 +171,7 @@ void VectorUnit::flush_pipes()
     for (int i = 0; i < 4; i++)
         update_mac_pipeline();
 
+    int_branch_pipeline.flush();
     finish_DIV_event = cycle_count;
     finish_EFU_event = cycle_count;
     DIV_event_started = false;
@@ -183,9 +188,8 @@ void VectorUnit::run(int cycles)
         cycle_count++;
         update_mac_pipeline();
         update_DIV_EFU_pipes();
+        int_branch_pipeline.update();
 
-        if (int_branch_delay)
-            int_branch_delay--;
 
         if (XGKICK_stall)
             break;
@@ -325,75 +329,90 @@ void VectorUnit::handle_XGKICK()
  */
 void VectorUnit::check_for_FMAC_stall()
 {
-    if (decoder.vf_read0[0] == 0 && decoder.vf_read1[0] == 0
-        && decoder.vf_read0[1] == 0 && decoder.vf_read1[1] == 0)
-        return;
-
     for (int i = 0; i < 3; i++)
     {
         uint8_t write0 = (MAC_pipeline[i] >> 16) & 0xFF;
         uint8_t write1 = (MAC_pipeline[i] >> 24) & 0xFF;
 
-        if (write0 == 0 && write1 == 0)
-            continue;
-
-        uint8_t write0_field = (MAC_pipeline[i] >> 32) & 0xF;
-        uint8_t write1_field = (MAC_pipeline[i] >> 36) & 0xF;
         bool stall_found = false;
-        for (int j = 0; j < 2; j++)
+
+        if (write0 != 0 || write1 != 0)
         {
-            if (decoder.vf_read0[j])
+            uint8_t write0_field = (MAC_pipeline[i] >> 32) & 0xF;
+            uint8_t write1_field = (MAC_pipeline[i] >> 36) & 0xF;
+
+            for (int j = 0; j < 2; j++)
             {
-                if (decoder.vf_read0[j] == write0)
+                if (decoder.vf_read0[j])
                 {
-                    if (decoder.vf_read0_field[j] & write0_field)
+                    if (decoder.vf_read0[j] == write0)
                     {
-                        stall_found = true;
-                        break;
+                        if (decoder.vf_read0_field[j] & write0_field)
+                        {
+                            stall_found = true;
+                            break;
+                        }
+                    }
+                    else if (decoder.vf_read0[j] == write1)
+                    {
+                        if (decoder.vf_read0_field[j] & write1_field)
+                        {
+                            stall_found = true;
+                            break;
+                        }
                     }
                 }
-                else if (decoder.vf_read0[j] == write1)
+                if (decoder.vf_read1[j])
                 {
-                    if (decoder.vf_read0_field[j] & write1_field)
+                    if (decoder.vf_read1[j] == write0)
                     {
-                        stall_found = true;
-                        break;
+                        if (decoder.vf_read1_field[j] & write0_field)
+                        {
+                            stall_found = true;
+                            break;
+                        }
                     }
-                }
-            }
-            if (decoder.vf_read1[j])
-            {
-                if (decoder.vf_read1[j] == write0)
-                {
-                    if (decoder.vf_read1_field[j] & write0_field)
+                    else if (decoder.vf_read1[j] == write1)
                     {
-                        stall_found = true;
-                        break;
-                    }
-                }
-                else if (decoder.vf_read1[j] == write1)
-                {
-                    if (decoder.vf_read1_field[j] & write1_field)
-                    {
-                        stall_found = true;
-                        break;
+                        if (decoder.vf_read1_field[j] & write1_field)
+                        {
+                            stall_found = true;
+                            break;
+                        }
                     }
                 }
             }
         }
+
+        if (ILW_pipeline[i])
+        {
+            if (ILW_pipeline[i] == decoder.vi_read0 || ILW_pipeline[i] == decoder.vi_read1)
+            {
+                printf("[VU%d] Load hazard stall on vi%d at PC = 0x%x\n", id, ILW_pipeline[i], PC);
+                stall_found = true;
+            }
+        }
+
+
         if (stall_found)
         {
             //printf("FMAC stall at $%08X for %d cycles!\n", PC, 3 - i);
             int delay = 3 - i;
             for (int j = 0; j < delay; j++)
+            {
                 update_mac_pipeline();
+                int_branch_pipeline.flush();
+            }
+
             cycle_count += delay;
             update_DIV_EFU_pipes();
-            int_branch_delay = 0;
             break;
         }
     }
 }
+
+
+
 
 void VectorUnit::backup_vf(bool newvf, int index)
 {
@@ -530,6 +549,11 @@ void VectorUnit::update_mac_pipeline()
     CLIP_pipeline[1] = CLIP_pipeline[0];
     CLIP_pipeline[0] = clip_flags;
 
+    ILW_pipeline[3] = ILW_pipeline[2];
+    ILW_pipeline[2] = ILW_pipeline[1];
+    ILW_pipeline[1] = ILW_pipeline[0];
+    ILW_pipeline[0] = decoder.vi_write_from_load;
+
     if(updatestatus)
         update_status();
 
@@ -576,12 +600,31 @@ void VectorUnit::start_EFU_unit(int latency)
 
 void VectorUnit::set_int_branch_delay(uint8_t reg)
 {
+    assert(false);
     if (reg)
     {
         int_branch_delay = 2;
         int_backup_id = reg;
         int_backup_reg = int_gpr[reg].u;
     }
+}
+
+void VectorUnit::write_int(uint8_t reg, uint8_t read0, uint8_t read1)
+{
+    if(reg)
+    {
+        int_branch_pipeline.write_reg(reg, int_gpr[reg], (reg == read0) || (reg == read1));
+    }
+}
+
+VU_I VectorUnit::read_int_for_branch_condition(uint8_t reg)
+{
+    VU_I value = int_gpr[reg];
+    if(reg)
+    {
+        int_branch_pipeline.check_branch_condition_reg(reg, value, id, PC);
+    }
+    return value;
 }
 
 float VectorUnit::convert(uint32_t value)
@@ -697,6 +740,9 @@ void VectorUnit::branch(bool condition, int16_t imm, bool link, uint8_t linkreg)
 {
     if (condition)
     {
+        // on taken conditional branch, flush the integer branch pipeline
+        // NOTE: we do NOT flush the integer load pipeline!
+        int_branch_pipeline.flush(); // todo try a load flush here
         if (branch_on)
         {
             second_branch_pending = true;
@@ -1268,14 +1314,14 @@ void VectorUnit::ftoi15(uint32_t instr)
 
 void VectorUnit::iadd(uint32_t instr)
 {
-    set_int_branch_delay(_id_);
+    write_int(_id_, _is_, _it_);
     set_int(_id_, int_gpr[_is_].s + int_gpr[_it_].s);
     printf("[VU] IADD: $%04X (%d, %d, %d)\n", int_gpr[_id_].u, _id_, _is_, _it_);
 }
 
 void VectorUnit::iaddi(uint32_t instr)
 {
-    set_int_branch_delay(_it_);
+    write_int(_it_, _is_);
     int16_t imm = ((instr >> 6) & 0x1f);
     imm = ((imm & 0x10 ? 0xfff0 : 0) | (imm & 0xf));
     set_int(_it_, int_gpr[_is_].s + imm);
@@ -1284,7 +1330,7 @@ void VectorUnit::iaddi(uint32_t instr)
 
 void VectorUnit::iaddiu(uint32_t instr)
 {
-    set_int_branch_delay(_it_);
+    write_int(_it_, _is_);
     uint16_t imm = (((instr >> 10) & 0x7800) | (instr & 0x7ff));
     set_int(_it_, int_gpr[_is_].s + imm);
     printf("[VU] IADDIU: $%04X (%d, %d, $%04X)\n", int_gpr[_it_].u, _it_, _is_, imm);
@@ -1292,7 +1338,7 @@ void VectorUnit::iaddiu(uint32_t instr)
 
 void VectorUnit::iand(uint32_t instr)
 {
-    set_int_branch_delay(_id_);
+    write_int(_id_, _is_, _it_);
     set_int(_id_, int_gpr[_is_].u & int_gpr[_it_].u);
     printf("[VU] IAND: $%04X (%d, %d, %d)\n", int_gpr[_id_].u, _id_, _is_, _it_);
 }
@@ -1303,16 +1349,8 @@ void VectorUnit::ibeq(uint32_t instr)
     imm = ((int16_t)(imm << 5)) >> 5;
     imm *= 8;
 
-    uint16_t reg1 = int_gpr[_is_].u;
-    uint16_t reg2 = int_gpr[_it_].u;
-
-    if (int_branch_delay)
-    {
-        if (int_backup_id == _is_)
-            reg1 = int_backup_reg;
-        if (int_backup_id == _it_)
-            reg2 = int_backup_reg;
-    }
+    uint16_t reg1 = read_int_for_branch_condition(_is_).u;
+    uint16_t reg2 = read_int_for_branch_condition(_it_).u;
 
     branch(reg1 == reg2, imm, false);
 }
@@ -1323,13 +1361,8 @@ void VectorUnit::ibgez(uint32_t instr)
     imm = ((int16_t)(imm << 5)) >> 5;
     imm *= 8;
 
-    int16_t value = int_gpr[_is_].s;
+    int16_t value = read_int_for_branch_condition(_is_).s;
 
-    if (int_branch_delay)
-    {
-        if (int_backup_id == _is_)
-            value = (int16_t)int_backup_reg;
-    }
 
     branch(value >= 0, imm, false);
 }
@@ -1339,13 +1372,7 @@ void VectorUnit::ibgtz(uint32_t instr)
     int16_t imm = instr & 0x7FF;
     imm = ((int16_t)(imm << 5)) >> 5;
     imm *= 8;
-    int16_t value = int_gpr[_is_].s;
-
-    if (int_branch_delay)
-    {
-        if (int_backup_id == _is_)
-            value = (int16_t)int_backup_reg;
-    }
+    int16_t value = read_int_for_branch_condition(_is_).s;
 
     branch(value > 0, imm, false);
 }
@@ -1355,13 +1382,7 @@ void VectorUnit::iblez(uint32_t instr)
     int16_t imm = instr & 0x7FF;
     imm = ((int16_t)(imm << 5)) >> 5;
     imm *= 8;
-    int16_t value = int_gpr[_is_].s;
-
-    if (int_branch_delay)
-    {
-        if (int_backup_id == _is_)
-            value = (int16_t)int_backup_reg;
-    }
+    int16_t value = read_int_for_branch_condition(_is_).s;
 
     branch(value <= 0, imm, false);
 }
@@ -1371,14 +1392,8 @@ void VectorUnit::ibltz(uint32_t instr)
     int16_t imm = instr & 0x7FF;
     imm = ((int16_t)(imm << 5)) >> 5;
     imm *= 8;
+    int16_t value = read_int_for_branch_condition(_is_).s;
 
-    int16_t value = int_gpr[_is_].s;
-
-    if (int_branch_delay)
-    {
-        if (int_backup_id == _is_)
-            value = (int16_t)int_backup_reg;
-    }
 
     branch(value < 0, imm, false);
 }
@@ -1389,23 +1404,15 @@ void VectorUnit::ibne(uint32_t instr)
     imm = ((int16_t)(imm << 5)) >> 5;
     imm *= 8;
 
-    uint16_t reg1 = int_gpr[_is_].u;
-    uint16_t reg2 = int_gpr[_it_].u;
-
-    if (int_branch_delay)
-    {
-        if (int_backup_id == _is_)
-            reg1 = int_backup_reg;
-        if (int_backup_id == _it_)
-            reg2 = int_backup_reg;
-    }
+    uint16_t reg1 = read_int_for_branch_condition(_is_).u;
+    uint16_t reg2 = read_int_for_branch_condition(_it_).u;
 
     branch(reg1 != reg2, imm, false);
 }
 
 void VectorUnit::ilw(uint32_t instr)
 {
-    set_int_branch_delay(_it_);
+    write_int(_it_, _is_);
     int16_t offset = (instr & 0x400) ? (instr & 0x3FF) | 0xFC00 : (instr & 0x3FF);
     uint16_t addr = (int_gpr[_is_].s + offset) * 16;
     uint128_t quad = read_data<uint128_t>(addr);
@@ -1424,7 +1431,7 @@ void VectorUnit::ilw(uint32_t instr)
 
 void VectorUnit::ilwr(uint32_t instr)
 {
-    set_int_branch_delay(_it_);
+    write_int(_it_, _is_);
     uint32_t addr = (uint32_t)int_gpr[_is_].u << 4;
     uint128_t quad = read_data<uint128_t>(addr);
     printf("[VU] ILWR: $%08X", addr);
@@ -1442,21 +1449,21 @@ void VectorUnit::ilwr(uint32_t instr)
 
 void VectorUnit::ior(uint32_t instr)
 {
-    set_int_branch_delay(_id_);
+    write_int(_id_, _is_, _it_);
     set_int(_id_, int_gpr[_is_].u | int_gpr[_it_].u);
     printf("[VU] IOR: $%04X (%d, %d, %d)\n", int_gpr[_id_].u, _id_, _is_, _it_);
 }
 
 void VectorUnit::isub(uint32_t instr)
 {
-    set_int_branch_delay(_id_);
+    write_int(_id_, _is_, _it_);
     set_int(_id_, int_gpr[_is_].s - int_gpr[_it_].s);
     printf("[VU] ISUB: $%04X (%d, %d, %d)\n", int_gpr[_id_].u, _id_, _is_, _it_);
 }
 
 void VectorUnit::isubiu(uint32_t instr)
 {
-    set_int_branch_delay(_it_);
+    write_int(_it_, _is_);
     uint16_t imm = ((instr >> 10) & 0x7800) | (instr & 0x7ff);
     set_int(_it_, int_gpr[_is_].s - imm);
     printf("[VU] ISUBIU: $%04X (%d, %d, $%04X)\n", int_gpr[_it_].u, _it_, _is_, imm);
@@ -1556,11 +1563,13 @@ void VectorUnit::jr(uint32_t instr)
 
 void VectorUnit::jalr(uint32_t instr)
 {
+
     uint8_t addr_reg = (instr >> 11) & 0x1F;
     uint16_t addr = get_int(addr_reg) * 8;
 
     uint8_t link_reg = (instr >> 16) & 0x1F;
-    printf("[VU] JR vi%d ($%x) link vi%d\n", addr_reg, addr, link_reg);
+    // write_int(link_reg, addr_reg);
+    printf("[VU] JALR vi%d ($%x) link vi%d\n", addr_reg, addr, link_reg);
     jp(addr, true, link_reg);
 }
 
@@ -1582,6 +1591,7 @@ void VectorUnit::lq(uint32_t instr)
 
 void VectorUnit::lqd(uint32_t instr)
 {
+    write_int(_is_, _is_);
     printf("[VU] LQD: ");
     if (_is_)
         int_gpr[_is_].u--;
@@ -1599,6 +1609,7 @@ void VectorUnit::lqd(uint32_t instr)
 
 void VectorUnit::lqi(uint32_t instr)
 {
+    write_int(_is_, _is_);
     printf("[VU] LQI: ");
     uint32_t addr = (uint32_t)int_gpr[_is_].u * 16;
     for (int i = 0; i < 4; i++)
@@ -2046,7 +2057,7 @@ void VectorUnit::msubq(uint32_t instr)
 
 void VectorUnit::mtir(uint32_t instr)
 {
-    set_int_branch_delay(_it_);
+    write_int(_it_);
     printf("[VU] MTIR: %d\n", gpr[_fs_].u[_fsf_] & 0xFFFF);
     set_int(_it_, gpr[_fs_].u[_fsf_] & 0xFFFF);
 }
@@ -2276,7 +2287,7 @@ void VectorUnit::rnext(uint32_t instr)
 
 void VectorUnit::rsqrt(uint32_t instr)
 {
-    float denom = fabs(convert(gpr[_ft_].u[_ftf_]));
+    float denom = (convert(gpr[_ft_].u[_ftf_]));
     float num = convert(gpr[_fs_].u[_fsf_]);
 
     status = (status & 0xFCF) | ((status & 0x30) << 6);
@@ -2342,6 +2353,7 @@ void VectorUnit::sq(uint32_t instr)
 
 void VectorUnit::sqd(uint32_t instr)
 {
+    write_int(_it_, _it_);
     if (_it_)
         int_gpr[_it_].u--;
     uint32_t addr = (uint32_t)int_gpr[_it_].u << 4;
@@ -2359,6 +2371,7 @@ void VectorUnit::sqd(uint32_t instr)
 
 void VectorUnit::sqi(uint32_t instr)
 {
+    write_int(_it_, _it_);
     uint32_t addr = (uint32_t)int_gpr[_it_].u << 4;
     printf("[VU] SQI to $%08X!\n", addr);
     for (int i = 0; i < 4; i++)
@@ -2521,6 +2534,7 @@ void VectorUnit::waitp(uint32_t instr)
     {
         cycle_count++;
         update_mac_pipeline();
+        int_branch_pipeline.update();
     }
     update_DIV_EFU_pipes();
 }
@@ -2534,6 +2548,7 @@ void VectorUnit::waitq(uint32_t instr)
     {
         cycle_count++;
         update_mac_pipeline();
+        int_branch_pipeline.update();
     }
     update_DIV_EFU_pipes();
 }
