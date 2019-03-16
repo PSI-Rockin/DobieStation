@@ -1,7 +1,6 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
-#include <cassert>
 #include "vu.hpp"
 #include "vu_interpreter.hpp"
 #include "vu_jit.hpp"
@@ -596,17 +595,6 @@ void VectorUnit::start_EFU_unit(int latency)
 {
     finish_EFU_event = cycle_count + latency;
     EFU_event_started = true;
-}
-
-void VectorUnit::set_int_branch_delay(uint8_t reg)
-{
-    assert(false);
-    if (reg)
-    {
-        int_branch_delay = 2;
-        int_backup_id = reg;
-        int_backup_reg = int_gpr[reg].u;
-    }
 }
 
 void VectorUnit::write_int(uint8_t reg, uint8_t read0, uint8_t read1)

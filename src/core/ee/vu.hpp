@@ -224,7 +224,6 @@ class VectorUnit
         void start_DIV_unit(int latency);
         //Updates new_P_Instance
         void start_EFU_unit(int latency);
-        void set_int_branch_delay(uint8_t reg);
         void write_int(uint8_t reg, uint8_t read0 = 0, uint8_t readq1 = 0);
         VU_I read_int_for_branch_condition(uint8_t reg);
         
