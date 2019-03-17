@@ -112,6 +112,8 @@ namespace EmotionInterpreter
     void sqc2(EmotionEngine& cpu, uint32_t instruction);
     void sd(EmotionEngine& cpu, uint32_t instruction);
 
+    void cache(EmotionEngine& cpu, uint32_t instruction);
+
     void cop(EmotionEngine& cpu, uint32_t instruction);
     void cop_mfc(EmotionEngine& cpu, uint32_t instruction);
     void cop_mtc(EmotionEngine& cpu, uint32_t instruction);

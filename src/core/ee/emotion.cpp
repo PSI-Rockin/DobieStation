@@ -571,6 +571,13 @@ void EmotionEngine::ctc(int cop_id, int reg, int cop_reg, uint32_t instruction)
     }
 }
 
+void EmotionEngine::invalidate_icache_indexed(uint32_t addr)
+{
+    int index = (addr >> 6) & 0x7F;
+    int way = addr & 0x1;
+    icache[index].valid[way] = false;
+}
+
 void EmotionEngine::mfhi(int index)
 {
     set_gpr<uint64_t>(index, HI);
@@ -740,18 +747,6 @@ void EmotionEngine::syscall_exception()
     uint8_t op = read8(PC - 4);
     //if (op != 0x7A)
         //printf("[EE] SYSCALL: %s (id: $%02X) called at $%08X\n", SYSCALL(op), op, PC);
-
-    if (op == 0x64)
-    {
-        if (get_gpr<uint32_t>(4) == 0)
-        {
-            for (int i = 0; i < 128; i++)
-            {
-                icache[i].valid[0] = false;
-                icache[i].valid[1] = false;
-            }
-        }
-    }
 
     if (op == 0x7C)
     {
