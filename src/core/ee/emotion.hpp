@@ -111,6 +111,8 @@ class EmotionEngine
         void swc1(uint32_t addr, int index);
         void sqc2(uint32_t addr, int index);
 
+        void invalidate_icache_indexed(uint32_t addr);
+
         void mfhi(int index);
         void mthi(int index);
         void mflo(int index);
