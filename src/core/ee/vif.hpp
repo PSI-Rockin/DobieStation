@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <queue>
 #include <fstream>
+#include <unordered_set>
 
 #include "intc.hpp"
 #include "vu.hpp"
@@ -84,6 +85,8 @@ class VectorInterface
         uint32_t ROW[4];
         uint32_t COL[4];
         uint32_t MARK;
+
+        std::unordered_set<uint32_t> seen_microprogram_crcs;
 
         int command_len;
         bool check_vif_stall(uint32_t value);

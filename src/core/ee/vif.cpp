@@ -855,21 +855,18 @@ bool VectorInterface::feed_DMA(uint128_t quad)
 void VectorInterface::disasm_micromem()
 {
     //Check for branch targets and also see if the microprogram is the same as the one previously disassembled
+    uint32_t crc = crc_microprogram();
+    if(seen_microprogram_crcs.find(crc) != seen_microprogram_crcs.end())
+        return;
+
+    seen_microprogram_crcs.insert(crc);
+
     int size = (vu->get_id()) ? 0x4000 : 0x1000;
-    static uint64_t last_micro[0x4000 / 8];
-    bool should_disasm = false;
     bool is_branch_target[0x4000 / 8];
     memset(is_branch_target, 0, size / 8);
     for (int i = 0; i < size; i += 8)
     {
         uint32_t lower = vu->read_instr<uint32_t>(i);
-
-        uint64_t instr = vu->read_instr<uint64_t>(i);
-        if (instr != last_micro[i / 8])
-        {
-            should_disasm = true;
-            last_micro[i / 8] = instr;
-        }
 
         //If the lower instruction is a branch, set branch target to true for the location it points to
         if (VU_Disasm::is_branch(lower))
@@ -884,17 +881,13 @@ void VectorInterface::disasm_micromem()
         }
     }
 
-    if (!should_disasm)
-        return;
 
     using namespace std;
 
     ofstream file;
+    string name = "microvu" + to_string(get_id()) + "_" + to_string(crc) + ".txt";
 
-    if (get_id())
-        file.open("microprogram1.txt");
-    else
-        file.open("microprogram0.txt");
+    file.open(name);
 
     if (!file.is_open())
     {
@@ -933,7 +926,7 @@ void VectorInterface::disasm_micromem()
 uint32_t VectorInterface::crc_microprogram()
 {
     uint32_t crc = 0;
-    int len = 0x4000;
+    int len = (vu->get_id()) ? 0x4000 : 0x1000;
     int addr = 0x0000;
 
     crc = ~crc;
