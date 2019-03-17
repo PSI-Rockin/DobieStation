@@ -182,6 +182,7 @@ class VectorUnit
         uint32_t get_gpr_u(int index, int field);
         uint16_t get_int(int index);
         int get_id();
+        uint64_t get_cycle_count();
         void set_gpr_f(int index, int field, float value);
         void set_gpr_u(int index, int field, uint32_t value);
         void set_gpr_s(int index, int field, int32_t value);
@@ -435,6 +436,11 @@ inline void VectorUnit::set_Q(uint32_t value)
 inline uint8_t* VectorUnit::get_instr_mem()
 {
     return (uint8_t*)instr_mem.m;
+}
+
+inline uint64_t VectorUnit::get_cycle_count()
+{
+    return cycle_count;
 }
 
 #endif // VU_HPP

@@ -4,7 +4,7 @@
 
 #define VER_MAJOR 0
 #define VER_MINOR 0
-#define VER_REV 20
+#define VER_REV 21
 
 using namespace std;
 
@@ -192,6 +192,9 @@ void Emulator::save_state(const char *file_name)
 
 void EmotionEngine::load_state(ifstream &state)
 {
+    state.read((char*)&cycle_count, sizeof(cycle_count));
+    state.read((char*)&cycles_to_run, sizeof(cycles_to_run));
+    state.read((char*)&icache, sizeof(ICacheLine) * 128);
     state.read((char*)&gpr, sizeof(gpr));
     state.read((char*)&LO, sizeof(uint64_t));
     state.read((char*)&HI, sizeof(uint64_t));
@@ -212,6 +215,9 @@ void EmotionEngine::load_state(ifstream &state)
 
 void EmotionEngine::save_state(ofstream &state)
 {
+    state.write((char*)&cycle_count, sizeof(cycle_count));
+    state.write((char*)&cycles_to_run, sizeof(cycles_to_run));
+    state.write((char*)&icache, sizeof(ICacheLine) * 128);
     state.write((char*)&gpr, sizeof(gpr));
     state.write((char*)&LO, sizeof(uint64_t));
     state.write((char*)&HI, sizeof(uint64_t));
