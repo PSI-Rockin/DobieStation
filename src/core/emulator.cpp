@@ -863,7 +863,7 @@ void Emulator::ee_kputs(uint32_t param)
 
 void Emulator::ee_deci2send(uint32_t addr, int len)
 {
-    if(len > 0x2000000)
+    if(len > 0x10000)
     {
         Errors::die("Tried to deci2send %d bytes!\n", len);
     }
