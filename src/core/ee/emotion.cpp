@@ -120,6 +120,7 @@ void EmotionEngine::reset()
 
 int EmotionEngine::run(int cycles)
 {
+    cycle_count += cycles;
     if (!wait_for_IRQ)
     {
         cycles_to_run += cycles;

@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "errors.hpp"
 #include "emulator.hpp"
 #include "scheduler.hpp"
@@ -28,7 +29,13 @@ unsigned int Scheduler::calculate_run_cycles()
     if (ee_cycles.count + MAX_CYCLES <= closest_event_time)
         run_cycles = MAX_CYCLES;
     else
-        run_cycles = std::max(closest_event_time - ee_cycles.count, 0LL);
+    {
+        int64_t delta = closest_event_time - ee_cycles.count;
+        if (delta > 0)
+            run_cycles = delta;
+        else
+            run_cycles = 0;
+    }
 
     return run_cycles;
 }
