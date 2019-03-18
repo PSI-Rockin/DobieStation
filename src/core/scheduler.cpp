@@ -95,16 +95,17 @@ void Scheduler::process_events(Emulator* e)
     if (ee_cycles.count >= closest_event_time)
     {
         int64_t new_time = 0x7FFFFFFFULL << 32ULL;
-        for (auto it = ee_events.begin(); it != ee_events.end(); it++)
+        for (auto it = ee_events.begin(); it != ee_events.end(); )
         {
             if (it->time_to_run <= closest_event_time)
             {
                 (e->*it->func)();
-                ee_events.erase(it);
+                it = ee_events.erase(it);
             }
             else
             {
                 new_time = std::min(it->time_to_run, new_time);
+                it++;
             }
         }
         closest_event_time = new_time;
