@@ -155,6 +155,11 @@ int EmuWindow::load_exec(const char* file_name, bool skip_BIOS)
     transform(format.begin(), format.end(), format.begin(), ::tolower);
     printf("%s\n", format.c_str());
 
+    if (Settings::instance().vu1_jit_enabled)
+        emu_thread.set_vu1_mode(VU_MODE::JIT);
+    else
+        emu_thread.set_vu1_mode(VU_MODE::INTERPRETER);
+
     if (format == ".elf")
     {
         long long ELF_size = filesize(file_name);
