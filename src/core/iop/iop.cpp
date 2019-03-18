@@ -36,6 +36,7 @@ void IOP::reset()
     branch_delay = 0;
     will_branch = false;
     can_disassemble = false;
+    wait_for_IRQ = false;
 }
 
 uint32_t IOP::translate_addr(uint32_t addr)

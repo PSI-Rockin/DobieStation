@@ -110,6 +110,12 @@ void VectorUnit::reset()
     finish_DIV_event = 0;
     pipeline_state[0] = 0;
     pipeline_state[1] = 0;
+
+    for(int i = 0; i < 4; i++) {
+        MAC_pipeline[i] = 0;
+        CLIP_pipeline[i] = 0;
+    }
+
     flush_pipes();
 
     int_backup_id = 0;
