@@ -1560,7 +1560,7 @@ void VectorUnit::jalr(uint32_t instr)
     uint16_t addr = get_int(addr_reg) * 8;
 
     uint8_t link_reg = (instr >> 16) & 0x1F;
-    printf("[VU] JR vi%d ($%x) link vi%d\n", addr_reg, addr, link_reg);
+    printf("[VU] JALR vi%d ($%x) link vi%d\n", addr_reg, addr, link_reg);
     jp(addr, true, link_reg);
 }
 
@@ -1781,7 +1781,7 @@ void VectorUnit::maxi(uint32_t instr)
     {
         if (_field & (1 << (3 - i)))
         {
-            int32_t op2 = gpr[_ft_].s[i];
+            int32_t op2 = gpr[_fs_].s[i];
             set_gpr_s(_fd_, i, vu_max(op1, op2));
             printf("(%d)%f ", i, gpr[_fd_].f[i]);
         }
