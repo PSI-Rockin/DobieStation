@@ -11,6 +11,7 @@ class Settings final : public QObject
     Q_OBJECT
 public:
     static Settings& instance();
+    static QSettings& qsettings();
 
     // you won't be needing these
     // use instance() instead
@@ -20,13 +21,14 @@ public:
     Settings& operator=(Settings&&) = delete;
 
     QString bios_path;
-    QString last_used_path;
+    QString last_used_directory;
     QStringList rom_directories;
     QStringList recent_roms;
     bool vu1_jit_enabled;
 
     void save();
     void reset();
+    void update_last_used_directory(QString path);
     void add_rom_directory(QString directory);
     void add_rom_path(QString path);
     void set_bios_path(QString path);

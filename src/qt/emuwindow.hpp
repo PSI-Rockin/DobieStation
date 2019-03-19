@@ -18,16 +18,16 @@ class EmuWindow : public QMainWindow
     Q_OBJECT
     private:
         EmuThread emu_thread;
-        std::string title;
-        std::string ROM_path;
+        QString vu1_mode;
         std::chrono::system_clock::time_point old_frametime;
         std::chrono::system_clock::time_point old_update_time;
         double framerate_avg;
 
+        QFileInfo current_ROM;
         QMenu* file_menu;
         QMenu* options_menu;
         QMenu* emulation_menu;
-        QMenu* scale_menu;
+        QMenu* window_menu;
         QAction* load_rom_action;
         QAction* load_bios_action;
         QAction* load_state_action;
@@ -38,8 +38,9 @@ class EmuWindow : public QMainWindow
 
         SettingsWindow* settings_window = nullptr;
 
-        int scale_factor;
-
+        void set_vu1_mode();
+        void show_render_view();
+        void show_default_view();
     public:
         explicit EmuWindow(QWidget *parent = nullptr);
         int init(int argc, char** argv);

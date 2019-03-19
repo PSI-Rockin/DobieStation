@@ -81,7 +81,7 @@ PathTab::PathTab(QWidget* parent)
     connect(add_directory, &QAbstractButton::clicked, this, [=]() {
         QString path = QFileDialog::getExistingDirectory(
             this, tr("Open Rom Directory"),
-            Settings::instance().last_used_path
+            Settings::instance().last_used_directory
         );
 
         Settings::instance().add_rom_directory(path);
@@ -114,7 +114,7 @@ PathTab::PathTab(QWidget* parent)
     QPushButton* browse_button = new QPushButton(tr("Browse"));
     connect(browse_button, &QAbstractButton::clicked, this, [=]() {
         QString path = QFileDialog::getOpenFileName(
-            this, tr("Open Bios"), Settings::instance().last_used_path,
+            this, tr("Open Bios"), Settings::instance().last_used_directory,
             tr("Bios File (*.bin)")
         );
 
