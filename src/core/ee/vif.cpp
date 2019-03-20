@@ -369,7 +369,7 @@ void VectorInterface::MSCAL(uint32_t addr)
         vu->clear_dirty();
     }*/
 
-    vu->mscal(addr);
+    vu->start_program(addr);
 
     ITOP = ITOPS;
 

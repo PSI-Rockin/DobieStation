@@ -159,8 +159,7 @@ class VectorUnit
         void run(int cycles);
         void run_jit(int cycles);
         void handle_XGKICK();
-        void callmsr();
-        void mscal(uint32_t addr);
+        void start_program(uint32_t addr);
         void end_execution();
         void stop();
         void reset();
@@ -168,6 +167,7 @@ class VectorUnit
         void backup_vf(bool newvf, int index);
         void restore_vf(bool newvf, int index);
         uint32_t read_fbrst();
+        uint32_t read_CMSAR0();
 
         static float convert(uint32_t value);
 

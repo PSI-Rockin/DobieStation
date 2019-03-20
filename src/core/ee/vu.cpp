@@ -417,18 +417,12 @@ uint32_t VectorUnit::read_fbrst()
     return FBRST;
 }
 
-void VectorUnit::callmsr()
+uint32_t VectorUnit::read_CMSAR0()
 {
-    printf("[VU%d] CallMSR Starting execution at $%08X! Cur PC %x\n", get_id(), CMSAR0 * 8, PC);
-    if (running == false)
-    {
-        running = true;
-        PC = CMSAR0 * 8;
-    }
-    run_event = cycle_count;
+    return CMSAR0;
 }
 
-void VectorUnit::mscal(uint32_t addr)
+void VectorUnit::start_program(uint32_t addr)
 {
     printf("[VU%d] CallMS Starting execution at $%08X! Cur PC %x\n", get_id(), addr, PC);
     if (running == false)
