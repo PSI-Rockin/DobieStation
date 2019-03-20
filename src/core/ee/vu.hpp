@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <fstream>
+#include <unordered_set>
 
 #include "../int128.hpp"
 
@@ -75,6 +76,8 @@ class VectorUnit
 
         VU_Mem instr_mem, data_mem;
 
+        std::unordered_set<uint32_t> seen_microprogram_crcs;
+
         bool running;
         bool vumem_is_dirty;
         uint16_t PC, new_PC, secondbranch_PC;
@@ -135,6 +138,8 @@ class VectorUnit
         //Updates new_P_Instance
         void start_EFU_unit(int latency);
         void set_int_branch_delay(uint8_t reg);
+        void disasm_micromem();
+        uint32_t crc_microprogram();
         
         void update_status();
         void advance_r();

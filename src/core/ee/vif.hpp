@@ -86,8 +86,6 @@ class VectorInterface
         uint32_t COL[4];
         uint32_t MARK;
 
-        std::unordered_set<uint32_t> seen_microprogram_crcs;
-
         int command_len;
         bool check_vif_stall(uint32_t value);
         void decode_cmd(uint32_t value);
@@ -99,9 +97,6 @@ class VectorInterface
         void handle_UNPACK_masking(uint128_t& quad);
         void handle_UNPACK_mode(uint128_t& quad);
         void process_UNPACK_quad(uint128_t& quad);
-
-        void disasm_micromem();
-        uint32_t crc_microprogram();
     public:
         VectorInterface(GraphicsInterface* gif, VectorUnit* vu, INTC* intc, int id);
         int get_id();
