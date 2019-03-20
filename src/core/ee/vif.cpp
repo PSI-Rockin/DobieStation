@@ -363,9 +363,10 @@ void VectorInterface::MSCAL(uint32_t addr)
     disasm_micromem();
 
     //Enable this if disabling micromem disasm
-    /*if (vu->get_id() == 1)
+    /*if (vu->get_id() == 1 && vu->is_dirty())
     {
         VU_JIT::set_current_program(crc_microprogram());
+        vu->clear_dirty();
     }*/
 
     vu->mscal(addr);
@@ -854,6 +855,9 @@ bool VectorInterface::feed_DMA(uint128_t quad)
 
 void VectorInterface::disasm_micromem()
 {
+    //If the memory hasn't changed since the last CRC/Disasm, don't bother checking it
+    if (!vu->is_dirty())
+        return;
     //Check for branch targets and also see if the microprogram is the same as the one previously disassembled
     uint32_t crc = crc_microprogram();
 
@@ -862,6 +866,8 @@ void VectorInterface::disasm_micromem()
     {
         VU_JIT::set_current_program(crc);
     }
+
+    vu->clear_dirty();
 
     if(seen_microprogram_crcs.find(crc) != seen_microprogram_crcs.end())
         return;

@@ -96,6 +96,7 @@ void VectorUnit::reset()
     cycle_count = 1; //Set to 1 to prevent spurious events from occurring during execution
     run_event = 0;
     running = false;
+    vumem_is_dirty = true; //assume we don't know the contents on reset
     finish_on = false;
     branch_on = false;
     second_branch_pending = false;
