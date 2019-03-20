@@ -146,15 +146,7 @@ void VectorInterface::update(int cycles)
                     vu->write_instr(mpg.addr, value);
                     mpg.addr += 4;
                     if (command_len <= 1)
-                    {
-                        disasm_micromem();
                         command = 0;
-                        //Calculate the current program crc for the VU JIT after all microprograms have transferred
-                        if (vu->get_id() == 1)
-                        {
-                            VU_JIT::set_current_program(crc_microprogram());
-                        }
-                    }
                     break;
                 case 0x50:
                 case 0x51:
@@ -368,6 +360,14 @@ void VectorInterface::handle_wait_cmd(uint32_t value)
 
 void VectorInterface::MSCAL(uint32_t addr)
 {
+    disasm_micromem();
+
+    //Enable this if disabling micromem disasm
+    /*if (vu->get_id() == 1)
+    {
+        VU_JIT::set_current_program(crc_microprogram());
+    }*/
+
     vu->mscal(addr);
 
     ITOP = ITOPS;
@@ -856,6 +856,13 @@ void VectorInterface::disasm_micromem()
 {
     //Check for branch targets and also see if the microprogram is the same as the one previously disassembled
     uint32_t crc = crc_microprogram();
+
+    //Set the current program crc to the VU JIT
+    if (vu->get_id() == 1)
+    {
+        VU_JIT::set_current_program(crc);
+    }
+
     if(seen_microprogram_crcs.find(crc) != seen_microprogram_crcs.end())
         return;
 
