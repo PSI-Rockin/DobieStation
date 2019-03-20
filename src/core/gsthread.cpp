@@ -1743,8 +1743,8 @@ void GraphicsSynthesizerThread::render_triangle()
     //Automatic scissoring test
     min_x = max(min_x, (int32_t)current_ctx->scissor.x1);
     min_y = max(min_y, (int32_t)current_ctx->scissor.y1);
-    max_x = min(max_x, (int32_t)current_ctx->scissor.x2);
-    max_y = min(max_y, (int32_t)current_ctx->scissor.y2);
+    max_x = min(max_x, (int32_t)current_ctx->scissor.x2 + 0x10);
+    max_y = min(max_y, (int32_t)current_ctx->scissor.y2 + 0x10);
 
     //We'll process the pixels in blocks, set the blocksize
     const int32_t BLOCKSIZE = 1 << 4; // Must be power of 2
@@ -1953,10 +1953,10 @@ void GraphicsSynthesizerThread::render_sprite()
     //Automatic scissoring test
     int32_t min_y = std::max(v1.y, (int32_t)current_ctx->scissor.y1);
     int32_t min_x = std::max(v1.x, (int32_t)current_ctx->scissor.x1);
-    int32_t max_y = std::min(v2.y, (int32_t)current_ctx->scissor.y2);
-    int32_t max_x = std::min(v2.x, (int32_t)current_ctx->scissor.x2);
+    int32_t max_y = std::min(v2.y, (int32_t)current_ctx->scissor.y2 + 0x10);
+    int32_t max_x = std::min(v2.x, (int32_t)current_ctx->scissor.x2 + 0x10);
 
-    printf("Coords: (%d, %d) (%d, %d)\n", v1.x >> 4, v1.y >> 4, v2.x >> 4, v2.y >> 4);
+    printf("Coords: (%d, %d) (%d, %d)\n", min_x >> 4, min_y >> 4, max_x >> 4, max_y >> 4);
 
     float pix_t = interpolate_f(min_y, v1.t, v1.y, v2.t, v2.y);
     int32_t pix_v = (int32_t)interpolate(min_y, v1.uv.v, v1.y, v2.uv.v, v2.y) << 16;
