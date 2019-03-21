@@ -73,6 +73,23 @@ ImageProcessingUnit::ImageProcessingUnit(INTC* intc) : intc(intc)
             crcb_map[index + 0x11] = (j / 2) + i;
         }
     }
+
+    dither_mtx[0][0] = -8;
+    dither_mtx[0][1] = 0;
+    dither_mtx[0][2] = -6;
+    dither_mtx[0][3] = 2;
+    dither_mtx[1][0] = 4;
+    dither_mtx[1][1] = -4;
+    dither_mtx[1][2] = 6;
+    dither_mtx[1][3] = -2;
+    dither_mtx[2][0] = -5;
+    dither_mtx[2][1] = 3;
+    dither_mtx[2][2] = -7;
+    dither_mtx[2][3] = 1;
+    dither_mtx[3][0] = 7;
+    dither_mtx[3][1] = -1;
+    dither_mtx[3][2] = 5;
+    dither_mtx[3][3] = -3;
 }
 
 void ImageProcessingUnit::reset()
@@ -918,9 +935,9 @@ bool ImageProcessingUnit::process_CSC()
                         color |= ((uint8_t)b) << 16;
 
                         uint32_t alpha;
-                        if (color < alpha_thresh0)
+                        if (r < (TH0 & 0xFF) && g < ((TH0 >> 8) & 0xFF) && b < ((TH0 >> 16) & 0xFF))
                             alpha = 0;
-                        else if (color < alpha_thresh1)
+                        else if (r < (TH1 & 0xFF) && g < ((TH1 >> 8) & 0xFF) && b < ((TH1 >> 16) & 0xFF))
                             alpha = 1 << 30;
                         else
                             alpha = 1 << 31;
@@ -931,13 +948,35 @@ bool ImageProcessingUnit::process_CSC()
                 }
 
                 uint128_t quad;
-                for (int i = 0; i < 0x100 / 4; i++)
+                if (csc.use_RGB16)
                 {
-                    for (int j = 0; j < 4; j++)
+                    //We must convert from RGB32 to RGB16.
+                    //It's worth noting that bit 30 is the alpha bit for RGB16, not bit 31.
+                    //TODO: Figure out how dithering works. It uses "pixel position"
+                    for (int i = 0; i < 0x100 / 8; i++)
                     {
-                        quad._u32[j] = pixels[j + (i * 4)];
+                        for (int j = 0; j < 8; j++)
+                        {
+                            uint32_t color32 = pixels[j + (i * 8)];
+                            uint16_t color16 = (color32 >> 3) & 0x1F;
+                            color16 |= ((color32 >> 11) & 0x1F) << 5;
+                            color16 |= ((color32 >> 19) & 0x1F) << 10;
+                            color16 |= ((color32 >> 30) & 0x1) << 15;
+                            quad._u16[j] = color16;
+                        }
+                        out_FIFO.f.push(quad);
                     }
-                    out_FIFO.f.push(quad);
+                }
+                else
+                {
+                    for (int i = 0; i < 0x100 / 4; i++)
+                    {
+                        for (int j = 0; j < 4; j++)
+                        {
+                            quad._u32[j] = pixels[j + (i * 4)];
+                        }
+                        out_FIFO.f.push(quad);
+                    }
                 }
                 csc.macroblocks--;
                 csc.state = CSC_STATE::BEGIN;
@@ -1031,8 +1070,7 @@ void ImageProcessingUnit::write_command(uint32_t value)
                 idec.qsc = (command_option >> 16) & 0x1F;
                 idec.decodes_dct = command_option & (1 << 24);
                 idec.blocks_decoded = 0;
-                if (command_option & (1 << 27))
-                    Errors::die("[IPU] RGB16 not supported!");
+                csc.use_RGB16 = command_option & (1 << 27);
                 break;
             case 0x02:
                 printf("[IPU] BDEC\n");
@@ -1069,8 +1107,6 @@ void ImageProcessingUnit::write_command(uint32_t value)
                 csc.state = CSC_STATE::BEGIN;
                 csc.macroblocks = command_option & 0x7FF;
                 csc.use_RGB16 = command_option & (1 << 27);
-                if (csc.use_RGB16)
-                    Errors::die("[IPU] RGB16 not supported!");
                 break;
             case 0x09:
                 printf("[IPU] SETTH\n");
