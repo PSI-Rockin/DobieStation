@@ -738,8 +738,6 @@ void DMAC::start_DMA(int index)
                 if (tag == 0 || tag == 7)
                     channels[index].tag_end = true;
                 if (tag != 4) //If the current tag is not refs, do not stall
-                    channels[index].can_stall_drain = true;
-                else
                     channels[index].can_stall_drain = false;
             }
             break;
