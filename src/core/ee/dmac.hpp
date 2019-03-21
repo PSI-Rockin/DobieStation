@@ -69,6 +69,7 @@ class DMAC
         uint32_t PCR;
         D_SQWC SQWC;
         uint32_t RBOR, RBSR;
+        uint32_t STADR;
         bool mfifo_empty_triggered;
 
         uint32_t master_disable;

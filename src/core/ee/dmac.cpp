@@ -42,6 +42,7 @@ void DMAC::reset(uint8_t* RDRAM, uint8_t* scratchpad)
     control.master_enable = false;
     mfifo_empty_triggered = false;
     PCR = 0;
+    STADR = 0;
 
     for (int i = 0; i < 15; i++)
     {
@@ -232,6 +233,11 @@ void DMAC::process_VIF1(int cycles)
         {
             if (channels[VIF1].control & 0x1)
             {
+                if (control.stall_dest_channel == 1)
+                {
+                    if (channels[VIF1].address + (8 * 16) > STADR)
+                        return;
+                }
                 if (!vif1->feed_DMA(fetch128(channels[VIF1].address)))
                     return;
 
@@ -275,6 +281,14 @@ void DMAC::process_GIF(int cycles)
         {
             if (gif->path_active(3) && !gif->fifo_full() && !gif->fifo_draining())
             {
+                if (control.stall_dest_channel == 2)
+                {
+                    if (channels[GIF].address + (8 * 16) > STADR)
+                    {
+                        gif->dma_waiting(true);
+                        return;
+                    }
+                }
                 //printf("Sending GIF PATH3 DMA\n");
                 gif->dma_waiting(false);
 
@@ -319,6 +333,9 @@ void DMAC::process_IPU_FROM(int cycles)
 
                 channels[IPU_FROM].address += 16;
                 channels[IPU_FROM].quadword_count--;
+
+                if (control.stall_source_channel == 3)
+                    STADR = channels[IPU_FROM].address;
             }
         }
         else
@@ -376,7 +393,6 @@ void DMAC::process_SIF0(int cycles)
                 {
                     uint32_t word = sif->read_SIF0();
                     e->write32(channels[SIF0].address + (i * 4), word);
-                    
                 }
                 advance_dest_dma(SIF0);
             }
@@ -420,6 +436,11 @@ void DMAC::process_SIF1(int cycles)
         cycles--;
         if (channels[SIF1].quadword_count)
         {
+            if (control.stall_dest_channel == 3)
+            {
+                if (channels[SIF1].address + (8 * 16) > STADR)
+                    return;
+            }
             if (sif->get_SIF1_size() <= SubsystemInterface::MAX_FIFO_SIZE - 4)
             {
                 sif->write_SIF1(fetch128(channels[SIF1].address));
@@ -580,7 +601,13 @@ void DMAC::advance_dest_dma(int index)
         switch (channels[index].tag_id)
         {
             case 0: //CNTS
-                //TODO: Copy MADR -> DMAC_STADR
+                //SIF0 source stall drain
+                if (index == 5 && control.stall_source_channel == 1)
+                    STADR = channels[index].address;
+                //SPR_FROM source stall drain
+                if (index == 8 && control.stall_source_channel == 2)
+                    STADR = channels[index].address;
+                break;
             default:
                 break;
         }
@@ -1247,6 +1274,10 @@ void DMAC::write32(uint32_t address, uint32_t value)
         case 0x1000E050:
             printf("[DMAC] Write to RBOR: $%08X\n", value);
             RBOR = value;
+            break;
+        case 0x1000E060:
+            printf("[DMAC] Write to STADR: $%08X\n", value);
+            STADR = value;
             break;
         default:
             printf("[DMAC] Unrecognized write32 of $%08X to $%08X\n", value, address);
