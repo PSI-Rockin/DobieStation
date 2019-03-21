@@ -233,7 +233,7 @@ void DMAC::process_VIF1(int cycles)
         {
             if (channels[VIF1].control & 0x1)
             {
-                if (control.stall_dest_channel == 1)
+                if (control.stall_dest_channel == 1 && channels[VIF1].can_stall_drain)
                 {
                     if (channels[VIF1].address + (8 * 16) > STADR)
                         return;
@@ -281,7 +281,7 @@ void DMAC::process_GIF(int cycles)
         {
             if (gif->path_active(3) && !gif->fifo_full() && !gif->fifo_draining())
             {
-                if (control.stall_dest_channel == 2)
+                if (control.stall_dest_channel == 2 && channels[GIF].can_stall_drain)
                 {
                     if (channels[GIF].address + (8 * 16) > STADR)
                     {
@@ -436,7 +436,7 @@ void DMAC::process_SIF1(int cycles)
         cycles--;
         if (channels[SIF1].quadword_count)
         {
-            if (control.stall_dest_channel == 3)
+            if (control.stall_dest_channel == 3 && channels[SIF1].can_stall_drain)
             {
                 if (channels[SIF1].address + (8 * 16) > STADR)
                     return;
@@ -624,6 +624,7 @@ void DMAC::handle_source_chain(int index)
     bool TIE = channels[index].control & (1 << 7);
     channels[index].tag_id = (DMAtag >> 28) & 0x7;
     channels[index].quadword_count = quadword_count;
+    channels[index].can_stall_drain = false;
     switch (channels[index].tag_id)
     {
         case 0:
@@ -651,6 +652,7 @@ void DMAC::handle_source_chain(int index)
             //refs
             channels[index].address = addr;
             channels[index].tag_address += 16;
+            channels[index].can_stall_drain = true;
             break;
         case 5:
         {
@@ -725,6 +727,7 @@ void DMAC::start_DMA(int index)
         mode = 1;
     }
     channels[index].tag_end = !(mode & 0x1); //always end transfers in normal and interleave mode
+    channels[index].can_stall_drain = true;
     switch (mode)
     {
         case 1: //Chain
@@ -734,6 +737,10 @@ void DMAC::start_DMA(int index)
                 int tag = channels[index].control >> 24;
                 if (tag == 0 || tag == 7)
                     channels[index].tag_end = true;
+                if (tag != 4) //If the current tag is not refs, do not stall
+                    channels[index].can_stall_drain = true;
+                else
+                    channels[index].can_stall_drain = false;
             }
             break;
         case 2: //Interleave
