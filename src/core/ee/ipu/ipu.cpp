@@ -1031,6 +1031,8 @@ void ImageProcessingUnit::write_command(uint32_t value)
                 idec.qsc = (command_option >> 16) & 0x1F;
                 idec.decodes_dct = command_option & (1 << 24);
                 idec.blocks_decoded = 0;
+                if (command_option & (1 << 27))
+                    Errors::die("[IPU] RGB16 not supported!");
                 break;
             case 0x02:
                 printf("[IPU] BDEC\n");
@@ -1067,6 +1069,8 @@ void ImageProcessingUnit::write_command(uint32_t value)
                 csc.state = CSC_STATE::BEGIN;
                 csc.macroblocks = command_option & 0x7FF;
                 csc.use_RGB16 = command_option & (1 << 27);
+                if (csc.use_RGB16)
+                    Errors::die("[IPU] RGB16 not supported!");
                 break;
             case 0x09:
                 printf("[IPU] SETTH\n");
