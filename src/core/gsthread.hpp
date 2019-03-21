@@ -131,6 +131,8 @@ class GraphicsSynthesizerThread
         RGBAQ_REG FOGCOL;
         bool PABE;
 
+        uint8_t SCANMSK;
+
         uint8_t dither_mtx[4][4];
 
         BITBLTBUF_REG BITBLTBUF;
