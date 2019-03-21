@@ -596,21 +596,15 @@ void DMAC::advance_dest_dma(int index)
     channels[index].address += 16;
     channels[index].quadword_count--;
 
-    if (mode == 1) //Chain
+    //Update stall address if we're not in chain mode or the tag id is cnts
+    if (mode != 1 || channels[index].tag_id == 0)
     {
-        switch (channels[index].tag_id)
-        {
-            case 0: //CNTS
-                //SIF0 source stall drain
-                if (index == 5 && control.stall_source_channel == 1)
-                    STADR = channels[index].address;
-                //SPR_FROM source stall drain
-                if (index == 8 && control.stall_source_channel == 2)
-                    STADR = channels[index].address;
-                break;
-            default:
-                break;
-        }
+        //SIF0 source stall drain
+        if (index == 5 && control.stall_source_channel == 1)
+            STADR = channels[index].address;
+        //SPR_FROM source stall drain
+        if (index == 8 && control.stall_source_channel == 2)
+            STADR = channels[index].address;
     }
 }
 
