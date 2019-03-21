@@ -727,19 +727,16 @@ void DMAC::start_DMA(int index)
         mode = 1;
     }
     channels[index].tag_end = !(mode & 0x1); //always end transfers in normal and interleave mode
-    channels[index].can_stall_drain = true;
+
+    //Stall drain happens on either normal transfers or refs tags
+    int tag = channels[index].control >> 24;
+    channels[index].can_stall_drain = !(mode & 0x1) || tag == 4;
     switch (mode)
     {
         case 1: //Chain
             //If QWC > 0 and the current tag in CHCR is a terminal tag, end the transfer
             if (channels[index].quadword_count > 0)
-            {
-                int tag = channels[index].control >> 24;
-                if (tag == 0 || tag == 7)
-                    channels[index].tag_end = true;
-                if (tag != 4) //If the current tag is not refs, do not stall
-                    channels[index].can_stall_drain = false;
-            }
+                channels[index].tag_end = (tag == 0 || tag == 7);
             break;
         case 2: //Interleave
             channels[index].interleaved_qwc = SQWC.transfer_qwc;
