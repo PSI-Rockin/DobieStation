@@ -11,6 +11,11 @@ struct VLC_Entry
     uint8_t bits;
 };
 
+class VLC_Error : public std::runtime_error
+{
+    using std::runtime_error::runtime_error;
+};
+
 class VLC_Table
 {
     private:

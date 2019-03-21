@@ -117,73 +117,81 @@ void ImageProcessingUnit::run()
 {
     if (ctrl.busy)
     {
-        switch (command)
+        try
         {
-            case 0x01:
-                if (in_FIFO.f.size())
-                {
-                    if (process_IDEC())
-                        finish_command();
-                }
-                break;
-            case 0x02:
-                if (in_FIFO.f.size())
-                {
-                    if (process_BDEC())
-                        finish_command();
-                }
-                break;
-            case 0x03:
-                if (in_FIFO.f.size())
-                    process_VDEC();
-                break;
-            case 0x04:
-                if (in_FIFO.f.size())
-                    process_FDEC();
-                break;
-            case 0x05:
-                if (!in_FIFO.advance_stream(command_option & 0x3F))
-                    return;
-                while (bytes_left && in_FIFO.f.size())
-                {
-                    uint32_t value;
-                    if (!in_FIFO.get_bits(value, 8))
-                        break;
-                    in_FIFO.advance_stream(8);
-                    int index = 64 - bytes_left;
-                    if (command_option & (1 << 27))
-                        nonintra_IQ[index] = value & 0xFF;
-                    else
-                        intra_IQ[index] = value & 0xFF;
-                    bytes_left--;
-                }
-                if (bytes_left <= 0)
-                    ctrl.busy = false;
-                break;
-            case 0x06:
-                while (bytes_left && in_FIFO.f.size())
-                {
-                    uint128_t quad = in_FIFO.f.front();
-                    in_FIFO.f.pop();
-                    for (int i = 0; i < 8; i++)
+            switch (command)
+            {
+                case 0x01:
+                    if (in_FIFO.f.size())
                     {
-                        int index = (32 - bytes_left) >> 1;
-                        VQCLUT[index] = quad._u16[index];
-                        bytes_left -= 2;
+                        if (process_IDEC())
+                            finish_command();
                     }
-                }
-                if (bytes_left <= 0)
-                    ctrl.busy = false;
-                break;
-            case 0x07:
-                if (in_FIFO.f.size())
-                {
-                    if (process_CSC())
-                        finish_command();
-                }
-                break;
-            default:
-                Errors::die("[IPU] Unrecognized command $%02X\n", command);
+                    break;
+                case 0x02:
+                    if (in_FIFO.f.size())
+                    {
+                        if (process_BDEC())
+                            finish_command();
+                    }
+                    break;
+                case 0x03:
+                    if (in_FIFO.f.size())
+                        process_VDEC();
+                    break;
+                case 0x04:
+                    if (in_FIFO.f.size())
+                        process_FDEC();
+                    break;
+                case 0x05:
+                    if (!in_FIFO.advance_stream(command_option & 0x3F))
+                        return;
+                    while (bytes_left && in_FIFO.f.size())
+                    {
+                        uint32_t value;
+                        if (!in_FIFO.get_bits(value, 8))
+                            break;
+                        in_FIFO.advance_stream(8);
+                        int index = 64 - bytes_left;
+                        if (command_option & (1 << 27))
+                            nonintra_IQ[index] = value & 0xFF;
+                        else
+                            intra_IQ[index] = value & 0xFF;
+                        bytes_left--;
+                    }
+                    if (bytes_left <= 0)
+                        ctrl.busy = false;
+                    break;
+                case 0x06:
+                    while (bytes_left && in_FIFO.f.size())
+                    {
+                        uint128_t quad = in_FIFO.f.front();
+                        in_FIFO.f.pop();
+                        for (int i = 0; i < 8; i++)
+                        {
+                            int index = (32 - bytes_left) >> 1;
+                            VQCLUT[index] = quad._u16[index];
+                            bytes_left -= 2;
+                        }
+                    }
+                    if (bytes_left <= 0)
+                        ctrl.busy = false;
+                    break;
+                case 0x07:
+                    if (in_FIFO.f.size())
+                    {
+                        if (process_CSC())
+                            finish_command();
+                    }
+                    break;
+                default:
+                    Errors::die("[IPU] Unrecognized command $%02X\n", command);
+            }
+        }
+        catch (VLC_Error& e)
+        {
+            ctrl.error_code = true;
+            finish_command();
         }
     }
 }
