@@ -1227,7 +1227,7 @@ bool GraphicsSynthesizerThread::depth_test(int32_t x, int32_t y, uint32_t z)
     return false;
 }
 
-void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGBAQ_REG& color, bool alpha_blending)
+void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGBAQ_REG& color)
 {
     x >>= 4;
     y >>= 4;
@@ -1348,7 +1348,7 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
     }
 
     //PABE - MSB of source alpha must be set to enable alpha blending
-    if (alpha_blending && (!PABE || (color.a & 0x80)))
+    if (current_PRMODE->alpha_blend && (!PABE || (color.a & 0x80)))
     {
         uint32_t r1, g1, b1;
         uint32_t r2, g2, b2;
@@ -1626,11 +1626,11 @@ void GraphicsSynthesizerThread::render_point()
             v = (uint32_t) v1.uv.v;
         }
         tex_lookup(u, v, tex_info);
-        draw_pixel(v1.x, v1.y, v1.z, tex_info.tex_color, current_PRMODE->alpha_blend);
+        draw_pixel(v1.x, v1.y, v1.z, tex_info.tex_color);
     }
     else
     {
-        draw_pixel(v1.x, v1.y, v1.z, tex_info.vtx_color, current_PRMODE->alpha_blend);
+        draw_pixel(v1.x, v1.y, v1.z, tex_info.vtx_color);
     }
 }
 
@@ -1701,9 +1701,9 @@ void GraphicsSynthesizerThread::render_line()
             tex_info.vtx_color = tex_info.tex_color;
         }
         if (is_steep)
-            draw_pixel(y, x, z, tex_info.vtx_color, current_PRMODE->alpha_blend);
+            draw_pixel(y, x, z, tex_info.vtx_color);
         else
-            draw_pixel(x, y, z, tex_info.vtx_color, current_PRMODE->alpha_blend);
+            draw_pixel(x, y, z, tex_info.vtx_color);
     }
 }
 
@@ -1905,11 +1905,11 @@ void GraphicsSynthesizerThread::render_triangle()
                                     v = (uint32_t) temp_v;
                                 }
                                 tex_lookup(u, v, tex_info);
-                                draw_pixel(x, y, (uint32_t)z, tex_info.tex_color, current_PRMODE->alpha_blend);
+                                draw_pixel(x, y, (uint32_t)z, tex_info.tex_color);
                             }
                             else
                             {
-                                draw_pixel(x, y, (uint32_t)z, tex_info.vtx_color, current_PRMODE->alpha_blend);
+                                draw_pixel(x, y, (uint32_t)z, tex_info.vtx_color);
                             }
                         }
                         //Horizontal step
@@ -1989,11 +1989,11 @@ void GraphicsSynthesizerThread::render_sprite()
                 }
                 else
                     tex_lookup(pix_u >> 16, pix_v >> 16, tex_info);
-                draw_pixel(x, y, v2.z, tex_info.tex_color, current_PRMODE->alpha_blend);
+                draw_pixel(x, y, v2.z, tex_info.tex_color);
             }
             else
             {
-                draw_pixel(x, y, v2.z, tex_info.vtx_color, current_PRMODE->alpha_blend);
+                draw_pixel(x, y, v2.z, tex_info.vtx_color);
             }
             pix_s += pix_s_step;
             pix_u += pix_u_step;

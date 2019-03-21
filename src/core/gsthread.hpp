@@ -204,7 +204,7 @@ class GraphicsSynthesizerThread
 
         void vertex_kick(bool drawing_kick);
         bool depth_test(int32_t x, int32_t y, uint32_t z);
-        void draw_pixel(int32_t x, int32_t y, uint32_t z, RGBAQ_REG& color, bool alpha_blending);
+        void draw_pixel(int32_t x, int32_t y, uint32_t z, RGBAQ_REG& color);
         void render_primitive();
         void render_point();
         void render_line();
