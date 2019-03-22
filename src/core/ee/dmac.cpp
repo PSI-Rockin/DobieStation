@@ -312,7 +312,6 @@ void DMAC::process_GIF(int cycles)
             if (channels[GIF].tag_end)
             {
                 transfer_end(GIF);
-                printf("GIF PATH3 DMA Ending\n");
                 gif->deactivate_PATH(3);
                 return;
             }

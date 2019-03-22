@@ -62,7 +62,6 @@ class GraphicsInterface
         void dma_waiting(bool dma_waiting);
         int get_active_path();
         bool path_active(int index);
-        bool path_activepath3(int index);
         void resume_path3();
 
         uint32_t read_STAT();
@@ -97,15 +96,6 @@ inline bool GraphicsInterface::path_active(int index)
         interrupt_path3(index);
     }
     return (active_path == index) && !gs->stalled();
-}
-
-inline bool GraphicsInterface::path_activepath3(int index)
-{
-    if (index != 3)
-    {
-        interrupt_path3(index);
-    }
-    return ((active_path == index) || (path_queue & (1 << 3))) && !gs->stalled();
 }
 
 inline void GraphicsInterface::resume_path3()
