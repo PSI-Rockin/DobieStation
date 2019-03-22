@@ -279,6 +279,7 @@ void DMAC::process_GIF(int cycles)
         cycles--;
         if (channels[GIF].quadword_count)
         {
+            gif->request_PATH(3, false);
             if (gif->path_active(3) && !gif->fifo_full() && !gif->fifo_draining())
             {
                 if (control.stall_dest_channel == 2 && channels[GIF].can_stall_drain)
@@ -295,6 +296,10 @@ void DMAC::process_GIF(int cycles)
                 gif->send_PATH3(fetch128(channels[GIF].address));
 
                 advance_source_dma(GIF);
+                //Do this to get the timing right for PATH3 masking
+                //might make GIF run a little slower if there's lots of tiny packets, but unlikely
+                if (gif->path3_done())
+                    return;
             }
             else
             {
@@ -307,7 +312,6 @@ void DMAC::process_GIF(int cycles)
             if (channels[GIF].tag_end)
             {
                 transfer_end(GIF);
-               // printf("GIF PATH3 DMA Ending\n");
                 gif->deactivate_PATH(3);
                 return;
             }
