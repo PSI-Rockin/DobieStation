@@ -1,5 +1,6 @@
 #ifndef VLC_TABLE_HPP
 #define VLC_TABLE_HPP
+#include <stdexcept>
 #include <cstdint>
 #include <queue>
 #include "ipu_fifo.hpp"
