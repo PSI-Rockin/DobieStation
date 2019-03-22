@@ -73,6 +73,7 @@ class GraphicsInterface
         void set_path3_vifmask(int value);
         bool path3_masked(int index);
         bool interrupt_path3(int index);
+        bool path3_done();
 
         bool send_PATH(int index, uint128_t quad);
 

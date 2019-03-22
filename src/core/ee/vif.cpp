@@ -99,8 +99,9 @@ void VectorInterface::update(int cycles)
 
         if (wait_for_PATH3)
         {
-            if (gif->path_activepath3(3))
+            if (!gif->path3_done())
                 return;
+            gif->deactivate_PATH(3);
             wait_for_PATH3 = false;
         }
 
