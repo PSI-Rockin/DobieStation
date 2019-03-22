@@ -1,9 +1,5 @@
 #include <cstdio>
 #include <cstdlib>
-#include <fstream>
-#include <iomanip>
-#include <cstring>
-#include "vu_disasm.hpp"
 #include "vu_jit.hpp"
 #include "vif.hpp"
 
@@ -146,15 +142,7 @@ void VectorInterface::update(int cycles)
                     vu->write_instr(mpg.addr, value);
                     mpg.addr += 4;
                     if (command_len <= 1)
-                    {
-                        disasm_micromem();
                         command = 0;
-                        //Calculate the current program crc for the VU JIT after all microprograms have transferred
-                        if (vu->get_id() == 1)
-                        {
-                            VU_JIT::set_current_program(crc_microprogram());
-                        }
-                    }
                     break;
                 case 0x50:
                 case 0x51:
@@ -368,7 +356,7 @@ void VectorInterface::handle_wait_cmd(uint32_t value)
 
 void VectorInterface::MSCAL(uint32_t addr)
 {
-    vu->mscal(addr);
+    vu->start_program(addr);
 
     ITOP = ITOPS;
 
@@ -850,92 +838,6 @@ bool VectorInterface::feed_DMA(uint128_t quad)
     for (int i = 0; i < 4; i++)
         FIFO.push(quad._u32[i]);
     return true;
-}
-
-void VectorInterface::disasm_micromem()
-{
-    //Check for branch targets and also see if the microprogram is the same as the one previously disassembled
-    uint32_t crc = crc_microprogram();
-    if(seen_microprogram_crcs.find(crc) != seen_microprogram_crcs.end())
-        return;
-
-    seen_microprogram_crcs.insert(crc);
-
-    int size = (vu->get_id()) ? 0x4000 : 0x1000;
-    bool is_branch_target[0x4000 / 8];
-    memset(is_branch_target, 0, size / 8);
-    for (int i = 0; i < size; i += 8)
-    {
-        uint32_t lower = vu->read_instr<uint32_t>(i);
-
-        //If the lower instruction is a branch, set branch target to true for the location it points to
-        if (VU_Disasm::is_branch(lower))
-        {
-            int32_t imm = lower & 0x7FF;
-            imm = ((int16_t)(imm << 5)) >> 5;
-            imm *= 8;
-
-            uint32_t addr = i + imm + 8;
-            if (addr < size)
-                is_branch_target[addr / 8] = true;
-        }
-    }
-
-
-    using namespace std;
-
-    ofstream file;
-    string name = "microvu" + to_string(get_id()) + "_" + to_string(crc) + ".txt";
-
-    file.open(name);
-
-    if (!file.is_open())
-    {
-        Errors::die("Failed to open\n");
-    }
-
-    for (int i = 0; i < size; i += 8)
-    {
-        if (is_branch_target[i / 8])
-        {
-            file << endl;
-            file << "Branch target $" << setfill('0') << setw(4) << right << hex << i << ":";
-            file << endl;
-        }
-        //PC
-        file << "[$" << setfill('0') << setw(4) << right << hex << i << "] ";
-
-        //Raw instructions
-        uint32_t lower = vu->read_instr<uint32_t>(i);
-        uint32_t upper = vu->read_instr<uint32_t>(i + 4);
-
-        file << setw(8) << hex << upper << ":" << setw(8) << lower << " ";
-        file << setfill(' ') << setw(30) << left << VU_Disasm::upper(i, upper);
-
-        if (upper & (1 << 31))
-            file << VU_Disasm::loi(lower);
-        else
-            file << VU_Disasm::lower(i, lower);
-        file << endl;
-    }
-    file.close();
-}
-
-#define POLY 0x82f63b78
-
-uint32_t VectorInterface::crc_microprogram()
-{
-    uint32_t crc = 0;
-    int len = (vu->get_id()) ? 0x4000 : 0x1000;
-    int addr = 0x0000;
-
-    crc = ~crc;
-    while (len--) {
-        crc ^= vu->read_instr<uint8_t>(addr++);
-        for (int k = 0; k < 8; k++)
-            crc = crc & 1 ? (crc >> 1) ^ POLY : crc >> 1;
-    }
-    return ~crc;
 }
 
 uint32_t VectorInterface::get_stat()

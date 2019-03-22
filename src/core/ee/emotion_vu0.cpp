@@ -448,7 +448,7 @@ void EmotionInterpreter::cop2_vcallms(VectorUnit &vu0, uint32_t instruction, Emo
     }
     cpu.clear_interlock();
 
-    vu0.mscal(imm);
+    vu0.start_program(imm);
 }
 
 void EmotionInterpreter::cop2_vcallmsr(VectorUnit &vu0, uint32_t instruction, EmotionEngine &cpu)
@@ -460,7 +460,7 @@ void EmotionInterpreter::cop2_vcallmsr(VectorUnit &vu0, uint32_t instruction, Em
     }
     cpu.clear_interlock();
 
-    vu0.callmsr();
+    vu0.start_program(vu0.read_CMSAR0() * 8);
 }
 
 void EmotionInterpreter::cop2_special2(VectorUnit &vu0, uint32_t instruction)

@@ -1,9 +1,13 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
+#include <fstream>
+#include <iomanip>
 #include "vu.hpp"
 #include "vu_interpreter.hpp"
 #include "vu_jit.hpp"
+#include "vu_disasm.hpp"
 
 #include "../emulator.hpp"
 #include "../errors.hpp"
@@ -96,6 +100,7 @@ void VectorUnit::reset()
     cycle_count = 1; //Set to 1 to prevent spurious events from occurring during execution
     run_event = 0;
     running = false;
+    vumem_is_dirty = true; //assume we don't know the contents on reset
     finish_on = false;
     branch_on = false;
     second_branch_pending = false;
@@ -416,20 +421,122 @@ uint32_t VectorUnit::read_fbrst()
     return FBRST;
 }
 
-void VectorUnit::callmsr()
+uint32_t VectorUnit::read_CMSAR0()
 {
-    printf("[VU%d] CallMSR Starting execution at $%08X! Cur PC %x\n", get_id(), CMSAR0 * 8, PC);
-    if (running == false)
-    {
-        running = true;
-        PC = CMSAR0 * 8;
-    }
-    run_event = cycle_count;
+    return CMSAR0;
 }
 
-void VectorUnit::mscal(uint32_t addr)
+void VectorUnit::disasm_micromem()
+{
+    //If the memory hasn't changed since the last CRC/Disasm, don't bother checking it
+    if (!is_dirty())
+        return;
+    //Check for branch targets and also see if the microprogram is the same as the one previously disassembled
+    uint32_t crc = crc_microprogram();
+
+    //Set the current program crc to the VU JIT
+    if (get_id() == 1)
+    {
+        VU_JIT::set_current_program(crc);
+    }
+
+    clear_dirty();
+
+    if (seen_microprogram_crcs.find(crc) != seen_microprogram_crcs.end())
+        return;
+
+    seen_microprogram_crcs.insert(crc);
+
+    int size = (get_id()) ? 0x4000 : 0x1000;
+    bool is_branch_target[0x4000 / 8];
+    memset(is_branch_target, 0, size / 8);
+    for (int i = 0; i < size; i += 8)
+    {
+        uint32_t lower = read_instr<uint32_t>(i);
+
+        //If the lower instruction is a branch, set branch target to true for the location it points to
+        if (VU_Disasm::is_branch(lower))
+        {
+            int32_t imm = lower & 0x7FF;
+            imm = ((int16_t)(imm << 5)) >> 5;
+            imm *= 8;
+
+            uint32_t addr = i + imm + 8;
+            if (addr < size)
+                is_branch_target[addr / 8] = true;
+        }
+    }
+
+
+    using namespace std;
+
+    ofstream file;
+    string name = "microvu" + to_string(get_id()) + "_" + to_string(crc) + ".txt";
+
+    file.open(name);
+
+    if (!file.is_open())
+    {
+        Errors::die("Failed to open\n");
+    }
+
+    for (int i = 0; i < size; i += 8)
+    {
+        if (is_branch_target[i / 8])
+        {
+            file << endl;
+            file << "Branch target $" << setfill('0') << setw(4) << right << hex << i << ":";
+            file << endl;
+        }
+        //PC
+        file << "[$" << setfill('0') << setw(4) << right << hex << i << "] ";
+
+        //Raw instructions
+        uint32_t lower = read_instr<uint32_t>(i);
+        uint32_t upper = read_instr<uint32_t>(i + 4);
+
+        file << setw(8) << hex << upper << ":" << setw(8) << lower << " ";
+        file << setfill(' ') << setw(30) << left << VU_Disasm::upper(i, upper);
+
+        if (upper & (1 << 31))
+            file << VU_Disasm::loi(lower);
+        else
+            file << VU_Disasm::lower(i, lower);
+        file << endl;
+    }
+    file.close();
+}
+
+#define POLY 0x82f63b78
+
+uint32_t VectorUnit::crc_microprogram()
+{
+    uint32_t crc = 0;
+    int len = (get_id()) ? 0x4000 : 0x1000;
+    int addr = 0x0000;
+
+    crc = ~crc;
+    while (len--) {
+        crc ^= read_instr<uint8_t>(addr++);
+        for (int k = 0; k < 8; k++)
+            crc = crc & 1 ? (crc >> 1) ^ POLY : crc >> 1;
+    }
+    return ~crc;
+}
+
+void VectorUnit::start_program(uint32_t addr)
 {
     printf("[VU%d] CallMS Starting execution at $%08X! Cur PC %x\n", get_id(), addr, PC);
+
+    disasm_micromem();
+
+    //Enable this if disabling micromem disasm
+    /*if (get_id() == 1 && is_dirty())
+    {
+        VU_JIT::set_current_program(crc_microprogram());
+        clear_dirty();
+    }*/
+    
     if (running == false)
     {
         running = true;
