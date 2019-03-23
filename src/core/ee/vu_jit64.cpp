@@ -1152,9 +1152,6 @@ void VU_JIT64::max_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     REG_64 bc_reg = alloc_sse_reg(vu, instr.get_source2(), REG_STATE::READ_WRITE);
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
 
-    clamp_vfreg(field, source);
-    clamp_vfreg(field, bc_reg);
-
     uint8_t bc = instr.get_bc();
     bc |= (bc << 6) | (bc << 4) | (bc << 2);
 
@@ -1174,11 +1171,9 @@ void VU_JIT64::max_vectors(VectorUnit &vu, IR::Instruction &instr)
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
     REG_64 temp = REG_64::XMM0;
 
-    clamp_vfreg(field, op1);
-    clamp_vfreg(field, op2);
-
-    emitter.MOVAPS_REG(op1, temp);
-    emitter.MAXPS(op2, temp);
+    //GT4 has black screens during 3D if it isn't this way around
+    emitter.MOVAPS_REG(op2, temp);
+    emitter.MAXPS(op1, temp);
     emitter.BLENDPS(field, temp, dest);
 }
 
@@ -1188,9 +1183,6 @@ void VU_JIT64::min_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ_WRITE);
     REG_64 bc_reg = alloc_sse_reg(vu, instr.get_source2(), REG_STATE::READ_WRITE);
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
-
-    clamp_vfreg(field, source);
-    clamp_vfreg(field, bc_reg);
 
     uint8_t bc = instr.get_bc();
     bc |= (bc << 6) | (bc << 4) | (bc << 2);
@@ -1211,11 +1203,9 @@ void VU_JIT64::min_vectors(VectorUnit &vu, IR::Instruction &instr)
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
     REG_64 temp = REG_64::XMM0;
 
-    clamp_vfreg(field, op1);
-    clamp_vfreg(field, op2);
-
-    emitter.MOVAPS_REG(op1, temp);
-    emitter.MINPS(op2, temp);
+    //GT4 has black screens during 3D if it isn't this way around
+    emitter.MOVAPS_REG(op2, temp);
+    emitter.MINPS(op1, temp);
     emitter.BLENDPS(field, temp, dest);
 }
 
