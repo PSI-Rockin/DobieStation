@@ -7,7 +7,7 @@
 
 #include "../int128.hpp"
 
-#define XGKICK_INIT_DELAY 3
+#define XGKICK_INIT_DELAY 0
 
 union alignas(16) VU_R
 {
