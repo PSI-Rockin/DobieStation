@@ -204,17 +204,22 @@ void VU_JIT64::clamp_vfreg(uint8_t field, REG_64 xmm_reg)
 {
     if (needs_clamping(xmm_reg, field))
     {
+        REG_64 temp_reg = REG_64::XMM1;
+        //Some ops use XMM1 as their final destination, so use the other reg
+        if(xmm_reg == temp_reg)
+            temp_reg = REG_64::XMM0;
+
         emitter.load_addr((uint64_t)&max_flt_constant, REG_64::RAX);
         emitter.load_addr((uint64_t)&min_flt_constant, REG_64::R15);
 
-        emitter.MOVAPS_REG(xmm_reg, REG_64::XMM1);
+        emitter.MOVAPS_REG(xmm_reg, temp_reg);
         //reg = min_signed(reg, 0x7F7FFFFF)
-        emitter.PMINSD_XMM_FROM_MEM(REG_64::RAX, REG_64::XMM1);
+        emitter.PMINSD_XMM_FROM_MEM(REG_64::RAX, temp_reg);
 
         //reg = min_unsigned(reg, 0xFF7FFFFF)
-        emitter.PMINUD_XMM_FROM_MEM(REG_64::R15, REG_64::XMM1);
+        emitter.PMINUD_XMM_FROM_MEM(REG_64::R15, temp_reg);
 
-        emitter.BLENDPS(field, REG_64::XMM1, xmm_reg);
+        emitter.BLENDPS(field, temp_reg, xmm_reg);
         set_clamping(xmm_reg, false, field);
     }
 }
