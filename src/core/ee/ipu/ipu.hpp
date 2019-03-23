@@ -158,6 +158,8 @@ class ImageProcessingUnit
         VLC_Table* VDEC_table;
         IPU_FIFO in_FIFO, out_FIFO;
 
+        int8_t dither_mtx[4][4];
+
         uint8_t intra_IQ[0x40], nonintra_IQ[0x40];
         uint16_t VQCLUT[16];
         uint32_t TH0, TH1;

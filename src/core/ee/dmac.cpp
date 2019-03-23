@@ -42,6 +42,7 @@ void DMAC::reset(uint8_t* RDRAM, uint8_t* scratchpad)
     control.master_enable = false;
     mfifo_empty_triggered = false;
     PCR = 0;
+    STADR = 0;
 
     for (int i = 0; i < 15; i++)
     {
@@ -232,6 +233,11 @@ void DMAC::process_VIF1(int cycles)
         {
             if (channels[VIF1].control & 0x1)
             {
+                if (control.stall_dest_channel == 1 && channels[VIF1].can_stall_drain)
+                {
+                    if (channels[VIF1].address + (8 * 16) > STADR)
+                        return;
+                }
                 if (!vif1->feed_DMA(fetch128(channels[VIF1].address)))
                     return;
 
@@ -273,14 +279,27 @@ void DMAC::process_GIF(int cycles)
         cycles--;
         if (channels[GIF].quadword_count)
         {
+            gif->request_PATH(3, false);
             if (gif->path_active(3) && !gif->fifo_full() && !gif->fifo_draining())
             {
+                if (control.stall_dest_channel == 2 && channels[GIF].can_stall_drain)
+                {
+                    if (channels[GIF].address + (8 * 16) > STADR)
+                    {
+                        gif->dma_waiting(true);
+                        return;
+                    }
+                }
                 //printf("Sending GIF PATH3 DMA\n");
                 gif->dma_waiting(false);
 
                 gif->send_PATH3(fetch128(channels[GIF].address));
 
                 advance_source_dma(GIF);
+                //Do this to get the timing right for PATH3 masking
+                //might make GIF run a little slower if there's lots of tiny packets, but unlikely
+                if (gif->path3_done())
+                    return;
             }
             else
             {
@@ -293,7 +312,6 @@ void DMAC::process_GIF(int cycles)
             if (channels[GIF].tag_end)
             {
                 transfer_end(GIF);
-               // printf("GIF PATH3 DMA Ending\n");
                 gif->deactivate_PATH(3);
                 return;
             }
@@ -319,6 +337,9 @@ void DMAC::process_IPU_FROM(int cycles)
 
                 channels[IPU_FROM].address += 16;
                 channels[IPU_FROM].quadword_count--;
+
+                if (control.stall_source_channel == 3)
+                    STADR = channels[IPU_FROM].address;
             }
         }
         else
@@ -376,7 +397,6 @@ void DMAC::process_SIF0(int cycles)
                 {
                     uint32_t word = sif->read_SIF0();
                     e->write32(channels[SIF0].address + (i * 4), word);
-                    
                 }
                 advance_dest_dma(SIF0);
             }
@@ -420,6 +440,11 @@ void DMAC::process_SIF1(int cycles)
         cycles--;
         if (channels[SIF1].quadword_count)
         {
+            if (control.stall_dest_channel == 3 && channels[SIF1].can_stall_drain)
+            {
+                if (channels[SIF1].address + (8 * 16) > STADR)
+                    return;
+            }
             if (sif->get_SIF1_size() <= SubsystemInterface::MAX_FIFO_SIZE - 4)
             {
                 sif->write_SIF1(fetch128(channels[SIF1].address));
@@ -575,15 +600,15 @@ void DMAC::advance_dest_dma(int index)
     channels[index].address += 16;
     channels[index].quadword_count--;
 
-    if (mode == 1) //Chain
+    //Update stall address if we're not in chain mode or the tag id is cnts
+    if (mode != 1 || channels[index].tag_id == 0)
     {
-        switch (channels[index].tag_id)
-        {
-            case 0: //CNTS
-                //TODO: Copy MADR -> DMAC_STADR
-            default:
-                break;
-        }
+        //SIF0 source stall drain
+        if (index == 5 && control.stall_source_channel == 1)
+            STADR = channels[index].address;
+        //SPR_FROM source stall drain
+        if (index == 8 && control.stall_source_channel == 2)
+            STADR = channels[index].address;
     }
 }
 
@@ -603,6 +628,7 @@ void DMAC::handle_source_chain(int index)
     bool TIE = channels[index].control & (1 << 7);
     channels[index].tag_id = (DMAtag >> 28) & 0x7;
     channels[index].quadword_count = quadword_count;
+    channels[index].can_stall_drain = false;
     switch (channels[index].tag_id)
     {
         case 0:
@@ -630,6 +656,7 @@ void DMAC::handle_source_chain(int index)
             //refs
             channels[index].address = addr;
             channels[index].tag_address += 16;
+            channels[index].can_stall_drain = true;
             break;
         case 5:
         {
@@ -704,16 +731,16 @@ void DMAC::start_DMA(int index)
         mode = 1;
     }
     channels[index].tag_end = !(mode & 0x1); //always end transfers in normal and interleave mode
+
+    //Stall drain happens on either normal transfers or refs tags
+    int tag = channels[index].control >> 24;
+    channels[index].can_stall_drain = !(mode & 0x1) || tag == 4;
     switch (mode)
     {
         case 1: //Chain
             //If QWC > 0 and the current tag in CHCR is a terminal tag, end the transfer
             if (channels[index].quadword_count > 0)
-            {
-                int tag = channels[index].control >> 24;
-                if (tag == 0 || tag == 7)
-                    channels[index].tag_end = true;
-            }
+                channels[index].tag_end = (tag == 0 || tag == 7);
             break;
         case 2: //Interleave
             channels[index].interleaved_qwc = SQWC.transfer_qwc;
@@ -1247,6 +1274,10 @@ void DMAC::write32(uint32_t address, uint32_t value)
         case 0x1000E050:
             printf("[DMAC] Write to RBOR: $%08X\n", value);
             RBOR = value;
+            break;
+        case 0x1000E060:
+            printf("[DMAC] Write to STADR: $%08X\n", value);
+            STADR = value;
             break;
         default:
             printf("[DMAC] Unrecognized write32 of $%08X to $%08X\n", value, address);

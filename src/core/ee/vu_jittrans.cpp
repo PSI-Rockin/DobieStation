@@ -861,6 +861,7 @@ void VU_JitTranslator::translate_upper(std::vector<IR::Instruction>& instrs, uin
 {
     uint8_t op = upper & 0x3F;
     IR::Instruction instr;
+    
     switch (op)
     {
         case 0x00:
@@ -986,7 +987,7 @@ void VU_JitTranslator::translate_upper(std::vector<IR::Instruction>& instrs, uin
             instr.op = IR::Opcode::VSubVectorByScalar;
             op_vector_by_scalar(instr, upper, VU_SpecialReg::I);
             break;
-        case 0x27:
+       case 0x27:
             //MSUBi
             instr.op = IR::Opcode::VMsubVectorByScalar;
             op_vector_by_scalar(instr, upper, VU_SpecialReg::I);
@@ -1057,6 +1058,7 @@ void VU_JitTranslator::upper_special(std::vector<IR::Instruction> &instrs, uint3
 {
     uint8_t op = (upper & 0x3) | ((upper >> 4) & 0x7C);
     IR::Instruction instr;
+    
     switch (op)
     {
         case 0x00:

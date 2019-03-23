@@ -172,7 +172,7 @@ void VU_JIT64::reset(bool clear_cache)
 
 void VU_JIT64::set_current_program(uint32_t crc)
 {
-    reset(false);
+    reset(current_program != crc);
     current_program = crc;
 
 }
@@ -200,20 +200,27 @@ uint64_t VU_JIT64::get_vf_addr(VectorUnit &vu, int index)
     return 0;
 }
 
-void VU_JIT64::clamp_vfreg(REG_64 xmm_reg)
+void VU_JIT64::clamp_vfreg(uint8_t field, REG_64 xmm_reg)
 {
-    if (needs_clamping(xmm_reg))
+    if (needs_clamping(xmm_reg, field))
     {
+        REG_64 temp_reg = REG_64::XMM1;
+        //Some ops use XMM1 as their final destination, so use the other reg
+        if(xmm_reg == temp_reg)
+            temp_reg = REG_64::XMM0;
+
         emitter.load_addr((uint64_t)&max_flt_constant, REG_64::RAX);
         emitter.load_addr((uint64_t)&min_flt_constant, REG_64::R15);
 
+        emitter.MOVAPS_REG(xmm_reg, temp_reg);
         //reg = min_signed(reg, 0x7F7FFFFF)
-        emitter.PMINSD_XMM_FROM_MEM(REG_64::RAX, xmm_reg);
+        emitter.PMINSD_XMM_FROM_MEM(REG_64::RAX, temp_reg);
 
         //reg = min_unsigned(reg, 0xFF7FFFFF)
-        emitter.PMINUD_XMM_FROM_MEM(REG_64::R15, xmm_reg);
+        emitter.PMINUD_XMM_FROM_MEM(REG_64::R15, temp_reg);
 
-        set_clamping(xmm_reg, false);
+        emitter.BLENDPS(field, temp_reg, xmm_reg);
+        set_clamping(xmm_reg, false, field);
     }
 }
 
@@ -346,7 +353,7 @@ void VU_JIT64::load_float_const(VectorUnit &vu, IR::Instruction &instr)
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::WRITE);
     emitter.MOV64_OI(instr.get_source(), REG_64::RAX);
     emitter.MOVD_TO_XMM(REG_64::RAX, dest);
-    set_clamping(dest, true);
+    set_clamping(dest, true, 0xf);
 }
 
 void VU_JIT64::load_int(VectorUnit &vu, IR::Instruction &instr)
@@ -451,7 +458,7 @@ void VU_JIT64::load_quad(VectorUnit &vu, IR::Instruction &instr)
     {
         REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::WRITE);
         emitter.MOVAPS_FROM_MEM(REG_64::R15, dest);
-        set_clamping(dest, true);
+        set_clamping(dest, true, 0xf);
     }
     else
     {
@@ -459,7 +466,7 @@ void VU_JIT64::load_quad(VectorUnit &vu, IR::Instruction &instr)
         REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
         emitter.MOVAPS_FROM_MEM(REG_64::R15, temp);
         emitter.BLENDPS(field, temp, dest);
-        set_clamping(dest, true);
+        set_clamping(dest, true, field);
     }
 }
 
@@ -520,7 +527,7 @@ void VU_JIT64::load_quad_inc(VectorUnit &vu, IR::Instruction &instr)
     {
         REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::WRITE);
         emitter.MOVAPS_FROM_MEM(REG_64::R15, dest);
-        set_clamping(dest, true);
+        set_clamping(dest, true, 0xf);
     }
     else
     {
@@ -528,7 +535,7 @@ void VU_JIT64::load_quad_inc(VectorUnit &vu, IR::Instruction &instr)
         REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
         emitter.MOVAPS_FROM_MEM(REG_64::R15, temp);
         emitter.BLENDPS(field, temp, dest);
-        set_clamping(dest, true);
+        set_clamping(dest, true, field);
     }
 
     if (instr.get_base())
@@ -586,7 +593,7 @@ void VU_JIT64::load_quad_dec(VectorUnit &vu, IR::Instruction &instr)
     {
         REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::WRITE);
         emitter.MOVAPS_FROM_MEM(REG_64::R15, dest);
-        set_clamping(dest, true);
+        set_clamping(dest, true, 0xf);
     }
     else
     {
@@ -594,7 +601,7 @@ void VU_JIT64::load_quad_dec(VectorUnit &vu, IR::Instruction &instr)
         REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
         emitter.MOVAPS_FROM_MEM(REG_64::R15, temp);
         emitter.BLENDPS(field, temp, dest);
-        set_clamping(dest, true);
+        set_clamping(dest, true, field);
     }
 }
 
@@ -1145,9 +1152,6 @@ void VU_JIT64::max_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     REG_64 bc_reg = alloc_sse_reg(vu, instr.get_source2(), REG_STATE::READ_WRITE);
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
 
-    clamp_vfreg(source);
-    clamp_vfreg(bc_reg);
-
     uint8_t bc = instr.get_bc();
     bc |= (bc << 6) | (bc << 4) | (bc << 2);
 
@@ -1167,11 +1171,9 @@ void VU_JIT64::max_vectors(VectorUnit &vu, IR::Instruction &instr)
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
     REG_64 temp = REG_64::XMM0;
 
-    clamp_vfreg(op1);
-    clamp_vfreg(op2);
-
-    emitter.MOVAPS_REG(op1, temp);
-    emitter.MAXPS(op2, temp);
+    //GT4 has black screens during 3D if it isn't this way around
+    emitter.MOVAPS_REG(op2, temp);
+    emitter.MAXPS(op1, temp);
     emitter.BLENDPS(field, temp, dest);
 }
 
@@ -1181,9 +1183,6 @@ void VU_JIT64::min_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ_WRITE);
     REG_64 bc_reg = alloc_sse_reg(vu, instr.get_source2(), REG_STATE::READ_WRITE);
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
-
-    clamp_vfreg(source);
-    clamp_vfreg(bc_reg);
 
     uint8_t bc = instr.get_bc();
     bc |= (bc << 6) | (bc << 4) | (bc << 2);
@@ -1204,11 +1203,9 @@ void VU_JIT64::min_vectors(VectorUnit &vu, IR::Instruction &instr)
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
     REG_64 temp = REG_64::XMM0;
 
-    clamp_vfreg(op1);
-    clamp_vfreg(op2);
-
-    emitter.MOVAPS_REG(op1, temp);
-    emitter.MINPS(op2, temp);
+    //GT4 has black screens during 3D if it isn't this way around
+    emitter.MOVAPS_REG(op2, temp);
+    emitter.MINPS(op1, temp);
     emitter.BLENDPS(field, temp, dest);
 }
 
@@ -1221,14 +1218,14 @@ void VU_JIT64::add_vectors(VectorUnit &vu, IR::Instruction &instr)
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
     REG_64 temp = REG_64::XMM0;
 
-    clamp_vfreg(op1);
-    clamp_vfreg(op2);
+    clamp_vfreg(field, op1);
+    clamp_vfreg(field, op2);
 
     emitter.MOVAPS_REG(op1, temp);
     emitter.ADDPS(op2, temp);
 
-    set_clamping(temp, true);
-    clamp_vfreg(temp);
+    set_clamping(temp, true, field);
+    clamp_vfreg(field, temp);
 
     if (instr.get_dest())
         emitter.BLENDPS(field, temp, dest);
@@ -1244,8 +1241,8 @@ void VU_JIT64::add_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     REG_64 bc_reg = alloc_sse_reg(vu, instr.get_source2(), REG_STATE::READ_WRITE);
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
 
-    clamp_vfreg(source);
-    clamp_vfreg(bc_reg);
+    clamp_vfreg(field, source);
+    clamp_vfreg(field, bc_reg);
 
     uint8_t bc = instr.get_bc();
     bc |= (bc << 6) | (bc << 4) | (bc << 2);
@@ -1254,8 +1251,8 @@ void VU_JIT64::add_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     emitter.MOVAPS_REG(bc_reg, temp);
     emitter.SHUFPS(bc, temp, temp);
     emitter.ADDPS(source, temp);
-    set_clamping(temp, true);
-    clamp_vfreg(temp);
+    set_clamping(temp, true, field);
+    clamp_vfreg(field, temp);
 
     if (instr.get_dest())
         emitter.BLENDPS(field, temp, dest);
@@ -1273,13 +1270,13 @@ void VU_JIT64::sub_vectors(VectorUnit &vu, IR::Instruction &instr)
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
     REG_64 temp = REG_64::XMM0;
 
-    clamp_vfreg(op1);
-    clamp_vfreg(op2);
+    clamp_vfreg(field, op1);
+    clamp_vfreg(field, op2);
 
     emitter.MOVAPS_REG(op1, temp);
     emitter.SUBPS(op2, temp);
-    set_clamping(temp, true);
-    clamp_vfreg(temp);
+    set_clamping(temp, true, field);
+    clamp_vfreg(field, temp);
 
     if (instr.get_dest())
         emitter.BLENDPS(field, temp, dest);
@@ -1295,8 +1292,8 @@ void VU_JIT64::sub_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     REG_64 bc_reg = alloc_sse_reg(vu, instr.get_source2(), REG_STATE::READ_WRITE);
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
 
-    clamp_vfreg(source);
-    clamp_vfreg(bc_reg);
+    clamp_vfreg(field, source);
+    clamp_vfreg(field, bc_reg);
 
     uint8_t bc = instr.get_bc();
     bc |= (bc << 6) | (bc << 4) | (bc << 2);
@@ -1307,8 +1304,8 @@ void VU_JIT64::sub_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     emitter.MOVAPS_REG(source, temp2);
     emitter.SHUFPS(bc, temp, temp);
     emitter.SUBPS(temp, temp2);
-    set_clamping(temp2, true);
-    clamp_vfreg(temp2);
+    set_clamping(temp2, true, field);
+    clamp_vfreg(field, temp2);
 
     if (instr.get_dest())
         emitter.BLENDPS(field, temp2, dest);
@@ -1326,13 +1323,13 @@ void VU_JIT64::mul_vectors(VectorUnit &vu, IR::Instruction &instr)
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
     REG_64 temp = REG_64::XMM0;
 
-    clamp_vfreg(op1);
-    clamp_vfreg(op2);
+    clamp_vfreg(field, op1);
+    clamp_vfreg(field, op2);
 
     emitter.MOVAPS_REG(op1, temp);
     emitter.MULPS(op2, temp);
-    set_clamping(temp, true);
-    clamp_vfreg(temp);
+    set_clamping(temp, true, field);
+    clamp_vfreg(field, temp);
 
     if (instr.get_dest())
         emitter.BLENDPS(field, temp, dest);
@@ -1348,8 +1345,8 @@ void VU_JIT64::mul_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     REG_64 bc_reg = alloc_sse_reg(vu, instr.get_source2(), REG_STATE::READ_WRITE);
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
 
-    clamp_vfreg(source);
-    clamp_vfreg(bc_reg);
+    clamp_vfreg(field, source);
+    clamp_vfreg(field, bc_reg);
 
     uint8_t bc = instr.get_bc();
     bc |= (bc << 6) | (bc << 4) | (bc << 2);
@@ -1358,8 +1355,8 @@ void VU_JIT64::mul_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     emitter.MOVAPS_REG(bc_reg, temp);
     emitter.SHUFPS(bc, temp, temp);
     emitter.MULPS(source, temp);
-    set_clamping(temp, true);
-    clamp_vfreg(temp);
+    set_clamping(temp, true, field);
+    clamp_vfreg(field, temp);
 
     if (instr.get_dest())
         emitter.BLENDPS(field, temp, dest);
@@ -1378,15 +1375,15 @@ void VU_JIT64::madd_vectors(VectorUnit &vu, IR::Instruction &instr)
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
     REG_64 temp = REG_64::XMM0;
 
-    clamp_vfreg(op1);
-    clamp_vfreg(op2);
-    clamp_vfreg(acc);
+    clamp_vfreg(field, op1);
+    clamp_vfreg(field, op2);
+    clamp_vfreg(field, acc);
 
     emitter.MOVAPS_REG(op1, temp);
     emitter.MULPS(op2, temp);
     emitter.ADDPS(acc, temp);
-    set_clamping(temp, true);
-    clamp_vfreg(temp);
+    set_clamping(temp, true, field);
+    clamp_vfreg(field, temp);
 
     if (instr.get_dest())
         emitter.BLENDPS(field, temp, dest);
@@ -1404,17 +1401,17 @@ void VU_JIT64::madd_acc_and_vectors(VectorUnit &vu, IR::Instruction &instr)
     REG_64 dest = alloc_sse_reg(vu, VU_SpecialReg::ACC, REG_STATE::READ_WRITE);
     REG_64 temp = REG_64::XMM0;
 
-    clamp_vfreg(op1);
-    clamp_vfreg(op2);
-    clamp_vfreg(dest);
+    clamp_vfreg(field, op1);
+    clamp_vfreg(field, op2);
+    clamp_vfreg(field, dest);
 
     emitter.MOVAPS_REG(op1, temp);
     emitter.MULPS(op2, temp);
     if (field == 0xF)
     {
         emitter.ADDPS(temp, dest);
-        set_clamping(dest, true);
-        clamp_vfreg(dest);
+        set_clamping(dest, true, field);
+        clamp_vfreg(field, dest);
 
         if (should_update_mac)
             update_mac_flags(vu, dest, field);
@@ -1422,8 +1419,8 @@ void VU_JIT64::madd_acc_and_vectors(VectorUnit &vu, IR::Instruction &instr)
     else
     {
         emitter.ADDPS(dest, temp);
-        set_clamping(temp, true);
-        clamp_vfreg(temp);
+        set_clamping(temp, true, field);
+        clamp_vfreg(field, temp);
         emitter.BLENDPS(field, temp, dest);
 
         if (should_update_mac)
@@ -1440,9 +1437,9 @@ void VU_JIT64::madd_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
     REG_64 acc = alloc_sse_reg(vu, VU_SpecialReg::ACC, REG_STATE::READ);
 
-    clamp_vfreg(source);
-    clamp_vfreg(bc_reg);
-    clamp_vfreg(acc);
+    clamp_vfreg(field, source);
+    clamp_vfreg(field, bc_reg);
+    clamp_vfreg(field, acc);
 
     uint8_t bc = instr.get_bc();
     bc |= (bc << 6) | (bc << 4) | (bc << 2);
@@ -1451,8 +1448,8 @@ void VU_JIT64::madd_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     emitter.SHUFPS(bc, temp, temp);
     emitter.MULPS(source, temp);
     emitter.ADDPS(acc, temp);
-    set_clamping(temp, true);
-    clamp_vfreg(temp);
+    set_clamping(temp, true, field);
+    clamp_vfreg(field, temp);
 
     if (instr.get_dest())
         emitter.BLENDPS(field, temp, dest);
@@ -1470,9 +1467,9 @@ void VU_JIT64::madd_acc_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ);
     REG_64 dest = alloc_sse_reg(vu, VU_SpecialReg::ACC, REG_STATE::READ_WRITE);
 
-    clamp_vfreg(source);
-    clamp_vfreg(bc_reg);
-    clamp_vfreg(dest);
+    clamp_vfreg(field, source);
+    clamp_vfreg(field, bc_reg);
+    clamp_vfreg(field, dest);
 
     uint8_t bc = instr.get_bc();
     bc |= (bc << 6) | (bc << 4) | (bc << 2);
@@ -1484,14 +1481,14 @@ void VU_JIT64::madd_acc_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     if (field == 0xF)
     {
         emitter.ADDPS(temp, dest);
-        set_clamping(dest, true);
-        clamp_vfreg(dest);
+        set_clamping(dest, true, field);
+        clamp_vfreg(field, dest);
     }
     else
     {
         emitter.ADDPS(dest, temp);
-        set_clamping(temp, true);
-        clamp_vfreg(temp);
+        set_clamping(temp, true, field);
+        clamp_vfreg(field, temp);
         emitter.BLENDPS(field, temp, dest);
     }
 
@@ -1510,16 +1507,16 @@ void VU_JIT64::msub_vectors(VectorUnit &vu, IR::Instruction &instr)
     REG_64 temp = REG_64::XMM0;
     REG_64 temp2 = REG_64::XMM1;
 
-    clamp_vfreg(op1);
-    clamp_vfreg(op2);
-    clamp_vfreg(acc);
+    clamp_vfreg(field, op1);
+    clamp_vfreg(field, op2);
+    clamp_vfreg(field, acc);
 
     emitter.MOVAPS_REG(acc, temp2);
     emitter.MOVAPS_REG(op1, temp);
     emitter.MULPS(op2, temp);
     emitter.SUBPS(temp, temp2);
-    set_clamping(temp2, true);
-    clamp_vfreg(temp2);
+    set_clamping(temp2, true, field);
+    clamp_vfreg(field, temp2);
 
     if (instr.get_dest())
         emitter.BLENDPS(field, temp2, dest);
@@ -1538,9 +1535,9 @@ void VU_JIT64::msub_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
     REG_64 acc = alloc_sse_reg(vu, VU_SpecialReg::ACC, REG_STATE::READ);
 
-    clamp_vfreg(source);
-    clamp_vfreg(bc_reg);
-    clamp_vfreg(acc);
+    clamp_vfreg(field, source);
+    clamp_vfreg(field, bc_reg);
+    clamp_vfreg(field, acc);
 
     uint8_t bc = instr.get_bc();
     bc |= (bc << 6) | (bc << 4) | (bc << 2);
@@ -1551,8 +1548,8 @@ void VU_JIT64::msub_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     emitter.SHUFPS(bc, temp, temp);
     emitter.MULPS(source, temp);
     emitter.SUBPS(temp, temp2);
-    set_clamping(temp2, true);
-    clamp_vfreg(temp2);
+    set_clamping(temp2, true, field);
+    clamp_vfreg(field, temp2);
 
     if (instr.get_dest())
         emitter.BLENDPS(field, temp2, dest);
@@ -1571,9 +1568,9 @@ void VU_JIT64::msub_acc_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ);
     REG_64 dest = alloc_sse_reg(vu, VU_SpecialReg::ACC, REG_STATE::READ_WRITE);
 
-    clamp_vfreg(source);
-    clamp_vfreg(bc_reg);
-    clamp_vfreg(dest);
+    clamp_vfreg(field, source);
+    clamp_vfreg(field, bc_reg);
+    clamp_vfreg(field, dest);
 
     uint8_t bc = instr.get_bc();
     bc |= (bc << 6) | (bc << 4) | (bc << 2);
@@ -1585,15 +1582,15 @@ void VU_JIT64::msub_acc_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     if (field == 0xF)
     {
         emitter.SUBPS(temp, dest);
-        set_clamping(dest, true);
-        clamp_vfreg(dest);
+        set_clamping(dest, true, field);
+        clamp_vfreg(field, dest);
     }
     else
     {
         emitter.MOVAPS_REG(dest, temp2);
         emitter.SUBPS(temp, temp2);
-        set_clamping(temp2, true);
-        clamp_vfreg(temp2);
+        set_clamping(temp2, true, field);
+        clamp_vfreg(field, temp2);
         emitter.BLENDPS(field, temp2, dest);
     }
 
@@ -1609,9 +1606,9 @@ void VU_JIT64::opmula(VectorUnit &vu, IR::Instruction &instr)
     REG_64 temp = REG_64::XMM0;
     REG_64 temp2 = REG_64::XMM1;
 
-    clamp_vfreg(reg1);
-    clamp_vfreg(reg2);
-    clamp_vfreg(dest);
+    clamp_vfreg(0xE, reg1);
+    clamp_vfreg(0xE, reg2);
+    clamp_vfreg(0xE, dest);
 
     //xyz = yzx
     emitter.PSHUFD(0x1 | (0x2 << 2), reg1, temp);
@@ -1621,8 +1618,8 @@ void VU_JIT64::opmula(VectorUnit &vu, IR::Instruction &instr)
 
     emitter.MULPS(temp2, temp);
 
-    set_clamping(temp, true);
-    clamp_vfreg(temp);
+    set_clamping(temp, true, 0xE);
+    clamp_vfreg(0xE, temp);
 
     emitter.BLENDPS(0x7, temp, dest);
 
@@ -1640,9 +1637,9 @@ void VU_JIT64::opmsub(VectorUnit &vu, IR::Instruction &instr)
     REG_64 temp = REG_64::XMM0;
     REG_64 temp2 = REG_64::XMM1;
 
-    clamp_vfreg(reg1);
-    clamp_vfreg(reg2);
-    clamp_vfreg(acc);
+    clamp_vfreg(0xE, reg1);
+    clamp_vfreg(0xE, reg2);
+    clamp_vfreg(0xE, acc);
 
     //xyz = yzx
     emitter.PSHUFD(0x1 | (0x2 << 2), reg1, temp);
@@ -1654,8 +1651,8 @@ void VU_JIT64::opmsub(VectorUnit &vu, IR::Instruction &instr)
     emitter.MOVAPS_REG(acc, temp2);
     emitter.SUBPS(temp, temp2);
 
-    set_clamping(temp2, true);
-    clamp_vfreg(temp2);
+    set_clamping(temp2, true, 0xE);
+    clamp_vfreg(0xE, temp2);
 
     if (instr.get_dest())
         emitter.BLENDPS(0x7, temp2, dest);
@@ -1690,11 +1687,11 @@ void VU_JIT64::div(VectorUnit &vu, IR::Instruction &instr)
     REG_64 temp = REG_64::XMM0;
     REG_64 temp2 = REG_64::XMM1;
 
-    clamp_vfreg(num);
-    clamp_vfreg(denom);
-
     uint8_t num_field = instr.get_field();
     uint8_t denom_field = instr.get_field2();
+
+    clamp_vfreg(1 << num_field, num);
+    clamp_vfreg(1 << denom_field, denom);
 
     //Insert the float value in num/denom into bits 0-31 in temp/temp2, then zero out bits 32-127
     emitter.INSERTPS(num_field, 0, 0b1110, num, temp);
@@ -1710,11 +1707,11 @@ void VU_JIT64::rsqrt(VectorUnit &vu, IR::Instruction &instr)
     REG_64 temp = REG_64::XMM0;
     REG_64 temp2 = REG_64::XMM1;
 
-    clamp_vfreg(num);
-    clamp_vfreg(denom);
-
     uint8_t num_field = instr.get_field();
     uint8_t denom_field = instr.get_field2();
+
+    clamp_vfreg(1 << num_field, num);
+    clamp_vfreg(1 << denom_field, denom);
 
     //Clear the negative bit in the denominator
     sse_abs(denom, temp2);
@@ -1747,7 +1744,7 @@ void VU_JIT64::fixed_to_float(VectorUnit &vu, IR::Instruction &instr, int table_
             emitter.MOVAPS_FROM_MEM(REG_64::RAX, temp);
 
             emitter.MULPS(temp, dest);
-            set_clamping(dest, true);
+            set_clamping(dest, true, field);
         }
     }
     else
@@ -1765,7 +1762,7 @@ void VU_JIT64::fixed_to_float(VectorUnit &vu, IR::Instruction &instr, int table_
             emitter.MULPS(temp2, temp);
         }
         emitter.BLENDPS(field, temp, dest);
-        set_clamping(dest, true);
+        set_clamping(dest, true, field);
     }
 }
 
@@ -1776,7 +1773,7 @@ void VU_JIT64::float_to_fixed(VectorUnit &vu, IR::Instruction &instr, int table_
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
     REG_64 temp = REG_64::XMM0;
 
-    clamp_vfreg(source);
+    clamp_vfreg(field, source);
 
     emitter.MOVAPS_REG(source, temp);
 
@@ -1832,7 +1829,7 @@ void VU_JIT64::move_from_int(VectorUnit &vu, IR::Instruction &instr)
     emitter.MOVD_TO_XMM(REG_64::RAX, temp);
     emitter.SHUFPS(0, temp, temp);
     emitter.BLENDPS(field, temp, dest);
-    set_clamping(dest, true);
+    set_clamping(dest, true, field);
 }
 
 void VU_JIT64::move_float(VectorUnit &vu, IR::Instruction &instr)
@@ -1845,14 +1842,14 @@ void VU_JIT64::move_float(VectorUnit &vu, IR::Instruction &instr)
         REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::WRITE);
 
         emitter.MOVAPS_REG(source, dest);
-        set_clamping(dest, needs_clamping(source));
+        set_clamping(dest, needs_clamping(source, field), field);
     }
     else
     {
         REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
 
         emitter.BLENDPS(field, source, dest);
-        set_clamping(dest, true);
+        set_clamping(dest, true, field);
     }
 }
 
@@ -1867,14 +1864,14 @@ void VU_JIT64::move_rotated_float(VectorUnit &vu, IR::Instruction &instr)
     if (field == 0xF)
     {
         emitter.PSHUFD(rot, source, dest);
-        set_clamping(dest, needs_clamping(source));
+        set_clamping(dest, needs_clamping(source, field), field);
     }
     else
     {
         REG_64 temp = REG_64::XMM0;
         emitter.PSHUFD(rot, source, temp);
         emitter.BLENDPS(field, temp, dest);
-        set_clamping(dest, true);
+        set_clamping(dest, true, field);
     }
 }
 
@@ -1979,7 +1976,7 @@ void VU_JIT64::move_from_p(VectorUnit &vu, IR::Instruction &instr)
     emitter.MOVAPS_REG(p_reg, temp);
     emitter.SHUFPS(0, temp, temp);
     emitter.BLENDPS(field, temp, dest);
-    set_clamping(dest, true);
+    set_clamping(dest, true, field);
 }
 
 void VU_JIT64::eleng(VectorUnit &vu, IR::Instruction &instr)
@@ -1987,7 +1984,7 @@ void VU_JIT64::eleng(VectorUnit &vu, IR::Instruction &instr)
     REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ);
     REG_64 temp = REG_64::XMM0;
 
-    clamp_vfreg(source);
+    clamp_vfreg(0xE, source);
 
     emitter.MOVAPS_REG(source, temp);
 
@@ -2007,7 +2004,7 @@ void VU_JIT64::erleng(VectorUnit &vu, IR::Instruction &instr)
     REG_64 temp = REG_64::XMM0;
     REG_64 temp2 = REG_64::XMM1;
 
-    clamp_vfreg(source);
+    clamp_vfreg(0xE, source);
 
     emitter.MOVAPS_REG(source, temp);
 
@@ -2030,7 +2027,7 @@ void VU_JIT64::esqrt(VectorUnit &vu, IR::Instruction &instr)
     REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ);
     REG_64 temp = REG_64::XMM0;
 
-    clamp_vfreg(source);
+    clamp_vfreg(1 << field, source);
 
     emitter.SQRTPS(source, temp);
     emitter.INSERTPS(field, 0, 0, temp, temp);
@@ -2046,7 +2043,7 @@ void VU_JIT64::ersqrt(VectorUnit &vu, IR::Instruction &instr)
     REG_64 denom = REG_64::XMM0;
     REG_64 num = REG_64::XMM1;
 
-    clamp_vfreg(source);
+    clamp_vfreg(1 << field, source);
 
     emitter.SQRTPS(source, denom);
     emitter.INSERTPS(field, 0, 0, denom, denom);
@@ -2067,7 +2064,7 @@ void VU_JIT64::rinit(VectorUnit &vu, IR::Instruction &instr)
     REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ);
     REG_64 temp = REG_64::XMM0;
 
-    clamp_vfreg(source);
+    clamp_vfreg(field, source);
 
     //R = 0x3F800000 | (reg[field] & 0x007FFFFF)
     emitter.INSERTPS(field, 0, 0, source, temp);
@@ -2128,7 +2125,7 @@ void VU_JIT64::update_q(VectorUnit &vu, IR::Instruction &instr)
     REG_64 q_reg = alloc_sse_reg(vu, VU_SpecialReg::Q, REG_STATE::WRITE);
     emitter.load_addr((uint64_t)&vu.new_Q_instance, REG_64::RAX);
     emitter.MOVAPS_FROM_MEM(REG_64::RAX, q_reg);
-    set_clamping(q_reg, true);
+    set_clamping(q_reg, true, 0xF);
 }
 
 void VU_JIT64::update_p(VectorUnit &vu, IR::Instruction &instr)
@@ -2137,7 +2134,7 @@ void VU_JIT64::update_p(VectorUnit &vu, IR::Instruction &instr)
     REG_64 p_reg = alloc_sse_reg(vu, VU_SpecialReg::P, REG_STATE::WRITE);
     emitter.load_addr((uint64_t)&vu.new_P_instance, REG_64::RAX);
     emitter.MOVAPS_FROM_MEM(REG_64::RAX, p_reg);
-    set_clamping(p_reg, true);
+    set_clamping(p_reg, true, 0xF);
 }
 
 void VU_JIT64::update_mac_pipeline(VectorUnit &vu, IR::Instruction &instr)
@@ -2411,7 +2408,7 @@ REG_64 VU_JIT64::alloc_sse_reg(VectorUnit &vu, int vf_reg, REG_STATE state)
     xmm_regs[xmm].vu_reg = vf_reg;
     xmm_regs[xmm].used = true;
     xmm_regs[xmm].age = 0;
-    set_clamping(xmm, true);
+    set_clamping(xmm, false, 0xF);
 
     return (REG_64)xmm;
 }
@@ -2456,17 +2453,22 @@ REG_64 VU_JIT64::alloc_sse_scratchpad(VectorUnit &vu, int vf_reg)
 }
 
 
-void VU_JIT64::set_clamping(int xmmreg, bool value)
+void VU_JIT64::set_clamping(int xmmreg, bool value, uint8_t field)
 {
-    if(xmm_regs[xmmreg].vu_reg)
-        xmm_regs[xmmreg].needs_clamping = value;
+    if (xmm_regs[xmmreg].vu_reg)
+    {
+        if (value == false)
+            xmm_regs[xmmreg].needs_clamping &= ~field;
+        else
+            xmm_regs[xmmreg].needs_clamping |= field;
+    }
     else
         xmm_regs[xmmreg].needs_clamping = false;
 }
 
-bool VU_JIT64::needs_clamping(int xmmreg)
+bool VU_JIT64::needs_clamping(int xmmreg, uint8_t field)
 {
-    return xmm_regs[xmmreg].needs_clamping;
+    return xmm_regs[xmmreg].needs_clamping & field;
 }
 
 

@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <fstream>
+#include <unordered_set>
 
 #include "../int128.hpp"
 
@@ -164,7 +165,10 @@ class VectorUnit
 
         VU_Mem instr_mem, data_mem;
 
+        std::unordered_set<uint32_t> seen_microprogram_crcs;
+
         bool running;
+        bool vumem_is_dirty;
         uint16_t PC, new_PC, secondbranch_PC;
         bool branch_on, branch_on_delay;
         bool finish_on;
@@ -226,11 +230,12 @@ class VectorUnit
         void start_EFU_unit(int latency);
         void write_int(uint8_t reg, uint8_t read0 = 0, uint8_t readq1 = 0);
         VU_I read_int_for_branch_condition(uint8_t reg);
+        void disasm_micromem();
+        uint32_t crc_microprogram();
         
         void update_status();
         void advance_r();
         void print_vectors(uint8_t a, uint8_t b);
-        float convert();
     public:
         VectorUnit(int id, Emulator* e);
 
@@ -251,8 +256,7 @@ class VectorUnit
         void run(int cycles);
         void run_jit(int cycles);
         void handle_XGKICK();
-        void callmsr();
-        void mscal(uint32_t addr);
+        void start_program(uint32_t addr);
         void end_execution();
         void stop();
         void reset();
@@ -260,6 +264,7 @@ class VectorUnit
         void backup_vf(bool newvf, int index);
         void restore_vf(bool newvf, int index);
         uint32_t read_fbrst();
+        uint32_t read_CMSAR0();
 
         static float convert(uint32_t value);
 
@@ -269,6 +274,8 @@ class VectorUnit
         template <typename T> void write_data(uint32_t addr, T data);
 
         bool is_running();
+        bool is_dirty();
+        void clear_dirty();
         uint16_t get_PC();
         void set_PC(uint32_t newPC);
         uint32_t get_gpr_u(int index, int field);
@@ -442,6 +449,7 @@ template <typename T>
 inline void VectorUnit::write_instr(uint32_t addr, T data)
 {
     *(T*)&instr_mem.m[addr & mem_mask] = data;
+    vumem_is_dirty = true;
 }
 
 template <typename T>
@@ -453,6 +461,16 @@ inline void VectorUnit::write_data(uint32_t addr, T data)
 inline bool VectorUnit::is_running()
 {
     return running;
+}
+
+inline bool VectorUnit::is_dirty()
+{
+    return vumem_is_dirty;
+}
+ 
+inline void VectorUnit::clear_dirty()
+{
+    vumem_is_dirty = false;
 }
 
 inline int VectorUnit::get_id()
