@@ -823,6 +823,15 @@ void EEDebugWindow::on_break_continue_button_clicked()
     printf("break handler returning!\n");
 }
 
+void EEDebugWindow::pause_on_show()
+{
+    if(emulation_running())
+    {
+        waiting_for_pause = true;
+        emu_thread->pause(DEBUGGER);
+    }
+}
+
 void EEDebugWindow::on_step_button_clicked()
 {
     if(!emulation_running())
@@ -962,6 +971,7 @@ void EEDebugWindow::breakpoint_hit(EmotionEngine *ee)
 
 void EEDebugWindow::breakpoint_hit(IOP *iop)
 {
+    setUpdatesEnabled(false);
     iop_running = false;
     current_cpu = DebuggerCpu::IOP;
     iop_most_recent_pc = iop->get_PC();
@@ -972,10 +982,13 @@ void EEDebugWindow::breakpoint_hit(IOP *iop)
     update_ui();
     cpu_combo->setCurrentIndex((uint32_t)DebuggerCpu::IOP);
     disassembly_table->scrollToItem(disassembly_table->item(EE_DEBUGGER_DISASSEMBLY_SIZE/2,0), QAbstractItemView::PositionAtCenter);
+    setUpdatesEnabled(true);
+    repaint();
 }
 
 void EEDebugWindow::pause_hit()
 {
+    setUpdatesEnabled(false);
     ee_most_recent_pc = ee->get_PC();
     ee_breakpoint_list->clear_old_breakpoints(); // important to run this in UI thread!!
     iop_most_recent_pc = iop->get_PC();
@@ -984,6 +997,8 @@ void EEDebugWindow::pause_hit()
     iop_disassembly_location = iop_most_recent_pc;
     update_ui();
     disassembly_table->scrollToItem(disassembly_table->item(EE_DEBUGGER_DISASSEMBLY_SIZE/2,0), QAbstractItemView::PositionAtCenter);
+    setUpdatesEnabled(true);
+    repaint();
 }
 
 void EEDebugWindow::add_breakpoint(DebuggerBreakpoint *breakpoint)

@@ -50,6 +50,7 @@ public:
     void update_ui();
     void set_ee(EmotionEngine* e);
     void set_iop(IOP* iop);
+    void pause_on_show();
     // breakpoint creation ui
     static DebuggerBreakpoint* create_breakpoint_prompt(BreakpointType type, std::vector<EERegisterDefinition>* ee_regs);
     static DebuggerBreakpoint* create_breakpoint_prompt(BreakpointType type, std::vector<IOPRegisterDefinition>* iop_regs);

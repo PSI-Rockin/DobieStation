@@ -507,5 +507,7 @@ void EmuWindow::save_state()
 
 void EmuWindow::show_debugger() {
     debugger.show();
+    debugger.pause_on_show();
     debugger.update_ui();
+
 }
