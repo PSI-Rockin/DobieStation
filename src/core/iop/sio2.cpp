@@ -162,7 +162,7 @@ void SIO2::write_device(uint8_t value)
 					case 0xf0: // Authentication?
 						memcard->mode = Memcard::MODE::AUTHENTICATION;
 						break;
-						// PS1 modes left unimplemented for now
+					// PS1 modes left unimplemented for now
 					case 0x52: // PS1 Read
 					case 0x53: // PS1 State
 					case 0x57: // PS1 Write
@@ -170,8 +170,8 @@ void SIO2::write_device(uint8_t value)
 						memcard->mode = Memcard::MODE::PS1;
 						break;
 
-						// Welcome to the mystery corner, where the documentation is
-						// shit and even PCSX2 isn't too sure what it's code is doing!
+					// Welcome to the mystery corner, where the documentation is
+					//shit and even PCSX2 isn't too sure what it's code is doing!
 					case 0x11: // Seems to happen on boots/memcard probing?
 					case 0x12: // Seems to happen on writes/erases?
 						RECV3 = 0x8c;
