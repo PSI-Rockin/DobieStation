@@ -96,6 +96,9 @@ void SIO2::write_device(uint8_t value)
                 case 0x01:
                     active_command = SIO_DEVICE::PAD;
                     break;
+				case 0x81:
+					active_command = SIO_DEVICE::MEMCARD;
+					break;
                 default:
                     active_command = SIO_DEVICE::DUMMY;
                     break;
@@ -123,6 +126,76 @@ void SIO2::write_device(uint8_t value)
             FIFO.push(reply);
         }
             break;
+		case SIO_DEVICE::MEMCARD:
+			if (memcard->mode != Memcard::MODE::INIT)
+			{
+				memcard->op_start(FIFO, value);
+			}
+			else
+			{
+				switch (FIFO.size())
+				{
+				case 0:
+					FIFO.push(0xff); // A dummy value that means nothing, just fills the space
+
+					// Should we be resetting the status register? Hell do we even
+					// HAVE the status register???
+					break;
+				case 1:
+					switch (value)
+					{
+					case 0x21: // Page Erase
+					case 0x22: // Page Write
+					case 0x23: // Page Read
+						RECV3 = 0x8c;
+						memcard->mode = Memcard::MODE::PAGE;
+						break;
+					case 0x26: // Memcard info
+						RECV3 = 0x83;
+						break;
+					case 0x27: // Set terminator
+						RECV3 = 0x8b;
+						break;
+					case 0x28: // Get terminator
+						RECV3 = 0x8b;
+						break;
+					case 0xf0: // Authentication?
+						memcard->mode = Memcard::MODE::AUTHENTICATION;
+						break;
+						// PS1 modes left unimplemented for now
+					case 0x52: // PS1 Read
+					case 0x53: // PS1 State
+					case 0x57: // PS1 Write
+					case 0x58: // PS1 Pocketstation (State?)
+						memcard->mode = Memcard::MODE::PS1;
+						break;
+
+						// Welcome to the mystery corner, where the documentation is
+						// shit and even PCSX2 isn't too sure what it's code is doing!
+					case 0x11: // Seems to happen on boots/memcard probing?
+					case 0x12: // Seems to happen on writes/erases?
+						RECV3 = 0x8c;
+						// Do not break; waterfall down into the payload for the other mystery commands
+
+					case 0x81: // Seems to happen after copies and deletes (via PS2 browser, maybe???)
+					case 0xbf: // PCSX2 says "wtf?", possibly used on game boots.
+					case 0xf3: // Seems to happen on resets?
+					case 0xf7: // No one knows.
+						memcard->push_terminators(FIFO);
+					}
+				case 2:
+					switch (memcard->command)
+					{
+					case 0x27:
+						memcard->terminator = value;
+						memcard->push_terminators(FIFO);
+						break;
+					}
+					break;
+				}
+			}
+			
+			break;
         case SIO_DEVICE::DUMMY:
             FIFO.push(0x00);
             RECV1 = 0x1D100;
@@ -166,5 +239,7 @@ uint32_t SIO2::get_RECV2()
 uint32_t SIO2::get_RECV3()
 {
     //printf("[SIO2] Read RECV3\n");
-    return 0;
+    return RECV3;
 }
+
+
