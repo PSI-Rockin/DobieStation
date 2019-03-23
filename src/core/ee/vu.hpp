@@ -50,8 +50,31 @@ struct DecodedRegs
     uint8_t vf_read0_field[2], vf_read1_field[2];
 
     uint8_t vi_read0, vi_read1, vi_write;
+    uint8_t vi_write_from_load; // register which written from a load-from-memory instruction
 
     void reset();
+};
+
+struct VuIntBranchPipelineEntry
+{
+    uint8_t write_reg;   // reg that was overwritten
+    VU_I    old_value;   // value that was overwritten
+    bool    read_and_write;
+
+    void clear();
+};
+
+struct VuIntBranchPipeline
+{
+    static constexpr int length = 5;           // how far back to go behind the branch
+    VuIntBranchPipelineEntry pipeline[length]; // the previous integer operations (0 is most recent)
+    VuIntBranchPipelineEntry next;             // the currently executing integer op
+
+    void reset();
+    void write_reg(uint8_t reg, VU_I old_value, bool also_read);
+    void update();
+    void flush();
+    VU_I get_branch_condition_reg(uint8_t reg, VU_I current_value, uint8_t vu_id, uint16_t PC);
 };
 
 class GraphicsInterface;
@@ -117,6 +140,8 @@ class VectorUnit
         uint64_t* MAC_flags; //pointer to last element in the pipeline; the register accessible to programs
         uint16_t new_MAC_flags; //to be placed in the pipeline
         uint64_t pipeline_state[2];
+        VuIntBranchPipeline int_branch_pipeline;
+        uint16_t ILW_pipeline[4]; // for integer load stalls
 
         int int_branch_delay;
         uint16_t int_backup_reg;
@@ -137,7 +162,8 @@ class VectorUnit
         void start_DIV_unit(int latency);
         //Updates new_P_Instance
         void start_EFU_unit(int latency);
-        void set_int_branch_delay(uint8_t reg);
+        void write_int(uint8_t reg, uint8_t read0 = 0, uint8_t readq1 = 0);
+        VU_I read_int_for_branch_condition(uint8_t reg);
         void disasm_micromem();
         uint32_t crc_microprogram();
         
