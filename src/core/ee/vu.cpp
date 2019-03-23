@@ -774,7 +774,7 @@ VU_I VectorUnit::read_int_for_branch_condition(uint8_t reg)
     VU_I value = int_gpr[reg];
     if(reg)
     {
-        int_branch_pipeline.get_branch_condition_reg(reg, value, id, PC);
+        value = int_branch_pipeline.get_branch_condition_reg(reg, value, id, PC);
     }
     return value;
 }

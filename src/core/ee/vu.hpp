@@ -69,7 +69,7 @@ struct VuIntBranchPipeline
     static constexpr int length = 5;           // how far back to go behind the branch
     VuIntBranchPipelineEntry pipeline[length]; // the previous integer operations (0 is most recent)
     VuIntBranchPipelineEntry next;             // the currently executing integer op
-    
+
     void reset();
     void write_reg(uint8_t reg, VU_I old_value, bool also_read);
     void update();
