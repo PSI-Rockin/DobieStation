@@ -31,7 +31,15 @@ class SettingsWindow : public QDialog
 private:
     GeneralTab* general_tab = nullptr;
     PathTab* path_tab = nullptr;
+    QTabWidget* tab_widget;
 public:
+    enum TAB
+    {
+        GENERAL,
+        PATH
+    };
     explicit SettingsWindow(QWidget *parent = nullptr);
+
+    void show_path_tab();
 };
 #endif

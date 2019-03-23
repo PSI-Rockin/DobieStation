@@ -23,7 +23,10 @@ public:
     QString bios_path;
     QString last_used_directory;
     QStringList rom_directories;
+    QStringList rom_directories_to_add;
+    QStringList rom_directories_to_remove;
     QStringList recent_roms;
+
     bool vu1_jit_enabled;
 
     void save();
@@ -38,10 +41,12 @@ public:
 private:
     Settings();
 signals:
-    void rom_path_added(QString path);
-    void rom_directory_added(QString directory);
-    void rom_directory_removed(QString directory);
-    void bios_changed(QString path);
+    void rom_path_added(const QString& path);
+    void rom_directory_added(const QString& directory);
+    void rom_directory_removed(const QString& directory);
+    void rom_directory_committed(const QString& directory);
+    void rom_directory_uncommitted(const QString& directory);
+    void bios_changed(const QString& path);
     void reload();
 };
 #endif

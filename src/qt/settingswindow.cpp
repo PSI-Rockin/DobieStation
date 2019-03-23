@@ -153,9 +153,10 @@ SettingsWindow::SettingsWindow(QWidget *parent)
     general_tab = new GeneralTab(this);
     path_tab = new PathTab(this);
 
-    QTabWidget* tab_widget = new QTabWidget(this);
+    tab_widget = new QTabWidget(this);
     tab_widget->addTab(general_tab, tr("General"));
     tab_widget->addTab(path_tab, tr("Paths"));
+    tab_widget->setCurrentIndex(TAB::GENERAL);
 
     QDialogButtonBox* close_buttons = new QDialogButtonBox(
         QDialogButtonBox::Close | QDialogButtonBox::Ok, this
@@ -174,4 +175,9 @@ SettingsWindow::SettingsWindow(QWidget *parent)
     layout->addWidget(close_buttons);
 
     setLayout(layout);
+}
+
+void SettingsWindow::show_path_tab()
+{
+    tab_widget->setCurrentIndex(TAB::PATH);
 }

@@ -2,8 +2,11 @@
 #include <QTableView>
 #include <QHeaderView>
 #include <QAbstractItemView>
-#include <QDebug>
+#include <QLocale>
 #include <QDirIterator>
+#include <QPushButton>
+#include <QVBoxLayout>
+#include <QDebug>
 
 #include "gamelistwidget.hpp"
 #include "settings.hpp"
@@ -16,8 +19,13 @@ GameListModel::GameListModel(QObject* parent)
         games.append(get_directory_entries(path));
     }
 
-    games.sort(Qt::CaseInsensitive);
-    games.removeDuplicates();
+    connect(&Settings::instance(), &Settings::rom_directory_committed,
+        this, &GameListModel::add_path
+    );
+
+    connect(&Settings::instance(), &Settings::rom_directory_uncommitted,
+        this, &GameListModel::remove_path
+    );
 }
 
 QVariant GameListModel::data(
@@ -38,7 +46,7 @@ QVariant GameListModel::data(
     case COLUMN_NAME:
         return file_info.fileName();
     case COLUMN_SIZE:
-        return file_info.size();
+        return QLocale().formattedDataSize(file_info.size());
     }
 
     return QVariant();
@@ -71,21 +79,52 @@ int GameListModel::columnCount(const QModelIndex& index) const
 
 QStringList GameListModel::get_directory_entries(QString path)
 {
-    QDirIterator it(
-        path, QStringList({"*.iso", "*.cso"}),
+    const QStringList file_types({
+        "*.iso",
+        "*.cso",
+        "*.elf",
+        "*.gsd"
+    });
+
+    QDirIterator it(path, file_types,
         QDir::Files, QDirIterator::Subdirectories
     );
 
     QStringList list;
     while (it.hasNext())
     {
-        if(!it.filePath().isEmpty())
-            list.append(it.filePath());
-
         it.next();
+        list.append(it.filePath());
     }
 
     return list;
+}
+
+void GameListModel::add_path(const QString& path)
+{
+    QStringList new_games = get_directory_entries(path);
+
+    beginInsertRows(QModelIndex(), 0, new_games.size() - 1);
+    games.append(new_games);
+    games.sort(Qt::CaseInsensitive);
+    games.removeDuplicates();
+    endInsertRows();
+}
+
+void GameListModel::remove_path(const QString& path)
+{
+    QStringList remove_games = get_directory_entries(path);
+
+    for (auto& game : remove_games)
+    {
+        int index = games.indexOf(game);
+        if (index == -1)
+            continue;
+
+        beginRemoveRows(QModelIndex(), index, index);
+        games.removeAll(game);
+        endRemoveRows();
+    }
 }
 
 GameListWidget::GameListWidget(QWidget* parent)
@@ -111,29 +150,48 @@ GameListWidget::GameListWidget(QWidget* parent)
         emit game_double_clicked(path);
     });
 
-    auto default_widget = new QLabel(this);
-    default_widget->setAlignment(Qt::AlignVCenter | Qt::AlignHCenter);
-    default_widget->setText(tr(
+    auto default_label = new QLabel(this);
+    default_label->setAlignment(Qt::AlignHCenter);
+    default_label->setText(tr(
         "No roms found.\n"
-        "Configure rom directories in settings or "
-        "open a rom from the file menu."
+        "Add a new rom directory to see your roms listed here."
     ));
+
+    auto default_button = new QPushButton("&Open Settings", this);
+    connect(default_button, &QPushButton::clicked, [=]() {
+        emit settings_requested();
+    });
+
+    auto layout = new QVBoxLayout;
+    layout->addWidget(default_label);
+    layout->addWidget(default_button);
+    layout->setAlignment(Qt::AlignVCenter | Qt::AlignHCenter);
+
+    auto default_widget = new QWidget(this);
+    default_widget->setLayout(layout);
 
     addWidget(default_widget);
     addWidget(game_list_widget);
 
     if (game_list_widget->model()->rowCount())
-    {
         show_gamelist_view();
-    }
+
+    connect(&Settings::instance(), &Settings::rom_directory_committed,
+        this, &GameListWidget::show_gamelist_view
+    );
+
+    connect(&Settings::instance(), &Settings::rom_directory_uncommitted, [=]() {
+        if (!game_list_widget->model()->rowCount())
+            show_default_view();
+    });
 }
 
 void GameListWidget::show_default_view()
 {
-    setCurrentIndex(0);
+    setCurrentIndex(VIEW::DEFAULT);
 }
 
 void GameListWidget::show_gamelist_view()
 {
-    setCurrentIndex(1);
+    setCurrentIndex(VIEW::GAMELIST);
 }

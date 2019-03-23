@@ -5,6 +5,10 @@
 RenderWidget::RenderWidget(QWidget* parent)
     : QWidget(parent)
 {
+    QPalette palette;
+    palette.setColor(QPalette::Background, Qt::black);
+    setPalette(palette);
+    setAutoFillBackground(true);
 }
 
 void RenderWidget::draw_frame(uint32_t* buffer, int inner_w, int inner_h, int final_w, int final_h)

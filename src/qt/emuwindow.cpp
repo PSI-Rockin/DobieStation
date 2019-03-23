@@ -28,11 +28,6 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
 
     render_widget = new RenderWidget;
 
-    QPalette palette;
-    palette.setColor(QPalette::Background, Qt::black);
-    render_widget->setPalette(palette);
-    render_widget->setAutoFillBackground(true);
-
     connect(&emu_thread, &EmuThread::completed_frame,
         render_widget, &RenderWidget::draw_frame
     );
@@ -40,6 +35,10 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
     GameListWidget* game_list_widget = new GameListWidget;
     connect(game_list_widget, &GameListWidget::game_double_clicked, this, [=](QString path) {
         load_exec(path.toLocal8Bit(), true);
+    });
+    connect(game_list_widget, &GameListWidget::settings_requested, [=]() {
+        open_settings_window();
+        settings_window->show_path_tab();
     });
 
     stack_widget = new QStackedWidget;

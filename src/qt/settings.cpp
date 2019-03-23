@@ -1,20 +1,24 @@
 #include "settings.hpp"
-#include <QDebug>
 
 Settings::Settings()
 {
-    connect(this, &Settings::rom_directory_added,
-        this, &Settings::update_last_used_directory
-    );
-
-    connect(this, &Settings::rom_path_added, this, [=](QString path) {
+    connect(this, &Settings::rom_path_added, this, [=](const QString& path) {
         QFileInfo file_info(path);
         update_last_used_directory(file_info.absoluteDir().path());
     });
 
-    connect(this, &Settings::bios_changed, this, [=](QString path) {
+    connect(this, &Settings::bios_changed, this, [=](const QString& path) {
         QFileInfo file_info(path);
         update_last_used_directory(file_info.absoluteDir().path());
+    });
+
+    connect(this, &Settings::rom_directory_added, [=](const QString& path) {
+        rom_directories_to_add.append(path);
+        update_last_used_directory(path);
+    });
+
+    connect(this, &Settings::rom_directory_removed, [=](const QString& path) {
+        rom_directories_to_remove.append(path);
     });
 
     reset();
@@ -28,15 +32,34 @@ void Settings::reset()
     vu1_jit_enabled = qsettings().value("vu1_jit_enabled", true).toBool();
     last_used_directory = qsettings().value("last_used_dir", QDir::homePath()).toString();
 
+    rom_directories_to_add = QStringList();
+    rom_directories_to_remove = QStringList();
+
     emit reload();
 }
 
 void Settings::save()
 {
+    for (const auto& directory : rom_directories_to_add)
+    {
+        rom_directories.append(directory);
+        emit rom_directory_committed(directory);
+    }
+
+    for (const auto& directory : rom_directories_to_remove)
+    {
+        rom_directories.removeAll(directory);
+        emit rom_directory_uncommitted(directory);
+    }
+
+    rom_directories.sort(Qt::CaseInsensitive);
+    rom_directories.removeDuplicates();
+
     qsettings().setValue("rom_directories", rom_directories);
     qsettings().setValue("bios_path", bios_path);
     qsettings().setValue("vu1_jit_enabled", vu1_jit_enabled);
     qsettings().sync();
+    reset();
 }
 
 Settings& Settings::instance()
@@ -64,7 +87,6 @@ void Settings::add_rom_directory(QString path)
 
     if (!rom_directories.contains(path, Qt::CaseInsensitive))
     {
-        rom_directories.append(path);
         emit rom_directory_added(path);
     }
 }
@@ -76,7 +98,6 @@ void Settings::remove_rom_directory(QString path)
 
     if (rom_directories.contains(path, Qt::CaseInsensitive))
     {
-        rom_directories.removeAll(path);
         emit rom_directory_removed(path);
     }
 }

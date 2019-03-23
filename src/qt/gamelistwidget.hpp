@@ -25,6 +25,9 @@ public:
         int role = Qt::DisplayRole) const override;
     int rowCount(const QModelIndex& index) const override;
     int columnCount(const QModelIndex& index) const override;
+
+    void add_path(const QString& path);
+    void remove_path(const QString& path);
 private:
     QStringList get_directory_entries(QString path);
 };
@@ -33,11 +36,17 @@ class GameListWidget : public QStackedWidget
 {
     Q_OBJECT
 public:
+    enum VIEW
+    {
+        DEFAULT,
+        GAMELIST
+    };
     GameListWidget(QWidget* parent = nullptr);
 
     void show_default_view();
     void show_gamelist_view();
 signals:
     void game_double_clicked(QString path);
+    void settings_requested();
 };
 #endif
