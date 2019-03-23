@@ -890,11 +890,9 @@ void VectorUnit::ctc(int index, uint32_t value)
 
 void VectorUnit::branch(bool condition, int16_t imm, bool link, uint8_t linkreg)
 {
+    int_branch_pipeline.flush();
     if (condition)
     {
-        // on taken conditional branch, flush the integer branch pipeline
-        // NOTE: we do NOT flush the integer load pipeline!
-        int_branch_pipeline.flush();
         if (branch_on)
         {
             second_branch_pending = true;
@@ -915,6 +913,7 @@ void VectorUnit::branch(bool condition, int16_t imm, bool link, uint8_t linkreg)
 
 void VectorUnit::jp(uint16_t addr, bool link, uint8_t linkreg)
 {
+    int_branch_pipeline.flush();
     if (branch_on)
     {
         second_branch_pending = true;
