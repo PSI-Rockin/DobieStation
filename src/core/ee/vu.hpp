@@ -78,9 +78,7 @@ struct VuIntBranchPipeline
     // completely reset pipeline to VU power on state
     void reset()
     {
-//        last_op_read_write = false;
-//        current_op_read_write = false;
-//        next.clear();
+        next.clear();
         flush();
     }
 
@@ -98,7 +96,6 @@ struct VuIntBranchPipeline
         pipeline[0] = next;
         for(int i = 0; i < length - 1; i++)
             pipeline[i+1] = pipeline[i];
-
 
         next.clear();
     }
