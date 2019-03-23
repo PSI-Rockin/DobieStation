@@ -61,12 +61,7 @@ struct VuIntBranchPipelineEntry
     VU_I    old_value;   // value that was overwritten
     bool    read_and_write;
 
-    void clear()
-    {
-        write_reg = 0;
-        old_value = {0};
-        read_and_write = false;
-    }
+    void clear();
 };
 
 struct VuIntBranchPipeline
@@ -74,70 +69,12 @@ struct VuIntBranchPipeline
     static constexpr int length = 5;           // how far back to go behind the branch
     VuIntBranchPipelineEntry pipeline[length]; // the previous integer operations (0 is most recent)
     VuIntBranchPipelineEntry next;             // the currently executing integer op
-
-    // completely reset pipeline to VU power on state
-    void reset()
-    {
-        next.clear();
-        flush();
-    }
-
-    // inform pipeline of a register write
-    void write_reg(uint8_t reg, VU_I old_value, bool also_read)
-    {
-        next.old_value = old_value;
-        next.write_reg = reg;
-        next.read_and_write = also_read;
-    }
-
-    // execute single instruction
-    void update()
-    {
-        pipeline[0] = next;
-        for(int i = 0; i < length - 1; i++)
-            pipeline[i+1] = pipeline[i];
-
-        next.clear();
-    }
-
-    // flushes the old stuff out, doesn't affect the current instruction
-    void flush()
-    {
-        for(auto& p : pipeline)
-            p.clear();
-    }
-
-
-    // check if reading a given integer register for branch condition will cause strange behavior
-    // if so, writes the correct value to destination
-    bool check_branch_condition_reg(uint8_t reg, VU_I& destination, uint8_t vu_id, uint16_t PC)
-    {
-        bool hazard = false; // is there any hazard at all?
-
-        // first check to see if there's a conflict
-        if (reg && reg == pipeline[0].write_reg)
-        {
-            // if so
-            hazard = true;
-            destination = pipeline[0].old_value;
-            // now we want the OLDEST write in the pipeline:
-            if (pipeline[0].read_and_write)
-            {
-                for (int i = 0; i < length; i++)
-                {
-                    if (reg == pipeline[i].write_reg)
-                    {
-                        destination = pipeline[i].old_value;
-                        printf("[VU%d] Integer branch using register from %d instructions ago (PC = 0x%x), vi%d now 0x%x!\n", vu_id, i+1, PC, reg, destination.s);
-                    }
-
-                }
-            }
-        }
-
-
-        return hazard;
-    }
+    
+    void reset();
+    void write_reg(uint8_t reg, VU_I old_value, bool also_read);
+    void update();
+    void flush();
+    VU_I get_branch_condition_reg(uint8_t reg, VU_I current_value, uint8_t vu_id, uint16_t PC);
 };
 
 class GraphicsInterface;

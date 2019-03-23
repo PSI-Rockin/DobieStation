@@ -38,6 +38,66 @@
 
 uint32_t VectorUnit::FBRST = 0;
 
+void VuIntBranchPipelineEntry::clear()
+{
+    write_reg = 0;
+    old_value = {0};
+    read_and_write = false;
+}
+
+void VuIntBranchPipeline::reset()
+{
+    next.clear();
+    flush();
+}
+
+VU_I VuIntBranchPipeline::get_branch_condition_reg(uint8_t reg, VU_I current_value, uint8_t vu_id, uint16_t PC)
+{
+    // first check to see if there's a conflict
+    if (reg && reg == pipeline[0].write_reg)
+    {
+        current_value = pipeline[0].old_value;
+        // now we want the OLDEST write in the pipeline:
+        if (pipeline[0].read_and_write)
+        {
+            for (int i = 0; i < length; i++)
+            {
+                if (reg == pipeline[i].write_reg)
+                {
+                    current_value = pipeline[i].old_value;
+                    printf("[VU%d] Integer branch using register from %d instructions ago (PC = 0x%x), vi%d now 0x%x!\n", vu_id, i+1, PC, reg, current_value.s);
+                }
+
+            }
+        }
+    }
+    return current_value;
+}
+
+// inform pipeline of a register write
+void VuIntBranchPipeline::write_reg(uint8_t reg, VU_I old_value, bool also_read)
+{
+    next.old_value = old_value;
+    next.write_reg = reg;
+    next.read_and_write = also_read;
+}
+
+void VuIntBranchPipeline::update()
+{
+    pipeline[0] = next;
+    for(int i = 0; i < length - 1; i++)
+        pipeline[i+1] = pipeline[i];
+
+    next.clear();
+}
+
+// flushes the old stuff out, doesn't affect the current instruction
+void VuIntBranchPipeline::flush()
+{
+    for(auto& p : pipeline)
+        p.clear();
+}
+
 /**
  * The VU max and min instructions support denormals.
  * Because of this, we must compare registers as signed integers instead of floats.
@@ -714,7 +774,7 @@ VU_I VectorUnit::read_int_for_branch_condition(uint8_t reg)
     VU_I value = int_gpr[reg];
     if(reg)
     {
-        int_branch_pipeline.check_branch_condition_reg(reg, value, id, PC);
+        int_branch_pipeline.get_branch_condition_reg(reg, value, id, PC);
     }
     return value;
 }
