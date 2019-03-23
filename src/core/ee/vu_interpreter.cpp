@@ -1937,11 +1937,13 @@ void bal(VectorUnit &vu, uint32_t instr)
 
 void jr(VectorUnit &vu, uint32_t instr)
 {
+    vu.decoder.vi_read0 = (instr >> 11) & 0xF;
     lower_op = &VectorUnit::jr;
 }
 
 void jalr(VectorUnit &vu, uint32_t instr)
 {
+    vu.decoder.vi_read0 = (instr >> 11) & 0xF;
     lower_op = &VectorUnit::jalr;
 }
 

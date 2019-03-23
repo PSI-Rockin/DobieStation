@@ -48,6 +48,7 @@ struct VU_InstrInfo
     uint8_t decoder_vi_read0;
     uint8_t decoder_vi_read1;
     uint8_t decoder_vi_write;
+    bool use_backup_vi;
 };
 
 class VU_JitTranslator
