@@ -688,6 +688,9 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             printf("X: %d\n", TEXCLUT.x);
             printf("Y: %d\n", TEXCLUT.y);
             break;
+        case 0x0022:
+            SCANMSK = value & 0x3;
+            break;
         case 0x0034:
             context1.set_miptbl1(value);
             break;
@@ -1227,10 +1230,16 @@ bool GraphicsSynthesizerThread::depth_test(int32_t x, int32_t y, uint32_t z)
     return false;
 }
 
-void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGBAQ_REG& color, bool alpha_blending)
+void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGBAQ_REG& color)
 {
     x >>= 4;
     y >>= 4;
+
+    //SCANMSK prohibits drawing on even or odd y-coordinates
+    if (SCANMSK == 2 && (y & 0x1) == 0)
+        return;
+    else if (SCANMSK == 3 && (y & 0x1) == 1)
+        return;
     TEST* test = &current_ctx->test;
     bool update_frame = true;
     bool update_alpha = true;
@@ -1348,7 +1357,7 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
     }
 
     //PABE - MSB of source alpha must be set to enable alpha blending
-    if (alpha_blending && (!PABE || (color.a & 0x80)))
+    if (current_PRMODE->alpha_blend && (!PABE || (color.a & 0x80)))
     {
         uint32_t r1, g1, b1;
         uint32_t r2, g2, b2;
@@ -1626,11 +1635,11 @@ void GraphicsSynthesizerThread::render_point()
             v = (uint32_t) v1.uv.v;
         }
         tex_lookup(u, v, tex_info);
-        draw_pixel(v1.x, v1.y, v1.z, tex_info.tex_color, current_PRMODE->alpha_blend);
+        draw_pixel(v1.x, v1.y, v1.z, tex_info.tex_color);
     }
     else
     {
-        draw_pixel(v1.x, v1.y, v1.z, tex_info.vtx_color, current_PRMODE->alpha_blend);
+        draw_pixel(v1.x, v1.y, v1.z, tex_info.vtx_color);
     }
 }
 
@@ -1701,9 +1710,9 @@ void GraphicsSynthesizerThread::render_line()
             tex_info.vtx_color = tex_info.tex_color;
         }
         if (is_steep)
-            draw_pixel(y, x, z, tex_info.vtx_color, current_PRMODE->alpha_blend);
+            draw_pixel(y, x, z, tex_info.vtx_color);
         else
-            draw_pixel(x, y, z, tex_info.vtx_color, current_PRMODE->alpha_blend);
+            draw_pixel(x, y, z, tex_info.vtx_color);
     }
 }
 
@@ -1743,8 +1752,8 @@ void GraphicsSynthesizerThread::render_triangle()
     //Automatic scissoring test
     min_x = max(min_x, (int32_t)current_ctx->scissor.x1);
     min_y = max(min_y, (int32_t)current_ctx->scissor.y1);
-    max_x = min(max_x, (int32_t)current_ctx->scissor.x2);
-    max_y = min(max_y, (int32_t)current_ctx->scissor.y2);
+    max_x = min(max_x, (int32_t)current_ctx->scissor.x2 + 0x10);
+    max_y = min(max_y, (int32_t)current_ctx->scissor.y2 + 0x10);
 
     //We'll process the pixels in blocks, set the blocksize
     const int32_t BLOCKSIZE = 1 << 4; // Must be power of 2
@@ -1905,11 +1914,11 @@ void GraphicsSynthesizerThread::render_triangle()
                                     v = (uint32_t) temp_v;
                                 }
                                 tex_lookup(u, v, tex_info);
-                                draw_pixel(x, y, (uint32_t)z, tex_info.tex_color, current_PRMODE->alpha_blend);
+                                draw_pixel(x, y, (uint32_t)z, tex_info.tex_color);
                             }
                             else
                             {
-                                draw_pixel(x, y, (uint32_t)z, tex_info.vtx_color, current_PRMODE->alpha_blend);
+                                draw_pixel(x, y, (uint32_t)z, tex_info.vtx_color);
                             }
                         }
                         //Horizontal step
@@ -1953,10 +1962,10 @@ void GraphicsSynthesizerThread::render_sprite()
     //Automatic scissoring test
     int32_t min_y = std::max(v1.y, (int32_t)current_ctx->scissor.y1);
     int32_t min_x = std::max(v1.x, (int32_t)current_ctx->scissor.x1);
-    int32_t max_y = std::min(v2.y, (int32_t)current_ctx->scissor.y2);
-    int32_t max_x = std::min(v2.x, (int32_t)current_ctx->scissor.x2);
+    int32_t max_y = std::min(v2.y, (int32_t)current_ctx->scissor.y2 + 0x10);
+    int32_t max_x = std::min(v2.x, (int32_t)current_ctx->scissor.x2 + 0x10);
 
-    printf("Coords: (%d, %d) (%d, %d)\n", v1.x >> 4, v1.y >> 4, v2.x >> 4, v2.y >> 4);
+    printf("Coords: (%d, %d) (%d, %d)\n", min_x >> 4, min_y >> 4, max_x >> 4, max_y >> 4);
 
     float pix_t = interpolate_f(min_y, v1.t, v1.y, v2.t, v2.y);
     int32_t pix_v = (int32_t)interpolate(min_y, v1.uv.v, v1.y, v2.uv.v, v2.y) << 16;
@@ -1989,11 +1998,11 @@ void GraphicsSynthesizerThread::render_sprite()
                 }
                 else
                     tex_lookup(pix_u >> 16, pix_v >> 16, tex_info);
-                draw_pixel(x, y, v2.z, tex_info.tex_color, current_PRMODE->alpha_blend);
+                draw_pixel(x, y, v2.z, tex_info.tex_color);
             }
             else
             {
-                draw_pixel(x, y, v2.z, tex_info.vtx_color, current_PRMODE->alpha_blend);
+                draw_pixel(x, y, v2.z, tex_info.vtx_color);
             }
             pix_s += pix_s_step;
             pix_u += pix_u_step;
@@ -2252,6 +2261,10 @@ void GraphicsSynthesizerThread::local_to_local()
                 data = read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
                                           TRXPOS.int_source_x, TRXPOS.int_source_y);
                 break;
+            case 0x13:
+                data = read_PSMCT8_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                                         TRXPOS.int_source_x, TRXPOS.int_source_y);
+                break;
             case 0x14:
                 data = read_PSMCT4_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
                                          TRXPOS.int_source_x, TRXPOS.int_source_y);
@@ -2268,6 +2281,10 @@ void GraphicsSynthesizerThread::local_to_local()
                 break;
             case 0x01:
                 write_PSMCT24_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width,
+                                    TRXPOS.int_dest_x, TRXPOS.int_dest_y, data);
+                break;
+            case 0x13:
+                write_PSMCT8_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width,
                                     TRXPOS.int_dest_x, TRXPOS.int_dest_y, data);
                 break;
             case 0x14:
@@ -2864,6 +2881,7 @@ void GraphicsSynthesizerThread::load_state(ifstream *state)
     state->read((char*)&FOG, sizeof(FOG));
     state->read((char*)&FOGCOL, sizeof(FOGCOL));
     state->read((char*)&PABE, sizeof(PABE));
+    state->read((char*)&SCANMSK, sizeof(SCANMSK));
 
     state->read((char*)&BITBLTBUF, sizeof(BITBLTBUF));
     state->read((char*)&TRXPOS, sizeof(TRXPOS));
@@ -2911,6 +2929,7 @@ void GraphicsSynthesizerThread::save_state(ofstream *state)
     state->write((char*)&FOG, sizeof(FOG));
     state->write((char*)&FOGCOL, sizeof(FOGCOL));
     state->write((char*)&PABE, sizeof(PABE));
+    state->write((char*)&SCANMSK, sizeof(SCANMSK));
 
     state->write((char*)&BITBLTBUF, sizeof(BITBLTBUF));
     state->write((char*)&TRXPOS, sizeof(TRXPOS));

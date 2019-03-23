@@ -863,6 +863,11 @@ void Emulator::ee_kputs(uint32_t param)
 
 void Emulator::ee_deci2send(uint32_t addr, int len)
 {
+    if(len > 0x10000)
+    {
+        Errors::die("Tried to deci2send %d bytes!\n", len);
+    }
+
     while (len > 0)
     {
         char c = RDRAM[addr & 0x1FFFFFF];

@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <queue>
 #include <fstream>
+#include <unordered_set>
 
 #include "intc.hpp"
 #include "vu.hpp"
@@ -96,9 +97,6 @@ class VectorInterface
         void handle_UNPACK_masking(uint128_t& quad);
         void handle_UNPACK_mode(uint128_t& quad);
         void process_UNPACK_quad(uint128_t& quad);
-
-        void disasm_micromem();
-        uint32_t crc_microprogram();
     public:
         VectorInterface(GraphicsInterface* gif, VectorUnit* vu, INTC* intc, int id);
         int get_id();

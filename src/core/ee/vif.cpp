@@ -1,9 +1,5 @@
 #include <cstdio>
 #include <cstdlib>
-#include <fstream>
-#include <iomanip>
-#include <cstring>
-#include "vu_disasm.hpp"
 #include "vu_jit.hpp"
 #include "vif.hpp"
 
@@ -103,8 +99,9 @@ void VectorInterface::update(int cycles)
 
         if (wait_for_PATH3)
         {
-            if (gif->path_activepath3(3))
+            if (!gif->path3_done())
                 return;
+            gif->deactivate_PATH(3);
             wait_for_PATH3 = false;
         }
 
@@ -146,15 +143,7 @@ void VectorInterface::update(int cycles)
                     vu->write_instr(mpg.addr, value);
                     mpg.addr += 4;
                     if (command_len <= 1)
-                    {
-                        disasm_micromem();
                         command = 0;
-                        //Calculate the current program crc for the VU JIT after all microprograms have transferred
-                        if (vu->get_id() == 1)
-                        {
-                            VU_JIT::set_current_program(crc_microprogram());
-                        }
-                    }
                     break;
                 case 0x50:
                 case 0x51:
@@ -368,7 +357,7 @@ void VectorInterface::handle_wait_cmd(uint32_t value)
 
 void VectorInterface::MSCAL(uint32_t addr)
 {
-    vu->mscal(addr);
+    vu->start_program(addr);
 
     ITOP = ITOPS;
 
@@ -850,99 +839,6 @@ bool VectorInterface::feed_DMA(uint128_t quad)
     for (int i = 0; i < 4; i++)
         FIFO.push(quad._u32[i]);
     return true;
-}
-
-void VectorInterface::disasm_micromem()
-{
-    //Check for branch targets and also see if the microprogram is the same as the one previously disassembled
-    int size = (vu->get_id()) ? 0x4000 : 0x1000;
-    static uint64_t last_micro[0x4000 / 8];
-    bool should_disasm = false;
-    bool is_branch_target[0x4000 / 8];
-    memset(is_branch_target, 0, size / 8);
-    for (int i = 0; i < size; i += 8)
-    {
-        uint32_t lower = vu->read_instr<uint32_t>(i);
-
-        uint64_t instr = vu->read_instr<uint64_t>(i);
-        if (instr != last_micro[i / 8])
-        {
-            should_disasm = true;
-            last_micro[i / 8] = instr;
-        }
-
-        //If the lower instruction is a branch, set branch target to true for the location it points to
-        if (VU_Disasm::is_branch(lower))
-        {
-            int32_t imm = lower & 0x7FF;
-            imm = ((int16_t)(imm << 5)) >> 5;
-            imm *= 8;
-
-            uint32_t addr = i + imm + 8;
-            if (addr < size)
-                is_branch_target[addr / 8] = true;
-        }
-    }
-
-    if (!should_disasm)
-        return;
-
-    using namespace std;
-
-    ofstream file;
-
-    if (get_id())
-        file.open("microprogram1.txt");
-    else
-        file.open("microprogram0.txt");
-
-    if (!file.is_open())
-    {
-        Errors::die("Failed to open\n");
-    }
-
-    for (int i = 0; i < size; i += 8)
-    {
-        if (is_branch_target[i / 8])
-        {
-            file << endl;
-            file << "Branch target $" << setfill('0') << setw(4) << right << hex << i << ":";
-            file << endl;
-        }
-        //PC
-        file << "[$" << setfill('0') << setw(4) << right << hex << i << "] ";
-
-        //Raw instructions
-        uint32_t lower = vu->read_instr<uint32_t>(i);
-        uint32_t upper = vu->read_instr<uint32_t>(i + 4);
-
-        file << setw(8) << hex << upper << ":" << setw(8) << lower << " ";
-        file << setfill(' ') << setw(30) << left << VU_Disasm::upper(i, upper);
-
-        if (upper & (1 << 31))
-            file << VU_Disasm::loi(lower);
-        else
-            file << VU_Disasm::lower(i, lower);
-        file << endl;
-    }
-    file.close();
-}
-
-#define POLY 0x82f63b78
-
-uint32_t VectorInterface::crc_microprogram()
-{
-    uint32_t crc = 0;
-    int len = 0x4000;
-    int addr = 0x0000;
-
-    crc = ~crc;
-    while (len--) {
-        crc ^= vu->read_instr<uint8_t>(addr++);
-        for (int k = 0; k < 8; k++)
-            crc = crc & 1 ? (crc >> 1) ^ POLY : crc >> 1;
-    }
-    return ~crc;
 }
 
 uint32_t VectorInterface::get_stat()

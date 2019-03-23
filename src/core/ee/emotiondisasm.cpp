@@ -564,7 +564,7 @@ string disasm_addu(uint32_t instruction)
 
 string disasm_sub(uint32_t instruction)
 {
-    return disasm_special_simplemath("add", instruction);
+    return disasm_special_simplemath("sub", instruction);
 }
 
 string disasm_subu(uint32_t instruction)

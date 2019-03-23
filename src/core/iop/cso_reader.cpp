@@ -176,13 +176,13 @@ uint64_t CSO_Reader::read(uint8_t* dst, uint64_t size)
         if (!read_block_internal(i))
             return total_read;
         
-        const uint64_t local_ofs = start - start_block * m_blocksize;
+        const uint64_t local_ofs = start - (uint64_t)start_block * m_blocksize;
         uint64_t readlen = m_blocksize;
         if (i == start_block)
             readlen -= local_ofs;
         if (i == end_block)
-            readlen -= m_blocksize - (end - end_block * m_blocksize);
-        
+            readlen -= m_blocksize - (end - (uint64_t)end_block * m_blocksize);
+
         memcpy(dst, m_frame + local_ofs, readlen);
         total_read += readlen;
         m_virtptr += readlen;
