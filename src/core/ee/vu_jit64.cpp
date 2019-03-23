@@ -2037,7 +2037,7 @@ void VU_JIT64::esqrt(VectorUnit &vu, IR::Instruction &instr)
     REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ);
     REG_64 temp = REG_64::XMM0;
 
-    clamp_vfreg(field, source);
+    clamp_vfreg(1 << field, source);
 
     emitter.SQRTPS(source, temp);
     emitter.INSERTPS(field, 0, 0, temp, temp);
@@ -2053,7 +2053,7 @@ void VU_JIT64::ersqrt(VectorUnit &vu, IR::Instruction &instr)
     REG_64 denom = REG_64::XMM0;
     REG_64 num = REG_64::XMM1;
 
-    clamp_vfreg(field, source);
+    clamp_vfreg(1 << field, source);
 
     emitter.SQRTPS(source, denom);
     emitter.INSERTPS(field, 0, 0, denom, denom);
