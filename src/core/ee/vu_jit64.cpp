@@ -172,7 +172,7 @@ void VU_JIT64::reset(bool clear_cache)
 
 void VU_JIT64::set_current_program(uint32_t crc)
 {
-    reset(false);
+    reset(current_program != crc);
     current_program = crc;
 
 }

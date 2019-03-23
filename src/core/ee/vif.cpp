@@ -308,9 +308,6 @@ void VectorInterface::decode_cmd(uint32_t value)
                 mpg.addr = imm * 8;
             }
 
-            if(id == 1)
-                VU_JIT::reset();
-
             wait_for_VU = true;
             wait_cmd_value = value;
             break;
