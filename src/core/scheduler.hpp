@@ -40,7 +40,7 @@ class Scheduler
 
         unsigned int run_cycles;
 
-        std::list<SchedulerEvent> ee_events;
+        std::list<SchedulerEvent> events;
 
         int64_t closest_event_time;
     public:
@@ -52,10 +52,23 @@ class Scheduler
         unsigned int get_bus_run_cycles();
         unsigned int get_iop_run_cycles();
 
-        void add_ee_event(event_func func, uint64_t delta_time_to_run);
+        int64_t get_ee_cycles();
+        int64_t get_iop_cycles();
+
+        void add_event(SchedulerEvent& event);
 
         void update_cycle_counts();
         void process_events(Emulator* e);
 };
+
+inline int64_t Scheduler::get_ee_cycles()
+{
+    return ee_cycles.count;
+}
+
+inline int64_t Scheduler::get_iop_cycles()
+{
+    return iop_cycles.count;
+}
 
 #endif // SCHEDULER_HPP

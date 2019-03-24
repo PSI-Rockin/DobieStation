@@ -70,14 +70,10 @@ class SPU
         int ADMA_left;
         int input_pos;
 
-        int cycles;
-
         static uint32_t IRQA[2];
         uint32_t ENDX;
         uint32_t key_on;
         uint32_t key_off;
-
-        void gen_sample();
 
         void key_on_voice(int v);
         void key_off_voice(int v);
@@ -95,7 +91,7 @@ class SPU
         bool can_write_ADMA();
 
         void reset(uint8_t* RAM);
-        void update(int cycles_to_run);
+        void gen_sample();
 
         void start_DMA(int size);
         void finish_DMA();

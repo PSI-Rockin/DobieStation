@@ -5,6 +5,7 @@
 #include <fstream>
 
 class Emulator;
+class IOP_DMA;
 
 enum CDVD_CONTAINER
 {
@@ -48,6 +49,7 @@ class CDVD_Drive
         uint64_t last_read;
         uint64_t cycle_count;
         Emulator* e;
+        IOP_DMA* dma;
         CDVD_CONTAINER container;
         std::ifstream cdvd_file;
         CSO_Reader cso_file;
@@ -77,7 +79,6 @@ class CDVD_Drive
         uint8_t N_command_params[11];
         uint8_t N_params;
         uint8_t N_status;
-        int N_cycles_left;
         RTC rtc;
 
         uint8_t S_command;
@@ -112,14 +113,14 @@ class CDVD_Drive
         void N_command_readkey(uint32_t arg);
         void S_command_sub(uint8_t func);
     public:
-        CDVD_Drive(Emulator* e);
+        CDVD_Drive(Emulator* e, IOP_DMA* dma);
         ~CDVD_Drive();
 
         std::string get_serial();
 
         void reset();
         void vsync();
-        void update(int cycles);
+        void handle_N_command();
         int get_block_size();
         int bytes_left();
 

@@ -111,8 +111,11 @@ class Emulator
         void get_resolution(int& w, int& h);
         void get_inner_resolution(int& w, int& h);
 
+        //Events
         void vblank_start();
         void vblank_end();
+        void cdvd_event();
+        void gen_sound_sample();
 
         bool request_load_state(const char* file_name);
         bool request_save_state(const char* file_name);
@@ -152,6 +155,9 @@ class Emulator
 
         void test_iop();
         GraphicsSynthesizer& get_gs();//used for gs dumps
+
+        void add_ee_event(event_func func, uint64_t delta_time_to_run);
+        void add_iop_event(event_func func, uint64_t delta_time_to_run);
 };
 
 #endif // EMULATOR_HPP

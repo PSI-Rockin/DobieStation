@@ -19,12 +19,14 @@ void Scheduler::reset()
     iop_cycles.remainder = 0;
 
     closest_event_time = 0x7FFFFFFFULL << 32ULL;
+
+    events.clear();
 }
 
 unsigned int Scheduler::calculate_run_cycles()
 {
-    if (!ee_events.size())
-        Errors::die("[Scheduler] No events in EE event list");
+    if (!events.size())
+        Errors::die("[Scheduler] No events registered");
     const static int MAX_CYCLES = 16;
     if (ee_cycles.count + MAX_CYCLES <= closest_event_time)
         run_cycles = MAX_CYCLES;
@@ -58,15 +60,11 @@ unsigned int Scheduler::get_iop_run_cycles()
     return iop_run_cycles;
 }
 
-void Scheduler::add_ee_event(event_func func, uint64_t delta_time_to_run)
+void Scheduler::add_event(SchedulerEvent& event)
 {
-    SchedulerEvent event;
-    event.func = func;
-    event.time_to_run = ee_cycles.count + delta_time_to_run;
-
     closest_event_time = std::min(event.time_to_run, closest_event_time);
 
-    ee_events.push_back(event);
+    events.push_back(event);
 }
 
 void Scheduler::update_cycle_counts()
@@ -95,12 +93,12 @@ void Scheduler::process_events(Emulator* e)
     if (ee_cycles.count >= closest_event_time)
     {
         int64_t new_time = 0x7FFFFFFFULL << 32ULL;
-        for (auto it = ee_events.begin(); it != ee_events.end(); )
+        for (auto it = events.begin(); it != events.end(); )
         {
             if (it->time_to_run <= closest_event_time)
             {
                 (e->*it->func)();
-                it = ee_events.erase(it);
+                it = events.erase(it);
             }
             else
             {

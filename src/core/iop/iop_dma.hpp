@@ -2,6 +2,9 @@
 #define IOP_DMA_HPP
 #include <cstdint>
 #include <fstream>
+#include <list>
+
+class IOP_DMA;
 
 struct IOP_DMA_Chan_Control
 {
@@ -22,6 +25,13 @@ struct IOP_DMA_Channel
     uint32_t tag_addr;
 
     bool tag_end;
+
+    typedef void(IOP_DMA::*dma_copy_func)();
+    dma_copy_func func;
+
+    bool dma_req;
+
+    int delay;
 };
 
 struct DMA_DPCR
@@ -44,6 +54,23 @@ class SubsystemInterface;
 class SIO2;
 class SPU;
 
+enum IOP_DMA_CHANNELS
+{
+    IOP_MDECin,
+    IOP_MDECout,
+    IOP_GPU,
+    IOP_CDVD,
+    IOP_SPU,
+    IOP_PIO,
+    IOP_OTC,
+    IOP_SPU2 = 8,
+    IOP_unk,
+    IOP_SIF0,
+    IOP_SIF1,
+    IOP_SIO2in,
+    IOP_SIO2out
+};
+
 class IOP_DMA
 {
     private:
@@ -54,7 +81,8 @@ class IOP_DMA
         SIO2* sio2;
         SPU *spu, *spu2;
         IOP_DMA_Channel channels[16];
-        static const uint8_t IMPLEMENTED[];
+        IOP_DMA_Channel* active_channel;
+        std::list<IOP_DMA_Channel*> queued_channels;
 
         int spu_delay, spu2_delay;
 
@@ -70,6 +98,9 @@ class IOP_DMA
         void process_SIF1();
         void process_SIO2in();
         void process_SIO2out();
+
+        void active_dma_check(int index);
+        void deactivate_dma(int index);
     public:
         static const char* CHAN(int index);
         IOP_DMA(Emulator* e, CDVD_Drive* cdvd, SubsystemInterface* sif, SIO2* sio2, SPU* spu, SPU* spu2);
@@ -90,6 +121,9 @@ class IOP_DMA
         void set_DPCR2(uint32_t value);
         void set_DICR(uint32_t value);
         void set_DICR2(uint32_t value);
+
+        void set_DMA_request(int index);
+        void clear_DMA_request(int index);
 
         void set_chan_addr(int index, uint32_t value);
         void set_chan_block(int index, uint32_t value);

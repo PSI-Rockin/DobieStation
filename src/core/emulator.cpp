@@ -16,11 +16,11 @@
 #define EELOAD_SIZE 0x20000
 
 Emulator::Emulator() :
-    cdvd(this), cp0(&dmac), cpu(&cp0, &fpu, this, (uint8_t*)&scratchpad, &vu0, &vu1),
+    cdvd(this, &iop_dma), cp0(&dmac), cpu(&cp0, &fpu, this, (uint8_t*)&scratchpad, &vu0, &vu1),
     dmac(&cpu, this, &gif, &ipu, &sif, &vif0, &vif1), gif(&gs), gs(&intc),
     iop(this), iop_dma(this, &cdvd, &sif, &sio2, &spu, &spu2), iop_timers(this), intc(&cpu), ipu(&intc),
     timers(&intc), sio2(this, &pad, &memcard), spu(1, this), spu2(2, this), vif0(nullptr, &vu0, &intc, 0),
-    vif1(&gif, &vu1, &intc, 1), vu0(0, this), vu1(1, this)
+    vif1(&gif, &vu1, &intc, 1), vu0(0, this), vu1(1, this), sif(&iop_dma)
 {
     BIOS = nullptr;
     RDRAM = nullptr;
@@ -80,8 +80,8 @@ void Emulator::run()
 
     frame_ended = false;
 
-    scheduler.add_ee_event(&Emulator::vblank_start, VBLANK_START);
-    scheduler.add_ee_event(&Emulator::vblank_end, CYCLES_PER_FRAME);
+    add_ee_event(&Emulator::vblank_start, VBLANK_START);
+    add_ee_event(&Emulator::vblank_end, CYCLES_PER_FRAME);
     
     while (!frame_ended)
     {
@@ -100,16 +100,14 @@ void Emulator::run()
         //vu1.run(bus_cycles);
         vu1.run_jit(bus_cycles);
 
-        iop_timers.run(iop_cycles);
-        iop_dma.run(iop_cycles);
         for (int i = 0; i < iop_cycles; i++)
         {
             iop.run(1);
             iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
         }
-        spu.update(iop_cycles);
-        spu2.update(iop_cycles);
-        cdvd.update(iop_cycles);
+
+        iop_timers.run(iop_cycles);
+        iop_dma.run(iop_cycles);
 
         scheduler.update_cycle_counts();
         scheduler.process_events(this);
@@ -170,6 +168,8 @@ void Emulator::reset()
     clear_cop2_interlock();
 
     iop_scratchpad_start = 0x1F800000;
+
+    add_iop_event(&Emulator::gen_sound_sample, 768);
 }
 
 void Emulator::vblank_start()
@@ -193,6 +193,18 @@ void Emulator::vblank_end()
     gs.set_VBLANK(false);
     timers.gate(true, false);
     frame_ended = true;
+}
+
+void Emulator::cdvd_event()
+{
+    cdvd.handle_N_command();
+}
+
+void Emulator::gen_sound_sample()
+{
+    spu.gen_sample();
+    spu2.gen_sample();
+    add_iop_event(&Emulator::gen_sound_sample, 768);
 }
 
 void Emulator::press_button(PAD_BUTTON button)
@@ -1647,4 +1659,22 @@ void Emulator::request_gsdump_toggle()
 void Emulator::request_gsdump_single_frame()
 {
     gsdump_single_frame = true;
+}
+
+void Emulator::add_ee_event(event_func func, uint64_t delta_time_to_run)
+{
+    SchedulerEvent event;
+    event.func = func;
+    event.time_to_run = scheduler.get_ee_cycles() + delta_time_to_run;
+
+    scheduler.add_event(event);
+}
+
+void Emulator::add_iop_event(event_func func, uint64_t delta_time_to_run)
+{
+    SchedulerEvent event;
+    event.func = func;
+    event.time_to_run = (scheduler.get_iop_cycles() + delta_time_to_run) << 3;
+
+    scheduler.add_event(event);
 }

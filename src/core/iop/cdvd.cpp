@@ -2,6 +2,7 @@
 #include <ctime>
 #include <string>
 #include "cdvd.hpp"
+#include "iop_dma.hpp"
 
 #include "../emulator.hpp"
 #include "../errors.hpp"
@@ -23,7 +24,7 @@ uint32_t CDVD_Drive::get_block_timing(bool mode_DVD)
     return (IOP_CLOCK * block_size) / (speed * (mode_DVD ? PSX_DVD_READSPEED : PSX_CD_READSPEED));
 }
 
-CDVD_Drive::CDVD_Drive(Emulator* e) : e(e), container(CDVD_CONTAINER::ISO)
+CDVD_Drive::CDVD_Drive(Emulator* e, IOP_DMA* dma) : e(e), dma(dma), container(CDVD_CONTAINER::ISO)
 {
 
 }
@@ -137,7 +138,6 @@ void CDVD_Drive::reset()
     drive_status = STOPPED;
     is_spinning = false;
     active_N_command = NCOMMAND::NONE;
-    N_cycles_left = 0;
     N_status = 0x40;
     N_params = 0;
     N_command = 0;
@@ -241,6 +241,7 @@ int CDVD_Drive::bytes_left()
 uint32_t CDVD_Drive::read_to_RAM(uint8_t *RAM, uint32_t bytes)
 {
     memcpy(RAM, read_buffer, block_size);
+    dma->clear_DMA_request(IOP_CDVD);
     read_bytes_left -= block_size;
     if (read_bytes_left <= 0)
     {
@@ -255,72 +256,64 @@ uint32_t CDVD_Drive::read_to_RAM(uint8_t *RAM, uint32_t bytes)
         else
         {
             active_N_command = NCOMMAND::READ;
-            N_cycles_left = get_block_timing(N_command != 0x06);
+            e->add_iop_event(&Emulator::cdvd_event, get_block_timing(N_command != 0x06));
         }
     }
     return block_size;
 }
 
-void CDVD_Drive::update(int cycles)
+void CDVD_Drive::handle_N_command()
 {
-    cycle_count += cycles;
-    if (N_cycles_left >= 0 && active_N_command != NCOMMAND::NONE)
+    switch (active_N_command)
     {
-        N_cycles_left -= cycles;
-        if (N_cycles_left <= 0)
-        {
-            switch (active_N_command)
+        case NCOMMAND::SEEK:
+            drive_status = PAUSED;
+            active_N_command = NCOMMAND::NONE;
+            current_sector = sector_pos;
+            N_status = 0x4E;
+            ISTAT |= 0x2;
+            e->iop_request_IRQ(2);
+            break;
+        case NCOMMAND::STANDBY:
+            drive_status = PAUSED;
+            active_N_command = NCOMMAND::NONE;
+            N_status = 0x40;
+            ISTAT |= 0x2;
+            e->iop_request_IRQ(2);
+            break;
+        case NCOMMAND::STOP:
+            is_spinning = false;
+            drive_status = STOPPED;
+            N_status = 0x40;
+            ISTAT |= 0x2;
+            e->iop_request_IRQ(2);
+            break;
+        case NCOMMAND::READ:
+            if (!read_bytes_left)
             {
-                case NCOMMAND::SEEK:
-                    drive_status = PAUSED;
-                    active_N_command = NCOMMAND::NONE;
-                    current_sector = sector_pos;
-                    N_status = 0x4E;
-                    ISTAT |= 0x2;
-                    e->iop_request_IRQ(2);
-                    break;
-                case NCOMMAND::STANDBY:
-                    drive_status = PAUSED;
-                    active_N_command = NCOMMAND::NONE;
-                    N_status = 0x40;
-                    ISTAT |= 0x2;
-                    e->iop_request_IRQ(2);
-                    break;
-                case NCOMMAND::STOP:
-                    is_spinning = false;
-                    drive_status = STOPPED;
-                    N_status = 0x40;
-                    ISTAT |= 0x2;
-                    e->iop_request_IRQ(2);
-                    break;
-                case NCOMMAND::READ:
-                    if (!read_bytes_left)
-                    {
-                        if (N_command == 0x06)
-                            read_CD_sector();
-                        else if (N_command == 0x08)
-                            read_DVD_sector();
-                    }
-                    else
-                        N_cycles_left = 1000; //Check later to see if there's space in the buffer
-                    break;
-                case NCOMMAND::READ_SEEK:
-                    drive_status = READING | SPINNING;
-                    active_N_command = NCOMMAND::READ;
-                    current_sector = sector_pos;
-                    N_cycles_left = get_block_timing(N_command != 0x06);
-                    break;
-                case NCOMMAND::BREAK:
-                    drive_status = PAUSED;
-                    active_N_command = NCOMMAND::NONE;
-                    N_status = 0x4E;
-                    ISTAT |= 0x2;
-                    e->iop_request_IRQ(2);
-                    break;
-                default:
-                    Errors::die("[CDVD] Unrecognized active N command\n");
+                if (N_command == 0x06)
+                    read_CD_sector();
+                else if (N_command == 0x08)
+                    read_DVD_sector();
             }
-        }
+            else
+                e->add_iop_event(&Emulator::cdvd_event, 1000); //Check later to see if there's space in the buffer
+            break;
+        case NCOMMAND::READ_SEEK:
+            drive_status = READING | SPINNING;
+            active_N_command = NCOMMAND::READ;
+            current_sector = sector_pos;
+            e->add_iop_event(&Emulator::cdvd_event, 1000);
+            break;
+        case NCOMMAND::BREAK:
+            drive_status = PAUSED;
+            active_N_command = NCOMMAND::NONE;
+            N_status = 0x4E;
+            ISTAT |= 0x2;
+            e->iop_request_IRQ(2);
+            break;
+        default:
+            Errors::die("[CDVD] Unrecognized active N command\n");
     }
 }
 
@@ -481,7 +474,7 @@ void CDVD_Drive::send_N_command(uint8_t value)
             active_N_command = NCOMMAND::STANDBY;
             break;
         case 0x03:
-            N_cycles_left = IOP_CLOCK / 6;
+            e->add_iop_event(&Emulator::cdvd_event, IOP_CLOCK / 6);
             active_N_command = NCOMMAND::STOP;
             break;
         case 0x04:
@@ -545,7 +538,7 @@ void CDVD_Drive::write_BREAK()
     if (N_status || active_N_command == NCOMMAND::BREAK)
         return;
 
-    N_cycles_left = 64;
+    e->add_iop_event(&Emulator::cdvd_event, 64);
     active_N_command = NCOMMAND::BREAK;
     drive_status = CDVD_STATUS::STOPPED;
     read_bytes_left = 0;
@@ -696,11 +689,13 @@ void CDVD_Drive::start_seek()
     N_status = 0;
     drive_status = PAUSED;
 
+    uint64_t cycles_to_seek = 0;
+
     if (!is_spinning)
     {
         //1/3 of a second
-        N_cycles_left = IOP_CLOCK / 3;
-        //N_cycles_left = 1000000;
+        cycles_to_seek = IOP_CLOCK / 3;
+        //cycles_to_seek = 1000000;
         printf("[CDVD] Spinning\n");
         is_spinning = true;
     }
@@ -713,7 +708,7 @@ void CDVD_Drive::start_seek()
         if ((is_DVD && delta < 16) || (!is_DVD && delta < 8))
         {
             printf("[CDVD] Contiguous read\n");
-            N_cycles_left = get_block_timing(is_DVD) * delta;
+            cycles_to_seek = get_block_timing(is_DVD) * delta;
             if (!delta)
             {
                 drive_status = READING | SPINNING;
@@ -722,12 +717,12 @@ void CDVD_Drive::start_seek()
         }
         else if ((is_DVD && delta < 14764) || (!is_DVD && delta < 4371))
         {
-            N_cycles_left = (IOP_CLOCK * 30) / 1000;
+            cycles_to_seek = (IOP_CLOCK * 30) / 1000;
             printf("[CDVD] Fast seek\n");
         }
         else
         {
-            N_cycles_left = (IOP_CLOCK * 100) / 1000;
+            cycles_to_seek = (IOP_CLOCK * 100) / 1000;
             printf("[CDVD] Full seek\n");
         }
     }
@@ -748,6 +743,8 @@ void CDVD_Drive::start_seek()
         Errors::die("[CDVD] Invalid sector read $%08X (max size: $%08X)", seek_to, block_count);
 
     container_seek((uint64_t)seek_to * 2048);
+
+    e->add_iop_event(&Emulator::cdvd_event, cycles_to_seek);
 }
 
 void CDVD_Drive::N_command_read()
@@ -801,6 +798,7 @@ void CDVD_Drive::N_command_gettoc()
     read_buffer[17] = 0x03;
     N_status = 0;
     drive_status = READING;
+    dma->set_DMA_request(IOP_CDVD);
 }
 
 void CDVD_Drive::N_command_readkey(uint32_t arg)
@@ -865,6 +863,7 @@ void CDVD_Drive::read_CD_sector()
     read_bytes_left = block_size;
     current_sector++;
     sectors_left--;
+    dma->set_DMA_request(IOP_CDVD);
 }
 
 void CDVD_Drive::fill_CDROM_sector()
@@ -931,6 +930,8 @@ void CDVD_Drive::read_DVD_sector()
     read_bytes_left = 2064;
     current_sector++;
     sectors_left--;
+
+    dma->set_DMA_request(IOP_CDVD);
 }
 
 void CDVD_Drive::get_dual_layer_info(bool &dual_layer, uint64_t &sector)

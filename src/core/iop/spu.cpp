@@ -31,7 +31,6 @@ void SPU::reset(uint8_t* RAM)
     key_on = 0;
     key_off = 0xFFFFFF;
     spdif_irq = 0;
-    cycles = 0;
 
     for (int i = 0; i < 24; i++)
     {
@@ -60,18 +59,6 @@ void SPU::spu_irq(int index)
     printf("[SPU%d] IRQA interrupt!\n", index);
     spdif_irq |= 4 << index;
     e->iop_request_IRQ(9);
-}
-
-void SPU::update(int cycles_to_run)
-{
-    cycles += cycles_to_run;
-
-    //Generate a sample every 768 IOP cycles
-    if (cycles >= 768)
-    {
-        cycles -= 768;
-        gen_sample();
-    }
 }
 
 void SPU::gen_sample()
