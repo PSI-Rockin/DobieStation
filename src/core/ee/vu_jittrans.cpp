@@ -41,6 +41,9 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
         trans_ebit_delay_slot = instr_info[prev_pc].ebit_delay_slot;
     }
 
+    IR::Instruction clear_delay(IR::Opcode::ClearIntDelay);
+    block.add_instr(clear_delay);
+
     while (!block_end)
     {
         std::vector<IR::Instruction> upper_instrs;
@@ -213,6 +216,8 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
             IR::Instruction p_stall(IR::Opcode::UpdateP);
             block.add_instr(p_stall);
 
+            IR::Instruction clear_delay(IR::Opcode::ClearIntDelay);
+            block.add_instr(clear_delay);
             //The branch will be taken instantly as we finish, I think
             //Only when in the delay slot of the ebit
             //if the branch was the ebit, this has already been done
@@ -397,6 +402,7 @@ void VU_JitTranslator::update_pipeline(VectorUnit &vu, int cycles)
 
         stall_pipe[0] = ((uint64_t)(vu.decoder.vf_write[0] & 0x1F)) | ((uint64_t)(vu.decoder.vf_write[1] & 0x1F) << 5);
         stall_pipe[0] |= ((uint64_t)(vu.decoder.vf_write_field[0] & 0xF) << 10) | ((uint64_t)(vu.decoder.vf_write_field[1] & 0xF) << 14);
+        stall_pipe[0] |= (uint64_t)(vu.decoder.vi_write & 0x1F) << 18;
     }
 }
 
@@ -405,64 +411,71 @@ void VU_JitTranslator::update_pipeline(VectorUnit &vu, int cycles)
  */
 void VU_JitTranslator::analyze_FMAC_stalls(VectorUnit &vu, uint16_t PC)
 {
-    if (vu.decoder.vf_read0[0] == 0 && vu.decoder.vf_read1[0] == 0
-        && vu.decoder.vf_read0[1] == 0 && vu.decoder.vf_read1[1] == 0)
-    {
-        return;
-    }
-
     for (int i = 0; i < 3; i++)
     {
         uint8_t write0 = stall_pipe[i] & 0x1F;
         uint8_t write1 = (stall_pipe[i] >> 5) & 0x1F;
+        uint8_t viwrite = (stall_pipe[i] >> 18) & 0xF;
+        bool viload = (stall_pipe[i] >> 22) & 0x1;
 
-        if (write0 == 0 && write1 == 0)
-            continue;
-
-        uint8_t write0_field = (stall_pipe[i] >> 10) & 0xF;
-        uint8_t write1_field = (stall_pipe[i] >> 14) & 0xF;
         bool stall_found = false;
-        for (int j = 0; j < 2; j++)
+        if (write0 != 0 || write1 != 0)
         {
-            if (vu.decoder.vf_read0[j])
+            uint8_t write0_field = (stall_pipe[i] >> 10) & 0xF;
+            uint8_t write1_field = (stall_pipe[i] >> 14) & 0xF;
+            
+            for (int j = 0; j < 2; j++)
             {
-                if (vu.decoder.vf_read0[j] == write0)
+                if (vu.decoder.vf_read0[j])
                 {
-                    if (vu.decoder.vf_read0_field[j] & write0_field)
+                    if (vu.decoder.vf_read0[j] == write0)
                     {
-                        stall_found = true;
-                        break;
+                        if (vu.decoder.vf_read0_field[j] & write0_field)
+                        {
+                            stall_found = true;
+                            break;
+                        }
+                    }
+                    else if (vu.decoder.vf_read0[j] == write1)
+                    {
+                        if (vu.decoder.vf_read0_field[j] & write1_field)
+                        {
+                            stall_found = true;
+                            break;
+                        }
                     }
                 }
-                else if (vu.decoder.vf_read0[j] == write1)
+                if (vu.decoder.vf_read1[j])
                 {
-                    if (vu.decoder.vf_read0_field[j] & write1_field)
+                    if (vu.decoder.vf_read1[j] == write0)
                     {
-                        stall_found = true;
-                        break;
+                        if (vu.decoder.vf_read1_field[j] & write0_field)
+                        {
+                            stall_found = true;
+                            break;
+                        }
                     }
-                }
-            }
-            if (vu.decoder.vf_read1[j])
-            {
-                if (vu.decoder.vf_read1[j] == write0)
-                {
-                    if (vu.decoder.vf_read1_field[j] & write0_field)
+                    else if (vu.decoder.vf_read1[j] == write1)
                     {
-                        stall_found = true;
-                        break;
-                    }
-                }
-                else if (vu.decoder.vf_read1[j] == write1)
-                {
-                    if (vu.decoder.vf_read1_field[j] & write1_field)
-                    {
-                        stall_found = true;
-                        break;
+                        if (vu.decoder.vf_read1_field[j] & write1_field)
+                        {
+                            stall_found = true;
+                            break;
+                        }
                     }
                 }
             }
         }
+        //Integer Load Delays
+        if (viwrite && viload)
+        {
+            if (viwrite == vu.decoder.vi_read0 || viwrite == vu.decoder.vi_read1)
+            {
+                stall_found = true;
+                break;
+            }
+        }
+
         if (stall_found)
         {
            // printf("[VU_JIT]FMAC stall at $%08X for %d cycles!\n", PC, 3 - i);
@@ -487,18 +500,19 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
     if (prev_pc != 0xFFFFFFFF)
     {        
         printf("[VU_JIT64] Restoring state from %x\n", prev_pc);
-        stall_pipe[0] = vu.pipeline_state[0] & 0x3FFFF;
-        stall_pipe[1] = (vu.pipeline_state[0] >> 18) & 0x3FFFF;
-        stall_pipe[2] = (vu.pipeline_state[0] >> 36) & 0x3FFFF; 
-        stall_pipe[3] = vu.pipeline_state[1] & 0x3FFFF;
+        stall_pipe[0] = vu.pipeline_state[0] & 0x7FFFFF;
+        stall_pipe[1] = (vu.pipeline_state[0] >> 23) & 0x7FFFFF;
+        stall_pipe[2] = (vu.pipeline_state[0] >> 46) & 0x7FFFFF;
+        stall_pipe[3] = vu.pipeline_state[1] & 0x7FFFFF;
 
-        vu.decoder.vf_write[0] = (vu.pipeline_state[1] >> 28) & 0x1F;
-        vu.decoder.vf_write[1] = ((vu.pipeline_state[1] >> 33) & 0x1F);
-        vu.decoder.vf_write_field[0] = ((vu.pipeline_state[1] >> 38) & 0xF);
-        vu.decoder.vf_write_field[1] = ((vu.pipeline_state[1] >> 42) & 0xF);
+        vu.decoder.vf_write[0] = (vu.pipeline_state[1] >> 33) & 0x1F;
+        vu.decoder.vf_write[1] = ((vu.pipeline_state[1] >> 38) & 0x1F);
+        vu.decoder.vf_write_field[0] = ((vu.pipeline_state[1] >> 43) & 0xF);
+        vu.decoder.vf_write_field[1] = ((vu.pipeline_state[1] >> 47) & 0xF);
+        vu.decoder.vi_write = ((vu.pipeline_state[1] >> 51) & 0x1F);
 
-        q_pipe_delay = ((vu.pipeline_state[1] >> 18) & 0xF);
-        p_pipe_delay = ((vu.pipeline_state[1] >> 22) & 0x3F);
+        q_pipe_delay = ((vu.pipeline_state[1] >> 23) & 0xF);
+        p_pipe_delay = ((vu.pipeline_state[1] >> 27) & 0x3F);
 
         branch_delay_slot = instr_info[prev_pc].branch_delay_slot;
         ebit_delay_slot = instr_info[prev_pc].ebit_delay_slot;
@@ -571,6 +585,21 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
             instr_info[PC].decoder_vi_read1 = vu.decoder.vi_read1;
             instr_info[PC].decoder_vi_write = vu.decoder.vi_write;
 
+            //We need to mark the decoder for ILW and ILWR to handle Integer Load Delays
+            if (vu.decoder.vi_write_from_load)
+            {
+                vu.decoder.vi_write |= 0x10;
+            }
+            //If an upper op writes to a register a lower op reads from, the lower op executes first
+            //Additionally, if an upper op and a lower op write to the same register, the upper op
+            //has priority.
+            if (write && ((write == read0 || write == read1) || (write == write1)))
+            {
+                instr_info[PC].swap_ops = true;
+                instr_info[PC].decoder_vf_write[0] = write;
+            }
+
+            analyze_FMAC_stalls(vu, PC);
 
             //Branch instructions
             if ((lower & 0xC0000000) == 0x40000000)
@@ -582,53 +611,61 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
                 instr_info[PC].branch_delay_slot = branch_delay_slot;
 
                 //Conditional branches only
-                if (((lower >> 25) & 0xF) >= 0x8 && PC > vu.get_PC())
+                if (((lower >> 25) & 0xF) >= 0x4 && instr_info[PC].stall_amount < 3)
                 {
-                    //Reg used in branch was modified on the previous instruction
-                    if (instr_info[PC - 8].decoder_vi_write != 0)
+                    instr_info[PC].use_backup_vi = false;
+                    if (vu.int_branch_delay)
                     {
-                        if (instr_info[PC - 8].decoder_vi_write == vu.decoder.vi_read0)
-                            vu.int_backup_id_rec = vu.decoder.vi_read0;
-
-                        if (instr_info[PC - 8].decoder_vi_write == vu.decoder.vi_read1)
-                            vu.int_backup_id_rec = vu.decoder.vi_read1;
-
-                        int backup_pc = ((PC - 32) < vu.get_PC()) ? vu.get_PC() : (PC - 32);
-                        if (backup_pc == (PC - 32))
+                        if ((vu.int_backup_id == vu.decoder.vi_read0 || vu.int_backup_id == vu.decoder.vi_read1))
                         {
-                            int stalls = 0;
-                            for (int i = PC-8; i >= backup_pc; i -= 8)
+                            instr_info[PC].use_backup_vi = true;
+                            vu.int_backup_id_rec = vu.int_backup_id;
+                        }
+                    }
+                    else
+                    {
+                        //Reg used in branch was modified on the previous instruction
+                        if (instr_info[PC - 8].decoder_vi_write != 0)
+                        {
+                            if (instr_info[PC - 8].decoder_vi_write == vu.decoder.vi_read0)
                             {
-                                stalls += instr_info[i].stall_amount;
-                                stalls += 1;
-                                if (stalls > 4)
+                                vu.int_backup_id_rec = vu.decoder.vi_read0;
+                                instr_info[PC].use_backup_vi = true;
+                            }
+
+                            if (instr_info[PC - 8].decoder_vi_write == vu.decoder.vi_read1)
+                            {
+                                vu.int_backup_id_rec = vu.decoder.vi_read1;
+                                instr_info[PC].use_backup_vi = true;
+                            }
+
+                            int backup_pc = ((PC - 32) < vu.get_PC()) ? vu.get_PC() : (PC - 32);
+                            if (backup_pc == (PC - 32))
+                            {
+                                int stalls = 0;
+                                for (int i = PC - 8; i >= backup_pc; i -= 8)
                                 {
-                                    printf("Integer delay, had %d stalls inbetween\n", (i - backup_pc) / 8);
-                                    backup_pc += i - backup_pc;                                    
-                                    break;
+                                    stalls += instr_info[i].stall_amount;
+                                    stalls += 1;
+                                    if (stalls > 4)
+                                    {
+                                        backup_pc += i - backup_pc;
+                                        break;
+                                    }
                                 }
                             }
+                            instr_info[backup_pc].backup_vi = vu.int_backup_id_rec;
                         }
-                        
-                        instr_info[backup_pc].backup_vi = vu.int_backup_id_rec;
                     }
                 }
             }
-
-            //If an upper op writes to a register a lower op reads from, the lower op executes first
-            //Additionally, if an upper op and a lower op write to the same register, the upper op
-            //has priority.
-            if (!(upper & (1 << 31)))
-            {
-                if (write && ((write == read0 || write == read1) || (write == write1)))
-                {
-                    instr_info[PC].swap_ops = true;
-                    instr_info[PC].decoder_vf_write[0] = write;
-                }
-            }
+        }
+        else
+        {
+            analyze_FMAC_stalls(vu, PC);
         }
 
-        analyze_FMAC_stalls(vu, PC);
+        
 
         //WaitQ, DIV, RSQRT, SQRT
         if (((lower & 0x800007FC) == 0x800003BC))
@@ -691,24 +728,36 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
             instr_info[PC].ebit_delay_slot = ebit_delay_slot;
         }
 
+        if (instr_info[PC].decoder_vi_write != vu.int_backup_id)
+            vu.int_branch_delay = 0;
+
         PC += 8;
     }
 
     end_PC = PC - 8;
 
+    if (!instr_info[end_PC - 8].ebit_delay_slot)
+    {
+        if (instr_info[end_PC].decoder_vi_write && !(vu.decoder.vi_write & 0x10))
+        {
+            instr_info[end_PC].backup_vi = instr_info[end_PC].decoder_vi_write;
+        }
+    }
+
     //Save the state at the end of the block
-    instr_info[end_PC].pipeline_state[0] = stall_pipe[0] & 0x3FFFF;
-    instr_info[end_PC].pipeline_state[0] |= (stall_pipe[1] & 0x3FFFF) << 18;
-    instr_info[end_PC].pipeline_state[0] |= (stall_pipe[2] & 0x3FFFF) << 36;
-    instr_info[end_PC].pipeline_state[1] = stall_pipe[3] & 0x3FFFF;
+    instr_info[end_PC].pipeline_state[0] = stall_pipe[0] & 0x7FFFFF;
+    instr_info[end_PC].pipeline_state[0] |= (stall_pipe[1] & 0x7FFFFF) << 23;
+    instr_info[end_PC].pipeline_state[0] |= (stall_pipe[2] & 0x7FFFFF) << 46;
+    instr_info[end_PC].pipeline_state[1] = stall_pipe[3] & 0x7FFFFF;
 
-    instr_info[end_PC].pipeline_state[1] |= (q_pipe_delay & 0xF) << 18;
-    instr_info[end_PC].pipeline_state[1] |= (p_pipe_delay & 0x3F) << 22;
+    instr_info[end_PC].pipeline_state[1] |= (q_pipe_delay & 0xF) << 23;
+    instr_info[end_PC].pipeline_state[1] |= (p_pipe_delay & 0x3F) << 27;
 
-    instr_info[end_PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vf_write[0] & 0x1F) << 28;
-    instr_info[end_PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vf_write[1] & 0x1F) << 33;
-    instr_info[end_PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vf_write_field[0] & 0xF) << 38;
-    instr_info[end_PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vf_write_field[1] & 0xF) << 42;
+    instr_info[end_PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vf_write[0] & 0x1F) << 33;
+    instr_info[end_PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vf_write[1] & 0x1F) << 38;
+    instr_info[end_PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vf_write_field[0] & 0xF) << 43;
+    instr_info[end_PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vf_write_field[1] & 0xF) << 47;
+    instr_info[end_PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vi_write & 0x1F) << 51;
 
     instr_info[end_PC].branch_delay_slot = branch_delay_slot;
     instr_info[end_PC].ebit_delay_slot = ebit_delay_slot;
@@ -1759,6 +1808,7 @@ void VU_JitTranslator::lower2(std::vector<IR::Instruction> &instrs, uint32_t low
             instr.set_jump_dest(branch_offset(lower, PC));
             instr.set_jump_fail_dest(PC + 16);
             instr.set_bc(trans_branch_delay_slot);
+            instr.set_field(instr_info[PC].use_backup_vi);
             break;
         case 0x29:
             //IBNE
@@ -1768,6 +1818,7 @@ void VU_JitTranslator::lower2(std::vector<IR::Instruction> &instrs, uint32_t low
             instr.set_jump_dest(branch_offset(lower, PC));
             instr.set_jump_fail_dest(PC + 16);
             instr.set_bc(trans_branch_delay_slot);
+            instr.set_field(instr_info[PC].use_backup_vi);
             break;
         case 0x2C:
             //IBLTZ
@@ -1776,6 +1827,7 @@ void VU_JitTranslator::lower2(std::vector<IR::Instruction> &instrs, uint32_t low
             instr.set_jump_dest(branch_offset(lower, PC));
             instr.set_jump_fail_dest(PC + 16);
             instr.set_bc(trans_branch_delay_slot);
+            instr.set_field(instr_info[PC].use_backup_vi);
             break;
         case 0x2D:
             //IBGTZ
@@ -1784,6 +1836,7 @@ void VU_JitTranslator::lower2(std::vector<IR::Instruction> &instrs, uint32_t low
             instr.set_jump_dest(branch_offset(lower, PC));
             instr.set_jump_fail_dest(PC + 16);
             instr.set_bc(trans_branch_delay_slot);
+            instr.set_field(instr_info[PC].use_backup_vi);
             break;
         case 0x2E:
             //IBLEZ
@@ -1792,6 +1845,7 @@ void VU_JitTranslator::lower2(std::vector<IR::Instruction> &instrs, uint32_t low
             instr.set_jump_dest(branch_offset(lower, PC));
             instr.set_jump_fail_dest(PC + 16);
             instr.set_bc(trans_branch_delay_slot);
+            instr.set_field(instr_info[PC].use_backup_vi);
             break;
         case 0x2F:
             //IBGEZ
@@ -1800,6 +1854,7 @@ void VU_JitTranslator::lower2(std::vector<IR::Instruction> &instrs, uint32_t low
             instr.set_jump_dest(branch_offset(lower, PC));
             instr.set_jump_fail_dest(PC + 16);
             instr.set_bc(trans_branch_delay_slot);
+            instr.set_field(instr_info[PC].use_backup_vi);
             break;
         default:
             //Errors::die("[VU_JIT] Unrecognized lower2 op $%02X", op);

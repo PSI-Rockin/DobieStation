@@ -795,7 +795,7 @@ void VU_JIT64::branch_equal(VectorUnit &vu, IR::Instruction &instr)
     REG_64 op1;
     REG_64 op2;
 
-    if (!vu.int_backup_id_rec || (instr.get_source() != vu.int_backup_id_rec && instr.get_source2() != vu.int_backup_id_rec))
+    if (!instr.get_field())
     {
         op1 = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
         op2 = alloc_int_reg(vu, instr.get_source2(), REG_STATE::READ);
@@ -816,6 +816,7 @@ void VU_JIT64::branch_equal(VectorUnit &vu, IR::Instruction &instr)
         emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::R15);
         emitter.load_addr((uint64_t)&vu.int_backup_id, REG_64::RAX);
         emitter.MOV16_IMM_MEM(0, REG_64::RAX);
+        clear_int_delay(vu, instr);
     }
 
     emitter.load_addr((uint64_t)&vu.branch_on_delay, REG_64::RAX);
@@ -832,7 +833,7 @@ void VU_JIT64::branch_not_equal(VectorUnit &vu, IR::Instruction &instr)
     REG_64 op1;
     REG_64 op2;
 
-    if (!vu.int_backup_id_rec || (instr.get_source() != vu.int_backup_id_rec && instr.get_source2() != vu.int_backup_id_rec))
+    if (!instr.get_field())
     {
         op1 = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
         op2 = alloc_int_reg(vu, instr.get_source2(), REG_STATE::READ);
@@ -853,6 +854,7 @@ void VU_JIT64::branch_not_equal(VectorUnit &vu, IR::Instruction &instr)
         emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::R15);
         emitter.load_addr((uint64_t)&vu.int_backup_id, REG_64::RAX);
         emitter.MOV16_IMM_MEM(0, REG_64::RAX);
+        clear_int_delay(vu, instr);
     }
 
     emitter.load_addr((uint64_t)&vu.branch_on_delay, REG_64::RAX);
@@ -868,7 +870,7 @@ void VU_JIT64::branch_less_than_zero(VectorUnit &vu, IR::Instruction &instr)
 {
     REG_64 op;
 
-    if (!vu.int_backup_id_rec || instr.get_source() != vu.int_backup_id_rec)
+    if (!instr.get_field())
     {
         op = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
     }
@@ -879,6 +881,7 @@ void VU_JIT64::branch_less_than_zero(VectorUnit &vu, IR::Instruction &instr)
         emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::R15);
         emitter.load_addr((uint64_t)&vu.int_backup_id, REG_64::RAX);
         emitter.MOV16_IMM_MEM(0, REG_64::RAX);
+        clear_int_delay(vu, instr);
     }
 
     emitter.load_addr((uint64_t)&vu.branch_on_delay, REG_64::RAX);
@@ -894,7 +897,7 @@ void VU_JIT64::branch_greater_than_zero(VectorUnit &vu, IR::Instruction &instr)
 {
     REG_64 op;
 
-    if (!vu.int_backup_id_rec || instr.get_source() != vu.int_backup_id_rec)
+    if (!instr.get_field())
     {
         op = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
     }
@@ -905,6 +908,7 @@ void VU_JIT64::branch_greater_than_zero(VectorUnit &vu, IR::Instruction &instr)
         emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::R15);
         emitter.load_addr((uint64_t)&vu.int_backup_id, REG_64::RAX);
         emitter.MOV16_IMM_MEM(0, REG_64::RAX);
+        clear_int_delay(vu, instr);
     }
 
     emitter.load_addr((uint64_t)&vu.branch_on_delay, REG_64::RAX);
@@ -920,7 +924,7 @@ void VU_JIT64::branch_less_or_equal_than_zero(VectorUnit &vu, IR::Instruction &i
 {
     REG_64 op;
 
-    if (!vu.int_backup_id_rec || instr.get_source() != vu.int_backup_id_rec)
+    if (!instr.get_field())
     {
         op = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
     }
@@ -931,6 +935,7 @@ void VU_JIT64::branch_less_or_equal_than_zero(VectorUnit &vu, IR::Instruction &i
         emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::R15);
         emitter.load_addr((uint64_t)&vu.int_backup_id, REG_64::RAX);
         emitter.MOV16_IMM_MEM(0, REG_64::RAX);
+        clear_int_delay(vu, instr);
     }
 
     emitter.load_addr((uint64_t)&vu.branch_on_delay, REG_64::RAX);
@@ -946,7 +951,7 @@ void VU_JIT64::branch_greater_or_equal_than_zero(VectorUnit &vu, IR::Instruction
 {
     REG_64 op;
 
-    if (!vu.int_backup_id_rec || instr.get_source() != vu.int_backup_id_rec)
+    if (!instr.get_field())
     {
         op = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
     }
@@ -957,6 +962,7 @@ void VU_JIT64::branch_greater_or_equal_than_zero(VectorUnit &vu, IR::Instruction
         emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::R15);
         emitter.load_addr((uint64_t)&vu.int_backup_id, REG_64::RAX);
         emitter.MOV16_IMM_MEM(0, REG_64::RAX);
+        clear_int_delay(vu, instr);
     }
 
     emitter.load_addr((uint64_t)&vu.branch_on_delay, REG_64::RAX);
@@ -2115,8 +2121,17 @@ void VU_JIT64::backup_vi(VectorUnit& vu, IR::Instruction& instr)
     emitter.MOV16_TO_MEM(int_reg, REG_64::RAX);
     emitter.load_addr((uint64_t)&vu.int_backup_id, REG_64::RAX);
     emitter.MOV8_IMM_MEM(instr.get_source(), REG_64::RAX);
+    emitter.load_addr((uint64_t)&vu.int_branch_delay, REG_64::RAX);
+    emitter.MOV8_IMM_MEM(1, REG_64::RAX);
+    
 
     vu.int_backup_id_rec = instr.get_source();
+}
+
+void VU_JIT64::clear_int_delay(VectorUnit& vu, IR::Instruction& instr)
+{
+    emitter.load_addr((uint64_t)&vu.int_branch_delay, REG_64::RAX);
+    emitter.MOV8_IMM_MEM(0, REG_64::RAX);
 }
 
 void VU_JIT64::update_q(VectorUnit &vu, IR::Instruction &instr)
@@ -2761,6 +2776,9 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
             break;
         case IR::Opcode::BackupVI:
             backup_vi(vu, instr);
+            break;
+        case IR::Opcode::ClearIntDelay:
+            clear_int_delay(vu, instr);
             break;
         case IR::Opcode::UpdateQ:
             update_q(vu, instr);
