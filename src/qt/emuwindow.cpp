@@ -107,7 +107,7 @@ int EmuWindow::init(int argc, char** argv)
 
     if (gsdump)
     {
-        return run_gsdump(gsdump);
+        return load_exec(gsdump, false);
     }
 
     if (file_name)
@@ -121,12 +121,6 @@ int EmuWindow::init(int argc, char** argv)
     return 0;
 }
 
-int EmuWindow::run_gsdump(const char* file_name)
-{
-    emu_thread.gsdump_read(file_name);
-    emu_thread.unpause(PAUSE_EVENT::GAME_NOT_LOADED);
-    return 0;
-}
 int EmuWindow::load_exec(const char* file_name, bool skip_BIOS)
 {
     if (!load_bios())
@@ -173,6 +167,8 @@ int EmuWindow::load_exec(const char* file_name, bool skip_BIOS)
         if (skip_BIOS)
             emu_thread.set_skip_BIOS_hack(SKIP_HACK::LOAD_DISC);
     }
+    else if (QString::compare(ext, "gsd", Qt::CaseInsensitive) == 0)
+        emu_thread.gsdump_read(file_name);
     else
     {
         printf("Unrecognized file format %s\n", qPrintable(file_info.suffix()));
@@ -201,14 +197,15 @@ void EmuWindow::create_menu()
         emu_thread.pause(PAUSE_EVENT::FILE_DIALOG);
 
         QString file_name = QFileDialog::getOpenFileName(
-            this, tr("Open Rom"), QDir::currentPath(),
+            this, tr("Open Rom"),
+            Settings::instance().last_used_directory,
             tr("GSDumps (*.gsd)")
         );
 
         if (!file_name.isEmpty())
         {
             Settings::instance().add_rom_path(file_name);
-            run_gsdump(file_name.toLocal8Bit());
+            load_exec(file_name.toLocal8Bit(), false);
 
             show_render_view();
         }

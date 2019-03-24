@@ -2,12 +2,12 @@
 
 Settings::Settings()
 {
-    connect(this, &Settings::rom_path_added, this, [=](const QString& path) {
+    connect(this, &Settings::rom_path_added, [=](const QString& path) {
         QFileInfo file_info(path);
         update_last_used_directory(file_info.absoluteDir().path());
     });
 
-    connect(this, &Settings::bios_changed, this, [=](const QString& path) {
+    connect(this, &Settings::bios_changed, [=](const QString& path) {
         QFileInfo file_info(path);
         update_last_used_directory(file_info.absoluteDir().path());
     });
@@ -40,16 +40,21 @@ void Settings::reset()
 
 void Settings::save()
 {
-    for (const auto& directory : rom_directories_to_add)
-    {
-        rom_directories.append(directory);
-        emit rom_directory_committed(directory);
-    }
-
+    // NOTE: order matters!
+    // If the user for example removes a directory
+    // and adds the parent directory before a save then
+    // doing the removal after the add will cause
+    // the sub directory not to be added properly
     for (const auto& directory : rom_directories_to_remove)
     {
         rom_directories.removeAll(directory);
         emit rom_directory_uncommitted(directory);
+    }
+
+    for (const auto& directory : rom_directories_to_add)
+    {
+        rom_directories.append(directory);
+        emit rom_directory_committed(directory);
     }
 
     rom_directories.sort(Qt::CaseInsensitive);
