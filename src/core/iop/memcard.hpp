@@ -64,7 +64,7 @@ class Memcard
 			PS1
 		};
 
-		MODE mode = INIT;
+		MODE mode = MODE::INIT;
 
 		uint8_t port;
 		uint8_t slot;
@@ -93,6 +93,17 @@ class Memcard
 		void op_authentication(std::queue<uint8_t>& FIFO, uint8_t value);
 		void op_ps1(std::queue<uint8_t>& FIFO, uint8_t value);
 		void push_terminators(std::queue<uint8_t>& FIFO);
+
+		// Used for the card info command. Memcard::terminator must be assigned
+		// to mystery_byte manually, as this changes throughout operation.
+		struct card_info {
+			uint8_t		flags = 0x2b;										// flags?
+			uint16_t	page_bytes_no_ecc = bytes_per_page - 16;			// Page size in bytes, EXCLUDING ECC.
+			uint16_t	erase_block_pages = erase_block_pages;				// Erase block size in pages
+			uint32_t	memcard_pages = oem_memcard_bytes / bytes_per_page;	// Memcard size in pages
+			uint8_t		memcard_xor = 18;									// XOR? PCSX2 thinks it's of the superblock? Definitely a magic number.
+			uint8_t		mystery_byte;										// PCSX2 claims it is unused/overwritten, but uses terminator byte.
+		};
 };
 
 #endif // MEMCARD_HPP

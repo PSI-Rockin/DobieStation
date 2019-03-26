@@ -127,12 +127,16 @@ void SIO2::write_device(uint8_t value)
         }
             break;
 		case SIO_DEVICE::MEMCARD:
+			printf("[SIO2] write_device(Memcard)!\n");
+
 			if (memcard->mode != Memcard::MODE::INIT)
 			{
+				printf("[SIO2] memcard->op_start()!\n");
 				memcard->op_start(FIFO, value);
 			}
 			else
 			{
+				printf("[SIO2] FIFO.size() = %d\n", FIFO.size());
 				switch (FIFO.size())
 				{
 				case 0:
@@ -142,6 +146,7 @@ void SIO2::write_device(uint8_t value)
 					// HAVE the status register???
 					break;
 				case 1:
+					printf("[SIO2] value = %02X\n", value);
 					switch (value)
 					{
 					case 0x21: // Page Erase
@@ -152,6 +157,10 @@ void SIO2::write_device(uint8_t value)
 						break;
 					case 0x26: // Memcard info
 						RECV3 = 0x83;
+						//Memcard::card_info info;
+						//info.mystery_byte = memcard->terminator;
+
+
 						break;
 					case 0x27: // Set terminator
 						RECV3 = 0x8b;
@@ -182,6 +191,7 @@ void SIO2::write_device(uint8_t value)
 					case 0xf3: // Seems to happen on resets?
 					case 0xf7: // No one knows.
 						memcard->push_terminators(FIFO);
+						active_command = SIO_DEVICE::DUMMY;
 					}
 				case 2:
 					switch (memcard->command)

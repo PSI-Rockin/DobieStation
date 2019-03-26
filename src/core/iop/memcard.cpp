@@ -29,7 +29,7 @@ bool Memcard::new_memcard_file(std::string file_name)
 
 	if (!file.is_open())
 	{
-		printf("[MCD] (WARN) Attempted to open ofstream on empty file %s, but it either cannot be opened or could not be created! Aborting...", file_name);
+		printf("[MCD] (WARN) Attempted to open ofstream on empty file %s, but it either cannot be opened or could not be created! Aborting...\n", file_name);
 		return false;
 	}
 
@@ -50,16 +50,16 @@ bool Memcard::open(std::string file_name)
 
 	if (!file.is_open())
 	{
-		printf("[MCD] (WARN) Attempted to open ifstream on memcard file %s, but it either cannot be opened or does not exist! Aborting...", file_name);
+		printf("[MCD] (WARN) Attempted to open ifstream on memcard file %s, but it either cannot be opened or does not exist! Aborting...\n", file_name);
 		return false;
 	}	
 
 	file.read(raw_data.data(), oem_memcard_bytes);
 
 	if (file)
-		printf("[MCD] (INFO) Successfully read all bytes into memory!");
+		printf("[MCD] (INFO) Successfully read all bytes into memory!\n");
 	else
-		printf("[MCD] (WARN) Failed to read all bytes into memory! Only read %d!", file.gcount());
+		printf("[MCD] (WARN) Failed to read all bytes into memory! Only read %d!\n", file.gcount());
 
 	file.close();
 	this->file_name = file_name;
@@ -77,7 +77,7 @@ bool Memcard::open(std::string file_name)
 	// of backup block 2.
 	if (!is_erase_block_erased(16352 * bytes_per_page))
 	{
-		printf("[MCD] (WARN) Backup block 2 was NOT erased when this memcard was opened! The last write op on this memcard may have failed! The emulated PS2 should be restoring the old data soon, if it hasn't already...");
+		printf("[MCD] (WARN) Backup block 2 was NOT erased when this memcard was opened! The last write op on this memcard may have failed! The emulated PS2 should be restoring the old data soon, if it hasn't already...\n");
 	}
 
 	return true;
@@ -88,7 +88,7 @@ bool Memcard::read(std::vector<uint8_t> destination, uint32_t address, uint32_t 
 {
 	if (!address_in_bounds(address, length))
 	{
-		printf("[MCD] (WARN) Attempted to read out-of-bounds memcard address %d! Aborting...", address);
+		printf("[MCD] (WARN) Attempted to read out-of-bounds memcard address %d! Aborting...\n", address);
 		return false;
 	}
 
@@ -101,7 +101,7 @@ bool Memcard::write(std::vector<uint8_t> source, uint32_t address)
 {
 	if (!address_in_bounds(address, source.size()))
 	{
-		printf("[MCD] (WARN) Attempted to write out-of-bounds memcard address %d! Aborting...", address);
+		printf("[MCD] (WARN) Attempted to write out-of-bounds memcard address %d! Aborting...\n", address);
 		return false;
 	}
 
@@ -113,7 +113,7 @@ bool Memcard::write(std::vector<uint8_t> source, uint32_t address)
 	{
 		if (raw_data[address + i] & source[i] != source[i])
 		{
-			printf("[MCD] (WARN) Attempted to write to memcard address %d, but its erase block hasn't been erased yet! Aborting...", address + i);
+			printf("[MCD] (WARN) Attempted to write to memcard address %d, but its erase block hasn't been erased yet! Aborting...\n", address + i);
 			return false;
 		}
 	}
@@ -121,30 +121,30 @@ bool Memcard::write(std::vector<uint8_t> source, uint32_t address)
 	// Info printf's for when an important sector is written
 	if (address < 528) // Superblock
 	{
-		printf("[MCD] (INFO) Memcard write op on superblock (addr = %d, size = %d)", address, source.size());
+		printf("[MCD] (INFO) Memcard write op on superblock (addr = %d, size = %d)\n", address, source.size());
 	}
 	else if (address < checksum_address + 8) // Checksum
 	{
-		printf("[MCD] (INFO) Memcard write op on checksum (addr = %d, size = %d)", address, source.size());
+		printf("[MCD] (INFO) Memcard write op on checksum (addr = %d, size = %d)\n", address, source.size());
 	}
 	else if (address < 8448) // Unused space
 	{
-		printf("[MCD] (INFO) Memcard write op on unused card space (addr = %d, size = %d)", address, source.size());
+		printf("[MCD] (INFO) Memcard write op on unused card space (addr = %d, size = %d)\n", address, source.size());
 	}
 	else if (address < 9504) // Indirect FAT
 	{
-		printf("MCD] (INFO) Memcard write op on indirect FAT (addr = %d, size = %d)", address, source.size());
+		printf("MCD] (INFO) Memcard write op on indirect FAT (addr = %d, size = %d)\n", address, source.size());
 	}
 	else if (address < 43296) // FAT
 	{
-		printf("MCD] (INFO) Memcard write op on FAT (addr = %d, size = %d)", address, source.size());
+		printf("MCD] (INFO) Memcard write op on FAT (addr = %d, size = %d)\n", address, source.size());
 	}
 
 	std::ofstream file(this->file_name);
 
 	if (!file.is_open())
 	{
-		printf("[MCD] (WARN) Attempted to open ofstream on %s, but it cannot be opened! Aborting...", this->file_name);
+		printf("[MCD] (WARN) Attempted to open ofstream on %s, but it cannot be opened! Aborting...\n", this->file_name);
 		return false;
 	}
 
@@ -166,6 +166,7 @@ bool Memcard::erase_block(uint32_t address)
 	std::vector<uint8_t> blank;
 	blank.assign(erase_block_pages * bytes_per_page, 0xff);
 	write(blank, get_erase_block_start(address));
+	return true;
 }
 
 // Test if the erase block containing address has been erased.
@@ -195,7 +196,7 @@ void Memcard::op_start(std::queue<uint8_t>& FIFO, uint8_t value)
 	case GET_TERMINATOR:	op_get_terminator(FIFO, value);	break;
 	case AUTHENTICATION:	op_authentication(FIFO, value);	break;
 	case PS1:				op_ps1(FIFO, value);			break;
-	default:				printf("[MCD] (WARN) WTF");		break;
+	default:				printf("[MCD] (WARN) WTF\n");	break;
 	}
 }
 
@@ -256,12 +257,12 @@ void Memcard::op_page_erase(std::queue<uint8_t>& FIFO, uint8_t value)
 	case 0:
 		if (value != 0x81)
 		{
-			printf("[MCD] (INFO) Expected 0x81, got %d, flushing FIFO and waiting...", value);
+			printf("[MCD] (INFO) Expected 0x81, got %d, flushing FIFO and waiting...\n", value);
 			FIFO.swap(empty);
 		}
 		else
 		{
-			printf("[MCD] (INFO) Got 0x81, completing the rest of erase command...");
+			printf("[MCD] (INFO) Got 0x81, completing the rest of erase command...\n");
 		}
 			
 		break;
@@ -296,7 +297,7 @@ void Memcard::op_authentication(std::queue<uint8_t>& FIFO, uint8_t value)
 
 void Memcard::op_ps1(std::queue<uint8_t>& FIFO, uint8_t value)
 {
-	printf("[MCD] (INFO) PS1 memcard op attempted, but not implemented yet.");
+	printf("[MCD] (INFO) PS1 memcard op attempted, but not implemented yet.\n");
 }
 
 // Push constant 0x2b, then whatever the memcard has as it's terminator. Seems
