@@ -43,7 +43,7 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\release</OutDir>
+    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\release\</OutDir>
     <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(Platform)\$(Configuration)\</IntDir>
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">libdeflate</TargetName>
     <IgnoreImportLibrary Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</IgnoreImportLibrary>
@@ -120,7 +120,6 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="..\..\ext\libdeflate\lib\aligned_malloc.c" />
-    <ClCompile Include="..\..\ext\libdeflate\lib\arm\cpu_features.c" />
     <ClCompile Include="..\..\ext\libdeflate\lib\x86\cpu_features.c" />
     <ClCompile Include="..\..\ext\libdeflate\lib\deflate_decompress.c" />
   </ItemGroup>
