@@ -134,6 +134,10 @@ void SIO2::write_device(uint8_t value)
 				printf("[SIO2] memcard->op_start()!\n");
 				memcard->op_start(FIFO, value);
 			}
+			else if (memcard->mode == Memcard::MODE::EXIT)
+			{
+				active_command = SIO_DEVICE::DUMMY;
+			}
 			else
 			{
 				printf("[SIO2] FIFO.size() = %d\n", FIFO.size());
@@ -160,13 +164,15 @@ void SIO2::write_device(uint8_t value)
 						//Memcard::card_info info;
 						//info.mystery_byte = memcard->terminator;
 
-
+						memcard->mode = Memcard::MODE::EXIT;
 						break;
 					case 0x27: // Set terminator
 						RECV3 = 0x8b;
+						memcard->mode = Memcard::MODE::EXIT;
 						break;
 					case 0x28: // Get terminator
 						RECV3 = 0x8b;
+						memcard->mode = Memcard::MODE::EXIT;
 						break;
 					case 0xf0: // Authentication?
 						memcard->mode = Memcard::MODE::AUTHENTICATION;
@@ -191,7 +197,8 @@ void SIO2::write_device(uint8_t value)
 					case 0xf3: // Seems to happen on resets?
 					case 0xf7: // No one knows.
 						memcard->push_terminators(FIFO);
-						active_command = SIO_DEVICE::DUMMY;
+						memcard->mode = Memcard::MODE::EXIT;
+						break;
 					}
 				case 2:
 					switch (memcard->command)

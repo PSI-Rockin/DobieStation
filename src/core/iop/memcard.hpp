@@ -61,7 +61,8 @@ class Memcard
 			PAGE_READ,
 			GET_TERMINATOR,
 			AUTHENTICATION,
-			PS1
+			PS1,
+			EXIT
 		};
 
 		MODE mode = MODE::INIT;
