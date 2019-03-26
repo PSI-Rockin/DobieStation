@@ -30,9 +30,6 @@
     <ClCompile Include="..\..\ext\libdeflate\lib\aligned_malloc.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\..\ext\libdeflate\lib\arm\cpu_features.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\..\ext\libdeflate\lib\x86\cpu_features.c">
       <Filter>Source Files</Filter>
     </ClCompile>
