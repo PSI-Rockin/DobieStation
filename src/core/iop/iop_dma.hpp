@@ -32,6 +32,7 @@ struct IOP_DMA_Channel
     bool dma_req;
 
     int delay;
+    int index;
 };
 
 struct DMA_DPCR
@@ -101,6 +102,7 @@ class IOP_DMA
 
         void active_dma_check(int index);
         void deactivate_dma(int index);
+        void find_new_active_channel();
     public:
         static const char* CHAN(int index);
         IOP_DMA(Emulator* e, CDVD_Drive* cdvd, SubsystemInterface* sif, SIO2* sio2, SPU* spu, SPU* spu2);

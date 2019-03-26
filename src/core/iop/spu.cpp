@@ -1,6 +1,7 @@
 #include <cstdio>
 #include "spu.hpp"
 #include "../emulator.hpp"
+#include "iop_dma.hpp"
 
 /**
  * Notes on "AutoDMA", as it seems to not be documented anywhere else
@@ -12,7 +13,7 @@
 uint16_t SPU::spdif_irq = 0;
 uint16_t SPU::core_att[2];
 uint32_t SPU::IRQA[2];
-SPU::SPU(int id, Emulator* e) : id(id), e(e)
+SPU::SPU(int id, Emulator* e, IOP_DMA* dma) : id(id), e(e), dma(dma)
 { 
 
 }
@@ -31,6 +32,8 @@ void SPU::reset(uint8_t* RAM)
     key_on = 0;
     key_off = 0xFFFFFF;
     spdif_irq = 0;
+
+    clear_dma_req();
 
     for (int i = 0; i < 24; i++)
     {
@@ -117,6 +120,14 @@ void SPU::gen_sample()
         process_ADMA();
         input_pos &= 0x1FF;
     }
+
+    if (running_ADMA())
+    {
+        if (can_write_ADMA())
+            set_dma_req();
+        else
+            clear_dma_req();
+    }
 }
 
 void SPU::finish_DMA()
@@ -132,6 +143,11 @@ void SPU::start_DMA(int size)
         printf("ADMA started with size: $%08X\n", size);
     }
     status.DMA_finished = false;
+}
+
+void SPU::pause_DMA()
+{
+    status.DMA_busy = false;
 }
 
 void SPU::write_DMA(uint32_t value)
@@ -442,11 +458,20 @@ void SPU::write16(uint32_t addr, uint16_t value)
                 if (!(value & (1 << 6)))
                     spdif_irq &= ~(2 << id);
             }
+
+            if (!running_ADMA())
+            {
+                if ((value >> 4) & 0x3)
+                    set_dma_req();
+                else
+                    clear_dma_req();
+            }
             core_att[id - 1] = value & 0x7FFF;
             if (value & (1 << 15))
             {
                 status.DMA_finished = false;
                 status.DMA_busy = false;
+                clear_dma_req();
             }
             break;
         case 0x19C:
@@ -517,6 +542,8 @@ void SPU::write16(uint32_t addr, uint16_t value)
         case 0x1B0:
             printf("[SPU%d] Write ADMA: $%04X\n", id, value);
             autodma_ctrl = value;
+            if (running_ADMA())
+                set_dma_req();
             break;
         case 0x340:
             ENDX &= 0xFF0000;
@@ -574,4 +601,20 @@ void SPU::key_on_voice(int v)
 void SPU::key_off_voice(int v)
 {
     //Set envelope to Release mode
+}
+
+void SPU::clear_dma_req()
+{
+    if (id == 1)
+        dma->clear_DMA_request(IOP_SPU);
+    else
+        dma->clear_DMA_request(IOP_SPU2);
+}
+
+void SPU::set_dma_req()
+{
+    if (id == 1)
+        dma->set_DMA_request(IOP_SPU);
+    else
+        dma->set_DMA_request(IOP_SPU2);
 }

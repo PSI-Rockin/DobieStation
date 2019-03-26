@@ -112,6 +112,7 @@ class CDVD_Drive
         void N_command_gettoc();
         void N_command_readkey(uint32_t arg);
         void S_command_sub(uint8_t func);
+        void add_event(uint64_t cycles);
     public:
         CDVD_Drive(Emulator* e, IOP_DMA* dma);
         ~CDVD_Drive();

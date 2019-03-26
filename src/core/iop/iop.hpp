@@ -23,6 +23,9 @@ class IOP
         bool will_branch;
         bool wait_for_IRQ;
 
+        int muldiv_delay;
+        int cycles_to_run;
+
         uint32_t translate_addr(uint32_t addr);
     public:
         IOP(Emulator* e);
@@ -34,6 +37,7 @@ class IOP
         void unhalt();
         void print_state();
         void set_disassembly(bool dis);
+        void set_muldiv_delay(int delay);
 
         void jp(uint32_t addr);
         void branch(bool condition, int32_t offset);
@@ -90,11 +94,21 @@ inline uint32_t IOP::get_gpr(int index)
 
 inline uint32_t IOP::get_LO()
 {
+    if (muldiv_delay)
+    {
+        cycles_to_run -= muldiv_delay;
+        muldiv_delay = 0;
+    }
     return LO;
 }
 
 inline uint32_t IOP::get_HI()
 {
+    if (muldiv_delay)
+    {
+        cycles_to_run -= muldiv_delay;
+        muldiv_delay = 0;
+    }
     return HI;
 }
 
@@ -117,6 +131,13 @@ inline void IOP::set_LO(uint32_t value)
 inline void IOP::set_HI(uint32_t value)
 {
     HI = value;
+}
+
+inline void IOP::set_muldiv_delay(int delay)
+{
+    if (muldiv_delay)
+        cycles_to_run -= muldiv_delay;
+    muldiv_delay = delay;
 }
 
 #endif // IOP_HPP

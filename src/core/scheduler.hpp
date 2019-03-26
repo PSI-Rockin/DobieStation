@@ -7,16 +7,13 @@ class Emulator;
 
 typedef void(Emulator::*event_func)();
 
-enum EE_Event
+enum EVENT_ID
 {
     VBLANK_START,
     VBLANK_END,
-    TIMER_INT
-};
-
-enum IOP_Event
-{
-    CDVD_INT
+    TIMER_INT,
+    CDVD_EVENT,
+    SPU_SAMPLE
 };
 
 struct CycleCount
@@ -27,6 +24,7 @@ struct CycleCount
 
 struct SchedulerEvent
 {
+    EVENT_ID id;
     int64_t time_to_run;
     event_func func;
 };

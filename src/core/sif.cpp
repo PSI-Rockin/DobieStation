@@ -26,7 +26,7 @@ void SubsystemInterface::reset()
 void SubsystemInterface::write_SIF0(uint32_t word)
 {
     SIF0_FIFO.push(word);
-    if (SIF0_FIFO.size() == MAX_FIFO_SIZE)
+    if (SIF0_FIFO.size() >= MAX_FIFO_SIZE)
         iop_dma->clear_DMA_request(IOP_SIF0);
 }
 

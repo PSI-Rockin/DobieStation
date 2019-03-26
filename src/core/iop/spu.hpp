@@ -43,12 +43,14 @@ struct SPU_STAT
 };
 
 class Emulator;
+class IOP_DMA;
 
 class SPU
 {
     private:
         int id;
         Emulator* e;
+        IOP_DMA* dma;
 
         uint16_t* RAM;
         Voice voices[24];
@@ -84,8 +86,11 @@ class SPU
         uint16_t read_voice_reg(uint32_t addr);
         void write_voice_reg(uint32_t addr, uint16_t value);
         void write_voice_addr(uint32_t addr, uint16_t value);
+
+        void clear_dma_req();
+        void set_dma_req();
     public:
-        SPU(int id, Emulator* e);
+        SPU(int id, Emulator* e, IOP_DMA* dma);
 
         bool running_ADMA();
         bool can_write_ADMA();
@@ -94,6 +99,7 @@ class SPU
         void gen_sample();
 
         void start_DMA(int size);
+        void pause_DMA();
         void finish_DMA();
 
         uint16_t read_mem();

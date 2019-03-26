@@ -256,7 +256,7 @@ uint32_t CDVD_Drive::read_to_RAM(uint8_t *RAM, uint32_t bytes)
         else
         {
             active_N_command = NCOMMAND::READ;
-            e->add_iop_event(&Emulator::cdvd_event, get_block_timing(N_command != 0x06));
+            add_event(get_block_timing(N_command != 0x06));
         }
     }
     return block_size;
@@ -264,6 +264,7 @@ uint32_t CDVD_Drive::read_to_RAM(uint8_t *RAM, uint32_t bytes)
 
 void CDVD_Drive::handle_N_command()
 {
+    printf("CDVD event!\n");
     switch (active_N_command)
     {
         case NCOMMAND::SEEK:
@@ -297,23 +298,29 @@ void CDVD_Drive::handle_N_command()
                     read_DVD_sector();
             }
             else
-                e->add_iop_event(&Emulator::cdvd_event, 1000); //Check later to see if there's space in the buffer
+                add_event(1000); //Check later to see if there's space in the buffer
             break;
         case NCOMMAND::READ_SEEK:
             drive_status = READING | SPINNING;
             active_N_command = NCOMMAND::READ;
             current_sector = sector_pos;
-            e->add_iop_event(&Emulator::cdvd_event, 1000);
+            add_event(get_block_timing(N_command != 0x06));
             break;
         case NCOMMAND::BREAK:
+            printf("[CDVD] Break issued\n");
             drive_status = PAUSED;
             active_N_command = NCOMMAND::NONE;
             N_status = 0x4E;
             ISTAT |= 0x2;
             e->iop_request_IRQ(2);
             break;
+        case NCOMMAND::NONE:
+            //Just do nothing
+            //This can happen when a BREAK is sent while a command is currently executing
+            //The BREAK will send its own event that clears active_N_command
+            break;
         default:
-            Errors::die("[CDVD] Unrecognized active N command\n");
+            Errors::die("[CDVD] Unrecognized active N command %d\n", active_N_command);
     }
 }
 
@@ -474,7 +481,7 @@ void CDVD_Drive::send_N_command(uint8_t value)
             active_N_command = NCOMMAND::STANDBY;
             break;
         case 0x03:
-            e->add_iop_event(&Emulator::cdvd_event, IOP_CLOCK / 6);
+            add_event(IOP_CLOCK / 6);
             active_N_command = NCOMMAND::STOP;
             break;
         case 0x04:
@@ -538,7 +545,7 @@ void CDVD_Drive::write_BREAK()
     if (N_status || active_N_command == NCOMMAND::BREAK)
         return;
 
-    e->add_iop_event(&Emulator::cdvd_event, 64);
+    add_event(64);
     active_N_command = NCOMMAND::BREAK;
     drive_status = CDVD_STATUS::STOPPED;
     read_bytes_left = 0;
@@ -744,7 +751,7 @@ void CDVD_Drive::start_seek()
 
     container_seek((uint64_t)seek_to * 2048);
 
-    e->add_iop_event(&Emulator::cdvd_event, cycles_to_seek);
+    add_event(cycles_to_seek);
 }
 
 void CDVD_Drive::N_command_read()
@@ -970,4 +977,9 @@ void CDVD_Drive::write_ISTAT(uint8_t value)
 {
     printf("[CDVD] Write ISTAT: $%02X\n", value);
     ISTAT &= ~value;
+}
+
+void CDVD_Drive::add_event(uint64_t cycles)
+{
+    e->add_iop_event(CDVD_EVENT, &Emulator::cdvd_event, cycles);
 }

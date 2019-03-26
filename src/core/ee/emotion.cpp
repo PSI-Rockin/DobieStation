@@ -138,6 +138,7 @@ int EmotionEngine::run(int cycles)
                 printf("[$%08X] $%08X - %s\n", PC, instruction, disasm.c_str());
                 //print_state();
             }
+
             EmotionInterpreter::interpret(*this, instruction);
             PC += 4;
 

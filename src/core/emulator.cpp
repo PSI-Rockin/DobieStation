@@ -9,7 +9,7 @@
 #include "ee/vu_jit.hpp"
 
 #define CYCLES_PER_FRAME 4900000
-#define VBLANK_START CYCLES_PER_FRAME * 0.75
+#define VBLANK_START_CYCLES CYCLES_PER_FRAME * 0.75
 
 //These constants are used for the fast boot hack for .isos
 #define EELOAD_START 0x82000
@@ -19,8 +19,8 @@ Emulator::Emulator() :
     cdvd(this, &iop_dma), cp0(&dmac), cpu(&cp0, &fpu, this, (uint8_t*)&scratchpad, &vu0, &vu1),
     dmac(&cpu, this, &gif, &ipu, &sif, &vif0, &vif1), gif(&gs), gs(&intc),
     iop(this), iop_dma(this, &cdvd, &sif, &sio2, &spu, &spu2), iop_timers(this), intc(&cpu), ipu(&intc),
-    timers(&intc), sio2(this, &pad, &memcard), spu(1, this), spu2(2, this), vif0(nullptr, &vu0, &intc, 0),
-    vif1(&gif, &vu1, &intc, 1), vu0(0, this), vu1(1, this), sif(&iop_dma)
+    timers(&intc), sio2(this, &pad, &memcard), spu(1, this, &iop_dma), spu2(2, this, &iop_dma),
+    vif0(nullptr, &vu0, &intc, 0), vif1(&gif, &vu1, &intc, 1), vu0(0, this), vu1(1, this), sif(&iop_dma)
 {
     BIOS = nullptr;
     RDRAM = nullptr;
@@ -80,8 +80,8 @@ void Emulator::run()
 
     frame_ended = false;
 
-    add_ee_event(&Emulator::vblank_start, VBLANK_START);
-    add_ee_event(&Emulator::vblank_end, CYCLES_PER_FRAME);
+    add_ee_event(VBLANK_START, &Emulator::vblank_start, VBLANK_START_CYCLES);
+    add_ee_event(VBLANK_END, &Emulator::vblank_end, CYCLES_PER_FRAME);
     
     while (!frame_ended)
     {
@@ -169,7 +169,7 @@ void Emulator::reset()
 
     iop_scratchpad_start = 0x1F800000;
 
-    add_iop_event(&Emulator::gen_sound_sample, 768);
+    add_iop_event(SPU_SAMPLE, &Emulator::gen_sound_sample, 768);
 }
 
 void Emulator::vblank_start()
@@ -204,7 +204,7 @@ void Emulator::gen_sound_sample()
 {
     spu.gen_sample();
     spu2.gen_sample();
-    add_iop_event(&Emulator::gen_sound_sample, 768);
+    add_iop_event(SPU_SAMPLE, &Emulator::gen_sound_sample, 768);
 }
 
 void Emulator::press_button(PAD_BUTTON button)
@@ -531,16 +531,16 @@ uint32_t Emulator::read32(uint32_t address)
             printf("[EE] Read BD4: $%08X\n", sif.get_control() | 0xF0000102);
             return sif.get_control() | 0xF0000102;
         case 0x1000F430:
-            printf("Read from MCH_RICM\n");
+            //printf("Read from MCH_RICM\n");
             return 0;
         case 0x1000F440:
-            printf("Read from MCH_DRD\n");
+            //printf("Read from MCH_DRD\n");
             if (!((MCH_RICM >> 6) & 0xF))
             {
                 switch ((MCH_RICM >> 16) & 0xFFF)
                 {
                     case 0x21:
-                        printf("Init\n");
+                        //printf("Init\n");
                         if (rdram_sdevid < 2)
                         {
                             rdram_sdevid++;
@@ -548,13 +548,13 @@ uint32_t Emulator::read32(uint32_t address)
                         }
                         return 0;
                     case 0x23:
-                        printf("ConfigA\n");
+                        //printf("ConfigA\n");
                         return 0x0D0D;
                     case 0x24:
-                        printf("ConfigB\n");
+                        //printf("ConfigB\n");
                         return 0x0090;
                     case 0x40:
-                        printf("Devid\n");
+                        //printf("Devid\n");
                         return MCH_RICM & 0x1F;
                 }
             }
@@ -750,14 +750,14 @@ void Emulator::write32(uint32_t address, uint32_t value)
             sif.set_control_EE(value);
             return;
         case 0x1000F430:
-            printf("Write to MCH_RICM: $%08X\n", value);
+            //printf("Write to MCH_RICM: $%08X\n", value);
             if ((((value >> 16) & 0xFFF) == 0x21) && (((value >> 6) & 0xF) == 1) &&
                     (((MCH_DRD >> 7) & 1) == 0))
                 rdram_sdevid = 0;
             MCH_RICM = value & ~0x80000000;
             return;
         case 0x1000F440:
-            printf("Write to MCH_DRD: $%08X\n", value);
+            //printf("Write to MCH_DRD: $%08X\n", value);
             MCH_DRD = value;
             return;
         case 0x1000F590:
@@ -1661,18 +1661,20 @@ void Emulator::request_gsdump_single_frame()
     gsdump_single_frame = true;
 }
 
-void Emulator::add_ee_event(event_func func, uint64_t delta_time_to_run)
+void Emulator::add_ee_event(EVENT_ID id, event_func func, uint64_t delta_time_to_run)
 {
     SchedulerEvent event;
+    event.id = id;
     event.func = func;
     event.time_to_run = scheduler.get_ee_cycles() + delta_time_to_run;
 
     scheduler.add_event(event);
 }
 
-void Emulator::add_iop_event(event_func func, uint64_t delta_time_to_run)
+void Emulator::add_iop_event(EVENT_ID id, event_func func, uint64_t delta_time_to_run)
 {
     SchedulerEvent event;
+    event.id = id;
     event.func = func;
     event.time_to_run = (scheduler.get_iop_cycles() + delta_time_to_run) << 3;
 

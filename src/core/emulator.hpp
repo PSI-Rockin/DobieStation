@@ -156,8 +156,8 @@ class Emulator
         void test_iop();
         GraphicsSynthesizer& get_gs();//used for gs dumps
 
-        void add_ee_event(event_func func, uint64_t delta_time_to_run);
-        void add_iop_event(event_func func, uint64_t delta_time_to_run);
+        void add_ee_event(EVENT_ID id, event_func func, uint64_t delta_time_to_run);
+        void add_iop_event(EVENT_ID id, event_func func, uint64_t delta_time_to_run);
 };
 
 #endif // EMULATOR_HPP

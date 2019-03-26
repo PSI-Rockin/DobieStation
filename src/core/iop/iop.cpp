@@ -37,6 +37,8 @@ void IOP::reset()
     will_branch = false;
     can_disassemble = false;
     wait_for_IRQ = false;
+    muldiv_delay = 0;
+    cycles_to_run = 0;
 }
 
 uint32_t IOP::translate_addr(uint32_t addr)
@@ -56,10 +58,14 @@ void IOP::run(int cycles)
 {
     if (!wait_for_IRQ)
     {
-        while (cycles--)
+        cycles_to_run += cycles;
+        while (cycles_to_run > 0)
         {
+            cycles_to_run--;
+            if (muldiv_delay)
+                muldiv_delay--;
             uint32_t instr = read32(PC);
-            if (can_disassemble && PC != 0xB89C && PC != 0xB8A0 && PC != 0xBB9C && PC != 0xBBA0)
+            if (can_disassemble)
             {
                 printf("[IOP] [$%08X] $%08X - %s\n", PC, instr, EmotionDisasm::disasm_instr(instr, PC).c_str());
                 //print_state();
@@ -84,6 +90,8 @@ void IOP::run(int cycles)
             }
         }
     }
+    else if (muldiv_delay)
+        muldiv_delay -= cycles;
 
     if (cop0.status.IEc && (cop0.status.Im & cop0.cause.int_pending))
         interrupt();

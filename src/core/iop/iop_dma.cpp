@@ -44,6 +44,7 @@ void IOP_DMA::reset(uint8_t* RAM)
         channels[i].control.busy = false;
         channels[i].control.sync_mode = 0;
         channels[i].dma_req = false;
+        channels[i].index = i;
 
         DPCR.enable[i] = false;
         DPCR.priorities[i] = 7;
@@ -55,8 +56,6 @@ void IOP_DMA::reset(uint8_t* RAM)
     DICR.master_int_enable[0] = false;
     DICR.master_int_enable[1] = false;
 
-    set_DMA_request(IOP_SPU);
-    set_DMA_request(IOP_SPU2);
     set_DMA_request(IOP_SIO2in);
     set_DMA_request(IOP_SIO2out);
 }
@@ -257,6 +256,10 @@ void IOP_DMA::transfer_end(int index)
     printf("[IOP DMA] %s transfer ended\n", CHAN(index));
     channels[index].control.busy = false;
     channels[index].tag_end = false;
+
+    if (active_channel && active_channel->index == index)
+        find_new_active_channel();
+
     bool dicr2 = index > 7;
     if (dicr2)
         index -= 8;
@@ -265,14 +268,6 @@ void IOP_DMA::transfer_end(int index)
         printf("[IOP DMA] IRQ requested: $%08X $%08X\n", DICR.STAT[dicr2], DICR.MASK[dicr2]);
         DICR.STAT[dicr2] |= 1 << index;
         e->iop_request_IRQ(3);
-    }
-
-    if (!queued_channels.size())
-        active_channel = nullptr;
-    else
-    {
-        active_channel = queued_channels.front();
-        queued_channels.pop_front();
     }
 }
 
@@ -337,13 +332,13 @@ uint32_t IOP_DMA::get_DICR2()
 
 uint32_t IOP_DMA::get_chan_addr(int index)
 {
-    printf("[IOP DMA] Read %s addr: $%08X\n", CHAN(index), channels[index].addr);
+    //printf("[IOP DMA] Read %s addr: $%08X\n", CHAN(index), channels[index].addr);
     return channels[index].addr;
 }
 
 uint32_t IOP_DMA::get_chan_block(int index)
 {
-    printf("[IOP DMA] Read %s block: $%08X\n", CHAN(index), channels[index].word_count | (channels[index].block_size << 16));
+    //printf("[IOP DMA] Read %s block: $%08X\n", CHAN(index), channels[index].word_count | (channels[index].block_size << 16));
     return channels[index].word_count | (channels[index].block_size << 16);
 }
 
@@ -355,7 +350,7 @@ uint32_t IOP_DMA::get_chan_control(int index)
     reg |= channels[index].control.sync_mode << 9;
     reg |= channels[index].control.busy << 24;
     reg |= channels[index].control.unk30 << 30;
-    printf("[IOP DMA] Read %s control: $%08X\n", CHAN(index), reg);
+    //printf("[IOP DMA] Read %s control: $%08X\n", CHAN(index), reg);
     return reg;
 }
 
@@ -410,7 +405,7 @@ void IOP_DMA::set_DICR2(uint32_t value)
 
 void IOP_DMA::set_DMA_request(int index)
 {
-    //printf("[IOP_DMA] DMA req: %d\n", index);
+    //printf("[IOP_DMA] DMA req: %s\n", CHAN(index));
     bool old_req = channels[index].dma_req;
     channels[index].dma_req = true;
 
@@ -420,7 +415,7 @@ void IOP_DMA::set_DMA_request(int index)
 
 void IOP_DMA::clear_DMA_request(int index)
 {
-    //printf("[IOP_DMA] DMA clear: %d\n", index);
+    //printf("[IOP_DMA] DMA clear: %s\n", CHAN(index));
     bool old_req = channels[index].dma_req;
     channels[index].dma_req = false;
 
@@ -479,7 +474,13 @@ void IOP_DMA::set_chan_control(int index, uint32_t value)
         active_dma_check(index);
     }
     else if (old_busy && !channels[index].control.busy)
+    {
         deactivate_dma(index);
+        if (index == IOP_SPU)
+            spu->pause_DMA();
+        else if (index == IOP_SPU2)
+            spu2->pause_DMA();
+    }
     channels[index].control.unk30 = value & (1 << 30);
 }
 
@@ -495,6 +496,11 @@ void IOP_DMA::active_dma_check(int index)
     {
         if (!active_channel)
             active_channel = &channels[index];
+        else if (active_channel->index < index)
+        {
+            queued_channels.push_back(active_channel);
+            active_channel = &channels[index];
+        }
         else
             queued_channels.push_back(&channels[index]);
     }
@@ -504,13 +510,43 @@ void IOP_DMA::deactivate_dma(int index)
 {
     if (active_channel == &channels[index])
         active_channel = nullptr;
-
-    for (auto it = queued_channels.begin(); it != queued_channels.end(); it++)
+    else
     {
-        if (*it == &channels[index])
+        for (auto it = queued_channels.begin(); it != queued_channels.end(); it++)
         {
-            queued_channels.erase(it);
-            return;
+            if (*it == &channels[index])
+            {
+                queued_channels.erase(it);
+                return;
+            }
         }
     }
+
+    find_new_active_channel();
+}
+
+void IOP_DMA::find_new_active_channel()
+{
+    if (!queued_channels.size())
+    {
+        active_channel = nullptr;
+        return;
+    }
+    int index = -1;
+    auto it = queued_channels.begin();
+    auto channel_to_erase = it;
+
+    for (it = queued_channels.begin(); it != queued_channels.end(); it++)
+    {
+        IOP_DMA_Channel* test = *it;
+        if (test->index > index)
+        {
+            channel_to_erase = it;
+            index = test->index;
+            active_channel = &channels[index];
+        }
+    }
+
+    queued_channels.erase(channel_to_erase);
+    printf("New active channel: %s\n", CHAN(active_channel->index));
 }
