@@ -116,6 +116,7 @@ class Emulator
         void vblank_end();
         void cdvd_event();
         void gen_sound_sample();
+        void ee_irq_check();
 
         bool request_load_state(const char* file_name);
         bool request_save_state(const char* file_name);

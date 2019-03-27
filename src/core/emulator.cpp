@@ -18,7 +18,7 @@
 Emulator::Emulator() :
     cdvd(this, &iop_dma), cp0(&dmac), cpu(&cp0, &fpu, this, (uint8_t*)&scratchpad, &vu0, &vu1),
     dmac(&cpu, this, &gif, &ipu, &sif, &vif0, &vif1), gif(&gs), gs(&intc),
-    iop(this), iop_dma(this, &cdvd, &sif, &sio2, &spu, &spu2), iop_timers(this), intc(&cpu), ipu(&intc),
+    iop(this), iop_dma(this, &cdvd, &sif, &sio2, &spu, &spu2), iop_timers(this), intc(this, &cpu), ipu(&intc),
     timers(&intc), sio2(this, &pad, &memcard), spu(1, this, &iop_dma), spu2(2, this, &iop_dma),
     vif0(nullptr, &vu0, &intc, 0), vif1(&gif, &vu1, &intc, 1), vu0(0, this), vu1(1, this), sif(&iop_dma)
 {
@@ -88,6 +88,7 @@ void Emulator::run()
         int ee_cycles = scheduler.calculate_run_cycles();
         int bus_cycles = scheduler.get_bus_run_cycles();
         int iop_cycles = scheduler.get_iop_run_cycles();
+        scheduler.update_cycle_counts();
 
         cpu.run(ee_cycles);
         dmac.run(bus_cycles);
@@ -109,7 +110,6 @@ void Emulator::run()
         iop_timers.run(iop_cycles);
         iop_dma.run(iop_cycles);
 
-        scheduler.update_cycle_counts();
         scheduler.process_events(this);
     }
     fesetround(originalRounding);
@@ -178,7 +178,7 @@ void Emulator::vblank_start()
     gs.set_VBLANK(true);
     timers.gate(true, true);
     cdvd.vsync();
-    //cpu.set_disassembly(frames == 3037);
+    //cpu.set_disassembly(frames >= 223 && frames < 225);
     printf("VSYNC FRAMES: %d\n", frames);
     gs.assert_VSYNC();
     frames++;
@@ -205,6 +205,12 @@ void Emulator::gen_sound_sample()
     spu.gen_sample();
     spu2.gen_sample();
     add_iop_event(SPU_SAMPLE, &Emulator::gen_sound_sample, 768);
+}
+
+void Emulator::ee_irq_check()
+{
+    printf("[EE] INT0 check\n");
+    intc.int0_check();
 }
 
 void Emulator::press_button(PAD_BUTTON button)

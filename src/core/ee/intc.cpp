@@ -2,7 +2,9 @@
 #include "emotion.hpp"
 #include "intc.hpp"
 
-INTC::INTC(EmotionEngine* cpu) : cpu(cpu)
+#include "../emulator.hpp"
+
+INTC::INTC(Emulator* e, EmotionEngine* cpu) : e(e), cpu(cpu)
 {
 
 }
@@ -49,7 +51,12 @@ void INTC::assert_IRQ(int id)
 {
     //printf("[INTC] EE IRQ: %d\n", id);
     INTC_STAT |= (1 << id);
-    int0_check();
+
+    //Some games will enter a wait-for-VBLANK loop where they poll INTC_STAT while a VBLANK interrupt handler
+    //is registered.
+    //If we fire the interrupt immediately, those games will never exit the loop.
+    //I don't know the exact number of cycles we need to wait, but 8 seems to work.
+    e->add_ee_event(EE_IRQ_CHECK, &Emulator::ee_irq_check, 8);
 }
 
 void INTC::deassert_IRQ(int id)

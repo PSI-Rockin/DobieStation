@@ -164,16 +164,6 @@ int EmotionEngine::run(int cycles)
                 else
                     delay_slot--;
             }
-            else
-            {
-                if (cp0->int_enabled())
-                {
-                    if (cp0->cause.int0_pending)
-                        int0();
-                    else if (cp0->cause.int1_pending)
-                        int1();
-                }
-            }
         }
     }
 

@@ -13,7 +13,8 @@ enum EVENT_ID
     VBLANK_END,
     TIMER_INT,
     CDVD_EVENT,
-    SPU_SAMPLE
+    SPU_SAMPLE,
+    EE_IRQ_CHECK
 };
 
 struct CycleCount
