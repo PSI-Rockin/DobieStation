@@ -62,7 +62,7 @@ void IOP::run(int cycles)
         while (cycles_to_run > 0)
         {
             cycles_to_run--;
-            if (muldiv_delay)
+            if (muldiv_delay > 0)
                 muldiv_delay--;
             uint32_t instr = read32(PC);
             if (can_disassemble)
@@ -91,7 +91,7 @@ void IOP::run(int cycles)
         }
     }
     else if (muldiv_delay)
-        muldiv_delay -= cycles;
+        muldiv_delay--;
 
     if (cop0.status.IEc && (cop0.status.Im & cop0.cause.int_pending))
         interrupt();

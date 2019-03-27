@@ -100,7 +100,7 @@ void IOP_DMA::process_SPU()
     }
     else
     {
-        if (!channels[IOP_SPU].delay)
+        if (channels[IOP_SPU].delay <= 0)
         {
             //Normal DMA transfer
             if (write_to_spu)
@@ -144,7 +144,7 @@ void IOP_DMA::process_SPU2()
     }
     else
     {
-        if (!channels[IOP_SPU2].delay)
+        if (channels[IOP_SPU2].delay <= 0)
         {
             //Normal DMA transfer
             if (write_to_spu)
@@ -525,7 +525,7 @@ void IOP_DMA::active_dma_check(int index)
 void IOP_DMA::deactivate_dma(int index)
 {
     if (active_channel == &channels[index])
-        active_channel = nullptr;
+        find_new_active_channel();
     else
     {
         for (auto it = queued_channels.begin(); it != queued_channels.end(); it++)
@@ -537,8 +537,6 @@ void IOP_DMA::deactivate_dma(int index)
             }
         }
     }
-
-    find_new_active_channel();
 }
 
 void IOP_DMA::find_new_active_channel()
