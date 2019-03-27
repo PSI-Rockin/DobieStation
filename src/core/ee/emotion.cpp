@@ -123,6 +123,7 @@ int EmotionEngine::run(int cycles_to_run)
                 PC = 0x100234;*/
             cycles_to_run--;
             uint32_t instruction = read32(PC);
+            uint32_t lastPC = PC;
             if (can_disassemble)
             {
                 std::string disasm = EmotionDisasm::disasm_instr(instruction, PC);
@@ -136,13 +137,17 @@ int EmotionEngine::run(int cycles_to_run)
             {
                 if (!delay_slot)
                 {
-                    branch_on = false;
-                    if (!new_PC || (new_PC & 0x3))
+                    //If the PC == LastPC it means we've reversed it to handle COP2 sync, so don't branch yet
+                    if (PC != lastPC)
                     {
-                        Errors::die("[EE] Jump to invalid address $%08X from $%08X\n", new_PC, PC - 8);
+                        branch_on = false;
+                        if (!new_PC || (new_PC & 0x3))
+                        {
+                            Errors::die("[EE] Jump to invalid address $%08X from $%08X\n", new_PC, PC - 8);
+                        }
+                        //if (new_PC != 0x15C440 && new_PC != 0x109710)
+                        PC = new_PC;
                     }
-                    //if (new_PC != 0x15C440 && new_PC != 0x109710)
-                    PC = new_PC;
                 }
                 else
                     delay_slot--;
