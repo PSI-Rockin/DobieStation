@@ -2423,7 +2423,7 @@ REG_64 VU_JIT64::alloc_sse_reg(VectorUnit &vu, int vf_reg, REG_STATE state)
     xmm_regs[xmm].vu_reg = vf_reg;
     xmm_regs[xmm].used = true;
     xmm_regs[xmm].age = 0;
-    set_clamping(xmm, false, 0xF);
+    set_clamping(xmm, true, 0xF);
 
     return (REG_64)xmm;
 }
