@@ -90,13 +90,10 @@ void IOP_DMA::process_SPU()
 {
     if (spu->running_ADMA())
     {
-        if (spu->can_write_ADMA())
-        {
-            spu->write_ADMA(RAM + channels[IOP_SPU].addr);
-            //printf("[IOP DMA] SPU transfer: $%08X\n", channels[IOP_SPU].size * 2);
-            channels[IOP_SPU].size--;
-            channels[IOP_SPU].addr += 4;
-        }
+        spu->write_ADMA(RAM + channels[IOP_SPU].addr);
+        //printf("[IOP DMA] SPU transfer: $%08X\n", channels[IOP_SPU].size * 2);
+        channels[IOP_SPU].size--;
+        channels[IOP_SPU].addr += 4;
     }
     else
     {
@@ -126,13 +123,10 @@ void IOP_DMA::process_SPU2()
 {
     if (spu2->running_ADMA())
     {
-        if (spu2->can_write_ADMA())
-        {
-            //Transfer 512 bytes of data (128 words) at once
-            spu2->write_ADMA(RAM + channels[IOP_SPU2].addr);
-            channels[IOP_SPU2].size--;
-            channels[IOP_SPU2].addr += 4;
-        }
+        //Transfer 512 bytes of data (128 words) at once
+        spu2->write_ADMA(RAM + channels[IOP_SPU2].addr);
+        channels[IOP_SPU2].size--;
+        channels[IOP_SPU2].addr += 4;
     }
     else
     {

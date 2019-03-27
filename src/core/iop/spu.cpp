@@ -169,6 +169,9 @@ void SPU::write_ADMA(uint8_t *RAM)
    // printf("[SPU%d] ADMA transfer: $%08X\n", id, ADMA_left);
     ADMA_left += 2;
 
+    if (ADMA_left >= 0x400)
+        clear_dma_req();
+
     status.DMA_busy = true;
     status.DMA_finished = false;
 }
