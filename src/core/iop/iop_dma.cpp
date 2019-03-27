@@ -88,8 +88,11 @@ void IOP_DMA::process_CDVD()
 
 void IOP_DMA::process_SPU()
 {
+    bool write_to_spu = channels[IOP_SPU].control.direction_from;
     if (spu->running_ADMA())
     {
+        if (!write_to_spu)
+            Errors::die("[IOP_DMA] SPU doing ADMA read!");
         spu->write_ADMA(RAM + channels[IOP_SPU].addr);
         //printf("[IOP DMA] SPU transfer: $%08X\n", channels[IOP_SPU].size * 2);
         channels[IOP_SPU].size--;
@@ -100,8 +103,16 @@ void IOP_DMA::process_SPU()
         if (!channels[IOP_SPU].delay)
         {
             //Normal DMA transfer
-            uint32_t value = *(uint32_t*)&RAM[channels[IOP_SPU].addr];
-            spu->write_DMA(value);
+            if (write_to_spu)
+            {
+                uint32_t value = *(uint32_t*)&RAM[channels[IOP_SPU].addr];
+                spu->write_DMA(value);
+            }
+            else
+            {
+                uint32_t value = spu->read_DMA();
+                *(uint32_t*)&RAM[channels[IOP_SPU].addr] = value;
+            }
             channels[IOP_SPU].size--;
             channels[IOP_SPU].addr += 4;
             channels[IOP_SPU].delay = 3;
@@ -121,8 +132,11 @@ void IOP_DMA::process_SPU()
 
 void IOP_DMA::process_SPU2()
 {
+    bool write_to_spu = channels[IOP_SPU2].control.direction_from;
     if (spu2->running_ADMA())
     {
+        if (!write_to_spu)
+            Errors::die("[IOP_DMA] SPU2 doing ADMA read!");
         //Transfer 512 bytes of data (128 words) at once
         spu2->write_ADMA(RAM + channels[IOP_SPU2].addr);
         channels[IOP_SPU2].size--;
@@ -133,8 +147,16 @@ void IOP_DMA::process_SPU2()
         if (!channels[IOP_SPU2].delay)
         {
             //Normal DMA transfer
-            uint32_t value = *(uint32_t*)&RAM[channels[IOP_SPU2].addr];
-            spu2->write_DMA(value);
+            if (write_to_spu)
+            {
+                uint32_t value = *(uint32_t*)&RAM[channels[IOP_SPU2].addr];
+                spu2->write_DMA(value);
+            }
+            else
+            {
+                uint32_t value = spu2->read_DMA();
+                *(uint32_t*)&RAM[channels[IOP_SPU2].addr] = value;
+            }
             channels[IOP_SPU2].size--;
             channels[IOP_SPU2].addr += 4;
             channels[IOP_SPU2].delay = 3;

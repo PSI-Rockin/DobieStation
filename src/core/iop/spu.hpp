@@ -104,6 +104,7 @@ class SPU
 
         uint16_t read_mem();
         void process_ADMA();
+        uint32_t read_DMA();
         void write_DMA(uint32_t value);
         void write_ADMA(uint8_t* RAM);
         void write_mem(uint16_t value);

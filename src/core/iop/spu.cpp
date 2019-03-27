@@ -150,6 +150,19 @@ void SPU::pause_DMA()
     status.DMA_busy = false;
 }
 
+uint32_t SPU::read_DMA()
+{
+    uint32_t value = RAM[current_addr];
+    value |= ((uint32_t)RAM[current_addr + 1]) << 16;
+
+    spu_check_irq(current_addr);
+    spu_check_irq(current_addr + 1);
+    current_addr += 2;
+    current_addr &= 0x000FFFFF;
+    status.DMA_busy = true;
+    status.DMA_finished = false;
+}
+
 void SPU::write_DMA(uint32_t value)
 {
     //printf("[SPU%d] Write mem $%08X ($%08X)\n", id, value, current_addr);
@@ -157,7 +170,7 @@ void SPU::write_DMA(uint32_t value)
     RAM[current_addr + 1] = value >> 16;
 
     spu_check_irq(current_addr);
-    spu_check_irq(current_addr+1);
+    spu_check_irq(current_addr + 1);
     current_addr += 2;
     current_addr &= 0x000FFFFF;
     status.DMA_busy = true;
