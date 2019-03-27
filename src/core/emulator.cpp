@@ -209,7 +209,7 @@ void Emulator::gen_sound_sample()
 
 void Emulator::ee_irq_check()
 {
-    printf("[EE] INT0 check\n");
+    //printf("[EE] INT0 check\n");
     intc.int0_check();
 }
 
@@ -495,6 +495,8 @@ uint32_t Emulator::read32(uint32_t address)
             return ipu.read_top();
         case 0x10003020:
             return gif.read_STAT();
+        case 0x10003800:
+            return vif0.get_stat();
         case 0x10003850:
             return vif0.get_mode();
         case 0x10003900:

@@ -161,6 +161,7 @@ uint32_t SPU::read_DMA()
     current_addr &= 0x000FFFFF;
     status.DMA_busy = true;
     status.DMA_finished = false;
+    return value;
 }
 
 void SPU::write_DMA(uint32_t value)
