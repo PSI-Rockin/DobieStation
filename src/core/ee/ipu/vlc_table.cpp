@@ -29,7 +29,7 @@ bool VLC_Table::peek_symbol(IPU_FIFO &FIFO, VLC_Entry &entry)
             }
         }
     }
-    Errors::die("[VLC Table] Symbol not found: $%08X\n", key);
+    throw VLC_Error("VLC symbol not found");
     return false;
 }
 

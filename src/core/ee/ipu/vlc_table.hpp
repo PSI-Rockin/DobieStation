@@ -1,5 +1,6 @@
 #ifndef VLC_TABLE_HPP
 #define VLC_TABLE_HPP
+#include <stdexcept>
 #include <cstdint>
 #include <queue>
 #include "ipu_fifo.hpp"
@@ -9,6 +10,11 @@ struct VLC_Entry
     uint32_t key;
     uint32_t value;
     uint8_t bits;
+};
+
+class VLC_Error : public std::runtime_error
+{
+    using std::runtime_error::runtime_error;
 };
 
 class VLC_Table

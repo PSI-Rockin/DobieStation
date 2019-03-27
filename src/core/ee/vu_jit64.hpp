@@ -12,7 +12,7 @@ struct AllocReg
     bool modified;
     int age;
     int vu_reg;
-    bool needs_clamping;
+    uint8_t needs_clamping;
 };
 
 struct alignas(16) FtoiTable
@@ -59,7 +59,7 @@ class VU_JIT64
         uint16_t vu_branch_delay_dest, vu_branch_delay_fail_dest;
         uint16_t cycle_count;
 
-        void clamp_vfreg(REG_64 xmm_reg);
+        void clamp_vfreg(uint8_t field, REG_64 xmm_reg);
         void sse_abs(REG_64 source, REG_64 dest);
         void sse_div_check(REG_64 num, REG_64 denom, VU_R& dest);
 
@@ -156,6 +156,7 @@ class VU_JIT64
         void backup_vf(VectorUnit& vu, IR::Instruction& instr);
         void restore_vf(VectorUnit& vu, IR::Instruction& instr);
         void backup_vi(VectorUnit& vu, IR::Instruction& instr);
+        void clear_int_delay(VectorUnit& vu, IR::Instruction& instr);
         void update_q(VectorUnit& vu, IR::Instruction& instr);
         void update_p(VectorUnit& vu, IR::Instruction& instr);
         void update_mac_pipeline(VectorUnit& vu, IR::Instruction &instr);
@@ -172,8 +173,8 @@ class VU_JIT64
         REG_64 alloc_int_reg(VectorUnit& vu, int vi_reg, REG_STATE state = REG_STATE::READ_WRITE);
         REG_64 alloc_sse_reg(VectorUnit& vu, int vf_reg, REG_STATE state = REG_STATE::READ_WRITE);
         REG_64 alloc_sse_scratchpad(VectorUnit& vu, int vf_reg);
-        void set_clamping(int xmmreg, bool value);
-        bool needs_clamping(int xmmreg);
+        void set_clamping(int xmmreg, bool value, uint8_t field);
+        bool needs_clamping(int xmmreg, uint8_t field);
         void flush_regs(VectorUnit& vu);
         void flush_sse_reg(VectorUnit& vu, int vf_reg);
 

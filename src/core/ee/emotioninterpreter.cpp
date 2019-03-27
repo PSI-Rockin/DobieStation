@@ -818,14 +818,24 @@ void EmotionInterpreter::cop(EmotionEngine &cpu, uint32_t instruction)
     uint16_t op = (instruction >> 21) & 0x1F;
     uint8_t cop_id = ((instruction >> 26) & 0x3);
     
-    if (cop_id == 2)
-    {
-        cpu.cop2_updatevu0();
-    }
     if (cop_id == 2 && op >= 0x10)
     {
+        //Apparently, any COP2 instruction that is executed while VU0 is running causes COP2 to stall, so lets do that
+        //Dragons Quest 8 is a good test for this as it does COP2 while VU0 is running.
+        if (cpu.vu0_wait())
+        {
+            cpu.set_PC(cpu.get_PC() - 4);
+            return;
+        }
+        cpu.clear_interlock();
+
         cpu.cop2_special(cpu, instruction);
         return;
+    }
+    //Update VU0 when doing CFC/CTC commands
+    if (cop_id == 2 && op < 0x8 && !(instruction & 0x1))
+    {
+        cpu.cop2_updatevu0();
     }
     switch (op | (cop_id * 0x100))
     {

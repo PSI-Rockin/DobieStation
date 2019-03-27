@@ -688,6 +688,9 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             printf("X: %d\n", TEXCLUT.x);
             printf("Y: %d\n", TEXCLUT.y);
             break;
+        case 0x0022:
+            SCANMSK = value & 0x3;
+            break;
         case 0x0034:
             context1.set_miptbl1(value);
             break;
@@ -1231,6 +1234,12 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
 {
     x >>= 4;
     y >>= 4;
+
+    //SCANMSK prohibits drawing on even or odd y-coordinates
+    if (SCANMSK == 2 && (y & 0x1) == 0)
+        return;
+    else if (SCANMSK == 3 && (y & 0x1) == 1)
+        return;
     TEST* test = &current_ctx->test;
     bool update_frame = true;
     bool update_alpha = true;
@@ -2872,6 +2881,7 @@ void GraphicsSynthesizerThread::load_state(ifstream *state)
     state->read((char*)&FOG, sizeof(FOG));
     state->read((char*)&FOGCOL, sizeof(FOGCOL));
     state->read((char*)&PABE, sizeof(PABE));
+    state->read((char*)&SCANMSK, sizeof(SCANMSK));
 
     state->read((char*)&BITBLTBUF, sizeof(BITBLTBUF));
     state->read((char*)&TRXPOS, sizeof(TRXPOS));
@@ -2919,6 +2929,7 @@ void GraphicsSynthesizerThread::save_state(ofstream *state)
     state->write((char*)&FOG, sizeof(FOG));
     state->write((char*)&FOGCOL, sizeof(FOGCOL));
     state->write((char*)&PABE, sizeof(PABE));
+    state->write((char*)&SCANMSK, sizeof(SCANMSK));
 
     state->write((char*)&BITBLTBUF, sizeof(BITBLTBUF));
     state->write((char*)&TRXPOS, sizeof(TRXPOS));

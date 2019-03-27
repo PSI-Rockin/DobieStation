@@ -233,7 +233,7 @@ void DMAC::process_VIF1(int cycles)
         {
             if (channels[VIF1].control & 0x1)
             {
-                if (control.stall_dest_channel == 1)
+                if (control.stall_dest_channel == 1 && channels[VIF1].can_stall_drain)
                 {
                     if (channels[VIF1].address + (8 * 16) > STADR)
                         return;
@@ -279,9 +279,10 @@ void DMAC::process_GIF(int cycles)
         cycles--;
         if (channels[GIF].quadword_count)
         {
+            gif->request_PATH(3, false);
             if (gif->path_active(3) && !gif->fifo_full() && !gif->fifo_draining())
             {
-                if (control.stall_dest_channel == 2)
+                if (control.stall_dest_channel == 2 && channels[GIF].can_stall_drain)
                 {
                     if (channels[GIF].address + (8 * 16) > STADR)
                     {
@@ -295,6 +296,10 @@ void DMAC::process_GIF(int cycles)
                 gif->send_PATH3(fetch128(channels[GIF].address));
 
                 advance_source_dma(GIF);
+                //Do this to get the timing right for PATH3 masking
+                //might make GIF run a little slower if there's lots of tiny packets, but unlikely
+                if (gif->path3_done())
+                    return;
             }
             else
             {
@@ -307,7 +312,6 @@ void DMAC::process_GIF(int cycles)
             if (channels[GIF].tag_end)
             {
                 transfer_end(GIF);
-               // printf("GIF PATH3 DMA Ending\n");
                 gif->deactivate_PATH(3);
                 return;
             }
@@ -436,7 +440,7 @@ void DMAC::process_SIF1(int cycles)
         cycles--;
         if (channels[SIF1].quadword_count)
         {
-            if (control.stall_dest_channel == 3)
+            if (control.stall_dest_channel == 3 && channels[SIF1].can_stall_drain)
             {
                 if (channels[SIF1].address + (8 * 16) > STADR)
                     return;
@@ -624,6 +628,7 @@ void DMAC::handle_source_chain(int index)
     bool TIE = channels[index].control & (1 << 7);
     channels[index].tag_id = (DMAtag >> 28) & 0x7;
     channels[index].quadword_count = quadword_count;
+    channels[index].can_stall_drain = false;
     switch (channels[index].tag_id)
     {
         case 0:
@@ -651,6 +656,7 @@ void DMAC::handle_source_chain(int index)
             //refs
             channels[index].address = addr;
             channels[index].tag_address += 16;
+            channels[index].can_stall_drain = true;
             break;
         case 5:
         {
@@ -725,16 +731,16 @@ void DMAC::start_DMA(int index)
         mode = 1;
     }
     channels[index].tag_end = !(mode & 0x1); //always end transfers in normal and interleave mode
+
+    //Stall drain happens on either normal transfers or refs tags
+    int tag = channels[index].control >> 24;
+    channels[index].can_stall_drain = !(mode & 0x1) || tag == 4;
     switch (mode)
     {
         case 1: //Chain
             //If QWC > 0 and the current tag in CHCR is a terminal tag, end the transfer
             if (channels[index].quadword_count > 0)
-            {
-                int tag = channels[index].control >> 24;
-                if (tag == 0 || tag == 7)
-                    channels[index].tag_end = true;
-            }
+                channels[index].tag_end = (tag == 0 || tag == 7);
             break;
         case 2: //Interleave
             channels[index].interleaved_qwc = SQWC.transfer_qwc;

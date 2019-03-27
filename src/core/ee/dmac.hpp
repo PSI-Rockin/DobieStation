@@ -20,6 +20,7 @@ struct DMA_Channel
     uint8_t tag_id;
 
     bool started;
+    bool can_stall_drain;
 };
 
 //Regs
