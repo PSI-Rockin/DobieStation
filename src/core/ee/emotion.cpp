@@ -103,11 +103,8 @@ void EmotionEngine::reset()
     wait_for_IRQ = false;
     delay_slot = 0;
 
-    for (int i = 0; i < 128; i++)
-    {
-        icache[i].valid[0] = false;
-        icache[i].valid[1] = false;
-    }
+    //Reset the cache
+    memset(icache, 0, sizeof(icache));
 
     //Clear out $zero
     for (int i = 0; i < 16; i++)
