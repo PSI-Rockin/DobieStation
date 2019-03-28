@@ -51,6 +51,12 @@ void INTC::assert_IRQ(int id)
 {
     //printf("[INTC] EE IRQ: %d\n", id);
     INTC_STAT |= (1 << id);
+    if (stat_speedhack_active)
+    {
+        cpu->unhalt();
+        stat_speedhack_active = false;
+        read_stat_count = 0;
+    }
 
     //Some games will enter a wait-for-VBLANK loop where they poll INTC_STAT while a VBLANK interrupt handler
     //is registered.
@@ -68,7 +74,11 @@ void INTC::deassert_IRQ(int id)
 void INTC::int0_check()
 {
     if (stat_speedhack_active)
+    {
         cpu->unhalt();
+        stat_speedhack_active = false;
+        read_stat_count = 0;
+    }
     read_stat_count = 0;
     cpu->set_int0_signal(INTC_STAT & INTC_MASK);
 }

@@ -1,6 +1,7 @@
 #ifndef JITCACHE_HPP
 #define JITCACHE_HPP
 #include <vector>
+#include "../errors.hpp"
 
 struct JitBlock
 {
@@ -21,8 +22,9 @@ struct JitBlock
 class JitCache
 {
     private:
-        constexpr static int BLOCK_SIZE = 1024 * 32;
-        constexpr static int START_OF_POOL = 1024 * 24;
+        constexpr static int BLOCK_SIZE = 1024 * 64;
+        constexpr static int POOL_SIZE = 1024 * 8;
+        constexpr static int START_OF_POOL = BLOCK_SIZE - POOL_SIZE;
         std::vector<JitBlock> blocks;
 
         JitBlock* current_block;
@@ -63,6 +65,9 @@ inline uint8_t* JitCache::get_literal_offset(T literal)
 
     *(T*)&pool[offset] = literal;
     current_block->pool_size += 16;
+
+    if (current_block->pool_size >= POOL_SIZE)
+        Errors::die("[JitCache] Literal pool exceeds BLOCK_SIZE!");
     return &pool[offset];
 }
 
@@ -71,6 +76,9 @@ inline void JitCache::write(T value)
 {
     *(T*)current_block->mem = value;
     current_block->mem += sizeof(T);
+
+    if (current_block->mem >= current_block->pool_start)
+        Errors::die("[JitCache] Allocated block exceeds maximum size!");
 }
 
 #endif // JITCACHE_HPP

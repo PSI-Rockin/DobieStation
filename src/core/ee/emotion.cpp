@@ -143,7 +143,7 @@ int EmotionEngine::run(int cycles)
             EmotionInterpreter::interpret(*this, instruction);
             PC += 4;
 
-            //Simulate dual-issue
+            //Simulate dual-issue if both instructions are NOPs
             if (!instruction && !read_instr(PC))
                 PC += 4;
 
