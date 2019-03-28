@@ -8,6 +8,12 @@
 
 class Emulator;
 
+struct IOP_ICacheLine
+{
+    bool valid;
+    uint32_t tag;
+};
+
 class IOP
 {
     private:
@@ -17,7 +23,11 @@ class IOP
         uint32_t PC;
         uint32_t LO, HI;
 
+        //4 KB bytes / 16 bytes per line = 256 cache lines
+        IOP_ICacheLine icache[256];
+
         uint32_t new_PC;
+        uint32_t cache_control;
         int branch_delay;
         bool can_disassemble;
         bool will_branch;
@@ -64,6 +74,7 @@ class IOP
         uint8_t read8(uint32_t addr);
         uint16_t read16(uint32_t addr);
         uint32_t read32(uint32_t addr);
+        uint32_t read_instr(uint32_t addr);
         void write8(uint32_t addr, uint8_t value);
         void write16(uint32_t addr, uint16_t value);
         void write32(uint32_t addr, uint32_t value);

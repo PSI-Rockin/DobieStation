@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include "emotion.hpp"
 #include "emotiondisasm.hpp"
 #include "emotioninterpreter.hpp"
@@ -142,6 +143,10 @@ int EmotionEngine::run(int cycles)
             EmotionInterpreter::interpret(*this, instruction);
             PC += 4;
 
+            //Simulate dual-issue
+            if (!instruction && !read_instr(PC))
+                PC += 4;
+
             if (branch_on)
             {
                 if (!delay_slot)
@@ -255,7 +260,7 @@ uint32_t EmotionEngine::read_instr(uint32_t address)
         int index = (address >> 6) & 0x7F;
         uint16_t tag = address >> 13;
 
-        ICacheLine* line = &icache[index];
+        EE_ICacheLine* line = &icache[index];
         //Check if there's no entry in icache
         if (!line->valid[0] || line->tag[0] != tag)
         {

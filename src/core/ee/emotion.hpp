@@ -18,7 +18,7 @@ struct Deci2Handler
     uint32_t addr;
 };
 
-struct ICacheLine
+struct EE_ICacheLine
 {
     bool valid[2];
     bool lfu[2];
@@ -44,7 +44,7 @@ class EmotionEngine
         uint32_t PC, new_PC;
         uint64_t SA;
 
-        ICacheLine icache[128];
+        EE_ICacheLine icache[128];
 
         bool wait_for_IRQ;
         bool branch_on;
