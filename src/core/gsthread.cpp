@@ -2212,6 +2212,8 @@ void GraphicsSynthesizerThread::local_to_local()
 {
     printf("[GS_t] Local to local transfer\n");
     printf("(%d, %d) -> (%d, %d)\n", TRXPOS.source_x, TRXPOS.source_y, TRXPOS.dest_x, TRXPOS.dest_y);
+    printf("Trans order: %d\n", TRXPOS.trans_order);
+    printf("Source: $%08X Dest: $%08X\n", BITBLTBUF.source_base, BITBLTBUF.dest_base);
     int max_pixels = TRXREG.width * TRXREG.height;
 
     uint16_t start_x = 0, start_y = 0;
@@ -2369,7 +2371,7 @@ void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
                 0, 0, 0, 1, 0.5, 0, 0, 0,
 
                 //0x18
-                0, 0, 0, 1, 0, 0, 0, 0,
+                0, 0, 0, 4, 0, 0, 0, 0,
 
                 //0x20
                 0, 0, 0, 0, 4, 0, 0, 0,
@@ -2378,10 +2380,10 @@ void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
                 0, 0, 0, 0, 4, 0, 0, 0,
 
                 //0x30
-                0, 0, 0, 0, 0, 0, 0, 0,
+                4, 4, 2, 0, 0, 0, 0, 0,
 
                 //0x38
-                0, 0, 0, 0, 0, 0, 0, 0
+                0, 0, 2, 0, 0, 0, 0, 0
             };
             //Calculate the texture base based on a continuous memory region
 
@@ -2776,9 +2778,13 @@ void GraphicsSynthesizerThread::reload_clut(GSContext& context)
             break;
         case 4: //Load new CLUT if CBP != CBP0
             reload = clut_addr != CBP0;
+            if (reload)
+                CBP0 = clut_addr;
             break;
         case 5: //Load new CLUT if CBP != CBP1
             reload = clut_addr != CBP1;
+            if (reload)
+                CBP1 = clut_addr;
             break;
         default:
             return;
