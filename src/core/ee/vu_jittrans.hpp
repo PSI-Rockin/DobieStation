@@ -30,6 +30,8 @@ struct VU_InstrInfo
     bool swap_ops;
     bool update_q_pipeline;
     bool update_p_pipeline;
+    bool q_pipeline_instr;
+    bool p_pipeline_instr;
     bool update_mac_pipeline;
     bool has_mac_result;
     bool has_clip_result;
