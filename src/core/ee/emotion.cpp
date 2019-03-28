@@ -841,7 +841,11 @@ void EmotionEngine::set_int0_signal(bool value)
 {
     cp0->cause.int0_pending = value;
     if (value)
+    {
         printf("[EE] Set INT0\n");
+        if (cp0->int_enabled())
+            int0();
+    }
 }
 
 void EmotionEngine::set_int1_signal(bool value)

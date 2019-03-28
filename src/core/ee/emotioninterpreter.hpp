@@ -221,6 +221,7 @@ namespace EmotionInterpreter
     void cop2_vlqi(VectorUnit& vu0, uint32_t instruction);
     void cop2_vsqi(VectorUnit& vu0, uint32_t instruction);
     void cop2_vlqd(VectorUnit& vu0, uint32_t instruction);
+    void cop2_vsqd(VectorUnit& vu0, uint32_t instruction);
     void cop2_vdiv(VectorUnit& vu0, uint32_t instruction);
     void cop2_vsqrt(VectorUnit& vu0, uint32_t instruction);
     void cop2_vrsqrt(VectorUnit& vu0, uint32_t instruction);
