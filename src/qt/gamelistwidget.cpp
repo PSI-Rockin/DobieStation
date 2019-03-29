@@ -6,7 +6,6 @@
 #include <QDirIterator>
 #include <QPushButton>
 #include <QVBoxLayout>
-#include <QDebug>
 
 #include "gamelistwidget.hpp"
 #include "settings.hpp"
@@ -43,10 +42,10 @@ QVariant GameListModel::data(
 
     switch (index.column())
     {
-    case COLUMN_NAME:
-        return file_info.fileName();
-    case COLUMN_SIZE:
-        return QLocale().formattedDataSize(file_info.size());
+        case COLUMN_NAME:
+            return file_info.fileName();
+        case COLUMN_SIZE:
+            return QLocale().formattedDataSize(file_info.size());
     }
 
     return QVariant();
@@ -58,10 +57,10 @@ QVariant GameListModel::headerData(
 {
     switch (section)
     {
-    case COLUMN_NAME:
-        return tr("Name");
-    case COLUMN_SIZE:
-        return tr("Size");
+        case COLUMN_NAME:
+            return tr("Name");
+        case COLUMN_SIZE:
+            return tr("Size");
     }
 
     return QVariant();

@@ -287,13 +287,13 @@ void Emulator::set_vu1_mode(VU_MODE mode)
 {
     switch (mode)
     {
-    case VU_MODE::INTERPRETER:
-        vu1_run_func = &VectorUnit::run;
-        break;
-    case VU_MODE::JIT:
-    default:
-        vu1_run_func = &VectorUnit::run_jit;
-        break;
+        case VU_MODE::INTERPRETER:
+            vu1_run_func = &VectorUnit::run;
+            break;
+        case VU_MODE::JIT:
+        default:
+            vu1_run_func = &VectorUnit::run_jit;
+            break;
     }
 }
 

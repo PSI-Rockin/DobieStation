@@ -10,36 +10,36 @@
 class GeneralTab : public QWidget
 {
     Q_OBJECT
-public:
-    explicit GeneralTab(QWidget* parent = nullptr);
+    public:
+        explicit GeneralTab(QWidget* parent = nullptr);
 };
 
 class PathTab : public QWidget
 {
     Q_OBJECT
-public:
-    QListWidget* path_list = nullptr;
+    public:
+        QListWidget* path_list = nullptr;
 
-    explicit PathTab(QWidget* parent = nullptr);
-private:
-    QLabel* bios_info = nullptr;
+        explicit PathTab(QWidget* parent = nullptr);
+    private:
+        QLabel* bios_info = nullptr;
 };
 
 class SettingsWindow : public QDialog
 {
     Q_OBJECT
-private:
-    GeneralTab* general_tab = nullptr;
-    PathTab* path_tab = nullptr;
-    QTabWidget* tab_widget;
-public:
-    enum TAB
-    {
-        GENERAL,
-        PATH
-    };
-    explicit SettingsWindow(QWidget *parent = nullptr);
+    private:
+        GeneralTab* general_tab = nullptr;
+        PathTab* path_tab = nullptr;
+        QTabWidget* tab_widget;
+    public:
+        enum TAB
+        {
+            GENERAL,
+            PATH
+        };
+        explicit SettingsWindow(QWidget *parent = nullptr);
 
-    void show_path_tab();
+        void show_path_tab();
 };
 #endif

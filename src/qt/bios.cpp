@@ -1,4 +1,3 @@
-#include <QDebug>
 #include <QtEndian>
 
 #include "bios.hpp"
