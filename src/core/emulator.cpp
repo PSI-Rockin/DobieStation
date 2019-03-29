@@ -30,6 +30,7 @@ Emulator::Emulator() :
     ELF_size = 0;
     gsdump_single_frame = false;
     ee_log.open("ee_log.txt", std::ios::out);
+    set_vu1_mode(VU_MODE::DONT_CARE);
 }
 
 Emulator::~Emulator()
@@ -98,9 +99,10 @@ void Emulator::run()
         vif1.update(bus_cycles);
         gif.run(bus_cycles);
         vu0.run(bus_cycles);
-        //vu1.run(bus_cycles);
-        vu1.run_jit(bus_cycles);
+        vu1_run_func(vu1, bus_cycles);
 
+        iop_timers.run(iop_cycles);
+        iop_dma.run(iop_cycles);
         for (int i = 0; i < iop_cycles; i++)
         {
             iop.run(1);
@@ -223,6 +225,11 @@ void Emulator::release_button(PAD_BUTTON button)
     pad.release_button(button);
 }
 
+void Emulator::update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t val)
+{
+    pad.update_joystick(joystick, axis, val);
+}
+
 uint32_t* Emulator::get_framebuffer()
 {
     //This function should only be called upon ending a frame; return nullptr otherwise
@@ -310,6 +317,20 @@ void Emulator::fast_boot()
 void Emulator::set_skip_BIOS_hack(SKIP_HACK type)
 {
     skip_BIOS_hack = type;
+}
+
+void Emulator::set_vu1_mode(VU_MODE mode)
+{
+    switch (mode)
+    {
+        case VU_MODE::INTERPRETER:
+            vu1_run_func = &VectorUnit::run;
+            break;
+        case VU_MODE::JIT:
+        default:
+            vu1_run_func = &VectorUnit::run_jit;
+            break;
+    }
 }
 
 void Emulator::load_BIOS(uint8_t *BIOS_file)

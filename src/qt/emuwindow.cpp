@@ -3,54 +3,60 @@
 #include <iostream>
 
 #include <QApplication>
-#include <QPainter>
 #include <QString>
 #include <QVBoxLayout>
 #include <QMenuBar>
 #include <QFileDialog>
 #include <QMessageBox>
+#include <QTableWidget>
 
 #include "emuwindow.hpp"
+#include "settingswindow.hpp"
+#include "renderwidget.hpp"
+#include "gamelistwidget.hpp"
+#include "bios.hpp"
 
 #include "arg.h"
 
 using namespace std;
-
-ifstream::pos_type filesize(const char* filename)
-{
-    ifstream in(filename, ifstream::ate | ifstream::binary);
-    return in.tellg();
-}
 
 EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
 {
     old_frametime = chrono::system_clock::now();
     old_update_time = chrono::system_clock::now();
     framerate_avg = 0.0;
-    scale_factor = 1;
 
-    QWidget* widget = new QWidget;
-    setCentralWidget(widget);
+    render_widget = new RenderWidget;
 
-    QWidget* topFiller = new QWidget;
-    topFiller->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    connect(&emu_thread, &EmuThread::completed_frame,
+        render_widget, &RenderWidget::draw_frame
+    );
 
-    QWidget *bottomFiller = new QWidget;
-    bottomFiller->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+    GameListWidget* game_list_widget = new GameListWidget;
+    connect(game_list_widget, &GameListWidget::game_double_clicked, this, [=](QString path) {
+        load_exec(path.toLocal8Bit(), true);
+    });
+    connect(game_list_widget, &GameListWidget::settings_requested, [=]() {
+        open_settings_window();
+        settings_window->show_path_tab();
+    });
 
-    QVBoxLayout *layout = new QVBoxLayout;
-    layout->setMargin(5);
-    layout->addWidget(topFiller);
-    layout->addWidget(bottomFiller);
-    widget->setLayout(layout);
+    stack_widget = new QStackedWidget;
+    stack_widget->addWidget(game_list_widget);
+    stack_widget->addWidget(render_widget);
+    stack_widget->setMinimumWidth(RenderWidget::DEFAULT_WIDTH);
+    stack_widget->setMinimumHeight(RenderWidget::DEFAULT_HEIGHT);
+
+    setCentralWidget(stack_widget);
 
     create_menu();
 
     connect(this, SIGNAL(shutdown()), &emu_thread, SLOT(shutdown()));
     connect(this, SIGNAL(press_key(PAD_BUTTON)), &emu_thread, SLOT(press_key(PAD_BUTTON)));
     connect(this, SIGNAL(release_key(PAD_BUTTON)), &emu_thread, SLOT(release_key(PAD_BUTTON)));
-    connect(&emu_thread, SIGNAL(completed_frame(uint32_t*, int, int, int, int)),
-            this, SLOT(draw_frame(uint32_t*, int, int, int, int)));
+    connect(this, SIGNAL(update_joystick(JOYSTICK, JOYSTICK_AXIS, uint8_t)),
+        &emu_thread, SLOT(update_joystick(JOYSTICK, JOYSTICK_AXIS, uint8_t))
+    );
     connect(&emu_thread, SIGNAL(update_FPS(int)), this, SLOT(update_FPS(int)));
     connect(&emu_thread, SIGNAL(emu_error(QString)), this, SLOT(emu_error(QString)));
     connect(&emu_thread, SIGNAL(emu_non_fatal_error(QString)), this, SLOT(emu_non_fatal_error(QString)));
@@ -60,12 +66,7 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
     emu_thread.start();
 
     //Initialize window
-    title = "DobieStation";
-    setWindowTitle(QString::fromStdString(title));
-    if (menuBar()->isNativeMenuBar())
-        resize(640, 448);
-    else
-        resize(640, 448 + menuBar()->geometry().height());
+    show_default_view();
     show();
 }
 
@@ -76,16 +77,12 @@ int EmuWindow::init(int argc, char** argv)
 
     char* bios_name = nullptr, *file_name = nullptr, *gsdump = nullptr;
 
-    // Load before the arguments, so the arguments override the config.
-    Settings::load();
-    if (!Settings::bios_path.isEmpty()) bios_name = Settings::as_char(Settings::bios_path);
-
     ARGBEGIN {
         case 'b':
             bios_name = ARGF();
-
-            // Store the bios path, converting to a QString along the way.
-            Settings::bios_path = QString::fromLocal8Bit(bios_name);
+            Settings::instance().set_bios_path(
+                QString::fromLocal8Bit(bios_name)
+            );
             break;
         case 'f':
             file_name = ARGF();
@@ -110,104 +107,80 @@ int EmuWindow::init(int argc, char** argv)
 
     if (gsdump)
     {
-        return run_gsdump(gsdump);
+        return load_exec(gsdump, false);
     }
-
-    ifstream BIOS_file(bios_name, ios::binary | ios::in);
-
-    // Try to head off loading a bad bios file.
-    if (!BIOS_file.is_open() || (filesize(bios_name) <= 0))
-    {
-        printf("Failed to load PS2 BIOS from %s\n", bios_name);
-        return 1;
-    }
-    
-    uint8_t* BIOS = new uint8_t[1024 * 1024 * 4];
-    BIOS_file.read((char*)BIOS, 1024 * 1024 * 4);
-    BIOS_file.close();
-
-    // Was there an error reading the file?
-    if (!BIOS_file.good())
-    {
-        printf("Failed to load PS2 BIOS from %s\n", bios_name);
-        return 1;
-    }
-
-    emu_thread.load_BIOS(BIOS);
-    delete[] BIOS;
-    BIOS = nullptr;
-
-    // Save at the end of init, so our arguments are saved.
-    Settings::save();
 
     if (file_name)
     {
         if (load_exec(file_name, skip_BIOS))
             return 1;
     }
+
+    Settings::instance().save();
+
     return 0;
 }
 
-int EmuWindow::run_gsdump(const char* file_name)
-{
-    emu_thread.gsdump_read(file_name);
-    emu_thread.unpause(PAUSE_EVENT::GAME_NOT_LOADED);
-    return 0;
-}
 int EmuWindow::load_exec(const char* file_name, bool skip_BIOS)
 {
-    ifstream exec_file(file_name, ios::binary | ios::in);
-    if (!exec_file.is_open())
+    if (!load_bios())
+        return 1;
+
+    QFileInfo file_info(file_name);
+
+    if (!file_info.exists())
     {
         printf("Failed to load %s\n", file_name);
         return 1;
     }
 
-    //Basic file format detection
-    string file_string = file_name;
-    string format = file_string.substr(file_string.length() - 4);
-    transform(format.begin(), format.end(), format.begin(), ::tolower);
-    printf("%s\n", format.c_str());
-
-    if (format == ".elf")
+    QString ext = file_info.suffix();
+    if(QString::compare(ext, "elf", Qt::CaseInsensitive) == 0)
     {
-        long long ELF_size = filesize(file_name);
-        uint8_t* ELF = new uint8_t[ELF_size];
-        exec_file.read((char*)ELF, ELF_size);
-        exec_file.close();
+        QFile exec_file(file_name);
+        if (!exec_file.open(QIODevice::ReadOnly))
+        {
+            QString path = file_info.absoluteFilePath();
+            printf("Couldn't open %s\n", qPrintable(path));
+            return 1;
+        }
 
-        printf("Loaded %s\n", file_name);
-        printf("Size: %lld\n", ELF_size);
-        emu_thread.load_ELF(ELF, ELF_size);
-        delete[] ELF;
-        ELF = nullptr;
+        QByteArray file_data(exec_file.readAll());
+
+        emu_thread.load_ELF(
+            reinterpret_cast<uint8_t *>(file_data.data()),
+            exec_file.size()
+        );
+
         if (skip_BIOS)
             emu_thread.set_skip_BIOS_hack(SKIP_HACK::LOAD_ELF);
     }
-    else if (format == ".iso")
+    else if (QString::compare(ext, "iso", Qt::CaseInsensitive) == 0)
     {
-        exec_file.close();
         emu_thread.load_CDVD(file_name, CDVD_CONTAINER::ISO);
         if (skip_BIOS)
             emu_thread.set_skip_BIOS_hack(SKIP_HACK::LOAD_DISC);
     }
-    else if (format == ".cso")
+    else if (QString::compare(ext, "cso", Qt::CaseInsensitive) == 0)
     {
-        exec_file.close();
         emu_thread.load_CDVD(file_name, CDVD_CONTAINER::CISO);
         if (skip_BIOS)
             emu_thread.set_skip_BIOS_hack(SKIP_HACK::LOAD_DISC);
     }
+    else if (QString::compare(ext, "gsd", Qt::CaseInsensitive) == 0)
+        emu_thread.gsdump_read(file_name);
     else
     {
-        printf("Unrecognized file format %s\n", format.c_str());
+        printf("Unrecognized file format %s\n", qPrintable(file_info.suffix()));
         return 1;
     }
 
-    title = file_name;
-    ROM_path = file_name;
+    set_vu1_mode();
 
+    current_ROM = file_info;
     emu_thread.unpause(PAUSE_EVENT::GAME_NOT_LOADED);
+    show_render_view();
+
     return 0;
 }
 
@@ -219,94 +192,210 @@ void EmuWindow::create_menu()
     load_bios_action = new QAction(tr("Load ROM... (&Boot BIOS)"), this);
     connect(load_bios_action, &QAction::triggered, this, &EmuWindow::open_file_no_skip);
 
+    auto load_gsdump_action = new QAction(tr("Load &GSDump..."), this);
+    connect(load_gsdump_action, &QAction::triggered, this, [=] (){
+        emu_thread.pause(PAUSE_EVENT::FILE_DIALOG);
+
+        QString file_name = QFileDialog::getOpenFileName(
+            this, tr("Open Rom"),
+            Settings::instance().last_used_directory,
+            tr("GSDumps (*.gsd)")
+        );
+
+        if (!file_name.isEmpty())
+        {
+            Settings::instance().add_rom_path(file_name);
+            load_exec(file_name.toLocal8Bit(), false);
+
+            show_render_view();
+        }
+
+        emu_thread.unpause(PAUSE_EVENT::FILE_DIALOG);
+    });
+
     load_state_action = new QAction(tr("&Load State"), this);
     connect(load_state_action, &QAction::triggered, this, &EmuWindow::load_state);
 
     save_state_action = new QAction(tr("&Save State"), this);
     connect(save_state_action, &QAction::triggered, this, &EmuWindow::save_state);
 
+    auto toggle_gsdump_action = new QAction(tr("GS dump &toggle"), this);
+    connect(toggle_gsdump_action, &QAction::triggered, this,
+        [this]() { this->emu_thread.gsdump_write_toggle(); });
+
     exit_action = new QAction(tr("&Exit"), this);
     connect(exit_action, &QAction::triggered, this, &QWidget::close);
-
-    auto gsdump_action = new QAction(tr("&GS dump toggle"), this);
-    connect(gsdump_action, &QAction::triggered, this,
-        [this]() { this->emu_thread.gsdump_write_toggle(); });
 
     file_menu = menuBar()->addMenu(tr("&File"));
     file_menu->addAction(load_rom_action);
     file_menu->addAction(load_bios_action);
+    file_menu->addAction(load_gsdump_action);
+
+    auto recent_menu = file_menu->addMenu(tr("&Recent"));
+    auto default_action = new QAction(tr("No recent roms..."));
+    default_action->setEnabled(false);
+
+    if (Settings::instance().recent_roms.isEmpty())
+    {
+        recent_menu->addAction(default_action);
+    }
+
+    for (auto& recent_file : Settings::instance().recent_roms)
+    {
+        auto recent_item_action = new QAction(recent_file);
+        connect(recent_item_action, &QAction::triggered, this, [=]() {
+            load_exec(recent_item_action->text().toLocal8Bit(), true);
+        });
+        recent_menu->addAction(recent_item_action);
+    }
+
+    connect(&Settings::instance(), &Settings::rom_path_added, this, [=](QString path) {
+        auto new_action = new QAction(path);
+        auto top_action = recent_menu->actions().first();
+
+        connect(new_action, &QAction::triggered, this, [=]() {
+            load_exec(new_action->text().toLocal8Bit(), true);
+        });
+
+        recent_menu->insertAction(top_action, new_action);
+
+        if (recent_menu->actions().contains(default_action))
+            recent_menu->removeAction(default_action);
+    });
+
+    recent_menu->addSeparator();
+
+    auto clear_action = new QAction(tr("Clear List"));
+
+    connect(clear_action, &QAction::triggered, this, [=]() {
+        Settings::instance().clear_rom_paths();
+        for (auto& old_action : recent_menu->actions())
+        {
+            recent_menu->removeAction(old_action);
+        }
+
+        recent_menu->addAction(default_action);
+        recent_menu->addSeparator();
+        recent_menu->addAction(clear_action);
+    });
+
+    recent_menu->addAction(clear_action);
+
+    file_menu->addMenu(recent_menu);
+    file_menu->addSeparator();
     file_menu->addAction(load_state_action);
     file_menu->addAction(save_state_action);
-    file_menu->addAction(exit_action);
     file_menu->addSeparator();
-    file_menu->addAction(gsdump_action);
+    file_menu->addAction(toggle_gsdump_action);
+    file_menu->addSeparator();
+    file_menu->addAction(exit_action);
+
+    auto pause_action = new QAction(tr("&Pause"), this);
+    connect(pause_action, &QAction::triggered, this, [=] (){
+        emu_thread.pause(PAUSE_EVENT::USER_REQUESTED);
+    });
+
+    auto unpause_action = new QAction(tr("&Unpause"), this);
+    connect(unpause_action, &QAction::triggered, this, [=] (){
+        emu_thread.unpause(PAUSE_EVENT::USER_REQUESTED);
+    });
+
+    auto frame_action = new QAction(tr("&Frame Advance"), this);
+    frame_action->setCheckable(true);
+    connect(frame_action, &QAction::triggered, this, [=] (){
+        emu_thread.frame_advance ^= true;
+
+        if(!emu_thread.frame_advance)
+            emu_thread.unpause(PAUSE_EVENT::FRAME_ADVANCE);
+
+        frame_action->setChecked(emu_thread.frame_advance);
+    });
+
+    auto shutdown_action = new QAction(tr("&Shutdown"), this);
+    connect(shutdown_action, &QAction::triggered, this, [=]() {
+        emu_thread.pause(PAUSE_EVENT::GAME_NOT_LOADED);
+        show_default_view();
+    });
+
+    emulation_menu = menuBar()->addMenu(tr("Emulation"));
+    emulation_menu->addAction(pause_action);
+    emulation_menu->addAction(unpause_action);
+    emulation_menu->addSeparator();
+    emulation_menu->addAction(frame_action);
+    emulation_menu->addSeparator();
+    emulation_menu->addAction(shutdown_action);
+
+    auto settings_action = new QAction(tr("&Settings"), this);
+    connect(settings_action, &QAction::triggered, this, &EmuWindow::open_settings_window);
 
     options_menu = menuBar()->addMenu(tr("&Options"));
-    auto size_options_actions = new QAction(tr("Scale to &Window (ignore aspect ratio)"), this);
-    connect(size_options_actions, &QAction::triggered, this,
-        [this]() { this->scale_factor = 0; });
-    options_menu->addAction(size_options_actions);
+    options_menu->addAction(settings_action);
 
-    size_options_actions = new QAction(tr("Scale &1x"), this);
-    connect(size_options_actions, &QAction::triggered, this,
-        [this]() { this->scale_factor = 1; });
-    options_menu->addAction(size_options_actions);
+    auto ignore_aspect_ratio_action =
+    new QAction(tr("&Ignore aspect ratio"), this);
+    ignore_aspect_ratio_action->setCheckable(true);
 
-    size_options_actions = new QAction(tr("Scale &2x"), this);
-    connect(size_options_actions, &QAction::triggered, this,
-        [this]() { this->scale_factor = 2; });
-    options_menu->addAction(size_options_actions);
+    connect(ignore_aspect_ratio_action, &QAction::triggered, render_widget, [=] (){
+        render_widget->toggle_aspect_ratio();
+        ignore_aspect_ratio_action->setChecked(
+            !render_widget->get_respect_aspect_ratio()
+        );
+    });
 
-    size_options_actions = new QAction(tr("Scale &3x"), this);
-    connect(size_options_actions, &QAction::triggered, this,
-        [this]() { this->scale_factor = 3; });
-    options_menu->addAction(size_options_actions);
+    window_menu = menuBar()->addMenu(tr("&Window"));
+    window_menu->addAction(ignore_aspect_ratio_action);
+    window_menu->addSeparator();
 
-    size_options_actions = new QAction(tr("Scale &4x"), this);
-    connect(size_options_actions, &QAction::triggered, this,
-        [this]() { this->scale_factor = 4; });
-    options_menu->addAction(size_options_actions);
+    for (int factor = 1; factor <= RenderWidget::MAX_SCALING; factor++)
+    {
+        auto scale_action = new QAction(
+            QString("Scale &%1x").arg(factor), this
+        );
 
-    options_menu->addSeparator();
+        connect(scale_action, &QAction::triggered, this, [=]() {
+            // Force the widget to the new size
+            stack_widget->setMinimumSize(
+                RenderWidget::DEFAULT_WIDTH * factor,
+                RenderWidget::DEFAULT_HEIGHT * factor
+            );
 
-    auto frame_action = new QAction(tr("&Frame Advance (10x draws for gs dumps)"), this);
-    connect(frame_action, &QAction::triggered, this,
-        [this]() { this->emu_thread.frame_advance ^= true; });
-    options_menu->addAction(frame_action);
+            showNormal();
+            adjustSize();
+
+            // reset it so the user can resize the window
+            // normally
+            stack_widget->setMinimumSize(
+                RenderWidget::DEFAULT_WIDTH,
+                RenderWidget::DEFAULT_HEIGHT
+            );
+        });
+
+        window_menu->addAction(scale_action);
+    }
 }
 
-void EmuWindow::draw_frame(uint32_t *buffer, int inner_w, int inner_h, int final_w, int final_h)
+bool EmuWindow::load_bios()
 {
-    if (!buffer || !inner_w || !inner_h)
-        return;
-    final_image = QImage((uint8_t*)buffer, inner_w, inner_h, QImage::Format_RGBA8888);
-    if (scale_factor == 0)
+    BiosReader bios_file(Settings::instance().bios_path);
+    if (!bios_file.is_valid())
     {
-        auto size = this->size();
-        final_image = final_image.scaled(size.width(), size.height());
+        bios_error(bios_file.to_string());
+
+        return false;
     }
-    else
-    {
-        final_image = final_image.scaled(final_w*scale_factor, final_h*scale_factor);
-        if (menuBar()->isNativeMenuBar())
-            resize(final_w*scale_factor, final_h*scale_factor);
-        else
-            resize(final_w*scale_factor, final_h*scale_factor + menuBar()->geometry().height());
-    }
-    update();
+
+    emu_thread.load_BIOS(bios_file.data());
+
+    return true;
 }
 
-void EmuWindow::paintEvent(QPaintEvent *event)
+void EmuWindow::open_settings_window()
 {
-    event->accept();
-    QPainter painter(this);
+    if (!settings_window)
+        settings_window = new SettingsWindow(this);
 
-    printf("Draw image!\n");
-
-    if (menuBar()->isNativeMenuBar())
-        painter.drawPixmap(0, 0, QPixmap::fromImage(final_image));
-    else
-        painter.drawPixmap(0, menuBar()->geometry().height(), QPixmap::fromImage(final_image));
+    settings_window->show();
+    settings_window->raise();
 }
 
 void EmuWindow::closeEvent(QCloseEvent *event)
@@ -359,6 +448,18 @@ void EmuWindow::keyPressEvent(QKeyEvent *event)
         case Qt::Key_Period:
             emu_thread.unpause(PAUSE_EVENT::FRAME_ADVANCE);
             break;
+        case Qt::Key_J:
+            emit update_joystick(JOYSTICK::LEFT, JOYSTICK_AXIS::X, 0x00);
+            break;
+        case Qt::Key_L:
+            emit update_joystick(JOYSTICK::LEFT, JOYSTICK_AXIS::X, 0xFF);
+            break;
+        case Qt::Key_I:
+            emit update_joystick(JOYSTICK::LEFT, JOYSTICK_AXIS::Y, 0x00);
+            break;
+        case Qt::Key_K:
+            emit update_joystick(JOYSTICK::LEFT, JOYSTICK_AXIS::Y, 0xFF);
+            break;
         case Qt::Key_F1:
             emu_thread.gsdump_single_frame();
             break;
@@ -406,23 +507,42 @@ void EmuWindow::keyReleaseEvent(QKeyEvent *event)
         case Qt::Key_Space:
             emit release_key(PAD_BUTTON::SELECT);
             break;
+        case Qt::Key_J:
+        case Qt::Key_L:
+            emit update_joystick(JOYSTICK::LEFT, JOYSTICK_AXIS::X, 0x80);
+            break;
+        case Qt::Key_K:
+        case Qt::Key_I:
+            emit update_joystick(JOYSTICK::LEFT, JOYSTICK_AXIS::Y, 0x80);
+            break;
     }
 }
 
 void EmuWindow::update_FPS(int FPS)
 {
-    /*
-    Updates window title every second
-    Framerate displayed is the average framerate over 1 second
-    */
+    // average framerate over 1 second
     chrono::system_clock::time_point now = chrono::system_clock::now();
     chrono::duration<double> elapsed_update_seconds = now - old_update_time;
     if (elapsed_update_seconds.count() >= 1.0)
     {
-        string new_title = "FPS: " + to_string(FPS) + " - " + title;
-        setWindowTitle(QString::fromStdString(new_title));
+        // avoid multiple copies
+        QString status = QString("FPS: %1 - %2 [VU1: %3]").arg(
+            QString::number(FPS), current_ROM.fileName(), vu1_mode
+        );
+
+        setWindowTitle(status);
         old_update_time = chrono::system_clock::now();
     }
+}
+
+void EmuWindow::bios_error(QString err)
+{
+    QMessageBox msg_box;
+    msg_box.setText("Emulation has been terminated");
+    msg_box.setInformativeText(err);
+    msg_box.setStandardButtons(QMessageBox::Abort);
+    msg_box.setDefaultButton(QMessageBox::Abort);
+    msg_box.exec();
 }
 
 void EmuWindow::emu_error(QString err)
@@ -433,8 +553,8 @@ void EmuWindow::emu_error(QString err)
     msgBox.setStandardButtons(QMessageBox::Abort);
     msgBox.setDefaultButton(QMessageBox::Abort);
     msgBox.exec();
-    ROM_path = "";
-    setWindowTitle("DobieStation");
+    current_ROM = QFileInfo();
+    show_default_view();
 }
 
 void EmuWindow::emu_non_fatal_error(QString err)
@@ -462,35 +582,92 @@ void EmuWindow::contextMenuEvent(QContextMenuEvent* event)
 void EmuWindow::open_file_no_skip()
 {
     emu_thread.pause(PAUSE_EVENT::FILE_DIALOG);
-    QString file_name = QFileDialog::getOpenFileName(this, tr("Open Rom"), "", tr("ROM Files (*.elf *.iso *.cso)"));
-    load_exec(file_name.toStdString().c_str(), false);
+    QString file_name = QFileDialog::getOpenFileName(
+        this, tr("Open Rom"), Settings::instance().last_used_directory,
+        tr("ROM Files (*.elf *.iso *.cso)")
+    );
+
+    if (!file_name.isEmpty())
+    {
+        Settings::instance().add_rom_path(file_name);
+        load_exec(file_name.toStdString().c_str(), false);
+    }
+
     emu_thread.unpause(PAUSE_EVENT::FILE_DIALOG);
 }
 
 void EmuWindow::open_file_skip()
 {
     emu_thread.pause(PAUSE_EVENT::FILE_DIALOG);
-    QString file_name = QFileDialog::getOpenFileName(this, tr("Open Rom"), "", tr("ROM Files (*.elf *.iso *.cso)"));
-    load_exec(file_name.toStdString().c_str(), true);
+    QString file_name = QFileDialog::getOpenFileName(
+        this, tr("Open Rom"), Settings::instance().last_used_directory,
+        tr("ROM Files (*.elf *.iso *.cso)")
+    );
+
+    if (!file_name.isEmpty())
+    {
+        Settings::instance().add_rom_path(file_name);
+        load_exec(file_name.toStdString().c_str(), true);
+    }
+
     emu_thread.unpause(PAUSE_EVENT::FILE_DIALOG);
 }
 
 void EmuWindow::load_state()
 {
     emu_thread.pause(PAUSE_EVENT::FILE_DIALOG);
-    string path = ROM_path.substr(0, ROM_path.length() - 4);
-    path += ".snp";
-    if (!emu_thread.load_state(path.c_str()))
-        printf("Failed to load %s\n", path.c_str());
+    QString file_name = current_ROM.baseName();
+    QString directory = current_ROM.absoluteDir().path();
+
+    QString save_state = directory
+        .append(QDir::separator())
+        .append(file_name)
+        .append(".snp");
+
+    if (!emu_thread.load_state(save_state.toLocal8Bit()))
+        printf("Failed to load %s\n", qPrintable(save_state));
     emu_thread.unpause(PAUSE_EVENT::FILE_DIALOG);
 }
 
 void EmuWindow::save_state()
 {
     emu_thread.pause(PAUSE_EVENT::FILE_DIALOG);
-    string path = ROM_path.substr(0, ROM_path.length() - 4);
-    path += ".snp";
-    if (!emu_thread.save_state(path.c_str()))
-        printf("Failed to save %s\n", path.c_str());
+    QString file_name = current_ROM.baseName();
+    QString directory = current_ROM.absoluteDir().path();
+
+    QString save_state = directory
+        .append(QDir::separator())
+        .append(file_name)
+        .append(".snp");
+
+    if (!emu_thread.save_state(save_state.toLocal8Bit()))
+        printf("Failed to save %s\n", qPrintable(save_state));
     emu_thread.unpause(PAUSE_EVENT::FILE_DIALOG);
+}
+
+void EmuWindow::show_default_view()
+{
+    stack_widget->setCurrentIndex(0);
+    setWindowTitle(QApplication::applicationName());
+}
+
+void EmuWindow::show_render_view()
+{
+    stack_widget->setCurrentIndex(1);
+}
+
+void EmuWindow::set_vu1_mode()
+{
+    VU_MODE mode;
+    if (Settings::instance().vu1_jit_enabled)
+    {
+        mode = VU_MODE::JIT;
+        vu1_mode = "JIT";
+    }
+    else
+    {
+        mode = VU_MODE::INTERPRETER;
+        vu1_mode = "Interpreter";
+    }
+    emu_thread.set_vu1_mode(mode);
 }

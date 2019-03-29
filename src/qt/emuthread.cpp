@@ -26,6 +26,13 @@ void EmuThread::set_skip_BIOS_hack(SKIP_HACK skip)
     load_mutex.unlock();
 }
 
+void EmuThread::set_vu1_mode(VU_MODE mode)
+{
+    load_mutex.lock();
+    e.set_vu1_mode(mode);
+    load_mutex.unlock();
+}
+
 void EmuThread::load_BIOS(uint8_t *BIOS)
 {
     load_mutex.lock();
@@ -232,6 +239,13 @@ void EmuThread::release_key(PAD_BUTTON button)
 {
     pause_mutex.lock();
     e.release_button(button);
+    pause_mutex.unlock();
+}
+
+void EmuThread::update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t val)
+{
+    pause_mutex.lock();
+    e.update_joystick(joystick, axis, val);
     pause_mutex.unlock();
 }
 

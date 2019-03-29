@@ -1,37 +1,136 @@
-#include <QSettings>
-#include <QString>
-
 #include "settings.hpp"
 
-namespace Settings
+Settings::Settings()
 {
-    QString bios_path;
+    connect(this, &Settings::rom_path_added, [=](const QString& path) {
+        QFileInfo file_info(path);
+        update_last_used_directory(file_info.absoluteDir().path());
+    });
 
-    // If we had a files for QT helper functions, this could go there, but here works for now.
-    // https://wiki.qt.io/Technical_FAQ#How_can_I_convert_a_QString_to_char.2A_and_vice_versa.3F
-    char* as_char(QString q_str)
+    connect(this, &Settings::bios_changed, [=](const QString& path) {
+        QFileInfo file_info(path);
+        update_last_used_directory(file_info.absoluteDir().path());
+    });
+
+    connect(this, &Settings::rom_directory_added, [=](const QString& path) {
+        rom_directories_to_add.append(path);
+        update_last_used_directory(path);
+    });
+
+    connect(this, &Settings::rom_directory_removed, [=](const QString& path) {
+        rom_directories_to_remove.append(path);
+    });
+
+    reset();
+}
+
+void Settings::reset()
+{
+    bios_path = qsettings().value("bios_path", "").toString();
+    rom_directories = qsettings().value("rom_directories", {}).toStringList();
+    recent_roms = qsettings().value("recent_roms", {}).toStringList();
+    vu1_jit_enabled = qsettings().value("vu1_jit_enabled", true).toBool();
+    last_used_directory = qsettings().value("last_used_dir", QDir::homePath()).toString();
+
+    rom_directories_to_add = QStringList();
+    rom_directories_to_remove = QStringList();
+
+    emit reload();
+}
+
+void Settings::save()
+{
+    // NOTE: order matters!
+    // If the user for example removes a directory
+    // and adds the parent directory before a save then
+    // doing the removal after the add will cause
+    // the sub directory not to be added properly
+    for (const auto& directory : rom_directories_to_remove)
     {
-        QByteArray ba = q_str.toLocal8Bit();
-        return ba.data();
+        rom_directories.removeAll(directory);
+        emit rom_directory_uncommitted(directory);
     }
 
-    bool load()
+    for (const auto& directory : rom_directories_to_add)
     {
-        QSettings conf("PSI", "Dobiestation");
-
-        bios_path = conf.value("bios", "").toString();
-        printf("Loaded config! Bios: %s\n", qPrintable(bios_path));
-        return true;
+        rom_directories.append(directory);
+        emit rom_directory_committed(directory);
     }
 
-    bool save()
+    rom_directories.sort(Qt::CaseInsensitive);
+    rom_directories.removeDuplicates();
+
+    qsettings().setValue("rom_directories", rom_directories);
+    qsettings().setValue("bios_path", bios_path);
+    qsettings().setValue("vu1_jit_enabled", vu1_jit_enabled);
+    qsettings().sync();
+    reset();
+}
+
+Settings& Settings::instance()
+{
+    static Settings settings;
+    return settings;
+}
+
+QSettings& Settings::qsettings()
+{
+    static QSettings settings;
+    return settings;
+}
+
+void Settings::update_last_used_directory(QString path)
+{
+    last_used_directory = path;
+    qsettings().setValue("last_used_dir", last_used_directory);
+}
+
+void Settings::add_rom_directory(QString path)
+{
+    if (path.isEmpty())
+        return;
+
+    if (!rom_directories.contains(path, Qt::CaseInsensitive))
     {
-        QSettings conf("PSI", "Dobiestation");
-
-        conf.setValue("bios", bios_path);
-        conf.sync();
-
-        printf("Saved config! Bios: %s\n", qPrintable(bios_path));
-        return true;
+        emit rom_directory_added(path);
     }
-};
+}
+
+void Settings::remove_rom_directory(QString path)
+{
+    if (path.isEmpty())
+        return;
+
+    if (rom_directories.contains(path, Qt::CaseInsensitive))
+    {
+        emit rom_directory_removed(path);
+    }
+}
+
+void Settings::add_rom_path(QString path)
+{
+    if (path.isEmpty())
+        return;
+
+    if (!recent_roms.contains(path, Qt::CaseInsensitive))
+    {
+        recent_roms.prepend(path);
+        qsettings().setValue("recent_roms", recent_roms);
+        emit rom_path_added(path);
+    }
+}
+
+void Settings::clear_rom_paths()
+{
+    recent_roms = QStringList();
+    qsettings().setValue("recent_roms", {});
+}
+
+void Settings::set_bios_path(QString path)
+{
+    if (path.isEmpty())
+        return;
+
+    bios_path = path;
+    emit bios_changed(path);
+}

@@ -16,6 +16,7 @@ enum PAUSE_EVENT
     FILE_DIALOG,
     MESSAGE_BOX,
     FRAME_ADVANCE,
+    USER_REQUESTED
 };
 
 class EmuThread : public QThread
@@ -37,6 +38,7 @@ class EmuThread : public QThread
         void reset();
 
         void set_skip_BIOS_hack(SKIP_HACK skip);
+        void set_vu1_mode(VU_MODE mode);
         void load_BIOS(uint8_t* BIOS);
         void load_ELF(uint8_t* ELF, uint64_t ELF_size);
         void load_CDVD(const char* name, CDVD_CONTAINER type);
@@ -58,6 +60,7 @@ class EmuThread : public QThread
         void shutdown();
         void press_key(PAD_BUTTON button);
         void release_key(PAD_BUTTON button);
+        void update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t val);
         void pause(PAUSE_EVENT event);
         void unpause(PAUSE_EVENT event);
 };
