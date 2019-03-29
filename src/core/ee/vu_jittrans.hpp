@@ -75,7 +75,7 @@ class VU_JitTranslator
         bool updates_mac_flags_special(uint32_t upper_instr);
 
         void update_pipeline(VectorUnit &vu, int cycles);
-        void handle_vu_stalls(VectorUnit &vu, uint16_t PC, uint32_t lower, bool is_loi, int &q_pipe_delay, int &p_pipe_delay);
+        void handle_vu_stalls(VectorUnit &vu, uint16_t PC, uint32_t lower, int &q_pipe_delay, int &p_pipe_delay);
         void analyze_FMAC_stalls(VectorUnit &vu, uint16_t PC);
         void interpreter_pass(VectorUnit& vu, uint8_t *instr_mem, uint32_t prev_pc);
         void flag_pass(VectorUnit& vu);
