@@ -32,6 +32,10 @@ void Gamepad::reset()
     command_buffer[0] = 0xFF;
     config_mode = false;
     buttons = 0xFFFF;
+    joysticks[0][0] = 0x80;
+    joysticks[0][1] = 0x80;
+    joysticks[1][0] = 0x80;
+    joysticks[1][1] = 0x80;
     command_length = 0;
     pad_mode = DIGITAL;
     command = 0;
@@ -52,6 +56,11 @@ void Gamepad::release_button(PAD_BUTTON button)
 {
     buttons |= 1 << (int)button;
     button_pressure[(int)button] = 0;
+}
+
+void Gamepad::update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t val)
+{
+    joysticks[(int)joystick][(int)axis] = val;
 }
 
 void Gamepad::set_result(const uint8_t *result)
@@ -113,10 +122,10 @@ uint8_t Gamepad::write_SIO(uint8_t value)
                 if (pad_mode != DIGITAL)
                 {
                     command_length = 9;
-                    command_buffer[5] = 0x80;
-                    command_buffer[6] = 0x80;
-                    command_buffer[7] = 0x80;
-                    command_buffer[8] = 0x80;
+                    command_buffer[5] = joysticks[0][0]; // right, y axis
+                    command_buffer[6] = joysticks[0][1]; // right, x axis
+                    command_buffer[7] = joysticks[1][0]; // left, y axis
+                    command_buffer[8] = joysticks[1][1]; // left, x axis
                     if (pad_mode != ANALOG && !config_mode)
                     {
                         command_buffer[9] = button_pressure[(int)PAD_BUTTON::RIGHT];

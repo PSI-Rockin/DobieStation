@@ -240,6 +240,30 @@
     </ClCompile>
     <ClCompile Include="$(QtMocOutPrefix)emuwindow.cpp">
       <Filter>Generated Files</Filter>
+	</ClCompile>
+	<ClCompile Include="$(QtMocOutPrefix)renderwidget.cpp">
+      <Filter>Generated Files</Filter>
+	</ClCompile>
+	<ClCompile Include="$(QtMocOutPrefix)settingswindow.cpp">
+      <Filter>Generated Files</Filter>
+	</ClCompile>
+	<ClCompile Include="$(QtMocOutPrefix)settings.cpp">
+      <Filter>Generated Files</Filter>
+	</ClCompile>
+	<ClCompile Include="$(QtMocOutPrefix)gamelistwidget.cpp">
+      <Filter>Generated Files</Filter>
+	</ClCompile>
+    <ClCompile Include="..\src\qt\renderwidget.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\qt\settingswindow.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+	<ClCompile Include="..\src\qt\gamelistwidget.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\qt\bios.cpp">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -294,12 +318,6 @@
     <ClInclude Include="..\src\core\emulator.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <QtMoc Include="..\src\qt\emuthread.hpp">
-      <Filter>Header Files</Filter>
-    </QtMoc>
-    <QtMoc Include="..\src\qt\emuwindow.hpp">
-      <Filter>Header Files</Filter>
-    </QtMoc>
     <ClInclude Include="..\src\core\errors.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -381,9 +399,6 @@
     <ClInclude Include="..\src\core\ee\ipu\motioncode.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\qt\settings.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\core\sif.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -423,6 +438,9 @@
     <ClInclude Include="..\src\core\iop\cso_reader.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\qt\bios.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="..\src\core\jitcommon\ir_instrlist.inc">
@@ -434,5 +452,25 @@
     <MASM Include="..\src\core\ee\vu_jit_asm.asm">
       <Filter>Source Files</Filter>
     </MASM>
+  </ItemGroup>
+  <ItemGroup>
+    <QtMoc Include="..\src\qt\renderwidget.hpp">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="..\src\qt\settingswindow.hpp">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="..\src\qt\emuthread.hpp">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+    <QtMoc Include="..\src\qt\emuwindow.hpp">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+	<QtMoc Include="..\src\qt\settings.hpp">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+	<QtMoc Include="..\src\qt\gamelistwidget.hpp">
+      <Filter>Header Files</Filter>
+    </QtMoc>
   </ItemGroup>
 </Project>

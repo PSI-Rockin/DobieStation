@@ -31,6 +31,12 @@ enum SKIP_HACK
     LOAD_DISC
 };
 
+enum VU_MODE {
+    DONT_CARE,
+    JIT,
+    INTERPRETER
+};
+
 class Emulator
 {
     private:
@@ -63,6 +69,7 @@ class Emulator
 
         std::ofstream ee_log;
         std::string ee_stdout;
+        std::function<void(VectorUnit&, int)> vu1_run_func;
 
         uint8_t* RDRAM;
         uint8_t* IOP_RAM;
@@ -98,9 +105,11 @@ class Emulator
         void reset();
         void press_button(PAD_BUTTON button);
         void release_button(PAD_BUTTON button);
+        void update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t val);
         bool skip_BIOS();
         void fast_boot();
         void set_skip_BIOS_hack(SKIP_HACK type);
+        void set_vu1_mode(VU_MODE mode);
         void load_BIOS(uint8_t* BIOS);
         void load_ELF(uint8_t* ELF, uint32_t size);
         bool load_CDVD(const char* name, CDVD_CONTAINER type);

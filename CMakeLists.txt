@@ -76,8 +76,12 @@ set(SOURCES
 	src/core/sif.cpp
 	src/qt/emuthread.cpp
         src/qt/emuwindow.cpp
+        src/qt/settingswindow.cpp
+        src/qt/renderwidget.cpp
+        src/qt/gamelistwidget.cpp
         src/qt/main.cpp
 	src/qt/settings.cpp
+	src/qt/bios.cpp
         )
 
 set(HEADERS
@@ -140,7 +144,11 @@ set(HEADERS
 	src/core/sif.hpp
 	src/qt/emuthread.hpp
         src/qt/emuwindow.hpp
+        src/qt/settingswindow.hpp
+        src/qt/renderwidget.hpp
+        src/qt/gamelistwidget.hpp
 	src/qt/settings.hpp
+	src/qt/bios.hpp
         )
 
 add_executable(DobieStation ${SOURCES} ${HEADERS})
