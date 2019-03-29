@@ -20,6 +20,7 @@ GeneralTab::GeneralTab(QWidget* parent)
 {
     QRadioButton* jit_checkbox = new QRadioButton(tr("JIT"));
     QRadioButton* interpreter_checkbox = new QRadioButton(tr("Interpreter"));
+    QLabel* warning = new QLabel(tr("NOTE: Change will take effect the next time you load a game."));
 
     bool vu1_jit = Settings::instance().vu1_jit_enabled;
     jit_checkbox->setChecked(vu1_jit);
@@ -42,6 +43,7 @@ GeneralTab::GeneralTab(QWidget* parent)
     QVBoxLayout* vu1_layout = new QVBoxLayout;
     vu1_layout->addWidget(jit_checkbox);
     vu1_layout->addWidget(interpreter_checkbox);
+    vu1_layout->addWidget(warning);
 
     QGroupBox* vu1_groupbox = new QGroupBox(tr("VU1"));
     vu1_groupbox->setLayout(vu1_layout);
