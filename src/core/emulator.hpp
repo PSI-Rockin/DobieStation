@@ -23,6 +23,7 @@
 #include "gs.hpp"
 #include "gif.hpp"
 #include "sif.hpp"
+#include "scheduler.hpp"
 
 enum SKIP_HACK
 {
@@ -58,6 +59,7 @@ class Emulator
         INTC intc;
         ImageProcessingUnit ipu;
         Memcard memcard;
+        Scheduler scheduler;
         SIO2 sio2;
         SPU spu, spu2;
         SubsystemInterface sif;
@@ -84,8 +86,6 @@ class Emulator
         uint32_t MCH_RICM, MCH_DRD;
         uint8_t rdram_sdevid;
 
-        uint32_t instructions_ran;
-
         uint8_t IOP_POST;
         uint32_t IOP_I_STAT;
         uint32_t IOP_I_MASK;
@@ -98,6 +98,8 @@ class Emulator
         uint32_t ELF_size;
 
         void iop_IRQ_check(uint32_t new_stat, uint32_t new_mask);
+
+        bool frame_ended;
     public:
         Emulator();
         ~Emulator();
@@ -117,6 +119,13 @@ class Emulator
         uint32_t* get_framebuffer();
         void get_resolution(int& w, int& h);
         void get_inner_resolution(int& w, int& h);
+
+        //Events
+        void vblank_start();
+        void vblank_end();
+        void cdvd_event();
+        void gen_sound_sample();
+        void ee_irq_check();
 
         bool request_load_state(const char* file_name);
         bool request_save_state(const char* file_name);
@@ -156,6 +165,9 @@ class Emulator
 
         void test_iop();
         GraphicsSynthesizer& get_gs();//used for gs dumps
+
+        void add_ee_event(EVENT_ID id, event_func func, uint64_t delta_time_to_run);
+        void add_iop_event(EVENT_ID id, event_func func, uint64_t delta_time_to_run);
 };
 
 #endif // EMULATOR_HPP

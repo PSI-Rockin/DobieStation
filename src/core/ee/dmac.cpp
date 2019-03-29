@@ -5,7 +5,7 @@
 #include "../emulator.hpp"
 #include "../errors.hpp"
 
-enum CHANNELS
+enum DMAC_CHANNELS
 {
     VIF0,
     VIF1,

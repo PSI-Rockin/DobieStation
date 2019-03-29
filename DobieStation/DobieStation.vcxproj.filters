@@ -232,6 +232,9 @@
     <ClCompile Include="..\src\core\ee\vu_jittrans.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\core\scheduler.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\core\iop\cso_reader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -433,6 +436,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\core\ee\vu_jittrans.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\core\scheduler.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\core\iop\cso_reader.hpp">

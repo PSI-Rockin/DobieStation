@@ -72,6 +72,7 @@ set(SOURCES
         src/core/gsthread.cpp
         src/core/gsregisters.cpp
         src/core/gscontext.cpp
+	src/core/scheduler.cpp
 	src/core/serialize.cpp
 	src/core/sif.cpp
 	src/qt/emuthread.cpp
@@ -141,6 +142,7 @@ set(HEADERS
         src/core/circularFIFO.hpp
 	src/core/gscontext.hpp
 	src/core/int128.hpp
+	src/core/scheduler.hpp
 	src/core/sif.hpp
 	src/qt/emuthread.hpp
         src/qt/emuwindow.hpp

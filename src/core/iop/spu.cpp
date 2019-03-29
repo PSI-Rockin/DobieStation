@@ -1,6 +1,7 @@
 #include <cstdio>
 #include "spu.hpp"
 #include "../emulator.hpp"
+#include "iop_dma.hpp"
 
 /**
  * Notes on "AutoDMA", as it seems to not be documented anywhere else
@@ -12,7 +13,7 @@
 uint16_t SPU::spdif_irq = 0;
 uint16_t SPU::core_att[2];
 uint32_t SPU::IRQA[2];
-SPU::SPU(int id, Emulator* e) : id(id), e(e)
+SPU::SPU(int id, Emulator* e, IOP_DMA* dma) : id(id), e(e), dma(dma)
 { 
 
 }
@@ -31,7 +32,8 @@ void SPU::reset(uint8_t* RAM)
     key_on = 0;
     key_off = 0xFFFFFF;
     spdif_irq = 0;
-    cycles = 0;
+
+    clear_dma_req();
 
     for (int i = 0; i < 24; i++)
     {
@@ -60,18 +62,6 @@ void SPU::spu_irq(int index)
     printf("[SPU%d] IRQA interrupt!\n", index);
     spdif_irq |= 4 << index;
     e->iop_request_IRQ(9);
-}
-
-void SPU::update(int cycles_to_run)
-{
-    cycles += cycles_to_run;
-
-    //Generate a sample every 768 IOP cycles
-    if (cycles >= 768)
-    {
-        cycles -= 768;
-        gen_sample();
-    }
 }
 
 void SPU::gen_sample()
@@ -130,6 +120,14 @@ void SPU::gen_sample()
         process_ADMA();
         input_pos &= 0x1FF;
     }
+
+    if (running_ADMA())
+    {
+        if (can_write_ADMA())
+            set_dma_req();
+        else
+            clear_dma_req();
+    }
 }
 
 void SPU::finish_DMA()
@@ -147,6 +145,25 @@ void SPU::start_DMA(int size)
     status.DMA_finished = false;
 }
 
+void SPU::pause_DMA()
+{
+    status.DMA_busy = false;
+}
+
+uint32_t SPU::read_DMA()
+{
+    uint32_t value = RAM[current_addr];
+    value |= ((uint32_t)RAM[current_addr + 1]) << 16;
+
+    spu_check_irq(current_addr);
+    spu_check_irq(current_addr + 1);
+    current_addr += 2;
+    current_addr &= 0x000FFFFF;
+    status.DMA_busy = true;
+    status.DMA_finished = false;
+    return value;
+}
+
 void SPU::write_DMA(uint32_t value)
 {
     //printf("[SPU%d] Write mem $%08X ($%08X)\n", id, value, current_addr);
@@ -154,7 +171,7 @@ void SPU::write_DMA(uint32_t value)
     RAM[current_addr + 1] = value >> 16;
 
     spu_check_irq(current_addr);
-    spu_check_irq(current_addr+1);
+    spu_check_irq(current_addr + 1);
     current_addr += 2;
     current_addr &= 0x000FFFFF;
     status.DMA_busy = true;
@@ -165,6 +182,9 @@ void SPU::write_ADMA(uint8_t *RAM)
 {
    // printf("[SPU%d] ADMA transfer: $%08X\n", id, ADMA_left);
     ADMA_left += 2;
+
+    if (ADMA_left >= 0x400)
+        clear_dma_req();
 
     status.DMA_busy = true;
     status.DMA_finished = false;
@@ -455,11 +475,20 @@ void SPU::write16(uint32_t addr, uint16_t value)
                 if (!(value & (1 << 6)))
                     spdif_irq &= ~(2 << id);
             }
+
+            if (!running_ADMA())
+            {
+                if ((value >> 4) & 0x3)
+                    set_dma_req();
+                else
+                    clear_dma_req();
+            }
             core_att[id - 1] = value & 0x7FFF;
             if (value & (1 << 15))
             {
                 status.DMA_finished = false;
                 status.DMA_busy = false;
+                clear_dma_req();
             }
             break;
         case 0x19C:
@@ -530,6 +559,8 @@ void SPU::write16(uint32_t addr, uint16_t value)
         case 0x1B0:
             printf("[SPU%d] Write ADMA: $%04X\n", id, value);
             autodma_ctrl = value;
+            if (running_ADMA())
+                set_dma_req();
             break;
         case 0x340:
             ENDX &= 0xFF0000;
@@ -587,4 +618,20 @@ void SPU::key_on_voice(int v)
 void SPU::key_off_voice(int v)
 {
     //Set envelope to Release mode
+}
+
+void SPU::clear_dma_req()
+{
+    if (id == 1)
+        dma->clear_DMA_request(IOP_SPU);
+    else
+        dma->clear_DMA_request(IOP_SPU2);
+}
+
+void SPU::set_dma_req()
+{
+    if (id == 1)
+        dma->set_DMA_request(IOP_SPU);
+    else
+        dma->set_DMA_request(IOP_SPU2);
 }

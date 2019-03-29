@@ -141,6 +141,7 @@ void EmotionInterpreter::interpret(EmotionEngine &cpu, uint32_t instruction)
             swr(cpu, instruction);
             break;
         case 0x2F:
+            cache(cpu, instruction);
             break;
         case 0x31:
             lwc1(cpu, instruction);
@@ -792,6 +793,24 @@ void EmotionInterpreter::sd(EmotionEngine &cpu, uint32_t instruction)
     uint32_t addr = cpu.get_gpr<uint32_t>(base);
     addr += offset;
     cpu.write64(addr, cpu.get_gpr<uint64_t>(source));
+}
+
+void EmotionInterpreter::cache(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint16_t op = (instruction >> 16) & 0x1F;
+    int16_t offset = (int16_t)(instruction & 0xFFFF);
+    uint32_t base = (instruction >> 21) & 0x1F;
+    uint32_t addr = cpu.get_gpr<uint32_t>(base);
+    addr += offset;
+    switch (op)
+    {
+        case 0x07:
+            cpu.invalidate_icache_indexed(addr);
+            break;
+        default:
+            //Do nothing, we don't emulate the other caches
+            break;
+    }
 }
 
 void EmotionInterpreter::cop(EmotionEngine &cpu, uint32_t instruction)

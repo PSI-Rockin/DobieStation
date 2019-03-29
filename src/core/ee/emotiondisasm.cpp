@@ -1691,6 +1691,8 @@ string disasm_cop2_special2(uint32_t instruction)
             return disasm_vsqi(instruction);
         case 0x36:
             return disasm_vlqd(instruction);
+        case 0x37:
+            return disasm_vsqd(instruction);
         case 0x38:
             return disasm_vdiv(instruction);
         case 0x39:
@@ -1962,6 +1964,17 @@ string disasm_vlqd(uint32_t instruction)
     string field = get_dest_field((instruction >> 21) & 0xF);
     output << "vlqd." << field;
     output << " vf" << dest << ", (vi" << is << "++)";
+    return output.str();
+}
+
+string disasm_vsqd(uint32_t instruction)
+{
+    stringstream output;
+    uint32_t fs = (instruction >> 11) & 0x1F;
+    uint32_t it = (instruction >> 16) & 0x1F;
+    string field = get_dest_field((instruction >> 21) & 0xF);
+    output << "vsqd." << field;
+    output << " vf" << fs << ", (vi" << it << "++)";
     return output.str();
 }
 

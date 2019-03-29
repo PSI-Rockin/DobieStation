@@ -43,12 +43,14 @@ struct SPU_STAT
 };
 
 class Emulator;
+class IOP_DMA;
 
 class SPU
 {
     private:
         int id;
         Emulator* e;
+        IOP_DMA* dma;
 
         uint16_t* RAM;
         Voice voices[24];
@@ -70,14 +72,10 @@ class SPU
         int ADMA_left;
         int input_pos;
 
-        int cycles;
-
         static uint32_t IRQA[2];
         uint32_t ENDX;
         uint32_t key_on;
         uint32_t key_off;
-
-        void gen_sample();
 
         void key_on_voice(int v);
         void key_off_voice(int v);
@@ -88,20 +86,25 @@ class SPU
         uint16_t read_voice_reg(uint32_t addr);
         void write_voice_reg(uint32_t addr, uint16_t value);
         void write_voice_addr(uint32_t addr, uint16_t value);
+
+        void clear_dma_req();
+        void set_dma_req();
     public:
-        SPU(int id, Emulator* e);
+        SPU(int id, Emulator* e, IOP_DMA* dma);
 
         bool running_ADMA();
         bool can_write_ADMA();
 
         void reset(uint8_t* RAM);
-        void update(int cycles_to_run);
+        void gen_sample();
 
         void start_DMA(int size);
+        void pause_DMA();
         void finish_DMA();
 
         uint16_t read_mem();
         void process_ADMA();
+        uint32_t read_DMA();
         void write_DMA(uint32_t value);
         void write_ADMA(uint8_t* RAM);
         void write_mem(uint16_t value);

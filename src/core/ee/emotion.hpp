@@ -18,10 +18,20 @@ struct Deci2Handler
     uint32_t addr;
 };
 
+struct EE_ICacheLine
+{
+    bool valid[2];
+    bool lfu[2];
+    uint16_t tag[2];
+};
+
 class EmotionEngine
 {
     private:
         Emulator* e;
+
+        uint64_t cycle_count;
+        int cycles_to_run;
 
         Cop0* cp0;
         Cop1* fpu;
@@ -33,6 +43,8 @@ class EmotionEngine
         uint64_t LO, HI, LO1, HI1;
         uint32_t PC, new_PC;
         uint64_t SA;
+
+        EE_ICacheLine icache[128];
 
         bool wait_for_IRQ;
         bool branch_on;
@@ -52,7 +64,7 @@ class EmotionEngine
         static const char* REG(int id);
         static const char* SYSCALL(int id);
         void reset();
-        int run(int cycles_to_run);
+        int run(int cycles);
         void halt();
         void unhalt();
         void print_state();
@@ -71,6 +83,8 @@ class EmotionEngine
         bool check_interlock();
         void clear_interlock();
         bool vu0_wait();
+
+        uint32_t read_instr(uint32_t address);
 
         uint8_t read8(uint32_t address);
         uint16_t read16(uint32_t address);
@@ -96,6 +110,8 @@ class EmotionEngine
         void lqc2(uint32_t addr, int index);
         void swc1(uint32_t addr, int index);
         void sqc2(uint32_t addr, int index);
+
+        void invalidate_icache_indexed(uint32_t addr);
 
         void mfhi(int index);
         void mthi(int index);
@@ -162,6 +178,7 @@ inline void EmotionEngine::set_gpr(int id, T value, int offset)
 inline void EmotionEngine::halt()
 {
     wait_for_IRQ = true;
+    cycles_to_run = 0;
 }
 
 inline void EmotionEngine::unhalt()

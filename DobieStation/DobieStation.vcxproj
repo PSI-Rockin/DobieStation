@@ -207,6 +207,7 @@
     <ClCompile Include="..\src\core\ee\vu_jit.cpp" />
     <ClCompile Include="..\src\core\ee\vu_jit64.cpp" />
     <ClCompile Include="..\src\core\ee\vu_jittrans.cpp" />
+	<ClCompile Include="..\src\core\scheduler.cpp" />
   </ItemGroup>
   <!-- moc files -->
   <ItemGroup>
@@ -285,6 +286,7 @@
     <ClInclude Include="..\src\core\ee\vu_jit.hpp" />
     <ClInclude Include="..\src\core\ee\vu_jit64.hpp" />
     <ClInclude Include="..\src\core\ee\vu_jittrans.hpp" />
+	<ClInclude Include="..\src\core\scheduler.hpp" />
   </ItemGroup>
   <!-- jit stuff -->
   <ItemGroup>

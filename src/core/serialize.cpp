@@ -4,7 +4,7 @@
 
 #define VER_MAJOR 0
 #define VER_MINOR 0
-#define VER_REV 23
+#define VER_REV 24
 
 using namespace std;
 
@@ -192,6 +192,9 @@ void Emulator::save_state(const char *file_name)
 
 void EmotionEngine::load_state(ifstream &state)
 {
+    state.read((char*)&cycle_count, sizeof(cycle_count));
+    state.read((char*)&cycles_to_run, sizeof(cycles_to_run));
+    state.read((char*)&icache, sizeof(icache));
     state.read((char*)&gpr, sizeof(gpr));
     state.read((char*)&LO, sizeof(uint64_t));
     state.read((char*)&HI, sizeof(uint64_t));
@@ -212,6 +215,9 @@ void EmotionEngine::load_state(ifstream &state)
 
 void EmotionEngine::save_state(ofstream &state)
 {
+    state.write((char*)&cycle_count, sizeof(cycle_count));
+    state.write((char*)&cycles_to_run, sizeof(cycles_to_run));
+    state.write((char*)&icache, sizeof(icache));
     state.write((char*)&gpr, sizeof(gpr));
     state.write((char*)&LO, sizeof(uint64_t));
     state.write((char*)&HI, sizeof(uint64_t));
@@ -277,6 +283,7 @@ void IOP::load_state(ifstream &state)
     state.read((char*)&HI, sizeof(HI));
     state.read((char*)&PC, sizeof(PC));
     state.read((char*)&new_PC, sizeof(new_PC));
+    state.read((char*)&icache, sizeof(icache));
 
     state.read((char*)&branch_delay, sizeof(branch_delay));
     state.read((char*)&will_branch, sizeof(branch_delay));
@@ -295,6 +302,7 @@ void IOP::save_state(ofstream &state)
     state.write((char*)&HI, sizeof(HI));
     state.write((char*)&PC, sizeof(PC));
     state.write((char*)&new_PC, sizeof(new_PC));
+    state.write((char*)&icache, sizeof(icache));
 
     state.write((char*)&branch_delay, sizeof(branch_delay));
     state.write((char*)&will_branch, sizeof(branch_delay));
@@ -734,7 +742,6 @@ void CDVD_Drive::load_state(ifstream &state)
     state.read((char*)&N_command_params, sizeof(N_command_params));
     state.read((char*)&N_params, sizeof(N_params));
     state.read((char*)&N_status, sizeof(N_status));
-    state.read((char*)&N_cycles_left, sizeof(N_cycles_left));
 
     state.read((char*)&S_command, sizeof(S_command));
     state.read((char*)&S_command_params, sizeof(S_command_params));
@@ -764,7 +771,6 @@ void CDVD_Drive::save_state(ofstream &state)
     state.write((char*)&N_command_params, sizeof(N_command_params));
     state.write((char*)&N_params, sizeof(N_params));
     state.write((char*)&N_status, sizeof(N_status));
-    state.write((char*)&N_cycles_left, sizeof(N_cycles_left));
 
     state.write((char*)&S_command, sizeof(S_command));
     state.write((char*)&S_command_params, sizeof(S_command_params));

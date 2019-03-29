@@ -584,6 +584,9 @@ void EmotionInterpreter::cop2_special2(VectorUnit &vu0, uint32_t instruction)
         case 0x36:
             cop2_vlqd(vu0, instruction);
             break;
+        case 0x37:
+            cop2_vsqd(vu0, instruction);
+            break;
         case 0x38:
             cop2_vdiv(vu0, instruction);
             break;
@@ -876,6 +879,11 @@ void EmotionInterpreter::cop2_vlqd(VectorUnit &vu0, uint32_t instruction)
     uint32_t dest = (instruction >> 16) & 0x1F;
     uint8_t dest_field = (instruction >> 21) & 0xF;*/
     vu0.lqd(instruction);
+}
+
+void EmotionInterpreter::cop2_vsqd(VectorUnit &vu0, uint32_t instruction)
+{
+    vu0.sqd(instruction);
 }
 
 void EmotionInterpreter::cop2_vdiv(VectorUnit &vu0, uint32_t instruction)

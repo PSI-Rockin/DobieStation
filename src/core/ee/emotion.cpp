@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include "emotion.hpp"
 #include "emotiondisasm.hpp"
 #include "emotioninterpreter.hpp"
@@ -96,10 +97,15 @@ const char* EmotionEngine::SYSCALL(int id)
 void EmotionEngine::reset()
 {
     PC = 0xBFC00000;
+    cycle_count = 0;
+    cycles_to_run = 0;
     branch_on = false;
     can_disassemble = false;
     wait_for_IRQ = false;
     delay_slot = 0;
+
+    //Reset the cache
+    memset(icache, 0, sizeof(icache));
 
     //Clear out $zero
     for (int i = 0; i < 16; i++)
@@ -110,28 +116,36 @@ void EmotionEngine::reset()
         deci2handlers[i].active = false;
 }
 
-int EmotionEngine::run(int cycles_to_run)
+int EmotionEngine::run(int cycles)
 {
-    int cycles = cycles_to_run;
+    cycle_count += cycles;
     if (!wait_for_IRQ)
     {
-        while (cycles_to_run)
+        cycles_to_run += cycles;
+        while (cycles_to_run > 0)
         {
             /*if (PC == 0x1001E0)
                 PC = 0x100204;
             if (PC == 0x10021C)
                 PC = 0x100234;*/
             cycles_to_run--;
-            uint32_t instruction = read32(PC);
+
+            uint32_t instruction = read_instr(PC);
             uint32_t lastPC = PC;
+
             if (can_disassemble)
             {
                 std::string disasm = EmotionDisasm::disasm_instr(instruction, PC);
                 printf("[$%08X] $%08X - %s\n", PC, instruction, disasm.c_str());
                 //print_state();
             }
+
             EmotionInterpreter::interpret(*this, instruction);
             PC += 4;
+
+            //Simulate dual-issue if both instructions are NOPs
+            if (!instruction && !read_instr(PC))
+                PC += 4;
 
             if (branch_on)
             {
@@ -151,16 +165,6 @@ int EmotionEngine::run(int cycles_to_run)
                 }
                 else
                     delay_slot--;
-            }
-            else
-            {
-                if (cp0->int_enabled())
-                {
-                    if (cp0->cause.int0_pending)
-                        int0();
-                    else if (cp0->cause.int1_pending)
-                        int1();
-                }
             }
         }
     }
@@ -246,6 +250,61 @@ uint64_t EmotionEngine::get_HI1()
 uint64_t EmotionEngine::get_SA()
 {
     return SA;
+}
+
+uint32_t EmotionEngine::read_instr(uint32_t address)
+{
+    bool uncached = address & 0x30000000;
+    if (!uncached)
+    {
+        int index = (address >> 6) & 0x7F;
+        uint16_t tag = address >> 13;
+
+        EE_ICacheLine* line = &icache[index];
+        //Check if there's no entry in icache
+        if (!line->valid[0] || line->tag[0] != tag)
+        {
+            if (!line->valid[1] || line->tag[1] != tag)
+            {
+                //Load 4 quadwords. This incurs a 10 * 4 penalty.
+                //printf("[EE] I$ miss at $%08X\n", address);
+                cycles_to_run -= 40;
+
+                //If there's an invalid entry, fill it.
+                //The `LFU` bit for the filled row gets flipped.
+                if (!line->valid[0])
+                {
+                    line->valid[0] = true;
+                    line->lfu[0] ^= true;
+                    line->tag[0] = tag;
+                }
+                else if (!line->valid[1])
+                {
+                    line->valid[1] = true;
+                    line->lfu[1] ^= true;
+                    line->tag[1] = tag;
+                }
+                else
+                {
+                    //The row to fill is the XOR of the LFU bits.
+                    int row_to_fill = line->lfu[0] ^ line->lfu[1];
+                    line->lfu[row_to_fill] ^= true;
+                    line->tag[row_to_fill] = tag;
+                }
+            }
+        }
+    }
+    else
+    {
+        //Simulate reading from RDRAM
+        //The penalty is 10 cycles for all data types, up to a quadword (128 bits).
+        //However, the EE loads two instructions at once. Since we only load a word, we divide the cycles in half.
+        if ((address & 0x1FFFFFFF) < 0x02000000)
+            cycles_to_run -= 5;
+        if (address >= 0x30100000 && address <= 0x31FFFFFF)
+            address -= 0x10000000;
+    }
+    return e->read32(address & 0x1FFFFFFF);
 }
 
 uint8_t EmotionEngine::read8(uint32_t address)
@@ -512,6 +571,13 @@ void EmotionEngine::ctc(int cop_id, int reg, int cop_reg, uint32_t instruction)
     }
 }
 
+void EmotionEngine::invalidate_icache_indexed(uint32_t addr)
+{
+    int index = (addr >> 6) & 0x7F;
+    int way = addr & 0x1;
+    icache[index].valid[way] = false;
+}
+
 void EmotionEngine::mfhi(int index)
 {
     set_gpr<uint64_t>(index, HI);
@@ -775,7 +841,11 @@ void EmotionEngine::set_int0_signal(bool value)
 {
     cp0->cause.int0_pending = value;
     if (value)
+    {
         printf("[EE] Set INT0\n");
+        if (cp0->int_enabled())
+            int0();
+    }
 }
 
 void EmotionEngine::set_int1_signal(bool value)
@@ -927,7 +997,11 @@ void EmotionEngine::qmtc2(int source, int cop_reg)
 void EmotionEngine::cop2_updatevu0()
 {
     if (vu0->is_running())
-        vu0->run(16);
+    {
+        uint64_t current_count = (cycle_count - cycles_to_run) >> 1;
+        if (vu0->get_cycle_count() < current_count)
+            vu0->run(current_count - vu0->get_cycle_count());
+    }
 }
 
 void EmotionEngine::cop2_special(EmotionEngine &cpu, uint32_t instruction)
