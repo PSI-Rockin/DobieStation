@@ -1247,10 +1247,12 @@ void VU_JIT64::add_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     REG_64 bc_reg = alloc_sse_reg(vu, instr.get_source2(), REG_STATE::READ_WRITE);
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
 
-    clamp_vfreg(field, source);
-    clamp_vfreg(field, bc_reg);
 
     uint8_t bc = instr.get_bc();
+
+    clamp_vfreg(field, source);
+    clamp_vfreg(1 << bc, bc_reg);
+
     bc |= (bc << 6) | (bc << 4) | (bc << 2);
 
     REG_64 temp = REG_64::XMM0;
@@ -1298,10 +1300,11 @@ void VU_JIT64::sub_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     REG_64 bc_reg = alloc_sse_reg(vu, instr.get_source2(), REG_STATE::READ_WRITE);
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
 
-    clamp_vfreg(field, source);
-    clamp_vfreg(field, bc_reg);
-
     uint8_t bc = instr.get_bc();
+
+    clamp_vfreg(field, source);
+    clamp_vfreg(1 << bc, bc_reg);
+
     bc |= (bc << 6) | (bc << 4) | (bc << 2);
 
     REG_64 temp = REG_64::XMM0;
@@ -1351,10 +1354,11 @@ void VU_JIT64::mul_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     REG_64 bc_reg = alloc_sse_reg(vu, instr.get_source2(), REG_STATE::READ_WRITE);
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
 
-    clamp_vfreg(field, source);
-    clamp_vfreg(field, bc_reg);
-
     uint8_t bc = instr.get_bc();
+
+    clamp_vfreg(field, source);
+    clamp_vfreg(1 << bc, bc_reg);
+
     bc |= (bc << 6) | (bc << 4) | (bc << 2);
 
     REG_64 temp = REG_64::XMM0;
@@ -1443,11 +1447,12 @@ void VU_JIT64::madd_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
     REG_64 acc = alloc_sse_reg(vu, VU_SpecialReg::ACC, REG_STATE::READ);
 
+    uint8_t bc = instr.get_bc();
+
     clamp_vfreg(field, source);
-    clamp_vfreg(field, bc_reg);
+    clamp_vfreg(1 << bc, bc_reg);
     clamp_vfreg(field, acc);
 
-    uint8_t bc = instr.get_bc();
     bc |= (bc << 6) | (bc << 4) | (bc << 2);
 
     emitter.MOVAPS_REG(bc_reg, temp);
@@ -1473,11 +1478,12 @@ void VU_JIT64::madd_acc_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ);
     REG_64 dest = alloc_sse_reg(vu, VU_SpecialReg::ACC, REG_STATE::READ_WRITE);
 
+    uint8_t bc = instr.get_bc();
+
     clamp_vfreg(field, source);
-    clamp_vfreg(field, bc_reg);
+    clamp_vfreg(1 << bc, bc_reg);
     clamp_vfreg(field, dest);
 
-    uint8_t bc = instr.get_bc();
     bc |= (bc << 6) | (bc << 4) | (bc << 2);
 
     emitter.MOVAPS_REG(bc_reg, temp);
@@ -1541,11 +1547,12 @@ void VU_JIT64::msub_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
     REG_64 acc = alloc_sse_reg(vu, VU_SpecialReg::ACC, REG_STATE::READ);
 
+    uint8_t bc = instr.get_bc();
+
     clamp_vfreg(field, source);
-    clamp_vfreg(field, bc_reg);
+    clamp_vfreg(1 << bc, bc_reg);
     clamp_vfreg(field, acc);
 
-    uint8_t bc = instr.get_bc();
     bc |= (bc << 6) | (bc << 4) | (bc << 2);
 
     emitter.MOVAPS_REG(bc_reg, temp);
@@ -1574,11 +1581,12 @@ void VU_JIT64::msub_acc_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ);
     REG_64 dest = alloc_sse_reg(vu, VU_SpecialReg::ACC, REG_STATE::READ_WRITE);
 
+    uint8_t bc = instr.get_bc();
+
     clamp_vfreg(field, source);
-    clamp_vfreg(field, bc_reg);
+    clamp_vfreg(1 << bc, bc_reg);
     clamp_vfreg(field, dest);
 
-    uint8_t bc = instr.get_bc();
     bc |= (bc << 6) | (bc << 4) | (bc << 2);
 
     emitter.MOVAPS_REG(bc_reg, temp);
