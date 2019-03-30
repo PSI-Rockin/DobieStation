@@ -83,14 +83,18 @@ void SPU::gen_sample()
 
                 if (loop_start && !voices[i].loop_addr_specified)
                     voices[i].loop_addr = voices[i].current_addr;
+
+                voices[i].block_pos = 3;
             }
 
             spu_check_irq(voices[i].current_addr);
             voices[i].block_pos++;
-            voices[i].current_addr++;
+
+            if ((voices[i].block_pos % 4) == 0)
+                voices[i].current_addr++;
 
             //End of block
-            if (voices[i].block_pos == 8)
+            if (voices[i].block_pos == 32)
             {
                 voices[i].block_pos = 0;
                 switch (voices[i].loop_code)

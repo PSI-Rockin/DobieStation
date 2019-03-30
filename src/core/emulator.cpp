@@ -109,9 +109,6 @@ void Emulator::run()
             iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
         }
 
-        iop_timers.run(iop_cycles);
-        iop_dma.run(iop_cycles);
-
         scheduler.process_events(this);
     }
     fesetround(originalRounding);
