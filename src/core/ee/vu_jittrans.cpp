@@ -404,7 +404,7 @@ void VU_JitTranslator::update_pipeline(VectorUnit &vu, int cycles)
 
         stall_pipe[0] = ((uint64_t)(vu.decoder.vf_write[0] & 0x1F)) | ((uint64_t)(vu.decoder.vf_write[1] & 0x1F) << 5);
         stall_pipe[0] |= ((uint64_t)(vu.decoder.vf_write_field[0] & 0xF) << 10) | ((uint64_t)(vu.decoder.vf_write_field[1] & 0xF) << 14);
-        stall_pipe[0] |= (uint64_t)(vu.decoder.vi_write & 0x1F) << 18;
+        stall_pipe[0] |= (uint64_t)(vu.decoder.vi_write & 0xF) << 18;
     }
 }
 
@@ -418,7 +418,6 @@ void VU_JitTranslator::analyze_FMAC_stalls(VectorUnit &vu, uint16_t PC)
         uint8_t write0 = stall_pipe[i] & 0x1F;
         uint8_t write1 = (stall_pipe[i] >> 5) & 0x1F;
         uint8_t viwrite = (stall_pipe[i] >> 18) & 0xF;
-        bool viload = (stall_pipe[i] >> 22) & 0x1;
 
         bool stall_found = false;
         if (write0 != 0 || write1 != 0)
@@ -469,7 +468,7 @@ void VU_JitTranslator::analyze_FMAC_stalls(VectorUnit &vu, uint16_t PC)
             }
         }
         //Integer Load Delays
-        if (viwrite && viload)
+        if (viwrite)
         {
             if (viwrite == vu.decoder.vi_read0 || viwrite == vu.decoder.vi_read1)
             {
@@ -643,6 +642,7 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
             block_end = true;
             //In case of branch on XGKick stall
             instr_info[PC].branch_delay_slot = branch_delay_slot;
+            instr_info[PC].ebit_delay_slot = ebit_delay_slot;
         }
 
         ebit_delay_slot = false;
@@ -673,13 +673,8 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
             int read0 = vu.decoder.vf_read0[1];
             int read1 = vu.decoder.vf_read1[1];
 
-            instr_info[PC].decoder_vi_write = vu.decoder.vi_write;
+            instr_info[PC].decoder_vi_write = vu.decoder.vi_write_from_load;
 
-            //We need to mark the decoder for ILW and ILWR to handle Integer Load Delays
-            if (vu.decoder.vi_write_from_load)
-            {
-                vu.decoder.vi_write |= 0x10;
-            }
             //If an upper op writes to a register a lower op reads from, the lower op executes first
             //Additionally, if an upper op and a lower op write to the same register, the upper op
             //has priority.
@@ -736,8 +731,6 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
         if (upper & (1 << 30))
         {
             ebit_delay_slot = true;
-            //In case of E-Bit on XGKick stall
-            instr_info[PC].ebit_delay_slot = ebit_delay_slot;
         }
 
         if (instr_info[PC].decoder_vi_write != vu.int_backup_id)
