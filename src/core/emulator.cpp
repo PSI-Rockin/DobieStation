@@ -37,16 +37,11 @@ Emulator::~Emulator()
 {
     if (ee_log.is_open())
         ee_log.close();
-    if (RDRAM)
-        delete[] RDRAM;
-    if (IOP_RAM)
-        delete[] IOP_RAM;
-    if (BIOS)
-        delete[] BIOS;
-    if (SPU_RAM)
-        delete[] SPU_RAM;
-    if (ELF_file)
-        delete[] ELF_file;
+	delete[] RDRAM;
+	delete[] IOP_RAM;
+	delete[] BIOS;
+	delete[] SPU_RAM;
+	delete[] ELF_file;
 }
 
 void Emulator::run()
@@ -346,8 +341,7 @@ void Emulator::load_ELF(uint8_t *ELF, uint32_t size)
         return;
     }
     printf("Valid elf\n");
-    if (ELF_file)
-        delete[] ELF_file;
+	delete[] ELF_file;
     ELF_file = new uint8_t[size];
     ELF_size = size;
     memcpy(ELF_file, ELF, size);

@@ -34,14 +34,10 @@ GraphicsSynthesizer::~GraphicsSynthesizer()
         send_message({ GSCommand::die_t,payload });
         gsthread_id.join();
     }
-    if (output_buffer1)
-        delete[] output_buffer1;
-    if (output_buffer2)
-        delete[] output_buffer2;
-    if (message_queue)
-        delete message_queue;
-    if (return_queue)
-        delete return_queue;
+	delete[] output_buffer1;
+	delete[] output_buffer2;
+	delete message_queue;
+	delete return_queue;
 }
 
 void GraphicsSynthesizer::reset()
