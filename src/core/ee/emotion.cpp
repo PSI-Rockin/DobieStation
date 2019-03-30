@@ -124,10 +124,6 @@ int EmotionEngine::run(int cycles)
         cycles_to_run += cycles;
         while (cycles_to_run > 0)
         {
-            /*if (PC == 0x1001E0)
-                PC = 0x100204;
-            if (PC == 0x10021C)
-                PC = 0x100234;*/
             cycles_to_run--;
 
             uint32_t instruction = read_instr(PC);
@@ -159,7 +155,6 @@ int EmotionEngine::run(int cycles)
                         {
                             Errors::die("[EE] Jump to invalid address $%08X from $%08X\n", new_PC, PC - 8);
                         }
-                        //if (new_PC != 0x15C440 && new_PC != 0x109710)
                         PC = new_PC;
                     }
                 }
