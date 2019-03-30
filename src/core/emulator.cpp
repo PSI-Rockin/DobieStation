@@ -330,7 +330,7 @@ void Emulator::set_vu1_mode(VU_MODE mode)
     }
 }
 
-void Emulator::load_BIOS(uint8_t *BIOS_file)
+void Emulator::load_BIOS(const uint8_t *BIOS_file)
 {
     if (!BIOS)
         BIOS = new uint8_t[1024 * 1024 * 4];
@@ -338,7 +338,7 @@ void Emulator::load_BIOS(uint8_t *BIOS_file)
     memcpy(BIOS, BIOS_file, 1024 * 1024 * 4);
 }
 
-void Emulator::load_ELF(uint8_t *ELF, uint32_t size)
+void Emulator::load_ELF(const uint8_t *ELF, uint32_t size)
 {
     if (ELF[0] != 0x7F || ELF[1] != 'E' || ELF[2] != 'L' || ELF[3] != 'F')
     {
