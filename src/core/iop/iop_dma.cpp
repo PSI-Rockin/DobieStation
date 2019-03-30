@@ -10,16 +10,7 @@
 IOP_DMA::IOP_DMA(Emulator* e, CDVD_Drive* cdvd, SubsystemInterface* sif, SIO2* sio2, class SPU* spu, class SPU* spu2) :
     e(e), cdvd(cdvd), sif(sif), sio2(sio2), spu(spu), spu2(spu2)
 {
-    for (int i = 0; i < 16; i++)
-        channels[i].func = nullptr;
-
-    channels[IOP_CDVD].func = &IOP_DMA::process_CDVD;
-    channels[IOP_SIF0].func = &IOP_DMA::process_SIF0;
-    channels[IOP_SIF1].func = &IOP_DMA::process_SIF1;
-    channels[IOP_SPU].func = &IOP_DMA::process_SPU;
-    channels[IOP_SPU2].func = &IOP_DMA::process_SPU2;
-    channels[IOP_SIO2in].func = &IOP_DMA::process_SIO2in;
-    channels[IOP_SIO2out].func = &IOP_DMA::process_SIO2out;
+    apply_dma_functions();
 }
 
 const char* IOP_DMA::CHAN(int index)
@@ -31,8 +22,6 @@ const char* IOP_DMA::CHAN(int index)
 
 void IOP_DMA::reset(uint8_t* RAM)
 {
-    spu_delay = 0;
-    spu2_delay = 0;
     this->RAM = RAM;
     active_channel = nullptr;
     queued_channels.clear();
@@ -563,4 +552,18 @@ void IOP_DMA::find_new_active_channel()
 
     queued_channels.erase(channel_to_erase);
     printf("New active channel: %s\n", CHAN(active_channel->index));
+}
+
+void IOP_DMA::apply_dma_functions()
+{
+    for (int i = 0; i < 16; i++)
+        channels[i].func = nullptr;
+
+    channels[IOP_CDVD].func = &IOP_DMA::process_CDVD;
+    channels[IOP_SIF0].func = &IOP_DMA::process_SIF0;
+    channels[IOP_SIF1].func = &IOP_DMA::process_SIF1;
+    channels[IOP_SPU].func = &IOP_DMA::process_SPU;
+    channels[IOP_SPU2].func = &IOP_DMA::process_SPU2;
+    channels[IOP_SIO2in].func = &IOP_DMA::process_SIO2in;
+    channels[IOP_SIO2out].func = &IOP_DMA::process_SIO2out;
 }

@@ -58,6 +58,9 @@ class Scheduler
 
         void update_cycle_counts();
         void process_events(Emulator* e);
+
+        void load_state(std::ifstream& state);
+        void save_state(std::ofstream& state);
 };
 
 inline int64_t Scheduler::get_ee_cycles()

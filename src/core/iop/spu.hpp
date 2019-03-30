@@ -1,6 +1,7 @@
 #ifndef SPU_HPP
 #define SPU_HPP
 #include <cstdint>
+#include <fstream>
 
 struct Voice
 {
@@ -111,6 +112,9 @@ class SPU
 
         uint16_t read16(uint32_t addr);
         void write16(uint32_t addr, uint16_t value);
+
+        void load_state(std::ifstream& state);
+        void save_state(std::ofstream& state);
 };
 
 inline bool SPU::running_ADMA()

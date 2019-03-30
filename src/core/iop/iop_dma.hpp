@@ -85,8 +85,6 @@ class IOP_DMA
         IOP_DMA_Channel* active_channel;
         std::list<IOP_DMA_Channel*> queued_channels;
 
-        int spu_delay, spu2_delay;
-
         //Merge of DxCR, DxCR2, DxCR3 for easier processing
         DMA_DPCR DPCR;
         DMA_DICR DICR;
@@ -103,6 +101,7 @@ class IOP_DMA
         void active_dma_check(int index);
         void deactivate_dma(int index);
         void find_new_active_channel();
+        void apply_dma_functions();
     public:
         static const char* CHAN(int index);
         IOP_DMA(Emulator* e, CDVD_Drive* cdvd, SubsystemInterface* sif, SIO2* sio2, SPU* spu, SPU* spu2);
