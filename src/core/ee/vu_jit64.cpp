@@ -399,14 +399,6 @@ void VU_JIT64::store_int(VectorUnit &vu, IR::Instruction &instr)
     uint8_t field = convert_field(instr.get_field());
     REG_64 source = alloc_int_reg(vu, instr.get_source(), REG_STATE::READ);
 
-    int field_offset = 0;
-    if (field & 0x2)
-        field_offset = 4;
-    if (field & 0x4)
-        field_offset = 8;
-    if (field & 0x8)
-        field_offset = 12;
-
     if (instr.get_base())
     {
         REG_64 base = alloc_int_reg(vu, instr.get_base(), REG_STATE::READ);
@@ -417,18 +409,28 @@ void VU_JIT64::store_int(VectorUnit &vu, IR::Instruction &instr)
             emitter.ADD16_REG_IMM(instr.get_source2(), REG_64::RAX);
         emitter.AND16_AX(vu.mem_mask);
 
-        emitter.load_addr((uint64_t)&vu.data_mem.m[field_offset], REG_64::R15);
+        emitter.load_addr((uint64_t)&vu.data_mem.m, REG_64::R15);
         emitter.ADD64_REG(REG_64::RAX, REG_64::R15);
     }
     else
     {
-        uint16_t offset = (instr.get_source2() + field_offset) & 0x3FFF;
+        uint16_t offset = instr.get_source2() & vu.mem_mask;
         emitter.load_addr((uint64_t)&vu.data_mem.m[offset], REG_64::R15);
     }
 
-    //Zero-extend the upper 16 bits
+    REG_64 temp = REG_64::XMM0;
+    REG_64 temp2 = REG_64::XMM1;
+    
+    //move all four vector positions from memory
+    emitter.MOVAPS_FROM_MEM(REG_64::R15, temp);
+    //Zero-extend the upper 16 bits of the vi source
     emitter.MOVZX64_REG(source, REG_64::RAX);
-    emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
+    //Move to XMM and populate all 4 vectors
+    emitter.MOVD_TO_XMM(REG_64::RAX, temp2);
+    emitter.SHUFPS(0, temp2, temp2);
+    //Combine it with the original memory and put it back
+    emitter.BLENDPS(field, temp2, temp);
+    emitter.MOVAPS_TO_MEM(temp, REG_64::R15);
 }
 
 void VU_JIT64::load_quad(VectorUnit &vu, IR::Instruction &instr)
