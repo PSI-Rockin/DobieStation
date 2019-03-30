@@ -33,14 +33,14 @@ void EmuThread::set_vu1_mode(VU_MODE mode)
     load_mutex.unlock();
 }
 
-void EmuThread::load_BIOS(uint8_t *BIOS)
+void EmuThread::load_BIOS(const uint8_t *BIOS)
 {
     load_mutex.lock();
     e.load_BIOS(BIOS);
     load_mutex.unlock();
 }
 
-void EmuThread::load_ELF(uint8_t *ELF, uint64_t ELF_size)
+void EmuThread::load_ELF(const uint8_t *ELF, uint64_t ELF_size)
 {
     load_mutex.lock();
     e.reset();

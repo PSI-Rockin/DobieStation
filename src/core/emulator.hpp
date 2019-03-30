@@ -113,8 +113,8 @@ class Emulator
         void fast_boot();
         void set_skip_BIOS_hack(SKIP_HACK type);
         void set_vu1_mode(VU_MODE mode);
-        void load_BIOS(uint8_t* BIOS);
-        void load_ELF(uint8_t* ELF, uint32_t size);
+        void load_BIOS(const uint8_t* BIOS);
+        void load_ELF(const uint8_t* ELF, uint32_t size);
         bool load_CDVD(const char* name, CDVD_CONTAINER type);
         void execute_ELF();
         uint32_t* get_framebuffer();

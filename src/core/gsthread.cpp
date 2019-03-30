@@ -2739,7 +2739,7 @@ void GraphicsSynthesizerThread::clut_CSM2_lookup(uint8_t entry, RGBAQ_REG &tex_c
     tex_color.a = get_16bit_alpha(color);
 }
 
-void GraphicsSynthesizerThread::reload_clut(GSContext& context)
+void GraphicsSynthesizerThread::reload_clut(const GSContext& context)
 {
     int eight_bit = false;
     switch (context.tex0.format)
