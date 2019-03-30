@@ -1,6 +1,7 @@
 #ifndef EMULATOR_HPP
 #define EMULATOR_HPP
 #include <fstream>
+#include <functional>
 
 #include "ee/dmac.hpp"
 #include "ee/emotion.hpp"
