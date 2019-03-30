@@ -228,7 +228,8 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
                 Errors::print_warning("[VU_JIT] Warning! Branch in E-Bit Delay Slot!\n");
             }
         }
-        else if (block_end)
+        //Do this separately to the ebit handling in case of ebit in delay slots
+        if (block_end && !ebit)
         {
             //Save end PC for block, helps us remember where the next block jumped from
             IR::Instruction savepc;
