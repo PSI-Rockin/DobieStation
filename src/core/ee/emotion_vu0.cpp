@@ -543,6 +543,9 @@ void EmotionInterpreter::cop2_special2(VectorUnit &vu0, uint32_t instruction)
         case 0x23:
             cop2_vmaddai(vu0, instruction);
             break;
+        case 0x25:
+            cop2_vmsubaq(vu0, instruction);
+            break;
         case 0x27:
             cop2_vmsubai(vu0, instruction);
             break;
@@ -785,6 +788,11 @@ void EmotionInterpreter::cop2_vmaddai(VectorUnit &vu0, uint32_t instruction)
     /*uint8_t source = (instruction >> 11) & 0x1F;
     uint8_t field = (instruction >> 21) & 0xF;*/
     vu0.maddai(instruction);
+}
+
+void EmotionInterpreter::cop2_vmsubaq(VectorUnit &vu0, uint32_t instruction)
+{
+    vu0.msubaq(instruction);
 }
 
 void EmotionInterpreter::cop2_vmsubai(VectorUnit &vu0, uint32_t instruction)

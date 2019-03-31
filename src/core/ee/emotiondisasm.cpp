@@ -1665,6 +1665,8 @@ string disasm_cop2_special2(uint32_t instruction)
             return disasm_vmaddaq(instruction);
         case 0x23:
             return disasm_vmaddai(instruction);
+        case 0x25:
+            return disasm_cop2_acc_q("vmsuba", instruction);
         case 0x27:
             return disasm_vmsubai(instruction);
         case 0x28:

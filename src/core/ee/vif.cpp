@@ -453,7 +453,8 @@ void VectorInterface::handle_UNPACK_masking(uint128_t& quad)
 
 void VectorInterface::handle_UNPACK_mode(uint128_t& quad)
 {
-    if (MODE)
+    //Do not apply addition decompression when the format is V4-5
+    if (MODE && unpack.cmd != 0xF)
     {
         uint8_t tempmask;
 

@@ -209,6 +209,7 @@ namespace EmotionInterpreter
     void cop2_vaddaq(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmaddaq(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmaddai(VectorUnit& vu0, uint32_t instruction);
+    void cop2_vmsubaq(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmsubai(VectorUnit& vu0, uint32_t instruction);
     void cop2_vadda(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmadda(VectorUnit& vu0, uint32_t instruction);
