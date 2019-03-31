@@ -75,6 +75,12 @@ void vu_stop_execution(VectorUnit& vu)
     vu.stop();
 }
 
+void vu_tbit_stop_execution(VectorUnit& vu)
+{
+    //printf("[VU_JIT64] Stopped execution by T-Bit\n");
+    vu.stop_by_tbit();
+}
+
 void vu_set_int(VectorUnit& vu, int dest, uint16_t value)
 {
     vu.set_int(dest, value);
@@ -2272,6 +2278,21 @@ void VU_JIT64::stop(VectorUnit &vu, IR::Instruction &instr)
     end_of_program = true;
 }
 
+void VU_JIT64::stop_by_tbit(VectorUnit &vu, IR::Instruction &instr)
+{
+    prepare_abi(vu, (uint64_t)&vu);
+    call_abi_func((uint64_t)vu_tbit_stop_execution);
+
+    emitter.load_addr((uint64_t)&vu.PC, REG_64::RAX);
+    emitter.MOV16_IMM_MEM(instr.get_jump_dest(), REG_64::RAX);
+
+    //We're at the end of a program, so the next call doesn't need to know the previous state
+    emitter.load_addr((uint64_t)&prev_pc, REG_64::RAX);
+    emitter.MOV32_IMM_MEM(0xFFFFFFFF, REG_64::RAX);
+
+    end_of_program = true;
+}
+
 void VU_JIT64::save_pc(VectorUnit &vu, IR::Instruction &instr)
 {
     emitter.load_addr((uint64_t)&prev_pc, REG_64::RAX);
@@ -2816,6 +2837,9 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
             break;
         case IR::Opcode::Stop:
             stop(vu, instr);
+            break;
+        case IR::Opcode::StopTBit:
+            stop_by_tbit(vu, instr);
             break;
         case IR::Opcode::SavePC:
             save_pc(vu, instr);

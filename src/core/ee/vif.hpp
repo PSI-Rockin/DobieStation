@@ -68,6 +68,7 @@ class VectorInterface
         bool wait_for_PATH3;
         bool flush_stall;
         uint32_t wait_cmd_value;
+        uint16_t mem_mask;
 
         uint32_t buffer[4];
         int buffer_size;

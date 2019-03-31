@@ -20,7 +20,7 @@ Emulator::Emulator() :
     dmac(&cpu, this, &gif, &ipu, &sif, &vif0, &vif1), gif(&gs), gs(&intc),
     iop(this), iop_dma(this, &cdvd, &sif, &sio2, &spu, &spu2), iop_timers(this), intc(this, &cpu), ipu(&intc),
     timers(&intc), sio2(this, &pad, &memcard), spu(1, this, &iop_dma), spu2(2, this, &iop_dma),
-    vif0(nullptr, &vu0, &intc, 0), vif1(&gif, &vu1, &intc, 1), vu0(0, this), vu1(1, this), sif(&iop_dma)
+    vif0(nullptr, &vu0, &intc, 0), vif1(&gif, &vu1, &intc, 1), vu0(0, this, &intc), vu1(1, this, &intc), sif(&iop_dma)
 {
     BIOS = nullptr;
     RDRAM = nullptr;
@@ -466,6 +466,8 @@ uint16_t Emulator::read16(uint32_t address)
         return *(uint16_t*)&IOP_RAM[address & 0x1FFFFF];
     switch (address)
     {
+        case 0x10003C30:
+            return vif1.get_mark() & 0xFFFF;
         case 0x1A000006:
             return 1;
     }
@@ -724,6 +726,27 @@ void Emulator::write32(uint32_t address, uint32_t value)
         printf("[EE] Unrecognized write32 to IOP addr $%08X of $%08X\n", address, value);
         return;
     }
+    if (address >= 0x11000000 && address < 0x11004000)
+    {
+        vu0.write_instr<uint32_t>(address, value);
+        return;
+    }
+    if (address >= 0x11004000 && address < 0x11008000)
+    {
+        vu0.write_data<uint32_t>(address, value);
+        return;
+    }
+    if (address >= 0x11008000 && address < 0x1100C000)
+    {
+        vu1.write_instr<uint32_t>(address, value);
+        return;
+    }
+    if (address >= 0x1100C000 && address < 0x11010000)
+    {
+        vu1.write_data<uint32_t>(address, value);
+        return;
+    }
+
     switch (address)
     {
         case 0x10002000:
@@ -734,6 +757,9 @@ void Emulator::write32(uint32_t address, uint32_t value)
             return;
         case 0x10003010:
             gif.write_MODE(value);
+            return;
+        case 0x10003820:
+            vif0.set_err(value);
             return;
         case 0x10003C10:
             vif1.set_fbrst(value);

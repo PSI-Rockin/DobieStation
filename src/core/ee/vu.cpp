@@ -132,7 +132,7 @@ void DecodedRegs::reset()
     vi_write_from_load = 0;
 }
 
-VectorUnit::VectorUnit(int id, Emulator* e) : id(id), e(e), gif(nullptr)
+VectorUnit::VectorUnit(int id, Emulator* e, INTC* intc) : id(id), e(e), intc(intc), gif(nullptr)
 {
     gpr[0].f[0] = 0.0;
     gpr[0].f[1] = 0.0;
@@ -161,6 +161,7 @@ void VectorUnit::reset()
     cycle_count = 1; //Set to 1 to prevent spurious events from occurring during execution
     run_event = 0;
     running = false;
+    tbit_stop = false;
     vumem_is_dirty = true; //assume we don't know the contents on reset
     finish_on = false;
     branch_on = false;
@@ -247,7 +248,7 @@ void VectorUnit::flush_pipes()
 void VectorUnit::run(int cycles)
 {
     int cycles_to_run = cycles;
-    while (running && cycles_to_run)
+    while (running && cycles_to_run > 0)
     {
         cycle_count++;
         update_mac_pipeline();
@@ -310,6 +311,37 @@ void VectorUnit::run(int cycles)
             else
                 ebit_delay_slot--;
         }
+        if (upper_instr & (1 << 27))
+        {
+            if (read_fbrst() & (1 << (3 + (get_id() * 8))))
+            {
+                if (!get_id())
+                {
+                    intc->assert_IRQ((int)Interrupt::VU0);
+                }
+                else
+                {
+                    intc->assert_IRQ((int)Interrupt::VU1);
+                }
+                tbit_stop = true;
+                running = false;
+                finish_on = false;
+                flush_pipes();
+                //Errors::die("VU%d Using T-Bit\n", get_id());
+            }
+        }
+        if (get_id() == 0)
+        {
+            if (is_interlocked())
+            {
+                //Errors::die("VU%d Using M-Bit\n", vu.get_id());
+                if (check_interlock())
+                {
+                    break;
+                }
+            }
+            clear_interlock();
+        }
         cycles_to_run--;
     }
 
@@ -333,32 +365,35 @@ void VectorUnit::run(int cycles)
 
 void VectorUnit::run_jit(int cycles)
 {
-    cycle_count += cycles;
-    if ((!running || XGKICK_stall) && transferring_GIF)
+    if (cycles > 0)
     {
-        gif->request_PATH(1, true);
-        while (cycles > 0 && gif->path_active(1))
+        cycle_count += cycles;
+        if ((!running || XGKICK_stall) && transferring_GIF)
         {
-            cycles--;
-            handle_XGKICK();
-        }
-    }
-    while (running && !XGKICK_stall && run_event < cycle_count)
-    {
-        run_event += VU_JIT::run(this);
-
-        /*if (PC > 0x1200 && PC < 0x1500)
-        {
-            for (int i = 0; i < 32; i++)
+            gif->request_PATH(1, true);
+            while (cycles > 0 && gif->path_active(1))
             {
-                printf("vf%d: (%f, %f, %f, %f)\n", i, gpr[i].f[3], gpr[i].f[2], gpr[i].f[1], gpr[i].f[0]);
-                printf("vf%d: ($%08X, $%08X, $%08X, $%08X)\n", i, gpr[i].u[3], gpr[i].u[2], gpr[i].u[1], gpr[i].u[0]);
+                cycles--;
+                handle_XGKICK();
             }
-            //printf("mac: $%04X $%04X $%04X $%04X\n", MAC_pipeline[0], MAC_pipeline[1], MAC_pipeline[2], *MAC_flags & 0xFFFF);
-            //for (int i = 0; i < 16; i++)
-                //printf("vi%d: $%04X\n", i, int_gpr[i].u);
-            //printf("clip: $%08X ($%04X)\n", clip_flags, 0 - ((clip_flags & 0x3FFFF) != 0));
-        }*/
+        }
+        while (running && !XGKICK_stall && run_event < cycle_count)
+        {
+            run_event += VU_JIT::run(this);
+
+            /*if (PC > 0x1200 && PC < 0x1500)
+            {
+                for (int i = 0; i < 32; i++)
+                {
+                    printf("vf%d: (%f, %f, %f, %f)\n", i, gpr[i].f[3], gpr[i].f[2], gpr[i].f[1], gpr[i].f[0]);
+                    printf("vf%d: ($%08X, $%08X, $%08X, $%08X)\n", i, gpr[i].u[3], gpr[i].u[2], gpr[i].u[1], gpr[i].u[0]);
+                }
+                //printf("mac: $%04X $%04X $%04X $%04X\n", MAC_pipeline[0], MAC_pipeline[1], MAC_pipeline[2], *MAC_flags & 0xFFFF);
+                //for (int i = 0; i < 16; i++)
+                    //printf("vi%d: $%04X\n", i, int_gpr[i].u);
+                //printf("clip: $%08X ($%04X)\n", clip_flags, 0 - ((clip_flags & 0x3FFFF) != 0));
+            }*/
+        }
     }
 }
 
@@ -601,7 +636,8 @@ uint32_t VectorUnit::crc_microprogram()
 
 void VectorUnit::start_program(uint32_t addr)
 {
-    printf("[VU%d] CallMS Starting execution at $%08X! Cur PC %x\n", get_id(), addr, PC);
+    uint32_t new_addr = addr & mem_mask;
+    printf("[VU%d] CallMS Starting execution at $%08X! Cur PC %x\n", get_id(), new_addr, PC);
 
     disasm_micromem();
 
@@ -615,7 +651,8 @@ void VectorUnit::start_program(uint32_t addr)
     if (running == false)
     {
         running = true;
-        PC = addr;
+        tbit_stop = false;
+        PC = new_addr;
     }
     run_event = cycle_count;
 }
@@ -630,6 +667,22 @@ void VectorUnit::stop()
 {
     running = false;
     flush_pipes();
+}
+
+void VectorUnit::stop_by_tbit()
+{
+    tbit_stop = true;
+    running = false;
+    flush_pipes();
+
+    if (!get_id())
+    {
+        intc->assert_IRQ((int)Interrupt::VU0);
+    }
+    else
+    {
+        intc->assert_IRQ((int)Interrupt::VU1);
+    }
 }
 
 float VectorUnit::update_mac_flags(float value, int index)
@@ -838,6 +891,8 @@ uint32_t VectorUnit::cfc(int index)
             return I.u;
         case 22:
             return Q.u;
+        case 26:
+            return (PC / 8);
         case 27:
             return CMSAR0;
         case 28:
