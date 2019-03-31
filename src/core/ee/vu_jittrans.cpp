@@ -544,6 +544,8 @@ void VU_JitTranslator::handle_vu_stalls(VectorUnit &vu, uint16_t PC, uint32_t lo
                 {
                     instr_info[PC].use_backup_vi = true;
                     vu.int_backup_id_rec = vu.int_backup_id;
+
+                    printf("[VU_JIT] Using backed up VI%d at PC %x\n", vu.int_backup_id_rec, PC);
                 }
             }
             else

@@ -364,9 +364,9 @@ void VectorInterface::MSCAL(uint32_t addr)
         //Double buffering
         TOP = TOPS;
         if (DBF)
-            TOPS = BASE;
+            TOPS = BASE & 0x3FF;
         else
-            TOPS = BASE + OFST;
+            TOPS = (BASE + OFST) & 0x3FF;
         DBF = !DBF;
     }
 }
