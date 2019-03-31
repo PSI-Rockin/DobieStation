@@ -466,6 +466,8 @@ uint16_t Emulator::read16(uint32_t address)
         return *(uint16_t*)&IOP_RAM[address & 0x1FFFFF];
     switch (address)
     {
+        case 0x10003C30:
+            return vif1.get_mark() & 0xFFFF;
         case 0x1A000006:
             return 1;
     }
@@ -755,6 +757,9 @@ void Emulator::write32(uint32_t address, uint32_t value)
             return;
         case 0x10003010:
             gif.write_MODE(value);
+            return;
+        case 0x10003820:
+            vif0.set_err(value);
             return;
         case 0x10003C10:
             vif1.set_fbrst(value);
