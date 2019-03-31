@@ -117,7 +117,7 @@ GraphicsSynthesizerThread::GraphicsSynthesizerThread()
 
 GraphicsSynthesizerThread::~GraphicsSynthesizerThread()
 {
-	delete[] local_mem;
+    delete[] local_mem;
 }
 
 void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return_fifo)
