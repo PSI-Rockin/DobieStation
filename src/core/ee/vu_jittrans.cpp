@@ -549,7 +549,7 @@ void VU_JitTranslator::handle_vu_stalls(VectorUnit &vu, uint16_t PC, uint32_t lo
             else
             {
                 //Reg used in branch was modified on the previous instruction
-                if (instr_info[PC - 8].decoder_vi_write != 0 && !instr_info[PC - 8].decoder_vi_write_from_load)
+                if (instr_info[PC - 8].decoder_vi_write != 0)
                 {
                     if (instr_info[PC - 8].decoder_vi_write == vu.decoder.vi_read0)
                     {
@@ -566,19 +566,18 @@ void VU_JitTranslator::handle_vu_stalls(VectorUnit &vu, uint16_t PC, uint32_t lo
                     if (instr_info[PC].use_backup_vi)
                     {
                         int backup_pc = ((PC - 32) < vu.get_PC()) ? vu.get_PC() : (PC - 32);
-                        /*if (backup_pc == (PC - 32))
-                        {*/
-                            int stalls = 0;
-                            for (int i = PC; i >= backup_pc; i -= 8)
+
+                        int stalls = 0;
+                        for (int i = PC - 8; i >= backup_pc; i -= 8)
+                        {
+                            //Stalls cause the chain to break
+                            if (instr_info[i].stall_amount)
                             {
-                                //Stalls cause the chain to break
-                                if (instr_info[i].stall_amount)
-                                {
-                                    backup_pc += i - backup_pc;
-                                    break;
-                                }
+                                backup_pc += i - backup_pc;
+                                break;
                             }
-                       // }
+                        }
+                        printf("[VU_JIT] Backing up VI%d at %x for PC %x\n", vu.int_backup_id_rec, backup_pc, PC);
                         instr_info[backup_pc].backup_vi = vu.int_backup_id_rec;
                     }
                 }
@@ -688,7 +687,6 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
             int read1 = vu.decoder.vf_read1[1];
 
             instr_info[PC].decoder_vi_write = vu.decoder.vi_write;
-            instr_info[PC].decoder_vi_write_from_load = vu.decoder.vi_write_from_load;
 
             //If an upper op writes to a register a lower op reads from, the lower op executes first
             //Additionally, if an upper op and a lower op write to the same register, the upper op
@@ -767,7 +765,7 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
 
     if (!instr_info[end_PC - 8].ebit_delay_slot)
     {
-        if (instr_info[end_PC].decoder_vi_write && !instr_info[end_PC].decoder_vi_write_from_load)
+        if (instr_info[end_PC].decoder_vi_write && !vu.decoder.vi_write_from_load)
         {
             instr_info[end_PC].backup_vi = instr_info[end_PC].decoder_vi_write;
         }
