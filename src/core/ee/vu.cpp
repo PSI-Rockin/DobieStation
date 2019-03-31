@@ -330,6 +330,18 @@ void VectorUnit::run(int cycles)
                 //Errors::die("VU%d Using T-Bit\n", get_id());
             }
         }
+        if (get_id() == 0)
+        {
+            if (is_interlocked())
+            {
+                //Errors::die("VU%d Using M-Bit\n", vu.get_id());
+                if (check_interlock())
+                {
+                    break;
+                }
+            }
+            clear_interlock();
+        }
         cycles_to_run--;
     }
 
@@ -621,7 +633,8 @@ uint32_t VectorUnit::crc_microprogram()
 
 void VectorUnit::start_program(uint32_t addr)
 {
-    printf("[VU%d] CallMS Starting execution at $%08X! Cur PC %x\n", get_id(), addr, PC);
+    uint32_t new_addr = addr & mem_mask;
+    printf("[VU%d] CallMS Starting execution at $%08X! Cur PC %x\n", get_id(), new_addr, PC);
 
     disasm_micromem();
 
@@ -636,7 +649,7 @@ void VectorUnit::start_program(uint32_t addr)
     {
         running = true;
         tbit_stop = false;
-        PC = addr;
+        PC = new_addr;
     }
     run_event = cycle_count;
 }
@@ -875,6 +888,8 @@ uint32_t VectorUnit::cfc(int index)
             return I.u;
         case 22:
             return Q.u;
+        case 26:
+            return PC;
         case 27:
             return CMSAR0;
         case 28:
