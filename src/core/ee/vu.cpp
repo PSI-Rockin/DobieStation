@@ -889,7 +889,7 @@ uint32_t VectorUnit::cfc(int index)
         case 22:
             return Q.u;
         case 26:
-            return PC;
+            return (PC / 8);
         case 27:
             return CMSAR0;
         case 28:
