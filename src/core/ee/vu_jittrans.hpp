@@ -51,6 +51,7 @@ struct VU_InstrInfo
     uint8_t decoder_vi_read0;
     uint8_t decoder_vi_read1;
     uint8_t decoder_vi_write;
+    uint8_t decoder_vi_write_from_load;
     bool use_backup_vi;
 };
 
