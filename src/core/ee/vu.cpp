@@ -132,7 +132,7 @@ void DecodedRegs::reset()
     vi_write_from_load = 0;
 }
 
-VectorUnit::VectorUnit(int id, Emulator* e) : id(id), e(e), gif(nullptr)
+VectorUnit::VectorUnit(int id, Emulator* e, INTC* intc) : id(id), e(e), intc(intc), gif(nullptr)
 {
     gpr[0].f[0] = 0.0;
     gpr[0].f[1] = 0.0;
@@ -161,6 +161,7 @@ void VectorUnit::reset()
     cycle_count = 1; //Set to 1 to prevent spurious events from occurring during execution
     run_event = 0;
     running = false;
+    tbit_stop = false;
     vumem_is_dirty = true; //assume we don't know the contents on reset
     finish_on = false;
     branch_on = false;
@@ -309,6 +310,25 @@ void VectorUnit::run(int cycles)
             }
             else
                 ebit_delay_slot--;
+        }
+        if (upper_instr & (1 << 27))
+        {
+            if (read_fbrst() & (1 << (3 + (get_id() * 8))))
+            {
+                if (!get_id())
+                {
+                    intc->assert_IRQ((int)Interrupt::VU0);
+                }
+                else
+                {
+                    intc->assert_IRQ((int)Interrupt::VU1);
+                }
+                tbit_stop = true;
+                running = false;
+                finish_on = false;
+                flush_pipes();
+                //Errors::die("VU%d Using T-Bit\n", get_id());
+            }
         }
         cycles_to_run--;
     }
@@ -615,6 +635,7 @@ void VectorUnit::start_program(uint32_t addr)
     if (running == false)
     {
         running = true;
+        tbit_stop = false;
         PC = addr;
     }
     run_event = cycle_count;
@@ -630,6 +651,22 @@ void VectorUnit::stop()
 {
     running = false;
     flush_pipes();
+}
+
+void VectorUnit::stop_by_tbit()
+{
+    tbit_stop = true;
+    running = false;
+    flush_pipes();
+
+    if (!get_id())
+    {
+        intc->assert_IRQ((int)Interrupt::VU0);
+    }
+    else
+    {
+        intc->assert_IRQ((int)Interrupt::VU1);
+    }
 }
 
 float VectorUnit::update_mac_flags(float value, int index)

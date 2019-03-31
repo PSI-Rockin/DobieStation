@@ -534,6 +534,8 @@ void EmotionEngine::cfc(int cop_id, int reg, int cop_reg, uint32_t instruction)
             {
                 bark = vu0->is_running();
                 bark |= vu1->is_running() << 8;
+                bark |= vu0->stopped_by_tbit() << 2;
+                bark |= vu1->stopped_by_tbit() << 10;
             }
             else
                 bark = (int32_t)vu0->cfc(cop_reg);
@@ -561,7 +563,10 @@ void EmotionEngine::ctc(int cop_id, int reg, int cop_reg, uint32_t instruction)
                 }
                 clear_interlock();
             }
-            vu0->ctc(cop_reg, bark);
+            if (cop_reg == 31)
+                vu1->start_program(bark);
+            else
+                vu0->ctc(cop_reg, bark);
             break;
     }
 }

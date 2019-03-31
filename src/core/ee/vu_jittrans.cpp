@@ -55,7 +55,7 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
             branch_detected = false;
         }
 
-        if (trans_branch_delay_slot || trans_ebit_delay_slot)
+        if (trans_branch_delay_slot || trans_ebit_delay_slot || instr_info[cur_PC].tbit_end)
         {
             block_end = true;
             if (trans_ebit_delay_slot)
@@ -196,12 +196,23 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
                 Errors::print_warning("[VU_JIT] Warning! E-Bit On Branch!\n");
             trans_ebit_delay_slot = true;
         }
-        else if (ebit)
+        
+        if (ebit || instr_info[cur_PC].tbit_end)
         {
-            IR::Instruction instr(IR::Opcode::Stop);
-            instr.set_jump_dest(cur_PC + 8);
-            block.add_instr(instr);
-            
+            if (instr_info[cur_PC].tbit_end)
+            {
+                IR::Instruction instr(IR::Opcode::StopTBit);
+                instr.set_jump_dest(cur_PC + 8);
+                block.add_instr(instr);
+                Errors::print_warning("[VU_JIT] Stopped by T-Bit\n");
+            }
+            else
+            {
+                IR::Instruction instr(IR::Opcode::Stop);
+                instr.set_jump_dest(cur_PC + 8);
+                block.add_instr(instr);
+            }
+
             //Clear the pipeline state, stalls won't happen in a new microprogram
             IR::Instruction pipeline;
             pipeline.op = IR::Opcode::SavePipelineState;
@@ -228,8 +239,7 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
                 Errors::print_warning("[VU_JIT] Warning! Branch in E-Bit Delay Slot!\n");
             }
         }
-        //Do this separately to the ebit handling in case of ebit in delay slots
-        if (block_end && !ebit)
+        else if(block_end)
         {
             //Save end PC for block, helps us remember where the next block jumped from
             IR::Instruction savepc;
@@ -404,7 +414,7 @@ void VU_JitTranslator::update_pipeline(VectorUnit &vu, int cycles)
 
         stall_pipe[0] = ((uint64_t)(vu.decoder.vf_write[0] & 0x1F)) | ((uint64_t)(vu.decoder.vf_write[1] & 0x1F) << 5);
         stall_pipe[0] |= ((uint64_t)(vu.decoder.vf_write_field[0] & 0xF) << 10) | ((uint64_t)(vu.decoder.vf_write_field[1] & 0xF) << 14);
-        stall_pipe[0] |= (uint64_t)(vu.decoder.vi_write & 0xF) << 18;
+        stall_pipe[0] |= (uint64_t)(vu.decoder.vi_write_from_load & 0xF) << 18;
     }
 }
 
@@ -633,6 +643,7 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
         instr_info[PC].ebit_delay_slot = false;
         instr_info[PC].q_pipeline_instr = false;
         instr_info[PC].p_pipeline_instr = false;
+        instr_info[PC].tbit_end = false;
 
         uint32_t upper = *(uint32_t*)&instr_mem[PC + 4];
         uint32_t lower = *(uint32_t*)&instr_mem[PC];
@@ -731,6 +742,15 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
         if (upper & (1 << 30))
         {
             ebit_delay_slot = true;
+        }
+
+        if (upper & (1 << 27))
+        {
+            if (vu.read_fbrst() & (1 << (3 + (vu.get_id() * 8))))
+            {
+                block_end = true;
+                instr_info[PC].tbit_end = true;
+            }
         }
 
         if (instr_info[PC].decoder_vi_write != vu.int_backup_id)

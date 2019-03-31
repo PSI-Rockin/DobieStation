@@ -27,6 +27,7 @@ struct VU_InstrInfo
 {
     bool branch_delay_slot;
     bool ebit_delay_slot;
+    bool tbit_end;
     bool swap_ops;
     bool update_q_pipeline;
     bool update_p_pipeline;
