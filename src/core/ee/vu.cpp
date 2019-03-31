@@ -248,7 +248,7 @@ void VectorUnit::flush_pipes()
 void VectorUnit::run(int cycles)
 {
     int cycles_to_run = cycles;
-    while (running && cycles_to_run)
+    while (running && cycles_to_run > 0)
     {
         cycle_count++;
         update_mac_pipeline();
@@ -365,32 +365,35 @@ void VectorUnit::run(int cycles)
 
 void VectorUnit::run_jit(int cycles)
 {
-    cycle_count += cycles;
-    if ((!running || XGKICK_stall) && transferring_GIF)
+    if (cycles > 0)
     {
-        gif->request_PATH(1, true);
-        while (cycles > 0 && gif->path_active(1))
+        cycle_count += cycles;
+        if ((!running || XGKICK_stall) && transferring_GIF)
         {
-            cycles--;
-            handle_XGKICK();
-        }
-    }
-    while (running && !XGKICK_stall && run_event < cycle_count)
-    {
-        run_event += VU_JIT::run(this);
-
-        /*if (PC > 0x1200 && PC < 0x1500)
-        {
-            for (int i = 0; i < 32; i++)
+            gif->request_PATH(1, true);
+            while (cycles > 0 && gif->path_active(1))
             {
-                printf("vf%d: (%f, %f, %f, %f)\n", i, gpr[i].f[3], gpr[i].f[2], gpr[i].f[1], gpr[i].f[0]);
-                printf("vf%d: ($%08X, $%08X, $%08X, $%08X)\n", i, gpr[i].u[3], gpr[i].u[2], gpr[i].u[1], gpr[i].u[0]);
+                cycles--;
+                handle_XGKICK();
             }
-            //printf("mac: $%04X $%04X $%04X $%04X\n", MAC_pipeline[0], MAC_pipeline[1], MAC_pipeline[2], *MAC_flags & 0xFFFF);
-            //for (int i = 0; i < 16; i++)
-                //printf("vi%d: $%04X\n", i, int_gpr[i].u);
-            //printf("clip: $%08X ($%04X)\n", clip_flags, 0 - ((clip_flags & 0x3FFFF) != 0));
-        }*/
+        }
+        while (running && !XGKICK_stall && run_event < cycle_count)
+        {
+            run_event += VU_JIT::run(this);
+
+            /*if (PC > 0x1200 && PC < 0x1500)
+            {
+                for (int i = 0; i < 32; i++)
+                {
+                    printf("vf%d: (%f, %f, %f, %f)\n", i, gpr[i].f[3], gpr[i].f[2], gpr[i].f[1], gpr[i].f[0]);
+                    printf("vf%d: ($%08X, $%08X, $%08X, $%08X)\n", i, gpr[i].u[3], gpr[i].u[2], gpr[i].u[1], gpr[i].u[0]);
+                }
+                //printf("mac: $%04X $%04X $%04X $%04X\n", MAC_pipeline[0], MAC_pipeline[1], MAC_pipeline[2], *MAC_flags & 0xFFFF);
+                //for (int i = 0; i < 16; i++)
+                    //printf("vi%d: $%04X\n", i, int_gpr[i].u);
+                //printf("clip: $%08X ($%04X)\n", clip_flags, 0 - ((clip_flags & 0x3FFFF) != 0));
+            }*/
+        }
     }
 }
 

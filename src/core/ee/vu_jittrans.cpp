@@ -607,7 +607,7 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
         vu.decoder.vf_write[1] = (vu.pipeline_state[1] >> 38) & 0x1F;
         vu.decoder.vf_write_field[0] = (vu.pipeline_state[1] >> 43) & 0xF;
         vu.decoder.vf_write_field[1] = (vu.pipeline_state[1] >> 47) & 0xF;
-        vu.decoder.vi_write = (vu.pipeline_state[1] >> 51) & 0x1F;
+        vu.decoder.vi_write_from_load = (vu.pipeline_state[1] >> 51) & 0xF;
 
         q_pipe_delay = (vu.pipeline_state[1] >> 23) & 0xF;
         p_pipe_delay = (vu.pipeline_state[1] >> 27) & 0x3F;
@@ -684,7 +684,7 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
             int read0 = vu.decoder.vf_read0[1];
             int read1 = vu.decoder.vf_read1[1];
 
-            instr_info[PC].decoder_vi_write = vu.decoder.vi_write_from_load;
+            instr_info[PC].decoder_vi_write = vu.decoder.vi_write;
 
             //If an upper op writes to a register a lower op reads from, the lower op executes first
             //Additionally, if an upper op and a lower op write to the same register, the upper op
@@ -782,7 +782,7 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
     instr_info[end_PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vf_write[1] & 0x1F) << 38UL;
     instr_info[end_PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vf_write_field[0] & 0xF) << 43UL;
     instr_info[end_PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vf_write_field[1] & 0xF) << 47UL;
-    instr_info[end_PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vi_write & 0x1F) << 51UL;
+    instr_info[end_PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vi_write_from_load & 0xF) << 51UL;
 
     instr_info[end_PC].branch_delay_slot = branch_delay_slot;
     instr_info[end_PC].ebit_delay_slot = ebit_delay_slot;
