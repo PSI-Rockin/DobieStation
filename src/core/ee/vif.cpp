@@ -6,7 +6,7 @@
 #include "../gif.hpp"
 #include "../errors.hpp"
 
-#define printf(fmt, ...)(0)
+//#define printf(fmt, ...)(0)
 
 VectorInterface::VectorInterface(GraphicsInterface* gif, VectorUnit* vu, INTC* intc, int id) : gif(gif), vu(vu), intc(intc), id(id)
 {
@@ -34,6 +34,12 @@ void VectorInterface::reset()
     vif_stop = false;
     mark_detected = false;
     flush_stall = false;
+
+    if (id)
+        mem_mask = 0x3FF;
+    else
+        mem_mask = 0xFF;
+
     if(vu->get_id() == 1)
         VU_JIT::reset();
 }
@@ -357,16 +363,16 @@ void VectorInterface::MSCAL(uint32_t addr)
 {
     vu->start_program(addr);
 
-    ITOP = ITOPS;
+    ITOP = ITOPS & mem_mask;
 
     if (vu->get_id())
     {
         //Double buffering
-        TOP = TOPS;
+        TOP = TOPS & mem_mask;
         if (DBF)
-            TOPS = BASE & 0x3FF;
+            TOPS = BASE;
         else
-            TOPS = (BASE + OFST) & 0x3FF;
+            TOPS = (BASE + OFST);
         DBF = !DBF;
     }
 }
