@@ -6,7 +6,7 @@
 #include "../gif.hpp"
 #include "../errors.hpp"
 
-//#define printf(fmt, ...)(0)
+#define printf(fmt, ...)(0)
 
 VectorInterface::VectorInterface(GraphicsInterface* gif, VectorUnit* vu, INTC* intc, int id) : gif(gif), vu(vu), intc(intc), id(id)
 {
