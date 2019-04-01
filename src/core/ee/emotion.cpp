@@ -204,8 +204,6 @@ void EmotionEngine::clear_interlock()
 
 bool EmotionEngine::vu0_wait()
 {
-    //Must interlock as if there is an Mbit it will stall
-    e->interlock_cop2_check(true);
     return vu0->is_running();
 }
 

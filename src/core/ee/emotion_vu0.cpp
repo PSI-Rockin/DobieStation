@@ -446,7 +446,6 @@ void EmotionInterpreter::cop2_vcallms(VectorUnit &vu0, uint32_t instruction, Emo
         cpu.set_PC(cpu.get_PC() - 4);
         return;
     }
-    cpu.clear_interlock();
 
     vu0.start_program(imm);
 }
@@ -458,7 +457,6 @@ void EmotionInterpreter::cop2_vcallmsr(VectorUnit &vu0, uint32_t instruction, Em
         cpu.set_PC(cpu.get_PC() - 4);
         return;
     }
-    cpu.clear_interlock();
 
     vu0.start_program(vu0.read_CMSAR0() * 8);
 }
