@@ -372,6 +372,12 @@ void EmuWindow::create_menu()
 
         window_menu->addAction(scale_action);
     }
+
+    auto screenshot_action = new QAction(tr("&Take Screenshot"), this);
+    connect(screenshot_action, &QAction::triggered, render_widget, &RenderWidget::screenshot);
+
+    window_menu->addSeparator();
+    window_menu->addAction(screenshot_action);
 }
 
 bool EmuWindow::load_bios()
@@ -462,6 +468,9 @@ void EmuWindow::keyPressEvent(QKeyEvent *event)
             break;
         case Qt::Key_F1:
             emu_thread.gsdump_single_frame();
+            break;
+        case Qt::Key_F8:
+            render_widget->screenshot();
             break;
     }
 }
