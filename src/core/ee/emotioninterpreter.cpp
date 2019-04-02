@@ -983,6 +983,7 @@ void EmotionInterpreter::cop2_qmfc2(EmotionEngine &cpu, uint32_t instruction)
             cpu.set_PC(cpu.get_PC() - 4);
             return;
         }
+        cpu.clear_interlock();
     }
     cpu.qmfc2(dest, cop_reg);
 }
