@@ -278,7 +278,7 @@ void VectorUnit::flush_pipes()
     Q.u = new_Q_instance.u;
     P.u = new_P_instance.u;
 }
-
+int mbitloop = 0;
 void VectorUnit::run(int cycles)
 {
     int cycles_to_run;
@@ -297,6 +297,21 @@ void VectorUnit::run(int cycles)
 
     while (running && cycles_to_run > 0)
     {
+        if (get_id() == 0)
+        {
+            if (is_interlocked())
+            {
+                //Errors::die("VU%d Using M-Bit\n", vu.get_id());
+                //Loop around a couple of times if the interlock is not reached, give COP2 time to catch up
+                if (check_interlock() && mbitloop++ < 2)
+                {
+                    break;
+                }
+            }
+            mbitloop = 0;
+            clear_interlock();
+        }
+
         cycle_count++;
         update_mac_pipeline();
         update_DIV_EFU_pipes();
@@ -380,19 +395,7 @@ void VectorUnit::run(int cycles)
                 //Errors::die("VU%d Using T-Bit\n", get_id());
             }
         }
-        if (get_id() == 0)
-        {
-            if (is_interlocked())
-            {
-                //Errors::die("VU%d Using M-Bit\n", vu.get_id());
-                if (check_interlock())
-                {
-                    cycle_count = eecpu->get_cop2_last_cycle() >> 1;
-                    break;
-                }
-            }
-            clear_interlock();
-        }
+        
         cycles_to_run--;
     }
 
