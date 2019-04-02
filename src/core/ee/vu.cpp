@@ -284,6 +284,7 @@ void VectorUnit::run(int cycles)
     int cycles_to_run;
     if (running && !id)
     {
+        //Round it up
         cycles_to_run = (eecpu->get_cycle_count() - eecpu->get_cop2_last_cycle()+1) >> 1;
     
         cycle_count = eecpu->get_cop2_last_cycle() >> 1;//(eecpu->get_cycle_count() >> 1);
@@ -353,9 +354,9 @@ void VectorUnit::run(int cycles)
                 running = false;
                 finish_on = false;
                 flush_pipes();
-
-                if (!id)
-                    eecpu->set_cop2_last_cycle(eecpu->get_cycle_count());
+                cycle_count = eecpu->get_cop2_last_cycle() >> 1;
+                //if (!id)
+                   // eecpu->set_cop2_last_cycle(eecpu->get_cycle_count());
             }
             else
                 ebit_delay_slot--;
@@ -386,7 +387,6 @@ void VectorUnit::run(int cycles)
                 //Errors::die("VU%d Using M-Bit\n", vu.get_id());
                 if (check_interlock())
                 {
-                    eecpu->set_cop2_last_cycle(eecpu->get_cycle_count());
                     cycle_count = eecpu->get_cop2_last_cycle() >> 1;
                     break;
                 }
@@ -993,8 +993,6 @@ void VectorUnit::advance_r()
 
 uint32_t VectorUnit::cfc(int index)
 {
-    if (!running)
-        cop2_updatepipes(1);
     if (index < 16)
         return int_gpr[index].u;
     switch (index)
@@ -1025,8 +1023,6 @@ uint32_t VectorUnit::cfc(int index)
 
 void VectorUnit::ctc(int index, uint32_t value)
 {
-    if(!running)
-        cop2_updatepipes(1);
     if (index < 16)
     {
         printf("[COP2] Set vi%d to $%04X\n", index, value);

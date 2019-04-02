@@ -204,8 +204,6 @@ void EmotionEngine::clear_interlock()
 
 bool EmotionEngine::vu0_wait()
 {
-    //Must interlock as if there is an Mbit it will stall
-    e->interlock_cop2_check(true);
     return vu0->is_running();
 }
 
@@ -664,8 +662,7 @@ void EmotionEngine::lwc1(uint32_t addr, int index)
 
 void EmotionEngine::lqc2(uint32_t addr, int index)
 {
-    if(!vu0->is_running())
-        vu0->cop2_updatepipes(1);
+    cop2_updatevu0();
     //printf("LQC2 $%08X: ", addr);
     for (int i = 0; i < 4; i++)
     {
@@ -683,8 +680,7 @@ void EmotionEngine::swc1(uint32_t addr, int index)
 
 void EmotionEngine::sqc2(uint32_t addr, int index)
 {
-    if(!vu0->is_running())
-        vu0->cop2_updatepipes(1);
+    cop2_updatevu0();
     //printf("SQC2 $%08X: ", addr);
     for (int i = 0; i < 4; i++)
     {
@@ -983,8 +979,6 @@ void EmotionEngine::fpu_cvt_s_w(int dest, int source)
 
 void EmotionEngine::qmfc2(int dest, int cop_reg)
 {
-    if (!vu0->is_running())
-        vu0->cop2_updatepipes(1);
     for (int i = 0; i < 4; i++)
     {
         set_gpr<uint32_t>(dest, vu0->get_gpr_u(cop_reg, i), i);
@@ -993,8 +987,6 @@ void EmotionEngine::qmfc2(int dest, int cop_reg)
 
 void EmotionEngine::qmtc2(int source, int cop_reg)
 {
-    if (!vu0->is_running())
-        vu0->cop2_updatepipes(1);
     for (int i = 0; i < 4; i++)
     {
         uint32_t bark = get_gpr<uint32_t>(source, i);
@@ -1007,8 +999,12 @@ void EmotionEngine::cop2_updatevu0()
     if (vu0->is_running())
     {
         uint64_t current_count = (cycle_count - cycles_to_run) - cop2_last_cycle;
-        vu0->run((current_count >> 1));
+        vu0->run((current_count >> 1)+1);
         cop2_last_cycle = (cycle_count - cycles_to_run);
+    }
+    else
+    {
+        vu0->cop2_updatepipes(1);
     }
 }
 
