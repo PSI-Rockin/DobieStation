@@ -1006,9 +1006,9 @@ void EmotionEngine::cop2_updatevu0()
 {
     if (vu0->is_running())
     {
-        uint64_t current_count = (cycle_count - cycles_to_run) >> 1;
-        if (vu0->get_cycle_count() < current_count)
-            vu0->run(current_count - vu0->get_cycle_count());
+        uint64_t current_count = (cycle_count - cycles_to_run) - cop2_last_cycle;
+        vu0->run((current_count >> 1));
+        cop2_last_cycle = (cycle_count - cycles_to_run);
     }
 }
 

@@ -160,8 +160,8 @@ void VectorUnit::reset()
     clip_flags = 0;
     PC = 0;
     //cycle_count = 1; //Set to 1 to prevent spurious events from occurring during execution
-    cycle_count = (eecpu->get_cycle_count() >> 1);
     eecpu->set_cop2_last_cycle(eecpu->get_cycle_count());
+    cycle_count = eecpu->get_cop2_last_cycle() >> 1;
     run_event = 0;
     running = false;
     tbit_stop = false;
@@ -281,13 +281,19 @@ void VectorUnit::flush_pipes()
 
 void VectorUnit::run(int cycles)
 {
+    int cycles_to_run;
     if (running && !id)
     {
-        cycle_count = (eecpu->get_cycle_count() >> 1);
+        cycles_to_run = (eecpu->get_cycle_count() - eecpu->get_cop2_last_cycle()+1) >> 1;
+    
+        cycle_count = eecpu->get_cop2_last_cycle() >> 1;//(eecpu->get_cycle_count() >> 1);
         eecpu->set_cop2_last_cycle(eecpu->get_cycle_count());
     }
+    else
+    {
+        cycles_to_run = cycles;
+    }
 
-    int cycles_to_run = cycles;
     while (running && cycles_to_run > 0)
     {
         cycle_count++;
@@ -347,6 +353,9 @@ void VectorUnit::run(int cycles)
                 running = false;
                 finish_on = false;
                 flush_pipes();
+
+                if (!id)
+                    eecpu->set_cop2_last_cycle(eecpu->get_cycle_count());
             }
             else
                 ebit_delay_slot--;
@@ -378,7 +387,7 @@ void VectorUnit::run(int cycles)
                 if (check_interlock())
                 {
                     eecpu->set_cop2_last_cycle(eecpu->get_cycle_count());
-                    cycle_count = eecpu->get_cycle_count() >> 1;
+                    cycle_count = eecpu->get_cop2_last_cycle() >> 1;
                     break;
                 }
             }
@@ -759,7 +768,7 @@ void VectorUnit::start_program(uint32_t addr)
         if (!id)
         {
             eecpu->set_cop2_last_cycle(eecpu->get_cycle_count());
-            cycle_count = eecpu->get_cycle_count() >> 1;
+            cycle_count = eecpu->get_cop2_last_cycle() >> 1;
         }
         flush_pipes();
     }
