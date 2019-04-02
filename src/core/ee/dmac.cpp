@@ -5,21 +5,6 @@
 #include "../emulator.hpp"
 #include "../errors.hpp"
 
-enum DMAC_CHANNELS
-{
-    VIF0,
-    VIF1,
-    GIF,
-    IPU_FROM,
-    IPU_TO,
-    SIF0,
-    SIF1,
-    SIF2,
-    SPR_FROM,
-    SPR_TO,
-    MFIFO_EMPTY = 14
-};
-
 const char* DMAC::CHAN(int index)
 {
     const char* channels[] = {"VIF0", "VIF1", "GIF", "IPU_FROM", "IPU_TO",
@@ -31,7 +16,15 @@ DMAC::DMAC(EmotionEngine* cpu, Emulator* e, GraphicsInterface* gif, ImageProcess
            VectorInterface* vif0, VectorInterface* vif1) :
     RDRAM(nullptr), scratchpad(nullptr), cpu(cpu), e(e), gif(gif), ipu(ipu), sif(sif), vif0(vif0), vif1(vif1)
 {
-
+    channels[VIF0].func = &DMAC::process_VIF0;
+    channels[VIF1].func = &DMAC::process_VIF1;
+    channels[GIF].func = &DMAC::process_GIF;
+    channels[IPU_FROM].func = &DMAC::process_IPU_FROM;
+    channels[IPU_TO].func = &DMAC::process_IPU_TO;
+    channels[EE_SIF0].func = &DMAC::process_SIF0;
+    channels[EE_SIF1].func = &DMAC::process_SIF1;
+    channels[SPR_FROM].func = &DMAC::process_SPR_FROM;
+    channels[SPR_TO].func = &DMAC::process_SPR_TO;
 }
 
 void DMAC::reset(uint8_t* RDRAM, uint8_t* scratchpad)
@@ -43,6 +36,9 @@ void DMAC::reset(uint8_t* RDRAM, uint8_t* scratchpad)
     mfifo_empty_triggered = false;
     PCR = 0;
     STADR = 0;
+
+    active_channel = nullptr;
+    queued_channels.clear();
 
     for (int i = 0; i < 15; i++)
     {
@@ -83,43 +79,13 @@ void DMAC::store128(uint32_t addr, uint128_t data)
 
 void DMAC::run(int cycles)
 {
-    if (!control.master_enable || (master_disable & (1 << 16)))
-        return;
-    for (int i = 0; i < 10; i++)
+    while (cycles > 0)
     {
-        if (channels[i].started)
-        {
-            switch (i)
-            {
-                case VIF0:
-                    process_VIF0(cycles);
-                    break;
-                case VIF1:
-                    process_VIF1(cycles);
-                    break;
-                case GIF:
-                    process_GIF(cycles);
-                    break;
-                case IPU_FROM:
-                    process_IPU_FROM(cycles);
-                    break;
-                case IPU_TO:
-                    process_IPU_TO(cycles);
-                    break;
-                case SIF0:
-                    process_SIF0(cycles);
-                    break;
-                case SIF1:
-                    process_SIF1(cycles);
-                    break;
-                case SPR_FROM:
-                    process_SPR_FROM(cycles);
-                    break;
-                case SPR_TO:
-                    process_SPR_TO(cycles);
-                    break;
-            }
-        }
+        cycles--;
+        if (!active_channel)
+            break;
+
+        (this->*active_channel->func)(0);
     }
 }
 
@@ -389,25 +355,25 @@ void DMAC::process_SIF0(int cycles)
     while (cycles)
     {
         cycles--;
-        if (channels[SIF0].quadword_count)
+        if (channels[EE_SIF0].quadword_count)
         {
             if (sif->get_SIF0_size() >= 4)
             {
                 for (int i = 0; i < 4; i++)
                 {
                     uint32_t word = sif->read_SIF0();
-                    e->write32(channels[SIF0].address + (i * 4), word);
+                    e->write32(channels[EE_SIF0].address + (i * 4), word);
                 }
-                advance_dest_dma(SIF0);
+                advance_dest_dma(EE_SIF0);
             }
             else
                 return;
         }
         else
         {
-            if (channels[SIF0].tag_end)
+            if (channels[EE_SIF0].tag_end)
             {
-                transfer_end(SIF0);
+                transfer_end(EE_SIF0);
                 return;
             }
             else if (sif->get_SIF0_size() >= 2)
@@ -416,18 +382,18 @@ void DMAC::process_SIF0(int cycles)
                 DMAtag |= (uint64_t)sif->read_SIF0() << 32;
                 printf("[DMAC] SIF0 tag: $%08lX_%08lX\n", DMAtag >> 32, DMAtag & 0xFFFFFFFF);
 
-                channels[SIF0].quadword_count = DMAtag & 0xFFFF;
-                channels[SIF0].address = DMAtag >> 32;
+                channels[EE_SIF0].quadword_count = DMAtag & 0xFFFF;
+                channels[EE_SIF0].address = DMAtag >> 32;
 
-                channels[SIF0].tag_id = (DMAtag >> 28) & 0x7;
+                channels[EE_SIF0].tag_id = (DMAtag >> 28) & 0x7;
 
                 bool IRQ = (DMAtag & (1UL << 31));
-                bool TIE = channels[SIF0].control & (1 << 7);
-                if (channels[SIF0].tag_id == 7 || (IRQ && TIE))
-                    channels[SIF0].tag_end = true;
+                bool TIE = channels[EE_SIF0].control & (1 << 7);
+                if (channels[EE_SIF0].tag_id == 7 || (IRQ && TIE))
+                    channels[EE_SIF0].tag_end = true;
 
-                channels[SIF0].control &= 0xFFFF;
-                channels[SIF0].control |= DMAtag & 0xFFFF0000;
+                channels[EE_SIF0].control &= 0xFFFF;
+                channels[EE_SIF0].control |= DMAtag & 0xFFFF0000;
             }
         }
     }
@@ -435,34 +401,35 @@ void DMAC::process_SIF0(int cycles)
 
 void DMAC::process_SIF1(int cycles)
 {
+
     while (cycles)
     {
         cycles--;
-        if (channels[SIF1].quadword_count)
+        if (channels[EE_SIF1].quadword_count)
         {
-            if (control.stall_dest_channel == 3 && channels[SIF1].can_stall_drain)
+            if (control.stall_dest_channel == 3 && channels[EE_SIF1].can_stall_drain)
             {
-                if (channels[SIF1].address + (8 * 16) > STADR)
+                if (channels[EE_SIF1].address + (8 * 16) > STADR)
                     return;
             }
             if (sif->get_SIF1_size() <= SubsystemInterface::MAX_FIFO_SIZE - 4)
             {
-                sif->write_SIF1(fetch128(channels[SIF1].address));
+                sif->write_SIF1(fetch128(channels[EE_SIF1].address));
 
-                advance_source_dma(SIF1);
+                advance_source_dma(EE_SIF1);
             }
             else
                 return;
         }
         else
         {
-            if (channels[SIF1].tag_end)
+            if (channels[EE_SIF1].tag_end)
             {
-                transfer_end(SIF1);
+                transfer_end(EE_SIF1);
                 return;
             }
             else
-                handle_source_chain(SIF1);
+                handle_source_chain(EE_SIF1);
         }
     }
 }
@@ -831,25 +798,25 @@ uint32_t DMAC::read32(uint32_t address)
             reg = channels[IPU_TO].tag_address;
             break;
         case 0x1000C000:
-            reg = channels[SIF0].control;
+            reg = channels[EE_SIF0].control;
             break;
         case 0x1000C010:
-            reg = channels[SIF0].address;
+            reg = channels[EE_SIF0].address;
             break;
         case 0x1000C020:
-            reg = channels[SIF0].quadword_count;
+            reg = channels[EE_SIF0].quadword_count;
             break;
         case 0x1000C400:
-            reg = channels[SIF1].control;
+            reg = channels[EE_SIF1].control;
             break;
         case 0x1000C410:
-            reg = channels[SIF1].address;
+            reg = channels[EE_SIF1].address;
             break;
         case 0x1000C420:
-            reg = channels[SIF1].quadword_count;
+            reg = channels[EE_SIF1].quadword_count;
             break;
         case 0x1000C430:
-            reg = channels[SIF1].tag_address;
+            reg = channels[EE_SIF1].tag_address;
             break;
         case 0x1000D000:
             reg = channels[SPR_FROM].control;
@@ -1125,55 +1092,55 @@ void DMAC::write32(uint32_t address, uint32_t value)
             break;
         case 0x1000C000:
             printf("[DMAC] SIF0 CTRL: $%08X\n", value);
-            if (!(channels[SIF0].control & 0x100))
+            if (!(channels[EE_SIF0].control & 0x100))
             {
-                channels[SIF0].control = value;
+                channels[EE_SIF0].control = value;
                 if (value & 0x100)
-                    start_DMA(SIF0);
+                    start_DMA(EE_SIF0);
                 else
-                    channels[SIF0].started = false;
+                    channels[EE_SIF0].started = false;
             }
             else
             {
-                channels[SIF0].control &= (value & 0x100) | 0xFFFFFEFF;
-                channels[SIF0].started = (channels[SIF0].control & 0x100);
+                channels[EE_SIF0].control &= (value & 0x100) | 0xFFFFFEFF;
+                channels[EE_SIF0].started = (channels[EE_SIF0].control & 0x100);
             }
             break;
         case 0x1000C010:
             printf("[DMAC] SIF0 M_ADR: $%08X\n", value);
-            channels[SIF0].address = value & ~0xF;
+            channels[EE_SIF0].address = value & ~0xF;
             break;
         case 0x1000C020:
             printf("[DMAC] SIF0 QWC: $%08X\n", value);
-            channels[SIF0].quadword_count = value & 0xFFFF;
+            channels[EE_SIF0].quadword_count = value & 0xFFFF;
             break;
         case 0x1000C400:
             printf("[DMAC] SIF1 CTRL: $%08X\n", value);
-            if (!(channels[SIF1].control & 0x100))
+            if (!(channels[EE_SIF1].control & 0x100))
             {
-                channels[SIF1].control = value;
+                channels[EE_SIF1].control = value;
                 if (value & 0x100)
-                    start_DMA(SIF1);
+                    start_DMA(EE_SIF1);
                 else
-                    channels[SIF1].started = false;
+                    channels[EE_SIF1].started = false;
             }
             else
             {
-                channels[SIF1].control &= (value & 0x100) | 0xFFFFFEFF;
-                channels[SIF1].started = (channels[SIF1].control & 0x100);
+                channels[EE_SIF1].control &= (value & 0x100) | 0xFFFFFEFF;
+                channels[EE_SIF1].started = (channels[EE_SIF1].control & 0x100);
             }
             break;
         case 0x1000C410:
             printf("[DMAC] SIF1 M_ADR: $%08X\n", value);
-            channels[SIF1].address = value & ~0xF;
+            channels[EE_SIF1].address = value & ~0xF;
             break;
         case 0x1000C420:
             printf("[DMAC] SIF1 QWC: $%08X\n", value);
-            channels[SIF1].quadword_count = value & 0xFFFF;
+            channels[EE_SIF1].quadword_count = value & 0xFFFF;
             break;
         case 0x1000C430:
             printf("[DMAC] SIF1 T_ADR: $%08X\n", value);
-            channels[SIF1].tag_address = value & ~0xF;
+            channels[EE_SIF1].tag_address = value & ~0xF;
             break;
         case 0x1000D000:
             printf("[DMAC] SPR_FROM CTRL: $%08X\n", value);
@@ -1283,4 +1250,14 @@ void DMAC::write32(uint32_t address, uint32_t value)
             printf("[DMAC] Unrecognized write32 of $%08X to $%08X\n", value, address);
             break;
     }
+}
+
+void DMAC::set_DMA_request(int index)
+{
+    channels[index].dma_req = true;
+}
+
+void DMAC::clear_DMA_request(int index)
+{
+    channels[index].dma_req = false;
 }

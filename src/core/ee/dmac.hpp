@@ -2,8 +2,26 @@
 #define DMAC_HPP
 #include <cstdint>
 #include <fstream>
+#include <list>
 
 #include "../int128.hpp"
+
+enum DMAC_CHANNELS
+{
+    VIF0,
+    VIF1,
+    GIF,
+    IPU_FROM,
+    IPU_TO,
+    EE_SIF0,
+    EE_SIF1,
+    EE_SIF2,
+    SPR_FROM,
+    SPR_TO,
+    MFIFO_EMPTY = 14
+};
+
+class DMAC;
 
 struct DMA_Channel
 {
@@ -19,8 +37,12 @@ struct DMA_Channel
     uint8_t interleaved_qwc;
     uint8_t tag_id;
 
+    typedef void(DMAC::*dma_copy_func)(int);
+    dma_copy_func func;
+
     bool started;
     bool can_stall_drain;
+    bool dma_req;
 };
 
 //Regs
@@ -64,6 +86,9 @@ class DMAC
         SubsystemInterface* sif;
         VectorInterface* vif0, *vif1;
         DMA_Channel channels[15];
+
+        DMA_Channel* active_channel;
+        std::list<DMA_Channel*> queued_channels;
 
         D_CTRL control;
         D_STAT interrupt_stat;
@@ -110,6 +135,9 @@ class DMAC
         void write8(uint32_t address, uint8_t value);
         void write16(uint32_t address, uint16_t value);
         void write32(uint32_t address, uint32_t value);
+
+        void set_DMA_request(int index);
+        void clear_DMA_request(int index);
 
         void load_state(std::ifstream& state);
         void save_state(std::ofstream& state);
