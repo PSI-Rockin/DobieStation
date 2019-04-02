@@ -114,7 +114,7 @@ PathTab::PathTab(QWidget* parent)
     edit_layout->addLayout(button_layout);
 
     QPushButton* browse_button = new QPushButton(tr("Browse"));
-    connect(browse_button, &QAbstractButton::clicked, this, [=]() {
+    connect(browse_button, &QAbstractButton::clicked, [=]() {
         QString path = QFileDialog::getOpenFileName(
             this, tr("Open Bios"), Settings::instance().last_used_directory,
             tr("Bios File (*.bin)")
@@ -126,22 +126,43 @@ PathTab::PathTab(QWidget* parent)
     BiosReader bios_reader(Settings::instance().bios_path);
     bios_info = new QLabel(bios_reader.to_string());
 
-    QGridLayout* bios_layout = new QGridLayout;
-    bios_layout->addWidget(bios_info, 0, 0);
-    bios_layout->addWidget(browse_button, 0, 3);
+    QPushButton* screenshot_button = new QPushButton(tr("Browse"));
+    connect(screenshot_button, &QAbstractButton::clicked, [=]() {
+        QString directory = QFileDialog::getExistingDirectory(
+            this, tr("Choose Screenshot Directory"),
+            Settings::instance().last_used_directory
+        );
 
-    bios_layout->setColumnStretch(1, 1);
-    bios_layout->setAlignment(Qt::AlignTop);
+        Settings::instance().set_screenshot_directory(directory);
+    });
+
+    auto screenshot_label =
+        new QLabel(Settings::instance().screenshot_directory);
+
+    connect(&Settings::instance(), &Settings::screenshot_directory_changed, [=](QString directory) {
+        screenshot_label->setText(directory);
+    });
+
+    QGridLayout* other_layout = new QGridLayout;
+    other_layout->addWidget(new QLabel(tr("Bios:"), 0, 0));
+    other_layout->addWidget(bios_info, 0, 2);
+    other_layout->addWidget(browse_button, 0, 3);
+    other_layout->addWidget(new QLabel("Screenshots:"), 1, 0);
+    other_layout->addWidget(screenshot_label, 1, 2);
+    other_layout->addWidget(screenshot_button, 1, 3);
+
+    other_layout->setColumnStretch(1, 1);
+    other_layout->setAlignment(Qt::AlignTop);
 
     QGroupBox* path_groupbox = new QGroupBox(tr("Rom Directories"));
     path_groupbox->setLayout(edit_layout);
 
-    QGroupBox* bios_groupbox = new QGroupBox(tr("Bios"));
-    bios_groupbox->setLayout(bios_layout);
+    QGroupBox* other_groupbox = new QGroupBox(tr("Other"));
+    other_groupbox->setLayout(other_layout);
 
     QVBoxLayout* layout = new QVBoxLayout;
     layout->addWidget(path_groupbox);
-    layout->addWidget(bios_groupbox);
+    layout->addWidget(other_groupbox);
 
     setLayout(layout);
 }

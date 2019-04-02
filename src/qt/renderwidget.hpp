@@ -22,5 +22,6 @@ class RenderWidget : public QWidget
     public slots:
         void draw_frame(uint32_t* buffer, int inner_w, int inner_h, int final_w, int final_h);
         void toggle_aspect_ratio();
+        void screenshot();
 };
 #endif

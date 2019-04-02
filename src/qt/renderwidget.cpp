@@ -1,6 +1,10 @@
 #include <QPainter>
+#include <QImageWriter>
+#include <QDateTime>
+#include <QDebug>
 
 #include "renderwidget.hpp"
+#include "settings.hpp"
 
 RenderWidget::RenderWidget(QWidget* parent)
     : QWidget(parent)
@@ -55,4 +59,29 @@ void RenderWidget::toggle_aspect_ratio()
 bool RenderWidget::get_respect_aspect_ratio() const
 {
     return respect_aspect_ratio;
+}
+
+void RenderWidget::screenshot()
+{
+    QString file_name(
+        QDateTime::currentDateTime()
+            .toString("yyyyMMddHHmmsszzz")
+            .append(".png")
+    );
+
+    QString directory(Settings::instance().screenshot_directory);
+
+    QString output_file(
+        directory.append(QDir::separator()).append(file_name)
+    );
+
+    QImageWriter writer(output_file, "png");
+
+    if (!writer.canWrite())
+    {
+        qDebug() << "Could not take screenshot!";
+        return;
+    }
+
+    writer.write(final_image);
 }
