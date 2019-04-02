@@ -5,6 +5,7 @@
 #include <vector>
 #include <fstream>
 #include <queue>
+#include <algorithm>
 
 Memcard::Memcard()
 {
@@ -34,10 +35,7 @@ bool Memcard::new_memcard_file(std::string file_name)
 	}
 
 	// Write 0xff to entire card
-	for (int i = 0; i < oem_memcard_bytes; i++) {
-		file.put(0xff);
-	}
-
+	std::fill_n(std::ostream_iterator<char>(file), oem_memcard_bytes, 0xff);
 	file.close();
 
 	return true;
