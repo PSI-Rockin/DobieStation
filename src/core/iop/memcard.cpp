@@ -200,28 +200,28 @@ void Memcard::op_start(std::queue<uint8_t>& FIFO, uint8_t value)
 
 void Memcard::op_page(std::queue<uint8_t>& FIFO, uint8_t value)
 {
-	uint8_t xor = 0;
+	uint8_t xor_sum = 0;
 
 	switch (value)
 	{		// Value == ...
 	case 2: // First byte of target address
 		page_index = value;
-		xor = value;
+		xor_sum = value;
 		break;
 	case 3: // Second
 		page_index = value << 8;
-		xor ^= value;
+		xor_sum ^= value;
 		break;
 	case 4: // Third
 		page_index = value << 16;
-		xor ^= value;
+		xor_sum ^= value;
 		break;
 	case 5: // Fourth
 		page_index = value << 24;
-		xor ^= value;
+		xor_sum ^= value;
 		break;
 	case 6: // XOR of bytes 1-4
-		good_page = value == xor;
+		good_page = value == xor_sum;
 		break;
 	// Nothing to do for 7?
 	case 8:
