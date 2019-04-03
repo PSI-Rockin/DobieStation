@@ -20,7 +20,7 @@ Emulator::Emulator() :
     dmac(&cpu, this, &gif, &ipu, &sif, &vif0, &vif1), gif(&gs), gs(&intc),
     iop(this), iop_dma(this, &cdvd, &sif, &sio2, &spu, &spu2), iop_timers(this), intc(this, &cpu), ipu(&intc),
     timers(&intc), sio2(this, &pad, &memcard), spu(1, this, &iop_dma), spu2(2, this, &iop_dma),
-    vif0(nullptr, &vu0, &intc, 0), vif1(&gif, &vu1, &intc, 1), vu0(0, this, &intc), vu1(1, this, &intc), sif(&iop_dma)
+    vif0(nullptr, &vu0, &intc, 0), vif1(&gif, &vu1, &intc, 1), vu0(0, this, &intc, &cpu), vu1(1, this, &intc, &cpu), sif(&iop_dma)
 {
     BIOS = nullptr;
     RDRAM = nullptr;
@@ -528,6 +528,8 @@ uint32_t Emulator::read32(uint32_t address)
             return vif1.get_mode();
         case 0x10003C80:
             return vif1.get_code();
+        case 0x10003CE0:
+            return vif1.get_top();
         case 0x10003D00:
         case 0x10003D10:
         case 0x10003D20:

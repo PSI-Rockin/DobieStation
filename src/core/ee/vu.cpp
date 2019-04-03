@@ -4,6 +4,7 @@
 #include <cstring>
 #include <fstream>
 #include <iomanip>
+#include <algorithm>
 #include "vu.hpp"
 #include "vu_interpreter.hpp"
 #include "vu_jit.hpp"
@@ -132,7 +133,7 @@ void DecodedRegs::reset()
     vi_write_from_load = 0;
 }
 
-VectorUnit::VectorUnit(int id, Emulator* e, INTC* intc) : id(id), e(e), intc(intc), gif(nullptr)
+VectorUnit::VectorUnit(int id, Emulator* e, INTC* intc, EmotionEngine* cpu) : id(id), e(e), intc(intc), eecpu(cpu), gif(nullptr)
 {
     gpr[0].f[0] = 0.0;
     gpr[0].f[1] = 0.0;
@@ -158,7 +159,9 @@ void VectorUnit::reset()
     status_pipe = 0;
     clip_flags = 0;
     PC = 0;
-    cycle_count = 1; //Set to 1 to prevent spurious events from occurring during execution
+    //cycle_count = 1; //Set to 1 to prevent spurious events from occurring during execution
+    eecpu->set_cop2_last_cycle(eecpu->get_cycle_count());
+    cycle_count = eecpu->get_cop2_last_cycle() >> 1;
     run_event = 0;
     running = false;
     tbit_stop = false;
@@ -177,6 +180,7 @@ void VectorUnit::reset()
     finish_DIV_event = 0;
     pipeline_state[0] = 0;
     pipeline_state[1] = 0;
+    mbit_wait = 0;
 
     for(int i = 0; i < 4; i++) {
         MAC_pipeline[i] = 0;
@@ -230,6 +234,38 @@ void VectorUnit::set_GIF(GraphicsInterface *gif)
     this->gif = gif;
 }
 
+void VectorUnit::cop2_updatepipes(int cycles)
+{
+    //TODO: Affect EE cycles when it's a 1 cycle stall caused by QMTC2, LQC2, CTC2
+    if (cycles > 0)
+    {
+        for (int i = 0; i < cycles; i++)
+        {
+            //This could run for a long time if many cycles have passed, there's no reason
+            if (i > 4 && DIV_event_started == false && EFU_event_started == false)
+            {
+                cycle_count += cycles - i;
+                flush_pipes();
+                break;
+            }
+            cycle_count++;
+
+            if (i >= 1)
+            {
+                decoder.reset();
+            }
+            update_mac_pipeline();
+            update_DIV_EFU_pipes();
+            int_branch_pipeline.update();
+        }
+    }
+}
+
+void VectorUnit::handle_cop2_stalls()
+{
+    check_for_COP2_FMAC_stall();
+}
+
 //Propogate all pipeline updates instantly
 void VectorUnit::flush_pipes()
 {
@@ -247,9 +283,36 @@ void VectorUnit::flush_pipes()
 
 void VectorUnit::run(int cycles)
 {
-    int cycles_to_run = cycles;
+    int cycles_to_run;
+    if (running && !id)
+    {
+        cycles_to_run = ((eecpu->get_cycle_count() - eecpu->get_cop2_last_cycle()) >> 1)+1;
+    
+        cycle_count = eecpu->get_cop2_last_cycle() >> 1;
+        eecpu->set_cop2_last_cycle(eecpu->get_cycle_count());
+    }
+    else
+    {
+        cycles_to_run = cycles;
+    }
+
     while (running && cycles_to_run > 0)
     {
+        if (get_id() == 0)
+        {
+            if (is_interlocked())
+            {
+                //Errors::die("VU%d Using M-Bit\n", vu.get_id());
+                //Loop around a couple of times if the interlock is not reached, give COP2 time to catch up
+                if (check_interlock() && mbit_wait++ < 2)
+                {
+                    break;
+                }
+            }
+            mbit_wait = 0;
+            clear_interlock();
+        }
+
         cycle_count++;
         update_mac_pipeline();
         update_DIV_EFU_pipes();
@@ -307,6 +370,7 @@ void VectorUnit::run(int cycles)
                 running = false;
                 finish_on = false;
                 flush_pipes();
+                cycle_count = eecpu->get_cop2_last_cycle() >> 1;
             }
             else
                 ebit_delay_slot--;
@@ -330,18 +394,7 @@ void VectorUnit::run(int cycles)
                 //Errors::die("VU%d Using T-Bit\n", get_id());
             }
         }
-        if (get_id() == 0)
-        {
-            if (is_interlocked())
-            {
-                //Errors::die("VU%d Using M-Bit\n", vu.get_id());
-                if (check_interlock())
-                {
-                    break;
-                }
-            }
-            clear_interlock();
-        }
+        
         cycles_to_run--;
     }
 
@@ -510,6 +563,65 @@ void VectorUnit::check_for_FMAC_stall()
     }
 }
 
+void VectorUnit::check_for_COP2_FMAC_stall()
+{
+    for (int i = 0; i < 3; i++)
+    {
+        uint8_t write0 = (MAC_pipeline[i] >> 16) & 0xFF;
+        uint8_t write1 = (MAC_pipeline[i] >> 24) & 0xFF;
+
+        bool stall_found = false;
+
+        if (write0 != 0 || write1 != 0)
+        {
+            for (int j = 0; j < 2; j++)
+            {
+                if (decoder.vf_read0[j])
+                {
+                    if (decoder.vf_read0[j] == write0)
+                    {
+                        stall_found = true;
+                        break;
+                    }
+                    else if (decoder.vf_read0[j] == write1)
+                    {
+                        stall_found = true;
+                        break;
+                    }
+                }
+                if (decoder.vf_read1[j])
+                {
+                    if (decoder.vf_read1[j] == write0)
+                    {
+                        stall_found = true;
+                        break;
+                    }
+                    else if (decoder.vf_read1[j] == write1)
+                    {
+                        stall_found = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        if (stall_found)
+        {
+            //printf("BANANA COP2 FMAC stall at $%08X for %d cycles!\n", PC, 3 - i);
+            int delay = 3 - i;
+            for (int j = 0; j < delay; j++)
+            {
+                update_mac_pipeline();
+                int_branch_pipeline.flush();
+            }
+            //TODO: Affect EE cycles also
+            cycle_count += delay;
+            update_DIV_EFU_pipes();
+            break;
+        }
+    }
+}
+
 void VectorUnit::backup_vf(bool newvf, int index)
 {
     if (newvf)
@@ -653,6 +765,15 @@ void VectorUnit::start_program(uint32_t addr)
         running = true;
         tbit_stop = false;
         PC = new_addr;
+
+        //Try to keep VU0 in sync with the EE
+        //TODO: Account for VIF0 MSCAL timing
+        if (!id)
+        {
+            eecpu->set_cop2_last_cycle(eecpu->get_cycle_count());
+            cycle_count = eecpu->get_cop2_last_cycle() >> 1;
+        }
+        flush_pipes();
     }
     run_event = cycle_count;
 }
@@ -914,7 +1035,7 @@ void VectorUnit::ctc(int index, uint32_t value)
     switch (index)
     {
         case 16:
-            status = value;
+            fsset(value);
             break;
         case 18:
             clip_flags = value;

@@ -31,6 +31,7 @@ class EmotionEngine
         Emulator* e;
 
         uint64_t cycle_count;
+        uint64_t cop2_last_cycle;
         int cycles_to_run;
 
         Cop0* cp0;
@@ -65,6 +66,9 @@ class EmotionEngine
         static const char* SYSCALL(int id);
         void reset();
         int run(int cycles);
+        uint64_t get_cycle_count();
+        uint64_t get_cop2_last_cycle();
+        void set_cop2_last_cycle(uint64_t value);
         void halt();
         void unhalt();
         void print_state();
@@ -173,6 +177,21 @@ inline void EmotionEngine::set_gpr(int id, T value, int offset)
 {
     if (id)
         *(T*)&gpr[(id * sizeof(uint64_t) * 2) + (offset * sizeof(T))] = value;
+}
+
+inline uint64_t EmotionEngine::get_cycle_count()
+{
+    return cycle_count - cycles_to_run;
+}
+
+inline uint64_t EmotionEngine::get_cop2_last_cycle()
+{
+    return cop2_last_cycle;
+}
+
+inline void EmotionEngine::set_cop2_last_cycle(uint64_t value)
+{
+    cop2_last_cycle = value;
 }
 
 inline void EmotionEngine::halt()

@@ -662,6 +662,7 @@ void EmotionEngine::lwc1(uint32_t addr, int index)
 
 void EmotionEngine::lqc2(uint32_t addr, int index)
 {
+    cop2_updatevu0();
     //printf("LQC2 $%08X: ", addr);
     for (int i = 0; i < 4; i++)
     {
@@ -679,6 +680,7 @@ void EmotionEngine::swc1(uint32_t addr, int index)
 
 void EmotionEngine::sqc2(uint32_t addr, int index)
 {
+    cop2_updatevu0();
     //printf("SQC2 $%08X: ", addr);
     for (int i = 0; i < 4; i++)
     {
@@ -996,9 +998,26 @@ void EmotionEngine::cop2_updatevu0()
 {
     if (vu0->is_running())
     {
-        uint64_t current_count = (cycle_count - cycles_to_run) >> 1;
-        if (vu0->get_cycle_count() < current_count)
-            vu0->run(current_count - vu0->get_cycle_count());
+        uint64_t current_count = (cycle_count - cycles_to_run) - cop2_last_cycle;
+        vu0->run((current_count >> 1)+1);
+        cop2_last_cycle = (cycle_count - cycles_to_run);
+    }
+    else
+    {
+        uint64_t cpu_cycles = get_cycle_count();
+        uint64_t cop2_cycles = get_cop2_last_cycle();
+        uint32_t last_instr = read32(get_PC() - 4);
+        uint32_t upper_instr = (last_instr >> 26);
+        uint32_t cop2_instr = (last_instr >> 21) & 0x1F;
+
+        //Always stall 1 VU cycle if the last op was LQC2, CTC2 or QMTC2
+        if (upper_instr == 0x36 || (upper_instr == 0x12 && (cop2_instr == 0x5 || cop2_instr == 0x6)))
+        {
+            vu0->cop2_updatepipes(1);
+        }
+
+        vu0->cop2_updatepipes(((cpu_cycles - cop2_cycles) >> 1) + 1);
+        set_cop2_last_cycle(cpu_cycles);
     }
 }
 
