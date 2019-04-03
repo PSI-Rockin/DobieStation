@@ -9,21 +9,7 @@ void EmotionInterpreter::cop2_special(EmotionEngine &cpu, VectorUnit &vu0, uint3
       * I don't yet have a good solution for this that doesn't murder performance.
       * Update: Kinda fixed?
       */
-    uint64_t cpu_cycles = cpu.get_cycle_count();
-    uint64_t cop2_cycles = cpu.get_cop2_last_cycle();
-    uint32_t last_instr = cpu.read32(cpu.get_PC() - 4);
-    uint32_t upper_instr = (last_instr >> 26);
-    uint32_t cop2_instr = (last_instr >> 21) & 0x1F;
-
-    //Always stall 1 VU cycle if the last op was LQC2, CTC2 or QMTC2
-    if (upper_instr == 0x36 || (upper_instr == 0x12 && (cop2_instr == 0x5 || cop2_instr == 0x6)))
-    {
-        vu0.cop2_updatepipes(1);
-    }
-
-    vu0.cop2_updatepipes(((cpu_cycles - cop2_cycles) >> 1)+1);
-
-    cpu.set_cop2_last_cycle(cpu_cycles);
+    cpu.cop2_updatevu0();
 
     vu0.decoder.reset();
 

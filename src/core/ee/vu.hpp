@@ -159,6 +159,7 @@ class VectorUnit
         bool DIV_event_started;
         uint64_t finish_EFU_event;
         bool EFU_event_started;
+        int mbit_wait;
 
         float update_mac_flags(float value, int index);
         void clear_mac_flags(int index);

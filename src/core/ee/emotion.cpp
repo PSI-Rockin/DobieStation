@@ -1004,7 +1004,20 @@ void EmotionEngine::cop2_updatevu0()
     }
     else
     {
-        vu0->cop2_updatepipes(1);
+        uint64_t cpu_cycles = get_cycle_count();
+        uint64_t cop2_cycles = get_cop2_last_cycle();
+        uint32_t last_instr = read32(get_PC() - 4);
+        uint32_t upper_instr = (last_instr >> 26);
+        uint32_t cop2_instr = (last_instr >> 21) & 0x1F;
+
+        //Always stall 1 VU cycle if the last op was LQC2, CTC2 or QMTC2
+        if (upper_instr == 0x36 || (upper_instr == 0x12 && (cop2_instr == 0x5 || cop2_instr == 0x6)))
+        {
+            vu0->cop2_updatepipes(1);
+        }
+
+        vu0->cop2_updatepipes(((cpu_cycles - cop2_cycles) >> 1) + 1);
+        set_cop2_last_cycle(cpu_cycles);
     }
 }
 

@@ -180,6 +180,7 @@ void VectorUnit::reset()
     finish_DIV_event = 0;
     pipeline_state[0] = 0;
     pipeline_state[1] = 0;
+    mbit_wait = 0;
 
     for(int i = 0; i < 4; i++) {
         MAC_pipeline[i] = 0;
@@ -278,16 +279,15 @@ void VectorUnit::flush_pipes()
     Q.u = new_Q_instance.u;
     P.u = new_P_instance.u;
 }
-int mbitloop = 0;
+
 void VectorUnit::run(int cycles)
 {
     int cycles_to_run;
     if (running && !id)
     {
-        //Round it up
-        cycles_to_run = (eecpu->get_cycle_count() - eecpu->get_cop2_last_cycle()+1) >> 1;
+        cycles_to_run = ((eecpu->get_cycle_count() - eecpu->get_cop2_last_cycle()) >> 1)+1;
     
-        cycle_count = eecpu->get_cop2_last_cycle() >> 1;//(eecpu->get_cycle_count() >> 1);
+        cycle_count = eecpu->get_cop2_last_cycle() >> 1;
         eecpu->set_cop2_last_cycle(eecpu->get_cycle_count());
     }
     else
@@ -303,12 +303,12 @@ void VectorUnit::run(int cycles)
             {
                 //Errors::die("VU%d Using M-Bit\n", vu.get_id());
                 //Loop around a couple of times if the interlock is not reached, give COP2 time to catch up
-                if (check_interlock() && mbitloop++ < 2)
+                if (check_interlock() && mbit_wait++ < 2)
                 {
                     break;
                 }
             }
-            mbitloop = 0;
+            mbit_wait = 0;
             clear_interlock();
         }
 
@@ -370,8 +370,6 @@ void VectorUnit::run(int cycles)
                 finish_on = false;
                 flush_pipes();
                 cycle_count = eecpu->get_cop2_last_cycle() >> 1;
-                //if (!id)
-                   // eecpu->set_cop2_last_cycle(eecpu->get_cycle_count());
             }
             else
                 ebit_delay_slot--;
