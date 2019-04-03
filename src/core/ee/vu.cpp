@@ -236,6 +236,7 @@ void VectorUnit::set_GIF(GraphicsInterface *gif)
 
 void VectorUnit::cop2_updatepipes(int cycles)
 {
+    //TODO: Affect EE cycles when it's a 1 cycle stall caused by QMTC2, LQC2, CTC2
     if (cycles > 0)
     {
         for (int i = 0; i < cycles; i++)
@@ -579,26 +580,26 @@ void VectorUnit::check_for_COP2_FMAC_stall()
                 {
                     if (decoder.vf_read0[j] == write0)
                     {
-                            stall_found = true;
-                            break;
+                        stall_found = true;
+                        break;
                     }
                     else if (decoder.vf_read0[j] == write1)
                     {
-                            stall_found = true;
-                            break;
+                        stall_found = true;
+                        break;
                     }
                 }
                 if (decoder.vf_read1[j])
                 {
                     if (decoder.vf_read1[j] == write0)
                     {
-                            stall_found = true;
-                            break;
+                        stall_found = true;
+                        break;
                     }
                     else if (decoder.vf_read1[j] == write1)
                     {
-                            stall_found = true;
-                            break;
+                        stall_found = true;
+                        break;
                     }
                 }
             }
@@ -613,7 +614,7 @@ void VectorUnit::check_for_COP2_FMAC_stall()
                 update_mac_pipeline();
                 int_branch_pipeline.flush();
             }
-
+            //TODO: Affect EE cycles also
             cycle_count += delay;
             update_DIV_EFU_pipes();
             break;
@@ -766,6 +767,7 @@ void VectorUnit::start_program(uint32_t addr)
         PC = new_addr;
 
         //Try to keep VU0 in sync with the EE
+        //TODO: Account for VIF0 MSCAL timing
         if (!id)
         {
             eecpu->set_cop2_last_cycle(eecpu->get_cycle_count());
