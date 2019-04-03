@@ -140,7 +140,7 @@ VectorUnit::VectorUnit(int id, Emulator* e, INTC* intc, EmotionEngine* cpu) : id
     gpr[0].f[2] = 0.0;
     gpr[0].f[3] = 1.0;
     int_gpr[0].u = 0;
-    cycle_count = eecpu->get_cycle_count();
+
     if (id == 0)
         mem_mask = 0xFFF;
     else
