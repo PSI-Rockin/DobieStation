@@ -286,9 +286,7 @@ void VectorUnit::run(int cycles)
     int cycles_to_run;
     if (running && !id)
     {
-        cycles_to_run = ((eecpu->get_cycle_count() - eecpu->get_cop2_last_cycle()) >> 1)+1;
-    
-        cycle_count = eecpu->get_cop2_last_cycle() >> 1;
+        cycles_to_run = cycles;
         eecpu->set_cop2_last_cycle(eecpu->get_cycle_count());
     }
     else
@@ -304,7 +302,7 @@ void VectorUnit::run(int cycles)
             {
                 //Errors::die("VU%d Using M-Bit\n", vu.get_id());
                 //Loop around a couple of times if the interlock is not reached, give COP2 time to catch up
-                if (check_interlock() && mbit_wait++ < 2)
+                if (check_interlock() && mbit_wait++ < 3)
                 {
                     break;
                 }
