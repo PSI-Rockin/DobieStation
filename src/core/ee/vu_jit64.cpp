@@ -2223,6 +2223,7 @@ void VU_JIT64::xgkick(VectorUnit &vu, IR::Instruction &instr)
         emitter.load_addr((uint64_t)&prev_pc, REG_64::RAX);
         emitter.MOV32_IMM_MEM(instr.get_source(), REG_64::RAX);
 
+        //Flush entire pipeline on stall, it's not accurate but probably the best we can assume (and better than not)
         REG_64 q_reg = alloc_sse_reg(vu, VU_SpecialReg::Q, REG_STATE::WRITE);
         emitter.load_addr((uint64_t)&vu.new_Q_instance, REG_64::RAX);
         emitter.MOVAPS_FROM_MEM(REG_64::RAX, q_reg);
