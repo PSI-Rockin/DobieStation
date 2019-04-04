@@ -297,7 +297,7 @@ void VU_JIT64::handle_branch(VectorUnit& vu)
     emitter.load_addr((uint64_t)&vu_branch_dest, REG_64::R15);
     emitter.MOV16_FROM_MEM(REG_64::R15, REG_64::R15);
     emitter.MOV16_TO_MEM(REG_64::R15, REG_64::RAX);
-    cleanup_recompiler(vu, end_of_program);
+    cleanup_recompiler(vu, true);
 
     //...Which we do here.
     emitter.set_jump_dest(offset_addr);
@@ -2223,7 +2223,30 @@ void VU_JIT64::xgkick(VectorUnit &vu, IR::Instruction &instr)
         emitter.load_addr((uint64_t)&prev_pc, REG_64::RAX);
         emitter.MOV32_IMM_MEM(instr.get_source(), REG_64::RAX);
 
-        cleanup_recompiler(vu, false);
+        REG_64 q_reg = alloc_sse_reg(vu, VU_SpecialReg::Q, REG_STATE::WRITE);
+        emitter.load_addr((uint64_t)&vu.new_Q_instance, REG_64::RAX);
+        emitter.MOVAPS_FROM_MEM(REG_64::RAX, q_reg);
+        set_clamping(q_reg, true, 0xF);
+       
+        emitter.load_addr((uint64_t)&vu.pipeline_state[0], REG_64::RAX);
+        emitter.MOV64_OI(0, REG_64::R15);
+        emitter.MOV64_TO_MEM(REG_64::R15, REG_64::RAX);
+
+        emitter.load_addr((uint64_t)&vu.pipeline_state[1], REG_64::RAX);
+        emitter.MOV64_OI(instr.get_source2(), REG_64::R15);
+        emitter.MOV64_TO_MEM(REG_64::R15, REG_64::RAX);
+
+        //Store the pipelined P inside the P available to the program
+        REG_64 p_reg = alloc_sse_reg(vu, VU_SpecialReg::P, REG_STATE::WRITE);
+        emitter.load_addr((uint64_t)&vu.new_P_instance, REG_64::RAX);
+        emitter.MOVAPS_FROM_MEM(REG_64::RAX, p_reg);
+        set_clamping(p_reg, true, 0xF);
+        
+        prepare_abi(vu, (uint64_t)&vu);
+        prepare_abi(vu, 4);
+        call_abi_func((uint64_t)vu_update_pipelines);
+
+        cleanup_recompiler(vu, true);
     }
 
     //Jump after the stall handling code is done

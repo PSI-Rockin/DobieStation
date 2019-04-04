@@ -286,7 +286,9 @@ void VectorUnit::run(int cycles)
     int cycles_to_run;
     if (running && !id)
     {
-        cycles_to_run = cycles;
+        cycles_to_run = ((eecpu->get_cycle_count() - eecpu->get_cop2_last_cycle()) >> 1)+1;
+    
+        cycle_count = eecpu->get_cop2_last_cycle() >> 1;
         eecpu->set_cop2_last_cycle(eecpu->get_cycle_count());
     }
     else
@@ -302,7 +304,7 @@ void VectorUnit::run(int cycles)
             {
                 //Errors::die("VU%d Using M-Bit\n", vu.get_id());
                 //Loop around a couple of times if the interlock is not reached, give COP2 time to catch up
-                if (check_interlock() && mbit_wait++ < 3)
+                if (check_interlock() && mbit_wait++ < 2)
                 {
                     break;
                 }
@@ -749,7 +751,7 @@ void VectorUnit::start_program(uint32_t addr)
     uint32_t new_addr = addr & mem_mask;
     printf("[VU%d] CallMS Starting execution at $%08X! Cur PC %x\n", get_id(), new_addr, PC);
 
-    disasm_micromem();
+    
 
     //Enable this if disabling micromem disasm
     /*if (get_id() == 1 && is_dirty())
@@ -773,6 +775,7 @@ void VectorUnit::start_program(uint32_t addr)
         }
         flush_pipes();
     }
+    disasm_micromem();
     run_event = cycle_count;
 }
 
