@@ -996,13 +996,7 @@ void EmotionEngine::qmtc2(int source, int cop_reg)
 
 void EmotionEngine::cop2_updatevu0()
 {
-    if (vu0->is_running())
-    {
-        uint64_t current_count = (cycle_count - cycles_to_run) - cop2_last_cycle;
-        vu0->run((current_count >> 1)+1);
-        cop2_last_cycle = (cycle_count - cycles_to_run);
-    }
-    else
+    if (!vu0->is_running())
     {
         uint64_t cpu_cycles = get_cycle_count();
         uint64_t cop2_cycles = get_cop2_last_cycle();
@@ -1018,6 +1012,12 @@ void EmotionEngine::cop2_updatevu0()
 
         vu0->cop2_updatepipes(((cpu_cycles - cop2_cycles) >> 1) + 1);
         set_cop2_last_cycle(cpu_cycles);
+    }
+    else if (!vu0->is_interlocked())
+    {
+        uint64_t current_count = ((cycle_count - cycles_to_run) - cop2_last_cycle) + 1;
+        vu0->run((current_count >> 1));
+        cop2_last_cycle = (cycle_count - cycles_to_run);
     }
 }
 
