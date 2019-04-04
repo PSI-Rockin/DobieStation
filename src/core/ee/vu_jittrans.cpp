@@ -34,8 +34,8 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
 
     if (prev_pc != 0xFFFFFFFF)
     {
-        trans_branch_delay_slot = instr_info[prev_pc].is_branch;
-        trans_ebit_delay_slot = instr_info[prev_pc].is_ebit;
+        trans_branch_delay_slot = (vu.pipeline_state[1] >> 55) & 0x1;
+        trans_ebit_delay_slot = (vu.pipeline_state[1] >> 56) & 0x1;
     }
 
     IR::Instruction clear_delay(IR::Opcode::ClearIntDelay);
@@ -213,6 +213,10 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
                 block.add_instr(branch);
                 Errors::print_warning("[VU_JIT] Warning! Branch in E-Bit Delay Slot!\n");
             }
+
+            IR::Instruction mac_update(IR::Opcode::UpdateMacPipeline);
+            mac_update.set_source(4);
+            block.add_instr(mac_update);
         }
         else if(block_end)
         {
@@ -591,8 +595,8 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
         q_pipe_delay = (vu.pipeline_state[1] >> 23) & 0xF;
         p_pipe_delay = (vu.pipeline_state[1] >> 27) & 0x3F;
 
-        branch_delay_slot = instr_info[prev_pc].is_branch;
-        ebit_delay_slot = instr_info[prev_pc].is_ebit;
+        branch_delay_slot = (vu.pipeline_state[1] >> 55) & 0x1;
+        ebit_delay_slot = (vu.pipeline_state[1] >> 56) & 0x1;
     }
     else //Else it's a new block so there is no previous state
     {
@@ -766,6 +770,8 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
     instr_info[end_PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vf_write_field[0] & 0xF) << 43UL;
     instr_info[end_PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vf_write_field[1] & 0xF) << 47UL;
     instr_info[end_PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vi_write_from_load & 0xF) << 51UL;
+    instr_info[end_PC].pipeline_state[1] |= (uint64_t)(instr_info[end_PC].is_branch & 0x1) << 55UL;
+    instr_info[end_PC].pipeline_state[1] |= (uint64_t)(instr_info[end_PC].is_ebit & 0x1) << 56UL;
 }
 
 /**
