@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
 #include "dmac.hpp"
@@ -44,9 +45,14 @@ void DMAC::reset(uint8_t* RDRAM, uint8_t* scratchpad)
     {
         channels[i].started = false;
         channels[i].control = 0;
+        channels[i].dma_req = false;
         interrupt_stat.channel_mask[i] = false;
         interrupt_stat.channel_stat[i] = false;
     }
+
+    //SPR channels don't have a FIFO, so they can always run when started
+    channels[SPR_FROM].dma_req = true;
+    channels[SPR_TO].dma_req = true;
 }
 
 uint128_t DMAC::fetch128(uint32_t addr)
@@ -81,7 +87,7 @@ void DMAC::run(int cycles)
 {
     while (cycles > 0)
     {
-        cycles--;
+        cycles -= 8;
         if (!active_channel)
             break;
 
@@ -137,6 +143,7 @@ void DMAC::transfer_end(int index)
     channels[index].started = false;
     interrupt_stat.channel_stat[index] = true;
     int1_check();
+    deactivate_channel(index);
 }
 
 void DMAC::int1_check()
@@ -238,7 +245,34 @@ void DMAC::process_VIF1(int cycles)
 
 void DMAC::process_GIF(int cycles)
 {
-    while (cycles)
+    if (!mfifo_handler(GIF))
+        return;
+
+    if (channels[GIF].quadword_count)
+    {
+        int quads_to_transfer = std::min(channels[GIF].quadword_count, 8U);
+        int count = 0;
+        while (count < quads_to_transfer)
+        {
+            gif->send_PATH3(fetch128(channels[GIF].address));
+            advance_source_dma(GIF);
+            count++;
+            if (gif->path3_done())
+                return;
+        }
+    }
+    if (!channels[GIF].quadword_count)
+    {
+        if (channels[GIF].tag_end)
+        {
+            transfer_end(GIF);
+            gif->deactivate_PATH(3);
+        }
+        else
+            handle_source_chain(GIF);
+    }
+
+    /*while (cycles)
     {
         if (!mfifo_handler(GIF))
             return;
@@ -286,7 +320,7 @@ void DMAC::process_GIF(int cycles)
                 handle_source_chain(GIF);
             }
         }
-    }
+    }*/
 }
 
 void DMAC::process_IPU_FROM(int cycles)
@@ -352,7 +386,48 @@ void DMAC::process_IPU_TO(int cycles)
 
 void DMAC::process_SIF0(int cycles)
 {
-    while (cycles)
+    int quads_to_transfer = std::min({channels[EE_SIF0].quadword_count, 8U, sif->get_SIF0_size() / 4U});
+    int count = 0;
+    while (count < quads_to_transfer)
+    {
+        for (int i = 0; i < 4; i++)
+        {
+            uint32_t word = sif->read_SIF0();
+            e->write32(channels[EE_SIF0].address + (i * 4), word);
+        }
+        advance_dest_dma(EE_SIF0);
+        count++;
+    }
+
+    if (!channels[EE_SIF0].quadword_count)
+    {
+        if (channels[EE_SIF0].tag_end)
+        {
+            transfer_end(EE_SIF0);
+            return;
+        }
+        else if (sif->get_SIF0_size() >= 2)
+        {
+            uint64_t DMAtag = sif->read_SIF0();
+            DMAtag |= (uint64_t)sif->read_SIF0() << 32;
+            printf("[DMAC] SIF0 tag: $%08lX_%08lX\n", DMAtag >> 32, DMAtag & 0xFFFFFFFF);
+
+            channels[EE_SIF0].quadword_count = DMAtag & 0xFFFF;
+            channels[EE_SIF0].address = DMAtag >> 32;
+
+            channels[EE_SIF0].tag_id = (DMAtag >> 28) & 0x7;
+
+            bool IRQ = (DMAtag & (1UL << 31));
+            bool TIE = channels[EE_SIF0].control & (1 << 7);
+            if (channels[EE_SIF0].tag_id == 7 || (IRQ && TIE))
+                channels[EE_SIF0].tag_end = true;
+
+            channels[EE_SIF0].control &= 0xFFFF;
+            channels[EE_SIF0].control |= DMAtag & 0xFFFF0000;
+        }
+    }
+
+    /*while (cycles)
     {
         cycles--;
         if (channels[EE_SIF0].quadword_count)
@@ -396,13 +471,31 @@ void DMAC::process_SIF0(int cycles)
                 channels[EE_SIF0].control |= DMAtag & 0xFFFF0000;
             }
         }
-    }
+    }*/
 }
 
 void DMAC::process_SIF1(int cycles)
 {
-
-    while (cycles)
+    if (channels[EE_SIF1].quadword_count)
+    {
+        int quads_to_transfer = std::min(channels[EE_SIF1].quadword_count, 8U);
+        printf("Quads to transfer: %d\n", quads_to_transfer);
+        int count = 0;
+        while (count < quads_to_transfer)
+        {
+            sif->write_SIF1(fetch128(channels[EE_SIF1].address));
+            advance_source_dma(EE_SIF1);
+            count++;
+        }
+    }
+    if (!channels[EE_SIF1].quadword_count)
+    {
+        if (channels[EE_SIF1].tag_end)
+            transfer_end(EE_SIF1);
+        else
+            handle_source_chain(EE_SIF1);
+    }
+    /*while (cycles)
     {
         cycles--;
         if (channels[EE_SIF1].quadword_count)
@@ -431,7 +524,7 @@ void DMAC::process_SIF1(int cycles)
             else
                 handle_source_chain(EE_SIF1);
         }
-    }
+    }*/
 }
 
 void DMAC::process_SPR_FROM(int cycles)
@@ -583,7 +676,7 @@ void DMAC::handle_source_chain(int index)
 {
     uint128_t quad = fetch128(channels[index].tag_address);
     uint64_t DMAtag = quad._u64[0];
-    //printf("[DMAC] Ch.%d Source DMAtag read $%08X: $%08X_%08X\n", index, channels[index].tag_address, DMAtag >> 32, DMAtag & 0xFFFFFFFF);
+    printf("[DMAC] Ch.%d Source DMAtag read $%08X: $%08X_%08X\n", index, channels[index].tag_address, DMAtag >> 32, DMAtag & 0xFFFFFFFF);
 
     //Change CTRL to have the upper 16 bits equal to bits 16-31 of the most recently read DMAtag
     channels[index].control &= 0xFFFF;
@@ -683,8 +776,8 @@ void DMAC::handle_source_chain(int index)
     }
     if (IRQ_after_transfer && TIE)
         channels[index].tag_end = true;
-    //printf("New address: $%08X\n", channels[index].address);
-    //printf("New tag addr: $%08X\n", channels[index].tag_address);
+    printf("New address: $%08X\n", channels[index].address);
+    printf("New tag addr: $%08X\n", channels[index].tag_address);
 }
 
 void DMAC::start_DMA(int index)
@@ -714,6 +807,8 @@ void DMAC::start_DMA(int index)
             break;
     }
     channels[index].started = true;
+
+    check_for_activation(index);
 }
 
 uint32_t DMAC::read_master_disable()
@@ -1254,10 +1349,34 @@ void DMAC::write32(uint32_t address, uint32_t value)
 
 void DMAC::set_DMA_request(int index)
 {
+    bool old_req = channels[index].dma_req;
     channels[index].dma_req = true;
+    if (!old_req)
+        check_for_activation(index);
 }
 
 void DMAC::clear_DMA_request(int index)
 {
     channels[index].dma_req = false;
+
+    deactivate_channel(index);
+}
+
+void DMAC::check_for_activation(int index)
+{
+    if (channels[index].dma_req && channels[index].started)
+    {
+        //printf("[DMAC] Activating %s\n", CHAN(index));
+        if (!active_channel)
+            active_channel = &channels[index];
+        else
+            Errors::die("More than one active DMA channel!");
+    }
+}
+
+void DMAC::deactivate_channel(int index)
+{
+    //printf("[DMAC] Deactivating %s\n", CHAN(index));
+    if (active_channel == &channels[index])
+        active_channel = nullptr;
 }

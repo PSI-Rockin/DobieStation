@@ -32,7 +32,8 @@ void SubsystemInterface::write_SIF0(uint32_t word)
     SIF0_FIFO.push(word);
     if (SIF0_FIFO.size() >= MAX_FIFO_SIZE)
         iop_dma->clear_DMA_request(IOP_SIF0);
-    dmac->set_DMA_request(EE_SIF0);
+    if (SIF0_FIFO.size() >= 4)
+        dmac->set_DMA_request(EE_SIF0);
 }
 
 void SubsystemInterface::write_SIF1(uint128_t quad)
@@ -48,10 +49,10 @@ void SubsystemInterface::write_SIF1(uint128_t quad)
 uint32_t SubsystemInterface::read_SIF0()
 {
     uint32_t value = SIF0_FIFO.front();
-    //printf("[SIF] Read SIF0: $%08X\n", value);
     SIF0_FIFO.pop();
     iop_dma->set_DMA_request(IOP_SIF0);
-    if (!SIF0_FIFO.size())
+
+    if (SIF0_FIFO.size() < 4)
         dmac->clear_DMA_request(EE_SIF0);
     return value;
 }

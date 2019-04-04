@@ -20,7 +20,7 @@ Emulator::Emulator() :
     cp0(&dmac),
     cpu(&cp0, &fpu, this, (uint8_t*)&scratchpad, &vu0, &vu1),
     dmac(&cpu, this, &gif, &ipu, &sif, &vif0, &vif1),
-    gif(&gs),
+    gif(&gs, &dmac),
     gs(&intc),
     iop(this),
     iop_dma(this, &cdvd, &sif, &sio2, &spu, &spu2),

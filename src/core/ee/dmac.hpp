@@ -119,6 +119,9 @@ class DMAC
 
         uint128_t fetch128(uint32_t addr);
         void store128(uint32_t addr, uint128_t data);
+
+        void check_for_activation(int index);
+        void deactivate_channel(int index);
     public:
         static const char* CHAN(int index);
         DMAC(EmotionEngine* cpu, Emulator* e, GraphicsInterface* gif, ImageProcessingUnit* ipu, SubsystemInterface* sif,

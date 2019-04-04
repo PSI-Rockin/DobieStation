@@ -7,6 +7,8 @@
 #include "gs.hpp"
 #include "int128.hpp"
 
+class DMAC;
+
 struct GIFtag
 {
     uint16_t NLOOP;
@@ -30,6 +32,7 @@ class GraphicsInterface
 {
     private:
         GraphicsSynthesizer* gs;
+        DMAC* dmac;
         
         GIFPath path[4];
 
@@ -52,7 +55,7 @@ class GraphicsInterface
 
         void flush_path3_fifo();
     public:
-        GraphicsInterface(GraphicsSynthesizer* gs);
+        GraphicsInterface(GraphicsSynthesizer* gs, DMAC* dmac);
         void reset();
         void run(int cycles);
 

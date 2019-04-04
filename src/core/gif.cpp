@@ -1,8 +1,9 @@
 #include <cstdio>
+#include "ee/dmac.hpp"
 #include "gif.hpp"
 #include "gs.hpp"
 
-GraphicsInterface::GraphicsInterface(GraphicsSynthesizer *gs) : gs(gs)
+GraphicsInterface::GraphicsInterface(GraphicsSynthesizer *gs, DMAC* dmac) : gs(gs), dmac(dmac)
 {
 
 }
@@ -319,6 +320,9 @@ void GraphicsInterface::request_PATH(int index, bool canInterruptPath3)
     if (!active_path || active_path == index || (canInterruptPath3 && interrupt_path3(index)))
     {
         active_path = index;
+
+        if (active_path == 3 && (!path3_masked(3) || FIFO.size() <= 8))
+            dmac->set_DMA_request(GIF);
         //printf("[GIF] PATH%d Active!\n", active_path);
     }
     else
@@ -332,6 +336,8 @@ void GraphicsInterface::deactivate_PATH(int index)
 {
     //printf("[GIF] PATH%d deactivated\n", index);
     path_queue &= ~(1 << index);
+    if (index == 3)
+        dmac->clear_DMA_request(GIF);
     if (active_path == index)
     {
         active_path = 0;
@@ -375,13 +381,15 @@ void GraphicsInterface::send_PATH2(uint32_t data[])
 
 void GraphicsInterface::send_PATH3(uint128_t data)
 {
-    //printf("[GIF] Send PATH3 $%08X_%08X_%08X_%08X\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
+    printf("[GIF] Send PATH3 $%08X_%08X_%08X_%08X\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
     if (!path3_masked(3))
         feed_GIF(data);
     else if (FIFO.size() < 16)
     {
         //printf("Adding data to GIF FIFO (size: %d)\n", FIFO.size());
         FIFO.push(data);
+        if (FIFO.size() > 8)
+            dmac->clear_DMA_request(GIF);
     }
 }
 
