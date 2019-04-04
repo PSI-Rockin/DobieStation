@@ -1013,8 +1013,7 @@ void EmotionEngine::cop2_updatevu0()
         vu0->cop2_updatepipes(((cpu_cycles - cop2_cycles) >> 1) + 1);
         set_cop2_last_cycle(cpu_cycles);
     }
-
-    if (vu0->is_running() && !vu0->is_interlocked())
+    else if (!vu0->is_interlocked())
     {
         uint64_t current_count = ((cycle_count - cycles_to_run) - cop2_last_cycle) + 1;
         vu0->run((current_count >> 1));
