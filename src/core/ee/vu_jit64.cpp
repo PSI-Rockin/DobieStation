@@ -360,6 +360,7 @@ void VU_JIT64::load_float_const(VectorUnit &vu, IR::Instruction &instr)
     emitter.MOV64_OI(instr.get_source(), REG_64::RAX);
     emitter.MOVD_TO_XMM(REG_64::RAX, dest);
     set_clamping(dest, true, 0xf);
+    clamp_vfreg(0xF, dest);
 }
 
 void VU_JIT64::load_int(VectorUnit &vu, IR::Instruction &instr)
