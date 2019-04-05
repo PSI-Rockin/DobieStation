@@ -1674,9 +1674,9 @@ void VU_JIT64::opmula(VectorUnit &vu, IR::Instruction &instr)
     REG_64 temp = REG_64::XMM0;
     REG_64 temp2 = REG_64::XMM1;
 
-    clamp_vfreg(0xE, reg1);
-    clamp_vfreg(0xE, reg2);
-    clamp_vfreg(0xE, dest);
+    clamp_vfreg(0x7, reg1);
+    clamp_vfreg(0x7, reg2);
+    clamp_vfreg(0x7, dest);
 
     //xyz = yzx
     emitter.PSHUFD(0x1 | (0x2 << 2), reg1, temp);
@@ -1706,9 +1706,9 @@ void VU_JIT64::opmsub(VectorUnit &vu, IR::Instruction &instr)
     REG_64 temp = REG_64::XMM0;
     REG_64 temp2 = REG_64::XMM1;
 
-    clamp_vfreg(0xE, reg1);
-    clamp_vfreg(0xE, reg2);
-    clamp_vfreg(0xE, acc);
+    clamp_vfreg(0x7, reg1);
+    clamp_vfreg(0x7, reg2);
+    clamp_vfreg(0x7, acc);
 
     //xyz = yzx
     emitter.PSHUFD(0x1 | (0x2 << 2), reg1, temp);
