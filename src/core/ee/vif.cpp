@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <cstdlib>
+#include "dmac.hpp"
 #include "vu_jit.hpp"
 #include "vif.hpp"
 
@@ -8,7 +9,8 @@
 
 #define printf(fmt, ...)(0)
 
-VectorInterface::VectorInterface(GraphicsInterface* gif, VectorUnit* vu, INTC* intc, int id) : gif(gif), vu(vu), intc(intc), id(id)
+VectorInterface::VectorInterface(GraphicsInterface* gif, VectorUnit* vu, INTC* intc, DMAC* dmac, int id) :
+    gif(gif), vu(vu), intc(intc), dmac(dmac), id(id)
 {
 
 }
@@ -185,6 +187,8 @@ void VectorInterface::update(int cycles)
         {
             command_len--;
             FIFO.pop();
+            if (FIFO.size() <= 32)
+                dmac->set_DMA_request(id);
         }
     }
 }
@@ -829,7 +833,10 @@ bool VectorInterface::transfer_DMAtag(uint128_t tag)
 {
     //This should return false if the transfer stalls due to the FIFO filling up
     if (FIFO.size() > 62)
+    {
+        dmac->clear_DMA_request(id);
         return false;
+    }
     printf("[VIF] Transfer tag: $%08X_%08X_%08X_%08X\n", tag._u32[3], tag._u32[2], tag._u32[1], tag._u32[0]);
     for (int i = 2; i < 4; i++)
         FIFO.push(tag._u32[i]);
@@ -839,7 +846,10 @@ bool VectorInterface::transfer_DMAtag(uint128_t tag)
 bool VectorInterface::feed_DMA(uint128_t quad)
 {
     if (FIFO.size() > 60)
+    {
+        dmac->clear_DMA_request(id);
         return false;
+    }
     printf("[VIF] Feed DMA: $%08X_%08X_%08X_%08X\n", quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
     for (int i = 0; i < 4; i++)
         FIFO.push(quad._u32[i]);

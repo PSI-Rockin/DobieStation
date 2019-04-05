@@ -47,6 +47,7 @@ void IOP_DMA::reset(uint8_t* RAM)
 
     set_DMA_request(IOP_SIO2in);
     set_DMA_request(IOP_SIO2out);
+    set_DMA_request(IOP_SIF0);
 }
 
 void IOP_DMA::run(int cycles)

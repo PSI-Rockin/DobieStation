@@ -43,6 +43,8 @@ struct DMA_Channel
     bool started;
     bool can_stall_drain;
     bool dma_req;
+
+    int index;
 };
 
 //Regs
@@ -88,6 +90,7 @@ class DMAC
         DMA_Channel channels[15];
 
         DMA_Channel* active_channel;
+        DMA_Channel* queued_VIF0; //VIF0 has a higher priority, so it needs its own slot
         std::list<DMA_Channel*> queued_channels;
 
         D_CTRL control;
@@ -122,6 +125,8 @@ class DMAC
 
         void check_for_activation(int index);
         void deactivate_channel(int index);
+        void arbitrate();
+        void find_new_active_channel();
     public:
         static const char* CHAN(int index);
         DMAC(EmotionEngine* cpu, Emulator* e, GraphicsInterface* gif, ImageProcessingUnit* ipu, SubsystemInterface* sif,

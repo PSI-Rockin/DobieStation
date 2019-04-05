@@ -11,6 +11,7 @@
 #include "../int128.hpp"
 
 class GraphicsInterface;
+class DMAC;
 
 enum VIF_STALL
 {
@@ -51,6 +52,7 @@ class VectorInterface
         GraphicsInterface* gif;
         VectorUnit* vu;
         INTC* intc;
+        DMAC* dmac;
         std::queue<uint32_t> FIFO;
         int id;
         uint16_t imm;
@@ -99,7 +101,7 @@ class VectorInterface
         void handle_UNPACK_mode(uint128_t& quad);
         void process_UNPACK_quad(uint128_t& quad);
     public:
-        VectorInterface(GraphicsInterface* gif, VectorUnit* vu, INTC* intc, int id);
+        VectorInterface(GraphicsInterface* gif, VectorUnit* vu, INTC* intc, DMAC* dmac, int id);
         int get_id();
 
         void reset();

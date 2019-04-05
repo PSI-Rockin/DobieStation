@@ -19,12 +19,6 @@ void SubsystemInterface::reset()
     msflag = 0;
     smflag = 0;
     control = 0;
-
-    iop_dma->set_DMA_request(IOP_SIF0);
-    iop_dma->clear_DMA_request(IOP_SIF1);
-
-    dmac->clear_DMA_request(EE_SIF0);
-    dmac->set_DMA_request(EE_SIF1);
 }
 
 void SubsystemInterface::write_SIF0(uint32_t word)

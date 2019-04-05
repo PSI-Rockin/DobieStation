@@ -349,6 +349,8 @@ void GraphicsInterface::deactivate_PATH(int index)
             {
                 path_queue &= ~bit;
                 active_path = path;
+                if (active_path == 3 && FIFO.size() <= 8)
+                    dmac->set_DMA_request(GIF);
                 //printf("[GIF] PATH%d Activated from queue\n", active_path);
                 break;
             }
@@ -381,7 +383,7 @@ void GraphicsInterface::send_PATH2(uint32_t data[])
 
 void GraphicsInterface::send_PATH3(uint128_t data)
 {
-    printf("[GIF] Send PATH3 $%08X_%08X_%08X_%08X\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
+    //printf("[GIF] Send PATH3 $%08X_%08X_%08X_%08X\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
     if (!path3_masked(3))
         feed_GIF(data);
     else if (FIFO.size() < 16)
