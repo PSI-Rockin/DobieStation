@@ -3,7 +3,7 @@
 #include <unordered_map>
 #include "../errors.hpp"
 
-struct VUState
+struct BlockState
 {
     public:
         uint32_t pc;
@@ -13,15 +13,15 @@ struct VUState
         uint64_t param2 = 0;
 
         // operator== is required to compare keys in case of hash collision
-        bool operator==(const VUState &p) const
+        bool operator==(const BlockState &p) const
         {
             return pc == p.pc && prev_pc == p.prev_pc && program == p.program && param1 == p.param1 && param2 == p.param2;
         }
 };
 
-struct VUStateHash
+struct BlockStateHash
 {
-    std::size_t operator()(const VUState& state) const
+    std::size_t operator()(const BlockState& state) const
     {
         std::size_t h1 = std::hash<uint32_t>()(state.pc);
         std::size_t h2 = std::hash<uint32_t>()(state.prev_pc);
@@ -45,13 +45,9 @@ struct VUStateHash
 struct JitBlock
 {
     //Variables needed for code execution
-    uint32_t start_pc;
-    uint32_t from_pc;
-    uint32_t program;
+    BlockState state;
     uint8_t* block_start;
     uint8_t* mem;
-    uint64_t param1;
-    uint64_t param2;
 
     //Related to the literal pool
     uint8_t* pool_start;
@@ -64,17 +60,17 @@ class JitCache
         constexpr static int BLOCK_SIZE = 1024 * 64;
         constexpr static int POOL_SIZE = 1024 * 8;
         constexpr static int START_OF_POOL = BLOCK_SIZE - POOL_SIZE;
-        std::unordered_map<VUState, JitBlock, VUStateHash> blocks;
+        std::unordered_map<BlockState, JitBlock, BlockStateHash> blocks;
 
         JitBlock* current_block;
     public:
         JitCache();
 
-        void alloc_block(VUState state);
-        void free_block(uint32_t pc);
+        void alloc_block(BlockState state);
+        void free_block(BlockState state);
         void flush_all_blocks();
 
-        JitBlock *find_block(VUState state);
+        JitBlock *find_block(BlockState state);
 
         uint8_t* get_current_block_start();
         uint8_t* get_current_block_pos();

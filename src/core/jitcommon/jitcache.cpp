@@ -15,17 +15,13 @@ JitCache::JitCache()
 }
 
 //Allocate a block with read and write, but not executable, privileges.
-void JitCache::alloc_block(VUState state)
+void JitCache::alloc_block(BlockState state)
 {
     JitBlock new_block;
 
     new_block.mem = nullptr;
     new_block.block_start = nullptr;
-    new_block.start_pc = state.pc;
-    new_block.from_pc = state.prev_pc;
-    new_block.program = state.program;
-    new_block.param1 = state.param1;
-    new_block.param2 = state.param2;
+    new_block.state = state;
 #ifdef _WIN32
     //Errors::die("[JIT] alloc_block not implemented for WIN32");
     new_block.block_start = (uint8_t *)VirtualAlloc(NULL, BLOCK_SIZE, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
@@ -51,7 +47,7 @@ void JitCache::alloc_block(VUState state)
 void JitCache::flush_all_blocks()
 {
     //Deallocate all virtual memory claimed by blocks
-    for (std::unordered_map<VUState, JitBlock>::iterator it = blocks.begin(); it != blocks.end(); ++it)
+    for (auto it = blocks.begin(); it != blocks.end(); ++it)
     {
 #ifdef _WIN32
         //Errors::die("[JIT] flush_all_blocks not implemented for WIN32");
@@ -63,18 +59,18 @@ void JitCache::flush_all_blocks()
 
     //Clear out the blocks vector and replace it with an empty one.
     //We reserve blocks to prevent them from getting reallocated
-    blocks = std::unordered_map<VUState, JitBlock, VUStateHash>();
+    blocks = std::unordered_map<BlockState, JitBlock, BlockStateHash>();
     blocks.reserve(1024 * 4);
     current_block = nullptr;
 }
 
-JitBlock *JitCache::find_block(VUState state)
+JitBlock *JitCache::find_block(BlockState state)
 {
     auto search = blocks.find(state);
 
     if (search != blocks.end())
     {
-        //printf("[VU_JIT64] Block found at %d\n", i);
+        //printf("[VU_JIT64] Block found at %p\n", &(search->second));
         current_block = &(search->second);
         return current_block;
     }

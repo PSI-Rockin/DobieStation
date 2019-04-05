@@ -2860,7 +2860,7 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
 
 void VU_JIT64::recompile_block(VectorUnit& vu, IR::Block& block)
 {
-    cache.alloc_block(VUState { vu.get_PC(), prev_pc, current_program, vu.pipeline_state[0], vu.pipeline_state[1] });
+    cache.alloc_block(BlockState { vu.get_PC(), prev_pc, current_program, vu.pipeline_state[0], vu.pipeline_state[1] });
 
     vu_branch = false;
     end_of_program = false;
@@ -3039,7 +3039,7 @@ extern "C"
 uint8_t* exec_block(VU_JIT64& jit, VectorUnit& vu)
 {
     //printf("[VU_JIT64] Executing block at $%04X, Prev PC $%04X Current Program %08X: recompiling\n", vu.PC, jit.prev_pc, jit.current_program);
-    if (jit.cache.find_block(VUState{ vu.PC, jit.prev_pc, jit.current_program, vu.pipeline_state[0], vu.pipeline_state[1] }) == nullptr)
+    if (jit.cache.find_block(BlockState { vu.get_PC(), jit.prev_pc, jit.current_program, vu.pipeline_state[0], vu.pipeline_state[1] }) == nullptr)
     {
         //printf("[VU_JIT64] Block not found at $%04X, Prev PC $%04X Current Program %08X: recompiling\n", vu.PC, jit.prev_pc, jit.current_program);
         IR::Block block = jit.ir.translate(vu, vu.get_instr_mem(), jit.prev_pc);
