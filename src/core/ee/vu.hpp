@@ -197,6 +197,7 @@ class VectorUnit
         void handle_cop2_stalls();
 
         void run(int cycles);
+        void correct_jit_pipeline(int cycles);
         void run_jit(int cycles);
         void handle_XGKICK();
         void start_program(uint32_t addr);
