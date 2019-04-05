@@ -315,6 +315,7 @@ void DMAC::process_GIF(int cycles)
             }
         }
     }
+    gif->intermittent_check();
     if (!channels[GIF].quadword_count)
     {
         if (channels[GIF].tag_end)

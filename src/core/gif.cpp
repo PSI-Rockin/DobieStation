@@ -16,6 +16,7 @@ void GraphicsInterface::reset()
     path[3].current_tag.data_left = 0;
     active_path = 0;
     path_queue = 0;
+    intermittent_active = false;
     path_status[0] = 4;
     path_status[1] = 4;
     path_status[2] = 4;
@@ -213,7 +214,7 @@ void GraphicsInterface::feed_GIF(uint128_t data)
             printf("Regs: $%08X_$%08X\n", path[active_path].current_tag.regs >> 32, path[active_path].current_tag.regs & 0xFFFFFFFF);
         }*/
 
-        if (path[active_path].current_tag.output_PRIM && path[active_path].current_tag.format != 1)
+        if (path[active_path].current_tag.output_PRIM && path[active_path].current_tag.format == 0)
             gs->write64(0, path[active_path].current_tag.PRIM);
     }
     else
@@ -305,10 +306,7 @@ bool GraphicsInterface::interrupt_path3(int index)
 
     if ((intermittent_mode && path_status[3] >= 2) || path3_masked(3)) //IMAGE MODE or IDLE
     {
-        //printf("[GIF] Interrupting PATH3 with PATH%d\n", index);
-        deactivate_PATH(3);
-        //printf("Active Path Now %d\n", active_path);
-        path_queue |= 1 << 3;
+        intermittent_active = true;
         return true;
     }
     return false;
@@ -317,7 +315,9 @@ bool GraphicsInterface::interrupt_path3(int index)
 void GraphicsInterface::request_PATH(int index, bool canInterruptPath3)
 {
     //printf("[GIF] PATH%d requested active path %d\n", index, active_path);
-    if (!active_path || active_path == index || (canInterruptPath3 && interrupt_path3(index)))
+    if (canInterruptPath3)
+        interrupt_path3(index);
+    if (!active_path || active_path == index)
     {
         active_path = index;
 
@@ -426,4 +426,14 @@ bool GraphicsInterface::fifo_draining()
 void GraphicsInterface::dma_waiting(bool dma_waiting)
 {
     path3_dma_waiting = dma_waiting;
+}
+
+void GraphicsInterface::intermittent_check()
+{
+    if (intermittent_active)
+    {
+        intermittent_active = false;
+        deactivate_PATH(3);
+        path_queue |= 1 << 3;
+    }
 }

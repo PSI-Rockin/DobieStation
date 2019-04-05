@@ -45,6 +45,7 @@ class GraphicsInterface
         bool path3_vif_masked;
         bool path3_mode_masked;
         bool intermittent_mode;
+        bool intermittent_active;
         bool path3_dma_waiting;
 
         float internal_Q;
@@ -82,6 +83,8 @@ class GraphicsInterface
         bool send_PATH1(uint128_t quad);
         void send_PATH2(uint32_t data[4]);
         void send_PATH3(uint128_t quad);
+
+        void intermittent_check();
 
         void load_state(std::ifstream& state);
         void save_state(std::ofstream& state);
