@@ -44,6 +44,23 @@ void JitCache::alloc_block(BlockState state)
     current_block = &blocks[state];
 }
 
+void JitCache::free_block(BlockState state)
+{
+    auto search = blocks.find(state);
+
+    if (search == blocks.end()) 
+        return;
+    if (&search->second == current_block)
+        current_block = nullptr;
+
+#ifdef _WIN32
+    VirtualFree(search->second.block_start, 0, MEM_RELEASE);
+#else
+    munmap(search->second.block_start, BLOCK_SIZE);
+#endif
+    blocks.erase(search);
+}
+
 void JitCache::flush_all_blocks()
 {
     //Deallocate all virtual memory claimed by blocks
