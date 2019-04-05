@@ -1,18 +1,53 @@
 #ifndef JITCACHE_HPP
 #define JITCACHE_HPP
-#include <vector>
+#include <unordered_map>
 #include "../errors.hpp"
+
+struct BlockState
+{
+    public:
+        uint32_t pc;
+        uint32_t prev_pc = 0;
+        uint32_t program = 0;
+        uint64_t param1 = 0;
+        uint64_t param2 = 0;
+
+        // operator== is required to compare keys in case of hash collision
+        bool operator==(const BlockState &p) const
+        {
+            return pc == p.pc && prev_pc == p.prev_pc && program == p.program && param1 == p.param1 && param2 == p.param2;
+        }
+};
+
+struct BlockStateHash
+{
+    std::size_t operator()(const BlockState& state) const
+    {
+        std::size_t h1 = std::hash<uint32_t>()(state.pc);
+        std::size_t h2 = std::hash<uint32_t>()(state.prev_pc);
+        std::size_t h3 = std::hash<uint64_t>()(state.program);
+        std::size_t h4 = std::hash<uint64_t>()(state.param1);
+        std::size_t h5 = std::hash<uint64_t>()(state.param2);
+
+        std::size_t result = 0;
+        std::size_t seed = 12345;
+
+        result = (result * seed) + h1;
+        result = (result * seed) + h2;
+        result = (result * seed) + h3;
+        result = (result * seed) + h4;
+        result = (result * seed) + h5;
+
+        return result;
+    }
+};
 
 struct JitBlock
 {
     //Variables needed for code execution
-    uint32_t start_pc;
-    uint32_t from_pc;
-    uint32_t program;
+    BlockState state;
     uint8_t* block_start;
     uint8_t* mem;
-    uint64_t param1;
-    uint64_t param2;
 
     //Related to the literal pool
     uint8_t* pool_start;
@@ -25,17 +60,17 @@ class JitCache
         constexpr static int BLOCK_SIZE = 1024 * 64;
         constexpr static int POOL_SIZE = 1024 * 8;
         constexpr static int START_OF_POOL = BLOCK_SIZE - POOL_SIZE;
-        std::vector<JitBlock> blocks;
+        std::unordered_map<BlockState, JitBlock, BlockStateHash> blocks;
 
         JitBlock* current_block;
     public:
         JitCache();
 
-        void alloc_block(uint32_t pc, uint32_t prev_pc = 0, uint32_t program = 0, uint64_t param1 = 0, uint64_t param2 = 0);
-        void free_block(uint32_t pc);
+        void alloc_block(BlockState state);
+        void free_block(BlockState state);
         void flush_all_blocks();
 
-        int find_block(uint32_t pc, uint32_t prev_pc = 0, uint32_t program = 0, uint64_t param1 = 0, uint64_t param2 = 0);
+        JitBlock *find_block(BlockState state);
 
         uint8_t* get_current_block_start();
         uint8_t* get_current_block_pos();
