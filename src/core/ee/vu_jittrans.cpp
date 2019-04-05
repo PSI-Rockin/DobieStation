@@ -932,7 +932,7 @@ void VU_JitTranslator::translate_upper(std::vector<IR::Instruction>& instrs, uin
 {
     uint8_t op = upper & 0x3F;
     IR::Instruction instr;
-
+    
     switch (op)
     {
         case 0x00:

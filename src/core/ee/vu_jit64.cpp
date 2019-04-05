@@ -1944,7 +1944,7 @@ void VU_JIT64::move_rotated_float(VectorUnit &vu, IR::Instruction &instr)
         REG_64 temp = REG_64::XMM0;
         emitter.PSHUFD(rot, source, temp);
         emitter.BLENDPS(field, temp, dest);
-        set_clamping(dest, needs_clamping(source, (field >> 1) | ((field & 0x1) << 3)), field);
+        set_clamping(dest, needs_clamping(source, (field << 1) | ((field & 0x8) >> 3)), field);
     }
 }
 
