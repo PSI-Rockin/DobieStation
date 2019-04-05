@@ -161,6 +161,9 @@ void Emulator::reset()
     IOP_POST = 0;
     clear_cop2_interlock();
 
+    // HLE method to zero out IOP memory
+    memset(IOP_RAM, 0, 0x00200000);
+
     iop_scratchpad_start = 0x1F800000;
 
     add_iop_event(SPU_SAMPLE, &Emulator::gen_sound_sample, 768);
