@@ -4,7 +4,7 @@
 #include <cstdio>
 #include <fstream>
 #include <unordered_set>
-
+#include "emotion.hpp"
 #include "../int128.hpp"
 
 #define XGKICK_INIT_DELAY 0
@@ -82,6 +82,7 @@ class Emulator;
 class VU_JIT64;
 class VectorUnit;
 class INTC;
+class EmotionEngine;
 
 extern "C" uint8_t* exec_block(VU_JIT64& jit, VectorUnit& vu);
 
@@ -93,6 +94,7 @@ class VectorUnit
         uint16_t mem_mask; //0xFFF for VU0, 0x3FFF for VU1
         Emulator* e;
         INTC* intc;
+        EmotionEngine* eecpu;
 
         uint64_t cycle_count; //Increments when "running" is true
         uint64_t run_event; //If less than cycle_count, the VU is allowed to run
@@ -157,6 +159,7 @@ class VectorUnit
         bool DIV_event_started;
         uint64_t finish_EFU_event;
         bool EFU_event_started;
+        int mbit_wait;
 
         float update_mac_flags(float value, int index);
         void clear_mac_flags(int index);
@@ -174,7 +177,7 @@ class VectorUnit
         void advance_r();
         void print_vectors(uint8_t a, uint8_t b);
     public:
-        VectorUnit(int id, Emulator* e, INTC* intc);
+        VectorUnit(int id, Emulator* e, INTC* intc, EmotionEngine* eecpu);
 
         DecodedRegs decoder;
 
@@ -188,7 +191,10 @@ class VectorUnit
         void update_mac_pipeline();
         void update_DIV_EFU_pipes();
         void check_for_FMAC_stall();
+        void check_for_COP2_FMAC_stall();
         void flush_pipes();
+        void cop2_updatepipes(int cycles);
+        void handle_cop2_stalls();
 
         void run(int cycles);
         void run_jit(int cycles);
@@ -485,6 +491,7 @@ inline void VectorUnit::set_I(uint32_t value)
 inline void VectorUnit::set_Q(uint32_t value)
 {
     new_Q_instance.u = value;
+    Q.u = new_Q_instance.u;
 }
 
 inline uint8_t* VectorUnit::get_instr_mem()

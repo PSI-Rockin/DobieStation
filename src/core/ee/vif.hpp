@@ -116,6 +116,7 @@ class VectorInterface
         uint32_t get_mode();
         uint32_t get_row(uint32_t address);
         uint32_t get_code();
+        uint32_t get_top();
 
         void set_mark(uint32_t value);
         void set_err(uint32_t value);

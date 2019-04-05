@@ -31,6 +31,7 @@ void Settings::reset()
     recent_roms = qsettings().value("recent_roms", {}).toStringList();
     vu1_jit_enabled = qsettings().value("vu1_jit_enabled", true).toBool();
     last_used_directory = qsettings().value("last_used_dir", QDir::homePath()).toString();
+    screenshot_directory = qsettings().value("screenshot_directory", QDir::homePath()).toString();
 
     rom_directories_to_add = QStringList();
     rom_directories_to_remove = QStringList();
@@ -63,6 +64,7 @@ void Settings::save()
     qsettings().setValue("rom_directories", rom_directories);
     qsettings().setValue("bios_path", bios_path);
     qsettings().setValue("vu1_jit_enabled", vu1_jit_enabled);
+    qsettings().setValue("screenshot_directory", screenshot_directory);
     qsettings().sync();
     reset();
 }
@@ -79,13 +81,13 @@ QSettings& Settings::qsettings()
     return settings;
 }
 
-void Settings::update_last_used_directory(QString path)
+void Settings::update_last_used_directory(const QString& path)
 {
     last_used_directory = path;
     qsettings().setValue("last_used_dir", last_used_directory);
 }
 
-void Settings::add_rom_directory(QString path)
+void Settings::add_rom_directory(const QString& path)
 {
     if (path.isEmpty())
         return;
@@ -96,7 +98,7 @@ void Settings::add_rom_directory(QString path)
     }
 }
 
-void Settings::remove_rom_directory(QString path)
+void Settings::remove_rom_directory(const QString& path)
 {
     if (path.isEmpty())
         return;
@@ -107,7 +109,7 @@ void Settings::remove_rom_directory(QString path)
     }
 }
 
-void Settings::add_rom_path(QString path)
+void Settings::add_rom_path(const QString& path)
 {
     if (path.isEmpty())
         return;
@@ -126,11 +128,20 @@ void Settings::clear_rom_paths()
     qsettings().setValue("recent_roms", {});
 }
 
-void Settings::set_bios_path(QString path)
+void Settings::set_bios_path(const QString& path)
 {
     if (path.isEmpty())
         return;
 
     bios_path = path;
     emit bios_changed(path);
+}
+
+void Settings::set_screenshot_directory(const QString& directory)
+{
+    if (directory.isEmpty())
+        return;
+
+    screenshot_directory = directory;
+    emit screenshot_directory_changed(directory);
 }

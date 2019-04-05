@@ -21,9 +21,6 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
     IR::Block block;
 
     bool block_end = false;
-    bool ebit = false;
-    bool move_branch_delay = false;
-    bool branch_detected = false;
 
     trans_branch_delay_slot = false;
     trans_ebit_delay_slot = false;
@@ -37,8 +34,8 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
 
     if (prev_pc != 0xFFFFFFFF)
     {
-        trans_branch_delay_slot = instr_info[prev_pc].branch_delay_slot;
-        trans_ebit_delay_slot = instr_info[prev_pc].ebit_delay_slot;
+        trans_branch_delay_slot = (vu.pipeline_state[1] >> 55) & 0x1;
+        trans_ebit_delay_slot = (vu.pipeline_state[1] >> 56) & 0x1;
     }
 
     IR::Instruction clear_delay(IR::Opcode::ClearIntDelay);
@@ -49,27 +46,15 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
         std::vector<IR::Instruction> upper_instrs;
         std::vector<IR::Instruction> lower_instrs;
 
-        if (branch_detected)
-        {
-            trans_branch_delay_slot = true;
-            branch_detected = false;
-        }
-
-        if (trans_branch_delay_slot || trans_ebit_delay_slot || instr_info[cur_PC].tbit_end)
+        if (instr_info[cur_PC].branch_delay_slot || instr_info[cur_PC].ebit_delay_slot || instr_info[cur_PC].tbit_end)
         {
             block_end = true;
+
             if (trans_ebit_delay_slot)
-                ebit = true;
+                trans_ebit_delay_slot = true;
 
-            if(trans_branch_delay_slot)
-                move_branch_delay = true;
-
-            /*if (trans_branch_delay_slot && prev_pc != 0xFFFFFFFF)
-            {
-                if(instr_info[prev_pc].branch_delay_slot)
-                    Errors::print_warning("[VU_IR] Executing Branch in delay slot");
-            }*/
-                
+            if (instr_info[cur_PC].branch_delay_slot)
+                trans_branch_delay_slot = true;
         }
 
         uint32_t upper = *(uint32_t*)&instr_mem[cur_PC + 4];
@@ -112,7 +97,7 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
             block.add_instr(backup);
         }
 
-        if (move_branch_delay)
+        if (instr_info[cur_PC].branch_delay_slot)
         {
             IR::Instruction branch(IR::Opcode::MoveDelayedBranch);
             block.add_instr(branch);
@@ -158,11 +143,6 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
                 for (unsigned int i = 0; i < lower_instrs.size(); i++)
                 {
                     block.add_instr(lower_instrs[i]);
-
-                    if (lower_instrs[i].is_jump())
-                    {
-                        branch_detected = true;
-                    }
                 }
 
                 IR::Instruction restore_new(IR::Opcode::RestoreVF);
@@ -181,10 +161,6 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
                 for (unsigned int i = 0; i < lower_instrs.size(); i++)
                 {
                     block.add_instr(lower_instrs[i]);
-                    if (lower_instrs[i].is_jump())
-                    {
-                        branch_detected = true;
-                    }
                 }
             }
         }
@@ -192,12 +168,11 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
         //End of microprogram delay slot
         if (upper & (1 << 30))
         {
-            if (trans_branch_delay_slot)
+            if (instr_info[cur_PC].is_branch)
                 Errors::print_warning("[VU_JIT] Warning! E-Bit On Branch!\n");
-            trans_ebit_delay_slot = true;
         }
         
-        if (ebit || instr_info[cur_PC].tbit_end)
+        if (instr_info[cur_PC].ebit_delay_slot || instr_info[cur_PC].tbit_end)
         {
             if (instr_info[cur_PC].tbit_end)
             {
@@ -232,12 +207,16 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
             //The branch will be taken instantly as we finish, I think
             //Only when in the delay slot of the ebit
             //if the branch was the ebit, this has already been done
-            if (branch_detected)
+            if (instr_info[cur_PC].is_branch)
             {
                 IR::Instruction branch(IR::Opcode::MoveDelayedBranch);
                 block.add_instr(branch);
                 Errors::print_warning("[VU_JIT] Warning! Branch in E-Bit Delay Slot!\n");
             }
+
+            IR::Instruction mac_update(IR::Opcode::UpdateMacPipeline);
+            mac_update.set_source(4);
+            block.add_instr(mac_update);
         }
         else if(block_end)
         {
@@ -616,8 +595,8 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
         q_pipe_delay = (vu.pipeline_state[1] >> 23) & 0xF;
         p_pipe_delay = (vu.pipeline_state[1] >> 27) & 0x3F;
 
-        branch_delay_slot = instr_info[prev_pc].branch_delay_slot;
-        ebit_delay_slot = instr_info[prev_pc].ebit_delay_slot;
+        branch_delay_slot = (vu.pipeline_state[1] >> 55) & 0x1;
+        ebit_delay_slot = (vu.pipeline_state[1] >> 56) & 0x1;
     }
     else //Else it's a new block so there is no previous state
     {
@@ -645,6 +624,8 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
         instr_info[PC].flag_instruction = FlagInstr_None;
         instr_info[PC].branch_delay_slot = false;
         instr_info[PC].ebit_delay_slot = false;
+        instr_info[PC].is_branch = false;
+        instr_info[PC].is_ebit = false;
         instr_info[PC].q_pipeline_instr = false;
         instr_info[PC].p_pipeline_instr = false;
         instr_info[PC].tbit_end = false;
@@ -707,6 +688,7 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
                 if (block_end)
                     Errors::print_warning("[VU_IR] Branch in delay slot\n");
                 branch_delay_slot = true;
+                instr_info[PC].is_branch = true;
             }
         }
         else
@@ -746,6 +728,7 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
         if (upper & (1 << 30))
         {
             ebit_delay_slot = true;
+            instr_info[PC].is_ebit = true;
         }
 
         if (upper & (1 << 27))
@@ -765,7 +748,7 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
 
     end_PC = PC - 8;
 
-    if (!instr_info[end_PC - 8].ebit_delay_slot)
+    if (!instr_info[end_PC].ebit_delay_slot)
     {
         if (instr_info[end_PC].decoder_vi_write && !vu.decoder.vi_write_from_load)
         {
@@ -787,9 +770,8 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
     instr_info[end_PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vf_write_field[0] & 0xF) << 43UL;
     instr_info[end_PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vf_write_field[1] & 0xF) << 47UL;
     instr_info[end_PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vi_write_from_load & 0xF) << 51UL;
-
-    instr_info[end_PC].branch_delay_slot = branch_delay_slot;
-    instr_info[end_PC].ebit_delay_slot = ebit_delay_slot;
+    instr_info[end_PC].pipeline_state[1] |= (uint64_t)(instr_info[end_PC].is_branch & 0x1) << 55UL;
+    instr_info[end_PC].pipeline_state[1] |= (uint64_t)(instr_info[end_PC].is_ebit & 0x1) << 56UL;
 }
 
 /**

@@ -33,8 +33,8 @@ Emulator::Emulator() :
     spu2(2, this, &iop_dma),
     vif0(nullptr, &vu0, &intc, &dmac, 0),
     vif1(&gif, &vu1, &intc, &dmac, 1),
-    vu0(0, this, &intc),
-    vu1(1, this, &intc),
+    vu0(0, this, &intc, &cpu),
+    vu1(1, this, &intc, &cpu),
     sif(&iop_dma, &dmac)
 {
     BIOS = nullptr;
@@ -543,6 +543,8 @@ uint32_t Emulator::read32(uint32_t address)
             return vif1.get_mode();
         case 0x10003C80:
             return vif1.get_code();
+        case 0x10003CE0:
+            return vif1.get_top();
         case 0x10003D00:
         case 0x10003D10:
         case 0x10003D20:
@@ -1198,6 +1200,8 @@ uint32_t Emulator::iop_read32(uint32_t address)
             return sio2.get_RECV2();
         case 0x1F808274:
             return sio2.get_RECV3();
+        case 0x1F808410:
+            return 8; // Some sort of FireWire thing
         case 0xFFFE0130: //Cache control?
             return 0;
     }

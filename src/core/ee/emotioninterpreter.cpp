@@ -827,16 +827,16 @@ void EmotionInterpreter::cop(EmotionEngine &cpu, uint32_t instruction)
             cpu.set_PC(cpu.get_PC() - 4);
             return;
         }
-        cpu.clear_interlock();
 
         cpu.cop2_special(cpu, instruction);
         return;
     }
     //Update VU0 when doing CFC/CTC commands
-    if (cop_id == 2 && op < 0x8 && !(instruction & 0x1))
+    if (cop_id == 2 && op != 0x8 && !(instruction & 0x1))
     {
         cpu.cop2_updatevu0();
     }
+
     switch (op | (cop_id * 0x100))
     {
         case 0x000:

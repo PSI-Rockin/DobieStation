@@ -22,6 +22,7 @@ class Settings final : public QObject
 
         QString bios_path;
         QString last_used_directory;
+        QString screenshot_directory;
         QStringList rom_directories;
         QStringList rom_directories_to_add;
         QStringList rom_directories_to_remove;
@@ -31,12 +32,13 @@ class Settings final : public QObject
 
         void save();
         void reset();
-        void update_last_used_directory(QString path);
-        void add_rom_directory(QString directory);
-        void add_rom_path(QString path);
-        void set_bios_path(QString path);
+        void update_last_used_directory(const QString& path);
+        void add_rom_directory(const QString& directory);
+        void add_rom_path(const QString& path);
+        void set_bios_path(const QString& path);
+        void set_screenshot_directory(const QString& directory);
 
-        void remove_rom_directory(QString directory);
+        void remove_rom_directory(const QString& directory);
         void clear_rom_paths();
     private:
         Settings();
@@ -47,6 +49,7 @@ class Settings final : public QObject
         void rom_directory_committed(const QString& directory);
         void rom_directory_uncommitted(const QString& directory);
         void bios_changed(const QString& path);
+        void screenshot_directory_changed(const QString& directory);
         void reload();
 };
 #endif

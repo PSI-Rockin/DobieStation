@@ -892,6 +892,11 @@ uint32_t VectorInterface::get_code()
     return CODE;
 }
 
+uint32_t VectorInterface::get_top()
+{
+    return TOP;
+}
+
 uint32_t VectorInterface::get_err()
 {
     uint32_t reg = 0;
