@@ -758,6 +758,7 @@ void DMAC::handle_source_chain(int index)
     uint32_t addr = (DMAtag >> 32) & 0xFFFFFFF0;
     bool IRQ_after_transfer = DMAtag & (1UL << 31);
     bool TIE = channels[index].control & (1 << 7);
+    int PCR_toggle = (DMAtag >> 26) & 0x3;
     channels[index].tag_id = (DMAtag >> 28) & 0x7;
     channels[index].quadword_count = quadword_count;
     channels[index].can_stall_drain = false;
@@ -851,7 +852,24 @@ void DMAC::handle_source_chain(int index)
     //printf("New address: $%08X\n", channels[index].address);
     //printf("New tag addr: $%08X\n", channels[index].tag_address);
 
-    //If a channel is queued, always switch to it on a tag boundary
+    switch (PCR_toggle)
+    {
+        case 1:
+            Errors::die("[DMAC] PCR info set to 1!");
+            break;
+        case 2:
+            //Disable priority control
+            PCR &= ~(1 << 31);
+            Errors::die("a");
+            break;
+        case 3:
+            //Enable priority control
+            PCR |= (1 << 31);
+            Errors::die("b");
+            break;
+    }
+
+    //If another channel is queued, always switch to it on a tag boundary
     arbitrate();
 }
 
@@ -1130,6 +1148,8 @@ void DMAC::write32(uint32_t address, uint32_t value)
             {
                 channels[VIF0].control &= (value & 0x100) | 0xFFFFFEFF;
                 channels[VIF0].started = (channels[VIF0].control & 0x100);
+                if (!channels[VIF0].started)
+                    deactivate_channel(VIF0);
             }
             break;
         case 0x10008010:
@@ -1158,6 +1178,8 @@ void DMAC::write32(uint32_t address, uint32_t value)
             {
                 channels[VIF1].control &= (value & 0x100) | 0xFFFFFEFF;
                 channels[VIF1].started = (channels[VIF1].control & 0x100);
+                if (!channels[VIF1].started)
+                    deactivate_channel(VIF1);
             }
             break;
         case 0x10009010:
@@ -1193,7 +1215,10 @@ void DMAC::write32(uint32_t address, uint32_t value)
                 channels[GIF].control &= (value & 0x100) | 0xFFFFFEFF;
                 channels[GIF].started = (channels[GIF].control & 0x100);
                 if (!channels[GIF].started)
+                {
+                    deactivate_channel(GIF);
                     gif->deactivate_PATH(3);
+                }
             }
             break;
         case 0x1000A010:
@@ -1222,6 +1247,8 @@ void DMAC::write32(uint32_t address, uint32_t value)
             {
                 channels[IPU_FROM].control &= (value & 0x100) | 0xFFFFFEFF;
                 channels[IPU_FROM].started = (channels[IPU_FROM].control & 0x100);
+                if (!channels[IPU_FROM].started)
+                    deactivate_channel(IPU_FROM);
             }
             break;
         case 0x1000B010:
@@ -1246,6 +1273,8 @@ void DMAC::write32(uint32_t address, uint32_t value)
             {
                 channels[IPU_TO].control &= (value & 0x100) | 0xFFFFFEFF;
                 channels[IPU_TO].started = (channels[IPU_TO].control & 0x100);
+                if (!channels[IPU_TO].started)
+                    deactivate_channel(IPU_TO);
             }
             break;
         case 0x1000B410:
@@ -1274,6 +1303,8 @@ void DMAC::write32(uint32_t address, uint32_t value)
             {
                 channels[EE_SIF0].control &= (value & 0x100) | 0xFFFFFEFF;
                 channels[EE_SIF0].started = (channels[EE_SIF0].control & 0x100);
+                if (!channels[EE_SIF0].started)
+                    deactivate_channel(EE_SIF0);
             }
             break;
         case 0x1000C010:
@@ -1298,6 +1329,8 @@ void DMAC::write32(uint32_t address, uint32_t value)
             {
                 channels[EE_SIF1].control &= (value & 0x100) | 0xFFFFFEFF;
                 channels[EE_SIF1].started = (channels[EE_SIF1].control & 0x100);
+                if (!channels[EE_SIF1].started)
+                    deactivate_channel(EE_SIF1);
             }
             break;
         case 0x1000C410:
@@ -1326,6 +1359,8 @@ void DMAC::write32(uint32_t address, uint32_t value)
             {
                 channels[SPR_FROM].control &= (value & 0x100) | 0xFFFFFEFF;
                 channels[SPR_FROM].started = (channels[SPR_FROM].control & 0x100);
+                if (!channels[SPR_FROM].started)
+                    deactivate_channel(SPR_FROM);
             }
             break;
         case 0x1000D010:
@@ -1354,6 +1389,8 @@ void DMAC::write32(uint32_t address, uint32_t value)
             {
                 channels[SPR_TO].control &= (value & 0x100) | 0xFFFFFEFF;
                 channels[SPR_TO].started = (channels[SPR_TO].control & 0x100);
+                if (!channels[SPR_TO].started)
+                    deactivate_channel(SPR_TO);
             }
             break;
         case 0x1000D410:
@@ -1398,6 +1435,12 @@ void DMAC::write32(uint32_t address, uint32_t value)
         case 0x1000E020:
             printf("[DMAC] Write to PCR: $%08X\n", value);
             PCR = value;
+
+            //Global priority control
+            if (PCR & (1 << 31))
+            {
+                //TODO
+            }
             break;
         case 0x1000E030:
             printf("[DMAC] Write to SQWC: $%08X\n", value);
@@ -1463,15 +1506,15 @@ void DMAC::deactivate_channel(int index)
     }
     else
     {
-            for (auto it = queued_channels.begin(); it != queued_channels.end(); it++)
+        for (auto it = queued_channels.begin(); it != queued_channels.end(); it++)
+        {
+            DMA_Channel* channel = *it;
+            if (channel == &channels[index])
             {
-                DMA_Channel* channel = *it;
-                if (channel == &channels[index])
-                {
-                    queued_channels.erase(it);
-                    break;
-                }
+                queued_channels.erase(it);
+                break;
             }
+        }
     }
 }
 
