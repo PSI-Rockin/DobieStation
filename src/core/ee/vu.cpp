@@ -416,7 +416,7 @@ void VectorUnit::run(int cycles)
 
 void VectorUnit::correct_jit_pipeline(int cycles)
 {
-    uint32_t stall_pipe[4];
+    uint64_t stall_pipe[4];
     int q_pipe_delay = (pipeline_state[1] >> 23) & 0xF;
     int p_pipe_delay = (pipeline_state[1] >> 27) & 0x3F;
 
