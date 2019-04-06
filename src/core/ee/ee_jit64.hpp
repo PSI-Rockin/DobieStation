@@ -31,12 +31,19 @@ private:
     int abi_int_count;
     int abi_xmm_count;
 
+    bool ee_branch;
+    uint32_t ee_branch_dest, ee_branch_fail_dest;
+    uint32_t ee_branch_delay_dest, ee_branch_delay_fail_dest;
     uint16_t cycle_count;
+
+    void EE_JIT64::handle_branch(EmotionEngine& ee);
 
     void fallback_interpreter(EmotionEngine& ee, const IR::Instruction &instr);
 
     void prepare_abi(EmotionEngine& ee, uint64_t value);
     void call_abi_func(uint64_t addr);
+    void recompile_block(EmotionEngine& ee, IR::Block& block);
+    void emit_instruction(EmotionEngine &ee, IR::Instruction &instr);
 
     void flush_regs(EmotionEngine& ee);
     void cleanup_recompiler(EmotionEngine& ee, bool clear_regs);

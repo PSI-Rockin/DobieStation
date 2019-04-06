@@ -37,6 +37,7 @@ class EmotionEngine
         uint64_t cycle_count;
         uint64_t cop2_last_cycle;
         int cycles_to_run;
+        uint64_t run_event;
 
         Cop0* cp0;
         Cop1* fpu;
@@ -70,6 +71,7 @@ class EmotionEngine
         static const char* SYSCALL(int id);
         void reset();
         int run(int cycles);
+        int run_jit(int cycles);
         uint64_t get_cycle_count();
         uint64_t get_cop2_last_cycle();
         void set_cop2_last_cycle(uint64_t value);

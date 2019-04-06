@@ -1,5 +1,5 @@
 PUBLIC run_ee_jit
-EXTERN exec_block:PROC
+EXTERN exec_block_ee:PROC
 
 .data
 
@@ -23,7 +23,7 @@ run_ee_jit PROC FRAME
     push rdi
 
     sub rsp, 32
-    call exec_block
+    call exec_block_ee
     add rsp, 32
     sub rsp, 32
     call rax

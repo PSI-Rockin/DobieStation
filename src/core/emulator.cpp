@@ -7,6 +7,7 @@
 #include "errors.hpp"
 
 #include "ee/vu_jit.hpp"
+#include "ee/ee_jit.hpp"
 
 #define CYCLES_PER_FRAME 4900000
 #define VBLANK_START_CYCLES CYCLES_PER_FRAME * 0.75
@@ -87,6 +88,7 @@ void Emulator::run()
         scheduler.update_cycle_counts();
 
         cpu.run(ee_cycles);
+        //cpu.run_jit(ee_cycles);
         dmac.run(bus_cycles);
         timers.run(bus_cycles);
         ipu.run();
@@ -151,6 +153,7 @@ void Emulator::reset()
     vu0.reset();
     vu1.reset();
     VU_JIT::reset();
+    EE_JIT::reset();
 
     MCH_DRD = 0;
     MCH_RICM = 0;

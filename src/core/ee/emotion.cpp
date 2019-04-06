@@ -8,6 +8,7 @@
 #include "../errors.hpp"
 
 #include "../emulator.hpp"
+#include "ee_jit.hpp"
 
 //#define SKIPMPEG_ON
 
@@ -177,6 +178,31 @@ int EmotionEngine::run(int cycles)
     return cycles;
 }
 
+int EmotionEngine::run_jit(int cycles)
+{
+    cycle_count += cycles;
+    if (!wait_for_IRQ)
+    {
+        cycles_to_run += cycles;
+        while (run_event < cycles_to_run)
+        {
+            run_event += EE_JIT::run(this);
+        }
+    }
+
+    if (cp0->int_enabled())
+    {
+        if (cp0->cause.int0_pending)
+            int0();
+        else if (cp0->cause.int1_pending)
+            int1();
+    }
+
+    cp0->count_up(cycles);
+
+    return cycles;
+}
+
 void EmotionEngine::print_state()
 {
     for (int i = 1; i < 32; i++)
@@ -314,7 +340,7 @@ uint16_t EmotionEngine::read16(uint32_t address)
     if (address & 0x1)
         Errors::die("[EE] Read16 from invalid address $%08X", address);
     if (address >= 0x70000000 && address < 0x70004000)
-        return *(uint16_t*)&scratchpad[address & 0x3FFE];
+        return *reinterpret_cast<uint16_t*>(&scratchpad[address & 0x3FFE]);
     if (address >= 0x30100000 && address <= 0x31FFFFFF)
         address -= 0x10000000;
     return e->read16(address & 0x1FFFFFFF);
@@ -325,7 +351,7 @@ uint32_t EmotionEngine::read32(uint32_t address)
     if (address & 0x3)
         Errors::die("[EE] Read32 from invalid address $%08X", address);
     if (address >= 0x70000000 && address < 0x70004000)
-        return *(uint32_t*)&scratchpad[address & 0x3FFC];
+        return *reinterpret_cast<uint32_t*>(&scratchpad[address & 0x3FFC]);
     if (address >= 0x30100000 && address <= 0x31FFFFFF)
         address -= 0x10000000;
     return e->read32(address & 0x1FFFFFFF);
@@ -336,7 +362,7 @@ uint64_t EmotionEngine::read64(uint32_t address)
     if (address & 0x7)
         Errors::die("[EE] Read64 from invalid address $%08X", address);
     if (address >= 0x70000000 && address < 0x70004000)
-        return *(uint64_t*)&scratchpad[address & 0x3FF8];
+        return *reinterpret_cast<uint64_t*>(&scratchpad[address & 0x3FF8]);
     if (address >= 0x30100000 && address <= 0x31FFFFFF)
         address -= 0x10000000;
     return e->read64(address & 0x1FFFFFFF);
@@ -345,7 +371,7 @@ uint64_t EmotionEngine::read64(uint32_t address)
 uint128_t EmotionEngine::read128(uint32_t address)
 {
     if (address >= 0x70000000 && address < 0x70004000)
-        return *(uint128_t*)&scratchpad[address & 0x3FF0];
+        return *reinterpret_cast<uint128_t*>(&scratchpad[address & 0x3FF0]);
     if (address >= 0x30100000 && address <= 0x31FFFFFF)
         address -= 0x10000000;
     return e->read128(address & 0x1FFFFFF0);
@@ -380,7 +406,7 @@ void EmotionEngine::write16(uint32_t address, uint16_t value)
         Errors::die("[EE] Write16 to invalid address $%08X: $%04X", address, value);
     if (address >= 0x70000000 && address < 0x70004000)
     {
-        *(uint16_t*)&scratchpad[address & 0x3FFE] = value;
+        *reinterpret_cast<uint16_t*>(&scratchpad[address & 0x3FFE]) = value;
         return;
     }
     if (address >= 0x30100000 && address <= 0x31FFFFFF)
@@ -394,7 +420,7 @@ void EmotionEngine::write32(uint32_t address, uint32_t value)
         Errors::die("[EE] Write32 to invalid address $%08X: $%08X", address, value);
     if (address >= 0x70000000 && address < 0x70004000)
     {
-        *(uint32_t*)&scratchpad[address & 0x3FFC] = value;
+        *reinterpret_cast<uint32_t*>(&scratchpad[address & 0x3FFC]) = value;
         return;
     }
     if (address >= 0x30100000 && address <= 0x31FFFFFF)
@@ -408,7 +434,7 @@ void EmotionEngine::write64(uint32_t address, uint64_t value)
         Errors::die("[EE] Write64 to invalid address $%08X: $%08X_%08X", address, value >> 32, value);
     if (address >= 0x70000000 && address < 0x70004000)
     {
-        *(uint64_t*)&scratchpad[address & 0x3FF8] = value;
+        *reinterpret_cast<uint64_t*>(&scratchpad[address & 0x3FF8]) = value;
         return;
     }
     if (address >= 0x30100000 && address <= 0x31FFFFFF)
@@ -420,7 +446,7 @@ void EmotionEngine::write128(uint32_t address, uint128_t value)
 {
     if (address >= 0x70000000 && address < 0x70004000)
     {
-        *(uint128_t*)&scratchpad[address & 0x3FF0] = value;
+        *reinterpret_cast<uint128_t*>(&scratchpad[address & 0x3FF0]) = value;
         return;
     }
     if (address >= 0x30100000 && address <= 0x31FFFFFF)

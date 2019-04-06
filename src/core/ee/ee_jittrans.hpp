@@ -21,9 +21,10 @@ private:
     uint16_t end_PC;
     uint16_t cur_PC;
 
-    void fallback_interpreter(IR::Instruction& instr, uint32_t instr_word, bool is_upper);
+    void interpreter_pass(EmotionEngine &ee, uint32_t pc);
+    void fallback_interpreter(IR::Instruction& instr, uint32_t instr_word);
 public:
-    //IR::Block translate(VectorUnit& vu, uint8_t *instr_mem, uint32_t prev_pc);
+    IR::Block translate(EmotionEngine& ee, uint32_t pc);
     void reset_instr_info();
 };
 
