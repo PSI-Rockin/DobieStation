@@ -61,7 +61,7 @@ uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee)
     if (jit.cache.find_block(BlockState{ ee.PC, 0, 0, 0, 0 }) == nullptr)
     {
         printf("[EE_JIT64] Block not found at $%04X: recompiling\n", ee.PC);
-        IR::Block block = jit.ir.translate(ee, ee.read32(ee.PC));
+        IR::Block block = jit.ir.translate(ee, ee.PC);
         jit.recompile_block(ee, block);
     }
     return jit.cache.get_current_block_start();
@@ -119,7 +119,7 @@ void EE_JIT64::recompile_block(EmotionEngine& ee, IR::Block& block)
     //cache.print_literal_pool();
 }
 
-void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
+void EE_JIT64::emit_instruction(EmotionEngine &ee, const IR::Instruction &instr)
 {
     switch (instr.op)
     {
@@ -163,7 +163,7 @@ void EE_JIT64::handle_branch(EmotionEngine& ee)
     cleanup_recompiler(ee, true);
 }
 
-void EE_JIT64::prepare_abi(EmotionEngine& ee, uint64_t value)
+void EE_JIT64::prepare_abi(const EmotionEngine& ee, uint64_t value)
 {
 #ifdef _WIN32
     const static REG_64 regs[] = { RCX, RDX, R8, R9 };
@@ -246,7 +246,10 @@ void EE_JIT64::fallback_interpreter(EmotionEngine& ee, const IR::Instruction &in
         xmm_regs[i].used = false;
     }
 
+    uint32_t instr_word = instr.get_source();
+
     prepare_abi(ee, reinterpret_cast<uint64_t>(&ee));
+    prepare_abi(ee, instr_word);
 
     call_abi_func(reinterpret_cast<uint64_t>(&interpreter));
 }
@@ -279,7 +282,7 @@ void EE_JIT64::flush_regs(EmotionEngine& ee)
 uint64_t EE_JIT64::get_fpu_addr(EmotionEngine &ee, int index)
 {
     if (index < 32)
-        return reinterpret_cast<uint64_t>(&ee.gpr[index]);
+        return reinterpret_cast<uint64_t>(&ee.fpu->gpr[index]);
 
     switch (index)
     {
@@ -305,9 +308,6 @@ void EE_JIT64::cleanup_recompiler(EmotionEngine& ee, bool clear_regs)
             xmm_regs[i].used = false;
         }
     }
-
-    emitter.load_addr((uint64_t)&ee.PC, REG_64::R15);
-    emitter.MOV16_TO_MEM(REG_64::RAX, REG_64::R15);
 
     //Return the amount of cycles to update the EE with
     emitter.MOV16_REG_IMM(cycle_count, REG_64::RAX);

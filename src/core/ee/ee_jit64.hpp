@@ -40,10 +40,10 @@ private:
 
     void fallback_interpreter(EmotionEngine& ee, const IR::Instruction &instr);
 
-    void prepare_abi(EmotionEngine& ee, uint64_t value);
+    void prepare_abi(const EmotionEngine& ee, uint64_t value);
     void call_abi_func(uint64_t addr);
     void recompile_block(EmotionEngine& ee, IR::Block& block);
-    void emit_instruction(EmotionEngine &ee, IR::Instruction &instr);
+    void emit_instruction(EmotionEngine &ee, const IR::Instruction &instr);
     uint64_t get_fpu_addr(EmotionEngine &ee, int index);
 
     void flush_regs(EmotionEngine& ee);

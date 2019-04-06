@@ -13,12 +13,12 @@ void Block::add_instr(Instruction &instr)
     instructions.push_back(instr);
 }
 
-unsigned int Block::get_instruction_count()
+unsigned int Block::get_instruction_count() const
 {
     return instructions.size();
 }
 
-int Block::get_cycle_count()
+int Block::get_cycle_count() const
 {
     return cycle_count;
 }

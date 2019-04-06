@@ -16,8 +16,8 @@ class Block
 
         void add_instr(Instruction& instr);
 
-        unsigned int get_instruction_count();
-        int get_cycle_count();
+        unsigned int get_instruction_count() const;
+        int get_cycle_count() const;
         Instruction get_next_instr();
 
         void set_cycle_count(int cycles);
