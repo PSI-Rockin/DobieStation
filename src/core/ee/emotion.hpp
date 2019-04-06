@@ -9,6 +9,8 @@
 
 class Emulator;
 class VectorUnit;
+class EE_JIT64;
+class EmotionEngine;
 
 //Handler used for Deci2Call (syscall 0x7C)
 struct Deci2Handler
@@ -24,6 +26,8 @@ struct EE_ICacheLine
     bool lfu[2];
     uint16_t tag[2];
 };
+
+extern "C" uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee);
 
 class EmotionEngine
 {
@@ -164,6 +168,12 @@ class EmotionEngine
 
         void load_state(std::ifstream& state);
         void save_state(std::ofstream& state);
+
+        //Friends needed for JIT convenience
+        friend class EE_JIT64;
+        friend class EE_JitTranslator;
+
+        friend uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee);
 };
 
 template <typename T>

@@ -41,7 +41,6 @@ EE_JIT64::EE_JIT64() : emitter(&cache)
 }
 
 
-
 void EE_JIT64::reset(bool clear_cache)
 {
     //TODO
@@ -59,4 +58,154 @@ uint16_t EE_JIT64::run(EmotionEngine& ee)
 {
     //TODO
     return 0;
+}
+
+void EE_JIT64::prepare_abi(EmotionEngine& ee, uint64_t value)
+{
+#ifdef _WIN32
+    const static REG_64 regs[] = { RCX, RDX, R8, R9 };
+
+    if (abi_int_count >= 4)
+        Errors::die("[EE_JIT64] ABI integer arguments exceeded 4!");
+#else
+    const static REG_64 regs[] = { RDI, RSI, RDX, RCX, R8, R9 };
+
+    if (abi_int_count >= 6)
+        Errors::die("[EE_JIT64] ABI integer arguments exceeded 6!");
+#endif    
+
+    REG_64 arg = regs[abi_int_count];
+
+    //If the chosen integer argument is being used, flush it back to the VU state
+    if (int_regs[arg].used)
+    {
+        int vi_reg = int_regs[arg].vu_reg;
+        if (int_regs[arg].modified)
+        {
+            //emitter.load_addr((uint64_t)&v.int_gpr[vi_reg], REG_64::RAX);
+            //emitter.MOV64_TO_MEM(arg, REG_64::RAX);
+        }
+        int_regs[arg].used = false;
+        int_regs[arg].age = 0;
+    }
+    emitter.load_addr(value, regs[abi_int_count]);
+    abi_int_count++;
+}
+
+void EE_JIT64::call_abi_func(uint64_t addr)
+{
+    const static REG_64 saved_regs[] = { RCX, RDX, R8, R9, R10, R11 };
+    int total_regs = sizeof(saved_regs) / sizeof(REG_64);
+    int regs_used = 0;
+    int sp_offset = 0;
+
+    for (int i = 0; i < total_regs; i++)
+    {
+        if (int_regs[saved_regs[i]].used)
+        {
+            emitter.PUSH(saved_regs[i]);
+            regs_used++;
+        }
+    }
+
+    //Align stack pointer on 16-byte boundary
+    if (regs_used & 1)
+        sp_offset += 8;
+#ifdef _WIN32
+    //x64 Windows requires a 32-byte "shadow region" to store the four argument registers, even if not all are used
+    sp_offset += 32;
+#endif
+    emitter.MOV64_OI(addr, REG_64::RAX);
+
+    if (sp_offset)
+        emitter.SUB64_REG_IMM(sp_offset, REG_64::RSP);
+    emitter.CALL_INDIR(REG_64::RAX);
+    if (sp_offset)
+        emitter.ADD64_REG_IMM(sp_offset, REG_64::RSP);
+
+    for (int i = total_regs - 1; i >= 0; i--)
+    {
+        if (int_regs[saved_regs[i]].used)
+            emitter.POP(saved_regs[i]);
+    }
+    abi_int_count = 0;
+    abi_xmm_count = 0;
+}
+
+void EE_JIT64::fallback_interpreter(EmotionEngine& ee, const IR::Instruction &instr)
+{
+    flush_regs(ee);
+    for (int i = 0; i < 16; i++)
+    {
+        int_regs[i].age = 0;
+        int_regs[i].used = false;
+        xmm_regs[i].age = 0;
+        xmm_regs[i].used = false;
+    }
+
+    uint32_t instr_word = instr.get_source();
+
+    /*
+    prepare_abi(ee, reinterpret_cast<uint64_t>(&ee));
+    prepare_abi(ee, instr_word);
+
+    bool is_upper = instr.get_field();
+
+    if (is_upper)
+        call_abi_func(reinterpret_cast<uint64_t>(&interpreter_upper));
+    else
+        call_abi_func(reinterpret_cast<uint64_t>(&interpreter_lower));
+    */
+}
+
+void EE_JIT64::flush_regs(EmotionEngine& ee)
+{
+    //Store the contents of all allocated x64 registers into the EE state.
+    printf("[EE_JIT64] Flushing regs\n");
+    for (int i = 0; i < 16; i++)
+    {
+        //TODO
+    }
+}
+
+void EE_JIT64::cleanup_recompiler(EmotionEngine& ee, bool clear_regs)
+{
+    flush_regs(ee);
+
+    if (clear_regs)
+    {
+        for (int i = 0; i < 16; i++)
+        {
+            int_regs[i].age = 0;
+            int_regs[i].used = false;
+            xmm_regs[i].age = 0;
+            xmm_regs[i].used = false;
+        }
+    }
+
+    //Return the amount of cycles to update the EE with
+    emitter.MOV16_REG_IMM(cycle_count, REG_64::RAX);
+    emitter.load_addr(reinterpret_cast<uint64_t>(&cycle_count), REG_64::R15);
+    emitter.MOV16_TO_MEM(REG_64::RAX, REG_64::R15);
+
+    //Epilogue
+    emitter.POP(REG_64::RBP);
+#ifndef _MSC_VER
+    emit_epilogue();
+#endif
+    emitter.RET();
+}
+
+void EE_JIT64::emit_epilogue()
+{
+#ifdef _WIN32
+    Errors::die("[EE_JIT64] emit_epilogue not implemented for _WIN32");
+#else
+    emitter.POP(REG_64::RDI);
+    emitter.POP(REG_64::R15);
+    emitter.POP(REG_64::R14);
+    emitter.POP(REG_64::R13);
+    emitter.POP(REG_64::R12);
+    emitter.POP(REG_64::RBX);
+#endif
 }

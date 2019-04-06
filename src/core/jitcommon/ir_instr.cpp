@@ -8,52 +8,52 @@ Instruction::Instruction(Opcode op) : op(op)
 
 }
 
-uint32_t Instruction::get_jump_dest()
+uint32_t Instruction::get_jump_dest() const
 {
     return jump_dest;
 }
 
-uint32_t Instruction::get_jump_fail_dest()
+uint32_t Instruction::get_jump_fail_dest() const
 {
     return jump_fail_dest;
 }
 
-uint32_t Instruction::get_return_addr()
+uint32_t Instruction::get_return_addr() const
 {
     return return_addr;
 }
 
-int Instruction::get_dest()
+int Instruction::get_dest() const
 {
     return dest;
 }
 
-int Instruction::get_base()
+int Instruction::get_base() const
 {
     return base;
 }
 
-uint64_t Instruction::get_source()
+uint64_t Instruction::get_source() const
 {
     return source;
 }
 
-uint64_t Instruction::get_source2()
+uint64_t Instruction::get_source2() const
 {
     return source2;
 }
 
-uint8_t Instruction::get_bc()
+uint8_t Instruction::get_bc() const
 {
     return bc;
 }
 
-uint8_t Instruction::get_field()
+uint8_t Instruction::get_field() const
 {
     return field;
 }
 
-uint8_t Instruction::get_field2()
+uint8_t Instruction::get_field2() const
 {
     return field2;
 }
