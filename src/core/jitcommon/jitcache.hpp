@@ -6,6 +6,10 @@
 struct BlockState
 {
     public:
+        BlockState(uint32_t pc, uint32_t prev_pc, uint32_t program, uint64_t param1,
+                   uint64_t param2) : pc(pc), prev_pc(prev_pc), program(program),
+                   param1(param1), param2(param2) { }
+        BlockState() = default;
         uint32_t pc;
         uint32_t prev_pc = 0;
         uint32_t program = 0;
