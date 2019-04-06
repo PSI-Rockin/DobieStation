@@ -209,6 +209,7 @@ bool GS_REGISTERS::write64(uint32_t addr, uint64_t value)
     addr &= 0xFFFF;
     switch (addr)
     {
+        case 0x0060:
             ds_log->gs_r->info("SIGNAL requested!\n");
         {
             uint32_t mask = value >> 32;
