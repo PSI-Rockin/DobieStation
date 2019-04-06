@@ -40,6 +40,8 @@ EE_JIT64::EE_JIT64() : emitter(&cache)
     //TODO
 }
 
+
+
 void EE_JIT64::reset(bool clear_cache)
 {
     //TODO
@@ -56,4 +58,5 @@ void EE_JIT64::reset(bool clear_cache)
 uint16_t EE_JIT64::run(EmotionEngine& ee)
 {
     //TODO
+    return 0;
 }
