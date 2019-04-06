@@ -6,6 +6,12 @@
 
 class EmotionEngine;
 
+enum FPU_SpecialReg
+{
+    VU_Regular = 0,
+    ACC = 32
+};
+
 struct EE_InstrInfo
 {
     //TODO

@@ -14,6 +14,7 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee, uint32_t pc)
     IR::Block block;
     IR::Instruction fallback(IR::Opcode::FallbackInterpreter);
     block.add_instr(fallback);
+    block.set_cycle_count(/*cycles_this_block*/1);
     
     return block;
 }

@@ -67,6 +67,11 @@ uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee)
     return jit.cache.get_current_block_start();
 }
 
+void interpreter(EmotionEngine& ee, uint32_t instr)
+{
+    EmotionInterpreter::interpret(ee, instr);
+}
+
 uint16_t EE_JIT64::run(EmotionEngine& ee)
 {
 #ifdef _MSC_VER
@@ -174,14 +179,14 @@ void EE_JIT64::prepare_abi(EmotionEngine& ee, uint64_t value)
 
     REG_64 arg = regs[abi_int_count];
 
-    //If the chosen integer argument is being used, flush it back to the VU state
+    //If the chosen integer argument is being used, flush it back to the EE state
     if (int_regs[arg].used)
     {
         int vi_reg = int_regs[arg].vu_reg;
         if (int_regs[arg].modified)
         {
-            //emitter.load_addr((uint64_t)&v.int_gpr[vi_reg], REG_64::RAX);
-            //emitter.MOV64_TO_MEM(arg, REG_64::RAX);
+            emitter.load_addr((uint64_t)&ee.gpr[vi_reg], REG_64::RAX);
+            emitter.MOV64_TO_MEM(arg, REG_64::RAX);
         }
         int_regs[arg].used = false;
         int_regs[arg].age = 0;
@@ -241,19 +246,9 @@ void EE_JIT64::fallback_interpreter(EmotionEngine& ee, const IR::Instruction &in
         xmm_regs[i].used = false;
     }
 
-    uint32_t instr_word = instr.get_source();
-
-    /*
     prepare_abi(ee, reinterpret_cast<uint64_t>(&ee));
-    prepare_abi(ee, instr_word);
 
-    bool is_upper = instr.get_field();
-
-    if (is_upper)
-        call_abi_func(reinterpret_cast<uint64_t>(&interpreter_upper));
-    else
-        call_abi_func(reinterpret_cast<uint64_t>(&interpreter_lower));
-    */
+    call_abi_func(reinterpret_cast<uint64_t>(&interpreter));
 }
 
 void EE_JIT64::flush_regs(EmotionEngine& ee)
@@ -262,8 +257,38 @@ void EE_JIT64::flush_regs(EmotionEngine& ee)
     printf("[EE_JIT64] Flushing regs\n");
     for (int i = 0; i < 16; i++)
     {
-        //TODO
+        for (int i = 0; i < 16; i++)
+        {
+            int vf_reg = xmm_regs[i].vu_reg;
+            int vi_reg = int_regs[i].vu_reg;
+            if (xmm_regs[i].used && vf_reg && xmm_regs[i].modified)
+            {
+                emitter.load_addr(get_fpu_addr(ee, vf_reg) , REG_64::RAX);
+                emitter.MOVAPS_TO_MEM((REG_64)i, REG_64::RAX);
+            }
+
+            if (int_regs[i].used && vi_reg && int_regs[i].modified)
+            {
+                emitter.load_addr((uint64_t)&ee.gpr[vi_reg], REG_64::RAX);
+                emitter.MOV16_TO_MEM((REG_64)i, REG_64::RAX);
+            }
+        }
     }
+}
+
+uint64_t EE_JIT64::get_fpu_addr(EmotionEngine &ee, int index)
+{
+    if (index < 32)
+        return reinterpret_cast<uint64_t>(&ee.gpr[index]);
+
+    switch (index)
+    {
+    case FPU_SpecialReg::ACC:
+        return (uint64_t)&ee.fpu->accumulator;
+    default:
+        Errors::die("[EE_JIT64] get_fpu_addr error: Unrecognized reg %d", index);
+    }
+    return 0;
 }
 
 void EE_JIT64::cleanup_recompiler(EmotionEngine& ee, bool clear_regs)
@@ -280,6 +305,9 @@ void EE_JIT64::cleanup_recompiler(EmotionEngine& ee, bool clear_regs)
             xmm_regs[i].used = false;
         }
     }
+
+    emitter.load_addr((uint64_t)&ee.PC, REG_64::R15);
+    emitter.MOV16_TO_MEM(REG_64::RAX, REG_64::R15);
 
     //Return the amount of cycles to update the EE with
     emitter.MOV16_REG_IMM(cycle_count, REG_64::RAX);

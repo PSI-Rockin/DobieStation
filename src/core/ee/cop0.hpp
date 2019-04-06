@@ -3,6 +3,9 @@
 #include <cstdint>
 #include <fstream>
 
+class EE_JIT64;
+class EmotionEngine;
+
 enum COP0_REG
 {
     STATUS = 12,
@@ -41,6 +44,8 @@ struct COP0_CAUSE
 
 class DMAC;
 
+extern "C" uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee);
+
 class Cop0
 {
     private:
@@ -67,6 +72,12 @@ class Cop0
 
         void load_state(std::ifstream &state);
         void save_state(std::ofstream& state);
+
+        //Friends needed for JIT convenience
+        friend class EE_JIT64;
+        friend class EE_JitTranslator;
+
+        friend uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee);
 };
 
 inline bool Cop0::int_enabled()

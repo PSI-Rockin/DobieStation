@@ -180,15 +180,29 @@ int EmotionEngine::run(int cycles)
 
 int EmotionEngine::run_jit(int cycles)
 {
+    run_event = 0;
+
     cycle_count += cycles;
     if (!wait_for_IRQ)
     {
         cycles_to_run += cycles;
         while (run_event < cycles_to_run)
         {
+            uint32_t instruction = read_instr(PC);
+            uint32_t lastPC = PC;
+
+            if (can_disassemble)
+            {
+                std::string disasm = EmotionDisasm::disasm_instr(instruction, PC);
+                printf("[$%08X] $%08X - %s\n", PC, instruction, disasm.c_str());
+                //print_state();
+            }
+
             run_event += EE_JIT::run(this);
         }
     }
+
+
 
     if (cp0->int_enabled())
     {

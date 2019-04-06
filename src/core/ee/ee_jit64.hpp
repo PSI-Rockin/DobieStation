@@ -44,6 +44,7 @@ private:
     void call_abi_func(uint64_t addr);
     void recompile_block(EmotionEngine& ee, IR::Block& block);
     void emit_instruction(EmotionEngine &ee, IR::Instruction &instr);
+    uint64_t get_fpu_addr(EmotionEngine &ee, int index);
 
     void flush_regs(EmotionEngine& ee);
     void cleanup_recompiler(EmotionEngine& ee, bool clear_regs);
