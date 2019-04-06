@@ -265,7 +265,7 @@ uint32_t CDVD_Drive::read_to_RAM(uint8_t *RAM, uint32_t bytes)
 
 void CDVD_Drive::handle_N_command()
 {
-    printf("CDVD event!\n");
+    ds_log->cdvd->info("CDVD event!\n");
     switch (active_N_command)
     {
         case NCOMMAND::SEEK:
@@ -308,7 +308,7 @@ void CDVD_Drive::handle_N_command()
             add_event(get_block_timing(N_command != 0x06));
             break;
         case NCOMMAND::BREAK:
-            printf("[CDVD] Break issued\n");
+            ds_log->cdvd->info("Break issued.\n");
             drive_status = PAUSED;
             active_N_command = NCOMMAND::NONE;
             N_status = 0x4E;

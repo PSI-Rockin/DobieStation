@@ -179,7 +179,7 @@ void Emulator::vblank_start()
     timers.gate(true, true);
     cdvd.vsync();
     //cpu.set_disassembly(frames >= 223 && frames < 225);
-    printf("VSYNC FRAMES: %d\n", frames);
+    ds_log->main->info("VSYNC FRAMES: {}\n", frames);
     gs.assert_VSYNC();
     frames++;
     iop_request_IRQ(0);
@@ -209,7 +209,7 @@ void Emulator::gen_sound_sample()
 
 void Emulator::ee_irq_check()
 {
-    //printf("[EE] INT0 check\n");
+    ds_log->ee->debug("INT0 check\n");
     intc.int0_check();
 }
 
@@ -542,7 +542,7 @@ uint32_t Emulator::read32(uint32_t address)
         case 0x10003D30:
             return vif1.get_row(address);
         case 0x1000F000:
-            //printf("\nRead32 INTC_STAT: $%08X", intc.read_stat());
+            ds_log->ee->debug("Read32 INTC_STAT: ${:08X}\n", intc.read_stat());
             return intc.read_stat();
         case 0x1000F010:
             ds_log->main->info("Read32 INTC_MASK: ${:08X}\n", intc.read_mask());
@@ -964,7 +964,7 @@ uint8_t Emulator::iop_read8(uint32_t address)
 {
     if (address < 0x00200000)
     {
-        //printf("[IOP] Read8 from $%08X: $%02X\n", address, IOP_RAM[address]);
+        ds_log->iop->debug("Read8 from ${:08X}: ${:02X}\n", address, IOP_RAM[address]);
         return IOP_RAM[address];
     }
     if (address >= 0x1FC00000 && address < 0x20000000)
@@ -1258,7 +1258,7 @@ void Emulator::iop_write16(uint32_t address, uint16_t value)
 {
     if (address < 0x00200000)
     {
-        //printf("[IOP] Write16 to $%08X of $%08X\n", address, value);
+        ds_log->iop->debug("Write16 to ${:08X} of ${:08X}\n", address, value);
         *(uint16_t*)&IOP_RAM[address] = value;
         return;
     }
@@ -1386,7 +1386,7 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
 {
     if (address < 0x00200000)
     {
-        //printf("[IOP] Write to $%08X of $%08X\n", address, value);
+        ds_log->iop->debug("Write to ${:08X} of ${:08X}.\n", address, value);
         *(uint32_t*)&IOP_RAM[address] = value;
         return;
     }
@@ -1606,7 +1606,7 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
     }
     if (address == 0xFFFE0144)
     {
-        printf("[IOP] Scratchpad start: $%08X\n", value);
+        ds_log->iop->info("Scratchpad start: ${:08X}\n", value);
         iop_scratchpad_start = value;
         return;
     }

@@ -2,6 +2,7 @@
 #include <cstdlib>
 #include "iop_cop0.hpp"
 #include "../errors.hpp"
+#include "../logger.hpp"
 
 IOP_Cop0::IOP_Cop0()
 {
@@ -27,7 +28,7 @@ void IOP_Cop0::reset()
 
 uint32_t IOP_Cop0::mfc(int cop_reg)
 {
-    //printf("[IOP COP0] MFC: Read from %d\n", cop_reg);
+    ds_log->cop->debug("[0] MFC: Read from {}\n", cop_reg);
     switch (cop_reg)
     {
         case 12:
@@ -64,7 +65,7 @@ uint32_t IOP_Cop0::mfc(int cop_reg)
 
 void IOP_Cop0::mtc(int cop_reg, uint32_t value)
 {
-    //printf("[IOP COP0] MTC: Write to %d of $%08X\n", cop_reg, value);
+    ds_log->cop->debug("[0] MTC: Write to {} of ${:08X}\n", cop_reg, value);
     switch (cop_reg)
     {
         case 12:

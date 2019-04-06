@@ -198,7 +198,7 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
 
                         while (!p.target_mutex->try_lock())
                         {
-                            printf("[GS_t] buffer lock failed!\n");
+                            ds_log->gs_t->info("buffer lock failed!\n");
                             std::this_thread::yield();
                         }
                         std::lock_guard<std::mutex> lock(*p.target_mutex, std::adopt_lock);
@@ -270,7 +270,7 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
                         }
                         else
                         {
-                            printf("(end)\n");
+                            ds_log->gs_t->info("(end)\n");
                             gsdump_file.close();
                             gsdump_recording = false;
                         }
@@ -477,7 +477,7 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
 void GraphicsSynthesizerThread::dump_texture(uint32_t* target, uint32_t start_addr, uint32_t width)
 {
     uint32_t dwidth = reg.DISPLAY2.width >> 2;
-    printf("[GS_t] Dumping texture\n");
+    ds_log->gs_t->info("Dumping texture\n");
     int max_pixels = width * 256 / 2;
     int p = 0;
     while (p < max_pixels)
@@ -1093,7 +1093,7 @@ void GraphicsSynthesizerThread::vertex_kick(bool drawing_kick)
     current_vtx.t = ST.t;
     current_vtx.fog = FOG;
     vtx_queue[0] = current_vtx;
-    //printf("Vkick: (%d, %d, %d)\n", current_vtx.x, current_vtx.y, current_vtx.z);
+    ds_log->gs_t->debug("Vkick: ({}, {}, {})\n", current_vtx.x, current_vtx.y, current_vtx.z);
 
     num_vertices++;
     bool request_draw_kick = false;
@@ -2208,10 +2208,10 @@ void GraphicsSynthesizerThread::unpack_PSMCT24(uint64_t data, int offset, bool z
 
 void GraphicsSynthesizerThread::local_to_local()
 {
-    printf("[GS_t] Local to local transfer\n");
-    printf("(%d, %d) -> (%d, %d)\n", TRXPOS.source_x, TRXPOS.source_y, TRXPOS.dest_x, TRXPOS.dest_y);
-    printf("Trans order: %d\n", TRXPOS.trans_order);
-    printf("Source: $%08X Dest: $%08X\n", BITBLTBUF.source_base, BITBLTBUF.dest_base);
+    ds_log->gs_t->info("Local to local transfer\n");
+    ds_log->gs_t->info("({}, {}) -> ({}, {})\n", TRXPOS.source_x, TRXPOS.source_y, TRXPOS.dest_x, TRXPOS.dest_y);
+    ds_log->gs_t->info("Trans order: {}\n", TRXPOS.trans_order);
+    ds_log->gs_t->info("Source: ${:08X} Dest: ${:08X}\n", BITBLTBUF.source_base, BITBLTBUF.dest_base);
     int max_pixels = TRXREG.width * TRXREG.height;
 
     uint16_t start_x = 0, start_y = 0;
@@ -2632,7 +2632,7 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupIn
             break;
         case 0x24:
         {
-            //printf("[GS_t] Format $24: Read from $%08X\n", tex_base + (coord << 2));
+            //ds_log->gs_t->debug("Format $24: Read from ${:08X}.\n", tex_base + (coord << 2));
             uint8_t entry = (read_PSMCT32_block(tex_base, width, u, v) >> 24) & 0xF;
             if (current_ctx->tex0.use_CSM2)
                 clut_CSM2_lookup(entry, info.tex_color);
