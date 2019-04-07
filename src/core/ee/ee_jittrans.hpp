@@ -40,8 +40,12 @@ private:
     void translate_op_mmi2(std::vector<IR::Instruction>& instrs, uint32_t opcode) const;
     void translate_op_mmi3(std::vector<IR::Instruction>& instrs, uint32_t opcode) const;
     void translate_op_cop0(std::vector<IR::Instruction>& instrs, uint32_t opcode) const;
+    void translate_op_cop0_type2(std::vector<IR::Instruction>& instrs, uint32_t opcode) const;
     void translate_op_cop1(std::vector<IR::Instruction>& instrs, uint32_t opcode) const;
+    void translate_op_cop1_fpu(std::vector<IR::Instruction>& instrs, uint32_t opcode) const;
     void translate_op_cop2(std::vector<IR::Instruction>& instrs, uint32_t opcode) const;
+    void translate_op_cop2_special(std::vector<IR::Instruction>& instrs, uint32_t opcode) const;
+    void translate_op_cop2_special2(std::vector<IR::Instruction>& instrs, uint32_t opcode) const;
 public:
     IR::Block translate(EmotionEngine& ee, uint32_t pc);
     void reset_instr_info();
