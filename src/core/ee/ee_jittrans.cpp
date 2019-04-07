@@ -555,10 +555,89 @@ void EE_JitTranslator::translate_op_special(std::vector<IR::Instruction>& instrs
 
 void EE_JitTranslator::translate_op_regimm(std::vector<IR::Instruction>& instrs, uint32_t opcode) const
 {
+    uint8_t op = (opcode >> 16) & 0x1F;
+    IR::Instruction instr;
 
+    switch (op)
+    {
+        case 0x00:
+            // BLTZ
+            Errors::print_warning("[EE_JIT] Unrecognized regimm op BLTZ\n", op);
+            fallback_interpreter(instr, opcode);
+            break;
+        case 0x01:
+            // BGEZ
+            Errors::print_warning("[EE_JIT] Unrecognized regimm op BGEZ\n", op);
+            fallback_interpreter(instr, opcode);
+            break;
+        case 0x02:
+            // BLTZL
+            Errors::print_warning("[EE_JIT] Unrecognized regimm op BLTZL\n", op);
+            fallback_interpreter(instr, opcode);
+            break;
+        case 0x03:
+            // BGEZL
+            Errors::print_warning("[EE_JIT] Unrecognized regimm op BGEZL\n", op);
+            fallback_interpreter(instr, opcode);
+            break;
+        case 0x10:
+            // BLTZAL
+            Errors::print_warning("[EE_JIT] Unrecognized regimm op BLTZAL\n", op);
+            fallback_interpreter(instr, opcode);
+            break;
+        case 0x11:
+            // BGEZAL
+            Errors::print_warning("[EE_JIT] Unrecognized regimm op BGEZAL\n", op);
+            fallback_interpreter(instr, opcode);
+            break;
+        case 0x12:
+            // BLTZALL
+            Errors::print_warning("[EE_JIT] Unrecognized regimm op BLTZALL\n", op);
+            fallback_interpreter(instr, opcode);
+            break;
+        case 0x13:
+            // BGEZALL
+            Errors::print_warning("[EE_JIT] Unrecognized regimm op BGEZALL\n", op);
+            fallback_interpreter(instr, opcode);
+            break;
+        case 0x18:
+            // MTSAB
+            Errors::print_warning("[EE_JIT] Unrecognized regimm op MTSAB\n", op);
+            fallback_interpreter(instr, opcode);
+            break;
+        case 0x19:
+            // MTASH
+            Errors::print_warning("[EE_JIT] Unrecognized regimm op MTSAH\n", op);
+            fallback_interpreter(instr, opcode);
+            break;
+        default:
+            Errors::die("[EE_JIT] Unrecognized regimm op $%02X", op);
+            return;
+    }
+    instrs.push_back(instr);
 }
 
 void EE_JitTranslator::translate_op_mmi(std::vector<IR::Instruction>& instrs, uint32_t opcode) const
+{
+
+}
+
+void EE_JitTranslator::translate_op_mmi0(std::vector<IR::Instruction>& instrs, uint32_t opcode) const
+{
+
+}
+
+void EE_JitTranslator::translate_op_mmi1(std::vector<IR::Instruction>& instrs, uint32_t opcode) const
+{
+
+}
+
+void EE_JitTranslator::translate_op_mmi2(std::vector<IR::Instruction>& instrs, uint32_t opcode) const
+{
+
+}
+
+void EE_JitTranslator::translate_op_mmi3(std::vector<IR::Instruction>& instrs, uint32_t opcode) const
 {
 
 }
