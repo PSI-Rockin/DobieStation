@@ -175,10 +175,9 @@ void EE_JitTranslator::translate_op(std::vector<IR::Instruction>& instrs, uint32
             fallback_interpreter(instr, opcode);
             break;
         case 0x1C:
-            // SLTI
-            Errors::print_warning("[EE_JIT] Unrecognized op SLTI\n", op);
-            fallback_interpreter(instr, opcode);
-            break;
+            // MMI Operation
+            translate_op_mmi(instrs, opcode);
+            return;
         case 0x1E:
             // LQ
             Errors::print_warning("[EE_JIT] Unrecognized op LQ\n", op);
@@ -619,7 +618,137 @@ void EE_JitTranslator::translate_op_regimm(std::vector<IR::Instruction>& instrs,
 
 void EE_JitTranslator::translate_op_mmi(std::vector<IR::Instruction>& instrs, uint32_t opcode) const
 {
+    uint32_t op = opcode & 0x3F;
+    IR::Instruction instr;
 
+    switch (op)
+    {
+        case 0x00:
+            // MADD
+            Errors::print_warning("[EE_JIT] Unrecognized mmi op MADD\n", op);
+            fallback_interpreter(instr, opcode);
+            break;
+        case 0x01:
+            // MADDU
+            Errors::print_warning("[EE_JIT] Unrecognized mmi op MADDU\n", op);
+            fallback_interpreter(instr, opcode);
+            break;
+        case 0x04:
+            // PLZCW
+            Errors::print_warning("[EE_JIT] Unrecognized mmi op PLZCW\n", op);
+            fallback_interpreter(instr, opcode);
+            break;
+        case 0x08:
+            // MMI0 Operation
+            translate_op_mmi0(instrs, opcode);
+            return;
+        case 0x09:
+            // MMI2 Operation
+            translate_op_mmi2(instrs, opcode);
+            return;
+        case 0x10:
+            // MFHI1
+            Errors::print_warning("[EE_JIT] Unrecognized mmi op MFHI1\n", op);
+            fallback_interpreter(instr, opcode);
+            break;
+        case 0x11:
+            // MTHI1
+            Errors::print_warning("[EE_JIT] Unrecognized mmi op MTHI1\n", op);
+            fallback_interpreter(instr, opcode);
+            break;
+        case 0x12:
+            // MFLO1
+            Errors::print_warning("[EE_JIT] Unrecognized mmi op MFLO1\n", op);
+            fallback_interpreter(instr, opcode);
+            break;
+        case 0x13:
+            // MTLO1
+            Errors::print_warning("[EE_JIT] Unrecognized mmi op MTLO1\n", op);
+            fallback_interpreter(instr, opcode);
+            break;
+        case 0x18:
+            // MULT1
+            Errors::print_warning("[EE_JIT] Unrecognized mmi op MULT1\n", op);
+            fallback_interpreter(instr, opcode);
+            break;
+        case 0x19:
+            // MULTU1
+            Errors::print_warning("[EE_JIT] Unrecognized mmi op MULTU1\n", op);
+            fallback_interpreter(instr, opcode);
+            break;
+        case 0x1A:
+            // DIV1
+            Errors::print_warning("[EE_JIT] Unrecognized mmi op DIV1\n", op);
+            fallback_interpreter(instr, opcode);
+            break;
+        case 0x1B:
+            // DIVU1
+            Errors::print_warning("[EE_JIT] Unrecognized mmi op DIVU1\n", op);
+            fallback_interpreter(instr, opcode);
+            break;
+        case 0x20:
+            // MADD1
+            Errors::print_warning("[EE_JIT] Unrecognized mmi op MADD1\n", op);
+            fallback_interpreter(instr, opcode);
+            break;
+        case 0x21:
+            // MADDU1
+            Errors::print_warning("[EE_JIT] Unrecognized mmi op MADDU1\n", op);
+            fallback_interpreter(instr, opcode);
+            break;
+        case 0x28:
+            // MMI1 Operation
+            translate_op_mmi1(instrs, opcode);
+            return;
+        case 0x29:
+            // MMI3 Operation
+            translate_op_mmi3(instrs, opcode);
+            return;
+        case 0x30:
+            // PMFHLFMT
+            Errors::print_warning("[EE_JIT] Unrecognized mmi op PMFHLFMT\n", op);
+            fallback_interpreter(instr, opcode);
+            break;
+        case 0x31:
+            // PMTHLLW
+            Errors::print_warning("[EE_JIT] Unrecognized mmi op PMTHLLW\n", op);
+            fallback_interpreter(instr, opcode);
+            break;
+        case 0x34:
+            // PSLLH
+            Errors::print_warning("[EE_JIT] Unrecognized mmi op PSLLH\n", op);
+            fallback_interpreter(instr, opcode);
+            break;
+        case 0x36:
+            // PSRLH
+            Errors::print_warning("[EE_JIT] Unrecognized mmi op PSRLH\n", op);
+            fallback_interpreter(instr, opcode);
+            break;
+        case 0x37:
+            // PSRAH
+            Errors::print_warning("[EE_JIT] Unrecognized mmi op PSRAH\n", op);
+            fallback_interpreter(instr, opcode);
+            break;
+        case 0x3C:
+            // PSLLW
+            Errors::print_warning("[EE_JIT] Unrecognized mmi op PSLLW\n", op);
+            fallback_interpreter(instr, opcode);
+            break;
+        case 0x3E:
+            // PSRLW
+            Errors::print_warning("[EE_JIT] Unrecognized mmi op PSRLW\n", op);
+            fallback_interpreter(instr, opcode);
+            break;
+        case 0x3F:
+            // PSRAW
+            Errors::print_warning("[EE_JIT] Unrecognized mmi op PSRAW\n", op);
+            fallback_interpreter(instr, opcode);
+            break;
+        default:
+            Errors::die("[EE_JIT] Unrecognized mmi op $%02X", op);
+            return;
+    }
+    instrs.push_back(instr);
 }
 
 void EE_JitTranslator::translate_op_mmi0(std::vector<IR::Instruction>& instrs, uint32_t opcode) const
