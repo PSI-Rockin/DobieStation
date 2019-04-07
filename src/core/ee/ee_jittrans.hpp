@@ -27,9 +27,14 @@ private:
     uint16_t end_PC;
     uint16_t cur_PC;
 
-    bool is_branch(uint32_t instr_word) const;
+    bool is_branch(uint32_t instr_word) const noexcept;
     void interpreter_pass(EmotionEngine &ee, uint32_t pc);
-    void fallback_interpreter(IR::Instruction& instr, uint32_t instr_word);
+    void fallback_interpreter(IR::Instruction& instr, uint32_t instr_word) const noexcept;
+
+    void translate_op(std::vector<IR::Instruction>& instrs, uint32_t opcode) const;
+    void translate_op_special(std::vector<IR::Instruction>& instrs, uint32_t opcode) const;
+    void translate_op_regimm(std::vector<IR::Instruction>& instrs, uint32_t opcode) const;
+    void translate_op_mmi(std::vector<IR::Instruction>& instrs, uint32_t opcode) const;
 public:
     IR::Block translate(EmotionEngine& ee, uint32_t pc);
     void reset_instr_info();
