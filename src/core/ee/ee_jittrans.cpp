@@ -38,7 +38,7 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee, uint32_t pc)
 }
 
 // TENTATIVE
-bool EE_JitTranslator::is_branch(uint32_t instr_word)
+bool EE_JitTranslator::is_branch(uint32_t instr_word) const
 {
     uint8_t op = instr_word >> 26;
 
@@ -59,25 +59,39 @@ bool EE_JitTranslator::is_branch(uint32_t instr_word)
         break;
     }
 
-    if (op != 0x01)
-        return false;
-
-    op = (instr_word >> 16) & 0x1F;
-
-    switch (op)
+    if (op == 0x00)
     {
-    case 0x00:
-    case 0x01:
-    case 0x02:
-    case 0x03:
-    case 0x10:
-    case 0x11:
-    case 0x12:
-    case 0x13:
-        return true;
-    default:
-        return false;
+        op = instr_word & 0x3F;
+        switch (op)
+        {
+        case 0x08:
+        case 0x09:
+            return true;
+        default:
+            return false;
+        }
     }
+    else if (op == 0x01)
+    {
+        op = (instr_word >> 16) & 0x1F;
+
+        switch (op)
+        {
+        case 0x00:
+        case 0x01:
+        case 0x02:
+        case 0x03:
+        case 0x10:
+        case 0x11:
+        case 0x12:
+        case 0x13:
+            return true;
+        default:
+            return false;
+        }
+    }
+
+    return false;
 }
 
 void EE_JitTranslator::fallback_interpreter(IR::Instruction& instr, uint32_t instr_word)
