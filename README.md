@@ -43,24 +43,28 @@ The various command line options are as follows:
 
 The key bindings are as follows:
 
-| Keyboard         | DualShock 2 |
-| ---------------- | ----------- |
-| <kbd>A</kbd>     | Triangle    |
-| <kbd>S</kbd>     | Square      |
-| <kbd>Z</kbd>     | Circle      |
-| <kbd>X</kbd>     | Cross       |
-| <kbd>Enter</kbd> | Start       |
-| <kbd>Shift</kbd> | Select      |
-| <kbd>Q</kbd>     | L1          |
-| N/A              | L2          |
-| N/A              | L3          |
-| <kbd>W</kbd>     | R1          |
-| N/A              | R2          |
-| N/A              | R3          |
-| <kbd>↑</kbd>     | D-pad up    |
-| <kbd>↓</kbd>     | D-pad down  |
-| <kbd>←</kbd>     | D-pad left  |
-| <kbd>→</kbd>     | D-pad right |
+| Keyboard         | DualShock 2       |
+| ---------------- | ----------------- |
+| <kbd>A</kbd>     | Triangle          |
+| <kbd>S</kbd>     | Square            |
+| <kbd>Z</kbd>     | Circle            |
+| <kbd>X</kbd>     | Cross             |
+| <kbd>Enter</kbd> | Start             |
+| <kbd>Shift</kbd> | Select            |
+| <kbd>Q</kbd>     | L1                |
+| N/A              | L2                |
+| N/A              | L3                |
+| <kbd>W</kbd>     | R1                |
+| N/A              | R2                |
+| N/A              | R3                |
+| <kbd>↑</kbd>     | D-pad up          |
+| <kbd>↓</kbd>     | D-pad down        |
+| <kbd>←</kbd>     | D-pad left        |
+| <kbd>→</kbd>     | D-pad right       |
+| <kbd>I</kbd>     | Left Analog up    |
+| <kbd>K</kbd>     | Left Analog down  |
+| <kbd>J</kbd>     | Left Analog left  |
+| <kbd>L</kbd>     | Left Analog right |
 
 | Keyboard      | DobieStation               |
 | ------------- | -------------------------- |
