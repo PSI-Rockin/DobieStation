@@ -43,6 +43,8 @@ private:
     void prepare_abi(const EmotionEngine& ee, uint64_t value);
     void call_abi_func(uint64_t addr);
     void recompile_block(EmotionEngine& ee, IR::Block& block);
+
+    void emit_prologue();
     void emit_instruction(EmotionEngine &ee, const IR::Instruction &instr);
     uint64_t get_fpu_addr(EmotionEngine &ee, int index);
 

@@ -322,6 +322,21 @@ void EE_JIT64::cleanup_recompiler(EmotionEngine& ee, bool clear_regs)
     emitter.RET();
 }
 
+void EE_JIT64::emit_prologue()
+{
+#ifdef _WIN32
+    Errors::die("[VU_JIT64] emit_prologue not implemented for _WIN32");
+#else
+    emitter.PUSH(REG_64::RBX);
+    emitter.PUSH(REG_64::R12);
+    emitter.PUSH(REG_64::R13);
+    emitter.PUSH(REG_64::R14);
+    emitter.PUSH(REG_64::R15);
+    emitter.PUSH(REG_64::RDI);
+#endif
+}
+
+
 void EE_JIT64::emit_epilogue()
 {
 #ifdef _WIN32
