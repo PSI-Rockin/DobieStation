@@ -91,7 +91,10 @@ SOURCES += ../../src/qt/main.cpp \
     ../../src/qt/renderwidget.cpp \
     ../../src/qt/settingswindow.cpp \
     ../../src/qt/bios.cpp \
-    ../../src/qt/gamelistwidget.cpp
+    ../../src/qt/gamelistwidget.cpp \
+    ../../src/core/ee/ee_jittrans.cpp \
+    ../../src/core/ee/ee_jit.cpp \
+    ../../src/core/ee/ee_jit64.cpp
 
 HEADERS += \
     ../../src/core/errors.hpp \
@@ -158,4 +161,8 @@ HEADERS += \
     ../../src/qt/renderwidget.hpp \
     ../../src/qt/settingswindow.hpp \
     ../../src/qt/bios.hpp \
-    ../../src/qt/gamelistwidget.hpp
+    ../../src/qt/gamelistwidget.hpp \
+    ../../src/core/ee/ee_jittrans.cpp \
+    ../../src/core/ee/ee_jit.cpp \
+    ../../src/core/ee/ee_jit64.cpp
+   

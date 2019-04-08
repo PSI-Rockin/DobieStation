@@ -36,7 +36,7 @@ private:
     uint32_t ee_branch_delay_dest, ee_branch_delay_fail_dest;
     uint16_t cycle_count;
 
-    void EE_JIT64::handle_branch(EmotionEngine& ee);
+    void handle_branch(EmotionEngine& ee);
 
     void fallback_interpreter(EmotionEngine& ee, const IR::Instruction &instr);
 
