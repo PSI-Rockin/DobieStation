@@ -1,8 +1,128 @@
 #ifndef GSTHREAD_HPP
 #define GSTHREAD_HPP
 #include <cstdint>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+#include <cstdint>
 #include "gscontext.hpp"
-#include "gs.hpp"
+#include "gsregisters.hpp"
+#include "circularFIFO.hpp"
+
+//Commands sent from the main thread to the GS thread.
+enum GSCommand:uint8_t 
+{
+    write64_t, write64_privileged_t, write32_privileged_t,
+    set_rgba_t, set_st_t, set_uv_t, set_xyz_t, set_xyzf_t, set_crt_t,
+    render_crt_t, assert_finish_t, assert_vsync_t, set_vblank_t, memdump_t, die_t,
+    save_state_t, load_state_t, gsdump_t
+};
+
+union GSMessagePayload 
+{
+    struct 
+    {
+        uint32_t addr;
+        uint64_t value;
+    } write64_payload;
+    struct 
+    {
+        uint32_t addr;
+        uint32_t value;
+    } write32_payload;
+    struct 
+    {
+        uint8_t r, g, b, a;
+        float q;
+    } rgba_payload;
+    struct 
+    {
+        uint32_t s, t;
+    } st_payload;
+    struct 
+    {
+        uint16_t u, v;
+    } uv_payload;
+    struct 
+    {
+        uint32_t x, y, z;
+        bool drawing_kick;
+    } xyz_payload;
+    struct
+    {
+        uint32_t x, y, z;
+        uint8_t fog;
+        bool drawing_kick;
+    } xyzf_payload;
+    struct 
+    {
+        bool interlaced;
+        int mode;
+        bool frame_mode;
+    } crt_payload;
+    struct 
+    {
+        bool vblank;
+    } vblank_payload;
+    struct 
+    {
+        uint32_t* target;
+        std::mutex* target_mutex;
+    } render_payload;
+    struct
+    {
+        std::ofstream* state;
+    } save_state_payload;
+    struct
+    {
+        std::ifstream* state;
+    } load_state_payload;
+    struct 
+    {
+        uint8_t BLANK; 
+    } no_payload;//C++ doesn't like the empty struct
+};
+
+struct GSMessage
+{
+    GSCommand type;
+    GSMessagePayload payload;
+};
+
+//Commands sent from the GS thread to the main thread.
+enum GSReturn :uint8_t
+{
+    render_complete_t,
+    death_error_t,
+    save_state_done_t,
+    load_state_done_t,
+    gsdump_render_partial_done_t,
+};
+
+union GSReturnMessagePayload
+{
+    struct
+    {
+        const char* error_str;
+    } death_error_payload;
+    struct
+    {
+        uint16_t x, y;
+    } xy_payload;
+    struct
+    {
+        uint8_t BLANK;
+    } no_payload;//C++ doesn't like the empty struct
+};
+
+struct GSReturnMessage
+{
+    GSReturn type;
+    GSReturnMessagePayload payload;
+};
+
+typedef CircularFifo<GSMessage, 1024 * 1024 * 16> gs_fifo;
+typedef CircularFifo<GSReturnMessage, 1024> gs_return_fifo;
 
 struct PRMODE_REG
 {
@@ -103,6 +223,19 @@ struct TexLookupInfo
 class GraphicsSynthesizerThread
 {
     private:
+        //threading
+        std::thread thread;
+        std::condition_variable message_notifier; // notify the gs thread
+        std::condition_variable return_notifier; // notify the emu thread
+
+        std::mutex message_mutex;
+        std::unique_lock<std::mutex> message_lock;
+        std::mutex return_mutex;
+        std::unique_lock<std::mutex> return_lock;
+
+        gs_fifo* message_queue = nullptr;
+        gs_return_fifo* return_queue = nullptr;
+
         bool frame_complete;
         int frame_count;
         uint8_t* local_mem;
@@ -154,8 +287,10 @@ class GraphicsSynthesizerThread
 
         static const unsigned int max_vertices[8];
 
-        uint32_t get_word(uint32_t addr);
-        void set_word(uint32_t addr, uint32_t value);
+        void event_loop();
+
+        inline const uint32_t get_word(uint32_t addr) { return *(uint32_t*)&local_mem[addr]; };
+        inline void set_word(uint32_t addr, uint32_t value) { *(uint32_t*)&local_mem[addr] = value; };
 
         //Swizzling routines
         uint32_t blockid_PSMCT32(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
@@ -218,7 +353,6 @@ class GraphicsSynthesizerThread
 
         int32_t orient2D(const Vertex &v1, const Vertex &v2, const Vertex &v3);
 
-        //called from event loop
         void reset();
         void memdump(uint32_t* target, uint16_t& width, uint16_t& height);
 
@@ -226,8 +360,6 @@ class GraphicsSynthesizerThread
         void render_single_CRT(uint32_t* target, DISPFB& dispfb, DISPLAY& display);
         void render_CRT(uint32_t* target);
 
-        void set_VBLANK(bool is_VBLANK);
-        void assert_FINISH();
         void dump_texture(uint32_t* target, uint32_t start_addr, uint32_t width);
 
         void write64(uint32_t addr, uint64_t value);
@@ -244,17 +376,10 @@ class GraphicsSynthesizerThread
         GraphicsSynthesizerThread();
         ~GraphicsSynthesizerThread();
         
-        static void event_loop(gs_fifo* fifo, gs_return_fifo* return_fifo);
+        // safe to access from emu thread
+        void send_message(GSMessage message);
+        void wait_for_return(GSReturn type, GSReturnMessage &data);
+        void reset_fifos();
+        void exit();
 };
-
-inline uint32_t GraphicsSynthesizerThread::get_word(uint32_t addr)
-{
-    return *(uint32_t*)&local_mem[addr];
-}
-
-inline void GraphicsSynthesizerThread::set_word(uint32_t addr, uint32_t value)
-{
-    *(uint32_t*)&local_mem[addr] = value;
-}
-
 #endif // GSTHREAD_HPP
