@@ -12,3 +12,6 @@ application/*.h
 # Dobie artifacts
 *.txt
 *.vcxproj.user
+
+# VS artifacts
+enc_temp_folder/*
