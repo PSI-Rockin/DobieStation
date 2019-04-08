@@ -2270,6 +2270,11 @@ void GraphicsSynthesizerThread::local_to_local()
                 data = read_PSMCT4_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
                                          TRXPOS.int_source_x, TRXPOS.int_source_y);
                 break;
+            case 0x30:
+            case 0x31:
+                data = read_PSMCT32Z_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                                          TRXPOS.int_source_x, TRXPOS.int_source_y);
+                break;
             default:
                 Errors::die("[GS_t] Unrecognized local-to-local source format $%02X", BITBLTBUF.source_format);
         }
@@ -2304,6 +2309,14 @@ void GraphicsSynthesizerThread::local_to_local()
                 data |= read_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width,
                                            TRXPOS.int_dest_x, TRXPOS.int_dest_y) & 0x0FFFFFFF;
                 write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width,
+                                    TRXPOS.int_dest_x, TRXPOS.int_dest_y, data);
+                break;
+            case 0x30:
+                write_PSMCT32Z_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width,
+                                    TRXPOS.int_dest_x, TRXPOS.int_dest_y, data);
+                break;
+            case 0x31:
+                write_PSMCT24Z_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width,
                                     TRXPOS.int_dest_x, TRXPOS.int_dest_y, data);
                 break;
             default:
