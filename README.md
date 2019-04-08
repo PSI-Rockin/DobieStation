@@ -69,6 +69,7 @@ The key bindings are as follows:
 | Keyboard      | DobieStation               |
 | ------------- | -------------------------- |
 | <kbd>F1</kbd> | Dump current frame from GS |
+| <kbd>F8</kbd> | Take a screenshot          |
 | <kbd>.</kbd>  | Advance a single frame     |
 
 ### PS2 Homebrew
