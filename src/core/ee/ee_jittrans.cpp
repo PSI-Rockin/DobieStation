@@ -5,9 +5,9 @@
 
 uint32_t branch_offset_ee(uint32_t instr, uint32_t PC)
 {
-    int16_t imm = static_cast<int16_t>(instr);
-    imm *= 4;
-    return PC + imm + 4;
+    instr = instr & 0xFFFF;
+    instr *= 4;
+    return PC + instr + 4;
 }
 
 IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
