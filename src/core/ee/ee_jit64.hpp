@@ -15,6 +15,14 @@ struct AllocReg
     uint8_t needs_clamping;
 };
 
+enum class REG_STATE
+{
+    SCRATCHPAD,
+    READ,
+    WRITE,
+    READ_WRITE
+};
+
 class EE_JIT64;
 
 extern "C" uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee);
@@ -37,16 +45,21 @@ private:
     uint16_t cycle_count;
 
     void handle_branch(EmotionEngine& ee);
+    void handle_branch_destinations(EmotionEngine& ee, IR::Instruction& instr);
 
+    void branch_not_equal(EmotionEngine& ee, IR::Instruction &instr);
     void fallback_interpreter(EmotionEngine& ee, const IR::Instruction &instr);
 
     void prepare_abi(const EmotionEngine& ee, uint64_t value);
     void call_abi_func(uint64_t addr);
     void recompile_block(EmotionEngine& ee, IR::Block& block);
 
+    int search_for_register(AllocReg *regs, int vu_reg);
+    REG_64 alloc_int_reg(EmotionEngine& ee, int vi_reg, REG_STATE state);
+
     void emit_prologue();
-    void emit_instruction(EmotionEngine &ee, const IR::Instruction &instr);
-    uint64_t get_fpu_addr(EmotionEngine &ee, int index);
+    void emit_instruction(EmotionEngine &ee, IR::Instruction &instr);
+    uint64_t get_fpu_addr(EmotionEngine &ee, FPU_SpecialReg index);
 
     void flush_regs(EmotionEngine& ee);
     void cleanup_recompiler(EmotionEngine& ee, bool clear_regs);

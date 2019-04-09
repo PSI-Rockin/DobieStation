@@ -24,8 +24,6 @@ run_ee_jit PROC FRAME
 
     sub rsp, 32
     call exec_block_ee
-    add rsp, 32
-    sub rsp, 32
     call rax
     add rsp, 32
 

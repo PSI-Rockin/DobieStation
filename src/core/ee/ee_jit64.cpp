@@ -57,11 +57,11 @@ void EE_JIT64::reset(bool clear_cache)
 extern "C"
 uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee)
 {
-    printf("[EE_JIT64] Executing block at $%04X: recompiling\n", ee.PC);
+    printf("[EE_JIT64] Executing block at $%04X\n", ee.PC);
     if (jit.cache.find_block(BlockState{ ee.PC, 0, 0, 0, 0 }) == nullptr)
     {
         printf("[EE_JIT64] Block not found at $%04X: recompiling\n", ee.PC);
-        IR::Block block = jit.ir.translate(ee, ee.PC);
+        IR::Block block = jit.ir.translate(ee);
         jit.recompile_block(ee, block);
     }
     return jit.cache.get_current_block_start();
@@ -91,6 +91,7 @@ uint16_t EE_JIT64::run(EmotionEngine& ee)
 
 void EE_JIT64::recompile_block(EmotionEngine& ee, IR::Block& block)
 {
+    ee_branch = false;
     cache.alloc_block(BlockState{ ee.get_PC(), 0, 0, 0, 0 });
 
     cycle_count = block.get_cycle_count();
@@ -119,48 +120,19 @@ void EE_JIT64::recompile_block(EmotionEngine& ee, IR::Block& block)
     //cache.print_literal_pool();
 }
 
-void EE_JIT64::emit_instruction(EmotionEngine &ee, const IR::Instruction &instr)
+void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
 {
     switch (instr.op)
     {
-    case IR::Opcode::FallbackInterpreter:
-        fallback_interpreter(ee, instr);
-        break;
-    default:
-        Errors::die("[EE_JIT64] Unknown IR instruction %d", instr.op);
+        case IR::Opcode::BranchNotEqual:
+            branch_not_equal(ee, instr);
+            break;
+        case IR::Opcode::FallbackInterpreter:
+            fallback_interpreter(ee, instr);
+            break;
+        default:
+            Errors::die("[EE_JIT64] Unknown IR instruction %d", instr.op);
     }
-}
-
-void EE_JIT64::handle_branch(EmotionEngine& ee)
-{
-    //Load the "branch happened" variable
-    emitter.load_addr(reinterpret_cast<uint64_t>(&ee.branch_on), REG_64::RAX);
-    emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::RAX);
-
-    //The branch will point to two locations: one where the PC is set to the branch destination,
-    //and another where PC = PC + 16. Our generated code will jump if the branch *fails*.
-    //This is to allow for future optimizations where the recompiler may generate code beyond
-    //the branch (assuming that the branch fails).
-    emitter.TEST16_REG(REG_64::RAX, REG_64::RAX);
-
-    //Because we don't know where the branch will jump to, we defer it.
-    //Once the "branch succeeded" case has been finished recompiling, we can rewrite the branch offset...
-    uint8_t* offset_addr = emitter.JE_NEAR_DEFERRED();
-    emitter.load_addr(reinterpret_cast<uint64_t>(&ee.PC), REG_64::RAX);
-    emitter.load_addr(reinterpret_cast<uint64_t>(&ee_branch_dest), REG_64::R15);
-    emitter.MOV16_FROM_MEM(REG_64::R15, REG_64::R15);
-    emitter.MOV16_TO_MEM(REG_64::R15, REG_64::RAX);
-    cleanup_recompiler(ee, false);
-
-    //...Which we do here.
-    emitter.set_jump_dest(offset_addr);
-
-    //And here we recompile the "branch failed" case.
-    emitter.load_addr(reinterpret_cast<uint64_t>(&ee.PC), REG_64::RAX);
-    emitter.load_addr(reinterpret_cast<uint64_t>(&ee_branch_fail_dest), REG_64::R15);
-    emitter.MOV16_FROM_MEM(REG_64::R15, REG_64::R15);
-    emitter.MOV16_TO_MEM(REG_64::R15, REG_64::RAX);
-    cleanup_recompiler(ee, true);
 }
 
 void EE_JIT64::prepare_abi(const EmotionEngine& ee, uint64_t value)
@@ -235,6 +207,161 @@ void EE_JIT64::call_abi_func(uint64_t addr)
     abi_xmm_count = 0;
 }
 
+int EE_JIT64::search_for_register(AllocReg *regs, int vu_reg)
+{
+    //Returns the index of either a free register or the oldest allocated register, depending on availability
+    int reg = -1;
+    int age = 0;
+    for (int i = 0; i < 16; i++)
+    {
+        if (regs[i].locked)
+            continue;
+
+        if (!regs[i].used)
+            return i;
+
+        if (regs[i].age > age)
+        {
+            reg = i;
+            age = regs[i].age;
+        }
+    }
+    return reg;
+}
+
+REG_64 EE_JIT64::alloc_int_reg(EmotionEngine& ee, int vi_reg, REG_STATE state)
+{
+    if (vi_reg >= 16)
+        Errors::die("[EE_JIT64] Alloc Int error: vi_reg == %d", vi_reg);
+
+    for (int i = 0; i < 16; i++)
+    {
+        if (int_regs[i].used && int_regs[i].vu_reg == vi_reg)
+        {
+            if (state != REG_STATE::READ)
+                int_regs[i].modified = true;
+            int_regs[i].age = 0;
+            return (REG_64)i;
+        }
+    }
+
+    for (int i = 0; i < 16; i++)
+    {
+        if (int_regs[i].used)
+            int_regs[i].age++;
+    }
+
+    int reg = search_for_register(int_regs, vi_reg);
+
+    if (int_regs[reg].used && int_regs[reg].modified && int_regs[reg].vu_reg)
+    {
+        //printf("[VU_JIT64] Flushing int reg %d! (old int reg: %d)\n", reg, int_regs[reg].vu_reg);
+        int old_vi_reg = int_regs[reg].vu_reg;
+        emitter.load_addr((uint64_t)&ee.gpr[old_vi_reg], REG_64::RAX);
+        emitter.MOV64_TO_MEM((REG_64)reg, REG_64::RAX);
+    }
+
+    //printf("[VU_JIT64] Allocating int reg %d (vi%d)\n", reg, vi_reg);
+
+    if (state != REG_STATE::WRITE)
+    {
+        emitter.load_addr((uint64_t)&ee.gpr[vi_reg], REG_64::RAX);
+        emitter.MOV64_FROM_MEM(REG_64::RAX, (REG_64)reg);
+    }
+
+    int_regs[reg].modified = state != REG_STATE::READ;
+
+    int_regs[reg].vu_reg = vi_reg;
+    int_regs[reg].used = true;
+    int_regs[reg].age = 0;
+
+    return (REG_64)reg;
+}
+
+void EE_JIT64::handle_branch(EmotionEngine& ee)
+{
+    //Load the "branch happened" variable
+    emitter.load_addr(reinterpret_cast<uint64_t>(&ee.branch_on), REG_64::RAX);
+    emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::RAX);
+
+    //The branch will point to two locations: one where the PC is set to the branch destination,
+    //and another where PC = PC + 16. Our generated code will jump if the branch *fails*.
+    //This is to allow for future optimizations where the recompiler may generate code beyond
+    //the branch (assuming that the branch fails).
+    emitter.TEST16_REG(REG_64::RAX, REG_64::RAX);
+
+    //Because we don't know where the branch will jump to, we defer it.
+    //Once the "branch succeeded" case has been finished recompiling, we can rewrite the branch offset...
+    uint8_t* offset_addr = emitter.JE_NEAR_DEFERRED();
+    emitter.load_addr(reinterpret_cast<uint64_t>(&ee.PC), REG_64::RAX);
+    emitter.load_addr(reinterpret_cast<uint64_t>(&ee_branch_dest), REG_64::R15);
+    emitter.MOV32_FROM_MEM(REG_64::R15, REG_64::R15);
+    emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
+    cleanup_recompiler(ee, false);
+
+    //...Which we do here.
+    emitter.set_jump_dest(offset_addr);
+
+    //And here we recompile the "branch failed" case.
+    emitter.load_addr(reinterpret_cast<uint64_t>(&ee.PC), REG_64::RAX);
+    emitter.load_addr(reinterpret_cast<uint64_t>(&ee_branch_fail_dest), REG_64::R15);
+    emitter.MOV32_FROM_MEM(REG_64::R15, REG_64::R15);
+    emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
+    cleanup_recompiler(ee, true);
+}
+
+void EE_JIT64::handle_branch_destinations(EmotionEngine& ee, IR::Instruction& instr)
+{
+    emitter.load_addr((uint64_t)&ee_branch_delay_dest, REG_64::RAX);
+    emitter.MOV32_IMM_MEM(instr.get_jump_dest(), REG_64::RAX);
+
+    if (instr.get_bc())
+    {
+        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
+        emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::RAX);
+
+        emitter.TEST16_REG(REG_64::RAX, REG_64::RAX);
+        uint8_t* offset_addr = emitter.JE_NEAR_DEFERRED();
+        //First branch is taken, so we set the fail destination according to that destination
+        emitter.load_addr((uint64_t)&ee_branch_dest, REG_64::RAX);
+        emitter.MOV32_FROM_MEM(REG_64::RAX, REG_64::R15);
+        emitter.ADD16_REG_IMM(8, REG_64::R15);
+        emitter.load_addr((uint64_t)&ee_branch_delay_fail_dest, REG_64::RAX);
+        emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
+
+        uint8_t* skip_addr = emitter.JMP_NEAR_DEFERRED();
+
+        emitter.set_jump_dest(offset_addr);
+        //First branch was not taken, so the destination is as normal
+        emitter.load_addr((uint64_t)&ee_branch_delay_fail_dest, REG_64::RAX);
+        emitter.MOV32_IMM_MEM(instr.get_jump_fail_dest(), REG_64::RAX);
+
+        emitter.set_jump_dest(skip_addr);
+    }
+    else
+    {
+        emitter.load_addr((uint64_t)&ee_branch_delay_fail_dest, REG_64::RAX);
+        emitter.MOV32_IMM_MEM(instr.get_jump_fail_dest(), REG_64::RAX);
+    }
+}
+
+void EE_JIT64::branch_not_equal(EmotionEngine& ee, IR::Instruction &instr)
+{
+    REG_64 op1;
+    REG_64 op2;
+
+    op1 = alloc_int_reg(ee, instr.get_source(), REG_STATE::READ);
+    op2 = alloc_int_reg(ee, instr.get_source2(), REG_STATE::READ);
+
+    emitter.CMP16_REG(op2, op1);
+    emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
+    emitter.SETNE_MEM(REG_64::RAX);
+
+    handle_branch_destinations(ee, instr);
+
+    ee_branch = true;
+}
+
 void EE_JIT64::fallback_interpreter(EmotionEngine& ee, const IR::Instruction &instr)
 {
     flush_regs(ee);
@@ -266,7 +393,7 @@ void EE_JIT64::flush_regs(EmotionEngine& ee)
             int vi_reg = int_regs[i].vu_reg;
             if (xmm_regs[i].used && vf_reg && xmm_regs[i].modified)
             {
-                emitter.load_addr(get_fpu_addr(ee, vf_reg) , REG_64::RAX);
+                emitter.load_addr(get_fpu_addr(ee, static_cast<FPU_SpecialReg>(vf_reg)) , REG_64::RAX);
                 emitter.MOVAPS_TO_MEM((REG_64)i, REG_64::RAX);
             }
 
@@ -279,10 +406,11 @@ void EE_JIT64::flush_regs(EmotionEngine& ee)
     }
 }
 
-uint64_t EE_JIT64::get_fpu_addr(EmotionEngine &ee, int index)
+uint64_t EE_JIT64::get_fpu_addr(EmotionEngine &ee, FPU_SpecialReg index)
 {
-    if (index < 32)
-        return reinterpret_cast<uint64_t>(&ee.fpu->gpr[index]);
+    int i = static_cast<int>(index);
+    if (i < 32)
+        return reinterpret_cast<uint64_t>(&ee.fpu->gpr[i]);
 
     switch (index)
     {

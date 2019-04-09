@@ -3,16 +3,19 @@
 #include "emotioninterpreter.hpp"
 #include "../errors.hpp"
 
-void EE_JitTranslator::reset_instr_info()
+uint32_t branch_offset_ee(uint32_t instr, uint32_t PC)
 {
-    //TODO
+    int16_t imm = static_cast<int16_t>(instr);
+    imm *= 4;
+    return PC + imm + 4;
 }
 
-IR::Block EE_JitTranslator::translate(EmotionEngine &ee, uint32_t pc)
+IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
 {
     //TODO
     IR::Block block;
     std::vector<IR::Instruction> instrs;
+    uint32_t pc = ee.get_PC();
 
     bool branch_op = false;
     bool branch_delayslot = false;
@@ -20,7 +23,7 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee, uint32_t pc)
 
     while (!branch_delayslot)
     {
-        translate_op(instrs, ee.read32(pc));
+        translate_op(instrs, ee.read32(pc), pc);
 
         if (branch_op)
             branch_delayslot = true;
@@ -39,7 +42,7 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee, uint32_t pc)
     return block;
 }
 
-void EE_JitTranslator::translate_op(std::vector<IR::Instruction>& instrs, uint32_t opcode) const
+void EE_JitTranslator::translate_op(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const
 {
     if (!opcode)
         return; // op is effective nop
@@ -74,8 +77,11 @@ void EE_JitTranslator::translate_op(std::vector<IR::Instruction>& instrs, uint32
             break;
         case 0x05:
             // BNE
-            Errors::print_warning("[EE_JIT] Unrecognized op BNE\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::BranchNotEqual;
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_source2((opcode >> 16) & 0x1F);
+            instr.set_jump_dest(branch_offset_ee(opcode, PC));
+            instr.set_jump_fail_dest(PC + 8);
             break;
         case 0x06:
             // BLEZ
