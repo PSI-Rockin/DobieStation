@@ -390,6 +390,11 @@ void EE_JitTranslator::translate_op_special(std::vector<IR::Instruction>& instrs
             Errors::print_warning("[EE_JIT] Unrecognized special op BREAK\n", op);
             fallback_interpreter(instr, opcode);
             break;
+        case 0x0F:
+            // SYNC
+            Errors::print_warning("[EE_JIT] Unrecognized special op SYNC\n", op);
+            fallback_interpreter(instr, opcode);
+            break;
         case 0x10:
             // MFHI
             Errors::print_warning("[EE_JIT] Unrecognized special op MFHI\n", op);

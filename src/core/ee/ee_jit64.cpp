@@ -283,7 +283,7 @@ REG_64 EE_JIT64::alloc_int_reg(EmotionEngine& ee, int vi_reg, REG_STATE state)
     {
         //printf("[VU_JIT64] Flushing int reg %d! (old int reg: %d)\n", reg, int_regs[reg].vu_reg);
         int old_vi_reg = int_regs[reg].vu_reg;
-        emitter.load_addr((uint64_t)&ee.gpr[old_vi_reg], REG_64::RAX);
+        emitter.load_addr((uint64_t)&ee.gpr[old_vi_reg * sizeof(uint128_t)], REG_64::RAX);
         emitter.MOV64_TO_MEM((REG_64)reg, REG_64::RAX);
     }
 
@@ -291,7 +291,7 @@ REG_64 EE_JIT64::alloc_int_reg(EmotionEngine& ee, int vi_reg, REG_STATE state)
 
     if (state != REG_STATE::WRITE)
     {
-        emitter.load_addr((uint64_t)&ee.gpr[vi_reg], REG_64::RAX);
+        emitter.load_addr((uint64_t)&ee.gpr[vi_reg * sizeof(uint128_t)], REG_64::RAX);
         emitter.MOV64_FROM_MEM(REG_64::RAX, (REG_64)reg);
     }
 
@@ -403,8 +403,16 @@ void EE_JIT64::jump_indirect(EmotionEngine& ee, IR::Instruction& instr)
 {
     REG_64 jump_dest = alloc_int_reg(ee, instr.get_source(), REG_STATE::READ);
 
-    ee.branch_on = true;
-    ee_branch_dest = instr.get_jump_dest();
+    // Set destination
+    emitter.load_addr((uint64_t)&ee_branch_dest, REG_64::RAX);
+    emitter.MOV32_TO_MEM(jump_dest, REG_64::RAX);
+
+    // Prime JIT to jump to success destination
+    emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
+    emitter.MOV8_IMM_MEM(true, REG_64::RAX);
+
+    handle_branch_destinations(ee, instr);
+
     ee_branch = true;
 }
 
