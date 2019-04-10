@@ -80,7 +80,7 @@ void EE_JIT64::reset(bool clear_cache)
 extern "C"
 uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee)
 {
-    //printf("[EE_JIT64] Executing block at $%08X\n", ee.PC);
+    printf("[EE_JIT64] Executing block at $%08X\n", ee.PC);
     if (jit.cache.find_block(BlockState{ ee.PC, 0, 0, 0, 0 }) == nullptr)
     {
         printf("[EE_JIT64] Block not found at $%08X: recompiling\n", ee.PC);
@@ -114,6 +114,9 @@ uint16_t EE_JIT64::run(EmotionEngine& ee)
 
 void EE_JIT64::recompile_block(EmotionEngine& ee, IR::Block& block)
 {
+    if (ee.PC == 0x80005184)
+        printf("P");
+
     ee_branch = false;
     likely_branch = false;
     cache.alloc_block(BlockState{ ee.get_PC(), 0, 0, 0, 0 });
@@ -230,6 +233,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             break;
         case IR::Opcode::JumpIndirect:
             jump_indirect(ee, instr);
+            break;
+        case IR::Opcode::SystemCall:
+            system_call(ee, instr);
             break;
         case IR::Opcode::FallbackInterpreter:
             fallback_interpreter(ee, instr);
@@ -936,6 +942,12 @@ void EE_JIT64::branch_not_equal_likely(EmotionEngine& ee, IR::Instruction &instr
 void EE_JIT64::exception_return(EmotionEngine& ee, IR::Instruction& instr)
 {
     fallback_interpreter(ee, instr);
+
+    // Since the interpreter decrements PC by 4, we reset it here to account for that.
+    emitter.load_addr((uint64_t)&ee.PC, REG_64::RAX);
+    emitter.MOV32_FROM_MEM(REG_64::RAX, REG_64::R15);
+    emitter.ADD32_REG_IMM(4, REG_64::R15);
+    emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
 }
 
 void EE_JIT64::jump(EmotionEngine& ee, IR::Instruction& instr)
@@ -1001,6 +1013,11 @@ void EE_JIT64::jump_indirect(EmotionEngine& ee, IR::Instruction& instr)
     handle_branch_destinations(ee, instr);
 
     ee_branch = true;
+}
+
+void EE_JIT64::system_call(EmotionEngine& ee, IR::Instruction& instr)
+{
+    fallback_interpreter(ee, instr);
 }
 
 void EE_JIT64::fallback_interpreter(EmotionEngine& ee, const IR::Instruction &instr)

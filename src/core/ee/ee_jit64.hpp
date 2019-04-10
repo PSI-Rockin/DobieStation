@@ -75,6 +75,7 @@ private:
     void jump_and_link(EmotionEngine& ee, IR::Instruction& instr);
     void jump_and_link_indirect(EmotionEngine &ee, IR::Instruction &instr);
     void jump_indirect(EmotionEngine& ee, IR::Instruction& instr);
+    void system_call(EmotionEngine& ee, IR::Instruction& instr);
     void fallback_interpreter(EmotionEngine& ee, const IR::Instruction &instr);
 
     void prepare_abi(const EmotionEngine& ee, uint64_t value);

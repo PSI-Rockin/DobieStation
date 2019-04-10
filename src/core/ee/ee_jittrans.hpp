@@ -99,7 +99,7 @@ private:
     void fallback_interpreter(IR::Instruction& instr, uint32_t instr_word) const noexcept;
 
     void translate_op(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t pc);
-    void translate_op_special(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const;
+    void translate_op_special(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC);
     void translate_op_regimm(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const;
     void translate_op_mmi(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const;
     void translate_op_mmi0(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const;

@@ -353,7 +353,7 @@ void EE_JitTranslator::translate_op(std::vector<IR::Instruction>& instrs, uint32
     instrs.push_back(instr);
 }
 
-void EE_JitTranslator::translate_op_special(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const
+void EE_JitTranslator::translate_op_special(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC)
 {
     uint8_t op = opcode & 0x3F;
     IR::Instruction instr;
@@ -416,8 +416,9 @@ void EE_JitTranslator::translate_op_special(std::vector<IR::Instruction>& instrs
             break;
         case 0x0C:
             // SYSCALL
-            Errors::print_warning("[EE_JIT] Unrecognized special op SYSCALL\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::SystemCall;
+            instr.set_source(opcode);
+            eret_op = true;
             break;
         case 0x0D:
             // BREAK
@@ -1325,6 +1326,7 @@ void EE_JitTranslator::translate_op_cop0_type2(std::vector<IR::Instruction>& ins
         case 0x18:
             // ERET
             instr.op = IR::Opcode::ExceptionReturn;
+            instr.set_source(opcode);
             eret_op = true;
             break;
         case 0x38:
