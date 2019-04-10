@@ -39,12 +39,13 @@ private:
     int abi_int_count;
     int abi_xmm_count;
 
-    bool ee_branch;
+    bool ee_branch, likely_branch;
     uint32_t ee_branch_dest, ee_branch_fail_dest;
     uint32_t ee_branch_delay_dest, ee_branch_delay_fail_dest;
     uint16_t cycle_count;
 
     void handle_branch(EmotionEngine& ee);
+    void handle_branch_likely(EmotionEngine& ee, IR::Block& block);
     void handle_branch_destinations(EmotionEngine& ee, IR::Instruction& instr);
 
     void branch_cop0(EmotionEngine& ee, IR::Instruction& instr);
