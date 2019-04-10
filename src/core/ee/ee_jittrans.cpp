@@ -6,8 +6,17 @@
 uint32_t branch_offset_ee(uint32_t instr, uint32_t PC)
 {
     int32_t i = instr & 0xFFFF;
-    i *= 4;
+    i <<= 2;
     return PC + i + 4;
+}
+
+uint32_t jump_offset_ee(uint32_t instr, uint32_t PC)
+{
+    PC += 4;
+    PC &= 0xF0000000;
+    instr &= 0x03FFFFFF;
+    instr <<= 2;
+    return PC + instr;
 }
 
 IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
@@ -54,11 +63,11 @@ void EE_JitTranslator::translate_op(std::vector<IR::Instruction>& instrs, uint32
     {
         case 0x00:
             // Special Operation
-            translate_op_special(instrs, opcode);
+            translate_op_special(instrs, opcode, PC);
             return;
         case 0x01:
             // Regimm Operation
-            translate_op_regimm(instrs, opcode);
+            translate_op_regimm(instrs, opcode, PC);
             return;
         case 0x02:
             // J
@@ -67,13 +76,18 @@ void EE_JitTranslator::translate_op(std::vector<IR::Instruction>& instrs, uint32
             break;
         case 0x03:
             // JAL
-            Errors::print_warning("[EE_JIT] Unrecognized op JAL\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::JumpAndLink;
+            instr.set_jump_dest(jump_offset_ee(opcode, PC));
+            instr.set_return_addr(PC + 8);
+            instr.set_dest(31); // $ra
             break;
         case 0x04:
             // BEQ
-            Errors::print_warning("[EE_JIT] Unrecognized op BEQ\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::BranchEqual;
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_source2((opcode >> 16) & 0x1F);
+            instr.set_jump_dest(branch_offset_ee(opcode, PC));
+            instr.set_jump_fail_dest(PC + 8);
             break;
         case 0x05:
             // BNE
@@ -135,15 +149,15 @@ void EE_JitTranslator::translate_op(std::vector<IR::Instruction>& instrs, uint32
             break;
         case 0x10:
             // COP0 (System Coprocessor)
-            translate_op_cop0(instrs, opcode);
+            translate_op_cop0(instrs, opcode, PC);
             return;
         case 0x11:
             // COP1 (Floating Point Unit)
-            translate_op_cop1(instrs, opcode);
+            translate_op_cop1(instrs, opcode, PC);
             return;
         case 0x12:
             // COP2 (Vector Unit 0)
-            translate_op_cop2(instrs, opcode);
+            translate_op_cop2(instrs, opcode, PC);
             return;
         case 0x13:
             // COP3 (unimplemented)
@@ -191,7 +205,7 @@ void EE_JitTranslator::translate_op(std::vector<IR::Instruction>& instrs, uint32
             break;
         case 0x1C:
             // MMI Operation
-            translate_op_mmi(instrs, opcode);
+            translate_op_mmi(instrs, opcode, PC);
             return;
         case 0x1E:
             // LQ
@@ -323,7 +337,7 @@ void EE_JitTranslator::translate_op(std::vector<IR::Instruction>& instrs, uint32
     instrs.push_back(instr);
 }
 
-void EE_JitTranslator::translate_op_special(std::vector<IR::Instruction>& instrs, uint32_t opcode) const
+void EE_JitTranslator::translate_op_special(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const
 {
     uint8_t op = opcode & 0x3F;
     IR::Instruction instr;
@@ -361,14 +375,18 @@ void EE_JitTranslator::translate_op_special(std::vector<IR::Instruction>& instrs
             fallback_interpreter(instr, opcode);
             break;
         case 0x08:
-            //JR
+            // JR
             instr.op = IR::Opcode::JumpIndirect;
             instr.set_source((opcode >> 21) & 0x1F);
             break;
         case 0x09:
             // JALR
-            Errors::print_warning("[EE_JIT] Unrecognized special op JALR\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::JumpAndLinkIndirect;
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_return_addr(PC + 8);
+            instr.set_dest((opcode >> 11) & 0x1F);
+            if (!instr.get_dest())
+                instr.op = IR::Opcode::JumpIndirect;
             break;
         case 0x0A:
             // MOVZ
@@ -572,7 +590,7 @@ void EE_JitTranslator::translate_op_special(std::vector<IR::Instruction>& instrs
     instrs.push_back(instr);
 }
 
-void EE_JitTranslator::translate_op_regimm(std::vector<IR::Instruction>& instrs, uint32_t opcode) const
+void EE_JitTranslator::translate_op_regimm(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const
 {
     uint8_t op = (opcode >> 16) & 0x1F;
     IR::Instruction instr;
@@ -636,7 +654,7 @@ void EE_JitTranslator::translate_op_regimm(std::vector<IR::Instruction>& instrs,
     instrs.push_back(instr);
 }
 
-void EE_JitTranslator::translate_op_mmi(std::vector<IR::Instruction>& instrs, uint32_t opcode) const
+void EE_JitTranslator::translate_op_mmi(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const
 {
     uint8_t op = opcode & 0x3F;
     IR::Instruction instr;
@@ -660,11 +678,11 @@ void EE_JitTranslator::translate_op_mmi(std::vector<IR::Instruction>& instrs, ui
             break;
         case 0x08:
             // MMI0 Operation
-            translate_op_mmi0(instrs, opcode);
+            translate_op_mmi0(instrs, opcode, PC);
             return;
         case 0x09:
             // MMI2 Operation
-            translate_op_mmi2(instrs, opcode);
+            translate_op_mmi2(instrs, opcode, PC);
             return;
         case 0x10:
             // MFHI1
@@ -718,11 +736,11 @@ void EE_JitTranslator::translate_op_mmi(std::vector<IR::Instruction>& instrs, ui
             break;
         case 0x28:
             // MMI1 Operation
-            translate_op_mmi1(instrs, opcode);
+            translate_op_mmi1(instrs, opcode, PC);
             return;
         case 0x29:
             // MMI3 Operation
-            translate_op_mmi3(instrs, opcode);
+            translate_op_mmi3(instrs, opcode, PC);
             return;
         case 0x30:
             // PMFHLFMT
@@ -771,7 +789,7 @@ void EE_JitTranslator::translate_op_mmi(std::vector<IR::Instruction>& instrs, ui
     instrs.push_back(instr);
 }
 
-void EE_JitTranslator::translate_op_mmi0(std::vector<IR::Instruction>& instrs, uint32_t opcode) const
+void EE_JitTranslator::translate_op_mmi0(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const
 {
     uint8_t op = (opcode >> 6) & 0x1F;
     IR::Instruction instr;
@@ -910,7 +928,7 @@ void EE_JitTranslator::translate_op_mmi0(std::vector<IR::Instruction>& instrs, u
     instrs.push_back(instr);
 }
 
-void EE_JitTranslator::translate_op_mmi1(std::vector<IR::Instruction>& instrs, uint32_t opcode) const
+void EE_JitTranslator::translate_op_mmi1(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const
 {
     uint8_t op = (opcode >> 6) & 0x1F;
     IR::Instruction instr;
@@ -1014,7 +1032,7 @@ void EE_JitTranslator::translate_op_mmi1(std::vector<IR::Instruction>& instrs, u
     instrs.push_back(instr);
 }
 
-void EE_JitTranslator::translate_op_mmi2(std::vector<IR::Instruction>& instrs, uint32_t opcode) const
+void EE_JitTranslator::translate_op_mmi2(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const
 {
     uint8_t op = (opcode >> 6) & 0x1F;
     IR::Instruction instr;
@@ -1138,7 +1156,7 @@ void EE_JitTranslator::translate_op_mmi2(std::vector<IR::Instruction>& instrs, u
     instrs.push_back(instr);
 }
 
-void EE_JitTranslator::translate_op_mmi3(std::vector<IR::Instruction>& instrs, uint32_t opcode) const
+void EE_JitTranslator::translate_op_mmi3(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const
 {
     uint8_t op = (opcode >> 6) & 0x1F;
     IR::Instruction instr;
@@ -1217,7 +1235,7 @@ void EE_JitTranslator::translate_op_mmi3(std::vector<IR::Instruction>& instrs, u
     instrs.push_back(instr);
 }
 
-void EE_JitTranslator::translate_op_cop0(std::vector<IR::Instruction>& instrs, uint32_t opcode) const
+void EE_JitTranslator::translate_op_cop0(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const
 {
     uint8_t op = (opcode >> 21) & 0x1F;
     IR::Instruction instr;
@@ -1241,7 +1259,7 @@ void EE_JitTranslator::translate_op_cop0(std::vector<IR::Instruction>& instrs, u
             break;
         case 0x10:
             // Type2 op
-            translate_op_cop0_type2(instrs, opcode);
+            translate_op_cop0_type2(instrs, opcode, PC);
             return;
         default:
             Errors::die("[EE_JIT] Unrecognized cop0 op $%02X", op);
@@ -1250,13 +1268,18 @@ void EE_JitTranslator::translate_op_cop0(std::vector<IR::Instruction>& instrs, u
     instrs.push_back(instr);
 }
 
-void EE_JitTranslator::translate_op_cop0_type2(std::vector<IR::Instruction>& instrs, uint32_t opcode) const
+void EE_JitTranslator::translate_op_cop0_type2(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const
 {
     uint8_t op = opcode & 0x3F;
     IR::Instruction instr;
 
     switch (op)
     {
+        case 0x02:
+            // TLBWI
+            Errors::print_warning("[EE_JIT] Unrecognized cop0 type2 op TLBWI\n", op);
+            fallback_interpreter(instr, opcode);
+            break;
         case 0x18:
             // ERET
             Errors::print_warning("[EE_JIT] Unrecognized cop0 type2 op ERET\n", op);
@@ -1279,7 +1302,7 @@ void EE_JitTranslator::translate_op_cop0_type2(std::vector<IR::Instruction>& ins
     instrs.push_back(instr);
 }
 
-void EE_JitTranslator::translate_op_cop1(std::vector<IR::Instruction>& instrs, uint32_t opcode) const
+void EE_JitTranslator::translate_op_cop1(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const
 {
     uint8_t op = (opcode >> 21) & 0x1F;
     IR::Instruction instr;
@@ -1313,7 +1336,7 @@ void EE_JitTranslator::translate_op_cop1(std::vector<IR::Instruction>& instrs, u
             break;
         case 0x10:
             // FPU Operation
-            translate_op_cop1_fpu(instrs, opcode);
+            translate_op_cop1_fpu(instrs, opcode, PC);
             return;
         case 0x14:
             // CVT.S.W
@@ -1327,7 +1350,7 @@ void EE_JitTranslator::translate_op_cop1(std::vector<IR::Instruction>& instrs, u
     instrs.push_back(instr);
 }
 
-void EE_JitTranslator::translate_op_cop1_fpu(std::vector<IR::Instruction>& instrs, uint32_t opcode) const
+void EE_JitTranslator::translate_op_cop1_fpu(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const
 {
     uint8_t op = opcode & 0x3F;
     IR::Instruction instr;
@@ -1456,7 +1479,7 @@ void EE_JitTranslator::translate_op_cop1_fpu(std::vector<IR::Instruction>& instr
     instrs.push_back(instr);
 }
 
-void EE_JitTranslator::translate_op_cop2(std::vector<IR::Instruction>& instrs, uint32_t opcode) const
+void EE_JitTranslator::translate_op_cop2(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const
 {
     uint8_t op = (opcode >> 21) & 0x1F;
     IR::Instruction instr;
@@ -1505,7 +1528,7 @@ void EE_JitTranslator::translate_op_cop2(std::vector<IR::Instruction>& instrs, u
         case 0x1E:
         case 0x1F:
             // COP2 Special Operation
-            translate_op_cop2_special(instrs, opcode);
+            translate_op_cop2_special(instrs, opcode, PC);
             return;
         default:
             Errors::die("[EE_JIT] Unrecognized cop2 op $%02X", op);
@@ -1514,7 +1537,7 @@ void EE_JitTranslator::translate_op_cop2(std::vector<IR::Instruction>& instrs, u
     instrs.push_back(instr);
 }
 
-void EE_JitTranslator::translate_op_cop2_special(std::vector<IR::Instruction>& instrs, uint32_t opcode) const
+void EE_JitTranslator::translate_op_cop2_special(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const
 {
     uint8_t op = opcode & 0x3F;
     IR::Instruction instr;
@@ -1717,7 +1740,7 @@ void EE_JitTranslator::translate_op_cop2_special(std::vector<IR::Instruction>& i
         case 0x3E:
         case 0x3F:
             // COP2 Special2 Operation
-            translate_op_cop2_special2(instrs, opcode);
+            translate_op_cop2_special2(instrs, opcode, PC);
             return;
         default:
             Errors::die("[EE_JIT] Unrecognized cop2 special op $%02X", op);
@@ -1726,7 +1749,7 @@ void EE_JitTranslator::translate_op_cop2_special(std::vector<IR::Instruction>& i
     instrs.push_back(instr);
 }
 
-void EE_JitTranslator::translate_op_cop2_special2(std::vector<IR::Instruction>& instrs, uint32_t opcode) const
+void EE_JitTranslator::translate_op_cop2_special2(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const
 {
     uint8_t op = opcode & 0x3F;
     IR::Instruction instr;
