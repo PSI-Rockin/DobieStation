@@ -28,16 +28,19 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
 
     bool branch_op = false;
     bool branch_delayslot = false;
+    bool eret_op = false;
     int cycle_count = 0;
 
-    while (!branch_delayslot)
+    while (!branch_delayslot && !eret_op)
     {
-        translate_op(instrs, ee.read32(pc), pc);
+        uint32_t opcode = ee.read32(pc);
+        translate_op(instrs, opcode, pc);
 
         if (branch_op)
             branch_delayslot = true;
 
-        branch_op = is_branch(ee.read32(pc));
+        branch_op = is_branch(opcode);
+        eret_op = is_eret(opcode);
 
         pc += 4;
         ++cycle_count;
@@ -1321,8 +1324,7 @@ void EE_JitTranslator::translate_op_cop0_type2(std::vector<IR::Instruction>& ins
             break;
         case 0x18:
             // ERET
-            Errors::print_warning("[EE_JIT] Unrecognized cop0 type2 op ERET\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::ExceptionReturn;
             break;
         case 0x38:
             // EI
@@ -2124,6 +2126,11 @@ bool EE_JitTranslator::is_branch(uint32_t instr_word) const noexcept
     }
 
     return false;
+}
+
+bool EE_JitTranslator::is_eret(uint32_t instr_word) const noexcept
+{
+    return instr_word >> 26 == 0x10 && instr_word & 0x1F == 0x10 && instr_word & 0x3F == 0x18;
 }
 
 void EE_JitTranslator::fallback_interpreter(IR::Instruction& instr, uint32_t instr_word) const noexcept

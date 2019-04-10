@@ -144,6 +144,7 @@ INSTR(BranchGreaterThanOrEqualZeroLikely)
 INSTR(BranchLessThanOrEqualZeroLikely)
 INSTR(BranchLessThanZeroLinkLikely)
 INSTR(BranchGreaterThanOrEqualZeroLinkLikely)
+INSTR(ExceptionReturn)
 
 
 

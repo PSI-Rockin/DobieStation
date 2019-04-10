@@ -80,7 +80,7 @@ void EE_JIT64::reset(bool clear_cache)
 extern "C"
 uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee)
 {
-    printf("[EE_JIT64] Executing block at $%08X\n", ee.PC);
+    //printf("[EE_JIT64] Executing block at $%08X\n", ee.PC);
     if (jit.cache.find_block(BlockState{ ee.PC, 0, 0, 0, 0 }) == nullptr)
     {
         printf("[EE_JIT64] Block not found at $%08X: recompiling\n", ee.PC);
@@ -215,6 +215,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             break;
         case IR::Opcode::BranchNotEqualLikely:
             branch_not_equal_likely(ee, instr);
+            break;
+        case IR::Opcode::ExceptionReturn:
+            exception_return(ee, instr);
             break;
         case IR::Opcode::Jump:
             jump(ee, instr);
@@ -928,6 +931,11 @@ void EE_JIT64::branch_not_equal_likely(EmotionEngine& ee, IR::Instruction &instr
     handle_branch_destinations(ee, instr);
 
     likely_branch = true;
+}
+
+void EE_JIT64::exception_return(EmotionEngine& ee, IR::Instruction& instr)
+{
+    fallback_interpreter(ee, instr);
 }
 
 void EE_JIT64::jump(EmotionEngine& ee, IR::Instruction& instr)

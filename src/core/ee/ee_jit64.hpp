@@ -70,6 +70,7 @@ private:
     void branch_less_than_zero_link_likely(EmotionEngine& ee, IR::Instruction &instr);
     void branch_not_equal(EmotionEngine& ee, IR::Instruction &instr);
     void branch_not_equal_likely(EmotionEngine& ee, IR::Instruction &instr);
+    void exception_return(EmotionEngine& ee, IR::Instruction& instr);
     void jump(EmotionEngine& ee, IR::Instruction& instr);
     void jump_and_link(EmotionEngine& ee, IR::Instruction& instr);
     void jump_and_link_indirect(EmotionEngine &ee, IR::Instruction &instr);

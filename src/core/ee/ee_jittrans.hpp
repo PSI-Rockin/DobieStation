@@ -94,6 +94,7 @@ private:
     uint16_t cur_PC;
 
     bool is_branch(uint32_t instr_word) const noexcept;
+    bool is_eret(uint32_t instr_word) const noexcept;
     void interpreter_pass(EmotionEngine &ee, uint32_t pc);
     void fallback_interpreter(IR::Instruction& instr, uint32_t instr_word) const noexcept;
 
