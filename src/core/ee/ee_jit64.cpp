@@ -43,7 +43,30 @@ EE_JIT64::EE_JIT64() : emitter(&cache)
 
 void EE_JIT64::reset(bool clear_cache)
 {
-    //TODO
+    abi_int_count = 0;
+    abi_xmm_count = 0;
+    for (int i = 0; i < 16; i++)
+    {
+        xmm_regs[i].used = false;
+        xmm_regs[i].locked = false;
+        xmm_regs[i].age = 0;
+        xmm_regs[i].needs_clamping = false;
+
+        int_regs[i].used = false;
+        int_regs[i].locked = false;
+        int_regs[i].age = 0;
+    }
+
+    //Lock special registers to prevent them from being used
+    int_regs[REG_64::RSP].locked = true;
+
+    //Scratchpad registers
+    int_regs[REG_64::RAX].locked = true;
+    int_regs[REG_64::R15].locked = true;
+    int_regs[REG_64::RDI].locked = true;
+    int_regs[REG_64::RSI].locked = true;
+    xmm_regs[REG_64::XMM0].locked = true;
+    xmm_regs[REG_64::XMM1].locked = true;
 
     if (clear_cache)
         cache.flush_all_blocks();
@@ -325,7 +348,7 @@ void EE_JIT64::handle_branch_destinations(EmotionEngine& ee, IR::Instruction& in
         //First branch is taken, so we set the fail destination according to that destination
         emitter.load_addr((uint64_t)&ee_branch_dest, REG_64::RAX);
         emitter.MOV32_FROM_MEM(REG_64::RAX, REG_64::R15);
-        emitter.ADD16_REG_IMM(8, REG_64::R15);
+        emitter.ADD32_REG_IMM(8, REG_64::R15);
         emitter.load_addr((uint64_t)&ee_branch_delay_fail_dest, REG_64::RAX);
         emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
 
@@ -352,6 +375,9 @@ void EE_JIT64::branch_not_equal(EmotionEngine& ee, IR::Instruction &instr)
 
     op1 = alloc_int_reg(ee, instr.get_source(), REG_STATE::READ);
     op2 = alloc_int_reg(ee, instr.get_source2(), REG_STATE::READ);
+    
+    ee_branch_dest = instr.get_jump_dest();
+    ee_branch_fail_dest = instr.get_jump_fail_dest();
 
     emitter.CMP16_REG(op2, op1);
     emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
