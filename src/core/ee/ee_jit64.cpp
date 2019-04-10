@@ -115,6 +115,7 @@ uint16_t EE_JIT64::run(EmotionEngine& ee)
 void EE_JIT64::recompile_block(EmotionEngine& ee, IR::Block& block)
 {
     ee_branch = false;
+    likely_branch = false;
     cache.alloc_block(BlockState{ ee.get_PC(), 0, 0, 0, 0 });
 
     cycle_count = block.get_cycle_count();
