@@ -180,15 +180,12 @@ int EmotionEngine::run(int cycles)
 
 int EmotionEngine::run_jit(int cycles)
 {
-    run_event = 0;
-
-    cycle_count += cycles;
     if (!wait_for_IRQ)
     {
         cycles_to_run += cycles;
-        while (run_event < cycles_to_run)
+        while (cycles_to_run > 0)
         {
-            run_event += EE_JIT::run(this);
+            cycles_to_run -= EE_JIT::run(this);
         }
     }
 
