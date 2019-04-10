@@ -129,6 +129,9 @@ int EmotionEngine::run(int cycles)
             uint32_t instruction = read_instr(PC);
             uint32_t lastPC = PC;
 
+            if (PC == 0x80005184)
+                can_disassemble = true;
+
             if (can_disassemble)
             {
                 std::string disasm = EmotionDisasm::disasm_instr(instruction, PC);
@@ -853,6 +856,12 @@ void EmotionEngine::set_int1_signal(bool value)
     cp0->cause.int1_pending = value;
     if (value)
         printf("[EE] Set INT1\n");
+}
+
+void EmotionEngine::tlbwi()
+{
+    int index = cp0->gpr[0];
+    cp0->set_tlb(index);
 }
 
 void EmotionEngine::eret()

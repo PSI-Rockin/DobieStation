@@ -39,6 +39,19 @@ struct COP0_CAUSE
     bool bd;
 };
 
+struct TLB_Entry
+{
+    bool valid[2];
+    bool dirty[2];
+    uint8_t cache_mode[2];
+    uint32_t pfn[2];
+    bool is_scratchpad;
+    bool global[2];
+    uint8_t asid;
+    uint32_t vpn2;
+    uint32_t page_size;
+};
+
 class DMAC;
 
 class Cop0
@@ -46,6 +59,7 @@ class Cop0
     private:
         DMAC* dmac;
     public:
+        TLB_Entry tlb[48];
         uint32_t gpr[32];
         COP0_STATUS status;
         COP0_CAUSE cause;
@@ -64,6 +78,8 @@ class Cop0
         bool int_pending();
 
         void count_up(int cycles);
+
+        void set_tlb(int index);
 
         void load_state(std::ifstream &state);
         void save_state(std::ofstream& state);

@@ -147,6 +147,82 @@ bool Cop0::int_pending()
     return false;
 }
 
+void Cop0::set_tlb(int index)
+{
+    TLB_Entry* new_entry = &tlb[index];
+
+    new_entry->is_scratchpad = gpr[2] >> 31;
+
+    uint32_t mask = (gpr[5] >> 13) & 0xFFF;
+    int shift = 0;
+    switch (mask)
+    {
+        case 0x000:
+            new_entry->page_size = 1024 * 4;
+            shift = 0;
+            break;
+        case 0x003:
+            new_entry->page_size = 1024 * 16;
+            shift = 2;
+            break;
+        case 0x00F:
+            new_entry->page_size = 1024 * 64;
+            shift = 4;
+            break;
+        case 0x03F:
+            new_entry->page_size = 1024 * 256;
+            shift = 6;
+            break;
+        case 0x0FF:
+            new_entry->page_size = 1024 * 1024;
+            shift = 8;
+            break;
+        case 0x3FF:
+            new_entry->page_size = 1024 * 1024 * 4;
+            shift = 10;
+            break;
+        case 0xFFF:
+            new_entry->page_size = 1024 * 1024 * 16;
+            shift = 12;
+            break;
+        default:
+            new_entry->page_size = 0;
+    }
+
+    //EntryHi
+    new_entry->asid = gpr[10] & 0xFF;
+    new_entry->vpn2 = gpr[10] >> 13;
+    bool is_odd = new_entry->vpn2 & 0x1;
+
+    for (int i = 0; i < 2; i++)
+    {
+        uint32_t entry_lo = gpr[i + 2];
+        new_entry->global[i] = entry_lo & 0x1;
+        new_entry->valid[i] = (entry_lo >> 1) & 0x1;
+        new_entry->dirty[i] = (entry_lo >> 2) & 0x1;
+        new_entry->cache_mode[i] = (entry_lo >> 3) & 0x7;
+        new_entry->pfn[i] = (entry_lo >> 6) & 0xFFFFF;
+    }
+
+    uint32_t real_virt = new_entry->vpn2 * 2;
+    real_virt >>= shift;
+    real_virt *= new_entry->page_size;
+
+    printf("[COP0] New TLB entry at %d\n", index);
+    printf("ASID: $%02X VPN2: $%08X SPR: %d\n", new_entry->asid, new_entry->vpn2, new_entry->is_scratchpad);
+    printf("Page size: %d Real virt: $%08X\n", new_entry->page_size, real_virt);
+
+    for (int i = 0; i < 2; i++)
+    {
+        uint32_t real_phy = new_entry->pfn[i] >> shift;
+        real_phy *= new_entry->page_size;
+        printf("G: %d D: %d V: %d C: %d\n", new_entry->global[i], new_entry->dirty[i],
+               new_entry->valid[i], new_entry->cache_mode[i]);
+        printf("PFN: $%08X Real phy: $%08X\n", new_entry->pfn[i], real_phy);
+        printf("\n");
+    }
+}
+
 void Cop0::count_up(int cycles)
 {
     gpr[9] += cycles;
