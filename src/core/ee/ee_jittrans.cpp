@@ -5,8 +5,8 @@
 
 uint32_t branch_offset_ee(uint32_t instr, uint32_t PC)
 {
-    int32_t i = instr & 0xFFFF;
-    i <<= 2;
+    int32_t i = static_cast<int32_t>(instr);
+    i = ((i << 16) >> 16) << 2;
     return PC + i + 4;
 }
 

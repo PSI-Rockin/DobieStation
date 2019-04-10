@@ -494,7 +494,28 @@ void EE_JIT64::branch_equal_likely(EmotionEngine& ee, IR::Instruction &instr)
 
 void EE_JIT64::branch_greater_than_or_equal_zero(EmotionEngine& ee, IR::Instruction &instr)
 {
-    Errors::die("[EE_JIT64] Branch Greater Than Or Equal Zero not implemented!");
+    REG_64 op1;
+    op1 = alloc_int_reg(ee, instr.get_source(), REG_STATE::READ);
+
+    // Set success destination
+    emitter.MOV32_REG_IMM(instr.get_jump_dest(), REG_64::RAX);
+    emitter.load_addr((uint64_t)&ee_branch_dest, REG_64::R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
+
+    // Set failure destination
+    emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
+    emitter.load_addr((uint64_t)&ee_branch_fail_dest, REG_64::R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
+
+    // Compare the two registers to see which jump we take
+    emitter.MOV64_OI(0, REG_64::RAX);
+    emitter.CMP64_REG(REG_64::RAX, op1);
+    emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
+    emitter.SETGE_MEM(REG_64::RAX);
+
+    handle_branch_destinations(ee, instr);
+
+    ee_branch = true;
 }
 
 void EE_JIT64::branch_greater_than_or_equal_zero_likely(EmotionEngine& ee, IR::Instruction &instr)
@@ -626,8 +647,10 @@ void EE_JIT64::jump_and_link(EmotionEngine& ee, IR::Instruction& instr)
     emitter.MOV16_IMM_MEM(true, REG_64::RAX);
 
     //Then set the link register
-    REG_64 link = alloc_int_reg(ee, 31, REG_STATE::WRITE); // 31 = $ra
-    emitter.MOV32_REG_IMM(instr.get_return_addr(), link);
+    emitter.load_addr((uint64_t)&ee.gpr[31 * sizeof(uint128_t)], REG_64::RAX); // 31 = $ra
+    emitter.MOV32_REG_IMM(instr.get_return_addr(), REG_64::R15);
+    emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
+
     ee_branch = true;
 }
 
@@ -644,8 +667,9 @@ void EE_JIT64::jump_and_link_indirect(EmotionEngine& ee, IR::Instruction &instr)
     emitter.MOV16_IMM_MEM(true, REG_64::RAX);
 
     //Then set the link register
-    REG_64 link = alloc_int_reg(ee, instr.get_dest(), REG_STATE::WRITE);
-    emitter.MOV32_REG_IMM(instr.get_return_addr(), link);
+    emitter.load_addr((uint64_t)&ee.gpr[31 * sizeof(uint128_t)], REG_64::RAX); // 31 = $ra
+    emitter.MOV32_REG_IMM(instr.get_return_addr(), REG_64::R15);
+    emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
 
     ee_branch = true;
 }
@@ -692,21 +716,18 @@ void EE_JIT64::flush_regs(EmotionEngine& ee)
     printf("[EE_JIT64] Flushing regs\n");
     for (int i = 0; i < 16; i++)
     {
-        for (int i = 0; i < 16; i++)
+        int vf_reg = xmm_regs[i].vu_reg;
+        int vi_reg = int_regs[i].vu_reg;
+        if (xmm_regs[i].used && vf_reg && xmm_regs[i].modified)
         {
-            int vf_reg = xmm_regs[i].vu_reg;
-            int vi_reg = int_regs[i].vu_reg;
-            if (xmm_regs[i].used && vf_reg && xmm_regs[i].modified)
-            {
-                emitter.load_addr(get_fpu_addr(ee, static_cast<FPU_SpecialReg>(vf_reg)) , REG_64::RAX);
-                emitter.MOVAPS_TO_MEM((REG_64)i, REG_64::RAX);
-            }
+            emitter.load_addr(get_fpu_addr(ee, static_cast<FPU_SpecialReg>(vf_reg)) , REG_64::RAX);
+            emitter.MOVAPS_TO_MEM((REG_64)i, REG_64::RAX);
+        }
 
-            if (int_regs[i].used && vi_reg && int_regs[i].modified)
-            {
-                emitter.load_addr((uint64_t)&ee.gpr[vi_reg], REG_64::RAX);
-                emitter.MOV16_TO_MEM((REG_64)i, REG_64::RAX);
-            }
+        if (int_regs[i].used && vi_reg && int_regs[i].modified)
+        {
+            emitter.load_addr((uint64_t)&ee.gpr[vi_reg], REG_64::RAX);
+            emitter.MOV16_TO_MEM((REG_64)i, REG_64::RAX);
         }
     }
 }
