@@ -28,8 +28,9 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
 
     bool branch_op = false;
     bool branch_delayslot = false;
-    bool eret_op = false;
     int cycle_count = 0;
+
+    eret_op = false;
 
     while (!branch_delayslot && !eret_op)
     {
@@ -40,7 +41,6 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
             branch_delayslot = true;
 
         branch_op = is_branch(opcode);
-        eret_op = is_eret(opcode);
 
         pc += 4;
         ++cycle_count;
@@ -54,7 +54,7 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
     return block;
 }
 
-void EE_JitTranslator::translate_op(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const
+void EE_JitTranslator::translate_op(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC)
 {
     if (!opcode)
         return; // op is effective nop
@@ -1271,7 +1271,7 @@ void EE_JitTranslator::translate_op_mmi3(std::vector<IR::Instruction>& instrs, u
     instrs.push_back(instr);
 }
 
-void EE_JitTranslator::translate_op_cop0(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const
+void EE_JitTranslator::translate_op_cop0(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC)
 {
     uint8_t op = (opcode >> 21) & 0x1F;
     IR::Instruction instr;
@@ -1310,7 +1310,7 @@ void EE_JitTranslator::translate_op_cop0(std::vector<IR::Instruction>& instrs, u
     instrs.push_back(instr);
 }
 
-void EE_JitTranslator::translate_op_cop0_type2(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const
+void EE_JitTranslator::translate_op_cop0_type2(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC)
 {
     uint8_t op = opcode & 0x3F;
     IR::Instruction instr;
@@ -1325,6 +1325,7 @@ void EE_JitTranslator::translate_op_cop0_type2(std::vector<IR::Instruction>& ins
         case 0x18:
             // ERET
             instr.op = IR::Opcode::ExceptionReturn;
+            eret_op = true;
             break;
         case 0x38:
             // EI
@@ -2126,11 +2127,6 @@ bool EE_JitTranslator::is_branch(uint32_t instr_word) const noexcept
     }
 
     return false;
-}
-
-bool EE_JitTranslator::is_eret(uint32_t instr_word) const noexcept
-{
-    return instr_word >> 26 == 0x10 && instr_word & 0x1F == 0x10 && instr_word & 0x3F == 0x18;
 }
 
 void EE_JitTranslator::fallback_interpreter(IR::Instruction& instr, uint32_t instr_word) const noexcept

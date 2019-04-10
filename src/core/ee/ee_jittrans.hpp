@@ -92,13 +92,13 @@ private:
     EE_InstrInfo instr_info[1024 * 16];
     uint16_t end_PC;
     uint16_t cur_PC;
+    bool eret_op;
 
     bool is_branch(uint32_t instr_word) const noexcept;
-    bool is_eret(uint32_t instr_word) const noexcept;
     void interpreter_pass(EmotionEngine &ee, uint32_t pc);
     void fallback_interpreter(IR::Instruction& instr, uint32_t instr_word) const noexcept;
 
-    void translate_op(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t pc) const;
+    void translate_op(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t pc);
     void translate_op_special(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const;
     void translate_op_regimm(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const;
     void translate_op_mmi(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const;
@@ -106,8 +106,8 @@ private:
     void translate_op_mmi1(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const;
     void translate_op_mmi2(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const;
     void translate_op_mmi3(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const;
-    void translate_op_cop0(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const;
-    void translate_op_cop0_type2(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const;
+    void translate_op_cop0(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC);
+    void translate_op_cop0_type2(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC);
     void translate_op_cop1(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const;
     void translate_op_cop1_fpu(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const;
     void translate_op_cop2(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const;
