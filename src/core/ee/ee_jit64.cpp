@@ -535,7 +535,28 @@ void EE_JIT64::branch_greater_than_or_equal_zero_link_likely(EmotionEngine& ee, 
 
 void EE_JIT64::branch_greater_than_zero(EmotionEngine& ee, IR::Instruction &instr)
 {
-    Errors::die("[EE_JIT64] Branch Greater Than Zero not implemented!");
+    REG_64 op1;
+    op1 = alloc_int_reg(ee, instr.get_source(), REG_STATE::READ);
+
+    // Set success destination
+    emitter.MOV32_REG_IMM(instr.get_jump_dest(), REG_64::RAX);
+    emitter.load_addr((uint64_t)&ee_branch_dest, REG_64::R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
+
+    // Set failure destination
+    emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
+    emitter.load_addr((uint64_t)&ee_branch_fail_dest, REG_64::R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
+
+    // Compare the two registers to see which jump we take
+    emitter.MOV64_OI(0, REG_64::RAX);
+    emitter.CMP64_REG(REG_64::RAX, op1);
+    emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
+    emitter.SETG_MEM(REG_64::RAX);
+
+    handle_branch_destinations(ee, instr);
+
+    ee_branch = true;
 }
 
 void EE_JIT64::branch_greater_than_zero_likely(EmotionEngine& ee, IR::Instruction &instr)
@@ -555,7 +576,28 @@ void EE_JIT64::branch_greater_than_zero_link_likely(EmotionEngine& ee, IR::Instr
 
 void EE_JIT64::branch_less_than_or_equal_zero(EmotionEngine& ee, IR::Instruction &instr)
 {
-    Errors::die("[EE_JIT64] Branch Less Than Or Equal Zero not implemented!");
+    REG_64 op1;
+    op1 = alloc_int_reg(ee, instr.get_source(), REG_STATE::READ);
+
+    // Set success destination
+    emitter.MOV32_REG_IMM(instr.get_jump_dest(), REG_64::RAX);
+    emitter.load_addr((uint64_t)&ee_branch_dest, REG_64::R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
+
+    // Set failure destination
+    emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
+    emitter.load_addr((uint64_t)&ee_branch_fail_dest, REG_64::R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
+
+    // Compare the two registers to see which jump we take
+    emitter.MOV64_OI(0, REG_64::RAX);
+    emitter.CMP64_REG(REG_64::RAX, op1);
+    emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
+    emitter.SETLE_MEM(REG_64::RAX);
+
+    handle_branch_destinations(ee, instr);
+
+    ee_branch = true;
 }
 
 void EE_JIT64::branch_less_than_or_equal_zero_likely(EmotionEngine& ee, IR::Instruction &instr)
@@ -575,7 +617,28 @@ void EE_JIT64::branch_less_than_or_equal_zero_link_likely(EmotionEngine& ee, IR:
 
 void EE_JIT64::branch_less_than_zero(EmotionEngine& ee, IR::Instruction &instr)
 {
-    Errors::die("[EE_JIT64] Branch Less Than Zero not implemented!");
+    REG_64 op1;
+    op1 = alloc_int_reg(ee, instr.get_source(), REG_STATE::READ);
+
+    // Set success destination
+    emitter.MOV32_REG_IMM(instr.get_jump_dest(), REG_64::RAX);
+    emitter.load_addr((uint64_t)&ee_branch_dest, REG_64::R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
+
+    // Set failure destination
+    emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
+    emitter.load_addr((uint64_t)&ee_branch_fail_dest, REG_64::R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
+
+    // Compare the two registers to see which jump we take
+    emitter.MOV64_OI(0, REG_64::RAX);
+    emitter.CMP64_REG(REG_64::RAX, op1);
+    emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
+    emitter.SETL_MEM(REG_64::RAX);
+
+    handle_branch_destinations(ee, instr);
+
+    ee_branch = true;
 }
 
 void EE_JIT64::branch_less_than_zero_likely(EmotionEngine& ee, IR::Instruction &instr)
