@@ -62,12 +62,8 @@ private:
     void branch_greater_than_or_equal_zero_link_likely(EmotionEngine& ee, IR::Instruction &instr);
     void branch_greater_than_zero(EmotionEngine& ee, IR::Instruction &instr);
     void branch_greater_than_zero_likely(EmotionEngine& ee, IR::Instruction &instr);
-    void branch_greater_than_zero_link(EmotionEngine& ee, IR::Instruction &instr);
-    void branch_greater_than_zero_link_likely(EmotionEngine& ee, IR::Instruction &instr);
     void branch_less_than_or_equal_zero(EmotionEngine& ee, IR::Instruction &instr);
     void branch_less_than_or_equal_zero_likely(EmotionEngine& ee, IR::Instruction &instr);
-    void branch_less_than_or_equal_zero_link(EmotionEngine& ee, IR::Instruction &instr);
-    void branch_less_than_or_equal_zero_link_likely(EmotionEngine& ee, IR::Instruction &instr);
     void branch_less_than_zero(EmotionEngine& ee, IR::Instruction &instr);
     void branch_less_than_zero_likely(EmotionEngine& ee, IR::Instruction &instr);
     void branch_less_than_zero_link(EmotionEngine& ee, IR::Instruction &instr);

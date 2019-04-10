@@ -644,6 +644,7 @@ void EE_JitTranslator::translate_op_regimm(std::vector<IR::Instruction>& instrs,
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_jump_dest(branch_offset_ee(opcode, PC));
             instr.set_jump_fail_dest(PC + 8);
+            instr.set_return_addr(PC + 8);
             break;
         case 0x11:
             // BGEZAL
@@ -651,6 +652,7 @@ void EE_JitTranslator::translate_op_regimm(std::vector<IR::Instruction>& instrs,
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_jump_dest(branch_offset_ee(opcode, PC));
             instr.set_jump_fail_dest(PC + 8);
+            instr.set_return_addr(PC + 8);
             break;
         case 0x12:
             // BLTZALL
@@ -658,6 +660,7 @@ void EE_JitTranslator::translate_op_regimm(std::vector<IR::Instruction>& instrs,
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_jump_dest(branch_offset_ee(opcode, PC));
             instr.set_jump_fail_dest(PC + 8);
+            instr.set_return_addr(PC + 8);
             break;
         case 0x13:
             // BGEZALL
@@ -665,6 +668,7 @@ void EE_JitTranslator::translate_op_regimm(std::vector<IR::Instruction>& instrs,
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_jump_dest(branch_offset_ee(opcode, PC));
             instr.set_jump_fail_dest(PC + 8);
+            instr.set_return_addr(PC + 8);
             break;
         case 0x18:
             // MTSAB
