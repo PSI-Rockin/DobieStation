@@ -147,11 +147,86 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
 {
     switch (instr.op)
     {
+        case IR::Opcode::BranchCop0:
+            branch_cop0(ee, instr);
+            break;
+        case IR::Opcode::BranchCop0Likely:
+            branch_cop0_likely(ee, instr);
+            break;
+        case IR::Opcode::BranchCop1:
+            branch_cop1(ee, instr);
+            break;
+        case IR::Opcode::BranchCop1Likely:
+            branch_cop1_likely(ee, instr);
+            break;
+        case IR::Opcode::BranchCop2:
+            branch_cop2(ee, instr);
+            break;
+        case IR::Opcode::BranchCop2Likely:
+            branch_cop2_likely(ee, instr);
+            break;
         case IR::Opcode::BranchEqual:
             branch_equal(ee, instr);
             break;
+        case IR::Opcode::BranchEqualLikely:
+            branch_equal_likely(ee, instr);
+            break;
+        case IR::Opcode::BranchGreaterThanOrEqualZero:
+            branch_greater_than_or_equal_zero(ee, instr);
+            break;
+        case IR::Opcode::BranchGreaterThanOrEqualZeroLikely:
+            branch_greater_than_or_equal_zero_likely(ee, instr);
+            break;
+        case IR::Opcode::BranchGreaterThanOrEqualZeroLink:
+            branch_greater_than_or_equal_zero_link(ee, instr);
+            break;
+        case IR::Opcode::BranchGreaterThanOrEqualZeroLinkLikely:
+            branch_greater_than_or_equal_zero_link_likely(ee, instr);
+            break;
+        case IR::Opcode::BranchGreaterThanZero:
+            branch_greater_than_zero(ee, instr);
+            break;
+        case IR::Opcode::BranchGreaterThanZeroLikely:
+            branch_greater_than_zero_likely(ee, instr);
+            break;
+        case IR::Opcode::BranchGreaterThanZeroLink:
+            branch_greater_than_zero_link(ee, instr);
+            break;
+        case IR::Opcode::BranchGreaterThanZeroLinkLikely:
+            branch_greater_than_zero_link_likely(ee, instr);
+            break;
+        case IR::Opcode::BranchLessThanOrEqualZero:
+            branch_less_than_or_equal_zero(ee, instr);
+            break;
+        case IR::Opcode::BranchLessThanOrEqualZeroLikely:
+            branch_less_than_or_equal_zero_likely(ee, instr);
+            break;
+        case IR::Opcode::BranchLessThanOrEqualZeroLink:
+            branch_less_than_or_equal_zero_link(ee, instr);
+            break;
+        case IR::Opcode::BranchLessThanOrEqualZeroLinkLikely:
+            branch_less_than_or_equal_zero_link_likely(ee, instr);
+            break;
+        case IR::Opcode::BranchLessThanZero:
+            branch_less_than_zero(ee, instr);
+            break;
+        case IR::Opcode::BranchLessThanZeroLikely:
+            branch_less_than_zero_likely(ee, instr);
+            break;
+        case IR::Opcode::BranchLessThanZeroLink:
+            branch_less_than_zero_link(ee, instr);
+            break;
+        case IR::Opcode::BranchLessThanZeroLinkLikely:
+            branch_less_than_zero_link_likely(ee, instr);
+            break;
         case IR::Opcode::BranchNotEqual:
             branch_not_equal(ee, instr);
+            break;
+        case IR::Opcode::BranchNotEqualLikely:
+            branch_not_equal_likely(ee, instr);
+            break;
+        case IR::Opcode::Jump:
+            jump(ee, instr);
             break;
         case IR::Opcode::JumpAndLink:
             jump_and_link(ee, instr);
@@ -354,6 +429,36 @@ void EE_JIT64::handle_branch_destinations(EmotionEngine& ee, IR::Instruction& in
     emitter.MOV32_IMM_MEM(instr.get_jump_fail_dest(), REG_64::RAX);
 }
 
+void EE_JIT64::branch_cop0(EmotionEngine& ee, IR::Instruction &instr)
+{
+    Errors::die("[EE_JIT64] Branch COP0 (true/false) not implemented!");
+}
+
+void EE_JIT64::branch_cop0_likely(EmotionEngine& ee, IR::Instruction &instr)
+{
+    Errors::die("[EE_JIT64] Branch COP0 (true/false) Likely not implemented!");
+}
+
+void EE_JIT64::branch_cop1(EmotionEngine& ee, IR::Instruction &instr)
+{
+    Errors::die("[EE_JIT64] Branch COP1 (true/false) not implemented!");
+}
+
+void EE_JIT64::branch_cop1_likely(EmotionEngine& ee, IR::Instruction &instr)
+{
+    Errors::die("[EE_JIT64] Branch COP1 (true/false) Likely not implemented!");
+}
+
+void EE_JIT64::branch_cop2(EmotionEngine& ee, IR::Instruction &instr)
+{
+    Errors::die("[EE_JIT64] Branch COP2 (true/false) not implemented!");
+}
+
+void EE_JIT64::branch_cop2_likely(EmotionEngine& ee, IR::Instruction &instr)
+{
+    Errors::die("[EE_JIT64] Branch COP2 (true/false) Likely not implemented!");
+}
+
 void EE_JIT64::branch_equal(EmotionEngine& ee, IR::Instruction &instr)
 {
     REG_64 op1;
@@ -382,6 +487,91 @@ void EE_JIT64::branch_equal(EmotionEngine& ee, IR::Instruction &instr)
     ee_branch = true;
 }
 
+void EE_JIT64::branch_equal_likely(EmotionEngine& ee, IR::Instruction &instr)
+{
+    Errors::die("[EE_JIT64] Branch Equal Likely not implemented!");
+}
+
+void EE_JIT64::branch_greater_than_or_equal_zero(EmotionEngine& ee, IR::Instruction &instr)
+{
+    Errors::die("[EE_JIT64] Branch Greater Than Or Equal Zero not implemented!");
+}
+
+void EE_JIT64::branch_greater_than_or_equal_zero_likely(EmotionEngine& ee, IR::Instruction &instr)
+{
+    Errors::die("[EE_JIT64] Branch Greater Than Or Equal Zero Likely not implemented!");
+}
+
+void EE_JIT64::branch_greater_than_or_equal_zero_link(EmotionEngine& ee, IR::Instruction &instr)
+{
+    Errors::die("[EE_JIT64] Branch Greater Than Or Equal Zero Link not implemented!");
+}
+
+void EE_JIT64::branch_greater_than_or_equal_zero_link_likely(EmotionEngine& ee, IR::Instruction &instr)
+{
+    Errors::die("[EE_JIT64] Branch Greater Than Or Equal Zero Link Likely not implemented!");
+}
+
+void EE_JIT64::branch_greater_than_zero(EmotionEngine& ee, IR::Instruction &instr)
+{
+    Errors::die("[EE_JIT64] Branch Greater Than Zero not implemented!");
+}
+
+void EE_JIT64::branch_greater_than_zero_likely(EmotionEngine& ee, IR::Instruction &instr)
+{
+    Errors::die("[EE_JIT64] Branch Greater Than Zero Likely not implemented!");
+}
+
+void EE_JIT64::branch_greater_than_zero_link(EmotionEngine& ee, IR::Instruction &instr)
+{
+    Errors::die("[EE_JIT64] Branch Greater Than Zero Link not implemented!");
+}
+
+void EE_JIT64::branch_greater_than_zero_link_likely(EmotionEngine& ee, IR::Instruction &instr)
+{
+    Errors::die("[EE_JIT64] Branch Greater Than Zero Link Likely not implemented!");
+}
+
+void EE_JIT64::branch_less_than_or_equal_zero(EmotionEngine& ee, IR::Instruction &instr)
+{
+    Errors::die("[EE_JIT64] Branch Less Than Or Equal Zero not implemented!");
+}
+
+void EE_JIT64::branch_less_than_or_equal_zero_likely(EmotionEngine& ee, IR::Instruction &instr)
+{
+    Errors::die("[EE_JIT64] Branch Less Than Or Equal Zero Likely not implemented!");
+}
+
+void EE_JIT64::branch_less_than_or_equal_zero_link(EmotionEngine& ee, IR::Instruction &instr)
+{
+    Errors::die("[EE_JIT64] Branch Less Than Or Equal Zero Link not implemented!");
+}
+
+void EE_JIT64::branch_less_than_or_equal_zero_link_likely(EmotionEngine& ee, IR::Instruction &instr)
+{
+    Errors::die("[EE_JIT64] Branch Less Than Or Equal Zero Link Likely not implemented!");
+}
+
+void EE_JIT64::branch_less_than_zero(EmotionEngine& ee, IR::Instruction &instr)
+{
+    Errors::die("[EE_JIT64] Branch Less Than Zero not implemented!");
+}
+
+void EE_JIT64::branch_less_than_zero_likely(EmotionEngine& ee, IR::Instruction &instr)
+{
+    Errors::die("[EE_JIT64] Branch Less Than Zero Likely not implemented!");
+}
+
+void EE_JIT64::branch_less_than_zero_link(EmotionEngine& ee, IR::Instruction &instr)
+{
+    Errors::die("[EE_JIT64] Branch Less Than Zero Link not implemented!");
+}
+
+void EE_JIT64::branch_less_than_zero_link_likely(EmotionEngine& ee, IR::Instruction &instr)
+{
+    Errors::die("[EE_JIT64] Branch Less Than Zero Link Likely not implemented!");
+}
+
 void EE_JIT64::branch_not_equal(EmotionEngine& ee, IR::Instruction &instr)
 {
     REG_64 op1;
@@ -389,7 +579,7 @@ void EE_JIT64::branch_not_equal(EmotionEngine& ee, IR::Instruction &instr)
 
     op1 = alloc_int_reg(ee, instr.get_source(), REG_STATE::READ);
     op2 = alloc_int_reg(ee, instr.get_source2(), REG_STATE::READ);
-    
+
     // Set success destination
     emitter.MOV32_REG_IMM(instr.get_jump_dest(), REG_64::RAX);
     emitter.load_addr((uint64_t)&ee_branch_dest, REG_64::R15);
@@ -410,6 +600,22 @@ void EE_JIT64::branch_not_equal(EmotionEngine& ee, IR::Instruction &instr)
     ee_branch = true;
 }
 
+void EE_JIT64::branch_not_equal_likely(EmotionEngine& ee, IR::Instruction &instr)
+{
+    Errors::die("[EE_JIT64] Branch Not Equal Likely not implemented!");
+}
+
+void EE_JIT64::jump(EmotionEngine& ee, IR::Instruction& instr)
+{
+    // We just need to set the PC.
+    emitter.load_addr((uint64_t)&ee_branch_dest, REG_64::RAX);
+    emitter.MOV32_IMM_MEM(instr.get_jump_dest(), REG_64::RAX);
+
+    emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
+    emitter.MOV16_IMM_MEM(true, REG_64::RAX);
+    ee_branch = true;
+}
+
 void EE_JIT64::jump_and_link(EmotionEngine& ee, IR::Instruction& instr)
 {
     //First set the PC
@@ -417,10 +623,10 @@ void EE_JIT64::jump_and_link(EmotionEngine& ee, IR::Instruction& instr)
     emitter.MOV32_IMM_MEM(instr.get_jump_dest(), REG_64::RAX);
 
     emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-    emitter.MOV16_IMM_MEM(1, REG_64::RAX);
+    emitter.MOV16_IMM_MEM(true, REG_64::RAX);
 
     //Then set the link register
-    REG_64 link = alloc_int_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+    REG_64 link = alloc_int_reg(ee, 31, REG_STATE::WRITE); // 31 = $ra
     emitter.MOV32_REG_IMM(instr.get_return_addr(), link);
     ee_branch = true;
 }

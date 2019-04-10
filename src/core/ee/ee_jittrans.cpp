@@ -71,15 +71,14 @@ void EE_JitTranslator::translate_op(std::vector<IR::Instruction>& instrs, uint32
             return;
         case 0x02:
             // J
-            Errors::print_warning("[EE_JIT] Unrecognized op J\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::Jump;
+            instr.set_jump_dest(jump_offset_ee(opcode, PC));
             break;
         case 0x03:
             // JAL
             instr.op = IR::Opcode::JumpAndLink;
             instr.set_jump_dest(jump_offset_ee(opcode, PC));
             instr.set_return_addr(PC + 8);
-            instr.set_dest(31); // $ra
             break;
         case 0x04:
             // BEQ
@@ -99,13 +98,17 @@ void EE_JitTranslator::translate_op(std::vector<IR::Instruction>& instrs, uint32
             break;
         case 0x06:
             // BLEZ
-            Errors::print_warning("[EE_JIT] Unrecognized op BLEZ\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::BranchLessThanOrEqualZero;
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_jump_dest(branch_offset_ee(opcode, PC));
+            instr.set_jump_fail_dest(PC + 8);
             break;
         case 0x07:
             // BGTZ
-            Errors::print_warning("[EE_JIT] Unrecognized op BGTZ\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::BranchGreaterThanZero;
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_jump_dest(branch_offset_ee(opcode, PC));
+            instr.set_jump_fail_dest(PC + 8);
             break;
         case 0x08:
             // ADDI
@@ -165,23 +168,33 @@ void EE_JitTranslator::translate_op(std::vector<IR::Instruction>& instrs, uint32
             return;
         case 0x14:
             // BEQL
-            Errors::print_warning("[EE_JIT] Unrecognized op BEQL\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::BranchEqualLikely;
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_source2((opcode >> 16) & 0x1F);
+            instr.set_jump_dest(branch_offset_ee(opcode, PC));
+            instr.set_jump_fail_dest(PC + 8);
             break;
         case 0x15:
             // BNEL
-            Errors::print_warning("[EE_JIT] Unrecognized op BNEL\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::BranchNotEqualLikely;
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_source2((opcode >> 16) & 0x1F);
+            instr.set_jump_dest(branch_offset_ee(opcode, PC));
+            instr.set_jump_fail_dest(PC + 8);
             break;
         case 0x16:
             // BLEZL
-            Errors::print_warning("[EE_JIT] Unrecognized op BLEZL\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::BranchLessThanOrEqualZeroLikely;
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_jump_dest(branch_offset_ee(opcode, PC));
+            instr.set_jump_fail_dest(PC + 8);
             break;
         case 0x17:
             // BGTZL
-            Errors::print_warning("[EE_JIT] Unrecognized op BGTZL\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::BranchGreaterThanOrEqualZeroLikely;
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_jump_dest(branch_offset_ee(opcode, PC));
+            instr.set_jump_fail_dest(PC + 8);
             break;
         case 0x18:
             // DADDI
@@ -599,43 +612,59 @@ void EE_JitTranslator::translate_op_regimm(std::vector<IR::Instruction>& instrs,
     {
         case 0x00:
             // BLTZ
-            Errors::print_warning("[EE_JIT] Unrecognized regimm op BLTZ\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::BranchLessThanZero;
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_jump_dest(branch_offset_ee(opcode, PC));
+            instr.set_jump_fail_dest(PC + 8);
             break;
         case 0x01:
             // BGEZ
-            Errors::print_warning("[EE_JIT] Unrecognized regimm op BGEZ\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::BranchGreaterThanOrEqualZero;
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_jump_dest(branch_offset_ee(opcode, PC));
+            instr.set_jump_fail_dest(PC + 8);
             break;
         case 0x02:
             // BLTZL
-            Errors::print_warning("[EE_JIT] Unrecognized regimm op BLTZL\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::BranchLessThanZeroLikely;
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_jump_dest(branch_offset_ee(opcode, PC));
+            instr.set_jump_fail_dest(PC + 8);
             break;
         case 0x03:
             // BGEZL
-            Errors::print_warning("[EE_JIT] Unrecognized regimm op BGEZL\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::BranchGreaterThanOrEqualZeroLikely;
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_jump_dest(branch_offset_ee(opcode, PC));
+            instr.set_jump_fail_dest(PC + 8);
             break;
         case 0x10:
             // BLTZAL
-            Errors::print_warning("[EE_JIT] Unrecognized regimm op BLTZAL\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::BranchLessThanZeroLink;
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_jump_dest(branch_offset_ee(opcode, PC));
+            instr.set_jump_fail_dest(PC + 8);
             break;
         case 0x11:
             // BGEZAL
-            Errors::print_warning("[EE_JIT] Unrecognized regimm op BGEZAL\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::BranchGreaterThanOrEqualZeroLink;
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_jump_dest(branch_offset_ee(opcode, PC));
+            instr.set_jump_fail_dest(PC + 8);
             break;
         case 0x12:
             // BLTZALL
-            Errors::print_warning("[EE_JIT] Unrecognized regimm op BLTZALL\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::BranchLessThanZeroLinkLikely;
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_jump_dest(branch_offset_ee(opcode, PC));
+            instr.set_jump_fail_dest(PC + 8);
             break;
         case 0x13:
             // BGEZALL
-            Errors::print_warning("[EE_JIT] Unrecognized regimm op BGEZALL\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::BranchGreaterThanOrEqualZeroLinkLikely;
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_jump_dest(branch_offset_ee(opcode, PC));
+            instr.set_jump_fail_dest(PC + 8);
             break;
         case 0x18:
             // MTSAB
@@ -1254,8 +1283,14 @@ void EE_JitTranslator::translate_op_cop0(std::vector<IR::Instruction>& instrs, u
             break;
         case 0x08:
             // BC0
-            Errors::print_warning("[EE_JIT] Unrecognized cop0 op BC0\n", op);
-            fallback_interpreter(instr, opcode);
+            if ((opcode >> 17) & 1)
+                instr.op = IR::Opcode::BranchCop0Likely;
+            else
+                instr.op = IR::Opcode::BranchCop0;
+
+            instr.set_field((opcode >> 16) & 1);
+            instr.set_jump_dest(branch_offset_ee(opcode, PC));
+            instr.set_jump_fail_dest(PC + 8);
             break;
         case 0x10:
             // Type2 op
@@ -1331,8 +1366,14 @@ void EE_JitTranslator::translate_op_cop1(std::vector<IR::Instruction>& instrs, u
             break;
         case 0x08:
             // BC1
-            Errors::print_warning("[EE_JIT] Unrecognized cop1 op BC1\n", op);
-            fallback_interpreter(instr, opcode);
+            if ((opcode >> 17) & 1)
+                instr.op = IR::Opcode::BranchCop1Likely;
+            else
+                instr.op = IR::Opcode::BranchCop1;
+
+            instr.set_field((opcode >> 16) & 1);
+            instr.set_jump_dest(branch_offset_ee(opcode, PC));
+            instr.set_jump_fail_dest(PC + 8);
             break;
         case 0x10:
             // FPU Operation
@@ -1508,8 +1549,14 @@ void EE_JitTranslator::translate_op_cop2(std::vector<IR::Instruction>& instrs, u
             break;
         case 0x08:
             // BC2
-            Errors::print_warning("[EE_JIT] Unrecognized cop2 op BC2\n", op);
-            fallback_interpreter(instr, opcode);
+            if ((opcode >> 17) & 1)
+                instr.op = IR::Opcode::BranchCop2Likely;
+            else
+                instr.op = IR::Opcode::BranchCop2;
+
+            instr.set_field((opcode >> 16) & 1);
+            instr.set_jump_dest(branch_offset_ee(opcode, PC));
+            instr.set_jump_fail_dest(PC + 8);
             break;
         case 0x10:
         case 0x11:
@@ -2065,6 +2112,11 @@ bool EE_JitTranslator::is_branch(uint32_t instr_word) const noexcept
             default:
                 return false;
         }
+    }
+    else if (op == 0x10 || op == 0x11 || op == 0x12)
+    {
+        op = (instr_word >> 21) & 0x1F;
+        return op == 0x08;
     }
 
     return false;
