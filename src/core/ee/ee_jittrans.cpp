@@ -361,9 +361,9 @@ void EE_JitTranslator::translate_op_special(std::vector<IR::Instruction>& instrs
             fallback_interpreter(instr, opcode);
             break;
         case 0x08:
-            // JR
-            Errors::print_warning("[EE_JIT] Unrecognized special op JR\n", op);
-            fallback_interpreter(instr, opcode);
+            //JR
+            instr.op = IR::Opcode::JumpIndirect;
+            instr.set_source((opcode >> 21) & 0x1F);
             break;
         case 0x09:
             // JALR

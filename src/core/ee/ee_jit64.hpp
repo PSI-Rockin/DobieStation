@@ -48,6 +48,7 @@ private:
     void handle_branch_destinations(EmotionEngine& ee, IR::Instruction& instr);
 
     void branch_not_equal(EmotionEngine& ee, IR::Instruction &instr);
+    void jump_indirect(EmotionEngine& ee, IR::Instruction& instr);
     void fallback_interpreter(EmotionEngine& ee, const IR::Instruction &instr);
 
     void prepare_abi(const EmotionEngine& ee, uint64_t value);

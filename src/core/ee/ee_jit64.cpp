@@ -150,6 +150,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::BranchNotEqual:
             branch_not_equal(ee, instr);
             break;
+        case IR::Opcode::JumpIndirect:
+            jump_indirect(ee, instr);
+            break;
         case IR::Opcode::FallbackInterpreter:
             fallback_interpreter(ee, instr);
             break;
@@ -254,7 +257,7 @@ int EE_JIT64::search_for_register(AllocReg *regs, int vu_reg)
 
 REG_64 EE_JIT64::alloc_int_reg(EmotionEngine& ee, int vi_reg, REG_STATE state)
 {
-    if (vi_reg >= 16)
+    if (vi_reg >= 32)
         Errors::die("[EE_JIT64] Alloc Int error: vi_reg == %d", vi_reg);
 
     for (int i = 0; i < 16; i++)
@@ -376,15 +379,32 @@ void EE_JIT64::branch_not_equal(EmotionEngine& ee, IR::Instruction &instr)
     op1 = alloc_int_reg(ee, instr.get_source(), REG_STATE::READ);
     op2 = alloc_int_reg(ee, instr.get_source2(), REG_STATE::READ);
     
-    ee_branch_dest = instr.get_jump_dest();
-    ee_branch_fail_dest = instr.get_jump_fail_dest();
+    // Set success destination
+    emitter.MOV32_REG_IMM(instr.get_jump_dest(), REG_64::RAX);
+    emitter.load_addr((uint64_t)&ee_branch_dest, REG_64::R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
 
-    emitter.CMP16_REG(op2, op1);
+    // Set failure destination
+    emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
+    emitter.load_addr((uint64_t)&ee_branch_fail_dest, REG_64::R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
+
+    // Compare the two registers to see which jump we take
+    emitter.CMP64_REG(op2, op1);
     emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
     emitter.SETNE_MEM(REG_64::RAX);
 
     handle_branch_destinations(ee, instr);
 
+    ee_branch = true;
+}
+
+void EE_JIT64::jump_indirect(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 jump_dest = alloc_int_reg(ee, instr.get_source(), REG_STATE::READ);
+
+    ee.branch_on = true;
+    ee_branch_dest = instr.get_jump_dest();
     ee_branch = true;
 }
 
