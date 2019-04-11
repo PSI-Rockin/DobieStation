@@ -701,7 +701,7 @@ void EE_JIT64::jump_indirect(EmotionEngine& ee, IR::Instruction& instr)
     if (instr.get_is_link())
     {
         // Set the link register
-        emitter.load_addr((uint64_t)get_gpr_addr(ee, EE_NormalReg::ra), REG_64::RAX);
+        emitter.load_addr((uint64_t)get_gpr_addr(ee, (EE_NormalReg)instr.get_dest()), REG_64::RAX);
         emitter.MOV32_REG_IMM(instr.get_return_addr(), REG_64::R15);
         emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
     }
