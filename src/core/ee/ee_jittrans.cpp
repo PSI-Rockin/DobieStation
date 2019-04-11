@@ -76,12 +76,14 @@ void EE_JitTranslator::translate_op(std::vector<IR::Instruction>& instrs, uint32
             // J
             instr.op = IR::Opcode::Jump;
             instr.set_jump_dest(jump_offset_ee(opcode, PC));
+            instr.set_is_link(false);
             break;
         case 0x03:
             // JAL
-            instr.op = IR::Opcode::JumpAndLink;
+            instr.op = IR::Opcode::Jump;
             instr.set_jump_dest(jump_offset_ee(opcode, PC));
             instr.set_return_addr(PC + 8);
+            instr.set_is_link(true);
             break;
         case 0x04:
             // BEQ
@@ -402,15 +404,15 @@ void EE_JitTranslator::translate_op_special(std::vector<IR::Instruction>& instrs
             // JR
             instr.op = IR::Opcode::JumpIndirect;
             instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_is_link(false);
             break;
         case 0x09:
             // JALR
-            instr.op = IR::Opcode::JumpAndLinkIndirect;
+            instr.op = IR::Opcode::JumpIndirect;
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_return_addr(PC + 8);
             instr.set_dest((opcode >> 11) & 0x1F);
-            if (!instr.get_dest())
-                instr.op = IR::Opcode::JumpIndirect;
+            instr.set_is_link(true);
             break;
         case 0x0A:
             // MOVZ

@@ -46,7 +46,6 @@ private:
 
     void handle_branch(EmotionEngine& ee);
     void handle_branch_likely(EmotionEngine& ee, IR::Block& block);
-    void handle_branch_destinations(EmotionEngine& ee, IR::Instruction& instr);
 
     void branch_cop0(EmotionEngine& ee, IR::Instruction& instr);
     void branch_cop1(EmotionEngine& ee, IR::Instruction& instr);
@@ -59,8 +58,6 @@ private:
     void branch_not_equal(EmotionEngine& ee, IR::Instruction &instr);
     void exception_return(EmotionEngine& ee, IR::Instruction& instr);
     void jump(EmotionEngine& ee, IR::Instruction& instr);
-    void jump_and_link(EmotionEngine& ee, IR::Instruction& instr);
-    void jump_and_link_indirect(EmotionEngine &ee, IR::Instruction &instr);
     void jump_indirect(EmotionEngine& ee, IR::Instruction& instr);
     void system_call(EmotionEngine& ee, IR::Instruction& instr);
     void fallback_interpreter(EmotionEngine& ee, const IR::Instruction &instr);
@@ -76,7 +73,9 @@ private:
 
     void emit_prologue();
     void emit_instruction(EmotionEngine &ee, IR::Instruction &instr);
-    uint64_t get_fpu_addr(EmotionEngine &ee, FPU_SpecialReg index);
+
+    uint64_t get_fpu_addr(EmotionEngine &ee, FPU_SpecialReg index) const;
+    uint64_t get_gpr_addr(EmotionEngine &ee, EE_NormalReg index) const;
 
     void flush_regs(EmotionEngine& ee);
     void cleanup_recompiler(EmotionEngine& ee, bool clear_regs);

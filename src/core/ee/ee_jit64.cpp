@@ -183,12 +183,6 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::Jump:
             jump(ee, instr);
             break;
-        case IR::Opcode::JumpAndLink:
-            jump_and_link(ee, instr);
-            break;
-        case IR::Opcode::JumpAndLinkIndirect:
-            jump_and_link_indirect(ee, instr);
-            break;
         case IR::Opcode::JumpIndirect:
             jump_indirect(ee, instr);
             break;
@@ -414,15 +408,6 @@ void EE_JIT64::handle_branch_likely(EmotionEngine& ee, IR::Block& block)
     cleanup_recompiler(ee, true);
 }
 
-void EE_JIT64::handle_branch_destinations(EmotionEngine& ee, IR::Instruction& instr)
-{
-    emitter.load_addr((uint64_t)&ee_branch_delay_dest, REG_64::RAX);
-    emitter.MOV32_IMM_MEM(instr.get_jump_dest(), REG_64::RAX);
-
-    emitter.load_addr((uint64_t)&ee_branch_fail_dest, REG_64::RAX);
-    emitter.MOV32_IMM_MEM(instr.get_jump_fail_dest(), REG_64::RAX);
-}
-
 bool cop0_get_condition(Cop0& cop0)
 {
     return cop0.get_condition();
@@ -451,8 +436,6 @@ void EE_JIT64::branch_cop0(EmotionEngine& ee, IR::Instruction &instr)
     emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
     emitter.SETE_MEM(REG_64::RAX);
 
-    handle_branch_destinations(ee, instr);
-
     if (instr.get_is_likely())
         likely_branch = true;
     else
@@ -478,8 +461,6 @@ void EE_JIT64::branch_cop1(EmotionEngine& ee, IR::Instruction &instr)
     emitter.CMP16_REG(REG_64::RAX, REG_64::R15);
     emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
     emitter.SETE_MEM(REG_64::RAX);
-
-    handle_branch_destinations(ee, instr);
 
     if (instr.get_is_likely())
         likely_branch = true;
@@ -515,8 +496,6 @@ void EE_JIT64::branch_equal(EmotionEngine& ee, IR::Instruction &instr)
     emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
     emitter.SETE_MEM(REG_64::RAX);
 
-    handle_branch_destinations(ee, instr);
-
     if (instr.get_is_likely())
         likely_branch = true;
     else
@@ -547,12 +526,10 @@ void EE_JIT64::branch_greater_than_or_equal_zero(EmotionEngine& ee, IR::Instruct
     if (instr.get_is_link())
     {
         // Set the link register
-        emitter.load_addr((uint64_t)&ee.gpr[EE_NormalReg::ra * sizeof(uint128_t)], REG_64::RAX);
+        emitter.load_addr((uint64_t)get_gpr_addr(ee, EE_NormalReg::ra), REG_64::RAX);
         emitter.MOV32_REG_IMM(instr.get_return_addr(), REG_64::R15);
         emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
     }
-
-    handle_branch_destinations(ee, instr);
 
     if (instr.get_is_likely())
         likely_branch = true;
@@ -581,8 +558,6 @@ void EE_JIT64::branch_greater_than_zero(EmotionEngine& ee, IR::Instruction &inst
     emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
     emitter.SETG_MEM(REG_64::RAX);
 
-    handle_branch_destinations(ee, instr);
-
     if (instr.get_is_likely())
         likely_branch = true;
     else
@@ -609,8 +584,6 @@ void EE_JIT64::branch_less_than_or_equal_zero(EmotionEngine& ee, IR::Instruction
     emitter.CMP64_REG(REG_64::RAX, op1);
     emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
     emitter.SETLE_MEM(REG_64::RAX);
-
-    handle_branch_destinations(ee, instr);
 
     if (instr.get_is_likely())
         likely_branch = true;
@@ -642,12 +615,10 @@ void EE_JIT64::branch_less_than_zero(EmotionEngine& ee, IR::Instruction &instr)
     if (instr.get_is_link())
     {
         // Set the link register
-        emitter.load_addr((uint64_t)&ee.gpr[EE_NormalReg::ra * sizeof(uint128_t)], REG_64::RAX);
+        emitter.load_addr((uint64_t)get_gpr_addr(ee, EE_NormalReg::ra), REG_64::RAX);
         emitter.MOV32_REG_IMM(instr.get_return_addr(), REG_64::R15);
         emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
     }
-
-    handle_branch_destinations(ee, instr);
 
     if (instr.get_is_likely())
         likely_branch = true;
@@ -679,8 +650,6 @@ void EE_JIT64::branch_not_equal(EmotionEngine& ee, IR::Instruction &instr)
     emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
     emitter.SETNE_MEM(REG_64::RAX);
 
-    handle_branch_destinations(ee, instr);
-
     if (instr.get_is_likely())
         likely_branch = true;
     else
@@ -700,48 +669,19 @@ void EE_JIT64::exception_return(EmotionEngine& ee, IR::Instruction& instr)
 
 void EE_JIT64::jump(EmotionEngine& ee, IR::Instruction& instr)
 {
-    // We just need to set the PC.
+    // Set the PC and branch_on
     emitter.load_addr((uint64_t)&ee_branch_dest, REG_64::RAX);
     emitter.MOV32_IMM_MEM(instr.get_jump_dest(), REG_64::RAX);
-
-    emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-    emitter.MOV16_IMM_MEM(true, REG_64::RAX);
-    ee_branch = true;
-}
-
-void EE_JIT64::jump_and_link(EmotionEngine& ee, IR::Instruction& instr)
-{
-    //First set the PC
-    emitter.load_addr((uint64_t)&ee_branch_dest, REG_64::RAX);
-    emitter.MOV32_IMM_MEM(instr.get_jump_dest(), REG_64::RAX);
-
     emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
     emitter.MOV16_IMM_MEM(true, REG_64::RAX);
 
-    //Then set the link register
-    emitter.load_addr((uint64_t)&ee.gpr[EE_NormalReg::ra * sizeof(uint128_t)], REG_64::RAX);
-    emitter.MOV32_REG_IMM(instr.get_return_addr(), REG_64::R15);
-    emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
-
-    ee_branch = true;
-}
-
-void EE_JIT64::jump_and_link_indirect(EmotionEngine& ee, IR::Instruction &instr)
-{
-    // Load and set jump address
-    REG_64 jump_reg = alloc_int_reg(ee, instr.get_source(), REG_STATE::READ);
-    emitter.MOV32_REG(jump_reg, REG_64::RAX);
-    emitter.load_addr((uint64_t)&ee_branch_dest, REG_64::R15);
-    emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
-
-    // Prime JIT to jump
-    emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-    emitter.MOV16_IMM_MEM(true, REG_64::RAX);
-
-    //Then set the link register
-    emitter.load_addr((uint64_t)&ee.gpr[EE_NormalReg::ra * sizeof(uint128_t)], REG_64::RAX);
-    emitter.MOV32_REG_IMM(instr.get_return_addr(), REG_64::R15);
-    emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
+    if (instr.get_is_link())
+    {
+        // Set the link register
+        emitter.load_addr((uint64_t)get_gpr_addr(ee, EE_NormalReg::ra), REG_64::RAX);
+        emitter.MOV32_REG_IMM(instr.get_return_addr(), REG_64::R15);
+        emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
+    }
 
     ee_branch = true;
 }
@@ -758,7 +698,13 @@ void EE_JIT64::jump_indirect(EmotionEngine& ee, IR::Instruction& instr)
     emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
     emitter.MOV16_IMM_MEM(true, REG_64::RAX);
 
-    handle_branch_destinations(ee, instr);
+    if (instr.get_is_link())
+    {
+        // Set the link register
+        emitter.load_addr((uint64_t)get_gpr_addr(ee, EE_NormalReg::ra), REG_64::RAX);
+        emitter.MOV32_REG_IMM(instr.get_return_addr(), REG_64::R15);
+        emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
+    }
 
     ee_branch = true;
 }
@@ -837,7 +783,8 @@ void EE_JIT64::flush_regs(EmotionEngine& ee)
     }
 }
 
-uint64_t EE_JIT64::get_fpu_addr(EmotionEngine &ee, FPU_SpecialReg index)
+
+uint64_t EE_JIT64::get_fpu_addr(EmotionEngine &ee, FPU_SpecialReg index) const
 {
     int i = static_cast<int>(index);
     if (i < 32)
@@ -851,6 +798,15 @@ uint64_t EE_JIT64::get_fpu_addr(EmotionEngine &ee, FPU_SpecialReg index)
         Errors::die("[EE_JIT64] get_fpu_addr error: Unrecognized reg %d", index);
     }
     return 0;
+}
+
+uint64_t EE_JIT64::get_gpr_addr(EmotionEngine &ee, EE_NormalReg index) const
+{
+    int i = (int)index;
+    if (i < 32)
+        return (uint64_t)&ee.gpr[i * sizeof(uint128_t)];
+
+    Errors::die("[EE_JIT64] get_gpr_addr error: Unrecognized reg %d", index);
 }
 
 void EE_JIT64::cleanup_recompiler(EmotionEngine& ee, bool clear_regs)
