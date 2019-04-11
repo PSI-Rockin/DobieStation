@@ -80,10 +80,13 @@ void EE_JIT64::reset(bool clear_cache)
 extern "C"
 uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee)
 {
+    if (ee.PC == 0x001D3C54)
+        printf("P");
+
     //printf("[EE_JIT64] Executing block at $%08X\n", ee.PC);
     if (jit.cache.find_block(BlockState{ ee.PC, 0, 0, 0, 0 }) == nullptr)
     {
-        printf("[EE_JIT64] Block not found at $%08X: recompiling\n", ee.PC);
+        //printf("[EE_JIT64] Block not found at $%08X: recompiling\n", ee.PC);
         IR::Block block = jit.ir.translate(ee);
         jit.recompile_block(ee, block);
     }
@@ -338,6 +341,112 @@ REG_64 EE_JIT64::alloc_int_reg(EmotionEngine& ee, int vi_reg, REG_STATE state)
     int_regs[reg].age = 0;
 
     return (REG_64)reg;
+}
+
+
+void EE_JIT64::flush_regs(EmotionEngine& ee)
+{
+    //Store the contents of all allocated x64 registers into the EE state.
+    printf("[EE_JIT64] Flushing regs\n");
+    for (int i = 0; i < 16; i++)
+    {
+        int vf_reg = xmm_regs[i].vu_reg;
+        int vi_reg = int_regs[i].vu_reg;
+        if (xmm_regs[i].used && vf_reg && xmm_regs[i].modified)
+        {
+            emitter.load_addr(get_fpu_addr(ee, static_cast<FPU_SpecialReg>(vf_reg)), REG_64::RAX);
+            emitter.MOVAPS_TO_MEM((REG_64)i, REG_64::RAX);
+        }
+
+        if (int_regs[i].used && vi_reg && int_regs[i].modified)
+        {
+            emitter.load_addr((uint64_t)&ee.gpr[vi_reg], REG_64::RAX);
+            emitter.MOV16_TO_MEM((REG_64)i, REG_64::RAX);
+        }
+    }
+}
+
+
+uint64_t EE_JIT64::get_fpu_addr(EmotionEngine &ee, FPU_SpecialReg index) const
+{
+    int i = static_cast<int>(index);
+    if (i < 32)
+        return reinterpret_cast<uint64_t>(&ee.fpu->gpr[i]);
+
+    switch (index)
+    {
+        case FPU_SpecialReg::ACC:
+            return (uint64_t)&ee.fpu->accumulator;
+        default:
+            Errors::die("[EE_JIT64] get_fpu_addr error: Unrecognized reg %d", index);
+    }
+    return 0;
+}
+
+uint64_t EE_JIT64::get_gpr_addr(EmotionEngine &ee, EE_NormalReg index) const
+{
+    int i = (int)index;
+    if (i < 32)
+        return (uint64_t)&ee.gpr[i * sizeof(uint128_t)];
+
+    Errors::die("[EE_JIT64] get_gpr_addr error: Unrecognized reg %d", index);
+}
+
+void EE_JIT64::cleanup_recompiler(EmotionEngine& ee, bool clear_regs)
+{
+    flush_regs(ee);
+
+    if (clear_regs)
+    {
+        for (int i = 0; i < 16; i++)
+        {
+            int_regs[i].age = 0;
+            int_regs[i].used = false;
+            xmm_regs[i].age = 0;
+            xmm_regs[i].used = false;
+        }
+    }
+
+    //Return the amount of cycles to update the EE with
+    emitter.MOV16_REG_IMM(cycle_count, REG_64::RAX);
+    emitter.load_addr(reinterpret_cast<uint64_t>(&cycle_count), REG_64::R15);
+    emitter.MOV16_TO_MEM(REG_64::RAX, REG_64::R15);
+
+    //Epilogue
+    emitter.POP(REG_64::RBP);
+#ifndef _MSC_VER
+    emit_epilogue();
+#endif
+    emitter.RET();
+}
+
+void EE_JIT64::emit_prologue()
+{
+#ifdef _WIN32
+    Errors::die("[VU_JIT64] emit_prologue not implemented for _WIN32");
+#else
+    emitter.PUSH(REG_64::RBX);
+    emitter.PUSH(REG_64::R12);
+    emitter.PUSH(REG_64::R13);
+    emitter.PUSH(REG_64::R14);
+    emitter.PUSH(REG_64::R15);
+    emitter.PUSH(REG_64::RDI);
+#endif
+}
+
+
+void EE_JIT64::emit_epilogue()
+{
+#ifdef _WIN32
+    Errors::die("[EE_JIT64] emit_epilogue not implemented for _WIN32");
+#else
+    emitter.POP(REG_64::RDI);
+    emitter.POP(REG_64::R15);
+    emitter.POP(REG_64::R14);
+    emitter.POP(REG_64::R13);
+    emitter.POP(REG_64::R12);
+    emitter.POP(REG_64::RBX);
+#endif
 }
 
 void EE_JIT64::handle_branch(EmotionEngine& ee)
@@ -658,6 +767,11 @@ void EE_JIT64::branch_not_equal(EmotionEngine& ee, IR::Instruction &instr)
 
 void EE_JIT64::exception_return(EmotionEngine& ee, IR::Instruction& instr)
 {
+    // Cleanup branch_on, exception handler expects this to be false
+    emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
+    emitter.MOV32_REG_IMM(false, REG_64::R15);
+    emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
+
     fallback_interpreter(ee, instr);
 
     // Since the interpreter decrements PC by 4, we reset it here to account for that.
@@ -709,9 +823,9 @@ void EE_JIT64::jump_indirect(EmotionEngine& ee, IR::Instruction& instr)
     ee_branch = true;
 }
 
-void EE_JIT64::ee_handle_exception(EmotionEngine& ee, uint32_t new_addr, uint8_t code)
+void EE_JIT64::ee_syscall_exception(EmotionEngine& ee)
 {
-    ee.handle_exception(new_addr, code);
+    ee.syscall_exception();
 }
 
 void EE_JIT64::system_call(EmotionEngine& ee, IR::Instruction& instr)
@@ -736,10 +850,8 @@ void EE_JIT64::system_call(EmotionEngine& ee, IR::Instruction& instr)
     emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
 
     prepare_abi(ee, reinterpret_cast<uint64_t>(&ee));
-    prepare_abi(ee, 0x80000180);
-    prepare_abi(ee, 0x08);
 
-    call_abi_func((uint64_t)ee_handle_exception);
+    call_abi_func((uint64_t)ee_syscall_exception);
 }
 
 void EE_JIT64::fallback_interpreter(EmotionEngine& ee, const IR::Instruction &instr)
@@ -759,109 +871,4 @@ void EE_JIT64::fallback_interpreter(EmotionEngine& ee, const IR::Instruction &in
     prepare_abi(ee, instr_word);
 
     call_abi_func(reinterpret_cast<uint64_t>(&interpreter));
-}
-
-void EE_JIT64::flush_regs(EmotionEngine& ee)
-{
-    //Store the contents of all allocated x64 registers into the EE state.
-    printf("[EE_JIT64] Flushing regs\n");
-    for (int i = 0; i < 16; i++)
-    {
-        int vf_reg = xmm_regs[i].vu_reg;
-        int vi_reg = int_regs[i].vu_reg;
-        if (xmm_regs[i].used && vf_reg && xmm_regs[i].modified)
-        {
-            emitter.load_addr(get_fpu_addr(ee, static_cast<FPU_SpecialReg>(vf_reg)) , REG_64::RAX);
-            emitter.MOVAPS_TO_MEM((REG_64)i, REG_64::RAX);
-        }
-
-        if (int_regs[i].used && vi_reg && int_regs[i].modified)
-        {
-            emitter.load_addr((uint64_t)&ee.gpr[vi_reg], REG_64::RAX);
-            emitter.MOV16_TO_MEM((REG_64)i, REG_64::RAX);
-        }
-    }
-}
-
-
-uint64_t EE_JIT64::get_fpu_addr(EmotionEngine &ee, FPU_SpecialReg index) const
-{
-    int i = static_cast<int>(index);
-    if (i < 32)
-        return reinterpret_cast<uint64_t>(&ee.fpu->gpr[i]);
-
-    switch (index)
-    {
-    case FPU_SpecialReg::ACC:
-        return (uint64_t)&ee.fpu->accumulator;
-    default:
-        Errors::die("[EE_JIT64] get_fpu_addr error: Unrecognized reg %d", index);
-    }
-    return 0;
-}
-
-uint64_t EE_JIT64::get_gpr_addr(EmotionEngine &ee, EE_NormalReg index) const
-{
-    int i = (int)index;
-    if (i < 32)
-        return (uint64_t)&ee.gpr[i * sizeof(uint128_t)];
-
-    Errors::die("[EE_JIT64] get_gpr_addr error: Unrecognized reg %d", index);
-}
-
-void EE_JIT64::cleanup_recompiler(EmotionEngine& ee, bool clear_regs)
-{
-    flush_regs(ee);
-
-    if (clear_regs)
-    {
-        for (int i = 0; i < 16; i++)
-        {
-            int_regs[i].age = 0;
-            int_regs[i].used = false;
-            xmm_regs[i].age = 0;
-            xmm_regs[i].used = false;
-        }
-    }
-
-    //Return the amount of cycles to update the EE with
-    emitter.MOV16_REG_IMM(cycle_count, REG_64::RAX);
-    emitter.load_addr(reinterpret_cast<uint64_t>(&cycle_count), REG_64::R15);
-    emitter.MOV16_TO_MEM(REG_64::RAX, REG_64::R15);
-
-    //Epilogue
-    emitter.POP(REG_64::RBP);
-#ifndef _MSC_VER
-    emit_epilogue();
-#endif
-    emitter.RET();
-}
-
-void EE_JIT64::emit_prologue()
-{
-#ifdef _WIN32
-    Errors::die("[VU_JIT64] emit_prologue not implemented for _WIN32");
-#else
-    emitter.PUSH(REG_64::RBX);
-    emitter.PUSH(REG_64::R12);
-    emitter.PUSH(REG_64::R13);
-    emitter.PUSH(REG_64::R14);
-    emitter.PUSH(REG_64::R15);
-    emitter.PUSH(REG_64::RDI);
-#endif
-}
-
-
-void EE_JIT64::emit_epilogue()
-{
-#ifdef _WIN32
-    Errors::die("[EE_JIT64] emit_epilogue not implemented for _WIN32");
-#else
-    emitter.POP(REG_64::RDI);
-    emitter.POP(REG_64::R15);
-    emitter.POP(REG_64::R14);
-    emitter.POP(REG_64::R13);
-    emitter.POP(REG_64::R12);
-    emitter.POP(REG_64::RBX);
-#endif
 }

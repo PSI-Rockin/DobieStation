@@ -771,12 +771,13 @@ void EmotionEngine::handle_exception(uint32_t new_addr, uint8_t code)
 void EmotionEngine::syscall_exception()
 {
     uint8_t op = read8(PC - 4);
-    //if (op != 0x7A)
-        //printf("[EE] SYSCALL: %s (id: $%02X) called at $%08X\n", SYSCALL(op), op, PC);
+    if (op != 0x7A)
+        printf("[EE] SYSCALL: %s (id: $%02X) called at $%08X\n", SYSCALL(op), op, PC);
 
     if (op == 0x7C)
     {
         deci2call(get_gpr<uint32_t>(4), get_gpr<uint32_t>(5));
+        PC += 4;
         return;
     }
     if (op == 0x04)
