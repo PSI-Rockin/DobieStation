@@ -189,6 +189,7 @@ int EmotionEngine::run_jit(int cycles)
         }
     }
 
+    branch_on = false;
     if (cp0->int_enabled())
     {
         if (cp0->cause.int0_pending)

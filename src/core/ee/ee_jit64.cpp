@@ -423,14 +423,68 @@ void EE_JIT64::handle_branch_destinations(EmotionEngine& ee, IR::Instruction& in
     emitter.MOV32_IMM_MEM(instr.get_jump_fail_dest(), REG_64::RAX);
 }
 
+bool cop0_get_condition(Cop0& cop0)
+{
+    return cop0.get_condition();
+}
+
 void EE_JIT64::branch_cop0(EmotionEngine& ee, IR::Instruction &instr)
 {
-    Errors::die("[EE_JIT64] Branch COP0 not implemented!");
+    // Set success destination
+    emitter.MOV32_REG_IMM(instr.get_jump_dest(), REG_64::RAX);
+    emitter.load_addr((uint64_t)&ee_branch_dest, REG_64::R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
+
+    // Set failure destination
+    emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
+    emitter.load_addr((uint64_t)&ee_branch_fail_dest, REG_64::R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
+
+    // Call cop0.get_condition to get value to compare
+    prepare_abi(ee, reinterpret_cast<uint64_t>(&ee.cp0));
+
+    call_abi_func((uint64_t)cop0_get_condition);
+
+    // Compare the condition to see which branch is taken
+    emitter.MOV16_REG_IMM(instr.get_field(), REG_64::R15);
+    emitter.CMP16_REG(REG_64::RAX, REG_64::R15);
+    emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
+    emitter.SETE_MEM(REG_64::RAX);
+
+    handle_branch_destinations(ee, instr);
+
+    if (instr.get_is_likely())
+        likely_branch = true;
+    else
+        ee_branch = true;
 }
 
 void EE_JIT64::branch_cop1(EmotionEngine& ee, IR::Instruction &instr)
 {
-    Errors::die("[EE_JIT64] Branch COP1 not implemented!");
+    // Set success destination
+    emitter.MOV32_REG_IMM(instr.get_jump_dest(), REG_64::RAX);
+    emitter.load_addr((uint64_t)&ee_branch_dest, REG_64::R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
+
+    // Set failure destination
+    emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
+    emitter.load_addr((uint64_t)&ee_branch_fail_dest, REG_64::R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
+
+    // Compare the FPU condition to see which branch is taken
+    emitter.load_addr((uint64_t)&ee.fpu->control.condition, REG_64::RAX);
+    emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::RAX);
+    emitter.MOV16_REG_IMM(instr.get_field(), REG_64::R15);
+    emitter.CMP16_REG(REG_64::RAX, REG_64::R15);
+    emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
+    emitter.SETE_MEM(REG_64::RAX);
+
+    handle_branch_destinations(ee, instr);
+
+    if (instr.get_is_likely())
+        likely_branch = true;
+    else
+        ee_branch = true;
 }
 
 void EE_JIT64::branch_cop2(EmotionEngine& ee, IR::Instruction &instr)
@@ -635,11 +689,6 @@ void EE_JIT64::branch_not_equal(EmotionEngine& ee, IR::Instruction &instr)
 
 void EE_JIT64::exception_return(EmotionEngine& ee, IR::Instruction& instr)
 {
-    // Cleanup branch_on, exception handler expects this to be false
-    emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-    emitter.MOV32_REG_IMM(false, REG_64::R15);
-    emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
-
     fallback_interpreter(ee, instr);
 
     // Since the interpreter decrements PC by 4, we reset it here to account for that.
