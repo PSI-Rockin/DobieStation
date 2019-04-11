@@ -417,7 +417,7 @@ void EE_JitTranslator::translate_op_special(std::vector<IR::Instruction>& instrs
         case 0x0C:
             // SYSCALL
             instr.op = IR::Opcode::SystemCall;
-            instr.set_source(opcode);
+            instr.set_return_addr(PC);
             eret_op = true;
             break;
         case 0x0D:

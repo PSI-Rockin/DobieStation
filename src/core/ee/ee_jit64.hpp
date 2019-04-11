@@ -78,6 +78,8 @@ private:
     void system_call(EmotionEngine& ee, IR::Instruction& instr);
     void fallback_interpreter(EmotionEngine& ee, const IR::Instruction &instr);
 
+    static void ee_handle_exception(EmotionEngine& ee, uint32_t new_addr, uint8_t code);
+
     void prepare_abi(const EmotionEngine& ee, uint64_t value);
     void call_abi_func(uint64_t addr);
     void recompile_block(EmotionEngine& ee, IR::Block& block);

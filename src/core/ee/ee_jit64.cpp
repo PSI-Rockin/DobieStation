@@ -80,7 +80,8 @@ void EE_JIT64::reset(bool clear_cache)
 extern "C"
 uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee)
 {
-    printf("[EE_JIT64] Executing block at $%08X\n", ee.PC);
+    ee.branch_on = false;
+    //printf("[EE_JIT64] Executing block at $%08X\n", ee.PC);
     if (jit.cache.find_block(BlockState{ ee.PC, 0, 0, 0, 0 }) == nullptr)
     {
         printf("[EE_JIT64] Block not found at $%08X: recompiling\n", ee.PC);
@@ -1015,9 +1016,32 @@ void EE_JIT64::jump_indirect(EmotionEngine& ee, IR::Instruction& instr)
     ee_branch = true;
 }
 
+void EE_JIT64::ee_handle_exception(EmotionEngine& ee, uint32_t new_addr, uint8_t code)
+{
+    ee.handle_exception(new_addr, code);
+}
+
 void EE_JIT64::system_call(EmotionEngine& ee, IR::Instruction& instr)
 {
-    fallback_interpreter(ee, instr);
+    flush_regs(ee);
+    for (int i = 0; i < 16; i++)
+    {
+        int_regs[i].age = 0;
+        int_regs[i].used = false;
+        xmm_regs[i].age = 0;
+        xmm_regs[i].used = false;
+    }
+
+    // Update PC before calling exception handler
+    emitter.load_addr((uint64_t)&ee.PC, REG_64::RAX);
+    emitter.MOV32_REG_IMM(instr.get_return_addr(), REG_64::R15);
+    emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
+
+    prepare_abi(ee, reinterpret_cast<uint64_t>(&ee));
+    prepare_abi(ee, 0x80000180);
+    prepare_abi(ee, 0x08);
+
+    call_abi_func((uint64_t)ee_handle_exception);
 }
 
 void EE_JIT64::fallback_interpreter(EmotionEngine& ee, const IR::Instruction &instr)
