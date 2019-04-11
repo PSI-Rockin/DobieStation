@@ -49,27 +49,14 @@ private:
     void handle_branch_destinations(EmotionEngine& ee, IR::Instruction& instr);
 
     void branch_cop0(EmotionEngine& ee, IR::Instruction& instr);
-    void branch_cop0_likely(EmotionEngine& ee, IR::Instruction& instr);
     void branch_cop1(EmotionEngine& ee, IR::Instruction& instr);
-    void branch_cop1_likely(EmotionEngine& ee, IR::Instruction& instr);
     void branch_cop2(EmotionEngine& ee, IR::Instruction& instr);
-    void branch_cop2_likely(EmotionEngine& ee, IR::Instruction& instr);
     void branch_equal(EmotionEngine& ee, IR::Instruction &instr);
-    void branch_equal_likely(EmotionEngine& ee, IR::Instruction &instr);
     void branch_greater_than_or_equal_zero(EmotionEngine& ee, IR::Instruction &instr);
-    void branch_greater_than_or_equal_zero_likely(EmotionEngine& ee, IR::Instruction &instr);
-    void branch_greater_than_or_equal_zero_link(EmotionEngine& ee, IR::Instruction &instr);
-    void branch_greater_than_or_equal_zero_link_likely(EmotionEngine& ee, IR::Instruction &instr);
     void branch_greater_than_zero(EmotionEngine& ee, IR::Instruction &instr);
-    void branch_greater_than_zero_likely(EmotionEngine& ee, IR::Instruction &instr);
     void branch_less_than_or_equal_zero(EmotionEngine& ee, IR::Instruction &instr);
-    void branch_less_than_or_equal_zero_likely(EmotionEngine& ee, IR::Instruction &instr);
     void branch_less_than_zero(EmotionEngine& ee, IR::Instruction &instr);
-    void branch_less_than_zero_likely(EmotionEngine& ee, IR::Instruction &instr);
-    void branch_less_than_zero_link(EmotionEngine& ee, IR::Instruction &instr);
-    void branch_less_than_zero_link_likely(EmotionEngine& ee, IR::Instruction &instr);
     void branch_not_equal(EmotionEngine& ee, IR::Instruction &instr);
-    void branch_not_equal_likely(EmotionEngine& ee, IR::Instruction &instr);
     void exception_return(EmotionEngine& ee, IR::Instruction& instr);
     void jump(EmotionEngine& ee, IR::Instruction& instr);
     void jump_and_link(EmotionEngine& ee, IR::Instruction& instr);

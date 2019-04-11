@@ -22,6 +22,7 @@ class Instruction
         int dest, base;
         uint64_t source, source2;
         uint8_t bc, field, field2;
+        bool is_likely, is_link;
     public:
         Opcode op;
 
@@ -37,6 +38,8 @@ class Instruction
         uint8_t get_bc() const;
         uint8_t get_field() const;
         uint8_t get_field2() const;
+        bool get_is_likely() const;
+        bool get_is_link() const;
 
         void set_jump_dest(uint32_t addr);
         void set_jump_fail_dest(uint32_t addr);
@@ -48,6 +51,8 @@ class Instruction
         void set_bc(uint8_t value);
         void set_field(uint8_t value);
         void set_field2(uint8_t value);
+        void set_is_likely(bool value);
+        void set_is_link(bool value);
 
         bool is_jump();
 };

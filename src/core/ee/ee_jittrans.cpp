@@ -90,6 +90,7 @@ void EE_JitTranslator::translate_op(std::vector<IR::Instruction>& instrs, uint32
             instr.set_source2((opcode >> 16) & 0x1F);
             instr.set_jump_dest(branch_offset_ee(opcode, PC));
             instr.set_jump_fail_dest(PC + 8);
+            instr.set_is_likely(false);
             break;
         case 0x05:
             // BNE
@@ -98,6 +99,7 @@ void EE_JitTranslator::translate_op(std::vector<IR::Instruction>& instrs, uint32
             instr.set_source2((opcode >> 16) & 0x1F);
             instr.set_jump_dest(branch_offset_ee(opcode, PC));
             instr.set_jump_fail_dest(PC + 8);
+            instr.set_is_likely(false);
             break;
         case 0x06:
             // BLEZ
@@ -105,6 +107,7 @@ void EE_JitTranslator::translate_op(std::vector<IR::Instruction>& instrs, uint32
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_jump_dest(branch_offset_ee(opcode, PC));
             instr.set_jump_fail_dest(PC + 8);
+            instr.set_is_likely(false);
             break;
         case 0x07:
             // BGTZ
@@ -112,6 +115,7 @@ void EE_JitTranslator::translate_op(std::vector<IR::Instruction>& instrs, uint32
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_jump_dest(branch_offset_ee(opcode, PC));
             instr.set_jump_fail_dest(PC + 8);
+            instr.set_is_likely(false);
             break;
         case 0x08:
             // ADDI
@@ -171,33 +175,37 @@ void EE_JitTranslator::translate_op(std::vector<IR::Instruction>& instrs, uint32
             return;
         case 0x14:
             // BEQL
-            instr.op = IR::Opcode::BranchEqualLikely;
+            instr.op = IR::Opcode::BranchEqual;
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_source2((opcode >> 16) & 0x1F);
             instr.set_jump_dest(branch_offset_ee(opcode, PC));
             instr.set_jump_fail_dest(PC + 8);
+            instr.set_is_likely(true);
             break;
         case 0x15:
             // BNEL
-            instr.op = IR::Opcode::BranchNotEqualLikely;
+            instr.op = IR::Opcode::BranchNotEqual;
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_source2((opcode >> 16) & 0x1F);
             instr.set_jump_dest(branch_offset_ee(opcode, PC));
             instr.set_jump_fail_dest(PC + 8);
+            instr.set_is_likely(true);
             break;
         case 0x16:
             // BLEZL
-            instr.op = IR::Opcode::BranchLessThanOrEqualZeroLikely;
+            instr.op = IR::Opcode::BranchLessThanOrEqualZero;
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_jump_dest(branch_offset_ee(opcode, PC));
             instr.set_jump_fail_dest(PC + 8);
+            instr.set_is_likely(true);
             break;
         case 0x17:
             // BGTZL
-            instr.op = IR::Opcode::BranchGreaterThanOrEqualZeroLikely;
+            instr.op = IR::Opcode::BranchGreaterThanOrEqualZero;
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_jump_dest(branch_offset_ee(opcode, PC));
             instr.set_jump_fail_dest(PC + 8);
+            instr.set_is_likely(true);
             break;
         case 0x18:
             // DADDI
@@ -620,6 +628,8 @@ void EE_JitTranslator::translate_op_regimm(std::vector<IR::Instruction>& instrs,
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_jump_dest(branch_offset_ee(opcode, PC));
             instr.set_jump_fail_dest(PC + 8);
+            instr.set_is_likely(false);
+            instr.set_is_link(false);
             break;
         case 0x01:
             // BGEZ
@@ -627,52 +637,66 @@ void EE_JitTranslator::translate_op_regimm(std::vector<IR::Instruction>& instrs,
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_jump_dest(branch_offset_ee(opcode, PC));
             instr.set_jump_fail_dest(PC + 8);
+            instr.set_is_likely(false);
+            instr.set_is_link(false);
             break;
         case 0x02:
             // BLTZL
-            instr.op = IR::Opcode::BranchLessThanZeroLikely;
+            instr.op = IR::Opcode::BranchLessThanZero;
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_jump_dest(branch_offset_ee(opcode, PC));
             instr.set_jump_fail_dest(PC + 8);
+            instr.set_is_likely(true);
+            instr.set_is_link(false);
             break;
         case 0x03:
             // BGEZL
-            instr.op = IR::Opcode::BranchGreaterThanOrEqualZeroLikely;
+            instr.op = IR::Opcode::BranchGreaterThanOrEqualZero;
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_jump_dest(branch_offset_ee(opcode, PC));
             instr.set_jump_fail_dest(PC + 8);
+            instr.set_is_likely(true);
+            instr.set_is_link(false);
             break;
         case 0x10:
             // BLTZAL
-            instr.op = IR::Opcode::BranchLessThanZeroLink;
+            instr.op = IR::Opcode::BranchLessThanZero;
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_jump_dest(branch_offset_ee(opcode, PC));
             instr.set_jump_fail_dest(PC + 8);
             instr.set_return_addr(PC + 8);
+            instr.set_is_likely(false);
+            instr.set_is_link(true);
             break;
         case 0x11:
             // BGEZAL
-            instr.op = IR::Opcode::BranchGreaterThanOrEqualZeroLink;
+            instr.op = IR::Opcode::BranchGreaterThanOrEqualZero;
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_jump_dest(branch_offset_ee(opcode, PC));
             instr.set_jump_fail_dest(PC + 8);
             instr.set_return_addr(PC + 8);
+            instr.set_is_likely(false);
+            instr.set_is_link(true);
             break;
         case 0x12:
             // BLTZALL
-            instr.op = IR::Opcode::BranchLessThanZeroLinkLikely;
+            instr.op = IR::Opcode::BranchLessThanZero;
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_jump_dest(branch_offset_ee(opcode, PC));
             instr.set_jump_fail_dest(PC + 8);
             instr.set_return_addr(PC + 8);
+            instr.set_is_likely(true);
+            instr.set_is_link(true);
             break;
         case 0x13:
             // BGEZALL
-            instr.op = IR::Opcode::BranchGreaterThanOrEqualZeroLinkLikely;
+            instr.op = IR::Opcode::BranchGreaterThanOrEqualZero;
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_jump_dest(branch_offset_ee(opcode, PC));
             instr.set_jump_fail_dest(PC + 8);
             instr.set_return_addr(PC + 8);
+            instr.set_is_likely(true);
+            instr.set_is_link(true);
             break;
         case 0x18:
             // MTSAB
@@ -1291,11 +1315,8 @@ void EE_JitTranslator::translate_op_cop0(std::vector<IR::Instruction>& instrs, u
             break;
         case 0x08:
             // BC0
-            if ((opcode >> 17) & 1)
-                instr.op = IR::Opcode::BranchCop0Likely;
-            else
-                instr.op = IR::Opcode::BranchCop0;
-
+            instr.op = IR::Opcode::BranchCop0;
+            instr.set_is_likely((opcode >> 17) & 1);
             instr.set_field((opcode >> 16) & 1);
             instr.set_jump_dest(branch_offset_ee(opcode, PC));
             instr.set_jump_fail_dest(PC + 8);
@@ -1375,11 +1396,8 @@ void EE_JitTranslator::translate_op_cop1(std::vector<IR::Instruction>& instrs, u
             break;
         case 0x08:
             // BC1
-            if ((opcode >> 17) & 1)
-                instr.op = IR::Opcode::BranchCop1Likely;
-            else
-                instr.op = IR::Opcode::BranchCop1;
-
+            instr.op = IR::Opcode::BranchCop1;
+            instr.set_is_likely((opcode >> 17) & 1);
             instr.set_field((opcode >> 16) & 1);
             instr.set_jump_dest(branch_offset_ee(opcode, PC));
             instr.set_jump_fail_dest(PC + 8);
@@ -1558,11 +1576,8 @@ void EE_JitTranslator::translate_op_cop2(std::vector<IR::Instruction>& instrs, u
             break;
         case 0x08:
             // BC2
-            if ((opcode >> 17) & 1)
-                instr.op = IR::Opcode::BranchCop2Likely;
-            else
-                instr.op = IR::Opcode::BranchCop2;
-
+            instr.op = IR::Opcode::BranchCop2;
+            instr.set_is_likely((opcode >> 17) & 1);
             instr.set_field((opcode >> 16) & 1);
             instr.set_jump_dest(branch_offset_ee(opcode, PC));
             instr.set_jump_fail_dest(PC + 8);

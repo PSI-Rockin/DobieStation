@@ -58,6 +58,16 @@ uint8_t Instruction::get_field2() const
     return field2;
 }
 
+bool Instruction::get_is_likely() const
+{
+    return is_likely;
+}
+
+bool Instruction::get_is_link() const
+{
+    return is_link;
+}
+
 void Instruction::set_jump_dest(uint32_t addr)
 {
     jump_dest = addr;
@@ -106,6 +116,16 @@ void Instruction::set_field(uint8_t value)
 void Instruction::set_field2(uint8_t value)
 {
     field2 = value;
+}
+
+void Instruction::set_is_likely(bool value)
+{
+    is_likely = value;
+}
+
+void Instruction::set_is_link(bool value)
+{
+    is_link = value;
 }
 
 bool Instruction::is_jump()
