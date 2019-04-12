@@ -50,6 +50,8 @@ struct TLB_Entry
     uint8_t asid;
     uint32_t vpn2;
     uint32_t page_size;
+
+    uint8_t page_shift;
 };
 
 class DMAC;
@@ -58,6 +60,14 @@ class Cop0
 {
     private:
         DMAC* dmac;
+        uint8_t* RDRAM;
+        uint8_t* BIOS;
+        uint8_t* spr;
+
+        void unmap_tlb(uint8_t** map, TLB_Entry* entry);
+        void map_tlb(uint8_t** map, TLB_Entry* entry);
+
+        uint8_t* get_mem_pointer(uint32_t paddr);
     public:
         TLB_Entry tlb[48];
         uint32_t gpr[32];
@@ -68,6 +78,8 @@ class Cop0
         Cop0(DMAC* dmac);
 
         void reset();
+        void init_mem_pointers(uint8_t* RDRAM, uint8_t* BIOS, uint8_t* spr);
+        void init_tlb(uint8_t** map);
 
         uint32_t mfc(int index);
         void mtc(int index, uint32_t value);
@@ -79,7 +91,7 @@ class Cop0
 
         void count_up(int cycles);
 
-        void set_tlb(int index);
+        void set_tlb(uint8_t** map, int index);
 
         void load_state(std::ifstream &state);
         void save_state(std::ofstream& state);

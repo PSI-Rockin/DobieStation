@@ -54,8 +54,6 @@ class EmotionEngine
         bool can_disassemble;
         int delay_slot;
 
-        uint8_t* scratchpad;
-
         Deci2Handler deci2handlers[128];
         int deci2size;
 
@@ -63,12 +61,12 @@ class EmotionEngine
         void handle_exception(uint32_t new_addr, uint8_t code);
         void deci2call(uint32_t func, uint32_t param);
     public:
-        EmotionEngine(Cop0* cp0, Cop1* fpu, Emulator* e, uint8_t* sp, VectorUnit* vu0, VectorUnit* vu1);
+        EmotionEngine(Cop0* cp0, Cop1* fpu, Emulator* e, VectorUnit* vu0, VectorUnit* vu1);
         ~EmotionEngine();
         static const char* REG(int id);
         static const char* SYSCALL(int id);
         void reset();
-        void init_tlb(uint8_t* RDRAM, uint8_t* BIOS);
+        void init_tlb();
         int run(int cycles);
         uint64_t get_cycle_count();
         uint64_t get_cop2_last_cycle();

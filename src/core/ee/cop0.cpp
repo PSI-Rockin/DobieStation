@@ -1,14 +1,21 @@
 #include <cstdio>
+#include <cstring>
 #include "cop0.hpp"
 #include "dmac.hpp"
 
 Cop0::Cop0(DMAC* dmac) : dmac(dmac)
-{}
+{
+    RDRAM = nullptr;
+    BIOS = nullptr;
+    spr = nullptr;
+}
 
 void Cop0::reset()
 {
     for (int i = 0; i < 32; i++)
         gpr[i] = 0;
+
+    memset(tlb, 0, sizeof(tlb));
 
     status.int_enable = false;
     status.exception = false;
@@ -39,6 +46,23 @@ void Cop0::reset()
 
     //Set processor revision id
     gpr[15] = 0x00002E20;
+}
+
+void Cop0::init_mem_pointers(uint8_t *RDRAM, uint8_t *BIOS, uint8_t *spr)
+{
+    this->RDRAM = RDRAM;
+    this->BIOS = BIOS;
+    this->spr = spr;
+}
+
+void Cop0::init_tlb(uint8_t **map)
+{
+    //Kernel segments are unmapped to TLB, so we must define them explicitly
+    uint32_t unmapped_start = 0x80000000, unmapped_end = 0xC0000000;
+    for (uint32_t i = unmapped_start; i < unmapped_end; i += 4096)
+    {
+        map[i / 4096] = get_mem_pointer(i & 0x1FFFFFFF);
+    }
 }
 
 uint32_t Cop0::mfc(int index)
@@ -147,43 +171,45 @@ bool Cop0::int_pending()
     return false;
 }
 
-void Cop0::set_tlb(int index)
+void Cop0::set_tlb(uint8_t** map, int index)
 {
     TLB_Entry* new_entry = &tlb[index];
+
+    unmap_tlb(map, new_entry);
 
     new_entry->is_scratchpad = gpr[2] >> 31;
 
     uint32_t mask = (gpr[5] >> 13) & 0xFFF;
-    int shift = 0;
+    new_entry->page_shift = 0;
     switch (mask)
     {
         case 0x000:
             new_entry->page_size = 1024 * 4;
-            shift = 0;
+            new_entry->page_shift = 0;
             break;
         case 0x003:
             new_entry->page_size = 1024 * 16;
-            shift = 2;
+            new_entry->page_shift = 2;
             break;
         case 0x00F:
             new_entry->page_size = 1024 * 64;
-            shift = 4;
+            new_entry->page_shift = 4;
             break;
         case 0x03F:
             new_entry->page_size = 1024 * 256;
-            shift = 6;
+            new_entry->page_shift = 6;
             break;
         case 0x0FF:
             new_entry->page_size = 1024 * 1024;
-            shift = 8;
+            new_entry->page_shift = 8;
             break;
         case 0x3FF:
             new_entry->page_size = 1024 * 1024 * 4;
-            shift = 10;
+            new_entry->page_shift = 10;
             break;
         case 0xFFF:
             new_entry->page_size = 1024 * 1024 * 16;
-            shift = 12;
+            new_entry->page_shift = 12;
             break;
         default:
             new_entry->page_size = 0;
@@ -192,7 +218,6 @@ void Cop0::set_tlb(int index)
     //EntryHi
     new_entry->asid = gpr[10] & 0xFF;
     new_entry->vpn2 = gpr[10] >> 13;
-    bool is_odd = new_entry->vpn2 & 0x1;
 
     for (int i = 0; i < 2; i++)
     {
@@ -205,7 +230,7 @@ void Cop0::set_tlb(int index)
     }
 
     uint32_t real_virt = new_entry->vpn2 * 2;
-    real_virt >>= shift;
+    real_virt >>= new_entry->page_shift;
     real_virt *= new_entry->page_size;
 
     printf("[COP0] New TLB entry at %d\n", index);
@@ -214,13 +239,15 @@ void Cop0::set_tlb(int index)
 
     for (int i = 0; i < 2; i++)
     {
-        uint32_t real_phy = new_entry->pfn[i] >> shift;
+        uint32_t real_phy = new_entry->pfn[i] >> new_entry->page_shift;
         real_phy *= new_entry->page_size;
         printf("G: %d D: %d V: %d C: %d\n", new_entry->global[i], new_entry->dirty[i],
                new_entry->valid[i], new_entry->cache_mode[i]);
         printf("PFN: $%08X Real phy: $%08X\n", new_entry->pfn[i], real_phy);
         printf("\n");
     }
+
+    map_tlb(map, new_entry);
 }
 
 void Cop0::count_up(int cycles)
@@ -257,8 +284,8 @@ void Cop0::count_up(int cycles)
             case 13: //Non-delay slot instruction completed
             case 14: //COP2/COP1 instruction completed
             case 15: //Load/store instruction completed
-            can_count1 = true;
-            break;
+                can_count1 = true;
+                break;
         }
 
         if (can_count0)
@@ -267,4 +294,93 @@ void Cop0::count_up(int cycles)
         if (can_count1)
             PCR1 += cycles;
     }
+}
+
+void Cop0::unmap_tlb(uint8_t **map, TLB_Entry *entry)
+{
+    uint32_t real_vpn = entry->vpn2 * 2;
+    real_vpn >>= entry->page_shift;
+
+    uint32_t even_page = (real_vpn * entry->page_size) / 4096;
+    uint32_t odd_page = ((real_vpn + 1) * entry->page_size) / 4096;
+
+    if (entry->is_scratchpad)
+    {
+        if (entry->valid[0])
+        {
+            for (uint32_t i = 0; i < 1024 * 16; i += 4096)
+            {
+                int map_index = i / 4096;
+                map[even_page + map_index] = nullptr;
+            }
+        }
+    }
+    else
+    {
+        if (entry->valid[0])
+        {
+            for (uint32_t i = 0; i < entry->page_size; i += 4096)
+                map[even_page + i / 4096] = nullptr;
+        }
+
+        if (entry->valid[1])
+        {
+            for (uint32_t i = 0; i < entry->page_size; i += 4096)
+                map[odd_page + i / 4096] = nullptr;
+        }
+    }
+}
+
+void Cop0::map_tlb(uint8_t **map, TLB_Entry *entry)
+{
+    uint32_t real_vpn = entry->vpn2 * 2;
+    real_vpn >>= entry->page_shift;
+
+    uint32_t even_virt_page = (real_vpn * entry->page_size) / 4096;
+    uint32_t even_phy_addr = (entry->pfn[0] >> entry->page_shift) * entry->page_size;
+    uint32_t odd_virt_page = ((real_vpn + 1) * entry->page_size) / 4096;
+    uint32_t odd_phy_addr = (entry->pfn[1] >> entry->page_shift) * entry->page_size;
+
+    printf("Even phy: $%08X Odd phy: $%08X\n", even_phy_addr, odd_phy_addr);
+
+    if (entry->is_scratchpad)
+    {
+        if (entry->valid[0])
+        {
+            for (uint32_t i = 0; i < 1024 * 16; i += 4096)
+                map[even_virt_page + (i / 4096)] = spr + i;
+        }
+    }
+    else
+    {
+        if (entry->valid[0])
+        {
+            for (uint32_t i = 0; i < entry->page_size; i += 4096)
+                map[even_virt_page + (i / 4096)] = get_mem_pointer(even_phy_addr + i);
+        }
+
+        if (entry->valid[1])
+        {
+            for (uint32_t i = 0; i < entry->page_size; i += 4096)
+                map[odd_virt_page + (i / 4096)] = get_mem_pointer(odd_phy_addr + i);
+        }
+    }
+}
+
+uint8_t* Cop0::get_mem_pointer(uint32_t paddr)
+{
+    if (paddr < 0x10000000)
+    {
+        paddr &= (1024 * 1024 * 32) - 1;
+        return RDRAM + paddr;
+    }
+
+    if (paddr >= 0x1FC00000 && paddr < 0x20000000)
+    {
+        paddr &= (1024 * 1024 * 4) - 1;
+        return BIOS + paddr;
+    }
+
+    //Indicates that the region is MMIO and must be handled specially
+    return (uint8_t*)1;
 }

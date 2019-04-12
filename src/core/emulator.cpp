@@ -16,7 +16,7 @@
 #define EELOAD_SIZE 0x20000
 
 Emulator::Emulator() :
-    cdvd(this, &iop_dma), cp0(&dmac), cpu(&cp0, &fpu, this, (uint8_t*)&scratchpad, &vu0, &vu1),
+    cdvd(this, &iop_dma), cp0(&dmac), cpu(&cp0, &fpu, this, &vu0, &vu1),
     dmac(&cpu, this, &gif, &ipu, &sif, &vif0, &vif1), gif(&gs), gs(&intc),
     iop(this), iop_dma(this, &cdvd, &sif, &sio2, &spu, &spu2), iop_timers(this), intc(this, &cpu), ipu(&intc),
     timers(&intc), sio2(this, &pad, &memcard), spu(1, this, &iop_dma), spu2(2, this, &iop_dma),
@@ -129,8 +129,9 @@ void Emulator::reset()
 
     cdvd.reset();
     cp0.reset();
+    cp0.init_mem_pointers(RDRAM, BIOS, (uint8_t*)&scratchpad);
     cpu.reset();
-    cpu.init_tlb(RDRAM, BIOS);
+    cpu.init_tlb();
     dmac.reset(RDRAM, (uint8_t*)&scratchpad);
     fpu.reset();
     gs.reset();
@@ -293,16 +294,8 @@ void Emulator::fast_boot()
         {
             if (!strcmp((char*)&RDRAM[str], "rom0:OSDSYS"))
             {
-                //String found. Now we need to find the location in memory pointing to it...
-                for (uint32_t ptr = str - 4; ptr >= EELOAD_START; ptr -= 4)
-                {
-                    if (*(uint32_t*)&RDRAM[ptr] == str)
-                    {
-                        uint32_t argv = cpu.get_gpr<uint32_t>(5) + 0x40;
-                        strcpy((char*)&RDRAM[argv], path.c_str());
-                        *(uint32_t*)&RDRAM[ptr] = argv;
-                    }
-                }
+                printf("OSDSYS string found at $%08X\n", str);
+                strcpy((char*)&RDRAM[str], path.c_str());
             }
         }
 
