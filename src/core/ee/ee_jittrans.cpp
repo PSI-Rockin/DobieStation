@@ -203,7 +203,7 @@ void EE_JitTranslator::translate_op(std::vector<IR::Instruction>& instrs, uint32
             break;
         case 0x17:
             // BGTZL
-            instr.op = IR::Opcode::BranchGreaterThanOrEqualZero;
+            instr.op = IR::Opcode::BranchGreaterThanZero;
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_jump_dest(branch_offset_ee(opcode, PC));
             instr.set_jump_fail_dest(PC + 8);
