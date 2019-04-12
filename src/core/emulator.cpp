@@ -130,6 +130,7 @@ void Emulator::reset()
     cdvd.reset();
     cp0.reset();
     cpu.reset();
+    cpu.init_tlb(RDRAM, BIOS);
     dmac.reset(RDRAM, (uint8_t*)&scratchpad);
     fpu.reset();
     gs.reset();
@@ -295,11 +296,11 @@ void Emulator::fast_boot()
                 //String found. Now we need to find the location in memory pointing to it...
                 for (uint32_t ptr = str - 4; ptr >= EELOAD_START; ptr -= 4)
                 {
-                    if (read32(ptr) == str)
+                    if (*(uint32_t*)&RDRAM[ptr] == str)
                     {
                         uint32_t argv = cpu.get_gpr<uint32_t>(5) + 0x40;
                         strcpy((char*)&RDRAM[argv], path.c_str());
-                        write32(ptr, argv);
+                        *(uint32_t*)&RDRAM[ptr] = argv;
                     }
                 }
             }
@@ -436,10 +437,6 @@ bool Emulator::interlock_cop2_check(bool isCOP2)
 
 uint8_t Emulator::read8(uint32_t address)
 {
-    if (address < 0x10000000)
-        return RDRAM[address & 0x01FFFFFF];
-    if (address >= 0x1FC00000 && address < 0x20000000)
-        return BIOS[address & 0x3FFFFF];
     if (address >= 0x1C000000 && address < 0x1C200000)
         return IOP_RAM[address & 0x1FFFFF];
     if (address >= 0x10008000 && address < 0x1000F000)
@@ -459,12 +456,8 @@ uint8_t Emulator::read8(uint32_t address)
 
 uint16_t Emulator::read16(uint32_t address)
 {
-    if (address < 0x10000000)
-        return *(uint16_t*)&RDRAM[address & 0x01FFFFFF];
     if (address >= 0x10000000 && address < 0x10002000)
         return (uint16_t)timers.read32(address);
-    if (address >= 0x1FC00000 && address < 0x20000000)
-        return *(uint16_t*)&BIOS[address & 0x3FFFFF];
     if (address >= 0x1C000000 && address < 0x1C200000)
         return *(uint16_t*)&IOP_RAM[address & 0x1FFFFF];
     switch (address)
@@ -480,10 +473,6 @@ uint16_t Emulator::read16(uint32_t address)
 
 uint32_t Emulator::read32(uint32_t address)
 {
-    if (address < 0x10000000)
-        return *(uint32_t*)&RDRAM[address & 0x01FFFFFF];
-    if (address >= 0x1FC00000 && address < 0x20000000)
-        return *(uint32_t*)&BIOS[address & 0x3FFFFF];
     if (address >= 0x10000000 && address < 0x10002000)
         return timers.read32(address);
     if ((address & (0xFF000000)) == 0x12000000)
@@ -595,12 +584,8 @@ uint32_t Emulator::read32(uint32_t address)
 
 uint64_t Emulator::read64(uint32_t address)
 {
-    if (address < 0x10000000)
-        return *(uint64_t*)&RDRAM[address & 0x01FFFFFF];
     if (address >= 0x10000000 && address < 0x10002000)
         return timers.read32(address);
-    if (address >= 0x1FC00000 && address < 0x20000000)
-        return *(uint64_t*)&BIOS[address & 0x3FFFFF];
     if (address >= 0x10008000 && address < 0x1000F000)
         return dmac.read32(address);
     if ((address & (0xFF000000)) == 0x12000000)
@@ -624,21 +609,12 @@ uint64_t Emulator::read64(uint32_t address)
 
 uint128_t Emulator::read128(uint32_t address)
 {
-    if (address < 0x10000000)
-        return *(uint128_t*)&RDRAM[address & 0x01FFFFFF];
-    if (address >= 0x1FC00000 && address < 0x20000000)
-        return *(uint128_t*)&BIOS[address & 0x3FFFFF];
     printf("Unrecognized read128 at physical addr $%08X\n", address);
     return uint128_t::from_u32(0);
 }
 
 void Emulator::write8(uint32_t address, uint8_t value)
 {
-    if (address < 0x10000000)
-    {
-        RDRAM[address & 0x01FFFFFF] = value;
-        return;
-    }
     if (address >= 0x10008000 && address < 0x1000F000)
     {
         dmac.write8(address, value);
@@ -647,11 +623,6 @@ void Emulator::write8(uint32_t address, uint8_t value)
     if (address >= 0x1C000000 && address < 0x1C200000)
     {
         IOP_RAM[address & 0x1FFFFF] = value;
-        return;
-    }
-    if (address >= 0x1FFF8000 && address < 0x20000000)
-    {
-        BIOS[address & 0x3FFFFF] = value;
         return;
     }
     switch (address)
@@ -666,11 +637,6 @@ void Emulator::write8(uint32_t address, uint8_t value)
 
 void Emulator::write16(uint32_t address, uint16_t value)
 {
-    if (address < 0x10000000)
-    {
-        *(uint16_t*)&RDRAM[address & 0x01FFFFFF] = value;
-        return;
-    }
     if (address >= 0x10008000 && address < 0x1000F000)
     {
         dmac.write16(address, value);
@@ -686,29 +652,14 @@ void Emulator::write16(uint32_t address, uint16_t value)
         printf("[EE] Unrecognized write16 to IOP addr $%08X of $%04X\n", address, value);
         return;
     }
-    if (address >= 0x1FFF8000 && address < 0x20000000)
-    {
-        *(uint16_t*)&BIOS[address & 0x3FFFFF] = value;
-        return;
-    }
     printf("Unrecognized write16 at physical addr $%08X of $%04X\n", address, value);
 }
 
 void Emulator::write32(uint32_t address, uint32_t value)
 {
-    if (address < 0x10000000)
-    {
-        *(uint32_t*)&RDRAM[address & 0x01FFFFFF] = value;
-        return;
-    }
     if (address >= 0x1C000000 && address < 0x1C200000)
     {
         *(uint32_t*)&IOP_RAM[address & 0x1FFFFF] = value;
-        return;
-    }
-    if (address >= 0x1FFF8000 && address < 0x20000000)
-    {
-        *(uint32_t*)&BIOS[address & 0x3FFFFF] = value;
         return;
     }
     if (address >= 0x10000000 && address < 0x10002000)
@@ -820,19 +771,9 @@ void Emulator::write32(uint32_t address, uint32_t value)
 
 void Emulator::write64(uint32_t address, uint64_t value)
 {
-    if (address < 0x10000000)
-    {
-        *(uint64_t*)&RDRAM[address & 0x01FFFFFF] = value;
-        return;
-    }
     if (address >= 0x1C000000 && address < 0x1C200000)
     {
         *(uint64_t*)&IOP_RAM[address & 0x1FFFFF] = value;
-        return;
-    }
-    if (address >= 0x1FFF8000 && address < 0x20000000)
-    {
-        *(uint64_t*)&BIOS[address & 0x3FFFFF] = value;
         return;
     }
     if (address >= 0x10000000 && address < 0x10002000)
@@ -875,11 +816,6 @@ void Emulator::write64(uint32_t address, uint64_t value)
 
 void Emulator::write128(uint32_t address, uint128_t value)
 {
-    if (address < 0x10000000)
-    {
-        *(uint128_t*)&RDRAM[address & 0x01FFFFFF] = value;
-        return;
-    }
     if (address >= 0x11000000 && address < 0x11010000)
     {
         if (address < 0x11004000)
@@ -914,11 +850,6 @@ void Emulator::write128(uint32_t address, uint128_t value)
         case 0x10007010:
             ipu.write_FIFO(value);
             return;
-    }
-    if (address >= 0x1FFF8000 && address < 0x20000000)
-    {
-        *(uint128_t*)&BIOS[address & 0x3FFFFF] = value;
-        return;
     }
     Errors::print_warning("Unrecognized write128 at physical addr $%08X of $%08X_%08X_%08X_%08X\n", address,
            value._u32[3], value._u32[2], value._u32[1], value._u32[0]);

@@ -39,6 +39,8 @@ class EmotionEngine
         VectorUnit* vu0;
         VectorUnit* vu1;
 
+        uint8_t** tlb_map;
+
         //Each register is 128-bit
         uint8_t gpr[32 * sizeof(uint64_t) * 2];
         uint64_t LO, HI, LO1, HI1;
@@ -62,9 +64,11 @@ class EmotionEngine
         void deci2call(uint32_t func, uint32_t param);
     public:
         EmotionEngine(Cop0* cp0, Cop1* fpu, Emulator* e, uint8_t* sp, VectorUnit* vu0, VectorUnit* vu1);
+        ~EmotionEngine();
         static const char* REG(int id);
         static const char* SYSCALL(int id);
         void reset();
+        void init_tlb(uint8_t* RDRAM, uint8_t* BIOS);
         int run(int cycles);
         uint64_t get_cycle_count();
         uint64_t get_cop2_last_cycle();
