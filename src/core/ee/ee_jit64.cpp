@@ -80,6 +80,9 @@ void EE_JIT64::reset(bool clear_cache)
 extern "C"
 uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee)
 {
+    if (ee.PC == 0x9FC431D4)
+        printf("P");
+
     //printf("[EE_JIT64] Executing block at $%08X\n", ee.PC);
     if (jit.cache.find_block(BlockState{ ee.PC, 0, 0, 0, 0 }) == nullptr)
     {
@@ -150,6 +153,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
 {
     switch (instr.op)
     {
+        case IR::Opcode::AddUnsignedImm:
+            add_unsigned_imm(ee, instr);
+            break;
         case IR::Opcode::BranchCop0:
             branch_cop0(ee, instr);
             break;
@@ -319,7 +325,7 @@ REG_64 EE_JIT64::alloc_int_reg(EmotionEngine& ee, int vi_reg, REG_STATE state)
     {
         //printf("[VU_JIT64] Flushing int reg %d! (old int reg: %d)\n", reg, int_regs[reg].vu_reg);
         int old_vi_reg = int_regs[reg].vu_reg;
-        emitter.load_addr((uint64_t)&ee.gpr[old_vi_reg * sizeof(uint128_t)], REG_64::RAX);
+        emitter.load_addr((uint64_t)get_gpr_addr(ee, (EE_NormalReg)old_vi_reg), REG_64::RAX);
         emitter.MOV64_TO_MEM((REG_64)reg, REG_64::RAX);
     }
 
@@ -327,7 +333,7 @@ REG_64 EE_JIT64::alloc_int_reg(EmotionEngine& ee, int vi_reg, REG_STATE state)
 
     if (state != REG_STATE::WRITE)
     {
-        emitter.load_addr((uint64_t)&ee.gpr[vi_reg * sizeof(uint128_t)], REG_64::RAX);
+        emitter.load_addr((uint64_t)get_gpr_addr(ee, (EE_NormalReg)vi_reg), REG_64::RAX);
         emitter.MOV64_FROM_MEM(REG_64::RAX, (REG_64)reg);
     }
 
@@ -357,8 +363,8 @@ void EE_JIT64::flush_regs(EmotionEngine& ee)
 
         if (int_regs[i].used && vi_reg && int_regs[i].modified)
         {
-            emitter.load_addr((uint64_t)&ee.gpr[vi_reg], REG_64::RAX);
-            emitter.MOV16_TO_MEM((REG_64)i, REG_64::RAX);
+            emitter.load_addr((uint64_t)get_gpr_addr(ee, (EE_NormalReg)vi_reg), REG_64::RAX);
+            emitter.MOV64_TO_MEM((REG_64)i, REG_64::RAX);
         }
     }
 }
@@ -450,13 +456,13 @@ void EE_JIT64::handle_branch(EmotionEngine& ee)
 {
     //Load the "branch happened" variable
     emitter.load_addr(reinterpret_cast<uint64_t>(&ee.branch_on), REG_64::RAX);
-    emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::RAX);
+    emitter.MOV8_FROM_MEM(REG_64::RAX, REG_64::RAX);
 
     //The branch will point to two locations: one where the PC is set to the branch destination,
     //and another where PC = PC + 8. Our generated code will jump if the branch *fails*.
     //This is to allow for future optimizations where the recompiler may generate code beyond
     //the branch (assuming that the branch fails).
-    emitter.TEST16_REG(REG_64::RAX, REG_64::RAX);
+    emitter.TEST8_REG(REG_64::RAX, REG_64::RAX);
 
     //Because we don't know where the branch will jump to, we defer it.
     //Once the "branch succeeded" case has been finished recompiling, we can rewrite the branch offset...
@@ -482,7 +488,7 @@ void EE_JIT64::handle_branch_likely(EmotionEngine& ee, IR::Block& block)
 {
     //Load the "branch happened" variable
     emitter.load_addr(reinterpret_cast<uint64_t>(&ee.branch_on), REG_64::RAX);
-    emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::RAX);
+    emitter.MOV8_FROM_MEM(REG_64::RAX, REG_64::RAX);
 
     //The branch will point to two locations: one where the PC is set to the branch destination,
     //and another where PC = PC + 8. Our generated code will jump if the branch *fails*.
@@ -490,7 +496,7 @@ void EE_JIT64::handle_branch_likely(EmotionEngine& ee, IR::Block& block)
     //the branch (assuming that the branch fails).
     //Additionally, by emitting the last instruction in the success case, we can have it "nullified"
     //if the branch were to be a failure instead.
-    emitter.TEST16_REG(REG_64::RAX, REG_64::RAX);
+    emitter.TEST8_REG(REG_64::RAX, REG_64::RAX);
 
     //Because we don't know where the branch will jump to, we defer it.
     //Once the "branch succeeded" case has been finished recompiling, we can rewrite the branch offset...
@@ -519,6 +525,29 @@ bool cop0_get_condition(Cop0& cop0)
     return cop0.get_condition();
 }
 
+void EE_JIT64::add_unsigned_imm(EmotionEngine& ee, IR::Instruction &instr)
+{
+    int32_t imm = (int16_t)instr.get_source2();
+    if (instr.get_dest() == instr.get_source())
+    {
+        // If the destination is same reg as source, we only have to allocate that one
+        REG_64 dest = alloc_int_reg(ee, instr.get_dest(), REG_STATE::READ_WRITE);
+        emitter.ADD32_REG_IMM(imm, dest);
+        emitter.MOVSX32_TO_64(dest, dest);
+    }
+    else
+    {
+        // Retrieve the first source, and the destination
+        REG_64 source = alloc_int_reg(ee, instr.get_source(), REG_STATE::READ);
+        REG_64 dest = alloc_int_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+
+        // Simply move the source to the destination, then add the immediate
+        emitter.MOV32_REG(source, dest);
+        emitter.ADD32_REG_IMM(imm, dest);
+        emitter.MOVSX32_TO_64(dest, dest);
+    }
+}
+
 void EE_JIT64::branch_cop0(EmotionEngine& ee, IR::Instruction &instr)
 {
     // Set success destination
@@ -537,8 +566,8 @@ void EE_JIT64::branch_cop0(EmotionEngine& ee, IR::Instruction &instr)
     call_abi_func((uint64_t)cop0_get_condition);
 
     // Compare the condition to see which branch is taken
-    emitter.MOV16_REG_IMM(instr.get_field(), REG_64::R15);
-    emitter.CMP16_REG(REG_64::RAX, REG_64::R15);
+    emitter.MOV8_REG_IMM(instr.get_field(), REG_64::R15);
+    emitter.CMP8_REG(REG_64::RAX, REG_64::R15);
     emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
     emitter.SETE_MEM(REG_64::RAX);
 
@@ -562,9 +591,9 @@ void EE_JIT64::branch_cop1(EmotionEngine& ee, IR::Instruction &instr)
 
     // Compare the FPU condition to see which branch is taken
     emitter.load_addr((uint64_t)&ee.fpu->control.condition, REG_64::RAX);
-    emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::RAX);
-    emitter.MOV16_REG_IMM(instr.get_field(), REG_64::R15);
-    emitter.CMP16_REG(REG_64::RAX, REG_64::R15);
+    emitter.MOV8_FROM_MEM(REG_64::RAX, REG_64::RAX);
+    emitter.MOV8_REG_IMM(instr.get_field(), REG_64::R15);
+    emitter.CMP8_REG(REG_64::RAX, REG_64::R15);
     emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
     emitter.SETE_MEM(REG_64::RAX);
 

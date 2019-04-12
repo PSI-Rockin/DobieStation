@@ -56,9 +56,11 @@ class Emitter64
         void AND32_EAX(uint32_t imm);
         void AND32_REG_IMM(uint32_t imm, REG_64 dest);
 
+        void CMP8_REG(REG_64 op2, REG_64 op1);
         void CMP16_IMM(uint16_t imm, REG_64 op);
         void CMP16_REG(REG_64 op2, REG_64 op1);
         void CMP32_EAX(uint32_t imm);
+        void CMP32_REG(REG_64 op2, REG_64 op1);
         void CMP64_REG(REG_64 op2, REG_64 op1);
 
         void DEC16(REG_64 dest);
@@ -87,13 +89,16 @@ class Emitter64
         void SUB32_REG(REG_64 source, REG_64 dest);
         void SUB64_REG_IMM(uint32_t imm, REG_64 dest);
 
+        void TEST8_REG(REG_64 op2, REG_64 op1);
         void TEST16_REG(REG_64 op2, REG_64 op1);
         void TEST32_EAX(uint32_t imm);
 
         void XOR16_REG(REG_64 source, REG_64 dest);
         void XOR32_REG(REG_64 source, REG_64 dest);
 
+        void MOV8_REG_IMM(uint8_t imm, REG_64 dest);
         void MOV8_TO_MEM(REG_64 source, REG_64 indir_dest);
+        void MOV8_FROM_MEM(REG_64 indir_source, REG_64 dest);
         void MOV8_IMM_MEM(uint8_t imm, REG_64 indir_dest);
         void MOV16_REG(REG_64 source, REG_64 dest);
         void MOV16_REG_IMM(uint16_t imm, REG_64 dest);
@@ -110,7 +115,8 @@ class Emitter64
         void MOV64_FROM_MEM(REG_64 indir_source, REG_64 dest);
         void MOV64_TO_MEM(REG_64 source, REG_64 indir_dest);
 
-        void MOVSX64_REG(REG_64 source, REG_64 dest);
+        void MOVSX16_TO_64(REG_64 source, REG_64 dest);
+        void MOVSX32_TO_64(REG_64 source, REG_64 dest);
         void MOVZX64_REG(REG_64 source, REG_64 dest);
 
         void MOVD_FROM_XMM(REG_64 xmm_source, REG_64 dest);

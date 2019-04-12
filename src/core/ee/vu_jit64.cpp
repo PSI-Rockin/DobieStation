@@ -1898,7 +1898,7 @@ void VU_JIT64::move_from_int(VectorUnit &vu, IR::Instruction &instr)
     REG_64 temp = REG_64::XMM0;
 
     //The 16-bit integer must be sign extended
-    emitter.MOVSX64_REG(source, REG_64::RAX);
+    emitter.MOVSX16_TO_64(source, REG_64::RAX);
     emitter.MOVD_TO_XMM(REG_64::RAX, temp);
     emitter.SHUFPS(0, temp, temp);
     emitter.BLENDPS(field, temp, dest);

@@ -174,6 +174,13 @@ void Emitter64::AND32_REG_IMM(uint32_t imm, REG_64 dest)
     cache->write<uint32_t>(imm);
 }
 
+void Emitter64::CMP8_REG(REG_64 op2, REG_64 op1)
+{
+    rex_r_rm(op2, op1);
+    cache->write<uint8_t>(0x38);
+    modrm(0b11, op2, op1);
+}
+
 void Emitter64::CMP16_IMM(uint16_t imm, REG_64 op)
 {
     cache->write<uint8_t>(0x66);
@@ -187,6 +194,12 @@ void Emitter64::CMP16_REG(REG_64 op2, REG_64 op1)
 {
     cache->write<uint8_t>(0x66);
     rex_r_rm(op2, op1);
+    cache->write<uint8_t>(0x39);
+    modrm(0b11, op2, op1);
+}
+
+void Emitter64::CMP32_REG(REG_64 op2, REG_64 op1)
+{
     cache->write<uint8_t>(0x39);
     modrm(0b11, op2, op1);
 }
@@ -363,6 +376,13 @@ void Emitter64::SUB64_REG_IMM(uint32_t imm, REG_64 dest)
     cache->write<uint32_t>(imm);
 }
 
+void Emitter64::TEST8_REG(REG_64 op2, REG_64 op1)
+{
+    rex_r_rm(op2, op1);
+    cache->write<uint8_t>(0x84);
+    modrm(0b11, op2, op1);
+}
+
 void Emitter64::TEST16_REG(REG_64 op2, REG_64 op1)
 {
     cache->write<uint8_t>(0x66);
@@ -392,11 +412,25 @@ void Emitter64::XOR32_REG(REG_64 source, REG_64 dest)
     modrm(0b11, source, dest);
 }
 
+void Emitter64::MOV8_REG_IMM(uint8_t imm, REG_64 dest)
+{
+    rex_rm(dest);
+    cache->write<uint8_t>(0xB0 + (dest & 0x7));
+    cache->write<uint8_t>(imm);
+}
+
 void Emitter64::MOV8_TO_MEM(REG_64 source, REG_64 indir_dest)
 {
     rex_r_rm(source, indir_dest);
     cache->write<uint8_t>(0x88);
     modrm(0, source, indir_dest);
+}
+
+void Emitter64::MOV8_FROM_MEM(REG_64 indir_source, REG_64 dest)
+{
+    rex_r_rm(dest, indir_source);
+    cache->write<uint8_t>(0x8A);
+    modrm(0, dest, indir_source);
 }
 
 void Emitter64::MOV8_IMM_MEM(uint8_t imm, REG_64 indir_dest)
@@ -512,11 +546,18 @@ void Emitter64::MOV64_TO_MEM(REG_64 source, REG_64 indir_dest)
     modrm(0, source, indir_dest);
 }
 
-void Emitter64::MOVSX64_REG(REG_64 source, REG_64 dest)
+void Emitter64::MOVSX16_TO_64(REG_64 source, REG_64 dest)
 {
     rexw_r_rm(dest, source);
     cache->write<uint8_t>(0x0F);
     cache->write<uint8_t>(0xBF);
+    modrm(0b11, dest, source);
+}
+
+void Emitter64::MOVSX32_TO_64(REG_64 source, REG_64 dest)
+{
+    rexw_r_rm(dest, source);
+    cache->write<uint8_t>(0x63);
     modrm(0b11, dest, source);
 }
 

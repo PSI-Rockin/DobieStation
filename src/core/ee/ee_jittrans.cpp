@@ -5,18 +5,16 @@
 
 uint32_t branch_offset_ee(uint32_t instr, uint32_t PC)
 {
-    int32_t i = static_cast<int32_t>(instr);
-    i = ((i << 16) >> 16) << 2;
+    int32_t i = (int16_t)(instr);
+    i <<= 2;
     return PC + i + 4;
 }
 
 uint32_t jump_offset_ee(uint32_t instr, uint32_t PC)
 {
-    PC += 4;
-    PC &= 0xF0000000;
-    instr &= 0x03FFFFFF;
-    instr <<= 2;
-    return PC + instr;
+    uint32_t addr = (instr & 0x3FFFFFF) << 2;
+    addr += (PC + 4) & 0xF0000000;
+    return addr;
 }
 
 IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
@@ -121,14 +119,30 @@ void EE_JitTranslator::translate_op(std::vector<IR::Instruction>& instrs, uint32
             break;
         case 0x08:
             // ADDI
-            Errors::print_warning("[EE_JIT] Unrecognized op ADDI\n", op);
+            // TODO: Overflow?
+        {
             fallback_interpreter(instr, opcode);
             break;
+
+            int32_t imm = (int16_t)opcode;
+            instr.op = IR::Opcode::AddUnsignedImm;
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_dest((opcode >> 16) & 0x1F);
+            instr.set_source2(opcode & 0xFFFF);
+            break;
+        }
         case 0x09:
             // ADDIU
-            Errors::print_warning("[EE_JIT] Unrecognized op ADDIU\n", op);
+        {
             fallback_interpreter(instr, opcode);
             break;
+
+            instr.op = IR::Opcode::AddUnsignedImm;
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_dest((opcode >> 16) & 0x1F);
+            instr.set_source2(opcode & 0xFFFF);
+            break;
+        }
         case 0x0A:
             // SLTI
             Errors::print_warning("[EE_JIT] Unrecognized op SLTI\n", op);

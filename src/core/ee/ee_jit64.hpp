@@ -47,6 +47,7 @@ private:
     void handle_branch(EmotionEngine& ee);
     void handle_branch_likely(EmotionEngine& ee, IR::Block& block);
 
+    void add_unsigned_imm(EmotionEngine& ee, IR::Instruction& instr);
     void branch_cop0(EmotionEngine& ee, IR::Instruction& instr);
     void branch_cop1(EmotionEngine& ee, IR::Instruction& instr);
     void branch_cop2(EmotionEngine& ee, IR::Instruction& instr);
