@@ -310,12 +310,28 @@ void Emitter64::SETNE_REG(REG_64 dest)
     modrm(0b11, 0, dest);
 }
 
+void Emitter64::SETNS_MEM(REG_64 dest)
+{
+    rex_rm(dest);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x99);
+    modrm(0b00, 0, dest);
+}
+
 void Emitter64::SETNE_MEM(REG_64 indir_dest)
 {
     rex_rm(indir_dest);
     cache->write<uint8_t>(0x0F);
     cache->write<uint8_t>(0x95);
     modrm(0, 0, indir_dest);
+}
+
+void Emitter64::SETS_MEM(REG_64 dest)
+{
+    rex_rm(dest);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x98);
+    modrm(0b00, 0, dest);
 }
 
 void Emitter64::SHL16_REG_1(REG_64 dest)
@@ -395,6 +411,20 @@ void Emitter64::TEST32_EAX(uint32_t imm)
 {
     cache->write<uint8_t>(0xA9);
     cache->write<uint32_t>(imm);
+}
+
+void Emitter64::TEST32_REG(REG_64 op2, REG_64 op1)
+{
+    rex_r_rm(op2, op1);
+    cache->write<uint8_t>(0x85);
+    modrm(0b11, op2, op1);
+}
+
+void Emitter64::TEST64_REG(REG_64 op2, REG_64 op1)
+{
+    rexw_r_rm(op2, op1);
+    cache->write<uint8_t>(0x85);
+    modrm(0b11, op2, op1);
 }
 
 void Emitter64::XOR16_REG(REG_64 source, REG_64 dest)

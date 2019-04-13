@@ -653,10 +653,9 @@ void EE_JIT64::branch_greater_than_or_equal_zero(EmotionEngine& ee, IR::Instruct
     emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
 
     // Compare the two registers to see which jump we take
-    emitter.MOV64_OI(0, REG_64::RAX);
-    emitter.CMP64_REG(REG_64::RAX, op1);
+    emitter.TEST64_REG(op1, op1);
     emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-    emitter.SETGE_MEM(REG_64::RAX);
+    emitter.SETNS_MEM(REG_64::RAX);
 
     if (instr.get_is_link())
     {
@@ -742,10 +741,9 @@ void EE_JIT64::branch_less_than_zero(EmotionEngine& ee, IR::Instruction &instr)
     emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
 
     // Compare the two registers to see which jump we take
-    emitter.MOV64_OI(0, REG_64::RAX);
-    emitter.CMP64_REG(REG_64::RAX, op1);
+    emitter.TEST64_REG(op1, op1);
     emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-    emitter.SETL_MEM(REG_64::RAX);
+    emitter.SETS_MEM(REG_64::RAX);
 
     if (instr.get_is_link())
     {
@@ -795,8 +793,8 @@ void EE_JIT64::exception_return(EmotionEngine& ee, IR::Instruction& instr)
 {
     // Cleanup branch_on, exception handler expects this to be false
     emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-    emitter.MOV32_REG_IMM(false, REG_64::R15);
-    emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
+    emitter.MOV8_REG_IMM(false, REG_64::R15);
+    emitter.MOV8_TO_MEM(REG_64::R15, REG_64::RAX);
 
     fallback_interpreter(ee, instr);
 
@@ -813,7 +811,7 @@ void EE_JIT64::jump(EmotionEngine& ee, IR::Instruction& instr)
     emitter.load_addr((uint64_t)&ee_branch_dest, REG_64::RAX);
     emitter.MOV32_IMM_MEM(instr.get_jump_dest(), REG_64::RAX);
     emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-    emitter.MOV16_IMM_MEM(true, REG_64::RAX);
+    emitter.MOV8_IMM_MEM(true, REG_64::RAX);
 
     if (instr.get_is_link())
     {
@@ -836,7 +834,7 @@ void EE_JIT64::jump_indirect(EmotionEngine& ee, IR::Instruction& instr)
 
     // Prime JIT to jump to success destination
     emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-    emitter.MOV16_IMM_MEM(true, REG_64::RAX);
+    emitter.MOV8_IMM_MEM(true, REG_64::RAX);
 
     if (instr.get_is_link())
     {
@@ -872,8 +870,8 @@ void EE_JIT64::system_call(EmotionEngine& ee, IR::Instruction& instr)
 
     // Cleanup branch_on, exception handler expects this to be false
     emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-    emitter.MOV32_REG_IMM(false, REG_64::R15);
-    emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
+    emitter.MOV8_REG_IMM(false, REG_64::R15);
+    emitter.MOV8_TO_MEM(REG_64::R15, REG_64::RAX);
 
     prepare_abi(ee, reinterpret_cast<uint64_t>(&ee));
 

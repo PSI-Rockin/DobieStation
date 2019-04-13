@@ -79,6 +79,8 @@ class Emitter64
         void SETLE_MEM(REG_64 indir_dest);
         void SETNE_REG(REG_64 dest);
         void SETNE_MEM(REG_64 indir_dest);
+        void SETNS_MEM(REG_64 indir_dest);
+        void SETS_MEM(REG_64 indir_dest);
 
         void SHL16_REG_1(REG_64 dest);
         void SHL16_REG_IMM(uint8_t shift, REG_64 dest);
@@ -92,6 +94,8 @@ class Emitter64
         void TEST8_REG(REG_64 op2, REG_64 op1);
         void TEST16_REG(REG_64 op2, REG_64 op1);
         void TEST32_EAX(uint32_t imm);
+        void TEST32_REG(REG_64 op2, REG_64 op1);
+        void TEST64_REG(REG_64 op2, REG_64 op1);
 
         void XOR16_REG(REG_64 source, REG_64 dest);
         void XOR32_REG(REG_64 source, REG_64 dest);
