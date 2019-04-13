@@ -19,11 +19,6 @@ EmotionEngine::EmotionEngine(Cop0* cp0, Cop1* fpu, Emulator* e, VectorUnit* vu0,
     tlb_map = nullptr;
 }
 
-EmotionEngine::~EmotionEngine()
-{
-    delete[] tlb_map;
-}
-
 const char* EmotionEngine::REG(int id)
 {
     static const char* names[] =
@@ -123,13 +118,8 @@ void EmotionEngine::reset()
 
 void EmotionEngine::init_tlb()
 {
-    if (!tlb_map)
-        tlb_map = new uint8_t*[1024 * 1024];
-
-    //Clear everything to NULL
-    memset(tlb_map, 0, sizeof(uint8_t*) * 1024 * 1024);
-
-    cp0->init_tlb(tlb_map);
+    cp0->init_tlb();
+    tlb_map = cp0->get_vtlb_map();
 }
 
 int EmotionEngine::run(int cycles)
@@ -145,9 +135,6 @@ int EmotionEngine::run(int cycles)
             uint32_t instruction = read32(PC);
             uint32_t lastPC = PC;
 
-            //if (PC < 0x90000000)
-                //can_disassemble = true;
-
             if (can_disassemble)
             {
                 std::string disasm = EmotionDisasm::disasm_instr(instruction, PC);
@@ -156,8 +143,6 @@ int EmotionEngine::run(int cycles)
             }
 
             EmotionInterpreter::interpret(*this, instruction);
-            if (PC == 0x82604)
-                print_state();
             PC += 4;
 
             //Simulate dual-issue if both instructions are NOPs
@@ -200,6 +185,7 @@ int EmotionEngine::run(int cycles)
 
 void EmotionEngine::print_state()
 {
+    printf("pc:$%08X\n", PC);
     for (int i = 1; i < 32; i++)
     {
         printf("%s:$%08X_%08X_%08X_%08X", REG(i), get_gpr<uint32_t>(i, 3), get_gpr<uint32_t>(i, 2), get_gpr<uint32_t>(i, 1), get_gpr<uint32_t>(i));
@@ -208,8 +194,9 @@ void EmotionEngine::print_state()
         else
             printf("\t");
     }
-    //printf("lo:$%08X_%08X_%08X_%08X\t", LO1 >> 32, LO1, LO >> 32, LO);
-    //printf("hi:$%08X_%08X_%08X_%08X\t", HI1 >> 32, HI1, HI >> 32, HI);
+    printf("lo:$%08X_%08X_%08X_%08X\t", LO1 >> 32, LO1, LO >> 32, LO);
+    printf("hi:$%08X_%08X_%08X_%08X\t\n", HI1 >> 32, HI1, HI >> 32, HI);
+    printf("KSU: %d\n", cp0->status.mode);
     printf("\n");
 }
 
@@ -541,6 +528,7 @@ void EmotionEngine::mtc(int cop_id, int reg, int cop_reg)
     {
         case 0:
             cp0->mtc(cop_reg, get_gpr<uint32_t>(reg));
+            tlb_map = cp0->get_vtlb_map();
             break;
         case 1:
             fpu->mtc(cop_reg, get_gpr<uint32_t>(reg));
@@ -781,11 +769,12 @@ void EmotionEngine::handle_exception(uint32_t new_addr, uint8_t code)
     delay_slot = 0;
     PC = new_addr;
     unhalt();
+    tlb_map = cp0->get_vtlb_map();
 }
 
 void EmotionEngine::syscall_exception()
 {
-    uint8_t op = read8(PC - 4);
+    int op = get_gpr<int>(3);
     //if (op != 0x7A)
         //printf("[EE] SYSCALL: %s (id: $%02X) called at $%08X\n", SYSCALL(op), op, PC);
 
@@ -899,7 +888,7 @@ void EmotionEngine::set_int1_signal(bool value)
 void EmotionEngine::tlbwi()
 {
     int index = cp0->gpr[0];
-    cp0->set_tlb(tlb_map, index);
+    cp0->set_tlb(index);
 }
 
 void EmotionEngine::eret()
@@ -932,6 +921,7 @@ void EmotionEngine::eret()
     if (PC >= 0x00100000 && PC < 0x00100010)
         e->skip_BIOS();
     PC -= 4;
+    tlb_map = cp0->get_vtlb_map();
 }
 
 void EmotionEngine::ei()

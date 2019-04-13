@@ -62,7 +62,6 @@ class EmotionEngine
         void deci2call(uint32_t func, uint32_t param);
     public:
         EmotionEngine(Cop0* cp0, Cop1* fpu, Emulator* e, VectorUnit* vu0, VectorUnit* vu1);
-        ~EmotionEngine();
         static const char* REG(int id);
         static const char* SYSCALL(int id);
         void reset();

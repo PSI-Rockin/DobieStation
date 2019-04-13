@@ -102,6 +102,7 @@ void IOP::run(int cycles)
 
 void IOP::print_state()
 {
+    printf("pc:$%08X\n", PC);
     for (int i = 1; i < 32; i++)
     {
         printf("%s:$%08X", REG(i), get_gpr(i));
@@ -110,6 +111,7 @@ void IOP::print_state()
         else
             printf("\t");
     }
+    printf("lo:$%08X\thi:$%08X\n", LO, HI);
 }
 
 void IOP::set_disassembly(bool dis)

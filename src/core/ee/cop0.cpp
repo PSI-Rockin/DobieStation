@@ -8,6 +8,34 @@ Cop0::Cop0(DMAC* dmac) : dmac(dmac)
     RDRAM = nullptr;
     BIOS = nullptr;
     spr = nullptr;
+    kernel_vtlb = nullptr;
+    sup_vtlb = nullptr;
+    user_vtlb = nullptr;
+}
+
+Cop0::~Cop0()
+{
+    delete[] kernel_vtlb;
+    delete[] sup_vtlb;
+    delete[] user_vtlb;
+}
+
+uint8_t** Cop0::get_vtlb_map()
+{
+    if (status.exception || status.error)
+        return kernel_vtlb;
+
+    switch (status.mode)
+    {
+        case 0:
+            return kernel_vtlb;
+        case 1:
+            return sup_vtlb;
+        case 2:
+            return user_vtlb;
+        default:
+            return kernel_vtlb;
+    }
 }
 
 void Cop0::reset()
@@ -55,13 +83,24 @@ void Cop0::init_mem_pointers(uint8_t *RDRAM, uint8_t *BIOS, uint8_t *spr)
     this->spr = spr;
 }
 
-void Cop0::init_tlb(uint8_t **map)
+void Cop0::init_tlb()
 {
+    if (!kernel_vtlb)
+        kernel_vtlb = new uint8_t*[1024 * 1024];
+    if (!sup_vtlb)
+        sup_vtlb = new uint8_t*[1024 * 1024];
+    if (!user_vtlb)
+        user_vtlb = new uint8_t*[1024 * 1024];
+
+    memset(kernel_vtlb, 0, 1024 * 1024 * sizeof(uint8_t*));
+    memset(sup_vtlb, 0, 1024 * 1024 * sizeof(uint8_t*));
+    memset(user_vtlb, 0, 1024 * 1024 * sizeof(uint8_t*));
+
     //Kernel segments are unmapped to TLB, so we must define them explicitly
     uint32_t unmapped_start = 0x80000000, unmapped_end = 0xC0000000;
     for (uint32_t i = unmapped_start; i < unmapped_end; i += 4096)
     {
-        map[i / 4096] = get_mem_pointer(i & 0x1FFFFFFF);
+        kernel_vtlb[i / 4096] = get_mem_pointer(i & 0x1FFFFFFF);
     }
 }
 
@@ -171,11 +210,11 @@ bool Cop0::int_pending()
     return false;
 }
 
-void Cop0::set_tlb(uint8_t** map, int index)
+void Cop0::set_tlb(int index)
 {
     TLB_Entry* new_entry = &tlb[index];
 
-    unmap_tlb(map, new_entry);
+    unmap_tlb(new_entry);
 
     new_entry->is_scratchpad = gpr[2] >> 31;
 
@@ -247,7 +286,7 @@ void Cop0::set_tlb(uint8_t** map, int index)
         printf("\n");
     }
 
-    map_tlb(map, new_entry);
+    map_tlb(new_entry);
 }
 
 void Cop0::count_up(int cycles)
@@ -296,7 +335,7 @@ void Cop0::count_up(int cycles)
     }
 }
 
-void Cop0::unmap_tlb(uint8_t **map, TLB_Entry *entry)
+void Cop0::unmap_tlb(TLB_Entry *entry)
 {
     uint32_t real_vpn = entry->vpn2 * 2;
     real_vpn >>= entry->page_shift;
@@ -311,7 +350,9 @@ void Cop0::unmap_tlb(uint8_t **map, TLB_Entry *entry)
             for (uint32_t i = 0; i < 1024 * 16; i += 4096)
             {
                 int map_index = i / 4096;
-                map[even_page + map_index] = nullptr;
+                kernel_vtlb[even_page + map_index] = nullptr;
+                sup_vtlb[even_page + map_index] = nullptr;
+                user_vtlb[even_page + map_index] = nullptr;
             }
         }
     }
@@ -320,25 +361,37 @@ void Cop0::unmap_tlb(uint8_t **map, TLB_Entry *entry)
         if (entry->valid[0])
         {
             for (uint32_t i = 0; i < entry->page_size; i += 4096)
-                map[even_page + i / 4096] = nullptr;
+            {
+                int map_index = i / 4096;
+                kernel_vtlb[even_page + map_index] = nullptr;
+                sup_vtlb[even_page + map_index] = nullptr;
+                user_vtlb[even_page + map_index] = nullptr;
+            }
         }
 
         if (entry->valid[1])
         {
             for (uint32_t i = 0; i < entry->page_size; i += 4096)
-                map[odd_page + i / 4096] = nullptr;
+            {
+                int map_index = i / 4096;
+                kernel_vtlb[odd_page + map_index] = nullptr;
+                sup_vtlb[odd_page + map_index] = nullptr;
+                user_vtlb[odd_page + map_index] = nullptr;
+            }
         }
     }
 }
 
-void Cop0::map_tlb(uint8_t **map, TLB_Entry *entry)
+void Cop0::map_tlb(TLB_Entry *entry)
 {
     uint32_t real_vpn = entry->vpn2 * 2;
     real_vpn >>= entry->page_shift;
 
     uint32_t even_virt_page = (real_vpn * entry->page_size) / 4096;
+    uint32_t even_virt_addr = even_virt_page * 4096;
     uint32_t even_phy_addr = (entry->pfn[0] >> entry->page_shift) * entry->page_size;
     uint32_t odd_virt_page = ((real_vpn + 1) * entry->page_size) / 4096;
+    uint32_t odd_virt_addr = odd_virt_page * 4096;
     uint32_t odd_phy_addr = (entry->pfn[1] >> entry->page_shift) * entry->page_size;
 
     printf("Even phy: $%08X Odd phy: $%08X\n", even_phy_addr, odd_phy_addr);
@@ -348,7 +401,12 @@ void Cop0::map_tlb(uint8_t **map, TLB_Entry *entry)
         if (entry->valid[0])
         {
             for (uint32_t i = 0; i < 1024 * 16; i += 4096)
-                map[even_virt_page + (i / 4096)] = spr + i;
+            {
+                int map_index = i / 4096;
+                kernel_vtlb[even_virt_page + map_index] = spr + i;
+                sup_vtlb[even_virt_page + map_index] = spr + i;
+                user_vtlb[even_virt_page + map_index] = spr + i;
+            }
         }
     }
     else
@@ -356,13 +414,37 @@ void Cop0::map_tlb(uint8_t **map, TLB_Entry *entry)
         if (entry->valid[0])
         {
             for (uint32_t i = 0; i < entry->page_size; i += 4096)
-                map[even_virt_page + (i / 4096)] = get_mem_pointer(even_phy_addr + i);
+            {
+                int map_index = i / 4096;
+                uint8_t* mem = get_mem_pointer(even_phy_addr + i);
+                kernel_vtlb[even_virt_page + map_index] = mem;
+
+                if (even_virt_addr < 0x80000000)
+                {
+                    sup_vtlb[even_virt_page + map_index] = mem;
+                    user_vtlb[even_virt_page + map_index] = mem;
+                }
+                else if (even_virt_addr >= 0xC0000000 && even_virt_addr < 0xE0000000)
+                    sup_vtlb[even_virt_page + map_index] = mem;
+            }
         }
 
         if (entry->valid[1])
         {
             for (uint32_t i = 0; i < entry->page_size; i += 4096)
-                map[odd_virt_page + (i / 4096)] = get_mem_pointer(odd_phy_addr + i);
+            {
+                int map_index = i / 4096;
+                uint8_t* mem = get_mem_pointer(odd_phy_addr + i);
+                kernel_vtlb[odd_virt_page + map_index] = mem;
+
+                if (odd_virt_addr < 0x80000000)
+                {
+                    sup_vtlb[odd_virt_page + map_index] = mem;
+                    user_vtlb[odd_virt_page + map_index] = mem;
+                }
+                else if (odd_virt_addr >= 0xC0000000 && odd_virt_addr < 0xE0000000)
+                    sup_vtlb[odd_virt_page + map_index] = mem;
+            }
         }
     }
 }

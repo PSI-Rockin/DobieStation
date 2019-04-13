@@ -171,6 +171,14 @@ void Emulator::reset()
     add_iop_event(SPU_SAMPLE, &Emulator::gen_sound_sample, 768);
 }
 
+void Emulator::print_state()
+{
+    printf("---EE STATE\n");
+    cpu.print_state();
+    printf("---IOP STATE\n");
+    iop.print_state();
+}
+
 void Emulator::vblank_start()
 {
     VBLANK_sent = true;

@@ -64,8 +64,12 @@ class Cop0
         uint8_t* BIOS;
         uint8_t* spr;
 
-        void unmap_tlb(uint8_t** map, TLB_Entry* entry);
-        void map_tlb(uint8_t** map, TLB_Entry* entry);
+        uint8_t** kernel_vtlb;
+        uint8_t** sup_vtlb;
+        uint8_t** user_vtlb;
+
+        void unmap_tlb(TLB_Entry* entry);
+        void map_tlb(TLB_Entry* entry);
 
         uint8_t* get_mem_pointer(uint32_t paddr);
     public:
@@ -76,10 +80,13 @@ class Cop0
         uint32_t EPC, ErrorEPC;
         uint32_t PCCR, PCR0, PCR1;
         Cop0(DMAC* dmac);
+        ~Cop0();
+
+        uint8_t** get_vtlb_map();
 
         void reset();
         void init_mem_pointers(uint8_t* RDRAM, uint8_t* BIOS, uint8_t* spr);
-        void init_tlb(uint8_t** map);
+        void init_tlb();
 
         uint32_t mfc(int index);
         void mtc(int index, uint32_t value);
@@ -91,7 +98,7 @@ class Cop0
 
         void count_up(int cycles);
 
-        void set_tlb(uint8_t** map, int index);
+        void set_tlb(int index);
 
         void load_state(std::ifstream &state);
         void save_state(std::ofstream& state);
