@@ -78,9 +78,17 @@ void Emulator::run()
 
     add_ee_event(VBLANK_START, &Emulator::vblank_start, VBLANK_START_CYCLES);
     add_ee_event(VBLANK_END, &Emulator::vblank_end, CYCLES_PER_FRAME);
+
+    //uint8_t old_finish = 0, new_finish = 0;
     
     while (!frame_ended)
     {
+        /*new_finish = RDRAM[0x2666EC];
+        if (new_finish != old_finish)
+        {
+            printf("Change finish: $%02X ($%02X)\n", new_finish, old_finish);
+            old_finish = new_finish;
+        }*/
         int ee_cycles = scheduler.calculate_run_cycles();
         int bus_cycles = scheduler.get_bus_run_cycles();
         int iop_cycles = scheduler.get_iop_run_cycles();

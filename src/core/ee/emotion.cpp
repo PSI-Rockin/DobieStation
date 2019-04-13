@@ -135,6 +135,9 @@ int EmotionEngine::run(int cycles)
             uint32_t instruction = read32(PC);
             uint32_t lastPC = PC;
 
+            //if (PC == 0x165A84)
+                //can_disassemble = true;
+
             if (can_disassemble)
             {
                 std::string disasm = EmotionDisasm::disasm_instr(instruction, PC);
@@ -926,13 +929,13 @@ void EmotionEngine::eret()
 
 void EmotionEngine::ei()
 {
-    if (cp0->status.edi || cp0->status.mode == 0)
+    if (cp0->status.edi || cp0->status.mode == 0 || cp0->status.exception || cp0->status.error)
         cp0->status.master_int_enable = true;
 }
 
 void EmotionEngine::di()
 {
-    if (cp0->status.edi || cp0->status.mode == 0)
+    if (cp0->status.edi || cp0->status.mode == 0 || cp0->status.exception || cp0->status.error)
         cp0->status.master_int_enable = false;
 }
 
