@@ -72,10 +72,8 @@ float interpolate_f(int32_t x, float u1, int32_t x1, float u2, int32_t x2)
 const unsigned int GraphicsSynthesizerThread::max_vertices[8] = {1, 2, 2, 3, 3, 3, 2, 0};
 
 GraphicsSynthesizerThread::GraphicsSynthesizerThread()
+    : frame_complete(false), local_mem(nullptr)
 {
-    frame_complete = false;
-    local_mem = nullptr;
-
     //Initialize swizzling tables
     for (int block = 0; block < 32; block++)
     {
@@ -113,84 +111,156 @@ GraphicsSynthesizerThread::GraphicsSynthesizerThread()
                 page_PSMCT4[block][y][x] = (blockid_PSMCT4(block, 0, x, y) << 9) + columnTable4[y & 15][x & 31];
         }
     }
+
+    thread = std::thread(&GraphicsSynthesizerThread::event_loop, this);
+
+    message_lock = std::unique_lock<std::mutex>(message_mutex);
+    return_lock = std::unique_lock<std::mutex>(return_mutex);
 }
 
 GraphicsSynthesizerThread::~GraphicsSynthesizerThread()
 {
     delete[] local_mem;
+    delete message_queue;
+    delete return_queue;
 }
 
-void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return_fifo)
+void GraphicsSynthesizerThread::wait_for_return(GSReturn type, GSReturnMessage &data)
 {
-    GraphicsSynthesizerThread gs = GraphicsSynthesizerThread();
-    gs.reset();
+    printf("[GS] Waiting for return\n");
+
+    while (true)
+    {
+        if (return_queue->pop(data))
+        {
+            if (data.type == death_error_t)
+            {
+                auto p = data.payload.death_error_payload;
+                auto data = std::string(p.error_str);
+                delete[] p.error_str;
+                Errors::die(data.c_str());
+                //There's probably a better way of doing this
+                //but I don't know how to make RAII work across threads properly
+            }
+
+            if (data.type == type)
+                return;
+            else
+                Errors::die("[GS] return message expected %d but was %d!\n", type, data.type);
+        }
+        else
+            return_notifier.wait(return_lock);
+    }
+}
+
+void GraphicsSynthesizerThread::send_message(GSMessage message)
+{
+    message_notifier.notify_one();
+    message_queue->push(message);
+}
+
+void GraphicsSynthesizerThread::reset_fifos()
+{
+    if (!message_queue)
+        message_queue = new gs_fifo();
+    if (!return_queue)
+        return_queue = new gs_return_fifo();
+
+    GSReturnMessage data;
+    while (return_queue->pop(data));
+
+    GSMessage data2;
+    while (message_queue->pop(data2));
+}
+
+void GraphicsSynthesizerThread::exit()
+{
+    if (thread.joinable())
+    {
+        GSMessagePayload payload;
+        payload.no_payload = {0};
+        
+        send_message({ GSCommand::die_t, payload });
+        
+        thread.join();
+    }
+}
+
+void GraphicsSynthesizerThread::event_loop()
+{
+    printf("[GS_t] Starting GS Thread\n");
+
+    reset();
+
     bool gsdump_recording = false;
     ofstream gsdump_file;
+
     try
     {
         while (true)
         {
             GSMessage data;
-            bool available = fifo->pop(data);
-            if (available)
+
+            if (message_queue->pop(data))
             {
                 if (gsdump_recording)
                     gsdump_file.write((char*)&data, sizeof(data));
+
                 switch (data.type)
                 {
                     case write64_t:
                     {
                         auto p = data.payload.write64_payload;
-                        gs.write64(p.addr, p.value);
+                        write64(p.addr, p.value);
                         break;
                     }
                     case write64_privileged_t:
                     {
                         auto p = data.payload.write64_payload;
-                        gs.reg.write64_privileged(p.addr, p.value);
+                        reg.write64_privileged(p.addr, p.value);
                         break;
                     }
                     case write32_privileged_t:
                     {
                         auto p = data.payload.write32_payload;
-                        gs.reg.write32_privileged(p.addr, p.value);
+                        reg.write32_privileged(p.addr, p.value);
                         break;
                     }
                     case set_rgba_t:
                     {
                         auto p = data.payload.rgba_payload;
-                        gs.set_RGBA(p.r, p.g, p.b, p.a, p.q);
+                        set_RGBA(p.r, p.g, p.b, p.a, p.q);
                         break;
                     }
                     case set_st_t:
                     {
                         auto p = data.payload.st_payload;
-                        gs.set_ST(p.s, p.t);
+                        set_ST(p.s, p.t);
                         break;
                     }
                     case set_uv_t:
                     {
                         auto p = data.payload.uv_payload;
-                        gs.set_UV(p.u, p.v);
+                        set_UV(p.u, p.v);
                         break;
                     }
                     case set_xyz_t:
                     {
                         auto p = data.payload.xyz_payload;
-                        gs.set_XYZ(p.x, p.y, p.z, p.drawing_kick);
+                        set_XYZ(p.x, p.y, p.z, p.drawing_kick);
                         break;
                     }
                     case set_xyzf_t:
                     {
                         auto p = data.payload.xyzf_payload;
-                        gs.set_XYZF(p.x, p.y, p.z, p.fog, p.drawing_kick);
+                        set_XYZF(p.x, p.y, p.z, p.fog, p.drawing_kick);
                         break;
                     }
                         break;
                     case set_crt_t:
                     {
                         auto p = data.payload.crt_payload;
-                        gs.reg.set_CRT(p.interlaced, p.mode, p.frame_mode);
+                        reg.set_CRT(p.interlaced, p.mode, p.frame_mode);
                         break;
                     }
                     case render_crt_t:
@@ -203,22 +273,22 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
                             std::this_thread::yield();
                         }
                         std::lock_guard<std::mutex> lock(*p.target_mutex, std::adopt_lock);
-                        gs.render_CRT(p.target);
+                        render_CRT(p.target);
                         GSReturnMessagePayload return_payload;
                         return_payload.no_payload = { 0 };
-                        return_fifo->push({ GSReturn::render_complete_t,return_payload });
+                        return_queue->push({ GSReturn::render_complete_t,return_payload });
                         break;
                     }
                     case assert_finish_t:
-                        gs.reg.assert_FINISH();
+                        reg.assert_FINISH();
                         break;
                     case assert_vsync_t:
-                        gs.reg.assert_VSYNC();
+                        reg.assert_VSYNC();
                         break;
                     case set_vblank_t:
                     {
                         auto p = data.payload.vblank_payload;
-                        gs.reg.set_VBLANK(p.vblank);
+                        reg.set_VBLANK(p.vblank);
                         break;
                     }
                     case memdump_t:
@@ -232,28 +302,28 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
                         }
                         std::lock_guard<std::mutex> lock(*p.target_mutex, std::adopt_lock);
                         uint16_t width, height;
-                        gs.memdump(p.target, width, height);
+                        memdump(p.target, width, height);
                         GSReturnMessagePayload return_payload;
                         return_payload.xy_payload = { width, height };
-                        return_fifo->push({ GSReturn::gsdump_render_partial_done_t,return_payload });
+                        return_queue->push({ GSReturn::gsdump_render_partial_done_t,return_payload });
                         break;
                     }
                     case die_t:
                         return;
                     case load_state_t:
                     {
-                        gs.load_state(data.payload.load_state_payload.state);
+                        load_state(data.payload.load_state_payload.state);
                         GSReturnMessagePayload return_payload;
                         return_payload.no_payload = { 0 };
-                        return_fifo->push({ GSReturn::load_state_done_t,return_payload });
+                        return_queue->push({ GSReturn::load_state_done_t,return_payload });
                         break;
                     }
                     case save_state_t:
                     {
-                        gs.save_state(data.payload.save_state_payload.state);
+                        save_state(data.payload.save_state_payload.state);
                         GSReturnMessagePayload return_payload;
                         return_payload.no_payload = { 0 };
-                        return_fifo->push({ GSReturn::save_state_done_t,return_payload });
+                        return_queue->push({ GSReturn::save_state_done_t,return_payload });
                         break;
                     }
                     case gsdump_t:
@@ -266,8 +336,8 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
                             if (!gsdump_file.is_open())
                                 Errors::die("gs dump file failed to open");
                             gsdump_recording = true;
-                            gs.save_state(&gsdump_file);
-                            gsdump_file.write((char*)&gs.reg, sizeof(gs.reg));//this is for the emuthread's gs faker
+                            save_state(&gsdump_file);
+                            gsdump_file.write((char*)&reg, sizeof(reg));//this is for the emuthread's gs faker
                         }
                         else
                         {
@@ -280,11 +350,11 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
                     default:
                         Errors::die("corrupted command sent to GS thread");
                 }
+
+                return_notifier.notify_all();
             }
             else
-            {
-                std::this_thread::yield();
-            }
+                message_notifier.wait(message_lock);
         }
     }
     catch (Emulation_error &e)
@@ -293,7 +363,7 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
         char* copied_string = new char[ERROR_STRING_MAX_LENGTH];
         strncpy(copied_string, e.what(), ERROR_STRING_MAX_LENGTH);
         return_payload.death_error_payload.error_str = { copied_string };
-        return_fifo->push({ GSReturn::death_error_t,return_payload });
+        return_queue->push({ GSReturn::death_error_t, return_payload });
     }
 }
 
@@ -301,6 +371,7 @@ void GraphicsSynthesizerThread::reset()
 {
     if (!local_mem)
         local_mem = new uint8_t[1024 * 1024 * 4];
+
     pixels_transferred = 0;
     num_vertices = 0;
     frame_count = 0;
@@ -316,6 +387,8 @@ void GraphicsSynthesizerThread::reset()
     current_PRMODE = &PRIM;
     PRIM.reset();
     PRMODE.reset();
+
+    reset_fifos();
 }
 
 void GraphicsSynthesizerThread::memdump(uint32_t* target, uint16_t& width, uint16_t& height)
