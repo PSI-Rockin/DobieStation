@@ -177,6 +177,7 @@ void Emitter64::AND32_REG_IMM(uint32_t imm, REG_64 dest)
 void Emitter64::CMOVCC16_REG(ConditionCode cc, REG_64 source, REG_64 dest)
 {
     cache->write<uint8_t>(0x66);
+    rex_r_rm(dest, source);
     cache->write<uint8_t>(0x0F);
     cache->write<uint8_t>((int)cc | 0x40);
     modrm(0b11, dest, source);
@@ -184,6 +185,7 @@ void Emitter64::CMOVCC16_REG(ConditionCode cc, REG_64 source, REG_64 dest)
 
 void Emitter64::CMOVCC32_REG(ConditionCode cc, REG_64 source, REG_64 dest)
 {
+    rex_r_rm(dest, source);
     cache->write<uint8_t>(0x0F);
     cache->write<uint8_t>((int)cc | 0x40);
     modrm(0b11, dest, source);

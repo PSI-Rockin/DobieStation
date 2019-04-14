@@ -80,9 +80,6 @@ void EE_JIT64::reset(bool clear_cache)
 extern "C"
 uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee)
 {
-    //if (ee.PC < 0x80000000)
-       // printf("%p\n", ee.PC);
-
     //printf("[EE_JIT64] Executing block at $%08X\n", ee.PC);
     if (jit.cache.find_block(BlockState{ ee.PC, 0, 0, 0, 0 }) == nullptr)
     {
@@ -768,25 +765,35 @@ void EE_JIT64::branch_not_equal(EmotionEngine& ee, IR::Instruction &instr)
     op1 = alloc_int_reg(ee, instr.get_source(), REG_STATE::READ);
     op2 = alloc_int_reg(ee, instr.get_source2(), REG_STATE::READ);
 
-    // Set success destination
-    emitter.MOV32_REG_IMM(instr.get_jump_dest(), REG_64::RAX);
-    emitter.load_addr((uint64_t)&ee_branch_dest, REG_64::R15);
-    emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
-
-    // Set failure destination
-    emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
-    emitter.load_addr((uint64_t)&ee_branch_fail_dest, REG_64::R15);
-    emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
-
-    // Compare the two registers to see which jump we take
-    emitter.CMP64_REG(op2, op1);
-    emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-    emitter.SETCC_MEM(ConditionCode::NE, REG_64::RAX);
-
     if (instr.get_is_likely())
+    {
+        // Set success destination
+        emitter.MOV32_REG_IMM(instr.get_jump_dest(), REG_64::RAX);
+        emitter.load_addr((uint64_t)&ee_branch_dest, REG_64::R15);
+        emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
+
+        // Set failure destination
+        emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
+        emitter.load_addr((uint64_t)&ee_branch_fail_dest, REG_64::R15);
+        emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
+
+        // Compare the two registers to see which jump we take
+        emitter.CMP64_REG(op2, op1);
+        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
+        emitter.SETCC_MEM(ConditionCode::NE, REG_64::RAX);
+        
         likely_branch = true;
-    else
-        ee_branch = true;
+        return;
+    }
+
+    // Conditionally move the success or failure destination into ee.PC
+    emitter.load_addr((uint64_t)&ee.PC, REG_64::RSI);
+    emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
+    emitter.MOV32_REG_IMM(instr.get_jump_dest(), REG_64::R15);
+    emitter.CMP64_REG(op2, op1);
+    emitter.CMOVCC32_REG(ConditionCode::NE, REG_64::R15, REG_64::RAX);
+    emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::RSI);
+    return;
 }
 
 void EE_JIT64::exception_return(EmotionEngine& ee, IR::Instruction& instr)
