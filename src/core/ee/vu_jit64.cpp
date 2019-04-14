@@ -243,11 +243,11 @@ void VU_JIT64::sse_div_check(REG_64 num, REG_64 denom, VU_R& dest)
     emitter.MOVD_FROM_XMM(denom, REG_64::RAX);
     emitter.TEST32_EAX(0x7FFFFFFF);
 
-    uint8_t* normal_div = emitter.JNE_NEAR_DEFERRED();
+    uint8_t* normal_div = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
 
     //If negative, load MIN_FLT.
     emitter.TEST32_EAX(0x80000000);
-    uint8_t* load_min = emitter.JNE_NEAR_DEFERRED();
+    uint8_t* load_min = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
 
     //Load MAX_FLT to destination
     emitter.load_addr((uint64_t)&max_flt_constant, REG_64::R15);
@@ -292,7 +292,7 @@ void VU_JIT64::handle_branch(VectorUnit& vu)
 
     //Because we don't know where the branch will jump to, we defer it.
     //Once the "branch succeeded" case has been finished recompiling, we can rewrite the branch offset...
-    uint8_t* offset_addr = emitter.JE_NEAR_DEFERRED();
+    uint8_t* offset_addr = emitter.JCC_NEAR_DEFERRED(ConditionCode::E);
     emitter.load_addr((uint64_t)&vu.PC, REG_64::RAX);
     emitter.load_addr((uint64_t)&vu_branch_dest, REG_64::R15);
     emitter.MOV16_FROM_MEM(REG_64::R15, REG_64::R15);
@@ -679,7 +679,7 @@ void VU_JIT64::jump_and_link(VectorUnit& vu, IR::Instruction& instr)
         emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::RAX);
 
         emitter.TEST16_REG(REG_64::RAX, REG_64::RAX);
-        uint8_t* offset_addr = emitter.JE_NEAR_DEFERRED();
+        uint8_t* offset_addr = emitter.JCC_NEAR_DEFERRED(ConditionCode::E);
         //First branch is taken, so we set the link according to that destination
         emitter.load_addr((uint64_t)&vu_branch_dest, REG_64::RAX);
         emitter.MOV16_FROM_MEM(REG_64::RAX, link);
@@ -742,7 +742,7 @@ void VU_JIT64::jump_and_link_indirect(VectorUnit &vu, IR::Instruction &instr)
         emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::RAX);
 
         emitter.TEST16_REG(REG_64::RAX, REG_64::RAX);
-        uint8_t* offset_addr = emitter.JE_NEAR_DEFERRED();
+        uint8_t* offset_addr = emitter.JCC_NEAR_DEFERRED(ConditionCode::E);
         //First branch is taken, so we set the link according to that destination
         emitter.load_addr((uint64_t)&vu_branch_dest, REG_64::RAX);
         emitter.MOV16_FROM_MEM(REG_64::RAX, link);
@@ -775,7 +775,7 @@ void VU_JIT64::handle_branch_destinations(VectorUnit& vu, IR::Instruction& instr
         emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::RAX);
 
         emitter.TEST16_REG(REG_64::RAX, REG_64::RAX);
-        uint8_t* offset_addr = emitter.JE_NEAR_DEFERRED();
+        uint8_t* offset_addr = emitter.JCC_NEAR_DEFERRED(ConditionCode::E);
         //First branch is taken, so we set the fail destination according to that destination
         emitter.load_addr((uint64_t)&vu_branch_dest, REG_64::RAX);
         emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::R15);
@@ -2252,7 +2252,7 @@ void VU_JIT64::xgkick(VectorUnit &vu, IR::Instruction &instr)
     emitter.TEST32_EAX(0x1);
 
     //Jump if no stall is necessary
-    uint8_t* no_stall_addr = emitter.JE_NEAR_DEFERRED();
+    uint8_t* no_stall_addr = emitter.JCC_NEAR_DEFERRED(ConditionCode::E);
 
     //Stall
     emitter.load_addr((uint64_t)&vu.XGKICK_stall, REG_64::RAX);

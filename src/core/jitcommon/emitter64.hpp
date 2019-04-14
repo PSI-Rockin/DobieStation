@@ -155,8 +155,7 @@ class Emitter64
         void CMOVCC64_MEM(ConditionCode cc, REG_64 source, REG_64 dest, uint32_t offset = 0);
 
         uint8_t* JMP_NEAR_DEFERRED();
-        uint8_t* JE_NEAR_DEFERRED();
-        uint8_t* JNE_NEAR_DEFERRED();
+        uint8_t* JCC_NEAR_DEFERRED(ConditionCode cc);
 
         void set_jump_dest(uint8_t* jump);
 

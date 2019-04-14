@@ -674,20 +674,10 @@ uint8_t* Emitter64::JMP_NEAR_DEFERRED()
     return addr;
 }
 
-uint8_t* Emitter64::JE_NEAR_DEFERRED()
+uint8_t* Emitter64::JCC_NEAR_DEFERRED(ConditionCode cc)
 {
     cache->write<uint8_t>(0x0F);
-    cache->write<uint8_t>(0x84);
-    uint8_t* addr = cache->get_current_block_pos();
-
-    cache->write<uint32_t>(0);
-    return addr;
-}
-
-uint8_t* Emitter64::JNE_NEAR_DEFERRED()
-{
-    cache->write<uint8_t>(0x0F);
-    cache->write<uint8_t>(0x85);
+    cache->write<uint8_t>((int)cc | 0x80);
     uint8_t* addr = cache->get_current_block_pos();
 
     cache->write<uint32_t>(0);

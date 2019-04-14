@@ -467,7 +467,7 @@ void EE_JIT64::handle_branch_likely(EmotionEngine& ee, IR::Block& block)
 
     // Because we don't know where the branch will jump to, we defer it.
     // Once the "branch succeeded" case has been finished recompiling, we can rewrite the branch offset...
-    uint8_t* offset_addr = emitter.JE_NEAR_DEFERRED();
+    uint8_t* offset_addr = emitter.JCC_NEAR_DEFERRED(ConditionCode::Z);
     IR::Instruction instr = block.get_next_instr();
     emit_instruction(ee, instr);
 
@@ -832,18 +832,16 @@ void EE_JIT64::vcall_ms(EmotionEngine& ee, IR::Instruction& instr)
     call_abi_func((uint64_t)ee_vu0_wait);
     emitter.TEST8_REG(REG_64::AL, REG_64::AL);
 
-    // if ee.vu0_wait(), set PC to the current operation's address and abort
-    uint8_t* offset_addr = emitter.JE_NEAR_DEFERRED();
+    uint8_t* offset_addr = emitter.JCC_NEAR_DEFERRED(ConditionCode::Z);
+
+    // If ee.vu0_wait(), set PC to the current operation's address and abort
     emitter.load_addr((uint64_t)&ee.PC, REG_64::RAX);
     emitter.MOV32_REG_IMM(instr.get_return_addr(), REG_64::R15);
     emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
     cleanup_recompiler(ee, true);
 
-    // Continue execution of block otherwise
+    // Otherwise continue execution of block otherwise
     emitter.set_jump_dest(offset_addr);
-    prepare_abi(ee, (uint64_t)&ee);
-    call_abi_func((uint64_t)ee_clear_interlock);
-
     prepare_abi(ee, (uint64_t)ee.vu0);
     prepare_abi(ee, instr.get_source());
     call_abi_func((uint64_t)vu0_start_program);
