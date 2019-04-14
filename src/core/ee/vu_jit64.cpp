@@ -830,7 +830,7 @@ void VU_JIT64::branch_equal(VectorUnit &vu, IR::Instruction &instr)
 
     emitter.load_addr((uint64_t)&vu.branch_on_delay, REG_64::RAX);
     emitter.CMP16_REG(op2, op1);
-    emitter.SETE_MEM(REG_64::RAX);
+    emitter.SETCC_MEM(ConditionCode::E, REG_64::RAX);
 
     handle_branch_destinations(vu, instr);
 
@@ -868,7 +868,7 @@ void VU_JIT64::branch_not_equal(VectorUnit &vu, IR::Instruction &instr)
 
     emitter.load_addr((uint64_t)&vu.branch_on_delay, REG_64::RAX);
     emitter.CMP16_REG(op2, op1);
-    emitter.SETNE_MEM(REG_64::RAX);
+    emitter.SETCC_MEM(ConditionCode::NE, REG_64::RAX);
 
     handle_branch_destinations(vu, instr);
 
@@ -895,7 +895,7 @@ void VU_JIT64::branch_less_than_zero(VectorUnit &vu, IR::Instruction &instr)
 
     emitter.load_addr((uint64_t)&vu.branch_on_delay, REG_64::RAX);
     emitter.CMP16_IMM(0, op);
-    emitter.SETL_MEM(REG_64::RAX);
+    emitter.SETCC_MEM(ConditionCode::L, REG_64::RAX);
 
     handle_branch_destinations(vu, instr);
 
@@ -922,7 +922,7 @@ void VU_JIT64::branch_greater_than_zero(VectorUnit &vu, IR::Instruction &instr)
 
     emitter.load_addr((uint64_t)&vu.branch_on_delay, REG_64::RAX);
     emitter.CMP16_IMM(0, op);
-    emitter.SETG_MEM(REG_64::RAX);
+    emitter.SETCC_MEM(ConditionCode::G, REG_64::RAX);
 
     handle_branch_destinations(vu, instr);
 
@@ -949,7 +949,7 @@ void VU_JIT64::branch_less_or_equal_than_zero(VectorUnit &vu, IR::Instruction &i
 
     emitter.load_addr((uint64_t)&vu.branch_on_delay, REG_64::RAX);
     emitter.CMP16_IMM(0, op);
-    emitter.SETLE_MEM(REG_64::RAX);
+    emitter.SETCC_MEM(ConditionCode::LE, REG_64::RAX);
 
     handle_branch_destinations(vu, instr);
 
@@ -976,7 +976,7 @@ void VU_JIT64::branch_greater_or_equal_than_zero(VectorUnit &vu, IR::Instruction
 
     emitter.load_addr((uint64_t)&vu.branch_on_delay, REG_64::RAX);
     emitter.CMP16_IMM(0, op);
-    emitter.SETGE_MEM(REG_64::RAX);
+    emitter.SETCC_MEM(ConditionCode::GE, REG_64::RAX);
 
     handle_branch_destinations(vu, instr);
 
@@ -1958,7 +1958,7 @@ void VU_JIT64::mac_eq(VectorUnit &vu, IR::Instruction &instr)
     emitter.MOV32_FROM_MEM(REG_64::RAX, REG_64::RAX);
     emitter.AND32_EAX(0xFFFF);
     emitter.CMP16_REG(REG_64::RAX, source);
-    emitter.SETE_REG(REG_64::RAX);
+    emitter.SETCC_REG(ConditionCode::E, REG_64::RAX);
     emitter.AND32_EAX(0x1);
     emitter.MOV32_REG(REG_64::RAX, dest);
 }
@@ -2008,7 +2008,7 @@ void VU_JIT64::and_clip_flags(VectorUnit &vu, IR::Instruction &instr)
     emitter.load_addr((uint64_t)vu.CLIP_flags, REG_64::RAX);
     emitter.MOV32_FROM_MEM(REG_64::RAX, REG_64::RAX);
     emitter.TEST32_EAX(instr.get_source());
-    emitter.SETNE_REG(REG_64::RAX);
+    emitter.SETCC_REG(ConditionCode::NE, REG_64::RAX);
     emitter.AND32_EAX(0x1);
     emitter.MOV32_REG(REG_64::RAX, vi1);
 }
@@ -2023,7 +2023,7 @@ void VU_JIT64::or_clip_flags(VectorUnit &vu, IR::Instruction &instr)
     emitter.OR32_EAX(instr.get_source());
     emitter.AND32_EAX(0xFFFFFF);
     emitter.CMP32_EAX(0xFFFFFF);
-    emitter.SETE_REG(REG_64::RAX);
+    emitter.SETCC_REG(ConditionCode::E, REG_64::RAX);
     emitter.AND32_EAX(0x1);
     emitter.MOV32_REG(REG_64::RAX, vi1);
 }

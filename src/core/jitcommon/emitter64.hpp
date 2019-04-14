@@ -23,6 +23,32 @@ enum REG_64
     R15B = 15, R15W = 15, R15D = 15, R15 = 15, XMM15 = 15,
 };
 
+/*
+    Alternate condition codes are defined for some values
+    because there are different mnemonics for the same operation
+    in some circumstances. For example, cmovb and cmovc are the same
+    operation while having different names.
+*/
+enum class ConditionCode
+{
+    O = 0,
+    NO = 1,
+    B = 2, C = 2, NAE = 2,
+    AE = 3, NB = 3, NC = 3,
+    E = 4, Z = 4,
+    NE = 5, NZ = 5,
+    BE = 6, NA = 6,
+    A = 7, NBE = 7,
+    S = 8,
+    NS = 9,
+    P = 10, PE = 10,
+    NP = 11, PO = 11,
+    L = 12, NGE = 12,
+    GE = 13, NL = 13,
+    LE = 14, NG = 14,
+    G = 15, NLE = 15
+};
+
 class Emitter64
 {
     private:
@@ -71,17 +97,6 @@ class Emitter64
         void OR32_REG(REG_64 source, REG_64 dest);
         void OR32_EAX(uint32_t imm);
 
-        void SETE_REG(REG_64 dest);
-        void SETE_MEM(REG_64 indir_dest);
-        void SETG_MEM(REG_64 indir_dest);
-        void SETGE_MEM(REG_64 indir_dest);
-        void SETL_MEM(REG_64 indir_dest);
-        void SETLE_MEM(REG_64 indir_dest);
-        void SETNE_REG(REG_64 dest);
-        void SETNE_MEM(REG_64 indir_dest);
-        void SETNS_MEM(REG_64 indir_dest);
-        void SETS_MEM(REG_64 indir_dest);
-
         void SHL16_REG_1(REG_64 dest);
         void SHL16_REG_IMM(uint8_t shift, REG_64 dest);
         void SHL32_REG_IMM(uint8_t shift, REG_64 dest);
@@ -129,6 +144,15 @@ class Emitter64
         void MOVAPS_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest);
         void MOVAPS_TO_MEM(REG_64 xmm_source, REG_64 indir_dest);
         void MOVMSKPS(REG_64 xmm_source, REG_64 dest);
+
+        void SETCC_REG(ConditionCode cc, REG_64 dest);
+        void SETCC_MEM(ConditionCode cc, REG_64 indir_dest, uint32_t offset = 0);
+        void CMOVCC16_REG(ConditionCode cc, REG_64 source, REG_64 dest);
+        void CMOVCC32_REG(ConditionCode cc, REG_64 source, REG_64 dest);
+        void CMOVCC64_REG(ConditionCode cc, REG_64 source, REG_64 dest);
+        void CMOVCC16_MEM(ConditionCode cc, REG_64 source, REG_64 dest, uint32_t offset = 0);
+        void CMOVCC32_MEM(ConditionCode cc, REG_64 source, REG_64 dest, uint32_t offset = 0);
+        void CMOVCC64_MEM(ConditionCode cc, REG_64 source, REG_64 dest, uint32_t offset = 0);
 
         uint8_t* JMP_NEAR_DEFERRED();
         uint8_t* JE_NEAR_DEFERRED();

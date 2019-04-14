@@ -80,8 +80,8 @@ void EE_JIT64::reset(bool clear_cache)
 extern "C"
 uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee)
 {
-    if (ee.PC == 0x9FC431D4)
-        printf("P");
+    //if (ee.PC < 0x80000000)
+       // printf("%p\n", ee.PC);
 
     //printf("[EE_JIT64] Executing block at $%08X\n", ee.PC);
     if (jit.cache.find_block(BlockState{ ee.PC, 0, 0, 0, 0 }) == nullptr)
@@ -569,7 +569,7 @@ void EE_JIT64::branch_cop0(EmotionEngine& ee, IR::Instruction &instr)
     emitter.MOV8_REG_IMM(instr.get_field(), REG_64::R15);
     emitter.CMP8_REG(REG_64::RAX, REG_64::R15);
     emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-    emitter.SETE_MEM(REG_64::RAX);
+    emitter.SETCC_MEM(ConditionCode::E, REG_64::RAX);
 
     if (instr.get_is_likely())
         likely_branch = true;
@@ -595,7 +595,7 @@ void EE_JIT64::branch_cop1(EmotionEngine& ee, IR::Instruction &instr)
     emitter.MOV8_REG_IMM(instr.get_field(), REG_64::R15);
     emitter.CMP8_REG(REG_64::RAX, REG_64::R15);
     emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-    emitter.SETE_MEM(REG_64::RAX);
+    emitter.SETCC_MEM(ConditionCode::E, REG_64::RAX);
 
     if (instr.get_is_likely())
         likely_branch = true;
@@ -629,7 +629,7 @@ void EE_JIT64::branch_equal(EmotionEngine& ee, IR::Instruction &instr)
     // Compare the two registers to see which jump we take
     emitter.CMP64_REG(op2, op1);
     emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-    emitter.SETE_MEM(REG_64::RAX);
+    emitter.SETCC_MEM(ConditionCode::E, REG_64::RAX);
 
     if (instr.get_is_likely())
         likely_branch = true;
@@ -655,7 +655,7 @@ void EE_JIT64::branch_greater_than_or_equal_zero(EmotionEngine& ee, IR::Instruct
     // Compare the two registers to see which jump we take
     emitter.TEST64_REG(op1, op1);
     emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-    emitter.SETNS_MEM(REG_64::RAX);
+    emitter.SETCC_MEM(ConditionCode::NS, REG_64::RAX);
 
     if (instr.get_is_link())
     {
@@ -690,7 +690,7 @@ void EE_JIT64::branch_greater_than_zero(EmotionEngine& ee, IR::Instruction &inst
     emitter.MOV64_OI(0, REG_64::RAX);
     emitter.CMP64_REG(REG_64::RAX, op1);
     emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-    emitter.SETG_MEM(REG_64::RAX);
+    emitter.SETCC_MEM(ConditionCode::G, REG_64::RAX);
 
     if (instr.get_is_likely())
         likely_branch = true;
@@ -717,7 +717,7 @@ void EE_JIT64::branch_less_than_or_equal_zero(EmotionEngine& ee, IR::Instruction
     emitter.MOV64_OI(0, REG_64::RAX);
     emitter.CMP64_REG(REG_64::RAX, op1);
     emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-    emitter.SETLE_MEM(REG_64::RAX);
+    emitter.SETCC_MEM(ConditionCode::LE, REG_64::RAX);
 
     if (instr.get_is_likely())
         likely_branch = true;
@@ -743,7 +743,7 @@ void EE_JIT64::branch_less_than_zero(EmotionEngine& ee, IR::Instruction &instr)
     // Compare the two registers to see which jump we take
     emitter.TEST64_REG(op1, op1);
     emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-    emitter.SETS_MEM(REG_64::RAX);
+    emitter.SETCC_MEM(ConditionCode::S, REG_64::RAX);
 
     if (instr.get_is_link())
     {
@@ -781,7 +781,7 @@ void EE_JIT64::branch_not_equal(EmotionEngine& ee, IR::Instruction &instr)
     // Compare the two registers to see which jump we take
     emitter.CMP64_REG(op2, op1);
     emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-    emitter.SETNE_MEM(REG_64::RAX);
+    emitter.SETCC_MEM(ConditionCode::NE, REG_64::RAX);
 
     if (instr.get_is_likely())
         likely_branch = true;

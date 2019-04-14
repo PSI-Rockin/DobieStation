@@ -174,6 +174,76 @@ void Emitter64::AND32_REG_IMM(uint32_t imm, REG_64 dest)
     cache->write<uint32_t>(imm);
 }
 
+void Emitter64::CMOVCC16_REG(ConditionCode cc, REG_64 source, REG_64 dest)
+{
+    cache->write<uint8_t>(0x66);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>((int)cc | 0x40);
+    modrm(0b11, dest, source);
+}
+
+void Emitter64::CMOVCC32_REG(ConditionCode cc, REG_64 source, REG_64 dest)
+{
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>((int)cc | 0x40);
+    modrm(0b11, dest, source);
+}
+
+void Emitter64::CMOVCC64_REG(ConditionCode cc, REG_64 source, REG_64 dest)
+{
+    rexw_r_rm(dest, source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>((int)cc | 0x40);
+    modrm(0b11, dest, source);
+}
+
+void Emitter64::CMOVCC16_MEM(ConditionCode cc, REG_64 source, REG_64 indir_dest, uint32_t offset)
+{
+    cache->write<uint8_t>(0x66);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>((int)cc | 0x40);
+
+    // 32-bit offsets only for now
+    if (offset)
+    {
+        modrm(0b10, indir_dest, source);
+        cache->write<uint32_t>(offset);
+    }
+    else
+        modrm(0b00, indir_dest, source);
+}
+
+void Emitter64::CMOVCC32_MEM(ConditionCode cc, REG_64 source, REG_64 indir_dest, uint32_t offset)
+{
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>((int)cc | 0x40);
+
+    // 32-bit offsets only for now
+    if (offset)
+    {
+        modrm(0b10, indir_dest, source);
+        cache->write<uint32_t>(offset);
+    }
+    else
+        modrm(0b00, indir_dest, source);
+}
+
+void Emitter64::CMOVCC64_MEM(ConditionCode cc, REG_64 source, REG_64 indir_dest, uint32_t offset)
+{
+    rexw_r_rm(indir_dest, source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>((int)cc | 0x40);
+
+    // 32-bit offsets only for now
+    if (offset)
+    {
+        modrm(0b10, indir_dest, source);
+        cache->write<uint32_t>(offset);
+    }
+    else
+        modrm(0b00, indir_dest, source);
+}
+
 void Emitter64::CMP8_REG(REG_64 op2, REG_64 op1)
 {
     rex_r_rm(op2, op1);
@@ -254,84 +324,28 @@ void Emitter64::OR32_EAX(uint32_t imm)
     cache->write<uint32_t>(imm);
 }
 
-void Emitter64::SETE_REG(REG_64 dest)
+void Emitter64::SETCC_REG(ConditionCode cc, REG_64 dest)
 {
     rex_rm(dest);
     cache->write<uint8_t>(0x0F);
-    cache->write<uint8_t>(0x94);
+    cache->write<uint8_t>((int)cc | 0x90);
     modrm(0b11, 0, dest);
 }
 
-void Emitter64::SETE_MEM(REG_64 indir_dest)
+void Emitter64::SETCC_MEM(ConditionCode cc, REG_64 indir_dest, uint32_t offset)
 {
     rex_rm(indir_dest);
     cache->write<uint8_t>(0x0F);
-    cache->write<uint8_t>(0x94);
-    modrm(0, 0, indir_dest);
-}
+    cache->write<uint8_t>((int)cc | 0x90);
 
-void Emitter64::SETG_MEM(REG_64 indir_dest)
-{
-    rex_rm(indir_dest);
-    cache->write<uint8_t>(0x0F);
-    cache->write<uint8_t>(0x9F);
-    modrm(0, 0, indir_dest);
-}
-
-void Emitter64::SETGE_MEM(REG_64 indir_dest)
-{
-    rex_rm(indir_dest);
-    cache->write<uint8_t>(0x0F);
-    cache->write<uint8_t>(0x9D);
-    modrm(0, 0, indir_dest);
-}
-
-void Emitter64::SETL_MEM(REG_64 indir_dest)
-{
-    rex_rm(indir_dest);
-    cache->write<uint8_t>(0x0F);
-    cache->write<uint8_t>(0x9C);
-    modrm(0, 0, indir_dest);
-}
-
-void Emitter64::SETLE_MEM(REG_64 indir_dest)
-{
-    rex_rm(indir_dest);
-    cache->write<uint8_t>(0x0F);
-    cache->write<uint8_t>(0x9E);
-    modrm(0, 0, indir_dest);
-}
-
-void Emitter64::SETNE_REG(REG_64 dest)
-{
-    rex_rm(dest);
-    cache->write<uint8_t>(0x0F);
-    cache->write<uint8_t>(0x95);
-    modrm(0b11, 0, dest);
-}
-
-void Emitter64::SETNS_MEM(REG_64 dest)
-{
-    rex_rm(dest);
-    cache->write<uint8_t>(0x0F);
-    cache->write<uint8_t>(0x99);
-    modrm(0b00, 0, dest);
-}
-
-void Emitter64::SETNE_MEM(REG_64 indir_dest)
-{
-    rex_rm(indir_dest);
-    cache->write<uint8_t>(0x0F);
-    cache->write<uint8_t>(0x95);
-    modrm(0, 0, indir_dest);
-}
-
-void Emitter64::SETS_MEM(REG_64 dest)
-{
-    rex_rm(dest);
-    cache->write<uint8_t>(0x0F);
-    cache->write<uint8_t>(0x98);
-    modrm(0b00, 0, dest);
+    // 32-bit offsets only for now
+    if (offset)
+    {
+        modrm(0b10, 0, indir_dest);
+        cache->write<uint32_t>(offset);
+    }
+    else
+        modrm(0b00, 0, indir_dest);
 }
 
 void Emitter64::SHL16_REG_1(REG_64 dest)
