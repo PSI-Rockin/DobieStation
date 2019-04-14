@@ -113,9 +113,6 @@ GraphicsSynthesizerThread::GraphicsSynthesizerThread()
     }
 
     thread = std::thread(&GraphicsSynthesizerThread::event_loop, this);
-
-    message_lock = std::unique_lock<std::mutex>(message_mutex);
-    return_lock = std::unique_lock<std::mutex>(return_mutex);
 }
 
 GraphicsSynthesizerThread::~GraphicsSynthesizerThread()
@@ -149,14 +146,22 @@ void GraphicsSynthesizerThread::wait_for_return(GSReturn type, GSReturnMessage &
                 Errors::die("[GS] return message expected %d but was %d!\n", type, data.type);
         }
         else
-            return_notifier.wait(return_lock);
+        {
+            printf("[GS] Waiting for return message\n");
+            std::unique_lock<std::mutex> lk(data_mutex);
+            notifier.wait(lk, [this] {return recieve_data;});
+            recieve_data = false;
+        }
     }
 }
 
 void GraphicsSynthesizerThread::send_message(GSMessage message)
 {
-    message_notifier.notify_one();
+    printf("[GS] Notifying gs thread of new data\n");
     message_queue->push(message);
+    std::unique_lock<std::mutex> lk(data_mutex);
+    notifier.notify_one();
+    send_data = true;
 }
 
 void GraphicsSynthesizerThread::reset_fifos()
@@ -277,6 +282,8 @@ void GraphicsSynthesizerThread::event_loop()
                         GSReturnMessagePayload return_payload;
                         return_payload.no_payload = { 0 };
                         return_queue->push({ GSReturn::render_complete_t,return_payload });
+                        recieve_data = true;
+                        notifier.notify_one();
                         break;
                     }
                     case assert_finish_t:
@@ -306,6 +313,8 @@ void GraphicsSynthesizerThread::event_loop()
                         GSReturnMessagePayload return_payload;
                         return_payload.xy_payload = { width, height };
                         return_queue->push({ GSReturn::gsdump_render_partial_done_t,return_payload });
+                        recieve_data = true;
+                        notifier.notify_one();
                         break;
                     }
                     case die_t:
@@ -316,6 +325,8 @@ void GraphicsSynthesizerThread::event_loop()
                         GSReturnMessagePayload return_payload;
                         return_payload.no_payload = { 0 };
                         return_queue->push({ GSReturn::load_state_done_t,return_payload });
+                        recieve_data = true;
+                        notifier.notify_one();
                         break;
                     }
                     case save_state_t:
@@ -324,6 +335,8 @@ void GraphicsSynthesizerThread::event_loop()
                         GSReturnMessagePayload return_payload;
                         return_payload.no_payload = { 0 };
                         return_queue->push({ GSReturn::save_state_done_t,return_payload });
+                        recieve_data = true;
+                        notifier.notify_one();
                         break;
                     }
                     case gsdump_t:
@@ -350,11 +363,13 @@ void GraphicsSynthesizerThread::event_loop()
                     default:
                         Errors::die("corrupted command sent to GS thread");
                 }
-
-                return_notifier.notify_all();
             }
             else
-                message_notifier.wait(message_lock);
+            {
+                std::unique_lock<std::mutex> lk(data_mutex);
+                notifier.wait(lk, [this] {return send_data;});
+                send_data = false;
+            }
         }
     }
     catch (Emulation_error &e)
@@ -364,6 +379,8 @@ void GraphicsSynthesizerThread::event_loop()
         strncpy(copied_string, e.what(), ERROR_STRING_MAX_LENGTH);
         return_payload.death_error_payload.error_str = { copied_string };
         return_queue->push({ GSReturn::death_error_t, return_payload });
+        recieve_data = true;
+        notifier.notify_one();
     }
 }
 

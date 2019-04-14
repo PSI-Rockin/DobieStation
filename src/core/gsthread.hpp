@@ -225,13 +225,12 @@ class GraphicsSynthesizerThread
     private:
         //threading
         std::thread thread;
-        std::condition_variable message_notifier; // notify the gs thread
-        std::condition_variable return_notifier; // notify the emu thread
+        std::condition_variable notifier;
 
-        std::mutex message_mutex;
-        std::unique_lock<std::mutex> message_lock;
-        std::mutex return_mutex;
-        std::unique_lock<std::mutex> return_lock;
+        std::mutex data_mutex;
+
+        bool send_data = false;
+        bool recieve_data = false;
 
         gs_fifo* message_queue = nullptr;
         gs_return_fifo* return_queue = nullptr;
