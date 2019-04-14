@@ -83,6 +83,8 @@ set(SOURCES
         src/qt/main.cpp
 	src/qt/settings.cpp
 	src/qt/bios.cpp
+	src/qt/gsdebugger.cpp
+	src/common/gsdump.cpp
         )
 
 set(HEADERS
@@ -151,6 +153,8 @@ set(HEADERS
         src/qt/gamelistwidget.hpp
 	src/qt/settings.hpp
 	src/qt/bios.hpp
+	src/qt/gsdebugger.hpp
+	src/common/gsdump.hpp
         )
 
 add_executable(DobieStation ${SOURCES} ${HEADERS})

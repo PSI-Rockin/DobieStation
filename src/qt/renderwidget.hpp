@@ -8,8 +8,11 @@ class RenderWidget : public QWidget
 {
     Q_OBJECT
     private:
-        QImage final_image;
+        QImage gs_framebuffer;
+        QImage output;
+
         bool respect_aspect_ratio = true;
+        bool extract_channel = false;
     public:
         static const int MAX_SCALING = 4;
         static const int DEFAULT_WIDTH = 640;
@@ -23,5 +26,7 @@ class RenderWidget : public QWidget
         void draw_frame(uint32_t* buffer, int inner_w, int inner_h, int final_w, int final_h);
         void toggle_aspect_ratio();
         void screenshot();
+        void change_channel(int channel);
+        void clear_screen();
 };
 #endif

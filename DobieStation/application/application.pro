@@ -91,7 +91,9 @@ SOURCES += ../../src/qt/main.cpp \
     ../../src/qt/renderwidget.cpp \
     ../../src/qt/settingswindow.cpp \
     ../../src/qt/bios.cpp \
-    ../../src/qt/gamelistwidget.cpp
+    ../../src/qt/gamelistwidget.cpp \
+    ../../src/qt/gsdebugger.cpp \
+    ../../src/common/gsdump.cpp
 
 HEADERS += \
     ../../src/core/errors.hpp \
@@ -158,4 +160,6 @@ HEADERS += \
     ../../src/qt/renderwidget.hpp \
     ../../src/qt/settingswindow.hpp \
     ../../src/qt/bios.hpp \
-    ../../src/qt/gamelistwidget.hpp
+    ../../src/qt/gamelistwidget.hpp \
+    ../../src/qt/gsdebugger.hpp \
+    ../../src/common/gsdump.hpp

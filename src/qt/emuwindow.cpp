@@ -9,11 +9,15 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QTableWidget>
+#include <QDockWidget>
+#include <QPushButton>
+#include <QLineEdit>
 
 #include "emuwindow.hpp"
 #include "settingswindow.hpp"
 #include "renderwidget.hpp"
 #include "gamelistwidget.hpp"
+#include "gsdebugger.hpp"
 #include "bios.hpp"
 
 #include "arg.h"
@@ -48,6 +52,51 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
     stack_widget->setMinimumHeight(RenderWidget::DEFAULT_HEIGHT);
 
     setCentralWidget(stack_widget);
+
+    connect(&emu_thread, &EmuThread::update_counters, this, [=](int frame, int draw) {
+        setWindowTitle(
+            QString("Frame %1 Draw %2").arg(frame).arg(draw)
+        );
+    });
+
+    control_dock = new GSControlDock;
+    connect(control_dock, &GSControlDock::request_single_draw, [=]() {
+        emu_thread.set_gs_breakpoint(GSDump::Replayer::DRAW, 1, false);
+        emu_thread.unpause(PAUSE_EVENT::FRAME_ADVANCE);
+    });
+
+    connect(control_dock, &GSControlDock::request_ten_draws, [=]() {
+        emu_thread.set_gs_breakpoint(GSDump::Replayer::DRAW, 10, false);
+        emu_thread.unpause(PAUSE_EVENT::FRAME_ADVANCE);
+    });
+
+    connect(control_dock, &GSControlDock::request_goto_draw, [=](int location) {
+        emu_thread.set_gs_breakpoint(GSDump::Replayer::DRAW, location, true);
+        emu_thread.unpause(PAUSE_EVENT::FRAME_ADVANCE);	
+    });
+
+    connect(control_dock, &GSControlDock::request_next_frame, [=]() {
+        emu_thread.set_gs_breakpoint(GSDump::Replayer::FRAME, 1, false);
+        emu_thread.unpause(PAUSE_EVENT::FRAME_ADVANCE);
+    });
+
+    connect(control_dock, &GSControlDock::request_draw_frame, [=]() {
+        emu_thread.set_gs_breakpoint(GSDump::Replayer::FRAME_DRAW, 1, false);
+        emu_thread.unpause(PAUSE_EVENT::FRAME_ADVANCE);
+    });
+
+    control_dock->hide();
+    addDockWidget(Qt::RightDockWidgetArea, control_dock);
+
+    image_dock = new ImageDock;
+    image_dock->hide();
+
+    connect(
+        image_dock, &ImageDock::request_channel,
+        render_widget, &RenderWidget::change_channel
+    );
+
+    addDockWidget(Qt::RightDockWidgetArea, image_dock);
 
     create_menu();
 
@@ -168,7 +217,11 @@ int EmuWindow::load_exec(const char* file_name, bool skip_BIOS)
             emu_thread.set_skip_BIOS_hack(SKIP_HACK::LOAD_DISC);
     }
     else if (QString::compare(ext, "gsd", Qt::CaseInsensitive) == 0)
+    {
+        image_dock->show();
+        control_dock->show();
         emu_thread.gsdump_read(file_name);
+    }
     else
     {
         printf("Unrecognized file format %s\n", qPrintable(file_info.suffix()));
@@ -314,6 +367,9 @@ void EmuWindow::create_menu()
     auto shutdown_action = new QAction(tr("&Shutdown"), this);
     connect(shutdown_action, &QAction::triggered, this, [=]() {
         emu_thread.pause(PAUSE_EVENT::GAME_NOT_LOADED);
+        emu_thread.unpause(PAUSE_EVENT::FRAME_ADVANCE);
+        emu_thread.gsdump_end();
+
         show_default_view();
     });
 
@@ -656,8 +712,11 @@ void EmuWindow::save_state()
 
 void EmuWindow::show_default_view()
 {
+    render_widget->clear_screen();
     stack_widget->setCurrentIndex(0);
     setWindowTitle(QApplication::applicationName());
+    control_dock->hide();
+    image_dock->hide();
 }
 
 void EmuWindow::show_render_view()

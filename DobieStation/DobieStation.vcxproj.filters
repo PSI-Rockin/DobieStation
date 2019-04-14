@@ -256,6 +256,9 @@
 	<ClCompile Include="$(QtMocOutPrefix)gamelistwidget.cpp">
       <Filter>Generated Files</Filter>
 	</ClCompile>
+	<ClCompile Include="$(QtMocOutPrefix)gsdebugger.cpp">
+      <Filter>Generated Files</Filter>
+	</ClCompile>
     <ClCompile Include="..\src\qt\renderwidget.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -263,6 +266,12 @@
       <Filter>Source Files</Filter>
     </ClCompile>
 	<ClCompile Include="..\src\qt\gamelistwidget.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+	<ClCompile Include="..\src\qt\gsdebugger.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+	<ClCompile Include="..\src\common\gsdump.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="..\src\qt\bios.cpp">
@@ -340,6 +349,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\core\gsregisters.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\common\gsdump.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\core\gsthread.hpp">
@@ -477,6 +489,9 @@
       <Filter>Header Files</Filter>
     </QtMoc>
 	<QtMoc Include="..\src\qt\gamelistwidget.hpp">
+      <Filter>Header Files</Filter>
+    </QtMoc>
+	<QtMoc Include="..\src\qt\gsdebugger.hpp">
       <Filter>Header Files</Filter>
     </QtMoc>
   </ItemGroup>

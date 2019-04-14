@@ -12,6 +12,8 @@
 
 class SettingsWindow;
 class RenderWidget;
+class GSControlDock;
+class ImageDock;
 
 class EmuWindow : public QMainWindow
 {
@@ -35,6 +37,8 @@ class EmuWindow : public QMainWindow
         QAction* exit_action;
         QStackedWidget* stack_widget;
         RenderWidget* render_widget;
+        GSControlDock* control_dock;
+        ImageDock* image_dock;
 
         SettingsWindow* settings_window = nullptr;
 

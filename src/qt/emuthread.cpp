@@ -4,14 +4,14 @@
 
 #include "emuthread.hpp"
 
-using namespace std;
-
 EmuThread::EmuThread()
+    : abort(false),
+    pause_status(0x0),
+    gsdump_reading(false),
+    frame_advance(false),
+    gs_breakpoint(GSDump::Replayer::FRAME)
 {
-    abort = false;
-    pause_status = 0x0;
-    gsdump_reading = false;
-    frame_advance = false;
+
 }
 
 void EmuThread::reset()
@@ -21,141 +21,165 @@ void EmuThread::reset()
 
 void EmuThread::set_skip_BIOS_hack(SKIP_HACK skip)
 {
-    load_mutex.lock();
+    QMutexLocker locker(&load_mutex);
+
     e.set_skip_BIOS_hack(skip);
-    load_mutex.unlock();
 }
 
 void EmuThread::set_vu1_mode(VU_MODE mode)
 {
-    load_mutex.lock();
+    QMutexLocker locker(&load_mutex);
+
     e.set_vu1_mode(mode);
-    load_mutex.unlock();
 }
 
 void EmuThread::load_BIOS(const uint8_t *BIOS)
 {
-    load_mutex.lock();
+    QMutexLocker locker(&load_mutex);
+
     e.load_BIOS(BIOS);
-    load_mutex.unlock();
 }
 
 void EmuThread::load_ELF(const uint8_t *ELF, uint64_t ELF_size)
 {
-    load_mutex.lock();
+    QMutexLocker locker(&load_mutex);
+
     e.reset();
     e.load_ELF(ELF, ELF_size);
-    load_mutex.unlock();
 }
 
 void EmuThread::load_CDVD(const char* name, CDVD_CONTAINER type)
 {
-    load_mutex.lock();
+    QMutexLocker locker(&load_mutex);
+
     e.reset();
     e.load_CDVD(name, type);
-    load_mutex.unlock();
 }
 
 bool EmuThread::load_state(const char *name)
 {
-    load_mutex.lock();
+    QMutexLocker locker(&load_mutex);
+
     bool fail = false;
     if (!e.request_load_state(name))
         fail = true;
-    load_mutex.unlock();
+
     return fail;
 }
 
 bool EmuThread::save_state(const char *name)
 {
-    load_mutex.lock();
+    QMutexLocker locker(&load_mutex);
+
     bool fail = false;
     if (!e.request_save_state(name))
         fail = true;
-    load_mutex.unlock();
+
     return fail;
 }
 
 bool EmuThread::gsdump_read(const char *name)
 {
-    load_mutex.lock();
-    gsdump.open(name,ios::binary);
+    QMutexLocker locker(&load_mutex);
+
+    gsdump.open(name);
+
     if (!gsdump.is_open())
         return 1;
-    e.get_gs().reset();
-    e.get_gs().load_state(gsdump);
-    load_mutex.unlock();
-    printf("loaded gsdump\n");
+    
+    e.reset();
+    e.get_gs().load_state(gsdump.stream());
+    
     gsdump_reading = true;
+
     return 0;
+}
+
+void EmuThread::gsdump_end()
+{
+    gsdump_reading = false;
 }
 
 void EmuThread::gsdump_write_toggle()
 {
-    load_mutex.lock();
+    QMutexLocker locker(&load_mutex);
+
     e.request_gsdump_toggle();
-    load_mutex.unlock();
 }
 
 void EmuThread::gsdump_single_frame()
 {
-    load_mutex.lock();
+    QMutexLocker locker(&load_mutex);
+
     e.request_gsdump_single_frame();
-    load_mutex.unlock();
 }
 
 void EmuThread::gsdump_run()
 {
-    printf("gsdump frame\n");
     try
     {
-        int draws_sent = 10;
-        while (true)
+        if (!gsdump.is_open())
+            Errors::die("Couldn't load gsdump");
+
+        do
         {
-            GSMessage data;
-            gsdump.read((char*)&data, sizeof(data));
+            gsdump.next();
+            GSMessage data = gsdump.message();
+
             switch (data.type)
             {
-                case set_xyz_t:
-                    e.get_gs().send_message(data);
-                    if (frame_advance && data.payload.xyz_payload.drawing_kick && --draws_sent <= 0)
-                    {
-                        uint16_t w, h;
-                        uint32_t* frame = e.get_gs().render_partial_frame(w, h);
-                        emit completed_frame(frame, w, h, w, h);
-                        pause(PAUSE_EVENT::FRAME_ADVANCE);
-                        return;
-                    }
-                    break;
-                case render_crt_t:
-                {
-                    printf("gsdump frame render\n");
-                    e.get_gs().render_CRT();
-                    int w, h, new_w, new_h;
-                    e.get_inner_resolution(w, h);
-                    e.get_resolution(new_w, new_h);
+            case set_xyz_t:
+            case set_xyzf_t:
+            {
+                uint16_t w, h;
 
-                    emit completed_frame(e.get_gs().get_framebuffer(), w, h, new_w, new_h);
-                    printf("gsdump frame render complete\n");
-                    pause(PAUSE_EVENT::FRAME_ADVANCE);
-                    return;
+                e.get_gs().send_message(data);
+                if (gsdump.draw())
+                {
+                    printf("[GSDUMP] partial frame\n");
+                    emit completed_frame(
+                        e.get_gs().render_partial_frame(w, h),
+                        w, h, w, h
+                    );
                 }
-                case gsdump_t:
-                    pause(PAUSE_EVENT::GAME_NOT_LOADED);
-                    if (gsdump.peek() != EOF)
-                        Errors::die("gsdump ended before end of file!");
-                    gsdump.close();
-                    Errors::die("gsdump ended successfully\n");
-                    return;
-                case save_state_t:
-                case load_state_t:
-                    Errors::die("save_state save/load during gsdump not supported!");
-                default:
-                    e.get_gs().send_message(data);
+
+                emit update_counters(
+                    gsdump.current_frame(), gsdump.current_draw()
+                );
+                break;
             }
-            if (gsdump.eof())
-                Errors::die("gs dump unexpectedly ended");
-        }
+            case render_crt_t:
+            {
+                int w, h, new_w, new_h;
+                e.get_gs().render_CRT();
+
+                e.get_inner_resolution(w, h);
+                e.get_resolution(new_w, new_h);
+
+                printf("[GSDUMP] render CRT\n");
+                emit completed_frame(
+                    e.get_gs().get_framebuffer(),
+                    w, h, new_w, new_h
+                );
+                emit update_counters(
+                    gsdump.current_frame(), gsdump.current_draw()
+                );
+                break;
+            }
+            case load_state_t:
+            case save_state_t:
+                pause(PAUSE_EVENT::GAME_NOT_LOADED);
+                Errors::die("[GSDUMP] Cannot save or load state in a GSDump\n");
+            case gsdump_t:
+                pause(PAUSE_EVENT::GAME_NOT_LOADED);
+                Errors::die("[GSDUMP] End of dump");
+            default:
+                e.get_gs().send_message(data);
+            }
+
+        } while (!gsdump.breakpoint_hit());
+
+        pause(PAUSE_EVENT::FRAME_ADVANCE);
     }
     catch (Emulation_error &e)
     {
@@ -169,6 +193,7 @@ void EmuThread::gsdump_run()
         emit emu_non_fatal_error(QString(e.what()));
         pause(PAUSE_EVENT::MESSAGE_BOX);
     }
+
 }
 
 void EmuThread::run()
@@ -196,6 +221,7 @@ void EmuThread::run()
 
                 //Update FPS
                 double FPS;
+                using namespace std;
                 do
                 {
                     chrono::system_clock::time_point now = chrono::system_clock::now();
@@ -223,30 +249,30 @@ void EmuThread::run()
 
 void EmuThread::shutdown()
 {
-    pause_mutex.lock();
+    QMutexLocker locker(&pause_mutex);
+
     abort = true;
-    pause_mutex.unlock();
 }
 
 void EmuThread::press_key(PAD_BUTTON button)
 {
-    pause_mutex.lock();
+    QMutexLocker locker(&pause_mutex);
+
     e.press_button(button);
-    pause_mutex.unlock();
 }
 
 void EmuThread::release_key(PAD_BUTTON button)
 {
-    pause_mutex.lock();
+    QMutexLocker locker(&pause_mutex);
+
     e.release_button(button);
-    pause_mutex.unlock();
 }
 
 void EmuThread::update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t val)
 {
-    pause_mutex.lock();
+    QMutexLocker locker(&pause_mutex);
+
     e.update_joystick(joystick, axis, val);
-    pause_mutex.unlock();
 }
 
 void EmuThread::pause(PAUSE_EVENT event)
@@ -257,4 +283,9 @@ void EmuThread::pause(PAUSE_EVENT event)
 void EmuThread::unpause(PAUSE_EVENT event)
 {
     pause_status &= ~(1 << event);
+}
+
+void EmuThread::set_gs_breakpoint(GSDump::Replayer::ADVANCE advance, int inc, bool is_goto)
+{
+    gsdump.set_breakpoint(advance, inc, is_goto);
 }
