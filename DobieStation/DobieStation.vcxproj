@@ -164,7 +164,7 @@
     <ClCompile Include="..\src\qt\emuwindow.cpp" />
     <ClCompile Include="..\src\qt\renderwidget.cpp" />
     <ClCompile Include="..\src\qt\settingswindow.cpp" />
-	<ClCompile Include="..\src\qt\gamelistwidget.cpp" />
+    <ClCompile Include="..\src\qt\gamelistwidget.cpp" />
     <ClCompile Include="..\src\qt\bios.cpp" />
     <ClCompile Include="..\src\core\errors.cpp" />
     <ClCompile Include="..\src\core\iop\gamepad.cpp" />
@@ -207,24 +207,24 @@
     <ClCompile Include="..\src\core\ee\vu_jit.cpp" />
     <ClCompile Include="..\src\core\ee\vu_jit64.cpp" />
     <ClCompile Include="..\src\core\ee\vu_jittrans.cpp" />
-	<ClCompile Include="..\src\core\scheduler.cpp" />
+    <ClCompile Include="..\src\core\scheduler.cpp" />
   </ItemGroup>
   <!-- moc files -->
   <ItemGroup>
-	<QtMoc Include="..\src\qt\settings.hpp" />
+    <QtMoc Include="..\src\qt\settings.hpp" />
     <QtMoc Include="..\src\qt\emuthread.hpp" />
     <QtMoc Include="..\src\qt\emuwindow.hpp" />
     <QtMoc Include="..\src\qt\renderwidget.hpp" />
     <QtMoc Include="..\src\qt\settingswindow.hpp" />
-	<QtMoc Include="..\src\qt\gamelistwidget.hpp" />
+    <QtMoc Include="..\src\qt\gamelistwidget.hpp" />
   </ItemGroup>
   <ItemGroup>
-	<ClCompile Include="$(QtMocOutPrefix)settings.cpp" />
+    <ClCompile Include="$(QtMocOutPrefix)settings.cpp" />
     <ClCompile Include="$(QtMocOutPrefix)emuthread.cpp" />
     <ClCompile Include="$(QtMocOutPrefix)emuwindow.cpp" />
-	<ClCompile Include="$(QtMocOutPrefix)renderwidget.cpp" />
+    <ClCompile Include="$(QtMocOutPrefix)renderwidget.cpp" />
     <ClCompile Include="$(QtMocOutPrefix)settingswindow.cpp" />
-	<ClCompile Include="$(QtMocOutPrefix)gamelistwidget.cpp" />
+    <ClCompile Include="$(QtMocOutPrefix)gamelistwidget.cpp" />
   </ItemGroup>
   <!-- headers -->
   <ItemGroup>
@@ -286,7 +286,8 @@
     <ClInclude Include="..\src\core\ee\vu_jit.hpp" />
     <ClInclude Include="..\src\core\ee\vu_jit64.hpp" />
     <ClInclude Include="..\src\core\ee\vu_jittrans.hpp" />
-	<ClInclude Include="..\src\core\scheduler.hpp" />
+    <ClInclude Include="..\src\core\scheduler.hpp" />
+    <ClInclude Include="resource.h" />
   </ItemGroup>
   <!-- jit stuff -->
   <ItemGroup>
@@ -296,6 +297,12 @@
   </ItemGroup>
   <ItemGroup>
     <MASM Include="..\src\core\ee\vu_jit_asm.asm" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="DobieStation.rc" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="windows\appicon.ico" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
