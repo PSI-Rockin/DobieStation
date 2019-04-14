@@ -1815,9 +1815,14 @@ void EE_JitTranslator::translate_op_cop2_special(std::vector<IR::Instruction>& i
             break;
         case 0x38:
             // VCALLMS
-            Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VCALLMS\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            instr.op = IR::Opcode::VCallMS;
+            uint32_t imm = (opcode >> 6) & 0x7FFF;
+            imm *= 8;
+            instr.set_source(imm);
+            instr.set_return_addr(PC);
             break;
+        }
         case 0x39:
             // VCALLMSR
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VCALLMSR\n", op);

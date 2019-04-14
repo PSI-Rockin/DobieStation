@@ -131,7 +131,8 @@ INSTR(BranchGreaterOrEqualThanZero)
 INSTR(BranchLessOrEqualThanZero)
 
 
-
+INSTR(VCallMS)
+INSTR(VCallMSR)
 
 INSTR(VAbs)
 INSTR(VMaxVectorByScalar)

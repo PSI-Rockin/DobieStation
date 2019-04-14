@@ -3,6 +3,7 @@
 
 #include "ee_jit64.hpp"
 #include "emotioninterpreter.hpp"
+#include "vu.hpp"
 #include "../gif.hpp"
 
 #include "../errors.hpp"
@@ -80,6 +81,9 @@ void EE_JIT64::reset(bool clear_cache)
 extern "C"
 uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee)
 {
+    if (ee.PC == 0x002e16d0)
+        printf("P");
+
     //printf("[EE_JIT64] Executing block at $%08X\n", ee.PC);
     if (jit.cache.find_block(BlockState{ ee.PC, 0, 0, 0, 0 }) == nullptr)
     {
@@ -189,6 +193,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             break;
         case IR::Opcode::SystemCall:
             system_call(ee, instr);
+            break;
+        case IR::Opcode::VCallMS:
+            vcall_ms(ee, instr);
             break;
         case IR::Opcode::FallbackInterpreter:
             fallback_interpreter(ee, instr);
@@ -802,6 +809,44 @@ void EE_JIT64::system_call(EmotionEngine& ee, IR::Instruction& instr)
     prepare_abi(ee, reinterpret_cast<uint64_t>(&ee));
 
     call_abi_func((uint64_t)ee_syscall_exception);
+}
+
+void vu0_start_program(VectorUnit& vu0, uint32_t addr)
+{
+    vu0.start_program(addr);
+}
+
+void ee_clear_interlock(EmotionEngine& ee)
+{
+    ee.clear_interlock();
+}
+
+bool ee_vu0_wait(EmotionEngine& ee)
+{
+    return ee.vu0_wait();
+}
+
+void EE_JIT64::vcall_ms(EmotionEngine& ee, IR::Instruction& instr)
+{
+    prepare_abi(ee, (uint64_t)&ee);
+    call_abi_func((uint64_t)ee_vu0_wait);
+    emitter.TEST8_REG(REG_64::AL, REG_64::AL);
+
+    // if ee.vu0_wait(), set PC to the current operation's address and abort
+    uint8_t* offset_addr = emitter.JE_NEAR_DEFERRED();
+    emitter.load_addr((uint64_t)&ee.PC, REG_64::RAX);
+    emitter.MOV32_REG_IMM(instr.get_return_addr(), REG_64::R15);
+    emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
+    cleanup_recompiler(ee, true);
+
+    // Continue execution of block otherwise
+    emitter.set_jump_dest(offset_addr);
+    prepare_abi(ee, (uint64_t)&ee);
+    call_abi_func((uint64_t)ee_clear_interlock);
+
+    prepare_abi(ee, (uint64_t)ee.vu0);
+    prepare_abi(ee, instr.get_source());
+    call_abi_func((uint64_t)vu0_start_program);
 }
 
 void EE_JIT64::fallback_interpreter(EmotionEngine& ee, const IR::Instruction &instr)
