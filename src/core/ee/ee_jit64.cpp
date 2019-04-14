@@ -449,37 +449,26 @@ void EE_JIT64::emit_epilogue()
 
 void EE_JIT64::handle_branch_likely(EmotionEngine& ee, IR::Block& block)
 {
-    //Load the "branch happened" variable
+    // Load the "branch happened" variable
     emitter.load_addr(reinterpret_cast<uint64_t>(&ee.branch_on), REG_64::RAX);
     emitter.MOV8_FROM_MEM(REG_64::RAX, REG_64::RAX);
 
-    //The branch will point to two locations: one where the PC is set to the branch destination,
-    //and another where PC = PC + 8. Our generated code will jump if the branch *fails*.
-    //This is to allow for future optimizations where the recompiler may generate code beyond
-    //the branch (assuming that the branch fails).
-    //Additionally, by emitting the last instruction in the success case, we can have it "nullified"
-    //if the branch were to be a failure instead.
+    // Test variable. In the case that the variable is true,
+    // we jump over the last instruction in the block in order
+    // to "nullify" it before returning from the recompiled block.
     emitter.TEST8_REG(REG_64::RAX, REG_64::RAX);
 
-    //Because we don't know where the branch will jump to, we defer it.
-    //Once the "branch succeeded" case has been finished recompiling, we can rewrite the branch offset...
+    // Because we don't know where the branch will jump to, we defer it.
+    // Once the "branch succeeded" case has been finished recompiling, we can rewrite the branch offset...
     uint8_t* offset_addr = emitter.JE_NEAR_DEFERRED();
     IR::Instruction instr = block.get_next_instr();
     emit_instruction(ee, instr);
-    emitter.load_addr(reinterpret_cast<uint64_t>(&ee.PC), REG_64::RAX);
-    emitter.load_addr(reinterpret_cast<uint64_t>(&ee_branch_dest), REG_64::R15);
-    emitter.MOV32_FROM_MEM(REG_64::R15, REG_64::R15);
-    emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
-    cleanup_recompiler(ee, false);
 
-    //...Which we do here.
+    // ...Which we do here.
     emitter.set_jump_dest(offset_addr);
 
-    //And here we recompile the "branch failed" case.
-    emitter.load_addr(reinterpret_cast<uint64_t>(&ee.PC), REG_64::RAX);
-    emitter.load_addr(reinterpret_cast<uint64_t>(&ee_branch_fail_dest), REG_64::R15);
-    emitter.MOV32_FROM_MEM(REG_64::R15, REG_64::R15);
-    emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
+    // Here we flush the EE state back to the EE instance,
+    // and return from the recompiled block.
     cleanup_recompiler(ee, true);
 }
 
@@ -513,33 +502,6 @@ void EE_JIT64::add_unsigned_imm(EmotionEngine& ee, IR::Instruction &instr)
 
 void EE_JIT64::branch_cop0(EmotionEngine& ee, IR::Instruction &instr)
 {
-    if (instr.get_is_likely())
-    {
-        // Set success destination
-        emitter.MOV32_REG_IMM(instr.get_jump_dest(), REG_64::RAX);
-        emitter.load_addr((uint64_t)&ee_branch_dest, REG_64::R15);
-        emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
-
-        // Set failure destination
-        emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
-        emitter.load_addr((uint64_t)&ee_branch_fail_dest, REG_64::R15);
-        emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
-
-        // Call cop0.get_condition to get value to compare
-        prepare_abi(ee, reinterpret_cast<uint64_t>(&ee.cp0));
-
-        call_abi_func((uint64_t)cop0_get_condition);
-
-        // Compare the COP0 condition to see which branch is taken
-        emitter.MOV8_REG_IMM(instr.get_field(), REG_64::R15);
-        emitter.CMP8_REG(REG_64::RAX, REG_64::R15);
-        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-        emitter.SETCC_MEM(ConditionCode::E, REG_64::RAX);
-
-        likely_branch = true;
-        return;
-    }
-
     // Call cop0.get_condition to get value to compare
     prepare_abi(ee, reinterpret_cast<uint64_t>(&ee.cp0));
 
@@ -553,34 +515,20 @@ void EE_JIT64::branch_cop0(EmotionEngine& ee, IR::Instruction &instr)
     emitter.CMOVCC32_REG(ConditionCode::E, REG_64::R15, REG_64::RAX);
     emitter.load_addr((uint64_t)&ee.PC, REG_64::R15);
     emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
+
+    if (instr.get_is_likely())
+    {
+        likely_branch = true;
+
+        // Use the result of the FLAGS register from the last compare to set branch_on,
+        // this boolean is used in handle_likely_branch
+        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
+        emitter.SETCC_MEM(ConditionCode::E, REG_64::RAX);
+    }
 }
 
 void EE_JIT64::branch_cop1(EmotionEngine& ee, IR::Instruction &instr)
 {
-    if (instr.get_is_likely())
-    {
-        // Set success destination
-        emitter.MOV32_REG_IMM(instr.get_jump_dest(), REG_64::RAX);
-        emitter.load_addr((uint64_t)&ee_branch_dest, REG_64::R15);
-        emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
-
-        // Set failure destination
-        emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
-        emitter.load_addr((uint64_t)&ee_branch_fail_dest, REG_64::R15);
-        emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
-
-        // Compare the FPU condition to see which branch is taken
-        emitter.load_addr((uint64_t)&ee.fpu->control.condition, REG_64::RAX);
-        emitter.MOV8_FROM_MEM(REG_64::RAX, REG_64::RAX);
-        emitter.MOV8_REG_IMM(instr.get_field(), REG_64::R15);
-        emitter.CMP8_REG(REG_64::RAX, REG_64::R15);
-        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-        emitter.SETCC_MEM(ConditionCode::E, REG_64::RAX);
-
-        likely_branch = true;
-        return;
-    }
-
     // Conditionally move the success or failure destination into ee.PC
     emitter.load_addr((uint64_t)&ee.fpu->control.condition, REG_64::RAX);
     emitter.MOV8_FROM_MEM(REG_64::RAX, REG_64::RAX);
@@ -591,6 +539,16 @@ void EE_JIT64::branch_cop1(EmotionEngine& ee, IR::Instruction &instr)
     emitter.CMOVCC32_REG(ConditionCode::E, REG_64::R15, REG_64::RAX);
     emitter.load_addr((uint64_t)&ee.PC, REG_64::R15);
     emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
+
+    if (instr.get_is_likely())
+    {
+        likely_branch = true;
+
+        // Use the result of the FLAGS register from the last compare to set branch_on,
+        // this boolean is used in handle_likely_branch
+        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
+        emitter.SETCC_MEM(ConditionCode::E, REG_64::RAX);
+    }
 }
 
 void EE_JIT64::branch_cop2(EmotionEngine& ee, IR::Instruction &instr)
@@ -606,27 +564,6 @@ void EE_JIT64::branch_equal(EmotionEngine& ee, IR::Instruction &instr)
     op1 = alloc_int_reg(ee, instr.get_source(), REG_STATE::READ);
     op2 = alloc_int_reg(ee, instr.get_source2(), REG_STATE::READ);
 
-    if (instr.get_is_likely())
-    {
-        // Set success destination
-        emitter.MOV32_REG_IMM(instr.get_jump_dest(), REG_64::RAX);
-        emitter.load_addr((uint64_t)&ee_branch_dest, REG_64::R15);
-        emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
-
-        // Set failure destination
-        emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
-        emitter.load_addr((uint64_t)&ee_branch_fail_dest, REG_64::R15);
-        emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
-
-        // Compare the two registers to see which jump we take
-        emitter.CMP64_REG(op2, op1);
-        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-        emitter.SETCC_MEM(ConditionCode::E, REG_64::RAX);
-
-        likely_branch = true;
-        return;
-    }
-
     // Conditionally move the success or failure destination into ee.PC
     emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
     emitter.MOV32_REG_IMM(instr.get_jump_dest(), REG_64::R15);
@@ -634,6 +571,16 @@ void EE_JIT64::branch_equal(EmotionEngine& ee, IR::Instruction &instr)
     emitter.CMOVCC32_REG(ConditionCode::E, REG_64::R15, REG_64::RAX);
     emitter.load_addr((uint64_t)&ee.PC, REG_64::R15);
     emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
+
+    if (instr.get_is_likely())
+    {
+        likely_branch = true;
+
+        // Use the result of the FLAGS register from the last compare to set branch_on,
+        // this boolean is used in handle_likely_branch
+        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
+        emitter.SETCC_MEM(ConditionCode::E, REG_64::RAX);
+    }
 }
 
 void EE_JIT64::branch_greater_than_or_equal_zero(EmotionEngine& ee, IR::Instruction &instr)
@@ -649,27 +596,6 @@ void EE_JIT64::branch_greater_than_or_equal_zero(EmotionEngine& ee, IR::Instruct
         emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
     }
 
-    if (instr.get_is_likely())
-    {
-        // Set success destination
-        emitter.MOV32_REG_IMM(instr.get_jump_dest(), REG_64::RAX);
-        emitter.load_addr((uint64_t)&ee_branch_dest, REG_64::R15);
-        emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
-
-        // Set failure destination
-        emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
-        emitter.load_addr((uint64_t)&ee_branch_fail_dest, REG_64::R15);
-        emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
-
-        // Compare the two registers to see which jump we take
-        emitter.TEST64_REG(op1, op1);
-        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-        emitter.SETCC_MEM(ConditionCode::NS, REG_64::RAX);
-
-        likely_branch = true;
-        return;
-    }
-
     // Conditionally move the success or failure destination into ee.PC
     emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
     emitter.MOV32_REG_IMM(instr.get_jump_dest(), REG_64::R15);
@@ -677,34 +603,22 @@ void EE_JIT64::branch_greater_than_or_equal_zero(EmotionEngine& ee, IR::Instruct
     emitter.CMOVCC32_REG(ConditionCode::NS, REG_64::R15, REG_64::RAX);
     emitter.load_addr((uint64_t)&ee.PC, REG_64::R15);
     emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
+
+    if (instr.get_is_likely())
+    {
+        likely_branch = true;
+
+        // Use the result of the FLAGS register from the last compare to set branch_on,
+        // this boolean is used in handle_likely_branch
+        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
+        emitter.SETCC_MEM(ConditionCode::NS, REG_64::RAX);
+    }
 }
 
 void EE_JIT64::branch_greater_than_zero(EmotionEngine& ee, IR::Instruction &instr)
 {
     REG_64 op1;
     op1 = alloc_int_reg(ee, instr.get_source(), REG_STATE::READ);
-
-    if (instr.get_is_likely())
-    {
-        // Set success destination
-        emitter.MOV32_REG_IMM(instr.get_jump_dest(), REG_64::RAX);
-        emitter.load_addr((uint64_t)&ee_branch_dest, REG_64::R15);
-        emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
-
-        // Set failure destination
-        emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
-        emitter.load_addr((uint64_t)&ee_branch_fail_dest, REG_64::R15);
-        emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
-
-        // Compare the two registers to see which jump we take
-        emitter.MOV64_OI(0, REG_64::RAX);
-        emitter.CMP64_REG(REG_64::RAX, op1);
-        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-        emitter.SETCC_MEM(ConditionCode::G, REG_64::RAX);
-
-        likely_branch = true;
-        return;
-    }
 
     // Conditionally move the success or failure destination into ee.PC
     emitter.MOV64_OI(0, REG_64::RAX);
@@ -714,34 +628,22 @@ void EE_JIT64::branch_greater_than_zero(EmotionEngine& ee, IR::Instruction &inst
     emitter.CMOVCC32_REG(ConditionCode::G, REG_64::R15, REG_64::RAX);
     emitter.load_addr((uint64_t)&ee.PC, REG_64::R15);
     emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
+
+    if (instr.get_is_likely())
+    {
+        likely_branch = true;
+
+        // Use the result of the FLAGS register from the last compare to set branch_on,
+        // this boolean is used in handle_likely_branch
+        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
+        emitter.SETCC_MEM(ConditionCode::G, REG_64::RAX);
+    }
 }
 
 void EE_JIT64::branch_less_than_or_equal_zero(EmotionEngine& ee, IR::Instruction &instr)
 {
     REG_64 op1;
     op1 = alloc_int_reg(ee, instr.get_source(), REG_STATE::READ);
-
-    if (instr.get_is_likely())
-    {
-        // Set success destination
-        emitter.MOV32_REG_IMM(instr.get_jump_dest(), REG_64::RAX);
-        emitter.load_addr((uint64_t)&ee_branch_dest, REG_64::R15);
-        emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
-
-        // Set failure destination
-        emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
-        emitter.load_addr((uint64_t)&ee_branch_fail_dest, REG_64::R15);
-        emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
-
-        // Compare the two registers to see which jump we take
-        emitter.MOV64_OI(0, REG_64::RAX);
-        emitter.CMP64_REG(REG_64::RAX, op1);
-        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-        emitter.SETCC_MEM(ConditionCode::LE, REG_64::RAX);
-
-        likely_branch = true;
-        return;
-    }
 
     // Conditionally move the success or failure destination into ee.PC
     emitter.MOV64_OI(0, REG_64::RAX);
@@ -751,6 +653,16 @@ void EE_JIT64::branch_less_than_or_equal_zero(EmotionEngine& ee, IR::Instruction
     emitter.CMOVCC32_REG(ConditionCode::LE, REG_64::R15, REG_64::RAX);
     emitter.load_addr((uint64_t)&ee.PC, REG_64::R15);
     emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
+
+    if (instr.get_is_likely())
+    {
+        likely_branch = true;
+
+        // Use the result of the FLAGS register from the last compare to set branch_on,
+        // this boolean is used in handle_likely_branch
+        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
+        emitter.SETCC_MEM(ConditionCode::LE, REG_64::RAX);
+    }
 }
 
 void EE_JIT64::branch_less_than_zero(EmotionEngine& ee, IR::Instruction &instr)
@@ -766,27 +678,6 @@ void EE_JIT64::branch_less_than_zero(EmotionEngine& ee, IR::Instruction &instr)
         emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
     }
 
-    if (instr.get_is_likely())
-    {
-        // Set success destination
-        emitter.MOV32_REG_IMM(instr.get_jump_dest(), REG_64::RAX);
-        emitter.load_addr((uint64_t)&ee_branch_dest, REG_64::R15);
-        emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
-
-        // Set failure destination
-        emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
-        emitter.load_addr((uint64_t)&ee_branch_fail_dest, REG_64::R15);
-        emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
-
-        // Compare the two registers to see which jump we take
-        emitter.TEST64_REG(op1, op1);
-        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-        emitter.SETCC_MEM(ConditionCode::S, REG_64::RAX);
-
-        likely_branch = true;
-        return;
-    }
-
     // Conditionally move the success or failure destination into ee.PC
     emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
     emitter.MOV32_REG_IMM(instr.get_jump_dest(), REG_64::R15);
@@ -794,6 +685,16 @@ void EE_JIT64::branch_less_than_zero(EmotionEngine& ee, IR::Instruction &instr)
     emitter.CMOVCC32_REG(ConditionCode::S, REG_64::R15, REG_64::RAX);
     emitter.load_addr((uint64_t)&ee.PC, REG_64::R15);
     emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
+
+    if (instr.get_is_likely())
+    {
+        likely_branch = true;
+
+        // Use the result of the FLAGS register from the last compare to set branch_on,
+        // this boolean is used in handle_likely_branch
+        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
+        emitter.SETCC_MEM(ConditionCode::S, REG_64::RAX);
+    }
 }
 
 
@@ -805,27 +706,6 @@ void EE_JIT64::branch_not_equal(EmotionEngine& ee, IR::Instruction &instr)
     op1 = alloc_int_reg(ee, instr.get_source(), REG_STATE::READ);
     op2 = alloc_int_reg(ee, instr.get_source2(), REG_STATE::READ);
 
-    if (instr.get_is_likely())
-    {
-        // Set success destination
-        emitter.MOV32_REG_IMM(instr.get_jump_dest(), REG_64::RAX);
-        emitter.load_addr((uint64_t)&ee_branch_dest, REG_64::R15);
-        emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
-
-        // Set failure destination
-        emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
-        emitter.load_addr((uint64_t)&ee_branch_fail_dest, REG_64::R15);
-        emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
-
-        // Compare the two registers to see which jump we take
-        emitter.CMP64_REG(op2, op1);
-        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-        emitter.SETCC_MEM(ConditionCode::NE, REG_64::RAX);
-        
-        likely_branch = true;
-        return;
-    }
-
     // Conditionally move the success or failure destination into ee.PC
     emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
     emitter.MOV32_REG_IMM(instr.get_jump_dest(), REG_64::R15);
@@ -833,6 +713,16 @@ void EE_JIT64::branch_not_equal(EmotionEngine& ee, IR::Instruction &instr)
     emitter.CMOVCC32_REG(ConditionCode::NE, REG_64::R15, REG_64::RAX);
     emitter.load_addr((uint64_t)&ee.PC, REG_64::R15);
     emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15);
+
+    if (instr.get_is_likely())
+    {
+        likely_branch = true;
+
+        // Use the result of the FLAGS register from the last compare to set branch_on,
+        // this boolean is used in handle_likely_branch
+        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
+        emitter.SETCC_MEM(ConditionCode::NE, REG_64::RAX);
+    }
 }
 
 void EE_JIT64::exception_return(EmotionEngine& ee, IR::Instruction& instr)
