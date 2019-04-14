@@ -38,7 +38,8 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
         if (branch_op)
             branch_delayslot = true;
 
-        branch_op = is_branch(opcode);
+        if (instrs.size())
+            branch_op = is_branch(instrs.back());
 
         pc += 4;
         ++cycle_count;
@@ -2101,65 +2102,19 @@ void EE_JitTranslator::translate_op_cop2_special2(std::vector<IR::Instruction>& 
 }
 
 // TENTATIVE
-bool EE_JitTranslator::is_branch(uint32_t instr_word) const noexcept
+bool EE_JitTranslator::is_branch(const IR::Instruction& instr) const noexcept
 {
-    uint8_t op = instr_word >> 26;
-
-    switch (op)
-    {
-        case 0x02:
-        case 0x03:
-        case 0x04:
-        case 0x05:
-        case 0x06:
-        case 0x07:
-        case 0x14:
-        case 0x15:
-        case 0x16:
-        case 0x17:
-            return true;
-        default:
-            break;
-    }
-
-    if (op == 0x00)
-    {
-        op = instr_word & 0x3F;
-        switch (op)
-        {
-            case 0x08:
-            case 0x09:
-                return true;
-            default:
-                return false;
-        }
-    }
-    else if (op == 0x01)
-    {
-        op = (instr_word >> 16) & 0x1F;
-
-        switch (op)
-        {
-            case 0x00:
-            case 0x01:
-            case 0x02:
-            case 0x03:
-            case 0x10:
-            case 0x11:
-            case 0x12:
-            case 0x13:
-                return true;
-            default:
-                return false;
-        }
-    }
-    else if (op == 0x10 || op == 0x11 || op == 0x12)
-    {
-        op = (instr_word >> 21) & 0x1F;
-        return op == 0x08;
-    }
-
-    return false;
+    return instr.op == IR::Opcode::Jump ||
+        instr.op == IR::Opcode::JumpIndirect ||
+        instr.op == IR::Opcode::BranchCop0 ||
+        instr.op == IR::Opcode::BranchCop1 ||
+        instr.op == IR::Opcode::BranchCop2 ||
+        instr.op == IR::Opcode::BranchEqual ||
+        instr.op == IR::Opcode::BranchGreaterThanOrEqualZero ||
+        instr.op == IR::Opcode::BranchGreaterThanZero ||
+        instr.op == IR::Opcode::BranchLessThanOrEqualZero ||
+        instr.op == IR::Opcode::BranchLessThanZero ||
+        instr.op == IR::Opcode::BranchNotEqual;
 }
 
 void EE_JitTranslator::fallback_interpreter(IR::Instruction& instr, uint32_t instr_word) const noexcept

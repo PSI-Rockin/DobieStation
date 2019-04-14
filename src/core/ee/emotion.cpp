@@ -785,7 +785,7 @@ void EmotionEngine::syscall_exception()
         //On a real PS2, Exit returns to OSDSYS.
         Errors::die("[EE] Exit syscall called!\n");
     }
-    handle_exception(0x8000017C, 0x08);
+    handle_exception(0x80000180, 0x08);
 }
 
 void EmotionEngine::break_exception()
