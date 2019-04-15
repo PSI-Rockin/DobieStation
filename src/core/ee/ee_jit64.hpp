@@ -7,11 +7,13 @@
 
 struct AllocReg
 {
-    bool used;
-    bool locked; //Prevent the register from being allocated
-    bool modified;
-    int age;
-    int vu_reg;
+    bool used = false;
+    bool locked = false; //Prevent the register from being allocated
+    bool modified = false;
+    int age = 0;
+    int reg;
+    bool is_gpr_reg;
+    bool is_fpu_reg;
     uint8_t needs_clamping;
 };
 
@@ -44,7 +46,6 @@ private:
     uint32_t ee_branch_delay_dest, ee_branch_delay_fail_dest;
     uint16_t cycle_count;
 
-    void handle_branch(EmotionEngine& ee);
     void handle_branch_likely(EmotionEngine& ee, IR::Block& block);
 
     void add_unsigned_imm(EmotionEngine& ee, IR::Instruction& instr);
@@ -72,16 +73,24 @@ private:
     void call_abi_func(uint64_t addr);
     void recompile_block(EmotionEngine& ee, IR::Block& block);
 
-    int search_for_register(AllocReg *regs, int vu_reg);
-    REG_64 alloc_int_reg(EmotionEngine& ee, int vi_reg, REG_STATE state);
+    int search_for_register(AllocReg *regs);
+    REG_64 alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state);
+    REG_64 alloc_vi_reg(EmotionEngine& ee, int vi_reg, REG_STATE state);
+    REG_64 alloc_fpu_reg(EmotionEngine& ee, int fpu_reg, REG_STATE state);
+    REG_64 alloc_vf_reg(EmotionEngine& ee, int vf_reg, REG_STATE state);
 
     void emit_prologue();
     void emit_instruction(EmotionEngine &ee, IR::Instruction &instr);
 
-    uint64_t get_fpu_addr(const EmotionEngine &ee, FPU_SpecialReg index) const;
-    uint64_t get_gpr_addr(const EmotionEngine &ee, EE_NormalReg index) const;
-
+    uint64_t get_gpr_addr(const EmotionEngine &ee, int index) const;
+    uint64_t get_vi_addr(const EmotionEngine &ee, int index) const;
+    uint64_t get_fpu_addr(const EmotionEngine &ee, int index) const;
+    uint64_t get_vf_addr(const EmotionEngine &ee, int index) const;
+    
+    void flush_int_reg(EmotionEngine& ee, int reg);
+    void flush_xmm_reg(EmotionEngine& ee, int reg);
     void flush_regs(EmotionEngine& ee);
+
     void cleanup_recompiler(EmotionEngine& ee, bool clear_regs);
     void emit_epilogue();
 public:
