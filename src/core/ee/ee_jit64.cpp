@@ -122,7 +122,9 @@ void EE_JIT64::recompile_block(EmotionEngine& ee, IR::Block& block)
     likely_branch = false;
     cache.alloc_block(BlockState{ ee.get_PC(), 0, 0, 0, 0 });
 
-    cycle_count = block.get_cycle_count();
+    //Return the amount of cycles to update the EE with
+    emitter.load_addr((uint64_t)&cycle_count, REG_64::RAX);
+    emitter.MOV16_IMM_MEM(block.get_cycle_count(), REG_64::RAX);
 
     //Prologue
 #ifndef _MSC_VER
@@ -234,6 +236,38 @@ void EE_JIT64::prepare_abi(const EmotionEngine& ee, uint64_t value)
         int_regs[arg].age = 0;
     }
     emitter.load_addr(value, regs[abi_int_count]);
+    abi_int_count++;
+}
+
+void EE_JIT64::prepare_abi_reg(const EmotionEngine& ee, REG_64 reg)
+{
+#ifdef _WIN32
+    const static REG_64 regs[] = { RCX, RDX, R8, R9 };
+
+    if (abi_int_count >= 4)
+        Errors::die("[EE_JIT64] ABI integer arguments exceeded 4!");
+#else
+    const static REG_64 regs[] = { RDI, RSI, RDX, RCX, R8, R9 };
+
+    if (abi_int_count >= 6)
+        Errors::die("[EE_JIT64] ABI integer arguments exceeded 6!");
+#endif    
+
+    REG_64 arg = regs[abi_int_count];
+
+    //If the chosen integer argument is being used, flush it back to the EE state
+    if (int_regs[arg].used)
+    {
+        int vi_reg = int_regs[arg].vu_reg;
+        if (int_regs[arg].modified)
+        {
+            emitter.load_addr((uint64_t)&ee.gpr[vi_reg], REG_64::RAX);
+            emitter.MOV64_TO_MEM(arg, REG_64::RAX);
+        }
+        int_regs[arg].used = false;
+        int_regs[arg].age = 0;
+    }
+    emitter.MOV64_MR(reg, regs[abi_int_count]);
     abi_int_count++;
 }
 
@@ -411,11 +445,6 @@ void EE_JIT64::cleanup_recompiler(EmotionEngine& ee, bool clear_regs)
             xmm_regs[i].used = false;
         }
     }
-
-    //Return the amount of cycles to update the EE with
-    emitter.MOV16_REG_IMM(cycle_count, REG_64::RAX);
-    emitter.load_addr(reinterpret_cast<uint64_t>(&cycle_count), REG_64::R15);
-    emitter.MOV16_TO_MEM(REG_64::RAX, REG_64::R15);
 
     //Epilogue
     emitter.POP(REG_64::RBP);
@@ -838,6 +867,15 @@ void EE_JIT64::vcall_ms(EmotionEngine& ee, IR::Instruction& instr)
     emitter.load_addr((uint64_t)&ee.PC, REG_64::RAX);
     emitter.MOV32_REG_IMM(instr.get_return_addr(), REG_64::R15);
     emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
+
+    // Set wait for VU0 flag
+    emitter.load_addr((uint64_t)&ee.wait_for_VU0, REG_64::RAX);
+    emitter.MOV8_IMM_MEM(true, REG_64::RAX);
+
+    // Set cycle count to number of cycles executed
+    emitter.load_addr((uint64_t)&cycle_count, REG_64::RAX);
+    emitter.MOV16_IMM_MEM(instr.get_cycle_count(), REG_64::RAX);
+
     cleanup_recompiler(ee, true);
 
     // Otherwise continue execution of block otherwise

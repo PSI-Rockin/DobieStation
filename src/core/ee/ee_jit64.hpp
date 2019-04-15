@@ -67,6 +67,7 @@ private:
     static void ee_syscall_exception(EmotionEngine& ee);
 
     void prepare_abi(const EmotionEngine& ee, uint64_t value);
+    void prepare_abi_reg(const EmotionEngine& ee, REG_64 value);
     void call_abi_func(uint64_t addr);
     void recompile_block(EmotionEngine& ee, IR::Block& block);
 

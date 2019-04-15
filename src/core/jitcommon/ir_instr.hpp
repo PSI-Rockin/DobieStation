@@ -21,6 +21,7 @@ class Instruction
 
         int dest, base;
         uint64_t source, source2;
+        uint16_t cycle_count;
         uint8_t bc, field, field2;
         bool is_likely, is_link;
     public:
@@ -35,6 +36,7 @@ class Instruction
         int get_base() const;
         uint64_t get_source() const;
         uint64_t get_source2() const;
+        uint16_t get_cycle_count() const;
         uint8_t get_bc() const;
         uint8_t get_field() const;
         uint8_t get_field2() const;
@@ -48,6 +50,7 @@ class Instruction
         void set_base(int index);
         void set_source(uint64_t value);
         void set_source2(uint64_t value);
+        void set_cycle_count(uint16_t value);
         void set_bc(uint8_t value);
         void set_field(uint8_t value);
         void set_field2(uint8_t value);

@@ -180,10 +180,17 @@ int EmotionEngine::run(int cycles)
 
 int EmotionEngine::run_jit(int cycles)
 {
+    int start_cycles = cycles_to_run;
+
     if (!wait_for_IRQ)
     {
+        start_cycles += cycles;
         cycles_to_run += cycles;
-        while (cycles_to_run > 0)
+
+        if (wait_for_VU0)
+            wait_for_VU0 = vu0_wait();
+
+        while (cycles_to_run > 0 && !wait_for_VU0)
         {
             cycles_to_run -= EE_JIT::run(this);
         }
@@ -200,7 +207,7 @@ int EmotionEngine::run_jit(int cycles)
 
     cp0->count_up(cycles);
 
-    return cycles;
+    return start_cycles - cycles_to_run;
 }
 
 void EmotionEngine::print_state()

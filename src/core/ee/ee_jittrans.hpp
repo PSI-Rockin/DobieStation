@@ -98,21 +98,21 @@ private:
     void interpreter_pass(EmotionEngine &ee, uint32_t pc);
     void fallback_interpreter(IR::Instruction& instr, uint32_t instr_word) const noexcept;
 
-    void translate_op(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t pc);
-    void translate_op_special(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC);
-    void translate_op_regimm(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const;
-    void translate_op_mmi(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const;
-    void translate_op_mmi0(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const;
-    void translate_op_mmi1(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const;
-    void translate_op_mmi2(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const;
-    void translate_op_mmi3(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const;
-    void translate_op_cop0(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC);
-    void translate_op_cop0_type2(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC);
-    void translate_op_cop1(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const;
-    void translate_op_cop1_fpu(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const;
-    void translate_op_cop2(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const;
-    void translate_op_cop2_special(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const;
-    void translate_op_cop2_special2(std::vector<IR::Instruction>& instrs, uint32_t opcode, uint32_t PC) const;
+    IR::Instruction translate_op(uint32_t opcode, uint32_t pc);
+    IR::Instruction translate_op_special(uint32_t opcode, uint32_t PC);
+    IR::Instruction translate_op_regimm(uint32_t opcode, uint32_t PC) const;
+    IR::Instruction translate_op_mmi(uint32_t opcode, uint32_t PC) const;
+    IR::Instruction translate_op_mmi0(uint32_t opcode, uint32_t PC) const;
+    IR::Instruction translate_op_mmi1(uint32_t opcode, uint32_t PC) const;
+    IR::Instruction translate_op_mmi2(uint32_t opcode, uint32_t PC) const;
+    IR::Instruction translate_op_mmi3(uint32_t opcode, uint32_t PC) const;
+    IR::Instruction translate_op_cop0(uint32_t opcode, uint32_t PC);
+    IR::Instruction translate_op_cop0_type2(uint32_t opcode, uint32_t PC);
+    IR::Instruction translate_op_cop1(uint32_t opcode, uint32_t PC) const;
+    IR::Instruction translate_op_cop1_fpu(uint32_t opcode, uint32_t PC) const;
+    IR::Instruction translate_op_cop2(uint32_t opcode, uint32_t PC) const;
+    IR::Instruction translate_op_cop2_special(uint32_t opcode, uint32_t PC) const;
+    IR::Instruction translate_op_cop2_special2(uint32_t opcode, uint32_t PC) const;
 public:
     IR::Block translate(EmotionEngine& ee);
 };

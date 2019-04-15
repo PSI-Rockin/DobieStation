@@ -43,6 +43,11 @@ uint64_t Instruction::get_source2() const
     return source2;
 }
 
+uint16_t Instruction::get_cycle_count() const
+{
+    return cycle_count;
+}
+
 uint8_t Instruction::get_bc() const
 {
     return bc;
@@ -101,6 +106,11 @@ void Instruction::set_source(uint64_t value)
 void Instruction::set_source2(uint64_t value)
 {
     source2 = value;
+}
+
+void Instruction::set_cycle_count(uint16_t value)
+{
+    cycle_count = value;
 }
 
 void Instruction::set_bc(uint8_t value)
