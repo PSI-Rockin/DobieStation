@@ -78,8 +78,8 @@ private:
     void emit_prologue();
     void emit_instruction(EmotionEngine &ee, IR::Instruction &instr);
 
-    uint64_t get_fpu_addr(EmotionEngine &ee, FPU_SpecialReg index) const;
-    uint64_t get_gpr_addr(EmotionEngine &ee, EE_NormalReg index) const;
+    uint64_t get_fpu_addr(const EmotionEngine &ee, FPU_SpecialReg index) const;
+    uint64_t get_gpr_addr(const EmotionEngine &ee, EE_NormalReg index) const;
 
     void flush_regs(EmotionEngine& ee);
     void cleanup_recompiler(EmotionEngine& ee, bool clear_regs);

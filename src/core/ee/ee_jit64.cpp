@@ -232,7 +232,7 @@ void EE_JIT64::prepare_abi(const EmotionEngine& ee, uint64_t value)
         int vi_reg = int_regs[arg].vu_reg;
         if (int_regs[arg].modified)
         {
-            emitter.load_addr((uint64_t)&ee.gpr[vi_reg], REG_64::RAX);
+            emitter.load_addr((uint64_t)get_gpr_addr(ee, (EE_NormalReg)vi_reg), REG_64::RAX);
             emitter.MOV64_TO_MEM(arg, REG_64::RAX);
         }
         int_regs[arg].used = false;
@@ -264,7 +264,7 @@ void EE_JIT64::prepare_abi_reg(const EmotionEngine& ee, REG_64 reg)
         int vi_reg = int_regs[arg].vu_reg;
         if (int_regs[arg].modified)
         {
-            emitter.load_addr((uint64_t)&ee.gpr[vi_reg], REG_64::RAX);
+            emitter.load_addr((uint64_t)get_gpr_addr(ee, (EE_NormalReg)vi_reg), REG_64::RAX);
             emitter.MOV64_TO_MEM(arg, REG_64::RAX);
         }
         int_regs[arg].used = false;
@@ -409,7 +409,7 @@ void EE_JIT64::flush_regs(EmotionEngine& ee)
 }
 
 
-uint64_t EE_JIT64::get_fpu_addr(EmotionEngine &ee, FPU_SpecialReg index) const
+uint64_t EE_JIT64::get_fpu_addr(const EmotionEngine &ee, FPU_SpecialReg index) const
 {
     int i = static_cast<int>(index);
     if (i < 32)
@@ -425,7 +425,7 @@ uint64_t EE_JIT64::get_fpu_addr(EmotionEngine &ee, FPU_SpecialReg index) const
     return 0;
 }
 
-uint64_t EE_JIT64::get_gpr_addr(EmotionEngine &ee, EE_NormalReg index) const
+uint64_t EE_JIT64::get_gpr_addr(const EmotionEngine &ee, EE_NormalReg index) const
 {
     int i = (int)index;
     if (i < 32)
