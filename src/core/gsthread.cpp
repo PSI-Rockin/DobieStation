@@ -1687,6 +1687,7 @@ void GraphicsSynthesizerThread::render_point()
     printf("[GS_t] Rendering point!\n");
     printf("Coords: (%d, %d, %d)\n", v1.x >> 4, v1.y >> 4, v1.z);
     TexLookupInfo tex_info;
+    tex_info.new_lookup = true;
     
     tex_info.vtx_color = v1.rgbaq;
     tex_info.fog = v1.fog;
@@ -1742,6 +1743,7 @@ void GraphicsSynthesizerThread::render_line()
     //int32_t max_y = min(v2.y, (int32_t)current_ctx->scissor.y2);
     
     TexLookupInfo tex_info;
+    tex_info.new_lookup = true;
     tex_info.vtx_color = vtx_queue[0].rgbaq;
 
     printf("Coords: (%d, %d, %d) (%d, %d, %d)\n", v1.x >> 4, v1.y >> 4, v1.z, v2.x >> 4, v2.y >> 4, v2.z);
@@ -1869,6 +1871,7 @@ void GraphicsSynthesizerThread::render_triangle()
     }
 
     TexLookupInfo tex_info;
+    tex_info.new_lookup = true;
 
     bool tmp_tex = current_PRMODE->texture_mapping;
     bool tmp_uv = !current_PRMODE->use_UV;//allow for loop unswitching
@@ -2024,6 +2027,8 @@ void GraphicsSynthesizerThread::render_sprite()
     Vertex v2 = vtx_queue[0]; v2.to_relative(current_ctx->xyoffset);
 
     TexLookupInfo tex_info;
+    tex_info.new_lookup = true;
+
     tex_info.vtx_color = vtx_queue[0].rgbaq;
 
     if (v1.x > v2.x)
@@ -2493,22 +2498,22 @@ void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
 
 void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, TexLookupInfo& info)
 {
-    if (current_ctx->tex1.filter_larger && info.LOD <= 0.0)
+    if (current_ctx->tex1.filter_larger && info.LOD < 0.0)
     {
         RGBAQ_REG a, b, c, d;
         int16_t uu = (u - 8) >> 4;
         int16_t vv = (v - 8) >> 4;
 
-        tex_lookup_int(uu, vv, info);
+        tex_lookup_int(uu, vv, info, true);
         a = info.tex_color;
 
-        tex_lookup_int(uu+1, vv, info);
+        tex_lookup_int(uu + 1, vv, info, true);
         b = info.tex_color;
 
-        tex_lookup_int(uu, vv+1, info);
+        tex_lookup_int(uu, vv + 1, info, true);
         c = info.tex_color;
 
-        tex_lookup_int(uu+1, vv+1, info);
+        tex_lookup_int(uu + 1, vv + 1, info, true);
         d = info.tex_color;
 
         double alpha = ((u - 8) & 0xF) * (1.0 / ((double)0xF));
@@ -2520,8 +2525,9 @@ void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, TexLookupInfo& 
         info.tex_color.b = alpha_s * beta_s*a.b + alpha * beta_s*b.b + alpha_s * beta*c.b + alpha * beta*d.b;
         info.tex_color.a = alpha_s * beta_s*a.a + alpha * beta_s*b.a + alpha_s * beta*c.a + alpha * beta*d.a;
     }
-    else
-        tex_lookup_int(u >> 4, v >> 4, info);
+    else //If we already have looked up the texture at this location and messed with it, no point in doing it again
+        if (!tex_lookup_int(u >> 4, v >> 4, info))
+            return;
 
     switch (current_ctx->tex0.color_function)
     {
@@ -2594,8 +2600,18 @@ void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, TexLookupInfo& 
     }
 }
 
-void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupInfo& info)
+bool GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupInfo& info, bool forced_lookup)
 {
+    if (!info.new_lookup && !forced_lookup)
+    {
+        //if it's the same texture, we already have the info, no need to look it up again
+        if (u == info.lastu && v == info.lastv)
+            return false;
+    }
+    info.lastu = u;
+    info.lastv = v;
+    info.new_lookup = false;
+
     switch (current_ctx->clamp.wrap_s)
     {
         case 0:
@@ -2779,6 +2795,8 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupIn
         default:
             Errors::die("[GS_t] Unrecognized texture format $%02X\n", current_ctx->tex0.format);
     }
+
+    return true;
 }
 
 void GraphicsSynthesizerThread::clut_lookup(uint8_t entry, RGBAQ_REG &tex_color)

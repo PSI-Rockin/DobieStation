@@ -17,13 +17,14 @@ struct IOP_Timer_Control
     uint8_t prescale;
     bool compare_interrupt;
     bool overflow_interrupt;
+    bool started;
 };
 
 struct IOP_Timer
 {
     uint64_t counter;
     IOP_Timer_Control control;
-    uint32_t target;
+    uint64_t target;
     uint32_t clocks;
     uint64_t last_update;
 
@@ -49,7 +50,6 @@ class IOPTiming
         IOPTiming(Emulator* e);
 
         void reset();
-        void count_up(int index, int cycles_per_count);
         void run(int cycles);
         uint32_t read_counter(int index);
         uint16_t read_control(int index);
