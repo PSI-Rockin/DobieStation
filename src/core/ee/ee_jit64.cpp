@@ -199,6 +199,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::VCallMS:
             vcall_ms(ee, instr);
             break;
+        case IR::Opcode::VCallMSR:
+            vcall_msr(ee, instr);
+            break;
         case IR::Opcode::FallbackInterpreter:
             fallback_interpreter(ee, instr);
             break;
@@ -845,6 +848,11 @@ void vu0_start_program(VectorUnit& vu0, uint32_t addr)
     vu0.start_program(addr);
 }
 
+uint32_t vu0_read_CMSAR0_shl3(VectorUnit& vu0)
+{
+    return vu0.read_CMSAR0() * 8;
+}
+
 void ee_clear_interlock(EmotionEngine& ee)
 {
     ee.clear_interlock();
@@ -882,6 +890,39 @@ void EE_JIT64::vcall_ms(EmotionEngine& ee, IR::Instruction& instr)
     emitter.set_jump_dest(offset_addr);
     prepare_abi(ee, (uint64_t)ee.vu0);
     prepare_abi(ee, instr.get_source());
+    call_abi_func((uint64_t)vu0_start_program);
+}
+
+void EE_JIT64::vcall_msr(EmotionEngine& ee, IR::Instruction& instr)
+{
+    prepare_abi(ee, (uint64_t)&ee);
+    call_abi_func((uint64_t)ee_vu0_wait);
+    emitter.TEST8_REG(REG_64::AL, REG_64::AL);
+
+    uint8_t* offset_addr = emitter.JCC_NEAR_DEFERRED(ConditionCode::Z);
+
+    // If ee.vu0_wait(), set PC to the current operation's address and abort
+    emitter.load_addr((uint64_t)&ee.PC, REG_64::RAX);
+    emitter.MOV32_REG_IMM(instr.get_return_addr(), REG_64::R15);
+    emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
+
+    // Set wait for VU0 flag
+    emitter.load_addr((uint64_t)&ee.wait_for_VU0, REG_64::RAX);
+    emitter.MOV8_IMM_MEM(true, REG_64::RAX);
+
+    // Set cycle count to number of cycles executed
+    emitter.load_addr((uint64_t)&cycle_count, REG_64::RAX);
+    emitter.MOV16_IMM_MEM(instr.get_cycle_count(), REG_64::RAX);
+
+    cleanup_recompiler(ee, true);
+
+    // Otherwise continue execution of block otherwise
+    emitter.set_jump_dest(offset_addr);
+
+    prepare_abi(ee, (uint64_t)ee.vu0);
+    call_abi_func((uint64_t)vu0_read_CMSAR0_shl3);
+    
+    prepare_abi_reg(ee, REG_64::RAX);
     call_abi_func((uint64_t)vu0_start_program);
 }
 

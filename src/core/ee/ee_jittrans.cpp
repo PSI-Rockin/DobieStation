@@ -1802,9 +1802,11 @@ IR::Instruction EE_JitTranslator::translate_op_cop2_special(uint32_t opcode, uin
         }
         case 0x39:
             // VCALLMSR
-            Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VCALLMSR\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            instr.op = IR::Opcode::VCallMSR;
+            instr.set_return_addr(PC);
             return instr;
+        }
         case 0x3C:
         case 0x3D:
         case 0x3E:
