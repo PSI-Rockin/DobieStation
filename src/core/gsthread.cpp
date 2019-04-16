@@ -2427,15 +2427,33 @@ uint8_t GraphicsSynthesizerThread::get_16bit_alpha(uint16_t color)
     return TEXA.alpha0;
 }
 
+int16_t GraphicsSynthesizerThread::multiply_tex_color(int16_t tex_color, int16_t frag_color)
+{
+    int16_t temp_color;
+    if (frag_color != 0x80)
+    {
+        temp_color = (tex_color * frag_color) >> 7;
+    }
+    else
+    {
+        temp_color = tex_color;
+    }
+
+    if (temp_color > 0xFF)
+        temp_color = 0xFF;
+    if (temp_color < 0)
+        temp_color = 0;
+
+    return temp_color;
+}
+
 void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
 {
+    float K = current_ctx->tex1.K / 16;
     if (current_ctx->tex1.LOD_method == 0)
-        info.LOD = ldexp(-log2(fabs(info.vtx_color.q)), current_ctx->tex1.L) + current_ctx->tex1.K;
+        info.LOD = ldexp(-log2(fabs(info.vtx_color.q)), current_ctx->tex1.L) + K;
     else
-        info.LOD = current_ctx->tex1.K;
-
-    if (info.LOD < 1.0 / 128.0) //ps2 precision limit
-        info.LOD = 0.0;
+        info.LOD = K;
 
     info.tex_base = current_ctx->tex0.texture_base;
     info.buffer_width = current_ctx->tex0.width;
@@ -2443,7 +2461,11 @@ void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
     info.tex_height = current_ctx->tex0.tex_height;
 
     //Determine mipmap level
-    info.mipmap_level = min((uint8_t)floor(info.LOD), current_ctx->tex1.max_MIP_level);
+    info.mipmap_level = min((int8_t)round(info.LOD), (int8_t)current_ctx->tex1.max_MIP_level);
+
+    if (info.mipmap_level < 0)
+        info.mipmap_level = 0;
+
     if (info.mipmap_level > 0)
     {
         if (current_ctx->tex1.MTBA && info.mipmap_level < 4)
@@ -2485,8 +2507,8 @@ void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
             }
         }
         else
-            info.tex_base = current_ctx->miptbl.texture_base[info.mipmap_level];
-        info.buffer_width = current_ctx->miptbl.width[info.mipmap_level];
+            info.tex_base = current_ctx->miptbl.texture_base[info.mipmap_level-1];
+        info.buffer_width = current_ctx->miptbl.width[info.mipmap_level-1];
         info.tex_width >>= info.mipmap_level;
         info.tex_height >>= info.mipmap_level;
 
@@ -2531,23 +2553,13 @@ void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, TexLookupInfo& 
     switch (current_ctx->tex0.color_function)
     {
         case 0: //Modulate
-            info.tex_color.r = (info.srctex_color.r * info.vtx_color.r) >> 7;
-            info.tex_color.g = (info.srctex_color.g * info.vtx_color.g) >> 7;
-            info.tex_color.b = (info.srctex_color.b * info.vtx_color.b) >> 7;
+            info.tex_color.r = multiply_tex_color(info.srctex_color.r, info.vtx_color.r);
+            info.tex_color.g = multiply_tex_color(info.srctex_color.g, info.vtx_color.g);
+            info.tex_color.b = multiply_tex_color(info.srctex_color.b, info.vtx_color.b);
             if (current_ctx->tex0.use_alpha)
-                info.tex_color.a = (info.srctex_color.a * info.vtx_color.a) >> 7;
+                info.tex_color.a = multiply_tex_color(info.srctex_color.a, info.vtx_color.a);
             else
                 info.tex_color.a = info.vtx_color.a;
-
-            //Clamp texture colors
-            if (info.tex_color.r > 0xFF)
-                info.tex_color.r = 0xFF;
-            if (info.tex_color.g > 0xFF)
-                info.tex_color.g = 0xFF;
-            if (info.tex_color.b > 0xFF)
-                info.tex_color.b = 0xFF;
-            if (info.tex_color.a > 0xFF)
-                info.tex_color.a = 0xFF;
             break;
         case 1: //Decal
             if (!current_ctx->tex0.use_alpha)
@@ -2559,38 +2571,22 @@ void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, TexLookupInfo& 
             info.tex_color.b = info.srctex_color.b;
             break;
         case 2: //Highlight
-            info.tex_color.r = ((info.srctex_color.r * info.vtx_color.r) >> 7) + info.vtx_color.a;
-            info.tex_color.g = ((info.srctex_color.g * info.vtx_color.g) >> 7) + info.vtx_color.a;
-            info.tex_color.b = ((info.srctex_color.b * info.vtx_color.b) >> 7) + info.vtx_color.a;
+            info.tex_color.r = multiply_tex_color(info.srctex_color.r, info.vtx_color.r) + info.vtx_color.a;
+            info.tex_color.g = multiply_tex_color(info.srctex_color.g, info.vtx_color.g) + info.vtx_color.a;
+            info.tex_color.b = multiply_tex_color(info.srctex_color.b, info.vtx_color.b) + info.vtx_color.a;
             if (!current_ctx->tex0.use_alpha)
                 info.tex_color.a = info.vtx_color.a;
             else
                 info.tex_color.a = info.srctex_color.a + info.vtx_color.a;
-
-            if (info.tex_color.r > 0xFF)
-                info.tex_color.r = 0xFF;
-            if (info.tex_color.g > 0xFF)
-                info.tex_color.g = 0xFF;
-            if (info.tex_color.b > 0xFF)
-                info.tex_color.b = 0xFF;
-            if (info.tex_color.a > 0xFF)
-                info.tex_color.a = 0xFF;
             break;
         case 3: //Highlight2
-            info.tex_color.r = ((info.srctex_color.r * info.vtx_color.r) >> 7) + info.vtx_color.a;
-            info.tex_color.g = ((info.srctex_color.g * info.vtx_color.g) >> 7) + info.vtx_color.a;
-            info.tex_color.b = ((info.srctex_color.b * info.vtx_color.b) >> 7) + info.vtx_color.a;
+            info.tex_color.r = multiply_tex_color(info.srctex_color.r, info.vtx_color.r) + info.vtx_color.a;
+            info.tex_color.g = multiply_tex_color(info.srctex_color.g, info.vtx_color.g) + info.vtx_color.a;
+            info.tex_color.b = multiply_tex_color(info.srctex_color.b, info.vtx_color.b) + info.vtx_color.a;
             if (!current_ctx->tex0.use_alpha)
                 info.tex_color.a = info.vtx_color.a;
             else
                 info.tex_color.a = info.srctex_color.a;
-
-            if (info.tex_color.r > 0xFF)
-                info.tex_color.r = 0xFF;
-            if (info.tex_color.g > 0xFF)
-                info.tex_color.g = 0xFF;
-            if (info.tex_color.b > 0xFF)
-                info.tex_color.b = 0xFF;
             break;
         default:
             Errors::die("[GS_t] Unrecognized texture color function $%02X", current_ctx->tex0.color_function);
