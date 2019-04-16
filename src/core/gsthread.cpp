@@ -2504,16 +2504,16 @@ void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, TexLookupInfo& 
         int16_t uu = (u - 8) >> 4;
         int16_t vv = (v - 8) >> 4;
 
-        tex_lookup_int(uu, vv, info, true);
+        tex_lookup_int(uu, vv, info);
         a = info.srctex_color;
 
-        tex_lookup_int(uu + 1, vv, info, true);
+        tex_lookup_int(uu + 1, vv, info);
         b = info.srctex_color;
 
-        tex_lookup_int(uu, vv + 1, info, true);
+        tex_lookup_int(uu, vv + 1, info);
         c = info.srctex_color;
 
-        tex_lookup_int(uu + 1, vv + 1, info, true);
+        tex_lookup_int(uu + 1, vv + 1, info);
         d = info.srctex_color;
 
         double alpha = ((u - 8) & 0xF) * (1.0 / ((double)0xF));
@@ -2606,18 +2606,8 @@ void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, TexLookupInfo& 
     }
 }
 
-void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupInfo& info, bool forced_lookup)
+void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupInfo& info)
 {
-    if (!info.new_lookup && !forced_lookup)
-    {
-        //if it's the same texture, we already have the info, no need to look it up again
-        if (u == info.lastu && v == info.lastv)
-            return;
-    }
-    info.lastu = u;
-    info.lastv = v;
-    info.new_lookup = false;
-
     switch (current_ctx->clamp.wrap_s)
     {
         case 0:
@@ -2661,6 +2651,16 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupIn
             v = (v & (current_ctx->clamp.min_v | 0xF)) | current_ctx->clamp.max_v;
             break;
     }
+
+    if (!info.new_lookup)
+    {
+        //if it's the same texture position, we already have the info, no need to look it up again
+        if (u == info.lastu && v == info.lastv)
+            return;
+    }
+    info.lastu = u;
+    info.lastv = v;
+    info.new_lookup = false;
 
     uint32_t tex_base = info.tex_base;
     uint32_t width = info.buffer_width;
