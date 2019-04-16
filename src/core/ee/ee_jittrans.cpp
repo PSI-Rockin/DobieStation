@@ -161,8 +161,9 @@ IR::Instruction EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC)
             return instr;
         case 0x0F:
             // LUI
-            Errors::print_warning("[EE_JIT] Unrecognized op LUI\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::LoadUpperImmediate;
+            instr.set_dest((opcode >> 16) & 0x1F);
+            instr.set_source(opcode & 0xFFFF);
             return instr;
         case 0x10:
             // COP0 (System Coprocessor)

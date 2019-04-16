@@ -193,6 +193,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::JumpIndirect:
             jump_indirect(ee, instr);
             break;
+        case IR::Opcode::LoadUpperImmediate:
+            load_upper_immediate(ee, instr);
+            break;
         case IR::Opcode::OrInt:
             or_int(ee, instr);
             break;
@@ -1033,9 +1036,15 @@ void EE_JIT64::jump_indirect(EmotionEngine& ee, IR::Instruction& instr)
     }
 }
 
-void EE_JIT64::ee_syscall_exception(EmotionEngine& ee)
+void EE_JIT64::load_upper_immediate(EmotionEngine& ee, IR::Instruction &instr)
 {
-    ee.syscall_exception();
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::READ_WRITE);
+
+    // dest = immediate << 16
+    // dest = (sign extend64)dest
+    emitter.MOV16_REG_IMM(instr.get_source(), dest);
+    emitter.SHL32_REG_IMM(16, dest);
+    emitter.MOVSX32_TO_64(dest, dest);
 }
 
 void EE_JIT64::or_int(EmotionEngine& ee, IR::Instruction &instr)
@@ -1061,6 +1070,11 @@ void EE_JIT64::or_int(EmotionEngine& ee, IR::Instruction &instr)
         emitter.MOVZX16_TO_64(dest, dest);
         emitter.OR64_REG(source, dest);
     }
+}
+
+void EE_JIT64::ee_syscall_exception(EmotionEngine& ee)
+{
+    ee.syscall_exception();
 }
 
 void EE_JIT64::system_call(EmotionEngine& ee, IR::Instruction& instr)
