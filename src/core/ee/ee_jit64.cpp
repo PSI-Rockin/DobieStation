@@ -1018,6 +1018,12 @@ void EE_JIT64::system_call(EmotionEngine& ee, IR::Instruction& instr)
     prepare_abi(ee, reinterpret_cast<uint64_t>(&ee));
 
     call_abi_func((uint64_t)ee_syscall_exception);
+
+    // Since the interpreter decrements PC by 4, we reset it here to account for that.
+    emitter.load_addr((uint64_t)&ee.PC, REG_64::RAX);
+    emitter.MOV32_FROM_MEM(REG_64::RAX, REG_64::R15);
+    emitter.ADD32_REG_IMM(4, REG_64::R15);
+    emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
 }
 
 void vu0_start_program(VectorUnit& vu0, uint32_t addr)
@@ -1028,11 +1034,6 @@ void vu0_start_program(VectorUnit& vu0, uint32_t addr)
 uint32_t vu0_read_CMSAR0_shl3(VectorUnit& vu0)
 {
     return vu0.read_CMSAR0() * 8;
-}
-
-void ee_clear_interlock(EmotionEngine& ee)
-{
-    ee.clear_interlock();
 }
 
 bool ee_vu0_wait(EmotionEngine& ee)

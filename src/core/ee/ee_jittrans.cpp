@@ -45,7 +45,7 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
             block.add_instr(instr);
 
         pc += 4;
-        ++cycle_count;
+        cycle_count += 3;
     }
  
     block.set_cycle_count(cycle_count);

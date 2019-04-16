@@ -87,8 +87,8 @@ void Emulator::run()
         int iop_cycles = scheduler.get_iop_run_cycles();
         scheduler.update_cycle_counts();
 
-        //cpu.run(ee_cycles);
-        cpu.run_jit(ee_cycles);
+        cpu.run(ee_cycles);
+        //cpu.run_jit(ee_cycles);
         dmac.run(bus_cycles);
         timers.run(bus_cycles);
         ipu.run();

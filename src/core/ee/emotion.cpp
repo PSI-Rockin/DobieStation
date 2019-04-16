@@ -777,14 +777,13 @@ void EmotionEngine::handle_exception(uint32_t new_addr, uint8_t code)
 
 void EmotionEngine::syscall_exception()
 {
-    uint8_t op = read8(PC - 4);
+    uint8_t op = get_gpr<uint8_t>(3);
     if (op != 0x7A)
         printf("[EE] SYSCALL: %s (id: $%02X) called at $%08X\n", SYSCALL(op), op, PC);
 
     if (op == 0x7C)
     {
         deci2call(get_gpr<uint32_t>(4), get_gpr<uint32_t>(5));
-        PC += 4;
         return;
     }
     if (op == 0x04)
@@ -792,7 +791,7 @@ void EmotionEngine::syscall_exception()
         //On a real PS2, Exit returns to OSDSYS.
         Errors::die("[EE] Exit syscall called!\n");
     }
-    handle_exception(0x80000180, 0x08);
+    handle_exception(0x8000017C, 0x08);
 }
 
 void EmotionEngine::break_exception()
