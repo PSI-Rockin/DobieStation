@@ -81,9 +81,6 @@ void EE_JIT64::reset(bool clear_cache)
 extern "C"
 uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee)
 {
-    if (ee.PC == 0xBFC00CF4)
-        printf("P");
-
     //printf("[EE_JIT64] Executing block at $%08X\n", ee.PC);
     if (jit.cache.find_block(BlockState{ ee.PC, 0, 0, 0, 0 }) == nullptr)
     {
@@ -157,6 +154,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::AddUnsignedImm:
             add_unsigned_imm(ee, instr);
             break;
+        case IR::Opcode::AndInt:
+            and_int(ee, instr);
+            break;
         case IR::Opcode::BranchCop0:
             branch_cop0(ee, instr);
             break;
@@ -193,6 +193,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::JumpIndirect:
             jump_indirect(ee, instr);
             break;
+        case IR::Opcode::OrInt:
+            or_int(ee, instr);
+            break;
         case IR::Opcode::SystemCall:
             system_call(ee, instr);
             break;
@@ -201,6 +204,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             break;
         case IR::Opcode::VCallMSR:
             vcall_msr(ee, instr);
+            break;
+        case IR::Opcode::XorInt:
+            xor_int(ee, instr);
             break;
         case IR::Opcode::FallbackInterpreter:
             fallback_interpreter(ee, instr);
@@ -700,16 +706,58 @@ bool cop0_get_condition(Cop0& cop0)
 
 void EE_JIT64::add_unsigned_imm(EmotionEngine& ee, IR::Instruction &instr)
 {
-    // Retrieve the first source, and the destination
-    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
-    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+    if (instr.get_dest() == instr.get_source())
+    {
+        REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::READ_WRITE);
 
-    // Simply move the source to the destination, then add the immediate
-    emitter.MOV16_REG_IMM(instr.get_source2(), REG_64::RAX);
-    emitter.MOVSX16_TO_32(REG_64::RAX, REG_64::RAX);
-    emitter.ADD32_REG(source, REG_64::RAX);
-    emitter.MOV32_REG(REG_64::RAX, dest);
-    emitter.MOVSX32_TO_64(dest, dest);
+        // temp = (int32_t)((int16_t)immediate)
+        // dest = (int64_t)(temp + dest)
+        emitter.MOV16_REG_IMM(instr.get_source2(), REG_64::RAX);
+        emitter.MOVSX16_TO_32(REG_64::RAX, REG_64::RAX);
+        emitter.ADD32_REG(REG_64::RAX, dest);
+        emitter.MOVSX32_TO_64(dest, dest);
+    }
+    else
+    {
+        REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+        REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+
+        // temp = (int32_t)((int16_t)immediate)
+        // temp += source
+        // dest = (int64_t)temp
+        emitter.MOV16_REG_IMM(instr.get_source2(), REG_64::RAX);
+        emitter.MOVSX16_TO_32(REG_64::RAX, REG_64::RAX);
+        emitter.ADD32_REG(source, REG_64::RAX);
+        emitter.MOV32_REG(REG_64::RAX, dest);
+        emitter.MOVSX32_TO_64(dest, dest);
+    }
+}
+
+void EE_JIT64::and_int(EmotionEngine& ee, IR::Instruction &instr)
+{
+    if (instr.get_dest() == instr.get_source())
+    {
+        REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::READ_WRITE);
+
+        // temp = (uint64_t)immediate
+        // dest &= temp
+        emitter.MOV16_REG_IMM(instr.get_source2(), REG_64::RAX);
+        emitter.MOVZX16_TO_64(REG_64::RAX, REG_64::RAX);
+        emitter.AND64_REG(REG_64::RAX, dest);
+    }
+    else
+    {
+        REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+        REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+
+        // temp = (uint64_t)immediate
+        // temp &= source
+        // dest = temp
+        emitter.MOV16_REG_IMM(instr.get_source2(), REG_64::RAX);
+        emitter.MOVZX16_TO_64(REG_64::RAX, REG_64::RAX);
+        emitter.AND64_REG(source, REG_64::RAX);
+        emitter.MOV64_MR(REG_64::RAX, dest);
+    }
 }
 
 void EE_JIT64::branch_cop0(EmotionEngine& ee, IR::Instruction &instr)
@@ -990,6 +1038,31 @@ void EE_JIT64::ee_syscall_exception(EmotionEngine& ee)
     ee.syscall_exception();
 }
 
+void EE_JIT64::or_int(EmotionEngine& ee, IR::Instruction &instr)
+{
+    if (instr.get_dest() == instr.get_source())
+    {
+        REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::READ_WRITE);
+
+        // temp = (uint64_t)immediate
+        // dest |= temp
+        emitter.MOV16_REG_IMM(instr.get_source2(), REG_64::RAX);
+        emitter.MOVZX16_TO_64(REG_64::RAX, REG_64::RAX);
+        emitter.OR64_REG(REG_64::RAX, dest);
+    }
+    else
+    {
+        REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+        REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+
+        // dest = (uint64_t)immediate
+        // dest |= source
+        emitter.MOV16_REG_IMM(instr.get_source2(), dest);
+        emitter.MOVZX16_TO_64(dest, dest);
+        emitter.OR64_REG(source, dest);
+    }
+}
+
 void EE_JIT64::system_call(EmotionEngine& ee, IR::Instruction& instr)
 {
     flush_regs(ee);
@@ -1098,6 +1171,31 @@ void EE_JIT64::vcall_msr(EmotionEngine& ee, IR::Instruction& instr)
     
     prepare_abi_reg(ee, REG_64::RAX);
     call_abi_func((uint64_t)vu0_start_program);
+}
+
+void EE_JIT64::xor_int(EmotionEngine& ee, IR::Instruction &instr)
+{
+    if (instr.get_dest() == instr.get_source())
+    {
+        REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::READ_WRITE);
+
+        // temp = (uint64_t)immediate
+        // dest ^= temp
+        emitter.MOV16_REG_IMM(instr.get_source2(), REG_64::RAX);
+        emitter.MOVZX16_TO_64(REG_64::RAX, REG_64::RAX);
+        emitter.XOR64_REG(REG_64::RAX, dest);
+    }
+    else
+    {
+        REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+        REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+
+        // dest = (uint64_t)immediate
+        // dest ^= source
+        emitter.MOV16_REG_IMM(instr.get_source2(), dest);
+        emitter.MOVZX16_TO_64(dest, dest);
+        emitter.XOR64_REG(source, dest);
+    }
 }
 
 void EE_JIT64::fallback_interpreter(EmotionEngine& ee, const IR::Instruction &instr)

@@ -106,6 +106,7 @@ INSTR(StoreQuadDec)
 
 INSTR(MoveIntReg)
 
+INSTR(XorInt)
 INSTR(AndInt)
 INSTR(OrInt)
 INSTR(ShiftLeft)

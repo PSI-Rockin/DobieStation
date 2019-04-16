@@ -45,7 +45,7 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
             block.add_instr(instr);
 
         pc += 4;
-        cycle_count += 3;
+        cycle_count++;
     }
  
     block.set_cycle_count(cycle_count);
@@ -116,28 +116,18 @@ IR::Instruction EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC)
         case 0x08:
             // ADDI
             // TODO: Overflow?
-        {
-            //fallback_interpreter(instr, opcode);
-            //return instr;
-
             instr.op = IR::Opcode::AddUnsignedImm;
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_dest((opcode >> 16) & 0x1F);
             instr.set_source2(opcode & 0xFFFF);
             return instr;
-        }
         case 0x09:
             // ADDIU
-        {
-            //fallback_interpreter(instr, opcode);
-            //return instr;
-
             instr.op = IR::Opcode::AddUnsignedImm;
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_dest((opcode >> 16) & 0x1F);
             instr.set_source2(opcode & 0xFFFF);
             return instr;
-        }
         case 0x0A:
             // SLTI
             Errors::print_warning("[EE_JIT] Unrecognized op SLTI\n", op);
@@ -150,18 +140,24 @@ IR::Instruction EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC)
             return instr;
         case 0x0C:
             // ANDI
-            Errors::print_warning("[EE_JIT] Unrecognized op ANDI\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::AndInt;
+            instr.set_dest((opcode >> 16) & 0x1F);
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_source2(opcode & 0xFFFF);
             return instr;
         case 0x0D:
             // ORI
-            Errors::print_warning("[EE_JIT] Unrecognized op ORI\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::OrInt;
+            instr.set_dest((opcode >> 16) & 0x1F);
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_source2(opcode & 0xFFFF);
             return instr;
         case 0x0E:
             // XORI
-            Errors::print_warning("[EE_JIT] Unrecognized op XORI\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::XorInt;
+            instr.set_dest((opcode >> 16) & 0x1F);
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_source2(opcode & 0xFFFF);
             return instr;
         case 0x0F:
             // LUI

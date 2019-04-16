@@ -166,12 +166,26 @@ void Emitter64::AND32_EAX(uint32_t imm)
     cache->write<uint32_t>(imm);
 }
 
+void Emitter64::AND32_REG(REG_64 source, REG_64 dest)
+{
+    rex_r_rm(source, dest);
+    cache->write<uint8_t>(0x21);
+    modrm(0b11, source, dest);
+}
+
 void Emitter64::AND32_REG_IMM(uint32_t imm, REG_64 dest)
 {
     rex_rm(dest);
     cache->write<uint8_t>(0x81);
     modrm(0b11, 4, dest);
     cache->write<uint32_t>(imm);
+}
+
+void Emitter64::AND64_REG(REG_64 source, REG_64 dest)
+{
+    rexw_r_rm(source, dest);
+    cache->write<uint8_t>(0x21);
+    modrm(0b11, source, dest);
 }
 
 void Emitter64::CMOVCC16_REG(ConditionCode cc, REG_64 source, REG_64 dest)
@@ -326,6 +340,13 @@ void Emitter64::OR32_EAX(uint32_t imm)
     cache->write<uint32_t>(imm);
 }
 
+void Emitter64::OR64_REG(REG_64 source, REG_64 dest)
+{
+    rexw_r_rm(source, dest);
+    cache->write<uint8_t>(0x09);
+    modrm(0b11, source, dest);
+}
+
 void Emitter64::SETCC_REG(ConditionCode cc, REG_64 dest)
 {
     rex_rm(dest);
@@ -454,6 +475,13 @@ void Emitter64::XOR16_REG(REG_64 source, REG_64 dest)
 void Emitter64::XOR32_REG(REG_64 source, REG_64 dest)
 {
     rex_r_rm(source, dest);
+    cache->write<uint8_t>(0x31);
+    modrm(0b11, source, dest);
+}
+
+void Emitter64::XOR64_REG(REG_64 source, REG_64 dest)
+{
+    rexw_r_rm(source, dest);
     cache->write<uint8_t>(0x31);
     modrm(0b11, source, dest);
 }
@@ -614,7 +642,15 @@ void Emitter64::MOVSX32_TO_64(REG_64 source, REG_64 dest)
     modrm(0b11, dest, source);
 }
 
-void Emitter64::MOVZX64_REG(REG_64 source, REG_64 dest)
+void Emitter64::MOVZX8_TO_64(REG_64 source, REG_64 dest)
+{
+    rexw_r_rm(dest, source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0xB6);
+    modrm(0b11, dest, source);
+}
+
+void Emitter64::MOVZX16_TO_64(REG_64 source, REG_64 dest)
 {
     rexw_r_rm(dest, source);
     cache->write<uint8_t>(0x0F);

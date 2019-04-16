@@ -381,7 +381,7 @@ void VU_JIT64::load_int(VectorUnit &vu, IR::Instruction &instr)
         //Dest must be allocated after base in case base == dest (this is so that the base address can load)
         REG_64 base = alloc_int_reg(vu, instr.get_base(), REG_STATE::READ);
         REG_64 dest = alloc_int_reg(vu, instr.get_dest(), REG_STATE::WRITE);
-        emitter.MOVZX64_REG(base, REG_64::RAX);
+        emitter.MOVZX16_TO_64(base, REG_64::RAX);
         emitter.SHL16_REG_IMM(4, REG_64::RAX);
 
         if (instr.get_source())
@@ -409,7 +409,7 @@ void VU_JIT64::store_int(VectorUnit &vu, IR::Instruction &instr)
     if (instr.get_base())
     {
         REG_64 base = alloc_int_reg(vu, instr.get_base(), REG_STATE::READ);
-        emitter.MOVZX64_REG(base, REG_64::RAX);
+        emitter.MOVZX16_TO_64(base, REG_64::RAX);
         emitter.SHL16_REG_IMM(4, REG_64::RAX);
 
         if (instr.get_source2())
@@ -431,7 +431,7 @@ void VU_JIT64::store_int(VectorUnit &vu, IR::Instruction &instr)
     //move all four vector positions from memory
     emitter.MOVAPS_FROM_MEM(REG_64::R15, temp);
     //Zero-extend the upper 16 bits of the vi source
-    emitter.MOVZX64_REG(source, REG_64::RAX);
+    emitter.MOVZX16_TO_64(source, REG_64::RAX);
     //Move to XMM and populate all 4 vectors
     emitter.MOVD_TO_XMM(REG_64::RAX, temp2);
     emitter.SHUFPS(0, temp2, temp2);
@@ -447,7 +447,7 @@ void VU_JIT64::load_quad(VectorUnit &vu, IR::Instruction &instr)
     if (instr.get_base())
     {
         REG_64 base = alloc_int_reg(vu, instr.get_base(), REG_STATE::READ);
-        emitter.MOVZX64_REG(base, REG_64::RAX);
+        emitter.MOVZX16_TO_64(base, REG_64::RAX);
         emitter.SHL16_REG_IMM(4, REG_64::RAX);
         if (instr.get_source())
             emitter.ADD16_REG_IMM(instr.get_source(), REG_64::RAX);
@@ -488,7 +488,7 @@ void VU_JIT64::store_quad(VectorUnit &vu, IR::Instruction &instr)
     if (instr.get_base())
     {
         REG_64 base = alloc_int_reg(vu, instr.get_base(), REG_STATE::READ);
-        emitter.MOVZX64_REG(base, REG_64::RAX);
+        emitter.MOVZX16_TO_64(base, REG_64::RAX);
         emitter.SHL16_REG_IMM(4, REG_64::RAX);
         if (instr.get_source2())
             emitter.ADD16_REG_IMM(instr.get_source2(), REG_64::RAX);
@@ -524,7 +524,7 @@ void VU_JIT64::load_quad_inc(VectorUnit &vu, IR::Instruction &instr)
     REG_64 base = alloc_int_reg(vu, instr.get_base(), REG_STATE::READ_WRITE);
 
     //addr = (int_reg * 16) & mem_mask
-    emitter.MOVZX64_REG(base, REG_64::RAX);
+    emitter.MOVZX16_TO_64(base, REG_64::RAX);
     emitter.SHL32_REG_IMM(4, REG_64::RAX);
     emitter.AND32_EAX(vu.mem_mask);
 
@@ -559,7 +559,7 @@ void VU_JIT64::store_quad_inc(VectorUnit &vu, IR::Instruction &instr)
     REG_64 base = alloc_int_reg(vu, instr.get_base(), REG_STATE::READ_WRITE);
 
     //addr = (int_reg * 16) & mem_mask
-    emitter.MOVZX64_REG(base, REG_64::RAX);
+    emitter.MOVZX16_TO_64(base, REG_64::RAX);
     emitter.SHL16_REG_IMM(4, REG_64::RAX);
     emitter.AND16_AX(vu.mem_mask);
 
@@ -590,7 +590,7 @@ void VU_JIT64::load_quad_dec(VectorUnit &vu, IR::Instruction &instr)
         emitter.DEC16(base);
 
     //addr = (int_reg * 16) & mem_mask
-    emitter.MOVZX64_REG(base, REG_64::RAX);
+    emitter.MOVZX16_TO_64(base, REG_64::RAX);
     emitter.SHL32_REG_IMM(4, REG_64::RAX);
     emitter.AND32_EAX(vu.mem_mask);
 
@@ -625,7 +625,7 @@ void VU_JIT64::store_quad_dec(VectorUnit &vu, IR::Instruction &instr)
         emitter.DEC16(base);
 
     //addr = (int_reg * 16) & mem_mask
-    emitter.MOVZX64_REG(base, REG_64::RAX);
+    emitter.MOVZX16_TO_64(base, REG_64::RAX);
     emitter.SHL16_REG_IMM(4, REG_64::RAX);
     emitter.AND16_AX(vu.mem_mask);
 
