@@ -2520,10 +2520,10 @@ void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, TexLookupInfo& 
         double beta = ((v - 8) & 0xF) * (1.0 / ((double)0xF));
         double alpha_s = 1.0 - alpha;
         double beta_s = 1.0 - beta;
-        info.tex_color.r = alpha_s * beta_s*a.r + alpha * beta_s*b.r + alpha_s * beta*c.r + alpha * beta*d.r;
-        info.tex_color.g = alpha_s * beta_s*a.g + alpha * beta_s*b.g + alpha_s * beta*c.g + alpha * beta*d.g;
-        info.tex_color.b = alpha_s * beta_s*a.b + alpha * beta_s*b.b + alpha_s * beta*c.b + alpha * beta*d.b;
-        info.tex_color.a = alpha_s * beta_s*a.a + alpha * beta_s*b.a + alpha_s * beta*c.a + alpha * beta*d.a;
+        info.srctex_color.r = alpha_s * beta_s*a.r + alpha * beta_s*b.r + alpha_s * beta*c.r + alpha * beta*d.r;
+        info.srctex_color.g = alpha_s * beta_s*a.g + alpha * beta_s*b.g + alpha_s * beta*c.g + alpha * beta*d.g;
+        info.srctex_color.b = alpha_s * beta_s*a.b + alpha * beta_s*b.b + alpha_s * beta*c.b + alpha * beta*d.b;
+        info.srctex_color.a = alpha_s * beta_s*a.a + alpha * beta_s*b.a + alpha_s * beta*c.a + alpha * beta*d.a;
     }
     else //If we already have looked up the texture at this location and messed with it, no point in doing it again
         tex_lookup_int(u >> 4, v >> 4, info);
@@ -2552,6 +2552,11 @@ void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, TexLookupInfo& 
         case 1: //Decal
             if (!current_ctx->tex0.use_alpha)
                 info.tex_color.a = info.vtx_color.a;
+            else
+                info.tex_color.a = info.srctex_color.a;
+            info.tex_color.r = info.srctex_color.r;
+            info.tex_color.g = info.srctex_color.g;
+            info.tex_color.b = info.srctex_color.b;
             break;
         case 2: //Highlight
             info.tex_color.r = ((info.srctex_color.r * info.vtx_color.r) >> 7) + info.vtx_color.a;
@@ -2560,7 +2565,7 @@ void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, TexLookupInfo& 
             if (!current_ctx->tex0.use_alpha)
                 info.tex_color.a = info.vtx_color.a;
             else
-                info.tex_color.a += info.vtx_color.a;
+                info.tex_color.a = info.srctex_color.a + info.vtx_color.a;
 
             if (info.tex_color.r > 0xFF)
                 info.tex_color.r = 0xFF;
@@ -2577,6 +2582,8 @@ void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, TexLookupInfo& 
             info.tex_color.b = ((info.srctex_color.b * info.vtx_color.b) >> 7) + info.vtx_color.a;
             if (!current_ctx->tex0.use_alpha)
                 info.tex_color.a = info.vtx_color.a;
+            else
+                info.tex_color.a = info.srctex_color.a;
 
             if (info.tex_color.r > 0xFF)
                 info.tex_color.r = 0xFF;
