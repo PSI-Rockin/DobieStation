@@ -81,13 +81,13 @@ void EE_JIT64::reset(bool clear_cache)
 extern "C"
 uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee)
 {
-    if (ee.PC == 0x002e16d0)
+    if (ee.PC == 0xBFC00CF4)
         printf("P");
 
     //printf("[EE_JIT64] Executing block at $%08X\n", ee.PC);
     if (jit.cache.find_block(BlockState{ ee.PC, 0, 0, 0, 0 }) == nullptr)
     {
-        //printf("[EE_JIT64] Block not found at $%08X: recompiling\n", ee.PC);
+        printf("[EE_JIT64] Block not found at $%08X: recompiling\n", ee.PC);
         IR::Block block = jit.ir.translate(ee);
         jit.recompile_block(ee, block);
     }
@@ -567,7 +567,7 @@ void EE_JIT64::flush_xmm_reg(EmotionEngine& ee, int reg)
 void EE_JIT64::flush_regs(EmotionEngine& ee)
 {
     //Store the contents of all allocated x64 registers into the EE state.
-    printf("[EE_JIT64] Flushing regs\n");
+    //printf("[EE_JIT64] Flushing regs\n");
     for (int i = 0; i < 16; i++)
     {
         flush_xmm_reg(ee, i);
@@ -674,17 +674,22 @@ void EE_JIT64::handle_branch_likely(EmotionEngine& ee, IR::Block& block)
     // to "nullify" it before returning from the recompiled block.
     emitter.TEST8_REG(REG_64::RAX, REG_64::RAX);
 
+    // Flush registers before nondeterministically executing the delay slot.
+    flush_regs(ee);
+
     // Because we don't know where the branch will jump to, we defer it.
-    // Once the "branch succeeded" case has been finished recompiling, we can rewrite the branch offset...
-    uint8_t* offset_addr = emitter.JCC_NEAR_DEFERRED(ConditionCode::Z);
-    IR::Instruction instr = block.get_next_instr();
-    emit_instruction(ee, instr);
+    // Once the "branch failure" case has been finished recompiling, we can rewrite the branch offset...
+    uint8_t* offset_addr = emitter.JCC_NEAR_DEFERRED(ConditionCode::NZ);
+
+    // flush the EE state back to the EE and return, not executing the delay slot
+    cleanup_recompiler(ee, true);
 
     // ...Which we do here.
     emitter.set_jump_dest(offset_addr);
 
-    // Here we flush the EE state back to the EE instance,
-    // and return from the recompiled block.
+    // execute delay slot and flush EE state back to EE
+    IR::Instruction instr = block.get_next_instr();
+    emit_instruction(ee, instr);
     cleanup_recompiler(ee, true);
 }
 
@@ -695,25 +700,16 @@ bool cop0_get_condition(Cop0& cop0)
 
 void EE_JIT64::add_unsigned_imm(EmotionEngine& ee, IR::Instruction &instr)
 {
-    int32_t imm = (int16_t)instr.get_source2();
-    if (instr.get_dest() == instr.get_source())
-    {
-        // If the destination is same reg as source, we only have to allocate that one
-        REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::READ_WRITE);
-        emitter.ADD32_REG_IMM(imm, dest);
-        emitter.MOVSX32_TO_64(dest, dest);
-    }
-    else
-    {
-        // Retrieve the first source, and the destination
-        REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
-        REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+    // Retrieve the first source, and the destination
+    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
 
-        // Simply move the source to the destination, then add the immediate
-        emitter.MOV32_REG(source, dest);
-        emitter.ADD32_REG_IMM(imm, dest);
-        emitter.MOVSX32_TO_64(dest, dest);
-    }
+    // Simply move the source to the destination, then add the immediate
+    emitter.MOV16_REG_IMM(instr.get_source2(), REG_64::RAX);
+    emitter.MOVSX16_TO_32(REG_64::RAX, REG_64::RAX);
+    emitter.ADD32_REG(source, REG_64::RAX);
+    emitter.MOV32_REG(REG_64::RAX, dest);
+    emitter.MOVSX32_TO_64(dest, dest);
 }
 
 void EE_JIT64::branch_cop0(EmotionEngine& ee, IR::Instruction &instr)

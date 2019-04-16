@@ -592,6 +592,13 @@ void Emitter64::MOV64_TO_MEM(REG_64 source, REG_64 indir_dest)
     modrm(0, source, indir_dest);
 }
 
+void Emitter64::MOVSX16_TO_32(REG_64 source, REG_64 dest)
+{
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0xBF);
+    modrm(0b11, dest, source);
+}
+
 void Emitter64::MOVSX16_TO_64(REG_64 source, REG_64 dest)
 {
     rexw_r_rm(dest, source);

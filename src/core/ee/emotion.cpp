@@ -130,6 +130,9 @@ int EmotionEngine::run(int cycles)
             uint32_t instruction = read_instr(PC);
             uint32_t lastPC = PC;
 
+            if (PC == 0x9fc41944)
+                can_disassemble = true;
+
             if (can_disassemble)
             {
                 std::string disasm = EmotionDisasm::disasm_instr(instruction, PC);

@@ -117,10 +117,9 @@ IR::Instruction EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC)
             // ADDI
             // TODO: Overflow?
         {
-            fallback_interpreter(instr, opcode);
-            return instr;
+            //fallback_interpreter(instr, opcode);
+            //return instr;
 
-            int32_t imm = (int16_t)opcode;
             instr.op = IR::Opcode::AddUnsignedImm;
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_dest((opcode >> 16) & 0x1F);
@@ -130,8 +129,8 @@ IR::Instruction EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC)
         case 0x09:
             // ADDIU
         {
-            fallback_interpreter(instr, opcode);
-            return instr;
+            //fallback_interpreter(instr, opcode);
+            //return instr;
 
             instr.op = IR::Opcode::AddUnsignedImm;
             instr.set_source((opcode >> 21) & 0x1F);
