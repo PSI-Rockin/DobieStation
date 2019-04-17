@@ -2629,8 +2629,8 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupIn
             u &= info.tex_width - 1;
             break;
         case 1:
-            if (u > info.tex_width)
-                u = info.tex_width;
+            if (u >= info.tex_width)
+                u = info.tex_width-1;
             else if (u < 0)
                 u = 0;
             break;
@@ -2651,8 +2651,8 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupIn
             v &= info.tex_height - 1;
             break;
         case 1:
-            if (v > info.tex_height)
-                v = info.tex_height;
+            if (v >= info.tex_height)
+                v = info.tex_height-1;
             else if (v < 0)
                 v = 0;
             break;
