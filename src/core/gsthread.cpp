@@ -2667,7 +2667,7 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupIn
             break;
     }
 
-    if (!info.new_lookup)
+    if (!info.new_lookup && !forced_lookup)
     {
         //if it's the same texture position, we already have the info, no need to look it up again
         if (u == info.lastu && v == info.lastv)
