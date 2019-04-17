@@ -2449,11 +2449,18 @@ int16_t GraphicsSynthesizerThread::multiply_tex_color(int16_t tex_color, int16_t
 
 void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
 {
-    float K = current_ctx->tex1.K / 16;
-    if (current_ctx->tex1.LOD_method == 0)
-        info.LOD = ldexp(-log2(fabs(info.vtx_color.q)), current_ctx->tex1.L) + K;
+    if (current_ctx->tex1.filter_smaller >= 2)
+    {
+        double K = (current_ctx->tex1.K + 8.0) / 16.0;
+        if (current_ctx->tex1.LOD_method == 0)
+            info.LOD = ldexp(log2(1.0 / fabs(info.vtx_color.q)), current_ctx->tex1.L) + K;
+        else
+            info.LOD = K;
+
+        info.LOD += 0.5;
+    }
     else
-        info.LOD = K;
+        info.LOD = 0;
 
     info.tex_base = current_ctx->tex0.texture_base;
     info.buffer_width = current_ctx->tex0.width;
@@ -2520,26 +2527,38 @@ void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
 
 void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, TexLookupInfo& info)
 {
-    if (current_ctx->tex1.filter_larger && info.LOD < 0.0)
+    bool bilinear_filter = false;
+
+    if (info.tex_height >= 8 && info.tex_width >= 8)
+    {
+        if (current_ctx->tex1.filter_larger && info.LOD < 0.0)
+            bilinear_filter = true;
+
+        //First bit is set for Bilinear filtering
+        if ((current_ctx->tex1.filter_smaller & 0x1) && info.LOD >= 0.0)
+            bilinear_filter = true;
+    }
+
+    if (bilinear_filter)
     {
         RGBAQ_REG a, b, c, d;
         int16_t uu = (u - 8) >> 4;
         int16_t vv = (v - 8) >> 4;
 
-        tex_lookup_int(uu, vv, info);
+        tex_lookup_int(uu, vv, info, true);
         a = info.srctex_color;
 
-        tex_lookup_int(uu + 1, vv, info);
+        tex_lookup_int(uu + 1, vv, info, true);
         b = info.srctex_color;
 
-        tex_lookup_int(uu, vv + 1, info);
+        tex_lookup_int(uu, vv + 1, info, true);
         c = info.srctex_color;
 
-        tex_lookup_int(uu + 1, vv + 1, info);
+        tex_lookup_int(uu + 1, vv + 1, info, true);
         d = info.srctex_color;
 
-        double alpha = ((u - 8) & 0xF) * (1.0 / ((double)0xF));
-        double beta = ((v - 8) & 0xF) * (1.0 / ((double)0xF));
+        double alpha = (double)((u - 8) & 0xF) * (1.0 / 16.0);
+        double beta = (double)((v - 8) & 0xF) * (1.0 / 16.0);
         double alpha_s = 1.0 - alpha;
         double beta_s = 1.0 - beta;
         info.srctex_color.r = alpha_s * beta_s*a.r + alpha * beta_s*b.r + alpha_s * beta*c.r + alpha * beta*d.r;
@@ -2602,7 +2621,7 @@ void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, TexLookupInfo& 
     }
 }
 
-void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupInfo& info)
+void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupInfo& info, bool forced_lookup)
 {
     switch (current_ctx->clamp.wrap_s)
     {

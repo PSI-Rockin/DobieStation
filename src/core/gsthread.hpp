@@ -337,7 +337,7 @@ class GraphicsSynthesizerThread
         int16_t multiply_tex_color(int16_t tex_color, int16_t frag_color);
         void calculate_LOD(TexLookupInfo& info);
         void tex_lookup(int16_t u, int16_t v, TexLookupInfo& info);
-        void tex_lookup_int(int16_t u, int16_t v, TexLookupInfo& info);
+        void tex_lookup_int(int16_t u, int16_t v, TexLookupInfo& info, bool forced_lookup = false);
         void clut_lookup(uint8_t entry, RGBAQ_REG& tex_color);
         void clut_CSM2_lookup(uint8_t entry, RGBAQ_REG& tex_color);
         void reload_clut(const GSContext& context);
