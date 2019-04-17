@@ -46,10 +46,11 @@ struct TLB_Entry
     uint8_t cache_mode[2];
     uint32_t pfn[2];
     bool is_scratchpad;
-    bool global[2];
+    bool global;
     uint8_t asid;
     uint32_t vpn2;
     uint32_t page_size;
+    uint32_t page_mask;
 
     uint8_t page_shift;
 };

@@ -218,9 +218,9 @@ void Cop0::set_tlb(int index)
 
     new_entry->is_scratchpad = gpr[2] >> 31;
 
-    uint32_t mask = (gpr[5] >> 13) & 0xFFF;
+    new_entry->page_mask = (gpr[5] >> 13) & 0xFFF;
     new_entry->page_shift = 0;
-    switch (mask)
+    switch (new_entry->page_mask)
     {
         case 0x000:
             new_entry->page_size = 1024 * 4;
@@ -258,10 +258,14 @@ void Cop0::set_tlb(int index)
     new_entry->asid = gpr[10] & 0xFF;
     new_entry->vpn2 = gpr[10] >> 13;
 
+    new_entry->global = true;
+
     for (int i = 0; i < 2; i++)
     {
         uint32_t entry_lo = gpr[i + 2];
-        new_entry->global[i] = entry_lo & 0x1;
+
+        //Both G bits in the EntryLo registers must be set for global to be set
+        new_entry->global &= entry_lo & 0x1;
         new_entry->valid[i] = (entry_lo >> 1) & 0x1;
         new_entry->dirty[i] = (entry_lo >> 2) & 0x1;
         new_entry->cache_mode[i] = (entry_lo >> 3) & 0x7;
@@ -280,7 +284,7 @@ void Cop0::set_tlb(int index)
     {
         uint32_t real_phy = new_entry->pfn[i] >> new_entry->page_shift;
         real_phy *= new_entry->page_size;
-        printf("G: %d D: %d V: %d C: %d\n", new_entry->global[i], new_entry->dirty[i],
+        printf("D: %d V: %d C: %d\n", new_entry->dirty[i],
                new_entry->valid[i], new_entry->cache_mode[i]);
         printf("PFN: $%08X Real phy: $%08X\n", new_entry->pfn[i], real_phy);
         printf("\n");

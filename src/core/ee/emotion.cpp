@@ -135,9 +135,6 @@ int EmotionEngine::run(int cycles)
             uint32_t instruction = read32(PC);
             uint32_t lastPC = PC;
 
-            //if (PC == 0x165A84)
-                //can_disassemble = true;
-
             if (can_disassemble)
             {
                 std::string disasm = EmotionDisasm::disasm_instr(instruction, PC);
@@ -892,6 +889,30 @@ void EmotionEngine::tlbwi()
 {
     int index = cp0->gpr[0];
     cp0->set_tlb(index);
+}
+
+void EmotionEngine::tlbp()
+{
+    //Search for a TLB entry whose "EntryHi" matches the EntryHi register in COP0.
+    //Place the index of the entry in Index, or place 1 << 31 in Index if no entry is found.
+    uint32_t entry_hi = cp0->gpr[10];
+
+    for (int i = 0; i < 48; i++)
+    {
+        TLB_Entry* entry = &cp0->tlb[i];
+        uint32_t vpn2 = entry_hi >> 13;
+        if (entry->vpn2 == (vpn2 & ~entry->page_mask))
+        {
+            uint32_t asid = entry_hi & 0xFF;
+            if (entry->global || entry->asid == asid)
+            {
+                cp0->gpr[0] = i;
+                return;
+            }
+        }
+    }
+
+    cp0->gpr[0] = 1 << 31;
 }
 
 void EmotionEngine::eret()
