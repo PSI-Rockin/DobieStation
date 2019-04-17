@@ -2449,18 +2449,20 @@ int16_t GraphicsSynthesizerThread::multiply_tex_color(int16_t tex_color, int16_t
 
 void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
 {
+    double K = (current_ctx->tex1.K + 8.0) / 16.0;
+    if (current_ctx->tex1.LOD_method == 0)
+        info.LOD = ldexp(log2(1.0 / fabs(info.vtx_color.q)), current_ctx->tex1.L) + K;
+    else
+        info.LOD = K;
+
+    info.LOD = round(info.LOD + 0.5);
+
     if (current_ctx->tex1.filter_smaller >= 2)
     {
-        double K = (current_ctx->tex1.K + 8.0) / 16.0;
-        if (current_ctx->tex1.LOD_method == 0)
-            info.LOD = ldexp(log2(1.0 / fabs(info.vtx_color.q)), current_ctx->tex1.L) + K;
-        else
-            info.LOD = K;
-
-        info.LOD += 0.5;
+        info.mipmap_level = min((int8_t)info.LOD, (int8_t)current_ctx->tex1.max_MIP_level);
     }
     else
-        info.LOD = 0;
+        info.mipmap_level = 0;
 
     info.tex_base = current_ctx->tex0.texture_base;
     info.buffer_width = current_ctx->tex0.width;
@@ -2468,7 +2470,6 @@ void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
     info.tex_height = current_ctx->tex0.tex_height;
 
     //Determine mipmap level
-    info.mipmap_level = min((int8_t)round(info.LOD), (int8_t)current_ctx->tex1.max_MIP_level);
 
     if (info.mipmap_level < 0)
         info.mipmap_level = 0;
