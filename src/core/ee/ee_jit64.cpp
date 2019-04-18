@@ -852,8 +852,7 @@ void EE_JIT64::branch_greater_than_or_equal_zero(EmotionEngine& ee, IR::Instruct
     {
         // Set the link register
         emitter.load_addr((uint64_t)get_gpr_addr(ee, EE_NormalReg::ra), REG_64::RAX);
-        emitter.MOV32_REG_IMM(instr.get_return_addr(), REG_64::R15);
-        emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
+        emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::RAX);
     }
 
     // Conditionally move the success or failure destination into ee.PC
@@ -934,8 +933,7 @@ void EE_JIT64::branch_less_than_zero(EmotionEngine& ee, IR::Instruction &instr)
     {
         // Set the link register
         emitter.load_addr((uint64_t)get_gpr_addr(ee, EE_NormalReg::ra), REG_64::RAX);
-        emitter.MOV32_REG_IMM(instr.get_return_addr(), REG_64::R15);
-        emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
+        emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::RAX);
     }
 
     // Conditionally move the success or failure destination into ee.PC
@@ -1011,8 +1009,7 @@ void EE_JIT64::jump(EmotionEngine& ee, IR::Instruction& instr)
     {
         // Set the link register
         emitter.load_addr((uint64_t)get_gpr_addr(ee, EE_NormalReg::ra), REG_64::RAX);
-        emitter.MOV32_REG_IMM(instr.get_return_addr(), REG_64::R15);
-        emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
+        emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::RAX);
     }
 }
 
@@ -1028,8 +1025,7 @@ void EE_JIT64::jump_indirect(EmotionEngine& ee, IR::Instruction& instr)
     {
         // Set the link register
         emitter.load_addr((uint64_t)get_gpr_addr(ee, (EE_NormalReg)instr.get_dest()), REG_64::RAX);
-        emitter.MOV32_REG_IMM(instr.get_return_addr(), REG_64::R15);
-        emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
+        emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::RAX);
     }
 }
 
@@ -1038,7 +1034,7 @@ void EE_JIT64::load_upper_immediate(EmotionEngine& ee, IR::Instruction &instr)
     REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
     int64_t imm = (int32_t)(instr.get_source() << 16);
 
-    // dest = (int64_t)((int32_t)imm << 16)
+    // dest = (int64_t)((int32_t)(imm << 16))
     emitter.MOV64_OI(imm, dest);
 }
 
