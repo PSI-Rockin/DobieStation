@@ -1035,13 +1035,11 @@ void EE_JIT64::jump_indirect(EmotionEngine& ee, IR::Instruction& instr)
 
 void EE_JIT64::load_upper_immediate(EmotionEngine& ee, IR::Instruction &instr)
 {
-    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::READ_WRITE);
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+    int64_t imm = (int32_t)(instr.get_source() << 16);
 
-    // dest = immediate << 16
-    // dest = (sign extend64)dest
-    emitter.MOV16_REG_IMM(instr.get_source(), dest);
-    emitter.SHL32_REG_IMM(16, dest);
-    emitter.MOVSX32_TO_64(dest, dest);
+    // dest = (int64_t)((int32_t)imm << 16)
+    emitter.MOV64_OI(imm, dest);
 }
 
 void EE_JIT64::or_int(EmotionEngine& ee, IR::Instruction &instr)
