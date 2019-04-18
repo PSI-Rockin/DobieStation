@@ -117,27 +117,53 @@ IR::Instruction EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC)
             // ADDI
             // TODO: Overflow?
             instr.op = IR::Opcode::AddUnsignedImm;
-            instr.set_source((opcode >> 21) & 0x1F);
             instr.set_dest((opcode >> 16) & 0x1F);
+            instr.set_source((opcode >> 21) & 0x1F);
             instr.set_source2(opcode & 0xFFFF);
             return instr;
         case 0x09:
             // ADDIU
             instr.op = IR::Opcode::AddUnsignedImm;
-            instr.set_source((opcode >> 21) & 0x1F);
             instr.set_dest((opcode >> 16) & 0x1F);
+            instr.set_source((opcode >> 21) & 0x1F);
             instr.set_source2(opcode & 0xFFFF);
             return instr;
         case 0x0A:
             // SLTI
-            Errors::print_warning("[EE_JIT] Unrecognized op SLTI\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 16) & 0x1F;
+
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+
+            int64_t imm = (int16_t)(opcode & 0xFFFF);
+            instr.op = IR::Opcode::SetOnLessThanImmediate;
+            instr.set_dest(dest);
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_source2(imm);
             return instr;
+        }
         case 0x0B:
             // SLTIU
-            Errors::print_warning("[EE_JIT] Unrecognized op SLTIU\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 16) & 0x1F;
+
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+
+            int64_t imm = (int16_t)(opcode & 0xFFFF);
+            instr.op = IR::Opcode::SetOnLessThanImmediateUnsigned;
+            instr.set_dest(dest);
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_source2(imm);
             return instr;
+        }
         case 0x0C:
             // ANDI
             instr.op = IR::Opcode::AndInt;

@@ -69,6 +69,10 @@ void EE_JIT64::reset(bool clear_cache)
     xmm_regs[REG_64::XMM0].locked = true;
     xmm_regs[REG_64::XMM1].locked = true;
 
+    // NOTE: Some emitted operations don't like using certain modes with RBP, so tentatively locking this register
+    // for debugging purposes
+    int_regs[REG_64::RBP].locked = true;
+
     if (clear_cache)
         cache.flush_all_blocks();
 
@@ -199,6 +203,12 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::OrInt:
             or_int(ee, instr);
             break;
+        case IR::Opcode::SetOnLessThanImmediate:
+            set_on_less_than_immediate(ee, instr);
+            break;
+        case IR::Opcode::SetOnLessThanImmediateUnsigned:
+            set_on_less_than_immediate_unsigned(ee, instr);
+            break;
         case IR::Opcode::SystemCall:
             system_call(ee, instr);
             break;
@@ -219,7 +229,7 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
     }
 }
 
-void EE_JIT64::prepare_abi(const EmotionEngine& ee, uint64_t value)
+void EE_JIT64::prepare_abi(EmotionEngine& ee, uint64_t value)
 {
 #ifdef _WIN32
     const static REG_64 regs[] = { RCX, RDX, R8, R9 };
@@ -239,11 +249,7 @@ void EE_JIT64::prepare_abi(const EmotionEngine& ee, uint64_t value)
     if (int_regs[arg].used)
     {
         int vi_reg = int_regs[arg].reg;
-        if (int_regs[arg].modified)
-        {
-            emitter.load_addr((uint64_t)get_gpr_addr(ee, (EE_NormalReg)vi_reg), REG_64::RAX);
-            emitter.MOV64_TO_MEM(arg, REG_64::RAX);
-        }
+        flush_int_reg(ee, vi_reg);
         int_regs[arg].used = false;
         int_regs[arg].age = 0;
     }
@@ -251,7 +257,7 @@ void EE_JIT64::prepare_abi(const EmotionEngine& ee, uint64_t value)
     abi_int_count++;
 }
 
-void EE_JIT64::prepare_abi_reg(const EmotionEngine& ee, REG_64 reg)
+void EE_JIT64::prepare_abi_reg(EmotionEngine& ee, REG_64 reg)
 {
 #ifdef _WIN32
     const static REG_64 regs[] = { RCX, RDX, R8, R9 };
@@ -271,11 +277,7 @@ void EE_JIT64::prepare_abi_reg(const EmotionEngine& ee, REG_64 reg)
     if (int_regs[arg].used)
     {
         int vi_reg = int_regs[arg].reg;
-        if (int_regs[arg].modified)
-        {
-            emitter.load_addr((uint64_t)get_gpr_addr(ee, (EE_NormalReg)vi_reg), REG_64::RAX);
-            emitter.MOV64_TO_MEM(arg, REG_64::RAX);
-        }
+        flush_int_reg(ee, vi_reg);
         int_regs[arg].used = false;
         int_regs[arg].age = 0;
     }
@@ -368,11 +370,7 @@ REG_64 EE_JIT64::alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state)
     }
 
     int reg = search_for_register(int_regs);
-
-    if (int_regs[reg].used && int_regs[reg].modified && int_regs[reg].reg)
-    {
-        flush_int_reg(ee, reg);
-    }
+    flush_int_reg(ee, reg);
 
     //printf("[EE_JIT64] Allocating GPR reg %d (EEREG %02d)\n", reg, gpr_reg);
 
@@ -383,7 +381,6 @@ REG_64 EE_JIT64::alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state)
     }
 
     int_regs[reg].modified = state != REG_STATE::READ;
-
     int_regs[reg].reg = gpr_reg;
     int_regs[reg].is_gpr_reg = true;
     int_regs[reg].used = true;
@@ -1075,6 +1072,53 @@ void EE_JIT64::or_int(EmotionEngine& ee, IR::Instruction &instr)
 void EE_JIT64::ee_syscall_exception(EmotionEngine& ee)
 {
     ee.syscall_exception();
+}
+
+
+void EE_JIT64::set_on_less_than_immediate(EmotionEngine& ee, IR::Instruction& instr)
+{
+    int64_t imm = instr.get_source2();
+
+    if (instr.get_source() == instr.get_dest())
+    {
+        REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::READ_WRITE);
+        emitter.MOV64_OI(imm, REG_64::RAX);
+        emitter.CMP64_REG(REG_64::RAX, dest);
+        emitter.MOV64_OI(0, dest);
+        emitter.SETCC_REG(ConditionCode::L, dest);
+    }
+    else
+    {
+        REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+        REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+        emitter.XOR64_REG(dest, dest);
+        emitter.MOV64_OI(imm, REG_64::RAX);
+        emitter.CMP64_REG(REG_64::RAX, source);
+        emitter.SETCC_REG(ConditionCode::L, dest);
+    }
+}
+
+void EE_JIT64::set_on_less_than_immediate_unsigned(EmotionEngine& ee, IR::Instruction& instr)
+{
+    int64_t imm = instr.get_source2();
+
+    if (instr.get_source() == instr.get_dest())
+    {
+        REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::READ_WRITE);
+        emitter.MOV64_OI(imm, REG_64::RAX);
+        emitter.CMP64_REG(REG_64::RAX, dest);
+        emitter.MOV64_OI(0, dest);
+        emitter.SETCC_REG(ConditionCode::B, dest);
+    }
+    else
+    {
+        REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+        REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+        emitter.XOR64_REG(dest, dest);
+        emitter.MOV64_OI(imm, REG_64::RAX);
+        emitter.CMP64_REG(REG_64::RAX, source);
+        emitter.SETCC_REG(ConditionCode::B, dest);
+    }
 }
 
 void EE_JIT64::system_call(EmotionEngine& ee, IR::Instruction& instr)

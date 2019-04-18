@@ -284,6 +284,14 @@ void Emitter64::CMP16_REG(REG_64 op2, REG_64 op1)
     modrm(0b11, op2, op1);
 }
 
+void Emitter64::CMP32_IMM(uint32_t imm, REG_64 op)
+{
+    rex_rm(op);
+    cache->write<uint8_t>(0x81);
+    modrm(0b11, 7, op);
+    cache->write<uint32_t>(imm);
+}
+
 void Emitter64::CMP32_REG(REG_64 op2, REG_64 op1)
 {
     cache->write<uint8_t>(0x39);
@@ -293,6 +301,14 @@ void Emitter64::CMP32_REG(REG_64 op2, REG_64 op1)
 void Emitter64::CMP32_EAX(uint32_t imm)
 {
     cache->write<uint8_t>(0x3D);
+    cache->write<uint32_t>(imm);
+}
+
+void Emitter64::CMP64_IMM(uint32_t imm, REG_64 op)
+{
+    rexw_rm(op);
+    cache->write<uint8_t>(0x81);
+    modrm(0b11, 7, op);
     cache->write<uint32_t>(imm);
 }
 

@@ -87,8 +87,10 @@ class Emitter64
         void CMP8_REG(REG_64 op2, REG_64 op1);
         void CMP16_IMM(uint16_t imm, REG_64 op);
         void CMP16_REG(REG_64 op2, REG_64 op1);
+        void CMP32_IMM(uint32_t imm, REG_64 op);
         void CMP32_EAX(uint32_t imm);
         void CMP32_REG(REG_64 op2, REG_64 op1);
+        void CMP64_IMM(uint32_t imm, REG_64 op);
         void CMP64_REG(REG_64 op2, REG_64 op1);
 
         void DEC16(REG_64 dest);
