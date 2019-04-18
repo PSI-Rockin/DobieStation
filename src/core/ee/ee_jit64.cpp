@@ -741,8 +741,7 @@ void EE_JIT64::and_int(EmotionEngine& ee, IR::Instruction &instr)
 
         // temp = (uint64_t)immediate
         // dest &= temp
-        emitter.MOV16_REG_IMM(instr.get_source2(), REG_64::RAX);
-        emitter.MOVZX16_TO_64(REG_64::RAX, REG_64::RAX);
+        emitter.MOV64_OI(instr.get_source2(), REG_64::RAX);
         emitter.AND64_REG(REG_64::RAX, dest);
     }
     else
@@ -750,13 +749,10 @@ void EE_JIT64::and_int(EmotionEngine& ee, IR::Instruction &instr)
         REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
         REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
 
-        // temp = (uint64_t)immediate
-        // temp &= source
-        // dest = temp
-        emitter.MOV16_REG_IMM(instr.get_source2(), REG_64::RAX);
-        emitter.MOVZX16_TO_64(REG_64::RAX, REG_64::RAX);
-        emitter.AND64_REG(source, REG_64::RAX);
-        emitter.MOV64_MR(REG_64::RAX, dest);
+        // dest = (uint64_t)immediate
+        // dest &= source
+        emitter.MOV64_OI(instr.get_source2(), dest);
+        emitter.AND64_REG(source, dest);
     }
 }
 
@@ -1046,8 +1042,7 @@ void EE_JIT64::or_int(EmotionEngine& ee, IR::Instruction &instr)
 
         // temp = (uint64_t)immediate
         // dest |= temp
-        emitter.MOV16_REG_IMM(instr.get_source2(), REG_64::RAX);
-        emitter.MOVZX16_TO_64(REG_64::RAX, REG_64::RAX);
+        emitter.MOV64_OI(instr.get_source2(), REG_64::RAX);
         emitter.OR64_REG(REG_64::RAX, dest);
     }
     else
@@ -1057,8 +1052,7 @@ void EE_JIT64::or_int(EmotionEngine& ee, IR::Instruction &instr)
 
         // dest = (uint64_t)immediate
         // dest |= source
-        emitter.MOV16_REG_IMM(instr.get_source2(), dest);
-        emitter.MOVZX16_TO_64(dest, dest);
+        emitter.MOV64_OI(instr.get_source2(), dest);
         emitter.OR64_REG(source, dest);
     }
 }
@@ -1233,8 +1227,7 @@ void EE_JIT64::xor_int(EmotionEngine& ee, IR::Instruction &instr)
 
         // temp = (uint64_t)immediate
         // dest ^= temp
-        emitter.MOV16_REG_IMM(instr.get_source2(), REG_64::RAX);
-        emitter.MOVZX16_TO_64(REG_64::RAX, REG_64::RAX);
+        emitter.MOV64_OI(instr.get_source2(), REG_64::RAX);
         emitter.XOR64_REG(REG_64::RAX, dest);
     }
     else
@@ -1244,8 +1237,7 @@ void EE_JIT64::xor_int(EmotionEngine& ee, IR::Instruction &instr)
 
         // dest = (uint64_t)immediate
         // dest ^= source
-        emitter.MOV16_REG_IMM(instr.get_source2(), dest);
-        emitter.MOVZX16_TO_64(dest, dest);
+        emitter.MOV64_OI(instr.get_source2(), dest);
         emitter.XOR64_REG(source, dest);
     }
 }
