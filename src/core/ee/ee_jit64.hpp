@@ -66,6 +66,9 @@ private:
     void or_int(EmotionEngine& ee, IR::Instruction& instr);
     void set_on_less_than_immediate(EmotionEngine& ee, IR::Instruction& instr);
     void set_on_less_than_immediate_unsigned(EmotionEngine& ee, IR::Instruction& instr);
+    void shift_left_logical(EmotionEngine& ee, IR::Instruction& instr);
+    void shift_right_arithmetic(EmotionEngine& ee, IR::Instruction& instr);
+    void shift_right_logical(EmotionEngine& ee, IR::Instruction& instr);
     void system_call(EmotionEngine& ee, IR::Instruction& instr);
     void vcall_ms(EmotionEngine& ee, IR::Instruction& instr);
     void vcall_msr(EmotionEngine& ee, IR::Instruction& instr);

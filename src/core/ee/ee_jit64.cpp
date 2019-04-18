@@ -209,6 +209,15 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::SetOnLessThanImmediateUnsigned:
             set_on_less_than_immediate_unsigned(ee, instr);
             break;
+        case IR::ShiftLeftLogical:
+            shift_left_logical(ee, instr);
+            break;
+        case IR::ShiftRightArithmetic:
+            shift_right_arithmetic(ee, instr);
+            break;
+        case IR::ShiftRightLogical:
+            shift_right_logical(ee, instr);
+            break;
         case IR::Opcode::SystemCall:
             system_call(ee, instr);
             break;
@@ -1106,6 +1115,81 @@ void EE_JIT64::set_on_less_than_immediate_unsigned(EmotionEngine& ee, IR::Instru
         emitter.MOV64_OI(imm, REG_64::RAX);
         emitter.CMP64_REG(REG_64::RAX, source);
         emitter.SETCC_REG(ConditionCode::B, dest);
+    }
+}
+
+void EE_JIT64::shift_left_logical(EmotionEngine& ee, IR::Instruction& instr)
+{
+    if (instr.get_source() == instr.get_dest())
+    {
+        REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::READ_WRITE);
+
+        // dest <<= immediate
+        // dest = (int64_t)dest
+        emitter.SHL32_REG_IMM(instr.get_source2(), dest);
+        emitter.MOVSX32_TO_64(dest, dest);
+    }
+    else
+    {
+        REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+        REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+        
+        // source = dest
+        // dest <<= immediate
+        // dest = (int64_t)dest
+        emitter.MOV32_REG(source, dest);
+        emitter.SHL32_REG_IMM(instr.get_source2(), dest);
+        emitter.MOVSX32_TO_64(dest, dest);
+    }
+}
+
+void EE_JIT64::shift_right_arithmetic(EmotionEngine& ee, IR::Instruction& instr)
+{
+    if (instr.get_source() == instr.get_dest())
+    {
+        REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::READ_WRITE);
+
+        // dest >>= immediate
+        // dest = (int64_t)dest
+        emitter.SAR32_REG_IMM(instr.get_source2(), dest);
+        emitter.MOVSX32_TO_64(dest, dest);
+    }
+    else
+    {
+        REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+        REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+
+        // source = dest
+        // dest >>= immediate
+        // dest = (int64_t)dest
+        emitter.MOV32_REG(source, dest);
+        emitter.SAR32_REG_IMM(instr.get_source2(), dest);
+        emitter.MOVSX32_TO_64(dest, dest);
+    }
+}
+
+void EE_JIT64::shift_right_logical(EmotionEngine& ee, IR::Instruction& instr)
+{
+    if (instr.get_source() == instr.get_dest())
+    {
+        REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::READ_WRITE);
+
+        // dest >>= immediate
+        // dest = (int64_t)dest
+        emitter.SHR32_REG_IMM(instr.get_source2(), dest);
+        emitter.MOVSX32_TO_64(dest, dest);
+    }
+    else
+    {
+        REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+        REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+
+        // source = dest
+        // dest >>= immediate
+        // dest = (int64_t)dest
+        emitter.MOV32_REG(source, dest);
+        emitter.SHR32_REG_IMM(instr.get_source2(), dest);
+        emitter.MOVSX32_TO_64(dest, dest);
     }
 }
 

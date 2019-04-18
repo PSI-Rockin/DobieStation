@@ -400,24 +400,52 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
     {
         case 0x00:
             // SLL
-            if (!opcode)
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            if (!dest)
             {
                 instr.op = IR::Opcode::Null;
                 return instr;
             }
-            Errors::print_warning("[EE_JIT] Unrecognized special op SLL\n", op);
-            fallback_interpreter(instr, opcode);
+
+            instr.op = IR::Opcode::ShiftLeftLogical;
+            instr.set_dest(dest);
+            instr.set_source((opcode >> 16) & 0x1F);
+            instr.set_source2((opcode >> 6) & 0x1F);
             return instr;
+        }
         case 0x02:
             // SRL
-            Errors::print_warning("[EE_JIT] Unrecognized special op SRL\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+
+            instr.op = IR::Opcode::ShiftRightLogical;
+            instr.set_dest(dest);
+            instr.set_source((opcode >> 16) & 0x1F);
+            instr.set_source2((opcode >> 6) & 0x1F);
             return instr;
+        }
         case 0x03:
             // SRA
-            Errors::print_warning("[EE_JIT] Unrecognized special op SRA\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+
+            instr.op = IR::Opcode::ShiftRightArithmetic;
+            instr.set_dest(dest);
+            instr.set_source((opcode >> 16) & 0x1F);
+            instr.set_source2((opcode >> 6) & 0x1F);
             return instr;
+        }
         case 0x04:
             // SLLV
             Errors::print_warning("[EE_JIT] Unrecognized special op SLLV\n", op);
