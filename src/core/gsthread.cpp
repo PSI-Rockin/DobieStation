@@ -2451,11 +2451,14 @@ void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
 {
     double K = (current_ctx->tex1.K + 8.0) / 16.0;
     if (current_ctx->tex1.LOD_method == 0)
+    {
         info.LOD = ldexp(log2(1.0 / fabs(info.vtx_color.q)), current_ctx->tex1.L) + K;
+
+        if (!(current_ctx->tex1.filter_smaller & 0x1))
+            info.LOD = round(info.LOD + 0.5);
+    }
     else
         info.LOD = K;
-
-    info.LOD = round(info.LOD + 0.5);
 
     if (current_ctx->tex1.filter_smaller >= 2)
     {
@@ -2525,7 +2528,7 @@ void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
         info.tex_height = max((int)info.tex_height, 1);
     }
 }
-
+#define printf(fmt, ...)(0)
 void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, TexLookupInfo& info)
 {
     bool bilinear_filter = false;
