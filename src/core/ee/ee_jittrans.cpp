@@ -448,19 +448,52 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
         }
         case 0x04:
             // SLLV
-            Errors::print_warning("[EE_JIT] Unrecognized special op SLLV\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+
+            instr.op = IR::Opcode::ShiftLeftLogicalVariable;
+            instr.set_dest(dest);
+            instr.set_source((opcode >> 16) & 0x1F);
+            instr.set_source2((opcode >> 21) & 0x1F);
             return instr;
+        }
         case 0x06:
             // SRLV
-            Errors::print_warning("[EE_JIT] Unrecognized special op SRLV\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+
+            instr.op = IR::Opcode::ShiftRightLogicalVariable;
+            instr.set_dest(dest);
+            instr.set_source((opcode >> 16) & 0x1F);
+            instr.set_source2((opcode >> 21) & 0x1F);
             return instr;
+        }
         case 0x07:
             // SRAV
-            Errors::print_warning("[EE_JIT] Unrecognized special op SRAV\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+
+            instr.op = IR::Opcode::ShiftRightArithmeticVariable;
+            instr.set_dest(dest);
+            instr.set_source((opcode >> 16) & 0x1F);
+            instr.set_source2((opcode >> 21) & 0x1F);
             return instr;
+        }
         case 0x08:
             // JR
             instr.op = IR::Opcode::JumpIndirect;

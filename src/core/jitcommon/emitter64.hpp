@@ -6,9 +6,9 @@
 enum REG_64
 {
     AL = 0, AX = 0, EAX = 0, RAX = 0, XMM0 = 0,
-    BL = 1, BX = 1, ECX = 1, RCX = 1, XMM1 = 1,
-    CL = 2, CX = 2, EDX = 2, RDX = 2, XMM2 = 2,
-    DL = 3, DX = 3, EBX = 3, RBX = 3, XMM3 = 3,
+    CL = 1, CX = 1, ECX = 1, RCX = 1, XMM1 = 1,
+    DL = 2, DX = 2, EDX = 2, RDX = 2, XMM2 = 2,
+    BL = 3, BX = 3, EBX = 3, RBX = 3, XMM3 = 3,
     SPL = 4, SP = 4, ESP = 4, RSP = 4, XMM4 = 4,
     BPL = 5, BP = 5, EBP = 5, RBP = 5, XMM5 = 5,
     SIL = 6, SI = 6, ESI = 6, RSI = 6, XMM6 = 6,
@@ -77,8 +77,10 @@ class Emitter64
 
         void INC16(REG_64 dest);
 
+        void AND8_REG_IMM(uint8_t imm, REG_64 dest);
         void AND16_AX(uint16_t imm);
         void AND16_REG(REG_64 source, REG_64 dest);
+        void AND16_REG_IMM(uint16_t imm, REG_64 dest);
         void AND32_EAX(uint32_t imm);
         void AND32_REG(REG_64 source, REG_64 dest);
         void AND32_REG_IMM(uint32_t imm, REG_64 dest);
@@ -103,11 +105,17 @@ class Emitter64
         void OR64_REG(REG_64 source, REG_64 dest);
 
         void SHL16_REG_1(REG_64 dest);
+        void SHL16_CL(REG_64 dest);
         void SHL16_REG_IMM(uint8_t shift, REG_64 dest);
+        void SHL32_CL(REG_64 dest);
         void SHL32_REG_IMM(uint8_t shift, REG_64 dest);
+        void SHR16_CL(REG_64 dest);
         void SHR16_REG_IMM(uint8_t shift, REG_64 dest);
+        void SHR32_CL(REG_64 dest);
         void SHR32_REG_IMM(uint8_t shift, REG_64 dest);
+        void SAR16_CL(REG_64 dest);
         void SAR16_REG_IMM(uint8_t shift, REG_64 dest);
+        void SAR32_CL(REG_64 dest);
         void SAR32_REG_IMM(uint8_t shift, REG_64 dest);
 
         void SUB16_REG_IMM(uint16_t imm, REG_64 dest);
@@ -124,6 +132,7 @@ class Emitter64
         void XOR32_REG(REG_64 source, REG_64 dest);
         void XOR64_REG(REG_64 source, REG_64 dest);
 
+        void MOV8_REG(REG_64 source, REG_64 dest);
         void MOV8_REG_IMM(uint8_t imm, REG_64 dest);
         void MOV8_TO_MEM(REG_64 source, REG_64 indir_dest);
         void MOV8_FROM_MEM(REG_64 indir_source, REG_64 dest);

@@ -212,11 +212,20 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::ShiftLeftLogical:
             shift_left_logical(ee, instr);
             break;
+        case IR::ShiftLeftLogicalVariable:
+            shift_left_logical_variable(ee, instr);
+            break;
         case IR::ShiftRightArithmetic:
             shift_right_arithmetic(ee, instr);
             break;
+        case IR::ShiftRightArithmeticVariable:
+            shift_right_arithmetic_variable(ee, instr);
+            break;
         case IR::ShiftRightLogical:
             shift_right_logical(ee, instr);
+            break;
+        case IR::ShiftRightLogicalVariable:
+            shift_right_logical_variable(ee, instr);
             break;
         case IR::Opcode::SystemCall:
             system_call(ee, instr);
@@ -356,6 +365,63 @@ int EE_JIT64::search_for_register(AllocReg *regs)
     return reg;
 }
 
+void EE_JIT64::alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_64 destination, REG_STATE state)
+{
+    if (gpr_reg >= 32)
+        Errors::die("[EE_JIT64] Alloc Int error: gpr_reg == %d", gpr_reg);
+
+    if (int_regs[destination].locked)
+        Errors::die("[EE_JIT64] Alloc Int error: Attempted to allocate locked x64 register %d", destination);
+
+    // Do nothing if the EE register is already inside our x86 register
+    if (int_regs[destination].used && int_regs[destination].is_gpr_reg && int_regs[destination].reg == gpr_reg)
+    {
+        int_regs[destination].age = 0;
+        return;
+    }
+
+    flush_int_reg(ee, destination);
+
+    if (state == REG_STATE::SCRATCHPAD)
+    {
+        int_regs[destination].modified = false;
+        int_regs[destination].used = true;
+        int_regs[destination].age = 0;
+        int_regs[destination].reg = -1;
+        return;
+    }
+
+    if (state != REG_STATE::WRITE)
+    {
+        int reg = -1;
+
+        for (int i = 0; i < 16; ++i)
+        {
+            if (int_regs[i].used && int_regs[i].reg == gpr_reg && int_regs[i].is_gpr_reg)
+            {
+                reg = i;
+                break;
+            }
+        }
+
+        if (reg >= 0)
+        {
+            emitter.MOV64_MR((REG_64)reg, destination);
+        }
+        else
+        {
+            emitter.load_addr((uint64_t)get_gpr_addr(ee, (EE_NormalReg)gpr_reg), REG_64::RAX);
+            emitter.MOV64_FROM_MEM(REG_64::RAX, (REG_64)destination);
+        }
+    }
+
+    int_regs[destination].modified = state != REG_STATE::READ;
+    int_regs[destination].reg = gpr_reg;
+    int_regs[destination].is_gpr_reg = true;
+    int_regs[destination].used = true;
+    int_regs[destination].age = 0;
+}
+
 REG_64 EE_JIT64::alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state)
 {
     if (gpr_reg >= 32)
@@ -382,6 +448,15 @@ REG_64 EE_JIT64::alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state)
     flush_int_reg(ee, reg);
 
     //printf("[EE_JIT64] Allocating GPR reg %d (EEREG %02d)\n", reg, gpr_reg);
+
+    if (state == REG_STATE::SCRATCHPAD)
+    {
+        int_regs[reg].modified = false;
+        int_regs[reg].used = true;
+        int_regs[reg].age = 0;
+        int_regs[reg].reg = -1;
+        return (REG_64)reg;
+    }
 
     if (state != REG_STATE::WRITE)
     {
@@ -557,6 +632,7 @@ void EE_JIT64::flush_int_reg(EmotionEngine& ee, int reg)
             emitter.MOV16_TO_MEM((REG_64)reg, REG_64::RAX);
         }
     }
+    int_regs[reg].used = false;
 }
 
 void EE_JIT64::flush_xmm_reg(EmotionEngine& ee, int reg)
@@ -1143,6 +1219,24 @@ void EE_JIT64::shift_left_logical(EmotionEngine& ee, IR::Instruction& instr)
     }
 }
 
+void EE_JIT64::shift_left_logical_variable(EmotionEngine& ee, IR::Instruction& instr)
+{
+    // Alloc variable into RCX
+    alloc_gpr_reg(ee, instr.get_source2(), REG_64::RCX, REG_STATE::SCRATCHPAD);
+    REG_64 variable = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
+    emitter.MOV8_REG(variable, REG_64::CL);
+    emitter.AND8_REG_IMM(0x1F, REG_64::CL);
+    
+    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+
+    if (source != dest)
+        emitter.MOV32_REG(source, dest);
+
+    emitter.SHL32_CL(dest);
+    emitter.MOVSX32_TO_64(dest, dest);
+}
+
 void EE_JIT64::shift_right_arithmetic(EmotionEngine& ee, IR::Instruction& instr)
 {
     if (instr.get_source() == instr.get_dest())
@@ -1168,6 +1262,24 @@ void EE_JIT64::shift_right_arithmetic(EmotionEngine& ee, IR::Instruction& instr)
     }
 }
 
+void EE_JIT64::shift_right_arithmetic_variable(EmotionEngine& ee, IR::Instruction& instr)
+{
+    // Alloc variable into RCX
+    alloc_gpr_reg(ee, instr.get_source2(), REG_64::RCX, REG_STATE::SCRATCHPAD);
+    REG_64 variable = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
+    emitter.MOV8_REG(variable, REG_64::CL);
+    emitter.AND8_REG_IMM(0x1F, REG_64::CL);
+
+    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+
+    if (source != dest)
+        emitter.MOV32_REG(source, dest);
+
+    emitter.SAR32_CL(dest);
+    emitter.MOVSX32_TO_64(dest, dest);
+}
+
 void EE_JIT64::shift_right_logical(EmotionEngine& ee, IR::Instruction& instr)
 {
     if (instr.get_source() == instr.get_dest())
@@ -1191,6 +1303,24 @@ void EE_JIT64::shift_right_logical(EmotionEngine& ee, IR::Instruction& instr)
         emitter.SHR32_REG_IMM(instr.get_source2(), dest);
         emitter.MOVSX32_TO_64(dest, dest);
     }
+}
+
+void EE_JIT64::shift_right_logical_variable(EmotionEngine& ee, IR::Instruction& instr)
+{
+    // Alloc variable into RCX
+    alloc_gpr_reg(ee, instr.get_source2(), REG_64::RCX, REG_STATE::SCRATCHPAD);
+    REG_64 variable = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
+    emitter.MOV8_REG(variable, REG_64::CL);
+    emitter.AND8_REG_IMM(0x1F, REG_64::CL);
+
+    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+
+    if (source != dest)
+        emitter.MOV32_REG(source, dest);
+
+    emitter.SHR32_CL(dest);
+    emitter.MOVSX32_TO_64(dest, dest);
 }
 
 void EE_JIT64::system_call(EmotionEngine& ee, IR::Instruction& instr)

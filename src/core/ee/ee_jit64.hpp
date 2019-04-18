@@ -67,8 +67,11 @@ private:
     void set_on_less_than_immediate(EmotionEngine& ee, IR::Instruction& instr);
     void set_on_less_than_immediate_unsigned(EmotionEngine& ee, IR::Instruction& instr);
     void shift_left_logical(EmotionEngine& ee, IR::Instruction& instr);
+    void shift_left_logical_variable(EmotionEngine& ee, IR::Instruction& instr);
     void shift_right_arithmetic(EmotionEngine& ee, IR::Instruction& instr);
+    void shift_right_arithmetic_variable(EmotionEngine& ee, IR::Instruction& instr);
     void shift_right_logical(EmotionEngine& ee, IR::Instruction& instr);
+    void shift_right_logical_variable(EmotionEngine& ee, IR::Instruction& instr);
     void system_call(EmotionEngine& ee, IR::Instruction& instr);
     void vcall_ms(EmotionEngine& ee, IR::Instruction& instr);
     void vcall_msr(EmotionEngine& ee, IR::Instruction& instr);
@@ -84,6 +87,7 @@ private:
 
     int search_for_register(AllocReg *regs);
     REG_64 alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state);
+    void alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_64 destination, REG_STATE state);
     REG_64 alloc_vi_reg(EmotionEngine& ee, int vi_reg, REG_STATE state);
     REG_64 alloc_fpu_reg(EmotionEngine& ee, int fpu_reg, REG_STATE state);
     REG_64 alloc_vf_reg(EmotionEngine& ee, int vf_reg, REG_STATE state);
