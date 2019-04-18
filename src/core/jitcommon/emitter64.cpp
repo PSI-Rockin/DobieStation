@@ -591,9 +591,9 @@ void Emitter64::XOR64_REG(REG_64 source, REG_64 dest)
 
 void Emitter64::MOV8_REG(REG_64 source, REG_64 dest)
 {
-    rex_r_rm(dest, source);
-    cache->write<uint8_t>(0x8A);
-    modrm(0b11, dest, source);
+    rex_r_rm(source, dest);
+    cache->write<uint8_t>(0x88);
+    modrm(0b11, source, dest);
 }
 
 void Emitter64::MOV8_REG_IMM(uint8_t imm, REG_64 dest)
