@@ -94,7 +94,7 @@ private:
     int search_for_register_priority(AllocReg *regs);
     int search_for_register_scratchpad(AllocReg *regs);
     REG_64 alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state);
-    REG_64 alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state, REG_64 destination, bool use_new_dest);
+    REG_64 alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state, REG_64 destination);
     REG_64 lalloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state);
     REG_64 lalloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state, REG_64 destination);
     void free_gpr_reg(EmotionEngine& ee, REG_64 reg);
