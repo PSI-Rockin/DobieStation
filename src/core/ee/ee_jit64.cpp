@@ -361,8 +361,10 @@ void EE_JIT64::call_abi_func(EmotionEngine& ee, uint64_t addr)
     int regs_used = 0;
     int sp_offset = 0;
 
-    REG_64 addrReg = alloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD, REG_64::RAX);
+    REG_64 addrReg = alloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
     emitter.MOV64_OI(addr, addrReg);
+
+    flush_int_reg(ee, REG_64::RAX);
 
     for (int i = 0; i < abi_int_count; ++i)
         int_regs[abi_regs[i]].locked = false;
@@ -480,7 +482,7 @@ REG_64 EE_JIT64::alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state, 
         Errors::die("[EE_JIT64] Alloc Int error: gpr_reg == %d", gpr_reg);
 
     if (int_regs[destination].locked)
-        Errors::die("[EE_JIT64] Alloc Int error: Attempted to allocate locked x64 register %d", destination);
+         Errors::die("[EE_JIT64] Alloc Int error: Attempted to allocate locked x64 register %d", destination);
     
     // An explicit destination is not provided, so we find one ourselves here.
     if (destination < 0)
