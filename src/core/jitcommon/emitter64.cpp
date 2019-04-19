@@ -383,6 +383,11 @@ void Emitter64::OR64_REG(REG_64 source, REG_64 dest)
 void Emitter64::SETCC_REG(ConditionCode cc, REG_64 dest)
 {
     rex_rm(dest);
+
+    // FIXME: fix encoding so we don't explicitly write 0x40 here :D
+    if (!(dest & 0x8))
+        cache->write<uint8_t>(0x40);
+
     cache->write<uint8_t>(0x0F);
     cache->write<uint8_t>((int)cc | 0x90);
     modrm(0b11, 0, dest);
@@ -637,6 +642,11 @@ void Emitter64::XOR64_REG(REG_64 source, REG_64 dest)
 void Emitter64::MOV8_REG(REG_64 source, REG_64 dest)
 {
     rex_r_rm(source, dest);
+
+    // FIXME: I still don't know anything about encoding these instructions, woooo
+    if (!(dest & 0x8) && !(source & 0x8))
+        cache->write<uint8_t>(0x40);
+
     cache->write<uint8_t>(0x88);
     modrm(0b11, source, dest);
 }
@@ -833,6 +843,7 @@ void Emitter64::MOV64_TO_MEM(REG_64 source, REG_64 indir_dest, uint32_t offset)
 
 void Emitter64::MOVSX16_TO_32(REG_64 source, REG_64 dest)
 {
+    rex_r_rm(dest, source);
     cache->write<uint8_t>(0x0F);
     cache->write<uint8_t>(0xBF);
     modrm(0b11, dest, source);
