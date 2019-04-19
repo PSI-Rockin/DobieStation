@@ -109,14 +109,20 @@ class Emitter64
         void SHL16_REG_IMM(uint8_t shift, REG_64 dest);
         void SHL32_CL(REG_64 dest);
         void SHL32_REG_IMM(uint8_t shift, REG_64 dest);
+        void SHL64_CL(REG_64 dest);
+        void SHL64_REG_IMM(uint8_t shift, REG_64 dest);
         void SHR16_CL(REG_64 dest);
         void SHR16_REG_IMM(uint8_t shift, REG_64 dest);
         void SHR32_CL(REG_64 dest);
         void SHR32_REG_IMM(uint8_t shift, REG_64 dest);
+        void SHR64_CL(REG_64 dest);
+        void SHR64_REG_IMM(uint8_t shift, REG_64 dest);
         void SAR16_CL(REG_64 dest);
         void SAR16_REG_IMM(uint8_t shift, REG_64 dest);
         void SAR32_CL(REG_64 dest);
         void SAR32_REG_IMM(uint8_t shift, REG_64 dest);
+        void SAR64_CL(REG_64 dest);
+        void SAR64_REG_IMM(uint8_t shift, REG_64 dest);
 
         void SUB16_REG_IMM(uint16_t imm, REG_64 dest);
         void SUB32_REG(REG_64 source, REG_64 dest);

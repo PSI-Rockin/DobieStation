@@ -116,18 +116,36 @@ IR::Instruction EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC)
         case 0x08:
             // ADDI
             // TODO: Overflow?
+        {
+            uint8_t dest = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+
             instr.op = IR::Opcode::AddUnsignedImm;
-            instr.set_dest((opcode >> 16) & 0x1F);
+            instr.set_dest(dest);
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_source2(opcode & 0xFFFF);
             return instr;
+        }
         case 0x09:
             // ADDIU
+        {
+            uint8_t dest = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+
             instr.op = IR::Opcode::AddUnsignedImm;
-            instr.set_dest((opcode >> 16) & 0x1F);
+            instr.set_dest(dest);
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_source2(opcode & 0xFFFF);
             return instr;
+        }
         case 0x0A:
             // SLTI
         {
@@ -166,31 +184,67 @@ IR::Instruction EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC)
         }
         case 0x0C:
             // ANDI
+        {
+            uint8_t dest = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+
             instr.op = IR::Opcode::AndInt;
-            instr.set_dest((opcode >> 16) & 0x1F);
+            instr.set_dest(dest);
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_source2(opcode & 0xFFFF);
             return instr;
+        }
         case 0x0D:
             // ORI
+        {
+            uint8_t dest = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+
             instr.op = IR::Opcode::OrInt;
             instr.set_dest((opcode >> 16) & 0x1F);
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_source2(opcode & 0xFFFF);
             return instr;
+        }
         case 0x0E:
             // XORI
+        {
+            uint8_t dest = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+
             instr.op = IR::Opcode::XorInt;
-            instr.set_dest((opcode >> 16) & 0x1F);
+            instr.set_dest(dest);
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_source2(opcode & 0xFFFF);
             return instr;
+        }
         case 0x0F:
             // LUI
+        {
+            uint8_t dest = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+
             instr.op = IR::Opcode::LoadUpperImmediate;
-            instr.set_dest((opcode >> 16) & 0x1F);
+            instr.set_dest(dest);
             instr.set_source(opcode & 0xFFFF);
             return instr;
+        }
         case 0x10:
             // COP0 (System Coprocessor)
             return translate_op_cop0(opcode, PC);
@@ -556,19 +610,58 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
             return instr;
         case 0x14:
             // DSLLV
-            Errors::print_warning("[EE_JIT] Unrecognized special op DSLLV\n", op);
+        {
             fallback_interpreter(instr, opcode);
             return instr;
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+
+            instr.op = IR::Opcode::DoublewordShiftLeftLogicalVariable;
+            instr.set_dest(dest);
+            instr.set_source((opcode >> 16) & 0x1F);
+            instr.set_source2((opcode >> 21) & 0x1F);
+            return instr;
+        }
         case 0x16:
             // DSRLV
-            Errors::print_warning("[EE_JIT] Unrecognized special op DSRLV\n", op);
+        {
             fallback_interpreter(instr, opcode);
             return instr;
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+
+            instr.op = IR::Opcode::DoublewordShiftRightLogicalVariable;
+            instr.set_dest(dest);
+            instr.set_source((opcode >> 16) & 0x1F);
+            instr.set_source2((opcode >> 21) & 0x1F);
+            return instr;
+        }
         case 0x17:
             // DSRAV
-            Errors::print_warning("[EE_JIT] Unrecognized special op DSRAV\n", op);
+        {
             fallback_interpreter(instr, opcode);
             return instr;
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+
+            instr.op = IR::Opcode::DoublewordShiftRightArithmeticVariable;
+            instr.set_dest(dest);
+            instr.set_source((opcode >> 16) & 0x1F);
+            instr.set_source2((opcode >> 21) & 0x1F);
+            return instr;
+        }
         case 0x18:
             // MULT
             Errors::print_warning("[EE_JIT] Unrecognized special op MULT\n", op);
@@ -676,34 +769,100 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
             return instr;
         case 0x38:
             // DSLL
-            Errors::print_warning("[EE_JIT] Unrecognized special op DSLL\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+
+            instr.op = IR::Opcode::DoublewordShiftLeftLogical;
+            instr.set_dest(dest);
+            instr.set_source((opcode >> 16) & 0x1F);
+            instr.set_source2((opcode >> 6) & 0x1F);
             return instr;
+        }
         case 0x3A:
             // DSRL
-            Errors::print_warning("[EE_JIT] Unrecognized special op DSRL\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+
+            instr.op = IR::Opcode::DoublewordShiftRightLogical;
+            instr.set_dest(dest);
+            instr.set_source((opcode >> 16) & 0x1F);
+            instr.set_source2((opcode >> 6) & 0x1F);
             return instr;
+        }
         case 0x3B:
             // DSRA
-            Errors::print_warning("[EE_JIT] Unrecognized special op DSRA\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+
+            instr.op = IR::Opcode::DoublewordShiftRightArithmetic;
+            instr.set_dest(dest);
+            instr.set_source((opcode >> 16) & 0x1F);
+            instr.set_source2((opcode >> 6) & 0x1F);
             return instr;
+        }
         case 0x3C:
             // DSLL32
-            Errors::print_warning("[EE_JIT] Unrecognized special op DSLL32\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+
+            instr.op = IR::Opcode::DoublewordShiftLeftLogical;
+            instr.set_dest(dest);
+            instr.set_source((opcode >> 16) & 0x1F);
+            instr.set_source2(((opcode >> 6) & 0x1F) + 32);
             return instr;
+        }
         case 0x3E:
             // DSRL32
-            Errors::print_warning("[EE_JIT] Unrecognized special op DSRL32\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+
+            instr.op = IR::Opcode::DoublewordShiftRightLogical;
+            instr.set_dest(dest);
+            instr.set_source((opcode >> 16) & 0x1F);
+            instr.set_source2(((opcode >> 6) & 0x1F) + 32);
             return instr;
+        }
         case 0x3F:
             // DSRA32
-            Errors::print_warning("[EE_JIT] Unrecognized special op DSRA32\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+
+            instr.op = IR::Opcode::DoublewordShiftRightArithmetic;
+            instr.set_dest(dest);
+            instr.set_source((opcode >> 16) & 0x1F);
+            instr.set_source2(((opcode >> 6) & 0x1F) + 32);
             return instr;
+        }
         default:
             Errors::die("[EE_JIT] Unrecognized special op $%02X", op);
             return instr;

@@ -444,6 +444,21 @@ void Emitter64::SHL32_REG_IMM(uint8_t shift, REG_64 dest)
     cache->write<uint8_t>(shift);
 }
 
+void Emitter64::SHL64_CL(REG_64 dest)
+{
+    rexw_rm(dest);
+    cache->write<uint8_t>(0xD3);
+    modrm(0b11, 4, dest);
+}
+
+void Emitter64::SHL64_REG_IMM(uint8_t shift, REG_64 dest)
+{
+    rexw_rm(dest);
+    cache->write<uint8_t>(0xC1);
+    modrm(0b11, 4, dest);
+    cache->write<uint8_t>(shift);
+}
+
 void Emitter64::SHR16_CL(REG_64 dest)
 {
     cache->write<uint8_t>(0x66);
@@ -476,6 +491,21 @@ void Emitter64::SHR32_REG_IMM(uint8_t shift, REG_64 dest)
     cache->write<uint8_t>(shift);
 }
 
+void Emitter64::SHR64_CL(REG_64 dest)
+{
+    rexw_rm(dest);
+    cache->write<uint8_t>(0xD3);
+    modrm(0b11, 5, dest);
+}
+
+void Emitter64::SHR64_REG_IMM(uint8_t shift, REG_64 dest)
+{
+    rexw_rm(dest);
+    cache->write<uint8_t>(0xC1);
+    modrm(0b11, 5, dest);
+    cache->write<uint8_t>(shift);
+}
+
 void Emitter64::SAR16_CL(REG_64 dest)
 {
     cache->write<uint8_t>(0x66);
@@ -503,6 +533,21 @@ void Emitter64::SAR32_CL(REG_64 dest)
 void Emitter64::SAR32_REG_IMM(uint8_t shift, REG_64 dest)
 {
     rex_rm(dest);
+    cache->write<uint8_t>(0xC1);
+    modrm(0b11, 7, dest);
+    cache->write<uint8_t>(shift);
+}
+
+void Emitter64::SAR64_CL(REG_64 dest)
+{
+    rexw_rm(dest);
+    cache->write<uint8_t>(0xD3);
+    modrm(0b11, 7, dest);
+}
+
+void Emitter64::SAR64_REG_IMM(uint8_t shift, REG_64 dest)
+{
+    rexw_rm(dest);
     cache->write<uint8_t>(0xC1);
     modrm(0b11, 7, dest);
     cache->write<uint8_t>(shift);

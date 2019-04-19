@@ -59,6 +59,12 @@ private:
     void branch_less_than_or_equal_zero(EmotionEngine& ee, IR::Instruction &instr);
     void branch_less_than_zero(EmotionEngine& ee, IR::Instruction &instr);
     void branch_not_equal(EmotionEngine& ee, IR::Instruction &instr);
+    void doubleword_shift_left_logical(EmotionEngine& ee, IR::Instruction& instr);
+    void doubleword_shift_left_logical_variable(EmotionEngine& ee, IR::Instruction& instr);
+    void doubleword_shift_right_arithmetic(EmotionEngine& ee, IR::Instruction& instr);
+    void doubleword_shift_right_arithmetic_variable(EmotionEngine& ee, IR::Instruction& instr);
+    void doubleword_shift_right_logical(EmotionEngine& ee, IR::Instruction& instr);
+    void doubleword_shift_right_logical_variable(EmotionEngine& ee, IR::Instruction& instr);
     void exception_return(EmotionEngine& ee, IR::Instruction& instr);
     void jump(EmotionEngine& ee, IR::Instruction& instr);
     void jump_indirect(EmotionEngine& ee, IR::Instruction& instr);
