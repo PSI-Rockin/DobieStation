@@ -41,6 +41,11 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
         branch_op = is_branch(instr);
         instr.set_cycle_count(cycle_count);
 
+        /*TENTATIVE START*/
+        if (!branch_op && instr.op != IR::Opcode::Null && !eret_op)
+            fallback_interpreter(instr, opcode);
+        /*TENTATIVE END*/
+
         if (instr.op != IR::Opcode::Null)
             block.add_instr(instr);
 

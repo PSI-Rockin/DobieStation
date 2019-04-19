@@ -88,12 +88,15 @@ private:
 
     void prepare_abi(EmotionEngine& ee, uint64_t value);
     void prepare_abi_reg(EmotionEngine& ee, REG_64 value);
-    void call_abi_func(uint64_t addr);
+    void call_abi_func(EmotionEngine& ee, uint64_t addr);
     void recompile_block(EmotionEngine& ee, IR::Block& block);
 
     int search_for_register(AllocReg *regs);
     REG_64 alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state);
-    void alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_64 destination, REG_STATE state);
+    REG_64 alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state, REG_64 destination);
+    REG_64 lalloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state);
+    REG_64 lalloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state, REG_64 destination);
+    void free_gpr_reg(EmotionEngine& ee, REG_64 reg);
     REG_64 alloc_vi_reg(EmotionEngine& ee, int vi_reg, REG_STATE state);
     REG_64 alloc_fpu_reg(EmotionEngine& ee, int fpu_reg, REG_STATE state);
     REG_64 alloc_vf_reg(EmotionEngine& ee, int vf_reg, REG_STATE state);

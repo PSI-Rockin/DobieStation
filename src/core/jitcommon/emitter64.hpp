@@ -155,7 +155,7 @@ class Emitter64
         void MOV32_TO_MEM(REG_64 source, REG_64 indir_dest);
         void MOV64_MR(REG_64 source, REG_64 dest);
         void MOV64_OI(uint64_t imm, REG_64 dest);
-        void MOV64_FROM_MEM(REG_64 indir_source, REG_64 dest);
+        void MOV64_FROM_MEM(REG_64 indir_source, REG_64 dest, uint32_t offset = 0);
         void MOV64_TO_MEM(REG_64 source, REG_64 indir_dest);
 
         void MOVSX16_TO_32(REG_64 source, REG_64 dest);

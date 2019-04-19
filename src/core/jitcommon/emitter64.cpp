@@ -761,11 +761,18 @@ void Emitter64::MOV64_OI(uint64_t imm, REG_64 dest)
     cache->write<uint64_t>(imm);
 }
 
-void Emitter64::MOV64_FROM_MEM(REG_64 indir_source, REG_64 dest)
+void Emitter64::MOV64_FROM_MEM(REG_64 indir_source, REG_64 dest, uint32_t offset)
 {
     rexw_r_rm(dest, indir_source);
     cache->write<uint8_t>(0x8B);
-    modrm(0, dest, indir_source);
+
+    if (indir_source == REG_64::RBP || offset != 0)
+    {
+        modrm(0b10, dest, indir_source);
+        cache->write<uint32_t>(offset);
+    }
+    else
+        modrm(0, dest, indir_source);
 }
 
 void Emitter64::MOV64_TO_MEM(REG_64 source, REG_64 indir_dest)
