@@ -639,6 +639,18 @@ void Emitter64::XOR64_REG(REG_64 source, REG_64 dest)
     modrm(0b11, source, dest);
 }
 
+void Emitter64::LEA32(REG_64 source, REG_64 dest, uint32_t offset, uint32_t shift)
+{
+    offset <<= shift;
+
+    rex_r_rm(dest, source);
+    cache->write<uint8_t>(0x8D);
+    modrm(0b10, dest, source);
+    if ((source & 7) == 4)
+        cache->write<uint8_t>(0x24);
+    cache->write<uint32_t>(offset);
+}
+
 void Emitter64::MOV8_REG(REG_64 source, REG_64 dest)
 {
     rex_r_rm(source, dest);
@@ -663,13 +675,16 @@ void Emitter64::MOV8_TO_MEM(REG_64 source, REG_64 indir_dest, uint32_t offset)
     rex_r_rm(source, indir_dest);
     cache->write<uint8_t>(0x88);
 
-    if (indir_dest == REG_64::RBP || offset != 0)
+    if ((indir_dest & 7) == 5 || offset)
     {
         modrm(0b10, source, indir_dest);
-        cache->write<uint32_t>(offset);
     }
     else
         modrm(0, source, indir_dest);
+    if ((indir_dest & 7) == 4)
+        cache->write<uint8_t>(0x24);
+    if ((indir_dest & 7) == 5 || offset)
+        cache->write<uint32_t>(offset);
 }
 
 void Emitter64::MOV8_FROM_MEM(REG_64 indir_source, REG_64 dest, uint32_t offset)
@@ -677,13 +692,16 @@ void Emitter64::MOV8_FROM_MEM(REG_64 indir_source, REG_64 dest, uint32_t offset)
     rex_r_rm(dest, indir_source);
     cache->write<uint8_t>(0x8A);
 
-    if (indir_source == REG_64::RBP || offset != 0)
+    if ((indir_source & 7) == 5 || offset)
     {
         modrm(0b10, dest, indir_source);
-        cache->write<uint32_t>(offset);
     }
     else
         modrm(0, dest, indir_source);
+    if ((indir_source & 7) == 4)
+        cache->write<uint8_t>(0x24);
+    if ((indir_source & 7) == 5 || offset)
+        cache->write<uint32_t>(offset);
 }
 
 void Emitter64::MOV8_IMM_MEM(uint8_t imm, REG_64 indir_dest)
@@ -716,13 +734,16 @@ void Emitter64::MOV16_TO_MEM(REG_64 source, REG_64 indir_dest, uint32_t offset)
     rex_r_rm(source, indir_dest);
     cache->write<uint8_t>(0x89);
 
-    if (indir_dest == REG_64::RBP || offset != 0)
+    if ((indir_dest & 7) == 5 || offset)
     {
         modrm(0b10, source, indir_dest);
-        cache->write<uint32_t>(offset);
     }
     else
         modrm(0, source, indir_dest);
+    if ((indir_dest & 7) == 4)
+        cache->write<uint8_t>(0x24);
+    if ((indir_dest & 7) == 5 || offset)
+        cache->write<uint32_t>(offset);
 } 
 
 void Emitter64::MOV16_FROM_MEM(REG_64 indir_source, REG_64 dest, uint32_t offset)
@@ -731,13 +752,16 @@ void Emitter64::MOV16_FROM_MEM(REG_64 indir_source, REG_64 dest, uint32_t offset
     rex_r_rm(dest, indir_source);
     cache->write<uint8_t>(0x8B);
 
-    if (indir_source == REG_64::RBP || offset != 0)
+    if ((indir_source & 7) == 5 || offset)
     {
         modrm(0b10, dest, indir_source);
-        cache->write<uint32_t>(offset);
     }
     else
         modrm(0, dest, indir_source);
+    if ((indir_source & 7) == 4)
+        cache->write<uint8_t>(0x24);
+    if ((indir_source & 7) == 5 || offset)
+        cache->write<uint32_t>(offset);
 }
 
 void Emitter64::MOV16_IMM_MEM(uint16_t imm, REG_64 indir_dest)
@@ -776,13 +800,16 @@ void Emitter64::MOV32_FROM_MEM(REG_64 indir_source, REG_64 dest, uint32_t offset
     rex_r_rm(dest, indir_source);
     cache->write<uint8_t>(0x8B);
 
-    if (indir_source == REG_64::RBP || offset != 0)
+    if ((indir_source & 7) == 5 || offset)
     {
         modrm(0b10, dest, indir_source);
-        cache->write<uint32_t>(offset);
     }
     else
         modrm(0, dest, indir_source);
+    if ((indir_source & 7) == 4)
+        cache->write<uint8_t>(0x24);
+    if ((indir_source & 7) == 5 || offset)
+        cache->write<uint32_t>(offset);
 }
 
 void Emitter64::MOV32_TO_MEM(REG_64 source, REG_64 indir_dest, uint32_t offset)
@@ -790,13 +817,16 @@ void Emitter64::MOV32_TO_MEM(REG_64 source, REG_64 indir_dest, uint32_t offset)
     rex_r_rm(source, indir_dest);
     cache->write<uint8_t>(0x89);
 
-    if (indir_dest == REG_64::RBP || offset != 0)
+    if ((indir_dest & 7) == 5 || offset)
     {
         modrm(0b10, source, indir_dest);
-        cache->write<uint32_t>(offset);
     }
     else
         modrm(0, source, indir_dest);
+    if ((indir_dest & 7) == 4)
+        cache->write<uint8_t>(0x24);
+    if ((indir_dest & 7) == 5 || offset)
+        cache->write<uint32_t>(offset);
 }
 
 void Emitter64::MOV64_MR(REG_64 source, REG_64 dest)
@@ -818,13 +848,16 @@ void Emitter64::MOV64_FROM_MEM(REG_64 indir_source, REG_64 dest, uint32_t offset
     rexw_r_rm(dest, indir_source);
     cache->write<uint8_t>(0x8B);
 
-    if (indir_source == REG_64::RBP || offset != 0)
+    if ((indir_source & 7) == 5 || offset)
     {
         modrm(0b10, dest, indir_source);
-        cache->write<uint32_t>(offset);
     }
     else
         modrm(0, dest, indir_source);
+    if ((indir_source & 7) == 4)
+        cache->write<uint8_t>(0x24);
+    if ((indir_source & 7) == 5 || offset)
+        cache->write<uint32_t>(offset);
 }
 
 void Emitter64::MOV64_TO_MEM(REG_64 source, REG_64 indir_dest, uint32_t offset)
@@ -832,13 +865,24 @@ void Emitter64::MOV64_TO_MEM(REG_64 source, REG_64 indir_dest, uint32_t offset)
     rexw_r_rm(source, indir_dest);
     cache->write<uint8_t>(0x89);
 
-    if (indir_dest == REG_64::RBP || offset != 0)
+    if ((indir_dest & 7) == 5 || offset)
     {
         modrm(0b10, source, indir_dest);
-        cache->write<uint32_t>(offset);
     }
     else
         modrm(0, source, indir_dest);
+    if ((indir_dest & 7) == 4)
+        cache->write<uint8_t>(0x24);
+    if ((indir_dest & 7) == 5 || offset)
+        cache->write<uint32_t>(offset);
+}
+
+void Emitter64::MOVSX8_TO_64(REG_64 source, REG_64 dest)
+{
+    rexw_r_rm(dest, source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0xBE);
+    modrm(0b11, dest, source);
 }
 
 void Emitter64::MOVSX16_TO_32(REG_64 source, REG_64 dest)
@@ -982,6 +1026,7 @@ void Emitter64::CALL(uint64_t func)
 
 void Emitter64::CALL_INDIR(REG_64 source)
 {
+    rex_rm(source);
     cache->write<uint8_t>(0xFF);
     modrm(0b11, 2, source);
 }

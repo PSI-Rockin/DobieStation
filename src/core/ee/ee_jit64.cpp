@@ -149,6 +149,8 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
 {
     switch (instr.op)
     {
+        case IR::Opcode::Null:
+            break;
         case IR::Opcode::AddUnsignedImm:
             add_unsigned_imm(ee, instr);
             break;
@@ -209,6 +211,12 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::JumpIndirect:
             jump_indirect(ee, instr);
             break;
+        case IR::Opcode::LoadByte:
+            load_byte(ee, instr);
+            break;
+        case IR::Opcode::LoadByteUnsigned:
+            load_byte_unsigned(ee, instr);
+            break;
         case IR::Opcode::LoadUpperImmediate:
             load_upper_immediate(ee, instr);
             break;
@@ -259,6 +267,26 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
     }
 }
 
+void EE_JIT64::alloc_abi_regs(int count)
+{
+#ifdef _WIN32
+    const static REG_64 regs[] = { RCX, RDX, R8, R9 };
+
+    if (abi_int_count + count > 4)
+        Errors::die("[EE_JIT64] ABI integer arguments exceeded 4!");
+#else
+    const static REG_64 regs[] = { RDI, RSI, RDX, RCX, R8, R9 };
+
+    if (abi_int_count + count > 6)
+        Errors::die("[EE_JIT64] ABI integer arguments exceeded 6!");
+#endif
+
+    for (int i = abi_int_count; i < abi_int_count + count; ++i)
+    {
+        int_regs[regs[i]].locked = true;
+    }
+}
+
 void EE_JIT64::prepare_abi(EmotionEngine& ee, uint64_t value)
 {
 #ifdef _WIN32
@@ -274,15 +302,10 @@ void EE_JIT64::prepare_abi(EmotionEngine& ee, uint64_t value)
 #endif    
 
     REG_64 arg = regs[abi_int_count];
+    int_regs[arg].locked = true;
 
     //If the chosen integer argument is being used, flush it back to the EE state
-    if (int_regs[arg].used)
-    {
-        int reg = int_regs[arg].reg;
-        flush_int_reg(ee, reg);
-        int_regs[arg].used = false;
-        int_regs[arg].age = 0;
-    }
+    flush_int_reg(ee, arg);
     emitter.load_addr(value, regs[abi_int_count]);
     abi_int_count++;
 }
@@ -302,28 +325,32 @@ void EE_JIT64::prepare_abi_reg(EmotionEngine& ee, REG_64 reg)
 #endif    
 
     REG_64 arg = regs[abi_int_count];
+    int_regs[arg].locked = true;
 
     //If the chosen integer argument is being used, flush it back to the EE state
-    if (int_regs[arg].used)
-    {
-        int vi_reg = int_regs[arg].reg;
-        flush_int_reg(ee, vi_reg);
-        int_regs[arg].used = false;
-        int_regs[arg].age = 0;
-    }
-    emitter.MOV64_MR(reg, regs[abi_int_count]);
+    flush_int_reg(ee, arg);
+    if (reg != regs[abi_int_count])
+        emitter.MOV64_MR(reg, regs[abi_int_count]);
     abi_int_count++;
 }
 
 void EE_JIT64::call_abi_func(EmotionEngine& ee, uint64_t addr)
 {
     const static REG_64 saved_regs[] = { RCX, RDX, R8, R9, R10, R11 };
+#ifdef _WIN32
+    const static REG_64 abi_regs[] = { RCX, RDX, R8, R9 };
+#else
+    const static REG_64 abi_regs[] = { RDI, RSI, RDX, RCX, R8, R9 };
+#endif    
     int total_regs = sizeof(saved_regs) / sizeof(REG_64);
     int regs_used = 0;
     int sp_offset = 0;
 
-    REG_64 addrReg = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
+    REG_64 addrReg = alloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD, REG_64::RAX);
     emitter.MOV64_OI(addr, addrReg);
+
+    for (int i = 0; i < abi_int_count; ++i)
+        int_regs[abi_regs[i]].locked = false;
 
     for (int i = 0; i < total_regs; i++)
     {
@@ -355,7 +382,6 @@ void EE_JIT64::call_abi_func(EmotionEngine& ee, uint64_t addr)
     }
     abi_int_count = 0;
     abi_xmm_count = 0;
-    free_gpr_reg(ee, addrReg);
 }
 
 int EE_JIT64::search_for_register_scratchpad(AllocReg *regs)
@@ -757,7 +783,7 @@ void EE_JIT64::flush_regs(EmotionEngine& ee)
     //printf("[EE_JIT64] Flushing regs\n");
     for (int i = 0; i < 16; i++)
     {
-        flush_xmm_reg(ee, i);
+        //flush_xmm_reg(ee, i);
         flush_int_reg(ee, i);
     }
 }
@@ -1418,6 +1444,53 @@ void EE_JIT64::jump_indirect(EmotionEngine& ee, IR::Instruction& instr)
 
     // Free scratchpad register
     free_gpr_reg(ee, RAX);
+}
+
+uint8_t ee_read8(EmotionEngine& ee, uint32_t addr)
+{
+    return ee.read8(addr);
+}
+
+void EE_JIT64::load_byte(EmotionEngine& ee, IR::Instruction &instr)
+{
+    alloc_abi_regs(2);
+    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 addr = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
+
+    int64_t offset = instr.get_source2();
+
+    if (offset)
+        emitter.LEA32(source, addr, offset);
+    else
+        emitter.MOV32_REG(source, addr);
+    prepare_abi(ee, (uint64_t)&ee);
+    prepare_abi_reg(ee, addr);
+    free_gpr_reg(ee, addr);
+    call_abi_func(ee, (uint64_t)ee_read8);
+
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+    emitter.MOVSX8_TO_64(REG_64::RAX, dest);
+}
+
+void EE_JIT64::load_byte_unsigned(EmotionEngine& ee, IR::Instruction &instr)
+{
+    alloc_abi_regs(2);
+    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 addr = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
+
+    int64_t offset = instr.get_source2();
+
+    if (offset)
+        emitter.LEA32(source, addr, offset);
+    else
+        emitter.MOV32_REG(source, addr);
+    prepare_abi(ee, (uint64_t)&ee);
+    prepare_abi_reg(ee, addr);
+    free_gpr_reg(ee, addr);
+    call_abi_func(ee, (uint64_t)ee_read8);
+
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+    emitter.MOVZX8_TO_64(REG_64::RAX, dest);
 }
 
 void EE_JIT64::load_upper_immediate(EmotionEngine& ee, IR::Instruction &instr)

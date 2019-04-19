@@ -138,6 +138,7 @@ class Emitter64
         void XOR32_REG(REG_64 source, REG_64 dest);
         void XOR64_REG(REG_64 source, REG_64 dest);
 
+        void LEA32(REG_64 source, REG_64 dest, uint32_t offset = 0, uint32_t shift = 0);
         void MOV8_REG(REG_64 source, REG_64 dest);
         void MOV8_REG_IMM(uint8_t imm, REG_64 dest);
         void MOV8_TO_MEM(REG_64 source, REG_64 indir_dest, uint32_t offset = 0);
@@ -158,6 +159,7 @@ class Emitter64
         void MOV64_FROM_MEM(REG_64 indir_source, REG_64 dest, uint32_t offset = 0);
         void MOV64_TO_MEM(REG_64 source, REG_64 indir_dest, uint32_t offset = 0);
 
+        void MOVSX8_TO_64(REG_64 source, REG_64 dest);
         void MOVSX16_TO_32(REG_64 source, REG_64 dest);
         void MOVSX16_TO_64(REG_64 source, REG_64 dest);
         void MOVSX32_TO_64(REG_64 source, REG_64 dest);

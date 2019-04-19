@@ -68,6 +68,8 @@ private:
     void exception_return(EmotionEngine& ee, IR::Instruction& instr);
     void jump(EmotionEngine& ee, IR::Instruction& instr);
     void jump_indirect(EmotionEngine& ee, IR::Instruction& instr);
+    void load_byte(EmotionEngine& ee, IR::Instruction& instr);
+    void load_byte_unsigned(EmotionEngine& ee, IR::Instruction& instr);
     void load_upper_immediate(EmotionEngine& ee, IR::Instruction &instr);
     void or_int(EmotionEngine& ee, IR::Instruction& instr);
     void set_on_less_than_immediate(EmotionEngine& ee, IR::Instruction& instr);
@@ -86,6 +88,7 @@ private:
 
     static void ee_syscall_exception(EmotionEngine& ee);
 
+    void alloc_abi_regs(int count);
     void prepare_abi(EmotionEngine& ee, uint64_t value);
     void prepare_abi_reg(EmotionEngine& ee, REG_64 value);
     void call_abi_func(EmotionEngine& ee, uint64_t addr);
