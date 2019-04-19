@@ -217,8 +217,23 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::LoadByteUnsigned:
             load_byte_unsigned(ee, instr);
             break;
+        case IR::Opcode::LoadDoubleword:
+            load_doubleword(ee, instr);
+            break;
+        case IR::Opcode::LoadHalfword:
+            load_halfword(ee, instr);
+            break;
+        case IR::Opcode::LoadHalfwordUnsigned:
+            load_halfword_unsigned(ee, instr);
+            break;
         case IR::Opcode::LoadUpperImmediate:
             load_upper_immediate(ee, instr);
+            break;
+        case IR::Opcode::LoadWord:
+            load_word(ee, instr);
+            break;
+        case IR::Opcode::LoadWordUnsigned:
+            load_word_unsigned(ee, instr);
             break;
         case IR::Opcode::OrInt:
             or_int(ee, instr);
@@ -1451,6 +1466,22 @@ uint8_t ee_read8(EmotionEngine& ee, uint32_t addr)
     return ee.read8(addr);
 }
 
+uint16_t ee_read16(EmotionEngine& ee, uint32_t addr)
+{
+    return ee.read16(addr);
+}
+
+uint32_t ee_read32(EmotionEngine& ee, uint32_t addr)
+{
+    return ee.read32(addr);
+}
+
+uint64_t ee_read64(EmotionEngine& ee, uint32_t addr)
+{
+    return ee.read64(addr);
+}
+
+
 void EE_JIT64::load_byte(EmotionEngine& ee, IR::Instruction &instr)
 {
     alloc_abi_regs(2);
@@ -1493,6 +1524,69 @@ void EE_JIT64::load_byte_unsigned(EmotionEngine& ee, IR::Instruction &instr)
     emitter.MOVZX8_TO_64(REG_64::RAX, dest);
 }
 
+void EE_JIT64::load_doubleword(EmotionEngine& ee, IR::Instruction &instr)
+{
+    alloc_abi_regs(2);
+    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 addr = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
+
+    int64_t offset = instr.get_source2();
+
+    if (offset)
+        emitter.LEA32(source, addr, offset);
+    else
+        emitter.MOV32_REG(source, addr);
+    prepare_abi(ee, (uint64_t)&ee);
+    prepare_abi_reg(ee, addr);
+    free_gpr_reg(ee, addr);
+    call_abi_func(ee, (uint64_t)ee_read64);
+
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+    emitter.MOV64_MR(REG_64::RAX, dest);
+}
+
+void EE_JIT64::load_halfword(EmotionEngine& ee, IR::Instruction &instr)
+{
+    alloc_abi_regs(2);
+    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 addr = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
+
+    int64_t offset = instr.get_source2();
+
+    if (offset)
+        emitter.LEA32(source, addr, offset);
+    else
+        emitter.MOV32_REG(source, addr);
+    prepare_abi(ee, (uint64_t)&ee);
+    prepare_abi_reg(ee, addr);
+    free_gpr_reg(ee, addr);
+    call_abi_func(ee, (uint64_t)ee_read16);
+
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+    emitter.MOVSX16_TO_64(REG_64::RAX, dest);
+}
+
+void EE_JIT64::load_halfword_unsigned(EmotionEngine& ee, IR::Instruction &instr)
+{
+    alloc_abi_regs(2);
+    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 addr = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
+
+    int64_t offset = instr.get_source2();
+
+    if (offset)
+        emitter.LEA32(source, addr, offset);
+    else
+        emitter.MOV32_REG(source, addr);
+    prepare_abi(ee, (uint64_t)&ee);
+    prepare_abi_reg(ee, addr);
+    free_gpr_reg(ee, addr);
+    call_abi_func(ee, (uint64_t)ee_read16);
+
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+    emitter.MOVZX16_TO_64(REG_64::RAX, dest);
+}
+
 void EE_JIT64::load_upper_immediate(EmotionEngine& ee, IR::Instruction &instr)
 {
     REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
@@ -1500,6 +1594,48 @@ void EE_JIT64::load_upper_immediate(EmotionEngine& ee, IR::Instruction &instr)
 
     // dest = (int64_t)((int32_t)(imm << 16))
     emitter.MOV64_OI(imm, dest);
+}
+
+void EE_JIT64::load_word(EmotionEngine& ee, IR::Instruction &instr)
+{
+    alloc_abi_regs(2);
+    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 addr = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
+
+    int64_t offset = instr.get_source2();
+
+    if (offset)
+        emitter.LEA32(source, addr, offset);
+    else
+        emitter.MOV32_REG(source, addr);
+    prepare_abi(ee, (uint64_t)&ee);
+    prepare_abi_reg(ee, addr);
+    free_gpr_reg(ee, addr);
+    call_abi_func(ee, (uint64_t)ee_read32);
+
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+    emitter.MOVSX32_TO_64(REG_64::RAX, dest);
+}
+
+void EE_JIT64::load_word_unsigned(EmotionEngine& ee, IR::Instruction &instr)
+{
+    alloc_abi_regs(2);
+    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 addr = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
+
+    int64_t offset = instr.get_source2();
+
+    if (offset)
+        emitter.LEA32(source, addr, offset);
+    else
+        emitter.MOV32_REG(source, addr);
+    prepare_abi(ee, (uint64_t)&ee);
+    prepare_abi_reg(ee, addr);
+    free_gpr_reg(ee, addr);
+    call_abi_func(ee, (uint64_t)ee_read32);
+
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+    emitter.MOV32_REG(REG_64::RAX, dest);
 }
 
 void EE_JIT64::or_int(EmotionEngine& ee, IR::Instruction &instr)

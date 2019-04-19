@@ -70,7 +70,12 @@ private:
     void jump_indirect(EmotionEngine& ee, IR::Instruction& instr);
     void load_byte(EmotionEngine& ee, IR::Instruction& instr);
     void load_byte_unsigned(EmotionEngine& ee, IR::Instruction& instr);
+    void load_doubleword(EmotionEngine& ee, IR::Instruction& instr);
+    void load_halfword(EmotionEngine& ee, IR::Instruction& instr);
+    void load_halfword_unsigned(EmotionEngine& ee, IR::Instruction& instr);
     void load_upper_immediate(EmotionEngine& ee, IR::Instruction &instr);
+    void load_word(EmotionEngine& ee, IR::Instruction& instr);
+    void load_word_unsigned(EmotionEngine& ee, IR::Instruction& instr);
     void or_int(EmotionEngine& ee, IR::Instruction& instr);
     void set_on_less_than_immediate(EmotionEngine& ee, IR::Instruction& instr);
     void set_on_less_than_immediate_unsigned(EmotionEngine& ee, IR::Instruction& instr);
