@@ -91,7 +91,8 @@ private:
     void call_abi_func(EmotionEngine& ee, uint64_t addr);
     void recompile_block(EmotionEngine& ee, IR::Block& block);
 
-    int search_for_register(AllocReg *regs);
+    int search_for_register_priority(AllocReg *regs);
+    int search_for_register_scratchpad(AllocReg *regs);
     REG_64 alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state);
     REG_64 alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state, REG_64 destination);
     REG_64 lalloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state);

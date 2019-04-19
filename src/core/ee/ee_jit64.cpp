@@ -79,9 +79,6 @@ extern "C"
 uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee)
 {
     //printf("[EE_JIT64] Executing block at $%08X\n", ee.PC);
-    if (ee.PC == 0x270374)
-        printf("P");
-
     if (jit.cache.find_block(BlockState{ ee.PC, 0, 0, 0, 0 }) == nullptr)
     {
         printf("[EE_JIT64] Block not found at $%08X: recompiling\n", ee.PC);
@@ -359,9 +356,62 @@ void EE_JIT64::call_abi_func(EmotionEngine& ee, uint64_t addr)
     free_gpr_reg(ee, addrReg);
 }
 
-int EE_JIT64::search_for_register(AllocReg *regs)
+int EE_JIT64::search_for_register_scratchpad(AllocReg *regs)
 {
-    //Returns the index of either a free register or the oldest allocated register, depending on availability
+    // Returns the index of either a free register or the oldest allocated register, depending on availability
+    // Will prioritize volatile (caller-saved) registers
+#ifdef _WIN32
+    REG_64 favored_registers[] = { RAX, RCX, RDX, R8, R9, R10, R11 };
+#else
+    REG_64 favored_registers[] = { RAX, RCX, RDX, RDI, RSI, R8, R9, R10, R11 };
+#endif
+
+    for (REG_64 favreg : favored_registers)
+    {
+        if (regs[favreg].locked)
+            continue;
+
+        if (!regs[favreg].used)
+            return favreg;
+    }
+
+    int reg = -1;
+    int age = 0;
+    for (int i = 0; i < 16; i++)
+    {
+        if (regs[i].locked)
+            continue;
+
+        if (!regs[i].used)
+            return i;
+
+        if (regs[i].age > age)
+        {
+            reg = i;
+            age = regs[i].age;
+        }
+    }
+    return reg;
+}
+
+int EE_JIT64::search_for_register_priority(AllocReg *regs)
+{
+    // Returns the index of either a free register or the oldest allocated register, depending on availability
+    // Will prioritize non-volatile (callee-saved) registers
+#ifdef _WIN32
+    REG_64 favored_registers[] = { RBX, RBP, RDI, RSI, R12, R13, R14, R15 };
+#else
+    REG_64 favored_registers[] = { RBX, RBP, R12, R13, R14, R15 };
+#endif
+    for (REG_64 favreg : favored_registers)
+    {
+        if (regs[favreg].locked)
+            continue;
+
+        if (!regs[favreg].used)
+            return favreg;
+    }
+
     int reg = -1;
     int age = 0;
     for (int i = 0; i < 16; i++)
@@ -441,7 +491,10 @@ REG_64 EE_JIT64::alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state, 
 
 REG_64 EE_JIT64::alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state)
 {
-    return alloc_gpr_reg(ee, gpr_reg, state, (REG_64)search_for_register(int_regs));
+    if (state == REG_STATE::SCRATCHPAD)
+        return alloc_gpr_reg(ee, gpr_reg, state, (REG_64)search_for_register_scratchpad(int_regs));
+    else
+        return alloc_gpr_reg(ee, gpr_reg, state, (REG_64)search_for_register_priority(int_regs));
 }
 
 REG_64 EE_JIT64::lalloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state, REG_64 destination)
@@ -453,7 +506,10 @@ REG_64 EE_JIT64::lalloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state,
 
 REG_64 EE_JIT64::lalloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state)
 {
-    return lalloc_gpr_reg(ee, gpr_reg, state, (REG_64)search_for_register(int_regs));
+    if (state == REG_STATE::SCRATCHPAD)
+        return lalloc_gpr_reg(ee, gpr_reg, state, (REG_64)search_for_register_scratchpad(int_regs));
+    else
+        return lalloc_gpr_reg(ee, gpr_reg, state, (REG_64)search_for_register_priority(int_regs));
 }
 
 void EE_JIT64::free_gpr_reg(EmotionEngine& ee, REG_64 reg)
@@ -462,6 +518,7 @@ void EE_JIT64::free_gpr_reg(EmotionEngine& ee, REG_64 reg)
     flush_int_reg(ee, reg);
 }
 
+/*
 REG_64 EE_JIT64::alloc_vi_reg(EmotionEngine& ee, int vi_reg, REG_STATE state)
 {
     if (vi_reg >= 16)
@@ -603,6 +660,7 @@ REG_64 EE_JIT64::alloc_vf_reg(EmotionEngine& ee, int vf_reg, REG_STATE state)
 
     return (REG_64)reg;
 }
+*/
 
 void EE_JIT64::flush_int_reg(EmotionEngine& ee, int reg)
 {
