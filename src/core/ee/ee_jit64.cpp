@@ -482,7 +482,7 @@ REG_64 EE_JIT64::alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state, 
         Errors::die("[EE_JIT64] Alloc Int error: gpr_reg == %d", gpr_reg);
 
     if (int_regs[destination].locked)
-         Errors::die("[EE_JIT64] Alloc Int error: Attempted to allocate locked x64 register %d", destination);
+        Errors::die("[EE_JIT64] Alloc Int error: Attempted to allocate locked x64 register %d", destination);
     
     // An explicit destination is not provided, so we find one ourselves here.
     if (destination < 0)

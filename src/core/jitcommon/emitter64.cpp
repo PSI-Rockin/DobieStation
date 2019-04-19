@@ -236,14 +236,16 @@ void Emitter64::CMOVCC16_MEM(ConditionCode cc, REG_64 source, REG_64 indir_dest,
     cache->write<uint8_t>(0x0F);
     cache->write<uint8_t>((int)cc | 0x40);
 
-    // 32-bit offsets only for now
-    if (offset)
+    if ((indir_dest & 7) == 5 || offset)
     {
         modrm(0b10, indir_dest, source);
-        cache->write<uint32_t>(offset);
     }
     else
-        modrm(0b00, indir_dest, source);
+        modrm(0, indir_dest, source);
+    if ((indir_dest & 7) == 4)
+        cache->write<uint8_t>(0x24);
+    if ((indir_dest & 7) == 5 || offset)
+        cache->write<uint32_t>(offset);
 }
 
 void Emitter64::CMOVCC32_MEM(ConditionCode cc, REG_64 source, REG_64 indir_dest, uint32_t offset)
@@ -251,14 +253,16 @@ void Emitter64::CMOVCC32_MEM(ConditionCode cc, REG_64 source, REG_64 indir_dest,
     cache->write<uint8_t>(0x0F);
     cache->write<uint8_t>((int)cc | 0x40);
 
-    // 32-bit offsets only for now
-    if (offset)
+    if ((indir_dest & 7) == 5 || offset)
     {
         modrm(0b10, indir_dest, source);
-        cache->write<uint32_t>(offset);
     }
     else
-        modrm(0b00, indir_dest, source);
+        modrm(0, indir_dest, source);
+    if ((indir_dest & 7) == 4)
+        cache->write<uint8_t>(0x24);
+    if ((indir_dest & 7) == 5 || offset)
+        cache->write<uint32_t>(offset);
 }
 
 void Emitter64::CMOVCC64_MEM(ConditionCode cc, REG_64 source, REG_64 indir_dest, uint32_t offset)
@@ -267,14 +271,16 @@ void Emitter64::CMOVCC64_MEM(ConditionCode cc, REG_64 source, REG_64 indir_dest,
     cache->write<uint8_t>(0x0F);
     cache->write<uint8_t>((int)cc | 0x40);
 
-    // 32-bit offsets only for now
-    if (offset)
+    if ((indir_dest & 7) == 5 || offset)
     {
         modrm(0b10, indir_dest, source);
-        cache->write<uint32_t>(offset);
     }
     else
-        modrm(0b00, indir_dest, source);
+        modrm(0, indir_dest, source);
+    if ((indir_dest & 7) == 4)
+        cache->write<uint8_t>(0x24);
+    if ((indir_dest & 7) == 5 || offset)
+        cache->write<uint32_t>(offset);
 }
 
 void Emitter64::CMP8_REG(REG_64 op2, REG_64 op1)
@@ -399,14 +405,16 @@ void Emitter64::SETCC_MEM(ConditionCode cc, REG_64 indir_dest, uint32_t offset)
     cache->write<uint8_t>(0x0F);
     cache->write<uint8_t>((int)cc | 0x90);
 
-    // 32-bit offsets only for now
-    if (offset)
+    if ((indir_dest & 7) == 5 || offset)
     {
         modrm(0b10, 0, indir_dest);
-        cache->write<uint32_t>(offset);
     }
     else
-        modrm(0b00, 0, indir_dest);
+        modrm(0, 0, indir_dest);
+    if ((indir_dest & 7) == 4)
+        cache->write<uint8_t>(0x24);
+    if ((indir_dest & 7) == 5 || offset)
+        cache->write<uint32_t>(offset);
 }
 
 void Emitter64::SHL16_REG_1(REG_64 dest)
