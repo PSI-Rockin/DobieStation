@@ -42,7 +42,7 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
         instr.set_cycle_count(cycle_count);
 
         /*TENTATIVE START*/
-        if (!branch_op && instr.op != IR::Opcode::Null && !eret_op)
+        if (!branch_op && instr.op != IR::Opcode::Null && !eret_op && instr.op != IR::Opcode::AddUnsignedImm)
             fallback_interpreter(instr, opcode);
         /*TENTATIVE END*/
 

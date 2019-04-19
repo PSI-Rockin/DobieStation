@@ -140,23 +140,23 @@ class Emitter64
 
         void MOV8_REG(REG_64 source, REG_64 dest);
         void MOV8_REG_IMM(uint8_t imm, REG_64 dest);
-        void MOV8_TO_MEM(REG_64 source, REG_64 indir_dest);
-        void MOV8_FROM_MEM(REG_64 indir_source, REG_64 dest);
+        void MOV8_TO_MEM(REG_64 source, REG_64 indir_dest, uint32_t offset = 0);
+        void MOV8_FROM_MEM(REG_64 indir_source, REG_64 dest, uint32_t offset = 0);
         void MOV8_IMM_MEM(uint8_t imm, REG_64 indir_dest);
         void MOV16_REG(REG_64 source, REG_64 dest);
         void MOV16_REG_IMM(uint16_t imm, REG_64 dest);
-        void MOV16_TO_MEM(REG_64 source, REG_64 indir_dest);
-        void MOV16_FROM_MEM(REG_64 indir_source, REG_64 dest);
+        void MOV16_TO_MEM(REG_64 source, REG_64 indir_dest, uint32_t offset = 0);
+        void MOV16_FROM_MEM(REG_64 indir_source, REG_64 dest, uint32_t offset = 0);
         void MOV16_IMM_MEM(uint16_t imm, REG_64 indir_dest);
         void MOV32_REG(REG_64 source, REG_64 dest);
         void MOV32_REG_IMM(uint32_t imm, REG_64 dest);
         void MOV32_IMM_MEM(uint32_t imm, REG_64 indir_dest);
-        void MOV32_FROM_MEM(REG_64 indir_source, REG_64 dest);
-        void MOV32_TO_MEM(REG_64 source, REG_64 indir_dest);
+        void MOV32_FROM_MEM(REG_64 indir_source, REG_64 dest, uint32_t offset = 0);
+        void MOV32_TO_MEM(REG_64 source, REG_64 indir_dest, uint32_t offset = 0);
         void MOV64_MR(REG_64 source, REG_64 dest);
         void MOV64_OI(uint64_t imm, REG_64 dest);
         void MOV64_FROM_MEM(REG_64 indir_source, REG_64 dest, uint32_t offset = 0);
-        void MOV64_TO_MEM(REG_64 source, REG_64 indir_dest);
+        void MOV64_TO_MEM(REG_64 source, REG_64 indir_dest, uint32_t offset = 0);
 
         void MOVSX16_TO_32(REG_64 source, REG_64 dest);
         void MOVSX16_TO_64(REG_64 source, REG_64 dest);

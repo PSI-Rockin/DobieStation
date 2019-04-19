@@ -56,6 +56,7 @@ void EE_JIT64::reset(bool clear_cache)
         int_regs[i].used = false;
         int_regs[i].locked = false;
         int_regs[i].age = 0;
+        int_regs[i].reg = -1;
     }
 
     //Lock special registers to prevent them from being used
@@ -78,6 +79,9 @@ void EE_JIT64::reset(bool clear_cache)
 extern "C"
 uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee)
 {
+    if (ee.PC == 0x2C0604)
+        printf("P");
+        
     //printf("[EE_JIT64] Executing block at $%08X\n", ee.PC);
     if (jit.cache.find_block(BlockState{ ee.PC, 0, 0, 0, 0 }) == nullptr)
     {
@@ -431,10 +435,22 @@ int EE_JIT64::search_for_register_priority(AllocReg *regs)
     return reg;
 }
 
-REG_64 EE_JIT64::alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state, REG_64 destination)
+REG_64 EE_JIT64::alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state, REG_64 destination, bool use_new_dest)
 {
     if (gpr_reg >= 32)
         Errors::die("[EE_JIT64] Alloc Int error: gpr_reg == %d", gpr_reg);
+
+    if (!use_new_dest)
+    {
+        for (int i = 0; i < 16; ++i)
+        {
+            if (!int_regs[i].locked && int_regs[i].used && int_regs[i].reg == gpr_reg && int_regs[i].is_gpr_reg)
+            {
+                destination = (REG_64)i;
+                break;
+            }
+        }
+    }
 
     if (int_regs[destination].locked)
         Errors::die("[EE_JIT64] Alloc Int error: Attempted to allocate locked x64 register %d", destination);
@@ -442,8 +458,16 @@ REG_64 EE_JIT64::alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state, 
     // Do nothing if the EE register is already inside our x86 register
     if (int_regs[destination].used && int_regs[destination].is_gpr_reg && int_regs[destination].reg == gpr_reg)
     {
+        if (state != REG_STATE::READ && gpr_reg)
+            int_regs[destination].modified = true;
         int_regs[destination].age = 0;
         return (REG_64)destination;
+    }
+
+    for (int i = 0; i < 16; ++i)
+    {
+        if (int_regs[i].used)
+            ++int_regs[i].age;
     }
 
     flush_int_reg(ee, destination);
@@ -452,6 +476,7 @@ REG_64 EE_JIT64::alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state, 
     {
         int_regs[destination].modified = false;
         int_regs[destination].used = true;
+        int_regs[destination].is_gpr_reg = false;
         int_regs[destination].age = 0;
         int_regs[destination].reg = -1;
         return (REG_64)destination;
@@ -470,7 +495,7 @@ REG_64 EE_JIT64::alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state, 
             }
         }
 
-        if (reg >= 0)
+        if (reg >= 0 && use_new_dest)
         {
             emitter.MOV64_MR((REG_64)reg, destination);
         }
@@ -492,14 +517,16 @@ REG_64 EE_JIT64::alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state, 
 REG_64 EE_JIT64::alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state)
 {
     if (state == REG_STATE::SCRATCHPAD)
-        return alloc_gpr_reg(ee, gpr_reg, state, (REG_64)search_for_register_scratchpad(int_regs));
+        return alloc_gpr_reg(ee, -1, state, (REG_64)search_for_register_scratchpad(int_regs), false);
     else
-        return alloc_gpr_reg(ee, gpr_reg, state, (REG_64)search_for_register_priority(int_regs));
+        return alloc_gpr_reg(ee, gpr_reg, state, (REG_64)search_for_register_priority(int_regs), false);
 }
 
 REG_64 EE_JIT64::lalloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state, REG_64 destination)
 {
-    REG_64 result = alloc_gpr_reg(ee, gpr_reg, state, destination);
+    if (state == REG_STATE::SCRATCHPAD)
+        gpr_reg = -1;
+    REG_64 result = alloc_gpr_reg(ee, gpr_reg, state, destination, true);
     int_regs[result].locked = true;
     return result;
 }
@@ -507,9 +534,15 @@ REG_64 EE_JIT64::lalloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state,
 REG_64 EE_JIT64::lalloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state)
 {
     if (state == REG_STATE::SCRATCHPAD)
-        return lalloc_gpr_reg(ee, gpr_reg, state, (REG_64)search_for_register_scratchpad(int_regs));
+        gpr_reg = -1;
+    REG_64 result;
+    if (state == REG_STATE::SCRATCHPAD)
+        result = alloc_gpr_reg(ee, gpr_reg, state, (REG_64)search_for_register_scratchpad(int_regs), false);
     else
-        return lalloc_gpr_reg(ee, gpr_reg, state, (REG_64)search_for_register_priority(int_regs));
+        result = alloc_gpr_reg(ee, gpr_reg, state, (REG_64)search_for_register_priority(int_regs), false);
+
+    int_regs[result].locked = true;
+    return result;
 }
 
 void EE_JIT64::free_gpr_reg(EmotionEngine& ee, REG_64 reg)
@@ -670,13 +703,13 @@ void EE_JIT64::flush_int_reg(EmotionEngine& ee, int reg)
         //printf("[EE_JIT64] Flushing int reg %d! (old int reg: %d, was GPR reg?: %d)\n", reg, int_regs[reg].reg, int_regs[reg].is_gpr_reg);
         if (int_regs[reg].is_gpr_reg && old_int_reg)
         {
-            emitter.load_addr((uint64_t)get_gpr_addr(ee, old_int_reg), REG_64::RAX);
-            emitter.MOV64_TO_MEM((REG_64)reg, REG_64::RAX);
+            emitter.load_addr((uint64_t)get_gpr_addr(ee, old_int_reg), REG_64::RBP);
+            emitter.MOV64_TO_MEM((REG_64)reg, REG_64::RBP);
         }
         else if (!int_regs[reg].is_gpr_reg)
         {
-            emitter.load_addr((uint64_t)get_vi_addr(ee, old_int_reg), REG_64::RAX);
-            emitter.MOV16_TO_MEM((REG_64)reg, REG_64::RAX);
+            emitter.load_addr((uint64_t)get_vi_addr(ee, old_int_reg), REG_64::RBP);
+            emitter.MOV16_TO_MEM((REG_64)reg, REG_64::RBP);
         }
     }
     int_regs[reg].used = false;
@@ -684,6 +717,7 @@ void EE_JIT64::flush_int_reg(EmotionEngine& ee, int reg)
 
 void EE_JIT64::flush_xmm_reg(EmotionEngine& ee, int reg)
 {
+    /*
     int old_xmm_reg = xmm_regs[reg].reg;
     if (xmm_regs[reg].used && xmm_regs[reg].modified)
     {
@@ -700,6 +734,7 @@ void EE_JIT64::flush_xmm_reg(EmotionEngine& ee, int reg)
             emitter.MOVAPS_TO_MEM((REG_64)reg, REG_64::RAX);
         }
     }
+    */
 }
 
 void EE_JIT64::flush_regs(EmotionEngine& ee)
@@ -844,15 +879,18 @@ bool cop0_get_condition(Cop0& cop0)
 
 void EE_JIT64::add_unsigned_imm(EmotionEngine& ee, IR::Instruction &instr)
 {
+    // Alloc scratchpad register
+    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
+
     if (instr.get_dest() == instr.get_source())
     {
         REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::READ_WRITE);
 
         // temp = (int32_t)((int16_t)immediate)
         // dest = (int64_t)(temp + dest)
-        emitter.MOV16_REG_IMM(instr.get_source2(), REG_64::RAX);
-        emitter.MOVSX16_TO_32(REG_64::RAX, REG_64::RAX);
-        emitter.ADD32_REG(REG_64::RAX, dest);
+        emitter.MOV16_REG_IMM(instr.get_source2(), RAX);
+        emitter.MOVSX16_TO_32(RAX, RAX);
+        emitter.ADD32_REG(RAX, dest);
         emitter.MOVSX32_TO_64(dest, dest);
     }
     else
@@ -863,12 +901,15 @@ void EE_JIT64::add_unsigned_imm(EmotionEngine& ee, IR::Instruction &instr)
         // temp = (int32_t)((int16_t)immediate)
         // temp += source
         // dest = (int64_t)temp
-        emitter.MOV16_REG_IMM(instr.get_source2(), REG_64::RAX);
-        emitter.MOVSX16_TO_32(REG_64::RAX, REG_64::RAX);
-        emitter.ADD32_REG(source, REG_64::RAX);
-        emitter.MOV32_REG(REG_64::RAX, dest);
+        emitter.MOV16_REG_IMM(instr.get_source2(), RAX);
+        emitter.MOVSX16_TO_32(RAX, RAX);
+        emitter.ADD32_REG(source, RAX);
+        emitter.MOV32_REG(RAX, dest);
         emitter.MOVSX32_TO_64(dest, dest);
     }
+
+    // Free scratchpad register
+    free_gpr_reg(ee, RAX);
 }
 
 void EE_JIT64::and_int(EmotionEngine& ee, IR::Instruction &instr)
@@ -1197,7 +1238,7 @@ void EE_JIT64::doubleword_shift_left_logical(EmotionEngine& ee, IR::Instruction&
 void EE_JIT64::doubleword_shift_left_logical_variable(EmotionEngine& ee, IR::Instruction& instr)
 {
     // Alloc variable into RCX
-    alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::SCRATCHPAD, REG_64::RCX);
+    alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::SCRATCHPAD, REG_64::RCX, true);
     REG_64 variable = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
     emitter.MOV8_REG(variable, REG_64::CL);
     emitter.AND8_REG_IMM(0x1F, REG_64::CL);
@@ -1237,7 +1278,7 @@ void EE_JIT64::doubleword_shift_right_arithmetic(EmotionEngine& ee, IR::Instruct
 void EE_JIT64::doubleword_shift_right_arithmetic_variable(EmotionEngine& ee, IR::Instruction& instr)
 {
     // Alloc variable into RCX
-    alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::SCRATCHPAD, REG_64::RCX);
+    alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::SCRATCHPAD, REG_64::RCX, true);
     REG_64 variable = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
     emitter.MOV8_REG(variable, REG_64::CL);
     emitter.AND8_REG_IMM(0x1F, REG_64::CL);
@@ -1277,7 +1318,7 @@ void EE_JIT64::doubleword_shift_right_logical(EmotionEngine& ee, IR::Instruction
 void EE_JIT64::doubleword_shift_right_logical_variable(EmotionEngine& ee, IR::Instruction& instr)
 {
     // Alloc variable into RCX
-    alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::SCRATCHPAD, REG_64::RCX);
+    alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::SCRATCHPAD, REG_64::RCX, true);
     REG_64 variable = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
     emitter.MOV8_REG(variable, REG_64::CL);
     emitter.AND8_REG_IMM(0x1F, REG_64::CL);
@@ -1293,18 +1334,27 @@ void EE_JIT64::doubleword_shift_right_logical_variable(EmotionEngine& ee, IR::In
 
 void EE_JIT64::exception_return(EmotionEngine& ee, IR::Instruction& instr)
 {
+    // Alloc scratchpad registers
+    // We make sure to use volatile registers here that call_abi_func will not attempt to preserve
+    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD, REG_64::R8);
+    REG_64 R15 = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD, REG_64::R9);
+
     // Cleanup branch_on, exception handler expects this to be false
-    emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-    emitter.MOV8_REG_IMM(false, REG_64::R15);
-    emitter.MOV8_TO_MEM(REG_64::R15, REG_64::RAX);
+    emitter.load_addr((uint64_t)&ee.branch_on, RAX);
+    emitter.MOV8_REG_IMM(false, R15);
+    emitter.MOV8_TO_MEM(R15, RAX);
 
     fallback_interpreter(ee, instr);
 
     // Since the interpreter decrements PC by 4, we reset it here to account for that.
-    emitter.load_addr((uint64_t)&ee.PC, REG_64::RAX);
-    emitter.MOV32_FROM_MEM(REG_64::RAX, REG_64::R15);
-    emitter.ADD32_REG_IMM(4, REG_64::R15);
-    emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
+    emitter.load_addr((uint64_t)&ee.PC, RAX);
+    emitter.MOV32_FROM_MEM(RAX, R15);
+    emitter.ADD32_REG_IMM(4, R15);
+    emitter.MOV32_TO_MEM(R15, RAX);
+
+    // Free scratchpad registers
+    free_gpr_reg(ee, RAX);
+    free_gpr_reg(ee, R15);
 }
 
 void EE_JIT64::jump(EmotionEngine& ee, IR::Instruction& instr)
@@ -1455,7 +1505,7 @@ void EE_JIT64::shift_left_logical(EmotionEngine& ee, IR::Instruction& instr)
 void EE_JIT64::shift_left_logical_variable(EmotionEngine& ee, IR::Instruction& instr)
 {
     // Alloc variable into RCX
-    alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::SCRATCHPAD, REG_64::RCX);
+    alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::SCRATCHPAD, REG_64::RCX, true);
     REG_64 variable = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
     emitter.MOV8_REG(variable, REG_64::CL);
     emitter.AND8_REG_IMM(0x1F, REG_64::CL);
@@ -1498,7 +1548,7 @@ void EE_JIT64::shift_right_arithmetic(EmotionEngine& ee, IR::Instruction& instr)
 void EE_JIT64::shift_right_arithmetic_variable(EmotionEngine& ee, IR::Instruction& instr)
 {
     // Alloc variable into RCX
-    alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::SCRATCHPAD, REG_64::RCX);
+    alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::SCRATCHPAD, REG_64::RCX, true);
     REG_64 variable = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
     emitter.MOV8_REG(variable, REG_64::CL);
     emitter.AND8_REG_IMM(0x1F, REG_64::CL);
@@ -1541,7 +1591,7 @@ void EE_JIT64::shift_right_logical(EmotionEngine& ee, IR::Instruction& instr)
 void EE_JIT64::shift_right_logical_variable(EmotionEngine& ee, IR::Instruction& instr)
 {
     // Alloc variable into RCX
-    alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::SCRATCHPAD, REG_64::RCX);
+    alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::SCRATCHPAD, REG_64::RCX, true);
     REG_64 variable = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
     emitter.MOV8_REG(variable, REG_64::CL);
     emitter.AND8_REG_IMM(0x1F, REG_64::CL);
