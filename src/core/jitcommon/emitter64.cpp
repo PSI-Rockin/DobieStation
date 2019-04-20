@@ -107,19 +107,9 @@ void Emitter64::ADD32_REG(REG_64 source, REG_64 dest)
 void Emitter64::ADD32_REG_IMM(uint32_t imm, REG_64 dest)
 {
     rex_rm(dest);
-
-    if (imm >> 8)
-    {
-        cache->write<uint8_t>(0x81);
-        modrm(0b11, 0, dest);
-        cache->write<uint32_t>(imm);
-    }
-    else
-    {
-        cache->write<uint8_t>(0x83);
-        modrm(0b11, 0, dest);
-        cache->write<uint8_t>(imm);
-    }
+    cache->write<uint8_t>(0x81);
+    modrm(0b11, 0, dest);
+    cache->write<uint32_t>(imm);
 }
 
 void Emitter64::ADD64_REG(REG_64 source, REG_64 dest)

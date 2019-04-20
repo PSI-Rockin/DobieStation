@@ -116,21 +116,6 @@ IR::Instruction EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC)
         case 0x08:
             // ADDI
             // TODO: Overflow?
-        {
-            uint8_t dest = (opcode >> 16) & 0x1F;
-            uint8_t source = (opcode >> 21) & 0x1F;
-            if (!dest)
-            {
-                instr.op = IR::Opcode::Null;
-                return instr;
-            }
-
-            instr.op = IR::Opcode::AddUnsignedImm;
-            instr.set_dest(dest);
-            instr.set_source(source);
-            instr.set_source2(opcode & 0xFFFF);
-            return instr;
-        }
         case 0x09:
             // ADDIU
         {
