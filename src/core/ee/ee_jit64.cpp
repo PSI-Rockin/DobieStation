@@ -151,6 +151,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
     {
         case IR::Opcode::Null:
             break;
+        case IR::Opcode::AddIntReg:
+            add_int_reg(ee, instr);
+            break;
         case IR::Opcode::AddUnsignedImm:
             add_unsigned_imm(ee, instr);
             break;
@@ -946,13 +949,23 @@ bool cop0_get_condition(Cop0& cop0)
     return cop0.get_condition();
 }
 
+void EE_JIT64::add_int_reg(EmotionEngine& ee, IR::Instruction &instr)
+{
+    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 source2 = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+
+    emitter.LEA32_REG(source, source2, dest);
+    emitter.MOVSX32_TO_64(dest, dest);
+}
+
 void EE_JIT64::add_unsigned_imm(EmotionEngine& ee, IR::Instruction &instr)
 {
-        REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
-        REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
 
-        emitter.LEA32(source, dest, instr.get_source2());
-        emitter.MOVSX32_TO_64(dest, dest);
+    emitter.LEA32_M(source, dest, instr.get_source2());
+    emitter.MOVSX32_TO_64(dest, dest);
 }
 
 void EE_JIT64::and_int(EmotionEngine& ee, IR::Instruction &instr)
@@ -1479,7 +1492,7 @@ void EE_JIT64::load_byte(EmotionEngine& ee, IR::Instruction &instr)
     int64_t offset = instr.get_source2();
 
     if (offset)
-        emitter.LEA32(source, addr, offset);
+        emitter.LEA32_M(source, addr, offset);
     else
         emitter.MOV32_REG(source, addr);
     prepare_abi(ee, (uint64_t)&ee);
@@ -1500,7 +1513,7 @@ void EE_JIT64::load_byte_unsigned(EmotionEngine& ee, IR::Instruction &instr)
     int64_t offset = instr.get_source2();
 
     if (offset)
-        emitter.LEA32(source, addr, offset);
+        emitter.LEA32_M(source, addr, offset);
     else
         emitter.MOV32_REG(source, addr);
     prepare_abi(ee, (uint64_t)&ee);
@@ -1521,7 +1534,7 @@ void EE_JIT64::load_doubleword(EmotionEngine& ee, IR::Instruction &instr)
     int64_t offset = instr.get_source2();
 
     if (offset)
-        emitter.LEA32(source, addr, offset);
+        emitter.LEA32_M(source, addr, offset);
     else
         emitter.MOV32_REG(source, addr);
     prepare_abi(ee, (uint64_t)&ee);
@@ -1542,7 +1555,7 @@ void EE_JIT64::load_halfword(EmotionEngine& ee, IR::Instruction &instr)
     int64_t offset = instr.get_source2();
 
     if (offset)
-        emitter.LEA32(source, addr, offset);
+        emitter.LEA32_M(source, addr, offset);
     else
         emitter.MOV32_REG(source, addr);
     prepare_abi(ee, (uint64_t)&ee);
@@ -1563,7 +1576,7 @@ void EE_JIT64::load_halfword_unsigned(EmotionEngine& ee, IR::Instruction &instr)
     int64_t offset = instr.get_source2();
 
     if (offset)
-        emitter.LEA32(source, addr, offset);
+        emitter.LEA32_M(source, addr, offset);
     else
         emitter.MOV32_REG(source, addr);
     prepare_abi(ee, (uint64_t)&ee);
@@ -1593,7 +1606,7 @@ void EE_JIT64::load_word(EmotionEngine& ee, IR::Instruction &instr)
     int64_t offset = instr.get_source2();
 
     if (offset)
-        emitter.LEA32(source, addr, offset);
+        emitter.LEA32_M(source, addr, offset);
     else
         emitter.MOV32_REG(source, addr);
     prepare_abi(ee, (uint64_t)&ee);
@@ -1614,7 +1627,7 @@ void EE_JIT64::load_word_unsigned(EmotionEngine& ee, IR::Instruction &instr)
     int64_t offset = instr.get_source2();
 
     if (offset)
-        emitter.LEA32(source, addr, offset);
+        emitter.LEA32_M(source, addr, offset);
     else
         emitter.MOV32_REG(source, addr);
     prepare_abi(ee, (uint64_t)&ee);
@@ -1866,7 +1879,7 @@ void EE_JIT64::store_byte(EmotionEngine& ee, IR::Instruction& instr)
     int64_t offset = instr.get_source2();
 
     if (offset)
-        emitter.LEA32(dest, addr, offset);
+        emitter.LEA32_M(dest, addr, offset);
     else
         emitter.MOV32_REG(dest, addr);
     prepare_abi(ee, (uint64_t)&ee);
@@ -1885,7 +1898,7 @@ void EE_JIT64::store_doubleword(EmotionEngine& ee, IR::Instruction& instr)
     int64_t offset = instr.get_source2();
 
     if (offset)
-        emitter.LEA32(dest, addr, offset);
+        emitter.LEA32_M(dest, addr, offset);
     else
         emitter.MOV32_REG(dest, addr);
     prepare_abi(ee, (uint64_t)&ee);
@@ -1904,7 +1917,7 @@ void EE_JIT64::store_halfword(EmotionEngine& ee, IR::Instruction& instr)
     int64_t offset = instr.get_source2();
 
     if (offset)
-        emitter.LEA32(dest, addr, offset);
+        emitter.LEA32_M(dest, addr, offset);
     else
         emitter.MOV32_REG(dest, addr);
     prepare_abi(ee, (uint64_t)&ee);
@@ -1923,7 +1936,7 @@ void EE_JIT64::store_word(EmotionEngine& ee, IR::Instruction& instr)
     int64_t offset = instr.get_source2();
 
     if (offset)
-        emitter.LEA32(dest, addr, offset);
+        emitter.LEA32_M(dest, addr, offset);
     else
         emitter.MOV32_REG(dest, addr);
     prepare_abi(ee, (uint64_t)&ee);

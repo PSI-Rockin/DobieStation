@@ -637,7 +637,7 @@ void Emitter64::XOR64_REG(REG_64 source, REG_64 dest)
     modrm(0b11, source, dest);
 }
 
-void Emitter64::LEA32(REG_64 source, REG_64 dest, uint32_t offset, uint32_t shift)
+void Emitter64::LEA32_M(REG_64 source, REG_64 dest, uint32_t offset, uint32_t shift)
 {
     offset <<= shift;
 
@@ -646,6 +646,21 @@ void Emitter64::LEA32(REG_64 source, REG_64 dest, uint32_t offset, uint32_t shif
     modrm(0b10, dest, source);
     if ((source & 7) == 4)
         cache->write<uint8_t>(0x24);
+    cache->write<uint32_t>(offset);
+}
+
+void Emitter64::LEA32_REG(REG_64 source, REG_64 source2, REG_64 dest, uint32_t offset, uint32_t shift)
+{
+    offset <<= shift;
+
+    uint8_t rex = 0x48;
+    if (dest & 0x8) rex += 0x4;
+    if (source & 0x8) rex += 0x2;
+    if (source2 & 0x8) rex += 0x1;
+    cache->write<uint8_t>(rex);
+    cache->write<uint8_t>(0x8D);
+    modrm(0b10, dest, 4);
+    modrm(0b00, source, source2);
     cache->write<uint32_t>(offset);
 }
 

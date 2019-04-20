@@ -764,14 +764,20 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
             return instr;
         case 0x20:
             // ADD
-            Errors::print_warning("[EE_JIT] Unrecognized special op ADD\n", op);
-            fallback_interpreter(instr, opcode);
-            return instr;
+            // TODO: Overflow?
         case 0x21:
             // ADDU
-            Errors::print_warning("[EE_JIT] Unrecognized special op ADDU\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+
+            instr.op = IR::Opcode::AddIntReg;
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
             return instr;
+        }
         case 0x22:
             // SUB
             Errors::print_warning("[EE_JIT] Unrecognized special op SUB\n", op);
