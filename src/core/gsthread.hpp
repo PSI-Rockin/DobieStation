@@ -209,7 +209,7 @@ struct Vertex
 struct TexLookupInfo
 {
     //int32_t u, v;
-    RGBAQ_REG vtx_color, tex_color;
+    RGBAQ_REG vtx_color, tex_color, srctex_color;
     float LOD;
     int mipmap_level;
 
@@ -218,6 +218,8 @@ struct TexLookupInfo
     uint16_t tex_width, tex_height;
 
     uint8_t fog;
+    bool new_lookup;
+    int16_t lastu, lastv;
 };
 
 class GraphicsSynthesizerThread
@@ -332,9 +334,10 @@ class GraphicsSynthesizerThread
         void write_PSMCT4_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y, uint8_t value);
 
         uint8_t get_16bit_alpha(uint16_t color);
+        int16_t multiply_tex_color(int16_t tex_color, int16_t frag_color);
         void calculate_LOD(TexLookupInfo& info);
         void tex_lookup(int16_t u, int16_t v, TexLookupInfo& info);
-        void tex_lookup_int(int16_t u, int16_t v, TexLookupInfo& info);
+        void tex_lookup_int(int16_t u, int16_t v, TexLookupInfo& info, bool forced_lookup = false);
         void clut_lookup(uint8_t entry, RGBAQ_REG& tex_color);
         void clut_CSM2_lookup(uint8_t entry, RGBAQ_REG& tex_color);
         void reload_clut(const GSContext& context);

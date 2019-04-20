@@ -1687,6 +1687,7 @@ void GraphicsSynthesizerThread::render_point()
     printf("[GS_t] Rendering point!\n");
     printf("Coords: (%d, %d, %d)\n", v1.x >> 4, v1.y >> 4, v1.z);
     TexLookupInfo tex_info;
+    tex_info.new_lookup = true;
     
     tex_info.vtx_color = v1.rgbaq;
     tex_info.fog = v1.fog;
@@ -1742,6 +1743,7 @@ void GraphicsSynthesizerThread::render_line()
     //int32_t max_y = min(v2.y, (int32_t)current_ctx->scissor.y2);
     
     TexLookupInfo tex_info;
+    tex_info.new_lookup = true;
     tex_info.vtx_color = vtx_queue[0].rgbaq;
 
     printf("Coords: (%d, %d, %d) (%d, %d, %d)\n", v1.x >> 4, v1.y >> 4, v1.z, v2.x >> 4, v2.y >> 4, v2.z);
@@ -1869,6 +1871,7 @@ void GraphicsSynthesizerThread::render_triangle()
     }
 
     TexLookupInfo tex_info;
+    tex_info.new_lookup = true;
 
     bool tmp_tex = current_PRMODE->texture_mapping;
     bool tmp_uv = !current_PRMODE->use_UV;//allow for loop unswitching
@@ -2024,6 +2027,8 @@ void GraphicsSynthesizerThread::render_sprite()
     Vertex v2 = vtx_queue[0]; v2.to_relative(current_ctx->xyoffset);
 
     TexLookupInfo tex_info;
+    tex_info.new_lookup = true;
+
     tex_info.vtx_color = vtx_queue[0].rgbaq;
 
     if (v1.x > v2.x)
@@ -2422,15 +2427,45 @@ uint8_t GraphicsSynthesizerThread::get_16bit_alpha(uint16_t color)
     return TEXA.alpha0;
 }
 
+int16_t GraphicsSynthesizerThread::multiply_tex_color(int16_t tex_color, int16_t frag_color)
+{
+    int16_t temp_color;
+    if (frag_color != 0x80)
+    {
+        temp_color = (tex_color * frag_color) >> 7;
+    }
+    else
+    {
+        temp_color = tex_color;
+    }
+
+    if (temp_color > 0xFF)
+        temp_color = 0xFF;
+    if (temp_color < 0)
+        temp_color = 0;
+
+    return temp_color;
+}
+
 void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
 {
+    double K = (current_ctx->tex1.K + 8.0) / 16.0;
     if (current_ctx->tex1.LOD_method == 0)
-        info.LOD = ldexp(-log2(fabs(info.vtx_color.q)), current_ctx->tex1.L) + current_ctx->tex1.K;
-    else
-        info.LOD = current_ctx->tex1.K;
+    {
+        info.LOD = ldexp(log2(1.0 / fabs(info.vtx_color.q)), current_ctx->tex1.L) + K;
 
-    if (info.LOD < 1.0 / 128.0) //ps2 precision limit
-        info.LOD = 0.0;
+        if (!(current_ctx->tex1.filter_smaller & 0x1))
+            info.LOD = round(info.LOD + 0.5);
+    }
+    else
+        info.LOD = K;
+
+    if (current_ctx->tex1.filter_smaller >= 2)
+    {
+        info.mipmap_level = min((int8_t)info.LOD, (int8_t)current_ctx->tex1.max_MIP_level);
+    }
+    else
+        info.mipmap_level = 0;
 
     info.tex_base = current_ctx->tex0.texture_base;
     info.buffer_width = current_ctx->tex0.width;
@@ -2438,7 +2473,10 @@ void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
     info.tex_height = current_ctx->tex0.tex_height;
 
     //Determine mipmap level
-    info.mipmap_level = min((uint8_t)floor(info.LOD), current_ctx->tex1.max_MIP_level);
+
+    if (info.mipmap_level < 0)
+        info.mipmap_level = 0;
+
     if (info.mipmap_level > 0)
     {
         if (current_ctx->tex1.MTBA && info.mipmap_level < 4)
@@ -2480,8 +2518,8 @@ void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
             }
         }
         else
-            info.tex_base = current_ctx->miptbl.texture_base[info.mipmap_level];
-        info.buffer_width = current_ctx->miptbl.width[info.mipmap_level];
+            info.tex_base = current_ctx->miptbl.texture_base[info.mipmap_level-1];
+        info.buffer_width = current_ctx->miptbl.width[info.mipmap_level-1];
         info.tex_width >>= info.mipmap_level;
         info.tex_height >>= info.mipmap_level;
 
@@ -2490,95 +2528,88 @@ void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
         info.tex_height = max((int)info.tex_height, 1);
     }
 }
-
+#define printf(fmt, ...)(0)
 void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, TexLookupInfo& info)
 {
-    if (current_ctx->tex1.filter_larger && info.LOD <= 0.0)
+    bool bilinear_filter = false;
+
+    if (info.tex_height >= 8 && info.tex_width >= 8)
+    {
+        if (current_ctx->tex1.filter_larger && info.LOD < 0.0)
+            bilinear_filter = true;
+
+        //First bit is set for Bilinear filtering
+        if ((current_ctx->tex1.filter_smaller & 0x1) && info.LOD >= 0.0)
+            bilinear_filter = true;
+    }
+
+    if (bilinear_filter)
     {
         RGBAQ_REG a, b, c, d;
         int16_t uu = (u - 8) >> 4;
         int16_t vv = (v - 8) >> 4;
 
-        tex_lookup_int(uu, vv, info);
-        a = info.tex_color;
+        tex_lookup_int(uu, vv, info, true);
+        a = info.srctex_color;
 
-        tex_lookup_int(uu+1, vv, info);
-        b = info.tex_color;
+        tex_lookup_int(uu + 1, vv, info, true);
+        b = info.srctex_color;
 
-        tex_lookup_int(uu, vv+1, info);
-        c = info.tex_color;
+        tex_lookup_int(uu, vv + 1, info, true);
+        c = info.srctex_color;
 
-        tex_lookup_int(uu+1, vv+1, info);
-        d = info.tex_color;
+        tex_lookup_int(uu + 1, vv + 1, info, true);
+        d = info.srctex_color;
 
-        double alpha = ((u - 8) & 0xF) * (1.0 / ((double)0xF));
-        double beta = ((v - 8) & 0xF) * (1.0 / ((double)0xF));
+        double alpha = (double)((u - 8) & 0xF) * (1.0 / 16.0);
+        double beta = (double)((v - 8) & 0xF) * (1.0 / 16.0);
         double alpha_s = 1.0 - alpha;
         double beta_s = 1.0 - beta;
-        info.tex_color.r = alpha_s * beta_s*a.r + alpha * beta_s*b.r + alpha_s * beta*c.r + alpha * beta*d.r;
-        info.tex_color.g = alpha_s * beta_s*a.g + alpha * beta_s*b.g + alpha_s * beta*c.g + alpha * beta*d.g;
-        info.tex_color.b = alpha_s * beta_s*a.b + alpha * beta_s*b.b + alpha_s * beta*c.b + alpha * beta*d.b;
-        info.tex_color.a = alpha_s * beta_s*a.a + alpha * beta_s*b.a + alpha_s * beta*c.a + alpha * beta*d.a;
+        info.srctex_color.r = alpha_s * beta_s*a.r + alpha * beta_s*b.r + alpha_s * beta*c.r + alpha * beta*d.r;
+        info.srctex_color.g = alpha_s * beta_s*a.g + alpha * beta_s*b.g + alpha_s * beta*c.g + alpha * beta*d.g;
+        info.srctex_color.b = alpha_s * beta_s*a.b + alpha * beta_s*b.b + alpha_s * beta*c.b + alpha * beta*d.b;
+        info.srctex_color.a = alpha_s * beta_s*a.a + alpha * beta_s*b.a + alpha_s * beta*c.a + alpha * beta*d.a;
     }
-    else
+    else //If we already have looked up the texture at this location and messed with it, no point in doing it again
         tex_lookup_int(u >> 4, v >> 4, info);
 
     switch (current_ctx->tex0.color_function)
     {
         case 0: //Modulate
-            info.tex_color.r = (info.tex_color.r * info.vtx_color.r) >> 7;
-            info.tex_color.g = (info.tex_color.g * info.vtx_color.g) >> 7;
-            info.tex_color.b = (info.tex_color.b * info.vtx_color.b) >> 7;
+            info.tex_color.r = multiply_tex_color(info.srctex_color.r, info.vtx_color.r);
+            info.tex_color.g = multiply_tex_color(info.srctex_color.g, info.vtx_color.g);
+            info.tex_color.b = multiply_tex_color(info.srctex_color.b, info.vtx_color.b);
             if (current_ctx->tex0.use_alpha)
-                info.tex_color.a = (info.tex_color.a * info.vtx_color.a) >> 7;
+                info.tex_color.a = multiply_tex_color(info.srctex_color.a, info.vtx_color.a);
             else
                 info.tex_color.a = info.vtx_color.a;
-
-            //Clamp texture colors
-            if (info.tex_color.r > 0xFF)
-                info.tex_color.r = 0xFF;
-            if (info.tex_color.g > 0xFF)
-                info.tex_color.g = 0xFF;
-            if (info.tex_color.b > 0xFF)
-                info.tex_color.b = 0xFF;
-            if (info.tex_color.a > 0xFF)
-                info.tex_color.a = 0xFF;
             break;
         case 1: //Decal
             if (!current_ctx->tex0.use_alpha)
                 info.tex_color.a = info.vtx_color.a;
+            else
+                info.tex_color.a = info.srctex_color.a;
+            info.tex_color.r = info.srctex_color.r;
+            info.tex_color.g = info.srctex_color.g;
+            info.tex_color.b = info.srctex_color.b;
             break;
         case 2: //Highlight
-            info.tex_color.r = ((info.tex_color.r * info.vtx_color.r) >> 7) + info.vtx_color.a;
-            info.tex_color.g = ((info.tex_color.g * info.vtx_color.g) >> 7) + info.vtx_color.a;
-            info.tex_color.b = ((info.tex_color.b * info.vtx_color.b) >> 7) + info.vtx_color.a;
+            info.tex_color.r = multiply_tex_color(info.srctex_color.r, info.vtx_color.r) + info.vtx_color.a;
+            info.tex_color.g = multiply_tex_color(info.srctex_color.g, info.vtx_color.g) + info.vtx_color.a;
+            info.tex_color.b = multiply_tex_color(info.srctex_color.b, info.vtx_color.b) + info.vtx_color.a;
             if (!current_ctx->tex0.use_alpha)
                 info.tex_color.a = info.vtx_color.a;
             else
-                info.tex_color.a += info.vtx_color.a;
-
-            if (info.tex_color.r > 0xFF)
-                info.tex_color.r = 0xFF;
-            if (info.tex_color.g > 0xFF)
-                info.tex_color.g = 0xFF;
-            if (info.tex_color.b > 0xFF)
-                info.tex_color.b = 0xFF;
-            if (info.tex_color.a > 0xFF)
-                info.tex_color.a = 0xFF;
+                info.tex_color.a = info.srctex_color.a + info.vtx_color.a;
             break;
         case 3: //Highlight2
-            info.tex_color.r = ((info.tex_color.r * info.vtx_color.r) >> 7) + info.vtx_color.a;
-            info.tex_color.g = ((info.tex_color.g * info.vtx_color.g) >> 7) + info.vtx_color.a;
-            info.tex_color.b = ((info.tex_color.b * info.vtx_color.b) >> 7) + info.vtx_color.a;
+            info.tex_color.r = multiply_tex_color(info.srctex_color.r, info.vtx_color.r) + info.vtx_color.a;
+            info.tex_color.g = multiply_tex_color(info.srctex_color.g, info.vtx_color.g) + info.vtx_color.a;
+            info.tex_color.b = multiply_tex_color(info.srctex_color.b, info.vtx_color.b) + info.vtx_color.a;
             if (!current_ctx->tex0.use_alpha)
                 info.tex_color.a = info.vtx_color.a;
-
-            if (info.tex_color.r > 0xFF)
-                info.tex_color.r = 0xFF;
-            if (info.tex_color.g > 0xFF)
-                info.tex_color.g = 0xFF;
-            if (info.tex_color.b > 0xFF)
-                info.tex_color.b = 0xFF;
+            else
+                info.tex_color.a = info.srctex_color.a;
             break;
         default:
             Errors::die("[GS_t] Unrecognized texture color function $%02X", current_ctx->tex0.color_function);
@@ -2594,7 +2625,7 @@ void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, TexLookupInfo& 
     }
 }
 
-void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupInfo& info)
+void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupInfo& info, bool forced_lookup)
 {
     switch (current_ctx->clamp.wrap_s)
     {
@@ -2602,8 +2633,8 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupIn
             u &= info.tex_width - 1;
             break;
         case 1:
-            if (u > info.tex_width)
-                u = info.tex_width;
+            if (u >= info.tex_width)
+                u = info.tex_width-1;
             else if (u < 0)
                 u = 0;
             break;
@@ -2624,8 +2655,8 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupIn
             v &= info.tex_height - 1;
             break;
         case 1:
-            if (v > info.tex_height)
-                v = info.tex_height;
+            if (v >= info.tex_height)
+                v = info.tex_height-1;
             else if (v < 0)
                 v = 0;
             break;
@@ -2640,6 +2671,16 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupIn
             break;
     }
 
+    if (!info.new_lookup && !forced_lookup)
+    {
+        //if it's the same texture position, we already have the info, no need to look it up again
+        if (u == info.lastu && v == info.lastv)
+            return;
+    }
+    info.lastu = u;
+    info.lastv = v;
+    info.new_lookup = false;
+
     uint32_t tex_base = info.tex_base;
     uint32_t width = info.buffer_width;
     switch (current_ctx->tex0.format)
@@ -2647,74 +2688,74 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupIn
         case 0x00:
         {
             uint32_t color = read_PSMCT32_block(tex_base, width, u, v);
-            info.tex_color.r = color & 0xFF;
-            info.tex_color.g = (color >> 8) & 0xFF;
-            info.tex_color.b = (color >> 16) & 0xFF;
-            info.tex_color.a = color >> 24;
+            info.srctex_color.r = color & 0xFF;
+            info.srctex_color.g = (color >> 8) & 0xFF;
+            info.srctex_color.b = (color >> 16) & 0xFF;
+            info.srctex_color.a = color >> 24;
         }
             break;
         case 0x01:
         {
             uint32_t color = read_PSMCT32_block(tex_base, width, u, v);
-            info.tex_color.r = color & 0xFF;
-            info.tex_color.g = (color >> 8) & 0xFF;
-            info.tex_color.b = (color >> 16) & 0xFF;
+            info.srctex_color.r = color & 0xFF;
+            info.srctex_color.g = (color >> 8) & 0xFF;
+            info.srctex_color.b = (color >> 16) & 0xFF;
 
             if (!(color & 0xFFFFFF) && TEXA.trans_black)
-                info.tex_color.a = 0;
+                info.srctex_color.a = 0;
             else
-                info.tex_color.a = TEXA.alpha0;
+                info.srctex_color.a = TEXA.alpha0;
         }
             break;
         case 0x02:
         {
             uint16_t color = read_PSMCT16_block(tex_base, width, u, v);
-            info.tex_color.r = (color & 0x1F) << 3;
-            info.tex_color.g = ((color >> 5) & 0x1F) << 3;
-            info.tex_color.b = ((color >> 10) & 0x1F) << 3;
-            info.tex_color.a = get_16bit_alpha(color);
+            info.srctex_color.r = (color & 0x1F) << 3;
+            info.srctex_color.g = ((color >> 5) & 0x1F) << 3;
+            info.srctex_color.b = ((color >> 10) & 0x1F) << 3;
+            info.srctex_color.a = get_16bit_alpha(color);
         }
             break;
         case 0x09: //Invalid format??? FFX uses it
-            info.tex_color.r = 0;
-            info.tex_color.g = 0;
-            info.tex_color.b = 0;
-            info.tex_color.a = 0;
+            info.srctex_color.r = 0;
+            info.srctex_color.g = 0;
+            info.srctex_color.b = 0;
+            info.srctex_color.a = 0;
             break;
         case 0x0A:
         {
             uint16_t color = read_PSMCT16S_block(tex_base, width, u, v);
-            info.tex_color.r = (color & 0x1F) << 3;
-            info.tex_color.g = ((color >> 5) & 0x1F) << 3;
-            info.tex_color.b = ((color >> 10) & 0x1F) << 3;
-            info.tex_color.a = get_16bit_alpha(color);
+            info.srctex_color.r = (color & 0x1F) << 3;
+            info.srctex_color.g = ((color >> 5) & 0x1F) << 3;
+            info.srctex_color.b = ((color >> 10) & 0x1F) << 3;
+            info.srctex_color.a = get_16bit_alpha(color);
         }
             break;
         case 0x13:
         {
             uint8_t entry = read_PSMCT8_block(tex_base, width, u, v);
             if (current_ctx->tex0.use_CSM2)
-                clut_CSM2_lookup(entry, info.tex_color);
+                clut_CSM2_lookup(entry, info.srctex_color);
             else
-                clut_lookup(entry, info.tex_color);
+                clut_lookup(entry, info.srctex_color);
         }
             break;
         case 0x14:
         {
             uint8_t entry = read_PSMCT4_block(tex_base, width, u, v);
             if (current_ctx->tex0.use_CSM2)
-                clut_CSM2_lookup(entry, info.tex_color);
+                clut_CSM2_lookup(entry, info.srctex_color);
             else
-                clut_lookup(entry, info.tex_color);
+                clut_lookup(entry, info.srctex_color);
         }
             break;
         case 0x1B:
         {
             uint8_t entry = read_PSMCT32_block(tex_base, width, u, v) >> 24;
             if (current_ctx->tex0.use_CSM2)
-                clut_CSM2_lookup(entry, info.tex_color);
+                clut_CSM2_lookup(entry, info.srctex_color);
             else
-                clut_lookup(entry, info.tex_color);
+                clut_lookup(entry, info.srctex_color);
         }
             break;
         case 0x24:
@@ -2722,9 +2763,9 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupIn
             //printf("[GS_t] Format $24: Read from $%08X\n", tex_base + (coord << 2));
             uint8_t entry = (read_PSMCT32_block(tex_base, width, u, v) >> 24) & 0xF;
             if (current_ctx->tex0.use_CSM2)
-                clut_CSM2_lookup(entry, info.tex_color);
+                clut_CSM2_lookup(entry, info.srctex_color);
             else
-                clut_lookup(entry, info.tex_color);
+                clut_lookup(entry, info.srctex_color);
             break;
         }
             break;
@@ -2732,48 +2773,48 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupIn
         {
             uint8_t entry = read_PSMCT32_block(tex_base, width, u, v) >> 28;
             if (current_ctx->tex0.use_CSM2)
-                clut_CSM2_lookup(entry, info.tex_color);
+                clut_CSM2_lookup(entry, info.srctex_color);
             else
-                clut_lookup(entry, info.tex_color);
+                clut_lookup(entry, info.srctex_color);
         }
             break;
         case 0x30:
         {
             uint32_t color = read_PSMCT32Z_block(tex_base, width, u, v);
-            info.tex_color.r = color & 0xFF;
-            info.tex_color.g = (color >> 8) & 0xFF;
-            info.tex_color.b = (color >> 16) & 0xFF;
-            info.tex_color.a = color >> 24;
+            info.srctex_color.r = color & 0xFF;
+            info.srctex_color.g = (color >> 8) & 0xFF;
+            info.srctex_color.b = (color >> 16) & 0xFF;
+            info.srctex_color.a = color >> 24;
         }
             break;
         case 0x31:
         {
             uint32_t color = read_PSMCT32Z_block(tex_base, width, u, v);
-            info.tex_color.r = color & 0xFF;
-            info.tex_color.g = (color >> 8) & 0xFF;
-            info.tex_color.b = (color >> 16) & 0xFF;
+            info.srctex_color.r = color & 0xFF;
+            info.srctex_color.g = (color >> 8) & 0xFF;
+            info.srctex_color.b = (color >> 16) & 0xFF;
             if (!(color & 0xFFFFFF) && TEXA.trans_black)
-                info.tex_color.a = 0;
+                info.srctex_color.a = 0;
             else
-                info.tex_color.a = TEXA.alpha0;
+                info.srctex_color.a = TEXA.alpha0;
         }
             break;
         case 0x32:
         {
             uint16_t color = read_PSMCT16Z_block(tex_base, width, u, v);
-            info.tex_color.r = (color & 0x1F) << 3;
-            info.tex_color.g = ((color >> 5) & 0x1F) << 3;
-            info.tex_color.b = ((color >> 10) & 0x1F) << 3;
-            info.tex_color.a = get_16bit_alpha(color);
+            info.srctex_color.r = (color & 0x1F) << 3;
+            info.srctex_color.g = ((color >> 5) & 0x1F) << 3;
+            info.srctex_color.b = ((color >> 10) & 0x1F) << 3;
+            info.srctex_color.a = get_16bit_alpha(color);
         }
             break;
         case 0x3A:
         {
             uint16_t color = read_PSMCT16SZ_block(tex_base, width, u, v);
-            info.tex_color.r = (color & 0x1F) << 3;
-            info.tex_color.g = ((color >> 5) & 0x1F) << 3;
-            info.tex_color.b = ((color >> 10) & 0x1F) << 3;
-            info.tex_color.a = get_16bit_alpha(color);
+            info.srctex_color.r = (color & 0x1F) << 3;
+            info.srctex_color.g = ((color >> 5) & 0x1F) << 3;
+            info.srctex_color.b = ((color >> 10) & 0x1F) << 3;
+            info.srctex_color.a = get_16bit_alpha(color);
         }
             break;
         default:
