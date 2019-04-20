@@ -217,6 +217,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::LoadByteUnsigned:
             load_byte_unsigned(ee, instr);
             break;
+        case IR::Opcode::LoadConst:
+            load_const(ee, instr);
+            break;
         case IR::Opcode::LoadDoubleword:
             load_doubleword(ee, instr);
             break;
@@ -225,9 +228,6 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             break;
         case IR::Opcode::LoadHalfwordUnsigned:
             load_halfword_unsigned(ee, instr);
-            break;
-        case IR::Opcode::LoadUpperImmediate:
-            load_upper_immediate(ee, instr);
             break;
         case IR::Opcode::LoadWord:
             load_word(ee, instr);
@@ -936,18 +936,11 @@ bool cop0_get_condition(Cop0& cop0)
 
 void EE_JIT64::add_unsigned_imm(EmotionEngine& ee, IR::Instruction &instr)
 {
-    // Alloc scratchpad register
-    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
-
     if (instr.get_dest() == instr.get_source())
     {
         REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::READ_WRITE);
 
-        // temp = (int32_t)((int16_t)immediate)
-        // dest = (int64_t)(temp + dest)
-        emitter.MOV16_REG_IMM(instr.get_source2(), RAX);
-        emitter.MOVSX16_TO_32(RAX, RAX);
-        emitter.ADD32_REG(RAX, dest);
+        emitter.LEA32(dest, dest, instr.get_source2());
         emitter.MOVSX32_TO_64(dest, dest);
     }
     else
@@ -955,18 +948,9 @@ void EE_JIT64::add_unsigned_imm(EmotionEngine& ee, IR::Instruction &instr)
         REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
         REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
 
-        // temp = (int32_t)((int16_t)immediate)
-        // temp += source
-        // dest = (int64_t)temp
-        emitter.MOV16_REG_IMM(instr.get_source2(), RAX);
-        emitter.MOVSX16_TO_32(RAX, RAX);
-        emitter.ADD32_REG(source, RAX);
-        emitter.MOV32_REG(RAX, dest);
+        emitter.LEA32(source, dest, instr.get_source2());
         emitter.MOVSX32_TO_64(dest, dest);
     }
-
-    // Free scratchpad register
-    free_gpr_reg(ee, RAX);
 }
 
 void EE_JIT64::and_int(EmotionEngine& ee, IR::Instruction &instr)
@@ -1589,12 +1573,12 @@ void EE_JIT64::load_halfword_unsigned(EmotionEngine& ee, IR::Instruction &instr)
     emitter.MOVZX16_TO_64(REG_64::RAX, dest);
 }
 
-void EE_JIT64::load_upper_immediate(EmotionEngine& ee, IR::Instruction &instr)
+void EE_JIT64::load_const(EmotionEngine& ee, IR::Instruction &instr)
 {
     REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
-    int64_t imm = (int32_t)(instr.get_source() << 16);
+    int64_t imm = instr.get_source();
 
-    // dest = (int64_t)((int32_t)(imm << 16))
+    // dest = immediate
     emitter.MOV64_OI(imm, dest);
 }
 
