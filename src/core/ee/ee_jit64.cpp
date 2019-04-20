@@ -936,11 +936,16 @@ bool cop0_get_condition(Cop0& cop0)
 
 void EE_JIT64::add_unsigned_imm(EmotionEngine& ee, IR::Instruction &instr)
 {
+    // Alloc scratchpad register
+    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
+
     if (instr.get_dest() == instr.get_source())
     {
         REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::READ_WRITE);
 
-        emitter.LEA32(dest, dest, instr.get_source2());
+        emitter.MOV32_REG_IMM(instr.get_source2(), RAX);
+        emitter.MOVSX16_TO_32(RAX, RAX);
+        emitter.ADD32_REG(RAX, dest);
         emitter.MOVSX32_TO_64(dest, dest);
     }
     else
@@ -948,9 +953,13 @@ void EE_JIT64::add_unsigned_imm(EmotionEngine& ee, IR::Instruction &instr)
         REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
         REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
 
-        emitter.LEA32(source, dest, instr.get_source2());
-        emitter.MOVSX32_TO_64(dest, dest);
+        emitter.MOV32_REG_IMM(instr.get_source2(), RAX);
+        emitter.ADD32_REG(source, RAX);
+        emitter.MOVSX32_TO_64(RAX, dest);
     }
+
+    // Free scratchpad register
+    free_gpr_reg(ee, RAX);
 }
 
 void EE_JIT64::and_int(EmotionEngine& ee, IR::Instruction &instr)

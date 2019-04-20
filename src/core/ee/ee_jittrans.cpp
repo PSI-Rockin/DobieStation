@@ -153,7 +153,7 @@ IR::Instruction EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC)
             instr.op = IR::Opcode::AddUnsignedImm;
             instr.set_dest(dest);
             instr.set_source(source);
-            instr.set_source2((int32_t)immediate);
+            instr.set_source2((int64_t)immediate);
             return instr;
         }
         case 0x0A:
