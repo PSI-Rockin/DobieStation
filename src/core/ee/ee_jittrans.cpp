@@ -437,14 +437,22 @@ IR::Instruction EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC)
         }
         case 0x28:
             // SB
-            Errors::print_warning("[EE_JIT] Unrecognized op SB\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            instr.op = IR::Opcode::StoreByte;
+            instr.set_dest((opcode >> 21) & 0x1F);
+            instr.set_source((opcode >> 16) & 0x1F);
+            instr.set_source2((int64_t)(int16_t)(opcode & 0xFFFF));
             return instr;
+        }
         case 0x29:
             // SH
-            Errors::print_warning("[EE_JIT] Unrecognized op SH\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            instr.op = IR::Opcode::StoreHalfword;
+            instr.set_dest((opcode >> 21) & 0x1F);
+            instr.set_source((opcode >> 16) & 0x1F);
+            instr.set_source2((int64_t)(int16_t)(opcode & 0xFFFF));
             return instr;
+        }
         case 0x2A:
             // SWL
             Errors::print_warning("[EE_JIT] Unrecognized op SWL\n", op);
@@ -452,9 +460,13 @@ IR::Instruction EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC)
             return instr;
         case 0x2B:
             // SW
-            Errors::print_warning("[EE_JIT] Unrecognized op SW\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            instr.op = IR::Opcode::StoreWord;
+            instr.set_dest((opcode >> 21) & 0x1F);
+            instr.set_source((opcode >> 16) & 0x1F);
+            instr.set_source2((int64_t)(int16_t)(opcode & 0xFFFF));
             return instr;
+        }
         case 0x2C:
             // SDL
             Errors::print_warning("[EE_JIT] Unrecognized op SDL\n", op);
@@ -516,9 +528,13 @@ IR::Instruction EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC)
             return instr;
         case 0x3F:
             // SD
-            Errors::print_warning("[EE_JIT] Unrecognized op SD\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            instr.op = IR::Opcode::StoreDoubleword;
+            instr.set_dest((opcode >> 21) & 0x1F);
+            instr.set_source((opcode >> 16) & 0x1F);
+            instr.set_source2((int64_t)(int16_t)(opcode & 0xFFFF));
             return instr;
+        }
         default:
             Errors::die("[EE_JIT] Unrecognized op $%02X", op);
             return instr;

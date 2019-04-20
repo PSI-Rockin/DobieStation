@@ -244,23 +244,35 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::SetOnLessThanImmediateUnsigned:
             set_on_less_than_immediate_unsigned(ee, instr);
             break;
-        case IR::ShiftLeftLogical:
+        case IR::Opcode::ShiftLeftLogical:
             shift_left_logical(ee, instr);
             break;
-        case IR::ShiftLeftLogicalVariable:
+        case IR::Opcode::ShiftLeftLogicalVariable:
             shift_left_logical_variable(ee, instr);
             break;
-        case IR::ShiftRightArithmetic:
+        case IR::Opcode::ShiftRightArithmetic:
             shift_right_arithmetic(ee, instr);
             break;
-        case IR::ShiftRightArithmeticVariable:
+        case IR::Opcode::ShiftRightArithmeticVariable:
             shift_right_arithmetic_variable(ee, instr);
             break;
-        case IR::ShiftRightLogical:
+        case IR::Opcode::ShiftRightLogical:
             shift_right_logical(ee, instr);
             break;
-        case IR::ShiftRightLogicalVariable:
+        case IR::Opcode::ShiftRightLogicalVariable:
             shift_right_logical_variable(ee, instr);
+            break;
+        case IR::Opcode::StoreByte:
+            store_byte(ee, instr);
+            break;
+        case IR::Opcode::StoreDoubleword:
+            store_doubleword(ee, instr);
+            break;
+        case IR::Opcode::StoreHalfword:
+            store_halfword(ee, instr);
+            break;
+        case IR::Opcode::StoreWord:
+            store_word(ee, instr);
             break;
         case IR::Opcode::SystemCall:
             system_call(ee, instr);
@@ -1842,6 +1854,102 @@ void EE_JIT64::shift_right_logical_variable(EmotionEngine& ee, IR::Instruction& 
     emitter.MOVSX32_TO_64(dest, dest);
 
     free_gpr_reg(ee, RCX);
+}
+
+void ee_write8(EmotionEngine& ee, uint32_t addr, uint8_t value)
+{
+    ee.write8(addr, value);
+}
+
+void ee_write16(EmotionEngine& ee, uint32_t addr, uint16_t value)
+{
+    ee.write16(addr, value);
+}
+
+void ee_write32(EmotionEngine& ee, uint32_t addr, uint32_t value)
+{
+    ee.write32(addr, value);
+}
+
+void ee_write64(EmotionEngine& ee, uint32_t addr, uint64_t value)
+{
+    ee.write64(addr, value);
+}
+
+void EE_JIT64::store_byte(EmotionEngine& ee, IR::Instruction& instr)
+{
+    alloc_abi_regs(3);
+    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::READ);
+    REG_64 addr = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
+    int64_t offset = instr.get_source2();
+
+    if (offset)
+        emitter.LEA32(dest, addr, offset);
+    else
+        emitter.MOV32_REG(dest, addr);
+    prepare_abi(ee, (uint64_t)&ee);
+    prepare_abi_reg(ee, addr);
+    prepare_abi_reg(ee, source);
+    call_abi_func(ee, (uint64_t)ee_write8);
+    free_gpr_reg(ee, addr);
+}
+
+void EE_JIT64::store_doubleword(EmotionEngine& ee, IR::Instruction& instr)
+{
+    alloc_abi_regs(3);
+    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::READ);
+    REG_64 addr = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
+    int64_t offset = instr.get_source2();
+
+    if (offset)
+        emitter.LEA32(dest, addr, offset);
+    else
+        emitter.MOV32_REG(dest, addr);
+    prepare_abi(ee, (uint64_t)&ee);
+    prepare_abi_reg(ee, addr);
+    prepare_abi_reg(ee, source);
+    call_abi_func(ee, (uint64_t)ee_write64);
+    free_gpr_reg(ee, addr);
+}
+
+void EE_JIT64::store_halfword(EmotionEngine& ee, IR::Instruction& instr)
+{
+    alloc_abi_regs(3);
+    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::READ);
+    REG_64 addr = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
+    int64_t offset = instr.get_source2();
+
+    if (offset)
+        emitter.LEA32(dest, addr, offset);
+    else
+        emitter.MOV32_REG(dest, addr);
+    prepare_abi(ee, (uint64_t)&ee);
+    prepare_abi_reg(ee, addr);
+    prepare_abi_reg(ee, source);
+    call_abi_func(ee, (uint64_t)ee_write16);
+    free_gpr_reg(ee, addr);
+}
+
+void EE_JIT64::store_word(EmotionEngine& ee, IR::Instruction& instr)
+{
+    alloc_abi_regs(3);
+    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::READ);
+    REG_64 addr = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
+    int64_t offset = instr.get_source2();
+
+    if (offset)
+        emitter.LEA32(dest, addr, offset);
+    else
+        emitter.MOV32_REG(dest, addr);
+    prepare_abi(ee, (uint64_t)&ee);
+    prepare_abi_reg(ee, addr);
+    prepare_abi_reg(ee, source);
+    call_abi_func(ee, (uint64_t)ee_write32);
+    free_gpr_reg(ee, addr);
 }
 
 void EE_JIT64::ee_syscall_exception(EmotionEngine& ee)
