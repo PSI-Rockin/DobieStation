@@ -2449,7 +2449,9 @@ int16_t GraphicsSynthesizerThread::multiply_tex_color(int16_t tex_color, int16_t
 
 void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
 {
-    double K = (current_ctx->tex1.K + 8.0) / 16.0;
+    //Should be +8 really but Street Fighter EX 3 hates that and Jurassic Park/Ratchet & Clank hate anything lower than 7
+    double K = (current_ctx->tex1.K + 7.0) / 16.0;
+
     if (current_ctx->tex1.LOD_method == 0)
     {
         info.LOD = ldexp(log2(1.0 / fabs(info.vtx_color.q)), current_ctx->tex1.L) + K;
@@ -2458,24 +2460,26 @@ void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
             info.LOD = round(info.LOD + 0.5);
     }
     else
-        info.LOD = K;
+        info.LOD = round(K);
 
+    //Determine mipmap level
     if (current_ctx->tex1.filter_smaller >= 2)
     {
-        info.mipmap_level = min((int8_t)info.LOD, (int8_t)current_ctx->tex1.max_MIP_level);
+        if (current_ctx->tex1.max_MIP_level > 0)
+            info.mipmap_level = min((int8_t)info.LOD, (int8_t)current_ctx->tex1.max_MIP_level);
+        else
+            info.mipmap_level = info.LOD;
     }
     else
+        info.mipmap_level = 0;
+
+    if (info.mipmap_level < 0)
         info.mipmap_level = 0;
 
     info.tex_base = current_ctx->tex0.texture_base;
     info.buffer_width = current_ctx->tex0.width;
     info.tex_width = current_ctx->tex0.tex_width;
     info.tex_height = current_ctx->tex0.tex_height;
-
-    //Determine mipmap level
-
-    if (info.mipmap_level < 0)
-        info.mipmap_level = 0;
 
     if (info.mipmap_level > 0)
     {
@@ -2523,7 +2527,6 @@ void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
         info.tex_width >>= info.mipmap_level;
         info.tex_height >>= info.mipmap_level;
 
-        //TODO: set minimum texture size to 8 when using bilinear filtering
         info.tex_width = max((int)info.tex_width, 1);
         info.tex_height = max((int)info.tex_height, 1);
     }
@@ -2832,7 +2835,7 @@ void GraphicsSynthesizerThread::clut_lookup(uint8_t entry, RGBAQ_REG &tex_color)
         case 0x00:
         case 0x01:
         {
-            uint32_t color = *(uint32_t*)&clut_cache[((clut_addr + entry) << 2) & 0x3FF];
+            uint32_t color = *(uint32_t*)&clut_cache[((clut_addr << 1) + (entry << 2)) & 0x7FF];
             tex_color.r = color & 0xFF;
             tex_color.g = (color >> 8) & 0xFF;
             tex_color.b = (color >> 16) & 0xFF;
