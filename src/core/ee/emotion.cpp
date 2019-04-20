@@ -267,7 +267,10 @@ uint32_t EmotionEngine::read_instr(uint32_t address)
         {
             if (!line->valid[1] || line->tag[1] != tag)
             {
-                //Load 4 quadwords. This incurs a 10 * 4 penalty.
+                //Load 4 quadwords.
+                //Based upon gamedev tests, an uncached data load takes 35 cycles, and a dcache miss takes 43.
+                //Another test we've run has determined that it takes 40 cycles for an icache miss.
+                //Current theory is a 32 cycle nonsequential penalty + (2 * 4) sequential penalty.
                 //printf("[EE] I$ miss at $%08X\n", address);
                 cycles_to_run -= 40;
 
@@ -298,10 +301,10 @@ uint32_t EmotionEngine::read_instr(uint32_t address)
     else
     {
         //Simulate reading from RDRAM
-        //The penalty is 10 cycles for all data types, up to a quadword (128 bits).
+        //The nonsequential penalty (mentioned above) is 32 cycles for all data types, up to a quadword (128 bits).
         //However, the EE loads two instructions at once. Since we only load a word, we divide the cycles in half.
         if ((address & 0x1FFFFFFF) < 0x02000000)
-            cycles_to_run -= 5;
+            cycles_to_run -= 16;
         if (address >= 0x30100000 && address <= 0x31FFFFFF)
             address -= 0x10000000;
     }

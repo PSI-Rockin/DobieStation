@@ -254,8 +254,10 @@ uint32_t IOP::read_instr(uint32_t addr)
         if (!icache[index].valid || icache[index].tag != tag)
         {
             //Cache miss: load 4 words
-            cycles_to_run -= 16;
-            muldiv_delay = std::max(muldiv_delay - 16, 0);
+            //I don't know what the exact count should be. 16 (4 * 4) breaks Fatal Frame 2.
+            //Current theory is 4 cycles for the first load + 1 * 3 cycles for sequential loads
+            cycles_to_run -= 7;
+            muldiv_delay = std::max(muldiv_delay - 7, 0);
             icache[index].valid = true;
             icache[index].tag = tag;
         }
@@ -285,6 +287,7 @@ void IOP::write32(uint32_t addr, uint32_t value)
 {
     if (cop0.status.IsC)
     {
+        //printf("Clearing IOP cache...\n");
         icache[(addr >> 4) & 0xFF].valid = false;
         return;
     }
