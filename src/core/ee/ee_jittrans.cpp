@@ -41,6 +41,9 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
         branch_op = is_branch(instr);
         instr.set_cycle_count(cycle_count);
 
+        if (instr.op == IR::Opcode::MoveConditionalOnZero || instr.op == IR::Opcode::MoveConditionalOnNotZero)
+            fallback_interpreter(instr, opcode);
+
         if (instr.op != IR::Opcode::Null)
             block.add_instr(instr);
 
@@ -487,7 +490,6 @@ IR::Instruction EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC)
             return instr;
         case 0x2F:
             // CACHE
-            Errors::print_warning("[EE_JIT] Unrecognized op CACHE\n", op);
             fallback_interpreter(instr, opcode);
             return instr;
         case 0x31:
@@ -497,7 +499,7 @@ IR::Instruction EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC)
             return instr;
         case 0x33:
             // PREFETCH
-            instr.op = IR::Opcode::Null;
+            fallback_interpreter(instr, opcode);
             return instr;
         case 0x36:
             // LQC2
@@ -663,14 +665,44 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
             return instr;
         case 0x0A:
             // MOVZ
-            Errors::print_warning("[EE_JIT] Unrecognized special op MOVZ\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 16) & 0x1F;
+            uint8_t source2 = (opcode >> 21) & 0x1F;
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+            if (!source)
+            {
+                // TODO: Unconditional move register
+            }
+
+            instr.op = IR::Opcode::MoveConditionalOnZero;
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
             return instr;
+        }
         case 0x0B:
             // MOVN
-            Errors::print_warning("[EE_JIT] Unrecognized special op MOVN\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 16) & 0x1F;
+            uint8_t source2 = (opcode >> 21) & 0x1F;
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+
+            instr.op = IR::Opcode::MoveConditionalOnNotZero;
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
             return instr;
+        }
         case 0x0C:
             // SYSCALL
             instr.op = IR::Opcode::SystemCall;
@@ -679,12 +711,11 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
             return instr;
         case 0x0D:
             // BREAK
-            Errors::print_warning("[EE_JIT] Unrecognized special op BREAK\n", op);
             fallback_interpreter(instr, opcode);
             return instr;
         case 0x0F:
             // SYNC
-            instr.op = IR::Opcode::Null;
+            fallback_interpreter(instr, opcode);
             return instr;
         case 0x10:
             // MFHI

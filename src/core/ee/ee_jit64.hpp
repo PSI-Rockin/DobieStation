@@ -79,6 +79,8 @@ private:
     void load_halfword_unsigned(EmotionEngine& ee, IR::Instruction& instr);
     void load_word(EmotionEngine& ee, IR::Instruction& instr);
     void load_word_unsigned(EmotionEngine& ee, IR::Instruction& instr);
+    void move_conditional_on_not_zero(EmotionEngine& ee, IR::Instruction& instr);
+    void move_conditional_on_zero(EmotionEngine& ee, IR::Instruction& instr);
     void or_imm(EmotionEngine& ee, IR::Instruction& instr);
     void set_on_less_than_immediate(EmotionEngine& ee, IR::Instruction& instr);
     void set_on_less_than_immediate_unsigned(EmotionEngine& ee, IR::Instruction& instr);

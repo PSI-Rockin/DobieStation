@@ -103,6 +103,7 @@ class Emitter64
         void NEG64(REG_64 dest);
 
         void OR16_REG(REG_64 source, REG_64 dest);
+        void OR16_REG_IMM(uint16_t imm, REG_64 source);
         void OR32_REG(REG_64 source, REG_64 dest);
         void OR32_EAX(uint32_t imm);
         void OR64_REG(REG_64 source, REG_64 dest);
@@ -139,6 +140,7 @@ class Emitter64
         void TEST64_REG(REG_64 op2, REG_64 op1);
 
         void XOR16_REG(REG_64 source, REG_64 dest);
+        void XOR16_REG_IMM(uint16_t imm, REG_64 source);
         void XOR32_REG(REG_64 source, REG_64 dest);
         void XOR64_REG(REG_64 source, REG_64 dest);
 
