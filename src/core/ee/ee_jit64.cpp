@@ -1196,8 +1196,7 @@ void EE_JIT64::branch_greater_than_zero(EmotionEngine& ee, IR::Instruction &inst
     REG_64 R15 = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
 
     // Conditionally move the success or failure destination into ee.PC
-    emitter.MOV64_OI(0, RAX);
-    emitter.CMP64_REG(RAX, op1);
+    emitter.TEST64_REG(op1, op1);
     emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), RAX);
     emitter.MOV32_REG_IMM(instr.get_jump_dest(), R15);
     emitter.CMOVCC32_REG(ConditionCode::G, R15, RAX);
@@ -1229,8 +1228,7 @@ void EE_JIT64::branch_less_than_or_equal_zero(EmotionEngine& ee, IR::Instruction
     REG_64 R15 = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
 
     // Conditionally move the success or failure destination into ee.PC
-    emitter.MOV64_OI(0, RAX);
-    emitter.CMP64_REG(RAX, op1);
+    emitter.TEST64_REG(op1, op1);
     emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), RAX);
     emitter.MOV32_REG_IMM(instr.get_jump_dest(), R15);
     emitter.CMOVCC32_REG(ConditionCode::LE, R15, RAX);
