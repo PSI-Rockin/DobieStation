@@ -135,7 +135,7 @@ IR::Instruction EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC)
                 instr.set_source(immediate);
             }
 
-            instr.op = IR::Opcode::AddUnsignedImm;
+            instr.op = IR::Opcode::AddWordImm;
             instr.set_dest(dest);
             instr.set_source(source);
             instr.set_source2((int64_t)immediate);
@@ -187,7 +187,7 @@ IR::Instruction EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC)
                 return instr;
             }
 
-            instr.op = IR::Opcode::AndInt;
+            instr.op = IR::Opcode::AndImm;
             instr.set_dest(dest);
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_source2(opcode & 0xFFFF);
@@ -203,7 +203,7 @@ IR::Instruction EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC)
                 return instr;
             }
 
-            instr.op = IR::Opcode::OrInt;
+            instr.op = IR::Opcode::OrImm;
             instr.set_dest((opcode >> 16) & 0x1F);
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_source2(opcode & 0xFFFF);
@@ -219,7 +219,7 @@ IR::Instruction EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC)
                 return instr;
             }
 
-            instr.op = IR::Opcode::XorInt;
+            instr.op = IR::Opcode::XorImm;
             instr.set_dest(dest);
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_source2(opcode & 0xFFFF);
@@ -289,14 +289,32 @@ IR::Instruction EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC)
             return instr;
         case 0x18:
             // DADDI
-            Errors::print_warning("[EE_JIT] Unrecognized op DADDI\n", op);
-            fallback_interpreter(instr, opcode);
-            return instr;
+            // TODO: Overflow?
         case 0x19:
             // DADDIU
-            Errors::print_warning("[EE_JIT] Unrecognized op DADDIU\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 16) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            int16_t immediate = opcode & 0xFFFF;
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+
+            if (!source)
+            {
+                instr.op = IR::Opcode::LoadConst;
+                instr.set_dest(dest);
+                instr.set_source(immediate);
+            }
+
+            instr.op = IR::Opcode::AddDoublewordImm;
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2((int64_t)immediate);
             return instr;
+        }
         case 0x1A:
             // LDL
             Errors::print_warning("[EE_JIT] Unrecognized op LDL\n", op);

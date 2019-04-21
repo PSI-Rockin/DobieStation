@@ -151,17 +151,20 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
     {
         case IR::Opcode::Null:
             break;
+        case IR::Opcode::AddDoublewordImm:
+            add_doubleword_imm(ee, instr);
+            break;
+        case IR::Opcode::AddWordImm:
+            add_word_imm(ee, instr);
+            break;
         case IR::Opcode::AddDoublewordReg:
             add_doubleword_reg(ee, instr);
-            break;
-        case IR::Opcode::AddUnsignedImm:
-            add_unsigned_imm(ee, instr);
             break;
         case IR::Opcode::AddWordReg:
             add_word_reg(ee, instr);
             break;
-        case IR::Opcode::AndInt:
-            and_int(ee, instr);
+        case IR::Opcode::AndImm:
+            and_imm(ee, instr);
             break;
         case IR::Opcode::BranchCop0:
             branch_cop0(ee, instr);
@@ -241,8 +244,8 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::LoadWordUnsigned:
             load_word_unsigned(ee, instr);
             break;
-        case IR::Opcode::OrInt:
-            or_int(ee, instr);
+        case IR::Opcode::OrImm:
+            or_imm(ee, instr);
             break;
         case IR::Opcode::SetOnLessThanImmediate:
             set_on_less_than_immediate(ee, instr);
@@ -295,8 +298,8 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::VCallMSR:
             vcall_msr(ee, instr);
             break;
-        case IR::Opcode::XorInt:
-            xor_int(ee, instr);
+        case IR::Opcode::XorImm:
+            xor_imm(ee, instr);
             break;
         case IR::Opcode::FallbackInterpreter:
             fallback_interpreter(ee, instr);
@@ -958,6 +961,14 @@ bool cop0_get_condition(Cop0& cop0)
     return cop0.get_condition();
 }
 
+void EE_JIT64::add_doubleword_imm(EmotionEngine& ee, IR::Instruction &instr)
+{
+    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+
+    emitter.LEA64_M(source, dest, instr.get_source2());
+}
+
 void EE_JIT64::add_doubleword_reg(EmotionEngine& ee, IR::Instruction &instr)
 {
     REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
@@ -967,7 +978,7 @@ void EE_JIT64::add_doubleword_reg(EmotionEngine& ee, IR::Instruction &instr)
     emitter.LEA64_REG(source, source2, dest);
 }
 
-void EE_JIT64::add_unsigned_imm(EmotionEngine& ee, IR::Instruction &instr)
+void EE_JIT64::add_word_imm(EmotionEngine& ee, IR::Instruction &instr)
 {
     REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
     REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
@@ -986,7 +997,7 @@ void EE_JIT64::add_word_reg(EmotionEngine& ee, IR::Instruction &instr)
     emitter.MOVSX32_TO_64(dest, dest);
 }
 
-void EE_JIT64::and_int(EmotionEngine& ee, IR::Instruction &instr)
+void EE_JIT64::and_imm(EmotionEngine& ee, IR::Instruction &instr)
 {
     if (instr.get_dest() == instr.get_source())
     {
@@ -1657,7 +1668,7 @@ void EE_JIT64::load_word_unsigned(EmotionEngine& ee, IR::Instruction &instr)
     emitter.MOV32_REG(REG_64::RAX, dest);
 }
 
-void EE_JIT64::or_int(EmotionEngine& ee, IR::Instruction &instr)
+void EE_JIT64::or_imm(EmotionEngine& ee, IR::Instruction &instr)
 {
     if (instr.get_dest() == instr.get_source())
     {
@@ -2142,7 +2153,7 @@ void EE_JIT64::vcall_msr(EmotionEngine& ee, IR::Instruction& instr)
     free_gpr_reg(ee, R15);
 }
 
-void EE_JIT64::xor_int(EmotionEngine& ee, IR::Instruction &instr)
+void EE_JIT64::xor_imm(EmotionEngine& ee, IR::Instruction &instr)
 {
     if (instr.get_dest() == instr.get_source())
     {

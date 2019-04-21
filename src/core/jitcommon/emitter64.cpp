@@ -693,6 +693,18 @@ void Emitter64::LEA32_REG(REG_64 source, REG_64 source2, REG_64 dest, uint32_t o
     cache->write<uint32_t>(offset);
 }
 
+void Emitter64::LEA64_M(REG_64 source, REG_64 dest, uint32_t offset, uint32_t shift)
+{
+    offset <<= shift;
+
+    rexw_r_rm(dest, source);
+    cache->write<uint8_t>(0x8D);
+    modrm(0b10, dest, source);
+    if ((source & 7) == 4)
+        cache->write<uint8_t>(0x24);
+    cache->write<uint32_t>(offset);
+}
+
 void Emitter64::LEA64_REG(REG_64 source, REG_64 source2, REG_64 dest, uint32_t offset, uint32_t shift)
 {
     offset <<= shift;

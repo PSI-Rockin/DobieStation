@@ -48,10 +48,11 @@ private:
 
     void handle_branch_likely(EmotionEngine& ee, IR::Block& block);
 
+    void add_doubleword_imm(EmotionEngine& ee, IR::Instruction& instr);
     void add_doubleword_reg(EmotionEngine& ee, IR::Instruction& instr);
-    void add_unsigned_imm(EmotionEngine& ee, IR::Instruction& instr);
+    void add_word_imm(EmotionEngine& ee, IR::Instruction& instr);
     void add_word_reg(EmotionEngine& ee, IR::Instruction& instr);
-    void and_int(EmotionEngine& ee, IR::Instruction& instr);
+    void and_imm(EmotionEngine& ee, IR::Instruction& instr);
     void branch_cop0(EmotionEngine& ee, IR::Instruction& instr);
     void branch_cop1(EmotionEngine& ee, IR::Instruction& instr);
     void branch_cop2(EmotionEngine& ee, IR::Instruction& instr);
@@ -78,7 +79,7 @@ private:
     void load_halfword_unsigned(EmotionEngine& ee, IR::Instruction& instr);
     void load_word(EmotionEngine& ee, IR::Instruction& instr);
     void load_word_unsigned(EmotionEngine& ee, IR::Instruction& instr);
-    void or_int(EmotionEngine& ee, IR::Instruction& instr);
+    void or_imm(EmotionEngine& ee, IR::Instruction& instr);
     void set_on_less_than_immediate(EmotionEngine& ee, IR::Instruction& instr);
     void set_on_less_than_immediate_unsigned(EmotionEngine& ee, IR::Instruction& instr);
     void shift_left_logical(EmotionEngine& ee, IR::Instruction& instr);
@@ -96,7 +97,7 @@ private:
     void system_call(EmotionEngine& ee, IR::Instruction& instr);
     void vcall_ms(EmotionEngine& ee, IR::Instruction& instr);
     void vcall_msr(EmotionEngine& ee, IR::Instruction& instr);
-    void xor_int(EmotionEngine& ee, IR::Instruction& instr);
+    void xor_imm(EmotionEngine& ee, IR::Instruction& instr);
     void fallback_interpreter(EmotionEngine& ee, const IR::Instruction &instr);
 
     static void ee_syscall_exception(EmotionEngine& ee);

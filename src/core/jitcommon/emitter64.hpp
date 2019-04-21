@@ -144,6 +144,7 @@ class Emitter64
 
         void LEA32_M(REG_64 source, REG_64 dest, uint32_t offset = 0, uint32_t shift = 0);
         void LEA32_REG(REG_64 source, REG_64 source2, REG_64 dest, uint32_t offset = 0, uint32_t shift = 0);
+        void LEA64_M(REG_64 source, REG_64 dest, uint32_t offset = 0, uint32_t shift = 0);
         void LEA64_REG(REG_64 source, REG_64 source2, REG_64 dest, uint32_t offset = 0, uint32_t shift = 0);
         void MOV8_REG(REG_64 source, REG_64 dest);
         void MOV8_REG_IMM(uint8_t imm, REG_64 dest);
