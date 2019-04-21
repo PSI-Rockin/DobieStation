@@ -48,8 +48,9 @@ private:
 
     void handle_branch_likely(EmotionEngine& ee, IR::Block& block);
 
-    void add_int_reg(EmotionEngine& ee, IR::Instruction& instr);
+    void add_doubleword_reg(EmotionEngine& ee, IR::Instruction& instr);
     void add_unsigned_imm(EmotionEngine& ee, IR::Instruction& instr);
+    void add_word_reg(EmotionEngine& ee, IR::Instruction& instr);
     void and_int(EmotionEngine& ee, IR::Instruction& instr);
     void branch_cop0(EmotionEngine& ee, IR::Instruction& instr);
     void branch_cop1(EmotionEngine& ee, IR::Instruction& instr);
@@ -90,6 +91,8 @@ private:
     void store_doubleword(EmotionEngine& ee, IR::Instruction& instr);
     void store_halfword(EmotionEngine& ee, IR::Instruction& instr);
     void store_word(EmotionEngine& ee, IR::Instruction& instr);
+    void sub_doubleword_reg(EmotionEngine& ee, IR::Instruction& instr);
+    void sub_word_reg(EmotionEngine& ee, IR::Instruction& instr);
     void system_call(EmotionEngine& ee, IR::Instruction& instr);
     void vcall_ms(EmotionEngine& ee, IR::Instruction& instr);
     void vcall_msr(EmotionEngine& ee, IR::Instruction& instr);

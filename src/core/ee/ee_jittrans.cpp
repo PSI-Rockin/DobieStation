@@ -41,6 +41,11 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
         branch_op = is_branch(instr);
         instr.set_cycle_count(cycle_count);
 
+        if (
+            instr.op == IR::Opcode::SubDoublewordReg ||
+            instr.op == IR::Opcode::SubWordReg)
+            fallback_interpreter(instr, opcode);
+
         if (instr.op != IR::Opcode::Null)
             block.add_instr(instr);
 
@@ -772,7 +777,7 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
             uint8_t source = (opcode >> 21) & 0x1F;
             uint8_t source2 = (opcode >> 16) & 0x1F;
 
-            instr.op = IR::Opcode::AddIntReg;
+            instr.op = IR::Opcode::AddWordReg;
             instr.set_dest(dest);
             instr.set_source(source);
             instr.set_source2(source2);
@@ -780,14 +785,20 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
         }
         case 0x22:
             // SUB
-            Errors::print_warning("[EE_JIT] Unrecognized special op SUB\n", op);
-            fallback_interpreter(instr, opcode);
-            return instr;
+            // TODO: Overflow?
         case 0x23:
             // SUBU
-            Errors::print_warning("[EE_JIT] Unrecognized special op SUBU\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+
+            instr.op = IR::Opcode::SubWordReg;
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
             return instr;
+        }
         case 0x24:
             // AND
             Errors::print_warning("[EE_JIT] Unrecognized special op AND\n", op);
@@ -830,24 +841,36 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
             return instr;
         case 0x2C:
             // DADD
-            Errors::print_warning("[EE_JIT] Unrecognized special op DADD\n", op);
-            fallback_interpreter(instr, opcode);
-            return instr;
+            // TODO: Overflow?
         case 0x2D:
             // DADDU
-            Errors::print_warning("[EE_JIT] Unrecognized special op DADDU\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+
+            instr.op = IR::Opcode::AddDoublewordReg;
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
             return instr;
+        }
         case 0x2E:
             // DSUB
-            Errors::print_warning("[EE_JIT] Unrecognized special op DSUB\n", op);
-            fallback_interpreter(instr, opcode);
-            return instr;
+            // TODO: Overflow?
         case 0x2F:
             // DSUBU
-            Errors::print_warning("[EE_JIT] Unrecognized special op DSUBU\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+
+            instr.op = IR::Opcode::SubDoublewordReg;
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
             return instr;
+        }
         case 0x34:
             // TEQ
             Errors::print_warning("[EE_JIT] Unrecognized special op TEQ\n", op);
