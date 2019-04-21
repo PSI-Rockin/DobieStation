@@ -41,11 +41,6 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
         branch_op = is_branch(instr);
         instr.set_cycle_count(cycle_count);
 
-        if (
-            instr.op == IR::Opcode::SubDoublewordReg ||
-            instr.op == IR::Opcode::SubWordReg)
-            fallback_interpreter(instr, opcode);
-
         if (instr.op != IR::Opcode::Null)
             block.add_instr(instr);
 

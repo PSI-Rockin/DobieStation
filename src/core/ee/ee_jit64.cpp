@@ -1966,44 +1966,32 @@ void EE_JIT64::store_word(EmotionEngine& ee, IR::Instruction& instr)
 
 void EE_JIT64::sub_doubleword_reg(EmotionEngine& ee, IR::Instruction &instr)
 {
-    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
+
+    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ_WRITE);
     REG_64 source2 = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
     REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
 
-    emitter.MOV64_MR(source, dest);
-    emitter.SUB64_REG(dest, source2);
+    emitter.MOV64_MR(source, RAX);
+    emitter.SUB64_REG(source2, RAX);
+    emitter.MOV64_MR(RAX, dest);
+
+    free_gpr_reg(ee, RAX);
 }
 
 void EE_JIT64::sub_word_reg(EmotionEngine& ee, IR::Instruction &instr)
 {
-    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
+
+    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ_WRITE);
     REG_64 source2 = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
     REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
 
-    if (ee.PC == 0x8000052C)
-        printf("P");
+    emitter.MOV32_REG(source, RAX);
+    emitter.SUB32_REG(source2, RAX);
+    emitter.MOVSX32_TO_64(RAX, dest);
 
-    if (dest == source)
-    {
-        emitter.SUB32_REG(source2, dest);
-        emitter.MOVSX32_TO_64(dest, dest);
-    }
-    else if (dest == source2)
-    {
-        emitter.SUB32_REG(source, dest);
-        emitter.MOVSX32_TO_64(dest, dest);
-    }
-    else if (dest == source && source == source2)
-    {
-        emitter.XOR32_REG(dest, dest);
-        emitter.MOV32_REG(dest, dest); // Zero extend
-    }
-    else
-    {
-        emitter.MOV32_REG(source, dest);
-        emitter.SUB32_REG(source2, dest);
-        emitter.MOVSX32_TO_64(dest, dest);
-    }
+    free_gpr_reg(ee, RAX);
 }
 
 void EE_JIT64::ee_syscall_exception(EmotionEngine& ee)
