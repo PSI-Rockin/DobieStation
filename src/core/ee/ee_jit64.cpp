@@ -166,6 +166,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::AndImm:
             and_imm(ee, instr);
             break;
+        case IR::Opcode::AndReg:
+            and_reg(ee, instr);
+            break;
         case IR::Opcode::BranchCop0:
             branch_cop0(ee, instr);
             break;
@@ -250,8 +253,14 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::MoveConditionalOnZero:
             move_conditional_on_zero(ee, instr);
             break;
+        case IR::Opcode::NorReg:
+            nor_reg(ee, instr);
+            break;
         case IR::Opcode::OrImm:
             or_imm(ee, instr);
+            break;
+        case IR::Opcode::OrReg:
+            or_reg(ee, instr);
             break;
         case IR::Opcode::SetOnLessThanImmediate:
             set_on_less_than_immediate(ee, instr);
@@ -306,6 +315,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             break;
         case IR::Opcode::XorImm:
             xor_imm(ee, instr);
+            break;
+        case IR::Opcode::XorReg:
+            xor_reg(ee, instr);
             break;
         case IR::Opcode::FallbackInterpreter:
             fallback_interpreter(ee, instr);
@@ -514,7 +526,7 @@ REG_64 EE_JIT64::alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state, 
     if (gpr_reg >= 32)
         Errors::die("[EE_JIT64] Alloc Int error: gpr_reg == %d", gpr_reg);
 
-    if (int_regs[destination].locked)
+    if (destination >= 0 && int_regs[destination].locked)
         Errors::die("[EE_JIT64] Alloc Int error: Attempted to allocate locked x64 register %d", destination);
     
     // An explicit destination is not provided, so we find one ourselves here.
@@ -543,6 +555,13 @@ REG_64 EE_JIT64::alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state, 
         }
     }
 
+    // Increment age of every used register
+    for (int i = 0; i < 16; ++i)
+    {
+        if (int_regs[i].used)
+            ++int_regs[i].age;
+    }
+
     // Do nothing if the EE register is already inside our x86 register
     if (int_regs[destination].used && int_regs[destination].is_gpr_reg && int_regs[destination].reg == gpr_reg)
     {
@@ -550,13 +569,6 @@ REG_64 EE_JIT64::alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state, 
             int_regs[destination].modified = true;
         int_regs[destination].age = 0;
         return (REG_64)destination;
-    }
-
-    // Increment age of every used register
-    for (int i = 0; i < 16; ++i)
-    {
-        if (int_regs[i].used)
-            ++int_regs[i].age;
     }
 
     // Flush new register's contents back to EE state
@@ -1013,6 +1025,27 @@ void EE_JIT64::and_imm(EmotionEngine& ee, IR::Instruction &instr)
         emitter.MOV64_MR(source, dest);
     emitter.AND16_REG_IMM(imm, dest);
     emitter.MOVZX16_TO_64(dest, dest);
+}
+
+void EE_JIT64::and_reg(EmotionEngine& ee, IR::Instruction &instr)
+{
+    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 source2 = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+
+    if (dest == source)
+    {
+        emitter.AND64_REG(source2, dest);
+    }
+    else if (dest == source2)
+    {
+        emitter.AND64_REG(source, dest);
+    }
+    else
+    {
+        emitter.MOV64_MR(source, dest);
+        emitter.AND64_REG(source2, dest);
+    }
 }
 
 void EE_JIT64::branch_cop0(EmotionEngine& ee, IR::Instruction &instr)
@@ -1641,6 +1674,29 @@ void EE_JIT64::move_conditional_on_zero(EmotionEngine& ee, IR::Instruction& inst
     emitter.CMOVCC64_REG(ConditionCode::Z, source2, dest);
 }
 
+void EE_JIT64::nor_reg(EmotionEngine& ee, IR::Instruction &instr)
+{
+    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 source2 = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+
+    if (dest == source)
+    {
+        emitter.OR64_REG(source2, dest);
+    }
+    else if (dest == source2)
+    {
+        emitter.OR64_REG(source, dest);
+    }
+    else
+    {
+        emitter.MOV64_MR(source, dest);
+        emitter.OR64_REG(source2, dest);
+    }
+
+    emitter.NOT64(dest);
+}
+
 void EE_JIT64::or_imm(EmotionEngine& ee, IR::Instruction &instr)
 {
     REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
@@ -1650,6 +1706,27 @@ void EE_JIT64::or_imm(EmotionEngine& ee, IR::Instruction &instr)
     if (source != dest)
         emitter.MOV64_MR(source, dest);
     emitter.OR16_REG_IMM(imm, dest);
+}
+
+void EE_JIT64::or_reg(EmotionEngine& ee, IR::Instruction &instr)
+{
+    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 source2 = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+
+    if (dest == source)
+    {
+        emitter.OR64_REG(source2, dest);
+    }
+    else if (dest == source2)
+    {
+        emitter.OR64_REG(source, dest);
+    }
+    else
+    {
+        emitter.MOV64_MR(source, dest);
+        emitter.OR64_REG(source2, dest);
+    }
 }
 
 void EE_JIT64::set_on_less_than_immediate(EmotionEngine& ee, IR::Instruction& instr)
@@ -2050,6 +2127,27 @@ void EE_JIT64::xor_imm(EmotionEngine& ee, IR::Instruction &instr)
     if (source != dest)
         emitter.MOV64_MR(source, dest);
     emitter.XOR16_REG_IMM(imm, dest);
+}
+
+void EE_JIT64::xor_reg(EmotionEngine& ee, IR::Instruction &instr)
+{
+    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 source2 = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+
+    if (dest == source)
+    {
+        emitter.XOR64_REG(source2, dest);
+    }
+    else if (dest == source2)
+    {
+        emitter.XOR64_REG(source, dest);
+    }
+    else
+    {
+        emitter.MOV64_MR(source, dest);
+        emitter.XOR64_REG(source2, dest);
+    }
 }
 
 void EE_JIT64::fallback_interpreter(EmotionEngine& ee, const IR::Instruction &instr)

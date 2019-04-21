@@ -98,6 +98,8 @@ class Emitter64
         void DEC16(REG_64 dest);
 
         void NOT16(REG_64 dest);
+        void NOT32(REG_64 dest);
+        void NOT64(REG_64 dest);
         void NEG16(REG_64 dest);
         void NEG32(REG_64 dest);
         void NEG64(REG_64 dest);

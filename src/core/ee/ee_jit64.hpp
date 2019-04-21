@@ -53,6 +53,7 @@ private:
     void add_word_imm(EmotionEngine& ee, IR::Instruction& instr);
     void add_word_reg(EmotionEngine& ee, IR::Instruction& instr);
     void and_imm(EmotionEngine& ee, IR::Instruction& instr);
+    void and_reg(EmotionEngine& ee, IR::Instruction& instr);
     void branch_cop0(EmotionEngine& ee, IR::Instruction& instr);
     void branch_cop1(EmotionEngine& ee, IR::Instruction& instr);
     void branch_cop2(EmotionEngine& ee, IR::Instruction& instr);
@@ -81,7 +82,9 @@ private:
     void load_word_unsigned(EmotionEngine& ee, IR::Instruction& instr);
     void move_conditional_on_not_zero(EmotionEngine& ee, IR::Instruction& instr);
     void move_conditional_on_zero(EmotionEngine& ee, IR::Instruction& instr);
+    void nor_reg(EmotionEngine& ee, IR::Instruction& instr);
     void or_imm(EmotionEngine& ee, IR::Instruction& instr);
+    void or_reg(EmotionEngine& ee, IR::Instruction& instr);
     void set_on_less_than_immediate(EmotionEngine& ee, IR::Instruction& instr);
     void set_on_less_than_immediate_unsigned(EmotionEngine& ee, IR::Instruction& instr);
     void shift_left_logical(EmotionEngine& ee, IR::Instruction& instr);
@@ -100,6 +103,7 @@ private:
     void vcall_ms(EmotionEngine& ee, IR::Instruction& instr);
     void vcall_msr(EmotionEngine& ee, IR::Instruction& instr);
     void xor_imm(EmotionEngine& ee, IR::Instruction& instr);
+    void xor_reg(EmotionEngine& ee, IR::Instruction& instr);
     void fallback_interpreter(EmotionEngine& ee, const IR::Instruction &instr);
 
     static void ee_syscall_exception(EmotionEngine& ee);

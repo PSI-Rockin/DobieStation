@@ -817,7 +817,11 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
             uint8_t dest = (opcode >> 11) & 0x1F;
             uint8_t source = (opcode >> 21) & 0x1F;
             uint8_t source2 = (opcode >> 16) & 0x1F;
-
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
             instr.op = IR::Opcode::AddWordReg;
             instr.set_dest(dest);
             instr.set_source(source);
@@ -833,6 +837,15 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
             uint8_t dest = (opcode >> 11) & 0x1F;
             uint8_t source = (opcode >> 21) & 0x1F;
             uint8_t source2 = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+            if (source == source2)
+            {
+                // TODO: Just clear out dest
+            }
 
             instr.op = IR::Opcode::SubWordReg;
             instr.set_dest(dest);
@@ -842,24 +855,92 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
         }
         case 0x24:
             // AND
-            Errors::print_warning("[EE_JIT] Unrecognized special op AND\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+            if (source == source2)
+            {
+                // TODO: dest = source
+            }
+
+            instr.op = IR::Opcode::AndReg;
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
             return instr;
+        }
         case 0x25:
             // OR
-            Errors::print_warning("[EE_JIT] Unrecognized special op OR\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+            if (source == source2)
+            {
+                // TODO: dest = source
+            }
+
+            instr.op = IR::Opcode::OrReg;
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
             return instr;
+        }
         case 0x26:
             // XOR
-            Errors::print_warning("[EE_JIT] Unrecognized special op XOR\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+            if (source == source2)
+            {
+                // TODO: dest = 0
+            }
+
+            instr.op = IR::Opcode::XorReg;
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
             return instr;
+        }
         case 0x27:
             // NOR
-            Errors::print_warning("[EE_JIT] Unrecognized special op NOR\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+            if (source == source2)
+            {
+                // TODO: dest = (NOT)source
+            }
+
+            instr.op = IR::Opcode::NorReg;
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
             return instr;
+        }
         case 0x28:
             // MFSA
             Errors::print_warning("[EE_JIT] Unrecognized special op MFSA\n", op);
@@ -889,6 +970,11 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
             uint8_t dest = (opcode >> 11) & 0x1F;
             uint8_t source = (opcode >> 21) & 0x1F;
             uint8_t source2 = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
 
             instr.op = IR::Opcode::AddDoublewordReg;
             instr.set_dest(dest);
@@ -905,6 +991,11 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
             uint8_t dest = (opcode >> 11) & 0x1F;
             uint8_t source = (opcode >> 21) & 0x1F;
             uint8_t source2 = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
 
             instr.op = IR::Opcode::SubDoublewordReg;
             instr.set_dest(dest);
