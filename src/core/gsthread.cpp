@@ -2465,10 +2465,7 @@ void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
     //Determine mipmap level
     if (current_ctx->tex1.filter_smaller >= 2)
     {
-        if (current_ctx->tex1.max_MIP_level > 0)
-            info.mipmap_level = min((int8_t)info.LOD, (int8_t)current_ctx->tex1.max_MIP_level);
-        else
-            info.mipmap_level = info.LOD;
+        info.mipmap_level = min((int8_t)info.LOD, (int8_t)current_ctx->tex1.max_MIP_level);
     }
     else
         info.mipmap_level = 0;
