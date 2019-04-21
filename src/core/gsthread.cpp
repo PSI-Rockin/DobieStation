@@ -2478,7 +2478,7 @@ void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
     info.tex_width = current_ctx->tex0.tex_width;
     info.tex_height = current_ctx->tex0.tex_height;
 
-    if (info.mipmap_level > 0)
+    if (info.mipmap_level > 0 && current_ctx->tex1.max_MIP_level)
     {
         if (current_ctx->tex1.MTBA && info.mipmap_level < 4)
         {
