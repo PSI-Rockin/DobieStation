@@ -348,6 +348,28 @@ void Emitter64::NOT16(REG_64 dest)
     modrm(0b11, 2, dest);
 }
 
+void Emitter64::NEG16(REG_64 dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_rm(dest);
+    cache->write<uint8_t>(0xF7);
+    modrm(0b11, 3, dest);
+}
+
+void Emitter64::NEG32(REG_64 dest)
+{
+    rex_rm(dest);
+    cache->write<uint8_t>(0xF7);
+    modrm(0b11, 3, dest);
+}
+
+void Emitter64::NEG64(REG_64 dest)
+{
+    rexw_rm(dest);
+    cache->write<uint8_t>(0xF7);
+    modrm(0b11, 3, dest);
+}
+
 void Emitter64::OR16_REG(REG_64 source, REG_64 dest)
 {
     cache->write<uint8_t>(0x66);
