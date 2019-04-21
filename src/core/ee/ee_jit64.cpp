@@ -1625,7 +1625,7 @@ void EE_JIT64::move_conditional_on_not_zero(EmotionEngine& ee, IR::Instruction& 
 {
     REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
     REG_64 source2 = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
-    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::READ_WRITE);
 
     emitter.TEST64_REG(source, source);
     emitter.CMOVCC64_REG(ConditionCode::NZ, source2, dest);
@@ -1635,7 +1635,7 @@ void EE_JIT64::move_conditional_on_zero(EmotionEngine& ee, IR::Instruction& inst
 {
     REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
     REG_64 source2 = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
-    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::READ_WRITE);
 
     emitter.TEST64_REG(source, source);
     emitter.CMOVCC64_REG(ConditionCode::Z, source2, dest);
