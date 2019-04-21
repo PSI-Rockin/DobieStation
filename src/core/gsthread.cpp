@@ -2541,7 +2541,7 @@ void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, TexLookupInfo& 
         if (current_ctx->tex1.filter_larger && info.LOD < 0.0)
             bilinear_filter = true;
 
-        //First bit is set for Bilinear filtering
+        //Bilinear filtering is used when set to 1 or 4 and above
         if ((current_ctx->tex1.filter_smaller == 0x1 || current_ctx->tex1.filter_smaller >= 4) && info.LOD >= 0.0)
             bilinear_filter = true;
     }
