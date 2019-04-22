@@ -32,7 +32,7 @@
  */
 
 #ifdef _WIN32
-    extern "C" void run_vu_jit();
+    extern "C" void run_vu_jit(VU_JIT64& jit, VectorUnit& vu);
 #endif
 
 VU_JIT64::VU_JIT64() : emitter(&cache)
@@ -3110,7 +3110,7 @@ uint8_t* exec_block(VU_JIT64& jit, VectorUnit& vu)
 uint16_t VU_JIT64::run(VectorUnit& vu)
 {
 #ifdef _MSC_VER
-    run_vu_jit();
+    run_vu_jit(*this, vu);
 #else
     uint8_t* block = exec_block(*this, vu);
 
