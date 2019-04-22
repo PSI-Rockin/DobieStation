@@ -820,9 +820,12 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
         }
         case 0x1B:
             // DIVU
-            Errors::print_warning("[EE_JIT] Unrecognized special op DIVU\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            instr.op = IR::Opcode::DivideUnsignedWord;
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_source2((opcode >> 16) & 0x1F);
             return instr;
+        }
         case 0x20:
             // ADD
             // TODO: Overflow?

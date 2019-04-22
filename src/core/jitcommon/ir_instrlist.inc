@@ -62,7 +62,7 @@ INSTR(Or)
 INSTR(SubtractWord)
 INSTR(SubtractUnsignedWord)
 INSTR(DivideWord)
-
+INSTR(DivideUnsignedWord)
 
 INSTR(FloatingPointAbsoluteValue)
 INSTR(FloatingPointAdd)

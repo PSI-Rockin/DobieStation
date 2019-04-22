@@ -378,6 +378,13 @@ void Emitter64::DEC64(REG_64 dest)
     modrm(0b11, 1, dest);
 }
 
+void Emitter64::DIV32(REG_64 dest)
+{
+    rex_rm(dest);
+    cache->write<uint8_t>(0xF7);
+    modrm(0b11, 6, dest);
+}
+
 void Emitter64::IDIV32(REG_64 dest)
 {
     rex_rm(dest);

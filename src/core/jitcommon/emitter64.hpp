@@ -104,6 +104,7 @@ class Emitter64
         void DEC32(REG_64 dest);
         void DEC64(REG_64 dest);
 
+        void DIV32(REG_64 dest);
         void IDIV32(REG_64 dest);
 
         void NOT16(REG_64 dest);
