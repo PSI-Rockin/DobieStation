@@ -716,24 +716,36 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
             return instr;
         case 0x10:
             // MFHI
-            Errors::print_warning("[EE_JIT] Unrecognized special op MFHI\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            instr.op = IR::Opcode::MoveFromHI;
+            instr.set_dest(dest);
             return instr;
+        }
         case 0x11:
             // MTHI
-            Errors::print_warning("[EE_JIT] Unrecognized special op MTHI\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t source = (opcode >> 21) & 0x1F;
+            instr.op = IR::Opcode::MoveToHI;
+            instr.set_source(source);
             return instr;
+        }
         case 0x12:
             // MFLO
-            Errors::print_warning("[EE_JIT] Unrecognized special op MFLO\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            instr.op = IR::Opcode::MoveFromLO;
+            instr.set_dest(dest);
             return instr;
+        }
         case 0x13:
             // MTLO
-            Errors::print_warning("[EE_JIT] Unrecognized special op MTLO\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t source = (opcode >> 21) & 0x1F;
+            instr.op = IR::Opcode::MoveToLO;
+            instr.set_source(source);
             return instr;
+        }
         case 0x14:
             // DSLLV
         {

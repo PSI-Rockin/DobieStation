@@ -253,6 +253,21 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::MoveConditionalOnZero:
             move_conditional_on_zero(ee, instr);
             break;
+        case IR::Opcode::MoveFromHI:
+            move_from_hi(ee, instr);
+            break;
+        case IR::Opcode::MoveFromLO:
+            move_from_lo(ee, instr);
+            break;
+        case IR::Opcode::MoveToHI:
+            move_to_hi(ee, instr);
+            break;
+        case IR::Opcode::MoveToLO:
+            move_to_lo(ee, instr);
+            break;
+        case IR::Opcode::MoveToLOHI:
+            move_to_lo_hi(ee, instr);
+            break;
         case IR::Opcode::NorReg:
             nor_reg(ee, instr);
             break;
@@ -1670,6 +1685,73 @@ void EE_JIT64::move_conditional_on_zero(EmotionEngine& ee, IR::Instruction& inst
 
     emitter.TEST64_REG(source, source);
     emitter.CMOVCC64_REG(ConditionCode::Z, source2, dest);
+}
+
+void EE_JIT64::move_from_hi(EmotionEngine&ee, IR::Instruction &instr)
+{
+    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+
+    emitter.load_addr((uint64_t)&ee.HI, RAX);
+    emitter.MOV64_FROM_MEM(RAX, dest);
+
+    free_gpr_reg(ee, RAX);
+}
+
+void EE_JIT64::move_from_lo(EmotionEngine&ee, IR::Instruction &instr)
+{
+    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+
+    emitter.load_addr((uint64_t)&ee.LO, RAX);
+    emitter.MOV64_FROM_MEM(RAX, dest);
+
+    free_gpr_reg(ee, RAX);
+}
+
+void EE_JIT64::move_to_hi(EmotionEngine& ee, IR::Instruction &instr)
+{
+    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+    move_to_hi(ee, source);
+}
+
+void EE_JIT64::move_to_hi(EmotionEngine& ee, REG_64 source)
+{
+    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
+
+    emitter.load_addr((uint64_t)&ee.HI, RAX);
+    emitter.MOV64_TO_MEM(source, RAX);
+
+    free_gpr_reg(ee, RAX);
+}
+
+void EE_JIT64::move_to_lo(EmotionEngine& ee, IR::Instruction &instr)
+{
+    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+    move_to_lo(ee, source);
+}
+
+void EE_JIT64::move_to_lo(EmotionEngine& ee, REG_64 source)
+{
+    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
+
+    emitter.load_addr((uint64_t)&ee.LO, RAX);
+    emitter.MOV64_TO_MEM(source, RAX);
+
+    free_gpr_reg(ee, RAX);
+}
+
+void EE_JIT64::move_to_lo_hi(EmotionEngine& ee, IR::Instruction &instr)
+{
+    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 source2 = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
+    move_to_lo_hi(ee, source, source2);
+}
+
+void EE_JIT64::move_to_lo_hi(EmotionEngine& ee, REG_64 loSource, REG_64 hiSource)
+{
+    move_to_lo(ee, loSource);
+    move_to_hi(ee, hiSource);
 }
 
 void EE_JIT64::nor_reg(EmotionEngine& ee, IR::Instruction &instr)

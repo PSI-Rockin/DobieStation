@@ -82,6 +82,14 @@ private:
     void load_word_unsigned(EmotionEngine& ee, IR::Instruction& instr);
     void move_conditional_on_not_zero(EmotionEngine& ee, IR::Instruction& instr);
     void move_conditional_on_zero(EmotionEngine& ee, IR::Instruction& instr);
+    void move_from_hi(EmotionEngine&ee, IR::Instruction &instr);
+    void move_from_lo(EmotionEngine&ee, IR::Instruction &instr);
+    void move_to_hi(EmotionEngine& ee, IR::Instruction &instr);
+    void move_to_hi(EmotionEngine& ee, REG_64 source);
+    void move_to_lo(EmotionEngine& ee, IR::Instruction &instr);
+    void move_to_lo(EmotionEngine& ee, REG_64 source);
+    void move_to_lo_hi(EmotionEngine& ee, IR::Instruction &instr);
+    void move_to_lo_hi(EmotionEngine& ee, REG_64 loSource, REG_64 hiSource);
     void nor_reg(EmotionEngine& ee, IR::Instruction& instr);
     void or_imm(EmotionEngine& ee, IR::Instruction& instr);
     void or_reg(EmotionEngine& ee, IR::Instruction& instr);
