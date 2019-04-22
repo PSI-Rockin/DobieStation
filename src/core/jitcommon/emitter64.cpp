@@ -392,6 +392,20 @@ void Emitter64::IDIV32(REG_64 dest)
     modrm(0b11, 7, dest);
 }
 
+void Emitter64::MUL32(REG_64 dest)
+{
+    rex_rm(dest);
+    cache->write<uint8_t>(0xF7);
+    modrm(0b11, 4, dest);
+}
+
+void Emitter64::IMUL32(REG_64 dest)
+{
+    rex_rm(dest);
+    cache->write<uint8_t>(0xF7);
+    modrm(0b11, 5, dest);
+}
+
 void Emitter64::NOT16(REG_64 dest)
 {
     cache->write<uint8_t>(0x66);

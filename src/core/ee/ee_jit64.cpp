@@ -274,6 +274,12 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::MoveToLOHI:
             move_to_lo_hi(ee, instr);
             break;
+        case IR::Opcode::MultiplyUnsignedWord:
+            multiply_unsigned_word(ee, instr);
+            break;
+        case IR::Opcode::MultiplyWord:
+            multiply_word(ee, instr);
+            break;
         case IR::Opcode::NorReg:
             nor_reg(ee, instr);
             break;
@@ -1825,15 +1831,20 @@ void EE_JIT64::move_from_hi(EmotionEngine&ee, IR::Instruction &instr)
     free_gpr_reg(ee, RAX);
 }
 
-void EE_JIT64::move_from_lo(EmotionEngine&ee, IR::Instruction &instr)
+void EE_JIT64::move_from_lo(EmotionEngine& ee, REG_64 dest)
 {
     REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
-    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
 
     emitter.load_addr((uint64_t)&ee.LO, RAX);
     emitter.MOV64_FROM_MEM(RAX, dest);
 
     free_gpr_reg(ee, RAX);
+}
+
+void EE_JIT64::move_from_lo(EmotionEngine& ee, IR::Instruction &instr)
+{
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+    move_from_lo(ee, dest);
 }
 
 void EE_JIT64::move_to_hi(EmotionEngine& ee, IR::Instruction &instr)
@@ -1905,6 +1916,48 @@ void EE_JIT64::move_to_lo_hi_imm(EmotionEngine& ee, int64_t loValue, int64_t hiV
 {
     move_to_lo_imm(ee, loValue);
     move_to_hi_imm(ee, hiValue);
+}
+
+void EE_JIT64::multiply_unsigned_word(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD, REG_64::RAX);
+    REG_64 RDX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD, REG_64::RDX);
+    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 source2 = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
+
+    emitter.MOV32_REG(source, RAX);
+    emitter.MUL32(source2);
+    move_to_lo_hi(ee, RAX, RDX);
+
+    if (instr.get_dest())
+    {
+        REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+        move_from_lo(ee, dest);
+    }
+
+    free_gpr_reg(ee, RAX);
+    free_gpr_reg(ee, RDX);
+}
+
+void EE_JIT64::multiply_word(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD, REG_64::RAX);
+    REG_64 RDX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD, REG_64::RDX);
+    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 source2 = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
+
+    emitter.MOV32_REG(source, RAX);
+    emitter.IMUL32(source2);
+    move_to_lo_hi(ee, RAX, RDX);
+
+    if (instr.get_dest())
+    {
+        REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+        move_from_lo(ee, dest);
+    }
+
+    free_gpr_reg(ee, RAX);
+    free_gpr_reg(ee, RDX);
 }
 
 void EE_JIT64::nor_reg(EmotionEngine& ee, IR::Instruction &instr)

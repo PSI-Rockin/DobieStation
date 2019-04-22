@@ -802,14 +802,22 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
         }
         case 0x18:
             // MULT
-            Errors::print_warning("[EE_JIT] Unrecognized special op MULT\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            instr.op = IR::Opcode::MultiplyWord;
+            instr.set_dest((opcode >> 11) & 0x1F);
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_source2((opcode >> 16) & 0x1F);
             return instr;
+        }
         case 0x19:
             // MULTU
-            Errors::print_warning("[EE_JIT] Unrecognized special op MULTU\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            instr.op = IR::Opcode::MultiplyUnsignedWord;
+            instr.set_dest((opcode >> 11) & 0x1F);
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_source2((opcode >> 16) & 0x1F);
             return instr;
+        }
         case 0x1A:
             // DIV
         {
