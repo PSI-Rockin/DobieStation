@@ -11,6 +11,7 @@ Cop0::Cop0(DMAC* dmac) : dmac(dmac)
     kernel_vtlb = nullptr;
     sup_vtlb = nullptr;
     user_vtlb = nullptr;
+    vtlb_info = nullptr;
 }
 
 Cop0::~Cop0()
@@ -18,6 +19,7 @@ Cop0::~Cop0()
     delete[] kernel_vtlb;
     delete[] sup_vtlb;
     delete[] user_vtlb;
+    delete[] vtlb_info;
 }
 
 uint8_t** Cop0::get_vtlb_map()
@@ -91,16 +93,24 @@ void Cop0::init_tlb()
         sup_vtlb = new uint8_t*[1024 * 1024];
     if (!user_vtlb)
         user_vtlb = new uint8_t*[1024 * 1024];
+    if (!vtlb_info)
+        vtlb_info = new VTLB_Info[1024 * 1024];
 
     memset(kernel_vtlb, 0, 1024 * 1024 * sizeof(uint8_t*));
     memset(sup_vtlb, 0, 1024 * 1024 * sizeof(uint8_t*));
     memset(user_vtlb, 0, 1024 * 1024 * sizeof(uint8_t*));
+    memset(vtlb_info, 0, 1024 * 1024 * sizeof(VTLB_Info));
 
     //Kernel segments are unmapped to TLB, so we must define them explicitly
     uint32_t unmapped_start = 0x80000000, unmapped_end = 0xC0000000;
     for (uint32_t i = unmapped_start; i < unmapped_end; i += 4096)
     {
-        kernel_vtlb[i / 4096] = get_mem_pointer(i & 0x1FFFFFFF);
+        int map_index = i / 4096;
+        kernel_vtlb[map_index] = get_mem_pointer(i & 0x1FFFFFFF);
+        if (i < 0xA0000000)
+            vtlb_info[map_index].cache_mode = CACHED;
+        else
+            vtlb_info[map_index].cache_mode = UNCACHED;
     }
 }
 
@@ -410,6 +420,7 @@ void Cop0::map_tlb(TLB_Entry *entry)
                 kernel_vtlb[even_virt_page + map_index] = spr + i;
                 sup_vtlb[even_virt_page + map_index] = spr + i;
                 user_vtlb[even_virt_page + map_index] = spr + i;
+                vtlb_info[even_virt_page + map_index].cache_mode = SPR;
             }
         }
     }
@@ -430,6 +441,8 @@ void Cop0::map_tlb(TLB_Entry *entry)
                 }
                 else if (even_virt_addr >= 0xC0000000 && even_virt_addr < 0xE0000000)
                     sup_vtlb[even_virt_page + map_index] = mem;
+
+                vtlb_info[even_virt_page + map_index].cache_mode = entry->cache_mode[0];
             }
         }
 
@@ -448,6 +461,8 @@ void Cop0::map_tlb(TLB_Entry *entry)
                 }
                 else if (odd_virt_addr >= 0xC0000000 && odd_virt_addr < 0xE0000000)
                     sup_vtlb[odd_virt_page + map_index] = mem;
+
+                vtlb_info[odd_virt_page + map_index].cache_mode = entry->cache_mode[1];
             }
         }
     }

@@ -132,7 +132,7 @@ int EmotionEngine::run(int cycles)
         {
             cycles_to_run--;
 
-            uint32_t instruction = read32(PC);
+            uint32_t instruction = read_instr(PC);
             uint32_t lastPC = PC;
 
             if (can_disassemble)
@@ -255,8 +255,7 @@ uint64_t EmotionEngine::get_SA()
 
 uint32_t EmotionEngine::read_instr(uint32_t address)
 {
-    bool uncached = address & 0x30000000;
-    if (!uncached)
+    if (cp0->is_cached(address))
     {
         int index = (address >> 6) & 0x7F;
         uint16_t tag = address >> 13;
@@ -303,12 +302,10 @@ uint32_t EmotionEngine::read_instr(uint32_t address)
         //Simulate reading from RDRAM
         //The nonsequential penalty (mentioned above) is 32 cycles for all data types, up to a quadword (128 bits).
         //However, the EE loads two instructions at once. Since we only load a word, we divide the cycles in half.
-        if ((address & 0x1FFFFFFF) < 0x02000000)
-            cycles_to_run -= 16;
-        if (address >= 0x30100000 && address <= 0x31FFFFFF)
-            address -= 0x10000000;
+        //if ((address & 0x1FFFFFFF) < 0x02000000)
+            //cycles_to_run -= 16;
     }
-    return e->read32(address & 0x1FFFFFFF);
+    return read32(address);
 }
 
 uint8_t EmotionEngine::read8(uint32_t address)
