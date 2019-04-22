@@ -93,6 +93,8 @@ private:
     void nor_reg(EmotionEngine& ee, IR::Instruction& instr);
     void or_imm(EmotionEngine& ee, IR::Instruction& instr);
     void or_reg(EmotionEngine& ee, IR::Instruction& instr);
+    void set_on_less_than(EmotionEngine& ee, IR::Instruction& instr);
+    void set_on_less_than_unsigned(EmotionEngine& ee, IR::Instruction& instr);
     void set_on_less_than_immediate(EmotionEngine& ee, IR::Instruction& instr);
     void set_on_less_than_immediate_unsigned(EmotionEngine& ee, IR::Instruction& instr);
     void shift_left_logical(EmotionEngine& ee, IR::Instruction& instr);

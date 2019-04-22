@@ -965,14 +965,30 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
             return instr;
         case 0x2A:
             // SLT
-            Errors::print_warning("[EE_JIT] Unrecognized special op SLT\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+
+            instr.op = IR::Opcode::SetOnLessThan;
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
             return instr;
+        }
         case 0x2B:
             // SLTU
-            Errors::print_warning("[EE_JIT] Unrecognized special op SLTU\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+
+            instr.op = IR::Opcode::SetOnLessThanUnsigned;
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
             return instr;
+        }
         case 0x2C:
             // DADD
             // TODO: Overflow?

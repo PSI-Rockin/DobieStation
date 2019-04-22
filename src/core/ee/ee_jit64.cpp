@@ -277,6 +277,12 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::OrReg:
             or_reg(ee, instr);
             break;
+        case IR::Opcode::SetOnLessThan:
+            set_on_less_than(ee, instr);
+            break;
+        case IR::Opcode::SetOnLessThanUnsigned:
+            set_on_less_than_unsigned(ee, instr);
+            break;
         case IR::Opcode::SetOnLessThanImmediate:
             set_on_less_than_immediate(ee, instr);
             break;
@@ -1807,6 +1813,28 @@ void EE_JIT64::or_reg(EmotionEngine& ee, IR::Instruction &instr)
         emitter.MOV64_MR(source, dest);
         emitter.OR64_REG(source2, dest);
     }
+}
+
+void EE_JIT64::set_on_less_than(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 source2 = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+
+    emitter.CMP64_REG(source2, source);
+    emitter.SETCC_REG(ConditionCode::L, dest);
+    emitter.MOVZX8_TO_64(dest, dest);
+}
+
+void EE_JIT64::set_on_less_than_unsigned(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 source2 = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+
+    emitter.CMP64_REG(source2, source);
+    emitter.SETCC_REG(ConditionCode::B, dest);
+    emitter.MOVZX8_TO_64(dest, dest);
 }
 
 void EE_JIT64::set_on_less_than_immediate(EmotionEngine& ee, IR::Instruction& instr)
