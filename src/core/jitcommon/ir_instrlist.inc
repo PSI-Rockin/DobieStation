@@ -61,6 +61,7 @@ INSTR(NotOr)
 INSTR(Or)
 INSTR(SubtractWord)
 INSTR(SubtractUnsignedWord)
+INSTR(DivideWord)
 
 
 INSTR(FloatingPointAbsoluteValue)

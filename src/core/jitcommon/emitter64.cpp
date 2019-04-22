@@ -332,12 +332,57 @@ void Emitter64::CMP64_REG(REG_64 op2, REG_64 op1)
     modrm(0b11, op2, op1);
 }
 
+void Emitter64::CWD()
+{
+    cache->write<uint8_t>(0x66);
+    cache->write<uint8_t>(0x99);
+}
+
+void Emitter64::CDQ()
+{
+    cache->write<uint8_t>(0x99);
+}
+
+void Emitter64::CQO()
+{
+    cache->write<uint8_t>(0x48);
+    cache->write<uint8_t>(0x99);
+}
+
+void Emitter64::DEC8(REG_64 dest)
+{
+    rex_rm(dest);
+    cache->write<uint8_t>(0xFE);
+    modrm(0b11, 1, dest);
+}
+
 void Emitter64::DEC16(REG_64 dest)
 {
     cache->write<uint8_t>(0x66);
     rex_rm(dest);
     cache->write<uint8_t>(0xFF);
     modrm(0b11, 1, dest);
+}
+
+void Emitter64::DEC32(REG_64 dest)
+{
+    rex_rm(dest);
+    cache->write<uint8_t>(0xFF);
+    modrm(0b11, 1, dest);
+}
+
+void Emitter64::DEC64(REG_64 dest)
+{
+    rexw_rm(dest);
+    cache->write<uint8_t>(0xFF);
+    modrm(0b11, 1, dest);
+}
+
+void Emitter64::IDIV32(REG_64 dest)
+{
+    rex_rm(dest);
+    cache->write<uint8_t>(0xF7);
+    modrm(0b11, 7, dest);
 }
 
 void Emitter64::NOT16(REG_64 dest)
@@ -450,6 +495,13 @@ void Emitter64::SETCC_MEM(ConditionCode cc, REG_64 indir_dest, uint32_t offset)
         cache->write<uint8_t>(0x24);
     if ((indir_dest & 7) == 5 || offset)
         cache->write<uint32_t>(offset);
+}
+
+void Emitter64::SHL8_REG_1(REG_64 dest)
+{
+    rex_rm(dest);
+    cache->write<uint8_t>(0xD0);
+    modrm(0b11, 4, dest);
 }
 
 void Emitter64::SHL16_REG_1(REG_64 dest)

@@ -196,6 +196,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::BranchNotEqual:
             branch_not_equal(ee, instr);
             break;
+        case IR::Opcode::DivideWord:
+            divide_word(ee, instr);
+            break;
         case IR::Opcode::DoublewordShiftLeftLogical:
             doubleword_shift_left_logical(ee, instr);
             break;
@@ -1344,6 +1347,88 @@ void EE_JIT64::branch_not_equal(EmotionEngine& ee, IR::Instruction &instr)
     free_gpr_reg(ee, R15);
 }
 
+void EE_JIT64::divide_word(EmotionEngine& ee, IR::Instruction &instr)
+{
+    /*
+    NOTE: 
+    This operation is kind of a mess due to all the possible edge cases.
+    I have included an example of what this operation may look like in x64 assembly.
+    You may also wish to refer to the implementation in emotioninterpreter.cpp.
+    -Souzooka
+
+        ; allocated regs - RDX, RAX, source (RCX), source2 (RBX), HI/LO (N/A)
+        cmp ECX, 0x80000000
+        jne label1
+        cmp EBX, 0xFFFFFFFF
+        jne label1
+        ; move 0x80000000 to LO
+        ; move 0 to HI
+        jmp end
+    label1:
+        test EBX, EBX
+        jz label2
+        mov EAX, ECX
+        cdq       ; sign extend EAX into EDX
+        idiv EBX  ; divide ECX by EBX, division is stored in EAX, mod is stored in EDX
+        movsx RAX, EAX
+        movsx RDX, EDX
+        ; move RAX to LO
+        ; move RDX to HI
+        jmp end
+    label2:
+        test ECX, ECX
+        setl AL
+        shl AL, 1 ; AL will be 0 if op1 >= 0, 2 otherwise
+        dec AL    ; AL will be -1 if op1 >= 0, 1 otherwise
+        movzx RAX, AL
+        movsx RCX, ECX
+        ; move RAX to LO
+        ; move RCX to HI
+    end:
+        ; continue block
+    */
+
+    // idiv result is stored in RAX:RDX, so we allocate those registers first.
+    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD, REG_64::RAX);
+    REG_64 RDX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD, REG_64::RDX);
+    REG_64 dividend = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 divisor = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
+
+    emitter.CMP32_IMM(0x80000000, dividend);
+    uint8_t *label1_1 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
+    emitter.CMP32_IMM(0xFFFFFFFF, divisor);
+    uint8_t *label1_2 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
+    move_to_lo_hi_imm(ee, (int64_t)(int32_t)0x80000000, 0);
+    uint8_t *end_1 = emitter.JMP_NEAR_DEFERRED();
+
+    emitter.set_jump_dest(label1_1);
+    emitter.set_jump_dest(label1_2);
+    emitter.TEST32_REG(divisor, divisor);
+    uint8_t* label2 = emitter.JCC_NEAR_DEFERRED(ConditionCode::Z);
+    emitter.MOV32_REG(dividend, RAX);
+    emitter.CDQ();
+    emitter.IDIV32(divisor);
+    emitter.MOVSX32_TO_64(RAX, RAX);
+    emitter.MOVSX32_TO_64(RDX, RDX);
+    move_to_lo_hi(ee, RAX, RDX);
+    uint8_t *end_2 = emitter.JMP_NEAR_DEFERRED();
+
+    emitter.set_jump_dest(label2);
+    emitter.TEST32_REG(dividend, dividend);
+    emitter.SETCC_REG(ConditionCode::L, RAX);
+    emitter.SHL8_REG_1(RAX);
+    emitter.DEC8(RAX);
+    emitter.MOVZX8_TO_64(RAX, RAX);
+    emitter.MOVSX32_TO_64(dividend, dividend);
+    move_to_lo_hi(ee, RAX, dividend);
+
+    emitter.set_jump_dest(end_1);
+    emitter.set_jump_dest(end_2);
+
+    free_gpr_reg(ee, RAX);
+    free_gpr_reg(ee, RDX);
+}
+
 void EE_JIT64::doubleword_shift_left_logical(EmotionEngine& ee, IR::Instruction& instr)
 {
     REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
@@ -1731,6 +1816,16 @@ void EE_JIT64::move_to_hi(EmotionEngine& ee, REG_64 source)
     free_gpr_reg(ee, RAX);
 }
 
+void EE_JIT64::move_to_hi_imm(EmotionEngine& ee, uint32_t value)
+{
+    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
+
+    emitter.load_addr((uint64_t)&ee.HI, RAX);
+    emitter.MOV32_IMM_MEM(value, RAX);
+
+    free_gpr_reg(ee, RAX);
+}
+
 void EE_JIT64::move_to_lo(EmotionEngine& ee, IR::Instruction &instr)
 {
     REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
@@ -1747,6 +1842,16 @@ void EE_JIT64::move_to_lo(EmotionEngine& ee, REG_64 source)
     free_gpr_reg(ee, RAX);
 }
 
+void EE_JIT64::move_to_lo_imm(EmotionEngine& ee, uint32_t value)
+{
+    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
+
+    emitter.load_addr((uint64_t)&ee.LO, RAX);
+    emitter.MOV32_IMM_MEM(value, RAX);
+
+    free_gpr_reg(ee, RAX);
+}
+
 void EE_JIT64::move_to_lo_hi(EmotionEngine& ee, IR::Instruction &instr)
 {
     REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
@@ -1758,6 +1863,12 @@ void EE_JIT64::move_to_lo_hi(EmotionEngine& ee, REG_64 loSource, REG_64 hiSource
 {
     move_to_lo(ee, loSource);
     move_to_hi(ee, hiSource);
+}
+
+void EE_JIT64::move_to_lo_hi_imm(EmotionEngine& ee, uint32_t loValue, uint32_t hiValue)
+{
+    move_to_lo_imm(ee, loValue);
+    move_to_hi_imm(ee, hiValue);
 }
 
 void EE_JIT64::nor_reg(EmotionEngine& ee, IR::Instruction &instr)

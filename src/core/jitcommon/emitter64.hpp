@@ -95,7 +95,16 @@ class Emitter64
         void CMP64_IMM(uint32_t imm, REG_64 op);
         void CMP64_REG(REG_64 op2, REG_64 op1);
 
+        void CWD();
+        void CDQ();
+        void CQO();
+
+        void DEC8(REG_64 dest);
         void DEC16(REG_64 dest);
+        void DEC32(REG_64 dest);
+        void DEC64(REG_64 dest);
+
+        void IDIV32(REG_64 dest);
 
         void NOT16(REG_64 dest);
         void NOT32(REG_64 dest);
@@ -110,6 +119,7 @@ class Emitter64
         void OR32_EAX(uint32_t imm);
         void OR64_REG(REG_64 source, REG_64 dest);
 
+        void SHL8_REG_1(REG_64 dest);
         void SHL16_REG_1(REG_64 dest);
         void SHL16_CL(REG_64 dest);
         void SHL16_REG_IMM(uint8_t shift, REG_64 dest);
