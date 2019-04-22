@@ -105,7 +105,13 @@ void EmotionEngine::reset()
     delay_slot = 0;
 
     //Reset the cache
-    memset(icache, 0, sizeof(icache));
+    for (int i = 0; i < 128; i++)
+    {
+        icache[i].tag[0] = 1 << 31;
+        icache[i].tag[1] = 1 << 31;
+        icache[i].lfu[0] = false;
+        icache[i].lfu[1] = false;
+    }
 
     //Clear out $zero
     for (int i = 0; i < 16; i++)
@@ -262,9 +268,9 @@ uint32_t EmotionEngine::read_instr(uint32_t address)
 
         EE_ICacheLine* line = &icache[index];
         //Check if there's no entry in icache
-        if (!line->valid[0] || line->tag[0] != tag)
+        if (line->tag[0] != tag)
         {
-            if (!line->valid[1] || line->tag[1] != tag)
+            if (line->tag[1] != tag)
             {
                 //Load 4 quadwords.
                 //Based upon gamedev tests, an uncached data load takes 35 cycles, and a dcache miss takes 43.
@@ -275,15 +281,13 @@ uint32_t EmotionEngine::read_instr(uint32_t address)
 
                 //If there's an invalid entry, fill it.
                 //The `LFU` bit for the filled row gets flipped.
-                if (!line->valid[0])
+                if (line->tag[0] & (1 << 31))
                 {
-                    line->valid[0] = true;
                     line->lfu[0] ^= true;
                     line->tag[0] = tag;
                 }
-                else if (!line->valid[1])
+                else if (line->tag[1] & (1 << 31))
                 {
-                    line->valid[1] = true;
                     line->lfu[1] ^= true;
                     line->tag[1] = tag;
                 }
@@ -302,10 +306,14 @@ uint32_t EmotionEngine::read_instr(uint32_t address)
         //Simulate reading from RDRAM
         //The nonsequential penalty (mentioned above) is 32 cycles for all data types, up to a quadword (128 bits).
         //However, the EE loads two instructions at once. Since we only load a word, we divide the cycles in half.
-        //if ((address & 0x1FFFFFFF) < 0x02000000)
-            //cycles_to_run -= 16;
+        cycles_to_run -= 16;
     }
-    return read32(address);
+    uint8_t* mem = tlb_map[address / 4096];
+    if (mem > (uint8_t*)1)
+        return *(uint32_t*)&mem[address & 4095];
+    else
+        Errors::die("[EE] Instruction read from invalid address $%08X", address);
+    return 0;
 }
 
 uint8_t EmotionEngine::read8(uint32_t address)
@@ -601,8 +609,7 @@ void EmotionEngine::ctc(int cop_id, int reg, int cop_reg, uint32_t instruction)
 void EmotionEngine::invalidate_icache_indexed(uint32_t addr)
 {
     int index = (addr >> 6) & 0x7F;
-    int way = addr & 0x1;
-    icache[index].valid[way] = false;
+    icache[index].tag[addr & 0x1] |= 1 << 31;
 }
 
 void EmotionEngine::mfhi(int index)

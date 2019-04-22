@@ -20,9 +20,8 @@ struct Deci2Handler
 
 struct EE_ICacheLine
 {
-    bool valid[2];
     bool lfu[2];
-    uint16_t tag[2];
+    uint32_t tag[2];
 };
 
 class EmotionEngine
