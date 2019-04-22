@@ -87,13 +87,13 @@ private:
     void move_from_lo(EmotionEngine&ee, IR::Instruction &instr);
     void move_to_hi(EmotionEngine& ee, IR::Instruction &instr);
     void move_to_hi(EmotionEngine& ee, REG_64 source);
-    void move_to_hi_imm(EmotionEngine& ee, uint32_t value);
+    void move_to_hi_imm(EmotionEngine& ee, int64_t value);
     void move_to_lo(EmotionEngine& ee, IR::Instruction &instr);
     void move_to_lo(EmotionEngine& ee, REG_64 source);
-    void move_to_lo_imm(EmotionEngine& ee, uint32_t value);
+    void move_to_lo_imm(EmotionEngine& ee, int64_t value);
     void move_to_lo_hi(EmotionEngine& ee, IR::Instruction &instr);
     void move_to_lo_hi(EmotionEngine& ee, REG_64 loSource, REG_64 hiSource);
-    void move_to_lo_hi_imm(EmotionEngine& ee, uint32_t loValue, uint32_t hiValue);
+    void move_to_lo_hi_imm(EmotionEngine& ee, int64_t loValue, int64_t hiValue);
     void nor_reg(EmotionEngine& ee, IR::Instruction& instr);
     void or_imm(EmotionEngine& ee, IR::Instruction& instr);
     void or_reg(EmotionEngine& ee, IR::Instruction& instr);

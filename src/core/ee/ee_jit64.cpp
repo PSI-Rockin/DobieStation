@@ -1816,12 +1816,12 @@ void EE_JIT64::move_to_hi(EmotionEngine& ee, REG_64 source)
     free_gpr_reg(ee, RAX);
 }
 
-void EE_JIT64::move_to_hi_imm(EmotionEngine& ee, uint32_t value)
+void EE_JIT64::move_to_hi_imm(EmotionEngine& ee, int64_t value)
 {
     REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
 
     emitter.load_addr((uint64_t)&ee.HI, RAX);
-    emitter.MOV32_IMM_MEM(value, RAX);
+    emitter.MOV32SX_IMM_MEM(value, RAX);
 
     free_gpr_reg(ee, RAX);
 }
@@ -1842,12 +1842,12 @@ void EE_JIT64::move_to_lo(EmotionEngine& ee, REG_64 source)
     free_gpr_reg(ee, RAX);
 }
 
-void EE_JIT64::move_to_lo_imm(EmotionEngine& ee, uint32_t value)
+void EE_JIT64::move_to_lo_imm(EmotionEngine& ee, int64_t value)
 {
     REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
 
     emitter.load_addr((uint64_t)&ee.LO, RAX);
-    emitter.MOV32_IMM_MEM(value, RAX);
+    emitter.MOV32SX_IMM_MEM(value, RAX);
 
     free_gpr_reg(ee, RAX);
 }
@@ -1865,7 +1865,7 @@ void EE_JIT64::move_to_lo_hi(EmotionEngine& ee, REG_64 loSource, REG_64 hiSource
     move_to_hi(ee, hiSource);
 }
 
-void EE_JIT64::move_to_lo_hi_imm(EmotionEngine& ee, uint32_t loValue, uint32_t hiValue)
+void EE_JIT64::move_to_lo_hi_imm(EmotionEngine& ee, int64_t loValue, int64_t hiValue)
 {
     move_to_lo_imm(ee, loValue);
     move_to_hi_imm(ee, hiValue);

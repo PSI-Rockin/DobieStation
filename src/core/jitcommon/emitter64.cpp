@@ -1012,6 +1012,24 @@ void Emitter64::MOV32_TO_MEM(REG_64 source, REG_64 indir_dest, uint32_t offset)
         cache->write<uint32_t>(offset);
 }
 
+void Emitter64::MOV32SX_IMM_MEM(uint32_t imm, REG_64 indir_dest, uint32_t offset)
+{
+    rexw_rm(indir_dest);
+    cache->write<uint8_t>(0xC7);
+    if ((indir_dest & 7) == 5 || offset != 0)
+    {
+        modrm(0b10, 0, indir_dest);
+        cache->write<uint32_t>(offset);
+    }
+    else
+    {
+        modrm(0, 0, indir_dest);
+    }
+    if ((indir_dest & 7) == 4)
+        cache->write<uint8_t>(0x24);
+    cache->write<uint32_t>(imm);
+}
+
 void Emitter64::MOV64_MR(REG_64 source, REG_64 dest)
 {
     rexw_r_rm(source, dest);
