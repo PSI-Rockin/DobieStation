@@ -1418,7 +1418,7 @@ void EE_JIT64::divide_word(EmotionEngine& ee, IR::Instruction &instr)
     emitter.SETCC_REG(ConditionCode::L, RAX);
     emitter.SHL8_REG_1(RAX);
     emitter.DEC8(RAX);
-    emitter.MOVZX8_TO_64(RAX, RAX);
+    emitter.MOVSX8_TO_64(RAX, RAX);
     emitter.MOVSX32_TO_64(dividend, dividend);
     move_to_lo_hi(ee, RAX, dividend);
 
