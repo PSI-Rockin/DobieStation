@@ -2037,11 +2037,11 @@ void GraphicsSynthesizerThread::render_sprite()
     }
 
     //Automatic scissoring test
-    int32_t min_y = std::max(v1.y, (int32_t)current_ctx->scissor.y1);
-    int32_t min_x = std::max(v1.x, (int32_t)current_ctx->scissor.x1);
-    int32_t max_y = std::min(v2.y, (int32_t)current_ctx->scissor.y2 + 0x10);
-    int32_t max_x = std::min(v2.x, (int32_t)current_ctx->scissor.x2 + 0x10);
-
+    int32_t min_y = ((std::max(v1.y, (int32_t)current_ctx->scissor.y1) + 8) >> 4) << 4;
+    int32_t min_x = ((std::max(v1.x, (int32_t)current_ctx->scissor.x1) + 8) >> 4) << 4;
+    int32_t max_y = ((std::min(v2.y, (int32_t)current_ctx->scissor.y2 + 0x10) + 8) >> 4) << 4;
+    int32_t max_x = ((std::min(v2.x, (int32_t)current_ctx->scissor.x2 + 0x10) + 8) >> 4) << 4;
+#undef printf
     printf("Coords: (%d, %d) (%d, %d)\n", min_x >> 4, min_y >> 4, max_x >> 4, max_y >> 4);
 
     float pix_t = interpolate_f(min_y, v1.t, v1.y, v2.t, v2.y);
@@ -2451,8 +2451,8 @@ void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
 {
     //Should be +8 really but Street Fighter EX 3 hates that and Jurassic Park/Ratchet & Clank hate anything lower than 7
     double K = (current_ctx->tex1.K + 7.0) / 16.0;
-
-    if (current_ctx->tex1.LOD_method == 0)
+    
+    if (current_ctx->tex1.LOD_method == 0 && !PRIM.use_UV)
     {
         info.LOD = ldexp(log2(1.0 / fabs(info.vtx_color.q)), current_ctx->tex1.L) + K;
 
@@ -2528,10 +2528,17 @@ void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
         info.tex_height = max((int)info.tex_height, 1);
     }
 }
-#define printf(fmt, ...)(0)
+
 void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, TexLookupInfo& info)
 {
     bool bilinear_filter = false;
+
+    //If UV is being used and MIPMAP is enabled, we need to bring down the UV size too
+    if (PRIM.use_UV)
+    {
+        u >>= info.mipmap_level;
+        v >>= info.mipmap_level;
+    }
 
     if (info.tex_height >= 8 && info.tex_width >= 8)
     {
