@@ -22,6 +22,13 @@ enum EE_NormalReg
     ra = 31
 };
 
+enum class EE_SpecialReg
+{
+    EE_Regular = 0,
+    LO = 32,
+    HI
+};
+
 enum class VU_SpecialReg
 {
     VU_Regular = 0,

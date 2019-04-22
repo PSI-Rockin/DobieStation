@@ -556,9 +556,6 @@ int EE_JIT64::search_for_register_priority(AllocReg *regs)
 
 REG_64 EE_JIT64::alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state, REG_64 destination)
 {
-    if (gpr_reg >= 32)
-        Errors::die("[EE_JIT64] Alloc Int error: gpr_reg == %d", gpr_reg);
-
     if (destination >= 0 && int_regs[destination].locked)
         Errors::die("[EE_JIT64] Alloc Int error: Attempted to allocate locked x64 register %d", destination);
     
@@ -915,8 +912,15 @@ uint64_t EE_JIT64::get_gpr_addr(const EmotionEngine &ee, int index) const
     if (index < 32)
         return (uint64_t)&ee.gpr[index * sizeof(uint128_t)];
 
-    Errors::die("[EE_JIT64] get_gpr_addr error: Unrecognized reg %d", index);
-    return 0;
+    switch (static_cast<EE_SpecialReg>(index))
+    {
+        case EE_SpecialReg::LO:
+            return (uint64_t)&ee.LO;
+        case EE_SpecialReg::HI:
+            return (uint64_t)&ee.HI;
+        default:
+            Errors::die("[EE_JIT64] get_gpr_addr error: Unrecognized reg %d", index);
+    }
 }
 
 void EE_JIT64::cleanup_recompiler(EmotionEngine& ee, bool clear_regs)
@@ -1363,6 +1367,8 @@ void EE_JIT64::divide_unsigned_word(EmotionEngine& ee, IR::Instruction &instr)
     REG_64 RDX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD, REG_64::RDX);
     REG_64 dividend = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
     REG_64 divisor = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
+    REG_64 HI = alloc_gpr_reg(ee, (int)EE_SpecialReg::HI, REG_STATE::WRITE);
+    REG_64 LO = alloc_gpr_reg(ee, (int)EE_SpecialReg::LO, REG_STATE::WRITE);
 
     emitter.TEST32_REG(divisor, divisor);
     uint8_t *label1 = emitter.JCC_NEAR_DEFERRED(ConditionCode::Z);
@@ -1377,16 +1383,10 @@ void EE_JIT64::divide_unsigned_word(EmotionEngine& ee, IR::Instruction &instr)
     free_gpr_reg(ee, RDX);
 
     emitter.set_jump_dest(label1);
-    // custom (imm, reg) store
-    REG_64 HILO = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
-    emitter.MOVSX32_TO_64(dividend, dividend);
-    emitter.load_addr((uint64_t)&ee.LO, HILO);
-    emitter.MOV32SX_IMM_MEM(-1, HILO);
-    emitter.load_addr((uint64_t)&ee.HI, HILO);
-    emitter.MOV64_TO_MEM(dividend, HILO);
+    emitter.MOVSX32_TO_64(dividend, HI);
+    emitter.MOV64_OI(-1, LO);
     
     emitter.set_jump_dest(end);
-    free_gpr_reg(ee, HILO);
 }
 
 void EE_JIT64::divide_word(EmotionEngine& ee, IR::Instruction &instr)
@@ -1822,29 +1822,26 @@ void EE_JIT64::move_conditional_on_zero(EmotionEngine& ee, IR::Instruction& inst
 
 void EE_JIT64::move_from_hi(EmotionEngine&ee, IR::Instruction &instr)
 {
-    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
     REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
-
-    emitter.load_addr((uint64_t)&ee.HI, RAX);
-    emitter.MOV64_FROM_MEM(RAX, dest);
-
-    free_gpr_reg(ee, RAX);
+    move_from_hi(ee, dest);
 }
 
-void EE_JIT64::move_from_lo(EmotionEngine& ee, REG_64 dest)
+void EE_JIT64::move_from_hi(EmotionEngine&ee, REG_64 dest)
 {
-    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
-
-    emitter.load_addr((uint64_t)&ee.LO, RAX);
-    emitter.MOV64_FROM_MEM(RAX, dest);
-
-    free_gpr_reg(ee, RAX);
+    REG_64 HI = alloc_gpr_reg(ee, (int)EE_SpecialReg::HI, REG_STATE::READ);
+    emitter.MOV64_MR(HI, dest);
 }
 
 void EE_JIT64::move_from_lo(EmotionEngine& ee, IR::Instruction &instr)
 {
     REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
     move_from_lo(ee, dest);
+}
+
+void EE_JIT64::move_from_lo(EmotionEngine& ee, REG_64 dest)
+{
+    REG_64 LO = alloc_gpr_reg(ee, (int)EE_SpecialReg::LO, REG_STATE::READ);
+    emitter.MOV64_MR(LO, dest);
 }
 
 void EE_JIT64::move_to_hi(EmotionEngine& ee, IR::Instruction &instr)
@@ -1855,22 +1852,14 @@ void EE_JIT64::move_to_hi(EmotionEngine& ee, IR::Instruction &instr)
 
 void EE_JIT64::move_to_hi(EmotionEngine& ee, REG_64 source)
 {
-    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
-
-    emitter.load_addr((uint64_t)&ee.HI, RAX);
-    emitter.MOV64_TO_MEM(source, RAX);
-
-    free_gpr_reg(ee, RAX);
+    REG_64 HI = alloc_gpr_reg(ee, (int)EE_SpecialReg::HI, REG_STATE::WRITE);
+    emitter.MOV64_MR(source, HI);
 }
 
 void EE_JIT64::move_to_hi_imm(EmotionEngine& ee, int64_t value)
 {
-    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
-
-    emitter.load_addr((uint64_t)&ee.HI, RAX);
-    emitter.MOV32SX_IMM_MEM(value, RAX);
-
-    free_gpr_reg(ee, RAX);
+    REG_64 HI = alloc_gpr_reg(ee, (int)EE_SpecialReg::HI, REG_STATE::WRITE);
+    emitter.MOV64_OI(value, HI);
 }
 
 void EE_JIT64::move_to_lo(EmotionEngine& ee, IR::Instruction &instr)
@@ -1881,22 +1870,14 @@ void EE_JIT64::move_to_lo(EmotionEngine& ee, IR::Instruction &instr)
 
 void EE_JIT64::move_to_lo(EmotionEngine& ee, REG_64 source)
 {
-    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
-
-    emitter.load_addr((uint64_t)&ee.LO, RAX);
-    emitter.MOV64_TO_MEM(source, RAX);
-
-    free_gpr_reg(ee, RAX);
+    REG_64 LO = alloc_gpr_reg(ee, (int)EE_SpecialReg::LO, REG_STATE::WRITE);
+    emitter.MOV64_MR(source, LO);
 }
 
 void EE_JIT64::move_to_lo_imm(EmotionEngine& ee, int64_t value)
 {
-    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
-
-    emitter.load_addr((uint64_t)&ee.LO, RAX);
-    emitter.MOV32SX_IMM_MEM(value, RAX);
-
-    free_gpr_reg(ee, RAX);
+    REG_64 LO = alloc_gpr_reg(ee, (int)EE_SpecialReg::LO, REG_STATE::WRITE);
+    emitter.MOV64_OI(value, LO);
 }
 
 void EE_JIT64::move_to_lo_hi(EmotionEngine& ee, IR::Instruction &instr)

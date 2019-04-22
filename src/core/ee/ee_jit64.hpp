@@ -85,6 +85,7 @@ private:
     void move_conditional_on_not_zero(EmotionEngine& ee, IR::Instruction& instr);
     void move_conditional_on_zero(EmotionEngine& ee, IR::Instruction& instr);
     void move_from_hi(EmotionEngine& ee, IR::Instruction &instr);
+    void move_from_hi(EmotionEngine& ee, REG_64 dest);
     void move_from_lo(EmotionEngine& ee, IR::Instruction &instr);
     void move_from_lo(EmotionEngine& ee, REG_64 dest);
     void move_to_hi(EmotionEngine& ee, IR::Instruction &instr);
