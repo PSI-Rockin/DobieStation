@@ -282,6 +282,12 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::MultiplyWord:
             multiply_word(ee, instr);
             break;
+        case IR::Opcode::NegateDoublewordReg:
+            negate_doubleword_reg(ee, instr);
+            break;
+        case IR::Opcode::NegateWordReg:
+            negate_word_reg(ee, instr);
+            break;
         case IR::Opcode::NorReg:
             nor_reg(ee, instr);
             break;
@@ -1895,6 +1901,26 @@ void EE_JIT64::multiply_word(EmotionEngine& ee, IR::Instruction& instr)
     }
 
     free_gpr_reg(ee, RDX);
+}
+
+void EE_JIT64::negate_doubleword_reg(EmotionEngine& ee, IR::Instruction &instr)
+{
+    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+
+    if (source != dest)
+        emitter.MOV64_MR(source, dest);
+    emitter.NEG64(dest);
+}
+
+void EE_JIT64::negate_word_reg(EmotionEngine& ee, IR::Instruction &instr)
+{
+    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+
+    if (source != dest)
+        emitter.MOV32_REG(source, dest);
+    emitter.NEG32(dest);
 }
 
 void EE_JIT64::nor_reg(EmotionEngine& ee, IR::Instruction &instr)

@@ -880,6 +880,12 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
                 instr.op = IR::Opcode::Null;
                 return instr;
             }
+            if (!source)
+            {
+                instr.op = IR::Opcode::NegateWordReg;
+                instr.set_dest(dest);
+                instr.set_source(source2);
+            }
             if (source == source2)
             {
                 // TODO: Just clear out dest
@@ -1049,6 +1055,12 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
             {
                 instr.op = IR::Opcode::Null;
                 return instr;
+            }
+            if (!source)
+            {
+                instr.op = IR::Opcode::NegateDoublewordReg;
+                instr.set_dest(dest);
+                instr.set_source(source2);
             }
 
             instr.op = IR::Opcode::SubDoublewordReg;

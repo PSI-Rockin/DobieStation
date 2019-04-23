@@ -99,6 +99,8 @@ private:
     void move_to_lo_hi_imm(EmotionEngine& ee, int64_t loValue, int64_t hiValue);
     void multiply_unsigned_word(EmotionEngine& ee, IR::Instruction& instr);
     void multiply_word(EmotionEngine& ee, IR::Instruction& instr);
+    void negate_doubleword_reg(EmotionEngine& ee, IR::Instruction &instr);
+    void negate_word_reg(EmotionEngine& ee, IR::Instruction &instr);
     void nor_reg(EmotionEngine& ee, IR::Instruction& instr);
     void or_imm(EmotionEngine& ee, IR::Instruction& instr);
     void or_reg(EmotionEngine& ee, IR::Instruction& instr);
