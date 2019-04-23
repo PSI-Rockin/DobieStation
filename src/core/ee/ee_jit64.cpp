@@ -65,7 +65,7 @@ void EE_JIT64::reset(bool clear_cache)
     // NOTE: Some emitted operations don't like using certain modes with RBP, so tentatively locking this register
     // for debugging purposes
     // I'll just use this to allocate registers in alloc_gpr_reg for now...
-    int_regs[REG_64::RBP].locked = true;
+    int_regs[REG_64::RAX].locked = true;
 
     if (clear_cache)
         cache.flush_all_blocks();
@@ -133,6 +133,8 @@ void EE_JIT64::recompile_block(EmotionEngine& ee, IR::Block& block)
         IR::Instruction instr = block.get_next_instr();
         emit_instruction(ee, instr);
     }
+
+
 
     if (likely_branch)
         handle_branch_likely(ee, block);
@@ -439,17 +441,15 @@ void EE_JIT64::call_abi_func(EmotionEngine& ee, uint64_t addr)
     int regs_used = 0;
     int sp_offset = 0;
 
-    REG_64 addrReg = alloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
+    REG_64 addrReg = REG_64::RAX;
     emitter.MOV64_OI(addr, addrReg);
-
-    flush_int_reg(ee, REG_64::RAX);
 
     for (int i = 0; i < abi_int_count; ++i)
         int_regs[abi_regs[i]].locked = false;
 
     for (int i = 0; i < total_regs; i++)
     {
-        if (int_regs[saved_regs[i]].used && saved_regs[i] != addrReg)
+        if (int_regs[saved_regs[i]].used)
         {
             emitter.PUSH(saved_regs[i]);
             regs_used++;
@@ -472,7 +472,7 @@ void EE_JIT64::call_abi_func(EmotionEngine& ee, uint64_t addr)
 
     for (int i = total_regs - 1; i >= 0; i--)
     {
-        if (int_regs[saved_regs[i]].used && saved_regs[i] != addrReg)
+        if (int_regs[saved_regs[i]].used)
             emitter.POP(saved_regs[i]);
     }
     abi_int_count = 0;
@@ -635,8 +635,8 @@ REG_64 EE_JIT64::alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state, 
         }
         else
         {
-            emitter.load_addr((uint64_t)get_gpr_addr(ee, (EE_NormalReg)gpr_reg), REG_64::RBP);
-            emitter.MOV64_FROM_MEM(REG_64::RBP, (REG_64)destination);
+            emitter.load_addr((uint64_t)get_gpr_addr(ee, (EE_NormalReg)gpr_reg), (REG_64)destination);
+            emitter.MOV64_FROM_MEM((REG_64)destination, (REG_64)destination);
         }
     }
 
@@ -835,13 +835,13 @@ void EE_JIT64::flush_int_reg(EmotionEngine& ee, int reg)
         //printf("[EE_JIT64] Flushing int reg %d! (old int reg: %d, was GPR reg?: %d)\n", reg, int_regs[reg].reg, int_regs[reg].is_gpr_reg);
         if (int_regs[reg].is_gpr_reg && old_int_reg)
         {
-            emitter.load_addr((uint64_t)get_gpr_addr(ee, old_int_reg), REG_64::RBP);
-            emitter.MOV64_TO_MEM((REG_64)reg, REG_64::RBP);
+            emitter.load_addr((uint64_t)get_gpr_addr(ee, old_int_reg), REG_64::RAX);
+            emitter.MOV64_TO_MEM((REG_64)reg, REG_64::RAX);
         }
         else if (!int_regs[reg].is_gpr_reg)
         {
-            emitter.load_addr((uint64_t)get_vi_addr(ee, old_int_reg), REG_64::RBP);
-            emitter.MOV16_TO_MEM((REG_64)reg, REG_64::RBP);
+            emitter.load_addr((uint64_t)get_vi_addr(ee, old_int_reg), REG_64::RAX);
+            emitter.MOV16_TO_MEM((REG_64)reg, REG_64::RAX);
         }
     }
     int_regs[reg].used = false;
@@ -977,17 +977,14 @@ void EE_JIT64::emit_epilogue()
 
 void EE_JIT64::handle_branch_likely(EmotionEngine& ee, IR::Block& block)
 {
-    // Alloc scratchpad register
-    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
-
     // Load the "branch happened" variable
-    emitter.load_addr(reinterpret_cast<uint64_t>(&ee.branch_on), RAX);
-    emitter.MOV8_FROM_MEM(RAX, RAX);
+    emitter.load_addr(reinterpret_cast<uint64_t>(&ee.branch_on), REG_64::RAX);
+    emitter.MOV8_FROM_MEM(REG_64::RAX, REG_64::RAX);
 
     // Test variable. In the case that the variable is true,
     // we jump over the last instruction in the block in order
     // to "nullify" it before returning from the recompiled block.
-    emitter.TEST8_REG(RAX, RAX);
+    emitter.TEST8_REG(REG_64::RAX, REG_64::RAX);
 
     // Flush registers before nondeterministically executing the delay slot.
     flush_regs(ee);
@@ -1001,9 +998,6 @@ void EE_JIT64::handle_branch_likely(EmotionEngine& ee, IR::Block& block)
 
     // ...Which we do here.
     emitter.set_jump_dest(offset_addr);
-
-    // Free scratchpad register
-    free_gpr_reg(ee, RAX);
 
     // execute delay slot and flush EE state back to EE
     IR::Instruction instr = block.get_next_instr();
@@ -1092,17 +1086,17 @@ void EE_JIT64::branch_cop0(EmotionEngine& ee, IR::Instruction &instr)
 
     call_abi_func(ee, (uint64_t)cop0_get_condition);
 
-    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
+    // Alloc scratchpad register
     REG_64 R15 = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
 
     // Conditionally move the success or failure destination into ee.PC
     emitter.MOV8_REG_IMM(instr.get_field(), R15);
-    emitter.CMP8_REG(RAX, R15);
-    emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), RAX);
+    emitter.CMP8_REG(REG_64::RAX, R15);
+    emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
     emitter.MOV32_REG_IMM(instr.get_jump_dest(), R15);
-    emitter.CMOVCC32_REG(ConditionCode::E, R15, RAX);
+    emitter.CMOVCC32_REG(ConditionCode::E, R15, REG_64::RAX);
     emitter.load_addr((uint64_t)&ee.PC, R15);
-    emitter.MOV32_TO_MEM(RAX, R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, R15);
 
     if (instr.get_is_likely())
     {
@@ -1110,28 +1104,26 @@ void EE_JIT64::branch_cop0(EmotionEngine& ee, IR::Instruction &instr)
 
         // Use the result of the FLAGS register from the last compare to set branch_on,
         // this boolean is used in handle_likely_branch
-        emitter.load_addr((uint64_t)&ee.branch_on, RAX);
-        emitter.SETCC_MEM(ConditionCode::E, RAX);
+        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
+        emitter.SETCC_MEM(ConditionCode::E, REG_64::RAX);
     }
-    free_gpr_reg(ee, RAX);
     free_gpr_reg(ee, R15);
 }
 
 void EE_JIT64::branch_cop1(EmotionEngine& ee, IR::Instruction &instr)
 {
-    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
     REG_64 R15 = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
 
     // Conditionally move the success or failure destination into ee.PC
-    emitter.load_addr((uint64_t)&ee.fpu->control.condition, RAX);
-    emitter.MOV8_FROM_MEM(RAX, RAX);
+    emitter.load_addr((uint64_t)&ee.fpu->control.condition, REG_64::RAX);
+    emitter.MOV8_FROM_MEM(REG_64::RAX, REG_64::RAX);
     emitter.MOV8_REG_IMM(instr.get_field(), R15);
-    emitter.CMP8_REG(RAX, R15);
-    emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), RAX);
+    emitter.CMP8_REG(REG_64::RAX, R15);
+    emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
     emitter.MOV32_REG_IMM(instr.get_jump_dest(), R15);
-    emitter.CMOVCC32_REG(ConditionCode::E, R15, RAX);
+    emitter.CMOVCC32_REG(ConditionCode::E, R15, REG_64::RAX);
     emitter.load_addr((uint64_t)&ee.PC, R15);
-    emitter.MOV32_TO_MEM(RAX, R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, R15);
 
     if (instr.get_is_likely())
     {
@@ -1139,10 +1131,9 @@ void EE_JIT64::branch_cop1(EmotionEngine& ee, IR::Instruction &instr)
 
         // Use the result of the FLAGS register from the last compare to set branch_on,
         // this boolean is used in handle_likely_branch
-        emitter.load_addr((uint64_t)&ee.branch_on, RAX);
-        emitter.SETCC_MEM(ConditionCode::E, RAX);
+        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
+        emitter.SETCC_MEM(ConditionCode::E, REG_64::RAX);
     }
-    free_gpr_reg(ee, RAX);
     free_gpr_reg(ee, R15);
 }
 
@@ -1158,16 +1149,15 @@ void EE_JIT64::branch_equal(EmotionEngine& ee, IR::Instruction &instr)
     REG_64 op2 = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
 
     // Alloc scratchpad registers
-    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
     REG_64 R15 = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
     
     // Conditionally move the success or failure destination into ee.PC
-    emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), RAX);
+    emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
     emitter.MOV32_REG_IMM(instr.get_jump_dest(), R15);
     emitter.CMP64_REG(op2, op1);
-    emitter.CMOVCC32_REG(ConditionCode::E, R15, RAX);
+    emitter.CMOVCC32_REG(ConditionCode::E, R15, REG_64::RAX);
     emitter.load_addr((uint64_t)&ee.PC, R15);
-    emitter.MOV32_TO_MEM(RAX, R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, R15);
 
     if (instr.get_is_likely())
     {
@@ -1175,12 +1165,11 @@ void EE_JIT64::branch_equal(EmotionEngine& ee, IR::Instruction &instr)
 
         // Use the result of the FLAGS register from the last compare to set branch_on,
         // this boolean is used in handle_likely_branch
-        emitter.load_addr((uint64_t)&ee.branch_on, RAX);
-        emitter.SETCC_MEM(ConditionCode::E, RAX);
+        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
+        emitter.SETCC_MEM(ConditionCode::E, REG_64::RAX);
     }
 
     // Free scratchpad registers
-    free_gpr_reg(ee, RAX);
     free_gpr_reg(ee, R15);
 }
 
@@ -1190,23 +1179,22 @@ void EE_JIT64::branch_greater_than_or_equal_zero(EmotionEngine& ee, IR::Instruct
     REG_64 op1 = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
 
     // Alloc scratchpad registers
-    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
     REG_64 R15 = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
 
     if (instr.get_is_link())
     {
         // Set the link register
-        emitter.load_addr((uint64_t)get_gpr_addr(ee, EE_NormalReg::ra), RAX);
-        emitter.MOV32_IMM_MEM(instr.get_return_addr(), RAX);
+        emitter.load_addr((uint64_t)get_gpr_addr(ee, EE_NormalReg::ra), REG_64::RAX);
+        emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::RAX);
     }
 
     // Conditionally move the success or failure destination into ee.PC
-    emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), RAX);
+    emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
     emitter.MOV32_REG_IMM(instr.get_jump_dest(), R15);
     emitter.TEST64_REG(op1, op1);
-    emitter.CMOVCC32_REG(ConditionCode::NS, R15, RAX);
+    emitter.CMOVCC32_REG(ConditionCode::NS, R15, REG_64::RAX);
     emitter.load_addr((uint64_t)&ee.PC, R15);
-    emitter.MOV32_TO_MEM(RAX, R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, R15);
 
     if (instr.get_is_likely())
     {
@@ -1214,12 +1202,11 @@ void EE_JIT64::branch_greater_than_or_equal_zero(EmotionEngine& ee, IR::Instruct
 
         // Use the result of the FLAGS register from the last compare to set branch_on,
         // this boolean is used in handle_likely_branch
-        emitter.load_addr((uint64_t)&ee.branch_on, RAX);
-        emitter.SETCC_MEM(ConditionCode::NS, RAX);
+        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
+        emitter.SETCC_MEM(ConditionCode::NS, REG_64::RAX);
     }
 
     // Free scratchpad registers
-    free_gpr_reg(ee, RAX);
     free_gpr_reg(ee, R15);
 }
 
@@ -1229,16 +1216,15 @@ void EE_JIT64::branch_greater_than_zero(EmotionEngine& ee, IR::Instruction &inst
     REG_64 op1 = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
 
     // Alloc scratchpad registers
-    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
     REG_64 R15 = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
 
     // Conditionally move the success or failure destination into ee.PC
     emitter.TEST64_REG(op1, op1);
-    emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), RAX);
+    emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
     emitter.MOV32_REG_IMM(instr.get_jump_dest(), R15);
-    emitter.CMOVCC32_REG(ConditionCode::G, R15, RAX);
+    emitter.CMOVCC32_REG(ConditionCode::G, R15, REG_64::RAX);
     emitter.load_addr((uint64_t)&ee.PC, R15);
-    emitter.MOV32_TO_MEM(RAX, R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, R15);
 
     if (instr.get_is_likely())
     {
@@ -1246,12 +1232,11 @@ void EE_JIT64::branch_greater_than_zero(EmotionEngine& ee, IR::Instruction &inst
 
         // Use the result of the FLAGS register from the last compare to set branch_on,
         // this boolean is used in handle_likely_branch
-        emitter.load_addr((uint64_t)&ee.branch_on, RAX);
-        emitter.SETCC_MEM(ConditionCode::G, RAX);
+        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
+        emitter.SETCC_MEM(ConditionCode::G, REG_64::RAX);
     }
 
     // Free scratchpad registers
-    free_gpr_reg(ee, RAX);
     free_gpr_reg(ee, R15);
 }
 
@@ -1261,16 +1246,15 @@ void EE_JIT64::branch_less_than_or_equal_zero(EmotionEngine& ee, IR::Instruction
     REG_64 op1 = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
 
     // Alloc scratchpad registers
-    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
     REG_64 R15 = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
 
     // Conditionally move the success or failure destination into ee.PC
     emitter.TEST64_REG(op1, op1);
-    emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), RAX);
+    emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
     emitter.MOV32_REG_IMM(instr.get_jump_dest(), R15);
-    emitter.CMOVCC32_REG(ConditionCode::LE, R15, RAX);
+    emitter.CMOVCC32_REG(ConditionCode::LE, R15, REG_64::RAX);
     emitter.load_addr((uint64_t)&ee.PC, R15);
-    emitter.MOV32_TO_MEM(RAX, R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, R15);
 
     if (instr.get_is_likely())
     {
@@ -1278,12 +1262,11 @@ void EE_JIT64::branch_less_than_or_equal_zero(EmotionEngine& ee, IR::Instruction
 
         // Use the result of the FLAGS register from the last compare to set branch_on,
         // this boolean is used in handle_likely_branch
-        emitter.load_addr((uint64_t)&ee.branch_on, RAX);
-        emitter.SETCC_MEM(ConditionCode::LE, RAX);
+        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
+        emitter.SETCC_MEM(ConditionCode::LE, REG_64::RAX);
     }
 
     // Free scratchpad registers
-    free_gpr_reg(ee, RAX);
     free_gpr_reg(ee, R15);
 }
 
@@ -1293,23 +1276,22 @@ void EE_JIT64::branch_less_than_zero(EmotionEngine& ee, IR::Instruction &instr)
     REG_64 op1 = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
 
     // Alloc scratchpad registers
-    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
     REG_64 R15 = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
 
     if (instr.get_is_link())
     {
         // Set the link register
-        emitter.load_addr((uint64_t)get_gpr_addr(ee, EE_NormalReg::ra), RAX);
-        emitter.MOV32_IMM_MEM(instr.get_return_addr(), RAX);
+        emitter.load_addr((uint64_t)get_gpr_addr(ee, EE_NormalReg::ra), REG_64::RAX);
+        emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::RAX);
     }
 
     // Conditionally move the success or failure destination into ee.PC
-    emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), RAX);
+    emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
     emitter.MOV32_REG_IMM(instr.get_jump_dest(), R15);
     emitter.TEST64_REG(op1, op1);
-    emitter.CMOVCC32_REG(ConditionCode::S, R15, RAX);
+    emitter.CMOVCC32_REG(ConditionCode::S, R15, REG_64::RAX);
     emitter.load_addr((uint64_t)&ee.PC, R15);
-    emitter.MOV32_TO_MEM(RAX, R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, R15);
 
     if (instr.get_is_likely())
     {
@@ -1317,12 +1299,11 @@ void EE_JIT64::branch_less_than_zero(EmotionEngine& ee, IR::Instruction &instr)
 
         // Use the result of the FLAGS register from the last compare to set branch_on,
         // this boolean is used in handle_likely_branch
-        emitter.load_addr((uint64_t)&ee.branch_on, RAX);
-        emitter.SETCC_MEM(ConditionCode::S, RAX);
+        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
+        emitter.SETCC_MEM(ConditionCode::S, REG_64::RAX);
     }
 
     // Free scratchpad registers
-    free_gpr_reg(ee, RAX);
     free_gpr_reg(ee, R15);
 }
 
@@ -1334,16 +1315,15 @@ void EE_JIT64::branch_not_equal(EmotionEngine& ee, IR::Instruction &instr)
     REG_64 op2 = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
 
     // Alloc scratchpad registers
-    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
     REG_64 R15 = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
 
     // Conditionally move the success or failure destination into ee.PC
-    emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), RAX);
+    emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
     emitter.MOV32_REG_IMM(instr.get_jump_dest(), R15);
     emitter.CMP64_REG(op2, op1);
-    emitter.CMOVCC32_REG(ConditionCode::NE, R15, RAX);
+    emitter.CMOVCC32_REG(ConditionCode::NE, R15, REG_64::RAX);
     emitter.load_addr((uint64_t)&ee.PC, R15);
-    emitter.MOV32_TO_MEM(RAX, R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, R15);
 
     if (instr.get_is_likely())
     {
@@ -1351,19 +1331,17 @@ void EE_JIT64::branch_not_equal(EmotionEngine& ee, IR::Instruction &instr)
 
         // Use the result of the FLAGS register from the last compare to set branch_on,
         // this boolean is used in handle_likely_branch
-        emitter.load_addr((uint64_t)&ee.branch_on, RAX);
-        emitter.SETCC_MEM(ConditionCode::NE, RAX);
+        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
+        emitter.SETCC_MEM(ConditionCode::NE, REG_64::RAX);
     }
 
     // Free scratchpad registers
-    free_gpr_reg(ee, RAX);
     free_gpr_reg(ee, R15);
 }
 
 void EE_JIT64::divide_unsigned_word(EmotionEngine& ee, IR::Instruction &instr)
 {
     // idiv result is stored in RAX:RDX, so we allocate those registers first.
-    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD, REG_64::RAX);
     REG_64 RDX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD, REG_64::RDX);
     REG_64 dividend = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
     REG_64 divisor = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
@@ -1372,14 +1350,13 @@ void EE_JIT64::divide_unsigned_word(EmotionEngine& ee, IR::Instruction &instr)
 
     emitter.TEST32_REG(divisor, divisor);
     uint8_t *label1 = emitter.JCC_NEAR_DEFERRED(ConditionCode::Z);
-    emitter.MOV32_REG(dividend, RAX);
+    emitter.MOV32_REG(dividend, REG_64::RAX);
     emitter.XOR32_REG(RDX, RDX);
     emitter.DIV32(divisor);
-    emitter.MOVSX32_TO_64(RAX, RAX);
+    emitter.MOVSX32_TO_64(REG_64::RAX, REG_64::RAX);
     emitter.MOVSX32_TO_64(RDX, RDX);
-    move_to_lo_hi(ee, RAX, RDX);
+    move_to_lo_hi(ee, REG_64::RAX, RDX);
     uint8_t *end = emitter.JMP_NEAR_DEFERRED();
-    free_gpr_reg(ee, RAX);
     free_gpr_reg(ee, RDX);
 
     emitter.set_jump_dest(label1);
@@ -1431,7 +1408,6 @@ void EE_JIT64::divide_word(EmotionEngine& ee, IR::Instruction &instr)
     */
 
     // idiv result is stored in RAX:RDX, so we allocate those registers first.
-    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD, REG_64::RAX);
     REG_64 RDX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD, REG_64::RDX);
     REG_64 dividend = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
     REG_64 divisor = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
@@ -1447,27 +1423,26 @@ void EE_JIT64::divide_word(EmotionEngine& ee, IR::Instruction &instr)
     emitter.set_jump_dest(label1_2);
     emitter.TEST32_REG(divisor, divisor);
     uint8_t* label2 = emitter.JCC_NEAR_DEFERRED(ConditionCode::Z);
-    emitter.MOV32_REG(dividend, RAX);
+    emitter.MOV32_REG(dividend, REG_64::RAX);
     emitter.CDQ();
     emitter.IDIV32(divisor);
-    emitter.MOVSX32_TO_64(RAX, RAX);
+    emitter.MOVSX32_TO_64(REG_64::RAX, REG_64::RAX);
     emitter.MOVSX32_TO_64(RDX, RDX);
-    move_to_lo_hi(ee, RAX, RDX);
+    move_to_lo_hi(ee, REG_64::RAX, RDX);
     uint8_t *end_2 = emitter.JMP_NEAR_DEFERRED();
 
     emitter.set_jump_dest(label2);
     emitter.TEST32_REG(dividend, dividend);
-    emitter.SETCC_REG(ConditionCode::L, RAX);
-    emitter.SHL8_REG_1(RAX);
-    emitter.DEC8(RAX);
-    emitter.MOVSX8_TO_64(RAX, RAX);
+    emitter.SETCC_REG(ConditionCode::L, REG_64::RAX);
+    emitter.SHL8_REG_1(REG_64::RAX);
+    emitter.DEC8(REG_64::RAX);
+    emitter.MOVSX8_TO_64(REG_64::RAX, REG_64::RAX);
     emitter.MOVSX32_TO_64(dividend, dividend);
-    move_to_lo_hi(ee, RAX, dividend);
+    move_to_lo_hi(ee, REG_64::RAX, dividend);
 
     emitter.set_jump_dest(end_1);
     emitter.set_jump_dest(end_2);
 
-    free_gpr_reg(ee, RAX);
     free_gpr_reg(ee, RDX);
 }
 
@@ -1487,7 +1462,7 @@ void EE_JIT64::doubleword_shift_left_logical_variable(EmotionEngine& ee, IR::Ins
     REG_64 RCX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD, REG_64::RCX);
     REG_64 variable = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
     emitter.MOV8_REG(variable, RCX);
-    emitter.AND8_REG_IMM(0x1F, RCX);
+    emitter.AND8_REG_IMM(0x3F, RCX);
 
     REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
     REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
@@ -1515,7 +1490,7 @@ void EE_JIT64::doubleword_shift_right_arithmetic_variable(EmotionEngine& ee, IR:
     REG_64 RCX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD, REG_64::RCX);
     REG_64 variable = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
     emitter.MOV8_REG(variable, RCX);
-    emitter.AND8_REG_IMM(0x1F, RCX);
+    emitter.AND8_REG_IMM(0x3F, RCX);
 
     REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
     REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
@@ -1544,7 +1519,7 @@ void EE_JIT64::doubleword_shift_right_logical_variable(EmotionEngine& ee, IR::In
     REG_64 RCX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD, REG_64::RCX);
     REG_64 variable = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
     emitter.MOV8_REG(variable, RCX);
-    emitter.AND8_REG_IMM(0x1F, RCX);
+    emitter.AND8_REG_IMM(0x3F, RCX);
 
     REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
     REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
@@ -1559,68 +1534,53 @@ void EE_JIT64::doubleword_shift_right_logical_variable(EmotionEngine& ee, IR::In
 void EE_JIT64::exception_return(EmotionEngine& ee, IR::Instruction& instr)
 {
     // Alloc scratchpad registers
-    // We make sure to use volatile registers here that call_abi_func will not attempt to preserve
-    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD, REG_64::R8);
-    REG_64 R15 = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD, REG_64::R9);
+    REG_64 R15 = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
 
     // Cleanup branch_on, exception handler expects this to be false
-    emitter.load_addr((uint64_t)&ee.branch_on, RAX);
+    emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
     emitter.MOV8_REG_IMM(false, R15);
-    emitter.MOV8_TO_MEM(R15, RAX);
+    emitter.MOV8_TO_MEM(R15, REG_64::RAX);
 
     fallback_interpreter(ee, instr);
 
     // Since the interpreter decrements PC by 4, we reset it here to account for that.
-    emitter.load_addr((uint64_t)&ee.PC, RAX);
-    emitter.MOV32_FROM_MEM(RAX, R15);
+    emitter.load_addr((uint64_t)&ee.PC, REG_64::RAX);
+    emitter.MOV32_FROM_MEM(REG_64::RAX, R15);
     emitter.ADD32_REG_IMM(4, R15);
-    emitter.MOV32_TO_MEM(R15, RAX);
+    emitter.MOV32_TO_MEM(R15, REG_64::RAX);
 
     // Free scratchpad registers
-    free_gpr_reg(ee, RAX);
     free_gpr_reg(ee, R15);
 }
 
 void EE_JIT64::jump(EmotionEngine& ee, IR::Instruction& instr)
 {
-    // Alloc scratchpad register
-    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
-
     // Simply set the PC
-    emitter.load_addr((uint64_t)&ee.PC, RAX);
-    emitter.MOV32_IMM_MEM(instr.get_jump_dest(), RAX);
+    emitter.load_addr((uint64_t)&ee.PC, REG_64::RAX);
+    emitter.MOV32_IMM_MEM(instr.get_jump_dest(), REG_64::RAX);
 
     if (instr.get_is_link())
     {
         // Set the link register
-        emitter.load_addr((uint64_t)get_gpr_addr(ee, EE_NormalReg::ra), RAX);
-        emitter.MOV32_IMM_MEM(instr.get_return_addr(), RAX);
+        emitter.load_addr((uint64_t)get_gpr_addr(ee, EE_NormalReg::ra), REG_64::RAX);
+        emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::RAX);
     }
-
-    // Free scratchpad register
-    free_gpr_reg(ee, RAX);
 }
 
 void EE_JIT64::jump_indirect(EmotionEngine& ee, IR::Instruction& instr)
 {
-    // Alloc scratchpad register
-    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
-
     REG_64 jump_dest = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
 
     // Simply set the PC
-    emitter.load_addr((uint64_t)&ee.PC, RAX);
-    emitter.MOV32_TO_MEM(jump_dest, RAX);
+    emitter.load_addr((uint64_t)&ee.PC, REG_64::RAX);
+    emitter.MOV32_TO_MEM(jump_dest, REG_64::RAX);
 
     if (instr.get_is_link())
     {
         // Set the link register
-        emitter.load_addr((uint64_t)get_gpr_addr(ee, (EE_NormalReg)instr.get_dest()), RAX);
-        emitter.MOV32_IMM_MEM(instr.get_return_addr(), RAX);
+        emitter.load_addr((uint64_t)get_gpr_addr(ee, (EE_NormalReg)instr.get_dest()), REG_64::RAX);
+        emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::RAX);
     }
-
-    // Free scratchpad register
-    free_gpr_reg(ee, RAX);
 }
 
 uint8_t ee_read8(EmotionEngine& ee, uint32_t addr)
@@ -1901,14 +1861,13 @@ void EE_JIT64::move_to_lo_hi_imm(EmotionEngine& ee, int64_t loValue, int64_t hiV
 
 void EE_JIT64::multiply_unsigned_word(EmotionEngine& ee, IR::Instruction& instr)
 {
-    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD, REG_64::RAX);
     REG_64 RDX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD, REG_64::RDX);
     REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
     REG_64 source2 = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
 
-    emitter.MOV32_REG(source, RAX);
+    emitter.MOV32_REG(source, REG_64::RAX);
     emitter.MUL32(source2);
-    move_to_lo_hi(ee, RAX, RDX);
+    move_to_lo_hi(ee, REG_64::RAX, RDX);
 
     if (instr.get_dest())
     {
@@ -1916,20 +1875,18 @@ void EE_JIT64::multiply_unsigned_word(EmotionEngine& ee, IR::Instruction& instr)
         move_from_lo(ee, dest);
     }
 
-    free_gpr_reg(ee, RAX);
     free_gpr_reg(ee, RDX);
 }
 
 void EE_JIT64::multiply_word(EmotionEngine& ee, IR::Instruction& instr)
 {
-    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD, REG_64::RAX);
     REG_64 RDX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD, REG_64::RDX);
     REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
     REG_64 source2 = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
 
-    emitter.MOV32_REG(source, RAX);
+    emitter.MOV32_REG(source, REG_64::RAX);
     emitter.IMUL32(source2);
-    move_to_lo_hi(ee, RAX, RDX);
+    move_to_lo_hi(ee, REG_64::RAX, RDX);
 
     if (instr.get_dest())
     {
@@ -1937,7 +1894,6 @@ void EE_JIT64::multiply_word(EmotionEngine& ee, IR::Instruction& instr)
         move_from_lo(ee, dest);
     }
 
-    free_gpr_reg(ee, RAX);
     free_gpr_reg(ee, RDX);
 }
 
@@ -2331,7 +2287,6 @@ bool ee_vu0_wait(EmotionEngine& ee)
 void EE_JIT64::vcall_ms(EmotionEngine& ee, IR::Instruction& instr)
 {
     // Alloc scratchpad registers
-    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
     REG_64 R15 = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
 
     prepare_abi(ee, (uint64_t)&ee);
@@ -2341,17 +2296,17 @@ void EE_JIT64::vcall_ms(EmotionEngine& ee, IR::Instruction& instr)
     uint8_t* offset_addr = emitter.JCC_NEAR_DEFERRED(ConditionCode::Z);
 
     // If ee.vu0_wait(), set PC to the current operation's address and abort
-    emitter.load_addr((uint64_t)&ee.PC, RAX);
+    emitter.load_addr((uint64_t)&ee.PC, REG_64::RAX);
     emitter.MOV32_REG_IMM(instr.get_return_addr(), R15);
-    emitter.MOV32_TO_MEM(R15, RAX);
+    emitter.MOV32_TO_MEM(R15, REG_64::RAX);
 
     // Set wait for VU0 flag
-    emitter.load_addr((uint64_t)&ee.wait_for_VU0, RAX);
-    emitter.MOV8_IMM_MEM(true, RAX);
+    emitter.load_addr((uint64_t)&ee.wait_for_VU0, REG_64::RAX);
+    emitter.MOV8_IMM_MEM(true, REG_64::RAX);
 
     // Set cycle count to number of cycles executed
-    emitter.load_addr((uint64_t)&cycle_count, RAX);
-    emitter.MOV16_IMM_MEM(instr.get_cycle_count(), RAX);
+    emitter.load_addr((uint64_t)&cycle_count, REG_64::RAX);
+    emitter.MOV16_IMM_MEM(instr.get_cycle_count(), REG_64::RAX);
 
     cleanup_recompiler(ee, true);
 
@@ -2361,15 +2316,12 @@ void EE_JIT64::vcall_ms(EmotionEngine& ee, IR::Instruction& instr)
     prepare_abi(ee, instr.get_source());
     call_abi_func(ee, (uint64_t)vu0_start_program);
 
-    // Free scratchpad registers
-    free_gpr_reg(ee, RAX);
     free_gpr_reg(ee, R15);
 }
 
 void EE_JIT64::vcall_msr(EmotionEngine& ee, IR::Instruction& instr)
 {
     // Alloc scratchpad registers
-    REG_64 RAX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
     REG_64 R15 = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
 
     prepare_abi(ee, (uint64_t)&ee);
@@ -2379,17 +2331,17 @@ void EE_JIT64::vcall_msr(EmotionEngine& ee, IR::Instruction& instr)
     uint8_t* offset_addr = emitter.JCC_NEAR_DEFERRED(ConditionCode::Z);
 
     // If ee.vu0_wait(), set PC to the current operation's address and abort
-    emitter.load_addr((uint64_t)&ee.PC, RAX);
+    emitter.load_addr((uint64_t)&ee.PC, REG_64::RAX);
     emitter.MOV32_REG_IMM(instr.get_return_addr(), R15);
-    emitter.MOV32_TO_MEM(R15, RAX);
+    emitter.MOV32_TO_MEM(R15, REG_64::RAX);
 
     // Set wait for VU0 flag
-    emitter.load_addr((uint64_t)&ee.wait_for_VU0, RAX);
-    emitter.MOV8_IMM_MEM(true, RAX);
+    emitter.load_addr((uint64_t)&ee.wait_for_VU0, REG_64::RAX);
+    emitter.MOV8_IMM_MEM(true, REG_64::RAX);
 
     // Set cycle count to number of cycles executed
-    emitter.load_addr((uint64_t)&cycle_count, RAX);
-    emitter.MOV16_IMM_MEM(instr.get_cycle_count(), RAX);
+    emitter.load_addr((uint64_t)&cycle_count, REG_64::RAX);
+    emitter.MOV16_IMM_MEM(instr.get_cycle_count(), REG_64::RAX);
 
     cleanup_recompiler(ee, true);
 
@@ -2403,7 +2355,6 @@ void EE_JIT64::vcall_msr(EmotionEngine& ee, IR::Instruction& instr)
     call_abi_func(ee, (uint64_t)vu0_start_program);
 
     // Free scratchpad registers
-    free_gpr_reg(ee, RAX);
     free_gpr_reg(ee, R15);
 }
 

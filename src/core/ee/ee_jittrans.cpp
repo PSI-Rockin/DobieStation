@@ -41,6 +41,24 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
         branch_op = is_branch(instr);
         instr.set_cycle_count(cycle_count);
 
+        /*
+        ** FIXME: NOTE: There is some sort of register allocation issue specifically
+        ** with load operations, probably involving prepare_abi_reg/call_abi_func.
+        ** Specifically, in Sonic Mega Collection Plus, sitting on a menu with an
+        ** FMV in the background for a period of time (around 10-40 seconds) will
+        ** cause some sort of IPU error, either aborting emulation or freezing
+        ** the FMV.
+        ** I've disabled these for now. -Souzooka
+        */
+        if (instr.op == IR::Opcode::LoadByte ||
+            instr.op == IR::Opcode::LoadByteUnsigned ||
+            instr.op == IR::Opcode::LoadHalfword ||
+            instr.op == IR::Opcode::LoadHalfwordUnsigned ||
+            instr.op == IR::Opcode::LoadWord ||
+            instr.op == IR::Opcode::LoadWordUnsigned ||
+            instr.op == IR::Opcode::LoadDoubleword)
+            fallback_interpreter(instr, opcode);
+
         if (instr.op != IR::Opcode::Null)
             block.add_instr(instr);
 
@@ -749,8 +767,6 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
         case 0x14:
             // DSLLV
         {
-            fallback_interpreter(instr, opcode);
-            return instr;
             uint8_t dest = (opcode >> 11) & 0x1F;
             if (!dest)
             {
@@ -767,8 +783,6 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
         case 0x16:
             // DSRLV
         {
-            fallback_interpreter(instr, opcode);
-            return instr;
             uint8_t dest = (opcode >> 11) & 0x1F;
             if (!dest)
             {
@@ -785,8 +799,6 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
         case 0x17:
             // DSRAV
         {
-            fallback_interpreter(instr, opcode);
-            return instr;
             uint8_t dest = (opcode >> 11) & 0x1F;
             if (!dest)
             {
