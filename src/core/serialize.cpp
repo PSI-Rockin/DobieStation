@@ -4,7 +4,7 @@
 
 #define VER_MAJOR 0
 #define VER_MINOR 0
-#define VER_REV 26
+#define VER_REV 27
 
 using namespace std;
 
@@ -256,6 +256,11 @@ void Cop0::load_state(ifstream &state)
     state.read((char*)&PCCR, sizeof(PCCR));
     state.read((char*)&PCR0, sizeof(PCR0));
     state.read((char*)&PCR1, sizeof(PCR1));
+    state.read((char*)&tlb, sizeof(tlb));
+
+    //Repopulate VTLB
+    for (int i = 0; i < 48; i++)
+        map_tlb(&tlb[i]);
 }
 
 void Cop0::save_state(ofstream &state)
@@ -268,6 +273,7 @@ void Cop0::save_state(ofstream &state)
     state.write((char*)&PCCR, sizeof(PCCR));
     state.write((char*)&PCR0, sizeof(PCR0));
     state.write((char*)&PCR1, sizeof(PCR1));
+    state.write((char*)&tlb, sizeof(tlb));
 }
 
 void Cop1::load_state(ifstream &state)

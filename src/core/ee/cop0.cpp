@@ -286,18 +286,10 @@ void Cop0::set_tlb(int index)
     real_virt >>= new_entry->page_shift;
     real_virt *= new_entry->page_size;
 
-    printf("[COP0] New TLB entry at %d\n", index);
-    printf("ASID: $%02X VPN2: $%08X SPR: %d\n", new_entry->asid, new_entry->vpn2, new_entry->is_scratchpad);
-    printf("Page size: %d Real virt: $%08X\n", new_entry->page_size, real_virt);
-
     for (int i = 0; i < 2; i++)
     {
         uint32_t real_phy = new_entry->pfn[i] >> new_entry->page_shift;
         real_phy *= new_entry->page_size;
-        printf("D: %d V: %d C: %d\n", new_entry->dirty[i],
-               new_entry->valid[i], new_entry->cache_mode[i]);
-        printf("PFN: $%08X Real phy: $%08X\n", new_entry->pfn[i], real_phy);
-        printf("\n");
     }
 
     map_tlb(new_entry);
@@ -407,8 +399,6 @@ void Cop0::map_tlb(TLB_Entry *entry)
     uint32_t odd_virt_page = ((real_vpn + 1) * entry->page_size) / 4096;
     uint32_t odd_virt_addr = odd_virt_page * 4096;
     uint32_t odd_phy_addr = (entry->pfn[1] >> entry->page_shift) * entry->page_size;
-
-    printf("Even phy: $%08X Odd phy: $%08X\n", even_phy_addr, odd_phy_addr);
 
     if (entry->is_scratchpad)
     {
