@@ -2360,7 +2360,7 @@ uint128_t GraphicsSynthesizerThread::local_to_host()
             switch (BITBLTBUF.source_format)
             {
             case 0x00:
-                data |= (read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                data |= (uint64_t)(read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
                     TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFFFFFF) << (i * 32);
                 pixels_transferred++;
                 TRXPOS.int_source_x++;
