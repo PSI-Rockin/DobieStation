@@ -188,9 +188,7 @@ void Emulator::vblank_start()
     //cpu.set_disassembly(frames >= 223 && frames < 225);
     printf("VSYNC FRAMES: %d\n", frames);
     gs.assert_VSYNC();
-    frames++;
     iop_request_IRQ(0);
-    gs.render_CRT();
 }
 
 void Emulator::vblank_end()
@@ -200,6 +198,8 @@ void Emulator::vblank_end()
     gs.set_VBLANK(false);
     timers.gate(true, false);
     frame_ended = true;
+    frames++;
+    gs.render_CRT();
 }
 
 void Emulator::cdvd_event()

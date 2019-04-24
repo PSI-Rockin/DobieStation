@@ -2346,6 +2346,9 @@ uint128_t GraphicsSynthesizerThread::local_to_host()
     case 0x1B:
         ppd = 8;
         break;
+    case 0x31:
+        ppd = 1; //Does it all in one go
+        break;
     default:
         Errors::print_warning("[GS_t] GS Download Unrecognized BITBLTBUF source format $%02X\n", BITBLTBUF.source_format);
         return return_data;
@@ -2366,7 +2369,7 @@ uint128_t GraphicsSynthesizerThread::local_to_host()
                 TRXPOS.int_source_x++;
                 break;
             case 0x01:
-                data = pack_PSMCT24();
+                data = pack_PSMCT24(false);
                 break;
             case 0x02:
                 data |= (uint64_t)(read_PSMCT16_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
@@ -2398,6 +2401,9 @@ uint128_t GraphicsSynthesizerThread::local_to_host()
                     TRXPOS.int_source_x, TRXPOS.int_source_y) >> 24) & 0xFF) << (i * 8);
                 pixels_transferred++;
                 TRXPOS.int_source_x++;
+                break;
+            case 0x31:
+                data = pack_PSMCT24(true);
                 break;
             default:
                 Errors::print_warning("[GS_t] GS Download Unrecognized BITBLTBUF source format $%02X\n", BITBLTBUF.source_format);
@@ -2453,7 +2459,7 @@ void GraphicsSynthesizerThread::unpack_PSMCT24(uint64_t data, int offset, bool z
     }
 }
 
-uint64_t GraphicsSynthesizerThread::pack_PSMCT24()
+uint64_t GraphicsSynthesizerThread::pack_PSMCT24(bool z_format)
 {
     int data_in_output = 0;
     uint64_t output_color = 0;
@@ -2483,8 +2489,16 @@ uint64_t GraphicsSynthesizerThread::pack_PSMCT24()
         }
         else
         {
-            PSMCT24_color = (uint64_t)(read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
-                TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFFFF) << PSMCT24_unpacked_count;
+            if (z_format)
+            {
+                PSMCT24_color = (uint64_t)(read_PSMCT32Z_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                    TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFFFF) << PSMCT24_unpacked_count;
+            }
+            else
+            {
+                PSMCT24_color = (uint64_t)(read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                    TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFFFF) << PSMCT24_unpacked_count;
+            }
             PSMCT24_unpacked_count += 24;
             TRXPOS.int_source_x++;
             pixels_transferred++;

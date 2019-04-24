@@ -358,7 +358,7 @@ class GraphicsSynthesizerThread
         void write_HWREG(uint64_t data);
         uint128_t local_to_host();
         void unpack_PSMCT24(uint64_t data, int offset, bool z_format);
-        uint64_t pack_PSMCT24();
+        uint64_t pack_PSMCT24(bool z_format);
         void local_to_local();
 
         int32_t orient2D(const Vertex &v1, const Vertex &v2, const Vertex &v3);

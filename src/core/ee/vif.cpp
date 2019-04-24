@@ -78,8 +78,14 @@ void VectorInterface::update(int cycles)
     //Since the loop processes per-word, we need to multiply cycles by 4
     //This allows us to process one quadword per bus cycle
     if (fifo_reverse)
+    {
+        uint128_t fifo_data;
+        fifo_data = gif->read_GSFIFO();
+        for (int i = 0; i < 4; i++)
+            FIFO.push(fifo_data._u32[i]);
         return;
-
+    }
+        
     int run_cycles = cycles << 2;
    
     if (vif_stalled & STALL_MSKPATH3)
@@ -851,7 +857,16 @@ bool VectorInterface::feed_DMA(uint128_t quad)
 
 uint128_t VectorInterface::readFIFO()
 {
-    return gif->read_GSFIFO();
+    uint128_t quad;
+    if (FIFO.empty())
+        return gif->read_GSFIFO();
+
+    for (int i = 0; i < 4; i++)
+    {
+        quad._u32[i] = FIFO.front();
+        FIFO.pop();
+    }
+    return quad;
 }
 
 uint32_t VectorInterface::get_stat()
@@ -908,6 +923,11 @@ uint32_t VectorInterface::get_err()
 
 void VectorInterface::set_stat(uint32_t value)
 {
+    if ((!fifo_reverse && ((value >> 23) & 0x1)) || (fifo_reverse && !((value >> 23) & 0x1)))
+    {
+        while (!FIFO.empty())
+            FIFO.pop();
+    }
     fifo_reverse = (value >> 23) & 0x1;
 }
 void VectorInterface::set_mark(uint32_t value)
