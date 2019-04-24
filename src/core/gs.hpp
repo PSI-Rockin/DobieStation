@@ -61,5 +61,7 @@ class GraphicsSynthesizer
         void send_dump_request();
 
         void send_message(GSMessage message);
+
+        uint128_t request_gs_download();
 };
 #endif // GS_HPP

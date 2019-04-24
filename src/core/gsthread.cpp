@@ -143,11 +143,24 @@ void GraphicsSynthesizerThread::wait_for_return(GSReturn type, GSReturnMessage &
             if (data.type == type)
                 return;
             else
-                Errors::die("[GS] return message expected %d but was %d!\n", type, data.type);
+            {
+                if (return_queue->was_empty())
+                {
+                    //Last message in the queue, so we don't want this one so we need to sleep
+                    return_queue->push(data); //Put it back on the queue, something else probably wants it
+                    printf("[GS] Waiting for return message, pushed last message on to queue type %d expecting %d\n", data.type, type);
+                    std::unique_lock<std::mutex> lk(data_mutex);
+                    notifier.wait(lk, [this] {return recieve_data; });
+                    recieve_data = false;
+                }
+                else
+                    return_queue->push(data); //Put it back on the queue, something else probably wants it
+            }
+              //Errors::die("[GS] return message expected %d but was %d!\n", type, data.type);
         }
         else
         {
-            printf("[GS] Waiting for return message\n");
+            printf("[GS] No Messages, waiting for return message\n");
             std::unique_lock<std::mutex> lk(data_mutex);
             notifier.wait(lk, [this] {return recieve_data;});
             recieve_data = false;
@@ -282,6 +295,7 @@ void GraphicsSynthesizerThread::event_loop()
                         GSReturnMessagePayload return_payload;
                         return_payload.no_payload = { 0 };
                         return_queue->push({ GSReturn::render_complete_t,return_payload });
+                        std::unique_lock<std::mutex> lk(data_mutex);
                         recieve_data = true;
                         notifier.notify_one();
                         break;
@@ -313,6 +327,7 @@ void GraphicsSynthesizerThread::event_loop()
                         GSReturnMessagePayload return_payload;
                         return_payload.xy_payload = { width, height };
                         return_queue->push({ GSReturn::gsdump_render_partial_done_t,return_payload });
+                        std::unique_lock<std::mutex> lk(data_mutex);
                         recieve_data = true;
                         notifier.notify_one();
                         break;
@@ -325,6 +340,7 @@ void GraphicsSynthesizerThread::event_loop()
                         GSReturnMessagePayload return_payload;
                         return_payload.no_payload = { 0 };
                         return_queue->push({ GSReturn::load_state_done_t,return_payload });
+                        std::unique_lock<std::mutex> lk(data_mutex);
                         recieve_data = true;
                         notifier.notify_one();
                         break;
@@ -360,12 +376,23 @@ void GraphicsSynthesizerThread::event_loop()
                         }
                         break;
                     }
+                    case request_local_host_tx:
+                    {
+                        GSReturnMessagePayload return_payload;
+                        return_payload.data_payload.quad_data = local_to_host();
+                        return_queue->push({ GSReturn::local_host_transfer, return_payload });
+                        std::unique_lock<std::mutex> lk(data_mutex);
+                        recieve_data = true;
+                        notifier.notify_one();
+                        break;
+                    }
                     default:
                         Errors::die("corrupted command sent to GS thread");
                 }
             }
             else
             {
+                printf("GS Thread: No messages waiting, going to sleep\n");
                 std::unique_lock<std::mutex> lk(data_mutex);
                 notifier.wait(lk, [this] {return send_data;});
                 send_data = false;
@@ -2276,6 +2303,125 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
         TRXDIR = 3;
         pixels_transferred = 0;
     }
+}
+
+uint128_t GraphicsSynthesizerThread::local_to_host()
+{
+    int ppd = 0; //pixels per doubleword (64-bits)
+    uint128_t return_data;
+    return_data._u64[0] = 0;
+    return_data._u64[1] = 0;
+    if (TRXDIR == 3)
+        return return_data;
+
+    switch (BITBLTBUF.source_format)
+    {
+        //PSMCT32
+    case 0x00:
+        ppd = 2;
+        break;
+        //PSMCT24
+    /*case 0x01:
+        ppq = 4; //TODO, will need pack style method
+        break;*/
+        //PSMCT16
+    case 0x02:
+        ppd = 4;
+        break;
+        //PSMCT16S
+    case 0x0A:
+        ppd = 4;
+        break;
+        //PSMCT8
+    case 0x13:
+        ppd = 8;
+        break;
+        //PSMCT4
+    case 0x14:
+        ppd = 16;
+        break;
+        //PSMCT8H
+    case 0x1B:
+        ppd = 8;
+        break;
+    default:
+        Errors::print_warning("[GS_t] GS Download Unrecognized BITBLTBUF source format $%02X\n", BITBLTBUF.source_format);
+        return return_data;
+    }
+    uint64_t data = 0;
+    for (int datapart = 0; datapart < 2; datapart++)
+    {
+        for (int i = 0; i < ppd; i++)
+        {
+            int datapart = i / (ppd / 2);
+
+            switch (BITBLTBUF.source_format)
+            {
+            case 0x00:
+                data |= (read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                    TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFFFFFF) << (i * 32);
+                pixels_transferred++;
+                TRXPOS.int_source_x++;
+                break;
+            case 0x02:
+                data |= (uint64_t)(read_PSMCT16_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                    TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFF) << (i * 16);
+                pixels_transferred++;
+                TRXPOS.int_source_x++;
+                break;
+            case 0x0A:
+                data |= (uint64_t)(read_PSMCT16S_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                    TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFF) << (i * 16);
+                pixels_transferred++;
+                TRXPOS.int_source_x++;
+                break;
+            case 0x13:
+                data |= (uint64_t)(read_PSMCT8_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                    TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFF) << (i * 8);
+                pixels_transferred++;
+                TRXPOS.int_source_x++;
+                break;
+            case 0x14:
+                data |= (uint64_t)(read_PSMCT4_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                    TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xf) << (i * 4);
+                pixels_transferred++;
+                TRXPOS.int_source_x++;
+                break;
+            case 0x1B:
+                data <<= 8;
+                data |= (uint64_t)((read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                    TRXPOS.int_source_x, TRXPOS.int_source_y) >> 24) & 0xFF) << (i * 8);
+                pixels_transferred++;
+                TRXPOS.int_source_x++;
+                break;
+            default:
+                Errors::print_warning("[GS_t] GS Download Unrecognized BITBLTBUF source format $%02X\n", BITBLTBUF.source_format);
+                return return_data;
+            }
+
+
+            if (TRXPOS.int_source_x - TRXPOS.source_x == TRXREG.width)
+            {
+                TRXPOS.int_source_x = TRXPOS.source_x;
+                TRXPOS.int_source_y++;
+            }
+        }
+
+        return_data._u64[datapart] = data;
+        data = 0;
+    }
+
+    int max_pixels = TRXREG.width * TRXREG.height;
+    if (pixels_transferred >= max_pixels)
+    {
+        //Deactivate the transmisssion
+        printf("[GS_t] Local to Host transfer ended\n");
+        TRXDIR = 3;
+        pixels_transferred = 0;
+    }
+    printf("Banana Finishing GS Download\n");
+#define printf(fmt, ...)(0)
+    return return_data;
 }
 
 void GraphicsSynthesizerThread::unpack_PSMCT24(uint64_t data, int offset, bool z_format)

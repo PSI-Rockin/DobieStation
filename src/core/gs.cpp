@@ -327,3 +327,14 @@ void GraphicsSynthesizer::send_message(GSMessage message)
 {
     gs_thread.send_message(message);
 }
+
+uint128_t GraphicsSynthesizer::request_gs_download()
+{
+    GSMessagePayload payload;
+    payload.no_payload = {};
+    gs_thread.send_message({ GSCommand::request_local_host_tx, payload });
+    GSReturnMessage data;
+    gs_thread.wait_for_return(GSReturn::local_host_transfer, data);
+    return data.payload.data_payload.quad_data;
+}
+

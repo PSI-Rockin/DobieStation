@@ -8,6 +8,7 @@
 #include "gscontext.hpp"
 #include "gsregisters.hpp"
 #include "circularFIFO.hpp"
+#include "int128.hpp"
 
 //Commands sent from the main thread to the GS thread.
 enum GSCommand:uint8_t 
@@ -15,7 +16,7 @@ enum GSCommand:uint8_t
     write64_t, write64_privileged_t, write32_privileged_t,
     set_rgba_t, set_st_t, set_uv_t, set_xyz_t, set_xyzf_t, set_crt_t,
     render_crt_t, assert_finish_t, assert_vsync_t, set_vblank_t, memdump_t, die_t,
-    save_state_t, load_state_t, gsdump_t
+    save_state_t, load_state_t, gsdump_t, request_local_host_tx,
 };
 
 union GSMessagePayload 
@@ -97,6 +98,7 @@ enum GSReturn :uint8_t
     save_state_done_t,
     load_state_done_t,
     gsdump_render_partial_done_t,
+    local_host_transfer,
 };
 
 union GSReturnMessagePayload
@@ -113,6 +115,10 @@ union GSReturnMessagePayload
     {
         uint8_t BLANK;
     } no_payload;//C++ doesn't like the empty struct
+    struct
+    {
+        uint128_t quad_data;
+    } data_payload;
 };
 
 struct GSReturnMessage
@@ -350,6 +356,7 @@ class GraphicsSynthesizerThread
         void render_triangle();
         void render_sprite();
         void write_HWREG(uint64_t data);
+        uint128_t local_to_host();
         void unpack_PSMCT24(uint64_t data, int offset, bool z_format);
         void local_to_local();
 
