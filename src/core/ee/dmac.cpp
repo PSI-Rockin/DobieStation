@@ -429,11 +429,10 @@ void DMAC::process_SIF0(int cycles)
         {
             if (sif->get_SIF0_size() >= 4)
             {
+                uint128_t quad;
                 for (int i = 0; i < 4; i++)
-                {
-                    uint32_t word = sif->read_SIF0();
-                    e->write32(channels[SIF0].address + (i * 4), word);
-                }
+                    quad._u32[i] = sif->read_SIF0();
+                store128(channels[SIF0].address, quad);
                 advance_dest_dma(SIF0);
             }
             else

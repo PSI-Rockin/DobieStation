@@ -205,16 +205,18 @@ void EmuThread::run()
                 old_frametime = chrono::system_clock::now();
                 emit update_FPS((int)round(FPS));
             }
-            catch (non_fatal_error &e)
+            catch (non_fatal_error &error)
             {
-                printf("non_fatal emulation error occurred\n%s\n", e.what());
-                emit emu_non_fatal_error(QString(e.what()));
+                printf("non_fatal emulation error occurred\n%s\n", error.what());
+                emit emu_non_fatal_error(QString(error.what()));
                 pause(PAUSE_EVENT::MESSAGE_BOX);
             }
-            catch (Emulation_error &e)
+            catch (Emulation_error &error)
             {
-                printf("Fatal emulation error occurred, stopping execution\n%s\n", e.what());
-                emit emu_error(QString(e.what()));
+                e.print_state();
+                printf("Fatal emulation error occurred, stopping execution\n%s\n", error.what());
+                fflush(stdout);
+                emit emu_error(QString(error.what()));
                 pause(PAUSE_EVENT::GAME_NOT_LOADED);
             }
         }
