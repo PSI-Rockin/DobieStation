@@ -77,8 +77,8 @@ class EmotionEngine
         void print_state();
         void set_disassembly(bool dis);
 
-        Cop0* get_cop0();
-        Cop1* get_fpu();
+        Cop0* get_cop0() const;
+        Cop1* get_fpu() const;
         template <typename T> T get_gpr(int id, int offset = 0);
         template <typename T> T get_LO(int offset = 0);
         template <typename T> void set_gpr(int id, T value, int offset = 0);

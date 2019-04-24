@@ -24,7 +24,7 @@ class breakpoint_window : public QDialog
     Q_OBJECT
 
 public:
-    explicit breakpoint_window(QWidget *parent = 0);
+    explicit breakpoint_window(QWidget *parent = nullptr);
     DebuggerBreakpoint* make_memory_breakpoint(bool limit_to_32 = false);
     DebuggerBreakpoint* make_memory_breakpoint(uint32_t addr, bool limit_to_32 = false);
     DebuggerBreakpoint* make_register_breakpoint(EERegisterDefinition& def);

@@ -1045,12 +1045,12 @@ void EmotionEngine::cop2_special(EmotionEngine &cpu, uint32_t instruction)
     EmotionInterpreter::cop2_special(cpu, *vu0, instruction);
 }
 
-Cop0* EmotionEngine::get_cop0()
+Cop0* EmotionEngine::get_cop0() const
 {
     return cp0;
 }
 
-Cop1* EmotionEngine::get_fpu()
+Cop1* EmotionEngine::get_fpu() const
 {
     return fpu;
 }

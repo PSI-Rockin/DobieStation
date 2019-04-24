@@ -661,7 +661,7 @@ bool BreakpointList::breakpoint_uses_instruction_addr(DebuggerBreakpoint *bp, ui
     if(and_breakpoint)
     {
         return breakpoint_uses_instruction_addr(and_breakpoint->_a, addr) ||
-        breakpoint_uses_instruction_addr(and_breakpoint->_b, addr);
+            breakpoint_uses_instruction_addr(and_breakpoint->_b, addr);
     }
     else
     {

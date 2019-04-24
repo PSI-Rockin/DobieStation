@@ -77,7 +77,7 @@ uint32_t Cop1::get_gpr(int index)
     return gpr[index].u;
 }
 
-float Cop1::get_gpr_f(int index)
+float Cop1::get_gpr_f(int index) const
 {
     return gpr[index].f;
 }

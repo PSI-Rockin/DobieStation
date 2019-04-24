@@ -190,9 +190,11 @@ static void setup_qtable(QTableWidget* table, uint32_t size)
 // 128-bit register value to hex
 static QString reg_to_string(uint128_t value)
 {
-    char cstr[128];
-    sprintf(cstr, "%08X %08X %08X %08X", value._u32[3], value._u32[2], value._u32[1], value._u32[0]);
-    return QString(cstr);
+  return QString("%1 %2 %3 %4")
+      .arg(value._u32[3], 8, 16, QChar('0'))
+      .arg(value._u32[2], 8, 16, QChar('0'))
+      .arg(value._u32[1], 8, 16, QChar('0'))
+      .arg(value._u32[0], 8, 16, QChar('0'));
 }
 
 static QString reg_to_string(uint64_t value)
@@ -233,7 +235,7 @@ static QString memory_data_to_string(uint32_t data)
     ascii[4] = '\0';
     char fp[64];
     sprintf(fp, "%g", *(float*)(&data));
-    return QString(reg_to_string(data) + "    " + QString(ascii) + "    " + QString(fp));
+    return QString("%1 %2 %3").arg(reg_to_string(data)).arg(ascii).arg(fp);
 }
 
 static uint32_t hex_address_to_u32(QString str)
@@ -297,9 +299,9 @@ void EEDebugWindow::update_registers()
     if(current_cpu == DebuggerCpu::EE)
     {
         // program counter
-        set_next(QString("pc  ") + reg_to_string(ee->get_PC()));
+        set_next(QString("pc %1").arg(reg_to_string(ee->get_PC())));
 
-        for(auto& reg : ee_registers)
+      for(auto& reg : ee_registers)
         {
             if(ee_breakpoint_list->get_breakpoints_at_register(reg).empty())
                 register_table->item(r,0)->setBackgroundColor(Qt::white);
@@ -309,17 +311,17 @@ void EEDebugWindow::update_registers()
             switch(reg.kind)
             {
                 case EERegisterKind::GPR:
-                    set_next(QString(reg.get_name().c_str()) + " " + reg_to_string(reg.get<uint128_t>(ee)));
+                    set_next(QString("%1 %2").arg(reg.get_name().c_str()).arg(reg_to_string(reg.get<uint128_t>(ee))));
                     break;
                 case EERegisterKind::HI:
                 case EERegisterKind::LO:
                 case EERegisterKind::HI1:
                 case EERegisterKind::LO1:
-                    set_next(QString(reg.get_name().c_str()) + " " + reg_to_string(reg.get<uint64_t>(ee)));
+                    set_next(QString("%1 %2").arg(reg.get_name().c_str()).arg(reg_to_string(reg.get<uint64_t>(ee))));
                     break;
                 case EERegisterKind::CP1:
-                    set_next(QString(reg.get_name().c_str()) + " " + reg_to_string(reg.get<float>(ee)));
-                    break;
+                    set_next(QString("%1 %2").arg(reg.get_name().c_str()).arg(reg_to_string(reg.get<float>(ee))));
+                break;
                 case EERegisterKind::CP0:
                 {
                     if(reg.id == 25)
@@ -328,11 +330,11 @@ void EEDebugWindow::update_registers()
                         cop0_str = reg_to_string(ee->get_cop0()->PCCR) + "/";
                         cop0_str += reg_to_string(ee->get_cop0()->PCR0) + "/";
                         cop0_str += reg_to_string(ee->get_cop0()->PCR1);
-                        set_next(QString(reg.get_name().c_str()) + " " + cop0_str);
+                        set_next(QString("%1 %2").arg(reg.get_name().c_str()).arg(cop0_str));
                     }
                     else
                     {
-                        set_next(QString(reg.get_name().c_str()) + " " + reg_to_string(reg.get<uint32_t>(ee)));
+                        set_next(QString("%1 %2").arg(reg.get_name().c_str()).arg(reg_to_string(reg.get<uint32_t>(ee))));
                     }
                     break;
                 }
@@ -344,7 +346,7 @@ void EEDebugWindow::update_registers()
     else if(current_cpu == DebuggerCpu::IOP)
     {
         // program counter
-        set_next(QString("pc  ") + reg_to_string(iop->get_PC()));
+        set_next(QString("pc %1").arg(reg_to_string(iop->get_PC())));
 
         for(auto& reg : iop_registers)
         {
@@ -353,18 +355,7 @@ void EEDebugWindow::update_registers()
             else
                 register_table->item(r,0)->setBackgroundColor(Qt::green);
 
-            switch(reg.kind)
-            {
-                case IOPRegisterKind ::GPR:
-                    set_next(QString(reg.get_name().c_str()) + " " + reg_to_string(reg.get<uint32_t>(iop)));
-                    break;
-                case IOPRegisterKind::HI:
-                case IOPRegisterKind::LO:
-                    set_next(QString(reg.get_name().c_str()) + " " + reg_to_string(reg.get<uint32_t>(iop)));
-                    break;
-                default:
-                    Errors::die("unknown IOP register kind");
-            }
+            set_next(QString("%1 %2").arg(reg.get_name().c_str()).arg(reg_to_string(reg.get<uint32_t>(iop))));
         }
 
         while(r < ee_registers.size())
@@ -382,7 +373,7 @@ void EEDebugWindow::update_disassembly()
     for (int i = 0; i < EE_DEBUGGER_DISASSEMBLY_SIZE * 4; i += 4)
     {
         uint32_t addr = start_addr + i;
-        QString addr_str = "[" + reg_to_string(addr) + "] ";
+        QString addr_str = QString("[%1] ").arg(reg_to_string(addr));
         QString table_str;
         try
         {
@@ -393,7 +384,7 @@ void EEDebugWindow::update_disassembly()
             else if(current_cpu == DebuggerCpu::IOP)
                 instr = iop->read32(addr);
 
-            QString instr_str = reg_to_string(instr) + " ";
+            QString instr_str = QString("%1 ").arg(reg_to_string(instr));
             QString dis_str = QString::fromStdString(EmotionDisasm::disasm_instr(instr, addr));
 
             if (addr == get_current_cpu_recent_pc())
@@ -434,7 +425,7 @@ void EEDebugWindow::update_memory()
     for (int i = 0; i < EE_DEBUGGER_MEMORY_SIZE * 4; i += 4)
     {
         uint32_t addr = start_addr + i;
-        QString addr_str = "[" + reg_to_string(addr) + "] ";
+        QString addr_str = QString("[%1] ").arg(reg_to_string(addr));
         QString table_str;
 
         try
@@ -483,7 +474,7 @@ void EEDebugWindow::update_stack()
     {
         uint32_t offset = EE_DEBUGGER_STACK_SIZE*4 - i;
         uint32_t addr = sp + offset;
-        QString addr_str = "[sp+" + reg_to_string(offset) + "] " ;
+        QString addr_str = QString("[sp+%1] ").arg(reg_to_string(offset));
         QString table_str;
         try
         {
@@ -516,7 +507,7 @@ void EEDebugWindow::update_breakpoints()
             breakpoint_table->item(r,0)->setBackgroundColor(Qt::lightGray);
         else
             breakpoint_table->item(r,0)->setBackgroundColor(Qt::white);
-        set_next(QString::number(r) + ": " + QString(bp->get_description().c_str()));
+        set_next(QString("%1: %2").arg(QString::number(r)).arg(QString(bp->get_description().c_str())));
     }
 
     for(uint32_t i = breakpoints->get_breakpoints().size(); i < EE_DEBUGGER_MAX_BREAKPOINTS; i++)
@@ -631,7 +622,7 @@ void EEDebugWindow::memory_context_menu(const QPoint &pos)
         menu.addSeparator();
         for(uint64_t bp : bps)
         {
-            QString menu_item_name = "Delete " + QString(get_current_cpu_breakpoints()->get_breakpoints()[bp]->get_description().c_str());
+            QString menu_item_name = QString("Delete %1").arg(get_current_cpu_breakpoints()->get_breakpoints()[bp]->get_description().c_str());
             menu.addAction(menu_item_name, this, [=]{ delete_breakpoint_by_index(bp);});
         }
     }
@@ -675,7 +666,7 @@ void EEDebugWindow::instruction_context_menu(const QPoint &pos)
         menu.addSeparator();
         for(uint64_t bp : bps)
         {
-            QString menu_item_name = "Delete " + QString(get_current_cpu_breakpoints()->get_breakpoints()[bp]->get_description().c_str());
+            QString menu_item_name = QString("Delete %1").arg(get_current_cpu_breakpoints()->get_breakpoints()[bp]->get_description().c_str());
             menu.addAction(menu_item_name, this, [=]{delete_breakpoint_by_index(bp);});
         }
     }
@@ -715,7 +706,7 @@ void EEDebugWindow::register_context_menu(const QPoint &qpos)
             menu.addSeparator();
             for(uint64_t bp : bps)
             {
-                QString menu_item_name = "Delete " + QString(ee_breakpoint_list->get_breakpoints()[bp]->get_description().c_str());
+                QString menu_item_name = QString("Delete %1").arg(ee_breakpoint_list->get_breakpoints()[bp]->get_description().c_str());
                 menu.addAction(menu_item_name, this, [=]{delete_breakpoint_by_index(bp);});
             }
         }
@@ -747,7 +738,7 @@ void EEDebugWindow::register_context_menu(const QPoint &qpos)
             menu.addSeparator();
             for(uint64_t bp : bps)
             {
-                QString menu_item_name = "Delete " + QString(iop_breakpoint_list->get_breakpoints()[bp]->get_description().c_str());
+                QString menu_item_name = QString("Delete %1").arg(iop_breakpoint_list->get_breakpoints()[bp]->get_description().c_str());
                 menu.addAction(menu_item_name, this, [=]{delete_breakpoint_by_index(bp);});
             }
         }
@@ -763,46 +754,46 @@ EEDebugWindow::~EEDebugWindow()
 
 void EEDebugWindow::on_disassembly_up_button_clicked()
 {
-    get_current_cpu_disassembly_location() -= 2048;
+    set_current_cpu_disassembly_location(get_current_cpu_disassembly_location() - 2048);
     update_disassembly();
 }
 
 void EEDebugWindow::on_disassembly_down_button_clicked()
 {
-    get_current_cpu_disassembly_location() += 2048;
+    set_current_cpu_disassembly_location(get_current_cpu_disassembly_location() + 2048);
     update_disassembly();
 }
 
 void EEDebugWindow::on_disassembly_seek_to_pc_button_clicked()
 {
-    get_current_cpu_disassembly_location() = get_current_cpu_recent_pc();
+    set_current_cpu_disassembly_location(get_current_cpu_recent_pc());
     update_disassembly();
 }
 
 void EEDebugWindow::on_disassembly_go_button_clicked()
 {
     QString dest = disassembly_seek_ledit->text();
-    get_current_cpu_disassembly_location() = hex_address_to_u32(dest);
+    set_current_cpu_disassembly_location(hex_address_to_u32(dest));
     update_disassembly();
     disassembly_table->scrollToItem(disassembly_table->item(EE_DEBUGGER_DISASSEMBLY_SIZE/2,0), QAbstractItemView::PositionAtCenter);
 }
 
 void EEDebugWindow::on_memory_up_clicked()
 {
-    get_current_cpu_memory_location() -= 2048;
+    set_current_cpu_memory_location(get_current_cpu_memory_location() - 2048);
     update_memory();
 }
 
 void EEDebugWindow::on_memory_down_clicked()
 {
-    get_current_cpu_memory_location() += 2048;
+    set_current_cpu_memory_location(get_current_cpu_memory_location() + 2048);
     update_memory();
 }
 
 void EEDebugWindow::on_memory_go_button_clicked()
 {
     QString dest = memory_seek_ledit->text();
-    get_current_cpu_memory_location() = hex_address_to_u32(dest);
+    set_current_cpu_memory_location(hex_address_to_u32(dest));
     update_memory();
     memory_table->scrollToItem(memory_table->item(EE_DEBUGGER_MEMORY_SIZE/2,0), QAbstractItemView::PositionAtCenter);
 }
@@ -810,7 +801,7 @@ void EEDebugWindow::on_memory_go_button_clicked()
 
 void EEDebugWindow::on_break_continue_button_clicked()
 {
-    printf("break handler...\n");
+    printf("[Debugger] Waiting for emulator thread to pause...\n");
     if(emulation_running())
     {
         waiting_for_pause = true;
@@ -820,7 +811,7 @@ void EEDebugWindow::on_break_continue_button_clicked()
         //add_breakpoint(new EmotionBreakpoints::Step());
     else
         resume_emulator();
-    printf("break handler returning!\n");
+    //printf("break handler returning!\n");
 }
 
 void EEDebugWindow::pause_on_show()
@@ -930,9 +921,9 @@ void EEDebugWindow::on_add_breakpoint_combo_activated(int index)
 // causes the breakpoint_hit function to be called in the UI thread
 void EEDebugWindow::notify_breakpoint_hit(EmotionEngine *ee)
 {
-    printf("notification from emulator thread\n");
+    //printf("notification from emulator thread\n");
     emit breakpoint_signal(ee);
-    printf("returning from emulator thread notify\n");
+    //printf("returning from emulator thread notify\n");
 }
 
 void EEDebugWindow::notify_breakpoint_hit(IOP *iop)
@@ -944,6 +935,7 @@ void EEDebugWindow::notify_pause_hit()
 {
     if(waiting_for_pause)
     {
+        printf("[Debugger] Emulator thread is paused!\n");
         emit pause_signal();
         waiting_for_pause = false;
     }
@@ -955,7 +947,7 @@ void EEDebugWindow::notify_pause_hit()
 // emulator thread is suspended at this point
 void EEDebugWindow::breakpoint_hit(EmotionEngine *ee)
 {
-    printf("ui thread update starting...\n");
+    //printf("ui thread update starting...\n");
     ee_running = false;
     current_cpu = DebuggerCpu::EE;
     ee_most_recent_pc = ee->get_PC();
@@ -966,7 +958,7 @@ void EEDebugWindow::breakpoint_hit(EmotionEngine *ee)
     update_ui();
     cpu_combo->setCurrentIndex((uint32_t)DebuggerCpu::EE);
     disassembly_table->scrollToItem(disassembly_table->item(EE_DEBUGGER_DISASSEMBLY_SIZE/2,0), QAbstractItemView::PositionAtCenter);
-    printf("ui thread done updating!\n");
+    //printf("ui thread done updating!\n");
 }
 
 void EEDebugWindow::breakpoint_hit(IOP *iop)
@@ -1200,32 +1192,50 @@ BreakpointList *EEDebugWindow::get_current_cpu_breakpoints()
     return breakpoints;
 }
 
-uint32_t& EEDebugWindow::get_current_cpu_memory_location()
+uint32_t EEDebugWindow::get_current_cpu_memory_location()
 {
-    uint32_t* memory_location;
     if(current_cpu == DebuggerCpu::EE)
-        memory_location = &ee_memory_location;
+        return ee_memory_location;
     else if(current_cpu == DebuggerCpu::IOP)
-        memory_location = &iop_memory_location;
-    return *memory_location;
+        return iop_memory_location;
+    else
+        return 0;
 }
 
-uint32_t& EEDebugWindow::get_current_cpu_disassembly_location()
+uint32_t EEDebugWindow::get_current_cpu_disassembly_location()
 {
-    uint32_t* disassembly_location;
     if(current_cpu == DebuggerCpu::EE)
-        disassembly_location = &ee_disassembly_location;
+        return ee_disassembly_location;
     else if(current_cpu == DebuggerCpu::IOP)
-        disassembly_location = &iop_disassembly_location;
-    return *disassembly_location;
+        return iop_disassembly_location;
+    else
+        return 0;
 }
 
-uint32_t& EEDebugWindow::get_current_cpu_recent_pc()
+uint32_t EEDebugWindow::get_current_cpu_recent_pc()
 {
-    uint32_t* pc;
     if(current_cpu == DebuggerCpu::EE)
-        pc = &ee_most_recent_pc;
+        return ee_most_recent_pc;
     else if(current_cpu == DebuggerCpu::IOP)
-        pc = &iop_most_recent_pc;
-    return *pc;
+        return iop_most_recent_pc;
+    else
+        return 0;
+}
+
+void EEDebugWindow::set_current_cpu_disassembly_location(uint32_t addr)
+{
+    if(current_cpu == DebuggerCpu::EE) {
+        ee_disassembly_location = addr;
+    } else if(current_cpu == DebuggerCpu::IOP) {
+        iop_disassembly_location = addr;
+    }
+}
+
+void EEDebugWindow::set_current_cpu_memory_location(uint32_t addr)
+{
+    if(current_cpu == DebuggerCpu::EE) {
+        ee_memory_location = addr;
+    } else if(current_cpu == DebuggerCpu::IOP) {
+        iop_memory_location = addr;
+    }
 }

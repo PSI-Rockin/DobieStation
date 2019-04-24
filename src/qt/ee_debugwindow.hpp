@@ -39,7 +39,7 @@ class EEDebugWindow : public QWidget, public EmotionDebugUI
     Q_OBJECT
 
 public:
-    explicit EEDebugWindow(EmuThread* emu_thread, QWidget *parent = 0);
+    explicit EEDebugWindow(EmuThread* emu_thread, QWidget *parent = nullptr);
     ~EEDebugWindow();
 
     void set_breakpoint_list(EEBreakpointList *list);
@@ -111,9 +111,11 @@ private:
     void remove_breakpoint(uint64_t id);
     void resume_emulator();
     BreakpointList* get_current_cpu_breakpoints();
-    uint32_t& get_current_cpu_memory_location();
-    uint32_t& get_current_cpu_disassembly_location();
-    uint32_t& get_current_cpu_recent_pc();
+    uint32_t get_current_cpu_memory_location();
+    uint32_t get_current_cpu_disassembly_location();
+    uint32_t get_current_cpu_recent_pc();
+    void set_current_cpu_memory_location(uint32_t addr);
+    void set_current_cpu_disassembly_location(uint32_t addr);
 
     // ui stuff
     QGridLayout *main_grid_layout;

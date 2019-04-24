@@ -231,7 +231,7 @@ DebuggerBreakpoint *breakpoint_window::make_register_breakpoint(EERegisterDefini
     reg_combo->hide();
     reg_type_combo->hide();
     reg_type_label->hide();
-    reg_label->setText("Register: " + QString(def.get_name().c_str()));
+    reg_label->setText(QString("Register: %1").arg(def.get_name().c_str()));
     setup_comparison_combo_boxes();
 
     on_reg_type_combo_currentIndexChanged(0);

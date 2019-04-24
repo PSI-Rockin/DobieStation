@@ -19,7 +19,7 @@ class AndBreakpointWindow : public QDialog
     Q_OBJECT
 
 public:
-    explicit AndBreakpointWindow(QWidget *parent = 0);
+    explicit AndBreakpointWindow(QWidget *parent = nullptr);
     ~AndBreakpointWindow();
     DebuggerBreakpoint* make_and_breakpoint(std::vector<EERegisterDefinition>* ee_regs);
     DebuggerBreakpoint* make_and_breakpoint(std::vector<EERegisterDefinition>* ee_regs, DebuggerBreakpoint* first);

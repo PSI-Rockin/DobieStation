@@ -41,7 +41,7 @@ class Cop1
         bool get_condition();
 
         uint32_t get_gpr(int index);
-        float get_gpr_f(int index);
+        float get_gpr_f(int index) const;
         void mtc(int index, uint32_t value);
         uint32_t cfc(int index);
         void ctc(int index, uint32_t value);

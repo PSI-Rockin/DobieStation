@@ -21,7 +21,7 @@
 
 using namespace std;
 
-EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
+EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent), debugger(&emu_thread)
 {
     old_frametime = chrono::system_clock::now();
     old_update_time = chrono::system_clock::now();
@@ -693,4 +693,10 @@ void EmuWindow::set_vu1_mode()
         vu1_mode = "Interpreter";
     }
     emu_thread.set_vu1_mode(mode);
+}
+
+void EmuWindow::show_debugger() {
+  debugger.show();
+  debugger.pause_on_show();
+  debugger.update_ui();
 }
