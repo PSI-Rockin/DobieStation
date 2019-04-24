@@ -929,6 +929,8 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
                 TRXPOS.int_source_x = TRXPOS.source_x;
                 TRXPOS.int_dest_y = TRXPOS.dest_y;
                 TRXPOS.int_source_y = TRXPOS.dest_y;
+                PSMCT24_unpacked_count = 0;
+                PSMCT24_color = 0;
                 //printf("Transfer addr: $%08X\n", transfer_addr);
                 if (TRXDIR == 2)
                 {
@@ -2321,9 +2323,9 @@ uint128_t GraphicsSynthesizerThread::local_to_host()
         ppd = 2;
         break;
         //PSMCT24
-    /*case 0x01:
-        ppq = 4; //TODO, will need pack style method
-        break;*/
+    case 0x01:
+        ppd = 1; //Does it all in one go
+        break;
         //PSMCT16
     case 0x02:
         ppd = 4;
@@ -2362,6 +2364,9 @@ uint128_t GraphicsSynthesizerThread::local_to_host()
                     TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFFFFFF) << (i * 32);
                 pixels_transferred++;
                 TRXPOS.int_source_x++;
+                break;
+            case 0x01:
+                data = pack_PSMCT24();
                 break;
             case 0x02:
                 data |= (uint64_t)(read_PSMCT16_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
@@ -2446,6 +2451,53 @@ void GraphicsSynthesizerThread::unpack_PSMCT24(uint64_t data, int offset, bool z
             pixels_transferred++;
         }
     }
+}
+
+uint64_t GraphicsSynthesizerThread::pack_PSMCT24()
+{
+    int data_in_output = 0;
+    uint64_t output_color = 0;
+
+    while (data_in_output < 64)
+    {
+        if (PSMCT24_unpacked_count)
+        {
+            output_color |= (uint64_t)PSMCT24_color << data_in_output;
+            data_in_output += PSMCT24_unpacked_count;
+
+            //Data overflowed, so keep left over
+            if (data_in_output > 64)
+            {
+                PSMCT24_color >>= PSMCT24_unpacked_count - (data_in_output - 64);                
+                PSMCT24_unpacked_count = (data_in_output - 64);
+            }
+            else
+            {
+                PSMCT24_unpacked_count = 0;
+                PSMCT24_color = 0;
+            }
+
+            int max_pixels = TRXREG.width * TRXREG.height;
+            if (pixels_transferred >= max_pixels)
+                break;
+        }
+        else
+        {
+            PSMCT24_color = (uint64_t)(read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFFFF) << PSMCT24_unpacked_count;
+            PSMCT24_unpacked_count += 24;
+            TRXPOS.int_source_x++;
+            pixels_transferred++;
+
+            if (TRXPOS.int_source_x - TRXPOS.source_x == TRXREG.width)
+            {
+                TRXPOS.int_source_x = TRXPOS.source_x;
+                TRXPOS.int_source_y++;
+            }
+        }
+    }
+
+    return output_color;
 }
 
 void GraphicsSynthesizerThread::local_to_local()
