@@ -52,6 +52,7 @@ class GraphicsInterface;
 class ImageProcessingUnit;
 class SubsystemInterface;
 class VectorInterface;
+class VectorUnit;
 
 class DMAC
 {
@@ -63,6 +64,7 @@ class DMAC
         ImageProcessingUnit* ipu;
         SubsystemInterface* sif;
         VectorInterface* vif0, *vif1;
+        VectorUnit* vu0, *vu1;
         DMA_Channel channels[15];
 
         D_CTRL control;
@@ -97,7 +99,7 @@ class DMAC
     public:
         static const char* CHAN(int index);
         DMAC(EmotionEngine* cpu, Emulator* e, GraphicsInterface* gif, ImageProcessingUnit* ipu, SubsystemInterface* sif,
-             VectorInterface* vif0, VectorInterface* vif1);
+             VectorInterface* vif0, VectorInterface* vif1, VectorUnit* vu0, VectorUnit* vu1);
         void reset(uint8_t* RDRAM, uint8_t* scratchpad);
         void run(int cycles);
         void start_DMA(int index);

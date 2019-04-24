@@ -9,6 +9,12 @@
 
 class Emulator;
 
+struct IOP_ICacheLine
+{
+    bool valid;
+    uint32_t tag;
+};
+
 class IOP
 {
     private:
@@ -19,11 +25,18 @@ class IOP
         uint32_t PC;
         uint32_t LO, HI;
 
+        //4 KB bytes / 16 bytes per line = 256 cache lines
+        IOP_ICacheLine icache[256];
+
         uint32_t new_PC;
+        uint32_t cache_control;
         int branch_delay;
         bool can_disassemble;
         bool will_branch;
         bool wait_for_IRQ;
+
+        int muldiv_delay;
+        int cycles_to_run;
 
         uint32_t translate_addr(uint32_t addr);
     public:
@@ -36,6 +49,7 @@ class IOP
         void unhalt();
         void print_state();
         void set_disassembly(bool dis);
+        void set_muldiv_delay(int delay);
 
         void jp(uint32_t addr);
         void branch(bool condition, int32_t offset);
@@ -62,6 +76,7 @@ class IOP
         uint8_t read8(uint32_t addr);
         uint16_t read16(uint32_t addr);
         uint32_t read32(uint32_t addr);
+        uint32_t read_instr(uint32_t addr);
         void write8(uint32_t addr, uint8_t value);
         void write16(uint32_t addr, uint16_t value);
         void write32(uint32_t addr, uint32_t value);
@@ -92,11 +107,21 @@ inline uint32_t IOP::get_gpr(int index)
 
 inline uint32_t IOP::get_LO()
 {
+    if (muldiv_delay)
+    {
+        cycles_to_run -= muldiv_delay;
+        muldiv_delay = 0;
+    }
     return LO;
 }
 
 inline uint32_t IOP::get_HI()
 {
+    if (muldiv_delay)
+    {
+        cycles_to_run -= muldiv_delay;
+        muldiv_delay = 0;
+    }
     return HI;
 }
 
@@ -119,6 +144,13 @@ inline void IOP::set_LO(uint32_t value)
 inline void IOP::set_HI(uint32_t value)
 {
     HI = value;
+}
+
+inline void IOP::set_muldiv_delay(int delay)
+{
+    if (muldiv_delay)
+        cycles_to_run -= muldiv_delay;
+    muldiv_delay = delay;
 }
 
 #endif // IOP_HPP

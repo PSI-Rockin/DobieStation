@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include "emotion.hpp"
 #include "emotiondisasm.hpp"
 #include "emotioninterpreter.hpp"
@@ -112,10 +113,15 @@ const char* EmotionEngine::SYSCALL(int id)
 void EmotionEngine::reset()
 {
     PC = 0xBFC00000;
+    cycle_count = 0;
+    cycles_to_run = 0;
     branch_on = false;
     can_disassemble = false;
     wait_for_IRQ = false;
     delay_slot = 0;
+
+    //Reset the cache
+    memset(icache, 0, sizeof(icache));
     ee_breakpoints->set_ee(this);
 
     //Clear out $zero
@@ -127,19 +133,19 @@ void EmotionEngine::reset()
         deci2handlers[i].active = false;
 }
 
-int EmotionEngine::run(int cycles_to_run)
+int EmotionEngine::run(int cycles)
 {
-    int cycles = cycles_to_run;
+    cycle_count += cycles;
     if (!wait_for_IRQ)
     {
-        while (cycles_to_run)
+        cycles_to_run += cycles;
+        while (cycles_to_run > 0)
         {
-            /*if (PC == 0x1001E0)
-                PC = 0x100204;
-            if (PC == 0x10021C)
-                PC = 0x100234;*/
             cycles_to_run--;
-            uint32_t instruction = read32(PC);
+
+            uint32_t instruction = read_instr(PC);
+            uint32_t lastPC = PC;
+
             if (can_disassemble)
             {
                 std::string disasm = EmotionDisasm::disasm_instr(instruction, PC);
@@ -149,30 +155,27 @@ int EmotionEngine::run(int cycles_to_run)
             EmotionInterpreter::interpret(*this, instruction);
             PC += 4;
 
+            //Simulate dual-issue if both instructions are NOPs
+            if (!instruction && !read_instr(PC))
+                PC += 4;
+
             if (branch_on)
             {
                 if (!delay_slot)
                 {
-                    branch_on = false;
-                    if (!new_PC || (new_PC & 0x3))
+                    //If the PC == LastPC it means we've reversed it to handle COP2 sync, so don't branch yet
+                    if (PC != lastPC)
                     {
-                        Errors::die("[EE] Jump to invalid address $%08X from $%08X\n", new_PC, PC - 8);
+                        branch_on = false;
+                        if (!new_PC || (new_PC & 0x3))
+                        {
+                            Errors::die("[EE] Jump to invalid address $%08X from $%08X\n", new_PC, PC - 8);
+                        }
+                        PC = new_PC;
                     }
-                    //if (new_PC != 0x15C440 && new_PC != 0x109710)
-                    PC = new_PC;
                 }
                 else
                     delay_slot--;
-            }
-            else
-            {
-                if (cp0->int_enabled())
-                {
-                    if (cp0->cause.int0_pending)
-                        int0();
-                    else if (cp0->cause.int1_pending)
-                        int1();
-                }
             }
 
             if(ee_breakpoints->debug_enable)
@@ -220,8 +223,6 @@ void EmotionEngine::clear_interlock()
 
 bool EmotionEngine::vu0_wait()
 {
-    //Must interlock as if there is an Mbit it will stall
-    e->interlock_cop2_check(true);
     return vu0->is_running();
 }
 
@@ -261,6 +262,61 @@ uint64_t EmotionEngine::get_HI1()
 uint64_t EmotionEngine::get_SA()
 {
     return SA;
+}
+
+uint32_t EmotionEngine::read_instr(uint32_t address)
+{
+    bool uncached = address & 0x30000000;
+    if (!uncached)
+    {
+        int index = (address >> 6) & 0x7F;
+        uint16_t tag = address >> 13;
+
+        EE_ICacheLine* line = &icache[index];
+        //Check if there's no entry in icache
+        if (!line->valid[0] || line->tag[0] != tag)
+        {
+            if (!line->valid[1] || line->tag[1] != tag)
+            {
+                //Load 4 quadwords. This incurs a 10 * 4 penalty.
+                //printf("[EE] I$ miss at $%08X\n", address);
+                cycles_to_run -= 40;
+
+                //If there's an invalid entry, fill it.
+                //The `LFU` bit for the filled row gets flipped.
+                if (!line->valid[0])
+                {
+                    line->valid[0] = true;
+                    line->lfu[0] ^= true;
+                    line->tag[0] = tag;
+                }
+                else if (!line->valid[1])
+                {
+                    line->valid[1] = true;
+                    line->lfu[1] ^= true;
+                    line->tag[1] = tag;
+                }
+                else
+                {
+                    //The row to fill is the XOR of the LFU bits.
+                    int row_to_fill = line->lfu[0] ^ line->lfu[1];
+                    line->lfu[row_to_fill] ^= true;
+                    line->tag[row_to_fill] = tag;
+                }
+            }
+        }
+    }
+    else
+    {
+        //Simulate reading from RDRAM
+        //The penalty is 10 cycles for all data types, up to a quadword (128 bits).
+        //However, the EE loads two instructions at once. Since we only load a word, we divide the cycles in half.
+        if ((address & 0x1FFFFFFF) < 0x02000000)
+            cycles_to_run -= 5;
+        if (address >= 0x30100000 && address <= 0x31FFFFFF)
+            address -= 0x10000000;
+    }
+    return e->read32(address & 0x1FFFFFFF);
 }
 
 uint8_t EmotionEngine::read8(uint32_t address)
@@ -495,6 +551,8 @@ void EmotionEngine::cfc(int cop_id, int reg, int cop_reg, uint32_t instruction)
             {
                 bark = vu0->is_running();
                 bark |= vu1->is_running() << 8;
+                bark |= vu0->stopped_by_tbit() << 2;
+                bark |= vu1->stopped_by_tbit() << 10;
             }
             else
                 bark = (int32_t)vu0->cfc(cop_reg);
@@ -522,9 +580,19 @@ void EmotionEngine::ctc(int cop_id, int reg, int cop_reg, uint32_t instruction)
                 }
                 clear_interlock();
             }
-            vu0->ctc(cop_reg, bark);
+            if (cop_reg == 31)
+                vu1->start_program(bark);
+            else
+                vu0->ctc(cop_reg, bark);
             break;
     }
+}
+
+void EmotionEngine::invalidate_icache_indexed(uint32_t addr)
+{
+    int index = (addr >> 6) & 0x7F;
+    int way = addr & 0x1;
+    icache[index].valid[way] = false;
 }
 
 void EmotionEngine::mfhi(int index)
@@ -613,6 +681,7 @@ void EmotionEngine::lwc1(uint32_t addr, int index)
 
 void EmotionEngine::lqc2(uint32_t addr, int index)
 {
+    cop2_updatevu0();
     //printf("LQC2 $%08X: ", addr);
     for (int i = 0; i < 4; i++)
     {
@@ -630,6 +699,7 @@ void EmotionEngine::swc1(uint32_t addr, int index)
 
 void EmotionEngine::sqc2(uint32_t addr, int index)
 {
+    cop2_updatevu0();
     //printf("SQC2 $%08X: ", addr);
     for (int i = 0; i < 4; i++)
     {
@@ -790,7 +860,11 @@ void EmotionEngine::set_int0_signal(bool value)
 {
     cp0->cause.int0_pending = value;
     if (value)
+    {
         printf("[EE] Set INT0\n");
+        if (cp0->int_enabled())
+            int0();
+    }
 }
 
 void EmotionEngine::set_int1_signal(bool value)
@@ -941,8 +1015,29 @@ void EmotionEngine::qmtc2(int source, int cop_reg)
 
 void EmotionEngine::cop2_updatevu0()
 {
-    if (vu0->is_running())
-        vu0->run(16);
+    if (!vu0->is_running())
+    {
+        uint64_t cpu_cycles = get_cycle_count();
+        uint64_t cop2_cycles = get_cop2_last_cycle();
+        uint32_t last_instr = read32(get_PC() - 4);
+        uint32_t upper_instr = (last_instr >> 26);
+        uint32_t cop2_instr = (last_instr >> 21) & 0x1F;
+
+        //Always stall 1 VU cycle if the last op was LQC2, CTC2 or QMTC2
+        if (upper_instr == 0x36 || (upper_instr == 0x12 && (cop2_instr == 0x5 || cop2_instr == 0x6)))
+        {
+            vu0->cop2_updatepipes(1);
+        }
+
+        vu0->cop2_updatepipes(((cpu_cycles - cop2_cycles) >> 1) + 1);
+        set_cop2_last_cycle(cpu_cycles);
+    }
+    else if (!vu0->is_interlocked())
+    {
+        uint64_t current_count = ((cycle_count - cycles_to_run) - cop2_last_cycle) + 1;
+        vu0->run((current_count >> 1));
+        cop2_last_cycle = (cycle_count - cycles_to_run);
+    }
 }
 
 void EmotionEngine::cop2_special(EmotionEngine &cpu, uint32_t instruction)

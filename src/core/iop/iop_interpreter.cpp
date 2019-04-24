@@ -596,6 +596,24 @@ void IOP_Interpreter::mult(IOP &cpu, uint32_t instruction)
     int64_t temp = op1 * op2;
     cpu.set_LO(temp & 0xFFFFFFFF);
     cpu.set_HI(temp >> 32);
+    if (op1 >= 0)
+    {
+        if (op1 < 0x800)
+            cpu.set_muldiv_delay(6);
+        else if (op1 < 0x100000)
+            cpu.set_muldiv_delay(9);
+        else
+            cpu.set_muldiv_delay(13);
+    }
+    else
+    {
+        if (op1 >= 0xFFFFF800)
+            cpu.set_muldiv_delay(6);
+        else if (op1 > 0xFF000000)
+            cpu.set_muldiv_delay(9);
+        else
+            cpu.set_muldiv_delay(13);
+    }
 }
 
 void IOP_Interpreter::multu(IOP &cpu, uint32_t instruction)
@@ -604,6 +622,13 @@ void IOP_Interpreter::multu(IOP &cpu, uint32_t instruction)
     uint64_t op2 = (instruction >> 16) & 0x1F;
     op1 = cpu.get_gpr(op1);
     op2 = cpu.get_gpr(op2);
+
+    if (op1 < 0x800)
+        cpu.set_muldiv_delay(6);
+    else if (op1 < 0x100000)
+        cpu.set_muldiv_delay(9);
+    else
+        cpu.set_muldiv_delay(13);
     uint64_t temp = op1 * op2;
     cpu.set_LO(temp & 0xFFFFFFFF);
     cpu.set_HI(temp >> 32);
@@ -633,6 +658,7 @@ void IOP_Interpreter::div(IOP &cpu, uint32_t instruction)
         cpu.set_LO(op1 / op2);
         cpu.set_HI(op1 % op2);
     }
+    cpu.set_muldiv_delay(36);
 }
 
 void IOP_Interpreter::divu(IOP &cpu, uint32_t instruction)
@@ -651,6 +677,7 @@ void IOP_Interpreter::divu(IOP &cpu, uint32_t instruction)
         cpu.set_LO(op1 / op2);
         cpu.set_HI(op1 % op2);
     }
+    cpu.set_muldiv_delay(36);
 }
 
 void IOP_Interpreter::add(IOP &cpu, uint32_t instruction)

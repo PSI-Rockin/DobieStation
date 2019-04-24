@@ -27,9 +27,14 @@ struct VU_InstrInfo
 {
     bool branch_delay_slot;
     bool ebit_delay_slot;
+    bool is_ebit;
+    bool is_branch;
+    bool tbit_end;
     bool swap_ops;
     bool update_q_pipeline;
     bool update_p_pipeline;
+    bool q_pipeline_instr;
+    bool p_pipeline_instr;
     bool update_mac_pipeline;
     bool has_mac_result;
     bool has_clip_result;
@@ -48,6 +53,7 @@ struct VU_InstrInfo
     uint8_t decoder_vi_read0;
     uint8_t decoder_vi_read1;
     uint8_t decoder_vi_write;
+    bool use_backup_vi;
 };
 
 class VU_JitTranslator
@@ -72,7 +78,9 @@ class VU_JitTranslator
         bool updates_mac_flags_special(uint32_t upper_instr);
 
         void update_pipeline(VectorUnit &vu, int cycles);
+        void handle_vu_stalls(VectorUnit &vu, uint16_t PC, uint32_t lower, int &q_pipe_delay, int &p_pipe_delay);
         void analyze_FMAC_stalls(VectorUnit &vu, uint16_t PC);
+        void populate_vu_state(VectorUnit &vu, int q_pipe_delay, int p_pipe_delay, uint16_t PC);
         void interpreter_pass(VectorUnit& vu, uint8_t *instr_mem, uint32_t prev_pc);
         void flag_pass(VectorUnit& vu);
 

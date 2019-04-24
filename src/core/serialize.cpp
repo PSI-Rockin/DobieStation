@@ -4,7 +4,7 @@
 
 #define VER_MAJOR 0
 #define VER_MINOR 0
-#define VER_REV 22
+#define VER_REV 26
 
 using namespace std;
 
@@ -113,6 +113,11 @@ void Emulator::load_state(const char *file_name)
     //Important note - this serialization function is located in gs.cpp as it contains a lot of thread-specific details
     gs.load_state(state);
 
+    scheduler.load_state(state);
+    pad.load_state(state);
+    spu.load_state(state);
+    spu2.load_state(state);
+
     state.close();
     printf("[Emulator] Success!\n");
 }
@@ -186,12 +191,20 @@ void Emulator::save_state(const char *file_name)
     //Important note - this serialization function is located in gs.cpp as it contains a lot of thread-specific details
     gs.save_state(state);
 
+    scheduler.save_state(state);
+    pad.save_state(state);
+    spu.save_state(state);
+    spu2.save_state(state);
+
     state.close();
     printf("Success!\n");
 }
 
 void EmotionEngine::load_state(ifstream &state)
 {
+    state.read((char*)&cycle_count, sizeof(cycle_count));
+    state.read((char*)&cycles_to_run, sizeof(cycles_to_run));
+    state.read((char*)&icache, sizeof(icache));
     state.read((char*)&gpr, sizeof(gpr));
     state.read((char*)&LO, sizeof(uint64_t));
     state.read((char*)&HI, sizeof(uint64_t));
@@ -212,6 +225,9 @@ void EmotionEngine::load_state(ifstream &state)
 
 void EmotionEngine::save_state(ofstream &state)
 {
+    state.write((char*)&cycle_count, sizeof(cycle_count));
+    state.write((char*)&cycles_to_run, sizeof(cycles_to_run));
+    state.write((char*)&icache, sizeof(icache));
     state.write((char*)&gpr, sizeof(gpr));
     state.write((char*)&LO, sizeof(uint64_t));
     state.write((char*)&HI, sizeof(uint64_t));
@@ -277,6 +293,7 @@ void IOP::load_state(ifstream &state)
     state.read((char*)&HI, sizeof(HI));
     state.read((char*)&PC, sizeof(PC));
     state.read((char*)&new_PC, sizeof(new_PC));
+    state.read((char*)&icache, sizeof(icache));
 
     state.read((char*)&branch_delay, sizeof(branch_delay));
     state.read((char*)&will_branch, sizeof(branch_delay));
@@ -295,6 +312,7 @@ void IOP::save_state(ofstream &state)
     state.write((char*)&HI, sizeof(HI));
     state.write((char*)&PC, sizeof(PC));
     state.write((char*)&new_PC, sizeof(new_PC));
+    state.write((char*)&icache, sizeof(icache));
 
     state.write((char*)&branch_delay, sizeof(branch_delay));
     state.write((char*)&will_branch, sizeof(branch_delay));
@@ -329,7 +347,7 @@ void VectorUnit::load_state(ifstream &state)
     state.read((char*)&DIV_event_started, sizeof(DIV_event_started));
     state.read((char*)&finish_EFU_event, sizeof(finish_EFU_event));
     state.read((char*)&new_P_instance.u, sizeof(new_P_instance.u));
-    state.read((char*)&EFU_event_started, sizeof(EFU_event_started));    
+    state.read((char*)&EFU_event_started, sizeof(EFU_event_started));
 
     state.read((char*)&int_branch_delay, sizeof(int_branch_delay));
     state.read((char*)&int_backup_reg, sizeof(int_backup_reg));
@@ -338,6 +356,8 @@ void VectorUnit::load_state(ifstream &state)
     state.read((char*)&status, sizeof(status));
     state.read((char*)&status_value, sizeof(status_value));
     state.read((char*)&status_pipe, sizeof(status_pipe));
+    state.read((char*)&int_branch_pipeline, sizeof(int_branch_pipeline));
+    state.read((char*)&ILW_pipeline, sizeof(ILW_pipeline));
 
     state.read((char*)&pipeline_state, sizeof(pipeline_state));
 
@@ -403,6 +423,8 @@ void VectorUnit::save_state(ofstream &state)
     state.write((char*)&status, sizeof(status));
     state.write((char*)&status_value, sizeof(status_value));
     state.write((char*)&status_pipe, sizeof(status_pipe));
+    state.write((char*)&int_branch_pipeline, sizeof(int_branch_pipeline));
+    state.write((char*)&ILW_pipeline, sizeof(ILW_pipeline));
 
     state.write((char*)&pipeline_state, sizeof(pipeline_state));
 
@@ -515,13 +537,46 @@ void IOP_DMA::load_state(ifstream &state)
 {
     state.read((char*)&channels, sizeof(channels));
 
+    int active_index;
+    state.read((char*)&active_index, sizeof(active_index));
+    if (active_index)
+        active_channel = &channels[active_index - 1];
+    else
+        active_channel = nullptr;
+
+    int queued_size = 0;
+    state.read((char*)&queued_size, sizeof(queued_size));
+    for (int i = 0; i < queued_size; i++)
+    {
+        int index;
+        state.read((char*)&index, sizeof(index));
+        queued_channels.push_back(&channels[index]);
+    }
+
     state.read((char*)&DPCR, sizeof(DPCR));
     state.read((char*)&DICR, sizeof(DICR));
+
+    //We have to reapply the function pointers as there's no guarantee they will remain in memory
+    //the next time Dobie is loaded
+    apply_dma_functions();
 }
 
 void IOP_DMA::save_state(ofstream &state)
 {
     state.write((char*)&channels, sizeof(channels));
+
+    int active_index = 0;
+    if (active_channel)
+        active_index = active_channel->index + 1;
+    state.write((char*)&active_index, sizeof(active_index));
+
+    int queued_size = queued_channels.size();
+    state.write((char*)&queued_size, sizeof(queued_size));
+    for (auto it = queued_channels.begin(); it != queued_channels.end(); it++)
+    {
+        IOP_DMA_Channel* chan = *it;
+        state.write((char*)&chan->index, sizeof(chan->index));
+    }
 
     state.write((char*)&DPCR, sizeof(DPCR));
     state.write((char*)&DICR, sizeof(DICR));
@@ -734,7 +789,6 @@ void CDVD_Drive::load_state(ifstream &state)
     state.read((char*)&N_command_params, sizeof(N_command_params));
     state.read((char*)&N_params, sizeof(N_params));
     state.read((char*)&N_status, sizeof(N_status));
-    state.read((char*)&N_cycles_left, sizeof(N_cycles_left));
 
     state.read((char*)&S_command, sizeof(S_command));
     state.read((char*)&S_command_params, sizeof(S_command_params));
@@ -764,7 +818,6 @@ void CDVD_Drive::save_state(ofstream &state)
     state.write((char*)&N_command_params, sizeof(N_command_params));
     state.write((char*)&N_params, sizeof(N_params));
     state.write((char*)&N_status, sizeof(N_status));
-    state.write((char*)&N_cycles_left, sizeof(N_cycles_left));
 
     state.write((char*)&S_command, sizeof(S_command));
     state.write((char*)&S_command_params, sizeof(S_command_params));
@@ -773,4 +826,117 @@ void CDVD_Drive::save_state(ofstream &state)
     state.write((char*)&S_out_params, sizeof(S_out_params));
     state.write((char*)&S_status, sizeof(S_status));
     state.write((char*)&rtc, sizeof(rtc));
+}
+
+void Scheduler::load_state(ifstream &state)
+{
+    state.read((char*)&ee_cycles, sizeof(ee_cycles));
+    state.read((char*)&bus_cycles, sizeof(bus_cycles));
+    state.read((char*)&iop_cycles, sizeof(iop_cycles));
+    state.read((char*)&run_cycles, sizeof(run_cycles));
+    state.read((char*)&closest_event_time, sizeof(closest_event_time));
+
+    int event_size = 0;
+    state.read((char*)&event_size, sizeof(event_size));
+
+    for (int i = 0; i < event_size; i++)
+    {
+        SchedulerEvent event;
+        state.read((char*)&event.id, sizeof(event.id));
+        state.read((char*)&event.time_to_run, sizeof(event.time_to_run));
+
+        switch (event.id)
+        {
+            case EVENT_ID::SPU_SAMPLE:
+                event.func = &Emulator::gen_sound_sample;
+                break;
+            case EVENT_ID::EE_IRQ_CHECK:
+                event.func = &Emulator::ee_irq_check;
+                break;
+            case EVENT_ID::CDVD_EVENT:
+                event.func = &Emulator::cdvd_event;
+                break;
+            default:
+                Errors::die("Event id %d not recognized!", event.id);
+        }
+
+        events.push_back(event);
+    }
+}
+
+void Scheduler::save_state(ofstream &state)
+{
+    state.write((char*)&ee_cycles, sizeof(ee_cycles));
+    state.write((char*)&bus_cycles, sizeof(bus_cycles));
+    state.write((char*)&iop_cycles, sizeof(iop_cycles));
+    state.write((char*)&run_cycles, sizeof(run_cycles));
+    state.write((char*)&closest_event_time, sizeof(closest_event_time));
+
+    int event_size = events.size();
+    state.write((char*)&event_size, sizeof(event_size));
+
+    for (auto it = events.begin(); it != events.end(); it++)
+    {
+        SchedulerEvent event = *it;
+        state.write((char*)&event.id, sizeof(event.id));
+        state.write((char*)&event.time_to_run, sizeof(event.time_to_run));
+    }
+}
+
+void Gamepad::load_state(ifstream &state)
+{
+    state.read((char*)&command_buffer, sizeof(command_buffer));
+    state.read((char*)&rumble_values, sizeof(rumble_values));
+    state.read((char*)&mode_lock, sizeof(mode_lock));
+    state.read((char*)&command, sizeof(command));
+    state.read((char*)&command_length, sizeof(command_length));
+    state.read((char*)&data_count, sizeof(data_count));
+    state.read((char*)&pad_mode, sizeof(pad_mode));
+    state.read((char*)&config_mode, sizeof(config_mode));
+}
+
+void Gamepad::save_state(ofstream &state)
+{
+    state.write((char*)&command_buffer, sizeof(command_buffer));
+    state.write((char*)&rumble_values, sizeof(rumble_values));
+    state.write((char*)&mode_lock, sizeof(mode_lock));
+    state.write((char*)&command, sizeof(command));
+    state.write((char*)&command_length, sizeof(command_length));
+    state.write((char*)&data_count, sizeof(data_count));
+    state.write((char*)&pad_mode, sizeof(pad_mode));
+    state.write((char*)&config_mode, sizeof(config_mode));
+}
+
+void SPU::load_state(ifstream &state)
+{
+    state.read((char*)&voices, sizeof(voices));
+    state.read((char*)&core_att, sizeof(core_att));
+    state.read((char*)&status, sizeof(status));
+    state.read((char*)&spdif_irq, sizeof(spdif_irq));
+    state.read((char*)&transfer_addr, sizeof(transfer_addr));
+    state.read((char*)&current_addr, sizeof(current_addr));
+    state.read((char*)&autodma_ctrl, sizeof(autodma_ctrl));
+    state.read((char*)&ADMA_left, sizeof(ADMA_left));
+    state.read((char*)&input_pos, sizeof(input_pos));
+    state.read((char*)&IRQA, sizeof(IRQA));
+    state.read((char*)&ENDX, sizeof(ENDX));
+    state.read((char*)&key_off, sizeof(key_off));
+    state.read((char*)&key_on, sizeof(key_on));
+}
+
+void SPU::save_state(ofstream &state)
+{
+    state.write((char*)&voices, sizeof(voices));
+    state.write((char*)&core_att, sizeof(core_att));
+    state.write((char*)&status, sizeof(status));
+    state.write((char*)&spdif_irq, sizeof(spdif_irq));
+    state.write((char*)&transfer_addr, sizeof(transfer_addr));
+    state.write((char*)&current_addr, sizeof(current_addr));
+    state.write((char*)&autodma_ctrl, sizeof(autodma_ctrl));
+    state.write((char*)&ADMA_left, sizeof(ADMA_left));
+    state.write((char*)&input_pos, sizeof(input_pos));
+    state.write((char*)&IRQA, sizeof(IRQA));
+    state.write((char*)&ENDX, sizeof(ENDX));
+    state.write((char*)&key_off, sizeof(key_off));
+    state.write((char*)&key_on, sizeof(key_on));
 }

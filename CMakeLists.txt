@@ -73,15 +73,20 @@ set(SOURCES
         src/core/gsthread.cpp
         src/core/gsregisters.cpp
         src/core/gscontext.cpp
+	src/core/scheduler.cpp
 	src/core/serialize.cpp
 	src/core/sif.cpp
 	src/qt/emuthread.cpp
         src/qt/emuwindow.cpp
+        src/qt/settingswindow.cpp
+        src/qt/renderwidget.cpp
+        src/qt/gamelistwidget.cpp
         src/qt/ee_debugwindow.cpp
         src/qt/breakpoint_window.cpp
         src/qt/and_breakpoint_window.cpp
         src/qt/main.cpp
 	src/qt/settings.cpp
+	src/qt/bios.cpp
         )
 
 set(HEADERS
@@ -142,13 +147,18 @@ set(HEADERS
         src/core/circularFIFO.hpp
 	src/core/gscontext.hpp
 	src/core/int128.hpp
+	src/core/scheduler.hpp
 	src/core/sif.hpp
 	src/qt/emuthread.hpp
         src/qt/emuwindow.hpp
         src/qt/ee_debugwindow.hpp
         src/qt/breakpoint_window.hpp
         src/qt/and_breakpoint_window.hpp
+        src/qt/settingswindow.hpp
+        src/qt/renderwidget.hpp
+        src/qt/gamelistwidget.hpp
 	src/qt/settings.hpp
+	src/qt/bios.hpp
         )
 
 add_executable(DobieStation ${SOURCES} ${HEADERS})

@@ -34,6 +34,12 @@ void VectorInterface::reset()
     vif_stop = false;
     mark_detected = false;
     flush_stall = false;
+
+    if (id)
+        mem_mask = 0x3FF;
+    else
+        mem_mask = 0xFF;
+
     if(vu->get_id() == 1)
         VU_JIT::reset();
 }
@@ -308,8 +314,6 @@ void VectorInterface::decode_cmd(uint32_t value)
                 mpg.addr = imm * 8;
             }
 
-            VU_JIT::reset();
-
             wait_for_VU = true;
             wait_cmd_value = value;
             break;
@@ -359,16 +363,16 @@ void VectorInterface::MSCAL(uint32_t addr)
 {
     vu->start_program(addr);
 
-    ITOP = ITOPS;
+    ITOP = ITOPS & mem_mask;
 
     if (vu->get_id())
     {
         //Double buffering
-        TOP = TOPS;
+        TOP = TOPS & mem_mask;
         if (DBF)
             TOPS = BASE;
         else
-            TOPS = BASE + OFST;
+            TOPS = (BASE + OFST);
         DBF = !DBF;
     }
 }
@@ -455,7 +459,8 @@ void VectorInterface::handle_UNPACK_masking(uint128_t& quad)
 
 void VectorInterface::handle_UNPACK_mode(uint128_t& quad)
 {
-    if (MODE)
+    //Do not apply addition decompression when the format is V4-5
+    if (MODE && unpack.cmd != 0xF)
     {
         uint8_t tempmask;
 
@@ -875,6 +880,11 @@ uint32_t VectorInterface::get_row(uint32_t address)
 uint32_t VectorInterface::get_code()
 {
     return CODE;
+}
+
+uint32_t VectorInterface::get_top()
+{
+    return TOP;
 }
 
 uint32_t VectorInterface::get_err()
