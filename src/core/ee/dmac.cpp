@@ -37,6 +37,8 @@ void DMAC::reset(uint8_t* RDRAM, uint8_t* scratchpad)
     mfifo_empty_triggered = false;
     PCR = 0;
     STADR = 0;
+    rdram_cycles = 0;
+    spr_cycles = 0;
 
     active_channel = nullptr;
     queued_channels.clear();
@@ -64,7 +66,7 @@ void DMAC::reset(uint8_t* RDRAM, uint8_t* scratchpad)
 
 uint128_t DMAC::fetch128(uint32_t addr)
 {
-    if (addr & (1 << 31))
+    if ((addr & (1 << 31)) || (addr & 0x70000000) == 0x70000000)
     {
         addr &= 0x3FF0;
         return *(uint128_t*)&scratchpad[addr];
@@ -94,7 +96,7 @@ uint128_t DMAC::fetch128(uint32_t addr)
 
 void DMAC::store128(uint32_t addr, uint128_t data)
 {
-    if (addr & (1 << 31))
+    if ((addr & (1 << 31)) || (addr & 0x70000000) == 0x70000000)
     {
         addr &= 0x3FF0;
         *(uint128_t*)&scratchpad[addr] = data;
@@ -130,10 +132,16 @@ void DMAC::run(int cycles)
 {
     if (!control.master_enable || (master_disable & (1 << 16)))
         return;
+
     while (cycles > 0)
     {
         if (!active_channel)
             break;
+
+        if (active_channel->is_spr)
+            cycles -= 8;
+        else
+            cycles -= 16;
 
         (this->*active_channel->func)(0);
     }
@@ -510,6 +518,8 @@ void DMAC::process_SIF0(int cycles)
 
             channels[EE_SIF0].quadword_count = DMAtag & 0xFFFF;
             channels[EE_SIF0].address = DMAtag >> 32;
+            uint32_t addr = channels[EE_SIF0].address;
+            channels[EE_SIF0].is_spr = (addr & (1 << 31)) || (addr & 0x70000000) == 0x70000000;
 
             channels[EE_SIF0].tag_id = (DMAtag >> 28) & 0x7;
 
@@ -791,6 +801,7 @@ void DMAC::handle_source_chain(int index)
 
     uint16_t quadword_count = DMAtag & 0xFFFF;
     uint32_t addr = (DMAtag >> 32) & 0xFFFFFFF0;
+    channels[index].is_spr = (addr & (1 << 31)) || (addr & 0x70000000) == 0x70000000;
     bool IRQ_after_transfer = DMAtag & (1UL << 31);
     bool TIE = channels[index].control & (1 << 7);
     int PCR_toggle = (DMAtag >> 26) & 0x3;
@@ -934,6 +945,8 @@ void DMAC::start_DMA(int index)
             channels[index].interleaved_qwc = SQWC.transfer_qwc;
             break;
     }
+    uint32_t addr = channels[index].address;
+    channels[index].is_spr = (addr & (1 << 31)) || (addr & 0x70000000) == 0x70000000;
     channels[index].started = true;
 
     check_for_activation(index);
@@ -1521,6 +1534,7 @@ void DMAC::check_for_activation(int index)
 {
     if (channels[index].dma_req && channels[index].started)
     {
+
         if (!active_channel)
             active_channel = &channels[index];
         else
