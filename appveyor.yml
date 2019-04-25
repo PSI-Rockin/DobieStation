@@ -1,24 +1,59 @@
 version: 0.0.{build}
+
 skip_tags: true
-image: Visual Studio 2017
+
+image:
+- Visual Studio 2017
+- Ubuntu
+
 configuration: Release
 platform: x64
-environment:
+
+# environment
+for:
+-
   matrix:
-  - qt: 5.12
+    only:
+      - image: Visual Studio 2017
+  environment:
+    qt: 5.12
     arch: x64
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
     cc: VS2017
     QTDIR: C:\Qt\5.12\msvc2017_64
+-
+  matrix:
+    only:
+      - image: Ubuntu
+  environment:
+    APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu
+    cc: gcc
+
+# just kill me now
+# we can't use the normal qt installer, it doesn't run headless on linux afaik
+# and Ubuntu Xenial only has qt 5.5 when we need at least 5.10
+# https://askubuntu.com/a/1062323
+install:
+- sh: sudo add-apt-repository ppa:beineri/opt-qt-5.11.1-xenial
+- sh: sudo apt-get update -qq
+- sh: sudo apt-get install -y -qq qt511-meta-minimal qt511multimedia
+- sh: sudo apt-get install -y -qq libglu1-mesa-dev
+- sh: source /opt/qt511/bin/qt511-env.sh
+- git submodule update --init --recursive
+
 before_build:
 - cmd: call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat" %arch%
-install:
-- git submodule update --init --recursive
-build:
-  verbosity: normal
-  project: Dobiestation\DobieStation.sln
+
+build_script:
+- sh: qmake -v
+- sh: cd DobieStation 
+- sh: qmake DobieStation.pro
+- sh: make
+- cmd: msbuild "C:\projects\dobiestation\DobieStation\DobieStation.sln" /verbosity:normal /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
+
 after_build:
-- cmd: 7z a Dobiestation.zip Dobiestation/release/
+- cmd: 7z a DobieStation.zip DobieStation/release/
+
 artifacts:
-- path: Dobiestation.zip
+- path: DobieStation.zip
   type: WebDeployPackage

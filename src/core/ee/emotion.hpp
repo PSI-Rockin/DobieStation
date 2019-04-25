@@ -20,9 +20,8 @@ struct Deci2Handler
 
 struct EE_ICacheLine
 {
-    bool valid[2];
     bool lfu[2];
-    uint16_t tag[2];
+    uint32_t tag[2];
 };
 
 class EmotionEngine
@@ -39,6 +38,8 @@ class EmotionEngine
         VectorUnit* vu0;
         VectorUnit* vu1;
 
+        uint8_t** tlb_map;
+
         //Each register is 128-bit
         uint8_t gpr[32 * sizeof(uint64_t) * 2];
         uint64_t LO, HI, LO1, HI1;
@@ -52,8 +53,6 @@ class EmotionEngine
         bool can_disassemble;
         int delay_slot;
 
-        uint8_t* scratchpad;
-
         Deci2Handler deci2handlers[128];
         int deci2size;
 
@@ -61,10 +60,11 @@ class EmotionEngine
         void handle_exception(uint32_t new_addr, uint8_t code);
         void deci2call(uint32_t func, uint32_t param);
     public:
-        EmotionEngine(Cop0* cp0, Cop1* fpu, Emulator* e, uint8_t* sp, VectorUnit* vu0, VectorUnit* vu1);
+        EmotionEngine(Cop0* cp0, Cop1* fpu, Emulator* e, VectorUnit* vu0, VectorUnit* vu1);
         static const char* REG(int id);
         static const char* SYSCALL(int id);
         void reset();
+        void init_tlb();
         int run(int cycles);
         uint64_t get_cycle_count();
         uint64_t get_cop2_last_cycle();
@@ -143,6 +143,8 @@ class EmotionEngine
         void set_int0_signal(bool value);
         void set_int1_signal(bool value);
 
+        void tlbwi();
+        void tlbp();
         void eret();
         void ei();
         void di();

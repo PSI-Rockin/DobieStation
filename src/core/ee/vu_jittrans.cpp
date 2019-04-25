@@ -14,7 +14,7 @@ uint32_t branch_offset(uint32_t instr, uint32_t PC)
 
 void VU_JitTranslator::reset_instr_info()
 {
-    memset(instr_info, 0, sizeof(VU_InstrInfo));
+    memset(instr_info, 0, sizeof(instr_info));
 }
 
 IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32_t prev_pc)
