@@ -118,6 +118,7 @@ void EmuThread::gsdump_run()
             {
                 case set_xyz_t:
                     e.get_gs().send_message(data);
+                    e.get_gs().wake_gs_thread();
                     if (frame_advance && data.payload.xyz_payload.drawing_kick && --draws_sent <= 0)
                     {
                         uint16_t w, h;
@@ -152,6 +153,7 @@ void EmuThread::gsdump_run()
                     Errors::die("save_state save/load during gsdump not supported!");
                 default:
                     e.get_gs().send_message(data);
+                    e.get_gs().wake_gs_thread();
             }
             if (gsdump.eof())
                 Errors::die("gs dump unexpectedly ended");

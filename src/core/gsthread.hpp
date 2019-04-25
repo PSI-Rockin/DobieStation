@@ -388,6 +388,7 @@ class GraphicsSynthesizerThread
         
         // safe to access from emu thread
         void send_message(GSMessage message);
+        void wake_thread();
         void wait_for_return(GSReturn type, GSReturnMessage &data);
         void reset_fifos();
         void exit();

@@ -79,10 +79,16 @@ void VectorInterface::update(int cycles)
     //This allows us to process one quadword per bus cycle
     if (fifo_reverse)
     {
-        uint128_t fifo_data;
-        fifo_data = gif->read_GSFIFO();
-        for (int i = 0; i < 4; i++)
-            FIFO.push(fifo_data._u32[i]);
+        if (FIFO.size() <= 60)
+        {
+            uint128_t fifo_data;
+            while (cycles--)
+            {
+                fifo_data = gif->read_GSFIFO();
+                for (int i = 0; i < 4; i++)
+                    FIFO.push(fifo_data._u32[i]);
+            }
+        }
         return;
     }
         
