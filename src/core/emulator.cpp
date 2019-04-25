@@ -730,8 +730,14 @@ void Emulator::write32(uint32_t address, uint32_t value)
         case 0x10003010:
             gif.write_MODE(value);
             return;
+        case 0x10003810:
+            vif0.set_fbrst(value);
+            return;
         case 0x10003820:
             vif0.set_err(value);
+            return;
+        case 0x10003830:
+            vif0.set_mark(value);
             return;
         case 0x10003C10:
             vif1.set_fbrst(value);
