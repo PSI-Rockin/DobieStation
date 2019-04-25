@@ -37,8 +37,6 @@ void DMAC::reset(uint8_t* RDRAM, uint8_t* scratchpad)
     mfifo_empty_triggered = false;
     PCR = 0;
     STADR = 0;
-    rdram_cycles = 0;
-    spr_cycles = 0;
 
     active_channel = nullptr;
     queued_channels.clear();
@@ -643,7 +641,6 @@ void DMAC::process_SPR_FROM(int cycles)
         int count = 0;
         while (count < quads_to_transfer)
         {
-            printf("QWC: %d\n", channels[SPR_FROM].quadword_count);
             if (control.mem_drain_channel != 0)
             {
                 channels[SPR_FROM].address = RBOR | (channels[SPR_FROM].address & RBSR);

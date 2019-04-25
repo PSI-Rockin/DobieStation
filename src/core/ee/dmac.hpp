@@ -43,6 +43,7 @@ struct DMA_Channel
     bool started;
     bool can_stall_drain;
     bool dma_req;
+    bool is_spr;
 
     int index;
 };
