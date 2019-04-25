@@ -292,6 +292,9 @@ class GraphicsSynthesizerThread
         Vertex vtx_queue[3];
         unsigned int num_vertices;
 
+        uint32_t frame_color;
+        bool frame_color_looked_up;
+
         static const unsigned int max_vertices[8];
 
         void event_loop();
@@ -350,6 +353,7 @@ class GraphicsSynthesizerThread
         void vertex_kick(bool drawing_kick);
         bool depth_test(int32_t x, int32_t y, uint32_t z);
         void draw_pixel(int32_t x, int32_t y, uint32_t z, RGBAQ_REG& color);
+        uint32_t lookup_frame_color(int32_t x, int32_t y);
         void render_primitive();
         void render_point();
         void render_line();
