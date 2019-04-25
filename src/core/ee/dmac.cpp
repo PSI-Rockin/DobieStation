@@ -14,8 +14,8 @@ const char* DMAC::CHAN(int index)
 }
 
 DMAC::DMAC(EmotionEngine* cpu, Emulator* e, GraphicsInterface* gif, ImageProcessingUnit* ipu, SubsystemInterface* sif,
-           VectorInterface* vif0, VectorInterface* vif1) :
-    RDRAM(nullptr), scratchpad(nullptr), cpu(cpu), e(e), gif(gif), ipu(ipu), sif(sif), vif0(vif0), vif1(vif1)
+           VectorInterface* vif0, VectorInterface* vif1, VectorUnit* vu0, VectorUnit* vu1) :
+    RDRAM(nullptr), scratchpad(nullptr), cpu(cpu), e(e), gif(gif), ipu(ipu), sif(sif), vif0(vif0), vif1(vif1), vu0(vu0), vu1(vu1)
 {
     channels[VIF0].func = &DMAC::process_VIF0;
     channels[VIF1].func = &DMAC::process_VIF1;
@@ -69,6 +69,22 @@ uint128_t DMAC::fetch128(uint32_t addr)
         addr &= 0x3FF0;
         return *(uint128_t*)&scratchpad[addr];
     }
+    else if (addr >= 0x11000000 && addr < 0x11010000)
+    {
+        if (addr < 0x11004000)
+        {
+            return vu0->read_instr<uint128_t>(addr);
+        }
+        if (addr < 0x11008000)
+        {
+            return vu0->read_data<uint128_t>(addr);
+        }
+        if (addr < 0x1100C000)
+        {
+            return vu1->read_instr<uint128_t>(addr);
+        }
+        return vu1->read_data<uint128_t>(addr);
+    }
     else
     {
         addr &= 0x01FFFFF0;
@@ -83,6 +99,26 @@ void DMAC::store128(uint32_t addr, uint128_t data)
         addr &= 0x3FF0;
         *(uint128_t*)&scratchpad[addr] = data;
     }
+    else if (addr >= 0x11000000 && addr < 0x11010000)
+    {
+        if (addr < 0x11004000)
+        {
+            vu0->write_instr<uint128_t>(addr, data);
+            return;
+        }
+        if (addr < 0x11008000)
+        {
+            vu0->write_data<uint128_t>(addr, data);
+            return;
+        }
+        if (addr < 0x1100C000)
+        {
+            vu1->write_instr<uint128_t>(addr, data);
+            return;
+        }
+        vu1->write_data<uint128_t>(addr, data);
+        return;
+    }
     else
     {
         addr &= 0x01FFFFF0;
@@ -96,7 +132,6 @@ void DMAC::run(int cycles)
         return;
     while (cycles > 0)
     {
-        cycles -= 8;
         if (!active_channel)
             break;
 
@@ -452,11 +487,10 @@ void DMAC::process_SIF0(int cycles)
     int count = 0;
     while (count < quads_to_transfer)
     {
+        uint128_t quad;
         for (int i = 0; i < 4; i++)
-        {
-            uint32_t word = sif->read_SIF0();
-            e->write32(channels[EE_SIF0].address + (i * 4), word);
-        }
+            quad._u32[i] = sif->read_SIF0();
+        store128(channels[EE_SIF0].address, quad);
         advance_dest_dma(EE_SIF0);
         count++;
     }

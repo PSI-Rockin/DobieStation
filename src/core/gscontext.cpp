@@ -38,7 +38,10 @@ void GSContext::set_tex0(uint64_t value)
     tex0.CLUT_base = ((value >> 37) & 0x3FFF) * 64 * 4;
     tex0.CLUT_format = (value >> 51) & 0xF;
     tex0.use_CSM2 = (value >> 55) & 0x1;
-    tex0.CLUT_offset = ((value >> 56) & 0x1F) * 16;
+    if (!tex0.CLUT_format)
+        tex0.CLUT_offset = ((value >> 56) & 0xF) * 16 * 2;
+    else
+        tex0.CLUT_offset = ((value >> 56) & 0x1F) * 16;
     tex0.CLUT_control = (value >> 61) & 0x7;
 
     printf("TEX0: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);
@@ -74,7 +77,10 @@ void GSContext::set_tex2(uint64_t value)
     tex0.CLUT_base = ((value >> 37) & 0x3FFF) * 64 * 4;
     tex0.CLUT_format = (value >> 51) & 0xF;
     tex0.use_CSM2 = (value >> 55) & 0x1;
-    tex0.CLUT_offset = ((value >> 56) & 0x1F) * 16;
+    if (!tex0.CLUT_format)
+        tex0.CLUT_offset = ((value >> 56) & 0xF) * 16 * 2;
+    else
+        tex0.CLUT_offset = ((value >> 56) & 0x1F) * 16;
     tex0.CLUT_control = (value >> 61) & 0x7;
 
     printf("TEX2: $%08X_%08X\n", value >> 32, value);

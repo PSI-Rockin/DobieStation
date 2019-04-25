@@ -453,6 +453,7 @@
       <Filter>Distribution Files</Filter>
     </None>
     <None Include="..\README.md" />
+	<None Include="..\appveyor.yml" />
   </ItemGroup>
   <ItemGroup>
     <MASM Include="..\src\core\ee\vu_jit_asm.asm">

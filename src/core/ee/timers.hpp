@@ -49,7 +49,6 @@ class EmotionTiming
 
         void update_timers();
         void reschedule();
-        void count_up(int index);
     public:
         EmotionTiming(INTC* intc);
 

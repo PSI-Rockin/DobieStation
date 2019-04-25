@@ -414,8 +414,72 @@ void VectorUnit::run(int cycles)
     }
 }
 
+void VectorUnit::correct_jit_pipeline(int cycles)
+{
+    uint64_t stall_pipe[4];
+    int q_pipe_delay = (pipeline_state[1] >> 23) & 0xF;
+    int p_pipe_delay = (pipeline_state[1] >> 27) & 0x3F;
+
+    bool branch_delay_slot = (pipeline_state[1] >> 55) & 0x1;
+    bool ebit_delay_slot = (pipeline_state[1] >> 56) & 0x1;
+
+    stall_pipe[0] = pipeline_state[0] & 0x7FFFFF;
+    stall_pipe[1] = (pipeline_state[0] >> 23) & 0x7FFFFF;
+    stall_pipe[2] = (pipeline_state[0] >> 46) & 0x7FFFFF;
+    stall_pipe[3] = pipeline_state[1] & 0x7FFFFF;
+
+    decoder.vf_write[0] = (pipeline_state[1] >> 33) & 0x1F;
+    decoder.vf_write[1] = (pipeline_state[1] >> 38) & 0x1F;
+    decoder.vf_write_field[0] = (pipeline_state[1] >> 43) & 0xF;
+    decoder.vf_write_field[1] = (pipeline_state[1] >> 47) & 0xF;
+    decoder.vi_write_from_load = (pipeline_state[1] >> 51) & 0xF;
+
+    for (int i = 0; i < cycles; i++)
+    {
+        update_mac_pipeline();
+        decoder.reset();
+
+        if (q_pipe_delay > 0)
+        {
+            if (--q_pipe_delay == 0)
+            {
+                Q.u = new_Q_instance.u;
+            }
+        }
+        if (p_pipe_delay > 0)
+        {
+            if (--p_pipe_delay == 0)
+            {
+                P.u = new_P_instance.u;
+            }
+        }
+
+        stall_pipe[0] = stall_pipe[1];
+        stall_pipe[1] = stall_pipe[2];
+        stall_pipe[3] = stall_pipe[3];
+        stall_pipe[3] = 0;
+    }
+
+    pipeline_state[0] = stall_pipe[0] & 0x7FFFFF;
+    pipeline_state[0] |= (stall_pipe[1] & 0x7FFFFF) << 23;
+    pipeline_state[0] |= (stall_pipe[2] & 0x7FFFFF) << 46;
+    pipeline_state[1] = stall_pipe[3] & 0x7FFFFF;
+
+    pipeline_state[1] |= (q_pipe_delay & 0xF) << 23;
+    pipeline_state[1] |= (uint64_t)(p_pipe_delay & 0x3F) << 27;
+
+    pipeline_state[1] |= (uint64_t)(decoder.vf_write[0] & 0x1F) << 33UL;
+    pipeline_state[1] |= (uint64_t)(decoder.vf_write[1] & 0x1F) << 38UL;
+    pipeline_state[1] |= (uint64_t)(decoder.vf_write_field[0] & 0xF) << 43UL;
+    pipeline_state[1] |= (uint64_t)(decoder.vf_write_field[1] & 0xF) << 47UL;
+    pipeline_state[1] |= (uint64_t)(decoder.vi_write_from_load & 0xF) << 51UL;
+    pipeline_state[1] |= (uint64_t)(branch_delay_slot & 0x1) << 55UL;
+    pipeline_state[1] |= (uint64_t)(ebit_delay_slot & 0x1) << 56UL;
+}
+
 void VectorUnit::run_jit(int cycles)
 {
+    int stalled_cycles = 0;
     if (cycles > 0)
     {
         cycle_count += cycles;
@@ -424,10 +488,19 @@ void VectorUnit::run_jit(int cycles)
             gif->request_PATH(1, true);
             while (cycles > 0 && gif->path_active(1))
             {
+                if (XGKICK_stall)
+                    stalled_cycles++;
                 cycles--;
                 handle_XGKICK();
             }
         }
+        //Get the pipeline in the right state after an XGKick stall
+        if (stalled_cycles > 0)
+        {
+            correct_jit_pipeline(stalled_cycles);
+            run_event += stalled_cycles;
+        }
+
         while (running && !XGKICK_stall && run_event < cycle_count)
         {
             run_event += VU_JIT::run(this);
