@@ -297,6 +297,8 @@ class GraphicsSynthesizerThread
 
         static const unsigned int max_vertices[8];
 
+        float log2_lookup[32768][4];
+
         void event_loop();
 
         inline const uint32_t get_word(uint32_t addr) { return *(uint32_t*)&local_mem[addr]; };

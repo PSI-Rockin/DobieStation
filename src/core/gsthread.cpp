@@ -112,6 +112,33 @@ GraphicsSynthesizerThread::GraphicsSynthesizerThread()
         }
     }
 
+    //Initialize lookup table used for LOD calculation
+    for (int i = 0; i < 32768; i++)
+    {
+        uint32_t value = i * 0x10000;
+        int exp = (value >> 23) & 0xFF;
+        float calculation;
+        if (exp == 0)
+        {
+            //arbitrary "large" value
+            calculation = 1000.0;
+            continue;
+        }
+        else if (exp == 0xFF)
+        {
+            //arbitrary large negative value - do this to prevent NaNs
+            calculation = -1000.0;
+        }
+        else
+            calculation = log2(1.0f / *(float*)&value);
+
+        //L has four possible values, so we need four different shifts
+        log2_lookup[i][0] = calculation;
+        log2_lookup[i][1] = ldexp(calculation, 1);
+        log2_lookup[i][2] = ldexp(calculation, 2);
+        log2_lookup[i][3] = ldexp(calculation, 3);
+    }
+
     thread = std::thread(&GraphicsSynthesizerThread::event_loop, this);
 }
 
@@ -2723,12 +2750,12 @@ int16_t GraphicsSynthesizerThread::multiply_tex_color(int16_t tex_color, int16_t
 
 void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
 {
-    //Should be +8 really but Street Fighter EX 3 hates that and Jurassic Park/Ratchet & Clank hate anything lower than 7
-    double K = (current_ctx->tex1.K + 7.0) / 16.0;
+    float K = current_ctx->tex1.K;
 
     if (current_ctx->tex1.LOD_method == 0 && !PRIM.use_UV && info.vtx_color.q != 1.0)
     {
-        info.LOD = ldexp(log2(1.0 / fabs(info.vtx_color.q)), current_ctx->tex1.L) + K;
+        uint32_t q_int = (*(uint32_t*)&info.vtx_color.q & 0x7FFFFFFF) >> 16;
+        info.LOD = log2_lookup[q_int][current_ctx->tex1.L] + K;
 
         if (!(current_ctx->tex1.filter_smaller & 0x1))
             info.LOD = round(info.LOD + 0.5);
