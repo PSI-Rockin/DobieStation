@@ -172,18 +172,14 @@ void GraphicsSynthesizerThread::send_message(GSMessage message)
 {
     printf("[GS] Notifying gs thread of new data\n");
     message_queue->push(message);
-    /*std::unique_lock<std::mutex> lk(data_mutex);
-    notifier.notify_one();*/
     send_data = true;
 }
 
 void GraphicsSynthesizerThread::wake_thread()
 {
     printf("[GS] Waking GS Thread\n");
-    //message_queue->push(message);
     std::unique_lock<std::mutex> lk(data_mutex);
     notifier.notify_one();
-    //send_data = true;
 }
 
 void GraphicsSynthesizerThread::reset_fifos()
