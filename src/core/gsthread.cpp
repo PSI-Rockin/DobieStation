@@ -1691,33 +1691,33 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
         //printf("[GS_t] Write $%08X (%d, %d)\n", final_color, x, y);
         switch (current_ctx->frame.format)
         {
-        case 0x0:
-            write_PSMCT32_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, final_color);
-            break;
-        case 0x1:
-            write_PSMCT24_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, final_color);
-            break;
-        case 0x2:
-            write_PSMCT16_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, convert_color_down(final_color));
-            break;
-        case 0xA:
-            write_PSMCT16S_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, convert_color_down(final_color));
-            break;
-        case 0x30:
-            write_PSMCT32Z_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, final_color);
-            break;
-        case 0x31:
-            write_PSMCT24Z_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, final_color);
-            break;
-        case 0x32:
-            write_PSMCT16Z_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, convert_color_down(final_color));
-            break;
-        case 0x3A:
-            write_PSMCT16SZ_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, convert_color_down(final_color));
-            break;
-        default:
-            Errors::die("Unknown FRAME format (%x) write attempted", current_ctx->frame.format);
-            break;
+            case 0x0:
+                write_PSMCT32_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, final_color);
+                break;
+            case 0x1:
+                write_PSMCT24_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, final_color);
+                break;
+            case 0x2:
+                write_PSMCT16_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, convert_color_down(final_color));
+                break;
+            case 0xA:
+                write_PSMCT16S_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, convert_color_down(final_color));
+                break;
+            case 0x30:
+                write_PSMCT32Z_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, final_color);
+                break;
+            case 0x31:
+                write_PSMCT24Z_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, final_color);
+                break;
+            case 0x32:
+                write_PSMCT16Z_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, convert_color_down(final_color));
+                break;
+            case 0x3A:
+                write_PSMCT16SZ_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, convert_color_down(final_color));
+                break;
+            default:
+                Errors::die("Unknown FRAME format (%x) write attempted", current_ctx->frame.format);
+                break;
         }
     }
     
@@ -2365,39 +2365,39 @@ uint128_t GraphicsSynthesizerThread::local_to_host()
     switch (BITBLTBUF.source_format)
     {
         //PSMCT32
-    case 0x00:
-        ppd = 2;
-        break;
+        case 0x00:
+            ppd = 2;
+            break;
         //PSMCT24
-    case 0x01:
-        ppd = 1; //Does it all in one go
-        break;
+        case 0x01:
+            ppd = 1; //Does it all in one go
+            break;
         //PSMCT16
-    case 0x02:
-        ppd = 4;
-        break;
+        case 0x02:
+            ppd = 4;
+            break;
         //PSMCT16S
-    case 0x0A:
-        ppd = 4;
-        break;
+        case 0x0A:
+            ppd = 4;
+            break;
         //PSMCT8
-    case 0x13:
-        ppd = 8;
-        break;
+        case 0x13:
+            ppd = 8;
+            break;
         //PSMCT4
-    case 0x14:
-        ppd = 16;
-        break;
+        case 0x14:
+            ppd = 16;
+            break;
         //PSMCT8H
-    case 0x1B:
-        ppd = 8;
-        break;
-    case 0x31:
-        ppd = 1; //Does it all in one go
-        break;
-    default:
-        Errors::print_warning("[GS_t] GS Download Unrecognized BITBLTBUF source format $%02X\n", BITBLTBUF.source_format);
-        return return_data;
+        case 0x1B:
+            ppd = 8;
+            break;
+        case 0x31:
+            ppd = 1; //Does it all in one go
+            break;
+        default:
+            Errors::print_warning("[GS_t] GS Download Unrecognized BITBLTBUF source format $%02X\n", BITBLTBUF.source_format);
+            return return_data;
     }
     uint64_t data = 0;
     for (int datapart = 0; datapart < 2; datapart++)
@@ -2408,52 +2408,52 @@ uint128_t GraphicsSynthesizerThread::local_to_host()
 
             switch (BITBLTBUF.source_format)
             {
-            case 0x00:
-                data |= (uint64_t)(read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
-                    TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFFFFFF) << (i * 32);
-                pixels_transferred++;
-                TRXPOS.int_source_x++;
-                break;
-            case 0x01:
-                data = pack_PSMCT24(false);
-                break;
-            case 0x02:
-                data |= (uint64_t)(read_PSMCT16_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
-                    TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFF) << (i * 16);
-                pixels_transferred++;
-                TRXPOS.int_source_x++;
-                break;
-            case 0x0A:
-                data |= (uint64_t)(read_PSMCT16S_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
-                    TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFF) << (i * 16);
-                pixels_transferred++;
-                TRXPOS.int_source_x++;
-                break;
-            case 0x13:
-                data |= (uint64_t)(read_PSMCT8_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
-                    TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFF) << (i * 8);
-                pixels_transferred++;
-                TRXPOS.int_source_x++;
-                break;
-            case 0x14:
-                data |= (uint64_t)(read_PSMCT4_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
-                    TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xf) << (i * 4);
-                pixels_transferred++;
-                TRXPOS.int_source_x++;
-                break;
-            case 0x1B:
-                data <<= 8;
-                data |= (uint64_t)((read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
-                    TRXPOS.int_source_x, TRXPOS.int_source_y) >> 24) & 0xFF) << (i * 8);
-                pixels_transferred++;
-                TRXPOS.int_source_x++;
-                break;
-            case 0x31:
-                data = pack_PSMCT24(true);
-                break;
-            default:
-                Errors::print_warning("[GS_t] GS Download Unrecognized BITBLTBUF source format $%02X\n", BITBLTBUF.source_format);
-                return return_data;
+                case 0x00:
+                    data |= (uint64_t)(read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                        TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFFFFFF) << (i * 32);
+                    pixels_transferred++;
+                    TRXPOS.int_source_x++;
+                    break;
+                case 0x01:
+                    data = pack_PSMCT24(false);
+                    break;
+                case 0x02:
+                    data |= (uint64_t)(read_PSMCT16_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                        TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFF) << (i * 16);
+                    pixels_transferred++;
+                    TRXPOS.int_source_x++;
+                    break;
+                case 0x0A:
+                    data |= (uint64_t)(read_PSMCT16S_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                        TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFF) << (i * 16);
+                    pixels_transferred++;
+                    TRXPOS.int_source_x++;
+                    break;
+                case 0x13:
+                    data |= (uint64_t)(read_PSMCT8_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                        TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFF) << (i * 8);
+                    pixels_transferred++;
+                    TRXPOS.int_source_x++;
+                    break;
+                case 0x14:
+                    data |= (uint64_t)(read_PSMCT4_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                        TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xf) << (i * 4);
+                    pixels_transferred++;
+                    TRXPOS.int_source_x++;
+                    break;
+                case 0x1B:
+                    data <<= 8;
+                    data |= (uint64_t)((read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                        TRXPOS.int_source_x, TRXPOS.int_source_y) >> 24) & 0xFF) << (i * 8);
+                    pixels_transferred++;
+                    TRXPOS.int_source_x++;
+                    break;
+                case 0x31:
+                    data = pack_PSMCT24(true);
+                    break;
+                default:
+                    Errors::print_warning("[GS_t] GS Download Unrecognized BITBLTBUF source format $%02X\n", BITBLTBUF.source_format);
+                    return return_data;
             }
 
 
@@ -2476,8 +2476,7 @@ uint128_t GraphicsSynthesizerThread::local_to_host()
         TRXDIR = 3;
         pixels_transferred = 0;
     }
-    printf("Banana Finishing GS Download\n");
-#define printf(fmt, ...)(0)
+
     return return_data;
 }
 
