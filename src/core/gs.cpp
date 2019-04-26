@@ -101,7 +101,7 @@ void GraphicsSynthesizer::set_VBLANK(bool is_VBLANK)
     payload.vblank_payload = { is_VBLANK };
     
     gs_thread.send_message({ GSCommand::set_vblank_t, payload });
-
+    gs_thread.wake_thread();
     reg.set_VBLANK(is_VBLANK);
 
     if (is_VBLANK)
@@ -151,6 +151,7 @@ void GraphicsSynthesizer::render_CRT()
         payload.render_payload = { output_buffer2, &output_buffer2_mutex }; ;
     
     gs_thread.send_message({ GSCommand::render_crt_t, payload });
+    gs_thread.wake_thread();
 }
 
 uint32_t* GraphicsSynthesizer::render_partial_frame(uint16_t& width, uint16_t& height)
@@ -163,7 +164,7 @@ uint32_t* GraphicsSynthesizer::render_partial_frame(uint16_t& width, uint16_t& h
         payload.render_payload = { output_buffer2, &output_buffer2_mutex }; ;
     
     gs_thread.send_message({ GSCommand::memdump_t,payload });
-
+    gs_thread.wake_thread();
     GSReturnMessage data;
     gs_thread.wait_for_return(GSReturn::gsdump_render_partial_done_t, data);
     
@@ -295,7 +296,7 @@ void GraphicsSynthesizer::load_state(std::ifstream &state)
     GSMessagePayload payload;
     payload.load_state_payload = {&state};
     gs_thread.send_message({ GSCommand::load_state_t, payload });
-    
+    gs_thread.wake_thread();
     GSReturnMessage data;
     gs_thread.wait_for_return(GSReturn::load_state_done_t, data);
     
@@ -308,7 +309,7 @@ void GraphicsSynthesizer::save_state(std::ofstream &state)
     payload.save_state_payload = {&state};
 
     gs_thread.send_message({ GSCommand::save_state_t, payload });
-
+    gs_thread.wake_thread();
     GSReturnMessage data;
     gs_thread.wait_for_return(GSReturn::save_state_done_t, data);
     
@@ -321,9 +322,27 @@ void GraphicsSynthesizer::send_dump_request()
     p.no_payload = { 0 };
 
     gs_thread.send_message({ gsdump_t, p });
+    gs_thread.wake_thread();
 }
 
 void GraphicsSynthesizer::send_message(GSMessage message)
 {
     gs_thread.send_message(message);
 }
+
+void GraphicsSynthesizer::wake_gs_thread()
+{
+    gs_thread.wake_thread();
+}
+
+uint128_t GraphicsSynthesizer::request_gs_download()
+{
+    GSMessagePayload payload;
+    payload.no_payload = {};
+    gs_thread.send_message({ GSCommand::request_local_host_tx, payload });
+    gs_thread.wake_thread();
+    GSReturnMessage data;
+    gs_thread.wait_for_return(GSReturn::local_host_transfer, data);
+    return data.payload.data_payload.quad_data;
+}
+
