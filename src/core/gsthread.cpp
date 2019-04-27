@@ -72,10 +72,8 @@ float interpolate_f(int32_t x, float u1, int32_t x1, float u2, int32_t x2)
 const unsigned int GraphicsSynthesizerThread::max_vertices[8] = {1, 2, 2, 3, 3, 3, 2, 0};
 
 GraphicsSynthesizerThread::GraphicsSynthesizerThread()
+    : frame_complete(false), local_mem(nullptr)
 {
-    frame_complete = false;
-    local_mem = nullptr;
-
     //Initialize swizzling tables
     for (int block = 0; block < 32; block++)
     {
@@ -113,84 +111,206 @@ GraphicsSynthesizerThread::GraphicsSynthesizerThread()
                 page_PSMCT4[block][y][x] = (blockid_PSMCT4(block, 0, x, y) << 9) + columnTable4[y & 15][x & 31];
         }
     }
+
+    //Initialize lookup table used for LOD calculation
+    for (int i = 0; i < 32768; i++)
+    {
+        uint32_t value = i * 0x10000;
+        int exp = (value >> 23) & 0xFF;
+        float calculation;
+        if (exp == 0)
+        {
+            //arbitrary "large" value
+            calculation = 1000.0;
+            continue;
+        }
+        else if (exp == 0xFF)
+        {
+            //arbitrary large negative value - do this to prevent NaNs
+            calculation = -1000.0;
+        }
+        else
+            calculation = log2(1.0f / *(float*)&value);
+
+        //L has four possible values, so we need four different shifts
+        log2_lookup[i][0] = calculation;
+        log2_lookup[i][1] = ldexp(calculation, 1);
+        log2_lookup[i][2] = ldexp(calculation, 2);
+        log2_lookup[i][3] = ldexp(calculation, 3);
+    }
+
+    thread = std::thread(&GraphicsSynthesizerThread::event_loop, this);
 }
 
 GraphicsSynthesizerThread::~GraphicsSynthesizerThread()
 {
     delete[] local_mem;
+    delete message_queue;
+    delete return_queue;
 }
 
-void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return_fifo)
+void GraphicsSynthesizerThread::wait_for_return(GSReturn type, GSReturnMessage &data)
 {
-    GraphicsSynthesizerThread gs = GraphicsSynthesizerThread();
-    gs.reset();
+    printf("[GS] Waiting for return\n");
+
+    while (true)
+    {
+        if (return_queue->pop(data))
+        {
+            if (data.type == death_error_t)
+            {
+                auto p = data.payload.death_error_payload;
+                auto data = std::string(p.error_str);
+                delete[] p.error_str;
+                Errors::die(data.c_str());
+                //There's probably a better way of doing this
+                //but I don't know how to make RAII work across threads properly
+            }
+
+            if (data.type == type)
+                return;
+            else
+            {
+                if (return_queue->was_empty())
+                {
+                    //Last message in the queue, so we don't want this one so we need to sleep
+                    return_queue->push(data); //Put it back on the queue, something else probably wants it
+                    printf("[GS] Waiting for return message, pushed last message on to queue type %d expecting %d\n", data.type, type);
+                    std::unique_lock<std::mutex> lk(data_mutex);
+                    notifier.wait(lk, [this] {return recieve_data; });
+                    recieve_data = false;
+                }
+                else
+                    return_queue->push(data); //Put it back on the queue, something else probably wants it
+            }
+              //Errors::die("[GS] return message expected %d but was %d!\n", type, data.type);
+        }
+        else
+        {
+            printf("[GS] No Messages, waiting for return message\n");
+            std::unique_lock<std::mutex> lk(data_mutex);
+            notifier.wait(lk, [this] {return recieve_data;});
+            recieve_data = false;
+        }
+    }
+}
+
+void GraphicsSynthesizerThread::send_message(GSMessage message)
+{
+    printf("[GS] Notifying gs thread of new data\n");
+    message_queue->push(message);
+    send_data = true;
+}
+
+void GraphicsSynthesizerThread::wake_thread()
+{
+    printf("[GS] Waking GS Thread\n");
+    std::unique_lock<std::mutex> lk(data_mutex);
+    notifier.notify_one();
+}
+
+void GraphicsSynthesizerThread::reset_fifos()
+{
+    if (!message_queue)
+        message_queue = new gs_fifo();
+    if (!return_queue)
+        return_queue = new gs_return_fifo();
+
+    GSReturnMessage data;
+    while (return_queue->pop(data));
+
+    GSMessage data2;
+    while (message_queue->pop(data2));
+}
+
+void GraphicsSynthesizerThread::exit()
+{
+    if (thread.joinable())
+    {
+        GSMessagePayload payload;
+        payload.no_payload = {0};
+        
+        send_message({ GSCommand::die_t, payload });
+        
+        thread.join();
+    }
+}
+
+void GraphicsSynthesizerThread::event_loop()
+{
+    printf("[GS_t] Starting GS Thread\n");
+
+    reset();
+
     bool gsdump_recording = false;
     ofstream gsdump_file;
+
     try
     {
         while (true)
         {
             GSMessage data;
-            bool available = fifo->pop(data);
-            if (available)
+
+            if (message_queue->pop(data))
             {
                 if (gsdump_recording)
                     gsdump_file.write((char*)&data, sizeof(data));
+
                 switch (data.type)
                 {
                     case write64_t:
                     {
                         auto p = data.payload.write64_payload;
-                        gs.write64(p.addr, p.value);
+                        write64(p.addr, p.value);
                         break;
                     }
                     case write64_privileged_t:
                     {
                         auto p = data.payload.write64_payload;
-                        gs.reg.write64_privileged(p.addr, p.value);
+                        reg.write64_privileged(p.addr, p.value);
                         break;
                     }
                     case write32_privileged_t:
                     {
                         auto p = data.payload.write32_payload;
-                        gs.reg.write32_privileged(p.addr, p.value);
+                        reg.write32_privileged(p.addr, p.value);
                         break;
                     }
                     case set_rgba_t:
                     {
                         auto p = data.payload.rgba_payload;
-                        gs.set_RGBA(p.r, p.g, p.b, p.a, p.q);
+                        set_RGBA(p.r, p.g, p.b, p.a, p.q);
                         break;
                     }
                     case set_st_t:
                     {
                         auto p = data.payload.st_payload;
-                        gs.set_ST(p.s, p.t);
+                        set_ST(p.s, p.t);
                         break;
                     }
                     case set_uv_t:
                     {
                         auto p = data.payload.uv_payload;
-                        gs.set_UV(p.u, p.v);
+                        set_UV(p.u, p.v);
                         break;
                     }
                     case set_xyz_t:
                     {
                         auto p = data.payload.xyz_payload;
-                        gs.set_XYZ(p.x, p.y, p.z, p.drawing_kick);
+                        set_XYZ(p.x, p.y, p.z, p.drawing_kick);
                         break;
                     }
                     case set_xyzf_t:
                     {
                         auto p = data.payload.xyzf_payload;
-                        gs.set_XYZF(p.x, p.y, p.z, p.fog, p.drawing_kick);
+                        set_XYZF(p.x, p.y, p.z, p.fog, p.drawing_kick);
                         break;
                     }
                         break;
                     case set_crt_t:
                     {
                         auto p = data.payload.crt_payload;
-                        gs.reg.set_CRT(p.interlaced, p.mode, p.frame_mode);
+                        reg.set_CRT(p.interlaced, p.mode, p.frame_mode);
                         break;
                     }
                     case render_crt_t:
@@ -203,22 +323,25 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
                             std::this_thread::yield();
                         }
                         std::lock_guard<std::mutex> lock(*p.target_mutex, std::adopt_lock);
-                        gs.render_CRT(p.target);
+                        render_CRT(p.target);
                         GSReturnMessagePayload return_payload;
                         return_payload.no_payload = { 0 };
-                        return_fifo->push({ GSReturn::render_complete_t,return_payload });
+                        return_queue->push({ GSReturn::render_complete_t,return_payload });
+                        std::unique_lock<std::mutex> lk(data_mutex);
+                        recieve_data = true;
+                        notifier.notify_one();
                         break;
                     }
                     case assert_finish_t:
-                        gs.reg.assert_FINISH();
+                        reg.assert_FINISH();
                         break;
                     case assert_vsync_t:
-                        gs.reg.assert_VSYNC();
+                        reg.assert_VSYNC();
                         break;
                     case set_vblank_t:
                     {
                         auto p = data.payload.vblank_payload;
-                        gs.reg.set_VBLANK(p.vblank);
+                        reg.set_VBLANK(p.vblank);
                         break;
                     }
                     case memdump_t:
@@ -232,28 +355,36 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
                         }
                         std::lock_guard<std::mutex> lock(*p.target_mutex, std::adopt_lock);
                         uint16_t width, height;
-                        gs.memdump(p.target, width, height);
+                        memdump(p.target, width, height);
                         GSReturnMessagePayload return_payload;
                         return_payload.xy_payload = { width, height };
-                        return_fifo->push({ GSReturn::gsdump_render_partial_done_t,return_payload });
+                        return_queue->push({ GSReturn::gsdump_render_partial_done_t,return_payload });
+                        std::unique_lock<std::mutex> lk(data_mutex);
+                        recieve_data = true;
+                        notifier.notify_one();
                         break;
                     }
                     case die_t:
                         return;
                     case load_state_t:
                     {
-                        gs.load_state(data.payload.load_state_payload.state);
+                        load_state(data.payload.load_state_payload.state);
                         GSReturnMessagePayload return_payload;
                         return_payload.no_payload = { 0 };
-                        return_fifo->push({ GSReturn::load_state_done_t,return_payload });
+                        return_queue->push({ GSReturn::load_state_done_t,return_payload });
+                        std::unique_lock<std::mutex> lk(data_mutex);
+                        recieve_data = true;
+                        notifier.notify_one();
                         break;
                     }
                     case save_state_t:
                     {
-                        gs.save_state(data.payload.save_state_payload.state);
+                        save_state(data.payload.save_state_payload.state);
                         GSReturnMessagePayload return_payload;
                         return_payload.no_payload = { 0 };
-                        return_fifo->push({ GSReturn::save_state_done_t,return_payload });
+                        return_queue->push({ GSReturn::save_state_done_t,return_payload });
+                        recieve_data = true;
+                        notifier.notify_one();
                         break;
                     }
                     case gsdump_t:
@@ -266,8 +397,8 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
                             if (!gsdump_file.is_open())
                                 Errors::die("gs dump file failed to open");
                             gsdump_recording = true;
-                            gs.save_state(&gsdump_file);
-                            gsdump_file.write((char*)&gs.reg, sizeof(gs.reg));//this is for the emuthread's gs faker
+                            save_state(&gsdump_file);
+                            gsdump_file.write((char*)&reg, sizeof(reg));//this is for the emuthread's gs faker
                         }
                         else
                         {
@@ -277,13 +408,26 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
                         }
                         break;
                     }
+                    case request_local_host_tx:
+                    {
+                        GSReturnMessagePayload return_payload;
+                        return_payload.data_payload.quad_data = local_to_host();
+                        return_queue->push({ GSReturn::local_host_transfer, return_payload });
+                        std::unique_lock<std::mutex> lk(data_mutex);
+                        recieve_data = true;
+                        notifier.notify_one();
+                        break;
+                    }
                     default:
                         Errors::die("corrupted command sent to GS thread");
                 }
             }
             else
             {
-                std::this_thread::yield();
+                printf("GS Thread: No messages waiting, going to sleep\n");
+                std::unique_lock<std::mutex> lk(data_mutex);
+                notifier.wait(lk, [this] {return send_data;});
+                send_data = false;
             }
         }
     }
@@ -293,7 +437,9 @@ void GraphicsSynthesizerThread::event_loop(gs_fifo* fifo, gs_return_fifo* return
         char* copied_string = new char[ERROR_STRING_MAX_LENGTH];
         strncpy(copied_string, e.what(), ERROR_STRING_MAX_LENGTH);
         return_payload.death_error_payload.error_str = { copied_string };
-        return_fifo->push({ GSReturn::death_error_t,return_payload });
+        return_queue->push({ GSReturn::death_error_t, return_payload });
+        recieve_data = true;
+        notifier.notify_one();
     }
 }
 
@@ -301,6 +447,7 @@ void GraphicsSynthesizerThread::reset()
 {
     if (!local_mem)
         local_mem = new uint8_t[1024 * 1024 * 4];
+
     pixels_transferred = 0;
     num_vertices = 0;
     frame_count = 0;
@@ -316,6 +463,8 @@ void GraphicsSynthesizerThread::reset()
     current_PRMODE = &PRIM;
     PRIM.reset();
     PRMODE.reset();
+
+    reset_fifos();
 }
 
 void GraphicsSynthesizerThread::memdump(uint32_t* target, uint16_t& width, uint16_t& height)
@@ -812,6 +961,8 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
                 TRXPOS.int_source_x = TRXPOS.source_x;
                 TRXPOS.int_dest_y = TRXPOS.dest_y;
                 TRXPOS.int_source_y = TRXPOS.dest_y;
+                PSMCT24_unpacked_count = 0;
+                PSMCT24_color = 0;
                 //printf("Transfer addr: $%08X\n", transfer_addr);
                 if (TRXDIR == 2)
                 {
@@ -1229,8 +1380,55 @@ bool GraphicsSynthesizerThread::depth_test(int32_t x, int32_t y, uint32_t z)
     return false;
 }
 
+uint32_t GraphicsSynthesizerThread::lookup_frame_color(int32_t x, int32_t y)
+{
+    if (frame_color_looked_up)
+    {
+        return frame_color;
+    }
+
+    switch (current_ctx->frame.format)
+    {
+        case 0x0:
+            frame_color = read_PSMCT32_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y);
+            break;
+        case 0x1://24
+            frame_color = read_PSMCT32_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y)
+                & 0xFFFFFF;
+            frame_color |= 1 << 31;
+            break;
+        case 0x2:
+            frame_color = convert_color_up(read_PSMCT16_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y));
+            break;
+        case 0xA:
+            frame_color = convert_color_up(read_PSMCT16S_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y));
+            break;
+        case 0x30:
+            frame_color = read_PSMCT32Z_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y);
+            break;
+        case 0x31://24Z
+            frame_color = read_PSMCT32Z_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y)
+                & 0xFFFFFF;
+            frame_color |= 1 << 31;
+            break;
+        case 0x32:
+            frame_color = convert_color_up(read_PSMCT16Z_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y));
+            break;
+        case 0x3A:
+            frame_color = convert_color_up(read_PSMCT16SZ_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y));
+            break;
+        default:
+            Errors::die("Unknown FRAME format (%x) read attempted", current_ctx->frame.format);
+            break;
+    }
+    frame_color_looked_up = true;
+
+    return frame_color;
+}
+
 void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGBAQ_REG& color)
 {
+    frame_color_looked_up = false;
     x >>= 4;
     y >>= 4;
 
@@ -1308,49 +1506,11 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
     if (!pass_depth_test)
         return;
 
-    uint32_t frame_color = 0;
-    bool frame_24bit = false;
-    switch (current_ctx->frame.format)
-    {
-        case 0x0:
-            frame_color = read_PSMCT32_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y);
-            break;
-        case 0x1://24
-            frame_color = read_PSMCT32_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y)
-                          & 0xFFFFFF;
-            frame_color |= 1 << 31;
-            frame_24bit = true;
-            break;
-        case 0x2:
-            frame_color = convert_color_up(read_PSMCT16_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y));
-            break;
-        case 0xA:
-            frame_color = convert_color_up(read_PSMCT16S_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y));
-            break;
-        case 0x30:
-            frame_color = read_PSMCT32Z_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y);
-            break;
-        case 0x31://24Z
-            frame_color = read_PSMCT32Z_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y)
-                          & 0xFFFFFF;
-            frame_color |= 1 << 31;
-            frame_24bit = true;
-            break;
-        case 0x32:
-            frame_color = convert_color_up(read_PSMCT16Z_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y));
-            break;
-        case 0x3A:
-            frame_color = convert_color_up(read_PSMCT16SZ_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y));
-            break;
-        default:
-            Errors::die("Unknown FRAME format (%x) read attempted", current_ctx->frame.format);
-            break;
-    }
     uint32_t final_color = 0;
 
-    if (test->dest_alpha_test && !frame_24bit)
+    if (test->dest_alpha_test && !(current_ctx->frame.format & 0x1))
     {
-        bool alpha = frame_color & (1 << 31);
+        bool alpha = lookup_frame_color(x, y) & (1 << 31);
         if (test->dest_alpha_method ^ alpha)
             return;
     }
@@ -1371,9 +1531,9 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
                 b1 = color.b;
                 break;
             case 1:
-                r1 = frame_color & 0xFF;
-                g1 = (frame_color >> 8) & 0xFF;
-                b1 = (frame_color >> 16) & 0xFF;
+                r1 = lookup_frame_color(x, y) & 0xFF;
+                g1 = (lookup_frame_color(x, y) >> 8) & 0xFF;
+                b1 = (lookup_frame_color(x, y) >> 16) & 0xFF;
                 break;
             case 2:
             case 3:
@@ -1391,9 +1551,9 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
                 b2 = color.b;
                 break;
             case 1:
-                r2 = frame_color & 0xFF;
-                g2 = (frame_color >> 8) & 0xFF;
-                b2 = (frame_color >> 16) & 0xFF;
+                r2 = lookup_frame_color(x, y) & 0xFF;
+                g2 = (lookup_frame_color(x, y) >> 8) & 0xFF;
+                b2 = (lookup_frame_color(x, y) >> 16) & 0xFF;
                 break;
             case 2:
             case 3:
@@ -1409,7 +1569,7 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
                 alpha = color.a;
                 break;
             case 1:
-                alpha = frame_color >> 24;
+                alpha = lookup_frame_color(x, y) >> 24;
                 break;
             case 2:
             case 3:
@@ -1425,9 +1585,9 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
                 cb = color.b;
                 break;
             case 1:
-                cr = frame_color & 0xFF;
-                cg = (frame_color >> 8) & 0xFF;
-                cb = (frame_color >> 16) & 0xFF;
+                cr = lookup_frame_color(x, y) & 0xFF;
+                cg = (lookup_frame_color(x, y) >> 8) & 0xFF;
+                cb = (lookup_frame_color(x, y) >> 16) & 0xFF;
                 break;
             case 2:
             case 3:
@@ -1540,51 +1700,54 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
         final_color |= color.r;
     }
 
-    if (!update_frame)
-        final_color = frame_color;
-    uint8_t alpha = frame_color >> 24;
-    if (update_alpha && !frame_24bit)
-        alpha = final_color >> 24;
-    final_color &= 0x00FFFFFF;
-    final_color |= alpha << 24;
-
-    //FBA performs "alpha correction" - MSB of alpha is always set when writing to frame buffer
-    final_color |= current_ctx->FBA << 31;
-
-    uint32_t mask = current_ctx->frame.mask;
-    final_color = (final_color & ~mask) | (frame_color & mask);
-
-    //printf("[GS_t] Write $%08X (%d, %d)\n", final_color, x, y);
-    switch (current_ctx->frame.format)
+    if (update_frame)
     {
-        case 0x0:
-            write_PSMCT32_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, final_color);
-            break;
-        case 0x1:
-            write_PSMCT24_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, final_color);
-            break;
-        case 0x2:
-            write_PSMCT16_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, convert_color_down(final_color));
-            break;
-        case 0xA:
-            write_PSMCT16S_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, convert_color_down(final_color));
-            break;
-        case 0x30:
-            write_PSMCT32Z_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, final_color);
-            break;
-        case 0x31:
-            write_PSMCT24Z_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, final_color);
-            break;
-        case 0x32:
-            write_PSMCT16Z_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, convert_color_down(final_color));
-            break;
-        case 0x3A:
-            write_PSMCT16SZ_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, convert_color_down(final_color));
-            break;
-        default:
-            Errors::die("Unknown FRAME format (%x) write attempted", current_ctx->frame.format);
-            break;
+        if (!update_alpha)
+        {
+            uint8_t alpha = lookup_frame_color(x, y) >> 24;
+            final_color &= 0x00FFFFFF;
+            final_color |= alpha << 24;
+        }
+
+        //FBA performs "alpha correction" - MSB of alpha is always set when writing to frame buffer
+        final_color |= current_ctx->FBA << 31;
+
+        uint32_t mask = current_ctx->frame.mask;
+        final_color = (final_color & ~mask) | (lookup_frame_color(x, y) & mask);
+
+        //printf("[GS_t] Write $%08X (%d, %d)\n", final_color, x, y);
+        switch (current_ctx->frame.format)
+        {
+            case 0x0:
+                write_PSMCT32_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, final_color);
+                break;
+            case 0x1:
+                write_PSMCT24_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, final_color);
+                break;
+            case 0x2:
+                write_PSMCT16_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, convert_color_down(final_color));
+                break;
+            case 0xA:
+                write_PSMCT16S_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, convert_color_down(final_color));
+                break;
+            case 0x30:
+                write_PSMCT32Z_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, final_color);
+                break;
+            case 0x31:
+                write_PSMCT24Z_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, final_color);
+                break;
+            case 0x32:
+                write_PSMCT16Z_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, convert_color_down(final_color));
+                break;
+            case 0x3A:
+                write_PSMCT16SZ_block(current_ctx->frame.base_pointer, current_ctx->frame.width, x, y, convert_color_down(final_color));
+                break;
+            default:
+                Errors::die("Unknown FRAME format (%x) write attempted", current_ctx->frame.format);
+                break;
+        }
     }
+    
     if (update_z)
     {
         switch (current_ctx->zbuf.format)
@@ -1614,9 +1777,15 @@ void GraphicsSynthesizerThread::render_point()
     printf("[GS_t] Rendering point!\n");
     printf("Coords: (%d, %d, %d)\n", v1.x >> 4, v1.y >> 4, v1.z);
     TexLookupInfo tex_info;
+    tex_info.new_lookup = true;
     
     tex_info.vtx_color = v1.rgbaq;
     tex_info.fog = v1.fog;
+    tex_info.tex_base = current_ctx->tex0.texture_base;
+    tex_info.buffer_width = current_ctx->tex0.width;
+    tex_info.tex_width = current_ctx->tex0.tex_width;
+    tex_info.tex_height = current_ctx->tex0.tex_height;
+
     if (current_PRMODE->texture_mapping)
     {
         int32_t u, v;
@@ -1669,7 +1838,12 @@ void GraphicsSynthesizerThread::render_line()
     //int32_t max_y = min(v2.y, (int32_t)current_ctx->scissor.y2);
     
     TexLookupInfo tex_info;
+    tex_info.new_lookup = true;
     tex_info.vtx_color = vtx_queue[0].rgbaq;
+    tex_info.tex_base = current_ctx->tex0.texture_base;
+    tex_info.buffer_width = current_ctx->tex0.width;
+    tex_info.tex_width = current_ctx->tex0.tex_width;
+    tex_info.tex_height = current_ctx->tex0.tex_height;
 
     printf("Coords: (%d, %d, %d) (%d, %d, %d)\n", v1.x >> 4, v1.y >> 4, v1.z, v2.x >> 4, v2.y >> 4, v2.z);
 
@@ -1754,6 +1928,8 @@ void GraphicsSynthesizerThread::render_triangle()
     max_x = min(max_x, (int32_t)current_ctx->scissor.x2 + 0x10);
     max_y = min(max_y, (int32_t)current_ctx->scissor.y2 + 0x10);
 
+    if (max_y == min_y && min_x == max_x)
+        return;
     //We'll process the pixels in blocks, set the blocksize
     const int32_t BLOCKSIZE = 1 << 4; // Must be power of 2
 
@@ -1769,6 +1945,13 @@ void GraphicsSynthesizerThread::render_triangle()
     const int32_t B23 = v3.x - v2.x;
     const int32_t A31 = v3.y - v1.y;
     const int32_t B31 = v1.x - v3.x;
+
+    const int32_t block_A23 = (BLOCKSIZE - 1) * A23;
+    const int32_t block_A31 = (BLOCKSIZE - 1) * A31;
+    const int32_t block_A12 = (BLOCKSIZE - 1) * A12;
+    const int32_t block_B23 = (BLOCKSIZE - 1) * B23;
+    const int32_t block_B31 = (BLOCKSIZE - 1) * B31;
+    const int32_t block_B12 = (BLOCKSIZE - 1) * B12;
 
     Vertex min_corner;
     min_corner.x = min_x; min_corner.y = min_y;
@@ -1796,6 +1979,11 @@ void GraphicsSynthesizerThread::render_triangle()
     }
 
     TexLookupInfo tex_info;
+    tex_info.new_lookup = true;
+    tex_info.tex_base = current_ctx->tex0.texture_base;
+    tex_info.buffer_width = current_ctx->tex0.width;
+    tex_info.tex_width = current_ctx->tex0.tex_width;
+    tex_info.tex_height = current_ctx->tex0.tex_height;
 
     bool tmp_tex = current_PRMODE->texture_mapping;
     bool tmp_uv = !current_PRMODE->use_UV;//allow for loop unswitching
@@ -1819,15 +2007,15 @@ void GraphicsSynthesizerThread::render_triangle()
             int32_t w3_tl, w3_tr, w3_bl, w3_br;
             //Calculate the weight offsets for the corners
             w1_tl = w1_block; w2_tl = w2_block, w3_tl = w3_block;
-            w1_tr = w1_tl + (BLOCKSIZE - 1) * A23;
-            w2_tr = w2_tl + (BLOCKSIZE - 1) * A31;
-            w3_tr = w3_tl + (BLOCKSIZE - 1) * A12;
-            w1_bl = w1_tl + (BLOCKSIZE - 1) * B23;
-            w2_bl = w2_tl + (BLOCKSIZE - 1) * B31;
-            w3_bl = w3_tl + (BLOCKSIZE - 1) * B12;
-            w1_br = w1_tl + (BLOCKSIZE - 1) * B23 + (BLOCKSIZE - 1) * A23;
-            w2_br = w2_tl + (BLOCKSIZE - 1) * B31 + (BLOCKSIZE - 1) * A31;
-            w3_br = w3_tl + (BLOCKSIZE - 1) * B12 + (BLOCKSIZE - 1) * A12;
+            w1_tr = w1_tl + block_A23;
+            w2_tr = w2_tl + block_A31;
+            w3_tr = w3_tl + block_A12;
+            w1_bl = w1_tl + block_B23;
+            w2_bl = w2_tl + block_B31;
+            w3_bl = w3_tl + block_B12;
+            w1_br = w1_tl + block_B23 + block_A23;
+            w2_br = w2_tl + block_B31 + block_A31;
+            w3_br = w3_tl + block_B12 + block_A12;
 
             //Check if any of the corners are in the positive half-space of a weight
             bool w1_tl_check = w1_tl > 0;
@@ -1920,6 +2108,8 @@ void GraphicsSynthesizerThread::render_triangle()
                                 draw_pixel(x, y, (uint32_t)z, tex_info.vtx_color);
                             }
                         }
+                        else
+                            break;
                         //Horizontal step
                         w1 += A23 << 4;
                         w2 += A31 << 4;
@@ -1951,7 +2141,15 @@ void GraphicsSynthesizerThread::render_sprite()
     Vertex v2 = vtx_queue[0]; v2.to_relative(current_ctx->xyoffset);
 
     TexLookupInfo tex_info;
+    tex_info.new_lookup = true;
+
     tex_info.vtx_color = vtx_queue[0].rgbaq;
+    tex_info.tex_base = current_ctx->tex0.texture_base;
+    tex_info.buffer_width = current_ctx->tex0.width;
+    tex_info.tex_width = current_ctx->tex0.tex_width;
+    tex_info.tex_height = current_ctx->tex0.tex_height;
+
+    calculate_LOD(tex_info);
 
     if (v1.x > v2.x)
     {
@@ -1959,10 +2157,10 @@ void GraphicsSynthesizerThread::render_sprite()
     }
 
     //Automatic scissoring test
-    int32_t min_y = std::max(v1.y, (int32_t)current_ctx->scissor.y1);
-    int32_t min_x = std::max(v1.x, (int32_t)current_ctx->scissor.x1);
-    int32_t max_y = std::min(v2.y, (int32_t)current_ctx->scissor.y2 + 0x10);
-    int32_t max_x = std::min(v2.x, (int32_t)current_ctx->scissor.x2 + 0x10);
+    int32_t min_y = ((std::max(v1.y, (int32_t)current_ctx->scissor.y1) + 8) >> 4) << 4;
+    int32_t min_x = ((std::max(v1.x, (int32_t)current_ctx->scissor.x1) + 8) >> 4) << 4;
+    int32_t max_y = ((std::min(v2.y, (int32_t)current_ctx->scissor.y2 + 0x10) + 8) >> 4) << 4;
+    int32_t max_x = ((std::min(v2.x, (int32_t)current_ctx->scissor.x2 + 0x10) + 8) >> 4) << 4;
 
     printf("Coords: (%d, %d) (%d, %d)\n", min_x >> 4, min_y >> 4, max_x >> 4, max_y >> 4);
 
@@ -1988,7 +2186,6 @@ void GraphicsSynthesizerThread::render_sprite()
             if (tmp_tex)
             {
                 tex_info.fog = v2.fog;
-                calculate_LOD(tex_info);
                 if (tmp_uv)
                 {
                     pix_v = (pix_t * tex_info.tex_height) * 16.0;
@@ -2183,6 +2380,133 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
     }
 }
 
+uint128_t GraphicsSynthesizerThread::local_to_host()
+{
+    int ppd = 0; //pixels per doubleword (64-bits)
+    uint128_t return_data;
+    return_data._u64[0] = 0;
+    return_data._u64[1] = 0;
+    if (TRXDIR == 3)
+        return return_data;
+
+    switch (BITBLTBUF.source_format)
+    {
+        //PSMCT32
+        case 0x00:
+            ppd = 2;
+            break;
+        //PSMCT24
+        case 0x01:
+            ppd = 1; //Does it all in one go
+            break;
+        //PSMCT16
+        case 0x02:
+            ppd = 4;
+            break;
+        //PSMCT16S
+        case 0x0A:
+            ppd = 4;
+            break;
+        //PSMCT8
+        case 0x13:
+            ppd = 8;
+            break;
+        //PSMCT4
+        case 0x14:
+            ppd = 16;
+            break;
+        //PSMCT8H
+        case 0x1B:
+            ppd = 8;
+            break;
+        case 0x31:
+            ppd = 1; //Does it all in one go
+            break;
+        default:
+            Errors::print_warning("[GS_t] GS Download Unrecognized BITBLTBUF source format $%02X\n", BITBLTBUF.source_format);
+            return return_data;
+    }
+    uint64_t data = 0;
+    for (int datapart = 0; datapart < 2; datapart++)
+    {
+        for (int i = 0; i < ppd; i++)
+        {
+            int datapart = i / (ppd / 2);
+
+            switch (BITBLTBUF.source_format)
+            {
+                case 0x00:
+                    data |= (uint64_t)(read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                        TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFFFFFF) << (i * 32);
+                    pixels_transferred++;
+                    TRXPOS.int_source_x++;
+                    break;
+                case 0x01:
+                    data = pack_PSMCT24(false);
+                    break;
+                case 0x02:
+                    data |= (uint64_t)(read_PSMCT16_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                        TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFF) << (i * 16);
+                    pixels_transferred++;
+                    TRXPOS.int_source_x++;
+                    break;
+                case 0x0A:
+                    data |= (uint64_t)(read_PSMCT16S_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                        TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFF) << (i * 16);
+                    pixels_transferred++;
+                    TRXPOS.int_source_x++;
+                    break;
+                case 0x13:
+                    data |= (uint64_t)(read_PSMCT8_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                        TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFF) << (i * 8);
+                    pixels_transferred++;
+                    TRXPOS.int_source_x++;
+                    break;
+                case 0x14:
+                    data |= (uint64_t)(read_PSMCT4_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                        TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xf) << (i * 4);
+                    pixels_transferred++;
+                    TRXPOS.int_source_x++;
+                    break;
+                case 0x1B:
+                    data <<= 8;
+                    data |= (uint64_t)((read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                        TRXPOS.int_source_x, TRXPOS.int_source_y) >> 24) & 0xFF) << (i * 8);
+                    pixels_transferred++;
+                    TRXPOS.int_source_x++;
+                    break;
+                case 0x31:
+                    data = pack_PSMCT24(true);
+                    break;
+                default:
+                    Errors::print_warning("[GS_t] GS Download Unrecognized BITBLTBUF source format $%02X\n", BITBLTBUF.source_format);
+                    return return_data;
+            }
+
+
+            if (TRXPOS.int_source_x - TRXPOS.source_x == TRXREG.width)
+            {
+                TRXPOS.int_source_x = TRXPOS.source_x;
+                TRXPOS.int_source_y++;
+            }
+        }
+
+        return_data._u64[datapart] = data;
+        data = 0;
+    }
+
+    int max_pixels = TRXREG.width * TRXREG.height;
+    if (pixels_transferred >= max_pixels)
+    {
+        //Deactivate the transmisssion
+        printf("[GS_t] Local to Host transfer ended\n");
+        TRXDIR = 3;
+        pixels_transferred = 0;
+    }
+
+    return return_data;
+}
+
 void GraphicsSynthesizerThread::unpack_PSMCT24(uint64_t data, int offset, bool z_format)
 {
     int bytes_unpacked = 0;
@@ -2205,6 +2529,61 @@ void GraphicsSynthesizerThread::unpack_PSMCT24(uint64_t data, int offset, bool z
             pixels_transferred++;
         }
     }
+}
+
+uint64_t GraphicsSynthesizerThread::pack_PSMCT24(bool z_format)
+{
+    int data_in_output = 0;
+    uint64_t output_color = 0;
+
+    while (data_in_output < 64)
+    {
+        if (PSMCT24_unpacked_count)
+        {
+            output_color |= (uint64_t)PSMCT24_color << data_in_output;
+            data_in_output += PSMCT24_unpacked_count;
+
+            //Data overflowed, so keep left over
+            if (data_in_output > 64)
+            {
+                PSMCT24_color >>= PSMCT24_unpacked_count - (data_in_output - 64);                
+                PSMCT24_unpacked_count = (data_in_output - 64);
+            }
+            else
+            {
+                PSMCT24_unpacked_count = 0;
+                PSMCT24_color = 0;
+            }
+
+            int max_pixels = TRXREG.width * TRXREG.height;
+            if (pixels_transferred >= max_pixels)
+                break;
+        }
+        else
+        {
+            if (z_format)
+            {
+                PSMCT24_color = (uint64_t)(read_PSMCT32Z_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                    TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFFFF) << PSMCT24_unpacked_count;
+            }
+            else
+            {
+                PSMCT24_color = (uint64_t)(read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                    TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFFFF) << PSMCT24_unpacked_count;
+            }
+            PSMCT24_unpacked_count += 24;
+            TRXPOS.int_source_x++;
+            pixels_transferred++;
+
+            if (TRXPOS.int_source_x - TRXPOS.source_x == TRXREG.width)
+            {
+                TRXPOS.int_source_x = TRXPOS.source_x;
+                TRXPOS.int_source_y++;
+            }
+        }
+    }
+
+    return output_color;
 }
 
 void GraphicsSynthesizerThread::local_to_local()
@@ -2349,163 +2728,196 @@ uint8_t GraphicsSynthesizerThread::get_16bit_alpha(uint16_t color)
     return TEXA.alpha0;
 }
 
+int16_t GraphicsSynthesizerThread::multiply_tex_color(int16_t tex_color, int16_t frag_color)
+{
+    int16_t temp_color;
+    if (frag_color != 0x80)
+    {
+        temp_color = (tex_color * frag_color) >> 7;
+    }
+    else
+    {
+        temp_color = tex_color;
+    }
+
+    if (temp_color > 0xFF)
+        temp_color = 0xFF;
+    if (temp_color < 0)
+        temp_color = 0;
+
+    return temp_color;
+}
+
 void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
 {
-    if (current_ctx->tex1.LOD_method == 0)
-        info.LOD = ldexp(-log2(fabs(info.vtx_color.q)), current_ctx->tex1.L) + current_ctx->tex1.K;
-    else
-        info.LOD = current_ctx->tex1.K;
+    float K = current_ctx->tex1.K;
 
-    if (info.LOD < 1.0 / 128.0) //ps2 precision limit
-        info.LOD = 0.0;
-
-    info.tex_base = current_ctx->tex0.texture_base;
-    info.buffer_width = current_ctx->tex0.width;
-    info.tex_width = current_ctx->tex0.tex_width;
-    info.tex_height = current_ctx->tex0.tex_height;
-
-    //Determine mipmap level
-    info.mipmap_level = min((uint8_t)floor(info.LOD), current_ctx->tex1.max_MIP_level);
-    if (info.mipmap_level > 0)
+    if (current_ctx->tex1.LOD_method == 0 && !PRIM.use_UV && info.vtx_color.q != 1.0)
     {
-        if (current_ctx->tex1.MTBA && info.mipmap_level < 4)
-        {
-            //Counted in bytes
-            const static float format_sizes[] =
-            {
-                //0x00
-                4, 4, 2, 0, 0, 0, 0, 0,
+        uint32_t q_int = (*(uint32_t*)&info.vtx_color.q & 0x7FFFFFFF) >> 16;
+        info.LOD = log2_lookup[q_int][current_ctx->tex1.L] + K;
 
-                //0x08
-                0, 0, 2, 0, 0, 0, 0, 0,
-
-                //0x10
-                0, 0, 0, 1, 0.5, 0, 0, 0,
-
-                //0x18
-                0, 0, 0, 4, 0, 0, 0, 0,
-
-                //0x20
-                0, 0, 0, 0, 4, 0, 0, 0,
-
-                //0x28
-                0, 0, 0, 0, 4, 0, 0, 0,
-
-                //0x30
-                4, 4, 2, 0, 0, 0, 0, 0,
-
-                //0x38
-                0, 0, 2, 0, 0, 0, 0, 0
-            };
-            //Calculate the texture base based on a continuous memory region
-
-            uint32_t offset;
-            for (int i = 0; i < info.mipmap_level; i++)
-            {
-                offset = (info.tex_width * info.tex_height) >> (i << 1);
-                info.tex_base += (offset * format_sizes[current_ctx->tex0.format]);
-            }
-        }
-        else
-            info.tex_base = current_ctx->miptbl.texture_base[info.mipmap_level];
-        info.buffer_width = current_ctx->miptbl.width[info.mipmap_level];
-        info.tex_width >>= info.mipmap_level;
-        info.tex_height >>= info.mipmap_level;
-
-        //TODO: set minimum texture size to 8 when using bilinear filtering
-        info.tex_width = max((int)info.tex_width, 1);
-        info.tex_height = max((int)info.tex_height, 1);
+        if (!(current_ctx->tex1.filter_smaller & 0x1))
+            info.LOD = round(info.LOD + 0.5);
     }
+    else
+        info.LOD = round(K);
+
+    if (current_ctx->tex1.max_MIP_level)
+    {
+        //Determine mipmap level
+        info.mipmap_level = min((int8_t)info.LOD, (int8_t)current_ctx->tex1.max_MIP_level);
+
+        if (info.mipmap_level < 0)
+            info.mipmap_level = 0;
+
+        if (info.mipmap_level > 0)
+        {
+            info.tex_base = current_ctx->tex0.texture_base;
+            info.buffer_width = current_ctx->tex0.width;
+            info.tex_width = current_ctx->tex0.tex_width;
+            info.tex_height = current_ctx->tex0.tex_height;
+
+            if (current_ctx->tex1.MTBA && info.mipmap_level < 4)
+            {
+                //Counted in bytes
+                const static float format_sizes[] =
+                {
+                    //0x00
+                    4, 4, 2, 0, 0, 0, 0, 0,
+
+                    //0x08
+                    0, 0, 2, 0, 0, 0, 0, 0,
+
+                    //0x10
+                    0, 0, 0, 1, 0.5, 0, 0, 0,
+
+                    //0x18
+                    0, 0, 0, 4, 0, 0, 0, 0,
+
+                    //0x20
+                    0, 0, 0, 0, 4, 0, 0, 0,
+
+                    //0x28
+                    0, 0, 0, 0, 4, 0, 0, 0,
+
+                    //0x30
+                    4, 4, 2, 0, 0, 0, 0, 0,
+
+                    //0x38
+                    0, 0, 2, 0, 0, 0, 0, 0
+                };
+                //Calculate the texture base based on a continuous memory region
+
+                uint32_t offset;
+                for (int i = 0; i < info.mipmap_level; i++)
+                {
+                    offset = (info.tex_width * info.tex_height) >> (i << 1);
+                    info.tex_base += (offset * format_sizes[current_ctx->tex0.format]);
+                }
+            }
+            else
+                info.tex_base = current_ctx->miptbl.texture_base[info.mipmap_level - 1];
+            info.buffer_width = current_ctx->miptbl.width[info.mipmap_level - 1];
+            info.tex_width >>= info.mipmap_level;
+            info.tex_height >>= info.mipmap_level;
+
+            info.tex_width = max((int)info.tex_width, 1);
+            info.tex_height = max((int)info.tex_height, 1);
+        }
+    }
+    else
+        info.mipmap_level = 0;
 }
 
 void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, TexLookupInfo& info)
 {
-    if (current_ctx->tex1.filter_larger && info.LOD <= 0.0)
+    bool bilinear_filter = false;
+
+    //If UV is being used and MIPMAP is enabled, we need to bring down the UV size too
+    if (PRIM.use_UV)
+    {
+        u >>= info.mipmap_level;
+        v >>= info.mipmap_level;
+    }
+
+    if (info.tex_height >= 8 && info.tex_width >= 8)
+    {
+        if (current_ctx->tex1.filter_larger && info.LOD < 0.0)
+            bilinear_filter = true;
+
+        //Bilinear filtering is used when set to 1 or 4 and above
+        if ((current_ctx->tex1.filter_smaller == 0x1 || current_ctx->tex1.filter_smaller >= 4) && info.LOD >= 0.0)
+            bilinear_filter = true;
+    }
+
+    if (bilinear_filter)
     {
         RGBAQ_REG a, b, c, d;
         int16_t uu = (u - 8) >> 4;
         int16_t vv = (v - 8) >> 4;
 
-        tex_lookup_int(uu, vv, info);
-        a = info.tex_color;
+        tex_lookup_int(uu, vv, info, true);
+        a = info.srctex_color;
 
-        tex_lookup_int(uu+1, vv, info);
-        b = info.tex_color;
+        tex_lookup_int(uu + 1, vv, info, true);
+        b = info.srctex_color;
 
-        tex_lookup_int(uu, vv+1, info);
-        c = info.tex_color;
+        tex_lookup_int(uu, vv + 1, info, true);
+        c = info.srctex_color;
 
-        tex_lookup_int(uu+1, vv+1, info);
-        d = info.tex_color;
+        tex_lookup_int(uu + 1, vv + 1, info, true);
+        d = info.srctex_color;
 
-        double alpha = ((u - 8) & 0xF) * (1.0 / ((double)0xF));
-        double beta = ((v - 8) & 0xF) * (1.0 / ((double)0xF));
+        double alpha = (double)((u - 8) & 0xF) * (1.0 / 16.0);
+        double beta = (double)((v - 8) & 0xF) * (1.0 / 16.0);
         double alpha_s = 1.0 - alpha;
         double beta_s = 1.0 - beta;
-        info.tex_color.r = alpha_s * beta_s*a.r + alpha * beta_s*b.r + alpha_s * beta*c.r + alpha * beta*d.r;
-        info.tex_color.g = alpha_s * beta_s*a.g + alpha * beta_s*b.g + alpha_s * beta*c.g + alpha * beta*d.g;
-        info.tex_color.b = alpha_s * beta_s*a.b + alpha * beta_s*b.b + alpha_s * beta*c.b + alpha * beta*d.b;
-        info.tex_color.a = alpha_s * beta_s*a.a + alpha * beta_s*b.a + alpha_s * beta*c.a + alpha * beta*d.a;
+        info.srctex_color.r = alpha_s * beta_s*a.r + alpha * beta_s*b.r + alpha_s * beta*c.r + alpha * beta*d.r;
+        info.srctex_color.g = alpha_s * beta_s*a.g + alpha * beta_s*b.g + alpha_s * beta*c.g + alpha * beta*d.g;
+        info.srctex_color.b = alpha_s * beta_s*a.b + alpha * beta_s*b.b + alpha_s * beta*c.b + alpha * beta*d.b;
+        info.srctex_color.a = alpha_s * beta_s*a.a + alpha * beta_s*b.a + alpha_s * beta*c.a + alpha * beta*d.a;
     }
-    else
+    else //If we already have looked up the texture at this location and messed with it, no point in doing it again
         tex_lookup_int(u >> 4, v >> 4, info);
 
     switch (current_ctx->tex0.color_function)
     {
         case 0: //Modulate
-            info.tex_color.r = (info.tex_color.r * info.vtx_color.r) >> 7;
-            info.tex_color.g = (info.tex_color.g * info.vtx_color.g) >> 7;
-            info.tex_color.b = (info.tex_color.b * info.vtx_color.b) >> 7;
+            info.tex_color.r = multiply_tex_color(info.srctex_color.r, info.vtx_color.r);
+            info.tex_color.g = multiply_tex_color(info.srctex_color.g, info.vtx_color.g);
+            info.tex_color.b = multiply_tex_color(info.srctex_color.b, info.vtx_color.b);
             if (current_ctx->tex0.use_alpha)
-                info.tex_color.a = (info.tex_color.a * info.vtx_color.a) >> 7;
+                info.tex_color.a = multiply_tex_color(info.srctex_color.a, info.vtx_color.a);
             else
                 info.tex_color.a = info.vtx_color.a;
-
-            //Clamp texture colors
-            if (info.tex_color.r > 0xFF)
-                info.tex_color.r = 0xFF;
-            if (info.tex_color.g > 0xFF)
-                info.tex_color.g = 0xFF;
-            if (info.tex_color.b > 0xFF)
-                info.tex_color.b = 0xFF;
-            if (info.tex_color.a > 0xFF)
-                info.tex_color.a = 0xFF;
             break;
         case 1: //Decal
             if (!current_ctx->tex0.use_alpha)
                 info.tex_color.a = info.vtx_color.a;
+            else
+                info.tex_color.a = info.srctex_color.a;
+            info.tex_color.r = info.srctex_color.r;
+            info.tex_color.g = info.srctex_color.g;
+            info.tex_color.b = info.srctex_color.b;
             break;
         case 2: //Highlight
-            info.tex_color.r = ((info.tex_color.r * info.vtx_color.r) >> 7) + info.vtx_color.a;
-            info.tex_color.g = ((info.tex_color.g * info.vtx_color.g) >> 7) + info.vtx_color.a;
-            info.tex_color.b = ((info.tex_color.b * info.vtx_color.b) >> 7) + info.vtx_color.a;
+            info.tex_color.r = multiply_tex_color(info.srctex_color.r, info.vtx_color.r) + info.vtx_color.a;
+            info.tex_color.g = multiply_tex_color(info.srctex_color.g, info.vtx_color.g) + info.vtx_color.a;
+            info.tex_color.b = multiply_tex_color(info.srctex_color.b, info.vtx_color.b) + info.vtx_color.a;
             if (!current_ctx->tex0.use_alpha)
                 info.tex_color.a = info.vtx_color.a;
             else
-                info.tex_color.a += info.vtx_color.a;
-
-            if (info.tex_color.r > 0xFF)
-                info.tex_color.r = 0xFF;
-            if (info.tex_color.g > 0xFF)
-                info.tex_color.g = 0xFF;
-            if (info.tex_color.b > 0xFF)
-                info.tex_color.b = 0xFF;
-            if (info.tex_color.a > 0xFF)
-                info.tex_color.a = 0xFF;
+                info.tex_color.a = info.srctex_color.a + info.vtx_color.a;
             break;
         case 3: //Highlight2
-            info.tex_color.r = ((info.tex_color.r * info.vtx_color.r) >> 7) + info.vtx_color.a;
-            info.tex_color.g = ((info.tex_color.g * info.vtx_color.g) >> 7) + info.vtx_color.a;
-            info.tex_color.b = ((info.tex_color.b * info.vtx_color.b) >> 7) + info.vtx_color.a;
+            info.tex_color.r = multiply_tex_color(info.srctex_color.r, info.vtx_color.r) + info.vtx_color.a;
+            info.tex_color.g = multiply_tex_color(info.srctex_color.g, info.vtx_color.g) + info.vtx_color.a;
+            info.tex_color.b = multiply_tex_color(info.srctex_color.b, info.vtx_color.b) + info.vtx_color.a;
             if (!current_ctx->tex0.use_alpha)
                 info.tex_color.a = info.vtx_color.a;
-
-            if (info.tex_color.r > 0xFF)
-                info.tex_color.r = 0xFF;
-            if (info.tex_color.g > 0xFF)
-                info.tex_color.g = 0xFF;
-            if (info.tex_color.b > 0xFF)
-                info.tex_color.b = 0xFF;
+            else
+                info.tex_color.a = info.srctex_color.a;
             break;
         default:
             Errors::die("[GS_t] Unrecognized texture color function $%02X", current_ctx->tex0.color_function);
@@ -2521,7 +2933,7 @@ void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, TexLookupInfo& 
     }
 }
 
-void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupInfo& info)
+void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupInfo& info, bool forced_lookup)
 {
     switch (current_ctx->clamp.wrap_s)
     {
@@ -2529,8 +2941,8 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupIn
             u &= info.tex_width - 1;
             break;
         case 1:
-            if (u > info.tex_width)
-                u = info.tex_width;
+            if (u >= info.tex_width)
+                u = info.tex_width-1;
             else if (u < 0)
                 u = 0;
             break;
@@ -2551,8 +2963,8 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupIn
             v &= info.tex_height - 1;
             break;
         case 1:
-            if (v > info.tex_height)
-                v = info.tex_height;
+            if (v >= info.tex_height)
+                v = info.tex_height-1;
             else if (v < 0)
                 v = 0;
             break;
@@ -2567,6 +2979,16 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupIn
             break;
     }
 
+    if (!info.new_lookup && !forced_lookup)
+    {
+        //if it's the same texture position, we already have the info, no need to look it up again
+        if (u == info.lastu && v == info.lastv)
+            return;
+    }
+    info.lastu = u;
+    info.lastv = v;
+    info.new_lookup = forced_lookup; //If we're forcing a lookup, it's bilinear filtering, so the src will get polluted
+
     uint32_t tex_base = info.tex_base;
     uint32_t width = info.buffer_width;
     switch (current_ctx->tex0.format)
@@ -2574,74 +2996,74 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupIn
         case 0x00:
         {
             uint32_t color = read_PSMCT32_block(tex_base, width, u, v);
-            info.tex_color.r = color & 0xFF;
-            info.tex_color.g = (color >> 8) & 0xFF;
-            info.tex_color.b = (color >> 16) & 0xFF;
-            info.tex_color.a = color >> 24;
+            info.srctex_color.r = color & 0xFF;
+            info.srctex_color.g = (color >> 8) & 0xFF;
+            info.srctex_color.b = (color >> 16) & 0xFF;
+            info.srctex_color.a = color >> 24;
         }
             break;
         case 0x01:
         {
             uint32_t color = read_PSMCT32_block(tex_base, width, u, v);
-            info.tex_color.r = color & 0xFF;
-            info.tex_color.g = (color >> 8) & 0xFF;
-            info.tex_color.b = (color >> 16) & 0xFF;
+            info.srctex_color.r = color & 0xFF;
+            info.srctex_color.g = (color >> 8) & 0xFF;
+            info.srctex_color.b = (color >> 16) & 0xFF;
 
             if (!(color & 0xFFFFFF) && TEXA.trans_black)
-                info.tex_color.a = 0;
+                info.srctex_color.a = 0;
             else
-                info.tex_color.a = TEXA.alpha0;
+                info.srctex_color.a = TEXA.alpha0;
         }
             break;
         case 0x02:
         {
             uint16_t color = read_PSMCT16_block(tex_base, width, u, v);
-            info.tex_color.r = (color & 0x1F) << 3;
-            info.tex_color.g = ((color >> 5) & 0x1F) << 3;
-            info.tex_color.b = ((color >> 10) & 0x1F) << 3;
-            info.tex_color.a = get_16bit_alpha(color);
+            info.srctex_color.r = (color & 0x1F) << 3;
+            info.srctex_color.g = ((color >> 5) & 0x1F) << 3;
+            info.srctex_color.b = ((color >> 10) & 0x1F) << 3;
+            info.srctex_color.a = get_16bit_alpha(color);
         }
             break;
         case 0x09: //Invalid format??? FFX uses it
-            info.tex_color.r = 0;
-            info.tex_color.g = 0;
-            info.tex_color.b = 0;
-            info.tex_color.a = 0;
+            info.srctex_color.r = 0;
+            info.srctex_color.g = 0;
+            info.srctex_color.b = 0;
+            info.srctex_color.a = 0;
             break;
         case 0x0A:
         {
             uint16_t color = read_PSMCT16S_block(tex_base, width, u, v);
-            info.tex_color.r = (color & 0x1F) << 3;
-            info.tex_color.g = ((color >> 5) & 0x1F) << 3;
-            info.tex_color.b = ((color >> 10) & 0x1F) << 3;
-            info.tex_color.a = get_16bit_alpha(color);
+            info.srctex_color.r = (color & 0x1F) << 3;
+            info.srctex_color.g = ((color >> 5) & 0x1F) << 3;
+            info.srctex_color.b = ((color >> 10) & 0x1F) << 3;
+            info.srctex_color.a = get_16bit_alpha(color);
         }
             break;
         case 0x13:
         {
             uint8_t entry = read_PSMCT8_block(tex_base, width, u, v);
             if (current_ctx->tex0.use_CSM2)
-                clut_CSM2_lookup(entry, info.tex_color);
+                clut_CSM2_lookup(entry, info.srctex_color);
             else
-                clut_lookup(entry, info.tex_color);
+                clut_lookup(entry, info.srctex_color);
         }
             break;
         case 0x14:
         {
             uint8_t entry = read_PSMCT4_block(tex_base, width, u, v);
             if (current_ctx->tex0.use_CSM2)
-                clut_CSM2_lookup(entry, info.tex_color);
+                clut_CSM2_lookup(entry, info.srctex_color);
             else
-                clut_lookup(entry, info.tex_color);
+                clut_lookup(entry, info.srctex_color);
         }
             break;
         case 0x1B:
         {
             uint8_t entry = read_PSMCT32_block(tex_base, width, u, v) >> 24;
             if (current_ctx->tex0.use_CSM2)
-                clut_CSM2_lookup(entry, info.tex_color);
+                clut_CSM2_lookup(entry, info.srctex_color);
             else
-                clut_lookup(entry, info.tex_color);
+                clut_lookup(entry, info.srctex_color);
         }
             break;
         case 0x24:
@@ -2649,9 +3071,9 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupIn
             //printf("[GS_t] Format $24: Read from $%08X\n", tex_base + (coord << 2));
             uint8_t entry = (read_PSMCT32_block(tex_base, width, u, v) >> 24) & 0xF;
             if (current_ctx->tex0.use_CSM2)
-                clut_CSM2_lookup(entry, info.tex_color);
+                clut_CSM2_lookup(entry, info.srctex_color);
             else
-                clut_lookup(entry, info.tex_color);
+                clut_lookup(entry, info.srctex_color);
             break;
         }
             break;
@@ -2659,48 +3081,48 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupIn
         {
             uint8_t entry = read_PSMCT32_block(tex_base, width, u, v) >> 28;
             if (current_ctx->tex0.use_CSM2)
-                clut_CSM2_lookup(entry, info.tex_color);
+                clut_CSM2_lookup(entry, info.srctex_color);
             else
-                clut_lookup(entry, info.tex_color);
+                clut_lookup(entry, info.srctex_color);
         }
             break;
         case 0x30:
         {
             uint32_t color = read_PSMCT32Z_block(tex_base, width, u, v);
-            info.tex_color.r = color & 0xFF;
-            info.tex_color.g = (color >> 8) & 0xFF;
-            info.tex_color.b = (color >> 16) & 0xFF;
-            info.tex_color.a = color >> 24;
+            info.srctex_color.r = color & 0xFF;
+            info.srctex_color.g = (color >> 8) & 0xFF;
+            info.srctex_color.b = (color >> 16) & 0xFF;
+            info.srctex_color.a = color >> 24;
         }
             break;
         case 0x31:
         {
             uint32_t color = read_PSMCT32Z_block(tex_base, width, u, v);
-            info.tex_color.r = color & 0xFF;
-            info.tex_color.g = (color >> 8) & 0xFF;
-            info.tex_color.b = (color >> 16) & 0xFF;
+            info.srctex_color.r = color & 0xFF;
+            info.srctex_color.g = (color >> 8) & 0xFF;
+            info.srctex_color.b = (color >> 16) & 0xFF;
             if (!(color & 0xFFFFFF) && TEXA.trans_black)
-                info.tex_color.a = 0;
+                info.srctex_color.a = 0;
             else
-                info.tex_color.a = TEXA.alpha0;
+                info.srctex_color.a = TEXA.alpha0;
         }
             break;
         case 0x32:
         {
             uint16_t color = read_PSMCT16Z_block(tex_base, width, u, v);
-            info.tex_color.r = (color & 0x1F) << 3;
-            info.tex_color.g = ((color >> 5) & 0x1F) << 3;
-            info.tex_color.b = ((color >> 10) & 0x1F) << 3;
-            info.tex_color.a = get_16bit_alpha(color);
+            info.srctex_color.r = (color & 0x1F) << 3;
+            info.srctex_color.g = ((color >> 5) & 0x1F) << 3;
+            info.srctex_color.b = ((color >> 10) & 0x1F) << 3;
+            info.srctex_color.a = get_16bit_alpha(color);
         }
             break;
         case 0x3A:
         {
             uint16_t color = read_PSMCT16SZ_block(tex_base, width, u, v);
-            info.tex_color.r = (color & 0x1F) << 3;
-            info.tex_color.g = ((color >> 5) & 0x1F) << 3;
-            info.tex_color.b = ((color >> 10) & 0x1F) << 3;
-            info.tex_color.a = get_16bit_alpha(color);
+            info.srctex_color.r = (color & 0x1F) << 3;
+            info.srctex_color.g = ((color >> 5) & 0x1F) << 3;
+            info.srctex_color.b = ((color >> 10) & 0x1F) << 3;
+            info.srctex_color.a = get_16bit_alpha(color);
         }
             break;
         default:
@@ -2718,7 +3140,7 @@ void GraphicsSynthesizerThread::clut_lookup(uint8_t entry, RGBAQ_REG &tex_color)
         case 0x00:
         case 0x01:
         {
-            uint32_t color = *(uint32_t*)&clut_cache[((clut_addr + entry) << 2) & 0x3FF];
+            uint32_t color = *(uint32_t*)&clut_cache[((clut_addr << 1) + (entry << 2)) & 0x7FF];
             tex_color.r = color & 0xFF;
             tex_color.g = (color >> 8) & 0xFF;
             tex_color.b = (color >> 16) & 0xFF;

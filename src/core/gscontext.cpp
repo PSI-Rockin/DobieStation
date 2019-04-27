@@ -38,7 +38,10 @@ void GSContext::set_tex0(uint64_t value)
     tex0.CLUT_base = ((value >> 37) & 0x3FFF) * 64 * 4;
     tex0.CLUT_format = (value >> 51) & 0xF;
     tex0.use_CSM2 = (value >> 55) & 0x1;
-    tex0.CLUT_offset = ((value >> 56) & 0x1F) * 16;
+    if (!tex0.CLUT_format)
+        tex0.CLUT_offset = ((value >> 56) & 0xF) * 16 * 2;
+    else
+        tex0.CLUT_offset = ((value >> 56) & 0x1F) * 16;
     tex0.CLUT_control = (value >> 61) & 0x7;
 
     printf("TEX0: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);
@@ -65,7 +68,11 @@ void GSContext::set_tex1(uint64_t value)
 
     bool k_sign = (value >> 43) & 0x1; // sign bit, 7 bits integer, 4 bits decimal.
     uint16_t k_amount = (value >> 32) & 0x7FF;
-    tex1.K = (k_sign ? -1.0 : 1.0) * ((double)k_amount * 1.0 / 16.0);
+    tex1.K = (k_sign ? -1.0 : 1.0) * ((float)k_amount * 1.0 / 16.0);
+
+    //Should be +8 really but Street Fighter EX 3 hates that and
+    //Jurassic Park/Ratchet & Clank hate anything lower than 7
+    tex1.K = (tex1.K + 7.0) / 16.0;
 }
 
 void GSContext::set_tex2(uint64_t value)
@@ -74,7 +81,10 @@ void GSContext::set_tex2(uint64_t value)
     tex0.CLUT_base = ((value >> 37) & 0x3FFF) * 64 * 4;
     tex0.CLUT_format = (value >> 51) & 0xF;
     tex0.use_CSM2 = (value >> 55) & 0x1;
-    tex0.CLUT_offset = ((value >> 56) & 0x1F) * 16;
+    if (!tex0.CLUT_format)
+        tex0.CLUT_offset = ((value >> 56) & 0xF) * 16 * 2;
+    else
+        tex0.CLUT_offset = ((value >> 56) & 0x1F) * 16;
     tex0.CLUT_control = (value >> 61) & 0x7;
 
     printf("TEX2: $%08X_%08X\n", value >> 32, value);

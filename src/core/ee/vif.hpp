@@ -63,6 +63,7 @@ class VectorInterface
         uint8_t vif_stalled;
         bool vif_interrupt;
         bool vif_stop;
+        bool fifo_reverse;
         
         bool wait_for_VU;
         bool wait_for_PATH3;
@@ -107,6 +108,7 @@ class VectorInterface
 
         bool transfer_DMAtag(uint128_t tag);
         bool feed_DMA(uint128_t quad);
+        uint128_t readFIFO();
 
         uint32_t get_stat();
         uint32_t get_mark();
@@ -116,6 +118,7 @@ class VectorInterface
         uint32_t get_code();
         uint32_t get_top();
 
+        void set_stat(uint32_t value);
         void set_mark(uint32_t value);
         void set_err(uint32_t value);
         void set_fbrst(uint32_t value);
