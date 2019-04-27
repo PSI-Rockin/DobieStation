@@ -9,8 +9,8 @@
 #include "gsregisters.hpp"
 #include "circularFIFO.hpp"
 
-#define GS_MESSAGE_BATCH_SIZE 1000
-#define GS_MESSAGE_BATCHES 1000
+#define GS_MESSAGE_BATCH_SIZE 10000
+#define GS_MESSAGE_BATCHES 100
 
 //Commands sent from the main thread to the GS thread.
 enum GSCommand:uint8_t 
