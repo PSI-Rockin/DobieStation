@@ -226,6 +226,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::FloatingPointMaximum:
             floating_point_maximum(ee, instr);
             break;
+        case IR::Opcode::FloatingPointSquareRoot:
+            floating_point_square_root(ee, instr);
+            break;
         case IR::Opcode::Jump:
             jump(ee, instr);
             break;

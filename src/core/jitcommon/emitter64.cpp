@@ -1496,6 +1496,15 @@ void Emitter64::SHUFPS(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest)
     cache->write<uint8_t>(imm);
 }
 
+void Emitter64::SQRTSS(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0xF3);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x51);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
 void Emitter64::SQRTPS(REG_64 xmm_source, REG_64 xmm_dest)
 {
     rex_r_rm(xmm_dest, xmm_source);

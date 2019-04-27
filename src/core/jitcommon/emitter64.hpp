@@ -245,6 +245,7 @@ class Emitter64
         void MINPS(REG_64 xmm_source, REG_64 xmm_dest);
         void MULPS(REG_64 xmm_source, REG_64 xmm_dest);
         void SHUFPS(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest);
+        void SQRTSS(REG_64 xmm_source, REG_64 xmm_dest);
         void SQRTPS(REG_64 xmm_source, REG_64 xmm_dest);
         void SUBPS(REG_64 xmm_source, REG_64 xmm_dest);
         void XORPS(REG_64 xmm_source, REG_64 xmm_dest);

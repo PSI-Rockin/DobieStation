@@ -97,6 +97,7 @@ private:
     void floating_point_minimum_AVX(EmotionEngine& ee, IR::Instruction& instr);
     void floating_point_maximum(EmotionEngine& ee, IR::Instruction& instr);
     void floating_point_maximum_AVX(EmotionEngine& ee, IR::Instruction& instr);
+    void floating_point_square_root(EmotionEngine& ee, IR::Instruction& instr);
     void jump(EmotionEngine& ee, IR::Instruction& instr);
     void jump_indirect(EmotionEngine& ee, IR::Instruction& instr);
     void load_byte(EmotionEngine& ee, IR::Instruction& instr);

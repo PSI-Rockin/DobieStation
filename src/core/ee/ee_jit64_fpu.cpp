@@ -96,6 +96,15 @@ void EE_JIT64::floating_point_minimum(EmotionEngine& ee, IR::Instruction& instr)
     // if dest == source && dest == source2, then no operation is performed
 }
 
+void EE_JIT64::floating_point_square_root(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 dest = alloc_fpu_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+    REG_64 source = alloc_fpu_reg(ee, instr.get_source(), REG_STATE::READ);
+    floating_point_absolute_value(ee, instr);
+    
+    emitter.SQRTSS(source, dest);
+}
+
 void EE_JIT64::move_from_coprocessor1(EmotionEngine& ee, IR::Instruction& instr)
 {
     REG_64 source = alloc_fpu_reg(ee, instr.get_source(), REG_STATE::READ);
