@@ -188,9 +188,7 @@ void Emulator::vblank_start()
     //cpu.set_disassembly(frames >= 223 && frames < 225);
     printf("VSYNC FRAMES: %d\n", frames);
     gs.assert_VSYNC();
-    frames++;
     iop_request_IRQ(0);
-    gs.render_CRT();
 }
 
 void Emulator::vblank_end()
@@ -200,6 +198,8 @@ void Emulator::vblank_end()
     gs.set_VBLANK(false);
     timers.gate(true, false);
     frame_ended = true;
+    frames++;
+    gs.render_CRT();
 }
 
 void Emulator::cdvd_event()
@@ -671,6 +671,7 @@ void Emulator::write32(uint32_t address, uint32_t value)
     if ((address & (0xFF000000)) == 0x12000000)
     {
         gs.write32_privileged(address, value);
+        gs.wake_gs_thread();
         return;
     }
     if (address >= 0x10008000 && address < 0x1000F000)
@@ -717,6 +718,9 @@ void Emulator::write32(uint32_t address, uint32_t value)
             return;
         case 0x10003820:
             vif0.set_err(value);
+            return;
+        case 0x10003c00:
+            vif1.set_stat(value);
             return;
         case 0x10003C10:
             vif1.set_fbrst(value);
@@ -790,6 +794,7 @@ void Emulator::write64(uint32_t address, uint64_t value)
     if ((address & (0xFF000000)) == 0x12000000)
     {
         gs.write64_privileged(address, value);
+        gs.wake_gs_thread();
         return;
     }
     if (address >= 0x11000000 && address < 0x11004000)

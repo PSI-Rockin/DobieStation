@@ -149,6 +149,7 @@ void EmuThread::gsdump_run()
             {
                 case set_xyz_t:
                     e.get_gs().send_message(data);
+                    e.get_gs().wake_gs_thread();
                     message_count++;
                     if (frame_advance && data.payload.xyz_payload.drawing_kick && --draws_sent <= 0)
                     {
@@ -186,6 +187,7 @@ void EmuThread::gsdump_run()
                 default:
                     message_count++;
                     e.get_gs().send_message(data);
+                    e.get_gs().wake_gs_thread();
             }
             if (gsdump_eof())
                 Errors::die("gs dump unexpectedly ended");
