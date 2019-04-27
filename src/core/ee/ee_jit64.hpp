@@ -17,6 +17,17 @@ struct AllocReg
     uint8_t needs_clamping;
 };
 
+enum class REG_TYPE
+{
+    GPR,
+    VI,
+    INTSCRATCHPAD,
+    GPREXTENDED,
+    FPU,
+    VF,
+    XMMSCRATCHPAD
+};
+
 enum class REG_STATE
 {
     SCRATCHPAD,
@@ -26,6 +37,7 @@ enum class REG_STATE
 };
 
 class EE_JIT64;
+static const int32_t FPU_MAX[4] = { 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF };
 
 extern "C" uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee);
 
@@ -72,6 +84,7 @@ private:
     void doubleword_shift_right_logical(EmotionEngine& ee, IR::Instruction& instr);
     void doubleword_shift_right_logical_variable(EmotionEngine& ee, IR::Instruction& instr);
     void exception_return(EmotionEngine& ee, IR::Instruction& instr);
+    void floating_point_absolute_value(EmotionEngine& ee, IR::Instruction& instr);
     void jump(EmotionEngine& ee, IR::Instruction& instr);
     void jump_indirect(EmotionEngine& ee, IR::Instruction& instr);
     void load_byte(EmotionEngine& ee, IR::Instruction& instr);
@@ -137,13 +150,18 @@ private:
 
     int search_for_register_priority(AllocReg *regs);
     int search_for_register_scratchpad(AllocReg *regs);
+    int search_for_register_xmm(AllocReg *regs);
     REG_64 alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state);
     REG_64 alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state, REG_64 destination);
+    REG_64 alloc_fpu_reg(EmotionEngine& ee, int fpu_reg, REG_STATE state);
+    REG_64 alloc_fpu_reg(EmotionEngine& ee, int fpu_reg, REG_STATE state, REG_64 destination);
     REG_64 lalloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state);
     REG_64 lalloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state, REG_64 destination);
+    REG_64 lalloc_fpu_reg(EmotionEngine& ee, int fpu_reg, REG_STATE state);
+    REG_64 lalloc_fpu_reg(EmotionEngine& ee, int fpu_reg, REG_STATE state, REG_64 destination);
     void free_gpr_reg(EmotionEngine& ee, REG_64 reg);
+    void free_xmm_reg(EmotionEngine& ee, REG_64 reg);
     REG_64 alloc_vi_reg(EmotionEngine& ee, int vi_reg, REG_STATE state);
-    REG_64 alloc_fpu_reg(EmotionEngine& ee, int fpu_reg, REG_STATE state);
     REG_64 alloc_vf_reg(EmotionEngine& ee, int vf_reg, REG_STATE state);
 
     void emit_prologue();

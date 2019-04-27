@@ -36,11 +36,7 @@
 extern "C" void run_ee_jit();
 #endif
 
-EE_JIT64::EE_JIT64() : emitter(&cache)
-{
-    //TODO
-}
-
+EE_JIT64::EE_JIT64() : emitter(&cache) {}
 
 void EE_JIT64::reset(bool clear_cache)
 {
@@ -59,21 +55,14 @@ void EE_JIT64::reset(bool clear_cache)
         int_regs[i].reg = -1;
     }
 
-    //Lock special registers to prevent them from being used
+    // Lock special registers to prevent them from being used
     int_regs[REG_64::RSP].locked = true;
 
-    // NOTE: Some emitted operations don't like using certain modes with RBP, so tentatively locking this register
-    // for debugging purposes
-    // I'll just use this to allocate registers in alloc_gpr_reg for now...
+    // Scratchpad Registers
     int_regs[REG_64::RAX].locked = true;
 
     if (clear_cache)
         cache.flush_all_blocks();
-
-    //ir.reset_instr_info();
-
-    //prev_pc = 0xFFFFFFFF;
-    //current_program = 0;
 }
 
 extern "C"
@@ -224,6 +213,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             break;
         case IR::Opcode::ExceptionReturn:
             exception_return(ee, instr);
+            break;
+        case IR::Opcode::FloatingPointAbsoluteValue:
+            floating_point_absolute_value(ee, instr);
             break;
         case IR::Opcode::Jump:
             jump(ee, instr);
@@ -560,6 +552,27 @@ int EE_JIT64::search_for_register_priority(AllocReg *regs)
     return reg;
 }
 
+int EE_JIT64::search_for_register_xmm(AllocReg *regs)
+{
+    int reg = -1;
+    int age = 0;
+    for (int i = 0; i < 16; i++)
+    {
+        if (regs[i].locked)
+            continue;
+
+        if (!regs[i].used)
+            return i;
+
+        if (regs[i].age > age)
+        {
+            reg = i;
+            age = regs[i].age;
+        }
+    }
+    return reg;
+}
+
 REG_64 EE_JIT64::alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state, REG_64 destination)
 {
     if (destination >= 0 && int_regs[destination].locked)
@@ -687,6 +700,129 @@ void EE_JIT64::free_gpr_reg(EmotionEngine& ee, REG_64 reg)
 {
     int_regs[reg].locked = false;
     flush_int_reg(ee, reg);
+}
+
+REG_64 EE_JIT64::alloc_fpu_reg(EmotionEngine& ee, int reg, REG_STATE state, REG_64 destination)
+{
+    if (destination >= 0 && xmm_regs[destination].locked)
+        Errors::die("[EE_JIT64] Alloc Xmm error: Attempted to allocate locked x64 register %d", destination);
+
+    // An explicit destination is not provided, so we find one ourselves here.
+    if (destination < 0)
+    {
+        for (int i = 0; i < 16; ++i)
+        {
+            // Check if our register is already allocated
+            if (!xmm_regs[i].locked && xmm_regs[i].used && xmm_regs[i].reg == reg && xmm_regs[i].is_fpu_reg)
+            {
+                destination = (REG_64)i;
+                break;
+            }
+        }
+
+        // If our EE register isn't already in a register
+        if (destination < 0)
+        {
+            destination = (REG_64)search_for_register_xmm(xmm_regs);
+        }
+    }
+
+    // Increment age of every used register
+    for (int i = 0; i < 16; ++i)
+    {
+        if (xmm_regs[i].used)
+            ++xmm_regs[i].age;
+    }
+
+    // Do nothing if the EE register is already inside our x86 register
+    if (xmm_regs[destination].used && xmm_regs[destination].is_fpu_reg && xmm_regs[destination].reg == reg)
+    {
+        if (state != REG_STATE::READ)
+            xmm_regs[destination].modified = true;
+        xmm_regs[destination].age = 0;
+        return (REG_64)destination;
+    }
+
+    // Flush new register's contents back to EE state
+    flush_xmm_reg(ee, destination);
+
+    if (state == REG_STATE::SCRATCHPAD)
+    {
+        xmm_regs[destination].modified = false;
+        xmm_regs[destination].used = true;
+        xmm_regs[destination].is_fpu_reg = false;
+        xmm_regs[destination].age = 0;
+        xmm_regs[destination].reg = -1;
+        return (REG_64)destination;
+    }
+
+    if (state != REG_STATE::WRITE)
+    {
+        int reg = -1;
+
+        for (int i = 0; i < 16; ++i)
+        {
+            if (xmm_regs[i].used && xmm_regs[i].reg == reg && xmm_regs[i].is_fpu_reg)
+            {
+                reg = i;
+                break;
+            }
+        }
+
+        if (reg >= 0)
+        {
+            // This case is hit if we want a register in a specific destination but
+            // we already have the contents in another reigster.
+            emitter.MOVAPS_REG((REG_64)reg, destination);
+        }
+        else
+        {
+            emitter.load_addr((uint64_t)get_fpu_addr(ee, reg), REG_64::RAX);
+            emitter.MOVAPS_FROM_MEM(REG_64::RAX, (REG_64)destination);
+        }
+    }
+
+    xmm_regs[destination].modified = state != REG_STATE::READ;
+    xmm_regs[destination].reg = reg;
+    xmm_regs[destination].is_fpu_reg = true;
+    xmm_regs[destination].used = true;
+    xmm_regs[destination].age = 0;
+    return (REG_64)destination;
+}
+
+REG_64 EE_JIT64::alloc_fpu_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state)
+{
+    if (state == REG_STATE::SCRATCHPAD)
+        return alloc_fpu_reg(ee, -1, state, (REG_64)-1);
+    else
+        return alloc_fpu_reg(ee, gpr_reg, state, (REG_64)-1);
+}
+
+REG_64 EE_JIT64::lalloc_fpu_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state, REG_64 destination)
+{
+    if (state == REG_STATE::SCRATCHPAD)
+        gpr_reg = -1;
+    REG_64 result = alloc_fpu_reg(ee, gpr_reg, state, destination);
+    xmm_regs[result].locked = true;
+    return result;
+}
+
+REG_64 EE_JIT64::lalloc_fpu_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state)
+{
+    REG_64 result;
+    if (state == REG_STATE::SCRATCHPAD)
+        result = alloc_fpu_reg(ee, -1, state, (REG_64)-1);
+    else
+        result = alloc_fpu_reg(ee, gpr_reg, state, (REG_64)-1);
+
+    xmm_regs[result].locked = true;
+    return result;
+}
+
+void EE_JIT64::free_xmm_reg(EmotionEngine& ee, REG_64 reg)
+{
+    xmm_regs[reg].locked = false;
+    flush_xmm_reg(ee, reg);
 }
 
 /*
@@ -855,7 +991,6 @@ void EE_JIT64::flush_int_reg(EmotionEngine& ee, int reg)
 
 void EE_JIT64::flush_xmm_reg(EmotionEngine& ee, int reg)
 {
-    /*
     int old_xmm_reg = xmm_regs[reg].reg;
     if (xmm_regs[reg].used && xmm_regs[reg].modified)
     {
@@ -863,8 +998,7 @@ void EE_JIT64::flush_xmm_reg(EmotionEngine& ee, int reg)
         if (xmm_regs[reg].is_fpu_reg)
         {
             emitter.load_addr((uint64_t)get_fpu_addr(ee, old_xmm_reg), REG_64::RAX);
-            emitter.MOVD_FROM_XMM((REG_64)reg, REG_64::R15);
-            emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
+            emitter.MOVD_TO_MEM((REG_64)reg, REG_64::RAX);
         }
         else if (!xmm_regs[reg].is_fpu_reg && old_xmm_reg)
         {
@@ -872,7 +1006,7 @@ void EE_JIT64::flush_xmm_reg(EmotionEngine& ee, int reg)
             emitter.MOVAPS_TO_MEM((REG_64)reg, REG_64::RAX);
         }
     }
-    */
+    xmm_regs[reg].used = false;
 }
 
 void EE_JIT64::flush_regs(EmotionEngine& ee)
@@ -881,7 +1015,7 @@ void EE_JIT64::flush_regs(EmotionEngine& ee)
     //printf("[EE_JIT64] Flushing regs\n");
     for (int i = 0; i < 16; i++)
     {
-        //flush_xmm_reg(ee, i);
+        flush_xmm_reg(ee, i);
         flush_int_reg(ee, i);
     }
 }
@@ -1557,6 +1691,23 @@ void EE_JIT64::exception_return(EmotionEngine& ee, IR::Instruction& instr)
 
     // Free scratchpad registers
     free_gpr_reg(ee, R15);
+}
+
+void EE_JIT64::floating_point_absolute_value(EmotionEngine& ee, IR::Instruction& instr)
+{
+    // This operation works by simply masking out the sign-bit from the float.
+    // Note that an array of four masks is used here, despite only doing the
+    // operation upon one float.
+    // This is due to there being no "ANDSS" instruction, which means four
+    // floats are masked at the same time.
+
+    REG_64 source = alloc_fpu_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 dest = alloc_fpu_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+
+    if (source != dest)
+        emitter.MOVSS_REG(source, dest);
+    emitter.load_addr((uint64_t)&FPU_MAX[0], REG_64::RAX);
+    emitter.PAND_XMM_MEM(REG_64::RAX, dest);
 }
 
 void EE_JIT64::jump(EmotionEngine& ee, IR::Instruction& instr)

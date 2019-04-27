@@ -192,7 +192,9 @@ class Emitter64
         void MOVZX16_TO_64(REG_64 source, REG_64 dest);
 
         void MOVD_FROM_XMM(REG_64 xmm_source, REG_64 dest);
+        void MOVD_TO_MEM(REG_64 xmm_source, REG_64 indir_dest);
         void MOVD_TO_XMM(REG_64 source, REG_64 xmm_dest);
+        void MOVSS_REG(REG_64 xmm_source, REG_64 xmm_dest);
         void MOVAPS_REG(REG_64 xmm_source, REG_64 xmm_dest);
         void MOVAPS_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest);
         void MOVAPS_TO_MEM(REG_64 xmm_source, REG_64 indir_dest);

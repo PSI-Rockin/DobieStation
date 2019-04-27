@@ -1155,6 +1155,15 @@ void Emitter64::MOVD_FROM_XMM(REG_64 xmm_source, REG_64 dest)
     modrm(0b11, xmm_source, dest);
 }
 
+void Emitter64::MOVD_TO_MEM(REG_64 xmm_source, REG_64 indir_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_source, indir_dest);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x7E);
+    modrm(0, xmm_source, indir_dest);
+}
+
 void Emitter64::MOVD_TO_XMM(REG_64 source, REG_64 xmm_dest)
 {
     cache->write<uint8_t>(0x66);
@@ -1163,6 +1172,15 @@ void Emitter64::MOVD_TO_XMM(REG_64 source, REG_64 xmm_dest)
     cache->write<uint8_t>(0x6E);
     modrm(0b11, xmm_dest, source);
 }
+
+void Emitter64::MOVSS_REG(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    rex_r_rm(xmm_source, xmm_dest);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x11);
+    modrm(0b11, xmm_source, xmm_dest);
+}
+
 
 void Emitter64::MOVAPS_REG(REG_64 xmm_source, REG_64 xmm_dest)
 {
