@@ -277,6 +277,15 @@
     <ClCompile Include="..\src\core\ee\ee_jittrans.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\core\ee\ee_jit64_fpu.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\core\ee\ee_jit64_fpu_avx.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\core\ee\ee_jit64_gpr.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\core\ee\bios_hle.hpp">
@@ -471,7 +480,7 @@
       <Filter>Distribution Files</Filter>
     </None>
     <None Include="..\README.md" />
-	<None Include="..\appveyor.yml" />
+    <None Include="..\appveyor.yml" />
   </ItemGroup>
   <ItemGroup>
     <MASM Include="..\src\core\ee\vu_jit_asm.asm">
