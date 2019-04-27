@@ -39,6 +39,10 @@ enum class REG_STATE
 class EE_JIT64;
 
 // FPU bitmasks
+// I've specifically made these *not* const because accessing them in the debug
+// build after marking them const throws an access violation.
+// You'll have to ask the guys who made the C++ standard why that happens,
+// but please don't touch! - Souzooka
 static int32_t FPU_MASK_ABS[4] = { 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF };
 static int32_t FPU_MASK_NEG[4] = { 0x80000000, 0x80000000, 0x80000000, 0x80000000 };
 
@@ -89,6 +93,10 @@ private:
     void exception_return(EmotionEngine& ee, IR::Instruction& instr);
     void floating_point_absolute_value(EmotionEngine& ee, IR::Instruction& instr);
     void floating_point_negate(EmotionEngine& ee, IR::Instruction& instr);
+    void floating_point_minimum(EmotionEngine& ee, IR::Instruction& instr);
+    void floating_point_minimum_AVX(EmotionEngine& ee, IR::Instruction& instr);
+    void floating_point_maximum(EmotionEngine& ee, IR::Instruction& instr);
+    void floating_point_maximum_AVX(EmotionEngine& ee, IR::Instruction& instr);
     void jump(EmotionEngine& ee, IR::Instruction& instr);
     void jump_indirect(EmotionEngine& ee, IR::Instruction& instr);
     void load_byte(EmotionEngine& ee, IR::Instruction& instr);
@@ -175,7 +183,7 @@ private:
     uint64_t get_vi_addr(const EmotionEngine &ee, int index) const;
     uint64_t get_fpu_addr(const EmotionEngine &ee, int index) const;
     uint64_t get_vf_addr(const EmotionEngine &ee, int index) const;
-    
+
     void flush_int_reg(EmotionEngine& ee, int reg);
     void flush_xmm_reg(EmotionEngine& ee, int reg);
     void flush_regs(EmotionEngine& ee);

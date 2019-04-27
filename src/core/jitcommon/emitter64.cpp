@@ -57,6 +57,36 @@ void Emitter64::rexw_r_rm(REG_64 reg, REG_64 rm)
     cache->write<uint8_t>(rex);
 }
 
+void Emitter64::vex(REG_64 source, REG_64 source2, REG_64 dest)
+{
+    if (source2 & 0x8)
+        vex3(source, source2, dest);
+    else
+        vex2(source, dest);
+}
+
+void Emitter64::vex2(REG_64 source, REG_64 dest)
+{
+    cache->write<uint8_t>(0xC5);
+    uint8_t result = 0xF8;
+    if (dest & 0x8)
+        result -= 0x80;
+    result += -(source << 3);
+    cache->write<uint8_t>(result);
+}
+
+void Emitter64::vex3(REG_64 source, REG_64 source2, REG_64 dest)
+{
+    cache->write<uint8_t>(0xC4);
+    uint8_t result = 0xC1;
+    if (dest & 0x8)
+        result -= 0x80;
+    cache->write<uint8_t>(result);
+    result = 0x78;
+    result += -(source << 3);
+    cache->write<uint8_t>(result);
+}
+
 void Emitter64::modrm(uint8_t mode, uint8_t reg, uint8_t rm)
 {
     cache->write<uint8_t>(((mode & 0x3) << 6) | ((reg & 0x7) << 3) | (rm & 0x7));
@@ -1505,4 +1535,18 @@ void Emitter64::CVTTPS2DQ(REG_64 xmm_source, REG_64 xmm_dest)
     cache->write<uint8_t>(0x0F);
     cache->write<uint8_t>(0x5B);
     modrm(0b11, xmm_dest, xmm_source);
+}
+
+void Emitter64::VMINPS(REG_64 xmm_source, REG_64 xmm_source2, REG_64 xmm_dest)
+{
+    vex(xmm_source, xmm_source2, xmm_dest);
+    cache->write<uint8_t>(0x5D);
+    modrm(0b11, 0, xmm_source2);
+}
+
+void Emitter64::VMAXPS(REG_64 xmm_source, REG_64 xmm_source2, REG_64 xmm_dest)
+{
+    vex(xmm_source, xmm_source2, xmm_dest);
+    cache->write<uint8_t>(0x5F);
+    modrm(0b11, 0, xmm_source2);
 }

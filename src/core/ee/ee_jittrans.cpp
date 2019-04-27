@@ -65,9 +65,9 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
         pc += 4;
         cycle_count++;
     }
- 
+
     block.set_cycle_count(cycle_count);
-    
+
     return block;
 }
 
@@ -2068,14 +2068,28 @@ IR::Instruction EE_JitTranslator::translate_op_cop1_fpu(uint32_t opcode, uint32_
             return instr;
         case 0x28:
             // MAX.S
-            Errors::print_warning("[EE_JIT] Unrecognized fpu op MAX.S\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 6) & 0x1F;
+            uint8_t source = (opcode >> 11) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            instr.op = IR::Opcode::FloatingPointMaximum;
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
             return instr;
+        }
         case 0x29:
             // MIN.S
-            Errors::print_warning("[EE_JIT] Unrecognized fpu op MIN.S\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 6) & 0x1F;
+            uint8_t source = (opcode >> 11) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            instr.op = IR::Opcode::FloatingPointMinimum;
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
             return instr;
+        }
         case 0x30:
             // C.F.S
             Errors::print_warning("[EE_JIT] Unrecognized fpu op C.F.S\n", op);

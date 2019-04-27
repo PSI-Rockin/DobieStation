@@ -61,6 +61,9 @@ class Emitter64
         void rexw_rm(REG_64 rm);
         void rexw_r_rm(REG_64 reg, REG_64 rm);
         void modrm(uint8_t mode, uint8_t reg, uint8_t rm);
+        void vex(REG_64 source, REG_64 source2, REG_64 dest);
+        void vex2(REG_64 source, REG_64 dest);
+        void vex3(REG_64 source, REG_64 source2, REG_64 dest);
 
         int get_rip_offset(uint64_t addr);
     public:
@@ -251,6 +254,9 @@ class Emitter64
 
         //Convert truncated floats into 32-bit signed integers
         void CVTTPS2DQ(REG_64 xmm_source, REG_64 xmm_dest);
+
+        void VMINPS(REG_64 xmm_source, REG_64 xmm_source2, REG_64 xmm_dest);
+        void VMAXPS(REG_64 xmm_source, REG_64 xmm_source2, REG_64 xmm_dest);
 };
 
 #endif // EMITTER64_HPP
