@@ -262,11 +262,17 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::MoveConditionalOnZero:
             move_conditional_on_zero(ee, instr);
             break;
+        case IR::Opcode::MoveFromCoprocessor1:
+            move_from_coprocessor1(ee, instr);
+            break;
         case IR::Opcode::MoveFromHI:
             move_from_hi(ee, instr);
             break;
         case IR::Opcode::MoveFromLO:
             move_from_lo(ee, instr);
+            break;
+        case IR::Opcode::MoveToCoprocessor1:
+            move_to_coprocessor1(ee, instr);
             break;
         case IR::Opcode::MoveToHI:
             move_to_hi(ee, instr);
@@ -276,6 +282,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             break;
         case IR::Opcode::MoveToLOHI:
             move_to_lo_hi(ee, instr);
+            break;
+        case IR::Opcode::MoveXmmReg:
+            move_xmm_reg(ee, instr);
             break;
         case IR::Opcode::MultiplyUnsignedWord:
             multiply_unsigned_word(ee, instr);

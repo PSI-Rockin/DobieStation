@@ -46,6 +46,31 @@ void EE_JIT64::floating_point_negate(EmotionEngine& ee, IR::Instruction& instr)
     emitter.PXOR_XMM_FROM_MEM(REG_64::RAX, dest);
 }
 
+void EE_JIT64::floating_point_maximum(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 dest = alloc_fpu_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+    REG_64 source = alloc_fpu_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 source2 = alloc_fpu_reg(ee, instr.get_source2(), REG_STATE::READ);
+
+    emitter.load_addr((uint64_t)&ee.fpu->control.u, REG_64::RAX);
+    emitter.MOV8_IMM_MEM(false, REG_64::RAX);
+    emitter.load_addr((uint64_t)&ee.fpu->control.o, REG_64::RAX);
+    emitter.MOV8_IMM_MEM(false, REG_64::RAX);
+
+    if (dest != source)
+    {
+        emitter.MOVAPS_REG(source, dest);
+        emitter.MAXPS(source2, dest);
+    }
+    else if (dest != source2)
+    {
+        emitter.MOVAPS_REG(source2, dest);
+        emitter.MAXPS(source, dest);
+    }
+
+    // if dest == source && dest == source2, then no operation is performed
+}
+
 void EE_JIT64::floating_point_minimum(EmotionEngine& ee, IR::Instruction& instr)
 {
     REG_64 dest = alloc_fpu_reg(ee, instr.get_dest(), REG_STATE::WRITE);
@@ -71,27 +96,26 @@ void EE_JIT64::floating_point_minimum(EmotionEngine& ee, IR::Instruction& instr)
     // if dest == source && dest == source2, then no operation is performed
 }
 
-void EE_JIT64::floating_point_maximum(EmotionEngine& ee, IR::Instruction& instr)
+void EE_JIT64::move_from_coprocessor1(EmotionEngine& ee, IR::Instruction& instr)
 {
-    REG_64 dest = alloc_fpu_reg(ee, instr.get_dest(), REG_STATE::WRITE);
     REG_64 source = alloc_fpu_reg(ee, instr.get_source(), REG_STATE::READ);
-    REG_64 source2 = alloc_fpu_reg(ee, instr.get_source2(), REG_STATE::READ);
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
 
-    emitter.load_addr((uint64_t)&ee.fpu->control.u, REG_64::RAX);
-    emitter.MOV8_IMM_MEM(false, REG_64::RAX);
-    emitter.load_addr((uint64_t)&ee.fpu->control.o, REG_64::RAX);
-    emitter.MOV8_IMM_MEM(false, REG_64::RAX);
+    emitter.MOVD_FROM_XMM(source, dest);
+}
 
-    if (dest != source)
-    {
-        emitter.MOVAPS_REG(source, dest);
-        emitter.MAXPS(source2, dest);
-    }
-    else if (dest != source2)
-    {
-        emitter.MOVAPS_REG(source2, dest);
-        emitter.MAXPS(source, dest);
-    }
+void EE_JIT64::move_to_coprocessor1(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 dest = alloc_fpu_reg(ee, instr.get_dest(), REG_STATE::WRITE);
 
-    // if dest == source && dest == source2, then no operation is performed
+    emitter.MOVD_TO_XMM(source, dest);
+}
+
+void EE_JIT64::move_xmm_reg(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_fpu_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 dest = alloc_fpu_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+
+    emitter.MOVAPS_REG(source, dest);
 }

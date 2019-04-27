@@ -1924,9 +1924,14 @@ IR::Instruction EE_JitTranslator::translate_op_cop1(uint32_t opcode, uint32_t PC
     {
         case 0x00:
             // MFC1
-            Errors::print_warning("[EE_JIT] Unrecognized cop1 op MFC1\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 16) & 0x1F;
+            uint8_t source = (opcode >> 11) & 0x1F;
+            instr.op = IR::Opcode::MoveFromCoprocessor1;
+            instr.set_dest(dest);
+            instr.set_source(source);
             return instr;
+        }
         case 0x02:
             // CFC1
             Errors::print_warning("[EE_JIT] Unrecognized cop1 op CFC1\n", op);
@@ -1934,9 +1939,14 @@ IR::Instruction EE_JitTranslator::translate_op_cop1(uint32_t opcode, uint32_t PC
             return instr;
         case 0x04:
             // MTC1
-            Errors::print_warning("[EE_JIT] Unrecognized cop1 op MTC1\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 16) & 0x1F;
+            instr.op = IR::Opcode::MoveToCoprocessor1;
+            instr.set_dest(dest);
+            instr.set_source(source);
             return instr;
+        }
         case 0x06:
             // CTC1
             Errors::print_warning("[EE_JIT] Unrecognized cop1 op CTC1\n", op);
@@ -2008,9 +2018,19 @@ IR::Instruction EE_JitTranslator::translate_op_cop1_fpu(uint32_t opcode, uint32_
         }
         case 0x06:
             // MOV.S
-            Errors::print_warning("[EE_JIT] Unrecognized fpu op MOV.S\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 6) & 0x1F;
+            uint8_t source = (opcode >> 11) & 0x1F;
+            if (dest == source)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+            instr.op = IR::Opcode::MoveXmmReg;
+            instr.set_dest(dest);
+            instr.set_source(source);
             return instr;
+        }
         case 0x07:
             // NEG.S
         {
