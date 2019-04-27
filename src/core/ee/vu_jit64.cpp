@@ -234,7 +234,7 @@ void VU_JIT64::sse_abs(REG_64 source, REG_64 dest)
 {
     emitter.load_addr((uint64_t)&abs_constant, REG_64::RAX);
     emitter.MOVAPS_REG(source, dest);
-    emitter.PAND_XMM_MEM(REG_64::RAX, dest);
+    emitter.PAND_XMM_FROM_MEM(REG_64::RAX, dest);
 }
 
 void VU_JIT64::sse_div_check(REG_64 num, REG_64 denom, VU_R& dest)

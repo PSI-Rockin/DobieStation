@@ -65,6 +65,7 @@ INSTR(DivideWord)
 INSTR(DivideUnsignedWord)
 
 INSTR(FloatingPointAbsoluteValue)
+INSTR(FloatingPointNegate)
 
 INSTR(LoadConst)
 INSTR(LoadFloatConst)

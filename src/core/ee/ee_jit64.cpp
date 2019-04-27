@@ -217,6 +217,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::FloatingPointAbsoluteValue:
             floating_point_absolute_value(ee, instr);
             break;
+        case IR::Opcode::FloatingPointNegate:
+            floating_point_negate(ee, instr);
+            break;
         case IR::Opcode::Jump:
             jump(ee, instr);
             break;
@@ -438,6 +441,11 @@ void EE_JIT64::call_abi_func(EmotionEngine& ee, uint64_t addr)
     int total_regs = sizeof(saved_regs) / sizeof(REG_64);
     int regs_used = 0;
     int sp_offset = 0;
+
+    for (int i = 0; i < 16; ++i)
+    {
+        flush_xmm_reg(ee, i);
+    }
 
     REG_64 addrReg = REG_64::RAX;
     emitter.MOV64_OI(addr, addrReg);
@@ -702,7 +710,7 @@ void EE_JIT64::free_gpr_reg(EmotionEngine& ee, REG_64 reg)
     flush_int_reg(ee, reg);
 }
 
-REG_64 EE_JIT64::alloc_fpu_reg(EmotionEngine& ee, int reg, REG_STATE state, REG_64 destination)
+REG_64 EE_JIT64::alloc_fpu_reg(EmotionEngine& ee, int fpu_reg, REG_STATE state, REG_64 destination)
 {
     if (destination >= 0 && xmm_regs[destination].locked)
         Errors::die("[EE_JIT64] Alloc Xmm error: Attempted to allocate locked x64 register %d", destination);
@@ -713,7 +721,7 @@ REG_64 EE_JIT64::alloc_fpu_reg(EmotionEngine& ee, int reg, REG_STATE state, REG_
         for (int i = 0; i < 16; ++i)
         {
             // Check if our register is already allocated
-            if (!xmm_regs[i].locked && xmm_regs[i].used && xmm_regs[i].reg == reg && xmm_regs[i].is_fpu_reg)
+            if (!xmm_regs[i].locked && xmm_regs[i].used && xmm_regs[i].reg == fpu_reg && xmm_regs[i].is_fpu_reg)
             {
                 destination = (REG_64)i;
                 break;
@@ -735,7 +743,7 @@ REG_64 EE_JIT64::alloc_fpu_reg(EmotionEngine& ee, int reg, REG_STATE state, REG_
     }
 
     // Do nothing if the EE register is already inside our x86 register
-    if (xmm_regs[destination].used && xmm_regs[destination].is_fpu_reg && xmm_regs[destination].reg == reg)
+    if (xmm_regs[destination].used && xmm_regs[destination].is_fpu_reg && xmm_regs[destination].reg == fpu_reg)
     {
         if (state != REG_STATE::READ)
             xmm_regs[destination].modified = true;
@@ -762,7 +770,7 @@ REG_64 EE_JIT64::alloc_fpu_reg(EmotionEngine& ee, int reg, REG_STATE state, REG_
 
         for (int i = 0; i < 16; ++i)
         {
-            if (xmm_regs[i].used && xmm_regs[i].reg == reg && xmm_regs[i].is_fpu_reg)
+            if (xmm_regs[i].used && xmm_regs[i].reg == fpu_reg && xmm_regs[i].is_fpu_reg)
             {
                 reg = i;
                 break;
@@ -777,13 +785,18 @@ REG_64 EE_JIT64::alloc_fpu_reg(EmotionEngine& ee, int reg, REG_STATE state, REG_
         }
         else
         {
-            emitter.load_addr((uint64_t)get_fpu_addr(ee, reg), REG_64::RAX);
-            emitter.MOVAPS_FROM_MEM(REG_64::RAX, (REG_64)destination);
+            printf("%d\n", fpu_reg);
+            printf("%p\n", &ee.fpu->gpr[0]);
+            printf("%p\n", &ee.fpu->gpr[fpu_reg].f);
+            printf("%p\n", get_fpu_addr(ee, fpu_reg));
+            printf("%p\n", &FPU_MASK_NEG[0]);
+            emitter.load_addr((uint64_t)get_fpu_addr(ee, fpu_reg), REG_64::RAX);
+            emitter.MOVD_FROM_MEM(REG_64::RAX, (REG_64)destination);
         }
     }
 
     xmm_regs[destination].modified = state != REG_STATE::READ;
-    xmm_regs[destination].reg = reg;
+    xmm_regs[destination].reg = fpu_reg;
     xmm_regs[destination].is_fpu_reg = true;
     xmm_regs[destination].used = true;
     xmm_regs[destination].age = 0;
@@ -824,150 +837,6 @@ void EE_JIT64::free_xmm_reg(EmotionEngine& ee, REG_64 reg)
     xmm_regs[reg].locked = false;
     flush_xmm_reg(ee, reg);
 }
-
-/*
-REG_64 EE_JIT64::alloc_vi_reg(EmotionEngine& ee, int vi_reg, REG_STATE state)
-{
-    if (vi_reg >= 16)
-        Errors::die("[EE_JIT64] Alloc Int error: vi_reg == %d", vi_reg);
-
-    for (int i = 0; i < 16; i++)
-    {
-        if (int_regs[i].used && int_regs[i].reg == vi_reg && !int_regs[i].is_gpr_reg)
-        {
-            if (state != REG_STATE::READ)
-                int_regs[i].modified = true;
-            int_regs[i].age = 0;
-            return (REG_64)i;
-        }
-    }
-
-    for (int i = 0; i < 16; i++)
-    {
-        if (int_regs[i].used)
-            int_regs[i].age++;
-    }
-
-    int reg = search_for_register(int_regs);
-
-    if (int_regs[reg].used && int_regs[reg].modified && int_regs[reg].reg)
-    {
-        flush_int_reg(ee, reg);
-    }
-
-    //printf("[EE_JIT64] Allocating vu0i reg %d (vi%02d)\n", reg, vi_reg);
-
-    if (state != REG_STATE::WRITE)
-    {
-        emitter.load_addr((uint64_t)get_vi_addr(ee, (EE_NormalReg)vi_reg), REG_64::RAX);
-        emitter.MOV64_FROM_MEM(REG_64::RAX, (REG_64)reg);
-    }
-
-    int_regs[reg].modified = state != REG_STATE::READ;
-
-    int_regs[reg].reg = vi_reg;
-    int_regs[reg].is_gpr_reg = false;
-    int_regs[reg].used = true;
-    int_regs[reg].age = 0;
-
-    return (REG_64)reg;
-}
-
-REG_64 EE_JIT64::alloc_fpu_reg(EmotionEngine& ee, int fpu_reg, REG_STATE state)
-{
-    if (fpu_reg >= 32)
-        Errors::die("[EE_JIT64] Alloc Float error: fpu_reg == %d", fpu_reg);
-
-    for (int i = 0; i < 16; i++)
-    {
-        if (xmm_regs[i].used && xmm_regs[i].reg == fpu_reg && xmm_regs[i].is_fpu_reg)
-        {
-            if (state != REG_STATE::READ)
-                xmm_regs[i].modified = true;
-            xmm_regs[i].age = 0;
-            return (REG_64)i;
-        }
-    }
-
-    for (int i = 0; i < 16; i++)
-    {
-        if (xmm_regs[i].used)
-            xmm_regs[i].age++;
-    }
-
-    int reg = search_for_register(xmm_regs);
-
-    if (xmm_regs[reg].used && xmm_regs[reg].modified)
-    {
-        flush_xmm_reg(ee, reg);
-    }
-
-    //printf("[EE_JIT64] Allocating FPU reg %d (f%02d)\n", reg, fpu_reg);
-
-    if (state != REG_STATE::WRITE)
-    {
-        emitter.load_addr((uint64_t)get_fpu_addr(ee, fpu_reg), REG_64::RAX);
-        emitter.MOV32_FROM_MEM(REG_64::RAX, REG_64::RAX);
-        emitter.MOVD_TO_XMM(REG_64::RAX, (REG_64)reg);
-    }
-
-    int_regs[reg].modified = state != REG_STATE::READ;
-
-    int_regs[reg].reg = fpu_reg;
-    int_regs[reg].is_fpu_reg = true;
-    int_regs[reg].used = true;
-    int_regs[reg].age = 0;
-
-    return (REG_64)reg;
-}
-
-REG_64 EE_JIT64::alloc_vf_reg(EmotionEngine& ee, int vf_reg, REG_STATE state)
-{
-    if (vf_reg >= 32)
-        Errors::die("[EE_JIT64] Alloc Float error: vf_reg == %d", vf_reg);
-
-    for (int i = 0; i < 16; i++)
-    {
-        if (xmm_regs[i].used && xmm_regs[i].reg == vf_reg && !xmm_regs[i].is_fpu_reg)
-        {
-            if (state != REG_STATE::READ)
-                xmm_regs[i].modified = true;
-            xmm_regs[i].age = 0;
-            return (REG_64)i;
-        }
-    }
-
-    for (int i = 0; i < 16; i++)
-    {
-        if (xmm_regs[i].used)
-            xmm_regs[i].age++;
-    }
-
-    int reg = search_for_register(xmm_regs);
-
-    if (xmm_regs[reg].used && xmm_regs[reg].modified)
-    {
-        flush_xmm_reg(ee, reg);
-    }
-
-    //printf("[EE_JIT64] Allocating vu0f reg %d (f%02d)\n", reg, vf_reg);
-
-    if (state != REG_STATE::WRITE)
-    {
-        // TODO: Broadcast VU0f state to XMM register
-        Errors::die("[EE_JIT64] alloc_vf_reg: Allocating vu0f register not supported!");
-    }
-
-    int_regs[reg].modified = state != REG_STATE::READ;
-
-    int_regs[reg].reg = vf_reg;
-    int_regs[reg].is_fpu_reg = false;
-    int_regs[reg].used = true;
-    int_regs[reg].age = 0;
-
-    return (REG_64)reg;
-}
-*/
 
 void EE_JIT64::flush_int_reg(EmotionEngine& ee, int reg)
 {
@@ -1704,10 +1573,37 @@ void EE_JIT64::floating_point_absolute_value(EmotionEngine& ee, IR::Instruction&
     REG_64 source = alloc_fpu_reg(ee, instr.get_source(), REG_STATE::READ);
     REG_64 dest = alloc_fpu_reg(ee, instr.get_dest(), REG_STATE::WRITE);
 
+    emitter.load_addr((uint64_t)&ee.fpu->control.u, REG_64::RAX);
+    emitter.MOV8_IMM_MEM(false, REG_64::RAX);
+    emitter.load_addr((uint64_t)&ee.fpu->control.o, REG_64::RAX);
+    emitter.MOV8_IMM_MEM(false, REG_64::RAX);
+
     if (source != dest)
         emitter.MOVSS_REG(source, dest);
-    emitter.load_addr((uint64_t)&FPU_MAX[0], REG_64::RAX);
-    emitter.PAND_XMM_MEM(REG_64::RAX, dest);
+    emitter.load_addr((uint64_t)&FPU_MASK_ABS[0], REG_64::RAX);
+    emitter.PAND_XMM_FROM_MEM(REG_64::RAX, dest);
+}
+
+void EE_JIT64::floating_point_negate(EmotionEngine& ee, IR::Instruction& instr)
+{
+    // This operation works by simply toggling the sign-bit in the float.
+    // Note that an array of four masks is used here, despite only doing the
+    // operation upon one float.
+    // This is due to there being no "XORSS" instruction, which means four
+    // floats are masked at the same time.
+
+    REG_64 source = alloc_fpu_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 dest = alloc_fpu_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+
+    emitter.load_addr((uint64_t)&ee.fpu->control.u, REG_64::RAX);
+    emitter.MOV8_IMM_MEM(false, REG_64::RAX);
+    emitter.load_addr((uint64_t)&ee.fpu->control.o, REG_64::RAX);
+    emitter.MOV8_IMM_MEM(false, REG_64::RAX);
+
+    if (source != dest)
+        emitter.MOVSS_REG(source, dest);
+    emitter.load_addr((uint64_t)&FPU_MASK_NEG[0], REG_64::RAX);
+    emitter.PXOR_XMM_FROM_MEM(REG_64::RAX, dest);
 }
 
 void EE_JIT64::jump(EmotionEngine& ee, IR::Instruction& instr)

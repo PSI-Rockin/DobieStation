@@ -1146,6 +1146,15 @@ void Emitter64::MOVZX16_TO_64(REG_64 source, REG_64 dest)
     modrm(0b11, dest, source);
 }
 
+void Emitter64::MOVD_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, indir_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x6E);
+    modrm(0, xmm_dest, indir_source);
+}
+
 void Emitter64::MOVD_FROM_XMM(REG_64 xmm_source, REG_64 dest)
 {
     cache->write<uint8_t>(0x66);
@@ -1285,7 +1294,7 @@ void Emitter64::PAND_XMM(REG_64 xmm_source, REG_64 xmm_dest)
     modrm(0b11, xmm_dest, xmm_source);
 }
 
-void Emitter64::PAND_XMM_MEM(REG_64 indir_source, REG_64 xmm_dest)
+void Emitter64::PAND_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest)
 {
     cache->write<uint8_t>(0x66);
     rex_r_rm(xmm_dest, indir_source);
@@ -1342,6 +1351,15 @@ void Emitter64::PSHUFD(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest)
     cache->write<uint8_t>(0x70);
     modrm(0b11, xmm_dest, xmm_source);
     cache->write<uint8_t>(imm);
+}
+
+void Emitter64::PXOR_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, indir_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0xEF);
+    modrm(0, xmm_dest, indir_source);
 }
 
 void Emitter64::DIVPS(REG_64 xmm_source, REG_64 xmm_dest)

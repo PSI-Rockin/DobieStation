@@ -191,6 +191,7 @@ class Emitter64
         void MOVZX8_TO_64(REG_64 source, REG_64 dest);
         void MOVZX16_TO_64(REG_64 source, REG_64 dest);
 
+        void MOVD_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest);
         void MOVD_FROM_XMM(REG_64 xmm_source, REG_64 dest);
         void MOVD_TO_MEM(REG_64 xmm_source, REG_64 indir_dest);
         void MOVD_TO_XMM(REG_64 source, REG_64 xmm_dest);
@@ -221,12 +222,13 @@ class Emitter64
         void RET();
 
         void PAND_XMM(REG_64 xmm_source, REG_64 xmm_dest);
-        void PAND_XMM_MEM(REG_64 indir_source, REG_64 xmm_dest);
+        void PAND_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest);
         void PMAXSD_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void PMINSD_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void PMINSD_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest);
         void PMINUD_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest);
         void PSHUFD(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest);
+        void PXOR_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest);
 
         void DIVPS(REG_64 xmm_source, REG_64 xmm_dest);
 

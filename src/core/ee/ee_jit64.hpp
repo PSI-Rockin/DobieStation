@@ -37,7 +37,10 @@ enum class REG_STATE
 };
 
 class EE_JIT64;
-static const int32_t FPU_MAX[4] = { 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF };
+
+// FPU bitmasks
+static int32_t FPU_MASK_ABS[4] = { 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF };
+static int32_t FPU_MASK_NEG[4] = { 0x80000000, 0x80000000, 0x80000000, 0x80000000 };
 
 extern "C" uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee);
 
@@ -85,6 +88,7 @@ private:
     void doubleword_shift_right_logical_variable(EmotionEngine& ee, IR::Instruction& instr);
     void exception_return(EmotionEngine& ee, IR::Instruction& instr);
     void floating_point_absolute_value(EmotionEngine& ee, IR::Instruction& instr);
+    void floating_point_negate(EmotionEngine& ee, IR::Instruction& instr);
     void jump(EmotionEngine& ee, IR::Instruction& instr);
     void jump_indirect(EmotionEngine& ee, IR::Instruction& instr);
     void load_byte(EmotionEngine& ee, IR::Instruction& instr);
