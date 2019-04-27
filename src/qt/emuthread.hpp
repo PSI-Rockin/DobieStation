@@ -10,6 +10,8 @@
 #include "../core/emulator.hpp"
 #include "../core/errors.hpp"
 
+#define GSDUMP_BUFFERED_MESSAGES 1000
+
 enum PAUSE_EVENT
 {
     GAME_NOT_LOADED,
@@ -31,9 +33,13 @@ class EmuThread : public QThread
         std::chrono::system_clock::time_point old_frametime;
         std::ifstream gsdump;
         std::atomic_bool gsdump_reading;
+        GSMessage* gsdump_read_buffer;
+        int buffered_gs_messages;
+        int current_gs_message;
         void gsdump_run();
     public:
         EmuThread();
+        ~EmuThread();
 
         void reset();
 
@@ -48,6 +54,8 @@ class EmuThread : public QThread
         bool gsdump_read(const char* name);
         void gsdump_write_toggle();
         void gsdump_single_frame();
+        GSMessage get_next_gsdump_message();
+        bool gsdump_eof();
         bool frame_advance;
     protected:
         void run() override;

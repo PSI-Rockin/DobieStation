@@ -42,6 +42,8 @@ void GraphicsSynthesizer::reset()
     reg.reset();
 
     gs_thread.reset_fifos();
+
+
 }
 
 void GraphicsSynthesizer::start_frame()

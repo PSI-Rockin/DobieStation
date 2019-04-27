@@ -130,6 +130,7 @@ void GraphicsSynthesizerThread::wait_for_return(GSReturn type, GSReturnMessage &
     {
         if (return_queue->pop(data))
         {
+          fprintf(stderr, "RETURN GS\n");
             if (data.type == death_error_t)
             {
                 auto p = data.payload.death_error_payload;
@@ -148,6 +149,7 @@ void GraphicsSynthesizerThread::wait_for_return(GSReturn type, GSReturnMessage &
         else
         {
             printf("[GS] Waiting for return message\n");
+            send_current_batch_to_gs(); // if it's in the current batch, send it!
             std::unique_lock<std::mutex> lk(data_mutex);
             notifier.wait(lk, [this] {return recieve_data;});
             recieve_data = false;
@@ -155,13 +157,69 @@ void GraphicsSynthesizerThread::wait_for_return(GSReturn type, GSReturnMessage &
     }
 }
 
+// send current batch to the gs, regardless of how full it is.
+void GraphicsSynthesizerThread::send_current_batch_to_gs()
+{
+    if(emulator_current_batch->idx)
+    {
+        emulator_current_batch->size = emulator_current_batch->idx;
+        emulator_current_batch->idx = 0;
+
+        message_queue->push(emulator_current_batch);
+        emulator_current_batch = nullptr;
+
+        // notify GS
+        std::unique_lock<std::mutex> lk(data_mutex);
+        notifier.notify_one();
+        send_data = true;
+
+        // allocate a new one
+        emulator_current_batch = gs_batch_stack.alloc();
+
+        if(emulator_current_batch->idx || emulator_current_batch->size)
+        {
+            Errors::die("send_current_batch_to_gs - allocated a batch with size/idx (%ld/%ld)?", emulator_current_batch->idx, emulator_current_batch->size);
+        }
+    }
+    else
+    {
+        // notify GS
+        std::unique_lock<std::mutex> lk(data_mutex);
+        notifier.notify_one();
+        send_data = true;
+    }
+}
+
 void GraphicsSynthesizerThread::send_message(GSMessage message)
 {
     printf("[GS] Notifying gs thread of new data\n");
-    message_queue->push(message);
-    std::unique_lock<std::mutex> lk(data_mutex);
-    notifier.notify_one();
-    send_data = true;
+    //fprintf(stdout, "send_message: ");
+//    message_queue->push(message);
+//    std::unique_lock<std::mutex> lk(data_mutex);
+//    notifier.notify_one();
+//    send_data = true;
+
+    // first try to push onto current batch
+    if(emulator_current_batch && emulator_current_batch->room_to_push())
+    {
+        emulator_current_batch->push_back(message);
+        //fprintf(stdout, "in current batch\n");
+        return;
+    }
+
+    //fprintf(stdout, "creating new batch...\n");
+    // if it's full or doesn't exist yet:
+    send_current_batch_to_gs();
+
+    //fprintf(stdout, "sending to new batch\n");
+    if(emulator_current_batch && emulator_current_batch->room_to_push())
+    {
+        emulator_current_batch->push_back(message);
+    }
+    else
+    {
+        Errors::die("send_message - failed to allocate a new batch after filling one");
+    }
 }
 
 void GraphicsSynthesizerThread::reset_fifos()
@@ -174,8 +232,13 @@ void GraphicsSynthesizerThread::reset_fifos()
     GSReturnMessage data;
     while (return_queue->pop(data));
 
-    GSMessage data2;
+    GSMessageBatch* data2;
     while (message_queue->pop(data2));
+
+    gs_current_batch = nullptr;
+    emulator_current_batch = nullptr;
+    gs_batch_stack.reset_allocations();
+    emulator_current_batch = gs_batch_stack.alloc();
 }
 
 void GraphicsSynthesizerThread::exit()
@@ -191,11 +254,54 @@ void GraphicsSynthesizerThread::exit()
     }
 }
 
+// pop a single GS message, from the GS thread.
+void GraphicsSynthesizerThread::gs_pop_message(GSMessage &mess)
+{
+    for(;;) // loop until we've actually popped something.
+    {
+        // first, try to get a message from the current batch
+        if(gs_current_batch && gs_current_batch->something_to_pop())
+        {
+            gs_current_batch->pop_back(mess);
+            return;
+        }
+
+        // current batch must be empty.  first return it:
+        gs_batch_stack.free(gs_current_batch);
+        gs_current_batch = nullptr;
+
+        // then see if there's a new one...
+        if(message_queue->pop(gs_current_batch)) {
+            // yup!
+            if(!gs_current_batch)
+            {
+                Errors::die("gs_pop_message() - popped null from FIFO");
+            }
+            if(!gs_current_batch->size)
+            {
+                Errors::die("gs_pop_message() - got an empty batch from the FIFO");
+            }
+            gs_current_batch->pop_back(mess);
+            return;
+        } else {
+            // nope, nothing here. the GS is currently starved.
+            gs_starvation_count++;
+            std::unique_lock<std::mutex> lk(data_mutex);
+            notifier.wait(lk, [this] {return send_data;});
+            send_data = false;
+        }
+    }
+}
+
 void GraphicsSynthesizerThread::event_loop()
 {
     printf("[GS_t] Starting GS Thread\n");
 
     reset();
+
+    int message_count = 0;
+    int total_message_count = 0;
+    int sleep_count = 0;
 
     bool gsdump_recording = false;
     ofstream gsdump_file;
@@ -205,9 +311,11 @@ void GraphicsSynthesizerThread::event_loop()
         while (true)
         {
             GSMessage data;
+            gs_pop_message(data);
 
-            if (message_queue->pop(data))
-            {
+//            if (message_queue->pop(data))
+//            {
+                total_message_count++;
                 if (gsdump_recording)
                     gsdump_file.write((char*)&data, sizeof(data));
 
@@ -270,6 +378,7 @@ void GraphicsSynthesizerThread::event_loop()
                     }
                     case render_crt_t:
                     {
+                        message_count++;
                         auto p = data.payload.render_payload;
 
                         while (!p.target_mutex->try_lock())
@@ -284,6 +393,16 @@ void GraphicsSynthesizerThread::event_loop()
                         return_queue->push({ GSReturn::render_complete_t,return_payload });
                         recieve_data = true;
                         notifier.notify_one();
+                        float ms = frameTimer.getMs();
+                        avg_frametime = avg_frametime * 0.9 + ms * 0.1;
+                        float avg_fps = 60 * 16.6667 / avg_frametime;
+                        fprintf(stderr, "GS [%6.3f ms] (filtered %5.2f fps) processed %d of %d messages, slept %d times!\n", ms, avg_fps,
+                                message_count, total_message_count, gs_starvation_count);
+                        frameTimer.start();
+                        gs_starvation_count = 0;
+                        message_count = 0;
+                        total_message_count = 0;
+                        sleep_count = 0;
                         break;
                     }
                     case assert_finish_t:
@@ -296,6 +415,7 @@ void GraphicsSynthesizerThread::event_loop()
                     {
                         auto p = data.payload.vblank_payload;
                         reg.set_VBLANK(p.vblank);
+                        message_count++;
                         break;
                     }
                     case memdump_t:
@@ -363,13 +483,14 @@ void GraphicsSynthesizerThread::event_loop()
                     default:
                         Errors::die("corrupted command sent to GS thread");
                 }
-            }
-            else
-            {
-                std::unique_lock<std::mutex> lk(data_mutex);
-                notifier.wait(lk, [this] {return send_data;});
-                send_data = false;
-            }
+//            }
+//            else
+//            {
+//                sleep_count++;
+//                std::unique_lock<std::mutex> lk(data_mutex);
+//                notifier.wait(lk, [this] {return send_data;});
+//                send_data = false;
+//            }
         }
     }
     catch (Emulation_error &e)
@@ -404,8 +525,12 @@ void GraphicsSynthesizerThread::reset()
     current_PRMODE = &PRIM;
     PRIM.reset();
     PRMODE.reset();
+    gs_current_batch = nullptr;
+    emulator_current_batch = nullptr;
+    gs_batch_stack.reset_allocations();
 
     reset_fifos();
+    //emulator_current_batch = gs_batch_stack.alloc();
 }
 
 void GraphicsSynthesizerThread::memdump(uint32_t* target, uint16_t& width, uint16_t& height)

@@ -9,6 +9,9 @@
 #include "gsregisters.hpp"
 #include "circularFIFO.hpp"
 
+#define GS_MESSAGE_BATCH_SIZE 1000
+#define GS_MESSAGE_BATCHES 1000
+
 //Commands sent from the main thread to the GS thread.
 enum GSCommand:uint8_t 
 {
@@ -89,6 +92,102 @@ struct GSMessage
     GSMessagePayload payload;
 };
 
+struct GSMessageBatch
+{
+  GSMessage msgs[GS_MESSAGE_BATCH_SIZE];
+  int64_t size = 0;
+  int64_t idx = 0;
+
+  void push_back(GSMessage& mess)
+  {
+      msgs[idx++] = mess;
+
+  }
+
+  void pop_back(GSMessage& mess)
+  {
+      mess = msgs[idx++];
+  }
+
+  bool room_to_push()
+  {
+      return idx < GS_MESSAGE_BATCH_SIZE;
+  }
+
+  bool something_to_pop()
+  {
+      return idx < size;
+  }
+};
+
+struct GSMessageBatchStack
+{
+  GSMessageBatchStack()
+  {
+    for(int i = 0; i< GS_MESSAGE_BATCHES; i++)
+    {
+        batches[i] = new GSMessageBatch;
+        freeBatches[i] = batches[i];
+    }
+  }
+
+  ~GSMessageBatchStack()
+  {
+    for (auto &batch : batches)
+    {
+      delete batch;
+    }
+  }
+
+  GSMessageBatch* alloc()
+  {
+      std::lock_guard<std::mutex> lock(mut);
+      if(freeStackIdx >= GS_MESSAGE_BATCHES)
+      {
+          Errors::die("GSMessageBatch::alloc() - out of Message Batches!");
+      }
+      //printf("alloc returning stack ID %d\n", freeStackIdx);
+      return freeBatches[freeStackIdx++]; // todo atomic
+  }
+
+  void free(GSMessageBatch* it)
+  {
+      std::lock_guard<std::mutex> lock(mut);
+      if(!it) return;
+      it->size = 0;
+      it->idx = 0;
+      // check for double free bug
+      for(int i = freeStackIdx; i < GS_MESSAGE_BATCHES; i++)
+      {
+          if(freeBatches[i] == it)
+          {
+              Errors::die("GSMessageBatch::free() - double free!");
+          }
+      }
+
+      // okay we're good to free
+      //printf("freed stack ID %d\n", freeStackIdx - 1);
+      freeBatches[--freeStackIdx] = it; // todo atomic
+  }
+
+  void reset_allocations() // WARNING - this method is not thread safe.
+  {
+      printf("RESET ALLOCATIONS\n");
+      freeStackIdx = 0;
+      for(int i = 0; i < GS_MESSAGE_BATCHES; i++)
+      {
+          freeBatches[i] = batches[i];
+          freeBatches[i]->size = 0;
+          freeBatches[i]->idx = 0;
+      }
+  }
+
+  GSMessageBatch* batches[GS_MESSAGE_BATCHES]; // all batches
+  GSMessageBatch* freeBatches[GS_MESSAGE_BATCHES]; // from freeStack -> GS_MESSAGE_BATCHES - 1 is free
+  int freeStackIdx = 0;
+  std::mutex mut;
+};
+
 //Commands sent from the GS thread to the main thread.
 enum GSReturn :uint8_t
 {
@@ -121,7 +220,8 @@ struct GSReturnMessage
     GSReturnMessagePayload payload;
 };
 
-typedef CircularFifo<GSMessage, 1024 * 1024 * 16> gs_fifo;
+//typedef CircularFifo<GSMessage, 1024 * 1024 * 16> gs_fifo;
+typedef CircularFifo<GSMessageBatch*, 1024> gs_fifo;
 typedef CircularFifo<GSReturnMessage, 1024> gs_return_fifo;
 
 struct PRMODE_REG
@@ -231,6 +331,11 @@ class GraphicsSynthesizerThread
 
         std::mutex data_mutex;
 
+        GSMessageBatchStack gs_batch_stack;
+        GSMessageBatch* gs_current_batch = nullptr;
+        GSMessageBatch* emulator_current_batch = nullptr;
+        int gs_starvation_count = 0;
+
         bool send_data = false;
         bool recieve_data = false;
 
@@ -250,6 +355,8 @@ class GraphicsSynthesizerThread
 
         GSContext context1, context2;
         GSContext* current_ctx;
+        CTimer frameTimer;
+        float avg_frametime = 0.f;
 
         uint8_t prim_type;
         uint16_t FOG;
@@ -289,6 +396,8 @@ class GraphicsSynthesizerThread
         static const unsigned int max_vertices[8];
 
         void event_loop();
+        void gs_pop_message(GSMessage& mess);
+        void send_current_batch_to_gs();
 
         inline const uint32_t get_word(uint32_t addr) { return *(uint32_t*)&local_mem[addr]; };
         inline void set_word(uint32_t addr, uint32_t value) { *(uint32_t*)&local_mem[addr] = value; };
