@@ -14,15 +14,6 @@ using namespace std;
 //Swizzling tables - we declare these outside the class to prevent a stack overflow
 //Globals are allocated in a different memory segment of the executable
 
-//static uint32_t page_PSMCT32[32][32][64];
-//static uint32_t page_PSMCT32Z[32][32][64];
-//static uint32_t page_PSMCT16[32][64][64];
-//static uint32_t page_PSMCT16S[32][64][64];
-//static uint32_t page_PSMCT16Z[32][64][64];
-//static uint32_t page_PSMCT16SZ[32][64][64];
-//static uint32_t page_PSMCT8[32][64][128];
-//static uint32_t page_PSMCT4[32][128][128];
-
 static SwizzleTable<32,32,64> page_PSMCT32;
 static SwizzleTable<32,32,64> page_PSMCT32Z;
 static SwizzleTable<32,64,64> page_PSMCT16;
@@ -92,9 +83,6 @@ GraphicsSynthesizerThread::GraphicsSynthesizerThread()
             for (int x = 0; x < 64; x++)
             {
                 uint32_t column = columnTable32[y & 0x7][x & 0x7];
-//                page_PSMCT32[block][y][x] = (blockid_PSMCT32(block, 0, x, y) << 6) + column;
-//                page_PSMCT32Z[block][y][x] = (blockid_PSMCT32Z(block, 0, x, y) << 6) + column;
-
                 page_PSMCT32.get(block,y,x) = (blockid_PSMCT32(block, 0, x, y) << 6) + column;
                 page_PSMCT32Z.get(block,y,x) = (blockid_PSMCT32Z(block, 0, x, y) << 6) + column;
             }
@@ -184,7 +172,7 @@ void GraphicsSynthesizerThread::wait_for_return(GSReturn type, GSReturnMessage &
                 return;
             else
             {
-                send_current_batch_to_gs(); // todo, does this really make sense?
+                send_current_batch_to_gs();
                 if (return_queue->was_empty())
                 {
                     //Last message in the queue, so we don't want this one so we need to sleep
@@ -218,13 +206,9 @@ void GraphicsSynthesizerThread::send_current_batch_to_gs()
         emulator_current_batch->size = emulator_current_batch->idx;
         emulator_current_batch->idx = 0;
 
-//        if(emulator_current_batch)
-//            fprintf(stderr, "gsbatch - %ld\n", emulator_current_batch->size);
 
         message_queue->push(emulator_current_batch);
         emulator_current_batch = nullptr;
-
-
 
         // notify GS
         std::unique_lock<std::mutex> lk(data_mutex);
@@ -252,20 +236,15 @@ void GraphicsSynthesizerThread::send_current_batch_to_gs()
 void GraphicsSynthesizerThread::send_message(GSMessage message)
 {
     printf("[GS] Notifying gs thread of new data\n");
-//    message_queue->push(message);
-//    send_data = true;
     if(emulator_current_batch && emulator_current_batch->room_to_push())
     {
         emulator_current_batch->push_back(message);
-        //fprintf(stdout, "in current batch\n");
         return;
     }
 
-    //fprintf(stdout, "creating new batch...\n");
     // if it's full or doesn't exist yet:
     send_current_batch_to_gs();
 
-    //fprintf(stdout, "sending to new batch\n");
     if(emulator_current_batch && emulator_current_batch->room_to_push())
     {
         emulator_current_batch->push_back(message);
@@ -279,7 +258,6 @@ void GraphicsSynthesizerThread::send_message(GSMessage message)
 void GraphicsSynthesizerThread::wake_thread()
 {
     printf("[GS] Waking GS Thread\n");
-    //send_current_batch_to_gs();
     std::unique_lock<std::mutex> lk(data_mutex);
     notifier.notify_one();
 }
@@ -2082,11 +2060,10 @@ static void order3(int32_t a, int32_t b, int32_t c, uint8_t* order)
 void GraphicsSynthesizerThread::render_triangle2() {
     tri_count++;
     // this version of render_triangle uses a different algorithm which hopefully is faster.
-    //   at least on small microcontrollers, this approach seems to be faster.
     //   some notes to others - the rounding is _extremely_ sensitive.  Replace x/y with x * (1/y) and it breaks.
     //
-    //
-    Vertex unsortedVerts[3];
+
+    Vertex unsortedVerts[3]; // vertices in the order they were sent to GS
     unsortedVerts[0] = vtx_queue[2]; unsortedVerts[0].to_relative(current_ctx->xyoffset);
     unsortedVerts[1] = vtx_queue[1]; unsortedVerts[1].to_relative(current_ctx->xyoffset);
     unsortedVerts[2] = vtx_queue[0]; unsortedVerts[2].to_relative(current_ctx->xyoffset);
@@ -2115,75 +2092,79 @@ void GraphicsSynthesizerThread::render_triangle2() {
     tex_info.tex_height = current_ctx->tex0.tex_height;
 
 
-    // I believe (but may be wrong) that if all the y coords are the same, we don't draw.
-    // this seems to be different from current dobiestation behavior.
-    if(unsortedVerts[0].y == unsortedVerts[1].y && unsortedVerts[1].y == unsortedVerts[2].y) // no tris
+    // fast reject - some games like to spam triangles that don't have any pixels
+    if(unsortedVerts[0].y == unsortedVerts[1].y && unsortedVerts[1].y == unsortedVerts[2].y)
     {
         y_reject_tris++;
         return;
     }
 
-    //bool single_tri = (unsortedVerts[0].y == unsortedVerts[1].y || unsortedVerts[1].y == unsortedVerts[2].y || unsortedVerts[0].y == unsortedVerts[2].y);
 
-
-    // sort by y-coordinate and convert to floating point:
+    // sort the three vertices by their y coordinate (increasing)
     uint8_t order[3];
     order3(unsortedVerts[0].y, unsortedVerts[1].y, unsortedVerts[2].y, order);
 
-    VertexF v0(unsortedVerts[order[0]]); // will divide to pixels
+    // convert all vertex data to floating point, converts position to floating point pixels
+    VertexF v0(unsortedVerts[order[0]]);
     VertexF v1(unsortedVerts[order[1]]);
     VertexF v2(unsortedVerts[order[2]]);
 
+    // we will divide the triangle into two by drawing a horiontal line that goes through the middle
+    //  vertex as sorted by y-coordinate).
     bool single_tri = (v0.y == v1.y);
 
-    // edges (difference of the ENTIRE vertex properties)
+    // edges (difference of the ENTIRE vertex properties, not just position)
     VertexF e21 = v2 - v1;
     VertexF e20 = v2 - v0;
     VertexF e10 = v1 - v0;
 
     // this is the equivalent of "divider" from the old algorithm (but in pixel coordiantes)
     float div = e10.y * e20.x - e10.x * e20.y;
-    bool div_flip = div < 0.f;
+    bool div_flip = div < 0.f; // if the triangle has backwards winding order. investigate if it's faster to flip it?
 
-    if(div == 0.f)
+    if(div == 0.f) // another fast exit if we won't draw any pixels
     {
         div_reject_tris++;
         return;
     }
 
 
-    // divide the triangle into lower and upper triangle:
-    // per the GS rules, we round UP.
+    // convert scissoring values to pixels
     float scissorY1 = (float)current_ctx->scissor.y1 / 16.f;
     float scissorY2 = (float)current_ctx->scissor.y2 / 16.f;
     float scissorX1 = (float)current_ctx->scissor.x1 / 16.f;
     float scissorX2 = (float)current_ctx->scissor.x2 / 16.f;
+
+    // the y coordinates of the top and bottom of the upper and lower triangle, with scissoring
+    // the std::ceil performs the correct rounding for the edges here
     float upperTop = std::max(std::ceil(v0.y), scissorY1);
     float upperBot = std::min(std::ceil(v1.y), scissorY2);
     float lowerTop = std::max(std::ceil(v1.y), scissorY1);
     float lowerBot = std::min(std::ceil(v2.y), scissorY2);
 
-    // divisions. for some reason * 1/div is causing issues. need to investigate more
+    // we need the derivatives of the colors,... with respect to the x and y coordinates
+    // these will give the same results as the old algorithm's barycentric interpolation
     float v10xdiv = e10.x / div;
     float v10ydiv = e10.y / div;
     float v20xdiv = e20.x / div;
     float v20ydiv = e20.y / div;
 
+    // the value to step per field per x/y pixel
+    VertexF x_step = e20 * v10ydiv - e10 * v20ydiv;
+    VertexF y_step = (e10 * v20xdiv - e20 * v10xdiv); //todo why is this negative?
+
+    // slopes of the edges
     float e20d = e20.x / e20.y;
     float e21d = e21.x / e21.y;
     float e10d = e10.x / e10.y;
 
-    // somehow the reciprecal works fine here.
-    VertexF x_step = e20 * v10ydiv - e10 * v20ydiv;
-    VertexF y_step = (e10 * v20xdiv - e20 * v10xdiv); //todo why is this negative?
-
-
+    // because the ordering of the vertices (CW, CCW) isn't known, these
+    // edge slopes need to be chosen correctly.  These are the left/right edges for the lower triangle
     float div3 = div_flip ? e20d : e21d;
     float div4 = div_flip ? e21d : e20d;
 
-    if(single_tri)
-    {
-        // todo figure out this
+    if(single_tri) // in the case where we have only one triangle (one of our edges is horizontal)
+    {              // if we try to draw both, it freaks out.
         if(lowerTop < lowerBot)
         {
             VertexF& selected_vertex = div_flip ? v0 : v1;
@@ -2194,12 +2175,12 @@ void GraphicsSynthesizerThread::render_triangle2() {
     }
     else
     {
+        // both triangle, so we need to know the edge slopes for the lower triangle
         float div1 = div_flip ? e20d : e10d;
         float div2 = div_flip ? e10d : e20d;
 
-
         // upper triangle
-        if(upperTop < upperBot) // wtf i shouldn't have to check this!
+        if(upperTop < upperBot) // i shouldn't have to check this!
         {
             render_half_triangle(v0.x, v0.x, upperTop, upperBot, x_step, y_step, v0, div1, div2, scissorX1, scissorX2, tex_info);
         }
@@ -2214,36 +2195,51 @@ void GraphicsSynthesizerThread::render_triangle2() {
 
 }
 
+/*!
+ * Render a "half-triangle" which has a horizontal edge
+ * @param x0 - the x coordinate of the upper left most point of the triangle. floating point pixels
+ * @param x1 - the x coordinate of the upper right most point of the triangle (can be the same as x0), floating point px
+ * @param y0 - the y coordinate of the first scanline which will contain the triangle (integer pixels)
+ * @param y1 - the y coordinate of the last scanline which will contain the triangle (integer pixels)
+ * @param x_step - the derivatives of all parameters wrt x
+ * @param y_step - the derivatives of all parameters wrt y
+ * @param init   - the vertex we interpolate from
+ * @param step_x0 - how far to step to the left on each step down (floating point px)
+ * @param step_x1 - how far to step to the right on each step down (floating point px)
+ * @param scx1    - left x scissor (fp px)
+ * @param scx2    - right x scissor (fp px)
+ * @param tex_info - texture data
+ */
 void GraphicsSynthesizerThread::render_half_triangle(float x0, float x1, int y0, int y1, VertexF &x_step,
                                                      VertexF &y_step, VertexF &init, float step_x0, float step_x1,
                                                      float scx1, float scx2, TexLookupInfo& tex_info) {
 
     bool tmp_tex = current_PRMODE->texture_mapping;
-    bool tmp_uv = !current_PRMODE->use_UV;//allow for loop unswitching
-    //fprintf(stderr, "%d -> %d\n", y0, y1);
-    //fprintf(stderr, "rgbstep: %f, %f, %f\n", x_step.r, x_step.g, x_step.b);
+    bool tmp_uv = !current_PRMODE->use_UV;
 
-    for(int y = y0; y < y1; y++)
+    for(int y = y0; y < y1; y++) // loop over scanlines of triangle
     {
-        float height = y - init.y; // must use floating point here
-        VertexF lineStart = init + y_step * height; // this likely interpolates _way_ more than it needs to.
-        float x0l = x0 + step_x0 * height;
-        float x1l = x1 + step_x1 * height;
-        x0l = std::max(scx1, std::ceil(x0l));
-        x1l = std::min(scx2, std::ceil(x1l));
+        float height = y - init.y; // how far down we've made it
+        VertexF vtx = init + y_step * height;       // interpolate to point (x_init, y)
+        float x0l = x0 + step_x0 * height;          // start x coordinates of scanline from interpolation
+        float x1l = x1 + step_x1 * height;          // end   x coordinate of scanline from interpolation
+        x0l = std::max(scx1, std::ceil(x0l));       // round and scissor
+        x1l = std::min(scx2, std::ceil(x1l));       // round and scissor
+        int xStop = x1l;                            // integer start/stop pixels
+        int xStart = x0l;
 
-        lineStart += (x_step * (x0l - init.x));
-        //fprintf(stderr, "(%f,%f), height %f -> (%f, %f)\n", x0, x1, height, x0l, x1l);
+        if(xStop == xStart) continue;               // skip rows of zero length
 
-        int xStop = x1l;
-        for(int x = x0l; x < xStop; x++)
+        vtx += (x_step * (x0l - init.x));           // interpolate to point (x0l, y)
+
+        for(int x = x0l; x < xStop; x++)            // loop over x pixels of scanline
         {
-            tex_info.vtx_color.r = lineStart.r;
-            tex_info.vtx_color.g = lineStart.g;
-            tex_info.vtx_color.b = lineStart.b;
-            tex_info.vtx_color.a = lineStart.a;
-            tex_info.vtx_color.q = lineStart.q;
-            tex_info.fog = lineStart.fog;
+            tex_info.vtx_color.r = vtx.r;           // set most recently interpolated stuff
+            tex_info.vtx_color.g = vtx.g;
+            tex_info.vtx_color.b = vtx.b;
+            tex_info.vtx_color.a = vtx.a;
+            tex_info.vtx_color.q = vtx.q;
+            tex_info.fog = vtx.fog;
             if (tmp_tex)
             {
                 int32_t u, v;
@@ -2251,29 +2247,30 @@ void GraphicsSynthesizerThread::render_half_triangle(float x0, float x1, int y0,
                 if (tmp_uv)
                 {
                     float s, t, q;
-                    s = lineStart.s;
-                    t = lineStart.t;
-                    q = lineStart.q;
+                    s = vtx.s * 16.f;
+                    t = vtx.t * 16.f;
+                    q = vtx.q * 16.f;
 
                     s /= q;
                     t /= q;
-                    u = (s * tex_info.tex_width) * 16.0;
-                    v = (t * tex_info.tex_height) * 16.0;
+                    u = (s * tex_info.tex_width) * 16.f;
+                    v = (t * tex_info.tex_height) * 16.f;
                 }
                 else
                 {
-                    u = (uint32_t) lineStart.u;
-                    v = (uint32_t) lineStart.v;
+                    u = (uint32_t) vtx.u;
+                    v = (uint32_t) vtx.v;
                 }
                 tex_lookup(u, v, tex_info);
-                draw_pixel(x * 16.f, y * 16.f, (uint32_t)(lineStart.z * 16.f), tex_info.tex_color);
+                draw_pixel(x * 16, y * 16, (uint32_t)(vtx.z * 16.f), tex_info.tex_color);
+
             }
             else
             {
-                draw_pixel(x * 16.f, y * 16.f, (uint32_t)(lineStart.z * 16.f), tex_info.vtx_color);
+                draw_pixel(x * 16, y * 16, (uint32_t)(vtx.z * 16.f), tex_info.vtx_color);
             }
 
-            lineStart += x_step;
+            vtx += x_step;                       // get values for the adjacent pixel
         }
     }
 
@@ -2458,19 +2455,25 @@ void GraphicsSynthesizerThread::render_triangle()
                             {
                                 int32_t u, v;
                                 calculate_LOD(tex_info);
+                                bool print_texinfo = false;
                                 if (tmp_uv)
                                 {
                                     float s, t, q;
                                     s = v1.s * w1 + v2.s * w2 + v3.s * w3;
                                     t = v1.t * w1 + v2.t * w2 + v3.t * w3;
-                                    q = v1.rgbaq.q * w1 + v2.rgbaq.q * w2 + v3.rgbaq.q * w3;
 
+                                    q = v1.rgbaq.q * w1 + v2.rgbaq.q * w2 + v3.rgbaq.q * w3;
+                                    //fprintf(stderr, "qqq %f %f %f -> %f (%f), %d r %f\n", v1.rgbaq.q, v2.rgbaq.q, v3.rgbaq.q, q, q/divider, divider, r);
                                     //We don't divide s and t by "divider" because dividing by Q effectively
                                     //cancels that out
                                     s /= q;
                                     t /= q;
                                     u = (s * tex_info.tex_width) * 16.0;
                                     v = (t * tex_info.tex_height) * 16.0;
+                                    //fprintf(stderr, "q: %f\n", tex_info.vtx_color.q);
+                                    fprintf(stderr, "uv: %d, %d @ %d, %d, %d\n", u, v, (int)(x * 1), (int)(y*1), (uint32_t)z);
+                                    print_texinfo = true;
+                                    //fprintf(stderr, "wh: %d %d\n", tex_info.tex_width, tex_info.tex_height);
                                 }
                                 else
                                 {
@@ -2482,6 +2485,9 @@ void GraphicsSynthesizerThread::render_triangle()
                                     v = (uint32_t) temp_v;
                                 }
                                 tex_lookup(u, v, tex_info);
+                                if(print_texinfo)
+                                    fprintf(stderr,"\t%d %d %d %f %d\n", tex_info.tex_color.r,tex_info.tex_color.g,tex_info.tex_color.b,
+                                        tex_info.tex_color.q,tex_info.tex_color.a);
                                 draw_pixel(x, y, (uint32_t)z, tex_info.tex_color);
                             }
                             else

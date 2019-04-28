@@ -156,7 +156,6 @@ struct GSMessageBatch
     void push_back(GSMessage& mess)
     {
         msgs[idx++] = mess;
-
     }
 
     void pop_back(GSMessage& mess)
@@ -350,14 +349,6 @@ struct Vec4f {
         uint32_t u32[4];
     };
 
-    Vec4f(Vertex& v)
-    {
-        x = (float)v.x / 16.f;
-        y = (float)v.y / 16.f;
-        z = (float)v.z / 16.f;
-        w = 0.f;
-    }
-
     Vec4f()
     {
 
@@ -456,7 +447,6 @@ struct VertexF
         }
         return result;
     }
-
 };
 
 class GraphicsSynthesizerThread
