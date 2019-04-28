@@ -3171,6 +3171,13 @@ void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
 
             if (current_ctx->tex1.MTBA && info.mipmap_level < 4)
             {
+                //Tex width and tex height must be equal for this mipmapping method to work
+                //Cartoon Network Racing breaks otherwise
+                if (info.tex_width < 32 || info.tex_width != info.tex_height)
+                {
+                    info.mipmap_level = 0;
+                    return;
+                }
                 //Counted in bytes
                 const static float format_sizes[] =
                 {
