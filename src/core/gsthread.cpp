@@ -13,14 +13,24 @@ using namespace std;
 
 //Swizzling tables - we declare these outside the class to prevent a stack overflow
 //Globals are allocated in a different memory segment of the executable
-static uint32_t page_PSMCT32[32][32][64];
-static uint32_t page_PSMCT32Z[32][32][64];
-static uint32_t page_PSMCT16[32][64][64];
-static uint32_t page_PSMCT16S[32][64][64];
-static uint32_t page_PSMCT16Z[32][64][64];
-static uint32_t page_PSMCT16SZ[32][64][64];
-static uint32_t page_PSMCT8[32][64][128];
-static uint32_t page_PSMCT4[32][128][128];
+
+//static uint32_t page_PSMCT32[32][32][64];
+//static uint32_t page_PSMCT32Z[32][32][64];
+//static uint32_t page_PSMCT16[32][64][64];
+//static uint32_t page_PSMCT16S[32][64][64];
+//static uint32_t page_PSMCT16Z[32][64][64];
+//static uint32_t page_PSMCT16SZ[32][64][64];
+//static uint32_t page_PSMCT8[32][64][128];
+//static uint32_t page_PSMCT4[32][128][128];
+
+static SwizzleTable<32,32,64> page_PSMCT32;
+static SwizzleTable<32,32,64> page_PSMCT32Z;
+static SwizzleTable<32,64,64> page_PSMCT16;
+static SwizzleTable<32,64,64> page_PSMCT16S;
+static SwizzleTable<32,64,64> page_PSMCT16Z;
+static SwizzleTable<32,64,64> page_PSMCT16SZ;
+static SwizzleTable<32,64,128> page_PSMCT8;
+static SwizzleTable<32,128,128> page_PSMCT4;
 
 #define printf(fmt, ...)(0)
 
@@ -82,8 +92,11 @@ GraphicsSynthesizerThread::GraphicsSynthesizerThread()
             for (int x = 0; x < 64; x++)
             {
                 uint32_t column = columnTable32[y & 0x7][x & 0x7];
-                page_PSMCT32[block][y][x] = (blockid_PSMCT32(block, 0, x, y) << 6) + column;
-                page_PSMCT32Z[block][y][x] = (blockid_PSMCT32Z(block, 0, x, y) << 6) + column;
+//                page_PSMCT32[block][y][x] = (blockid_PSMCT32(block, 0, x, y) << 6) + column;
+//                page_PSMCT32Z[block][y][x] = (blockid_PSMCT32Z(block, 0, x, y) << 6) + column;
+
+                page_PSMCT32.get(block,y,x) = (blockid_PSMCT32(block, 0, x, y) << 6) + column;
+                page_PSMCT32Z.get(block,y,x) = (blockid_PSMCT32Z(block, 0, x, y) << 6) + column;
             }
         }
 
@@ -92,23 +105,23 @@ GraphicsSynthesizerThread::GraphicsSynthesizerThread()
             for (int x = 0; x < 64; x++)
             {
                 uint32_t column = columnTable16[y & 0x7][x & 0xF];
-                page_PSMCT16[block][y][x] = (blockid_PSMCT16(block, 0, x, y) << 7) + column;
-                page_PSMCT16S[block][y][x] = (blockid_PSMCT16S(block, 0, x, y) << 7) + column;
-                page_PSMCT16Z[block][y][x] = (blockid_PSMCT16Z(block, 0, x, y) << 7) + column;
-                page_PSMCT16SZ[block][y][x] = (blockid_PSMCT16SZ(block, 0, x, y) << 7) + column;
+                page_PSMCT16.get(block,y,x) = (blockid_PSMCT16(block, 0, x, y) << 7) + column;
+                page_PSMCT16S.get(block,y,x) = (blockid_PSMCT16S(block, 0, x, y) << 7) + column;
+                page_PSMCT16Z.get(block,y,x) = (blockid_PSMCT16Z(block, 0, x, y) << 7) + column;
+                page_PSMCT16SZ.get(block,y,x) = (blockid_PSMCT16SZ(block, 0, x, y) << 7) + column;
             }
         }
 
         for (int y = 0; y < 64; y++)
         {
             for (int x = 0; x < 128; x++)
-                page_PSMCT8[block][y][x] = (blockid_PSMCT8(block, 0, x, y) << 8) + columnTable8[y & 0xF][x & 0xF];
+                page_PSMCT8.get(block,y,x) = (blockid_PSMCT8(block, 0, x, y) << 8) + columnTable8[y & 0xF][x & 0xF];
         }
 
         for (int y = 0; y < 128; y++)
         {
             for (int x = 0; x < 128; x++)
-                page_PSMCT4[block][y][x] = (blockid_PSMCT4(block, 0, x, y) << 9) + columnTable4[y & 15][x & 31];
+                page_PSMCT4.get(block,y,x) = (blockid_PSMCT4(block, 0, x, y) << 9) + columnTable4[y & 15][x & 31];
         }
     }
 
@@ -171,6 +184,7 @@ void GraphicsSynthesizerThread::wait_for_return(GSReturn type, GSReturnMessage &
                 return;
             else
             {
+                send_current_batch_to_gs(); // todo, does this really make sense?
                 if (return_queue->was_empty())
                 {
                     //Last message in the queue, so we don't want this one so we need to sleep
@@ -188,6 +202,7 @@ void GraphicsSynthesizerThread::wait_for_return(GSReturn type, GSReturnMessage &
         else
         {
             printf("[GS] No Messages, waiting for return message\n");
+            send_current_batch_to_gs();
             std::unique_lock<std::mutex> lk(data_mutex);
             notifier.wait(lk, [this] {return recieve_data;});
             recieve_data = false;
@@ -195,16 +210,76 @@ void GraphicsSynthesizerThread::wait_for_return(GSReturn type, GSReturnMessage &
     }
 }
 
+// send current batch to the gs, regardless of how full it is.
+void GraphicsSynthesizerThread::send_current_batch_to_gs()
+{
+    if(emulator_current_batch->idx)
+    {
+        emulator_current_batch->size = emulator_current_batch->idx;
+        emulator_current_batch->idx = 0;
+
+//        if(emulator_current_batch)
+//            fprintf(stderr, "gsbatch - %ld\n", emulator_current_batch->size);
+
+        message_queue->push(emulator_current_batch);
+        emulator_current_batch = nullptr;
+
+
+
+        // notify GS
+        std::unique_lock<std::mutex> lk(data_mutex);
+        notifier.notify_one();
+        send_data = true;
+
+        // allocate a new one
+        emulator_current_batch = gs_batch_stack.alloc();
+
+        if(emulator_current_batch->idx || emulator_current_batch->size)
+        {
+            Errors::die("send_current_batch_to_gs - allocated a batch with size/idx (%ld/%ld)?", emulator_current_batch->idx, emulator_current_batch->size);
+        }
+    }
+    else
+    {
+        // notify GS
+        std::unique_lock<std::mutex> lk(data_mutex);
+        notifier.notify_one();
+        send_data = true;
+    }
+}
+
+
 void GraphicsSynthesizerThread::send_message(GSMessage message)
 {
     printf("[GS] Notifying gs thread of new data\n");
-    message_queue->push(message);
-    send_data = true;
+//    message_queue->push(message);
+//    send_data = true;
+    if(emulator_current_batch && emulator_current_batch->room_to_push())
+    {
+        emulator_current_batch->push_back(message);
+        //fprintf(stdout, "in current batch\n");
+        return;
+    }
+
+    //fprintf(stdout, "creating new batch...\n");
+    // if it's full or doesn't exist yet:
+    send_current_batch_to_gs();
+
+    //fprintf(stdout, "sending to new batch\n");
+    if(emulator_current_batch && emulator_current_batch->room_to_push())
+    {
+        emulator_current_batch->push_back(message);
+    }
+    else
+    {
+        Errors::die("send_message - failed to allocate a new batch after filling one");
+    }
 }
 
 void GraphicsSynthesizerThread::wake_thread()
 {
     printf("[GS] Waking GS Thread\n");
+    //send_current_batch_to_gs();
     std::unique_lock<std::mutex> lk(data_mutex);
     notifier.notify_one();
 }
@@ -219,8 +294,52 @@ void GraphicsSynthesizerThread::reset_fifos()
     GSReturnMessage data;
     while (return_queue->pop(data));
 
-    GSMessage data2;
+    GSMessageBatch* data2;
     while (message_queue->pop(data2));
+    gs_current_batch = nullptr;
+    emulator_current_batch = nullptr;
+    gs_batch_stack.reset_allocations();
+    emulator_current_batch = gs_batch_stack.alloc();
+}
+
+// pop a single GS message, from the GS thread.
+void GraphicsSynthesizerThread::gs_pop_message(GSMessage &mess)
+{
+    for(;;) // loop until we've actually popped something.
+    {
+        // first, try to get a message from the current batch
+        if(gs_current_batch && gs_current_batch->something_to_pop())
+        {
+            gs_current_batch->pop_back(mess);
+            return;
+        }
+
+        // current batch must be empty.  first return it:
+        gs_batch_stack.free(gs_current_batch);
+        gs_current_batch = nullptr;
+
+        // then see if there's a new one...
+        if(message_queue->pop(gs_current_batch)) {
+            // yup!
+            if(!gs_current_batch)
+            {
+                Errors::die("gs_pop_message() - popped null from FIFO");
+            }
+            if(!gs_current_batch->size)
+            {
+                Errors::die("gs_pop_message() - got an empty batch from the FIFO");
+            }
+            gs_current_batch->pop_back(mess);
+            batch_count++;
+            return;
+        } else {
+            // nope, nothing here. the GS is currently starved.
+            gs_starvation_count++;
+            std::unique_lock<std::mutex> lk(data_mutex);
+            notifier.wait(lk, [this] {return send_data;});
+            send_data = false;
+        }
+    }
 }
 
 void GraphicsSynthesizerThread::exit()
@@ -239,6 +358,7 @@ void GraphicsSynthesizerThread::exit()
 void GraphicsSynthesizerThread::event_loop()
 {
     printf("[GS_t] Starting GS Thread\n");
+    int frame_messages = 0;
 
     reset();
 
@@ -250,12 +370,13 @@ void GraphicsSynthesizerThread::event_loop()
         while (true)
         {
             GSMessage data;
-
-            if (message_queue->pop(data))
-            {
+            gs_pop_message(data);
+//            if (message_queue->pop(data))
+//            {
                 if (gsdump_recording)
                     gsdump_file.write((char*)&data, sizeof(data));
 
+                frame_messages++;
                 switch (data.type)
                 {
                     case write64_t:
@@ -330,6 +451,19 @@ void GraphicsSynthesizerThread::event_loop()
                         std::unique_lock<std::mutex> lk(data_mutex);
                         recieve_data = true;
                         notifier.notify_one();
+                        float ms = frameTimer.getMs();
+                        avg_frametime = avg_frametime * 0.9 + ms * 0.1;
+                        float avg_fps = 60 * 16.6667 / avg_frametime;
+                        fprintf(stderr, "GS [%6.3f ms] (filtered %5.2f fps) got %d messages in %d batches, slept %d times!\n", ms, avg_fps,
+                                 frame_messages, batch_count, gs_starvation_count);
+                        fprintf(stderr, "\ttris: %d (%d px), sprites: %d\n", tri_count, tri_px_count, sprite_count);
+                        sprite_count = 0;
+                        tri_count = 0;
+                        frameTimer.start();
+                        gs_starvation_count = 0;
+                        tri_px_count = 0;
+                        frame_messages = 0;
+                        batch_count = 0;
                         break;
                     }
                     case assert_finish_t:
@@ -421,14 +555,15 @@ void GraphicsSynthesizerThread::event_loop()
                     default:
                         Errors::die("corrupted command sent to GS thread");
                 }
-            }
-            else
-            {
-                printf("GS Thread: No messages waiting, going to sleep\n");
-                std::unique_lock<std::mutex> lk(data_mutex);
-                notifier.wait(lk, [this] {return send_data;});
-                send_data = false;
-            }
+//            }
+//            else
+//            {
+//                printf("GS Thread: No messages waiting, going to sleep\n");
+//                std::unique_lock<std::mutex> lk(data_mutex);
+//                notifier.wait(lk, [this] {return send_data;});
+//                gs_starvation_count++;
+//                send_data = false;
+//            }
         }
     }
     catch (Emulation_error &e)
@@ -463,6 +598,10 @@ void GraphicsSynthesizerThread::reset()
     current_PRMODE = &PRIM;
     PRIM.reset();
     PRMODE.reset();
+
+    gs_current_batch = nullptr;
+    emulator_current_batch = nullptr;
+    gs_batch_stack.reset_allocations();
 
     reset_fifos();
 }
@@ -1065,56 +1204,57 @@ uint32_t GraphicsSynthesizerThread::blockid_PSMCT4(uint32_t block, uint32_t widt
 uint32_t GraphicsSynthesizerThread::addr_PSMCT32(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
 {
     uint32_t page = ((block >> 5) + (y >> 5) * width + (x >> 6));
-    uint32_t addr = (page << 11) + page_PSMCT32[block & 0x1F][y & 0x1F][x & 0x3F];
+    //uint32_t addr = (page << 11) + page_PSMCT32[block & 0x1F][y & 0x1F][x & 0x3F];
+    uint32_t addr = (page << 11) + page_PSMCT32.get(block & 0x1F, y & 0x1F, x & 0x3F);
     return (addr << 2) & 0x003FFFFC;
 }
 
 uint32_t GraphicsSynthesizerThread::addr_PSMCT32Z(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
 {
     uint32_t page = ((block >> 5) + (y >> 5) * width + (x >> 6));
-    uint32_t addr = (page << 11) + page_PSMCT32Z[block & 0x1F][y & 0x1F][x & 0x3F];
+    uint32_t addr = (page << 11) + page_PSMCT32Z.get(block & 0x1F, y & 0x1F, x & 0x3F);
     return (addr << 2) & 0x003FFFFC;
 }
 
 uint32_t GraphicsSynthesizerThread::addr_PSMCT16(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
 {
     uint32_t page = ((block >> 5) + (y >> 6) * width + (x >> 6));
-    uint32_t addr = (page << 12) + page_PSMCT16[block & 0x1F][y & 0x3F][x & 0x3F];
+    uint32_t addr = (page << 12) + page_PSMCT16.get(block & 0x1F, y & 0x3F, x & 0x3F);
     return (addr << 1) & 0x003FFFFE;
 }
 
 uint32_t GraphicsSynthesizerThread::addr_PSMCT16S(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
 {
     uint32_t page = ((block >> 5) + (y >> 6) * width + (x >> 6));
-    uint32_t addr = (page << 12) + page_PSMCT16S[block & 0x1F][y & 0x3F][x & 0x3F];
+    uint32_t addr = (page << 12) + page_PSMCT16S.get(block & 0x1F, y & 0x3F, x & 0x3F);
     return (addr << 1) & 0x003FFFFE;
 }
 
 uint32_t GraphicsSynthesizerThread::addr_PSMCT16Z(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
 {
     uint32_t page = ((block >> 5) + (y >> 6) * width + (x >> 6));
-    uint32_t addr = (page << 12) + page_PSMCT16Z[block & 0x1F][y & 0x3F][x & 0x3F];
+    uint32_t addr = (page << 12) + page_PSMCT16Z.get(block & 0x1F, y & 0x3F, x & 0x3F);
     return (addr << 1) & 0x003FFFFE;
 }
 
 uint32_t GraphicsSynthesizerThread::addr_PSMCT16SZ(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
 {
     uint32_t page = ((block >> 5) + (y >> 6) * width + (x >> 6));
-    uint32_t addr = (page << 12) + page_PSMCT16SZ[block & 0x1F][y & 0x3F][x & 0x3F];
+    uint32_t addr = (page << 12) + page_PSMCT16SZ.get(block & 0x1F, y & 0x3F, x & 0x3F);
     return (addr << 1) & 0x003FFFFE;
 }
 
 uint32_t GraphicsSynthesizerThread::addr_PSMCT8(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
 {
     uint32_t page = ((block >> 5) + (y >> 6) * (width >> 1) + (x >> 7));
-    uint32_t addr = (page << 13) + page_PSMCT8[block & 0x1F][y & 0x3F][x & 0x7F];
+    uint32_t addr = (page << 13) + page_PSMCT8.get(block & 0x1F, y & 0x3F, x & 0x7F);
     return addr & 0x003FFFFF;
 }
 
 uint32_t GraphicsSynthesizerThread::addr_PSMCT4(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
 {
     uint32_t page = ((block >> 5) + (y >> 7) * (width >> 1) + (x >> 7));
-    uint32_t addr = (page << 14) + page_PSMCT4[block & 0x1f][y & 0x7f][x & 0x7f];
+    uint32_t addr = (page << 14) + page_PSMCT4.get(block & 0x1F, y & 0x7F, x & 0x7F);
     return addr & 0x007FFFFF;
 }
 
@@ -1322,7 +1462,7 @@ void GraphicsSynthesizerThread::render_primitive()
         case 3:
         case 4:
         case 5:
-            render_triangle();
+            render_triangle2();
             break;
         case 6:
             render_sprite();
@@ -1899,10 +2039,250 @@ int32_t GraphicsSynthesizerThread::orient2D(const Vertex &v1, const Vertex &v2, 
     return (v2.x - v1.x) * (v3.y - v1.y) - (v3.x - v1.x) * (v2.y - v1.y);
 }
 
+// this is garbage, possible to go way faster.
+static void order3(int32_t a, int32_t b, int32_t c, uint8_t* order)
+{
+    if(a > b) {
+        if(b > c) {
+            order[0] = 2;
+            order[1] = 1;
+            order[2] = 0;
+        } else {
+            // a > b, b < c
+            order[0] = 1;
+            if(a > c) {
+                order[2] = 0;
+                order[1] = 2;
+            } else {
+                // c > a
+                order[2] = 2;
+                order[1] = 0;
+            }
+        }
+    } else {
+        // b > a
+        if(a > c) {
+            order[0] = 2;
+            order[1] = 0;
+            order[2] = 1;
+        } else {
+            // b > a, c > a
+            order[0] = 0; // a
+            if(b > c) {
+                order[1] = 2;
+                order[2] = 1;
+            } else {
+                order[1] = 1;
+                order[2] = 2;
+            }
+        }
+    }
+}
+
+void GraphicsSynthesizerThread::render_triangle2() {
+    tri_count++;
+    // this version of render_triangle uses a different algorithm which hopefully is faster.
+    //   at least on small microcontrollers, this approach seems to be faster.
+    //   some notes to others - the rounding is _extremely_ sensitive.  Replace x/y with x * (1/y) and it breaks.
+    //
+    //
+    Vertex unsortedVerts[3];
+    unsortedVerts[0] = vtx_queue[2]; unsortedVerts[0].to_relative(current_ctx->xyoffset);
+    unsortedVerts[1] = vtx_queue[1]; unsortedVerts[1].to_relative(current_ctx->xyoffset);
+    unsortedVerts[2] = vtx_queue[0]; unsortedVerts[2].to_relative(current_ctx->xyoffset);
+
+    if (!current_PRMODE->gourand_shading)
+    {
+        //Flatten the colors
+        unsortedVerts[0].rgbaq.r = unsortedVerts[2].rgbaq.r;
+        unsortedVerts[1].rgbaq.r = unsortedVerts[2].rgbaq.r;
+
+        unsortedVerts[0].rgbaq.g = unsortedVerts[2].rgbaq.g;
+        unsortedVerts[1].rgbaq.g = unsortedVerts[2].rgbaq.g;
+
+        unsortedVerts[0].rgbaq.b = unsortedVerts[2].rgbaq.b;
+        unsortedVerts[1].rgbaq.b = unsortedVerts[2].rgbaq.b;
+
+        unsortedVerts[0].rgbaq.a = unsortedVerts[2].rgbaq.a;
+        unsortedVerts[1].rgbaq.a = unsortedVerts[2].rgbaq.a;
+    }
+
+    TexLookupInfo tex_info;
+    tex_info.new_lookup = true;
+    tex_info.tex_base = current_ctx->tex0.texture_base;
+    tex_info.buffer_width = current_ctx->tex0.width;
+    tex_info.tex_width = current_ctx->tex0.tex_width;
+    tex_info.tex_height = current_ctx->tex0.tex_height;
+
+
+    // I believe (but may be wrong) that if all the y coords are the same, we don't draw.
+    // this seems to be different from current dobiestation behavior.
+    if(unsortedVerts[0].y == unsortedVerts[1].y && unsortedVerts[1].y == unsortedVerts[2].y) // no tris
+    {
+        y_reject_tris++;
+        return;
+    }
+
+    //bool single_tri = (unsortedVerts[0].y == unsortedVerts[1].y || unsortedVerts[1].y == unsortedVerts[2].y || unsortedVerts[0].y == unsortedVerts[2].y);
+
+
+    // sort by y-coordinate and convert to floating point:
+    uint8_t order[3];
+    order3(unsortedVerts[0].y, unsortedVerts[1].y, unsortedVerts[2].y, order);
+
+    VertexF v0(unsortedVerts[order[0]]); // will divide to pixels
+    VertexF v1(unsortedVerts[order[1]]);
+    VertexF v2(unsortedVerts[order[2]]);
+
+    bool single_tri = (v0.y == v1.y);
+
+    // edges (difference of the ENTIRE vertex properties)
+    VertexF e21 = v2 - v1;
+    VertexF e20 = v2 - v0;
+    VertexF e10 = v1 - v0;
+
+    // this is the equivalent of "divider" from the old algorithm (but in pixel coordiantes)
+    float div = e10.y * e20.x - e10.x * e20.y;
+    bool div_flip = div < 0.f;
+
+    if(div == 0.f)
+    {
+        div_reject_tris++;
+        return;
+    }
+
+
+    // divide the triangle into lower and upper triangle:
+    // per the GS rules, we round UP.
+    float scissorY1 = (float)current_ctx->scissor.y1 / 16.f;
+    float scissorY2 = (float)current_ctx->scissor.y2 / 16.f;
+    float scissorX1 = (float)current_ctx->scissor.x1 / 16.f;
+    float scissorX2 = (float)current_ctx->scissor.x2 / 16.f;
+    float upperTop = std::max(std::ceil(v0.y), scissorY1);
+    float upperBot = std::min(std::ceil(v1.y), scissorY2);
+    float lowerTop = std::max(std::ceil(v1.y), scissorY1);
+    float lowerBot = std::min(std::ceil(v2.y), scissorY2);
+
+    // divisions. for some reason * 1/div is causing issues. need to investigate more
+    float v10xdiv = e10.x / div;
+    float v10ydiv = e10.y / div;
+    float v20xdiv = e20.x / div;
+    float v20ydiv = e20.y / div;
+
+    float e20d = e20.x / e20.y;
+    float e21d = e21.x / e21.y;
+    float e10d = e10.x / e10.y;
+
+    // somehow the reciprecal works fine here.
+    VertexF x_step = e20 * v10ydiv - e10 * v20ydiv;
+    VertexF y_step = (e10 * v20xdiv - e20 * v10xdiv); //todo why is this negative?
+
+
+    float div3 = div_flip ? e20d : e21d;
+    float div4 = div_flip ? e21d : e20d;
+
+    if(single_tri)
+    {
+        // todo figure out this
+        if(lowerTop < lowerBot)
+        {
+            VertexF& selected_vertex = div_flip ? v0 : v1;
+            VertexF& other_vertex = div_flip ? v1 : v0;
+            render_half_triangle(selected_vertex.x, other_vertex.x, upperTop, lowerBot, x_step, y_step, selected_vertex,
+                    div3, div4, scissorX1, scissorX2, tex_info);
+        }
+    }
+    else
+    {
+        float div1 = div_flip ? e20d : e10d;
+        float div2 = div_flip ? e10d : e20d;
+
+
+        // upper triangle
+        if(upperTop < upperBot) // wtf i shouldn't have to check this!
+        {
+            render_half_triangle(v0.x, v0.x, upperTop, upperBot, x_step, y_step, v0, div1, div2, scissorX1, scissorX2, tex_info);
+        }
+
+        if(lowerTop < lowerBot)
+        {
+            render_half_triangle(v0.x + div1 * e10.y, v0.x + div2 * e10.y, lowerTop, lowerBot, x_step, y_step, v1,
+                    div3, div4, scissorX1, scissorX2, tex_info);
+        }
+
+    }
+
+}
+
+void GraphicsSynthesizerThread::render_half_triangle(float x0, float x1, int y0, int y1, VertexF &x_step,
+                                                     VertexF &y_step, VertexF &init, float step_x0, float step_x1,
+                                                     float scx1, float scx2, TexLookupInfo& tex_info) {
+
+    bool tmp_tex = current_PRMODE->texture_mapping;
+    bool tmp_uv = !current_PRMODE->use_UV;//allow for loop unswitching
+    //fprintf(stderr, "%d -> %d\n", y0, y1);
+    //fprintf(stderr, "rgbstep: %f, %f, %f\n", x_step.r, x_step.g, x_step.b);
+
+    for(int y = y0; y < y1; y++)
+    {
+        float height = y - init.y; // must use floating point here
+        VertexF lineStart = init + y_step * height; // this likely interpolates _way_ more than it needs to.
+        float x0l = x0 + step_x0 * height;
+        float x1l = x1 + step_x1 * height;
+        x0l = std::max(scx1, std::ceil(x0l));
+        x1l = std::min(scx2, std::ceil(x1l));
+
+        lineStart += (x_step * (x0l - init.x));
+        //fprintf(stderr, "(%f,%f), height %f -> (%f, %f)\n", x0, x1, height, x0l, x1l);
+
+        int xStop = x1l;
+        for(int x = x0l; x < xStop; x++)
+        {
+            tex_info.vtx_color.r = lineStart.r;
+            tex_info.vtx_color.g = lineStart.g;
+            tex_info.vtx_color.b = lineStart.b;
+            tex_info.vtx_color.a = lineStart.a;
+            tex_info.vtx_color.q = lineStart.q;
+            tex_info.fog = lineStart.fog;
+            if (tmp_tex)
+            {
+                int32_t u, v;
+                calculate_LOD(tex_info);
+                if (tmp_uv)
+                {
+                    float s, t, q;
+                    s = lineStart.s;
+                    t = lineStart.t;
+                    q = lineStart.q;
+
+                    s /= q;
+                    t /= q;
+                    u = (s * tex_info.tex_width) * 16.0;
+                    v = (t * tex_info.tex_height) * 16.0;
+                }
+                else
+                {
+                    u = (uint32_t) lineStart.u;
+                    v = (uint32_t) lineStart.v;
+                }
+                tex_lookup(u, v, tex_info);
+                draw_pixel(x * 16.f, y * 16.f, (uint32_t)(lineStart.z * 16.f), tex_info.tex_color);
+            }
+            else
+            {
+                draw_pixel(x * 16.f, y * 16.f, (uint32_t)(lineStart.z * 16.f), tex_info.vtx_color);
+            }
+
+            lineStart += x_step;
+        }
+    }
+
+}
+
 void GraphicsSynthesizerThread::render_triangle()
 {
     printf("[GS_t] Rendering triangle!\n");
-
+    tri_count++;
     Vertex v1 = vtx_queue[2]; v1.to_relative(current_ctx->xyoffset);
     Vertex v2 = vtx_queue[1]; v2.to_relative(current_ctx->xyoffset);
     Vertex v3 = vtx_queue[0]; v3.to_relative(current_ctx->xyoffset);
@@ -2055,6 +2435,7 @@ void GraphicsSynthesizerThread::render_triangle()
                         //Is inside triangle?
                         if ((w1 | w2 | w3) >= 0)
                         {
+                            tri_px_count++;
                             //Interpolate Z
                             double z = (double) v1.z * w1 + (double) v2.z * w2 + (double) v3.z * w3;
                             z /= divider;
@@ -2107,6 +2488,7 @@ void GraphicsSynthesizerThread::render_triangle()
                             {
                                 draw_pixel(x, y, (uint32_t)z, tex_info.vtx_color);
                             }
+                            break;
                         }
                         else
                             break;
@@ -2139,7 +2521,7 @@ void GraphicsSynthesizerThread::render_sprite()
     printf("[GS_t] Rendering sprite!\n");
     Vertex v1 = vtx_queue[1]; v1.to_relative(current_ctx->xyoffset);
     Vertex v2 = vtx_queue[0]; v2.to_relative(current_ctx->xyoffset);
-
+    sprite_count++;
     TexLookupInfo tex_info;
     tex_info.new_lookup = true;
 
@@ -2762,6 +3144,9 @@ void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
     }
     else
         info.LOD = round(K);
+
+
+    //fprintf(stderr, "LOD %f\n", info.LOD);
 
     if (current_ctx->tex1.max_MIP_level)
     {

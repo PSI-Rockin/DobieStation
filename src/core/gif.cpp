@@ -246,7 +246,7 @@ void GraphicsInterface::feed_GIF(uint128_t data)
     {
         path_status[active_path] = 4;
         gs->assert_FINISH();
-        gs->wake_gs_thread();
+        //gs->wake_gs_thread(); todo - do we want this one?
     }
 }
 
