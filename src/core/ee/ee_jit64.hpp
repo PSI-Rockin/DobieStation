@@ -43,8 +43,8 @@ class EE_JIT64;
 // build after marking them const throws an access violation.
 // You'll have to ask the guys who made the C++ standard why that happens,
 // but please don't touch! - Souzooka
-static int32_t FPU_MASK_ABS[4] = { 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF };
-static int32_t FPU_MASK_NEG[4] = { 0x80000000, 0x80000000, 0x80000000, 0x80000000 };
+static uint32_t FPU_MASK_ABS[4] = { 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF };
+static uint32_t FPU_MASK_NEG[4] = { 0x80000000, 0x80000000, 0x80000000, 0x80000000 };
 
 extern "C" uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee);
 
@@ -117,13 +117,13 @@ private:
     void move_from_lo(EmotionEngine& ee, REG_64 dest);
     void move_to_coprocessor1(EmotionEngine& ee, IR::Instruction &instr);
     void move_to_hi(EmotionEngine& ee, IR::Instruction &instr);
-    void move_to_hi(EmotionEngine& ee, REG_64 source);
+    void move_to_hi(EmotionEngine& ee, REG_64 source, REG_64 dest);
     void move_to_hi_imm(EmotionEngine& ee, int64_t value);
     void move_to_lo(EmotionEngine& ee, IR::Instruction &instr);
-    void move_to_lo(EmotionEngine& ee, REG_64 source);
+    void move_to_lo(EmotionEngine& ee, REG_64 source, REG_64 dest);
     void move_to_lo_imm(EmotionEngine& ee, int64_t value);
     void move_to_lo_hi(EmotionEngine& ee, IR::Instruction &instr);
-    void move_to_lo_hi(EmotionEngine& ee, REG_64 loSource, REG_64 hiSource);
+    void move_to_lo_hi(EmotionEngine& ee, REG_64 loSource, REG_64 hiSource, REG_64 loDest, REG_64 hiDest);
     void move_to_lo_hi_imm(EmotionEngine& ee, int64_t loValue, int64_t hiValue);
     void move_xmm_reg(EmotionEngine& ee, IR::Instruction& instr);
     void multiply_unsigned_word(EmotionEngine& ee, IR::Instruction& instr);

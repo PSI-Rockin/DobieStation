@@ -4,9 +4,9 @@
 
 void EE_JIT64::floating_point_minimum_AVX(EmotionEngine& ee, IR::Instruction& instr)
 {
-    REG_64 dest = alloc_fpu_reg(ee, instr.get_dest(), REG_STATE::WRITE);
     REG_64 source = alloc_fpu_reg(ee, instr.get_source(), REG_STATE::READ);
     REG_64 source2 = alloc_fpu_reg(ee, instr.get_source2(), REG_STATE::READ);
+    REG_64 dest = alloc_fpu_reg(ee, instr.get_dest(), REG_STATE::WRITE);
 
     emitter.load_addr((uint64_t)&ee.fpu->control.u, REG_64::RAX);
     emitter.MOV8_IMM_MEM(false, REG_64::RAX);
@@ -18,9 +18,9 @@ void EE_JIT64::floating_point_minimum_AVX(EmotionEngine& ee, IR::Instruction& in
 
 void EE_JIT64::floating_point_maximum_AVX(EmotionEngine& ee, IR::Instruction& instr)
 {
-    REG_64 dest = alloc_fpu_reg(ee, instr.get_dest(), REG_STATE::WRITE);
     REG_64 source = alloc_fpu_reg(ee, instr.get_source(), REG_STATE::READ);
     REG_64 source2 = alloc_fpu_reg(ee, instr.get_source2(), REG_STATE::READ);
+    REG_64 dest = alloc_fpu_reg(ee, instr.get_dest(), REG_STATE::WRITE);
 
     emitter.load_addr((uint64_t)&ee.fpu->control.u, REG_64::RAX);
     emitter.MOV8_IMM_MEM(false, REG_64::RAX);

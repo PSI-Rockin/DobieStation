@@ -343,8 +343,8 @@ void EE_JIT64::divide_unsigned_word(EmotionEngine& ee, IR::Instruction &instr)
     REG_64 RDX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD, REG_64::RDX);
     REG_64 dividend = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
     REG_64 divisor = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
-    REG_64 HI = alloc_gpr_reg(ee, (int)EE_SpecialReg::HI, REG_STATE::WRITE);
     REG_64 LO = alloc_gpr_reg(ee, (int)EE_SpecialReg::LO, REG_STATE::WRITE);
+    REG_64 HI = alloc_gpr_reg(ee, (int)EE_SpecialReg::HI, REG_STATE::WRITE);
 
     emitter.TEST32_REG(divisor, divisor);
     uint8_t *label1 = emitter.JCC_NEAR_DEFERRED(ConditionCode::Z);
@@ -353,7 +353,7 @@ void EE_JIT64::divide_unsigned_word(EmotionEngine& ee, IR::Instruction &instr)
     emitter.DIV32(divisor);
     emitter.MOVSX32_TO_64(REG_64::RAX, REG_64::RAX);
     emitter.MOVSX32_TO_64(RDX, RDX);
-    move_to_lo_hi(ee, REG_64::RAX, RDX);
+    move_to_lo_hi(ee, REG_64::RAX, RDX, LO, HI);
     uint8_t *end = emitter.JMP_NEAR_DEFERRED();
     free_gpr_reg(ee, RDX);
 
@@ -409,6 +409,8 @@ void EE_JIT64::divide_word(EmotionEngine& ee, IR::Instruction &instr)
     REG_64 RDX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD, REG_64::RDX);
     REG_64 dividend = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
     REG_64 divisor = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
+    REG_64 LO = alloc_gpr_reg(ee, (int)EE_SpecialReg::LO, REG_STATE::WRITE);
+    REG_64 HI = alloc_gpr_reg(ee, (int)EE_SpecialReg::HI, REG_STATE::WRITE);
 
     emitter.CMP32_IMM(0x80000000, dividend);
     uint8_t *label1_1 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
@@ -426,7 +428,7 @@ void EE_JIT64::divide_word(EmotionEngine& ee, IR::Instruction &instr)
     emitter.IDIV32(divisor);
     emitter.MOVSX32_TO_64(REG_64::RAX, REG_64::RAX);
     emitter.MOVSX32_TO_64(RDX, RDX);
-    move_to_lo_hi(ee, REG_64::RAX, RDX);
+    move_to_lo_hi(ee, REG_64::RAX, RDX, LO, HI);
     uint8_t *end_2 = emitter.JMP_NEAR_DEFERRED();
 
     emitter.set_jump_dest(label2);
@@ -436,7 +438,7 @@ void EE_JIT64::divide_word(EmotionEngine& ee, IR::Instruction &instr)
     emitter.DEC8(REG_64::RAX);
     emitter.MOVSX8_TO_64(REG_64::RAX, REG_64::RAX);
     emitter.MOVSX32_TO_64(dividend, dividend);
-    move_to_lo_hi(ee, REG_64::RAX, dividend);
+    move_to_lo_hi(ee, REG_64::RAX, dividend, LO, HI);
 
     emitter.set_jump_dest(end_1);
     emitter.set_jump_dest(end_2);
@@ -805,13 +807,13 @@ void EE_JIT64::move_from_lo(EmotionEngine& ee, REG_64 dest)
 void EE_JIT64::move_to_hi(EmotionEngine& ee, IR::Instruction &instr)
 {
     REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
-    move_to_hi(ee, source);
+    REG_64 HI = alloc_gpr_reg(ee, (int)EE_SpecialReg::HI, REG_STATE::WRITE);
+    move_to_hi(ee, source, HI);
 }
 
-void EE_JIT64::move_to_hi(EmotionEngine& ee, REG_64 source)
+void EE_JIT64::move_to_hi(EmotionEngine& ee, REG_64 source, REG_64 dest)
 {
-    REG_64 HI = alloc_gpr_reg(ee, (int)EE_SpecialReg::HI, REG_STATE::WRITE);
-    emitter.MOV64_MR(source, HI);
+    emitter.MOV64_MR(source, dest);
 }
 
 void EE_JIT64::move_to_hi_imm(EmotionEngine& ee, int64_t value)
@@ -823,10 +825,11 @@ void EE_JIT64::move_to_hi_imm(EmotionEngine& ee, int64_t value)
 void EE_JIT64::move_to_lo(EmotionEngine& ee, IR::Instruction &instr)
 {
     REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
-    move_to_lo(ee, source);
+    REG_64 LO = alloc_gpr_reg(ee, (int)EE_SpecialReg::LO, REG_STATE::WRITE);
+    move_to_lo(ee, source, LO);
 }
 
-void EE_JIT64::move_to_lo(EmotionEngine& ee, REG_64 source)
+void EE_JIT64::move_to_lo(EmotionEngine& ee, REG_64 source, REG_64 dest)
 {
     REG_64 LO = alloc_gpr_reg(ee, (int)EE_SpecialReg::LO, REG_STATE::WRITE);
     emitter.MOV64_MR(source, LO);
@@ -842,13 +845,15 @@ void EE_JIT64::move_to_lo_hi(EmotionEngine& ee, IR::Instruction &instr)
 {
     REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
     REG_64 source2 = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
-    move_to_lo_hi(ee, source, source2);
+    REG_64 LO = alloc_gpr_reg(ee, (int)EE_SpecialReg::LO, REG_STATE::WRITE);
+    REG_64 HI = alloc_gpr_reg(ee, (int)EE_SpecialReg::HI, REG_STATE::WRITE);
+    move_to_lo_hi(ee, source, source2, LO, HI);
 }
 
-void EE_JIT64::move_to_lo_hi(EmotionEngine& ee, REG_64 loSource, REG_64 hiSource)
+void EE_JIT64::move_to_lo_hi(EmotionEngine& ee, REG_64 loSource, REG_64 hiSource, REG_64 loDest, REG_64 hiDest)
 {
-    move_to_lo(ee, loSource);
-    move_to_hi(ee, hiSource);
+    move_to_lo(ee, loSource, loDest);
+    move_to_hi(ee, hiSource, hiDest);
 }
 
 void EE_JIT64::move_to_lo_hi_imm(EmotionEngine& ee, int64_t loValue, int64_t hiValue)
@@ -862,10 +867,12 @@ void EE_JIT64::multiply_unsigned_word(EmotionEngine& ee, IR::Instruction& instr)
     REG_64 RDX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD, REG_64::RDX);
     REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
     REG_64 source2 = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
+    REG_64 LO = alloc_gpr_reg(ee, (int)EE_SpecialReg::LO, REG_STATE::WRITE);
+    REG_64 HI = alloc_gpr_reg(ee, (int)EE_SpecialReg::HI, REG_STATE::WRITE);
 
     emitter.MOV32_REG(source, REG_64::RAX);
     emitter.MUL32(source2);
-    move_to_lo_hi(ee, REG_64::RAX, RDX);
+    move_to_lo_hi(ee, REG_64::RAX, RDX, LO, HI);
 
     if (instr.get_dest())
     {
@@ -881,10 +888,12 @@ void EE_JIT64::multiply_word(EmotionEngine& ee, IR::Instruction& instr)
     REG_64 RDX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD, REG_64::RDX);
     REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
     REG_64 source2 = alloc_gpr_reg(ee, instr.get_source2(), REG_STATE::READ);
+    REG_64 LO = alloc_gpr_reg(ee, (int)EE_SpecialReg::LO, REG_STATE::WRITE);
+    REG_64 HI = alloc_gpr_reg(ee, (int)EE_SpecialReg::HI, REG_STATE::WRITE);
 
     emitter.MOV32_REG(source, REG_64::RAX);
     emitter.IMUL32(source2);
-    move_to_lo_hi(ee, REG_64::RAX, RDX);
+    move_to_lo_hi(ee, REG_64::RAX, RDX, LO, HI);
 
     if (instr.get_dest())
     {
