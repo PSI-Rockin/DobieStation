@@ -193,6 +193,12 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::BranchNotEqualZero:
             branch_not_equal_zero(ee, instr);
             break;
+        case IR::Opcode::ClearDoublewordReg:
+            clear_doubleword_reg(ee, instr);
+            break;
+        case IR::Opcode::ClearWordReg:
+            clear_word_reg(ee, instr);
+            break;
         case IR::Opcode::DivideWord:
             divide_word(ee, instr);
             break;

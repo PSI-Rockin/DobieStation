@@ -794,7 +794,10 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
             }
             if (!source)
             {
-                // TODO: Unconditional move register
+                instr.op = IR::Opcode::MoveDoublewordReg;
+                instr.set_dest(dest);
+                instr.set_source(source2);
+                return instr;
             }
 
             instr.op = IR::Opcode::MoveConditionalOnZero;
@@ -809,7 +812,7 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
             uint8_t dest = (opcode >> 11) & 0x1F;
             uint8_t source = (opcode >> 16) & 0x1F;
             uint8_t source2 = (opcode >> 21) & 0x1F;
-            if (!dest)
+            if (!dest || !source)
             {
                 instr.op = IR::Opcode::Null;
                 return instr;
@@ -1010,7 +1013,8 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
             }
             if (source == source2)
             {
-                // TODO: Just clear out dest
+                instr.op = IR::Opcode::ClearWordReg;
+                instr.set_dest(dest);
             }
 
             instr.op = IR::Opcode::SubWordReg;
@@ -1032,7 +1036,10 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
             }
             if (source == source2)
             {
-                // TODO: dest = source
+                instr.op = IR::Opcode::MoveDoublewordReg;
+                instr.set_dest(dest);
+                instr.set_source(source);
+                return instr;
             }
 
             instr.op = IR::Opcode::AndReg;
@@ -1054,7 +1061,10 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
             }
             if (source == source2)
             {
-                // TODO: dest = source
+                instr.op = IR::Opcode::MoveDoublewordReg;
+                instr.set_dest(dest);
+                instr.set_source(source);
+                return instr;
             }
 
             instr.op = IR::Opcode::OrReg;
@@ -1076,7 +1086,9 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
             }
             if (source == source2)
             {
-                // TODO: dest = 0
+                instr.op = IR::Opcode::ClearDoublewordReg;
+                instr.set_dest(dest);
+                return instr;
             }
 
             instr.op = IR::Opcode::XorReg;
@@ -1199,6 +1211,12 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
                 instr.op = IR::Opcode::NegateDoublewordReg;
                 instr.set_dest(dest);
                 instr.set_source(source2);
+            }
+            if (source == source2)
+            {
+                instr.op = IR::Opcode::ClearDoublewordReg;
+                instr.set_dest(dest);
+                return instr;
             }
 
             instr.op = IR::Opcode::SubDoublewordReg;

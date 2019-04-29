@@ -397,7 +397,19 @@ void EE_JIT64::branch_not_equal_zero(EmotionEngine& ee, IR::Instruction &instr)
     free_gpr_reg(ee, R15);
 }
 
-void EE_JIT64::divide_unsigned_word(EmotionEngine& ee, IR::Instruction &instr)
+void EE_JIT64::clear_doubleword_reg(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+    emitter.XOR64_REG(dest, dest);
+}
+
+void EE_JIT64::clear_word_reg(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+    emitter.XOR32_REG(dest, dest);
+}
+
+void EE_JIT64::divide_unsigned_word(EmotionEngine& ee, IR::Instruction& instr)
 {
     // idiv result is stored in RAX:RDX, so we allocate those registers first.
     REG_64 RDX = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD, REG_64::RDX);
