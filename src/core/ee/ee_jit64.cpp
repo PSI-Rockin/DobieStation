@@ -172,6 +172,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::BranchEqual:
             branch_equal(ee, instr);
             break;
+        case IR::Opcode::BranchEqualZero:
+            branch_equal_zero(ee, instr);
+            break;
         case IR::Opcode::BranchGreaterThanOrEqualZero:
             branch_greater_than_or_equal_zero(ee, instr);
             break;
@@ -186,6 +189,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             break;
         case IR::Opcode::BranchNotEqual:
             branch_not_equal(ee, instr);
+            break;
+        case IR::Opcode::BranchNotEqualZero:
+            branch_not_equal_zero(ee, instr);
             break;
         case IR::Opcode::DivideWord:
             divide_word(ee, instr);

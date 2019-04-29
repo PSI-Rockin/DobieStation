@@ -171,6 +171,36 @@ void EE_JIT64::branch_equal(EmotionEngine& ee, IR::Instruction &instr)
     free_gpr_reg(ee, R15);
 }
 
+void EE_JIT64::branch_equal_zero(EmotionEngine& ee, IR::Instruction &instr)
+{
+    // Alloc registers to compare
+    REG_64 op1 = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+
+    // Alloc scratchpad registers
+    REG_64 R15 = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
+
+    // Conditionally move the success or failure destination into ee.PC
+    emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
+    emitter.MOV32_REG_IMM(instr.get_jump_dest(), R15);
+    emitter.TEST64_REG(op1, op1);
+    emitter.CMOVCC32_REG(ConditionCode::Z, R15, REG_64::RAX);
+    emitter.load_addr((uint64_t)&ee.PC, R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, R15);
+
+    if (instr.get_is_likely())
+    {
+        likely_branch = true;
+
+        // Use the result of the FLAGS register from the last compare to set branch_on,
+        // this boolean is used in handle_likely_branch
+        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
+        emitter.SETCC_MEM(ConditionCode::Z, REG_64::RAX);
+    }
+
+    // Free scratchpad registers
+    free_gpr_reg(ee, R15);
+}
+
 void EE_JIT64::branch_greater_than_or_equal_zero(EmotionEngine& ee, IR::Instruction &instr)
 {
     // Alloc registers to compare
@@ -331,6 +361,36 @@ void EE_JIT64::branch_not_equal(EmotionEngine& ee, IR::Instruction &instr)
         // this boolean is used in handle_likely_branch
         emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
         emitter.SETCC_MEM(ConditionCode::NE, REG_64::RAX);
+    }
+
+    // Free scratchpad registers
+    free_gpr_reg(ee, R15);
+}
+
+void EE_JIT64::branch_not_equal_zero(EmotionEngine& ee, IR::Instruction &instr)
+{
+    // Alloc registers to compare
+    REG_64 op1 = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
+
+    // Alloc scratchpad registers
+    REG_64 R15 = lalloc_gpr_reg(ee, 0, REG_STATE::SCRATCHPAD);
+
+    // Conditionally move the success or failure destination into ee.PC
+    emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
+    emitter.MOV32_REG_IMM(instr.get_jump_dest(), R15);
+    emitter.TEST64_REG(op1, op1);
+    emitter.CMOVCC32_REG(ConditionCode::NZ, R15, REG_64::RAX);
+    emitter.load_addr((uint64_t)&ee.PC, R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, R15);
+
+    if (instr.get_is_likely())
+    {
+        likely_branch = true;
+
+        // Use the result of the FLAGS register from the last compare to set branch_on,
+        // this boolean is used in handle_likely_branch
+        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
+        emitter.SETCC_MEM(ConditionCode::NZ, REG_64::RAX);
     }
 
     // Free scratchpad registers

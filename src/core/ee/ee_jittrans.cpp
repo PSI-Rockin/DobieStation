@@ -81,6 +81,38 @@ IR::Instruction EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC)
             return instr;
         case 0x04:
             // BEQ
+        {
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+
+            if (source == source2)
+            {
+                // B
+                instr.op = IR::Opcode::Jump;
+                instr.set_jump_dest(branch_offset_ee(opcode, PC));
+                return instr;
+            }
+            if (!source)
+            {
+                // BEQZ
+                instr.op = IR::Opcode::BranchEqualZero;
+                instr.set_source(source2);
+                instr.set_jump_dest(branch_offset_ee(opcode, PC));
+                instr.set_jump_fail_dest(PC + 8);
+                instr.set_is_likely(false);
+                return instr;
+            }
+            if (!source2)
+            {
+                // BEQZ
+                instr.op = IR::Opcode::BranchEqualZero;
+                instr.set_source(source);
+                instr.set_jump_dest(branch_offset_ee(opcode, PC));
+                instr.set_jump_fail_dest(PC + 8);
+                instr.set_is_likely(false);
+                return instr;
+            }
+
             instr.op = IR::Opcode::BranchEqual;
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_source2((opcode >> 16) & 0x1F);
@@ -88,8 +120,39 @@ IR::Instruction EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC)
             instr.set_jump_fail_dest(PC + 8);
             instr.set_is_likely(false);
             return instr;
+        }
         case 0x05:
             // BNE
+        {
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+
+            if (source == source2)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+            if (!source)
+            {
+                // BNEZ
+                instr.op = IR::Opcode::BranchNotEqualZero;
+                instr.set_source(source2);
+                instr.set_jump_dest(branch_offset_ee(opcode, PC));
+                instr.set_jump_fail_dest(PC + 8);
+                instr.set_is_likely(false);
+                return instr;
+            }
+            if (!source2)
+            {
+                // BNEZ
+                instr.op = IR::Opcode::BranchNotEqualZero;
+                instr.set_source(source);
+                instr.set_jump_dest(branch_offset_ee(opcode, PC));
+                instr.set_jump_fail_dest(PC + 8);
+                instr.set_is_likely(false);
+                return instr;
+            }
+
             instr.op = IR::Opcode::BranchNotEqual;
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_source2((opcode >> 16) & 0x1F);
@@ -97,6 +160,7 @@ IR::Instruction EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC)
             instr.set_jump_fail_dest(PC + 8);
             instr.set_is_likely(false);
             return instr;
+        }
         case 0x06:
             // BLEZ
             instr.op = IR::Opcode::BranchLessThanOrEqualZero;
@@ -255,6 +319,31 @@ IR::Instruction EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC)
             return instr;
         case 0x14:
             // BEQL
+        {
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+
+            if (!source)
+            {
+                // BEQZL
+                instr.op = IR::Opcode::BranchEqualZero;
+                instr.set_source(source2);
+                instr.set_jump_dest(branch_offset_ee(opcode, PC));
+                instr.set_jump_fail_dest(PC + 8);
+                instr.set_is_likely(true);
+                return instr;
+            }
+            if (!source2)
+            {
+                // BEQZL
+                instr.op = IR::Opcode::BranchEqualZero;
+                instr.set_source(source);
+                instr.set_jump_dest(branch_offset_ee(opcode, PC));
+                instr.set_jump_fail_dest(PC + 8);
+                instr.set_is_likely(true);
+                return instr;
+            }
+
             instr.op = IR::Opcode::BranchEqual;
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_source2((opcode >> 16) & 0x1F);
@@ -262,8 +351,39 @@ IR::Instruction EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC)
             instr.set_jump_fail_dest(PC + 8);
             instr.set_is_likely(true);
             return instr;
+        }
         case 0x15:
             // BNEL
+        {
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+
+            if (source == source2)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+            if (!source)
+            {
+                // BNEZL
+                instr.op = IR::Opcode::BranchNotEqualZero;
+                instr.set_source(source2);
+                instr.set_jump_dest(branch_offset_ee(opcode, PC));
+                instr.set_jump_fail_dest(PC + 8);
+                instr.set_is_likely(true);
+                return instr;
+            }
+            if (!source2)
+            {
+                // BNEZL
+                instr.op = IR::Opcode::BranchNotEqualZero;
+                instr.set_source(source);
+                instr.set_jump_dest(branch_offset_ee(opcode, PC));
+                instr.set_jump_fail_dest(PC + 8);
+                instr.set_is_likely(true);
+                return instr;
+            }
+
             instr.op = IR::Opcode::BranchNotEqual;
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_source2((opcode >> 16) & 0x1F);
@@ -271,6 +391,7 @@ IR::Instruction EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC)
             instr.set_jump_fail_dest(PC + 8);
             instr.set_is_likely(true);
             return instr;
+        }
         case 0x16:
             // BLEZL
             instr.op = IR::Opcode::BranchLessThanOrEqualZero;
@@ -2676,11 +2797,13 @@ bool EE_JitTranslator::is_branch(const IR::Instruction& instr) const noexcept
         instr.op == IR::Opcode::BranchCop1 ||
         instr.op == IR::Opcode::BranchCop2 ||
         instr.op == IR::Opcode::BranchEqual ||
+        instr.op == IR::Opcode::BranchEqualZero ||
         instr.op == IR::Opcode::BranchGreaterThanOrEqualZero ||
         instr.op == IR::Opcode::BranchGreaterThanZero ||
         instr.op == IR::Opcode::BranchLessThanOrEqualZero ||
         instr.op == IR::Opcode::BranchLessThanZero ||
-        instr.op == IR::Opcode::BranchNotEqual;
+        instr.op == IR::Opcode::BranchNotEqual ||
+        instr.op == IR::Opcode::BranchNotEqualZero;
 }
 
 void EE_JitTranslator::fallback_interpreter(IR::Instruction& instr, uint32_t instr_word) const noexcept
