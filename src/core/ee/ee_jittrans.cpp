@@ -718,7 +718,8 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
             // MFHI
         {
             uint8_t dest = (opcode >> 11) & 0x1F;
-            instr.op = IR::Opcode::MoveFromHI;
+            instr.op = IR::Opcode::MoveDoublewordReg;
+            instr.set_source((int)EE_SpecialReg::HI);
             instr.set_dest(dest);
             return instr;
         }
@@ -726,15 +727,17 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
             // MTHI
         {
             uint8_t source = (opcode >> 21) & 0x1F;
-            instr.op = IR::Opcode::MoveToHI;
+            instr.op = IR::Opcode::MoveDoublewordReg;
             instr.set_source(source);
+            instr.set_dest((int)EE_SpecialReg::HI);
             return instr;
         }
         case 0x12:
             // MFLO
         {
             uint8_t dest = (opcode >> 11) & 0x1F;
-            instr.op = IR::Opcode::MoveFromLO;
+            instr.op = IR::Opcode::MoveDoublewordReg;
+            instr.set_source((int)EE_SpecialReg::LO);
             instr.set_dest(dest);
             return instr;
         }
@@ -742,8 +745,9 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
             // MTLO
         {
             uint8_t source = (opcode >> 21) & 0x1F;
-            instr.op = IR::Opcode::MoveToLO;
+            instr.op = IR::Opcode::MoveDoublewordReg;
             instr.set_source(source);
+            instr.set_dest((int)EE_SpecialReg::LO);
             return instr;
         }
         case 0x14:

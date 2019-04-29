@@ -780,65 +780,12 @@ void EE_JIT64::move_conditional_on_zero(EmotionEngine& ee, IR::Instruction& inst
     emitter.CMOVCC64_REG(ConditionCode::Z, source2, dest);
 }
 
-void EE_JIT64::move_from_hi(EmotionEngine&ee, IR::Instruction &instr)
-{
-    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
-    move_from_hi(ee, dest);
-}
-
-void EE_JIT64::move_from_hi(EmotionEngine&ee, REG_64 dest)
-{
-    REG_64 HI = alloc_gpr_reg(ee, (int)EE_SpecialReg::HI, REG_STATE::READ);
-    emitter.MOV64_MR(HI, dest);
-}
-
-void EE_JIT64::move_from_lo(EmotionEngine& ee, IR::Instruction &instr)
-{
-    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
-    move_from_lo(ee, dest);
-}
-
-void EE_JIT64::move_from_lo(EmotionEngine& ee, REG_64 dest)
-{
-    REG_64 LO = alloc_gpr_reg(ee, (int)EE_SpecialReg::LO, REG_STATE::READ);
-    emitter.MOV64_MR(LO, dest);
-}
-
-void EE_JIT64::move_to_hi(EmotionEngine& ee, IR::Instruction &instr)
+void EE_JIT64::move_doubleword_reg(EmotionEngine& ee, IR::Instruction& instr)
 {
     REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
-    REG_64 HI = alloc_gpr_reg(ee, (int)EE_SpecialReg::HI, REG_STATE::WRITE);
-    move_to_hi(ee, source, HI);
-}
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
 
-void EE_JIT64::move_to_hi(EmotionEngine& ee, REG_64 source, REG_64 dest)
-{
     emitter.MOV64_MR(source, dest);
-}
-
-void EE_JIT64::move_to_hi_imm(EmotionEngine& ee, int64_t value)
-{
-    REG_64 HI = alloc_gpr_reg(ee, (int)EE_SpecialReg::HI, REG_STATE::WRITE);
-    emitter.MOV64_OI(value, HI);
-}
-
-void EE_JIT64::move_to_lo(EmotionEngine& ee, IR::Instruction &instr)
-{
-    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
-    REG_64 LO = alloc_gpr_reg(ee, (int)EE_SpecialReg::LO, REG_STATE::WRITE);
-    move_to_lo(ee, source, LO);
-}
-
-void EE_JIT64::move_to_lo(EmotionEngine& ee, REG_64 source, REG_64 dest)
-{
-    REG_64 LO = alloc_gpr_reg(ee, (int)EE_SpecialReg::LO, REG_STATE::WRITE);
-    emitter.MOV64_MR(source, LO);
-}
-
-void EE_JIT64::move_to_lo_imm(EmotionEngine& ee, int64_t value)
-{
-    REG_64 LO = alloc_gpr_reg(ee, (int)EE_SpecialReg::LO, REG_STATE::WRITE);
-    emitter.MOV64_OI(value, LO);
 }
 
 void EE_JIT64::move_to_lo_hi(EmotionEngine& ee, IR::Instruction &instr)
@@ -852,14 +799,24 @@ void EE_JIT64::move_to_lo_hi(EmotionEngine& ee, IR::Instruction &instr)
 
 void EE_JIT64::move_to_lo_hi(EmotionEngine& ee, REG_64 loSource, REG_64 hiSource, REG_64 loDest, REG_64 hiDest)
 {
-    move_to_lo(ee, loSource, loDest);
-    move_to_hi(ee, hiSource, hiDest);
+    emitter.MOV32_REG(loSource, loDest);
+    emitter.MOV32_REG(hiSource, hiDest);
 }
 
 void EE_JIT64::move_to_lo_hi_imm(EmotionEngine& ee, int64_t loValue, int64_t hiValue)
 {
-    move_to_lo_imm(ee, loValue);
-    move_to_hi_imm(ee, hiValue);
+    REG_64 LO = alloc_gpr_reg(ee, (int)EE_SpecialReg::LO, REG_STATE::WRITE);
+    REG_64 HI = alloc_gpr_reg(ee, (int)EE_SpecialReg::HI, REG_STATE::WRITE);
+    emitter.MOV32_REG_IMM(loValue, LO);
+    emitter.MOV32_REG_IMM(hiValue, HI);
+}
+
+void EE_JIT64::move_word_reg(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_fpu_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+
+    emitter.MOV32_REG(source, dest);
 }
 
 void EE_JIT64::multiply_unsigned_word(EmotionEngine& ee, IR::Instruction& instr)
@@ -877,7 +834,7 @@ void EE_JIT64::multiply_unsigned_word(EmotionEngine& ee, IR::Instruction& instr)
     if (instr.get_dest())
     {
         REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
-        move_from_lo(ee, dest);
+        emitter.MOV32_REG(LO, dest);
     }
 
     free_gpr_reg(ee, RDX);
@@ -898,7 +855,7 @@ void EE_JIT64::multiply_word(EmotionEngine& ee, IR::Instruction& instr)
     if (instr.get_dest())
     {
         REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
-        move_from_lo(ee, dest);
+        emitter.MOV32_REG(LO, dest);
     }
 
     free_gpr_reg(ee, RDX);

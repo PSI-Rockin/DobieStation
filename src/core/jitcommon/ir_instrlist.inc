@@ -86,6 +86,10 @@ INSTR(StoreQuadDec)
 
 INSTR(MoveIntReg)
 INSTR(MoveXmmReg)
+INSTR(MoveDoublewordReg)
+INSTR(MoveWordReg)
+INSTR(ClearDoublewordReg)
+INSTR(ClearWordReg)
 
 INSTR(XorInt)
 INSTR(AndInt)
