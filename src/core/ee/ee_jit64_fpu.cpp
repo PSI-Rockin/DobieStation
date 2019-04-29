@@ -111,6 +111,7 @@ void EE_JIT64::move_from_coprocessor1(EmotionEngine& ee, IR::Instruction& instr)
     REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
 
     emitter.MOVD_FROM_XMM(source, dest);
+    emitter.MOVSX32_TO_64(dest, dest);
 }
 
 void EE_JIT64::move_to_coprocessor1(EmotionEngine& ee, IR::Instruction& instr)
