@@ -962,6 +962,21 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
             uint8_t dest = (opcode >> 11) & 0x1F;
             uint8_t source = (opcode >> 21) & 0x1F;
             uint8_t source2 = (opcode >> 16) & 0x1F;
+
+            if (!source)
+            {
+                instr.op = IR::Opcode::MoveWordReg;
+                instr.set_dest(dest);
+                instr.set_source(source2);
+                return instr;
+            }
+            if (!source2)
+            {
+                instr.op = IR::Opcode::MoveWordReg;
+                instr.set_dest(dest);
+                instr.set_source(source);
+                return instr;
+            }
             if (!dest)
             {
                 instr.op = IR::Opcode::Null;
@@ -1138,6 +1153,21 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
             uint8_t dest = (opcode >> 11) & 0x1F;
             uint8_t source = (opcode >> 21) & 0x1F;
             uint8_t source2 = (opcode >> 16) & 0x1F;
+
+            if (!source)
+            {
+                instr.op = IR::Opcode::MoveDoublewordReg;
+                instr.set_dest(dest);
+                instr.set_source(source2);
+                return instr;
+            }
+            if (!source2)
+            {
+                instr.op = IR::Opcode::MoveDoublewordReg;
+                instr.set_dest(dest);
+                instr.set_source(source);
+                return instr;
+            }
             if (!dest)
             {
                 instr.op = IR::Opcode::Null;
