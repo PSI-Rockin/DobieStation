@@ -26,7 +26,8 @@ enum class EE_SpecialReg
 {
     EE_Regular = 0,
     LO = 32,
-    HI
+    HI,
+    SA
 };
 
 enum class VU_SpecialReg

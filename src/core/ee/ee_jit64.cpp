@@ -946,6 +946,8 @@ uint64_t EE_JIT64::get_gpr_addr(const EmotionEngine &ee, int index) const
             return (uint64_t)&ee.LO;
         case EE_SpecialReg::HI:
             return (uint64_t)&ee.HI;
+        case EE_SpecialReg::SA:
+            return (uint64_t)&ee.SA;
         default:
             Errors::die("[EE_JIT64] get_gpr_addr error: Unrecognized reg %d", index);
     }

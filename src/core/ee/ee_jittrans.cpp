@@ -1121,13 +1121,15 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
         }
         case 0x28:
             // MFSA
-            Errors::print_warning("[EE_JIT] Unrecognized special op MFSA\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::MoveDoublewordReg;
+            instr.set_dest((opcode >> 11) & 0x1F);
+            instr.set_source((int)EE_SpecialReg::SA);
             return instr;
         case 0x29:
             // MTSA
-            Errors::print_warning("[EE_JIT] Unrecognized special op MTSA\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::MoveDoublewordReg;
+            instr.set_dest((int)EE_SpecialReg::SA);
+            instr.set_source((opcode >> 21) & 0x1F);
             return instr;
         case 0x2A:
             // SLT
