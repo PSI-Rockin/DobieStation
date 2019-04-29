@@ -94,7 +94,10 @@ SOURCES += ../../src/qt/main.cpp \
     ../../src/qt/gamelistwidget.cpp \
     ../../src/core/ee/ee_jittrans.cpp \
     ../../src/core/ee/ee_jit.cpp \
-    ../../src/core/ee/ee_jit64.cpp
+    ../../src/core/ee/ee_jit64.cpp \
+    ../../src/core/ee/ee_jit64_fpu.cpp \
+    ../../src/core/ee/ee_jit64_fpu_avx.cpp \
+    ../../src/core/ee/ee_jit64_gpr.cpp
 
 HEADERS += \
     ../../src/core/errors.hpp \

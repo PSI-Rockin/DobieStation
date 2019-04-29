@@ -33,7 +33,7 @@
  */
 
 #ifdef _WIN32
-extern "C" void run_ee_jit();
+extern "C" void run_ee_jit(EE_JIT64& jit, EmotionEngine& ee);
 #endif
 
 EE_JIT64::EE_JIT64() : emitter(&cache) {}
@@ -86,7 +86,7 @@ void interpreter(EmotionEngine& ee, uint32_t instr)
 uint16_t EE_JIT64::run(EmotionEngine& ee)
 {
 #ifdef _MSC_VER
-    run_ee_jit();
+    run_ee_jit(*this, ee);
 #else
     uint8_t* block = exec_block_ee(*this, ee);
 
