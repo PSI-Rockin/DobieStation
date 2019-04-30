@@ -426,6 +426,7 @@ void EE_JIT64::prepare_abi(EmotionEngine& ee, uint64_t value)
 
     //If the chosen integer argument is being used, flush it back to the EE state
     flush_int_reg(ee, arg);
+    int_regs[arg].used = false;
     emitter.load_addr(value, regs[abi_int_count]);
     abi_int_count++;
 }
@@ -449,6 +450,7 @@ void EE_JIT64::prepare_abi_reg(EmotionEngine& ee, REG_64 reg)
 
     //If the chosen integer argument is being used, flush it back to the EE state
     flush_int_reg(ee, arg);
+    int_regs[arg].used = false;
     if (reg != regs[abi_int_count])
         emitter.MOV64_MR(reg, regs[abi_int_count]);
     abi_int_count++;
@@ -469,6 +471,7 @@ void EE_JIT64::call_abi_func(EmotionEngine& ee, uint64_t addr)
     for (int i = 0; i < 16; ++i)
     {
         flush_xmm_reg(ee, i);
+        xmm_regs[i].used = false;
     }
 
     REG_64 addrReg = REG_64::RAX;
@@ -654,6 +657,7 @@ REG_64 EE_JIT64::alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state, 
 
     // Flush new register's contents back to EE state
     flush_int_reg(ee, destination);
+    int_regs[destination].used = false;
 
     if (state == REG_STATE::SCRATCHPAD)
     {
@@ -731,6 +735,7 @@ REG_64 EE_JIT64::lalloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state)
 void EE_JIT64::free_gpr_reg(EmotionEngine& ee, REG_64 reg)
 {
     int_regs[reg].locked = false;
+    int_regs[reg].used = false;
     flush_int_reg(ee, reg);
 }
 
@@ -777,6 +782,7 @@ REG_64 EE_JIT64::alloc_fpu_reg(EmotionEngine& ee, int fpu_reg, REG_STATE state, 
 
     // Flush new register's contents back to EE state
     flush_xmm_reg(ee, destination);
+    xmm_regs[destination].used = false;
 
     if (state == REG_STATE::SCRATCHPAD)
     {
@@ -854,6 +860,7 @@ REG_64 EE_JIT64::lalloc_fpu_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state)
 void EE_JIT64::free_xmm_reg(EmotionEngine& ee, REG_64 reg)
 {
     xmm_regs[reg].locked = false;
+    xmm_regs[reg].used = false;
     flush_xmm_reg(ee, reg);
 }
 
@@ -874,7 +881,6 @@ void EE_JIT64::flush_int_reg(EmotionEngine& ee, int reg)
             emitter.MOV16_TO_MEM((REG_64)reg, REG_64::RAX);
         }
     }
-    int_regs[reg].used = false;
 }
 
 void EE_JIT64::flush_xmm_reg(EmotionEngine& ee, int reg)
@@ -894,7 +900,6 @@ void EE_JIT64::flush_xmm_reg(EmotionEngine& ee, int reg)
             emitter.MOVAPS_TO_MEM((REG_64)reg, REG_64::RAX);
         }
     }
-    xmm_regs[reg].used = false;
 }
 
 void EE_JIT64::flush_regs(EmotionEngine& ee)
@@ -1018,6 +1023,13 @@ void EE_JIT64::handle_branch_likely(EmotionEngine& ee, IR::Block& block)
 
     // Flush registers before nondeterministically executing the delay slot.
     flush_regs(ee);
+    for (int i = 0; i < 16; i++)
+    {
+        int_regs[i].age = 0;
+        int_regs[i].used = false;
+        xmm_regs[i].age = 0;
+        xmm_regs[i].used = false;
+    }
 
     // Because we don't know where the branch will jump to, we defer it.
     // Once the "branch failure" case has been finished recompiling, we can rewrite the branch offset...

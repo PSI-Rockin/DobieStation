@@ -1364,24 +1364,7 @@ void EE_JIT64::vcall_ms(EmotionEngine& ee, IR::Instruction& instr)
     emitter.load_addr((uint64_t)&cycle_count, REG_64::RAX);
     emitter.MOV16_IMM_MEM(instr.get_cycle_count(), REG_64::RAX);
 
-    // flush registers while maintaining JIT state (since this is in a branch)
-    for (int i = 0; i < 16; i++)
-    {
-        bool intused = int_regs[i].used;
-        bool xmmused = xmm_regs[i].used;
-
-        flush_int_reg(ee, i);
-        int_regs[i].used = intused;
-        flush_xmm_reg(ee, i);
-        xmm_regs[i].used = xmmused;
-    }
-
-    // return from block
-    emitter.POP(REG_64::RBP);
-#ifndef _MSC_VER
-    emit_epilogue();
-#endif
-    emitter.RET();
+    cleanup_recompiler(ee, false);
 
     // Otherwise continue execution of block otherwise
     emitter.set_jump_dest(offset_addr);
@@ -1416,24 +1399,7 @@ void EE_JIT64::vcall_msr(EmotionEngine& ee, IR::Instruction& instr)
     emitter.load_addr((uint64_t)&cycle_count, REG_64::RAX);
     emitter.MOV16_IMM_MEM(instr.get_cycle_count(), REG_64::RAX);
 
-    // flush registers while maintaining JIT state (since this is in a branch)
-    for (int i = 0; i < 16; i++)
-    {
-        bool intused = int_regs[i].used;
-        bool xmmused = xmm_regs[i].used;
-
-        flush_int_reg(ee, i);
-        int_regs[i].used = intused;
-        flush_xmm_reg(ee, i);
-        xmm_regs[i].used = xmmused;
-    }
-
-    // return from block
-    emitter.POP(REG_64::RBP);
-#ifndef _MSC_VER
-    emit_epilogue();
-#endif
-    emitter.RET();
+    cleanup_recompiler(ee, false);
 
     // Otherwise continue execution of block otherwise
     emitter.set_jump_dest(offset_addr);
