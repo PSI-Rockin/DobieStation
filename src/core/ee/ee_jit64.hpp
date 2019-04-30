@@ -66,6 +66,7 @@ private:
     uint16_t cycle_count;
 
     void handle_branch_likely(EmotionEngine& ee, IR::Block& block);
+    void fpu_test_overflow_underflow(EmotionEngine& ee, REG_64 test, bool set_flags);
 
     void add_doubleword_imm(EmotionEngine& ee, IR::Instruction& instr);
     void add_doubleword_reg(EmotionEngine& ee, IR::Instruction& instr);
@@ -96,6 +97,7 @@ private:
     void doubleword_shift_right_logical_variable(EmotionEngine& ee, IR::Instruction& instr);
     void exception_return(EmotionEngine& ee, IR::Instruction& instr);
     void floating_point_absolute_value(EmotionEngine& ee, IR::Instruction& instr);
+    void floating_point_add(EmotionEngine& ee, IR::Instruction& instr);
     void floating_point_negate(EmotionEngine& ee, IR::Instruction& instr);
     void floating_point_minimum(EmotionEngine& ee, IR::Instruction& instr);
     void floating_point_minimum_AVX(EmotionEngine& ee, IR::Instruction& instr);

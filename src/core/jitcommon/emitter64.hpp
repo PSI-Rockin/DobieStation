@@ -61,9 +61,9 @@ class Emitter64
         void rexw_rm(REG_64 rm);
         void rexw_r_rm(REG_64 reg, REG_64 rm);
         void modrm(uint8_t mode, uint8_t reg, uint8_t rm);
-        void vex(REG_64 source, REG_64 source2, REG_64 dest);
-        void vex2(REG_64 source, REG_64 dest);
-        void vex3(REG_64 source, REG_64 source2, REG_64 dest);
+        void vex(REG_64 source, REG_64 source2, REG_64 dest, bool packed);
+        void vex2(REG_64 source, REG_64 dest, bool packed);
+        void vex3(REG_64 source, REG_64 source2, REG_64 dest, bool packed);
 
         int get_rip_offset(uint64_t addr);
     public:
@@ -152,14 +152,19 @@ class Emitter64
         void SUB64_REG_IMM(uint32_t imm, REG_64 dest);
 
         void TEST8_REG(REG_64 op2, REG_64 op1);
+        void TEST8_REG_IMM(uint8_t imm, REG_64 op1);
         void TEST16_REG(REG_64 op2, REG_64 op1);
+        void TEST16_REG_IMM(uint16_t imm, REG_64 op1);
         void TEST32_EAX(uint32_t imm);
         void TEST32_REG(REG_64 op2, REG_64 op1);
+        void TEST32_REG_IMM(uint32_t imm, REG_64 op1);
         void TEST64_REG(REG_64 op2, REG_64 op1);
+        void TEST64_REG_IMM(uint32_t imm, REG_64 op1);
 
         void XOR16_REG(REG_64 source, REG_64 dest);
         void XOR16_REG_IMM(uint16_t imm, REG_64 source);
         void XOR32_REG(REG_64 source, REG_64 dest);
+        void XOR32_EAX(uint32_t imm);
         void XOR64_REG(REG_64 source, REG_64 dest);
 
         void LEA32_M(REG_64 source, REG_64 dest, uint32_t offset = 0, uint32_t shift = 0);
@@ -236,6 +241,7 @@ class Emitter64
         void DIVPS(REG_64 xmm_source, REG_64 xmm_dest);
 
         void ADDPS(REG_64 xmm_source, REG_64 xmm_dest);
+        void ADDSS(REG_64 xmm_source, REG_64 xmm_dest);
         void BLENDPS(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest);
         void CMPEQPS(REG_64 xmm_source, REG_64 xmm_dest);
         void CMPNLEPS(REG_64 xmm_source, REG_64 xmm_dest);
@@ -248,6 +254,7 @@ class Emitter64
         void SQRTSS(REG_64 xmm_source, REG_64 xmm_dest);
         void SQRTPS(REG_64 xmm_source, REG_64 xmm_dest);
         void SUBPS(REG_64 xmm_source, REG_64 xmm_dest);
+        void UCOMISS(REG_64 xmm_source, REG_64 xmm_dest);
         void XORPS(REG_64 xmm_source, REG_64 xmm_dest);
 
         //Convert 32-bit signed integers into floats
@@ -256,6 +263,7 @@ class Emitter64
         //Convert truncated floats into 32-bit signed integers
         void CVTTPS2DQ(REG_64 xmm_source, REG_64 xmm_dest);
 
+        void VADDSS(REG_64 xmm_source, REG_64 xmm_source2, REG_64 xmm_dest);
         void VMINPS(REG_64 xmm_source, REG_64 xmm_source2, REG_64 xmm_dest);
         void VMAXPS(REG_64 xmm_source, REG_64 xmm_source2, REG_64 xmm_dest);
 };

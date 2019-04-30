@@ -57,25 +57,27 @@ void Emitter64::rexw_r_rm(REG_64 reg, REG_64 rm)
     cache->write<uint8_t>(rex);
 }
 
-void Emitter64::vex(REG_64 source, REG_64 source2, REG_64 dest)
+void Emitter64::vex(REG_64 source, REG_64 source2, REG_64 dest, bool packed)
 {
     if (source2 & 0x8)
-        vex3(source, source2, dest);
+        vex3(source, source2, dest, packed);
     else
-        vex2(source, dest);
+        vex2(source, dest, packed);
 }
 
-void Emitter64::vex2(REG_64 source, REG_64 dest)
+void Emitter64::vex2(REG_64 source, REG_64 dest, bool packed)
 {
     cache->write<uint8_t>(0xC5);
     uint8_t result = 0xF8;
+    if (!packed)
+        result |= 0x2;
     if (dest & 0x8)
         result -= 0x80;
     result += -(source << 3);
     cache->write<uint8_t>(result);
 }
 
-void Emitter64::vex3(REG_64 source, REG_64 source2, REG_64 dest)
+void Emitter64::vex3(REG_64 source, REG_64 source2, REG_64 dest, bool packed)
 {
     cache->write<uint8_t>(0xC4);
     uint8_t result = 0xC1;
@@ -83,6 +85,8 @@ void Emitter64::vex3(REG_64 source, REG_64 source2, REG_64 dest)
         result -= 0x80;
     cache->write<uint8_t>(result);
     result = 0x78;
+    if (!packed)
+        result |= 0x2;
     result += -(source << 3);
     cache->write<uint8_t>(result);
 }
@@ -742,12 +746,29 @@ void Emitter64::TEST8_REG(REG_64 op2, REG_64 op1)
     modrm(0b11, op2, op1);
 }
 
+void Emitter64::TEST8_REG_IMM(uint8_t imm, REG_64 op1)
+{
+    rex_r_rm((REG_64)0, op1);
+    cache->write<uint8_t>(0xF6);
+    modrm(0b11, 0, op1);
+    cache->write<uint8_t>(imm);
+}
+
 void Emitter64::TEST16_REG(REG_64 op2, REG_64 op1)
 {
     cache->write<uint8_t>(0x66);
     rex_r_rm(op2, op1);
     cache->write<uint8_t>(0x85);
     modrm(0b11, op2, op1);
+}
+
+void Emitter64::TEST16_REG_IMM(uint16_t imm, REG_64 op1)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm((REG_64)0, op1);
+    cache->write<uint8_t>(0xF7);
+    modrm(0b11, 0, op1);
+    cache->write<uint16_t>(imm);
 }
 
 void Emitter64::TEST32_EAX(uint32_t imm)
@@ -763,11 +784,27 @@ void Emitter64::TEST32_REG(REG_64 op2, REG_64 op1)
     modrm(0b11, op2, op1);
 }
 
+void Emitter64::TEST32_REG_IMM(uint32_t imm, REG_64 op1)
+{
+    rex_r_rm((REG_64)0, op1);
+    cache->write<uint8_t>(0xF7);
+    modrm(0b11, 0, op1);
+    cache->write<uint32_t>(imm);
+}
+
 void Emitter64::TEST64_REG(REG_64 op2, REG_64 op1)
 {
     rexw_r_rm(op2, op1);
     cache->write<uint8_t>(0x85);
     modrm(0b11, op2, op1);
+}
+
+void Emitter64::TEST64_REG_IMM(uint32_t imm, REG_64 op1)
+{
+    rexw_r_rm((REG_64)0, op1);
+    cache->write<uint8_t>(0xF7);
+    modrm(0b11, 0, op1);
+    cache->write<uint32_t>(imm);
 }
 
 void Emitter64::XOR16_REG(REG_64 source, REG_64 dest)
@@ -792,6 +829,12 @@ void Emitter64::XOR32_REG(REG_64 source, REG_64 dest)
     rex_r_rm(source, dest);
     cache->write<uint8_t>(0x31);
     modrm(0b11, source, dest);
+}
+
+void Emitter64::XOR32_EAX(uint32_t imm)
+{
+    cache->write<uint8_t>(0x35);
+    cache->write<uint32_t>(imm);
 }
 
 void Emitter64::XOR64_REG(REG_64 source, REG_64 dest)
@@ -1408,6 +1451,15 @@ void Emitter64::ADDPS(REG_64 xmm_source, REG_64 xmm_dest)
     modrm(0b11, xmm_dest, xmm_source);
 }
 
+void Emitter64::ADDSS(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0xF3);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x58);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
 void Emitter64::BLENDPS(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest)
 {
     cache->write<uint8_t>(0x66);
@@ -1521,6 +1573,14 @@ void Emitter64::SUBPS(REG_64 xmm_source, REG_64 xmm_dest)
     modrm(0b11, xmm_dest, xmm_source);
 }
 
+void Emitter64::UCOMISS(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x2E);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
 void Emitter64::XORPS(REG_64 xmm_source, REG_64 xmm_dest)
 {
     rex_r_rm(xmm_dest, xmm_source);
@@ -1546,16 +1606,23 @@ void Emitter64::CVTTPS2DQ(REG_64 xmm_source, REG_64 xmm_dest)
     modrm(0b11, xmm_dest, xmm_source);
 }
 
+void Emitter64::VADDSS(REG_64 xmm_source, REG_64 xmm_source2, REG_64 xmm_dest)
+{
+    vex(xmm_source, xmm_source2, xmm_dest, false);
+    cache->write<uint8_t>(0x58);
+    modrm(0b11, 0, xmm_source2);
+}
+
 void Emitter64::VMINPS(REG_64 xmm_source, REG_64 xmm_source2, REG_64 xmm_dest)
 {
-    vex(xmm_source, xmm_source2, xmm_dest);
+    vex(xmm_source, xmm_source2, xmm_dest, true);
     cache->write<uint8_t>(0x5D);
     modrm(0b11, 0, xmm_source2);
 }
 
 void Emitter64::VMAXPS(REG_64 xmm_source, REG_64 xmm_source2, REG_64 xmm_dest)
 {
-    vex(xmm_source, xmm_source2, xmm_dest);
+    vex(xmm_source, xmm_source2, xmm_dest, true);
     cache->write<uint8_t>(0x5F);
     modrm(0b11, 0, xmm_source2);
 }

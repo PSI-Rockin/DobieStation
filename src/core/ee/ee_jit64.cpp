@@ -229,6 +229,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::FloatingPointAbsoluteValue:
             floating_point_absolute_value(ee, instr);
             break;
+        case IR::Opcode::FloatingPointAdd:
+            floating_point_add(ee, instr);
+            break;
         case IR::Opcode::FloatingPointNegate:
             floating_point_negate(ee, instr);
             break;
