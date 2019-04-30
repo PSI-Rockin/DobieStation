@@ -968,14 +968,14 @@ IR::Instruction EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t
 
             if (!source)
             {
-                instr.op = IR::Opcode::MoveWordReg;
+                instr.op = IR::Opcode::MoveDoublewordReg;
                 instr.set_dest(dest);
                 instr.set_source(source2);
                 return instr;
             }
             if (!source2)
             {
-                instr.op = IR::Opcode::MoveWordReg;
+                instr.op = IR::Opcode::MoveDoublewordReg;
                 instr.set_dest(dest);
                 instr.set_source(source);
                 return instr;
