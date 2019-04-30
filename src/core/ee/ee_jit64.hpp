@@ -99,11 +99,13 @@ private:
     void floating_point_absolute_value(EmotionEngine& ee, IR::Instruction& instr);
     void floating_point_add(EmotionEngine& ee, IR::Instruction& instr);
     void floating_point_negate(EmotionEngine& ee, IR::Instruction& instr);
-    void floating_point_minimum(EmotionEngine& ee, IR::Instruction& instr);
-    void floating_point_minimum_AVX(EmotionEngine& ee, IR::Instruction& instr);
     void floating_point_maximum(EmotionEngine& ee, IR::Instruction& instr);
     void floating_point_maximum_AVX(EmotionEngine& ee, IR::Instruction& instr);
+    void floating_point_minimum(EmotionEngine& ee, IR::Instruction& instr);
+    void floating_point_minimum_AVX(EmotionEngine& ee, IR::Instruction& instr);
+    void floating_point_multiply(EmotionEngine& ee, IR::Instruction& instr);
     void floating_point_square_root(EmotionEngine& ee, IR::Instruction& instr);
+    void floating_point_subtract(EmotionEngine& ee, IR::Instruction& instr);
     void jump(EmotionEngine& ee, IR::Instruction& instr);
     void jump_indirect(EmotionEngine& ee, IR::Instruction& instr);
     void load_byte(EmotionEngine& ee, IR::Instruction& instr);

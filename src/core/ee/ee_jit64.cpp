@@ -235,14 +235,20 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::FloatingPointNegate:
             floating_point_negate(ee, instr);
             break;
-        case IR::Opcode::FloatingPointMinimum:
-            floating_point_minimum(ee, instr);
-            break;
         case IR::Opcode::FloatingPointMaximum:
             floating_point_maximum(ee, instr);
             break;
+        case IR::Opcode::FloatingPointMinimum:
+            floating_point_minimum(ee, instr);
+            break;
+        case IR::Opcode::FloatingPointMultiply:
+            floating_point_multiply(ee, instr);
+            break;
         case IR::Opcode::FloatingPointSquareRoot:
             floating_point_square_root(ee, instr);
+            break;
+        case IR::Opcode::FloatingPointSubtract:
+            floating_point_subtract(ee, instr);
             break;
         case IR::Opcode::Jump:
             jump(ee, instr);

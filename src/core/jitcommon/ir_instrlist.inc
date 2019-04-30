@@ -72,6 +72,8 @@ INSTR(FloatingPointMaximum)
 INSTR(FloatingPointMinimum)
 INSTR(FloatingPointSquareRoot)
 INSTR(FloatingPointAdd)
+INSTR(FloatingPointMultiply)
+INSTR(FloatingPointSubtract)
 
 INSTR(LoadConst)
 INSTR(LoadFloatConst)

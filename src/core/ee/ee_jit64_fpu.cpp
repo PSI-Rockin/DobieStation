@@ -100,6 +100,30 @@ void EE_JIT64::floating_point_add(EmotionEngine& ee, IR::Instruction& instr)
     fpu_test_overflow_underflow(ee, dest, true);
 }
 
+void EE_JIT64::floating_point_multiply(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_fpu_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 source2 = alloc_fpu_reg(ee, instr.get_source2(), REG_STATE::READ);
+    REG_64 dest = alloc_fpu_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+
+    if (dest == source)
+    {
+        emitter.MULSS(source2, dest);
+    }
+    else if (dest == source2)
+    {
+        emitter.MULSS(source, dest);
+    }
+    else
+    {
+        emitter.MOVAPS_REG(source, dest);
+        emitter.MULSS(source2, dest);
+    }
+
+    // Clamp and set flags
+    fpu_test_overflow_underflow(ee, dest, true);
+}
+
 void EE_JIT64::floating_point_negate(EmotionEngine& ee, IR::Instruction& instr)
 {
     // This operation works by simply toggling the sign-bit in the float.
@@ -179,6 +203,32 @@ void EE_JIT64::floating_point_square_root(EmotionEngine& ee, IR::Instruction& in
     floating_point_absolute_value(ee, instr);
     
     emitter.SQRTSS(source, dest);
+}
+
+void EE_JIT64::floating_point_subtract(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_fpu_reg(ee, instr.get_source(), REG_STATE::READ);
+    REG_64 source2 = alloc_fpu_reg(ee, instr.get_source2(), REG_STATE::READ);
+    REG_64 dest = alloc_fpu_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+
+    if (dest == source)
+    {
+        emitter.SUBSS(source2, dest);
+    }
+    else if (dest == source2)
+    {
+        emitter.SUBSS(source, dest);
+        emitter.load_addr((uint64_t)&FPU_MASK_NEG[0], REG_64::RAX);
+        emitter.PXOR_XMM_FROM_MEM(REG_64::RAX, dest);
+    }
+    else
+    {
+        emitter.MOVAPS_REG(source, dest);
+        emitter.SUBSS(source2, dest);
+    }
+
+    // Clamp and set flags
+    fpu_test_overflow_underflow(ee, dest, true);
 }
 
 void EE_JIT64::move_from_coprocessor1(EmotionEngine& ee, IR::Instruction& instr)

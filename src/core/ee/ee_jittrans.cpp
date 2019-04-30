@@ -2153,14 +2153,28 @@ IR::Instruction EE_JitTranslator::translate_op_cop1_fpu(uint32_t opcode, uint32_
         }
         case 0x01:
             // SUB.S
-            Errors::print_warning("[EE_JIT] Unrecognized fpu op SUB.S\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 6) & 0x1F;
+            uint8_t source = (opcode >> 11) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::FloatingPointSubtract;
             return instr;
+        }
         case 0x02:
             // MUL.S
-            Errors::print_warning("[EE_JIT] Unrecognized fpu op MUL.S\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 6) & 0x1F;
+            uint8_t source = (opcode >> 11) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::FloatingPointMultiply;
             return instr;
+        }
         case 0x03:
             // DIV.S
             Errors::print_warning("[EE_JIT] Unrecognized fpu op DIV.S\n", op);
@@ -2229,14 +2243,26 @@ IR::Instruction EE_JitTranslator::translate_op_cop1_fpu(uint32_t opcode, uint32_
         }
         case 0x19:
             // SUBA.S
-            Errors::print_warning("[EE_JIT] Unrecognized fpu op SUBA.S\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t source = (opcode >> 11) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            instr.set_dest((int)FPU_SpecialReg::ACC);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::FloatingPointSubtract;
             return instr;
+        }
         case 0x1A:
             // MULA.S
-            Errors::print_warning("[EE_JIT] Unrecognized fpu op MULA.S\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t source = (opcode >> 11) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            instr.set_dest((int)FPU_SpecialReg::ACC);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::FloatingPointMultiply;
             return instr;
+        }
         case 0x1C:
             // MADD.S
             Errors::print_warning("[EE_JIT] Unrecognized fpu op MADD.S\n", op);
