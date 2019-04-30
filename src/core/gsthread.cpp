@@ -2763,7 +2763,8 @@ void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
     else
         info.LOD = round(K);
 
-    if (current_ctx->tex1.max_MIP_level)
+    //Mipmapping is only enabled when the max MIP level is > 0 and filtering is set to a MIPMAP type
+    if (current_ctx->tex1.max_MIP_level && current_ctx->tex1.filter_smaller >= 2)
     {
         //Determine mipmap level
         info.mipmap_level = min((int8_t)info.LOD, (int8_t)current_ctx->tex1.max_MIP_level);
