@@ -27,7 +27,7 @@ float Cop1::convert(uint32_t value)
 
 void Cop1::check_overflow(uint32_t& dest, bool set_flags)
 {
-    if ((dest & ~0x80000000) == 0x7F800000)
+    if ((dest & 0x7F800000) == 0x7F800000)
     {
         printf("[FPU] Overflow Dest = %x\n", dest);
         dest = (dest & 0x80000000) | 0x7F7FFFFF;
