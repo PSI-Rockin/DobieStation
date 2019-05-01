@@ -10,6 +10,8 @@
 #include "circularFIFO.hpp"
 #include "int128.hpp"
 
+#include "jitcommon/emitter64.hpp"
+
 //Commands sent from the main thread to the GS thread.
 enum GSCommand:uint8_t 
 {
@@ -257,6 +259,10 @@ class GraphicsSynthesizerThread
         GSContext context1, context2;
         GSContext* current_ctx;
 
+        Emitter64 emitter;
+        JitCache jit_cache;
+        uint8_t* jit_draw_pixel_func;
+
         uint8_t prim_type;
         uint16_t FOG;
         PRMODE_REG PRIM, PRMODE;
@@ -352,6 +358,9 @@ class GraphicsSynthesizerThread
         void clut_CSM2_lookup(uint8_t entry, RGBAQ_REG& tex_color);
         void reload_clut(const GSContext& context);
         void update_draw_pixel_state();
+        uint8_t* get_jitted_draw_pixel(uint64_t state);
+        void recompile_draw_pixel(uint64_t state);
+        void jit_epilogue_draw_pixel();
 
         void vertex_kick(bool drawing_kick);
         bool depth_test(int32_t x, int32_t y, uint32_t z);

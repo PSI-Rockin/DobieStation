@@ -72,7 +72,7 @@ float interpolate_f(int32_t x, float u1, int32_t x1, float u2, int32_t x2)
 const unsigned int GraphicsSynthesizerThread::max_vertices[8] = {1, 2, 2, 3, 3, 3, 2, 0};
 
 GraphicsSynthesizerThread::GraphicsSynthesizerThread()
-    : frame_complete(false), local_mem(nullptr)
+    : frame_complete(false), local_mem(nullptr), emitter(&jit_cache)
 {
     //Initialize swizzling tables
     for (int block = 0; block < 32; block++)
@@ -137,6 +137,8 @@ GraphicsSynthesizerThread::GraphicsSynthesizerThread()
         log2_lookup[i][2] = ldexp(calculation, 2);
         log2_lookup[i][3] = ldexp(calculation, 3);
     }
+
+    jit_cache.flush_all_blocks();
 
     thread = std::thread(&GraphicsSynthesizerThread::event_loop, this);
 }
@@ -696,6 +698,7 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             PRIM.fix_fragment_value = value & (1 << 10);
             num_vertices = 0;
             printf("[GS_t] PRIM: $%08X\n", value);
+            update_draw_pixel_state();
             break;
         case 0x0001:
         {
@@ -806,6 +809,7 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
                 else
                     current_ctx = &context1;
             }
+            update_draw_pixel_state();
             break;
         case 0x001B:
             printf("PRMODE: $%08X\n", value);
@@ -825,6 +829,7 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
                     current_ctx = &context1;
             }
             PRMODE.fix_fragment_value = value & (1 << 10);
+            update_draw_pixel_state();
             break;
         case 0x001C:
             TEXCLUT.width = (value & 0x3F) * 64;
@@ -873,9 +878,13 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             break;
         case 0x0042:
             context1.set_alpha(value);
+            if (current_ctx == &context1)
+                update_draw_pixel_state();
             break;
         case 0x0043:
             context2.set_alpha(value);
+            if (current_ctx == &context2)
+                update_draw_pixel_state();
             break;
         case 0x0044:
             for (int y = 0; y < 4; y++)
@@ -890,19 +899,26 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             break;
         case 0x0045:
             DTHE = value & 0x1;
+            update_draw_pixel_state();
             break;
         case 0x0046:
             COLCLAMP = value & 0x1;
+            update_draw_pixel_state();
             break;
         case 0x0047:
             context1.set_test(value);
+            if (current_ctx == &context1)
+                update_draw_pixel_state();
             break;
         case 0x0048:
             context2.set_test(value);
+            if (current_ctx == &context2)
+                update_draw_pixel_state();
             break;
         case 0x0049:
             printf("[GS_t] PABE: $%02X\n", value);
             PABE = value & 0x1;
+            update_draw_pixel_state();
             break;
         case 0x004A:
             context1.FBA = value & 0x1;
@@ -912,15 +928,23 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             break;
         case 0x004C:
             context1.set_frame(value);
+            if (current_ctx == &context1)
+                update_draw_pixel_state();
             break;
         case 0x004D:
             context2.set_frame(value);
+            if (current_ctx == &context2)
+                update_draw_pixel_state();
             break;
         case 0x004E:
             context1.set_zbuf(value);
+            if (current_ctx == &context1)
+                update_draw_pixel_state();
             break;
         case 0x004F:
             context2.set_zbuf(value);
+            if (current_ctx == &context2)
+                update_draw_pixel_state();
             break;
         case 0x0050:
             BITBLTBUF.source_base = (value & 0x3FFF) * 64 * 4;
@@ -1309,6 +1333,7 @@ void GraphicsSynthesizerThread::vertex_kick(bool drawing_kick)
 
 void GraphicsSynthesizerThread::render_primitive()
 {
+    jit_draw_pixel_func = get_jitted_draw_pixel(draw_pixel_state);
     switch (prim_type)
     {
         case 0:
@@ -3311,6 +3336,173 @@ void GraphicsSynthesizerThread::update_draw_pixel_state()
     draw_pixel_state |= (uint64_t)COLCLAMP << 35UL;
     draw_pixel_state |= (uint64_t)current_ctx->zbuf.format << 36UL;
     draw_pixel_state |= (uint64_t)SCANMSK << 40UL;
+    draw_pixel_state |= (uint64_t)current_ctx->zbuf.no_update << 41UL;
+}
+
+uint8_t* GraphicsSynthesizerThread::get_jitted_draw_pixel(uint64_t state)
+{
+    if (jit_cache.find_block(BlockState{0, 0, 0, state, 0}) == nullptr)
+    {
+#undef printf
+        printf("[GS_t] RECOMPILING %llX\n", state);
+        recompile_draw_pixel(state);
+    }
+    return jit_cache.get_current_block_start();
+}
+
+void GraphicsSynthesizerThread::recompile_draw_pixel(uint64_t state)
+{
+    jit_cache.alloc_block(BlockState{0, 0, 0, state, 0});
+
+    //Prologue - create stack frame and save all nonvolatile registers
+    emitter.PUSH(REG_64::RBP);
+    emitter.MOV64_MR(REG_64::RSP, REG_64::RBP);
+
+    emitter.PUSH(R12);
+    emitter.PUSH(R13);
+    emitter.PUSH(R14);
+    emitter.PUSH(R15);
+    emitter.PUSH(RBX);
+
+    //Store argument registers in nonvolatile registers
+    //R12 = x  R13 = y  R14 = z  R15 = color
+#ifdef _WIN32
+    emitter.MOV64_MR(RCX, R12);
+    emitter.MOV64_MR(RDX, R13);
+    emitter.MOV64_MR(R8, R14);
+    emitter.MOV64_MR(R9, R15);
+#else
+    emitter.MOV64_MR(RDI, R12);
+    emitter.MOV64_MR(RSI, R13);
+    emitter.MOV64_MR(RDX, R14);
+    emitter.MOV64_MR(RCX, R15);
+#endif
+
+    //Shift x and y to the right by 4 (remove fractional component)
+    emitter.SAR32_REG_IMM(4, R12);
+    emitter.SAR32_REG_IMM(4, R13);
+
+    //SCANMSK test - stop drawing on odd or even y coordinate
+    if (SCANMSK >= 2)
+    {
+        uint8_t* scanmsk_success_dest = nullptr;
+        emitter.TEST8_REG_IMM(0x1, R13);
+        if (SCANMSK == 2) //Fail if even (result is 0)
+            scanmsk_success_dest = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
+        else //Fail if odd
+            scanmsk_success_dest = emitter.JCC_NEAR_DEFERRED(ConditionCode::E);
+
+        //Return on failure
+        jit_epilogue_draw_pixel();
+
+        //Success
+        emitter.set_jump_dest(scanmsk_success_dest);
+    }
+
+    //RBX = bitfield for storing update variables (update_frame, update_z, update_alpha)
+    //If a flag is set, the component will NOT be updated
+    //Bit 0 = frame, bit 1 = z, bit 2 = alpha
+    emitter.XOR32_REG(RBX, RBX);
+    if (current_ctx->zbuf.no_update)
+        emitter.OR16_REG_IMM(0x2, RBX);
+
+    //Alpha test
+    if (current_ctx->test.alpha_test && current_ctx->test.alpha_method != 1)
+    {
+        //If the condition is NEVER, do not compare and just proceed with the failure condition
+        if (current_ctx->test.alpha_method != 0)
+        {
+            //Load alpha from color
+            emitter.XOR32_REG(RAX, RAX);
+            emitter.MOV16_FROM_MEM(R15, RAX, sizeof(int16_t) * 3);
+
+            //Compare alpha with REF
+            emitter.CMP32_EAX(current_ctx->test.alpha_ref);
+            uint8_t* alpha_test_success = nullptr;
+            switch (current_ctx->test.alpha_method)
+            {
+                case 2: //LESS
+                    alpha_test_success = emitter.JCC_NEAR_DEFERRED(ConditionCode::L);
+                    break;
+                case 3: //LEQUAL
+                    alpha_test_success = emitter.JCC_NEAR_DEFERRED(ConditionCode::LE);
+                    break;
+                case 4: //EQUAL
+                    alpha_test_success = emitter.JCC_NEAR_DEFERRED(ConditionCode::E);
+                    break;
+                case 5: //GEQUAL
+                    alpha_test_success = emitter.JCC_NEAR_DEFERRED(ConditionCode::GE);
+                    break;
+                case 6: //GREATER
+                    alpha_test_success = emitter.JCC_NEAR_DEFERRED(ConditionCode::G);
+                    break;
+                case 7: //NOTEQUAL
+                    alpha_test_success = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
+                    break;
+            }
+
+            //Test for failure
+            switch (current_ctx->test.alpha_fail_method)
+            {
+                case 0: //KEEP - Update nothing
+                    jit_epilogue_draw_pixel();
+                    break;
+                case 1: //FB_ONLY - Only update framebuffer
+                    emitter.OR16_REG_IMM(0x2, RBX);
+                    break;
+                case 2: //ZB_ONLY - Only update z-buffer
+                    emitter.OR16_REG_IMM(0x5, RBX);
+                    break;
+                case 3: //RGB_ONLY - Same as FB_ONLY, but ignore alpha
+                    emitter.OR16_REG_IMM(0x6, RBX);
+                    break;
+            }
+
+            emitter.set_jump_dest(alpha_test_success);
+        }
+    }
+
+    //Depth test
+    if (current_ctx->test.depth_test)
+    {
+        if (current_ctx->test.depth_method == 0)
+        {
+            jit_epilogue_draw_pixel();
+            return;
+        }
+        else if (current_ctx->test.depth_method != 1)
+        {
+            ConditionCode depth_comparison;
+            if (current_ctx->test.depth_method == 2)
+                depth_comparison = ConditionCode::GE;
+            else
+                depth_comparison = ConditionCode::G;
+        }
+    }
+
+    emitter.TEST16_REG_IMM(0x1, RBX);
+    uint8_t* do_not_update_rgba = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
+
+    switch (current_ctx->frame.format)
+    {
+        default:
+            Errors::die("[GS_t] Unrecognized frame format $%02X in recompile_draw_pixel", current_ctx->frame.format);
+    }
+
+    emitter.set_jump_dest(do_not_update_rgba);
+    jit_epilogue_draw_pixel();
+    jit_cache.set_current_block_rx();
+}
+
+void GraphicsSynthesizerThread::jit_epilogue_draw_pixel()
+{
+    emitter.POP(RBX);
+    emitter.POP(R15);
+    emitter.POP(R14);
+    emitter.POP(R13);
+    emitter.POP(R12);
+    emitter.POP(RBP);
+    emitter.RET();
 }
 
 void GraphicsSynthesizerThread::load_state(ifstream *state)
