@@ -62,8 +62,8 @@ void EE_JIT64::floating_point_absolute_value(EmotionEngine& ee, IR::Instruction&
     // This is due to there being no "ANDSS" instruction, which means four
     // floats are masked at the same time.
 
-    REG_64 source = alloc_fpu_reg(ee, instr.get_source(), REG_STATE::READ);
-    REG_64 dest = alloc_fpu_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
 
     emitter.load_addr((uint64_t)&ee.fpu->control.u, REG_64::RAX);
     emitter.MOV8_IMM_MEM(false, REG_64::RAX);
@@ -78,9 +78,9 @@ void EE_JIT64::floating_point_absolute_value(EmotionEngine& ee, IR::Instruction&
 
 void EE_JIT64::floating_point_add(EmotionEngine& ee, IR::Instruction& instr)
 {
-    REG_64 source = alloc_fpu_reg(ee, instr.get_source(), REG_STATE::READ);
-    REG_64 source2 = alloc_fpu_reg(ee, instr.get_source2(), REG_STATE::READ);
-    REG_64 dest = alloc_fpu_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::FPU, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
 
     if (dest == source)
     {
@@ -102,9 +102,9 @@ void EE_JIT64::floating_point_add(EmotionEngine& ee, IR::Instruction& instr)
 
 void EE_JIT64::floating_point_multiply(EmotionEngine& ee, IR::Instruction& instr)
 {
-    REG_64 source = alloc_fpu_reg(ee, instr.get_source(), REG_STATE::READ);
-    REG_64 source2 = alloc_fpu_reg(ee, instr.get_source2(), REG_STATE::READ);
-    REG_64 dest = alloc_fpu_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::FPU, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
 
     if (dest == source)
     {
@@ -132,8 +132,8 @@ void EE_JIT64::floating_point_negate(EmotionEngine& ee, IR::Instruction& instr)
     // This is due to there being no "XORSS" instruction, which means four
     // floats are masked at the same time.
 
-    REG_64 source = alloc_fpu_reg(ee, instr.get_source(), REG_STATE::READ);
-    REG_64 dest = alloc_fpu_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
 
     emitter.load_addr((uint64_t)&ee.fpu->control.u, REG_64::RAX);
     emitter.MOV8_IMM_MEM(false, REG_64::RAX);
@@ -148,9 +148,9 @@ void EE_JIT64::floating_point_negate(EmotionEngine& ee, IR::Instruction& instr)
 
 void EE_JIT64::floating_point_maximum(EmotionEngine& ee, IR::Instruction& instr)
 {
-    REG_64 source = alloc_fpu_reg(ee, instr.get_source(), REG_STATE::READ);
-    REG_64 source2 = alloc_fpu_reg(ee, instr.get_source2(), REG_STATE::READ);
-    REG_64 dest = alloc_fpu_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::FPU, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
 
     emitter.load_addr((uint64_t)&ee.fpu->control.u, REG_64::RAX);
     emitter.MOV8_IMM_MEM(false, REG_64::RAX);
@@ -173,9 +173,9 @@ void EE_JIT64::floating_point_maximum(EmotionEngine& ee, IR::Instruction& instr)
 
 void EE_JIT64::floating_point_minimum(EmotionEngine& ee, IR::Instruction& instr)
 {
-    REG_64 source = alloc_fpu_reg(ee, instr.get_source(), REG_STATE::READ);
-    REG_64 source2 = alloc_fpu_reg(ee, instr.get_source2(), REG_STATE::READ);
-    REG_64 dest = alloc_fpu_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::FPU, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
 
     emitter.load_addr((uint64_t)&ee.fpu->control.u, REG_64::RAX);
     emitter.MOV8_IMM_MEM(false, REG_64::RAX);
@@ -198,8 +198,8 @@ void EE_JIT64::floating_point_minimum(EmotionEngine& ee, IR::Instruction& instr)
 
 void EE_JIT64::floating_point_square_root(EmotionEngine& ee, IR::Instruction& instr)
 {
-    REG_64 source = alloc_fpu_reg(ee, instr.get_source(), REG_STATE::READ);
-    REG_64 dest = alloc_fpu_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
     floating_point_absolute_value(ee, instr);
     
     emitter.SQRTSS(source, dest);
@@ -207,9 +207,9 @@ void EE_JIT64::floating_point_square_root(EmotionEngine& ee, IR::Instruction& in
 
 void EE_JIT64::floating_point_subtract(EmotionEngine& ee, IR::Instruction& instr)
 {
-    REG_64 source = alloc_fpu_reg(ee, instr.get_source(), REG_STATE::READ);
-    REG_64 source2 = alloc_fpu_reg(ee, instr.get_source2(), REG_STATE::READ);
-    REG_64 dest = alloc_fpu_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::FPU, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
 
     if (dest == source)
     {
@@ -233,8 +233,8 @@ void EE_JIT64::floating_point_subtract(EmotionEngine& ee, IR::Instruction& instr
 
 void EE_JIT64::move_from_coprocessor1(EmotionEngine& ee, IR::Instruction& instr)
 {
-    REG_64 source = alloc_fpu_reg(ee, instr.get_source(), REG_STATE::READ);
-    REG_64 dest = alloc_gpr_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPR, REG_STATE::WRITE);
 
     emitter.MOVD_FROM_XMM(source, dest);
     emitter.MOVSX32_TO_64(dest, dest);
@@ -242,16 +242,16 @@ void EE_JIT64::move_from_coprocessor1(EmotionEngine& ee, IR::Instruction& instr)
 
 void EE_JIT64::move_to_coprocessor1(EmotionEngine& ee, IR::Instruction& instr)
 {
-    REG_64 source = alloc_gpr_reg(ee, instr.get_source(), REG_STATE::READ);
-    REG_64 dest = alloc_fpu_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPR, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
 
     emitter.MOVD_TO_XMM(source, dest);
 }
 
 void EE_JIT64::move_xmm_reg(EmotionEngine& ee, IR::Instruction& instr)
 {
-    REG_64 source = alloc_fpu_reg(ee, instr.get_source(), REG_STATE::READ);
-    REG_64 dest = alloc_fpu_reg(ee, instr.get_dest(), REG_STATE::WRITE);
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
 
     emitter.MOVAPS_REG(source, dest);
 }

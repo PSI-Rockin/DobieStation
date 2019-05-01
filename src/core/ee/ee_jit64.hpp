@@ -5,6 +5,8 @@
 #include "ee_jittrans.hpp"
 #include "emotion.hpp"
 
+enum class REG_TYPE;
+
 struct AllocReg
 {
     bool used = false;
@@ -12,8 +14,7 @@ struct AllocReg
     bool modified = false;
     int age = 0;
     int reg;
-    bool is_gpr_reg;
-    bool is_fpu_reg;
+    REG_TYPE type;
     uint8_t needs_clamping;
 };
 
@@ -167,15 +168,9 @@ private:
     int search_for_register_priority(AllocReg *regs);
     int search_for_register_scratchpad(AllocReg *regs);
     int search_for_register_xmm(AllocReg *regs);
-    REG_64 alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state);
-    REG_64 alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state, REG_64 destination);
-    REG_64 alloc_fpu_reg(EmotionEngine& ee, int fpu_reg, REG_STATE state);
-    REG_64 alloc_fpu_reg(EmotionEngine& ee, int fpu_reg, REG_STATE state, REG_64 destination);
-    REG_64 lalloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state);
-    REG_64 lalloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state, REG_64 destination);
-    REG_64 lalloc_fpu_reg(EmotionEngine& ee, int fpu_reg, REG_STATE state);
-    REG_64 lalloc_fpu_reg(EmotionEngine& ee, int fpu_reg, REG_STATE state, REG_64 destination);
-    void free_gpr_reg(EmotionEngine& ee, REG_64 reg);
+    REG_64 alloc_reg(EmotionEngine& ee, int reg, REG_TYPE type, REG_STATE state, REG_64 destination = (REG_64)-1);
+    REG_64 lalloc_reg(EmotionEngine& ee, int reg, REG_TYPE type, REG_STATE state, REG_64 destination = (REG_64)-1);
+    void free_int_reg(EmotionEngine& ee, REG_64 reg);
     void free_xmm_reg(EmotionEngine& ee, REG_64 reg);
     REG_64 alloc_vi_reg(EmotionEngine& ee, int vi_reg, REG_STATE state);
     REG_64 alloc_vf_reg(EmotionEngine& ee, int vf_reg, REG_STATE state);

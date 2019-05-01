@@ -617,253 +617,250 @@ int EE_JIT64::search_for_register_xmm(AllocReg *regs)
     return reg;
 }
 
-REG_64 EE_JIT64::alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state, REG_64 destination)
+REG_64 EE_JIT64::alloc_reg(EmotionEngine& ee, int reg, REG_TYPE type, REG_STATE state, REG_64 destination)
 {
-    if (destination >= 0 && int_regs[destination].locked)
-        Errors::die("[EE_JIT64] Alloc Int error: Attempted to allocate locked x64 register %d", destination);
-
     // An explicit destination is not provided, so we find one ourselves here.
     if (destination < 0)
     {
-        if (state == REG_STATE::SCRATCHPAD)
+        switch (type)
         {
-            destination = (REG_64)search_for_register_scratchpad(int_regs);
+            case REG_TYPE::INTSCRATCHPAD:
+                destination = (REG_64)search_for_register_scratchpad(int_regs);
+                break;
+            case REG_TYPE::XMMSCRATCHPAD:
+                destination = (REG_64)search_for_register_xmm(xmm_regs);
+                break;
+            case REG_TYPE::GPR:
+            case REG_TYPE::VI:
+                for (int i = 0; i < 16; ++i)
+                {
+                    if (!int_regs[i].locked && int_regs[i].used && int_regs[i].reg == reg && int_regs[i].type == type)
+                    {
+                        destination = (REG_64)i;
+                        break;
+                    }
+                }
+
+                // If our EE register isn't already in a register
+                if (destination < 0)
+                {
+                    destination = (REG_64)search_for_register_priority(int_regs);
+                }
+                break;
+            case REG_TYPE::FPU:
+            case REG_TYPE::GPREXTENDED:
+            case REG_TYPE::VF:
+                for (int i = 0; i < 16; ++i)
+                {
+                    // Check if our register is already allocated
+                    if (!xmm_regs[i].locked && xmm_regs[i].used && xmm_regs[i].reg == reg && xmm_regs[i].type == type)
+                    {
+                        destination = (REG_64)i;
+                        break;
+                    }
+                }
+
+                // If our EE register isn't already in a register
+                if (destination < 0)
+                {
+                    destination = (REG_64)search_for_register_xmm(xmm_regs);
+                }
+                break;
+            default:
+                break;
         }
-        else
-        {
+    }
+
+    switch (type)
+    {
+        case REG_TYPE::GPR:
+        case REG_TYPE::VI:
+        case REG_TYPE::INTSCRATCHPAD:
+            if (int_regs[destination].locked)
+                Errors::die("[EE_JIT64] Alloc Int error: Attempted to allocate locked x64 register %d", destination);
+            break;
+        case REG_TYPE::FPU:
+        case REG_TYPE::GPREXTENDED:
+        case REG_TYPE::VF:
+        case REG_TYPE::XMMSCRATCHPAD:
+            if (xmm_regs[destination].locked)
+                Errors::die("[EE_JIT64] Alloc Xmm error: Attempted to allocate locked x64 register %d", destination);
+            break;
+        default:
+            break;
+    }
+
+    switch (type)
+    {
+        case REG_TYPE::INTSCRATCHPAD:
+            flush_int_reg(ee, destination);
+            int_regs[destination].modified = false;
+            int_regs[destination].used = true;
+            int_regs[destination].age = 0;
+            int_regs[destination].reg = -1;
+            int_regs[destination].type = type;
+            return (REG_64)destination;
+        case REG_TYPE::XMMSCRATCHPAD:
+            flush_xmm_reg(ee, destination);
+            xmm_regs[destination].modified = false;
+            xmm_regs[destination].used = true;
+            xmm_regs[destination].age = 0;
+            xmm_regs[destination].reg = -1;
+            xmm_regs[destination].type = type;
+            return (REG_64)destination;
+        case REG_TYPE::GPR:
+        case REG_TYPE::VI:
+            // Increment age of every used register
             for (int i = 0; i < 16; ++i)
             {
-                if (!int_regs[i].locked && int_regs[i].used && int_regs[i].reg == gpr_reg && int_regs[i].is_gpr_reg)
+                if (int_regs[i].used)
+                    ++int_regs[i].age;
+            }
+
+            // Do nothing if the EE register is already inside our x86 register
+            if (int_regs[destination].used && int_regs[destination].type == type && int_regs[destination].reg == reg)
+            {
+                if (state != REG_STATE::READ && !(reg == 0 && type == REG_TYPE::GPR))
+                    int_regs[destination].modified = true;
+                int_regs[destination].age = 0;
+                return (REG_64)destination;
+            }
+
+            // Flush new register's contents back to EE state
+            flush_int_reg(ee, destination);
+            int_regs[destination].used = false;
+
+            if (state != REG_STATE::WRITE)
+            {
+                int reg_to_find = -1;
+
+                for (int i = 0; i < 16; ++i)
                 {
-                    destination = (REG_64)i;
-                    break;
+                    if (int_regs[i].used && int_regs[i].reg == reg && int_regs[i].type == type)
+                    {
+                        reg_to_find = i;
+                        break;
+                    }
+                }
+
+                if (reg_to_find >= 0)
+                {
+                    // This case is hit if we want a register in a specific destination but
+                    // we already have the contents in another register.
+                    emitter.MOV64_MR((REG_64)reg_to_find, destination);
+                }
+                else
+                {
+                    switch (type)
+                    {
+                        case REG_TYPE::GPR:
+                            emitter.load_addr((uint64_t)get_gpr_addr(ee, (EE_NormalReg)reg), (REG_64)destination);
+                            break;
+                        case REG_TYPE::VI:
+                            // TODO
+                            break;
+                        default:
+                            break;
+                    }
+                    emitter.MOV64_FROM_MEM((REG_64)destination, (REG_64)destination);
                 }
             }
 
-            // If our EE register isn't already in a register
-            if (destination < 0)
+            int_regs[destination].modified = state != REG_STATE::READ && !(reg == 0 && type == REG_TYPE::GPR);
+            int_regs[destination].reg = reg;
+            int_regs[destination].type = type;
+            int_regs[destination].used = true;
+            int_regs[destination].age = 0;
+            return (REG_64)destination;
+        case REG_TYPE::FPU:
+        case REG_TYPE::GPREXTENDED:
+        case REG_TYPE::VF:
+            // Increment age of every used register
+            for (int i = 0; i < 16; ++i)
             {
-                destination = (REG_64)search_for_register_priority(int_regs);
+                if (xmm_regs[i].used)
+                    ++xmm_regs[i].age;
             }
-        }
-    }
 
-    // Increment age of every used register
-    for (int i = 0; i < 16; ++i)
-    {
-        if (int_regs[i].used)
-            ++int_regs[i].age;
-    }
-
-    // Do nothing if the EE register is already inside our x86 register
-    if (int_regs[destination].used && int_regs[destination].is_gpr_reg && int_regs[destination].reg == gpr_reg)
-    {
-        if (state != REG_STATE::READ && gpr_reg)
-            int_regs[destination].modified = true;
-        int_regs[destination].age = 0;
-        return (REG_64)destination;
-    }
-
-    // Flush new register's contents back to EE state
-    flush_int_reg(ee, destination);
-    int_regs[destination].used = false;
-
-    if (state == REG_STATE::SCRATCHPAD)
-    {
-        int_regs[destination].modified = false;
-        int_regs[destination].used = true;
-        int_regs[destination].is_gpr_reg = false;
-        int_regs[destination].age = 0;
-        int_regs[destination].reg = -1;
-        return (REG_64)destination;
-    }
-
-    if (state != REG_STATE::WRITE)
-    {
-        int reg = -1;
-
-        for (int i = 0; i < 16; ++i)
-        {
-            if (int_regs[i].used && int_regs[i].reg == gpr_reg && int_regs[i].is_gpr_reg)
+            // Do nothing if the EE register is already inside our x86 register
+            if (xmm_regs[destination].used && xmm_regs[destination].type == type && xmm_regs[destination].reg == reg)
             {
-                reg = i;
-                break;
+                if (state != REG_STATE::READ && !(reg == 0 && type == REG_TYPE::VF))
+                    xmm_regs[destination].modified = true;
+                xmm_regs[destination].age = 0;
+                return (REG_64)destination;
             }
-        }
 
-        if (reg >= 0)
-        {
-            // This case is hit if we want a register in a specific destination but
-            // we already have the contents in another reigster.
-            emitter.MOV64_MR((REG_64)reg, destination);
-        }
-        else
-        {
-            emitter.load_addr((uint64_t)get_gpr_addr(ee, (EE_NormalReg)gpr_reg), (REG_64)destination);
-            emitter.MOV64_FROM_MEM((REG_64)destination, (REG_64)destination);
-        }
+            // Flush new register's contents back to EE state
+            flush_xmm_reg(ee, destination);
+            xmm_regs[destination].used = false;
+
+            if (state != REG_STATE::WRITE)
+            {
+                int reg_to_find = -1;
+
+                for (int i = 0; i < 16; ++i)
+                {
+                    if (xmm_regs[i].used && xmm_regs[i].reg == reg && xmm_regs[i].type == type)
+                    {
+                        reg_to_find = i;
+                        break;
+                    }
+                }
+
+                if (reg_to_find >= 0)
+                {
+                    // This case is hit if we want a register in a specific destination but
+                    // we already have the contents in another reigster.
+                    emitter.MOVAPS_REG((REG_64)reg_to_find, destination);
+                }
+                else
+                {
+                    switch (type)
+                    {
+                        case REG_TYPE::FPU:
+                            emitter.load_addr((uint64_t)get_fpu_addr(ee, reg), REG_64::RAX);
+                            emitter.MOVD_FROM_MEM(REG_64::RAX, (REG_64)destination);
+                            break;
+                        case REG_TYPE::VF:
+                            // TODO
+                            // emitter.MOVAPS_FROM_MEM(REG_64::RAX, (REG_64)destination);
+                            break;
+                        case REG_TYPE::GPREXTENDED:
+                            emitter.load_addr((uint64_t)get_gpr_addr(ee, (EE_NormalReg)reg), (REG_64)destination);
+                            emitter.MOVAPS_FROM_MEM(REG_64::RAX, (REG_64)destination);
+                            break;
+                        default:
+                            break;
+                    }
+                    
+                }
+            }
+
+            xmm_regs[destination].modified = state != REG_STATE::READ && !(reg == 0 && type == REG_TYPE::VF);
+            xmm_regs[destination].reg = reg;
+            xmm_regs[destination].type = type;
+            xmm_regs[destination].used = true;
+            xmm_regs[destination].age = 0;
+            return (REG_64)destination;
+        default:
+            Errors::die("[EE_JIT64] Register allocation error! Attempted to allocate a register with an unknown type %d!", type);
+            return (REG_64)-1;
     }
-
-    int_regs[destination].modified = state != REG_STATE::READ;
-    int_regs[destination].reg = gpr_reg;
-    int_regs[destination].is_gpr_reg = true;
-    int_regs[destination].used = true;
-    int_regs[destination].age = 0;
-    return (REG_64)destination;
 }
 
-REG_64 EE_JIT64::alloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state)
+REG_64 EE_JIT64::lalloc_reg(EmotionEngine& ee, int gpr_reg, REG_TYPE type, REG_STATE state, REG_64 destination)
 {
-    if (state == REG_STATE::SCRATCHPAD)
-        return alloc_gpr_reg(ee, -1, state, (REG_64)-1);
-    else
-        return alloc_gpr_reg(ee, gpr_reg, state, (REG_64)-1);
-}
-
-REG_64 EE_JIT64::lalloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state, REG_64 destination)
-{
-    if (state == REG_STATE::SCRATCHPAD)
-        gpr_reg = -1;
-    REG_64 result = alloc_gpr_reg(ee, gpr_reg, state, destination);
+    REG_64 result = alloc_reg(ee, gpr_reg, type, state, destination);
     int_regs[result].locked = true;
     return result;
 }
 
-REG_64 EE_JIT64::lalloc_gpr_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state)
-{
-    REG_64 result;
-    if (state == REG_STATE::SCRATCHPAD)
-        result = alloc_gpr_reg(ee, -1, state, (REG_64)-1);
-    else
-        result = alloc_gpr_reg(ee, gpr_reg, state, (REG_64)-1);
-
-    int_regs[result].locked = true;
-    return result;
-}
-
-void EE_JIT64::free_gpr_reg(EmotionEngine& ee, REG_64 reg)
+void EE_JIT64::free_int_reg(EmotionEngine& ee, REG_64 reg)
 {
     int_regs[reg].locked = false;
     int_regs[reg].used = false;
     flush_int_reg(ee, reg);
-}
-
-REG_64 EE_JIT64::alloc_fpu_reg(EmotionEngine& ee, int fpu_reg, REG_STATE state, REG_64 destination)
-{
-    if (destination >= 0 && xmm_regs[destination].locked)
-        Errors::die("[EE_JIT64] Alloc Xmm error: Attempted to allocate locked x64 register %d", destination);
-
-    // An explicit destination is not provided, so we find one ourselves here.
-    if (destination < 0)
-    {
-        for (int i = 0; i < 16; ++i)
-        {
-            // Check if our register is already allocated
-            if (!xmm_regs[i].locked && xmm_regs[i].used && xmm_regs[i].reg == fpu_reg && xmm_regs[i].is_fpu_reg)
-            {
-                destination = (REG_64)i;
-                break;
-            }
-        }
-
-        // If our EE register isn't already in a register
-        if (destination < 0)
-        {
-            destination = (REG_64)search_for_register_xmm(xmm_regs);
-        }
-    }
-
-    // Increment age of every used register
-    for (int i = 0; i < 16; ++i)
-    {
-        if (xmm_regs[i].used)
-            ++xmm_regs[i].age;
-    }
-
-    // Do nothing if the EE register is already inside our x86 register
-    if (xmm_regs[destination].used && xmm_regs[destination].is_fpu_reg && xmm_regs[destination].reg == fpu_reg)
-    {
-        if (state != REG_STATE::READ)
-            xmm_regs[destination].modified = true;
-        xmm_regs[destination].age = 0;
-        return (REG_64)destination;
-    }
-
-    // Flush new register's contents back to EE state
-    flush_xmm_reg(ee, destination);
-    xmm_regs[destination].used = false;
-
-    if (state == REG_STATE::SCRATCHPAD)
-    {
-        xmm_regs[destination].modified = false;
-        xmm_regs[destination].used = true;
-        xmm_regs[destination].is_fpu_reg = false;
-        xmm_regs[destination].age = 0;
-        xmm_regs[destination].reg = -1;
-        return (REG_64)destination;
-    }
-
-    if (state != REG_STATE::WRITE)
-    {
-        int reg = -1;
-
-        for (int i = 0; i < 16; ++i)
-        {
-            if (xmm_regs[i].used && xmm_regs[i].reg == fpu_reg && xmm_regs[i].is_fpu_reg)
-            {
-                reg = i;
-                break;
-            }
-        }
-
-        if (reg >= 0)
-        {
-            // This case is hit if we want a register in a specific destination but
-            // we already have the contents in another reigster.
-            emitter.MOVAPS_REG((REG_64)reg, destination);
-        }
-        else
-        {
-            emitter.load_addr((uint64_t)get_fpu_addr(ee, fpu_reg), REG_64::RAX);
-            emitter.MOVD_FROM_MEM(REG_64::RAX, (REG_64)destination);
-        }
-    }
-
-    xmm_regs[destination].modified = state != REG_STATE::READ;
-    xmm_regs[destination].reg = fpu_reg;
-    xmm_regs[destination].is_fpu_reg = true;
-    xmm_regs[destination].used = true;
-    xmm_regs[destination].age = 0;
-    return (REG_64)destination;
-}
-
-REG_64 EE_JIT64::alloc_fpu_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state)
-{
-    if (state == REG_STATE::SCRATCHPAD)
-        return alloc_fpu_reg(ee, -1, state, (REG_64)-1);
-    else
-        return alloc_fpu_reg(ee, gpr_reg, state, (REG_64)-1);
-}
-
-REG_64 EE_JIT64::lalloc_fpu_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state, REG_64 destination)
-{
-    if (state == REG_STATE::SCRATCHPAD)
-        gpr_reg = -1;
-    REG_64 result = alloc_fpu_reg(ee, gpr_reg, state, destination);
-    xmm_regs[result].locked = true;
-    return result;
-}
-
-REG_64 EE_JIT64::lalloc_fpu_reg(EmotionEngine& ee, int gpr_reg, REG_STATE state)
-{
-    REG_64 result;
-    if (state == REG_STATE::SCRATCHPAD)
-        result = alloc_fpu_reg(ee, -1, state, (REG_64)-1);
-    else
-        result = alloc_fpu_reg(ee, gpr_reg, state, (REG_64)-1);
-
-    xmm_regs[result].locked = true;
-    return result;
 }
 
 void EE_JIT64::free_xmm_reg(EmotionEngine& ee, REG_64 reg)
@@ -878,16 +875,22 @@ void EE_JIT64::flush_int_reg(EmotionEngine& ee, int reg)
     int old_int_reg = int_regs[reg].reg;
     if (int_regs[reg].used && int_regs[reg].modified)
     {
-        //printf("[EE_JIT64] Flushing int reg %d! (old int reg: %d, was GPR reg?: %d)\n", reg, int_regs[reg].reg, int_regs[reg].is_gpr_reg);
-        if (int_regs[reg].is_gpr_reg && old_int_reg)
+        //printf("[EE_JIT64] Flushing int reg %d! (old int reg: %d, reg type: %d)\n", reg, int_regs[reg].reg, int_regs[reg].type);
+        switch (int_regs[reg].type)
         {
-            emitter.load_addr((uint64_t)get_gpr_addr(ee, old_int_reg), REG_64::RAX);
-            emitter.MOV64_TO_MEM((REG_64)reg, REG_64::RAX);
-        }
-        else if (!int_regs[reg].is_gpr_reg)
-        {
-            emitter.load_addr((uint64_t)get_vi_addr(ee, old_int_reg), REG_64::RAX);
-            emitter.MOV16_TO_MEM((REG_64)reg, REG_64::RAX);
+            case REG_TYPE::GPR:
+                // old_int_reg = $zero, which should never be flushed
+                if (!old_int_reg)
+                    break;
+                emitter.load_addr((uint64_t)get_gpr_addr(ee, old_int_reg), REG_64::RAX);
+                emitter.MOV64_TO_MEM((REG_64)reg, REG_64::RAX);
+                break;
+            case REG_TYPE::VI:
+                emitter.load_addr((uint64_t)get_vi_addr(ee, old_int_reg), REG_64::RAX);
+                emitter.MOV16_TO_MEM((REG_64)reg, REG_64::RAX);
+                break;
+            default:
+                break;
         }
     }
 }
@@ -897,16 +900,26 @@ void EE_JIT64::flush_xmm_reg(EmotionEngine& ee, int reg)
     int old_xmm_reg = xmm_regs[reg].reg;
     if (xmm_regs[reg].used && xmm_regs[reg].modified)
     {
-        //printf("[EE_JIT64] Flushing float reg %d! (old float reg: %d, was FPU reg?: %d)\n", reg, xmm_regs[reg].reg, xmm_regs[reg].is_fpu_reg);
-        if (xmm_regs[reg].is_fpu_reg)
+        //printf("[EE_JIT64] Flushing xmm reg %d! (old float reg: %d, reg type: %d)\n", reg, xmm_regs[reg].reg, xmm_regs[reg].type);
+        switch (xmm_regs[reg].type)
         {
-            emitter.load_addr((uint64_t)get_fpu_addr(ee, old_xmm_reg), REG_64::RAX);
-            emitter.MOVD_TO_MEM((REG_64)reg, REG_64::RAX);
-        }
-        else if (!xmm_regs[reg].is_fpu_reg && old_xmm_reg)
-        {
-            emitter.load_addr((uint64_t)get_vf_addr(ee, old_xmm_reg), REG_64::RAX);
-            emitter.MOVAPS_TO_MEM((REG_64)reg, REG_64::RAX);
+            case REG_TYPE::FPU:
+                emitter.load_addr((uint64_t)get_fpu_addr(ee, old_xmm_reg), REG_64::RAX);
+                emitter.MOVD_TO_MEM((REG_64)reg, REG_64::RAX);
+                break;
+            case REG_TYPE::GPREXTENDED:
+                // old_xmm_reg = $zero, which should never be flushed
+                if (!old_xmm_reg)
+                    break;
+                emitter.load_addr((uint64_t)get_gpr_addr(ee, old_xmm_reg), REG_64::RAX);
+                emitter.MOVAPS_TO_MEM((REG_64)reg, REG_64::RAX);
+                break;
+            case REG_TYPE::VF:
+                emitter.load_addr((uint64_t)get_vf_addr(ee, old_xmm_reg), REG_64::RAX);
+                emitter.MOVAPS_TO_MEM((REG_64)reg, REG_64::RAX);
+                break;
+            default:
+                break;
         }
     }
 }
