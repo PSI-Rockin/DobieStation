@@ -275,6 +275,9 @@ class GraphicsSynthesizerThread
 
         uint8_t dither_mtx[4][4];
 
+        //Used for the JIT to determine the ID of the draw pixel block
+        uint64_t draw_pixel_state;
+
         BITBLTBUF_REG BITBLTBUF;
         TRXPOS_REG TRXPOS;
         TRXREG_REG TRXREG;
@@ -300,9 +303,6 @@ class GraphicsSynthesizerThread
         float log2_lookup[32768][4];
 
         void event_loop();
-
-        inline const uint32_t get_word(uint32_t addr) { return *(uint32_t*)&local_mem[addr]; };
-        inline void set_word(uint32_t addr, uint32_t value) { *(uint32_t*)&local_mem[addr] = value; };
 
         //Swizzling routines
         uint32_t blockid_PSMCT32(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
@@ -351,6 +351,7 @@ class GraphicsSynthesizerThread
         void clut_lookup(uint8_t entry, RGBAQ_REG& tex_color);
         void clut_CSM2_lookup(uint8_t entry, RGBAQ_REG& tex_color);
         void reload_clut(const GSContext& context);
+        void update_draw_pixel_state();
 
         void vertex_kick(bool drawing_kick);
         bool depth_test(int32_t x, int32_t y, uint32_t z);

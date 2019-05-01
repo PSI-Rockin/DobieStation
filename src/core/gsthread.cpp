@@ -122,7 +122,6 @@ GraphicsSynthesizerThread::GraphicsSynthesizerThread()
         {
             //arbitrary "large" value
             calculation = 1000.0;
-            continue;
         }
         else if (exp == 0xFF)
         {
@@ -3287,6 +3286,31 @@ void GraphicsSynthesizerThread::reload_clut(const GSContext& context)
             cache_addr &= 0x3FF;
         }
     }
+}
+
+void GraphicsSynthesizerThread::update_draw_pixel_state()
+{
+    draw_pixel_state = 0;
+
+    draw_pixel_state |= current_ctx->test.alpha_ref;
+    draw_pixel_state |= current_ctx->test.alpha_test << 8;
+    draw_pixel_state |= current_ctx->test.alpha_method << 9;
+    draw_pixel_state |= current_ctx->test.alpha_fail_method << 12;
+    draw_pixel_state |= current_ctx->test.depth_test << 14;
+    draw_pixel_state |= current_ctx->test.depth_method << 15;
+    draw_pixel_state |= current_ctx->test.dest_alpha_test << 17;
+    draw_pixel_state |= current_ctx->test.dest_alpha_method << 18;
+    draw_pixel_state |= current_ctx->frame.format << 19;
+    draw_pixel_state |= current_PRMODE->alpha_blend << 25;
+    draw_pixel_state |= PABE << 26;
+    draw_pixel_state |= current_ctx->alpha.spec_A << 27;
+    draw_pixel_state |= current_ctx->alpha.spec_B << 29;
+    draw_pixel_state |= (uint64_t)current_ctx->alpha.spec_C << 31UL;
+    draw_pixel_state |= (uint64_t)current_ctx->alpha.spec_D << 33UL;
+    draw_pixel_state |= (uint64_t)DTHE << 34UL;
+    draw_pixel_state |= (uint64_t)COLCLAMP << 35UL;
+    draw_pixel_state |= (uint64_t)current_ctx->zbuf.format << 36UL;
+    draw_pixel_state |= (uint64_t)SCANMSK << 40UL;
 }
 
 void GraphicsSynthesizerThread::load_state(ifstream *state)
