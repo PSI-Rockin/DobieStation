@@ -85,6 +85,7 @@ class INTC;
 class EmotionEngine;
 
 extern "C" uint8_t* exec_block(VU_JIT64& jit, VectorUnit& vu);
+extern "C" uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee);
 
 class VectorUnit
 {
@@ -374,10 +375,13 @@ class VectorUnit
         //Friends needed for JIT convenience
         friend class VU_JIT64;
         friend class VU_JitTranslator;
+        friend class EE_JIT64;
+        friend class EE_JitTranslator;
 
         friend void vu_update_xgkick(VectorUnit& vu, int cycles);
         friend void vu_update_pipelines(VectorUnit& vu, int cycles);
         friend uint8_t* exec_block(VU_JIT64& jit, VectorUnit& vu);
+        friend uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee);
 };
 
 template <typename T>

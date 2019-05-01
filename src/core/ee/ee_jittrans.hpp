@@ -30,7 +30,7 @@ enum class EE_SpecialReg
     SA
 };
 
-enum class VU_SpecialReg
+enum VU_SpecialReg
 {
     VU_Regular = 0,
     ACC = 32,
@@ -121,6 +121,7 @@ private:
     IR::Instruction translate_op_cop2(uint32_t opcode, uint32_t PC) const;
     IR::Instruction translate_op_cop2_special(uint32_t opcode, uint32_t PC) const;
     IR::Instruction translate_op_cop2_special2(uint32_t opcode, uint32_t PC) const;
+    void op_vector_by_scalar(IR::Instruction &instr, uint32_t upper, VU_SpecialReg scalar = VU_Regular) const;
 public:
     IR::Block translate(EmotionEngine& ee);
 };

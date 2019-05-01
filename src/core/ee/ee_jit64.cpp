@@ -36,7 +36,26 @@
 extern "C" void run_ee_jit(EE_JIT64& jit, EmotionEngine& ee);
 #endif
 
-EE_JIT64::EE_JIT64() : emitter(&cache) {}
+EE_JIT64::EE_JIT64() : emitter(&cache) 
+{
+    // VU0 initialization
+    for (int i = 0; i < 4; i++)
+    {
+        ftoi_table[0].f[i] = pow(2, 0);
+        ftoi_table[1].f[i] = pow(2, 4);
+        ftoi_table[2].f[i] = pow(2, 12);
+        ftoi_table[3].f[i] = pow(2, 15);
+
+        itof_table[0].f[i] = 1.0f / ftoi_table[0].f[i];
+        itof_table[1].f[i] = 1.0f / ftoi_table[1].f[i];
+        itof_table[2].f[i] = 1.0f / ftoi_table[2].f[i];
+        itof_table[3].f[i] = 1.0f / ftoi_table[3].f[i];
+
+        abs_constant.u[i] = 0x7FFFFFFF;
+        max_flt_constant.u[i] = 0x7F7FFFFF;
+        min_flt_constant.u[i] = 0xFF7FFFFF;
+    }
+}
 
 void EE_JIT64::reset(bool clear_cache)
 {
@@ -375,6 +394,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             break;
         case IR::Opcode::SystemCall:
             system_call(ee, instr);
+            break;
+        case IR::Opcode::VAddVectorByScalar:
+            add_vector_by_scalar(ee, instr);
             break;
         case IR::Opcode::VCallMS:
             vcall_ms(ee, instr);
@@ -811,7 +833,7 @@ REG_64 EE_JIT64::alloc_reg(EmotionEngine& ee, int reg, REG_TYPE type, REG_STATE 
                 if (reg_to_find >= 0)
                 {
                     // This case is hit if we want a register in a specific destination but
-                    // we already have the contents in another reigster.
+                    // we already have the contents in another register.
                     emitter.MOVAPS_REG((REG_64)reg_to_find, destination);
                 }
                 else
@@ -823,8 +845,8 @@ REG_64 EE_JIT64::alloc_reg(EmotionEngine& ee, int reg, REG_TYPE type, REG_STATE 
                             emitter.MOVD_FROM_MEM(REG_64::RAX, (REG_64)destination);
                             break;
                         case REG_TYPE::VF:
-                            // TODO
-                            // emitter.MOVAPS_FROM_MEM(REG_64::RAX, (REG_64)destination);
+                            emitter.load_addr((uint64_t)get_vf_addr(ee, reg), REG_64::RAX);
+                            emitter.MOVAPS_FROM_MEM(REG_64::RAX, (REG_64)destination);
                             break;
                         case REG_TYPE::GPREXTENDED:
                             emitter.load_addr((uint64_t)get_gpr_addr(ee, (EE_NormalReg)reg), (REG_64)destination);
@@ -943,7 +965,24 @@ uint64_t EE_JIT64::get_vi_addr(const EmotionEngine&ee, int index) const
 
 uint64_t EE_JIT64::get_vf_addr(const EmotionEngine&ee, int index) const
 {
-    //TODO
+    if (index < 32)
+        return (uint64_t)&ee.vu0->gpr[index];
+
+    switch (index)
+    {
+        case VU_SpecialReg::ACC:
+            return (uint64_t)&ee.vu0->ACC;
+        case VU_SpecialReg::I:
+            return (uint64_t)&ee.vu0->I;
+        case VU_SpecialReg::Q:
+            return (uint64_t)&ee.vu0->Q;
+        case VU_SpecialReg::P:
+            return (uint64_t)&ee.vu0->P;
+        case VU_SpecialReg::R:
+            return (uint64_t)&ee.vu0->R;
+        default:
+            Errors::die("[EE_JIT64] get_vf_addr error: Unrecognized reg %d", index);
+    }
     return 0;
 }
 

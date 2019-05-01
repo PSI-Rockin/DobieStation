@@ -2409,8 +2409,8 @@ IR::Instruction EE_JitTranslator::translate_op_cop2_special(uint32_t opcode, uin
         case 0x02:
         case 0x03:
             // VADDBC
-            Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VADDBC\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::VAddVectorByScalar;
+            op_vector_by_scalar(instr, opcode);
             return instr;
         case 0x04:
         case 0x05:
@@ -2907,4 +2907,22 @@ void EE_JitTranslator::fallback_interpreter(IR::Instruction& instr, uint32_t ins
 void EE_JitTranslator::interpreter_pass(EmotionEngine &ee, uint32_t pc)
 {
     //TODO
+}
+
+void EE_JitTranslator::op_vector_by_scalar(IR::Instruction &instr, uint32_t upper, VU_SpecialReg scalar) const
+{
+    instr.set_dest((upper >> 6) & 0x1F);
+    instr.set_source((upper >> 11) & 0x1F);
+    instr.set_field((upper >> 21) & 0xF);
+
+    if (scalar == VU_Regular)
+    {
+        instr.set_source2((upper >> 16) & 0x1F);
+        instr.set_bc(upper & 0x3);
+    }
+    else
+    {
+        instr.set_source2(scalar);
+        instr.set_bc(0);
+    }
 }
