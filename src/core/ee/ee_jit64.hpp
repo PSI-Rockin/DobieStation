@@ -74,7 +74,7 @@ private:
     uint16_t cycle_count;
 
     void handle_branch_likely(EmotionEngine& ee, IR::Block& block);
-    void fpu_test_overflow_underflow(EmotionEngine& ee, REG_64 test, bool set_flags);
+    void clamp_freg(EmotionEngine& ee, REG_64 freg);
 
     bool needs_clamping(int xmmreg, uint8_t field);
     void set_clamping(int xmmreg, bool value, uint8_t field);
@@ -182,11 +182,10 @@ private:
     int search_for_register_scratchpad(AllocReg *regs);
     int search_for_register_xmm(AllocReg *regs);
     REG_64 alloc_reg(EmotionEngine& ee, int reg, REG_TYPE type, REG_STATE state, REG_64 destination = (REG_64)-1);
-    REG_64 lalloc_reg(EmotionEngine& ee, int reg, REG_TYPE type, REG_STATE state, REG_64 destination = (REG_64)-1);
+    REG_64 lalloc_int_reg(EmotionEngine& ee, int reg, REG_TYPE type, REG_STATE state, REG_64 destination = (REG_64)-1);
+    REG_64 lalloc_xmm_reg(EmotionEngine& ee, int reg, REG_TYPE type, REG_STATE state, REG_64 destination = (REG_64)-1);
     void free_int_reg(EmotionEngine& ee, REG_64 reg);
     void free_xmm_reg(EmotionEngine& ee, REG_64 reg);
-    REG_64 alloc_vi_reg(EmotionEngine& ee, int vi_reg, REG_STATE state);
-    REG_64 alloc_vf_reg(EmotionEngine& ee, int vf_reg, REG_STATE state);
 
     void emit_prologue();
     void emit_instruction(EmotionEngine &ee, IR::Instruction &instr);

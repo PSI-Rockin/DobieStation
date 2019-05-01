@@ -9,8 +9,8 @@ void EE_JIT64::clamp_vfreg(EmotionEngine& ee, uint8_t field, REG_64 xmm_reg)
 {
     if (needs_clamping(xmm_reg, field))
     {
-        REG_64 XMM0 = lalloc_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
-        REG_64 R15 = lalloc_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+        REG_64 XMM0 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
+        REG_64 R15 = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
 
         emitter.load_addr((uint64_t)&max_flt_constant, REG_64::RAX);
         emitter.load_addr((uint64_t)&min_flt_constant, R15);
@@ -51,9 +51,9 @@ void EE_JIT64::set_clamping(int xmmreg, bool value, uint8_t field)
 void EE_JIT64::update_mac_flags(EmotionEngine &ee, REG_64 xmm_reg, uint8_t field)
 {
     field = convert_field(field);
-    REG_64 XMM0 = lalloc_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
-    REG_64 XMM1 = lalloc_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
-    REG_64 R15 = lalloc_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 XMM0 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 XMM1 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 R15 = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
 
     //Shuffle the vector from WZYX to XYZW
     if (xmm_reg != XMM0)
@@ -98,7 +98,7 @@ void EE_JIT64::add_vector_by_scalar(EmotionEngine& ee, IR::Instruction& instr)
     clamp_vfreg(ee, field, source);
     bc |= (bc << 6) | (bc << 4) | (bc << 2);
 
-    REG_64 temp = lalloc_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 temp = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
     emitter.MOVAPS_REG(bc_reg, temp);
     emitter.SHUFPS(bc, temp, temp);
     set_clamping(temp, true, field);

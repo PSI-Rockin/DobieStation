@@ -1523,6 +1523,15 @@ void Emitter64::MAXPS(REG_64 xmm_source, REG_64 xmm_dest)
     modrm(0b11, xmm_dest, xmm_source);
 }
 
+void Emitter64::MAXSS(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0xF3);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x5F);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
 void Emitter64::MINPS(REG_64 xmm_source, REG_64 xmm_dest)
 {
     rex_r_rm(xmm_dest, xmm_source);
@@ -1530,6 +1539,16 @@ void Emitter64::MINPS(REG_64 xmm_source, REG_64 xmm_dest)
     cache->write<uint8_t>(0x5D);
     modrm(0b11, xmm_dest, xmm_source);
 }
+
+void Emitter64::MINSS(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0xF3);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x5D);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
 
 void Emitter64::MULPS(REG_64 xmm_source, REG_64 xmm_dest)
 {

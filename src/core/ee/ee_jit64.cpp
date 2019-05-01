@@ -871,10 +871,17 @@ REG_64 EE_JIT64::alloc_reg(EmotionEngine& ee, int reg, REG_TYPE type, REG_STATE 
     }
 }
 
-REG_64 EE_JIT64::lalloc_reg(EmotionEngine& ee, int gpr_reg, REG_TYPE type, REG_STATE state, REG_64 destination)
+REG_64 EE_JIT64::lalloc_int_reg(EmotionEngine& ee, int gpr_reg, REG_TYPE type, REG_STATE state, REG_64 destination)
 {
     REG_64 result = alloc_reg(ee, gpr_reg, type, state, destination);
     int_regs[result].locked = true;
+    return result;
+}
+
+REG_64 EE_JIT64::lalloc_xmm_reg(EmotionEngine& ee, int gpr_reg, REG_TYPE type, REG_STATE state, REG_64 destination)
+{
+    REG_64 result = alloc_reg(ee, gpr_reg, type, state, destination);
+    xmm_regs[result].locked = true;
     return result;
 }
 
