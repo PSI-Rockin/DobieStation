@@ -399,7 +399,7 @@ void Emulator::execute_ELF()
         for (unsigned int file_w = p_offset; file_w < (p_offset + p_filesz); file_w += 4)
         {
             uint32_t word = *(uint32_t*)&ELF_file[file_w];
-            write32(mem_w, word);
+            *(uint32_t*)&RDRAM[mem_w] = word;
             mem_w += 4;
         }
     }

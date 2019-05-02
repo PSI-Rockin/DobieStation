@@ -230,6 +230,15 @@ struct TexLookupInfo
     int16_t lastu, lastv;
 };
 
+uint32_t addr_PSMCT32(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
+uint32_t addr_PSMCT32Z(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
+uint32_t addr_PSMCT16(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
+uint32_t addr_PSMCT16S(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
+uint32_t addr_PSMCT16Z(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
+uint32_t addr_PSMCT16SZ(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
+uint32_t addr_PSMCT8(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
+uint32_t addr_PSMCT4(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
+
 class GraphicsSynthesizerThread
 {
     private:
@@ -320,15 +329,6 @@ class GraphicsSynthesizerThread
         uint32_t blockid_PSMCT8(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
         uint32_t blockid_PSMCT4(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
 
-        uint32_t addr_PSMCT32(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
-        uint32_t addr_PSMCT32Z(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
-        uint32_t addr_PSMCT16(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
-        uint32_t addr_PSMCT16S(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
-        uint32_t addr_PSMCT16Z(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
-        uint32_t addr_PSMCT16SZ(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
-        uint32_t addr_PSMCT8(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
-        uint32_t addr_PSMCT4(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
-
         uint32_t read_PSMCT32_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y);
         uint32_t read_PSMCT32Z_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y);
         uint16_t read_PSMCT16_block(uint32_t base, uint32_t width, uint32_t x, uint32_t y);
@@ -365,6 +365,7 @@ class GraphicsSynthesizerThread
         void vertex_kick(bool drawing_kick);
         bool depth_test(int32_t x, int32_t y, uint32_t z);
         void draw_pixel(int32_t x, int32_t y, uint32_t z, RGBAQ_REG& color);
+        void jit_draw_pixel(int32_t x, int32_t y, uint32_t z, RGBAQ_REG& color);
         uint32_t lookup_frame_color(int32_t x, int32_t y);
         void render_primitive();
         void render_point();

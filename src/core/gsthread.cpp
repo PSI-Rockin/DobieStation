@@ -24,6 +24,8 @@ static uint32_t page_PSMCT4[32][128][128];
 
 #define printf(fmt, ...)(0)
 
+//#define GS_JIT
+
 /**
   * ~ GS notes ~
   * PRIM.prim_type:
@@ -198,7 +200,7 @@ void GraphicsSynthesizerThread::wait_for_return(GSReturn type, GSReturnMessage &
 
 void GraphicsSynthesizerThread::send_message(GSMessage message)
 {
-    printf("[GS] Notifying gs thread of new data\n");
+    //printf("[GS] Notifying gs thread of new data\n");
     message_queue->push(message);
     send_data = true;
 }
@@ -1085,56 +1087,56 @@ uint32_t GraphicsSynthesizerThread::blockid_PSMCT4(uint32_t block, uint32_t widt
     return block + ((y >> 2) & ~0x1f) * (width >> 7) + ((x >> 2) & ~0x1f) + blockTable4[(y >> 4) & 7][(x >> 5) & 3];
 }
 
-uint32_t GraphicsSynthesizerThread::addr_PSMCT32(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
+uint32_t addr_PSMCT32(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
 {
     uint32_t page = ((block >> 5) + (y >> 5) * width + (x >> 6));
     uint32_t addr = (page << 11) + page_PSMCT32[block & 0x1F][y & 0x1F][x & 0x3F];
     return (addr << 2) & 0x003FFFFC;
 }
 
-uint32_t GraphicsSynthesizerThread::addr_PSMCT32Z(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
+uint32_t addr_PSMCT32Z(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
 {
     uint32_t page = ((block >> 5) + (y >> 5) * width + (x >> 6));
     uint32_t addr = (page << 11) + page_PSMCT32Z[block & 0x1F][y & 0x1F][x & 0x3F];
     return (addr << 2) & 0x003FFFFC;
 }
 
-uint32_t GraphicsSynthesizerThread::addr_PSMCT16(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
+uint32_t addr_PSMCT16(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
 {
     uint32_t page = ((block >> 5) + (y >> 6) * width + (x >> 6));
     uint32_t addr = (page << 12) + page_PSMCT16[block & 0x1F][y & 0x3F][x & 0x3F];
     return (addr << 1) & 0x003FFFFE;
 }
 
-uint32_t GraphicsSynthesizerThread::addr_PSMCT16S(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
+uint32_t addr_PSMCT16S(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
 {
     uint32_t page = ((block >> 5) + (y >> 6) * width + (x >> 6));
     uint32_t addr = (page << 12) + page_PSMCT16S[block & 0x1F][y & 0x3F][x & 0x3F];
     return (addr << 1) & 0x003FFFFE;
 }
 
-uint32_t GraphicsSynthesizerThread::addr_PSMCT16Z(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
+uint32_t addr_PSMCT16Z(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
 {
     uint32_t page = ((block >> 5) + (y >> 6) * width + (x >> 6));
     uint32_t addr = (page << 12) + page_PSMCT16Z[block & 0x1F][y & 0x3F][x & 0x3F];
     return (addr << 1) & 0x003FFFFE;
 }
 
-uint32_t GraphicsSynthesizerThread::addr_PSMCT16SZ(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
+uint32_t addr_PSMCT16SZ(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
 {
     uint32_t page = ((block >> 5) + (y >> 6) * width + (x >> 6));
     uint32_t addr = (page << 12) + page_PSMCT16SZ[block & 0x1F][y & 0x3F][x & 0x3F];
     return (addr << 1) & 0x003FFFFE;
 }
 
-uint32_t GraphicsSynthesizerThread::addr_PSMCT8(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
+uint32_t addr_PSMCT8(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
 {
     uint32_t page = ((block >> 5) + (y >> 6) * (width >> 1) + (x >> 7));
     uint32_t addr = (page << 13) + page_PSMCT8[block & 0x1F][y & 0x3F][x & 0x7F];
     return addr & 0x003FFFFF;
 }
 
-uint32_t GraphicsSynthesizerThread::addr_PSMCT4(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
+uint32_t addr_PSMCT4(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
 {
     uint32_t page = ((block >> 5) + (y >> 7) * (width >> 1) + (x >> 7));
     uint32_t addr = (page << 14) + page_PSMCT4[block & 0x1f][y & 0x7f][x & 0x7f];
@@ -1333,7 +1335,9 @@ void GraphicsSynthesizerThread::vertex_kick(bool drawing_kick)
 
 void GraphicsSynthesizerThread::render_primitive()
 {
+#ifdef GS_JIT
     jit_draw_pixel_func = get_jitted_draw_pixel(draw_pixel_state);
+#endif
     switch (prim_type)
     {
         case 0:
@@ -1792,6 +1796,20 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
     }
 }
 
+void GraphicsSynthesizerThread::jit_draw_pixel(int32_t x, int32_t y,
+                                               uint32_t z, RGBAQ_REG &color)
+{
+#ifdef _MSC_VER
+    //TODO
+#else
+    __asm__ volatile (
+        "callq *%4"
+                : "=X" (x), "=X" (y), "=X" (z), "=X" (color)
+                : "r" (jit_draw_pixel_func)
+    );
+#endif
+}
+
 void GraphicsSynthesizerThread::render_point()
 {
     Vertex v1 = vtx_queue[0]; v1.to_relative(current_ctx->xyoffset);
@@ -2218,10 +2236,13 @@ void GraphicsSynthesizerThread::render_sprite()
                 }
                 else
                     tex_lookup(pix_u >> 16, pix_v >> 16, tex_info);
+
+                //jit_draw_pixel(x, y, v2.z, tex_info.tex_color);
                 draw_pixel(x, y, v2.z, tex_info.tex_color);
             }
             else
             {
+                //jit_draw_pixel(x, y, v2.z, tex_info.tex_color);
                 draw_pixel(x, y, v2.z, tex_info.vtx_color);
             }
             pix_s += pix_s_step;
@@ -3343,7 +3364,6 @@ uint8_t* GraphicsSynthesizerThread::get_jitted_draw_pixel(uint64_t state)
 {
     if (jit_cache.find_block(BlockState{0, 0, 0, state, 0}) == nullptr)
     {
-#undef printf
         printf("[GS_t] RECOMPILING %llX\n", state);
         recompile_draw_pixel(state);
     }
@@ -3363,6 +3383,8 @@ void GraphicsSynthesizerThread::recompile_draw_pixel(uint64_t state)
     emitter.PUSH(R14);
     emitter.PUSH(R15);
     emitter.PUSH(RBX);
+    emitter.PUSH(RDI);
+    emitter.PUSH(RSI);
 
     //Store argument registers in nonvolatile registers
     //R12 = x  R13 = y  R14 = z  R15 = color
@@ -3372,10 +3394,10 @@ void GraphicsSynthesizerThread::recompile_draw_pixel(uint64_t state)
     emitter.MOV64_MR(R8, R14);
     emitter.MOV64_MR(R9, R15);
 #else
-    emitter.MOV64_MR(RDI, R12);
-    emitter.MOV64_MR(RSI, R13);
-    emitter.MOV64_MR(RDX, R14);
-    emitter.MOV64_MR(RCX, R15);
+    emitter.MOV64_MR(RSI, R12);
+    emitter.MOV64_MR(RDX, R13);
+    emitter.MOV64_MR(RCX, R14);
+    emitter.MOV64_MR(R8, R15);
 #endif
 
     //Shift x and y to the right by 4 (remove fractional component)
@@ -3470,32 +3492,133 @@ void GraphicsSynthesizerThread::recompile_draw_pixel(uint64_t state)
             jit_epilogue_draw_pixel();
             return;
         }
-        else if (current_ctx->test.depth_method != 1)
+
+        //Load address to zbuffer
+        emitter.load_addr((uint64_t)&current_ctx->zbuf.base_pointer, RDI);
+        emitter.load_addr((uint64_t)&current_ctx->frame.width, RSI);
+        emitter.MOV32_FROM_MEM(RDI, RDI);
+        emitter.MOV32_FROM_MEM(RSI, RSI);
+        emitter.SAR32_REG_IMM(8, RDI);
+        emitter.SAR32_REG_IMM(6, RSI);
+        emitter.MOV64_MR(R12, RDX);
+        emitter.MOV64_MR(R13, RCX);
+
+        switch (current_ctx->zbuf.format)
+        {
+            case 0x00:
+                //PSMCT32Z
+                emitter.CALL((uint64_t)&addr_PSMCT32Z);
+                break;
+            case 0x01:
+                //PSMCT24Z
+                emitter.CALL((uint64_t)&addr_PSMCT32Z);
+                break;
+            case 0x02:
+                //PSMCT16Z
+                emitter.CALL((uint64_t)&addr_PSMCT16Z);
+                break;
+            case 0x0A:
+                //PSMCT16SZ
+                emitter.CALL((uint64_t)&addr_PSMCT16SZ);
+                break;
+            default:
+                Errors::die("[GS_t] Unrecognized zbuf format $%02X\n", current_ctx->zbuf.format);
+        }
+
+        //RCX = zbuffer address
+        emitter.load_addr((uint64_t)local_mem, RCX);
+        emitter.ADD64_REG(RAX, RCX);
+
+        if (current_ctx->test.depth_method != 1)
         {
             ConditionCode depth_comparison;
             if (current_ctx->test.depth_method == 2)
                 depth_comparison = ConditionCode::GE;
             else
                 depth_comparison = ConditionCode::G;
+
+            emitter.MOV32_FROM_MEM(RCX, RAX);
+
+            if (current_ctx->zbuf.format == 1)
+                emitter.AND32_EAX(0xFFFFFF);
+
+            emitter.CMP32_REG(RAX, R14);
+            uint8_t* depth_passed = emitter.JCC_NEAR_DEFERRED(depth_comparison);
+
+            //Depth test failed, do not go any further
+            jit_epilogue_draw_pixel();
+
+            emitter.set_jump_dest(depth_passed);
         }
+
+        //Update zbuffer
+        emitter.TEST32_REG_IMM(0x2, RBX);
+        uint8_t* do_not_update_z = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
+
+        switch (current_ctx->zbuf.format)
+        {
+            case 0x00:
+                emitter.MOV32_TO_MEM(R14, RCX);
+                break;
+            case 0x01:
+                emitter.AND32_REG_IMM(0xFFFFFF, R14);
+                emitter.MOV32_TO_MEM(R14, RCX);
+                break;
+            default:
+                emitter.MOV16_TO_MEM(R14, RCX);
+        }
+
+        emitter.set_jump_dest(do_not_update_z);
     }
 
-    emitter.TEST16_REG_IMM(0x1, RBX);
+    emitter.TEST32_REG_IMM(0x1, RBX);
     uint8_t* do_not_update_rgba = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
+
+    emitter.load_addr((uint64_t)&current_ctx->frame.base_pointer, RDI);
+    emitter.MOV32_FROM_MEM(RDI, RDI);
+    emitter.SAR32_REG_IMM(8, RDI);
+    emitter.load_addr((uint64_t)&current_ctx->frame.width, RSI);
+    emitter.MOV32_FROM_MEM(RSI, RSI);
+    emitter.SAR32_REG_IMM(6, RSI);
+    emitter.MOV64_MR(R12, RDX);
+    emitter.MOV64_MR(R13, RCX);
 
     switch (current_ctx->frame.format)
     {
+        case 0x00:
+            //PSMCT32
+            emitter.CALL((uint64_t)&addr_PSMCT32);
+            emitter.load_addr((uint64_t)local_mem, RCX);
+            emitter.ADD64_REG(RAX, RCX);
+            emitter.MOV32_REG_IMM(0x80000000, RDX);
+            emitter.MOV32_TO_MEM(RDX, RCX);
+            break;
+        case 0x01:
+            //PSMCT24
+            emitter.CALL((uint64_t)&addr_PSMCT32);
+            emitter.load_addr((uint64_t)local_mem, RCX);
+            emitter.ADD64_REG(RAX, RCX);
+            emitter.MOV32_FROM_MEM(RCX, RDX);
+            emitter.AND32_REG_IMM(0xFF000000, RDX);
+            emitter.MOV32_REG_IMM(0x80808080, RAX);
+            emitter.OR32_REG(RAX, RDX);
+            emitter.MOV32_TO_MEM(RDX, RCX);
+            break;
         default:
             Errors::die("[GS_t] Unrecognized frame format $%02X in recompile_draw_pixel", current_ctx->frame.format);
     }
 
     emitter.set_jump_dest(do_not_update_rgba);
     jit_epilogue_draw_pixel();
+    jit_cache.print_current_block();
+    jit_cache.print_literal_pool();
     jit_cache.set_current_block_rx();
 }
 
 void GraphicsSynthesizerThread::jit_epilogue_draw_pixel()
 {
+    emitter.POP(RSI);
+    emitter.POP(RDI);
     emitter.POP(RBX);
     emitter.POP(R15);
     emitter.POP(R14);
