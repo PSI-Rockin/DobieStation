@@ -38,7 +38,7 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
         if (branch_op)
             branch_delayslot = true;
 
-        branch_op = is_branch(instr);
+        branch_op = instr.is_jump();
         instr.set_cycle_count(cycle_count);
 
         if (instr.op != IR::Opcode::Null)
@@ -2314,24 +2314,42 @@ IR::Instruction EE_JitTranslator::translate_op_cop1_fpu(uint32_t opcode, uint32_
         }
         case 0x30:
             // C.F.S
-            Errors::print_warning("[EE_JIT] Unrecognized fpu op C.F.S\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            instr.op = IR::Opcode::FloatingPointClearControl;
             return instr;
+        }
         case 0x32:
             // C.EQ.S
-            Errors::print_warning("[EE_JIT] Unrecognized fpu op C.EQ.S\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t source = (opcode >> 11) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            instr.op = IR::Opcode::FloatingPointCompareEqual;
+            instr.set_source(source);
+            instr.set_source2(source2);
             return instr;
+        }
         case 0x34:
             // C.LT.S
-            Errors::print_warning("[EE_JIT] Unrecognized fpu op C.LT.S\n", op);
+        {
+            uint8_t source = (opcode >> 11) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            instr.op = IR::Opcode::FloatingPointCompareLessThan;
+            instr.set_source(source);
+            instr.set_source2(source2);
             fallback_interpreter(instr, opcode);
             return instr;
+        }
         case 0x36:
             // C.LE.S
-            Errors::print_warning("[EE_JIT] Unrecognized fpu op C.LE.S\n", op);
+        {
+            uint8_t source = (opcode >> 11) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            instr.op = IR::Opcode::FloatingPointCompareLessThanOrEqual;
+            instr.set_source(source);
+            instr.set_source2(source2);
             fallback_interpreter(instr, opcode);
             return instr;
+        }
         default:
             Errors::die("[EE_JIT] Unrecognized fpu op $%02X", op);
             return instr;
@@ -2875,24 +2893,6 @@ IR::Instruction EE_JitTranslator::translate_op_cop2_special2(uint32_t opcode, ui
             Errors::die("[EE_JIT] Unrecognized cop2 special2 op $%02X", op);
             return instr;
     }
-}
-
-// TENTATIVE
-bool EE_JitTranslator::is_branch(const IR::Instruction& instr) const noexcept
-{
-    return instr.op == IR::Opcode::Jump ||
-        instr.op == IR::Opcode::JumpIndirect ||
-        instr.op == IR::Opcode::BranchCop0 ||
-        instr.op == IR::Opcode::BranchCop1 ||
-        instr.op == IR::Opcode::BranchCop2 ||
-        instr.op == IR::Opcode::BranchEqual ||
-        instr.op == IR::Opcode::BranchEqualZero ||
-        instr.op == IR::Opcode::BranchGreaterThanOrEqualZero ||
-        instr.op == IR::Opcode::BranchGreaterThanZero ||
-        instr.op == IR::Opcode::BranchLessThanOrEqualZero ||
-        instr.op == IR::Opcode::BranchLessThanZero ||
-        instr.op == IR::Opcode::BranchNotEqual ||
-        instr.op == IR::Opcode::BranchNotEqualZero;
 }
 
 void EE_JitTranslator::fallback_interpreter(IR::Instruction& instr, uint32_t instr_word) const noexcept

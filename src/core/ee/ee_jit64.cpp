@@ -251,6 +251,18 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::FloatingPointAdd:
             floating_point_add(ee, instr);
             break;
+        case IR::Opcode::FloatingPointClearControl:
+            floating_point_clear_control(ee, instr);
+            break;
+        case IR::Opcode::FloatingPointCompareEqual:
+            floating_point_compare_equal(ee, instr);
+            break;
+        case IR::Opcode::FloatingPointCompareLessThan:
+            floating_point_compare_less_than(ee, instr);
+            break;
+        case IR::Opcode::FloatingPointCompareLessThanOrEqual:
+            floating_point_compare_less_than_or_equal(ee, instr);
+            break;
         case IR::Opcode::FloatingPointNegate:
             floating_point_negate(ee, instr);
             break;

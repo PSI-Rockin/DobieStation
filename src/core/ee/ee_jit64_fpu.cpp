@@ -66,6 +66,42 @@ void EE_JIT64::floating_point_add(EmotionEngine& ee, IR::Instruction& instr)
     clamp_freg(ee, dest);
 }
 
+void EE_JIT64::floating_point_clear_control(EmotionEngine& ee, IR::Instruction& instr)
+{
+    emitter.load_addr((uint64_t)&ee.fpu->control.condition, REG_64::RAX);
+    emitter.MOV8_IMM_MEM(false, REG_64::RAX);
+}
+
+void EE_JIT64::floating_point_compare_equal(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::FPU, REG_STATE::READ);
+
+    emitter.UCOMISS(source2, source);
+    emitter.load_addr((uint64_t)&ee.fpu->control.condition, REG_64::RAX);
+    emitter.SETCC_MEM(ConditionCode::E, REG_64::RAX);
+}
+
+void EE_JIT64::floating_point_compare_less_than(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::FPU, REG_STATE::READ);
+
+    emitter.UCOMISS(source2, source);
+    emitter.load_addr((uint64_t)&ee.fpu->control.condition, REG_64::RAX);
+    emitter.SETCC_MEM(ConditionCode::L, REG_64::RAX);
+}
+
+void EE_JIT64::floating_point_compare_less_than_or_equal(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::FPU, REG_STATE::READ);
+
+    emitter.UCOMISS(source2, source);
+    emitter.load_addr((uint64_t)&ee.fpu->control.condition, REG_64::RAX);
+    emitter.SETCC_MEM(ConditionCode::LE, REG_64::RAX);
+}
+
 void EE_JIT64::floating_point_multiply(EmotionEngine& ee, IR::Instruction& instr)
 {
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);

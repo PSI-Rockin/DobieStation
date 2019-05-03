@@ -141,15 +141,18 @@ void Instruction::set_is_link(bool value)
 bool Instruction::is_jump()
 {
     return op == Opcode::Jump ||
-            op == Opcode::JumpIndirect ||
-            op == Opcode::JumpAndLink ||
-            op == Opcode::JumpAndLinkIndirect ||
-            op == Opcode::BranchEqual ||
-            op == Opcode::BranchNotEqual ||
-            op == Opcode::BranchLessThanZero ||
-            op == Opcode::BranchGreaterThanZero ||
-            op == Opcode::BranchLessOrEqualThanZero ||
-            op == Opcode::BranchGreaterOrEqualThanZero;
+        op == Opcode::JumpIndirect ||
+        op == Opcode::BranchCop0 ||
+        op == Opcode::BranchCop1 ||
+        op == Opcode::BranchCop2 ||
+        op == Opcode::BranchEqual ||
+        op == Opcode::BranchEqualZero ||
+        op == Opcode::BranchGreaterThanOrEqualZero ||
+        op == Opcode::BranchGreaterThanZero ||
+        op == Opcode::BranchLessThanOrEqualZero ||
+        op == Opcode::BranchLessThanZero ||
+        op == Opcode::BranchNotEqual ||
+        op == Opcode::BranchNotEqualZero;
 }
 
 };
