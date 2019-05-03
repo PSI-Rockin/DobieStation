@@ -1595,6 +1595,7 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
                     fail = true;
                 break;
         }
+
         if (fail)
         {
             switch (test->alpha_fail_method)
@@ -2058,10 +2059,35 @@ static void order3(int32_t a, int32_t b, int32_t c, uint8_t* order)
 }
 
 void GraphicsSynthesizerThread::render_triangle2() {
-    tri_count++;
-    // this version of render_triangle uses a different algorithm which hopefully is faster.
-    //   some notes to others - the rounding is _extremely_ sensitive.  Replace x/y with x * (1/y) and it breaks.
+    // This is a "scanline" algorithm which reduces flops/pixel
+    //  at the cost of a longer setup time.
+
+    // per-pixel work:
+    //         add   mult   div
+    // stupid  13     7      1
+    // old      5     3      1
+    // scan     3     0      0
     //
+    // per-line work:
+    //         add   mult   div
+    // stupid  0     0      0
+    // old     3     0      0
+    // scan    1     1      0   (possible to do 1 add, but rounding issues with floats occur)
+
+    // it divides a triangle like this:
+
+    //             * v0
+    //
+    //     v1  * ----
+    //
+    //
+    //               * v2
+
+    // where v0, v1, v2 are floating point pixel locations, ordered from low to high
+    // (this triangles also has a positive area because the vertices are CCW)
+
+
+    tri_count++;
 
     Vertex unsortedVerts[3]; // vertices in the order they were sent to GS
     unsortedVerts[0] = vtx_queue[2]; unsortedVerts[0].to_relative(current_ctx->xyoffset);
@@ -2093,11 +2119,11 @@ void GraphicsSynthesizerThread::render_triangle2() {
 
 
     // fast reject - some games like to spam triangles that don't have any pixels
-    if(unsortedVerts[0].y == unsortedVerts[1].y && unsortedVerts[1].y == unsortedVerts[2].y)
-    {
-        y_reject_tris++;
-        return;
-    }
+//    if(unsortedVerts[0].y == unsortedVerts[1].y && unsortedVerts[1].y == unsortedVerts[2].y)
+//    {
+//        y_reject_tris++;
+//        return;
+//    }
 
 
     // sort the three vertices by their y coordinate (increasing)
@@ -2109,86 +2135,168 @@ void GraphicsSynthesizerThread::render_triangle2() {
     VertexF v1(unsortedVerts[order[1]]);
     VertexF v2(unsortedVerts[order[2]]);
 
-    // we will divide the triangle into two by drawing a horiontal line that goes through the middle
-    //  vertex as sorted by y-coordinate).
-    bool single_tri = (v0.y == v1.y);
+    // COMMONLY USED VALUES
 
+    // check if we only have a single triangle like this:
+    //     v0  * ----*  v1         v1 *-----* v0
+    //                        OR
+    //             * v2                 * v2
+    // the other orientations of single triangle (where v1 v2 is horizontal) works fine.
+    bool lower_tri_only = (v0.y == v1.y);
+
+    // the edge e21 is the edge from v1 -> v2.  So v1 + e21 = v2
     // edges (difference of the ENTIRE vertex properties, not just position)
     VertexF e21 = v2 - v1;
     VertexF e20 = v2 - v0;
     VertexF e10 = v1 - v0;
 
-    // this is the equivalent of "divider" from the old algorithm (but in pixel coordiantes)
-    float div = e10.y * e20.x - e10.x * e20.y;
-    bool div_flip = div < 0.f; // if the triangle has backwards winding order. investigate if it's faster to flip it?
+    // interpolating z (or any value) at point P in a triangle can be done by computing the barycentric coordinates
+    // (w0, w1, w2) and using P_z = w0 * v1_z + w1 * v2_z + w2 * v3_z
 
-    if(div == 0.f) // another fast exit if we won't draw any pixels
+    // derivative of P_z wrt x and y is constant everywhere
+    // dP_z/dx = dw0/dx * v1_z + dw1/dx * v2_z + dw2/dx * v3_z
+
+    // w0 = (v2_y - v3_y)*(P_x - v3_x) + (v3_x - v2_x) * (P_y - v3_y)
+    //      ----------------------------------------------------------
+    //      (v1_y - v0_y)*(v2_x - v0_x) + (v1_x - v0_x)*(v2_y - v0_y)
+
+    // dw0/dx =           v2_y - v3_y
+    //          ------------------------------
+    //           the same denominator as above
+
+    // The denominator of this fraction shows up everywhere, so we compute it once.
+    float div = (e10.y * e20.x - e10.x * e20.y);
+
+    // If the vertices of the triangle are CCW, the denominator will be negative
+    // if the triangle is degenerate (has 0 area), it will be zero.
+    bool reversed = div < 0.f;
+
+    if(div == 0.f)
     {
         div_reject_tris++;
         return;
     }
 
+    // next we need to determine the horizontal scanlines that will have pixels.
+    // GS pixel draw condition for scissor
+    //   >= minimum value, <= maximum value (draw left/top, but not right/bottom)
+    // Our scanline loop
+    //   >= minimum value, < maximum value
 
-    // convert scissoring values to pixels
-    float scissorY1 = (float)current_ctx->scissor.y1 / 16.f;
-    float scissorY2 = (float)current_ctx->scissor.y2 / 16.f;
-    float scissorX1 = (float)current_ctx->scissor.x1 / 16.f;
-    float scissorX2 = (float)current_ctx->scissor.x2 / 16.f;
+    // MINIMUM SCISSOR
+    // -------------------  y = 0.0 (pixel)
+    //
+    //  XXXXXXXXXXXXXXXXXX  scissor minimum (y = 0.125 to y = 0.875)
+    //                           (round to y = 1.0 - the first scanline we should consider)
+    // -------------------- y = 1.0 (pixel)
+    int scissorY1 = (current_ctx->scissor.y1 + 15) / 16; // min y coordinate, round up because we don't draw px below scissor
+    int scissorX1 = (current_ctx->scissor.x1 + 15) / 16;
 
-    // the y coordinates of the top and bottom of the upper and lower triangle, with scissoring
-    // the std::ceil performs the correct rounding for the edges here
-    float upperTop = std::max(std::ceil(v0.y), scissorY1);
-    float upperBot = std::min(std::ceil(v1.y), scissorY2);
-    float lowerTop = std::max(std::ceil(v1.y), scissorY1);
-    float lowerBot = std::min(std::ceil(v2.y), scissorY2);
+    // MAXIMUM SCISSOR
+    // -------------------  y = 3.0 (pixel)
+    //
+    //  XXXXXXXXXXXXXXXXXX  scissor maximum (y = 3.125 to y = 3.875)
+    //                           (round to y = 4.0 - will do scanlines at y = 1, 2, 3)
+    // -------------------- y = 4.0 (pixel)
 
-    // we need the derivatives of the colors,... with respect to the x and y coordinates
-    // these will give the same results as the old algorithm's barycentric interpolation
-    float v10xdiv = e10.x / div;
-    float v10ydiv = e10.y / div;
-    float v20xdiv = e20.x / div;
-    float v20ydiv = e20.y / div;
+    // however, if SCISSOR = 4, we should round that up to 5 because we do want to draw pixels on y = 4 (<= max value)
+    int scissorY2 = (current_ctx->scissor.y2 + 16) / 16;
+    int scissorX2 = (current_ctx->scissor.x2 + 16) / 16;
+
+    // scissor triangle top/bottoms
+    // we can get away with only checking min scissor for tops and max scissors for bottom
+    // because it will give negative height triangles for completely scissored half tris
+    // and the correct answer for half tris that aren't completely killed
+    int upperTop = std::max((int)std::ceil(v0.y), scissorY1); // we draw this
+    int upperBot = std::min((int)std::ceil(v1.y), scissorY2); // we don't draw this, (< max value, different from scissor)
+    int lowerTop = std::max((int)std::ceil(v1.y), scissorY1); // we draw this
+    int lowerBot = std::min((int)std::ceil(v2.y), scissorY2); // we don't draw this, (< max value, different from scissor)
+
+
+    // compute the derivatives of the weights, like shown in the formula above
+    float ndw2dy = e10.x / div; // n is negative
+    float dw2dx  = e10.y / div;
+    float dw1dy  = e20.x / div;
+    float ndw1dx = e20.y / div; // also negative
+
+    // derivatives wrt x and y would normally be computed as dz/dx = dw0/dx * z0 + dw1/dx * z1 + dw2/dx * z2
+    // however, w0 + w1 + w2 = 1 so dw0/dx + dw1/dx + dw2/dx = 0,
+    //   and we can use some clever rearranging and reuse of the edges to simplify this
+    //   we can replace dw0/dx with (-dw1/dx - dw2/dx):
+
+    // dz/dx = dw0/dx*z0 + dw1/dx*z1 + dw2/dx*z2
+    // dz/dx = (-dw1/dx - dw2/dx)*z0 + dw1/dx*z1 + dw2/dx*z2
+    // dz/dx = -dw1/dx*z0 - dw2/dx*z0 + dw1/dx*z1 + dw2/dx*z2
+    // dz/dx = dw1/dx*(z1 - z0) + dw2/dx*(z2 - z0)
 
     // the value to step per field per x/y pixel
-    VertexF x_step = e20 * v10ydiv - e10 * v20ydiv;
-    VertexF y_step = (e10 * v20xdiv - e20 * v10xdiv); //todo why is this negative?
+    VertexF dvdx = e20 * dw2dx - e10 * ndw1dx;
+    VertexF dvdy = e10 * dw1dy - e20 * ndw2dy;
 
     // slopes of the edges
-    float e20d = e20.x / e20.y;
-    float e21d = e21.x / e21.y;
-    float e10d = e10.x / e10.y;
+    float e20dxdy = e20.x / e20.y;
+    float e21dxdy = e21.x / e21.y;
+    float e10dxdy = e10.x / e10.y;
 
-    // because the ordering of the vertices (CW, CCW) isn't known, these
-    // edge slopes need to be chosen correctly.  These are the left/right edges for the lower triangle
-    float div3 = div_flip ? e20d : e21d;
-    float div4 = div_flip ? e21d : e20d;
+    // we need to know the left/right side slopes. They can be different if v1 is on the opposite side of e20
+    float lowerLeftEdgeStep  = reversed ? e20dxdy : e21dxdy;
+    float lowerRightEdgeStep = reversed ? e21dxdy : e20dxdy;
 
-    if(single_tri) // in the case where we have only one triangle (one of our edges is horizontal)
-    {              // if we try to draw both, it freaks out.
-        if(lowerTop < lowerBot)
+    // draw triangles
+    if(lower_tri_only)
+    {
+        if(lowerTop < lowerBot) // if we weren't killed by scissoring
         {
-            VertexF& selected_vertex = div_flip ? v0 : v1;
-            VertexF& other_vertex = div_flip ? v1 : v0;
-            render_half_triangle(selected_vertex.x, other_vertex.x, upperTop, lowerBot, x_step, y_step, selected_vertex,
-                    div3, div4, scissorX1, scissorX2, tex_info);
+            // we don't know which vertex is on the left or right, but the two configures have opposite sign areas:
+            //     v0  * ----*  v1         v1 *-----* v0
+            //                        OR
+            //             * v2                 * v2
+            VertexF& left_vertex = reversed ? v0 : v1;
+            VertexF& right_vertex = reversed ? v1 : v0;
+            render_half_triangle(left_vertex.x,    // upper edge left vertex, floating point pixels
+                                 right_vertex.x,   // upper edge right vertex, floating point pixels
+                                 upperTop,         // start scanline (included)
+                                 lowerBot,         // end scanline   (not included)
+                                 dvdx,             // derivative of values wrt x coordinate
+                                 dvdy,             // derivative of values wrt y coordinate
+                                 left_vertex,      // one point to interpolate from
+                                 lowerLeftEdgeStep, // slope of left edge
+                                 lowerRightEdgeStep,  // slope of right edge
+                                 scissorX1,        // x scissor (integer pixels, do draw this px)
+                                 scissorX2,        // x scissor (integer pixels, don't draw this px)
+                                 tex_info);        // texture
         }
     }
     else
     {
-        // both triangle, so we need to know the edge slopes for the lower triangle
-        float div1 = div_flip ? e20d : e10d;
-        float div2 = div_flip ? e10d : e20d;
+        // again, left/right slopes
+        float upperLeftEdgeStep = reversed ? e20dxdy : e10dxdy;
+        float upperRightEdgeStep = reversed ? e10dxdy : e20dxdy;
 
         // upper triangle
-        if(upperTop < upperBot) // i shouldn't have to check this!
+        if(upperTop < upperBot) // if we weren't killed by scissoring
         {
-            render_half_triangle(v0.x, v0.x, upperTop, upperBot, x_step, y_step, v0, div1, div2, scissorX1, scissorX2, tex_info);
+            render_half_triangle(v0.x, v0.x,          // upper edge is just the highest point on triangle
+                                 upperTop, upperBot,  // scanline bounds
+                                 dvdx, dvdy,          // derivatives of values
+                                 v0,                  // interpolate from this vertex
+                                 upperLeftEdgeStep, upperRightEdgeStep, // slopes
+                                 scissorX1, scissorX2,  // integer x scissor
+                                 tex_info);
         }
 
         if(lowerTop < lowerBot)
         {
-            render_half_triangle(v0.x + div1 * e10.y, v0.x + div2 * e10.y, lowerTop, lowerBot, x_step, y_step, v1,
-                    div3, div4, scissorX1, scissorX2, tex_info);
+            //             * v0
+            //
+            //     v1  * ----
+            //
+            //
+            //               * v2
+            render_half_triangle(v0.x + upperLeftEdgeStep * e10.y, // one of our upper edge vertices isn't v0,v1,v2, but we don't know which. todo is this faster than branch?
+                                 v0.x + upperRightEdgeStep * e10.y,
+                                 lowerTop, lowerBot, dvdx, dvdy, v1,
+                                 lowerLeftEdgeStep, lowerRightEdgeStep, scissorX1, scissorX2, tex_info);
         }
 
     }
@@ -2234,6 +2342,7 @@ void GraphicsSynthesizerThread::render_half_triangle(float x0, float x1, int y0,
 
         for(int x = x0l; x < xStop; x++)            // loop over x pixels of scanline
         {
+            //vtx = init + y_step * height + (x_step * (x - init.x));
             tex_info.vtx_color.r = vtx.r;           // set most recently interpolated stuff
             tex_info.vtx_color.g = vtx.g;
             tex_info.vtx_color.b = vtx.b;
@@ -2255,6 +2364,7 @@ void GraphicsSynthesizerThread::render_half_triangle(float x0, float x1, int y0,
                     t /= q;
                     u = (s * tex_info.tex_width) * 16.f;
                     v = (t * tex_info.tex_height) * 16.f;
+                    //fprintf(stderr, "q: %f, u: %d, v: %d, a: %d\n", vtx.q, u,v, tex_info.vtx_color.a);
                 }
                 else
                 {
@@ -2283,6 +2393,22 @@ void GraphicsSynthesizerThread::render_triangle()
     Vertex v1 = vtx_queue[2]; v1.to_relative(current_ctx->xyoffset);
     Vertex v2 = vtx_queue[1]; v2.to_relative(current_ctx->xyoffset);
     Vertex v3 = vtx_queue[0]; v3.to_relative(current_ctx->xyoffset);
+
+    if (!current_PRMODE->gourand_shading)
+    {
+        //Flatten the colors
+        v1.rgbaq.r = v3.rgbaq.r;
+        v2.rgbaq.r = v3.rgbaq.r;
+
+        v1.rgbaq.g = v3.rgbaq.g;
+        v2.rgbaq.g = v3.rgbaq.g;
+
+        v1.rgbaq.b = v3.rgbaq.b;
+        v2.rgbaq.b = v3.rgbaq.b;
+
+        v1.rgbaq.a = v3.rgbaq.a;
+        v2.rgbaq.a = v3.rgbaq.a;
+    }
 
     //The triangle rasterization code uses an approach with barycentric coordinates
     //Clear explanation can be read below:
@@ -2339,21 +2465,7 @@ void GraphicsSynthesizerThread::render_triangle()
     int32_t w2_row_block = w2_row;
     int32_t w3_row_block = w3_row;
 
-    if (!current_PRMODE->gourand_shading)
-    {
-        //Flatten the colors
-        v1.rgbaq.r = v3.rgbaq.r;
-        v2.rgbaq.r = v3.rgbaq.r;
 
-        v1.rgbaq.g = v3.rgbaq.g;
-        v2.rgbaq.g = v3.rgbaq.g;
-
-        v1.rgbaq.b = v3.rgbaq.b;
-        v2.rgbaq.b = v3.rgbaq.b;
-
-        v1.rgbaq.a = v3.rgbaq.a;
-        v2.rgbaq.a = v3.rgbaq.a;
-    }
 
     TexLookupInfo tex_info;
     tex_info.new_lookup = true;
@@ -2470,8 +2582,9 @@ void GraphicsSynthesizerThread::render_triangle()
                                     t /= q;
                                     u = (s * tex_info.tex_width) * 16.0;
                                     v = (t * tex_info.tex_height) * 16.0;
+                                    //fprintf(stderr, "q: %f, u: %d, v: %d, a: %d\n", tex_info.vtx_color.q, u,v, tex_info.vtx_color.a);
                                     //fprintf(stderr, "q: %f\n", tex_info.vtx_color.q);
-                                    fprintf(stderr, "uv: %d, %d @ %d, %d, %d\n", u, v, (int)(x * 1), (int)(y*1), (uint32_t)z);
+                                    //fprintf(stderr, "uv: %d, %d @ %d, %d, %d\n", u, v, (int)(x * 1), (int)(y*1), (uint32_t)z);
                                     print_texinfo = true;
                                     //fprintf(stderr, "wh: %d %d\n", tex_info.tex_width, tex_info.tex_height);
                                 }
@@ -2485,9 +2598,9 @@ void GraphicsSynthesizerThread::render_triangle()
                                     v = (uint32_t) temp_v;
                                 }
                                 tex_lookup(u, v, tex_info);
-                                if(print_texinfo)
-                                    fprintf(stderr,"\t%d %d %d %f %d\n", tex_info.tex_color.r,tex_info.tex_color.g,tex_info.tex_color.b,
-                                        tex_info.tex_color.q,tex_info.tex_color.a);
+//                                if(print_texinfo)
+//                                    fprintf(stderr,"\t%d %d %d %f %d\n", tex_info.tex_color.r,tex_info.tex_color.g,tex_info.tex_color.b,
+//                                        tex_info.tex_color.q,tex_info.tex_color.a);
                                 draw_pixel(x, y, (uint32_t)z, tex_info.tex_color);
                             }
                             else
