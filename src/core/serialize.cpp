@@ -279,16 +279,16 @@ void Cop0::save_state(ofstream &state)
 void Cop1::load_state(ifstream &state)
 {
     for (int i = 0; i < 32; i++)
-        state.read((char*)&gpr[i].u, sizeof(uint32_t));
-    state.read((char*)&accumulator.u, sizeof(uint32_t));
+        state.read((char*)&gpr[i], sizeof(uint32_t));
+    state.read((char*)&accumulator, sizeof(uint32_t));
     state.read((char*)&control, sizeof(control));
 }
 
 void Cop1::save_state(ofstream &state)
 {
     for (int i = 0; i < 32; i++)
-        state.write((char*)&gpr[i].u, sizeof(uint32_t));
-    state.write((char*)&accumulator.u, sizeof(uint32_t));
+        state.write((char*)&gpr[i], sizeof(uint32_t));
+    state.write((char*)&accumulator, sizeof(uint32_t));
     state.write((char*)&control, sizeof(control));
 }
 
