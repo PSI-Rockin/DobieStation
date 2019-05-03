@@ -221,7 +221,7 @@ void Cop1::div_s(int dest, int reg1, int reg2) noexcept
         memcpy(&gpr[dest], &result, sizeof(float));
     }
     else
-        gpr[dest] = convert(numerator) / convert(denominator);
+        gpr[dest] = convert(gpr[reg1]) / convert(gpr[reg2]);
 
     check_overflow(gpr[dest], false);
     check_underflow(gpr[dest], false);
