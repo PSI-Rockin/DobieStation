@@ -89,7 +89,7 @@ void EE_JIT64::floating_point_compare_less_than(EmotionEngine& ee, IR::Instructi
 
     emitter.UCOMISS(source2, source);
     emitter.load_addr((uint64_t)&ee.fpu->control.condition, REG_64::RAX);
-    emitter.SETCC_MEM(ConditionCode::L, REG_64::RAX);
+    emitter.SETCC_MEM(ConditionCode::B, REG_64::RAX);
 }
 
 void EE_JIT64::floating_point_compare_less_than_or_equal(EmotionEngine& ee, IR::Instruction& instr)
@@ -99,7 +99,7 @@ void EE_JIT64::floating_point_compare_less_than_or_equal(EmotionEngine& ee, IR::
 
     emitter.UCOMISS(source2, source);
     emitter.load_addr((uint64_t)&ee.fpu->control.condition, REG_64::RAX);
-    emitter.SETCC_MEM(ConditionCode::LE, REG_64::RAX);
+    emitter.SETCC_MEM(ConditionCode::BE, REG_64::RAX);
 }
 
 void EE_JIT64::floating_point_multiply(EmotionEngine& ee, IR::Instruction& instr)

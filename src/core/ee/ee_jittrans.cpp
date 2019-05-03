@@ -2336,7 +2336,6 @@ IR::Instruction EE_JitTranslator::translate_op_cop1_fpu(uint32_t opcode, uint32_
             instr.op = IR::Opcode::FloatingPointCompareLessThan;
             instr.set_source(source);
             instr.set_source2(source2);
-            fallback_interpreter(instr, opcode);
             return instr;
         }
         case 0x36:
@@ -2347,7 +2346,6 @@ IR::Instruction EE_JitTranslator::translate_op_cop1_fpu(uint32_t opcode, uint32_
             instr.op = IR::Opcode::FloatingPointCompareLessThanOrEqual;
             instr.set_source(source);
             instr.set_source2(source2);
-            fallback_interpreter(instr, opcode);
             return instr;
         }
         default:
