@@ -2270,24 +2270,50 @@ IR::Instruction EE_JitTranslator::translate_op_cop1_fpu(uint32_t opcode, uint32_
         }
         case 0x1C:
             // MADD.S
-            Errors::print_warning("[EE_JIT] Unrecognized fpu op MADD.S\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 6) & 0x1F;
+            uint8_t source = (opcode >> 11) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::FloatingPointMultiplyAdd;
             return instr;
+        }
         case 0x1D:
             // MSUB.S
-            Errors::print_warning("[EE_JIT] Unrecognized fpu op MSUB.S\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 6) & 0x1F;
+            uint8_t source = (opcode >> 11) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::FloatingPointMultiplySubtract;
             return instr;
+        }
         case 0x1E:
             // MADDA.S
-            Errors::print_warning("[EE_JIT] Unrecognized fpu op MADDA.S\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t source = (opcode >> 11) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            instr.set_dest((int)FPU_SpecialReg::ACC);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::FloatingPointMultiplyAdd;
             return instr;
+        }
         case 0x1F:
             // MSUBA.S
-            Errors::print_warning("[EE_JIT] Unrecognized fpu op MSUBA.S\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t source = (opcode >> 11) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            instr.set_dest((int)FPU_SpecialReg::ACC);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::FloatingPointMultiplySubtract;
             return instr;
+        }
         case 0x24:
             // CVT.W.S
         {

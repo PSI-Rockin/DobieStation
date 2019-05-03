@@ -143,6 +143,40 @@ void EE_JIT64::floating_point_multiply(EmotionEngine& ee, IR::Instruction& instr
     clamp_freg(ee, dest);
 }
 
+void EE_JIT64::floating_point_multiply_add(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 XMM0 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 acc = alloc_reg(ee, (int)FPU_SpecialReg::ACC, REG_TYPE::FPU, REG_STATE::READ);
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::FPU, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
+
+    emitter.MOVAPS_REG(source, XMM0);
+    emitter.MULSS(source2, XMM0);
+    emitter.ADDSS(acc, XMM0);
+    emitter.MOVAPS_REG(XMM0, dest);
+
+    clamp_freg(ee, dest);
+    free_xmm_reg(ee, XMM0);
+}
+
+void EE_JIT64::floating_point_multiply_subtract(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 XMM0 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 acc = alloc_reg(ee, (int)FPU_SpecialReg::ACC, REG_TYPE::FPU, REG_STATE::READ);
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::FPU, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
+
+    emitter.MOVAPS_REG(source, XMM0);
+    emitter.MULSS(source2, XMM0);
+    emitter.MOVAPS_REG(acc, dest);
+    emitter.SUBSS(XMM0, dest);
+
+    clamp_freg(ee, dest);
+    free_xmm_reg(ee, XMM0);
+}
+
 void EE_JIT64::floating_point_negate(EmotionEngine& ee, IR::Instruction& instr)
 {
     // This operation works by simply toggling the sign-bit in the float.

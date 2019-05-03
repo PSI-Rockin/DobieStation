@@ -124,6 +124,8 @@ private:
     void floating_point_minimum(EmotionEngine& ee, IR::Instruction& instr);
     void floating_point_minimum_AVX(EmotionEngine& ee, IR::Instruction& instr);
     void floating_point_multiply(EmotionEngine& ee, IR::Instruction& instr);
+    void floating_point_multiply_add(EmotionEngine& ee, IR::Instruction& instr);
+    void floating_point_multiply_subtract(EmotionEngine& ee, IR::Instruction& instr);
     void floating_point_square_root(EmotionEngine& ee, IR::Instruction& instr);
     void floating_point_subtract(EmotionEngine& ee, IR::Instruction& instr);
     void jump(EmotionEngine& ee, IR::Instruction& instr);

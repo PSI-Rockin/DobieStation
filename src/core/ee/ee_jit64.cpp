@@ -281,6 +281,12 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::FloatingPointMultiply:
             floating_point_multiply(ee, instr);
             break;
+        case IR::Opcode::FloatingPointMultiplyAdd:
+            floating_point_multiply_add(ee, instr);
+            break;
+        case IR::Opcode::FloatingPointMultiplySubtract:
+            floating_point_multiply_subtract(ee, instr);
+            break;
         case IR::Opcode::FloatingPointSquareRoot:
             floating_point_square_root(ee, instr);
             break;
