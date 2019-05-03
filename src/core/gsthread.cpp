@@ -2567,26 +2567,19 @@ void GraphicsSynthesizerThread::render_triangle()
                             {
                                 int32_t u, v;
                                 calculate_LOD(tex_info);
-                                bool print_texinfo = false;
                                 if (tmp_uv)
                                 {
                                     float s, t, q;
                                     s = v1.s * w1 + v2.s * w2 + v3.s * w3;
                                     t = v1.t * w1 + v2.t * w2 + v3.t * w3;
-
                                     q = v1.rgbaq.q * w1 + v2.rgbaq.q * w2 + v3.rgbaq.q * w3;
-                                    //fprintf(stderr, "qqq %f %f %f -> %f (%f), %d r %f\n", v1.rgbaq.q, v2.rgbaq.q, v3.rgbaq.q, q, q/divider, divider, r);
+
                                     //We don't divide s and t by "divider" because dividing by Q effectively
                                     //cancels that out
                                     s /= q;
                                     t /= q;
                                     u = (s * tex_info.tex_width) * 16.0;
                                     v = (t * tex_info.tex_height) * 16.0;
-                                    //fprintf(stderr, "q: %f, u: %d, v: %d, a: %d\n", tex_info.vtx_color.q, u,v, tex_info.vtx_color.a);
-                                    //fprintf(stderr, "q: %f\n", tex_info.vtx_color.q);
-                                    //fprintf(stderr, "uv: %d, %d @ %d, %d, %d\n", u, v, (int)(x * 1), (int)(y*1), (uint32_t)z);
-                                    print_texinfo = true;
-                                    //fprintf(stderr, "wh: %d %d\n", tex_info.tex_width, tex_info.tex_height);
                                 }
                                 else
                                 {
@@ -2598,16 +2591,12 @@ void GraphicsSynthesizerThread::render_triangle()
                                     v = (uint32_t) temp_v;
                                 }
                                 tex_lookup(u, v, tex_info);
-//                                if(print_texinfo)
-//                                    fprintf(stderr,"\t%d %d %d %f %d\n", tex_info.tex_color.r,tex_info.tex_color.g,tex_info.tex_color.b,
-//                                        tex_info.tex_color.q,tex_info.tex_color.a);
                                 draw_pixel(x, y, (uint32_t)z, tex_info.tex_color);
                             }
                             else
                             {
                                 draw_pixel(x, y, (uint32_t)z, tex_info.vtx_color);
                             }
-                            break;
                         }
                         else
                             break;
@@ -3264,10 +3253,8 @@ void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
     else
         info.LOD = round(K);
 
-
-    //fprintf(stderr, "LOD %f\n", info.LOD);
-
-    if (current_ctx->tex1.max_MIP_level)
+    //Mipmapping is only enabled when the max MIP level is > 0 and filtering is set to a MIPMAP type
+    if (current_ctx->tex1.max_MIP_level && current_ctx->tex1.filter_smaller >= 2)
     {
         //Determine mipmap level
         info.mipmap_level = min((int8_t)info.LOD, (int8_t)current_ctx->tex1.max_MIP_level);
