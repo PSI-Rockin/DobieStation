@@ -1,5 +1,6 @@
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 #include "cop1.hpp"
 
 #define printf(fmt, ...)(0)
@@ -10,19 +11,22 @@ Cop1::Cop1()
 }
 
 //Returns a floating point value that may be changed to accomodate the FPU's non-compliance to the IEEE 754 standard.
-float Cop1::convert(uint32_t value)
+float Cop1::convert(uint32_t value) const noexcept
 {
+    float result;
     switch(value & 0x7F800000)
     {
         case 0x0:
             value &= 0x80000000;
-            return *(float*)&value;
+            break;
         case 0x7F800000:
             value = (value & 0x80000000)|0x7F7FFFFF;
-            return *(float*)&value;
+            break;
         default:
-            return *(float*)&value;
+            break;
     }
+    memcpy(&result, &value, sizeof(float));
+    return result;
 }
 
 void Cop1::check_overflow(uint32_t& dest, bool set_flags)
