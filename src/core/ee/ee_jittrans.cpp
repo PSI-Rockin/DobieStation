@@ -2123,9 +2123,14 @@ IR::Instruction EE_JitTranslator::translate_op_cop1(uint32_t opcode, uint32_t PC
             return translate_op_cop1_fpu(opcode, PC);
         case 0x14:
             // CVT.S.W
-            Errors::print_warning("[EE_JIT] Unrecognized cop1 op CVT.S.W\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 6) & 0x1F;
+            uint8_t source = (opcode >> 11) & 0x1F;
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.op = IR::Opcode::FixedPointConvertToFloatingPoint;
             return instr;
+        }
         default:
             Errors::die("[EE_JIT] Unrecognized cop1 op $%02X", op);
             return instr;
@@ -2285,9 +2290,14 @@ IR::Instruction EE_JitTranslator::translate_op_cop1_fpu(uint32_t opcode, uint32_
             return instr;
         case 0x24:
             // CVT.W.S
-            Errors::print_warning("[EE_JIT] Unrecognized fpu op CVT.W.S\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 6) & 0x1F;
+            uint8_t source = (opcode >> 11) & 0x1F;
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.op = IR::Opcode::FloatingPointConvertToFixedPoint;
             return instr;
+        }
         case 0x28:
             // MAX.S
         {

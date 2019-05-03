@@ -78,6 +78,8 @@ INSTR(FloatingPointClearControl)
 INSTR(FloatingPointCompareEqual)
 INSTR(FloatingPointCompareLessThan)
 INSTR(FloatingPointCompareLessThanOrEqual)
+INSTR(FloatingPointConvertToFixedPoint)
+INSTR(FixedPointConvertToFloatingPoint)
 
 INSTR(LoadConst)
 INSTR(LoadFloatConst)

@@ -1634,6 +1634,24 @@ void Emitter64::CVTDQ2PS(REG_64 xmm_source, REG_64 xmm_dest)
     modrm(0b11, xmm_dest, xmm_source);
 }
 
+void Emitter64::CVTSS2SI(REG_64 xmm_source, REG_64 int_dest)
+{
+    cache->write<uint8_t>(0xF3);
+    rex_r_rm(int_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x2D);
+    modrm(0b11, int_dest, xmm_source);
+}
+
+void Emitter64::CVTSI2SS(REG_64 int_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0xF3);
+    rex_r_rm(xmm_dest, int_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x2A);
+    modrm(0b11, xmm_dest, int_source);
+}
+
 void Emitter64::CVTTPS2DQ(REG_64 xmm_source, REG_64 xmm_dest)
 {
     cache->write<uint8_t>(0xF3);

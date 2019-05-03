@@ -21,6 +21,15 @@ void EE_JIT64::clamp_freg(EmotionEngine& ee, REG_64 freg)
     free_int_reg(ee, R15);
 }
 
+void EE_JIT64::fixed_point_convert_to_floating_point(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
+
+    emitter.MOVD_FROM_XMM(source, REG_64::RAX);
+    emitter.CVTSI2SS(REG_64::RAX, dest);
+}
+
 void EE_JIT64::floating_point_absolute_value(EmotionEngine& ee, IR::Instruction& instr)
 {
     // This operation works by simply masking out the sign-bit from the float.
@@ -100,6 +109,15 @@ void EE_JIT64::floating_point_compare_less_than_or_equal(EmotionEngine& ee, IR::
     emitter.UCOMISS(source2, source);
     emitter.load_addr((uint64_t)&ee.fpu->control.condition, REG_64::RAX);
     emitter.SETCC_MEM(ConditionCode::BE, REG_64::RAX);
+}
+
+void EE_JIT64::floating_point_convert_to_fixed_point(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
+
+    emitter.CVTSS2SI(source, REG_64::RAX);
+    emitter.MOVD_TO_XMM(REG_64::RAX, dest);
 }
 
 void EE_JIT64::floating_point_multiply(EmotionEngine& ee, IR::Instruction& instr)

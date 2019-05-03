@@ -110,12 +110,14 @@ private:
     void doubleword_shift_right_logical(EmotionEngine& ee, IR::Instruction& instr);
     void doubleword_shift_right_logical_variable(EmotionEngine& ee, IR::Instruction& instr);
     void exception_return(EmotionEngine& ee, IR::Instruction& instr);
+    void fixed_point_convert_to_floating_point(EmotionEngine& ee, IR::Instruction& instr);
     void floating_point_absolute_value(EmotionEngine& ee, IR::Instruction& instr);
     void floating_point_add(EmotionEngine& ee, IR::Instruction& instr);
     void floating_point_clear_control(EmotionEngine& ee, IR::Instruction& instr);
     void floating_point_compare_equal(EmotionEngine& ee, IR::Instruction& instr);
     void floating_point_compare_less_than(EmotionEngine& ee, IR::Instruction& instr);
     void floating_point_compare_less_than_or_equal(EmotionEngine& ee, IR::Instruction& instr);
+    void floating_point_convert_to_fixed_point(EmotionEngine& ee, IR::Instruction& instr);
     void floating_point_negate(EmotionEngine& ee, IR::Instruction& instr);
     void floating_point_maximum(EmotionEngine& ee, IR::Instruction& instr);
     void floating_point_maximum_AVX(EmotionEngine& ee, IR::Instruction& instr);

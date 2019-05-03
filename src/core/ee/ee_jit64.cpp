@@ -245,6 +245,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::ExceptionReturn:
             exception_return(ee, instr);
             break;
+        case IR::Opcode::FixedPointConvertToFloatingPoint:
+            fixed_point_convert_to_floating_point(ee, instr);
+            break;
         case IR::Opcode::FloatingPointAbsoluteValue:
             floating_point_absolute_value(ee, instr);
             break;
@@ -262,6 +265,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             break;
         case IR::Opcode::FloatingPointCompareLessThanOrEqual:
             floating_point_compare_less_than_or_equal(ee, instr);
+            break;
+        case IR::Opcode::FloatingPointConvertToFixedPoint:
+            floating_point_convert_to_fixed_point(ee, instr);
             break;
         case IR::Opcode::FloatingPointNegate:
             floating_point_negate(ee, instr);

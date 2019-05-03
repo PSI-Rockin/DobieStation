@@ -264,6 +264,9 @@ class Emitter64
         //Convert 32-bit signed integers into floats
         void CVTDQ2PS(REG_64 xmm_source, REG_64 xmm_dest);
 
+        void CVTSS2SI(REG_64 xmm_source, REG_64 int_dest);
+        void CVTSI2SS(REG_64 int_source, REG_64 xmm_dest);
+
         //Convert truncated floats into 32-bit signed integers
         void CVTTPS2DQ(REG_64 xmm_source, REG_64 xmm_dest);
 
