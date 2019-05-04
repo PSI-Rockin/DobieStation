@@ -236,6 +236,7 @@ class Emitter64
         void PMINSD_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t offset = 0);
         void PMINUD_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t offset = 0);
         void PSHUFD(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest);
+        void PXOR_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void PXOR_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t offset = 0);
 
         void DIVPS(REG_64 xmm_source, REG_64 xmm_dest);

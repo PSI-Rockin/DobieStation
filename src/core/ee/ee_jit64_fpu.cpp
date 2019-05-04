@@ -113,11 +113,27 @@ void EE_JIT64::floating_point_compare_less_than_or_equal(EmotionEngine& ee, IR::
 
 void EE_JIT64::floating_point_convert_to_fixed_point(EmotionEngine& ee, IR::Instruction& instr)
 {
+    REG_64 XMM0 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
     REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
 
+    // Convert single and test to see if the result is out of range. If out of range,
+    // the result will be 0x80000000, which is fine for signed floats. However, the PS2
+    // will expect 0x7FFFFFFF if the float was originally unsigned.
     emitter.CVTSS2SI(source, REG_64::RAX);
+
+    emitter.CMP32_EAX(0x80000000);
+    uint8_t *end0 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
+    emitter.PXOR_XMM(XMM0, XMM0);
+    emitter.UCOMISS(XMM0, source);
+    uint8_t *end1 = emitter.JCC_NEAR_DEFERRED(ConditionCode::BE);
+    emitter.MOV32_REG_IMM(0x7FFFFFFF, REG_64::RAX);
+
+    emitter.set_jump_dest(end0);
+    emitter.set_jump_dest(end1);
     emitter.MOVD_TO_XMM(REG_64::RAX, dest);
+
+    free_xmm_reg(ee, XMM0);
 }
 
 void EE_JIT64::floating_point_multiply(EmotionEngine& ee, IR::Instruction& instr)
