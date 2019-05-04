@@ -239,14 +239,14 @@ class Emitter64
         void PXOR_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void PXOR_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t offset = 0);
 
-        void DIVPS(REG_64 xmm_source, REG_64 xmm_dest);
-
         void ADDPS(REG_64 xmm_source, REG_64 xmm_dest);
         void ADDSS(REG_64 xmm_source, REG_64 xmm_dest);
         void BLENDPS(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest);
         void CMPEQPS(REG_64 xmm_source, REG_64 xmm_dest);
         void CMPNLEPS(REG_64 xmm_source, REG_64 xmm_dest);
         void DPPS(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest);
+        void DIVPS(REG_64 xmm_source, REG_64 xmm_dest);
+        void DIVSS(REG_64 xmm_source, REG_64 xmm_dest);
         void INSERTPS(uint8_t count_s, uint8_t count_d, uint8_t zmask, REG_64 xmm_source, REG_64 xmm_dest);
         void MAXPS(REG_64 xmm_source, REG_64 xmm_dest);
         void MAXSS(REG_64 xmm_source, REG_64 xmm_dest);

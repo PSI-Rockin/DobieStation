@@ -269,8 +269,8 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::FloatingPointConvertToFixedPoint:
             floating_point_convert_to_fixed_point(ee, instr);
             break;
-        case IR::Opcode::FloatingPointNegate:
-            floating_point_negate(ee, instr);
+        case IR::Opcode::FloatingPointDivide:
+            floating_point_divide(ee, instr);
             break;
         case IR::Opcode::FloatingPointMaximum:
             floating_point_maximum(ee, instr);
@@ -286,6 +286,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             break;
         case IR::Opcode::FloatingPointMultiplySubtract:
             floating_point_multiply_subtract(ee, instr);
+            break;
+        case IR::Opcode::FloatingPointNegate:
+            floating_point_negate(ee, instr);
             break;
         case IR::Opcode::FloatingPointSquareRoot:
             floating_point_square_root(ee, instr);

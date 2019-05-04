@@ -118,6 +118,7 @@ private:
     void floating_point_compare_less_than(EmotionEngine& ee, IR::Instruction& instr);
     void floating_point_compare_less_than_or_equal(EmotionEngine& ee, IR::Instruction& instr);
     void floating_point_convert_to_fixed_point(EmotionEngine& ee, IR::Instruction& instr);
+    void floating_point_divide(EmotionEngine& ee, IR::Instruction& instr);
     void floating_point_negate(EmotionEngine& ee, IR::Instruction& instr);
     void floating_point_maximum(EmotionEngine& ee, IR::Instruction& instr);
     void floating_point_maximum_AVX(EmotionEngine& ee, IR::Instruction& instr);

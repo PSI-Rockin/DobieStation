@@ -1460,14 +1460,6 @@ void Emitter64::PXOR_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t
         cache->write<uint32_t>(offset);
 }
 
-void Emitter64::DIVPS(REG_64 xmm_source, REG_64 xmm_dest)
-{
-    rex_r_rm(xmm_dest, xmm_source);
-    cache->write<uint8_t>(0x0F);
-    cache->write<uint8_t>(0x5E);
-    modrm(0b11, xmm_dest, xmm_source);
-}
-
 void Emitter64::ADDPS(REG_64 xmm_source, REG_64 xmm_dest)
 {
     rex_r_rm(xmm_dest, xmm_source);
@@ -1512,6 +1504,23 @@ void Emitter64::CMPNLEPS(REG_64 xmm_source, REG_64 xmm_dest)
     cache->write<uint8_t>(0xC2);
     modrm(0b11, xmm_dest, xmm_source);
     cache->write<uint8_t>(0x06);
+}
+
+void Emitter64::DIVPS(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x5E);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
+void Emitter64::DIVSS(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0xF3);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x5E);
+    modrm(0b11, xmm_dest, xmm_source);
 }
 
 void Emitter64::DPPS(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest)
