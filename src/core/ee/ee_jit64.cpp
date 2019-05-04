@@ -323,6 +323,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::LoadWord:
             load_word(ee, instr);
             break;
+        case IR::Opcode::LoadWordCoprocessor1:
+            load_word_coprocessor1(ee, instr);
+            break;
         case IR::Opcode::LoadWordUnsigned:
             load_word_unsigned(ee, instr);
             break;
@@ -412,6 +415,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             break;
         case IR::Opcode::StoreWord:
             store_word(ee, instr);
+            break;
+        case IR::Opcode::StoreWordCoprocessor1:
+            store_word_coprocessor1(ee, instr);
             break;
         case IR::Opcode::SubDoublewordReg:
             sub_doubleword_reg(ee, instr);
@@ -511,6 +517,30 @@ void EE_JIT64::prepare_abi_reg(EmotionEngine& ee, REG_64 reg)
     int_regs[arg].used = false;
     if (reg != regs[abi_int_count])
         emitter.MOV64_MR(reg, regs[abi_int_count]);
+    abi_int_count++;
+}
+
+void EE_JIT64::prepare_abi_reg_from_xmm(EmotionEngine& ee, REG_64 reg)
+{
+#ifdef _WIN32
+    const static REG_64 regs[] = { RCX, RDX, R8, R9 };
+
+    if (abi_int_count >= 4)
+        Errors::die("[EE_JIT64] ABI integer arguments exceeded 4!");
+#else
+    const static REG_64 regs[] = { RDI, RSI, RDX, RCX, R8, R9 };
+
+    if (abi_int_count >= 6)
+        Errors::die("[EE_JIT64] ABI integer arguments exceeded 6!");
+#endif    
+
+    REG_64 arg = regs[abi_int_count];
+    int_regs[arg].locked = true;
+
+    //If the chosen integer argument is being used, flush it back to the EE state
+    flush_int_reg(ee, arg);
+    int_regs[arg].used = false;
+    emitter.MOVD_FROM_XMM(reg, arg);
     abi_int_count++;
 }
 

@@ -138,6 +138,7 @@ private:
     void load_halfword(EmotionEngine& ee, IR::Instruction& instr);
     void load_halfword_unsigned(EmotionEngine& ee, IR::Instruction& instr);
     void load_word(EmotionEngine& ee, IR::Instruction& instr);
+    void load_word_coprocessor1(EmotionEngine& ee, IR::Instruction& instr);
     void load_word_unsigned(EmotionEngine& ee, IR::Instruction& instr);
     void move_conditional_on_not_zero(EmotionEngine& ee, IR::Instruction& instr);
     void move_conditional_on_zero(EmotionEngine& ee, IR::Instruction& instr);
@@ -170,6 +171,7 @@ private:
     void store_doubleword(EmotionEngine& ee, IR::Instruction& instr);
     void store_halfword(EmotionEngine& ee, IR::Instruction& instr);
     void store_word(EmotionEngine& ee, IR::Instruction& instr);
+    void store_word_coprocessor1(EmotionEngine& ee, IR::Instruction& instr);
     void sub_doubleword_reg(EmotionEngine& ee, IR::Instruction& instr);
     void sub_word_reg(EmotionEngine& ee, IR::Instruction& instr);
     void system_call(EmotionEngine& ee, IR::Instruction& instr);
@@ -183,7 +185,10 @@ private:
 
     void alloc_abi_regs(int count);
     void prepare_abi(EmotionEngine& ee, uint64_t value);
-    void prepare_abi_reg(EmotionEngine& ee, REG_64 value);
+    void prepare_abi_xmm(EmotionEngine& ee, float value);
+    void prepare_abi_reg(EmotionEngine& ee, REG_64 reg);
+    void prepare_abi_reg_from_xmm(EmotionEngine& ee, REG_64 reg);
+    void prepare_abi_xmm_reg(EmotionEngine& ee, REG_64 reg);
     void call_abi_func(EmotionEngine& ee, uint64_t addr);
     void recompile_block(EmotionEngine& ee, IR::Block& block);
 

@@ -612,9 +612,14 @@ IR::Instruction EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC)
             return instr;
         case 0x31:
             // LWC1
-            Errors::print_warning("[EE_JIT] Unrecognized op LWC1\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 16) & 0x1F;
+            instr.op = IR::Opcode::LoadWordCoprocessor1;
+            instr.set_dest(dest);
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_source2((int64_t)(int16_t)(opcode & 0xFFFF));
             return instr;
+        }
         case 0x33:
             // PREFETCH
             fallback_interpreter(instr, opcode);
@@ -641,9 +646,14 @@ IR::Instruction EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC)
         }
         case 0x39:
             // SWC1
-            Errors::print_warning("[EE_JIT] Unrecognized op SWC1\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 16) & 0x1F;
+            instr.op = IR::Opcode::StoreWordCoprocessor1;
+            instr.set_dest(dest);
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_source2((int64_t)(int16_t)(opcode & 0xFFFF));
             return instr;
+        }
         case 0x3E:
             // SQC2
             Errors::print_warning("[EE_JIT] Unrecognized op SQC2\n", op);

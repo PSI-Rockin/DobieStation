@@ -811,6 +811,27 @@ void EE_JIT64::load_word(EmotionEngine& ee, IR::Instruction &instr)
     emitter.MOVSX32_TO_64(REG_64::RAX, dest);
 }
 
+void EE_JIT64::load_word_coprocessor1(EmotionEngine& ee, IR::Instruction &instr)
+{
+    alloc_abi_regs(2);
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPR, REG_STATE::READ);
+    REG_64 addr = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+
+    int64_t offset = instr.get_source2();
+
+    if (offset)
+        emitter.LEA32_M(source, addr, offset);
+    else
+        emitter.MOV32_REG(source, addr);
+    prepare_abi(ee, (uint64_t)&ee);
+    prepare_abi_reg(ee, addr);
+    free_int_reg(ee, addr);
+    call_abi_func(ee, (uint64_t)ee_read32);
+
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
+    emitter.MOVD_TO_XMM(REG_64::RAX, dest);
+}
+
 void EE_JIT64::load_word_unsigned(EmotionEngine& ee, IR::Instruction &instr)
 {
     alloc_abi_regs(2);
@@ -1237,6 +1258,25 @@ void EE_JIT64::store_word(EmotionEngine& ee, IR::Instruction& instr)
     prepare_abi(ee, (uint64_t)&ee);
     prepare_abi_reg(ee, addr);
     prepare_abi_reg(ee, source);
+    call_abi_func(ee, (uint64_t)ee_write32);
+    free_int_reg(ee, addr);
+}
+
+void EE_JIT64::store_word_coprocessor1(EmotionEngine& ee, IR::Instruction& instr)
+{
+    alloc_abi_regs(3);
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPR, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::READ);
+    REG_64 addr = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    int64_t offset = instr.get_source2();
+
+    if (offset)
+        emitter.LEA32_M(source, addr, offset);
+    else
+        emitter.MOV32_REG(source, addr);
+    prepare_abi(ee, (uint64_t)&ee);
+    prepare_abi_reg(ee, addr);
+    prepare_abi_reg_from_xmm(ee, dest);
     call_abi_func(ee, (uint64_t)ee_write32);
     free_int_reg(ee, addr);
 }
