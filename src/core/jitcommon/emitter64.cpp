@@ -1644,6 +1644,23 @@ void Emitter64::SUBSS(REG_64 xmm_source, REG_64 xmm_dest)
     modrm(0b11, xmm_dest, xmm_source);
 }
 
+void Emitter64::RSQRTSS(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0xF3);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x52);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
+void Emitter64::RSQRTPS(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x52);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
 void Emitter64::UCOMISS(REG_64 xmm_source, REG_64 xmm_dest)
 {
     rex_r_rm(xmm_dest, xmm_source);

@@ -296,6 +296,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::FloatingPointSubtract:
             floating_point_subtract(ee, instr);
             break;
+        case IR::Opcode::FloatingPointReciprocalSquareRoot:
+            floating_point_reciprocal_square_root(ee, instr);
+            break;
         case IR::Opcode::Jump:
             jump(ee, instr);
             break;

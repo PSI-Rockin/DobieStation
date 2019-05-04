@@ -300,9 +300,16 @@ void EE_JIT64::floating_point_square_root(EmotionEngine& ee, IR::Instruction& in
 {
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
     REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
-    floating_point_absolute_value(ee, instr);
+
+    // abs(source)
+    if (source != dest)
+        emitter.MOVSS_REG(source, dest);
+    emitter.load_addr((uint64_t)&FPU_MASK_ABS[0], REG_64::RAX);
+    emitter.PAND_XMM_FROM_MEM(REG_64::RAX, dest);
     
     emitter.SQRTSS(source, dest);
+
+    clamp_freg(ee, dest);
 }
 
 void EE_JIT64::floating_point_subtract(EmotionEngine& ee, IR::Instruction& instr)
@@ -328,6 +335,44 @@ void EE_JIT64::floating_point_subtract(EmotionEngine& ee, IR::Instruction& instr
     }
 
     clamp_freg(ee, dest);
+}
+
+void EE_JIT64::floating_point_reciprocal_square_root(EmotionEngine& ee, IR::Instruction& instr)
+{
+
+    REG_64 R15 = alloc_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 XMM0 = alloc_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 XMM1 = alloc_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::FPU, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
+
+    emitter.MOVD_FROM_XMM(source2, REG_64::RAX);
+    emitter.AND32_EAX(0x7F800000);
+    emitter.TEST32_REG(REG_64::RAX, REG_64::RAX);
+    uint8_t *normalop = emitter.JCC_NEAR_DEFERRED(ConditionCode::NZ);
+
+    // Second operand is 0
+    emitter.MOVD_FROM_XMM(source, REG_64::RAX);
+    emitter.MOVD_FROM_XMM(source2, R15);
+    emitter.XOR32_REG(R15, REG_64::RAX);
+    emitter.MOVD_TO_XMM(REG_64::RAX, dest);
+    uint8_t *exit = emitter.JMP_NEAR_DEFERRED();
+
+    emitter.set_jump_dest(normalop);
+    emitter.MOVAPS_REG(source, XMM0);
+    // abs(source2)
+    emitter.MOVAPS_REG(source2, XMM1);
+    emitter.load_addr((uint64_t)&FPU_MASK_ABS[0], REG_64::RAX);
+    emitter.PAND_XMM_FROM_MEM(REG_64::RAX, XMM1);
+    emitter.RSQRTSS(XMM1, XMM0);
+    emitter.MOVAPS_REG(XMM0, dest);
+    emitter.set_jump_dest(exit);
+
+    clamp_freg(ee, dest);
+    free_int_reg(ee, R15);
+    free_xmm_reg(ee, XMM0);
+    free_xmm_reg(ee, XMM1);
 }
 
 void EE_JIT64::move_from_coprocessor1(EmotionEngine& ee, IR::Instruction& instr)

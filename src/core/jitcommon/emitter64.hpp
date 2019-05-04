@@ -259,6 +259,8 @@ class Emitter64
         void SQRTPS(REG_64 xmm_source, REG_64 xmm_dest);
         void SUBPS(REG_64 xmm_source, REG_64 xmm_dest);
         void SUBSS(REG_64 xmm_source, REG_64 xmm_dest);
+        void RSQRTSS(REG_64 xmm_source, REG_64 xmm_dest);
+        void RSQRTPS(REG_64 xmm_source, REG_64 xmm_dest);
         void UCOMISS(REG_64 xmm_source, REG_64 xmm_dest);
         void XORPS(REG_64 xmm_source, REG_64 xmm_dest);
 

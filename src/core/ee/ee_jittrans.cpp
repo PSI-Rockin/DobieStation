@@ -2248,10 +2248,16 @@ IR::Instruction EE_JitTranslator::translate_op_cop1_fpu(uint32_t opcode, uint32_
             return instr;
         }
         case 0x16:
-            // RSQRT.S
-            Errors::print_warning("[EE_JIT] Unrecognized fpu op RSQRT.S\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 6) & 0x1F;
+            uint8_t source = (opcode >> 11) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::FloatingPointReciprocalSquareRoot;
             return instr;
+        }
         case 0x18:
             // ADDA.S
         {
