@@ -137,7 +137,29 @@ void EE_JIT64::branch_cop1(EmotionEngine& ee, IR::Instruction &instr)
 
 void EE_JIT64::branch_cop2(EmotionEngine& ee, IR::Instruction &instr)
 {
-    Errors::die("[EE_JIT64] Branch COP2 not implemented!");
+    REG_64 R15 = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+
+    // Conditionally move the success or failure destination into ee.PC
+    emitter.load_addr((uint64_t)&ee.vu0->running, REG_64::RAX);
+    emitter.MOV8_FROM_MEM(REG_64::RAX, REG_64::RAX);
+    emitter.MOV8_REG_IMM(instr.get_field(), R15);
+    emitter.CMP8_REG(REG_64::RAX, R15);
+    emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
+    emitter.MOV32_REG_IMM(instr.get_jump_dest(), R15);
+    emitter.CMOVCC32_REG(ConditionCode::E, R15, REG_64::RAX);
+    emitter.load_addr((uint64_t)&ee.PC, R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, R15);
+
+    if (instr.get_is_likely())
+    {
+        likely_branch = true;
+
+        // Use the result of the FLAGS register from the last compare to set branch_on,
+        // this boolean is used in handle_likely_branch
+        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
+        emitter.SETCC_MEM(ConditionCode::E, REG_64::RAX);
+    }
+    free_int_reg(ee, R15);
 }
 
 void EE_JIT64::branch_equal(EmotionEngine& ee, IR::Instruction &instr)
