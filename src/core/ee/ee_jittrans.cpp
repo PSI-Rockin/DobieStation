@@ -2248,6 +2248,7 @@ IR::Instruction EE_JitTranslator::translate_op_cop1_fpu(uint32_t opcode, uint32_
             return instr;
         }
         case 0x16:
+            // RSQRT.S
         {
             uint8_t dest = (opcode >> 6) & 0x1F;
             uint8_t source = (opcode >> 11) & 0x1F;

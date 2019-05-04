@@ -5,20 +5,20 @@
 void EE_JIT64::clamp_freg(EmotionEngine& ee, REG_64 freg)
 {
     REG_64 XMM0 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
-    REG_64 R15 = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
-
-    emitter.load_addr((uint64_t)&max_flt_constant, REG_64::RAX);
-    emitter.load_addr((uint64_t)&min_flt_constant, R15);
 
     emitter.MOVAPS_REG(freg, XMM0);
+
     //reg = min_signed(reg, 0x7F7FFFFF)
+    emitter.load_addr((uint64_t)&max_flt_constant, REG_64::RAX);
     emitter.PMINSD_XMM_FROM_MEM(REG_64::RAX, XMM0);
 
     //reg = min_unsigned(reg, 0xFF7FFFFF)
-    emitter.PMINUD_XMM_FROM_MEM(R15, XMM0);
+    emitter.load_addr((uint64_t)&min_flt_constant, REG_64::RAX);
+    emitter.PMINUD_XMM_FROM_MEM(REG_64::RAX, XMM0);
+
+    emitter.MOVAPS_REG(XMM0, freg);
 
     free_xmm_reg(ee, XMM0);
-    free_int_reg(ee, R15);
 }
 
 void EE_JIT64::fixed_point_convert_to_floating_point(EmotionEngine& ee, IR::Instruction& instr)
