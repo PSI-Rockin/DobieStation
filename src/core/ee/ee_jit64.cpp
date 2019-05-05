@@ -87,8 +87,19 @@ void EE_JIT64::reset(bool clear_cache)
 extern "C"
 uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee)
 {
+    bool is_modified = false;
+    JitBlock *recompiledBlock = jit.cache.find_block(BlockState{ ee.PC, 0, 0, 0, 0 });
+
+    if (ee.cp0->get_tlb_modified(ee.PC / 4096))
+    {
+        if (recompiledBlock != nullptr)
+            jit.cache.free_block(BlockState{ ee.PC, 0, 0, 0, 0 });
+        is_modified = true;
+        ee.cp0->clear_tlb_modified(ee.PC / 4096);
+    }
+
     //printf("[EE_JIT64] Executing block at $%08X\n", ee.PC);
-    if (jit.cache.find_block(BlockState{ ee.PC, 0, 0, 0, 0 }) == nullptr)
+    if (is_modified || recompiledBlock == nullptr)
     {
         printf("[EE_JIT64] Block not found at $%08X: recompiling\n", ee.PC);
         IR::Block block = jit.ir.translate(ee);

@@ -70,6 +70,7 @@ struct TLB_Entry
 struct VTLB_Info
 {
     uint8_t cache_mode;
+    bool modified = false;
 };
 
 class DMAC;
@@ -123,6 +124,9 @@ class Cop0
         void count_up(int cycles);
 
         void set_tlb(int index);
+        void clear_tlb_modified(size_t page);
+        void set_tlb_modified(size_t page);
+        bool get_tlb_modified(size_t page) const;
 
         void load_state(std::ifstream &state);
         void save_state(std::ofstream& state);

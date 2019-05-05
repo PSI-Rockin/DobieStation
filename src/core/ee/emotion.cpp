@@ -440,7 +440,10 @@ void EmotionEngine::write8(uint32_t address, uint8_t value)
 {
     uint8_t* mem = tlb_map[address / 4096];
     if (mem > (uint8_t*)1)
+    {
+        cp0->set_tlb_modified(address / 4096);
         mem[address & 4095] = value;
+    }
     else if (mem == (uint8_t*)1)
         e->write8(address & 0x1FFFFFFF, value);
     else
@@ -453,7 +456,10 @@ void EmotionEngine::write16(uint32_t address, uint16_t value)
         Errors::die("[EE] Write16 to invalid address $%08X: $%04X", address, value);
     uint8_t* mem = tlb_map[address / 4096];
     if (mem > (uint8_t*)1)
+    {
+        cp0->set_tlb_modified(address / 4096);
         *(uint16_t*)&mem[address & 4095] = value;
+    }
     else if (mem == (uint8_t*)1)
         e->write16(address & 0x1FFFFFFF, value);
     else
@@ -466,7 +472,10 @@ void EmotionEngine::write32(uint32_t address, uint32_t value)
         Errors::die("[EE] Write32 to invalid address $%08X: $%08X", address, value);
     uint8_t* mem = tlb_map[address / 4096];
     if (mem > (uint8_t*)1)
+    {
+        cp0->set_tlb_modified(address / 4096);
         *(uint32_t*)&mem[address & 4095] = value;
+    }
     else if (mem == (uint8_t*)1)
         e->write32(address & 0x1FFFFFFF, value);
     else
@@ -479,7 +488,10 @@ void EmotionEngine::write64(uint32_t address, uint64_t value)
         Errors::die("[EE] Write64 to invalid address $%08X: $%08X_%08X", address, value >> 32, value);
     uint8_t* mem = tlb_map[address / 4096];
     if (mem > (uint8_t*)1)
+    {
+        cp0->set_tlb_modified(address / 4096);
         *(uint64_t*)&mem[address & 4095] = value;
+    }
     else if (mem == (uint8_t*)1)
         e->write64(address & 0x1FFFFFFF, value);
     else
@@ -490,7 +502,10 @@ void EmotionEngine::write128(uint32_t address, uint128_t value)
 {
     uint8_t* mem = tlb_map[address / 4096];
     if (mem > (uint8_t*)1)
+    {
+        cp0->set_tlb_modified(address / 4096);
         *(uint128_t*)&mem[address & 4095] = value;
+    }
     else if (mem == (uint8_t*)1)
         e->write128(address & 0x1FFFFFFF, value);
     else
