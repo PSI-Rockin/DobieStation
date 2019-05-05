@@ -1469,6 +1469,7 @@ void EE_JIT64::vcall_msr(EmotionEngine& ee, IR::Instruction& instr)
     prepare_abi(ee, (uint64_t)ee.vu0);
     call_abi_func(ee, (uint64_t)vu0_read_CMSAR0_shl3);
 
+    prepare_abi(ee, (uint64_t)ee.vu0);
     prepare_abi_reg(ee, REG_64::RAX);
     call_abi_func(ee, (uint64_t)vu0_start_program);
 
