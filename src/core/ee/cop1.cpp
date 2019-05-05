@@ -1,5 +1,6 @@
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 #include "cop1.hpp"
 
 #define printf(fmt, ...)(0)
