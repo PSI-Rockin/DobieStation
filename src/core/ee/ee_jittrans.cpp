@@ -2485,8 +2485,8 @@ IR::Instruction EE_JitTranslator::translate_op_cop2_special(uint32_t opcode, uin
         case 0x02:
         case 0x03:
             // VADDBC
-            instr.op = IR::Opcode::VAddVectorByScalar;
-            op_vector_by_scalar(instr, opcode);
+            Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VADDBC\n", op);
+            fallback_interpreter(instr, opcode);
             return instr;
         case 0x04:
         case 0x05:

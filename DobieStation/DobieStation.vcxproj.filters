@@ -286,9 +286,6 @@
     <ClCompile Include="..\src\core\ee\ee_jit64_gpr.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\core\ee\ee_jit64_vu.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\core\ee\bios_hle.hpp">

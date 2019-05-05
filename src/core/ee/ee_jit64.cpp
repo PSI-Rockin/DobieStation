@@ -38,23 +38,6 @@ extern "C" void run_ee_jit(EE_JIT64& jit, EmotionEngine& ee);
 
 EE_JIT64::EE_JIT64() : emitter(&cache) 
 {
-    // VU0 initialization
-    for (int i = 0; i < 4; i++)
-    {
-        ftoi_table[0].f[i] = pow(2, 0);
-        ftoi_table[1].f[i] = pow(2, 4);
-        ftoi_table[2].f[i] = pow(2, 12);
-        ftoi_table[3].f[i] = pow(2, 15);
-
-        itof_table[0].f[i] = 1.0f / ftoi_table[0].f[i];
-        itof_table[1].f[i] = 1.0f / ftoi_table[1].f[i];
-        itof_table[2].f[i] = 1.0f / ftoi_table[2].f[i];
-        itof_table[3].f[i] = 1.0f / ftoi_table[3].f[i];
-
-        abs_constant.u[i] = 0x7FFFFFFF;
-        max_flt_constant.u[i] = 0x7F7FFFFF;
-        min_flt_constant.u[i] = 0xFF7FFFFF;
-    }
 }
 
 void EE_JIT64::reset(bool clear_cache)
@@ -441,9 +424,6 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             break;
         case IR::Opcode::SystemCall:
             system_call(ee, instr);
-            break;
-        case IR::Opcode::VAddVectorByScalar:
-            add_vector_by_scalar(ee, instr);
             break;
         case IR::Opcode::VCallMS:
             vcall_ms(ee, instr);

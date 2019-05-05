@@ -47,6 +47,8 @@ class EE_JIT64;
 // but please don't touch! - Souzooka
 static uint32_t FPU_MASK_ABS[4] = { 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF };
 static uint32_t FPU_MASK_NEG[4] = { 0x80000000, 0x80000000, 0x80000000, 0x80000000 };
+static uint32_t max_flt_constant[4] = { 0x7F7FFFFF, 0x7F7FFFFF, 0x7F7FFFFF, 0x7F7FFFFF };
+static uint32_t min_flt_constant[4] = { 0xFF7FFFFF, 0xFF7FFFFF, 0xFF7FFFFF, 0xFF7FFFFF };
 
 extern "C" uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee);
 
@@ -59,12 +61,6 @@ private:
     Emitter64 emitter;
     EE_JitTranslator ir;
 
-    //Set to 0x7FFFFFFF, repeated four times
-    VU_GPR abs_constant;
-    VU_GPR max_flt_constant, min_flt_constant;
-    VU_GPR ftoi_table[4], itof_table[4];
-    bool should_update_mac;
-
     int abi_int_count;
     int abi_xmm_count;
 
@@ -75,12 +71,6 @@ private:
 
     void handle_branch_likely(EmotionEngine& ee, IR::Block& block);
     void clamp_freg(EmotionEngine& ee, REG_64 freg);
-
-    bool needs_clamping(int xmmreg, uint8_t field);
-    void set_clamping(int xmmreg, bool value, uint8_t field);
-    void clamp_vfreg(EmotionEngine& ee, uint8_t field, REG_64 xmm_reg);
-    void update_mac_flags(EmotionEngine &ee, REG_64 xmm_reg, uint8_t field);
-    void add_vector_by_scalar(EmotionEngine& ee, IR::Instruction& instr);
 
     void add_doubleword_imm(EmotionEngine& ee, IR::Instruction& instr);
     void add_doubleword_reg(EmotionEngine& ee, IR::Instruction& instr);
