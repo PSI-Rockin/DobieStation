@@ -131,6 +131,7 @@ private:
     void load_word(EmotionEngine& ee, IR::Instruction& instr);
     void load_word_coprocessor1(EmotionEngine& ee, IR::Instruction& instr);
     void load_word_unsigned(EmotionEngine& ee, IR::Instruction& instr);
+    void load_quadword(EmotionEngine& ee, IR::Instruction& instr);
     void move_conditional_on_not_zero(EmotionEngine& ee, IR::Instruction& instr);
     void move_conditional_on_zero(EmotionEngine& ee, IR::Instruction& instr);
     void move_doubleword_reg(EmotionEngine& ee, IR::Instruction& instr);
@@ -163,6 +164,7 @@ private:
     void store_halfword(EmotionEngine& ee, IR::Instruction& instr);
     void store_word(EmotionEngine& ee, IR::Instruction& instr);
     void store_word_coprocessor1(EmotionEngine& ee, IR::Instruction& instr);
+    void store_quadword(EmotionEngine& ee, IR::Instruction& instr);
     void sub_doubleword_reg(EmotionEngine& ee, IR::Instruction& instr);
     void sub_word_reg(EmotionEngine& ee, IR::Instruction& instr);
     void system_call(EmotionEngine& ee, IR::Instruction& instr);

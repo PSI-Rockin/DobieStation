@@ -326,6 +326,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::LoadWordUnsigned:
             load_word_unsigned(ee, instr);
             break;
+        case IR::Opcode::LoadQuadword:
+            load_quadword(ee, instr);
+            break;
         case IR::Opcode::MoveConditionalOnNotZero:
             move_conditional_on_not_zero(ee, instr);
             break;
@@ -540,10 +543,11 @@ void EE_JIT64::prepare_abi_reg_from_xmm(EmotionEngine& ee, REG_64 reg)
 
 void EE_JIT64::call_abi_func(EmotionEngine& ee, uint64_t addr)
 {
-    const static REG_64 saved_regs[] = { RCX, RDX, R8, R9, R10, R11 };
 #ifdef _WIN32
+    const static REG_64 saved_regs[] = { RCX, RDX, R8, R9, R10, R11 };
     const static REG_64 abi_regs[] = { RCX, RDX, R8, R9 };
 #else
+    const static REG_64 saved_regs[] = { RDI, RSI, RCX, RDX, R8, R9, R10, R11 };
     const static REG_64 abi_regs[] = { RDI, RSI, RDX, RCX, R8, R9 };
 #endif    
     int total_regs = sizeof(saved_regs) / sizeof(REG_64);
@@ -799,6 +803,18 @@ REG_64 EE_JIT64::alloc_reg(EmotionEngine& ee, int reg, REG_TYPE type, REG_STATE 
                 return (REG_64)destination;
             }
 
+            if (type == REG_TYPE::GPR)
+            {
+                for (int i = 0; i < 16; ++i)
+                {
+                    if (xmm_regs[i].used && xmm_regs[i].reg == reg && xmm_regs[i].type == REG_TYPE::GPREXTENDED)
+                    {
+                        flush_xmm_reg(ee, i);
+                        xmm_regs[i].used = false;
+                    }
+                }
+            }
+
             // Flush new register's contents back to EE state
             flush_int_reg(ee, destination);
             int_regs[destination].used = false;
@@ -862,6 +878,18 @@ REG_64 EE_JIT64::alloc_reg(EmotionEngine& ee, int reg, REG_TYPE type, REG_STATE 
                     xmm_regs[destination].modified = true;
                 xmm_regs[destination].age = 0;
                 return (REG_64)destination;
+            }
+
+            if (type == REG_TYPE::GPREXTENDED)
+            {
+                for (int i = 0; i < 16; ++i)
+                {
+                    if (int_regs[i].used && int_regs[i].reg == reg && int_regs[i].type == REG_TYPE::GPR)
+                    {
+                        flush_int_reg(ee, i);
+                        int_regs[i].used = false;
+                    }
+                }
             }
 
             // Flush new register's contents back to EE state

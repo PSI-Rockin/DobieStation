@@ -451,14 +451,35 @@ IR::Instruction EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC)
             return translate_op_mmi(opcode, PC);
         case 0x1E:
             // LQ
-            Errors::print_warning("[EE_JIT] Unrecognized op LQ\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+            instr.op = IR::Opcode::LoadQuadword;
+            instr.set_dest(dest);
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_source2((int64_t)(int16_t)(opcode & 0xFFFF));
             return instr;
+        }
         case 0x1F:
             // SQ
-            Errors::print_warning("[EE_JIT] Unrecognized op SQ\n", op);
+        {
+            uint8_t dest = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+            instr.op = IR::Opcode::StoreQuadword;
+            instr.set_dest(dest);
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_source2((int64_t)(int16_t)(opcode & 0xFFFF));
             fallback_interpreter(instr, opcode);
             return instr;
+        }
         case 0x20:
             // LB
         {

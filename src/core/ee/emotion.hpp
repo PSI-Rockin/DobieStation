@@ -46,7 +46,7 @@ class EmotionEngine
         uint8_t** tlb_map;
 
         //Each register is 128-bit
-        uint8_t gpr[32 * sizeof(uint64_t) * 2];
+        alignas(16) uint8_t gpr[32 * sizeof(uint64_t) * 2];
         uint64_t LO, HI, LO1, HI1;
         uint32_t PC, new_PC;
         uint64_t SA;

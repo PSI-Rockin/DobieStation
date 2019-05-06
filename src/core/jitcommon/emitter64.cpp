@@ -1255,6 +1255,15 @@ void Emitter64::MOVD_TO_XMM(REG_64 source, REG_64 xmm_dest)
     modrm(0b11, xmm_dest, source);
 }
 
+void Emitter64::MOVQ_TO_XMM(REG_64 source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rexw_r_rm(xmm_dest, source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x6E);
+    modrm(0b11, xmm_dest, source);
+}
+
 void Emitter64::MOVSS_REG(REG_64 xmm_source, REG_64 xmm_dest)
 {
     rex_r_rm(xmm_source, xmm_dest);
@@ -1378,6 +1387,17 @@ void Emitter64::PAND_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t
         cache->write<uint8_t>(0x24);
     if ((indir_source & 7) == 5 || offset)
         cache->write<uint32_t>(offset);
+}
+
+void Emitter64::PINSRQ_XMM(uint8_t imm, REG_64 source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rexw_r_rm(xmm_dest, source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x3A);
+    cache->write<uint8_t>(0x22);
+    modrm(0b11, xmm_dest, source);
+    cache->write<uint8_t>(imm);
 }
 
 void Emitter64::PMAXSD_XMM(REG_64 xmm_source, REG_64 xmm_dest)

@@ -32,6 +32,7 @@ INSTR(LoadWordLeft)
 INSTR(LoadWordRight)
 INSTR(LoadWordUnsigned)
 INSTR(LoadWordCoprocessor1)
+INSTR(LoadQuadword)
 
 INSTR(StoreByte)
 INSTR(StoreHalfword)
@@ -42,6 +43,7 @@ INSTR(StoreDoubleword)
 INSTR(StoreDoublewordLeft)
 INSTR(StoreDoublewordRight)
 INSTR(StoreWordCoprocessor1)
+INSTR(StoreQuadword)
 
 INSTR(SystemCall)
 

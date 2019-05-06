@@ -697,6 +697,10 @@ uint64_t ee_read64(EmotionEngine& ee, uint32_t addr)
     return ee.read64(addr);
 }
 
+void ee_read128(EmotionEngine& ee, uint32_t addr, uint128_t& dest)
+{
+    dest = ee.read128(addr);
+}
 
 void EE_JIT64::load_byte(EmotionEngine& ee, IR::Instruction &instr)
 {
@@ -873,6 +877,37 @@ void EE_JIT64::load_word_unsigned(EmotionEngine& ee, IR::Instruction &instr)
 
     REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPR, REG_STATE::WRITE);
     emitter.MOV32_REG(REG_64::RAX, dest);
+}
+
+void EE_JIT64::load_quadword(EmotionEngine& ee, IR::Instruction &instr)
+{
+    alloc_abi_regs(3);
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPR, REG_STATE::READ);
+    REG_64 addr = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+
+    int64_t offset = instr.get_source2();
+
+    if (offset)
+        emitter.LEA32_M(source, addr, offset);
+    else
+        emitter.MOV32_REG(source, addr);
+    emitter.AND32_REG_IMM(0xFFFFFFF0, addr);
+
+    // Due to differences in how the uint128_t struct is returned on different platforms,
+    // we simply allocate space for it on the stack, which the wrapper function will store the
+    // result into.
+    emitter.SUB64_REG_IMM(0x10, REG_64::RSP);
+    prepare_abi(ee, (uint64_t)&ee);
+    prepare_abi_reg(ee, addr);
+    prepare_abi_reg(ee, REG_64::RSP);
+    free_int_reg(ee, addr);
+    call_abi_func(ee, (uint64_t)ee_read128);
+
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
+    emitter.POP(REG_64::RAX);
+    emitter.MOVQ_TO_XMM(REG_64::RAX, dest);
+    emitter.POP(REG_64::RAX);
+    emitter.PINSRQ_XMM(1, REG_64::RAX, dest);
 }
 
 void EE_JIT64::move_conditional_on_not_zero(EmotionEngine& ee, IR::Instruction& instr)
