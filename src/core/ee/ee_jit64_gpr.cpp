@@ -1345,15 +1345,6 @@ void EE_JIT64::store_word_coprocessor1(EmotionEngine& ee, IR::Instruction& instr
 
 void EE_JIT64::store_quadword(EmotionEngine& ee, IR::Instruction &instr)
 {
-    for (int i = 0; i < 16; ++i)
-    {
-        flush_xmm_reg(ee, i);
-        xmm_regs[i].used = false;
-        flush_int_reg(ee, i);
-        int_regs[i].used = false;
-    }
-
-
     alloc_abi_regs(3);
 
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
@@ -1379,14 +1370,6 @@ void EE_JIT64::store_quadword(EmotionEngine& ee, IR::Instruction &instr)
     call_abi_func(ee, (uint64_t)ee_write128);
     free_int_reg(ee, addr);
     emitter.ADD64_REG_IMM(0x10, REG_64::RSP);
-
-    for (int i = 0; i < 16; ++i)
-    {
-        flush_xmm_reg(ee, i);
-        xmm_regs[i].used = false;
-        flush_int_reg(ee, i);
-        int_regs[i].used = false;
-    }
 }
 
 void EE_JIT64::sub_doubleword_reg(EmotionEngine& ee, IR::Instruction &instr)
