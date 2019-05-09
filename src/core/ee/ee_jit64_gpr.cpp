@@ -1243,6 +1243,11 @@ void ee_write64(EmotionEngine& ee, uint32_t addr, uint64_t value)
     ee.write64(addr, value);
 }
 
+void ee_write128(EmotionEngine& ee, uint32_t addr, uint128_t& value)
+{
+    ee.write128(addr, value);
+}
+
 void EE_JIT64::store_byte(EmotionEngine& ee, IR::Instruction& instr)
 {
     alloc_abi_regs(3);
@@ -1336,6 +1341,52 @@ void EE_JIT64::store_word_coprocessor1(EmotionEngine& ee, IR::Instruction& instr
     prepare_abi_reg_from_xmm(ee, dest);
     call_abi_func(ee, (uint64_t)ee_write32);
     free_int_reg(ee, addr);
+}
+
+void EE_JIT64::store_quadword(EmotionEngine& ee, IR::Instruction &instr)
+{
+    for (int i = 0; i < 16; ++i)
+    {
+        flush_xmm_reg(ee, i);
+        xmm_regs[i].used = false;
+        flush_int_reg(ee, i);
+        int_regs[i].used = false;
+    }
+
+
+    alloc_abi_regs(3);
+
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPR, REG_STATE::READ);
+    REG_64 addr = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    int64_t offset = instr.get_source2();
+
+    if (offset)
+        emitter.LEA32_M(dest, addr, offset);
+    else
+        emitter.MOV32_REG(dest, addr);
+    emitter.AND32_REG_IMM(0xFFFFFFF0, addr);
+
+    // Due to differences in how the uint128_t struct is passed as an argument on different platforms,
+    // we simply allocate space for it on the stack and pass a pointer to our wrapper function.
+    emitter.PEXTRQ_XMM(1, source, REG_64::RAX);
+    emitter.PUSH(REG_64::RAX);
+    emitter.MOVQ_FROM_XMM(source, REG_64::RAX);
+    emitter.PUSH(REG_64::RAX);
+    prepare_abi(ee, (uint64_t)&ee);
+    prepare_abi_reg(ee, addr);
+    prepare_abi_reg(ee, REG_64::RSP);
+    call_abi_func(ee, (uint64_t)ee_write128);
+    free_int_reg(ee, addr);
+    emitter.ADD64_REG_IMM(0x10, REG_64::RSP);
+
+    for (int i = 0; i < 16; ++i)
+    {
+        flush_xmm_reg(ee, i);
+        xmm_regs[i].used = false;
+        flush_int_reg(ee, i);
+        int_regs[i].used = false;
+    }
 }
 
 void EE_JIT64::sub_doubleword_reg(EmotionEngine& ee, IR::Instruction &instr)

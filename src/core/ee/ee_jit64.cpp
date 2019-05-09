@@ -36,7 +36,7 @@
 extern "C" void run_ee_jit(EE_JIT64& jit, EmotionEngine& ee);
 #endif
 
-EE_JIT64::EE_JIT64() : emitter(&cache) 
+EE_JIT64::EE_JIT64() : emitter(&cache)
 {
 }
 
@@ -419,6 +419,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::StoreWordCoprocessor1:
             store_word_coprocessor1(ee, instr);
             break;
+        case IR::Opcode::StoreQuadword:
+            store_quadword(ee, instr);
+            break;
         case IR::Opcode::SubDoublewordReg:
             sub_doubleword_reg(ee, instr);
             break;
@@ -453,16 +456,16 @@ void EE_JIT64::alloc_abi_regs(int count)
 #ifdef _WIN32
     const static REG_64 regs[] = { RCX, RDX, R8, R9 };
 
-    if (abi_int_count + count > 4)
+    if (count > 4)
         Errors::die("[EE_JIT64] ABI integer arguments exceeded 4!");
 #else
     const static REG_64 regs[] = { RDI, RSI, RDX, RCX, R8, R9 };
 
-    if (abi_int_count + count > 6)
+    if (count > 6)
         Errors::die("[EE_JIT64] ABI integer arguments exceeded 6!");
 #endif
 
-    for (int i = abi_int_count; i < abi_int_count + count; ++i)
+    for (int i = 0; i < count; ++i)
     {
         int_regs[regs[i]].locked = true;
     }
@@ -578,6 +581,7 @@ void EE_JIT64::call_abi_func(EmotionEngine& ee, uint64_t addr)
     //Align stack pointer on 16-byte boundary
     if (regs_used & 1)
         sp_offset += 8;
+
 #ifdef _WIN32
     //x64 Windows requires a 32-byte "shadow region" to store the four argument registers, even if not all are used
     sp_offset += 32;
@@ -874,7 +878,7 @@ REG_64 EE_JIT64::alloc_reg(EmotionEngine& ee, int reg, REG_TYPE type, REG_STATE 
             // Do nothing if the EE register is already inside our x86 register
             if (xmm_regs[destination].used && xmm_regs[destination].type == type && xmm_regs[destination].reg == reg)
             {
-                if (state != REG_STATE::READ && !(reg == 0 && type == REG_TYPE::VF))
+                if (state != REG_STATE::READ && !(reg == 0 && (type == REG_TYPE::VF || type == REG_TYPE::GPREXTENDED)))
                     xmm_regs[destination].modified = true;
                 xmm_regs[destination].age = 0;
                 return (REG_64)destination;
@@ -928,17 +932,17 @@ REG_64 EE_JIT64::alloc_reg(EmotionEngine& ee, int reg, REG_TYPE type, REG_STATE 
                             emitter.MOVAPS_FROM_MEM(REG_64::RAX, (REG_64)destination);
                             break;
                         case REG_TYPE::GPREXTENDED:
-                            emitter.load_addr((uint64_t)get_gpr_addr(ee, (EE_NormalReg)reg), (REG_64)destination);
+                            emitter.load_addr((uint64_t)get_gpr_addr(ee, (EE_NormalReg)reg), REG_64::RAX);
                             emitter.MOVAPS_FROM_MEM(REG_64::RAX, (REG_64)destination);
                             break;
                         default:
                             break;
                     }
-                    
+
                 }
             }
 
-            xmm_regs[destination].modified = state != REG_STATE::READ && !(reg == 0 && type == REG_TYPE::VF);
+            xmm_regs[destination].modified = state != REG_STATE::READ && !(reg == 0 && (type == REG_TYPE::VF || type == REG_TYPE::GPREXTENDED));
             xmm_regs[destination].reg = reg;
             xmm_regs[destination].type = type;
             xmm_regs[destination].used = true;
@@ -1103,6 +1107,7 @@ uint64_t EE_JIT64::get_gpr_addr(const EmotionEngine &ee, int index) const
         default:
             Errors::die("[EE_JIT64] get_gpr_addr error: Unrecognized reg %d", index);
     }
+    return 0;
 }
 
 void EE_JIT64::cleanup_recompiler(EmotionEngine& ee, bool clear_regs)

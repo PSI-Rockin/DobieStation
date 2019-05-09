@@ -1001,7 +1001,7 @@ void Emitter64::MOV16_TO_MEM(REG_64 source, REG_64 indir_dest, uint32_t offset)
         cache->write<uint8_t>(0x24);
     if ((indir_dest & 7) == 5 || offset)
         cache->write<uint32_t>(offset);
-} 
+}
 
 void Emitter64::MOV16_FROM_MEM(REG_64 indir_source, REG_64 dest, uint32_t offset)
 {
@@ -1255,6 +1255,15 @@ void Emitter64::MOVD_TO_XMM(REG_64 source, REG_64 xmm_dest)
     modrm(0b11, xmm_dest, source);
 }
 
+void Emitter64::MOVQ_FROM_XMM(REG_64 xmm_source, REG_64 dest)
+{
+    cache->write<uint8_t>(0x66);
+    rexw_r_rm(xmm_source, dest);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x7E);
+    modrm(0b11, xmm_source, dest);
+}
+
 void Emitter64::MOVQ_TO_XMM(REG_64 source, REG_64 xmm_dest)
 {
     cache->write<uint8_t>(0x66);
@@ -1281,20 +1290,28 @@ void Emitter64::MOVAPS_REG(REG_64 xmm_source, REG_64 xmm_dest)
     modrm(0b11, xmm_source, xmm_dest);
 }
 
-void Emitter64::MOVAPS_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest)
+void Emitter64::MOVAPS_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t offset)
 {
     rex_r_rm(xmm_dest, indir_source);
     cache->write<uint8_t>(0x0F);
     cache->write<uint8_t>(0x28);
     modrm(0, xmm_dest, indir_source);
+    if ((indir_source & 7) == 4)
+        cache->write<uint8_t>(0x24);
+    if ((indir_source & 7) == 5 || offset)
+        cache->write<uint32_t>(offset);
 }
 
-void Emitter64::MOVAPS_TO_MEM(REG_64 xmm_source, REG_64 indir_dest)
+void Emitter64::MOVAPS_TO_MEM(REG_64 xmm_source, REG_64 indir_dest, uint32_t offset)
 {
     rex_r_rm(xmm_source, indir_dest);
     cache->write<uint8_t>(0x0F);
     cache->write<uint8_t>(0x29);
     modrm(0, xmm_source, indir_dest);
+    if ((indir_dest & 7) == 4)
+        cache->write<uint8_t>(0x24);
+    if ((indir_dest & 7) == 5 || offset)
+        cache->write<uint32_t>(offset);
 }
 
 void Emitter64::MOVMSKPS(REG_64 xmm_source, REG_64 dest)
@@ -1387,6 +1404,17 @@ void Emitter64::PAND_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t
         cache->write<uint8_t>(0x24);
     if ((indir_source & 7) == 5 || offset)
         cache->write<uint32_t>(offset);
+}
+
+void Emitter64::PEXTRQ_XMM(uint8_t imm, REG_64 xmm_source, REG_64 dest)
+{
+    cache->write<uint8_t>(0x66);
+    rexw_r_rm(xmm_source, dest);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x3A);
+    cache->write<uint8_t>(0x16);
+    modrm(0b11, xmm_source, dest);
+    cache->write<uint8_t>(imm);
 }
 
 void Emitter64::PINSRQ_XMM(uint8_t imm, REG_64 source, REG_64 xmm_dest)
