@@ -70,8 +70,8 @@ private:
     uint16_t cycle_count;
 
     void handle_branch_likely(EmotionEngine& ee, IR::Block& block);
-    void clamp_freg(EmotionEngine& ee, REG_64 freg);
 
+    // Instructions
     void add_doubleword_imm(EmotionEngine& ee, IR::Instruction& instr);
     void add_doubleword_reg(EmotionEngine& ee, IR::Instruction& instr);
     void add_word_imm(EmotionEngine& ee, IR::Instruction& instr);
@@ -170,14 +170,23 @@ private:
     void sub_doubleword_reg(EmotionEngine& ee, IR::Instruction& instr);
     void sub_word_reg(EmotionEngine& ee, IR::Instruction& instr);
     void system_call(EmotionEngine& ee, IR::Instruction& instr);
+    void vadd_vectors(EmotionEngine& ee, IR::Instruction& instr);
     void vcall_ms(EmotionEngine& ee, IR::Instruction& instr);
     void vcall_msr(EmotionEngine& ee, IR::Instruction& instr);
     void xor_imm(EmotionEngine& ee, IR::Instruction& instr);
     void xor_reg(EmotionEngine& ee, IR::Instruction& instr);
     void fallback_interpreter(EmotionEngine& ee, const IR::Instruction &instr);
 
-    static void ee_syscall_exception(EmotionEngine& ee);
+    // COP1 helper functions
+    void clamp_freg(REG_64 freg);
 
+    // COP2 helper functions
+    uint8_t convert_field(uint8_t value);
+    void clamp_vfreg(EmotionEngine& ee, uint8_t field, REG_64 vfreg);
+    bool needs_clamping(int reg, uint8_t field);
+    void set_clamping(int reg, bool value, uint8_t field);
+
+    // ABI prep/function call
     void alloc_abi_regs(int count);
     void prepare_abi(EmotionEngine& ee, uint64_t value);
     void prepare_abi_xmm(EmotionEngine& ee, float value);
@@ -185,29 +194,32 @@ private:
     void prepare_abi_reg_from_xmm(EmotionEngine& ee, REG_64 reg);
     void prepare_abi_xmm_reg(EmotionEngine& ee, REG_64 reg);
     void call_abi_func(EmotionEngine& ee, uint64_t addr);
-    void recompile_block(EmotionEngine& ee, IR::Block& block);
 
+    // Register alloc
     int search_for_register_priority(AllocReg *regs);
     int search_for_register_scratchpad(AllocReg *regs);
     int search_for_register_xmm(AllocReg *regs);
     REG_64 alloc_reg(EmotionEngine& ee, int reg, REG_TYPE type, REG_STATE state, REG_64 destination = (REG_64)-1);
     REG_64 lalloc_int_reg(EmotionEngine& ee, int reg, REG_TYPE type, REG_STATE state, REG_64 destination = (REG_64)-1);
     REG_64 lalloc_xmm_reg(EmotionEngine& ee, int reg, REG_TYPE type, REG_STATE state, REG_64 destination = (REG_64)-1);
-    void free_int_reg(EmotionEngine& ee, REG_64 reg);
-    void free_xmm_reg(EmotionEngine& ee, REG_64 reg);
 
-    void emit_prologue();
-    void emit_instruction(EmotionEngine &ee, IR::Instruction &instr);
-
+    // Address lookup
     uint64_t get_gpr_addr(const EmotionEngine &ee, int index) const;
     uint64_t get_vi_addr(const EmotionEngine &ee, int index) const;
     uint64_t get_fpu_addr(const EmotionEngine &ee, int index) const;
     uint64_t get_vf_addr(const EmotionEngine &ee, int index) const;
 
+    // Flush/free registers
     void flush_int_reg(EmotionEngine& ee, int reg);
     void flush_xmm_reg(EmotionEngine& ee, int reg);
     void flush_regs(EmotionEngine& ee);
+    void free_int_reg(EmotionEngine& ee, REG_64 reg);
+    void free_xmm_reg(EmotionEngine& ee, REG_64 reg);
 
+    // Recompile + Cleanup
+    void emit_prologue();
+    void emit_instruction(EmotionEngine &ee, IR::Instruction &instr);
+    void recompile_block(EmotionEngine& ee, IR::Block& block);
     void cleanup_recompiler(EmotionEngine& ee, bool clear_regs);
     void emit_epilogue();
 public:
@@ -229,5 +241,6 @@ void ee_write16(EmotionEngine& ee, uint32_t addr, uint16_t value);
 void ee_write32(EmotionEngine& ee, uint32_t addr, uint32_t value);
 void ee_write64(EmotionEngine& ee, uint32_t addr, uint64_t value);
 void ee_write128(EmotionEngine& ee, uint32_t addr, uint128_t& value);
+void ee_syscall_exception(EmotionEngine& ee);
 
 #endif // EE_JIT64_HPP

@@ -1329,11 +1329,6 @@ void EE_JIT64::sub_word_reg(EmotionEngine& ee, IR::Instruction &instr)
     }
 }
 
-void EE_JIT64::ee_syscall_exception(EmotionEngine& ee)
-{
-    ee.syscall_exception();
-}
-
 void EE_JIT64::system_call(EmotionEngine& ee, IR::Instruction& instr)
 {
     flush_regs(ee);

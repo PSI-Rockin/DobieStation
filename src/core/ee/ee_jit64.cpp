@@ -437,6 +437,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::SystemCall:
             system_call(ee, instr);
             break;
+        case IR::Opcode::VAddVectors:
+            vadd_vectors(ee, instr);
+            break;
         case IR::Opcode::VCallMS:
             vcall_ms(ee, instr);
             break;
@@ -1272,4 +1275,9 @@ void ee_write64(EmotionEngine& ee, uint32_t addr, uint64_t value)
 void ee_write128(EmotionEngine& ee, uint32_t addr, uint128_t& value)
 {
     ee.write128(addr, value);
+}
+
+void ee_syscall_exception(EmotionEngine& ee)
+{
+    ee.syscall_exception();
 }

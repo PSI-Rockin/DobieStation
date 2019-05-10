@@ -2,7 +2,7 @@
 #include <algorithm>
 #include "ee_jit64.hpp"
 
-void EE_JIT64::clamp_freg(EmotionEngine& ee, REG_64 freg)
+void EE_JIT64::clamp_freg(REG_64 freg)
 {
     //reg = min_signed(reg, 0x7F7FFFFF)
     emitter.load_addr((uint64_t)&max_flt_constant, REG_64::RAX);
@@ -64,7 +64,7 @@ void EE_JIT64::floating_point_add(EmotionEngine& ee, IR::Instruction& instr)
         emitter.ADDSS(source2, dest);
     }
 
-    clamp_freg(ee, dest);
+    clamp_freg(dest);
 }
 
 void EE_JIT64::floating_point_clear_control(EmotionEngine& ee, IR::Instruction& instr)
@@ -154,7 +154,7 @@ void EE_JIT64::floating_point_divide(EmotionEngine& ee, IR::Instruction& instr)
     emitter.MOVAPS_REG(XMM0, dest);
     emitter.set_jump_dest(exit);
 
-    clamp_freg(ee, dest);
+    clamp_freg(dest);
     free_int_reg(ee, R15);
     free_xmm_reg(ee, XMM0);
 }
@@ -179,7 +179,7 @@ void EE_JIT64::floating_point_multiply(EmotionEngine& ee, IR::Instruction& instr
         emitter.MULSS(source2, dest);
     }
 
-    clamp_freg(ee, dest);
+    clamp_freg(dest);
 }
 
 void EE_JIT64::floating_point_multiply_add(EmotionEngine& ee, IR::Instruction& instr)
@@ -195,7 +195,7 @@ void EE_JIT64::floating_point_multiply_add(EmotionEngine& ee, IR::Instruction& i
     emitter.ADDSS(acc, XMM0);
     emitter.MOVAPS_REG(XMM0, dest);
 
-    clamp_freg(ee, dest);
+    clamp_freg(dest);
     free_xmm_reg(ee, XMM0);
 }
 
@@ -212,7 +212,7 @@ void EE_JIT64::floating_point_multiply_subtract(EmotionEngine& ee, IR::Instructi
     emitter.MOVAPS_REG(acc, dest);
     emitter.SUBSS(XMM0, dest);
 
-    clamp_freg(ee, dest);
+    clamp_freg(dest);
     free_xmm_reg(ee, XMM0);
 }
 
@@ -301,7 +301,7 @@ void EE_JIT64::floating_point_square_root(EmotionEngine& ee, IR::Instruction& in
     
     emitter.SQRTSS(source, dest);
 
-    clamp_freg(ee, dest);
+    clamp_freg(dest);
 }
 
 void EE_JIT64::floating_point_subtract(EmotionEngine& ee, IR::Instruction& instr)
@@ -326,7 +326,7 @@ void EE_JIT64::floating_point_subtract(EmotionEngine& ee, IR::Instruction& instr
         emitter.SUBSS(source2, dest);
     }
 
-    clamp_freg(ee, dest);
+    clamp_freg(dest);
 }
 
 void EE_JIT64::floating_point_reciprocal_square_root(EmotionEngine& ee, IR::Instruction& instr)
@@ -361,7 +361,7 @@ void EE_JIT64::floating_point_reciprocal_square_root(EmotionEngine& ee, IR::Inst
     emitter.MOVAPS_REG(XMM0, dest);
     emitter.set_jump_dest(exit);
 
-    clamp_freg(ee, dest);
+    clamp_freg(dest);
     free_int_reg(ee, R15);
     free_xmm_reg(ee, XMM0);
     free_xmm_reg(ee, XMM1);
