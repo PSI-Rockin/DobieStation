@@ -62,6 +62,45 @@ void EE_JIT64::set_clamping(int reg, bool value, uint8_t field)
         xmm_regs[reg].needs_clamping = false;
 }
 
+void EE_JIT64::update_mac_flags(EmotionEngine& ee, REG_64 reg, uint8_t field)
+{
+    field = convert_field(field);
+    REG_64 XMM0 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 XMM1 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 R15 = lalloc_xmm_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+
+    //Shuffle the vector from WZYX to XYZW
+    if (reg != XMM0)
+        emitter.MOVAPS_REG(reg, XMM0);
+    emitter.PSHUFD(0x1B, XMM0, XMM0);
+
+    //Get the sign bits
+    emitter.MOVMSKPS(XMM0, REG_64::RAX);
+    emitter.SHL32_REG_IMM(4, REG_64::RAX);
+
+    //Get zero bits
+    //First remove sign bit
+    emitter.load_addr((uint64_t)&FPU_MASK_ABS[0], R15);
+    emitter.MOVAPS_FROM_MEM(R15, XMM1);
+    emitter.PAND_XMM(XMM1, XMM0);
+
+    //Then compare with 0
+    emitter.XORPS(XMM1, XMM1);
+    emitter.CMPEQPS(XMM1, XMM0);
+    emitter.MOVMSKPS(XMM0, R15);
+    emitter.OR32_REG(R15, REG_64::RAX);
+    emitter.AND32_EAX((field << 4) | field);
+
+    emitter.load_addr((uint64_t)&ee.vu0->new_MAC_flags, R15);
+    emitter.MOV16_TO_MEM(REG_64::RAX, R15);
+
+    free_xmm_reg(ee, XMM0);
+    free_xmm_reg(ee, XMM1);
+    free_int_reg(ee, R15);
+
+    should_update_mac = false;
+}
+
 void EE_JIT64::store_quadword_coprocessor2(EmotionEngine& ee, IR::Instruction &instr)
 {
     alloc_abi_regs(3);
@@ -122,7 +161,6 @@ void EE_JIT64::load_quadword_coprocessor2(EmotionEngine& ee, IR::Instruction &in
 
 void EE_JIT64::vadd_vectors(EmotionEngine& ee, IR::Instruction& instr)
 {
-    // TODO: Update mac flags instead of flushing
     prepare_abi(ee, (uint64_t)ee.vu0);
     call_abi_func(ee, (uint64_t)&vu_flush_pipes);
 
@@ -148,8 +186,6 @@ void EE_JIT64::vadd_vectors(EmotionEngine& ee, IR::Instruction& instr)
         emitter.BLENDPS(field, XMM0, dest);
     }
 
+    update_mac_flags(ee, XMM0, field);
     free_xmm_reg(ee, XMM0);
-
-    //if (should_update_mac)
-        //update_mac_flags(vu, temp, field);
 }

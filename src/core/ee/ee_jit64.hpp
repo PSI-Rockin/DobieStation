@@ -69,6 +69,8 @@ private:
     uint32_t ee_branch_delay_dest, ee_branch_delay_fail_dest;
     uint16_t cycle_count;
 
+    bool should_update_mac;
+
     void handle_branch_likely(EmotionEngine& ee, IR::Block& block);
 
     // Instructions
@@ -185,6 +187,7 @@ private:
     void clamp_vfreg(EmotionEngine& ee, uint8_t field, REG_64 vfreg);
     bool needs_clamping(int reg, uint8_t field);
     void set_clamping(int reg, bool value, uint8_t field);
+    void update_mac_flags(EmotionEngine& ee, REG_64 reg, uint8_t field);
 
     // ABI prep/function call
     void alloc_abi_regs(int count);
