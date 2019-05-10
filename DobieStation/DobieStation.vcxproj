@@ -205,6 +205,7 @@
   <ItemGroup>
     <ClCompile Include="..\src\core\ee\ee_jit.cpp" />
     <ClCompile Include="..\src\core\ee\ee_jit64.cpp" />
+    <ClCompile Include="..\src\core\ee\ee_jit64_cop2.cpp" />
     <ClCompile Include="..\src\core\ee\ee_jit64_fpu.cpp" />
     <ClCompile Include="..\src\core\ee\ee_jit64_fpu_avx.cpp" />
     <ClCompile Include="..\src\core\ee\ee_jit64_gpr.cpp" />

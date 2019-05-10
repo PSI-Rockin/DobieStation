@@ -677,31 +677,6 @@ void EE_JIT64::jump_indirect(EmotionEngine& ee, IR::Instruction& instr)
     }
 }
 
-uint8_t ee_read8(EmotionEngine& ee, uint32_t addr)
-{
-    return ee.read8(addr);
-}
-
-uint16_t ee_read16(EmotionEngine& ee, uint32_t addr)
-{
-    return ee.read16(addr);
-}
-
-uint32_t ee_read32(EmotionEngine& ee, uint32_t addr)
-{
-    return ee.read32(addr);
-}
-
-uint64_t ee_read64(EmotionEngine& ee, uint32_t addr)
-{
-    return ee.read64(addr);
-}
-
-void ee_read128(EmotionEngine& ee, uint32_t addr, uint128_t& dest)
-{
-    dest = ee.read128(addr);
-}
-
 void EE_JIT64::load_byte(EmotionEngine& ee, IR::Instruction &instr)
 {
     alloc_abi_regs(2);
@@ -835,27 +810,6 @@ void EE_JIT64::load_word(EmotionEngine& ee, IR::Instruction &instr)
 
     REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPR, REG_STATE::WRITE);
     emitter.MOVSX32_TO_64(REG_64::RAX, dest);
-}
-
-void EE_JIT64::load_word_coprocessor1(EmotionEngine& ee, IR::Instruction &instr)
-{
-    alloc_abi_regs(2);
-    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPR, REG_STATE::READ);
-    REG_64 addr = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
-
-    int64_t offset = instr.get_source2();
-
-    if (offset)
-        emitter.LEA32_M(source, addr, offset);
-    else
-        emitter.MOV32_REG(source, addr);
-    prepare_abi(ee, (uint64_t)&ee);
-    prepare_abi_reg(ee, addr);
-    free_int_reg(ee, addr);
-    call_abi_func(ee, (uint64_t)ee_read32);
-
-    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
-    emitter.MOVD_TO_XMM(REG_64::RAX, dest);
 }
 
 void EE_JIT64::load_word_unsigned(EmotionEngine& ee, IR::Instruction &instr)
@@ -1223,31 +1177,6 @@ void EE_JIT64::shift_right_logical_variable(EmotionEngine& ee, IR::Instruction& 
     free_int_reg(ee, RCX);
 }
 
-void ee_write8(EmotionEngine& ee, uint32_t addr, uint8_t value)
-{
-    ee.write8(addr, value);
-}
-
-void ee_write16(EmotionEngine& ee, uint32_t addr, uint16_t value)
-{
-    ee.write16(addr, value);
-}
-
-void ee_write32(EmotionEngine& ee, uint32_t addr, uint32_t value)
-{
-    ee.write32(addr, value);
-}
-
-void ee_write64(EmotionEngine& ee, uint32_t addr, uint64_t value)
-{
-    ee.write64(addr, value);
-}
-
-void ee_write128(EmotionEngine& ee, uint32_t addr, uint128_t& value)
-{
-    ee.write128(addr, value);
-}
-
 void EE_JIT64::store_byte(EmotionEngine& ee, IR::Instruction& instr)
 {
     alloc_abi_regs(3);
@@ -1320,25 +1249,6 @@ void EE_JIT64::store_word(EmotionEngine& ee, IR::Instruction& instr)
     prepare_abi(ee, (uint64_t)&ee);
     prepare_abi_reg(ee, addr);
     prepare_abi_reg(ee, source);
-    call_abi_func(ee, (uint64_t)ee_write32);
-    free_int_reg(ee, addr);
-}
-
-void EE_JIT64::store_word_coprocessor1(EmotionEngine& ee, IR::Instruction& instr)
-{
-    alloc_abi_regs(3);
-    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPR, REG_STATE::READ);
-    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::READ);
-    REG_64 addr = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
-    int64_t offset = instr.get_source2();
-
-    if (offset)
-        emitter.LEA32_M(source, addr, offset);
-    else
-        emitter.MOV32_REG(source, addr);
-    prepare_abi(ee, (uint64_t)&ee);
-    prepare_abi_reg(ee, addr);
-    prepare_abi_reg_from_xmm(ee, dest);
     call_abi_func(ee, (uint64_t)ee_write32);
     free_int_reg(ee, addr);
 }

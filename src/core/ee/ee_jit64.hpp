@@ -132,6 +132,7 @@ private:
     void load_word_coprocessor1(EmotionEngine& ee, IR::Instruction& instr);
     void load_word_unsigned(EmotionEngine& ee, IR::Instruction& instr);
     void load_quadword(EmotionEngine& ee, IR::Instruction& instr);
+    void load_quadword_coprocessor2(EmotionEngine& ee, IR::Instruction& instr);
     void move_conditional_on_not_zero(EmotionEngine& ee, IR::Instruction& instr);
     void move_conditional_on_zero(EmotionEngine& ee, IR::Instruction& instr);
     void move_doubleword_reg(EmotionEngine& ee, IR::Instruction& instr);
@@ -165,6 +166,7 @@ private:
     void store_word(EmotionEngine& ee, IR::Instruction& instr);
     void store_word_coprocessor1(EmotionEngine& ee, IR::Instruction& instr);
     void store_quadword(EmotionEngine& ee, IR::Instruction& instr);
+    void store_quadword_coprocessor2(EmotionEngine& ee, IR::Instruction& instr);
     void sub_doubleword_reg(EmotionEngine& ee, IR::Instruction& instr);
     void sub_word_reg(EmotionEngine& ee, IR::Instruction& instr);
     void system_call(EmotionEngine& ee, IR::Instruction& instr);
@@ -216,5 +218,16 @@ public:
 
     friend uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee);
 };
+
+uint8_t ee_read8(EmotionEngine& ee, uint32_t addr);
+uint16_t ee_read16(EmotionEngine& ee, uint32_t addr);
+uint32_t ee_read32(EmotionEngine& ee, uint32_t addr);
+uint64_t ee_read64(EmotionEngine& ee, uint32_t addr);
+void ee_read128(EmotionEngine& ee, uint32_t addr, uint128_t& dest);
+void ee_write8(EmotionEngine& ee, uint32_t addr, uint8_t value);
+void ee_write16(EmotionEngine& ee, uint32_t addr, uint16_t value);
+void ee_write32(EmotionEngine& ee, uint32_t addr, uint32_t value);
+void ee_write64(EmotionEngine& ee, uint32_t addr, uint64_t value);
+void ee_write128(EmotionEngine& ee, uint32_t addr, uint128_t& value);
 
 #endif // EE_JIT64_HPP

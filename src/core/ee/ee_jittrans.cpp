@@ -640,9 +640,19 @@ IR::Instruction EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC)
             return instr;
         case 0x36:
             // LQC2
-            Errors::print_warning("[EE_JIT] Unrecognized op LQC2\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+            instr.op = IR::Opcode::LoadQuadwordCoprocessor2;
+            instr.set_dest(dest);
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_source2((int64_t)(int16_t)(opcode & 0xFFFF));
             return instr;
+        }
         case 0x37:
             // LD
         {
@@ -670,9 +680,13 @@ IR::Instruction EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC)
         }
         case 0x3E:
             // SQC2
-            Errors::print_warning("[EE_JIT] Unrecognized op SQC2\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            instr.op = IR::Opcode::StoreQuadwordCoprocessor2;
+            instr.set_dest((opcode >> 21) & 0x1F);
+            instr.set_source((opcode >> 16) & 0x1F);
+            instr.set_source2((int64_t)(int16_t)(opcode & 0xFFFF));
             return instr;
+        }
         case 0x3F:
             // SD
         {

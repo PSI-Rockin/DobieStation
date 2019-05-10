@@ -329,6 +329,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::LoadQuadword:
             load_quadword(ee, instr);
             break;
+        case IR::Opcode::LoadQuadwordCoprocessor2:
+            load_quadword_coprocessor2(ee, instr);
+            break;
         case IR::Opcode::MoveConditionalOnNotZero:
             move_conditional_on_not_zero(ee, instr);
             break;
@@ -421,6 +424,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             break;
         case IR::Opcode::StoreQuadword:
             store_quadword(ee, instr);
+            break;
+        case IR::Opcode::StoreQuadwordCoprocessor2:
+            store_quadword_coprocessor2(ee, instr);
             break;
         case IR::Opcode::SubDoublewordReg:
             sub_doubleword_reg(ee, instr);
@@ -1216,4 +1222,54 @@ void EE_JIT64::fallback_interpreter(EmotionEngine& ee, const IR::Instruction &in
     prepare_abi(ee, instr_word);
 
     call_abi_func(ee, reinterpret_cast<uint64_t>(&interpreter));
+}
+
+uint8_t ee_read8(EmotionEngine& ee, uint32_t addr)
+{
+    return ee.read8(addr);
+}
+
+uint16_t ee_read16(EmotionEngine& ee, uint32_t addr)
+{
+    return ee.read16(addr);
+}
+
+uint32_t ee_read32(EmotionEngine& ee, uint32_t addr)
+{
+    return ee.read32(addr);
+}
+
+uint64_t ee_read64(EmotionEngine& ee, uint32_t addr)
+{
+    return ee.read64(addr);
+}
+
+void ee_read128(EmotionEngine& ee, uint32_t addr, uint128_t& dest)
+{
+    dest = ee.read128(addr);
+}
+
+void ee_write8(EmotionEngine& ee, uint32_t addr, uint8_t value)
+{
+    ee.write8(addr, value);
+}
+
+void ee_write16(EmotionEngine& ee, uint32_t addr, uint16_t value)
+{
+    ee.write16(addr, value);
+}
+
+void ee_write32(EmotionEngine& ee, uint32_t addr, uint32_t value)
+{
+    ee.write32(addr, value);
+}
+
+void ee_write64(EmotionEngine& ee, uint32_t addr, uint64_t value)
+{
+    ee.write64(addr, value);
+}
+
+void ee_write128(EmotionEngine& ee, uint32_t addr, uint128_t& value)
+{
+    ee.write128(addr, value);
 }
