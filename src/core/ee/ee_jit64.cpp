@@ -446,6 +446,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::VCallMSR:
             vcall_msr(ee, instr);
             break;
+        case IR::Opcode::VSubVectors:
+            vsub_vectors(ee, instr);
+            break;
         case IR::Opcode::XorImm:
             xor_imm(ee, instr);
             break;
@@ -761,6 +764,7 @@ REG_64 EE_JIT64::alloc_reg(EmotionEngine& ee, int reg, REG_TYPE type, REG_STATE 
         }
     }
 
+    // NOTE: If you attempted to allocate a locked register -1, you probably didn't free your registers after lalloc'ing them.
     switch (type)
     {
         case REG_TYPE::GPR:

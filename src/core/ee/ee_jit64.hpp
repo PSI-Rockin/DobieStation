@@ -173,6 +173,7 @@ private:
     void sub_word_reg(EmotionEngine& ee, IR::Instruction& instr);
     void system_call(EmotionEngine& ee, IR::Instruction& instr);
     void vadd_vectors(EmotionEngine& ee, IR::Instruction& instr);
+    void vsub_vectors(EmotionEngine& ee, IR::Instruction& instr);
     void vcall_ms(EmotionEngine& ee, IR::Instruction& instr);
     void vcall_msr(EmotionEngine& ee, IR::Instruction& instr);
     void xor_imm(EmotionEngine& ee, IR::Instruction& instr);
