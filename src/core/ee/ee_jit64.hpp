@@ -191,6 +191,7 @@ private:
     bool needs_clamping(int reg, uint8_t field);
     void set_clamping(int reg, bool value, uint8_t field);
     void update_mac_flags(EmotionEngine& ee, REG_64 reg, uint8_t field);
+    void wait_for_vu0(EmotionEngine& ee, IR::Instruction& instr);
 
     // ABI prep/function call
     void alloc_abi_regs(int count);
@@ -237,6 +238,7 @@ public:
     friend uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee);
 };
 
+// Various wrapper functions
 uint8_t ee_read8(EmotionEngine& ee, uint32_t addr);
 uint16_t ee_read16(EmotionEngine& ee, uint32_t addr);
 uint32_t ee_read32(EmotionEngine& ee, uint32_t addr);
@@ -248,5 +250,8 @@ void ee_write32(EmotionEngine& ee, uint32_t addr, uint32_t value);
 void ee_write64(EmotionEngine& ee, uint32_t addr, uint64_t value);
 void ee_write128(EmotionEngine& ee, uint32_t addr, uint128_t& value);
 void ee_syscall_exception(EmotionEngine& ee);
+void vu0_start_program(VectorUnit& vu0, uint32_t addr);
+uint32_t vu0_read_CMSAR0_shl3(VectorUnit& vu0);
+bool ee_vu0_wait(EmotionEngine& ee);
 
 #endif // EE_JIT64_HPP

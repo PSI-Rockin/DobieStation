@@ -1237,6 +1237,37 @@ void EE_JIT64::fallback_interpreter(EmotionEngine& ee, const IR::Instruction &in
     call_abi_func(ee, reinterpret_cast<uint64_t>(&interpreter));
 }
 
+void EE_JIT64::wait_for_vu0(EmotionEngine& ee, IR::Instruction& instr)
+{
+    // Alloc scratchpad registers
+    REG_64 R15 = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+
+    prepare_abi(ee, (uint64_t)&ee);
+    call_abi_func(ee, (uint64_t)ee_vu0_wait);
+    emitter.TEST8_REG(REG_64::AL, REG_64::AL);
+
+    uint8_t* offset_addr = emitter.JCC_NEAR_DEFERRED(ConditionCode::Z);
+
+    // If ee.vu0_wait(), set PC to the current operation's address and abort
+    emitter.load_addr((uint64_t)&ee.PC, REG_64::RAX);
+    emitter.MOV32_REG_IMM(instr.get_return_addr(), R15);
+    emitter.MOV32_TO_MEM(R15, REG_64::RAX);
+
+    // Set wait for VU0 flag
+    emitter.load_addr((uint64_t)&ee.wait_for_VU0, REG_64::RAX);
+    emitter.MOV8_IMM_MEM(true, REG_64::RAX);
+
+    // Set cycle count to number of cycles executed
+    emitter.load_addr((uint64_t)&cycle_count, REG_64::RAX);
+    emitter.MOV16_IMM_MEM(instr.get_cycle_count(), REG_64::RAX);
+
+    cleanup_recompiler(ee, false);
+
+    // Otherwise continue execution of block otherwise
+    emitter.set_jump_dest(offset_addr);
+    free_int_reg(ee, R15);
+}
+
 uint8_t ee_read8(EmotionEngine& ee, uint32_t addr)
 {
     return ee.read8(addr);
@@ -1290,4 +1321,19 @@ void ee_write128(EmotionEngine& ee, uint32_t addr, uint128_t& value)
 void ee_syscall_exception(EmotionEngine& ee)
 {
     ee.syscall_exception();
+}
+
+void vu0_start_program(VectorUnit& vu0, uint32_t addr)
+{
+    vu0.start_program(addr);
+}
+
+uint32_t vu0_read_CMSAR0_shl3(VectorUnit& vu0)
+{
+    return vu0.read_CMSAR0() * 8;
+}
+
+bool ee_vu0_wait(EmotionEngine& ee)
+{
+    return ee.vu0_wait();
 }

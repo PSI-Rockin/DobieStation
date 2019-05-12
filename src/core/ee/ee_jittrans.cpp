@@ -2635,6 +2635,7 @@ IR::Instruction EE_JitTranslator::translate_op_cop2_special(uint32_t opcode, uin
             instr.set_source(source);
             instr.set_source2(source2);
             instr.set_field(field);
+            instr.set_return_addr(PC);
             instr.op = IR::Opcode::VAddVectors;
             return instr;
         }
@@ -2654,6 +2655,7 @@ IR::Instruction EE_JitTranslator::translate_op_cop2_special(uint32_t opcode, uin
             instr.set_source(source);
             instr.set_source2(source2);
             instr.set_field(field);
+            instr.set_return_addr(PC);
             instr.op = IR::Opcode::VMulVectors;
             return instr;
         }
@@ -2673,6 +2675,7 @@ IR::Instruction EE_JitTranslator::translate_op_cop2_special(uint32_t opcode, uin
             instr.set_source(source);
             instr.set_source2(source2);
             instr.set_field(field);
+            instr.set_return_addr(PC);
             instr.op = IR::Opcode::VSubVectors;
             return instr;
         }
@@ -2853,6 +2856,7 @@ IR::Instruction EE_JitTranslator::translate_op_cop2_special2(uint32_t opcode, ui
             instr.set_dest(dest);
             instr.set_source(source);
             instr.set_field(field);
+            instr.set_return_addr(PC);
             instr.op = IR::Opcode::VAbs;
             return instr;
         }
