@@ -2839,9 +2839,23 @@ IR::Instruction EE_JitTranslator::translate_op_cop2_special2(uint32_t opcode, ui
             return instr;
         case 0x1D:
             // VABS
-            Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VABS\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t source = (opcode >> 11) & 0x1F;
+            uint8_t dest = (opcode >> 16) & 0x1F;
+            uint8_t field = (opcode >> 21) & 0xF;
+
+            if (!dest)
+            {
+                instr.op = IR::Opcode::Null;
+                return instr;
+            }
+
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_field(field);
+            instr.op = IR::Opcode::VAbs;
             return instr;
+        }
         case 0x1E:
             // VMULAI
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VMULAI\n", op);

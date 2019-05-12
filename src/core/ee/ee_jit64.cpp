@@ -437,6 +437,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::SystemCall:
             system_call(ee, instr);
             break;
+        case IR::Opcode::VAbs:
+            vabs(ee, instr);
+            break;
         case IR::Opcode::VAddVectors:
             vadd_vectors(ee, instr);
             break;

@@ -159,6 +159,27 @@ void EE_JIT64::load_quadword_coprocessor2(EmotionEngine& ee, IR::Instruction &in
     emitter.PINSRQ_XMM(1, REG_64::RAX, dest);
 }
 
+void EE_JIT64::vabs(EmotionEngine& ee, IR::Instruction& instr)
+{
+    prepare_abi(ee, (uint64_t)ee.vu0);
+    call_abi_func(ee, (uint64_t)&vu_flush_pipes);
+
+    uint8_t field = convert_field(instr.get_field());
+
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::VF, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::VF, REG_STATE::WRITE);
+    REG_64 XMM0 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
+
+    emitter.load_addr((uint64_t)&FPU_MASK_ABS[0], REG_64::RAX);
+    emitter.MOVAPS_REG(source, XMM0);
+    emitter.PAND_XMM_FROM_MEM(REG_64::RAX, XMM0);
+
+    if (instr.get_dest())
+        emitter.BLENDPS(field, XMM0, dest);
+
+    free_xmm_reg(ee, XMM0);
+}
+
 void EE_JIT64::vadd_vectors(EmotionEngine& ee, IR::Instruction& instr)
 {
     prepare_abi(ee, (uint64_t)ee.vu0);
