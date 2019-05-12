@@ -190,6 +190,37 @@ void EE_JIT64::vadd_vectors(EmotionEngine& ee, IR::Instruction& instr)
     free_xmm_reg(ee, XMM0);
 }
 
+void EE_JIT64::vmul_vectors(EmotionEngine& ee, IR::Instruction& instr)
+{
+    prepare_abi(ee, (uint64_t)ee.vu0);
+    call_abi_func(ee, (uint64_t)&vu_flush_pipes);
+
+    uint8_t field = convert_field(instr.get_field());
+
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::VF, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::VF, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::VF, REG_STATE::WRITE);
+    REG_64 XMM0 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
+
+    clamp_vfreg(ee, field, source);
+    clamp_vfreg(ee, field, source2);
+
+    emitter.MOVAPS_REG(source, XMM0);
+    emitter.MULPS(source2, XMM0);
+
+    set_clamping(XMM0, true, field);
+    clamp_vfreg(ee, field, XMM0);
+
+    if (instr.get_dest())
+    {
+        set_clamping(XMM0, false, field);
+        emitter.BLENDPS(field, XMM0, dest);
+    }
+
+    update_mac_flags(ee, XMM0, field);
+    free_xmm_reg(ee, XMM0);
+}
+
 void EE_JIT64::vsub_vectors(EmotionEngine& ee, IR::Instruction& instr)
 {
     prepare_abi(ee, (uint64_t)ee.vu0);

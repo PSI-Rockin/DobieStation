@@ -2631,13 +2631,6 @@ IR::Instruction EE_JitTranslator::translate_op_cop2_special(uint32_t opcode, uin
             uint8_t source = (opcode >> 11) & 0x1F;
             uint8_t source2 = (opcode >> 16) & 0x1F;
             uint8_t field = (opcode >> 21) & 0xF;
-
-            if (!dest)
-            {
-                instr.op = IR::Opcode::Null;
-                return instr;
-            }
-
             instr.set_dest(dest);
             instr.set_source(source);
             instr.set_source2(source2);
@@ -2652,9 +2645,18 @@ IR::Instruction EE_JitTranslator::translate_op_cop2_special(uint32_t opcode, uin
             return instr;
         case 0x2A:
             // VMUL
-            Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VMUL\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 6) & 0x1F;
+            uint8_t source = (opcode >> 11) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            uint8_t field = (opcode >> 21) & 0xF;
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.set_field(field);
+            instr.op = IR::Opcode::VMulVectors;
             return instr;
+        }
         case 0x2B:
             // VMAX
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VMAX\n", op);
@@ -2667,13 +2669,6 @@ IR::Instruction EE_JitTranslator::translate_op_cop2_special(uint32_t opcode, uin
             uint8_t source = (opcode >> 11) & 0x1F;
             uint8_t source2 = (opcode >> 16) & 0x1F;
             uint8_t field = (opcode >> 21) & 0xF;
-
-            if (!dest)
-            {
-                instr.op = IR::Opcode::Null;
-                return instr;
-            }
-
             instr.set_dest(dest);
             instr.set_source(source);
             instr.set_source2(source2);
