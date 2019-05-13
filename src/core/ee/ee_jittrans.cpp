@@ -2759,23 +2759,16 @@ void EE_JitTranslator::translate_op_cop1_fpu(uint32_t opcode, uint32_t PC, std::
 
 void EE_JitTranslator::translate_op_cop2(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs)
 {
-    // Wait for VU0 to stop running for first COP2 op in block
-    if (!cop2_encountered)
-    {
-        cop2_encountered = true;
-        IR::Instruction instr;
-        // run branch operation again if first COP2 in block is in the delay slot
-        if (branch_op)
-            instr.set_return_addr(PC - 4);
-        else
-            instr.set_return_addr(PC);
-        instr.set_cycle_count(cycle_count);
-        instr.op = IR::Opcode::WaitVU0;
-        instrs.push_back(instr);
-    }
-
     uint8_t op = (opcode >> 21) & 0x1F;
     IR::Instruction instr;
+    // run branch operation again if COP2 in block is in the delay slot
+    if (branch_op)
+        instr.set_return_addr(PC - 4);
+    else
+        instr.set_return_addr(PC);
+    instr.set_cycle_count(cycle_count);
+    instr.op = IR::Opcode::WaitVU0;
+    instrs.push_back(instr);
 
     switch (op)
     {
@@ -2836,7 +2829,7 @@ void EE_JitTranslator::translate_op_cop2(uint32_t opcode, uint32_t PC, std::vect
     }
 }
 
-void EE_JitTranslator::translate_op_cop2_special(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs) const
+void EE_JitTranslator::translate_op_cop2_special(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs)
 {
     uint8_t op = opcode & 0x3F;
     IR::Instruction instr;
