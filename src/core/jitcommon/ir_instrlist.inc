@@ -229,5 +229,6 @@ INSTR(SavePC)
 INSTR(SavePipelineState)
 INSTR(MoveDelayedBranch)
 INSTR(ClearIntDelay)
+INSTR(WaitVU0)
 
 INSTR(FallbackInterpreter)

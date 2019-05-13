@@ -24,11 +24,11 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
     std::vector<IR::Instruction> instrs;
     uint32_t pc = ee.get_PC();
 
-    bool branch_op = false;
-    bool branch_delayslot = false;
-    cycle_count = 0;
-
+    branch_op = false;
+    branch_delayslot = false;
     eret_op = false;
+    cop2_encountered = false;
+    cycle_count = 0;
 
     while (!branch_delayslot && !eret_op)
     {
@@ -39,7 +39,6 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
             branch_delayslot = true;
 
         branch_op = instrs.back().is_jump();
-        instrs.back().set_cycle_count(cycle_count);
 
         pc += 4;
         cycle_count++;
@@ -1170,11 +1169,14 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
             }
             if (!source)
             {
+                // TODO: Seems to be broken (causes cursor to cycle in RD's title menu by itself)
+                /*
                 instr.op = IR::Opcode::NegateWordReg;
                 instr.set_dest(dest);
                 instr.set_source(source2);
                 instrs.push_back(instr);
                 break;
+                */
             }
             if (source == source2)
             {
@@ -1398,11 +1400,13 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
             }
             if (!source)
             {
+                /*
                 instr.op = IR::Opcode::NegateDoublewordReg;
                 instr.set_dest(dest);
                 instr.set_source(source2);
                 instrs.push_back(instr);
                 break;
+                */
             }
             if (source == source2)
             {
@@ -2753,8 +2757,23 @@ void EE_JitTranslator::translate_op_cop1_fpu(uint32_t opcode, uint32_t PC, std::
     }
 }
 
-void EE_JitTranslator::translate_op_cop2(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs) const
+void EE_JitTranslator::translate_op_cop2(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs)
 {
+    // Wait for VU0 to stop running for first COP2 op in block
+    if (!cop2_encountered)
+    {
+        cop2_encountered = true;
+        IR::Instruction instr;
+        // run branch operation again if first COP2 in block is in the delay slot
+        if (branch_op)
+            instr.set_return_addr(PC - 4);
+        else
+            instr.set_return_addr(PC);
+        instr.set_cycle_count(cycle_count);
+        instr.op = IR::Opcode::WaitVU0;
+        instrs.push_back(instr);
+    }
+
     uint8_t op = (opcode >> 21) & 0x1F;
     IR::Instruction instr;
 

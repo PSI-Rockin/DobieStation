@@ -455,6 +455,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::VSubVectors:
             vsub_vectors(ee, instr);
             break;
+        case IR::Opcode::WaitVU0:
+            wait_for_vu0(ee, instr);
+            break;
         case IR::Opcode::XorImm:
             xor_imm(ee, instr);
             break;
@@ -1213,8 +1216,8 @@ void EE_JIT64::handle_branch_likely(EmotionEngine& ee, IR::Block& block)
     emitter.set_jump_dest(offset_addr);
 
     // execute delay slot and flush EE state back to EE
-    IR::Instruction instr = block.get_next_instr();
-    emit_instruction(ee, instr);
+    for (IR::Instruction instr = block.get_next_instr(); instr.op != IR::Opcode::Null; instr = block.get_next_instr())
+        emit_instruction(ee, instr);
     cleanup_recompiler(ee, true);
 }
 

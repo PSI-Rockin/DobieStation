@@ -1363,8 +1363,6 @@ void EE_JIT64::system_call(EmotionEngine& ee, IR::Instruction& instr)
 
 void EE_JIT64::vcall_ms(EmotionEngine& ee, IR::Instruction& instr)
 {
-    wait_for_vu0(ee, instr);
-
     prepare_abi(ee, (uint64_t)ee.vu0);
     prepare_abi(ee, instr.get_source());
     call_abi_func(ee, (uint64_t)vu0_start_program);
@@ -1372,8 +1370,6 @@ void EE_JIT64::vcall_ms(EmotionEngine& ee, IR::Instruction& instr)
 
 void EE_JIT64::vcall_msr(EmotionEngine& ee, IR::Instruction& instr)
 {
-    wait_for_vu0(ee, instr);
-
     prepare_abi(ee, (uint64_t)ee.vu0);
     call_abi_func(ee, (uint64_t)vu0_read_CMSAR0_shl3);
 

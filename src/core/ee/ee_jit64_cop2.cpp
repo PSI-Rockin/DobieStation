@@ -161,7 +161,6 @@ void EE_JIT64::load_quadword_coprocessor2(EmotionEngine& ee, IR::Instruction &in
 
 void EE_JIT64::vabs(EmotionEngine& ee, IR::Instruction& instr)
 {
-    wait_for_vu0(ee, instr);
     prepare_abi(ee, (uint64_t)ee.vu0);
     call_abi_func(ee, (uint64_t)&vu_flush_pipes);
 
@@ -183,7 +182,6 @@ void EE_JIT64::vabs(EmotionEngine& ee, IR::Instruction& instr)
 
 void EE_JIT64::vadd_vectors(EmotionEngine& ee, IR::Instruction& instr)
 {
-    wait_for_vu0(ee, instr);
     prepare_abi(ee, (uint64_t)ee.vu0);
     call_abi_func(ee, (uint64_t)&vu_flush_pipes);
 
@@ -215,7 +213,6 @@ void EE_JIT64::vadd_vectors(EmotionEngine& ee, IR::Instruction& instr)
 
 void EE_JIT64::vmul_vectors(EmotionEngine& ee, IR::Instruction& instr)
 {
-    wait_for_vu0(ee, instr);
     prepare_abi(ee, (uint64_t)ee.vu0);
     call_abi_func(ee, (uint64_t)&vu_flush_pipes);
 
@@ -247,7 +244,6 @@ void EE_JIT64::vmul_vectors(EmotionEngine& ee, IR::Instruction& instr)
 
 void EE_JIT64::vsub_vectors(EmotionEngine& ee, IR::Instruction& instr)
 {
-    wait_for_vu0(ee, instr);
     prepare_abi(ee, (uint64_t)ee.vu0);
     call_abi_func(ee, (uint64_t)&vu_flush_pipes);
 
