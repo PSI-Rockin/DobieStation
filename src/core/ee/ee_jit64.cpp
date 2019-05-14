@@ -75,8 +75,11 @@ uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee)
 
     if (ee.cp0->get_tlb_modified(ee.PC / 4096))
     {
-        if (recompiledBlock != nullptr)
-            jit.cache.free_block(BlockState{ ee.PC, 0, 0, 0, 0 });
+        // TODO: Cleaner way of clearing entire page of blocks
+        for (int i = 0; i < 4096; i += 4)
+        {
+            jit.cache.free_block(BlockState{ ee.PC / 4096 * 4096 + i, 0, 0, 0, 0 });
+        }
         is_modified = true;
         ee.cp0->clear_tlb_modified(ee.PC / 4096);
     }
@@ -135,8 +138,6 @@ void EE_JIT64::recompile_block(EmotionEngine& ee, IR::Block& block)
         IR::Instruction instr = block.get_next_instr();
         emit_instruction(ee, instr);
     }
-
-
 
     if (likely_branch)
         handle_branch_likely(ee, block);
@@ -376,6 +377,18 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             break;
         case IR::Opcode::OrReg:
             or_reg(ee, instr);
+            break;
+        case IR::Opcode::ParallelAnd:
+            parallel_and(ee, instr);
+            break;
+        case IR::Opcode::ParallelNor:
+            parallel_nor(ee, instr);
+            break;
+        case IR::Opcode::ParallelOr:
+            parallel_or(ee, instr);
+            break;
+        case IR::Opcode::ParallelXor:
+            parallel_xor(ee, instr);
             break;
         case IR::Opcode::SetOnLessThan:
             set_on_less_than(ee, instr);

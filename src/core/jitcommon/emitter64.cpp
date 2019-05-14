@@ -1406,6 +1406,28 @@ void Emitter64::PAND_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t
         cache->write<uint32_t>(offset);
 }
 
+void Emitter64::PANDN_XMM(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0xDF);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
+void Emitter64::PANDN_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t offset)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, indir_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0xDF);
+    modrm(0, xmm_dest, indir_source);
+    if ((indir_source & 7) == 4)
+        cache->write<uint8_t>(0x24);
+    if ((indir_source & 7) == 5 || offset)
+        cache->write<uint32_t>(offset);
+}
+
 void Emitter64::PEXTRQ_XMM(uint8_t imm, REG_64 xmm_source, REG_64 dest)
 {
     cache->write<uint8_t>(0x66);
@@ -1469,6 +1491,28 @@ void Emitter64::PMINUD_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32
     cache->write<uint8_t>(0x0F);
     cache->write<uint8_t>(0x38);
     cache->write<uint8_t>(0x3B);
+    modrm(0, xmm_dest, indir_source);
+    if ((indir_source & 7) == 4)
+        cache->write<uint8_t>(0x24);
+    if ((indir_source & 7) == 5 || offset)
+        cache->write<uint32_t>(offset);
+}
+
+void Emitter64::POR_XMM(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0xEB);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
+void Emitter64::POR_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t offset)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, indir_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0xEB);
     modrm(0, xmm_dest, indir_source);
     if ((indir_source & 7) == 4)
         cache->write<uint8_t>(0x24);

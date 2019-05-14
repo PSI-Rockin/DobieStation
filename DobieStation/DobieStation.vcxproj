@@ -209,6 +209,7 @@
     <ClCompile Include="..\src\core\ee\ee_jit64_fpu.cpp" />
     <ClCompile Include="..\src\core\ee\ee_jit64_fpu_avx.cpp" />
     <ClCompile Include="..\src\core\ee\ee_jit64_gpr.cpp" />
+    <ClCompile Include="..\src\core\ee\ee_jit64_mmi.cpp" />
     <ClCompile Include="..\src\core\ee\ee_jittrans.cpp" />
     <ClCompile Include="..\src\core\iop\cso_reader.cpp" />
     <ClCompile Include="..\src\core\tests\iop\alu.cpp" />

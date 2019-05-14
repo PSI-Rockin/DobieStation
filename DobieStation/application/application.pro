@@ -95,6 +95,7 @@ SOURCES += ../../src/qt/main.cpp \
     ../../src/core/ee/ee_jittrans.cpp \
     ../../src/core/ee/ee_jit.cpp \
     ../../src/core/ee/ee_jit64.cpp \
+    ../../src/core/ee/ee_jit64_mmi.cpp \
     ../../src/core/ee/ee_jit64_cop2.cpp \
     ../../src/core/ee/ee_jit64_fpu.cpp \
     ../../src/core/ee/ee_jit64_fpu_avx.cpp \

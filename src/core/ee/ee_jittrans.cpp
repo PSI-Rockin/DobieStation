@@ -2166,16 +2166,30 @@ void EE_JitTranslator::translate_op_mmi2(uint32_t opcode, uint32_t PC, std::vect
             break;
         case 0x12:
             // PAND
-            Errors::print_warning("[EE_JIT] Unrecognized mmi2 op PAND\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::ParallelAnd;
             instrs.push_back(instr);
             break;
+        }
         case 0x13:
             // PXOR
-            Errors::print_warning("[EE_JIT] Unrecognized mmi2 op PXOR\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >>16) & 0x1F;
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::ParallelXor;
             instrs.push_back(instr);
             break;
+        }
         case 0x14:
             // PMSUBH
             Errors::print_warning("[EE_JIT] Unrecognized mmi2 op PMSUBH\n", op);
@@ -2286,16 +2300,30 @@ void EE_JitTranslator::translate_op_mmi3(uint32_t opcode, uint32_t PC, std::vect
             break;
         case 0x12:
             // POR
-            Errors::print_warning("[EE_JIT] Unrecognized mmi3 op POR\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::ParallelOr;
             instrs.push_back(instr);
             break;
+        }
         case 0x13:
             // PNOR
-            Errors::print_warning("[EE_JIT] Unrecognized mmi3 op PNOR\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::ParallelNor;
             instrs.push_back(instr);
             break;
+        }
         case 0x1A:
             // PEXCH
             Errors::print_warning("[EE_JIT] Unrecognized mmi3 op PEXCH\n", op);

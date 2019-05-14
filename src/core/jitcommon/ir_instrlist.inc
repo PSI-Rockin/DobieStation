@@ -1,5 +1,10 @@
 INSTR(Null)
 
+INSTR(ParallelAnd)
+INSTR(ParallelNor)
+INSTR(ParallelOr)
+INSTR(ParallelXor)
+
 INSTR(ShiftLeftLogical)
 INSTR(ShiftLeftLogicalVariable)
 INSTR(ShiftRightArithmetic)
