@@ -235,6 +235,9 @@ class Emitter64
         void PAND_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t offset = 0);
         void PANDN_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void PANDN_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t offset = 0);
+        void PCMPEQB_XMM(REG_64 xmm_source, REG_64 xmm_dest);
+        void PCMPEQD_XMM(REG_64 xmm_source, REG_64 xmm_dest);
+        void PCMPEQW_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void PEXTRQ_XMM(uint8_t imm, REG_64 xmm_source, REG_64 dest); // SSE 4.1
         void PINSRQ_XMM(uint8_t imm, REG_64 source, REG_64 xmm_dest); // SSE 4.1
         void PMAXSD_XMM(REG_64 xmm_source, REG_64 xmm_dest);

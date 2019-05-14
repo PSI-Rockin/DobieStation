@@ -2170,6 +2170,11 @@ void EE_JitTranslator::translate_op_mmi2(uint32_t opcode, uint32_t PC, std::vect
             uint8_t dest = (opcode >> 11) & 0x1F;
             uint8_t source = (opcode >> 21) & 0x1F;
             uint8_t source2 = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                // NOP
+                break;
+            }
             instr.set_dest(dest);
             instr.set_source(source);
             instr.set_source2(source2);
@@ -2183,6 +2188,11 @@ void EE_JitTranslator::translate_op_mmi2(uint32_t opcode, uint32_t PC, std::vect
             uint8_t dest = (opcode >> 11) & 0x1F;
             uint8_t source = (opcode >> 21) & 0x1F;
             uint8_t source2 = (opcode >>16) & 0x1F;
+            if (!dest)
+            {
+                // NOP
+                break;
+            }
             instr.set_dest(dest);
             instr.set_source(source);
             instr.set_source2(source2);
@@ -2304,6 +2314,11 @@ void EE_JitTranslator::translate_op_mmi3(uint32_t opcode, uint32_t PC, std::vect
             uint8_t dest = (opcode >> 11) & 0x1F;
             uint8_t source = (opcode >> 21) & 0x1F;
             uint8_t source2 = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                // NOP
+                break;
+            }
             instr.set_dest(dest);
             instr.set_source(source);
             instr.set_source2(source2);
@@ -2317,6 +2332,11 @@ void EE_JitTranslator::translate_op_mmi3(uint32_t opcode, uint32_t PC, std::vect
             uint8_t dest = (opcode >> 11) & 0x1F;
             uint8_t source = (opcode >> 21) & 0x1F;
             uint8_t source2 = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                // NOP
+                break;
+            }
             instr.set_dest(dest);
             instr.set_source(source);
             instr.set_source2(source2);

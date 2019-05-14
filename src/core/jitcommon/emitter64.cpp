@@ -1428,6 +1428,33 @@ void Emitter64::PANDN_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_
         cache->write<uint32_t>(offset);
 }
 
+void Emitter64::PCMPEQB_XMM(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x74);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
+void Emitter64::PCMPEQD_XMM(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x76);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
+void Emitter64::PCMPEQW_XMM(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x75);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
 void Emitter64::PEXTRQ_XMM(uint8_t imm, REG_64 xmm_source, REG_64 dest)
 {
     cache->write<uint8_t>(0x66);

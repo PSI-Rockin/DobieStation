@@ -26,6 +26,7 @@ void EE_JIT64::parallel_nor(EmotionEngine& ee, IR::Instruction& instr)
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
     REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
     REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
+    REG_64 XMM0 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
 
     if (dest == source)
     {
@@ -41,13 +42,11 @@ void EE_JIT64::parallel_nor(EmotionEngine& ee, IR::Instruction& instr)
         emitter.POR_XMM(source2, dest);
     }
 
-    // No PNOT...?
-    emitter.PEXTRQ_XMM(0, dest, REG_64::RAX);
-    emitter.NOT64(REG_64::RAX);
-    emitter.PINSRQ_XMM(0, REG_64::RAX, dest);
-    emitter.PEXTRQ_XMM(1, dest, REG_64::RAX);
-    emitter.NOT64(REG_64::RAX);
-    emitter.PINSRQ_XMM(1, REG_64::RAX, dest);
+    // Bitwise NOT of destination register
+    emitter.PCMPEQD_XMM(XMM0, XMM0);
+    emitter.PXOR_XMM(XMM0, dest);
+
+    free_xmm_reg(ee, XMM0);
 }
 
 void EE_JIT64::parallel_or(EmotionEngine& ee, IR::Instruction& instr)
