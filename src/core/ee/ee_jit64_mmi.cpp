@@ -70,6 +70,78 @@ void EE_JIT64::parallel_or(EmotionEngine& ee, IR::Instruction& instr)
     }
 }
 
+void EE_JIT64::parallel_pack_to_byte(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
+    REG_64 XMM0 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
+
+    for (int i = 0; i < 8; ++i)
+    {
+        emitter.PEXTRB_XMM(i * 2, source, REG_64::RAX);
+        emitter.PINSRB_XMM(8 + i, REG_64::RAX, XMM0);
+    }
+
+    for (int i = 0; i < 8; ++i)
+    {
+        emitter.PEXTRB_XMM(i * 2, source2, REG_64::RAX);
+        emitter.PINSRB_XMM(i, REG_64::RAX, XMM0);
+    }
+
+    emitter.MOVAPS_REG(XMM0, dest);
+
+    free_xmm_reg(ee, XMM0);
+}
+
+void EE_JIT64::parallel_pack_to_halfword(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
+    REG_64 XMM0 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
+
+    for (int i = 0; i < 4; ++i)
+    {
+        emitter.PEXTRW_XMM(i * 2, source, REG_64::RAX);
+        emitter.PINSRB_XMM(4 + i, REG_64::RAX, XMM0);
+    }
+
+    for (int i = 0; i < 4; ++i)
+    {
+        emitter.PEXTRB_XMM(i * 2, source2, REG_64::RAX);
+        emitter.PINSRB_XMM(i, REG_64::RAX, XMM0);
+    }
+
+    emitter.MOVAPS_REG(XMM0, dest);
+
+    free_xmm_reg(ee, XMM0);
+}
+
+void EE_JIT64::parallel_pack_to_word(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
+    REG_64 XMM0 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
+
+    for (int i = 0; i < 2; ++i)
+    {
+        emitter.PEXTRD_XMM(i * 2, source, REG_64::RAX);
+        emitter.PINSRD_XMM(2 + i, REG_64::RAX, XMM0);
+    }
+
+    for (int i = 0; i < 2; ++i)
+    {
+        emitter.PEXTRD_XMM(i * 2, source2, REG_64::RAX);
+        emitter.PINSRD_XMM(i, REG_64::RAX, XMM0);
+    }
+
+    emitter.MOVAPS_REG(XMM0, dest);
+
+    free_xmm_reg(ee, XMM0);
+}
+
 void EE_JIT64::parallel_xor(EmotionEngine& ee, IR::Instruction& instr)
 {
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);

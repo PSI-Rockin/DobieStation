@@ -390,6 +390,15 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::ParallelXor:
             parallel_xor(ee, instr);
             break;
+        case IR::Opcode::ParallelPackToByte:
+            parallel_pack_to_byte(ee, instr);
+            break;
+        case IR::Opcode::ParallelPackToHalfword:
+            parallel_pack_to_halfword(ee, instr);
+            break;
+        case IR::Opcode::ParallelPackToWord:
+            parallel_pack_to_word(ee, instr);
+            break;
         case IR::Opcode::SetOnLessThan:
             set_on_less_than(ee, instr);
             break;

@@ -236,10 +236,16 @@ class Emitter64
         void PANDN_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void PANDN_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t offset = 0);
         void PCMPEQB_XMM(REG_64 xmm_source, REG_64 xmm_dest);
-        void PCMPEQD_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void PCMPEQW_XMM(REG_64 xmm_source, REG_64 xmm_dest);
-        void PEXTRQ_XMM(uint8_t imm, REG_64 xmm_source, REG_64 dest); // SSE 4.1
-        void PINSRQ_XMM(uint8_t imm, REG_64 source, REG_64 xmm_dest); // SSE 4.1
+        void PCMPEQD_XMM(REG_64 xmm_source, REG_64 xmm_dest);
+        void PEXTRB_XMM(uint8_t imm, REG_64 xmm_source, REG_64 dest);
+        void PEXTRW_XMM(uint8_t imm, REG_64 xmm_source, REG_64 dest);
+        void PEXTRD_XMM(uint8_t imm, REG_64 xmm_source, REG_64 dest);
+        void PEXTRQ_XMM(uint8_t imm, REG_64 xmm_source, REG_64 dest);
+        void PINSRB_XMM(uint8_t imm, REG_64 source, REG_64 xmm_dest);
+        void PINSRW_XMM(uint8_t imm, REG_64 source, REG_64 xmm_dest);
+        void PINSRD_XMM(uint8_t imm, REG_64 source, REG_64 xmm_dest);
+        void PINSRQ_XMM(uint8_t imm, REG_64 source, REG_64 xmm_dest);
         void PMAXSD_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void PMINSD_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void PMINSD_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t offset = 0);

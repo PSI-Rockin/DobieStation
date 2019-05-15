@@ -45,10 +45,10 @@ class EE_JIT64;
 // build after marking them const throws an access violation.
 // You'll have to ask the guys who made the C++ standard why that happens,
 // but please don't touch! - Souzooka
-static uint32_t FPU_MASK_ABS[4] = { 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF };
-static uint32_t FPU_MASK_NEG[4] = { 0x80000000, 0x80000000, 0x80000000, 0x80000000 };
-static uint32_t max_flt_constant[4] = { 0x7F7FFFFF, 0x7F7FFFFF, 0x7F7FFFFF, 0x7F7FFFFF };
-static uint32_t min_flt_constant[4] = { 0xFF7FFFFF, 0xFF7FFFFF, 0xFF7FFFFF, 0xFF7FFFFF };
+alignas(16) static uint32_t FPU_MASK_ABS[4] = { 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF, 0x7FFFFFFF };
+alignas(16) static uint32_t FPU_MASK_NEG[4] = { 0x80000000, 0x80000000, 0x80000000, 0x80000000 };
+alignas(16) static uint32_t max_flt_constant[4] = { 0x7F7FFFFF, 0x7F7FFFFF, 0x7F7FFFFF, 0x7F7FFFFF };
+alignas(16) static uint32_t min_flt_constant[4] = { 0xFF7FFFFF, 0xFF7FFFFF, 0xFF7FFFFF, 0xFF7FFFFF };
 
 extern "C" uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee);
 
@@ -156,6 +156,9 @@ private:
     void parallel_nor(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_or(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_xor(EmotionEngine& ee, IR::Instruction& instr);
+    void parallel_pack_to_byte(EmotionEngine& ee, IR::Instruction& instr);
+    void parallel_pack_to_halfword(EmotionEngine& ee, IR::Instruction& instr);
+    void parallel_pack_to_word(EmotionEngine& ee, IR::Instruction& instr);
     void set_on_less_than(EmotionEngine& ee, IR::Instruction& instr);
     void set_on_less_than_unsigned(EmotionEngine& ee, IR::Instruction& instr);
     void set_on_less_than_immediate(EmotionEngine& ee, IR::Instruction& instr);

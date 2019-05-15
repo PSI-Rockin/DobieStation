@@ -1455,6 +1455,38 @@ void Emitter64::PCMPEQW_XMM(REG_64 xmm_source, REG_64 xmm_dest)
     modrm(0b11, xmm_dest, xmm_source);
 }
 
+void Emitter64::PEXTRB_XMM(uint8_t imm, REG_64 xmm_source, REG_64 dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_source, dest);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x3A);
+    cache->write<uint8_t>(0x14);
+    modrm(0b11, xmm_source, dest);
+    cache->write<uint8_t>(imm);
+}
+
+void Emitter64::PEXTRW_XMM(uint8_t imm, REG_64 xmm_source, REG_64 dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_source, dest);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0xC5);
+    modrm(0b11, xmm_source, dest);
+    cache->write<uint8_t>(imm);
+}
+
+void Emitter64::PEXTRD_XMM(uint8_t imm, REG_64 xmm_source, REG_64 dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_source, dest);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x3A);
+    cache->write<uint8_t>(0x16);
+    modrm(0b11, xmm_source, dest);
+    cache->write<uint8_t>(imm);
+}
+
 void Emitter64::PEXTRQ_XMM(uint8_t imm, REG_64 xmm_source, REG_64 dest)
 {
     cache->write<uint8_t>(0x66);
@@ -1463,6 +1495,38 @@ void Emitter64::PEXTRQ_XMM(uint8_t imm, REG_64 xmm_source, REG_64 dest)
     cache->write<uint8_t>(0x3A);
     cache->write<uint8_t>(0x16);
     modrm(0b11, xmm_source, dest);
+    cache->write<uint8_t>(imm);
+}
+
+void Emitter64::PINSRB_XMM(uint8_t imm, REG_64 source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x3A);
+    cache->write<uint8_t>(0x20);
+    modrm(0b11, xmm_dest, source);
+    cache->write<uint8_t>(imm);
+}
+
+void Emitter64::PINSRW_XMM(uint8_t imm, REG_64 source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0xC4);
+    modrm(0b11, xmm_dest, source);
+    cache->write<uint8_t>(imm);
+}
+
+void Emitter64::PINSRD_XMM(uint8_t imm, REG_64 source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x3A);
+    cache->write<uint8_t>(0x22);
+    modrm(0b11, xmm_dest, source);
     cache->write<uint8_t>(imm);
 }
 
