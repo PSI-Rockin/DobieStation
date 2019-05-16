@@ -312,6 +312,12 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::LoadDoubleword:
             load_doubleword(ee, instr);
             break;
+        case IR::Opcode::LoadDoublewordLeft:
+            load_doubleword_left(ee, instr);
+            break;
+        case IR::Opcode::LoadDoublewordRight:
+            load_doubleword_right(ee, instr);
+            break;
         case IR::Opcode::LoadHalfword:
             load_halfword(ee, instr);
             break;
@@ -323,6 +329,12 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             break;
         case IR::Opcode::LoadWordCoprocessor1:
             load_word_coprocessor1(ee, instr);
+            break;
+        case IR::Opcode::LoadWordLeft:
+            load_word_left(ee, instr);
+            break;
+        case IR::Opcode::LoadWordRight:
+            load_word_right(ee, instr);
             break;
         case IR::Opcode::LoadWordUnsigned:
             load_word_unsigned(ee, instr);

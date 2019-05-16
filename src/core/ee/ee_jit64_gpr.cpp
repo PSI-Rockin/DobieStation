@@ -740,6 +740,85 @@ void EE_JIT64::load_doubleword(EmotionEngine& ee, IR::Instruction &instr)
     emitter.MOV64_MR(REG_64::RAX, dest);
 }
 
+void EE_JIT64::load_doubleword_left(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 RCX = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD, REG_64::RCX);
+    REG_64 addr = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPR, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPR, REG_STATE::READ_WRITE);
+
+    int64_t offset = instr.get_source2();
+
+    if (offset)
+        emitter.LEA32_M(source, addr, offset);
+    else
+        emitter.MOV32_REG(source, addr);
+    emitter.ADD64_REG_IMM(-0x10, REG_64::RSP);
+    emitter.MOV32_TO_MEM(addr, REG_64::RSP, 0);
+    emitter.AND32_REG_IMM(~0x7, addr);
+    prepare_abi(ee, (uint64_t)&ee);
+    prepare_abi_reg(ee, addr);
+    call_abi_func(ee, (uint64_t)ee_read64);
+    emitter.MOV32_FROM_MEM(REG_64::RSP, addr, 0);
+    emitter.ADD64_REG_IMM(0x10, REG_64::RSP);
+    emitter.AND32_REG_IMM(0x7, addr);
+    emitter.SHL32_REG_IMM(0x3, addr);
+    emitter.MOV32_REG_IMM(56, RCX);
+    emitter.SUB32_REG(addr, RCX);
+    emitter.SHL64_CL(REG_64::RAX);
+
+    emitter.SUB16_REG_IMM(64, REG_64::RCX);
+    emitter.NEG16(REG_64::RCX);
+    emitter.MOV32_REG_IMM(0x3F, addr);
+    emitter.CMP16_IMM(0x40, RCX);
+    emitter.CMOVCC16_REG(ConditionCode::E, addr, RCX);
+    emitter.SHL64_CL(dest);
+    emitter.SHR64_CL(dest);
+    emitter.OR64_REG(REG_64::RAX, dest);
+
+    free_int_reg(ee, RCX);
+    free_int_reg(ee, addr);
+}
+
+void EE_JIT64::load_doubleword_right(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 RCX = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD, REG_64::RCX);
+    REG_64 addr = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPR, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPR, REG_STATE::READ_WRITE);
+
+    int64_t offset = instr.get_source2();
+
+    if (offset)
+        emitter.LEA32_M(source, addr, offset);
+    else
+        emitter.MOV32_REG(source, addr);
+    emitter.ADD64_REG_IMM(-0x10, REG_64::RSP);
+    emitter.MOV32_TO_MEM(addr, REG_64::RSP, 0);
+    emitter.AND32_REG_IMM(~0x7, addr);
+    prepare_abi(ee, (uint64_t)&ee);
+    prepare_abi_reg(ee, addr);
+    call_abi_func(ee, (uint64_t)ee_read64);
+    emitter.MOV32_FROM_MEM(REG_64::RSP, addr, 0);
+    emitter.ADD64_REG_IMM(0x10, REG_64::RSP);
+    emitter.AND32_REG_IMM(0x7, addr);
+    emitter.SHL32_REG_IMM(0x3, addr);
+    emitter.MOV32_REG(addr, RCX);
+    emitter.SHR64_CL(REG_64::RAX);
+
+    emitter.SUB16_REG_IMM(64, RCX);
+    emitter.NEG16(RCX);
+    emitter.MOV32_REG_IMM(0x3F, addr);
+    emitter.CMP16_IMM(0x40, RCX);
+    emitter.CMOVCC16_REG(ConditionCode::E, addr, RCX);
+    emitter.SHR64_CL(dest);
+    emitter.SHL64_CL(dest);
+    emitter.OR64_REG(REG_64::RAX, dest);
+
+    free_int_reg(ee, RCX);
+    free_int_reg(ee, addr);
+}
+
 void EE_JIT64::load_halfword(EmotionEngine& ee, IR::Instruction &instr)
 {
     alloc_abi_regs(2);
@@ -810,6 +889,87 @@ void EE_JIT64::load_word(EmotionEngine& ee, IR::Instruction &instr)
 
     REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPR, REG_STATE::WRITE);
     emitter.MOVSX32_TO_64(REG_64::RAX, dest);
+}
+
+void EE_JIT64::load_word_left(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 RCX = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD, REG_64::RCX);
+    REG_64 addr = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPR, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPR, REG_STATE::READ_WRITE);
+
+    int64_t offset = instr.get_source2();
+
+    if (offset)
+        emitter.LEA32_M(source, addr, offset);
+    else
+        emitter.MOV32_REG(source, addr);
+    emitter.ADD64_REG_IMM(-0x10, REG_64::RSP);
+    emitter.MOV32_TO_MEM(addr, REG_64::RSP, 0);
+    emitter.AND32_REG_IMM(~0x3, addr);
+    prepare_abi(ee, (uint64_t)&ee);
+    prepare_abi_reg(ee, addr);
+    call_abi_func(ee, (uint64_t)ee_read32);
+    emitter.MOV32_FROM_MEM(REG_64::RSP, addr, 0);
+    emitter.ADD64_REG_IMM(0x10, REG_64::RSP);
+    emitter.AND32_REG_IMM(0x3, addr);
+    emitter.SHL32_REG_IMM(0x3, addr);
+    emitter.MOV32_REG_IMM(24, RCX);
+    emitter.SUB32_REG(addr, RCX);
+    emitter.SHL32_CL(REG_64::RAX);
+
+    emitter.SUB16_REG_IMM(32, REG_64::RCX);
+    emitter.NEG16(REG_64::RCX);
+    emitter.MOV32_REG_IMM(0x1F, addr);
+    emitter.CMP16_IMM(0x20, RCX);
+    emitter.CMOVCC16_REG(ConditionCode::E, addr, RCX);
+    emitter.SHL32_CL(dest);
+    emitter.SHR32_CL(dest);
+    emitter.OR32_REG(REG_64::RAX, dest);
+    emitter.MOVSX32_TO_64(dest, dest);
+
+    free_int_reg(ee, RCX);
+    free_int_reg(ee, addr);
+}
+
+void EE_JIT64::load_word_right(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 RCX = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD, REG_64::RCX);
+    REG_64 addr = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPR, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPR, REG_STATE::READ_WRITE);
+
+    int64_t offset = instr.get_source2();
+
+    if (offset)
+        emitter.LEA32_M(source, addr, offset);
+    else
+        emitter.MOV32_REG(source, addr);
+    emitter.ADD64_REG_IMM(-0x10, REG_64::RSP);
+    emitter.MOV32_TO_MEM(addr, REG_64::RSP, 0);
+    emitter.AND32_REG_IMM(~0x3, addr);
+    prepare_abi(ee, (uint64_t)&ee);
+    prepare_abi_reg(ee, addr);
+    call_abi_func(ee, (uint64_t)ee_read32);
+    emitter.MOV32_FROM_MEM(REG_64::RSP, addr, 0);
+    emitter.ADD64_REG_IMM(0x10, REG_64::RSP);
+    emitter.AND32_REG_IMM(0x3, addr);
+    emitter.SHL32_REG_IMM(0x3, addr);
+    emitter.MOV32_REG(addr, RCX);
+    emitter.SHR32_CL(REG_64::RAX);
+
+    emitter.SUB16_REG_IMM(32, REG_64::RCX);
+    emitter.NEG16(REG_64::RCX);
+    emitter.MOV32_REG_IMM(0x1F, addr);
+    emitter.CMP16_IMM(0x20, RCX);
+    emitter.CMOVCC16_REG(ConditionCode::E, addr, RCX);
+    emitter.SHR32_CL(dest);
+    emitter.SHL32_CL(dest);
+    emitter.OR32_REG(REG_64::RAX, dest);
+    emitter.MOVSX32_TO_64(dest, dest);
+
+    free_int_reg(ee, RCX);
+    free_int_reg(ee, addr);
 }
 
 void EE_JIT64::load_word_unsigned(EmotionEngine& ee, IR::Instruction &instr)

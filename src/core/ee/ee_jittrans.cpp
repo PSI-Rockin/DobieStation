@@ -457,16 +457,36 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
         }
         case 0x1A:
             // LDL
-            Errors::print_warning("[EE_JIT] Unrecognized op LDL\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                // NOP
+                break;
+            }
+            instr.op = IR::Opcode::LoadDoublewordLeft;
+            instr.set_dest(dest);
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_source2((int64_t)(int16_t)(opcode & 0xFFFF));
             instrs.push_back(instr);
             break;
+        }
         case 0x1B:
             // LDR
-            Errors::print_warning("[EE_JIT] Unrecognized op LDR\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                // NOP
+                break;
+            }
+            instr.op = IR::Opcode::LoadDoublewordRight;
+            instr.set_dest(dest);
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_source2((int64_t)(int16_t)(opcode & 0xFFFF));
             instrs.push_back(instr);
             break;
+        }
         case 0x1C:
             // MMI Operation
             translate_op_mmi(opcode, PC, instrs);
@@ -531,10 +551,20 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
         }
         case 0x22:
             // LWL
-            Errors::print_warning("[EE_JIT] Unrecognized op LWL\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                // NOP
+                break;
+            }
+            instr.op = IR::Opcode::LoadWordLeft;
+            instr.set_dest(dest);
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_source2((int64_t)(int16_t)(opcode & 0xFFFF));
             instrs.push_back(instr);
             break;
+        }
         case 0x23:
             // LW
         {
@@ -585,10 +615,20 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
         }
         case 0x26:
             // LWR
-            Errors::print_warning("[EE_JIT] Unrecognized op LWR\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                // NOP
+                break;
+            }
+            instr.op = IR::Opcode::LoadWordRight;
+            instr.set_dest(dest);
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_source2((int64_t)(int16_t)(opcode & 0xFFFF));
             instrs.push_back(instr);
             break;
+        }
         case 0x27:
             // LWU
         {

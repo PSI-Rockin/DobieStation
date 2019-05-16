@@ -128,10 +128,14 @@ private:
     void load_byte_unsigned(EmotionEngine& ee, IR::Instruction& instr);
     void load_const(EmotionEngine& ee, IR::Instruction &instr);
     void load_doubleword(EmotionEngine& ee, IR::Instruction& instr);
+    void load_doubleword_left(EmotionEngine& ee, IR::Instruction& instr);
+    void load_doubleword_right(EmotionEngine& ee, IR::Instruction& instr);
     void load_halfword(EmotionEngine& ee, IR::Instruction& instr);
     void load_halfword_unsigned(EmotionEngine& ee, IR::Instruction& instr);
     void load_word(EmotionEngine& ee, IR::Instruction& instr);
     void load_word_coprocessor1(EmotionEngine& ee, IR::Instruction& instr);
+    void load_word_left(EmotionEngine& ee, IR::Instruction& instr);
+    void load_word_right(EmotionEngine& ee, IR::Instruction& instr);
     void load_word_unsigned(EmotionEngine& ee, IR::Instruction& instr);
     void load_quadword(EmotionEngine& ee, IR::Instruction& instr);
     void load_quadword_coprocessor2(EmotionEngine& ee, IR::Instruction& instr);
