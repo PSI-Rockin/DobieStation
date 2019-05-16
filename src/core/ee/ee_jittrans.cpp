@@ -700,9 +700,8 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
         case 0x31:
             // LWC1
         {
-            uint8_t dest = (opcode >> 16) & 0x1F;
             instr.op = IR::Opcode::LoadWordCoprocessor1;
-            instr.set_dest(dest);
+            instr.set_dest((opcode >> 16) & 0x1F);
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_source2((int64_t)(int16_t)(opcode & 0xFFFF));
             instrs.push_back(instr);
@@ -750,10 +749,9 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
         case 0x39:
             // SWC1
         {
-            uint8_t dest = (opcode >> 16) & 0x1F;
             instr.op = IR::Opcode::StoreWordCoprocessor1;
-            instr.set_dest(dest);
-            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_dest((opcode >> 21) & 0x1F);
+            instr.set_source((opcode >> 16) & 0x1F);
             instr.set_source2((int64_t)(int16_t)(opcode & 0xFFFF));
             instrs.push_back(instr);
             break;
