@@ -490,7 +490,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             fallback_interpreter(ee, instr);
             break;
         default:
-            Errors::die("[EE_JIT64] Unknown IR instruction %d", instr.op);
+            Errors::print_warning("[EE_JIT64] Unknown IR instruction %d", instr.op);
+            fallback_interpreter(ee, instr);
+            break;
     }
 }
 
@@ -1254,7 +1256,7 @@ void EE_JIT64::fallback_interpreter(EmotionEngine& ee, const IR::Instruction &in
         xmm_regs[i].used = false;
     }
 
-    uint32_t instr_word = instr.get_source();
+    uint32_t instr_word = instr.get_opcode();
 
     prepare_abi(ee, reinterpret_cast<uint64_t>(&ee));
     prepare_abi(ee, instr_word);

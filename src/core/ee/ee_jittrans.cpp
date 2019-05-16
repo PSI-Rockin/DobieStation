@@ -27,7 +27,6 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
     branch_op = false;
     branch_delayslot = false;
     eret_op = false;
-    cop2_encountered = false;
     cycle_count = 0;
 
     while (!branch_delayslot && !eret_op)
@@ -38,7 +37,8 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
         if (branch_op)
             branch_delayslot = true;
 
-        branch_op = instrs.back().is_jump();
+        if (instrs.size())
+            branch_op = instrs.back().is_jump();
 
         pc += 4;
         cycle_count++;
@@ -57,6 +57,7 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
 {
     uint8_t op = opcode >> 26;
     IR::Instruction instr;
+    instr.set_opcode(opcode);
 
     switch (op)
     {
@@ -134,11 +135,9 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
         {
             uint8_t source = (opcode >> 21) & 0x1F;
             uint8_t source2 = (opcode >> 16) & 0x1F;
-
             if (source == source2)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
             if (!source)
@@ -202,11 +201,9 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
             int16_t immediate = opcode & 0xFFFF;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
-
             if (!source)
             {
                 instr.op = IR::Opcode::LoadConst;
@@ -215,7 +212,6 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
                 instrs.push_back(instr);
                 break;
             }
-
             instr.op = IR::Opcode::AddWordImm;
             instr.set_dest(dest);
             instr.set_source(source);
@@ -227,14 +223,11 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
             // SLTI
         {
             uint8_t dest = (opcode >> 16) & 0x1F;
-
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
-
             int64_t imm = (int16_t)(opcode & 0xFFFF);
             instr.op = IR::Opcode::SetOnLessThanImmediate;
             instr.set_dest(dest);
@@ -247,14 +240,11 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
             // SLTIU
         {
             uint8_t dest = (opcode >> 16) & 0x1F;
-
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
-
             int64_t imm = (int16_t)(opcode & 0xFFFF);
             instr.op = IR::Opcode::SetOnLessThanImmediateUnsigned;
             instr.set_dest(dest);
@@ -269,11 +259,9 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
             uint8_t dest = (opcode >> 16) & 0x1F;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
-
             instr.op = IR::Opcode::AndImm;
             instr.set_dest(dest);
             instr.set_source((opcode >> 21) & 0x1F);
@@ -287,11 +275,9 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
             uint8_t dest = (opcode >> 16) & 0x1F;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
-
             instr.op = IR::Opcode::OrImm;
             instr.set_dest((opcode >> 16) & 0x1F);
             instr.set_source((opcode >> 21) & 0x1F);
@@ -305,11 +291,9 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
             uint8_t dest = (opcode >> 16) & 0x1F;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
-
             instr.op = IR::Opcode::XorImm;
             instr.set_dest(dest);
             instr.set_source((opcode >> 21) & 0x1F);
@@ -323,11 +307,9 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
             uint8_t dest = (opcode >> 16) & 0x1F;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
-
             instr.op = IR::Opcode::LoadConst;
             instr.set_dest(dest);
             instr.set_source((int64_t)(int32_t)((opcode & 0xFFFF) << 16));
@@ -354,7 +336,6 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
         {
             uint8_t source = (opcode >> 21) & 0x1F;
             uint8_t source2 = (opcode >> 16) & 0x1F;
-
             if (!source)
             {
                 // BEQZL
@@ -377,7 +358,6 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
                 instrs.push_back(instr);
                 break;
             }
-
             instr.op = IR::Opcode::BranchEqual;
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_source2((opcode >> 16) & 0x1F);
@@ -392,11 +372,9 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
         {
             uint8_t source = (opcode >> 21) & 0x1F;
             uint8_t source2 = (opcode >> 16) & 0x1F;
-
             if (source == source2)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
             if (!source)
@@ -421,7 +399,6 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
                 instrs.push_back(instr);
                 break;
             }
-
             instr.op = IR::Opcode::BranchNotEqual;
             instr.set_source((opcode >> 21) & 0x1F);
             instr.set_source2((opcode >> 16) & 0x1F);
@@ -460,11 +437,9 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
             int16_t immediate = opcode & 0xFFFF;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
-
             if (!source)
             {
                 instr.op = IR::Opcode::LoadConst;
@@ -473,7 +448,6 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
                 instrs.push_back(instr);
                 break;
             }
-
             instr.op = IR::Opcode::AddDoublewordImm;
             instr.set_dest(dest);
             instr.set_source(source);
@@ -503,8 +477,7 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
             uint8_t dest = (opcode >> 16) & 0x1F;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
             instr.op = IR::Opcode::LoadQuadword;
@@ -530,8 +503,7 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
             uint8_t dest = (opcode >> 16) & 0x1F;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
             instr.op = IR::Opcode::LoadByte;
@@ -547,8 +519,7 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
             uint8_t dest = (opcode >> 16) & 0x1F;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
             instr.op = IR::Opcode::LoadHalfword;
@@ -570,8 +541,7 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
             uint8_t dest = (opcode >> 16) & 0x1F;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
             instr.op = IR::Opcode::LoadWord;
@@ -587,8 +557,7 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
             uint8_t dest = (opcode >> 16) & 0x1F;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
             instr.op = IR::Opcode::LoadByteUnsigned;
@@ -604,8 +573,7 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
             uint8_t dest = (opcode >> 16) & 0x1F;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
             instr.op = IR::Opcode::LoadHalfwordUnsigned;
@@ -627,8 +595,7 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
             uint8_t dest = (opcode >> 16) & 0x1F;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
             instr.op = IR::Opcode::LoadWordUnsigned;
@@ -718,8 +685,7 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
             uint8_t dest = (opcode >> 16) & 0x1F;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
             instr.op = IR::Opcode::LoadQuadwordCoprocessor2;
@@ -735,8 +701,7 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
             uint8_t dest = (opcode >> 16) & 0x1F;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
             instr.op = IR::Opcode::LoadDoubleword;
@@ -787,6 +752,7 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
 {
     uint8_t op = opcode & 0x3F;
     IR::Instruction instr;
+    instr.set_opcode(opcode);
 
     switch (op)
     {
@@ -796,11 +762,9 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
             uint8_t dest = (opcode >> 11) & 0x1F;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
-
             instr.op = IR::Opcode::ShiftLeftLogical;
             instr.set_dest(dest);
             instr.set_source((opcode >> 16) & 0x1F);
@@ -814,11 +778,9 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
             uint8_t dest = (opcode >> 11) & 0x1F;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
-
             instr.op = IR::Opcode::ShiftRightLogical;
             instr.set_dest(dest);
             instr.set_source((opcode >> 16) & 0x1F);
@@ -832,11 +794,9 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
             uint8_t dest = (opcode >> 11) & 0x1F;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
-
             instr.op = IR::Opcode::ShiftRightArithmetic;
             instr.set_dest(dest);
             instr.set_source((opcode >> 16) & 0x1F);
@@ -850,11 +810,9 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
             uint8_t dest = (opcode >> 11) & 0x1F;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
-
             instr.op = IR::Opcode::ShiftLeftLogicalVariable;
             instr.set_dest(dest);
             instr.set_source((opcode >> 16) & 0x1F);
@@ -868,11 +826,9 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
             uint8_t dest = (opcode >> 11) & 0x1F;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
-
             instr.op = IR::Opcode::ShiftRightLogicalVariable;
             instr.set_dest(dest);
             instr.set_source((opcode >> 16) & 0x1F);
@@ -886,11 +842,9 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
             uint8_t dest = (opcode >> 11) & 0x1F;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
-
             instr.op = IR::Opcode::ShiftRightArithmeticVariable;
             instr.set_dest(dest);
             instr.set_source((opcode >> 16) & 0x1F);
@@ -922,8 +876,7 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
             uint8_t source2 = (opcode >> 21) & 0x1F;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
             if (!source)
@@ -934,7 +887,6 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
                 instrs.push_back(instr);
                 break;
             }
-
             instr.op = IR::Opcode::MoveConditionalOnZero;
             instr.set_dest(dest);
             instr.set_source(source);
@@ -950,11 +902,9 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
             uint8_t source2 = (opcode >> 21) & 0x1F;
             if (!dest || !source)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
-
             instr.op = IR::Opcode::MoveConditionalOnNotZero;
             instr.set_dest(dest);
             instr.set_source(source);
@@ -1025,11 +975,9 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
             uint8_t dest = (opcode >> 11) & 0x1F;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
-
             instr.op = IR::Opcode::DoublewordShiftLeftLogicalVariable;
             instr.set_dest(dest);
             instr.set_source((opcode >> 16) & 0x1F);
@@ -1043,11 +991,9 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
             uint8_t dest = (opcode >> 11) & 0x1F;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
-
             instr.op = IR::Opcode::DoublewordShiftRightLogicalVariable;
             instr.set_dest(dest);
             instr.set_source((opcode >> 16) & 0x1F);
@@ -1061,11 +1007,9 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
             uint8_t dest = (opcode >> 11) & 0x1F;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
-
             instr.op = IR::Opcode::DoublewordShiftRightArithmeticVariable;
             instr.set_dest(dest);
             instr.set_source((opcode >> 16) & 0x1F);
@@ -1139,8 +1083,7 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
             }
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
             instr.op = IR::Opcode::AddWordReg;
@@ -1161,8 +1104,7 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
             uint8_t source2 = (opcode >> 16) & 0x1F;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
             if (!source)
@@ -1183,7 +1125,6 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
                 instrs.push_back(instr);
                 break;
             }
-
             instr.op = IR::Opcode::SubWordReg;
             instr.set_dest(dest);
             instr.set_source(source);
@@ -1199,8 +1140,7 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
             uint8_t source2 = (opcode >> 16) & 0x1F;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
             if (source == source2)
@@ -1211,7 +1151,6 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
                 instrs.push_back(instr);
                 break;
             }
-
             instr.op = IR::Opcode::AndReg;
             instr.set_dest(dest);
             instr.set_source(source);
@@ -1227,8 +1166,7 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
             uint8_t source2 = (opcode >> 16) & 0x1F;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
             if (source == source2)
@@ -1239,7 +1177,6 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
                 instrs.push_back(instr);
                 break;
             }
-
             instr.op = IR::Opcode::OrReg;
             instr.set_dest(dest);
             instr.set_source(source);
@@ -1255,8 +1192,7 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
             uint8_t source2 = (opcode >> 16) & 0x1F;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
             if (source == source2)
@@ -1266,7 +1202,6 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
                 instrs.push_back(instr);
                 break;
             }
-
             instr.op = IR::Opcode::XorReg;
             instr.set_dest(dest);
             instr.set_source(source);
@@ -1290,7 +1225,6 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
             {
                 // TODO: dest = (NOT)source
             }
-
             instr.op = IR::Opcode::NorReg;
             instr.set_dest(dest);
             instr.set_source(source);
@@ -1369,11 +1303,9 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
             }
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
-
             instr.op = IR::Opcode::AddDoublewordReg;
             instr.set_dest(dest);
             instr.set_source(source);
@@ -1392,8 +1324,7 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
             uint8_t source2 = (opcode >> 16) & 0x1F;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
             if (!source)
@@ -1413,7 +1344,6 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
                 instrs.push_back(instr);
                 break;
             }
-
             instr.op = IR::Opcode::SubDoublewordReg;
             instr.set_dest(dest);
             instr.set_source(source);
@@ -1433,11 +1363,9 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
             uint8_t dest = (opcode >> 11) & 0x1F;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
-
             instr.op = IR::Opcode::DoublewordShiftLeftLogical;
             instr.set_dest(dest);
             instr.set_source((opcode >> 16) & 0x1F);
@@ -1451,11 +1379,9 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
             uint8_t dest = (opcode >> 11) & 0x1F;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
-
             instr.op = IR::Opcode::DoublewordShiftRightLogical;
             instr.set_dest(dest);
             instr.set_source((opcode >> 16) & 0x1F);
@@ -1469,11 +1395,9 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
             uint8_t dest = (opcode >> 11) & 0x1F;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
-
             instr.op = IR::Opcode::DoublewordShiftRightArithmetic;
             instr.set_dest(dest);
             instr.set_source((opcode >> 16) & 0x1F);
@@ -1487,11 +1411,9 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
             uint8_t dest = (opcode >> 11) & 0x1F;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
-
             instr.op = IR::Opcode::DoublewordShiftLeftLogical;
             instr.set_dest(dest);
             instr.set_source((opcode >> 16) & 0x1F);
@@ -1505,11 +1427,9 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
             uint8_t dest = (opcode >> 11) & 0x1F;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
-
             instr.op = IR::Opcode::DoublewordShiftRightLogical;
             instr.set_dest(dest);
             instr.set_source((opcode >> 16) & 0x1F);
@@ -1523,11 +1443,9 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
             uint8_t dest = (opcode >> 11) & 0x1F;
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
-
             instr.op = IR::Opcode::DoublewordShiftRightArithmetic;
             instr.set_dest(dest);
             instr.set_source((opcode >> 16) & 0x1F);
@@ -1544,6 +1462,7 @@ void EE_JitTranslator::translate_op_regimm(uint32_t opcode, uint32_t PC, std::ve
 {
     uint8_t op = (opcode >> 16) & 0x1F;
     IR::Instruction instr;
+    instr.set_opcode(opcode);
 
     switch (op)
     {
@@ -1652,6 +1571,7 @@ void EE_JitTranslator::translate_op_mmi(uint32_t opcode, uint32_t PC, std::vecto
 {
     uint8_t op = opcode & 0x3F;
     IR::Instruction instr;
+    instr.set_opcode(opcode);
 
     switch (op)
     {
@@ -1805,6 +1725,7 @@ void EE_JitTranslator::translate_op_mmi0(uint32_t opcode, uint32_t PC, std::vect
 {
     uint8_t op = (opcode >> 6) & 0x1F;
     IR::Instruction instr;
+    instr.set_opcode(opcode);
 
     switch (op)
     {
@@ -2003,6 +1924,7 @@ void EE_JitTranslator::translate_op_mmi1(uint32_t opcode, uint32_t PC, std::vect
 {
     uint8_t op = (opcode >> 6) & 0x1F;
     IR::Instruction instr;
+    instr.set_opcode(opcode);
 
     switch (op)
     {
@@ -2123,6 +2045,7 @@ void EE_JitTranslator::translate_op_mmi2(uint32_t opcode, uint32_t PC, std::vect
 {
     uint8_t op = (opcode >> 6) & 0x1F;
     IR::Instruction instr;
+    instr.set_opcode(opcode);
 
     switch (op)
     {
@@ -2291,6 +2214,7 @@ void EE_JitTranslator::translate_op_mmi3(uint32_t opcode, uint32_t PC, std::vect
 {
     uint8_t op = (opcode >> 6) & 0x1F;
     IR::Instruction instr;
+    instr.set_opcode(opcode);
 
     switch (op)
     {
@@ -2405,6 +2329,7 @@ void EE_JitTranslator::translate_op_cop0(uint32_t opcode, uint32_t PC, std::vect
 {
     uint8_t op = (opcode >> 21) & 0x1F;
     IR::Instruction instr;
+    instr.set_opcode(opcode);
 
     switch (op)
     {
@@ -2444,6 +2369,7 @@ void EE_JitTranslator::translate_op_cop0_type2(uint32_t opcode, uint32_t PC, std
 {
     uint8_t op = opcode & 0x3F;
     IR::Instruction instr;
+    instr.set_opcode(opcode);
 
     switch (op)
     {
@@ -2483,6 +2409,7 @@ void EE_JitTranslator::translate_op_cop1(uint32_t opcode, uint32_t PC, std::vect
 {
     uint8_t op = (opcode >> 21) & 0x1F;
     IR::Instruction instr;
+    instr.set_opcode(opcode);
 
     switch (op)
     {
@@ -2553,6 +2480,7 @@ void EE_JitTranslator::translate_op_cop1_fpu(uint32_t opcode, uint32_t PC, std::
 {
     uint8_t op = opcode & 0x3F;
     IR::Instruction instr;
+    instr.set_opcode(opcode);
 
     switch (op)
     {
@@ -2637,8 +2565,7 @@ void EE_JitTranslator::translate_op_cop1_fpu(uint32_t opcode, uint32_t PC, std::
             uint8_t source = (opcode >> 11) & 0x1F;
             if (dest == source)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
             instr.op = IR::Opcode::MoveXmmReg;
@@ -2850,7 +2777,9 @@ void EE_JitTranslator::translate_op_cop2(uint32_t opcode, uint32_t PC, std::vect
         instr.set_return_addr(PC);
     instr.set_cycle_count(cycle_count);
     instr.op = IR::Opcode::WaitVU0;
+    instr.set_opcode(0);
     instrs.push_back(instr);
+    instr.set_opcode(opcode);
 
     switch (op)
     {
@@ -2915,6 +2844,7 @@ void EE_JitTranslator::translate_op_cop2_special(uint32_t opcode, uint32_t PC, s
 {
     uint8_t op = opcode & 0x3F;
     IR::Instruction instr;
+    instr.set_opcode(opcode);
 
     switch (op)
     {
@@ -3064,7 +2994,6 @@ void EE_JitTranslator::translate_op_cop2_special(uint32_t opcode, uint32_t PC, s
             instr.set_source(source);
             instr.set_source2(source2);
             instr.set_field(field);
-            instr.set_return_addr(PC);
             instr.op = IR::Opcode::VAddVectors;
             instrs.push_back(instr);
             break;
@@ -3086,7 +3015,6 @@ void EE_JitTranslator::translate_op_cop2_special(uint32_t opcode, uint32_t PC, s
             instr.set_source(source);
             instr.set_source2(source2);
             instr.set_field(field);
-            instr.set_return_addr(PC);
             instr.op = IR::Opcode::VMulVectors;
             instrs.push_back(instr);
             break;
@@ -3108,7 +3036,6 @@ void EE_JitTranslator::translate_op_cop2_special(uint32_t opcode, uint32_t PC, s
             instr.set_source(source);
             instr.set_source2(source2);
             instr.set_field(field);
-            instr.set_return_addr(PC);
             instr.op = IR::Opcode::VSubVectors;
             instrs.push_back(instr);
             break;
@@ -3168,7 +3095,6 @@ void EE_JitTranslator::translate_op_cop2_special(uint32_t opcode, uint32_t PC, s
             uint32_t imm = (opcode >> 6) & 0x7FFF;
             imm *= 8;
             instr.set_source(imm);
-            instr.set_return_addr(PC);
             instrs.push_back(instr);
             break;
         }
@@ -3176,7 +3102,6 @@ void EE_JitTranslator::translate_op_cop2_special(uint32_t opcode, uint32_t PC, s
             // VCALLMSR
         {
             instr.op = IR::Opcode::VCallMSR;
-            instr.set_return_addr(PC);
             instrs.push_back(instr);
             break;
         }
@@ -3196,6 +3121,7 @@ void EE_JitTranslator::translate_op_cop2_special2(uint32_t opcode, uint32_t PC, 
 {
     uint8_t op = opcode & 0x3F;
     IR::Instruction instr;
+    instr.set_opcode(opcode);
 
     switch (op)
     {
@@ -3307,8 +3233,7 @@ void EE_JitTranslator::translate_op_cop2_special2(uint32_t opcode, uint32_t PC, 
 
             if (!dest)
             {
-                instr.op = IR::Opcode::Null;
-                instrs.push_back(instr);
+                // NOP
                 break;
             }
 
@@ -3520,7 +3445,7 @@ void EE_JitTranslator::translate_op_cop2_special2(uint32_t opcode, uint32_t PC, 
 void EE_JitTranslator::fallback_interpreter(IR::Instruction& instr, uint32_t instr_word) const noexcept
 {
     instr.op = IR::Opcode::FallbackInterpreter;
-    instr.set_source(instr_word);
+    instr.set_opcode(instr_word);
 }
 
 /**

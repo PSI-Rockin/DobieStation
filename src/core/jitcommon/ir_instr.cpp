@@ -73,6 +73,11 @@ bool Instruction::get_is_link() const
     return is_link;
 }
 
+uint32_t Instruction::get_opcode() const
+{
+    return opcode;
+}
+
 void Instruction::set_jump_dest(uint32_t addr)
 {
     jump_dest = addr;
@@ -136,6 +141,11 @@ void Instruction::set_is_likely(bool value)
 void Instruction::set_is_link(bool value)
 {
     is_link = value;
+}
+
+void Instruction::set_opcode(uint32_t value)
+{
+    opcode = value;
 }
 
 bool Instruction::is_jump()
