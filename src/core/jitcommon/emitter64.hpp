@@ -209,6 +209,8 @@ class Emitter64
         void MOVAPS_REG(REG_64 xmm_source, REG_64 xmm_dest);
         void MOVAPS_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t offset = 0);
         void MOVAPS_TO_MEM(REG_64 xmm_source, REG_64 indir_dest, uint32_t offset = 0);
+        void MOVUPS_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t offset = 0);
+        void MOVUPS_TO_MEM(REG_64 xmm_source, REG_64 indir_dest, uint32_t offset = 0);
         void MOVMSKPS(REG_64 xmm_source, REG_64 dest);
 
         void SETCC_REG(ConditionCode cc, REG_64 dest);

@@ -5,6 +5,7 @@
 #include "ee_jittrans.hpp"
 #include "emotion.hpp"
 #include "vu.hpp"
+#include <stack>
 
 enum class REG_TYPE;
 
@@ -17,6 +18,12 @@ struct AllocReg
     int reg;
     REG_TYPE type;
     uint8_t needs_clamping;
+};
+
+enum class REG_TYPE_X86
+{
+    INT,
+    XMM
 };
 
 enum class REG_TYPE
@@ -61,6 +68,10 @@ private:
     Emitter64 emitter;
     EE_JitTranslator ir;
 
+    int sp_offset;
+    std::deque<REG_64> saved_int_regs;
+    std::deque<REG_64> saved_xmm_regs;
+    std::deque<REG_TYPE_X86> saved_reg_types;
     int abi_int_count;
     int abi_xmm_count;
 
@@ -205,13 +216,17 @@ private:
     void wait_for_vu0(EmotionEngine& ee, IR::Instruction& instr);
 
     // ABI prep/function call
-    void alloc_abi_regs(int count);
+    void alloc_abi_regs(EmotionEngine& ee, int count);
     void prepare_abi(EmotionEngine& ee, uint64_t value);
     void prepare_abi_xmm(EmotionEngine& ee, float value);
     void prepare_abi_reg(EmotionEngine& ee, REG_64 reg);
     void prepare_abi_reg_from_xmm(EmotionEngine& ee, REG_64 reg);
     void prepare_abi_xmm_reg(EmotionEngine& ee, REG_64 reg);
     void call_abi_func(EmotionEngine& ee, uint64_t addr);
+    void PUSHUPS(REG_64 reg);
+    void POPUPS(REG_64 reg);
+    void PUSH(REG_64 reg);
+    void POP(REG_64 reg);
 
     // Register alloc
     int search_for_register_priority(AllocReg *regs);
