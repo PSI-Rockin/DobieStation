@@ -167,7 +167,7 @@ HEADERS += \
     ../../src/qt/settingswindow.hpp \
     ../../src/qt/bios.hpp \
     ../../src/qt/gamelistwidget.hpp \
-    ../../src/core/ee/ee_jittrans.cpp \
-    ../../src/core/ee/ee_jit.cpp \
-    ../../src/core/ee/ee_jit64.cpp
+    ../../src/core/ee/ee_jittrans.hpp \
+    ../../src/core/ee/ee_jit.hpp \
+    ../../src/core/ee/ee_jit64.hpp
    
