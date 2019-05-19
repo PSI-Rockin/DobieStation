@@ -1802,10 +1802,23 @@ void GraphicsSynthesizerThread::jit_draw_pixel(int32_t x, int32_t y,
 #ifdef _MSC_VER
     //TODO
 #else
-    __asm__ volatile (
-        "callq *%4"
-                : "=X" (x), "=X" (y), "=X" (z), "=X" (color)
-                : "r" (jit_draw_pixel_func)
+    __asm__ volatile(
+        "pushq %%r12\n\t"
+        "pushq %%r13\n\t"
+        "pushq %%r14\n\t"
+        "pushq %%r15\n\t"
+        "mov %0, %%r12d\n\t"
+        "mov %1, %%r13d\n\t"
+        "mov %2, %%r14d\n\t"
+        "mov %3, %%r15\n\t"
+        "callq *%4\n\t"
+        "popq %%r15\n\t"
+        "popq %%r14\n\t"
+        "popq %%r13\n\t"
+        "popq %%r12"
+                :
+                : "r" (x), "r" (y), "r" (z), "X" (color), "r" (jit_draw_pixel_func)
+
     );
 #endif
 }
@@ -2237,13 +2250,19 @@ void GraphicsSynthesizerThread::render_sprite()
                 else
                     tex_lookup(pix_u >> 16, pix_v >> 16, tex_info);
 
-                //jit_draw_pixel(x, y, v2.z, tex_info.tex_color);
+#ifdef GS_JIT
+                jit_draw_pixel(x, y, v2.z, tex_info.tex_color);
+#else
                 draw_pixel(x, y, v2.z, tex_info.tex_color);
+#endif
             }
             else
             {
-                //jit_draw_pixel(x, y, v2.z, tex_info.tex_color);
+#ifdef GS_JIT
+                jit_draw_pixel(x, y, v2.z, tex_info.tex_color);
+#else
                 draw_pixel(x, y, v2.z, tex_info.vtx_color);
+#endif
             }
             pix_s += pix_s_step;
             pix_u += pix_u_step;
@@ -3378,27 +3397,11 @@ void GraphicsSynthesizerThread::recompile_draw_pixel(uint64_t state)
     emitter.PUSH(REG_64::RBP);
     emitter.MOV64_MR(REG_64::RSP, REG_64::RBP);
 
-    emitter.PUSH(R12);
-    emitter.PUSH(R13);
-    emitter.PUSH(R14);
-    emitter.PUSH(R15);
     emitter.PUSH(RBX);
     emitter.PUSH(RDI);
     emitter.PUSH(RSI);
 
-    //Store argument registers in nonvolatile registers
     //R12 = x  R13 = y  R14 = z  R15 = color
-#ifdef _WIN32
-    emitter.MOV64_MR(RCX, R12);
-    emitter.MOV64_MR(RDX, R13);
-    emitter.MOV64_MR(R8, R14);
-    emitter.MOV64_MR(R9, R15);
-#else
-    emitter.MOV64_MR(RSI, R12);
-    emitter.MOV64_MR(RDX, R13);
-    emitter.MOV64_MR(RCX, R14);
-    emitter.MOV64_MR(R8, R15);
-#endif
 
     //Shift x and y to the right by 4 (remove fractional component)
     emitter.SAR32_REG_IMM(4, R12);
@@ -3583,6 +3586,29 @@ void GraphicsSynthesizerThread::recompile_draw_pixel(uint64_t state)
     emitter.MOV64_MR(R12, RDX);
     emitter.MOV64_MR(R13, RCX);
 
+    //Get color: R14 = color in RGBA32 format
+    emitter.XOR64_REG(RAX, RAX);
+    emitter.XOR64_REG(R14, R14);
+
+    /*//R component
+    emitter.MOV16_FROM_MEM(R15, RAX);
+    emitter.OR64_REG(RAX, R14);
+
+    //G component
+    emitter.MOV16_FROM_MEM(R15, RAX, sizeof(int16_t) * 1);
+    emitter.SHL32_REG_IMM(8, RAX);
+    emitter.OR64_REG(RAX, R14);
+
+    //B component
+    emitter.MOV16_FROM_MEM(R15, RAX, sizeof(int16_t) * 2);
+    emitter.SHL32_REG_IMM(16, RAX);
+    emitter.OR64_REG(RAX, R14);*/
+
+    //A component
+    emitter.MOV16_FROM_MEM(R15, RAX, sizeof(int16_t) * 3);
+    emitter.SHL32_REG_IMM(24, RAX);
+    emitter.OR64_REG(RAX, R14);
+
     switch (current_ctx->frame.format)
     {
         case 0x00:
@@ -3590,10 +3616,9 @@ void GraphicsSynthesizerThread::recompile_draw_pixel(uint64_t state)
             emitter.CALL((uint64_t)&addr_PSMCT32);
             emitter.load_addr((uint64_t)local_mem, RCX);
             emitter.ADD64_REG(RAX, RCX);
-            emitter.MOV32_REG_IMM(0x80000000, RDX);
-            emitter.MOV32_TO_MEM(RDX, RCX);
+            emitter.MOV32_TO_MEM(R14, RCX);
             break;
-        case 0x01:
+        /*case 0x01:
             //PSMCT24
             emitter.CALL((uint64_t)&addr_PSMCT32);
             emitter.load_addr((uint64_t)local_mem, RCX);
@@ -3603,7 +3628,7 @@ void GraphicsSynthesizerThread::recompile_draw_pixel(uint64_t state)
             emitter.MOV32_REG_IMM(0x80808080, RAX);
             emitter.OR32_REG(RAX, RDX);
             emitter.MOV32_TO_MEM(RDX, RCX);
-            break;
+            break;*/
         default:
             Errors::die("[GS_t] Unrecognized frame format $%02X in recompile_draw_pixel", current_ctx->frame.format);
     }
@@ -3620,10 +3645,6 @@ void GraphicsSynthesizerThread::jit_epilogue_draw_pixel()
     emitter.POP(RSI);
     emitter.POP(RDI);
     emitter.POP(RBX);
-    emitter.POP(R15);
-    emitter.POP(R14);
-    emitter.POP(R13);
-    emitter.POP(R12);
     emitter.POP(RBP);
     emitter.RET();
 }
