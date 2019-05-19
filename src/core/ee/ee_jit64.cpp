@@ -320,12 +320,6 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::LoadDoubleword:
             load_doubleword(ee, instr);
             break;
-        case IR::Opcode::LoadDoublewordLeft:
-            load_doubleword_left(ee, instr);
-            break;
-        case IR::Opcode::LoadDoublewordRight:
-            load_doubleword_right(ee, instr);
-            break;
         case IR::Opcode::LoadHalfword:
             load_halfword(ee, instr);
             break;
@@ -337,12 +331,6 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             break;
         case IR::Opcode::LoadWordCoprocessor1:
             load_word_coprocessor1(ee, instr);
-            break;
-        case IR::Opcode::LoadWordLeft:
-            load_word_left(ee, instr);
-            break;
-        case IR::Opcode::LoadWordRight:
-            load_word_right(ee, instr);
             break;
         case IR::Opcode::LoadWordUnsigned:
             load_word_unsigned(ee, instr);
@@ -638,13 +626,6 @@ void EE_JIT64::call_abi_func(EmotionEngine& ee, uint64_t addr)
     for (int i = 0; i < abi_int_count; ++i)
         int_regs[abi_regs[i]].locked = false;
 
-    // PUSH saved xmm registers
-    for (int i = 0; i < 16; ++i)
-    {
-        if (xmm_regs[i].used)
-            PUSHUPS((REG_64)i);
-    }
-
     // PUSH saved int registers
     for (int i = 0; i < total_regs; i++)
     {
@@ -652,6 +633,12 @@ void EE_JIT64::call_abi_func(EmotionEngine& ee, uint64_t addr)
             PUSH(saved_regs[i]);
     }
 
+    for (int i = 0; i < 16; ++i)
+    {
+        if (xmm_regs[i].used)
+            flush_xmm_reg(ee, i);
+        xmm_regs[i].used = false;
+    }
 
 #ifdef _WIN32
     // x64 Windows requires a 32-byte "shadow region" to store the four argument registers when calling functions, even if not all are used
@@ -677,13 +664,6 @@ void EE_JIT64::call_abi_func(EmotionEngine& ee, uint64_t addr)
     {
         if (int_regs[saved_regs[i]].used)
             POP(saved_regs[i]);
-    }
-
-    // POP saved xmm registers
-    for (int i = 15; i >= 0; --i)
-    {
-        if (xmm_regs[i].used)
-            POPUPS((REG_64)i);
     }
 
     // POP registers saved in prepare_abi functions

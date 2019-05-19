@@ -1438,10 +1438,6 @@ void EE_JIT64::store_quadword(EmotionEngine& ee, IR::Instruction &instr)
     call_abi_func(ee, (uint64_t)ee_write128);
     free_int_reg(ee, addr);
     emitter.ADD64_REG_IMM(0x10, REG_64::RSP);
-    
-    // TODO
-    free_xmm_reg(ee, source);
-    xmm_regs[source].used = false;
 }
 
 void EE_JIT64::sub_doubleword_reg(EmotionEngine& ee, IR::Instruction &instr)
