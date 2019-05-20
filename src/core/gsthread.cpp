@@ -1802,7 +1802,7 @@ void GraphicsSynthesizerThread::jit_draw_pixel(int32_t x, int32_t y,
 #ifdef _MSC_VER
     //TODO
 #else
-    __asm__ volatile(
+    __asm__(
         "pushq %%r12\n\t"
         "pushq %%r13\n\t"
         "pushq %%r14\n\t"
@@ -2156,11 +2156,19 @@ void GraphicsSynthesizerThread::render_triangle()
                                     v = (uint32_t) temp_v;
                                 }
                                 tex_lookup(u, v, tex_info);
+#ifdef GS_JIT
+                                jit_draw_pixel(x, y, (uint32_t)z, tex_info.tex_color);
+#else
                                 draw_pixel(x, y, (uint32_t)z, tex_info.tex_color);
+#endif
                             }
                             else
                             {
+#ifdef GS_JIT
+                                jit_draw_pixel(x, y, (uint32_t)z, tex_info.vtx_color);
+#else
                                 draw_pixel(x, y, (uint32_t)z, tex_info.vtx_color);
+#endif
                             }
                         }
                         else
@@ -2259,7 +2267,7 @@ void GraphicsSynthesizerThread::render_sprite()
             else
             {
 #ifdef GS_JIT
-                jit_draw_pixel(x, y, v2.z, tex_info.tex_color);
+                jit_draw_pixel(x, y, v2.z, tex_info.vtx_color);
 #else
                 draw_pixel(x, y, v2.z, tex_info.vtx_color);
 #endif
@@ -3438,8 +3446,8 @@ void GraphicsSynthesizerThread::recompile_draw_pixel(uint64_t state)
         if (current_ctx->test.alpha_method != 0)
         {
             //Load alpha from color
-            emitter.XOR32_REG(RAX, RAX);
-            emitter.MOV16_FROM_MEM(R15, RAX, sizeof(int16_t) * 3);
+            emitter.MOV64_MR(R15, RAX);
+            emitter.SAR64_REG_IMM(48, RAX);
 
             //Compare alpha with REF
             emitter.CMP32_EAX(current_ctx->test.alpha_ref);
@@ -3590,24 +3598,28 @@ void GraphicsSynthesizerThread::recompile_draw_pixel(uint64_t state)
     emitter.XOR64_REG(RAX, RAX);
     emitter.XOR64_REG(R14, R14);
 
-    /*//R component
-    emitter.MOV16_FROM_MEM(R15, RAX);
-    emitter.OR64_REG(RAX, R14);
+    //R component
+    emitter.MOV64_MR(R15, RAX);
+    emitter.AND32_EAX(0xFF);
+    emitter.OR32_REG(RAX, R14);
 
     //G component
-    emitter.MOV16_FROM_MEM(R15, RAX, sizeof(int16_t) * 1);
-    emitter.SHL32_REG_IMM(8, RAX);
-    emitter.OR64_REG(RAX, R14);
+    emitter.MOV64_MR(R15, RAX);
+    emitter.SHR64_REG_IMM(16 - 8, RAX);
+    emitter.AND32_EAX(0xFF00);
+    emitter.OR32_REG(RAX, R14);
 
     //B component
-    emitter.MOV16_FROM_MEM(R15, RAX, sizeof(int16_t) * 2);
-    emitter.SHL32_REG_IMM(16, RAX);
-    emitter.OR64_REG(RAX, R14);*/
+    emitter.MOV64_MR(R15, RAX);
+    emitter.SHR64_REG_IMM(32 - 16, RAX);
+    emitter.AND32_EAX(0xFF0000);
+    emitter.OR32_REG(RAX, R14);
 
     //A component
-    emitter.MOV16_FROM_MEM(R15, RAX, sizeof(int16_t) * 3);
-    emitter.SHL32_REG_IMM(24, RAX);
-    emitter.OR64_REG(RAX, R14);
+    /*emitter.MOV64_MR(R15, RAX);
+    emitter.SHR64_REG_IMM(48 - 24, RAX);
+    emitter.AND32_EAX(0xFF000000);
+    emitter.OR32_REG(RAX, R14);*/
 
     switch (current_ctx->frame.format)
     {
@@ -3618,17 +3630,16 @@ void GraphicsSynthesizerThread::recompile_draw_pixel(uint64_t state)
             emitter.ADD64_REG(RAX, RCX);
             emitter.MOV32_TO_MEM(R14, RCX);
             break;
-        /*case 0x01:
+        case 0x01:
             //PSMCT24
             emitter.CALL((uint64_t)&addr_PSMCT32);
             emitter.load_addr((uint64_t)local_mem, RCX);
             emitter.ADD64_REG(RAX, RCX);
             emitter.MOV32_FROM_MEM(RCX, RDX);
             emitter.AND32_REG_IMM(0xFF000000, RDX);
-            emitter.MOV32_REG_IMM(0x80808080, RAX);
-            emitter.OR32_REG(RAX, RDX);
-            emitter.MOV32_TO_MEM(RDX, RCX);
-            break;*/
+            emitter.OR32_REG(RDX, R14);
+            emitter.MOV32_TO_MEM(R14, RCX);
+            break;
         default:
             Errors::die("[GS_t] Unrecognized frame format $%02X in recompile_draw_pixel", current_ctx->frame.format);
     }

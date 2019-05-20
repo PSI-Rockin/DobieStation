@@ -341,6 +341,7 @@ void Emitter64::CMP32_IMM(uint32_t imm, REG_64 op)
 
 void Emitter64::CMP32_REG(REG_64 op2, REG_64 op1)
 {
+    rex_r_rm(op2, op1);
     cache->write<uint8_t>(0x39);
     modrm(0b11, op2, op1);
 }
@@ -1275,12 +1276,12 @@ void Emitter64::MOVQ_TO_XMM(REG_64 source, REG_64 xmm_dest)
 
 void Emitter64::MOVSS_REG(REG_64 xmm_source, REG_64 xmm_dest)
 {
+    cache->write<uint8_t>(0xF3);
     rex_r_rm(xmm_source, xmm_dest);
     cache->write<uint8_t>(0x0F);
     cache->write<uint8_t>(0x11);
     modrm(0b11, xmm_source, xmm_dest);
 }
-
 
 void Emitter64::MOVAPS_REG(REG_64 xmm_source, REG_64 xmm_dest)
 {
