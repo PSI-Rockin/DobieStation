@@ -44,10 +44,8 @@ void EE_JIT64::reset(bool clear_cache)
 {
     abi_int_count = 0;
     abi_xmm_count = 0;
-    sp_offset = 0;
-    saved_int_regs = std::deque<REG_64>();
-    saved_xmm_regs = std::deque<REG_64>();
-    saved_reg_types = std::deque<REG_TYPE_X86>();
+    saved_int_regs = std::vector<REG_64>();
+    saved_xmm_regs = std::vector<REG_64>();
     for (int i = 0; i < 16; i++)
     {
         xmm_regs[i].used = false;
@@ -125,9 +123,9 @@ void EE_JIT64::recompile_block(EmotionEngine& ee, IR::Block& block)
     ee_branch = false;
     likely_branch = false;
     sp_offset = 0;
-    saved_int_regs = std::deque<REG_64>();
-    saved_xmm_regs = std::deque<REG_64>();
-    saved_reg_types = std::deque<REG_TYPE_X86>();
+    saved_int_regs = std::vector<REG_64>();
+    saved_xmm_regs = std::vector<REG_64>();
+
     cache.alloc_block(BlockState{ ee.get_PC(), 0, 0, 0, 0 });
 
     //Return the amount of cycles to update the EE with
@@ -138,8 +136,15 @@ void EE_JIT64::recompile_block(EmotionEngine& ee, IR::Block& block)
 #ifndef _MSC_VER
     emit_prologue();
 #endif
-    PUSH(REG_64::RBP);
+    emitter.PUSH(REG_64::RBP);
     emitter.MOV64_MR(REG_64::RSP, REG_64::RBP);
+
+    // Preallocate a chunk of stack space for storing registers during function calls, + some other utility
+    // RSP + 0h: 32 bytes of argument spillage for Windows
+    // RSP + 20h: uint64_t[16] for integer registers
+    // RSP + A0h: uint128_t[16] for xmm registers
+    // RSP + 1A0h: uint128_t for storing the argument/result of store/load quad
+    emitter.SUB64_REG_IMM(0x1B0, REG_64::RSP);
 
     while (block.get_instruction_count() > 0 && !likely_branch)
     {
@@ -335,12 +340,6 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::LoadWordUnsigned:
             load_word_unsigned(ee, instr);
             break;
-        case IR::Opcode::LoadQuadword:
-            load_quadword(ee, instr);
-            break;
-        case IR::Opcode::LoadQuadwordCoprocessor2:
-            load_quadword_coprocessor2(ee, instr);
-            break;
         case IR::Opcode::MoveConditionalOnNotZero:
             move_conditional_on_not_zero(ee, instr);
             break;
@@ -452,12 +451,6 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::StoreWordCoprocessor1:
             store_word_coprocessor1(ee, instr);
             break;
-        case IR::Opcode::StoreQuadword:
-            store_quadword(ee, instr);
-            break;
-        case IR::Opcode::StoreQuadwordCoprocessor2:
-            store_quadword_coprocessor2(ee, instr);
-            break;
         case IR::Opcode::SubDoublewordReg:
             sub_doubleword_reg(ee, instr);
             break;
@@ -545,12 +538,13 @@ void EE_JIT64::prepare_abi(EmotionEngine& ee, uint64_t value)
 
     if (int_regs[arg].used)
     {
-        PUSH(arg);
         saved_int_regs.push_back(arg);
-        saved_reg_types.push_back(REG_TYPE_X86::INT);
-        int_regs[arg].used = false;
+        // Note: The 0x20 here is the int register array offset noted in recompile_block
+        // TODO: Store 0x20 in some sort of constant
+        emitter.MOV64_TO_MEM(arg, REG_64::RSP, 0x20 + (int)arg * sizeof(uint64_t));
     }
-    emitter.load_addr(value, regs[abi_int_count]);
+    int_regs[arg].used = false;
+    emitter.load_addr(value, arg);
     abi_int_count++;
 }
 
@@ -571,14 +565,25 @@ void EE_JIT64::prepare_abi_reg(EmotionEngine& ee, REG_64 reg)
     REG_64 arg = regs[abi_int_count];
     int_regs[arg].locked = true;
 
-    if (int_regs[arg].used)
+    auto p = std::find(saved_int_regs.begin(), saved_int_regs.end(), reg);
+    if (p != saved_int_regs.end())
     {
-        PUSH(arg);
-        saved_int_regs.push_back(arg);
-        saved_reg_types.push_back(REG_TYPE_X86::INT);
-        int_regs[arg].used = false;
+        // The argument register was previously stored on the stack, so it's probably actually garbage.
+        // (e.g. on Unix preparing an immediate as a register (ex: 9 -> RDI), then using RDI as an argument)
+        // Here we restore it from the stack.
+        // Note: The 0x20 here is the int register array offset noted in recompile_block
+        // TODO: Store 0x20 in some sort of constant
+        emitter.MOV64_FROM_MEM(REG_64::RSP, arg, 0x20 + (int)reg * sizeof(uint64_t));
     }
-    if (reg != regs[abi_int_count])
+    else if (int_regs[arg].used)
+    {
+        saved_int_regs.push_back(arg);
+        // Note: The 0x20 here is the int register array offset noted in recompile_block
+        // TODO: Store 0x20 in some sort of constant
+        emitter.MOV64_TO_MEM(arg, REG_64::RSP, 0x20 + (int)arg * sizeof(uint64_t));
+    }
+    int_regs[arg].used = false;
+    if (reg != regs[abi_int_count] && p == saved_int_regs.end())
         emitter.MOV64_MR(reg, regs[abi_int_count]);
     abi_int_count++;
 }
@@ -602,11 +607,12 @@ void EE_JIT64::prepare_abi_reg_from_xmm(EmotionEngine& ee, REG_64 reg)
 
     if (int_regs[arg].used)
     {
-        PUSH(arg);
         saved_int_regs.push_back(arg);
-        saved_reg_types.push_back(REG_TYPE_X86::INT);
-        int_regs[arg].used = false;
+        // Note: The 0x20 here is the int register array offset noted in recompile_block
+        // TODO: Store 0x20 in some sort of constant
+        emitter.MOV64_TO_MEM(arg, REG_64::RSP, 0x20 + (int)arg * sizeof(uint64_t));
     }
+    int_regs[arg].used = false;
     emitter.MOVD_FROM_XMM(reg, arg);
     abi_int_count++;
 }
@@ -620,84 +626,67 @@ void EE_JIT64::call_abi_func(EmotionEngine& ee, uint64_t addr)
     const static REG_64 saved_regs[] = { RDI, RSI, RCX, RDX, R8, R9, R10, R11 };
     const static REG_64 abi_regs[] = { RDI, RSI, RDX, RCX, R8, R9 };
 #endif    
-    int total_regs = sizeof(saved_regs) / sizeof(REG_64);
-    int stack_offset = 0;
 
     for (int i = 0; i < abi_int_count; ++i)
         int_regs[abi_regs[i]].locked = false;
 
-    // PUSH saved int registers
-    for (int i = 0; i < total_regs; i++)
-    {
-        if (int_regs[saved_regs[i]].used)
-            PUSH(saved_regs[i]);
-    }
-
+    // Store any used XMM registers into the stack
     for (int i = 0; i < 16; ++i)
     {
         if (xmm_regs[i].used)
-            flush_xmm_reg(ee, i);
-        xmm_regs[i].used = false;
+        {
+            // Note: The 0xA0 here is the xmm register array offset noted in recompile_block
+            // TODO: Store 0xA0 in some sort of constant
+            emitter.MOVAPS_TO_MEM((REG_64)i, REG_64::RSP, 0xA0 + i * 16);
+        }
     }
 
-#ifdef _WIN32
-    // x64 Windows requires a 32-byte "shadow region" to store the four argument registers when calling functions, even if not all are used
-    stack_offset += 32;
-#endif
-
-    // Align stack pointer on 16-byte boundary
-    if (!(sp_offset & 8))
-        stack_offset += 8;
+    // Store any volatile INT registers into the stack
+    for (REG_64 reg : saved_regs)
+    {
+        if (int_regs[reg].used)
+        {
+            // Note: The 0x20 here is the int register array offset noted in recompile_block
+            // TODO: Store 0x20 in some sort of constant
+            emitter.MOV64_TO_MEM(reg, REG_64::RSP, 0x20 + (int)reg * sizeof(uint64_t));
+        }
+    }
 
     // Call function
-    REG_64 addrReg = REG_64::RAX;
-    emitter.MOV64_OI(addr, addrReg);
+    emitter.MOV64_OI(addr, REG_64::RAX);
+    emitter.CALL_INDIR(REG_64::RAX);
 
-    if (stack_offset)
-        emitter.SUB64_REG_IMM(stack_offset, REG_64::RSP);
-    emitter.CALL_INDIR(addrReg);
-    if (stack_offset)
-        emitter.ADD64_REG_IMM(stack_offset, REG_64::RSP);
-
-    // POP saved int registers
-    for (int i = total_regs - 1; i >= 0; --i)
+    // Restore any used XMM registers from the stack
+    for (int i = 0; i < 16; ++i)
     {
-        if (int_regs[saved_regs[i]].used)
-            POP(saved_regs[i]);
-    }
-
-    // POP registers saved in prepare_abi functions
-    while (!saved_reg_types.empty())
-    {
-        REG_TYPE_X86 type = saved_reg_types.back();
-
-        switch (type)
+        if (xmm_regs[i].used)
         {
-            case REG_TYPE_X86::INT:
-            {
-                REG_64 reg = saved_int_regs.back();
-                saved_int_regs.pop_back();
-                POP(reg);
-                int_regs[reg].used = true;
-                break;
-                
-            }
-            case REG_TYPE_X86::XMM:
-            {
-                REG_64 reg = saved_xmm_regs.back();
-                saved_xmm_regs.pop_back();
-                POPUPS(reg);
-                xmm_regs[reg].used = true;
-                break;
-            }
-            default:
-                break;
+            // Note: The 0xA0 here is the xmm register array offset noted in recompile_block
+            // TODO: Store 0xA0 in some sort of constant
+            emitter.MOVAPS_FROM_MEM(REG_64::RSP, (REG_64)i, 0xA0 + i * 16);
         }
-
-        saved_reg_types.pop_back();
     }
 
+    // Restore any used INT registers from the stack (+ those stored in prepare_abi functions)
+    for (REG_64 reg : saved_regs)
+    {
+        if (int_regs[reg].used)
+        {
+            // Note: The 0x20 here is the int register array offset noted in recompile_block
+            // TODO: Store 0x20 in some sort of constant
+            emitter.MOV64_FROM_MEM(REG_64::RSP, reg, 0x20 + (int)reg * sizeof(uint64_t));
+        }
+    }
+    for (REG_64 reg : saved_int_regs)
+    {
+        // Note: The 0x20 here is the int register array offset noted in recompile_block
+        // TODO: Store 0x20 in some sort of constant
+        emitter.MOV64_FROM_MEM(REG_64::RSP, reg, 0x20 + (int)reg * sizeof(uint64_t));
+        int_regs[reg].used = true;
+    }
 
+    saved_int_regs.clear();
+    saved_xmm_regs.clear();
     abi_int_count = 0;
     abi_xmm_count = 0;
 }
@@ -1227,6 +1216,7 @@ void EE_JIT64::cleanup_recompiler(EmotionEngine& ee, bool clear_regs)
     }
 
     //Epilogue
+    emitter.ADD64_REG_IMM(0x1B0, REG_64::RSP);
     emitter.POP(REG_64::RBP);
 #ifndef _MSC_VER
     emit_epilogue();
@@ -1348,38 +1338,6 @@ void EE_JIT64::wait_for_vu0(EmotionEngine& ee, IR::Instruction& instr)
     // Otherwise continue execution of block otherwise
     emitter.set_jump_dest(offset_addr);
     free_int_reg(ee, R15);
-}
-
-void EE_JIT64::PUSHUPS(REG_64 reg)
-{
-    emitter.SUB64_REG_IMM(0x10, REG_64::RSP);
-    if (sp_offset & 8)
-        emitter.MOVAPS_TO_MEM(reg, REG_64::RSP);
-    else
-        emitter.MOVUPS_TO_MEM(reg, REG_64::RSP);
-    sp_offset += 0x10;
-}
-
-void EE_JIT64::POPUPS(REG_64 reg)
-{
-    if (sp_offset & 8)
-        emitter.MOVAPS_FROM_MEM(REG_64::RSP, reg);
-    else
-        emitter.MOVUPS_FROM_MEM(REG_64::RSP, reg);
-    emitter.ADD64_REG_IMM(0x10, REG_64::RSP);
-    sp_offset -= 0x10;
-}
-
-void EE_JIT64::PUSH(REG_64 reg)
-{
-    sp_offset += 8;
-    emitter.PUSH(reg);
-}
-
-void EE_JIT64::POP(REG_64 reg)
-{
-    sp_offset -= 8;
-    emitter.POP(reg);
 }
 
 uint8_t ee_read8(EmotionEngine& ee, uint32_t addr)

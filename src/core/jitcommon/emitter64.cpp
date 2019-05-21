@@ -1304,7 +1304,10 @@ void Emitter64::MOVAPS_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t o
     rex_r_rm(xmm_dest, indir_source);
     cache->write<uint8_t>(0x0F);
     cache->write<uint8_t>(0x28);
-    modrm(0, xmm_dest, indir_source);
+    if ((indir_source & 7) == 5 || offset)
+        modrm(0b10, xmm_dest, indir_source);
+    else
+        modrm(0b0, xmm_dest, indir_source);
     if ((indir_source & 7) == 4)
         cache->write<uint8_t>(0x24);
     if ((indir_source & 7) == 5 || offset)
@@ -1316,7 +1319,10 @@ void Emitter64::MOVAPS_TO_MEM(REG_64 xmm_source, REG_64 indir_dest, uint32_t off
     rex_r_rm(xmm_source, indir_dest);
     cache->write<uint8_t>(0x0F);
     cache->write<uint8_t>(0x29);
-    modrm(0, xmm_source, indir_dest);
+    if ((indir_dest & 7) == 5 || offset)
+        modrm(0b10, xmm_source, indir_dest);
+    else
+        modrm(0b0, xmm_source, indir_dest);
     if ((indir_dest & 7) == 4)
         cache->write<uint8_t>(0x24);
     if ((indir_dest & 7) == 5 || offset)
@@ -1328,7 +1334,10 @@ void Emitter64::MOVUPS_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t o
     rex_r_rm(xmm_dest, indir_source);
     cache->write<uint8_t>(0x0F);
     cache->write<uint8_t>(0x10);
-    modrm(0, xmm_dest, indir_source);
+    if ((indir_source & 7) == 5 || offset)
+        modrm(0b10, xmm_dest, indir_source);
+    else
+        modrm(0b0, xmm_dest, indir_source);
     if ((indir_source & 7) == 4)
         cache->write<uint8_t>(0x24);
     if ((indir_source & 7) == 5 || offset)
@@ -1340,7 +1349,10 @@ void Emitter64::MOVUPS_TO_MEM(REG_64 xmm_source, REG_64 indir_dest, uint32_t off
     rex_r_rm(xmm_source, indir_dest);
     cache->write<uint8_t>(0x0F);
     cache->write<uint8_t>(0x11);
-    modrm(0, xmm_source, indir_dest);
+    if ((indir_dest & 7) == 5 || offset)
+        modrm(0b10, xmm_source, indir_dest);
+    else
+        modrm(0b0, xmm_source, indir_dest);
     if ((indir_dest & 7) == 4)
         cache->write<uint8_t>(0x24);
     if ((indir_dest & 7) == 5 || offset)

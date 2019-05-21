@@ -117,15 +117,17 @@ void EE_JIT64::store_quadword_coprocessor2(EmotionEngine& ee, IR::Instruction &i
 
     // Due to differences in how the uint128_t struct is passed as an argument on different platforms,
     // we simply allocate space for it on the stack and pass a pointer to our wrapper function.
-    emitter.SUB64_REG_IMM(0x10, REG_64::RSP);
-    emitter.MOVUPS_TO_MEM(source, REG_64::RSP);
+    // Note: The 0x1A0 here is the SQ/LQ uint128_t offset noted in recompile_block
+    // TODO: Store 0x1A0 in some sort of constant
+    emitter.MOVAPS_TO_MEM(source, REG_64::RSP, 0x1A0);
+    // TODO: Offset in prepare_abi_reg
     emitter.MOV64_MR(REG_64::RSP, REG_64::RAX);
+    emitter.ADD64_REG_IMM(0x1A0, REG_64::RAX);
     prepare_abi(ee, (uint64_t)&ee);
     prepare_abi_reg(ee, addr);
     prepare_abi_reg(ee, REG_64::RAX);
     call_abi_func(ee, (uint64_t)ee_write128);
     free_int_reg(ee, addr);
-    emitter.ADD64_REG_IMM(0x10, REG_64::RSP);
 }
 
 void EE_JIT64::load_quadword_coprocessor2(EmotionEngine& ee, IR::Instruction &instr)
@@ -144,8 +146,11 @@ void EE_JIT64::load_quadword_coprocessor2(EmotionEngine& ee, IR::Instruction &in
     // Due to differences in how the uint128_t struct is returned on different platforms,
     // we simply allocate space for it on the stack, which the wrapper function will store the
     // result into.
-    emitter.SUB64_REG_IMM(0x10, REG_64::RSP);
+    // Note: The 0x1A0 here is the SQ/LQ uint128_t offset noted in recompile_block
+    // TODO: Store 0x1A0 in some sort of constant
+    // TODO: Offset in prepare_abi_reg
     emitter.MOV64_MR(REG_64::RSP, REG_64::RAX);
+    emitter.ADD64_REG_IMM(0x1A0, REG_64::RAX);
     prepare_abi(ee, (uint64_t)&ee);
     prepare_abi_reg(ee, addr);
     prepare_abi_reg(ee, REG_64::RAX);
@@ -153,8 +158,7 @@ void EE_JIT64::load_quadword_coprocessor2(EmotionEngine& ee, IR::Instruction &in
     free_int_reg(ee, addr);
 
     REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::VF, REG_STATE::WRITE);
-    emitter.MOVUPS_FROM_MEM(REG_64::RSP, dest);
-    emitter.ADD64_REG_IMM(0x10, REG_64::RSP);
+    emitter.MOVAPS_FROM_MEM(REG_64::RSP, dest, 0x1A0);
 }
 
 void EE_JIT64::vabs(EmotionEngine& ee, IR::Instruction& instr)

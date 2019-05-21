@@ -69,9 +69,8 @@ private:
     EE_JitTranslator ir;
 
     int sp_offset;
-    std::deque<REG_64> saved_int_regs;
-    std::deque<REG_64> saved_xmm_regs;
-    std::deque<REG_TYPE_X86> saved_reg_types;
+    std::vector<REG_64> saved_int_regs;
+    std::vector<REG_64> saved_xmm_regs;
     int abi_int_count;
     int abi_xmm_count;
 
@@ -223,10 +222,6 @@ private:
     void prepare_abi_reg_from_xmm(EmotionEngine& ee, REG_64 reg);
     void prepare_abi_xmm_reg(EmotionEngine& ee, REG_64 reg);
     void call_abi_func(EmotionEngine& ee, uint64_t addr);
-    void PUSHUPS(REG_64 reg);
-    void POPUPS(REG_64 reg);
-    void PUSH(REG_64 reg);
-    void POP(REG_64 reg);
 
     // Register alloc
     int search_for_register_priority(AllocReg *regs);
