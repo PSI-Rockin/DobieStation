@@ -998,7 +998,7 @@ void EE_JIT64::load_quadword(EmotionEngine& ee, IR::Instruction &instr)
     alloc_abi_regs(ee, 3);
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPR, REG_STATE::READ);
     REG_64 addr = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
-
+    
     int64_t offset = instr.get_source2();
 
     if (offset)
@@ -1442,6 +1442,10 @@ void EE_JIT64::store_quadword(EmotionEngine& ee, IR::Instruction &instr)
     prepare_abi_reg(ee, REG_64::RAX);
     call_abi_func(ee, (uint64_t)ee_write128);
     free_int_reg(ee, addr);
+
+    // TODO: Weird side effects when not flushing source
+    flush_xmm_reg(ee, source);
+    xmm_regs[source].used = false;
 }
 
 void EE_JIT64::sub_doubleword_reg(EmotionEngine& ee, IR::Instruction &instr)

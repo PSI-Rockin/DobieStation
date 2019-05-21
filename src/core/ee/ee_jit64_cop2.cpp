@@ -128,6 +128,10 @@ void EE_JIT64::store_quadword_coprocessor2(EmotionEngine& ee, IR::Instruction &i
     prepare_abi_reg(ee, REG_64::RAX);
     call_abi_func(ee, (uint64_t)ee_write128);
     free_int_reg(ee, addr);
+
+    // TODO: Weird side effects when not flushing source
+    flush_xmm_reg(ee, source);
+    xmm_regs[source].used = false;
 }
 
 void EE_JIT64::load_quadword_coprocessor2(EmotionEngine& ee, IR::Instruction &instr)
