@@ -360,6 +360,10 @@ class GraphicsSynthesizerThread
         void update_draw_pixel_state();
         uint8_t* get_jitted_draw_pixel(uint64_t state);
         void recompile_draw_pixel(uint64_t state);
+        void recompile_alpha_test();
+        void recompile_depth_test();
+        void recompile_alpha_blend();
+        void jit_call_func(uint64_t addr);
         void jit_epilogue_draw_pixel();
 
         void vertex_kick(bool drawing_kick);

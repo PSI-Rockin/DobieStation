@@ -122,6 +122,7 @@ class Emitter64
         void OR16_REG(REG_64 source, REG_64 dest);
         void OR16_REG_IMM(uint16_t imm, REG_64 source);
         void OR32_REG(REG_64 source, REG_64 dest);
+        void OR32_REG_IMM(uint32_t imm, REG_64 source);
         void OR32_EAX(uint32_t imm);
         void OR64_REG(REG_64 source, REG_64 dest);
 
@@ -233,6 +234,8 @@ class Emitter64
         void CALL_INDIR(REG_64 source);
         void RET();
 
+        void PACKUSWB(REG_64 xmm_source, REG_64 xmm_dest);
+        void PADDW(REG_64 xmm_source, REG_64 xmm_dest);
         void PAND_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void PAND_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t offset = 0);
         void PANDN_XMM(REG_64 xmm_source, REG_64 xmm_dest);
@@ -252,9 +255,14 @@ class Emitter64
         void PMINSD_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void PMINSD_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t offset = 0);
         void PMINUD_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t offset = 0);
+        void PMOVZX8_TO_16(REG_64 xmm_source, REG_64 xmm_dest);
+        void PMULLW(REG_64 xmm_source, REG_64 xmm_dest);
         void POR_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void POR_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t offset = 0);
         void PSHUFD(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest);
+        void PSHUFLW(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest);
+        void PSRAW(int shift, REG_64 xmm_dest);
+        void PSUBW(REG_64 xmm_source, REG_64 xmm_dest);
         void PXOR_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void PXOR_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t offset = 0);
 

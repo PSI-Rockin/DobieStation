@@ -3384,7 +3384,8 @@ void GraphicsSynthesizerThread::update_draw_pixel_state()
     draw_pixel_state |= (uint64_t)COLCLAMP << 35UL;
     draw_pixel_state |= (uint64_t)current_ctx->zbuf.format << 36UL;
     draw_pixel_state |= (uint64_t)SCANMSK << 40UL;
-    draw_pixel_state |= (uint64_t)current_ctx->zbuf.no_update << 41UL;
+    draw_pixel_state |= (uint64_t)current_ctx->zbuf.no_update << 42UL;
+    draw_pixel_state |= (uint64_t)current_ctx->alpha.fixed_alpha << 43UL;
 }
 
 uint8_t* GraphicsSynthesizerThread::get_jitted_draw_pixel(uint64_t state)
@@ -3401,8 +3402,9 @@ void GraphicsSynthesizerThread::recompile_draw_pixel(uint64_t state)
 {
     jit_cache.alloc_block(BlockState{0, 0, 0, state, 0});
 
-    //Prologue - create stack frame and save all nonvolatile registers
+    //Prologue - create stack frame and save registers
     emitter.PUSH(REG_64::RBP);
+    emitter.SUB64_REG_IMM(0x40, RSP);
     emitter.MOV64_MR(REG_64::RSP, REG_64::RBP);
 
     emitter.PUSH(RBX);
@@ -3441,150 +3443,22 @@ void GraphicsSynthesizerThread::recompile_draw_pixel(uint64_t state)
 
     //Alpha test
     if (current_ctx->test.alpha_test && current_ctx->test.alpha_method != 1)
+        recompile_alpha_test();
+
+    //Dest alpha test
+    if (current_ctx->test.dest_alpha_test && !(current_ctx->frame.format & 0x1))
     {
-        //If the condition is NEVER, do not compare and just proceed with the failure condition
-        if (current_ctx->test.alpha_method != 0)
-        {
-            //Load alpha from color
-            emitter.MOV64_MR(R15, RAX);
-            emitter.SAR64_REG_IMM(48, RAX);
-
-            //Compare alpha with REF
-            emitter.CMP32_EAX(current_ctx->test.alpha_ref);
-            uint8_t* alpha_test_success = nullptr;
-            switch (current_ctx->test.alpha_method)
-            {
-                case 2: //LESS
-                    alpha_test_success = emitter.JCC_NEAR_DEFERRED(ConditionCode::L);
-                    break;
-                case 3: //LEQUAL
-                    alpha_test_success = emitter.JCC_NEAR_DEFERRED(ConditionCode::LE);
-                    break;
-                case 4: //EQUAL
-                    alpha_test_success = emitter.JCC_NEAR_DEFERRED(ConditionCode::E);
-                    break;
-                case 5: //GEQUAL
-                    alpha_test_success = emitter.JCC_NEAR_DEFERRED(ConditionCode::GE);
-                    break;
-                case 6: //GREATER
-                    alpha_test_success = emitter.JCC_NEAR_DEFERRED(ConditionCode::G);
-                    break;
-                case 7: //NOTEQUAL
-                    alpha_test_success = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
-                    break;
-            }
-
-            //Test for failure
-            switch (current_ctx->test.alpha_fail_method)
-            {
-                case 0: //KEEP - Update nothing
-                    jit_epilogue_draw_pixel();
-                    break;
-                case 1: //FB_ONLY - Only update framebuffer
-                    emitter.OR16_REG_IMM(0x2, RBX);
-                    break;
-                case 2: //ZB_ONLY - Only update z-buffer
-                    emitter.OR16_REG_IMM(0x5, RBX);
-                    break;
-                case 3: //RGB_ONLY - Same as FB_ONLY, but ignore alpha
-                    emitter.OR16_REG_IMM(0x6, RBX);
-                    break;
-            }
-
-            emitter.set_jump_dest(alpha_test_success);
-        }
+        Errors::die("[GS JIT] Dest alpha test not implemented");
     }
 
     //Depth test
     if (current_ctx->test.depth_test)
-    {
-        if (current_ctx->test.depth_method == 0)
-        {
-            jit_epilogue_draw_pixel();
-            return;
-        }
-
-        //Load address to zbuffer
-        emitter.load_addr((uint64_t)&current_ctx->zbuf.base_pointer, RDI);
-        emitter.load_addr((uint64_t)&current_ctx->frame.width, RSI);
-        emitter.MOV32_FROM_MEM(RDI, RDI);
-        emitter.MOV32_FROM_MEM(RSI, RSI);
-        emitter.SAR32_REG_IMM(8, RDI);
-        emitter.SAR32_REG_IMM(6, RSI);
-        emitter.MOV64_MR(R12, RDX);
-        emitter.MOV64_MR(R13, RCX);
-
-        switch (current_ctx->zbuf.format)
-        {
-            case 0x00:
-                //PSMCT32Z
-                emitter.CALL((uint64_t)&addr_PSMCT32Z);
-                break;
-            case 0x01:
-                //PSMCT24Z
-                emitter.CALL((uint64_t)&addr_PSMCT32Z);
-                break;
-            case 0x02:
-                //PSMCT16Z
-                emitter.CALL((uint64_t)&addr_PSMCT16Z);
-                break;
-            case 0x0A:
-                //PSMCT16SZ
-                emitter.CALL((uint64_t)&addr_PSMCT16SZ);
-                break;
-            default:
-                Errors::die("[GS_t] Unrecognized zbuf format $%02X\n", current_ctx->zbuf.format);
-        }
-
-        //RCX = zbuffer address
-        emitter.load_addr((uint64_t)local_mem, RCX);
-        emitter.ADD64_REG(RAX, RCX);
-
-        if (current_ctx->test.depth_method != 1)
-        {
-            ConditionCode depth_comparison;
-            if (current_ctx->test.depth_method == 2)
-                depth_comparison = ConditionCode::GE;
-            else
-                depth_comparison = ConditionCode::G;
-
-            emitter.MOV32_FROM_MEM(RCX, RAX);
-
-            if (current_ctx->zbuf.format == 1)
-                emitter.AND32_EAX(0xFFFFFF);
-
-            emitter.CMP32_REG(RAX, R14);
-            uint8_t* depth_passed = emitter.JCC_NEAR_DEFERRED(depth_comparison);
-
-            //Depth test failed, do not go any further
-            jit_epilogue_draw_pixel();
-
-            emitter.set_jump_dest(depth_passed);
-        }
-
-        //Update zbuffer
-        emitter.TEST32_REG_IMM(0x2, RBX);
-        uint8_t* do_not_update_z = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
-
-        switch (current_ctx->zbuf.format)
-        {
-            case 0x00:
-                emitter.MOV32_TO_MEM(R14, RCX);
-                break;
-            case 0x01:
-                emitter.AND32_REG_IMM(0xFFFFFF, R14);
-                emitter.MOV32_TO_MEM(R14, RCX);
-                break;
-            default:
-                emitter.MOV16_TO_MEM(R14, RCX);
-        }
-
-        emitter.set_jump_dest(do_not_update_z);
-    }
+        recompile_depth_test();
 
     emitter.TEST32_REG_IMM(0x1, RBX);
     uint8_t* do_not_update_rgba = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
 
+    //Get framebuffer address and store on stack
     emitter.load_addr((uint64_t)&current_ctx->frame.base_pointer, RDI);
     emitter.MOV32_FROM_MEM(RDI, RDI);
     emitter.SAR32_REG_IMM(8, RDI);
@@ -3594,49 +3468,60 @@ void GraphicsSynthesizerThread::recompile_draw_pixel(uint64_t state)
     emitter.MOV64_MR(R12, RDX);
     emitter.MOV64_MR(R13, RCX);
 
-    //Get color: R14 = color in RGBA32 format
-    emitter.XOR64_REG(RAX, RAX);
-    emitter.XOR64_REG(R14, R14);
+    switch (current_ctx->frame.format)
+    {
+        case 0x00:
+            //PSMCT32
+            jit_call_func((uint64_t)&addr_PSMCT32);
+            break;
+        case 0x01:
+            //PSMCT24
+            jit_call_func((uint64_t)&addr_PSMCT32);
+            break;
+        case 0x02:
+            //PSMCT16
+            jit_call_func((uint64_t)&addr_PSMCT16);
+            break;
+        case 0x0A:
+            //PSMCT16S
+            jit_call_func((uint64_t)&addr_PSMCT16S);
+            break;
+        default:
+            Errors::die("[GS_t] Unrecognized frame format $%02X in recompile_draw_pixel", current_ctx->frame.format);
+    }
 
-    //R component
-    emitter.MOV64_MR(R15, RAX);
-    emitter.AND32_EAX(0xFF);
-    emitter.OR32_REG(RAX, R14);
+    //[RBP + 0x38] = pointer to framebuffer pixel
+    emitter.load_addr((uint64_t)local_mem, RCX);
+    emitter.ADD64_REG(RCX, RAX);
+    emitter.MOV64_TO_MEM(RAX, RBP, 0x38);
 
-    //G component
-    emitter.MOV64_MR(R15, RAX);
-    emitter.SHR64_REG_IMM(16 - 8, RAX);
-    emitter.AND32_EAX(0xFF00);
-    emitter.OR32_REG(RAX, R14);
+    if (current_PRMODE->alpha_blend)
+        recompile_alpha_blend();
+    else
+    {
+        //Get color: R14 = color in RGBA32 format
+        emitter.MOVQ_TO_XMM(R15, XMM0);
+        emitter.PACKUSWB(XMM0, XMM0);
+        emitter.MOVD_FROM_XMM(XMM0, R14);
+    }
 
-    //B component
-    emitter.MOV64_MR(R15, RAX);
-    emitter.SHR64_REG_IMM(32 - 16, RAX);
-    emitter.AND32_EAX(0xFF0000);
-    emitter.OR32_REG(RAX, R14);
+    if (current_ctx->FBA)
+        emitter.OR32_REG_IMM(0x80000000, R14);
 
-    //A component
-    /*emitter.MOV64_MR(R15, RAX);
-    emitter.SHR64_REG_IMM(48 - 24, RAX);
-    emitter.AND32_EAX(0xFF000000);
-    emitter.OR32_REG(RAX, R14);*/
+    //RCX = framebuffer address
+    emitter.MOV64_FROM_MEM(RBP, RCX, 0x38);
 
     switch (current_ctx->frame.format)
     {
         case 0x00:
             //PSMCT32
-            emitter.CALL((uint64_t)&addr_PSMCT32);
-            emitter.load_addr((uint64_t)local_mem, RCX);
-            emitter.ADD64_REG(RAX, RCX);
             emitter.MOV32_TO_MEM(R14, RCX);
             break;
         case 0x01:
             //PSMCT24
-            emitter.CALL((uint64_t)&addr_PSMCT32);
-            emitter.load_addr((uint64_t)local_mem, RCX);
-            emitter.ADD64_REG(RAX, RCX);
             emitter.MOV32_FROM_MEM(RCX, RDX);
             emitter.AND32_REG_IMM(0xFF000000, RDX);
+            emitter.AND32_REG_IMM(0x00FFFFFF, R14);
             emitter.OR32_REG(RDX, R14);
             emitter.MOV32_TO_MEM(R14, RCX);
             break;
@@ -3651,11 +3536,271 @@ void GraphicsSynthesizerThread::recompile_draw_pixel(uint64_t state)
     jit_cache.set_current_block_rx();
 }
 
+void GraphicsSynthesizerThread::recompile_alpha_test()
+{
+    //If the condition is NEVER, do not compare and just proceed with the failure condition
+    if (current_ctx->test.alpha_method != 0)
+    {
+        //Load alpha from color
+        emitter.MOV64_MR(R15, RAX);
+        emitter.SAR64_REG_IMM(48, RAX);
+
+        //Compare alpha with REF
+        emitter.CMP32_EAX(current_ctx->test.alpha_ref);
+        uint8_t* alpha_test_success = nullptr;
+        switch (current_ctx->test.alpha_method)
+        {
+            case 2: //LESS
+                alpha_test_success = emitter.JCC_NEAR_DEFERRED(ConditionCode::L);
+                break;
+            case 3: //LEQUAL
+                alpha_test_success = emitter.JCC_NEAR_DEFERRED(ConditionCode::LE);
+                break;
+            case 4: //EQUAL
+                alpha_test_success = emitter.JCC_NEAR_DEFERRED(ConditionCode::E);
+                break;
+            case 5: //GEQUAL
+                alpha_test_success = emitter.JCC_NEAR_DEFERRED(ConditionCode::GE);
+                break;
+            case 6: //GREATER
+                alpha_test_success = emitter.JCC_NEAR_DEFERRED(ConditionCode::G);
+                break;
+            case 7: //NOTEQUAL
+                alpha_test_success = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
+                break;
+        }
+
+        //Test for failure
+        switch (current_ctx->test.alpha_fail_method)
+        {
+            case 0: //KEEP - Update nothing
+                jit_epilogue_draw_pixel();
+                break;
+            case 1: //FB_ONLY - Only update framebuffer
+                emitter.OR16_REG_IMM(0x2, RBX);
+                break;
+            case 2: //ZB_ONLY - Only update z-buffer
+                emitter.OR16_REG_IMM(0x5, RBX);
+                break;
+            case 3: //RGB_ONLY - Same as FB_ONLY, but ignore alpha
+                emitter.OR16_REG_IMM(0x6, RBX);
+                break;
+        }
+
+        emitter.set_jump_dest(alpha_test_success);
+    }
+}
+
+void GraphicsSynthesizerThread::recompile_depth_test()
+{
+    if (current_ctx->test.depth_method == 0)
+    {
+        jit_epilogue_draw_pixel();
+        return;
+    }
+
+    //Load address to zbuffer
+    emitter.load_addr((uint64_t)&current_ctx->zbuf.base_pointer, RDI);
+    emitter.load_addr((uint64_t)&current_ctx->frame.width, RSI);
+    emitter.MOV32_FROM_MEM(RDI, RDI);
+    emitter.MOV32_FROM_MEM(RSI, RSI);
+    emitter.SAR32_REG_IMM(8, RDI);
+    emitter.SAR32_REG_IMM(6, RSI);
+    emitter.MOV64_MR(R12, RDX);
+    emitter.MOV64_MR(R13, RCX);
+
+    switch (current_ctx->zbuf.format)
+    {
+        case 0x00:
+            //PSMCT32Z
+            jit_call_func((uint64_t)&addr_PSMCT32Z);
+            break;
+        case 0x01:
+            //PSMCT24Z
+            jit_call_func((uint64_t)&addr_PSMCT32Z);
+            break;
+        case 0x02:
+            //PSMCT16Z
+            jit_call_func((uint64_t)&addr_PSMCT16Z);
+            break;
+        case 0x0A:
+            //PSMCT16SZ
+            jit_call_func((uint64_t)&addr_PSMCT16SZ);
+            break;
+        default:
+            Errors::die("[GS_t] Unrecognized zbuf format $%02X\n", current_ctx->zbuf.format);
+    }
+
+    //RCX = zbuffer address
+    emitter.load_addr((uint64_t)local_mem, RCX);
+    emitter.ADD64_REG(RAX, RCX);
+
+    if (current_ctx->test.depth_method != 1)
+    {
+        ConditionCode depth_comparison;
+        if (current_ctx->test.depth_method == 2)
+            depth_comparison = ConditionCode::GE;
+        else
+            depth_comparison = ConditionCode::G;
+
+        emitter.MOV32_FROM_MEM(RCX, RAX);
+
+        if (current_ctx->zbuf.format == 1)
+            emitter.AND32_EAX(0xFFFFFF);
+
+        //64-bit compare to avoid signed bullshit
+        emitter.CMP64_REG(RAX, R14);
+        uint8_t* depth_passed = emitter.JCC_NEAR_DEFERRED(depth_comparison);
+
+        //Depth test failed, do not go any further
+        jit_epilogue_draw_pixel();
+
+        emitter.set_jump_dest(depth_passed);
+    }
+
+    //Update zbuffer
+    emitter.TEST32_REG_IMM(0x2, RBX);
+    uint8_t* do_not_update_z = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
+
+    switch (current_ctx->zbuf.format)
+    {
+        case 0x00:
+            emitter.MOV32_TO_MEM(R14, RCX);
+            break;
+        case 0x01:
+            emitter.AND32_REG_IMM(0xFFFFFF, R14);
+            emitter.MOV32_TO_MEM(R14, RCX);
+            break;
+        default:
+            emitter.MOV16_TO_MEM(R14, RCX);
+    }
+
+    emitter.set_jump_dest(do_not_update_z);
+}
+
+void GraphicsSynthesizerThread::recompile_alpha_blend()
+{
+    if (PABE)
+        Errors::die("[GS JIT] PABE not implemented");
+
+    //Local stack variables - vertex/texture color is stored in R15
+    //Note that colors are 16-bit format so that we can handle overflows/underflows
+    uint32_t fb_addr = 0x38;
+
+    emitter.MOV64_FROM_MEM(RBP, RAX, fb_addr);
+
+    //Store 32-bit framebuffer color in RAX
+    switch (current_ctx->frame.format)
+    {
+        case 0x00:
+        case 0x01:
+            emitter.MOV32_FROM_MEM(RAX, RAX);
+            break;
+        default:
+            Errors::die("[GS JIT] Unrecognized framebuffer format $%02X\n", current_ctx->frame.format);
+    }
+
+    //Convert 32-bit framebuffer color to 64-bit
+    emitter.MOVD_TO_XMM(RAX, XMM7);
+    emitter.PMOVZX8_TO_16(XMM7, XMM7);
+
+    switch (current_ctx->alpha.spec_A)
+    {
+        case 0:
+            emitter.MOVQ_TO_XMM(R15, XMM0);
+            break;
+        case 1:
+            emitter.MOVAPS_REG(XMM7, XMM0);
+            break;
+        case 2:
+        case 3:
+            emitter.XORPS(XMM0, XMM0);
+            break;
+    }
+
+    switch (current_ctx->alpha.spec_B)
+    {
+        case 0:
+            emitter.MOVQ_TO_XMM(R15, XMM1);
+            break;
+        case 1:
+            emitter.MOVAPS_REG(XMM7, XMM1);
+            break;
+        case 2:
+        case 3:
+            //Do nothing. We can optimize out the subtraction in the alpha blending operation
+            break;
+    }
+
+    switch (current_ctx->alpha.spec_C)
+    {
+        case 0:
+            emitter.MOV64_MR(R15, RAX);
+            //Fallthrough
+        case 1:
+            emitter.SAR64_REG_IMM(48, RAX);
+            break;
+        case 2:
+        case 3:
+            emitter.MOV32_REG_IMM(current_ctx->alpha.fixed_alpha, RAX);
+            break;
+    }
+
+    //Duplicate alpha into 4 16-bit words
+    emitter.MOVD_TO_XMM(RAX, XMM2);
+    emitter.PSHUFLW(0, XMM2, XMM2);
+
+    switch (current_ctx->alpha.spec_D)
+    {
+        case 0:
+            emitter.MOVQ_TO_XMM(R15, XMM3);
+            break;
+        case 1:
+            emitter.MOVAPS_REG(XMM7, XMM3);
+            break;
+        case 2:
+        case 3:
+            emitter.XORPS(XMM3, XMM3);
+            break;
+    }
+
+    //color component = (((A - B) * C) >> 7) + D
+    if (current_ctx->alpha.spec_B < 2)
+        emitter.PSUBW(XMM1, XMM0);
+    emitter.PMULLW(XMM2, XMM0);
+    emitter.PSRAW(7, XMM0);
+    emitter.PADDW(XMM3, XMM0);
+
+    //Clamp color
+    if (!COLCLAMP)
+        Errors::die("[GS JIT] AND clamp not implemented");
+    else
+        emitter.PACKUSWB(XMM0, XMM0);
+
+    //Return color in R14
+    emitter.MOVD_FROM_XMM(XMM0, R14);
+
+    //Append alpha to color if the format has an alpha
+    if (!(current_ctx->frame.format & 0x1))
+    {
+        emitter.AND32_REG_IMM(0xFFFFFF, R14);
+        emitter.SHL32_REG_IMM(24, RAX);
+        emitter.OR32_REG(RAX, R14);
+    }
+}
+
+void GraphicsSynthesizerThread::jit_call_func(uint64_t addr)
+{
+    emitter.MOV64_OI(addr, RAX);
+    emitter.CALL_INDIR(RAX);
+}
+
 void GraphicsSynthesizerThread::jit_epilogue_draw_pixel()
 {
     emitter.POP(RSI);
     emitter.POP(RDI);
     emitter.POP(RBX);
+    emitter.ADD64_REG_IMM(0x40, RSP);
     emitter.POP(RBP);
     emitter.RET();
 }

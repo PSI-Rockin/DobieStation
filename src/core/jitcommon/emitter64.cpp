@@ -509,6 +509,14 @@ void Emitter64::OR32_REG(REG_64 source, REG_64 dest)
     modrm(0b11, source, dest);
 }
 
+void Emitter64::OR32_REG_IMM(uint32_t imm, REG_64 dest)
+{
+    rex_rm(dest);
+    cache->write<uint8_t>(0x81);
+    modrm(0b11, 1, dest);
+    cache->write<uint32_t>(imm);
+}
+
 void Emitter64::OR32_EAX(uint32_t imm)
 {
     cache->write<uint8_t>(0x0D);
@@ -1409,6 +1417,24 @@ void Emitter64::RET()
     cache->write<uint8_t>(0xC3);
 }
 
+void Emitter64::PACKUSWB(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x67);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
+void Emitter64::PADDW(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0xFD);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
 void Emitter64::PAND_XMM(REG_64 xmm_source, REG_64 xmm_dest)
 {
     cache->write<uint8_t>(0x66);
@@ -1614,6 +1640,25 @@ void Emitter64::PMINUD_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32
         cache->write<uint32_t>(offset);
 }
 
+void Emitter64::PMOVZX8_TO_16(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x38);
+    cache->write<uint8_t>(0x30);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
+void Emitter64::PMULLW(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0xD5);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
 void Emitter64::POR_XMM(REG_64 xmm_source, REG_64 xmm_dest)
 {
     cache->write<uint8_t>(0x66);
@@ -1644,6 +1689,35 @@ void Emitter64::PSHUFD(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest)
     cache->write<uint8_t>(0x70);
     modrm(0b11, xmm_dest, xmm_source);
     cache->write<uint8_t>(imm);
+}
+
+void Emitter64::PSHUFLW(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0xF2);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x70);
+    modrm(0b11, xmm_dest, xmm_source);
+    cache->write<uint8_t>(imm);
+}
+
+void Emitter64::PSRAW(int shift, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_rm(xmm_dest);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x71);
+    modrm(0b11, 4, xmm_dest);
+    cache->write<uint8_t>(shift);
+}
+
+void Emitter64::PSUBW(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0xF9);
+    modrm(0b11, xmm_dest, xmm_source);
 }
 
 void Emitter64::PXOR_XMM(REG_64 xmm_source, REG_64 xmm_dest)
