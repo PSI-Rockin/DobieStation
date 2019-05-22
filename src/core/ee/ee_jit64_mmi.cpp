@@ -96,8 +96,6 @@ void EE_JIT64::parallel_pack_to_byte(EmotionEngine& ee, IR::Instruction& instr)
 
 void EE_JIT64::parallel_pack_to_halfword(EmotionEngine& ee, IR::Instruction& instr)
 {
-    // TODO: Broken (See "Chicken Little" splash FMVs)
-
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
     REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
     REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
@@ -106,13 +104,13 @@ void EE_JIT64::parallel_pack_to_halfword(EmotionEngine& ee, IR::Instruction& ins
     for (int i = 0; i < 4; ++i)
     {
         emitter.PEXTRW_XMM(i * 2, source, REG_64::RAX);
-        emitter.PINSRB_XMM(4 + i, REG_64::RAX, XMM0);
+        emitter.PINSRW_XMM(4 + i, REG_64::RAX, XMM0);
     }
 
     for (int i = 0; i < 4; ++i)
     {
-        emitter.PEXTRB_XMM(i * 2, source2, REG_64::RAX);
-        emitter.PINSRB_XMM(i, REG_64::RAX, XMM0);
+        emitter.PEXTRW_XMM(i * 2, source2, REG_64::RAX);
+        emitter.PINSRW_XMM(i, REG_64::RAX, XMM0);
     }
 
     emitter.MOVAPS_REG(XMM0, dest);
