@@ -129,9 +129,7 @@ void EE_JIT64::store_quadword_coprocessor2(EmotionEngine& ee, IR::Instruction &i
     call_abi_func(ee, (uint64_t)ee_write128);
     free_int_reg(ee, addr);
 
-    // TODO: Weird side effects when not flushing source
-    flush_xmm_reg(ee, source);
-    xmm_regs[source].used = false;
+
 }
 
 void EE_JIT64::load_quadword_coprocessor2(EmotionEngine& ee, IR::Instruction &instr)
@@ -139,6 +137,7 @@ void EE_JIT64::load_quadword_coprocessor2(EmotionEngine& ee, IR::Instruction &in
     alloc_abi_regs(ee, 3);
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPR, REG_STATE::READ);
     REG_64 addr = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::VF, REG_STATE::WRITE);
 
     int64_t offset = instr.get_source2();
 
@@ -161,7 +160,6 @@ void EE_JIT64::load_quadword_coprocessor2(EmotionEngine& ee, IR::Instruction &in
     call_abi_func(ee, (uint64_t)ee_read128);
     free_int_reg(ee, addr);
 
-    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::VF, REG_STATE::WRITE);
     emitter.MOVAPS_FROM_MEM(REG_64::RSP, dest, 0x1A0);
 }
 

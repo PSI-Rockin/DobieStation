@@ -397,6 +397,7 @@ void EE_JIT64::load_word_coprocessor1(EmotionEngine& ee, IR::Instruction &instr)
     alloc_abi_regs(ee, 2);
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPR, REG_STATE::READ);
     REG_64 addr = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
 
     int64_t offset = instr.get_source2();
 
@@ -409,7 +410,6 @@ void EE_JIT64::load_word_coprocessor1(EmotionEngine& ee, IR::Instruction &instr)
     call_abi_func(ee, (uint64_t)ee_read32);
     free_int_reg(ee, addr);
 
-    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
     emitter.MOVD_TO_XMM(REG_64::RAX, dest);
 }
 

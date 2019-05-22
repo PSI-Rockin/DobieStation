@@ -122,7 +122,6 @@ void EE_JIT64::recompile_block(EmotionEngine& ee, IR::Block& block)
 {
     ee_branch = false;
     likely_branch = false;
-    sp_offset = 0;
     saved_int_regs = std::vector<REG_64>();
     saved_xmm_regs = std::vector<REG_64>();
 
@@ -333,7 +332,7 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             break;
         case IR::Opcode::LoadWord:
             load_word(ee, instr);
-            break;
+            break;        
         case IR::Opcode::LoadWordCoprocessor1:
             load_word_coprocessor1(ee, instr);
             break;
@@ -1129,6 +1128,9 @@ void EE_JIT64::flush_xmm_reg(EmotionEngine& ee, int reg)
                 emitter.MOVAPS_TO_MEM((REG_64)reg, REG_64::RAX);
                 break;
             case REG_TYPE::VF:
+                // old_xmm_reg = $vf00, which should never be flushed
+                if (!old_xmm_reg)
+                    break;
                 emitter.load_addr((uint64_t)get_vf_addr(ee, old_xmm_reg), REG_64::RAX);
                 emitter.MOVAPS_TO_MEM((REG_64)reg, REG_64::RAX);
                 break;

@@ -225,7 +225,7 @@ int EmotionEngine::run_jit(int cycles)
 void EmotionEngine::print_state()
 {
     printf("pc:$%08X\n", PC);
-    for (int i = 1; i < 32; i++)
+    for (int i = 0; i < 32; i++)
     {
         printf("%s:$%08X_%08X_%08X_%08X", REG(i), get_gpr<uint32_t>(i, 3), get_gpr<uint32_t>(i, 2), get_gpr<uint32_t>(i, 1), get_gpr<uint32_t>(i));
         if ((i & 1) == 1)
@@ -236,6 +236,22 @@ void EmotionEngine::print_state()
     printf("lo:$%08X_%08X_%08X_%08X\t", LO1 >> 32, LO1, LO >> 32, LO);
     printf("hi:$%08X_%08X_%08X_%08X\t\n", HI1 >> 32, HI1, HI >> 32, HI);
     printf("KSU: %d\n", cp0->status.mode);
+    for (int i = 0; i < 32; i++)
+    {
+        printf("f%02d:$%08X", i, fpu->get_gpr(i));
+        if ((i & 1) == 1)
+            printf("\n");
+        else
+            printf("\t");
+    }
+    for (int i = 0; i < 32; i++)
+    {
+        printf("vf%02d:$%08X_%08X_%08X_%08X", i, vu0->get_gpr_u(i, 3), vu0->get_gpr_u(i, 2), vu0->get_gpr_u(i, 1), vu0->get_gpr_u(i, 0));
+        if ((i & 1) == 1)
+            printf("\n");
+        else
+            printf("\t");
+    }
     printf("\n");
 }
 
