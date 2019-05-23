@@ -520,29 +520,7 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
     }
 }
 
-void EE_JIT64::alloc_abi_regs(EmotionEngine& ee, int count)
-{
-#ifdef _WIN32
-    const static REG_64 regs[] = { RCX, RDX, R8, R9 };
-
-    if (count > 4)
-        Errors::die("[EE_JIT64] ABI integer arguments exceeded 4!");
-#else
-    const static REG_64 regs[] = { RDI, RSI, RDX, RCX, R8, R9 };
-
-    if (count > 6)
-        Errors::die("[EE_JIT64] ABI integer arguments exceeded 6!");
-#endif
-
-    for (int i = 0; i < count; ++i)
-    {
-        flush_int_reg(ee, regs[i]);
-        int_regs[regs[i]].locked = true;
-        int_regs[regs[i]].used = false;
-    }
-}
-
-void EE_JIT64::prepare_abi(EmotionEngine& ee, uint64_t value)
+void EE_JIT64::prepare_abi(uint64_t value)
 {
 #ifdef _WIN32
     const static REG_64 regs[] = { RCX, RDX, R8, R9 };
@@ -571,7 +549,7 @@ void EE_JIT64::prepare_abi(EmotionEngine& ee, uint64_t value)
     abi_int_count++;
 }
 
-void EE_JIT64::prepare_abi_reg(EmotionEngine& ee, REG_64 reg)
+void EE_JIT64::prepare_abi_reg(REG_64 reg)
 {
 #ifdef _WIN32
     const static REG_64 regs[] = { RCX, RDX, R8, R9 };
@@ -611,7 +589,7 @@ void EE_JIT64::prepare_abi_reg(EmotionEngine& ee, REG_64 reg)
     abi_int_count++;
 }
 
-void EE_JIT64::prepare_abi_reg_from_xmm(EmotionEngine& ee, REG_64 reg)
+void EE_JIT64::prepare_abi_reg_from_xmm(REG_64 reg)
 {
 #ifdef _WIN32
     const static REG_64 regs[] = { RCX, RDX, R8, R9 };
@@ -640,7 +618,7 @@ void EE_JIT64::prepare_abi_reg_from_xmm(EmotionEngine& ee, REG_64 reg)
     abi_int_count++;
 }
 
-void EE_JIT64::call_abi_func(EmotionEngine& ee, uint64_t addr)
+void EE_JIT64::call_abi_func(uint64_t addr)
 {
 #ifdef _WIN32
     const static REG_64 saved_regs[] = { RCX, RDX, R8, R9, R10, R11 };
@@ -1329,10 +1307,10 @@ void EE_JIT64::fallback_interpreter(EmotionEngine& ee, const IR::Instruction &in
 
     uint32_t instr_word = instr.get_opcode();
 
-    prepare_abi(ee, reinterpret_cast<uint64_t>(&ee));
-    prepare_abi(ee, instr_word);
+    prepare_abi((uint64_t)&ee);
+    prepare_abi(instr_word);
 
-    call_abi_func(ee, reinterpret_cast<uint64_t>(&interpreter));
+    call_abi_func((uint64_t)&interpreter);
 }
 
 void EE_JIT64::wait_for_vu0(EmotionEngine& ee, IR::Instruction& instr)
@@ -1340,8 +1318,8 @@ void EE_JIT64::wait_for_vu0(EmotionEngine& ee, IR::Instruction& instr)
     // Alloc scratchpad registers
     REG_64 R15 = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
 
-    prepare_abi(ee, (uint64_t)&ee);
-    call_abi_func(ee, (uint64_t)ee_vu0_wait);
+    prepare_abi((uint64_t)&ee);
+    call_abi_func((uint64_t)ee_vu0_wait);
     emitter.TEST8_REG(REG_64::AL, REG_64::AL);
 
     uint8_t* offset_addr = emitter.JCC_NEAR_DEFERRED(ConditionCode::Z);

@@ -103,8 +103,6 @@ void EE_JIT64::update_mac_flags(EmotionEngine& ee, REG_64 reg, uint8_t field)
 
 void EE_JIT64::store_quadword_coprocessor2(EmotionEngine& ee, IR::Instruction &instr)
 {
-    alloc_abi_regs(ee, 3);
-
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::VF, REG_STATE::READ);
     REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPR, REG_STATE::READ);
     REG_64 addr = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
@@ -123,10 +121,10 @@ void EE_JIT64::store_quadword_coprocessor2(EmotionEngine& ee, IR::Instruction &i
     // TODO: Offset in prepare_abi_reg
     emitter.MOV64_MR(REG_64::RSP, REG_64::RAX);
     emitter.ADD64_REG_IMM(0x1A0, REG_64::RAX);
-    prepare_abi(ee, (uint64_t)&ee);
-    prepare_abi_reg(ee, addr);
-    prepare_abi_reg(ee, REG_64::RAX);
-    call_abi_func(ee, (uint64_t)ee_write128);
+    prepare_abi((uint64_t)&ee);
+    prepare_abi_reg(addr);
+    prepare_abi_reg(REG_64::RAX);
+    call_abi_func((uint64_t)ee_write128);
     free_int_reg(ee, addr);
 
 
@@ -134,7 +132,6 @@ void EE_JIT64::store_quadword_coprocessor2(EmotionEngine& ee, IR::Instruction &i
 
 void EE_JIT64::load_quadword_coprocessor2(EmotionEngine& ee, IR::Instruction &instr)
 {
-    alloc_abi_regs(ee, 3);
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPR, REG_STATE::READ);
     REG_64 addr = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
     REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::VF, REG_STATE::WRITE);
@@ -154,10 +151,10 @@ void EE_JIT64::load_quadword_coprocessor2(EmotionEngine& ee, IR::Instruction &in
     // TODO: Offset in prepare_abi_reg
     emitter.MOV64_MR(REG_64::RSP, REG_64::RAX);
     emitter.ADD64_REG_IMM(0x1A0, REG_64::RAX);
-    prepare_abi(ee, (uint64_t)&ee);
-    prepare_abi_reg(ee, addr);
-    prepare_abi_reg(ee, REG_64::RAX);
-    call_abi_func(ee, (uint64_t)ee_read128);
+    prepare_abi((uint64_t)&ee);
+    prepare_abi_reg(addr);
+    prepare_abi_reg(REG_64::RAX);
+    call_abi_func((uint64_t)ee_read128);
     free_int_reg(ee, addr);
 
     emitter.MOVAPS_FROM_MEM(REG_64::RSP, dest, 0x1A0);
@@ -165,8 +162,8 @@ void EE_JIT64::load_quadword_coprocessor2(EmotionEngine& ee, IR::Instruction &in
 
 void EE_JIT64::vabs(EmotionEngine& ee, IR::Instruction& instr)
 {
-    prepare_abi(ee, (uint64_t)ee.vu0);
-    call_abi_func(ee, (uint64_t)&vu_flush_pipes);
+    prepare_abi((uint64_t)ee.vu0);
+    call_abi_func((uint64_t)&vu_flush_pipes);
 
     uint8_t field = convert_field(instr.get_field());
 
@@ -186,8 +183,8 @@ void EE_JIT64::vabs(EmotionEngine& ee, IR::Instruction& instr)
 
 void EE_JIT64::vadd_vectors(EmotionEngine& ee, IR::Instruction& instr)
 {
-    prepare_abi(ee, (uint64_t)ee.vu0);
-    call_abi_func(ee, (uint64_t)&vu_flush_pipes);
+    prepare_abi((uint64_t)ee.vu0);
+    call_abi_func((uint64_t)&vu_flush_pipes);
 
     uint8_t field = convert_field(instr.get_field());
 
@@ -217,8 +214,8 @@ void EE_JIT64::vadd_vectors(EmotionEngine& ee, IR::Instruction& instr)
 
 void EE_JIT64::vmul_vectors(EmotionEngine& ee, IR::Instruction& instr)
 {
-    prepare_abi(ee, (uint64_t)ee.vu0);
-    call_abi_func(ee, (uint64_t)&vu_flush_pipes);
+    prepare_abi((uint64_t)ee.vu0);
+    call_abi_func((uint64_t)&vu_flush_pipes);
 
     uint8_t field = convert_field(instr.get_field());
 
@@ -248,8 +245,8 @@ void EE_JIT64::vmul_vectors(EmotionEngine& ee, IR::Instruction& instr)
 
 void EE_JIT64::vsub_vectors(EmotionEngine& ee, IR::Instruction& instr)
 {
-    prepare_abi(ee, (uint64_t)ee.vu0);
-    call_abi_func(ee, (uint64_t)&vu_flush_pipes);
+    prepare_abi((uint64_t)ee.vu0);
+    call_abi_func((uint64_t)&vu_flush_pipes);
 
     uint8_t field = convert_field(instr.get_field());
 

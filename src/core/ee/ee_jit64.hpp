@@ -215,13 +215,12 @@ private:
     void wait_for_vu0(EmotionEngine& ee, IR::Instruction& instr);
 
     // ABI prep/function call
-    void alloc_abi_regs(EmotionEngine& ee, int count);
-    void prepare_abi(EmotionEngine& ee, uint64_t value);
-    void prepare_abi_xmm(EmotionEngine& ee, float value);
-    void prepare_abi_reg(EmotionEngine& ee, REG_64 reg);
-    void prepare_abi_reg_from_xmm(EmotionEngine& ee, REG_64 reg);
-    void prepare_abi_xmm_reg(EmotionEngine& ee, REG_64 reg);
-    void call_abi_func(EmotionEngine& ee, uint64_t addr);
+    void prepare_abi(uint64_t value);
+    void prepare_abi_xmm(float value);
+    void prepare_abi_reg(REG_64 reg);
+    void prepare_abi_reg_from_xmm(REG_64 reg);
+    void prepare_abi_xmm_reg(REG_64 reg);
+    void call_abi_func(uint64_t addr);
 
     // Register alloc
     int search_for_register_priority(AllocReg *regs);
