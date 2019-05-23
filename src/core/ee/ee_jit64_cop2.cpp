@@ -126,8 +126,6 @@ void EE_JIT64::store_quadword_coprocessor2(EmotionEngine& ee, IR::Instruction &i
     prepare_abi_reg(REG_64::RAX);
     call_abi_func((uint64_t)ee_write128);
     free_int_reg(ee, addr);
-
-
 }
 
 void EE_JIT64::load_quadword_coprocessor2(EmotionEngine& ee, IR::Instruction &instr)
