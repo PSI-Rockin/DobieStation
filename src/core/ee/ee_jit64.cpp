@@ -324,6 +324,12 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::LoadDoubleword:
             load_doubleword(ee, instr);
             break;
+        case IR::Opcode::LoadDoublewordLeft:
+            load_doubleword_left(ee, instr);
+            break;
+        case IR::Opcode::LoadDoublewordRight:
+            load_doubleword_right(ee, instr);
+            break;
         case IR::Opcode::LoadHalfword:
             load_halfword(ee, instr);
             break;
@@ -335,6 +341,12 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             break;        
         case IR::Opcode::LoadWordCoprocessor1:
             load_word_coprocessor1(ee, instr);
+            break;
+        case IR::Opcode::LoadWordLeft:
+            load_word_left(ee, instr);
+            break;
+        case IR::Opcode::LoadWordRight:
+            load_word_right(ee, instr);
             break;
         case IR::Opcode::LoadWordUnsigned:
             load_word_unsigned(ee, instr);
@@ -576,6 +588,13 @@ void EE_JIT64::prepare_abi_reg(EmotionEngine& ee, REG_64 reg)
     REG_64 arg = regs[abi_int_count];
     int_regs[arg].locked = true;
 
+    if (int_regs[arg].used)
+    {
+        // Note: The 0x20 here is the int register array offset noted in recompile_block
+        // TODO: Store 0x20 in some sort of constant
+        saved_int_regs.push_back(arg);
+        emitter.MOV64_TO_MEM(arg, REG_64::RSP, 0x20 + (int)arg * sizeof(uint64_t));
+    }
     auto p = std::find(saved_int_regs.begin(), saved_int_regs.end(), reg);
     if (p != saved_int_regs.end())
     {
@@ -585,13 +604,6 @@ void EE_JIT64::prepare_abi_reg(EmotionEngine& ee, REG_64 reg)
         // Note: The 0x20 here is the int register array offset noted in recompile_block
         // TODO: Store 0x20 in some sort of constant
         emitter.MOV64_FROM_MEM(REG_64::RSP, arg, 0x20 + (int)reg * sizeof(uint64_t));
-    }
-    else if (int_regs[arg].used)
-    {
-        saved_int_regs.push_back(arg);
-        // Note: The 0x20 here is the int register array offset noted in recompile_block
-        // TODO: Store 0x20 in some sort of constant
-        emitter.MOV64_TO_MEM(arg, REG_64::RSP, 0x20 + (int)arg * sizeof(uint64_t));
     }
     int_regs[arg].used = false;
     if (reg != regs[abi_int_count] && p == saved_int_regs.end())
