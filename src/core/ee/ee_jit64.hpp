@@ -217,7 +217,7 @@ private:
     // ABI prep/function call
     void prepare_abi(uint64_t value);
     void prepare_abi_xmm(float value);
-    void prepare_abi_reg(REG_64 reg);
+    void prepare_abi_reg(REG_64 reg, uint32_t offset = 0);
     void prepare_abi_reg_from_xmm(REG_64 reg);
     void prepare_abi_xmm_reg(REG_64 reg);
     void call_abi_func(uint64_t addr);

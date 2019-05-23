@@ -992,12 +992,9 @@ void EE_JIT64::load_quadword(EmotionEngine& ee, IR::Instruction &instr)
     // result into.
     // Note: The 0x1A0 here is the SQ/LQ uint128_t offset noted in recompile_block
     // TODO: Store 0x1A0 in some sort of constant
-    // TODO: Offset in prepare_abi_reg
-    emitter.MOV64_MR(REG_64::RSP, REG_64::RAX);
-    emitter.ADD64_REG_IMM(0x1A0, REG_64::RAX);
     prepare_abi((uint64_t)&ee);
     prepare_abi_reg(addr);
-    prepare_abi_reg(REG_64::RAX);
+    prepare_abi_reg(REG_64::RSP, 0x1A0);
     call_abi_func((uint64_t)ee_read128);
     free_int_reg(ee, addr);
 
@@ -1407,12 +1404,9 @@ void EE_JIT64::store_quadword(EmotionEngine& ee, IR::Instruction &instr)
     // Note: The 0x1A0 here is the SQ/LQ uint128_t offset noted in recompile_block
     // TODO: Store 0x1A0 in some sort of constant
     emitter.MOVAPS_TO_MEM(source, REG_64::RSP, 0x1A0);
-    // TODO: Offset in prepare_abi_reg
-    emitter.MOV64_MR(REG_64::RSP, REG_64::RAX);
-    emitter.ADD64_REG_IMM(0x1A0, REG_64::RAX);
     prepare_abi((uint64_t)&ee);
     prepare_abi_reg(addr);
-    prepare_abi_reg(REG_64::RAX);
+    prepare_abi_reg(REG_64::RSP, 0x1A0);
     call_abi_func((uint64_t)ee_write128);
     free_int_reg(ee, addr);
 }

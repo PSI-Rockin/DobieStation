@@ -549,7 +549,7 @@ void EE_JIT64::prepare_abi(uint64_t value)
     abi_int_count++;
 }
 
-void EE_JIT64::prepare_abi_reg(REG_64 reg)
+void EE_JIT64::prepare_abi_reg(REG_64 reg, uint32_t offset)
 {
 #ifdef _WIN32
     const static REG_64 regs[] = { RCX, RDX, R8, R9 };
@@ -585,7 +585,12 @@ void EE_JIT64::prepare_abi_reg(REG_64 reg)
     }
     int_regs[arg].used = false;
     if (reg != regs[abi_int_count] && p == saved_int_regs.end())
-        emitter.MOV64_MR(reg, regs[abi_int_count]);
+    {   
+        if (offset)
+            emitter.LEA64_M(reg, arg, offset);
+        else
+            emitter.MOV64_MR(reg, arg);
+    }
     abi_int_count++;
 }
 
