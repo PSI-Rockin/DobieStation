@@ -23,7 +23,6 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
     IR::Block block;
     std::vector<IR::Instruction> instrs;
     uint32_t pc = ee.get_PC();
-    uint32_t firstpc = pc;
 
     branch_op = false;
     branch_delayslot = false;
@@ -46,7 +45,7 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
         pc += 4;
         cycle_count++;
 
-        if (instrs.size() >= instrs_limit && (!branch_op && !branch_delayslot))
+        if (instrs.size() >= instrs_limit && !branch_op && !branch_delayslot && !eret_op)
             break;
     }
     

@@ -483,24 +483,14 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::SystemCall:
             system_call(ee, instr);
             break;
-        case IR::Opcode::VAbs:
-            vabs(ee, instr);
-            break;
-        case IR::Opcode::VAddVectors:
-            vadd_vectors(ee, instr);
-            break;
+
         case IR::Opcode::VCallMS:
             vcall_ms(ee, instr);
             break;
         case IR::Opcode::VCallMSR:
             vcall_msr(ee, instr);
             break;
-        case IR::Opcode::VMulVectors:
-            vmul_vectors(ee, instr);
-            break;
-        case IR::Opcode::VSubVectors:
-            vsub_vectors(ee, instr);
-            break;
+
         case IR::Opcode::WaitVU0:
             wait_for_vu0(ee, instr);
             break;

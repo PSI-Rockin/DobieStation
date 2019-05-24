@@ -310,6 +310,11 @@ void Emitter64::CMOVCC64_MEM(ConditionCode cc, REG_64 source, REG_64 indir_dest,
 void Emitter64::CMP8_REG(REG_64 op2, REG_64 op1)
 {
     rex_r_rm(op2, op1);
+
+    // FIXME: I still don't know anything about encoding these instructions, woooo
+    if (!(op2 & 0x8) && !(op1 & 0x8))
+        cache->write<uint8_t>(0x40);
+
     cache->write<uint8_t>(0x38);
     modrm(0b11, op2, op1);
 }
@@ -922,6 +927,11 @@ void Emitter64::MOV8_REG(REG_64 source, REG_64 dest)
 void Emitter64::MOV8_REG_IMM(uint8_t imm, REG_64 dest)
 {
     rex_rm(dest);
+
+    // FIXME: I still don't know anything about encoding these instructions, woooo
+    if (!(dest & 0x8))
+        cache->write<uint8_t>(0x40);
+
     cache->write<uint8_t>(0xB0 + (dest & 0x7));
     cache->write<uint8_t>(imm);
 }
