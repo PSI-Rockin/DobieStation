@@ -402,18 +402,33 @@ void Cop1::c_f_s()
 
 void Cop1::c_lt_s(int reg1, int reg2)
 {
-    control.condition = convert(gpr[reg1].u) < convert(gpr[reg2].u);
+    if (gpr[reg1].u == 0x80000000 && gpr[reg2].u == 0)
+        control.condition = true;
+    else if (gpr[reg1].u = 0 && gpr[reg2].u == 0x80000000)
+        control.condition = false;
+    else
+        control.condition = convert(gpr[reg1].u) < convert(gpr[reg2].u);
     printf("[FPU] c.lt.s: %f(%d), %f(%d)\n", gpr[reg1].f, reg1, gpr[reg2].f, reg2);
 }
 
 void Cop1::c_eq_s(int reg1, int reg2)
 {
-    control.condition = convert(gpr[reg1].u) == convert(gpr[reg2].u);
+    if (gpr[reg1].u == 0x80000000 && gpr[reg2].u == 0)
+        control.condition = true;
+    else if (gpr[reg1].u = 0 && gpr[reg2].u == 0x80000000)
+        control.condition = true;
+    else
+        control.condition = convert(gpr[reg1].u) == convert(gpr[reg2].u);
     printf("[FPU] c.eq.s: %f(%d), %f(%d)\n", gpr[reg1].f, reg1, gpr[reg2].f, reg2);
 }
 
 void Cop1::c_le_s(int reg1, int reg2)
 {
-    control.condition = convert(gpr[reg1].u) <= convert(gpr[reg2].u);
+    if (gpr[reg1].u == 0x80000000 && gpr[reg2].u == 0)
+        control.condition = true;
+    else if (gpr[reg1].u = 0 && gpr[reg2].u == 0x80000000)
+        control.condition = true;
+    else
+        control.condition = convert(gpr[reg1].u) <= convert(gpr[reg2].u);
     printf("[FPU] c.le.s: %f(%d), %f(%d)\n", gpr[reg1].f, reg1, gpr[reg2].f, reg2);
 }
