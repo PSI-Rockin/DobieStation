@@ -78,37 +78,9 @@ void EE_JIT64::floating_point_compare_equal(EmotionEngine& ee, IR::Instruction& 
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
     REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::FPU, REG_STATE::READ);
 
-    // c.eq.s(+0, -0) check...
-    emitter.MOVD_FROM_XMM(source, REG_64::RAX);
-    emitter.CMP32_EAX(0x80000000);
-    uint8_t *check2 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
-    emitter.MOVD_FROM_XMM(source2, REG_64::RAX);
-    emitter.TEST32_EAX(REG_64::RAX);
-    uint8_t *check2_1 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NZ);
-    emitter.load_addr((uint64_t)&ee.fpu->control.condition, REG_64::RAX);
-    emitter.MOV8_IMM_MEM(true, REG_64::RAX);
-    uint8_t *end = emitter.JMP_NEAR_DEFERRED();
-
-    emitter.set_jump_dest(check2);
-    emitter.set_jump_dest(check2_1);
-    emitter.MOVD_FROM_XMM(source2, REG_64::RAX);
-    emitter.CMP32_EAX(0x80000000);
-    uint8_t *normal = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
-    emitter.MOVD_FROM_XMM(source, REG_64::RAX);
-    emitter.TEST32_EAX(REG_64::RAX);
-    uint8_t *normal_1 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NZ);
-    emitter.load_addr((uint64_t)&ee.fpu->control.condition, REG_64::RAX);
-    emitter.MOV8_IMM_MEM(true, REG_64::RAX);
-    uint8_t *end_1 = emitter.JMP_NEAR_DEFERRED();
-
-    emitter.set_jump_dest(normal);
-    emitter.set_jump_dest(normal_1);
     emitter.UCOMISS(source2, source);
     emitter.load_addr((uint64_t)&ee.fpu->control.condition, REG_64::RAX);
     emitter.SETCC_MEM(ConditionCode::E, REG_64::RAX);
-
-    emitter.set_jump_dest(end);
-    emitter.set_jump_dest(end_1);
 }
 
 void EE_JIT64::floating_point_compare_less_than(EmotionEngine& ee, IR::Instruction& instr)
@@ -116,37 +88,9 @@ void EE_JIT64::floating_point_compare_less_than(EmotionEngine& ee, IR::Instructi
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
     REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::FPU, REG_STATE::READ);
 
-    // c.lt.s(+0, -0) check...
-    emitter.MOVD_FROM_XMM(source, REG_64::RAX);
-    emitter.CMP32_EAX(0x80000000);
-    uint8_t *check2 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
-    emitter.MOVD_FROM_XMM(source2, REG_64::RAX);
-    emitter.TEST32_EAX(REG_64::RAX);
-    uint8_t *check2_1 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NZ);
-    emitter.load_addr((uint64_t)&ee.fpu->control.condition, REG_64::RAX);
-    emitter.MOV8_IMM_MEM(true, REG_64::RAX);
-    uint8_t *end = emitter.JMP_NEAR_DEFERRED();
-
-    emitter.set_jump_dest(check2);
-    emitter.set_jump_dest(check2_1);
-    emitter.MOVD_FROM_XMM(source2, REG_64::RAX);
-    emitter.CMP32_EAX(0x80000000);
-    uint8_t *normal = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
-    emitter.MOVD_FROM_XMM(source, REG_64::RAX);
-    emitter.TEST32_EAX(REG_64::RAX);
-    uint8_t *normal_1 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NZ);
-    emitter.load_addr((uint64_t)&ee.fpu->control.condition, REG_64::RAX);
-    emitter.MOV8_IMM_MEM(false, REG_64::RAX);
-    uint8_t *end_1 = emitter.JMP_NEAR_DEFERRED();
-
-    emitter.set_jump_dest(normal);
-    emitter.set_jump_dest(normal_1);
     emitter.UCOMISS(source2, source);
     emitter.load_addr((uint64_t)&ee.fpu->control.condition, REG_64::RAX);
     emitter.SETCC_MEM(ConditionCode::B, REG_64::RAX);
-
-    emitter.set_jump_dest(end);
-    emitter.set_jump_dest(end_1);
 }
 
 void EE_JIT64::floating_point_compare_less_than_or_equal(EmotionEngine& ee, IR::Instruction& instr)
@@ -154,37 +98,9 @@ void EE_JIT64::floating_point_compare_less_than_or_equal(EmotionEngine& ee, IR::
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
     REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::FPU, REG_STATE::READ);
 
-    // c.le.s(+0, -0) check...
-    emitter.MOVD_FROM_XMM(source, REG_64::RAX);
-    emitter.CMP32_EAX(0x80000000);
-    uint8_t *check2 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
-    emitter.MOVD_FROM_XMM(source2, REG_64::RAX);
-    emitter.TEST32_EAX(REG_64::RAX);
-    uint8_t *check2_1 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NZ);
-    emitter.load_addr((uint64_t)&ee.fpu->control.condition, REG_64::RAX);
-    emitter.MOV8_IMM_MEM(true, REG_64::RAX);
-    uint8_t *end = emitter.JMP_NEAR_DEFERRED();
-
-    emitter.set_jump_dest(check2);
-    emitter.set_jump_dest(check2_1);
-    emitter.MOVD_FROM_XMM(source2, REG_64::RAX);
-    emitter.CMP32_EAX(0x80000000);
-    uint8_t *normal = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
-    emitter.MOVD_FROM_XMM(source, REG_64::RAX);
-    emitter.TEST32_EAX(REG_64::RAX);
-    uint8_t *normal_1 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NZ);
-    emitter.load_addr((uint64_t)&ee.fpu->control.condition, REG_64::RAX);
-    emitter.MOV8_IMM_MEM(true, REG_64::RAX);
-    uint8_t *end_1 = emitter.JMP_NEAR_DEFERRED();
-
-    emitter.set_jump_dest(normal);
-    emitter.set_jump_dest(normal_1);
     emitter.UCOMISS(source2, source);
     emitter.load_addr((uint64_t)&ee.fpu->control.condition, REG_64::RAX);
     emitter.SETCC_MEM(ConditionCode::BE, REG_64::RAX);
-
-    emitter.set_jump_dest(end);
-    emitter.set_jump_dest(end_1);
 }
 
 void EE_JIT64::floating_point_convert_to_fixed_point(EmotionEngine& ee, IR::Instruction& instr)
@@ -327,52 +243,19 @@ void EE_JIT64::floating_point_maximum(EmotionEngine& ee, IR::Instruction& instr)
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
     REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::FPU, REG_STATE::READ);
     REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
+    REG_64 XMM0 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
 
     emitter.load_addr((uint64_t)&ee.fpu->control.u, REG_64::RAX);
     emitter.MOV8_IMM_MEM(false, REG_64::RAX);
     emitter.load_addr((uint64_t)&ee.fpu->control.o, REG_64::RAX);
     emitter.MOV8_IMM_MEM(false, REG_64::RAX);
 
-    // if dest == source && dest == source2, then no operation is performed
-    if (dest == source && dest == source2)
-        return;
-
-    // max.s(+0, -0) check...
-    emitter.MOVD_FROM_XMM(source, REG_64::RAX);
-    emitter.CMP32_EAX(0x80000000);
-    uint8_t *check2 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
-    emitter.MOVD_FROM_XMM(source2, REG_64::RAX);
-    emitter.TEST32_EAX(REG_64::RAX);
-    uint8_t *check2_1 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NZ);
+    // MAXSS returns the second source operand if both operands are zero, regardless of sign (e.g. +0 or -0).
+    // The EE returns the first source operand, so we use a temporary register in order to handle this case.
+    emitter.MOVAPS_REG(source, XMM0);
     emitter.MOVAPS_REG(source2, dest);
-    uint8_t *end = emitter.JMP_NEAR_DEFERRED();
-
-    emitter.set_jump_dest(check2);
-    emitter.set_jump_dest(check2_1);
-    emitter.MOVD_FROM_XMM(source2, REG_64::RAX);
-    emitter.CMP32_EAX(0x80000000);
-    uint8_t *normal = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
-    emitter.MOVD_FROM_XMM(source, REG_64::RAX);
-    emitter.TEST32_EAX(REG_64::RAX);
-    uint8_t *normal_1 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NZ);
-    emitter.MOVAPS_REG(source, dest);
-    uint8_t *end_1 = emitter.JMP_NEAR_DEFERRED();
-
-    emitter.set_jump_dest(normal);
-    emitter.set_jump_dest(normal_1);
-    if (dest != source)
-    {
-        emitter.MOVAPS_REG(source2, dest);
-        emitter.MAXSS(source, dest);
-    }
-    else if (dest != source2)
-    {
-        emitter.MOVAPS_REG(source, dest);
-        emitter.MAXSS(source2, dest);
-    }
-
-    emitter.set_jump_dest(end);
-    emitter.set_jump_dest(end_1);
+    emitter.MAXSS(XMM0, dest);
+    free_xmm_reg(ee, XMM0);
 }
 
 void EE_JIT64::floating_point_minimum(EmotionEngine& ee, IR::Instruction& instr)
@@ -380,49 +263,19 @@ void EE_JIT64::floating_point_minimum(EmotionEngine& ee, IR::Instruction& instr)
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
     REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::FPU, REG_STATE::READ);
     REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
+    REG_64 XMM0 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
 
     emitter.load_addr((uint64_t)&ee.fpu->control.u, REG_64::RAX);
     emitter.MOV8_IMM_MEM(false, REG_64::RAX);
     emitter.load_addr((uint64_t)&ee.fpu->control.o, REG_64::RAX);
     emitter.MOV8_IMM_MEM(false, REG_64::RAX);
 
-    // if dest == source && dest == source2, then no operation is performed
-    if (dest == source && dest == source2)
-        return;
-
-    // min.s(+0, -0) check...
-    emitter.MOVD_FROM_XMM(source, REG_64::RAX);
-    emitter.CMP32_EAX(0x80000000);
-    uint8_t *check2 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
-    emitter.MOVD_FROM_XMM(source2, REG_64::RAX);
-    emitter.TEST32_EAX(REG_64::RAX);
-    uint8_t *check2_1 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NZ);
-    emitter.MOVAPS_REG(source, dest);
-    uint8_t *end = emitter.JMP_NEAR_DEFERRED();
-
-    emitter.set_jump_dest(check2);
-    emitter.set_jump_dest(check2_1);
-    emitter.MOVD_FROM_XMM(source, REG_64::RAX);
-    emitter.TEST32_EAX(REG_64::RAX);
-    uint8_t *normal = emitter.JCC_NEAR_DEFERRED(ConditionCode::NZ);
-    emitter.MOVD_FROM_XMM(source2, REG_64::RAX);
-    emitter.CMP32_EAX(0x80000000);
-    uint8_t *normal_1 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
+    // MINSS returns the second source operand if both operands are zero, regardless of sign (e.g. +0 or -0).
+    // The EE returns the first source operand, so we use a temporary register in order to handle this case.
+    emitter.MOVAPS_REG(source, XMM0);
     emitter.MOVAPS_REG(source2, dest);
-    uint8_t *end_1 = emitter.JMP_NEAR_DEFERRED();
-
-    emitter.set_jump_dest(normal);
-    emitter.set_jump_dest(normal_1);
-    if (dest != source)
-    {
-        emitter.MOVAPS_REG(source2, dest);
-        emitter.MINSS(source, dest);
-    }
-    else if (dest != source2)
-    {
-        emitter.MOVAPS_REG(source, dest);
-        emitter.MINSS(source2, dest);
-    }
+    emitter.MINSS(XMM0, dest);
+    free_xmm_reg(ee, XMM0);
 }
 
 void EE_JIT64::floating_point_square_root(EmotionEngine& ee, IR::Instruction& instr)
