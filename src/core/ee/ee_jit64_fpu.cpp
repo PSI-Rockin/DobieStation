@@ -240,6 +240,11 @@ void EE_JIT64::floating_point_negate(EmotionEngine& ee, IR::Instruction& instr)
 
 void EE_JIT64::floating_point_maximum(EmotionEngine& ee, IR::Instruction& instr)
 {
+
+    if (ee.PC == 0x00189038)
+        for (int i = 0; i < 5; ++i)
+            emitter.MOV64_MR(XMM0, XMM0);
+
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
     REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::FPU, REG_STATE::READ);
     REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
@@ -251,13 +256,13 @@ void EE_JIT64::floating_point_maximum(EmotionEngine& ee, IR::Instruction& instr)
 
     if (dest != source)
     {
-        emitter.MOVAPS_REG(source, dest);
-        emitter.MAXSS(source2, dest);
+        emitter.MOVAPS_REG(source2, dest);
+        emitter.MAXSS(source, dest);
     }
     else if (dest != source2)
     {
-        emitter.MOVAPS_REG(source2, dest);
-        emitter.MAXSS(source, dest);
+        emitter.MOVAPS_REG(source, dest);
+        emitter.MAXSS(source2, dest);
     }
 
     // if dest == source && dest == source2, then no operation is performed
@@ -276,13 +281,13 @@ void EE_JIT64::floating_point_minimum(EmotionEngine& ee, IR::Instruction& instr)
 
     if (dest != source)
     {
-        emitter.MOVAPS_REG(source, dest);
-        emitter.MINSS(source2, dest);
+        emitter.MOVAPS_REG(source2, dest);
+        emitter.MINSS(source, dest);
     }
     else if (dest != source2)
     {
-        emitter.MOVAPS_REG(source2, dest);
-        emitter.MINSS(source, dest);
+        emitter.MOVAPS_REG(source, dest);
+        emitter.MINSS(source2, dest);
     }
 
     // if dest == source && dest == source2, then no operation is performed
