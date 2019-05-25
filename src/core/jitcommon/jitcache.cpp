@@ -1,4 +1,6 @@
 #ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN 
+#define NOMINMAX 
 #include <Windows.h>
 #include <algorithm>
 #else
@@ -509,7 +511,7 @@ void* JitCache::find_memory(std::size_t size)
     return mem;
   }
 
-  std::size_t min_so_far = (std::numeric_limits<std::size_t>::max)();
+  std::size_t min_so_far = std::numeric_limits<std::size_t>::max();
   FreeList* min_mem = nullptr;
   // otherwise we need to search the large bin for the smallest chunk to split up.
   selected_bin = free_bin_lists[JIT_ALLOC_BINS];
@@ -630,10 +632,11 @@ void JitCache::jit_free(void *ptr)
  */
 void* JitCache::jit_malloc(std::size_t size)
 {
-  size = (std::max)(get_min_bin_size(0), aligned_size(size));
+  size = std::max(get_min_bin_size(0), aligned_size(size));
   if(size < sizeof(FreeList)) size = sizeof(FreeList);
   void* mem = find_memory(size);
-  heap_usage += *get_size_ptr(mem); // this is the aligned size.  for tiny blocks they use 
+  if (mem)
+    heap_usage += *get_size_ptr(mem); // this is the aligned size.  for tiny blocks they use 
   //fprintf(stderr, "mem %ld / %ld (%.2f pct)\n", heap_usage, _heap_size, 100. * (double)heap_usage / (double)_heap_size);
   return mem;
 }
