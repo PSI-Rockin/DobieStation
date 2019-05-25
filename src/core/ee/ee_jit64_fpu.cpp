@@ -240,11 +240,6 @@ void EE_JIT64::floating_point_negate(EmotionEngine& ee, IR::Instruction& instr)
 
 void EE_JIT64::floating_point_maximum(EmotionEngine& ee, IR::Instruction& instr)
 {
-
-    if (ee.PC == 0x00189038)
-        for (int i = 0; i < 5; ++i)
-            emitter.MOV64_MR(XMM0, XMM0);
-
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
     REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::FPU, REG_STATE::READ);
     REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
@@ -254,6 +249,33 @@ void EE_JIT64::floating_point_maximum(EmotionEngine& ee, IR::Instruction& instr)
     emitter.load_addr((uint64_t)&ee.fpu->control.o, REG_64::RAX);
     emitter.MOV8_IMM_MEM(false, REG_64::RAX);
 
+    // if dest == source && dest == source2, then no operation is performed
+    if (dest == source && dest == source2)
+        return;
+
+    // max.s(+0, -0) check...
+    emitter.MOVD_FROM_XMM(source, REG_64::RAX);
+    emitter.CMP32_EAX(0x80000000);
+    uint8_t *check2 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
+    emitter.MOVD_FROM_XMM(source2, REG_64::RAX);
+    emitter.TEST32_EAX(REG_64::RAX);
+    uint8_t *check2_1 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NZ);
+    emitter.MOVAPS_REG(source2, dest);
+    uint8_t *end = emitter.JMP_NEAR_DEFERRED();
+
+    emitter.set_jump_dest(check2);
+    emitter.set_jump_dest(check2_1);
+    emitter.MOVD_FROM_XMM(source2, REG_64::RAX);
+    emitter.CMP32_EAX(0x80000000);
+    uint8_t *normal = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
+    emitter.MOVD_FROM_XMM(source, REG_64::RAX);
+    emitter.TEST32_EAX(REG_64::RAX);
+    uint8_t *normal_1 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NZ);
+    emitter.MOVAPS_REG(source, dest);
+    uint8_t *end_1 = emitter.JMP_NEAR_DEFERRED();
+
+    emitter.set_jump_dest(normal);
+    emitter.set_jump_dest(normal_1);
     if (dest != source)
     {
         emitter.MOVAPS_REG(source2, dest);
@@ -265,7 +287,8 @@ void EE_JIT64::floating_point_maximum(EmotionEngine& ee, IR::Instruction& instr)
         emitter.MAXSS(source2, dest);
     }
 
-    // if dest == source && dest == source2, then no operation is performed
+    emitter.set_jump_dest(end);
+    emitter.set_jump_dest(end_1);
 }
 
 void EE_JIT64::floating_point_minimum(EmotionEngine& ee, IR::Instruction& instr)
@@ -279,6 +302,33 @@ void EE_JIT64::floating_point_minimum(EmotionEngine& ee, IR::Instruction& instr)
     emitter.load_addr((uint64_t)&ee.fpu->control.o, REG_64::RAX);
     emitter.MOV8_IMM_MEM(false, REG_64::RAX);
 
+    // if dest == source && dest == source2, then no operation is performed
+    if (dest == source && dest == source2)
+        return;
+
+    // min.s(+0, -0) check...
+    emitter.MOVD_FROM_XMM(source, REG_64::RAX);
+    emitter.CMP32_EAX(0x80000000);
+    uint8_t *check2 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
+    emitter.MOVD_FROM_XMM(source2, REG_64::RAX);
+    emitter.TEST32_EAX(REG_64::RAX);
+    uint8_t *check2_1 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NZ);
+    emitter.MOVAPS_REG(source, dest);
+    uint8_t *end = emitter.JMP_NEAR_DEFERRED();
+
+    emitter.set_jump_dest(check2);
+    emitter.set_jump_dest(check2_1);
+    emitter.MOVD_FROM_XMM(source, REG_64::RAX);
+    emitter.TEST32_EAX(REG_64::RAX);
+    uint8_t *normal = emitter.JCC_NEAR_DEFERRED(ConditionCode::NZ);
+    emitter.MOVD_FROM_XMM(source2, REG_64::RAX);
+    emitter.CMP32_EAX(0x80000000);
+    uint8_t *normal_1 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
+    emitter.MOVAPS_REG(source2, dest);
+    uint8_t *end_1 = emitter.JMP_NEAR_DEFERRED();
+
+    emitter.set_jump_dest(normal);
+    emitter.set_jump_dest(normal_1);
     if (dest != source)
     {
         emitter.MOVAPS_REG(source2, dest);
@@ -289,8 +339,6 @@ void EE_JIT64::floating_point_minimum(EmotionEngine& ee, IR::Instruction& instr)
         emitter.MOVAPS_REG(source, dest);
         emitter.MINSS(source2, dest);
     }
-
-    // if dest == source && dest == source2, then no operation is performed
 }
 
 void EE_JIT64::floating_point_square_root(EmotionEngine& ee, IR::Instruction& instr)
