@@ -46,33 +46,77 @@ struct BlockStateHash
     }
 };
 
+
 struct JitBlock
 {
-    //Variables needed for code execution
-    BlockState state;
-    uint8_t* block_start;
-    uint8_t* mem;
+  BlockState state;
+  void* literals_start;
+  void* code_start;
+  void* code_end;
 
-    //Related to the literal pool
-    uint8_t* pool_start;
-    int pool_size;
+  // page list.
+  JitBlock* next;
+  JitBlock* prev;
+
 };
+
+struct FreeList {
+  FreeList* next;
+  FreeList* prev;
+  uint8_t bin;
+};
+
 
 class JitCache
 {
     private:
-        constexpr static int JIT_BLOCK_SIZE = 1024 * 64;
-        constexpr static int POOL_SIZE = 1024 * 8;
-        constexpr static int START_OF_POOL = JIT_BLOCK_SIZE - POOL_SIZE;
+        // old version had at most 8192 blocks, each 64 kB. this is quite large, let's do 1/128th of it.
+        // all these must have at least 16 byte alignment (or whatever JIT_ALLOC_ALIGN is set to).
+        constexpr static int JIT_CACHE_DEFAULT_SIZE = 8192 * 1024 * 64 / 32;
+        constexpr static int JIT_ALLOC_BINS = 8;
+        constexpr static int JIT_ALLOC_BIN_START = 8; // 2^8 = 256 bytes
+        constexpr static int JIT_MAX_BLOCK_CODESIZE = 1024 * 128; // 16 kB/block maximum size
+        constexpr static int JIT_MAX_BLOCK_LITERALSIZE = 1024 * 8;
+
+        std::size_t get_min_bin_size(uint8_t bin);
+        std::size_t get_max_bin_size(uint8_t bin);
+        std::size_t* get_size_ptr(void* obj);
+        std::size_t* get_end_ptr(void* obj);
+        void* get_next_object(void* obj);
+        void add_freed_memory_to_bin(void* mem);
+        void remove_memory_from_bin(void* mem);
+        void shrink_object(void* obj, std::size_t size);
+        void* find_memory(std::size_t size);
+        bool merge_fwd(void* mem);
+        bool merge_bwd(void* mem);
+        void init_allocator();
+        void jit_free(void* ptr);
+        void* jit_malloc(std::size_t size);
+        JitBlock** get_ee_page_list_head(uint32_t ee_page);
+        void debug_print_page_list(uint32_t ee_page);
+
         std::unordered_map<BlockState, JitBlock, BlockStateHash> blocks;
 
+        std::unordered_map<uint32_t, JitBlock*> ee_page_lists;
+
+        JitBlock building_jit_block;
+        uint8_t* building_block;
+
         JitBlock* current_block;
+
+        std::size_t _heap_size = 0;
+        void* _heap = nullptr;
+        FreeList* free_bin_lists[JIT_ALLOC_BINS + 1];
+
+        uint64_t heap_usage;
     public:
-        JitCache();
+        explicit JitCache(std::size_t size = 0);
+        ~JitCache();
 
         void alloc_block(BlockState state);
         void free_block(BlockState state);
         void flush_all_blocks();
+        void invalidate_ee_page(uint32_t page);
 
         JitBlock *find_block(BlockState state);
 
@@ -88,36 +132,41 @@ class JitCache
         template <typename T> void write(T value);
 };
 
-template <typename T>
+template<typename T>
 inline uint8_t* JitCache::get_literal_offset(T literal)
 {
-    //Search for the literal in the pool. If it is not found, add it to the end of the pool.
-    //Return the 16-byte aligned offset of the literal in the block.
-    uint8_t* pool = current_block->block_start;
-    int offset = START_OF_POOL;
-    while (offset < START_OF_POOL + current_block->pool_size)
-    {
-        if (*(T*)&pool[offset] == literal)
-            return &pool[offset];
-        offset += 16;
+  if(current_block != &building_jit_block) Errors::die("no");
+  uint8_t* ptr;
+  for(ptr = (uint8_t*)current_block->code_start - 16; ptr >= current_block->literals_start; ptr -= 16) {
+    if(*(T*)ptr == literal) {
+      return ptr;
     }
+  }
 
-    *(T*)&pool[offset] = literal;
-    current_block->pool_size += 16;
+  // didn't find it
+  ptr -= 16;
+  if(ptr < building_block) Errors::die("out of room for literals");
+  current_block->literals_start = ptr;
 
-    if (current_block->pool_size >= POOL_SIZE)
-        Errors::die("[JitCache] Literal pool exceeds POOL_SIZE!");
-    return &pool[offset];
+  *(T*)ptr = literal;
+
+  return ptr;
 }
 
-template <typename T>
+
+template<typename T>
 inline void JitCache::write(T value)
 {
-    *(T*)current_block->mem = value;
-    current_block->mem += sizeof(T);
+  if(current_block != &building_jit_block) Errors::die("no");
+  *(T*)current_block->code_end = value;
+  current_block->code_end = (uint8_t*)current_block->code_end + sizeof(T);
 
-    if (current_block->mem >= current_block->pool_start)
-        Errors::die("[JitCache] Allocated block exceeds maximum size!");
+  if(current_block->code_end >= building_block + JIT_MAX_BLOCK_CODESIZE + JIT_MAX_BLOCK_LITERALSIZE) {
+    Errors::die("no more room for the codes");
+  }
+
 }
 
+
 #endif // JITCACHE_HPP
+
