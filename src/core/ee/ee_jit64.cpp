@@ -77,11 +77,12 @@ uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee)
 
     if (ee.cp0->get_tlb_modified(ee.PC / 4096))
     {
+        jit.cache.invalidate_ee_page(ee.PC / 4096);
         // TODO: Cleaner way of clearing entire page of blocks
-        for (int i = 0; i < 4096; i += 4)
-        {
-            jit.cache.free_block(BlockState{ ee.PC / 4096 * 4096 + i, 0, 0, 0, 0 });
-        }
+        //for (int i = 0; i < 4096; i += 4)
+        //{
+        //    jit.cache.free_block(BlockState{ ee.PC / 4096 * 4096 + i, 0, 0, 0, 0 });
+        //}
         is_modified = true;
         ee.cp0->clear_tlb_modified(ee.PC / 4096);
     }
