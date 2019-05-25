@@ -444,8 +444,6 @@ void EE_JIT64::divide_unsigned_word(EmotionEngine& ee, IR::Instruction& instr)
     emitter.MOV32_REG(dividend, REG_64::RAX);
     emitter.XOR32_REG(RDX, RDX);
     emitter.DIV32(divisor);
-    emitter.MOVSX32_TO_64(REG_64::RAX, REG_64::RAX);
-    emitter.MOVSX32_TO_64(RDX, RDX);
     move_to_lo_hi(ee, REG_64::RAX, RDX, LO, HI);
     uint8_t *end = emitter.JMP_NEAR_DEFERRED();
     free_int_reg(ee, RDX);
@@ -519,8 +517,6 @@ void EE_JIT64::divide_word(EmotionEngine& ee, IR::Instruction &instr)
     emitter.MOV32_REG(dividend, REG_64::RAX);
     emitter.CDQ();
     emitter.IDIV32(divisor);
-    emitter.MOVSX32_TO_64(REG_64::RAX, REG_64::RAX);
-    emitter.MOVSX32_TO_64(RDX, RDX);
     move_to_lo_hi(ee, REG_64::RAX, RDX, LO, HI);
     uint8_t *end_2 = emitter.JMP_NEAR_DEFERRED();
 
@@ -1040,8 +1036,8 @@ void EE_JIT64::move_to_lo_hi(EmotionEngine& ee, IR::Instruction &instr)
 
 void EE_JIT64::move_to_lo_hi(EmotionEngine& ee, REG_64 loSource, REG_64 hiSource, REG_64 loDest, REG_64 hiDest)
 {
-    emitter.MOV32_REG(loSource, loDest);
-    emitter.MOV32_REG(hiSource, hiDest);
+    emitter.MOVSX32_TO_64(loSource, loDest);
+    emitter.MOVSX32_TO_64(hiSource, hiDest);
 }
 
 void EE_JIT64::move_to_lo_hi_imm(EmotionEngine& ee, int64_t loValue, int64_t hiValue)
@@ -1068,14 +1064,14 @@ void EE_JIT64::multiply_unsigned_word(EmotionEngine& ee, IR::Instruction& instr)
     REG_64 LO = alloc_reg(ee, (int)EE_SpecialReg::LO, REG_TYPE::GPR, REG_STATE::WRITE);
     REG_64 HI = alloc_reg(ee, (int)EE_SpecialReg::HI, REG_TYPE::GPR, REG_STATE::WRITE);
 
-    emitter.MOV32_REG(source, REG_64::RAX);
+    emitter.MOVSX32_TO_64(source, REG_64::RAX);
     emitter.MUL32(source2);
     move_to_lo_hi(ee, REG_64::RAX, RDX, LO, HI);
 
     if (instr.get_dest())
     {
         REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPR, REG_STATE::WRITE);
-        emitter.MOV32_REG(LO, dest);
+        emitter.MOVSX32_TO_64(LO, dest);
     }
 
     free_int_reg(ee, RDX);
@@ -1089,14 +1085,14 @@ void EE_JIT64::multiply_word(EmotionEngine& ee, IR::Instruction& instr)
     REG_64 LO = alloc_reg(ee, (int)EE_SpecialReg::LO, REG_TYPE::GPR, REG_STATE::WRITE);
     REG_64 HI = alloc_reg(ee, (int)EE_SpecialReg::HI, REG_TYPE::GPR, REG_STATE::WRITE);
 
-    emitter.MOV32_REG(source, REG_64::RAX);
+    emitter.MOVSX32_TO_64(source, REG_64::RAX);
     emitter.IMUL32(source2);
     move_to_lo_hi(ee, REG_64::RAX, RDX, LO, HI);
 
     if (instr.get_dest())
     {
         REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPR, REG_STATE::WRITE);
-        emitter.MOV32_REG(LO, dest);
+        emitter.MOVSX32_TO_64(LO, dest);
     }
 
     free_int_reg(ee, RDX);
