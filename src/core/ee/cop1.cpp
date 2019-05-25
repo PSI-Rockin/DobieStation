@@ -363,7 +363,11 @@ void Cop1::msuba_s(int reg1, int reg2)
 void Cop1::max_s(int dest, int reg1, int reg2)
 {
     printf("[FPU] max.s: %f(%d) >= %f(%d)", gpr[reg1].f, reg1, gpr[reg2].f, reg2);
-    if (gpr[reg1].f >= gpr[reg2].f)
+    if (gpr[reg1].u == 0x80000000 && gpr[reg2].u == 0)
+        gpr[dest].f = gpr[reg2].f;
+    else if (gpr[reg1].u == 0 && gpr[reg2].u == 0x80000000)
+        gpr[dest].f = gpr[reg1].f;
+    else if (gpr[reg1].f >= gpr[reg2].f)
         gpr[dest].f = gpr[reg1].f;
     else
         gpr[dest].f = gpr[reg2].f;
@@ -376,7 +380,11 @@ void Cop1::max_s(int dest, int reg1, int reg2)
 void Cop1::min_s(int dest, int reg1, int reg2)
 {
     printf("[FPU] min.s: %f(%d) <= %f(%d)", gpr[reg1].f, reg1, gpr[reg2].f, reg2);
-    if (gpr[reg1].f <= gpr[reg2].f)
+    if (gpr[reg1].u == 0x80000000 && gpr[reg2].u == 0)
+        gpr[dest].f = gpr[reg1].f;
+    else if (gpr[reg1].u == 0 && gpr[reg2].u == 0x80000000)
+        gpr[dest].f = gpr[reg2].f;
+    else if (gpr[reg1].f <= gpr[reg2].f)
         gpr[dest].f = gpr[reg1].f;
     else
         gpr[dest].f = gpr[reg2].f;
