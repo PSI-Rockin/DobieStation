@@ -205,9 +205,15 @@ void JitCache::set_current_block_rx()
 
   // allocate space on JIT heap
   void* dest = jit_malloc(block_size);
+
   if(!dest) {
-    Errors::die("JIT heap out of memory (allocating %ld bytes, heap usage %ld / %ld bytes), "
-                "try increasing JIT_CACHE_DEFAULT_SIZE\n", block_size, heap_usage, _heap_size);
+    fprintf(stderr, "Flushing JIT cache\n");
+    flush_all_blocks();
+    current_block = &building_jit_block;
+    dest = jit_malloc(block_size);
+  }
+  if(!dest) {
+    Errors::die("JIT heap out of memory even after freeing all, something is wrong with the jit allocator");
   }
 
 
@@ -619,7 +625,7 @@ void JitCache::init_allocator()
  */
 void JitCache::jit_free(void *ptr)
 {
-  assert(*get_size_ptr(ptr) < heap_usage);
+  assert(*get_size_ptr(ptr) <= heap_usage);
   heap_usage -= *get_size_ptr(ptr);
   if(!ptr) return;
   add_freed_memory_to_bin(ptr);
