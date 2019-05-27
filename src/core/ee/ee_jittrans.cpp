@@ -29,7 +29,7 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
     eret_op = false;
     cycle_count = 0;
     // Set hard limit to avoid massive blocks (Thanks, Yakuza)
-    const int instrs_limit = 100;
+    const int instrs_limit = 1000;
 
     while (!branch_delayslot && !eret_op)
     {
