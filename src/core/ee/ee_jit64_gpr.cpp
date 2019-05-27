@@ -992,6 +992,7 @@ void EE_JIT64::load_quadword(EmotionEngine& ee, IR::Instruction &instr)
     prepare_abi_reg(addr);
     prepare_abi_reg(REG_64::RSP, 0x1A0);
     call_abi_func((uint64_t)ee_read128);
+    restore_xmm_regs(std::vector<REG_64> {dest});
     free_int_reg(ee, addr);
 
     emitter.MOVAPS_FROM_MEM(REG_64::RSP, dest, 0x1A0);

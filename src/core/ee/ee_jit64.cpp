@@ -50,11 +50,13 @@ void EE_JIT64::reset(bool clear_cache)
     {
         xmm_regs[i].used = false;
         xmm_regs[i].locked = false;
+        xmm_regs[i].stored = false;
         xmm_regs[i].age = 0;
         xmm_regs[i].needs_clamping = false;
 
         int_regs[i].used = false;
         int_regs[i].locked = false;
+        int_regs[i].stored = false;
         int_regs[i].age = 0;
         int_regs[i].reg = -1;
     }
@@ -339,7 +341,7 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             break;
         case IR::Opcode::LoadWord:
             load_word(ee, instr);
-            break;        
+            break;
         case IR::Opcode::LoadWordCoprocessor1:
             load_word_coprocessor1(ee, instr);
             break;
@@ -484,14 +486,12 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::SystemCall:
             system_call(ee, instr);
             break;
-
         case IR::Opcode::VCallMS:
             vcall_ms(ee, instr);
             break;
         case IR::Opcode::VCallMSR:
             vcall_msr(ee, instr);
             break;
-
         case IR::Opcode::WaitVU0:
             wait_for_vu0(ee, instr);
             break;
@@ -534,6 +534,7 @@ void EE_JIT64::prepare_abi(uint64_t value)
         // Note: The 0x20 here is the int register array offset noted in recompile_block
         // TODO: Store 0x20 in some sort of constant
         emitter.MOV64_TO_MEM(arg, REG_64::RSP, 0x20 + (int)arg * sizeof(uint64_t));
+        // int_regs[arg].stored = true;
     }
     int_regs[arg].used = false;
     emitter.load_addr(value, arg);
@@ -563,6 +564,7 @@ void EE_JIT64::prepare_abi_reg(REG_64 reg, uint32_t offset)
         // TODO: Store 0x20 in some sort of constant
         saved_int_regs.push_back(arg);
         emitter.MOV64_TO_MEM(arg, REG_64::RSP, 0x20 + (int)arg * sizeof(uint64_t));
+        // int_regs[arg].stored = true;
     }
     auto p = std::find(saved_int_regs.begin(), saved_int_regs.end(), reg);
     if (p != saved_int_regs.end())
@@ -608,6 +610,7 @@ void EE_JIT64::prepare_abi_reg_from_xmm(REG_64 reg)
         // Note: The 0x20 here is the int register array offset noted in recompile_block
         // TODO: Store 0x20 in some sort of constant
         emitter.MOV64_TO_MEM(arg, REG_64::RSP, 0x20 + (int)arg * sizeof(uint64_t));
+        // int_regs[arg].stored = true;
     }
     int_regs[arg].used = false;
     emitter.MOVD_FROM_XMM(reg, arg);
@@ -630,39 +633,30 @@ void EE_JIT64::call_abi_func(uint64_t addr)
     // Store any used XMM registers into the stack
     for (int i = 0; i < 16; ++i)
     {
-        if (xmm_regs[i].used)
+        if (xmm_regs[i].used && !xmm_regs[i].stored)
         {
             // Note: The 0xA0 here is the xmm register array offset noted in recompile_block
             // TODO: Store 0xA0 in some sort of constant
             emitter.MOVAPS_TO_MEM((REG_64)i, REG_64::RSP, 0xA0 + i * 16);
+            xmm_regs[i].stored = true;
         }
     }
 
     // Store any volatile INT registers into the stack
     for (REG_64 reg : saved_regs)
     {
-        if (int_regs[reg].used)
+        if (int_regs[reg].used /* && !int_regs[reg].stored*/)
         {
             // Note: The 0x20 here is the int register array offset noted in recompile_block
             // TODO: Store 0x20 in some sort of constant
             emitter.MOV64_TO_MEM(reg, REG_64::RSP, 0x20 + (int)reg * sizeof(uint64_t));
+            // int_regs[reg].stored = true;
         }
     }
 
     // Call function
     emitter.MOV64_OI(addr, REG_64::RAX);
     emitter.CALL_INDIR(REG_64::RAX);
-
-    // Restore any used XMM registers from the stack
-    for (int i = 0; i < 16; ++i)
-    {
-        if (xmm_regs[i].used)
-        {
-            // Note: The 0xA0 here is the xmm register array offset noted in recompile_block
-            // TODO: Store 0xA0 in some sort of constant
-            emitter.MOVAPS_FROM_MEM(REG_64::RSP, (REG_64)i, 0xA0 + i * 16);
-        }
-    }
 
     // Restore any used INT registers from the stack (+ those stored in prepare_abi functions)
     for (REG_64 reg : saved_regs)
@@ -681,11 +675,24 @@ void EE_JIT64::call_abi_func(uint64_t addr)
         emitter.MOV64_FROM_MEM(REG_64::RSP, reg, 0x20 + (int)reg * sizeof(uint64_t));
         int_regs[reg].used = true;
     }
-
     saved_int_regs.clear();
-    saved_xmm_regs.clear();
     abi_int_count = 0;
     abi_xmm_count = 0;
+}
+
+// Explicitly restore XMM registers when they are stored on the stack
+void EE_JIT64::restore_xmm_regs(const std::vector<REG_64>& regs)
+{
+    for (REG_64 reg : regs)
+    {
+        if (xmm_regs[reg].stored)
+        {
+            // Note: The 0xA0 here is the xmm register array offset noted in recompile_block
+            // TODO: Store 0xA0 in some sort of constant
+            emitter.MOVAPS_FROM_MEM(REG_64::RSP, reg, 0xA0 + (int)reg * 0x10);
+            xmm_regs[reg].stored = false;
+        }
+    }
 }
 
 int EE_JIT64::search_for_register_scratchpad(AllocReg *regs)
@@ -870,6 +877,7 @@ REG_64 EE_JIT64::alloc_reg(EmotionEngine& ee, int reg, REG_TYPE type, REG_STATE 
             return (REG_64)destination;
         case REG_TYPE::XMMSCRATCHPAD:
             flush_xmm_reg(ee, destination);
+            xmm_regs[destination].stored = false;
             xmm_regs[destination].modified = false;
             xmm_regs[destination].used = true;
             xmm_regs[destination].age = 0;
@@ -946,6 +954,7 @@ REG_64 EE_JIT64::alloc_reg(EmotionEngine& ee, int reg, REG_TYPE type, REG_STATE 
                 }
             }
 
+            int_regs[destination].stored = false;
             int_regs[destination].modified = state != REG_STATE::READ && !(reg == 0 && type == REG_TYPE::GPR);
             int_regs[destination].reg = reg;
             int_regs[destination].type = type;
@@ -965,6 +974,14 @@ REG_64 EE_JIT64::alloc_reg(EmotionEngine& ee, int reg, REG_TYPE type, REG_STATE 
             // Do nothing if the EE register is already inside our x86 register
             if (xmm_regs[destination].used && xmm_regs[destination].type == type && xmm_regs[destination].reg == reg)
             {
+                if (xmm_regs[destination].stored)
+                {
+                    // Move int register from stack
+                    // Note: The 0xA0 here is the xmm register array offset noted in recompile_block
+                    // TODO: Store 0xA0 in some sort of constant
+                    emitter.MOVAPS_FROM_MEM(REG_64::RSP, destination, 0xA0 + (int)destination * 0x10);
+                    xmm_regs[destination].stored = false;
+                }
                 if (state != REG_STATE::READ && !(reg == 0 && (type == REG_TYPE::VF || type == REG_TYPE::GPREXTENDED)))
                     xmm_regs[destination].modified = true;
                 xmm_regs[destination].age = 0;
@@ -1004,7 +1021,17 @@ REG_64 EE_JIT64::alloc_reg(EmotionEngine& ee, int reg, REG_TYPE type, REG_STATE 
                 {
                     // This case is hit if we want a register in a specific destination but
                     // we already have the contents in another register.
-                    emitter.MOVAPS_REG((REG_64)reg_to_find, destination);
+                    if (xmm_regs[reg_to_find].stored)
+                    {
+                        // Move int register from stack
+                        // Note: The 0xA0 here is the xmm register array offset noted in recompile_block
+                        // TODO: Store 0xA0 in some sort of constant
+                        emitter.MOVAPS_FROM_MEM(REG_64::RSP, destination, 0xA0 + (int)reg_to_find * 0x10);
+                    }
+                    else
+                    {
+                        emitter.MOVAPS_REG((REG_64)reg_to_find, destination);
+                    }
                 }
                 else
                 {
@@ -1029,6 +1056,7 @@ REG_64 EE_JIT64::alloc_reg(EmotionEngine& ee, int reg, REG_TYPE type, REG_STATE 
                 }
             }
 
+            xmm_regs[destination].stored = false;
             xmm_regs[destination].modified = state != REG_STATE::READ && !(reg == 0 && (type == REG_TYPE::VF || type == REG_TYPE::GPREXTENDED));
             xmm_regs[destination].reg = reg;
             xmm_regs[destination].type = type;
@@ -1060,6 +1088,7 @@ void EE_JIT64::free_int_reg(EmotionEngine& ee, REG_64 reg)
     int_regs[reg].locked = false;
     int_regs[reg].used = false;
     flush_int_reg(ee, reg);
+    int_regs[reg].stored = false;
 }
 
 void EE_JIT64::free_xmm_reg(EmotionEngine& ee, REG_64 reg)
@@ -1067,6 +1096,7 @@ void EE_JIT64::free_xmm_reg(EmotionEngine& ee, REG_64 reg)
     xmm_regs[reg].locked = false;
     xmm_regs[reg].used = false;
     flush_xmm_reg(ee, reg);
+    xmm_regs[reg].stored = false;
 }
 
 void EE_JIT64::flush_int_reg(EmotionEngine& ee, int reg)
@@ -1099,6 +1129,13 @@ void EE_JIT64::flush_xmm_reg(EmotionEngine& ee, int reg)
     int old_xmm_reg = xmm_regs[reg].reg;
     if (xmm_regs[reg].used && xmm_regs[reg].modified)
     {
+        if (xmm_regs[reg].stored)
+        {
+            // Note: The 0xA0 here is the xmm register array offset noted in recompile_block
+            // TODO: Store 0xA0 in some sort of constant
+            emitter.MOVAPS_FROM_MEM(REG_64::RSP, (REG_64)reg, 0xA0 + (int)reg * 0x10);
+        }
+
         //printf("[EE_JIT64] Flushing xmm reg %d! (old float reg: %d, reg type: %d)\n", reg, xmm_regs[reg].reg, xmm_regs[reg].type);
         switch (xmm_regs[reg].type)
         {
@@ -1210,8 +1247,10 @@ void EE_JIT64::cleanup_recompiler(EmotionEngine& ee, bool clear_regs)
         {
             int_regs[i].age = 0;
             int_regs[i].used = false;
+            int_regs[i].stored = false;
             xmm_regs[i].age = 0;
             xmm_regs[i].used = false;
+            xmm_regs[i].stored = false;
         }
     }
 
@@ -1297,8 +1336,10 @@ void EE_JIT64::fallback_interpreter(EmotionEngine& ee, const IR::Instruction &in
     {
         int_regs[i].age = 0;
         int_regs[i].used = false;
+        int_regs[i].stored = false;
         xmm_regs[i].age = 0;
         xmm_regs[i].used = false;
+        xmm_regs[i].stored = false;
     }
 
     uint32_t instr_word = instr.get_opcode();

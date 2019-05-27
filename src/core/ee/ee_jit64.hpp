@@ -14,6 +14,7 @@ struct AllocReg
     bool used = false;
     bool locked = false; //Prevent the register from being allocated
     bool modified = false;
+    bool stored = false; // Register is stored on the stack
     int age = 0;
     int reg;
     REG_TYPE type;
@@ -221,6 +222,8 @@ private:
     void prepare_abi_reg_from_xmm(REG_64 reg);
     void prepare_abi_xmm_reg(REG_64 reg);
     void call_abi_func(uint64_t addr);
+    void restore_int_regs(const std::vector<REG_64>& regs);
+    void restore_xmm_regs(const std::vector<REG_64>& regs);
 
     // Register alloc
     int search_for_register_priority(AllocReg *regs);

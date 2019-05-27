@@ -397,6 +397,7 @@ void EE_JIT64::load_word_coprocessor1(EmotionEngine& ee, IR::Instruction &instr)
     prepare_abi((uint64_t)&ee);
     prepare_abi_reg(addr);
     call_abi_func((uint64_t)ee_read32);
+    restore_xmm_regs(std::vector<REG_64> {dest});
     free_int_reg(ee, addr);
 
     emitter.MOVD_TO_XMM(REG_64::RAX, dest);
