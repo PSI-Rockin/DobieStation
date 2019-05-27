@@ -1542,10 +1542,10 @@ void Emitter64::PEXTRB_XMM(uint8_t imm, REG_64 xmm_source, REG_64 dest)
 void Emitter64::PEXTRW_XMM(uint8_t imm, REG_64 xmm_source, REG_64 dest)
 {
     cache->write<uint8_t>(0x66);
-    rex_r_rm(xmm_source, dest);
+    rex_r_rm(dest, xmm_source);
     cache->write<uint8_t>(0x0F);
     cache->write<uint8_t>(0xC5);
-    modrm(0b11, xmm_source, dest);
+    modrm(0b11, dest, xmm_source);
     cache->write<uint8_t>(imm);
 }
 
