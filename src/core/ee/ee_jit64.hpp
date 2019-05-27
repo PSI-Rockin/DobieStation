@@ -222,8 +222,8 @@ private:
     void prepare_abi_reg_from_xmm(REG_64 reg);
     void prepare_abi_xmm_reg(REG_64 reg);
     void call_abi_func(uint64_t addr);
-    void restore_int_regs(const std::vector<REG_64>& regs);
-    void restore_xmm_regs(const std::vector<REG_64>& regs);
+    void restore_int_regs(const std::vector<REG_64>& regs, bool restore_values = true);
+    void restore_xmm_regs(const std::vector<REG_64>& regs, bool restore_values = true);
 
     // Register alloc
     int search_for_register_priority(AllocReg *regs);

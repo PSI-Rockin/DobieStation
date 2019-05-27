@@ -681,7 +681,7 @@ void EE_JIT64::call_abi_func(uint64_t addr)
 }
 
 // Explicitly restore XMM registers when they are stored on the stack
-void EE_JIT64::restore_xmm_regs(const std::vector<REG_64>& regs)
+void EE_JIT64::restore_xmm_regs(const std::vector<REG_64>& regs, bool restore_values)
 {
     for (REG_64 reg : regs)
     {
@@ -689,7 +689,8 @@ void EE_JIT64::restore_xmm_regs(const std::vector<REG_64>& regs)
         {
             // Note: The 0xA0 here is the xmm register array offset noted in recompile_block
             // TODO: Store 0xA0 in some sort of constant
-            emitter.MOVAPS_FROM_MEM(REG_64::RSP, reg, 0xA0 + (int)reg * 0x10);
+            if (restore_values)
+                emitter.MOVAPS_FROM_MEM(REG_64::RSP, reg, 0xA0 + (int)reg * 0x10);
             xmm_regs[reg].stored = false;
         }
     }
