@@ -1087,16 +1087,16 @@ REG_64 EE_JIT64::lalloc_xmm_reg(EmotionEngine& ee, int gpr_reg, REG_TYPE type, R
 void EE_JIT64::free_int_reg(EmotionEngine& ee, REG_64 reg)
 {
     int_regs[reg].locked = false;
-    int_regs[reg].used = false;
     flush_int_reg(ee, reg);
+    int_regs[reg].used = false;
     int_regs[reg].stored = false;
 }
 
 void EE_JIT64::free_xmm_reg(EmotionEngine& ee, REG_64 reg)
 {
     xmm_regs[reg].locked = false;
-    xmm_regs[reg].used = false;
     flush_xmm_reg(ee, reg);
+    xmm_regs[reg].used = false;
     xmm_regs[reg].stored = false;
 }
 

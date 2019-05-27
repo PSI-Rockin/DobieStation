@@ -686,8 +686,8 @@ void EE_JIT64::load_byte(EmotionEngine& ee, IR::Instruction &instr)
         emitter.MOV32_REG(source, addr);
     prepare_abi((uint64_t)&ee);
     prepare_abi_reg(addr);
-    call_abi_func((uint64_t)ee_read8);
     free_int_reg(ee, addr);
+    call_abi_func((uint64_t)ee_read8);
 
     emitter.MOVSX8_TO_64(REG_64::RAX, dest);
 }
@@ -706,8 +706,8 @@ void EE_JIT64::load_byte_unsigned(EmotionEngine& ee, IR::Instruction &instr)
         emitter.MOV32_REG(source, addr);
     prepare_abi((uint64_t)&ee);
     prepare_abi_reg(addr);
-    call_abi_func((uint64_t)ee_read8);
     free_int_reg(ee, addr);
+    call_abi_func((uint64_t)ee_read8);
 
     emitter.MOVZX8_TO_64(REG_64::RAX, dest);
 }
@@ -726,8 +726,8 @@ void EE_JIT64::load_doubleword(EmotionEngine& ee, IR::Instruction &instr)
         emitter.MOV32_REG(source, addr);
     prepare_abi((uint64_t)&ee);
     prepare_abi_reg(addr);
-    call_abi_func((uint64_t)ee_read64);
     free_int_reg(ee, addr);
+    call_abi_func((uint64_t)ee_read64);
 
     emitter.MOV64_MR(REG_64::RAX, dest);
 }
@@ -819,8 +819,8 @@ void EE_JIT64::load_halfword(EmotionEngine& ee, IR::Instruction &instr)
         emitter.MOV32_REG(source, addr);
     prepare_abi((uint64_t)&ee);
     prepare_abi_reg(addr);
-    call_abi_func((uint64_t)ee_read16);
     free_int_reg(ee, addr);
+    call_abi_func((uint64_t)ee_read16);
 
     emitter.MOVSX16_TO_64(REG_64::RAX, dest);
 }
@@ -839,8 +839,8 @@ void EE_JIT64::load_halfword_unsigned(EmotionEngine& ee, IR::Instruction &instr)
         emitter.MOV32_REG(source, addr);
     prepare_abi((uint64_t)&ee);
     prepare_abi_reg(addr);
-    call_abi_func((uint64_t)ee_read16);
     free_int_reg(ee, addr);
+    call_abi_func((uint64_t)ee_read16);
 
     emitter.MOVZX16_TO_64(REG_64::RAX, dest);
 }
@@ -868,8 +868,8 @@ void EE_JIT64::load_word(EmotionEngine& ee, IR::Instruction &instr)
         emitter.MOV32_REG(source, addr);
     prepare_abi((uint64_t)&ee);
     prepare_abi_reg(addr);
-    call_abi_func((uint64_t)ee_read32);
     free_int_reg(ee, addr);
+    call_abi_func((uint64_t)ee_read32);
 
     emitter.MOVSX32_TO_64(REG_64::RAX, dest);
 }
@@ -963,8 +963,9 @@ void EE_JIT64::load_word_unsigned(EmotionEngine& ee, IR::Instruction &instr)
         emitter.MOV32_REG(source, addr);
     prepare_abi((uint64_t)&ee);
     prepare_abi_reg(addr);
-    call_abi_func((uint64_t)ee_read32);
     free_int_reg(ee, addr);
+    call_abi_func((uint64_t)ee_read32);
+
 
     emitter.MOV32_REG(REG_64::RAX, dest);
 }
@@ -991,9 +992,9 @@ void EE_JIT64::load_quadword(EmotionEngine& ee, IR::Instruction &instr)
     prepare_abi((uint64_t)&ee);
     prepare_abi_reg(addr);
     prepare_abi_reg(REG_64::RSP, 0x1A0);
+    free_int_reg(ee, addr);
     call_abi_func((uint64_t)ee_read128);
     restore_xmm_regs(std::vector<REG_64> {dest}, false);
-    free_int_reg(ee, addr);
 
     emitter.MOVAPS_FROM_MEM(REG_64::RSP, dest, 0x1A0);
 }
@@ -1325,8 +1326,8 @@ void EE_JIT64::store_byte(EmotionEngine& ee, IR::Instruction& instr)
     prepare_abi((uint64_t)&ee);
     prepare_abi_reg(addr);
     prepare_abi_reg(source);
-    call_abi_func((uint64_t)ee_write8);
     free_int_reg(ee, addr);
+    call_abi_func((uint64_t)ee_write8);
 }
 
 void EE_JIT64::store_doubleword(EmotionEngine& ee, IR::Instruction& instr)
@@ -1343,8 +1344,8 @@ void EE_JIT64::store_doubleword(EmotionEngine& ee, IR::Instruction& instr)
     prepare_abi((uint64_t)&ee);
     prepare_abi_reg(addr);
     prepare_abi_reg(source);
-    call_abi_func((uint64_t)ee_write64);
     free_int_reg(ee, addr);
+    call_abi_func((uint64_t)ee_write64);
 }
 
 void EE_JIT64::store_halfword(EmotionEngine& ee, IR::Instruction& instr)
@@ -1361,8 +1362,8 @@ void EE_JIT64::store_halfword(EmotionEngine& ee, IR::Instruction& instr)
     prepare_abi((uint64_t)&ee);
     prepare_abi_reg(addr);
     prepare_abi_reg(source);
-    call_abi_func((uint64_t)ee_write16);
     free_int_reg(ee, addr);
+    call_abi_func((uint64_t)ee_write16);
 }
 
 void EE_JIT64::store_word(EmotionEngine& ee, IR::Instruction& instr)
@@ -1379,8 +1380,8 @@ void EE_JIT64::store_word(EmotionEngine& ee, IR::Instruction& instr)
     prepare_abi((uint64_t)&ee);
     prepare_abi_reg(addr);
     prepare_abi_reg(source);
-    call_abi_func((uint64_t)ee_write32);
     free_int_reg(ee, addr);
+    call_abi_func((uint64_t)ee_write32);
 }
 
 void EE_JIT64::store_quadword(EmotionEngine& ee, IR::Instruction &instr)
@@ -1404,8 +1405,8 @@ void EE_JIT64::store_quadword(EmotionEngine& ee, IR::Instruction &instr)
     prepare_abi((uint64_t)&ee);
     prepare_abi_reg(addr);
     prepare_abi_reg(REG_64::RSP, 0x1A0);
-    call_abi_func((uint64_t)ee_write128);
     free_int_reg(ee, addr);
+    call_abi_func((uint64_t)ee_write128);
 }
 
 void EE_JIT64::sub_doubleword_reg(EmotionEngine& ee, IR::Instruction &instr)
