@@ -132,7 +132,6 @@ bool EmuThread::gsdump_eof()
 
 void EmuThread::gsdump_run()
 {
-    CTimer gsdFrameTimer;
     printf("gsdump frame\n");
     try
     {
@@ -148,7 +147,7 @@ void EmuThread::gsdump_run()
             {
                 case set_xyz_t:
                     e.get_gs().send_message(data);
-                    //e.get_gs().wake_gs_thread();
+                    e.get_gs().wake_gs_thread();
                     if (frame_advance && data.payload.xyz_payload.drawing_kick && --draws_sent <= 0)
                     {
                         uint16_t w, h;
@@ -168,7 +167,6 @@ void EmuThread::gsdump_run()
 
                     emit completed_frame(e.get_gs().get_framebuffer(), w, h, new_w, new_h);
                     printf("gsdump frame render complete\n");
-                    fprintf(stderr, "[GS-Perf] gsdump frame done in %.3f ms\n", gsdFrameTimer.getMs());
                     pause(PAUSE_EVENT::FRAME_ADVANCE);
                     return;
                 }

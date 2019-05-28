@@ -671,7 +671,7 @@ void Emulator::write32(uint32_t address, uint32_t value)
     if ((address & (0xFF000000)) == 0x12000000)
     {
         gs.write32_privileged(address, value);
-        //gs.wake_gs_thread();
+        gs.wake_gs_thread();
         return;
     }
     if (address >= 0x10008000 && address < 0x1000F000)
@@ -794,7 +794,7 @@ void Emulator::write64(uint32_t address, uint64_t value)
     if ((address & (0xFF000000)) == 0x12000000)
     {
         gs.write64_privileged(address, value);
-        //gs.wake_gs_thread();
+        gs.wake_gs_thread();
         return;
     }
     if (address >= 0x11000000 && address < 0x11004000)

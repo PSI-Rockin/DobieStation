@@ -10,9 +10,6 @@
 #include "circularFIFO.hpp"
 #include "int128.hpp"
 
-#define GS_MESSAGE_BATCH_SIZE 3000
-#define GS_MESSAGE_BATCHES 1000
-
 template<int XS, int YS, int ZS>
 struct SwizzleTable
 {
@@ -147,100 +144,7 @@ struct GSReturnMessage
     GSReturnMessagePayload payload;
 };
 
-struct GSMessageBatch
-{
-    GSMessage msgs[GS_MESSAGE_BATCH_SIZE];
-    int64_t size = 0;
-    int64_t idx = 0;
-
-    void push_back(GSMessage& mess)
-    {
-        msgs[idx++] = mess;
-    }
-
-    void pop_back(GSMessage& mess)
-    {
-        mess = msgs[idx++];
-    }
-
-    bool room_to_push()
-    {
-        return idx < GS_MESSAGE_BATCH_SIZE;
-    }
-
-    bool something_to_pop()
-    {
-        return idx < size;
-    }
-};
-
-struct GSMessageBatchStack
-{
-    GSMessageBatchStack()
-    {
-        for(int i = 0; i< GS_MESSAGE_BATCHES; i++)
-        {
-            batches[i] = new GSMessageBatch;
-            freeBatches[i] = batches[i];
-        }
-    }
-
-    ~GSMessageBatchStack()
-    {
-        for (auto &batch : batches)
-        {
-            delete batch;
-        }
-    }
-
-    GSMessageBatch* alloc()
-    {
-        std::lock_guard<std::mutex> lock(mut);
-        if(freeStackIdx >= GS_MESSAGE_BATCHES)
-        {
-            Errors::die("GSMessageBatch::alloc() - out of Message Batches!");
-        }
-        return freeBatches[freeStackIdx++]; // todo atomic instead of mutex?
-    }
-
-    void free(GSMessageBatch* it)
-    {
-        std::lock_guard<std::mutex> lock(mut);
-        if(!it) return;
-        it->size = 0;
-        it->idx = 0;
-        // check for double free bug, but takes a big performance hit.
-//        for(int i = freeStackIdx; i < GS_MESSAGE_BATCHES; i++)
-//        {
-//            if(freeBatches[i] == it)
-//            {
-//                Errors::die("GSMessageBatch::free() - double free!");
-//            }
-//        }
-
-        freeBatches[--freeStackIdx] = it; // todo atomic instead of mutex?
-    }
-
-    void reset_allocations() // WARNING - this method is not thread safe.
-    {
-        printf("RESET ALLOCATIONS\n");
-        freeStackIdx = 0;
-        for(int i = 0; i < GS_MESSAGE_BATCHES; i++)
-        {
-            freeBatches[i] = batches[i];
-            freeBatches[i]->size = 0;
-            freeBatches[i]->idx = 0;
-        }
-    }
-
-    GSMessageBatch* batches[GS_MESSAGE_BATCHES]; // all batches
-    GSMessageBatch* freeBatches[GS_MESSAGE_BATCHES]; // from freeStack -> GS_MESSAGE_BATCHES - 1 is free
-    int freeStackIdx = 0;
-    std::mutex mut;
-};
-
-//typedef CircularFifo<GSMessage, 1024 * 1024 * 16> gs_fifo;
-typedef CircularFifo<GSMessageBatch*, 5000> gs_fifo;
+typedef CircularFifo<GSMessage, 1024 * 1024 * 16> gs_fifo;
 typedef CircularFifo<GSReturnMessage, 1024> gs_return_fifo;
 
 struct PRMODE_REG
@@ -452,26 +356,11 @@ struct VertexF
 class GraphicsSynthesizerThread
 {
     private:
-        // performance monitoring
-        CTimer frameTimer;
-        float avg_frametime = 0.f;
-        int gs_starvation_count = 0;
-        int batch_count = 0;
-        int tri_count = 0;
-        int tri_px_count = 0;
-        int sprite_count = 0;
-        int y_reject_tris = 0;
-        int div_reject_tris = 0;
-
         //threading
         std::thread thread;
         std::condition_variable notifier;
 
         std::mutex data_mutex;
-
-        GSMessageBatchStack gs_batch_stack;
-        GSMessageBatch* gs_current_batch = nullptr;
-        GSMessageBatch* emulator_current_batch = nullptr;
 
         bool send_data = false;
         bool recieve_data = false;
@@ -536,8 +425,6 @@ class GraphicsSynthesizerThread
         float log2_lookup[32768][4];
 
         void event_loop();
-        void gs_pop_message(GSMessage& mess);
-        void send_current_batch_to_gs();
 
         inline const uint32_t get_word(uint32_t addr) { return *(uint32_t*)&local_mem[addr]; };
         inline void set_word(uint32_t addr, uint32_t value) { *(uint32_t*)&local_mem[addr] = value; };

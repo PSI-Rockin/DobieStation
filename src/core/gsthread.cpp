@@ -172,7 +172,6 @@ void GraphicsSynthesizerThread::wait_for_return(GSReturn type, GSReturnMessage &
                 return;
             else
             {
-                send_current_batch_to_gs();
                 if (return_queue->was_empty())
                 {
                     //Last message in the queue, so we don't want this one so we need to sleep
@@ -190,7 +189,6 @@ void GraphicsSynthesizerThread::wait_for_return(GSReturn type, GSReturnMessage &
         else
         {
             printf("[GS] No Messages, waiting for return message\n");
-            send_current_batch_to_gs();
             std::unique_lock<std::mutex> lk(data_mutex);
             notifier.wait(lk, [this] {return recieve_data;});
             recieve_data = false;
@@ -198,61 +196,11 @@ void GraphicsSynthesizerThread::wait_for_return(GSReturn type, GSReturnMessage &
     }
 }
 
-// send current batch to the gs, regardless of how full it is.
-void GraphicsSynthesizerThread::send_current_batch_to_gs()
-{
-    if(emulator_current_batch->idx)
-    {
-        emulator_current_batch->size = emulator_current_batch->idx;
-        emulator_current_batch->idx = 0;
-
-
-        message_queue->push(emulator_current_batch);
-        emulator_current_batch = nullptr;
-
-        // notify GS
-        std::unique_lock<std::mutex> lk(data_mutex);
-        notifier.notify_one();
-        send_data = true;
-
-        // allocate a new one
-        emulator_current_batch = gs_batch_stack.alloc();
-
-        if(emulator_current_batch->idx || emulator_current_batch->size)
-        {
-            Errors::die("send_current_batch_to_gs - allocated a batch with size/idx (%ld/%ld)?", emulator_current_batch->idx, emulator_current_batch->size);
-        }
-    }
-    else
-    {
-        // notify GS
-        std::unique_lock<std::mutex> lk(data_mutex);
-        notifier.notify_one();
-        send_data = true;
-    }
-}
-
-
 void GraphicsSynthesizerThread::send_message(GSMessage message)
 {
     printf("[GS] Notifying gs thread of new data\n");
-    if(emulator_current_batch && emulator_current_batch->room_to_push())
-    {
-        emulator_current_batch->push_back(message);
-        return;
-    }
-
-    // if it's full or doesn't exist yet:
-    send_current_batch_to_gs();
-
-    if(emulator_current_batch && emulator_current_batch->room_to_push())
-    {
-        emulator_current_batch->push_back(message);
-    }
-    else
-    {
-        Errors::die("send_message - failed to allocate a new batch after filling one");
-    }
+    message_queue->push(message);
+    send_data = true;
 }
 
 void GraphicsSynthesizerThread::wake_thread()
@@ -272,52 +220,8 @@ void GraphicsSynthesizerThread::reset_fifos()
     GSReturnMessage data;
     while (return_queue->pop(data));
 
-    GSMessageBatch* data2;
+    GSMessage data2;
     while (message_queue->pop(data2));
-    gs_current_batch = nullptr;
-    emulator_current_batch = nullptr;
-    gs_batch_stack.reset_allocations();
-    emulator_current_batch = gs_batch_stack.alloc();
-}
-
-// pop a single GS message, from the GS thread.
-void GraphicsSynthesizerThread::gs_pop_message(GSMessage &mess)
-{
-    for(;;) // loop until we've actually popped something.
-    {
-        // first, try to get a message from the current batch
-        if(gs_current_batch && gs_current_batch->something_to_pop())
-        {
-            gs_current_batch->pop_back(mess);
-            return;
-        }
-
-        // current batch must be empty.  first return it:
-        gs_batch_stack.free(gs_current_batch);
-        gs_current_batch = nullptr;
-
-        // then see if there's a new one...
-        if(message_queue->pop(gs_current_batch)) {
-            // yup!
-            if(!gs_current_batch)
-            {
-                Errors::die("gs_pop_message() - popped null from FIFO");
-            }
-            if(!gs_current_batch->size)
-            {
-                Errors::die("gs_pop_message() - got an empty batch from the FIFO");
-            }
-            gs_current_batch->pop_back(mess);
-            batch_count++;
-            return;
-        } else {
-            // nope, nothing here. the GS is currently starved.
-            gs_starvation_count++;
-            std::unique_lock<std::mutex> lk(data_mutex);
-            notifier.wait(lk, [this] {return send_data;});
-            send_data = false;
-        }
-    }
 }
 
 void GraphicsSynthesizerThread::exit()
@@ -336,7 +240,6 @@ void GraphicsSynthesizerThread::exit()
 void GraphicsSynthesizerThread::event_loop()
 {
     printf("[GS_t] Starting GS Thread\n");
-    int frame_messages = 0;
 
     reset();
 
@@ -348,13 +251,11 @@ void GraphicsSynthesizerThread::event_loop()
         while (true)
         {
             GSMessage data;
-            gs_pop_message(data);
-//            if (message_queue->pop(data))
-//            {
+            if (message_queue->pop(data))
+            {
                 if (gsdump_recording)
                     gsdump_file.write((char*)&data, sizeof(data));
 
-                frame_messages++;
                 switch (data.type)
                 {
                     case write64_t:
@@ -429,19 +330,6 @@ void GraphicsSynthesizerThread::event_loop()
                         std::unique_lock<std::mutex> lk(data_mutex);
                         recieve_data = true;
                         notifier.notify_one();
-                        float ms = frameTimer.getMs();
-                        avg_frametime = avg_frametime * 0.9 + ms * 0.1;
-                        float avg_fps = 60 * 16.6667 / avg_frametime;
-                        fprintf(stderr, "GS [%6.3f ms] (filtered %5.2f fps) got %d messages in %d batches, slept %d times!\n", ms, avg_fps,
-                                 frame_messages, batch_count, gs_starvation_count);
-                        fprintf(stderr, "\ttris: %d (%d px), sprites: %d\n", tri_count, tri_px_count, sprite_count);
-                        sprite_count = 0;
-                        tri_count = 0;
-                        frameTimer.start();
-                        gs_starvation_count = 0;
-                        tri_px_count = 0;
-                        frame_messages = 0;
-                        batch_count = 0;
                         break;
                     }
                     case assert_finish_t:
@@ -533,15 +421,14 @@ void GraphicsSynthesizerThread::event_loop()
                     default:
                         Errors::die("corrupted command sent to GS thread");
                 }
-//            }
-//            else
-//            {
-//                printf("GS Thread: No messages waiting, going to sleep\n");
-//                std::unique_lock<std::mutex> lk(data_mutex);
-//                notifier.wait(lk, [this] {return send_data;});
-//                gs_starvation_count++;
-//                send_data = false;
-//            }
+            }
+            else
+            {
+                printf("GS Thread: No messages waiting, going to sleep\n");
+                std::unique_lock<std::mutex> lk(data_mutex);
+                notifier.wait(lk, [this] {return send_data;});
+                send_data = false;
+            }
         }
     }
     catch (Emulation_error &e)
@@ -576,10 +463,6 @@ void GraphicsSynthesizerThread::reset()
     current_PRMODE = &PRIM;
     PRIM.reset();
     PRMODE.reset();
-
-    gs_current_batch = nullptr;
-    emulator_current_batch = nullptr;
-    gs_batch_stack.reset_allocations();
 
     reset_fifos();
 }
@@ -2087,8 +1970,6 @@ void GraphicsSynthesizerThread::render_triangle2() {
     // (this triangles also has a positive area because the vertices are CCW)
 
 
-    tri_count++;
-
     Vertex unsortedVerts[3]; // vertices in the order they were sent to GS
     unsortedVerts[0] = vtx_queue[2]; unsortedVerts[0].to_relative(current_ctx->xyoffset);
     unsortedVerts[1] = vtx_queue[1]; unsortedVerts[1].to_relative(current_ctx->xyoffset);
@@ -2173,7 +2054,6 @@ void GraphicsSynthesizerThread::render_triangle2() {
 
     if(div == 0.f)
     {
-        div_reject_tris++;
         return;
     }
 
@@ -2389,7 +2269,7 @@ void GraphicsSynthesizerThread::render_half_triangle(float x0, float x1, int y0,
 void GraphicsSynthesizerThread::render_triangle()
 {
     printf("[GS_t] Rendering triangle!\n");
-    tri_count++;
+
     Vertex v1 = vtx_queue[2]; v1.to_relative(current_ctx->xyoffset);
     Vertex v2 = vtx_queue[1]; v2.to_relative(current_ctx->xyoffset);
     Vertex v3 = vtx_queue[0]; v3.to_relative(current_ctx->xyoffset);
@@ -2544,7 +2424,6 @@ void GraphicsSynthesizerThread::render_triangle()
                         //Is inside triangle?
                         if ((w1 | w2 | w3) >= 0)
                         {
-                            tri_px_count++;
                             //Interpolate Z
                             double z = (double) v1.z * w1 + (double) v2.z * w2 + (double) v3.z * w3;
                             z /= divider;
@@ -2629,7 +2508,6 @@ void GraphicsSynthesizerThread::render_sprite()
     printf("[GS_t] Rendering sprite!\n");
     Vertex v1 = vtx_queue[1]; v1.to_relative(current_ctx->xyoffset);
     Vertex v2 = vtx_queue[0]; v2.to_relative(current_ctx->xyoffset);
-    sprite_count++;
     TexLookupInfo tex_info;
     tex_info.new_lookup = true;
 
