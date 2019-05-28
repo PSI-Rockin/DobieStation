@@ -75,7 +75,7 @@ class JitCache
         constexpr static int JIT_CACHE_DEFAULT_SIZE = 8192 * 1024 * 64 / 32;
         constexpr static int JIT_ALLOC_BINS = 8;
         constexpr static int JIT_ALLOC_BIN_START = 8; // 2^8 = 256 bytes
-        constexpr static int JIT_MAX_BLOCK_CODESIZE = 1024 * 128; // 16 kB/block maximum size
+        constexpr static int JIT_MAX_BLOCK_CODESIZE = 1024 * 4096; // 512 kB/block maximum size
         constexpr static int JIT_MAX_BLOCK_LITERALSIZE = 1024 * 8;
 
         std::size_t get_min_bin_size(uint8_t bin);

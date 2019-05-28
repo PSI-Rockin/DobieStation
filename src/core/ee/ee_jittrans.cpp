@@ -28,8 +28,6 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
     branch_delayslot = false;
     eret_op = false;
     cycle_count = 0;
-    // Set hard limit to avoid massive blocks (Thanks, Yakuza)
-    const int instrs_limit = 1000;
 
     while (!branch_delayslot && !eret_op)
     {
@@ -44,18 +42,6 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
 
         pc += 4;
         cycle_count++;
-
-        if (instrs.size() >= instrs_limit && !branch_op && !branch_delayslot && !eret_op)
-            break;
-    }
-    
-    if (instrs.size() >= instrs_limit && !branch_op && !branch_delayslot && !eret_op)
-    {
-        IR::Instruction instr;
-        instr.op = IR::Opcode::Jump;
-        instr.set_jump_dest(pc);
-        instr.set_is_link(false);
-        instrs.push_back(instr);
     }
 
     for (auto instr : instrs)
