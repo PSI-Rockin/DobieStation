@@ -155,6 +155,7 @@ struct PRMODE_REG
     }
 };
 
+//NOTE: RGBAQ is used by the JIT. DO NOT TOUCH!
 struct RGBAQ_REG
 {
     //We make them 16-bit to handle potential overflows
@@ -214,6 +215,7 @@ struct Vertex
     }
 };
 
+//NOTE: TexLookupInfo is used by the JIT. DO NOT TOUCH!
 struct TexLookupInfo
 {
     //int32_t u, v;
@@ -268,9 +270,10 @@ class GraphicsSynthesizerThread
         GSContext context1, context2;
         GSContext* current_ctx;
 
-        Emitter64 emitter;
-        JitCache jit_cache;
+        Emitter64 emitter_dp, emitter_tex;
+        JitCache jit_draw_pixel_cache, jit_tex_lookup_cache;
         uint8_t* jit_draw_pixel_func;
+        uint8_t* jit_tex_lookup_func;
 
         uint8_t prim_type;
         uint16_t FOG;
@@ -292,6 +295,7 @@ class GraphicsSynthesizerThread
 
         //Used for the JIT to determine the ID of the draw pixel block
         uint64_t draw_pixel_state;
+        uint64_t tex_lookup_state;
 
         BITBLTBUF_REG BITBLTBUF;
         TRXPOS_REG TRXPOS;
@@ -354,17 +358,25 @@ class GraphicsSynthesizerThread
         void calculate_LOD(TexLookupInfo& info);
         void tex_lookup(int16_t u, int16_t v, TexLookupInfo& info);
         void tex_lookup_int(int16_t u, int16_t v, TexLookupInfo& info, bool forced_lookup = false);
+        void jit_tex_lookup(int16_t u, int16_t v, TexLookupInfo* info);
         void clut_lookup(uint8_t entry, RGBAQ_REG& tex_color);
         void clut_CSM2_lookup(uint8_t entry, RGBAQ_REG& tex_color);
         void reload_clut(const GSContext& context);
         void update_draw_pixel_state();
+        void update_tex_lookup_state();
         uint8_t* get_jitted_draw_pixel(uint64_t state);
         void recompile_draw_pixel(uint64_t state);
         void recompile_alpha_test();
         void recompile_depth_test();
         void recompile_alpha_blend();
-        void jit_call_func(uint64_t addr);
+        void jit_call_func(Emitter64& emitter, uint64_t addr);
         void jit_epilogue_draw_pixel();
+
+        uint8_t* get_jitted_tex_lookup(uint64_t state);
+        void recompile_tex_lookup(uint64_t state);
+        void recompile_clut_lookup();
+        void recompile_csm2_lookup();
+        void recompile_convert_16bit_tex(REG_64 color, REG_64 temp, REG_64 temp2);
 
         void vertex_kick(bool drawing_kick);
         bool depth_test(int32_t x, int32_t y, uint32_t z);

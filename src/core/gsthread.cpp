@@ -9,6 +9,12 @@
 #include "gsmem.hpp"
 #include "errors.hpp"
 
+#ifdef _MSC_VER
+#define _noinline(type) __declspec(noinline) type
+#else
+#define _noinline(type) type __attribute__ ((noinline))
+#endif
+
 using namespace std;
 
 //Swizzling tables - we declare these outside the class to prevent a stack overflow
@@ -24,7 +30,7 @@ static uint32_t page_PSMCT4[32][128][128];
 
 #define printf(fmt, ...)(0)
 
-//#define GS_JIT
+#define GS_JIT
 
 /**
   * ~ GS notes ~
@@ -74,7 +80,8 @@ float interpolate_f(int32_t x, float u1, int32_t x1, float u2, int32_t x2)
 const unsigned int GraphicsSynthesizerThread::max_vertices[8] = {1, 2, 2, 3, 3, 3, 2, 0};
 
 GraphicsSynthesizerThread::GraphicsSynthesizerThread()
-    : frame_complete(false), local_mem(nullptr), emitter(&jit_cache)
+    : frame_complete(false), local_mem(nullptr), emitter_dp(&jit_draw_pixel_cache),
+      emitter_tex(&jit_tex_lookup_cache)
 {
     //Initialize swizzling tables
     for (int block = 0; block < 32; block++)
@@ -140,7 +147,8 @@ GraphicsSynthesizerThread::GraphicsSynthesizerThread()
         log2_lookup[i][3] = ldexp(calculation, 3);
     }
 
-    jit_cache.flush_all_blocks();
+    jit_draw_pixel_cache.flush_all_blocks();
+    jit_tex_lookup_cache.flush_all_blocks();
 
     thread = std::thread(&GraphicsSynthesizerThread::event_loop, this);
 }
@@ -467,6 +475,12 @@ void GraphicsSynthesizerThread::reset()
     PRIM.reset();
     PRMODE.reset();
 
+    jit_draw_pixel_func = nullptr;
+    jit_tex_lookup_func = nullptr;
+
+    jit_tex_lookup_cache.flush_all_blocks();
+    jit_draw_pixel_cache.flush_all_blocks();
+
     reset_fifos();
 }
 
@@ -701,6 +715,7 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             num_vertices = 0;
             printf("[GS_t] PRIM: $%08X\n", value);
             update_draw_pixel_state();
+            update_tex_lookup_state();
             break;
         case 0x0001:
         {
@@ -747,16 +762,24 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
         case 0x0006:
             context1.set_tex0(value);
             reload_clut(context1);
+            if (current_ctx == &context1)
+                update_tex_lookup_state();
             break;
         case 0x0007:
             context2.set_tex0(value);
             reload_clut(context2);
+            if (current_ctx == &context2)
+                update_tex_lookup_state();
             break;
         case 0x0008:
             context1.set_clamp(value);
+            if (current_ctx == &context1)
+                update_tex_lookup_state();
             break;
         case 0x0009:
             context2.set_clamp(value);
+            if (current_ctx == &context2)
+                update_tex_lookup_state();
             break;
         case 0x000A:
             FOG = (value >> 56) & 0xFF;
@@ -780,17 +803,25 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             break;
         case 0x0014:
             context1.set_tex1(value);
+            if (current_ctx == &context1)
+                update_tex_lookup_state();
             break;
         case 0x0015:
             context2.set_tex1(value);
+            if (current_ctx == &context2)
+                update_tex_lookup_state();
             break;
         case 0x0016:
             context1.set_tex2(value);
             reload_clut(context1);
+            if (current_ctx == &context1)
+                update_tex_lookup_state();
             break;
         case 0x0017:
             context2.set_tex2(value);
             reload_clut(context2);
+            if (current_ctx == &context2)
+                update_tex_lookup_state();
             break;
         case 0x0018:
             context1.set_xyoffset(value);
@@ -812,6 +843,7 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
                     current_ctx = &context1;
             }
             update_draw_pixel_state();
+            update_tex_lookup_state();
             break;
         case 0x001B:
             printf("PRMODE: $%08X\n", value);
@@ -832,6 +864,7 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             }
             PRMODE.fix_fragment_value = value & (1 << 10);
             update_draw_pixel_state();
+            update_tex_lookup_state();
             break;
         case 0x001C:
             TEXCLUT.width = (value & 0x3F) * 64;
@@ -862,6 +895,7 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             TEXA.alpha0 = value & 0xFF;
             TEXA.trans_black = value & (1 << 15);
             TEXA.alpha1 = (value >> 32) & 0xFF;
+            update_tex_lookup_state();
             break;
         case 0x003D:
             printf("FOGCOL: $%08X\n", value);
@@ -924,9 +958,13 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             break;
         case 0x004A:
             context1.FBA = value & 0x1;
+            if (current_ctx == &context1)
+                update_draw_pixel_state();
             break;
         case 0x004B:
             context2.FBA = value & 0x1;
+            if (current_ctx == &context2)
+                update_draw_pixel_state();
             break;
         case 0x004C:
             context1.set_frame(value);
@@ -1337,6 +1375,7 @@ void GraphicsSynthesizerThread::render_primitive()
 {
 #ifdef GS_JIT
     jit_draw_pixel_func = get_jitted_draw_pixel(draw_pixel_state);
+    jit_tex_lookup_func = get_jitted_tex_lookup(tex_lookup_state);
 #endif
     switch (prim_type)
     {
@@ -1526,7 +1565,7 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
     }
 
     bool pass_depth_test = true;
-    if (test->depth_test)
+    if (test->depth_test && false)
         pass_depth_test = depth_test(x, y, z);
     else
         update_z = false;
@@ -1796,7 +1835,7 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
     }
 }
 
-void GraphicsSynthesizerThread::jit_draw_pixel(int32_t x, int32_t y,
+_noinline(void) GraphicsSynthesizerThread::jit_draw_pixel(int32_t x, int32_t y,
                                                uint32_t z, RGBAQ_REG &color)
 {
 #ifdef _MSC_VER
@@ -1815,7 +1854,7 @@ void GraphicsSynthesizerThread::jit_draw_pixel(int32_t x, int32_t y,
         "popq %%r15\n\t"
         "popq %%r14\n\t"
         "popq %%r13\n\t"
-        "popq %%r12"
+        "popq %%r12\n\t"
                 :
                 : "r" (x), "r" (y), "r" (z), "X" (color), "r" (jit_draw_pixel_func)
 
@@ -2155,10 +2194,11 @@ void GraphicsSynthesizerThread::render_triangle()
                                     u = (uint32_t) temp_u;
                                     v = (uint32_t) temp_v;
                                 }
-                                tex_lookup(u, v, tex_info);
 #ifdef GS_JIT
+                                jit_tex_lookup(u, v, &tex_info);
                                 jit_draw_pixel(x, y, (uint32_t)z, tex_info.tex_color);
 #else
+                                tex_lookup(u, v, tex_info);
                                 draw_pixel(x, y, (uint32_t)z, tex_info.tex_color);
 #endif
                             }
@@ -2238,7 +2278,7 @@ void GraphicsSynthesizerThread::render_sprite()
     int32_t pix_u_step = stepsize((int32_t)v1.uv.u, v1.x, (int32_t)v2.uv.u, v2.x, 0x100000);
 
     bool tmp_tex = current_PRMODE->texture_mapping;
-    bool tmp_uv = !current_PRMODE->use_UV;//allow for loop unswitching
+    bool tmp_st = !current_PRMODE->use_UV;//allow for loop unswitching
 
     for (int32_t y = min_y; y < max_y; y += 0x10)
     {
@@ -2249,14 +2289,24 @@ void GraphicsSynthesizerThread::render_sprite()
             if (tmp_tex)
             {
                 tex_info.fog = v2.fog;
-                if (tmp_uv)
+                if (tmp_st)
                 {
                     pix_v = (pix_t * tex_info.tex_height) * 16.0;
                     pix_u = (pix_s * tex_info.tex_width) * 16.0;
+#ifdef GS_JIT
+                    jit_tex_lookup(pix_u, pix_v, &tex_info);
+#else
                     tex_lookup(pix_u, pix_v, tex_info);
+#endif
                 }
                 else
+                {
+#ifdef GS_JIT
+                    jit_tex_lookup(pix_u >> 16, pix_v >> 16, &tex_info);
+#else
                     tex_lookup(pix_u >> 16, pix_v >> 16, tex_info);
+#endif
+                }
 
 #ifdef GS_JIT
                 jit_draw_pixel(x, y, v2.z, tex_info.tex_color);
@@ -2907,7 +2957,7 @@ void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, TexLookupInfo& 
     bool bilinear_filter = false;
 
     //If UV is being used and MIPMAP is enabled, we need to bring down the UV size too
-    if (PRIM.use_UV)
+    if (current_PRMODE->use_UV)
     {
         u >>= info.mipmap_level;
         v >>= info.mipmap_level;
@@ -3202,6 +3252,33 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupIn
     }
 }
 
+_noinline(void) GraphicsSynthesizerThread::jit_tex_lookup(int16_t u, int16_t v, TexLookupInfo *info)
+{
+#ifdef _MSC_VER
+    //TODO
+#else
+    __asm__(
+        "pushq %%r12\n\t"
+        "pushq %%r13\n\t"
+        "pushq %%r14\n\t"
+        "pushq %%r15\n\t"
+        "xor %%r12, %%r12\n\t"
+        "xor %%r13, %%r13\n\t"
+        "mov %0, %%r12w\n\t"
+        "mov %1, %%r13w\n\t"
+        "mov %2, %%r14\n\t"
+        "callq *%3\n\t"
+        "popq %%r15\n\t"
+        "popq %%r14\n\t"
+        "popq %%r13\n\t"
+        "popq %%r12\n\t"
+                :
+                : "r" (u), "r" (v), "r" (info), "r" (jit_tex_lookup_func)
+
+    );
+#endif
+}
+
 void GraphicsSynthesizerThread::clut_lookup(uint8_t entry, RGBAQ_REG &tex_color)
 {
     uint32_t clut_addr = current_ctx->tex0.CLUT_offset;
@@ -3386,154 +3463,236 @@ void GraphicsSynthesizerThread::update_draw_pixel_state()
     draw_pixel_state |= (uint64_t)SCANMSK << 40UL;
     draw_pixel_state |= (uint64_t)current_ctx->zbuf.no_update << 42UL;
     draw_pixel_state |= (uint64_t)current_ctx->alpha.fixed_alpha << 43UL;
+    draw_pixel_state |= (uint64_t)(current_PRMODE == &PRIM) << 51UL;
+    draw_pixel_state |= (uint64_t)(current_ctx == &context1) << 52UL;
+}
+
+void GraphicsSynthesizerThread::update_tex_lookup_state()
+{
+    tex_lookup_state = 0;
+
+    tex_lookup_state |= current_PRMODE == &PRIM;
+    tex_lookup_state |= current_PRMODE->use_UV << 1;
+    tex_lookup_state |= current_ctx->tex1.filter_larger << 2;
+    tex_lookup_state |= current_ctx->tex1.filter_smaller << 3;
+    tex_lookup_state |= current_ctx->clamp.wrap_s << 6;
+    tex_lookup_state |= current_ctx->clamp.wrap_t << 8;
+    tex_lookup_state |= current_ctx->tex0.format << 10;
+    tex_lookup_state |= TEXA.alpha0 << 16;
+    tex_lookup_state |= TEXA.alpha1 << 24;
+    tex_lookup_state |= (uint64_t)TEXA.trans_black << 32UL;
+    tex_lookup_state |= (uint64_t)current_ctx->tex0.use_CSM2 << 33UL;
+    tex_lookup_state |= (uint64_t)current_ctx->tex0.CLUT_format << 34UL;
+    tex_lookup_state |= (uint64_t)(current_ctx == &context1) << 38UL;
+    tex_lookup_state |= (uint64_t)current_ctx->tex0.color_function << 39UL;
+    tex_lookup_state |= (uint64_t)current_ctx->tex0.use_alpha << 41UL;
+    tex_lookup_state |= (uint64_t)current_PRMODE->fog << 42UL;
 }
 
 uint8_t* GraphicsSynthesizerThread::get_jitted_draw_pixel(uint64_t state)
 {
-    if (jit_cache.find_block(BlockState{0, 0, 0, state, 0}) == nullptr)
+    if (jit_draw_pixel_cache.find_block(BlockState{0, 0, 0, state, 0}) == nullptr)
     {
-        printf("[GS_t] RECOMPILING %llX\n", state);
+        printf("[GS_t] RECOMPILING DRAW PIXEL %llX\n", state);
         recompile_draw_pixel(state);
     }
-    return jit_cache.get_current_block_start();
+    return jit_draw_pixel_cache.get_current_block_start();
+}
+
+uint8_t* GraphicsSynthesizerThread::get_jitted_tex_lookup(uint64_t state)
+{
+    if (jit_tex_lookup_cache.find_block(BlockState{0, 0, 0, state, 0}) == nullptr)
+    {
+        printf("[GS_t] RECOMPILING TEX LOOKUP %llX\n", state);
+        recompile_tex_lookup(state);
+    }
+    return jit_tex_lookup_cache.get_current_block_start();
 }
 
 void GraphicsSynthesizerThread::recompile_draw_pixel(uint64_t state)
 {
-    jit_cache.alloc_block(BlockState{0, 0, 0, state, 0});
+    jit_draw_pixel_cache.alloc_block(BlockState{0, 0, 0, state, 0});
 
     //Prologue - create stack frame and save registers
-    emitter.PUSH(REG_64::RBP);
-    emitter.SUB64_REG_IMM(0x40, RSP);
-    emitter.MOV64_MR(REG_64::RSP, REG_64::RBP);
+    emitter_dp.PUSH(RBP);
+    emitter_dp.SUB64_REG_IMM(0xF0, RSP);
+    emitter_dp.MOV64_MR(RSP, RBP);
 
-    emitter.PUSH(RBX);
-    emitter.PUSH(RDI);
-    emitter.PUSH(RSI);
+    emitter_dp.MOVAPS_TO_MEM(XMM0, RBP, 0);
+    emitter_dp.MOVAPS_TO_MEM(XMM1, RBP, 0x10);
+    emitter_dp.MOVAPS_TO_MEM(XMM2, RBP, 0x20);
+    emitter_dp.MOVAPS_TO_MEM(XMM3, RBP, 0x30);
+    emitter_dp.MOVAPS_TO_MEM(XMM4, RBP, 0x40);
+
+    emitter_dp.MOV64_TO_MEM(RBX, RBP, 0x50);
+    emitter_dp.MOV64_TO_MEM(RDI, RBP, 0x58);
+    emitter_dp.MOV64_TO_MEM(RSI, RBP, 0x60);
 
     //R12 = x  R13 = y  R14 = z  R15 = color
 
     //Shift x and y to the right by 4 (remove fractional component)
-    emitter.SAR32_REG_IMM(4, R12);
-    emitter.SAR32_REG_IMM(4, R13);
+    emitter_dp.SAR32_REG_IMM(4, R12);
+    emitter_dp.SAR32_REG_IMM(4, R13);
 
     //SCANMSK test - stop drawing on odd or even y coordinate
     if (SCANMSK >= 2)
     {
         uint8_t* scanmsk_success_dest = nullptr;
-        emitter.TEST8_REG_IMM(0x1, R13);
+        emitter_dp.TEST8_REG_IMM(0x1, R13);
         if (SCANMSK == 2) //Fail if even (result is 0)
-            scanmsk_success_dest = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
+            scanmsk_success_dest = emitter_dp.JCC_NEAR_DEFERRED(ConditionCode::NE);
         else //Fail if odd
-            scanmsk_success_dest = emitter.JCC_NEAR_DEFERRED(ConditionCode::E);
+            scanmsk_success_dest = emitter_dp.JCC_NEAR_DEFERRED(ConditionCode::E);
 
         //Return on failure
         jit_epilogue_draw_pixel();
 
         //Success
-        emitter.set_jump_dest(scanmsk_success_dest);
+        emitter_dp.set_jump_dest(scanmsk_success_dest);
     }
 
     //RBX = bitfield for storing update variables (update_frame, update_z, update_alpha)
     //If a flag is set, the component will NOT be updated
     //Bit 0 = frame, bit 1 = z, bit 2 = alpha
-    emitter.XOR32_REG(RBX, RBX);
-    if (current_ctx->zbuf.no_update)
-        emitter.OR16_REG_IMM(0x2, RBX);
+    emitter_dp.XOR32_REG(RBX, RBX);
 
     //Alpha test
     if (current_ctx->test.alpha_test && current_ctx->test.alpha_method != 1)
         recompile_alpha_test();
 
-    //Dest alpha test
-    if (current_ctx->test.dest_alpha_test && !(current_ctx->frame.format & 0x1))
-    {
-        Errors::die("[GS JIT] Dest alpha test not implemented");
-    }
-
     //Depth test
     if (current_ctx->test.depth_test)
         recompile_depth_test();
 
-    emitter.TEST32_REG_IMM(0x1, RBX);
-    uint8_t* do_not_update_rgba = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
+    emitter_dp.TEST32_REG_IMM(0x1, RBX);
+    uint8_t* do_not_update_rgba = emitter_dp.JCC_NEAR_DEFERRED(ConditionCode::NE);
 
     //Get framebuffer address and store on stack
-    emitter.load_addr((uint64_t)&current_ctx->frame.base_pointer, RDI);
-    emitter.MOV32_FROM_MEM(RDI, RDI);
-    emitter.SAR32_REG_IMM(8, RDI);
-    emitter.load_addr((uint64_t)&current_ctx->frame.width, RSI);
-    emitter.MOV32_FROM_MEM(RSI, RSI);
-    emitter.SAR32_REG_IMM(6, RSI);
-    emitter.MOV64_MR(R12, RDX);
-    emitter.MOV64_MR(R13, RCX);
+    emitter_dp.load_addr((uint64_t)&current_ctx->frame.base_pointer, RDI);
+    emitter_dp.MOV32_FROM_MEM(RDI, RDI);
+    emitter_dp.SAR32_REG_IMM(8, RDI);
+    emitter_dp.load_addr((uint64_t)&current_ctx->frame.width, RSI);
+    emitter_dp.MOV32_FROM_MEM(RSI, RSI);
+    emitter_dp.SAR32_REG_IMM(6, RSI);
+    emitter_dp.MOV64_MR(R12, RDX);
+    emitter_dp.MOV64_MR(R13, RCX);
 
     switch (current_ctx->frame.format)
     {
         case 0x00:
             //PSMCT32
-            jit_call_func((uint64_t)&addr_PSMCT32);
+            jit_call_func(emitter_dp, (uint64_t)&addr_PSMCT32);
             break;
         case 0x01:
             //PSMCT24
-            jit_call_func((uint64_t)&addr_PSMCT32);
+            jit_call_func(emitter_dp, (uint64_t)&addr_PSMCT32);
             break;
         case 0x02:
             //PSMCT16
-            jit_call_func((uint64_t)&addr_PSMCT16);
+            jit_call_func(emitter_dp, (uint64_t)&addr_PSMCT16);
             break;
         case 0x0A:
             //PSMCT16S
-            jit_call_func((uint64_t)&addr_PSMCT16S);
+            jit_call_func(emitter_dp, (uint64_t)&addr_PSMCT16S);
             break;
         default:
             Errors::die("[GS_t] Unrecognized frame format $%02X in recompile_draw_pixel", current_ctx->frame.format);
     }
 
-    //[RBP + 0x38] = pointer to framebuffer pixel
-    emitter.load_addr((uint64_t)local_mem, RCX);
-    emitter.ADD64_REG(RCX, RAX);
-    emitter.MOV64_TO_MEM(RAX, RBP, 0x38);
+    //[RBP + 0xD0] = pointer to framebuffer pixel
+    emitter_dp.load_addr((uint64_t)local_mem, RCX);
+    emitter_dp.ADD64_REG(RCX, RAX);
+    emitter_dp.MOV64_TO_MEM(RAX, RBP, 0xD0);
+
+    //Dest alpha test
+    if (current_ctx->test.dest_alpha_test && !(current_ctx->frame.format & 0x1))
+    {
+        //Since we only need the top-most alpha bit, we can do a 32-bit move for all formats
+        //This saves us from having to insert an extra xor eax, eax instruction for 16-bit formats
+        emitter_dp.MOV32_FROM_MEM(RAX, RAX);
+
+        if (current_ctx->frame.format & 0x2)
+            emitter_dp.TEST32_EAX(1 << 15);
+        else
+            emitter_dp.TEST32_EAX(1 << 31);
+        ConditionCode pass_code;
+        if (current_ctx->test.dest_alpha_method)
+            pass_code = ConditionCode::NE;
+        else
+            pass_code = ConditionCode::E;
+
+        uint8_t* pass_dest_alpha_test = emitter_dp.JCC_NEAR_DEFERRED(pass_code);
+
+        jit_epilogue_draw_pixel();
+
+        emitter_dp.set_jump_dest(pass_dest_alpha_test);
+    }
 
     if (current_PRMODE->alpha_blend)
         recompile_alpha_blend();
     else
     {
         //Get color: R14 = color in RGBA32 format
-        emitter.MOVQ_TO_XMM(R15, XMM0);
-        emitter.PACKUSWB(XMM0, XMM0);
-        emitter.MOVD_FROM_XMM(XMM0, R14);
+        emitter_dp.MOVQ_TO_XMM(R15, XMM0);
+        emitter_dp.PACKUSWB(XMM0, XMM0);
+        emitter_dp.MOVD_FROM_XMM(XMM0, R14);
     }
 
     if (current_ctx->FBA)
-        emitter.OR32_REG_IMM(0x80000000, R14);
+        emitter_dp.OR32_REG_IMM(0x80000000, R14);
 
     //RCX = framebuffer address
-    emitter.MOV64_FROM_MEM(RBP, RCX, 0x38);
+    emitter_dp.MOV64_FROM_MEM(RBP, RCX, 0xD0);
 
     switch (current_ctx->frame.format)
     {
         case 0x00:
             //PSMCT32
-            emitter.MOV32_TO_MEM(R14, RCX);
+            emitter_dp.MOV32_TO_MEM(R14, RCX);
             break;
         case 0x01:
             //PSMCT24
-            emitter.MOV32_FROM_MEM(RCX, RDX);
-            emitter.AND32_REG_IMM(0xFF000000, RDX);
-            emitter.AND32_REG_IMM(0x00FFFFFF, R14);
-            emitter.OR32_REG(RDX, R14);
-            emitter.MOV32_TO_MEM(R14, RCX);
+            emitter_dp.MOV32_FROM_MEM(RCX, RDX);
+            emitter_dp.AND32_REG_IMM(0xFF000000, RDX);
+            emitter_dp.AND32_REG_IMM(0x00FFFFFF, R14);
+            emitter_dp.OR32_REG(RDX, R14);
+            emitter_dp.MOV32_TO_MEM(R14, RCX);
+            break;
+        case 0x02:
+        case 0x0A:
+            //Alpha
+            emitter_dp.MOV32_REG(R14, RDX);
+            emitter_dp.AND32_REG_IMM(0x80000000, RDX);
+            emitter_dp.SHR32_REG_IMM(16, RDX);
+
+            //B
+            emitter_dp.MOV32_REG(R14, RAX);
+            emitter_dp.AND32_EAX(0x00F80000);
+            emitter_dp.SHR32_REG_IMM(9, RAX);
+            emitter_dp.OR32_REG(RAX, RDX);
+
+            //G
+            emitter_dp.MOV32_REG(R14, RAX);
+            emitter_dp.AND32_EAX(0x0000F800);
+            emitter_dp.SHR32_REG_IMM(6, RAX);
+            emitter_dp.OR32_REG(RAX, RDX);
+
+            //R
+            emitter_dp.MOV32_REG(R14, RAX);
+            emitter_dp.AND32_EAX(0x000000F8);
+            emitter_dp.SHR32_REG_IMM(3, RAX);
+            emitter_dp.OR32_REG(RAX, RDX);
+            emitter_dp.MOV16_TO_MEM(RDX, RCX);
             break;
         default:
             Errors::die("[GS_t] Unrecognized frame format $%02X in recompile_draw_pixel", current_ctx->frame.format);
     }
 
-    emitter.set_jump_dest(do_not_update_rgba);
+    emitter_dp.set_jump_dest(do_not_update_rgba);
     jit_epilogue_draw_pixel();
-    jit_cache.print_current_block();
-    jit_cache.print_literal_pool();
-    jit_cache.set_current_block_rx();
+    jit_draw_pixel_cache.print_current_block();
+    jit_draw_pixel_cache.print_literal_pool();
+    jit_draw_pixel_cache.set_current_block_rx();
 }
 
 void GraphicsSynthesizerThread::recompile_alpha_test()
@@ -3542,31 +3701,31 @@ void GraphicsSynthesizerThread::recompile_alpha_test()
     if (current_ctx->test.alpha_method != 0)
     {
         //Load alpha from color
-        emitter.MOV64_MR(R15, RAX);
-        emitter.SAR64_REG_IMM(48, RAX);
+        emitter_dp.MOV64_MR(R15, RAX);
+        emitter_dp.SAR64_REG_IMM(48, RAX);
 
         //Compare alpha with REF
-        emitter.CMP32_EAX(current_ctx->test.alpha_ref);
+        emitter_dp.CMP32_EAX(current_ctx->test.alpha_ref);
         uint8_t* alpha_test_success = nullptr;
         switch (current_ctx->test.alpha_method)
         {
             case 2: //LESS
-                alpha_test_success = emitter.JCC_NEAR_DEFERRED(ConditionCode::L);
+                alpha_test_success = emitter_dp.JCC_NEAR_DEFERRED(ConditionCode::L);
                 break;
             case 3: //LEQUAL
-                alpha_test_success = emitter.JCC_NEAR_DEFERRED(ConditionCode::LE);
+                alpha_test_success = emitter_dp.JCC_NEAR_DEFERRED(ConditionCode::LE);
                 break;
             case 4: //EQUAL
-                alpha_test_success = emitter.JCC_NEAR_DEFERRED(ConditionCode::E);
+                alpha_test_success = emitter_dp.JCC_NEAR_DEFERRED(ConditionCode::E);
                 break;
             case 5: //GEQUAL
-                alpha_test_success = emitter.JCC_NEAR_DEFERRED(ConditionCode::GE);
+                alpha_test_success = emitter_dp.JCC_NEAR_DEFERRED(ConditionCode::GE);
                 break;
             case 6: //GREATER
-                alpha_test_success = emitter.JCC_NEAR_DEFERRED(ConditionCode::G);
+                alpha_test_success = emitter_dp.JCC_NEAR_DEFERRED(ConditionCode::G);
                 break;
             case 7: //NOTEQUAL
-                alpha_test_success = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
+                alpha_test_success = emitter_dp.JCC_NEAR_DEFERRED(ConditionCode::NE);
                 break;
         }
 
@@ -3577,17 +3736,17 @@ void GraphicsSynthesizerThread::recompile_alpha_test()
                 jit_epilogue_draw_pixel();
                 break;
             case 1: //FB_ONLY - Only update framebuffer
-                emitter.OR16_REG_IMM(0x2, RBX);
+                emitter_dp.OR16_REG_IMM(0x2, RBX);
                 break;
             case 2: //ZB_ONLY - Only update z-buffer
-                emitter.OR16_REG_IMM(0x5, RBX);
+                emitter_dp.OR16_REG_IMM(0x5, RBX);
                 break;
             case 3: //RGB_ONLY - Same as FB_ONLY, but ignore alpha
-                emitter.OR16_REG_IMM(0x6, RBX);
+                emitter_dp.OR16_REG_IMM(0x6, RBX);
                 break;
         }
 
-        emitter.set_jump_dest(alpha_test_success);
+        emitter_dp.set_jump_dest(alpha_test_success);
     }
 }
 
@@ -3600,40 +3759,40 @@ void GraphicsSynthesizerThread::recompile_depth_test()
     }
 
     //Load address to zbuffer
-    emitter.load_addr((uint64_t)&current_ctx->zbuf.base_pointer, RDI);
-    emitter.load_addr((uint64_t)&current_ctx->frame.width, RSI);
-    emitter.MOV32_FROM_MEM(RDI, RDI);
-    emitter.MOV32_FROM_MEM(RSI, RSI);
-    emitter.SAR32_REG_IMM(8, RDI);
-    emitter.SAR32_REG_IMM(6, RSI);
-    emitter.MOV64_MR(R12, RDX);
-    emitter.MOV64_MR(R13, RCX);
+    emitter_dp.load_addr((uint64_t)&current_ctx->zbuf.base_pointer, RDI);
+    emitter_dp.load_addr((uint64_t)&current_ctx->frame.width, RSI);
+    emitter_dp.MOV32_FROM_MEM(RDI, RDI);
+    emitter_dp.MOV32_FROM_MEM(RSI, RSI);
+    emitter_dp.SAR32_REG_IMM(8, RDI);
+    emitter_dp.SAR32_REG_IMM(6, RSI);
+    emitter_dp.MOV64_MR(R12, RDX);
+    emitter_dp.MOV64_MR(R13, RCX);
 
     switch (current_ctx->zbuf.format)
     {
         case 0x00:
             //PSMCT32Z
-            jit_call_func((uint64_t)&addr_PSMCT32Z);
+            jit_call_func(emitter_dp, (uint64_t)&addr_PSMCT32Z);
             break;
         case 0x01:
             //PSMCT24Z
-            jit_call_func((uint64_t)&addr_PSMCT32Z);
+            jit_call_func(emitter_dp, (uint64_t)&addr_PSMCT32Z);
             break;
         case 0x02:
             //PSMCT16Z
-            jit_call_func((uint64_t)&addr_PSMCT16Z);
+            jit_call_func(emitter_dp, (uint64_t)&addr_PSMCT16Z);
             break;
         case 0x0A:
             //PSMCT16SZ
-            jit_call_func((uint64_t)&addr_PSMCT16SZ);
+            jit_call_func(emitter_dp, (uint64_t)&addr_PSMCT16SZ);
             break;
         default:
             Errors::die("[GS_t] Unrecognized zbuf format $%02X\n", current_ctx->zbuf.format);
     }
 
     //RCX = zbuffer address
-    emitter.load_addr((uint64_t)local_mem, RCX);
-    emitter.ADD64_REG(RAX, RCX);
+    emitter_dp.load_addr((uint64_t)local_mem, RCX);
+    emitter_dp.ADD64_REG(RAX, RCX);
 
     if (current_ctx->test.depth_method != 1)
     {
@@ -3643,88 +3802,98 @@ void GraphicsSynthesizerThread::recompile_depth_test()
         else
             depth_comparison = ConditionCode::G;
 
-        emitter.MOV32_FROM_MEM(RCX, RAX);
+        emitter_dp.MOV32_FROM_MEM(RCX, RAX);
 
-        if (current_ctx->zbuf.format == 1)
-            emitter.AND32_EAX(0xFFFFFF);
+        if (current_ctx->zbuf.format & 0x2)
+            emitter_dp.AND32_EAX(0xFFFF);
+        else if (current_ctx->zbuf.format & 0x1)
+            emitter_dp.AND32_EAX(0xFFFFFF);
 
         //64-bit compare to avoid signed bullshit
-        emitter.CMP64_REG(RAX, R14);
-        uint8_t* depth_passed = emitter.JCC_NEAR_DEFERRED(depth_comparison);
+        emitter_dp.CMP64_REG(RAX, R14);
+        uint8_t* depth_passed = emitter_dp.JCC_NEAR_DEFERRED(depth_comparison);
 
         //Depth test failed, do not go any further
         jit_epilogue_draw_pixel();
 
-        emitter.set_jump_dest(depth_passed);
+        emitter_dp.set_jump_dest(depth_passed);
     }
 
     //Update zbuffer
-    emitter.TEST32_REG_IMM(0x2, RBX);
-    uint8_t* do_not_update_z = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
-
-    switch (current_ctx->zbuf.format)
+    if (!current_ctx->zbuf.no_update)
     {
-        case 0x00:
-            emitter.MOV32_TO_MEM(R14, RCX);
-            break;
-        case 0x01:
-            emitter.AND32_REG_IMM(0xFFFFFF, R14);
-            emitter.MOV32_TO_MEM(R14, RCX);
-            break;
-        default:
-            emitter.MOV16_TO_MEM(R14, RCX);
-    }
+        emitter_dp.TEST32_REG_IMM(0x2, RBX);
+        uint8_t* do_not_update_z = emitter_dp.JCC_NEAR_DEFERRED(ConditionCode::NE);
 
-    emitter.set_jump_dest(do_not_update_z);
+        switch (current_ctx->zbuf.format)
+        {
+            case 0x00:
+                emitter_dp.MOV32_TO_MEM(R14, RCX);
+                break;
+            case 0x01:
+                emitter_dp.MOV32_FROM_MEM(RCX, RAX);
+                emitter_dp.AND32_EAX(0xFF000000);
+                emitter_dp.AND32_REG_IMM(0xFFFFFF, R14);
+                emitter_dp.OR32_REG(RAX, R14);
+                emitter_dp.MOV32_TO_MEM(R14, RCX);
+                break;
+            default:
+                emitter_dp.MOV16_TO_MEM(R14, RCX);
+        }
+
+        emitter_dp.set_jump_dest(do_not_update_z);
+    }
 }
 
 void GraphicsSynthesizerThread::recompile_alpha_blend()
 {
+    printf("Frame: %d\n", current_ctx->frame.format);
+    printf("Alpha blend: %d %d %d %d\n", current_ctx->alpha.spec_A, current_ctx->alpha.spec_B, current_ctx->alpha.spec_C, current_ctx->alpha.spec_D);
     if (PABE)
         Errors::die("[GS JIT] PABE not implemented");
 
     //Local stack variables - vertex/texture color is stored in R15
     //Note that colors are 16-bit format so that we can handle overflows/underflows
-    uint32_t fb_addr = 0x38;
+    uint32_t fb_addr = 0xD0;
 
-    emitter.MOV64_FROM_MEM(RBP, RAX, fb_addr);
+    emitter_dp.MOV64_FROM_MEM(RBP, RAX, fb_addr);
 
     //Store 32-bit framebuffer color in RAX
     switch (current_ctx->frame.format)
     {
         case 0x00:
         case 0x01:
-            emitter.MOV32_FROM_MEM(RAX, RAX);
+            emitter_dp.MOV32_FROM_MEM(RAX, RAX);
             break;
         default:
-            Errors::die("[GS JIT] Unrecognized framebuffer format $%02X\n", current_ctx->frame.format);
+            Errors::die("[GS JIT] Unrecognized alpha blend framebuffer format $%02X\n", current_ctx->frame.format);
     }
 
     //Convert 32-bit framebuffer color to 64-bit
-    emitter.MOVD_TO_XMM(RAX, XMM7);
-    emitter.PMOVZX8_TO_16(XMM7, XMM7);
+    emitter_dp.MOVD_TO_XMM(RAX, XMM4);
+    emitter_dp.PMOVZX8_TO_16(XMM4, XMM4);
 
     switch (current_ctx->alpha.spec_A)
     {
         case 0:
-            emitter.MOVQ_TO_XMM(R15, XMM0);
+            emitter_dp.MOVQ_TO_XMM(R15, XMM0);
             break;
         case 1:
-            emitter.MOVAPS_REG(XMM7, XMM0);
+            emitter_dp.MOVAPS_REG(XMM4, XMM0);
             break;
         case 2:
         case 3:
-            emitter.XORPS(XMM0, XMM0);
+            emitter_dp.XORPS(XMM0, XMM0);
             break;
     }
 
     switch (current_ctx->alpha.spec_B)
     {
         case 0:
-            emitter.MOVQ_TO_XMM(R15, XMM1);
+            emitter_dp.MOVQ_TO_XMM(R15, XMM1);
             break;
         case 1:
-            emitter.MOVAPS_REG(XMM7, XMM1);
+            emitter_dp.MOVAPS_REG(XMM4, XMM1);
             break;
         case 2:
         case 3:
@@ -3735,61 +3904,62 @@ void GraphicsSynthesizerThread::recompile_alpha_blend()
     switch (current_ctx->alpha.spec_C)
     {
         case 0:
-            emitter.MOV64_MR(R15, RAX);
-            //Fallthrough
+            emitter_dp.MOV64_MR(R15, RAX);
+            emitter_dp.SAR64_REG_IMM(48, RAX);
+            break;
         case 1:
-            emitter.SAR64_REG_IMM(48, RAX);
+            if (!(current_ctx->frame.format & 0x1))
+                emitter_dp.SAR64_REG_IMM(48, RAX);
+            else
+                emitter_dp.MOV32_REG_IMM(0x80, RAX);
             break;
         case 2:
         case 3:
-            emitter.MOV32_REG_IMM(current_ctx->alpha.fixed_alpha, RAX);
+            emitter_dp.MOV32_REG_IMM(current_ctx->alpha.fixed_alpha, RAX);
             break;
     }
 
     //Duplicate alpha into 4 16-bit words
-    emitter.MOVD_TO_XMM(RAX, XMM2);
-    emitter.PSHUFLW(0, XMM2, XMM2);
+    emitter_dp.MOVD_TO_XMM(RAX, XMM2);
+    emitter_dp.PSHUFLW(0, XMM2, XMM2);
 
     switch (current_ctx->alpha.spec_D)
     {
         case 0:
-            emitter.MOVQ_TO_XMM(R15, XMM3);
+            emitter_dp.MOVQ_TO_XMM(R15, XMM3);
             break;
         case 1:
-            emitter.MOVAPS_REG(XMM7, XMM3);
+            emitter_dp.MOVAPS_REG(XMM4, XMM3);
             break;
         case 2:
         case 3:
-            emitter.XORPS(XMM3, XMM3);
             break;
     }
 
     //color component = (((A - B) * C) >> 7) + D
     if (current_ctx->alpha.spec_B < 2)
-        emitter.PSUBW(XMM1, XMM0);
-    emitter.PMULLW(XMM2, XMM0);
-    emitter.PSRAW(7, XMM0);
-    emitter.PADDW(XMM3, XMM0);
+        emitter_dp.PSUBW(XMM1, XMM0);
+    emitter_dp.PMULLW(XMM2, XMM0);
+    emitter_dp.PSRAW(7, XMM0);
+    if (current_ctx->alpha.spec_D < 2)
+        emitter_dp.PADDW(XMM3, XMM0);
 
     //Clamp color
     if (!COLCLAMP)
         Errors::die("[GS JIT] AND clamp not implemented");
-    else
-        emitter.PACKUSWB(XMM0, XMM0);
+
+    emitter_dp.PACKUSWB(XMM0, XMM0);
 
     //Return color in R14
-    emitter.MOVD_FROM_XMM(XMM0, R14);
+    emitter_dp.MOVD_FROM_XMM(XMM0, R14);
 
-    //Append alpha to color if the format has an alpha
-    if (!(current_ctx->frame.format & 0x1))
-    {
-        emitter.AND32_REG_IMM(0xFFFFFF, R14);
-        emitter.SHL32_REG_IMM(24, RAX);
-        emitter.OR32_REG(RAX, R14);
-    }
+    //Append alpha to color
+    emitter_dp.AND32_REG_IMM(0xFFFFFF, R14);
+    emitter_dp.SHL32_REG_IMM(24, RAX);
+    emitter_dp.OR32_REG(RAX, R14);
 }
 
-void GraphicsSynthesizerThread::jit_call_func(uint64_t addr)
+void GraphicsSynthesizerThread::jit_call_func(Emitter64& emitter, uint64_t addr)
 {
     emitter.MOV64_OI(addr, RAX);
     emitter.CALL_INDIR(RAX);
@@ -3797,12 +3967,367 @@ void GraphicsSynthesizerThread::jit_call_func(uint64_t addr)
 
 void GraphicsSynthesizerThread::jit_epilogue_draw_pixel()
 {
-    emitter.POP(RSI);
-    emitter.POP(RDI);
-    emitter.POP(RBX);
-    emitter.ADD64_REG_IMM(0x40, RSP);
-    emitter.POP(RBP);
-    emitter.RET();
+    emitter_dp.MOVAPS_FROM_MEM(RBP, XMM0, 0);
+    emitter_dp.MOVAPS_FROM_MEM(RBP, XMM1, 0x10);
+    emitter_dp.MOVAPS_FROM_MEM(RBP, XMM2, 0x20);
+    emitter_dp.MOVAPS_FROM_MEM(RBP, XMM3, 0x30);
+    emitter_dp.MOVAPS_FROM_MEM(RBP, XMM4, 0x40);
+
+    emitter_dp.MOV64_FROM_MEM(RBP, RBX, 0x50);
+    emitter_dp.MOV64_FROM_MEM(RBP, RDI, 0x58);
+    emitter_dp.MOV64_FROM_MEM(RBP, RSI, 0x60);
+    emitter_dp.ADD64_REG_IMM(0xF0, RSP);
+    emitter_dp.POP(RBP);
+    emitter_dp.RET();
+}
+
+void GraphicsSynthesizerThread::recompile_tex_lookup(uint64_t state)
+{
+    jit_tex_lookup_cache.alloc_block(BlockState{0, 0, 0, state, 0});
+
+    emitter_tex.PUSH(RBP);
+    emitter_tex.SUB64_REG_IMM(0x100, RSP);
+    emitter_tex.MOV64_MR(RSP, RBP);
+
+    //Preserve used XMM registers on the stack
+    emitter_tex.MOVAPS_TO_MEM(XMM0, RBP, 0);
+    emitter_tex.MOVAPS_TO_MEM(XMM1, RBP, 0x10);
+
+    //And preserve integer registers
+    emitter_tex.MOV64_TO_MEM(RBX, RBP, 0x20);
+    emitter_tex.MOV64_TO_MEM(RDI, RBP, 0x28);
+    emitter_tex.MOV64_TO_MEM(RSI, RBP, 0x30);
+    emitter_tex.MOV64_TO_MEM(R10, RBP, 0x38);
+    emitter_tex.MOV64_TO_MEM(RDX, RBP, 0x40);
+
+    //R12 = signed 16-bit u  R13 = signed 16-bit v  R14 = pointer to TexLookupInfo
+    emitter_tex.SHR32_REG_IMM(4, R12);
+    emitter_tex.SHR32_REG_IMM(4, R13);
+
+    //Load tex width and height
+    //RBX = width, R15 = height
+    emitter_tex.MOV32_FROM_MEM(R14, RBX, (sizeof(RGBAQ_REG) * 3) + (4 * 4));
+    emitter_tex.MOV32_REG(RBX, R15);
+    emitter_tex.AND32_REG_IMM(0xFFFF, RBX);
+    emitter_tex.SHR32_REG_IMM(16, R15);
+
+    //Clamp u/v (s/t) appropriately
+    switch (current_ctx->clamp.wrap_s)
+    {
+        case 0x0:
+            //Repeat
+            emitter_tex.MOV32_REG(RBX, RAX);
+            emitter_tex.DEC32(RAX);
+            emitter_tex.AND32_REG(RAX, R12);
+            break;
+        case 0x1:
+            //Clamp
+        {
+            //Is u > tex_width?
+            emitter_tex.CMP32_REG(RBX, R12);
+            uint8_t* no_clamp_hi = emitter_tex.JCC_NEAR_DEFERRED(ConditionCode::LE);
+
+            //u > tex_width
+            emitter_tex.MOV32_REG(RBX, R12);
+            uint8_t* clamp_hi_end = emitter_tex.JMP_NEAR_DEFERRED();
+
+            //Is u < 0?
+            emitter_tex.set_jump_dest(no_clamp_hi);
+            emitter_tex.CMP32_IMM(0, R12);
+            uint8_t* no_clamp_lo = emitter_tex.JCC_NEAR_DEFERRED(ConditionCode::GE);
+
+            //u < 0
+            emitter_tex.MOV32_REG_IMM(0, R12);
+
+            //End
+            emitter_tex.set_jump_dest(no_clamp_lo);
+            emitter_tex.set_jump_dest(clamp_hi_end);
+        }
+            break;
+        default:
+            Errors::die("[GS JIT] Unrecognized wrap s mode $%02X", current_ctx->clamp.wrap_s);
+    }
+
+    switch (current_ctx->clamp.wrap_t)
+    {
+        case 0x0:
+            //Repeat
+            emitter_tex.MOV32_REG(R15, RAX);
+            emitter_tex.DEC32(RAX);
+            emitter_tex.AND32_REG(RAX, R13);
+            break;
+        case 0x1:
+            //Clamp
+        {
+            //Is v > tex_height?
+            emitter_tex.CMP32_REG(R15, R13);
+            uint8_t* no_clamp_hi = emitter_tex.JCC_NEAR_DEFERRED(ConditionCode::LE);
+
+            //v > tex_height
+            emitter_tex.MOV32_REG(R15, R13);
+            uint8_t* clamp_hi_end = emitter_tex.JMP_NEAR_DEFERRED();
+
+            //Is v < 0?
+            emitter_tex.set_jump_dest(no_clamp_hi);
+            emitter_tex.CMP32_IMM(0, R13);
+            uint8_t* no_clamp_lo = emitter_tex.JCC_NEAR_DEFERRED(ConditionCode::GE);
+
+            //v < 0
+            emitter_tex.MOV32_REG_IMM(0, R13);
+
+            //End
+            emitter_tex.set_jump_dest(no_clamp_lo);
+            emitter_tex.set_jump_dest(clamp_hi_end);
+        }
+            break;
+        default:
+            Errors::die("[GS JIT] Unrecognized wrap t mode $%02X", current_ctx->clamp.wrap_t);
+    }
+
+    //Load the texture pixel
+    //TODO: bilinear filtering
+    emitter_tex.MOV32_FROM_MEM(R14, RDI, (sizeof(RGBAQ_REG) * 3) + (4 * 2));
+    emitter_tex.SHR32_REG_IMM(8, RDI);
+    emitter_tex.MOV32_FROM_MEM(R14, RSI, (sizeof(RGBAQ_REG) * 3) + (4 * 3));
+    emitter_tex.SHR32_REG_IMM(6, RSI);
+    emitter_tex.MOV32_REG(R12, RDX);
+    emitter_tex.MOV32_REG(R13, RCX);
+
+    switch (current_ctx->tex0.format)
+    {
+        case 0x00:
+            jit_call_func(emitter_tex, (uint64_t)&addr_PSMCT32);
+            emitter_tex.load_addr((uint64_t)local_mem, RCX);
+            emitter_tex.ADD64_REG(RCX, RAX);
+            emitter_tex.MOV32_FROM_MEM(RAX, RAX);
+            break;
+        case 0x01:
+            jit_call_func(emitter_tex, (uint64_t)&addr_PSMCT32);
+            emitter_tex.load_addr((uint64_t)local_mem, RCX);
+            emitter_tex.ADD64_REG(RCX, RAX);
+            emitter_tex.MOV32_FROM_MEM(RAX, RAX);
+            emitter_tex.AND32_EAX(0xFFFFFF);
+            emitter_tex.MOV32_REG_IMM(TEXA.alpha0 << 24, RDI);
+            if (TEXA.trans_black)
+            {
+                emitter_tex.OR32_REG(RAX, RDI);
+                emitter_tex.TEST32_EAX(0xFFFFFF);
+                emitter_tex.CMOVCC32_REG(ConditionCode::NE, RDI, RAX);
+            }
+            else
+                emitter_tex.OR32_REG(RDI, RAX);
+            break;
+        case 0x13:
+            jit_call_func(emitter_tex, (uint64_t)&addr_PSMCT8);
+            emitter_tex.load_addr((uint64_t)local_mem, RCX);
+            emitter_tex.ADD64_REG(RCX, RAX);
+            emitter_tex.MOV32_FROM_MEM(RAX, RDI);
+            emitter_tex.AND32_REG_IMM(0xFF, RDI);
+
+            if (current_ctx->tex0.use_CSM2)
+                recompile_csm2_lookup();
+            else
+                recompile_clut_lookup();
+            break;
+        case 0x14:
+            jit_call_func(emitter_tex, (uint64_t)&addr_PSMCT4);
+            emitter_tex.MOV32_REG(RAX, RCX);
+            emitter_tex.SHR32_REG_IMM(1, RAX);
+            emitter_tex.load_addr((uint64_t)local_mem, RDI);
+            emitter_tex.ADD64_REG(RDI, RAX);
+
+            //index = (local_mem[addr >> 1] >> ((addr & 0x1) << 2)) & 0xF
+            //We do a 32-bit move as an 8-bit move converts EDI to BH. Not what we want
+            emitter_tex.MOV32_FROM_MEM(RAX, RDI);
+            emitter_tex.AND32_REG_IMM(0x1, RCX);
+            emitter_tex.SHL32_REG_IMM(2, RCX);
+            emitter_tex.SHR32_CL(RDI);
+            emitter_tex.AND32_REG_IMM(0xF, RDI);
+
+            if (current_ctx->tex0.use_CSM2)
+                recompile_csm2_lookup();
+            else
+                recompile_clut_lookup();
+            break;
+        case 0x24:
+            jit_call_func(emitter_tex, (uint64_t)&addr_PSMCT32);
+            emitter_tex.load_addr((uint64_t)local_mem, RCX);
+            emitter_tex.ADD64_REG(RCX, RAX);
+            emitter_tex.MOV32_FROM_MEM(RAX, RDI);
+            emitter_tex.SHR32_REG_IMM(24, RDI);
+            emitter_tex.AND32_REG_IMM(0xF, RDI);
+
+            if (current_ctx->tex0.use_CSM2)
+                recompile_csm2_lookup();
+            else
+                recompile_clut_lookup();
+            break;
+        case 0x2C:
+            jit_call_func(emitter_tex, (uint64_t)&addr_PSMCT32);
+            emitter_tex.load_addr((uint64_t)local_mem, RCX);
+            emitter_tex.ADD64_REG(RCX, RAX);
+            emitter_tex.MOV32_FROM_MEM(RAX, RDI);
+            emitter_tex.SHR32_REG_IMM(28, RDI);
+
+            if (current_ctx->tex0.use_CSM2)
+                recompile_csm2_lookup();
+            else
+                recompile_clut_lookup();
+            break;
+        default:
+            Errors::die("[GS JIT] Unrecognized texture format $%02X", current_ctx->tex0.format);
+    }
+
+    //Expand the texture color to 64-bit (16 bits for each color)
+    emitter_tex.MOVD_TO_XMM(RAX, XMM0);
+    emitter_tex.PMOVZX8_TO_16(XMM0, XMM0);
+
+    //Read the vertex color
+    //Since the vertex color is first, and each component is 16-bit, we can simply do a 64-bit move
+    emitter_tex.MOV64_FROM_MEM(R14, RCX, 0);
+    emitter_tex.MOVQ_TO_XMM(RCX, XMM1);
+
+    switch (current_ctx->tex0.color_function)
+    {
+        case 0: //Modulate
+            //tex_color = (tex_color * vtx_color) >> 7
+            emitter_tex.PMULLW(XMM1, XMM0);
+            emitter_tex.PSRAW(7, XMM0);
+
+            //Clamp colors and re-convert back to 16-bit
+            emitter_tex.PACKUSWB(XMM0, XMM0);
+            emitter_tex.PMOVZX8_TO_16(XMM0, XMM0);
+            emitter_tex.MOVQ_FROM_XMM(XMM0, RAX);
+            break;
+        case 1: //Decal
+            emitter_tex.MOVQ_FROM_XMM(XMM0, RAX);
+            break;
+        default:
+            Errors::die("[GS JIT] Unrecognized color function $%02X", current_ctx->tex0.color_function);
+    }
+
+    //Store tex_color in the TexLookupInfo struct
+    emitter_tex.MOV64_TO_MEM(RAX, R14, sizeof(RGBAQ_REG));
+
+    if (!current_ctx->tex0.use_alpha)
+    {
+        //Replace tex_color.a with vtx_color.a
+        emitter_tex.SHR32_REG_IMM(48, RCX);
+        emitter_tex.MOV16_TO_MEM(RCX, R14, sizeof(RGBAQ_REG) + (sizeof(uint16_t) * 3));
+    }
+
+    emitter_tex.MOVAPS_FROM_MEM(RBP, XMM0, 0);
+    emitter_tex.MOVAPS_FROM_MEM(RBP, XMM1, 0x10);
+    emitter_tex.MOV64_FROM_MEM(RBP, RBX, 0x20);
+    emitter_tex.MOV64_FROM_MEM(RBP, RDI, 0x28);
+    emitter_tex.MOV64_FROM_MEM(RBP, RSI, 0x30);
+    emitter_tex.MOV64_FROM_MEM(RBP, R10, 0x38);
+    emitter_tex.MOV64_FROM_MEM(RBP, RDX, 0x40);
+
+    emitter_tex.ADD64_REG_IMM(0x100, RSP);
+
+    emitter_tex.POP(RBP);
+    emitter_tex.RET();
+
+    jit_tex_lookup_cache.print_current_block();
+    jit_tex_lookup_cache.print_literal_pool();
+    jit_tex_lookup_cache.set_current_block_rx();
+}
+
+void GraphicsSynthesizerThread::recompile_clut_lookup()
+{
+    //Input: RDI (index)
+    //Output: RAX (color in 32-bit format)
+
+    //RCX = current_ctx->tex0.CLUT_offset << 1
+    emitter_tex.load_addr((uint64_t)&current_ctx->tex0.CLUT_offset, RCX);
+    emitter_tex.MOV32_FROM_MEM(RCX, RCX);
+    emitter_tex.SHL32_REG_IMM(1, RCX);
+    emitter_tex.load_addr((uint64_t)&clut_cache, RAX);
+
+    switch (current_ctx->tex0.CLUT_format)
+    {
+        case 0x00:
+        case 0x01:
+            emitter_tex.SHL32_REG_IMM(2, RDI);
+            emitter_tex.ADD32_REG(RDI, RCX);
+            emitter_tex.AND32_REG_IMM(0x7FF, RCX);
+            emitter_tex.ADD64_REG(RCX, RAX);
+            emitter_tex.MOV32_FROM_MEM(RAX, RAX);
+            break;
+        case 0x02:
+        case 0x0A:
+            emitter_tex.SHL32_REG_IMM(1, RDI);
+            emitter_tex.ADD32_REG(RDI, RCX);
+            emitter_tex.AND32_REG_IMM(0x3FF, RCX);
+            emitter_tex.ADD64_REG(RCX, RAX);
+            emitter_tex.MOV32_FROM_MEM(RAX, RAX);
+            emitter_tex.AND32_EAX(0xFFFF);
+
+            recompile_convert_16bit_tex(RAX, RCX, RDI);
+            break;
+        default:
+            Errors::die("[GS JIT] Unrecognized CLUT format $%02X", current_ctx->tex0.CLUT_format);
+    }
+}
+
+void GraphicsSynthesizerThread::recompile_csm2_lookup()
+{
+    //color = *(uint16_t*)&clut_cache[index << 1]
+    emitter_tex.load_addr((uint64_t)clut_cache, RAX);
+    emitter_tex.SHL32_REG_IMM(1, RDI);
+    emitter_tex.ADD32_REG(RDI, RAX);
+    emitter_tex.MOV32_FROM_MEM(RAX, RAX);
+    emitter_tex.AND32_EAX(0xFFFF);
+
+    recompile_convert_16bit_tex(RAX, RDI, RSI);
+}
+
+void GraphicsSynthesizerThread::recompile_convert_16bit_tex(REG_64 color, REG_64 temp, REG_64 temp2)
+{
+    //R
+    emitter_tex.MOV32_REG(color, temp);
+    emitter_tex.AND32_REG_IMM(0x1F, temp);
+    emitter_tex.SHL32_REG_IMM(3, temp);
+    emitter_tex.MOV32_REG(temp, temp2);
+
+    //G
+    emitter_tex.MOV32_REG(color, temp);
+    emitter_tex.AND32_REG_IMM(0x1F << 5, temp);
+    emitter_tex.SHL32_REG_IMM(6, temp);
+    emitter_tex.OR32_REG(temp, temp2);
+
+    //B
+    /*emitter_tex.MOV32_REG(color, temp);
+    emitter_tex.AND32_REG_IMM(0x1F << 10, temp);
+    emitter_tex.SHL32_REG_IMM(9, temp);
+    emitter_tex.OR32_REG(temp, temp2);*/
+
+    //A
+    emitter_tex.TEST32_REG_IMM(1 << 15, color);
+
+    uint8_t* bit_set_dest = emitter_tex.JCC_NEAR_DEFERRED(ConditionCode::NE);
+
+    //Bit not set
+    if (TEXA.trans_black)
+    {
+        emitter_tex.TEST32_REG_IMM(0xFFFF, color);
+        uint8_t* trans_dest = emitter_tex.JCC_NEAR_DEFERRED(ConditionCode::E);
+
+        emitter_tex.OR32_REG_IMM(TEXA.alpha0 << 24, temp2);
+
+        emitter_tex.set_jump_dest(trans_dest);
+    }
+    else
+        emitter_tex.OR32_REG_IMM(TEXA.alpha0 << 24, temp2);
+
+    uint8_t* bit_not_set_end = emitter_tex.JMP_NEAR_DEFERRED();
+
+    emitter_tex.set_jump_dest(bit_set_dest);
+    emitter_tex.OR32_REG_IMM(TEXA.alpha1 << 24, temp2);
+
+    emitter_tex.set_jump_dest(bit_not_set_end);
+    emitter_tex.MOV32_REG(temp2, color);
 }
 
 void GraphicsSynthesizerThread::load_state(ifstream *state)
