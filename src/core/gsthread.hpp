@@ -20,7 +20,6 @@ struct SwizzleTable
 
     uint32_t& get(int x, int y, int z)
     {
-        //return data[z*XS*YS + y * XS + x]; // poor cache usage.
         return data[x*YS*ZS + y * ZS + z];
     }
 
@@ -246,43 +245,12 @@ struct TexLookupInfo
     int16_t lastu, lastv;
 };
 
-struct Vec4f {
-    union {
-        struct { float x,y,z,w; };
-        float f[4];
-        uint32_t u32[4];
-    };
-
-    Vec4f()
-    {
-
-    }
-
-    Vec4f operator-(const Vec4f& rhs)
-    {
-        Vec4f result;
-        result.x = x - rhs.x;
-        result.y = y - rhs.y;
-        result.z = z - rhs.z;
-        result.w = w - rhs.w;
-        return result;
-    }
-
-    Vec4f operator*(float n)
-    {
-        Vec4f result;
-        for(int i = 0; i < 4; i++)
-            result.f[i] = f[i] * n;
-        return result;
-    }
-};
-
 struct VertexF
 {
     union {
         struct
         {
-            float x,y,z,w,r,g,b,a,q,u,v,s,t,fog; // w so it lines up with a Vec4f
+            float x,y,z,w,r,g,b,a,q,u,v,s,t,fog;
         };
         float data[14];
     };
@@ -290,10 +258,6 @@ struct VertexF
     VertexF()
     {
 
-    }
-
-    Vec4f* getVec4f() {
-        return (Vec4f*)this;
     }
 
     VertexF(Vertex& vert)

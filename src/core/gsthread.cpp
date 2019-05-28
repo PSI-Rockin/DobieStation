@@ -251,6 +251,7 @@ void GraphicsSynthesizerThread::event_loop()
         while (true)
         {
             GSMessage data;
+
             if (message_queue->pop(data))
             {
                 if (gsdump_recording)
@@ -2000,11 +2001,10 @@ void GraphicsSynthesizerThread::render_triangle2() {
 
 
     // fast reject - some games like to spam triangles that don't have any pixels
-//    if(unsortedVerts[0].y == unsortedVerts[1].y && unsortedVerts[1].y == unsortedVerts[2].y)
-//    {
-//        y_reject_tris++;
-//        return;
-//    }
+    if(unsortedVerts[0].y == unsortedVerts[1].y && unsortedVerts[1].y == unsortedVerts[2].y)
+    {
+        return;
+    }
 
 
     // sort the three vertices by their y coordinate (increasing)
