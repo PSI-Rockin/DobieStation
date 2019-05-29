@@ -1733,6 +1733,16 @@ void Emitter64::PSRAW(int shift, REG_64 xmm_dest)
     cache->write<uint8_t>(shift);
 }
 
+void Emitter64::PSRLW(int shift, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_rm(xmm_dest);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x71);
+    modrm(0b11, 2, xmm_dest);
+    cache->write<uint8_t>(shift);
+}
+
 void Emitter64::PSUBW(REG_64 xmm_source, REG_64 xmm_dest)
 {
     cache->write<uint8_t>(0x66);

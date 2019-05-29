@@ -3454,7 +3454,7 @@ void GraphicsSynthesizerThread::update_draw_pixel_state()
     draw_pixel_state |= current_PRMODE->alpha_blend << 25;
     draw_pixel_state |= PABE << 26;
     draw_pixel_state |= current_ctx->alpha.spec_A << 27;
-    draw_pixel_state |= current_ctx->alpha.spec_B << 29;
+    draw_pixel_state |= (uint64_t)current_ctx->alpha.spec_B << 29UL;
     draw_pixel_state |= (uint64_t)current_ctx->alpha.spec_C << 31UL;
     draw_pixel_state |= (uint64_t)current_ctx->alpha.spec_D << 33UL;
     draw_pixel_state |= (uint64_t)DTHE << 34UL;
@@ -3479,7 +3479,7 @@ void GraphicsSynthesizerThread::update_tex_lookup_state()
     tex_lookup_state |= current_ctx->clamp.wrap_t << 8;
     tex_lookup_state |= current_ctx->tex0.format << 10;
     tex_lookup_state |= TEXA.alpha0 << 16;
-    tex_lookup_state |= TEXA.alpha1 << 24;
+    tex_lookup_state |= (uint64_t)TEXA.alpha1 << 24UL;
     tex_lookup_state |= (uint64_t)TEXA.trans_black << 32UL;
     tex_lookup_state |= (uint64_t)current_ctx->tex0.use_CSM2 << 33UL;
     tex_lookup_state |= (uint64_t)current_ctx->tex0.CLUT_format << 34UL;
@@ -3946,7 +3946,12 @@ void GraphicsSynthesizerThread::recompile_alpha_blend()
 
     //Clamp color
     if (!COLCLAMP)
-        Errors::die("[GS JIT] AND clamp not implemented");
+    {
+        //Extract the lower 8 bits before packing
+        const static uint16_t and_const[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+        emitter_dp.load_addr((uint64_t)and_const, RAX);
+        emitter_dp.PANDN_XMM_FROM_MEM(RAX, XMM0);
+    }
 
     emitter_dp.PACKUSWB(XMM0, XMM0);
 
@@ -4011,6 +4016,40 @@ void GraphicsSynthesizerThread::recompile_tex_lookup(uint64_t state)
     emitter_tex.AND32_REG_IMM(0xFFFF, RBX);
     emitter_tex.SHR32_REG_IMM(16, R15);
 
+    //Min s, min t
+    emitter_tex.XOR32_REG(RDX, RDX);
+    emitter_tex.XOR32_REG(R8, R8);
+
+    if (current_ctx->clamp.wrap_s >= 0x2)
+    {
+        emitter_tex.MOV32_FROM_MEM(R14, RCX, sizeof(RGBAQ_REG) * 3 + sizeof(float));
+        emitter_tex.load_addr((uint64_t)&current_ctx->clamp.min_u, RDX);
+        emitter_tex.MOV32_FROM_MEM(RDX, RDX);
+        emitter_tex.AND32_REG_IMM(0xFFFF, RDX);
+        emitter_tex.SHR32_CL(RDX);
+
+        emitter_tex.XOR32_REG(RBX, RBX);
+        emitter_tex.load_addr((uint64_t)&current_ctx->clamp.max_u, RBX);
+        emitter_tex.MOV32_FROM_MEM(RBX, RBX);
+        emitter_tex.AND32_REG_IMM(0xFFFF, RBX);
+        emitter_tex.SHR32_CL(RBX);
+    }
+
+    if (current_ctx->clamp.wrap_t >= 0x2)
+    {
+        emitter_tex.MOV32_FROM_MEM(R14, RCX, sizeof(RGBAQ_REG) * 3 + sizeof(float));
+        emitter_tex.load_addr((uint64_t)&current_ctx->clamp.min_v, R8);
+        emitter_tex.MOV32_FROM_MEM(R8, R8);
+        emitter_tex.AND32_REG_IMM(0xFFFF, R8);
+        emitter_tex.SHR32_CL(R8);
+
+        emitter_tex.XOR32_REG(R15, R15);
+        emitter_tex.load_addr((uint64_t)&current_ctx->clamp.max_v, R15);
+        emitter_tex.MOV32_FROM_MEM(R15, R15);
+        emitter_tex.AND32_REG_IMM(0xFFFF, R15);
+        emitter_tex.SHR32_CL(R15);
+    }
+
     //Clamp u/v (s/t) appropriately
     switch (current_ctx->clamp.wrap_s)
     {
@@ -4021,23 +4060,24 @@ void GraphicsSynthesizerThread::recompile_tex_lookup(uint64_t state)
             emitter_tex.AND32_REG(RAX, R12);
             break;
         case 0x1:
+        case 0x2:
             //Clamp
         {
-            //Is u > tex_width?
+            //Is u > max_width?
             emitter_tex.CMP32_REG(RBX, R12);
             uint8_t* no_clamp_hi = emitter_tex.JCC_NEAR_DEFERRED(ConditionCode::LE);
 
-            //u > tex_width
+            //u > max_width
             emitter_tex.MOV32_REG(RBX, R12);
             uint8_t* clamp_hi_end = emitter_tex.JMP_NEAR_DEFERRED();
 
-            //Is u < 0?
+            //Is u < min_width?
             emitter_tex.set_jump_dest(no_clamp_hi);
-            emitter_tex.CMP32_IMM(0, R12);
+            emitter_tex.CMP32_REG(RDX, R12);
             uint8_t* no_clamp_lo = emitter_tex.JCC_NEAR_DEFERRED(ConditionCode::GE);
 
-            //u < 0
-            emitter_tex.MOV32_REG_IMM(0, R12);
+            //u < min_width
+            emitter_tex.MOV32_REG(RDX, R12);
 
             //End
             emitter_tex.set_jump_dest(no_clamp_lo);
@@ -4057,23 +4097,24 @@ void GraphicsSynthesizerThread::recompile_tex_lookup(uint64_t state)
             emitter_tex.AND32_REG(RAX, R13);
             break;
         case 0x1:
+        case 0x2:
             //Clamp
         {
-            //Is v > tex_height?
+            //Is v > max_height?
             emitter_tex.CMP32_REG(R15, R13);
             uint8_t* no_clamp_hi = emitter_tex.JCC_NEAR_DEFERRED(ConditionCode::LE);
 
-            //v > tex_height
+            //v > max_height
             emitter_tex.MOV32_REG(R15, R13);
             uint8_t* clamp_hi_end = emitter_tex.JMP_NEAR_DEFERRED();
 
-            //Is v < 0?
+            //Is v < min_height?
             emitter_tex.set_jump_dest(no_clamp_hi);
-            emitter_tex.CMP32_IMM(0, R13);
+            emitter_tex.CMP32_REG(R8, R13);
             uint8_t* no_clamp_lo = emitter_tex.JCC_NEAR_DEFERRED(ConditionCode::GE);
 
-            //v < 0
-            emitter_tex.MOV32_REG_IMM(0, R13);
+            //v < min_height
+            emitter_tex.MOV32_REG(R8, R13);
 
             //End
             emitter_tex.set_jump_dest(no_clamp_lo);
@@ -4117,6 +4158,14 @@ void GraphicsSynthesizerThread::recompile_tex_lookup(uint64_t state)
             else
                 emitter_tex.OR32_REG(RDI, RAX);
             break;
+        case 0x02:
+            jit_call_func(emitter_tex, (uint64_t)&addr_PSMCT32);
+            emitter_tex.load_addr((uint64_t)local_mem, RCX);
+            emitter_tex.ADD64_REG(RCX, RAX);
+            emitter_tex.MOV32_FROM_MEM(RAX, RAX);
+            emitter_tex.AND32_EAX(0xFFFF);
+            recompile_convert_16bit_tex(RAX, RCX, RSI);
+            break;
         case 0x13:
             jit_call_func(emitter_tex, (uint64_t)&addr_PSMCT8);
             emitter_tex.load_addr((uint64_t)local_mem, RCX);
@@ -4143,6 +4192,18 @@ void GraphicsSynthesizerThread::recompile_tex_lookup(uint64_t state)
             emitter_tex.SHL32_REG_IMM(2, RCX);
             emitter_tex.SHR32_CL(RDI);
             emitter_tex.AND32_REG_IMM(0xF, RDI);
+
+            if (current_ctx->tex0.use_CSM2)
+                recompile_csm2_lookup();
+            else
+                recompile_clut_lookup();
+            break;
+        case 0x1B:
+            jit_call_func(emitter_tex, (uint64_t)&addr_PSMCT32);
+            emitter_tex.load_addr((uint64_t)local_mem, RCX);
+            emitter_tex.ADD64_REG(RCX, RAX);
+            emitter_tex.MOV32_FROM_MEM(RAX, RDI);
+            emitter_tex.SHR32_REG_IMM(24, RDI);
 
             if (current_ctx->tex0.use_CSM2)
                 recompile_csm2_lookup();
@@ -4192,7 +4253,7 @@ void GraphicsSynthesizerThread::recompile_tex_lookup(uint64_t state)
         case 0: //Modulate
             //tex_color = (tex_color * vtx_color) >> 7
             emitter_tex.PMULLW(XMM1, XMM0);
-            emitter_tex.PSRAW(7, XMM0);
+            emitter_tex.PSRLW(7, XMM0);
 
             //Clamp colors and re-convert back to 16-bit
             emitter_tex.PACKUSWB(XMM0, XMM0);
@@ -4274,9 +4335,9 @@ void GraphicsSynthesizerThread::recompile_clut_lookup()
 void GraphicsSynthesizerThread::recompile_csm2_lookup()
 {
     //color = *(uint16_t*)&clut_cache[index << 1]
-    emitter_tex.load_addr((uint64_t)clut_cache, RAX);
+    emitter_tex.load_addr((uint64_t)&clut_cache, RAX);
     emitter_tex.SHL32_REG_IMM(1, RDI);
-    emitter_tex.ADD32_REG(RDI, RAX);
+    emitter_tex.ADD64_REG(RDI, RAX);
     emitter_tex.MOV32_FROM_MEM(RAX, RAX);
     emitter_tex.AND32_EAX(0xFFFF);
 
