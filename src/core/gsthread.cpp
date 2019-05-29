@@ -30,7 +30,7 @@ static uint32_t page_PSMCT4[32][128][128];
 
 #define printf(fmt, ...)(0)
 
-#define GS_JIT
+//#define GS_JIT
 
 /**
   * ~ GS notes ~
@@ -4298,10 +4298,10 @@ void GraphicsSynthesizerThread::recompile_convert_16bit_tex(REG_64 color, REG_64
     emitter_tex.OR32_REG(temp, temp2);
 
     //B
-    /*emitter_tex.MOV32_REG(color, temp);
+    emitter_tex.MOV32_REG(color, temp);
     emitter_tex.AND32_REG_IMM(0x1F << 10, temp);
     emitter_tex.SHL32_REG_IMM(9, temp);
-    emitter_tex.OR32_REG(temp, temp2);*/
+    emitter_tex.OR32_REG(temp, temp2);
 
     //A
     emitter_tex.TEST32_REG_IMM(1 << 15, color);
