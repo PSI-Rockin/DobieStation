@@ -13,14 +13,15 @@ using namespace std;
 
 //Swizzling tables - we declare these outside the class to prevent a stack overflow
 //Globals are allocated in a different memory segment of the executable
-static uint32_t page_PSMCT32[32][32][64];
-static uint32_t page_PSMCT32Z[32][32][64];
-static uint32_t page_PSMCT16[32][64][64];
-static uint32_t page_PSMCT16S[32][64][64];
-static uint32_t page_PSMCT16Z[32][64][64];
-static uint32_t page_PSMCT16SZ[32][64][64];
-static uint32_t page_PSMCT8[32][64][128];
-static uint32_t page_PSMCT4[32][128][128];
+
+static SwizzleTable<32,32,64> page_PSMCT32;
+static SwizzleTable<32,32,64> page_PSMCT32Z;
+static SwizzleTable<32,64,64> page_PSMCT16;
+static SwizzleTable<32,64,64> page_PSMCT16S;
+static SwizzleTable<32,64,64> page_PSMCT16Z;
+static SwizzleTable<32,64,64> page_PSMCT16SZ;
+static SwizzleTable<32,64,128> page_PSMCT8;
+static SwizzleTable<32,128,128> page_PSMCT4;
 
 #define printf(fmt, ...)(0)
 
@@ -82,8 +83,8 @@ GraphicsSynthesizerThread::GraphicsSynthesizerThread()
             for (int x = 0; x < 64; x++)
             {
                 uint32_t column = columnTable32[y & 0x7][x & 0x7];
-                page_PSMCT32[block][y][x] = (blockid_PSMCT32(block, 0, x, y) << 6) + column;
-                page_PSMCT32Z[block][y][x] = (blockid_PSMCT32Z(block, 0, x, y) << 6) + column;
+                page_PSMCT32.get(block,y,x) = (blockid_PSMCT32(block, 0, x, y) << 6) + column;
+                page_PSMCT32Z.get(block,y,x) = (blockid_PSMCT32Z(block, 0, x, y) << 6) + column;
             }
         }
 
@@ -92,23 +93,23 @@ GraphicsSynthesizerThread::GraphicsSynthesizerThread()
             for (int x = 0; x < 64; x++)
             {
                 uint32_t column = columnTable16[y & 0x7][x & 0xF];
-                page_PSMCT16[block][y][x] = (blockid_PSMCT16(block, 0, x, y) << 7) + column;
-                page_PSMCT16S[block][y][x] = (blockid_PSMCT16S(block, 0, x, y) << 7) + column;
-                page_PSMCT16Z[block][y][x] = (blockid_PSMCT16Z(block, 0, x, y) << 7) + column;
-                page_PSMCT16SZ[block][y][x] = (blockid_PSMCT16SZ(block, 0, x, y) << 7) + column;
+                page_PSMCT16.get(block,y,x) = (blockid_PSMCT16(block, 0, x, y) << 7) + column;
+                page_PSMCT16S.get(block,y,x) = (blockid_PSMCT16S(block, 0, x, y) << 7) + column;
+                page_PSMCT16Z.get(block,y,x) = (blockid_PSMCT16Z(block, 0, x, y) << 7) + column;
+                page_PSMCT16SZ.get(block,y,x) = (blockid_PSMCT16SZ(block, 0, x, y) << 7) + column;
             }
         }
 
         for (int y = 0; y < 64; y++)
         {
             for (int x = 0; x < 128; x++)
-                page_PSMCT8[block][y][x] = (blockid_PSMCT8(block, 0, x, y) << 8) + columnTable8[y & 0xF][x & 0xF];
+                page_PSMCT8.get(block,y,x) = (blockid_PSMCT8(block, 0, x, y) << 8) + columnTable8[y & 0xF][x & 0xF];
         }
 
         for (int y = 0; y < 128; y++)
         {
             for (int x = 0; x < 128; x++)
-                page_PSMCT4[block][y][x] = (blockid_PSMCT4(block, 0, x, y) << 9) + columnTable4[y & 15][x & 31];
+                page_PSMCT4.get(block,y,x) = (blockid_PSMCT4(block, 0, x, y) << 9) + columnTable4[y & 15][x & 31];
         }
     }
 
@@ -1065,56 +1066,57 @@ uint32_t GraphicsSynthesizerThread::blockid_PSMCT4(uint32_t block, uint32_t widt
 uint32_t GraphicsSynthesizerThread::addr_PSMCT32(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
 {
     uint32_t page = ((block >> 5) + (y >> 5) * width + (x >> 6));
-    uint32_t addr = (page << 11) + page_PSMCT32[block & 0x1F][y & 0x1F][x & 0x3F];
+    //uint32_t addr = (page << 11) + page_PSMCT32[block & 0x1F][y & 0x1F][x & 0x3F];
+    uint32_t addr = (page << 11) + page_PSMCT32.get(block & 0x1F, y & 0x1F, x & 0x3F);
     return (addr << 2) & 0x003FFFFC;
 }
 
 uint32_t GraphicsSynthesizerThread::addr_PSMCT32Z(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
 {
     uint32_t page = ((block >> 5) + (y >> 5) * width + (x >> 6));
-    uint32_t addr = (page << 11) + page_PSMCT32Z[block & 0x1F][y & 0x1F][x & 0x3F];
+    uint32_t addr = (page << 11) + page_PSMCT32Z.get(block & 0x1F, y & 0x1F, x & 0x3F);
     return (addr << 2) & 0x003FFFFC;
 }
 
 uint32_t GraphicsSynthesizerThread::addr_PSMCT16(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
 {
     uint32_t page = ((block >> 5) + (y >> 6) * width + (x >> 6));
-    uint32_t addr = (page << 12) + page_PSMCT16[block & 0x1F][y & 0x3F][x & 0x3F];
+    uint32_t addr = (page << 12) + page_PSMCT16.get(block & 0x1F, y & 0x3F, x & 0x3F);
     return (addr << 1) & 0x003FFFFE;
 }
 
 uint32_t GraphicsSynthesizerThread::addr_PSMCT16S(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
 {
     uint32_t page = ((block >> 5) + (y >> 6) * width + (x >> 6));
-    uint32_t addr = (page << 12) + page_PSMCT16S[block & 0x1F][y & 0x3F][x & 0x3F];
+    uint32_t addr = (page << 12) + page_PSMCT16S.get(block & 0x1F, y & 0x3F, x & 0x3F);
     return (addr << 1) & 0x003FFFFE;
 }
 
 uint32_t GraphicsSynthesizerThread::addr_PSMCT16Z(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
 {
     uint32_t page = ((block >> 5) + (y >> 6) * width + (x >> 6));
-    uint32_t addr = (page << 12) + page_PSMCT16Z[block & 0x1F][y & 0x3F][x & 0x3F];
+    uint32_t addr = (page << 12) + page_PSMCT16Z.get(block & 0x1F, y & 0x3F, x & 0x3F);
     return (addr << 1) & 0x003FFFFE;
 }
 
 uint32_t GraphicsSynthesizerThread::addr_PSMCT16SZ(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
 {
     uint32_t page = ((block >> 5) + (y >> 6) * width + (x >> 6));
-    uint32_t addr = (page << 12) + page_PSMCT16SZ[block & 0x1F][y & 0x3F][x & 0x3F];
+    uint32_t addr = (page << 12) + page_PSMCT16SZ.get(block & 0x1F, y & 0x3F, x & 0x3F);
     return (addr << 1) & 0x003FFFFE;
 }
 
 uint32_t GraphicsSynthesizerThread::addr_PSMCT8(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
 {
     uint32_t page = ((block >> 5) + (y >> 6) * (width >> 1) + (x >> 7));
-    uint32_t addr = (page << 13) + page_PSMCT8[block & 0x1F][y & 0x3F][x & 0x7F];
+    uint32_t addr = (page << 13) + page_PSMCT8.get(block & 0x1F, y & 0x3F, x & 0x7F);
     return addr & 0x003FFFFF;
 }
 
 uint32_t GraphicsSynthesizerThread::addr_PSMCT4(uint32_t block, uint32_t width, uint32_t x, uint32_t y)
 {
     uint32_t page = ((block >> 5) + (y >> 7) * (width >> 1) + (x >> 7));
-    uint32_t addr = (page << 14) + page_PSMCT4[block & 0x1f][y & 0x7f][x & 0x7f];
+    uint32_t addr = (page << 14) + page_PSMCT4.get(block & 0x1F, y & 0x7F, x & 0x7F);
     return addr & 0x007FFFFF;
 }
 
@@ -1322,7 +1324,7 @@ void GraphicsSynthesizerThread::render_primitive()
         case 3:
         case 4:
         case 5:
-            render_triangle();
+            render_triangle2();
             break;
         case 6:
             render_sprite();
@@ -1477,6 +1479,7 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
                     fail = true;
                 break;
         }
+
         if (fail)
         {
             switch (test->alpha_fail_method)
@@ -1899,6 +1902,370 @@ int32_t GraphicsSynthesizerThread::orient2D(const Vertex &v1, const Vertex &v2, 
     return (v2.x - v1.x) * (v3.y - v1.y) - (v3.x - v1.x) * (v2.y - v1.y);
 }
 
+// this is garbage, possible to go way faster.
+static void order3(int32_t a, int32_t b, int32_t c, uint8_t* order)
+{
+    if(a > b) {
+        if(b > c) {
+            order[0] = 2;
+            order[1] = 1;
+            order[2] = 0;
+        } else {
+            // a > b, b < c
+            order[0] = 1;
+            if(a > c) {
+                order[2] = 0;
+                order[1] = 2;
+            } else {
+                // c > a
+                order[2] = 2;
+                order[1] = 0;
+            }
+        }
+    } else {
+        // b > a
+        if(a > c) {
+            order[0] = 2;
+            order[1] = 0;
+            order[2] = 1;
+        } else {
+            // b > a, c > a
+            order[0] = 0; // a
+            if(b > c) {
+                order[1] = 2;
+                order[2] = 1;
+            } else {
+                order[1] = 1;
+                order[2] = 2;
+            }
+        }
+    }
+}
+
+void GraphicsSynthesizerThread::render_triangle2() {
+    // This is a "scanline" algorithm which reduces flops/pixel
+    //  at the cost of a longer setup time.
+
+    // per-pixel work:
+    //         add   mult   div
+    // stupid  13     7      1
+    // old      5     3      1
+    // scan     3     0      0
+    //
+    // per-line work:
+    //         add   mult   div
+    // stupid  0     0      0
+    // old     3     0      0
+    // scan    1     1      0   (possible to do 1 add, but rounding issues with floats occur)
+
+    // it divides a triangle like this:
+
+    //             * v0
+    //
+    //     v1  * ----
+    //
+    //
+    //               * v2
+
+    // where v0, v1, v2 are floating point pixel locations, ordered from low to high
+    // (this triangles also has a positive area because the vertices are CCW)
+
+
+    Vertex unsortedVerts[3]; // vertices in the order they were sent to GS
+    unsortedVerts[0] = vtx_queue[2]; unsortedVerts[0].to_relative(current_ctx->xyoffset);
+    unsortedVerts[1] = vtx_queue[1]; unsortedVerts[1].to_relative(current_ctx->xyoffset);
+    unsortedVerts[2] = vtx_queue[0]; unsortedVerts[2].to_relative(current_ctx->xyoffset);
+
+    if (!current_PRMODE->gourand_shading)
+    {
+        //Flatten the colors
+        unsortedVerts[0].rgbaq.r = unsortedVerts[2].rgbaq.r;
+        unsortedVerts[1].rgbaq.r = unsortedVerts[2].rgbaq.r;
+
+        unsortedVerts[0].rgbaq.g = unsortedVerts[2].rgbaq.g;
+        unsortedVerts[1].rgbaq.g = unsortedVerts[2].rgbaq.g;
+
+        unsortedVerts[0].rgbaq.b = unsortedVerts[2].rgbaq.b;
+        unsortedVerts[1].rgbaq.b = unsortedVerts[2].rgbaq.b;
+
+        unsortedVerts[0].rgbaq.a = unsortedVerts[2].rgbaq.a;
+        unsortedVerts[1].rgbaq.a = unsortedVerts[2].rgbaq.a;
+    }
+
+    TexLookupInfo tex_info;
+    tex_info.new_lookup = true;
+    tex_info.tex_base = current_ctx->tex0.texture_base;
+    tex_info.buffer_width = current_ctx->tex0.width;
+    tex_info.tex_width = current_ctx->tex0.tex_width;
+    tex_info.tex_height = current_ctx->tex0.tex_height;
+
+
+    // fast reject - some games like to spam triangles that don't have any pixels
+    if(unsortedVerts[0].y == unsortedVerts[1].y && unsortedVerts[1].y == unsortedVerts[2].y)
+    {
+        return;
+    }
+
+
+    // sort the three vertices by their y coordinate (increasing)
+    uint8_t order[3];
+    order3(unsortedVerts[0].y, unsortedVerts[1].y, unsortedVerts[2].y, order);
+
+    // convert all vertex data to floating point, converts position to floating point pixels
+    VertexF v0(unsortedVerts[order[0]]);
+    VertexF v1(unsortedVerts[order[1]]);
+    VertexF v2(unsortedVerts[order[2]]);
+
+    // COMMONLY USED VALUES
+
+    // check if we only have a single triangle like this:
+    //     v0  * ----*  v1         v1 *-----* v0
+    //                        OR
+    //             * v2                 * v2
+    // the other orientations of single triangle (where v1 v2 is horizontal) works fine.
+    bool lower_tri_only = (v0.y == v1.y);
+
+    // the edge e21 is the edge from v1 -> v2.  So v1 + e21 = v2
+    // edges (difference of the ENTIRE vertex properties, not just position)
+    VertexF e21 = v2 - v1;
+    VertexF e20 = v2 - v0;
+    VertexF e10 = v1 - v0;
+
+    // interpolating z (or any value) at point P in a triangle can be done by computing the barycentric coordinates
+    // (w0, w1, w2) and using P_z = w0 * v1_z + w1 * v2_z + w2 * v3_z
+
+    // derivative of P_z wrt x and y is constant everywhere
+    // dP_z/dx = dw0/dx * v1_z + dw1/dx * v2_z + dw2/dx * v3_z
+
+    // w0 = (v2_y - v3_y)*(P_x - v3_x) + (v3_x - v2_x) * (P_y - v3_y)
+    //      ----------------------------------------------------------
+    //      (v1_y - v0_y)*(v2_x - v0_x) + (v1_x - v0_x)*(v2_y - v0_y)
+
+    // dw0/dx =           v2_y - v3_y
+    //          ------------------------------
+    //           the same denominator as above
+
+    // The denominator of this fraction shows up everywhere, so we compute it once.
+    float div = (e10.y * e20.x - e10.x * e20.y);
+
+    // If the vertices of the triangle are CCW, the denominator will be negative
+    // if the triangle is degenerate (has 0 area), it will be zero.
+    bool reversed = div < 0.f;
+
+    if(div == 0.f)
+    {
+        return;
+    }
+
+    // next we need to determine the horizontal scanlines that will have pixels.
+    // GS pixel draw condition for scissor
+    //   >= minimum value, <= maximum value (draw left/top, but not right/bottom)
+    // Our scanline loop
+    //   >= minimum value, < maximum value
+
+    // MINIMUM SCISSOR
+    // -------------------  y = 0.0 (pixel)
+    //
+    //  XXXXXXXXXXXXXXXXXX  scissor minimum (y = 0.125 to y = 0.875)
+    //                           (round to y = 1.0 - the first scanline we should consider)
+    // -------------------- y = 1.0 (pixel)
+    int scissorY1 = (current_ctx->scissor.y1 + 15) / 16; // min y coordinate, round up because we don't draw px below scissor
+    int scissorX1 = (current_ctx->scissor.x1 + 15) / 16;
+
+    // MAXIMUM SCISSOR
+    // -------------------  y = 3.0 (pixel)
+    //
+    //  XXXXXXXXXXXXXXXXXX  scissor maximum (y = 3.125 to y = 3.875)
+    //                           (round to y = 4.0 - will do scanlines at y = 1, 2, 3)
+    // -------------------- y = 4.0 (pixel)
+
+    // however, if SCISSOR = 4, we should round that up to 5 because we do want to draw pixels on y = 4 (<= max value)
+    int scissorY2 = (current_ctx->scissor.y2 + 16) / 16;
+    int scissorX2 = (current_ctx->scissor.x2 + 16) / 16;
+
+    // scissor triangle top/bottoms
+    // we can get away with only checking min scissor for tops and max scissors for bottom
+    // because it will give negative height triangles for completely scissored half tris
+    // and the correct answer for half tris that aren't completely killed
+    int upperTop = std::max((int)std::ceil(v0.y), scissorY1); // we draw this
+    int upperBot = std::min((int)std::ceil(v1.y), scissorY2); // we don't draw this, (< max value, different from scissor)
+    int lowerTop = std::max((int)std::ceil(v1.y), scissorY1); // we draw this
+    int lowerBot = std::min((int)std::ceil(v2.y), scissorY2); // we don't draw this, (< max value, different from scissor)
+
+
+    // compute the derivatives of the weights, like shown in the formula above
+    float ndw2dy = e10.x / div; // n is negative
+    float dw2dx  = e10.y / div;
+    float dw1dy  = e20.x / div;
+    float ndw1dx = e20.y / div; // also negative
+
+    // derivatives wrt x and y would normally be computed as dz/dx = dw0/dx * z0 + dw1/dx * z1 + dw2/dx * z2
+    // however, w0 + w1 + w2 = 1 so dw0/dx + dw1/dx + dw2/dx = 0,
+    //   and we can use some clever rearranging and reuse of the edges to simplify this
+    //   we can replace dw0/dx with (-dw1/dx - dw2/dx):
+
+    // dz/dx = dw0/dx*z0 + dw1/dx*z1 + dw2/dx*z2
+    // dz/dx = (-dw1/dx - dw2/dx)*z0 + dw1/dx*z1 + dw2/dx*z2
+    // dz/dx = -dw1/dx*z0 - dw2/dx*z0 + dw1/dx*z1 + dw2/dx*z2
+    // dz/dx = dw1/dx*(z1 - z0) + dw2/dx*(z2 - z0)
+
+    // the value to step per field per x/y pixel
+    VertexF dvdx = e20 * dw2dx - e10 * ndw1dx;
+    VertexF dvdy = e10 * dw1dy - e20 * ndw2dy;
+
+    // slopes of the edges
+    float e20dxdy = e20.x / e20.y;
+    float e21dxdy = e21.x / e21.y;
+    float e10dxdy = e10.x / e10.y;
+
+    // we need to know the left/right side slopes. They can be different if v1 is on the opposite side of e20
+    float lowerLeftEdgeStep  = reversed ? e20dxdy : e21dxdy;
+    float lowerRightEdgeStep = reversed ? e21dxdy : e20dxdy;
+
+    // draw triangles
+    if(lower_tri_only)
+    {
+        if(lowerTop < lowerBot) // if we weren't killed by scissoring
+        {
+            // we don't know which vertex is on the left or right, but the two configures have opposite sign areas:
+            //     v0  * ----*  v1         v1 *-----* v0
+            //                        OR
+            //             * v2                 * v2
+            VertexF& left_vertex = reversed ? v0 : v1;
+            VertexF& right_vertex = reversed ? v1 : v0;
+            render_half_triangle(left_vertex.x,    // upper edge left vertex, floating point pixels
+                                 right_vertex.x,   // upper edge right vertex, floating point pixels
+                                 upperTop,         // start scanline (included)
+                                 lowerBot,         // end scanline   (not included)
+                                 dvdx,             // derivative of values wrt x coordinate
+                                 dvdy,             // derivative of values wrt y coordinate
+                                 left_vertex,      // one point to interpolate from
+                                 lowerLeftEdgeStep, // slope of left edge
+                                 lowerRightEdgeStep,  // slope of right edge
+                                 scissorX1,        // x scissor (integer pixels, do draw this px)
+                                 scissorX2,        // x scissor (integer pixels, don't draw this px)
+                                 tex_info);        // texture
+        }
+    }
+    else
+    {
+        // again, left/right slopes
+        float upperLeftEdgeStep = reversed ? e20dxdy : e10dxdy;
+        float upperRightEdgeStep = reversed ? e10dxdy : e20dxdy;
+
+        // upper triangle
+        if(upperTop < upperBot) // if we weren't killed by scissoring
+        {
+            render_half_triangle(v0.x, v0.x,          // upper edge is just the highest point on triangle
+                                 upperTop, upperBot,  // scanline bounds
+                                 dvdx, dvdy,          // derivatives of values
+                                 v0,                  // interpolate from this vertex
+                                 upperLeftEdgeStep, upperRightEdgeStep, // slopes
+                                 scissorX1, scissorX2,  // integer x scissor
+                                 tex_info);
+        }
+
+        if(lowerTop < lowerBot)
+        {
+            //             * v0
+            //
+            //     v1  * ----
+            //
+            //
+            //               * v2
+            render_half_triangle(v0.x + upperLeftEdgeStep * e10.y, // one of our upper edge vertices isn't v0,v1,v2, but we don't know which. todo is this faster than branch?
+                                 v0.x + upperRightEdgeStep * e10.y,
+                                 lowerTop, lowerBot, dvdx, dvdy, v1,
+                                 lowerLeftEdgeStep, lowerRightEdgeStep, scissorX1, scissorX2, tex_info);
+        }
+
+    }
+
+}
+
+/*!
+ * Render a "half-triangle" which has a horizontal edge
+ * @param x0 - the x coordinate of the upper left most point of the triangle. floating point pixels
+ * @param x1 - the x coordinate of the upper right most point of the triangle (can be the same as x0), floating point px
+ * @param y0 - the y coordinate of the first scanline which will contain the triangle (integer pixels)
+ * @param y1 - the y coordinate of the last scanline which will contain the triangle (integer pixels)
+ * @param x_step - the derivatives of all parameters wrt x
+ * @param y_step - the derivatives of all parameters wrt y
+ * @param init   - the vertex we interpolate from
+ * @param step_x0 - how far to step to the left on each step down (floating point px)
+ * @param step_x1 - how far to step to the right on each step down (floating point px)
+ * @param scx1    - left x scissor (fp px)
+ * @param scx2    - right x scissor (fp px)
+ * @param tex_info - texture data
+ */
+void GraphicsSynthesizerThread::render_half_triangle(float x0, float x1, int y0, int y1, VertexF &x_step,
+                                                     VertexF &y_step, VertexF &init, float step_x0, float step_x1,
+                                                     float scx1, float scx2, TexLookupInfo& tex_info) {
+
+    bool tmp_tex = current_PRMODE->texture_mapping;
+    bool tmp_uv = !current_PRMODE->use_UV;
+
+    for(int y = y0; y < y1; y++) // loop over scanlines of triangle
+    {
+        float height = y - init.y; // how far down we've made it
+        VertexF vtx = init + y_step * height;       // interpolate to point (x_init, y)
+        float x0l = x0 + step_x0 * height;          // start x coordinates of scanline from interpolation
+        float x1l = x1 + step_x1 * height;          // end   x coordinate of scanline from interpolation
+        x0l = std::max(scx1, std::ceil(x0l));       // round and scissor
+        x1l = std::min(scx2, std::ceil(x1l));       // round and scissor
+        int xStop = x1l;                            // integer start/stop pixels
+        int xStart = x0l;
+
+        if(xStop == xStart) continue;               // skip rows of zero length
+
+        vtx += (x_step * (x0l - init.x));           // interpolate to point (x0l, y)
+
+        for(int x = x0l; x < xStop; x++)            // loop over x pixels of scanline
+        {
+            //vtx = init + y_step * height + (x_step * (x - init.x));
+            tex_info.vtx_color.r = vtx.r;           // set most recently interpolated stuff
+            tex_info.vtx_color.g = vtx.g;
+            tex_info.vtx_color.b = vtx.b;
+            tex_info.vtx_color.a = vtx.a;
+            tex_info.vtx_color.q = vtx.q;
+            tex_info.fog = vtx.fog;
+            if (tmp_tex)
+            {
+                int32_t u, v;
+                calculate_LOD(tex_info);
+                if (tmp_uv)
+                {
+                    float s, t, q;
+                    s = vtx.s * 16.f;
+                    t = vtx.t * 16.f;
+                    q = vtx.q * 16.f;
+
+                    s /= q;
+                    t /= q;
+                    u = (s * tex_info.tex_width) * 16.f;
+                    v = (t * tex_info.tex_height) * 16.f;
+                    //fprintf(stderr, "q: %f, u: %d, v: %d, a: %d\n", vtx.q, u,v, tex_info.vtx_color.a);
+                }
+                else
+                {
+                    u = (uint32_t) vtx.u;
+                    v = (uint32_t) vtx.v;
+                }
+                tex_lookup(u, v, tex_info);
+                draw_pixel(x * 16, y * 16, (uint32_t)(vtx.z * 16.f), tex_info.tex_color);
+
+            }
+            else
+            {
+                draw_pixel(x * 16, y * 16, (uint32_t)(vtx.z * 16.f), tex_info.vtx_color);
+            }
+
+            vtx += x_step;                       // get values for the adjacent pixel
+        }
+    }
+
+}
+
 void GraphicsSynthesizerThread::render_triangle()
 {
     printf("[GS_t] Rendering triangle!\n");
@@ -1906,6 +2273,22 @@ void GraphicsSynthesizerThread::render_triangle()
     Vertex v1 = vtx_queue[2]; v1.to_relative(current_ctx->xyoffset);
     Vertex v2 = vtx_queue[1]; v2.to_relative(current_ctx->xyoffset);
     Vertex v3 = vtx_queue[0]; v3.to_relative(current_ctx->xyoffset);
+
+    if (!current_PRMODE->gourand_shading)
+    {
+        //Flatten the colors
+        v1.rgbaq.r = v3.rgbaq.r;
+        v2.rgbaq.r = v3.rgbaq.r;
+
+        v1.rgbaq.g = v3.rgbaq.g;
+        v2.rgbaq.g = v3.rgbaq.g;
+
+        v1.rgbaq.b = v3.rgbaq.b;
+        v2.rgbaq.b = v3.rgbaq.b;
+
+        v1.rgbaq.a = v3.rgbaq.a;
+        v2.rgbaq.a = v3.rgbaq.a;
+    }
 
     //The triangle rasterization code uses an approach with barycentric coordinates
     //Clear explanation can be read below:
@@ -1962,21 +2345,7 @@ void GraphicsSynthesizerThread::render_triangle()
     int32_t w2_row_block = w2_row;
     int32_t w3_row_block = w3_row;
 
-    if (!current_PRMODE->gourand_shading)
-    {
-        //Flatten the colors
-        v1.rgbaq.r = v3.rgbaq.r;
-        v2.rgbaq.r = v3.rgbaq.r;
 
-        v1.rgbaq.g = v3.rgbaq.g;
-        v2.rgbaq.g = v3.rgbaq.g;
-
-        v1.rgbaq.b = v3.rgbaq.b;
-        v2.rgbaq.b = v3.rgbaq.b;
-
-        v1.rgbaq.a = v3.rgbaq.a;
-        v2.rgbaq.a = v3.rgbaq.a;
-    }
 
     TexLookupInfo tex_info;
     tex_info.new_lookup = true;
@@ -2139,7 +2508,6 @@ void GraphicsSynthesizerThread::render_sprite()
     printf("[GS_t] Rendering sprite!\n");
     Vertex v1 = vtx_queue[1]; v1.to_relative(current_ctx->xyoffset);
     Vertex v2 = vtx_queue[0]; v2.to_relative(current_ctx->xyoffset);
-
     TexLookupInfo tex_info;
     tex_info.new_lookup = true;
 

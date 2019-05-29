@@ -10,6 +10,22 @@
 #include "circularFIFO.hpp"
 #include "int128.hpp"
 
+template<int XS, int YS, int ZS>
+struct SwizzleTable
+{
+    SwizzleTable()
+    {
+
+    }
+
+    uint32_t& get(int x, int y, int z)
+    {
+        return data[x*YS*ZS + y * ZS + z];
+    }
+
+    uint32_t data[XS*YS*ZS];
+};
+
 //Commands sent from the main thread to the GS thread.
 enum GSCommand:uint8_t 
 {
@@ -212,6 +228,7 @@ struct Vertex
     }
 };
 
+
 struct TexLookupInfo
 {
     //int32_t u, v;
@@ -226,6 +243,78 @@ struct TexLookupInfo
     uint8_t fog;
     bool new_lookup;
     int16_t lastu, lastv;
+};
+
+struct VertexF
+{
+    union {
+        struct
+        {
+            float x,y,z,w,r,g,b,a,q,u,v,s,t,fog;
+        };
+        float data[14];
+    };
+
+    VertexF()
+    {
+
+    }
+
+    VertexF(Vertex& vert)
+    {
+        x = (float)vert.x / 16.f;
+        y = (float)vert.y / 16.f;
+        z = (float)vert.z / 16.f;
+        r = vert.rgbaq.r;
+        g = vert.rgbaq.g;
+        b = vert.rgbaq.b;
+        a = vert.rgbaq.a;
+        q = vert.rgbaq.q;
+        u = vert.uv.u;
+        v = vert.uv.v;
+        s = vert.s;
+        t = vert.t;
+        fog = vert.fog;
+    }
+
+    VertexF operator-(const VertexF& rhs)
+    {
+        VertexF result;
+        for(int i = 0; i < 14; i++)
+        {
+            result.data[i] = data[i] - rhs.data[i];
+        }
+        return result;
+    }
+
+    VertexF operator+(const VertexF& rhs)
+    {
+        VertexF result;
+        for(int i = 0; i < 14; i++)
+        {
+            result.data[i] = data[i] + rhs.data[i];
+        }
+        return result;
+    }
+
+    VertexF& operator+=(const VertexF& rhs)
+    {
+        for(int i = 0; i < 14; i++)
+        {
+            data[i] = data[i] + rhs.data[i];
+        }
+        return *this;
+    }
+
+    VertexF operator*(float mult)
+    {
+        VertexF result;
+        for(int i = 0; i < 14; i++)
+        {
+            result.data[i] = data[i] * mult;
+        }
+        return result;
+    }
 };
 
 class GraphicsSynthesizerThread
@@ -360,6 +449,9 @@ class GraphicsSynthesizerThread
         void render_point();
         void render_line();
         void render_triangle();
+        void render_triangle2();
+        void render_half_triangle(float x0, float x1, int y0, int y1, VertexF& x_step, VertexF& y_step, VertexF& init,
+                float step_x0, float step_x1, float scx1, float scx2, TexLookupInfo& tex_info);
         void render_sprite();
         void write_HWREG(uint64_t data);
         uint128_t local_to_host();
