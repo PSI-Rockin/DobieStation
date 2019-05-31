@@ -263,10 +263,11 @@ struct VertexF
     union {
         struct
         {
-            float x,y,z,w,r,g,b,a,q,u,v,s,t,fog;
+            float x,y,w,r,g,b,a,q,u,v,s,t,fog;
         };
-        float data[14];
+        float data[13];
     };
+    double z;
 
     VertexF()
     {
@@ -277,7 +278,7 @@ struct VertexF
     {
         x = (float)vert.x / 16.f;
         y = (float)vert.y / 16.f;
-        z = (float)vert.z / 16.f;
+        z = vert.z;
         r = vert.rgbaq.r;
         g = vert.rgbaq.g;
         b = vert.rgbaq.b;
@@ -293,39 +294,43 @@ struct VertexF
     VertexF operator-(const VertexF& rhs)
     {
         VertexF result;
-        for(int i = 0; i < 14; i++)
+        for(int i = 0; i < 13; i++)
         {
             result.data[i] = data[i] - rhs.data[i];
         }
+        result.z = z - rhs.z;
         return result;
     }
 
     VertexF operator+(const VertexF& rhs)
     {
         VertexF result;
-        for(int i = 0; i < 14; i++)
+        for(int i = 0; i < 13; i++)
         {
             result.data[i] = data[i] + rhs.data[i];
         }
+        result.z = z + rhs.z;
         return result;
     }
 
     VertexF& operator+=(const VertexF& rhs)
     {
-        for(int i = 0; i < 14; i++)
+        for(int i = 0; i < 13; i++)
         {
             data[i] = data[i] + rhs.data[i];
         }
+        z += rhs.z;
         return *this;
     }
 
     VertexF operator*(float mult)
     {
         VertexF result;
-        for(int i = 0; i < 14; i++)
+        for(int i = 0; i < 13; i++)
         {
             result.data[i] = data[i] * mult;
         }
+        result.z = z * mult;
         return result;
     }
 };

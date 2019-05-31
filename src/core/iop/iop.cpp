@@ -160,7 +160,7 @@ void IOP::handle_exception(uint32_t addr, uint8_t cause)
 
 void IOP::syscall_exception()
 {
-    handle_exception(0x80000080, 0x08);
+    handle_exception(0x80000084, 0x08);
 }
 
 void IOP::interrupt_check(bool i_pass)
