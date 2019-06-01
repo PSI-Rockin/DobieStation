@@ -667,10 +667,14 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
         }
         case 0x2A:
             // SWL
-            Errors::print_warning("[EE_JIT] Unrecognized op SWL\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            instr.op = IR::Opcode::StoreWordLeft;
+            instr.set_dest((opcode >> 21) & 0x1F);
+            instr.set_source((opcode >> 16) & 0x1F);
+            instr.set_source2((int64_t)(int16_t)(opcode & 0xFFFF));
             instrs.push_back(instr);
             break;
+        }
         case 0x2B:
             // SW
         {
@@ -683,22 +687,34 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
         }
         case 0x2C:
             // SDL
-            Errors::print_warning("[EE_JIT] Unrecognized op SDL\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            instr.op = IR::Opcode::StoreDoublewordLeft;
+            instr.set_dest((opcode >> 21) & 0x1F);
+            instr.set_source((opcode >> 16) & 0x1F);
+            instr.set_source2((int64_t)(int16_t)(opcode & 0xFFFF));
             instrs.push_back(instr);
             break;
+        }
         case 0x2D:
             // SDR
-            Errors::print_warning("[EE_JIT] Unrecognized op SDR\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            instr.op = IR::Opcode::StoreDoublewordRight;
+            instr.set_dest((opcode >> 21) & 0x1F);
+            instr.set_source((opcode >> 16) & 0x1F);
+            instr.set_source2((int64_t)(int16_t)(opcode & 0xFFFF));
             instrs.push_back(instr);
             break;
+        }
         case 0x2E:
             // SWR
-            Errors::print_warning("[EE_JIT] Unrecognized op SWR\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            instr.op = IR::Opcode::StoreWordRight;
+            instr.set_dest((opcode >> 21) & 0x1F);
+            instr.set_source((opcode >> 16) & 0x1F);
+            instr.set_source2((int64_t)(int16_t)(opcode & 0xFFFF));
             instrs.push_back(instr);
             break;
+        }
         case 0x2F:
             // CACHE
             fallback_interpreter(instr, opcode);

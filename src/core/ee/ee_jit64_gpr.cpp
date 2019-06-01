@@ -1348,6 +1348,97 @@ void EE_JIT64::store_doubleword(EmotionEngine& ee, IR::Instruction& instr)
     call_abi_func((uint64_t)ee_write64);
 }
 
+void EE_JIT64::store_doubleword_left(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 RCX = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD, REG_64::RCX);
+    REG_64 addr = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 addr_backup = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPR, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPR, REG_STATE::READ);
+    int64_t offset = instr.get_source2();
+
+    if (offset)
+        emitter.LEA32_M(dest, addr, offset);
+    else
+        emitter.MOV32_REG(dest, addr);
+    emitter.MOV32_REG(addr, addr_backup);
+    emitter.AND32_REG_IMM(~0x7, addr);
+    prepare_abi((uint64_t)&ee);
+    prepare_abi_reg(addr);
+    call_abi_func((uint64_t)ee_read64);
+    emitter.MOV32_REG(addr_backup, RCX);
+    emitter.AND32_REG_IMM(0x7, RCX);
+    emitter.SHL32_REG_IMM(0x3, RCX);
+    emitter.XOR16_REG_IMM(56, RCX);
+    emitter.MOV64_MR(source, addr);
+    emitter.SHR64_CL(addr);
+    emitter.SUB16_REG_IMM(64, RCX);
+    emitter.NEG16(RCX);
+    emitter.MOV32_REG_IMM(0x3F, addr_backup);
+    emitter.CMP16_IMM(0x40, RCX);
+    emitter.CMOVCC16_REG(ConditionCode::E, addr_backup, RCX);
+    emitter.SHR64_CL(REG_64::RAX);
+    emitter.SHL64_CL(REG_64::RAX);
+    emitter.OR64_REG(REG_64::RAX, addr);
+    if (offset)
+        emitter.LEA32_M(dest, addr_backup, offset);
+    else
+        emitter.MOV32_REG(dest, addr_backup);
+    emitter.AND32_REG_IMM(~0x7, addr_backup);
+    prepare_abi((uint64_t)&ee);
+    prepare_abi_reg(addr_backup);
+    prepare_abi_reg(addr);
+    free_int_reg(ee, RCX);
+    free_int_reg(ee, addr);
+    free_int_reg(ee, addr_backup);
+    call_abi_func((uint64_t)ee_write64);
+}
+
+void EE_JIT64::store_doubleword_right(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 RCX = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD, REG_64::RCX);
+    REG_64 addr = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 addr_backup = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPR, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPR, REG_STATE::READ);
+    int64_t offset = instr.get_source2();
+
+    if (offset)
+        emitter.LEA32_M(dest, addr, offset);
+    else
+        emitter.MOV32_REG(dest, addr);
+    emitter.MOV32_REG(addr, addr_backup);
+    emitter.AND32_REG_IMM(~0x7, addr);
+    prepare_abi((uint64_t)&ee);
+    prepare_abi_reg(addr);
+    call_abi_func((uint64_t)ee_read64);
+    emitter.MOV32_REG(addr_backup, RCX);
+    emitter.AND32_REG_IMM(0x7, RCX);
+    emitter.SHL32_REG_IMM(0x3, RCX);
+    emitter.MOV64_MR(source, addr);
+    emitter.SHL64_CL(addr);
+    emitter.SUB16_REG_IMM(64, RCX);
+    emitter.NEG16(RCX);
+    emitter.MOV32_REG_IMM(0x3F, addr_backup);
+    emitter.CMP16_IMM(0x40, RCX);
+    emitter.CMOVCC16_REG(ConditionCode::E, addr_backup, RCX);
+    emitter.SHL64_CL(REG_64::RAX);
+    emitter.SHR64_CL(REG_64::RAX);
+    emitter.OR64_REG(REG_64::RAX, addr);
+    if (offset)
+        emitter.LEA32_M(dest, addr_backup, offset);
+    else
+        emitter.MOV32_REG(dest, addr_backup);
+    emitter.AND32_REG_IMM(~0x7, addr_backup);
+    prepare_abi((uint64_t)&ee);
+    prepare_abi_reg(addr_backup);
+    prepare_abi_reg(addr);
+    free_int_reg(ee, RCX);
+    free_int_reg(ee, addr);
+    free_int_reg(ee, addr_backup);
+    call_abi_func((uint64_t)ee_write64);
+}
+
 void EE_JIT64::store_halfword(EmotionEngine& ee, IR::Instruction& instr)
 {
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPR, REG_STATE::READ);
@@ -1381,6 +1472,97 @@ void EE_JIT64::store_word(EmotionEngine& ee, IR::Instruction& instr)
     prepare_abi_reg(addr);
     prepare_abi_reg(source);
     free_int_reg(ee, addr);
+    call_abi_func((uint64_t)ee_write32);
+}
+
+void EE_JIT64::store_word_left(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 RCX = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD, REG_64::RCX);
+    REG_64 addr = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 addr_backup = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPR, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPR, REG_STATE::READ);
+    int64_t offset = instr.get_source2();
+
+    if (offset)
+        emitter.LEA32_M(dest, addr, offset);
+    else
+        emitter.MOV32_REG(dest, addr);
+    emitter.MOV32_REG(addr, addr_backup);
+    emitter.AND32_REG_IMM(~0x3, addr);
+    prepare_abi((uint64_t)&ee);
+    prepare_abi_reg(addr);
+    call_abi_func((uint64_t)ee_read32);
+    emitter.MOV32_REG(addr_backup, RCX);
+    emitter.AND32_REG_IMM(0x3, RCX);
+    emitter.SHL32_REG_IMM(0x3, RCX);
+    emitter.XOR16_REG_IMM(24, RCX);
+    emitter.MOV32_REG(source, addr);
+    emitter.SHR32_CL(addr);
+    emitter.SUB16_REG_IMM(32, RCX);
+    emitter.NEG16(RCX);
+    emitter.MOV32_REG_IMM(0x1F, addr_backup);
+    emitter.CMP16_IMM(0x20, RCX);
+    emitter.CMOVCC16_REG(ConditionCode::E, addr_backup, RCX);
+    emitter.SHR32_CL(REG_64::RAX);
+    emitter.SHL32_CL(REG_64::RAX);
+    emitter.OR32_REG(REG_64::RAX, addr);
+    if (offset)
+        emitter.LEA32_M(dest, addr_backup, offset);
+    else
+        emitter.MOV32_REG(dest, addr_backup);
+    emitter.AND32_REG_IMM(~0x3, addr_backup);
+    prepare_abi((uint64_t)&ee);
+    prepare_abi_reg(addr_backup);
+    prepare_abi_reg(addr);
+    free_int_reg(ee, RCX);
+    free_int_reg(ee, addr);
+    free_int_reg(ee, addr_backup);
+    call_abi_func((uint64_t)ee_write32);
+}
+
+void EE_JIT64::store_word_right(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 RCX = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD, REG_64::RCX);
+    REG_64 addr = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 addr_backup = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPR, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPR, REG_STATE::READ);
+    int64_t offset = instr.get_source2();
+
+    if (offset)
+        emitter.LEA32_M(dest, addr, offset);
+    else
+        emitter.MOV32_REG(dest, addr);
+    emitter.MOV32_REG(addr, addr_backup);
+    emitter.AND32_REG_IMM(~0x3, addr);
+    prepare_abi((uint64_t)&ee);
+    prepare_abi_reg(addr);
+    call_abi_func((uint64_t)ee_read32);
+    emitter.MOV32_REG(addr_backup, RCX);
+    emitter.AND32_REG_IMM(0x3, RCX);
+    emitter.SHL32_REG_IMM(0x3, RCX);
+    emitter.MOV32_REG(source, addr);
+    emitter.SHL32_CL(addr);
+    emitter.SUB16_REG_IMM(32, RCX);
+    emitter.NEG16(RCX);
+    emitter.MOV32_REG_IMM(0x1F, addr_backup);
+    emitter.CMP16_IMM(0x20, RCX);
+    emitter.CMOVCC16_REG(ConditionCode::E, addr_backup, RCX);
+    emitter.SHL32_CL(REG_64::RAX);
+    emitter.SHR32_CL(REG_64::RAX);
+    emitter.OR32_REG(REG_64::RAX, addr);
+    if (offset)
+        emitter.LEA32_M(dest, addr_backup, offset);
+    else
+        emitter.MOV32_REG(dest, addr_backup);
+    emitter.AND32_REG_IMM(~0x3, addr_backup);
+    prepare_abi((uint64_t)&ee);
+    prepare_abi_reg(addr_backup);
+    prepare_abi_reg(addr);
+    free_int_reg(ee, RCX);
+    free_int_reg(ee, addr);
+    free_int_reg(ee, addr_backup);
     call_abi_func((uint64_t)ee_write32);
 }
 

@@ -186,9 +186,13 @@ private:
     void shift_right_logical_variable(EmotionEngine& ee, IR::Instruction& instr);
     void store_byte(EmotionEngine& ee, IR::Instruction& instr);
     void store_doubleword(EmotionEngine& ee, IR::Instruction& instr);
+    void store_doubleword_left(EmotionEngine& ee, IR::Instruction& instr);
+    void store_doubleword_right(EmotionEngine& ee, IR::Instruction& instr);
     void store_halfword(EmotionEngine& ee, IR::Instruction& instr);
     void store_word(EmotionEngine& ee, IR::Instruction& instr);
     void store_word_coprocessor1(EmotionEngine& ee, IR::Instruction& instr);
+    void store_word_left(EmotionEngine& ee, IR::Instruction& instr);
+    void store_word_right(EmotionEngine& ee, IR::Instruction& instr);
     void store_quadword(EmotionEngine& ee, IR::Instruction& instr);
     void store_quadword_coprocessor2(EmotionEngine& ee, IR::Instruction& instr);
     void sub_doubleword_reg(EmotionEngine& ee, IR::Instruction& instr);

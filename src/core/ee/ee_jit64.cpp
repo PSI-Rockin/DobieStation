@@ -462,11 +462,23 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::StoreDoubleword:
             store_doubleword(ee, instr);
             break;
+        case IR::Opcode::StoreDoublewordLeft:
+            store_doubleword_left(ee, instr);
+            break;
+        case IR::Opcode::StoreDoublewordRight:
+            store_doubleword_right(ee, instr);
+            break;
         case IR::Opcode::StoreHalfword:
             store_halfword(ee, instr);
             break;
         case IR::Opcode::StoreWord:
             store_word(ee, instr);
+            break;
+        case IR::Opcode::StoreWordLeft:
+            store_word_left(ee, instr);
+            break;
+        case IR::Opcode::StoreWordRight:
+            store_word_right(ee, instr);
             break;
         case IR::Opcode::StoreWordCoprocessor1:
             store_word_coprocessor1(ee, instr);
