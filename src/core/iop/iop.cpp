@@ -160,7 +160,7 @@ void IOP::handle_exception(uint32_t addr, uint8_t cause)
 
 void IOP::syscall_exception()
 {
-    handle_exception(0x80000080, 0x08);
+    handle_exception(0x80000084, 0x08);
 }
 
 void IOP::interrupt_check(bool i_pass)
@@ -174,7 +174,7 @@ void IOP::interrupt_check(bool i_pass)
 void IOP::interrupt()
 {
     printf("[IOP] Processing interrupt!\n");
-    handle_exception(0x80000080, 0x00);
+    handle_exception(0x80000084, 0x00);
     unhalt();
 }
 
@@ -256,6 +256,7 @@ uint32_t IOP::read_instr(uint32_t addr)
             //Cache miss: load 4 words
             //I don't know what the exact count should be. 16 (4 * 4) breaks Fatal Frame 2.
             //Current theory is 4 cycles for the first load + 1 * 3 cycles for sequential loads
+            //printf("[IOP] i$ miss $%08X\n", addr);
             cycles_to_run -= 7;
             muldiv_delay = std::max(muldiv_delay - 7, 0);
             icache[index].valid = true;
@@ -287,7 +288,7 @@ void IOP::write32(uint32_t addr, uint32_t value)
 {
     if (cop0.status.IsC)
     {
-        //printf("Clearing IOP cache...\n");
+        //printf("Clearing IOP cache ($%08X)\n", addr);
         icache[(addr >> 4) & 0xFF].valid = false;
         return;
     }

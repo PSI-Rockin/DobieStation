@@ -69,7 +69,7 @@ void SPU::gen_sample()
     for (int i = 0; i < 24; i++)
     {
         voices[i].counter += voices[i].pitch;
-        if (voices[i].counter >= 0x1000)
+        while (voices[i].counter >= 0x1000)
         {
             voices[i].counter -= 0x1000;
 
@@ -87,11 +87,13 @@ void SPU::gen_sample()
                 voices[i].block_pos = 3;
             }
 
-            spu_check_irq(voices[i].current_addr);
             voices[i].block_pos++;
 
             if ((voices[i].block_pos % 4) == 0)
+            {
+                spu_check_irq(voices[i].current_addr);
                 voices[i].current_addr++;
+            }
 
             //End of block
             if (voices[i].block_pos == 32)
@@ -352,27 +354,27 @@ uint16_t SPU::read_voice_reg(uint32_t addr)
     int reg = addr & 0xF;
     switch (reg)
     {
-    case 0:
-        printf("[SPU%d] Read V%d VOLL: $%04X\n", id, v, voices[v].left_vol);
-        return voices[v].left_vol;
-    case 2:
-        printf("[SPU%d] Read V%d VOLR: $%04X\n", id, v, voices[v].right_vol);
-        return voices[v].right_vol;
-    case 4:
-        printf("[SPU%d] ReadV%d PITCH: $%04X\n", id, v, voices[v].pitch);
-        return voices[v].pitch;
-    case 6:
-        printf("[SPU%d] Read V%d ADSR1: $%04X\n", id, v, voices[v].adsr1);
-        return voices[v].adsr1;
-    case 8:
-        printf("[SPU%d] Read V%d ADSR2: $%04X\n", id, v, voices[v].adsr2);
-        return voices[v].adsr2;
-    case 10:
-        printf("[SPU%d] Read V%d ENVX: $%04X\n", id, v, voices[v].current_envelope);
-        return voices[v].current_envelope;
-    default:
-        printf("[SPU%d] V%d Read $%08X\n", id, v, addr);
-        return 0;
+        case 0:
+            printf("[SPU%d] Read V%d VOLL: $%04X\n", id, v, voices[v].left_vol);
+            return voices[v].left_vol;
+        case 2:
+            printf("[SPU%d] Read V%d VOLR: $%04X\n", id, v, voices[v].right_vol);
+            return voices[v].right_vol;
+        case 4:
+            printf("[SPU%d] ReadV%d PITCH: $%04X\n", id, v, voices[v].pitch);
+            return voices[v].pitch;
+        case 6:
+            printf("[SPU%d] Read V%d ADSR1: $%04X\n", id, v, voices[v].adsr1);
+            return voices[v].adsr1;
+        case 8:
+            printf("[SPU%d] Read V%d ADSR2: $%04X\n", id, v, voices[v].adsr2);
+            return voices[v].adsr2;
+        case 10:
+            printf("[SPU%d] Read V%d ENVX: $%04X\n", id, v, voices[v].current_envelope);
+            return voices[v].current_envelope;
+        default:
+            printf("[SPU%d] V%d Read $%08X\n", id, v, addr);
+            return 0;
     }
 }
 
@@ -591,7 +593,9 @@ void SPU::write_voice_reg(uint32_t addr, uint16_t value)
             break;
         case 4:
             printf("[SPU%d] Write V%d PITCH: $%04X\n", id, v, value);
-            voices[v].pitch = value & 0x3FFF;
+            voices[v].pitch = value & 0xFFFF;
+            if (voices[v].pitch > 0x4000)
+                voices[v].pitch = 0x4000;
             break;
         case 6:
             printf("[SPU%d] Write V%d ADSR1: $%04X\n", id, v, value);

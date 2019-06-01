@@ -12,6 +12,22 @@
 
 #include "jitcommon/emitter64.hpp"
 
+template<int XS, int YS, int ZS>
+struct SwizzleTable
+{
+    SwizzleTable()
+    {
+
+    }
+
+    uint32_t& get(int x, int y, int z)
+    {
+        return data[x*YS*ZS + y * ZS + z];
+    }
+
+    uint32_t data[XS*YS*ZS];
+};
+
 //Commands sent from the main thread to the GS thread.
 enum GSCommand:uint8_t 
 {
@@ -155,6 +171,7 @@ struct PRMODE_REG
     }
 };
 
+//NOTE: RGBAQ is used by the JIT. DO NOT TOUCH!
 struct RGBAQ_REG
 {
     //We make them 16-bit to handle potential overflows
@@ -214,6 +231,7 @@ struct Vertex
     }
 };
 
+//NOTE: TexLookupInfo is used by the JIT. DO NOT TOUCH!
 struct TexLookupInfo
 {
     //int32_t u, v;
@@ -230,6 +248,7 @@ struct TexLookupInfo
     int16_t lastu, lastv;
 };
 
+
 uint32_t addr_PSMCT32(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
 uint32_t addr_PSMCT32Z(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
 uint32_t addr_PSMCT16(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
@@ -238,6 +257,83 @@ uint32_t addr_PSMCT16Z(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
 uint32_t addr_PSMCT16SZ(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
 uint32_t addr_PSMCT8(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
 uint32_t addr_PSMCT4(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
+
+struct VertexF
+{
+    union {
+        struct
+        {
+            float x,y,w,r,g,b,a,q,u,v,s,t,fog;
+        };
+        float data[13];
+    };
+    double z;
+
+    VertexF()
+    {
+
+    }
+
+    VertexF(Vertex& vert)
+    {
+        x = (float)vert.x / 16.f;
+        y = (float)vert.y / 16.f;
+        z = vert.z;
+        r = vert.rgbaq.r;
+        g = vert.rgbaq.g;
+        b = vert.rgbaq.b;
+        a = vert.rgbaq.a;
+        q = vert.rgbaq.q;
+        u = vert.uv.u;
+        v = vert.uv.v;
+        s = vert.s;
+        t = vert.t;
+        fog = vert.fog;
+    }
+
+    VertexF operator-(const VertexF& rhs)
+    {
+        VertexF result;
+        for(int i = 0; i < 13; i++)
+        {
+            result.data[i] = data[i] - rhs.data[i];
+        }
+        result.z = z - rhs.z;
+        return result;
+    }
+
+    VertexF operator+(const VertexF& rhs)
+    {
+        VertexF result;
+        for(int i = 0; i < 13; i++)
+        {
+            result.data[i] = data[i] + rhs.data[i];
+        }
+        result.z = z + rhs.z;
+        return result;
+    }
+
+    VertexF& operator+=(const VertexF& rhs)
+    {
+        for(int i = 0; i < 13; i++)
+        {
+            data[i] = data[i] + rhs.data[i];
+        }
+        z += rhs.z;
+        return *this;
+    }
+
+    VertexF operator*(float mult)
+    {
+        VertexF result;
+        for(int i = 0; i < 13; i++)
+        {
+            result.data[i] = data[i] * mult;
+        }
+        result.z = z * mult;
+        return result;
+    }
+};
 
 class GraphicsSynthesizerThread
 {
@@ -268,9 +364,10 @@ class GraphicsSynthesizerThread
         GSContext context1, context2;
         GSContext* current_ctx;
 
-        Emitter64 emitter;
-        JitCache jit_cache;
+        Emitter64 emitter_dp, emitter_tex;
+        JitCache jit_draw_pixel_cache, jit_tex_lookup_cache;
         uint8_t* jit_draw_pixel_func;
+        uint8_t* jit_tex_lookup_func;
 
         uint8_t prim_type;
         uint16_t FOG;
@@ -292,6 +389,7 @@ class GraphicsSynthesizerThread
 
         //Used for the JIT to determine the ID of the draw pixel block
         uint64_t draw_pixel_state;
+        uint64_t tex_lookup_state;
 
         BITBLTBUF_REG BITBLTBUF;
         TRXPOS_REG TRXPOS;
@@ -354,17 +452,25 @@ class GraphicsSynthesizerThread
         void calculate_LOD(TexLookupInfo& info);
         void tex_lookup(int16_t u, int16_t v, TexLookupInfo& info);
         void tex_lookup_int(int16_t u, int16_t v, TexLookupInfo& info, bool forced_lookup = false);
+        void jit_tex_lookup(int16_t u, int16_t v, TexLookupInfo* info);
         void clut_lookup(uint8_t entry, RGBAQ_REG& tex_color);
         void clut_CSM2_lookup(uint8_t entry, RGBAQ_REG& tex_color);
         void reload_clut(const GSContext& context);
         void update_draw_pixel_state();
+        void update_tex_lookup_state();
         uint8_t* get_jitted_draw_pixel(uint64_t state);
         void recompile_draw_pixel(uint64_t state);
         void recompile_alpha_test();
         void recompile_depth_test();
         void recompile_alpha_blend();
-        void jit_call_func(uint64_t addr);
+        void jit_call_func(Emitter64& emitter, uint64_t addr);
         void jit_epilogue_draw_pixel();
+
+        uint8_t* get_jitted_tex_lookup(uint64_t state);
+        void recompile_tex_lookup(uint64_t state);
+        void recompile_clut_lookup();
+        void recompile_csm2_lookup();
+        void recompile_convert_16bit_tex(REG_64 color, REG_64 temp, REG_64 temp2);
 
         void vertex_kick(bool drawing_kick);
         bool depth_test(int32_t x, int32_t y, uint32_t z);
@@ -375,6 +481,9 @@ class GraphicsSynthesizerThread
         void render_point();
         void render_line();
         void render_triangle();
+        void render_triangle2();
+        void render_half_triangle(float x0, float x1, int y0, int y1, VertexF& x_step, VertexF& y_step, VertexF& init,
+                float step_x0, float step_x1, float scx1, float scx2, TexLookupInfo& tex_info);
         void render_sprite();
         void write_HWREG(uint64_t data);
         uint128_t local_to_host();
