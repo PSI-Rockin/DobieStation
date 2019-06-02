@@ -545,6 +545,17 @@ void EE_JIT64::doubleword_shift_left_logical(EmotionEngine& ee, IR::Instruction&
     emitter.SHL64_REG_IMM(instr.get_source2(), dest);
 }
 
+void EE_JIT64::doubleword_shift_left_logical_immediate(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPR, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPR, REG_STATE::WRITE);
+    uint16_t imm = instr.get_source2();
+
+    if (source != dest)
+        emitter.MOV64_MR(source, dest);
+    emitter.SHL64_REG_IMM(imm, dest);
+}
+
 void EE_JIT64::doubleword_shift_left_logical_variable(EmotionEngine& ee, IR::Instruction& instr)
 {
     // Alloc variable into RCX
