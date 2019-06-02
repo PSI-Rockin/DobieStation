@@ -1628,9 +1628,29 @@ void EE_JitTranslator::translate_op_regimm(uint32_t opcode, uint32_t PC, std::ve
 
             break;
         case 0x19:
-            // MTASH
-            Errors::print_warning("[EE_JIT] Unrecognized regimm op MTSAH\n", op);
-            fallback_interpreter(instr, opcode);
+            // MTSAH
+            instr.op = IR::Opcode::MoveDoublewordReg;
+            instr.set_dest((int)EE_SpecialReg::SA);
+            instr.set_source((opcode >> 21) & 0x1F);
+            instrs.push_back(instr);
+
+            instr.set_opcode(0);
+            instr.op = IR::Opcode::XorImm;
+            instr.set_dest((int)EE_SpecialReg::SA);
+            instr.set_source((int)EE_SpecialReg::SA);
+            instr.set_source2(opcode & 0x7);
+            instrs.push_back(instr);
+
+            instr.op = IR::Opcode::AndImm;
+            instr.set_dest((int)EE_SpecialReg::SA);
+            instr.set_source((int)EE_SpecialReg::SA);
+            instr.set_source2(0x7);
+            instrs.push_back(instr);
+
+            instr.op = IR::Opcode::DoublewordShiftLeftLogicalImm;
+            instr.set_dest((int)EE_SpecialReg::SA);
+            instr.set_source((int)EE_SpecialReg::SA);
+            instr.set_source2(0x1);
             instrs.push_back(instr);
             break;
         default:
