@@ -1822,10 +1822,22 @@ void EE_JitTranslator::translate_op_mmi0(uint32_t opcode, uint32_t PC, std::vect
     {
         case 0x00:
             // PADDW
-            Errors::print_warning("[EE_JIT] Unrecognized mmi0 op PADDW\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                // NOP
+                break;
+            }
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::ParallelAddWord;
             instrs.push_back(instr);
             break;
+        }
         case 0x01:
             // PSUBW
             Errors::print_warning("[EE_JIT] Unrecognized mmi0 op PSUBW\n", op);
@@ -1911,8 +1923,8 @@ void EE_JitTranslator::translate_op_mmi0(uint32_t opcode, uint32_t PC, std::vect
             instrs.push_back(instr);
             break;
         case 0x12:
-            // PADDW
-            Errors::print_warning("[EE_JIT] Unrecognized mmi0 op PADDW\n", op);
+            // PEXTLW
+            Errors::print_warning("[EE_JIT] Unrecognized mmi0 op PEXTLW\n", op);
             fallback_interpreter(instr, opcode);
             instrs.push_back(instr);
             break;
@@ -1984,7 +1996,7 @@ void EE_JitTranslator::translate_op_mmi0(uint32_t opcode, uint32_t PC, std::vect
             break;
         case 0x1A:
             // PEXTLB
-            Errors::print_warning("[EE_JIT] Unrecognized mmi0 op PADDW\n", op);
+            Errors::print_warning("[EE_JIT] Unrecognized mmi0 op PEXTLB\n", op);
             fallback_interpreter(instr, opcode);
             instrs.push_back(instr);
             break;
