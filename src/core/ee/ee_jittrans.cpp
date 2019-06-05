@@ -2141,10 +2141,22 @@ void EE_JitTranslator::translate_op_mmi1(uint32_t opcode, uint32_t PC, std::vect
             break;
         case 0x18:
             // PADDUB
-            Errors::print_warning("[EE_JIT] Unrecognized mmi1 op PADDUB\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                // NOP
+                break;
+            }
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::ParallelAddWithUnsignedSaturationByte;
             instrs.push_back(instr);
             break;
+        }
         case 0x19:
             // PSUBUB
             Errors::print_warning("[EE_JIT] Unrecognized mmi1 op PSUBUB\n", op);
