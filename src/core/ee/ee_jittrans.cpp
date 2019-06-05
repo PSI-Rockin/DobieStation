@@ -1822,10 +1822,22 @@ void EE_JitTranslator::translate_op_mmi0(uint32_t opcode, uint32_t PC, std::vect
     {
         case 0x00:
             // PADDW
-            Errors::print_warning("[EE_JIT] Unrecognized mmi0 op PADDW\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                // NOP
+                break;
+            }
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::ParallelAddWord;
             instrs.push_back(instr);
             break;
+        }
         case 0x01:
             // PSUBW
         {
@@ -1858,10 +1870,22 @@ void EE_JitTranslator::translate_op_mmi0(uint32_t opcode, uint32_t PC, std::vect
             break;
         case 0x04:
             // PADDH
-            Errors::print_warning("[EE_JIT] Unrecognized mmi0 op PADDH\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                // NOP
+                break;
+            }
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::ParallelAddHalfword;
             instrs.push_back(instr);
             break;
+        }
         case 0x05:
             // PSUBH
         {
@@ -1894,10 +1918,22 @@ void EE_JitTranslator::translate_op_mmi0(uint32_t opcode, uint32_t PC, std::vect
             break;
         case 0x08:
             // PADDB
-            Errors::print_warning("[EE_JIT] Unrecognized mmi0 op PADDB\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                // NOP
+                break;
+            }
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::ParallelAddByte;
             instrs.push_back(instr);
             break;
+        }
         case 0x09:
             // PSUBB
         {
@@ -1935,8 +1971,8 @@ void EE_JitTranslator::translate_op_mmi0(uint32_t opcode, uint32_t PC, std::vect
             instrs.push_back(instr);
             break;
         case 0x12:
-            // PADDW
-            Errors::print_warning("[EE_JIT] Unrecognized mmi0 op PADDW\n", op);
+            // PEXTLW
+            Errors::print_warning("[EE_JIT] Unrecognized mmi0 op PEXTLW\n", op);
             fallback_interpreter(instr, opcode);
             instrs.push_back(instr);
             break;
@@ -2008,7 +2044,7 @@ void EE_JitTranslator::translate_op_mmi0(uint32_t opcode, uint32_t PC, std::vect
             break;
         case 0x1A:
             // PEXTLB
-            Errors::print_warning("[EE_JIT] Unrecognized mmi0 op PADDW\n", op);
+            Errors::print_warning("[EE_JIT] Unrecognized mmi0 op PEXTLB\n", op);
             fallback_interpreter(instr, opcode);
             instrs.push_back(instr);
             break;
@@ -2135,10 +2171,22 @@ void EE_JitTranslator::translate_op_mmi1(uint32_t opcode, uint32_t PC, std::vect
             break;
         case 0x14:
             // PADDUH
-            Errors::print_warning("[EE_JIT] Unrecognized mmi1 op PADDUH\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                // NOP
+                break;
+            }
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::ParallelAddWithUnsignedSaturationHalfword;
             instrs.push_back(instr);
             break;
+        }
         case 0x15:
             // PSUBUH
         {
@@ -2165,10 +2213,22 @@ void EE_JitTranslator::translate_op_mmi1(uint32_t opcode, uint32_t PC, std::vect
             break;
         case 0x18:
             // PADDUB
-            Errors::print_warning("[EE_JIT] Unrecognized mmi1 op PADDUB\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                // NOP
+                break;
+            }
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::ParallelAddWithUnsignedSaturationByte;
             instrs.push_back(instr);
             break;
+        }
         case 0x19:
             // PSUBUB
         {

@@ -235,7 +235,11 @@ class Emitter64
         void RET();
 
         void PACKUSWB(REG_64 xmm_source, REG_64 xmm_dest);
+        void PADDB(REG_64 xmm_source, REG_64 xmm_dest);
+        void PADDD(REG_64 xmm_source, REG_64 xmm_dest);
         void PADDW(REG_64 xmm_source, REG_64 xmm_dest);
+        void PADDUSB(REG_64 xmm_source, REG_64 xmm_dest);
+        void PADDUSW(REG_64 xmm_source, REG_64 xmm_dest);
         void PAND_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void PAND_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t offset = 0);
         void PANDN_XMM(REG_64 xmm_source, REG_64 xmm_dest);

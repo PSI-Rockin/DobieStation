@@ -408,6 +408,21 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::ParallelAnd:
             parallel_and(ee, instr);
             break;
+        case IR::Opcode::ParallelAddByte:
+            parallel_add_byte(ee, instr);
+            break;
+        case IR::Opcode::ParallelAddHalfword:
+            parallel_add_halfword(ee, instr);
+            break;
+        case IR::Opcode::ParallelAddWord:
+            parallel_add_word(ee, instr);
+            break;
+        case IR::Opcode::ParallelAddWithUnsignedSaturationByte:
+            parallel_add_with_unsigned_saturation_byte(ee, instr);
+            break;
+        case IR::Opcode::ParallelAddWithUnsignedSaturationHalfword:
+            parallel_add_with_unsigned_saturation_halfword(ee, instr);
+            break;
         case IR::Opcode::ParallelNor:
             parallel_nor(ee, instr);
             break;
