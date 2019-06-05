@@ -433,7 +433,7 @@ void EE_JIT64::clear_word_reg(EmotionEngine& ee, IR::Instruction& instr)
 void EE_JIT64::divide_unsigned_word(EmotionEngine& ee, IR::Instruction& instr)
 {
     // idiv result is stored in RAX:RDX, so we allocate those registers first.
-    REG_64 RDX = lalloc_int_reg(ee, 0, REG_TYPE::GPR, REG_STATE::SCRATCHPAD, REG_64::RDX);
+    REG_64 RDX = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD, REG_64::RDX);
     REG_64 dividend = alloc_reg(ee, instr.get_source(), REG_TYPE::GPR, REG_STATE::READ);
     REG_64 divisor = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPR, REG_STATE::READ);
     REG_64 LO = alloc_reg(ee, (int)EE_SpecialReg::LO, REG_TYPE::GPR, REG_STATE::WRITE);
@@ -497,7 +497,7 @@ void EE_JIT64::divide_word(EmotionEngine& ee, IR::Instruction &instr)
     */
 
     // idiv result is stored in RAX:RDX, so we allocate those registers first.
-    REG_64 RDX = lalloc_int_reg(ee, 0, REG_TYPE::GPR, REG_STATE::SCRATCHPAD, REG_64::RDX);
+    REG_64 RDX = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD, REG_64::RDX);
     REG_64 dividend = alloc_reg(ee, instr.get_source(), REG_TYPE::GPR, REG_STATE::READ);
     REG_64 divisor = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPR, REG_STATE::READ);
     REG_64 LO = alloc_reg(ee, (int)EE_SpecialReg::LO, REG_TYPE::GPR, REG_STATE::WRITE);

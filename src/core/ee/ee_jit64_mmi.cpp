@@ -199,6 +199,92 @@ void EE_JIT64::parallel_pack_to_byte(EmotionEngine& ee, IR::Instruction& instr)
     free_xmm_reg(ee, XMM0);
 }
 
+void EE_JIT64::parallel_divide_word(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 RDX = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD, REG_64::RDX);
+    REG_64 dividend64 = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 divisor64 = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+
+    REG_64 dividend = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 divisor = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 LO = alloc_reg(ee, (int)EE_SpecialReg::LO, REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
+    REG_64 HI = alloc_reg(ee, (int)EE_SpecialReg::HI, REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
+
+    emitter.MOVD_FROM_XMM(dividend, dividend64);
+    emitter.MOVD_FROM_XMM(divisor, divisor64);
+    emitter.CMP32_IMM(0x80000000, dividend64);
+    uint8_t *label1_1 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
+    emitter.CMP32_IMM(0xFFFFFFFF, divisor64);
+    uint8_t *label1_2 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
+    move_to_lo_hi_imm(ee, (int64_t)(int32_t)0x80000000, 0);
+    uint8_t *lower_end_1 = emitter.JMP_NEAR_DEFERRED();
+
+    emitter.set_jump_dest(label1_1);
+    emitter.set_jump_dest(label1_2);
+    emitter.TEST32_REG(divisor64, divisor64);
+    uint8_t* label2 = emitter.JCC_NEAR_DEFERRED(ConditionCode::Z);
+    emitter.MOV32_REG(dividend64, REG_64::RAX);
+    emitter.CDQ();
+    emitter.IDIV32(divisor64);
+    emitter.MOVSX32_TO_64(REG_64::RAX, REG_64::RAX);
+    emitter.MOVSX32_TO_64(RDX, RDX);
+    emitter.MOVQ_TO_XMM(REG_64::RAX, LO);
+    emitter.MOVQ_TO_XMM(RDX, HI);
+    uint8_t *lower_end_2 = emitter.JMP_NEAR_DEFERRED();
+
+    emitter.set_jump_dest(label2);
+    emitter.TEST32_REG(dividend64, dividend64);
+    emitter.SETCC_REG(ConditionCode::L, REG_64::RAX);
+    emitter.SHL8_REG_1(REG_64::RAX);
+    emitter.DEC8(REG_64::RAX);
+    emitter.MOVSX8_TO_64(REG_64::RAX, REG_64::RAX);
+    emitter.MOVSX32_TO_64(dividend64, dividend64);
+    emitter.MOVQ_TO_XMM(REG_64::RAX, LO);
+    emitter.MOVQ_TO_XMM(dividend64, HI);
+
+    emitter.set_jump_dest(lower_end_1);
+    emitter.set_jump_dest(lower_end_2);
+
+    emitter.PEXTRD_XMM(2, dividend, dividend64);
+    emitter.PEXTRD_XMM(2, divisor, divisor64);
+    emitter.CMP32_IMM(0x80000000, dividend64);
+    uint8_t *label3_1 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
+    emitter.CMP32_IMM(0xFFFFFFFF, divisor64);
+    uint8_t *label3_2 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
+    move_to_lo_hi_imm(ee, (int64_t)(int32_t)0x80000000, 0);
+    uint8_t *upper_end_1 = emitter.JMP_NEAR_DEFERRED();
+
+    emitter.set_jump_dest(label3_1);
+    emitter.set_jump_dest(label3_2);
+    emitter.TEST32_REG(divisor64, divisor64);
+    uint8_t* label4 = emitter.JCC_NEAR_DEFERRED(ConditionCode::Z);
+    emitter.MOV32_REG(dividend64, REG_64::RAX);
+    emitter.CDQ();
+    emitter.IDIV32(divisor64);
+    emitter.MOVSX32_TO_64(REG_64::RAX, REG_64::RAX);
+    emitter.MOVSX32_TO_64(RDX, RDX);
+    emitter.MOVQ_TO_XMM(REG_64::RAX, LO);
+    emitter.MOVQ_TO_XMM(RDX, HI);
+    uint8_t *upper_end_2 = emitter.JMP_NEAR_DEFERRED();
+
+    emitter.set_jump_dest(label4);
+    emitter.TEST32_REG(dividend64, dividend64);
+    emitter.SETCC_REG(ConditionCode::L, REG_64::RAX);
+    emitter.SHL8_REG_1(REG_64::RAX);
+    emitter.DEC8(REG_64::RAX);
+    emitter.MOVSX8_TO_64(REG_64::RAX, REG_64::RAX);
+    emitter.MOVSX32_TO_64(dividend64, dividend64);
+    emitter.PINSRQ_XMM(1, REG_64::RAX, LO);
+    emitter.PINSRQ_XMM(1, dividend64, HI);
+
+    emitter.set_jump_dest(upper_end_1);
+    emitter.set_jump_dest(upper_end_2);
+
+    free_int_reg(ee, RDX);
+    free_int_reg(ee, divisor64);
+    free_int_reg(ee, dividend64);
+}
+
 void EE_JIT64::parallel_pack_to_halfword(EmotionEngine& ee, IR::Instruction& instr)
 {
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);

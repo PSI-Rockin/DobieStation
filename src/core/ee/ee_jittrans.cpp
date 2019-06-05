@@ -2322,10 +2322,15 @@ void EE_JitTranslator::translate_op_mmi2(uint32_t opcode, uint32_t PC, std::vect
             break;
         case 0x0D:
             // PDIVW
-            Errors::print_warning("[EE_JIT] Unrecognized mmi2 op PDIVW\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::ParallelDivideWord;
             instrs.push_back(instr);
             break;
+        }
         case 0x0E:
             // PCPYLD
             Errors::print_warning("[EE_JIT] Unrecognized mmi2 op PCPYLD\n", op);
