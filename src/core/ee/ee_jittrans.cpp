@@ -1647,7 +1647,7 @@ void EE_JitTranslator::translate_op_regimm(uint32_t opcode, uint32_t PC, std::ve
             instr.set_source2(0x7);
             instrs.push_back(instr);
 
-            instr.op = IR::Opcode::DoublewordShiftLeftLogicalImm;
+            instr.op = IR::Opcode::DoublewordShiftLeftLogical;
             instr.set_dest((int)EE_SpecialReg::SA);
             instr.set_source((int)EE_SpecialReg::SA);
             instr.set_source2(0x1);
