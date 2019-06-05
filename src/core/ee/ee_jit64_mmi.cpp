@@ -91,6 +91,27 @@ void EE_JIT64::parallel_add_byte(EmotionEngine& ee, IR::Instruction& instr)
     }
 }
 
+void EE_JIT64::parallel_add_halfword(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
+
+    if (dest == source)
+    {
+        emitter.PADDW(source2, dest);
+    }
+    else if (dest == source2)
+    {
+        emitter.PADDW(source, dest);
+    }
+    else
+    {
+        emitter.MOVAPS_REG(source, dest);
+        emitter.PADDW(source2, dest);
+    }
+}
+
 void EE_JIT64::parallel_add_word(EmotionEngine& ee, IR::Instruction& instr)
 {
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
