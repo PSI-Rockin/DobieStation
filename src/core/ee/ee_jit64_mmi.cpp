@@ -154,6 +154,27 @@ void EE_JIT64::parallel_add_with_unsigned_saturation_byte(EmotionEngine& ee, IR:
     }
 }
 
+void EE_JIT64::parallel_add_with_unsigned_saturation_halfword(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
+
+    if (dest == source)
+    {
+        emitter.PADDUSW(source2, dest);
+    }
+    else if (dest == source2)
+    {
+        emitter.PADDUSW(source, dest);
+    }
+    else
+    {
+        emitter.MOVAPS_REG(source, dest);
+        emitter.PADDUSW(source2, dest);
+    }
+}
+
 void EE_JIT64::parallel_pack_to_byte(EmotionEngine& ee, IR::Instruction& instr)
 {
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);

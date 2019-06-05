@@ -176,6 +176,7 @@ private:
     void parallel_add_halfword(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_add_word(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_add_with_unsigned_saturation_byte(EmotionEngine& ee, IR::Instruction& instr);
+    void parallel_add_with_unsigned_saturation_halfword(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_pack_to_byte(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_pack_to_halfword(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_pack_to_word(EmotionEngine& ee, IR::Instruction& instr);
