@@ -175,6 +175,12 @@ private:
     void parallel_pack_to_byte(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_pack_to_halfword(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_pack_to_word(EmotionEngine& ee, IR::Instruction& instr);
+    void parallel_subtract_byte(EmotionEngine& ee, IR::Instruction& instr);
+    void parallel_subtract_halfword(EmotionEngine& ee, IR::Instruction& instr);
+    void parallel_subtract_word(EmotionEngine& ee, IR::Instruction& instr);
+    void parallel_subtract_with_unsigned_saturation_byte(EmotionEngine& ee, IR::Instruction& instr);
+    void parallel_subtract_with_unsigned_saturation_halfword(EmotionEngine& ee, IR::Instruction& instr);
+    //void parallel_subtract_with_unsigned_saturation_word(EmotionEngine& ee, IR::Instruction& instr);
     void set_on_less_than(EmotionEngine& ee, IR::Instruction& instr);
     void set_on_less_than_unsigned(EmotionEngine& ee, IR::Instruction& instr);
     void set_on_less_than_immediate(EmotionEngine& ee, IR::Instruction& instr);

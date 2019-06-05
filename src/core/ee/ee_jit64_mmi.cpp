@@ -142,6 +142,131 @@ void EE_JIT64::parallel_pack_to_word(EmotionEngine& ee, IR::Instruction& instr)
     free_xmm_reg(ee, XMM0);
 }
 
+void EE_JIT64::parallel_subtract_byte(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
+
+    if (dest == source)
+    {
+        emitter.PSUBB(source2, dest);
+    }
+    else if (dest == source2)
+    {
+        REG_64 XMM0 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
+        emitter.MOVAPS_REG(source2, XMM0);
+        emitter.MOVAPS_REG(source, dest);
+        emitter.PSUBB(XMM0, dest);
+        free_xmm_reg(ee, XMM0);
+    }
+    else
+    {
+        emitter.MOVAPS_REG(source, dest);
+        emitter.PSUBB(source2, dest);
+    }
+}
+
+void EE_JIT64::parallel_subtract_halfword(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
+
+    if (dest == source)
+    {
+        emitter.PSUBW(source2, dest);
+    }
+    else if (dest == source2)
+    {
+        REG_64 XMM0 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
+        emitter.MOVAPS_REG(source2, XMM0);
+        emitter.MOVAPS_REG(source, dest);
+        emitter.PSUBW(XMM0, dest);
+        free_xmm_reg(ee, XMM0);
+    }
+    else
+    {
+        emitter.MOVAPS_REG(source, dest);
+        emitter.PSUBW(source2, dest);
+    }
+}
+
+void EE_JIT64::parallel_subtract_word(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
+
+    if (dest == source)
+    {
+        emitter.PSUBD(source2, dest);
+    }
+    else if (dest == source2)
+    {
+        REG_64 XMM0 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
+        emitter.MOVAPS_REG(source2, XMM0);
+        emitter.MOVAPS_REG(source, dest);
+        emitter.PSUBD(XMM0, dest);
+        free_xmm_reg(ee, XMM0);
+    }
+    else
+    {
+        emitter.MOVAPS_REG(source, dest);
+        emitter.PSUBD(source2, dest);
+    }
+}
+
+void EE_JIT64::parallel_subtract_with_unsigned_saturation_byte(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
+
+    if (dest == source)
+    {
+        emitter.PSUBUSB(source2, dest);
+    }
+    else if (dest == source2)
+    {
+        REG_64 XMM0 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
+        emitter.MOVAPS_REG(source2, XMM0);
+        emitter.MOVAPS_REG(source, dest);
+        emitter.PSUBUSB(XMM0, dest);
+        free_xmm_reg(ee, XMM0);
+    }
+    else
+    {
+        emitter.MOVAPS_REG(source, dest);
+        emitter.PSUBUSB(source2, dest);
+    }
+}
+
+void EE_JIT64::parallel_subtract_with_unsigned_saturation_halfword(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
+
+    if (dest == source)
+    {
+        emitter.PSUBUSW(source2, dest);
+    }
+    else if (dest == source2)
+    {
+        REG_64 XMM0 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
+        emitter.MOVAPS_REG(source2, XMM0);
+        emitter.MOVAPS_REG(source, dest);
+        emitter.PSUBUSW(XMM0, dest);
+        free_xmm_reg(ee, XMM0);
+    }
+    else
+    {
+        emitter.MOVAPS_REG(source, dest);
+        emitter.PSUBUSW(source2, dest);
+    }
+}
+
 void EE_JIT64::parallel_xor(EmotionEngine& ee, IR::Instruction& instr)
 {
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);

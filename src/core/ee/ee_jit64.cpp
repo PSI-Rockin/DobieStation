@@ -426,6 +426,24 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::ParallelPackToWord:
             parallel_pack_to_word(ee, instr);
             break;
+        case IR::Opcode::ParallelSubtractByte:
+            parallel_subtract_byte(ee, instr);
+            break;
+        case IR::Opcode::ParallelSubtractHalfword:
+            parallel_subtract_halfword(ee, instr);
+            break;
+        case IR::Opcode::ParallelSubtractWord:
+            parallel_subtract_word(ee, instr);
+            break;
+        case IR::Opcode::ParallelSubtractWithUnsignedSaturationByte:
+            parallel_subtract_with_unsigned_saturation_byte(ee, instr);
+            break;
+        case IR::Opcode::ParallelSubtractWithUnsignedSaturationHalfword:
+            parallel_subtract_with_unsigned_saturation_halfword(ee, instr);
+            break;
+        case IR::Opcode::ParallelSubtractWithUnsignedSaturationWord:
+            fallback_interpreter(ee, instr); // TODO
+            break;
         case IR::Opcode::SetOnLessThan:
             set_on_less_than(ee, instr);
             break;

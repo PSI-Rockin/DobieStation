@@ -1752,12 +1752,48 @@ void Emitter64::PSRLW(int shift, REG_64 xmm_dest)
     cache->write<uint8_t>(shift);
 }
 
+void Emitter64::PSUBB(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0xF8);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
+void Emitter64::PSUBD(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0xFA);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
 void Emitter64::PSUBW(REG_64 xmm_source, REG_64 xmm_dest)
 {
     cache->write<uint8_t>(0x66);
     rex_r_rm(xmm_dest, xmm_source);
     cache->write<uint8_t>(0x0F);
     cache->write<uint8_t>(0xF9);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
+void Emitter64::PSUBUSB(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0xD8);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
+void Emitter64::PSUBUSW(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0xD9);
     modrm(0b11, xmm_dest, xmm_source);
 }
 
