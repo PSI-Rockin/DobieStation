@@ -188,6 +188,12 @@ private:
     void parallel_pack_to_byte(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_pack_to_halfword(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_pack_to_word(EmotionEngine& ee, IR::Instruction& instr);
+    void parallel_shift_left_logical_halfword(EmotionEngine& ee, IR::Instruction& instr);
+    void parallel_shift_left_logical_word(EmotionEngine& ee, IR::Instruction& instr);
+    void parallel_shift_right_arithmetic_halfword(EmotionEngine& ee, IR::Instruction& instr);
+    void parallel_shift_right_arithmetic_word(EmotionEngine& ee, IR::Instruction& instr);
+    void parallel_shift_right_logical_halfword(EmotionEngine& ee, IR::Instruction& instr);
+    void parallel_shift_right_logical_word(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_subtract_byte(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_subtract_halfword(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_subtract_word(EmotionEngine& ee, IR::Instruction& instr);

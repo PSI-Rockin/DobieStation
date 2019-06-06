@@ -397,6 +397,66 @@ void EE_JIT64::parallel_pack_to_halfword(EmotionEngine& ee, IR::Instruction& ins
     free_xmm_reg(ee, XMM0);
 }
 
+void EE_JIT64::parallel_shift_left_logical_halfword(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
+
+    if (dest != source)
+        emitter.MOVAPS_REG(source, dest);
+    emitter.PSLLW(instr.get_source2(), dest);
+}
+
+void EE_JIT64::parallel_shift_left_logical_word(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
+
+    if (dest != source)
+        emitter.MOVAPS_REG(source, dest);
+    emitter.PSLLD(instr.get_source2(), dest);
+}
+
+void EE_JIT64::parallel_shift_right_arithmetic_halfword(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
+
+    if (dest != source)
+        emitter.MOVAPS_REG(source, dest);
+    emitter.PSRAW(instr.get_source2(), dest);
+}
+
+void EE_JIT64::parallel_shift_right_arithmetic_word(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
+
+    if (dest != source)
+        emitter.MOVAPS_REG(source, dest);
+    emitter.PSRAD(instr.get_source2(), dest);
+}
+
+void EE_JIT64::parallel_shift_right_logical_halfword(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
+
+    if (dest != source)
+        emitter.MOVAPS_REG(source, dest);
+    emitter.PSRLW(instr.get_source2(), dest);
+}
+
+void EE_JIT64::parallel_shift_right_logical_word(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
+
+    if (dest != source)
+        emitter.MOVAPS_REG(source, dest);
+    emitter.PSRLD(instr.get_source2(), dest);
+}
+
 void EE_JIT64::parallel_pack_to_word(EmotionEngine& ee, IR::Instruction& instr)
 {
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);

@@ -471,6 +471,24 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::ParallelPackToWord:
             parallel_pack_to_word(ee, instr);
             break;
+        case IR::Opcode::ParallelShiftLeftLogicalHalfword:
+            parallel_shift_left_logical_halfword(ee, instr);
+            break;
+        case IR::Opcode::ParallelShiftLeftLogicalWord:
+            parallel_shift_left_logical_word(ee, instr);
+            break;
+        case IR::Opcode::ParallelShiftRightArithmeticHalfword:
+            parallel_shift_right_arithmetic_halfword(ee, instr);
+            break;
+        case IR::Opcode::ParallelShiftRightArithmeticWord:
+            parallel_shift_right_arithmetic_word(ee, instr);
+            break;
+        case IR::Opcode::ParallelShiftRightLogicalHalfword:
+            parallel_shift_right_logical_halfword(ee, instr);
+            break;
+        case IR::Opcode::ParallelShiftRightLogicalWord:
+            parallel_shift_right_logical_word(ee, instr);
+            break;
         case IR::Opcode::ParallelSubtractByte:
             parallel_subtract_byte(ee, instr);
             break;

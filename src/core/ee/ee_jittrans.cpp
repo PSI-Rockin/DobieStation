@@ -1774,40 +1774,82 @@ void EE_JitTranslator::translate_op_mmi(uint32_t opcode, uint32_t PC, std::vecto
             break;
         case 0x34:
             // PSLLH
-            Errors::print_warning("[EE_JIT] Unrecognized mmi op PSLLH\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 16) & 0x1F;
+            uint8_t sa = (opcode >> 6) & 0xF;
+            instr.op = IR::Opcode::ParallelShiftLeftLogicalHalfword;
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(sa);
             instrs.push_back(instr);
             break;
+        }
         case 0x36:
             // PSRLH
-            Errors::print_warning("[EE_JIT] Unrecognized mmi op PSRLH\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 16) & 0x1F;
+            uint8_t sa = (opcode >> 6) & 0xF;
+            instr.op = IR::Opcode::ParallelShiftRightLogicalHalfword;
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(sa);
             instrs.push_back(instr);
             break;
+        }
         case 0x37:
             // PSRAH
-            Errors::print_warning("[EE_JIT] Unrecognized mmi op PSRAH\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 16) & 0x1F;
+            uint8_t sa = (opcode >> 6) & 0xF;
+            instr.op = IR::Opcode::ParallelShiftRightArithmeticHalfword;
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(sa);
             instrs.push_back(instr);
             break;
+        }
         case 0x3C:
             // PSLLW
-            Errors::print_warning("[EE_JIT] Unrecognized mmi op PSLLW\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 16) & 0x1F;
+            uint8_t sa = (opcode >> 6) & 0x1F;
+            instr.op = IR::Opcode::ParallelShiftLeftLogicalWord;
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(sa);
             instrs.push_back(instr);
             break;
+        }
         case 0x3E:
             // PSRLW
-            Errors::print_warning("[EE_JIT] Unrecognized mmi op PSRLW\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 16) & 0x1F;
+            uint8_t sa = (opcode >> 6) & 0x1F;
+            instr.op = IR::Opcode::ParallelShiftRightLogicalWord;
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(sa);
             instrs.push_back(instr);
             break;
+        }
         case 0x3F:
             // PSRAW
-            Errors::print_warning("[EE_JIT] Unrecognized mmi op PSRAW\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 16) & 0x1F;
+            uint8_t sa = (opcode >> 6) & 0x1F;
+            instr.op = IR::Opcode::ParallelShiftRightArithmeticWord;
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(sa);
             instrs.push_back(instr);
             break;
+        }
         default:
             Errors::die("[EE_JIT] Unrecognized mmi op $%02X", op);
     }
