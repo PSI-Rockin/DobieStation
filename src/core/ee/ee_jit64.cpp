@@ -435,6 +435,12 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::ParallelDivideWord:
             parallel_divide_word(ee, instr);
             break;
+        case IR::Opcode::ParallelExchangeEvenHalfword:
+            parallel_exchange_halfword(ee, instr, true);
+            break;
+        case IR::Opcode::ParallelExchangeCenterHalfword:
+            parallel_exchange_halfword(ee, instr, false);
+            break;
         case IR::Opcode::ParallelPackToByte:
             parallel_pack_to_byte(ee, instr);
             break;

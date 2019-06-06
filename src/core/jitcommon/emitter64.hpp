@@ -265,6 +265,7 @@ class Emitter64
         void POR_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void POR_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t offset = 0);
         void PSHUFD(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest);
+        void PSHUFHW(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest);
         void PSHUFLW(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest);
         void PSRAW(int shift, REG_64 xmm_dest);
         void PSRLW(int shift, REG_64 xmm_dest);
