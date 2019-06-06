@@ -2576,10 +2576,14 @@ void EE_JitTranslator::translate_op_mmi3(uint32_t opcode, uint32_t PC, std::vect
             break;
         case 0x09:
             // PMTLO
-            Errors::print_warning("[EE_JIT] Unrecognized mmi3 op PMTLO\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t source = (opcode >> 21) & 0x1F;
+            instr.op = IR::Opcode::MoveQuadwordReg;
+            instr.set_source(source);
+            instr.set_dest((int)EE_SpecialReg::LO);
             instrs.push_back(instr);
             break;
+        }
         case 0x0A:
             // PINTEH
             Errors::print_warning("[EE_JIT] Unrecognized mmi3 op PINTEH\n", op);
