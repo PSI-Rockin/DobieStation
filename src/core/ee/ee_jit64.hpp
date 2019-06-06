@@ -160,6 +160,7 @@ private:
     void move_to_lo_hi(EmotionEngine& ee, REG_64 loSource, REG_64 hiSource, REG_64 loDest, REG_64 hiDest);
     void move_to_lo_hi_imm(EmotionEngine& ee, int64_t loValue, int64_t hiValue);
     void move_word_reg(EmotionEngine& ee, IR::Instruction& instr);
+    void move_quadword_reg(EmotionEngine& ee, IR::Instruction& instr);
     void move_xmm_reg(EmotionEngine& ee, IR::Instruction& instr);
     void multiply_unsigned_word(EmotionEngine& ee, IR::Instruction& instr);
     void multiply_word(EmotionEngine& ee, IR::Instruction& instr);

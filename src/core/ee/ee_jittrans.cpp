@@ -2370,16 +2370,24 @@ void EE_JitTranslator::translate_op_mmi2(uint32_t opcode, uint32_t PC, std::vect
             break;
         case 0x08:
             // PMFHI
-            Errors::print_warning("[EE_JIT] Unrecognized mmi2 op PMADDW\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            instr.op = IR::Opcode::MoveQuadwordReg;
+            instr.set_source((int)EE_SpecialReg::HI);
+            instr.set_dest(dest);
             instrs.push_back(instr);
             break;
+        }
         case 0x09:
             // PMFLO
-            Errors::print_warning("[EE_JIT] Unrecognized mmi2 op PMFLO\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            instr.op = IR::Opcode::MoveQuadwordReg;
+            instr.set_source((int)EE_SpecialReg::LO);
+            instr.set_dest(dest);
             instrs.push_back(instr);
             break;
+        }
         case 0x0A:
             // PINTH
             Errors::print_warning("[EE_JIT] Unrecognized mmi2 op PINTH\n", op);
@@ -2572,16 +2580,24 @@ void EE_JitTranslator::translate_op_mmi3(uint32_t opcode, uint32_t PC, std::vect
             break;
         case 0x08:
             // PMTHI
-            Errors::print_warning("[EE_JIT] Unrecognized mmi3 op PMTHI\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t source = (opcode >> 21) & 0x1F;
+            instr.op = IR::Opcode::MoveQuadwordReg;
+            instr.set_source(source);
+            instr.set_dest((int)EE_SpecialReg::HI);
             instrs.push_back(instr);
             break;
+        }
         case 0x09:
             // PMTLO
-            Errors::print_warning("[EE_JIT] Unrecognized mmi3 op PMTLO\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t source = (opcode >> 21) & 0x1F;
+            instr.op = IR::Opcode::MoveQuadwordReg;
+            instr.set_source(source);
+            instr.set_dest((int)EE_SpecialReg::LO);
             instrs.push_back(instr);
             break;
+        }
         case 0x0A:
             // PINTEH
             Errors::print_warning("[EE_JIT] Unrecognized mmi3 op PINTEH\n", op);

@@ -140,6 +140,7 @@ INSTR(MoveIntReg)
 INSTR(MoveXmmReg)
 INSTR(MoveDoublewordReg)
 INSTR(MoveWordReg)
+INSTR(MoveQuadwordReg)
 INSTR(ClearDoublewordReg)
 INSTR(ClearWordReg)
 
