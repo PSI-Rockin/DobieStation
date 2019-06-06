@@ -2521,10 +2521,20 @@ void EE_JitTranslator::translate_op_mmi2(uint32_t opcode, uint32_t PC, std::vect
         }
         case 0x1F:
             // PROT3W
-            Errors::print_warning("[EE_JIT] Unrecognized mmi2 op PROT3W\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                // NOP
+                break;
+            }
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.op = IR::Opcode::ParallelRotate3WordsLeft;
             instrs.push_back(instr);
             break;
+        }
         default:
             Errors::die("[EE_JIT] Unrecognized mmi2 op $%02X", op);
     }

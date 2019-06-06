@@ -30,6 +30,7 @@ INSTR(ParallelSubtractWithSignedSaturationWord)
 INSTR(ParallelSubtractWithUnsignedSaturationByte)
 INSTR(ParallelSubtractWithUnsignedSaturationHalfword)
 INSTR(ParallelSubtractWithUnsignedSaturationWord)
+INSTR(ParallelRotate3WordsLeft)
 
 INSTR(ShiftLeftLogical)
 INSTR(ShiftLeftLogicalVariable)
