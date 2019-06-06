@@ -233,8 +233,8 @@ void EmotionEngine::print_state()
         else
             printf("\t");
     }
-    printf("lo:$%08X_%08X_%08X_%08X\t", LO1 >> 32, LO1, LO >> 32, LO);
-    printf("hi:$%08X_%08X_%08X_%08X\t\n", HI1 >> 32, HI1, HI >> 32, HI);
+    printf("lo:$%08X_%08X_%08X_%08X\t", LO._u32[3], LO._u32[2], LO._u32[1], LO._u32[0]);
+    printf("hi:$%08X_%08X_%08X_%08X\t\n", HI._u32[3], HI._u32[2], HI._u32[1], HI._u32[0]);
     printf("KSU: %d\n", cp0->status.mode);
     for (int i = 0; i < 32; i++)
     {
@@ -285,22 +285,22 @@ uint32_t EmotionEngine::get_PC()
 
 uint64_t EmotionEngine::get_LO()
 {
-    return LO;
+    return LO.lo;
 }
 
 uint64_t EmotionEngine::get_LO1()
 {
-    return LO1;
+    return LO.hi;
 }
 
 uint64_t EmotionEngine::get_HI()
 {
-    return HI;
+    return HI.lo;
 }
 
 uint64_t EmotionEngine::get_HI1()
 {
-    return HI1;
+    return HI.hi;
 }
 
 uint64_t EmotionEngine::get_SA()
@@ -678,42 +678,42 @@ void EmotionEngine::invalidate_icache_indexed(uint32_t addr)
 
 void EmotionEngine::mfhi(int index)
 {
-    set_gpr<uint64_t>(index, HI);
+    set_gpr<uint64_t>(index, HI.lo);
 }
 
 void EmotionEngine::mthi(int index)
 {
-    HI = get_gpr<uint64_t>(index);
+    HI.lo = get_gpr<uint64_t>(index);
 }
 
 void EmotionEngine::mflo(int index)
 {
-    set_gpr<uint64_t>(index, LO);
+    set_gpr<uint64_t>(index, LO.lo);
 }
 
 void EmotionEngine::mtlo(int index)
 {
-    LO = get_gpr<uint64_t>(index);
+    LO.lo = get_gpr<uint64_t>(index);
 }
 
 void EmotionEngine::mfhi1(int index)
 {
-    set_gpr<uint64_t>(index, HI1);
+    set_gpr<uint64_t>(index, HI.hi);
 }
 
 void EmotionEngine::mthi1(int index)
 {
-    HI1 = get_gpr<uint64_t>(index);
+    HI.hi = get_gpr<uint64_t>(index);
 }
 
 void EmotionEngine::mflo1(int index)
 {
-    set_gpr<uint64_t>(index, LO1);
+    set_gpr<uint64_t>(index, LO.hi);
 }
 
 void EmotionEngine::mtlo1(int index)
 {
-    LO1 = get_gpr<uint64_t>(index);
+    LO.hi = get_gpr<uint64_t>(index);
 }
 
 void EmotionEngine::mfsa(int index)
@@ -728,26 +728,26 @@ void EmotionEngine::mtsa(int index)
 
 void EmotionEngine::pmfhi(int index)
 {
-    set_gpr<uint64_t>(index, HI);
-    set_gpr<uint64_t>(index, HI1, 1);
+    set_gpr<uint64_t>(index, HI.lo);
+    set_gpr<uint64_t>(index, HI.hi, 1);
 }
 
 void EmotionEngine::pmflo(int index)
 {
-    set_gpr<uint64_t>(index, LO);
-    set_gpr<uint64_t>(index, LO1, 1);
+    set_gpr<uint64_t>(index, LO.lo);
+    set_gpr<uint64_t>(index, LO.hi, 1);
 }
 
 void EmotionEngine::pmthi(int index)
 {
-    HI = get_gpr<uint64_t>(index);
-    HI1 = get_gpr<uint64_t>(index, 1);
+    HI.lo = get_gpr<uint64_t>(index);
+    HI.hi = get_gpr<uint64_t>(index, 1);
 }
 
 void EmotionEngine::pmtlo(int index)
 {
-    LO = get_gpr<uint64_t>(index);
-    LO1 = get_gpr<uint64_t>(index, 1);
+    LO.lo = get_gpr<uint64_t>(index);
+    LO.hi = get_gpr<uint64_t>(index, 1);
 }
 
 void EmotionEngine::set_SA(uint64_t value)
@@ -797,13 +797,13 @@ void EmotionEngine::set_LO_HI(uint64_t a, uint64_t b, bool hi)
     b = (int64_t)b;
     if (hi)
     {
-        LO1 = a;
-        HI1 = b;
+        LO.hi = a;
+        HI.hi = b;
     }
     else
     {
-        LO = a;
-        HI = b;
+        LO.lo = a;
+        HI.lo = b;
     }
 }
 

@@ -47,8 +47,7 @@ class EmotionEngine
 
         //Each register is 128-bit
         alignas(16) uint8_t gpr[32 * sizeof(uint64_t) * 2];
-        alignas(16) uint64_t LO, HI;
-        uint64_t LO1, HI1;
+        alignas(16) uint128_t LO, HI;
         uint32_t PC, new_PC;
         uint64_t SA;
 
