@@ -133,6 +133,53 @@ void EE_JIT64::parallel_add_word(EmotionEngine& ee, IR::Instruction& instr)
     }
 }
 
+void EE_JIT64::parallel_add_with_signed_saturation_byte(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
+
+    if (dest == source)
+    {
+        emitter.PADDSB(source2, dest);
+    }
+    else if (dest == source2)
+    {
+        emitter.PADDSB(source, dest);
+    }
+    else
+    {
+        emitter.MOVAPS_REG(source, dest);
+        emitter.PADDSB(source2, dest);
+    }
+}
+
+void EE_JIT64::parallel_add_with_signed_saturation_halfword(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
+
+    if (dest == source)
+    {
+        emitter.PADDSW(source2, dest);
+    }
+    else if (dest == source2)
+    {
+        emitter.PADDSW(source, dest);
+    }
+    else
+    {
+        emitter.MOVAPS_REG(source, dest);
+        emitter.PADDSW(source2, dest);
+    }
+}
+
+void EE_JIT64::parallel_add_with_signed_saturation_word(EmotionEngine& ee, IR::Instruction& instr)
+{
+    // TODO
+}
+
 void EE_JIT64::parallel_add_with_unsigned_saturation_byte(EmotionEngine& ee, IR::Instruction& instr)
 {
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
@@ -173,6 +220,11 @@ void EE_JIT64::parallel_add_with_unsigned_saturation_halfword(EmotionEngine& ee,
         emitter.MOVAPS_REG(source, dest);
         emitter.PADDUSW(source2, dest);
     }
+}
+
+void EE_JIT64::parallel_add_with_unsigned_saturation_word(EmotionEngine& ee, IR::Instruction& instr)
+{
+    // TODO
 }
 
 void EE_JIT64::parallel_pack_to_byte(EmotionEngine& ee, IR::Instruction& instr)
@@ -436,6 +488,61 @@ void EE_JIT64::parallel_subtract_word(EmotionEngine& ee, IR::Instruction& instr)
     }
 }
 
+void EE_JIT64::parallel_subtract_with_signed_saturation_byte(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
+
+    if (dest == source)
+    {
+        emitter.PSUBSB(source2, dest);
+    }
+    else if (dest == source2)
+    {
+        REG_64 XMM0 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
+        emitter.MOVAPS_REG(source2, XMM0);
+        emitter.MOVAPS_REG(source, dest);
+        emitter.PSUBSB(XMM0, dest);
+        free_xmm_reg(ee, XMM0);
+    }
+    else
+    {
+        emitter.MOVAPS_REG(source, dest);
+        emitter.PSUBSB(source2, dest);
+    }
+}
+
+void EE_JIT64::parallel_subtract_with_signed_saturation_halfword(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
+
+    if (dest == source)
+    {
+        emitter.PSUBSW(source2, dest);
+    }
+    else if (dest == source2)
+    {
+        REG_64 XMM0 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
+        emitter.MOVAPS_REG(source2, XMM0);
+        emitter.MOVAPS_REG(source, dest);
+        emitter.PSUBSW(XMM0, dest);
+        free_xmm_reg(ee, XMM0);
+    }
+    else
+    {
+        emitter.MOVAPS_REG(source, dest);
+        emitter.PSUBSW(source2, dest);
+    }
+}
+
+void EE_JIT64::parallel_subtract_with_signed_saturation_word(EmotionEngine& ee, IR::Instruction& instr)
+{
+    // TODO
+}
+
 void EE_JIT64::parallel_subtract_with_unsigned_saturation_byte(EmotionEngine& ee, IR::Instruction& instr)
 {
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
@@ -484,6 +591,11 @@ void EE_JIT64::parallel_subtract_with_unsigned_saturation_halfword(EmotionEngine
         emitter.MOVAPS_REG(source, dest);
         emitter.PSUBUSW(source2, dest);
     }
+}
+
+void EE_JIT64::parallel_subtract_with_unsigned_saturation_word(EmotionEngine& ee, IR::Instruction& instr)
+{
+    // TODO
 }
 
 void EE_JIT64::parallel_xor(EmotionEngine& ee, IR::Instruction& instr)

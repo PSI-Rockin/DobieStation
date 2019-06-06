@@ -175,8 +175,12 @@ private:
     void parallel_add_byte(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_add_halfword(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_add_word(EmotionEngine& ee, IR::Instruction& instr);
+    void parallel_add_with_signed_saturation_byte(EmotionEngine& ee, IR::Instruction& instr);
+    void parallel_add_with_signed_saturation_halfword(EmotionEngine& ee, IR::Instruction& instr);
+    void parallel_add_with_signed_saturation_word(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_add_with_unsigned_saturation_byte(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_add_with_unsigned_saturation_halfword(EmotionEngine& ee, IR::Instruction& instr);
+    void parallel_add_with_unsigned_saturation_word(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_divide_word(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_exchange_halfword(EmotionEngine& ee, IR::Instruction& instr, bool even);
     void parallel_exchange_word(EmotionEngine& ee, IR::Instruction& instr, bool even);
@@ -186,9 +190,12 @@ private:
     void parallel_subtract_byte(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_subtract_halfword(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_subtract_word(EmotionEngine& ee, IR::Instruction& instr);
+    void parallel_subtract_with_signed_saturation_byte(EmotionEngine& ee, IR::Instruction& instr);
+    void parallel_subtract_with_signed_saturation_halfword(EmotionEngine& ee, IR::Instruction& instr);
+    void parallel_subtract_with_signed_saturation_word(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_subtract_with_unsigned_saturation_byte(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_subtract_with_unsigned_saturation_halfword(EmotionEngine& ee, IR::Instruction& instr);
-    //void parallel_subtract_with_unsigned_saturation_word(EmotionEngine& ee, IR::Instruction& instr);
+    void parallel_subtract_with_unsigned_saturation_word(EmotionEngine& ee, IR::Instruction& instr);
     void set_on_less_than(EmotionEngine& ee, IR::Instruction& instr);
     void set_on_less_than_unsigned(EmotionEngine& ee, IR::Instruction& instr);
     void set_on_less_than_immediate(EmotionEngine& ee, IR::Instruction& instr);

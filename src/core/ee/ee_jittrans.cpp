@@ -1960,16 +1960,40 @@ void EE_JitTranslator::translate_op_mmi0(uint32_t opcode, uint32_t PC, std::vect
             break;
         case 0x10:
             // PADDSW
-            Errors::print_warning("[EE_JIT] Unrecognized mmi0 op PADDSW\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                // NOP
+                break;
+            }
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::ParallelAddWithSignedSaturationWord;
             instrs.push_back(instr);
             break;
+        }
         case 0x11:
             // PSUBSW
-            Errors::print_warning("[EE_JIT] Unrecognized mmi0 op PSUBSW\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                // NOP
+                break;
+            }
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::ParallelSubtractWithSignedSaturationWord;
             instrs.push_back(instr);
             break;
+        }
         case 0x12:
             // PEXTLW
             Errors::print_warning("[EE_JIT] Unrecognized mmi0 op PEXTLW\n", op);
@@ -1996,16 +2020,40 @@ void EE_JitTranslator::translate_op_mmi0(uint32_t opcode, uint32_t PC, std::vect
         }
         case 0x14:
             // PADDSH
-            Errors::print_warning("[EE_JIT] Unrecognized mmi0 op PADDSH\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                // NOP
+                break;
+            }
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::ParallelAddWithSignedSaturationHalfword;
             instrs.push_back(instr);
             break;
+        }
         case 0x15:
             // PSUBSH
-            Errors::print_warning("[EE_JIT] Unrecognized mmi0 op PSUBSH\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                // NOP
+                break;
+            }
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::ParallelSubtractWithSignedSaturationHalfword;
             instrs.push_back(instr);
             break;
+        }
         case 0x16:
             // PEXTLH
             Errors::print_warning("[EE_JIT] Unrecognized mmi0 op PEXTLH\n", op);
@@ -2032,16 +2080,40 @@ void EE_JitTranslator::translate_op_mmi0(uint32_t opcode, uint32_t PC, std::vect
         }
         case 0x18:
             // PADDSB
-            Errors::print_warning("[EE_JIT] Unrecognized mmi0 op PADDSB\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                // NOP
+                break;
+            }
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::ParallelAddWithSignedSaturationByte;
             instrs.push_back(instr);
             break;
+        }
         case 0x19:
             // PSUBSB
-            Errors::print_warning("[EE_JIT] Unrecognized mmi0 op PSUBSB\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                // NOP
+                break;
+            }
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::ParallelSubtractWithSignedSaturationByte;
             instrs.push_back(instr);
             break;
+        }
         case 0x1A:
             // PEXTLB
             Errors::print_warning("[EE_JIT] Unrecognized mmi0 op PEXTLB\n", op);

@@ -417,11 +417,23 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::ParallelAddWord:
             parallel_add_word(ee, instr);
             break;
+        case IR::Opcode::ParallelAddWithSignedSaturationByte:
+            parallel_add_with_signed_saturation_byte(ee, instr);
+            break;
+        case IR::Opcode::ParallelAddWithSignedSaturationHalfword:
+            parallel_add_with_signed_saturation_halfword(ee, instr);
+            break;
+        case IR::Opcode::ParallelAddWithSignedSaturationWord:
+            fallback_interpreter(ee, instr); // TODO
+            break;
         case IR::Opcode::ParallelAddWithUnsignedSaturationByte:
             parallel_add_with_unsigned_saturation_byte(ee, instr);
             break;
         case IR::Opcode::ParallelAddWithUnsignedSaturationHalfword:
             parallel_add_with_unsigned_saturation_halfword(ee, instr);
+            break;
+        case IR::Opcode::ParallelAddWithUnsignedSaturationWord:
+            fallback_interpreter(ee, instr); // TODO
             break;
         case IR::Opcode::ParallelNor:
             parallel_nor(ee, instr);
@@ -464,6 +476,15 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             break;
         case IR::Opcode::ParallelSubtractWord:
             parallel_subtract_word(ee, instr);
+            break;
+        case IR::Opcode::ParallelSubtractWithSignedSaturationByte:
+            parallel_subtract_with_signed_saturation_byte(ee, instr);
+            break;
+        case IR::Opcode::ParallelSubtractWithSignedSaturationHalfword:
+            parallel_subtract_with_signed_saturation_halfword(ee, instr);
+            break;
+        case IR::Opcode::ParallelSubtractWithSignedSaturationWord:
+            fallback_interpreter(ee, instr); // TODO
             break;
         case IR::Opcode::ParallelSubtractWithUnsignedSaturationByte:
             parallel_subtract_with_unsigned_saturation_byte(ee, instr);

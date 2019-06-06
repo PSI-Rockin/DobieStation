@@ -238,6 +238,8 @@ class Emitter64
         void PADDB(REG_64 xmm_source, REG_64 xmm_dest);
         void PADDD(REG_64 xmm_source, REG_64 xmm_dest);
         void PADDW(REG_64 xmm_source, REG_64 xmm_dest);
+        void PADDSB(REG_64 xmm_source, REG_64 xmm_dest);
+        void PADDSW(REG_64 xmm_source, REG_64 xmm_dest);
         void PADDUSB(REG_64 xmm_source, REG_64 xmm_dest);
         void PADDUSW(REG_64 xmm_source, REG_64 xmm_dest);
         void PAND_XMM(REG_64 xmm_source, REG_64 xmm_dest);
@@ -272,6 +274,8 @@ class Emitter64
         void PSUBB(REG_64 xmm_source, REG_64 xmm_dest);
         void PSUBD(REG_64 xmm_source, REG_64 xmm_dest);
         void PSUBW(REG_64 xmm_source, REG_64 xmm_dest);
+        void PSUBSB(REG_64 xmm_source, REG_64 xmm_dest);
+        void PSUBSW(REG_64 xmm_source, REG_64 xmm_dest);
         void PSUBUSB(REG_64 xmm_source, REG_64 xmm_dest);
         void PSUBUSW(REG_64 xmm_source, REG_64 xmm_dest);
         void PXOR_XMM(REG_64 xmm_source, REG_64 xmm_dest);
