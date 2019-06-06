@@ -269,8 +269,14 @@ class Emitter64
         void PSHUFD(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest);
         void PSHUFHW(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest);
         void PSHUFLW(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest);
+        void PSLLW(int shift, REG_64 xmm_dest);
+        void PSLLD(int shift, REG_64 xmm_dest);
+        void PSLLQ(int shift, REG_64 xmm_dest);
         void PSRAW(int shift, REG_64 xmm_dest);
+        void PSRAD(int shift, REG_64 xmm_dest);
         void PSRLW(int shift, REG_64 xmm_dest);
+        void PSRLD(int shift, REG_64 xmm_dest);
+        void PSRLQ(int shift, REG_64 xmm_dest);
         void PSUBB(REG_64 xmm_source, REG_64 xmm_dest);
         void PSUBD(REG_64 xmm_source, REG_64 xmm_dest);
         void PSUBW(REG_64 xmm_source, REG_64 xmm_dest);

@@ -1796,6 +1796,36 @@ void Emitter64::PSHUFLW(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest)
     cache->write<uint8_t>(imm);
 }
 
+void Emitter64::PSLLW(int shift, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_rm(xmm_dest);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x71);
+    modrm(0b11, 6, xmm_dest);
+    cache->write<uint8_t>(shift);
+}
+
+void Emitter64::PSLLD(int shift, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_rm(xmm_dest);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x72);
+    modrm(0b11, 6, xmm_dest);
+    cache->write<uint8_t>(shift);
+}
+
+void Emitter64::PSLLQ(int shift, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_rm(xmm_dest);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x73);
+    modrm(0b11, 6, xmm_dest);
+    cache->write<uint8_t>(shift);
+}
+
 void Emitter64::PSRAW(int shift, REG_64 xmm_dest)
 {
     cache->write<uint8_t>(0x66);
@@ -1806,12 +1836,42 @@ void Emitter64::PSRAW(int shift, REG_64 xmm_dest)
     cache->write<uint8_t>(shift);
 }
 
+void Emitter64::PSRAD(int shift, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_rm(xmm_dest);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x72);
+    modrm(0b11, 4, xmm_dest);
+    cache->write<uint8_t>(shift);
+}
+
 void Emitter64::PSRLW(int shift, REG_64 xmm_dest)
 {
     cache->write<uint8_t>(0x66);
     rex_rm(xmm_dest);
     cache->write<uint8_t>(0x0F);
     cache->write<uint8_t>(0x71);
+    modrm(0b11, 2, xmm_dest);
+    cache->write<uint8_t>(shift);
+}
+
+void Emitter64::PSRLD(int shift, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_rm(xmm_dest);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x72);
+    modrm(0b11, 2, xmm_dest);
+    cache->write<uint8_t>(shift);
+}
+
+void Emitter64::PSRLQ(int shift, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_rm(xmm_dest);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x73);
     modrm(0b11, 2, xmm_dest);
     cache->write<uint8_t>(shift);
 }
