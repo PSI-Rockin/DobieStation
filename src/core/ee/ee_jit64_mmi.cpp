@@ -302,6 +302,17 @@ void EE_JIT64::parallel_exchange_halfword(EmotionEngine& ee, IR::Instruction& in
     }
 }
 
+void EE_JIT64::parallel_exchange_word(EmotionEngine& ee, IR::Instruction& instr, bool even)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
+
+    if (even)
+        emitter.PSHUFD(0xC6, source, dest);
+    else
+        emitter.PSHUFD(0xD8, source, dest);
+}
+
 void EE_JIT64::parallel_pack_to_halfword(EmotionEngine& ee, IR::Instruction& instr)
 {
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);

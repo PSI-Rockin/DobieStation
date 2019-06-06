@@ -2401,7 +2401,7 @@ void EE_JitTranslator::translate_op_mmi2(uint32_t opcode, uint32_t PC, std::vect
             // PEXEH
         {
             uint8_t dest = (opcode >> 11) & 0x1F;
-            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source = (opcode >> 16) & 0x1F;
             if (!dest)
             {
                 // NOP
@@ -2433,10 +2433,20 @@ void EE_JitTranslator::translate_op_mmi2(uint32_t opcode, uint32_t PC, std::vect
             break;
         case 0x1E:
             // PEXEW
-            Errors::print_warning("[EE_JIT] Unrecognized mmi2 op PEXEW\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                // NOP
+                break;
+            }
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.op = IR::Opcode::ParallelExchangeEvenWord;
             instrs.push_back(instr);
             break;
+        }
         case 0x1F:
             // PROT3W
             Errors::print_warning("[EE_JIT] Unrecognized mmi2 op PROT3W\n", op);
@@ -2544,7 +2554,7 @@ void EE_JitTranslator::translate_op_mmi3(uint32_t opcode, uint32_t PC, std::vect
             // PEXCH
         {
             uint8_t dest = (opcode >> 11) & 0x1F;
-            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source = (opcode >> 16) & 0x1F;
             if (!dest)
             {
                 // NOP
@@ -2564,10 +2574,20 @@ void EE_JitTranslator::translate_op_mmi3(uint32_t opcode, uint32_t PC, std::vect
             break;
         case 0x1E:
             // PEXCW
-            Errors::print_warning("[EE_JIT] Unrecognized mmi3 op PEXCW\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                // NOP
+                break;
+            }
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.op = IR::Opcode::ParallelExchangeCenterWord;
             instrs.push_back(instr);
             break;
+        }
         default:
             Errors::die("[EE_JIT] Unrecognized mmi3 op $%02X", op);
     }
