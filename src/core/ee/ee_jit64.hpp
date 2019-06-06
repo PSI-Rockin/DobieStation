@@ -196,6 +196,7 @@ private:
     void parallel_subtract_with_unsigned_saturation_byte(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_subtract_with_unsigned_saturation_halfword(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_subtract_with_unsigned_saturation_word(EmotionEngine& ee, IR::Instruction& instr);
+    void parallel_reverse_halfword(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_rotate_3_words_left(EmotionEngine& ee, IR::Instruction& instr);
     void set_on_less_than(EmotionEngine& ee, IR::Instruction& instr);
     void set_on_less_than_unsigned(EmotionEngine& ee, IR::Instruction& instr);

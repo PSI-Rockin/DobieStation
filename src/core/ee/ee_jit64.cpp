@@ -492,6 +492,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::ParallelSubtractWithUnsignedSaturationHalfword:
             parallel_subtract_with_unsigned_saturation_halfword(ee, instr);
             break;
+        case IR::Opcode::ParallelReverseHalfword:
+            parallel_reverse_halfword(ee, instr);
+            break;
         case IR::Opcode::ParallelRotate3WordsLeft:
             parallel_rotate_3_words_left(ee, instr);
             break;
