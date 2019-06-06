@@ -384,6 +384,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::MoveWordReg:
             move_word_reg(ee, instr);
             break;
+        case IR::Opcode::MoveQuadwordReg:
+            move_quadword_reg(ee, instr);
+            break;
         case IR::Opcode::MultiplyUnsignedWord:
             multiply_unsigned_word(ee, instr);
             break;
