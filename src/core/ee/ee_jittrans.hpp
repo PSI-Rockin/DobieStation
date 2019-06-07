@@ -26,7 +26,9 @@ enum class EE_SpecialReg
 {
     EE_Regular = 0,
     LO = 32,
+    LO1,
     HI,
+    HI1,
     SA
 };
 

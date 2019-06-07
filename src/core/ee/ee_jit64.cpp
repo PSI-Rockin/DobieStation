@@ -1347,9 +1347,13 @@ uint64_t EE_JIT64::get_gpr_addr(const EmotionEngine &ee, int index) const
     switch (static_cast<EE_SpecialReg>(index))
     {
         case EE_SpecialReg::LO:
-            return (uint64_t)&ee.LO;
+            return (uint64_t)&ee.LO.lo;
+        case EE_SpecialReg::LO1:
+            return (uint64_t)&ee.LO.hi;
         case EE_SpecialReg::HI:
-            return (uint64_t)&ee.HI;
+            return (uint64_t)&ee.HI.lo;
+        case EE_SpecialReg::HI1:
+            return (uint64_t)&ee.HI.hi;
         case EE_SpecialReg::SA:
             return (uint64_t)&ee.SA;
         default:

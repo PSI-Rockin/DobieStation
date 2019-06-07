@@ -1694,28 +1694,44 @@ void EE_JitTranslator::translate_op_mmi(uint32_t opcode, uint32_t PC, std::vecto
             break;
         case 0x10:
             // MFHI1
-            Errors::print_warning("[EE_JIT] Unrecognized mmi op MFHI1\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            instr.op = IR::Opcode::MoveDoublewordReg;
+            instr.set_source((int)EE_SpecialReg::HI1);
+            instr.set_dest(dest);
             instrs.push_back(instr);
             break;
+        }
         case 0x11:
             // MTHI1
-            Errors::print_warning("[EE_JIT] Unrecognized mmi op MTHI1\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t source = (opcode >> 21) & 0x1F;
+            instr.op = IR::Opcode::MoveDoublewordReg;
+            instr.set_source(source);
+            instr.set_dest((int)EE_SpecialReg::HI1);
             instrs.push_back(instr);
             break;
+        }
         case 0x12:
             // MFLO1
-            Errors::print_warning("[EE_JIT] Unrecognized mmi op MFLO1\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            instr.op = IR::Opcode::MoveDoublewordReg;
+            instr.set_source((int)EE_SpecialReg::LO1);
+            instr.set_dest(dest);
             instrs.push_back(instr);
             break;
+        }
         case 0x13:
             // MTLO1
-            Errors::print_warning("[EE_JIT] Unrecognized mmi op MTLO1\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t source = (opcode >> 21) & 0x1F;
+            instr.op = IR::Opcode::MoveDoublewordReg;
+            instr.set_source(source);
+            instr.set_dest((int)EE_SpecialReg::LO1);
             instrs.push_back(instr);
             break;
+        }
         case 0x18:
             // MULT1
             Errors::print_warning("[EE_JIT] Unrecognized mmi op MULT1\n", op);
