@@ -462,6 +462,12 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::ParallelExchangeCenterWord:
             parallel_exchange_word(ee, instr, false);
             break;
+        case IR::Opcode::ParallelMaximizeHalfword:
+            parallel_maximize_halfword(ee, instr);
+            break;
+        case IR::Opcode::ParallelMaximizeWord:
+            parallel_maximize_word(ee, instr);
+            break;
         case IR::Opcode::ParallelMinimizeHalfword:
             parallel_minimize_halfword(ee, instr);
             break;

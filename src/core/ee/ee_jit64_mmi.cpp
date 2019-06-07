@@ -373,6 +373,48 @@ void EE_JIT64::parallel_exchange_word(EmotionEngine& ee, IR::Instruction& instr,
         emitter.PSHUFD(0xD8, source, dest);
 }
 
+void EE_JIT64::parallel_maximize_halfword(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
+
+    if (dest == source)
+    {
+        emitter.PMAXSW_XMM(source2, dest);
+    }
+    else if (dest == source2)
+    {
+        emitter.PMAXSW_XMM(source, dest);
+    }
+    else
+    {
+        emitter.MOVAPS_REG(source, dest);
+        emitter.PMAXSW_XMM(source2, dest);
+    }
+}
+
+void EE_JIT64::parallel_maximize_word(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
+
+    if (dest == source)
+    {
+        emitter.PMAXSD_XMM(source2, dest);
+    }
+    else if (dest == source2)
+    {
+        emitter.PMAXSD_XMM(source, dest);
+    }
+    else
+    {
+        emitter.MOVAPS_REG(source, dest);
+        emitter.PMAXSD_XMM(source2, dest);
+    }
+}
+
 void EE_JIT64::parallel_minimize_halfword(EmotionEngine& ee, IR::Instruction& instr)
 {
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
