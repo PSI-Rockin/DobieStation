@@ -258,8 +258,18 @@ class Emitter64
         void PINSRW_XMM(uint8_t imm, REG_64 source, REG_64 xmm_dest);
         void PINSRD_XMM(uint8_t imm, REG_64 source, REG_64 xmm_dest);
         void PINSRQ_XMM(uint8_t imm, REG_64 source, REG_64 xmm_dest);
+        void PMAXSB_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void PMAXSD_XMM(REG_64 xmm_source, REG_64 xmm_dest);
+        void PMAXSW_XMM(REG_64 xmm_source, REG_64 xmm_dest);
+        void PMAXUB_XMM(REG_64 xmm_source, REG_64 xmm_dest);
+        void PMAXUD_XMM(REG_64 xmm_source, REG_64 xmm_dest);
+        void PMAXUW_XMM(REG_64 xmm_source, REG_64 xmm_dest);
+        void PMINSB_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void PMINSD_XMM(REG_64 xmm_source, REG_64 xmm_dest);
+        void PMINSW_XMM(REG_64 xmm_source, REG_64 xmm_dest);
+        void PMINUB_XMM(REG_64 xmm_source, REG_64 xmm_dest);
+        void PMINUD_XMM(REG_64 xmm_source, REG_64 xmm_dest);
+        void PMINUW_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void PMINSD_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t offset = 0);
         void PMINUD_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t offset = 0);
         void PMOVZX8_TO_16(REG_64 xmm_source, REG_64 xmm_dest);

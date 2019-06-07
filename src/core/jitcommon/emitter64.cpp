@@ -1677,6 +1677,16 @@ void Emitter64::PINSRQ_XMM(uint8_t imm, REG_64 source, REG_64 xmm_dest)
     cache->write<uint8_t>(imm);
 }
 
+void Emitter64::PMAXSB_XMM(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x38);
+    cache->write<uint8_t>(0x3C);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
 void Emitter64::PMAXSD_XMM(REG_64 xmm_source, REG_64 xmm_dest)
 {
     cache->write<uint8_t>(0x66);
@@ -1687,6 +1697,54 @@ void Emitter64::PMAXSD_XMM(REG_64 xmm_source, REG_64 xmm_dest)
     modrm(0b11, xmm_dest, xmm_source);
 }
 
+void Emitter64::PMAXSW_XMM(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0xEE);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
+void Emitter64::PMAXUB_XMM(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0xDE);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
+void Emitter64::PMAXUD_XMM(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x38);
+    cache->write<uint8_t>(0x3F);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
+void Emitter64::PMAXUW_XMM(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x38);
+    cache->write<uint8_t>(0x3E);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
+void Emitter64::PMINSB_XMM(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x38);
+    cache->write<uint8_t>(0x38);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
 void Emitter64::PMINSD_XMM(REG_64 xmm_source, REG_64 xmm_dest)
 {
     cache->write<uint8_t>(0x66);
@@ -1694,6 +1752,15 @@ void Emitter64::PMINSD_XMM(REG_64 xmm_source, REG_64 xmm_dest)
     cache->write<uint8_t>(0x0F);
     cache->write<uint8_t>(0x38);
     cache->write<uint8_t>(0x39);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
+void Emitter64::PMINSW_XMM(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0xEA);
     modrm(0b11, xmm_dest, xmm_source);
 }
 
@@ -1709,6 +1776,35 @@ void Emitter64::PMINSD_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32
         cache->write<uint8_t>(0x24);
     if ((indir_source & 7) == 5 || offset)
         cache->write<uint32_t>(offset);
+}
+
+void Emitter64::PMINUB_XMM(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0xDA);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
+void Emitter64::PMINUD_XMM(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x38);
+    cache->write<uint8_t>(0x3B);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
+void Emitter64::PMINUW_XMM(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x38);
+    cache->write<uint8_t>(0x3A);
+    modrm(0b11, xmm_dest, xmm_source);
 }
 
 void Emitter64::PMINUD_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t offset)

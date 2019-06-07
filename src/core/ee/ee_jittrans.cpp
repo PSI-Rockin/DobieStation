@@ -2219,10 +2219,22 @@ void EE_JitTranslator::translate_op_mmi1(uint32_t opcode, uint32_t PC, std::vect
             break;
         case 0x03:
             // PMINW
-            Errors::print_warning("[EE_JIT] Unrecognized mmi1 op PABSW\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                // NOP
+                break;
+            }
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::ParallelMinimizeWord;
             instrs.push_back(instr);
             break;
+        }
         case 0x04:
             // PADSBH
             Errors::print_warning("[EE_JIT] Unrecognized mmi1 op PABSW\n", op);
@@ -2243,10 +2255,22 @@ void EE_JitTranslator::translate_op_mmi1(uint32_t opcode, uint32_t PC, std::vect
             break;
         case 0x07:
             // PMINH
-            Errors::print_warning("[EE_JIT] Unrecognized mmi1 op PMINH\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                // NOP
+                break;
+            }
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::ParallelMinimizeHalfword;
             instrs.push_back(instr);
             break;
+        }
         case 0x0A:
             // PCEQB
             Errors::print_warning("[EE_JIT] Unrecognized mmi1 op PCEQB\n", op);
@@ -2255,10 +2279,22 @@ void EE_JitTranslator::translate_op_mmi1(uint32_t opcode, uint32_t PC, std::vect
             break;
         case 0x10:
             // PADDUW
-            Errors::print_warning("[EE_JIT] Unrecognized mmi1 op PADDUW\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                // NOP
+                break;
+            }
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::ParallelAddWithUnsignedSaturationWord;
             instrs.push_back(instr);
             break;
+        }
         case 0x11:
             // PSUBUW
         {

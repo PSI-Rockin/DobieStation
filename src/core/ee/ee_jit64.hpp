@@ -186,6 +186,8 @@ private:
     void parallel_exchange_halfword(EmotionEngine& ee, IR::Instruction& instr, bool even);
     void parallel_exchange_word(EmotionEngine& ee, IR::Instruction& instr, bool even);
     void parallel_pack_to_byte(EmotionEngine& ee, IR::Instruction& instr);
+    void parallel_minimize_halfword(EmotionEngine& ee, IR::Instruction& instr);
+    void parallel_minimize_word(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_pack_to_halfword(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_pack_to_word(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_shift_left_logical_halfword(EmotionEngine& ee, IR::Instruction& instr);
