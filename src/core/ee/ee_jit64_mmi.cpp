@@ -7,6 +7,15 @@ void EE_JIT64::move_quadword_reg(EmotionEngine& ee, IR::Instruction& instr)
 
     emitter.MOVAPS_REG(source, dest);
 }
+
+void EE_JIT64::parallel_absolute_halfword(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
+
+    emitter.PABSW(source, dest);
+}
+
 void EE_JIT64::parallel_absolute_word(EmotionEngine& ee, IR::Instruction& instr)
 {
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
