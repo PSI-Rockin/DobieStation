@@ -1916,10 +1916,22 @@ void EE_JitTranslator::translate_op_mmi0(uint32_t opcode, uint32_t PC, std::vect
         }
         case 0x02:
             // PCGTW
-            Errors::print_warning("[EE_JIT] Unrecognized mmi0 op PCTGW\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                // NOP
+                break;
+            }
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::ParallelCompareGreaterThanWord;
             instrs.push_back(instr);
             break;
+        }
         case 0x03:
             // PMAXW
         {
@@ -1975,11 +1987,23 @@ void EE_JitTranslator::translate_op_mmi0(uint32_t opcode, uint32_t PC, std::vect
             break;
         }
         case 0x06:
-            // PCTGH
-            Errors::print_warning("[EE_JIT] Unrecognized mmi0 op PCTGH\n", op);
-            fallback_interpreter(instr, opcode);
+            // PCGTH
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                // NOP
+                break;
+            }
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::ParallelCompareGreaterThanHalfword;
             instrs.push_back(instr);
             break;
+        }
         case 0x07:
             // PMAXH
         {
@@ -2035,11 +2059,23 @@ void EE_JitTranslator::translate_op_mmi0(uint32_t opcode, uint32_t PC, std::vect
             break;
         }
         case 0x0A:
-            // PCTGB
-            Errors::print_warning("[EE_JIT] Unrecognized mmi0 op PCTGB\n", op);
-            fallback_interpreter(instr, opcode);
+            // PCGTB
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                // NOP
+                break;
+            }
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::ParallelCompareGreaterThanByte;
             instrs.push_back(instr);
             break;
+        }
         case 0x10:
             // PADDSW
         {
@@ -2253,10 +2289,22 @@ void EE_JitTranslator::translate_op_mmi1(uint32_t opcode, uint32_t PC, std::vect
             break;
         case 0x02:
             // PCEQW
-            Errors::print_warning("[EE_JIT] Unrecognized mmi1 op PABSW\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                // NOP
+                break;
+            }
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::ParallelCompareEqualWord;
             instrs.push_back(instr);
             break;
+        }
         case 0x03:
             // PMINW
         {
@@ -2289,10 +2337,22 @@ void EE_JitTranslator::translate_op_mmi1(uint32_t opcode, uint32_t PC, std::vect
             break;
         case 0x06:
             // PCEQH
-            Errors::print_warning("[EE_JIT] Unrecognized mmi1 op PCEQH\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                // NOP
+                break;
+            }
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::ParallelCompareEqualHalfword;
             instrs.push_back(instr);
             break;
+        }
         case 0x07:
             // PMINH
         {
@@ -2313,10 +2373,22 @@ void EE_JitTranslator::translate_op_mmi1(uint32_t opcode, uint32_t PC, std::vect
         }
         case 0x0A:
             // PCEQB
-            Errors::print_warning("[EE_JIT] Unrecognized mmi1 op PCEQB\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 21) & 0x1F;
+            uint8_t source2 = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                // NOP
+                break;
+            }
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.set_source2(source2);
+            instr.op = IR::Opcode::ParallelCompareEqualByte;
             instrs.push_back(instr);
             break;
+        }
         case 0x10:
             // PADDUW
         {

@@ -438,14 +438,23 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::ParallelAddWithUnsignedSaturationWord:
             fallback_interpreter(ee, instr); // TODO
             break;
-        case IR::Opcode::ParallelNor:
-            parallel_nor(ee, instr);
+        case IR::Opcode::ParallelCompareEqualByte:
+            parallel_compare_equal_byte(ee, instr);
             break;
-        case IR::Opcode::ParallelOr:
-            parallel_or(ee, instr);
+        case IR::Opcode::ParallelCompareEqualHalfword:
+            parallel_compare_equal_halfword(ee, instr);
             break;
-        case IR::Opcode::ParallelXor:
-            parallel_xor(ee, instr);
+        case IR::Opcode::ParallelCompareEqualWord:
+            parallel_compare_equal_word(ee, instr);
+            break;
+        case IR::Opcode::ParallelCompareGreaterThanByte:
+            parallel_compare_greater_than_byte(ee, instr);
+            break;
+        case IR::Opcode::ParallelCompareGreaterThanHalfword:
+            parallel_compare_greater_than_halfword(ee, instr);
+            break;
+        case IR::Opcode::ParallelCompareGreaterThanWord:
+            parallel_compare_greater_than_word(ee, instr);
             break;
         case IR::Opcode::ParallelDivideWord:
             parallel_divide_word(ee, instr);
@@ -473,6 +482,12 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             break;
         case IR::Opcode::ParallelMinimizeWord:
             parallel_minimize_word(ee, instr);
+            break;
+        case IR::Opcode::ParallelNor:
+            parallel_nor(ee, instr);
+            break;
+        case IR::Opcode::ParallelOr:
+            parallel_or(ee, instr);
             break;
         case IR::Opcode::ParallelPackToByte:
             parallel_pack_to_byte(ee, instr);
@@ -533,6 +548,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             break;
         case IR::Opcode::ParallelSubtractWithUnsignedSaturationWord:
             fallback_interpreter(ee, instr); // TODO
+            break;
+        case IR::Opcode::ParallelXor:
+            parallel_xor(ee, instr);
             break;
         case IR::Opcode::SetOnLessThan:
             set_on_less_than(ee, instr);

@@ -1582,6 +1582,15 @@ void Emitter64::PCMPEQW_XMM(REG_64 xmm_source, REG_64 xmm_dest)
     modrm(0b11, xmm_dest, xmm_source);
 }
 
+void Emitter64::PCMPGTB_XMM(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x64);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
 void Emitter64::PCMPGTW_XMM(REG_64 xmm_source, REG_64 xmm_dest)
 {
     cache->write<uint8_t>(0x66);
@@ -1590,6 +1599,16 @@ void Emitter64::PCMPGTW_XMM(REG_64 xmm_source, REG_64 xmm_dest)
     cache->write<uint8_t>(0x65);
     modrm(0b11, xmm_dest, xmm_source);
 }
+
+void Emitter64::PCMPGTD_XMM(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x66);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
 
 void Emitter64::PEXTRB_XMM(uint8_t imm, REG_64 xmm_source, REG_64 dest)
 {

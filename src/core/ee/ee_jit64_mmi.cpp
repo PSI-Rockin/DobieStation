@@ -235,29 +235,132 @@ void EE_JIT64::parallel_add_with_unsigned_saturation_word(EmotionEngine& ee, IR:
     // TODO
 }
 
-void EE_JIT64::parallel_pack_to_byte(EmotionEngine& ee, IR::Instruction& instr)
+void EE_JIT64::parallel_compare_equal_byte(EmotionEngine& ee, IR::Instruction& instr)
 {
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
     REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
     REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
-    REG_64 XMM0 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
 
-    for (int i = 0; i < 8; ++i)
+    if (dest == source)
     {
-        emitter.PEXTRB_XMM(i * 2, source, REG_64::RAX);
-        emitter.PINSRB_XMM(8 + i, REG_64::RAX, XMM0);
+        emitter.PCMPEQB_XMM(source2, dest);
     }
-
-    for (int i = 0; i < 8; ++i)
+    else if (dest == source2)
     {
-        emitter.PEXTRB_XMM(i * 2, source2, REG_64::RAX);
-        emitter.PINSRB_XMM(i, REG_64::RAX, XMM0);
+        emitter.PCMPEQB_XMM(source, dest);
     }
-
-    emitter.MOVAPS_REG(XMM0, dest);
-
-    free_xmm_reg(ee, XMM0);
+    else
+    {
+        emitter.MOVAPS_REG(source, dest);
+        emitter.PCMPEQB_XMM(source2, dest);
+    }
 }
+
+void EE_JIT64::parallel_compare_equal_halfword(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
+
+    if (dest == source)
+    {
+        emitter.PCMPEQW_XMM(source2, dest);
+    }
+    else if (dest == source2)
+    {
+        emitter.PCMPEQW_XMM(source, dest);
+    }
+    else
+    {
+        emitter.MOVAPS_REG(source, dest);
+        emitter.PCMPEQW_XMM(source2, dest);
+    }
+}
+
+void EE_JIT64::parallel_compare_equal_word(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
+
+    if (dest == source)
+    {
+        emitter.PCMPEQD_XMM(source2, dest);
+    }
+    else if (dest == source2)
+    {
+        emitter.PCMPEQD_XMM(source, dest);
+    }
+    else
+    {
+        emitter.MOVAPS_REG(source, dest);
+        emitter.PCMPEQD_XMM(source2, dest);
+    }
+}
+
+void EE_JIT64::parallel_compare_greater_than_byte(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
+
+    if (dest == source)
+    {
+        emitter.PCMPGTB_XMM(source2, dest);
+    }
+    else if (dest == source2)
+    {
+        emitter.PCMPGTB_XMM(source, dest);
+    }
+    else
+    {
+        emitter.MOVAPS_REG(source, dest);
+        emitter.PCMPGTB_XMM(source2, dest);
+    }
+}
+
+void EE_JIT64::parallel_compare_greater_than_halfword(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
+
+    if (dest == source)
+    {
+        emitter.PCMPGTW_XMM(source2, dest);
+    }
+    else if (dest == source2)
+    {
+        emitter.PCMPGTW_XMM(source, dest);
+    }
+    else
+    {
+        emitter.MOVAPS_REG(source, dest);
+        emitter.PCMPGTW_XMM(source2, dest);
+    }
+}
+
+void EE_JIT64::parallel_compare_greater_than_word(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
+
+    if (dest == source)
+    {
+        emitter.PCMPGTD_XMM(source2, dest);
+    }
+    else if (dest == source2)
+    {
+        emitter.PCMPGTD_XMM(source, dest);
+    }
+    else
+    {
+        emitter.MOVAPS_REG(source, dest);
+        emitter.PCMPGTD_XMM(source2, dest);
+    }
+}
+
 
 void EE_JIT64::parallel_divide_word(EmotionEngine& ee, IR::Instruction& instr)
 {
@@ -457,6 +560,30 @@ void EE_JIT64::parallel_minimize_word(EmotionEngine& ee, IR::Instruction& instr)
     }
 }
 
+void EE_JIT64::parallel_pack_to_byte(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
+    REG_64 XMM0 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
+
+    for (int i = 0; i < 8; ++i)
+    {
+        emitter.PEXTRB_XMM(i * 2, source, REG_64::RAX);
+        emitter.PINSRB_XMM(8 + i, REG_64::RAX, XMM0);
+    }
+
+    for (int i = 0; i < 8; ++i)
+    {
+        emitter.PEXTRB_XMM(i * 2, source2, REG_64::RAX);
+        emitter.PINSRB_XMM(i, REG_64::RAX, XMM0);
+    }
+
+    emitter.MOVAPS_REG(XMM0, dest);
+
+    free_xmm_reg(ee, XMM0);
+}
+
 void EE_JIT64::parallel_pack_to_halfword(EmotionEngine& ee, IR::Instruction& instr)
 {
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
@@ -474,6 +601,30 @@ void EE_JIT64::parallel_pack_to_halfword(EmotionEngine& ee, IR::Instruction& ins
     {
         emitter.PEXTRW_XMM(i * 2, source2, REG_64::RAX);
         emitter.PINSRW_XMM(i, REG_64::RAX, XMM0);
+    }
+
+    emitter.MOVAPS_REG(XMM0, dest);
+
+    free_xmm_reg(ee, XMM0);
+}
+
+void EE_JIT64::parallel_pack_to_word(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
+    REG_64 XMM0 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
+
+    for (int i = 0; i < 2; ++i)
+    {
+        emitter.PEXTRD_XMM(i * 2, source, REG_64::RAX);
+        emitter.PINSRD_XMM(2 + i, REG_64::RAX, XMM0);
+    }
+
+    for (int i = 0; i < 2; ++i)
+    {
+        emitter.PEXTRD_XMM(i * 2, source2, REG_64::RAX);
+        emitter.PINSRD_XMM(i, REG_64::RAX, XMM0);
     }
 
     emitter.MOVAPS_REG(XMM0, dest);
@@ -539,30 +690,6 @@ void EE_JIT64::parallel_shift_right_logical_word(EmotionEngine& ee, IR::Instruct
     if (dest != source)
         emitter.MOVAPS_REG(source, dest);
     emitter.PSRLD(instr.get_source2(), dest);
-}
-
-void EE_JIT64::parallel_pack_to_word(EmotionEngine& ee, IR::Instruction& instr)
-{
-    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
-    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
-    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
-    REG_64 XMM0 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
-
-    for (int i = 0; i < 2; ++i)
-    {
-        emitter.PEXTRD_XMM(i * 2, source, REG_64::RAX);
-        emitter.PINSRD_XMM(2 + i, REG_64::RAX, XMM0);
-    }
-
-    for (int i = 0; i < 2; ++i)
-    {
-        emitter.PEXTRD_XMM(i * 2, source2, REG_64::RAX);
-        emitter.PINSRD_XMM(i, REG_64::RAX, XMM0);
-    }
-
-    emitter.MOVAPS_REG(XMM0, dest);
-
-    free_xmm_reg(ee, XMM0);
 }
 
 void EE_JIT64::parallel_subtract_byte(EmotionEngine& ee, IR::Instruction& instr)

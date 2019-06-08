@@ -182,6 +182,12 @@ private:
     void parallel_add_with_unsigned_saturation_byte(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_add_with_unsigned_saturation_halfword(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_add_with_unsigned_saturation_word(EmotionEngine& ee, IR::Instruction& instr);
+    void parallel_compare_equal_byte(EmotionEngine& ee, IR::Instruction& instr);
+    void parallel_compare_equal_halfword(EmotionEngine& ee, IR::Instruction& instr);
+    void parallel_compare_equal_word(EmotionEngine& ee, IR::Instruction& instr);
+    void parallel_compare_greater_than_byte(EmotionEngine& ee, IR::Instruction& instr);
+    void parallel_compare_greater_than_halfword(EmotionEngine& ee, IR::Instruction& instr);
+    void parallel_compare_greater_than_word(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_divide_word(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_exchange_halfword(EmotionEngine& ee, IR::Instruction& instr, bool even);
     void parallel_exchange_word(EmotionEngine& ee, IR::Instruction& instr, bool even);

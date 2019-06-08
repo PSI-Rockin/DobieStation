@@ -249,6 +249,8 @@ class Emitter64
         void PCMPEQB_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void PCMPEQW_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void PCMPEQD_XMM(REG_64 xmm_source, REG_64 xmm_dest);
+        void PCMPGTB_XMM(REG_64 xmm_source, REG_64 xmm_dest);
+        void PCMPGTD_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void PCMPGTW_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void PEXTRB_XMM(uint8_t imm, REG_64 xmm_source, REG_64 dest);
         void PEXTRW_XMM(uint8_t imm, REG_64 xmm_source, REG_64 dest);
