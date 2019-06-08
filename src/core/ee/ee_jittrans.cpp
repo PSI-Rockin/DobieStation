@@ -2283,10 +2283,20 @@ void EE_JitTranslator::translate_op_mmi1(uint32_t opcode, uint32_t PC, std::vect
     {
         case 0x01:
             // PABSW
-            Errors::print_warning("[EE_JIT] Unrecognized mmi1 op PABSW\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 16) & 0x1F;
+            if (!dest)
+            {
+                // NOP
+                break;
+            }
+            instr.set_dest(dest);
+            instr.set_source(source);
+            instr.op = IR::ParallelAbsoluteWord;
             instrs.push_back(instr);
             break;
+        }
         case 0x02:
             // PCEQW
         {
