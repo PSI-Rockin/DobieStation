@@ -235,6 +235,7 @@ class Emitter64
         void RET();
 
         void PACKUSWB(REG_64 xmm_source, REG_64 xmm_dest);
+        void PABSB(REG_64 xmm_source, REG_64 xmm_dest);
         void PABSD(REG_64 xmm_source, REG_64 xmm_dest);
         void PABSW(REG_64 xmm_source, REG_64 xmm_dest);
         void PADDB(REG_64 xmm_source, REG_64 xmm_dest);
