@@ -310,7 +310,12 @@ void EE_JIT64::parallel_compare_greater_than_byte(EmotionEngine& ee, IR::Instruc
     }
     else if (dest == source2)
     {
-        emitter.PCMPGTB_XMM(source, dest);
+        // Swap source and source2 so that the comparison is in the correct order
+        REG_64 XMM0 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
+        emitter.MOVAPS_REG(source2, XMM0);
+        emitter.MOVAPS_REG(source, dest);
+        emitter.PCMPGTB_XMM(XMM0, dest);
+        free_xmm_reg(ee, XMM0);
     }
     else
     {
@@ -331,7 +336,12 @@ void EE_JIT64::parallel_compare_greater_than_halfword(EmotionEngine& ee, IR::Ins
     }
     else if (dest == source2)
     {
-        emitter.PCMPGTW_XMM(source, dest);
+        // Swap source and source2 so that the comparison is in the correct order
+        REG_64 XMM0 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
+        emitter.MOVAPS_REG(source2, XMM0);
+        emitter.MOVAPS_REG(source, dest);
+        emitter.PCMPGTW_XMM(XMM0, dest);
+        free_xmm_reg(ee, XMM0);
     }
     else
     {
@@ -352,7 +362,12 @@ void EE_JIT64::parallel_compare_greater_than_word(EmotionEngine& ee, IR::Instruc
     }
     else if (dest == source2)
     {
-        emitter.PCMPGTD_XMM(source, dest);
+        // Swap source and source2 so that the comparison is in the correct order
+        REG_64 XMM0 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
+        emitter.MOVAPS_REG(source2, XMM0);
+        emitter.MOVAPS_REG(source, dest);
+        emitter.PCMPGTD_XMM(XMM0, dest);
+        free_xmm_reg(ee, XMM0);
     }
     else
     {
