@@ -620,22 +620,21 @@ void EE_JIT64::parallel_pack_to_halfword(EmotionEngine& ee, IR::Instruction& ins
     REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPREXTENDED, REG_STATE::READ);
     REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
     REG_64 XMM0 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 XMM1 = lalloc_xmm_reg(ee, 1, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
 
-    for (int i = 0; i < 4; ++i)
-    {
-        emitter.PEXTRW_XMM(i * 2, source, REG_64::RAX);
-        emitter.PINSRW_XMM(4 + i, REG_64::RAX, XMM0);
-    }
+    emitter.MOVAPS_REG(source, XMM1);
+    if (source2 != dest)
+        emitter.MOVAPS_REG(source2, dest);
 
-    for (int i = 0; i < 4; ++i)
-    {
-        emitter.PEXTRW_XMM(i * 2, source2, REG_64::RAX);
-        emitter.PINSRW_XMM(i, REG_64::RAX, XMM0);
-    }
+    emitter.load_addr((uint64_t)&PPACH_MASK, REG_64::RAX);
+    emitter.MOVAPS_FROM_MEM(REG_64::RAX, XMM0);
 
-    emitter.MOVAPS_REG(XMM0, dest);
+    emitter.PAND_XMM(XMM0, dest);
+    emitter.PAND_XMM(XMM0, XMM1);
 
+    emitter.PACKUSDW(XMM1, dest);
     free_xmm_reg(ee, XMM0);
+    free_xmm_reg(ee, XMM1);
 }
 
 void EE_JIT64::parallel_pack_to_word(EmotionEngine& ee, IR::Instruction& instr)

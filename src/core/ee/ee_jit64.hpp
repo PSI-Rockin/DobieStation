@@ -58,6 +58,7 @@ alignas(16) static uint32_t FPU_MASK_NEG[4] = { 0x80000000, 0x80000000, 0x800000
 alignas(16) static uint32_t max_flt_constant[4] = { 0x7F7FFFFF, 0x7F7FFFFF, 0x7F7FFFFF, 0x7F7FFFFF };
 alignas(16) static uint32_t min_flt_constant[4] = { 0xFF7FFFFF, 0xFF7FFFFF, 0xFF7FFFFF, 0xFF7FFFFF };
 alignas(16) static uint32_t PPACB_MASK[4] = { 0x00FF00FF, 0x00FF00FF, 0x00FF00FF, 0x00FF00FF };
+alignas(16) static uint32_t PPACH_MASK[4] = { 0x0000FFFF, 0x0000FFFF, 0x0000FFFF, 0x0000FFFF };
 
 extern "C" uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee);
 
