@@ -408,6 +408,12 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::OrReg:
             or_reg(ee, instr);
             break;
+        case IR::Opcode::ParallelAbsoluteHalfword:
+            parallel_absolute_halfword(ee, instr);
+            break;
+        case IR::Opcode::ParallelAbsoluteWord:
+            parallel_absolute_word(ee, instr);
+            break;
         case IR::Opcode::ParallelAnd:
             parallel_and(ee, instr);
             break;

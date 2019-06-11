@@ -169,6 +169,8 @@ private:
     void nor_reg(EmotionEngine& ee, IR::Instruction& instr);
     void or_imm(EmotionEngine& ee, IR::Instruction& instr);
     void or_reg(EmotionEngine& ee, IR::Instruction& instr);
+    void parallel_absolute_halfword(EmotionEngine& ee, IR::Instruction& instr);
+    void parallel_absolute_word(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_and(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_nor(EmotionEngine& ee, IR::Instruction& instr);
     void parallel_or(EmotionEngine& ee, IR::Instruction& instr);
