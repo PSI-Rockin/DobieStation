@@ -1439,6 +1439,16 @@ void Emitter64::RET()
     cache->write<uint8_t>(0xC3);
 }
 
+void Emitter64::PACKUSDW(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    cache->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0x38);
+    cache->write<uint8_t>(0x2B);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
 void Emitter64::PACKUSWB(REG_64 xmm_source, REG_64 xmm_dest)
 {
     cache->write<uint8_t>(0x66);
