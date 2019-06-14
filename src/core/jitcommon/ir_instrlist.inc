@@ -156,6 +156,7 @@ INSTR(StoreQuadDec)
 
 INSTR(MoveIntReg)
 INSTR(MoveXmmReg)
+INSTR(MoveControlWordFromFloatingPoint)
 INSTR(MoveControlWordToFloatingPoint)
 INSTR(MoveDoublewordReg)
 INSTR(MoveWordReg)

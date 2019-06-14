@@ -155,6 +155,7 @@ private:
     void load_quadword_coprocessor2(EmotionEngine& ee, IR::Instruction& instr);
     void move_conditional_on_not_zero(EmotionEngine& ee, IR::Instruction& instr);
     void move_conditional_on_zero(EmotionEngine& ee, IR::Instruction& instr);
+    void move_control_word_from_floating_point(EmotionEngine& ee, IR::Instruction& instr);
     void move_control_word_to_floating_point(EmotionEngine& ee, IR::Instruction& instr);
     void move_doubleword_reg(EmotionEngine& ee, IR::Instruction& instr);
     void move_from_coprocessor1(EmotionEngine& ee, IR::Instruction &instr);

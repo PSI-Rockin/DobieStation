@@ -3012,10 +3012,20 @@ void EE_JitTranslator::translate_op_cop1(uint32_t opcode, uint32_t PC, std::vect
         }
         case 0x02:
             // CFC1
-            Errors::print_warning("[EE_JIT] Unrecognized cop1 op CFC1\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            uint8_t dest = (opcode >> 11) & 0x1F;
+            uint8_t source = (opcode >> 16) & 0x1F;
+            instr.op = IR::Opcode::MoveControlWordFromFloatingPoint;
+            instr.set_dest(dest);
+            instr.set_source(source);
+
+            // undefined
+            if (dest != 0x1F || dest != 0x0)
+                break;
+
             instrs.push_back(instr);
             break;
+        }
         case 0x04:
             // MTC1
         {
