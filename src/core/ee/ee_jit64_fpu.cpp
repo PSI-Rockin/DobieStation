@@ -357,6 +357,44 @@ void EE_JIT64::floating_point_reciprocal_square_root(EmotionEngine& ee, IR::Inst
     free_xmm_reg(ee, XMM1);
 }
 
+void EE_JIT64::move_control_word_to_floating_point(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 R15 = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPR, REG_STATE::READ);
+
+    emitter.load_addr((uint64_t)&ee.fpu->control, R15);
+    emitter.MOV32_REG(source, REG_64::EAX);
+
+    emitter.TEST32_REG_IMM((1 << 3), REG_64::EAX);
+    emitter.SETCC_MEM(ConditionCode::NZ, R15, offsetof(COP1_CONTROL, su));
+
+    emitter.TEST32_REG_IMM((1 << 4), REG_64::EAX);
+    emitter.SETCC_MEM(ConditionCode::NZ, R15, offsetof(COP1_CONTROL, so));
+
+    emitter.TEST32_REG_IMM((1 << 5), REG_64::EAX);
+    emitter.SETCC_MEM(ConditionCode::NZ, R15, offsetof(COP1_CONTROL, sd));
+
+    emitter.TEST32_REG_IMM((1 << 6), REG_64::EAX);
+    emitter.SETCC_MEM(ConditionCode::NZ, R15, offsetof(COP1_CONTROL, si));
+
+    emitter.TEST32_REG_IMM((1 << 14), REG_64::EAX);
+    emitter.SETCC_MEM(ConditionCode::NZ, R15, offsetof(COP1_CONTROL, u));
+
+    emitter.TEST32_REG_IMM((1 << 15), REG_64::EAX);
+    emitter.SETCC_MEM(ConditionCode::NZ, R15, offsetof(COP1_CONTROL, o));
+
+    emitter.TEST32_REG_IMM((1 << 16), REG_64::EAX);
+    emitter.SETCC_MEM(ConditionCode::NZ, R15, offsetof(COP1_CONTROL, d));
+
+    emitter.TEST32_REG_IMM((1 << 17), REG_64::EAX);
+    emitter.SETCC_MEM(ConditionCode::NZ, R15, offsetof(COP1_CONTROL, i));
+
+    emitter.TEST32_REG_IMM((1 << 23), REG_64::EAX);
+    emitter.SETCC_MEM(ConditionCode::NZ, R15, offsetof(COP1_CONTROL, condition));
+
+    free_int_reg(ee, R15);
+}
+
 void EE_JIT64::move_from_coprocessor1(EmotionEngine& ee, IR::Instruction& instr)
 {
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);

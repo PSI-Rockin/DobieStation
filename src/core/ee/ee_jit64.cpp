@@ -366,6 +366,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::MoveConditionalOnZero:
             move_conditional_on_zero(ee, instr);
             break;
+        case IR::Opcode::MoveControlWordToFloatingPoint:
+            move_control_word_to_floating_point(ee, instr);
+            break;
         case IR::Opcode::MoveDoublewordReg:
             move_doubleword_reg(ee, instr);
             break;
