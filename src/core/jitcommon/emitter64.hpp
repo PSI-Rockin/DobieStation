@@ -197,6 +197,7 @@ class Emitter64
         void MOVSX16_TO_32(REG_64 source, REG_64 dest);
         void MOVSX16_TO_64(REG_64 source, REG_64 dest);
         void MOVSX32_TO_64(REG_64 source, REG_64 dest);
+        void MOVZX8_TO_32(REG_64 source, REG_64 dest);
         void MOVZX8_TO_64(REG_64 source, REG_64 dest);
         void MOVZX16_TO_64(REG_64 source, REG_64 dest);
 
