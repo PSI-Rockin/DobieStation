@@ -1222,6 +1222,14 @@ void Emitter64::MOVSX32_TO_64(REG_64 source, REG_64 dest)
     modrm(0b11, dest, source);
 }
 
+void Emitter64::MOVZX8_TO_32(REG_64 source, REG_64 dest)
+{
+    rex_r_rm(dest, source);
+    cache->write<uint8_t>(0x0F);
+    cache->write<uint8_t>(0xB6);
+    modrm(0b11, dest, source);
+}
+
 void Emitter64::MOVZX8_TO_64(REG_64 source, REG_64 dest)
 {
     rexw_r_rm(dest, source);

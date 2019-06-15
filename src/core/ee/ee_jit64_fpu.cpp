@@ -357,6 +357,114 @@ void EE_JIT64::floating_point_reciprocal_square_root(EmotionEngine& ee, IR::Inst
     free_xmm_reg(ee, XMM1);
 }
 
+void EE_JIT64::move_control_word_from_floating_point(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPR, REG_STATE::WRITE);
+
+    switch (instr.get_source())
+    {
+        case 0x0:
+            emitter.MOV32_IMM_MEM(0x2E00, dest);
+            break;
+        case 0x1F:
+        {
+            REG_64 R15 = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+            REG_64 R14 = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+
+            emitter.load_addr((uint64_t)&ee.fpu->control, R15);
+
+            emitter.MOV8_FROM_MEM(R15, R14, offsetof(COP1_CONTROL, su));
+            emitter.MOVZX8_TO_32(R14, R14);
+            emitter.SHL32_REG_IMM(3, R14);
+            emitter.OR32_REG(R14, dest);
+
+            emitter.MOV8_FROM_MEM(R15, R14, offsetof(COP1_CONTROL, so));
+            emitter.MOVZX8_TO_32(R14, R14);
+            emitter.SHL32_REG_IMM(4, R14);
+            emitter.OR32_REG(R14, dest);
+
+            emitter.MOV8_FROM_MEM(R15, R14, offsetof(COP1_CONTROL, sd));
+            emitter.MOVZX8_TO_32(R14, R14);
+            emitter.SHL32_REG_IMM(5, R14);
+            emitter.OR32_REG(R14, dest);
+
+            emitter.MOV8_FROM_MEM(R15, R14, offsetof(COP1_CONTROL, si));
+            emitter.MOVZX8_TO_32(R14, R14);
+            emitter.SHL32_REG_IMM(6, R14);
+            emitter.OR32_REG(R14, dest);
+
+            emitter.MOV8_FROM_MEM(R15, R14, offsetof(COP1_CONTROL, u));
+            emitter.MOVZX8_TO_32(R14, R14);
+            emitter.SHL32_REG_IMM(14, R14);
+            emitter.OR32_REG(R14, dest);
+
+            emitter.MOV8_FROM_MEM(R15, R14, offsetof(COP1_CONTROL, o));
+            emitter.MOVZX8_TO_32(R14, R14);
+            emitter.SHL32_REG_IMM(15, R14);
+            emitter.OR32_REG(R14, dest);
+
+            emitter.MOV8_FROM_MEM(R15, R14, offsetof(COP1_CONTROL, d));
+            emitter.MOVZX8_TO_32(R14, R14);
+            emitter.SHL32_REG_IMM(16, R14);
+            emitter.OR32_REG(R14, dest);
+
+            emitter.MOV8_FROM_MEM(R15, R14, offsetof(COP1_CONTROL, i));
+            emitter.MOVZX8_TO_32(R14, R14);
+            emitter.SHL32_REG_IMM(17, R14);
+            emitter.OR32_REG(R14, dest);
+
+            emitter.MOV8_FROM_MEM(R15, R14, offsetof(COP1_CONTROL, condition));
+            emitter.MOVZX8_TO_32(R14, R14);
+            emitter.SHL32_REG_IMM(23, R14);
+            emitter.OR32_REG(R14, dest);
+
+            free_int_reg(ee, R15);
+            free_int_reg(ee, R14);
+            break;
+        }
+        default:
+            emitter.XOR32_REG(dest, dest);
+    }
+}
+
+void EE_JIT64::move_control_word_to_floating_point(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 R15 = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPR, REG_STATE::READ);
+
+    emitter.load_addr((uint64_t)&ee.fpu->control, R15);
+    emitter.MOV32_REG(source, REG_64::EAX);
+
+    emitter.TEST32_REG_IMM((1 << 3), REG_64::EAX);
+    emitter.SETCC_MEM(ConditionCode::NZ, R15, offsetof(COP1_CONTROL, su));
+
+    emitter.TEST32_REG_IMM((1 << 4), REG_64::EAX);
+    emitter.SETCC_MEM(ConditionCode::NZ, R15, offsetof(COP1_CONTROL, so));
+
+    emitter.TEST32_REG_IMM((1 << 5), REG_64::EAX);
+    emitter.SETCC_MEM(ConditionCode::NZ, R15, offsetof(COP1_CONTROL, sd));
+
+    emitter.TEST32_REG_IMM((1 << 6), REG_64::EAX);
+    emitter.SETCC_MEM(ConditionCode::NZ, R15, offsetof(COP1_CONTROL, si));
+
+    emitter.TEST32_REG_IMM((1 << 14), REG_64::EAX);
+    emitter.SETCC_MEM(ConditionCode::NZ, R15, offsetof(COP1_CONTROL, u));
+
+    emitter.TEST32_REG_IMM((1 << 15), REG_64::EAX);
+    emitter.SETCC_MEM(ConditionCode::NZ, R15, offsetof(COP1_CONTROL, o));
+
+    emitter.TEST32_REG_IMM((1 << 16), REG_64::EAX);
+    emitter.SETCC_MEM(ConditionCode::NZ, R15, offsetof(COP1_CONTROL, d));
+
+    emitter.TEST32_REG_IMM((1 << 17), REG_64::EAX);
+    emitter.SETCC_MEM(ConditionCode::NZ, R15, offsetof(COP1_CONTROL, i));
+
+    emitter.TEST32_REG_IMM((1 << 23), REG_64::EAX);
+    emitter.SETCC_MEM(ConditionCode::NZ, R15, offsetof(COP1_CONTROL, condition));
+
+    free_int_reg(ee, R15);
+}
+
 void EE_JIT64::move_from_coprocessor1(EmotionEngine& ee, IR::Instruction& instr)
 {
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
