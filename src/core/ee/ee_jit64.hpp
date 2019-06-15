@@ -6,6 +6,7 @@
 #include "emotion.hpp"
 #include "vu.hpp"
 #include <stack>
+#include <cstddef>
 
 enum class REG_TYPE;
 
