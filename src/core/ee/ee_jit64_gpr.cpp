@@ -1212,7 +1212,29 @@ void EE_JIT64::multiply_word(EmotionEngine& ee, IR::Instruction& instr)
     if (instr.get_dest())
     {
         REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPR, REG_STATE::WRITE);
-        emitter.MOVSX32_TO_64(LO, dest);
+        emitter.MOV64_MR(LO, dest);
+    }
+
+    free_int_reg(ee, RDX);
+}
+
+void EE_JIT64::multiply_word1(EmotionEngine& ee, IR::Instruction& instr)
+{
+    REG_64 RDX = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD, REG_64::RDX);
+    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPR, REG_STATE::READ);
+    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPR, REG_STATE::READ);
+    REG_64 LO1 = alloc_reg(ee, (int)EE_SpecialReg::LO, REG_TYPE::GPR, REG_STATE::WRITE);
+    REG_64 HI1 = alloc_reg(ee, (int)EE_SpecialReg::HI, REG_TYPE::GPR, REG_STATE::WRITE);
+
+    emitter.MOVSX32_TO_64(source, REG_64::RAX);
+    emitter.IMUL32(source2);
+    emitter.MOVSX32_TO_64(REG_64::RAX, LO1);
+    emitter.MOVSX32_TO_64(RDX, HI1);
+
+    if (instr.get_dest())
+    {
+        REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPR, REG_STATE::WRITE);
+        emitter.MOV64_MR(LO1, dest);
     }
 
     free_int_reg(ee, RDX);

@@ -169,6 +169,7 @@ private:
     void multiply_unsigned_word(EmotionEngine& ee, IR::Instruction& instr);
     void multiply_unsigned_word1(EmotionEngine& ee, IR::Instruction& instr);
     void multiply_word(EmotionEngine& ee, IR::Instruction& instr);
+    void multiply_word1(EmotionEngine& ee, IR::Instruction& instr);
     void negate_doubleword_reg(EmotionEngine& ee, IR::Instruction &instr);
     void negate_word_reg(EmotionEngine& ee, IR::Instruction &instr);
     void nor_reg(EmotionEngine& ee, IR::Instruction& instr);

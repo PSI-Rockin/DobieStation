@@ -1733,10 +1733,14 @@ void EE_JitTranslator::translate_op_mmi(uint32_t opcode, uint32_t PC, std::vecto
         }
         case 0x18:
             // MULT1
-            Errors::print_warning("[EE_JIT] Unrecognized mmi op MULT1\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            instr.op = IR::Opcode::MultiplyWord1;
+            instr.set_dest((opcode >> 11) & 0x1F);
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_source2((opcode >> 16) & 0x1F);
             instrs.push_back(instr);
             break;
+        }
         case 0x19:
             // MULTU1
         {

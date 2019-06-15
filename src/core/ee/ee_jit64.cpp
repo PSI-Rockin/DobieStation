@@ -411,6 +411,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::MultiplyWord:
             multiply_word(ee, instr);
             break;
+        case IR::Opcode::MultiplyWord1:
+            multiply_word1(ee, instr);
+            break;
         case IR::Opcode::NegateDoublewordReg:
             negate_doubleword_reg(ee, instr);
             break;
