@@ -237,6 +237,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::DivideUnsignedWord:
             divide_unsigned_word(ee, instr);
             break;
+        case IR::Opcode::DivideUnsignedWord1:
+            divide_unsigned_word1(ee, instr);
+            break;
         case IR::Opcode::DoublewordShiftLeftLogical:
             doubleword_shift_left_logical(ee, instr);
             break;

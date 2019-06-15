@@ -456,6 +456,32 @@ void EE_JIT64::divide_unsigned_word(EmotionEngine& ee, IR::Instruction& instr)
     emitter.set_jump_dest(end);
 }
 
+void EE_JIT64::divide_unsigned_word1(EmotionEngine& ee, IR::Instruction& instr)
+{
+    // idiv result is stored in RAX:RDX, so we allocate those registers first.
+    REG_64 RDX = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD, REG_64::RDX);
+    REG_64 dividend = alloc_reg(ee, instr.get_source(), REG_TYPE::GPR, REG_STATE::READ);
+    REG_64 divisor = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPR, REG_STATE::READ);
+    REG_64 LO1 = alloc_reg(ee, (int)EE_SpecialReg::LO1, REG_TYPE::GPR, REG_STATE::WRITE);
+    REG_64 HI1 = alloc_reg(ee, (int)EE_SpecialReg::HI1, REG_TYPE::GPR, REG_STATE::WRITE);
+
+    emitter.TEST32_REG(divisor, divisor);
+    uint8_t *label1 = emitter.JCC_NEAR_DEFERRED(ConditionCode::Z);
+    emitter.MOV32_REG(dividend, REG_64::RAX);
+    emitter.XOR32_REG(RDX, RDX);
+    emitter.DIV32(divisor);
+    emitter.MOVSX32_TO_64(REG_64::RAX, LO1);
+    emitter.MOVSX32_TO_64(RDX, HI1);
+    uint8_t *end = emitter.JMP_NEAR_DEFERRED();
+    free_int_reg(ee, RDX);
+
+    emitter.set_jump_dest(label1);
+    emitter.MOVSX32_TO_64(dividend, HI1);
+    emitter.MOV64_OI(-1, LO1);
+
+    emitter.set_jump_dest(end);
+}
+
 void EE_JIT64::divide_word(EmotionEngine& ee, IR::Instruction &instr)
 {
     /*

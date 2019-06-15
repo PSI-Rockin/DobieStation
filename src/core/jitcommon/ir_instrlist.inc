@@ -124,6 +124,7 @@ INSTR(SubtractUnsignedWord)
 INSTR(DivideWord)
 INSTR(DivideWord1)
 INSTR(DivideUnsignedWord)
+INSTR(DivideUnsignedWord1)
 
 INSTR(FloatingPointAbsoluteValue)
 INSTR(FloatingPointNegate)
