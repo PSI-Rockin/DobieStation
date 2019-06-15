@@ -231,6 +231,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::DivideWord:
             divide_word(ee, instr);
             break;
+        case IR::Opcode::DivideWord1:
+            divide_word1(ee, instr);
+            break;
         case IR::Opcode::DivideUnsignedWord:
             divide_unsigned_word(ee, instr);
             break;
@@ -380,9 +383,6 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             break;
         case IR::Opcode::MoveToCoprocessor1:
             move_to_coprocessor1(ee, instr);
-            break;
-        case IR::Opcode::MoveToLOHI:
-            move_to_lo_hi(ee, instr);
             break;
         case IR::Opcode::MoveXmmReg:
             move_xmm_reg(ee, instr);

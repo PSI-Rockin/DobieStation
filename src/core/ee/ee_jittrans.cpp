@@ -1745,10 +1745,13 @@ void EE_JitTranslator::translate_op_mmi(uint32_t opcode, uint32_t PC, std::vecto
             break;
         case 0x1A:
             // DIV1
-            Errors::print_warning("[EE_JIT] Unrecognized mmi op DIV1\n", op);
-            fallback_interpreter(instr, opcode);
+        {
+            instr.op = IR::Opcode::DivideWord1;
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_source2((opcode >> 16) & 0x1F);
             instrs.push_back(instr);
             break;
+        }
         case 0x1B:
             // DIVU1
             Errors::print_warning("[EE_JIT] Unrecognized mmi op DIVU1\n", op);

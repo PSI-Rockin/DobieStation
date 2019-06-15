@@ -410,7 +410,10 @@ void EE_JIT64::parallel_divide_word(EmotionEngine& ee, IR::Instruction& instr)
     uint8_t *label1_1 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
     emitter.CMP32_IMM(0xFFFFFFFF, divisor64);
     uint8_t *label1_2 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
-    move_to_lo_hi_imm(ee, (int64_t)(int32_t)0x80000000, 0);
+    emitter.MOV64_OI((int64_t)(int32_t)0x80000000, REG_64::RAX);
+    emitter.MOVQ_TO_XMM(REG_64::RAX, LO);
+    emitter.MOV64_OI(0, REG_64::RAX);
+    emitter.MOVQ_TO_XMM(REG_64::RAX, HI);
     uint8_t *lower_end_1 = emitter.JMP_NEAR_DEFERRED();
 
     emitter.set_jump_dest(label1_1);
@@ -445,7 +448,10 @@ void EE_JIT64::parallel_divide_word(EmotionEngine& ee, IR::Instruction& instr)
     uint8_t *label3_1 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
     emitter.CMP32_IMM(0xFFFFFFFF, divisor64);
     uint8_t *label3_2 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
-    move_to_lo_hi_imm(ee, (int64_t)(int32_t)0x80000000, 0);
+    emitter.MOV64_OI((int64_t)(int32_t)0x80000000, REG_64::RAX);
+    emitter.PINSRQ_XMM(1, REG_64::RAX, LO);
+    emitter.MOV64_OI(0, REG_64::RAX);
+    emitter.PINSRQ_XMM(1, REG_64::RAX, HI);
     uint8_t *upper_end_1 = emitter.JMP_NEAR_DEFERRED();
 
     emitter.set_jump_dest(label3_1);
@@ -457,8 +463,8 @@ void EE_JIT64::parallel_divide_word(EmotionEngine& ee, IR::Instruction& instr)
     emitter.IDIV32(divisor64);
     emitter.MOVSX32_TO_64(REG_64::RAX, REG_64::RAX);
     emitter.MOVSX32_TO_64(RDX, RDX);
-    emitter.MOVQ_TO_XMM(REG_64::RAX, LO);
-    emitter.MOVQ_TO_XMM(RDX, HI);
+    emitter.PINSRQ_XMM(1, REG_64::RAX, LO);
+    emitter.PINSRQ_XMM(1, RDX, HI);
     uint8_t *upper_end_2 = emitter.JMP_NEAR_DEFERRED();
 
     emitter.set_jump_dest(label4);

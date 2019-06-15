@@ -444,7 +444,8 @@ void EE_JIT64::divide_unsigned_word(EmotionEngine& ee, IR::Instruction& instr)
     emitter.MOV32_REG(dividend, REG_64::RAX);
     emitter.XOR32_REG(RDX, RDX);
     emitter.DIV32(divisor);
-    move_to_lo_hi(ee, REG_64::RAX, RDX, LO, HI);
+    emitter.MOVSX32_TO_64(REG_64::RAX, LO);
+    emitter.MOVSX32_TO_64(RDX, HI);
     uint8_t *end = emitter.JMP_NEAR_DEFERRED();
     free_int_reg(ee, RDX);
 
@@ -507,7 +508,8 @@ void EE_JIT64::divide_word(EmotionEngine& ee, IR::Instruction &instr)
     uint8_t *label1_1 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
     emitter.CMP32_IMM(0xFFFFFFFF, divisor);
     uint8_t *label1_2 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
-    move_to_lo_hi_imm(ee, (int64_t)(int32_t)0x80000000, 0);
+    emitter.MOV64_OI((int64_t)(int32_t)0x80000000, LO);
+    emitter.MOV64_OI(0, HI);
     uint8_t *end_1 = emitter.JMP_NEAR_DEFERRED();
 
     emitter.set_jump_dest(label1_1);
@@ -517,7 +519,8 @@ void EE_JIT64::divide_word(EmotionEngine& ee, IR::Instruction &instr)
     emitter.MOV32_REG(dividend, REG_64::RAX);
     emitter.CDQ();
     emitter.IDIV32(divisor);
-    move_to_lo_hi(ee, REG_64::RAX, RDX, LO, HI);
+    emitter.MOVSX32_TO_64(REG_64::RAX, LO);
+    emitter.MOVSX32_TO_64(RDX, HI);
     uint8_t *end_2 = emitter.JMP_NEAR_DEFERRED();
 
     emitter.set_jump_dest(label2);
@@ -527,7 +530,50 @@ void EE_JIT64::divide_word(EmotionEngine& ee, IR::Instruction &instr)
     emitter.DEC8(REG_64::RAX);
     emitter.MOVSX8_TO_64(REG_64::RAX, REG_64::RAX);
     emitter.MOVSX32_TO_64(dividend, dividend);
-    move_to_lo_hi(ee, REG_64::RAX, dividend, LO, HI);
+    emitter.MOVSX8_TO_64(REG_64::RAX, LO);
+    emitter.MOVSX32_TO_64(dividend, HI);
+
+    emitter.set_jump_dest(end_1);
+    emitter.set_jump_dest(end_2);
+
+    free_int_reg(ee, RDX);
+}
+
+void EE_JIT64::divide_word1(EmotionEngine& ee, IR::Instruction &instr)
+{
+    // idiv result is stored in RAX:RDX, so we allocate those registers first.
+    REG_64 RDX = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD, REG_64::RDX);
+    REG_64 dividend = alloc_reg(ee, instr.get_source(), REG_TYPE::GPR, REG_STATE::READ);
+    REG_64 divisor = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPR, REG_STATE::READ);
+    REG_64 LO1 = alloc_reg(ee, (int)EE_SpecialReg::LO1, REG_TYPE::GPR, REG_STATE::WRITE);
+    REG_64 HI1 = alloc_reg(ee, (int)EE_SpecialReg::HI1, REG_TYPE::GPR, REG_STATE::WRITE);
+
+    emitter.CMP32_IMM(0x80000000, dividend);
+    uint8_t *label1_1 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
+    emitter.CMP32_IMM(0xFFFFFFFF, divisor);
+    uint8_t *label1_2 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
+    emitter.MOV64_OI((int64_t)(int32_t)0x80000000, LO1);
+    emitter.MOV64_OI(0, HI1);
+    uint8_t *end_1 = emitter.JMP_NEAR_DEFERRED();
+
+    emitter.set_jump_dest(label1_1);
+    emitter.set_jump_dest(label1_2);
+    emitter.TEST32_REG(divisor, divisor);
+    uint8_t* label2 = emitter.JCC_NEAR_DEFERRED(ConditionCode::Z);
+    emitter.MOV32_REG(dividend, REG_64::RAX);
+    emitter.CDQ();
+    emitter.IDIV32(divisor);
+    emitter.MOVSX32_TO_64(REG_64::RAX, LO1);
+    emitter.MOVSX32_TO_64(RDX, HI1);
+    uint8_t *end_2 = emitter.JMP_NEAR_DEFERRED();
+
+    emitter.set_jump_dest(label2);
+    emitter.TEST32_REG(dividend, dividend);
+    emitter.SETCC_REG(ConditionCode::L, REG_64::RAX);
+    emitter.SHL8_REG_1(REG_64::RAX);
+    emitter.DEC8(REG_64::RAX);
+    emitter.MOVSX8_TO_64(REG_64::RAX, LO1);
+    emitter.MOVSX32_TO_64(dividend, HI1);
 
     emitter.set_jump_dest(end_1);
     emitter.set_jump_dest(end_2);
@@ -1024,29 +1070,6 @@ void EE_JIT64::move_doubleword_reg(EmotionEngine& ee, IR::Instruction& instr)
     emitter.MOV64_MR(source, dest);
 }
 
-void EE_JIT64::move_to_lo_hi(EmotionEngine& ee, IR::Instruction &instr)
-{
-    REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPR, REG_STATE::READ);
-    REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPR, REG_STATE::READ);
-    REG_64 LO = alloc_reg(ee, (int)EE_SpecialReg::LO, REG_TYPE::GPR, REG_STATE::WRITE);
-    REG_64 HI = alloc_reg(ee, (int)EE_SpecialReg::HI, REG_TYPE::GPR, REG_STATE::WRITE);
-    move_to_lo_hi(ee, source, source2, LO, HI);
-}
-
-void EE_JIT64::move_to_lo_hi(EmotionEngine& ee, REG_64 loSource, REG_64 hiSource, REG_64 loDest, REG_64 hiDest)
-{
-    emitter.MOVSX32_TO_64(loSource, loDest);
-    emitter.MOVSX32_TO_64(hiSource, hiDest);
-}
-
-void EE_JIT64::move_to_lo_hi_imm(EmotionEngine& ee, int64_t loValue, int64_t hiValue)
-{
-    REG_64 LO = alloc_reg(ee, (int)EE_SpecialReg::LO, REG_TYPE::GPR, REG_STATE::WRITE);
-    REG_64 HI = alloc_reg(ee, (int)EE_SpecialReg::HI, REG_TYPE::GPR, REG_STATE::WRITE);
-    emitter.MOV32_REG_IMM(loValue, LO);
-    emitter.MOV32_REG_IMM(hiValue, HI);
-}
-
 void EE_JIT64::move_word_reg(EmotionEngine& ee, IR::Instruction& instr)
 {
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPR, REG_STATE::READ);
@@ -1113,7 +1136,8 @@ void EE_JIT64::multiply_unsigned_word(EmotionEngine& ee, IR::Instruction& instr)
 
     emitter.MOVSX32_TO_64(source, REG_64::RAX);
     emitter.MUL32(source2);
-    move_to_lo_hi(ee, REG_64::RAX, RDX, LO, HI);
+    emitter.MOVSX32_TO_64(REG_64::RAX, LO);
+    emitter.MOVSX32_TO_64(RDX, HI);
 
     if (instr.get_dest())
     {
@@ -1134,7 +1158,8 @@ void EE_JIT64::multiply_word(EmotionEngine& ee, IR::Instruction& instr)
 
     emitter.MOVSX32_TO_64(source, REG_64::RAX);
     emitter.IMUL32(source2);
-    move_to_lo_hi(ee, REG_64::RAX, RDX, LO, HI);
+    emitter.MOVSX32_TO_64(REG_64::RAX, LO);
+    emitter.MOVSX32_TO_64(RDX, HI);
 
     if (instr.get_dest())
     {

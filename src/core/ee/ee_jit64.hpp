@@ -108,6 +108,7 @@ private:
     void clear_word_reg(EmotionEngine& ee, IR::Instruction& instr);
     void divide_unsigned_word(EmotionEngine& ee, IR::Instruction &instr);
     void divide_word(EmotionEngine& ee, IR::Instruction &instr);
+    void divide_word1(EmotionEngine& ee, IR::Instruction &instr);
     void doubleword_shift_left_logical(EmotionEngine& ee, IR::Instruction& instr);
     void doubleword_shift_left_logical_immediate(EmotionEngine& e, IR::Instruction& instr);
     void doubleword_shift_left_logical_variable(EmotionEngine& ee, IR::Instruction& instr);
@@ -160,9 +161,6 @@ private:
     void move_doubleword_reg(EmotionEngine& ee, IR::Instruction& instr);
     void move_from_coprocessor1(EmotionEngine& ee, IR::Instruction &instr);
     void move_to_coprocessor1(EmotionEngine& ee, IR::Instruction &instr);
-    void move_to_lo_hi(EmotionEngine& ee, IR::Instruction &instr);
-    void move_to_lo_hi(EmotionEngine& ee, REG_64 loSource, REG_64 hiSource, REG_64 loDest, REG_64 hiDest);
-    void move_to_lo_hi_imm(EmotionEngine& ee, int64_t loValue, int64_t hiValue);
     void move_word_reg(EmotionEngine& ee, IR::Instruction& instr);
     void move_quadword_reg(EmotionEngine& ee, IR::Instruction& instr);
     void move_xmm_reg(EmotionEngine& ee, IR::Instruction& instr);
