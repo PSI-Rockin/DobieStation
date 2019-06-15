@@ -1668,14 +1668,13 @@ void EE_JitTranslator::translate_op_mmi(uint32_t opcode, uint32_t PC, std::vecto
     {
         case 0x00:
             // MADD
-            Errors::print_warning("[EE_JIT] Unrecognized mmi op MADD\n", op);
-            fallback_interpreter(instr, opcode);
-            instrs.push_back(instr);
-            break;
+            // TODO: Overflow?
         case 0x01:
             // MADDU
-            Errors::print_warning("[EE_JIT] Unrecognized mmi op MADDU\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::MultiplyAddUnsignedWord;
+            instr.set_dest((opcode >> 11) & 0x1F);
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_source2((opcode >> 16) & 0x1F);
             instrs.push_back(instr);
             break;
         case 0x04:
@@ -1758,14 +1757,13 @@ void EE_JitTranslator::translate_op_mmi(uint32_t opcode, uint32_t PC, std::vecto
             break;
         case 0x20:
             // MADD1
-            Errors::print_warning("[EE_JIT] Unrecognized mmi op MADD1\n", op);
-            fallback_interpreter(instr, opcode);
-            instrs.push_back(instr);
-            break;
+            // TODO: Overflow?
         case 0x21:
             // MADDU1
-            Errors::print_warning("[EE_JIT] Unrecognized mmi op MADDU1\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::MultiplyAddUnsignedWord1;
+            instr.set_dest((opcode >> 11) & 0x1F);
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_source2((opcode >> 16) & 0x1F);
             instrs.push_back(instr);
             break;
         case 0x28:
