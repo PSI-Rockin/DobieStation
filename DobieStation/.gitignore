@@ -10,6 +10,8 @@ application/*.cpp
 application/*.h
 
 # Dobie artifacts
-ee_log.txt
-microprogram1.txt
+*.txt
 *.vcxproj.user
+
+# VS artifacts
+enc_temp_folder/*

@@ -1,6 +1,7 @@
 #ifndef GAMEPAD_HPP
 #define GAMEPAD_HPP
 #include <cstdint>
+#include <fstream>
 
 enum class PAD_BUTTON
 {
@@ -22,6 +23,18 @@ enum class PAD_BUTTON
     SQUARE
 };
 
+enum class JOYSTICK
+{
+    RIGHT,
+    LEFT
+};
+
+enum class JOYSTICK_AXIS
+{
+    X,
+    Y
+};
+
 enum PAD_MODE
 {
     DIGITAL = 0x41,
@@ -36,6 +49,7 @@ class Gamepad
         uint8_t rumble_values[8];
         uint8_t mode_lock;
         uint16_t buttons;
+        uint8_t joysticks[2][2];
         uint8_t button_pressure[16];
         uint8_t command;
         int command_length;
@@ -64,9 +78,13 @@ class Gamepad
         void reset();
         void press_button(PAD_BUTTON button);
         void release_button(PAD_BUTTON button);
+        void update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t val);
 
         uint8_t start_transfer(uint8_t value);
         uint8_t write_SIO(uint8_t value);
+
+        void load_state(std::ifstream& state);
+        void save_state(std::ofstream& state);
 };
 
 #endif // GAMEPAD_HPP

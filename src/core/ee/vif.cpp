@@ -34,6 +34,12 @@ void VectorInterface::reset()
     vif_stop = false;
     mark_detected = false;
     flush_stall = false;
+
+    if (id)
+        mem_mask = 0x3FF;
+    else
+        mem_mask = 0xFF;
+
     if(vu->get_id() == 1)
         VU_JIT::reset();
 }
@@ -71,6 +77,21 @@ void VectorInterface::update(int cycles)
 {
     //Since the loop processes per-word, we need to multiply cycles by 4
     //This allows us to process one quadword per bus cycle
+    if (fifo_reverse)
+    {
+        if (FIFO.size() <= 60)
+        {
+            uint128_t fifo_data;
+            while (cycles--)
+            {
+                fifo_data = gif->read_GSFIFO();
+                for (int i = 0; i < 4; i++)
+                    FIFO.push(fifo_data._u32[i]);
+            }
+        }
+        return;
+    }
+        
     int run_cycles = cycles << 2;
    
     if (vif_stalled & STALL_MSKPATH3)
@@ -357,16 +378,16 @@ void VectorInterface::MSCAL(uint32_t addr)
 {
     vu->start_program(addr);
 
-    ITOP = ITOPS;
+    ITOP = ITOPS & mem_mask;
 
     if (vu->get_id())
     {
         //Double buffering
-        TOP = TOPS;
+        TOP = TOPS & mem_mask;
         if (DBF)
             TOPS = BASE;
         else
-            TOPS = BASE + OFST;
+            TOPS = (BASE + OFST);
         DBF = !DBF;
     }
 }
@@ -453,7 +474,8 @@ void VectorInterface::handle_UNPACK_masking(uint128_t& quad)
 
 void VectorInterface::handle_UNPACK_mode(uint128_t& quad)
 {
-    if (MODE)
+    //Do not apply addition decompression when the format is V4-5
+    if (MODE && unpack.cmd != 0xF)
     {
         uint8_t tempmask;
 
@@ -839,6 +861,20 @@ bool VectorInterface::feed_DMA(uint128_t quad)
     return true;
 }
 
+uint128_t VectorInterface::readFIFO()
+{
+    uint128_t quad;
+    if (FIFO.empty())
+        return gif->read_GSFIFO();
+
+    for (int i = 0; i < 4; i++)
+    {
+        quad._u32[i] = FIFO.front();
+        FIFO.pop();
+    }
+    return quad;
+}
+
 uint32_t VectorInterface::get_stat()
 {
     uint32_t reg = 0;
@@ -849,6 +885,7 @@ uint32_t VectorInterface::get_stat()
     reg |= vif_stop << 8;
     reg |= (vif_stalled & STALL_IBIT) << 10;
     reg |= vif_interrupt << 11;
+    reg |= fifo_reverse << 23;
     reg |= ((FIFO.size() + 3) / 4) << 24;
     //printf("[VIF] Get STAT: $%08X\n", reg);
     return reg;
@@ -875,6 +912,11 @@ uint32_t VectorInterface::get_code()
     return CODE;
 }
 
+uint32_t VectorInterface::get_top()
+{
+    return TOP;
+}
+
 uint32_t VectorInterface::get_err()
 {
     uint32_t reg = 0;
@@ -885,6 +927,15 @@ uint32_t VectorInterface::get_err()
     return reg;
 }
 
+void VectorInterface::set_stat(uint32_t value)
+{
+    if ((!fifo_reverse && ((value >> 23) & 0x1)) || (fifo_reverse && !((value >> 23) & 0x1)))
+    {
+        while (!FIFO.empty())
+            FIFO.pop();
+    }
+    fifo_reverse = (value >> 23) & 0x1;
+}
 void VectorInterface::set_mark(uint32_t value)
 {
     MARK = value;

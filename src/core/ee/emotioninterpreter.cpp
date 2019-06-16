@@ -141,6 +141,7 @@ void EmotionInterpreter::interpret(EmotionEngine &cpu, uint32_t instruction)
             swr(cpu, instruction);
             break;
         case 0x2F:
+            cache(cpu, instruction);
             break;
         case 0x31:
             lwc1(cpu, instruction);
@@ -794,20 +795,48 @@ void EmotionInterpreter::sd(EmotionEngine &cpu, uint32_t instruction)
     cpu.write64(addr, cpu.get_gpr<uint64_t>(source));
 }
 
+void EmotionInterpreter::cache(EmotionEngine &cpu, uint32_t instruction)
+{
+    uint16_t op = (instruction >> 16) & 0x1F;
+    int16_t offset = (int16_t)(instruction & 0xFFFF);
+    uint32_t base = (instruction >> 21) & 0x1F;
+    uint32_t addr = cpu.get_gpr<uint32_t>(base);
+    addr += offset;
+    switch (op)
+    {
+        case 0x07:
+            cpu.invalidate_icache_indexed(addr);
+            break;
+        default:
+            //Do nothing, we don't emulate the other caches
+            break;
+    }
+}
+
 void EmotionInterpreter::cop(EmotionEngine &cpu, uint32_t instruction)
 {
     uint16_t op = (instruction >> 21) & 0x1F;
     uint8_t cop_id = ((instruction >> 26) & 0x3);
     
-    if (cop_id == 2)
-    {
-        cpu.cop2_updatevu0();
-    }
     if (cop_id == 2 && op >= 0x10)
     {
+        //Apparently, any COP2 instruction that is executed while VU0 is running causes COP2 to stall, so lets do that
+        //Dragons Quest 8 is a good test for this as it does COP2 while VU0 is running.
+        if (cpu.vu0_wait())
+        {
+            cpu.set_PC(cpu.get_PC() - 4);
+            return;
+        }
+
         cpu.cop2_special(cpu, instruction);
         return;
     }
+    //Update VU0 when doing CFC/CTC commands
+    if (cop_id == 2 && op != 0x8 && !(instruction & 0x1))
+    {
+        cpu.cop2_updatevu0();
+    }
+
     switch (op | (cop_id * 0x100))
     {
         case 0x000:
@@ -824,6 +853,7 @@ void EmotionInterpreter::cop(EmotionEngine &cpu, uint32_t instruction)
             switch (op2)
             {
                 case 0x2:
+                    cpu.tlbwi();
                     break;
                 case 0x18:
                     cpu.eret();

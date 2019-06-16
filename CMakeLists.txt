@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD 11)
 
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
-set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-pthread -O2")
+set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-pthread -O2 -ggdb")
 
 find_package(Qt5Core REQUIRED)
 find_package(Qt5Widgets REQUIRED)
@@ -72,12 +72,17 @@ set(SOURCES
         src/core/gsthread.cpp
         src/core/gsregisters.cpp
         src/core/gscontext.cpp
+	src/core/scheduler.cpp
 	src/core/serialize.cpp
 	src/core/sif.cpp
 	src/qt/emuthread.cpp
         src/qt/emuwindow.cpp
+        src/qt/settingswindow.cpp
+        src/qt/renderwidget.cpp
+        src/qt/gamelistwidget.cpp
         src/qt/main.cpp
 	src/qt/settings.cpp
+	src/qt/bios.cpp
         )
 
 set(HEADERS
@@ -137,10 +142,15 @@ set(HEADERS
         src/core/circularFIFO.hpp
 	src/core/gscontext.hpp
 	src/core/int128.hpp
+	src/core/scheduler.hpp
 	src/core/sif.hpp
 	src/qt/emuthread.hpp
         src/qt/emuwindow.hpp
+        src/qt/settingswindow.hpp
+        src/qt/renderwidget.hpp
+        src/qt/gamelistwidget.hpp
 	src/qt/settings.hpp
+	src/qt/bios.hpp
         )
 
 add_executable(DobieStation ${SOURCES} ${HEADERS})

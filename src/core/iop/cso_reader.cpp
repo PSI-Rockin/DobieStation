@@ -311,30 +311,18 @@ bool CSO_Reader::open(const char* path)
 
 void CSO_Reader::close()
 {
-    if (m_inflate)
-    {
-        libdeflate_free_decompressor(m_inflate);
-        m_inflate = nullptr;
-    }
+    libdeflate_free_decompressor(m_inflate);
+    m_inflate = nullptr;
     
-    if (m_readbuf)
-    {
-        delete[] m_readbuf;
-        m_readbuf = nullptr;
-    }
+    delete[] m_readbuf;
+    m_readbuf = nullptr;
+
+    delete[] m_frame;
+    m_frame = nullptr;
     
-    if (m_frame)
-    {
-        delete[] m_frame;
-        m_frame = nullptr;
-    }
-    
-    if (m_indices)
-    {
-        delete[] m_indices;
-        m_indices = nullptr;
-    }
-    
+    delete[] m_indices;
+    m_indices = nullptr;
+
     if (m_file.is_open())
         m_file.close();
     

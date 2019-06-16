@@ -1,5 +1,7 @@
+#include <algorithm>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include "iop.hpp"
 #include "iop_interpreter.hpp"
 
@@ -32,11 +34,14 @@ void IOP::reset()
 {
     cop0.reset();
     PC = 0xBFC00000;
+    memset(icache, 0, sizeof(icache));
     gpr[0] = 0;
     branch_delay = 0;
     will_branch = false;
     can_disassemble = false;
     wait_for_IRQ = false;
+    muldiv_delay = 0;
+    cycles_to_run = 0;
 }
 
 uint32_t IOP::translate_addr(uint32_t addr)
@@ -56,10 +61,14 @@ void IOP::run(int cycles)
 {
     if (!wait_for_IRQ)
     {
-        while (cycles--)
+        cycles_to_run += cycles;
+        while (cycles_to_run > 0)
         {
-            uint32_t instr = read32(PC);
-            if (can_disassemble && PC != 0xB89C && PC != 0xB8A0 && PC != 0xBB9C && PC != 0xBBA0)
+            cycles_to_run--;
+            if (muldiv_delay > 0)
+                muldiv_delay--;
+            uint32_t instr = read_instr(PC);
+            if (can_disassemble)
             {
                 printf("[IOP] [$%08X] $%08X - %s\n", PC, instr, EmotionDisasm::disasm_instr(instr, PC).c_str());
                 //print_state();
@@ -84,6 +93,8 @@ void IOP::run(int cycles)
             }
         }
     }
+    else if (muldiv_delay)
+        muldiv_delay--;
 
     if (cop0.status.IEc && (cop0.status.Im & cop0.cause.int_pending))
         interrupt();
@@ -91,6 +102,7 @@ void IOP::run(int cycles)
 
 void IOP::print_state()
 {
+    printf("pc:$%08X\n", PC);
     for (int i = 1; i < 32; i++)
     {
         printf("%s:$%08X", REG(i), get_gpr(i));
@@ -99,6 +111,7 @@ void IOP::print_state()
         else
             printf("\t");
     }
+    printf("lo:$%08X\thi:$%08X\n", LO, HI);
 }
 
 void IOP::set_disassembly(bool dis)
@@ -161,7 +174,7 @@ void IOP::interrupt_check(bool i_pass)
 void IOP::interrupt()
 {
     printf("[IOP] Processing interrupt!\n");
-    handle_exception(0x80000080, 0x00);
+    handle_exception(0x80000084, 0x00);
     unhalt();
 }
 
@@ -221,7 +234,36 @@ uint32_t IOP::read32(uint32_t addr)
     {
         Errors::die("[IOP] Invalid read32 from $%08X!\n", addr);
     }
+    if (addr == 0xFFFE0130)
+        return cache_control;
     return e->iop_read32(translate_addr(addr));
+}
+
+uint32_t IOP::read_instr(uint32_t addr)
+{
+    //Uncached RAM waitstate. In the future might be good idea to do BIOS as well
+    if (addr >= 0xA0000000 || !(cache_control & (1 << 11)))
+    {
+        cycles_to_run -= 4;
+        muldiv_delay = std::max(muldiv_delay - 4, 0);
+    }
+    else
+    {
+        int index = (addr >> 4) & 0xFF;
+        uint32_t tag = (addr & 0x1FFFFFFF) >> 12;
+        if (!icache[index].valid || icache[index].tag != tag)
+        {
+            //Cache miss: load 4 words
+            //I don't know what the exact count should be. 16 (4 * 4) breaks Fatal Frame 2.
+            //Current theory is 4 cycles for the first load + 1 * 3 cycles for sequential loads
+            //printf("[IOP] i$ miss $%08X\n", addr);
+            cycles_to_run -= 7;
+            muldiv_delay = std::max(muldiv_delay - 7, 0);
+            icache[index].valid = true;
+            icache[index].tag = tag;
+        }
+    }
+    return e->iop_read32(addr & 0x1FFFFFFF);
 }
 
 void IOP::write8(uint32_t addr, uint8_t value)
@@ -245,10 +287,17 @@ void IOP::write16(uint32_t addr, uint16_t value)
 void IOP::write32(uint32_t addr, uint32_t value)
 {
     if (cop0.status.IsC)
+    {
+        //printf("Clearing IOP cache ($%08X)\n", addr);
+        icache[(addr >> 4) & 0xFF].valid = false;
         return;
+    }
     if (addr & 0x3)
     {
         Errors::die("[IOP] Invalid write32 to $%08X!\n", addr);
     }
+    //Check for cache control here, as it's used internally by the IOP
+    if (addr == 0xFFFE0130)
+        cache_control = value;
     e->iop_write32(translate_addr(addr), value);
 }

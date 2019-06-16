@@ -18,15 +18,27 @@ struct Deci2Handler
     uint32_t addr;
 };
 
+struct EE_ICacheLine
+{
+    bool lfu[2];
+    uint32_t tag[2];
+};
+
 class EmotionEngine
 {
     private:
         Emulator* e;
 
+        uint64_t cycle_count;
+        uint64_t cop2_last_cycle;
+        int cycles_to_run;
+
         Cop0* cp0;
         Cop1* fpu;
         VectorUnit* vu0;
         VectorUnit* vu1;
+
+        uint8_t** tlb_map;
 
         //Each register is 128-bit
         uint8_t gpr[32 * sizeof(uint64_t) * 2];
@@ -34,12 +46,12 @@ class EmotionEngine
         uint32_t PC, new_PC;
         uint64_t SA;
 
+        EE_ICacheLine icache[128];
+
         bool wait_for_IRQ;
         bool branch_on;
         bool can_disassemble;
         int delay_slot;
-
-        uint8_t* scratchpad;
 
         Deci2Handler deci2handlers[128];
         int deci2size;
@@ -48,11 +60,15 @@ class EmotionEngine
         void handle_exception(uint32_t new_addr, uint8_t code);
         void deci2call(uint32_t func, uint32_t param);
     public:
-        EmotionEngine(Cop0* cp0, Cop1* fpu, Emulator* e, uint8_t* sp, VectorUnit* vu0, VectorUnit* vu1);
+        EmotionEngine(Cop0* cp0, Cop1* fpu, Emulator* e, VectorUnit* vu0, VectorUnit* vu1);
         static const char* REG(int id);
         static const char* SYSCALL(int id);
         void reset();
-        int run(int cycles_to_run);
+        void init_tlb();
+        int run(int cycles);
+        uint64_t get_cycle_count();
+        uint64_t get_cop2_last_cycle();
+        void set_cop2_last_cycle(uint64_t value);
         void halt();
         void unhalt();
         void print_state();
@@ -71,6 +87,8 @@ class EmotionEngine
         bool check_interlock();
         void clear_interlock();
         bool vu0_wait();
+
+        uint32_t read_instr(uint32_t address);
 
         uint8_t read8(uint32_t address);
         uint16_t read16(uint32_t address);
@@ -96,6 +114,8 @@ class EmotionEngine
         void lqc2(uint32_t addr, int index);
         void swc1(uint32_t addr, int index);
         void sqc2(uint32_t addr, int index);
+
+        void invalidate_icache_indexed(uint32_t addr);
 
         void mfhi(int index);
         void mthi(int index);
@@ -123,6 +143,8 @@ class EmotionEngine
         void set_int0_signal(bool value);
         void set_int1_signal(bool value);
 
+        void tlbwi();
+        void tlbp();
         void eret();
         void ei();
         void di();
@@ -159,9 +181,25 @@ inline void EmotionEngine::set_gpr(int id, T value, int offset)
         *(T*)&gpr[(id * sizeof(uint64_t) * 2) + (offset * sizeof(T))] = value;
 }
 
+inline uint64_t EmotionEngine::get_cycle_count()
+{
+    return cycle_count - cycles_to_run;
+}
+
+inline uint64_t EmotionEngine::get_cop2_last_cycle()
+{
+    return cop2_last_cycle;
+}
+
+inline void EmotionEngine::set_cop2_last_cycle(uint64_t value)
+{
+    cop2_last_cycle = value;
+}
+
 inline void EmotionEngine::halt()
 {
     wait_for_IRQ = true;
+    cycles_to_run = 0;
 }
 
 inline void EmotionEngine::unhalt()

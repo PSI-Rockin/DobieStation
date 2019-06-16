@@ -33,17 +33,6 @@ void call_lower(VectorUnit &vu, uint32_t instr)
 
 void interpret(VectorUnit &vu, uint32_t upper_instr, uint32_t lower_instr)
 {
-    if (vu.get_id() == 0 && vu.is_interlocked())
-    {
-        //Errors::die("VU%d Using M-Bit\n", vu.get_id());
-        if (vu.check_interlock())
-        {
-            vu.set_PC(vu.get_PC() - 8);
-            return;
-        }
-        vu.clear_interlock();
-    }
-
     //WaitQ, DIV, RSQRT, SQRT
     if (((lower_instr & 0x800007FC) == 0x800003BC))
     {
@@ -103,12 +92,6 @@ void interpret(VectorUnit &vu, uint32_t upper_instr, uint32_t lower_instr)
 
     if (upper_instr & (1 << 29) && vu.get_id() == 0)
         vu.check_interlock();
-
-    if (upper_instr & (1 << 27))
-    {
-        if(vu.read_fbrst() & (1 << (3 + (vu.get_id() * 8))))
-            Errors::die("VU%d Using T-Bit\n", vu.get_id());
-    }
 
     if (upper_instr & (1 << 30))
         vu.end_execution();

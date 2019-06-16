@@ -4,7 +4,7 @@
 #include <cstdio>
 #include <fstream>
 #include <unordered_set>
-
+#include "emotion.hpp"
 #include "../int128.hpp"
 
 #define XGKICK_INIT_DELAY 0
@@ -81,6 +81,8 @@ class GraphicsInterface;
 class Emulator;
 class VU_JIT64;
 class VectorUnit;
+class INTC;
+class EmotionEngine;
 
 extern "C" uint8_t* exec_block(VU_JIT64& jit, VectorUnit& vu);
 
@@ -91,6 +93,8 @@ class VectorUnit
         int id;
         uint16_t mem_mask; //0xFFF for VU0, 0x3FFF for VU1
         Emulator* e;
+        INTC* intc;
+        EmotionEngine* eecpu;
 
         uint64_t cycle_count; //Increments when "running" is true
         uint64_t run_event; //If less than cycle_count, the VU is allowed to run
@@ -102,6 +106,7 @@ class VectorUnit
         std::unordered_set<uint32_t> seen_microprogram_crcs;
 
         bool running;
+        bool tbit_stop;
         bool vumem_is_dirty;
         uint16_t PC, new_PC, secondbranch_PC;
         bool branch_on, branch_on_delay;
@@ -154,6 +159,7 @@ class VectorUnit
         bool DIV_event_started;
         uint64_t finish_EFU_event;
         bool EFU_event_started;
+        int mbit_wait;
 
         float update_mac_flags(float value, int index);
         void clear_mac_flags(int index);
@@ -171,7 +177,7 @@ class VectorUnit
         void advance_r();
         void print_vectors(uint8_t a, uint8_t b);
     public:
-        VectorUnit(int id, Emulator* e);
+        VectorUnit(int id, Emulator* e, INTC* intc, EmotionEngine* eecpu);
 
         DecodedRegs decoder;
 
@@ -185,14 +191,19 @@ class VectorUnit
         void update_mac_pipeline();
         void update_DIV_EFU_pipes();
         void check_for_FMAC_stall();
+        void check_for_COP2_FMAC_stall();
         void flush_pipes();
+        void cop2_updatepipes(int cycles);
+        void handle_cop2_stalls();
 
         void run(int cycles);
+        void correct_jit_pipeline(int cycles);
         void run_jit(int cycles);
         void handle_XGKICK();
         void start_program(uint32_t addr);
         void end_execution();
         void stop();
+        void stop_by_tbit();
         void reset();
 
         void backup_vf(bool newvf, int index);
@@ -208,6 +219,7 @@ class VectorUnit
         template <typename T> void write_data(uint32_t addr, T data);
 
         bool is_running();
+        bool stopped_by_tbit();
         bool is_dirty();
         void clear_dirty();
         uint16_t get_PC();
@@ -215,6 +227,7 @@ class VectorUnit
         uint32_t get_gpr_u(int index, int field);
         uint16_t get_int(int index);
         int get_id();
+        uint64_t get_cycle_count();
         void set_gpr_f(int index, int field, float value);
         void set_gpr_u(int index, int field, uint32_t value);
         void set_gpr_s(int index, int field, int32_t value);
@@ -397,6 +410,11 @@ inline bool VectorUnit::is_running()
     return running;
 }
 
+inline bool VectorUnit::stopped_by_tbit()
+{
+    return tbit_stop;
+}
+
 inline bool VectorUnit::is_dirty()
 {
     return vumem_is_dirty;
@@ -474,11 +492,17 @@ inline void VectorUnit::set_I(uint32_t value)
 inline void VectorUnit::set_Q(uint32_t value)
 {
     new_Q_instance.u = value;
+    Q.u = new_Q_instance.u;
 }
 
 inline uint8_t* VectorUnit::get_instr_mem()
 {
     return (uint8_t*)instr_mem.m;
+}
+
+inline uint64_t VectorUnit::get_cycle_count()
+{
+    return cycle_count;
 }
 
 #endif // VU_HPP

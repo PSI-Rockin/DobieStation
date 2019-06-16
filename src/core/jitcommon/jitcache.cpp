@@ -15,17 +15,13 @@ JitCache::JitCache()
 }
 
 //Allocate a block with read and write, but not executable, privileges.
-void JitCache::alloc_block(uint32_t pc, uint32_t prev_pc, uint32_t program, uint64_t param1, uint64_t param2)
+void JitCache::alloc_block(BlockState state)
 {
     JitBlock new_block;
 
     new_block.mem = nullptr;
     new_block.block_start = nullptr;
-    new_block.start_pc = pc;
-    new_block.from_pc = prev_pc;
-    new_block.program = program;
-    new_block.param1 = param1;
-    new_block.param2 = param2;
+    new_block.state = state;
 #ifdef _WIN32
     //Errors::die("[JIT] alloc_block not implemented for WIN32");
     new_block.block_start = (uint8_t *)VirtualAlloc(NULL, BLOCK_SIZE, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
@@ -44,46 +40,59 @@ void JitCache::alloc_block(uint32_t pc, uint32_t prev_pc, uint32_t program, uint
     if (blocks.size() > 0x2000)
         flush_all_blocks();
 
-    blocks.push_back(new_block);
-    current_block = &blocks[blocks.size() - 1];
+    blocks.insert({ state, new_block });
+    current_block = &blocks[state];
+}
+
+void JitCache::free_block(BlockState state)
+{
+    auto search = blocks.find(state);
+
+    if (search == blocks.end()) 
+        return;
+    if (&search->second == current_block)
+        current_block = nullptr;
+
+#ifdef _WIN32
+    VirtualFree(search->second.block_start, 0, MEM_RELEASE);
+#else
+    munmap(search->second.block_start, BLOCK_SIZE);
+#endif
+    blocks.erase(search);
 }
 
 void JitCache::flush_all_blocks()
 {
     //Deallocate all virtual memory claimed by blocks
-    for (unsigned int i = 0; i < blocks.size(); i++)
+    for (auto it = blocks.begin(); it != blocks.end(); ++it)
     {
 #ifdef _WIN32
         //Errors::die("[JIT] flush_all_blocks not implemented for WIN32");
-        VirtualFree(blocks[i].block_start, 0, MEM_RELEASE);
+        VirtualFree(it->second.block_start, 0, MEM_RELEASE);
 #else
-        munmap(blocks[i].block_start, BLOCK_SIZE);
+        munmap(it->second.block_start, BLOCK_SIZE);
 #endif
     }
 
     //Clear out the blocks vector and replace it with an empty one.
     //We reserve blocks to prevent them from getting reallocated
-    blocks = std::vector<JitBlock>();
+    blocks = std::unordered_map<BlockState, JitBlock, BlockStateHash>();
     blocks.reserve(1024 * 4);
     current_block = nullptr;
 }
 
-int JitCache::find_block(uint32_t pc, uint32_t prev_pc, uint32_t program, uint64_t param1, uint64_t param2)
+JitBlock *JitCache::find_block(BlockState state)
 {
-    if (blocks.size() > 0)
+    auto search = blocks.find(state);
+
+    if (search != blocks.end())
     {
-        for (int i = blocks.size() - 1; i >= 0; i--)
-        {
-            if (pc == blocks[i].start_pc && prev_pc == blocks[i].from_pc && param1 == blocks[i].param1 && param2 == blocks[i].param2 && program == blocks[i].program)
-            {
-                //printf("[VU_JIT64] Block found at %d\n", i);
-                current_block = &blocks[i];
-                return i;
-            }
-        }
+        //printf("[VU_JIT64] Block found at %p\n", &(search->second));
+        current_block = &(search->second);
+        return current_block;
     }
     //printf("[VU_JIT64] Block not found\n");
-    return -1;
+    return nullptr;
 }
 
 uint8_t* JitCache::get_current_block_start()

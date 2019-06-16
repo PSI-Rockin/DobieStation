@@ -13,7 +13,7 @@ uint32_t branch_offset(uint32_t instr, uint32_t PC)
 
 void VU_JitTranslator::reset_instr_info()
 {
-    memset(instr_info, 0, sizeof(VU_InstrInfo));
+    memset(instr_info, 0, sizeof(instr_info));
 }
 
 IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32_t prev_pc)
@@ -21,9 +21,6 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
     IR::Block block;
 
     bool block_end = false;
-    bool ebit = false;
-    bool move_branch_delay = false;
-    bool branch_detected = false;
 
     trans_branch_delay_slot = false;
     trans_ebit_delay_slot = false;
@@ -37,8 +34,8 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
 
     if (prev_pc != 0xFFFFFFFF)
     {
-        trans_branch_delay_slot = instr_info[prev_pc].branch_delay_slot;
-        trans_ebit_delay_slot = instr_info[prev_pc].ebit_delay_slot;
+        trans_branch_delay_slot = (vu.pipeline_state[1] >> 55) & 0x1;
+        trans_ebit_delay_slot = (vu.pipeline_state[1] >> 56) & 0x1;
     }
 
     IR::Instruction clear_delay(IR::Opcode::ClearIntDelay);
@@ -49,27 +46,15 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
         std::vector<IR::Instruction> upper_instrs;
         std::vector<IR::Instruction> lower_instrs;
 
-        if (branch_detected)
-        {
-            trans_branch_delay_slot = true;
-            branch_detected = false;
-        }
-
-        if (trans_branch_delay_slot || trans_ebit_delay_slot)
+        if (instr_info[cur_PC].branch_delay_slot || instr_info[cur_PC].ebit_delay_slot || instr_info[cur_PC].tbit_end)
         {
             block_end = true;
+
             if (trans_ebit_delay_slot)
-                ebit = true;
+                trans_ebit_delay_slot = true;
 
-            if(trans_branch_delay_slot)
-                move_branch_delay = true;
-
-            /*if (trans_branch_delay_slot && prev_pc != 0xFFFFFFFF)
-            {
-                if(instr_info[prev_pc].branch_delay_slot)
-                    Errors::print_warning("[VU_IR] Executing Branch in delay slot");
-            }*/
-                
+            if (instr_info[cur_PC].branch_delay_slot)
+                trans_branch_delay_slot = true;
         }
 
         uint32_t upper = *(uint32_t*)&instr_mem[cur_PC + 4];
@@ -112,7 +97,7 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
             block.add_instr(backup);
         }
 
-        if (move_branch_delay)
+        if (instr_info[cur_PC].branch_delay_slot)
         {
             IR::Instruction branch(IR::Opcode::MoveDelayedBranch);
             block.add_instr(branch);
@@ -158,11 +143,6 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
                 for (unsigned int i = 0; i < lower_instrs.size(); i++)
                 {
                     block.add_instr(lower_instrs[i]);
-
-                    if (lower_instrs[i].is_jump())
-                    {
-                        branch_detected = true;
-                    }
                 }
 
                 IR::Instruction restore_new(IR::Opcode::RestoreVF);
@@ -181,10 +161,6 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
                 for (unsigned int i = 0; i < lower_instrs.size(); i++)
                 {
                     block.add_instr(lower_instrs[i]);
-                    if (lower_instrs[i].is_jump())
-                    {
-                        trans_branch_delay_slot = true;
-                    }
                 }
             }
         }
@@ -192,16 +168,26 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
         //End of microprogram delay slot
         if (upper & (1 << 30))
         {
-            if (trans_branch_delay_slot)
+            if (instr_info[cur_PC].is_branch)
                 Errors::print_warning("[VU_JIT] Warning! E-Bit On Branch!\n");
-            trans_ebit_delay_slot = true;
         }
-        else if (ebit)
+        
+        if (instr_info[cur_PC].ebit_delay_slot || instr_info[cur_PC].tbit_end)
         {
-            IR::Instruction instr(IR::Opcode::Stop);
-            instr.set_jump_dest(cur_PC + 8);
-            block.add_instr(instr);
-            
+            if (instr_info[cur_PC].tbit_end)
+            {
+                IR::Instruction instr(IR::Opcode::StopTBit);
+                instr.set_jump_dest(cur_PC + 8);
+                block.add_instr(instr);
+                Errors::print_warning("[VU_JIT] Stopped by T-Bit\n");
+            }
+            else
+            {
+                IR::Instruction instr(IR::Opcode::Stop);
+                instr.set_jump_dest(cur_PC + 8);
+                block.add_instr(instr);
+            }
+
             //Clear the pipeline state, stalls won't happen in a new microprogram
             IR::Instruction pipeline;
             pipeline.op = IR::Opcode::SavePipelineState;
@@ -221,14 +207,18 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
             //The branch will be taken instantly as we finish, I think
             //Only when in the delay slot of the ebit
             //if the branch was the ebit, this has already been done
-            if (branch_detected)
+            if (instr_info[cur_PC].is_branch)
             {
                 IR::Instruction branch(IR::Opcode::MoveDelayedBranch);
                 block.add_instr(branch);
                 Errors::print_warning("[VU_JIT] Warning! Branch in E-Bit Delay Slot!\n");
             }
+
+            IR::Instruction mac_update(IR::Opcode::UpdateMacPipeline);
+            mac_update.set_source(4);
+            block.add_instr(mac_update);
         }
-        else if (block_end)
+        else if(block_end)
         {
             //Save end PC for block, helps us remember where the next block jumped from
             IR::Instruction savepc;
@@ -375,6 +365,7 @@ int VU_JitTranslator::is_flag_instruction(uint32_t lower_instr)
 
         switch (op)
         {
+            case 0x10:
             case 0x11:
             case 0x12:
             case 0x13:
@@ -402,7 +393,7 @@ void VU_JitTranslator::update_pipeline(VectorUnit &vu, int cycles)
 
         stall_pipe[0] = ((uint64_t)(vu.decoder.vf_write[0] & 0x1F)) | ((uint64_t)(vu.decoder.vf_write[1] & 0x1F) << 5);
         stall_pipe[0] |= ((uint64_t)(vu.decoder.vf_write_field[0] & 0xF) << 10) | ((uint64_t)(vu.decoder.vf_write_field[1] & 0xF) << 14);
-        stall_pipe[0] |= (uint64_t)(vu.decoder.vi_write & 0x1F) << 18;
+        stall_pipe[0] |= (uint64_t)(vu.decoder.vi_write_from_load & 0xF) << 18;
     }
 }
 
@@ -416,7 +407,6 @@ void VU_JitTranslator::analyze_FMAC_stalls(VectorUnit &vu, uint16_t PC)
         uint8_t write0 = stall_pipe[i] & 0x1F;
         uint8_t write1 = (stall_pipe[i] >> 5) & 0x1F;
         uint8_t viwrite = (stall_pipe[i] >> 18) & 0xF;
-        bool viload = (stall_pipe[i] >> 22) & 0x1;
 
         bool stall_found = false;
         if (write0 != 0 || write1 != 0)
@@ -467,12 +457,11 @@ void VU_JitTranslator::analyze_FMAC_stalls(VectorUnit &vu, uint16_t PC)
             }
         }
         //Integer Load Delays
-        if (viwrite && viload)
+        if (viwrite)
         {
             if (viwrite == vu.decoder.vi_read0 || viwrite == vu.decoder.vi_read1)
             {
                 stall_found = true;
-                break;
             }
         }
 
@@ -485,6 +474,118 @@ void VU_JitTranslator::analyze_FMAC_stalls(VectorUnit &vu, uint16_t PC)
     }
 }
 
+void VU_JitTranslator::handle_vu_stalls(VectorUnit &vu, uint16_t PC, uint32_t lower, int &q_pipe_delay, int &p_pipe_delay)
+{
+    analyze_FMAC_stalls(vu, PC);
+
+    //WaitQ, DIV, RSQRT, SQRT
+    if (((lower & 0x800007FC) == 0x800003BC))
+    {
+        instr_info[PC].q_pipeline_instr = true;
+        if (q_pipe_delay > 0)
+        {
+            //printf("[VU_JIT] Q pipe delay of %d stall amount of %d\n", q_pipe_delay, instr_info[PC].stall_amount);
+            if (instr_info[PC].stall_amount < q_pipe_delay)
+                instr_info[PC].stall_amount = q_pipe_delay;
+
+            instr_info[PC].update_q_pipeline = true;
+        }
+
+        q_pipe_delay = fdiv_pipe_cycles(lower);
+    }
+
+    //WaitP, EATAN, EEXP, ELENG, ERCPR, ERLENG, ERSADD, ERSQRT, ESADD, ESIN, ESQRT, ESUM
+    if ((lower & (1 << 31)) && ((lower >> 2) & 0x1CF) == 0x1CF)
+    {
+        instr_info[PC].p_pipeline_instr = true;
+        if (p_pipe_delay > 0)
+        {
+            //printf("[VU_JIT] P pipe delay of %d stall amount of %d\n", q_pipe_delay, instr_info[PC].stall_amount);
+            if (instr_info[PC].stall_amount < (p_pipe_delay - 1))
+                instr_info[PC].stall_amount = (p_pipe_delay - 1);
+
+            instr_info[PC].update_p_pipeline = true;
+        }
+        p_pipe_delay = efu_pipe_cycles(lower);
+    }
+
+    //Branch instructions
+    if ((lower & 0xC0000000) == 0x40000000)
+    {
+        //Conditional branches only
+        //Also if there is a stall on the branch instruction, I "Think" this gives it time to write the value so this no longer applies
+        if (((lower >> 25) & 0xF) >= 0x4 && instr_info[PC].stall_amount == 0)
+        {
+            instr_info[PC].use_backup_vi = false;
+            if (vu.int_branch_delay)
+            {
+                if ((vu.int_backup_id == vu.decoder.vi_read0 || vu.int_backup_id == vu.decoder.vi_read1))
+                {
+                    instr_info[PC].use_backup_vi = true;
+                    vu.int_backup_id_rec = vu.int_backup_id;
+
+                    printf("[VU_JIT] Using backed up VI%d at PC %x\n", vu.int_backup_id_rec, PC);
+                }
+            }
+            else
+            {
+                //Reg used in branch was modified on the previous instruction
+                if (instr_info[PC - 8].decoder_vi_write != 0)
+                {
+                    if (instr_info[PC - 8].decoder_vi_write == vu.decoder.vi_read0)
+                    {
+                        vu.int_backup_id_rec = vu.decoder.vi_read0;
+                        instr_info[PC].use_backup_vi = true;
+                    }
+
+                    if (instr_info[PC - 8].decoder_vi_write == vu.decoder.vi_read1)
+                    {
+                        vu.int_backup_id_rec = vu.decoder.vi_read1;
+                        instr_info[PC].use_backup_vi = true;
+                    }
+
+                    if (instr_info[PC].use_backup_vi)
+                    {
+                        int backup_pc = ((PC - 32) < vu.get_PC()) ? vu.get_PC() : (PC - 32);
+
+                        int stalls = 0;
+                        for (int i = PC - 8; i >= backup_pc; i -= 8)
+                        {
+                            //Stalls cause the chain to break
+                            if (instr_info[i].stall_amount)
+                            {
+                                backup_pc += i - backup_pc;
+                                break;
+                            }
+                        }
+                        printf("[VU_JIT] Backing up VI%d at %x for PC %x\n", vu.int_backup_id_rec, backup_pc, PC);
+                        instr_info[backup_pc].backup_vi = vu.int_backup_id_rec;
+                    }
+                }
+            }
+        }
+    }
+}
+
+void VU_JitTranslator::populate_vu_state(VectorUnit &vu, int q_pipe_delay, int p_pipe_delay, uint16_t PC)
+{
+    //Save the state at the end of the block
+    instr_info[PC].pipeline_state[0] = stall_pipe[0] & 0x7FFFFF;
+    instr_info[PC].pipeline_state[0] |= (stall_pipe[1] & 0x7FFFFF) << 23;
+    instr_info[PC].pipeline_state[0] |= (stall_pipe[2] & 0x7FFFFF) << 46;
+    instr_info[PC].pipeline_state[1] = stall_pipe[3] & 0x7FFFFF;
+
+    instr_info[PC].pipeline_state[1] |= (q_pipe_delay & 0xF) << 23;
+    instr_info[PC].pipeline_state[1] |= (uint64_t)(p_pipe_delay & 0x3F) << 27;
+
+    instr_info[PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vf_write[0] & 0x1F) << 33UL;
+    instr_info[PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vf_write[1] & 0x1F) << 38UL;
+    instr_info[PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vf_write_field[0] & 0xF) << 43UL;
+    instr_info[PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vf_write_field[1] & 0xF) << 47UL;
+    instr_info[PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vi_write_from_load & 0xF) << 51UL;
+    instr_info[PC].pipeline_state[1] |= (uint64_t)(instr_info[PC].is_branch & 0x1) << 55UL;
+    instr_info[PC].pipeline_state[1] |= (uint64_t)(instr_info[PC].is_ebit & 0x1) << 56UL;
+}
 /**
  * Determine base operation information and which instructions need to be swapped
  */
@@ -506,16 +607,16 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
         stall_pipe[3] = vu.pipeline_state[1] & 0x7FFFFF;
 
         vu.decoder.vf_write[0] = (vu.pipeline_state[1] >> 33) & 0x1F;
-        vu.decoder.vf_write[1] = ((vu.pipeline_state[1] >> 38) & 0x1F);
-        vu.decoder.vf_write_field[0] = ((vu.pipeline_state[1] >> 43) & 0xF);
-        vu.decoder.vf_write_field[1] = ((vu.pipeline_state[1] >> 47) & 0xF);
-        vu.decoder.vi_write = ((vu.pipeline_state[1] >> 51) & 0x1F);
+        vu.decoder.vf_write[1] = (vu.pipeline_state[1] >> 38) & 0x1F;
+        vu.decoder.vf_write_field[0] = (vu.pipeline_state[1] >> 43) & 0xF;
+        vu.decoder.vf_write_field[1] = (vu.pipeline_state[1] >> 47) & 0xF;
+        vu.decoder.vi_write_from_load = (vu.pipeline_state[1] >> 51) & 0xF;
 
-        q_pipe_delay = ((vu.pipeline_state[1] >> 23) & 0xF);
-        p_pipe_delay = ((vu.pipeline_state[1] >> 27) & 0x3F);
+        q_pipe_delay = (vu.pipeline_state[1] >> 23) & 0xF;
+        p_pipe_delay = (vu.pipeline_state[1] >> 27) & 0x3F;
 
-        branch_delay_slot = instr_info[prev_pc].branch_delay_slot;
-        ebit_delay_slot = instr_info[prev_pc].ebit_delay_slot;
+        branch_delay_slot = (vu.pipeline_state[1] >> 55) & 0x1;
+        ebit_delay_slot = (vu.pipeline_state[1] >> 56) & 0x1;
     }
     else //Else it's a new block so there is no previous state
     {
@@ -524,10 +625,7 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
         stall_pipe[2] = 0;
         stall_pipe[3] = 0;
 
-        vu.decoder.vf_write[0] = 0;
-        vu.decoder.vf_write[1] = 0;
-        vu.decoder.vf_write_field[0] = 0;
-        vu.decoder.vf_write_field[1] = 0;
+        vu.decoder.reset();
     }
 
     vu.int_backup_id_rec = 0;
@@ -536,14 +634,21 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
     while (!block_end)
     {
         instr_info[PC].backup_vi = 0;
+        instr_info[PC].use_backup_vi = false;
         instr_info[PC].stall_amount = 0;
         instr_info[PC].swap_ops = false;
         instr_info[PC].update_q_pipeline = false;
+        instr_info[PC].update_p_pipeline = false;
         instr_info[PC].update_mac_pipeline = false;
         instr_info[PC].advance_mac_pipeline = false;
         instr_info[PC].flag_instruction = FlagInstr_None;
         instr_info[PC].branch_delay_slot = false;
         instr_info[PC].ebit_delay_slot = false;
+        instr_info[PC].is_branch = false;
+        instr_info[PC].is_ebit = false;
+        instr_info[PC].q_pipeline_instr = false;
+        instr_info[PC].p_pipeline_instr = false;
+        instr_info[PC].tbit_end = false;
 
         uint32_t upper = *(uint32_t*)&instr_mem[PC + 4];
         uint32_t lower = *(uint32_t*)&instr_mem[PC];
@@ -551,6 +656,9 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
         if (branch_delay_slot || ebit_delay_slot)
         {
             block_end = true;
+            //In case of branch on XGKick stall
+            instr_info[PC].branch_delay_slot = branch_delay_slot;
+            instr_info[PC].ebit_delay_slot = ebit_delay_slot;
         }
 
         ebit_delay_slot = false;
@@ -581,15 +689,8 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
             int read0 = vu.decoder.vf_read0[1];
             int read1 = vu.decoder.vf_read1[1];
 
-            instr_info[PC].decoder_vi_read0 = vu.decoder.vi_read0;
-            instr_info[PC].decoder_vi_read1 = vu.decoder.vi_read1;
             instr_info[PC].decoder_vi_write = vu.decoder.vi_write;
 
-            //We need to mark the decoder for ILW and ILWR to handle Integer Load Delays
-            if (vu.decoder.vi_write_from_load)
-            {
-                vu.decoder.vi_write |= 0x10;
-            }
             //If an upper op writes to a register a lower op reads from, the lower op executes first
             //Additionally, if an upper op and a lower op write to the same register, the upper op
             //has priority.
@@ -599,7 +700,7 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
                 instr_info[PC].decoder_vf_write[0] = write;
             }
 
-            analyze_FMAC_stalls(vu, PC);
+            handle_vu_stalls(vu, PC, lower, q_pipe_delay, p_pipe_delay);
 
             //Branch instructions
             if ((lower & 0xC0000000) == 0x40000000)
@@ -607,81 +708,19 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
                 if (block_end)
                     Errors::print_warning("[VU_IR] Branch in delay slot\n");
                 branch_delay_slot = true;
-                //In case of branch on XGKick stall
-                instr_info[PC].branch_delay_slot = branch_delay_slot;
-
-                //Conditional branches only
-                if (((lower >> 25) & 0xF) >= 0x4 && instr_info[PC].stall_amount < 3)
-                {
-                    instr_info[PC].use_backup_vi = false;
-                    if (vu.int_branch_delay)
-                    {
-                        if ((vu.int_backup_id == vu.decoder.vi_read0 || vu.int_backup_id == vu.decoder.vi_read1))
-                        {
-                            instr_info[PC].use_backup_vi = true;
-                            vu.int_backup_id_rec = vu.int_backup_id;
-                        }
-                    }
-                    else
-                    {
-                        //Reg used in branch was modified on the previous instruction
-                        if (instr_info[PC - 8].decoder_vi_write != 0)
-                        {
-                            if (instr_info[PC - 8].decoder_vi_write == vu.decoder.vi_read0)
-                            {
-                                vu.int_backup_id_rec = vu.decoder.vi_read0;
-                                instr_info[PC].use_backup_vi = true;
-                            }
-
-                            if (instr_info[PC - 8].decoder_vi_write == vu.decoder.vi_read1)
-                            {
-                                vu.int_backup_id_rec = vu.decoder.vi_read1;
-                                instr_info[PC].use_backup_vi = true;
-                            }
-
-                            int backup_pc = ((PC - 32) < vu.get_PC()) ? vu.get_PC() : (PC - 32);
-                            if (backup_pc == (PC - 32))
-                            {
-                                int stalls = 0;
-                                for (int i = PC - 8; i >= backup_pc; i -= 8)
-                                {
-                                    stalls += instr_info[i].stall_amount;
-                                    stalls += 1;
-                                    if (stalls > 4)
-                                    {
-                                        backup_pc += i - backup_pc;
-                                        break;
-                                    }
-                                }
-                            }
-                            instr_info[backup_pc].backup_vi = vu.int_backup_id_rec;
-                        }
-                    }
-                }
+                instr_info[PC].is_branch = true;
             }
         }
         else
         {
+            instr_info[PC].decoder_vi_read0 = 0;
+            instr_info[PC].decoder_vi_read1 = 0;
+            instr_info[PC].decoder_vi_write = 0;
             analyze_FMAC_stalls(vu, PC);
         }
 
-        
-
-        //WaitQ, DIV, RSQRT, SQRT
-        if (((lower & 0x800007FC) == 0x800003BC))
-        {
-            if (q_pipe_delay > 0)
-            {
-                //printf("[VU_JIT] Q pipe delay of %d stall amount of %d\n", q_pipe_delay, instr_info[PC].stall_amount);
-                if (instr_info[PC].stall_amount < q_pipe_delay)
-                    instr_info[PC].stall_amount = q_pipe_delay;
-
-                instr_info[PC].update_q_pipeline = true;
-            }
-
-            q_pipe_delay = fdiv_pipe_cycles(lower);
-        }
-        else if (q_pipe_delay > 0)
+        //Handle the pipes separately from the instructions in case an EFU instruction happens after a FDIV instruction and stalls
+        if (q_pipe_delay > 0 && !instr_info[PC].q_pipeline_instr)
         {
             q_pipe_delay -= instr_info[PC].stall_amount + 1;
 
@@ -692,21 +731,7 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
             }
         }
 
-        //WaitP, EATAN, EEXP, ELENG, ERCPR, ERLENG, ERSADD, ERSQRT, ESADD, ESIN, ESQRT, ESUM
-        if ((lower & (1 << 31)) && ((lower >> 2) & 0x1CF) == 0x1CF)
-        {
-            if (p_pipe_delay > 0)
-            {
-                //printf("[VU_JIT] P pipe delay of %d stall amount of %d\n", q_pipe_delay, instr_info[PC].stall_amount);
-                if (instr_info[PC].stall_amount < (p_pipe_delay-1))
-                    instr_info[PC].stall_amount = (p_pipe_delay-1);
-
-                instr_info[PC].update_p_pipeline = true;
-            }
-
-            p_pipe_delay = efu_pipe_cycles(lower);
-        }
-        else if (p_pipe_delay > 0)
+        if (p_pipe_delay > 0 && !instr_info[PC].p_pipeline_instr)
         {
             p_pipe_delay -= instr_info[PC].stall_amount + 1;
 
@@ -717,15 +742,28 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
             }
         }
 
-
         if(instr_info[PC].stall_amount)
             update_pipeline(vu, instr_info[PC].stall_amount);
 
         if (upper & (1 << 30))
         {
             ebit_delay_slot = true;
-            //In case of E-Bit on XGKick stall
-            instr_info[PC].ebit_delay_slot = ebit_delay_slot;
+            instr_info[PC].is_ebit = true;
+        }
+
+        if (upper & (1 << 27))
+        {
+            if (vu.read_fbrst() & (1 << (3 + (vu.get_id() * 8))))
+            {
+                block_end = true;
+                instr_info[PC].tbit_end = true;
+            }
+        }
+
+        //XGKick we need to save the VU state if it stalls
+        if (!(upper & (1 << 31)) && (lower & (1 << 31)) && (lower & 0x7FF) == 0x6FC)
+        {
+            populate_vu_state(vu, q_pipe_delay, p_pipe_delay, PC);
         }
 
         if (instr_info[PC].decoder_vi_write != vu.int_backup_id)
@@ -736,31 +774,15 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
 
     end_PC = PC - 8;
 
-    if (!instr_info[end_PC - 8].ebit_delay_slot)
+    if (!instr_info[end_PC].ebit_delay_slot)
     {
-        if (instr_info[end_PC].decoder_vi_write && !(vu.decoder.vi_write & 0x10))
+        if (instr_info[end_PC].decoder_vi_write && !vu.decoder.vi_write_from_load)
         {
             instr_info[end_PC].backup_vi = instr_info[end_PC].decoder_vi_write;
         }
     }
 
-    //Save the state at the end of the block
-    instr_info[end_PC].pipeline_state[0] = stall_pipe[0] & 0x7FFFFF;
-    instr_info[end_PC].pipeline_state[0] |= (stall_pipe[1] & 0x7FFFFF) << 23;
-    instr_info[end_PC].pipeline_state[0] |= (stall_pipe[2] & 0x7FFFFF) << 46;
-    instr_info[end_PC].pipeline_state[1] = stall_pipe[3] & 0x7FFFFF;
-
-    instr_info[end_PC].pipeline_state[1] |= (q_pipe_delay & 0xF) << 23;
-    instr_info[end_PC].pipeline_state[1] |= (p_pipe_delay & 0x3F) << 27;
-
-    instr_info[end_PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vf_write[0] & 0x1F) << 33;
-    instr_info[end_PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vf_write[1] & 0x1F) << 38;
-    instr_info[end_PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vf_write_field[0] & 0xF) << 43;
-    instr_info[end_PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vf_write_field[1] & 0xF) << 47;
-    instr_info[end_PC].pipeline_state[1] |= (uint64_t)(vu.decoder.vi_write & 0x1F) << 51;
-
-    instr_info[end_PC].branch_delay_slot = branch_delay_slot;
-    instr_info[end_PC].ebit_delay_slot = ebit_delay_slot;
+    populate_vu_state(vu, q_pipe_delay, p_pipe_delay, end_PC);
 }
 
 /**
@@ -1568,7 +1590,9 @@ void VU_JitTranslator::lower1_special(std::vector<IR::Instruction> &instrs, uint
             update_xgkick(instrs);
             instr.op = IR::Opcode::Xgkick;
             instr.set_base((lower >> 11) & 0xF);
-            instr.set_source(cur_PC);
+            instr.set_return_addr(cur_PC);
+            instr.set_source(instr_info[cur_PC].pipeline_state[0]);
+            instr.set_source2(instr_info[cur_PC].pipeline_state[1]);
             instr.set_dest(trans_branch_delay_slot);
             instr.set_jump_dest(trans_ebit_delay_slot);
             break;

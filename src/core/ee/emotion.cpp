@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include "emotion.hpp"
 #include "emotiondisasm.hpp"
 #include "emotioninterpreter.hpp"
@@ -12,10 +13,10 @@
 
 //#define printf(fmt, ...)(0)
 
-EmotionEngine::EmotionEngine(Cop0* cp0, Cop1* fpu, Emulator* e, uint8_t* sp, VectorUnit* vu0, VectorUnit* vu1) :
-    cp0(cp0), fpu(fpu), e(e), scratchpad(sp), vu0(vu0), vu1(vu1)
+EmotionEngine::EmotionEngine(Cop0* cp0, Cop1* fpu, Emulator* e, VectorUnit* vu0, VectorUnit* vu1) :
+    cp0(cp0), fpu(fpu), e(e), vu0(vu0), vu1(vu1)
 {
-    reset();
+    tlb_map = nullptr;
 }
 
 const char* EmotionEngine::REG(int id)
@@ -96,10 +97,21 @@ const char* EmotionEngine::SYSCALL(int id)
 void EmotionEngine::reset()
 {
     PC = 0xBFC00000;
+    cycle_count = 0;
+    cycles_to_run = 0;
     branch_on = false;
     can_disassemble = false;
     wait_for_IRQ = false;
     delay_slot = 0;
+
+    //Reset the cache
+    for (int i = 0; i < 128; i++)
+    {
+        icache[i].tag[0] = 1 << 31;
+        icache[i].tag[1] = 1 << 31;
+        icache[i].lfu[0] = false;
+        icache[i].lfu[1] = false;
+    }
 
     //Clear out $zero
     for (int i = 0; i < 16; i++)
@@ -110,52 +122,56 @@ void EmotionEngine::reset()
         deci2handlers[i].active = false;
 }
 
-int EmotionEngine::run(int cycles_to_run)
+void EmotionEngine::init_tlb()
 {
-    int cycles = cycles_to_run;
+    cp0->init_tlb();
+    tlb_map = cp0->get_vtlb_map();
+}
+
+int EmotionEngine::run(int cycles)
+{
+    cycle_count += cycles;
     if (!wait_for_IRQ)
     {
-        while (cycles_to_run)
+        cycles_to_run += cycles;
+        while (cycles_to_run > 0)
         {
-            /*if (PC == 0x1001E0)
-                PC = 0x100204;
-            if (PC == 0x10021C)
-                PC = 0x100234;*/
             cycles_to_run--;
-            uint32_t instruction = read32(PC);
+
+            uint32_t instruction = read_instr(PC);
+            uint32_t lastPC = PC;
+
             if (can_disassemble)
             {
                 std::string disasm = EmotionDisasm::disasm_instr(instruction, PC);
                 printf("[$%08X] $%08X - %s\n", PC, instruction, disasm.c_str());
                 //print_state();
             }
+
             EmotionInterpreter::interpret(*this, instruction);
             PC += 4;
+
+            //Simulate dual-issue if both instructions are NOPs
+            if (!instruction && !read32(PC))
+                PC += 4;
 
             if (branch_on)
             {
                 if (!delay_slot)
                 {
-                    branch_on = false;
-                    if (!new_PC || (new_PC & 0x3))
+                    //If the PC == LastPC it means we've reversed it to handle COP2 sync, so don't branch yet
+                    if (PC != lastPC)
                     {
-                        Errors::die("[EE] Jump to invalid address $%08X from $%08X\n", new_PC, PC - 8);
+                        branch_on = false;
+                        if (!new_PC || (new_PC & 0x3))
+                        {
+                            Errors::die("[EE] Jump to invalid address $%08X from $%08X\n", new_PC, PC - 8);
+                        }
+                        PC = new_PC;
                     }
-                    //if (new_PC != 0x15C440 && new_PC != 0x109710)
-                    PC = new_PC;
                 }
                 else
                     delay_slot--;
-            }
-            else
-            {
-                if (cp0->int_enabled())
-                {
-                    if (cp0->cause.int0_pending)
-                        int0();
-                    else if (cp0->cause.int1_pending)
-                        int1();
-                }
             }
         }
     }
@@ -175,6 +191,7 @@ int EmotionEngine::run(int cycles_to_run)
 
 void EmotionEngine::print_state()
 {
+    printf("pc:$%08X\n", PC);
     for (int i = 1; i < 32; i++)
     {
         printf("%s:$%08X_%08X_%08X_%08X", REG(i), get_gpr<uint32_t>(i, 3), get_gpr<uint32_t>(i, 2), get_gpr<uint32_t>(i, 1), get_gpr<uint32_t>(i));
@@ -183,8 +200,9 @@ void EmotionEngine::print_state()
         else
             printf("\t");
     }
-    //printf("lo:$%08X_%08X_%08X_%08X\t", LO1 >> 32, LO1, LO >> 32, LO);
-    //printf("hi:$%08X_%08X_%08X_%08X\t", HI1 >> 32, HI1, HI >> 32, HI);
+    printf("lo:$%08X_%08X_%08X_%08X\t", LO1 >> 32, LO1, LO >> 32, LO);
+    printf("hi:$%08X_%08X_%08X_%08X\t\n", HI1 >> 32, HI1, HI >> 32, HI);
+    printf("KSU: %d\n", cp0->status.mode);
     printf("\n");
 }
 
@@ -200,8 +218,6 @@ void EmotionEngine::clear_interlock()
 
 bool EmotionEngine::vu0_wait()
 {
-    //Must interlock as if there is an Mbit it will stall
-    e->interlock_cop2_check(true);
     return vu0->is_running();
 }
 
@@ -243,55 +259,137 @@ uint64_t EmotionEngine::get_SA()
     return SA;
 }
 
+uint32_t EmotionEngine::read_instr(uint32_t address)
+{
+    if (cp0->is_cached(address))
+    {
+        int index = (address >> 6) & 0x7F;
+        uint16_t tag = address >> 13;
+
+        EE_ICacheLine* line = &icache[index];
+        //Check if there's no entry in icache
+        if (line->tag[0] != tag)
+        {
+            if (line->tag[1] != tag)
+            {
+                //Load 4 quadwords.
+                //Based upon gamedev tests, an uncached data load takes 35 cycles, and a dcache miss takes 43.
+                //Another test we've run has determined that it takes 40 cycles for an icache miss.
+                //Current theory is a 32 cycle nonsequential penalty + (2 * 4) sequential penalty.
+                //printf("[EE] I$ miss at $%08X\n", address);
+                cycles_to_run -= 40;
+
+                //If there's an invalid entry, fill it.
+                //The `LFU` bit for the filled row gets flipped.
+                if (line->tag[0] & (1 << 31))
+                {
+                    line->lfu[0] ^= true;
+                    line->tag[0] = tag;
+                }
+                else if (line->tag[1] & (1 << 31))
+                {
+                    line->lfu[1] ^= true;
+                    line->tag[1] = tag;
+                }
+                else
+                {
+                    //The row to fill is the XOR of the LFU bits.
+                    int row_to_fill = line->lfu[0] ^ line->lfu[1];
+                    line->lfu[row_to_fill] ^= true;
+                    line->tag[row_to_fill] = tag;
+                }
+            }
+        }
+    }
+    else
+    {
+        //Simulate reading from RDRAM
+        //The nonsequential penalty (mentioned above) is 32 cycles for all data types, up to a quadword (128 bits).
+        //However, the EE loads two instructions at once. Since we only load a word, we divide the cycles in half.
+        cycles_to_run -= 16;
+    }
+    uint8_t* mem = tlb_map[address / 4096];
+    if (mem > (uint8_t*)1)
+        return *(uint32_t*)&mem[address & 4095];
+    else
+        Errors::die("[EE] Instruction read from invalid address $%08X", address);
+    return 0;
+}
+
 uint8_t EmotionEngine::read8(uint32_t address)
 {
-    if (address >= 0x70000000 && address < 0x70004000)
-        return scratchpad[address & 0x3FFF];
-    if (address >= 0x30100000 && address <= 0x31FFFFFF)
-        address -= 0x10000000;
-    return e->read8(address & 0x1FFFFFFF);
+    uint8_t* mem = tlb_map[address / 4096];
+    if (mem > (uint8_t*)1)
+        return mem[address & 4095];
+    else if (mem == (uint8_t*)1)
+        return e->read8(address & 0x1FFFFFFF);
+    else
+    {
+        Errors::die("[EE] Read8 from invalid address $%08X", address);
+        return 0;
+    }
 }
 
 uint16_t EmotionEngine::read16(uint32_t address)
 {
     if (address & 0x1)
         Errors::die("[EE] Read16 from invalid address $%08X", address);
-    if (address >= 0x70000000 && address < 0x70004000)
-        return *(uint16_t*)&scratchpad[address & 0x3FFE];
-    if (address >= 0x30100000 && address <= 0x31FFFFFF)
-        address -= 0x10000000;
-    return e->read16(address & 0x1FFFFFFF);
+    uint8_t* mem = tlb_map[address / 4096];
+    if (mem > (uint8_t*)1)
+        return *(uint16_t*)&mem[address & 4095];
+    else if (mem == (uint8_t*)1)
+        return e->read16(address & 0x1FFFFFFF);
+    else
+    {
+        Errors::die("[EE] Read16 from invalid address $%08X", address);
+        return 0;
+    }
 }
 
 uint32_t EmotionEngine::read32(uint32_t address)
 {
     if (address & 0x3)
         Errors::die("[EE] Read32 from invalid address $%08X", address);
-    if (address >= 0x70000000 && address < 0x70004000)
-        return *(uint32_t*)&scratchpad[address & 0x3FFC];
-    if (address >= 0x30100000 && address <= 0x31FFFFFF)
-        address -= 0x10000000;
-    return e->read32(address & 0x1FFFFFFF);
+    uint8_t* mem = tlb_map[address / 4096];
+    if (mem > (uint8_t*)1)
+        return *(uint32_t*)&mem[address & 4095];
+    else if (mem == (uint8_t*)1)
+        return e->read32(address & 0x1FFFFFFF);
+    else
+    {
+        Errors::die("[EE] Read32 from invalid address $%08X", address);
+        return 0;
+    }
 }
 
 uint64_t EmotionEngine::read64(uint32_t address)
 {
     if (address & 0x7)
         Errors::die("[EE] Read64 from invalid address $%08X", address);
-    if (address >= 0x70000000 && address < 0x70004000)
-        return *(uint64_t*)&scratchpad[address & 0x3FF8];
-    if (address >= 0x30100000 && address <= 0x31FFFFFF)
-        address -= 0x10000000;
-    return e->read64(address & 0x1FFFFFFF);
+    uint8_t* mem = tlb_map[address / 4096];
+    if (mem > (uint8_t*)1)
+        return *(uint64_t*)&mem[address & 4095];
+    else if (mem == (uint8_t*)1)
+        return e->read64(address & 0x1FFFFFFF);
+    else
+    {
+        Errors::die("[EE] Read64 from invalid address $%08X", address);
+        return 0;
+    }
 }
 
 uint128_t EmotionEngine::read128(uint32_t address)
 {
-    if (address >= 0x70000000 && address < 0x70004000)
-        return *(uint128_t*)&scratchpad[address & 0x3FF0];
-    if (address >= 0x30100000 && address <= 0x31FFFFFF)
-        address -= 0x10000000;
-    return e->read128(address & 0x1FFFFFF0);
+    uint8_t* mem = tlb_map[address / 4096];
+    if (mem > (uint8_t*)1)
+        return *(uint128_t*)&mem[address & 4095];
+    else if (mem == (uint8_t*)1)
+        return e->read128(address & 0x1FFFFFFF);
+    else
+    {
+        Errors::die("[EE] Read128 from invalid address $%08X", address);
+        return uint128_t::from_u32(0);
+    }
 }
 
 /*void EmotionEngine::set_gpr_lo(int index, uint64_t value)
@@ -307,68 +405,63 @@ void EmotionEngine::set_PC(uint32_t addr)
 
 void EmotionEngine::write8(uint32_t address, uint8_t value)
 {
-    if (address >= 0x70000000 && address < 0x70004000)
-    {
-        scratchpad[address & 0x3FFF] = value;
-        return;
-    }
-    if (address >= 0x30100000 && address <= 0x31FFFFFF)
-        address -= 0x10000000;
-    e->write8(address & 0x1FFFFFFF, value);
+    uint8_t* mem = tlb_map[address / 4096];
+    if (mem > (uint8_t*)1)
+        mem[address & 4095] = value;
+    else if (mem == (uint8_t*)1)
+        e->write8(address & 0x1FFFFFFF, value);
+    else
+        Errors::die("[EE] Write8 to invalid address $%08X", address);
 }
 
 void EmotionEngine::write16(uint32_t address, uint16_t value)
 {
     if (address & 0x1)
         Errors::die("[EE] Write16 to invalid address $%08X: $%04X", address, value);
-    if (address >= 0x70000000 && address < 0x70004000)
-    {
-        *(uint16_t*)&scratchpad[address & 0x3FFE] = value;
-        return;
-    }
-    if (address >= 0x30100000 && address <= 0x31FFFFFF)
-        address -= 0x10000000;
-    e->write16(address & 0x1FFFFFFF, value);
+    uint8_t* mem = tlb_map[address / 4096];
+    if (mem > (uint8_t*)1)
+        *(uint16_t*)&mem[address & 4095] = value;
+    else if (mem == (uint8_t*)1)
+        e->write16(address & 0x1FFFFFFF, value);
+    else
+        Errors::die("[EE] Write16 to invalid address $%08X", address);
 }
 
 void EmotionEngine::write32(uint32_t address, uint32_t value)
 {
     if (address & 0x3)
         Errors::die("[EE] Write32 to invalid address $%08X: $%08X", address, value);
-    if (address >= 0x70000000 && address < 0x70004000)
-    {
-        *(uint32_t*)&scratchpad[address & 0x3FFC] = value;
-        return;
-    }
-    if (address >= 0x30100000 && address <= 0x31FFFFFF)
-        address -= 0x10000000;
-    e->write32(address & 0x1FFFFFFF, value);
+    uint8_t* mem = tlb_map[address / 4096];
+    if (mem > (uint8_t*)1)
+        *(uint32_t*)&mem[address & 4095] = value;
+    else if (mem == (uint8_t*)1)
+        e->write32(address & 0x1FFFFFFF, value);
+    else
+        Errors::die("[EE] Write32 to invalid address $%08X", address);
 }
 
 void EmotionEngine::write64(uint32_t address, uint64_t value)
 {
     if (address & 0x7)
         Errors::die("[EE] Write64 to invalid address $%08X: $%08X_%08X", address, value >> 32, value);
-    if (address >= 0x70000000 && address < 0x70004000)
-    {
-        *(uint64_t*)&scratchpad[address & 0x3FF8] = value;
-        return;
-    }
-    if (address >= 0x30100000 && address <= 0x31FFFFFF)
-        address -= 0x10000000;
-    e->write64(address & 0x1FFFFFFF, value);
+    uint8_t* mem = tlb_map[address / 4096];
+    if (mem > (uint8_t*)1)
+        *(uint64_t*)&mem[address & 4095] = value;
+    else if (mem == (uint8_t*)1)
+        e->write64(address & 0x1FFFFFFF, value);
+    else
+        Errors::die("[EE] Write64 to invalid address $%08X", address);
 }
 
 void EmotionEngine::write128(uint32_t address, uint128_t value)
 {
-    if (address >= 0x70000000 && address < 0x70004000)
-    {
-        *(uint128_t*)&scratchpad[address & 0x3FF0] = value;
-        return;
-    }
-    if (address >= 0x30100000 && address <= 0x31FFFFFF)
-        address -= 0x10000000;
-    e->write128(address & 0x1FFFFFF0, value);
+    uint8_t* mem = tlb_map[address / 4096];
+    if (mem > (uint8_t*)1)
+        *(uint128_t*)&mem[address & 4095] = value;
+    else if (mem == (uint8_t*)1)
+        e->write128(address & 0x1FFFFFFF, value);
+    else
+        Errors::die("[EE] Write128 to invalid address $%08X", address);
 }
 
 void EmotionEngine::jp(uint32_t new_addr)
@@ -443,6 +536,7 @@ void EmotionEngine::mtc(int cop_id, int reg, int cop_reg)
     {
         case 0:
             cp0->mtc(cop_reg, get_gpr<uint32_t>(reg));
+            tlb_map = cp0->get_vtlb_map();
             break;
         case 1:
             fpu->mtc(cop_reg, get_gpr<uint32_t>(reg));
@@ -475,6 +569,8 @@ void EmotionEngine::cfc(int cop_id, int reg, int cop_reg, uint32_t instruction)
             {
                 bark = vu0->is_running();
                 bark |= vu1->is_running() << 8;
+                bark |= vu0->stopped_by_tbit() << 2;
+                bark |= vu1->stopped_by_tbit() << 10;
             }
             else
                 bark = (int32_t)vu0->cfc(cop_reg);
@@ -502,9 +598,18 @@ void EmotionEngine::ctc(int cop_id, int reg, int cop_reg, uint32_t instruction)
                 }
                 clear_interlock();
             }
-            vu0->ctc(cop_reg, bark);
+            if (cop_reg == 31)
+                vu1->start_program(bark);
+            else
+                vu0->ctc(cop_reg, bark);
             break;
     }
+}
+
+void EmotionEngine::invalidate_icache_indexed(uint32_t addr)
+{
+    int index = (addr >> 6) & 0x7F;
+    icache[index].tag[addr & 0x1] |= 1 << 31;
 }
 
 void EmotionEngine::mfhi(int index)
@@ -593,6 +698,7 @@ void EmotionEngine::lwc1(uint32_t addr, int index)
 
 void EmotionEngine::lqc2(uint32_t addr, int index)
 {
+    cop2_updatevu0();
     //printf("LQC2 $%08X: ", addr);
     for (int i = 0; i < 4; i++)
     {
@@ -610,6 +716,7 @@ void EmotionEngine::swc1(uint32_t addr, int index)
 
 void EmotionEngine::sqc2(uint32_t addr, int index)
 {
+    cop2_updatevu0();
     //printf("SQC2 $%08X: ", addr);
     for (int i = 0; i < 4; i++)
     {
@@ -669,11 +776,12 @@ void EmotionEngine::handle_exception(uint32_t new_addr, uint8_t code)
     delay_slot = 0;
     PC = new_addr;
     unhalt();
+    tlb_map = cp0->get_vtlb_map();
 }
 
 void EmotionEngine::syscall_exception()
 {
-    uint8_t op = read8(PC - 4);
+    int op = get_gpr<int>(3);
     //if (op != 0x7A)
         //printf("[EE] SYSCALL: %s (id: $%02X) called at $%08X\n", SYSCALL(op), op, PC);
 
@@ -770,7 +878,11 @@ void EmotionEngine::set_int0_signal(bool value)
 {
     cp0->cause.int0_pending = value;
     if (value)
+    {
         printf("[EE] Set INT0\n");
+        if (cp0->int_enabled())
+            int0();
+    }
 }
 
 void EmotionEngine::set_int1_signal(bool value)
@@ -778,6 +890,36 @@ void EmotionEngine::set_int1_signal(bool value)
     cp0->cause.int1_pending = value;
     if (value)
         printf("[EE] Set INT1\n");
+}
+
+void EmotionEngine::tlbwi()
+{
+    int index = cp0->gpr[0];
+    cp0->set_tlb(index);
+}
+
+void EmotionEngine::tlbp()
+{
+    //Search for a TLB entry whose "EntryHi" matches the EntryHi register in COP0.
+    //Place the index of the entry in Index, or place 1 << 31 in Index if no entry is found.
+    uint32_t entry_hi = cp0->gpr[10];
+
+    for (int i = 0; i < 48; i++)
+    {
+        TLB_Entry* entry = &cp0->tlb[i];
+        uint32_t vpn2 = entry_hi >> 13;
+        if (entry->vpn2 == (vpn2 & ~entry->page_mask))
+        {
+            uint32_t asid = entry_hi & 0xFF;
+            if (entry->global || entry->asid == asid)
+            {
+                cp0->gpr[0] = i;
+                return;
+            }
+        }
+    }
+
+    cp0->gpr[0] = 1 << 31;
 }
 
 void EmotionEngine::eret()
@@ -795,7 +937,10 @@ void EmotionEngine::eret()
     }
     //This hack is used for ISOs.
     if (PC == 0x82000)
+    {
         e->fast_boot();
+        //can_disassemble = true;
+    }
 
     //BIFC0 speedhack
     if (PC >= 0x81FC0 && PC < 0x81FE0)
@@ -807,17 +952,18 @@ void EmotionEngine::eret()
     if (PC >= 0x00100000 && PC < 0x00100010)
         e->skip_BIOS();
     PC -= 4;
+    tlb_map = cp0->get_vtlb_map();
 }
 
 void EmotionEngine::ei()
 {
-    if (cp0->status.edi || cp0->status.mode == 0)
+    if (cp0->status.edi || cp0->status.mode == 0 || cp0->status.exception || cp0->status.error)
         cp0->status.master_int_enable = true;
 }
 
 void EmotionEngine::di()
 {
-    if (cp0->status.edi || cp0->status.mode == 0)
+    if (cp0->status.edi || cp0->status.mode == 0 || cp0->status.exception || cp0->status.error)
         cp0->status.master_int_enable = false;
 }
 
@@ -921,8 +1067,29 @@ void EmotionEngine::qmtc2(int source, int cop_reg)
 
 void EmotionEngine::cop2_updatevu0()
 {
-    if (vu0->is_running())
-        vu0->run(16);
+    if (!vu0->is_running())
+    {
+        uint64_t cpu_cycles = get_cycle_count();
+        uint64_t cop2_cycles = get_cop2_last_cycle();
+        uint32_t last_instr = read32(get_PC() - 4);
+        uint32_t upper_instr = (last_instr >> 26);
+        uint32_t cop2_instr = (last_instr >> 21) & 0x1F;
+
+        //Always stall 1 VU cycle if the last op was LQC2, CTC2 or QMTC2
+        if (upper_instr == 0x36 || (upper_instr == 0x12 && (cop2_instr == 0x5 || cop2_instr == 0x6)))
+        {
+            vu0->cop2_updatepipes(1);
+        }
+
+        vu0->cop2_updatepipes(((cpu_cycles - cop2_cycles) >> 1) + 1);
+        set_cop2_last_cycle(cpu_cycles);
+    }
+    else if (!vu0->is_interlocked())
+    {
+        uint64_t current_count = ((cycle_count - cycles_to_run) - cop2_last_cycle) + 1;
+        vu0->run((current_count >> 1));
+        cop2_last_cycle = (cycle_count - cycles_to_run);
+    }
 }
 
 void EmotionEngine::cop2_special(EmotionEngine &cpu, uint32_t instruction)

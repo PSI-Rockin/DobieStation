@@ -165,6 +165,7 @@ class VU_JIT64
         void xgkick(VectorUnit& vu, IR::Instruction& instr);
         void update_xgkick(VectorUnit& vu, IR::Instruction& instr);
         void stop(VectorUnit& vu, IR::Instruction& instr);
+        void stop_by_tbit(VectorUnit& vu, IR::Instruction& instr);
         void save_pc(VectorUnit& vu, IR::Instruction& instr);
         void save_pipeline_state(VectorUnit& vu, IR::Instruction& instr);
         void move_delayed_branch(VectorUnit& vu, IR::Instruction& instr);

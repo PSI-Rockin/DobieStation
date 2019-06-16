@@ -194,7 +194,7 @@ class ImageProcessingUnit
         void inverse_scan(int16_t* block);
         void dequantize(int16_t* block);
         void prepare_IDCT();
-        void perform_IDCT(int16_t* pUV, int16_t* pXY);
+        void perform_IDCT(const int16_t* pUV, int16_t* pXY);
         bool BDEC_read_coeffs();
         bool BDEC_read_diff();
 

@@ -26,7 +26,7 @@ struct TEX1
     uint8_t filter_smaller; //MMIN 0 - 6
     bool MTBA; //base address specification of MIPMAPs (0 = specified, 1 = automatic)
     uint8_t L;//2 bits
-    double K;//sign bit, 7 bits integer, 4 bits decimal.
+    float K;//sign bit, 7 bits integer, 4 bits decimal.
 };
 
 struct CLAMP

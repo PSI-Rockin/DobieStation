@@ -913,6 +913,8 @@ string disasm_cop(uint32_t instruction, uint32_t instr_addr)
             {
                 case 0x2:
                     return "tlbwi";
+                case 0x8:
+                    return "tlbp";
                 case 0x18:
                     return "eret";
                 case 0x38:
@@ -1665,6 +1667,8 @@ string disasm_cop2_special2(uint32_t instruction)
             return disasm_vmaddaq(instruction);
         case 0x23:
             return disasm_vmaddai(instruction);
+        case 0x25:
+            return disasm_cop2_acc_q("vmsuba", instruction);
         case 0x27:
             return disasm_vmsubai(instruction);
         case 0x28:
@@ -1691,6 +1695,8 @@ string disasm_cop2_special2(uint32_t instruction)
             return disasm_vsqi(instruction);
         case 0x36:
             return disasm_vlqd(instruction);
+        case 0x37:
+            return disasm_vsqd(instruction);
         case 0x38:
             return disasm_vdiv(instruction);
         case 0x39:
@@ -1962,6 +1968,17 @@ string disasm_vlqd(uint32_t instruction)
     string field = get_dest_field((instruction >> 21) & 0xF);
     output << "vlqd." << field;
     output << " vf" << dest << ", (vi" << is << "++)";
+    return output.str();
+}
+
+string disasm_vsqd(uint32_t instruction)
+{
+    stringstream output;
+    uint32_t fs = (instruction >> 11) & 0x1F;
+    uint32_t it = (instruction >> 16) & 0x1F;
+    string field = get_dest_field((instruction >> 21) & 0xF);
+    output << "vsqd." << field;
+    output << " vf" << fs << ", (vi" << it << "++)";
     return output.str();
 }
 

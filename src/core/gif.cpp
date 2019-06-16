@@ -246,6 +246,7 @@ void GraphicsInterface::feed_GIF(uint128_t data)
     {
         path_status[active_path] = 4;
         gs->assert_FINISH();
+        gs->wake_gs_thread();
     }
 }
 
@@ -383,6 +384,11 @@ void GraphicsInterface::send_PATH3(uint128_t data)
         //printf("Adding data to GIF FIFO (size: %d)\n", FIFO.size());
         FIFO.push(data);
     }
+}
+
+uint128_t GraphicsInterface::read_GSFIFO()
+{
+    return gs->request_gs_download();
 }
 
 void GraphicsInterface::flush_path3_fifo()
