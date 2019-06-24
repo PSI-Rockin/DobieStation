@@ -30,6 +30,7 @@ class GameListModel final : public QAbstractTableModel
         void remove_path(const QString& path);
     private:
         QStringList get_directory_entries(QString path);
+        QString get_formatted_data_size(uint64_t size) const;
 };
 
 class GameListWidget : public QStackedWidget
