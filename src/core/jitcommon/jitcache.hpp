@@ -2,57 +2,12 @@
 #define JITCACHE_HPP
 
 #include <unordered_map>
+#include <cstring>
+#include <cstdlib>
 #include "../errors.hpp"
 
-// New Stuff
-
-
-//struct BlockState
-//{
-//    public:
-//        BlockState(uint32_t pc, uint32_t prev_pc, uint32_t program, uint64_t param1,
-//                   uint64_t param2) : pc(pc), prev_pc(prev_pc), program(program),
-//                   param1(param1), param2(param2) { }
-//        BlockState() = default;
-//        uint32_t pc;
-//        uint32_t prev_pc = 0;
-//        uint32_t program = 0;
-//        uint64_t param1 = 0;
-//        uint64_t param2 = 0;
-//
-//        // operator== is required to compare keys in case of hash collision
-//        bool operator==(const BlockState &p) const
-//        {
-//            return pc == p.pc && prev_pc == p.prev_pc && program == p.program && param1 == p.param1 && param2 == p.param2;
-//        }
-//};
-//
-//struct BlockStateHash
-//{
-//    std::size_t operator()(const BlockState& state) const
-//    {
-//        std::size_t h1 = std::hash<uint32_t>()(state.pc);
-//        std::size_t h2 = std::hash<uint32_t>()(state.prev_pc);
-//        std::size_t h3 = std::hash<uint64_t>()(state.program);
-//        std::size_t h4 = std::hash<uint64_t>()(state.param1);
-//        std::size_t h5 = std::hash<uint64_t>()(state.param2);
-//
-//        std::size_t result = 0;
-//        std::size_t seed = 12345;
-//
-//        result = (result * seed) + h1;
-//        result = (result * seed) + h2;
-//        result = (result * seed) + h3;
-//        result = (result * seed) + h4;
-//        result = (result * seed) + h5;
-//
-//        return result;
-//    }
-//};
-
-
 /*!
- * A record to keep track of JIT blocks. Points to the x86 code/literals, as well as some block_data
+ * A record to keep track of JIT blocks in a JIT heap. Points to the x86 code/literals, as well as some block_data
  * which can be specialized for the specific JIT to contain state information and lookup data structures
  */
 template<typename T>
@@ -63,9 +18,8 @@ struct JitBlockRecord {
     T block_data;
 };
 
-
 /*!
- * Block of x86 code used in EE/VU/draw_pixel/texture JITs
+ * Block of x86 code which the emitter writes into.  Non executable.
  */
 class JitBlock {
 private:
@@ -132,12 +86,10 @@ inline void JitBlock::write(T value) {
 
 }
 
-struct FreeList {
-    FreeList *next;
-    FreeList *prev;
-    uint8_t bin;
-};
 
+/*!
+ * Common jit Heap functions shared by all jit heaps
+ */
 class JitHeap
 {
 protected:
@@ -145,13 +97,188 @@ protected:
     void rwx_free(void* mem, std::size_t size);
 };
 
-template<typename DataType, typename HashFunction = std::hash<DataType>>
+/*!
+ * "Old" style jit heap which does an unordered map lookup per lookup and only supports clearing all.
+ */
+template<typename DataType, typename HashFunction>
 class JitUnorderedMapHeap : public JitHeap
 {
 private:
     constexpr static int JIT_HEAP_DEFAULT_SIZE = 64 * 1024 * 1024;
+    constexpr static int JIT_HEAP_ALIGN = 16;
     std::unordered_map<DataType, JitBlockRecord<DataType>, HashFunction> block_map;
+    uint8_t* heap = nullptr;
+    uint8_t* heap_top = nullptr;
+    uint8_t* heap_cur = nullptr;
+    uint64_t heap_size = 0;
+
+    void* jit_alloc(std::size_t size)
+    {
+        std::size_t aligned_size = (size + JIT_HEAP_ALIGN - 1) & ~(JIT_HEAP_ALIGN - 1);
+        uint8_t* old_cur = heap_cur;
+        uint8_t* new_cur = heap_cur + aligned_size;
+
+        // heap full!
+        if(new_cur >= heap_top) {
+            return nullptr;
+        }
+
+        heap_cur = new_cur;
+        return old_cur;
+    }
+
+    void jit_free_all()
+    {
+        heap_cur = heap;
+    }
+
+
+public:
+    explicit JitUnorderedMapHeap(std::size_t size = 0)
+    {
+        if(!size)
+        {
+            heap_size = JIT_HEAP_DEFAULT_SIZE;
+        }
+        else
+        {
+            heap_size = size;
+        }
+
+        heap = (uint8_t*)rwx_alloc(heap_size);
+        heap_cur = heap;
+        heap_top = heap + heap_size;
+    }
+
+    ~JitUnorderedMapHeap()
+    {
+        rwx_free(heap, heap_size);
+    }
+
+    JitBlockRecord<DataType>* insert_block(DataType data, JitBlock* block)
+    {
+        // compute block size
+        uint8_t *code_start = block->get_code_start();
+        uint8_t *code_end = block->get_code_pos();
+        uint8_t *literals_start = block->get_literals_start();
+        std::size_t block_size = code_end - literals_start;
+        if(block_size <= 0) Errors::die("block size invalid");
+
+        // allocate space on JIT heap
+        void* dest = jit_alloc(block_size);
+
+        if(!dest)
+        {
+            fprintf(stderr, "JIT Heap is full. Flushing!\n");
+            flush_all_blocks();
+            dest = jit_alloc(block_size);
+        }
+
+        if(!dest)
+        {
+            Errors::die("JIT EE Heap memory error.  Either the heap is corrupted, or you are attempting to insert a block"
+                        "which is larger than the entire heap size.");
+        }
+
+        std::memcpy(dest, block->get_literals_start(), block_size);
+
+        // create a record
+        JitBlockRecord<DataType> record;
+        std::size_t literal_size = code_start - literals_start;
+        std::size_t code_size = code_end - code_start;
+        record.literals_start = (uint8_t*)dest;
+        record.code_start = (uint8_t*)dest + literal_size;
+        record.code_end = (uint8_t*)dest + literal_size + code_size;
+        record.block_data = data;
+
+        // add to hash table
+        auto it = block_map.insert({data, record}).first;
+        return &it->second;
+    }
+
+
+    void flush_all_blocks()
+    {
+        jit_free_all();
+        block_map.clear();
+    }
+
+    JitBlockRecord<DataType>* find_block(DataType data)
+    {
+        auto kv = block_map.find(data);
+        if(kv != block_map.end())
+        {
+            //fprintf(stderr, "find got!\n");
+            return &(kv->second);
+        }
+        //fprintf(stderr, "find miss!\n");
+        return nullptr;
+    }
 };
+
+///////////////
+// GS
+///////////////
+
+struct GSU64Hash
+{
+    std::size_t operator()(const uint64_t &v) const {
+        return v;
+    }
+};
+
+using GSPixelJitBlockRecord = JitBlockRecord<uint64_t>;
+using GSPixelJitHeap = JitUnorderedMapHeap<uint64_t, GSU64Hash>;
+
+using GSTextureJitBlockRecord = JitBlockRecord<uint64_t>;
+using GSTextureJitHeap = JitUnorderedMapHeap<uint64_t, GSU64Hash>;
+
+///////////////
+// VU
+///////////////
+
+struct VUBlockState
+{
+    VUBlockState(uint32_t pc, uint32_t prev_pc, uint32_t program, uint64_t param1,
+                 uint64_t param2) : pc(pc), prev_pc(prev_pc), program(program),
+                                    param1(param1), param2(param2) { }
+    VUBlockState() = default;
+    uint32_t pc = 0;
+    uint32_t prev_pc = 0;
+    uint32_t program = 0;
+    uint64_t param1 = 0;
+    uint64_t param2 = 0;
+
+    // operator== is required to compare keys in case of hash collision
+    bool operator==(const VUBlockState &p) const
+    {
+        return pc == p.pc && prev_pc == p.prev_pc && program == p.program && param1 == p.param1 && param2 == p.param2;
+    }
+};
+
+struct VUBlockStateHash
+{
+    std::size_t operator()(const VUBlockState &v) const {
+        std::size_t result = 0;
+        std::size_t seed = 12345;
+
+        result = (result * seed) + v.pc;
+        result = (result * seed) + v.prev_pc;
+        result = (result * seed) + v.program;
+        result = (result * seed) + v.param1;
+        result = (result * seed) + v.param2;
+
+        return result;
+    }
+};
+
+using VUJitBlockRecord = JitBlockRecord<VUBlockState>;
+using VUJitHeap = JitUnorderedMapHeap<VUBlockState, VUBlockStateHash>;
+
+
+//////////////
+// EE
+//////////////
 
 struct EEJitBlockRecordData {
     // state
@@ -164,7 +291,11 @@ struct EEJitBlockRecordData {
 
 using EEJitBlockRecord = JitBlockRecord<EEJitBlockRecordData>;
 
-
+struct FreeList {
+    FreeList *next;
+    FreeList *prev;
+    uint8_t bin;
+};
 class EEJitHeap : public JitHeap
 {
 private:

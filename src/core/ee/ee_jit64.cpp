@@ -156,10 +156,11 @@ EEJitBlockRecord* EE_JIT64::recompile_block(EmotionEngine& ee, IR::Block& block)
         cleanup_recompiler(ee, true);
 
     //Switch the block's privileges from RW to RX.
-    jit_heap.insert_block(ee.get_PC(), &jit_block);
-
     //cache.print_block();
     //cache.print_literal_pool();
+    return jit_heap.insert_block(ee.get_PC(), &jit_block);
+
+
 }
 
 void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)

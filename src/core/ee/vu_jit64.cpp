@@ -35,7 +35,7 @@
     extern "C" void run_vu_jit(VU_JIT64& jit, VectorUnit& vu);
 #endif
 
-VU_JIT64::VU_JIT64() : emitter(&cache)
+VU_JIT64::VU_JIT64() : jit_block("VU"), emitter(&jit_block)
 {
     for (int i = 0; i < 4; i++)
     {
@@ -167,7 +167,7 @@ void VU_JIT64::reset(bool clear_cache)
     xmm_regs[REG_64::XMM1].locked = true;
 
     if(clear_cache)
-        cache.flush_all_blocks();
+        jit_heap.flush_all_blocks();
 
     ir.reset_instr_info();
 
@@ -2917,9 +2917,10 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
     }
 }
 
-void VU_JIT64::recompile_block(VectorUnit& vu, IR::Block& block)
+VUJitBlockRecord* VU_JIT64::recompile_block(VectorUnit& vu, IR::Block& block)
 {
-    cache.alloc_block(BlockState { vu.get_PC(), prev_pc, current_program, vu.pipeline_state[0], vu.pipeline_state[1] });
+    //jit_block.alloc_block(BlockState { vu.get_PC(), prev_pc, current_program, vu.pipeline_state[0], vu.pipeline_state[1] });
+    jit_block.clear();
 
     vu_branch = false;
     end_of_program = false;
@@ -2944,7 +2945,8 @@ void VU_JIT64::recompile_block(VectorUnit& vu, IR::Block& block)
         cleanup_recompiler(vu, true);
 
     //Switch the block's privileges from RW to RX.
-    cache.set_current_block_rx();
+    //jit_block.set_current_block_rx();
+    return jit_heap.insert_block(VUBlockState{vu.get_PC(), prev_pc, current_program, vu.pipeline_state[0], vu.pipeline_state[1]}, &jit_block);
     //cache.print_block();
     //cache.print_literal_pool();
 }
@@ -3097,14 +3099,17 @@ void VU_JIT64::fallback_interpreter(VectorUnit &vu, IR::Instruction &instr)
 extern "C"
 uint8_t* exec_block(VU_JIT64& jit, VectorUnit& vu)
 {
-    //printf("[VU_JIT64] Executing block at $%04X, Prev PC $%04X Current Program %08X: recompiling\n", vu.PC, jit.prev_pc, jit.current_program);
-    if (jit.cache.find_block(BlockState { vu.get_PC(), jit.prev_pc, jit.current_program, vu.pipeline_state[0], vu.pipeline_state[1] }) == nullptr)
+    //fprintf(stderr, "[VU_JIT64] Executing block at $%04X, Prev PC $%04X Current Program %08X: recompiling\n", vu.PC, jit.prev_pc, jit.current_program);
+    VUJitBlockRecord* found_block = jit.jit_heap.find_block(VUBlockState
+        { vu.get_PC(), jit.prev_pc, jit.current_program, vu.pipeline_state[0], vu.pipeline_state[1] });
+
+    if (!found_block)
     {
-        //printf("[VU_JIT64] Block not found at $%04X, Prev PC $%04X Current Program %08X: recompiling\n", vu.PC, jit.prev_pc, jit.current_program);
+        //fprintf(stderr, "[VU_JIT64] Block not found at $%04X, Prev PC $%04X Current Program %08X: recompiling\n", vu.PC, jit.prev_pc, jit.current_program);
         IR::Block block = jit.ir.translate(vu, vu.get_instr_mem(), jit.prev_pc);
-        jit.recompile_block(vu, block);
+        found_block = jit.recompile_block(vu, block);
     }
-    return jit.cache.get_code_start();
+    return (uint8_t*)found_block->code_start;
 }
 
 uint16_t VU_JIT64::run(VectorUnit& vu)
