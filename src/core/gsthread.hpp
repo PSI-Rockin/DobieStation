@@ -365,7 +365,7 @@ class GraphicsSynthesizerThread
         GSContext* current_ctx;
 
         Emitter64 emitter_dp, emitter_tex;
-        JitCache jit_draw_pixel_cache, jit_tex_lookup_cache;
+        JitBlock jit_draw_pixel_block, jit_tex_lookup_block;
         uint8_t* jit_draw_pixel_func;
         uint8_t* jit_tex_lookup_func;
 

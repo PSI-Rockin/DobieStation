@@ -2945,7 +2945,7 @@ void VU_JIT64::recompile_block(VectorUnit& vu, IR::Block& block)
 
     //Switch the block's privileges from RW to RX.
     cache.set_current_block_rx();
-    //cache.print_current_block();
+    //cache.print_block();
     //cache.print_literal_pool();
 }
 
@@ -3104,7 +3104,7 @@ uint8_t* exec_block(VU_JIT64& jit, VectorUnit& vu)
         IR::Block block = jit.ir.translate(vu, vu.get_instr_mem(), jit.prev_pc);
         jit.recompile_block(vu, block);
     }
-    return jit.cache.get_current_block_start();
+    return jit.cache.get_code_start();
 }
 
 uint16_t VU_JIT64::run(VectorUnit& vu)

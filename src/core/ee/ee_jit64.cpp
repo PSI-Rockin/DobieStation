@@ -36,7 +36,7 @@
 extern "C" void run_ee_jit(EE_JIT64& jit, EmotionEngine& ee);
 #endif
 
-EE_JIT64::EE_JIT64() : emitter(&cache)
+EE_JIT64::EE_JIT64() : jit_block("EE"), emitter(&jit_block)
 {
 }
 
@@ -68,23 +68,18 @@ void EE_JIT64::reset(bool clear_cache)
     int_regs[REG_64::RAX].locked = true;
 
     if (clear_cache)
-        cache.flush_all_blocks();
+        jit_heap.flush_all_blocks();
 }
 
 extern "C"
 uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee)
 {
     bool is_modified = false;
-    JitBlock *recompiledBlock = jit.cache.find_block(BlockState{ ee.PC, 0, 0, 0, 0 });
+    EEJitBlockRecord *recompiledBlock = jit.jit_heap.find_block(ee.PC);
 
     if (ee.cp0->get_tlb_modified(ee.PC / 4096))
     {
-        jit.cache.invalidate_ee_page(ee.PC / 4096);
-        // TODO: Cleaner way of clearing entire page of blocks
-        //for (int i = 0; i < 4096; i += 4)
-        //{
-        //    jit.cache.free_block(BlockState{ ee.PC / 4096 * 4096 + i, 0, 0, 0, 0 });
-        //}
+        jit.jit_heap.invalidate_ee_page(ee.PC / 4096);
         is_modified = true;
         ee.cp0->clear_tlb_modified(ee.PC / 4096);
     }
@@ -94,9 +89,9 @@ uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee)
     {
         printf("[EE_JIT64] Block not found at $%08X: recompiling\n", ee.PC);
         IR::Block block = jit.ir.translate(ee);
-        jit.recompile_block(ee, block);
+        recompiledBlock = jit.recompile_block(ee, block);
     }
-    return jit.cache.get_current_block_start();
+    return (uint8_t*)recompiledBlock->code_start;
 }
 
 void interpreter(EmotionEngine& ee, uint32_t instr)
@@ -121,14 +116,15 @@ uint16_t EE_JIT64::run(EmotionEngine& ee)
     return cycle_count;
 }
 
-void EE_JIT64::recompile_block(EmotionEngine& ee, IR::Block& block)
+EEJitBlockRecord* EE_JIT64::recompile_block(EmotionEngine& ee, IR::Block& block)
 {
     ee_branch = false;
     likely_branch = false;
     saved_int_regs = std::vector<REG_64>();
     saved_xmm_regs = std::vector<REG_64>();
 
-    cache.alloc_block(BlockState{ ee.get_PC(), 0, 0, 0, 0 });
+    //block.alloc_block(BlockState{ ee.get_PC(), 0, 0, 0, 0 });
+    jit_block.clear();
 
     //Return the amount of cycles to update the EE with
     emitter.load_addr((uint64_t)&cycle_count, REG_64::RAX);
@@ -160,8 +156,9 @@ void EE_JIT64::recompile_block(EmotionEngine& ee, IR::Block& block)
         cleanup_recompiler(ee, true);
 
     //Switch the block's privileges from RW to RX.
-    cache.set_current_block_rx();
-    //cache.print_current_block();
+    jit_heap.insert_block(ee.get_PC(), &jit_block);
+
+    //cache.print_block();
     //cache.print_literal_pool();
 }
 

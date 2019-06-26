@@ -35,7 +35,7 @@ class VU_JIT64
     private:
         AllocReg xmm_regs[16];
         AllocReg int_regs[16];
-        JitCache cache;
+        JitBlock cache;
         Emitter64 emitter;
         VU_JitTranslator ir;
 

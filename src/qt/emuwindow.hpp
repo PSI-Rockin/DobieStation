@@ -20,8 +20,7 @@ class EmuWindow : public QMainWindow
         EmuThread emu_thread;
         QString vu1_mode;
         std::chrono::system_clock::time_point old_frametime;
-        std::chrono::system_clock::time_point old_update_time;
-        double framerate_avg;
+        double framerate_avg, frametime_avg;
 
         QFileInfo current_ROM;
         QMenu* file_menu;
@@ -65,7 +64,7 @@ class EmuWindow : public QMainWindow
         void release_key(PAD_BUTTON button);
         void update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t val);
     public slots:
-        void update_FPS(int FPS);
+        void update_FPS(double FPS);
         void open_file_no_skip();
         void open_file_skip();
         void load_state();

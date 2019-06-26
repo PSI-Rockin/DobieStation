@@ -52,7 +52,7 @@ enum class ConditionCode
 class Emitter64
 {
     private:
-        JitCache* cache;
+        JitBlock* block;
 
         void rex_r(REG_64 reg);
         void rex_rm(REG_64 rm);
@@ -67,7 +67,7 @@ class Emitter64
 
         int get_rip_offset(uint64_t addr);
     public:
-        Emitter64(JitCache* cache);
+        Emitter64(JitBlock* cache);
 
         void load_addr(uint64_t addr, REG_64 dest);
 

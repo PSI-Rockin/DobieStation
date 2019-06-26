@@ -81,8 +81,8 @@ float interpolate_f(int32_t x, float u1, int32_t x1, float u2, int32_t x2)
 const unsigned int GraphicsSynthesizerThread::max_vertices[8] = {1, 2, 2, 3, 3, 3, 2, 0};
 
 GraphicsSynthesizerThread::GraphicsSynthesizerThread()
-    : frame_complete(false), local_mem(nullptr), emitter_dp(&jit_draw_pixel_cache),
-      emitter_tex(&jit_tex_lookup_cache)
+    : frame_complete(false), local_mem(nullptr), emitter_dp(&jit_draw_pixel_block),
+      emitter_tex(&jit_tex_lookup_block)
 {
     //Initialize swizzling tables
     for (int block = 0; block < 32; block++)
@@ -148,8 +148,8 @@ GraphicsSynthesizerThread::GraphicsSynthesizerThread()
         log2_lookup[i][3] = ldexp(calculation, 3);
     }
 
-    jit_draw_pixel_cache.flush_all_blocks();
-    jit_tex_lookup_cache.flush_all_blocks();
+    jit_draw_pixel_block.flush_all_blocks();
+    jit_tex_lookup_block.flush_all_blocks();
 
     thread = std::thread(&GraphicsSynthesizerThread::event_loop, this);
 }
@@ -479,8 +479,8 @@ void GraphicsSynthesizerThread::reset()
     jit_draw_pixel_func = nullptr;
     jit_tex_lookup_func = nullptr;
 
-    jit_tex_lookup_cache.flush_all_blocks();
-    jit_draw_pixel_cache.flush_all_blocks();
+    jit_tex_lookup_block.flush_all_blocks();
+    jit_draw_pixel_block.flush_all_blocks();
 
     reset_fifos();
 }
@@ -3877,27 +3877,27 @@ void GraphicsSynthesizerThread::update_tex_lookup_state()
 
 uint8_t* GraphicsSynthesizerThread::get_jitted_draw_pixel(uint64_t state)
 {
-    if (jit_draw_pixel_cache.find_block(BlockState{0, 0, 0, state, 0}) == nullptr)
+    if (jit_draw_pixel_block.find_block(BlockState{0, 0, 0, state, 0}) == nullptr)
     {
         printf("[GS_t] RECOMPILING DRAW PIXEL %llX\n", state);
         recompile_draw_pixel(state);
     }
-    return jit_draw_pixel_cache.get_current_block_start();
+    return jit_draw_pixel_block.get_code_start();
 }
 
 uint8_t* GraphicsSynthesizerThread::get_jitted_tex_lookup(uint64_t state)
 {
-    if (jit_tex_lookup_cache.find_block(BlockState{0, 0, 0, state, 0}) == nullptr)
+    if (jit_tex_lookup_block.find_block(BlockState{0, 0, 0, state, 0}) == nullptr)
     {
         printf("[GS_t] RECOMPILING TEX LOOKUP %llX\n", state);
         recompile_tex_lookup(state);
     }
-    return jit_tex_lookup_cache.get_current_block_start();
+    return jit_tex_lookup_block.get_code_start();
 }
 
 void GraphicsSynthesizerThread::recompile_draw_pixel(uint64_t state)
 {
-    jit_draw_pixel_cache.alloc_block(BlockState{0, 0, 0, state, 0});
+    jit_draw_pixel_block.alloc_block(BlockState{0, 0, 0, state, 0});
 
     //Prologue - create stack frame and save registers
     emitter_dp.PUSH(RBP);
@@ -4153,9 +4153,9 @@ void GraphicsSynthesizerThread::recompile_draw_pixel(uint64_t state)
 
     emitter_dp.set_jump_dest(do_not_update_rgba);
     jit_epilogue_draw_pixel();
-    jit_draw_pixel_cache.print_current_block();
-    jit_draw_pixel_cache.print_literal_pool();
-    jit_draw_pixel_cache.set_current_block_rx();
+    jit_draw_pixel_block.print_block();
+    jit_draw_pixel_block.print_literal_pool();
+    jit_draw_pixel_block.set_current_block_rx();
 }
 
 void GraphicsSynthesizerThread::recompile_alpha_test()
@@ -4481,7 +4481,7 @@ void GraphicsSynthesizerThread::jit_epilogue_draw_pixel()
 
 void GraphicsSynthesizerThread::recompile_tex_lookup(uint64_t state)
 {
-    jit_tex_lookup_cache.alloc_block(BlockState{0, 0, 0, state, 0});
+    jit_tex_lookup_block.alloc_block(BlockState{0, 0, 0, state, 0});
 
     emitter_tex.PUSH(RBP);
     emitter_tex.SUB64_REG_IMM(0x100, RSP);
@@ -4849,9 +4849,9 @@ void GraphicsSynthesizerThread::recompile_tex_lookup(uint64_t state)
     emitter_tex.POP(RBP);
     emitter_tex.RET();
 
-    jit_tex_lookup_cache.print_current_block();
-    jit_tex_lookup_cache.print_literal_pool();
-    jit_tex_lookup_cache.set_current_block_rx();
+    jit_tex_lookup_block.print_block();
+    jit_tex_lookup_block.print_literal_pool();
+    jit_tex_lookup_block.set_current_block_rx();
 }
 
 void GraphicsSynthesizerThread::recompile_clut_lookup()
