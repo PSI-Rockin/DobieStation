@@ -280,6 +280,8 @@ using VUJitHeap = JitUnorderedMapHeap<VUBlockState, VUBlockStateHash>;
 // EE
 //////////////
 
+
+
 struct EEJitBlockRecordData {
     // state
     uint32_t pc;
@@ -287,6 +289,11 @@ struct EEJitBlockRecordData {
     // lookup data structures
     JitBlockRecord<EEJitBlockRecordData> *next;
     JitBlockRecord<EEJitBlockRecordData> *prev;
+};
+
+struct EEPageRecord {
+    JitBlockRecord<EEJitBlockRecordData>* block_array = nullptr; // nullptr if there is no cached code in this block.
+    bool valid = false;
 };
 
 using EEJitBlockRecord = JitBlockRecord<EEJitBlockRecordData>;
@@ -328,11 +335,20 @@ private:
     std::unordered_map<uint32_t, EEJitBlockRecord> blocks;
     std::unordered_map<uint32_t, EEJitBlockRecord *> ee_page_lists;
 
+    EEPageRecord* lookup_ee_page(uint32_t page);
+    EEPageRecord* ee_page_lookup_cache;
+    int32_t ee_page_lookup_idx;
+    std::unordered_map<uint32_t, EEPageRecord> ee_page_record_map;
+    uint64_t page_lookups = 0;
+    uint64_t cached_page_lookups = 0;
+
     // allocator
     std::size_t _heap_size = 0;
     void *_heap = nullptr;
     FreeList *free_bin_lists[JIT_ALLOC_BINS + 1];
     uint64_t heap_usage;
+
+    uint64_t invalid_count = 0;
 
 public:
     EEJitHeap();
@@ -343,6 +359,7 @@ public:
     void flush_all_blocks();
     void invalidate_ee_page(uint32_t page);
     EEJitBlockRecord *find_block(uint32_t PC);
+    bool is_page_valid(uint32_t page);
 
 };
 

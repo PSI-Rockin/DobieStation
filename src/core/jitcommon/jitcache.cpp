@@ -485,11 +485,31 @@ EEJitHeap::EEJitHeap()
 
     // allocator setup
     init_allocator();
+
+    // lookup cache setup
+    ee_page_lookup_cache = nullptr;
+    ee_page_lookup_idx = -1;
 }
 
 EEJitHeap::~EEJitHeap()
 {
     rwx_free(_heap, _heap_size);
+}
+
+EEPageRecord* EEJitHeap::lookup_ee_page(uint32_t page)
+{
+    page_lookups++;
+    if(ee_page_lookup_idx == page) {
+        cached_page_lookups++;
+        return ee_page_lookup_cache;
+    }
+
+    EEPageRecord* rec = &ee_page_record_map[page];
+
+    ee_page_lookup_cache = rec;
+    ee_page_lookup_idx = page;
+
+    return rec;
 }
 
 /*!
@@ -508,16 +528,16 @@ void EEJitHeap::free_block(uint32_t PC) {
     }
 
     // update ee page linked list
-    if(block->block_data.next) {
-        block->block_data.next->block_data.prev = block->block_data.prev;
-    }
-
-    if(block->block_data.prev) {
-        block->block_data.prev->block_data.next = block->block_data.next;
-    } else {
-        // no prev means we were the head
-        *get_ee_page_list_head(block->block_data.pc / 4096) = block->block_data.next;
-    }
+//    if(block->block_data.next) {
+//        block->block_data.next->block_data.prev = block->block_data.prev;
+//    }
+//
+//    if(block->block_data.prev) {
+//        block->block_data.prev->block_data.next = block->block_data.next;
+//    } else {
+//        // no prev means we were the head
+//        *get_ee_page_list_head(block->block_data.pc / 4096) = block->block_data.next;
+//    }
 
     // free memory
     jit_free(block->literals_start);
@@ -531,17 +551,42 @@ void EEJitHeap::free_block(uint32_t PC) {
  */
 void EEJitHeap::invalidate_ee_page(uint32_t page)
 {
-    EEJitBlockRecord** head_ptr = get_ee_page_list_head(page);
-    EEJitBlockRecord* block = *head_ptr;
+//    EEJitBlockRecord** head_ptr = get_ee_page_list_head(page);
+//    EEJitBlockRecord* block = *head_ptr;
+//
+//    while(block) {
+//        auto* next = block->block_data.next;
+//        jit_free(block->literals_start);
+//        blocks.erase(block->block_data.pc);
+//        block = next;
+//    }
+//
+//    *head_ptr = nullptr;
 
-    while(block) {
-        auto* next = block->block_data.next;
-        jit_free(block->literals_start);
-        blocks.erase(block->block_data.pc);
-        block = next;
+    auto kv = ee_page_record_map.find(page);
+    if(kv != ee_page_record_map.end()) {
+        if(kv->second.block_array) {
+            for(uint32_t idx = 0; idx < 1024; idx++) {
+                if(kv->second.block_array[idx].literals_start) {
+                    jit_free(kv->second.block_array[idx].literals_start);
+                }
+            }
+        }
+        delete[] kv->second.block_array;
+        ee_page_record_map.erase(page);
     }
 
-    *head_ptr = nullptr;
+    if(page == ee_page_lookup_idx) {
+        ee_page_lookup_cache = nullptr;
+        ee_page_lookup_idx = -1;
+    }
+
+    invalid_count++;
+    if(invalid_count == 10000) {
+        invalid_count = 0;
+        fprintf(stderr, "cache %ld/%ld %.3f\n", cached_page_lookups, page_lookups, (double)cached_page_lookups/page_lookups);
+    }
+
 }
 
 /*!
@@ -550,12 +595,25 @@ void EEJitHeap::invalidate_ee_page(uint32_t page)
  */
 EEJitBlockRecord* EEJitHeap::find_block(uint32_t PC)
 {
-    auto kv = blocks.find(PC);
-    if(kv != blocks.end())
-    {
-        return &(kv->second);
+//    auto kv = blocks.find(PC);
+//    if(kv != blocks.end())
+//    {
+//        return &(kv->second);
+//    }
+//    return nullptr;
+
+    uint32_t page = PC / 4096;
+    uint64_t idx = (PC - 4096*page)/4;
+    EEPageRecord* page_rec = lookup_ee_page(page);
+    if(page_rec->block_array && page_rec->block_array[idx].literals_start) {
+        return &page_rec->block_array[idx];
     }
     return nullptr;
+}
+
+bool EEJitHeap::is_page_valid(uint32_t page) {
+    EEPageRecord* page_rec = lookup_ee_page(page);
+    return page_rec->valid;
 }
 
 /*!
@@ -564,16 +622,30 @@ EEJitBlockRecord* EEJitHeap::find_block(uint32_t PC)
 void EEJitHeap::flush_all_blocks()
 {
 
-    for (auto &it : blocks)
+//    for (auto &it : blocks)
+//    {
+//        EEJitBlockRecord *block = &it.second;
+//        jit_free(block->literals_start);
+//    }
+//
+//    // todo heap check here?
+//
+//    ee_page_lists.clear();
+//    blocks.clear();
+
+    for(auto& page : ee_page_record_map)
     {
-        EEJitBlockRecord *block = &it.second;
-        jit_free(block->literals_start);
+        for(uint32_t idx = 0; idx < 1024; idx++)
+        {
+            if(page.second.block_array[idx].literals_start) {
+                jit_free(page.second.block_array[idx].literals_start);
+            }
+        }
+        delete[] page.second.block_array;
     }
-
-    // todo heap check here?
-
-    ee_page_lists.clear();
-    blocks.clear();
+    ee_page_record_map.clear();
+    ee_page_lookup_cache = nullptr;
+    ee_page_lookup_idx = -1;
 }
 
 /*!
@@ -615,41 +687,57 @@ EEJitBlockRecord* EEJitHeap::insert_block(uint32_t PC, JitBlock *block)
     record.code_end = (uint8_t*)dest + literal_size + code_size;
     record.block_data.pc = PC;
 
+    uint32_t page = PC / 4096;
+    EEPageRecord* page_record = lookup_ee_page(page);
+
+    if(!page_record->block_array)
+    {
+        page_record->block_array = new EEJitBlockRecord[1024];
+        page_record->valid = true;
+        memset(page_record->block_array, 0, 1024 * sizeof(EEJitBlockRecord));
+    }
+
+
     // add to hash table
-    auto it = blocks.insert({PC, record}).first;
+//    auto it = blocks.insert({PC, record}).first;
 
     // ee page lists
-    EEJitBlockRecord** page_list_head = get_ee_page_list_head(PC / 4096);
-    it->second.block_data.next = *page_list_head;
-    it->second.block_data.prev = nullptr;
+//    EEJitBlockRecord** page_list_head = get_ee_page_list_head(PC / 4096);
+//    it->second.block_data.next = *page_list_head;
+//    it->second.block_data.prev = nullptr;
+//
+//    if(it->second.block_data.next) {
+//        it->second.block_data.next->block_data.prev = &it->second;
+//    }
+//    *page_list_head = &it->second;
+//    return &it->second;
 
-    if(it->second.block_data.next) {
-        it->second.block_data.next->block_data.prev = &it->second;
-    }
-    *page_list_head = &it->second;
-    return &it->second;
+    uint64_t idx = (PC - 4096*page)/4;
+    assert(idx < 1024);
+    page_record->block_array[idx] = record;
+    return &page_record->block_array[idx];
 }
 
-/*!
- * Returns a pointer to the head of the ee page list
- */
-EEJitBlockRecord** EEJitHeap::get_ee_page_list_head(uint32_t ee_page)
-{
-    auto kv = ee_page_lists.find(ee_page);
-    if(kv == ee_page_lists.end()) {
-        // doesn't exist yet, add it
-        ee_page_lists[ee_page] = nullptr;
-        return &ee_page_lists.find(ee_page)->second;
-    } else {
-        return &kv->second;
-    }
-}
+///*!
+// * Returns a pointer to the head of the ee page list
+// */
+//EEJitBlockRecord** EEJitHeap::get_ee_page_list_head(uint32_t ee_page)
+//{
+//    auto kv = ee_page_lists.find(ee_page);
+//    if(kv == ee_page_lists.end()) {
+//        // doesn't exist yet, add it
+//        ee_page_lists[ee_page] = nullptr;
+//        return &ee_page_lists.find(ee_page)->second;
+//    } else {
+//        return &kv->second;
+//    }
+//}
 
 void EEJitHeap::debug_print_page_list(uint32_t ee_page)
 {
     printf("PAGE LIST\n");
-    for(EEJitBlockRecord* block = *get_ee_page_list_head(ee_page); block; block = block->block_data.next) {
-        printf("dbg [0x%x] 0x%lx n: 0x%lx p: 0x%lx\n", block->block_data.pc, (uint64_t)block,
-            (uint64_t)block->block_data.next, (uint64_t)block->block_data.prev);
-    }
+//    for(EEJitBlockRecord* block = *get_ee_page_list_head(ee_page); block; block = block->block_data.next) {
+//        printf("dbg [0x%x] 0x%lx n: 0x%lx p: 0x%lx\n", block->block_data.pc, (uint64_t)block,
+//            (uint64_t)block->block_data.next, (uint64_t)block->block_data.prev);
+//    }
 }
