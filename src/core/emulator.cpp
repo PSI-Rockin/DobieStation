@@ -31,7 +31,8 @@ Emulator::Emulator() :
     ELF_size = 0;
     gsdump_single_frame = false;
     ee_log.open("ee_log.txt", std::ios::out);
-    set_vu1_mode(VU_MODE::DONT_CARE);
+    set_ee_mode(CPU_MODE::DONT_CARE);
+    set_vu1_mode(CPU_MODE::DONT_CARE);
 }
 
 Emulator::~Emulator()
@@ -87,8 +88,7 @@ void Emulator::run()
         int iop_cycles = scheduler.get_iop_run_cycles();
         scheduler.update_cycle_counts();
 
-        //cpu.run(ee_cycles);
-        cpu.run_jit(ee_cycles);
+        ee_run_func(cpu, ee_cycles);
         dmac.run(bus_cycles);
         timers.run(bus_cycles);
         ipu.run();
@@ -319,14 +319,28 @@ void Emulator::set_skip_BIOS_hack(SKIP_HACK type)
     skip_BIOS_hack = type;
 }
 
-void Emulator::set_vu1_mode(VU_MODE mode)
+void Emulator::set_ee_mode(CPU_MODE mode)
+{
+  switch (mode)
+  {
+      case CPU_MODE::INTERPRETER:
+          ee_run_func = &EmotionEngine::run;
+          break;
+      case CPU_MODE::JIT:
+      default:
+          ee_run_func = &EmotionEngine::run_jit;
+          break;
+  }
+}
+
+void Emulator::set_vu1_mode(CPU_MODE mode)
 {
     switch (mode)
     {
-        case VU_MODE::INTERPRETER:
+        case CPU_MODE::INTERPRETER:
             vu1_run_func = &VectorUnit::run;
             break;
-        case VU_MODE::JIT:
+        case CPU_MODE::JIT:
         default:
             vu1_run_func = &VectorUnit::run_jit;
             break;

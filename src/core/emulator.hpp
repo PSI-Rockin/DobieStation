@@ -33,7 +33,8 @@ enum SKIP_HACK
     LOAD_DISC
 };
 
-enum VU_MODE {
+enum CPU_MODE
+{
     DONT_CARE,
     JIT,
     INTERPRETER
@@ -73,6 +74,7 @@ class Emulator
         std::ofstream ee_log;
         std::string ee_stdout;
         std::function<void(VectorUnit&, int)> vu1_run_func;
+        std::function<void(EmotionEngine&, int)> ee_run_func;
 
         uint8_t* RDRAM;
         uint8_t* IOP_RAM;
@@ -113,7 +115,8 @@ class Emulator
         bool skip_BIOS();
         void fast_boot();
         void set_skip_BIOS_hack(SKIP_HACK type);
-        void set_vu1_mode(VU_MODE mode);
+        void set_ee_mode(CPU_MODE mode);
+        void set_vu1_mode(CPU_MODE mode);
         void load_BIOS(const uint8_t* BIOS);
         void load_ELF(const uint8_t* ELF, uint32_t size);
         bool load_CDVD(const char* name, CDVD_CONTAINER type);

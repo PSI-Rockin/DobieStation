@@ -29,6 +29,7 @@ class Settings final : public QObject
         QStringList recent_roms;
 
         bool vu1_jit_enabled;
+        bool ee_jit_enabled;
 
         void save();
         void reset();

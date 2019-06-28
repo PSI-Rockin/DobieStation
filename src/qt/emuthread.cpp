@@ -34,7 +34,14 @@ void EmuThread::set_skip_BIOS_hack(SKIP_HACK skip)
     load_mutex.unlock();
 }
 
-void EmuThread::set_vu1_mode(VU_MODE mode)
+void EmuThread::set_ee_mode(CPU_MODE mode)
+{
+    load_mutex.lock();
+    e.set_ee_mode(mode);
+    load_mutex.unlock();
+}
+
+void EmuThread::set_vu1_mode(CPU_MODE mode)
 {
     load_mutex.lock();
     e.set_vu1_mode(mode);
