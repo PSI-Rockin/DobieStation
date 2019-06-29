@@ -52,6 +52,9 @@ build_script:
 
 after_build:
 - cmd: 7z a DobieStation.zip DobieStation/release/
+- sh: 7z a ../DobieStation.zip DobieStation
+
+test: off
 
 artifacts:
 - path: DobieStation.zip
