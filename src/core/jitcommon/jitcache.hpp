@@ -7,8 +7,9 @@
 #include "../errors.hpp"
 
 /*!
- * A record to keep track of JIT blocks in a JIT heap. Points to the x86 code/literals, as well as some block_data
- * which can be specialized for the specific JIT to contain state information and lookup data structures
+ * A record to keep track of a JIT block in a JIT heap. Points to the x86 code/literals, as well as some block_data
+ * which can be specialized for the specific JIT.
+ * A JIT Block contains literals, then code.
  */
 template<typename T>
 struct JitBlockRecord {
@@ -23,10 +24,9 @@ struct JitBlockRecord {
  */
 class JitBlock {
 private:
-    // old version had at most 8192 blocks, each 64 kB. this is quite large, let's do 1/128th of it.
-    // all these must have at least 16 byte alignment (or whatever JIT_ALLOC_ALIGN is set to).
-    constexpr static int JIT_MAX_BLOCK_CODESIZE = 1024 * 4096; // 512 kB/block maximum size
-    constexpr static int JIT_MAX_BLOCK_LITERALSIZE = 1024 * 8;
+    // all these must have at least 16 byte alignment
+    constexpr static int JIT_MAX_BLOCK_CODESIZE = 1024 * 4096; // 4 MB/block maximum code size
+    constexpr static int JIT_MAX_BLOCK_LITERALSIZE = 1024 * 8; // 1 MB/block maximum literal size
     uint8_t *building_block = nullptr;
     void *literals_start = nullptr;
     void *code_start = nullptr;
@@ -99,14 +99,17 @@ protected:
 
 /*!
  * "Old" style jit heap which does an unordered map lookup per lookup and only supports clearing all.
+ * Templated on the lookup data type and a hash function for it.
  */
 template<typename DataType, typename HashFunction>
 class JitUnorderedMapHeap : public JitHeap
 {
 private:
-    constexpr static int JIT_HEAP_DEFAULT_SIZE = 64 * 1024 * 1024;
-    constexpr static int JIT_HEAP_ALIGN = 16;
+    constexpr static int JIT_HEAP_DEFAULT_SIZE = 64 * 1024 * 1024; // 64 MB heap size
+    constexpr static int JIT_HEAP_ALIGN = 16;                      // 16 byte alignment used everywhere
     std::unordered_map<DataType, JitBlockRecord<DataType>, HashFunction> block_map;
+
+    // simple "stack" allocator
     uint8_t* heap = nullptr;
     uint8_t* heap_top = nullptr;
     uint8_t* heap_cur = nullptr;
@@ -169,15 +172,25 @@ public:
 
         if(!dest)
         {
-            fprintf(stderr, "JIT Heap is full. Flushing!\n");
+            fprintf(stderr, "JIT Heap is full. Flushing all!\n");
             flush_all_blocks();
             dest = jit_alloc(block_size);
         }
 
+        // if it still fails, something is very wrong.
         if(!dest)
         {
-            Errors::die("JIT EE Heap memory error.  Either the heap is corrupted, or you are attempting to insert a block"
-                        "which is larger than the entire heap size.");
+            std::size_t aligned_size = (block_size + JIT_HEAP_ALIGN - 1) & ~(JIT_HEAP_ALIGN - 1);
+            if(aligned_size >= heap_size)
+            {
+                Errors::die("Tried to insert a Jit block of size %ld bytes, but the entire JIT heap is only %ld bytes!",
+                    aligned_size, heap_size);
+            }
+            else
+            {
+                Errors::die("JIT EE Heap memory error.");
+            }
+
         }
 
         std::memcpy(dest, block->get_literals_start(), block_size);
@@ -208,17 +221,16 @@ public:
         auto kv = block_map.find(data);
         if(kv != block_map.end())
         {
-            //fprintf(stderr, "find got!\n");
             return &(kv->second);
         }
-        //fprintf(stderr, "find miss!\n");
+
         return nullptr;
     }
 };
 
-///////////////
-// GS
-///////////////
+///////////////////////
+// GS Implementation
+///////////////////////
 
 struct GSU64Hash
 {
@@ -233,9 +245,9 @@ using GSPixelJitHeap = JitUnorderedMapHeap<uint64_t, GSU64Hash>;
 using GSTextureJitBlockRecord = JitBlockRecord<uint64_t>;
 using GSTextureJitHeap = JitUnorderedMapHeap<uint64_t, GSU64Hash>;
 
-///////////////
-// VU
-///////////////
+///////////////////////
+// VU Implementation
+//////////////////////
 
 struct VUBlockState
 {
@@ -276,10 +288,9 @@ using VUJitBlockRecord = JitBlockRecord<VUBlockState>;
 using VUJitHeap = JitUnorderedMapHeap<VUBlockState, VUBlockStateHash>;
 
 
-//////////////
-// EE
-//////////////
-
+////////////////////////
+// EE Implementation
+////////////////////////
 
 
 struct EEJitBlockRecordData {
@@ -290,6 +301,7 @@ struct EEJitBlockRecordData {
     JitBlockRecord<EEJitBlockRecordData> *next;
     JitBlockRecord<EEJitBlockRecordData> *prev;
 };
+
 
 struct EEPageRecord {
     JitBlockRecord<EEJitBlockRecordData>* block_array = nullptr; // nullptr if there is no cached code in this block.
@@ -303,15 +315,14 @@ struct FreeList {
     FreeList *prev;
     uint8_t bin;
 };
+
 class EEJitHeap : public JitHeap
 {
 private:
-    // allocator constants
+    // allocator
     constexpr static int EE_JIT_HEAP_SIZE = 64 * 1024 * 1024;
-    constexpr static int JIT_ALLOC_BINS = 8;
     constexpr static int JIT_ALLOC_BIN_START = 8; // 2^8 = 256 bytes
-
-    // allocator methods
+    constexpr static int JIT_ALLOC_BINS = 8; // 2^(8 + 8) = 16k bytes.
     std::size_t get_min_bin_size(uint8_t bin);
     std::size_t get_max_bin_size(uint8_t bin);
     std::size_t *get_size_ptr(void *obj);
@@ -326,15 +337,14 @@ private:
     void init_allocator();
     void jit_free(void *ptr);
     void *jit_malloc(std::size_t size);
+    std::size_t _heap_size = 0;
+    void *_heap = nullptr;
+    FreeList *free_bin_lists[JIT_ALLOC_BINS + 1];
+    uint64_t heap_usage;
+    uint64_t invalid_count = 0;
 
-    // page list methods
-    EEJitBlockRecord **get_ee_page_list_head(uint32_t ee_page);
-    void debug_print_page_list(uint32_t ee_page);
 
-    // lookup stuff
-    std::unordered_map<uint32_t, EEJitBlockRecord> blocks;
-    std::unordered_map<uint32_t, EEJitBlockRecord *> ee_page_lists;
-
+    // ee page
     EEPageRecord* lookup_ee_page(uint32_t page);
     EEPageRecord* ee_page_lookup_cache;
     int32_t ee_page_lookup_idx;
@@ -342,25 +352,14 @@ private:
     uint64_t page_lookups = 0;
     uint64_t cached_page_lookups = 0;
 
-    // allocator
-    std::size_t _heap_size = 0;
-    void *_heap = nullptr;
-    FreeList *free_bin_lists[JIT_ALLOC_BINS + 1];
-    uint64_t heap_usage;
-
-    uint64_t invalid_count = 0;
-
 public:
     EEJitHeap();
     ~EEJitHeap();
 
     EEJitBlockRecord *insert_block(uint32_t PC, JitBlock* block);
-    void free_block(uint32_t PC);
     void flush_all_blocks();
     void invalidate_ee_page(uint32_t page);
     EEJitBlockRecord *find_block(uint32_t PC);
-    bool is_page_valid(uint32_t page);
-
 };
 
 
