@@ -10,6 +10,8 @@
 #include "gamelistwidget.hpp"
 #include "settings.hpp"
 
+#include <cmath>
+
 GameListModel::GameListModel(QObject* parent)
     : QAbstractTableModel(parent)
 {

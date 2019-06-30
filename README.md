@@ -23,6 +23,17 @@ cmake ..
 make
 ```
 
+### Note for Ubuntu Xenial
+While 16.04 is still officially supported they don't provide a recent enough version of Qt.
+As such if you wish to build Dobie on Xenial you will need to update Qt through a PPA
+```
+add-apt-repository ppa:beineri/opt-qt-5.11.1-xenial
+apt-get update
+apt-get install qt511-meta-minimal qt511multimedia libglu1-mesa-dev
+source /opt/qt511/bin/qt511-env.sh
+```
+Alternatively, you may upgrade to the most recent Ubuntu LTS, 18.04.
+
 ### Building with Visual Studio
 Dobiestation is known to compile on 2015 and 2017.
 
