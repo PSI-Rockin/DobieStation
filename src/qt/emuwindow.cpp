@@ -175,6 +175,7 @@ int EmuWindow::load_exec(const char* file_name, bool skip_BIOS)
         return 1;
     }
 
+    set_ee_mode();
     set_vu1_mode();
 
     current_ROM = file_info;
@@ -529,11 +530,15 @@ void EmuWindow::keyReleaseEvent(QKeyEvent *event)
 
 void EmuWindow::update_FPS(double FPS)
 {
+    if(FPS > 0.01) {
+        frametime_avg = 0.8 * frametime_avg + 0.2 / FPS;
+    }
+
     framerate_avg = 0.8 * framerate_avg + 0.2 * FPS;
-    frametime_avg = 0.8 * frametime_avg + 0.2 / FPS;
+
     // avoid multiple copies
-    QString status = QString("FPS: %1 (%2 ms)- %3 [VU1: %4]").arg(
-        QString::number(framerate_avg, 'f', 1), QString::number(frametime_avg * 1000., 'f', 1), current_ROM.fileName(), vu1_mode
+    QString status = QString("FPS: %1 (%2 ms)- %3 [EE: %4] [VU1: %5]").arg(
+        QString::number(framerate_avg, 'f', 1), QString::number(frametime_avg * 1000., 'f', 1), current_ROM.fileName(), ee_mode, vu1_mode
     );
 
     setWindowTitle(status);
@@ -660,17 +665,33 @@ void EmuWindow::show_render_view()
     stack_widget->setCurrentIndex(1);
 }
 
+void EmuWindow::set_ee_mode()
+{
+    CPU_MODE mode;
+    if (Settings::instance().ee_jit_enabled)
+    {
+        mode = CPU_MODE::JIT;
+        ee_mode = "JIT";
+    }
+    else
+    {
+        mode = CPU_MODE::INTERPRETER;
+        ee_mode = "Interpreter";
+    }
+    emu_thread.set_ee_mode(mode);
+}
+
 void EmuWindow::set_vu1_mode()
 {
-    VU_MODE mode;
+    CPU_MODE mode;
     if (Settings::instance().vu1_jit_enabled)
     {
-        mode = VU_MODE::JIT;
+        mode = CPU_MODE::JIT;
         vu1_mode = "JIT";
     }
     else
     {
-        mode = VU_MODE::INTERPRETER;
+        mode = CPU_MODE::INTERPRETER;
         vu1_mode = "Interpreter";
     }
     emu_thread.set_vu1_mode(mode);

@@ -18,6 +18,7 @@ class EmuWindow : public QMainWindow
     Q_OBJECT
     private:
         EmuThread emu_thread;
+        QString ee_mode;
         QString vu1_mode;
         std::chrono::system_clock::time_point old_frametime;
         double framerate_avg, frametime_avg;
@@ -38,6 +39,7 @@ class EmuWindow : public QMainWindow
         SettingsWindow* settings_window = nullptr;
 
         void set_vu1_mode();
+        void set_ee_mode();
         void show_render_view();
         void show_default_view();
     public:
