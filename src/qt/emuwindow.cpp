@@ -532,13 +532,25 @@ void EmuWindow::update_FPS(double FPS)
 {
     if(FPS > 0.01) {
         frametime_avg = 0.8 * frametime_avg + 0.2 / FPS;
+        frametime_list[frametime_list_index] = 1. / FPS;
+        frametime_list_index = (frametime_list_index + 1) % 60;
     }
+
+    double worst_frame_time = 0;
+    for(int i = 0; i < 60; i++)
+    {
+        if(frametime_list[i] > worst_frame_time) worst_frame_time = frametime_list[i];
+    }
+
+
 
     framerate_avg = 0.8 * framerate_avg + 0.2 * FPS;
 
     // avoid multiple copies
-    QString status = QString("FPS: %1 (%2 ms)- %3 [EE: %4] [VU1: %5]").arg(
-        QString::number(framerate_avg, 'f', 1), QString::number(frametime_avg * 1000., 'f', 1), current_ROM.fileName(), ee_mode, vu1_mode
+    QString status = QString("FPS: %1 (%2 ms, %3 ms worst)- %4 [EE: %5] [VU1: %6]").arg(
+        QString::number(framerate_avg, 'f', 1), QString::number(frametime_avg * 1000., 'f', 1),
+        QString::number(worst_frame_time * 1000., 'f', 1),
+        current_ROM.fileName(), ee_mode, vu1_mode
     );
 
     setWindowTitle(status);

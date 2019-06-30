@@ -22,6 +22,8 @@ class EmuWindow : public QMainWindow
         QString vu1_mode;
         std::chrono::system_clock::time_point old_frametime;
         double framerate_avg, frametime_avg;
+        double frametime_list[60];
+        int frametime_list_index = 0;
 
         QFileInfo current_ROM;
         QMenu* file_menu;
