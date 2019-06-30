@@ -68,7 +68,8 @@ class EE_JIT64
 private:
     AllocReg xmm_regs[16];
     AllocReg int_regs[16];
-    JitCache cache;
+    JitBlock jit_block;
+    EEJitHeap jit_heap;
     Emitter64 emitter;
     EE_JitTranslator ir;
 
@@ -303,7 +304,7 @@ private:
     // Recompile + Cleanup
     void emit_prologue();
     void emit_instruction(EmotionEngine &ee, IR::Instruction &instr);
-    void recompile_block(EmotionEngine& ee, IR::Block& block);
+    EEJitBlockRecord* recompile_block(EmotionEngine& ee, IR::Block& block);
     void cleanup_recompiler(EmotionEngine& ee, bool clear_regs);
     void emit_epilogue();
 public:

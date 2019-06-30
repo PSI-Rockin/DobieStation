@@ -35,7 +35,8 @@ class VU_JIT64
     private:
         AllocReg xmm_regs[16];
         AllocReg int_regs[16];
-        JitCache cache;
+        JitBlock jit_block;
+        VUJitHeap jit_heap;
         Emitter64 emitter;
         VU_JitTranslator ir;
 
@@ -181,7 +182,7 @@ class VU_JIT64
 
         void emit_prologue();
         void emit_instruction(VectorUnit& vu, IR::Instruction& instr);
-        void recompile_block(VectorUnit& vu, IR::Block& block);
+        VUJitBlockRecord* recompile_block(VectorUnit& vu, IR::Block& block);
         //uint8_t* exec_block(VectorUnit& vu);
         void cleanup_recompiler(VectorUnit& vu, bool clear_regs);
         void emit_epilogue();

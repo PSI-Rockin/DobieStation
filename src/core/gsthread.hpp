@@ -364,8 +364,11 @@ class GraphicsSynthesizerThread
         GSContext context1, context2;
         GSContext* current_ctx;
 
+        JitBlock jit_draw_pixel_block, jit_tex_lookup_block;
         Emitter64 emitter_dp, emitter_tex;
-        JitCache jit_draw_pixel_cache, jit_tex_lookup_cache;
+
+        GSPixelJitHeap jit_draw_pixel_heap;
+        GSTextureJitHeap jit_tex_lookup_heap;
         uint8_t* jit_draw_pixel_func;
         uint8_t* jit_tex_lookup_func;
 
@@ -459,7 +462,7 @@ class GraphicsSynthesizerThread
         void update_draw_pixel_state();
         void update_tex_lookup_state();
         uint8_t* get_jitted_draw_pixel(uint64_t state);
-        void recompile_draw_pixel(uint64_t state);
+        GSPixelJitBlockRecord* recompile_draw_pixel(uint64_t state);
         void recompile_alpha_test();
         void recompile_depth_test();
         void recompile_alpha_blend();
@@ -467,7 +470,7 @@ class GraphicsSynthesizerThread
         void jit_epilogue_draw_pixel();
 
         uint8_t* get_jitted_tex_lookup(uint64_t state);
-        void recompile_tex_lookup(uint64_t state);
+        GSTextureJitBlockRecord* recompile_tex_lookup(uint64_t state);
         void recompile_clut_lookup();
         void recompile_csm2_lookup();
         void recompile_convert_16bit_tex(REG_64 color, REG_64 temp, REG_64 temp2);

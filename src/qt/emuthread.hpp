@@ -63,7 +63,7 @@ class EmuThread : public QThread
         void run() override;
     signals:
         void completed_frame(uint32_t* buffer, int inner_w, int inner_h, int final_w, int final_h);
-        void update_FPS(int FPS);
+        void update_FPS(double FPS);
         void emu_error(QString err);
         void emu_non_fatal_error(QString err);
     public slots:

@@ -238,10 +238,10 @@ void EmuThread::run()
                 {
                     chrono::system_clock::time_point now = chrono::system_clock::now();
                     chrono::duration<double> elapsed_seconds = now - old_frametime;
-                    FPS = 1 / elapsed_seconds.count();
+                    FPS = 1.0 / elapsed_seconds.count();
                 } while (FPS > 60.0);
                 old_frametime = chrono::system_clock::now();
-                emit update_FPS((int)round(FPS));
+                emit update_FPS(FPS);
             }
             catch (non_fatal_error &error)
             {

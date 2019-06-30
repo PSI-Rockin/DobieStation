@@ -13,256 +13,74 @@
 #include "../errors.hpp"
 #include "jitcache.hpp"
 
-// JIT Cache Design
-//
-//
-// JIT blocks are built inside a temporary area of size MAX_CODE + MAX_LITERALS
-//   the code starts at offset MAX_LITERALS and grows forward
-//   the literals start at offset MAX_LITERALS and grows backward
-//
-// Once a JIT block is completed, space is allocated on the JIT heap (for exactly the needed code/literal size)
-//   and the block is copied to the heap.  To get JIT heap memory, you must use jit_malloc and jit_free.
-//
-// JIT block records are part of a linked list of all the jit blocks in a given ee page.  When invalidating an EE page
-//  this linked list is used to determine all blocks to be flushed.
-//
-//
+//////////////
+// JIT Block
+//////////////
 
+JitBlock::JitBlock(const std::string &name) {
+    jit_name = name;
 
-/*!
- * Allocate all memory for a JIT cache.  Currently, all memory is marked RWX, which is unsafe.
- * If size is 0, use default size.
- */
-JitCache::JitCache(std::size_t size)
-{
-
-  // set JIT heap size
-  if(!size)
-    size = JIT_CACHE_DEFAULT_SIZE;
-  _heap_size = size;
-
-  // allocate JIT heap
-#ifdef _WIN32
-    _heap = (void *)VirtualAlloc(NULL, _heap_size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
-#else
-  _heap = (void*)mmap(nullptr, _heap_size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-#endif
-
-  if(!_heap)
-    Errors::die("[JIT] Unable to allocate block");
-
-  // allocator setup
-  init_allocator();
-
-  // scratch storage for block being build
-  // the code starts at block + MAX_LITERALSIZE and grows forward
-  // the literals start at block + MAX_LITERALSIZE and grow backward
-  // this way literals/code end up back to back, and we can allocate space just for the
-  // needed code/literals
-  building_block = new uint8_t[JIT_MAX_BLOCK_CODESIZE + JIT_MAX_BLOCK_LITERALSIZE];
-
-  // block that was allocated/found most recently
-  current_block = nullptr;
+    // scratch storage for block being build
+    // the code starts at block + MAX_LITERALSIZE and grows forward
+    // the literals start at block + MAX_LITERALSIZE and grow backward
+    // this way literals/code end up back to back, and we can allocate space just for the
+    // needed code/literals
+    building_block = new uint8_t[JIT_MAX_BLOCK_CODESIZE + JIT_MAX_BLOCK_LITERALSIZE];
+    clear();
 }
 
 
 /*!
  * Free the JIT cache heap and scratch memory
  */
-JitCache::~JitCache()
+JitBlock::~JitBlock()
 {
-#ifdef _WIN32
-  VirtualFree(_heap, 0, MEM_RELEASE);
-#else
-  munmap(_heap, _heap_size);
-#endif
-
   delete[] building_block;
 }
 
-
-
 /*!
- * Start creating a new jit block.
- * This block will live in the building_block (not on JIT heap) until it is finished
+ * Reset a JitBlock to empty.
  */
-void JitCache::alloc_block(BlockState state)
-{
-  // prepare jit block record to point to the scratch block
-  building_jit_block.code_start = building_block + JIT_MAX_BLOCK_LITERALSIZE;
-  building_jit_block.code_end = building_jit_block.code_start;
-  building_jit_block.literals_start = building_jit_block.code_start;
-  building_jit_block.state = state;
-
-  // set scratch block as current block
-  current_block = &building_jit_block;
-}
-
-/*!
- * Free a JIT block which has been allocated.
- * If there is no block with the state, does nothing.
- */
-void JitCache::free_block(BlockState state)
-{
-  auto kv = blocks.find(state);
-
-  if(kv == blocks.end())
-    return;
-
-  JitBlock* block = &kv->second;
-
-  if(!(state == block->state)) {
-    Errors::die("Mismatch between key and value state");
-  }
-
-  // update ee page linked list
-  if(block->next) {
-    block->next->prev = block->prev;
-  }
-
-  if(block->prev) {
-    block->prev->next = block->next;
-  } else {
-    // no prev means we were the head
-    *get_ee_page_list_head(block->state.pc / 4096) = block->next;
-  }
-
-  // free memory
-  jit_free(block->literals_start);
-
-  // remove from hash table
-  blocks.erase(kv);
-}
-
-/*!
- * Invalidate an entire EE page worth of blocks.
- */
-void JitCache::invalidate_ee_page(uint32_t page)
-{
-  JitBlock** head_ptr = get_ee_page_list_head(page);
-  JitBlock* block = *head_ptr;
-
-  while(block) {
-    auto* next = block->next;
-    jit_free(block->literals_start);
-    blocks.erase(block->state); // bleh
-    block = next;
-  }
-
-  *head_ptr = nullptr;
-}
-
-/*!
- * Return a matching block and set current_block
- * returns/sets nullptr if the block isn't found.
- */
-JitBlock* JitCache::find_block(BlockState state)
-{
-  auto kv = blocks.find(state);
-  if(kv != blocks.end())
-  {
-    current_block = &(kv->second);
-    return current_block;
-  }
-  current_block = nullptr;
-  return nullptr;
+void JitBlock::clear() {
+    code_start = building_block + JIT_MAX_BLOCK_LITERALSIZE;
+    code_end = code_start;
+    literals_start = code_start;
 }
 
 /*!
  * Get the start of the current block's code
  */
-uint8_t* JitCache::get_current_block_start()
+uint8_t* JitBlock::get_code_start()
 {
-  return (uint8_t*)current_block->code_start;
+    return (uint8_t*)code_start;
 }
 
 /*!
  * Get the current position of the code pointer
  */
-uint8_t* JitCache::get_current_block_pos()
+uint8_t* JitBlock::get_code_pos()
 {
-  return (uint8_t*)current_block->code_end;
+    return (uint8_t*)code_end;
+}
+
+uint8_t* JitBlock::get_literals_start()
+{
+    return (uint8_t*)literals_start;
 }
 
 /*!
  * Set the position of the code pointer
  */
-void JitCache::set_current_block_pos(uint8_t *pos)
+void JitBlock::set_code_pos(uint8_t *pos)
 {
-  current_block->code_end = pos;
+    code_end = pos;
 }
 
 
-/*!
- * Finalize a block and mark it as exectuable.
- * This copies the block to the JIT heap
- */
-void JitCache::set_current_block_rx()
+void JitBlock::print_block()
 {
-  if(current_block != &building_jit_block) Errors::die("Tried to set rx a block that is not in progress");
-  std::size_t block_size = (uint8_t*)current_block->code_end - (uint8_t*)current_block->literals_start;
-  if(block_size <= 0) Errors::die("block size invalid");
-
-  // allocate space on JIT heap
-  void* dest = jit_malloc(block_size);
-
-  if(!dest) {
-    fprintf(stderr, "Flushing JIT cache\n");
-    flush_all_blocks();
-    current_block = &building_jit_block;
-    dest = jit_malloc(block_size);
-  }
-  if(!dest) {
-    Errors::die("JIT heap out of memory even after freeing all, something is wrong with the jit allocator");
-  }
-
-
-  // copy to heap
-  std::memcpy(dest, current_block->literals_start, block_size);
-
-  // update record to point to jit heap
-  std::size_t literal_size = (uint8_t*)building_jit_block.code_start - (uint8_t*)building_jit_block.literals_start;
-  std::size_t code_size = (uint8_t*)building_jit_block.code_end - (uint8_t*)building_jit_block.code_start;
-  building_jit_block.literals_start = dest;
-  building_jit_block.code_start = (uint8_t*)building_jit_block.literals_start + literal_size;
-  building_jit_block.code_end = (uint8_t*)building_jit_block.code_start + code_size;
-
-  // add record to hash table
-  auto it = blocks.insert({building_jit_block.state, building_jit_block}).first;
-
-  // push onto ee page list
-  JitBlock** page_list_head = get_ee_page_list_head(building_jit_block.state.pc / 4096);
-  it->second.next = *page_list_head;
-  it->second.prev = nullptr;
-  if(it->second.next) {
-    it->second.next->prev = &it->second;
-  }
-  *page_list_head = &it->second;
-}
-
-/*!
- * Completely flush the JIT cache
- */
-void JitCache::flush_all_blocks()
-{
-  current_block = nullptr;
-
-  for (auto &it : blocks)
-  {
-    JitBlock *block = &it.second;
-    jit_free(block->literals_start);
-  }
-
-  // todo heap check here?
-
-  ee_page_lists.clear();
-  blocks.clear();
-}
-
-void JitCache::print_current_block()
-{
-  auto* ptr = (uint8_t*)current_block->code_start;
-  auto* end = (uint8_t*)current_block->code_end;
+  auto* ptr = (uint8_t*)code_start;
+  auto* end = (uint8_t*)code_end;
   printf("[JIT Cache] Block: ");
   while (ptr != end)
   {
@@ -272,10 +90,10 @@ void JitCache::print_current_block()
   printf("\n");
 }
 
-void JitCache::print_literal_pool()
+void JitBlock::print_literal_pool()
 {
-  auto* ptr = (uint8_t*)current_block->literals_start;
-  auto* end = (uint8_t*)current_block->code_start;
+  auto* ptr = (uint8_t*)literals_start;
+  auto* end = (uint8_t*)code_start;
   int offset = 0;
   while(ptr != end) {
     printf("$%02X ", *ptr);
@@ -286,28 +104,33 @@ void JitCache::print_literal_pool()
   }
 }
 
-/*!
- * Returns a pointer to the head of the ee page list
- */
-JitBlock** JitCache::get_ee_page_list_head(uint32_t ee_page)
+
+////////////////////
+// JIT Heap Common
+///////////////////
+
+
+void* JitHeap::rwx_alloc(std::size_t size)
 {
-  auto kv = ee_page_lists.find(ee_page);
-  if(kv == ee_page_lists.end()) {
-    // doesn't exist yet, add it
-    ee_page_lists[ee_page] = nullptr;
-    return &ee_page_lists.find(ee_page)->second;
-  } else {
-    return &kv->second;
-  }
+    void* result;
+#ifdef _WIN32
+    result = (void *)VirtualAlloc(NULL, size, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+#else
+    result = (void*)mmap(nullptr, size, PROT_READ | PROT_WRITE | PROT_EXEC, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+#endif
+    return result;
 }
 
-void JitCache::debug_print_page_list(uint32_t ee_page)
+void JitHeap::rwx_free(void* mem, std::size_t size)
 {
-  printf("PAGE LIST\n");
-  for(JitBlock* block = *get_ee_page_list_head(ee_page); block; block = block->next) {
-    printf("dbg [0x%x] 0x%lx n: 0x%lx p: 0x%lx\n", block->state.pc, (uint64_t)block, (uint64_t)block->next, (uint64_t)block->prev);
-  }
+#ifdef _WIN32
+    VirtualFree(mem, 0, MEM_RELEASE);
+#else
+    munmap(mem, size);
+#endif
 }
+
+
 
 /////////////////
 // ALLOCATOR   //
@@ -356,7 +179,7 @@ static void* ptr_add(void* mem, std::size_t offset) {
 /*!
  * Get the minimum possible size of something in the nth bin.
  */
-std::size_t JitCache::get_min_bin_size(uint8_t bin)
+std::size_t EEJitHeap::get_min_bin_size(uint8_t bin)
 {
   assert(bin < JIT_ALLOC_BINS);
   return ((std::size_t)1 << (JIT_ALLOC_BIN_START + bin));
@@ -365,7 +188,7 @@ std::size_t JitCache::get_min_bin_size(uint8_t bin)
 /*!
  * Get the maximum possible size of something in the nth bin.
  */
-std::size_t JitCache::get_max_bin_size(uint8_t bin)
+std::size_t EEJitHeap::get_max_bin_size(uint8_t bin)
 {
   assert(bin < JIT_ALLOC_BINS);
   return ((std::size_t)1 << (JIT_ALLOC_BIN_START + bin + 1));
@@ -374,7 +197,7 @@ std::size_t JitCache::get_max_bin_size(uint8_t bin)
 /*!
  * Get the pointer to an object's size field. (at obj - 8)
  */
-std::size_t* JitCache::get_size_ptr(void *obj)
+std::size_t* EEJitHeap::get_size_ptr(void *obj)
 {
   auto *m = (std::size_t*)obj;
   return m - 1;
@@ -383,7 +206,7 @@ std::size_t* JitCache::get_size_ptr(void *obj)
 /*!
  * Get the pointer to an object's end field (at obj + size)
  */
-std::size_t* JitCache::get_end_ptr(void *obj)
+std::size_t* EEJitHeap::get_end_ptr(void *obj)
 {
   std::size_t size = *get_size_ptr(obj);
   assert(!(size & (JIT_ALLOC_ALIGN - 1))); // should be an aligned size
@@ -393,7 +216,7 @@ std::size_t* JitCache::get_end_ptr(void *obj)
 /*!
  * Get the object which occurs next in memory (at obj + size + sizeof(size_t))
  */
-void* JitCache::get_next_object(void *obj)
+void* EEJitHeap::get_next_object(void *obj)
 {
   return ptr_add(obj, *get_size_ptr(obj) + 2 * sizeof(std::size_t));
 }
@@ -401,7 +224,7 @@ void* JitCache::get_next_object(void *obj)
 /*!
  * Return memory to a bin
  */
-void JitCache::add_freed_memory_to_bin(void *mem)
+void EEJitHeap::add_freed_memory_to_bin(void *mem)
 {
   // pick bin
   std::size_t size = *get_size_ptr(mem);
@@ -434,7 +257,7 @@ void JitCache::add_freed_memory_to_bin(void *mem)
 /*!
  * Remove memory from a bin.
  */
-void JitCache::remove_memory_from_bin(void *mem)
+void EEJitHeap::remove_memory_from_bin(void *mem)
 {
   assert(*get_end_ptr(mem) == *get_size_ptr(mem));
 
@@ -462,7 +285,7 @@ void JitCache::remove_memory_from_bin(void *mem)
  * Reduce the size of an object and free memory if possible.
  * This works by splitting the object in two, then freeing the second one
  */
-void JitCache::shrink_object(void *obj, std::size_t size)
+void EEJitHeap::shrink_object(void *obj, std::size_t size)
 {
   assert(!*get_end_ptr(obj));
   assert(*get_size_ptr(obj) >= size);
@@ -485,7 +308,7 @@ void JitCache::shrink_object(void *obj, std::size_t size)
 /*!
  * Find memory of at least the given size.
  */
-void* JitCache::find_memory(std::size_t size)
+void* EEJitHeap::find_memory(std::size_t size)
 {
   // find smallest bin which contains chunks large enough for our object
   uint8_t bin = JIT_ALLOC_BINS;
@@ -544,7 +367,7 @@ void* JitCache::find_memory(std::size_t size)
  * Attempt to merge current block with the block in front.
  * Returns true if there might be more work to do
  */
-bool JitCache::merge_fwd(void *mem)
+bool EEJitHeap::merge_fwd(void *mem)
 {
   void* next = get_next_object(mem);
 
@@ -574,7 +397,7 @@ bool JitCache::merge_fwd(void *mem)
  * Attempt to merge current block with block behind.
  * Returns true if there might be more work to do
  */
-bool JitCache::merge_bwd(void *mem)
+bool EEJitHeap::merge_bwd(void *mem)
 {
   std::size_t* b_start = get_size_ptr(mem);
   std::size_t* a_end = b_start - 1;
@@ -601,7 +424,7 @@ bool JitCache::merge_bwd(void *mem)
 /*!
  * Initialize the JIT allocator
  */
-void JitCache::init_allocator()
+void EEJitHeap::init_allocator()
 {
   // all free lists start empty...
   for(auto& bin_list : free_bin_lists)
@@ -623,7 +446,7 @@ void JitCache::init_allocator()
 /*!
  * Free memory and merge blocks
  */
-void JitCache::jit_free(void *ptr)
+void EEJitHeap::jit_free(void *ptr)
 {
   assert(*get_size_ptr(ptr) <= heap_usage);
   heap_usage -= *get_size_ptr(ptr);
@@ -636,7 +459,7 @@ void JitCache::jit_free(void *ptr)
 /*!
  * Allocate memory
  */
-void* JitCache::jit_malloc(std::size_t size)
+void* EEJitHeap::jit_malloc(std::size_t size)
 {
   size = std::max(get_min_bin_size(0), aligned_size(size));
   if(size < sizeof(FreeList)) size = sizeof(FreeList);
@@ -645,4 +468,179 @@ void* JitCache::jit_malloc(std::size_t size)
     heap_usage += *get_size_ptr(mem); // this is the aligned size.  for tiny blocks they use 
   //fprintf(stderr, "mem %ld / %ld (%.2f pct)\n", heap_usage, _heap_size, 100. * (double)heap_usage / (double)_heap_size);
   return mem;
+}
+
+
+
+
+EEJitHeap::EEJitHeap()
+{
+    _heap_size = EE_JIT_HEAP_SIZE;
+
+    // allocate heap
+    _heap = rwx_alloc(_heap_size);
+
+    if(!_heap)
+        Errors::die("[EE JIT Heap] Unable to allocate heap");
+
+    // allocator setup
+    init_allocator();
+
+    // lookup cache setup
+    ee_page_lookup_cache = nullptr;
+    ee_page_lookup_idx = -1;
+}
+
+EEJitHeap::~EEJitHeap()
+{
+    rwx_free(_heap, _heap_size);
+}
+
+EEPageRecord* EEJitHeap::lookup_ee_page(uint32_t page)
+{
+    page_lookups++;
+
+    // try page lookup cache
+    if(ee_page_lookup_idx == page) {
+        cached_page_lookups++;
+        return ee_page_lookup_cache;
+    }
+
+    // otherwise do an actual lookup
+    EEPageRecord* rec = &ee_page_record_map[page];
+
+    ee_page_lookup_cache = rec;
+    ee_page_lookup_idx = page;
+
+    return rec;
+}
+
+
+/*!
+ * Free memory for all blocks inside an EE page and remove them from the lookup.
+ */
+void EEJitHeap::invalidate_ee_page(uint32_t page)
+{
+    // check if page record exists
+    auto kv = ee_page_record_map.find(page);
+    if(kv != ee_page_record_map.end()) {
+        // kill all PCs in the page.
+        if(kv->second.block_array) {
+            for(uint32_t idx = 0; idx < 1024; idx++) {
+                if(kv->second.block_array[idx].literals_start) {
+                    jit_free(kv->second.block_array[idx].literals_start);
+                }
+            }
+        }
+        // erase PC array
+        delete[] kv->second.block_array;
+        // and record
+        ee_page_record_map.erase(page);
+    }
+
+    // invalidate cache if needed
+    if(page == ee_page_lookup_idx) {
+        ee_page_lookup_cache = nullptr;
+        ee_page_lookup_idx = -1;
+    }
+
+    // print stats.
+    invalid_count++;
+    if(invalid_count == 10000) {
+        invalid_count = 0;
+        fprintf(stderr, "cache %ld/%ld %.3f\n", cached_page_lookups, page_lookups, (double)cached_page_lookups/page_lookups);
+    }
+
+}
+
+/*!
+ * Return a matching block
+ * returns nullptr if the block isn't found.
+ */
+EEJitBlockRecord* EEJitHeap::find_block(uint32_t PC)
+{
+    uint32_t page = PC / 4096;
+    uint64_t idx = (PC - 4096*page)/4;
+    EEPageRecord* page_rec = lookup_ee_page(page);
+    if(page_rec->block_array && page_rec->block_array[idx].literals_start) {
+        return &page_rec->block_array[idx];
+    }
+    return nullptr;
+}
+
+
+/*!
+ * Completely flush the heap
+ */
+void EEJitHeap::flush_all_blocks()
+{
+    for(auto& page : ee_page_record_map)
+    {
+        for(uint32_t idx = 0; idx < 1024; idx++)
+        {
+            if(page.second.block_array[idx].literals_start) {
+                jit_free(page.second.block_array[idx].literals_start);
+            }
+        }
+        delete[] page.second.block_array;
+    }
+    ee_page_record_map.clear();
+    ee_page_lookup_cache = nullptr;
+    ee_page_lookup_idx = -1;
+}
+
+/*!
+ * Add a completed block to the JIT heap
+ */
+EEJitBlockRecord* EEJitHeap::insert_block(uint32_t PC, JitBlock *block)
+{
+    // compute block size
+    uint8_t *code_start = block->get_code_start();
+    uint8_t *code_end = block->get_code_pos();
+    uint8_t *literals_start = block->get_literals_start();
+    std::size_t block_size = code_end - literals_start;
+    if(block_size <= 0) Errors::die("block size invalid");
+
+    // allocate space on JIT heap
+    void* dest = jit_malloc(block_size);
+
+    if(!dest)
+    {
+        fprintf(stderr, "JIT Heap is full. Flushing!\n");
+        flush_all_blocks();
+        dest = jit_malloc(block_size);
+    }
+
+    if(!dest)
+    {
+        Errors::die("JIT EE Heap memory error.  Either the heap is corrupted, or you are attempting to insert a block"
+                    "which is larger than the entire heap size.");
+    }
+
+    std::memcpy(dest, block->get_literals_start(), block_size);
+
+    // create a record
+    EEJitBlockRecord record;
+    std::size_t literal_size = code_start - literals_start;
+    std::size_t code_size = code_end - code_start;
+    record.literals_start = (uint8_t*)dest;
+    record.code_start = (uint8_t*)dest + literal_size;
+    record.code_end = (uint8_t*)dest + literal_size + code_size;
+    record.block_data.pc = PC;
+
+    uint32_t page = PC / 4096;
+    EEPageRecord* page_record = lookup_ee_page(page);
+
+    if(!page_record->block_array)
+    {
+        page_record->block_array = new EEJitBlockRecord[1024];
+        page_record->valid = true;
+        memset(page_record->block_array, 0, 1024 * sizeof(EEJitBlockRecord));
+    }
+
+
+    uint64_t idx = (PC - 4096*page)/4;
+    assert(idx < 1024);
+    page_record->block_array[idx] = record;
+    return &page_record->block_array[idx];
 }

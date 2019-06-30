@@ -23,8 +23,8 @@ using namespace std;
 EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
 {
     old_frametime = chrono::system_clock::now();
-    old_update_time = chrono::system_clock::now();
     framerate_avg = 0.0;
+    frametime_avg = 0.016;
 
     render_widget = new RenderWidget;
 
@@ -57,7 +57,7 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
     connect(this, SIGNAL(update_joystick(JOYSTICK, JOYSTICK_AXIS, uint8_t)),
         &emu_thread, SLOT(update_joystick(JOYSTICK, JOYSTICK_AXIS, uint8_t))
     );
-    connect(&emu_thread, SIGNAL(update_FPS(int)), this, SLOT(update_FPS(int)));
+    connect(&emu_thread, SIGNAL(update_FPS(double)), this, SLOT(update_FPS(double)));
     connect(&emu_thread, SIGNAL(emu_error(QString)), this, SLOT(emu_error(QString)));
     connect(&emu_thread, SIGNAL(emu_non_fatal_error(QString)), this, SLOT(emu_non_fatal_error(QString)));
     emu_thread.pause(PAUSE_EVENT::GAME_NOT_LOADED);
@@ -528,21 +528,32 @@ void EmuWindow::keyReleaseEvent(QKeyEvent *event)
     }
 }
 
-void EmuWindow::update_FPS(int FPS)
+void EmuWindow::update_FPS(double FPS)
 {
-    // average framerate over 1 second
-    chrono::system_clock::time_point now = chrono::system_clock::now();
-    chrono::duration<double> elapsed_update_seconds = now - old_update_time;
-    if (elapsed_update_seconds.count() >= 1.0)
-    {
-        // avoid multiple copies
-        QString status = QString("FPS: %1 - %2 [EE: %3] [VU1: %4]").arg(
-            QString::number(FPS), current_ROM.fileName(), ee_mode, vu1_mode
-        );
-
-        setWindowTitle(status);
-        old_update_time = chrono::system_clock::now();
+    if(FPS > 0.01) {
+        frametime_avg = 0.8 * frametime_avg + 0.2 / FPS;
+        frametime_list[frametime_list_index] = 1. / FPS;
+        frametime_list_index = (frametime_list_index + 1) % 60;
     }
+
+    double worst_frame_time = 0;
+    for(int i = 0; i < 60; i++)
+    {
+        if(frametime_list[i] > worst_frame_time) worst_frame_time = frametime_list[i];
+    }
+
+
+
+    framerate_avg = 0.8 * framerate_avg + 0.2 * FPS;
+
+    // avoid multiple copies
+    QString status = QString("FPS: %1 (%2 ms, %3 ms worst)- %4 [EE: %5] [VU1: %6]").arg(
+        QString::number(framerate_avg, 'f', 1), QString::number(frametime_avg * 1000., 'f', 1),
+        QString::number(worst_frame_time * 1000., 'f', 1),
+        current_ROM.fileName(), ee_mode, vu1_mode
+    );
+
+    setWindowTitle(status);
 }
 
 void EmuWindow::bios_error(QString err)
