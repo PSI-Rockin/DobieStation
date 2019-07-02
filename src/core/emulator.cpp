@@ -155,7 +155,7 @@ void Emulator::reset()
     vu0.reset();
     vu1.reset();
     VU_JIT::reset();
-    EE_JIT::reset();
+    EE_JIT::reset(true);
 
     MCH_DRD = 0;
     MCH_RICM = 0;

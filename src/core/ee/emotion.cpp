@@ -849,6 +849,15 @@ void EmotionEngine::syscall_exception()
     //if (op != 0x7A)
         //printf("[EE] SYSCALL: %s (id: $%02X) called at $%08X\n", SYSCALL(op), op, PC);
 
+    if (op == 0x64)
+    {
+        int a0 = get_gpr<uint32_t>(4);
+
+        // Clear icache
+        if (a0 != 0 && a0 != 1)
+            EE_JIT::reset(true);
+    }
+
     if (op == 0x7C)
     {
         deci2call(get_gpr<uint32_t>(4), get_gpr<uint32_t>(5));

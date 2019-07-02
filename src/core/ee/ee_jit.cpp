@@ -18,9 +18,9 @@ namespace EE_JIT
         return jit64.run(*ee);
     }
 
-    void reset()
+    void reset(bool clear_cache)
     {
-        jit64.reset();
+        jit64.reset(clear_cache);
     }
     /*
     void set_current_program(uint32_t crc)

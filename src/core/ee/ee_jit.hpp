@@ -7,7 +7,7 @@ class EmotionEngine;
 namespace EE_JIT
 {
     uint16_t run(EmotionEngine* ee);
-    void reset();
+    void reset(bool clear_cache);
 };
 
 #endif // EE_JIT_HPP
