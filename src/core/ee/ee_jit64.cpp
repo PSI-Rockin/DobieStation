@@ -400,6 +400,12 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::MultiplyAddUnsignedWord1:
             multiply_add_unsigned_word1(ee, instr);
             break;
+        case IR::Opcode::MultiplyAddWord:
+            multiply_add_word(ee, instr);
+            break;
+        case IR::Opcode::MultiplyAddWord1:
+            multiply_add_word1(ee, instr);
+            break;
         case IR::Opcode::MultiplyUnsignedWord:
             multiply_unsigned_word(ee, instr);
             break;

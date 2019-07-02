@@ -168,6 +168,8 @@ private:
     void move_xmm_reg(EmotionEngine& ee, IR::Instruction& instr);
     void multiply_add_unsigned_word(EmotionEngine& ee, IR::Instruction& instr);
     void multiply_add_unsigned_word1(EmotionEngine& ee, IR::Instruction& instr);
+    void multiply_add_word(EmotionEngine& ee, IR::Instruction& instr);
+    void multiply_add_word1(EmotionEngine& ee, IR::Instruction& instr);
     void multiply_unsigned_word(EmotionEngine& ee, IR::Instruction& instr);
     void multiply_unsigned_word1(EmotionEngine& ee, IR::Instruction& instr);
     void multiply_word(EmotionEngine& ee, IR::Instruction& instr);

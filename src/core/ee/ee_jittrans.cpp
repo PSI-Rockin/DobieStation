@@ -1668,7 +1668,12 @@ void EE_JitTranslator::translate_op_mmi(uint32_t opcode, uint32_t PC, std::vecto
     {
         case 0x00:
             // MADD
-            // TODO: Overflow?
+            instr.op = IR::Opcode::MultiplyAddWord;
+            instr.set_dest((opcode >> 11) & 0x1F);
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_source2((opcode >> 16) & 0x1F);
+            instrs.push_back(instr);
+            break;
         case 0x01:
             // MADDU
             instr.op = IR::Opcode::MultiplyAddUnsignedWord;
@@ -1771,7 +1776,12 @@ void EE_JitTranslator::translate_op_mmi(uint32_t opcode, uint32_t PC, std::vecto
         }
         case 0x20:
             // MADD1
-            // TODO: Overflow?
+            instr.op = IR::Opcode::MultiplyAddWord1;
+            instr.set_dest((opcode >> 11) & 0x1F);
+            instr.set_source((opcode >> 21) & 0x1F);
+            instr.set_source2((opcode >> 16) & 0x1F);
+            instrs.push_back(instr);
+            break;
         case 0x21:
             // MADDU1
             instr.op = IR::Opcode::MultiplyAddUnsignedWord1;
