@@ -1860,7 +1860,7 @@ _noinline(void) GraphicsSynthesizerThread::jit_draw_pixel(int32_t x, int32_t y,
         "popq %%r13\n\t"
         "popq %%r12\n\t"
                 :
-                : "r" (x), "r" (y), "r" (z), "X" (color), "r" (jit_draw_pixel_func)
+                : "r" (x), "r" (y), "r" (z), "X" (*(uint64_t*)(&color)), "r" (jit_draw_pixel_func)
 
     );
 #endif

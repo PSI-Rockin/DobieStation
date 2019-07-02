@@ -4,6 +4,7 @@
 #include <unordered_map>
 #include <cstring>
 #include <cstdlib>
+#include <string>
 #include "../errors.hpp"
 
 /*!
