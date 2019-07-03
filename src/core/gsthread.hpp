@@ -338,6 +338,11 @@ struct VertexF
 class GraphicsSynthesizerThread
 {
     private:
+#ifdef _MSC_VER
+        constexpr static REG_64 abi_args[] = {RCX, RDX, R8, R9};
+#else
+        constexpr static REG_64 abi_args[] = {RDI, RSI, RDX, RCX};
+#endif
         //threading
         std::thread thread;
         std::condition_variable notifier;
