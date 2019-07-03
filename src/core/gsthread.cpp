@@ -15,6 +15,11 @@
 #define _noinline(type) type __attribute__ ((noinline))
 #endif
 
+#ifdef _WIN32
+extern "C" void jit_draw_pixel_asm(uint8_t* func, int32_t x, int32_t y, uint32_t z, RGBAQ_REG* color);
+extern "C" void jit_tex_lookup_asm(uint8_t* func, int16_t u, int16_t v, TexLookupInfo* tex_info);
+#endif
+
 using namespace std;
 
 //Swizzling tables - we declare these outside the class to prevent a stack overflow
@@ -79,6 +84,7 @@ float interpolate_f(int32_t x, float u1, int32_t x1, float u2, int32_t x2)
 }
 
 const unsigned int GraphicsSynthesizerThread::max_vertices[8] = {1, 2, 2, 3, 3, 3, 2, 0};
+constexpr REG_64 GraphicsSynthesizerThread::abi_args[4];
 
 GraphicsSynthesizerThread::GraphicsSynthesizerThread()
     : frame_complete(false), local_mem(nullptr), jit_draw_pixel_block("GS-pixel"), jit_tex_lookup_block("GS-texture"),
@@ -1843,7 +1849,7 @@ _noinline(void) GraphicsSynthesizerThread::jit_draw_pixel(int32_t x, int32_t y,
                                                uint32_t z, RGBAQ_REG &color)
 {
 #ifdef _MSC_VER
-    //TODO
+    jit_draw_pixel_asm(jit_draw_pixel_func, x, y, z, &color);
 #else
     __asm__(
         "pushq %%r12\n\t"
@@ -3643,7 +3649,7 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupIn
 _noinline(void) GraphicsSynthesizerThread::jit_tex_lookup(int16_t u, int16_t v, TexLookupInfo *info)
 {
 #ifdef _MSC_VER
-    //TODO
+    jit_tex_lookup_asm(jit_tex_lookup_func, u, v, info);
 #else
     __asm__(
         "pushq %%r12\n\t"
@@ -3967,14 +3973,14 @@ GSPixelJitBlockRecord* GraphicsSynthesizerThread::recompile_draw_pixel(uint64_t 
     uint8_t* do_not_update_rgba = emitter_dp.JCC_NEAR_DEFERRED(ConditionCode::NE);
 
     //Get framebuffer address and store on stack
-    emitter_dp.load_addr((uint64_t)&current_ctx->frame.base_pointer, RDI);
-    emitter_dp.MOV32_FROM_MEM(RDI, RDI);
-    emitter_dp.SAR32_REG_IMM(8, RDI);
-    emitter_dp.load_addr((uint64_t)&current_ctx->frame.width, RSI);
-    emitter_dp.MOV32_FROM_MEM(RSI, RSI);
-    emitter_dp.SAR32_REG_IMM(6, RSI);
-    emitter_dp.MOV64_MR(R12, RDX);
-    emitter_dp.MOV64_MR(R13, RCX);
+    emitter_dp.load_addr((uint64_t)&current_ctx->frame.base_pointer, abi_args[0]);
+    emitter_dp.MOV32_FROM_MEM(abi_args[0], abi_args[0]);
+    emitter_dp.SAR32_REG_IMM(8, abi_args[0]);
+    emitter_dp.load_addr((uint64_t)&current_ctx->frame.width, abi_args[1]);
+    emitter_dp.MOV32_FROM_MEM(abi_args[1], abi_args[1]);
+    emitter_dp.SAR32_REG_IMM(6, abi_args[1]);
+    emitter_dp.MOV64_MR(R12, abi_args[2]);
+    emitter_dp.MOV64_MR(R13, abi_args[3]);
 
     switch (current_ctx->frame.format)
     {
@@ -4249,14 +4255,14 @@ void GraphicsSynthesizerThread::recompile_depth_test()
     }
 
     //Load address to zbuffer
-    emitter_dp.load_addr((uint64_t)&current_ctx->zbuf.base_pointer, RDI);
-    emitter_dp.load_addr((uint64_t)&current_ctx->frame.width, RSI);
-    emitter_dp.MOV32_FROM_MEM(RDI, RDI);
-    emitter_dp.MOV32_FROM_MEM(RSI, RSI);
-    emitter_dp.SAR32_REG_IMM(8, RDI);
-    emitter_dp.SAR32_REG_IMM(6, RSI);
-    emitter_dp.MOV64_MR(R12, RDX);
-    emitter_dp.MOV64_MR(R13, RCX);
+    emitter_dp.load_addr((uint64_t)&current_ctx->zbuf.base_pointer, abi_args[0]);
+    emitter_dp.load_addr((uint64_t)&current_ctx->frame.width, abi_args[1]);
+    emitter_dp.MOV32_FROM_MEM(abi_args[0], abi_args[0]);
+    emitter_dp.MOV32_FROM_MEM(abi_args[1], abi_args[1]);
+    emitter_dp.SAR32_REG_IMM(8, abi_args[0]);
+    emitter_dp.SAR32_REG_IMM(6, abi_args[1]);
+    emitter_dp.MOV64_MR(R12, abi_args[2]);
+    emitter_dp.MOV64_MR(R13, abi_args[3]);
 
     switch (current_ctx->zbuf.format)
     {
@@ -4467,8 +4473,15 @@ void GraphicsSynthesizerThread::recompile_alpha_blend()
 
 void GraphicsSynthesizerThread::jit_call_func(Emitter64& emitter, uint64_t addr)
 {
+#ifdef _MSC_VER
+    emitter.SUB64_REG_IMM(0x20, RSP);
     emitter.MOV64_OI(addr, RAX);
     emitter.CALL_INDIR(RAX);
+    emitter.ADD64_REG_IMM(0x20, RSP);
+#else
+    emitter.MOV64_OI(addr, RAX);
+    emitter.CALL_INDIR(RAX);
+#endif
 }
 
 void GraphicsSynthesizerThread::jit_epilogue_draw_pixel()
@@ -4647,12 +4660,12 @@ GSTextureJitBlockRecord* GraphicsSynthesizerThread::recompile_tex_lookup(uint64_
 
     //Load the texture pixel
     //TODO: bilinear filtering
-    emitter_tex.MOV32_FROM_MEM(R14, RDI, (sizeof(RGBAQ_REG) * 3) + (4 * 2));
-    emitter_tex.SHR32_REG_IMM(8, RDI);
-    emitter_tex.MOV32_FROM_MEM(R14, RSI, (sizeof(RGBAQ_REG) * 3) + (4 * 3));
-    emitter_tex.SHR32_REG_IMM(6, RSI);
-    emitter_tex.MOV32_REG(R12, RDX);
-    emitter_tex.MOV32_REG(R13, RCX);
+    emitter_tex.MOV32_FROM_MEM(R14, abi_args[0], (sizeof(RGBAQ_REG) * 3) + (4 * 2));
+    emitter_tex.SHR32_REG_IMM(8, abi_args[0]);
+    emitter_tex.MOV32_FROM_MEM(R14, abi_args[1], (sizeof(RGBAQ_REG) * 3) + (4 * 3));
+    emitter_tex.SHR32_REG_IMM(6, abi_args[1]);
+    emitter_tex.MOV32_REG(R12, abi_args[2]);
+    emitter_tex.MOV32_REG(R13, abi_args[3]);
 
     switch (current_ctx->tex0.format)
     {
