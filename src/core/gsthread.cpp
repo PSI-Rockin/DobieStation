@@ -36,7 +36,7 @@ static SwizzleTable<32,128,128> page_PSMCT4;
 
 #define printf(fmt, ...)(0)
 
-//#define GS_JIT
+#define GS_JIT
 
 /**
   * ~ GS notes ~
@@ -4433,7 +4433,7 @@ void GraphicsSynthesizerThread::recompile_alpha_blend()
             break;
     }
 
-    const static uint16_t and_const[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+    alignas(16) const static uint16_t and_const[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
     //color component = (((A - B) * C) >> 7) + D
     if (current_ctx->alpha.spec_B < 2)
