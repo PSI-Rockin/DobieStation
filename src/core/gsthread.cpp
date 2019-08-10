@@ -4715,6 +4715,10 @@ GSTextureJitBlockRecord* GraphicsSynthesizerThread::recompile_tex_lookup(uint64_
             emitter_tex.AND32_EAX(0xFFFF);
             recompile_convert_16bit_tex(RAX, RCX, RSI);
             break;
+        case 0x09:
+            //Invalid texture format used by FFX
+            emitter_tex.MOV32_REG_IMM(0, RAX);
+            break;
         case 0x13:
             jit_call_func(emitter_tex, (uint64_t)&addr_PSMCT8);
             emitter_tex.load_addr((uint64_t)local_mem, RCX);

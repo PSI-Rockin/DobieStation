@@ -95,6 +95,7 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
                 // B
                 instr.op = IR::Opcode::Jump;
                 instr.set_jump_dest(branch_offset_ee(opcode, PC));
+                instr.set_is_link(false);
                 instrs.push_back(instr);
                 break;
             }

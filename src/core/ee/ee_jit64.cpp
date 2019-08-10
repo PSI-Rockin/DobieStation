@@ -84,7 +84,6 @@ uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee)
         ee.cp0->clear_tlb_modified(ee.PC / 4096);
     }
 
-    //printf("[EE_JIT64] Executing block at $%08X\n", ee.PC);
     if (is_modified || recompiledBlock == nullptr)
     {
         printf("[EE_JIT64] Block not found at $%08X: recompiling\n", ee.PC);
@@ -156,7 +155,7 @@ EEJitBlockRecord* EE_JIT64::recompile_block(EmotionEngine& ee, IR::Block& block)
         cleanup_recompiler(ee, true);
 
     //Switch the block's privileges from RW to RX.
-    //cache.print_block();
+    //jit_block.print_block();
     //cache.print_literal_pool();
     return jit_heap.insert_block(ee.get_PC(), &jit_block);
 

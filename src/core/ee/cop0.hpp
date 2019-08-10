@@ -148,4 +148,9 @@ inline bool Cop0::int_enabled()
     return status.master_int_enable && status.int_enable && !status.exception && !status.error;
 }
 
+inline bool Cop0::get_tlb_modified(size_t page) const
+{
+    return vtlb_info[page].modified;
+}
+
 #endif // COP0_HPP

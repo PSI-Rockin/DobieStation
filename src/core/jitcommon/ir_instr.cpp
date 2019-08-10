@@ -5,7 +5,19 @@ namespace IR
 
 Instruction::Instruction(Opcode op) : op(op)
 {
-
+    jump_dest = 0;
+    jump_fail_dest = 0;
+    return_addr = 0;
+    dest = 0;
+    base = 0;
+    source = 0;
+    source2 = 0;
+    cycle_count = 0;
+    bc = 0;
+    field = 0;
+    field2 = 0;
+    is_likely = 0;
+    is_link = 0;
 }
 
 uint32_t Instruction::get_jump_dest() const
