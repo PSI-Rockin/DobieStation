@@ -231,16 +231,16 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             clear_word_reg(ee, instr);
             break;
         case IR::Opcode::DivideWord:
-            divide_word(ee, instr);
+            divide_word(ee, instr, false);
             break;
         case IR::Opcode::DivideWord1:
-            divide_word1(ee, instr);
+            divide_word(ee, instr, true);
             break;
         case IR::Opcode::DivideUnsignedWord:
-            divide_unsigned_word(ee, instr);
+            divide_unsigned_word(ee, instr, false);
             break;
         case IR::Opcode::DivideUnsignedWord1:
-            divide_unsigned_word1(ee, instr);
+            divide_unsigned_word(ee, instr, true);
             break;
         case IR::Opcode::DoublewordShiftLeftLogical:
             doubleword_shift_left_logical(ee, instr);
@@ -399,28 +399,28 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             move_quadword_reg(ee, instr);
             break;
         case IR::Opcode::MultiplyAddUnsignedWord:
-            multiply_add_unsigned_word(ee, instr);
+            multiply_add_unsigned_word(ee, instr, false);
             break;
         case IR::Opcode::MultiplyAddUnsignedWord1:
-            multiply_add_unsigned_word1(ee, instr);
+            multiply_add_unsigned_word(ee, instr, true);
             break;
         case IR::Opcode::MultiplyAddWord:
-            multiply_add_word(ee, instr);
+            multiply_add_word(ee, instr, false);
             break;
         case IR::Opcode::MultiplyAddWord1:
-            multiply_add_word1(ee, instr);
+            multiply_add_word(ee, instr, true);
             break;
         case IR::Opcode::MultiplyUnsignedWord:
-            multiply_unsigned_word(ee, instr);
+            multiply_unsigned_word(ee, instr, false);
             break;
         case IR::Opcode::MultiplyUnsignedWord1:
-            multiply_unsigned_word1(ee, instr);
+            multiply_unsigned_word(ee, instr, true);
             break;
         case IR::Opcode::MultiplyWord:
-            multiply_word(ee, instr);
+            multiply_word(ee, instr, false);
             break;
         case IR::Opcode::MultiplyWord1:
-            multiply_word1(ee, instr);
+            multiply_word(ee, instr, true);
             break;
         case IR::Opcode::NegateDoublewordReg:
             negate_doubleword_reg(ee, instr);
