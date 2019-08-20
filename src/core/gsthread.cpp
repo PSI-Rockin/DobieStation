@@ -4670,13 +4670,21 @@ GSTextureJitBlockRecord* GraphicsSynthesizerThread::recompile_tex_lookup(uint64_
     switch (current_ctx->tex0.format)
     {
         case 0x00:
-            jit_call_func(emitter_tex, (uint64_t)&addr_PSMCT32);
+        case 0x30:
+            if (current_ctx->tex0.format & 0x30)
+                jit_call_func(emitter_tex, (uint64_t)&addr_PSMCT32Z);
+            else
+                jit_call_func(emitter_tex, (uint64_t)&addr_PSMCT32);
             emitter_tex.load_addr((uint64_t)local_mem, RCX);
             emitter_tex.ADD64_REG(RCX, RAX);
             emitter_tex.MOV32_FROM_MEM(RAX, RAX);
             break;
         case 0x01:
-            jit_call_func(emitter_tex, (uint64_t)&addr_PSMCT32);
+        case 0x31:
+            if (current_ctx->tex0.format & 0x30)
+                jit_call_func(emitter_tex, (uint64_t)&addr_PSMCT32Z);
+            else
+                jit_call_func(emitter_tex, (uint64_t)&addr_PSMCT32);
             emitter_tex.load_addr((uint64_t)local_mem, RCX);
             emitter_tex.ADD64_REG(RCX, RAX);
             emitter_tex.MOV32_FROM_MEM(RAX, RAX);
