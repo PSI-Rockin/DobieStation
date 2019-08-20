@@ -45,8 +45,23 @@ VLC_Entry MotionCode::table[] =
     {0x19, 0xBFFF0, 11}
 };
 
+unsigned int MotionCode::index_table[11] =
+{
+    0,
+    1,
+    1,
+    3,
+    5,
+    7,
+    7,
+    9,
+    15,
+    15,
+    21,
+};
+
 MotionCode::MotionCode() :
-    VLC_Table(table, SIZE, 11)
+    VLC_Table(table, SIZE, 11, index_table)
 {
 
 }

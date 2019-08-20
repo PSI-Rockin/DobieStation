@@ -211,12 +211,14 @@ inline void EmotionEngine::set_cop2_last_cycle(uint64_t value)
 inline void EmotionEngine::halt()
 {
     wait_for_IRQ = true;
+    cycles_to_run = 0;
 }
 
 inline void EmotionEngine::unhalt()
 {
     wait_for_IRQ = false;
-    cycles_to_run = 0;
+    if (cycles_to_run < 0)
+        cycles_to_run = 0;
 }
 
 #endif // EMOTION_HPP

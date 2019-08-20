@@ -100,11 +100,8 @@ void Emulator::run()
 
         iop_timers.run(iop_cycles);
         iop_dma.run(iop_cycles);
-        for (int i = 0; i < iop_cycles; i++)
-        {
-            iop.run(1);
-            iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
-        }
+        iop.run(iop_cycles);
+        iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
 
         scheduler.process_events(this);
     }

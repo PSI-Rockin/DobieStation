@@ -81,7 +81,7 @@ uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee)
 
     if (ee.cp0->get_tlb_modified(ee_page))
     {
-        if (ee_page < (0x80000000 >> 12) && ee_page >= (0x80040000 >> 12))
+        if (ee_page < (0x80000000ULL >> 12ULL) && ee_page >= (0x80040000ULL >> 12ULL))
         {
             jit.jit_heap.invalidate_ee_page(ee_page);
             is_modified = true;

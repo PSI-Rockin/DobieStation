@@ -11,8 +11,18 @@ VLC_Entry Macroblock_PPic::table[] =
     {0x1, 0x60011, 6}
 };
 
+unsigned int Macroblock_PPic::index_table[6] =
+{
+    0,
+    1,
+    2,
+    2,
+    3,
+    6,
+};
+
 Macroblock_PPic::Macroblock_PPic() :
-    VLC_Table(table, SIZE, 6)
+    VLC_Table(table, SIZE, 6, index_table)
 {
 
 }

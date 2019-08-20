@@ -166,7 +166,7 @@ void ImageProcessingUnit::run()
                     while (bytes_left && in_FIFO.f.size())
                     {
                         uint128_t quad = in_FIFO.f.front();
-                        in_FIFO.f.pop();
+                        in_FIFO.f.pop_front();
                         for (int i = 0; i < 8; i++)
                         {
                             int index = (32 - bytes_left) >> 1;
@@ -275,7 +275,7 @@ bool ImageProcessingUnit::process_IDEC()
                 for (int i = 0; i < BLOCK_SIZE / 8; i++)
                 {
                     uint128_t quad = idec.temp_fifo.f.front();
-                    idec.temp_fifo.f.pop();
+                    idec.temp_fifo.f.pop_front();
 
                     int offset = i * 8;
 
@@ -445,29 +445,29 @@ bool ImageProcessingUnit::process_BDEC()
                 for (int i = 0; i < 8; i++)
                 {
                     memcpy(quad._u8, bdec.blocks[0] + (i * 8), sizeof(int16_t) * 8);
-                    bdec.out_fifo->f.push(quad);
+                    bdec.out_fifo->f.push_back(quad);
                     memcpy(quad._u8, bdec.blocks[1] + (i * 8), sizeof(int16_t) * 8);
-                    bdec.out_fifo->f.push(quad);
+                    bdec.out_fifo->f.push_back(quad);
                 }
 
                 for (int i = 0; i < 8; i++)
                 {
                     memcpy(quad._u8, bdec.blocks[2] + (i * 8), sizeof(int16_t) * 8);
-                    bdec.out_fifo->f.push(quad);
+                    bdec.out_fifo->f.push_back(quad);
                     memcpy(quad._u8, bdec.blocks[3] + (i * 8), sizeof(int16_t) * 8);
-                    bdec.out_fifo->f.push(quad);
+                    bdec.out_fifo->f.push_back(quad);
                 }
 
                 for (int i = 0; i < 8; i++)
                 {
                     memcpy(quad._u8, bdec.blocks[4] + (i * 8), sizeof(int16_t) * 8);
-                    bdec.out_fifo->f.push(quad);
+                    bdec.out_fifo->f.push_back(quad);
                 }
 
                 for (int i = 0; i < 8; i++)
                 {
                     memcpy(quad._u8, bdec.blocks[5] + (i * 8), sizeof(int16_t) * 8);
-                    bdec.out_fifo->f.push(quad);
+                    bdec.out_fifo->f.push_back(quad);
                 }
 
                 if (bdec.check_start_code)
@@ -972,7 +972,7 @@ bool ImageProcessingUnit::process_CSC()
                             color16 |= ((color32 >> 30) & 0x1) << 15;
                             quad._u16[j] = color16;
                         }
-                        out_FIFO.f.push(quad);
+                        out_FIFO.f.push_back(quad);
                     }
                 }
                 else
@@ -983,7 +983,7 @@ bool ImageProcessingUnit::process_CSC()
                         {
                             quad._u32[j] = pixels[j + (i * 4)];
                         }
-                        out_FIFO.f.push(quad);
+                        out_FIFO.f.push_back(quad);
                     }
                 }
                 csc.macroblocks--;
@@ -1162,7 +1162,7 @@ bool ImageProcessingUnit::can_write_FIFO()
 uint128_t ImageProcessingUnit::read_FIFO()
 {
     uint128_t quad = out_FIFO.f.front();
-    out_FIFO.f.pop();
+    out_FIFO.f.pop_front();
     return quad;
 }
 
@@ -1173,6 +1173,6 @@ void ImageProcessingUnit::write_FIFO(uint128_t quad)
     {
         Errors::die("[IPU] Error: data sent to IPU exceeding FIFO limit!\n");
     }
-    in_FIFO.f.push(quad);
+    in_FIFO.f.push_back(quad);
     in_FIFO.bit_cache_dirty = true;
 }

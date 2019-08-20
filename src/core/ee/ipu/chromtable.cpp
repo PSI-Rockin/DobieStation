@@ -16,7 +16,21 @@ VLC_Entry ChromTable::table[] =
     {0x3FF, 11, 10}
 };
 
-ChromTable::ChromTable() : VLC_Table(table, SIZE, 10)
+unsigned int ChromTable::index_table[10] =
+{
+    0,
+    0,
+    3,
+    4,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+};
+
+ChromTable::ChromTable() : VLC_Table(table, SIZE, 10, index_table)
 {
 
 }

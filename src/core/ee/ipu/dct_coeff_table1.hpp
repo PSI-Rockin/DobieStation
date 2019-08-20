@@ -7,6 +7,7 @@ class DCT_Coeff_Table1 : public DCT_Coeff
     private:
         static VLC_Entry table[];
         static RunLevelPair runlevel_table[];
+        static unsigned int index_table[];
 
         constexpr static int SIZE = 112;
     public:

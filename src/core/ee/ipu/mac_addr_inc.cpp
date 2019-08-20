@@ -51,7 +51,22 @@ VLC_Entry MacroblockAddrInc::table[] =
     {0x8, 0xB0023, 11}
 };
 
-MacroblockAddrInc::MacroblockAddrInc() : VLC_Table(table, SIZE, 11)
+unsigned int MacroblockAddrInc::index_table[11] =
+{
+    0,
+    1,
+    1,
+    3,
+    5,
+    5,
+    7,
+    9,
+    9,
+    15,
+    21,
+};
+
+MacroblockAddrInc::MacroblockAddrInc() : VLC_Table(table, SIZE, 11, index_table)
 {
 
 }

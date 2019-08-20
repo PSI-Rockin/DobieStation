@@ -7,7 +7,7 @@
 
 struct IPU_FIFO
 {
-    std::queue<uint128_t> f;
+    std::deque<uint128_t> f;
     int bit_pointer;
     uint64_t cached_bits;
     bool bit_cache_dirty;

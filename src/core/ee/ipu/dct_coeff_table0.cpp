@@ -290,8 +290,28 @@ RunLevelPair DCT_Coeff_Table0::runlevel_table[] =
     { 31,			1	},
 };
 
+unsigned int DCT_Coeff_Table0::index_table[16] =
+{
+    0,
+    0,
+    1,
+    2,
+    4,
+    7,
+    12,
+    16,
+    24,
+    24,
+    32,
+    32,
+    48,
+    64,
+    80,
+    96,
+};
+
 DCT_Coeff_Table0::DCT_Coeff_Table0() :
-    DCT_Coeff(table, SIZE, 16)
+    DCT_Coeff(table, SIZE, 16, index_table)
 {
 
 }

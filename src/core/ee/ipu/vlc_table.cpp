@@ -3,8 +3,8 @@
 #include "vlc_table.hpp"
 #include "../../errors.hpp"
 
-VLC_Table::VLC_Table(VLC_Entry* table, int table_size, int max_bits) :
-    table(table), table_size(table_size), max_bits(max_bits)
+VLC_Table::VLC_Table(VLC_Entry* table, int table_size, int max_bits, unsigned int* index_table) :
+    table(table), table_size(table_size), max_bits(max_bits), index_table(index_table)
 {
 
 }
@@ -17,10 +17,10 @@ bool VLC_Table::peek_symbol(IPU_FIFO &FIFO, VLC_Entry &entry)
         int bits = i + 1;
         if (!FIFO.get_bits(key, bits))
             return false;
-        for (int j = 0; j < table_size; j++)
+        for (int j = index_table[i]; j < table_size; j++)
         {
             if (bits != table[j].bits)
-                continue;
+                break;
 
             if (key == table[j].key)
             {

@@ -16,7 +16,20 @@ VLC_Entry LumTable::table[] =
     {0x01FF, 11, 9}
 };
 
-LumTable::LumTable() : VLC_Table(table, SIZE, 9)
+unsigned int LumTable::index_table[9] =
+{
+    0,
+    0,
+    2,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+};
+
+LumTable::LumTable() : VLC_Table(table, SIZE, 9, index_table)
 {
 
 }
