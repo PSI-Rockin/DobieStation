@@ -70,8 +70,8 @@ class EmotionEngine
         static const char* SYSCALL(int id);
         void reset();
         void init_tlb();
-        int run(int cycles);
-        int run_jit(int cycles);
+        void run(int cycles);
+        void run_jit(int cycles);
         uint64_t get_cycle_count();
         uint64_t get_cop2_last_cycle();
         void set_cop2_last_cycle(uint64_t value);
@@ -211,12 +211,12 @@ inline void EmotionEngine::set_cop2_last_cycle(uint64_t value)
 inline void EmotionEngine::halt()
 {
     wait_for_IRQ = true;
-    cycles_to_run = 0;
 }
 
 inline void EmotionEngine::unhalt()
 {
     wait_for_IRQ = false;
+    cycles_to_run = 0;
 }
 
 #endif // EMOTION_HPP

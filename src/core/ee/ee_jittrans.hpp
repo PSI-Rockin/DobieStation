@@ -90,7 +90,22 @@ enum class FPU_SpecialReg
 
 struct EE_InstrInfo
 {
-    //TODO
+    enum class Pipeline
+    {
+        Unk,
+        IntGeneric,
+        Int0,
+        Int1,
+        IntWide,
+        LoadStore,
+        Branch,
+        COP1,
+        COP2
+    };
+
+
+
+    Pipeline pipeline;
 };
 
 class EE_JitTranslator
@@ -99,7 +114,7 @@ private:
     //TODO
     int cycles_this_block;
 
-    EE_InstrInfo instr_info[1024 * 16];
+    std::vector<EE_InstrInfo> instr_info;
     uint16_t end_PC;
     uint16_t cur_PC;
     bool cop2_encountered;

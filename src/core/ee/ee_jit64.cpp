@@ -77,11 +77,16 @@ uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee)
     bool is_modified = false;
     EEJitBlockRecord *recompiledBlock = jit.jit_heap.find_block(ee.PC);
 
-    if (ee.cp0->get_tlb_modified(ee.PC / 4096))
+    uint32_t ee_page = ee.PC >> 12;
+
+    if (ee.cp0->get_tlb_modified(ee_page))
     {
-        jit.jit_heap.invalidate_ee_page(ee.PC / 4096);
-        is_modified = true;
-        ee.cp0->clear_tlb_modified(ee.PC / 4096);
+        if (ee_page < (0x80000000 >> 12) && ee_page >= (0x80040000 >> 12))
+        {
+            jit.jit_heap.invalidate_ee_page(ee_page);
+            is_modified = true;
+            ee.cp0->clear_tlb_modified(ee_page);
+        }
     }
 
     if (is_modified || recompiledBlock == nullptr)

@@ -129,7 +129,7 @@ void EmotionEngine::init_tlb()
     tlb_map = cp0->get_vtlb_map();
 }
 
-int EmotionEngine::run(int cycles)
+void EmotionEngine::run(int cycles)
 {
     cycle_count += cycles;
     if (!wait_for_IRQ)
@@ -186,17 +186,12 @@ int EmotionEngine::run(int cycles)
     }
 
     cp0->count_up(cycles);
-
-    return cycles;
 }
 
-int EmotionEngine::run_jit(int cycles)
+void EmotionEngine::run_jit(int cycles)
 {
-    int start_cycles = cycles_to_run;
-
     if (!wait_for_IRQ)
     {
-        start_cycles += cycles;
         cycles_to_run += cycles;
 
         if (wait_for_VU0)
@@ -218,8 +213,6 @@ int EmotionEngine::run_jit(int cycles)
     }
 
     cp0->count_up(cycles);
-
-    return start_cycles - cycles_to_run;
 }
 
 void EmotionEngine::print_state()
