@@ -100,6 +100,8 @@ class VectorInterface
         void handle_UNPACK_masking(uint128_t& quad);
         void handle_UNPACK_mode(uint128_t& quad);
         void process_UNPACK_quad(uint128_t& quad);
+
+        bool process_data_word(uint32_t value);
     public:
         VectorInterface(GraphicsInterface* gif, VectorUnit* vu, INTC* intc, DMAC* dmac, int id);
         int get_id();

@@ -117,80 +117,91 @@ void VectorInterface::update(int cycles)
             return;
 
         uint32_t value = FIFO.front();
-        if (command == 0)
+
+        //If process_data_word returns false, this means the word was not processed, so don't pop the FIFO.
+        if (process_data_word(value))
         {
-            buffer_size = 0;
-            decode_cmd(value);
-        }
-        else
-        {
-            switch (command)
+            if (command_len)
             {
-                case 0x20:
-                    //STMASK
-                    printf("[VIF] New MASK: $%08X\n", value);
-                    MASK = value;
-                    command = 0;
-                    break;
-                case 0x30:
-                    //STROW
-                    printf("[VIF] ROW%d: $%08X\n", 4 - command_len, value);
-                    ROW[4 - command_len] = value;
-                    if (command_len <= 1)
-                        command = 0;
-                    break;
-                case 0x31:
-                    //STCOL
-                    printf("[VIF] COL%d: $%08X\n", 4 - command_len, value);
-                    COL[4 - command_len] = value;
-                    if (command_len <= 1)
-                        command = 0;
-                    break;
-                case 0x4A:
-                    //MPG
-                    vu->write_instr(mpg.addr, value);
-                    mpg.addr += 4;
-                    if (command_len <= 1)
-                        command = 0;
-                    break;
-                case 0x50:
-                case 0x51:
-                    //DIRECT/DIRECTHL
-                    if (!gif->path_active(2))
-                        return;
-
-                    buffer[buffer_size] = value;
-                    buffer_size++;
-                    if (buffer_size == 4)
-                    {
-                        gif->send_PATH2(buffer);
-                        buffer_size = 0;
-                    }
-
-                    //If we've run out of data, deactivate the PATH2 transfer
-                    if (command_len <= 1)
-                    {
-                        gif->deactivate_PATH(2);
-                        command = 0;
-                    }
-                    break;
-                default:
-                    if ((command & 0x60) == 0x60)
-                        handle_UNPACK(value);
-                    else
-                    {
-                        Errors::die("[VIF] Unhandled data for command $%02X\n", command);
-                    }
+                command_len--;
+                FIFO.pop();
+                if (FIFO.size() <= 32)
+                    dmac->set_DMA_request(id);
             }
         }
-        if (command_len)
+    }
+}
+
+bool VectorInterface::process_data_word(uint32_t value)
+{
+    if (command == 0)
+    {
+        buffer_size = 0;
+        decode_cmd(value);
+    }
+    else
+    {
+        switch (command)
         {
-            command_len--;
-            FIFO.pop();
-            if (FIFO.size() <= 32)
-                dmac->set_DMA_request(id);
+            case 0x20:
+                //STMASK
+                printf("[VIF] New MASK: $%08X\n", value);
+                MASK = value;
+                command = 0;
+                break;
+            case 0x30:
+                //STROW
+                printf("[VIF] ROW%d: $%08X\n", 4 - command_len, value);
+                ROW[4 - command_len] = value;
+                if (command_len <= 1)
+                    command = 0;
+                break;
+            case 0x31:
+                //STCOL
+                printf("[VIF] COL%d: $%08X\n", 4 - command_len, value);
+                COL[4 - command_len] = value;
+                if (command_len <= 1)
+                    command = 0;
+                break;
+            case 0x4A:
+                //MPG
+                vu->write_instr(mpg.addr, value);
+                mpg.addr += 4;
+                if (command_len <= 1)
+                    command = 0;
+                break;
+            case 0x50:
+            case 0x51:
+                //DIRECT/DIRECTHL
+                if (!gif->path_active(2))
+                    return false;
+
+                buffer[buffer_size] = value;
+                buffer_size++;
+                if (buffer_size == 4)
+                {
+                    gif->send_PATH2(buffer);
+                    buffer_size = 0;
+                }
+
+                //If we've run out of data, deactivate the PATH2 transfer
+                if (command_len <= 1)
+                {
+                    gif->deactivate_PATH(2);
+                    command = 0;
+                }
+                break;
+            default:
+                if ((command & 0x60) == 0x60)
+                    handle_UNPACK(value);
+                else
+                {
+                    Errors::die("[VIF] Unhandled data for command $%02X\n", command);
+                }
         }
     }
+
+    return true;
 }
 
 void VectorInterface::decode_cmd(uint32_t value)

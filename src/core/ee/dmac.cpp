@@ -37,6 +37,7 @@ void DMAC::reset(uint8_t* RDRAM, uint8_t* scratchpad)
     mfifo_empty_triggered = false;
     PCR = 0;
     STADR = 0;
+    cycles_to_run = 0;
 
     active_channel = nullptr;
     queued_channels.clear();
@@ -131,17 +132,23 @@ void DMAC::run(int cycles)
     if (!control.master_enable || (master_disable & (1 << 16)))
         return;
 
-    while (cycles > 0)
+    if (active_channel)
     {
-        if (!active_channel)
-            break;
+        cycles_to_run += cycles;
+        while (cycles_to_run > 0)
+        {
+            DMA_Channel* temp = active_channel;
+            int qwc_transferred = (this->*active_channel->func)();
+            cycles_to_run -= std::max(qwc_transferred, 1);
+            if (!temp->is_spr)
+                cycles_to_run -= 12;
 
-        if (active_channel->is_spr)
-            cycles -= 8;
-        else
-            cycles -= 16;
-
-        (this->*active_channel->func)(0);
+            if (!active_channel)
+            {
+                cycles_to_run = 0;
+                break;
+            }
+        }
     }
 }
 
@@ -210,12 +217,12 @@ void DMAC::int1_check()
     cpu->set_int1_signal(int1_signal);
 }
 
-void DMAC::process_VIF0(int cycles)
+int DMAC::process_VIF0()
 {
+    int count = 0;
     if (channels[VIF0].quadword_count)
     {
         int quads_to_transfer = std::min(channels[VIF0].quadword_count, 8U);
-        int count = 0;
         while (count < quads_to_transfer)
         {
             if (!vif0->feed_DMA(fetch128(channels[VIF0].address)))
@@ -229,7 +236,7 @@ void DMAC::process_VIF0(int cycles)
         if (channels[VIF0].tag_end)
         {
             transfer_end(VIF0);
-            return;
+            return count;
         }
         else
         {
@@ -239,7 +246,7 @@ void DMAC::process_VIF0(int cycles)
                 if (!vif0->transfer_DMAtag(DMAtag))
                 {
                     arbitrate();
-                    return;
+                    return count;
                 }
             }
             handle_source_chain(VIF0);
@@ -247,19 +254,32 @@ void DMAC::process_VIF0(int cycles)
     }
     else
         arbitrate();
+
+    return count;
 }
 
-void DMAC::process_VIF1(int cycles)
+int DMAC::process_VIF1()
 {
+    int count = 0;
     if (channels[VIF1].quadword_count)
     {
         int quads_to_transfer = std::min(channels[VIF1].quadword_count, 8U);
-        int count = 0;
         while (count < quads_to_transfer)
         {
             if (channels[VIF1].control & 0x1)
+            {
+                if (control.stall_dest_channel == 1 && channels[VIF1].can_stall_drain)
+                {
+                    if (channels[VIF1].address + (8 * 16) > STADR)
+                    {
+                        active_channel = nullptr;
+                        break;
+                    }
+                }
+
                 if (!vif1->feed_DMA(fetch128(channels[VIF1].address)))
                     break;
+            }
             advance_source_dma(VIF1);
             count++;
         }
@@ -269,14 +289,14 @@ void DMAC::process_VIF1(int cycles)
         if (channels[VIF1].tag_end)
         {
             transfer_end(VIF1);
-            return;
+            return count;
         }
         else
         {
             if (!mfifo_handler(VIF1))
             {
                 arbitrate();
-                return;
+                return count;
             }
             uint128_t DMAtag = fetch128(channels[VIF1].tag_address);
             if (channels[VIF1].control & (1 << 6))
@@ -284,7 +304,7 @@ void DMAC::process_VIF1(int cycles)
                 if (!vif1->transfer_DMAtag(DMAtag))
                 {
                     arbitrate();
-                    return;
+                    return count;
                 }
             }
             handle_source_chain(VIF1);
@@ -292,6 +312,8 @@ void DMAC::process_VIF1(int cycles)
     }
     else
         arbitrate();
+
+    return count;
     /*while (cycles)
     {
         if (!mfifo_handler(VIF1))
@@ -338,25 +360,45 @@ void DMAC::process_VIF1(int cycles)
     }*/
 }
 
-void DMAC::process_GIF(int cycles)
+int DMAC::process_GIF()
 {
+    int count = 0;
     if (channels[GIF].quadword_count)
     {
         int quads_to_transfer = std::min(channels[GIF].quadword_count, 8U);
-        int count = 0;
+        if (control.stall_dest_channel == 2 && channels[GIF].can_stall_drain)
+        {
+            if (channels[GIF].address + (quads_to_transfer * 16) > STADR)
+            {
+                if (interrupt_stat.channel_mask[13])
+                    Errors::die("yay");
+                gif->dma_waiting(true);
+                active_channel = nullptr;
+                arbitrate();
+                return 0;
+            }
+        }
         while (count < quads_to_transfer)
         {
-            gif->send_PATH3(fetch128(channels[GIF].address));
-            advance_source_dma(GIF);
-            count++;
-            if (gif->path3_done())
+            gif->request_PATH(3, false);
+            if (gif->path_active(3) && !gif->fifo_full() && !gif->fifo_draining())
             {
-                arbitrate();
-                return;
+                gif->dma_waiting(false);
+                gif->send_PATH3(fetch128(channels[GIF].address));
+                advance_source_dma(GIF);
+                count++;
+                if (gif->path3_done())
+                    break;
+            }
+            else
+            {
+                gif->dma_waiting(true);
+                break;
             }
         }
     }
-    gif->intermittent_check();
+    //gif->intermittent_check();
+    printf("GIF: %d ($%08X $%08X)\n", channels[GIF].quadword_count, channels[GIF].address, STADR);
     if (!channels[GIF].quadword_count)
     {
         if (channels[GIF].tag_end)
@@ -369,13 +411,15 @@ void DMAC::process_GIF(int cycles)
             if (!mfifo_handler(GIF))
             {
                 arbitrate();
-                return;
+                return count;
             }
             handle_source_chain(GIF);
         }
     }
     else
         arbitrate();
+
+    return count;
 
     /*while (cycles)
     {
@@ -428,12 +472,12 @@ void DMAC::process_GIF(int cycles)
     }*/
 }
 
-void DMAC::process_IPU_FROM(int cycles)
+int DMAC::process_IPU_FROM()
 {
+    int count = 0;
     if (channels[IPU_FROM].quadword_count)
     {
         int quads_to_transfer = std::min(channels[IPU_FROM].quadword_count, 8U);
-        int count = 0;
         while (count < quads_to_transfer)
         {
             if (!ipu->can_read_FIFO())
@@ -443,11 +487,11 @@ void DMAC::process_IPU_FROM(int cycles)
 
             channels[IPU_FROM].address += 16;
             channels[IPU_FROM].quadword_count--;
-
-            if (control.stall_source_channel == 3)
-                STADR = channels[IPU_FROM].address;
+            count++;
         }
     }
+    if (control.stall_source_channel == 3)
+        update_stadr(channels[IPU_FROM].address);
     if (!channels[IPU_FROM].quadword_count)
     {
         if (channels[IPU_FROM].tag_end)
@@ -459,14 +503,16 @@ void DMAC::process_IPU_FROM(int cycles)
     }
     else
         arbitrate();
+
+    return count;
 }
 
-void DMAC::process_IPU_TO(int cycles)
+int DMAC::process_IPU_TO()
 {
+    int count = 0;
     if (channels[IPU_TO].quadword_count)
     {
         int quads_to_transfer = std::min(channels[IPU_TO].quadword_count, 8U);
-        int count = 0;
         while (count < quads_to_transfer)
         {
             if (!ipu->can_write_FIFO())
@@ -485,9 +531,11 @@ void DMAC::process_IPU_TO(int cycles)
     }
     else
         arbitrate();
+
+    return count;
 }
 
-void DMAC::process_SIF0(int cycles)
+int DMAC::process_SIF0()
 {
     int quads_to_transfer = std::min({channels[EE_SIF0].quadword_count, 8U, sif->get_SIF0_size() / 4U});
     int count = 0;
@@ -506,7 +554,7 @@ void DMAC::process_SIF0(int cycles)
         if (channels[EE_SIF0].tag_end)
         {
             transfer_end(EE_SIF0);
-            return;
+            return count;
         }
         else if (sif->get_SIF0_size() >= 2)
         {
@@ -533,6 +581,8 @@ void DMAC::process_SIF0(int cycles)
     }
     else
         arbitrate();
+
+    return count;
 
     /*while (cycles)
     {
@@ -581,14 +631,22 @@ void DMAC::process_SIF0(int cycles)
     }*/
 }
 
-void DMAC::process_SIF1(int cycles)
+int DMAC::process_SIF1()
 {
+    int count = 0;
     if (channels[EE_SIF1].quadword_count)
     {
         int quads_to_transfer = std::min(channels[EE_SIF1].quadword_count, 8U);
-        int count = 0;
         while (count < quads_to_transfer)
         {
+            if (control.stall_dest_channel == 3 && channels[EE_SIF1].can_stall_drain)
+            {
+                if (channels[EE_SIF1].address + (8 * 16) > STADR)
+                {
+                    active_channel = nullptr;
+                    break;
+                }
+            }
             sif->write_SIF1(fetch128(channels[EE_SIF1].address));
             advance_source_dma(EE_SIF1);
             count++;
@@ -601,6 +659,8 @@ void DMAC::process_SIF1(int cycles)
         else
             handle_source_chain(EE_SIF1);
     }
+
+    return count;
     /*while (cycles)
     {
         cycles--;
@@ -633,12 +693,12 @@ void DMAC::process_SIF1(int cycles)
     }*/
 }
 
-void DMAC::process_SPR_FROM(int cycles)
+int DMAC::process_SPR_FROM()
 {
+    int count = 0;
     if (channels[SPR_FROM].quadword_count)
     {
         int quads_to_transfer = std::min(channels[SPR_FROM].quadword_count, 8U);
-        int count = 0;
         while (count < quads_to_transfer)
         {
             if (control.mem_drain_channel != 0)
@@ -673,7 +733,7 @@ void DMAC::process_SPR_FROM(int cycles)
         if (channels[SPR_FROM].tag_end)
         {
             transfer_end(SPR_FROM);
-            return;
+            return count;
         }
         else
         {
@@ -697,14 +757,16 @@ void DMAC::process_SPR_FROM(int cycles)
             arbitrate();
         }
     }
+
+    return count;
 }
 
-void DMAC::process_SPR_TO(int cycles)
+int DMAC::process_SPR_TO()
 {
+    int count = 0;
     if (channels[SPR_TO].quadword_count)
     {
         int quads_to_transfer = std::min(channels[SPR_TO].quadword_count, 8U);
-        int count = 0;
         while (count < quads_to_transfer)
         {
             uint128_t DMAData = fetch128(channels[SPR_TO].address);
@@ -745,6 +807,8 @@ void DMAC::process_SPR_TO(int cycles)
             handle_source_chain(SPR_TO);
         }
     }
+
+    return count;
 }
 
 void DMAC::advance_source_dma(int index)
@@ -779,10 +843,10 @@ void DMAC::advance_dest_dma(int index)
     {
         //SIF0 source stall drain
         if (index == 5 && control.stall_source_channel == 1)
-            STADR = channels[index].address;
+            update_stadr(channels[index].address);
         //SPR_FROM source stall drain
         if (index == 8 && control.stall_source_channel == 2)
-            STADR = channels[index].address;
+            update_stadr(channels[index].address);
     }
 }
 
@@ -945,6 +1009,9 @@ void DMAC::start_DMA(int index)
     uint32_t addr = channels[index].address;
     channels[index].is_spr = (addr & (1 << 31)) || (addr & 0x70000000) == 0x70000000;
     channels[index].started = true;
+
+    if (!active_channel)
+        cycles_to_run = 0;
 
     check_for_activation(index);
 }
@@ -1527,10 +1594,54 @@ void DMAC::clear_DMA_request(int index)
         deactivate_channel(index);
 }
 
+void DMAC::update_stadr(uint32_t addr)
+{
+    uint32_t old_stadr = STADR;
+    STADR = addr;
+
+    //Reactivate a stalled channel if necessary
+    int c;
+    switch (control.stall_dest_channel)
+    {
+        case 0:
+            return;
+        case 1:
+            c = VIF1;
+            break;
+        case 2:
+            c = GIF;
+            break;
+        case 3:
+            c = EE_SIF1;
+            break;
+    }
+
+    uint32_t madr = channels[c].address + (8 * 16);
+    if (madr > old_stadr && madr <= STADR)
+        check_for_activation(c);
+}
+
 void DMAC::check_for_activation(int index)
 {
     if (channels[index].dma_req && channels[index].started)
     {
+        //Keep a channel deactivated if it has been stalled
+        bool do_stall_check = false;
+        switch (control.stall_dest_channel)
+        {
+            case 1:
+                do_stall_check = index == VIF1;
+                break;
+            case 2:
+                do_stall_check = index == GIF;
+                break;
+            case 3:
+                do_stall_check = index == EE_SIF1;
+                break;
+        }
+
+        if (do_stall_check && channels[index].can_stall_drain && channels[index].address + (8 * 16) > STADR)
+            return;
 
         if (!active_channel)
             active_channel = &channels[index];
@@ -1569,9 +1680,15 @@ void DMAC::arbitrate()
     //Only switch to a new channel if something is queued
     if (queued_channels.size())
     {
-        printf("[DMAC] Arbitrating from %s to ", CHAN(active_channel->index));
+        bool is_active = active_channel;
+        if (is_active)
+            printf("[DMAC] Arbitrating from %s to ", CHAN(active_channel->index));
         find_new_active_channel();
-        printf("%s\n", CHAN(active_channel->index));
+
+        if (is_active)
+            printf("%s\n", CHAN(active_channel->index));
+        else
+            printf("[DMAC] Arbitrating to %s\n", CHAN(active_channel->index));
     }
 }
 

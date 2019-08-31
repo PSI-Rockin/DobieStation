@@ -267,7 +267,7 @@ void GraphicsInterface::run(int cycles)
 
 void GraphicsInterface::set_path3_vifmask(int value)
 {
-   // printf("GIF PATH3Mask VIF set to %d\n", value);
+    //printf("GIF PATH3Mask VIF set to %d\n", value);
     path3_vif_masked = value;
 }
 
@@ -285,11 +285,15 @@ bool GraphicsInterface::path3_masked(int index)
     if (path3_vif_masked || path3_mode_masked)
     {
         masked = (path_status[3] == 4);
-        //printf("[GIF] PATH3 Masked\n");
-        if (masked && fifo_full())
+
+        if (masked)
         {
-            deactivate_PATH(3);
-            
+            //printf("[GIF] PATH3 Masked\n");
+            if (fifo_full())
+            {
+                deactivate_PATH(3);
+
+            }
         }
     }
     return masked;
@@ -306,7 +310,10 @@ bool GraphicsInterface::interrupt_path3(int index)
 
     if ((intermittent_mode && path_status[3] >= 2) || path3_masked(3)) //IMAGE MODE or IDLE
     {
-        intermittent_active = true;
+        //printf("[GIF] Interrupting PATH3 with PATH%d\n", index);
+        deactivate_PATH(3);
+        //printf("Active Path Now %d\n", active_path);
+        path_queue |= 1 << 3;
         return true;
     }
     return false;
@@ -315,9 +322,7 @@ bool GraphicsInterface::interrupt_path3(int index)
 void GraphicsInterface::request_PATH(int index, bool canInterruptPath3)
 {
     //printf("[GIF] PATH%d requested active path %d\n", index, active_path);
-    if (canInterruptPath3)
-        interrupt_path3(index);
-    if (!active_path || active_path == index)
+    if (!active_path || active_path == index || (canInterruptPath3 && interrupt_path3(index)))
     {
         active_path = index;
 
@@ -336,8 +341,8 @@ void GraphicsInterface::deactivate_PATH(int index)
 {
     //printf("[GIF] PATH%d deactivated\n", index);
     path_queue &= ~(1 << index);
-    if (index == 3)
-        dmac->clear_DMA_request(GIF);
+    //if (index == 3)
+        //dmac->clear_DMA_request(GIF);
     if (active_path == index)
     {
         active_path = 0;
@@ -397,7 +402,7 @@ void GraphicsInterface::send_PATH3(uint128_t data)
 
 void GraphicsInterface::flush_path3_fifo()
 {
-    //printf("Flushing GIF FIFO\n");
+    printf("Flushing GIF FIFO\n");
     feed_GIF(FIFO.front());
     FIFO.pop();
 
@@ -405,6 +410,8 @@ void GraphicsInterface::flush_path3_fifo()
     {
         //printf("GIF Deactivating PATH at FIFO flush end\n");
         deactivate_PATH(3);
+        if (fifo_empty() && !path3_dma_waiting)
+            dmac->set_DMA_request(GIF);
     }
 }
 

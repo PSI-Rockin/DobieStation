@@ -37,7 +37,7 @@ struct DMA_Channel
     uint8_t interleaved_qwc;
     uint8_t tag_id;
 
-    typedef void(DMAC::*dma_copy_func)(int);
+    typedef int(DMAC::*dma_copy_func)();
     dma_copy_func func;
 
     bool started;
@@ -103,18 +103,19 @@ class DMAC
         uint32_t RBOR, RBSR;
         uint32_t STADR;
         bool mfifo_empty_triggered;
+        int cycles_to_run;
 
         uint32_t master_disable;
 
-        void process_VIF0(int cycles);
-        void process_VIF1(int cycles);
-        void process_GIF(int cycles);
-        void process_IPU_FROM(int cycles);
-        void process_IPU_TO(int cycles);
-        void process_SIF0(int cycles);
-        void process_SIF1(int cycles);
-        void process_SPR_FROM(int cycles);
-        void process_SPR_TO(int cycles);
+        int process_VIF0();
+        int process_VIF1();
+        int process_GIF();
+        int process_IPU_FROM();
+        int process_IPU_TO();
+        int process_SIF0();
+        int process_SIF1();
+        int process_SPR_FROM();
+        int process_SPR_TO();
 
         void handle_source_chain(int index);
         void advance_source_dma(int index);
@@ -126,6 +127,7 @@ class DMAC
         uint128_t fetch128(uint32_t addr);
         void store128(uint32_t addr, uint128_t data);
 
+        void update_stadr(uint32_t addr);
         void check_for_activation(int index);
         void deactivate_channel(int index);
         void arbitrate();
