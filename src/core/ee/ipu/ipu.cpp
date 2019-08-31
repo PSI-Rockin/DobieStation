@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <cstring>
 #include "ipu.hpp"
+#include "../dmac.hpp"
 #include "../intc.hpp"
 #include "../../errors.hpp"
 
@@ -58,7 +59,7 @@ uint32_t ImageProcessingUnit::quantizer_nonlinear[0x20] =
     56,		64,		72,		80,		88,		96,		104,	112,
 };
 
-ImageProcessingUnit::ImageProcessingUnit(INTC* intc) : intc(intc)
+ImageProcessingUnit::ImageProcessingUnit(INTC* intc, DMAC* dmac) : intc(intc), dmac(dmac)
 {
     //Generate CrCb->RGB conversion map
     for (unsigned int i = 0; i < 0x40; i += 0x8)
@@ -194,6 +195,10 @@ void ImageProcessingUnit::run()
             finish_command();
         }
     }
+    if (can_write_FIFO())
+        dmac->set_DMA_request(IPU_TO);
+    if (can_read_FIFO())
+        dmac->set_DMA_request(IPU_FROM);
 }
 
 void ImageProcessingUnit::finish_command()
@@ -986,6 +991,7 @@ bool ImageProcessingUnit::process_CSC()
                         out_FIFO.f.push_back(quad);
                     }
                 }
+                dmac->set_DMA_request(IPU_FROM);
                 csc.macroblocks--;
                 csc.state = CSC_STATE::BEGIN;
             }
@@ -1163,12 +1169,15 @@ uint128_t ImageProcessingUnit::read_FIFO()
 {
     uint128_t quad = out_FIFO.f.front();
     out_FIFO.f.pop_front();
+    if (!out_FIFO.f.size())
+        dmac->clear_DMA_request(IPU_FROM);
     return quad;
 }
 
 void ImageProcessingUnit::write_FIFO(uint128_t quad)
 {
     printf("[IPU] Write FIFO: $%08X_%08X_%08X_%08X\n", quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
+    dmac->clear_DMA_request(IPU_TO);
     if (in_FIFO.f.size() >= 8)
     {
         Errors::die("[IPU] Error: data sent to IPU exceeding FIFO limit!\n");

@@ -2,8 +2,26 @@
 #define DMAC_HPP
 #include <cstdint>
 #include <fstream>
+#include <list>
 
 #include "../int128.hpp"
+
+enum DMAC_CHANNELS
+{
+    VIF0,
+    VIF1,
+    GIF,
+    IPU_FROM,
+    IPU_TO,
+    EE_SIF0,
+    EE_SIF1,
+    EE_SIF2,
+    SPR_FROM,
+    SPR_TO,
+    MFIFO_EMPTY = 14
+};
+
+class DMAC;
 
 struct DMA_Channel
 {
@@ -19,8 +37,15 @@ struct DMA_Channel
     uint8_t interleaved_qwc;
     uint8_t tag_id;
 
+    typedef int(DMAC::*dma_copy_func)();
+    dma_copy_func func;
+
     bool started;
     bool can_stall_drain;
+    bool dma_req;
+    bool is_spr;
+
+    int index;
 };
 
 //Regs
@@ -67,6 +92,10 @@ class DMAC
         VectorUnit* vu0, *vu1;
         DMA_Channel channels[15];
 
+        DMA_Channel* active_channel;
+        DMA_Channel* queued_VIF0; //TODO: VIF0 has a higher priority, so it needs its own slot
+        std::list<DMA_Channel*> queued_channels;
+
         D_CTRL control;
         D_STAT interrupt_stat;
         uint32_t PCR;
@@ -74,18 +103,21 @@ class DMAC
         uint32_t RBOR, RBSR;
         uint32_t STADR;
         bool mfifo_empty_triggered;
+        int cycles_to_run;
 
         uint32_t master_disable;
 
-        void process_VIF0(int cycles);
-        void process_VIF1(int cycles);
-        void process_GIF(int cycles);
-        void process_IPU_FROM(int cycles);
-        void process_IPU_TO(int cycles);
-        void process_SIF0(int cycles);
-        void process_SIF1(int cycles);
-        void process_SPR_FROM(int cycles);
-        void process_SPR_TO(int cycles);
+        void apply_dma_funcs();
+
+        int process_VIF0();
+        int process_VIF1();
+        int process_GIF();
+        int process_IPU_FROM();
+        int process_IPU_TO();
+        int process_SIF0();
+        int process_SIF1();
+        int process_SPR_FROM();
+        int process_SPR_TO();
 
         void handle_source_chain(int index);
         void advance_source_dma(int index);
@@ -96,6 +128,12 @@ class DMAC
 
         uint128_t fetch128(uint32_t addr);
         void store128(uint32_t addr, uint128_t data);
+
+        void update_stadr(uint32_t addr);
+        void check_for_activation(int index);
+        void deactivate_channel(int index);
+        void arbitrate();
+        void find_new_active_channel();
     public:
         static const char* CHAN(int index);
         DMAC(EmotionEngine* cpu, Emulator* e, GraphicsInterface* gif, ImageProcessingUnit* ipu, SubsystemInterface* sif,
@@ -112,6 +150,9 @@ class DMAC
         void write8(uint32_t address, uint8_t value);
         void write16(uint32_t address, uint16_t value);
         void write32(uint32_t address, uint32_t value);
+
+        void set_DMA_request(int index);
+        void clear_DMA_request(int index);
 
         void load_state(std::ifstream& state);
         void save_state(std::ofstream& state);

@@ -17,11 +17,26 @@
 #define EELOAD_SIZE 0x20000
 
 Emulator::Emulator() :
-    cdvd(this, &iop_dma), cp0(&dmac), cpu(&cp0, &fpu, this, &vu0, &vu1),
-    dmac(&cpu, this, &gif, &ipu, &sif, &vif0, &vif1, &vu0, &vu1), gif(&gs), gs(&intc),
-    iop(this), iop_dma(this, &cdvd, &sif, &sio2, &spu, &spu2), iop_timers(this), intc(this, &cpu), ipu(&intc),
-    timers(&intc), sio2(this, &pad, &memcard), spu(1, this, &iop_dma), spu2(2, this, &iop_dma),
-    vif0(&gif, &vu0, &intc, 0), vif1(&gif, &vu1, &intc, 1), vu0(0, this, &intc, &cpu), vu1(1, this, &intc, &cpu), sif(&iop_dma)
+    cdvd(this, &iop_dma),
+    cp0(&dmac),
+    cpu(&cp0, &fpu, this, &vu0, &vu1),
+    dmac(&cpu, this, &gif, &ipu, &sif, &vif0, &vif1, &vu0, &vu1),
+    gif(&gs, &dmac),
+    gs(&intc),
+    iop(this),
+    iop_dma(this, &cdvd, &sif, &sio2, &spu, &spu2),
+    iop_timers(this),
+    intc(this, &cpu),
+    ipu(&intc, &dmac),
+    timers(&intc),
+    sio2(this, &pad, &memcard),
+    spu(1, this, &iop_dma),
+    spu2(2, this, &iop_dma),
+    vif0(nullptr, &vu0, &intc, &dmac, 0),
+    vif1(&gif, &vu1, &intc, &dmac, 1),
+    vu0(0, this, &intc, &cpu),
+    vu1(1, this, &intc, &cpu),
+    sif(&iop_dma, &dmac)
 {
     BIOS = nullptr;
     RDRAM = nullptr;
@@ -730,8 +745,14 @@ void Emulator::write32(uint32_t address, uint32_t value)
         case 0x10003010:
             gif.write_MODE(value);
             return;
+        case 0x10003810:
+            vif0.set_fbrst(value);
+            return;
         case 0x10003820:
             vif0.set_err(value);
+            return;
+        case 0x10003830:
+            vif0.set_mark(value);
             return;
         case 0x10003c00:
             vif1.set_stat(value);
