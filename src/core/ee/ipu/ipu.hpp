@@ -139,11 +139,13 @@ struct CSC_Command
 };
 
 class INTC;
+class DMAC;
 
 class ImageProcessingUnit
 {
     private:
         INTC* intc;
+        DMAC* dmac;
         DCT_Coeff_Table0 dct_coeff0;
         DCT_Coeff_Table1 dct_coeff1;
         DCT_Coeff* dct_coeff;
@@ -202,7 +204,7 @@ class ImageProcessingUnit
         void process_FDEC();
         bool process_CSC();
     public:
-        ImageProcessingUnit(INTC* intc);
+        ImageProcessingUnit(INTC* intc, DMAC* dmac);
 
         void reset();
         void run();

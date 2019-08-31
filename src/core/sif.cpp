@@ -2,8 +2,9 @@
 #include "sif.hpp"
 
 #include "iop/iop_dma.hpp"
+#include "ee/dmac.hpp"
 
-SubsystemInterface::SubsystemInterface(IOP_DMA* iop_dma) : iop_dma(iop_dma)
+SubsystemInterface::SubsystemInterface(IOP_DMA* iop_dma, DMAC* dmac) : iop_dma(iop_dma), dmac(dmac)
 {
 
 }
@@ -18,9 +19,6 @@ void SubsystemInterface::reset()
     msflag = 0;
     smflag = 0;
     control = 0;
-
-    iop_dma->set_DMA_request(IOP_SIF0);
-    iop_dma->clear_DMA_request(IOP_SIF1);
 }
 
 void SubsystemInterface::write_SIF0(uint32_t word)
@@ -28,6 +26,8 @@ void SubsystemInterface::write_SIF0(uint32_t word)
     SIF0_FIFO.push(word);
     if (SIF0_FIFO.size() >= MAX_FIFO_SIZE)
         iop_dma->clear_DMA_request(IOP_SIF0);
+    if (SIF0_FIFO.size() >= 4)
+        dmac->set_DMA_request(EE_SIF0);
 }
 
 void SubsystemInterface::write_SIF1(uint128_t quad)
@@ -36,14 +36,18 @@ void SubsystemInterface::write_SIF1(uint128_t quad)
     for (int i = 0; i < 4; i++)
         SIF1_FIFO.push(quad._u32[i]);
     iop_dma->set_DMA_request(IOP_SIF1);
+    if (SIF1_FIFO.size() >= MAX_FIFO_SIZE / 2)
+        dmac->clear_DMA_request(EE_SIF1);
 }
 
 uint32_t SubsystemInterface::read_SIF0()
 {
     uint32_t value = SIF0_FIFO.front();
-    //printf("[SIF] Read SIF0: $%08X\n", value);
     SIF0_FIFO.pop();
     iop_dma->set_DMA_request(IOP_SIF0);
+
+    if (SIF0_FIFO.size() < 4)
+        dmac->clear_DMA_request(EE_SIF0);
     return value;
 }
 
@@ -53,6 +57,8 @@ uint32_t SubsystemInterface::read_SIF1()
     SIF1_FIFO.pop();
     if (!SIF1_FIFO.size())
         iop_dma->clear_DMA_request(IOP_SIF1);
+    if (SIF1_FIFO.size() < MAX_FIFO_SIZE / 2)
+        dmac->set_DMA_request(EE_SIF1);
     return value;
 }
 

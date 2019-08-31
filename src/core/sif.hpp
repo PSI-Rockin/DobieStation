@@ -7,11 +7,13 @@
 #include "int128.hpp"
 
 class IOP_DMA;
+class DMAC;
 
 class SubsystemInterface
 {
     private:
         IOP_DMA* iop_dma;
+        DMAC* dmac;
         uint32_t mscom;
         uint32_t smcom;
         uint32_t msflag;
@@ -22,7 +24,7 @@ class SubsystemInterface
         std::queue<uint32_t> SIF1_FIFO;
     public:
         constexpr static int MAX_FIFO_SIZE = 32;
-        SubsystemInterface(IOP_DMA* iop_dma);
+        SubsystemInterface(IOP_DMA* iop_dma, DMAC* dmac);
 
         void reset();
         int get_SIF0_size();

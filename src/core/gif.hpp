@@ -7,6 +7,8 @@
 #include "gs.hpp"
 #include "int128.hpp"
 
+class DMAC;
+
 struct GIFtag
 {
     uint16_t NLOOP;
@@ -30,6 +32,7 @@ class GraphicsInterface
 {
     private:
         GraphicsSynthesizer* gs;
+        DMAC* dmac;
         
         GIFPath path[4];
 
@@ -42,6 +45,7 @@ class GraphicsInterface
         bool path3_vif_masked;
         bool path3_mode_masked;
         bool intermittent_mode;
+        bool intermittent_active;
         bool path3_dma_waiting;
 
         float internal_Q;
@@ -52,7 +56,7 @@ class GraphicsInterface
 
         void flush_path3_fifo();
     public:
-        GraphicsInterface(GraphicsSynthesizer* gs);
+        GraphicsInterface(GraphicsSynthesizer* gs, DMAC* dmac);
         void reset();
         void run(int cycles);
 
@@ -80,6 +84,8 @@ class GraphicsInterface
         void send_PATH2(uint32_t data[4]);
         void send_PATH3(uint128_t quad);
         uint128_t read_GSFIFO();
+
+        void intermittent_check();
 
         void load_state(std::ifstream& state);
         void save_state(std::ofstream& state);
