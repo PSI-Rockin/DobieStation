@@ -83,6 +83,7 @@ class GraphicsInterface
         bool send_PATH1(uint128_t quad);
         void send_PATH2(uint32_t data[4]);
         void send_PATH3(uint128_t quad);
+        uint128_t read_GSFIFO();
 
         void intermittent_check();
 

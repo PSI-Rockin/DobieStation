@@ -54,6 +54,10 @@ BiosReader::BiosReader(QString path)
         bios_country = "Japan";
     else if (country_code == "E")
         bios_country = "Europe";
+    else if (country_code == "C")
+        bios_country = "China";
+    else if (country_code == "H")
+        bios_country = "Hong Kong";
     else
         bios_country = "Unknown";
 
@@ -134,5 +138,4 @@ const char* BiosReader::const_data() const
 uint8_t* BiosReader::data()
 {
     return reinterpret_cast<uint8_t*>(bios_data.data());
-
 }

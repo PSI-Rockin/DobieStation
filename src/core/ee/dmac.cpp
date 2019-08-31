@@ -337,6 +337,7 @@ int DMAC::process_VIF1()
             }
             else
             {
+                store128(channels[VIF1].address, vif1->readFIFO());
                 channels[VIF1].quadword_count--;
                 channels[VIF1].address += 16;
             }

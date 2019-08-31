@@ -248,6 +248,7 @@ void GraphicsInterface::feed_GIF(uint128_t data)
     {
         path_status[active_path] = 4;
         gs->assert_FINISH();
+        gs->wake_gs_thread();
     }
 }
 
@@ -398,6 +399,11 @@ void GraphicsInterface::send_PATH3(uint128_t data)
         if (FIFO.size() > 8)
             dmac->clear_DMA_request(GIF);
     }
+}
+
+uint128_t GraphicsInterface::read_GSFIFO()
+{
+    return gs->request_gs_download();
 }
 
 void GraphicsInterface::flush_path3_fifo()
