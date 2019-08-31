@@ -17,15 +17,7 @@ DMAC::DMAC(EmotionEngine* cpu, Emulator* e, GraphicsInterface* gif, ImageProcess
            VectorInterface* vif0, VectorInterface* vif1, VectorUnit* vu0, VectorUnit* vu1) :
     RDRAM(nullptr), scratchpad(nullptr), cpu(cpu), e(e), gif(gif), ipu(ipu), sif(sif), vif0(vif0), vif1(vif1), vu0(vu0), vu1(vu1)
 {
-    channels[VIF0].func = &DMAC::process_VIF0;
-    channels[VIF1].func = &DMAC::process_VIF1;
-    channels[GIF].func = &DMAC::process_GIF;
-    channels[IPU_FROM].func = &DMAC::process_IPU_FROM;
-    channels[IPU_TO].func = &DMAC::process_IPU_TO;
-    channels[EE_SIF0].func = &DMAC::process_SIF0;
-    channels[EE_SIF1].func = &DMAC::process_SIF1;
-    channels[SPR_FROM].func = &DMAC::process_SPR_FROM;
-    channels[SPR_TO].func = &DMAC::process_SPR_TO;
+    apply_dma_funcs();
 }
 
 void DMAC::reset(uint8_t* RDRAM, uint8_t* scratchpad)
@@ -215,6 +207,19 @@ void DMAC::int1_check()
         }
     }
     cpu->set_int1_signal(int1_signal);
+}
+
+void DMAC::apply_dma_funcs()
+{
+    channels[VIF0].func = &DMAC::process_VIF0;
+    channels[VIF1].func = &DMAC::process_VIF1;
+    channels[GIF].func = &DMAC::process_GIF;
+    channels[IPU_TO].func = &DMAC::process_IPU_TO;
+    channels[IPU_FROM].func = &DMAC::process_IPU_FROM;
+    channels[EE_SIF0].func = &DMAC::process_SIF0;
+    channels[EE_SIF1].func = &DMAC::process_SIF1;
+    channels[SPR_FROM].func = &DMAC::process_SPR_FROM;
+    channels[SPR_TO].func = &DMAC::process_SPR_TO;
 }
 
 int DMAC::process_VIF0()
@@ -976,12 +981,10 @@ void DMAC::handle_source_chain(int index)
         case 2:
             //Disable priority control
             PCR &= ~(1 << 31);
-            Errors::die("a");
             break;
         case 3:
             //Enable priority control
             PCR |= (1 << 31);
-            Errors::die("b");
             break;
     }
 

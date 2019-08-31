@@ -107,6 +107,8 @@ class DMAC
 
         uint32_t master_disable;
 
+        void apply_dma_funcs();
+
         int process_VIF0();
         int process_VIF1();
         int process_GIF();

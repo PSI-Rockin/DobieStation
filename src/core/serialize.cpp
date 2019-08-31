@@ -513,6 +513,8 @@ void DMAC::load_state(ifstream &state)
 {
     state.read((char*)&channels, sizeof(channels));
 
+    apply_dma_funcs();
+
     state.read((char*)&control, sizeof(control));
     state.read((char*)&interrupt_stat, sizeof(interrupt_stat));
     state.read((char*)&PCR, sizeof(PCR));

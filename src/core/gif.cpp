@@ -408,7 +408,7 @@ uint128_t GraphicsInterface::read_GSFIFO()
 
 void GraphicsInterface::flush_path3_fifo()
 {
-    printf("Flushing GIF FIFO\n");
+    //printf("Flushing GIF FIFO\n");
     feed_GIF(FIFO.front());
     FIFO.pop();
 
