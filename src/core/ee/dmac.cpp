@@ -222,7 +222,8 @@ int DMAC::process_VIF0()
     int count = 0;
     if (channels[VIF0].quadword_count)
     {
-        int quads_to_transfer = std::min(channels[VIF0].quadword_count, 8U);
+        uint32_t max_qwc = 8 - ((channels[VIF0].address >> 4) & 0x7);
+        int quads_to_transfer = std::min(channels[VIF0].quadword_count, max_qwc);
         while (count < quads_to_transfer)
         {
             if (!vif0->feed_DMA(fetch128(channels[VIF0].address)))
@@ -263,7 +264,8 @@ int DMAC::process_VIF1()
     int count = 0;
     if (channels[VIF1].quadword_count)
     {
-        int quads_to_transfer = std::min(channels[VIF1].quadword_count, 8U);
+        uint32_t max_qwc = 8 - ((channels[VIF1].address >> 4) & 0x7);
+        int quads_to_transfer = std::min(channels[VIF1].quadword_count, max_qwc);
         while (count < quads_to_transfer)
         {
             if (channels[VIF1].control & 0x1)
@@ -365,7 +367,8 @@ int DMAC::process_GIF()
     int count = 0;
     if (channels[GIF].quadword_count)
     {
-        int quads_to_transfer = std::min(channels[GIF].quadword_count, 8U);
+        uint32_t max_qwc = 8 - ((channels[GIF].address >> 4) & 0x7);
+        int quads_to_transfer = std::min(channels[GIF].quadword_count, max_qwc);
         if (control.stall_dest_channel == 2 && channels[GIF].can_stall_drain)
         {
             if (channels[GIF].address + (quads_to_transfer * 16) > STADR)
@@ -398,7 +401,6 @@ int DMAC::process_GIF()
         }
     }
     //gif->intermittent_check();
-    printf("GIF: %d ($%08X $%08X)\n", channels[GIF].quadword_count, channels[GIF].address, STADR);
     if (!channels[GIF].quadword_count)
     {
         if (channels[GIF].tag_end)
@@ -477,7 +479,8 @@ int DMAC::process_IPU_FROM()
     int count = 0;
     if (channels[IPU_FROM].quadword_count)
     {
-        int quads_to_transfer = std::min(channels[IPU_FROM].quadword_count, 8U);
+        uint32_t max_qwc = 8 - ((channels[IPU_FROM].address >> 4) & 0x7);
+        int quads_to_transfer = std::min(channels[IPU_FROM].quadword_count, max_qwc);
         while (count < quads_to_transfer)
         {
             if (!ipu->can_read_FIFO())
@@ -512,7 +515,8 @@ int DMAC::process_IPU_TO()
     int count = 0;
     if (channels[IPU_TO].quadword_count)
     {
-        int quads_to_transfer = std::min(channels[IPU_TO].quadword_count, 8U);
+        uint32_t max_qwc = 8 - ((channels[IPU_TO].address >> 4) & 0x7);
+        int quads_to_transfer = std::min(channels[IPU_TO].quadword_count, max_qwc);
         while (count < quads_to_transfer)
         {
             if (!ipu->can_write_FIFO())
@@ -537,7 +541,8 @@ int DMAC::process_IPU_TO()
 
 int DMAC::process_SIF0()
 {
-    int quads_to_transfer = std::min({channels[EE_SIF0].quadword_count, 8U, sif->get_SIF0_size() / 4U});
+    uint32_t max_qwc = 8 - ((channels[EE_SIF0].address >> 4) & 0x7);
+    int quads_to_transfer = std::min({channels[EE_SIF0].quadword_count, max_qwc, sif->get_SIF0_size() / 4U});
     int count = 0;
     while (count < quads_to_transfer)
     {
@@ -636,7 +641,8 @@ int DMAC::process_SIF1()
     int count = 0;
     if (channels[EE_SIF1].quadword_count)
     {
-        int quads_to_transfer = std::min(channels[EE_SIF1].quadword_count, 8U);
+        uint32_t max_qwc = 8 - ((channels[EE_SIF1].address >> 4) & 0x7);
+        int quads_to_transfer = std::min(channels[EE_SIF1].quadword_count, max_qwc);
         while (count < quads_to_transfer)
         {
             if (control.stall_dest_channel == 3 && channels[EE_SIF1].can_stall_drain)
@@ -698,7 +704,8 @@ int DMAC::process_SPR_FROM()
     int count = 0;
     if (channels[SPR_FROM].quadword_count)
     {
-        int quads_to_transfer = std::min(channels[SPR_FROM].quadword_count, 8U);
+        uint32_t max_qwc = 8 - ((channels[SPR_FROM].address >> 4) & 0x7);
+        int quads_to_transfer = std::min(channels[SPR_FROM].quadword_count, max_qwc);
         while (count < quads_to_transfer)
         {
             if (control.mem_drain_channel != 0)
@@ -766,7 +773,8 @@ int DMAC::process_SPR_TO()
     int count = 0;
     if (channels[SPR_TO].quadword_count)
     {
-        int quads_to_transfer = std::min(channels[SPR_TO].quadword_count, 8U);
+        uint32_t max_qwc = 8 - ((channels[SPR_TO].address >> 4) & 0x7);
+        int quads_to_transfer = std::min(channels[SPR_TO].quadword_count, max_qwc);
         while (count < quads_to_transfer)
         {
             uint128_t DMAData = fetch128(channels[SPR_TO].address);
@@ -1680,15 +1688,15 @@ void DMAC::arbitrate()
     //Only switch to a new channel if something is queued
     if (queued_channels.size())
     {
-        bool is_active = active_channel;
+        /*bool is_active = active_channel;
         if (is_active)
-            printf("[DMAC] Arbitrating from %s to ", CHAN(active_channel->index));
+            printf("[DMAC] Arbitrating from %s to ", CHAN(active_channel->index));*/
         find_new_active_channel();
 
-        if (is_active)
+        /*if (is_active)
             printf("%s\n", CHAN(active_channel->index));
         else
-            printf("[DMAC] Arbitrating to %s\n", CHAN(active_channel->index));
+            printf("[DMAC] Arbitrating to %s\n", CHAN(active_channel->index));*/
     }
 }
 
