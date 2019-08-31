@@ -93,7 +93,7 @@ class DMAC
         DMA_Channel channels[15];
 
         DMA_Channel* active_channel;
-        DMA_Channel* queued_VIF0; //VIF0 has a higher priority, so it needs its own slot
+        DMA_Channel* queued_VIF0; //TODO: VIF0 has a higher priority, so it needs its own slot
         std::list<DMA_Channel*> queued_channels;
 
         D_CTRL control;

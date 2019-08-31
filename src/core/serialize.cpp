@@ -521,7 +521,26 @@ void DMAC::load_state(ifstream &state)
     state.read((char*)&SQWC, sizeof(SQWC));
     state.read((char*)&STADR, sizeof(STADR));
     state.read((char*)&mfifo_empty_triggered, sizeof(mfifo_empty_triggered));
+    state.read((char*)&cycles_to_run, sizeof(cycles_to_run));
     state.read((char*)&master_disable, sizeof(master_disable));
+
+    int index;
+    state.read((char*)&index, sizeof(index));
+    if (index >= 0)
+        active_channel = &channels[index];
+    else
+        active_channel = nullptr;
+
+    int queued_size;
+    state.read((char*)&queued_size, sizeof(queued_size));
+    if (queued_size > 0)
+    {
+        for (int i = 0; i < queued_size; i++)
+        {
+            state.read((char*)&index, sizeof(index));
+            queued_channels.push_back(&channels[index]);
+        }
+    }
 }
 
 void DMAC::save_state(ofstream &state)
@@ -536,7 +555,26 @@ void DMAC::save_state(ofstream &state)
     state.write((char*)&SQWC, sizeof(SQWC));
     state.write((char*)&STADR, sizeof(STADR));
     state.write((char*)&mfifo_empty_triggered, sizeof(mfifo_empty_triggered));
+    state.write((char*)&cycles_to_run, sizeof(cycles_to_run));
     state.write((char*)&master_disable, sizeof(master_disable));
+
+    int index;
+    if (active_channel)
+        index = active_channel->index;
+    else
+        index = -1;
+
+    state.write((char*)&index, sizeof(index));
+    int size = queued_channels.size();
+    state.write((char*)&size, sizeof(size));
+    if (size > 0)
+    {
+        for (auto it = queued_channels.begin(); it != queued_channels.end(); )
+        {
+            index = (*it)->index;
+            state.write((char*)&index, sizeof(index));
+        }
+    }
 }
 
 void IOP_DMA::load_state(ifstream &state)
