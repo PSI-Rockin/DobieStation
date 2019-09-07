@@ -28,17 +28,44 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
     branch_delayslot = false;
     eret_op = false;
     cycle_count = 0;
+    int ops_translated = 0;
 
     while (!branch_delayslot && !eret_op)
     {
         uint32_t opcode = ee.read32(pc);
         translate_op(opcode, pc, instrs);
 
+        ops_translated++;
+
         if (branch_op)
             branch_delayslot = true;
 
         if (instrs.size())
+        {
             branch_op = instrs.back().is_jump();
+
+            //The EE has a bug in its pipelining logic that causes branches to be skipped in certain conditions.
+            //They are as follows:
+            // * The branch points to the start of a loop - forward branches are not affected
+            // * The branch is conditional - unconditional branches, jumps, and calls are not affected
+            // * No other branch/jump instructions are present in the loop
+            // * Less than six instructions are present in the loop, including delay slot
+            // * On EE revision #2.9 and later, the delay slot is not NOP
+            // When all conditions are met, the branch is treated as if it were a NOP.
+
+            //Note that the branch delay slot has not been translated yet, so we use 5 instead of 6
+            if (branch_op && ops_translated < 5)
+            {
+                if (instrs.back().op != IR::Opcode::Jump && instrs.back().op != IR::Opcode::JumpIndirect)
+                {
+                    if (instrs.back().get_jump_dest() == ee.get_PC())
+                    {
+                        //Set branch dest to instruction after delay slot
+                        instrs.back().set_jump_dest(pc + 8);
+                    }
+                }
+            }
+        }
 
         pc += 4;
         cycle_count++;

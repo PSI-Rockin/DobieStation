@@ -456,7 +456,7 @@ void EmotionEngine::write8(uint32_t address, uint8_t value)
     else if (mem == (uint8_t*)1)
         e->write8(address & 0x1FFFFFFF, value);
     else
-        Errors::die("[EE] Write8 to invalid address $%08X", address);
+        Errors::die("[EE] Write8 to invalid address $%08X: $%02X", address, value);
 }
 
 void EmotionEngine::write16(uint32_t address, uint16_t value)
@@ -472,7 +472,7 @@ void EmotionEngine::write16(uint32_t address, uint16_t value)
     else if (mem == (uint8_t*)1)
         e->write16(address & 0x1FFFFFFF, value);
     else
-        Errors::die("[EE] Write16 to invalid address $%08X", address);
+        Errors::die("[EE] Write16 to invalid address $%08X: $%04X", address, value);
 }
 
 void EmotionEngine::write32(uint32_t address, uint32_t value)
@@ -488,13 +488,13 @@ void EmotionEngine::write32(uint32_t address, uint32_t value)
     else if (mem == (uint8_t*)1)
         e->write32(address & 0x1FFFFFFF, value);
     else
-        Errors::die("[EE] Write32 to invalid address $%08X", address);
+        Errors::die("[EE] Write32 to invalid address $%08X: $%08X", address, value);
 }
 
 void EmotionEngine::write64(uint32_t address, uint64_t value)
 {
     if (address & 0x7)
-        Errors::die("[EE] Write64 to invalid address $%08X: $%08X_%08X", address, value >> 32, value);
+        Errors::die("[EE] Write64 to invalid address $%08X: %llX", address, value);
     uint8_t* mem = tlb_map[address / 4096];
     if (mem > (uint8_t*)1)
     {
@@ -504,7 +504,7 @@ void EmotionEngine::write64(uint32_t address, uint64_t value)
     else if (mem == (uint8_t*)1)
         e->write64(address & 0x1FFFFFFF, value);
     else
-        Errors::die("[EE] Write64 to invalid address $%08X", address);
+        Errors::die("[EE] Write64 to invalid address $%08X: %llX", address, value);
 }
 
 void EmotionEngine::write128(uint32_t address, uint128_t value)

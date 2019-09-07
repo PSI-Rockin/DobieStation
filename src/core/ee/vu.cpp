@@ -527,7 +527,7 @@ void VectorUnit::handle_XGKICK()
     GIF_addr += 16;
     if (gif->send_PATH1(quad))
     {
-        printf("[VU1] XGKICK transfer ended!\n");
+        //printf("[VU1] XGKICK transfer ended!\n");
         if (XGKICK_stall)
         {
             //printf("[VU1] Activating stalled XGKICK transfer\n");
@@ -820,7 +820,7 @@ uint32_t VectorUnit::crc_microprogram()
 void VectorUnit::start_program(uint32_t addr)
 {
     uint32_t new_addr = addr & mem_mask;
-    printf("[VU%d] CallMS Starting execution at $%08X! Cur PC %x\n", get_id(), new_addr, PC);
+    //printf("[VU%d] CallMS Starting execution at $%08X! Cur PC %x\n", get_id(), new_addr, PC);
 
     //Enable this if disabling micromem disasm
     /*if (get_id() == 1 && is_dirty())
