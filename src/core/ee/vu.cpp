@@ -1420,7 +1420,10 @@ void VectorUnit::eexp(uint32_t instr)
         0.000005430199963, 0.000000690600018
     };
     if (!id)
-        Errors::die("[VU] EEXP called on VU0!");
+    {
+        Errors::print_warning("[VU] EEXP called on VU0!");
+        return;
+    }
 
     if (gpr[_fs_].u[_fsf_] & 0x80000000)
     {
@@ -1457,7 +1460,8 @@ void VectorUnit::ercpr(uint32_t instr)
 {
     if (!id)
     {
-        Errors::die("[VU] ERCPR called on VU0!\n");
+        Errors::print_warning("[VU] ERCPR called on VU0!\n");
+        return;
     }
 
     new_P_instance.f = convert(gpr[_fs_].u[_fsf_]);
@@ -1473,7 +1477,8 @@ void VectorUnit::eleng(uint32_t instr)
 {
     if (!id)
     {
-        Errors::die("[VU] ELENG called on VU0!\n");
+        Errors::print_warning("[VU] ELENG called on VU0!\n");
+        return;
     }
 
     //P = sqrt(x^2 + y^2 + z^2)
@@ -1489,7 +1494,8 @@ void VectorUnit::esqrt(uint32_t instr)
 {
     if (!id)
     {
-        Errors::die("[VU] ESQRT called on VU0!\n");
+        Errors::print_warning("[VU] ESQRT called on VU0!\n");
+        return;
     }
 
     new_P_instance.f = convert(gpr[_fs_].u[_fsf_]);
@@ -1502,7 +1508,10 @@ void VectorUnit::esqrt(uint32_t instr)
 void VectorUnit::esum(uint32_t instr)
 {
     if (!id)
-        Errors::die("[VU] ESUM called on VU0!");
+    {
+        Errors::print_warning("[VU] ESUM called on VU0!");
+        return;
+    }
 
     new_P_instance.f = 0.0;
     for (int i = 0; i < 4; i++)
@@ -1516,7 +1525,8 @@ void VectorUnit::erleng(uint32_t instr)
 {
     if (!id)
     {
-        Errors::die("[VU] ERLENG called on VU0!\n");
+        Errors::print_warning("[VU] ERLENG called on VU0!\n");
+        return;
     }
 
     //P = 1 / sqrt(x^2 + y^2 + z^2)
@@ -1536,7 +1546,8 @@ void VectorUnit::ersadd(uint32_t instr)
 {
     if (!id)
     {
-        Errors::die("[VU] ERSADD called on VU0!");
+        Errors::print_warning("[VU] ERSADD called on VU0!");
+        return;
     }
 
     //P = 1 / (x^2 + y^2 + z^2)
@@ -1552,7 +1563,8 @@ void VectorUnit::ersqrt(uint32_t instr)
 {
     if (!id)
     {
-        Errors::die("[VU] ERSQRT called on VU0!\n");
+        Errors::print_warning("[VU] ERSQRT called on VU0!\n");
+        return;
     }
 
     new_P_instance.f = convert(gpr[_fs_].u[_fsf_]);
@@ -1569,7 +1581,8 @@ void VectorUnit::esadd(uint32_t instr)
 {
     if (!id)
     {
-        Errors::die("[VU] ESADD called on VU0!");
+        Errors::print_warning("[VU] ESADD called on VU0!");
+        return;
     }
 
     //P = x^2 + y^2 + z^2
@@ -2953,7 +2966,8 @@ void VectorUnit::xgkick(uint32_t instr)
 {
     if (!id)
     {
-        Errors::die("[VU] ERROR: XGKICK called on VU0!\n");
+        Errors::print_warning("[VU] WARNING: XGKICK called on VU0!\n");
+        return;
     }
     printf("[VU1] XGKICK: Addr $%08X\n", (int_gpr[_is_].u & 0x3ff) * 16);
 
@@ -2984,7 +2998,8 @@ void VectorUnit::xtop(uint32_t instr)
 {
     if (!id)
     {
-        Errors::die("[VU] ERROR: XTOP called on VU0!\n");
+        Errors::print_warning("[VU] WARNING: XTOP called on VU0!\n");
+        return;
     }
     printf("[VU1] XTOP: $%04X (%d)\n", *VIF_TOP, _it_);
     set_int(_it_, *VIF_TOP);
