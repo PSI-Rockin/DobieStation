@@ -305,6 +305,11 @@ int DMAC::process_VIF1()
         }
         else
         {
+            if (!mfifo_handler(VIF1))
+            {
+                arbitrate();
+                return count;
+            }
             uint128_t DMAtag = fetch128(channels[VIF1].tag_address);
             if (channels[VIF1].control & (1 << 6))
             {
@@ -371,6 +376,7 @@ int DMAC::process_VIF1()
 int DMAC::process_GIF()
 {
     int count = 0;
+
     if (channels[GIF].quadword_count)
     {
         uint32_t max_qwc = 8 - ((channels[GIF].address >> 4) & 0x7);
@@ -419,6 +425,11 @@ int DMAC::process_GIF()
         }
         else
         {
+            if (!mfifo_handler(GIF))
+            {
+                arbitrate();
+                return count;
+            }
             handle_source_chain(GIF);
         }
     }
