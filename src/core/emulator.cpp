@@ -22,7 +22,7 @@ Emulator::Emulator() :
     dmac(&cpu, this, &gif, &ipu, &sif, &vif0, &vif1, &vu0, &vu1),
     gif(&gs, &dmac),
     gs(&intc),
-    iop(thi, &iop_breakpoints),
+    iop(this, &iop_breakpoints),
     iop_dma(this, &cdvd, &sif, &sio2, &spu, &spu2),
     iop_timers(this),
     intc(this, &cpu),
