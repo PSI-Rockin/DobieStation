@@ -273,6 +273,11 @@ int DMAC::process_VIF1()
         int quads_to_transfer = std::min(channels[VIF1].quadword_count, max_qwc);
         while (count < quads_to_transfer)
         {
+            if (!mfifo_handler(VIF1))
+            {
+                arbitrate();
+                return count;
+            }
             if (channels[VIF1].control & 0x1)
             {
                 if (control.stall_dest_channel == 1 && channels[VIF1].can_stall_drain)
@@ -300,11 +305,6 @@ int DMAC::process_VIF1()
         }
         else
         {
-            if (!mfifo_handler(VIF1))
-            {
-                arbitrate();
-                return count;
-            }
             uint128_t DMAtag = fetch128(channels[VIF1].tag_address);
             if (channels[VIF1].control & (1 << 6))
             {
@@ -379,8 +379,6 @@ int DMAC::process_GIF()
         {
             if (channels[GIF].address + (quads_to_transfer * 16) > STADR)
             {
-                if (interrupt_stat.channel_mask[13])
-                    Errors::die("yay");
                 gif->dma_waiting(true);
                 active_channel = nullptr;
                 arbitrate();
@@ -389,6 +387,11 @@ int DMAC::process_GIF()
         }
         while (count < quads_to_transfer)
         {
+            if (!mfifo_handler(GIF))
+            {
+                arbitrate();
+                return count;
+            }
             gif->request_PATH(3, false);
             if (gif->path_active(3) && !gif->fifo_full() && !gif->fifo_draining())
             {
@@ -416,11 +419,6 @@ int DMAC::process_GIF()
         }
         else
         {
-            if (!mfifo_handler(GIF))
-            {
-                arbitrate();
-                return count;
-            }
             handle_source_chain(GIF);
         }
     }
