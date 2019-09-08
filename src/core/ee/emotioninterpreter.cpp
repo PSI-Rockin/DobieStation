@@ -853,6 +853,7 @@ void EmotionInterpreter::cop(EmotionEngine &cpu, uint32_t instruction)
             switch (op2)
             {
                 case 0x2:
+                    cpu.tlbwi();
                     break;
                 case 0x18:
                     cpu.eret();

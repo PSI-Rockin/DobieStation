@@ -107,6 +107,7 @@ void IOP::run(int cycles)
 
 void IOP::print_state()
 {
+    printf("pc:$%08X\n", PC);
     for (int i = 1; i < 32; i++)
     {
         printf("%s:$%08X", REG(i), get_gpr(i));
@@ -115,6 +116,7 @@ void IOP::print_state()
         else
             printf("\t");
     }
+    printf("lo:$%08X\thi:$%08X\n", LO, HI);
 }
 
 void IOP::set_disassembly(bool dis)
@@ -177,7 +179,7 @@ void IOP::interrupt_check(bool i_pass)
 void IOP::interrupt()
 {
     printf("[IOP] Processing interrupt!\n");
-    handle_exception(0x80000080, 0x00);
+    handle_exception(0x80000084, 0x00);
     unhalt();
 }
 
@@ -257,8 +259,11 @@ uint32_t IOP::read_instr(uint32_t addr)
         if (!icache[index].valid || icache[index].tag != tag)
         {
             //Cache miss: load 4 words
-            cycles_to_run -= 16;
-            muldiv_delay = std::max(muldiv_delay - 16, 0);
+            //I don't know what the exact count should be. 16 (4 * 4) breaks Fatal Frame 2.
+            //Current theory is 4 cycles for the first load + 1 * 3 cycles for sequential loads
+            //printf("[IOP] i$ miss $%08X\n", addr);
+            cycles_to_run -= 7;
+            muldiv_delay = std::max(muldiv_delay - 7, 0);
             icache[index].valid = true;
             icache[index].tag = tag;
         }
@@ -288,6 +293,7 @@ void IOP::write32(uint32_t addr, uint32_t value)
 {
     if (cop0.status.IsC)
     {
+        //printf("Clearing IOP cache ($%08X)\n", addr);
         icache[(addr >> 4) & 0xFF].valid = false;
         return;
     }

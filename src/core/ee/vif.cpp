@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <cstdlib>
+#include "dmac.hpp"
 #include "vu_jit.hpp"
 #include "vif.hpp"
 
@@ -8,7 +9,8 @@
 
 #define printf(fmt, ...)(0)
 
-VectorInterface::VectorInterface(GraphicsInterface* gif, VectorUnit* vu, INTC* intc, int id) : gif(gif), vu(vu), intc(intc), id(id)
+VectorInterface::VectorInterface(GraphicsInterface* gif, VectorUnit* vu, INTC* intc, DMAC* dmac, int id) :
+    gif(gif), vu(vu), intc(intc), dmac(dmac), id(id)
 {
 
 }
@@ -77,6 +79,21 @@ void VectorInterface::update(int cycles)
 {
     //Since the loop processes per-word, we need to multiply cycles by 4
     //This allows us to process one quadword per bus cycle
+    if (fifo_reverse)
+    {
+        if (FIFO.size() <= 60)
+        {
+            uint128_t fifo_data;
+            while (cycles--)
+            {
+                fifo_data = gif->read_GSFIFO();
+                for (int i = 0; i < 4; i++)
+                    FIFO.push(fifo_data._u32[i]);
+            }
+        }
+        return;
+    }
+        
     int run_cycles = cycles << 2;
    
     if (vif_stalled & STALL_MSKPATH3)
@@ -115,78 +132,91 @@ void VectorInterface::update(int cycles)
             return;
 
         uint32_t value = FIFO.front();
-        if (command == 0)
+
+        //If process_data_word returns false, this means the word was not processed, so don't pop the FIFO.
+        if (process_data_word(value))
         {
-            buffer_size = 0;
-            decode_cmd(value);
-        }
-        else
-        {
-            switch (command)
+            if (command_len)
             {
-                case 0x20:
-                    //STMASK
-                    printf("[VIF] New MASK: $%08X\n", value);
-                    MASK = value;
-                    command = 0;
-                    break;
-                case 0x30:
-                    //STROW
-                    printf("[VIF] ROW%d: $%08X\n", 4 - command_len, value);
-                    ROW[4 - command_len] = value;
-                    if (command_len <= 1)
-                        command = 0;
-                    break;
-                case 0x31:
-                    //STCOL
-                    printf("[VIF] COL%d: $%08X\n", 4 - command_len, value);
-                    COL[4 - command_len] = value;
-                    if (command_len <= 1)
-                        command = 0;
-                    break;
-                case 0x4A:
-                    //MPG
-                    vu->write_instr(mpg.addr, value);
-                    mpg.addr += 4;
-                    if (command_len <= 1)
-                        command = 0;
-                    break;
-                case 0x50:
-                case 0x51:
-                    //DIRECT/DIRECTHL
-                    if (!gif->path_active(2))
-                        return;
-
-                    buffer[buffer_size] = value;
-                    buffer_size++;
-                    if (buffer_size == 4)
-                    {
-                        gif->send_PATH2(buffer);
-                        buffer_size = 0;
-                    }
-
-                    //If we've run out of data, deactivate the PATH2 transfer
-                    if (command_len <= 1)
-                    {
-                        gif->deactivate_PATH(2);
-                        command = 0;
-                    }
-                    break;
-                default:
-                    if ((command & 0x60) == 0x60)
-                        handle_UNPACK(value);
-                    else
-                    {
-                        Errors::die("[VIF] Unhandled data for command $%02X\n", command);
-                    }
+                command_len--;
+                FIFO.pop();
+                if (FIFO.size() <= 32)
+                    dmac->set_DMA_request(id);
             }
         }
-        if (command_len)
+    }
+}
+
+bool VectorInterface::process_data_word(uint32_t value)
+{
+    if (command == 0)
+    {
+        buffer_size = 0;
+        decode_cmd(value);
+    }
+    else
+    {
+        switch (command)
         {
-            command_len--;
-            FIFO.pop();
+            case 0x20:
+                //STMASK
+                printf("[VIF] New MASK: $%08X\n", value);
+                MASK = value;
+                command = 0;
+                break;
+            case 0x30:
+                //STROW
+                printf("[VIF] ROW%d: $%08X\n", 4 - command_len, value);
+                ROW[4 - command_len] = value;
+                if (command_len <= 1)
+                    command = 0;
+                break;
+            case 0x31:
+                //STCOL
+                printf("[VIF] COL%d: $%08X\n", 4 - command_len, value);
+                COL[4 - command_len] = value;
+                if (command_len <= 1)
+                    command = 0;
+                break;
+            case 0x4A:
+                //MPG
+                vu->write_instr(mpg.addr, value);
+                mpg.addr += 4;
+                if (command_len <= 1)
+                    command = 0;
+                break;
+            case 0x50:
+            case 0x51:
+                //DIRECT/DIRECTHL
+                if (!gif->path_active(2))
+                    return false;
+
+                buffer[buffer_size] = value;
+                buffer_size++;
+                if (buffer_size == 4)
+                {
+                    gif->send_PATH2(buffer);
+                    buffer_size = 0;
+                }
+
+                //If we've run out of data, deactivate the PATH2 transfer
+                if (command_len <= 1)
+                {
+                    gif->deactivate_PATH(2);
+                    command = 0;
+                }
+                break;
+            default:
+                if ((command & 0x60) == 0x60)
+                    handle_UNPACK(value);
+                else
+                {
+                    Errors::die("[VIF] Unhandled data for command $%02X\n", command);
+                }
         }
     }
+
+    return true;
 }
 
 void VectorInterface::decode_cmd(uint32_t value)
@@ -829,7 +859,10 @@ bool VectorInterface::transfer_DMAtag(uint128_t tag)
 {
     //This should return false if the transfer stalls due to the FIFO filling up
     if (FIFO.size() > 62)
+    {
+        dmac->clear_DMA_request(id);
         return false;
+    }
     printf("[VIF] Transfer tag: $%08X_%08X_%08X_%08X\n", tag._u32[3], tag._u32[2], tag._u32[1], tag._u32[0]);
     for (int i = 2; i < 4; i++)
         FIFO.push(tag._u32[i]);
@@ -839,11 +872,28 @@ bool VectorInterface::transfer_DMAtag(uint128_t tag)
 bool VectorInterface::feed_DMA(uint128_t quad)
 {
     if (FIFO.size() > 60)
+    {
+        dmac->clear_DMA_request(id);
         return false;
+    }
     printf("[VIF] Feed DMA: $%08X_%08X_%08X_%08X\n", quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
     for (int i = 0; i < 4; i++)
         FIFO.push(quad._u32[i]);
     return true;
+}
+
+uint128_t VectorInterface::readFIFO()
+{
+    uint128_t quad;
+    if (FIFO.empty())
+        return gif->read_GSFIFO();
+
+    for (int i = 0; i < 4; i++)
+    {
+        quad._u32[i] = FIFO.front();
+        FIFO.pop();
+    }
+    return quad;
 }
 
 uint32_t VectorInterface::get_stat()
@@ -856,6 +906,7 @@ uint32_t VectorInterface::get_stat()
     reg |= vif_stop << 8;
     reg |= (vif_stalled & STALL_IBIT) << 10;
     reg |= vif_interrupt << 11;
+    reg |= fifo_reverse << 23;
     reg |= ((FIFO.size() + 3) / 4) << 24;
     //printf("[VIF] Get STAT: $%08X\n", reg);
     return reg;
@@ -897,6 +948,15 @@ uint32_t VectorInterface::get_err()
     return reg;
 }
 
+void VectorInterface::set_stat(uint32_t value)
+{
+    if ((!fifo_reverse && ((value >> 23) & 0x1)) || (fifo_reverse && !((value >> 23) & 0x1)))
+    {
+        while (!FIFO.empty())
+            FIFO.pop();
+    }
+    fifo_reverse = (value >> 23) & 0x1;
+}
 void VectorInterface::set_mark(uint32_t value)
 {
     MARK = value;

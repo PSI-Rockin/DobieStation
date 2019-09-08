@@ -683,7 +683,7 @@ void VectorUnit::check_for_COP2_FMAC_stall()
 
         if (stall_found)
         {
-            //printf("BANANA COP2 FMAC stall at $%08X for %d cycles!\n", PC, 3 - i);
+            //printf("COP2 FMAC stall at $%08X for %d cycles!\n", PC, 3 - i);
             int delay = 3 - i;
             for (int j = 0; j < delay; j++)
             {

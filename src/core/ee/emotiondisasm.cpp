@@ -945,6 +945,8 @@ string disasm_cop(uint32_t instruction, uint32_t instr_addr)
             {
                 case 0x2:
                     return "tlbwi";
+                case 0x8:
+                    return "tlbp";
                 case 0x18:
                     return "eret";
                 case 0x38:

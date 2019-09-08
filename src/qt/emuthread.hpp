@@ -11,6 +11,8 @@
 #include "../core/errors.hpp"
 #include "../core/ee/emotion_breakpoint.hpp"
 
+#define GSDUMP_BUFFERED_MESSAGES 100000
+
 enum PAUSE_EVENT
 {
     GAME_NOT_LOADED,
@@ -33,9 +35,14 @@ class EmuThread : public QThread
         std::chrono::system_clock::time_point old_frametime;
         std::ifstream gsdump;
         std::atomic_bool gsdump_reading;
+        GSMessage* gsdump_read_buffer;
+        int buffered_gs_messages;
+        int current_gs_message;
+
         void gsdump_run();
     public:
         EmuThread();
+        ~EmuThread();
 
         void reset();
 
@@ -44,15 +51,18 @@ class EmuThread : public QThread
         void load_BIOS(const uint8_t* BIOS);
         void load_ELF(const uint8_t* ELF, uint64_t ELF_size);
         void load_CDVD(const char* name, CDVD_CONTAINER type);
+        
+        EEBreakpointList* get_ee_breakpoint_list();
+        IOPBreakpointList* get_iop_breakpoint_list();
+        bool is_paused();
 
         bool load_state(const char* name);
         bool save_state(const char* name);
         bool gsdump_read(const char* name);
         void gsdump_write_toggle();
         void gsdump_single_frame();
-        EEBreakpointList* get_ee_breakpoint_list();
-        IOPBreakpointList* get_iop_breakpoint_list();
-        bool is_paused();
+        GSMessage& get_next_gsdump_message();
+        bool gsdump_eof();
         bool frame_advance;
     protected:
         void run() override;

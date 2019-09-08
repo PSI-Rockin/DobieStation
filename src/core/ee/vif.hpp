@@ -11,6 +11,7 @@
 #include "../int128.hpp"
 
 class GraphicsInterface;
+class DMAC;
 
 enum VIF_STALL
 {
@@ -51,6 +52,7 @@ class VectorInterface
         GraphicsInterface* gif;
         VectorUnit* vu;
         INTC* intc;
+        DMAC* dmac;
         std::queue<uint32_t> FIFO;
         int id;
         uint16_t imm;
@@ -63,6 +65,7 @@ class VectorInterface
         uint8_t vif_stalled;
         bool vif_interrupt;
         bool vif_stop;
+        bool fifo_reverse;
         
         bool wait_for_VU;
         bool wait_for_PATH3;
@@ -98,8 +101,10 @@ class VectorInterface
         void handle_UNPACK_masking(uint128_t& quad);
         void handle_UNPACK_mode(uint128_t& quad);
         void process_UNPACK_quad(uint128_t& quad);
+
+        bool process_data_word(uint32_t value);
     public:
-        VectorInterface(GraphicsInterface* gif, VectorUnit* vu, INTC* intc, int id);
+        VectorInterface(GraphicsInterface* gif, VectorUnit* vu, INTC* intc, DMAC* dmac, int id);
         int get_id();
 
         void reset();
@@ -107,6 +112,7 @@ class VectorInterface
 
         bool transfer_DMAtag(uint128_t tag);
         bool feed_DMA(uint128_t quad);
+        uint128_t readFIFO();
 
         uint32_t get_stat();
         uint32_t get_mark();
@@ -116,6 +122,7 @@ class VectorInterface
         uint32_t get_code();
         uint32_t get_top();
 
+        void set_stat(uint32_t value);
         void set_mark(uint32_t value);
         void set_err(uint32_t value);
         void set_fbrst(uint32_t value);

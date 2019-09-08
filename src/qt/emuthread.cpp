@@ -12,11 +12,19 @@ EmuThread::EmuThread()
     pause_status = 0x0;
     gsdump_reading = false;
     frame_advance = false;
+    gsdump_read_buffer = new GSMessage[GSDUMP_BUFFERED_MESSAGES];
+}
+
+EmuThread::~EmuThread()
+{
+    delete[] gsdump_read_buffer;
 }
 
 void EmuThread::reset()
 {
     e.reset();
+    buffered_gs_messages = 0;
+    current_gs_message = 0;
 }
 
 void EmuThread::set_skip_BIOS_hack(SKIP_HACK skip)
@@ -104,6 +112,24 @@ void EmuThread::gsdump_single_frame()
     load_mutex.unlock();
 }
 
+GSMessage& EmuThread::get_next_gsdump_message()
+{
+    if(!buffered_gs_messages) {
+        gsdump.read((char*)gsdump_read_buffer, sizeof(GSMessage) * GSDUMP_BUFFERED_MESSAGES);
+        current_gs_message = 0;
+        buffered_gs_messages = gsdump.gcount() / sizeof(GSMessage);
+    }
+    GSMessage& data = gsdump_read_buffer[current_gs_message];
+    current_gs_message++;
+    buffered_gs_messages--;
+    return data;
+}
+
+bool EmuThread::gsdump_eof()
+{
+    return gsdump.eof() && !buffered_gs_messages;
+}
+
 void EmuThread::gsdump_run()
 {
     printf("gsdump frame\n");
@@ -112,12 +138,16 @@ void EmuThread::gsdump_run()
         int draws_sent = 10;
         while (true)
         {
-            GSMessage data;
-            gsdump.read((char*)&data, sizeof(data));
+            GSMessage& data = get_next_gsdump_message();
+//            GSMessage data;
+//            gsdump.read((char*)&data, sizeof(data));
+
+
             switch (data.type)
             {
                 case set_xyz_t:
                     e.get_gs().send_message(data);
+                    e.get_gs().wake_gs_thread();
                     if (frame_advance && data.payload.xyz_payload.drawing_kick && --draws_sent <= 0)
                     {
                         uint16_t w, h;
@@ -152,8 +182,9 @@ void EmuThread::gsdump_run()
                     Errors::die("save_state save/load during gsdump not supported!");
                 default:
                     e.get_gs().send_message(data);
+                    //e.get_gs().wake_gs_thread();
             }
-            if (gsdump.eof())
+            if (gsdump_eof())
                 Errors::die("gs dump unexpectedly ended");
         }
     }
@@ -208,16 +239,18 @@ void EmuThread::run()
                 old_frametime = chrono::system_clock::now();
                 emit update_FPS((int)round(FPS));
             }
-            catch (non_fatal_error &e)
+            catch (non_fatal_error &error)
             {
-                printf("non_fatal emulation error occurred\n%s\n", e.what());
-                emit emu_non_fatal_error(QString(e.what()));
+                printf("non_fatal emulation error occurred\n%s\n", error.what());
+                emit emu_non_fatal_error(QString(error.what()));
                 pause(PAUSE_EVENT::MESSAGE_BOX);
             }
-            catch (Emulation_error &e)
+            catch (Emulation_error &error)
             {
-                printf("Fatal emulation error occurred, stopping execution\n%s\n", e.what());
-                emit emu_error(QString(e.what()));
+                e.print_state();
+                printf("Fatal emulation error occurred, stopping execution\n%s\n", error.what());
+                fflush(stdout);
+                emit emu_error(QString(error.what()));
                 pause(PAUSE_EVENT::GAME_NOT_LOADED);
             }
         }

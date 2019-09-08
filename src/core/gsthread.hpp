@@ -8,6 +8,23 @@
 #include "gscontext.hpp"
 #include "gsregisters.hpp"
 #include "circularFIFO.hpp"
+#include "int128.hpp"
+
+template<int XS, int YS, int ZS>
+struct SwizzleTable
+{
+    SwizzleTable()
+    {
+
+    }
+
+    uint32_t& get(int x, int y, int z)
+    {
+        return data[x*YS*ZS + y * ZS + z];
+    }
+
+    uint32_t data[XS*YS*ZS];
+};
 
 //Commands sent from the main thread to the GS thread.
 enum GSCommand:uint8_t 
@@ -15,7 +32,7 @@ enum GSCommand:uint8_t
     write64_t, write64_privileged_t, write32_privileged_t,
     set_rgba_t, set_st_t, set_uv_t, set_xyz_t, set_xyzf_t, set_crt_t,
     render_crt_t, assert_finish_t, assert_vsync_t, set_vblank_t, memdump_t, die_t,
-    save_state_t, load_state_t, gsdump_t
+    save_state_t, load_state_t, gsdump_t, request_local_host_tx,
 };
 
 union GSMessagePayload 
@@ -97,6 +114,7 @@ enum GSReturn :uint8_t
     save_state_done_t,
     load_state_done_t,
     gsdump_render_partial_done_t,
+    local_host_transfer,
 };
 
 union GSReturnMessagePayload
@@ -113,6 +131,10 @@ union GSReturnMessagePayload
     {
         uint8_t BLANK;
     } no_payload;//C++ doesn't like the empty struct
+    struct
+    {
+        uint128_t quad_data;
+    } data_payload;
 };
 
 struct GSReturnMessage
@@ -206,6 +228,7 @@ struct Vertex
     }
 };
 
+
 struct TexLookupInfo
 {
     //int32_t u, v;
@@ -220,6 +243,78 @@ struct TexLookupInfo
     uint8_t fog;
     bool new_lookup;
     int16_t lastu, lastv;
+};
+
+struct VertexF
+{
+    union {
+        struct
+        {
+            float x,y,z,w,r,g,b,a,q,u,v,s,t,fog;
+        };
+        float data[14];
+    };
+
+    VertexF()
+    {
+
+    }
+
+    VertexF(Vertex& vert)
+    {
+        x = (float)vert.x / 16.f;
+        y = (float)vert.y / 16.f;
+        z = (float)vert.z / 16.f;
+        r = vert.rgbaq.r;
+        g = vert.rgbaq.g;
+        b = vert.rgbaq.b;
+        a = vert.rgbaq.a;
+        q = vert.rgbaq.q;
+        u = vert.uv.u;
+        v = vert.uv.v;
+        s = vert.s;
+        t = vert.t;
+        fog = vert.fog;
+    }
+
+    VertexF operator-(const VertexF& rhs)
+    {
+        VertexF result;
+        for(int i = 0; i < 14; i++)
+        {
+            result.data[i] = data[i] - rhs.data[i];
+        }
+        return result;
+    }
+
+    VertexF operator+(const VertexF& rhs)
+    {
+        VertexF result;
+        for(int i = 0; i < 14; i++)
+        {
+            result.data[i] = data[i] + rhs.data[i];
+        }
+        return result;
+    }
+
+    VertexF& operator+=(const VertexF& rhs)
+    {
+        for(int i = 0; i < 14; i++)
+        {
+            data[i] = data[i] + rhs.data[i];
+        }
+        return *this;
+    }
+
+    VertexF operator*(float mult)
+    {
+        VertexF result;
+        for(int i = 0; i < 14; i++)
+        {
+            result.data[i] = data[i] * mult;
+        }
+        return result;
+    }
 };
 
 class GraphicsSynthesizerThread
@@ -286,7 +381,12 @@ class GraphicsSynthesizerThread
         Vertex vtx_queue[3];
         unsigned int num_vertices;
 
+        uint32_t frame_color;
+        bool frame_color_looked_up;
+
         static const unsigned int max_vertices[8];
+
+        float log2_lookup[32768][4];
 
         void event_loop();
 
@@ -344,13 +444,19 @@ class GraphicsSynthesizerThread
         void vertex_kick(bool drawing_kick);
         bool depth_test(int32_t x, int32_t y, uint32_t z);
         void draw_pixel(int32_t x, int32_t y, uint32_t z, RGBAQ_REG& color);
+        uint32_t lookup_frame_color(int32_t x, int32_t y);
         void render_primitive();
         void render_point();
         void render_line();
         void render_triangle();
+        void render_triangle2();
+        void render_half_triangle(float x0, float x1, int y0, int y1, VertexF& x_step, VertexF& y_step, VertexF& init,
+                float step_x0, float step_x1, float scx1, float scx2, TexLookupInfo& tex_info);
         void render_sprite();
         void write_HWREG(uint64_t data);
+        uint128_t local_to_host();
         void unpack_PSMCT24(uint64_t data, int offset, bool z_format);
+        uint64_t pack_PSMCT24(bool z_format);
         void local_to_local();
 
         int32_t orient2D(const Vertex &v1, const Vertex &v2, const Vertex &v3);
@@ -380,6 +486,7 @@ class GraphicsSynthesizerThread
         
         // safe to access from emu thread
         void send_message(GSMessage message);
+        void wake_thread();
         void wait_for_return(GSReturn type, GSReturnMessage &data);
         void reset_fifos();
         void exit();
