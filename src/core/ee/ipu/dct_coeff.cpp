@@ -3,8 +3,8 @@
 #include "dct_coeff.hpp"
 #include "../../errors.hpp"
 
-DCT_Coeff::DCT_Coeff(VLC_Entry* table, int table_size, int max_bits) :
-    VLC_Table(table, table_size, max_bits)
+DCT_Coeff::DCT_Coeff(VLC_Entry* table, int table_size, int max_bits, unsigned int* index_table) :
+    VLC_Table(table, table_size, max_bits, index_table)
 {
 
 }

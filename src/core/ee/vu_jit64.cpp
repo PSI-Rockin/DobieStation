@@ -35,7 +35,7 @@
     extern "C" void run_vu_jit(VU_JIT64& jit, VectorUnit& vu);
 #endif
 
-VU_JIT64::VU_JIT64() : emitter(&cache)
+VU_JIT64::VU_JIT64() : jit_block("VU"), emitter(&jit_block)
 {
     for (int i = 0; i < 4; i++)
     {
@@ -167,7 +167,7 @@ void VU_JIT64::reset(bool clear_cache)
     xmm_regs[REG_64::XMM1].locked = true;
 
     if(clear_cache)
-        cache.flush_all_blocks();
+        jit_heap.flush_all_blocks();
 
     ir.reset_instr_info();
 
@@ -234,7 +234,7 @@ void VU_JIT64::sse_abs(REG_64 source, REG_64 dest)
 {
     emitter.load_addr((uint64_t)&abs_constant, REG_64::RAX);
     emitter.MOVAPS_REG(source, dest);
-    emitter.PAND_XMM_MEM(REG_64::RAX, dest);
+    emitter.PAND_XMM_FROM_MEM(REG_64::RAX, dest);
 }
 
 void VU_JIT64::sse_div_check(REG_64 num, REG_64 denom, VU_R& dest)
@@ -243,11 +243,11 @@ void VU_JIT64::sse_div_check(REG_64 num, REG_64 denom, VU_R& dest)
     emitter.MOVD_FROM_XMM(denom, REG_64::RAX);
     emitter.TEST32_EAX(0x7FFFFFFF);
 
-    uint8_t* normal_div = emitter.JNE_NEAR_DEFERRED();
+    uint8_t* normal_div = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
 
     //If negative, load MIN_FLT.
     emitter.TEST32_EAX(0x80000000);
-    uint8_t* load_min = emitter.JNE_NEAR_DEFERRED();
+    uint8_t* load_min = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
 
     //Load MAX_FLT to destination
     emitter.load_addr((uint64_t)&max_flt_constant, REG_64::R15);
@@ -292,7 +292,7 @@ void VU_JIT64::handle_branch(VectorUnit& vu)
 
     //Because we don't know where the branch will jump to, we defer it.
     //Once the "branch succeeded" case has been finished recompiling, we can rewrite the branch offset...
-    uint8_t* offset_addr = emitter.JE_NEAR_DEFERRED();
+    uint8_t* offset_addr = emitter.JCC_NEAR_DEFERRED(ConditionCode::E);
     emitter.load_addr((uint64_t)&vu.PC, REG_64::RAX);
     emitter.load_addr((uint64_t)&vu_branch_dest, REG_64::R15);
     emitter.MOV16_FROM_MEM(REG_64::R15, REG_64::R15);
@@ -381,7 +381,7 @@ void VU_JIT64::load_int(VectorUnit &vu, IR::Instruction &instr)
         //Dest must be allocated after base in case base == dest (this is so that the base address can load)
         REG_64 base = alloc_int_reg(vu, instr.get_base(), REG_STATE::READ);
         REG_64 dest = alloc_int_reg(vu, instr.get_dest(), REG_STATE::WRITE);
-        emitter.MOVZX64_REG(base, REG_64::RAX);
+        emitter.MOVZX16_TO_64(base, REG_64::RAX);
         emitter.SHL16_REG_IMM(4, REG_64::RAX);
 
         if (instr.get_source())
@@ -409,7 +409,7 @@ void VU_JIT64::store_int(VectorUnit &vu, IR::Instruction &instr)
     if (instr.get_base())
     {
         REG_64 base = alloc_int_reg(vu, instr.get_base(), REG_STATE::READ);
-        emitter.MOVZX64_REG(base, REG_64::RAX);
+        emitter.MOVZX16_TO_64(base, REG_64::RAX);
         emitter.SHL16_REG_IMM(4, REG_64::RAX);
 
         if (instr.get_source2())
@@ -431,7 +431,7 @@ void VU_JIT64::store_int(VectorUnit &vu, IR::Instruction &instr)
     //move all four vector positions from memory
     emitter.MOVAPS_FROM_MEM(REG_64::R15, temp);
     //Zero-extend the upper 16 bits of the vi source
-    emitter.MOVZX64_REG(source, REG_64::RAX);
+    emitter.MOVZX16_TO_64(source, REG_64::RAX);
     //Move to XMM and populate all 4 vectors
     emitter.MOVD_TO_XMM(REG_64::RAX, temp2);
     emitter.SHUFPS(0, temp2, temp2);
@@ -447,7 +447,7 @@ void VU_JIT64::load_quad(VectorUnit &vu, IR::Instruction &instr)
     if (instr.get_base())
     {
         REG_64 base = alloc_int_reg(vu, instr.get_base(), REG_STATE::READ);
-        emitter.MOVZX64_REG(base, REG_64::RAX);
+        emitter.MOVZX16_TO_64(base, REG_64::RAX);
         emitter.SHL16_REG_IMM(4, REG_64::RAX);
         if (instr.get_source())
             emitter.ADD16_REG_IMM(instr.get_source(), REG_64::RAX);
@@ -488,7 +488,7 @@ void VU_JIT64::store_quad(VectorUnit &vu, IR::Instruction &instr)
     if (instr.get_base())
     {
         REG_64 base = alloc_int_reg(vu, instr.get_base(), REG_STATE::READ);
-        emitter.MOVZX64_REG(base, REG_64::RAX);
+        emitter.MOVZX16_TO_64(base, REG_64::RAX);
         emitter.SHL16_REG_IMM(4, REG_64::RAX);
         if (instr.get_source2())
             emitter.ADD16_REG_IMM(instr.get_source2(), REG_64::RAX);
@@ -524,7 +524,7 @@ void VU_JIT64::load_quad_inc(VectorUnit &vu, IR::Instruction &instr)
     REG_64 base = alloc_int_reg(vu, instr.get_base(), REG_STATE::READ_WRITE);
 
     //addr = (int_reg * 16) & mem_mask
-    emitter.MOVZX64_REG(base, REG_64::RAX);
+    emitter.MOVZX16_TO_64(base, REG_64::RAX);
     emitter.SHL32_REG_IMM(4, REG_64::RAX);
     emitter.AND32_EAX(vu.mem_mask);
 
@@ -559,7 +559,7 @@ void VU_JIT64::store_quad_inc(VectorUnit &vu, IR::Instruction &instr)
     REG_64 base = alloc_int_reg(vu, instr.get_base(), REG_STATE::READ_WRITE);
 
     //addr = (int_reg * 16) & mem_mask
-    emitter.MOVZX64_REG(base, REG_64::RAX);
+    emitter.MOVZX16_TO_64(base, REG_64::RAX);
     emitter.SHL16_REG_IMM(4, REG_64::RAX);
     emitter.AND16_AX(vu.mem_mask);
 
@@ -590,7 +590,7 @@ void VU_JIT64::load_quad_dec(VectorUnit &vu, IR::Instruction &instr)
         emitter.DEC16(base);
 
     //addr = (int_reg * 16) & mem_mask
-    emitter.MOVZX64_REG(base, REG_64::RAX);
+    emitter.MOVZX16_TO_64(base, REG_64::RAX);
     emitter.SHL32_REG_IMM(4, REG_64::RAX);
     emitter.AND32_EAX(vu.mem_mask);
 
@@ -625,7 +625,7 @@ void VU_JIT64::store_quad_dec(VectorUnit &vu, IR::Instruction &instr)
         emitter.DEC16(base);
 
     //addr = (int_reg * 16) & mem_mask
-    emitter.MOVZX64_REG(base, REG_64::RAX);
+    emitter.MOVZX16_TO_64(base, REG_64::RAX);
     emitter.SHL16_REG_IMM(4, REG_64::RAX);
     emitter.AND16_AX(vu.mem_mask);
 
@@ -679,7 +679,7 @@ void VU_JIT64::jump_and_link(VectorUnit& vu, IR::Instruction& instr)
         emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::RAX);
 
         emitter.TEST16_REG(REG_64::RAX, REG_64::RAX);
-        uint8_t* offset_addr = emitter.JE_NEAR_DEFERRED();
+        uint8_t* offset_addr = emitter.JCC_NEAR_DEFERRED(ConditionCode::E);
         //First branch is taken, so we set the link according to that destination
         emitter.load_addr((uint64_t)&vu_branch_dest, REG_64::RAX);
         emitter.MOV16_FROM_MEM(REG_64::RAX, link);
@@ -742,7 +742,7 @@ void VU_JIT64::jump_and_link_indirect(VectorUnit &vu, IR::Instruction &instr)
         emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::RAX);
 
         emitter.TEST16_REG(REG_64::RAX, REG_64::RAX);
-        uint8_t* offset_addr = emitter.JE_NEAR_DEFERRED();
+        uint8_t* offset_addr = emitter.JCC_NEAR_DEFERRED(ConditionCode::E);
         //First branch is taken, so we set the link according to that destination
         emitter.load_addr((uint64_t)&vu_branch_dest, REG_64::RAX);
         emitter.MOV16_FROM_MEM(REG_64::RAX, link);
@@ -775,7 +775,7 @@ void VU_JIT64::handle_branch_destinations(VectorUnit& vu, IR::Instruction& instr
         emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::RAX);
 
         emitter.TEST16_REG(REG_64::RAX, REG_64::RAX);
-        uint8_t* offset_addr = emitter.JE_NEAR_DEFERRED();
+        uint8_t* offset_addr = emitter.JCC_NEAR_DEFERRED(ConditionCode::E);
         //First branch is taken, so we set the fail destination according to that destination
         emitter.load_addr((uint64_t)&vu_branch_dest, REG_64::RAX);
         emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::R15);
@@ -830,7 +830,7 @@ void VU_JIT64::branch_equal(VectorUnit &vu, IR::Instruction &instr)
 
     emitter.load_addr((uint64_t)&vu.branch_on_delay, REG_64::RAX);
     emitter.CMP16_REG(op2, op1);
-    emitter.SETE_MEM(REG_64::RAX);
+    emitter.SETCC_MEM(ConditionCode::E, REG_64::RAX);
 
     handle_branch_destinations(vu, instr);
 
@@ -868,7 +868,7 @@ void VU_JIT64::branch_not_equal(VectorUnit &vu, IR::Instruction &instr)
 
     emitter.load_addr((uint64_t)&vu.branch_on_delay, REG_64::RAX);
     emitter.CMP16_REG(op2, op1);
-    emitter.SETNE_MEM(REG_64::RAX);
+    emitter.SETCC_MEM(ConditionCode::NE, REG_64::RAX);
 
     handle_branch_destinations(vu, instr);
 
@@ -895,7 +895,7 @@ void VU_JIT64::branch_less_than_zero(VectorUnit &vu, IR::Instruction &instr)
 
     emitter.load_addr((uint64_t)&vu.branch_on_delay, REG_64::RAX);
     emitter.CMP16_IMM(0, op);
-    emitter.SETL_MEM(REG_64::RAX);
+    emitter.SETCC_MEM(ConditionCode::L, REG_64::RAX);
 
     handle_branch_destinations(vu, instr);
 
@@ -922,7 +922,7 @@ void VU_JIT64::branch_greater_than_zero(VectorUnit &vu, IR::Instruction &instr)
 
     emitter.load_addr((uint64_t)&vu.branch_on_delay, REG_64::RAX);
     emitter.CMP16_IMM(0, op);
-    emitter.SETG_MEM(REG_64::RAX);
+    emitter.SETCC_MEM(ConditionCode::G, REG_64::RAX);
 
     handle_branch_destinations(vu, instr);
 
@@ -949,7 +949,7 @@ void VU_JIT64::branch_less_or_equal_than_zero(VectorUnit &vu, IR::Instruction &i
 
     emitter.load_addr((uint64_t)&vu.branch_on_delay, REG_64::RAX);
     emitter.CMP16_IMM(0, op);
-    emitter.SETLE_MEM(REG_64::RAX);
+    emitter.SETCC_MEM(ConditionCode::LE, REG_64::RAX);
 
     handle_branch_destinations(vu, instr);
 
@@ -976,7 +976,7 @@ void VU_JIT64::branch_greater_or_equal_than_zero(VectorUnit &vu, IR::Instruction
 
     emitter.load_addr((uint64_t)&vu.branch_on_delay, REG_64::RAX);
     emitter.CMP16_IMM(0, op);
-    emitter.SETGE_MEM(REG_64::RAX);
+    emitter.SETCC_MEM(ConditionCode::GE, REG_64::RAX);
 
     handle_branch_destinations(vu, instr);
 
@@ -1898,7 +1898,7 @@ void VU_JIT64::move_from_int(VectorUnit &vu, IR::Instruction &instr)
     REG_64 temp = REG_64::XMM0;
 
     //The 16-bit integer must be sign extended
-    emitter.MOVSX64_REG(source, REG_64::RAX);
+    emitter.MOVSX16_TO_64(source, REG_64::RAX);
     emitter.MOVD_TO_XMM(REG_64::RAX, temp);
     emitter.SHUFPS(0, temp, temp);
     emitter.BLENDPS(field, temp, dest);
@@ -1958,7 +1958,7 @@ void VU_JIT64::mac_eq(VectorUnit &vu, IR::Instruction &instr)
     emitter.MOV32_FROM_MEM(REG_64::RAX, REG_64::RAX);
     emitter.AND32_EAX(0xFFFF);
     emitter.CMP16_REG(REG_64::RAX, source);
-    emitter.SETE_REG(REG_64::RAX);
+    emitter.SETCC_REG(ConditionCode::E, REG_64::RAX);
     emitter.AND32_EAX(0x1);
     emitter.MOV32_REG(REG_64::RAX, dest);
 }
@@ -2008,7 +2008,7 @@ void VU_JIT64::and_clip_flags(VectorUnit &vu, IR::Instruction &instr)
     emitter.load_addr((uint64_t)vu.CLIP_flags, REG_64::RAX);
     emitter.MOV32_FROM_MEM(REG_64::RAX, REG_64::RAX);
     emitter.TEST32_EAX(instr.get_source());
-    emitter.SETNE_REG(REG_64::RAX);
+    emitter.SETCC_REG(ConditionCode::NE, REG_64::RAX);
     emitter.AND32_EAX(0x1);
     emitter.MOV32_REG(REG_64::RAX, vi1);
 }
@@ -2023,7 +2023,7 @@ void VU_JIT64::or_clip_flags(VectorUnit &vu, IR::Instruction &instr)
     emitter.OR32_EAX(instr.get_source());
     emitter.AND32_EAX(0xFFFFFF);
     emitter.CMP32_EAX(0xFFFFFF);
-    emitter.SETE_REG(REG_64::RAX);
+    emitter.SETCC_REG(ConditionCode::E, REG_64::RAX);
     emitter.AND32_EAX(0x1);
     emitter.MOV32_REG(REG_64::RAX, vi1);
 }
@@ -2252,7 +2252,7 @@ void VU_JIT64::xgkick(VectorUnit &vu, IR::Instruction &instr)
     emitter.TEST32_EAX(0x1);
 
     //Jump if no stall is necessary
-    uint8_t* no_stall_addr = emitter.JE_NEAR_DEFERRED();
+    uint8_t* no_stall_addr = emitter.JCC_NEAR_DEFERRED(ConditionCode::E);
 
     //Stall
     emitter.load_addr((uint64_t)&vu.XGKICK_stall, REG_64::RAX);
@@ -2917,9 +2917,10 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
     }
 }
 
-void VU_JIT64::recompile_block(VectorUnit& vu, IR::Block& block)
+VUJitBlockRecord* VU_JIT64::recompile_block(VectorUnit& vu, IR::Block& block)
 {
-    cache.alloc_block(BlockState { vu.get_PC(), prev_pc, current_program, vu.pipeline_state[0], vu.pipeline_state[1] });
+    //jit_block.alloc_block(BlockState { vu.get_PC(), prev_pc, current_program, vu.pipeline_state[0], vu.pipeline_state[1] });
+    jit_block.clear();
 
     vu_branch = false;
     end_of_program = false;
@@ -2944,8 +2945,9 @@ void VU_JIT64::recompile_block(VectorUnit& vu, IR::Block& block)
         cleanup_recompiler(vu, true);
 
     //Switch the block's privileges from RW to RX.
-    cache.set_current_block_rx();
-    //cache.print_current_block();
+    //jit_block.set_current_block_rx();
+    return jit_heap.insert_block(VUBlockState{vu.get_PC(), prev_pc, current_program, vu.pipeline_state[0], vu.pipeline_state[1]}, &jit_block);
+    //cache.print_block();
     //cache.print_literal_pool();
 }
 
@@ -3097,14 +3099,17 @@ void VU_JIT64::fallback_interpreter(VectorUnit &vu, IR::Instruction &instr)
 extern "C"
 uint8_t* exec_block(VU_JIT64& jit, VectorUnit& vu)
 {
-    //printf("[VU_JIT64] Executing block at $%04X, Prev PC $%04X Current Program %08X: recompiling\n", vu.PC, jit.prev_pc, jit.current_program);
-    if (jit.cache.find_block(BlockState { vu.get_PC(), jit.prev_pc, jit.current_program, vu.pipeline_state[0], vu.pipeline_state[1] }) == nullptr)
+    //fprintf(stderr, "[VU_JIT64] Executing block at $%04X, Prev PC $%04X Current Program %08X: recompiling\n", vu.PC, jit.prev_pc, jit.current_program);
+    VUJitBlockRecord* found_block = jit.jit_heap.find_block(VUBlockState
+        { vu.get_PC(), jit.prev_pc, jit.current_program, vu.pipeline_state[0], vu.pipeline_state[1] });
+
+    if (!found_block)
     {
-        //printf("[VU_JIT64] Block not found at $%04X, Prev PC $%04X Current Program %08X: recompiling\n", vu.PC, jit.prev_pc, jit.current_program);
+        //fprintf(stderr, "[VU_JIT64] Block not found at $%04X, Prev PC $%04X Current Program %08X: recompiling\n", vu.PC, jit.prev_pc, jit.current_program);
         IR::Block block = jit.ir.translate(vu, vu.get_instr_mem(), jit.prev_pc);
-        jit.recompile_block(vu, block);
+        found_block = jit.recompile_block(vu, block);
     }
-    return jit.cache.get_current_block_start();
+    return (uint8_t*)found_block->code_start;
 }
 
 uint16_t VU_JIT64::run(VectorUnit& vu)

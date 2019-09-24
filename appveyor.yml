@@ -4,7 +4,7 @@ skip_tags: true
 
 image:
 - Visual Studio 2017
-- Ubuntu
+- ubuntu1804
 
 configuration: Release
 platform: x64
@@ -24,21 +24,15 @@ for:
 -
   matrix:
     only:
-      - image: Ubuntu
+      - image: ubuntu1804
   environment:
-    APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu
+    APPVEYOR_BUILD_WORKER_IMAGE: ubuntu1804
     cc: gcc
 
-# just kill me now
-# we can't use the normal qt installer, it doesn't run headless on linux afaik
-# and Ubuntu Xenial only has qt 5.5 when we need at least 5.10
-# https://askubuntu.com/a/1062323
 install:
-- sh: sudo add-apt-repository ppa:beineri/opt-qt-5.11.1-xenial
 - sh: sudo apt-get update -qq
-- sh: sudo apt-get install -y -qq qt511-meta-minimal qt511multimedia
-- sh: sudo apt-get install -y -qq libglu1-mesa-dev
-- sh: source /opt/qt511/bin/qt511-env.sh
+- sh: sudo apt-get install -qq qt5-default qtmultimedia5-dev
+- sh: sudo apt-get install -qq libglu1-mesa-dev
 
 before_build:
 - cmd: call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat" %arch%

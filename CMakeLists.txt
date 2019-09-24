@@ -18,6 +18,14 @@ set(SOURCES
         src/core/ee/cop0.cpp
         src/core/ee/cop1.cpp
         src/core/ee/dmac.cpp
+        src/core/ee/ee_jit.cpp
+        src/core/ee/ee_jit64.cpp
+	src/core/ee/ee_jit64_mmi.cpp
+        src/core/ee/ee_jit64_cop2.cpp
+        src/core/ee/ee_jit64_fpu.cpp
+        src/core/ee/ee_jit64_fpu_avx.cpp
+        src/core/ee/ee_jit64_gpr.cpp
+        src/core/ee/ee_jittrans.cpp
         src/core/ee/emotion.cpp
         src/core/ee/emotion_fpu.cpp
         src/core/ee/emotion_mmi.cpp
@@ -91,6 +99,9 @@ set(HEADERS
         src/core/ee/cop0.hpp
         src/core/ee/cop1.hpp
         src/core/ee/dmac.hpp
+        src/core/ee/ee_jit.hpp
+        src/core/ee/ee_jit64.hpp
+        src/core/ee/ee_jittrans.hpp
         src/core/ee/emotion.hpp
         src/core/ee/emotionasm.hpp
         src/core/ee/emotiondisasm.hpp

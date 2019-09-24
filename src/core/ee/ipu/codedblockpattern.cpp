@@ -96,7 +96,20 @@ VLC_Entry CodedBlockPattern::table[] =
     {0x1, 0, 9}
 };
 
-CodedBlockPattern::CodedBlockPattern() : VLC_Table(table, SIZE, 9)
+unsigned int CodedBlockPattern::index_table[9] =
+{
+    0,
+    0,
+    0,
+    1,
+    5,
+    17,
+    21,
+    29,
+    57,
+};
+
+CodedBlockPattern::CodedBlockPattern() : VLC_Table(table, SIZE, 9, index_table)
 {
 
 }

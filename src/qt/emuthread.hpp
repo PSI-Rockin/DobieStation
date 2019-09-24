@@ -45,7 +45,8 @@ class EmuThread : public QThread
         void reset();
 
         void set_skip_BIOS_hack(SKIP_HACK skip);
-        void set_vu1_mode(VU_MODE mode);
+        void set_ee_mode(CPU_MODE mode);
+        void set_vu1_mode(CPU_MODE mode);
         void load_BIOS(const uint8_t* BIOS);
         void load_ELF(const uint8_t* ELF, uint64_t ELF_size);
         void load_CDVD(const char* name, CDVD_CONTAINER type);
@@ -62,7 +63,7 @@ class EmuThread : public QThread
         void run() override;
     signals:
         void completed_frame(uint32_t* buffer, int inner_w, int inner_h, int final_w, int final_h);
-        void update_FPS(int FPS);
+        void update_FPS(double FPS);
         void emu_error(QString err);
         void emu_non_fatal_error(QString err);
     public slots:

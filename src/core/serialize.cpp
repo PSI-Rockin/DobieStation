@@ -208,8 +208,8 @@ void EmotionEngine::load_state(ifstream &state)
     state.read((char*)&gpr, sizeof(gpr));
     state.read((char*)&LO, sizeof(uint64_t));
     state.read((char*)&HI, sizeof(uint64_t));
-    state.read((char*)&LO1, sizeof(uint64_t));
-    state.read((char*)&HI1, sizeof(uint64_t));
+    state.read((char*)&LO.hi, sizeof(uint64_t));
+    state.read((char*)&HI.hi, sizeof(uint64_t));
     state.read((char*)&PC, sizeof(uint32_t));
     state.read((char*)&new_PC, sizeof(uint32_t));
     state.read((char*)&SA, sizeof(uint64_t));
@@ -231,8 +231,8 @@ void EmotionEngine::save_state(ofstream &state)
     state.write((char*)&gpr, sizeof(gpr));
     state.write((char*)&LO, sizeof(uint64_t));
     state.write((char*)&HI, sizeof(uint64_t));
-    state.write((char*)&LO1, sizeof(uint64_t));
-    state.write((char*)&HI1, sizeof(uint64_t));
+    state.write((char*)&LO.lo, sizeof(uint64_t));
+    state.write((char*)&HI.hi, sizeof(uint64_t));
     state.write((char*)&PC, sizeof(uint32_t));
     state.write((char*)&new_PC, sizeof(uint32_t));
     state.write((char*)&SA, sizeof(uint64_t));

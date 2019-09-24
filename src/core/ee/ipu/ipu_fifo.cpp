@@ -15,14 +15,10 @@ bool IPU_FIFO::get_bits(uint32_t &data, int bits)
 
     if (bit_cache_dirty)
     {
-        std::queue<uint128_t> temp_fifo = f;
         uint8_t temp[32];
-        *(uint128_t*)&temp[0] = temp_fifo.front();
-        if (temp_fifo.size() > 1)
-        {
-            temp_fifo.pop();
-            *(uint128_t*)&temp[16] = temp_fifo.front();
-        }
+        *(uint128_t*)&temp[0] = f[0];
+        if (f.size() > 1)
+            *(uint128_t*)&temp[16] = f[1];
 
         uint8_t blorp[8];
         int index = (bit_pointer & ~0x1F) / 8;
@@ -64,7 +60,7 @@ bool IPU_FIFO::advance_stream(uint8_t amount)
     while (bit_pointer >= 128)
     {
         bit_pointer -= 128;
-        f.pop();
+        f.pop_front();
         bit_cache_dirty = true;
     }
     return true;
@@ -72,7 +68,7 @@ bool IPU_FIFO::advance_stream(uint8_t amount)
 
 void IPU_FIFO::reset()
 {
-    std::queue<uint128_t> empty;
+    std::deque<uint128_t> empty;
     f.swap(empty);
     bit_pointer = 0;
     cached_bits = 0;

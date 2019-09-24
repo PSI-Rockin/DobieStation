@@ -17,7 +17,17 @@ VLC_Entry Macroblock_BPic::table[] =
     {0x1, 0x60011, 6}
 };
 
-Macroblock_BPic::Macroblock_BPic() : VLC_Table(table, SIZE, 6)
+unsigned int Macroblock_BPic::index_table[6] =
+{
+    0,
+    0,
+    2,
+    4,
+    6,
+    8,
+};
+
+Macroblock_BPic::Macroblock_BPic() : VLC_Table(table, SIZE, 6, index_table)
 {
 
 }

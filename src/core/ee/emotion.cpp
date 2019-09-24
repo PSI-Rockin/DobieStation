@@ -8,6 +8,7 @@
 #include "../errors.hpp"
 
 #include "../emulator.hpp"
+#include "ee_jit.hpp"
 
 //#define SKIPMPEG_ON
 
@@ -128,7 +129,7 @@ void EmotionEngine::init_tlb()
     tlb_map = cp0->get_vtlb_map();
 }
 
-int EmotionEngine::run(int cycles)
+void EmotionEngine::run(int cycles)
 {
     cycle_count += cycles;
     if (!wait_for_IRQ)
@@ -185,14 +186,39 @@ int EmotionEngine::run(int cycles)
     }
 
     cp0->count_up(cycles);
+}
 
-    return cycles;
+void EmotionEngine::run_jit(int cycles)
+{
+    if (!wait_for_IRQ)
+    {
+        cycles_to_run += cycles;
+
+        if (wait_for_VU0)
+            wait_for_VU0 = vu0_wait();
+
+        while (cycles_to_run > 0 && !wait_for_VU0)
+        {
+            cycles_to_run -= EE_JIT::run(this);
+        }
+    }
+
+    branch_on = false;
+    if (cp0->int_enabled())
+    {
+        if (cp0->cause.int0_pending)
+            int0();
+        else if (cp0->cause.int1_pending)
+            int1();
+    }
+
+    cp0->count_up(cycles);
 }
 
 void EmotionEngine::print_state()
 {
     printf("pc:$%08X\n", PC);
-    for (int i = 1; i < 32; i++)
+    for (int i = 0; i < 32; i++)
     {
         printf("%s:$%08X_%08X_%08X_%08X", REG(i), get_gpr<uint32_t>(i, 3), get_gpr<uint32_t>(i, 2), get_gpr<uint32_t>(i, 1), get_gpr<uint32_t>(i));
         if ((i & 1) == 1)
@@ -200,9 +226,25 @@ void EmotionEngine::print_state()
         else
             printf("\t");
     }
-    printf("lo:$%08X_%08X_%08X_%08X\t", LO1 >> 32, LO1, LO >> 32, LO);
-    printf("hi:$%08X_%08X_%08X_%08X\t\n", HI1 >> 32, HI1, HI >> 32, HI);
+    printf("lo:$%08X_%08X_%08X_%08X\t", LO._u32[3], LO._u32[2], LO._u32[1], LO._u32[0]);
+    printf("hi:$%08X_%08X_%08X_%08X\t\n", HI._u32[3], HI._u32[2], HI._u32[1], HI._u32[0]);
     printf("KSU: %d\n", cp0->status.mode);
+    for (int i = 0; i < 32; i++)
+    {
+        printf("f%02d:$%08X", i, fpu->get_gpr(i));
+        if ((i & 1) == 1)
+            printf("\n");
+        else
+            printf("\t");
+    }
+    for (int i = 0; i < 32; i++)
+    {
+        printf("vf%02d:$%08X_%08X_%08X_%08X", i, vu0->get_gpr_u(i, 3), vu0->get_gpr_u(i, 2), vu0->get_gpr_u(i, 1), vu0->get_gpr_u(i, 0));
+        if ((i & 1) == 1)
+            printf("\n");
+        else
+            printf("\t");
+    }
     printf("\n");
 }
 
@@ -236,22 +278,22 @@ uint32_t EmotionEngine::get_PC()
 
 uint64_t EmotionEngine::get_LO()
 {
-    return LO;
+    return LO.lo;
 }
 
 uint64_t EmotionEngine::get_LO1()
 {
-    return LO1;
+    return LO.hi;
 }
 
 uint64_t EmotionEngine::get_HI()
 {
-    return HI;
+    return HI.lo;
 }
 
 uint64_t EmotionEngine::get_HI1()
 {
-    return HI1;
+    return HI.hi;
 }
 
 uint64_t EmotionEngine::get_SA()
@@ -407,11 +449,14 @@ void EmotionEngine::write8(uint32_t address, uint8_t value)
 {
     uint8_t* mem = tlb_map[address / 4096];
     if (mem > (uint8_t*)1)
+    {
+        cp0->set_tlb_modified(address / 4096);
         mem[address & 4095] = value;
+    }
     else if (mem == (uint8_t*)1)
         e->write8(address & 0x1FFFFFFF, value);
     else
-        Errors::die("[EE] Write8 to invalid address $%08X", address);
+        Errors::die("[EE] Write8 to invalid address $%08X: $%02X", address, value);
 }
 
 void EmotionEngine::write16(uint32_t address, uint16_t value)
@@ -420,11 +465,14 @@ void EmotionEngine::write16(uint32_t address, uint16_t value)
         Errors::die("[EE] Write16 to invalid address $%08X: $%04X", address, value);
     uint8_t* mem = tlb_map[address / 4096];
     if (mem > (uint8_t*)1)
+    {
+        cp0->set_tlb_modified(address / 4096);
         *(uint16_t*)&mem[address & 4095] = value;
+    }
     else if (mem == (uint8_t*)1)
         e->write16(address & 0x1FFFFFFF, value);
     else
-        Errors::die("[EE] Write16 to invalid address $%08X", address);
+        Errors::die("[EE] Write16 to invalid address $%08X: $%04X", address, value);
 }
 
 void EmotionEngine::write32(uint32_t address, uint32_t value)
@@ -433,31 +481,40 @@ void EmotionEngine::write32(uint32_t address, uint32_t value)
         Errors::die("[EE] Write32 to invalid address $%08X: $%08X", address, value);
     uint8_t* mem = tlb_map[address / 4096];
     if (mem > (uint8_t*)1)
+    {
+        cp0->set_tlb_modified(address / 4096);
         *(uint32_t*)&mem[address & 4095] = value;
+    }
     else if (mem == (uint8_t*)1)
         e->write32(address & 0x1FFFFFFF, value);
     else
-        Errors::die("[EE] Write32 to invalid address $%08X", address);
+        Errors::die("[EE] Write32 to invalid address $%08X: $%08X", address, value);
 }
 
 void EmotionEngine::write64(uint32_t address, uint64_t value)
 {
     if (address & 0x7)
-        Errors::die("[EE] Write64 to invalid address $%08X: $%08X_%08X", address, value >> 32, value);
+        Errors::die("[EE] Write64 to invalid address $%08X: %llX", address, value);
     uint8_t* mem = tlb_map[address / 4096];
     if (mem > (uint8_t*)1)
+    {
+        cp0->set_tlb_modified(address / 4096);
         *(uint64_t*)&mem[address & 4095] = value;
+    }
     else if (mem == (uint8_t*)1)
         e->write64(address & 0x1FFFFFFF, value);
     else
-        Errors::die("[EE] Write64 to invalid address $%08X", address);
+        Errors::die("[EE] Write64 to invalid address $%08X: %llX", address, value);
 }
 
 void EmotionEngine::write128(uint32_t address, uint128_t value)
 {
     uint8_t* mem = tlb_map[address / 4096];
     if (mem > (uint8_t*)1)
+    {
+        cp0->set_tlb_modified(address / 4096);
         *(uint128_t*)&mem[address & 4095] = value;
+    }
     else if (mem == (uint8_t*)1)
         e->write128(address & 0x1FFFFFFF, value);
     else
@@ -614,42 +671,42 @@ void EmotionEngine::invalidate_icache_indexed(uint32_t addr)
 
 void EmotionEngine::mfhi(int index)
 {
-    set_gpr<uint64_t>(index, HI);
+    set_gpr<uint64_t>(index, HI.lo);
 }
 
 void EmotionEngine::mthi(int index)
 {
-    HI = get_gpr<uint64_t>(index);
+    HI.lo = get_gpr<uint64_t>(index);
 }
 
 void EmotionEngine::mflo(int index)
 {
-    set_gpr<uint64_t>(index, LO);
+    set_gpr<uint64_t>(index, LO.lo);
 }
 
 void EmotionEngine::mtlo(int index)
 {
-    LO = get_gpr<uint64_t>(index);
+    LO.lo = get_gpr<uint64_t>(index);
 }
 
 void EmotionEngine::mfhi1(int index)
 {
-    set_gpr<uint64_t>(index, HI1);
+    set_gpr<uint64_t>(index, HI.hi);
 }
 
 void EmotionEngine::mthi1(int index)
 {
-    HI1 = get_gpr<uint64_t>(index);
+    HI.hi = get_gpr<uint64_t>(index);
 }
 
 void EmotionEngine::mflo1(int index)
 {
-    set_gpr<uint64_t>(index, LO1);
+    set_gpr<uint64_t>(index, LO.hi);
 }
 
 void EmotionEngine::mtlo1(int index)
 {
-    LO1 = get_gpr<uint64_t>(index);
+    LO.hi = get_gpr<uint64_t>(index);
 }
 
 void EmotionEngine::mfsa(int index)
@@ -664,26 +721,26 @@ void EmotionEngine::mtsa(int index)
 
 void EmotionEngine::pmfhi(int index)
 {
-    set_gpr<uint64_t>(index, HI);
-    set_gpr<uint64_t>(index, HI1, 1);
+    set_gpr<uint64_t>(index, HI.lo);
+    set_gpr<uint64_t>(index, HI.hi, 1);
 }
 
 void EmotionEngine::pmflo(int index)
 {
-    set_gpr<uint64_t>(index, LO);
-    set_gpr<uint64_t>(index, LO1, 1);
+    set_gpr<uint64_t>(index, LO.lo);
+    set_gpr<uint64_t>(index, LO.hi, 1);
 }
 
 void EmotionEngine::pmthi(int index)
 {
-    HI = get_gpr<uint64_t>(index);
-    HI1 = get_gpr<uint64_t>(index, 1);
+    HI.lo = get_gpr<uint64_t>(index);
+    HI.hi = get_gpr<uint64_t>(index, 1);
 }
 
 void EmotionEngine::pmtlo(int index)
 {
-    LO = get_gpr<uint64_t>(index);
-    LO1 = get_gpr<uint64_t>(index, 1);
+    LO.lo = get_gpr<uint64_t>(index);
+    LO.hi = get_gpr<uint64_t>(index, 1);
 }
 
 void EmotionEngine::set_SA(uint64_t value)
@@ -733,13 +790,13 @@ void EmotionEngine::set_LO_HI(uint64_t a, uint64_t b, bool hi)
     b = (int64_t)b;
     if (hi)
     {
-        LO1 = a;
-        HI1 = b;
+        LO.hi = a;
+        HI.hi = b;
     }
     else
     {
-        LO = a;
-        HI = b;
+        LO.lo = a;
+        HI.lo = b;
     }
 }
 
@@ -784,6 +841,15 @@ void EmotionEngine::syscall_exception()
     int op = get_gpr<int>(3);
     //if (op != 0x7A)
         //printf("[EE] SYSCALL: %s (id: $%02X) called at $%08X\n", SYSCALL(op), op, PC);
+
+    if (op == 0x64)
+    {
+        int a0 = get_gpr<uint32_t>(4);
+
+        // Clear icache
+        if (a0 != 0 && a0 != 1)
+            EE_JIT::reset(true);
+    }
 
     if (op == 0x7C)
     {

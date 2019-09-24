@@ -12,7 +12,7 @@ class DCT_Coeff : public VLC_Table
     protected:
         constexpr static int RUN_ESCAPE = 102;
     public:
-        DCT_Coeff(VLC_Entry* table, int table_size, int max_bits);
+        DCT_Coeff(VLC_Entry* table, int table_size, int max_bits, unsigned int* index_table);
 
         virtual bool get_end_of_block(IPU_FIFO& FIFO, uint32_t& result) = 0;
         virtual bool get_skip_block(IPU_FIFO& FIFO) = 0;

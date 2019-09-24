@@ -3,6 +3,10 @@
 #include <cstdint>
 #include <fstream>
 
+
+class EE_JIT64;
+class EmotionEngine;
+
 enum CACHE_MODE
 {
     UNCACHED = 2,
@@ -66,9 +70,12 @@ struct TLB_Entry
 struct VTLB_Info
 {
     uint8_t cache_mode;
+    bool modified = false;
 };
 
 class DMAC;
+
+extern "C" uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee);
 
 class Cop0
 {
@@ -117,9 +124,18 @@ class Cop0
         void count_up(int cycles);
 
         void set_tlb(int index);
+        void clear_tlb_modified(size_t page);
+        void set_tlb_modified(size_t page);
+        bool get_tlb_modified(size_t page) const;
 
         void load_state(std::ifstream &state);
         void save_state(std::ofstream& state);
+
+        //Friends needed for JIT convenience
+        friend class EE_JIT64;
+        friend class EE_JitTranslator;
+
+        friend uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee);
 };
 
 inline bool Cop0::is_cached(uint32_t address)
@@ -130,6 +146,11 @@ inline bool Cop0::is_cached(uint32_t address)
 inline bool Cop0::int_enabled()
 {
     return status.master_int_enable && status.int_enable && !status.exception && !status.error;
+}
+
+inline bool Cop0::get_tlb_modified(size_t page) const
+{
+    return vtlb_info[page].modified;
 }
 
 #endif // COP0_HPP

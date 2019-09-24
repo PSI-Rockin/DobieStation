@@ -458,6 +458,16 @@ void Cop0::map_tlb(TLB_Entry *entry)
     }
 }
 
+void Cop0::clear_tlb_modified(size_t page)
+{
+    vtlb_info[page].modified = false;
+}
+
+void Cop0::set_tlb_modified(size_t page)
+{
+    vtlb_info[page].modified = true;
+}
+
 uint8_t* Cop0::get_mem_pointer(uint32_t paddr)
 {
     if (paddr < 0x10000000)

@@ -3,6 +3,9 @@
 #include <cstdint>
 #include <fstream>
 
+class EE_JIT64;
+class EmotionEngine;
+
 struct COP1_CONTROL
 {
     bool su;
@@ -22,6 +25,8 @@ union COP1_REG
     uint32_t u;
     int32_t s;
 };
+
+extern "C" uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee);
 
 class Cop1
 {
@@ -73,6 +78,12 @@ class Cop1
 
         void load_state(std::ifstream& state);
         void save_state(std::ofstream& state);
+
+        //Friends needed for JIT convenience
+        friend class EE_JIT64;
+        friend class EE_JitTranslator;
+
+        friend uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee);
 };
 
 #endif // COP1_HPP

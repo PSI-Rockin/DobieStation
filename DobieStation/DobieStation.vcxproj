@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Release Optimized|x64">
@@ -77,18 +77,18 @@
       <AdditionalOptions>-Zc:rvalueCast -Zc:inline -Zc:strictStrings -Zc:throwingNew -Zc:referenceBinding -w34100 -w34189 -w44996 -w44456 -w44457 -w44458 %(AdditionalOptions)</AdditionalOptions>
       <AssemblerListingLocation>release\</AssemblerListingLocation>
       <BrowseInformation>false</BrowseInformation>
-      <DebugInformationFormat>None</DebugInformationFormat>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <DisableSpecificWarnings>4577;4467;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <ExceptionHandling>Sync</ExceptionHandling>
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <Optimization>MaxSpeed</Optimization>
-      <PreprocessorDefinitions>_CONSOLE;UNICODE;_UNICODE;WIN32;WIN64;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CONSOLE;UNICODE;_UNICODE;WIN32;WIN64;WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessToFile>false</PreprocessToFile>
       <ProgramDataBaseFileName>$(IntDir)vc$(PlatformToolsetVersion).pdb</ProgramDataBaseFileName>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level2</WarningLevel>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <AdditionalIncludeDirectories>$(ProjectDir)\..\src\qt;$(ProjectDir)\..\ext\libdeflate;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
@@ -97,7 +97,7 @@
       <AdditionalDependencies>.\libdeflate\release\libdeflate.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalOptions>"/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' publicKeyToken='6595b64144ccf1df' language='*' processorArchitecture='*'" %(AdditionalOptions)</AdditionalOptions>
       <DataExecutionPrevention>true</DataExecutionPrevention>
-      <GenerateDebugInformation>false</GenerateDebugInformation>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
       <IgnoreImportLibrary>true</IgnoreImportLibrary>
       <LinkIncremental>false</LinkIncremental>
       <OutputFile>$(OutDir)\DobieStation.exe</OutputFile>
@@ -124,13 +124,13 @@
       <ExceptionHandling>Sync</ExceptionHandling>
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <Optimization>MaxSpeed</Optimization>
-      <PreprocessorDefinitions>_CONSOLE;UNICODE;_UNICODE;WIN32;WIN64;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CONSOLE;UNICODE;_UNICODE;WIN32;WIN64;WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessToFile>false</PreprocessToFile>
       <ProgramDataBaseFileName>$(IntDir)vc$(PlatformToolsetVersion).pdb</ProgramDataBaseFileName>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level2</WarningLevel>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <AdditionalIncludeDirectories>$(ProjectDir)\..\src\qt;$(ProjectDir)\..\ext\libdeflate;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
@@ -171,12 +171,12 @@
       <ExceptionHandling>Sync</ExceptionHandling>
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_CONSOLE;UNICODE;_UNICODE;WIN32;WIN64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_CONSOLE;UNICODE;_UNICODE;WIN32;WIN64;WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessToFile>false</PreprocessToFile>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
       <SuppressStartupBanner>true</SuppressStartupBanner>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level2</WarningLevel>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <ProgramDataBaseFileName>$(IntDir)vc$(PlatformToolsetVersion).pdb</ProgramDataBaseFileName>
       <AdditionalIncludeDirectories>$(ProjectDir)\..\src\qt;$(ProjectDir)\..\ext\libdeflate;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -203,6 +203,14 @@
   </ItemDefinitionGroup>
   <!-- cpp files -->
   <ItemGroup>
+    <ClCompile Include="..\src\core\ee\ee_jit.cpp" />
+    <ClCompile Include="..\src\core\ee\ee_jit64.cpp" />
+    <ClCompile Include="..\src\core\ee\ee_jit64_cop2.cpp" />
+    <ClCompile Include="..\src\core\ee\ee_jit64_fpu.cpp" />
+    <ClCompile Include="..\src\core\ee\ee_jit64_fpu_avx.cpp" />
+    <ClCompile Include="..\src\core\ee\ee_jit64_gpr.cpp" />
+    <ClCompile Include="..\src\core\ee\ee_jit64_mmi.cpp" />
+    <ClCompile Include="..\src\core\ee\ee_jittrans.cpp" />
     <ClCompile Include="..\src\core\iop\cso_reader.cpp" />
     <ClCompile Include="..\src\core\tests\iop\alu.cpp" />
     <ClCompile Include="..\src\core\ee\bios_hle.cpp" />
@@ -294,6 +302,9 @@
   <!-- headers -->
   <ItemGroup>
     <ClInclude Include="..\src\core\ee\bios_hle.hpp" />
+    <ClInclude Include="..\src\core\ee\ee_jit.hpp" />
+    <ClInclude Include="..\src\core\ee\ee_jit64.hpp" />
+    <ClInclude Include="..\src\core\ee\ee_jittrans.hpp" />
     <ClInclude Include="..\src\core\iop\cdvd.hpp" />
     <ClInclude Include="..\src\core\ee\ipu\chromtable.hpp" />
     <ClInclude Include="..\src\core\circularFIFO.hpp" />
@@ -360,7 +371,13 @@
     <None Include="..\appveyor.yml" />
   </ItemGroup>
   <ItemGroup>
+    <MASM Include="..\src\core\ee\ee_jit_asm.asm" />
     <MASM Include="..\src\core\ee\vu_jit_asm.asm" />
+  </ItemGroup>
+  <ItemGroup>
+    <MASM Include="..\src\core\gsjit.asm">
+      <FileType>Document</FileType>
+    </MASM>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

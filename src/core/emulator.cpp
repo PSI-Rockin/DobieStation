@@ -7,6 +7,7 @@
 #include "errors.hpp"
 
 #include "ee/vu_jit.hpp"
+#include "ee/ee_jit.hpp"
 
 #define CYCLES_PER_FRAME 4900000
 #define VBLANK_START_CYCLES CYCLES_PER_FRAME * 0.75
@@ -45,7 +46,8 @@ Emulator::Emulator() :
     ELF_size = 0;
     gsdump_single_frame = false;
     ee_log.open("ee_log.txt", std::ios::out);
-    set_vu1_mode(VU_MODE::DONT_CARE);
+    set_ee_mode(CPU_MODE::DONT_CARE);
+    set_vu1_mode(CPU_MODE::DONT_CARE);
 }
 
 Emulator::~Emulator()
@@ -101,7 +103,7 @@ void Emulator::run()
         int iop_cycles = scheduler.get_iop_run_cycles();
         scheduler.update_cycle_counts();
 
-        cpu.run(ee_cycles);
+        ee_run_func(cpu, ee_cycles);
         dmac.run(bus_cycles);
         timers.run(bus_cycles);
         ipu.run();
@@ -113,11 +115,8 @@ void Emulator::run()
 
         iop_timers.run(iop_cycles);
         iop_dma.run(iop_cycles);
-        for (int i = 0; i < iop_cycles; i++)
-        {
-            iop.run(1);
-            iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
-        }
+        iop.run(iop_cycles);
+        iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
 
         scheduler.process_events(this);
     }
@@ -168,6 +167,7 @@ void Emulator::reset()
     vu0.reset();
     vu1.reset();
     VU_JIT::reset();
+    EE_JIT::reset(true);
 
     MCH_DRD = 0;
     MCH_RICM = 0;
@@ -331,14 +331,28 @@ void Emulator::set_skip_BIOS_hack(SKIP_HACK type)
     skip_BIOS_hack = type;
 }
 
-void Emulator::set_vu1_mode(VU_MODE mode)
+void Emulator::set_ee_mode(CPU_MODE mode)
+{
+  switch (mode)
+  {
+      case CPU_MODE::INTERPRETER:
+          ee_run_func = &EmotionEngine::run;
+          break;
+      case CPU_MODE::JIT:
+      default:
+          ee_run_func = &EmotionEngine::run_jit;
+          break;
+  }
+}
+
+void Emulator::set_vu1_mode(CPU_MODE mode)
 {
     switch (mode)
     {
-        case VU_MODE::INTERPRETER:
+        case CPU_MODE::INTERPRETER:
             vu1_run_func = &VectorUnit::run;
             break;
-        case VU_MODE::JIT:
+        case CPU_MODE::JIT:
         default:
             vu1_run_func = &VectorUnit::run_jit;
             break;
@@ -411,7 +425,7 @@ void Emulator::execute_ELF()
         for (unsigned int file_w = p_offset; file_w < (p_offset + p_filesz); file_w += 4)
         {
             uint32_t word = *(uint32_t*)&ELF_file[file_w];
-            write32(mem_w, word);
+            *(uint32_t*)&RDRAM[mem_w] = word;
             mem_w += 4;
         }
     }

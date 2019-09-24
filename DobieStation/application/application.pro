@@ -91,7 +91,15 @@ SOURCES += ../../src/qt/main.cpp \
     ../../src/qt/renderwidget.cpp \
     ../../src/qt/settingswindow.cpp \
     ../../src/qt/bios.cpp \
-    ../../src/qt/gamelistwidget.cpp
+    ../../src/qt/gamelistwidget.cpp \
+    ../../src/core/ee/ee_jittrans.cpp \
+    ../../src/core/ee/ee_jit.cpp \
+    ../../src/core/ee/ee_jit64.cpp \
+    ../../src/core/ee/ee_jit64_mmi.cpp \
+    ../../src/core/ee/ee_jit64_cop2.cpp \
+    ../../src/core/ee/ee_jit64_fpu.cpp \
+    ../../src/core/ee/ee_jit64_fpu_avx.cpp \
+    ../../src/core/ee/ee_jit64_gpr.cpp
 
 HEADERS += \
     ../../src/core/errors.hpp \
@@ -158,4 +166,8 @@ HEADERS += \
     ../../src/qt/renderwidget.hpp \
     ../../src/qt/settingswindow.hpp \
     ../../src/qt/bios.hpp \
-    ../../src/qt/gamelistwidget.hpp
+    ../../src/qt/gamelistwidget.hpp \
+    ../../src/core/ee/ee_jittrans.hpp \
+    ../../src/core/ee/ee_jit.hpp \
+    ../../src/core/ee/ee_jit64.hpp
+   

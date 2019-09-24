@@ -9,6 +9,8 @@
 
 class Emulator;
 class VectorUnit;
+class EE_JIT64;
+class EmotionEngine;
 
 //Handler used for Deci2Call (syscall 0x7C)
 struct Deci2Handler
@@ -24,6 +26,8 @@ struct EE_ICacheLine
     uint32_t tag[2];
 };
 
+extern "C" uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee);
+
 class EmotionEngine
 {
     private:
@@ -32,6 +36,7 @@ class EmotionEngine
         uint64_t cycle_count;
         uint64_t cop2_last_cycle;
         int cycles_to_run;
+        uint64_t run_event;
 
         Cop0* cp0;
         Cop1* fpu;
@@ -41,14 +46,14 @@ class EmotionEngine
         uint8_t** tlb_map;
 
         //Each register is 128-bit
-        uint8_t gpr[32 * sizeof(uint64_t) * 2];
-        uint64_t LO, HI, LO1, HI1;
+        alignas(16) uint8_t gpr[32 * sizeof(uint64_t) * 2];
+        alignas(16) uint128_t LO, HI;
         uint32_t PC, new_PC;
         uint64_t SA;
 
         EE_ICacheLine icache[128];
 
-        bool wait_for_IRQ;
+        bool wait_for_IRQ, wait_for_VU0;
         bool branch_on;
         bool can_disassemble;
         int delay_slot;
@@ -65,7 +70,8 @@ class EmotionEngine
         static const char* SYSCALL(int id);
         void reset();
         void init_tlb();
-        int run(int cycles);
+        void run(int cycles);
+        void run_jit(int cycles);
         uint64_t get_cycle_count();
         uint64_t get_cop2_last_cycle();
         void set_cop2_last_cycle(uint64_t value);
@@ -166,6 +172,12 @@ class EmotionEngine
 
         void load_state(std::ifstream& state);
         void save_state(std::ofstream& state);
+
+        //Friends needed for JIT convenience
+        friend class EE_JIT64;
+        friend class EE_JitTranslator;
+
+        friend uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee);
 };
 
 template <typename T>
@@ -205,6 +217,8 @@ inline void EmotionEngine::halt()
 inline void EmotionEngine::unhalt()
 {
     wait_for_IRQ = false;
+    if (cycles_to_run < 0)
+        cycles_to_run = 0;
 }
 
 #endif // EMOTION_HPP
