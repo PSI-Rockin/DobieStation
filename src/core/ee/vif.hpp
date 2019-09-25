@@ -65,7 +65,7 @@ class VectorInterface
         uint8_t vif_stalled;
         bool vif_interrupt;
         bool vif_stop;
-        bool fifo_reverse = false;
+        bool fifo_reverse;
         
         bool wait_for_VU;
         bool wait_for_PATH3;
