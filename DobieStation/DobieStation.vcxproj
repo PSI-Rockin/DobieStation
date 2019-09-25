@@ -64,6 +64,11 @@
     <Import Project="qt.props" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros">
+    <RootDir>$(SolutionDir)..\</RootDir>
+    <SrcDir>$(RootDir)\src\</SrcDir>
+    <QtDir>$(SrcDir)\qt\</QtDir>
+    <CoreDir>$(SrcDir)\core\</CoreDir>
+    <ExtDir>$(RootDir)\ext\</ExtDir>
   </PropertyGroup>
   <PropertyGroup>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">release\</OutDir>
@@ -81,67 +86,80 @@
     <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">DobieStation</TargetName>
     <IgnoreImportLibrary Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</IgnoreImportLibrary>
   </PropertyGroup>
+
+  <!-- base compile -->
+  <ItemDefinitionGroup>
+    <ClCompile>
+      <!-- Warnings -->
+      <WarningLevel>Level4</WarningLevel>
+      <!-- disable some conversion errors -->
+      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+
+      <!-- includes -->
+      <AdditionalIncludeDirectories>$(QtDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ExtDir)\libdeflate;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <DisableSpecificWarnings>4577;4467;%(DisableSpecificWarnings)</DisableSpecificWarnings>
+
+      <!-- preprocessor-->
+      <PreprocessToFile>false</PreprocessToFile>
+      <PreprocessorDefinitions>_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>UNICODE;_UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32;WIN64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+
+      <!-- compiler -->
+      <AdditionalOptions>-Zc:rvalueCast -Zc:inline -Zc:strictStrings -Zc:throwingNew -Zc:referenceBinding %(AdditionalOptions)</AdditionalOptions>
+      <AdditionalOptions>-w34100 -w34189 -w44996 -w44456 -w44457 -w44458 %(AdditionalOptions)</AdditionalOptions>
+
+      <ObjectFileName>$(IntDir)</ObjectFileName>
+      <BrowseInformation>false</BrowseInformation>
+      <ExceptionHandling>Sync</ExceptionHandling>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
+
+      <ProgramDataBaseFileName>$(IntDir)vc$(PlatformToolsetVersion).pdb</ProgramDataBaseFileName>
+    </ClCompile>
+  </ItemDefinitionGroup>
+
+  <!-- default link -->
+  <ItemDefinitionGroup>
+    <Link>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <OutputFile>$(OutDir)\DobieStation.exe</OutputFile>
+      <SubSystem>Console</SubSystem>
+      <RandomizedBaseAddress>true</RandomizedBaseAddress>
+      <IgnoreImportLibrary>true</IgnoreImportLibrary>
+      <DataExecutionPrevention>true</DataExecutionPrevention>
+    </Link>
+  </ItemDefinitionGroup>
+
+  <!-- release compile -->
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <AdditionalOptions>-Zc:rvalueCast -Zc:inline -Zc:strictStrings -Zc:throwingNew -Zc:referenceBinding -w34100 -w34189 -w44996 -w44456 -w44457 -w44458 %(AdditionalOptions)</AdditionalOptions>
       <AssemblerListingLocation>release\</AssemblerListingLocation>
-      <BrowseInformation>false</BrowseInformation>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <DisableSpecificWarnings>4577;4467;%(DisableSpecificWarnings)</DisableSpecificWarnings>
-      <ExceptionHandling>Sync</ExceptionHandling>
-      <ObjectFileName>$(IntDir)</ObjectFileName>
       <Optimization>MaxSpeed</Optimization>
-      <PreprocessorDefinitions>_CONSOLE;UNICODE;_UNICODE;WIN32;WIN64;WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PreprocessToFile>false</PreprocessToFile>
-      <ProgramDataBaseFileName>$(IntDir)vc$(PlatformToolsetVersion).pdb</ProgramDataBaseFileName>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <SuppressStartupBanner>true</SuppressStartupBanner>
-      <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
-      <WarningLevel>Level2</WarningLevel>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalIncludeDirectories>$(ProjectDir)\..\src\qt;$(ProjectDir)\..\ext\libdeflate;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
     </ClCompile>
     <Link>
       <AdditionalDependencies>.\libdeflate\release\libdeflate.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalOptions>"/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' publicKeyToken='6595b64144ccf1df' language='*' processorArchitecture='*'" %(AdditionalOptions)</AdditionalOptions>
-      <DataExecutionPrevention>true</DataExecutionPrevention>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <IgnoreImportLibrary>true</IgnoreImportLibrary>
       <LinkIncremental>false</LinkIncremental>
-      <OutputFile>$(OutDir)\DobieStation.exe</OutputFile>
-      <RandomizedBaseAddress>true</RandomizedBaseAddress>
-      <SubSystem>Console</SubSystem>
-      <SuppressStartupBanner>true</SuppressStartupBanner>
     </Link>
-    <Midl>
-      <DefaultCharType>Unsigned</DefaultCharType>
-      <EnableErrorChecks>None</EnableErrorChecks>
-      <WarningLevel>0</WarningLevel>
-    </Midl>
-    <ResourceCompile>
-      <PreprocessorDefinitions>_CONSOLE;UNICODE;_UNICODE;WIN32;WIN64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ResourceCompile>
   </ItemDefinitionGroup>
+
+  <!-- release optimized compile -->
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release Optimized|x64'">
     <ClCompile>
-      <AdditionalOptions>-Zc:rvalueCast -Zc:inline -Zc:strictStrings -Zc:throwingNew -Zc:referenceBinding -w34100 -w34189 -w44996 -w44456 -w44457 -w44458 %(AdditionalOptions)</AdditionalOptions>
       <AssemblerListingLocation>release\</AssemblerListingLocation>
-      <BrowseInformation>false</BrowseInformation>
       <DebugInformationFormat>None</DebugInformationFormat>
-      <DisableSpecificWarnings>4577;4467;%(DisableSpecificWarnings)</DisableSpecificWarnings>
-      <ExceptionHandling>Sync</ExceptionHandling>
-      <ObjectFileName>$(IntDir)</ObjectFileName>
       <Optimization>MaxSpeed</Optimization>
-      <PreprocessorDefinitions>_CONSOLE;UNICODE;_UNICODE;WIN32;WIN64;WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PreprocessToFile>false</PreprocessToFile>
-      <ProgramDataBaseFileName>$(IntDir)vc$(PlatformToolsetVersion).pdb</ProgramDataBaseFileName>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
-      <SuppressStartupBanner>true</SuppressStartupBanner>
-      <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
-      <WarningLevel>Level2</WarningLevel>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <AdditionalIncludeDirectories>$(ProjectDir)\..\src\qt;$(ProjectDir)\..\ext\libdeflate;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
@@ -150,155 +168,116 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>.\libdeflate\release\libdeflate.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalOptions>"/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' publicKeyToken='6595b64144ccf1df' language='*' processorArchitecture='*'" %(AdditionalOptions)</AdditionalOptions>
-      <DataExecutionPrevention>true</DataExecutionPrevention>
       <GenerateDebugInformation>false</GenerateDebugInformation>
-      <IgnoreImportLibrary>true</IgnoreImportLibrary>
       <LinkIncremental>false</LinkIncremental>
-      <OutputFile>$(OutDir)\DobieStation.exe</OutputFile>
-      <RandomizedBaseAddress>true</RandomizedBaseAddress>
-      <SubSystem>Console</SubSystem>
-      <SuppressStartupBanner>true</SuppressStartupBanner>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
     </Link>
-    <Midl>
-      <DefaultCharType>Unsigned</DefaultCharType>
-      <EnableErrorChecks>None</EnableErrorChecks>
-      <WarningLevel>0</WarningLevel>
-    </Midl>
-    <ResourceCompile>
-      <PreprocessorDefinitions>_CONSOLE;UNICODE;_UNICODE;WIN32;WIN64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ResourceCompile>
   </ItemDefinitionGroup>
+
+  <!-- debug compile -->
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <ClCompile>
-      <AdditionalOptions>-Zc:rvalueCast -Zc:inline -Zc:strictStrings -Zc:throwingNew -Zc:referenceBinding -w34100 -w34189 -w44996 -w44456 -w44457 -w44458 %(AdditionalOptions)</AdditionalOptions>
       <AssemblerListingLocation>debug\</AssemblerListingLocation>
-      <BrowseInformation>false</BrowseInformation>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <DisableSpecificWarnings>4577;4467;%(DisableSpecificWarnings)</DisableSpecificWarnings>
-      <ExceptionHandling>Sync</ExceptionHandling>
-      <ObjectFileName>$(IntDir)</ObjectFileName>
       <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_CONSOLE;UNICODE;_UNICODE;WIN32;WIN64;WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PreprocessToFile>false</PreprocessToFile>
+      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
-      <SuppressStartupBanner>true</SuppressStartupBanner>
-      <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
-      <WarningLevel>Level2</WarningLevel>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <ProgramDataBaseFileName>$(IntDir)vc$(PlatformToolsetVersion).pdb</ProgramDataBaseFileName>
-      <AdditionalIncludeDirectories>$(ProjectDir)\..\src\qt;$(ProjectDir)\..\ext\libdeflate;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>.\libdeflate\release\libdeflate.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalOptions>"/MANIFESTDEPENDENCY:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' publicKeyToken='6595b64144ccf1df' language='*' processorArchitecture='*'" %(AdditionalOptions)</AdditionalOptions>
-      <DataExecutionPrevention>true</DataExecutionPrevention>
+      <AdditionalDependencies>.\libdeflate\debug\libdeflate.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <IgnoreImportLibrary>true</IgnoreImportLibrary>
-      <OutputFile>$(OutDir)\DobieStation.exe</OutputFile>
-      <RandomizedBaseAddress>true</RandomizedBaseAddress>
-      <SubSystem>Console</SubSystem>
-      <SuppressStartupBanner>true</SuppressStartupBanner>
     </Link>
-    <Midl>
-      <DefaultCharType>Unsigned</DefaultCharType>
-      <EnableErrorChecks>None</EnableErrorChecks>
-      <WarningLevel>0</WarningLevel>
-    </Midl>
-    <ResourceCompile>
-      <PreprocessorDefinitions>_CONSOLE;UNICODE;_UNICODE;WIN32;WIN64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-    </ResourceCompile>
   </ItemDefinitionGroup>
+
   <!-- cpp files -->
   <ItemGroup>
-    <ClCompile Include="..\src\core\ee\ee_jit.cpp" />
-    <ClCompile Include="..\src\core\ee\ee_jit64.cpp" />
-    <ClCompile Include="..\src\core\ee\ee_jit64_cop2.cpp" />
-    <ClCompile Include="..\src\core\ee\ee_jit64_fpu.cpp" />
-    <ClCompile Include="..\src\core\ee\ee_jit64_fpu_avx.cpp" />
-    <ClCompile Include="..\src\core\ee\ee_jit64_gpr.cpp" />
-    <ClCompile Include="..\src\core\ee\ee_jit64_mmi.cpp" />
-    <ClCompile Include="..\src\core\ee\ee_jittrans.cpp" />
-    <ClCompile Include="..\src\core\iop\cso_reader.cpp" />
-    <ClCompile Include="..\src\core\tests\iop\alu.cpp" />
-    <ClCompile Include="..\src\core\ee\bios_hle.cpp" />
-    <ClCompile Include="..\src\core\iop\cdvd.cpp" />
-    <ClCompile Include="..\src\core\ee\ipu\chromtable.cpp" />
-    <ClCompile Include="..\src\core\ee\ipu\codedblockpattern.cpp" />
-    <ClCompile Include="..\src\core\ee\cop0.cpp" />
-    <ClCompile Include="..\src\core\ee\cop1.cpp" />
-    <ClCompile Include="..\src\core\ee\ipu\dct_coeff.cpp" />
-    <ClCompile Include="..\src\core\ee\ipu\dct_coeff_table0.cpp" />
-    <ClCompile Include="..\src\core\ee\ipu\dct_coeff_table1.cpp" />
-    <ClCompile Include="..\src\core\ee\dmac.cpp" />
-    <ClCompile Include="..\src\core\jitcommon\emitter64.cpp" />
-    <ClCompile Include="..\src\core\ee\emotion.cpp" />
-    <ClCompile Include="..\src\core\ee\emotion_fpu.cpp" />
-    <ClCompile Include="..\src\core\ee\emotion_mmi.cpp" />
-    <ClCompile Include="..\src\core\ee\emotion_special.cpp" />
-    <ClCompile Include="..\src\core\ee\emotion_vu0.cpp" />
-    <ClCompile Include="..\src\core\ee\emotionasm.cpp" />
-    <ClCompile Include="..\src\core\ee\emotiondisasm.cpp" />
-    <ClCompile Include="..\src\core\ee\emotioninterpreter.cpp" />
-    <ClCompile Include="..\src\core\emulator.cpp" />
-    <ClCompile Include="..\src\qt\emuthread.cpp" />
-    <ClCompile Include="..\src\qt\emuwindow.cpp" />
-    <ClCompile Include="..\src\qt\renderwidget.cpp" />
-    <ClCompile Include="..\src\qt\settingswindow.cpp" />
-    <ClCompile Include="..\src\qt\gamelistwidget.cpp" />
-    <ClCompile Include="..\src\qt\bios.cpp" />
-    <ClCompile Include="..\src\core\errors.cpp" />
-    <ClCompile Include="..\src\core\iop\gamepad.cpp" />
-    <ClCompile Include="..\src\core\gif.cpp" />
-    <ClCompile Include="..\src\core\gs.cpp" />
-    <ClCompile Include="..\src\core\gscontext.cpp" />
-    <ClCompile Include="..\src\core\gsmem.cpp" />
-    <ClCompile Include="..\src\core\gsregisters.cpp" />
-    <ClCompile Include="..\src\core\gsthread.cpp" />
-    <ClCompile Include="..\src\core\ee\intc.cpp" />
-    <ClCompile Include="..\src\core\iop\iop.cpp" />
-    <ClCompile Include="..\src\core\iop\iop_cop0.cpp" />
-    <ClCompile Include="..\src\core\iop\iop_dma.cpp" />
-    <ClCompile Include="..\src\core\iop\iop_interpreter.cpp" />
-    <ClCompile Include="..\src\core\iop\iop_timers.cpp" />
-    <ClCompile Include="..\src\core\ee\ipu\ipu.cpp" />
-    <ClCompile Include="..\src\core\ee\ipu\ipu_fifo.cpp" />
-    <ClCompile Include="..\src\core\jitcommon\ir_block.cpp" />
-    <ClCompile Include="..\src\core\jitcommon\ir_instr.cpp" />
-    <ClCompile Include="..\src\core\jitcommon\jitcache.cpp" />
-    <ClCompile Include="..\src\core\ee\ipu\lumtable.cpp" />
-    <ClCompile Include="..\src\core\ee\ipu\mac_addr_inc.cpp" />
-    <ClCompile Include="..\src\core\ee\ipu\mac_b_pic.cpp" />
-    <ClCompile Include="..\src\core\ee\ipu\mac_i_pic.cpp" />
-    <ClCompile Include="..\src\core\ee\ipu\mac_p_pic.cpp" />
-    <ClCompile Include="..\src\qt\main.cpp" />
-    <ClCompile Include="..\src\core\iop\memcard.cpp" />
-    <ClCompile Include="..\src\core\ee\ipu\motioncode.cpp" />
-    <ClCompile Include="..\src\core\serialize.cpp" />
-    <ClCompile Include="..\src\qt\settings.cpp" />
-    <ClCompile Include="..\src\core\sif.cpp" />
-    <ClCompile Include="..\src\core\iop\sio2.cpp" />
-    <ClCompile Include="..\src\core\iop\spu.cpp" />
-    <ClCompile Include="..\src\core\ee\timers.cpp" />
-    <ClCompile Include="..\src\core\ee\vif.cpp" />
-    <ClCompile Include="..\src\core\ee\ipu\vlc_table.cpp" />
-    <ClCompile Include="..\src\core\ee\vu.cpp" />
-    <ClCompile Include="..\src\core\ee\vu_disasm.cpp" />
-    <ClCompile Include="..\src\core\ee\vu_interpreter.cpp" />
-    <ClCompile Include="..\src\core\ee\vu_jit.cpp" />
-    <ClCompile Include="..\src\core\ee\vu_jit64.cpp" />
-    <ClCompile Include="..\src\core\ee\vu_jittrans.cpp" />
-    <ClCompile Include="..\src\core\scheduler.cpp" />
+    <ClCompile Include="$(CoreDir)ee\ee_jit.cpp" />
+    <ClCompile Include="$(CoreDir)ee\ee_jit64.cpp" />
+    <ClCompile Include="$(CoreDir)ee\ee_jit64_cop2.cpp" />
+    <ClCompile Include="$(CoreDir)ee\ee_jit64_fpu.cpp" />
+    <ClCompile Include="$(CoreDir)ee\ee_jit64_fpu_avx.cpp" />
+    <ClCompile Include="$(CoreDir)ee\ee_jit64_gpr.cpp" />
+    <ClCompile Include="$(CoreDir)ee\ee_jit64_mmi.cpp" />
+    <ClCompile Include="$(CoreDir)ee\ee_jittrans.cpp" />
+    <ClCompile Include="$(CoreDir)iop\cso_reader.cpp" />
+    <ClCompile Include="$(CoreDir)tests\iop\alu.cpp" />
+    <ClCompile Include="$(CoreDir)ee\bios_hle.cpp" />
+    <ClCompile Include="$(CoreDir)iop\cdvd.cpp" />
+    <ClCompile Include="$(CoreDir)ee\ipu\chromtable.cpp" />
+    <ClCompile Include="$(CoreDir)ee\ipu\codedblockpattern.cpp" />
+    <ClCompile Include="$(CoreDir)ee\cop0.cpp" />
+    <ClCompile Include="$(CoreDir)ee\cop1.cpp" />
+    <ClCompile Include="$(CoreDir)ee\ipu\dct_coeff.cpp" />
+    <ClCompile Include="$(CoreDir)ee\ipu\dct_coeff_table0.cpp" />
+    <ClCompile Include="$(CoreDir)ee\ipu\dct_coeff_table1.cpp" />
+    <ClCompile Include="$(CoreDir)ee\dmac.cpp" />
+    <ClCompile Include="$(CoreDir)jitcommon\emitter64.cpp" />
+    <ClCompile Include="$(CoreDir)ee\emotion.cpp" />
+    <ClCompile Include="$(CoreDir)ee\emotion_fpu.cpp" />
+    <ClCompile Include="$(CoreDir)ee\emotion_mmi.cpp" />
+    <ClCompile Include="$(CoreDir)ee\emotion_special.cpp" />
+    <ClCompile Include="$(CoreDir)ee\emotion_vu0.cpp" />
+    <ClCompile Include="$(CoreDir)ee\emotionasm.cpp" />
+    <ClCompile Include="$(CoreDir)ee\emotiondisasm.cpp" />
+    <ClCompile Include="$(CoreDir)ee\emotioninterpreter.cpp" />
+    <ClCompile Include="$(CoreDir)emulator.cpp" />
+    <ClCompile Include="$(QtDir)emuthread.cpp" />
+    <ClCompile Include="$(QtDir)emuwindow.cpp" />
+    <ClCompile Include="$(QtDir)renderwidget.cpp" />
+    <ClCompile Include="$(QtDir)settingswindow.cpp" />
+    <ClCompile Include="$(QtDir)gamelistwidget.cpp" />
+    <ClCompile Include="$(QtDir)bios.cpp" />
+    <ClCompile Include="$(CoreDir)errors.cpp" />
+    <ClCompile Include="$(CoreDir)iop\gamepad.cpp" />
+    <ClCompile Include="$(CoreDir)gif.cpp" />
+    <ClCompile Include="$(CoreDir)gs.cpp" />
+    <ClCompile Include="$(CoreDir)gscontext.cpp" />
+    <ClCompile Include="$(CoreDir)gsmem.cpp" />
+    <ClCompile Include="$(CoreDir)gsregisters.cpp" />
+    <ClCompile Include="$(CoreDir)gsthread.cpp" />
+    <ClCompile Include="$(CoreDir)ee\intc.cpp" />
+    <ClCompile Include="$(CoreDir)iop\iop.cpp" />
+    <ClCompile Include="$(CoreDir)iop\iop_cop0.cpp" />
+    <ClCompile Include="$(CoreDir)iop\iop_dma.cpp" />
+    <ClCompile Include="$(CoreDir)iop\iop_interpreter.cpp" />
+    <ClCompile Include="$(CoreDir)iop\iop_timers.cpp" />
+    <ClCompile Include="$(CoreDir)ee\ipu\ipu.cpp" />
+    <ClCompile Include="$(CoreDir)ee\ipu\ipu_fifo.cpp" />
+    <ClCompile Include="$(CoreDir)jitcommon\ir_block.cpp" />
+    <ClCompile Include="$(CoreDir)jitcommon\ir_instr.cpp" />
+    <ClCompile Include="$(CoreDir)jitcommon\jitcache.cpp" />
+    <ClCompile Include="$(CoreDir)ee\ipu\lumtable.cpp" />
+    <ClCompile Include="$(CoreDir)ee\ipu\mac_addr_inc.cpp" />
+    <ClCompile Include="$(CoreDir)ee\ipu\mac_b_pic.cpp" />
+    <ClCompile Include="$(CoreDir)ee\ipu\mac_i_pic.cpp" />
+    <ClCompile Include="$(CoreDir)ee\ipu\mac_p_pic.cpp" />
+    <ClCompile Include="$(QtDir)main.cpp" />
+    <ClCompile Include="$(CoreDir)iop\memcard.cpp" />
+    <ClCompile Include="$(CoreDir)ee\ipu\motioncode.cpp" />
+    <ClCompile Include="$(CoreDir)serialize.cpp" />
+    <ClCompile Include="$(QtDir)settings.cpp" />
+    <ClCompile Include="$(CoreDir)sif.cpp" />
+    <ClCompile Include="$(CoreDir)iop\sio2.cpp" />
+    <ClCompile Include="$(CoreDir)iop\spu.cpp" />
+    <ClCompile Include="$(CoreDir)ee\timers.cpp" />
+    <ClCompile Include="$(CoreDir)ee\vif.cpp" />
+    <ClCompile Include="$(CoreDir)ee\ipu\vlc_table.cpp" />
+    <ClCompile Include="$(CoreDir)ee\vu.cpp" />
+    <ClCompile Include="$(CoreDir)ee\vu_disasm.cpp" />
+    <ClCompile Include="$(CoreDir)ee\vu_interpreter.cpp" />
+    <ClCompile Include="$(CoreDir)ee\vu_jit.cpp" />
+    <ClCompile Include="$(CoreDir)ee\vu_jit64.cpp" />
+    <ClCompile Include="$(CoreDir)ee\vu_jittrans.cpp" />
+    <ClCompile Include="$(CoreDir)scheduler.cpp" />
   </ItemGroup>
   <!-- moc files -->
   <ItemGroup>
-    <QtMoc Include="..\src\qt\settings.hpp" />
-    <QtMoc Include="..\src\qt\emuthread.hpp" />
-    <QtMoc Include="..\src\qt\emuwindow.hpp" />
-    <QtMoc Include="..\src\qt\renderwidget.hpp" />
-    <QtMoc Include="..\src\qt\settingswindow.hpp" />
-    <QtMoc Include="..\src\qt\gamelistwidget.hpp" />
+    <QtMoc Include="$(QtDir)settings.hpp" />
+    <QtMoc Include="$(QtDir)emuthread.hpp" />
+    <QtMoc Include="$(QtDir)emuwindow.hpp" />
+    <QtMoc Include="$(QtDir)renderwidget.hpp" />
+    <QtMoc Include="$(QtDir)settingswindow.hpp" />
+    <QtMoc Include="$(QtDir)gamelistwidget.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(QtMocOutPrefix)settings.cpp" />
@@ -310,86 +289,86 @@
   </ItemGroup>
   <!-- headers -->
   <ItemGroup>
-    <ClInclude Include="..\src\core\ee\bios_hle.hpp" />
-    <ClInclude Include="..\src\core\ee\ee_jit.hpp" />
-    <ClInclude Include="..\src\core\ee\ee_jit64.hpp" />
-    <ClInclude Include="..\src\core\ee\ee_jittrans.hpp" />
-    <ClInclude Include="..\src\core\iop\cdvd.hpp" />
-    <ClInclude Include="..\src\core\ee\ipu\chromtable.hpp" />
-    <ClInclude Include="..\src\core\circularFIFO.hpp" />
-    <ClInclude Include="..\src\core\ee\ipu\codedblockpattern.hpp" />
-    <ClInclude Include="..\src\core\ee\cop0.hpp" />
-    <ClInclude Include="..\src\core\ee\cop1.hpp" />
-    <ClInclude Include="..\src\core\ee\ipu\dct_coeff.hpp" />
-    <ClInclude Include="..\src\core\ee\ipu\dct_coeff_table0.hpp" />
-    <ClInclude Include="..\src\core\ee\ipu\dct_coeff_table1.hpp" />
-    <ClInclude Include="..\src\core\ee\dmac.hpp" />
-    <ClInclude Include="..\src\core\iop\cso_reader.hpp" />
-    <ClInclude Include="..\src\core\jitcommon\emitter64.hpp" />
-    <ClInclude Include="..\src\core\ee\emotion.hpp" />
-    <ClInclude Include="..\src\core\ee\emotionasm.hpp" />
-    <ClInclude Include="..\src\core\ee\emotiondisasm.hpp" />
-    <ClInclude Include="..\src\core\ee\emotioninterpreter.hpp" />
-    <ClInclude Include="..\src\core\emulator.hpp" />
-    <ClInclude Include="..\src\qt\bios.hpp" />
-    <ClInclude Include="..\src\core\errors.hpp" />
-    <ClInclude Include="..\src\core\iop\gamepad.hpp" />
-    <ClInclude Include="..\src\core\gif.hpp" />
-    <ClInclude Include="..\src\core\gs.hpp" />
-    <ClInclude Include="..\src\core\gscontext.hpp" />
-    <ClInclude Include="..\src\core\gsmem.hpp" />
-    <ClInclude Include="..\src\core\gsregisters.hpp" />
-    <ClInclude Include="..\src\core\gsthread.hpp" />
-    <ClInclude Include="..\src\core\int128.hpp" />
-    <ClInclude Include="..\src\core\ee\intc.hpp" />
-    <ClInclude Include="..\src\core\iop\iop.hpp" />
-    <ClInclude Include="..\src\core\iop\iop_cop0.hpp" />
-    <ClInclude Include="..\src\core\iop\iop_dma.hpp" />
-    <ClInclude Include="..\src\core\iop\iop_interpreter.hpp" />
-    <ClInclude Include="..\src\core\iop\iop_timers.hpp" />
-    <ClInclude Include="..\src\core\ee\ipu\ipu.hpp" />
-    <ClInclude Include="..\src\core\ee\ipu\ipu_fifo.hpp" />
-    <ClInclude Include="..\src\core\jitcommon\ir_block.hpp" />
-    <ClInclude Include="..\src\core\jitcommon\ir_instr.hpp" />
-    <ClInclude Include="..\src\core\jitcommon\jitcache.hpp" />
-    <ClInclude Include="..\src\core\ee\ipu\lumtable.hpp" />
-    <ClInclude Include="..\src\core\ee\ipu\mac_addr_inc.hpp" />
-    <ClInclude Include="..\src\core\ee\ipu\mac_b_pic.hpp" />
-    <ClInclude Include="..\src\core\ee\ipu\mac_i_pic.hpp" />
-    <ClInclude Include="..\src\core\ee\ipu\mac_p_pic.hpp" />
-    <ClInclude Include="..\src\core\iop\memcard.hpp" />
-    <ClInclude Include="..\src\core\ee\ipu\motioncode.hpp" />
-    <ClInclude Include="..\src\core\sif.hpp" />
-    <ClInclude Include="..\src\core\iop\sio2.hpp" />
-    <ClInclude Include="..\src\core\iop\spu.hpp" />
-    <ClInclude Include="..\src\core\ee\timers.hpp" />
-    <ClInclude Include="..\src\core\ee\vif.hpp" />
-    <ClInclude Include="..\src\core\ee\ipu\vlc_table.hpp" />
-    <ClInclude Include="..\src\core\ee\vu.hpp" />
-    <ClInclude Include="..\src\core\ee\vu_disasm.hpp" />
-    <ClInclude Include="..\src\core\ee\vu_interpreter.hpp" />
-    <ClInclude Include="..\src\core\ee\vu_jit.hpp" />
-    <ClInclude Include="..\src\core\ee\vu_jit64.hpp" />
-    <ClInclude Include="..\src\core\ee\vu_jittrans.hpp" />
-    <ClInclude Include="..\src\core\scheduler.hpp" />
+    <ClInclude Include="$(CoreDir)ee\bios_hle.hpp" />
+    <ClInclude Include="$(CoreDir)ee\ee_jit.hpp" />
+    <ClInclude Include="$(CoreDir)ee\ee_jit64.hpp" />
+    <ClInclude Include="$(CoreDir)ee\ee_jittrans.hpp" />
+    <ClInclude Include="$(CoreDir)iop\cdvd.hpp" />
+    <ClInclude Include="$(CoreDir)ee\ipu\chromtable.hpp" />
+    <ClInclude Include="$(CoreDir)circularFIFO.hpp" />
+    <ClInclude Include="$(CoreDir)ee\ipu\codedblockpattern.hpp" />
+    <ClInclude Include="$(CoreDir)ee\cop0.hpp" />
+    <ClInclude Include="$(CoreDir)ee\cop1.hpp" />
+    <ClInclude Include="$(CoreDir)ee\ipu\dct_coeff.hpp" />
+    <ClInclude Include="$(CoreDir)ee\ipu\dct_coeff_table0.hpp" />
+    <ClInclude Include="$(CoreDir)ee\ipu\dct_coeff_table1.hpp" />
+    <ClInclude Include="$(CoreDir)ee\dmac.hpp" />
+    <ClInclude Include="$(CoreDir)iop\cso_reader.hpp" />
+    <ClInclude Include="$(CoreDir)jitcommon\emitter64.hpp" />
+    <ClInclude Include="$(CoreDir)ee\emotion.hpp" />
+    <ClInclude Include="$(CoreDir)ee\emotionasm.hpp" />
+    <ClInclude Include="$(CoreDir)ee\emotiondisasm.hpp" />
+    <ClInclude Include="$(CoreDir)ee\emotioninterpreter.hpp" />
+    <ClInclude Include="$(CoreDir)emulator.hpp" />
+    <ClInclude Include="$(QtDir)bios.hpp" />
+    <ClInclude Include="$(CoreDir)errors.hpp" />
+    <ClInclude Include="$(CoreDir)iop\gamepad.hpp" />
+    <ClInclude Include="$(CoreDir)gif.hpp" />
+    <ClInclude Include="$(CoreDir)gs.hpp" />
+    <ClInclude Include="$(CoreDir)gscontext.hpp" />
+    <ClInclude Include="$(CoreDir)gsmem.hpp" />
+    <ClInclude Include="$(CoreDir)gsregisters.hpp" />
+    <ClInclude Include="$(CoreDir)gsthread.hpp" />
+    <ClInclude Include="$(CoreDir)int128.hpp" />
+    <ClInclude Include="$(CoreDir)ee\intc.hpp" />
+    <ClInclude Include="$(CoreDir)iop\iop.hpp" />
+    <ClInclude Include="$(CoreDir)iop\iop_cop0.hpp" />
+    <ClInclude Include="$(CoreDir)iop\iop_dma.hpp" />
+    <ClInclude Include="$(CoreDir)iop\iop_interpreter.hpp" />
+    <ClInclude Include="$(CoreDir)iop\iop_timers.hpp" />
+    <ClInclude Include="$(CoreDir)ee\ipu\ipu.hpp" />
+    <ClInclude Include="$(CoreDir)ee\ipu\ipu_fifo.hpp" />
+    <ClInclude Include="$(CoreDir)jitcommon\ir_block.hpp" />
+    <ClInclude Include="$(CoreDir)jitcommon\ir_instr.hpp" />
+    <ClInclude Include="$(CoreDir)jitcommon\jitcache.hpp" />
+    <ClInclude Include="$(CoreDir)ee\ipu\lumtable.hpp" />
+    <ClInclude Include="$(CoreDir)ee\ipu\mac_addr_inc.hpp" />
+    <ClInclude Include="$(CoreDir)ee\ipu\mac_b_pic.hpp" />
+    <ClInclude Include="$(CoreDir)ee\ipu\mac_i_pic.hpp" />
+    <ClInclude Include="$(CoreDir)ee\ipu\mac_p_pic.hpp" />
+    <ClInclude Include="$(CoreDir)iop\memcard.hpp" />
+    <ClInclude Include="$(CoreDir)ee\ipu\motioncode.hpp" />
+    <ClInclude Include="$(CoreDir)sif.hpp" />
+    <ClInclude Include="$(CoreDir)iop\sio2.hpp" />
+    <ClInclude Include="$(CoreDir)iop\spu.hpp" />
+    <ClInclude Include="$(CoreDir)ee\timers.hpp" />
+    <ClInclude Include="$(CoreDir)ee\vif.hpp" />
+    <ClInclude Include="$(CoreDir)ee\ipu\vlc_table.hpp" />
+    <ClInclude Include="$(CoreDir)ee\vu.hpp" />
+    <ClInclude Include="$(CoreDir)ee\vu_disasm.hpp" />
+    <ClInclude Include="$(CoreDir)ee\vu_interpreter.hpp" />
+    <ClInclude Include="$(CoreDir)ee\vu_jit.hpp" />
+    <ClInclude Include="$(CoreDir)ee\vu_jit64.hpp" />
+    <ClInclude Include="$(CoreDir)ee\vu_jittrans.hpp" />
+    <ClInclude Include="$(CoreDir)scheduler.hpp" />
   </ItemGroup>
   <!-- jit stuff -->
   <ItemGroup>
-    <None Include="..\README.md" />
-    <None Include="..\src\core\jitcommon\ir_instrlist.inc" />
-    <None Include="..\appveyor.yml" />
-    <None Include="..\CMakeLists.txt" />
-    <None Include="..\LICENSE" />
-    <None Include="..\.gitignore" />
-    <None Include="..\CONTRIBUTING.md" />
+    <None Include="$(RootDir)README.md" />
+    <None Include="$(CoreDir)jitcommon\ir_instrlist.inc" />
+    <None Include="$(RootDir)appveyor.yml" />
+    <None Include="$(RootDir)CMakeLists.txt" />
+    <None Include="$(RootDir)LICENSE" />
+    <None Include="$(RootDir).gitignore" />
+    <None Include="$(RootDir)CONTRIBUTING.md" />
     <None Include="application\application.pro" />
   </ItemGroup>
   <ItemGroup>
-    <MASM Include="..\src\core\ee\ee_jit_asm.asm" />
-    <MASM Include="..\src\core\ee\vu_jit_asm.asm" />
+    <MASM Include="$(CoreDir)ee\ee_jit_asm.asm" />
+    <MASM Include="$(CoreDir)ee\vu_jit_asm.asm" />
   </ItemGroup>
   <ItemGroup>
-    <MASM Include="..\src\core\gsjit.asm">
+    <MASM Include="$(CoreDir)gsjit.asm">
       <FileType>Document</FileType>
     </MASM>
   </ItemGroup>
