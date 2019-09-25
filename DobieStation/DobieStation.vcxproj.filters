@@ -485,6 +485,11 @@
     </None>
     <None Include="..\README.md" />
     <None Include="..\appveyor.yml" />
+    <None Include="..\CMakeLists.txt" />
+    <None Include="..\LICENSE" />
+    <None Include="..\.gitignore" />
+    <None Include="..\CONTRIBUTING.md" />
+    <None Include="application\application.pro" />
   </ItemGroup>
   <ItemGroup>
     <MASM Include="..\src\core\ee\ee_jit_asm.asm">
