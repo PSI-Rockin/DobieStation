@@ -1,5 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
+  <!-- configurations -->
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Release Optimized|x64">
       <Configuration>Release Optimized</Configuration>
@@ -14,38 +16,41 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+
+  <!-- globals -->
   <PropertyGroup Label="Globals">
     <ProjectGuid>{A77564F4-56BB-3D08-8126-3FD5FC44F217}</ProjectGuid>
     <RootNamespace>libdeflate</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+
+  <!-- configuration defaults -->
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <PlatformToolset>$(DefaultPlatformToolset)</PlatformToolset>
+    <ATLMinimizesCRunTimeLibraryUsage>false</ATLMinimizesCRunTimeLibraryUsage>
+    <CharacterSet>Unicode</CharacterSet>
+    <PrimaryOutput>libdeflate</PrimaryOutput>
+  </PropertyGroup>
+
+  <!-- release -->
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <PlatformToolset>$(DefaultPlatformToolset)</PlatformToolset>
     <OutputDirectory>release\</OutputDirectory>
-    <ATLMinimizesCRunTimeLibraryUsage>false</ATLMinimizesCRunTimeLibraryUsage>
-    <CharacterSet>NotSet</CharacterSet>
-    <ConfigurationType>StaticLibrary</ConfigurationType>
     <IntermediateDirectory>release\</IntermediateDirectory>
-    <PrimaryOutput>libdeflate</PrimaryOutput>
   </PropertyGroup>
+
+  <!-- release optimized -->
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release Optimized|x64'" Label="Configuration">
-    <PlatformToolset>$(DefaultPlatformToolset)</PlatformToolset>
     <OutputDirectory>release\</OutputDirectory>
-    <ATLMinimizesCRunTimeLibraryUsage>false</ATLMinimizesCRunTimeLibraryUsage>
-    <CharacterSet>NotSet</CharacterSet>
-    <ConfigurationType>StaticLibrary</ConfigurationType>
     <IntermediateDirectory>release\</IntermediateDirectory>
-    <PrimaryOutput>libdeflate</PrimaryOutput>
   </PropertyGroup>
+
+  <!-- debug -->
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <PlatformToolset>$(DefaultPlatformToolset)</PlatformToolset>
     <OutputDirectory>debug\</OutputDirectory>
-    <ATLMinimizesCRunTimeLibraryUsage>false</ATLMinimizesCRunTimeLibraryUsage>
-    <CharacterSet>NotSet</CharacterSet>
-    <ConfigurationType>StaticLibrary</ConfigurationType>
     <IntermediateDirectory>debug\</IntermediateDirectory>
-    <PrimaryOutput>libdeflate</PrimaryOutput>
   </PropertyGroup>
+
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings" />
   <ImportGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="PropertySheets">
