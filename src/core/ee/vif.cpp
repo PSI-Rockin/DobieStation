@@ -36,6 +36,7 @@ void VectorInterface::reset()
     vif_stop = false;
     mark_detected = false;
     flush_stall = false;
+    fifo_reverse = false;
 
     if (id)
         mem_mask = 0x3FF;
