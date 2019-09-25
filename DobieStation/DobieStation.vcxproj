@@ -61,15 +61,9 @@
   </ImportGroup>
   <ImportGroup Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" />
+    <Import Project="common.props" />
     <Import Project="qt.props" />
   </ImportGroup>
-  <PropertyGroup Label="UserMacros">
-    <RootDir>$(SolutionDir)..\</RootDir>
-    <SrcDir>$(RootDir)\src\</SrcDir>
-    <QtDir>$(SrcDir)\qt\</QtDir>
-    <CoreDir>$(SrcDir)\core\</CoreDir>
-    <ExtDir>$(RootDir)\ext\</ExtDir>
-  </PropertyGroup>
   <PropertyGroup>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">release\</OutDir>
     <OutDir Condition="'$(Configuration)|$(Platform)'=='Release Optimized|x64'">release\</OutDir>
@@ -87,105 +81,11 @@
     <IgnoreImportLibrary Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</IgnoreImportLibrary>
   </PropertyGroup>
 
-  <!-- base compile -->
-  <ItemDefinitionGroup>
-    <ClCompile>
-      <!-- Warnings -->
-      <WarningLevel>Level4</WarningLevel>
-      <!-- disable some conversion errors -->
-      <DisableSpecificWarnings>4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
-
-      <!-- includes -->
-      <AdditionalIncludeDirectories>$(QtDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories>$(ExtDir)\libdeflate;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <DisableSpecificWarnings>4577;4467;%(DisableSpecificWarnings)</DisableSpecificWarnings>
-
-      <!-- preprocessor-->
-      <PreprocessToFile>false</PreprocessToFile>
-      <PreprocessorDefinitions>_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PreprocessorDefinitions>UNICODE;_UNICODE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PreprocessorDefinitions>WIN32;WIN64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PreprocessorDefinitions>WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <PreprocessorDefinitions>NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-
-      <!-- compiler -->
-      <AdditionalOptions>-Zc:rvalueCast -Zc:inline -Zc:strictStrings -Zc:throwingNew -Zc:referenceBinding %(AdditionalOptions)</AdditionalOptions>
-      <AdditionalOptions>-w34100 -w34189 -w44996 -w44456 -w44457 -w44458 %(AdditionalOptions)</AdditionalOptions>
-
-      <ObjectFileName>$(IntDir)</ObjectFileName>
-      <BrowseInformation>false</BrowseInformation>
-      <ExceptionHandling>Sync</ExceptionHandling>
-      <MultiProcessorCompilation>true</MultiProcessorCompilation>
-      <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
-
-      <ProgramDataBaseFileName>$(IntDir)vc$(PlatformToolsetVersion).pdb</ProgramDataBaseFileName>
-    </ClCompile>
-  </ItemDefinitionGroup>
-
   <!-- default link -->
   <ItemDefinitionGroup>
     <Link>
-      <SuppressStartupBanner>true</SuppressStartupBanner>
       <OutputFile>$(OutDir)\DobieStation.exe</OutputFile>
       <SubSystem>Console</SubSystem>
-      <RandomizedBaseAddress>true</RandomizedBaseAddress>
-      <IgnoreImportLibrary>true</IgnoreImportLibrary>
-      <DataExecutionPrevention>true</DataExecutionPrevention>
-    </Link>
-  </ItemDefinitionGroup>
-
-  <!-- release compile -->
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <ClCompile>
-      <AssemblerListingLocation>release\</AssemblerListingLocation>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <Optimization>MaxSpeed</Optimization>
-      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
-      <SuppressStartupBanner>true</SuppressStartupBanner>
-      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-    </ClCompile>
-    <Link>
-      <AdditionalDependencies>.\libdeflate\release\libdeflate.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
-      <LinkIncremental>false</LinkIncremental>
-    </Link>
-  </ItemDefinitionGroup>
-
-  <!-- release optimized compile -->
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release Optimized|x64'">
-    <ClCompile>
-      <AssemblerListingLocation>release\</AssemblerListingLocation>
-      <DebugInformationFormat>None</DebugInformationFormat>
-      <Optimization>MaxSpeed</Optimization>
-      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
-      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
-      <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
-      <EnableFiberSafeOptimizations>true</EnableFiberSafeOptimizations>
-      <WholeProgramOptimization>true</WholeProgramOptimization>
-      <IntrinsicFunctions>false</IntrinsicFunctions>
-    </ClCompile>
-    <Link>
-      <AdditionalDependencies>.\libdeflate\release\libdeflate.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <GenerateDebugInformation>false</GenerateDebugInformation>
-      <LinkIncremental>false</LinkIncremental>
-      <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
-    </Link>
-  </ItemDefinitionGroup>
-
-  <!-- debug compile -->
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <ClCompile>
-      <AssemblerListingLocation>debug\</AssemblerListingLocation>
-      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <Optimization>Disabled</Optimization>
-      <PreprocessorDefinitions>_DEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
-    </ClCompile>
-    <Link>
-      <AdditionalDependencies>.\libdeflate\debug\libdeflate.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
 
@@ -221,12 +121,12 @@
     <ClCompile Include="$(CoreDir)ee\emotiondisasm.cpp" />
     <ClCompile Include="$(CoreDir)ee\emotioninterpreter.cpp" />
     <ClCompile Include="$(CoreDir)emulator.cpp" />
-    <ClCompile Include="$(QtDir)emuthread.cpp" />
-    <ClCompile Include="$(QtDir)emuwindow.cpp" />
-    <ClCompile Include="$(QtDir)renderwidget.cpp" />
-    <ClCompile Include="$(QtDir)settingswindow.cpp" />
-    <ClCompile Include="$(QtDir)gamelistwidget.cpp" />
-    <ClCompile Include="$(QtDir)bios.cpp" />
+    <ClCompile Include="$(UIDir)emuthread.cpp" />
+    <ClCompile Include="$(UIDir)emuwindow.cpp" />
+    <ClCompile Include="$(UIDir)renderwidget.cpp" />
+    <ClCompile Include="$(UIDir)settingswindow.cpp" />
+    <ClCompile Include="$(UIDir)gamelistwidget.cpp" />
+    <ClCompile Include="$(UIDir)bios.cpp" />
     <ClCompile Include="$(CoreDir)errors.cpp" />
     <ClCompile Include="$(CoreDir)iop\gamepad.cpp" />
     <ClCompile Include="$(CoreDir)gif.cpp" />
@@ -251,11 +151,11 @@
     <ClCompile Include="$(CoreDir)ee\ipu\mac_b_pic.cpp" />
     <ClCompile Include="$(CoreDir)ee\ipu\mac_i_pic.cpp" />
     <ClCompile Include="$(CoreDir)ee\ipu\mac_p_pic.cpp" />
-    <ClCompile Include="$(QtDir)main.cpp" />
+    <ClCompile Include="$(UIDir)main.cpp" />
     <ClCompile Include="$(CoreDir)iop\memcard.cpp" />
     <ClCompile Include="$(CoreDir)ee\ipu\motioncode.cpp" />
     <ClCompile Include="$(CoreDir)serialize.cpp" />
-    <ClCompile Include="$(QtDir)settings.cpp" />
+    <ClCompile Include="$(UIDir)settings.cpp" />
     <ClCompile Include="$(CoreDir)sif.cpp" />
     <ClCompile Include="$(CoreDir)iop\sio2.cpp" />
     <ClCompile Include="$(CoreDir)iop\spu.cpp" />
@@ -272,12 +172,12 @@
   </ItemGroup>
   <!-- moc files -->
   <ItemGroup>
-    <QtMoc Include="$(QtDir)settings.hpp" />
-    <QtMoc Include="$(QtDir)emuthread.hpp" />
-    <QtMoc Include="$(QtDir)emuwindow.hpp" />
-    <QtMoc Include="$(QtDir)renderwidget.hpp" />
-    <QtMoc Include="$(QtDir)settingswindow.hpp" />
-    <QtMoc Include="$(QtDir)gamelistwidget.hpp" />
+    <QtMoc Include="$(UIDir)settings.hpp" />
+    <QtMoc Include="$(UIDir)emuthread.hpp" />
+    <QtMoc Include="$(UIDir)emuwindow.hpp" />
+    <QtMoc Include="$(UIDir)renderwidget.hpp" />
+    <QtMoc Include="$(UIDir)settingswindow.hpp" />
+    <QtMoc Include="$(UIDir)gamelistwidget.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(QtMocOutPrefix)settings.cpp" />
@@ -310,7 +210,7 @@
     <ClInclude Include="$(CoreDir)ee\emotiondisasm.hpp" />
     <ClInclude Include="$(CoreDir)ee\emotioninterpreter.hpp" />
     <ClInclude Include="$(CoreDir)emulator.hpp" />
-    <ClInclude Include="$(QtDir)bios.hpp" />
+    <ClInclude Include="$(UIDir)bios.hpp" />
     <ClInclude Include="$(CoreDir)errors.hpp" />
     <ClInclude Include="$(CoreDir)iop\gamepad.hpp" />
     <ClInclude Include="$(CoreDir)gif.hpp" />

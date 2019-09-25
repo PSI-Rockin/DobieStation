@@ -46,7 +46,6 @@
 		<MocDefines>-DQT_USE_QSTRINGBUILDER -DQT_NO_CAST_FROM_ASCII -DQT_NO_CAST_TO_ASCII -DQT_DLL -DQT_CORE_LIB -DQT_GUI_LIB -DQT_WIDGETS_LIB -D_SECURE_SCL=0 -D_ARCH_64=1 -D_M_X86_64=1 -D_M_X86=1 -DUSE_UPNP -D_CRT_SECURE_NO_WARNINGS -D_CRT_SECURE_NO_DEPRECATE -D_UNICODE -DUNICODE</MocDefines>
 		<MocDefines Condition="'$(Configuration)'=='Release'">-DQT_NO_DEBUG -DNDEBUG $(MocDefines)</MocDefines>
 		<MocIncludes>"-I$(QtIncludeDir)QtWidgets" "-I$(QtIncludeDir)QtGui" "-I$(QtIncludeDir)QtCore" "-I$(QtIncludeDir) " "-I$(QtToolOutDir) " -I.</MocIncludes>
-		<MocIncludes>"-I$(ExternalsDir)xxhash" "-I$(ExternalsDir)zlib" "-I$(ExternalsDir)SFML\include" "-I$(ExternalsDir)mbedtls\include" "-I$(ExternalsDir)miniupnpc\src" "-I$(ExternalsDir)LZO" "-I$(ExternalsDir)libusbx\libusb" "-I$(ExternalsDir)libpng" "-I$(ExternalsDir)GL" "-I$(ExternalsDir)Bochs_disasm" "-I$(ExternalsDir) " "-I$(CoreDir) " $(MocIncludes)</MocIncludes>
 	</PropertyGroup>
 	<Target Name="QtMoc"
 		BeforeTargets="ClCompile"
