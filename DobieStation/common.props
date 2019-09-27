@@ -13,10 +13,9 @@
     <IgnoreImportLibrary>true</IgnoreImportLibrary>
     <IntDir>$(BuildDir)$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
     <OutDir>$(BinDir)</OutDir>
-    <LinkIncremental Condition="'$(Configuration)'=='Release'">false</LinkIncremental>
-    <LinkIncremental Condition="'$(Configuration)'=='Release Optimized'">false</LinkIncremental>
 
     <Postfix>-debug</Postfix>
+    <Postfix Condition="'$(Configuration)'=='Devel'">-devel</Postfix>
     <Postfix Condition="'$(Configuration)'=='Release Optimized'">-optum</Postfix>
     <Postfix Condition="'$(Configuration)'=='Release'"></Postfix>
   </PropertyGroup>
@@ -32,7 +31,6 @@
       <!-- includes -->
       <AdditionalIncludeDirectories>$(UIDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories>$(ExtDir)\libdeflate;$(ExtDir)\libdeflate\common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <DisableSpecificWarnings>4577;4467;%(DisableSpecificWarnings)</DisableSpecificWarnings>
 
       <!-- preprocessor-->
       <PreprocessToFile>false</PreprocessToFile>
@@ -77,7 +75,7 @@
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
     </ClCompile>
     <Link>
-      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <GenerateDebugInformation>false</GenerateDebugInformation>
       <LinkIncremental>false</LinkIncremental>
     </Link>
   </ItemDefinitionGroup>
@@ -100,6 +98,23 @@
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <LinkIncremental>false</LinkIncremental>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
+    </Link>
+  </ItemDefinitionGroup>
+
+  <!-- devel compile -->
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Devel'">
+    <ClCompile>
+      <AssemblerListingLocation>release\</AssemblerListingLocation>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <Optimization>MaxSpeed</Optimization>
+      <PreprocessorDefinitions>NDEBUG;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <SuppressStartupBanner>true</SuppressStartupBanner>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
+    </ClCompile>
+    <Link>
+      <GenerateDebugInformation>true</GenerateDebugInformation>
+      <LinkIncremental>false</LinkIncremental>
     </Link>
   </ItemDefinitionGroup>
 
