@@ -25,12 +25,14 @@
   <PropertyGroup Label="Globals">
     <ProjectGuid>{353E9072-F9AB-35F7-8AFF-FAC3EA8AFEE0}</ProjectGuid>
     <WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>
+    <ProjectName>Core</ProjectName>
   </PropertyGroup>
+
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
 
   <!-- configuration defaults -->
   <PropertyGroup Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
     <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
@@ -45,6 +47,7 @@
     <UseDebugLibraries>false</UseDebugLibraries>
   </PropertyGroup>
 
+  <!-- devel -->
   <PropertyGroup Condition="'$(Configuration)'=='Devel'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
   </PropertyGroup>
@@ -64,7 +67,6 @@
   <ImportGroup Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" />
     <Import Project="common.props" />
-    <Import Project="qt.props" />
   </ImportGroup>
 
   <PropertyGroup>
@@ -74,8 +76,7 @@
   <!-- default link -->
   <ItemDefinitionGroup>
     <Link>
-      <OutputFile>$(OutDir)\$(ProjectName)$(Postfix).exe</OutputFile>
-      <SubSystem>Console</SubSystem>
+      <OutputFile>$(BinDir)\$(ProjectName)$(Postfix).lib</OutputFile>
     </Link>
   </ItemDefinitionGroup>
 
@@ -111,12 +112,6 @@
     <ClCompile Include="$(CoreDir)ee\emotiondisasm.cpp" />
     <ClCompile Include="$(CoreDir)ee\emotioninterpreter.cpp" />
     <ClCompile Include="$(CoreDir)emulator.cpp" />
-    <ClCompile Include="$(UIDir)emuthread.cpp" />
-    <ClCompile Include="$(UIDir)emuwindow.cpp" />
-    <ClCompile Include="$(UIDir)renderwidget.cpp" />
-    <ClCompile Include="$(UIDir)settingswindow.cpp" />
-    <ClCompile Include="$(UIDir)gamelistwidget.cpp" />
-    <ClCompile Include="$(UIDir)bios.cpp" />
     <ClCompile Include="$(CoreDir)errors.cpp" />
     <ClCompile Include="$(CoreDir)iop\gamepad.cpp" />
     <ClCompile Include="$(CoreDir)gif.cpp" />
@@ -141,11 +136,9 @@
     <ClCompile Include="$(CoreDir)ee\ipu\mac_b_pic.cpp" />
     <ClCompile Include="$(CoreDir)ee\ipu\mac_i_pic.cpp" />
     <ClCompile Include="$(CoreDir)ee\ipu\mac_p_pic.cpp" />
-    <ClCompile Include="$(UIDir)main.cpp" />
     <ClCompile Include="$(CoreDir)iop\memcard.cpp" />
     <ClCompile Include="$(CoreDir)ee\ipu\motioncode.cpp" />
     <ClCompile Include="$(CoreDir)serialize.cpp" />
-    <ClCompile Include="$(UIDir)settings.cpp" />
     <ClCompile Include="$(CoreDir)sif.cpp" />
     <ClCompile Include="$(CoreDir)iop\sio2.cpp" />
     <ClCompile Include="$(CoreDir)iop\spu.cpp" />
@@ -159,25 +152,6 @@
     <ClCompile Include="$(CoreDir)ee\vu_jit64.cpp" />
     <ClCompile Include="$(CoreDir)ee\vu_jittrans.cpp" />
     <ClCompile Include="$(CoreDir)scheduler.cpp" />
-  </ItemGroup>
-
-  <!-- moc files -->
-  <ItemGroup>
-    <QtMoc Include="$(UIDir)settings.hpp" />
-    <QtMoc Include="$(UIDir)emuthread.hpp" />
-    <QtMoc Include="$(UIDir)emuwindow.hpp" />
-    <QtMoc Include="$(UIDir)renderwidget.hpp" />
-    <QtMoc Include="$(UIDir)settingswindow.hpp" />
-    <QtMoc Include="$(UIDir)gamelistwidget.hpp" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ClCompile Include="$(QtMocOutPrefix)settings.cpp" />
-    <ClCompile Include="$(QtMocOutPrefix)emuthread.cpp" />
-    <ClCompile Include="$(QtMocOutPrefix)emuwindow.cpp" />
-    <ClCompile Include="$(QtMocOutPrefix)renderwidget.cpp" />
-    <ClCompile Include="$(QtMocOutPrefix)settingswindow.cpp" />
-    <ClCompile Include="$(QtMocOutPrefix)gamelistwidget.cpp" />
   </ItemGroup>
 
   <!-- headers -->
@@ -203,7 +177,6 @@
     <ClInclude Include="$(CoreDir)ee\emotiondisasm.hpp" />
     <ClInclude Include="$(CoreDir)ee\emotioninterpreter.hpp" />
     <ClInclude Include="$(CoreDir)emulator.hpp" />
-    <ClInclude Include="$(UIDir)bios.hpp" />
     <ClInclude Include="$(CoreDir)errors.hpp" />
     <ClInclude Include="$(CoreDir)iop\gamepad.hpp" />
     <ClInclude Include="$(CoreDir)gif.hpp" />
@@ -262,11 +235,7 @@
   <ItemGroup>
     <MASM Include="$(CoreDir)ee\ee_jit_asm.asm" />
     <MASM Include="$(CoreDir)ee\vu_jit_asm.asm" />
-  </ItemGroup>
-  <ItemGroup>
-    <MASM Include="$(CoreDir)gsjit.asm">
-      <FileType>Document</FileType>
-    </MASM>
+    <MASM Include="$(CoreDir)gsjit.asm" />
   </ItemGroup>
 
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

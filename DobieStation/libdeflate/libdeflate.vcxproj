@@ -53,7 +53,7 @@
 
   <ItemDefinitionGroup>
     <Lib>
-      <OutputFile>$(BinDir)\libdeflate$(Postfix).lib</OutputFile>
+      <OutputFile>$(BinDir)\$(ProjectName)$(Postfix).lib</OutputFile>
     </Lib>
   </ItemDefinitionGroup>
 

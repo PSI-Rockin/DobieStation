@@ -59,6 +59,7 @@
       <RandomizedBaseAddress>true</RandomizedBaseAddress>
       <IgnoreImportLibrary>true</IgnoreImportLibrary>
       <DataExecutionPrevention>true</DataExecutionPrevention>
+      <AdditionalDependencies>$(BinDir)\Core$(Postfix).lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies>$(BinDir)\libdeflate$(Postfix).lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
