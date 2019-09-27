@@ -3,10 +3,22 @@
   <ImportGroup Label="PropertySheets" />
   <PropertyGroup Label="UserMacros">
     <RootDir>$(SolutionDir)..\</RootDir>
-    <SrcDir>$(RootDir)\src\</SrcDir>
-    <UIDir>$(SrcDir)\qt\</UIDir>
-    <CoreDir>$(SrcDir)\core\</CoreDir>
-    <ExtDir>$(RootDir)\ext\</ExtDir> 
+    <SrcDir>$(RootDir)src\</SrcDir>
+    <UIDir>$(SrcDir)qt\</UIDir>
+    <CoreDir>$(SrcDir)core\</CoreDir>
+    <ExtDir>$(RootDir)ext\</ExtDir>
+    <BuildDir>$(RootDir)build\</BuildDir>
+    <BinDir>$(BuildDir)bin\</BinDir>
+
+    <IgnoreImportLibrary>true</IgnoreImportLibrary>
+    <IntDir>$(BuildDir)$(Platform)\$(Configuration)\$(ProjectName)\</IntDir>
+    <OutDir>$(BinDir)</OutDir>
+    <LinkIncremental Condition="'$(Configuration)'=='Release'">false</LinkIncremental>
+    <LinkIncremental Condition="'$(Configuration)'=='Release Optimized'">false</LinkIncremental>
+
+    <Postfix>-debug</Postfix>
+    <Postfix Condition="'$(Configuration)'=='Release Optimized'">-optum</Postfix>
+    <Postfix Condition="'$(Configuration)'=='Release'"></Postfix>
   </PropertyGroup>
 
   <!-- base compile -->
@@ -34,8 +46,6 @@
       <AdditionalOptions>-Zc:rvalueCast -Zc:inline -Zc:strictStrings -Zc:throwingNew -Zc:referenceBinding %(AdditionalOptions)</AdditionalOptions>
       <AdditionalOptions>-w34100 -w34189 -w44996 -w44456 -w44457 -w44458 %(AdditionalOptions)</AdditionalOptions>
 
-      <ObjectFileName>$(IntDir)</ObjectFileName>
-      <BrowseInformation>false</BrowseInformation>
       <ExceptionHandling>Sync</ExceptionHandling>
       <MultiProcessorCompilation>true</MultiProcessorCompilation>
       <TreatWChar_tAsBuiltInType>true</TreatWChar_tAsBuiltInType>
@@ -51,11 +61,12 @@
       <RandomizedBaseAddress>true</RandomizedBaseAddress>
       <IgnoreImportLibrary>true</IgnoreImportLibrary>
       <DataExecutionPrevention>true</DataExecutionPrevention>
+      <AdditionalDependencies>$(BinDir)\libdeflate$(Postfix).lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
 
   <!-- release compile -->
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Release'">
     <ClCompile>
       <AssemblerListingLocation>release\</AssemblerListingLocation>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -66,14 +77,13 @@
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>.\libdeflate\release\libdeflate.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <LinkIncremental>false</LinkIncremental>
     </Link>
   </ItemDefinitionGroup>
 
   <!-- release optimized compile -->
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release Optimized|x64'">
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Release Optimized'">
     <ClCompile>
       <AssemblerListingLocation>release\</AssemblerListingLocation>
       <DebugInformationFormat>None</DebugInformationFormat>
@@ -87,7 +97,6 @@
       <IntrinsicFunctions>false</IntrinsicFunctions>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>.\libdeflate\release\libdeflate.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>false</GenerateDebugInformation>
       <LinkIncremental>false</LinkIncremental>
       <LinkTimeCodeGeneration>UseLinkTimeCodeGeneration</LinkTimeCodeGeneration>
@@ -95,7 +104,7 @@
   </ItemDefinitionGroup>
 
   <!-- debug compile -->
-  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+  <ItemDefinitionGroup Condition="'$(Configuration)'=='Debug'">
     <ClCompile>
       <AssemblerListingLocation>debug\</AssemblerListingLocation>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -104,7 +113,6 @@
       <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
-      <AdditionalDependencies>.\libdeflate\debug\libdeflate.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>

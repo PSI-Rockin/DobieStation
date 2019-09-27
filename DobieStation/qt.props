@@ -16,7 +16,7 @@
 			<QtDebugSuffix>d</QtDebugSuffix>
 			<QtLibSuffix Condition="'$(Configuration)'=='Debug'">$(QtDebugSuffix)</QtLibSuffix>
 			<QtPluginFolder>QtPlugins</QtPluginFolder>
-			<BinaryOutputDir>$(ProjectDir)$(OutputDirectory)</BinaryOutputDir>
+			<BinaryOutputDir>$(BinDir)</BinaryOutputDir>
 	</PropertyGroup>
 	<ItemDefinitionGroup>
 		<ClCompile>

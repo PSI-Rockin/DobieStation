@@ -35,7 +35,7 @@ source /opt/qt511/bin/qt511-env.sh
 Alternatively, you may upgrade to the most recent Ubuntu LTS, 18.04.
 
 ### Building with Visual Studio
-Dobiestation is known to compile on 2015 and 2017.
+Dobiestation is known to compile on 2017 and 2019.
 
 Before opening Visual Studio, you must set the `QTDIR` environment variable to your 64 bit QT install.
 For example on Visual Studio 2017: `C:\path\to\qt\5.12.1\msvc2017_64`

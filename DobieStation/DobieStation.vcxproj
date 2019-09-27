@@ -20,7 +20,7 @@
   <!-- globals -->
   <PropertyGroup Label="Globals">
     <ProjectGuid>{353E9072-F9AB-35F7-8AFF-FAC3EA8AFEE0}</ProjectGuid>
-    <RootNamespace>DobieStation</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
 
@@ -28,30 +28,22 @@
   <PropertyGroup Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
-    <PlatformToolset>$(DefaultPlatformToolset)</PlatformToolset>
-    <PrimaryOutput>DobieStation</PrimaryOutput>
-    <ATLMinimizesCRunTimeLibraryUsage>false</ATLMinimizesCRunTimeLibraryUsage>
+    <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
 
   <!-- release -->
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <OutputDirectory>release\</OutputDirectory>
-    <IntermediateDirectory>release\</IntermediateDirectory>
+  <PropertyGroup Condition="'$(Configuration)'=='Release'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
   </PropertyGroup>
 
   <!-- optimized release -->
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release Optimized|x64'" Label="Configuration">
-    <OutputDirectory>release\</OutputDirectory>
-    <IntermediateDirectory>release\</IntermediateDirectory>
+  <PropertyGroup Condition="'$(Configuration)'=='Release Optimized'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
   </PropertyGroup>
 
   <!-- debug -->
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <OutputDirectory>debug\</OutputDirectory>
-    <IntermediateDirectory>debug\</IntermediateDirectory>
-    <UseDebugLibraries>false</UseDebugLibraries>
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
   </PropertyGroup>
 
   <!-- props -->
@@ -59,32 +51,22 @@
   <ImportGroup Label="ExtensionSettings">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.props" />
   </ImportGroup>
+
+  <!-- prop includes -->
   <ImportGroup Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" />
     <Import Project="common.props" />
     <Import Project="qt.props" />
   </ImportGroup>
+
   <PropertyGroup>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">release\</OutDir>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release Optimized|x64'">release\</OutDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(Platform)\$(Configuration)\</IntDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release Optimized|x64'">$(Platform)\$(Configuration)\</IntDir>
-    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">DobieStation</TargetName>
-    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release Optimized|x64'">DobieStation</TargetName>
-    <IgnoreImportLibrary Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</IgnoreImportLibrary>
-    <IgnoreImportLibrary Condition="'$(Configuration)|$(Platform)'=='Release Optimized|x64'">true</IgnoreImportLibrary>
-    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release|x64'">false</LinkIncremental>
-    <LinkIncremental Condition="'$(Configuration)|$(Platform)'=='Release Optimized|x64'">false</LinkIncremental>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">debug\</OutDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(Platform)\$(Configuration)\</IntDir>
-    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">DobieStation</TargetName>
-    <IgnoreImportLibrary Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</IgnoreImportLibrary>
+    <TargetName>$(ProjectName)$(Postfix)</TargetName>
   </PropertyGroup>
 
   <!-- default link -->
   <ItemDefinitionGroup>
     <Link>
-      <OutputFile>$(OutDir)\DobieStation.exe</OutputFile>
+      <OutputFile>$(OutDir)\$(ProjectName)$(Postfix).exe</OutputFile>
       <SubSystem>Console</SubSystem>
     </Link>
   </ItemDefinitionGroup>
@@ -170,6 +152,7 @@
     <ClCompile Include="$(CoreDir)ee\vu_jittrans.cpp" />
     <ClCompile Include="$(CoreDir)scheduler.cpp" />
   </ItemGroup>
+
   <!-- moc files -->
   <ItemGroup>
     <QtMoc Include="$(UIDir)settings.hpp" />
@@ -179,6 +162,7 @@
     <QtMoc Include="$(UIDir)settingswindow.hpp" />
     <QtMoc Include="$(UIDir)gamelistwidget.hpp" />
   </ItemGroup>
+
   <ItemGroup>
     <ClCompile Include="$(QtMocOutPrefix)settings.cpp" />
     <ClCompile Include="$(QtMocOutPrefix)emuthread.cpp" />
@@ -187,6 +171,7 @@
     <ClCompile Include="$(QtMocOutPrefix)settingswindow.cpp" />
     <ClCompile Include="$(QtMocOutPrefix)gamelistwidget.cpp" />
   </ItemGroup>
+
   <!-- headers -->
   <ItemGroup>
     <ClInclude Include="$(CoreDir)ee\bios_hle.hpp" />
@@ -252,7 +237,8 @@
     <ClInclude Include="$(CoreDir)ee\vu_jittrans.hpp" />
     <ClInclude Include="$(CoreDir)scheduler.hpp" />
   </ItemGroup>
-  <!-- jit stuff -->
+
+  <!-- misc -->
   <ItemGroup>
     <None Include="$(RootDir)README.md" />
     <None Include="$(CoreDir)jitcommon\ir_instrlist.inc" />
@@ -263,6 +249,8 @@
     <None Include="$(RootDir)CONTRIBUTING.md" />
     <None Include="application\application.pro" />
   </ItemGroup>
+
+  <!-- jit stuff -->
   <ItemGroup>
     <MASM Include="$(CoreDir)ee\ee_jit_asm.asm" />
     <MASM Include="$(CoreDir)ee\vu_jit_asm.asm" />
@@ -272,7 +260,9 @@
       <FileType>Document</FileType>
     </MASM>
   </ItemGroup>
+
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+
   <ImportGroup Label="ExtensionTargets">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
   </ImportGroup>

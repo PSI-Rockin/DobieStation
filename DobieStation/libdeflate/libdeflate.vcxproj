@@ -20,65 +20,40 @@
   <!-- globals -->
   <PropertyGroup Label="Globals">
     <ProjectGuid>{A77564F4-56BB-3D08-8126-3FD5FC44F217}</ProjectGuid>
-    <RootNamespace>libdeflate</RootNamespace>
+    <WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
+
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
 
   <!-- configuration defaults -->
   <PropertyGroup Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>$(DefaultPlatformToolset)</PlatformToolset>
-    <ATLMinimizesCRunTimeLibraryUsage>false</ATLMinimizesCRunTimeLibraryUsage>
+    <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
-    <PrimaryOutput>libdeflate</PrimaryOutput>
-  </PropertyGroup>
-
-  <!-- release -->
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <OutputDirectory>release\</OutputDirectory>
-    <IntermediateDirectory>release\</IntermediateDirectory>
-  </PropertyGroup>
-
-  <!-- release optimized -->
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release Optimized|x64'" Label="Configuration">
-    <OutputDirectory>release\</OutputDirectory>
-    <IntermediateDirectory>release\</IntermediateDirectory>
-  </PropertyGroup>
-
-  <!-- debug -->
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <OutputDirectory>debug\</OutputDirectory>
-    <IntermediateDirectory>debug\</IntermediateDirectory>
   </PropertyGroup>
 
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings" />
+
+  <!-- prop includes -->
   <ImportGroup Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" />
     <Import Project="..\common.props" />
   </ImportGroup>
+
   <PropertyGroup Label="UserMacros" />
+
   <PropertyGroup>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">.\release\</OutDir>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Release Optimized|x64'">.\release\</OutDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release|x64'">$(Platform)\$(Configuration)\</IntDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='Release Optimized|x64'">$(Platform)\$(Configuration)\</IntDir>
-    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release|x64'">libdeflate</TargetName>
-    <TargetName Condition="'$(Configuration)|$(Platform)'=='Release Optimized|x64'">libdeflate</TargetName>
-    <IgnoreImportLibrary Condition="'$(Configuration)|$(Platform)'=='Release|x64'">true</IgnoreImportLibrary>
-    <IgnoreImportLibrary Condition="'$(Configuration)|$(Platform)'=='Release Optimized|x64'">true</IgnoreImportLibrary>
-    <OutDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">.\debug\</OutDir>
-    <IntDir Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(Platform)\$(Configuration)\</IntDir>
-    <TargetName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">libdeflate</TargetName>
-    <IgnoreImportLibrary Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</IgnoreImportLibrary>
+    <TargetName>$(ProjectName)$(Postfix)</TargetName>
   </PropertyGroup>
 
   <ItemDefinitionGroup>
     <Lib>
-      <OutputFile>$(OutDir)\libdeflate.lib</OutputFile>
+      <OutputFile>$(BinDir)\libdeflate$(Postfix).lib</OutputFile>
     </Lib>
   </ItemDefinitionGroup>
 
+  <!-- c files -->
   <ItemGroup>
     <ClCompile Include="$(ExtDir)\libdeflate\lib\aligned_malloc.c">
       <DisableSpecificWarnings>4127;%(DisableSpecificWarnings)</DisableSpecificWarnings>
@@ -89,8 +64,8 @@
     <ClCompile Include="$(ExtDir)\libdeflate\lib\deflate_decompress.c">
       <DisableSpecificWarnings>4127;4245;4100;4018;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
-  </ItemGroup>
-  <ItemGroup>
+
+    <!-- headers-->
     <ClInclude Include="$(ExtDir)\libdeflate\lib\x86\adler32_impl.h" />
     <ClInclude Include="$(ExtDir)\libdeflate\lib\adler32_vec_template.h" />
     <ClInclude Include="$(ExtDir)\libdeflate\lib\aligned_malloc.h" />
@@ -116,5 +91,6 @@
     <ClInclude Include="$(ExtDir)\libdeflate\lib\unaligned.h" />
     <ClInclude Include="$(ExtDir)\libdeflate\lib\zlib_constants.h" />
   </ItemGroup>
+
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>
