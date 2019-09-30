@@ -45,7 +45,7 @@ build_script:
 - cmd: msbuild "C:\projects\dobiestation\DobieStation\DobieStation.sln" /verbosity:normal /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
 
 after_build:
-- cmd: 7z a DobieStation.zip DobieStation/release/
+- cmd: 7z a -xr!*.lib DobieStation.zip build/bin/
 - sh: 7z a ../DobieStation.zip DobieStation
 
 test: off

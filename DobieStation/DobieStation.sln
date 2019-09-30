@@ -1,9 +1,13 @@
-﻿
-Microsoft Visual Studio Solution File, Format Version 12.00
+﻿Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.28307.421
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DobieStation", "DobieStation.vcxproj", "{353E9072-F9AB-35F7-8AFF-FAC3EA8AFEE0}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "DobieQt", "DobieQt.vcxproj", "{ABD605C8-F15D-43D6-9955-AAC852BFCB6C}"
+	ProjectSection(ProjectDependencies) = postProject
+		{353E9072-F9AB-35F7-8AFF-FAC3EA8AFEE0} = {353E9072-F9AB-35F7-8AFF-FAC3EA8AFEE0}
+	EndProjectSection
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Core", "Core.vcxproj", "{353E9072-F9AB-35F7-8AFF-FAC3EA8AFEE0}"
 	ProjectSection(ProjectDependencies) = postProject
 		{A77564F4-56BB-3D08-8126-3FD5FC44F217} = {A77564F4-56BB-3D08-8126-3FD5FC44F217}
 	EndProjectSection
@@ -13,18 +17,31 @@ EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|x64 = Debug|x64
+		Devel|x64 = Devel|x64
 		Release Optimized|x64 = Release Optimized|x64
 		Release|x64 = Release|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{ABD605C8-F15D-43D6-9955-AAC852BFCB6C}.Debug|x64.ActiveCfg = Debug|x64
+		{ABD605C8-F15D-43D6-9955-AAC852BFCB6C}.Debug|x64.Build.0 = Debug|x64
+		{ABD605C8-F15D-43D6-9955-AAC852BFCB6C}.Devel|x64.ActiveCfg = Devel|x64
+		{ABD605C8-F15D-43D6-9955-AAC852BFCB6C}.Devel|x64.Build.0 = Devel|x64
+		{ABD605C8-F15D-43D6-9955-AAC852BFCB6C}.Release Optimized|x64.ActiveCfg = Release Optimized|x64
+		{ABD605C8-F15D-43D6-9955-AAC852BFCB6C}.Release Optimized|x64.Build.0 = Release Optimized|x64
+		{ABD605C8-F15D-43D6-9955-AAC852BFCB6C}.Release|x64.ActiveCfg = Release|x64
+		{ABD605C8-F15D-43D6-9955-AAC852BFCB6C}.Release|x64.Build.0 = Release|x64
 		{353E9072-F9AB-35F7-8AFF-FAC3EA8AFEE0}.Debug|x64.ActiveCfg = Debug|x64
 		{353E9072-F9AB-35F7-8AFF-FAC3EA8AFEE0}.Debug|x64.Build.0 = Debug|x64
+		{353E9072-F9AB-35F7-8AFF-FAC3EA8AFEE0}.Devel|x64.ActiveCfg = Devel|x64
+		{353E9072-F9AB-35F7-8AFF-FAC3EA8AFEE0}.Devel|x64.Build.0 = Devel|x64
 		{353E9072-F9AB-35F7-8AFF-FAC3EA8AFEE0}.Release Optimized|x64.ActiveCfg = Release Optimized|x64
 		{353E9072-F9AB-35F7-8AFF-FAC3EA8AFEE0}.Release Optimized|x64.Build.0 = Release Optimized|x64
 		{353E9072-F9AB-35F7-8AFF-FAC3EA8AFEE0}.Release|x64.ActiveCfg = Release|x64
 		{353E9072-F9AB-35F7-8AFF-FAC3EA8AFEE0}.Release|x64.Build.0 = Release|x64
 		{A77564F4-56BB-3D08-8126-3FD5FC44F217}.Debug|x64.ActiveCfg = Debug|x64
 		{A77564F4-56BB-3D08-8126-3FD5FC44F217}.Debug|x64.Build.0 = Debug|x64
+		{A77564F4-56BB-3D08-8126-3FD5FC44F217}.Devel|x64.ActiveCfg = Devel|x64
+		{A77564F4-56BB-3D08-8126-3FD5FC44F217}.Devel|x64.Build.0 = Devel|x64
 		{A77564F4-56BB-3D08-8126-3FD5FC44F217}.Release Optimized|x64.ActiveCfg = Release Optimized|x64
 		{A77564F4-56BB-3D08-8126-3FD5FC44F217}.Release Optimized|x64.Build.0 = Release Optimized|x64
 		{A77564F4-56BB-3D08-8126-3FD5FC44F217}.Release|x64.ActiveCfg = Release|x64
