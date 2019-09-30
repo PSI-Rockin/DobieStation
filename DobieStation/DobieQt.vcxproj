@@ -68,13 +68,13 @@
   </ImportGroup>
 
   <PropertyGroup>
-    <TargetName>$(ProjectName)$(Postfix)</TargetName>
+    <TargetName>DobieStation$(Postfix)</TargetName>
   </PropertyGroup>
 
   <!-- default link -->
   <ItemDefinitionGroup>
     <Link>
-      <OutputFile>$(OutDir)\$(ProjectName)$(Postfix).exe</OutputFile>
+      <OutputFile>$(OutDir)\DobieStation$(Postfix).exe</OutputFile>
       <SubSystem>Console</SubSystem>
     </Link>
   </ItemDefinitionGroup>
