@@ -1,5 +1,5 @@
 /*
-CISO (v0, v1) decoder implementation
+CSO (v0, v1) decoder implementation
  copyleft 2019 a dinosaur
 
 Based off reference by unknownbrackets:
@@ -254,7 +254,7 @@ bool CSO_Reader::open(const char* path)
         return false;
     }
     
-    uint32_t framesize = header.block_len + (1 << m_shift);
+    uint32_t framesize = header.block_len + (1 << header.index_shift);
     for (unsigned i = 1; i < num_entries; ++i)
     {
         uint32_t lastpos = (lastidx & ~IDX_COMPRESS_BIT) << header.index_shift;
