@@ -4,35 +4,34 @@ project(DobieStation)
 add_subdirectory(ext/libdeflate)
 
 set(CMAKE_CXX_STANDARD 11)
-
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
-set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-pthread -O2 -ggdb")
+set(THREADS_PREFER_PTHREAD_FLAG ON)
 
-find_package(Qt5Core REQUIRED)
-find_package(Qt5Widgets REQUIRED)
+find_package(Qt5 COMPONENTS Core Widgets REQUIRED)
+find_package(Threads REQUIRED)
 
 set(SOURCES
-    	src/core/errors.cpp
-        src/core/ee/bios_hle.cpp
-        src/core/ee/cop0.cpp
-        src/core/ee/cop1.cpp
-        src/core/ee/dmac.cpp
-        src/core/ee/ee_jit.cpp
-        src/core/ee/ee_jit64.cpp
+	src/core/errors.cpp
+	src/core/ee/bios_hle.cpp
+	src/core/ee/cop0.cpp
+	src/core/ee/cop1.cpp
+	src/core/ee/dmac.cpp
+	src/core/ee/ee_jit.cpp
+	src/core/ee/ee_jit64.cpp
 	src/core/ee/ee_jit64_mmi.cpp
-        src/core/ee/ee_jit64_cop2.cpp
-        src/core/ee/ee_jit64_fpu.cpp
-        src/core/ee/ee_jit64_fpu_avx.cpp
-        src/core/ee/ee_jit64_gpr.cpp
-        src/core/ee/ee_jittrans.cpp
-        src/core/ee/emotion.cpp
-        src/core/ee/emotion_fpu.cpp
-        src/core/ee/emotion_mmi.cpp
-        src/core/ee/emotion_special.cpp
-        src/core/ee/emotionasm.cpp
-        src/core/ee/emotiondisasm.cpp
-        src/core/ee/emotioninterpreter.cpp
+	src/core/ee/ee_jit64_cop2.cpp
+	src/core/ee/ee_jit64_fpu.cpp
+	src/core/ee/ee_jit64_fpu_avx.cpp
+	src/core/ee/ee_jit64_gpr.cpp
+	src/core/ee/ee_jittrans.cpp
+	src/core/ee/emotion.cpp
+	src/core/ee/emotion_fpu.cpp
+	src/core/ee/emotion_mmi.cpp
+	src/core/ee/emotion_special.cpp
+	src/core/ee/emotionasm.cpp
+	src/core/ee/emotiondisasm.cpp
+	src/core/ee/emotioninterpreter.cpp
 	src/core/ee/emotion_vu0.cpp
 	src/core/ee/intc.cpp
 	src/core/ee/ipu/chromtable.cpp
@@ -73,39 +72,38 @@ set(SOURCES
 	src/core/jitcommon/ir_instr.cpp
 	src/core/jitcommon/jitcache.cpp
 	src/core/tests/iop/alu.cpp
-        src/core/emulator.cpp
-        src/core/gif.cpp
-        src/core/gs.cpp
+	src/core/emulator.cpp
+	src/core/gif.cpp
+	src/core/gs.cpp
 	src/core/gsmem.cpp
-        src/core/gsthread.cpp
-        src/core/gsregisters.cpp
-        src/core/gscontext.cpp
+	src/core/gsthread.cpp
+	src/core/gsregisters.cpp
+	src/core/gscontext.cpp
 	src/core/scheduler.cpp
 	src/core/serialize.cpp
 	src/core/sif.cpp
 	src/qt/emuthread.cpp
-        src/qt/emuwindow.cpp
-        src/qt/settingswindow.cpp
-        src/qt/renderwidget.cpp
-        src/qt/gamelistwidget.cpp
-        src/qt/main.cpp
+	src/qt/emuwindow.cpp
+	src/qt/settingswindow.cpp
+	src/qt/renderwidget.cpp
+	src/qt/gamelistwidget.cpp
+	src/qt/main.cpp
 	src/qt/settings.cpp
-	src/qt/bios.cpp
-        )
+	src/qt/bios.cpp)
 
 set(HEADERS
-    	src/core/errors.hpp
-        src/core/ee/bios_hle.hpp
-        src/core/ee/cop0.hpp
-        src/core/ee/cop1.hpp
-        src/core/ee/dmac.hpp
-        src/core/ee/ee_jit.hpp
-        src/core/ee/ee_jit64.hpp
-        src/core/ee/ee_jittrans.hpp
-        src/core/ee/emotion.hpp
-        src/core/ee/emotionasm.hpp
-        src/core/ee/emotiondisasm.hpp
-        src/core/ee/emotioninterpreter.hpp
+	src/core/errors.hpp
+	src/core/ee/bios_hle.hpp
+	src/core/ee/cop0.hpp
+	src/core/ee/cop1.hpp
+	src/core/ee/dmac.hpp
+	src/core/ee/ee_jit.hpp
+	src/core/ee/ee_jit64.hpp
+	src/core/ee/ee_jittrans.hpp
+	src/core/ee/emotion.hpp
+	src/core/ee/emotionasm.hpp
+	src/core/ee/emotiondisasm.hpp
+	src/core/ee/emotioninterpreter.hpp
 	src/core/ee/intc.hpp
 	src/core/ee/ipu/chromtable.hpp
 	src/core/ee/ipu/codedblockpattern.hpp
@@ -145,26 +143,25 @@ set(HEADERS
 	src/core/jitcommon/ir_instr.hpp
 	src/core/jitcommon/jitcache.hpp
 	src/core/emulator.hpp
-        src/core/gif.hpp
-        src/core/gs.hpp
+	src/core/gif.hpp
+	src/core/gs.hpp
 	src/core/gsmem.hpp
-        src/core/gsthread.hpp
-        src/core/gsregisters.hpp
-        src/core/circularFIFO.hpp
+	src/core/gsthread.hpp
+	src/core/gsregisters.hpp
+	src/core/circularFIFO.hpp
 	src/core/gscontext.hpp
 	src/core/int128.hpp
 	src/core/scheduler.hpp
 	src/core/sif.hpp
 	src/qt/emuthread.hpp
-        src/qt/emuwindow.hpp
-        src/qt/settingswindow.hpp
-        src/qt/renderwidget.hpp
-        src/qt/gamelistwidget.hpp
+	src/qt/emuwindow.hpp
+	src/qt/settingswindow.hpp
+	src/qt/renderwidget.hpp
+	src/qt/gamelistwidget.hpp
 	src/qt/settings.hpp
-	src/qt/bios.hpp
-        )
+	src/qt/bios.hpp)
 
 add_executable(DobieStation ${SOURCES} ${HEADERS})
-target_link_libraries(DobieStation Qt5::Core Qt5::Widgets Ext::libdeflate)
-install (TARGETS DobieStation DESTINATION bin)
+target_link_libraries(DobieStation Qt5::Core Qt5::Widgets Ext::libdeflate Threads::Threads)
 
+install(TARGETS DobieStation DESTINATION bin)
