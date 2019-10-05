@@ -91,6 +91,13 @@ set(SOURCES
     src/qt/settings.cpp
     src/qt/bios.cpp)
 
+if (WIN32)
+    set(ASSEMBLY
+        src/core/ee/ee_jit_asm.asm
+        src/core/ee/vu_jit_asm.asm
+        src/core/gsjit.asm)
+endif()
+
 set(HEADERS
     src/core/errors.hpp
     src/core/ee/bios_hle.hpp
@@ -161,7 +168,7 @@ set(HEADERS
     src/qt/settings.hpp
     src/qt/bios.hpp)
 
-add_executable(DobieStation ${SOURCES} ${HEADERS})
+add_executable(DobieStation ${SOURCES} ${ASSEMBLY} ${HEADERS})
 target_link_libraries(DobieStation Qt5::Core Qt5::Widgets Ext::libdeflate Threads::Threads)
 if (WIN32)
     target_compile_definitions(DobieStation PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
