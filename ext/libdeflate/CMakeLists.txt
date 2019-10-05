@@ -1,9 +1,9 @@
 project(libdeflate C)
 set(CMAKE_C_STANDARD 99)
 
-if (MSVC)
-    add_definitions(/MD)
-else()
+if (${CMAKE_C_COMPILER_ID} STREQUAL "GNU" OR
+    ${CMAKE_C_COMPILER_ID} STREQUAL "Clang")
+
     add_definitions(-fomit-frame-pointer)
     add_definitions(-Wall -Wundef)
     add_definitions(-Wpedantic -Wdeclaration-after-statement -Wmissing-prototypes -Wstrict-prototypes -Wvla)
