@@ -163,5 +163,11 @@ set(HEADERS
 
 add_executable(DobieStation ${SOURCES} ${HEADERS})
 target_link_libraries(DobieStation Qt5::Core Qt5::Widgets Ext::libdeflate Threads::Threads)
+if (WIN32)
+	target_compile_definitions(DobieStation PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
+	if (MSVC)
+	target_compile_definitions(DobieStation PRIVATE VC_EXTRALEAN)
+	endif()
+endif()
 
 install(TARGETS DobieStation DESTINATION bin)
