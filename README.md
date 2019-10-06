@@ -9,24 +9,37 @@ Discord: https://discord.gg/zbEXKfN
 DobieStation uses Qt 5 and supports qmake and CMake.
 
 ### Building with qmake
-```
+```bash
 cd DobieStation/DobieStation
 qmake DobieStation.pro
 make
 ```
 
 ### Building with CMake
-```
-mkdir build
-cd build
-cmake ..
+```bash
+# Linux
+mkdir build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo
 make
+
+# MacOS (using Homebrew Qt5)
+mkdir build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_PREFIX_PATH=/usr/local/opt/qt5
+make
+
+# Windows (MSVC)
+#  - change 'CMAKE_PREFIX_PATH' to point to your Qt installation.
+#  - replace 'Visual Studio 16 2017' with your desired VS version (eg: "Visual Studio 16 2019")
+mkdir build && cd build
+cmake -DCMAKE_PREFIX_PATH="C:/Qt/5.13.1/msvc2017_64" \
+      -G "Visual Studio 15 2017" -A x64 ..
+start DobieStation.sln
 ```
 
 ### Note for Ubuntu Xenial
 While 16.04 is still officially supported they don't provide a recent enough version of Qt.
 As such if you wish to build Dobie on Xenial you will need to update Qt through a PPA
-```
+```bash
 add-apt-repository ppa:beineri/opt-qt-5.11.1-xenial
 apt-get update
 apt-get install qt511-meta-minimal qt511multimedia libglu1-mesa-dev
