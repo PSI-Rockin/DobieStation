@@ -4,13 +4,13 @@ set(CMAKE_C_STANDARD 99)
 if (${CMAKE_C_COMPILER_ID} STREQUAL "GNU" OR
     ${CMAKE_C_COMPILER_ID} STREQUAL "Clang")
 
-    add_definitions(-fomit-frame-pointer)
-    add_definitions(-Wall -Wundef)
-    add_definitions(-Wpedantic -Wdeclaration-after-statement -Wmissing-prototypes -Wstrict-prototypes -Wvla)
-    add_definitions(-fvisibility=hidden -D_ANSI_SOURCE)
+    set(FLAGS ${FLAGS} -fomit-frame-pointer)
+    set(FLAGS ${FLAGS} -Wall -Wundef)
+    set(FLAGS ${FLAGS} -Wpedantic -Wdeclaration-after-statement -Wmissing-prototypes -Wstrict-prototypes -Wvla)
+    set(FLAGS ${FLAGS} -fvisibility=hidden -D_ANSI_SOURCE)
 
     if (MINGW)
-        add_definitions(-Wno-pedantic-ms-format)
+        set(FLAGS ${FLAGS} -Wno-pedantic-ms-format)
     endif()
 endif()
 
@@ -74,3 +74,7 @@ add_library(Ext::libdeflate ALIAS deflate)
 target_include_directories(deflate
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/common)
+
+if (FLAGS)
+    target_compile_options(deflate PRIVATE ${FLAGS})
+endif()
