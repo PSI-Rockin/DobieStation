@@ -4,6 +4,8 @@ set(CMAKE_C_STANDARD 99)
 if (${CMAKE_C_COMPILER_ID} STREQUAL "GNU" OR
     ${CMAKE_C_COMPILER_ID} STREQUAL "Clang")
 
+    set(TARGET deflate)
+
     set(FLAGS ${FLAGS} -fomit-frame-pointer)
     set(FLAGS ${FLAGS} -Wall -Wundef)
     set(FLAGS ${FLAGS} -Wpedantic -Wdeclaration-after-statement -Wmissing-prototypes -Wstrict-prototypes -Wvla)
@@ -12,6 +14,8 @@ if (${CMAKE_C_COMPILER_ID} STREQUAL "GNU" OR
     if (MINGW)
         set(FLAGS ${FLAGS} -Wno-pedantic-ms-format)
     endif()
+else()
+    set(TARGET libdeflate)
 endif()
 
 set(COMMON_HEADERS
@@ -68,13 +72,13 @@ set(LIB_SRC
     lib/arm/cpu_features.c
     lib/x86/cpu_features.c)
 
-add_library(deflate STATIC ${LIB_SRC} ${LIB_HEADERS} ${COMMON_HEADERS})
-add_library(Ext::libdeflate ALIAS deflate)
+add_library(${TARGET} STATIC ${LIB_SRC} ${LIB_HEADERS} ${COMMON_HEADERS})
+add_library(Ext::libdeflate ALIAS ${TARGET})
 
-target_include_directories(deflate
+target_include_directories(${TARGET}
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
     PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/common)
 
 if (FLAGS)
-    target_compile_options(deflate PRIVATE ${FLAGS})
+    target_compile_options(${TARGET} PRIVATE ${FLAGS})
 endif()
