@@ -153,6 +153,7 @@ add_library(${TARGET} ${SOURCES} ${HEADERS})
 add_library(Dobie::Core ALIAS ${TARGET})
 
 target_link_libraries(${TARGET} Ext::libdeflate)
+target_compile_options(${TARGET} PRIVATE ${DOBIE_FLAGS})
 
 if (WIN32)
     target_compile_definitions(${TARGET} PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)

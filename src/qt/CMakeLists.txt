@@ -10,7 +10,6 @@ endif()
 
 find_package(Qt5 COMPONENTS Core Widgets REQUIRED)
 
-
 set(SOURCES
     emuthread.cpp
     emuwindow.cpp
@@ -32,4 +31,5 @@ set(HEADERS
 
 add_executable(${TARGET} ${SOURCES} ${HEADERS})
 set_target_properties(${TARGET} PROPERTIES OUTPUT_NAME "DobieStation")
+target_compile_options(${TARGET} PRIVATE ${DOBIE_FLAGS})
 target_link_libraries(${TARGET} Dobie::Core Qt5::Core Qt5::Widgets Ext::libdeflate Threads::Threads)
