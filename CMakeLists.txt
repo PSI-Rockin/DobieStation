@@ -91,7 +91,8 @@ set(SOURCES
     src/qt/settings.cpp
     src/qt/bios.cpp)
 
-if (WIN32)
+if (MSVC)
+    enable_language(ASM_MASM)
     set(ASSEMBLY
         src/core/ee/ee_jit_asm.asm
         src/core/ee/vu_jit_asm.asm
@@ -168,7 +169,12 @@ set(HEADERS
     src/qt/settings.hpp
     src/qt/bios.hpp)
 
-add_executable(DobieStation ${SOURCES} ${ASSEMBLY} ${HEADERS})
+if (CMAKE_ASM_MASM_COMPILER_LOADED)
+    set_source_files_properties(SOURCES ${ASSEMBLY} PROPERTIES LANGUAGE ASM_MASM)
+    set(SOURCES ${SOURCES} ${ASSEMBLY})
+endif()
+
+add_executable(DobieStation ${SOURCES} ${HEADERS})
 target_link_libraries(DobieStation Qt5::Core Qt5::Widgets Ext::libdeflate Threads::Threads)
 if (WIN32)
     target_compile_definitions(DobieStation PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
