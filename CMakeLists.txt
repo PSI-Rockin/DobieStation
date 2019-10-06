@@ -9,4 +9,8 @@ find_package(Threads REQUIRED)
 add_subdirectory(src/core)
 add_subdirectory(src/qt)
 
+if (MSVC)
+    set_property(DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT DobieQt)
+endif()
+
 install(TARGETS DobieQt DESTINATION bin)
