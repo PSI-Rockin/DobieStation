@@ -4,13 +4,7 @@ project(DobieStation)
 if (${CMAKE_C_COMPILER_ID} STREQUAL "GNU" OR
     ${CMAKE_C_COMPILER_ID} STREQUAL "Clang")
 
-    if (CMAKE_BUILD_TYPE MATCHES "Release")
-        message(WARNING
-            "CMake's Release flags include -O3, which causes Dobie to become "
-            "a very sick puppy, you are advised to use RelWithDebInfo instead.\n"
-            "Do not expect any builds made in this configuration to work.")
-    endif()
-
+    string(REPLACE "-O3" "-O2" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
     set(DOBIE_FLAGS
         -Wall -Wundef -Wsign-compare -Wconversion -Wstrict-aliasing -Wtype-limits
 
