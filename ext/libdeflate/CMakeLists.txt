@@ -2,7 +2,8 @@ project(libdeflate C)
 set(CMAKE_C_STANDARD 99)
 
 if (${CMAKE_C_COMPILER_ID} STREQUAL "GNU" OR
-    ${CMAKE_C_COMPILER_ID} STREQUAL "Clang")
+    ${CMAKE_C_COMPILER_ID} STREQUAL "Clang" OR
+    ${CMAKE_C_COMPILER_ID} STREQUAL "AppleClang")
 
     set(TARGET deflate)
 
