@@ -25,20 +25,27 @@ if (${CMAKE_C_COMPILER_ID} STREQUAL "GNU" OR
         set(DOBIE_FLAGS ${DOBIE_FLAGS} -Wno-unused-but-set-variable)
     endif()
 
+    set(THREADS_PREFER_PTHREAD_FLAG ON) # -pthreads on GNU-like compilers
+
 elseif (MSVC)
-    set(DOBIE_FLAGS /W4)
+    set(DOBIE_FLAGS /W4) # Warning level 4
 
 endif()
 
+
+# Externals
 add_subdirectory(ext/libdeflate)
 
-set(THREADS_PREFER_PTHREAD_FLAG ON)
+# Shared packages
 find_package(Threads REQUIRED)
 
+# Modules
 add_subdirectory(src/core)
 add_subdirectory(src/qt)
 
+
 if (MSVC)
+    # Use DobieQt as Startup Project instead of ALL_BUILD
     set_property(DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT DobieQt)
 endif()
 
