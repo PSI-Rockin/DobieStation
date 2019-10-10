@@ -155,7 +155,7 @@ endif()
 add_library(${TARGET} ${SOURCES} ${HEADERS})
 add_library(Dobie::Core ALIAS ${TARGET})
 
-target_link_libraries(${TARGET} Ext::libdeflate)
+target_link_libraries(${TARGET} Ext::libdeflate Threads::Threads)
 target_compile_options(${TARGET} PRIVATE ${DOBIE_FLAGS})
 
 if (WIN32)
