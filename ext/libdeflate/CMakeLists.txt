@@ -1,11 +1,10 @@
 project(libdeflate C)
+set(TARGET libdeflate)
 set(CMAKE_C_STANDARD 99)
 
 if (${CMAKE_C_COMPILER_ID} STREQUAL "GNU" OR
     ${CMAKE_C_COMPILER_ID} STREQUAL "Clang" OR
     ${CMAKE_C_COMPILER_ID} STREQUAL "AppleClang")
-
-    set(TARGET deflate)
 
     set(FLAGS ${FLAGS} -fomit-frame-pointer)
     set(FLAGS ${FLAGS} -Wall -Wundef)
@@ -15,8 +14,6 @@ if (${CMAKE_C_COMPILER_ID} STREQUAL "GNU" OR
     if (MINGW)
         set(FLAGS ${FLAGS} -Wno-pedantic-ms-format)
     endif()
-else()
-    set(TARGET libdeflate)
 endif()
 
 set(COMMON_HEADERS
@@ -75,6 +72,7 @@ set(LIB_SRC
 
 add_library(${TARGET} STATIC ${LIB_SRC} ${LIB_HEADERS} ${COMMON_HEADERS})
 add_library(Ext::libdeflate ALIAS ${TARGET})
+set_target_properties(${TARGET} PROPERTIES PREFIX "")
 
 target_include_directories(${TARGET}
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
