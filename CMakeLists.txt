@@ -17,12 +17,15 @@ if (${CMAKE_C_COMPILER_ID} STREQUAL "GNU" OR
         #-fomit-frame-pointer -fwrapv -fno-delete-null-pointer-checks -fno-strict-aliasing -fvisibility=hidden
     )
 
-    if (${CMAKE_C_COMPILER_ID} STREQUAL "AppleClang")
-        # Needed to make a working build on some Macs,
-        # Dobie crashes in the same way as using -O3
+    if (${CMAKE_BUILD_TYPE} MATCHES "Debug" OR
+        ${CMAKE_C_COMPILER_ID} STREQUAL "AppleClang")
+
+        # Required on Debug configuations and all configurations on OSX, Dobie WILL crash otherwise.
         set(DOBIE_FLAGS ${DOBIE_FLAGS} -fomit-frame-pointer)
-    else()
-        set(DOBIE_FLAGS ${DOBIE_FLAGS} -Wno-unused-but-set-variable)
+    endif()
+
+    if (${CMAKE_C_COMPILER_ID} STREQUAL "GNU")
+        set(DOBIE_FLAGS ${DOBIE_FLAGS} -Wno-unused-but-set-variable) # GNU only warning
     endif()
 
     set(THREADS_PREFER_PTHREAD_FLAG ON) # -pthreads on GNU-like compilers
