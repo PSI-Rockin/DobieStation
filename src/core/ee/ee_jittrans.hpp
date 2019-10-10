@@ -1,5 +1,5 @@
-#ifndef VU_JITTRANS_HPP
-#define VU_JITTRANS_HPP
+#ifndef EE_JITTRANS_HPP
+#define EE_JITTRANS_HPP
 #include <cstdint>
 //#include <vector>
 #include "../jitcommon/ir_block.hpp"
