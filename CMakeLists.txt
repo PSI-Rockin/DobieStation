@@ -20,7 +20,7 @@ if (${CMAKE_C_COMPILER_ID} STREQUAL "GNU" OR
     if (${CMAKE_BUILD_TYPE} MATCHES "Debug" OR
         ${CMAKE_C_COMPILER_ID} STREQUAL "AppleClang")
 
-        # Required on Debug configuations and all configurations on OSX, Dobie WILL crash otherwise.
+        # Required on Debug configuration and all configurations on OSX, Dobie WILL crash otherwise.
         set(DOBIE_FLAGS ${DOBIE_FLAGS} -fomit-frame-pointer)
     endif()
 
