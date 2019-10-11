@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Version=@PROJECT_VERSION@
+Name=DobieStation
+GenericName=PlayStation 2 Emulator
+Comment=A dog-themed PS2 emulator
+Icon=
+TryExec=DobieStation
+Exec=DobieStation
+Categories=Game;Emulator;

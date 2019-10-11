@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.1)
-project(DobieStation)
+project(DobieStation
+    VERSION 0.1.0)
 
 if (${CMAKE_C_COMPILER_ID} STREQUAL "GNU" OR
     ${CMAKE_C_COMPILER_ID} STREQUAL "Clang" OR
@@ -53,3 +54,10 @@ if (MSVC)
 endif()
 
 install(TARGETS DobieQt DESTINATION bin)
+
+if (UNIX AND NOT APPLE)
+    configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/data/DobieStation.desktop.in
+        ${CMAKE_CURRENT_BINARY_DIR}/DobieStation.desktop)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/DobieStation.desktop DESTINATION share/applications/)
+endif()
