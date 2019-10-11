@@ -1,170 +1,63 @@
 cmake_minimum_required(VERSION 3.1)
-project(DobieStation)
+project(DobieStation
+    VERSION 0.1.0)
 
+if (${CMAKE_C_COMPILER_ID} STREQUAL "GNU" OR
+    ${CMAKE_C_COMPILER_ID} STREQUAL "Clang" OR
+    ${CMAKE_C_COMPILER_ID} STREQUAL "AppleClang")
+
+    string(REPLACE "-O3" "-O2" CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE}")
+    set(DOBIE_FLAGS
+        -Wall -Wundef -Wsign-compare -Wconversion -Wstrict-aliasing -Wtype-limits
+
+        # These probably should be fixed instead of disabled,
+        # but doing so to keep the warning count more managable for now.
+        -Wno-reorder -Wno-unused-variable -Wno-unused-value
+
+        # Might be useful for debugging:
+        #-fomit-frame-pointer -fwrapv -fno-delete-null-pointer-checks -fno-strict-aliasing -fvisibility=hidden
+    )
+
+    if (${CMAKE_BUILD_TYPE} MATCHES "Debug" OR
+        ${CMAKE_C_COMPILER_ID} STREQUAL "AppleClang")
+
+        # Required on Debug configuration and all configurations on OSX, Dobie WILL crash otherwise.
+        set(DOBIE_FLAGS ${DOBIE_FLAGS} -fomit-frame-pointer)
+    endif()
+
+    if (${CMAKE_C_COMPILER_ID} STREQUAL "GNU")
+        set(DOBIE_FLAGS ${DOBIE_FLAGS} -Wno-unused-but-set-variable) # GNU only warning
+    endif()
+
+    set(THREADS_PREFER_PTHREAD_FLAG ON) # -pthreads on GNU-like compilers
+
+elseif (MSVC)
+    set(DOBIE_FLAGS /W4) # Warning level 4
+
+endif()
+
+
+# Externals
 add_subdirectory(ext/libdeflate)
 
-set(CMAKE_CXX_STANDARD 11)
+# Shared packages
+find_package(Threads REQUIRED)
 
-set(CMAKE_AUTOMOC ON)
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
-set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-pthread -O2 -ggdb")
+# Modules
+add_subdirectory(src/core)
+add_subdirectory(src/qt)
 
-find_package(Qt5Core REQUIRED)
-find_package(Qt5Widgets REQUIRED)
 
-set(SOURCES
-    	src/core/errors.cpp
-        src/core/ee/bios_hle.cpp
-        src/core/ee/cop0.cpp
-        src/core/ee/cop1.cpp
-        src/core/ee/dmac.cpp
-        src/core/ee/ee_jit.cpp
-        src/core/ee/ee_jit64.cpp
-	src/core/ee/ee_jit64_mmi.cpp
-        src/core/ee/ee_jit64_cop2.cpp
-        src/core/ee/ee_jit64_fpu.cpp
-        src/core/ee/ee_jit64_fpu_avx.cpp
-        src/core/ee/ee_jit64_gpr.cpp
-        src/core/ee/ee_jittrans.cpp
-        src/core/ee/emotion.cpp
-        src/core/ee/emotion_fpu.cpp
-        src/core/ee/emotion_mmi.cpp
-        src/core/ee/emotion_special.cpp
-        src/core/ee/emotionasm.cpp
-        src/core/ee/emotiondisasm.cpp
-        src/core/ee/emotioninterpreter.cpp
-	src/core/ee/emotion_vu0.cpp
-	src/core/ee/intc.cpp
-	src/core/ee/ipu/chromtable.cpp
-	src/core/ee/ipu/codedblockpattern.cpp
-	src/core/ee/ipu/dct_coeff.cpp
-	src/core/ee/ipu/dct_coeff_table0.cpp
-	src/core/ee/ipu/dct_coeff_table1.cpp
-	src/core/ee/ipu/ipu.cpp
-	src/core/ee/ipu/ipu_fifo.cpp
-	src/core/ee/ipu/lumtable.cpp
-	src/core/ee/ipu/mac_addr_inc.cpp
-	src/core/ee/ipu/mac_b_pic.cpp
-	src/core/ee/ipu/mac_i_pic.cpp
-	src/core/ee/ipu/mac_p_pic.cpp
-	src/core/ee/ipu/motioncode.cpp
-	src/core/ee/ipu/vlc_table.cpp
-	src/core/ee/timers.cpp
-	src/core/ee/vif.cpp
-	src/core/ee/vu.cpp
-	src/core/ee/vu_disasm.cpp
-	src/core/ee/vu_interpreter.cpp
-	src/core/ee/vu_jit.cpp
-	src/core/ee/vu_jit64.cpp
-	src/core/ee/vu_jittrans.cpp
-	src/core/iop/cdvd.cpp
-	src/core/iop/cso_reader.cpp
-	src/core/iop/gamepad.cpp
-	src/core/iop/iop.cpp
-	src/core/iop/iop_cop0.cpp
-	src/core/iop/iop_dma.cpp
-	src/core/iop/iop_interpreter.cpp
-	src/core/iop/iop_timers.cpp
-	src/core/iop/memcard.cpp
-	src/core/iop/sio2.cpp
-	src/core/iop/spu.cpp
-	src/core/jitcommon/emitter64.cpp
-	src/core/jitcommon/ir_block.cpp
-	src/core/jitcommon/ir_instr.cpp
-	src/core/jitcommon/jitcache.cpp
-	src/core/tests/iop/alu.cpp
-        src/core/emulator.cpp
-        src/core/gif.cpp
-        src/core/gs.cpp
-	src/core/gsmem.cpp
-        src/core/gsthread.cpp
-        src/core/gsregisters.cpp
-        src/core/gscontext.cpp
-	src/core/scheduler.cpp
-	src/core/serialize.cpp
-	src/core/sif.cpp
-	src/qt/emuthread.cpp
-        src/qt/emuwindow.cpp
-        src/qt/settingswindow.cpp
-        src/qt/renderwidget.cpp
-        src/qt/gamelistwidget.cpp
-        src/qt/main.cpp
-	src/qt/settings.cpp
-	src/qt/bios.cpp
-        )
+if (MSVC)
+    # Use DobieQt as Startup Project instead of ALL_BUILD
+    set_property(DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT DobieQt)
+endif()
 
-set(HEADERS
-    	src/core/errors.hpp
-        src/core/ee/bios_hle.hpp
-        src/core/ee/cop0.hpp
-        src/core/ee/cop1.hpp
-        src/core/ee/dmac.hpp
-        src/core/ee/ee_jit.hpp
-        src/core/ee/ee_jit64.hpp
-        src/core/ee/ee_jittrans.hpp
-        src/core/ee/emotion.hpp
-        src/core/ee/emotionasm.hpp
-        src/core/ee/emotiondisasm.hpp
-        src/core/ee/emotioninterpreter.hpp
-	src/core/ee/intc.hpp
-	src/core/ee/ipu/chromtable.hpp
-	src/core/ee/ipu/codedblockpattern.hpp
-	src/core/ee/ipu/dct_coeff.hpp
-	src/core/ee/ipu/dct_coeff_table0.hpp
-	src/core/ee/ipu/dct_coeff_table1.hpp
-	src/core/ee/ipu/ipu.hpp
-	src/core/ee/ipu/ipu_fifo.hpp
-	src/core/ee/ipu/lumtable.hpp
-	src/core/ee/ipu/mac_addr_inc.hpp
-	src/core/ee/ipu/mac_b_pic.hpp
-	src/core/ee/ipu/mac_i_pic.hpp
-	src/core/ee/ipu/mac_p_pic.hpp
-	src/core/ee/ipu/motioncode.hpp
-	src/core/ee/ipu/vlc_table.hpp
-	src/core/ee/timers.hpp
-	src/core/ee/vif.hpp
-	src/core/ee/vu.hpp
-	src/core/ee/vu_disasm.hpp
-	src/core/ee/vu_interpreter.hpp
-	src/core/ee/vu_jit.hpp
-	src/core/ee/vu_jit64.hpp
-	src/core/ee/vu_jittrans.hpp
-	src/core/iop/cdvd.hpp
-	src/core/iop/cso_reader.hpp
-	src/core/iop/gamepad.hpp
-	src/core/iop/iop.hpp
-	src/core/iop/iop_cop0.hpp
-	src/core/iop/iop_dma.hpp
-	src/core/iop/iop_interpreter.hpp
-	src/core/iop/iop_timers.hpp
-	src/core/iop/memcard.hpp
-	src/core/iop/sio2.hpp
-	src/core/iop/spu.hpp
-	src/core/jitcommon/emitter64.hpp
-	src/core/jitcommon/ir_block.hpp
-	src/core/jitcommon/ir_instr.hpp
-	src/core/jitcommon/jitcache.hpp
-	src/core/emulator.hpp
-        src/core/gif.hpp
-        src/core/gs.hpp
-	src/core/gsmem.hpp
-        src/core/gsthread.hpp
-        src/core/gsregisters.hpp
-        src/core/circularFIFO.hpp
-	src/core/gscontext.hpp
-	src/core/int128.hpp
-	src/core/scheduler.hpp
-	src/core/sif.hpp
-	src/qt/emuthread.hpp
-        src/qt/emuwindow.hpp
-        src/qt/settingswindow.hpp
-        src/qt/renderwidget.hpp
-        src/qt/gamelistwidget.hpp
-	src/qt/settings.hpp
-	src/qt/bios.hpp
-        )
+install(TARGETS DobieQt DESTINATION bin)
 
-add_executable(DobieStation ${SOURCES} ${HEADERS})
-target_link_libraries(DobieStation Qt5::Core Qt5::Widgets Ext::libdeflate)
-install (TARGETS DobieStation DESTINATION bin)
-
+if (UNIX AND NOT APPLE)
+    configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/data/DobieStation.desktop.in
+        ${CMAKE_CURRENT_BINARY_DIR}/DobieStation.desktop)
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/DobieStation.desktop DESTINATION share/applications/)
+endif()
