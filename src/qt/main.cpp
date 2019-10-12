@@ -1,4 +1,5 @@
 #include <QApplication>
+#include <memory>
 #include "emuwindow.hpp"
 
 using namespace std;
@@ -10,7 +11,7 @@ int main(int argc, char** argv)
     QApplication::setOrganizationDomain("https://github.com/PSI-Rockin/DobieStation");
 
     QApplication a(argc, argv);
-    EmuWindow* window = new EmuWindow();
+    auto window = unique_ptr<EmuWindow>(new EmuWindow());
 
     if (window->init(argc, argv))
         return 1;

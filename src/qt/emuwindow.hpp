@@ -46,6 +46,8 @@ class EmuWindow : public QMainWindow
         void show_default_view();
     public:
         explicit EmuWindow(QWidget *parent = nullptr);
+        ~EmuWindow() final;
+
         int init(int argc, char** argv);
         int load_exec(const char* file_name, bool skip_BIOS);
 

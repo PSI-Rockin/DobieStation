@@ -121,6 +121,12 @@ int EmuWindow::init(int argc, char** argv)
     return 0;
 }
 
+EmuWindow::~EmuWindow()
+{
+    emu_thread.wait();
+}
+
+
 int EmuWindow::load_exec(const char* file_name, bool skip_BIOS)
 {
     if (!load_bios())

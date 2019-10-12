@@ -250,7 +250,7 @@ void GraphicsSynthesizerThread::exit()
         payload.no_payload = {0};
         
         send_message({ GSCommand::die_t, payload });
-        
+        wake_thread();
         thread.join();
     }
 }
