@@ -16,5 +16,7 @@ int main(int argc, char** argv)
         return 1;
 
     a.exec();
+
+    delete window;
     return 0;
 }
