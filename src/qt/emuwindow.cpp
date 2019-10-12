@@ -123,7 +123,7 @@ int EmuWindow::init(int argc, char** argv)
 
 EmuWindow::~EmuWindow()
 {
-	emu_thread.wait();
+    emu_thread.wait();
 }
 
 
