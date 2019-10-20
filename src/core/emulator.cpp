@@ -31,7 +31,6 @@ Emulator::Emulator() :
     ELF_size = 0;
     gsdump_single_frame = false;
 
-    ds_log = new ds_logger;
     ee_log.open("ee_log.txt", std::ios::out);
     set_vu1_mode(VU_MODE::DONT_CARE);
 }
