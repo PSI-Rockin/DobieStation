@@ -20,6 +20,8 @@ class SubsystemInterface
         uint32_t smflag;
         uint32_t control; //???
 
+        uint32_t oldest_SIF0_data[4];
+
         std::queue<uint32_t> SIF0_FIFO;
         std::queue<uint32_t> SIF1_FIFO;
     public:
@@ -31,6 +33,7 @@ class SubsystemInterface
         int get_SIF1_size();
 
         void write_SIF0(uint32_t word);
+        void send_SIF0_junk(int count);
         void write_SIF1(uint128_t quad);
         uint32_t read_SIF0();
         uint32_t read_SIF1();

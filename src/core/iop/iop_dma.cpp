@@ -166,6 +166,7 @@ void IOP_DMA::process_SPU2()
 
 void IOP_DMA::process_SIF0()
 {
+    static int junk_words = 0;
     if (channels[IOP_SIF0].word_count)
     {
         uint32_t data = *(uint32_t*)&RAM[channels[IOP_SIF0].addr];
@@ -173,8 +174,12 @@ void IOP_DMA::process_SIF0()
 
         channels[IOP_SIF0].addr += 4;
         channels[IOP_SIF0].word_count--;
-        if (!channels[IOP_SIF0].word_count && channels[IOP_SIF0].tag_end)
-            transfer_end(IOP_SIF0);
+        if (!channels[IOP_SIF0].word_count)
+        {
+            sif->send_SIF0_junk(junk_words);
+            if (channels[IOP_SIF0].tag_end)
+                transfer_end(IOP_SIF0);
+        }
     }
     //Read tag if there's enough room to transfer the EE's tag
     else if (sif->get_SIF0_size() <= SubsystemInterface::MAX_FIFO_SIZE - 2)
@@ -186,13 +191,26 @@ void IOP_DMA::process_SIF0()
         sif->write_SIF0(*(uint32_t*)&RAM[channels[IOP_SIF0].tag_addr + 12]);
 
         channels[IOP_SIF0].addr = data & 0xFFFFFF;
-        channels[IOP_SIF0].word_count = (words + 3) & 0xFFFFC; //round to nearest 4?
+        channels[IOP_SIF0].word_count = words & 0xFFFFF;
+
+        /* NOTE: UNCONFIRMED ON REAL HARDWARE!
+         * The default behavior of PCSX2 is to round up "words" to the nearest 16 bytes.
+         * This has the effect of reading additional data from the SIF0 buffer in IOP memory.
+         * However, True Crime: Streets of L.A. stores important variables right next to a 4 byte receive buffer.
+         * Thus, the variables get overwritten when certain transfers occur, and the game expects them to be nonzero.
+         * PCSX2's behavior causes that memory to be zeroed out, which crashes the game in menus.
+         *
+         * I have surmised that the correct behavior on nonaligned transfers is to read the oldest values
+         * from previous transfers. This indeed results in the game's memory being nonzero, allowing it to go in-game.
+         */
+        junk_words = (words & 0x3) ? (4 - (words & 0x3)) : 0;
 
         channels[IOP_SIF0].tag_addr += 16;
 
         printf("[IOP DMA] Read SIF0 DMAtag!\n");
         printf("Data: $%08X\n", data);
         printf("Words: $%08X\n", channels[IOP_SIF0].word_count);
+        printf("Junk: %d\n", junk_words);
 
         if ((data & (1 << 31)) || (data & (1 << 30)))
             channels[IOP_SIF0].tag_end = true;
