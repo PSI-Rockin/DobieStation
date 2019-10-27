@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <cstring>
 #include "sif.hpp"
 
 #include "iop/iop_dma.hpp"
@@ -23,11 +24,24 @@ void SubsystemInterface::reset()
 
 void SubsystemInterface::write_SIF0(uint32_t word)
 {
+    if (SIF0_FIFO.size() < 4)
+        oldest_SIF0_data[SIF0_FIFO.size()] = word;
     SIF0_FIFO.push(word);
     if (SIF0_FIFO.size() >= MAX_FIFO_SIZE)
         iop_dma->clear_DMA_request(IOP_SIF0);
     if (SIF0_FIFO.size() >= 4)
         dmac->set_DMA_request(EE_SIF0);
+}
+
+void SubsystemInterface::send_SIF0_junk(int count)
+{
+    uint32_t temp[4];
+    memcpy(temp, oldest_SIF0_data, 4);
+    for (int i = 4 - count; i < 4; i++)
+    {
+        printf("[SIF] Send junk: $%08X\n", temp[i]);
+        write_SIF0(temp[i]);
+    }
 }
 
 void SubsystemInterface::write_SIF1(uint128_t quad)
