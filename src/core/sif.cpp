@@ -1,4 +1,5 @@
 #include <cstdio>
+#include <cstring>
 #include "sif.hpp"
 
 #include "iop/iop_dma.hpp"
