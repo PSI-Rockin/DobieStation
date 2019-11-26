@@ -2939,8 +2939,6 @@ uint128_t GraphicsSynthesizerThread::local_to_host()
     {
         for (int i = 0; i < ppd; i++)
         {
-            int datapart = i / (ppd / 2);
-
             switch (BITBLTBUF.source_format)
             {
                 case 0x00:
