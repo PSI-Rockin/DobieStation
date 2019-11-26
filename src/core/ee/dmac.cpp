@@ -1053,6 +1053,12 @@ uint8_t DMAC::read8(uint32_t address)
     return (read32(address & ~0x3) >> shift) & 0xFF;
 }
 
+uint16_t DMAC::read16(uint32_t address)
+{
+    int shift = (address & 0x2) * 8;
+    return (read32(address & ~0x2) >> shift) & 0xFFFF;
+}
+
 uint32_t DMAC::read32(uint32_t address)
 {
     uint32_t reg = 0;

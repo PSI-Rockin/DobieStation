@@ -488,6 +488,8 @@ uint16_t Emulator::read16(uint32_t address)
 {
     if (address >= 0x10000000 && address < 0x10002000)
         return (uint16_t)timers.read32(address);
+    if (address >= 0x10008000 && address < 0x1000F000)
+        return dmac.read16(address);
     if (address >= 0x1C000000 && address < 0x1C200000)
         return *(uint16_t*)&IOP_RAM[address & 0x1FFFFF];
     switch (address)
