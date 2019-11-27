@@ -9,7 +9,8 @@ demos
 .idea/
 CmakeSettings.json
 cmake-build-*/
-build
+build/
+build-clang/
 build-DobieStation-*
 debug
 release
