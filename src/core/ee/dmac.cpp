@@ -20,10 +20,10 @@ DMAC::DMAC(EmotionEngine* cpu, Emulator* e, GraphicsInterface* gif, ImageProcess
     apply_dma_funcs();
 }
 
-void DMAC::reset(uint8_t* RDRAM, uint8_t* scratchpad)
+void DMAC::reset(uint8_t* new_RDRAM, uint8_t* new_scratchpad)
 {
-    this->RDRAM = RDRAM;
-    this->scratchpad = scratchpad;
+    RDRAM = new_RDRAM;
+    scratchpad = new_scratchpad;
     master_disable = 0x1201; //SCPH-39001 requires this value to be set, possibly other BIOSes too
     control.master_enable = false;
     mfifo_empty_triggered = false;
