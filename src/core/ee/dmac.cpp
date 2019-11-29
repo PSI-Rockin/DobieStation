@@ -1627,7 +1627,7 @@ void DMAC::update_stadr(uint32_t addr)
     STADR = addr;
 
     //Reactivate a stalled channel if necessary
-    int c;
+    int c = 0;
     switch (control.stall_dest_channel)
     {
         case 0:
@@ -1641,6 +1641,8 @@ void DMAC::update_stadr(uint32_t addr)
         case 3:
             c = EE_SIF1;
             break;
+        default:
+            Errors::die("DMAC::update_stadr: control.stall_dest_channel >= 4");
     }
 
     uint32_t madr = channels[c].address + (8 * 16);
