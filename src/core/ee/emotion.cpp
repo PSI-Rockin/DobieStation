@@ -103,6 +103,7 @@ void EmotionEngine::reset()
     branch_on = false;
     can_disassemble = false;
     wait_for_IRQ = false;
+    wait_for_VU0 = false;
     delay_slot = 0;
 
     //Reset the cache
