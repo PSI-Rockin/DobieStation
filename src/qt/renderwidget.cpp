@@ -10,7 +10,7 @@ RenderWidget::RenderWidget(QWidget* parent)
     : QWidget(parent)
 {
     QPalette palette;
-    palette.setColor(QPalette::Background, Qt::black);
+    palette.setColor(QPalette::Window, Qt::black);
     setPalette(palette);
     setAutoFillBackground(true);
 }
