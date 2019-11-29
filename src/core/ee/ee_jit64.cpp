@@ -1239,7 +1239,6 @@ REG_64 EE_JIT64::alloc_reg(EmotionEngine& ee, int reg, REG_TYPE type, REG_STATE 
             return (REG_64)destination;
         default:
             Errors::die("[EE_JIT64] Register allocation error! Attempted to allocate a register with an unknown type %d!", type);
-            return (REG_64)-1;
     }
 }
 

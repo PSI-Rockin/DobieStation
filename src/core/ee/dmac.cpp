@@ -986,7 +986,6 @@ void DMAC::handle_source_chain(int index)
     {
         case 1:
             Errors::die("[DMAC] PCR info set to 1!");
-            break;
         case 2:
             //Disable priority control
             PCR &= ~(1 << 31);
