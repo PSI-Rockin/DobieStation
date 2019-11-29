@@ -276,10 +276,12 @@ void EmuThread::update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t v
 
 void EmuThread::pause(PAUSE_EVENT event)
 {
+    QMutexLocker locker(&emu_mutex);
     pause_status |= 1 << event;
 }
 
 void EmuThread::unpause(PAUSE_EVENT event)
 {
+    QMutexLocker locker(&emu_mutex);
     pause_status &= ~(1 << event);
 }
