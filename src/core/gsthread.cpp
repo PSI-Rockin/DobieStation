@@ -545,7 +545,6 @@ uint32_t GraphicsSynthesizerThread::get_CRT_color(DISPFB &dispfb, uint32_t x, ui
             return convert_color_up(read_PSMCT16S_block(dispfb.frame_base * 4, dispfb.width, x, y));
         default:
             Errors::die("Unknown framebuffer format (%x)", dispfb.format);
-            return 0;
     }
 }
 
@@ -1495,7 +1494,6 @@ uint32_t GraphicsSynthesizerThread::lookup_frame_color(int32_t x, int32_t y)
             break;
         default:
             Errors::die("Unknown FRAME format (%x) read attempted", current_ctx->frame.format);
-            break;
     }
     frame_color_looked_up = true;
 
@@ -1821,7 +1819,6 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
                 break;
             default:
                 Errors::die("Unknown FRAME format (%x) write attempted", current_ctx->frame.format);
-                break;
         }
     }
     

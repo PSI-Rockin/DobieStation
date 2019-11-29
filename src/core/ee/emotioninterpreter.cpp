@@ -1009,7 +1009,7 @@ void EmotionInterpreter::cop2_qmtc2(EmotionEngine &cpu, uint32_t instruction)
     cpu.qmtc2(source, cop_reg);
 }
 
-void EmotionInterpreter::unknown_op(const char *type, uint32_t instruction, uint16_t op)
+[[ noreturn ]] void EmotionInterpreter::unknown_op(const char *type, uint32_t instruction, uint16_t op)
 {
     Errors::die("[EE Interpreter] Unrecognized %s op $%04X (instr: $%08X)\n", type, op, instruction);
 }

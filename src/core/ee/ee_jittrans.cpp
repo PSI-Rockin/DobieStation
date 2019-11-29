@@ -827,8 +827,6 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
         }
         default:
             Errors::die("[EE_JIT] Unrecognized op $%02X", op);
-            instrs.push_back(instr);
-            break;
     }
 }
 
@@ -2996,8 +2994,6 @@ void EE_JitTranslator::translate_op_cop0(uint32_t opcode, uint32_t PC, std::vect
             break;
         default:
             Errors::die("[EE_JIT] Unrecognized cop0 op $%02X", op);
-            instrs.push_back(instr);
-            break;
     }
 }
 
@@ -3036,8 +3032,6 @@ void EE_JitTranslator::translate_op_cop0_type2(uint32_t opcode, uint32_t PC, std
             break;
         default:
             Errors::die("[EE_JIT] Unrecognized cop0 type2 op $%02X", op);
-            instrs.push_back(instr);
-            break;
     }
 }
 

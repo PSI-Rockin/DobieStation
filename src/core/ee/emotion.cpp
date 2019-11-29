@@ -103,6 +103,7 @@ void EmotionEngine::reset()
     branch_on = false;
     can_disassemble = false;
     wait_for_IRQ = false;
+    wait_for_VU0 = false;
     delay_slot = 0;
 
     //Reset the cache
@@ -355,7 +356,6 @@ uint32_t EmotionEngine::read_instr(uint32_t address)
         return *(uint32_t*)&mem[address & 4095];
     else
         Errors::die("[EE] Instruction read from invalid address $%08X", address);
-    return 0;
 }
 
 uint8_t EmotionEngine::read8(uint32_t address)
@@ -368,7 +368,6 @@ uint8_t EmotionEngine::read8(uint32_t address)
     else
     {
         Errors::die("[EE] Read8 from invalid address $%08X", address);
-        return 0;
     }
 }
 
@@ -384,7 +383,6 @@ uint16_t EmotionEngine::read16(uint32_t address)
     else
     {
         Errors::die("[EE] Read16 from invalid address $%08X", address);
-        return 0;
     }
 }
 
@@ -400,7 +398,6 @@ uint32_t EmotionEngine::read32(uint32_t address)
     else
     {
         Errors::die("[EE] Read32 from invalid address $%08X", address);
-        return 0;
     }
 }
 
@@ -416,7 +413,6 @@ uint64_t EmotionEngine::read64(uint32_t address)
     else
     {
         Errors::die("[EE] Read64 from invalid address $%08X", address);
-        return 0;
     }
 }
 
@@ -430,7 +426,6 @@ uint128_t EmotionEngine::read128(uint32_t address)
     else
     {
         Errors::die("[EE] Read128 from invalid address $%08X", address);
-        return uint128_t::from_u32(0);
     }
 }
 

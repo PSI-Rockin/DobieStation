@@ -172,7 +172,6 @@ void EmuThread::gsdump_run()
                         Errors::die("gsdump ended before end of file!");
                     gsdump.close();
                     Errors::die("gsdump ended successfully\n");
-                    return;
                 case save_state_t:
                 case load_state_t:
                     Errors::die("save_state save/load during gsdump not supported!");
