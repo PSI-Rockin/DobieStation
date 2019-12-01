@@ -61,6 +61,8 @@ class EmotionEngine
         Deci2Handler deci2handlers[128];
         int deci2size;
 
+        std::function<void(EmotionEngine&)> run_func;
+
         uint32_t get_paddr(uint32_t vaddr);
         void handle_exception(uint32_t new_addr, uint8_t code);
         void deci2call(uint32_t func, uint32_t param);
@@ -71,7 +73,8 @@ class EmotionEngine
         void reset();
         void init_tlb();
         void run(int cycles);
-        void run_jit(int cycles);
+        void run_interpreter();
+        void run_jit();
         uint64_t get_cycle_count();
         uint64_t get_cop2_last_cycle();
         void set_cop2_last_cycle(uint64_t value);
@@ -79,6 +82,7 @@ class EmotionEngine
         void unhalt();
         void print_state();
         void set_disassembly(bool dis);
+        void set_run_func(std::function<void(EmotionEngine&)> func);
 
         template <typename T> T get_gpr(int id, int offset = 0);
         template <typename T> T get_LO(int offset = 0);

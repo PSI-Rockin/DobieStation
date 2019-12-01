@@ -74,7 +74,6 @@ class Emulator
         std::ofstream ee_log;
         std::string ee_stdout;
         std::function<void(VectorUnit&, int)> vu1_run_func;
-        std::function<void(EmotionEngine&, int)> ee_run_func;
 
         uint8_t* RDRAM;
         uint8_t* IOP_RAM;

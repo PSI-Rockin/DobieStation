@@ -103,7 +103,7 @@ void Emulator::run()
         int iop_cycles = scheduler.get_iop_run_cycles();
         scheduler.update_cycle_counts();
 
-        ee_run_func(cpu, ee_cycles);
+        cpu.run(ee_cycles);
         dmac.run(bus_cycles);
         timers.run(bus_cycles);
         ipu.run();
@@ -333,16 +333,16 @@ void Emulator::set_skip_BIOS_hack(SKIP_HACK type)
 
 void Emulator::set_ee_mode(CPU_MODE mode)
 {
-  switch (mode)
-  {
-      case CPU_MODE::INTERPRETER:
-          ee_run_func = &EmotionEngine::run;
-          break;
-      case CPU_MODE::JIT:
-      default:
-          ee_run_func = &EmotionEngine::run_jit;
-          break;
-  }
+    switch (mode)
+    {
+        case CPU_MODE::INTERPRETER:
+            cpu.set_run_func(&EmotionEngine::run_interpreter);
+            break;
+        case CPU_MODE::JIT:
+        default:
+            cpu.set_run_func(&EmotionEngine::run_jit);
+            break;
+    }
 }
 
 void Emulator::set_vu1_mode(CPU_MODE mode)
