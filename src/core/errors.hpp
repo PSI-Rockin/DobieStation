@@ -8,7 +8,7 @@
 class Errors
 {
     public:
-        static void die(const char* format, ...);
+        [[ noreturn ]] static void die(const char* format, ...);
         static void non_fatal(const char* format, ...);
         static void print_warning(const char* format, ...);//ignores the error, just print it.
 };
