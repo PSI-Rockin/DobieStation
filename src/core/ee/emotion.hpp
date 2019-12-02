@@ -2,6 +2,7 @@
 #define EMOTION_HPP
 #include <cstdint>
 #include <fstream>
+#include <functional>
 #include "cop0.hpp"
 #include "cop1.hpp"
 
