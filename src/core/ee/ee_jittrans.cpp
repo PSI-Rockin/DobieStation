@@ -3063,9 +3063,9 @@ void EE_JitTranslator::translate_op_cop1(uint32_t opcode, uint32_t PC, std::vect
             instr.set_dest(dest);
             instr.set_source(source);
 
-            // undefined
-            if (dest != 0x1F || dest != 0x0)
-                break;
+            // undefined if dest is not 31 or 0
+            if (!(dest == 0x1F || dest == 0x0))
+                Errors::die("ee_jittrans.cpp: CFC1 has invalid destination register %d", dest);
 
             instrs.push_back(instr);
             break;
