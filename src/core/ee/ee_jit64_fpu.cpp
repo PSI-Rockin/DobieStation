@@ -368,7 +368,7 @@ void EE_JIT64::move_control_word_from_floating_point(EmotionEngine& ee, IR::Inst
     switch (instr.get_source())
     {
         case 0x0:
-            emitter.MOV32_IMM_MEM(0x2E00, dest);
+            emitter.MOV64_OI(0x2E00, dest);
             break;
         case 0x1F:
         {
