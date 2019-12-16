@@ -36,7 +36,7 @@
 extern "C" void run_ee_jit(EE_JIT64& jit, EmotionEngine& ee);
 #endif
 
-EE_JIT64::EE_JIT64() : jit_block("EE"), emitter(&jit_block)
+EE_JIT64::EE_JIT64() : jit_block("EE"), emitter(&jit_block), prologue_block(nullptr)
 {
 }
 
@@ -68,7 +68,10 @@ void EE_JIT64::reset(bool clear_cache)
     int_regs[REG_64::RAX].locked = true;
 
     if (clear_cache)
+    {
         jit_heap.flush_all_blocks();
+        prologue_block = create_prologue_block();
+    }
 }
 
 extern "C"
@@ -105,19 +108,28 @@ void interpreter(EmotionEngine& ee, uint32_t instr)
 
 uint16_t EE_JIT64::run(EmotionEngine& ee)
 {
-#ifdef _MSC_VER
-    run_ee_jit(*this, ee);
-#else
-    uint8_t* block = exec_block_ee(*this, ee);
-
-    __asm__ volatile (
-        "callq *%0"
-        :
-    : "r" (block)
-        );
-#endif
+    prologue_block(*this, ee);
 
     return cycle_count;
+}
+
+EEJitPrologue EE_JIT64::create_prologue_block()
+{
+    jit_block.clear();
+
+    emit_prologue();
+
+    emitter.load_addr((uint64_t)exec_block_ee, REG_64::RAX);
+    emitter.CALL_INDIR(REG_64::RAX);
+
+    //Call the recompiled block
+    emitter.CALL_INDIR(REG_64::RAX);
+
+    emit_epilogue();
+
+    //Reserve 0xFFFFFFFF as the PC.
+    //Because this is an invalid address, it doesn't matter that the prologue block has this.
+    return (EEJitPrologue)jit_heap.insert_block(0xFFFFFFFF, &jit_block)->code_start;
 }
 
 EEJitBlockRecord* EE_JIT64::recompile_block(EmotionEngine& ee, IR::Block& block)
@@ -127,26 +139,20 @@ EEJitBlockRecord* EE_JIT64::recompile_block(EmotionEngine& ee, IR::Block& block)
     saved_int_regs = std::vector<REG_64>();
     saved_xmm_regs = std::vector<REG_64>();
 
-    //block.alloc_block(BlockState{ ee.get_PC(), 0, 0, 0, 0 });
     jit_block.clear();
 
-    //Return the amount of cycles to update the EE with
-    emitter.load_addr((uint64_t)&cycle_count, REG_64::RAX);
-    emitter.MOV16_IMM_MEM(block.get_cycle_count(), REG_64::RAX);
-
-    //Prologue
-#ifndef _MSC_VER
-    emit_prologue();
-#endif
     emitter.PUSH(REG_64::RBP);
     emitter.MOV64_MR(REG_64::RSP, REG_64::RBP);
-
     // Preallocate a chunk of stack space for storing registers during function calls, + some other utility
     // RSP + 0h: 32 bytes of argument spillage for Windows
     // RSP + 20h: uint64_t[16] for integer registers
     // RSP + A0h: uint128_t[16] for xmm registers
     // RSP + 1A0h: uint128_t for storing the argument/result of store/load quad
     emitter.SUB64_REG_IMM(0x1B0, REG_64::RSP);
+
+    //Return the amount of cycles to update the EE with
+    emitter.load_addr((uint64_t)&cycle_count, REG_64::RAX);
+    emitter.MOV16_IMM_MEM(block.get_cycle_count(), REG_64::RAX);
 
     while (block.get_instruction_count() > 0 && !likely_branch)
     {
@@ -159,12 +165,7 @@ EEJitBlockRecord* EE_JIT64::recompile_block(EmotionEngine& ee, IR::Block& block)
     else
         cleanup_recompiler(ee, true);
 
-    //Switch the block's privileges from RW to RX.
-    //jit_block.print_block();
-    //cache.print_literal_pool();
     return jit_heap.insert_block(ee.get_PC(), &jit_block);
-
-
 }
 
 void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
@@ -1431,12 +1432,8 @@ void EE_JIT64::cleanup_recompiler(EmotionEngine& ee, bool clear_regs)
         }
     }
 
-    //Epilogue
     emitter.ADD64_REG_IMM(0x1B0, REG_64::RSP);
     emitter.POP(REG_64::RBP);
-#ifndef _MSC_VER
-    emit_epilogue();
-#endif
     emitter.RET();
 }
 
@@ -1444,29 +1441,28 @@ void EE_JIT64::emit_prologue()
 {
 #ifdef _WIN32
     Errors::die("[EE_JIT64] emit_prologue not implemented for _WIN32");
+
 #else
     emitter.PUSH(REG_64::RBX);
     emitter.PUSH(REG_64::R12);
     emitter.PUSH(REG_64::R13);
     emitter.PUSH(REG_64::R14);
     emitter.PUSH(REG_64::R15);
-    emitter.PUSH(REG_64::RDI);
 #endif
 }
-
 
 void EE_JIT64::emit_epilogue()
 {
 #ifdef _WIN32
     Errors::die("[EE_JIT64] emit_epilogue not implemented for _WIN32");
 #else
-    emitter.POP(REG_64::RDI);
     emitter.POP(REG_64::R15);
     emitter.POP(REG_64::R14);
     emitter.POP(REG_64::R13);
     emitter.POP(REG_64::R12);
     emitter.POP(REG_64::RBX);
 #endif
+    emitter.RET();
 }
 
 void EE_JIT64::handle_branch_likely(EmotionEngine& ee, IR::Block& block)

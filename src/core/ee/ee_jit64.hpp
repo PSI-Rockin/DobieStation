@@ -63,6 +63,8 @@ alignas(16) static uint32_t PPACH_MASK[4] = { 0x0000FFFF, 0x0000FFFF, 0x0000FFFF
 
 extern "C" uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee);
 
+typedef void (*EEJitPrologue)(EE_JIT64& jit, EmotionEngine& ee);
+
 class EE_JIT64
 {
 private:
@@ -85,6 +87,9 @@ private:
     uint16_t cycle_count;
 
     bool should_update_mac;
+
+    //Pointer to the dispatcher prologue that begins execution of recompiled code
+    EEJitPrologue prologue_block;
 
     void handle_branch_likely(EmotionEngine& ee, IR::Block& block);
 
@@ -298,6 +303,7 @@ private:
     void free_xmm_reg(EmotionEngine& ee, REG_64 reg);
 
     // Recompile + Cleanup
+    EEJitPrologue create_prologue_block();
     void emit_prologue();
     void emit_instruction(EmotionEngine &ee, IR::Instruction &instr);
     EEJitBlockRecord* recompile_block(EmotionEngine& ee, IR::Block& block);
