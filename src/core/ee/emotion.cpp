@@ -123,6 +123,8 @@ void EmotionEngine::reset()
     deci2size = 0;
     for (int i = 0; i < 128; i++)
         deci2handlers[i].active = false;
+
+    flush_jit_cache = true;
 }
 
 void EmotionEngine::init_tlb()
@@ -197,13 +199,19 @@ void EmotionEngine::run_interpreter()
 
 void EmotionEngine::run_jit()
 {
-    if (wait_for_VU0)
-        wait_for_VU0 = vu0_wait();
+    //If we're stalling on COP2 and VU0 is still active, we continue stalling.
+    wait_for_VU0 &= vu0_wait();
 
-    while (cycles_to_run > 0 && !wait_for_VU0)
+    //If FlushCache(2) has been executed, reset the JIT.
+    //This represents an icache flush.
+    if (flush_jit_cache)
     {
-        cycles_to_run -= EE_JIT::run(this);
+        EE_JIT::reset(true);
+        flush_jit_cache = false;
     }
+
+    //cycles_to_run and wait_for_VU0 are handled in the dispatcher, so no need to check for them here
+    EE_JIT::run(this);
 
     branch_on = false;
 }
@@ -838,9 +846,10 @@ void EmotionEngine::syscall_exception()
     {
         int a0 = get_gpr<uint32_t>(4);
 
-        // Clear icache
+        //We can't flush the EE JIT cache immediately as we're still executing in a block.
+        //We have to wait until after we've left the block before we can erase blocks.
         if (a0 != 0 && a0 != 1)
-            EE_JIT::reset(true);
+            flush_jit_cache = true;
     }
 
     if (op == 0x7C)

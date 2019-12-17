@@ -305,6 +305,7 @@ private:
     // Recompile + Cleanup
     EEJitPrologue create_prologue_block();
     void emit_prologue();
+    void emit_dispatcher();
     void emit_instruction(EmotionEngine &ee, IR::Instruction &instr);
     EEJitBlockRecord* recompile_block(EmotionEngine& ee, IR::Block& block);
     void cleanup_recompiler(EmotionEngine& ee, bool clear_regs);
