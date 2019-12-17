@@ -63,12 +63,14 @@ void EE_JIT64::reset(bool clear_cache)
 
     //Current register allocation
     //RSP: reserved for stack
+    //R13: Fast lookup cache
     //R14: JIT64 object
     //R15: EE object
     //RAX: generic scratchpad register
     //Any register not on this list may be used freely by the recompiler.
 
     int_regs[REG_64::RSP].locked = true;
+    int_regs[REG_64::R13].locked = true;
     int_regs[REG_64::R14].locked = true;
     int_regs[REG_64::R15].locked = true;
     int_regs[REG_64::RAX].locked = true;
@@ -83,7 +85,6 @@ void EE_JIT64::reset(bool clear_cache)
 extern "C"
 uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee)
 {
-    //printf("PC: $%08X\n", ee.get_PC());
     bool is_modified = false;
     EEJitBlockRecord *recompiledBlock = jit.jit_heap.find_block(ee.PC);
 
@@ -105,7 +106,7 @@ uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee)
         IR::Block block = jit.ir.translate(ee);
         recompiledBlock = jit.recompile_block(ee, block);
     }
-    //printf("blorp: %p\n", recompiledBlock->code_start);
+    jit.jit_heap.lookup_cache[(ee.PC >> 2) & 0x7FFF] = recompiledBlock;
     return (uint8_t*)recompiledBlock->code_start;
 }
 
@@ -116,7 +117,7 @@ void interpreter(EmotionEngine& ee, uint32_t instr)
 
 uint16_t EE_JIT64::run(EmotionEngine& ee)
 {
-    prologue_block(*this, ee);
+    prologue_block(*this, ee, &jit_heap.lookup_cache[0]);
 
     return cycle_count;
 }
@@ -133,6 +134,7 @@ EEJitPrologue EE_JIT64::create_prologue_block()
 #else
     emitter.MOV64_MR(REG_64::RSI, REG_64::R15);
     emitter.MOV64_MR(REG_64::RDI, REG_64::R14);
+    emitter.MOV64_MR(REG_64::RDX, REG_64::R13);
 #endif
 
     emit_dispatcher();
@@ -154,9 +156,39 @@ void EE_JIT64::emit_dispatcher()
 
     emitter.set_jump_dest(cycle_count_gt0);
 
-    //TODO: do a fast lookup in a large lookup table to reduce the need for calling C++ code
+    //Fetch pointer to index in cache
+    //ptr = lookup_cache[(PC >> 2) & 0x7FFF]
+    emitter.MOV32_FROM_MEM(REG_64::R15, REG_64::RCX, offsetof(EmotionEngine, PC));
+    emitter.MOV32_REG(REG_64::RCX, REG_64::RAX);
+    emitter.SAR32_REG_IMM(2, REG_64::RAX);
+    emitter.AND32_EAX(0x7FFF);
+    emitter.SHL32_REG_IMM(3, REG_64::RAX);
+    emitter.ADD64_REG(REG_64::R13, REG_64::RAX);
+    emitter.MOV64_FROM_MEM(REG_64::RAX, REG_64::RAX);
+
+    //First we need to make sure the pointer isn't NULL, which means no block has been recompiled.
+    //If it is NULL, we go to the slow path.
+    emitter.CMP64_IMM(0, REG_64::RAX);
+    uint8_t* slow_path_dest1 = emitter.JCC_NEAR_DEFERRED(ConditionCode::E);
+
+    //Compare current PC with the PC of the block
+    //If equal, fetch the block's start and jump to it.
+    //Otherwise, we have to go to the slow path.
+    emitter.MOV32_FROM_MEM(REG_64::RAX, REG_64::RDX,
+                           offsetof(EEJitBlockRecord, block_data) + offsetof(EEJitBlockRecordData, pc));
+    emitter.CMP32_REG(REG_64::RCX, REG_64::RDX);
+    uint8_t* slow_path_dest2 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
+
+    emitter.MOV64_FROM_MEM(REG_64::RAX, REG_64::RAX, offsetof(EEJitBlockRecord, code_start));
+
+    //Tail-call optimization
+    emitter.JMP_INDIR(REG_64::RAX);
 
     //Find a block the slow way.
+    //This entails calling a C++ function that finds a block by looking in an unordered_map.
+    //If no block is found, this function will also recompile a new block.
+    emitter.set_jump_dest(slow_path_dest1);
+    emitter.set_jump_dest(slow_path_dest2);
 #ifdef _WIN32
     Errors::die("[EE_JIT64] WIN32 in emit_dispatcher");
 #else
@@ -204,8 +236,6 @@ EEJitBlockRecord* EE_JIT64::recompile_block(EmotionEngine& ee, IR::Block& block)
         handle_branch_likely(ee, block);
     else
         cleanup_recompiler(ee, true);
-
-    jit_block.print_block();
 
     return jit_heap.insert_block(ee.get_PC(), &jit_block);
 }

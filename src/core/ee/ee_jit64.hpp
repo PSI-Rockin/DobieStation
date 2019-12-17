@@ -63,7 +63,7 @@ alignas(16) static uint32_t PPACH_MASK[4] = { 0x0000FFFF, 0x0000FFFF, 0x0000FFFF
 
 extern "C" uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee);
 
-typedef void (*EEJitPrologue)(EE_JIT64& jit, EmotionEngine& ee);
+typedef void (*EEJitPrologue)(EE_JIT64& jit, EmotionEngine& ee, EEJitBlockRecord** cache);
 
 class EE_JIT64
 {

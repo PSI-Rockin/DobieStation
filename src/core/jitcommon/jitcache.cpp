@@ -566,7 +566,6 @@ EEJitBlockRecord* EEJitHeap::find_block(uint32_t PC)
     return nullptr;
 }
 
-
 /*!
  * Completely flush the heap
  */
@@ -582,6 +581,7 @@ void EEJitHeap::flush_all_blocks()
         }
         delete[] page.second.block_array;
     }
+    memset(lookup_cache, 0, sizeof(lookup_cache));
     ee_page_record_map.clear();
     ee_page_lookup_cache = nullptr;
     ee_page_lookup_idx = -1;
@@ -629,13 +629,12 @@ EEJitBlockRecord* EEJitHeap::insert_block(uint32_t PC, JitBlock *block)
     uint32_t page = PC / 4096;
     EEPageRecord* page_record = lookup_ee_page(page);
 
-    if(!page_record->block_array)
+    if (!page_record->block_array)
     {
         page_record->block_array = new EEJitBlockRecord[1024];
         page_record->valid = true;
         memset(page_record->block_array, 0, 1024 * sizeof(EEJitBlockRecord));
     }
-
 
     uint64_t idx = (PC - 4096*page)/4;
     assert(idx < 1024);

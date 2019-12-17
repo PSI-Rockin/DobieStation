@@ -344,7 +344,6 @@ private:
     uint64_t heap_usage;
     uint64_t invalid_count = 0;
 
-
     // ee page
     EEPageRecord* lookup_ee_page(uint32_t page);
     EEPageRecord* ee_page_lookup_cache;
@@ -356,6 +355,8 @@ private:
 public:
     EEJitHeap();
     ~EEJitHeap();
+
+    EEJitBlockRecord* lookup_cache[1024 * 32];
 
     EEJitBlockRecord *insert_block(uint32_t PC, JitBlock* block);
     void flush_all_blocks();
