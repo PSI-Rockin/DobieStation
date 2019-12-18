@@ -32,10 +32,6 @@
  * https://en.wikipedia.org/wiki/X86_calling_conventions#x86-64_calling_conventions
  */
 
-#ifdef _WIN32
-extern "C" void run_ee_jit(EE_JIT64& jit, EmotionEngine& ee);
-#endif
-
 EE_JIT64::EE_JIT64() : jit_block("EE"), emitter(&jit_block), prologue_block(nullptr)
 {
 }
@@ -130,7 +126,9 @@ EEJitPrologue EE_JIT64::create_prologue_block()
 
     //Store the JIT64/EE objects in R14/R15 respectively
 #ifdef _WIN32
-    Errors::die("[EE_JIT64] WIN32 in create_prologue_block");
+    emitter.MOV64_MR(REG_64::RDX, REG_64::R15);
+    emitter.MOV64_MR(REG_64::RCX, REG_64::R14);
+    emitter.MOV64_MR(REG_64::R8, REG_64::R13);
 #else
     emitter.MOV64_MR(REG_64::RSI, REG_64::R15);
     emitter.MOV64_MR(REG_64::RDI, REG_64::R14);
@@ -190,7 +188,8 @@ void EE_JIT64::emit_dispatcher()
     emitter.set_jump_dest(slow_path_dest1);
     emitter.set_jump_dest(slow_path_dest2);
 #ifdef _WIN32
-    Errors::die("[EE_JIT64] WIN32 in emit_dispatcher");
+    emitter.MOV64_MR(REG_64::R14, REG_64::RCX);
+    emitter.MOV64_MR(REG_64::R15, REG_64::RDX);
 #else
     emitter.MOV64_MR(REG_64::R14, REG_64::RDI);
     emitter.MOV64_MR(REG_64::R15, REG_64::RSI);
@@ -1514,29 +1513,28 @@ void EE_JIT64::cleanup_recompiler(EmotionEngine& ee, bool clear_regs)
 
 void EE_JIT64::emit_prologue()
 {
-#ifdef _WIN32
-    Errors::die("[EE_JIT64] emit_prologue not implemented for _WIN32");
-
-#else
     emitter.PUSH(REG_64::RBX);
     emitter.PUSH(REG_64::R12);
     emitter.PUSH(REG_64::R13);
     emitter.PUSH(REG_64::R14);
     emitter.PUSH(REG_64::R15);
+#ifdef _WIN32
+    emitter.PUSH(REG_64::RDI);
+    emitter.PUSH(REG_64::RSI);
 #endif
 }
 
 void EE_JIT64::emit_epilogue()
 {
 #ifdef _WIN32
-    Errors::die("[EE_JIT64] emit_epilogue not implemented for _WIN32");
-#else
+    emitter.POP(REG_64::RSI);
+    emitter.POP(REG_64::RDI);
+#endif
     emitter.POP(REG_64::R15);
     emitter.POP(REG_64::R14);
     emitter.POP(REG_64::R13);
     emitter.POP(REG_64::R12);
     emitter.POP(REG_64::RBX);
-#endif
     emitter.RET();
 }
 
