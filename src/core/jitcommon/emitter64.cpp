@@ -798,6 +798,22 @@ void Emitter64::TEST8_REG_IMM(uint8_t imm, REG_64 op1)
     block->write<uint8_t>(imm);
 }
 
+void Emitter64::TEST8_MEM_IMM(uint8_t imm, REG_64 mem, uint32_t offset)
+{
+    rex_r_rm((REG_64)0, mem);
+    block->write<uint8_t>(0xF6);
+    if ((mem & 7) == 5 || offset != 0)
+    {
+        modrm(0b10, 0, mem);
+        block->write<uint32_t>(offset);
+    }
+    else
+    {
+        modrm(0, 0, mem);
+    }
+    block->write<uint8_t>(imm);
+}
+
 void Emitter64::TEST16_REG(REG_64 op2, REG_64 op1)
 {
     block->write<uint8_t>(0x66);

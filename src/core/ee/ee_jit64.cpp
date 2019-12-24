@@ -146,13 +146,20 @@ void EE_JIT64::emit_dispatcher()
 {
     //Check if cycles_to_run > 0 and VU0 wait is false. When both are true, we execute another block.
     //Otherwise, we return.
-    //TODO: VU0 check
     emitter.CMP32_IMM_MEM(0, REG_64::R15, offsetof(EmotionEngine, cycles_to_run));
 
     uint8_t* cycle_count_gt0 = emitter.JCC_NEAR_DEFERRED(ConditionCode::G);
     emit_epilogue();
 
     emitter.set_jump_dest(cycle_count_gt0);
+
+    //Now do the VU0 wait check.
+    emitter.TEST8_MEM_IMM(0, REG_64::R15, offsetof(EmotionEngine, wait_for_VU0));
+
+    uint8_t* no_vu0_wait = emitter.JCC_NEAR_DEFERRED(ConditionCode::Z);
+    emit_epilogue();
+
+    emitter.set_jump_dest(no_vu0_wait);
 
     //Fetch pointer to index in cache
     //ptr = lookup_cache[(PC >> 2) & 0x7FFF]
