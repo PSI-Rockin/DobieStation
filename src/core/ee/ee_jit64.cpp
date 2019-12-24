@@ -190,12 +190,17 @@ void EE_JIT64::emit_dispatcher()
 #ifdef _WIN32
     emitter.MOV64_MR(REG_64::R14, REG_64::RCX);
     emitter.MOV64_MR(REG_64::R15, REG_64::RDX);
+    emitter.SUB64_REG_IMM(0x20, REG_64::RSP);
 #else
     emitter.MOV64_MR(REG_64::R14, REG_64::RDI);
     emitter.MOV64_MR(REG_64::R15, REG_64::RSI);
 #endif
     emitter.load_addr((uint64_t)exec_block_ee, REG_64::RAX);
     emitter.CALL_INDIR(REG_64::RAX);
+
+#ifdef _WIN32
+    emitter.ADD64_REG_IMM(0x20, REG_64::RSP);
+#endif
 
     //Tail-call optimization
     emitter.JMP_INDIR(REG_64::RAX);
