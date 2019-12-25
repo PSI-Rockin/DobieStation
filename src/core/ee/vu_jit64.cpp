@@ -282,13 +282,13 @@ void VU_JIT64::handle_branch(VectorUnit& vu)
 {
     //Load the "branch happened" variable
     emitter.load_addr((uint64_t)&vu.branch_on, REG_64::RAX);
-    emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::RAX);
+    emitter.MOV8_FROM_MEM(REG_64::RAX, REG_64::RAX);
 
     //The branch will point to two locations: one where the PC is set to the branch destination,
     //and another where PC = PC + 16. Our generated code will jump if the branch *fails*.
     //This is to allow for future optimizations where the recompiler may generate code beyond
     //the branch (assuming that the branch fails).
-    emitter.TEST16_REG(REG_64::RAX, REG_64::RAX);
+    emitter.TEST8_REG(REG_64::RAX, REG_64::RAX);
 
     //Because we don't know where the branch will jump to, we defer it.
     //Once the "branch succeeded" case has been finished recompiling, we can rewrite the branch offset...
@@ -658,7 +658,7 @@ void VU_JIT64::jump(VectorUnit& vu, IR::Instruction& instr)
     emitter.MOV16_IMM_MEM(instr.get_jump_dest(), REG_64::RAX);
 
     emitter.load_addr((uint64_t)&vu.branch_on_delay, REG_64::RAX);
-    emitter.MOV16_IMM_MEM(1, REG_64::RAX);
+    emitter.MOV8_IMM_MEM(1, REG_64::RAX);
     vu_branch = true;
 }
 
@@ -669,16 +669,16 @@ void VU_JIT64::jump_and_link(VectorUnit& vu, IR::Instruction& instr)
     emitter.MOV16_IMM_MEM(instr.get_jump_dest(), REG_64::RAX);
 
     emitter.load_addr((uint64_t)&vu.branch_on_delay, REG_64::RAX);
-    emitter.MOV16_IMM_MEM(1, REG_64::RAX);
+    emitter.MOV8_IMM_MEM(1, REG_64::RAX);
 
     //Then set the link register
     REG_64 link = alloc_int_reg(vu, instr.get_dest(), REG_STATE::WRITE);
     if (instr.get_bc())
     {
         emitter.load_addr((uint64_t)&vu.branch_on, REG_64::RAX);
-        emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::RAX);
+        emitter.MOV8_FROM_MEM(REG_64::RAX, REG_64::RAX);
 
-        emitter.TEST16_REG(REG_64::RAX, REG_64::RAX);
+        emitter.TEST8_REG(REG_64::RAX, REG_64::RAX);
         uint8_t* offset_addr = emitter.JCC_NEAR_DEFERRED(ConditionCode::E);
         //First branch is taken, so we set the link according to that destination
         emitter.load_addr((uint64_t)&vu_branch_dest, REG_64::RAX);
@@ -716,7 +716,7 @@ void VU_JIT64::jump_indirect(VectorUnit &vu, IR::Instruction &instr)
     emitter.MOV16_TO_MEM(REG_64::RAX, REG_64::R15);
 
     emitter.load_addr((uint64_t)&vu.branch_on_delay, REG_64::RAX);
-    emitter.MOV16_IMM_MEM(1, REG_64::RAX);
+    emitter.MOV8_IMM_MEM(1, REG_64::RAX);
     vu_branch = true;
 }
 
@@ -732,16 +732,16 @@ void VU_JIT64::jump_and_link_indirect(VectorUnit &vu, IR::Instruction &instr)
     emitter.MOV16_TO_MEM(REG_64::RAX, REG_64::R15);
 
     emitter.load_addr((uint64_t)&vu.branch_on_delay, REG_64::RAX);
-    emitter.MOV16_IMM_MEM(1, REG_64::RAX);
+    emitter.MOV8_IMM_MEM(1, REG_64::RAX);
 
     //Then set the link register
     REG_64 link = alloc_int_reg(vu, instr.get_dest(), REG_STATE::WRITE);
     if (instr.get_bc())
     {
         emitter.load_addr((uint64_t)&vu.branch_on, REG_64::RAX);
-        emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::RAX);
+        emitter.MOV8_FROM_MEM(REG_64::RAX, REG_64::RAX);
 
-        emitter.TEST16_REG(REG_64::RAX, REG_64::RAX);
+        emitter.TEST8_REG(REG_64::RAX, REG_64::RAX);
         uint8_t* offset_addr = emitter.JCC_NEAR_DEFERRED(ConditionCode::E);
         //First branch is taken, so we set the link according to that destination
         emitter.load_addr((uint64_t)&vu_branch_dest, REG_64::RAX);
@@ -772,9 +772,9 @@ void VU_JIT64::handle_branch_destinations(VectorUnit& vu, IR::Instruction& instr
     if (instr.get_bc())
     {
         emitter.load_addr((uint64_t)&vu.branch_on, REG_64::RAX);
-        emitter.MOV16_FROM_MEM(REG_64::RAX, REG_64::RAX);
+        emitter.MOV8_FROM_MEM(REG_64::RAX, REG_64::RAX);
 
-        emitter.TEST16_REG(REG_64::RAX, REG_64::RAX);
+        emitter.TEST8_REG(REG_64::RAX, REG_64::RAX);
         uint8_t* offset_addr = emitter.JCC_NEAR_DEFERRED(ConditionCode::E);
         //First branch is taken, so we set the fail destination according to that destination
         emitter.load_addr((uint64_t)&vu_branch_dest, REG_64::RAX);
@@ -2386,8 +2386,8 @@ void VU_JIT64::move_delayed_branch(VectorUnit &vu, IR::Instruction &instr)
 
     emitter.load_addr((uint64_t)&vu.branch_on, REG_64::RAX);
     emitter.load_addr((uint64_t)&vu.branch_on_delay, REG_64::R15);
-    emitter.MOV16_FROM_MEM(REG_64::R15, REG_64::R15);
-    emitter.MOV16_TO_MEM(REG_64::R15, REG_64::RAX);
+    emitter.MOV8_FROM_MEM(REG_64::R15, REG_64::R15);
+    emitter.MOV8_TO_MEM(REG_64::R15, REG_64::RAX);
 
     vu_branch = true;
 }
