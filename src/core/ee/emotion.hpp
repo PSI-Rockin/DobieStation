@@ -62,6 +62,8 @@ class EmotionEngine
         Deci2Handler deci2handlers[128];
         int deci2size;
 
+        bool flush_jit_cache;
+
         std::function<void(EmotionEngine&)> run_func;
 
         uint32_t get_paddr(uint32_t vaddr);
@@ -182,6 +184,7 @@ class EmotionEngine
         friend class EE_JIT64;
         friend class EE_JitTranslator;
 
+        friend void emit_dispatcher();
         friend uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee);
 };
 

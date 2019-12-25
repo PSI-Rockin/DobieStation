@@ -233,7 +233,6 @@
 
   <!-- jit stuff -->
   <ItemGroup>
-    <MASM Include="$(CoreDir)ee\ee_jit_asm.asm" />
     <MASM Include="$(CoreDir)ee\vu_jit_asm.asm" />
     <MASM Include="$(CoreDir)gsjit.asm" />
   </ItemGroup>

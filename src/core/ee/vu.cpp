@@ -823,11 +823,11 @@ void VectorUnit::start_program(uint32_t addr)
     //printf("[VU%d] CallMS Starting execution at $%08X! Cur PC %x\n", get_id(), new_addr, PC);
 
     //Enable this if disabling micromem disasm
-    /*if (get_id() == 1 && is_dirty())
+    if (get_id() == 1 && is_dirty())
     {
         VU_JIT::set_current_program(crc_microprogram());
         clear_dirty();
-    }*/
+    }
     
     if (running == false)
     {
@@ -844,7 +844,7 @@ void VectorUnit::start_program(uint32_t addr)
         }
         flush_pipes();
     }
-    disasm_micromem();
+    //disasm_micromem();
     run_event = cycle_count;
 }
 

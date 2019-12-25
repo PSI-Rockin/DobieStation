@@ -32,11 +32,7 @@
  * https://en.wikipedia.org/wiki/X86_calling_conventions#x86-64_calling_conventions
  */
 
-#ifdef _WIN32
-extern "C" void run_ee_jit(EE_JIT64& jit, EmotionEngine& ee);
-#endif
-
-EE_JIT64::EE_JIT64() : jit_block("EE"), emitter(&jit_block)
+EE_JIT64::EE_JIT64() : jit_block("EE"), emitter(&jit_block), prologue_block(nullptr)
 {
 }
 
@@ -61,14 +57,25 @@ void EE_JIT64::reset(bool clear_cache)
         int_regs[i].reg = -1;
     }
 
-    // Lock special registers to prevent them from being used
-    int_regs[REG_64::RSP].locked = true;
+    //Current register allocation
+    //RSP: reserved for stack
+    //R13: Fast lookup cache
+    //R14: JIT64 object
+    //R15: EE object
+    //RAX: generic scratchpad register
+    //Any register not on this list may be used freely by the recompiler.
 
-    // Scratchpad Registers
+    int_regs[REG_64::RSP].locked = true;
+    int_regs[REG_64::R13].locked = true;
+    int_regs[REG_64::R14].locked = true;
+    int_regs[REG_64::R15].locked = true;
     int_regs[REG_64::RAX].locked = true;
 
     if (clear_cache)
+    {
         jit_heap.flush_all_blocks();
+        prologue_block = create_prologue_block();
+    }
 }
 
 extern "C"
@@ -95,6 +102,7 @@ uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee)
         IR::Block block = jit.ir.translate(ee);
         recompiledBlock = jit.recompile_block(ee, block);
     }
+    jit.jit_heap.lookup_cache[(ee.PC >> 2) & 0x7FFF] = recompiledBlock;
     return (uint8_t*)recompiledBlock->code_start;
 }
 
@@ -105,19 +113,104 @@ void interpreter(EmotionEngine& ee, uint32_t instr)
 
 uint16_t EE_JIT64::run(EmotionEngine& ee)
 {
-#ifdef _MSC_VER
-    run_ee_jit(*this, ee);
-#else
-    uint8_t* block = exec_block_ee(*this, ee);
-
-    __asm__ volatile (
-        "callq *%0"
-        :
-    : "r" (block)
-        );
-#endif
+    prologue_block(*this, ee, &jit_heap.lookup_cache[0]);
 
     return cycle_count;
+}
+
+EEJitPrologue EE_JIT64::create_prologue_block()
+{
+    jit_block.clear();
+
+    emit_prologue();
+
+    //Store the JIT64/EE objects in R14/R15 respectively
+#ifdef _WIN32
+    emitter.MOV64_MR(REG_64::RDX, REG_64::R15);
+    emitter.MOV64_MR(REG_64::RCX, REG_64::R14);
+    emitter.MOV64_MR(REG_64::R8, REG_64::R13);
+#else
+    emitter.MOV64_MR(REG_64::RSI, REG_64::R15);
+    emitter.MOV64_MR(REG_64::RDI, REG_64::R14);
+    emitter.MOV64_MR(REG_64::RDX, REG_64::R13);
+#endif
+
+    emit_dispatcher();
+
+    //Reserve 0xFFFFFFFF as the PC.
+    //Because this is an invalid address, it doesn't matter that the prologue block has this.
+    return (EEJitPrologue)jit_heap.insert_block(0xFFFFFFFF, &jit_block)->code_start;
+}
+
+void EE_JIT64::emit_dispatcher()
+{
+    //Check if cycles_to_run > 0 and VU0 wait is false. When both are true, we execute another block.
+    //Otherwise, we return.
+    emitter.CMP32_IMM_MEM(0, REG_64::R15, offsetof(EmotionEngine, cycles_to_run));
+
+    uint8_t* cycle_count_gt0 = emitter.JCC_NEAR_DEFERRED(ConditionCode::G);
+    emit_epilogue();
+
+    emitter.set_jump_dest(cycle_count_gt0);
+
+    //Now do the VU0 wait check.
+    emitter.TEST8_MEM_IMM(0, REG_64::R15, offsetof(EmotionEngine, wait_for_VU0));
+
+    uint8_t* no_vu0_wait = emitter.JCC_NEAR_DEFERRED(ConditionCode::Z);
+    emit_epilogue();
+
+    emitter.set_jump_dest(no_vu0_wait);
+
+    //Fetch pointer to index in cache
+    //ptr = lookup_cache[(PC >> 2) & 0x7FFF]
+    emitter.MOV32_FROM_MEM(REG_64::R15, REG_64::RCX, offsetof(EmotionEngine, PC));
+    emitter.MOV32_REG(REG_64::RCX, REG_64::RAX);
+    emitter.SAR32_REG_IMM(2, REG_64::RAX);
+    emitter.AND32_EAX(0x7FFF);
+    emitter.SHL32_REG_IMM(3, REG_64::RAX);
+    emitter.ADD64_REG(REG_64::R13, REG_64::RAX);
+    emitter.MOV64_FROM_MEM(REG_64::RAX, REG_64::RAX);
+
+    //First we need to make sure the pointer isn't NULL, which means no block has been recompiled.
+    //If it is NULL, we go to the slow path.
+    emitter.CMP64_IMM(0, REG_64::RAX);
+    uint8_t* slow_path_dest1 = emitter.JCC_NEAR_DEFERRED(ConditionCode::E);
+
+    //Compare current PC with the PC of the block
+    //If equal, fetch the block's start and jump to it.
+    //Otherwise, we have to go to the slow path.
+    emitter.MOV32_FROM_MEM(REG_64::RAX, REG_64::RDX,
+                           offsetof(EEJitBlockRecord, block_data) + offsetof(EEJitBlockRecordData, pc));
+    emitter.CMP32_REG(REG_64::RCX, REG_64::RDX);
+    uint8_t* slow_path_dest2 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
+
+    emitter.MOV64_FROM_MEM(REG_64::RAX, REG_64::RAX, offsetof(EEJitBlockRecord, code_start));
+
+    //Tail-call optimization
+    emitter.JMP_INDIR(REG_64::RAX);
+
+    //Find a block the slow way.
+    //This entails calling a C++ function that finds a block by looking in an unordered_map.
+    //If no block is found, this function will also recompile a new block.
+    emitter.set_jump_dest(slow_path_dest1);
+    emitter.set_jump_dest(slow_path_dest2);
+#ifdef _WIN32
+    emitter.MOV64_MR(REG_64::R14, REG_64::RCX);
+    emitter.MOV64_MR(REG_64::R15, REG_64::RDX);
+    emitter.SUB64_REG_IMM(0x20, REG_64::RSP);
+#else
+    emitter.MOV64_MR(REG_64::R14, REG_64::RDI);
+    emitter.MOV64_MR(REG_64::R15, REG_64::RSI);
+#endif
+    emitter.load_addr((uint64_t)exec_block_ee, REG_64::RAX);
+    emitter.CALL_INDIR(REG_64::RAX);
+
+#ifdef _WIN32
+    emitter.ADD64_REG_IMM(0x20, REG_64::RSP);
+#endif
+
+    //Tail-call optimization
+    emitter.JMP_INDIR(REG_64::RAX);
 }
 
 EEJitBlockRecord* EE_JIT64::recompile_block(EmotionEngine& ee, IR::Block& block)
@@ -127,17 +220,9 @@ EEJitBlockRecord* EE_JIT64::recompile_block(EmotionEngine& ee, IR::Block& block)
     saved_int_regs = std::vector<REG_64>();
     saved_xmm_regs = std::vector<REG_64>();
 
-    //block.alloc_block(BlockState{ ee.get_PC(), 0, 0, 0, 0 });
     jit_block.clear();
 
-    //Return the amount of cycles to update the EE with
-    emitter.load_addr((uint64_t)&cycle_count, REG_64::RAX);
-    emitter.MOV16_IMM_MEM(block.get_cycle_count(), REG_64::RAX);
-
-    //Prologue
-#ifndef _MSC_VER
-    emit_prologue();
-#endif
+    //Create new stack frame
     emitter.PUSH(REG_64::RBP);
     emitter.MOV64_MR(REG_64::RSP, REG_64::RBP);
 
@@ -146,7 +231,11 @@ EEJitBlockRecord* EE_JIT64::recompile_block(EmotionEngine& ee, IR::Block& block)
     // RSP + 20h: uint64_t[16] for integer registers
     // RSP + A0h: uint128_t[16] for xmm registers
     // RSP + 1A0h: uint128_t for storing the argument/result of store/load quad
-    emitter.SUB64_REG_IMM(0x1B0, REG_64::RSP);
+    // An extra 0x8 is needed so that functions we call can have a 16-byte aligned stack pointer.
+    emitter.SUB64_REG_IMM(0x1B8, REG_64::RSP);
+
+    //Update EE cycle count
+    emitter.SUB32_MEM_IMM(block.get_cycle_count(), REG_64::R15, offsetof(EmotionEngine, cycles_to_run));
 
     while (block.get_instruction_count() > 0 && !likely_branch)
     {
@@ -159,12 +248,7 @@ EEJitBlockRecord* EE_JIT64::recompile_block(EmotionEngine& ee, IR::Block& block)
     else
         cleanup_recompiler(ee, true);
 
-    //Switch the block's privileges from RW to RX.
-    //jit_block.print_block();
-    //cache.print_literal_pool();
     return jit_heap.insert_block(ee.get_PC(), &jit_block);
-
-
 }
 
 void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
@@ -1431,42 +1515,39 @@ void EE_JIT64::cleanup_recompiler(EmotionEngine& ee, bool clear_regs)
         }
     }
 
-    //Epilogue
-    emitter.ADD64_REG_IMM(0x1B0, REG_64::RSP);
+    //Clean up stack, has to be handled before we enter dispatcher
+    emitter.ADD64_REG_IMM(0x1B8, REG_64::RSP);
     emitter.POP(REG_64::RBP);
-#ifndef _MSC_VER
-    emit_epilogue();
-#endif
-    emitter.RET();
+
+    //Go back to the dispatcher to potentially execute another block
+    emit_dispatcher();
 }
 
 void EE_JIT64::emit_prologue()
 {
-#ifdef _WIN32
-    Errors::die("[EE_JIT64] emit_prologue not implemented for _WIN32");
-#else
     emitter.PUSH(REG_64::RBX);
     emitter.PUSH(REG_64::R12);
     emitter.PUSH(REG_64::R13);
     emitter.PUSH(REG_64::R14);
     emitter.PUSH(REG_64::R15);
+#ifdef _WIN32
     emitter.PUSH(REG_64::RDI);
+    emitter.PUSH(REG_64::RSI);
 #endif
 }
-
 
 void EE_JIT64::emit_epilogue()
 {
 #ifdef _WIN32
-    Errors::die("[EE_JIT64] emit_epilogue not implemented for _WIN32");
-#else
+    emitter.POP(REG_64::RSI);
     emitter.POP(REG_64::RDI);
+#endif
     emitter.POP(REG_64::R15);
     emitter.POP(REG_64::R14);
     emitter.POP(REG_64::R13);
     emitter.POP(REG_64::R12);
     emitter.POP(REG_64::RBX);
-#endif
+    emitter.RET();
 }
 
 void EE_JIT64::handle_branch_likely(EmotionEngine& ee, IR::Block& block)

@@ -1703,24 +1703,28 @@ void EE_JIT64::system_call(EmotionEngine& ee, IR::Instruction& instr)
         xmm_regs[i].used = false;
     }
 
+    REG_64 temp = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+
     // Update PC before calling exception handler
     emitter.load_addr((uint64_t)&ee.PC, REG_64::RAX);
-    emitter.MOV32_REG_IMM(instr.get_return_addr(), REG_64::R15);
-    emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
+    emitter.MOV32_REG_IMM(instr.get_return_addr(), temp);
+    emitter.MOV32_TO_MEM(temp, REG_64::RAX);
 
     // Cleanup branch_on, exception handler expects this to be false
     emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-    emitter.MOV8_REG_IMM(false, REG_64::R15);
-    emitter.MOV8_TO_MEM(REG_64::R15, REG_64::RAX);
+    emitter.MOV8_REG_IMM(false, temp);
+    emitter.MOV8_TO_MEM(temp, REG_64::RAX);
 
     prepare_abi((uint64_t)&ee);
     call_abi_func((uint64_t)ee_syscall_exception);
 
     // Since the interpreter decrements PC by 4, we reset it here to account for that.
     emitter.load_addr((uint64_t)&ee.PC, REG_64::RAX);
-    emitter.MOV32_FROM_MEM(REG_64::RAX, REG_64::R15);
-    emitter.ADD32_REG_IMM(4, REG_64::R15);
-    emitter.MOV32_TO_MEM(REG_64::R15, REG_64::RAX);
+    emitter.MOV32_FROM_MEM(REG_64::RAX, temp);
+    emitter.ADD32_REG_IMM(4, temp);
+    emitter.MOV32_TO_MEM(temp, REG_64::RAX);
+
+    free_int_reg(ee, temp);
 }
 
 void EE_JIT64::vcall_ms(EmotionEngine& ee, IR::Instruction& instr)
