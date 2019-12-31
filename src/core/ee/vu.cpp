@@ -593,6 +593,8 @@ void VectorUnit::write_reg(uint32_t addr, uint32_t data)
         if ((addr & 0xF) < 4)
             set_int((addr - 0x0200) / 0x10, data);
     }
+    else
+        printf("[VU0] Unrecognized write to VU1 register $%04X: $%08X\n", addr, data);
 }
 
 /**
