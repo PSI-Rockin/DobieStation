@@ -1866,7 +1866,7 @@ void VectorUnit::ilw(uint32_t instr)
     {
         if (_field & (1 << (3 - i)))
         {
-            uint32_t word = read_data<uint32_t>(addr);
+            uint32_t word = read_data<uint32_t>(addr + (i * 4));
             printf(" $%04X ($%02X, %d, %d)", word, _field, _it_, _is_);
             set_int(_it_, word);
             break;
@@ -1884,7 +1884,7 @@ void VectorUnit::ilwr(uint32_t instr)
     {
         if (_field & (1 << (3 - i)))
         {
-            uint32_t word = read_data<uint32_t>(addr);
+            uint32_t word = read_data<uint32_t>(addr + (i * 4));
             printf(" $%04X ($%02X, %d, %d)", word, _field, _it_, _is_);
             set_int(_it_, word & 0xFFFF);
             break;
