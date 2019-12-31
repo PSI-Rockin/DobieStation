@@ -548,7 +548,7 @@ void VectorUnit::handle_XGKICK()
 //VU0 can access VU1 registers through the addresses (anded with 0x7FFF) 0x4000-0x4400
 uint32_t VectorUnit::read_reg(uint32_t addr)
 {
-    addr &= 0xFFF;
+    addr &= 0x3FF;
     if (addr < 0x0200)
         return get_gpr_u(addr / 0x10, (addr & 0xC) / 4);
     else if (addr < 0x0300)
@@ -570,7 +570,7 @@ uint32_t VectorUnit::read_reg(uint32_t addr)
 
 void VectorUnit::write_reg(uint32_t addr, uint32_t data)
 {
-    addr &= 0xFFF;
+    addr &= 0x3FF;
     if (addr < 0x0200)
         set_gpr_u(addr / 0x10, (addr & 0xC) / 4, data);
     else if (addr < 0x0300)

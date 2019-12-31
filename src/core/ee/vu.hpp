@@ -401,7 +401,7 @@ inline T VectorUnit::read_data(uint32_t addr)
 {
     if (id == 1)
         return *(T*)&data_mem.m[addr & 0x3FFF];
-    if (addr >= 0x4000 && addr < 0x4400)
+    if (addr & 0x4000)
         return other_vu->read_reg(addr);
     return *(T*)&data_mem.m[addr & 0xFFF];
 }
@@ -424,7 +424,7 @@ inline void VectorUnit::write_data(uint32_t addr, T data)
 {
     if (id == 1)
         *(T*)&data_mem.m[addr & 0x3FFF] = data;
-    else if (addr >= 0x4000 && addr < 0x4400)
+    else if (addr & 0x4000)
         other_vu->write_reg(addr, data);
     else
         *(T*)&data_mem.m[addr & 0xFFF] = data;
