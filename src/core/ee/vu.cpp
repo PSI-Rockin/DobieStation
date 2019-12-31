@@ -324,7 +324,7 @@ void VectorUnit::run(int cycles)
         {
             if (XGKICK_delay)
                 XGKICK_delay--;
-            else if (gif->path_active(1))
+            else if(gif->path_active(1, true))
                 handle_XGKICK();
         }
 
@@ -364,7 +364,7 @@ void VectorUnit::run(int cycles)
         {
             if (!ebit_delay_slot)
             {
-                printf("[VU%d] Ended execution!\n", id);
+                printf("[VU%d] Ended execution at PC %x!\n", id, PC);
                 running = false;
                 finish_on = false;
                 flush_pipes();
@@ -398,7 +398,7 @@ void VectorUnit::run(int cycles)
 
     if (transferring_GIF)
     {
-        if (gif->path_active(1))
+        if (gif->path_active(1, true))
         {
             while (cycles_to_run && transferring_GIF)
             {
@@ -486,7 +486,7 @@ void VectorUnit::run_jit(int cycles)
         if ((!running || XGKICK_stall) && transferring_GIF)
         {
             gif->request_PATH(1, true);
-            while (cycles > 0 && gif->path_active(1))
+            while (cycles > 0 && gif->path_active(1, true))
             {
                 if (XGKICK_stall)
                     stalled_cycles++;
@@ -887,7 +887,7 @@ void VectorUnit::start_program(uint32_t addr)
         running = true;
         tbit_stop = false;
         PC = new_addr;
-
+        printf("[VU%d] Starting execution at PC %x!\n", id, PC);
         //Try to keep VU0 in sync with the EE
         //TODO: Account for VIF0 MSCAL timing
         if (!id)

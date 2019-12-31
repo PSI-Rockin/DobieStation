@@ -399,7 +399,7 @@ int DMAC::process_GIF()
                 return count;
             }
             gif->request_PATH(3, false);
-            if (gif->path_active(3) && !gif->fifo_full() && !gif->fifo_draining())
+            if (gif->path_active(3, false) && !gif->fifo_full() && !gif->fifo_draining())
             {
                 gif->dma_waiting(false);
                 gif->send_PATH3(fetch128(channels[GIF].address));
@@ -446,7 +446,7 @@ int DMAC::process_GIF()
         if (channels[GIF].quadword_count)
         {
             gif->request_PATH(3, false);
-            if (gif->path_active(3) && !gif->fifo_full() && !gif->fifo_draining())
+            if (gif->path_active(3, false) && !gif->fifo_full() && !gif->fifo_draining())
             {
                 if (control.stall_dest_channel == 2 && channels[GIF].can_stall_drain)
                 {

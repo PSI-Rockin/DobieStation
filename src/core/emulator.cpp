@@ -641,6 +641,15 @@ uint64_t Emulator::read64(uint32_t address)
 
 uint128_t Emulator::read128(uint32_t address)
 {
+    if (address >= 0x11000000 && address < 0x11004000)
+        return vu0.read_instr<uint128_t>(address);
+    if (address >= 0x11004000 && address < 0x11008000)
+        return vu0.read_mem<uint128_t>(address);
+    if (address >= 0x11008000 && address < 0x1100C000)
+        return vu1.read_instr<uint128_t>(address);
+    if (address >= 0x1100C000 && address < 0x11010000)
+        return vu1.read_mem<uint128_t>(address);
+
     printf("Unrecognized read128 at physical addr $%08X\n", address);
     return uint128_t::from_u32(0);
 }

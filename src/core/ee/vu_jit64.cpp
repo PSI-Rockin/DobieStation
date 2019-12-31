@@ -114,9 +114,9 @@ void vu_update_xgkick(VectorUnit& vu, int cycles)
     if (vu.transferring_GIF)
     {
         vu.gif->request_PATH(1, true);
-        if (!vu.gif->path_active(1))
+        if (!vu.gif->path_active(1, true))
             vu.XGKICK_delay = std::max(0, vu.XGKICK_delay - cycles);
-        while (cycles > 0 && vu.gif->path_active(1))
+        while (cycles > 0 && vu.gif->path_active(1, true))
         {
             cycles--;
             if (vu.XGKICK_delay)
