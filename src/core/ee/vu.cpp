@@ -317,7 +317,6 @@ void VectorUnit::run(int cycles)
         update_DIV_EFU_pipes();
         int_branch_pipeline.update();
 
-
         if (XGKICK_stall)
             break;
 
@@ -325,7 +324,7 @@ void VectorUnit::run(int cycles)
         {
             if (XGKICK_delay)
                 XGKICK_delay--;
-            else if(gif->path_active(1))
+            else if (gif->path_active(1))
                 handle_XGKICK();
         }
 
@@ -365,7 +364,7 @@ void VectorUnit::run(int cycles)
         {
             if (!ebit_delay_slot)
             {
-                printf("[VU] Ended execution!\n");
+                printf("[VU%d] Ended execution!\n", id);
                 running = false;
                 finish_on = false;
                 flush_pipes();
@@ -562,6 +561,22 @@ uint32_t VectorUnit::read_reg(uint32_t addr)
     {
         switch (addr)
         {
+            case 0x300:
+                return status;
+            case 0x310:
+                return *MAC_flags;
+            case 0x320:
+                return *CLIP_flags;
+            case 0x340:
+                return R.u;
+            case 0x350:
+                return I.u;
+            case 0x360:
+                return Q.u;
+            case 0x370:
+                return P.u;
+            case 0x3A0:
+                return PC;
             default:
                 return 0;
         }
@@ -1868,7 +1883,7 @@ void VectorUnit::ilw(uint32_t instr)
         {
             uint32_t word = read_data<uint32_t>(addr + (i * 4));
             printf(" $%04X ($%02X, %d, %d)", word, _field, _it_, _is_);
-            set_int(_it_, word);
+            set_int(_it_, word & 0xFFFF);
             break;
         }
     }
