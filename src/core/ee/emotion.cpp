@@ -656,7 +656,7 @@ void EmotionEngine::ctc(int cop_id, int reg, int cop_reg, uint32_t instruction)
                 clear_interlock();
             }
             if (cop_reg == 31)
-                vu1->start_program(bark);
+                vu1->start_program(bark << 3);
             else
                 vu0->ctc(cop_reg, bark);
             break;

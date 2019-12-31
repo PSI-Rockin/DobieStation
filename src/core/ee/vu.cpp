@@ -133,7 +133,8 @@ void DecodedRegs::reset()
     vi_write_from_load = 0;
 }
 
-VectorUnit::VectorUnit(int id, Emulator* e, INTC* intc, EmotionEngine* cpu) : id(id), e(e), intc(intc), eecpu(cpu), gif(nullptr)
+VectorUnit::VectorUnit(int id, Emulator* e, INTC* intc, EmotionEngine* cpu, VectorUnit* other_vu) :
+    id(id), e(e), intc(intc), eecpu(cpu), gif(nullptr), other_vu(other_vu)
 {
     gpr[0].f[0] = 0.0;
     gpr[0].f[1] = 0.0;
@@ -316,7 +317,6 @@ void VectorUnit::run(int cycles)
         update_DIV_EFU_pipes();
         int_branch_pipeline.update();
 
-
         if (XGKICK_stall)
             break;
 
@@ -324,7 +324,7 @@ void VectorUnit::run(int cycles)
         {
             if (XGKICK_delay)
                 XGKICK_delay--;
-            else if(gif->path_active(1))
+            else if (gif->path_active(1))
                 handle_XGKICK();
         }
 
@@ -364,7 +364,7 @@ void VectorUnit::run(int cycles)
         {
             if (!ebit_delay_slot)
             {
-                printf("[VU] Ended execution!\n");
+                printf("[VU%d] Ended execution!\n", id);
                 running = false;
                 finish_on = false;
                 flush_pipes();
@@ -523,7 +523,7 @@ void VectorUnit::run_jit(int cycles)
 
 void VectorUnit::handle_XGKICK()
 {
-    uint128_t quad = read_data<uint128_t>(GIF_addr);
+    uint128_t quad = read_mem<uint128_t>(GIF_addr);
     GIF_addr += 16;
     if (gif->send_PATH1(quad))
     {
@@ -542,6 +542,59 @@ void VectorUnit::handle_XGKICK()
             transferring_GIF = false;
         }
     }
+}
+
+//VU0 can access VU1 registers through the addresses (anded with 0x7FFF) 0x4000-0x4400
+uint32_t VectorUnit::read_reg(uint32_t addr)
+{
+    addr &= 0x3FF;
+    if (addr < 0x0200)
+        return get_gpr_u(addr / 0x10, (addr & 0xC) / 4);
+    else if (addr < 0x0300)
+    {
+        if ((addr & 0xF) < 4)
+            return get_int((addr - 0x0200) / 0x10);
+        else
+            return 0;
+    }
+    else
+    {
+        switch (addr)
+        {
+            case 0x300:
+                return status;
+            case 0x310:
+                return *MAC_flags;
+            case 0x320:
+                return *CLIP_flags;
+            case 0x340:
+                return R.u;
+            case 0x350:
+                return I.u;
+            case 0x360:
+                return Q.u;
+            case 0x370:
+                return P.u;
+            case 0x3A0:
+                return PC;
+            default:
+                return 0;
+        }
+    }
+}
+
+void VectorUnit::write_reg(uint32_t addr, uint32_t data)
+{
+    addr &= 0x3FF;
+    if (addr < 0x0200)
+        set_gpr_u(addr / 0x10, (addr & 0xC) / 4, data);
+    else if (addr < 0x0300)
+    {
+        if ((addr & 0xF) < 4)
+            set_int((addr - 0x0200) / 0x10, data);
+    }
+    else
+        printf("[VU0] Unrecognized write to VU1 register $%04X: $%08X\n", addr, data);
 }
 
 /**
@@ -1825,14 +1878,14 @@ void VectorUnit::ilw(uint32_t instr)
     write_int(_it_, _is_);
     int16_t offset = (instr & 0x400) ? (instr & 0x3FF) | 0xFC00 : (instr & 0x3FF);
     uint16_t addr = (int_gpr[_is_].s + offset) * 16;
-    uint128_t quad = read_data<uint128_t>(addr);
     printf("[VU] ILW: $%08X ($%08X)\n", addr, offset);
     for (int i = 0; i < 4; i++)
     {
         if (_field & (1 << (3 - i)))
         {
-            printf(" $%04X ($%02X, %d, %d)", quad._u32[i] & 0xFFFF, _field, _it_, _is_);
-            set_int(_it_, quad._u32[i] & 0xFFFF);
+            uint32_t word = read_data<uint32_t>(addr + (i * 4));
+            printf(" $%04X ($%02X, %d, %d)", word, _field, _it_, _is_);
+            set_int(_it_, word & 0xFFFF);
             break;
         }
     }
@@ -1843,14 +1896,14 @@ void VectorUnit::ilwr(uint32_t instr)
 {
     write_int(_it_, _is_);
     uint32_t addr = (uint32_t)int_gpr[_is_].u << 4;
-    uint128_t quad = read_data<uint128_t>(addr);
     printf("[VU] ILWR: $%08X", addr);
     for (int i = 0; i < 4; i++)
     {
         if (_field & (1 << (3 - i)))
         {
-            printf(" $%04X ($%02X, %d, %d)", quad._u32[i] & 0xFFFF, _field, _it_, _is_);
-            set_int(_it_, quad._u32[i] & 0xFFFF);
+            uint32_t word = read_data<uint32_t>(addr + (i * 4));
+            printf(" $%04X ($%02X, %d, %d)", word, _field, _it_, _is_);
+            set_int(_it_, word & 0xFFFF);
             break;
         }
     }
