@@ -70,13 +70,13 @@ uint128_t DMAC::fetch128(uint32_t addr)
         }
         if (addr < 0x11008000)
         {
-            return vu0->read_data<uint128_t>(addr);
+            return vu0->read_mem<uint128_t>(addr);
         }
         if (addr < 0x1100C000)
         {
             return vu1->read_instr<uint128_t>(addr);
         }
-        return vu1->read_data<uint128_t>(addr);
+        return vu1->read_mem<uint128_t>(addr);
     }
     else
     {
@@ -101,7 +101,7 @@ void DMAC::store128(uint32_t addr, uint128_t data)
         }
         if (addr < 0x11008000)
         {
-            vu0->write_data<uint128_t>(addr, data);
+            vu0->write_mem<uint128_t>(addr, data);
             return;
         }
         if (addr < 0x1100C000)
@@ -109,7 +109,7 @@ void DMAC::store128(uint32_t addr, uint128_t data)
             vu1->write_instr<uint128_t>(addr, data);
             return;
         }
-        vu1->write_data<uint128_t>(addr, data);
+        vu1->write_mem<uint128_t>(addr, data);
         return;
     }
     else

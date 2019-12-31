@@ -96,6 +96,7 @@ class VectorUnit
         Emulator* e;
         INTC* intc;
         EmotionEngine* eecpu;
+        VectorUnit* other_vu; //Pointer to VU1 for VU0, vice versa for VU1
 
         uint64_t cycle_count; //Increments when "running" is true
         uint64_t run_event; //If less than cycle_count, the VU is allowed to run
@@ -178,7 +179,7 @@ class VectorUnit
         void advance_r();
         void print_vectors(uint8_t a, uint8_t b);
     public:
-        VectorUnit(int id, Emulator* e, INTC* intc, EmotionEngine* eecpu);
+        VectorUnit(int id, Emulator* e, INTC* intc, EmotionEngine* eecpu, VectorUnit* other_vu);
 
         DecodedRegs decoder;
 
@@ -214,10 +215,15 @@ class VectorUnit
 
         static float convert(uint32_t value);
 
+        uint32_t read_reg(uint32_t addr);
         template <typename T> T read_instr(uint32_t addr);
         template <typename T> T read_data(uint32_t addr);
+        template <typename T> T read_mem(uint32_t addr);
+
+        void write_reg(uint32_t addr, uint32_t data);
         template <typename T> void write_instr(uint32_t addr, T data);
         template <typename T> void write_data(uint32_t addr, T data);
+        template <typename T> void write_mem(uint32_t addr, T data);
 
         bool is_running();
         bool stopped_by_tbit();
@@ -393,6 +399,16 @@ inline T VectorUnit::read_instr(uint32_t addr)
 template <typename T>
 inline T VectorUnit::read_data(uint32_t addr)
 {
+    if (id == 1)
+        return *(T*)&data_mem.m[addr & 0x3FFF];
+    if (addr >= 0x4000 && addr < 0x4400)
+        return other_vu->read_reg(addr);
+    return *(T*)&data_mem.m[addr & 0xFFF];
+}
+
+template <typename T>
+inline T VectorUnit::read_mem(uint32_t addr)
+{
     return *(T*)&data_mem.m[addr & mem_mask];
 }
 
@@ -405,6 +421,17 @@ inline void VectorUnit::write_instr(uint32_t addr, T data)
 
 template <typename T>
 inline void VectorUnit::write_data(uint32_t addr, T data)
+{
+    if (id == 1)
+        *(T*)&data_mem.m[addr & 0x3FFF] = data;
+    else if (addr >= 0x4000 && addr < 0x4400)
+        other_vu->write_reg(addr, data);
+    else
+        *(T*)&data_mem.m[addr & 0xFFF] = data;
+}
+
+template <typename T>
+inline void VectorUnit::write_mem(uint32_t addr, T data)
 {
     *(T*)&data_mem.m[addr & mem_mask] = data;
 }

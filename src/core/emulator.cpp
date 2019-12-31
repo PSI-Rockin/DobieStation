@@ -34,8 +34,8 @@ Emulator::Emulator() :
     spu2(2, this, &iop_dma),
     vif0(nullptr, &vu0, &intc, &dmac, 0),
     vif1(&gif, &vu1, &intc, &dmac, 1),
-    vu0(0, this, &intc, &cpu),
-    vu1(1, this, &intc, &cpu),
+    vu0(0, this, &intc, &cpu, &vu1),
+    vu1(1, this, &intc, &cpu, &vu0),
     sif(&iop_dma, &dmac)
 {
     BIOS = nullptr;
