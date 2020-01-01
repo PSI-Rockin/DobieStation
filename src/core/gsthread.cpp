@@ -3474,7 +3474,7 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupIn
             break;
         case 3:
             //Mask should only apply to integer component
-            u = (u & ((current_ctx->clamp.min_u >> info.mipmap_level) | 0xF)) | (current_ctx->clamp.max_u >> info.mipmap_level);
+            u = (u & (current_ctx->clamp.min_u >> info.mipmap_level)) | (current_ctx->clamp.max_u >> info.mipmap_level);
             break;
     }
     switch (current_ctx->clamp.wrap_t)
@@ -3495,7 +3495,7 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupIn
                 v = (current_ctx->clamp.min_v >> info.mipmap_level);
             break;
         case 3:
-            v = (v & ((current_ctx->clamp.min_v >> info.mipmap_level) | 0xF)) | (current_ctx->clamp.max_v >> info.mipmap_level);
+            v = (v & (current_ctx->clamp.min_v >> info.mipmap_level)) | (current_ctx->clamp.max_v >> info.mipmap_level);
             break;
     }
 
@@ -4614,8 +4614,7 @@ GSTextureJitBlockRecord* GraphicsSynthesizerThread::recompile_tex_lookup(uint64_
         }
             break;
         case 0x3:
-            //u = (u & (min_u | 0xF)) | max_u
-            emitter_tex.OR32_REG_IMM(0xF, RDX);
+            //u = (u & min_u) | max_u
             emitter_tex.AND32_REG(RDX, R12);
             emitter_tex.OR32_REG(RBX, R12);
             break;
@@ -4655,8 +4654,7 @@ GSTextureJitBlockRecord* GraphicsSynthesizerThread::recompile_tex_lookup(uint64_
         }
             break;
         case 0x3:
-            //v = (v & (min_v | 0xF)) | max_v
-            emitter_tex.OR32_REG_IMM(0xF, R8);
+            //v = (v & min_v) | max_v
             emitter_tex.AND32_REG(R8, R13);
             emitter_tex.OR32_REG(R15, R13);
             break;
