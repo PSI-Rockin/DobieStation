@@ -84,7 +84,7 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
             {
                 if (instrs.back().op != IR::Opcode::Jump && instrs.back().op != IR::Opcode::JumpIndirect)
                 {
-                    if (instrs.back().get_jump_dest() == ee.get_PC())
+                    if (instrs.back().get_jump_dest() == ee.get_PC() && ee.read32(pc + 4) != 0)
                     {
                         //Set branch dest to instruction after delay slot
                         instrs.back().set_jump_dest(pc + 8);
