@@ -28,7 +28,9 @@ enum class REG_STATE
     READ_WRITE
 };
 
-extern "C" uint8_t* exec_block(VU_JIT64& jit, VectorUnit& vu);
+extern "C" uint8_t* exec_block_vu(VU_JIT64& jit, VectorUnit& vu);
+
+typedef void (*VUJitPrologue)(VU_JIT64& jit, VectorUnit& vu);
 
 class VU_JIT64
 {
@@ -39,6 +41,7 @@ class VU_JIT64
         VUJitHeap jit_heap;
         Emitter64 emitter;
         VU_JitTranslator ir;
+        VUJitPrologue prologue_block;
 
         //Set to 0x7FFFFFFF, repeated four times
         VU_GPR abs_constant;
@@ -180,10 +183,10 @@ class VU_JIT64
         void flush_regs(VectorUnit& vu);
         void flush_sse_reg(VectorUnit& vu, int vf_reg);
 
+        void create_prologue_block();
         void emit_prologue();
         void emit_instruction(VectorUnit& vu, IR::Instruction& instr);
         VUJitBlockRecord* recompile_block(VectorUnit& vu, IR::Block& block);
-        //uint8_t* exec_block(VectorUnit& vu);
         void cleanup_recompiler(VectorUnit& vu, bool clear_regs);
         void emit_epilogue();
 
@@ -197,7 +200,7 @@ class VU_JIT64
         void set_current_program(uint32_t crc);
         uint16_t run(VectorUnit& vu);
 
-        friend uint8_t* exec_block(VU_JIT64& jit, VectorUnit& vu);
+        friend uint8_t* exec_block_vu(VU_JIT64& jit, VectorUnit& vu);
 };
 
 #endif // VU_JIT64_HPP

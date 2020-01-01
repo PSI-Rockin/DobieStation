@@ -333,15 +333,6 @@ void VectorUnit::run(int cycles)
         //printf("[$%08X] $%08X:$%08X\n", PC, upper_instr, lower_instr);
         VU_Interpreter::interpret(*this, upper_instr, lower_instr);
 
-        /*if (PC == 0x13B8 || PC == 0x1380)
-        {
-            for (int i = 0; i < 32; i++)
-            {
-                printf("vf%d: (%f, %f, %f, %f)\n", i, gpr[i].f[3], gpr[i].f[2], gpr[i].f[1], gpr[i].f[0]);
-                printf("vf%d: ($%08X, $%08X, $%08X, $%08X)\n", i, gpr[i].u[3], gpr[i].u[2], gpr[i].u[1], gpr[i].u[0]);
-            }
-        }*/
-
         PC += 8;
 
         if (branch_on)
@@ -504,19 +495,6 @@ void VectorUnit::run_jit(int cycles)
         while (running && !XGKICK_stall && run_event < cycle_count)
         {
             run_event += VU_JIT::run(this);
-
-            /*if (PC > 0x1200 && PC < 0x1500)
-            {
-                for (int i = 0; i < 32; i++)
-                {
-                    printf("vf%d: (%f, %f, %f, %f)\n", i, gpr[i].f[3], gpr[i].f[2], gpr[i].f[1], gpr[i].f[0]);
-                    printf("vf%d: ($%08X, $%08X, $%08X, $%08X)\n", i, gpr[i].u[3], gpr[i].u[2], gpr[i].u[1], gpr[i].u[0]);
-                }
-                //printf("mac: $%04X $%04X $%04X $%04X\n", MAC_pipeline[0], MAC_pipeline[1], MAC_pipeline[2], *MAC_flags & 0xFFFF);
-                //for (int i = 0; i < 16; i++)
-                    //printf("vi%d: $%04X\n", i, int_gpr[i].u);
-                //printf("clip: $%08X ($%04X)\n", clip_flags, 0 - ((clip_flags & 0x3FFFF) != 0));
-            }*/
         }
     }
 }

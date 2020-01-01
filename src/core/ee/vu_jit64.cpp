@@ -31,12 +31,9 @@
  * https://en.wikipedia.org/wiki/X86_calling_conventions#x86-64_calling_conventions
  */
 
-#ifdef _WIN32
-    extern "C" void run_vu_jit(VU_JIT64& jit, VectorUnit& vu);
-#endif
-
 VU_JIT64::VU_JIT64() : jit_block("VU"), emitter(&jit_block)
 {
+    prologue_block = nullptr;
     for (int i = 0; i < 4; i++)
     {
         ftoi_table[0].f[i] = pow(2, 0);
@@ -166,8 +163,11 @@ void VU_JIT64::reset(bool clear_cache)
     xmm_regs[REG_64::XMM0].locked = true;
     xmm_regs[REG_64::XMM1].locked = true;
 
-    if(clear_cache)
+    if (clear_cache)
+    {
         jit_heap.flush_all_blocks();
+        create_prologue_block();
+    }
 
     ir.reset_instr_info();
 
@@ -180,7 +180,6 @@ void VU_JIT64::set_current_program(uint32_t crc)
 {
     reset(false);
     current_program = crc;
-
 }
 
 uint64_t VU_JIT64::get_vf_addr(VectorUnit &vu, int index)
@@ -2615,17 +2614,45 @@ void VU_JIT64::flush_sse_reg(VectorUnit &vu, int vf_reg)
     }
 }
 
+void VU_JIT64::create_prologue_block()
+{
+    jit_block.clear();
+
+    emit_prologue();
+
+    emitter.SUB64_REG_IMM(0x28, REG_64::RSP);
+    emitter.load_addr((uint64_t)&exec_block_vu, REG_64::RAX);
+    emitter.CALL_INDIR(REG_64::RAX);
+    emitter.CALL_INDIR(REG_64::RAX);
+    emitter.ADD64_REG_IMM(0x28, REG_64::RSP);
+
+    emit_epilogue();
+    emitter.RET();
+
+    VUBlockState state;
+    state.pc = 0xFFFF;
+    state.prev_pc = 0xFFFE;
+    state.param1 = 0;
+    state.param2 = 0;
+    state.program = 0;
+
+    jit_block.print_block();
+
+    prologue_block = (VUJitPrologue)jit_heap.insert_block(state, &jit_block)->code_start;
+}
+
 void VU_JIT64::emit_prologue()
 {
-#ifdef _WIN32
-    Errors::die("[VU_JIT64] emit_prologue not implemented for _WIN32");
-#else
+    emitter.PUSH(REG_64::RBP);
+    emitter.MOV64_MR(REG_64::RSP, REG_64::RBP);
     emitter.PUSH(REG_64::RBX);
     emitter.PUSH(REG_64::R12);
     emitter.PUSH(REG_64::R13);
     emitter.PUSH(REG_64::R14);
     emitter.PUSH(REG_64::R15);
+#ifdef _WIN32
     emitter.PUSH(REG_64::RDI);
+    emitter.PUSH(REG_64::RSI);
 #endif
 }
 
@@ -2919,7 +2946,6 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
 
 VUJitBlockRecord* VU_JIT64::recompile_block(VectorUnit& vu, IR::Block& block)
 {
-    //jit_block.alloc_block(BlockState { vu.get_PC(), prev_pc, current_program, vu.pipeline_state[0], vu.pipeline_state[1] });
     jit_block.clear();
 
     vu_branch = false;
@@ -2927,9 +2953,6 @@ VUJitBlockRecord* VU_JIT64::recompile_block(VectorUnit& vu, IR::Block& block)
     cycle_count = block.get_cycle_count();
 
     //Prologue
-#ifndef _MSC_VER
-    emit_prologue();
-#endif
     emitter.PUSH(REG_64::RBP);
     emitter.MOV64_MR(REG_64::RSP, REG_64::RBP);
 
@@ -2944,11 +2967,7 @@ VUJitBlockRecord* VU_JIT64::recompile_block(VectorUnit& vu, IR::Block& block)
     else
         cleanup_recompiler(vu, true);
 
-    //Switch the block's privileges from RW to RX.
-    //jit_block.set_current_block_rx();
     return jit_heap.insert_block(VUBlockState{vu.get_PC(), prev_pc, current_program, vu.pipeline_state[0], vu.pipeline_state[1]}, &jit_block);
-    //cache.print_block();
-    //cache.print_literal_pool();
 }
 
 void VU_JIT64::cleanup_recompiler(VectorUnit& vu, bool clear_regs)
@@ -2979,24 +2998,21 @@ void VU_JIT64::cleanup_recompiler(VectorUnit& vu, bool clear_regs)
 
     //Epilogue
     emitter.POP(REG_64::RBP);
-#ifndef _MSC_VER
-    emit_epilogue();
-#endif
     emitter.RET();
 }
 
 void VU_JIT64::emit_epilogue()
 {
 #ifdef _WIN32
-    Errors::die("[VU_JIT64] emit_epilogue not implemented for _WIN32");
-#else
+    emitter.POP(REG_64::RSI);
     emitter.POP(REG_64::RDI);
+#endif
     emitter.POP(REG_64::R15);
     emitter.POP(REG_64::R14);
     emitter.POP(REG_64::R13);
     emitter.POP(REG_64::R12);
     emitter.POP(REG_64::RBX);
-#endif
+    emitter.POP(REG_64::RBP);
 }
 
 void VU_JIT64::prepare_abi(VectorUnit& vu, uint64_t value)
@@ -3097,7 +3113,7 @@ void VU_JIT64::fallback_interpreter(VectorUnit &vu, IR::Instruction &instr)
 }
 
 extern "C"
-uint8_t* exec_block(VU_JIT64& jit, VectorUnit& vu)
+uint8_t* exec_block_vu(VU_JIT64& jit, VectorUnit& vu)
 {
     //fprintf(stderr, "[VU_JIT64] Executing block at $%04X, Prev PC $%04X Current Program %08X: recompiling\n", vu.PC, jit.prev_pc, jit.current_program);
     VUJitBlockRecord* found_block = jit.jit_heap.find_block(VUBlockState
@@ -3114,17 +3130,7 @@ uint8_t* exec_block(VU_JIT64& jit, VectorUnit& vu)
 
 uint16_t VU_JIT64::run(VectorUnit& vu)
 {
-#ifdef _MSC_VER
-    run_vu_jit(*this, vu);
-#else
-    uint8_t* block = exec_block(*this, vu);
-
-    __asm__ volatile (
-        "callq *%0"
-                :
-                : "r" (block)
-    );
-#endif
+    prologue_block(*this, vu);
     
     return cycle_count;
 }

@@ -231,12 +231,6 @@
     <None Include="application\application.pro" />
   </ItemGroup>
 
-  <!-- jit stuff -->
-  <ItemGroup>
-    <MASM Include="$(CoreDir)ee\vu_jit_asm.asm" />
-    <MASM Include="$(CoreDir)gsjit.asm" />
-  </ItemGroup>
-
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 
   <ImportGroup Label="ExtensionTargets">
