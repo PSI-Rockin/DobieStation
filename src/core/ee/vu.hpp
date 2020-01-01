@@ -7,8 +7,6 @@
 #include "emotion.hpp"
 #include "../int128.hpp"
 
-#define XGKICK_INIT_DELAY 0
-
 union alignas(16) VU_R
 {
     float f;
@@ -116,7 +114,6 @@ class VectorUnit
         bool second_branch_pending;
         int branch_delay_slot, ebit_delay_slot;
 
-        int XGKICK_delay;
         uint16_t GIF_addr;
         bool transferring_GIF;
         bool XGKICK_stall;

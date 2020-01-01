@@ -4,7 +4,7 @@
 
 #define VER_MAJOR 0
 #define VER_MINOR 0
-#define VER_REV 27
+#define VER_REV 28
 
 using namespace std;
 
@@ -368,7 +368,6 @@ void VectorUnit::load_state(ifstream &state)
     state.read((char*)&pipeline_state, sizeof(pipeline_state));
 
     //XGKICK
-    state.read((char*)&XGKICK_delay, sizeof(XGKICK_delay));
     state.read((char*)&GIF_addr, sizeof(GIF_addr));
     state.read((char*)&transferring_GIF, sizeof(transferring_GIF));
     state.read((char*)&XGKICK_stall, sizeof(XGKICK_stall));
@@ -435,7 +434,6 @@ void VectorUnit::save_state(ofstream &state)
     state.write((char*)&pipeline_state, sizeof(pipeline_state));
 
     //XGKICK
-    state.write((char*)&XGKICK_delay, sizeof(XGKICK_delay));
     state.write((char*)&GIF_addr, sizeof(GIF_addr));
     state.write((char*)&transferring_GIF, sizeof(transferring_GIF));
     state.write((char*)&XGKICK_stall, sizeof(XGKICK_stall));

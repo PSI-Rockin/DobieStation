@@ -111,15 +111,10 @@ void vu_update_xgkick(VectorUnit& vu, int cycles)
     if (vu.transferring_GIF)
     {
         vu.gif->request_PATH(1, true);
-        if (!vu.gif->path_active(1, true))
-            vu.XGKICK_delay = std::max(0, vu.XGKICK_delay - cycles);
         while (cycles > 0 && vu.gif->path_active(1, true))
         {
             cycles--;
-            if (vu.XGKICK_delay)
-                vu.XGKICK_delay--;
-            else
-                vu.handle_XGKICK();
+            vu.handle_XGKICK();
         }
     }
 }
@@ -2299,9 +2294,6 @@ void VU_JIT64::xgkick(VectorUnit &vu, IR::Instruction &instr)
 
     emitter.load_addr((uint64_t)&vu.GIF_addr, REG_64::R15);
     emitter.MOV16_TO_MEM(REG_64::RAX, REG_64::R15);
-
-    emitter.load_addr((uint64_t)&vu.XGKICK_delay, REG_64::R15);
-    emitter.MOV32_IMM_MEM(XGKICK_INIT_DELAY, REG_64::R15);
 
     emitter.set_jump_dest(stall_addr);
 }
