@@ -1872,8 +1872,6 @@ void GraphicsSynthesizerThread::recompile_draw_pixel_prologue()
     emitter_dp.POP(REG_64::RBP);
     emitter_dp.RET();
 
-    jit_draw_pixel_block.print_block();
-
     jit_draw_pixel_prologue = (GSDrawPixelPrologue)jit_draw_pixel_heap.
             insert_block(~0ULL, &jit_draw_pixel_block)->code_start;
 }
@@ -4180,9 +4178,6 @@ GSPixelJitBlockRecord* GraphicsSynthesizerThread::recompile_draw_pixel(uint64_t 
 
     emitter_dp.set_jump_dest(do_not_update_rgba);
     jit_epilogue_draw_pixel();
-    jit_draw_pixel_block.print_block();
-    jit_draw_pixel_block.print_literal_pool();
-    //jit_draw_pixel_block.set_current_block_rx();
     return jit_draw_pixel_heap.insert_block(state, &jit_draw_pixel_block);
 }
 
@@ -4896,9 +4891,6 @@ GSTextureJitBlockRecord* GraphicsSynthesizerThread::recompile_tex_lookup(uint64_
     emitter_tex.POP(RBP);
     emitter_tex.RET();
 
-    jit_tex_lookup_block.print_block();
-    jit_tex_lookup_block.print_literal_pool();
-    //jit_tex_lookup_block.set_current_block_rx();
     return jit_tex_lookup_heap.insert_block(state, &jit_tex_lookup_block);
 }
 

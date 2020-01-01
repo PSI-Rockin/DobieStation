@@ -84,7 +84,7 @@ class VectorUnit;
 class INTC;
 class EmotionEngine;
 
-extern "C" uint8_t* exec_block(VU_JIT64& jit, VectorUnit& vu);
+extern "C" uint8_t* exec_block_vu(VU_JIT64& jit, VectorUnit& vu);
 extern "C" uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee);
 
 class VectorUnit
@@ -380,7 +380,7 @@ class VectorUnit
 
         friend void vu_update_xgkick(VectorUnit& vu, int cycles);
         friend void vu_update_pipelines(VectorUnit& vu, int cycles);
-        friend uint8_t* exec_block(VU_JIT64& jit, VectorUnit& vu);
+        friend uint8_t* exec_block_vu(VU_JIT64& jit, VectorUnit& vu);
         friend uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee);
 };
 

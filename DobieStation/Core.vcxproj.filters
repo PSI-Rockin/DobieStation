@@ -422,9 +422,4 @@
     <None Include="$(RootDir).gitignore" />
     <None Include="$(RootDir)CONTRIBUTING.md" />
   </ItemGroup>
-  <ItemGroup>
-    <MASM Include="$(CoreDir)ee\vu_jit_asm.asm">
-      <Filter>x86</Filter>
-    </MASM>
-  </ItemGroup>
 </Project>
