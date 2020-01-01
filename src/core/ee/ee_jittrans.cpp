@@ -24,6 +24,8 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
     std::vector<IR::Instruction> instrs;
     uint32_t pc = ee.get_PC();
 
+    di_delay = 0;
+
     branch_op = false;
     branch_delayslot = false;
     eret_op = false;
@@ -39,6 +41,30 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
 
         if (branch_op)
             branch_delayslot = true;
+
+        //The EE kernel has a bug where it tries to disable interrupts, but due to pipelining this doesn't happen.
+        //The code in the kernel looks like this:
+        //* di
+        //* mfc0 k0, Status
+        //* ori k0, 0x13
+        //* mtc0 k0, Status
+        //* sync
+        //* eret
+        //DI is non-atomic, so MFC0 will read the *old* value of the Status register.
+        //The DI completes before MTC0 executes, so MTC0 will overwrite the old value of EIE.
+        //Some games (Namco 50th Anniversary, Jak X) check if interrupts are enabled during bootup and error
+        //out if they are not, so emulating this is required.
+        if (di_delay)
+        {
+            di_delay--;
+            if (!di_delay)
+            {
+                IR::Instruction instr;
+                uint32_t opcode = 0x42000039;
+                fallback_interpreter(instr, opcode);
+                instrs.push_back(instr);
+            }
+        }
 
         if (instrs.size())
         {
@@ -58,7 +84,7 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
             {
                 if (instrs.back().op != IR::Opcode::Jump && instrs.back().op != IR::Opcode::JumpIndirect)
                 {
-                    if (instrs.back().get_jump_dest() == ee.get_PC())
+                    if (instrs.back().get_jump_dest() == ee.get_PC() && ee.read32(pc + 4) != 0)
                     {
                         //Set branch dest to instruction after delay slot
                         instrs.back().set_jump_dest(pc + 8);
@@ -3026,9 +3052,14 @@ void EE_JitTranslator::translate_op_cop0_type2(uint32_t opcode, uint32_t PC, std
             break;
         case 0x39:
             // DI
-            Errors::print_warning("[EE_JIT] Unrecognized cop0 type2 op DI\n", op);
-            fallback_interpreter(instr, opcode);
-            instrs.push_back(instr);
+            if (!branch_op)
+                di_delay = 2;
+            else
+            {
+                Errors::print_warning("[EE_JIT] Unrecognized cop0 type2 op DI\n", op);
+                fallback_interpreter(instr, opcode);
+                instrs.push_back(instr);
+            }
             break;
         default:
             Errors::die("[EE_JIT] Unrecognized cop0 type2 op $%02X", op);

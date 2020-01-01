@@ -149,6 +149,7 @@ private:
     bool branch_op;
     bool branch_delayslot;
     int cycle_count;
+    int di_delay;
 
     void interpreter_pass(EmotionEngine &ee, uint32_t pc);
     void fallback_interpreter(IR::Instruction& instr, uint32_t instr_word) const noexcept;
