@@ -220,7 +220,6 @@ void IOPTiming::write_control(int index, uint16_t value)
     if (timers[index].control.use_gate)
     {
         Errors::die("IOPTiming timer %d control.use_gate is true", index);
-        timers[index].control.started = false;
     }
     else
         timers[index].control.started = true;

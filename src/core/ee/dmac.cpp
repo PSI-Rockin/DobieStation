@@ -20,10 +20,10 @@ DMAC::DMAC(EmotionEngine* cpu, Emulator* e, GraphicsInterface* gif, ImageProcess
     apply_dma_funcs();
 }
 
-void DMAC::reset(uint8_t* RDRAM, uint8_t* scratchpad)
+void DMAC::reset(uint8_t* new_RDRAM, uint8_t* new_scratchpad)
 {
-    this->RDRAM = RDRAM;
-    this->scratchpad = scratchpad;
+    RDRAM = new_RDRAM;
+    scratchpad = new_scratchpad;
     master_disable = 0x1201; //SCPH-39001 requires this value to be set, possibly other BIOSes too
     control.master_enable = false;
     mfifo_empty_triggered = false;
@@ -70,13 +70,13 @@ uint128_t DMAC::fetch128(uint32_t addr)
         }
         if (addr < 0x11008000)
         {
-            return vu0->read_data<uint128_t>(addr);
+            return vu0->read_mem<uint128_t>(addr);
         }
         if (addr < 0x1100C000)
         {
             return vu1->read_instr<uint128_t>(addr);
         }
-        return vu1->read_data<uint128_t>(addr);
+        return vu1->read_mem<uint128_t>(addr);
     }
     else
     {
@@ -101,7 +101,7 @@ void DMAC::store128(uint32_t addr, uint128_t data)
         }
         if (addr < 0x11008000)
         {
-            vu0->write_data<uint128_t>(addr, data);
+            vu0->write_mem<uint128_t>(addr, data);
             return;
         }
         if (addr < 0x1100C000)
@@ -109,7 +109,7 @@ void DMAC::store128(uint32_t addr, uint128_t data)
             vu1->write_instr<uint128_t>(addr, data);
             return;
         }
-        vu1->write_data<uint128_t>(addr, data);
+        vu1->write_mem<uint128_t>(addr, data);
         return;
     }
     else
@@ -399,7 +399,7 @@ int DMAC::process_GIF()
                 return count;
             }
             gif->request_PATH(3, false);
-            if (gif->path_active(3) && !gif->fifo_full() && !gif->fifo_draining())
+            if (gif->path_active(3, false) && !gif->fifo_full() && !gif->fifo_draining())
             {
                 gif->dma_waiting(false);
                 gif->send_PATH3(fetch128(channels[GIF].address));
@@ -446,7 +446,7 @@ int DMAC::process_GIF()
         if (channels[GIF].quadword_count)
         {
             gif->request_PATH(3, false);
-            if (gif->path_active(3) && !gif->fifo_full() && !gif->fifo_draining())
+            if (gif->path_active(3, false) && !gif->fifo_full() && !gif->fifo_draining())
             {
                 if (control.stall_dest_channel == 2 && channels[GIF].can_stall_drain)
                 {
@@ -986,7 +986,6 @@ void DMAC::handle_source_chain(int index)
     {
         case 1:
             Errors::die("[DMAC] PCR info set to 1!");
-            break;
         case 2:
             //Disable priority control
             PCR &= ~(1 << 31);
@@ -1051,6 +1050,12 @@ uint8_t DMAC::read8(uint32_t address)
 {
     int shift = (address & 0x3) * 8;
     return (read32(address & ~0x3) >> shift) & 0xFF;
+}
+
+uint16_t DMAC::read16(uint32_t address)
+{
+    int shift = (address & 0x2) * 8;
+    return (read32(address & ~0x2) >> shift) & 0xFFFF;
 }
 
 uint32_t DMAC::read32(uint32_t address)
@@ -1621,7 +1626,7 @@ void DMAC::update_stadr(uint32_t addr)
     STADR = addr;
 
     //Reactivate a stalled channel if necessary
-    int c;
+    int c = 0;
     switch (control.stall_dest_channel)
     {
         case 0:
@@ -1635,6 +1640,8 @@ void DMAC::update_stadr(uint32_t addr)
         case 3:
             c = EE_SIF1;
             break;
+        default:
+            Errors::die("DMAC::update_stadr: control.stall_dest_channel >= 4");
     }
 
     uint32_t madr = channels[c].address + (8 * 16);

@@ -29,77 +29,71 @@ void EmuThread::reset()
 
 void EmuThread::set_skip_BIOS_hack(SKIP_HACK skip)
 {
-    load_mutex.lock();
+    QMutexLocker locker(&emu_mutex);
     e.set_skip_BIOS_hack(skip);
-    load_mutex.unlock();
 }
 
 void EmuThread::set_ee_mode(CPU_MODE mode)
 {
-    load_mutex.lock();
+    QMutexLocker locker(&emu_mutex);
     e.set_ee_mode(mode);
-    load_mutex.unlock();
 }
 
 void EmuThread::set_vu1_mode(CPU_MODE mode)
 {
-    load_mutex.lock();
+    QMutexLocker locker(&emu_mutex);
     e.set_vu1_mode(mode);
-    load_mutex.unlock();
 }
 
 void EmuThread::load_BIOS(const uint8_t *BIOS)
 {
-    load_mutex.lock();
+    QMutexLocker locker(&emu_mutex);
     e.load_BIOS(BIOS);
-    load_mutex.unlock();
 }
 
 void EmuThread::load_ELF(const uint8_t *ELF, uint64_t ELF_size)
 {
-    load_mutex.lock();
+    QMutexLocker locker(&emu_mutex);
     e.reset();
     e.load_ELF(ELF, ELF_size);
-    load_mutex.unlock();
 }
 
 void EmuThread::load_CDVD(const char* name, CDVD_CONTAINER type)
 {
-    load_mutex.lock();
+    QMutexLocker locker(&emu_mutex);
     e.reset();
     e.load_CDVD(name, type);
-    load_mutex.unlock();
 }
 
 bool EmuThread::load_state(const char *name)
 {
-    load_mutex.lock();
+    QMutexLocker locker(&emu_mutex);
     bool fail = false;
     if (!e.request_load_state(name))
         fail = true;
-    load_mutex.unlock();
+
     return fail;
 }
 
 bool EmuThread::save_state(const char *name)
 {
-    load_mutex.lock();
+    QMutexLocker locker(&emu_mutex);
     bool fail = false;
     if (!e.request_save_state(name))
         fail = true;
-    load_mutex.unlock();
+
     return fail;
 }
 
 bool EmuThread::gsdump_read(const char *name)
 {
-    load_mutex.lock();
+    QMutexLocker locker(&emu_mutex);
     gsdump.open(name,ios::binary);
     if (!gsdump.is_open())
         return 1;
     e.get_gs().reset();
     e.get_gs().load_state(gsdump);
-    load_mutex.unlock();
+
     printf("loaded gsdump\n");
     gsdump_reading = true;
     return 0;
@@ -107,16 +101,14 @@ bool EmuThread::gsdump_read(const char *name)
 
 void EmuThread::gsdump_write_toggle()
 {
-    load_mutex.lock();
+    QMutexLocker locker(&emu_mutex);
     e.request_gsdump_toggle();
-    load_mutex.unlock();
 }
 
 void EmuThread::gsdump_single_frame()
 {
-    load_mutex.lock();
+    QMutexLocker locker(&emu_mutex);
     e.request_gsdump_single_frame();
-    load_mutex.unlock();
 }
 
 GSMessage& EmuThread::get_next_gsdump_message()
@@ -146,9 +138,6 @@ void EmuThread::gsdump_run()
         while (true)
         {
             GSMessage& data = get_next_gsdump_message();
-//            GSMessage data;
-//            gsdump.read((char*)&data, sizeof(data));
-
 
             switch (data.type)
             {
@@ -183,7 +172,6 @@ void EmuThread::gsdump_run()
                         Errors::die("gsdump ended before end of file!");
                     gsdump.close();
                     Errors::die("gsdump ended successfully\n");
-                    return;
                 case save_state_t:
                 case load_state_t:
                     Errors::die("save_state save/load during gsdump not supported!");
@@ -263,38 +251,36 @@ void EmuThread::run()
 
 void EmuThread::shutdown()
 {
-    pause_mutex.lock();
+    QMutexLocker locker(&emu_mutex);
     abort = true;
-    pause_mutex.unlock();
 }
 
 void EmuThread::press_key(PAD_BUTTON button)
 {
-    pause_mutex.lock();
+    QMutexLocker locker(&emu_mutex);
     e.press_button(button);
-    pause_mutex.unlock();
 }
 
 void EmuThread::release_key(PAD_BUTTON button)
 {
-    pause_mutex.lock();
+    QMutexLocker locker(&emu_mutex);
     e.release_button(button);
-    pause_mutex.unlock();
 }
 
 void EmuThread::update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t val)
 {
-    pause_mutex.lock();
+    QMutexLocker locker(&emu_mutex);
     e.update_joystick(joystick, axis, val);
-    pause_mutex.unlock();
 }
 
 void EmuThread::pause(PAUSE_EVENT event)
 {
+    QMutexLocker locker(&emu_mutex);
     pause_status |= 1 << event;
 }
 
 void EmuThread::unpause(PAUSE_EVENT event)
 {
+    QMutexLocker locker(&emu_mutex);
     pause_status &= ~(1 << event);
 }

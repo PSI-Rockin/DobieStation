@@ -189,7 +189,7 @@ bool VectorInterface::process_data_word(uint32_t value)
             case 0x50:
             case 0x51:
                 //DIRECT/DIRECTHL
-                if (!gif->path_active(2))
+                if (!gif->path_active(2, command == 0x50))
                     return false;
 
                 buffer[buffer_size] = value;
@@ -478,7 +478,7 @@ void VectorInterface::handle_UNPACK_masking(uint128_t& quad)
                     break;
                 case 3:
                     //printf("[VIF] Write Protecting to position %d\n", i);
-                    quad._u32[i] = vu->read_data<uint32_t>(unpack.addr + (i * 4));
+                    quad._u32[i] = vu->read_mem<uint32_t>(unpack.addr + (i * 4));
                     break;
                 default:
                     //No masking, ignore
@@ -843,7 +843,7 @@ void VectorInterface::process_UNPACK_quad(uint128_t &quad)
 
     //printf("[VIF] Write data mem $%08X: $%08X_%08X_%08X_%08X\n", unpack.addr,
     //quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
-    vu->write_data<uint128_t>(unpack.addr, quad);
+    vu->write_mem<uint128_t>(unpack.addr, quad);
     unpack.addr += 16;
     unpack.num -= 1;
     

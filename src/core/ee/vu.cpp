@@ -133,7 +133,8 @@ void DecodedRegs::reset()
     vi_write_from_load = 0;
 }
 
-VectorUnit::VectorUnit(int id, Emulator* e, INTC* intc, EmotionEngine* cpu) : id(id), e(e), intc(intc), eecpu(cpu), gif(nullptr)
+VectorUnit::VectorUnit(int id, Emulator* e, INTC* intc, EmotionEngine* cpu, VectorUnit* other_vu) :
+    id(id), e(e), intc(intc), eecpu(cpu), gif(nullptr), other_vu(other_vu)
 {
     gpr[0].f[0] = 0.0;
     gpr[0].f[1] = 0.0;
@@ -316,7 +317,6 @@ void VectorUnit::run(int cycles)
         update_DIV_EFU_pipes();
         int_branch_pipeline.update();
 
-
         if (XGKICK_stall)
             break;
 
@@ -324,7 +324,7 @@ void VectorUnit::run(int cycles)
         {
             if (XGKICK_delay)
                 XGKICK_delay--;
-            else if(gif->path_active(1))
+            else if(gif->path_active(1, true))
                 handle_XGKICK();
         }
 
@@ -332,15 +332,6 @@ void VectorUnit::run(int cycles)
         uint32_t lower_instr = *(uint32_t*)&instr_mem.m[PC];
         //printf("[$%08X] $%08X:$%08X\n", PC, upper_instr, lower_instr);
         VU_Interpreter::interpret(*this, upper_instr, lower_instr);
-
-        /*if (PC == 0x13B8 || PC == 0x1380)
-        {
-            for (int i = 0; i < 32; i++)
-            {
-                printf("vf%d: (%f, %f, %f, %f)\n", i, gpr[i].f[3], gpr[i].f[2], gpr[i].f[1], gpr[i].f[0]);
-                printf("vf%d: ($%08X, $%08X, $%08X, $%08X)\n", i, gpr[i].u[3], gpr[i].u[2], gpr[i].u[1], gpr[i].u[0]);
-            }
-        }*/
 
         PC += 8;
 
@@ -364,7 +355,7 @@ void VectorUnit::run(int cycles)
         {
             if (!ebit_delay_slot)
             {
-                printf("[VU] Ended execution!\n");
+                printf("[VU%d] Ended execution at PC %x!\n", id, PC);
                 running = false;
                 finish_on = false;
                 flush_pipes();
@@ -398,7 +389,7 @@ void VectorUnit::run(int cycles)
 
     if (transferring_GIF)
     {
-        if (gif->path_active(1))
+        if (gif->path_active(1, true))
         {
             while (cycles_to_run && transferring_GIF)
             {
@@ -486,7 +477,7 @@ void VectorUnit::run_jit(int cycles)
         if ((!running || XGKICK_stall) && transferring_GIF)
         {
             gif->request_PATH(1, true);
-            while (cycles > 0 && gif->path_active(1))
+            while (cycles > 0 && gif->path_active(1, true))
             {
                 if (XGKICK_stall)
                     stalled_cycles++;
@@ -504,26 +495,13 @@ void VectorUnit::run_jit(int cycles)
         while (running && !XGKICK_stall && run_event < cycle_count)
         {
             run_event += VU_JIT::run(this);
-
-            /*if (PC > 0x1200 && PC < 0x1500)
-            {
-                for (int i = 0; i < 32; i++)
-                {
-                    printf("vf%d: (%f, %f, %f, %f)\n", i, gpr[i].f[3], gpr[i].f[2], gpr[i].f[1], gpr[i].f[0]);
-                    printf("vf%d: ($%08X, $%08X, $%08X, $%08X)\n", i, gpr[i].u[3], gpr[i].u[2], gpr[i].u[1], gpr[i].u[0]);
-                }
-                //printf("mac: $%04X $%04X $%04X $%04X\n", MAC_pipeline[0], MAC_pipeline[1], MAC_pipeline[2], *MAC_flags & 0xFFFF);
-                //for (int i = 0; i < 16; i++)
-                    //printf("vi%d: $%04X\n", i, int_gpr[i].u);
-                //printf("clip: $%08X ($%04X)\n", clip_flags, 0 - ((clip_flags & 0x3FFFF) != 0));
-            }*/
         }
     }
 }
 
 void VectorUnit::handle_XGKICK()
 {
-    uint128_t quad = read_data<uint128_t>(GIF_addr);
+    uint128_t quad = read_mem<uint128_t>(GIF_addr);
     GIF_addr += 16;
     if (gif->send_PATH1(quad))
     {
@@ -542,6 +520,59 @@ void VectorUnit::handle_XGKICK()
             transferring_GIF = false;
         }
     }
+}
+
+//VU0 can access VU1 registers through the addresses (anded with 0x7FFF) 0x4000-0x4400
+uint32_t VectorUnit::read_reg(uint32_t addr)
+{
+    addr &= 0x3FF;
+    if (addr < 0x0200)
+        return get_gpr_u(addr / 0x10, (addr & 0xC) / 4);
+    else if (addr < 0x0300)
+    {
+        if ((addr & 0xF) < 4)
+            return get_int((addr - 0x0200) / 0x10);
+        else
+            return 0;
+    }
+    else
+    {
+        switch (addr)
+        {
+            case 0x300:
+                return status;
+            case 0x310:
+                return *MAC_flags;
+            case 0x320:
+                return *CLIP_flags;
+            case 0x340:
+                return R.u;
+            case 0x350:
+                return I.u;
+            case 0x360:
+                return Q.u;
+            case 0x370:
+                return P.u;
+            case 0x3A0:
+                return PC;
+            default:
+                return 0;
+        }
+    }
+}
+
+void VectorUnit::write_reg(uint32_t addr, uint32_t data)
+{
+    addr &= 0x3FF;
+    if (addr < 0x0200)
+        set_gpr_u(addr / 0x10, (addr & 0xC) / 4, data);
+    else if (addr < 0x0300)
+    {
+        if ((addr & 0xF) < 4)
+            set_int((addr - 0x0200) / 0x10, data);
+    }
+    else
+        printf("[VU0] Unrecognized write to VU1 register $%04X: $%08X\n", addr, data);
 }
 
 /**
@@ -823,18 +854,18 @@ void VectorUnit::start_program(uint32_t addr)
     //printf("[VU%d] CallMS Starting execution at $%08X! Cur PC %x\n", get_id(), new_addr, PC);
 
     //Enable this if disabling micromem disasm
-    /*if (get_id() == 1 && is_dirty())
+    if (get_id() == 1 && is_dirty())
     {
         VU_JIT::set_current_program(crc_microprogram());
         clear_dirty();
-    }*/
+    }
     
     if (running == false)
     {
         running = true;
         tbit_stop = false;
         PC = new_addr;
-
+        printf("[VU%d] Starting execution at PC %x!\n", id, PC);
         //Try to keep VU0 in sync with the EE
         //TODO: Account for VIF0 MSCAL timing
         if (!id)
@@ -844,7 +875,7 @@ void VectorUnit::start_program(uint32_t addr)
         }
         flush_pipes();
     }
-    disasm_micromem();
+    //disasm_micromem();
     run_event = cycle_count;
 }
 
@@ -1825,14 +1856,14 @@ void VectorUnit::ilw(uint32_t instr)
     write_int(_it_, _is_);
     int16_t offset = (instr & 0x400) ? (instr & 0x3FF) | 0xFC00 : (instr & 0x3FF);
     uint16_t addr = (int_gpr[_is_].s + offset) * 16;
-    uint128_t quad = read_data<uint128_t>(addr);
     printf("[VU] ILW: $%08X ($%08X)\n", addr, offset);
     for (int i = 0; i < 4; i++)
     {
         if (_field & (1 << (3 - i)))
         {
-            printf(" $%04X ($%02X, %d, %d)", quad._u32[i] & 0xFFFF, _field, _it_, _is_);
-            set_int(_it_, quad._u32[i] & 0xFFFF);
+            uint32_t word = read_data<uint32_t>(addr + (i * 4));
+            printf(" $%04X ($%02X, %d, %d)", word, _field, _it_, _is_);
+            set_int(_it_, word & 0xFFFF);
             break;
         }
     }
@@ -1843,14 +1874,14 @@ void VectorUnit::ilwr(uint32_t instr)
 {
     write_int(_it_, _is_);
     uint32_t addr = (uint32_t)int_gpr[_is_].u << 4;
-    uint128_t quad = read_data<uint128_t>(addr);
     printf("[VU] ILWR: $%08X", addr);
     for (int i = 0; i < 4; i++)
     {
         if (_field & (1 << (3 - i)))
         {
-            printf(" $%04X ($%02X, %d, %d)", quad._u32[i] & 0xFFFF, _field, _it_, _is_);
-            set_int(_it_, quad._u32[i] & 0xFFFF);
+            uint32_t word = read_data<uint32_t>(addr + (i * 4));
+            printf(" $%04X ($%02X, %d, %d)", word, _field, _it_, _is_);
+            set_int(_it_, word & 0xFFFF);
             break;
         }
     }

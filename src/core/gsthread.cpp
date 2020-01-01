@@ -9,17 +9,6 @@
 #include "gsmem.hpp"
 #include "errors.hpp"
 
-#ifdef _MSC_VER
-#define _noinline(type) __declspec(noinline) type
-#else
-#define _noinline(type) type __attribute__ ((noinline))
-#endif
-
-#ifdef _WIN32
-extern "C" void jit_draw_pixel_asm(uint8_t* func, int32_t x, int32_t y, uint32_t z, RGBAQ_REG* color);
-extern "C" void jit_tex_lookup_asm(uint8_t* func, int16_t u, int16_t v, TexLookupInfo* tex_info);
-#endif
-
 using namespace std;
 
 //Swizzling tables - we declare these outside the class to prevent a stack overflow
@@ -485,9 +474,14 @@ void GraphicsSynthesizerThread::reset()
 
     jit_draw_pixel_func = nullptr;
     jit_tex_lookup_func = nullptr;
+    jit_draw_pixel_prologue = nullptr;
+    jit_tex_lookup_prologue = nullptr;
 
     jit_tex_lookup_heap.flush_all_blocks();
     jit_draw_pixel_heap.flush_all_blocks();
+
+    recompile_tex_lookup_prologue();
+    recompile_draw_pixel_prologue();
 
     reset_fifos();
 }
@@ -545,7 +539,6 @@ uint32_t GraphicsSynthesizerThread::get_CRT_color(DISPFB &dispfb, uint32_t x, ui
             return convert_color_up(read_PSMCT16S_block(dispfb.frame_base * 4, dispfb.width, x, y));
         default:
             Errors::die("Unknown framebuffer format (%x)", dispfb.format);
-            return 0;
     }
 }
 
@@ -1495,7 +1488,6 @@ uint32_t GraphicsSynthesizerThread::lookup_frame_color(int32_t x, int32_t y)
             break;
         default:
             Errors::die("Unknown FRAME format (%x) read attempted", current_ctx->frame.format);
-            break;
     }
     frame_color_looked_up = true;
 
@@ -1821,7 +1813,6 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
                 break;
             default:
                 Errors::die("Unknown FRAME format (%x) write attempted", current_ctx->frame.format);
-                break;
         }
     }
     
@@ -1845,33 +1836,44 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
     }
 }
 
-_noinline(void) GraphicsSynthesizerThread::jit_draw_pixel(int32_t x, int32_t y,
-                                               uint32_t z, RGBAQ_REG &color)
+void GraphicsSynthesizerThread::recompile_draw_pixel_prologue()
 {
-#ifdef _MSC_VER
-    jit_draw_pixel_asm(jit_draw_pixel_func, x, y, z, &color);
-#else
-    __asm__(
-        "pushq %%r12\n\t"
-        "pushq %%r13\n\t"
-        "pushq %%r14\n\t"
-        "pushq %%r15\n\t"
-        //"subq $8, %%rsp\n\t"
-        "mov %0, %%r12d\n\t"
-        "mov %1, %%r13d\n\t"
-        "mov %2, %%r14d\n\t"
-        "mov %3, %%r15\n\t"
-        "callq *%4\n\t"
-        //"addq $8, %%rsp\n\t"
-        "popq %%r15\n\t"
-        "popq %%r14\n\t"
-        "popq %%r13\n\t"
-        "popq %%r12\n\t"
-                :
-                : "r" (x), "r" (y), "r" (z), "X" (*(uint64_t*)(&color)), "r" (jit_draw_pixel_func)
+    jit_draw_pixel_block.clear();
 
-    );
+    emitter_dp.PUSH(REG_64::RBP);
+    emitter_dp.MOV64_MR(REG_64::RSP, REG_64::RBP);
+    emitter_dp.PUSH(REG_64::R12);
+    emitter_dp.PUSH(REG_64::R13);
+    emitter_dp.PUSH(REG_64::R14);
+    emitter_dp.PUSH(REG_64::R15);
+
+#ifdef _WIN32
+    emitter_dp.MOV32_REG(REG_64::RCX, REG_64::R12);
+    emitter_dp.MOV32_REG(REG_64::RDX, REG_64::R13);
+    emitter_dp.MOV32_REG(REG_64::R8, REG_64::R14);
+    emitter_dp.MOV64_FROM_MEM(REG_64::R9, REG_64::R15);
+#else
+    emitter_dp.MOV32_REG(REG_64::RDI, REG_64::R12);
+    emitter_dp.MOV32_REG(REG_64::RSI, REG_64::R13);
+    emitter_dp.MOV32_REG(REG_64::RDX, REG_64::R14);
+    emitter_dp.MOV64_FROM_MEM(REG_64::RCX, REG_64::R15);
 #endif
+
+    emitter_dp.SUB64_REG_IMM(0x20, REG_64::RSP);
+    emitter_dp.load_addr((uint64_t)&jit_draw_pixel_func, REG_64::RAX);
+    emitter_dp.MOV64_FROM_MEM(REG_64::RAX, REG_64::RAX);
+    emitter_dp.CALL_INDIR(REG_64::RAX);
+    emitter_dp.ADD64_REG_IMM(0x20, REG_64::RSP);
+
+    emitter_dp.POP(REG_64::R15);
+    emitter_dp.POP(REG_64::R14);
+    emitter_dp.POP(REG_64::R13);
+    emitter_dp.POP(REG_64::R12);
+    emitter_dp.POP(REG_64::RBP);
+    emitter_dp.RET();
+
+    jit_draw_pixel_prologue = (GSDrawPixelPrologue)jit_draw_pixel_heap.
+            insert_block(~0ULL, &jit_draw_pixel_block)->code_start;
 }
 
 void GraphicsSynthesizerThread::render_point()
@@ -2355,8 +2357,8 @@ void GraphicsSynthesizerThread::render_half_triangle(float x0, float x1, int y0,
                     v = (uint32_t) vtx.v;
                 }
 #ifdef GS_JIT
-                jit_tex_lookup(u, v, &tex_info);
-                jit_draw_pixel(x * 16, y * 16, (uint32_t)vtx.z, tex_info.tex_color);
+                jit_tex_lookup_prologue(u, v, &tex_info);
+                jit_draw_pixel_prologue(x * 16, y * 16, (uint32_t)vtx.z, tex_info.tex_color);
 #else
                 tex_lookup(u, v, tex_info);
                 draw_pixel(x * 16, y * 16, (uint32_t)vtx.z, tex_info.tex_color);
@@ -2366,7 +2368,7 @@ void GraphicsSynthesizerThread::render_half_triangle(float x0, float x1, int y0,
             else
             {
 #ifdef GS_JIT
-                jit_draw_pixel(x * 16, y * 16, (uint32_t)vtx.z, tex_info.vtx_color);
+                jit_draw_pixel_prologue(x * 16, y * 16, (uint32_t)vtx.z, tex_info.vtx_color);
 #else
                 draw_pixel(x * 16, y * 16, (uint32_t)vtx.z, tex_info.vtx_color);
 #endif
@@ -2582,8 +2584,8 @@ void GraphicsSynthesizerThread::render_triangle()
                                     v = (uint32_t) temp_v;
                                 }
 #ifdef GS_JIT
-                                jit_tex_lookup(u, v, &tex_info);
-                                jit_draw_pixel(x, y, (uint32_t)z, tex_info.tex_color);
+                                jit_tex_lookup_prologue(u, v, &tex_info);
+                                jit_draw_pixel_prologue(x, y, (uint32_t)z, tex_info.tex_color);
 #else
                                 tex_lookup(u, v, tex_info);
                                 draw_pixel(x, y, (uint32_t)z, tex_info.tex_color);
@@ -2592,7 +2594,7 @@ void GraphicsSynthesizerThread::render_triangle()
                             else
                             {
 #ifdef GS_JIT
-                                jit_draw_pixel(x, y, (uint32_t)z, tex_info.vtx_color);
+                                jit_draw_pixel_prologue(x, y, (uint32_t)z, tex_info.vtx_color);
 #else
                                 draw_pixel(x, y, (uint32_t)z, tex_info.vtx_color);
 #endif
@@ -2680,7 +2682,7 @@ void GraphicsSynthesizerThread::render_sprite()
                     pix_v = (pix_t * tex_info.tex_height) * 16.0;
                     pix_u = (pix_s * tex_info.tex_width) * 16.0;
 #ifdef GS_JIT
-                    jit_tex_lookup(pix_u, pix_v, &tex_info);
+                    jit_tex_lookup_prologue(pix_u, pix_v, &tex_info);
 #else
                     tex_lookup(pix_u, pix_v, tex_info);
 #endif
@@ -2688,14 +2690,14 @@ void GraphicsSynthesizerThread::render_sprite()
                 else
                 {
 #ifdef GS_JIT
-                    jit_tex_lookup(pix_u >> 16, pix_v >> 16, &tex_info);
+                    jit_tex_lookup_prologue(pix_u >> 16, pix_v >> 16, &tex_info);
 #else
                     tex_lookup(pix_u >> 16, pix_v >> 16, tex_info);
 #endif
                 }
 
 #ifdef GS_JIT
-                jit_draw_pixel(x, y, v2.z, tex_info.tex_color);
+                jit_draw_pixel_prologue(x, y, v2.z, tex_info.tex_color);
 #else
                 draw_pixel(x, y, v2.z, tex_info.tex_color);
 #endif
@@ -2703,7 +2705,7 @@ void GraphicsSynthesizerThread::render_sprite()
             else
             {
 #ifdef GS_JIT
-                jit_draw_pixel(x, y, v2.z, tex_info.vtx_color);
+                jit_draw_pixel_prologue(x, y, v2.z, tex_info.vtx_color);
 #else
                 draw_pixel(x, y, v2.z, tex_info.vtx_color);
 #endif
@@ -2939,8 +2941,6 @@ uint128_t GraphicsSynthesizerThread::local_to_host()
     {
         for (int i = 0; i < ppd; i++)
         {
-            int datapart = i / (ppd / 2);
-
             switch (BITBLTBUF.source_format)
             {
                 case 0x00:
@@ -3156,6 +3156,10 @@ void GraphicsSynthesizerThread::local_to_local()
             case 0x14:
                 data = read_PSMCT4_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
                                          TRXPOS.int_source_x, TRXPOS.int_source_y);
+                break;
+            case 0x2C:
+                data = read_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width,
+                    TRXPOS.int_dest_x, TRXPOS.int_dest_y) >> 28;
                 break;
             case 0x30:
             case 0x31:
@@ -3646,33 +3650,45 @@ void GraphicsSynthesizerThread::tex_lookup_int(int16_t u, int16_t v, TexLookupIn
     }
 }
 
-_noinline(void) GraphicsSynthesizerThread::jit_tex_lookup(int16_t u, int16_t v, TexLookupInfo *info)
+void GraphicsSynthesizerThread::recompile_tex_lookup_prologue()
 {
-#ifdef _MSC_VER
-    jit_tex_lookup_asm(jit_tex_lookup_func, u, v, info);
-#else
-    __asm__(
-        "pushq %%r12\n\t"
-        "pushq %%r13\n\t"
-        "pushq %%r14\n\t"
-        "pushq %%r15\n\t"
-        //"subq $8, %%rsp\n\t"
-        "xor %%r12, %%r12\n\t"
-        "xor %%r13, %%r13\n\t"
-        "mov %0, %%r12w\n\t"
-        "mov %1, %%r13w\n\t"
-        "mov %2, %%r14\n\t"
-        "callq *%3\n\t"
-        //"addq $8, %%rsp\n\t"
-        "popq %%r15\n\t"
-        "popq %%r14\n\t"
-        "popq %%r13\n\t"
-        "popq %%r12\n\t"
-                :
-                : "r" (u), "r" (v), "r" (info), "r" (jit_tex_lookup_func)
+    jit_tex_lookup_block.clear();
 
-    );
+    emitter_tex.PUSH(REG_64::RBP);
+    emitter_tex.MOV64_MR(REG_64::RSP, REG_64::RBP);
+    emitter_tex.PUSH(REG_64::R12);
+    emitter_tex.PUSH(REG_64::R13);
+    emitter_tex.PUSH(REG_64::R14);
+    emitter_tex.PUSH(REG_64::R15);
+
+    emitter_tex.XOR64_REG(REG_64::R12, REG_64::R12);
+    emitter_tex.XOR64_REG(REG_64::R13, REG_64::R13);
+
+#ifdef _WIN32
+    emitter_tex.MOV16_REG(REG_64::RCX, REG_64::R12);
+    emitter_tex.MOV16_REG(REG_64::RDX, REG_64::R13);
+    emitter_tex.MOV64_MR(REG_64::R8, REG_64::R14);
+#else
+    emitter_tex.MOV16_REG(REG_64::RDI, REG_64::R12);
+    emitter_tex.MOV16_REG(REG_64::RSI, REG_64::R13);
+    emitter_tex.MOV64_MR(REG_64::RDX, REG_64::R14);
 #endif
+
+    emitter_tex.SUB64_REG_IMM(0x20, REG_64::RSP);
+    emitter_tex.load_addr((uint64_t)&jit_tex_lookup_func, REG_64::RAX);
+    emitter_tex.MOV64_FROM_MEM(REG_64::RAX, REG_64::RAX);
+    emitter_tex.CALL_INDIR(REG_64::RAX);
+    emitter_tex.ADD64_REG_IMM(0x20, REG_64::RSP);
+
+    emitter_tex.POP(REG_64::R15);
+    emitter_tex.POP(REG_64::R14);
+    emitter_tex.POP(REG_64::R13);
+    emitter_tex.POP(REG_64::R12);
+    emitter_tex.POP(REG_64::RBP);
+    emitter_tex.RET();
+
+    jit_tex_lookup_prologue = (GSTexLookupPrologue)jit_tex_lookup_heap.
+            insert_block(~0ULL, &jit_tex_lookup_block)->code_start;
 }
 
 void GraphicsSynthesizerThread::clut_lookup(uint8_t entry, RGBAQ_REG &tex_color)
@@ -4166,9 +4182,6 @@ GSPixelJitBlockRecord* GraphicsSynthesizerThread::recompile_draw_pixel(uint64_t 
 
     emitter_dp.set_jump_dest(do_not_update_rgba);
     jit_epilogue_draw_pixel();
-    jit_draw_pixel_block.print_block();
-    jit_draw_pixel_block.print_literal_pool();
-    //jit_draw_pixel_block.set_current_block_rx();
     return jit_draw_pixel_heap.insert_block(state, &jit_draw_pixel_block);
 }
 
@@ -4882,9 +4895,6 @@ GSTextureJitBlockRecord* GraphicsSynthesizerThread::recompile_tex_lookup(uint64_
     emitter_tex.POP(RBP);
     emitter_tex.RET();
 
-    jit_tex_lookup_block.print_block();
-    jit_tex_lookup_block.print_literal_pool();
-    //jit_tex_lookup_block.set_current_block_rx();
     return jit_tex_lookup_heap.insert_block(state, &jit_tex_lookup_block);
 }
 

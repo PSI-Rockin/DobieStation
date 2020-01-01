@@ -93,6 +93,7 @@ class Emitter64
         void CMP16_IMM(uint16_t imm, REG_64 op);
         void CMP16_REG(REG_64 op2, REG_64 op1);
         void CMP32_IMM(uint32_t imm, REG_64 op);
+        void CMP32_IMM_MEM(uint32_t imm, REG_64 mem, uint32_t offset = 0);
         void CMP32_EAX(uint32_t imm);
         void CMP32_REG(REG_64 op2, REG_64 op1);
         void CMP64_IMM(uint32_t imm, REG_64 op);
@@ -149,11 +150,13 @@ class Emitter64
 
         void SUB16_REG_IMM(uint16_t imm, REG_64 dest);
         void SUB32_REG(REG_64 source, REG_64 dest);
+        void SUB32_MEM_IMM(uint32_t imm, REG_64 mem, uint32_t offset = 0);
         void SUB64_REG(REG_64 source, REG_64 dest);
         void SUB64_REG_IMM(uint32_t imm, REG_64 dest);
 
         void TEST8_REG(REG_64 op2, REG_64 op1);
         void TEST8_REG_IMM(uint8_t imm, REG_64 op1);
+        void TEST8_MEM_IMM(uint8_t imm, REG_64 mem, uint32_t offset = 0);
         void TEST16_REG(REG_64 op2, REG_64 op1);
         void TEST16_REG_IMM(uint16_t imm, REG_64 op1);
         void TEST32_EAX(uint32_t imm);
@@ -233,6 +236,7 @@ class Emitter64
         void POP(REG_64 reg);
         void CALL(uint64_t addr);
         void CALL_INDIR(REG_64 source);
+        void JMP_INDIR(REG_64 source);
         void RET();
 
         void PACKUSDW(REG_64 xmm_source, REG_64 xmm_dest);

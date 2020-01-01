@@ -27,7 +27,7 @@ class EmuThread : public QThread
     private:
         bool abort;
         uint32_t pause_status;
-        QMutex emu_mutex, load_mutex, pause_mutex;
+        QMutex emu_mutex;
         Emulator e;
 
         std::chrono::system_clock::time_point old_frametime;

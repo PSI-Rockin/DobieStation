@@ -34,8 +34,8 @@ Emulator::Emulator() :
     spu2(2, this, &iop_dma),
     vif0(nullptr, &vu0, &intc, &dmac, 0),
     vif1(&gif, &vu1, &intc, &dmac, 1),
-    vu0(0, this, &intc, &cpu),
-    vu1(1, this, &intc, &cpu),
+    vu0(0, this, &intc, &cpu, &vu1),
+    vu1(1, this, &intc, &cpu, &vu0),
     sif(&iop_dma, &dmac)
 {
     BIOS = nullptr;
@@ -103,7 +103,7 @@ void Emulator::run()
         int iop_cycles = scheduler.get_iop_run_cycles();
         scheduler.update_cycle_counts();
 
-        ee_run_func(cpu, ee_cycles);
+        cpu.run(ee_cycles);
         dmac.run(bus_cycles);
         timers.run(bus_cycles);
         ipu.run();
@@ -333,16 +333,16 @@ void Emulator::set_skip_BIOS_hack(SKIP_HACK type)
 
 void Emulator::set_ee_mode(CPU_MODE mode)
 {
-  switch (mode)
-  {
-      case CPU_MODE::INTERPRETER:
-          ee_run_func = &EmotionEngine::run;
-          break;
-      case CPU_MODE::JIT:
-      default:
-          ee_run_func = &EmotionEngine::run_jit;
-          break;
-  }
+    switch (mode)
+    {
+        case CPU_MODE::INTERPRETER:
+            cpu.set_run_func(&EmotionEngine::run_interpreter);
+            break;
+        case CPU_MODE::JIT:
+        default:
+            cpu.set_run_func(&EmotionEngine::run_jit);
+            break;
+    }
 }
 
 void Emulator::set_vu1_mode(CPU_MODE mode)
@@ -488,6 +488,8 @@ uint16_t Emulator::read16(uint32_t address)
 {
     if (address >= 0x10000000 && address < 0x10002000)
         return (uint16_t)timers.read32(address);
+    if (address >= 0x10008000 && address < 0x1000F000)
+        return dmac.read16(address);
     if (address >= 0x1C000000 && address < 0x1C200000)
         return *(uint16_t*)&IOP_RAM[address & 0x1FFFFF];
     switch (address)
@@ -514,11 +516,11 @@ uint32_t Emulator::read32(uint32_t address)
     if (address >= 0x11000000 && address < 0x11004000)
         return vu0.read_instr<uint32_t>(address);
     if (address >= 0x11004000 && address < 0x11008000)
-        return vu0.read_data<uint32_t>(address);
+        return vu0.read_mem<uint32_t>(address);
     if (address >= 0x11008000 && address < 0x1100C000)
         return vu1.read_instr<uint32_t>(address);
     if (address >= 0x1100C000 && address < 0x11010000)
-        return vu1.read_data<uint32_t>(address);
+        return vu1.read_mem<uint32_t>(address);
     switch (address)
     {
         case 0x10002000:
@@ -639,6 +641,15 @@ uint64_t Emulator::read64(uint32_t address)
 
 uint128_t Emulator::read128(uint32_t address)
 {
+    if (address >= 0x11000000 && address < 0x11004000)
+        return vu0.read_instr<uint128_t>(address);
+    if (address >= 0x11004000 && address < 0x11008000)
+        return vu0.read_mem<uint128_t>(address);
+    if (address >= 0x11008000 && address < 0x1100C000)
+        return vu1.read_instr<uint128_t>(address);
+    if (address >= 0x1100C000 && address < 0x11010000)
+        return vu1.read_mem<uint128_t>(address);
+
     printf("Unrecognized read128 at physical addr $%08X\n", address);
     return uint128_t::from_u32(0);
 }
@@ -720,7 +731,7 @@ void Emulator::write32(uint32_t address, uint32_t value)
     }
     if (address >= 0x11004000 && address < 0x11008000)
     {
-        vu0.write_data<uint32_t>(address, value);
+        vu0.write_mem<uint32_t>(address, value);
         return;
     }
     if (address >= 0x11008000 && address < 0x1100C000)
@@ -730,7 +741,7 @@ void Emulator::write32(uint32_t address, uint32_t value)
     }
     if (address >= 0x1100C000 && address < 0x11010000)
     {
-        vu1.write_data<uint32_t>(address, value);
+        vu1.write_mem<uint32_t>(address, value);
         return;
     }
 
@@ -839,7 +850,7 @@ void Emulator::write64(uint32_t address, uint64_t value)
     }
     if (address >= 0x11004000 && address < 0x11008000)
     {
-        vu0.write_data<uint64_t>(address, value);
+        vu0.write_mem<uint64_t>(address, value);
         return;
     }
     if (address >= 0x11008000 && address < 0x1100C000)
@@ -849,7 +860,7 @@ void Emulator::write64(uint32_t address, uint64_t value)
     }
     if (address >= 0x1100C000 && address < 0x11010000)
     {
-        vu1.write_data<uint64_t>(address, value);
+        vu1.write_mem<uint64_t>(address, value);
         return;
     }
     Errors::print_warning("Unrecognized write64 at physical addr $%08X of $%08X_%08X\n", address, value >> 32, value & 0xFFFFFFFF);
@@ -866,7 +877,7 @@ void Emulator::write128(uint32_t address, uint128_t value)
         }
         if (address < 0x11008000)
         {
-            vu0.write_data<uint128_t>(address & 0xFFF, value);
+            vu0.write_mem<uint128_t>(address & 0xFFF, value);
             return;
         }
         if (address < 0x1100C000)
@@ -874,7 +885,7 @@ void Emulator::write128(uint32_t address, uint128_t value)
             vu1.write_instr<uint128_t>(address, value);
             return;
         }
-        vu1.write_data<uint128_t>(address, value);
+        vu1.write_mem<uint128_t>(address, value);
         return;
     }
     switch (address)

@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup>
     <Filter Include="Headers">
@@ -421,16 +421,5 @@
     <None Include="$(RootDir)LICENSE" />
     <None Include="$(RootDir).gitignore" />
     <None Include="$(RootDir)CONTRIBUTING.md" />
-  </ItemGroup>
-  <ItemGroup>
-    <MASM Include="$(CoreDir)ee\ee_jit_asm.asm">
-      <Filter>x86</Filter>
-    </MASM>
-    <MASM Include="$(CoreDir)ee\vu_jit_asm.asm">
-      <Filter>x86</Filter>
-    </MASM>
-    <MASM Include="$(CoreDir)gsjit.asm">
-      <Filter>x86</Filter>
-    </MASM>
   </ItemGroup>
 </Project>

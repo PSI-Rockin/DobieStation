@@ -2,7 +2,7 @@
 #include <cstdarg>
 #include <string>
 
-void Errors::die(const char* format, ...)
+[[ noreturn ]] void Errors::die(const char* format, ...)
 {
     //Display a message box and forcibly terminate emulation
     char output[ERROR_STRING_MAX_LENGTH];

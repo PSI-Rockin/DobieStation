@@ -150,30 +150,15 @@ void CDVD_Drive::reset()
     time_t raw_time;
     struct tm * time;
     std::time(&raw_time);
+    raw_time += 9 * 60 * 60; // Add 9 hours to change raw_time to Japan's timezone
     time = std::gmtime(&raw_time);
     rtc.vsyncs = 0;
     rtc.second = time->tm_sec;
     rtc.minute = time->tm_min;
-    rtc.hour = time->tm_hour+9;
+    rtc.hour = time->tm_hour;
     rtc.day = time->tm_mday;
     rtc.month = time->tm_mon+1; //Jan = 0
     rtc.year = time->tm_year - 100; //Returns Years since 1900
-
-    if (rtc.hour >= 24)
-    {
-        rtc.hour -= 24;
-        rtc.day++;
-        if (rtc.day > (rtc.month == 2 && rtc.year % 4 == 0 ? 29 : monthmap[rtc.month - 1]))
-        {
-            rtc.month++;
-            if (rtc.month > 12)
-            {
-                rtc.month = 1;
-                rtc.year++;
-            }
-            rtc.day = 1;
-        }
-    }
 }
 
 string CDVD_Drive::get_serial()

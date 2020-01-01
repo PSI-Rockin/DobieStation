@@ -342,6 +342,22 @@ void Emitter64::CMP32_IMM(uint32_t imm, REG_64 op)
     block->write<uint32_t>(imm);
 }
 
+void Emitter64::CMP32_IMM_MEM(uint32_t imm, REG_64 mem, uint32_t offset)
+{
+    rex_rm(mem);
+    block->write<uint8_t>(0x81);
+    if ((mem & 7) == 5 || offset != 0)
+    {
+        modrm(0b10, 7, mem);
+        block->write<uint32_t>(offset);
+    }
+    else
+    {
+        modrm(0, 7, mem);
+    }
+    block->write<uint32_t>(imm);
+}
+
 void Emitter64::CMP32_REG(REG_64 op2, REG_64 op1)
 {
     rex_r_rm(op2, op1);
@@ -736,6 +752,22 @@ void Emitter64::SUB32_REG(REG_64 source, REG_64 dest)
     modrm(0b11, source, dest);
 }
 
+void Emitter64::SUB32_MEM_IMM(uint32_t imm, REG_64 mem, uint32_t offset)
+{
+    rex_rm(mem);
+    block->write<uint8_t>(0x81);
+    if ((mem & 7) == 5 || offset != 0)
+    {
+        modrm(0b10, 5, mem);
+        block->write<uint32_t>(offset);
+    }
+    else
+    {
+        modrm(0, 5, mem);
+    }
+    block->write<uint32_t>(imm);
+}
+
 void Emitter64::SUB64_REG(REG_64 source, REG_64 dest)
 {
     rexw_r_rm(source, dest);
@@ -763,6 +795,22 @@ void Emitter64::TEST8_REG_IMM(uint8_t imm, REG_64 op1)
     rex_r_rm((REG_64)0, op1);
     block->write<uint8_t>(0xF6);
     modrm(0b11, 0, op1);
+    block->write<uint8_t>(imm);
+}
+
+void Emitter64::TEST8_MEM_IMM(uint8_t imm, REG_64 mem, uint32_t offset)
+{
+    rex_r_rm((REG_64)0, mem);
+    block->write<uint8_t>(0xF6);
+    if ((mem & 7) == 5 || offset != 0)
+    {
+        modrm(0b10, 0, mem);
+        block->write<uint32_t>(offset);
+    }
+    else
+    {
+        modrm(0, 0, mem);
+    }
     block->write<uint8_t>(imm);
 }
 
@@ -1438,6 +1486,13 @@ void Emitter64::CALL_INDIR(REG_64 source)
     rex_rm(source);
     block->write<uint8_t>(0xFF);
     modrm(0b11, 2, source);
+}
+
+void Emitter64::JMP_INDIR(REG_64 source)
+{
+    rex_rm(source);
+    block->write<uint8_t>(0xFF);
+    modrm(0b11, 4, source);
 }
 
 void Emitter64::RET()

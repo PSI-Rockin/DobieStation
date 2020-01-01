@@ -352,7 +352,7 @@ namespace EmotionInterpreter
     void pcpyh(EmotionEngine& cpu, uint32_t instruction);
     void pexcw(EmotionEngine& cpu, uint32_t instruction);
 
-    void unknown_op(const char* type, uint32_t instruction, uint16_t op);
+    [[ noreturn ]] void unknown_op(const char* type, uint32_t instruction, uint16_t op);
 };
 
 #endif // EMOTIONINTERPRETER_HPP

@@ -18,6 +18,7 @@ EmotionEngine::EmotionEngine(Cop0* cp0, Cop1* fpu, Emulator* e, VectorUnit* vu0,
     cp0(cp0), fpu(fpu), e(e), vu0(vu0), vu1(vu1)
 {
     tlb_map = nullptr;
+    set_run_func(&EmotionEngine::run_interpreter);
 }
 
 const char* EmotionEngine::REG(int id)
@@ -103,6 +104,7 @@ void EmotionEngine::reset()
     branch_on = false;
     can_disassemble = false;
     wait_for_IRQ = false;
+    wait_for_VU0 = false;
     delay_slot = 0;
 
     //Reset the cache
@@ -121,6 +123,8 @@ void EmotionEngine::reset()
     deci2size = 0;
     for (int i = 0; i < 128; i++)
         deci2handlers[i].active = false;
+
+    flush_jit_cache = true;
 }
 
 void EmotionEngine::init_tlb()
@@ -135,46 +139,7 @@ void EmotionEngine::run(int cycles)
     if (!wait_for_IRQ)
     {
         cycles_to_run += cycles;
-        while (cycles_to_run > 0)
-        {
-            cycles_to_run--;
-
-            uint32_t instruction = read_instr(PC);
-            uint32_t lastPC = PC;
-
-            if (can_disassemble)
-            {
-                std::string disasm = EmotionDisasm::disasm_instr(instruction, PC);
-                printf("[$%08X] $%08X - %s\n", PC, instruction, disasm.c_str());
-                //print_state();
-            }
-
-            EmotionInterpreter::interpret(*this, instruction);
-            PC += 4;
-
-            //Simulate dual-issue if both instructions are NOPs
-            if (!instruction && !read32(PC))
-                PC += 4;
-
-            if (branch_on)
-            {
-                if (!delay_slot)
-                {
-                    //If the PC == LastPC it means we've reversed it to handle COP2 sync, so don't branch yet
-                    if (PC != lastPC)
-                    {
-                        branch_on = false;
-                        if (!new_PC || (new_PC & 0x3))
-                        {
-                            Errors::die("[EE] Jump to invalid address $%08X from $%08X\n", new_PC, PC - 8);
-                        }
-                        PC = new_PC;
-                    }
-                }
-                else
-                    delay_slot--;
-            }
-        }
+        run_func(*this);
     }
 
     if (cp0->int_enabled())
@@ -188,31 +153,72 @@ void EmotionEngine::run(int cycles)
     cp0->count_up(cycles);
 }
 
-void EmotionEngine::run_jit(int cycles)
+void EmotionEngine::run_interpreter()
 {
-    if (!wait_for_IRQ)
+    while (cycles_to_run > 0)
     {
-        cycles_to_run += cycles;
+        cycles_to_run--;
 
-        if (wait_for_VU0)
-            wait_for_VU0 = vu0_wait();
+        uint32_t instruction = read_instr(PC);
+        uint32_t lastPC = PC;
 
-        while (cycles_to_run > 0 && !wait_for_VU0)
+        if (can_disassemble)
         {
-            cycles_to_run -= EE_JIT::run(this);
+            std::string disasm = EmotionDisasm::disasm_instr(instruction, PC);
+            printf("[$%08X] $%08X - %s\n", PC, instruction, disasm.c_str());
+            //print_state();
+        }
+
+        EmotionInterpreter::interpret(*this, instruction);
+        PC += 4;
+
+        //Simulate dual-issue if both instructions are NOPs
+        if (!instruction && !read32(PC))
+            PC += 4;
+
+        if (branch_on)
+        {
+            if (!delay_slot)
+            {
+                //If the PC == LastPC it means we've reversed it to handle COP2 sync, so don't branch yet
+                if (PC != lastPC)
+                {
+                    branch_on = false;
+                    if (!new_PC || (new_PC & 0x3))
+                    {
+                        Errors::die("[EE] Jump to invalid address $%08X from $%08X\n", new_PC, PC - 8);
+                    }
+                    PC = new_PC;
+                }
+            }
+            else
+                delay_slot--;
         }
     }
+}
 
-    branch_on = false;
-    if (cp0->int_enabled())
+void EmotionEngine::run_jit()
+{
+    //If we're stalling on COP2 and VU0 is still active, we continue stalling.
+    wait_for_VU0 &= vu0_wait();
+
+    //If FlushCache(2) has been executed, reset the JIT.
+    //This represents an icache flush.
+    if (flush_jit_cache)
     {
-        if (cp0->cause.int0_pending)
-            int0();
-        else if (cp0->cause.int1_pending)
-            int1();
+        EE_JIT::reset(true);
+        flush_jit_cache = false;
     }
 
-    cp0->count_up(cycles);
+    //cycles_to_run and wait_for_VU0 are handled in the dispatcher, so no need to check for them here
+    EE_JIT::run(this);
+
+    branch_on = false;
+}
+
+void EmotionEngine::set_run_func(std::function<void (EmotionEngine &)> func)
+{
+    run_func = func;
 }
 
 void EmotionEngine::print_state()
@@ -355,7 +361,6 @@ uint32_t EmotionEngine::read_instr(uint32_t address)
         return *(uint32_t*)&mem[address & 4095];
     else
         Errors::die("[EE] Instruction read from invalid address $%08X", address);
-    return 0;
 }
 
 uint8_t EmotionEngine::read8(uint32_t address)
@@ -368,7 +373,6 @@ uint8_t EmotionEngine::read8(uint32_t address)
     else
     {
         Errors::die("[EE] Read8 from invalid address $%08X", address);
-        return 0;
     }
 }
 
@@ -384,7 +388,6 @@ uint16_t EmotionEngine::read16(uint32_t address)
     else
     {
         Errors::die("[EE] Read16 from invalid address $%08X", address);
-        return 0;
     }
 }
 
@@ -400,7 +403,6 @@ uint32_t EmotionEngine::read32(uint32_t address)
     else
     {
         Errors::die("[EE] Read32 from invalid address $%08X", address);
-        return 0;
     }
 }
 
@@ -416,7 +418,6 @@ uint64_t EmotionEngine::read64(uint32_t address)
     else
     {
         Errors::die("[EE] Read64 from invalid address $%08X", address);
-        return 0;
     }
 }
 
@@ -430,7 +431,6 @@ uint128_t EmotionEngine::read128(uint32_t address)
     else
     {
         Errors::die("[EE] Read128 from invalid address $%08X", address);
-        return uint128_t::from_u32(0);
     }
 }
 
@@ -656,7 +656,7 @@ void EmotionEngine::ctc(int cop_id, int reg, int cop_reg, uint32_t instruction)
                 clear_interlock();
             }
             if (cop_reg == 31)
-                vu1->start_program(bark);
+                vu1->start_program(bark << 3);
             else
                 vu0->ctc(cop_reg, bark);
             break;
@@ -846,9 +846,10 @@ void EmotionEngine::syscall_exception()
     {
         int a0 = get_gpr<uint32_t>(4);
 
-        // Clear icache
+        //We can't flush the EE JIT cache immediately as we're still executing in a block.
+        //We have to wait until after we've left the block before we can erase blocks.
         if (a0 != 0 && a0 != 1)
-            EE_JIT::reset(true);
+            flush_jit_cache = true;
     }
 
     if (op == 0x7C)

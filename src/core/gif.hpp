@@ -65,7 +65,7 @@ class GraphicsInterface
         bool fifo_draining();
         void dma_waiting(bool dma_waiting);
         int get_active_path();
-        bool path_active(int index);
+        bool path_active(int index, bool canInterruptPath3);
         void resume_path3();
 
         uint32_t read_STAT();
@@ -77,6 +77,7 @@ class GraphicsInterface
         bool path3_masked(int index);
         bool interrupt_path3(int index);
         bool path3_done();
+        void arbitrate_paths();
 
         bool send_PATH(int index, uint128_t quad);
 
@@ -96,9 +97,9 @@ inline int GraphicsInterface::get_active_path()
     return active_path;
 }
 
-inline bool GraphicsInterface::path_active(int index)
+inline bool GraphicsInterface::path_active(int index, bool canInterruptPath3)
 {
-    if (index != 3)
+    if (index != 3 && canInterruptPath3)
     {
         interrupt_path3(index);
     }
