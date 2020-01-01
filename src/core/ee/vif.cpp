@@ -189,7 +189,7 @@ bool VectorInterface::process_data_word(uint32_t value)
             case 0x50:
             case 0x51:
                 //DIRECT/DIRECTHL
-                if (!gif->path_active(2))
+                if (!gif->path_active(2, command == 0x50))
                     return false;
 
                 buffer[buffer_size] = value;

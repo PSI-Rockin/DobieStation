@@ -249,6 +249,7 @@ void GraphicsInterface::feed_GIF(uint128_t data)
         path_status[active_path] = 4;
         gs->assert_FINISH();
         gs->wake_gs_thread();
+        arbitrate_paths();
     }
 }
 
@@ -259,7 +260,7 @@ void GraphicsInterface::run(int cycles)
         request_PATH(3, false);
         //printf("GIF PATH3 should be flushing FIFO active = %d mask off, cycles = %d\n", path_active(3), cycles);
     }
-    while (path_active(3) && !path3_masked(3) && cycles && !fifo_empty())
+    while (path_active(3, false) && !path3_masked(3) && cycles && !fifo_empty())
     {
         flush_path3_fifo();
         cycles--;
@@ -312,9 +313,8 @@ bool GraphicsInterface::interrupt_path3(int index)
     if ((intermittent_mode && path_status[3] >= 2) || path3_masked(3)) //IMAGE MODE or IDLE
     {
         //printf("[GIF] Interrupting PATH3 with PATH%d\n", index);
-        deactivate_PATH(3);
+        arbitrate_paths();
         //printf("Active Path Now %d\n", active_path);
-        path_queue |= 1 << 3;
         return true;
     }
     return false;
@@ -323,7 +323,7 @@ bool GraphicsInterface::interrupt_path3(int index)
 void GraphicsInterface::request_PATH(int index, bool canInterruptPath3)
 {
     //printf("[GIF] PATH%d requested active path %d\n", index, active_path);
-    if (!active_path || active_path == index || (canInterruptPath3 && interrupt_path3(index)))
+    if (!active_path || active_path == index)
     {
         active_path = index;
 
@@ -336,30 +336,42 @@ void GraphicsInterface::request_PATH(int index, bool canInterruptPath3)
         path_queue |= 1 << index;
         //printf("[GIF] PATH%d Queued!\n", index);
     }
+    //Do this last as another path may have higher priority and be queued than the requested path
+    if (canInterruptPath3)
+        interrupt_path3(index);
 }
 
 void GraphicsInterface::deactivate_PATH(int index)
 {
     //printf("[GIF] PATH%d deactivated\n", index);
-    path_queue &= ~(1 << index);
-    //if (index == 3)
-        //dmac->clear_DMA_request(GIF);
+
+    //If for some reason the current path is still active (can happen with PATH3) kill it and check other paths
     if (active_path == index)
     {
         active_path = 0;
+        arbitrate_paths();
+    }
 
-        for (int path = 1; path <= 3; path++)
+    //Then do this last in case it has been put back in to the queue by the arbitrate
+    path_queue &= ~(1 << index);
+}
+
+void GraphicsInterface::arbitrate_paths()
+{
+    for (int new_path = 1; new_path <= 3; new_path++)
+    {
+        int bit = 1 << new_path;
+        if (path_queue & bit)
         {
-            int bit = 1 << path;
-            if (path_queue & bit)
-            {
-                path_queue &= ~bit;
-                active_path = path;
-                if (active_path == 3 && FIFO.size() <= 8)
-                    dmac->set_DMA_request(GIF);
-                //printf("[GIF] PATH%d Activated from queue\n", active_path);
-                break;
-            }
+            path_queue &= ~bit;
+
+            if(active_path)
+                path_queue |= 1 << active_path;
+            //printf("[GIF] PATH%d Activated from arbitration queue, PATH%d put in to queue\n", new_path, active_path);
+            active_path = new_path;
+            if (active_path == 3 && FIFO.size() <= 8)
+                dmac->set_DMA_request(GIF);
+            return;
         }
     }
 }
