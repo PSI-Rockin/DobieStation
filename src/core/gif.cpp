@@ -365,8 +365,13 @@ void GraphicsInterface::arbitrate_paths()
         {
             path_queue &= ~bit;
 
-            if(active_path)
+            if (active_path)
+            {
+                if (new_path > active_path) //Don't do anything since the only waiting channels have lower priority
+                    return;
+
                 path_queue |= 1 << active_path;
+            }
             //printf("[GIF] PATH%d Activated from arbitration queue, PATH%d put in to queue\n", new_path, active_path);
             active_path = new_path;
             if (active_path == 3 && FIFO.size() <= 8)
