@@ -4557,17 +4557,13 @@ GSTextureJitBlockRecord* GraphicsSynthesizerThread::recompile_tex_lookup(uint64_
         emitter_tex.load_addr((uint64_t)&current_ctx->clamp.min_u, RDX);
         emitter_tex.MOV32_FROM_MEM(RDX, RDX);
         emitter_tex.AND32_REG_IMM(0xFFFF, RDX);
-
-        if (current_ctx->clamp.wrap_s >= 0x2)
-            emitter_tex.SHR32_CL(RDX);
+        emitter_tex.SHR32_CL(RDX);
 
         emitter_tex.XOR32_REG(RBX, RBX);
         emitter_tex.load_addr((uint64_t)&current_ctx->clamp.max_u, RBX);
         emitter_tex.MOV32_FROM_MEM(RBX, RBX);
         emitter_tex.AND32_REG_IMM(0xFFFF, RBX);
-
-        if (current_ctx->clamp.wrap_s >= 0x2)
-            emitter_tex.SHR32_CL(RBX);
+        emitter_tex.SHR32_CL(RBX);
     }
 
     if (current_ctx->clamp.wrap_t >= 0x2)
@@ -4576,17 +4572,13 @@ GSTextureJitBlockRecord* GraphicsSynthesizerThread::recompile_tex_lookup(uint64_
         emitter_tex.load_addr((uint64_t)&current_ctx->clamp.min_v, R8);
         emitter_tex.MOV32_FROM_MEM(R8, R8);
         emitter_tex.AND32_REG_IMM(0xFFFF, R8);
-
-        if (current_ctx->clamp.wrap_t >= 0x2)
-            emitter_tex.SHR32_CL(R8);
+        emitter_tex.SHR32_CL(R8);
 
         emitter_tex.XOR32_REG(R15, R15);
         emitter_tex.load_addr((uint64_t)&current_ctx->clamp.max_v, R15);
         emitter_tex.MOV32_FROM_MEM(R15, R15);
         emitter_tex.AND32_REG_IMM(0xFFFF, R15);
-
-        if (current_ctx->clamp.wrap_t >= 0x2)
-            emitter_tex.SHR32_CL(R15);
+        emitter_tex.SHR32_CL(R15);
     }
 
     //Clamp u/v (s/t) appropriately
