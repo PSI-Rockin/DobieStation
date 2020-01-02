@@ -31,7 +31,7 @@ void SIO2::reset()
 
 uint8_t SIO2::read_serial()
 {
-    printf("[SIO2] Read FIFO: $%02X\n", FIFO.front());
+    //printf("[SIO2] Read FIFO: $%02X\n", FIFO.front());
     uint8_t value = FIFO.front();
     FIFO.pop();
     return value;
@@ -88,7 +88,7 @@ void SIO2::write_dma(uint8_t value)
 
 void SIO2::write_serial(uint8_t value)
 {
-    printf("[SIO2] DATAIN: $%02X\n", value);
+    //printf("[SIO2] DATAIN: $%02X\n", value);
 
     if (!command_length)
     {
