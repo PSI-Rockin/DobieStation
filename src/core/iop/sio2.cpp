@@ -23,6 +23,8 @@ void SIO2::reset()
     RECV1 = 0x1D100;
     port = 0;
 
+    dma_reset();
+
     if (!memcard->open("memcard.bin"))
         printf("[SIO2] Failed to open memcard\n");
 }
@@ -62,6 +64,26 @@ void SIO2::set_send3(int index, uint32_t value)
     send3[index] = value;
     if (index < 0 || index >= 16)
         Errors::die("SIO2 set_send3 index (%d) out of range (0-4)", index);
+}
+
+void SIO2::dma_reset()
+{
+    dma_bytes_received = 0;
+}
+
+void SIO2::write_dma(uint8_t value)
+{
+    if (!command_length)
+    {
+        if (dma_bytes_received % 0x90)
+        {
+            dma_bytes_received++;
+            FIFO.push(0x00);
+            return;
+        }
+    }
+    dma_bytes_received++;
+    write_serial(value);
 }
 
 void SIO2::write_serial(uint8_t value)
@@ -145,9 +167,14 @@ void SIO2::write_device(uint8_t value)
 
             if (new_command)
             {
-                memcard->start_transfer();
-                FIFO.push(0xFF);
-                new_command = false;
+                if (value == 0x81)
+                {
+                    new_command = false;
+                    memcard->start_transfer();
+                    FIFO.push(0xFF);
+                }
+                else
+                    FIFO.push(0);
             }
             else
                 FIFO.push(memcard->write_serial(value));

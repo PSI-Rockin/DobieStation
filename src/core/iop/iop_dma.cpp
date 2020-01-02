@@ -250,10 +250,11 @@ void IOP_DMA::process_SIF1()
 
 void IOP_DMA::process_SIO2in()
 {
+    sio2->dma_reset();
     int size = channels[IOP_SIO2in].word_count * channels[IOP_SIO2in].block_size * 4;
     while (size)
     {
-        sio2->write_serial(RAM[channels[IOP_SIO2in].addr]);
+        sio2->write_dma(RAM[channels[IOP_SIO2in].addr]);
         channels[IOP_SIO2in].addr++;
         size--;
     }
