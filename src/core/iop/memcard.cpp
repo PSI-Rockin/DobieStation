@@ -1,3 +1,4 @@
+#include <cstring>
 #include <fstream>
 #include "../errors.hpp"
 #include "memcard.hpp"
