@@ -3126,9 +3126,6 @@ void GraphicsSynthesizerThread::local_to_local()
     uint16_t dest_start_x = 0, src_start_x = 0;
     int x_step = 0, y_step = 0;
 
-    if (TRXPOS.trans_order)
-        Errors::die("Not normal");
-
     switch (TRXPOS.trans_order)
     {
         case 0x00:
