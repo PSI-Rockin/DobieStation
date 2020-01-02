@@ -633,7 +633,7 @@ void VectorUnit::check_for_FMAC_stall()
         {
             if (ILW_pipeline[i] == decoder.vi_read0 || ILW_pipeline[i] == decoder.vi_read1)
             {
-                printf("[VU%d] Load hazard stall on vi%d at PC = 0x%x\n", id, ILW_pipeline[i], PC);
+                //printf("[VU%d] Load hazard stall on vi%d at PC = 0x%x\n", id, ILW_pipeline[i], PC);
                 stall_found = true;
             }
         }

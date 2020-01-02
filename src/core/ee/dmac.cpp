@@ -292,6 +292,10 @@ int DMAC::process_VIF1()
                 if (!vif1->feed_DMA(fetch128(channels[VIF1].address)))
                     break;
             }
+            else
+            {
+                store128(channels[VIF1].address, vif1->readFIFO());
+            }
             advance_source_dma(VIF1);
             count++;
         }
