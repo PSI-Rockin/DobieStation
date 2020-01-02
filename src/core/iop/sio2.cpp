@@ -88,7 +88,7 @@ void SIO2::write_dma(uint8_t value)
 
 void SIO2::write_serial(uint8_t value)
 {
-    //printf("[SIO2] DATAIN: $%02X\n", value);
+    printf("[SIO2] DATAIN: $%02X\n", value);
 
     if (!command_length)
     {
