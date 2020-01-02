@@ -16,9 +16,11 @@ Memcard::~Memcard()
 void Memcard::reset()
 {
     cmd_length = 0;
+    cmd_params = 0;
     response_read_pos = 0;
     response_write_pos = 0;
     response_size = 0;
+    auth_f0_do_xor = false;
 
     //Initial value is needed for newer MCMANs to work
     terminator = 0x55;
@@ -73,7 +75,71 @@ uint8_t Memcard::write_serial(uint8_t data)
                 cmd_length = 2;
                 response_end();
                 break;
+            case 0x23:
+                //Read sector
+                cmd_length = 7;
+                response_end();
+                break;
+            case 0x26:
+                //Get specs - currently hardcoded for standard Sony 8 MB memory cards
+            {
+                cmd_length = 11;
+                write_response(0x2B);
+
+                //Sector size in bytes (512)
+                write_response(0x00);
+                write_response(0x02);
+
+                //Erase block pages (16)
+                write_response(0x10);
+                write_response(0x00);
+
+                //Total size in sectors (0x4000)
+                write_response(0x00);
+                write_response(0x40);
+                write_response(0x00);
+                write_response(0x00);
+
+                //XOR checksum (0x52)
+                write_response(0x52);
+
+                write_response(terminator);
+            }
+                break;
+            case 0x27:
+                //Set terminator
+                cmd_length = 3;
+                response_end();
+                break;
+            case 0x28:
+                //Get terminator
+                write_response(0x2B);
+                write_response(terminator);
+                write_response(0x55);
+                cmd_length = 3;
+                break;
+            case 0x43:
+                //Read
+                cmd_length = 132;
+                write_response(0x2B);
+                write_response(terminator);
+                break;
+            case 0x81:
+                //Sector access end
+                cmd_length = 2;
+                response_end();
+                break;
+            case 0xBF:
+                //Used when detecting the card...
+                cmd_length = 3;
+                response_end();
+                break;
+            case 0xF0:
+                //Some XOR authentication thing
+                cmd_length = 3;
+                break;
             case 0xF3:
+            case 0xF7:
                 //Used for authentication
                 cmd_length = 3;
                 response_end();
@@ -87,9 +153,30 @@ uint8_t Memcard::write_serial(uint8_t data)
     {
         switch (cmd)
         {
+            case 0x23:
+                sector_op(data);
+                break;
+            case 0x27:
+                if (cmd_params == 0)
+                {
+                    terminator = data;
+                    response_end();
+                }
+                break;
+            case 0x43:
+                if (cmd_params == 0)
+                {
+                    read_mem(mem_addr, data);
+                    mem_addr += data;
+                }
+                break;
+            case 0xF0:
+                do_auth_f0(data);
+                break;
             default:
                 break;
         }
+        cmd_params++;
         return read_response();
     }
 }
@@ -117,4 +204,91 @@ void Memcard::response_end()
 {
     response_buffer[cmd_length - 2] = 0x2B;
     response_buffer[cmd_length - 1] = terminator;
+}
+
+void Memcard::do_auth_f0(uint8_t value)
+{
+    if (cmd_params == 0)
+    {
+        switch (value)
+        {
+            case 0x06:
+            case 0x07:
+            case 0x0B:
+                cmd_length = 12;
+                auth_f0_do_xor = false;
+                response_end();
+                break;
+            case 0x01:
+            case 0x02:
+            case 0x04:
+            case 0x0F:
+            case 0x11:
+            case 0x13:
+                auth_f0_do_xor = true;
+                auth_f0_checksum = 0;
+                write_response(0x00);
+                break;
+            default:
+                auth_f0_do_xor = false;
+                response_end();
+        }
+    }
+    else if (auth_f0_do_xor)
+    {
+        printf("blorp: %d\n", cmd_params);
+        switch (cmd_params)
+        {
+            case 1:
+                write_response(0x2B);
+                break;
+            case 10:
+                write_response(auth_f0_checksum);
+                write_response(terminator);
+                break;
+            default:
+                auth_f0_checksum ^= value;
+                write_response(0x00);
+        }
+    }
+}
+
+void Memcard::sector_op(uint8_t value)
+{
+    switch (cmd_params)
+    {
+        case 0:
+            mem_addr = value;
+            break;
+        case 1:
+            mem_addr |= value << 8;
+            break;
+        case 2:
+            mem_addr |= value << 16;
+            break;
+        case 3:
+            mem_addr |= value << 24;
+            mem_addr *= (512 + 16);
+            printf("[Memcard] Accessing $%08X...\n", mem_addr);
+            break;
+    }
+}
+
+void Memcard::read_mem(uint32_t addr, uint8_t size)
+{
+    for (unsigned int i = 0; i < size; i++)
+        write_response(mem[addr + i]);
+
+    write_response(do_checksum(&mem[addr], size));
+    write_response(terminator);
+}
+
+uint8_t Memcard::do_checksum(uint8_t *buff, unsigned int size)
+{
+    uint8_t checksum = 0;
+
+    for (unsigned int i = 0; i < size; i++)
+        checksum ^= buff[i];
+
+    return checksum;
 }
