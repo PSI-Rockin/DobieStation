@@ -1016,11 +1016,15 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             {
                 pixels_transferred = 0;
                 printf("Transfer started!\n");
+                printf("Src base: $%08X\n", BITBLTBUF.source_base);
                 printf("Dest base: $%08X\n", BITBLTBUF.dest_base);
-                printf("TRXPOS: (%d, %d)\n", TRXPOS.dest_x, TRXPOS.dest_y);
+                printf("Src TRXPOS: (%d, %d)\n", TRXPOS.source_x, TRXPOS.source_y);
+                printf("Dest TRXPOS: (%d, %d)\n", TRXPOS.dest_x, TRXPOS.dest_y);
                 printf("TRXREG (%d, %d)\n", TRXREG.width, TRXREG.height);
-                printf("Format: $%02X\n", BITBLTBUF.dest_format);
-                printf("Width: %d\n", BITBLTBUF.dest_width);
+                printf("Src Format: $%02X\n", BITBLTBUF.source_format);
+                printf("Dest Format: $%02X\n", BITBLTBUF.dest_format);
+                printf("Src Width: %d\n", BITBLTBUF.source_width);
+                printf("Dest Width: %d\n", BITBLTBUF.dest_width);
                 TRXPOS.int_dest_x = TRXPOS.dest_x;
                 TRXPOS.int_source_x = TRXPOS.source_x;
                 TRXPOS.int_dest_y = TRXPOS.dest_y;
@@ -2873,11 +2877,15 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
                 unpack_PSMCT24(data, i, true);
                 break;
         }
-        if (TRXPOS.int_dest_x - TRXPOS.dest_x == TRXREG.width)
+        if (pixels_transferred % TRXREG.width == 0)
         {
             TRXPOS.int_dest_x = TRXPOS.dest_x;
             TRXPOS.int_dest_y++;
         }
+
+        //Coordinates wrap at 2048 pixels
+        TRXPOS.int_dest_x %= 2048;
+        TRXPOS.int_dest_y %= 2048;
     }
 
     int max_pixels = TRXREG.width * TRXREG.height;
@@ -2992,11 +3000,15 @@ uint128_t GraphicsSynthesizerThread::local_to_host()
             }
 
 
-            if (TRXPOS.int_source_x - TRXPOS.source_x == TRXREG.width)
+            if (pixels_transferred % TRXREG.width == 0)
             {
                 TRXPOS.int_source_x = TRXPOS.source_x;
                 TRXPOS.int_source_y++;
             }
+
+            //Coordinates wrap at 2048 pixels
+            TRXPOS.int_source_x %= 2048;
+            TRXPOS.int_source_y %= 2048;
         }
 
         return_data._u64[datapart] = data;
@@ -3071,23 +3083,32 @@ uint64_t GraphicsSynthesizerThread::pack_PSMCT24(bool z_format)
         {
             if (z_format)
             {
-                PSMCT24_color = (uint64_t)(read_PSMCT32Z_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                PSMCT24_color |= (uint64_t)(read_PSMCT32Z_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
                     TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFFFF) << PSMCT24_unpacked_count;
             }
             else
             {
-                PSMCT24_color = (uint64_t)(read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                PSMCT24_color |= (uint64_t)(read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
                     TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFFFF) << PSMCT24_unpacked_count;
             }
             PSMCT24_unpacked_count += 24;
             TRXPOS.int_source_x++;
             pixels_transferred++;
 
-            if (TRXPOS.int_source_x - TRXPOS.source_x == TRXREG.width)
+            //If this is the last read, reg updating is handled by the main loop
+            //Otherwise we need to do it here
+            if (data_in_output < 40)
             {
-                TRXPOS.int_source_x = TRXPOS.source_x;
-                TRXPOS.int_source_y++;
+                if (pixels_transferred % TRXREG.width == 0)
+                {
+                    TRXPOS.int_source_x = TRXPOS.source_x;
+                    TRXPOS.int_source_y++;
+                }
             }
+
+            //Coordinates wrap at 2048 pixels
+            TRXPOS.int_source_x %= 2048;
+            TRXPOS.int_source_y %= 2048;
         }
     }
 
@@ -3102,36 +3123,44 @@ void GraphicsSynthesizerThread::local_to_local()
     printf("Source: $%08X Dest: $%08X\n", BITBLTBUF.source_base, BITBLTBUF.dest_base);
     int max_pixels = TRXREG.width * TRXREG.height;
 
-    uint16_t start_x = 0, start_y = 0;
+    uint16_t dest_start_x = 0, src_start_x = 0;
     int x_step = 0, y_step = 0;
 
     switch (TRXPOS.trans_order)
     {
         case 0x00:
             //Upper-left to bottom-right
-            start_x = TRXPOS.int_dest_x = TRXPOS.dest_x;
-            start_y = TRXPOS.int_dest_y = TRXPOS.dest_y;
+            dest_start_x = TRXPOS.int_dest_x = TRXPOS.dest_x;
+            src_start_x = TRXPOS.int_source_x = TRXPOS.source_x;
+            TRXPOS.int_dest_y = TRXPOS.dest_y;
+            TRXPOS.int_source_y = TRXPOS.source_y;
             x_step = 1;
             y_step = 1;
             break;
         case 0x01:
             //Bottom-left to upper-right
-            start_x = TRXPOS.int_dest_x = TRXPOS.dest_x;
-            start_y = TRXPOS.int_dest_y = TRXPOS.dest_y + TRXREG.height - 1;
+            dest_start_x = TRXPOS.int_dest_x = TRXPOS.dest_x;
+            src_start_x = TRXPOS.int_source_x = TRXPOS.source_x;
+            TRXPOS.int_dest_y = TRXPOS.dest_y + TRXREG.height - 1;
+            TRXPOS.int_source_y = TRXPOS.source_y + TRXREG.height - 1;
             x_step = 1;
             y_step = -1;
             break;
         case 0x02:
             //Upper-right to bottom-left
-            start_x = TRXPOS.int_dest_x = TRXPOS.dest_x + TRXREG.width - 1;
-            start_y = TRXPOS.int_dest_y = TRXPOS.dest_y;
+            dest_start_x = TRXPOS.int_dest_x = TRXPOS.dest_x + TRXREG.width - 1;
+            src_start_x = TRXPOS.int_source_x = TRXPOS.source_x + TRXREG.width - 1;
+            TRXPOS.int_dest_y = TRXPOS.dest_y;
+            TRXPOS.int_source_y = TRXPOS.source_y;
             x_step = -1;
             y_step = 1;
             break;
         case 0x03:
             //Bottom-right to upper-left
-            start_x = TRXPOS.int_dest_x = TRXPOS.dest_x + TRXREG.width - 1;
-            start_y = TRXPOS.int_dest_y = TRXPOS.dest_y + TRXREG.height - 1;
+            dest_start_x = TRXPOS.int_dest_x = TRXPOS.dest_x + TRXREG.width - 1;
+            src_start_x = TRXPOS.int_source_x = TRXPOS.source_x + TRXREG.width - 1;
+            TRXPOS.int_dest_y = TRXPOS.dest_y + TRXREG.height - 1;
+            TRXPOS.int_source_y = TRXPOS.source_y + TRXREG.height - 1;
             x_step = -1;
             y_step = -1;
             break;
@@ -3158,8 +3187,8 @@ void GraphicsSynthesizerThread::local_to_local()
                                          TRXPOS.int_source_x, TRXPOS.int_source_y);
                 break;
             case 0x2C:
-                data = read_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width,
-                    TRXPOS.int_dest_x, TRXPOS.int_dest_y) >> 28;
+                data = read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                    TRXPOS.int_source_x, TRXPOS.int_source_y) >> 28;
                 break;
             case 0x30:
             case 0x31:
@@ -3215,17 +3244,23 @@ void GraphicsSynthesizerThread::local_to_local()
         }
 
         pixels_transferred++;
-        TRXPOS.int_source_x++;
+        TRXPOS.int_source_x += x_step;
         TRXPOS.int_dest_x += x_step;
 
         if (pixels_transferred % TRXREG.width == 0)
         {
-            TRXPOS.int_source_x = TRXPOS.source_x;
-            TRXPOS.int_source_y++;
+            TRXPOS.int_source_x = src_start_x;
+            TRXPOS.int_source_y += y_step;
 
-            TRXPOS.int_dest_x = start_x;
+            TRXPOS.int_dest_x = dest_start_x;
             TRXPOS.int_dest_y += y_step;
         }
+
+        //Coordinates wrap at 2048 pixels
+        TRXPOS.int_source_x %= 2048;
+        TRXPOS.int_source_y %= 2048;
+        TRXPOS.int_dest_x %= 2048;
+        TRXPOS.int_dest_y %= 2048;
     }
     pixels_transferred = 0;
     TRXDIR = 3;
