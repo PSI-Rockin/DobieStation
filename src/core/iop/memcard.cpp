@@ -28,12 +28,9 @@ Memcard::~Memcard()
 
 void Memcard::reset()
 {
-    cmd_length = 0;
-    cmd_params = 0;
-    response_read_pos = 0;
-    response_write_pos = 0;
-    response_size = 0;
-    auth_f0_do_xor = false;
+    is_dirty = false;
+
+    start_transfer();
 
     //Initial value is needed for newer MCMANs to work
     terminator = 0x55;
@@ -41,7 +38,7 @@ void Memcard::reset()
 
 bool Memcard::open(std::string file_name)
 {
-    std::ifstream file(file_name);
+    std::ifstream file(file_name, std::ios::binary);
 
     if (mem)
     {
@@ -51,14 +48,26 @@ bool Memcard::open(std::string file_name)
 
     if (file.is_open())
     {
+        //Specs are currently hardcoded for a standard 8 MB Sony memory card
+        specs.page_size = 0x200;
+        specs.erase_block_pages = 16;
+        specs.page_count = 0x4000;
         file_opened = true;
 
-        mem = new uint8_t[0x840000];
-        file.read((char*)mem, 0x840000);
+        //On standard memory cards, an additional 16 bytes is included in every page for ECC.
+        size_t memcard_size = (specs.page_size + 16) * specs.page_count;
+
+        mem = new uint8_t[memcard_size];
+        file.read((char*)mem, memcard_size);
         file.close();
+
+        this->file_name = file_name;
     }
     else
+    {
+        this->file_name = "";
         file_opened = false;
+    }
 
     return file_opened;
 }
@@ -70,9 +79,25 @@ bool Memcard::is_connected()
 
 void Memcard::start_transfer()
 {
-    reset();
+    cmd_length = 0;
+    cmd_params = 0;
+    response_read_pos = 0;
+    response_write_pos = 0;
+    response_size = 0;
+    auth_f0_do_xor = false;
 
     memset(response_buffer, 0, sizeof(response_buffer));
+}
+
+void Memcard::save_if_dirty()
+{
+    if (is_dirty && file_opened)
+    {
+        std::ofstream file(file_name, std::ios::binary);
+        file.write((char*)mem, 0x840000);
+        file.close();
+        is_dirty = false;
+    }
 }
 
 uint8_t Memcard::write_serial(uint8_t data)
@@ -110,27 +135,27 @@ uint8_t Memcard::write_serial(uint8_t data)
                 response_end();
                 break;
             case 0x26:
-                //Get specs - currently hardcoded for standard Sony 8 MB memory cards
+                //Get specs
             {
                 cmd_length = 11;
                 write_response(0x2B);
 
-                //Sector size in bytes (512)
-                write_response(0x00);
-                write_response(0x02);
+                //Page size, not including ECC area
+                write_response(specs.page_size & 0xFF);
+                write_response(specs.page_size >> 8);
 
-                //Erase block pages (16)
-                write_response(0x10);
-                write_response(0x00);
+                //Amount of pages in an erase block
+                write_response(specs.erase_block_pages & 0xFF);
+                write_response(specs.erase_block_pages >> 8);
 
-                //Total size in sectors (0x4000)
-                write_response(0x00);
-                write_response(0x40);
-                write_response(0x00);
-                write_response(0x00);
+                //Page count
+                write_response(specs.page_count & 0xFF);
+                write_response((specs.page_count >> 8) & 0xFF);
+                write_response((specs.page_count >> 16) & 0xFF);
+                write_response(specs.page_count >> 24);
 
-                //XOR checksum (0x52)
-                write_response(0x52);
+                //XOR checksum
+                write_response(do_checksum((uint8_t*)&specs, sizeof(specs)));
 
                 write_response(terminator);
             }
@@ -168,6 +193,8 @@ uint8_t Memcard::write_serial(uint8_t data)
                 //Erase sector
                 cmd_length = 2;
                 response_end();
+
+                is_dirty = true;
 
                 for (unsigned int i = 0; i < 528 * 16; i++)
                     mem[mem_addr + i] = 0xFF;
@@ -348,6 +375,7 @@ void Memcard::write_mem(uint8_t data)
     }
     else if (cmd_params - 1 < mem_write_size)
     {
+        is_dirty = true;
         mem[mem_addr] = data;
         mem_addr++;
     }

@@ -24,9 +24,6 @@ void SIO2::reset()
     port = 0;
 
     dma_reset();
-
-    if (!memcard->open("memcard.bin"))
-        printf("[SIO2] Failed to open memcard\n");
 }
 
 uint8_t SIO2::read_serial()
@@ -88,7 +85,7 @@ void SIO2::write_dma(uint8_t value)
 
 void SIO2::write_serial(uint8_t value)
 {
-    printf("[SIO2] DATAIN: $%02X\n", value);
+    //printf("[SIO2] DATAIN: $%02X\n", value);
 
     if (!command_length)
     {
