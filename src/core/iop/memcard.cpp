@@ -2,6 +2,18 @@
 #include "../errors.hpp"
 #include "memcard.hpp"
 
+/**
+ * On a high level, detecting a PS2 memory card follows this procedure:
+ * - First, the card is probed with the 0x11 command.
+ * - Next, the card is authenticated with the help of SECRMAN (security manager).
+ *   This entails using MagicGate commands of some sort using the MECHACON, the DVD drive controller.
+ *   If this or the above step fails, MCMAN will move on and check if a PSX memory card is inserted.
+ * - Finally, the superblock (first block on the card) is read to make sure the card is formatted correctly.
+ *   If this fails, the card will be detected, but MCMAN (memory card manager) will return an "unformatted" error.
+ *
+ * Once the card has been detected successfully, handling read/write/erase commands is quite simple.
+ */
+
 Memcard::Memcard()
 {
     mem = nullptr;
@@ -75,6 +87,22 @@ uint8_t Memcard::write_serial(uint8_t data)
                 cmd_length = 2;
                 response_end();
                 break;
+            case 0x12:
+                //Sent on write/erase
+                //*RECV3 = 0x8C;
+                cmd_length = 2;
+                response_end();
+                break;
+            case 0x21:
+                //Erase sector
+                cmd_length = 7;
+                response_end();
+                break;
+            case 0x22:
+                //Write sector
+                cmd_length = 7;
+                response_end();
+                break;
             case 0x23:
                 //Read sector
                 cmd_length = 7;
@@ -118,6 +146,12 @@ uint8_t Memcard::write_serial(uint8_t data)
                 write_response(0x55);
                 cmd_length = 3;
                 break;
+            case 0x42:
+                //Write
+                cmd_length = 132;
+                write_response(0x2B);
+                write_response(terminator);
+                break;
             case 0x43:
                 //Read
                 cmd_length = 132;
@@ -125,9 +159,17 @@ uint8_t Memcard::write_serial(uint8_t data)
                 write_response(terminator);
                 break;
             case 0x81:
-                //Sector access end
+                //Read/write end
                 cmd_length = 2;
                 response_end();
+                break;
+            case 0x82:
+                //Erase sector
+                cmd_length = 2;
+                response_end();
+
+                for (unsigned int i = 0; i < 528 * 16; i++)
+                    mem[mem_addr + i] = 0xFF;
                 break;
             case 0xBF:
                 //Used when detecting the card...
@@ -153,6 +195,12 @@ uint8_t Memcard::write_serial(uint8_t data)
     {
         switch (cmd)
         {
+            case 0x21:
+                sector_op(data);
+                break;
+            case 0x22:
+                sector_op(data);
+                break;
             case 0x23:
                 sector_op(data);
                 break;
@@ -162,6 +210,9 @@ uint8_t Memcard::write_serial(uint8_t data)
                     terminator = data;
                     response_end();
                 }
+                break;
+            case 0x42:
+                write_mem(data);
                 break;
             case 0x43:
                 if (cmd_params == 0)
@@ -186,7 +237,6 @@ uint8_t Memcard::read_response()
     if (response_read_pos >= sizeof(response_buffer))
         Errors::die("[Memcard] Reading more response data than is available!");
     uint8_t value = response_buffer[response_read_pos];
-    printf("[Memcard] Response: $%02X\n", value);
     response_read_pos++;
     return value;
 }
@@ -236,7 +286,6 @@ void Memcard::do_auth_f0(uint8_t value)
     }
     else if (auth_f0_do_xor)
     {
-        printf("blorp: %d\n", cmd_params);
         switch (cmd_params)
         {
             case 1:
@@ -269,7 +318,13 @@ void Memcard::sector_op(uint8_t value)
         case 3:
             mem_addr |= value << 24;
             mem_addr *= (512 + 16);
-            printf("[Memcard] Accessing $%08X...\n", mem_addr);
+
+            if (cmd == 0x21)
+                printf("[Memcard] Erasing $%08X...\n", mem_addr);
+            else if (cmd == 0x22)
+                printf("[Memcard] Writing $%08X...\n", mem_addr);
+            else if (cmd == 0x23)
+                printf("[Memcard] Reading $%08X...\n", mem_addr);
             break;
     }
 }
@@ -281,6 +336,20 @@ void Memcard::read_mem(uint32_t addr, uint8_t size)
 
     write_response(do_checksum(&mem[addr], size));
     write_response(terminator);
+}
+
+void Memcard::write_mem(uint8_t data)
+{
+    if (cmd_params == 0)
+    {
+        mem_write_size = data;
+        response_buffer[data + 3] = terminator;
+    }
+    else if (cmd_params - 1 < mem_write_size)
+    {
+        mem[mem_addr] = data;
+        mem_addr++;
+    }
 }
 
 uint8_t Memcard::do_checksum(uint8_t *buff, unsigned int size)

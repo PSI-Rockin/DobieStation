@@ -22,6 +22,8 @@ class Memcard
 
         uint32_t mem_addr;
 
+        uint8_t mem_write_size;
+
         bool auth_f0_do_xor;
         uint8_t auth_f0_checksum;
 
@@ -34,6 +36,7 @@ class Memcard
 
         void sector_op(uint8_t value);
         void read_mem(uint32_t addr, uint8_t size);
+        void write_mem(uint8_t data);
     public:
         Memcard();
         ~Memcard();
