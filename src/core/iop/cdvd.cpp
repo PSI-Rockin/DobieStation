@@ -646,6 +646,84 @@ void CDVD_Drive::send_S_command(uint8_t value)
             prepare_S_outdata(1);
             S_outdata[0] = 0;
             break;
+        case 0x80:
+            printf("[CDVD] MECHACON_auth_0x80\n");
+            prepare_S_outdata(1);
+            S_outdata[0] = 0;
+            break;
+        case 0x81:
+            printf("[CDVD] MECHACON_auth_0x81\n");
+            prepare_S_outdata(1);
+            S_outdata[0] = 0;
+            break;
+        case 0x82:
+            printf("[CDVD] MECHACON_auth_0x82\n");
+            prepare_S_outdata(1);
+            S_outdata[0] = 0;
+            break;
+        case 0x83:
+            printf("[CDVD] MECHACON_auth_0x83\n");
+            prepare_S_outdata(1);
+            S_outdata[0] = 0;
+            break;
+        case 0x84:
+            printf("[CDVD] MECHACON_auth_0x84\n");
+            prepare_S_outdata(1+8+4);
+            S_outdata[0] = 0;
+
+            S_outdata[1] = 0x21;
+            S_outdata[2] = 0xdc;
+            S_outdata[3] = 0x31;
+            S_outdata[4] = 0x96;
+            S_outdata[5] = 0xce;
+            S_outdata[6] = 0x72;
+            S_outdata[7] = 0xe0;
+            S_outdata[8] = 0xc8;
+
+            S_outdata[9]  = 0x69;
+            S_outdata[10] = 0xda;
+            S_outdata[11] = 0x34;
+            S_outdata[12] = 0x9b;
+            break;
+        case 0x85:
+            printf("[CDVD] MECHACON_auth_0x85\n");
+            prepare_S_outdata(1+4+8);
+            S_outdata[0] = 0;
+
+            S_outdata[1] = 0xeb;
+            S_outdata[2] = 0x01;
+            S_outdata[3] = 0xc7;
+            S_outdata[4] = 0xa9;
+
+            S_outdata[5] = 0x3f;
+            S_outdata[6] = 0x9c;
+            S_outdata[7] = 0x5b;
+            S_outdata[8] = 0x19;
+            S_outdata[9] = 0x31;
+            S_outdata[10] = 0xa0;
+            S_outdata[11] = 0xb3;
+            S_outdata[12] = 0xa3;
+            break;
+        case 0x86:
+            printf("[CDVD] MECHACON_auth_0x86\n");
+            prepare_S_outdata(1);
+            S_outdata[0] = 0;
+            break;
+        case 0x87:
+            printf("[CDVD] MECHACON_auth_0x87\n");
+            prepare_S_outdata(1);
+            S_outdata[0] = 0;
+            break;
+        case 0x88:
+            printf("[CDVD] MECHACON_auth_0x88\n");
+            prepare_S_outdata(1);
+            S_outdata[0] = 0;
+            break;
+        case 0x8F:
+            printf("[CDVD] MECHACON_auth_0x8F\n");
+            prepare_S_outdata(1);
+            S_outdata[0] = 0;
+            break;
         default:
             Errors::die("[CDVD] Unrecognized S command $%02X\n", value);
     }

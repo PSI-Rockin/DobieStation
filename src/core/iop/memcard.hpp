@@ -9,6 +9,7 @@ class Memcard
         uint8_t* mem;
 
         int cmd_length;
+        int cmd_params;
         uint8_t cmd;
         uint8_t terminator;
 
@@ -19,9 +20,20 @@ class Memcard
         unsigned int response_write_pos;
         unsigned int response_size;
 
+        uint32_t mem_addr;
+
+        bool auth_f0_do_xor;
+        uint8_t auth_f0_checksum;
+
         uint8_t read_response();
         void write_response(uint8_t value);
         void response_end();
+
+        void do_auth_f0(uint8_t value);
+        uint8_t do_checksum(uint8_t* buff, unsigned int size);
+
+        void sector_op(uint8_t value);
+        void read_mem(uint32_t addr, uint8_t size);
     public:
         Memcard();
         ~Memcard();
