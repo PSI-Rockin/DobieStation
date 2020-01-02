@@ -22,11 +22,14 @@ void SIO2::reset()
     new_command = false;
     RECV1 = 0x1D100;
     port = 0;
+
+    if (!memcard->open("memcard.bin"))
+        printf("[SIO2] Failed to open memcard\n");
 }
 
 uint8_t SIO2::read_serial()
 {
-    //printf("[SIO2] Read FIFO\n");
+    printf("[SIO2] Read FIFO: $%02X\n", FIFO.front());
     uint8_t value = FIFO.front();
     FIFO.pop();
     return value;
@@ -63,7 +66,7 @@ void SIO2::set_send3(int index, uint32_t value)
 
 void SIO2::write_serial(uint8_t value)
 {
-    //printf("[SIO2] DATAIN: $%02X\n", value);
+    printf("[SIO2] DATAIN: $%02X\n", value);
 
     if (!command_length)
     {
@@ -81,9 +84,12 @@ void SIO2::write_serial(uint8_t value)
     }
 
     if (command_length)
+    {
         command_length--;
-
-    write_device(value);
+        write_device(value);
+    }
+    else
+        FIFO.push(0xFF);
 }
 
 void SIO2::write_device(uint8_t value)
@@ -95,6 +101,9 @@ void SIO2::write_device(uint8_t value)
             {
                 case 0x01:
                     active_command = SIO_DEVICE::PAD;
+                    break;
+                case 0x81:
+                    active_command = SIO_DEVICE::MEMCARD;
                     break;
                 default:
                     active_command = SIO_DEVICE::DUMMY;
@@ -122,6 +131,26 @@ void SIO2::write_device(uint8_t value)
             //printf("[SIO2] PAD reply: $%02X\n", reply);
             FIFO.push(reply);
         }
+            break;
+        case SIO_DEVICE::MEMCARD:
+            if (!memcard->is_connected())
+                RECV1 = 0x1D100;
+            else
+                RECV1 = 0x1100;
+            if (port || RECV1 == 0x1D100)
+            {
+                FIFO.push(0x00);
+                return;
+            }
+
+            if (new_command)
+            {
+                memcard->start_transfer();
+                FIFO.push(0xFF);
+                new_command = false;
+            }
+            else
+                FIFO.push(memcard->write_serial(value));
             break;
         case SIO_DEVICE::DUMMY:
             FIFO.push(0x00);
@@ -165,6 +194,6 @@ uint32_t SIO2::get_RECV2()
 
 uint32_t SIO2::get_RECV3()
 {
-    //printf("[SIO2] Read RECV3\n");
+    printf("[SIO2] Read RECV3\n");
     return 0;
 }
