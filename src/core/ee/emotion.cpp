@@ -855,8 +855,8 @@ void EmotionEngine::handle_exception(uint32_t new_addr, uint8_t code)
 void EmotionEngine::syscall_exception()
 {
     int op = get_gpr<int>(3);
-    if (op != 0x7A)
-        printf("[EE] SYSCALL: %s (id: $%02X) called at $%08X\n", SYSCALL(op), op, PC);
+    //if (op != 0x7A)
+        //printf("[EE] SYSCALL: %s (id: $%02X) called at $%08X\n", SYSCALL(op), op, PC);
 
     if (op == 0x64)
     {
