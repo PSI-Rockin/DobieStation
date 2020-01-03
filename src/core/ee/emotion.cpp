@@ -113,6 +113,7 @@ void EmotionEngine::reset()
     //The solution is to HLE the syscalls used to access the config.
     //This allows us to set the default BIOS language to English. The settings can still be changed at full boot.
     //TODO: Read in system settings from NVM so that non-English languages can be used at fast boot.
+    //TODO: Expose language setting in the UI so that a default language can be selected even without NVM.
     osd_config_param.screenType = 0; //4:3
     osd_config_param.ps1drvConfig = 0; //???
     osd_config_param.spdifMode = 0; //Enabled
