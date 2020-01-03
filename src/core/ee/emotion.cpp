@@ -107,6 +107,22 @@ void EmotionEngine::reset()
     wait_for_VU0 = false;
     delay_slot = 0;
 
+    //OsdConfigParam is used by certain games to detect language settings.
+    //This is not initialized until OSDSYS boots. Since fast boot skips this,
+    //games that rely on this will read zeroed out data (this usually manifests as Japanese).
+    //The solution is to HLE the syscalls used to access the config.
+    //This allows us to set the default BIOS language to English. The settings can still be changed at full boot.
+    //TODO: Read in system settings from NVM so that non-English languages can be used at fast boot.
+    //TODO: Expose language setting in the UI so that a default language can be selected even without NVM.
+    osd_config_param.screenType = 0; //4:3
+    osd_config_param.ps1drvConfig = 0; //???
+    osd_config_param.spdifMode = 0; //Enabled
+    osd_config_param.timezoneOffset = 0;
+    osd_config_param.videoOutput = 0; //RGB
+    osd_config_param.japLanguage = 1; //Indicates not Japanese
+    osd_config_param.language = 1; //English
+    osd_config_param.version = 1; //Indicates normal kernel without extended language settings
+
     //Reset the cache
     for (int i = 0; i < 128; i++)
     {
@@ -839,8 +855,8 @@ void EmotionEngine::handle_exception(uint32_t new_addr, uint8_t code)
 void EmotionEngine::syscall_exception()
 {
     int op = get_gpr<int>(3);
-    //if (op != 0x7A)
-        //printf("[EE] SYSCALL: %s (id: $%02X) called at $%08X\n", SYSCALL(op), op, PC);
+    if (op != 0x7A)
+        printf("[EE] SYSCALL: %s (id: $%02X) called at $%08X\n", SYSCALL(op), op, PC);
 
     if (op == 0x64)
     {
@@ -850,6 +866,27 @@ void EmotionEngine::syscall_exception()
         //We have to wait until after we've left the block before we can erase blocks.
         if (a0 != 0 && a0 != 1)
             flush_jit_cache = true;
+    }
+
+    if (op == 0x4A)
+    {
+        //SetOsdConfigParam
+        uint32_t ptr = get_gpr<uint32_t>(4);
+        uint32_t value = read32(ptr);
+
+        memcpy(&osd_config_param, &value, 4);
+    }
+
+    if (op == 0x4B)
+    {
+        //GetOsdConfigParam
+        uint32_t ptr = get_gpr<uint32_t>(4);
+
+        uint32_t value;
+        memcpy(&value, &osd_config_param, 4);
+
+        write32(ptr, value);
+        return;
     }
 
     if (op == 0x7C)

@@ -27,6 +27,28 @@ struct EE_ICacheLine
     uint32_t tag[2];
 };
 
+//Taken from PS2SDK
+struct EE_OsdConfigParam
+{
+    /** 0=enabled, 1=disabled */
+    /*00*/uint32_t spdifMode:1;
+        /** 0=4:3, 1=fullscreen, 2=16:9 */
+    /*01*/uint32_t screenType:2;
+        /** 0=rgb(scart), 1=component */
+    /*03*/uint32_t videoOutput:1;
+        /** 0=japanese, 1=english(non-japanese) */
+    /*04*/uint32_t japLanguage:1;
+        /** Playstation driver settings. */
+    /*05*/uint32_t ps1drvConfig:8;
+        /** 0 = early Japanese OSD, 1 = OSD2, 2 = OSD2 with extended languages.
+         * Early kernels cannot retain the value set in this field (Hence always 0). */
+    /*13*/uint32_t version:3;
+        /** LANGUAGE_??? value */
+    /*16*/uint32_t language:5;
+        /** timezone minutes offset from gmt */
+    /*21*/uint32_t timezoneOffset:11;
+};
+
 extern "C" uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee);
 
 class EmotionEngine
@@ -45,6 +67,8 @@ class EmotionEngine
         VectorUnit* vu1;
 
         uint8_t** tlb_map;
+
+        EE_OsdConfigParam osd_config_param;
 
         //Each register is 128-bit
         alignas(16) uint8_t gpr[32 * sizeof(uint64_t) * 2];
