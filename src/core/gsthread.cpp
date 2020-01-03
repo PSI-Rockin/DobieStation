@@ -2937,6 +2937,11 @@ uint128_t GraphicsSynthesizerThread::local_to_host()
         case 0x1B:
             ppd = 8;
             break;
+        //PSMZ32
+        case 0x30:
+            ppd = 2;
+            break;
+        //PSMZ24
         case 0x31:
             ppd = 1; //Does it all in one go
             break;
@@ -2988,6 +2993,12 @@ uint128_t GraphicsSynthesizerThread::local_to_host()
                     data <<= 8;
                     data |= (uint64_t)((read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
                         TRXPOS.int_source_x, TRXPOS.int_source_y) >> 24) & 0xFF) << (i * 8);
+                    pixels_transferred++;
+                    TRXPOS.int_source_x++;
+                    break;
+                case 0x30:
+                    data |= (uint64_t)(read_PSMCT32Z_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                        TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFFFFFF) << (i * 32);
                     pixels_transferred++;
                     TRXPOS.int_source_x++;
                     break;
