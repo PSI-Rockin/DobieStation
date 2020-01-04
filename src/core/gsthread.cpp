@@ -25,7 +25,7 @@ static SwizzleTable<32,128,128> page_PSMCT4;
 
 #define printf(fmt, ...)(0)
 
-//#define GS_JIT
+#define GS_JIT
 
 /**
   * ~ GS notes ~
