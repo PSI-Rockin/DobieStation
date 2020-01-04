@@ -34,21 +34,30 @@ struct EE_InstrInfo
         //MMI instruction. Takes up both integer pipelines.
         IntWide,
 
-        //Load/store instructions. This includes COP1 and COP2 load/store instructions.
+        //Load/store instructions.
         LoadStore,
 
         //Branches, jumps, and calls. This includes COP1 and COP2 branches.
         Branch,
 
+        // COP0
+        COP0,
+
         //COP1 arithmetic.
-        COP1,
+        COP1Operate,
+
+        //COP1 LoadStore
+        COP1LoadStore,
 
         //COP2 arithmetic.
-        COP2
+        COP2,
+
+        //COP2 LoadStore
+        COP2LoadStore
     };
 
     // Used for throughput calculations
-    enum class instruction_type
+    enum class InstructionType : uint8_t
     {
         MULT = 0,
         MULT1,
@@ -59,15 +68,17 @@ struct EE_InstrInfo
         FPU_DIV,
         FPU_SQRT,
         FPU_RSQRT,
-
-        MAXINSTRUCTIONTYPE
+        OTHER
     };
 
     std::vector<uint8_t> dependencies = std::vector<uint8_t>(3);
     void(*interpreter_fn)(EmotionEngine&, uint32_t) = nullptr;
     Pipeline pipeline = Pipeline::Unk;
-    uint8_t latency = 1;
-    uint8_t throughput = 1;
+    InstructionType type = InstructionType::OTHER;
+
+    // 2-bit fixed point numbers
+    uint8_t latency = 4;
+    uint8_t throughput = 4;
 };
 
 namespace EmotionInterpreter
@@ -421,6 +432,8 @@ namespace EmotionInterpreter
     void pexch(EmotionEngine& cpu, uint32_t instruction);
     void pcpyh(EmotionEngine& cpu, uint32_t instruction);
     void pexcw(EmotionEngine& cpu, uint32_t instruction);
+
+    void nop(EmotionEngine &cpu, uint32_t instruction);
 
     [[ noreturn ]] void unknown_op(const char* type, uint32_t instruction, uint16_t op);
 };

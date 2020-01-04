@@ -202,6 +202,8 @@ void EmotionInterpreter::lookup(EE_InstrInfo &info, uint32_t instruction)
             break;
         case 0x33:
             //prefetch
+            info.interpreter_fn = &nop;
+            info.pipeline = EE_InstrInfo::Pipeline::COP0;
             break;
         case 0x36:
             info.interpreter_fn = &lqc2;
@@ -228,40 +230,50 @@ void EmotionInterpreter::lookup(EE_InstrInfo &info, uint32_t instruction)
     }
 }
 
-void EmotionInterpreter::regimm(EE_InstrInfo &cpu, uint32_t instruction)
+void EmotionInterpreter::regimm(EE_InstrInfo &info, uint32_t instruction)
 {
     int op = (instruction >> 16) & 0x1F;
     switch (op)
     {
         case 0x00:
-            bltz(cpu, instruction);
+            info.interpreter_fn = &bltz;
+            info.pipeline = EE_InstrInfo::Pipeline::Branch;
             break;
         case 0x01:
-            bgez(cpu, instruction);
+            info.interpreter_fn = &bgez;
+            info.pipeline = EE_InstrInfo::Pipeline::Branch;
             break;
         case 0x02:
-            bltzl(cpu, instruction);
+            info.interpreter_fn = &bltzl;
+            info.pipeline = EE_InstrInfo::Pipeline::Branch;
             break;
         case 0x03:
-            bgezl(cpu, instruction);
+            info.interpreter_fn = &bgezl;
+            info.pipeline = EE_InstrInfo::Pipeline::Branch;
             break;
         case 0x10:
-            bltzal(cpu,instruction);
+            info.interpreter_fn = &bltzal;
+            info.pipeline = EE_InstrInfo::Pipeline::Branch;
             break;
         case 0x11:
-            bgezal(cpu,instruction);
+            info.interpreter_fn = &bgezal;
+            info.pipeline = EE_InstrInfo::Pipeline::Branch;
             break;
         case 0x12:
-            bltzall(cpu,instruction);
+            info.interpreter_fn = &bltzall;
+            info.pipeline = EE_InstrInfo::Pipeline::Branch;
             break;
         case 0x13:
-            bgezall(cpu,instruction);
+            info.interpreter_fn = &bgezall;
+            info.pipeline = EE_InstrInfo::Pipeline::Branch;
             break;
         case 0x18:
-            mtsab(cpu, instruction);
+            info.interpreter_fn = &mtsab;
+            info.pipeline = EE_InstrInfo::Pipeline::COP0;
             break;
         case 0x19:
-            mtsah(cpu, instruction);
+            info.interpreter_fn = &mtsah;
+            info.pipeline = EE_InstrInfo::Pipeline::COP0;
             break;
         default:
             unknown_op("regimm", instruction, op);
@@ -1066,6 +1078,11 @@ void EmotionInterpreter::cop2_qmtc2(EmotionEngine &cpu, uint32_t instruction)
     }
 
     cpu.qmtc2(source, cop_reg);
+}
+
+void EmotionInterpreter::nop(EmotionEngine &cpu, uint32_t instruction) 
+{
+    // NULLSUB for sll $zero, $zero, 0 and unimplemented operations like prefetch
 }
 
 [[ noreturn ]] void EmotionInterpreter::unknown_op(const char *type, uint32_t instruction, uint16_t op)
