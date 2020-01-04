@@ -22,6 +22,7 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
     //TODO
     IR::Block block;
     std::vector<IR::Instruction> instrs;
+    instr_info.clear();
     uint32_t pc = ee.get_PC();
 
     di_delay = 0;

@@ -1,6 +1,7 @@
 #ifndef EMOTIONINTERPRETER_HPP
 #define EMOTIONINTERPRETER_HPP
 #include "emotion.hpp"
+#include <vector>
 
 namespace EmotionInterpreter
 {
@@ -354,6 +355,73 @@ namespace EmotionInterpreter
     void pexcw(EmotionEngine& cpu, uint32_t instruction);
 
     [[ noreturn ]] void unknown_op(const char* type, uint32_t instruction, uint16_t op);
+};
+
+struct EE_InstrInfo
+{
+    /**
+     * The EE has a dual-issue pipeline, meaning that under ideal circumstances, it can execute two instructions
+     * per cycle. The two instructions must have no dependencies with each other, exist in separate physical
+     * pipelines, and cause no stalls for the two to be executed in a single cycle.
+     *
+     * There are six physical pipelines: two integer pipelines, load/store, branch, COP1, and COP2.
+     * MMI instructions use both integer pipelines, so an MMI instruction and any other ALU instruction
+     * can never both be issued in the same cycle.
+     *
+     * Because the EE is in-order, assuming no stalls, one can achieve optimal performance by pairing together
+     * instructions using different physical pipelines.
+     */
+    enum class Pipeline : uint8_t
+    {
+        //Uninitialized. Error out if an instruction's pipeline is set to this.
+        Unk,
+
+        //Generic ALU instruction. Can be placed in either integer pipeline.
+        IntGeneric,
+
+        //ALU instruction that can only be used in integer pipeline 0.
+        Int0,
+
+        //... integer pipeline 1.
+        Int1,
+
+        //MMI instruction. Takes up both integer pipelines.
+        IntWide,
+
+        //Load/store instructions. This includes COP1 and COP2 load/store instructions.
+        LoadStore,
+
+        //Branches, jumps, and calls. This includes COP1 and COP2 branches.
+        Branch,
+
+        //COP1 arithmetic.
+        COP1,
+
+        //COP2 arithmetic.
+        COP2
+    };
+
+    // Used for throughput calculations
+    enum class instruction_type
+    {
+        MULT = 0,
+        MULT1,
+        DIV,
+        DIV1,
+        MADD,
+        MADD1,
+        FPU_DIV,
+        FPU_SQRT,
+        FPU_RSQRT,
+
+        MAXINSTRUCTIONTYPE
+    };
+
+    std::vector<uint8_t> dependencies = std::vector<uint8_t>(3);
+    void(*interpreter_function)(EmotionEngine*, uint32_t) = nullptr;
+    Pipeline pipeline;
+    uint8_t latency;
+    uint8_t throughput;
 };
 
 #endif // EMOTIONINTERPRETER_HPP
