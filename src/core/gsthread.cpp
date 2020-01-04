@@ -1720,7 +1720,7 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
             fr &= 0xFF;
         }
 
-        final_color |= alpha << 24;
+        final_color |= color.a << 24;
         final_color |= fb << 16;
         final_color |= fg << 8;
         final_color |= fr;
