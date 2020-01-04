@@ -1589,9 +1589,10 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
                 case 2: //ZB_ONLY - Only update z-buffer
                     update_frame = false;
                     break;
-                case 3: //RGB_ONLY - Same as FB_ONLY, but ignore alpha
+                case 3: //RGB_ONLY - Same as FB_ONLY, but ignore alpha unless the color format is not RGB32, then it's treated as FB_ONLY
                     update_z = false;
-                    update_alpha = false;
+                    if(current_ctx->tex0.format == 0)
+                        update_alpha = false;
                     break;
             }
         }
