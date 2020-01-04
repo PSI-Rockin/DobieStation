@@ -25,7 +25,7 @@ static SwizzleTable<32,128,128> page_PSMCT4;
 
 #define printf(fmt, ...)(0)
 
-//#define GS_JIT
+#define GS_JIT
 
 /**
   * ~ GS notes ~
@@ -2965,6 +2965,11 @@ uint128_t GraphicsSynthesizerThread::local_to_host()
         case 0x1B:
             ppd = 8;
             break;
+        //PSMZ32
+        case 0x30:
+            ppd = 2;
+            break;
+        //PSMZ24
         case 0x31:
             ppd = 1; //Does it all in one go
             break;
@@ -3016,6 +3021,12 @@ uint128_t GraphicsSynthesizerThread::local_to_host()
                     data <<= 8;
                     data |= (uint64_t)((read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
                         TRXPOS.int_source_x, TRXPOS.int_source_y) >> 24) & 0xFF) << (i * 8);
+                    pixels_transferred++;
+                    TRXPOS.int_source_x++;
+                    break;
+                case 0x30:
+                    data |= (uint64_t)(read_PSMCT32Z_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                        TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFFFFFF) << (i * 32);
                     pixels_transferred++;
                     TRXPOS.int_source_x++;
                     break;
@@ -5088,6 +5099,7 @@ void GraphicsSynthesizerThread::load_state(ifstream *state)
     state->read((char*)&TRXDIR, sizeof(TRXDIR));
     state->read((char*)&BUSDIR, sizeof(BUSDIR));
     state->read((char*)&pixels_transferred, sizeof(pixels_transferred));
+    state->read((char*)&dither_mtx, sizeof(dither_mtx));
 
     state->read((char*)&PSMCT24_color, sizeof(PSMCT24_color));
     state->read((char*)&PSMCT24_unpacked_count, sizeof(PSMCT24_unpacked_count));
@@ -5136,6 +5148,7 @@ void GraphicsSynthesizerThread::save_state(ofstream *state)
     state->write((char*)&TRXDIR, sizeof(TRXDIR));
     state->write((char*)&BUSDIR, sizeof(BUSDIR));
     state->write((char*)&pixels_transferred, sizeof(pixels_transferred));
+    state->write((char*)&dither_mtx, sizeof(dither_mtx));
 
     state->write((char*)&PSMCT24_color, sizeof(PSMCT24_color));
     state->write((char*)&PSMCT24_unpacked_count, sizeof(PSMCT24_unpacked_count));
