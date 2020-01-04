@@ -2,7 +2,7 @@
 #include <cstdlib>
 #include "emotioninterpreter.hpp"
 
-void EmotionInterpreter::special(EmotionEngine &cpu, uint32_t instruction)
+void EmotionInterpreter::special(EE_InstrInfo &cpu, uint32_t instruction)
 {
     int op = instruction & 0x3F;
     switch (op)

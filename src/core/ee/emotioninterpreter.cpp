@@ -5,56 +5,83 @@
 
 void EmotionInterpreter::interpret(EmotionEngine &cpu, uint32_t instruction)
 {
+    EE_InstrInfo instr_info;
+    lookup(instr_info, instruction);
+
+    if (instr_info.interpreter_fn == nullptr)
+    {
+        Errors::die("[EE Interpreter] Lookup returned nullptr interpreter_fn");
+    }
+
+    instr_info.interpreter_fn(cpu, instruction);
+}
+
+void EmotionInterpreter::lookup(EE_InstrInfo &info, uint32_t instruction)
+{
     int op = instruction >> 26;
     switch (op)
     {
         case 0x00:
-            special(cpu, instruction);
+            special(info, instruction);
             break;
         case 0x01:
-            regimm(cpu, instruction);
+            regimm(info, instruction);
             break;
         case 0x02:
-            j(cpu, instruction);
+            info.interpreter_fn = &j;
+            info.pipeline = EE_InstrInfo::Pipeline::Branch;
             break;
         case 0x03:
-            jal(cpu, instruction);
+            info.interpreter_fn = &jal;
+            info.pipeline = EE_InstrInfo::Pipeline::Branch;
             break;
         case 0x04:
-            beq(cpu, instruction);
+            info.interpreter_fn = &beq;
+            info.pipeline = EE_InstrInfo::Pipeline::Branch;
             break;
         case 0x05:
-            bne(cpu, instruction);
+            info.interpreter_fn = &bne;
+            info.pipeline = EE_InstrInfo::Pipeline::Branch;
             break;
         case 0x06:
-            blez(cpu, instruction);
+            info.interpreter_fn = &blez;
+            info.pipeline = EE_InstrInfo::Pipeline::Branch;
             break;
         case 0x07:
-            bgtz(cpu, instruction);
+            info.interpreter_fn = &bgtz;
+            info.pipeline = EE_InstrInfo::Pipeline::Branch;
             break;
         case 0x08:
-            addi(cpu, instruction);
+            info.interpreter_fn = &addi;
+            info.pipeline = EE_InstrInfo::Pipeline::IntGeneric;
             break;
         case 0x09:
-            addiu(cpu, instruction);
+            info.interpreter_fn = &addiu;
+            info.pipeline = EE_InstrInfo::Pipeline::IntGeneric;
             break;
         case 0x0A:
-            slti(cpu, instruction);
+            info.interpreter_fn = &sltu;
+            info.pipeline = EE_InstrInfo::Pipeline::IntGeneric;
             break;
         case 0x0B:
-            sltiu(cpu, instruction);
+            info.interpreter_fn = &sltiu;
+            info.pipeline = EE_InstrInfo::Pipeline::IntGeneric;
             break;
         case 0x0C:
-            andi(cpu, instruction);
+            info.interpreter_fn = &andi;
+            info.pipeline = EE_InstrInfo::Pipeline::IntGeneric;
             break;
         case 0x0D:
-            ori(cpu, instruction);
+            info.interpreter_fn = &ori;
+            info.pipeline = EE_InstrInfo::Pipeline::IntGeneric;
             break;
         case 0x0E:
-            xori(cpu, instruction);
+            info.interpreter_fn = &xori;
+            info.pipeline = EE_InstrInfo::Pipeline::IntGeneric;
             break;
         case 0x0F:
-            lui(cpu, instruction);
+            info.interpreter_fn = &lui;
+            info.pipeline = EE_InstrInfo::Pipeline::IntGeneric;
             break;
         case 0x10:
         case 0x11:
@@ -63,113 +90,145 @@ void EmotionInterpreter::interpret(EmotionEngine &cpu, uint32_t instruction)
             cop(cpu, instruction);
             break;
         case 0x14:
-            beql(cpu, instruction);
+            info.interpreter_fn = &beql;
+            info.pipeline = EE_InstrInfo::Pipeline::Branch;
             break;
         case 0x15:
-            bnel(cpu, instruction);
+            info.interpreter_fn = &bnel;
+            info.pipeline = EE_InstrInfo::Pipeline::Branch;
             break;
         case 0x16:
-            blezl(cpu, instruction);
+            info.interpreter_fn = &blezl;
+            info.pipeline = EE_InstrInfo::Pipeline::Branch;
             break;
         case 0x17:
-            bgtzl(cpu, instruction);
+            info.interpreter_fn = &bgtzl;
+            info.pipeline = EE_InstrInfo::Pipeline::Branch;
             break;
         case 0x18:
-            daddi(cpu, instruction);
+            info.interpreter_fn = &daddi;
+            info.pipeline = EE_InstrInfo::Pipeline::IntGeneric;
             break;
         case 0x19:
-            daddiu(cpu, instruction);
+            info.interpreter_fn = &daddiu;
+            info.pipeline = EE_InstrInfo::Pipeline::IntGeneric;
             break;
         case 0x1A:
-            ldl(cpu, instruction);
+            info.interpreter_fn = &ldl;
+            info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
             break;
         case 0x1B:
-            ldr(cpu, instruction);
+            info.interpreter_fn = &ldr;
+            info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
             break;
         case 0x1C:
             mmi(cpu, instruction);
             break;
         case 0x1E:
-            lq(cpu, instruction);
+            info.interpreter_fn = &lq;
+            info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
             break;
         case 0x1F:
-            sq(cpu, instruction);
+            info.interpreter_fn = &sq;
+            info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
             break;
         case 0x20:
-            lb(cpu, instruction);
+            info.interpreter_fn = &lb;
+            info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
             break;
         case 0x21:
-            lh(cpu, instruction);
+            info.interpreter_fn = &lh;
+            info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
             break;
         case 0x22:
-            lwl(cpu, instruction);
+            info.interpreter_fn = &lwl;
+            info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
             break;
         case 0x23:
-            lw(cpu, instruction);
+            info.interpreter_fn = &lw;
+            info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
             break;
         case 0x24:
-            lbu(cpu, instruction);
+            info.interpreter_fn = &lbu;
+            info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
             break;
         case 0x25:
-            lhu(cpu, instruction);
+            info.interpreter_fn = &lhu;
+            info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
             break;
         case 0x26:
-            lwr(cpu, instruction);
+            info.interpreter_fn = &lwr;
+            info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
             break;
         case 0x27:
-            lwu(cpu, instruction);
+            info.interpreter_fn = &lwu;
+            info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
             break;
         case 0x28:
-            sb(cpu, instruction);
+            info.interpreter_fn = &sb;
+            info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
             break;
         case 0x29:
-            sh(cpu, instruction);
+            info.interpreter_fn = &sh;
+            info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
             break;
         case 0x2A:
-            swl(cpu, instruction);
+            info.interpreter_fn = &swl;
+            info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
             break;
         case 0x2B:
-            sw(cpu, instruction);
+            info.interpreter_fn = &sw;
+            info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
             break;
         case 0x2C:
-            sdl(cpu, instruction);
+            info.interpreter_fn = &sdl;
+            info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
             break;
         case 0x2D:
-            sdr(cpu, instruction);
+            info.interpreter_fn = &sdr;
+            info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
             break;
         case 0x2E:
-            swr(cpu, instruction);
+            info.interpreter_fn = &swr;
+            info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
             break;
         case 0x2F:
-            cache(cpu, instruction);
+            info.interpreter_fn = &cache;
+            info.pipeline = EE_InstrInfo::Pipeline::COP0;
             break;
         case 0x31:
-            lwc1(cpu, instruction);
+            info.interpreter_fn = &lwc1;
+            info.pipeline = EE_InstrInfo::Pipeline::COP1LoadStore;
             break;
         case 0x33:
             //prefetch
             break;
         case 0x36:
-            lqc2(cpu, instruction);
+            info.interpreter_fn = &lqc2;
+            info.pipeline = EE_InstrInfo::Pipeline::COP2LoadStore;
             break;
         case 0x37:
-            ld(cpu, instruction);
+            info.interpreter_fn = &ld;
+            info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
             break;
         case 0x39:
-            swc1(cpu, instruction);
+            info.interpreter_fn = &swc1;
+            info.pipeline = EE_InstrInfo::Pipeline::COP1LoadStore;
             break;
         case 0x3E:
-            sqc2(cpu, instruction);
+            info.interpreter_fn = &sqc2;
+            info.pipeline = EE_InstrInfo::Pipeline::COP2LoadStore;
             break;
         case 0x3F:
-            sd(cpu, instruction);
+            info.interpreter_fn = &sd;
+            info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
             break;
         default:
             unknown_op("normal", instruction, op);
     }
 }
 
-void EmotionInterpreter::regimm(EmotionEngine &cpu, uint32_t instruction)
+void EmotionInterpreter::regimm(EE_InstrInfo &cpu, uint32_t instruction)
 {
     int op = (instruction >> 16) & 0x1F;
     switch (op)

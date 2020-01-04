@@ -108,7 +108,8 @@ uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee)
 
 void interpreter(EmotionEngine& ee, uint32_t instr)
 {
-    EmotionInterpreter::interpret(ee, instr);
+    // TODO: Call fn pointer on EE_InstrInfo directly
+    //EmotionInterpreter::interpret(ee, instr);
 }
 
 uint16_t EE_JIT64::run(EmotionEngine& ee)
