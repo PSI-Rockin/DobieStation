@@ -1713,7 +1713,7 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
             uint8_t dither_amount = dither & 0x3;
             if (dither & 0x4)
             {
-                dither_amount + 1;
+                dither_amount += 1;
                 fb -= dither_amount;
                 fg -= dither_amount;
                 fr -= dither_amount;
@@ -1762,7 +1762,7 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
             uint8_t dither_amount = dither & 0x3;
             if (dither & 0x4)
             {
-                dither_amount + 1;
+                dither_amount += 1;
                 color.b -= dither_amount;
                 color.g -= dither_amount;
                 color.r -= dither_amount;
