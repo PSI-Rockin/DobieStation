@@ -5071,6 +5071,7 @@ void GraphicsSynthesizerThread::load_state(ifstream *state)
     state->read((char*)&TRXDIR, sizeof(TRXDIR));
     state->read((char*)&BUSDIR, sizeof(BUSDIR));
     state->read((char*)&pixels_transferred, sizeof(pixels_transferred));
+    state->read((char*)&dither_mtx, sizeof(dither_mtx));
 
     state->read((char*)&PSMCT24_color, sizeof(PSMCT24_color));
     state->read((char*)&PSMCT24_unpacked_count, sizeof(PSMCT24_unpacked_count));
@@ -5119,6 +5120,7 @@ void GraphicsSynthesizerThread::save_state(ofstream *state)
     state->write((char*)&TRXDIR, sizeof(TRXDIR));
     state->write((char*)&BUSDIR, sizeof(BUSDIR));
     state->write((char*)&pixels_transferred, sizeof(pixels_transferred));
+    state->write((char*)&dither_mtx, sizeof(dither_mtx));
 
     state->write((char*)&PSMCT24_color, sizeof(PSMCT24_color));
     state->write((char*)&PSMCT24_unpacked_count, sizeof(PSMCT24_unpacked_count));
