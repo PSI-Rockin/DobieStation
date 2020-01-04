@@ -4296,6 +4296,7 @@ void GraphicsSynthesizerThread::recompile_alpha_test()
 
 void GraphicsSynthesizerThread::recompile_depth_test()
 {
+    //If depth test is set to NEVER, don't draw anything
     if (current_ctx->test.depth_method == 0)
     {
         jit_epilogue_draw_pixel();
@@ -4394,16 +4395,24 @@ void GraphicsSynthesizerThread::recompile_alpha_blend()
     printf("Alpha blend: %d %d %d %d\n", current_ctx->alpha.spec_A, current_ctx->alpha.spec_B,
            current_ctx->alpha.spec_C, current_ctx->alpha.spec_D);
 
+    uint8_t* pabe_fail_end = nullptr;
+
+    //Per-pixel alpha blending. If alpha is less than 0x80, do not perform alpha blending.
     if (PABE)
     {
-        //If alpha < 0x80, do not perform alpha blending
         emitter_dp.MOV64_MR(R15, RAX);
         emitter_dp.SHR64_REG_IMM(48, RAX);
         emitter_dp.TEST32_EAX(0x80);
 
         uint8_t* pabe_success = emitter_dp.JCC_NEAR_DEFERRED(ConditionCode::NE);
 
-        jit_epilogue_draw_pixel();
+        //Failure condition for PABE - set color as if alpha blending were disabled.
+        //R14 = color in RGBA32 format
+        emitter_dp.MOVQ_TO_XMM(R15, XMM0);
+        emitter_dp.PACKUSWB(XMM0, XMM0);
+        emitter_dp.MOVD_FROM_XMM(XMM0, R14);
+
+        pabe_fail_end = emitter_dp.JMP_NEAR_DEFERRED();
 
         emitter_dp.set_jump_dest(pabe_success);
     }
@@ -4412,22 +4421,24 @@ void GraphicsSynthesizerThread::recompile_alpha_blend()
     //Note that colors are 16-bit format so that we can handle overflows/underflows
     uint32_t fb_pixel_addr = 0xD8;
 
+    //Convert 8-bit frame color components into 16-bit
     emitter_dp.MOV32_FROM_MEM(RBP, RAX, fb_pixel_addr);
-
-    //Convert 32-bit framebuffer color to 64-bit
     emitter_dp.MOVD_TO_XMM(RAX, XMM4);
     emitter_dp.PMOVZX8_TO_16(XMM4, XMM4);
 
     switch (current_ctx->alpha.spec_A)
     {
         case 0:
+            //Source color
             emitter_dp.MOVQ_TO_XMM(R15, XMM0);
             break;
         case 1:
+            //Frame color
             emitter_dp.MOVAPS_REG(XMM4, XMM0);
             break;
         case 2:
         case 3:
+            //Zero
             emitter_dp.XORPS(XMM0, XMM0);
             break;
     }
@@ -4435,24 +4446,29 @@ void GraphicsSynthesizerThread::recompile_alpha_blend()
     switch (current_ctx->alpha.spec_B)
     {
         case 0:
+            //Source color
             emitter_dp.MOVQ_TO_XMM(R15, XMM1);
             break;
         case 1:
+            //Frame color
             emitter_dp.MOVAPS_REG(XMM4, XMM1);
             break;
         case 2:
         case 3:
-            //Do nothing. We can optimize out the subtraction in the alpha blending operation
+            //Zero. We can optimize by not emitting a sub in the blending operation.
             break;
     }
 
     switch (current_ctx->alpha.spec_C)
     {
         case 0:
+            //Source alpha
             emitter_dp.MOV64_MR(R15, RAX);
             emitter_dp.SAR64_REG_IMM(48, RAX);
             break;
         case 1:
+            //Frame alpha
+            //If the frame format is RGB24, only use 0x80 as alpha.
             if (!(current_ctx->frame.format & 0x1))
                 emitter_dp.SAR64_REG_IMM(48, RAX);
             else
@@ -4460,6 +4476,7 @@ void GraphicsSynthesizerThread::recompile_alpha_blend()
             break;
         case 2:
         case 3:
+            //Fixed alpha
             emitter_dp.MOV32_REG_IMM(current_ctx->alpha.fixed_alpha, RAX);
             break;
     }
@@ -4471,13 +4488,16 @@ void GraphicsSynthesizerThread::recompile_alpha_blend()
     switch (current_ctx->alpha.spec_D)
     {
         case 0:
+            //Source color
             emitter_dp.MOVQ_TO_XMM(R15, XMM3);
             break;
         case 1:
+            //Frame color
             emitter_dp.MOVAPS_REG(XMM4, XMM3);
             break;
         case 2:
         case 3:
+            //Zero - we can optimize by not emitting an ADD instruction for D
             break;
     }
 
@@ -4485,38 +4505,43 @@ void GraphicsSynthesizerThread::recompile_alpha_blend()
 
     //color component = (((A - B) * C) >> 7) + D
     if (current_ctx->alpha.spec_B < 2)
-    {
-        //TODO: fix clamping in cases where (A - B) * C >= 0x8000 (with normal clamping, this goes to 0)
+    {   
+        //Calculate ((A - B) * C) >> 7
+        //BUG: If (A - B) * C >= +0x8000, this gets treated as negative and clamped to black.
         emitter_dp.PSUBW(XMM1, XMM0);
         emitter_dp.PMULLW(XMM2, XMM0);
         emitter_dp.PSRAW(7, XMM0);
     }
     else
     {
+        //If B is 0, the calculation simplifies to (A * C) >> 7
         emitter_dp.PMULLW(XMM2, XMM0);
         emitter_dp.PSRLW(7, XMM0);
     }
 
+    //If D is not 0, add it to the blend result
     if (current_ctx->alpha.spec_D < 2)
         emitter_dp.PADDW(XMM3, XMM0);
 
     //Clamp color
     if (!COLCLAMP)
     {
-        //Extract the lower 8 bits before packing
+        //Extract the lower 8 bits from the blend result before packing
         emitter_dp.load_addr((uint64_t)&and_const, RAX);
         emitter_dp.PAND_XMM_FROM_MEM(RAX, XMM0);
     }
 
+    //Convert 16-bit color components to 8-bit and clamp to a 0-0xFF range
     emitter_dp.PACKUSWB(XMM0, XMM0);
 
-    //Return color in R14
+    //Return color in R14. We need to replace the alpha component with the source alpha.
     emitter_dp.MOVD_FROM_XMM(XMM0, R14);
-
-    //Append alpha to color
     emitter_dp.AND32_REG_IMM(0xFFFFFF, R14);
     emitter_dp.SHL32_REG_IMM(24, RAX);
     emitter_dp.OR32_REG(RAX, R14);
+
+    if (PABE)
+        emitter_dp.set_jump_dest(pabe_fail_end);
 }
 
 void GraphicsSynthesizerThread::jit_call_func(Emitter64& emitter, uint64_t addr)
