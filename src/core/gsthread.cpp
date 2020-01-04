@@ -1557,10 +1557,10 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
                 case 0: //KEEP - Update nothing
                     return;
                 case 1: //FB_ONLY - Only update framebuffer
-                    update_z = false;
+                    update_frame = false;
                     break;
                 case 2: //ZB_ONLY - Only update z-buffer
-                    update_frame = false;
+                    update_z = false;
                     break;
                 case 3: //RGB_ONLY - Same as FB_ONLY, but ignore alpha
                     update_z = false;
