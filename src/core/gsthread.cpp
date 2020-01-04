@@ -1406,7 +1406,9 @@ void GraphicsSynthesizerThread::render_primitive()
 {
 #ifdef GS_JIT
     jit_draw_pixel_func = get_jitted_draw_pixel(draw_pixel_state);
-    jit_tex_lookup_func = get_jitted_tex_lookup(tex_lookup_state);
+    //No need to recompile tex_lookup if texture mapping is disabled. TEX0 can contain bad data
+    if(current_PRMODE->texture_mapping)
+        jit_tex_lookup_func = get_jitted_tex_lookup(tex_lookup_state);
 #endif
     switch (prim_type)
     {
