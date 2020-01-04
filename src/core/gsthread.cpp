@@ -25,7 +25,7 @@ static SwizzleTable<32,128,128> page_PSMCT4;
 
 #define printf(fmt, ...)(0)
 
-#define GS_JIT
+//#define GS_JIT
 
 /**
   * ~ GS notes ~
@@ -1768,8 +1768,7 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
             //FBA performs "alpha correction" - MSB of alpha is always set when writing to frame buffer
             final_color |= current_ctx->FBA << 31;
         }
-        if (fb > 255 | fg > 255 | fr > 255)
-            Errors::die("fb %x fg %x fr %x\n", fb, fg, fr);
+
         final_color |= fb << 16;
         final_color |= fg << 8;
         final_color |= fr;
