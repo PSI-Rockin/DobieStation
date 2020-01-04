@@ -294,21 +294,31 @@ void GS_REGISTERS::set_CRT(bool interlaced, int mode, bool frame_mode)
 
 void GS_REGISTERS::get_resolution(int &w, int &h)
 {
-    w = 640;
-    switch (CRT_mode)
+
+    if (DISPLAY1.magnify_x)
+        w = DISPLAY1.width / DISPLAY1.magnify_x;
+    else
+        w = 640;
+
+    /*switch (CRT_mode)
     {
-        case 0x2:
-            h = 448;
-            break;
-        case 0x3:
-            h = 512;
-            break;
-        case 0x1C:
-            h = 480;
-            break;
-        default:
-            h = 448;
-    }
+    case 0x2:
+        h = 448;
+        break;
+    case 0x3:
+        h = 512;
+        break;
+    case 0x1C:
+        h = 480;
+        break;
+    default:
+        h = 448;
+    }*/
+
+    h = DISPLAY1.height;
+    //TODO - Find out why some games double their height
+    if (h > w)
+        h /= 2;
 }
 
 void GS_REGISTERS::get_inner_resolution(int &w, int &h)
@@ -323,8 +333,14 @@ void GS_REGISTERS::get_inner_resolution(int &w, int &h)
     {
         current_display = DISPLAY2;
     }
-    w = current_display.width >> 2;
+    if (current_display.magnify_x)
+        w = current_display.width / current_display.magnify_x;
+    else
+        w = current_display.width >> 2;
     h = current_display.height;
+    //TODO - Find out why some games double their height
+    if (h > w)
+        h /= 2;
 }
 
 void GS_REGISTERS::set_VBLANK(bool is_VBLANK)

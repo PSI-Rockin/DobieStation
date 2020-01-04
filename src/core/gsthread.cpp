@@ -25,7 +25,7 @@ static SwizzleTable<32,128,128> page_PSMCT4;
 
 #define printf(fmt, ...)(0)
 
-#define GS_JIT
+//#define GS_JIT
 
 /**
   * ~ GS notes ~
@@ -544,7 +544,20 @@ uint32_t GraphicsSynthesizerThread::get_CRT_color(DISPFB &dispfb, uint32_t x, ui
 
 void GraphicsSynthesizerThread::render_single_CRT(uint32_t *target, DISPFB &dispfb, DISPLAY &display)
 {
-    int width = display.width >> 2;
+    int width;
+    int height;
+
+    if (display.magnify_x)
+        width = display.width / display.magnify_x;
+    else
+        width = display.width >> 2;
+
+    //TODO - Find out why some games double their height
+    if (display.height > width)
+        height = display.height / 2;
+    else
+        height = display.height;
+
     for (int y = 0; y < display.height; y++)
     {
         for (int x = 0; x < width; x++)
@@ -554,7 +567,7 @@ void GraphicsSynthesizerThread::render_single_CRT(uint32_t *target, DISPFB &disp
 
             if (reg.SMODE2.frame_mode && reg.SMODE2.interlaced)
                 pixel_y *= 2;
-            if (pixel_x >= width || pixel_y >= display.height)
+            if (pixel_x >= width || pixel_y >= height)
                 continue;
             uint32_t scaled_x = dispfb.x + x;
             uint32_t scaled_y = dispfb.y + y;
@@ -580,7 +593,19 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
     //Circuits 1 and 2 (merge circuit)
     else
     {
-        int width = reg.DISPLAY1.width >> 2;
+        int width;
+        int height;
+
+        if (reg.DISPLAY1.magnify_x)
+            width = reg.DISPLAY1.width / reg.DISPLAY1.magnify_x;
+        else
+            width = reg.DISPLAY1.width >> 2;
+        //TODO - Find out why some games double their height
+        if (reg.DISPLAY1.height > width)
+            height = reg.DISPLAY1.height / 2;
+        else
+            height = reg.DISPLAY1.height;
+
         for (int y = 0; y < reg.DISPLAY1.height; y++)
         {
             for (int x = 0; x < width; x++)
@@ -590,7 +615,7 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
 
                 if (reg.SMODE2.frame_mode && reg.SMODE2.interlaced)
                     pixel_y *= 2;
-                if (pixel_x >= width || pixel_y >= reg.DISPLAY1.height)
+                if (pixel_x >= width || pixel_y >= height)
                     continue;
                 uint32_t scaled_x1 = reg.DISPFB1.x + x;
                 uint32_t scaled_x2 = reg.DISPFB2.x + x;
@@ -1686,6 +1711,7 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
             uint8_t dither_amount = dither & 0x3;
             if (dither & 0x4)
             {
+                dither_amount + 1;
                 fb -= dither_amount;
                 fg -= dither_amount;
                 fr -= dither_amount;
@@ -1734,6 +1760,7 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
             uint8_t dither_amount = dither & 0x3;
             if (dither & 0x4)
             {
+                dither_amount + 1;
                 color.b -= dither_amount;
                 color.g -= dither_amount;
                 color.r -= dither_amount;
@@ -1744,29 +1771,30 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
                 color.g += dither_amount;
                 color.r += dither_amount;
             }
-
-            if (COLCLAMP)
-            {
-                if (color.b < 0)
-                    color.b = 0;
-                if (color.g < 0)
-                    color.g = 0;
-                if (color.r < 0)
-                    color.r = 0;
-                if (color.b > 0xFF)
-                    color.b = 0xFF;
-                if (color.g > 0xFF)
-                    color.g = 0xFF;
-                if (color.r > 0xFF)
-                    color.r = 0xFF;
-            }
-            else
-            {
-                color.b &= 0xFF;
-                color.g &= 0xFF;
-                color.r &= 0xFF;
-            }
         }
+
+        if (COLCLAMP)
+        {
+            if (color.b < 0)
+                color.b = 0;
+            if (color.g < 0)
+                color.g = 0;
+            if (color.r < 0)
+                color.r = 0;
+            if (color.b > 0xFF)
+                color.b = 0xFF;
+            if (color.g > 0xFF)
+                color.g = 0xFF;
+            if (color.r > 0xFF)
+                color.r = 0xFF;
+        }
+        else
+        {
+            color.b &= 0xFF;
+            color.g &= 0xFF;
+            color.r &= 0xFF;
+        }
+
         final_color |= color.a << 24;
         final_color |= color.b << 16;
         final_color |= color.g << 8;
@@ -2937,11 +2965,6 @@ uint128_t GraphicsSynthesizerThread::local_to_host()
         case 0x1B:
             ppd = 8;
             break;
-        //PSMZ32
-        case 0x30:
-            ppd = 2;
-            break;
-        //PSMZ24
         case 0x31:
             ppd = 1; //Does it all in one go
             break;
@@ -2993,12 +3016,6 @@ uint128_t GraphicsSynthesizerThread::local_to_host()
                     data <<= 8;
                     data |= (uint64_t)((read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
                         TRXPOS.int_source_x, TRXPOS.int_source_y) >> 24) & 0xFF) << (i * 8);
-                    pixels_transferred++;
-                    TRXPOS.int_source_x++;
-                    break;
-                case 0x30:
-                    data |= (uint64_t)(read_PSMCT32Z_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
-                        TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFFFFFF) << (i * 32);
                     pixels_transferred++;
                     TRXPOS.int_source_x++;
                     break;
@@ -5071,7 +5088,6 @@ void GraphicsSynthesizerThread::load_state(ifstream *state)
     state->read((char*)&TRXDIR, sizeof(TRXDIR));
     state->read((char*)&BUSDIR, sizeof(BUSDIR));
     state->read((char*)&pixels_transferred, sizeof(pixels_transferred));
-    state->read((char*)&dither_mtx, sizeof(dither_mtx));
 
     state->read((char*)&PSMCT24_color, sizeof(PSMCT24_color));
     state->read((char*)&PSMCT24_unpacked_count, sizeof(PSMCT24_unpacked_count));
@@ -5120,7 +5136,6 @@ void GraphicsSynthesizerThread::save_state(ofstream *state)
     state->write((char*)&TRXDIR, sizeof(TRXDIR));
     state->write((char*)&BUSDIR, sizeof(BUSDIR));
     state->write((char*)&pixels_transferred, sizeof(pixels_transferred));
-    state->write((char*)&dither_mtx, sizeof(dither_mtx));
 
     state->write((char*)&PSMCT24_color, sizeof(PSMCT24_color));
     state->write((char*)&PSMCT24_unpacked_count, sizeof(PSMCT24_unpacked_count));
