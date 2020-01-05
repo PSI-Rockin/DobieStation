@@ -164,6 +164,7 @@ void GraphicsInterface::process_REGLIST(uint128_t data)
         uint64_t reg_offset = (path[active_path].current_tag.reg_count - path[active_path].current_tag.regs_left) << 2;
         uint8_t reg = (path[active_path].current_tag.regs >> reg_offset) & 0xF;
 
+        //A+D is a NOP in REGLIST mode
         if(reg != 0xE)
             gs->write64(reg, data._u64[i]);
 
@@ -417,6 +418,9 @@ void GraphicsInterface::send_PATH3(uint128_t data)
     {
         //printf("Adding data to GIF FIFO (size: %d)\n", FIFO.size());
         FIFO.push(data);
+        //Need to check if the fifo is full (no less!)
+        //Some games (Wallace & Gromit) send 16QW with PATH3 masked
+        //If the dma execution is paused before then, the game will hang
         if (FIFO.size() > 15)
             dmac->clear_DMA_request(GIF);
     }

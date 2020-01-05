@@ -601,6 +601,7 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
         else
             width = reg.DISPLAY1.width >> 2;
         //TODO - Find out why some games double their height
+        //Examples are Pool Paradise, Silent Hill 2
         if (reg.DISPLAY1.height > width)
             height = reg.DISPLAY1.height / 2;
         else
@@ -3309,6 +3310,8 @@ void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
     else
         info.LOD = round(K);
 
+    //Need to reset the values here
+    //If the back of a triangle is MIP level 1 and the front is MIP level 0, it will have the wrong value
     info.tex_base = current_ctx->tex0.texture_base;
     info.buffer_width = current_ctx->tex0.width;
     info.tex_width = current_ctx->tex0.tex_width;
