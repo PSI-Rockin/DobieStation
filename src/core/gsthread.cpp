@@ -544,7 +544,20 @@ uint32_t GraphicsSynthesizerThread::get_CRT_color(DISPFB &dispfb, uint32_t x, ui
 
 void GraphicsSynthesizerThread::render_single_CRT(uint32_t *target, DISPFB &dispfb, DISPLAY &display)
 {
-    int width = display.width >> 2;
+    int width;
+    int height;
+
+    if (display.magnify_x)
+        width = display.width / display.magnify_x;
+    else
+        width = display.width >> 2;
+
+    //TODO - Find out why some games double their height
+    if (display.height > width)
+        height = display.height / 2;
+    else
+        height = display.height;
+
     for (int y = 0; y < display.height; y++)
     {
         for (int x = 0; x < width; x++)
@@ -554,7 +567,7 @@ void GraphicsSynthesizerThread::render_single_CRT(uint32_t *target, DISPFB &disp
 
             if (reg.SMODE2.frame_mode && reg.SMODE2.interlaced)
                 pixel_y *= 2;
-            if (pixel_x >= width || pixel_y >= display.height)
+            if (pixel_x >= width || pixel_y >= height)
                 continue;
             uint32_t scaled_x = dispfb.x + x;
             uint32_t scaled_y = dispfb.y + y;
@@ -580,7 +593,20 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
     //Circuits 1 and 2 (merge circuit)
     else
     {
-        int width = reg.DISPLAY1.width >> 2;
+        int width;
+        int height;
+
+        if (reg.DISPLAY1.magnify_x)
+            width = reg.DISPLAY1.width / reg.DISPLAY1.magnify_x;
+        else
+            width = reg.DISPLAY1.width >> 2;
+        //TODO - Find out why some games double their height
+        //Examples are Pool Paradise, Silent Hill 2
+        if (reg.DISPLAY1.height > width)
+            height = reg.DISPLAY1.height / 2;
+        else
+            height = reg.DISPLAY1.height;
+
         for (int y = 0; y < reg.DISPLAY1.height; y++)
         {
             for (int x = 0; x < width; x++)
@@ -590,7 +616,7 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
 
                 if (reg.SMODE2.frame_mode && reg.SMODE2.interlaced)
                     pixel_y *= 2;
-                if (pixel_x >= width || pixel_y >= reg.DISPLAY1.height)
+                if (pixel_x >= width || pixel_y >= height)
                     continue;
                 uint32_t scaled_x1 = reg.DISPFB1.x + x;
                 uint32_t scaled_x2 = reg.DISPFB2.x + x;
@@ -1381,7 +1407,9 @@ void GraphicsSynthesizerThread::render_primitive()
 {
 #ifdef GS_JIT
     jit_draw_pixel_func = get_jitted_draw_pixel(draw_pixel_state);
-    jit_tex_lookup_func = get_jitted_tex_lookup(tex_lookup_state);
+    //No need to recompile tex_lookup if texture mapping is disabled. TEX0 can contain bad data
+    if(current_PRMODE->texture_mapping)
+        jit_tex_lookup_func = get_jitted_tex_lookup(tex_lookup_state);
 #endif
     switch (prim_type)
     {
@@ -1513,6 +1541,7 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
     bool update_frame = true;
     bool update_alpha = true;
     bool update_z = !current_ctx->zbuf.no_update;
+    int fb, fg, fr;
 
     if (test->alpha_test)
     {
@@ -1562,9 +1591,10 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
                 case 2: //ZB_ONLY - Only update z-buffer
                     update_frame = false;
                     break;
-                case 3: //RGB_ONLY - Same as FB_ONLY, but ignore alpha
+                case 3: //RGB_ONLY - Same as FB_ONLY, but ignore alpha unless the color format is not RGB32, then it's treated as FB_ONLY
                     update_z = false;
-                    update_alpha = false;
+                    if(current_ctx->tex0.format == 0)
+                        update_alpha = false;
                     break;
             }
         }
@@ -1588,96 +1618,105 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
             return;
     }
 
-    //PABE - MSB of source alpha must be set to enable alpha blending
-    if (current_PRMODE->alpha_blend && (!PABE || (color.a & 0x80)))
+    if (update_frame)
     {
-        uint32_t r1, g1, b1;
-        uint32_t r2, g2, b2;
-        uint32_t cr, cg, cb;
-        uint32_t alpha;
-
-        switch (current_ctx->alpha.spec_A)
+        //PABE - MSB of source alpha must be set to enable alpha blending
+        if (current_PRMODE->alpha_blend && (!PABE || (color.a & 0x80)))
         {
-            case 0:
-                r1 = color.r;
-                g1 = color.g;
-                b1 = color.b;
-                break;
-            case 1:
-                r1 = lookup_frame_color(x, y) & 0xFF;
-                g1 = (lookup_frame_color(x, y) >> 8) & 0xFF;
-                b1 = (lookup_frame_color(x, y) >> 16) & 0xFF;
-                break;
-            case 2:
-            case 3:
-                r1 = 0;
-                g1 = 0;
-                b1 = 0;
-                break;
-        }
+            uint32_t r1, g1, b1;
+            uint32_t r2, g2, b2;
+            uint32_t cr, cg, cb;
+            uint32_t alpha;
 
-        switch (current_ctx->alpha.spec_B)
+            switch (current_ctx->alpha.spec_A)
+            {
+                case 0:
+                    r1 = color.r;
+                    g1 = color.g;
+                    b1 = color.b;
+                    break;
+                case 1:
+                    r1 = lookup_frame_color(x, y) & 0xFF;
+                    g1 = (lookup_frame_color(x, y) >> 8) & 0xFF;
+                    b1 = (lookup_frame_color(x, y) >> 16) & 0xFF;
+                    break;
+                case 2:
+                case 3:
+                    r1 = 0;
+                    g1 = 0;
+                    b1 = 0;
+                    break;
+            }
+
+            switch (current_ctx->alpha.spec_B)
+            {
+                case 0:
+                    r2 = color.r;
+                    g2 = color.g;
+                    b2 = color.b;
+                    break;
+                case 1:
+                    r2 = lookup_frame_color(x, y) & 0xFF;
+                    g2 = (lookup_frame_color(x, y) >> 8) & 0xFF;
+                    b2 = (lookup_frame_color(x, y) >> 16) & 0xFF;
+                    break;
+                case 2:
+                case 3:
+                    r2 = 0;
+                    g2 = 0;
+                    b2 = 0;
+                    break;
+            }
+
+            switch (current_ctx->alpha.spec_C)
+            {
+                case 0:
+                    alpha = color.a;
+                    break;
+                case 1:
+                    alpha = lookup_frame_color(x, y) >> 24;
+                    break;
+                case 2:
+                case 3:
+                    alpha = current_ctx->alpha.fixed_alpha;
+                    break;
+            }
+
+            switch (current_ctx->alpha.spec_D)
+            {
+                case 0:
+                    cr = color.r;
+                    cg = color.g;
+                    cb = color.b;
+                    break;
+                case 1:
+                    cr = lookup_frame_color(x, y) & 0xFF;
+                    cg = (lookup_frame_color(x, y) >> 8) & 0xFF;
+                    cb = (lookup_frame_color(x, y) >> 16) & 0xFF;
+                    break;
+                case 2:
+                case 3:
+                    cr = 0;
+                    cg = 0;
+                    cb = 0;
+                    break;
+            }
+
+            fb = (int)b1 - (int)b2;
+            fg = (int)g1 - (int)g2;
+            fr = (int)r1 - (int)r2;
+
+            //Color values are 9-bit after an alpha blending operation
+            fb = (((fb * (int)alpha) >> 7) + cb);
+            fg = (((fg * (int)alpha) >> 7) + cg);
+            fr = (((fr * (int)alpha) >> 7) + cr);
+        }
+        else
         {
-            case 0:
-                r2 = color.r;
-                g2 = color.g;
-                b2 = color.b;
-                break;
-            case 1:
-                r2 = lookup_frame_color(x, y) & 0xFF;
-                g2 = (lookup_frame_color(x, y) >> 8) & 0xFF;
-                b2 = (lookup_frame_color(x, y) >> 16) & 0xFF;
-                break;
-            case 2:
-            case 3:
-                r2 = 0;
-                g2 = 0;
-                b2 = 0;
-                break;
+            fb = color.b;
+            fg = color.g;
+            fr = color.r;
         }
-
-        switch (current_ctx->alpha.spec_C)
-        {
-            case 0:
-                alpha = color.a;
-                break;
-            case 1:
-                alpha = lookup_frame_color(x, y) >> 24;
-                break;
-            case 2:
-            case 3:
-                alpha = current_ctx->alpha.fixed_alpha;
-                break;
-        }
-
-        switch (current_ctx->alpha.spec_D)
-        {
-            case 0:
-                cr = color.r;
-                cg = color.g;
-                cb = color.b;
-                break;
-            case 1:
-                cr = lookup_frame_color(x, y) & 0xFF;
-                cg = (lookup_frame_color(x, y) >> 8) & 0xFF;
-                cb = (lookup_frame_color(x, y) >> 16) & 0xFF;
-                break;
-            case 2:
-            case 3:
-                cr = 0;
-                cg = 0;
-                cb = 0;
-                break;
-        }
-
-        int fb = (int)b1 - (int)b2;
-        int fg = (int)g1 - (int)g2;
-        int fr = (int)r1 - (int)r2;
-
-        //Color values are 9-bit after an alpha blending operation
-        fb = (((fb * (int)alpha) >> 7) + cb);
-        fg = (((fg * (int)alpha) >> 7) + cg);
-        fr = (((fr * (int)alpha) >> 7) + cr);
 
         //Dithering
         if (DTHE)
@@ -1686,6 +1725,7 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
             uint8_t dither_amount = dither & 0x3;
             if (dither & 0x4)
             {
+                dither_amount += 1;
                 fb -= dither_amount;
                 fg -= dither_amount;
                 fr -= dither_amount;
@@ -1720,70 +1760,19 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
             fr &= 0xFF;
         }
 
-        final_color |= color.a << 24;
+        if (!update_alpha)
+            final_color = lookup_frame_color(x, y) & 0xFF000000;
+        else
+        {
+            final_color = color.a << 24;
+
+            //FBA performs "alpha correction" - MSB of alpha is always set when writing to frame buffer
+            final_color |= current_ctx->FBA << 31;
+        }
+
         final_color |= fb << 16;
         final_color |= fg << 8;
         final_color |= fr;
-    }
-    else
-    {
-        //Dithering
-        if (DTHE)
-        {
-            uint8_t dither = dither_mtx[y % 4][x % 4];
-            uint8_t dither_amount = dither & 0x3;
-            if (dither & 0x4)
-            {
-                color.b -= dither_amount;
-                color.g -= dither_amount;
-                color.r -= dither_amount;
-            }
-            else
-            {
-                color.b += dither_amount;
-                color.g += dither_amount;
-                color.r += dither_amount;
-            }
-
-            if (COLCLAMP)
-            {
-                if (color.b < 0)
-                    color.b = 0;
-                if (color.g < 0)
-                    color.g = 0;
-                if (color.r < 0)
-                    color.r = 0;
-                if (color.b > 0xFF)
-                    color.b = 0xFF;
-                if (color.g > 0xFF)
-                    color.g = 0xFF;
-                if (color.r > 0xFF)
-                    color.r = 0xFF;
-            }
-            else
-            {
-                color.b &= 0xFF;
-                color.g &= 0xFF;
-                color.r &= 0xFF;
-            }
-        }
-        final_color |= color.a << 24;
-        final_color |= color.b << 16;
-        final_color |= color.g << 8;
-        final_color |= color.r;
-    }
-
-    if (update_frame)
-    {
-        if (!update_alpha)
-        {
-            uint8_t alpha = lookup_frame_color(x, y) >> 24;
-            final_color &= 0x00FFFFFF;
-            final_color |= alpha << 24;
-        }
-
-        //FBA performs "alpha correction" - MSB of alpha is always set when writing to frame buffer
-        final_color |= current_ctx->FBA << 31;
 
         uint32_t mask = current_ctx->frame.mask;
         final_color = (final_color & ~mask) | (lookup_frame_color(x, y) & mask);
@@ -3321,6 +3310,13 @@ void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
     else
         info.LOD = round(K);
 
+    //Need to reset the values here
+    //If the back of a triangle is MIP level 1 and the front is MIP level 0, it will have the wrong value
+    info.tex_base = current_ctx->tex0.texture_base;
+    info.buffer_width = current_ctx->tex0.width;
+    info.tex_width = current_ctx->tex0.tex_width;
+    info.tex_height = current_ctx->tex0.tex_height;
+
     //Mipmapping is only enabled when the max MIP level is > 0 and filtering is set to a MIPMAP type
     if (current_ctx->tex1.max_MIP_level && current_ctx->tex1.filter_smaller >= 2)
     {
@@ -3332,10 +3328,6 @@ void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
 
         if (info.mipmap_level > 0)
         {
-            info.tex_base = current_ctx->tex0.texture_base;
-            info.buffer_width = current_ctx->tex0.width;
-            info.tex_width = current_ctx->tex0.tex_width;
-            info.tex_height = current_ctx->tex0.tex_height;
 
             if (current_ctx->tex1.MTBA && info.mipmap_level < 4)
             {
@@ -3747,7 +3739,7 @@ void GraphicsSynthesizerThread::clut_lookup(uint8_t entry, RGBAQ_REG &tex_color)
         case 0x00:
         case 0x01:
         {
-            uint32_t color = *(uint32_t*)&clut_cache[((clut_addr << 1) + (entry << 2)) & 0x7FF];
+            uint32_t color = *(uint32_t*)&clut_cache[((clut_addr << 1) + (entry << 2)) & 0x3FF];
             tex_color.r = color & 0xFF;
             tex_color.g = (color >> 8) & 0xFF;
             tex_color.b = (color >> 16) & 0xFF;
