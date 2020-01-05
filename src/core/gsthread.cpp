@@ -1620,7 +1620,7 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
     if (update_frame)
     {
         //PABE - MSB of source alpha must be set to enable alpha blending
-        if (current_PRMODE->alpha_blend && (!PABE || (color.a & 0x80)) && current_ctx->tex0.format < 0x30)
+        if (current_PRMODE->alpha_blend && (!PABE || (color.a & 0x80)))
         {
             uint32_t r1, g1, b1;
             uint32_t r2, g2, b2;
