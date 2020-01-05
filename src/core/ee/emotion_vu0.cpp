@@ -153,6 +153,11 @@ void EmotionInterpreter::cop2_special(EmotionEngine &cpu, VectorUnit &vu0, uint3
 
 void EmotionInterpreter::cop2_bc2(EmotionEngine &cpu, uint32_t instruction)
 {
+    if (!cop2_sync(cpu, instruction))
+    {
+        return;
+    };
+
     const static bool likely[] = { false, false, true, true };
     const static bool op_true[] = { false, true, false, true };
     int32_t offset = ((int16_t)(instruction & 0xFFFF)) << 2;
