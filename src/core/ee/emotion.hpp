@@ -200,7 +200,6 @@ class EmotionEngine
 
         void qmfc2(int dest, int cop_reg);
         void qmtc2(int source, int cop_reg);
-        void cop2_special(EmotionEngine &cpu, uint32_t instruction);
         void cop2_updatevu0();
 
         void load_state(std::ifstream& state);

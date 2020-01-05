@@ -194,7 +194,7 @@ namespace EmotionInterpreter
 
     void cache(EmotionEngine& cpu, uint32_t instruction);
 
-    void cop(EmotionEngine& cpu, uint32_t instruction);
+    void cop(EE_InstrInfo& info, uint32_t instruction);
     void cop_mfc(EmotionEngine& cpu, uint32_t instruction);
     void cop_mtc(EmotionEngine& cpu, uint32_t instruction);
     void cop_cfc(EmotionEngine& cpu, uint32_t instruction);
@@ -232,7 +232,7 @@ namespace EmotionInterpreter
     void cop2_qmfc2(EmotionEngine& cpu, uint32_t instruction);
     void cop2_qmtc2(EmotionEngine& cpu, uint32_t instruction);
 
-    void cop2_special(EmotionEngine &cpu, VectorUnit& vu0, uint32_t instruction);
+    void cop2_special(EE_InstrInfo& info, uint32_t instruction);
     void cop2_vaddbc(VectorUnit& vu0, uint32_t instruction);
     void cop2_vsubbc(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmaddbc(VectorUnit& vu0, uint32_t instruction);
@@ -315,6 +315,8 @@ namespace EmotionInterpreter
     void cop2_vrget(VectorUnit& vu0, uint32_t instruction);
     void cop2_vrinit(VectorUnit& vu0, uint32_t instruction);
     void cop2_vrxor(VectorUnit& vu0, uint32_t instruction);
+
+    bool cop2_sync(EmotionEngine& cpu, uint32_t instruction);
 
     void mmi(EmotionEngine& cpu, uint32_t instruction);
     void madd(EmotionEngine& cpu, uint32_t instruction);

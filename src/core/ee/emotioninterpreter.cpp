@@ -884,28 +884,36 @@ void EmotionInterpreter::cache(EmotionEngine &cpu, uint32_t instruction)
     }
 }
 
-void EmotionInterpreter::cop(EmotionEngine &cpu, uint32_t instruction)
+bool EmotionInterpreter::cop2_sync(EmotionEngine& cpu, uint32_t instruction)
+{
+    //Apparently, any COP2 instruction that is executed while VU0 is running causes COP2 to stall, so lets do that
+    //Dragons Quest 8 is a good test for this as it does COP2 while VU0 is running.
+    if (cpu.vu0_wait())
+    {
+        cpu.set_PC(cpu.get_PC() - 4);
+        return false;
+    }
+
+    uint16_t op = (instruction >> 21) & 0x1F;
+
+    //Update VU0 when doing CFC/CTC commands
+    if (op != 0x8 && !(instruction & 0x1))
+    {
+        cpu.cop2_updatevu0();
+    }
+
+    return true;
+}
+
+void EmotionInterpreter::cop(EE_InstrInfo& info, uint32_t instruction)
 {
     uint16_t op = (instruction >> 21) & 0x1F;
     uint8_t cop_id = ((instruction >> 26) & 0x3);
-    
+
     if (cop_id == 2 && op >= 0x10)
     {
-        //Apparently, any COP2 instruction that is executed while VU0 is running causes COP2 to stall, so lets do that
-        //Dragons Quest 8 is a good test for this as it does COP2 while VU0 is running.
-        if (cpu.vu0_wait())
-        {
-            cpu.set_PC(cpu.get_PC() - 4);
-            return;
-        }
-
-        cpu.cop2_special(cpu, instruction);
+        cop2_special(info, instruction);
         return;
-    }
-    //Update VU0 when doing CFC/CTC commands
-    if (cop_id == 2 && op != 0x8 && !(instruction & 0x1))
-    {
-        cpu.cop2_updatevu0();
     }
 
     switch (op | (cop_id * 0x100))
@@ -955,7 +963,8 @@ void EmotionInterpreter::cop(EmotionEngine &cpu, uint32_t instruction)
             cop_bc1(cpu, instruction);
             break;
         case 0x208:
-            cop2_bc2(cpu, instruction);
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
+            info.interpreter_fn = &cop2_bc2;
             break;
         case 0x110:
             cpu.fpu_cop_s(instruction);
@@ -964,10 +973,12 @@ void EmotionInterpreter::cop(EmotionEngine &cpu, uint32_t instruction)
             cop_cvt_s_w(cpu, instruction);
             break;
         case 0x201:
-            cop2_qmfc2(cpu, instruction);
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
+            info.interpreter_fn = &cop2_qmfc2;
             break;
         case 0x205:
-            cop2_qmtc2(cpu, instruction);
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
+            info.interpreter_fn = &cop2_qmtc2;
             break;
         default:
             unknown_op("cop", instruction, op | (cop_id * 0x100));
@@ -1046,6 +1057,11 @@ void EmotionInterpreter::cop_bc0(EmotionEngine &cpu, uint32_t instruction)
 
 void EmotionInterpreter::cop2_qmfc2(EmotionEngine &cpu, uint32_t instruction)
 {
+    if (!cop2_sync(cpu, instruction))
+    {
+        return;
+    };
+
     int dest = (instruction >> 16) & 0x1F;
     int cop_reg = (instruction >> 11) & 0x1F;
     int interlock = (instruction & 0x1);
@@ -1063,6 +1079,11 @@ void EmotionInterpreter::cop2_qmfc2(EmotionEngine &cpu, uint32_t instruction)
 
 void EmotionInterpreter::cop2_qmtc2(EmotionEngine &cpu, uint32_t instruction)
 {
+    if (!cop2_sync(cpu, instruction))
+    {
+        return;
+    };
+
     int source = (instruction >> 16) & 0x1F;
     int cop_reg = (instruction >> 11) & 0x1F;
     int interlock = (instruction & 0x1);

@@ -1194,8 +1194,3 @@ void EmotionEngine::cop2_updatevu0()
         vu0->run(current_count);
     }
 }
-
-void EmotionEngine::cop2_special(EmotionEngine &cpu, uint32_t instruction)
-{
-    EmotionInterpreter::cop2_special(cpu, *vu0, instruction);
-}
