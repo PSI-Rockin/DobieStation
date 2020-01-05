@@ -4475,13 +4475,13 @@ void GraphicsSynthesizerThread::recompile_alpha_blend()
         case 0:
             //Source alpha
             emitter_dp.MOV64_MR(R15, RAX);
-            emitter_dp.SAR64_REG_IMM(48, RAX);
+            emitter_dp.SHR64_REG_IMM(48, RAX);
             break;
         case 1:
-            //Frame alpha
+            //Frame alpha - note that RAX has 8-bit components, not 16-bit components
             //If the frame format is RGB24, only use 0x80 as alpha.
             if (!(current_ctx->frame.format & 0x1))
-                emitter_dp.SAR64_REG_IMM(48, RAX);
+                emitter_dp.SHR64_REG_IMM(24, RAX);
             else
                 emitter_dp.MOV32_REG_IMM(0x80, RAX);
             break;
@@ -4548,7 +4548,9 @@ void GraphicsSynthesizerThread::recompile_alpha_blend()
     //Return color in R14. We need to replace the alpha component with the source alpha.
     emitter_dp.MOVD_FROM_XMM(XMM0, R14);
     emitter_dp.AND32_REG_IMM(0xFFFFFF, R14);
-    emitter_dp.SHL32_REG_IMM(24, RAX);
+    emitter_dp.MOV64_MR(R15, RAX);
+    emitter_dp.SHR64_REG_IMM(24, RAX);
+    emitter_dp.AND32_REG_IMM(0xFF000000, RAX);
     emitter_dp.OR32_REG(RAX, R14);
 
     if (PABE)
