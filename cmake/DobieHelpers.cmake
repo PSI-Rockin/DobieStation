@@ -20,7 +20,7 @@ function(dobie_cxx_compile_options TARGET)
     )
 
     target_compile_options(${TARGET} PRIVATE
-        $<$<CXX_COMPILER_ID:GNU,Clang,AppleClang>:${DOBIE_GNU_FLAGS}>
+        $<$<OR:$<CXX_COMPILER_ID:GNU>,$<CXX_COMPILER_ID:Clang>,$<CXX_COMPILER_ID:AppleClang>>:${DOBIE_GNU_FLAGS}>
         $<$<CXX_COMPILER_ID:MSVC>:${DOBIE_MSVC_FLAGS}>)
 
     # Needed to avoid ruining global scope with Windows.h on win32
