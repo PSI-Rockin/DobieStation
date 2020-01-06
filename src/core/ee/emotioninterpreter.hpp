@@ -194,6 +194,11 @@ namespace EmotionInterpreter
 
     void cache(EmotionEngine& cpu, uint32_t instruction);
 
+    void tlbwi(EmotionEngine& cpu, uint32_t instruction);
+    void eret(EmotionEngine& cpu, uint32_t instruction);
+    void ei(EmotionEngine& cpu, uint32_t instruction);
+    void di(EmotionEngine& cpu, uint32_t instruction);
+
     void cop(EE_InstrInfo& info, uint32_t instruction);
     void cop_mfc(EmotionEngine& cpu, uint32_t instruction);
     void cop_mtc(EmotionEngine& cpu, uint32_t instruction);
