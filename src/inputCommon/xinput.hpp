@@ -4,21 +4,20 @@
 
 #include <iostream>
 #include <Windows.h>
+#include <Xinput.h>
+#include "inputCommon/commonInput.h"
 
-#include "../core/iop/gamepad.hpp"
-
-class xinput
+class xinput : commonInput
 {
 
 private:
-
 	DWORD isConnected; // Is she connected captian?
-	Gamepad virualController;
-
+	XINPUT_STATE state; // General GamePad State
+	inputEvent event;
 public:
 
 	void initalize();
-
+	void sendInput();
 
 
 };
