@@ -23,8 +23,6 @@ if (MSVC)
     set_property(DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT DobieQt)
 endif()
 
-install(TARGETS DobieQt DESTINATION bin)
-
 if (UNIX AND NOT APPLE)
     configure_file(
         ${CMAKE_CURRENT_SOURCE_DIR}/data/DobieStation.desktop.in
