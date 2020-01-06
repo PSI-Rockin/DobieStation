@@ -940,12 +940,20 @@ void EmotionInterpreter::cop(EE_InstrInfo& info, uint32_t instruction)
     switch (op | (cop_id * 0x100))
     {
         case 0x000:
+            info.interpreter_fn = &cop0_mfc;
+            info.pipeline = EE_InstrInfo::Pipeline::COP0;
+            break;
         case 0x100:
-            cop_mfc(cpu, instruction);
+            info.interpreter_fn = &cop1_mfc;
+            info.pipeline = EE_InstrInfo::Pipeline::COP1;
             break;
         case 0x004:
+            info.interpreter_fn = &cop0_mtc;
+            info.pipeline = EE_InstrInfo::Pipeline::COP0;
+            break;
         case 0x104:
-            cop_mtc(cpu, instruction);
+            info.interpreter_fn = &cop1_mtc;
+            info.pipeline = EE_InstrInfo::Pipeline::COP1;
             break;
         case 0x010:
         {
@@ -974,28 +982,40 @@ void EmotionInterpreter::cop(EE_InstrInfo& info, uint32_t instruction)
         }
             break;
         case 0x102:
+            info.interpreter_fn = &cop1_cfc;
+            info.pipeline = EE_InstrInfo::Pipeline::COP1;
+            break;
         case 0x202:
-            cop_cfc(cpu, instruction);
+            info.interpreter_fn = &cop2_cfc;
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             break;
         case 0x106:
+            info.interpreter_fn = &cop1_ctc;
+            info.pipeline = EE_InstrInfo::Pipeline::COP1;
+            break;
         case 0x206:
-            cop_ctc(cpu, instruction);
+            info.interpreter_fn = &cop2_ctc;
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             break;
         case 0x008:
-            cop_bc0(cpu, instruction);
+            info.interpreter_fn = &cop_bc0;
+            info.pipeline = EE_InstrInfo::Pipeline::COP0;
             break;
         case 0x108:
-            cop_bc1(cpu, instruction);
+            info.interpreter_fn = &cop_bc1;
+            info.pipeline = EE_InstrInfo::Pipeline::COP1;
             break;
         case 0x208:
             info.interpreter_fn = &cop2_bc2;
             info.pipeline = EE_InstrInfo::Pipeline::COP2;
             break;
         case 0x110:
-            cpu.fpu_cop_s(instruction);
+            info.interpreter_fn = &fpu_cop_s;
+            info.pipeline = EE_InstrInfo::Pipeline::COP1;
             break;
         case 0x114:
-            cop_cvt_s_w(cpu, instruction);
+            info.interpreter_fn = &cop_cvt_s_w;
+            info.pipeline = EE_InstrInfo::Pipeline::COP1;
             break;
         case 0x201:
             info.interpreter_fn = &cop2_qmfc2;
@@ -1010,13 +1030,12 @@ void EmotionInterpreter::cop(EE_InstrInfo& info, uint32_t instruction)
     }
 }
 
-void EmotionInterpreter::cop_mfc(EmotionEngine& cpu, uint32_t instruction)
+void EmotionInterpreter::cop0_mfc(EmotionEngine& cpu, uint32_t instruction)
 {
-    int cop_id = (instruction >> 26) & 0x3;
     int emotion_reg = (instruction >> 16) & 0x1F;
     int cop_reg = (instruction >> 11) & 0x1F;
     //Special case for MFPS/MFPC
-    if (cop_id == 0 && cop_reg == 25)
+    if (cop_reg == 25)
     {
         if (instruction & 0x1)
         {
@@ -1027,17 +1046,25 @@ void EmotionInterpreter::cop_mfc(EmotionEngine& cpu, uint32_t instruction)
             cpu.mfps(emotion_reg);
     }
     else
-        cpu.mfc(cop_id, emotion_reg, cop_reg);
+        cpu.mfc(0, emotion_reg, cop_reg);
 }
 
-void EmotionInterpreter::cop_mtc(EmotionEngine& cpu, uint32_t instruction)
+void EmotionInterpreter::cop1_mfc(EmotionEngine& cpu, uint32_t instruction)
+{
+    int emotion_reg = (instruction >> 16) & 0x1F;
+    int cop_reg = (instruction >> 11) & 0x1F;
+
+    cpu.mfc(1, emotion_reg, cop_reg);
+}
+
+void EmotionInterpreter::cop0_mtc(EmotionEngine& cpu, uint32_t instruction)
 {
     int cop_id = (instruction >> 26) & 0x3;
     int emotion_reg = (instruction >> 16) & 0x1F;
     int cop_reg = (instruction >> 11) & 0x1F;
 
     //Special case for MTPS/MTPC
-    if (cop_id == 0 && cop_reg == 25)
+    if (cop_reg == 25)
     {
         if (instruction & 0x1)
         {
@@ -1048,23 +1075,43 @@ void EmotionInterpreter::cop_mtc(EmotionEngine& cpu, uint32_t instruction)
             cpu.mtps(emotion_reg);
     }
     else
-        cpu.mtc(cop_id, emotion_reg, cop_reg);
+        cpu.mtc(0, emotion_reg, cop_reg);
 }
 
-void EmotionInterpreter::cop_cfc(EmotionEngine &cpu, uint32_t instruction)
+void EmotionInterpreter::cop1_mtc(EmotionEngine& cpu, uint32_t instruction)
 {
-    int cop_id = (instruction >> 26) & 0x3;
     int emotion_reg = (instruction >> 16) & 0x1F;
     int cop_reg = (instruction >> 11) & 0x1F;
-    cpu.cfc(cop_id, emotion_reg, cop_reg, instruction);
+
+    cpu.mtc(1, emotion_reg, cop_reg);
 }
 
-void EmotionInterpreter::cop_ctc(EmotionEngine &cpu, uint32_t instruction)
+void EmotionInterpreter::cop1_cfc(EmotionEngine &cpu, uint32_t instruction)
 {
-    int cop_id = (instruction >> 26) & 0x3;
     int emotion_reg = (instruction >> 16) & 0x1F;
     int cop_reg = (instruction >> 11) & 0x1F;
-    cpu.ctc(cop_id, emotion_reg, cop_reg, instruction);
+    cpu.cfc(1, emotion_reg, cop_reg, instruction);
+}
+
+void EmotionInterpreter::cop2_cfc(EmotionEngine &cpu, uint32_t instruction)
+{
+    int emotion_reg = (instruction >> 16) & 0x1F;
+    int cop_reg = (instruction >> 11) & 0x1F;
+    cpu.cfc(2, emotion_reg, cop_reg, instruction);
+}
+
+void EmotionInterpreter::cop1_ctc(EmotionEngine &cpu, uint32_t instruction)
+{
+    int emotion_reg = (instruction >> 16) & 0x1F;
+    int cop_reg = (instruction >> 11) & 0x1F;
+    cpu.ctc(1, emotion_reg, cop_reg, instruction);
+}
+
+void EmotionInterpreter::cop2_ctc(EmotionEngine &cpu, uint32_t instruction)
+{
+    int emotion_reg = (instruction >> 16) & 0x1F;
+    int cop_reg = (instruction >> 11) & 0x1F;
+    cpu.ctc(2, emotion_reg, cop_reg, instruction);
 }
 
 void EmotionInterpreter::cop_bc0(EmotionEngine &cpu, uint32_t instruction)
