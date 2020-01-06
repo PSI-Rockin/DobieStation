@@ -15,7 +15,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Core", "Core.vcxproj", "{35
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libdeflate", "libdeflate\libdeflate.vcxproj", "{A77564F4-56BB-3D08-8126-3FD5FC44F217}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "InputCommon", "InputCommon.vcxproj", "{F61CEB41-9B79-417D-9908-0D91A97A18F8}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Core", "InputCommon.vcxproj", "{F61CEB41-9B79-417D-9908-0D91A97A18F8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -67,20 +67,16 @@ Global
 		{A77564F4-56BB-3D08-8126-3FD5FC44F217}.Release|x86.ActiveCfg = Release|x64
 		{F61CEB41-9B79-417D-9908-0D91A97A18F8}.Debug|x64.ActiveCfg = Debug|x64
 		{F61CEB41-9B79-417D-9908-0D91A97A18F8}.Debug|x64.Build.0 = Debug|x64
-		{F61CEB41-9B79-417D-9908-0D91A97A18F8}.Debug|x86.ActiveCfg = Debug|Win32
-		{F61CEB41-9B79-417D-9908-0D91A97A18F8}.Debug|x86.Build.0 = Debug|Win32
+		{F61CEB41-9B79-417D-9908-0D91A97A18F8}.Debug|x86.ActiveCfg = Debug|x64
 		{F61CEB41-9B79-417D-9908-0D91A97A18F8}.Devel|x64.ActiveCfg = Debug|x64
 		{F61CEB41-9B79-417D-9908-0D91A97A18F8}.Devel|x64.Build.0 = Debug|x64
-		{F61CEB41-9B79-417D-9908-0D91A97A18F8}.Devel|x86.ActiveCfg = Debug|Win32
-		{F61CEB41-9B79-417D-9908-0D91A97A18F8}.Devel|x86.Build.0 = Debug|Win32
+		{F61CEB41-9B79-417D-9908-0D91A97A18F8}.Devel|x86.ActiveCfg = Devel|x64
 		{F61CEB41-9B79-417D-9908-0D91A97A18F8}.Release Optimized|x64.ActiveCfg = Release|x64
 		{F61CEB41-9B79-417D-9908-0D91A97A18F8}.Release Optimized|x64.Build.0 = Release|x64
-		{F61CEB41-9B79-417D-9908-0D91A97A18F8}.Release Optimized|x86.ActiveCfg = Release|Win32
-		{F61CEB41-9B79-417D-9908-0D91A97A18F8}.Release Optimized|x86.Build.0 = Release|Win32
+		{F61CEB41-9B79-417D-9908-0D91A97A18F8}.Release Optimized|x86.ActiveCfg = Release Optimized|x64
 		{F61CEB41-9B79-417D-9908-0D91A97A18F8}.Release|x64.ActiveCfg = Release|x64
 		{F61CEB41-9B79-417D-9908-0D91A97A18F8}.Release|x64.Build.0 = Release|x64
-		{F61CEB41-9B79-417D-9908-0D91A97A18F8}.Release|x86.ActiveCfg = Release|Win32
-		{F61CEB41-9B79-417D-9908-0D91A97A18F8}.Release|x86.Build.0 = Release|Win32
+		{F61CEB41-9B79-417D-9908-0D91A97A18F8}.Release|x86.ActiveCfg = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
