@@ -15,15 +15,15 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="..\xinput.cpp">
+    <ClCompile Include="$(InputDir)xinput.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\xinput.hpp">
+    <ClInclude Include="$(InputDir)common_input.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="commonInput.h">
+    <ClInclude Include="$(InputDir)xinput.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

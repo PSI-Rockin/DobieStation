@@ -21,8 +21,9 @@
   <PropertyGroup Label="Globals">
     <VCProjectVersion>16.0</VCProjectVersion>
     <ProjectGuid>{F61CEB41-9B79-417D-9908-0D91A97A18F8}</ProjectGuid>
-    <RootNamespace>inputCommon</RootNamespace>
+    <RootNamespace>InputCommon</RootNamespace>
     <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
+    <ProjectName>InputCommon</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
@@ -138,11 +139,11 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\xinput.cpp" />
+    <ClCompile Include="$(InputDir)xinput.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\xinput.hpp" />
-    <ClInclude Include="commonInput.h" />
+    <ClInclude Include="$(InputDir)common_input.h" />
+    <ClInclude Include="$(InputDir)xinput.hpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

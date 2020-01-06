@@ -15,7 +15,7 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Core", "Core.vcxproj", "{35
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libdeflate", "libdeflate\libdeflate.vcxproj", "{A77564F4-56BB-3D08-8126-3FD5FC44F217}"
 EndProject
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "inputCommon", "..\src\inputCommon\inputCommon\inputCommon.vcxproj", "{F61CEB41-9B79-417D-9908-0D91A97A18F8}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "InputCommon", "InputCommon.vcxproj", "{F61CEB41-9B79-417D-9908-0D91A97A18F8}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
