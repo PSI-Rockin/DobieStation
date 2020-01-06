@@ -23,5 +23,8 @@
     <ClInclude Include="..\xinput.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="commonInput.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
 </Project>
