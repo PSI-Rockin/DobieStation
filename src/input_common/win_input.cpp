@@ -1,6 +1,6 @@
-#include "xinput.hpp"
+#include "win_input.hpp"
 
-void xinput::initalize()
+void WinInput::initalize()
 {
 	for (DWORD i = 0; i < XUSER_MAX_COUNT; i++)
 	{
@@ -15,7 +15,7 @@ void xinput::initalize()
 	}
 }
 
-void xinput::sendInput()
+void WinInput::sendInput()
 {
 	switch (state.Gamepad.wButtons)
 	{

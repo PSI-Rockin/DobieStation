@@ -15,16 +15,28 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="$(InputDir)xinput.cpp">
+    <ClCompile Include="$(InputDir)win_input.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="$(InputDir)common_input.h">
+    <ClInclude Include="$(InputDir)\common_input.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="$(InputDir)xinput.hpp">
+    <ClInclude Include="$(InputDir)win_input.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="$(RootDir)README.md" />
+    <None Include="$(CoreDir)jitcommon\ir_instrlist.inc">
+      <Filter>Header Files</Filter>
+    </None>
+    <None Include="$(RootDir)appveyor.yml" />
+    <None Include="$(RootDir)CMakeLists.txt" />
+    <None Include="$(RootDir)LICENSE" />
+    <None Include="$(RootDir).gitignore" />
+    <None Include="$(RootDir)CONTRIBUTING.md" />
+    <None Include="application\application.pro" />
   </ItemGroup>
 </Project>

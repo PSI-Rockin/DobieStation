@@ -5,9 +5,11 @@
 #include <iostream>
 #include <Windows.h>
 #include <Xinput.h>
-#include "common_input.h"
+#include "common_input.hpp"
 
-class xinput : common_input
+#pragma comment (lib, "xinput.lib") 
+
+class WinInput : CommonInput
 {
 
 private:
@@ -18,8 +20,6 @@ public:
 
 	void initalize();
 	void sendInput();
-
-
 };
 
 
