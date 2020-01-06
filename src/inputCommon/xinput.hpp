@@ -5,9 +5,9 @@
 #include <iostream>
 #include <Windows.h>
 #include <Xinput.h>
-#include "inputCommon/commonInput.h"
+#include "common_input.h"
 
-class xinput : commonInput
+class xinput : common_input
 {
 
 private:
