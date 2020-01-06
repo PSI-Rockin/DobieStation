@@ -81,6 +81,11 @@ void EmotionInterpreter::cop_s(Cop1& fpu, uint32_t instruction)
     }
 }
 
+void EmotionInterpreter::fpu_cop_s(EmotionEngine& cpu, uint32_t instruction)
+{
+    cpu.fpu_cop_s(instruction);
+}
+
 void EmotionInterpreter::fpu_add(Cop1 &fpu, uint32_t instruction)
 {
     uint32_t dest = (instruction >> 6) & 0x1F;

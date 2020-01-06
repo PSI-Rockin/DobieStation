@@ -44,7 +44,7 @@ struct EE_InstrInfo
         COP0,
 
         //COP1 arithmetic.
-        COP1Operate,
+        COP1,
 
         //COP1 LoadStore
         COP1LoadStore,
@@ -200,13 +200,18 @@ namespace EmotionInterpreter
     void di(EmotionEngine& cpu, uint32_t instruction);
 
     void cop(EE_InstrInfo& info, uint32_t instruction);
-    void cop_mfc(EmotionEngine& cpu, uint32_t instruction);
-    void cop_mtc(EmotionEngine& cpu, uint32_t instruction);
-    void cop_cfc(EmotionEngine& cpu, uint32_t instruction);
-    void cop_ctc(EmotionEngine& cpu, uint32_t instruction);
+    void cop0_mfc(EmotionEngine& cpu, uint32_t instruction);
+    void cop1_mfc(EmotionEngine& cpu, uint32_t instruction);
+    void cop0_mtc(EmotionEngine& cpu, uint32_t instruction);
+    void cop1_mtc(EmotionEngine& cpu, uint32_t instruction);
+    void cop1_cfc(EmotionEngine& cpu, uint32_t instruction);
+    void cop2_cfc(EmotionEngine& cpu, uint32_t instruction);
+    void cop1_ctc(EmotionEngine& cpu, uint32_t instruction);
+    void cop2_ctc(EmotionEngine& cpu, uint32_t instruction);
     void cop_bc0(EmotionEngine& cpu, uint32_t instruction);
 
     void cop_s(Cop1& fpu, uint32_t instruction);
+    void fpu_cop_s(EmotionEngine& cpu, uint32_t instruction);
     void fpu_add(Cop1& fpu, uint32_t instruction);
     void fpu_sub(Cop1& fpu, uint32_t instruction);
     void fpu_mul(Cop1& fpu, uint32_t instruction);
