@@ -1405,6 +1405,10 @@ void GraphicsSynthesizerThread::vertex_kick(bool drawing_kick)
 
 void GraphicsSynthesizerThread::render_primitive()
 {
+    // ignore nop draw
+    if (current_ctx->scissor.empty())
+        return;
+
 #ifdef GS_JIT
     jit_draw_pixel_func = get_jitted_draw_pixel(draw_pixel_state);
     //No need to recompile tex_lookup if texture mapping is disabled. TEX0 can contain bad data
