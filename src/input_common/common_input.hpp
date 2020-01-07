@@ -1,8 +1,9 @@
-#pragma once
+#ifndef INPUTEVENT_H
+#define INUTEVENT_H
 
 enum virtualController{CROSS, TRIANGLE, CIRCLE, SQUARE, START, SELECT, R1, R2, R3, L1, L2, L3};
 
-enum deviceType {CONTROLLER, MOUSE, KEYBOARD, USB}; // USB is a subset of controllers like Guitar Hero stuff and for Pandubz future Eye Toy PR. Right pandubz ... you didnt forget, right?
+enum deviceType{CONTROLLER, MOUSE, KEYBOARD, USB}; // USB is a subset of controllers like Guitar Hero stuff and for Pandubz future Eye Toy PR. Right pandubz ... you didnt forget, right?
 
 struct inputEvent
 {
@@ -29,6 +30,9 @@ struct inputEvent
 class CommonInput
 {
 	virtual void initalize();
-	virtual void sendInput(const WORD button);
-	virtual bool press(const WORD button);
+	virtual void poll(int playerNumber);
+	virtual void sendInput(const uint16_t button);
+	virtual bool press(const uint16_t button);
 };
+
+#endif
