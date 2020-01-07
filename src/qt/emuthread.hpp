@@ -7,6 +7,7 @@
 #include <QThread>
 #include <string>
 
+
 #include "../core/emulator.hpp"
 #include "../core/errors.hpp"
 #include "../input_common/win_input.hpp"

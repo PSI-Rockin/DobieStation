@@ -59,4 +59,6 @@ void WinInput::sendInput(const WORD button)
 			}
 		}
 	}
+
+
 }

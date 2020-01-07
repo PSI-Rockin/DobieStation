@@ -21,6 +21,7 @@ private:
 public:
 	void initalize();
 	void sendInput(const WORD button);
+	bool press(const WORD button);
 };
 
 #endif 
