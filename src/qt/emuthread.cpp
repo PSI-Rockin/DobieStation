@@ -220,6 +220,8 @@ void EmuThread::run()
                 e.get_resolution(new_w, new_h);
                 emit completed_frame(e.get_framebuffer(), w, h, new_w, new_h);
 
+                input.sendInput();
+
                 //Update FPS
                 double FPS;
                 do
@@ -255,7 +257,7 @@ void EmuThread::shutdown()
     abort = true;
 }
 
-void EmuThread::press_key(PAD_BUTTON button)
+/*void EmuThread::press_key(PAD_BUTTON button)
 {
     QMutexLocker locker(&emu_mutex);
     e.press_button(button);
@@ -271,7 +273,7 @@ void EmuThread::update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t v
 {
     QMutexLocker locker(&emu_mutex);
     e.update_joystick(joystick, axis, val);
-}
+}*/
 
 void EmuThread::pause(PAUSE_EVENT event)
 {

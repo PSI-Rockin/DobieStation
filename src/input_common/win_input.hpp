@@ -20,7 +20,7 @@ private:
 	inputEvent event;
 public:
 	void initalize();
-	void sendInput(const WORD button);
+	void sendInput();
 	bool press(const WORD button);
 };
 
