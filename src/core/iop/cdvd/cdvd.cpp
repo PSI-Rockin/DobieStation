@@ -2,6 +2,8 @@
 #include <ctime>
 #include <string>
 #include "cdvd.hpp"
+#include "cso_reader.hpp"
+#include "iso_reader.hpp"
 #include "iop_dma.hpp"
 
 #include "../emulator.hpp"
@@ -24,110 +26,15 @@ uint32_t CDVD_Drive::get_block_timing(bool mode_DVD)
     return (IOP_CLOCK * block_size) / (speed * (mode_DVD ? PSX_DVD_READSPEED : PSX_CD_READSPEED));
 }
 
-CDVD_Drive::CDVD_Drive(Emulator* e, IOP_DMA* dma) : e(e), dma(dma), container(CDVD_CONTAINER::ISO)
+CDVD_Drive::CDVD_Drive(Emulator* e, IOP_DMA* dma) : e(e), dma(dma)
 {
 
 }
 
 CDVD_Drive::~CDVD_Drive()
 {
-    container_close();
+    container->close();
 }
-
-bool CDVD_Drive::container_open(const char* file_path)
-{
-    if (container == CDVD_CONTAINER::ISO)
-    {
-        if (cdvd_file.is_open())
-            cdvd_file.close();
-    
-        cdvd_file.open(file_path, ios::in | ios::binary | ifstream::ate);
-        if (!cdvd_file.is_open())
-            return false;
-    
-        file_size = cdvd_file.tellg();
-        return true;
-    }
-    else if (container == CDVD_CONTAINER::CISO)
-    {
-        if (!cso_file.open(file_path))
-            return false;
-        
-        file_size = cso_file.get_size();
-        return true;
-    }
-    
-    return false;
-}
-
-void CDVD_Drive::container_close()
-{
-    if (container == CDVD_CONTAINER::ISO)
-    {
-        if (cdvd_file.is_open())
-            cdvd_file.close();
-    }
-    else if (container == CDVD_CONTAINER::CISO)
-    {
-        cso_file.close();
-    }
-}
-
-bool CDVD_Drive::container_isopen()
-{
-    if (container == CDVD_CONTAINER::ISO)
-    {
-        return cdvd_file.is_open();
-    }
-    else if (container == CDVD_CONTAINER::CISO)
-    {
-        return cso_file.isopen();
-    }
-    
-    return false;
-}
-
-void CDVD_Drive::container_seek(std::ios::streamoff ofs, std::ios::seekdir whence)
-{
-    if (container == CDVD_CONTAINER::ISO)
-    {
-        cdvd_file.seekg(ofs, whence);
-    }
-    else if (container == CDVD_CONTAINER::CISO)
-    {
-        cso_file.seek((int64_t)ofs, whence);
-    }
-}
-
-uint64_t CDVD_Drive::container_tell()
-{
-    if (container == CDVD_CONTAINER::ISO)
-    {
-        return cdvd_file.tellg();
-    }
-    else if (container == CDVD_CONTAINER::CISO)
-    {
-        return cso_file.tell();
-    }
-    
-    return 0;
-}
-
-size_t CDVD_Drive::container_read(void* dst, size_t size)
-{
-    if (container == CDVD_CONTAINER::ISO)
-    {
-        cdvd_file.read((char*)dst, size);
-        return cdvd_file.gcount();
-    }
-    else if (container == CDVD_CONTAINER::CISO)
-    {
-        return cso_file.read((uint8_t*)dst, size);
-    }
-    
-    return 0;
-}
-
 
 void CDVD_Drive::reset()
 {
@@ -163,7 +70,7 @@ void CDVD_Drive::reset()
 
 string CDVD_Drive::get_serial()
 {
-    if (!container_isopen())
+    if (!container->is_open())
         return "";
 
     uint32_t cnf_size;
@@ -311,9 +218,23 @@ void CDVD_Drive::handle_N_command()
 
 bool CDVD_Drive::load_disc(const char *name, CDVD_CONTAINER a_container)
 {
-    container = a_container;
-    if (!container_open(name))
+    //container = a_container;
+    switch (a_container)
+    {
+        case CDVD_CONTAINER::ISO:
+            container = std::unique_ptr<CDVD_Container>(new ISO_Reader());
+            break;
+        case CDVD_CONTAINER::CISO:
+            container = std::unique_ptr<CDVD_Container>(new CSO_Reader());
+            break;
+        default:
+            container = nullptr;
+            return false;
+    }
+    if (!container->open(name))
         return false;
+
+    file_size = container->get_size();
 
     printf("[CDVD] Disc size: %lu bytes\n", file_size);
     printf("[CDVD] Locating Primary Volume Descriptor\n");
@@ -322,13 +243,13 @@ bool CDVD_Drive::load_disc(const char *name, CDVD_CONTAINER a_container)
     while (type != 1)
     {
         sector++;
-        container_seek(sector * 2048);
-        container_read(&type, sizeof(uint8_t));
+        container->seek(sector * 2048, std::ios::beg);
+        container->read(&type, sizeof(uint8_t));
     }
     printf("[CDVD] Primary Volume Descriptor found at sector %d\n", sector);
 
-    container_seek(sector * 2048);
-    container_read(pvd_sector, 2048);
+    container->seek(sector * 2048, std::ios::beg);
+    container->read(pvd_sector, 2048);
 
     LBA = *(uint16_t*)&pvd_sector[128];
     printf("[CDVD] PVD LBA: $%08X\n", LBA);
@@ -345,8 +266,8 @@ bool CDVD_Drive::load_disc(const char *name, CDVD_CONTAINER a_container)
 uint8_t* CDVD_Drive::read_file(string name, uint32_t& file_size)
 {
     uint8_t* root_extent = new uint8_t[root_len];
-    container_seek(root_location);
-    container_read(root_extent, root_len);
+    container->seek(root_location, std::ios::beg);
+    container->read(root_extent, root_len);
     uint32_t bytes = 0;
     uint64_t file_location = 0;
     uint8_t* file;
@@ -376,8 +297,8 @@ uint8_t* CDVD_Drive::read_file(string name, uint32_t& file_size)
                 printf("[CDVD] Size: $%08X\n", file_size);
 
                 file = new uint8_t[file_size];
-                container_seek(file_location);
-                container_read(file, file_size);
+                container->seek(file_location, std::ios::beg);
+                container->read(file, file_size);
                 delete[] root_extent;
                 return file;
             }
@@ -720,7 +641,7 @@ void CDVD_Drive::start_seek()
     }
 
     //Seek anyway. The program won't know the difference
-    uint32_t seek_to = sector_pos;
+    uint64_t seek_to = sector_pos;
     uint32_t block_count = file_size / LBA;
     int32_t seek_to_int = (int32_t)seek_to;
 
@@ -734,7 +655,7 @@ void CDVD_Drive::start_seek()
     if (seek_to > block_count)
         Errors::die("[CDVD] Invalid sector read $%08X (max size: $%08X)", seek_to, block_count);
 
-    container_seek((uint64_t)seek_to * 2048);
+    container->seek(seek_to * 2048, std::ios::beg);
 
     add_event(cycles_to_seek);
 }
@@ -848,10 +769,9 @@ void CDVD_Drive::read_CD_sector()
             fill_CDROM_sector();
             break;
         default:
-            container_read(read_buffer, block_size);
+            container->read(read_buffer, block_size);
             break;
     }
-    //container_read(read_buffer, block_size);
     read_bytes_left = block_size;
     current_sector++;
     sectors_left--;
@@ -877,7 +797,7 @@ void CDVD_Drive::fill_CDROM_sector()
     temp_buffer[0xD] = itob(seconds);
     temp_buffer[0xE] = itob(fragments);
     temp_buffer[0xF] = 1;
-    container_read(&temp_buffer[0x10 + 0x8], 2048);
+    container->read(&temp_buffer[0x10 + 0x8], 2048);
 
     memcpy(read_buffer, temp_buffer + 0xC, 2340);
 }
@@ -914,7 +834,7 @@ void CDVD_Drive::read_DVD_sector()
     read_buffer[9] = 0;
     read_buffer[10] = 0;
     read_buffer[11] = 0;
-    container_read(&read_buffer[12], 2048);
+    container->read(&read_buffer[12], 2048);
     read_buffer[2060] = 0;
     read_buffer[2061] = 0;
     read_buffer[2062] = 0;
