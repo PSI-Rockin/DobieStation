@@ -13,15 +13,14 @@ class WinInput : CommonInput
 {
 
 private:
+	int playerNumber;
 	DWORD isConnected; // Is she connected captian?
+	bool connected;
 	XINPUT_STATE state; // General GamePad State
 	inputEvent event;
 public:
-
 	void initalize();
-	void sendInput();
+	void sendInput(const WORD button);
 };
-
-
 
 #endif 
