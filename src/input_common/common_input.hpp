@@ -30,4 +30,5 @@ class CommonInput
 {
 	virtual void initalize();
 	virtual void sendInput(const WORD button);
+	virtual bool press(const WORD button);
 };
