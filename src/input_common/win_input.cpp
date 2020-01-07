@@ -27,15 +27,22 @@ void WinInput::initalize()
 	}
 }
 
-void WinInput::sendInput(const WORD button)
+
+bool WinInput::press(uint16_t button)
+{
+	return (state.Gamepad.wButtons & button) != 0;
+}
+
+
+void WinInput::sendInput()
 {
 	initalize(); // This is for constant polling if the controller lives
 
+	uint16_t button;
+
 	if (connected)
 	{
-		if ((state.Gamepad.wButtons & button) != 0)
-		{
-			switch (state.Gamepad.wButtons & button)
+			switch (press(button))
 			{
 			case XINPUT_GAMEPAD_A:
 				event.construct(virtualController::CROSS, playerNumber, 0, 0, 0, 0);
@@ -57,7 +64,6 @@ void WinInput::sendInput(const WORD button)
 				event.construct(virtualController::START, playerNumber, 0, 0, 0, 0);
 				break;
 			}
-		}
 	}
 
 

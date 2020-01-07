@@ -11,6 +11,8 @@
 #include "../core/emulator.hpp"
 #include "../core/errors.hpp"
 
+#include "../input_common/common_input.hpp"
+
 #define GSDUMP_BUFFERED_MESSAGES 100000
 
 enum PAUSE_EVENT
@@ -38,7 +40,7 @@ class EmuThread : public QThread
         int buffered_gs_messages;
         int current_gs_message;
 
-
+        CommonInput input;
 
         void gsdump_run();
     public:
@@ -71,9 +73,9 @@ class EmuThread : public QThread
         void emu_non_fatal_error(QString err);
     public slots:
         void shutdown();
-        void press_key(PAD_BUTTON button);
-        void release_key(PAD_BUTTON button);
-        void update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t val);
+        //void press_key(PAD_BUTTON button);
+        //void release_key(PAD_BUTTON button);
+        //void update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t val);
         void pause(PAUSE_EVENT event);
         void unpause(PAUSE_EVENT event);
 };
