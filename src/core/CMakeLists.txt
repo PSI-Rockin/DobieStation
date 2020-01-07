@@ -47,8 +47,9 @@ set(SOURCES
     ee/vu_jit.cpp
     ee/vu_jit64.cpp
     ee/vu_jittrans.cpp
-    iop/cdvd.cpp
-    iop/cso_reader.cpp
+    iop/cdvd/cdvd.cpp
+    iop/cdvd/cso_reader.cpp
+    iop/cdvd/iso_reader.cpp
     iop/gamepad.cpp
     iop/iop.cpp
     iop/iop_cop0.cpp
@@ -110,8 +111,9 @@ set(HEADERS
     ee/vu_jit.hpp
     ee/vu_jit64.hpp
     ee/vu_jittrans.hpp
-    iop/cdvd.hpp
-    iop/cso_reader.hpp
+    iop/cdvd/cdvd.hpp
+    iop/cdvd/cso_reader.hpp
+    iop/cdvd/iso_reader.hpp
     iop/gamepad.hpp
     iop/iop.hpp
     iop/iop_cop0.hpp
