@@ -11,7 +11,7 @@
 #include "ee/vif.hpp"
 #include "ee/vu.hpp"
 
-#include "iop/cdvd.hpp"
+#include "iop/cdvd/cdvd.hpp"
 #include "iop/gamepad.hpp"
 #include "iop/iop.hpp"
 #include "iop/iop_dma.hpp"
