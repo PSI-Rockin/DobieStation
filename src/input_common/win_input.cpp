@@ -34,6 +34,11 @@ bool WinInput::press(uint16_t button)
 }
 
 
+void WinInput::poll(int playerNumber)
+{
+
+}
+
 void WinInput::sendInput()
 {
 	initalize(); // This is for constant polling if the controller lives

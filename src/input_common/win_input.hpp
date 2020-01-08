@@ -21,7 +21,8 @@ private:
 public:
 	void initalize();
 	void sendInput();
-	bool press(const WORD button);
+	bool press(const uint16_t button);
+	void poll(int playerNumber);
 };
 
 #endif 
