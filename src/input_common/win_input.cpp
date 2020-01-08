@@ -5,7 +5,7 @@
 * if the data structure style makes more sense to me 
 * then i'll end up using playerNumer
 *******************************************************/
-void WinInput::initalize()
+bool WinInput::initalize()
 {
 	for (DWORD i = 0; i < XUSER_MAX_COUNT; i++) 
 	{
@@ -14,15 +14,16 @@ void WinInput::initalize()
 		isConnected = XInputGetState(i, &state);
 
 		if (isConnected == ERROR_SUCCESS) // Controller is connected
-		{
-			connected = true;
-			std::cout << "Xbox Controller Detected!" << std::endl;
+		{			
+			playerNumber = i;
+			std::cout << "Xbox Controller Detected: " << playerNumber << std::endl;
+			return true;
 		}
 
 		else
 		{
-			connected = false;
-			std::cout << "Ripparoini and cheese" << std::endl;
+			std::cout << "No xbox controller Detected: " << std::endl;
+			return false;
 		}
 	}
 }
@@ -41,20 +42,32 @@ void WinInput::poll(int playerNumber)
 
 void WinInput::sendInput()
 {
-	initalize(); // This is for constant polling if the controller lives
 
-	uint16_t button;
+	ZeroMemory(&state, sizeof(XINPUT_STATE));
 
-	if (connected)
+	uint16_t button = XInputGetState(playerNumber, &state);
+
+	if (initalize())
 	{
+
+
+		if (press(XINPUT_GAMEPAD_A))
+		{					
+			event.construct(virtualController::CROSS, playerNumber, 0, 0, 0, 0);				
+			std::cout << "A is pressed" << std::endl;
+		}
+
+
 			switch (press(button))
 			{
 			case XINPUT_GAMEPAD_A:
 				event.construct(virtualController::CROSS, playerNumber, 0, 0, 0, 0);
+				std::cout << "A is pressed" << std::endl;
 				break;
 
 			case XINPUT_GAMEPAD_B:
 				event.construct(virtualController::CIRCLE, playerNumber, 0, 0, 0, 0);
+				std::cout << "B is pressed" << std::endl;
 				break;
 
 			case XINPUT_GAMEPAD_X:

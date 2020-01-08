@@ -19,7 +19,7 @@ private:
 	XINPUT_STATE state; // General GamePad State
 	inputEvent event;
 public:
-	void initalize();
+	bool initalize();
 	void sendInput();
 	bool press(const uint16_t button);
 	void poll(int playerNumber);
