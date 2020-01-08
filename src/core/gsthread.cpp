@@ -2639,6 +2639,9 @@ void GraphicsSynthesizerThread::render_sprite()
 
     calculate_LOD(tex_info);
 
+    uint32_t zvalue = v2.z;
+    uint8_t fog = v2.fog;
+
     if (v1.x > v2.x)
     {
         swap(v1, v2);
@@ -2673,7 +2676,7 @@ void GraphicsSynthesizerThread::render_sprite()
         {
             if (tmp_tex)
             {
-                tex_info.fog = v2.fog;
+                tex_info.fog = fog;
                 if (tmp_st)
                 {
                     pix_v = (pix_t * tex_info.tex_height) * 16.0;
@@ -2694,17 +2697,17 @@ void GraphicsSynthesizerThread::render_sprite()
                 }
 
 #ifdef GS_JIT
-                jit_draw_pixel_prologue(x, y, v2.z, tex_info.tex_color);
+                jit_draw_pixel_prologue(x, y, zvalue, tex_info.tex_color);
 #else
-                draw_pixel(x, y, v2.z, tex_info.tex_color);
+                draw_pixel(x, y, zvalue, tex_info.tex_color);
 #endif
             }
             else
             {
 #ifdef GS_JIT
-                jit_draw_pixel_prologue(x, y, v2.z, tex_info.vtx_color);
+                jit_draw_pixel_prologue(x, y, zvalue, tex_info.vtx_color);
 #else
-                draw_pixel(x, y, v2.z, tex_info.vtx_color);
+                draw_pixel(x, y, zvalue, tex_info.vtx_color);
 #endif
             }
             pix_s += pix_s_step;
