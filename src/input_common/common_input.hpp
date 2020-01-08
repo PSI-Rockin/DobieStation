@@ -30,10 +30,10 @@ struct inputEvent
 class CommonInput
 {
 public:
-	virtual void initalize();
-	virtual void poll(int playerNumber);
-	virtual void sendInput();
-	virtual bool press(const uint16_t button);
+	virtual void initalize() = 0;
+	virtual void poll(int playerNumber) = 0;
+	virtual void sendInput() = 0;
+	virtual bool press(const uint16_t button) = 0;
 };
 
 #endif
