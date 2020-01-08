@@ -34,10 +34,8 @@ int rc;
 
 public:
 
-void initalize();
-void poll(int playerNumber);
+bool initalizeAPI(DeviceAPI api);
 void sendInput ();
-bool press (u_int16_t input);
 
 };
 

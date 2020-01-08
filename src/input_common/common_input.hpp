@@ -43,9 +43,11 @@ enum DeviceAPI {
 class CommonInput
 {
 
-private:
-	std::thread thread;
+protected:
+	std::thread *input;
+	std::mutex inputMutex;
 	DeviceAPI currentAPI;
+	int playerNumber;
 
 	virtual bool initalizeAPI(DeviceAPI api);
 	virtual void sendInput();
