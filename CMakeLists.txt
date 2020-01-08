@@ -46,7 +46,7 @@ find_package(Threads REQUIRED)
 # Modules
 add_subdirectory(src/core)
 add_subdirectory(src/qt)
-
+add_subdirectory(src/input_common)
 
 if (MSVC)
     # Use DobieQt as Startup Project instead of ALL_BUILD
@@ -61,3 +61,4 @@ if (UNIX AND NOT APPLE)
         ${CMAKE_CURRENT_BINARY_DIR}/DobieStation.desktop)
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/DobieStation.desktop DESTINATION share/applications/)
 endif()
+ 

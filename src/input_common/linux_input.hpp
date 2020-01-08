@@ -36,7 +36,7 @@ public:
 
 void initalize();
 void poll(int playerNumber);
-void sendInput (u_int16_t input);
+void sendInput ();
 bool press (u_int16_t input);
 
 };

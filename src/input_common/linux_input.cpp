@@ -22,7 +22,14 @@ for (int i = 0; i < 4; i++)
     if (libevdev_has_event_type(dev, EV_KEY) && libevdev_has_event_code(dev, EV_ABS, ABS_X) && libevdev_has_event_code(dev, EV_ABS, ABS_Y))
     {
         controllers[i].controller = dev; // ladies and gents we have a controller!
+        std::cout << "Controller Detected" << std::endl;
     }
+
+else 
+{
+    std::cout << "No Controller!" << std::endl;
+}
+
 }
 
 
@@ -34,7 +41,10 @@ void LinuxInput::poll(int playerNumber)
 }
 
 
-void LinuxInput::sendInput(u_int16_t input)
+void LinuxInput::sendInput()
 {
+
+initalize();
+
 
 }
