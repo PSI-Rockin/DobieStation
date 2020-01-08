@@ -56,8 +56,8 @@ class EmuWindow : public QMainWindow
         bool load_bios();
         void open_settings_window();
         void closeEvent(QCloseEvent *event) override;
-        void keyPressEvent(QKeyEvent *event) override;
-        void keyReleaseEvent(QKeyEvent *event) override;
+        //void keyPressEvent(QKeyEvent *event) override;
+        //void keyReleaseEvent(QKeyEvent *event) override;
 
     protected:
     #ifndef QT_NO_CONTEXTMENU
