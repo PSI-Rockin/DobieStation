@@ -7,9 +7,12 @@ bool CommonInput::initalizeAPI(DeviceAPI api)
 	//initalize thread in here
 }
 
-void initalize()
+void CommonInput::initalize()
 {
 	// create thread here.
+
+	input = new std::thread(update, 1); 
+
 }
 
 void update()

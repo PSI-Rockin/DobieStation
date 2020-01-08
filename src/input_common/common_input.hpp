@@ -2,6 +2,7 @@
 #define INUTEVENT_H
 
 #include <thread>
+#include <mutex>
 
 enum virtualController{CROSS, TRIANGLE, CIRCLE, SQUARE, START, SELECT, R1, R2, R3, L1, L2, L3};
 
@@ -45,9 +46,11 @@ enum DeviceAPI {
 class CommonInput
 {
 
-private:
-	std::thread thread;
+protected:
+	std::thread *input;
+	std::mutex inputMutex;
 	DeviceAPI currentAPI;
+	int playerNumber;
 
 
 public:

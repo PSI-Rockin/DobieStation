@@ -1,7 +1,7 @@
 #include "linux_input.hpp"
 
 
-void LinuxInput::initalize()
+bool LinuxInput::initalizeAPI(DeviceAPI api) 
 {
 
 controllers = new controller[4];
@@ -35,16 +35,11 @@ else
 
 }
 
-void LinuxInput::poll(int playerNumber)
-{
-    rc = libevdev_next_event(controllers[playerNumber].controller, LIBEVDEV_READ_FLAG_NORMAL, &ev);
-}
-
-
 void LinuxInput::sendInput()
 {
 
 initalize();
+    rc = libevdev_next_event(controllers[playerNumber].controller, LIBEVDEV_READ_FLAG_NORMAL, &ev);
 
 
 }
