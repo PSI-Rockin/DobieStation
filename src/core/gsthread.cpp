@@ -558,7 +558,7 @@ void GraphicsSynthesizerThread::render_single_CRT(uint32_t *target, DISPFB &disp
     else
         height = display.height;
 
-    for (int y = 0; y < display.height; y++)
+    for (int y = 0; y < height; y++)
     {
         for (int x = 0; x < width; x++)
         {
@@ -572,12 +572,46 @@ void GraphicsSynthesizerThread::render_single_CRT(uint32_t *target, DISPFB &disp
             uint32_t scaled_x = dispfb.x + x;
             uint32_t scaled_y = dispfb.y + y;
             scaled_x = (scaled_x * dispfb.width) / width;
-            uint32_t value = get_CRT_color(dispfb, scaled_x, scaled_y);
+            uint32_t final_color = get_CRT_color(dispfb, scaled_x, scaled_y);
+            uint32_t output2 = 0;
 
-            target[pixel_x + (pixel_y * width)] = value | 0xFF000000;
+            //Only Circuit 1 can be blended with the background
+            if (reg.PMODE.blend_with_bg && reg.PMODE.circuit1)
+                output2 = reg.BGCOLOR;
+
+            int alpha = (final_color >> 24) * 2;
+
+            //Only Circuit 1 can select the ALP value
+            if (reg.PMODE.use_ALP && reg.PMODE.circuit1)
+                alpha = reg.PMODE.ALP;
+
+            if (alpha > 0xFF)
+                alpha = 0xFF;
+
+            uint32_t r1, g1, b1, r2, g2, b2, r, g, b;
+
+            r1 = final_color & 0xFF; r2 = output2 & 0xFF;
+            g1 = (final_color >> 8) & 0xFF; g2 = (output2 >> 8) & 0xFF;
+            b1 = (final_color >> 16) & 0xFF; b2 = (output2 >> 16) & 0xFF;
+
+            r = ((r1 * alpha) + (r2 * (0xFF - alpha))) >> 8;
+            if (r > 0xFF)
+                r = 0xFF;
+
+            g = ((g1 * alpha) + (g2 * (0xFF - alpha))) >> 8;
+            if (g > 0xFF)
+                g = 0xFF;
+
+            b = ((b1 * alpha) + (b2 * (0xFF - alpha))) >> 8;
+            if (b > 0xFF)
+                b = 0xFF;
+
+            final_color = 0xFF000000 | r | (g << 8) | (b << 16);
+
+            target[pixel_x + (pixel_y * width)] = final_color;
 
             if (reg.SMODE2.frame_mode && reg.SMODE2.interlaced)
-                target[pixel_x + ((pixel_y + 1) * width)] = value | 0xFF000000;
+                target[pixel_x + ((pixel_y + 1) * width)] = final_color;
         }
     }
 }
@@ -607,7 +641,7 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
         else
             height = reg.DISPLAY1.height;
 
-        for (int y = 0; y < reg.DISPLAY1.height; y++)
+        for (int y = 0; y < height; y++)
         {
             for (int x = 0; x < width; x++)
             {
