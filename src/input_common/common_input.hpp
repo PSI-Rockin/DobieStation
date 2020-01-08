@@ -1,6 +1,8 @@
 #ifndef INPUTEVENT_H
 #define INUTEVENT_H
 
+#include <thread>
+
 enum virtualController{CROSS, TRIANGLE, CIRCLE, SQUARE, START, SELECT, R1, R2, R3, L1, L2, L3};
 
 enum deviceType{CONTROLLER, MOUSE, KEYBOARD, USB}; // USB is a subset of controllers like Guitar Hero stuff and for Pandubz future Eye Toy PR. Right pandubz ... you didnt forget, right?
@@ -27,13 +29,34 @@ struct inputEvent
 	}
 };
 
+enum DeviceAPI {
+	NO_API = 0,
+	DI = 1,
+	WM = 2, // Windows Keyboard
+	RAW = 3, // It's FUCKING RAW!!!
+	XINPUT = 4,
+	DS4_LIB = 5,// Potential custom option for later
+	LNX_KEYBOARD = 16, // Xorg / Wayland input specific or we do some real shitz!
+	EVDEV = 17,
+};
+
+
+
 class CommonInput
 {
+
+private:
+	std::thread thread;
+	DeviceAPI currentAPI;
+
+
 public:
-	virtual bool initalize() = 0;
-	virtual void poll(int playerNumber) = 0;
-	virtual void sendInput() = 0;
-	virtual bool press(const uint16_t button) = 0;
+	virtual bool initalizeAPI(DeviceAPI api);
+	virtual void sendInput();
+	void initalize();
+	void update();
+
+
 };
 
 #endif

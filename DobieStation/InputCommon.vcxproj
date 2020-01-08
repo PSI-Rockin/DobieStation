@@ -71,10 +71,11 @@
   <!-- cpp files -->
   <ItemGroup>
     <ClCompile Include="$(InputDir)win_input.cpp" />
+    <ClCompile Include="$(InputDir)common_input.cpp" />
   </ItemGroup>
   <!-- headers -->
   <ItemGroup>
-    <ClInclude Include="$(InputDir)\common_input.hpp" />
+    <ClInclude Include="$(InputDir)common_input.hpp" />
     <ClInclude Include="$(InputDir)win_input.hpp" />
   </ItemGroup>
   <!-- misc -->

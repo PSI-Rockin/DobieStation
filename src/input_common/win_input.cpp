@@ -5,7 +5,7 @@
 * if the data structure style makes more sense to me 
 * then i'll end up using playerNumer
 *******************************************************/
-bool WinInput::initalize()
+bool WinInput::initalizeAPI()
 {
 	for (DWORD i = 0; i < XUSER_MAX_COUNT; i++) 
 	{
@@ -42,23 +42,13 @@ void WinInput::poll(int playerNumber)
 
 void WinInput::sendInput()
 {
+	DWORD button;
 
-	ZeroMemory(&state, sizeof(XINPUT_STATE));
-
-	uint16_t button = XInputGetState(playerNumber, &state);
-
-	if (initalize())
+	for (int i = 0; i < 4; i++)
 	{
-
-
-		if (press(XINPUT_GAMEPAD_A))
-		{					
-			event.construct(virtualController::CROSS, playerNumber, 0, 0, 0, 0);				
-			std::cout << "A is pressed" << std::endl;
-		}
-
-
-			switch (press(button))
+		if (initalize())
+		{
+			switch (press(state.Gamepad.wButtons))
 			{
 			case XINPUT_GAMEPAD_A:
 				event.construct(virtualController::CROSS, playerNumber, 0, 0, 0, 0);
@@ -72,17 +62,20 @@ void WinInput::sendInput()
 
 			case XINPUT_GAMEPAD_X:
 				event.construct(virtualController::SQUARE, playerNumber, 0, 0, 0, 0);
+				std::cout << "X is pressed" << std::endl;
 				break;
 
 			case XINPUT_GAMEPAD_Y:
 				event.construct(virtualController::TRIANGLE, playerNumber, 0, 0, 0, 0);
+				std::cout << "Y is pressed" << std::endl;
 				break;
 
 			case XINPUT_GAMEPAD_START:
 				event.construct(virtualController::START, playerNumber, 0, 0, 0, 0);
+				std::cout << "Start is pressed" << std::endl;
 				break;
 			}
+		}
 	}
-
 
 }

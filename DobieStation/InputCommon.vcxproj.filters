@@ -18,6 +18,9 @@
     <ClCompile Include="$(InputDir)win_input.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="common_input.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(InputDir)\common_input.hpp">
