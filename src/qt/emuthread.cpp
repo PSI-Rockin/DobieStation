@@ -215,12 +215,11 @@ void EmuThread::run()
             try
             {
                 e.run();
+                input.sendInput();
                 int w, h, new_w, new_h;
                 e.get_inner_resolution(w, h);
                 e.get_resolution(new_w, new_h);
                 emit completed_frame(e.get_framebuffer(), w, h, new_w, new_h);
-
-                input.sendInput();
 
                 //Update FPS
                 double FPS;

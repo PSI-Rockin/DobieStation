@@ -7,7 +7,7 @@
 #include <Xinput.h>
 #include "common_input.hpp"
 
-#pragma comment (lib, "xinput.lib") 
+#pragma comment(lib, "Xinput9_1_0")
 
 class WinInput : CommonInput
 {
@@ -18,11 +18,11 @@ private:
 	bool connected;
 	XINPUT_STATE state; // General GamePad State
 	inputEvent event;
+
 public:
-	bool initalize();
+	bool initalizeAPI();
 	void sendInput();
 	bool press(const uint16_t button);
-	void poll(int playerNumber);
 };
 
 #endif 
