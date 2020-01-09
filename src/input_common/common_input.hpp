@@ -7,7 +7,7 @@
 #ifdef __linux__ 
 #include "linux_input.hpp"
 
-#elif _WIN32
+#elif WIN32
 #include "win_input.hpp"
 #endif
 
@@ -61,11 +61,10 @@ protected:
 	int playerNumber;
 
 	#ifdef __linux__
-	LinuxInput linux_input;
-	#endif
+	LinuxInput *linux_input;
 
-	#ifdef _WIN32
-	WinInput win_input;
+	#elif WIN32
+	WinInput *win_input;
 	#endif
 
 
@@ -78,3 +77,4 @@ public:
 
 };
 
+#endif

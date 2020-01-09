@@ -10,12 +10,16 @@ void CommonInput::initalize()
 {
 	// create thread here.
 	#ifdef __linux__
-	linux_input.initalizeAPI();
+	linux_input = new LinuxInput();
+	linux_input->initalizeAPI();
 	#endif
 		
-	#ifdef _WIN32
-	win_input.inializeAPI();
+	#ifdef WIN32
+	win_input = new WinInput();
+	win_input->initalizeAPI();
 	#endif
+
+
 }
 
 void CommonInput::update()
@@ -24,14 +28,7 @@ void CommonInput::update()
 
 while (true)
 {
-	// lock thread and poll for events
-	#ifdef __linux__
-	linux_input.sendInput();
-	#endif
-
-	#ifdef _WIN32
-	win_input.sendInput();
-	#endif
+	win_input->sendInput();
 }
 
 }
