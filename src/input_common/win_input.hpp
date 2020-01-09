@@ -1,6 +1,6 @@
 
-#ifndef XINPUT_HPP
-#define XINPUT_HPP
+#ifndef WININPUT_HPP
+#define WININPUT_HPP
 
 #include <iostream>
 #include <Windows.h>
@@ -9,7 +9,7 @@
 
 #pragma comment(lib, "Xinput9_1_0")
 
-class WinInput : CommonInput
+class WinInput : public CommonInput
 {
 
 private:

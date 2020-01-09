@@ -4,7 +4,7 @@
 #ifdef __linux__ 
 #include "linux_input.hpp"
 
-#elif _WIN32
+#elif WIN32
 #include "win_input.hpp"
 #endif
 
@@ -56,6 +56,13 @@ protected:
 	std::mutex inputMutex;
 	DeviceAPI currentAPI;
 	int playerNumber;
+
+	#ifdef __linux__
+	LinuxInput *linux_input;
+
+	#elif WIN32
+	WinInput *win_input;
+	#endif
 
 
 public:

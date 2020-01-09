@@ -35,18 +35,13 @@ bool WinInput::press(uint16_t button)
 }
 
 
-void WinInput::poll(int playerNumber)
-{
-
-}
-
 void WinInput::sendInput()
 {
 	DWORD button;
 
 	for (int i = 0; i < 4; i++)
 	{
-		if (initalize())
+		if (initalizeAPI())
 		{
 			switch (press(state.Gamepad.wButtons))
 			{
