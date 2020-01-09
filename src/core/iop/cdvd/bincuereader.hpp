@@ -1,13 +1,13 @@
-#ifndef ISO_READER_HPP
-#define ISO_READER_HPP
+#ifndef BINCUEREADER_HPP
+#define BINCUEREADER_HPP
 #include "cdvd_container.hpp"
 
-class ISO_Reader : public CDVD_Container
+class BinCueReader : public CDVD_Container
 {
     protected:
-        std::ifstream file;
+        std::ifstream bin_file, cue_file;
     public:
-        ISO_Reader();
+        BinCueReader();
 
         bool open(std::string name);
         void close();
@@ -18,4 +18,4 @@ class ISO_Reader : public CDVD_Container
         size_t get_size();
 };
 
-#endif // ISO_READER_HPP
+#endif // BINCUEREADER_HPP
