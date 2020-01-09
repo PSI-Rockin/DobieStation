@@ -11,7 +11,8 @@ class IOP_DMA;
 enum CDVD_CONTAINER
 {
     ISO,
-    CISO
+    CISO,
+    BIN_CUE
 };
 
 enum CDVD_STATUS

@@ -27,7 +27,7 @@ size_t ISO_Reader::read(uint8_t* buff, size_t bytes)
 
 void ISO_Reader::seek(size_t pos, std::ios::seekdir whence)
 {
-    file.seekg(pos);
+    file.seekg(pos * 2048);
 }
 
 bool ISO_Reader::is_open()

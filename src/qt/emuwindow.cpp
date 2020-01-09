@@ -178,6 +178,12 @@ int EmuWindow::load_exec(const char* file_name, bool skip_BIOS)
         if (skip_BIOS)
             emu_thread.set_skip_BIOS_hack(SKIP_HACK::LOAD_DISC);
     }
+    else if (QString::compare(ext, "bin", Qt::CaseInsensitive) == 0)
+    {
+        emu_thread.load_CDVD(file_name, CDVD_CONTAINER::BIN_CUE);
+        if (skip_BIOS)
+            emu_thread.set_skip_BIOS_hack(SKIP_HACK::LOAD_DISC);
+    }
     else if (QString::compare(ext, "gsd", Qt::CaseInsensitive) == 0)
         emu_thread.gsdump_read(file_name);
     else
@@ -629,7 +635,7 @@ void EmuWindow::open_file_no_skip()
     emu_thread.pause(PAUSE_EVENT::FILE_DIALOG);
     QString file_name = QFileDialog::getOpenFileName(
         this, tr("Open Rom"), Settings::instance().last_used_directory,
-        tr("ROM Files (*.elf *.iso *.cso)")
+        tr("ROM Files (*.elf *.iso *.cso *.bin)")
     );
 
     if (!file_name.isEmpty())
@@ -646,7 +652,7 @@ void EmuWindow::open_file_skip()
     emu_thread.pause(PAUSE_EVENT::FILE_DIALOG);
     QString file_name = QFileDialog::getOpenFileName(
         this, tr("Open Rom"), Settings::instance().last_used_directory,
-        tr("ROM Files (*.elf *.iso *.cso)")
+        tr("ROM Files (*.elf *.iso *.cso *.bin)")
     );
 
     if (!file_name.isEmpty())

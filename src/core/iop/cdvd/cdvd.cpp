@@ -1,13 +1,15 @@
 #include <cstring>
 #include <ctime>
 #include <string>
+#include "bincuereader.hpp"
 #include "cdvd.hpp"
 #include "cso_reader.hpp"
 #include "iso_reader.hpp"
-#include "iop_dma.hpp"
 
-#include "../emulator.hpp"
-#include "../errors.hpp"
+#include "../iop_dma.hpp"
+
+#include "../../emulator.hpp"
+#include "../../errors.hpp"
 
 using namespace std;
 
@@ -227,6 +229,9 @@ bool CDVD_Drive::load_disc(const char *name, CDVD_CONTAINER a_container)
         case CDVD_CONTAINER::CISO:
             container = std::unique_ptr<CDVD_Container>(new CSO_Reader());
             break;
+        case CDVD_CONTAINER::BIN_CUE:
+            container = std::unique_ptr<CDVD_Container>(new BinCueReader());
+            break;
         default:
             container = nullptr;
             return false;
@@ -243,21 +248,21 @@ bool CDVD_Drive::load_disc(const char *name, CDVD_CONTAINER a_container)
     while (type != 1)
     {
         sector++;
-        container->seek(sector * 2048, std::ios::beg);
+        container->seek(sector, std::ios::beg);
         container->read(&type, sizeof(uint8_t));
     }
     printf("[CDVD] Primary Volume Descriptor found at sector %d\n", sector);
 
-    container->seek(sector * 2048, std::ios::beg);
+    container->seek(sector, std::ios::beg);
     container->read(pvd_sector, 2048);
 
     LBA = *(uint16_t*)&pvd_sector[128];
     printf("[CDVD] PVD LBA: $%08X\n", LBA);
 
-    root_location = *(uint32_t*)&pvd_sector[156 + 2] * LBA;
+    root_location = *(uint32_t*)&pvd_sector[156 + 2];
     root_len = *(uint32_t*)&pvd_sector[156 + 10];
     printf("[CDVD] Root dir len: %d\n", *(uint16_t*)&pvd_sector[156]);
-    printf("[CDVD] Extent loc: $%08lX\n", root_location);
+    printf("[CDVD] Extent loc: $%08lX\n", root_location * LBA);
     printf("[CDVD] Extent len: $%08lX\n", root_len);
 
     return true;
@@ -291,7 +296,6 @@ uint8_t* CDVD_Drive::read_file(string name, uint32_t& file_size)
             {
                 printf("[CDVD] Match found!\n");
                 file_location = *(uint32_t*)&root_extent[bytes + 2];
-                file_location *= LBA;
                 file_size = *(uint32_t*)&root_extent[bytes + 10];
                 printf("[CDVD] Location: $%08lX\n", file_location);
                 printf("[CDVD] Size: $%08X\n", file_size);
@@ -655,7 +659,7 @@ void CDVD_Drive::start_seek()
     if (seek_to > block_count)
         Errors::die("[CDVD] Invalid sector read $%08X (max size: $%08X)", seek_to, block_count);
 
-    container->seek(seek_to * 2048, std::ios::beg);
+    container->seek(seek_to, std::ios::beg);
 
     add_event(cycles_to_seek);
 }
