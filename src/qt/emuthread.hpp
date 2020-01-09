@@ -11,7 +11,7 @@
 #include "../core/emulator.hpp"
 #include "../core/errors.hpp"
 
-#include "../input_common/win_input.hpp"
+#include "../input_common/common_input.hpp"
 
 #define GSDUMP_BUFFERED_MESSAGES 100000
 
@@ -40,7 +40,7 @@ class EmuThread : public QThread
         int buffered_gs_messages;
         int current_gs_message;
 
-        WinInput input;
+        CommonInput input;
 
         void gsdump_run();
     public:

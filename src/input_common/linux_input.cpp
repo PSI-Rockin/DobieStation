@@ -1,7 +1,7 @@
 #include "linux_input.hpp"
 
 
-bool LinuxInput::initalizeAPI(DeviceAPI api) 
+bool LinuxInput::initalizeAPI() 
 {
 
 controllers = new controller[4];

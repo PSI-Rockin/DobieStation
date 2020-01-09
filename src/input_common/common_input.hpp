@@ -4,6 +4,15 @@
 #include <thread>
 #include <mutex>
 
+#ifdef __linux__ 
+#include "linux_input.hpp"
+
+#elif _WIN32
+#include "win_input.hpp"
+#endif
+
+
+
 enum virtualController{CROSS, TRIANGLE, CIRCLE, SQUARE, START, SELECT, R1, R2, R3, L1, L2, L3};
 
 enum deviceType{CONTROLLER, MOUSE, KEYBOARD, USB}; // USB is a subset of controllers like Guitar Hero stuff and for Pandubz future Eye Toy PR. Right pandubz ... you didnt forget, right?
@@ -32,7 +41,6 @@ struct inputEvent
 
 enum DeviceAPI {
 	NO_API = 0,
-	DI = 1,
 	WM = 2, // Windows Keyboard
 	RAW = 3, // It's FUCKING RAW!!!
 	XINPUT = 4,
@@ -52,9 +60,17 @@ protected:
 	DeviceAPI currentAPI;
 	int playerNumber;
 
+	#ifdef __linux__
+	LinuxInput linux_input;
+	#endif
+
+	#ifdef _WIN32
+	WinInput win_input;
+	#endif
+
 
 public:
-	virtual bool initalizeAPI(DeviceAPI api);
+	virtual bool initalizeAPI();
 	virtual void sendInput();
 	void initalize();
 	void update();
@@ -62,4 +78,3 @@ public:
 
 };
 
-#endif

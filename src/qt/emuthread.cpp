@@ -215,7 +215,7 @@ void EmuThread::run()
             try
             {
                 e.run();
-                input.sendInput();
+                input.update();
                 int w, h, new_w, new_h;
                 e.get_inner_resolution(w, h);
                 e.get_resolution(new_w, new_h);
