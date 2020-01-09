@@ -84,6 +84,7 @@ bool CSO_Reader::is_open()
 
 void CSO_Reader::seek(size_t ofs, std::ios::seekdir whence)
 {
+    ofs *= 2048;
     if (whence == std::ios::beg)
     {
         if ((uint64_t)ofs < m_size)
