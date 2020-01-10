@@ -4,20 +4,20 @@ void InputApi::initalize()
 {
 	// create thread here.
 #ifdef __linux__
-	linux_input = new LinuxInput();
-	linux_input->initalizeAPI();
+	input = std::make_unique<new LinuxInput>();
+	input->initalizeAPI();
 
 #elif WIN32
-	win_input = new WinInput();
-	win_input->initalizeAPI();
+	input = std::make_unique<WinInput>();
+	input->initalizeAPI();
 #endif
 }
 
 void InputApi::update()
 {
 #ifdef __linux__
-	linux_input->sendInput();
+	input->sendInput();
 #elif WIN32
-	win_input->sendInput();
+	input->sendInput();
 #endif
 }
