@@ -1,6 +1,11 @@
 #include "linux_input.hpp"
 
 
+LinuxInput::LinuxInput()
+{
+
+}
+
 bool LinuxInput::initalizeAPI() 
 {
 
@@ -38,7 +43,7 @@ else
 void LinuxInput::sendInput()
 {
 
-initalize();
+    //initalizeAPI();
     rc = libevdev_next_event(controllers[playerNumber].controller, LIBEVDEV_READ_FLAG_NORMAL, &ev);
 
 

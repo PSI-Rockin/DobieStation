@@ -12,13 +12,7 @@ class InputApi
 {
 
 private:
-#ifdef __linux__
-	LinuxInput* linux_input;
-
-#elif WIN32
-	WinInput* win_input;
-#endif
-
+	std::unique_ptr<CommonInput> input;
 public:
 	void initalize();
 	void update();

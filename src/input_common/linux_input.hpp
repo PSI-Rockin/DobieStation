@@ -33,6 +33,8 @@ int rc;
 
 public:
 
+LinuxInput();
+
 bool initalizeAPI();
 void sendInput ();
 

@@ -1,6 +1,8 @@
 #ifndef COMMONINPUT_H
 #define COMMONINPUT_H
 
+
+
 enum virtualController{CROSS, TRIANGLE, CIRCLE, SQUARE, START, SELECT, R1, R2, R3, L1, L2, L3};
 
 enum deviceType{CONTROLLER, MOUSE, KEYBOARD, USB}; // USB is a subset of controllers like Guitar Hero stuff and for Pandubz future Eye Toy PR. Right pandubz ... you didnt forget, right?
@@ -51,7 +53,6 @@ protected:
 public:
 	virtual bool initalizeAPI() = 0;
 	virtual void sendInput() = 0;
-	void update();
 };
 
 #endif
