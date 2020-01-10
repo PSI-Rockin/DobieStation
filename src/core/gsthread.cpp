@@ -25,7 +25,7 @@ static SwizzleTable<32,128,128> page_PSMCT4;
 
 #define printf(fmt, ...)(0)
 
-//#define GS_JIT
+#define GS_JIT
 
 /**
   * ~ GS notes ~
@@ -542,21 +542,40 @@ uint32_t GraphicsSynthesizerThread::get_CRT_color(DISPFB &dispfb, uint32_t x, ui
     }
 }
 
-void GraphicsSynthesizerThread::render_single_CRT(uint32_t *target, DISPFB &dispfb, DISPLAY &display)
+void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
 {
     int width;
     int height;
+    DISPLAY &cur_disp = reg.DISPLAY1;
 
-    if (display.magnify_x)
-        width = display.width / display.magnify_x;
+    //Makai Kingdom needs to take its display information from Display2
+    if (!reg.PMODE.circuit1)
+    {
+        cur_disp = reg.DISPLAY2;
+    }
+    if (cur_disp.magnify_x)
+        width = cur_disp.width / cur_disp.magnify_x;
     else
-        width = display.width >> 2;
+        width = cur_disp.width >> 2;
 
     //TODO - Find out why some games double their height
-    if (display.height > width)
-        height = display.height / 2;
+    //Examples are Pool Paradise, Silent Hill 2
+    //Makai Kingdom + Disgaea go the other way and half their height, but this is ok
+    //Resident Evil 4 has it's height just slightly higher than width (pseudo widescreen), so we need to be careful to check that
+
+    /*
+    height 511 magy 1 width 2562 magx 6 actual width 427 dx 656 dy 73 Interlaced 1 Frame 0 --- Resident Evil 4 (strangely cut off, broken with PCRTC change)
+    height 896 magy 1 width 2560 magx 5 actual width 512 dx 652 dy 50 Interlaced 1 Frame 0 --- Silent Hill 2
+    height 960 magy 1 width 2560 magx 4 actual width 640 dx 636 dy 42 Interlaced 1 Frame 0 --- Pool Paradise
+    height 224 magy 1 width 2560 magx 4 actual width 640 dx 636 dy 25 Interlaced 0 Frame 1 --- Makai
+      */
+
+    //Check for extremely high heights, slightly higher heights are ok as they are a sort of widescreen resolution
+    if (cur_disp.height > (width * 1.5))
+        height = cur_disp.height / 2;
     else
-        height = display.height;
+        height = cur_disp.height;
+
 
     for (int y = 0; y < height; y++)
     {
@@ -569,37 +588,29 @@ void GraphicsSynthesizerThread::render_single_CRT(uint32_t *target, DISPFB &disp
                 pixel_y *= 2;
             if (pixel_x >= width || pixel_y >= height)
                 continue;
-            uint32_t scaled_x = dispfb.x + x;
-            uint32_t scaled_y = dispfb.y + y;
-            scaled_x = (scaled_x * dispfb.width) / width;
-            uint32_t output1, output2, final_color;
+            uint32_t scaled_x1 = reg.DISPFB1.x + x;
+            uint32_t scaled_x2 = reg.DISPFB2.x + x;
+            uint32_t scaled_y1 = reg.DISPFB1.y + y;
+            uint32_t scaled_y2 = reg.DISPFB2.y + y;
 
-            if (reg.PMODE.circuit1)
-            {
-                output1 = get_CRT_color(dispfb, scaled_x, scaled_y);
-                output2 = 0;
-            }
-            else
-            {
-                output1 = 0;
-                output2 = get_CRT_color(dispfb, scaled_x, scaled_y);
-            }
+            uint32_t output1 = reg.PMODE.circuit1 ? get_CRT_color(reg.DISPFB1, scaled_x1, scaled_y1) : 0;
+            uint32_t output2 = reg.PMODE.circuit2 ? get_CRT_color(reg.DISPFB2, scaled_x2, scaled_y2) : reg.BGCOLOR;
 
-            //Only Circuit 1 can be blended with the background
-            if (reg.PMODE.blend_with_bg && reg.PMODE.circuit1)
+            if (reg.PMODE.blend_with_bg)
                 output2 = reg.BGCOLOR;
 
-            uint32_t alpha = (output1 >> 24) * 2;
+            uint32_t alpha;
 
-            //Only Circuit 1 can select the ALP value
-            if (reg.PMODE.use_ALP && reg.PMODE.circuit1)
+            if (reg.PMODE.use_ALP)
                 alpha = reg.PMODE.ALP;
+            else
+                alpha = (output1 >> 24) * 2;
 
             if (alpha > 0xFF)
                 alpha = 0xFF;
 
             uint32_t r1, g1, b1, r2, g2, b2, r, g, b;
-
+            uint32_t final_color;
             r1 = output1 & 0xFF; r2 = output2 & 0xFF;
             g1 = (output1 >> 8) & 0xFF; g2 = (output2 >> 8) & 0xFF;
             b1 = (output1 >> 16) & 0xFF; b2 = (output2 >> 16) & 0xFF;
@@ -622,92 +633,6 @@ void GraphicsSynthesizerThread::render_single_CRT(uint32_t *target, DISPFB &disp
 
             if (reg.SMODE2.frame_mode && reg.SMODE2.interlaced)
                 target[pixel_x + ((pixel_y + 1) * width)] = final_color;
-        }
-    }
-}
-
-void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
-{
-    //Circuit 1 only
-    if (reg.PMODE.circuit1 && !reg.PMODE.circuit2)
-        render_single_CRT(target, reg.DISPFB1, reg.DISPLAY1);
-    //Circuit 2 only
-    else if (!reg.PMODE.circuit1 && reg.PMODE.circuit2)
-        render_single_CRT(target, reg.DISPFB2, reg.DISPLAY2);
-    //Circuits 1 and 2 (merge circuit)
-    else
-    {
-        int width;
-        int height;
-
-        if (reg.DISPLAY1.magnify_x)
-            width = reg.DISPLAY1.width / reg.DISPLAY1.magnify_x;
-        else
-            width = reg.DISPLAY1.width >> 2;
-        //TODO - Find out why some games double their height
-        //Examples are Pool Paradise, Silent Hill 2
-        if (reg.DISPLAY1.height > width)
-            height = reg.DISPLAY1.height / 2;
-        else
-            height = reg.DISPLAY1.height;
-
-        for (int y = 0; y < height; y++)
-        {
-            for (int x = 0; x < width; x++)
-            {
-                int pixel_x = x;
-                int pixel_y = y;
-
-                if (reg.SMODE2.frame_mode && reg.SMODE2.interlaced)
-                    pixel_y *= 2;
-                if (pixel_x >= width || pixel_y >= height)
-                    continue;
-                uint32_t scaled_x1 = reg.DISPFB1.x + x;
-                uint32_t scaled_x2 = reg.DISPFB2.x + x;
-                uint32_t scaled_y1 = reg.DISPFB1.y + y;
-                uint32_t scaled_y2 = reg.DISPFB2.y + y;
-
-                scaled_x1 = (scaled_x1 * reg.DISPFB1.width) / width;
-                scaled_x2 = (scaled_x2 * reg.DISPFB2.width) / width;
-
-                uint32_t output1 = get_CRT_color(reg.DISPFB1, scaled_x1, scaled_y1);
-                uint32_t output2 = get_CRT_color(reg.DISPFB2, scaled_x2, scaled_y2);
-
-                if (reg.PMODE.blend_with_bg)
-                    output2 = reg.BGCOLOR;
-
-                uint32_t alpha = (output1 >> 24) * 2;
-                if (reg.PMODE.use_ALP)
-                    alpha = reg.PMODE.ALP;
-
-                if (alpha > 0xFF)
-                    alpha = 0xFF;
-
-                uint32_t r1, g1, b1, r2, g2, b2, r, g, b;
-                uint32_t final_color;
-                r1 = output1 & 0xFF; r2 = output2 & 0xFF;
-                g1 = (output1 >> 8) & 0xFF; g2 = (output2 >> 8) & 0xFF;
-                b1 = (output1 >> 16) & 0xFF; b2 = (output2 >> 16) & 0xFF;
-
-                r = ((r1 * alpha) + (r2 * (0xFF - alpha))) >> 8;
-                if (r > 0xFF)
-                    r = 0xFF;
-
-                g = ((g1 * alpha) + (g2 * (0xFF - alpha))) >> 8;
-                if (g > 0xFF)
-                    g = 0xFF;
-
-                b = ((b1 * alpha) + (b2 * (0xFF - alpha))) >> 8;
-                if (b > 0xFF)
-                    b = 0xFF;
-
-                final_color = 0xFF000000 | r | (g << 8) | (b << 16);
-
-                target[pixel_x + (pixel_y * width)] = final_color;
-
-                if (reg.SMODE2.frame_mode && reg.SMODE2.interlaced)
-                    target[pixel_x + ((pixel_y + 1) * width)] = final_color;
-            }
         }
     }
 }
@@ -795,7 +720,7 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             RGBAQ.b = (value >> 16) & 0xFF;
             RGBAQ.a = (value >> 24) & 0xFF;
 
-            uint32_t q = value >> 32;
+            uint32_t q = (value >> 32) & ~0xFF;
             RGBAQ.q = *(float*)&q;
             printf("[GS_t] RGBAQ: $%08X_%08X\n", value >> 32, value);
         }
@@ -3348,19 +3273,6 @@ int16_t GraphicsSynthesizerThread::multiply_tex_color(int16_t tex_color, int16_t
 
 void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
 {
-    float K = current_ctx->tex1.K;
-
-    if (current_ctx->tex1.LOD_method == 0 && !PRIM.use_UV && info.vtx_color.q != 1.0)
-    {
-        uint32_t q_int = (*(uint32_t*)&info.vtx_color.q & 0x7FFFFFFF) >> 16;
-        info.LOD = log2_lookup[q_int][current_ctx->tex1.L] + K;
-
-        if (!(current_ctx->tex1.filter_smaller & 0x1))
-            info.LOD = round(info.LOD + 0.5);
-    }
-    else
-        info.LOD = round(K);
-
     //Need to reset the values here
     //If the back of a triangle is MIP level 1 and the front is MIP level 0, it will have the wrong value
     info.tex_base = current_ctx->tex0.texture_base;
@@ -3369,74 +3281,92 @@ void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
     info.tex_height = current_ctx->tex0.tex_height;
 
     //Mipmapping is only enabled when the max MIP level is > 0 and filtering is set to a MIPMAP type
-    if (current_ctx->tex1.max_MIP_level && current_ctx->tex1.filter_smaller >= 2)
+    if (!current_ctx->tex1.max_MIP_level || current_ctx->tex1.filter_smaller < 2)
     {
-        //Determine mipmap level
-        info.mipmap_level = min((int8_t)info.LOD, (int8_t)current_ctx->tex1.max_MIP_level);
+        info.mipmap_level = 0;
+        return;
+    }
 
-        if (info.mipmap_level < 0)
-            info.mipmap_level = 0;
+    float K = current_ctx->tex1.K;
 
-        if (info.mipmap_level > 0)
+    if (current_ctx->tex1.LOD_method == 0 && !PRIM.use_UV)
+    {
+        if (info.vtx_color.q != 1.0f)
         {
+            uint32_t q_int = (*(uint32_t*)&info.vtx_color.q & 0x7FFFFFFF) >> 16;
+            info.LOD = log2_lookup[q_int][current_ctx->tex1.L] + K;
 
-            if (current_ctx->tex1.MTBA && info.mipmap_level < 4)
-            {
-                //Tex width and tex height must be equal for this mipmapping method to work
-                //Cartoon Network Racing breaks otherwise
-                if (info.tex_width < 32 || info.tex_width != info.tex_height)
-                {
-                    info.mipmap_level = 0;
-                    return;
-                }
-                //Counted in bytes
-                const static float format_sizes[] =
-                {
-                    //0x00
-                    4, 4, 2, 0, 0, 0, 0, 0,
-
-                    //0x08
-                    0, 0, 2, 0, 0, 0, 0, 0,
-
-                    //0x10
-                    0, 0, 0, 1, 0.5, 0, 0, 0,
-
-                    //0x18
-                    0, 0, 0, 4, 0, 0, 0, 0,
-
-                    //0x20
-                    0, 0, 0, 0, 4, 0, 0, 0,
-
-                    //0x28
-                    0, 0, 0, 0, 4, 0, 0, 0,
-
-                    //0x30
-                    4, 4, 2, 0, 0, 0, 0, 0,
-
-                    //0x38
-                    0, 0, 2, 0, 0, 0, 0, 0
-                };
-                //Calculate the texture base based on a continuous memory region
-
-                uint32_t offset;
-                for (int i = 0; i < info.mipmap_level; i++)
-                {
-                    offset = (info.tex_width * info.tex_height) >> (i << 1);
-                    info.tex_base += (offset * format_sizes[current_ctx->tex0.format]);
-                }
-            }
-            else
-                info.tex_base = current_ctx->miptbl.texture_base[info.mipmap_level - 1];
-            info.buffer_width = current_ctx->miptbl.width[info.mipmap_level - 1];
-            info.tex_width >>= info.mipmap_level;
-            info.tex_height >>= info.mipmap_level;
-
-            info.tex_width = max((int)info.tex_width, 1);
-            info.tex_height = max((int)info.tex_height, 1);
+            if (!(current_ctx->tex1.filter_smaller & 0x1))
+                info.LOD = round(info.LOD + 0.5);
         }
+        else
+            info.LOD = 0;
     }
     else
+        info.LOD = round(K);
+
+    //Determine mipmap level
+    info.mipmap_level = min((int8_t)info.LOD, (int8_t)current_ctx->tex1.max_MIP_level);
+
+    if (info.mipmap_level < 0)
         info.mipmap_level = 0;
+
+    if (info.mipmap_level > 0)
+    {
+        if (current_ctx->tex1.MTBA && info.mipmap_level < 4)
+        {
+            //Tex width and tex height must be equal for this mipmapping method to work
+            //Cartoon Network Racing breaks otherwise
+            if (info.tex_width < 32 || info.tex_width != info.tex_height)
+            {
+                info.mipmap_level = 0;
+                return;
+            }
+            //Counted in bytes
+            const static float format_sizes[] =
+            {
+                //0x00
+                4, 4, 2, 0, 0, 0, 0, 0,
+
+                //0x08
+                0, 0, 2, 0, 0, 0, 0, 0,
+
+                //0x10
+                0, 0, 0, 1, 0.5, 0, 0, 0,
+
+                //0x18
+                0, 0, 0, 4, 0, 0, 0, 0,
+
+                //0x20
+                0, 0, 0, 0, 4, 0, 0, 0,
+
+                //0x28
+                0, 0, 0, 0, 4, 0, 0, 0,
+
+                //0x30
+                4, 4, 2, 0, 0, 0, 0, 0,
+
+                //0x38
+                0, 0, 2, 0, 0, 0, 0, 0
+            };
+            //Calculate the texture base based on a continuous memory region
+
+            uint32_t offset;
+            for (int i = 0; i < info.mipmap_level; i++)
+            {
+                offset = (info.tex_width * info.tex_height) >> (i << 1);
+                info.tex_base += (offset * format_sizes[current_ctx->tex0.format]);
+            }
+        }
+        else
+            info.tex_base = current_ctx->miptbl.texture_base[info.mipmap_level - 1];
+        info.buffer_width = current_ctx->miptbl.width[info.mipmap_level - 1];
+        info.tex_width >>= info.mipmap_level;
+        info.tex_height >>= info.mipmap_level;
+
+        info.tex_width = max((int)info.tex_width, 1);
+        info.tex_height = max((int)info.tex_height, 1);
+    }
 }
 
 void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, TexLookupInfo& info)
@@ -4653,6 +4583,13 @@ GSTextureJitBlockRecord* GraphicsSynthesizerThread::recompile_tex_lookup(uint64_
     emitter_tex.MOVSX16_TO_32(R13, R13);
     emitter_tex.SAR32_REG_IMM(4, R12);
     emitter_tex.SAR32_REG_IMM(4, R13);
+
+    if (current_PRMODE->use_UV)
+    {
+        emitter_tex.MOV32_FROM_MEM(R14, RCX, sizeof(RGBAQ_REG) * 3 + sizeof(float));
+        emitter_tex.SAR32_CL(R12);
+        emitter_tex.SAR32_CL(R13);
+    }
 
     //Load tex width and height
     //RBX = width - 1, R15 = height - 1

@@ -513,7 +513,6 @@ class GraphicsSynthesizerThread
         void memdump(uint32_t* target, uint16_t& width, uint16_t& height);
 
         uint32_t get_CRT_color(DISPFB& dispfb, uint32_t x, uint32_t y);
-        void render_single_CRT(uint32_t* target, DISPFB& dispfb, DISPLAY& display);
         void render_CRT(uint32_t* target);
 
         void dump_texture(uint32_t* target, uint32_t start_addr, uint32_t width);

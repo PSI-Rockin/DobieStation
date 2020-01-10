@@ -294,12 +294,6 @@ void GS_REGISTERS::set_CRT(bool interlaced, int mode, bool frame_mode)
 
 void GS_REGISTERS::get_resolution(int &w, int &h)
 {
-
-    /*if (DISPLAY1.magnify_x)
-        w = DISPLAY1.width / DISPLAY1.magnify_x;
-    else
-        w = 640;*/
-
     /*switch (CRT_mode)
     {
     case 0x2:
@@ -314,11 +308,6 @@ void GS_REGISTERS::get_resolution(int &w, int &h)
     default:
         h = 448;
     }*/
-
-    h = DISPLAY1.height;
-    //TODO - Find out why some games double their height
-    /*if (h > w)
-        h /= 2;*/
 
     //Force the window to display everything in 4:3 for now
     w = 640;
@@ -343,7 +332,7 @@ void GS_REGISTERS::get_inner_resolution(int &w, int &h)
         w = current_display.width >> 2;
     h = current_display.height;
     //TODO - Find out why some games double their height
-    if (h > w)
+    if (h > (w * 1.5))
         h /= 2;
 }
 
