@@ -25,7 +25,7 @@ static SwizzleTable<32,128,128> page_PSMCT4;
 
 #define printf(fmt, ...)(0)
 
-#define GS_JIT
+//#define GS_JIT
 
 /**
   * ~ GS notes ~
@@ -572,14 +572,24 @@ void GraphicsSynthesizerThread::render_single_CRT(uint32_t *target, DISPFB &disp
             uint32_t scaled_x = dispfb.x + x;
             uint32_t scaled_y = dispfb.y + y;
             scaled_x = (scaled_x * dispfb.width) / width;
-            uint32_t final_color = get_CRT_color(dispfb, scaled_x, scaled_y);
-            uint32_t output2 = 0;
+            uint32_t output1, output2, final_color;
+
+            if (reg.PMODE.circuit1)
+            {
+                output1 = get_CRT_color(dispfb, scaled_x, scaled_y);
+                output2 = 0;
+            }
+            else
+            {
+                output1 = 0;
+                output2 = get_CRT_color(dispfb, scaled_x, scaled_y);
+            }
 
             //Only Circuit 1 can be blended with the background
             if (reg.PMODE.blend_with_bg && reg.PMODE.circuit1)
                 output2 = reg.BGCOLOR;
 
-            int alpha = (final_color >> 24) * 2;
+            uint32_t alpha = (output1 >> 24) * 2;
 
             //Only Circuit 1 can select the ALP value
             if (reg.PMODE.use_ALP && reg.PMODE.circuit1)
@@ -590,9 +600,9 @@ void GraphicsSynthesizerThread::render_single_CRT(uint32_t *target, DISPFB &disp
 
             uint32_t r1, g1, b1, r2, g2, b2, r, g, b;
 
-            r1 = final_color & 0xFF; r2 = output2 & 0xFF;
-            g1 = (final_color >> 8) & 0xFF; g2 = (output2 >> 8) & 0xFF;
-            b1 = (final_color >> 16) & 0xFF; b2 = (output2 >> 16) & 0xFF;
+            r1 = output1 & 0xFF; r2 = output2 & 0xFF;
+            g1 = (output1 >> 8) & 0xFF; g2 = (output2 >> 8) & 0xFF;
+            b1 = (output1 >> 16) & 0xFF; b2 = (output2 >> 16) & 0xFF;
 
             r = ((r1 * alpha) + (r2 * (0xFF - alpha))) >> 8;
             if (r > 0xFF)
@@ -666,7 +676,7 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
                 if (reg.PMODE.blend_with_bg)
                     output2 = reg.BGCOLOR;
 
-                int alpha = (output1 >> 24) * 2;
+                uint32_t alpha = (output1 >> 24) * 2;
                 if (reg.PMODE.use_ALP)
                     alpha = reg.PMODE.ALP;
 
