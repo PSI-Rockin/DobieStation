@@ -3280,13 +3280,6 @@ void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
     info.tex_width = current_ctx->tex0.tex_width;
     info.tex_height = current_ctx->tex0.tex_height;
 
-    //Mipmapping is only enabled when the max MIP level is > 0 and filtering is set to a MIPMAP type
-    if (!current_ctx->tex1.max_MIP_level || current_ctx->tex1.filter_smaller < 2)
-    {
-        info.mipmap_level = 0;
-        return;
-    }
-
     float K = current_ctx->tex1.K;
 
     if (current_ctx->tex1.LOD_method == 0 && !PRIM.use_UV)
@@ -3304,6 +3297,13 @@ void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
     }
     else
         info.LOD = round(K);
+
+    //Mipmapping is only enabled when the max MIP level is > 0 and filtering is set to a MIPMAP type
+    if (!current_ctx->tex1.max_MIP_level || current_ctx->tex1.filter_smaller < 2)
+    {
+        info.mipmap_level = 0;
+        return;
+    }
 
     //Determine mipmap level
     info.mipmap_level = min((int8_t)info.LOD, (int8_t)current_ctx->tex1.max_MIP_level);
