@@ -4,15 +4,6 @@
 #include <thread>
 #include <mutex>
 
-#ifdef __linux__ 
-#include "linux_input.hpp"
-
-#elif WIN32
-#include "win_input.hpp"
-#endif
-
-
-
 enum virtualController{CROSS, TRIANGLE, CIRCLE, SQUARE, START, SELECT, R1, R2, R3, L1, L2, L3};
 
 enum deviceType{CONTROLLER, MOUSE, KEYBOARD, USB}; // USB is a subset of controllers like Guitar Hero stuff and for Pandubz future Eye Toy PR. Right pandubz ... you didnt forget, right?
@@ -60,21 +51,10 @@ protected:
 	DeviceAPI currentAPI;
 	int playerNumber;
 
-	#ifdef __linux__
-	LinuxInput *linux_input;
-
-	#elif WIN32
-	WinInput *win_input;
-	#endif
-
-
 public:
-	virtual bool initalizeAPI();
-	virtual void sendInput();
-	void initalize();
+	virtual bool initalizeAPI() = 0;
+	virtual void sendInput() = 0;
 	void update();
-
-
 };
 
 #endif

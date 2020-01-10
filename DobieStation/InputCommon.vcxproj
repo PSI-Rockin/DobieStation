@@ -71,12 +71,14 @@
   <!-- cpp files -->
   <ItemGroup>
     <ClCompile Include="$(InputDir)win_input.cpp" />
-    <ClCompile Include="$(InputDir)common_input.cpp" />
+    <ClCompile Include="$(InputDir)input_api.cpp" />
   </ItemGroup>
   <!-- headers -->
   <ItemGroup>
     <ClInclude Include="$(InputDir)common_input.hpp" />
     <ClInclude Include="$(InputDir)win_input.hpp" />
+    <ClInclude Include="$(InputDir)input_api.hpp" />
+    <ClInclude Include="resource.h" />
   </ItemGroup>
   <!-- misc -->
   <ItemGroup>
@@ -88,6 +90,9 @@
     <None Include="$(RootDir).gitignore" />
     <None Include="$(RootDir)CONTRIBUTING.md" />
     <None Include="application\application.pro" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="InputCommon.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
