@@ -18,12 +18,21 @@
     <ClCompile Include="$(InputDir)win_input.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="$(InputDir)input_api.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="$(InputDir)\common_input.hpp">
+    <ClInclude Include="$(InputDir)win_input.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="$(InputDir)win_input.hpp">
+    <ClInclude Include="$(InputDir)common_input.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="resource.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="$(InputDir)input_api.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
@@ -38,5 +47,10 @@
     <None Include="$(RootDir).gitignore" />
     <None Include="$(RootDir)CONTRIBUTING.md" />
     <None Include="application\application.pro" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="InputCommon.rc">
+      <Filter>Resource Files</Filter>
+    </ResourceCompile>
   </ItemGroup>
 </Project>

@@ -4,8 +4,7 @@
 #include <vector>
 #include <iostream>
 #include "common_input.hpp"
-#include <libevdev/libevdev.h>
-
+#include <libevdev-1.0/libevdev/libevdev.h>
 struct controller // testing the structure type of controller which Xinput can do as well in this each controller gets an interface a player number and an event
 {
     inputEvent pressed;
@@ -34,10 +33,8 @@ int rc;
 
 public:
 
-void initalize();
-void poll(int playerNumber);
+bool initalizeAPI();
 void sendInput ();
-bool press (u_int16_t input);
 
 };
 

@@ -1,7 +1,12 @@
 #include "linux_input.hpp"
 
 
-void LinuxInput::initalize()
+LinuxInput::LinuxInput()
+{
+
+}
+
+bool LinuxInput::initalizeAPI() 
 {
 
 controllers = new controller[4];
@@ -35,16 +40,11 @@ else
 
 }
 
-void LinuxInput::poll(int playerNumber)
-{
-    rc = libevdev_next_event(controllers[playerNumber].controller, LIBEVDEV_READ_FLAG_NORMAL, &ev);
-}
-
-
 void LinuxInput::sendInput()
 {
 
-initalize();
+    //initalizeAPI();
+    rc = libevdev_next_event(controllers[playerNumber].controller, LIBEVDEV_READ_FLAG_NORMAL, &ev);
 
 
 }

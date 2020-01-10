@@ -1,15 +1,15 @@
 
-#ifndef XINPUT_HPP
-#define XINPUT_HPP
+#ifndef WININPUT_HPP
+#define WININPUT_HPP
 
 #include <iostream>
 #include <Windows.h>
 #include <Xinput.h>
 #include "common_input.hpp"
 
-#pragma comment (lib, "xinput.lib") 
+#pragma comment(lib, "Xinput9_1_0")
 
-class WinInput : CommonInput
+class WinInput : public CommonInput
 {
 
 private:
@@ -18,10 +18,11 @@ private:
 	bool connected;
 	XINPUT_STATE state; // General GamePad State
 	inputEvent event;
+
 public:
-	void initalize();
+	bool initalizeAPI();
 	void sendInput();
-	bool press(const WORD button);
+	bool press(const uint16_t button);
 };
 
 #endif 
