@@ -73,6 +73,7 @@ set(LIB_SRC
 add_library(${TARGET} STATIC ${LIB_SRC} ${LIB_HEADERS} ${COMMON_HEADERS})
 add_library(Ext::libdeflate ALIAS ${TARGET})
 set_target_properties(${TARGET} PROPERTIES PREFIX "")
+set_property(TARGET ${TARGET} PROPERTY FOLDER External)
 
 target_include_directories(${TARGET}
     PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
