@@ -10,7 +10,6 @@ set(SOURCES
 set(HEADERS  
   input_api.hpp
   linux_input.hpp
-  common_input.hpp
   )
 
 if (CMAKE_ASM_MASM_COMPILER_LOADED)
