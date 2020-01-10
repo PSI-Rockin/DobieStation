@@ -332,7 +332,7 @@ void GS_REGISTERS::get_inner_resolution(int &w, int &h)
         w = current_display.width >> 2;
     h = current_display.height;
     //TODO - Find out why some games double their height
-    if (h > (w * 1.5))
+    if (h >= (w * 1.5))
         h /= 2;
 }
 

@@ -571,7 +571,7 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
       */
 
     //Check for extremely high heights, slightly higher heights are ok as they are a sort of widescreen resolution
-    if (cur_disp.height > (width * 1.5))
+    if (cur_disp.height >= (width * 1.5))
         height = cur_disp.height / 2;
     else
         height = cur_disp.height;
