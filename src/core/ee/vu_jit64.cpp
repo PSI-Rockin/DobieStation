@@ -3122,6 +3122,16 @@ uint8_t* exec_block_vu(VU_JIT64& jit, VectorUnit& vu)
 
 uint16_t VU_JIT64::run(VectorUnit& vu)
 {
+    //Need to check we have space on the heap before running any recompiled code
+    //Resetting the heap during recompilation wipes out the prologue/epilogue!
+    //Checks for maximum 5mb block size of space before continuing
+    if (jit_heap.heap_is_full())
+    {
+        printf("[VU JIT] Not enough room for new blocks, clearing cache\n");
+        jit_heap.flush_all_blocks();
+        create_prologue_block();
+    }
+
     prologue_block(*this, vu);
     
     return cycle_count;

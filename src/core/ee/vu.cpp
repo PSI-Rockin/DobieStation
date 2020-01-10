@@ -352,7 +352,7 @@ void VectorUnit::run(int cycles)
         {
             if (!ebit_delay_slot)
             {
-                printf("[VU%d] Ended execution at PC %x!\n", id, PC);
+                //printf("[VU%d] Ended execution at PC %x!\n", id, PC);
                 running = false;
                 finish_on = false;
                 flush_pipes();
@@ -856,7 +856,7 @@ void VectorUnit::start_program(uint32_t addr)
         running = true;
         tbit_stop = false;
         PC = new_addr;
-        printf("[VU%d] Starting execution at PC %x!\n", id, PC);
+        //printf("[VU%d] Starting execution at PC %x!\n", id, PC);
         //Try to keep VU0 in sync with the EE
         //TODO: Account for VIF0 MSCAL timing
         if (!id)
