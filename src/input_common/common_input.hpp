@@ -1,5 +1,15 @@
-#ifndef COMMONINPUT_H
-#define COMMONINPUT_H
+#ifndef INPUTEVENT_H
+#define INUTEVENT_H
+
+#include <thread>
+#include <mutex>
+
+#ifdef __linux__ 
+#include "linux_input.hpp"
+
+#elif WIN32
+#include "win_input.hpp"
+#endif
 
 
 
@@ -50,9 +60,21 @@ protected:
 	DeviceAPI currentAPI;
 	int playerNumber;
 
+	#ifdef __linux__
+	LinuxInput *linux_input;
+
+	#elif WIN32
+	WinInput *win_input;
+	#endif
+
+
 public:
-	virtual bool initalizeAPI() = 0;
-	virtual void update() = 0;
+	virtual bool initalizeAPI();
+	virtual void sendInput();
+	void initalize();
+	void update();
+
+
 };
 
 #endif
