@@ -3,9 +3,12 @@ set(TARGET InputCommon)
 set(CMAKE_CXX_STANDARD 11)
 
 set(SOURCES
-   linux_input.cpp)
+   linux_input.cpp
+   input_api.cpp
+   )
 
-set(HEADERS
+set(HEADERS  
+  input_api.hpp
   linux_input.hpp
   common_input.hpp
   )
