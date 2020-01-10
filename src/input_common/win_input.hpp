@@ -21,7 +21,7 @@ private:
 
 public:
 	bool initalizeAPI();
-	void sendInput();
+	void update();
 	bool press(const uint16_t button);
 };
 

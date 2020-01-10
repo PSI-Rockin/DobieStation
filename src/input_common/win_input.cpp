@@ -35,7 +35,7 @@ bool WinInput::press(uint16_t button)
 }
 
 
-void WinInput::sendInput()
+void WinInput::update()
 {
 	DWORD button;
 

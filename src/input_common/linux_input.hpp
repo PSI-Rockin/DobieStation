@@ -36,7 +36,7 @@ public:
 LinuxInput();
 
 bool initalizeAPI();
-void sendInput ();
+void update();
 
 };
 
