@@ -2692,6 +2692,14 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
 {
     int ppd = 0; //pixels per doubleword (64-bits)
 
+    //Invalid transfer if no height/width has been set
+    if (TRXREG.width == 0 || TRXREG.height == 0)
+    {
+        TRXDIR = 3;
+        pixels_transferred = 0;
+        return;
+    }
+
     switch (BITBLTBUF.dest_format)
     {
         //PSMCT32
@@ -2872,6 +2880,14 @@ uint128_t GraphicsSynthesizerThread::local_to_host()
     return_data._u64[1] = 0;
     if (TRXDIR == 3)
         return return_data;
+
+    //Invalid transfer if no height/width has been set
+    if (TRXREG.width == 0 || TRXREG.height == 0)
+    {
+        TRXDIR = 3;
+        pixels_transferred = 0;
+        return return_data;
+    }
 
     switch (BITBLTBUF.source_format)
     {
@@ -3102,6 +3118,14 @@ void GraphicsSynthesizerThread::local_to_local()
 
     uint16_t dest_start_x = 0, src_start_x = 0;
     int x_step = 0, y_step = 0;
+
+    //Invalid transfer if no height/width has been set
+    if (TRXREG.width == 0 || TRXREG.height == 0)
+    {
+        TRXDIR = 3;
+        pixels_transferred = 0;
+        return;
+    }
 
     switch (TRXPOS.trans_order)
     {
