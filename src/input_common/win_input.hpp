@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 
 #ifndef WININPUT_HPP
 #define WININPUT_HPP

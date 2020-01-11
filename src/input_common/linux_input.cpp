@@ -40,7 +40,7 @@ else
 
 }
 
-void LinuxInput::update()
+void LinuxInput::sendInput()
 {
 
     //initalizeAPI();
