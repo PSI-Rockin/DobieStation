@@ -7,7 +7,6 @@
 #include <libevdev-1.0/libevdev/libevdev.h>
 struct controller // testing the structure type of controller which Xinput can do as well in this each controller gets an interface a player number and an event
 {
-    inputEvent pressed;
     libevdev *controller; // the interface itself
 };
 
@@ -33,8 +32,8 @@ int rc;
 
 public:
 
-bool initalizeAPI();
-void sendInput ();
+bool reset();
+void poll ();
 
 };
 

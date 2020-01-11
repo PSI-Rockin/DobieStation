@@ -9,6 +9,7 @@ set(SOURCES
 
 set(HEADERS  
   input_api.hpp
+  common_input.hpp
   linux_input.hpp
   )
 

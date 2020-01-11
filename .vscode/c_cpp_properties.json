@@ -6,14 +6,13 @@
                 "${workspaceFolder}/**",
                 "/usr/include/libevdev-1.0/libevdev",
                 "/usr/include/qt/QtCore",
-                "/usr/include/qt",
-                "/usr/include/libevdev-1.0"
+                "/usr/include/qt"
             ],
             "defines": [],
-            "compilerPath": "/usr/bin/clang",
+            "compilerPath": "/usr/bin/gcc",
             "cStandard": "c11",
             "cppStandard": "c++17",
-            "intelliSenseMode": "clang-x64"
+            "intelliSenseMode": "gcc-x64"
         }
     ],
     "version": 4

@@ -28,19 +28,15 @@ bool WinInput::initalizeAPI()
 	}
 }
 
-
 bool WinInput::press(uint16_t button)
 {
 	return (state.Gamepad.wButtons & button) != 0;
 }
 
-
-void WinInput::update()
+void WinInput::poll()
 {
 	DWORD button;
 
-	for (int i = 0; i < 4; i++)
-	{
 		if (initalizeAPI())
 		{
 			switch (press(state.Gamepad.wButtons))
@@ -70,7 +66,6 @@ void WinInput::update()
 				std::cout << "Start is pressed" << std::endl;
 				break;
 			}
-		}
 	}
 
 }

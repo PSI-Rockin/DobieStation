@@ -48,12 +48,8 @@ protected:
 	int playerNumber;
 
 public:
-	virtual bool initalizeAPI();
-	virtual void sendInput();
-	void initalize();
-	void update();
-
-
+	virtual bool initalizeAPI() = 0;
+	virtual void sendInput() = 0;
 };
 
 

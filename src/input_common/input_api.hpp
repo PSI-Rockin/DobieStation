@@ -1,9 +1,5 @@
-#ifndef INPUTAPI_HPP
-#define INPUTAPI_HPP
-
-#include <thread>
-#include <mutex>
-
+#ifndef INPUTMANAGER_HPP
+#define INPUTMANAGER_HPP
 
 #ifdef __linux__ 
 #include "linux_input.hpp"
@@ -12,17 +8,14 @@
 #include "win_input.hpp"
 #endif
 
-class InputApi{
+class InputManager{
 
 private:
 	std::unique_ptr<CommonInput> input;
-	std::mutex inputMutex;
-	DeviceAPI currentAPI;
-	int playerNumber;
 public:
 	void initalize();
-	virtual void update() = 0;
-	virtual bool initalizeAPI() = 0;
+	void poll();
 };
+
 
 #endif

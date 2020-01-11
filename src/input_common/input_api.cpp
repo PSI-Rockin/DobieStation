@@ -1,20 +1,21 @@
 
 #include "input_api.hpp"
 
-void InputApi::initalize()
+void InputManager::initalize()
 {
 	// create thread here.
 #ifdef __linux__
 	input = std::make_unique<LinuxInput>();
-	input->initalizeAPI();
 
 #elif WIN32
 	input = std::make_unique<WinInput>();
-	input->initalizeAPI();
 #endif
+	
+	input->initalizeAPI();
+
 }
 
-void InputApi::update()
+void InputManager::poll()
 {
-	input->sendInput();
+	input->poll();
 }

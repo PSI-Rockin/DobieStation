@@ -13,8 +13,7 @@ EmuThread::EmuThread()
     gsdump_reading = false;
     frame_advance = false;
     gsdump_read_buffer = new GSMessage[GSDUMP_BUFFERED_MESSAGES];
-    input = new InputApi();
-    input->initalize();
+    input.initalize();
 }
 
 EmuThread::~EmuThread()
@@ -217,7 +216,6 @@ void EmuThread::run()
             try
             {
                 e.run();
-                input->update();
                 int w, h, new_w, new_h;
                 e.get_inner_resolution(w, h);
                 e.get_resolution(new_w, new_h);
@@ -249,6 +247,7 @@ void EmuThread::run()
                 pause(PAUSE_EVENT::GAME_NOT_LOADED);
             }
         }
+        input.poll();
     }
 }
 

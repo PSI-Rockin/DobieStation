@@ -6,7 +6,7 @@ LinuxInput::LinuxInput()
 
 }
 
-bool LinuxInput::initalizeAPI() 
+bool LinuxInput::reset() 
 {
 
 controllers = new controller[4];
@@ -40,7 +40,7 @@ else
 
 }
 
-void LinuxInput::sendInput()
+void LinuxInput::poll()
 {
 
     //initalizeAPI();
