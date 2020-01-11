@@ -1,4 +1,3 @@
-
 #include "input_api.hpp"
 
 void InputManager::initalize()
@@ -9,12 +8,10 @@ void InputManager::initalize()
 #elif WIN32
 	input = std::make_unique<WinInput>();
 #endif
-	
 	input->reset();
-
 }
 
 void InputManager::poll()
 {
-	input->poll();
+	input->sendInput();
 }
