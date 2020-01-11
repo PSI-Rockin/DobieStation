@@ -7,15 +7,13 @@
 *******************************************************/
 bool WinInput::initalizeAPI()
 {
-	for (DWORD i = 0; i < XUSER_MAX_COUNT; i++) 
-	{
 		ZeroMemory(&isConnected, sizeof(state));
 
-		isConnected = XInputGetState(i, &state);
+		isConnected = XInputGetState(0, &state);
 
 		if (isConnected == ERROR_SUCCESS) // Controller is connected
 		{			
-			playerNumber = i;
+			playerNumber = 0;
 			std::cout << "Xbox Controller Detected: " << playerNumber << std::endl;
 			return true;
 		}
@@ -25,7 +23,6 @@ bool WinInput::initalizeAPI()
 			std::cout << "No xbox controller Detected: " << std::endl;
 			return false;
 		}
-	}
 }
 
 bool WinInput::press(uint16_t button)
@@ -33,39 +30,36 @@ bool WinInput::press(uint16_t button)
 	return (state.Gamepad.wButtons & button) != 0;
 }
 
-void WinInput::sendInput()
+void WinInput::poll() 
 {
 	DWORD button;
 
-		if (initalizeAPI())
-		{
-			switch (press(state.Gamepad.wButtons))
-			{
-			case XINPUT_GAMEPAD_A:
-				event.construct(virtualController::CROSS, playerNumber, 0, 0, 0, 0);
-				std::cout << "A is pressed" << std::endl;
-				break;
+	ZeroMemory(&button, sizeof(state));
 
-			case XINPUT_GAMEPAD_B:
-				event.construct(virtualController::CIRCLE, playerNumber, 0, 0, 0, 0);
-				std::cout << "B is pressed" << std::endl;
-				break;
-
-			case XINPUT_GAMEPAD_X:
-				event.construct(virtualController::SQUARE, playerNumber, 0, 0, 0, 0);
-				std::cout << "X is pressed" << std::endl;
-				break;
-
-			case XINPUT_GAMEPAD_Y:
-				event.construct(virtualController::TRIANGLE, playerNumber, 0, 0, 0, 0);
-				std::cout << "Y is pressed" << std::endl;
-				break;
-
-			case XINPUT_GAMEPAD_START:
-				event.construct(virtualController::START, playerNumber, 0, 0, 0, 0);
-				std::cout << "Start is pressed" << std::endl;
-				break;
-			}
+	button = XInputGetState(0, &state);
+	
+	if (state.Gamepad.wButtons & XINPUT_GAMEPAD_A)
+	{
+		std::cout << "A is pressed" << std::endl;
 	}
 
+	if (state.Gamepad.wButtons & XINPUT_GAMEPAD_B)
+	{
+		std::cout << "B is pressed" << std::endl;
+	}
+		
+	if (state.Gamepad.wButtons & XINPUT_GAMEPAD_X)
+	{
+		std::cout << "X is pressed" << std::endl;
+	}
+
+	if (state.Gamepad.wButtons & XINPUT_GAMEPAD_Y)
+	{
+		std::cout << "Y is pressed" << std::endl;
+	}
+	
+	if (state.Gamepad.wButtons & XINPUT_GAMEPAD_START)	
+	{
+			std::cout << "Start is pressed" << std::endl;	
+	}
 }

@@ -20,7 +20,7 @@ private:
 
 public:
 	bool initalizeAPI();
-	void sendInput();
+	void poll();
 	bool press(const uint16_t button);
 };
 
