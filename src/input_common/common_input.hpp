@@ -49,7 +49,7 @@ protected:
 
 public:
 	virtual bool initalizeAPI() = 0;
-	virtual void sendInput() = 0;
+	virtual void poll() = 0;
 };
 
 
