@@ -1,4 +1,3 @@
-
 #include "input_api.hpp"
 
 void InputManager::initalize()
@@ -12,10 +11,9 @@ void InputManager::initalize()
 #endif
 	
 	input->initalizeAPI();
-
 }
 
 void InputManager::poll()
 {
-	input->poll();
+	input->sendInput();
 }

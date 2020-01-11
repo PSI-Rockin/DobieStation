@@ -33,7 +33,7 @@ bool WinInput::press(uint16_t button)
 	return (state.Gamepad.wButtons & button) != 0;
 }
 
-void WinInput::poll()
+void WinInput::sendInput()
 {
 	DWORD button;
 

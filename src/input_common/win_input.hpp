@@ -1,5 +1,3 @@
-<<<<<<< HEAD
-
 #ifndef WININPUT_HPP
 #define WININPUT_HPP
 
@@ -22,7 +20,7 @@ private:
 
 public:
 	bool initalizeAPI();
-	void poll();
+	void sendInput();
 	bool press(const uint16_t button);
 };
 
