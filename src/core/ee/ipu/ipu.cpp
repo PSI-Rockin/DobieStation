@@ -1102,11 +1102,13 @@ void ImageProcessingUnit::write_command(uint32_t value)
                 printf("[IPU] VDEC\n");
                 command_decoding = true;
                 vdec_state = VDEC_STATE::ADVANCE;
+                process_VDEC();
                 break;
             case 0x04:
                 printf("[IPU] FDEC\n");
                 command_decoding = true;
                 fdec_state = VDEC_STATE::ADVANCE;
+                process_FDEC();
                 break;
             case 0x05:
                 printf("[IPU] SETIQ\n");
