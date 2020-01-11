@@ -40,7 +40,7 @@ class EmuThread : public QThread
         int buffered_gs_messages;
         int current_gs_message;
 
-        InputApi *input;
+        InputManager input;
 
         void gsdump_run();
     public:

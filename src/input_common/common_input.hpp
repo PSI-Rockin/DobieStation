@@ -1,17 +1,5 @@
-#ifndef INPUTEVENT_H
-#define INUTEVENT_H
-
-#include <thread>
-#include <mutex>
-
-#ifdef __linux__ 
-#include "linux_input.hpp"
-
-#elif WIN32
-#include "win_input.hpp"
-#endif
-
-
+#ifndef COMMONINPUT_H
+#define COMMONINPUT_H
 
 enum virtualController{CROSS, TRIANGLE, CIRCLE, SQUARE, START, SELECT, R1, R2, R3, L1, L2, L3};
 
@@ -55,26 +43,14 @@ class CommonInput
 {
 
 protected:
-	std::thread *input;
-	std::mutex inputMutex;
 	DeviceAPI currentAPI;
 	int playerNumber;
 
-	#ifdef __linux__
-	LinuxInput *linux_input;
-
-	#elif WIN32
-	WinInput *win_input;
-	#endif
-
-
 public:
-	virtual bool initalizeAPI();
-	virtual void sendInput();
-	void initalize();
-	void update();
-
-
+	virtual bool initalizeAPI() = 0;
+	virtual void sendInput() = 0;
 };
+
+
 
 #endif
