@@ -1,6 +1,6 @@
 set(TARGET InputCommon)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 
 set(SOURCES
    linux_input.cpp
@@ -21,7 +21,6 @@ endif()
 add_library(${TARGET} ${SOURCES} ${HEADERS})
 add_library(Dobie::InputCommon ALIAS ${TARGET})
 
-target_link_libraries(${TARGET} Ext::libdeflate Threads::Threads)
 target_compile_options(${TARGET} PRIVATE ${DOBIE_FLAGS})
 
 if (WIN32)

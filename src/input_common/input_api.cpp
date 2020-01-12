@@ -10,7 +10,7 @@ void InputManager::initalize()
 	input = std::make_unique<WinInput>();
 #endif
 	
-	input->initalizeAPI();
+	input->reset();
 
 }
 
