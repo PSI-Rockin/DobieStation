@@ -352,7 +352,7 @@ void VectorUnit::run(int cycles)
         {
             if (!ebit_delay_slot)
             {
-                printf("[VU%d] Ended execution at PC %x!\n", id, PC);
+                //printf("[VU%d] Ended execution at PC %x!\n", id, PC);
                 running = false;
                 finish_on = false;
                 flush_pipes();
@@ -856,7 +856,7 @@ void VectorUnit::start_program(uint32_t addr)
         running = true;
         tbit_stop = false;
         PC = new_addr;
-        printf("[VU%d] Starting execution at PC %x!\n", id, PC);
+        //printf("[VU%d] Starting execution at PC %x!\n", id, PC);
         //Try to keep VU0 in sync with the EE
         //TODO: Account for VIF0 MSCAL timing
         if (!id)
@@ -1431,6 +1431,95 @@ void VectorUnit::div(uint32_t instr)
     printf("Reg2: %f\n", denom);
 }
 
+float VectorUnit::calculate_atan(float t)
+{
+    //In reality, VU1 uses an approximation to derive the result. This is shown here.
+    const static float atan_const[] = 
+    { 
+        0.999999344348907f, -0.333298563957214f, 
+        0.199465364217758f, -0.139085337519646f, 
+        0.096420042216778f, -0.055909886956215f,
+        0.021861229091883f, -0.004054057877511f
+    };
+
+    float result = 0.785398185253143f; //pi/4
+
+    for (int i = 0; i < 8; i++)
+    {
+        result += atan_const[i] * powf(t, (i * 2) + 1);
+    }
+
+    return result;
+}
+
+void VectorUnit::eatan(uint32_t instr)
+{
+    float x = convert(gpr[_fs_].u[_fsf_]);
+
+    if (!id)
+    {
+        Errors::print_warning("[VU] EATAN called on VU0!");
+        return;
+    }
+
+    //P = atan(x)
+    if (x == -1.0f)
+        new_P_instance.u = 0xFF7FFFFF;
+    else
+    {
+        x = (x - 1.0f) / (x + 1.0f);
+
+        new_P_instance.f = calculate_atan(x);
+    }
+    start_EFU_unit(54);
+}
+
+void VectorUnit::eatanxy(uint32_t instr)
+{
+    float x = convert(gpr[_fs_].u[0]);
+    float y = convert(gpr[_fs_].u[1]);
+
+    if (!id)
+    {
+        Errors::print_warning("[VU] EATANxy called on VU0!");
+        return;
+    }
+
+    //P = atan(y/x)
+    if (y + x == 0.0f)
+        new_P_instance.u = 0x7F7FFFFF | (gpr[_fs_].u[1] & 0x80000000);
+    else
+    {
+        x = (y - 1.0f) / (y + x);
+
+        new_P_instance.f = calculate_atan(x);
+    }
+    start_EFU_unit(54);
+}
+
+void VectorUnit::eatanxz(uint32_t instr)
+{
+    float x = convert(gpr[_fs_].u[0]);
+    float z = convert(gpr[_fs_].u[2]);
+
+    if (!id)
+    {
+        Errors::print_warning("[VU] EATANxz called on VU0!");
+        return;
+    }
+
+    //P = atan(z/x)
+    if (z + x == 0.0f)
+        new_P_instance.u = 0x7F7FFFFF | (gpr[_fs_].u[2] & 0x80000000);
+    else
+    {
+        x = (z - x) / (z + x);
+
+        new_P_instance.f = calculate_atan(x);
+    }
+    start_EFU_unit(54);
+}
+
 void VectorUnit::eexp(uint32_t instr)
 {
     //P = exp(-reg)
@@ -1616,7 +1705,7 @@ void VectorUnit::esadd(uint32_t instr)
 
 void VectorUnit::fcand(uint32_t value)
 {
-    printf("[VU] FCAND: $%08X\n", value);
+    printf("[VU] FCAND VI01: $%08X\n", value);
     if ((*CLIP_flags & 0xFFFFFF) & (value & 0xFFFFFF))
         set_int(1, 1);
     else
@@ -1625,7 +1714,7 @@ void VectorUnit::fcand(uint32_t value)
 
 void VectorUnit::fceq(uint32_t instr)
 {
-    printf("[VU] FCEQ: $%08X\n", instr);
+    printf("[VU] FCEQ VI01: $%08X\n", instr);
     if ((*CLIP_flags & 0xFFFFFF) == (instr & 0xFFFFFF))
         set_int(1, 1);
     else
@@ -1634,12 +1723,13 @@ void VectorUnit::fceq(uint32_t instr)
 
 void VectorUnit::fcget(uint32_t instr)
 {
-    printf("[VU] FCGET: %d\n", _it_);
+    printf("[VU] FCGET VI%02D\n", _it_);
     set_int(_it_, *CLIP_flags & 0xFFF);
 }
 
 void VectorUnit::fcor(uint32_t instr)
 {
+    printf("[VU] FCOR VI01: $%08X\n", instr & 0xFFFFFF);
     if (((*CLIP_flags & 0xFFFFFF) | (instr & 0xFFFFFF)) == 0xFFFFFF)
         set_int(1, 1);
     else
@@ -1654,7 +1744,7 @@ void VectorUnit::fcset(uint32_t instr)
 
 void VectorUnit::fmeq(uint32_t instr)
 {
-    printf("[VU] FMEQ: $%04X\n", int_gpr[_is_].u);
+    printf("[VU] FMEQ VI%02D VI%02D: $%04X\n", _it_, _is_, int_gpr[_is_].u);
     if((*MAC_flags & 0xFFFF) == (int_gpr[_is_].u & 0xFFFF))
         set_int(_it_, 1);
     else
@@ -1663,29 +1753,47 @@ void VectorUnit::fmeq(uint32_t instr)
 
 void VectorUnit::fmand(uint32_t instr)
 {
-    printf("[VU] FMAND: $%04X\n", int_gpr[_is_].u);
+    printf("[VU] FMAND VI%02D VI%02D: $%04X\n", _it_, _is_, int_gpr[_is_].u);
     printf("MAC flags: $%08X\n", *MAC_flags);
     set_int(_it_, (*MAC_flags & 0xFFFF) & int_gpr[_is_].u);
 }
 
 void VectorUnit::fmor(uint32_t instr)
 {
-    printf("[VU] FMOR: $%04X\n", int_gpr[_is_].u);
+    printf("[VU] FMOR VI%02D VI%02D: $%04X\n", _it_, _is_, int_gpr[_is_].u);
     set_int(_it_, (*MAC_flags & 0xFFFF) | int_gpr[_is_].u);
+}
+
+void VectorUnit::fseq(uint32_t instr)
+{
+    uint16_t imm = (((instr >> 21) & 0x1) << 11) | (instr & 0x7FF);
+    printf("[VU] FSEQ VI%02D: $%08X\n", _it_, imm);
+    if ((status & 0xFFF) == imm)
+        set_int(_it_, 1);
+    else
+        set_int(_it_, 0);
 }
 
 void VectorUnit::fsset(uint32_t instr)
 {
-    printf("[VU] FSSET: $%08X\n", instr);
-    status_value = (instr & 0xFC0);
+    uint16_t imm = (((instr >> 21) & 0x1) << 11) | (instr & 0x7FF);
+    printf("[VU] FSSET: $%08X\n", imm);
+    status_value = imm;
     status_pipe = 4;
 }
 
 void VectorUnit::fsand(uint32_t instr)
 {
     uint16_t imm = (((instr >> 21 ) & 0x1) << 11) | (instr & 0x7FF);
-    printf("[VU] FSAND: $%08X\n", imm);
+    printf("[VU] FSAND VI%02D: $%08X\n", _it_, imm);
     set_int(_it_, status & imm);
+}
+
+void VectorUnit::fsor(uint32_t instr)
+{
+    uint16_t imm = (((instr >> 21) & 0x1) << 11) | (instr & 0x7FF);
+    printf("[VU] FSOR VI%02D: $%08X\n", _it_, imm);
+    set_int(_it_, status | imm);
 }
 
 void VectorUnit::ftoi0(uint32_t instr)
@@ -2887,6 +2995,24 @@ void VectorUnit::subai(uint32_t instr)
 {
     printf("[VU] SUBAi: ");
     float op = convert(I.u);
+    for (int i = 0; i < 4; i++)
+    {
+        if (_field & (1 << (3 - i)))
+        {
+            ACC.f[i] = convert(gpr[_fs_].u[i]) - op;
+            ACC.f[i] = update_mac_flags(ACC.f[i], i);
+            printf("(%d)%f ", i, ACC.f[i]);
+        }
+        else
+            clear_mac_flags(i);
+    }
+    printf("\n");
+}
+
+void VectorUnit::subaq(uint32_t instr)
+{
+    printf("[VU] SUBAq: ");
+    float op = convert(Q.u);
     for (int i = 0; i < 4; i++)
     {
         if (_field & (1 << (3 - i)))

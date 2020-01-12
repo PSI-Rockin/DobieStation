@@ -19,9 +19,8 @@ private:
 	inputEvent event;
 
 public:
-	bool initalizeAPI();
+	bool reset();
 	void poll();
-	bool press(const uint16_t button);
 };
 
 #endif 

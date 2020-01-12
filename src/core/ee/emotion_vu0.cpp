@@ -825,6 +825,9 @@ void EmotionInterpreter::cop2_special2(VectorUnit &vu0, uint32_t instruction)
         case 0x21:
             cop2_vmaddaq(vu0, instruction);
             break;
+        case 0x22:
+            cop2_vaddai(vu0, instruction);
+            break;
         case 0x23:
             cop2_vmaddai(vu0, instruction);
             break;
@@ -1250,6 +1253,18 @@ void EmotionInterpreter::cop2_vadda(VectorUnit &vu0, uint32_t instruction)
 
     vu0.handle_cop2_stalls();
     vu0.adda(instruction);
+}
+
+void EmotionInterpreter::cop2_vaddai(VectorUnit &vu0, uint32_t instruction)
+{
+    uint8_t reg1 = (instruction >> 11) & 0x1F;
+    uint8_t field = (instruction >> 21) & 0xF;
+
+    vu0.decoder.vf_read0[0] = reg1;
+    vu0.decoder.vf_read0_field[0] = field;
+
+    vu0.handle_cop2_stalls();
+    vu0.addai(instruction);
 }
 
 void EmotionInterpreter::cop2_vmadda(VectorUnit &vu0, uint32_t instruction)

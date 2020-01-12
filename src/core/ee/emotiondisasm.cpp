@@ -1899,6 +1899,11 @@ string disasm_vadda(uint32_t instruction)
     return disasm_cop2_acc("vadda", instruction);
 }
 
+string disasm_vaddai(uint32_t instruction)
+{
+    return disasm_cop2_acc_i("vadda", instruction);
+}
+
 string disasm_vmadda(uint32_t instruction)
 {
     return disasm_cop2_acc("vmadda", instruction);

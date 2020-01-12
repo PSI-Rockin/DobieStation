@@ -3,7 +3,7 @@
 
 #ifdef __linux__ 
 #include "linux_input.hpp"
-
+#include <memory>
 #elif WIN32
 #include "win_input.hpp"
 #endif

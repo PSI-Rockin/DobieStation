@@ -262,6 +262,10 @@ class VectorUnit
         void bal(uint32_t instr);
         void clip(uint32_t instr);
         void div(uint32_t instr);
+        float calculate_atan(float t);
+        void eatan(uint32_t instr);
+        void eatanxy(uint32_t instr);
+        void eatanxz(uint32_t instr);
         void eexp(uint32_t instr);
         void esin(uint32_t instr);
         void ercpr(uint32_t instr);
@@ -280,8 +284,10 @@ class VectorUnit
         void fmeq(uint32_t instr);
         void fmand(uint32_t instr);
         void fmor(uint32_t instr);
+        void fseq(uint32_t instr);
         void fsset(uint32_t instr);
         void fsand(uint32_t instr);
+        void fsor(uint32_t instr);
         void ftoi0(uint32_t instr);
         void ftoi4(uint32_t instr);
         void ftoi12(uint32_t instr);
@@ -363,6 +369,7 @@ class VectorUnit
         void suba(uint32_t instr);
         void subabc(uint32_t instr);
         void subai(uint32_t instr);
+        void subaq(uint32_t instr);
         void subbc(uint32_t instr);
         void subi(uint32_t instr);
         void subq(uint32_t instr);

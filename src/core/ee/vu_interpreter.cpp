@@ -734,6 +734,9 @@ void upper_special(VectorUnit &vu, uint32_t instr)
         case 0x23:
             maddai(vu, instr);
             break;
+        case 0x24:
+            subaq(vu, instr);
+            break;
         case 0x25:
             msubaq(vu, instr);
             break;
@@ -1039,6 +1042,16 @@ void maddai(VectorUnit &vu, uint32_t instr)
     upper_op = &VectorUnit::maddai;
 }
 
+void subaq(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t field = (instr >> 21) & 0xF;
+
+    vu.decoder.vf_read0[0] = source;
+    vu.decoder.vf_read0_field[0] = field;
+    upper_op = &VectorUnit::subaq;
+}
+
 void msubaq(VectorUnit &vu, uint32_t instr)
 {
     uint8_t source = (instr >> 11) & 0x1F;
@@ -1329,6 +1342,12 @@ void lower1_special(VectorUnit &vu, uint32_t instr)
         case 0x73:
             erleng(vu, instr);
             break;
+        case 0x74:
+            eatanxy(vu, instr);
+            break;
+        case 0x75:
+            eatanxz(vu, instr);
+            break;
         case 0x76:
             esum(vu, instr);
             break;
@@ -1342,12 +1361,14 @@ void lower1_special(VectorUnit &vu, uint32_t instr)
             ercpr(vu, instr);
             break;
         case 0x7B:
-            //waitp should always execute before upper
-            vu.waitp(instr);
+            //waitp executed before upper instruction
             lower_op = &VectorUnit::nop;
             break;
         case 0x7C:
             esin(vu, instr);
+            break;
+        case 0x7D:
+            eatan(vu, instr);
             break;
         case 0x7E:
             eexp(vu, instr);
@@ -1682,6 +1703,34 @@ void esin(VectorUnit &vu, uint32_t instr)
     lower_op = &VectorUnit::esin;
 }
 
+void eatan(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t source = (instr >> 11) & 0x1F;
+    uint8_t fsf = (instr >> 21) & 0x3;
+
+    vu.decoder.vf_read0[1] = source;
+    vu.decoder.vf_read0_field[1] = 1 << (3 - fsf);
+    lower_op = &VectorUnit::eatan;
+}
+
+void eatanxy(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t source = (instr >> 11) & 0x1F;
+
+    vu.decoder.vf_read0[1] = source;
+    vu.decoder.vf_read0_field[1] = 0xC; //xy
+    lower_op = &VectorUnit::eatanxy;
+}
+
+void eatanxz(VectorUnit &vu, uint32_t instr)
+{
+    uint8_t source = (instr >> 11) & 0x1F;
+
+    vu.decoder.vf_read0[1] = source;
+    vu.decoder.vf_read0_field[1] = 0xA; //xz
+    lower_op = &VectorUnit::eatanxz;
+}
+
 void eexp(VectorUnit &vu, uint32_t instr)
 {
     uint8_t source = (instr >> 11) & 0x1F;
@@ -1727,11 +1776,17 @@ void lower2(VectorUnit &vu, uint32_t instr)
         case 0x13:
             fcor(vu, instr);
             break;
+        case 0x14:
+            fseq(vu, instr);
+            break;
         case 0x15:
             fsset(vu, instr);
             break;
         case 0x16:
             fsand(vu, instr);
+            break;
+        case 0x17:
+            fsor(vu, instr);
             break;
         case 0x18:
             fmeq(vu, instr);
@@ -1875,6 +1930,11 @@ void fcor(VectorUnit &vu, uint32_t instr)
     lower_op = &VectorUnit::fcor;
 }
 
+void fseq(VectorUnit &vu, uint32_t instr)
+{
+    lower_op = &VectorUnit::fseq;
+}
+
 void fsset(VectorUnit &vu, uint32_t instr)
 {
     lower_op = &VectorUnit::fsset;
@@ -1883,6 +1943,11 @@ void fsset(VectorUnit &vu, uint32_t instr)
 void fsand(VectorUnit &vu, uint32_t instr)
 {
     lower_op = &VectorUnit::fsand;
+}
+
+void fsor(VectorUnit &vu, uint32_t instr)
+{
+    lower_op = &VectorUnit::fsor;
 }
 
 void fmeq(VectorUnit &vu, uint32_t instr)
