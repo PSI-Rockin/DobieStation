@@ -600,33 +600,50 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
             if (reg.PMODE.blend_with_bg)
                 output2 = reg.BGCOLOR;
 
-            uint32_t alpha;
-
-            if (reg.PMODE.use_ALP)
-                alpha = reg.PMODE.ALP;
-            else
-                alpha = (output1 >> 24) * 2;
-
-            if (alpha > 0xFF)
-                alpha = 0xFF;
-
-            uint32_t r1, g1, b1, r2, g2, b2, r, g, b;
+            uint32_t r, g, b;
             uint32_t final_color;
-            r1 = output1 & 0xFF; r2 = output2 & 0xFF;
-            g1 = (output1 >> 8) & 0xFF; g2 = (output2 >> 8) & 0xFF;
-            b1 = (output1 >> 16) & 0xFF; b2 = (output2 >> 16) & 0xFF;
 
-            r = ((r1 * alpha) + (r2 * (0xFF - alpha))) >> 8;
-            if (r > 0xFF)
-                r = 0xFF;
+            //If Circuit 1 is disabled, we can skip alpha blending on Circuit 2
+            //Some games (like Devil May Cry) will use Circuit 2 with an ALP of 255, making it effectively blank.
+            //However we think that on real hardware it will either skip the blending or duplicate Circuit 2 in the Circuit 1 output
+            //which effectively means output2 is outputted at full alpha
+            //Downhill Domination also has a dark screen if you do not follow this behaviour.  ALP 128 only circuit 2
+            if (reg.PMODE.circuit1)
+            {
+                uint32_t alpha;
 
-            g = ((g1 * alpha) + (g2 * (0xFF - alpha))) >> 8;
-            if (g > 0xFF)
-                g = 0xFF;
+                if (reg.PMODE.use_ALP)
+                    alpha = reg.PMODE.ALP;
+                else
+                    alpha = (output1 >> 24) * 2;
 
-            b = ((b1 * alpha) + (b2 * (0xFF - alpha))) >> 8;
-            if (b > 0xFF)
-                b = 0xFF;
+                if (alpha > 0xFF)
+                    alpha = 0xFF;
+
+                uint32_t r1, g1, b1, r2, g2, b2;
+                
+                r1 = output1 & 0xFF; r2 = output2 & 0xFF;
+                g1 = (output1 >> 8) & 0xFF; g2 = (output2 >> 8) & 0xFF;
+                b1 = (output1 >> 16) & 0xFF; b2 = (output2 >> 16) & 0xFF;
+
+                r = ((r1 * alpha) + (r2 * (0xFF - alpha))) >> 8;
+                if (r > 0xFF)
+                    r = 0xFF;
+
+                g = ((g1 * alpha) + (g2 * (0xFF - alpha))) >> 8;
+                if (g > 0xFF)
+                    g = 0xFF;
+
+                b = ((b1 * alpha) + (b2 * (0xFF - alpha))) >> 8;
+                if (b > 0xFF)
+                    b = 0xFF;
+            }
+            else
+            {
+                r = output2 & 0xFF;
+                g = (output2 >> 8) & 0xFF;
+                b = (output2 >> 16) & 0xFF;
+            }
 
             final_color = 0xFF000000 | r | (g << 8) | (b << 16);
 
