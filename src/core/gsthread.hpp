@@ -248,6 +248,14 @@ struct TexLookupInfo
     int16_t lastu, lastv;
 };
 
+//0 = No Deinterlacing, 1 = Merge Field (blurry/low res), 2 = Blend Scanline (ghosting), 3 = Bob (Best quality, can still have interlace bob)
+enum DeinterlaceMethod
+{
+    NO_DEINTERLACE,
+    MERGE_FIELD_DEINTERLACE,
+    BLEND_SCANLINE_DEINTERLACE,
+    BOB_DEINTERLACE,
+};
 
 uint32_t addr_PSMCT32(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
 uint32_t addr_PSMCT32Z(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
@@ -362,6 +370,8 @@ class GraphicsSynthesizerThread
         int frame_count;
         uint8_t* local_mem;
         uint8_t CRT_mode;
+        uint32_t screen_buffer[2048 * 2048];
+        DeinterlaceMethod deinterlace_method;
         uint8_t clut_cache[1024];
         uint32_t CBP0, CBP1;
 
