@@ -5,7 +5,7 @@
 * if the data structure style makes more sense to me 
 * then i'll end up using playerNumer
 *******************************************************/
-bool WinInput::initalizeAPI()
+bool WinInput::reset()
 {
 		ZeroMemory(&isConnected, sizeof(state));
 
@@ -23,11 +23,6 @@ bool WinInput::initalizeAPI()
 			std::cout << "No xbox controller Detected: " << std::endl;
 			return false;
 		}
-}
-
-bool WinInput::press(uint16_t button)
-{
-	return (state.Gamepad.wButtons & button) != 0;
 }
 
 void WinInput::poll() 

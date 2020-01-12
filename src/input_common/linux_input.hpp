@@ -3,6 +3,9 @@
 #include <fcntl.h>
 #include <vector>
 #include <iostream>
+#include <errno.h>
+#include <stdio.h>
+#include <string.h>
 #include "common_input.hpp"
 #include <libevdev-1.0/libevdev/libevdev.h>
 
@@ -14,9 +17,9 @@ class LinuxInput : public CommonInput
 private:
 
 struct input_event ev;
-struct libevdev *dev = NULL;
+struct libevdev *dev;
 
-std::string filePath = "/dev/input";
+std::string filePath = "/dev/input/event0";
 
 
 int fd;

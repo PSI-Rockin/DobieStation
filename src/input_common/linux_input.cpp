@@ -5,13 +5,18 @@ bool LinuxInput::reset()
 
     //std::string deviceName = libevdev_get_name(dev);
 
-    fd = open(filePath.c_str(), O_RDWR | O_NONBLOCK);
+    fd = open(filePath.c_str(), O_RDONLY|O_NONBLOCK);
+
+    if (fd < 0)
+    {
+        fprintf(stderr, "error: %d %s\n", errno, strerror(errno));
+    }
 
 	rc = libevdev_new_from_fd(fd, &dev);
 
-    if (rc != -9)
+    if (rc < 0)    
     {
-        std::cerr << "Error bad Descriptor file!" << std::endl;
+        fprintf(stderr, "error: %d %s\n", -rc, strerror(-rc));    
     }
 
     if (libevdev_has_event_type(dev, EV_KEY) && libevdev_has_event_code(dev, EV_ABS, ABS_X) && libevdev_has_event_code(dev, EV_ABS, ABS_Y))
