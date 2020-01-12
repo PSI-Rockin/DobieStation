@@ -59,7 +59,13 @@ void WinInput::poll()
 	}
 	
 	if (state.Gamepad.wButtons & XINPUT_GAMEPAD_START)	
-	{
-			std::cout << "Start is pressed" << std::endl;	
+	{		
+		std::cout << "Start is pressed" << std::endl;	
 	}
+
+	if (state.Gamepad.wButtons & XINPUT_GAMEPAD_BACK)
+	{
+		std::cout << "Select is pressed" << std::endl;
+	}
+
 }

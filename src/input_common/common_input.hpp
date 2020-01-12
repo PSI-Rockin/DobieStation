@@ -11,11 +11,11 @@ struct inputEvent
 	virtualController input;
 	int playerNumber;
 
-	int lStickXAxis;
-	int lStickYAxis;
+	float lStickXAxis;
+	float lStickYAxis;
 
-	int rStickXAxis;
-	int rStickYAxis;
+	float rStickXAxis;
+	float rStickYAxis;
 
 	void construct(virtualController eventI, int playerNum, int lXAxis, int lYAxis, int rXAxis, int rYAxis)
 	{
