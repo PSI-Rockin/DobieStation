@@ -281,12 +281,17 @@ int VU_JitTranslator::efu_pipe_cycles(uint32_t lower_instr)
                 return 18;
             case 0x73:
                 return 24;
+            case 0x74:
+            case 0x75:
+                return 54;
             case 0x76:
             case 0x78:
             case 0x7A:
                 return 12;
             case 0x7C:
                 return 29;
+            case 0x7D:
+                return 54;
             case 0x7E:
                 return 44;
             default:
@@ -494,7 +499,7 @@ void VU_JitTranslator::handle_vu_stalls(VectorUnit &vu, uint16_t PC, uint32_t lo
         q_pipe_delay = fdiv_pipe_cycles(lower);
     }
 
-    //WaitP, EATAN, EEXP, ELENG, ERCPR, ERLENG, ERSADD, ERSQRT, ESADD, ESIN, ESQRT, ESUM
+    //WaitP, EATAN(xy/xz), EEXP, ELENG, ERCPR, ERLENG, ERSADD, ERSQRT, ESADD, ESIN, ESQRT, ESUM
     if ((lower & (1 << 31)) && ((lower >> 2) & 0x1CF) == 0x1CF)
     {
         instr_info[PC].p_pipeline_instr = true;
@@ -1616,6 +1621,16 @@ void VU_JitTranslator::lower1_special(std::vector<IR::Instruction> &instrs, uint
             instr.op = IR::Opcode::VErleng;
             instr.set_source((lower >> 11) & 0x1F);
             break;
+        case 0x74:
+            //EATANxy
+            fallback_interpreter(instr, lower, false);
+            Errors::print_warning("[VU_JIT] Unrecognized lower1 special op EATANxy\n", op);
+            break;
+        case 0x75:
+            //EATANxz
+            fallback_interpreter(instr, lower, false);
+            Errors::print_warning("[VU_JIT] Unrecognized lower1 special op EATANxz\n", op);
+            break;
         case 0x78:
             //ESQRT
             instr.op = IR::Opcode::VESqrt;
@@ -1640,6 +1655,11 @@ void VU_JitTranslator::lower1_special(std::vector<IR::Instruction> &instrs, uint
             //ESIN
             fallback_interpreter(instr, lower, false);
             Errors::print_warning("[VU_JIT] Unrecognized lower1 special op ESIN\n", op);
+            break;
+        case 0x7D:
+            //EATAN
+            fallback_interpreter(instr, lower, false);
+            Errors::print_warning("[VU_JIT] Unrecognized lower1 special op EATAN\n", op);
             break;
         case 0x7E:
             //EEXP

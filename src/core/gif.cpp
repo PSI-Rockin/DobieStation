@@ -218,7 +218,11 @@ void GraphicsInterface::feed_GIF(uint128_t data)
         }*/
 
         if (path[active_path].current_tag.output_PRIM && path[active_path].current_tag.format == 0)
-            gs->write64(0, path[active_path].current_tag.PRIM);
+        {
+            //NOP GIFTags ignore all fields except EOP
+            if (path[active_path].current_tag.data_left != 0)
+                gs->write64(0, path[active_path].current_tag.PRIM);
+        }
     }
     else
     {

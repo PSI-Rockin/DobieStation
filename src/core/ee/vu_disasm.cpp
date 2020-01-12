@@ -467,6 +467,10 @@ string lower1_special(uint32_t PC, uint32_t instr)
             return eleng(instr);
         case 0x73:
             return erleng(instr);
+        case 0x74: 
+            return eatanxy(instr);
+        case 0x75:
+            return eatanxz(instr);
         case 0x76:
             return esum(instr);
         case 0x78:
@@ -477,6 +481,8 @@ string lower1_special(uint32_t PC, uint32_t instr)
             return ercpr(instr);
         case 0x7B:
             return "waitp";
+        case 0x7D:
+            return eatan(instr);
         case 0x7E:
             return eexp(instr);
         default:
@@ -769,6 +775,30 @@ string esin(uint32_t instr)
     return output.str();
 }
 
+string eatan(uint32_t instr)
+{
+    stringstream output;
+    uint32_t source = (instr >> 11) & 0x1F;
+    output << "eatan P, vf" << source << "." << get_fsf((instr >> 21) & 0x3);
+    return output.str();
+}
+
+string eatanxy(uint32_t instr)
+{
+    stringstream output;
+    uint32_t source = (instr >> 11) & 0x1F;
+    output << "eatanxy P, vf" << source;
+    return output.str();
+}
+
+string eatanxz(uint32_t instr)
+{
+    stringstream output;
+    uint32_t source = (instr >> 11) & 0x1F;
+    output << "eatanxz P, vf" << source;
+    return output.str();
+}
+
 string eexp(uint32_t instr)
 {
     stringstream output;
@@ -802,10 +832,14 @@ string lower2(uint32_t PC, uint32_t instr)
             return fcand(instr);
         case 0x13:
             return fcor(instr);
+        case 0x14:
+            return fseq(instr);
         case 0x15:
             return fsset(instr);
         case 0x16:
             return fsand(instr);
+        case 0x17:
+            return fsor(instr);
         case 0x18:
             return fmeq(instr);
         case 0x1A:
@@ -957,6 +991,16 @@ string fcor(uint32_t instr)
     return output.str();
 }
 
+string fseq(uint32_t instr)
+{
+    stringstream output;
+    uint32_t imm = ((instr >> 10) & 0x800) | (instr & 0x7FF);
+    uint32_t dest = (instr >> 16) & 0x1F;
+    output << "fseq vi" << dest << ", 0x";
+    output << setfill('0') << setw(8) << hex << imm;
+    return output.str();
+}
+
 string fsset(uint32_t instr)
 {
     stringstream output;
@@ -972,6 +1016,16 @@ string fsand(uint32_t instr)
     uint32_t imm = ((instr >> 10) & 0x800) | (instr & 0x7FF);
     uint32_t dest = (instr >> 16) & 0x1F;
     output << "fsand vi" << dest << ", 0x";
+    output << setfill('0') << setw(8) << hex << imm;
+    return output.str();
+}
+
+string fsor(uint32_t instr)
+{
+    stringstream output;
+    uint32_t imm = ((instr >> 10) & 0x800) | (instr & 0x7FF);
+    uint32_t dest = (instr >> 16) & 0x1F;
+    output << "fsor vi" << dest << ", 0x";
     output << setfill('0') << setw(8) << hex << imm;
     return output.str();
 }

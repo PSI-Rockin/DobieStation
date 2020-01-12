@@ -3950,6 +3950,12 @@ void EE_JitTranslator::translate_op_cop2_special2(uint32_t opcode, uint32_t PC, 
             fallback_interpreter(instr, opcode);
             instrs.push_back(instr);
             break;
+        case 0x22:
+            // VADDAi
+            Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VADDAi\n", op);
+            fallback_interpreter(instr, opcode);
+            instrs.push_back(instr);
+            break;
         case 0x23:
             // VMADDAI
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VMADDAI\n", op);
