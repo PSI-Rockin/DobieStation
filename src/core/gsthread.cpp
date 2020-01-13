@@ -4038,10 +4038,6 @@ GSPixelJitBlockRecord* GraphicsSynthesizerThread::recompile_draw_pixel(uint64_t 
     if ((current_ctx->test.alpha_test) && current_ctx->test.alpha_method != 1)
         recompile_alpha_test();
 
-    //Hack for SotC - removes overbloom (but breaks other games of course)
-    //else if (current_ctx->test.alpha_fail_method != 1)
-        //emitter_dp.OR32_REG_IMM(0x2, RBX);
-
     //Depth test
     if (current_ctx->test.depth_test)
         recompile_depth_test();
