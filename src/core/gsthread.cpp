@@ -4624,14 +4624,14 @@ GSTextureJitBlockRecord* GraphicsSynthesizerThread::recompile_tex_lookup(uint64_
 
     if (current_PRMODE->use_UV)
     {
-        emitter_tex.MOV32_FROM_MEM(R14, RCX, sizeof(RGBAQ_REG) * 3 + sizeof(float));
+        emitter_tex.MOV32_FROM_MEM(R14, RCX, offsetof(TexLookupInfo, mipmap_level));
         emitter_tex.SAR32_CL(R12);
         emitter_tex.SAR32_CL(R13);
     }
 
     //Load tex width and height
     //RBX = width - 1, R15 = height - 1
-    emitter_tex.MOV32_FROM_MEM(R14, RBX, (sizeof(RGBAQ_REG) * 3) + (4 * 4));
+    emitter_tex.MOV32_FROM_MEM(R14, RBX, offsetof(TexLookupInfo, tex_width));
     emitter_tex.MOV32_REG(RBX, R15);
     emitter_tex.AND32_REG_IMM(0xFFFF, RBX);
     emitter_tex.DEC32(RBX);
@@ -4644,7 +4644,7 @@ GSTextureJitBlockRecord* GraphicsSynthesizerThread::recompile_tex_lookup(uint64_
 
     if (current_ctx->clamp.wrap_s >= 0x2)
     {
-        emitter_tex.MOV32_FROM_MEM(R14, RCX, sizeof(RGBAQ_REG) * 3 + sizeof(float));
+        emitter_tex.MOV32_FROM_MEM(R14, RCX, offsetof(TexLookupInfo, mipmap_level));
         emitter_tex.load_addr((uint64_t)&current_ctx->clamp.min_u, RDX);
         emitter_tex.MOV32_FROM_MEM(RDX, RDX);
         emitter_tex.AND32_REG_IMM(0xFFFF, RDX);
@@ -4659,7 +4659,7 @@ GSTextureJitBlockRecord* GraphicsSynthesizerThread::recompile_tex_lookup(uint64_
 
     if (current_ctx->clamp.wrap_t >= 0x2)
     {
-        emitter_tex.MOV32_FROM_MEM(R14, RCX, sizeof(RGBAQ_REG) * 3 + sizeof(float));
+        emitter_tex.MOV32_FROM_MEM(R14, RCX, offsetof(TexLookupInfo, mipmap_level));
         emitter_tex.load_addr((uint64_t)&current_ctx->clamp.min_v, R8);
         emitter_tex.MOV32_FROM_MEM(R8, R8);
         emitter_tex.AND32_REG_IMM(0xFFFF, R8);
