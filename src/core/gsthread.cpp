@@ -550,7 +550,8 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
     int height;
     int y_increment = 1;
     int start_scanline = 0;
-    int frame_line_divider = 1;
+    int frame_line_increment = 1;
+    int fb_y = 0;
 
     DISPLAY &cur_disp = reg.DISPLAY1;
 
@@ -591,21 +592,12 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
         if (deinterlace_method != BOB_DEINTERLACE)
         {
             y_increment = 2;
-            start_scanline = !reg.CSR.is_odd_frame;
+            start_scanline = !reg.CSR.is_odd_frame; //Seems to write the upper fields first
 
-            if (reg.SMODE2.frame_mode)
-            {
-                frame_line_divider = 2;
-            }
-        }
-        else
-        {
-            start_scanline = reg.CSR.is_odd_frame;
+            if (!reg.SMODE2.frame_mode)
+                frame_line_increment = 2;
 
-            if (reg.SMODE2.frame_mode)
-            {
-                frame_line_divider = 2;
-            }
+            fb_y = reg.CSR.is_odd_frame;
         }
     }
 
@@ -621,7 +613,6 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
         {
             int pixel_x = x;
             int pixel_y = y;
-            int fb_y = pixel_y / frame_line_divider;
 
             uint32_t scaled_x1 = reg.DISPFB1.x + x;
             uint32_t scaled_x2 = reg.DISPFB2.x + x;
@@ -746,7 +737,16 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
                     }
                     case BOB_DEINTERLACE:
                     {
-                        target[pixel_x + ((pixel_y)* width)] = final_color;
+                        if (reg.SMODE2.frame_mode)
+                        {
+                            pixel_y *= 2;
+                            target[pixel_x + (pixel_y * width)] = final_color;
+                            target[pixel_x + ((pixel_y + 1)* width)] = final_color;
+                        }
+                        else
+                        {
+                            target[pixel_x + (pixel_y * width)] = final_color;
+                        }
                         break;
                     }
                     default: //No Deinterlacing
@@ -771,6 +771,7 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
                 target[pixel_x + (pixel_y * width)] = final_color;
             }
         }
+        fb_y += frame_line_increment;
     }
 }
 
