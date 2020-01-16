@@ -655,52 +655,6 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
     }
 }
 
-void GraphicsSynthesizerThread::dump_texture(uint32_t* target, uint32_t start_addr, uint32_t width)
-{
-    uint32_t dwidth = reg.DISPLAY2.width >> 2;
-    printf("[GS_t] Dumping texture\n");
-    int max_pixels = width * 256 / 2;
-    int p = 0;
-    while (p < max_pixels)
-    {
-        int x = p % width;
-        int y = p / width;
-        uint32_t addr = (x + (y * width));
-        for (int i = 0; i < 2; i++)
-        {
-            uint8_t entry;
-            entry = (local_mem[start_addr + (addr / 2)] >> (i * 4)) & 0xF;
-            uint32_t value = (entry << 4) | (entry << 12) | (entry << 20);
-            target[x + (y * dwidth)] = value;
-            target[x + (y * dwidth)] |= 0xFF000000;
-            x++;
-        }
-        p += 2;
-    }
-    /*for (int y = 0; y < 256; y++)
-    {
-        for (int x = 0; x < width; x++)
-        {
-            int pixel_x = x;
-            int pixel_y = y;
-            if (pixel_x >= width || pixel_y >= 256)
-                continue;
-            uint32_t addr = (pixel_x + (pixel_y * width));
-            for (int i = 0; i < 2; i++)
-            {
-                uint8_t entry;
-                entry = (local_mem[start_addr + (addr / 2)] >> (i * 4)) & 0xF;
-                uint32_t value = (entry << 4) | (entry << 12) | (entry << 20);
-                output_buffer[pixel_x + (pixel_y * dwidth)] = value;
-                output_buffer[pixel_x + (pixel_y * dwidth)] |= 0xFF000000;
-                pixel_x++;
-            }
-            x++;
-        }
-    }*/
-    printf("[GS_t] Done dumping\n");
-}
-
 void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
 {
     if (reg.write64(addr, value))

@@ -515,8 +515,6 @@ class GraphicsSynthesizerThread
         uint32_t get_CRT_color(DISPFB& dispfb, uint32_t x, uint32_t y);
         void render_CRT(uint32_t* target);
 
-        void dump_texture(uint32_t* target, uint32_t start_addr, uint32_t width);
-
         void write64(uint32_t addr, uint64_t value);
 
         void set_RGBA(uint8_t r, uint8_t g, uint8_t b, uint8_t a, float q);
