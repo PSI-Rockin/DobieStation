@@ -1180,6 +1180,15 @@ void ImageProcessingUnit::write_FIFO(uint128_t quad)
 {
     printf("[IPU] Write FIFO: $%08X_%08X_%08X_%08X\n", quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
     dmac->clear_DMA_request(IPU_TO);
+
+    //Certain games (Theme Park, Neo Contra, etc) read command output without sending a command.
+    //They expect to read the first word of a newly started IPU_TO transfer.
+    if (in_FIFO.f.size() == 0 && !ctrl.busy)
+    {
+        command_output = quad._u32[0];
+        command_output = (command_output >> 24) | (((command_output >> 16) & 0xFF) << 8) |
+                         (((command_output >> 8) & 0xFF) << 16) | (command_output << 24);
+    }
     if (in_FIFO.f.size() >= 8)
     {
         Errors::die("[IPU] Error: data sent to IPU exceeding FIFO limit!\n");
