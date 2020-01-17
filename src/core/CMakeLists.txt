@@ -2,7 +2,6 @@ set(TARGET Core)
 
 set(CMAKE_CXX_STANDARD 11)
 
-
 set(SOURCES
     errors.cpp
     ee/bios_hle.cpp
@@ -75,14 +74,6 @@ set(SOURCES
     serialize.cpp
     sif.cpp)
 
-if (MSVC)
-    enable_language(ASM_MASM)
-    set(ASSEMBLY
-        ee/ee_jit_asm.asm
-        ee/vu_jit_asm.asm
-        gsjit.asm)
-endif()
-
 set(HEADERS
     errors.hpp
     ee/bios_hle.hpp
@@ -145,12 +136,6 @@ set(HEADERS
     int128.hpp
     scheduler.hpp
     sif.hpp)
-
-# MSVC: Add assembly sources to project
-if (CMAKE_ASM_MASM_COMPILER_LOADED)
-    set_source_files_properties(SOURCES ${ASSEMBLY} PROPERTIES LANGUAGE ASM_MASM)
-    set(SOURCES ${SOURCES} ${ASSEMBLY})
-endif()
 
 add_library(${TARGET} ${SOURCES} ${HEADERS})
 add_library(Dobie::Core ALIAS ${TARGET})
