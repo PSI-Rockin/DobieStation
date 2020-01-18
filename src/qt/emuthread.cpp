@@ -210,7 +210,7 @@ void EmuThread::run()
     {
         if (abort)
             return;
-        else if (pause_status or block_run_loop)
+        else if (pause_status || block_run_loop)
         {
             usleep(10000);
         }
