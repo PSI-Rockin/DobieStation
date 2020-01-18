@@ -343,7 +343,7 @@ void mulbc(VectorUnit &vu, uint32_t instr)
     vu.decoder.vf_read0[0] = source;
     vu.decoder.vf_read0_field[0] = field;
 
-    vu.decoder.vf_read0[0] = bc_reg;
+    vu.decoder.vf_read1[0] = bc_reg;
     vu.decoder.vf_read1_field[0] = 1 << (3 - bc);
     upper_op = &VectorUnit::mulbc;
 }
