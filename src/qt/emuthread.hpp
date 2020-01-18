@@ -33,6 +33,7 @@ class EmuThread : public QThread
         std::chrono::system_clock::time_point old_frametime;
         std::ifstream gsdump;
         std::atomic_bool gsdump_reading;
+        std::atomic_bool block_run_loop;
         GSMessage* gsdump_read_buffer;
         int buffered_gs_messages;
         int current_gs_message;
