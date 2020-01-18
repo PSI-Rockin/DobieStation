@@ -25,8 +25,8 @@ class EmuThread : public QThread
 {
     Q_OBJECT
     private:
-        bool abort;
-        uint32_t pause_status;
+        std::atomic_bool abort;
+        std::atomic<uint32_t> pause_status;
         QMutex emu_mutex;
         Emulator e;
 
@@ -59,7 +59,7 @@ class EmuThread : public QThread
         void gsdump_single_frame();
         GSMessage& get_next_gsdump_message();
         bool gsdump_eof();
-        bool frame_advance;
+        std::atomic_bool frame_advance;
     protected:
         void run() override;
     signals:

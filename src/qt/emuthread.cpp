@@ -224,14 +224,11 @@ void EmuThread::run()
 {
     forever
     {
-        QMutexLocker locker(&emu_mutex);
         if (abort)
             return;
         else if (pause_status or block_run_loop)
         {
-            emu_mutex.unlock();
             usleep(10000);
-            emu_mutex.lock();
         }
         else if (gsdump_reading)
             gsdump_run();
@@ -241,6 +238,7 @@ void EmuThread::run()
                 pause(PAUSE_EVENT::FRAME_ADVANCE);
             try
             {
+                QMutexLocker locker(&emu_mutex);
                 e.run();
                 int w, h, new_w, new_h;
                 e.get_inner_resolution(w, h);
