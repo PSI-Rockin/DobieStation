@@ -39,10 +39,10 @@ class EmuThread : public QThread
         int current_gs_message;
 
         void gsdump_run();
+        template <typename Func> void wait_for_lock(Func f);
     public:
         EmuThread();
         ~EmuThread();
-
         void reset();
 
         void set_skip_BIOS_hack(SKIP_HACK skip);

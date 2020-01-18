@@ -6,6 +6,15 @@
 
 using namespace std;
 
+template <typename Func>
+void EmuThread::wait_for_lock(Func f)
+{
+    block_run_loop = true;
+    QMutexLocker locker(&emu_mutex);
+    f();
+    block_run_loop = false;
+}
+
 EmuThread::EmuThread()
 {
     abort = false;
@@ -30,108 +39,83 @@ void EmuThread::reset()
 
 void EmuThread::set_skip_BIOS_hack(SKIP_HACK skip)
 {
-    block_run_loop = true;
-    QMutexLocker locker(&emu_mutex);
-    e.set_skip_BIOS_hack(skip);
-    block_run_loop = false;
+    wait_for_lock([=]() { e.set_skip_BIOS_hack(skip); } );
 }
 
 void EmuThread::set_ee_mode(CPU_MODE mode)
 {
-    block_run_loop = true;
-    QMutexLocker locker(&emu_mutex);
-    e.set_ee_mode(mode);
-    block_run_loop = false;
+    wait_for_lock([=]() {  e.set_ee_mode(mode); } );
 }
 
 void EmuThread::set_vu1_mode(CPU_MODE mode)
 {
-    block_run_loop = true;
-    QMutexLocker locker(&emu_mutex);
-    e.set_vu1_mode(mode);
-    block_run_loop = false;
+    wait_for_lock([=]() { e.set_vu1_mode(mode); } );
 }
 
 void EmuThread::load_BIOS(const uint8_t *BIOS)
 {
-    block_run_loop = true;
-    QMutexLocker locker(&emu_mutex);
-    e.load_BIOS(BIOS);
-    block_run_loop = false;
+    wait_for_lock([=]() { e.load_BIOS(BIOS); } );
 }
 
 void EmuThread::load_ELF(const uint8_t *ELF, uint64_t ELF_size)
 {
-    block_run_loop = true;
-    QMutexLocker locker(&emu_mutex);
-    e.reset();
-    e.load_ELF(ELF, ELF_size);
-    block_run_loop = false;
+    wait_for_lock([=]() 
+    {
+        e.reset();
+        e.load_ELF(ELF, ELF_size);
+    } );
 }
 
 void EmuThread::load_CDVD(const char* name, CDVD_CONTAINER type)
 {
-    block_run_loop = true;
-    QMutexLocker locker(&emu_mutex);
-    e.reset();
-    e.load_CDVD(name, type);
-    block_run_loop = false;
+    wait_for_lock([=]() 
+    { 
+        e.reset();
+        e.load_CDVD(name, type);
+    } );
 }
 
 bool EmuThread::load_state(const char *name)
 {
-    block_run_loop = true;
-    QMutexLocker locker(&emu_mutex);
     bool fail = false;
-    if (!e.request_load_state(name))
-        fail = true;
-    block_run_loop = false;
+    wait_for_lock([=, &fail]() { if (!e.request_load_state(name)) fail = true; } );
 
     return fail;
 }
 
 bool EmuThread::save_state(const char *name)
 {
-    block_run_loop = true;
-    QMutexLocker locker(&emu_mutex);
     bool fail = false;
-    if (!e.request_save_state(name))
-        fail = true;
-    block_run_loop = false;
+
+    wait_for_lock([=, &fail]() { if (!e.request_save_state(name)) fail = true; } );
 
     return fail;
 }
 
 bool EmuThread::gsdump_read(const char *name)
 {
-    block_run_loop = true;
-    QMutexLocker locker(&emu_mutex);
-    gsdump.open(name,ios::binary);
-    if (!gsdump.is_open())
-        return 1;
-    e.get_gs().reset();
-    e.get_gs().load_state(gsdump);
+    wait_for_lock([=]() 
+    { 
+        gsdump.open(name,ios::binary);
+        if (!gsdump.is_open())
+            return 1;
+        e.get_gs().reset();
+        e.get_gs().load_state(gsdump);
 
-    printf("loaded gsdump\n");
-    gsdump_reading = true;
-    block_run_loop = false;
+        printf("loaded gsdump\n");
+        gsdump_reading = true;
+    });
     return 0;
 }
 
 void EmuThread::gsdump_write_toggle()
 {
-    block_run_loop = true;
-    QMutexLocker locker(&emu_mutex);
-    e.request_gsdump_toggle();
-    block_run_loop = false;
+    wait_for_lock([=]() { e.request_gsdump_toggle(); } );
 }
 
 void EmuThread::gsdump_single_frame()
 {
-    block_run_loop = true;
-    QMutexLocker locker(&emu_mutex);
-    e.request_gsdump_single_frame();
-    block_run_loop = false;
+    wait_for_lock([=]() { e.request_gsdump_single_frame(); } );
 }
 
 GSMessage& EmuThread::get_next_gsdump_message()
@@ -276,48 +260,30 @@ void EmuThread::run()
 
 void EmuThread::shutdown()
 {
-    block_run_loop = true;
-    QMutexLocker locker(&emu_mutex);
     abort = true;
-    block_run_loop = false;
 }
 
 void EmuThread::press_key(PAD_BUTTON button)
 {
-    block_run_loop = true;
-    QMutexLocker locker(&emu_mutex);
-    e.press_button(button);
-    block_run_loop = false;
+    wait_for_lock([=]() { e.press_button(button); });
 }
 
 void EmuThread::release_key(PAD_BUTTON button)
 {
-    block_run_loop = true;
-    QMutexLocker locker(&emu_mutex);
-    e.release_button(button);
-    block_run_loop = false;
+    wait_for_lock([=]() { e.release_button(button); });
 }
 
 void EmuThread::update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t val)
 {
-    block_run_loop = true;
-    QMutexLocker locker(&emu_mutex);
-    e.update_joystick(joystick, axis, val);
-    block_run_loop = false;
+    wait_for_lock([=]() { e.update_joystick(joystick, axis, val); });
 }
 
 void EmuThread::pause(PAUSE_EVENT event)
 {
-    block_run_loop = true;
-    QMutexLocker locker(&emu_mutex);
     pause_status |= 1 << event;
-    block_run_loop = false;
 }
 
 void EmuThread::unpause(PAUSE_EVENT event)
 {
-    block_run_loop = true;
-    QMutexLocker locker(&emu_mutex);
     pause_status &= ~(1 << event);
-    block_run_loop = false;
 }
