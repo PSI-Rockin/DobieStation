@@ -3150,6 +3150,14 @@ void GraphicsSynthesizerThread::local_to_local()
                 data = read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
                                           TRXPOS.int_source_x, TRXPOS.int_source_y);
                 break;
+            case 0x02:
+                data = read_PSMCT16_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                                          TRXPOS.int_source_x, TRXPOS.int_source_y);
+                break;
+            case 0x0A:
+                data = read_PSMCT16S_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                                          TRXPOS.int_source_x, TRXPOS.int_source_y);
+                break;
             case 0x13:
                 data = read_PSMCT8_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
                                          TRXPOS.int_source_x, TRXPOS.int_source_y);
@@ -3179,6 +3187,14 @@ void GraphicsSynthesizerThread::local_to_local()
                 break;
             case 0x01:
                 write_PSMCT24_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width,
+                                    TRXPOS.int_dest_x, TRXPOS.int_dest_y, data);
+                break;
+            case 0x02:
+                write_PSMCT16_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width,
+                                    TRXPOS.int_dest_x, TRXPOS.int_dest_y, data);
+                break;
+            case 0x0A:
+                write_PSMCT16S_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width,
                                     TRXPOS.int_dest_x, TRXPOS.int_dest_y, data);
                 break;
             case 0x13:
