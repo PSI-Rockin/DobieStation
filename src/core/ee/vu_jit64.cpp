@@ -85,8 +85,14 @@ void vu_set_int(VectorUnit& vu, int dest, uint16_t value)
 
 void vu_update_pipelines(VectorUnit& vu, int cycles)
 {
+    bool update_status = false;
     for (int i = 0; i < cycles; i++)
     {
+        if ((vu.MAC_pipeline[3] & 0xFFFF) != (vu.MAC_pipeline[2] & 0xFFFF))
+            update_status = true;
+        else
+            update_status = false;
+
         vu.MAC_pipeline[3] = vu.MAC_pipeline[2];
         vu.MAC_pipeline[2] = vu.MAC_pipeline[1];
         vu.MAC_pipeline[1] = vu.MAC_pipeline[0];
@@ -97,7 +103,15 @@ void vu_update_pipelines(VectorUnit& vu, int cycles)
         vu.CLIP_pipeline[1] = vu.CLIP_pipeline[0];
         vu.CLIP_pipeline[0] = vu.clip_flags;
 
-        vu.update_status();
+        if(update_status)
+            vu.update_status();
+
+        if (vu.status_pipe > 0)
+        {
+            vu.status_pipe--;
+            if (!vu.status_pipe)
+                vu.status = (vu.status & 0x3F) | (vu.status_value & 0xFFF);
+        }
     }
 }
 
