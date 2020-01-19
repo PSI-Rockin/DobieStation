@@ -1,5 +1,6 @@
 #include <cmath>
 #include <cstdio>
+#include <cstring>
 #include "cop1.hpp"
 
 #define printf(fmt, ...)(0)
@@ -10,51 +11,62 @@ Cop1::Cop1()
 }
 
 //Returns a floating point value that may be changed to accomodate the FPU's non-compliance to the IEEE 754 standard.
-float Cop1::convert(uint32_t value)
+float Cop1::convert(float value) const noexcept
 {
-    switch(value & 0x7F800000)
+    uint32_t test;
+    memcpy(&test, &value, sizeof(float));
+    switch(test & 0x7F800000)
     {
         case 0x0:
-            value &= 0x80000000;
-            return *(float*)&value;
+            test &= 0x80000000;
+            break;
         case 0x7F800000:
-            value = (value & 0x80000000)|0x7F7FFFFF;
-            return *(float*)&value;
+            test = (test & 0x80000000)|0x7F7FFFFF;
+            break;
         default:
-            return *(float*)&value;
+            break;
     }
+    memcpy(&value, &test, sizeof(float));
+    return value;
 }
 
-void Cop1::check_overflow(uint32_t& dest, bool set_flags)
+void Cop1::check_overflow(float& dest, bool set_flags) noexcept
 {
-    if ((dest & ~0x80000000) == 0x7F800000)
+    uint32_t test;
+    memcpy(&test, &dest, sizeof(float));
+    if ((test & ~0x80000000) == 0x7F800000)
     {
         printf("[FPU] Overflow Dest = %x\n", dest);
-        dest = (dest & 0x80000000) | 0x7F7FFFFF;
+        test = (test & 0x80000000) | 0x7F7FFFFF;
        
         if (set_flags)
         {
             control.so = true;
             control.o = true;
         }
+        memcpy(&dest, &test, sizeof(float));
     }
 }
 
-void Cop1::check_underflow(uint32_t& dest, bool set_flags)
+void Cop1::check_underflow(float& dest, bool set_flags) noexcept
 {
-    if ((dest & 0x7F800000) == 0 && (dest & 0x7FFFFF) != 0)
+    uint32_t test;
+    memcpy(&test, &dest, sizeof(float));
+    if ((test & 0x7F800000) == 0 && (test & 0x7FFFFF) != 0)
     {
-        printf("[FPU] Underflow Dest = %x\n", dest);
-        dest &= 0x80000000;
+        printf("[FPU] Underflow Dest = %x\n", test);
+        test &= 0x80000000;
         
         if (set_flags)
         {
             control.su = true;
             control.u = true;
         }
+        memcpy(&dest, &test, sizeof(float));
     }
 }
-void Cop1::reset()
+
+void Cop1::reset() noexcept
 {
     control.su = false;
     control.so = false;
@@ -67,23 +79,25 @@ void Cop1::reset()
     control.condition = false;
 }
 
-bool Cop1::get_condition()
+bool Cop1::get_condition() const noexcept
 {
     return control.condition;
 }
 
-uint32_t Cop1::get_gpr(int index)
+uint32_t Cop1::get_gpr(int index) const noexcept
 {
-    return gpr[index].u;
+    uint32_t result;
+    memcpy(&result, &gpr[index], sizeof(float));
+    return result;
 }
 
-void Cop1::mtc(int index, uint32_t value)
+void Cop1::mtc(int index, uint32_t value) noexcept
 {
     printf("[FPU] MTC1: %d, $%08X\n", index, value);
-    gpr[index].u = value;
+    memcpy(&gpr[index], &value, sizeof(float));
 }
 
-uint32_t Cop1::cfc(int index)
+uint32_t Cop1::cfc(int index) noexcept
 {
     switch (index)
     {
@@ -107,7 +121,7 @@ uint32_t Cop1::cfc(int index)
     }
 }
 
-void Cop1::ctc(int index, uint32_t value)
+void Cop1::ctc(int index, uint32_t value) noexcept
 {
     printf("[FPU] CTC1: $%08X (%d)\n", value, index);
     switch (index)
@@ -126,63 +140,70 @@ void Cop1::ctc(int index, uint32_t value)
     }
 }
 
-void Cop1::cvt_s_w(int dest, int source)
+void Cop1::cvt_s_w(int dest, int source) noexcept
 {
-    gpr[dest].f = (float)gpr[source].s;
-    gpr[dest].f = convert(gpr[dest].u);
-    printf("[FPU] CVT_S_W: %f(%d)\n", gpr[dest].f, dest);
+    int32_t fixed;
+    memcpy(&fixed, &gpr[source], sizeof(float));
+    gpr[dest] = convert(static_cast<float>(fixed));
+    printf("[FPU] CVT_S_W: %f(%d)\n", gpr[dest], dest);
 }
 
-void Cop1::cvt_w_s(int dest, int source)
+void Cop1::cvt_w_s(int dest, int source) noexcept
 {
-    if ((gpr[source].u & 0x7F800000) <= 0x4E800000)
-        gpr[dest].s = (int32_t)gpr[source].f;
-    else if ((gpr[source].u & 0x80000000) == 0)
-        gpr[dest].u = 0x7FFFFFFF;
+    uint32_t usource;
+    uint32_t udest;
+    memcpy(&usource, &gpr[source], sizeof(float));
+    if ((usource & 0x7F800000) <= 0x4E800000)
+        udest = static_cast<uint32_t>(gpr[source]);
+    else if ((usource & 0x80000000) == 0)
+        udest = 0x7FFFFFFF;
     else
-        gpr[dest].u = 0x80000000;
-    printf("[FPU] CVT_W_S: $%08X(%d)\n", gpr[dest].u, dest);
+        udest = 0x80000000;
+    memcpy(&gpr[dest], &udest, sizeof(float));
+    printf("[FPU] CVT_W_S: $%08X(%d)\n", gpr[dest], dest);
 }
 
-void Cop1::add_s(int dest, int reg1, int reg2)
+void Cop1::add_s(int dest, int reg1, int reg2) noexcept
 {
-    float op1 = convert(gpr[reg1].u);
-    float op2 = convert(gpr[reg2].u);
-    gpr[dest].f = op1 + op2;
+    float op1 = convert(gpr[reg1]);
+    float op2 = convert(gpr[reg2]);
+    gpr[dest] = op1 + op2;
 
-    check_overflow(gpr[dest].u, true);
-    check_underflow(gpr[dest].u, true);
+    check_overflow(gpr[dest], true);
+    check_underflow(gpr[dest], true);
 
-    printf("[FPU] add.s: %f(%d) + %f(%d) = %f(%d)\n", op1, reg1, op2, reg2, gpr[dest].f, dest);
+    printf("[FPU] add.s: %f(%d) + %f(%d) = %f(%d)\n", op1, reg1, op2, reg2, gpr[dest], dest);
 }
 
-void Cop1::sub_s(int dest, int reg1, int reg2)
+void Cop1::sub_s(int dest, int reg1, int reg2) noexcept
 {
-    float op1 = convert(gpr[reg1].u);
-    float op2 = convert(gpr[reg2].u);
-    gpr[dest].f = op1 - op2;
+    float op1 = convert(gpr[reg1]);
+    float op2 = convert(gpr[reg2]);
+    gpr[dest] = op1 - op2;
         
-    check_overflow(gpr[dest].u, true);
-    check_underflow(gpr[dest].u, true);
+    check_overflow(gpr[dest], true);
+    check_underflow(gpr[dest], true);
 
-    printf("[FPU] sub.s: %f(%d) - %f(%d) = %f(%d)\n", op1, reg1, op2, reg2, gpr[dest].f, dest);
+    printf("[FPU] sub.s: %f(%d) - %f(%d) = %f(%d)\n", op1, reg1, op2, reg2, gpr[dest], dest);
 }
 
-void Cop1::mul_s(int dest, int reg1, int reg2)
+void Cop1::mul_s(int dest, int reg1, int reg2) noexcept
 {
-    float op1 = convert(gpr[reg1].u);
-    float op2 = convert(gpr[reg2].u);
-    gpr[dest].f = op1 * op2;
+    float op1 = convert(gpr[reg1]);
+    float op2 = convert(gpr[reg2]);
+    gpr[dest] = op1 * op2;
 
-    check_overflow(gpr[dest].u, true);
-    check_underflow(gpr[dest].u, true);
-    printf("[FPU] mul.s: %f(%d) * %f(%d) = %f(%d)\n", op1, reg1, op2, reg2, gpr[dest].f, dest);
+    check_overflow(gpr[dest], true);
+    check_underflow(gpr[dest], true);
+    printf("[FPU] mul.s: %f(%d) * %f(%d) = %f(%d)\n", op1, reg1, op2, reg2, gpr[dest], dest);
 }
 
-void Cop1::div_s(int dest, int reg1, int reg2)
+void Cop1::div_s(int dest, int reg1, int reg2) noexcept
 {
-    uint32_t numerator = gpr[reg1].u;
-    uint32_t denominator = gpr[reg2].u;
+    uint32_t numerator;
+    uint32_t denominator;
+    memcpy(&numerator, &gpr[reg1], sizeof(float));
+    memcpy(&denominator, &gpr[reg2], sizeof(float));
     if ((denominator & 0x7F800000) == 0)
     {
         if ((numerator & 0x7F800000) == 0)
@@ -197,215 +218,224 @@ void Cop1::div_s(int dest, int reg1, int reg2)
             control.d = true;
             control.sd = true;
         }
-        gpr[dest].u = ((numerator ^ denominator) & 0x80000000) | 0x7F7FFFFF;
+        uint32_t result = ((numerator ^ denominator) & 0x80000000) | 0x7F7FFFFF;
+        memcpy(&gpr[dest], &result, sizeof(float));
     }
     else
-        gpr[dest].f = convert(numerator) / convert(denominator);
+        gpr[dest] = convert(gpr[reg1]) / convert(gpr[reg2]);
 
-    check_overflow(gpr[dest].u, false);
-    check_underflow(gpr[dest].u, false);
+    check_overflow(gpr[dest], false);
+    check_underflow(gpr[dest], false);
 
-    printf("[FPU] div.s: %f(%d) / %f(%d) = %f(%d)\n", convert(numerator), reg1, convert(denominator), reg2,
-           gpr[dest].f, dest);
+    printf("[FPU] div.s: %f(%d) / %f(%d) = %f(%d)\n", convert(numerator), reg1, convert(denominator), reg2, gpr[dest], dest);
 }
 
-void Cop1::sqrt_s(int dest, int source)
+void Cop1::sqrt_s(int dest, int source) noexcept
 {
-    if ((gpr[source].u & 0x7F800000) == 0)
-        gpr[dest].u = gpr[source].u & 0x80000000;
+    uint32_t usource;
+    uint32_t udest;
+    memcpy(&usource, &gpr[source], sizeof(float));
+    memcpy(&udest, &gpr[dest], sizeof(float));
+    if ((usource & 0x7F800000) == 0)
+    {
+        udest = usource & 0x80000000;
+        memcpy(&gpr[dest], &udest, sizeof(float));
+    }
     else
     {
-        if (gpr[source].u & 0x80000000)
+        if (usource & 0x80000000)
         {
-            printf("[FPU] Negative Sqrt Fs = %x\n", gpr[source].u);
+            printf("[FPU] Negative Sqrt Fs = %x\n", usource);
             control.i = true;
             control.si = true;
         }
 
-        gpr[dest].f = sqrt(fabs(convert(gpr[source].u)));
+        gpr[dest] = sqrtf(fabsf(convert(gpr[source])));
     }
 
     control.d = false;
-    printf("[FPU] sqrt.s: %f(%d) = %f(%d)\n", gpr[source].f, source, gpr[dest].f, dest);
+    printf("[FPU] sqrt.s: %f(%d) = %f(%d)\n", gpr[source], source, gpr[dest], dest);
 }
 
-void Cop1::abs_s(int dest, int source)
+void Cop1::abs_s(int dest, int source) noexcept
 {
-    gpr[dest].u = gpr[source].u & 0x7FFFFFFF;
+    gpr[dest] = fabsf(gpr[source]);
 
     control.u = false;
     control.o = false;
 
-    printf("[FPU] abs.s: %f = -%f\n", gpr[source].f, gpr[dest].f);
+    printf("[FPU] abs.s: %f = -%f\n", gpr[source], gpr[dest]);
 }
 
-void Cop1::mov_s(int dest, int source)
+void Cop1::mov_s(int dest, int source) noexcept
 {
-    gpr[dest].u = gpr[source].u;
+    gpr[dest] = gpr[source];
     printf("[FPU] mov.s: %d = %d", source, dest);
 }
 
-void Cop1::neg_s(int dest, int source)
+void Cop1::neg_s(int dest, int source) noexcept
 {
-    gpr[dest].u = gpr[source].u ^ 0x80000000;
+    gpr[dest] = -gpr[source];
 
     control.u = false;
     control.o = false;
 
-    printf("[FPU] neg.s: %f = -%f\n", gpr[source].f, gpr[dest].f);
+    printf("[FPU] neg.s: %f = -%f\n", gpr[source], gpr[dest]);
 }
 
-void Cop1::rsqrt_s(int dest, int reg1, int reg2)
+void Cop1::rsqrt_s(int dest, int reg1, int reg2) noexcept
 {
-    if ((gpr[reg2].u & 0x7F800000) == 0)
-        gpr[dest].u = (gpr[reg1].u ^ gpr[reg2].u) & 0x80000000;
+    uint32_t udest;
+    uint32_t ureg1;
+    uint32_t ureg2;
+    memcpy(&udest, &gpr[dest], sizeof(float));
+    memcpy(&ureg1, &gpr[reg1], sizeof(float));
+    memcpy(&ureg2, &gpr[reg2], sizeof(float));
+
+    if ((ureg2 & 0x7F800000) == 0)
+    {
+        udest = (ureg1 ^ ureg2) & 0x80000000;
+        memcpy(&gpr[dest], &udest, sizeof(float));
+    }
     else
     {
-        if (gpr[reg2].u & 0x80000000)
+        if (ureg2 & 0x80000000)
         {
-            printf("[FPU] Negative RSqrt Fs = %x\n", gpr[reg2].u);
+            printf("[FPU] Negative RSqrt Fs = %x\n", ureg2);
             control.i = true;
             control.si = true;
         }
-        COP1_REG temp;
-        temp.f = sqrt(fabs(convert(gpr[reg2].u)));
-        gpr[dest].f = convert(gpr[reg1].u) / convert(temp.u);
+        float temp = sqrtf(fabsf(convert(gpr[reg2])));
+        gpr[dest] = convert(gpr[reg1]) / convert(temp);
     }
 
     control.d = false;
-    check_overflow(gpr[dest].u, false);
-    check_underflow(gpr[dest].u, false);
-    printf("[FPU] rsqrt.s: %f(%d) = %f(%d)\n", gpr[source].f, source, gpr[dest].f, dest);
+    check_overflow(gpr[dest], false);
+    check_underflow(gpr[dest], false);
+    printf("[FPU] rsqrt.s: %f(%d) = %f(%d)\n", gpr[source], source, gpr[dest], dest);
 }
 
-
-void Cop1::adda_s(int reg1, int reg2)
+void Cop1::adda_s(int reg1, int reg2) noexcept
 {
-    float op1 = convert(gpr[reg1].u);
-    float op2 = convert(gpr[reg2].u);
-    accumulator.f = op1 + op2;
+    float op1 = convert(gpr[reg1]);
+    float op2 = convert(gpr[reg2]);
+    accumulator = op1 + op2;
 
-    check_overflow(accumulator.u, true);
-    check_underflow(accumulator.u, true);
-    printf("[FPU] adda.s: %f + %f = %f\n", op1, op2, accumulator.f);
+    check_overflow(accumulator, true);
+    check_underflow(accumulator, true);
+    printf("[FPU] adda.s: %f + %f = %f\n", op1, op2, accumulator);
 }
 
-void Cop1::suba_s(int reg1, int reg2)
+void Cop1::suba_s(int reg1, int reg2) noexcept
 {
-    float op1 = convert(gpr[reg1].u);
-    float op2 = convert(gpr[reg2].u);
-    accumulator.f = op1 - op2;
+    float op1 = convert(gpr[reg1]);
+    float op2 = convert(gpr[reg2]);
+    accumulator = op1 - op2;
 
-    check_overflow(accumulator.u, true);
-    check_underflow(accumulator.u, true);
+    check_overflow(accumulator, true);
+    check_underflow(accumulator, true);
 
-    printf("[FPU] suba.s: %f - %f = %f\n", op1, op2, accumulator.f);
+    printf("[FPU] suba.s: %f - %f = %f\n", op1, op2, accumulator);
 }
 
-void Cop1::mula_s(int reg1, int reg2)
+void Cop1::mula_s(int reg1, int reg2) noexcept
 {
-    float op1 = convert(gpr[reg1].u);
-    float op2 = convert(gpr[reg2].u);
-    accumulator.f = op1 * op2;
+    float op1 = convert(gpr[reg1]);
+    float op2 = convert(gpr[reg2]);
+    accumulator = op1 * op2;
 
-    check_overflow(accumulator.u, true);
-    check_underflow(accumulator.u, true);
-    printf("[FPU] mula.s: %f * %f = %f\n", op1, op2, accumulator.f);
+    check_overflow(accumulator, true);
+    check_underflow(accumulator, true);
+    printf("[FPU] mula.s: %f * %f = %f\n", op1, op2, accumulator);
 }
 
-void Cop1::madd_s(int dest, int reg1, int reg2)
+void Cop1::madd_s(int dest, int reg1, int reg2) noexcept
 {
-    float op1 = convert(gpr[reg1].u);
-    float op2 = convert(gpr[reg2].u);
-    float acc = convert(accumulator.u);
-    gpr[dest].f = acc + (op1 * op2);
+    float op1 = convert(gpr[reg1]);
+    float op2 = convert(gpr[reg2]);
+    float acc = convert(accumulator);
+    gpr[dest] = acc + (op1 * op2);
     
-    check_overflow(gpr[dest].u, true);
-    check_underflow(gpr[dest].u, true);
-    printf("[FPU] madd.s: %f + %f * %f = %f\n", acc, op1, op2, gpr[dest].f);
+    check_overflow(gpr[dest], true);
+    check_underflow(gpr[dest], true);
+    printf("[FPU] madd.s: %f + %f * %f = %f\n", acc, op1, op2, gpr[dest]);
 }
 
-void Cop1::msub_s(int dest, int reg1, int reg2)
+void Cop1::msub_s(int dest, int reg1, int reg2) noexcept
 {
-    float op1 = convert(gpr[reg1].u);
-    float op2 = convert(gpr[reg2].u);
-    float acc = convert(accumulator.u);
-    gpr[dest].f = acc - (op1 * op2);
+    float op1 = convert(gpr[reg1]);
+    float op2 = convert(gpr[reg2]);
+    float acc = convert(accumulator);
+    gpr[dest] = acc - (op1 * op2);
 
-    check_overflow(gpr[dest].u, true);
-    check_underflow(gpr[dest].u, true);
+    check_overflow(gpr[dest], true);
+    check_underflow(gpr[dest], true);
 
-    printf("[FPU] msub.s: %f - %f * %f = %f\n", acc, op1, op2, gpr[dest].f);
+    printf("[FPU] msub.s: %f - %f * %f = %f\n", acc, op1, op2, gpr[dest]);
 }
 
-void Cop1::madda_s(int reg1, int reg2)
+void Cop1::madda_s(int reg1, int reg2) noexcept
 {
-    float op1 = convert(gpr[reg1].u);
-    float op2 = convert(gpr[reg2].u);
-    accumulator.f += op1 * op2;
+    float op1 = convert(gpr[reg1]);
+    float op2 = convert(gpr[reg2]);
+    accumulator += op1 * op2;
 
-    check_overflow(accumulator.u, true);
-    check_underflow(accumulator.u, true);
-    printf("[FPU] madda.s: %f + (%f * %f) = %f", acc, op1, op2, accumulator.f);
+    check_overflow(accumulator, true);
+    check_underflow(accumulator, true);
+    printf("[FPU] madda.s: %f + (%f * %f) = %f", acc, op1, op2, accumulator);
 }
 
-void Cop1::msuba_s(int reg1, int reg2)
+void Cop1::msuba_s(int reg1, int reg2) noexcept
 {
-    float op1 = convert(gpr[reg1].u);
-    float op2 = convert(gpr[reg2].u);
-    accumulator.f -= op1 * op2;
+    float op1 = convert(gpr[reg1]);
+    float op2 = convert(gpr[reg2]);
+    accumulator -= op1 * op2;
 
-    check_overflow(accumulator.u, true);
-    check_underflow(accumulator.u, true);
-    printf("[FPU] msuba.s: %f + (%f * %f) = %f", acc, op1, op2, accumulator.f);
+    check_overflow(accumulator, true);
+    check_underflow(accumulator, true);
+    printf("[FPU] msuba.s: %f + (%f * %f) = %f", acc, op1, op2, accumulator);
 }
 
-void Cop1::max_s(int dest, int reg1, int reg2)
+void Cop1::max_s(int dest, int reg1, int reg2) noexcept
 {
-    printf("[FPU] max.s: %f(%d) >= %f(%d)", gpr[reg1].f, reg1, gpr[reg2].f, reg2);
-    if (gpr[reg1].f >= gpr[reg2].f)
-        gpr[dest].f = gpr[reg1].f;
-    else
-        gpr[dest].f = gpr[reg2].f;
+    printf("[FPU] max.s: %f(%d) >= %f(%d)", gpr[reg1], reg1, gpr[reg2], reg2);
+    gpr[dest] = fmaxf(gpr[reg1], gpr[reg2]);
 
     control.u = false;
     control.o = false;
-    printf(" Result = %f(%d)\n", gpr[dest].f, dest);
+    printf(" Result = %f(%d)\n", gpr[dest], dest);
 }
 
-void Cop1::min_s(int dest, int reg1, int reg2)
+void Cop1::min_s(int dest, int reg1, int reg2) noexcept
 {
-    printf("[FPU] min.s: %f(%d) <= %f(%d)", gpr[reg1].f, reg1, gpr[reg2].f, reg2);
-    if (gpr[reg1].f <= gpr[reg2].f)
-        gpr[dest].f = gpr[reg1].f;
-    else
-        gpr[dest].f = gpr[reg2].f;
+    printf("[FPU] min.s: %f(%d) <= %f(%d)", gpr[reg1], reg1, gpr[reg2], reg2);
+    gpr[dest] = fminf(gpr[reg1], gpr[reg2]);
 
     control.u = false;
     control.o = false;
-    printf(" Result = %f(%d)\n", gpr[dest].f, dest);
+    printf(" Result = %f(%d)\n", gpr[dest], dest);
 }
 
-void Cop1::c_f_s()
+void Cop1::c_f_s() noexcept
 {
     control.condition = false;
     printf("[FPU] c.f.s\n");
 }
 
-void Cop1::c_lt_s(int reg1, int reg2)
+void Cop1::c_lt_s(int reg1, int reg2) noexcept
 {
-    control.condition = convert(gpr[reg1].u) < convert(gpr[reg2].u);
-    printf("[FPU] c.lt.s: %f(%d), %f(%d)\n", gpr[reg1].f, reg1, gpr[reg2].f, reg2);
+    control.condition = convert(gpr[reg1]) < convert(gpr[reg2]);
+    printf("[FPU] c.lt.s: %f(%d), %f(%d)\n", gpr[reg1], reg1, gpr[reg2], reg2);
 }
 
-void Cop1::c_eq_s(int reg1, int reg2)
+void Cop1::c_eq_s(int reg1, int reg2) noexcept
 {
-    control.condition = convert(gpr[reg1].u) == convert(gpr[reg2].u);
-    printf("[FPU] c.eq.s: %f(%d), %f(%d)\n", gpr[reg1].f, reg1, gpr[reg2].f, reg2);
+    control.condition = convert(gpr[reg1]) == convert(gpr[reg2]);
+    printf("[FPU] c.eq.s: %f(%d), %f(%d)\n", gpr[reg1], reg1, gpr[reg2], reg2);
 }
 
-void Cop1::c_le_s(int reg1, int reg2)
+void Cop1::c_le_s(int reg1, int reg2) noexcept
 {
-    control.condition = convert(gpr[reg1].u) <= convert(gpr[reg2].u);
-    printf("[FPU] c.le.s: %f(%d), %f(%d)\n", gpr[reg1].f, reg1, gpr[reg2].f, reg2);
+    control.condition = convert(gpr[reg1]) <= convert(gpr[reg2]);
+    printf("[FPU] c.le.s: %f(%d), %f(%d)\n", gpr[reg1], reg1, gpr[reg2], reg2);
 }
