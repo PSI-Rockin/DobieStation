@@ -732,7 +732,7 @@ int DMAC::process_SPR_FROM()
                 channels[SPR_FROM].address = RBOR | (channels[SPR_FROM].address & RBSR);
             }
             uint128_t DMAData = fetch128(channels[SPR_FROM].scratchpad_address | (1 << 31));
-            store128(channels[SPR_FROM].address, DMAData);
+            store128(channels[SPR_FROM].address & 0x7FFFFFFF, DMAData);
 
             channels[SPR_FROM].scratchpad_address += 16;
             advance_dest_dma(SPR_FROM);
@@ -796,7 +796,7 @@ int DMAC::process_SPR_TO()
         int quads_to_transfer = std::min(channels[SPR_TO].quadword_count, max_qwc);
         while (count < quads_to_transfer)
         {
-            uint128_t DMAData = fetch128(channels[SPR_TO].address);
+            uint128_t DMAData = fetch128(channels[SPR_TO].address & 0x7FFFFFFF);
             store128(channels[SPR_TO].scratchpad_address | (1 << 31), DMAData);
             channels[SPR_TO].scratchpad_address += 16;
 
