@@ -910,7 +910,7 @@ float VectorUnit::update_mac_flags(float value, int index)
         new_MAC_flags &= ~(0x10 << flag_id);
 
     //Zero flag, clear under/overflow
-    if (value == 0)
+    if ((value_u & 0x7FFFFFFF) == 0)
     {
         new_MAC_flags |= 1 << flag_id;
         new_MAC_flags &= ~(0x1100 << flag_id);
@@ -962,7 +962,7 @@ void VectorUnit::update_mac_pipeline()
     bool updatestatus = false;
 
     //Pipeline has updated, so the status needs to update
-    if (MAC_pipeline[3] != MAC_pipeline[2])
+    if ((MAC_pipeline[3] & 0xFFFF) != (MAC_pipeline[2] & 0xFFFF))
         updatestatus = true;
 
     MAC_pipeline[3] = MAC_pipeline[2];
@@ -990,7 +990,7 @@ void VectorUnit::update_mac_pipeline()
     {
         status_pipe--;
         if (!status_pipe)
-            status = (status & 0x3F) | (status_value & 0xFC0);
+            status = (status & 0x3F) | (status_value & 0xFFF);
     }
 }
 
@@ -1411,9 +1411,11 @@ void VectorUnit::div(uint32_t instr)
     if (denom == 0.0)
     {
         if (num == 0.0)
-            status |= 0x10;
+            status_value = 0x10;
         else
-            status |= 0x20;
+            status_value = 0x20;
+
+        status_pipe = 7;
 
         if ((gpr[_fs_].u[_fsf_] & 0x80000000) ^ (gpr[_ft_].u[_ftf_] & 0x80000000))
             new_Q_instance.u = 0xFF7FFFFF;
@@ -2834,8 +2836,8 @@ void VectorUnit::rsqrt(uint32_t instr)
     if (denom == 0.0)
     {
         printf("[VU] RSQRT by zero!\n");
-        status |= 0x20;
-
+        status_value = 0x20;
+        status_pipe = 13;
         if (num == 0.0)
         {
             if ((gpr[_fs_].u[_fsf_] & 0x80000000) ^ (gpr[_ft_].u[_ftf_] & 0x80000000))
@@ -2843,7 +2845,8 @@ void VectorUnit::rsqrt(uint32_t instr)
             else
                 new_Q_instance.u = 0;
 
-            status |= 0x10;
+            status_value |= 0x10;
+            
         }
         else
         {
@@ -2855,8 +2858,11 @@ void VectorUnit::rsqrt(uint32_t instr)
     }
     else
     {
-        if(denom < 0.0)
-            status |= 0x10;
+        if (denom < 0.0)
+        {
+            status_value = 0x10;
+            status_pipe = 13;
+        }
 
         new_Q_instance.f = num;
         new_Q_instance.f /= sqrt(fabs(denom));
@@ -2930,7 +2936,10 @@ void VectorUnit::vu_sqrt(uint32_t instr)
 {
     status = (status & 0xfcf) | ((status & 0x30) << 6);
     if (convert(gpr[_ft_].u[_ftf_]) < 0.0)
-        status |= 0x10;
+    {
+        status_value = 0x10;
+        status_pipe = 7;
+    }
 
     new_Q_instance.f = sqrt(fabs(convert(gpr[_ft_].u[_ftf_])));
     new_Q_instance.f = convert(new_Q_instance.u);
