@@ -885,8 +885,8 @@ void VectorUnit::start_program(uint32_t addr)
         if (!id)
         {
             eecpu->set_cop2_last_cycle(eecpu->get_cycle_count());
-            cycle_count = eecpu->get_cop2_last_cycle() >> 1;
         }
+        cycle_count = eecpu->get_cycle_count();
         flush_pipes();
     }
     //disasm_micromem();
