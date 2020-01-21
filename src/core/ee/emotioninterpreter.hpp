@@ -34,7 +34,9 @@ enum RegType
     GPR,
     COP0,
     COP1,
+    COP1_CONTROL,
     COP2,
+    COP2_CONTROL
 };
 
 struct EE_DependencyInfo
@@ -172,6 +174,8 @@ struct EE_InstrInfo
 
 namespace EmotionInterpreter
 {
+    friend class EmotionEngine;
+
     void interpret(EmotionEngine& cpu, uint32_t instruction);
     void lookup(EE_InstrInfo&, uint32_t instruction);
 
@@ -299,31 +303,30 @@ namespace EmotionInterpreter
     void cop2_ctc(EmotionEngine& cpu, uint32_t instruction);
     void cop_bc0(EmotionEngine& cpu, uint32_t instruction);
 
-    void cop_s(Cop1& fpu, uint32_t instruction);
-    void fpu_cop_s(EmotionEngine& cpu, uint32_t instruction);
-    void fpu_add(Cop1& fpu, uint32_t instruction);
-    void fpu_sub(Cop1& fpu, uint32_t instruction);
-    void fpu_mul(Cop1& fpu, uint32_t instruction);
-    void fpu_div(Cop1& fpu, uint32_t instruction);
-    void fpu_sqrt(Cop1& fpu, uint32_t instruction);
-    void fpu_abs(Cop1& fpu, uint32_t instruction);
-    void fpu_mov(Cop1& fpu, uint32_t instruction);
-    void fpu_neg(Cop1& fpu, uint32_t instruction);
-    void fpu_rsqrt(Cop1& fpu, uint32_t instruction);
-    void fpu_adda(Cop1& fpu, uint32_t instruction);
-    void fpu_suba(Cop1& fpu, uint32_t instruction);
-    void fpu_mula(Cop1& fpu, uint32_t instruction);
-    void fpu_madd(Cop1& fpu, uint32_t instruction);
-    void fpu_msub(Cop1& fpu, uint32_t instruction);
-    void fpu_madda(Cop1& fpu, uint32_t instruction);
-    void fpu_msuba(Cop1& fpu, uint32_t instruction);
-    void fpu_cvt_w_s(Cop1& fpu, uint32_t instruction);
-    void fpu_max_s(Cop1& fpu, uint32_t instruction);
-    void fpu_min_s(Cop1& fpu, uint32_t instruction);
-    void fpu_c_f_s(Cop1& fpu, uint32_t instruction);
-    void fpu_c_eq_s(Cop1& fpu, uint32_t instruction);
-    void fpu_c_lt_s(Cop1& fpu, uint32_t instruction);
-    void fpu_c_le_s(Cop1& fpu, uint32_t instruction);
+    void cop_s(EE_InstrInfo& info, uint32_t instruction);
+    void fpu_add(EmotionEngine& cpu, uint32_t instruction);
+    void fpu_sub(EmotionEngine& cpu, uint32_t instruction);
+    void fpu_mul(EmotionEngine& cpu, uint32_t instruction);
+    void fpu_div(EmotionEngine& cpu, uint32_t instruction);
+    void fpu_sqrt(EmotionEngine& cpu, uint32_t instruction);
+    void fpu_abs(EmotionEngine& cpu, uint32_t instruction);
+    void fpu_mov(EmotionEngine& cpu, uint32_t instruction);
+    void fpu_neg(EmotionEngine& cpu, uint32_t instruction);
+    void fpu_rsqrt(EmotionEngine& cpu, uint32_t instruction);
+    void fpu_adda(EmotionEngine& cpu, uint32_t instruction);
+    void fpu_suba(EmotionEngine& cpu, uint32_t instruction);
+    void fpu_mula(EmotionEngine& cpu, uint32_t instruction);
+    void fpu_madd(EmotionEngine& cpu, uint32_t instruction);
+    void fpu_msub(EmotionEngine& cpu, uint32_t instruction);
+    void fpu_madda(EmotionEngine& cpu, uint32_t instruction);
+    void fpu_msuba(EmotionEngine& cpu, uint32_t instruction);
+    void fpu_cvt_w_s(EmotionEngine& cpu, uint32_t instruction);
+    void fpu_max_s(EmotionEngine& cpu, uint32_t instruction);
+    void fpu_min_s(EmotionEngine& cpu, uint32_t instruction);
+    void fpu_c_f_s(EmotionEngine& cpu, uint32_t instruction);
+    void fpu_c_eq_s(EmotionEngine& cpu, uint32_t instruction);
+    void fpu_c_lt_s(EmotionEngine& cpu, uint32_t instruction);
+    void fpu_c_le_s(EmotionEngine& cpu, uint32_t instruction);
     void cop_bc1(EmotionEngine& cpu, uint32_t instruction);
     void cop2_bc2(EmotionEngine& cpu, uint32_t instruction);
     void cop_cvt_s_w(EmotionEngine& cpu, uint32_t instruction);

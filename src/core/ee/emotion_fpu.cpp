@@ -2,13 +2,17 @@
 #include <cstdlib>
 #include "emotioninterpreter.hpp"
 
-void EmotionInterpreter::cop_s(Cop1& fpu, uint32_t instruction)
+void EmotionInterpreter::cop_s(EE_InstrInfo &info, uint32_t instruction)
 {
     uint8_t op = instruction & 0x3F;
     switch (op)
     {
         case 0x0:
-            fpu_add(fpu, instruction);
+            info.interpreter_fn = fpu_add;
+            info.pipeline = EE_InstrInfo::Pipeline::COP1;
+            info.latency = 4;
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x1:
             fpu_sub(fpu, instruction);
@@ -81,17 +85,12 @@ void EmotionInterpreter::cop_s(Cop1& fpu, uint32_t instruction)
     }
 }
 
-void EmotionInterpreter::fpu_cop_s(EmotionEngine& cpu, uint32_t instruction)
-{
-    cpu.fpu_cop_s(instruction);
-}
-
-void EmotionInterpreter::fpu_add(Cop1 &fpu, uint32_t instruction)
+void EmotionInterpreter::fpu_add(EmotionEngine& cpu, uint32_t instruction)
 {
     uint32_t dest = (instruction >> 6) & 0x1F;
     uint32_t reg1 = (instruction >> 11) & 0x1F;
     uint32_t reg2 = (instruction >> 16) & 0x1F;
-    fpu.add_s(dest, reg1, reg2);
+    //fpu.add_s(dest, reg1, reg2);
 }
 
 void EmotionInterpreter::fpu_sub(Cop1 &fpu, uint32_t instruction)
