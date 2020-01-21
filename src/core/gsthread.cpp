@@ -459,7 +459,7 @@ void GraphicsSynthesizerThread::reset()
     pixels_transferred = 0;
     num_vertices = 0;
     frame_count = 0;
-    deinterlace_method = BOB_DEINTERLACE;
+    reg.deinterlace_method = BOB_DEINTERLACE;
 
     COLCLAMP = true;
 
@@ -589,7 +589,7 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
 
     if (reg.SMODE2.interlaced)
     {
-        if (deinterlace_method != BOB_DEINTERLACE)
+        if (reg.deinterlace_method != BOB_DEINTERLACE)
         {
             y_increment = 2;
             start_scanline = !reg.CSR.is_odd_frame; //Seems to write the upper fields first
@@ -673,7 +673,7 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
 
             if (reg.SMODE2.interlaced)
             {
-                switch (deinterlace_method)
+                switch (reg.deinterlace_method)
                 {
                     case MERGE_FIELD_DEINTERLACE:
                     {
