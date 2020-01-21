@@ -97,7 +97,7 @@ class VectorInterface
         void MSCAL(uint32_t addr);
         void init_UNPACK(uint32_t value);
         bool is_filling_write();
-        void handle_UNPACK(uint32_t value);
+        void handle_UNPACK();
         void handle_UNPACK_masking(uint128_t& quad);
         void handle_UNPACK_mode(uint128_t& quad);
         void process_UNPACK_quad(uint128_t& quad);
