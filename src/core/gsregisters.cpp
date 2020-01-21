@@ -22,6 +22,10 @@ void GS_REGISTERS::write64_privileged(uint32_t addr, uint64_t value)
             SMODE2.interlaced = value & 0x1;
             SMODE2.frame_mode = value & 0x2;
             SMODE2.power_mode = (value >> 2) & 0x3;
+            if(SMODE2.interlaced && SMODE2.frame_mode) //Interlace - Read Every Line
+                deinterlace_method = NO_DEINTERLACE;
+            else
+                deinterlace_method = BOB_DEINTERLACE;
             break;
         case 0x0070:
             printf("[GS_r] Write DISPFB1: $%08lX_%08lX\n", value >> 32, value & 0xFFFFFFFF);
