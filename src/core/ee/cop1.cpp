@@ -77,6 +77,67 @@ void Cop1::reset()
     control.condition = false;
 }
 
+//Translated from PCSX2's recompiler for accurate ADD_S/SUB_S
+float Cop1::accurate_add_sub(uint32_t fs, uint32_t ft, bool isSub)
+{
+    COP1_REG op1, op2;
+    op1.f = convert(fs);
+    op2.f = convert(ft);
+    float result;
+
+    int32_t tempexpfs = (fs >> 23) & 0xFF;
+    int32_t tempexpft = (ft >> 23) & 0xFF;
+    int32_t tempexp = tempexpfs - tempexpft;
+
+    if (tempexp >= 25)//25 - 255
+    {
+        op2.u = (op2.u & 0x80000000);
+        if(!isSub)
+            result = op1.f + op2.f;
+        else
+            result = op1.f - op2.f;
+    }
+    else if (tempexp <= -25) //-25 - -255
+    {
+        op1.u = (op1.u & 0x80000000);
+        if (!isSub)
+            result = op1.f + op2.f;
+        else
+            result = op1.f - op2.f;
+    }
+    else if (tempexp < 0) //-1 - -24
+    {
+        uint32_t temp = 0xffffffff;
+        tempexp = abs(tempexp) - 1;
+        temp <<= tempexp;
+        op1.u &= temp;
+        if (!isSub)
+            result = op1.f + op2.f;
+        else
+            result = op1.f - op2.f;
+    }
+    else if (tempexp > 0) //1 - 24
+    {
+        uint32_t temp = 0xffffffff;
+        tempexp -= 1;
+        temp <<= tempexp;
+        op2.u &= temp;
+        if (!isSub)
+            result = op1.f + op2.f;
+        else
+            result = op1.f - op2.f;
+    }
+    else //0
+    {
+        if (!isSub)
+            result = op1.f + op2.f;
+        else
+            result = op1.f - op2.f;
+    }
+
+    return result;
+}
+
 bool Cop1::get_condition()
 {
     return control.condition;
@@ -161,45 +222,7 @@ void Cop1::add_s(int dest, int reg1, int reg2)
     float op2 = convert(gpr[reg2].u);
     gpr[dest].f = op1 + op2;*/
 
-    //Translated from PCSX2's recompiler for accurate ADD_S/SUB_S
-    COP1_REG op1, op2;
-    op1.f = convert(gpr[reg1].u);
-    op2.f = convert(gpr[reg2].u);
-
-    int32_t tempexpfs = (gpr[reg1].u >> 23) & 0xFF;
-    int32_t tempexpft = (gpr[reg2].u >> 23) & 0xFF;
-    int32_t tempexp = tempexpfs - tempexpft;
-
-    if (tempexp >= 25)//25 - 255
-    {
-        op2.u = (op2.u & 0x80000000);
-        gpr[dest].f = op1.f + op2.f;
-    }
-    else if (tempexp <= -25) //-25 - -255
-    {
-        op1.u = (op1.u & 0x80000000);
-        gpr[dest].f = op1.f + op2.f;
-    }
-    else if (tempexp < 0) //-1 - -24
-    {
-        uint32_t temp = 0xffffffff;
-        tempexp = abs(tempexp) - 1;
-        temp <<= tempexp;
-        op1.u &= temp;
-        gpr[dest].f = op1.f + op2.f;
-    }
-    else if (tempexp > 0) //1 - 24
-    {
-        uint32_t temp = 0xffffffff;
-        tempexp -= 1;
-        temp <<= tempexp;
-        op2.u &= temp;
-        gpr[dest].f = op1.f + op2.f;
-    }
-    else //0
-    {
-        gpr[dest].f = op1.f + op2.f;
-    }
+    gpr[dest].f = accurate_add_sub(gpr[reg1].u, gpr[reg2].u, false);
 
     check_overflow(gpr[dest].u, true);
     check_underflow(gpr[dest].u, true);
@@ -213,46 +236,8 @@ void Cop1::sub_s(int dest, int reg1, int reg2)
     float op2 = convert(gpr[reg2].u);
     gpr[dest].f = op1 - op2;*/
 
-    //Translated from PCSX2's recompiler for accurate ADD_S/SUB_S
-    COP1_REG op1, op2;
-    op1.f = convert(gpr[reg1].u);
-    op2.f = convert(gpr[reg2].u);
+    gpr[dest].f = accurate_add_sub(gpr[reg1].u, gpr[reg2].u, true);
 
-    int32_t tempexpfs = (gpr[reg1].u >> 23) & 0xFF;
-    int32_t tempexpft = (gpr[reg2].u >> 23) & 0xFF;
-    int32_t tempexp = tempexpfs - tempexpft;
-
-    if (tempexp >= 25)//25 - 255
-    {
-        op2.u = (op2.u & 0x80000000);
-        gpr[dest].f = op1.f - op2.f;
-    }
-    else if (tempexp <= -25) //-25 - -255
-    {
-        op1.u = (op1.u & 0x80000000);
-        gpr[dest].f = op1.f - op2.f;
-    }
-    else if (tempexp < 0) //-1 - -24
-    {
-        uint32_t temp = 0xffffffff;
-        tempexp = abs(tempexp) - 1;
-        temp <<= tempexp;
-        op1.u &= temp;
-        gpr[dest].f = op1.f - op2.f;
-    }
-    else if (tempexp > 0) //1 - 24
-    {
-        uint32_t temp = 0xffffffff;
-        tempexp -= 1;
-        temp <<= tempexp;
-        op2.u &= temp;
-        gpr[dest].f = op1.f - op2.f;
-    }
-    else //0
-    {
-        gpr[dest].f = op1.f - op2.f;
-    }
-        
     check_overflow(gpr[dest].u, true);
     check_underflow(gpr[dest].u, true);
 
