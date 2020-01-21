@@ -43,6 +43,11 @@ void VectorInterface::reset()
     else
         mem_mask = 0xFF;
 
+    if (id)
+        fifo_size = 64;
+    else
+        fifo_size = 32;
+
     if(vu->get_id() == 1)
         VU_JIT::reset();
 }
@@ -81,7 +86,7 @@ void VectorInterface::update(int cycles)
     //This allows us to process one quadword per bus cycle
     if (fifo_reverse)
     {
-        if (FIFO.size() <= 60)
+        if (FIFO.size() <= (fifo_size - 4))
         {
             uint128_t fifo_data;
             while (cycles--)
@@ -145,7 +150,7 @@ void VectorInterface::update(int cycles)
             {
                 command_len--;
                 FIFO.pop();
-                if (FIFO.size() <= 32)
+                if (FIFO.size() <= (fifo_size - 4))
                     dmac->set_DMA_request(id);
             }
         }
@@ -862,7 +867,7 @@ void VectorInterface::process_UNPACK_quad(uint128_t &quad)
 bool VectorInterface::transfer_DMAtag(uint128_t tag)
 {
     //This should return false if the transfer stalls due to the FIFO filling up
-    if (FIFO.size() > 62)
+    if (FIFO.size() > (fifo_size - 2))
     {
         dmac->clear_DMA_request(id);
         return false;
@@ -875,7 +880,7 @@ bool VectorInterface::transfer_DMAtag(uint128_t tag)
 
 bool VectorInterface::feed_DMA(uint128_t quad)
 {
-    if (FIFO.size() > 60)
+    if (FIFO.size() > (fifo_size - 4))
     {
         dmac->clear_DMA_request(id);
         return false;

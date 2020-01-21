@@ -72,6 +72,7 @@ class VectorInterface
         bool flush_stall;
         uint32_t wait_cmd_value;
         uint16_t mem_mask;
+        uint32_t fifo_size;
 
         uint32_t buffer[4];
         int buffer_size;
