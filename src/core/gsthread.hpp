@@ -248,7 +248,6 @@ struct TexLookupInfo
     int16_t lastu, lastv;
 };
 
-
 uint32_t addr_PSMCT32(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
 uint32_t addr_PSMCT32Z(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
 uint32_t addr_PSMCT16(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
@@ -362,6 +361,7 @@ class GraphicsSynthesizerThread
         int frame_count;
         uint8_t* local_mem;
         uint8_t CRT_mode;
+        uint32_t screen_buffer[2048 * 2048];
         uint8_t clut_cache[1024];
         uint32_t CBP0, CBP1;
 

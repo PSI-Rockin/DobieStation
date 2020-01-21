@@ -66,6 +66,15 @@ struct GS_SIGLBLID
     uint32_t lbl_id;
 };
 
+//0 = No Deinterlacing, 1 = Merge Field (blurry/low res), 2 = Blend Scanline (ghosting), 3 = Bob (Best quality, can still have interlace bob)
+enum DeinterlaceMethod
+{
+    NO_DEINTERLACE,
+    MERGE_FIELD_DEINTERLACE,
+    BLEND_SCANLINE_DEINTERLACE,
+    BOB_DEINTERLACE,
+};
+
 struct GS_REGISTERS
 {
     //Privileged registers
@@ -79,6 +88,7 @@ struct GS_REGISTERS
     uint8_t CRT_mode;
     GS_SIGLBLID SIGLBLID;
     uint32_t BGCOLOR;
+    DeinterlaceMethod deinterlace_method;
     
     //EXTBUF, EXTDATA, EXTWRITE not currently implemented
 
