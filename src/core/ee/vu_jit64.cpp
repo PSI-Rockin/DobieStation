@@ -2065,7 +2065,7 @@ void VU_JIT64::eleng(VectorUnit &vu, IR::Instruction &instr)
     REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ);
     REG_64 temp = REG_64::XMM0;
 
-    clamp_vfreg(0xE, source);
+    clamp_vfreg(0x7, source);
 
     emitter.MOVAPS_REG(source, temp);
 
@@ -2085,7 +2085,7 @@ void VU_JIT64::erleng(VectorUnit &vu, IR::Instruction &instr)
     REG_64 temp = REG_64::XMM0;
     REG_64 temp2 = REG_64::XMM1;
 
-    clamp_vfreg(0xE, source);
+    clamp_vfreg(0x7, source);
 
     emitter.MOVAPS_REG(source, temp);
 
@@ -2145,7 +2145,7 @@ void VU_JIT64::rinit(VectorUnit &vu, IR::Instruction &instr)
     REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ);
     REG_64 temp = REG_64::XMM0;
 
-    clamp_vfreg(field, source);
+    clamp_vfreg(1 << field, source);
 
     //R = 0x3F800000 | (reg[field] & 0x007FFFFF)
     emitter.INSERTPS(field, 0, 0, source, temp);
