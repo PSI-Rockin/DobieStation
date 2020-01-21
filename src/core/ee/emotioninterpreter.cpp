@@ -322,42 +322,58 @@ void EmotionInterpreter::regimm(EE_InstrInfo &info, uint32_t instruction)
         case 0x00:
             info.interpreter_fn = &bltz;
             info.pipeline = EE_InstrInfo::Pipeline::Branch;
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x01:
             info.interpreter_fn = &bgez;
             info.pipeline = EE_InstrInfo::Pipeline::Branch;
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x02:
             info.interpreter_fn = &bltzl;
             info.pipeline = EE_InstrInfo::Pipeline::Branch;
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x03:
             info.interpreter_fn = &bgezl;
             info.pipeline = EE_InstrInfo::Pipeline::Branch;
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x10:
             info.interpreter_fn = &bltzal;
             info.pipeline = EE_InstrInfo::Pipeline::Branch;
+            info.add_dependency(DependencyType::Write, RegType::GPR, EE_NormalReg::ra);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x11:
             info.interpreter_fn = &bgezal;
             info.pipeline = EE_InstrInfo::Pipeline::Branch;
+            info.add_dependency(DependencyType::Write, RegType::GPR, EE_NormalReg::ra);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x12:
             info.interpreter_fn = &bltzall;
             info.pipeline = EE_InstrInfo::Pipeline::Branch;
+            info.add_dependency(DependencyType::Write, RegType::GPR, EE_NormalReg::ra);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x13:
             info.interpreter_fn = &bgezall;
             info.pipeline = EE_InstrInfo::Pipeline::Branch;
+            info.add_dependency(DependencyType::Write, RegType::GPR, EE_NormalReg::ra);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x18:
             info.interpreter_fn = &mtsab;
-            info.pipeline = EE_InstrInfo::Pipeline::COP0;
+            info.pipeline = EE_InstrInfo::Pipeline::IntGeneric;
+            info.add_dependency(DependencyType::Write, RegType::GPR, EE_SpecialReg::SA);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x19:
             info.interpreter_fn = &mtsah;
-            info.pipeline = EE_InstrInfo::Pipeline::COP0;
+            info.pipeline = EE_InstrInfo::Pipeline::IntGeneric;
+            info.add_dependency(DependencyType::Write, RegType::GPR, EE_SpecialReg::SA);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         default:
             unknown_op("regimm", instruction, op);
