@@ -38,50 +38,72 @@ void EmotionInterpreter::lookup(EE_InstrInfo &info, uint32_t instruction)
         case 0x04:
             info.interpreter_fn = &beq;
             info.pipeline = EE_InstrInfo::Pipeline::Branch;
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x05:
             info.interpreter_fn = &bne;
             info.pipeline = EE_InstrInfo::Pipeline::Branch;
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x06:
             info.interpreter_fn = &blez;
             info.pipeline = EE_InstrInfo::Pipeline::Branch;
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x07:
             info.interpreter_fn = &bgtz;
             info.pipeline = EE_InstrInfo::Pipeline::Branch;
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x08:
             info.interpreter_fn = &addi;
             info.pipeline = EE_InstrInfo::Pipeline::IntGeneric;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x09:
             info.interpreter_fn = &addiu;
             info.pipeline = EE_InstrInfo::Pipeline::IntGeneric;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x0A:
             info.interpreter_fn = &sltu;
             info.pipeline = EE_InstrInfo::Pipeline::IntGeneric;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x0B:
             info.interpreter_fn = &sltiu;
             info.pipeline = EE_InstrInfo::Pipeline::IntGeneric;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x0C:
             info.interpreter_fn = &andi;
             info.pipeline = EE_InstrInfo::Pipeline::IntGeneric;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x0D:
             info.interpreter_fn = &ori;
             info.pipeline = EE_InstrInfo::Pipeline::IntGeneric;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x0E:
             info.interpreter_fn = &xori;
             info.pipeline = EE_InstrInfo::Pipeline::IntGeneric;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x0F:
             info.interpreter_fn = &lui;
             info.pipeline = EE_InstrInfo::Pipeline::IntGeneric;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 16) & 0x1F);
             break;
         case 0x10:
         case 0x11:
@@ -92,34 +114,48 @@ void EmotionInterpreter::lookup(EE_InstrInfo &info, uint32_t instruction)
         case 0x14:
             info.interpreter_fn = &beql;
             info.pipeline = EE_InstrInfo::Pipeline::Branch;
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x15:
             info.interpreter_fn = &bnel;
             info.pipeline = EE_InstrInfo::Pipeline::Branch;
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x16:
             info.interpreter_fn = &blezl;
             info.pipeline = EE_InstrInfo::Pipeline::Branch;
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x17:
             info.interpreter_fn = &bgtzl;
             info.pipeline = EE_InstrInfo::Pipeline::Branch;
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x18:
             info.interpreter_fn = &daddi;
             info.pipeline = EE_InstrInfo::Pipeline::IntGeneric;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x19:
             info.interpreter_fn = &daddiu;
             info.pipeline = EE_InstrInfo::Pipeline::IntGeneric;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x1A:
             info.interpreter_fn = &ldl;
             info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x1B:
             info.interpreter_fn = &ldr;
             info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x1C:
             mmi(cpu, instruction);
@@ -127,103 +163,151 @@ void EmotionInterpreter::lookup(EE_InstrInfo &info, uint32_t instruction)
         case 0x1E:
             info.interpreter_fn = &lq;
             info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x1F:
             info.interpreter_fn = &sq;
             info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x20:
             info.interpreter_fn = &lb;
             info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x21:
             info.interpreter_fn = &lh;
             info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x22:
             info.interpreter_fn = &lwl;
             info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x23:
             info.interpreter_fn = &lw;
             info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x24:
             info.interpreter_fn = &lbu;
             info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x25:
             info.interpreter_fn = &lhu;
             info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x26:
             info.interpreter_fn = &lwr;
             info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x27:
             info.interpreter_fn = &lwu;
             info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x28:
             info.interpreter_fn = &sb;
             info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x29:
             info.interpreter_fn = &sh;
             info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x2A:
             info.interpreter_fn = &swl;
             info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x2B:
             info.interpreter_fn = &sw;
             info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x2C:
             info.interpreter_fn = &sdl;
             info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x2D:
             info.interpreter_fn = &sdr;
             info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x2E:
             info.interpreter_fn = &swr;
             info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x2F:
             info.interpreter_fn = &cache;
             info.pipeline = EE_InstrInfo::Pipeline::COP0;
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x31:
             info.interpreter_fn = &lwc1;
             info.pipeline = EE_InstrInfo::Pipeline::COP1 | EE_InstrInfo::Pipeline::LoadStore;
+            info.add_dependency(DependencyType::Write, RegType::COP1, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x33:
             //prefetch
             info.interpreter_fn = &nop;
-            info.pipeline = EE_InstrInfo::Pipeline::COP0;
+            info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x36:
             info.interpreter_fn = &lqc2;
             info.pipeline = EE_InstrInfo::Pipeline::COP2 | EE_InstrInfo::Pipeline::LoadStore;
+            info.add_dependency(DependencyType::Write, RegType::COP2, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x37:
             info.interpreter_fn = &ld;
             info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x39:
             info.interpreter_fn = &swc1;
             info.pipeline = EE_InstrInfo::Pipeline::COP1 | EE_InstrInfo::Pipeline::LoadStore;
+            info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x3E:
             info.interpreter_fn = &sqc2;
             info.pipeline = EE_InstrInfo::Pipeline::COP2 | EE_InstrInfo::Pipeline::LoadStore;
+            info.add_dependency(DependencyType::Read, RegType::COP2, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x3F:
             info.interpreter_fn = &sd;
             info.pipeline = EE_InstrInfo::Pipeline::LoadStore;
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         default:
             unknown_op("normal", instruction, op);
