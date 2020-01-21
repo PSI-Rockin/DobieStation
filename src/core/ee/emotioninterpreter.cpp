@@ -198,7 +198,7 @@ void EmotionInterpreter::lookup(EE_InstrInfo &info, uint32_t instruction)
             break;
         case 0x31:
             info.interpreter_fn = &lwc1;
-            info.pipeline = EE_InstrInfo::Pipeline::COP1LoadStore;
+            info.pipeline = EE_InstrInfo::Pipeline::COP1 | EE_InstrInfo::Pipeline::LoadStore;
             break;
         case 0x33:
             //prefetch
@@ -207,7 +207,7 @@ void EmotionInterpreter::lookup(EE_InstrInfo &info, uint32_t instruction)
             break;
         case 0x36:
             info.interpreter_fn = &lqc2;
-            info.pipeline = EE_InstrInfo::Pipeline::COP2LoadStore;
+            info.pipeline = EE_InstrInfo::Pipeline::COP2 | EE_InstrInfo::Pipeline::LoadStore;
             break;
         case 0x37:
             info.interpreter_fn = &ld;
@@ -215,11 +215,11 @@ void EmotionInterpreter::lookup(EE_InstrInfo &info, uint32_t instruction)
             break;
         case 0x39:
             info.interpreter_fn = &swc1;
-            info.pipeline = EE_InstrInfo::Pipeline::COP1LoadStore;
+            info.pipeline = EE_InstrInfo::Pipeline::COP1 | EE_InstrInfo::Pipeline::LoadStore;
             break;
         case 0x3E:
             info.interpreter_fn = &sqc2;
-            info.pipeline = EE_InstrInfo::Pipeline::COP2LoadStore;
+            info.pipeline = EE_InstrInfo::Pipeline::COP2 | EE_InstrInfo::Pipeline::LoadStore;
             break;
         case 0x3F:
             info.interpreter_fn = &sd;
