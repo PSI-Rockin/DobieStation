@@ -28,6 +28,27 @@ enum EE_SpecialReg
     SA
 };
 
+enum RegType
+{
+    UNK,
+    GPR,
+    COP0,
+    COP1,
+    COP2,
+};
+
+struct EE_DependencyInfo
+{
+    RegType type = RegType::UNK;
+    uint8_t reg = 0xCD;
+};
+
+enum class DependencyType
+{
+    Read,
+    Write
+};
+
 struct EE_InstrInfo
 {
     /**
@@ -105,13 +126,48 @@ struct EE_InstrInfo
         OTHER
     };
 
-    std::basic_string<uint8_t> dependencies = std::basic_string<uint8_t>();
+    // By using basic_string instead of vector, constructing this structure
+    // requires no dynamic memory allocation
+    std::basic_string<uint16_t> write_dependencies = std::basic_string<uint16_t>();
+    std::basic_string<uint16_t> read_dependencies = std::basic_string<uint16_t>();
     void(*interpreter_fn)(EmotionEngine&, uint32_t) = nullptr;
     Pipeline pipeline = Pipeline::Unk;
     InstructionType type = InstructionType::OTHER;
 
     uint8_t latency = 1;
     uint8_t throughput = 1;
+
+    void add_dependency(DependencyType dtype, RegType rtype, uint8_t reg)
+    {
+        switch (dtype)
+        {
+            case DependencyType::Read:
+                read_dependencies.push_back((int)rtype << 8 | reg);
+                break;
+            case DependencyType::Write:
+                write_dependencies.push_back((int)rtype << 8 | reg);
+                break;
+            default:
+                break;
+        }
+    }
+
+    void get_dependency(EE_DependencyInfo &dest, size_t idx, DependencyType dtype)
+    {
+        switch (dtype)
+        {
+            case DependencyType::Read:
+                dest.type = (RegType)(read_dependencies[idx] >> 8);
+                dest.reg = read_dependencies[idx] | 0xFF;
+                break;
+            case DependencyType::Write:
+                dest.type = (RegType)(write_dependencies[idx] >> 8);
+                dest.reg = write_dependencies[idx] | 0xFF;
+                break;
+            default:
+                break;
+        }
+    }
 };
 
 namespace EmotionInterpreter
