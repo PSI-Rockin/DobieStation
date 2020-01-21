@@ -38,6 +38,11 @@ void Cop1::check_overflow(uint32_t& dest, bool set_flags)
             control.o = true;
         }
     }
+    else
+    {
+        if (set_flags)
+            control.o = false;
+    }
 }
 
 void Cop1::check_underflow(uint32_t& dest, bool set_flags)
@@ -52,6 +57,11 @@ void Cop1::check_underflow(uint32_t& dest, bool set_flags)
             control.su = true;
             control.u = true;
         }
+    }
+    else
+    {
+        if (set_flags)
+            control.u = false;
     }
 }
 void Cop1::reset()
@@ -91,7 +101,8 @@ uint32_t Cop1::cfc(int index)
             return 0x2E00;
         case 31:
             uint32_t reg;
-            reg = control.su << 3;
+            reg = 1;
+            reg |= control.su << 3;
             reg |= control.so << 4;
             reg |= control.sd << 5;
             reg |= control.si << 6;
@@ -146,9 +157,49 @@ void Cop1::cvt_w_s(int dest, int source)
 
 void Cop1::add_s(int dest, int reg1, int reg2)
 {
-    float op1 = convert(gpr[reg1].u);
+    /*float op1 = convert(gpr[reg1].u);
     float op2 = convert(gpr[reg2].u);
-    gpr[dest].f = op1 + op2;
+    gpr[dest].f = op1 + op2;*/
+
+    //Translated from PCSX2's recompiler for accurate ADD_S/SUB_S
+    COP1_REG op1, op2;
+    op1.f = convert(gpr[reg1].u);
+    op2.f = convert(gpr[reg2].u);
+
+    int32_t tempexpfs = (gpr[reg1].u >> 23) & 0xFF;
+    int32_t tempexpft = (gpr[reg2].u >> 23) & 0xFF;
+    int32_t tempexp = tempexpfs - tempexpft;
+
+    if (tempexp >= 25)//25 - 255
+    {
+        op2.u = (op2.u & 0x80000000);
+        gpr[dest].f = op1.f + op2.f;
+    }
+    else if (tempexp <= -25) //-25 - -255
+    {
+        op1.u = (op1.u & 0x80000000);
+        gpr[dest].f = op1.f + op2.f;
+    }
+    else if (tempexp < 0) //-1 - -24
+    {
+        uint32_t temp = 0xffffffff;
+        tempexp = abs(tempexp) - 1;
+        temp <<= tempexp;
+        op1.u &= temp;
+        gpr[dest].f = op1.f + op2.f;
+    }
+    else if (tempexp > 0) //1 - 24
+    {
+        uint32_t temp = 0xffffffff;
+        tempexp -= 1;
+        temp <<= tempexp;
+        op2.u &= temp;
+        gpr[dest].f = op1.f + op2.f;
+    }
+    else //0
+    {
+        gpr[dest].f = op1.f + op2.f;
+    }
 
     check_overflow(gpr[dest].u, true);
     check_underflow(gpr[dest].u, true);
@@ -158,9 +209,49 @@ void Cop1::add_s(int dest, int reg1, int reg2)
 
 void Cop1::sub_s(int dest, int reg1, int reg2)
 {
-    float op1 = convert(gpr[reg1].u);
+    /*float op1 = convert(gpr[reg1].u);
     float op2 = convert(gpr[reg2].u);
-    gpr[dest].f = op1 - op2;
+    gpr[dest].f = op1 - op2;*/
+
+    //Translated from PCSX2's recompiler for accurate ADD_S/SUB_S
+    COP1_REG op1, op2;
+    op1.f = convert(gpr[reg1].u);
+    op2.f = convert(gpr[reg2].u);
+
+    int32_t tempexpfs = (gpr[reg1].u >> 23) & 0xFF;
+    int32_t tempexpft = (gpr[reg2].u >> 23) & 0xFF;
+    int32_t tempexp = tempexpfs - tempexpft;
+
+    if (tempexp >= 25)//25 - 255
+    {
+        op2.u = (op2.u & 0x80000000);
+        gpr[dest].f = op1.f - op2.f;
+    }
+    else if (tempexp <= -25) //-25 - -255
+    {
+        op1.u = (op1.u & 0x80000000);
+        gpr[dest].f = op1.f - op2.f;
+    }
+    else if (tempexp < 0) //-1 - -24
+    {
+        uint32_t temp = 0xffffffff;
+        tempexp = abs(tempexp) - 1;
+        temp <<= tempexp;
+        op1.u &= temp;
+        gpr[dest].f = op1.f - op2.f;
+    }
+    else if (tempexp > 0) //1 - 24
+    {
+        uint32_t temp = 0xffffffff;
+        tempexp -= 1;
+        temp <<= tempexp;
+        op2.u &= temp;
+        gpr[dest].f = op1.f - op2.f;
+    }
+    else //0
+    {
+        gpr[dest].f = op1.f - op2.f;
+    }
         
     check_overflow(gpr[dest].u, true);
     check_underflow(gpr[dest].u, true);
@@ -198,6 +289,7 @@ void Cop1::div_s(int dest, int reg1, int reg2)
             control.sd = true;
         }
         gpr[dest].u = ((numerator ^ denominator) & 0x80000000) | 0x7F7FFFFF;
+        return;
     }
     else
         gpr[dest].f = convert(numerator) / convert(denominator);
@@ -258,7 +350,12 @@ void Cop1::neg_s(int dest, int source)
 void Cop1::rsqrt_s(int dest, int reg1, int reg2)
 {
     if ((gpr[reg2].u & 0x7F800000) == 0)
-        gpr[dest].u = (gpr[reg1].u ^ gpr[reg2].u) & 0x80000000;
+    {
+        gpr[dest].u = (gpr[reg1].u & 0x80000000) | 0x7F7FFFFF;
+        control.d = true;
+        control.sd = true;
+        return;
+    }
     else
     {
         if (gpr[reg2].u & 0x80000000)
