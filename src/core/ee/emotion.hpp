@@ -103,6 +103,8 @@ class EmotionEngine
         void run_interpreter();
         void run_jit();
         uint64_t get_cycle_count();
+        uint64_t get_cycle_count_raw();
+        void set_cycle_count(uint64_t value);
         uint64_t get_cop2_last_cycle();
         void set_cop2_last_cycle(uint64_t value);
         void halt();
@@ -228,6 +230,16 @@ inline void EmotionEngine::set_gpr(int id, T value, int offset)
 inline uint64_t EmotionEngine::get_cycle_count()
 {
     return cycle_count - cycles_to_run;
+}
+
+inline uint64_t EmotionEngine::get_cycle_count_raw()
+{
+    return cycle_count;
+}
+
+inline void EmotionEngine::set_cycle_count(uint64_t value)
+{
+    cycle_count = value;
 }
 
 inline uint64_t EmotionEngine::get_cop2_last_cycle()
