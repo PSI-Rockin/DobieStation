@@ -3,19 +3,26 @@
 #include <cstdlib>
 #include "emotioninterpreter.hpp"
 
-void EmotionInterpreter::mmi(EmotionEngine &cpu, uint32_t instruction)
+void EmotionInterpreter::mmi(EE_InstrInfo &info, uint32_t instruction)
 {
     int op = instruction & 0x3F;
     switch (op)
     {
         case 0x00:
-            madd(cpu, instruction);
+            info.interpreter_fn = &madd;
+            info.pipeline = EE_InstrInfo::Pipeline::Int0;
+            info.latency = 4;
+            info.throughput = 2;
             break;
         case 0x01:
-            maddu(cpu, instruction);
+            info.interpreter_fn = &maddu;
+            info.pipeline = EE_InstrInfo::Pipeline::Int0;
+            info.latency = 4;
+            info.throughput = 2;
             break;
         case 0x04:
-            plzcw(cpu, instruction);
+            info.interpreter_fn = &plzcw;
+            info.pipeline = EE_InstrInfo::Pipeline::IntGeneric;
             break;
         case 0x08:
             mmi0(cpu, instruction);
@@ -24,34 +31,56 @@ void EmotionInterpreter::mmi(EmotionEngine &cpu, uint32_t instruction)
             mmi2(cpu, instruction);
             break;
         case 0x10:
-            mfhi1(cpu, instruction);
+            info.interpreter_fn = &mfhi1;
+            info.pipeline = EE_InstrInfo::Pipeline::Int1;
             break;
         case 0x11:
-            mthi1(cpu, instruction);
+            info.interpreter_fn = &mthi1;
+            info.pipeline = EE_InstrInfo::Pipeline::Int1;
             break;
         case 0x12:
-            mflo1(cpu, instruction);
+            info.interpreter_fn = &mflo1;
+            info.pipeline = EE_InstrInfo::Pipeline::Int1;
             break;
         case 0x13:
-            mtlo1(cpu, instruction);
+            info.interpreter_fn = &mtlo1;
+            info.pipeline = EE_InstrInfo::Pipeline::Int1;
             break;
         case 0x18:
-            mult1(cpu, instruction);
+            info.interpreter_fn = &mult1;
+            info.pipeline = EE_InstrInfo::Pipeline::Int1;
+            info.latency = 4;
+            info.throughput = 2;
             break;
         case 0x19:
-            multu1(cpu, instruction);
+            info.interpreter_fn = &multu1;
+            info.pipeline = EE_InstrInfo::Pipeline::Int1;
+            info.latency = 4;
+            info.throughput = 2;
             break;
         case 0x1A:
-            div1(cpu, instruction);
+            info.interpreter_fn = &div1;
+            info.pipeline = EE_InstrInfo::Pipeline::Int1;
+            info.latency = 37;
+            info.throughput = 37;
             break;
         case 0x1B:
-            divu1(cpu, instruction);
+            info.interpreter_fn = &divu1;
+            info.pipeline = EE_InstrInfo::Pipeline::Int1;
+            info.latency = 37;
+            info.throughput = 37;
             break;
         case 0x20:
-            madd1(cpu, instruction);
+            info.interpreter_fn = &madd1;
+            info.pipeline = EE_InstrInfo::Pipeline::Int1;
+            info.latency = 4;
+            info.throughput = 2;
             break;
         case 0x21:
-            maddu1(cpu, instruction);
+            info.interpreter_fn = &maddu1;
+            info.pipeline = EE_InstrInfo::Pipeline::Int1;
+            info.latency = 4;
+            info.throughput = 2;
             break;
         case 0x28:
             mmi1(cpu, instruction);

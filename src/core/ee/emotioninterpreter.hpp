@@ -3,6 +3,31 @@
 #include "emotion.hpp"
 #include <vector>
 
+enum EE_NormalReg
+{
+    zero = 0,
+    at = 1,
+    v0 = 2, v1 = 3,
+    a0 = 4, a1 = 5, a2 = 6, a3 = 7,
+    t0 = 8, t1 = 9, t2 = 10, t3 = 11, t4 = 12, t5 = 13, t6 = 14, t7 = 15, t8 = 24, t9 = 25,
+    s0 = 16, s1 = 17, s2 = 18, s3 = 19, s4 = 20, s5 = 21, s6 = 22, s7 = 23,
+    k0 = 26, k1 = 27,
+    gp = 28,
+    sp = 29,
+    fp = 30,
+    ra = 31
+};
+
+enum EE_SpecialReg
+{
+    EE_Regular = 0,
+    LO = 32,
+    LO1,
+    HI,
+    HI1,
+    SA
+};
+
 struct EE_InstrInfo
 {
     /**
@@ -17,44 +42,53 @@ struct EE_InstrInfo
      * Because the EE is in-order, assuming no stalls, one can achieve optimal performance by pairing together
      * instructions using different physical pipelines.
      */
-    enum class Pipeline : uint8_t
+    enum class Pipeline: uint8_t
     {
         //Uninitialized. Error out if an instruction's pipeline is set to this.
-        Unk,
-
-        //Generic ALU instruction. Can be placed in either integer pipeline.
-        IntGeneric,
+        Unk = 0,
 
         //ALU instruction that can only be used in integer pipeline 0.
-        Int0,
+        Int0 = 1,
 
-        //... integer pipeline 1.
-        Int1,
+        //ALU instruction that can only be used in integer pipeline 1.
+        Int1 = 2,
 
         //MMI instruction. Takes up both integer pipelines.
-        IntWide,
+        IntWide = Int0 | Int1,
+
+        //Generic ALU instruction. Can be placed in either integer pipeline.
+        IntGeneric = 4,
 
         //Load/store instructions.
-        LoadStore,
+        LoadStore = 8,
 
         //Branches, jumps, and calls. This includes COP1 and COP2 branches.
-        Branch,
+        Branch = 0x10,
 
-        // COP0
-        COP0,
+        //COP0
+        COP0 = 0x20,
 
-        //COP1 arithmetic.
-        COP1,
+        //COP1
+        COP1 = 0x40,
 
-        //COP1 LoadStore
-        COP1LoadStore,
-
-        //COP2 arithmetic.
-        COP2,
-
-        //COP2 LoadStore
-        COP2LoadStore
+        //COP2
+        COP2 = 0x80
     };
+
+    friend Pipeline operator& (Pipeline x, Pipeline y)
+    {
+        return (Pipeline)((uint8_t)x & (uint8_t)y);
+    }
+
+    friend Pipeline operator| (Pipeline x, Pipeline y)
+    {
+        return (Pipeline)((uint8_t)x | (uint8_t)y);
+    }
+
+    friend Pipeline operator^ (Pipeline x, Pipeline y)
+    {
+        return (Pipeline)((uint8_t)x ^ (uint8_t)y);
+    }
 
     // Used for throughput calculations
     enum class InstructionType : uint8_t
@@ -71,14 +105,13 @@ struct EE_InstrInfo
         OTHER
     };
 
-    std::vector<uint8_t> dependencies = std::vector<uint8_t>(3);
+    std::basic_string<uint8_t> dependencies = std::basic_string<uint8_t>();
     void(*interpreter_fn)(EmotionEngine&, uint32_t) = nullptr;
     Pipeline pipeline = Pipeline::Unk;
     InstructionType type = InstructionType::OTHER;
 
-    // 2-bit fixed point numbers
-    uint8_t latency = 4;
-    uint8_t throughput = 4;
+    uint8_t latency = 1;
+    uint8_t throughput = 1;
 };
 
 namespace EmotionInterpreter
@@ -328,7 +361,7 @@ namespace EmotionInterpreter
 
     bool cop2_sync(EmotionEngine& cpu, uint32_t instruction);
 
-    void mmi(EmotionEngine& cpu, uint32_t instruction);
+    void mmi(EE_InstrInfo& info, uint32_t instruction);
     void madd(EmotionEngine& cpu, uint32_t instruction);
     void maddu(EmotionEngine& cpu, uint32_t instruction);
     void plzcw(EmotionEngine& cpu, uint32_t instruction);
