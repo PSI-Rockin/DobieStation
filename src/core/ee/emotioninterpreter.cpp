@@ -109,7 +109,7 @@ void EmotionInterpreter::lookup(EE_InstrInfo &info, uint32_t instruction)
         case 0x11:
         case 0x12:
         case 0x13:
-            cop(cpu, instruction);
+            cop(info, instruction);
             break;
         case 0x14:
             info.interpreter_fn = &beql;
@@ -1042,18 +1042,26 @@ void EmotionInterpreter::cop(EE_InstrInfo& info, uint32_t instruction)
         case 0x000:
             info.interpreter_fn = &cop0_mfc;
             info.pipeline = EE_InstrInfo::Pipeline::COP0;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::COP0, (instruction >> 11) & 0x1F);
             break;
         case 0x100:
             info.interpreter_fn = &cop1_mfc;
             info.pipeline = EE_InstrInfo::Pipeline::COP1;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 11) & 0x1F);
             break;
         case 0x004:
             info.interpreter_fn = &cop0_mtc;
             info.pipeline = EE_InstrInfo::Pipeline::COP0;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::COP0, (instruction >> 11) & 0x1F);
             break;
         case 0x104:
             info.interpreter_fn = &cop1_mtc;
             info.pipeline = EE_InstrInfo::Pipeline::COP1;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 11) & 0x1F);
             break;
         case 0x010:
         {
@@ -1084,18 +1092,26 @@ void EmotionInterpreter::cop(EE_InstrInfo& info, uint32_t instruction)
         case 0x102:
             info.interpreter_fn = &cop1_cfc;
             info.pipeline = EE_InstrInfo::Pipeline::COP1;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::COP1_CONTROL, (instruction >> 11) & 0x1F);
             break;
         case 0x202:
             info.interpreter_fn = &cop2_cfc;
             info.pipeline = EE_InstrInfo::Pipeline::COP2;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::COP2_CONTROL, (instruction >> 11) & 0x1F);
             break;
         case 0x106:
             info.interpreter_fn = &cop1_ctc;
             info.pipeline = EE_InstrInfo::Pipeline::COP1;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::COP1_CONTROL, (instruction >> 11) & 0x1F);
             break;
         case 0x206:
             info.interpreter_fn = &cop2_ctc;
             info.pipeline = EE_InstrInfo::Pipeline::COP2;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::COP2_CONTROL, (instruction >> 11) & 0x1F);
             break;
         case 0x008:
             info.interpreter_fn = &cop_bc0;
@@ -1110,8 +1126,7 @@ void EmotionInterpreter::cop(EE_InstrInfo& info, uint32_t instruction)
             info.pipeline = EE_InstrInfo::Pipeline::COP2;
             break;
         case 0x110:
-            info.interpreter_fn = &fpu_cop_s;
-            info.pipeline = EE_InstrInfo::Pipeline::COP1;
+            cop_s(info, instruction);
             break;
         case 0x114:
             info.interpreter_fn = &cop_cvt_s_w;

@@ -1114,11 +1114,6 @@ void EmotionEngine::mfpc(int pc_reg, int reg)
     set_gpr<int64_t>(reg, pcr);
 }
 
-void EmotionEngine::fpu_cop_s(uint32_t instruction)
-{
-    EmotionInterpreter::cop_s(*fpu, instruction);
-}
-
 void EmotionEngine::fpu_bc1(int32_t offset, bool test_true, bool likely)
 {
     bool passed = false;
