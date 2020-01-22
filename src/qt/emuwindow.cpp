@@ -310,7 +310,7 @@ void EmuWindow::create_menu()
     auto frame_action = new QAction(tr("&Frame Advance"), this);
     frame_action->setCheckable(true);
     connect(frame_action, &QAction::triggered, this, [=] (){
-        emu_thread.frame_advance ^= true;
+        emu_thread.frame_advance = emu_thread.frame_advance ^ true;
 
         if(!emu_thread.frame_advance)
             emu_thread.unpause(PAUSE_EVENT::FRAME_ADVANCE);
