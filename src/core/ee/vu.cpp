@@ -180,7 +180,6 @@ void VectorUnit::reset()
     finish_DIV_event = 0;
     pipeline_state[0] = 0;
     pipeline_state[1] = 0;
-    mbit_wait = 0;
     XGKICK_cycles = 0;
 
     for(int i = 0; i < 4; i++) {
@@ -294,6 +293,8 @@ void VectorUnit::run(int cycles)
             eecpu->set_cop2_last_cycle(eecpu->get_cop2_last_cycle() + cycles_to_run);
         else
             return;
+
+        clear_interlock();
     }
     else
     {
@@ -302,20 +303,6 @@ void VectorUnit::run(int cycles)
 
     while (running && cycles_to_run > 0)
     {
-        if (get_id() == 0)
-        {
-            if (is_interlocked())
-            {
-                //Errors::die("VU%d Using M-Bit\n", vu.get_id());
-                //Break out from the VU0 loop to give COP2 time to catch the interlock
-                if (check_interlock() && !mbit_wait++)
-                {
-                    break;
-                }
-            }
-            mbit_wait = 0;
-            clear_interlock();
-        }
         cycles_this_op = cycle_count;
         cycle_count++;
         update_mac_pipeline();
@@ -380,11 +367,22 @@ void VectorUnit::run(int cycles)
                 //Errors::die("VU%d Using T-Bit\n", get_id());
             }
         }
+
         cycles_this_op = cycle_count - cycles_this_op;
         XGKICK_cycles += cycles_this_op;
         cycles_to_run-= cycles_this_op;
 
-        if (transferring_GIF)
+        if (get_id() == 0)
+        {
+            if (is_interlocked())
+            {
+                //Errors::die("VU%d Using M-Bit\n", vu.get_id());
+                //Break out from the VU0 loop to give COP2 time to catch the interlock
+                if(check_interlock())
+                    break;
+            }
+        }
+        else if (transferring_GIF)
         {
             while (XGKICK_cycles >= 2)
             {
