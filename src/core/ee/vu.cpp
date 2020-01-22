@@ -180,7 +180,7 @@ void VectorUnit::reset()
     finish_DIV_event = 0;
     pipeline_state[0] = 0;
     pipeline_state[1] = 0;
-    mbit_wait = 0;
+    XGKICK_cycles = 0;
 
     for(int i = 0; i < 4; i++) {
         MAC_pipeline[i] = 0;
@@ -284,10 +284,17 @@ void VectorUnit::flush_pipes()
 void VectorUnit::run(int cycles)
 {
     int cycles_to_run;
+    uint32_t cycles_this_op = 0;
+
     if (running && !id)
     {
-        cycles_to_run = cycles;
-        eecpu->set_cop2_last_cycle(eecpu->get_cycle_count());
+        cycles_to_run = (eecpu->get_cycle_count() - eecpu->get_cop2_last_cycle());
+        if (cycles_to_run > 0)
+            eecpu->set_cop2_last_cycle(eecpu->get_cop2_last_cycle() + cycles_to_run);
+        else
+            return;
+
+        clear_interlock();
     }
     else
     {
@@ -296,21 +303,7 @@ void VectorUnit::run(int cycles)
 
     while (running && cycles_to_run > 0)
     {
-        if (get_id() == 0)
-        {
-            if (is_interlocked())
-            {
-                //Errors::die("VU%d Using M-Bit\n", vu.get_id());
-                //Loop around a couple of times if the interlock is not reached, give COP2 time to catch up
-                if (check_interlock() && mbit_wait++ < 3)
-                {
-                    break;
-                }
-            }
-            mbit_wait = 0;
-            clear_interlock();
-        }
-
+        cycles_this_op = cycle_count;
         cycle_count++;
         update_mac_pipeline();
         update_DIV_EFU_pipes();
@@ -318,12 +311,6 @@ void VectorUnit::run(int cycles)
 
         if (XGKICK_stall)
             break;
-
-        if (transferring_GIF)
-        {
-            if (gif->path_active(1, true))
-                handle_XGKICK();
-        }
 
         uint32_t upper_instr = *(uint32_t*)&instr_mem.m[PC + 4];
         uint32_t lower_instr = *(uint32_t*)&instr_mem.m[PC];
@@ -380,17 +367,51 @@ void VectorUnit::run(int cycles)
                 //Errors::die("VU%d Using T-Bit\n", get_id());
             }
         }
-        
-        cycles_to_run--;
+
+        cycles_this_op = cycle_count - cycles_this_op;
+        XGKICK_cycles += cycles_this_op;
+        cycles_to_run-= cycles_this_op;
+
+        if (get_id() == 0)
+        {
+            if (is_interlocked())
+            {
+                //Errors::die("VU%d Using M-Bit\n", vu.get_id());
+                //Break out from the VU0 loop to give COP2 time to catch the interlock
+                if(check_interlock())
+                    break;
+            }
+        }
+        else if (transferring_GIF)
+        {
+            while (XGKICK_cycles >= 2)
+            {
+                if (gif->path_active(1, true))
+                {
+                    handle_XGKICK();
+                    XGKICK_cycles -= 2;
+                }
+                else
+                {
+                    XGKICK_cycles = 0;
+                    break;
+                }
+            }
+        }
+    }
+
+    if (cycles_to_run < 0 && !id)
+    {
+        eecpu->set_cop2_last_cycle(eecpu->get_cop2_last_cycle() + std::abs((int)cycles_to_run));
     }
 
     if (transferring_GIF)
     {
         if (gif->path_active(1, true))
         {
-            while (cycles_to_run && transferring_GIF)
+            while (cycles_to_run >= 2 && transferring_GIF)
             {
-                cycles_to_run--;
+                cycles_to_run -= 2;
                 handle_XGKICK();
             }
         }
@@ -469,11 +490,11 @@ void VectorUnit::run_jit(int cycles)
         if ((!running || XGKICK_stall) && transferring_GIF)
         {
             gif->request_PATH(1, true);
-            while (cycles > 0 && gif->path_active(1, true))
+            while (cycles >= 2 && gif->path_active(1, true))
             {
                 if (XGKICK_stall)
-                    stalled_cycles++;
-                cycles--;
+                    stalled_cycles+=2;
+                cycles -= 2; //BUS Speed
                 handle_XGKICK();
             }
         }
@@ -862,8 +883,8 @@ void VectorUnit::start_program(uint32_t addr)
         if (!id)
         {
             eecpu->set_cop2_last_cycle(eecpu->get_cycle_count());
-            cycle_count = eecpu->get_cop2_last_cycle() >> 1;
         }
+        cycle_count = eecpu->get_cycle_count();
         flush_pipes();
     }
     //disasm_micromem();
@@ -3141,6 +3162,7 @@ void VectorUnit::xgkick(uint32_t instr)
         gif->request_PATH(1, true);
         transferring_GIF = true;
         GIF_addr = (uint32_t)(int_gpr[_is_].u & 0x3ff) * 16;
+        XGKICK_cycles = 0;
     }
 }
 

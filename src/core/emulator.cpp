@@ -110,8 +110,10 @@ void Emulator::run()
         vif0.update(bus_cycles);
         vif1.update(bus_cycles);
         gif.run(bus_cycles);
-        vu0.run(bus_cycles);
-        vu1_run_func(vu1, bus_cycles);
+        
+        //VU's run at EE speed, however VU0 maintains its own speed
+        vu0.run(ee_cycles);
+        vu1_run_func(vu1, ee_cycles);
 
         iop_timers.run(iop_cycles);
         iop_dma.run(iop_cycles);

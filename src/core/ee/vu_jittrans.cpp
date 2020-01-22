@@ -884,7 +884,8 @@ void VU_JitTranslator::update_xgkick(std::vector<IR::Instruction> &instrs)
     IR::Instruction update;
     update.op = IR::Opcode::UpdateXgkick;
     update.set_source(cycles_since_xgkick_update);
-    cycles_since_xgkick_update = 0;
+    //Preserve the LSB since XGKick decrements 2 cycles at a time and we may have sent the request on an odd cycle
+    cycles_since_xgkick_update &= 1;
     instrs.push_back(update);
 }
 

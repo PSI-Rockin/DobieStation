@@ -118,6 +118,7 @@ class VectorUnit
         bool transferring_GIF;
         bool XGKICK_stall;
         uint16_t stalled_GIF_addr;
+        int XGKICK_cycles;
 
         //GPR
         VU_GPR backup_newgpr;
@@ -158,7 +159,6 @@ class VectorUnit
         bool DIV_event_started;
         uint64_t finish_EFU_event;
         bool EFU_event_started;
-        int mbit_wait;
 
         float update_mac_flags(float value, int index);
         void clear_mac_flags(int index);
