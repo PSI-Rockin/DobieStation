@@ -188,7 +188,6 @@ void GraphicsInterface::feed_GIF(uint128_t data)
     uint64_t data2 = data._u64[1];
     if (!path[active_path].current_tag.data_left)
     {
-        path_status[active_path] = path[active_path].current_tag.format;
         //Read new GIFtag
         path[active_path].current_tag.NLOOP = data1 & 0x7FFF;
         path[active_path].current_tag.end_of_packet = data1 & (1 << 15);
@@ -202,6 +201,7 @@ void GraphicsInterface::feed_GIF(uint128_t data)
         path[active_path].current_tag.regs_left = path[active_path].current_tag.reg_count;
         path[active_path].current_tag.data_left = path[active_path].current_tag.NLOOP;
 
+        path_status[active_path] = path[active_path].current_tag.format;
         //Q is initialized to 1.0 upon reading a GIFtag
         internal_Q = 1.0f;
 

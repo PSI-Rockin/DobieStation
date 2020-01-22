@@ -43,6 +43,11 @@ void VectorInterface::reset()
     else
         mem_mask = 0xFF;
 
+    if (id)
+        fifo_size = 64;
+    else
+        fifo_size = 32;
+
     if(vu->get_id() == 1)
         VU_JIT::reset();
 }
@@ -51,20 +56,19 @@ bool VectorInterface::check_vif_stall(uint32_t value)
 {
     if (command == 0)
     {
-        if (vif_ibit_detected)
+        //Acknowledge the stall on the next command when triggered on MARK
+        if (vif_ibit_detected && ((value >> 24) & 0x7f) != 0x7)
         {
             printf("[VIF] VIF%x Stalled\n", get_id());
             vif_ibit_detected = false;
             vif_interrupt = true;
 
-            //Do not stall if the command is MARK
-            if (((value >> 24) & 0x7f) != 0x7)
-                vif_stalled |= STALL_IBIT;
-
             if (get_id())
                 intc->assert_IRQ((int)Interrupt::VIF1);
             else
                 intc->assert_IRQ((int)Interrupt::VIF0);
+
+            vif_stalled |= STALL_IBIT;
             return true;
         }
         if (vif_stop)
@@ -82,7 +86,7 @@ void VectorInterface::update(int cycles)
     //This allows us to process one quadword per bus cycle
     if (fifo_reverse)
     {
-        if (FIFO.size() <= 60)
+        if (FIFO.size() <= (fifo_size - 4))
         {
             uint128_t fifo_data;
             while (cycles--)
@@ -129,6 +133,11 @@ void VectorInterface::update(int cycles)
             wait_for_PATH3 = false;
         }
 
+        if ((command & 0x60) == 0x60)
+        {
+            handle_UNPACK();
+        }
+
         if(check_vif_stall(CODE) || !FIFO.size())
             return;
 
@@ -141,7 +150,7 @@ void VectorInterface::update(int cycles)
             {
                 command_len--;
                 FIFO.pop();
-                if (FIFO.size() <= 32)
+                if (FIFO.size() <= (fifo_size - 4))
                     dmac->set_DMA_request(id);
             }
         }
@@ -209,7 +218,10 @@ bool VectorInterface::process_data_word(uint32_t value)
                 break;
             default:
                 if ((command & 0x60) == 0x60)
-                    handle_UNPACK(value);
+                {
+                    buffer[buffer_size] = value;
+                    buffer_size++;
+                }
                 else
                 {
                     Errors::die("[VIF] Unhandled data for command $%02X\n", command);
@@ -229,8 +241,6 @@ void VectorInterface::decode_cmd(uint32_t value)
     {
         if (!VIF_ERR.mask_interrupt)
             vif_ibit_detected = true;
-        else
-            Errors::die("[VIF] Stall detected when VIF_ERR.MI1 set\n", command);
     }
 
     command_len = 1;
@@ -532,11 +542,9 @@ bool VectorInterface::is_filling_write()
     return false;
 }
 
-void VectorInterface::handle_UNPACK(uint32_t value)
+void VectorInterface::handle_UNPACK()
 {
     int bufferpos = 0;
-    buffer[buffer_size] = value;
-    buffer_size++;
 
     while((is_filling_write() || (buffer_size >= unpack.words_per_op)) && unpack.num)
     {
@@ -859,7 +867,7 @@ void VectorInterface::process_UNPACK_quad(uint128_t &quad)
 bool VectorInterface::transfer_DMAtag(uint128_t tag)
 {
     //This should return false if the transfer stalls due to the FIFO filling up
-    if (FIFO.size() > 62)
+    if (FIFO.size() > (fifo_size - 2))
     {
         dmac->clear_DMA_request(id);
         return false;
@@ -872,7 +880,7 @@ bool VectorInterface::transfer_DMAtag(uint128_t tag)
 
 bool VectorInterface::feed_DMA(uint128_t quad)
 {
-    if (FIFO.size() > 60)
+    if (FIFO.size() > (fifo_size - 4))
     {
         dmac->clear_DMA_request(id);
         return false;
