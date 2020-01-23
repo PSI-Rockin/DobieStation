@@ -27,7 +27,7 @@ unsigned int Scheduler::calculate_run_cycles()
 {
     if (!events.size())
         Errors::die("[Scheduler] No events registered");
-    const static int MAX_CYCLES = 128;
+    const static int MAX_CYCLES = 32;
     if (ee_cycles.count + MAX_CYCLES <= closest_event_time)
         run_cycles = MAX_CYCLES;
     else
