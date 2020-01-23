@@ -294,7 +294,11 @@ int DMAC::process_VIF1()
             }
             else
             {
-                store128(channels[VIF1].address, vif1->readFIFO());
+                auto quad_data = vif1->readFIFO();
+                if (std::get<1>(quad_data))
+                    store128(channels[VIF1].address, std::get<0>(quad_data));
+                else
+                    return count;
             }
             advance_source_dma(VIF1);
             count++;

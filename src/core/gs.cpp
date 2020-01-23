@@ -335,7 +335,7 @@ void GraphicsSynthesizer::wake_gs_thread()
     gs_thread.wake_thread();
 }
 
-uint128_t GraphicsSynthesizer::request_gs_download()
+std::tuple<uint128_t, uint32_t>GraphicsSynthesizer::request_gs_download()
 {
     GSMessagePayload payload;
     payload.no_payload = {};
@@ -343,6 +343,6 @@ uint128_t GraphicsSynthesizer::request_gs_download()
     gs_thread.wake_thread();
     GSReturnMessage data;
     gs_thread.wait_for_return(GSReturn::local_host_transfer, data);
-    return data.payload.data_payload.quad_data;
+    return std::make_tuple(data.payload.data_payload.quad_data, data.payload.data_payload.status);
 }
 

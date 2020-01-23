@@ -16,7 +16,8 @@ class DMAC;
 enum VIF_STALL
 {
     STALL_IBIT = 1,
-    STALL_MSKPATH3 = 2
+    STALL_MSKPATH3 = 2,
+    STALL_STOP = 3
 };
 
 struct MPG_Command
@@ -113,7 +114,7 @@ class VectorInterface
 
         bool transfer_DMAtag(uint128_t tag);
         bool feed_DMA(uint128_t quad);
-        uint128_t readFIFO();
+        std::tuple<uint128_t, uint32_t>readFIFO();
 
         uint32_t get_stat();
         uint32_t get_mark();

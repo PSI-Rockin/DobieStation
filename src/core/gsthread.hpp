@@ -136,6 +136,7 @@ union GSReturnMessagePayload
     struct
     {
         uint128_t quad_data;
+        uint32_t status;
     } data_payload;
 };
 
