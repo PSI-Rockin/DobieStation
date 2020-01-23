@@ -90,10 +90,10 @@ void VectorInterface::update(int cycles)
             while (cycles--)
             {
                 auto fifo_data = gif->read_GSFIFO();
-                printf("Reading GIF %d\n", std::get<1>(fifo_data));
+                //Check the GS still wants to send data
                 if (!std::get<1>(fifo_data))
                     return;
-                printf("Filling VIF FIFO with reverse GIF\n");
+
                 for (int i = 0; i < 4; i++)
                     FIFO.push(std::get<0>(fifo_data)._u32[i]);
             }
@@ -921,7 +921,7 @@ uint32_t VectorInterface::get_stat()
     reg |= vif_interrupt << 11;
     reg |= fifo_reverse << 23;
     reg |= ((FIFO.size() + 3) / 4) << 24;
-    printf("[VIF] Get STAT: $%08X\n", reg);
+    //printf("[VIF] Get STAT: $%08X\n", reg);
     return reg;
 }
 
