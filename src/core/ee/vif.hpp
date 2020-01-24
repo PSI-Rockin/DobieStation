@@ -17,7 +17,7 @@ enum VIF_STALL
 {
     STALL_IBIT = 1,
     STALL_MSKPATH3 = 2,
-    STALL_STOP = 3
+    STALL_STOP = 4
 };
 
 struct MPG_Command
