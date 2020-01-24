@@ -93,24 +93,28 @@ void EmotionInterpreter::special(EE_InstrInfo &info, uint32_t instruction)
             info.pipeline = EE_InstrInfo::Pipeline::Int0;
             info.throughput = 2;
             info.latency = 4;
+            info.instruction_type = EE_InstrInfo::InstructionType::MULT;
             break;
         case 0x19:
             info.interpreter_fn = &multu;
             info.pipeline = EE_InstrInfo::Pipeline::Int0;
             info.throughput = 2;
             info.latency = 4;
+            info.instruction_type = EE_InstrInfo::InstructionType::MULT;
             break;
         case 0x1A:
             info.interpreter_fn = &div;
             info.pipeline = EE_InstrInfo::Pipeline::Int0;
             info.throughput = 37;
             info.latency = 37;
+            info.instruction_type = EE_InstrInfo::InstructionType::DIV;
             break;
         case 0x1B:
             info.interpreter_fn = &divu;
             info.pipeline = EE_InstrInfo::Pipeline::Int0;
             info.throughput = 37;
             info.latency = 37;
+            info.instruction_type = EE_InstrInfo::InstructionType::DIV;
             break;
         case 0x20:
             info.interpreter_fn = &add;
