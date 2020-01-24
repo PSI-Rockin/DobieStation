@@ -193,10 +193,32 @@ class EmotionEngine
         void mfps(int reg);
         void mfpc(int pc_reg, int reg);
 
-        void fpu_cop_s(uint32_t instruction);
         void fpu_bc1(int32_t offset, bool test_true, bool likely);
         void cop2_bc2(int32_t offset, bool test_true, bool likely);
+        void fpu_add(uint32_t dest, uint32_t reg1, uint32_t reg2);
+        void fpu_sub(uint32_t dest, uint32_t reg1, uint32_t reg2);
+        void fpu_mul(uint32_t dest, uint32_t reg1, uint32_t reg2);
+        void fpu_div(uint32_t dest, uint32_t reg1, uint32_t reg2);
+        void fpu_sqrt(uint32_t dest, uint32_t source);
+        void fpu_abs(uint32_t dest, uint32_t source);
+        void fpu_mov(uint32_t dest, uint32_t source);
+        void fpu_neg(uint32_t dest, uint32_t source);
+        void fpu_rsqrt(uint32_t dest, uint32_t reg1, uint32_t reg2);
+        void fpu_adda(uint32_t reg1, uint32_t reg2);
+        void fpu_suba(uint32_t reg1, uint32_t reg2);
+        void fpu_mula(uint32_t reg1, uint32_t reg2);
+        void fpu_madd(uint32_t dest, uint32_t reg1, uint32_t reg2);
+        void fpu_msub(uint32_t dest, uint32_t reg1, uint32_t reg2);
+        void fpu_madda(uint32_t reg1, uint32_t reg2);
+        void fpu_msuba( uint32_t reg1, uint32_t reg2);
+        void fpu_cvt_w_s(uint32_t dest, uint32_t source);
         void fpu_cvt_s_w(int dest, int source);
+        void fpu_max_s(uint32_t dest, uint32_t reg1, uint32_t reg2);
+        void fpu_min_s(uint32_t dest, uint32_t reg1, uint32_t reg2);
+        void fpu_c_f_s();
+        void fpu_c_lt_s(uint32_t reg1, uint32_t reg2);
+        void fpu_c_eq_s(uint32_t reg1, uint32_t reg2);
+        void fpu_c_le_s(uint32_t reg1, uint32_t reg2);
 
         void qmfc2(int dest, int cop_reg);
         void qmtc2(int source, int cop_reg);

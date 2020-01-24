@@ -1131,14 +1131,21 @@ void EmotionInterpreter::cop(EE_InstrInfo& info, uint32_t instruction)
         case 0x114:
             info.interpreter_fn = &cop_cvt_s_w;
             info.pipeline = EE_InstrInfo::Pipeline::COP1;
+            info.latency = 4;
+            info.add_dependency(DependencyType::Write, RegType::COP1, (instruction >> 6) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 11) & 0x1F);
             break;
         case 0x201:
             info.interpreter_fn = &cop2_qmfc2;
             info.pipeline = EE_InstrInfo::Pipeline::COP2;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::COP2, (instruction >> 11) & 0x1F);
             break;
         case 0x205:
             info.interpreter_fn = &cop2_qmtc2;
             info.pipeline = EE_InstrInfo::Pipeline::COP2;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 16) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::COP2, (instruction >> 11) & 0x1F);
             break;
         default:
             unknown_op("cop", instruction, op | (cop_id * 0x100));
