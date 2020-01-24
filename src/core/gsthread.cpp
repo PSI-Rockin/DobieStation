@@ -419,6 +419,7 @@ void GraphicsSynthesizerThread::event_loop()
                     case request_local_host_tx:
                     {
                         GSReturnMessagePayload return_payload;
+                        return_payload.data_payload.status = (TRXDIR != 3);
                         return_payload.data_payload.quad_data = local_to_host();
                         return_queue->push({ GSReturn::local_host_transfer, return_payload });
                         std::unique_lock<std::mutex> lk(data_mutex);
@@ -3149,6 +3150,18 @@ uint64_t GraphicsSynthesizerThread::pack_PSMCT24(bool z_format)
             {
                 PSMCT24_unpacked_count = 0;
                 PSMCT24_color = 0;
+
+                pixels_transferred++;
+                //If this is the last read, reg updating is handled by the main loop
+                //Otherwise we need to do it here
+                if (data_in_output < 64)
+                {
+                    if (pixels_transferred % TRXREG.width == 0)
+                    {
+                        TRXPOS.int_source_x = TRXPOS.source_x;
+                        TRXPOS.int_source_y++;
+                    }
+                }
             }
 
             int max_pixels = TRXREG.width * TRXREG.height;
@@ -3159,29 +3172,18 @@ uint64_t GraphicsSynthesizerThread::pack_PSMCT24(bool z_format)
         {
             if (z_format)
             {
-                PSMCT24_color |= (uint64_t)(read_PSMCT32Z_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
-                    TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFFFF) << PSMCT24_unpacked_count;
+                PSMCT24_color = (uint64_t)(read_PSMCT32Z_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                    TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFFFF);
             }
             else
             {
-                PSMCT24_color |= (uint64_t)(read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
-                    TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFFFF) << PSMCT24_unpacked_count;
+                PSMCT24_color = (uint64_t)(read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                    TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFFFF);
             }
             PSMCT24_unpacked_count += 24;
+
             TRXPOS.int_source_x++;
-            pixels_transferred++;
-
-            //If this is the last read, reg updating is handled by the main loop
-            //Otherwise we need to do it here
-            if (data_in_output < 40)
-            {
-                if (pixels_transferred % TRXREG.width == 0)
-                {
-                    TRXPOS.int_source_x = TRXPOS.source_x;
-                    TRXPOS.int_source_y++;
-                }
-            }
-
+            
             //Coordinates wrap at 2048 pixels
             TRXPOS.int_source_x %= 2048;
             TRXPOS.int_source_y %= 2048;

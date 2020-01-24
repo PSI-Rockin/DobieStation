@@ -57,7 +57,7 @@ bool VectorInterface::check_vif_stall(uint32_t value)
     if (command == 0)
     {
         //Acknowledge the stall on the next command when triggered on MARK
-        if (vif_ibit_detected && ((value >> 24) & 0x7f) != 0x7)
+        if (vif_ibit_detected)
         {
             printf("[VIF] VIF%x Stalled\n", get_id());
             vif_ibit_detected = false;
@@ -68,12 +68,13 @@ bool VectorInterface::check_vif_stall(uint32_t value)
             else
                 intc->assert_IRQ((int)Interrupt::VIF0);
 
-            vif_stalled |= STALL_IBIT;
+            if(((value >> 24) & 0x7f) != 0x7)
+                vif_stalled |= STALL_IBIT;
             return true;
         }
         if (vif_stop)
         {
-            vif_stalled |= STALL_IBIT;
+            vif_stalled |= STALL_STOP;
             return true;
         }
     }
@@ -82,23 +83,26 @@ bool VectorInterface::check_vif_stall(uint32_t value)
 
 void VectorInterface::update(int cycles)
 {
-    //Since the loop processes per-word, we need to multiply cycles by 4
-    //This allows us to process one quadword per bus cycle
     if (fifo_reverse)
     {
         if (FIFO.size() <= (fifo_size - 4))
         {
-            uint128_t fifo_data;
             while (cycles--)
             {
-                fifo_data = gif->read_GSFIFO();
+                auto fifo_data = gif->read_GSFIFO();
+                //Check the GS still wants to send data
+                if (!std::get<1>(fifo_data))
+                    return;
+
                 for (int i = 0; i < 4; i++)
-                    FIFO.push(fifo_data._u32[i]);
+                    FIFO.push(std::get<0>(fifo_data)._u32[i]);
             }
         }
         return;
     }
-        
+
+    //Since the loop processes per-word, we need to multiply cycles by 4
+    //This allows us to process one quadword per bus cycle
     int run_cycles = cycles << 2;
    
     if (vif_stalled & STALL_MSKPATH3)
@@ -891,24 +895,24 @@ bool VectorInterface::feed_DMA(uint128_t quad)
     return true;
 }
 
-uint128_t VectorInterface::readFIFO()
+std::tuple<uint128_t, uint32_t>VectorInterface::readFIFO()
 {
     uint128_t quad;
     if (FIFO.empty())
-        return gif->read_GSFIFO();
+        return std::make_tuple(quad, false);
 
     for (int i = 0; i < 4; i++)
     {
         quad._u32[i] = FIFO.front();
         FIFO.pop();
     }
-    return quad;
+    return std::make_tuple(quad, true);
 }
 
 uint32_t VectorInterface::get_stat()
 {
     uint32_t reg = 0;
-    reg |= (vif_stalled & STALL_IBIT) ? 0 : ((FIFO.size() != 0) * 3);
+    reg |= (vif_stalled & (STALL_IBIT | STALL_STOP) || fifo_reverse) ? 0 : ((FIFO.size() != 0) * 3);
     reg |= vu->is_running() << 2;
     reg |= mark_detected << 6;
     reg |= DBF << 7;
@@ -988,7 +992,7 @@ void VectorInterface::set_fbrst(uint32_t value)
     if (value & 0x8)
     {
         printf("[VIF] VIF%x Resumed\n", get_id());
-        vif_stalled &= ~STALL_IBIT;
+        vif_stalled &= ~(STALL_IBIT | STALL_STOP);
         vif_interrupt = false;
         vif_stop = false;
     }

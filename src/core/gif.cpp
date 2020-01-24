@@ -430,7 +430,7 @@ void GraphicsInterface::send_PATH3(uint128_t data)
     }
 }
 
-uint128_t GraphicsInterface::read_GSFIFO()
+std::tuple<uint128_t, uint32_t>GraphicsInterface::read_GSFIFO()
 {
     return gs->request_gs_download();
 }
