@@ -126,7 +126,8 @@ struct EE_InstrInfo
     // Used for throughput calculations
     enum class InstructionType : uint8_t
     {
-        MULT = 0,
+        OTHER = 0,
+        MULT,
         MULT1,
         DIV,
         DIV1,
@@ -134,8 +135,7 @@ struct EE_InstrInfo
         MADD1,
         FPU_DIV,
         FPU_SQRT,
-        FPU_RSQRT,
-        OTHER
+        FPU_RSQRT
     };
 
     // By using basic_string instead of vector, constructing this structure
@@ -144,7 +144,7 @@ struct EE_InstrInfo
     std::basic_string<uint16_t> read_dependencies = std::basic_string<uint16_t>();
     void(*interpreter_fn)(EmotionEngine&, uint32_t) = nullptr;
     Pipeline pipeline = Pipeline::Unk;
-    InstructionType type = InstructionType::OTHER;
+    InstructionType instruction_type = InstructionType::OTHER;
 
     uint8_t latency = 1;
     uint8_t throughput = 1;
