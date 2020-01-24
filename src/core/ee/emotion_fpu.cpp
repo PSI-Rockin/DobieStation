@@ -36,6 +36,7 @@ void EmotionInterpreter::cop_s(EE_InstrInfo &info, uint32_t instruction)
             info.pipeline = EE_InstrInfo::Pipeline::COP1;
             info.latency = 8;
             info.throughput = 7;
+            info.instruction_type = EE_InstrInfo::InstructionType::FPU_DIV;
             info.add_dependency(DependencyType::Write, RegType::COP1, (instruction >> 6) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 16) & 0x1F);
@@ -45,6 +46,7 @@ void EmotionInterpreter::cop_s(EE_InstrInfo &info, uint32_t instruction)
             info.pipeline = EE_InstrInfo::Pipeline::COP1;
             info.latency = 8;
             info.throughput = 7;
+            info.instruction_type = EE_InstrInfo::InstructionType::FPU_SQRT;
             info.add_dependency(DependencyType::Write, RegType::COP1, (instruction >> 6) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 16) & 0x1F);
         case 0x5:
@@ -70,6 +72,7 @@ void EmotionInterpreter::cop_s(EE_InstrInfo &info, uint32_t instruction)
             info.pipeline = EE_InstrInfo::Pipeline::COP1;
             info.latency = 14;
             info.throughput = 13;
+            info.instruction_type = EE_InstrInfo::InstructionType::FPU_RSQRT;
             info.add_dependency(DependencyType::Write, RegType::COP1, (instruction >> 6) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 16) & 0x1F);
