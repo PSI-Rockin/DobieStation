@@ -25,12 +25,17 @@ enum EE_SpecialReg
     LO1,
     HI,
     HI1,
-    SA, 
+    SA,
     COP1_ACC,
     COP1_CONTROL,
 
 
     MAX_VALUE
+};
+
+enum COP1_Control_SpecialReg
+{
+    CONDITION
 };
 
 enum RegType
@@ -39,7 +44,9 @@ enum RegType
     GPR,
     COP0,
     COP1,
+    COP1_CONTROL,
     COP2,
+    COP2_CONTROL
 };
 
 struct EE_DependencyInfo
