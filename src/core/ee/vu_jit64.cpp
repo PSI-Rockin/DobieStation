@@ -1337,11 +1337,11 @@ void VU_JIT64::sub_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     REG_64 temp = REG_64::XMM0;
     REG_64 temp2 = REG_64::XMM1;
     emitter.MOVAPS_REG(bc_reg, temp);
-    emitter.MOVAPS_REG(source, temp2);
     emitter.SHUFPS(bc, temp, temp);
     set_clamping(temp, true, field);
     clamp_vfreg(field, temp);
 
+    emitter.MOVAPS_REG(source, temp2);
     emitter.SUBPS(temp, temp2);
     set_clamping(temp2, true, field);
     clamp_vfreg(field, temp2);
@@ -1461,6 +1461,10 @@ void VU_JIT64::madd_acc_and_vectors(VectorUnit &vu, IR::Instruction &instr)
 
     emitter.MOVAPS_REG(op1, temp);
     emitter.MULPS(op2, temp);
+
+    set_clamping(temp, true, field);
+    clamp_vfreg(field, temp);
+
     if (field == 0xF)
     {
         emitter.ADDPS(temp, dest);
@@ -1473,10 +1477,9 @@ void VU_JIT64::madd_acc_and_vectors(VectorUnit &vu, IR::Instruction &instr)
     else
     {
         emitter.ADDPS(dest, temp);
-        set_clamping(temp, true, field);
-        clamp_vfreg(field, temp);
-        set_clamping(dest, false, field);
+        set_clamping(dest, true, field);
         emitter.BLENDPS(field, temp, dest);
+        clamp_vfreg(field, dest);
 
         if (should_update_mac)
             update_mac_flags(vu, temp, field);
@@ -1542,6 +1545,9 @@ void VU_JIT64::madd_acc_by_scalar(VectorUnit &vu, IR::Instruction &instr)
 
     emitter.MULPS(source, temp);
 
+    set_clamping(temp, true, field);
+    clamp_vfreg(field, temp);
+
     if (field == 0xF)
     {
         emitter.ADDPS(temp, dest);
@@ -1551,10 +1557,9 @@ void VU_JIT64::madd_acc_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     else
     {
         emitter.ADDPS(dest, temp);
-        set_clamping(temp, true, field);
-        clamp_vfreg(field, temp);
-        set_clamping(dest, false, field);
+        set_clamping(dest, true, field);
         emitter.BLENDPS(field, temp, dest);
+        clamp_vfreg(field, dest);
     }
 
     if (should_update_mac)
@@ -1611,11 +1616,11 @@ void VU_JIT64::msub_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     bc |= (bc << 6) | (bc << 4) | (bc << 2);
 
     emitter.MOVAPS_REG(bc_reg, temp);
-    emitter.MOVAPS_REG(acc, temp2);
-
     emitter.SHUFPS(bc, temp, temp);
     set_clamping(temp, true, field);
     clamp_vfreg(field, temp);
+
+    emitter.MOVAPS_REG(acc, temp2);
 
     emitter.MULPS(source, temp);
     emitter.SUBPS(temp, temp2);
@@ -1656,6 +1661,9 @@ void VU_JIT64::msub_acc_by_scalar(VectorUnit &vu, IR::Instruction &instr)
 
     emitter.MULPS(source, temp);
 
+    set_clamping(temp, true, field);
+    clamp_vfreg(field, temp);
+
     if (field == 0xF)
     {
         emitter.SUBPS(temp, dest);
@@ -1666,10 +1674,9 @@ void VU_JIT64::msub_acc_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     {
         emitter.MOVAPS_REG(dest, temp2);
         emitter.SUBPS(temp, temp2);
-        set_clamping(temp2, true, field);
-        clamp_vfreg(field, temp2);
-        set_clamping(dest, false, field);
+        set_clamping(dest, true, field);
         emitter.BLENDPS(field, temp2, dest);
+        clamp_vfreg(field, dest);
     }
 
     if (should_update_mac)
@@ -2566,7 +2573,7 @@ REG_64 VU_JIT64::alloc_sse_scratchpad(VectorUnit &vu, int vf_reg)
 
 void VU_JIT64::set_clamping(int xmmreg, bool value, uint8_t field)
 {
-    if (xmm_regs[xmmreg].vu_reg)
+    if (xmm_regs[xmmreg].vu_reg || xmm_regs[xmmreg].locked)
     {
         if (value == false)
             xmm_regs[xmmreg].needs_clamping &= ~field;
