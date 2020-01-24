@@ -25,7 +25,12 @@ enum EE_SpecialReg
     LO1,
     HI,
     HI1,
-    SA
+    SA, 
+    COP1_ACC,
+    COP1_CONTROL,
+
+
+    MAX_VALUE
 };
 
 enum RegType
@@ -34,9 +39,7 @@ enum RegType
     GPR,
     COP0,
     COP1,
-    COP1_CONTROL,
     COP2,
-    COP2_CONTROL
 };
 
 struct EE_DependencyInfo
@@ -174,7 +177,10 @@ struct EE_InstrInfo
 
 namespace EmotionInterpreter
 {
-    friend class EmotionEngine;
+    class EmotionEngineView
+    {
+        friend class EmotionEngine;
+    };
 
     void interpret(EmotionEngine& cpu, uint32_t instruction);
     void lookup(EE_InstrInfo&, uint32_t instruction);
