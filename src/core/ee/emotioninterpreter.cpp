@@ -1235,11 +1235,6 @@ void EmotionInterpreter::cop_bc0(EmotionEngine &cpu, uint32_t instruction)
 
 void EmotionInterpreter::cop2_qmfc2(EmotionEngine &cpu, uint32_t instruction)
 {
-    if (!cop2_sync(cpu, instruction))
-    {
-        return;
-    };
-
     cpu.cop2_updatevu0();
 
     int dest = (instruction >> 16) & 0x1F;
@@ -1259,11 +1254,6 @@ void EmotionInterpreter::cop2_qmfc2(EmotionEngine &cpu, uint32_t instruction)
 
 void EmotionInterpreter::cop2_qmtc2(EmotionEngine &cpu, uint32_t instruction)
 {
-    if (!cop2_sync(cpu, instruction))
-    {
-        return;
-    };
-
     cpu.cop2_updatevu0();
 
     int source = (instruction >> 16) & 0x1F;

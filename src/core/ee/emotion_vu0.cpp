@@ -1013,7 +1013,6 @@ void EmotionInterpreter::cop2_vcallms(EmotionEngine& cpu, uint32_t instruction)
         return;
     };
 
-    cpu.cop2_updatevu0();
     VectorUnit& vu0 = cpu.get_VU0();
     vu0.decoder.reset();
 
@@ -1033,7 +1032,6 @@ void EmotionInterpreter::cop2_vcallmsr(EmotionEngine& cpu, uint32_t instruction)
         return;
     };
 
-    cpu.cop2_updatevu0();
     VectorUnit& vu0 = cpu.get_VU0();
     vu0.decoder.reset();
 
