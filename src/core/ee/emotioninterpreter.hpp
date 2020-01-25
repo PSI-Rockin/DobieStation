@@ -38,6 +38,11 @@ enum COP1_Control_SpecialReg
     CONDITION
 };
 
+enum COP2_Control_SpecialReg
+{
+    CONDITION
+};
+
 enum RegType
 {
     UNK,
