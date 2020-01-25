@@ -27,8 +27,6 @@ enum class EE_SpecialReg
     HI1,
     SA,
     COP1_ACC,
-    COP1_CONTROL,
-
 
     MAX_VALUE
 };
@@ -143,6 +141,9 @@ struct EE_InstrInfo
         FPU_RSQRT
     };
 
+    // Ease of access in interpreter
+    EmotionEngine* cpu = nullptr;
+
     // By using basic_string instead of vector, constructing this structure
     // requires no dynamic memory allocation
     std::basic_string<uint16_t> write_dependencies = std::basic_string<uint16_t>();
@@ -189,11 +190,6 @@ struct EE_InstrInfo
 
 namespace EmotionInterpreter
 {
-    class EmotionEngineView
-    {
-        friend class EmotionEngine;
-    };
-
     void interpret(EmotionEngine& cpu, uint32_t instruction);
     void lookup(EE_InstrInfo&, uint32_t instruction);
 
@@ -352,7 +348,7 @@ namespace EmotionInterpreter
     void cop2_qmfc2(EmotionEngine& cpu, uint32_t instruction);
     void cop2_qmtc2(EmotionEngine& cpu, uint32_t instruction);
 
-    void cop2_special(EE_InstrInfo& info, uint32_t instruction);
+    void cop2_special(EmotionEngine& ee, VectorUnit& vu0, uint32_t instruction);
     void cop2_vaddbc(VectorUnit& vu0, uint32_t instruction);
     void cop2_vsubbc(VectorUnit& vu0, uint32_t instruction);
     void cop2_vmaddbc(VectorUnit& vu0, uint32_t instruction);

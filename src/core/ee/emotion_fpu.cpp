@@ -197,7 +197,7 @@ void EmotionInterpreter::fpu_add(EmotionEngine& cpu, uint32_t instruction)
     uint32_t dest = (instruction >> 6) & 0x1F;
     uint32_t reg1 = (instruction >> 11) & 0x1F;
     uint32_t reg2 = (instruction >> 16) & 0x1F;
-    cpu.fpu_add(dest, reg1, reg2);
+    cpu.get_FPU()->add_s(dest, reg1, reg2);
 }
 
 void EmotionInterpreter::fpu_sub(EmotionEngine& cpu, uint32_t instruction)
@@ -205,7 +205,7 @@ void EmotionInterpreter::fpu_sub(EmotionEngine& cpu, uint32_t instruction)
     uint32_t dest = (instruction >> 6) & 0x1F;
     uint32_t reg1 = (instruction >> 11) & 0x1F;
     uint32_t reg2 = (instruction >> 16) & 0x1F;
-    cpu.fpu_sub(dest, reg1, reg2);
+    cpu.get_FPU()->sub_s(dest, reg1, reg2);
 }
 
 void EmotionInterpreter::fpu_mul(EmotionEngine& cpu, uint32_t instruction)
@@ -213,7 +213,7 @@ void EmotionInterpreter::fpu_mul(EmotionEngine& cpu, uint32_t instruction)
     uint32_t dest = (instruction >> 6) & 0x1F;
     uint32_t reg1 = (instruction >> 11) & 0x1F;
     uint32_t reg2 = (instruction >> 16) & 0x1F;
-    cpu.fpu_mul(dest, reg1, reg2);
+    cpu.get_FPU()->mul_s(dest, reg1, reg2);
 }
 
 void EmotionInterpreter::fpu_div(EmotionEngine& cpu, uint32_t instruction)
@@ -221,35 +221,35 @@ void EmotionInterpreter::fpu_div(EmotionEngine& cpu, uint32_t instruction)
     uint32_t dest = (instruction >> 6) & 0x1F;
     uint32_t reg1 = (instruction >> 11) & 0x1F;
     uint32_t reg2 = (instruction >> 16) & 0x1F;
-    cpu.fpu_div(dest, reg1, reg2);
+    cpu.get_FPU()->div_s(dest, reg1, reg2);
 }
 
 void EmotionInterpreter::fpu_sqrt(EmotionEngine& cpu, uint32_t instruction)
 {
     uint32_t dest = (instruction >> 6) & 0x1F;
     uint32_t source = (instruction >> 16) & 0x1F;
-    cpu.fpu_sqrt(dest, source);
+    cpu.get_FPU()->sqrt_s(dest, source);
 }
 
 void EmotionInterpreter::fpu_abs(EmotionEngine& cpu, uint32_t instruction)
 {
     uint32_t dest = (instruction >> 6) & 0x1F;
     uint32_t source = (instruction >> 11) & 0x1F;
-    cpu.fpu_abs(dest, source);
+    cpu.get_FPU()->abs_s(dest, source);
 }
 
 void EmotionInterpreter::fpu_mov(EmotionEngine& cpu, uint32_t instruction)
 {
     uint32_t dest = (instruction >> 6) & 0x1F;
     uint32_t source = (instruction >> 11) & 0x1F;
-    cpu.fpu_mov(dest, source);
+    cpu.get_FPU()->mov_s(dest, source);
 }
 
 void EmotionInterpreter::fpu_neg(EmotionEngine& cpu, uint32_t instruction)
 {
     uint32_t dest = (instruction >> 6) & 0x1F;
     uint32_t source = (instruction >> 11) & 0x1F;
-    cpu.fpu_neg(dest, source);
+    cpu.get_FPU()->neg_s(dest, source);
 }
 
 void EmotionInterpreter::fpu_rsqrt(EmotionEngine& cpu, uint32_t instruction)
@@ -257,28 +257,28 @@ void EmotionInterpreter::fpu_rsqrt(EmotionEngine& cpu, uint32_t instruction)
     uint32_t dest = (instruction >> 6) & 0x1F;
     uint32_t reg1 = (instruction >> 11) & 0x1F;
     uint32_t reg2 = (instruction >> 16) & 0x1F;
-    cpu.fpu_rsqrt(dest, reg1, reg2);
+    cpu.get_FPU()->rsqrt_s(dest, reg1, reg2);
 }
 
 void EmotionInterpreter::fpu_adda(EmotionEngine& cpu, uint32_t instruction)
 {
     uint32_t reg1 = (instruction >> 11) & 0x1F;
     uint32_t reg2 = (instruction >> 16) & 0x1F;
-    cpu.fpu_adda(reg1, reg2);
+    cpu.get_FPU()->adda_s(reg1, reg2);
 }
 
 void EmotionInterpreter::fpu_suba(EmotionEngine& cpu, uint32_t instruction)
 {
     uint32_t reg1 = (instruction >> 11) & 0x1F;
     uint32_t reg2 = (instruction >> 16) & 0x1F;
-    cpu.fpu_suba(reg1, reg2);
+    cpu.get_FPU()->suba_s(reg1, reg2);
 }
 
 void EmotionInterpreter::fpu_mula(EmotionEngine& cpu, uint32_t instruction)
 {
     uint32_t reg1 = (instruction >> 11) & 0x1F;
     uint32_t reg2 = (instruction >> 16) & 0x1F;
-    cpu.fpu_mula(reg1, reg2);
+    cpu.get_FPU()->mula_s(reg1, reg2);
 }
 
 void EmotionInterpreter::fpu_madd(EmotionEngine& cpu, uint32_t instruction)
@@ -286,7 +286,7 @@ void EmotionInterpreter::fpu_madd(EmotionEngine& cpu, uint32_t instruction)
     uint32_t dest = (instruction >> 6) & 0x1F;
     uint32_t reg1 = (instruction >> 11) & 0x1F;
     uint32_t reg2 = (instruction >> 16) & 0x1F;
-    cpu.fpu_madd(dest, reg1, reg2);
+    cpu.get_FPU()->madd_s(dest, reg1, reg2);
 }
 
 void EmotionInterpreter::fpu_msub(EmotionEngine& cpu, uint32_t instruction)
@@ -294,28 +294,28 @@ void EmotionInterpreter::fpu_msub(EmotionEngine& cpu, uint32_t instruction)
     uint32_t dest = (instruction >> 6) & 0x1F;
     uint32_t reg1 = (instruction >> 11) & 0x1F;
     uint32_t reg2 = (instruction >> 16) & 0x1F;
-    cpu.fpu_msub(dest, reg1, reg2);
+    cpu.get_FPU()->msub_s(dest, reg1, reg2);
 }
 
 void EmotionInterpreter::fpu_madda(EmotionEngine& cpu, uint32_t instruction)
 {
     uint32_t reg1 = (instruction >> 11) & 0x1F;
     uint32_t reg2 = (instruction >> 16) & 0x1F;
-    cpu.fpu_madda(reg1, reg2);
+    cpu.get_FPU()->madda_s(reg1, reg2);
 }
 
 void EmotionInterpreter::fpu_msuba(EmotionEngine& cpu, uint32_t instruction)
 {
     uint32_t reg1 = (instruction >> 11) & 0x1F;
     uint32_t reg2 = (instruction >> 16) & 0x1F;
-    cpu.fpu_msuba(reg1, reg2);
+    cpu.get_FPU()->msuba_s(reg1, reg2);
 }
 
 void EmotionInterpreter::fpu_cvt_w_s(EmotionEngine& cpu, uint32_t instruction)
 {
     uint32_t dest = (instruction >> 6) & 0x1F;
     uint32_t source = (instruction >> 11) & 0x1F;
-    cpu.fpu_cvt_w_s(dest, source);
+    cpu.get_FPU()->cvt_w_s(dest, source);
 }
 
 void EmotionInterpreter::fpu_max_s(EmotionEngine& cpu, uint32_t instruction)
@@ -323,7 +323,7 @@ void EmotionInterpreter::fpu_max_s(EmotionEngine& cpu, uint32_t instruction)
     uint32_t dest = (instruction >> 6) & 0x1F;
     uint32_t reg1 = (instruction >> 11) & 0x1F;
     uint32_t reg2 = (instruction >> 16) & 0x1F;
-    cpu.fpu_max_s(dest, reg1, reg2);
+    cpu.get_FPU()->max_s(dest, reg1, reg2);
 }
 
 void EmotionInterpreter::fpu_min_s(EmotionEngine& cpu, uint32_t instruction)
@@ -331,33 +331,33 @@ void EmotionInterpreter::fpu_min_s(EmotionEngine& cpu, uint32_t instruction)
     uint32_t dest = (instruction >> 6) & 0x1F;
     uint32_t reg1 = (instruction >> 11) & 0x1F;
     uint32_t reg2 = (instruction >> 16) & 0x1F;
-    cpu.fpu_min_s(dest, reg1, reg2);
+    cpu.get_FPU()->min_s(dest, reg1, reg2);
 }
 
 void EmotionInterpreter::fpu_c_f_s(EmotionEngine& cpu, uint32_t instruction)
 {
-    cpu.fpu_c_f_s();
+    cpu.get_FPU()->c_f_s();
 }
 
 void EmotionInterpreter::fpu_c_lt_s(EmotionEngine& cpu, uint32_t instruction)
 {
     uint32_t reg1 = (instruction >> 11) & 0x1F;
     uint32_t reg2 = (instruction >> 16) & 0x1F;
-    cpu.fpu_c_lt_s(reg1, reg2);
+    cpu.get_FPU()->c_lt_s(reg1, reg2);
 }
 
 void EmotionInterpreter::fpu_c_eq_s(EmotionEngine& cpu, uint32_t instruction)
 {
     uint32_t reg1 = (instruction >> 11) & 0x1F;
     uint32_t reg2 = (instruction >> 16) & 0x1F;
-    cpu.fpu_c_eq_s(reg1, reg2);
+    cpu.get_FPU()->c_eq_s(reg1, reg2);
 }
 
 void EmotionInterpreter::fpu_c_le_s(EmotionEngine& cpu, uint32_t instruction)
 {
     uint32_t reg1 = (instruction >> 11) & 0x1F;
     uint32_t reg2 = (instruction >> 16) & 0x1F;
-    cpu.fpu_c_le_s(reg1, reg2);
+    cpu.get_FPU()->c_le_s(reg1, reg2);
 }
 
 void EmotionInterpreter::cop_bc1(EmotionEngine &cpu, uint32_t instruction)
@@ -377,5 +377,5 @@ void EmotionInterpreter::cop_cvt_s_w(EmotionEngine &cpu, uint32_t instruction)
 {
     int source = (instruction >> 11) & 0x1F;
     int dest = (instruction >> 6) & 0x1F;
-    cpu.fpu_cvt_s_w(dest, source);
+    cpu.get_FPU()->cvt_s_w(dest, source);
 }

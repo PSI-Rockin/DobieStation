@@ -323,6 +323,16 @@ uint64_t EmotionEngine::get_SA()
     return SA;
 }
 
+Cop1 *EmotionEngine::get_FPU()
+{
+    return fpu;
+}
+
+VectorUnit *EmotionEngine::get_VU0()
+{
+    return vu0;
+}
+
 uint32_t EmotionEngine::read_instr(uint32_t address)
 {
     if (cp0->is_cached(address))
@@ -1140,126 +1150,6 @@ void EmotionEngine::cop2_bc2(int32_t offset, bool test_true, bool likely)
         branch_likely(passed, offset);
     else
         branch(passed, offset);
-}
-
-void EmotionEngine::fpu_add(uint32_t dest, uint32_t reg1, uint32_t reg2)
-{
-    fpu->add_s(dest, reg1, reg2);
-}
-
-void EmotionEngine::fpu_sub(uint32_t dest, uint32_t reg1, uint32_t reg2)
-{
-    fpu->sub_s(dest, reg1, reg2);
-}
-
-void EmotionEngine::fpu_mul(uint32_t dest, uint32_t reg1, uint32_t reg2)
-{
-    fpu->mul_s(dest, reg1, reg2);
-}
-
-void EmotionEngine::fpu_div(uint32_t dest, uint32_t reg1, uint32_t reg2)
-{
-    fpu->div_s(dest, reg1, reg2);
-}
-
-void EmotionEngine::fpu_sqrt(uint32_t dest, uint32_t source)
-{
-    fpu->sqrt_s(dest, source);
-}
-
-void EmotionEngine::fpu_abs(uint32_t dest, uint32_t source)
-{
-    fpu->abs_s(dest, source);
-}
-
-void EmotionEngine::fpu_mov(uint32_t dest, uint32_t source)
-{
-    fpu->mov_s(dest, source);
-}
-
-void EmotionEngine::fpu_neg(uint32_t dest, uint32_t source)
-{
-    fpu->neg_s(dest, source);
-}
-
-void EmotionEngine::fpu_rsqrt(uint32_t dest, uint32_t reg1, uint32_t reg2)
-{
-    fpu->rsqrt_s(dest, reg1, reg2);
-}
-
-void EmotionEngine::fpu_adda(uint32_t reg1, uint32_t reg2)
-{
-    fpu->adda_s(reg1, reg2);
-}
-
-void EmotionEngine::fpu_suba(uint32_t reg1, uint32_t reg2)
-{
-    fpu->suba_s(reg1, reg2);
-}
-
-void EmotionEngine::fpu_mula(uint32_t reg1, uint32_t reg2)
-{
-    fpu->mula_s(reg1, reg2);
-}
-
-void EmotionEngine::fpu_madd(uint32_t dest, uint32_t reg1, uint32_t reg2)
-{
-    fpu->madd_s(dest, reg1, reg2);
-}
-
-void EmotionEngine::fpu_msub(uint32_t dest, uint32_t reg1, uint32_t reg2)
-{
-    fpu->msub_s(dest, reg1, reg2);
-}
-
-void EmotionEngine::fpu_madda(uint32_t reg1, uint32_t reg2)
-{
-    fpu->madda_s(reg1, reg2);
-}
-
-void EmotionEngine::fpu_msuba(uint32_t reg1, uint32_t reg2)
-{
-    fpu->msuba_s(reg1, reg2);
-}
-
-void EmotionEngine::fpu_cvt_s_w(int dest, int source)
-{
-    fpu->cvt_s_w(dest, source);
-}
-
-void EmotionEngine::fpu_cvt_w_s(uint32_t dest, uint32_t source)
-{
-    fpu->cvt_s_w(dest, source);
-}
-
-void EmotionEngine::fpu_max_s(uint32_t dest, uint32_t reg1, uint32_t reg2)
-{
-    fpu->max_s(dest, reg1, reg2);
-}
-
-void EmotionEngine::fpu_min_s(uint32_t dest, uint32_t reg1, uint32_t reg2)
-{
-    fpu->min_s(dest, reg1, reg2);
-}
-
-void EmotionEngine::fpu_c_f_s()
-{
-    fpu->c_f_s();
-}
-
-void EmotionEngine::fpu_c_lt_s(uint32_t reg1, uint32_t reg2)
-{
-    fpu->c_lt_s(reg1, reg2);
-}
-
-void EmotionEngine::fpu_c_eq_s(uint32_t reg1, uint32_t reg2)
-{
-    fpu->c_eq_s(reg1, reg2);
-}
-
-void EmotionEngine::fpu_c_le_s(uint32_t reg1, uint32_t reg2)
-{
-    fpu->c_le_s(reg1, reg2);
 }
 
 void EmotionEngine::qmfc2(int dest, int cop_reg)
