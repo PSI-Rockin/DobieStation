@@ -480,7 +480,7 @@ namespace EmotionInterpreter
     void pext5(EmotionEngine& cpu, uint32_t instruction);
     void ppac5(EmotionEngine& cpu, uint32_t instruction);
 
-    void mmi1(EmotionEngine& cpu, uint32_t instruction);
+    void mmi1(EE_InstrInfo& cpu, uint32_t instruction);
     void pabsw(EmotionEngine& cpu, uint32_t instruction);
     void pceqw(EmotionEngine& cpu, uint32_t instruction);
     void pminw(EmotionEngine& cpu, uint32_t instruction);
