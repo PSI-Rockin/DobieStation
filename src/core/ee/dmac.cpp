@@ -1021,7 +1021,7 @@ void DMAC::start_DMA(int index)
     channels[index].tag_end = !(mode & 0x1); //always end transfers in normal and interleave mode
 
     //Stall drain happens on either normal transfers or refs tags
-    int tag = channels[index].control >> 24;
+    int tag = (channels[index].control >> 28) & 0x7;
     channels[index].can_stall_drain = !(mode & 0x1) || tag == 4;
     switch (mode)
     {
