@@ -56,7 +56,7 @@ void EmotionInterpreter::special(EE_InstrInfo &info, uint32_t instruction)
             info.pipeline = EE_InstrInfo::Pipeline::COP0;
             break;
         case 0x0F:
-            // TODO: Find out what this instruction is
+            // SYNC
             info.interpreter_fn = &nop;
             info.pipeline = EE_InstrInfo::Pipeline::COP0;
             break;
