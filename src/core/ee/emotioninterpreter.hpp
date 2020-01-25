@@ -141,9 +141,6 @@ struct EE_InstrInfo
         FPU_RSQRT
     };
 
-    // Ease of access in interpreter
-    EmotionEngine* cpu = nullptr;
-
     // By using basic_string instead of vector, constructing this structure
     // requires no dynamic memory allocation
     std::basic_string<uint16_t> write_dependencies = std::basic_string<uint16_t>();
