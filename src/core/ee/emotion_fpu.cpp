@@ -49,24 +49,28 @@ void EmotionInterpreter::cop_s(EE_InstrInfo &info, uint32_t instruction)
             info.instruction_type = EE_InstrInfo::InstructionType::FPU_SQRT;
             info.add_dependency(DependencyType::Write, RegType::COP1, (instruction >> 6) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 16) & 0x1F);
+            break;
         case 0x5:
             info.interpreter_fn = &fpu_abs;
             info.pipeline = EE_InstrInfo::Pipeline::COP1;
             info.latency = 4;
             info.add_dependency(DependencyType::Write, RegType::COP1, (instruction >> 6) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 11) & 0x1F);
+            break;
         case 0x6:
             info.interpreter_fn = &fpu_mov;
             info.pipeline = EE_InstrInfo::Pipeline::COP1;
             info.latency = 4;
             info.add_dependency(DependencyType::Write, RegType::COP1, (instruction >> 6) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 11) & 0x1F);
+            break;
         case 0x7:
             info.interpreter_fn = &fpu_neg;
             info.pipeline = EE_InstrInfo::Pipeline::COP1;
             info.latency = 4;
             info.add_dependency(DependencyType::Write, RegType::COP1, (instruction >> 6) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 11) & 0x1F);
+            break;
         case 0x16:
             info.interpreter_fn = &fpu_rsqrt;
             info.pipeline = EE_InstrInfo::Pipeline::COP1;
