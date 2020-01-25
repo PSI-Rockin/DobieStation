@@ -323,14 +323,14 @@ uint64_t EmotionEngine::get_SA()
     return SA;
 }
 
-Cop1 *EmotionEngine::get_FPU()
+Cop1& EmotionEngine::get_FPU()
 {
-    return fpu;
+    return *fpu;
 }
 
-VectorUnit *EmotionEngine::get_VU0()
+VectorUnit& EmotionEngine::get_VU0()
 {
-    return vu0;
+    return *vu0;
 }
 
 uint32_t EmotionEngine::read_instr(uint32_t address)

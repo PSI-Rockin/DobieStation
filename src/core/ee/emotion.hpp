@@ -123,8 +123,8 @@ class EmotionEngine
         uint64_t get_HI();
         uint64_t get_HI1();
         uint64_t get_SA();
-        Cop1* get_FPU();
-        VectorUnit *get_VU0();
+        Cop1& get_FPU();
+        VectorUnit& get_VU0();
         bool check_interlock();
         void clear_interlock();
         bool vu0_wait();
