@@ -42,7 +42,7 @@ void EmotionInterpreter::mmi(EE_InstrInfo &info, uint32_t instruction)
             mmi0(info, instruction);
             break;
         case 0x09:
-            mmi2(cpu, instruction);
+            mmi2(info, instruction);
             break;
         case 0x10:
             info.interpreter_fn = &mfhi1;
@@ -139,13 +139,13 @@ void EmotionInterpreter::mmi(EE_InstrInfo &info, uint32_t instruction)
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
             break;
         case 0x28:
-            mmi1(cpu, instruction);
+            mmi1(info, instruction);
             break;
         case 0x29:
-            mmi3(cpu, instruction);
+            mmi3(info, instruction);
             break;
         case 0x30:
-            pmfhlfmt(cpu, instruction);
+            pmfhlfmt(info, instruction);
             break;
         case 0x31:
             info.interpreter_fn = &pmthllw;
@@ -372,25 +372,45 @@ void EmotionInterpreter::psraw(EmotionEngine &cpu, uint32_t instruction)
     }
 }
 
-void EmotionInterpreter::pmfhlfmt(EmotionEngine& cpu, uint32_t instruction)
+void EmotionInterpreter::pmfhlfmt(EE_InstrInfo& info, uint32_t instruction)
 {
     uint8_t op = (instruction >> 6) & 0x1F;
     switch (op)
     {
         case 0x00:
-            pmfhllw(cpu, instruction);
+            info.interpreter_fn = &pmfhllw;
+            info.pipeline = EE_InstrInfo::Pipeline::IntWide;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, EE_SpecialReg::LO);
+            info.add_dependency(DependencyType::Read, RegType::GPR, EE_SpecialReg::HI);
             break;
         case 0x01:
-            pmfhluw(cpu, instruction);
+            info.interpreter_fn = &pmfhluw;
+            info.pipeline = EE_InstrInfo::Pipeline::IntWide;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, EE_SpecialReg::LO);
+            info.add_dependency(DependencyType::Read, RegType::GPR, EE_SpecialReg::HI);
             break;
         case 0x02:
-            pmfhlslw(cpu, instruction);
+            info.interpreter_fn = &pmfhlslw;
+            info.pipeline = EE_InstrInfo::Pipeline::IntWide;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, EE_SpecialReg::LO);
+            info.add_dependency(DependencyType::Read, RegType::GPR, EE_SpecialReg::HI);
             break;
         case 0x03:           
-            pmfhllh(cpu, instruction);
+            info.interpreter_fn = &pmfhllh;
+            info.pipeline = EE_InstrInfo::Pipeline::IntWide;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, EE_SpecialReg::LO);
+            info.add_dependency(DependencyType::Read, RegType::GPR, EE_SpecialReg::HI);
             break;
         case 0x04:
-            pmfhlsh(cpu, instruction);
+            info.interpreter_fn = &pmfhlsh;
+            info.pipeline = EE_InstrInfo::Pipeline::IntWide;
+            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, EE_SpecialReg::LO);
+            info.add_dependency(DependencyType::Read, RegType::GPR, EE_SpecialReg::HI);
             break;
     }
 }

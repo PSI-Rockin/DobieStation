@@ -158,7 +158,7 @@ void EmotionInterpreter::lookup(EE_InstrInfo &info, uint32_t instruction)
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x1C:
-            mmi(cpu, instruction);
+            mmi(info, instruction);
             break;
         case 0x1E:
             info.interpreter_fn = &lq;
