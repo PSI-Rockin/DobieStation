@@ -1153,7 +1153,7 @@ void EmotionInterpreter::cop2_special2(EE_InstrInfo& info, uint32_t instruction)
             /**
               * TODO: vnop?
               */
-            info.interpreter_fn = &nop;
+            info.interpreter_fn = &cop2_vnop;
             break;
         case 0x30:
             info.interpreter_fn = &cop2_vmove;
@@ -1898,6 +1898,13 @@ void EmotionInterpreter::cop2_vopmula(EmotionEngine& cpu, uint32_t instruction)
 
     vu0.handle_cop2_stalls();
     vu0.opmula(instruction);
+}
+
+void EmotionInterpreter::cop2_vnop(EmotionEngine& cpu, uint32_t instruction)
+{
+    cpu.cop2_updatevu0();
+    VectorUnit& vu0 = cpu.get_VU0();
+    vu0.decoder.reset();
 }
 
 void EmotionInterpreter::cop2_vmove(EmotionEngine& cpu, uint32_t instruction)

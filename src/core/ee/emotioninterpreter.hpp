@@ -414,6 +414,7 @@ namespace EmotionInterpreter
     void cop2_vsuba(EmotionEngine& cpu, uint32_t instruction);
     void cop2_vmsuba(EmotionEngine& cpu, uint32_t instruction);
     void cop2_vopmula(EmotionEngine& cpu, uint32_t instruction);
+    void cop2_vnop(EmotionEngine& cpu, uint32_t instruction);
     void cop2_vmove(EmotionEngine& cpu, uint32_t instruction);
     void cop2_vmr32(EmotionEngine& cpu, uint32_t instruction);
     void cop2_vlqi(EmotionEngine& cpu, uint32_t instruction);
