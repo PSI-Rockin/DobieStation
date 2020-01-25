@@ -6,7 +6,6 @@
 void EmotionInterpreter::interpret(EmotionEngine &cpu, uint32_t instruction)
 {
     EE_InstrInfo instr_info;
-    instr_info.cpu = &cpu;
     lookup(instr_info, instruction);
 
     if (instr_info.interpreter_fn == nullptr)
