@@ -71,7 +71,7 @@ void EmotionInterpreter::lookup(EE_InstrInfo &info, uint32_t instruction)
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x0A:
-            info.interpreter_fn = &sltu;
+            info.interpreter_fn = &slti;
             info.pipeline = EE_InstrInfo::Pipeline::IntGeneric;
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
