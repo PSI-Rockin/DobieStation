@@ -18,7 +18,7 @@ enum EE_NormalReg
     ra = 31
 };
 
-enum EE_SpecialReg
+enum class EE_SpecialReg
 {
     EE_Regular = 0,
     LO = 32,
@@ -33,17 +33,17 @@ enum EE_SpecialReg
     MAX_VALUE
 };
 
-enum COP1_Control_SpecialReg
+enum class COP1_Control_SpecialReg
 {
     CONDITION
 };
 
-enum COP2_Control_SpecialReg
+enum class COP2_Control_SpecialReg
 {
     CONDITION
 };
 
-enum RegType
+enum class RegType
 {
     UNK,
     GPR,

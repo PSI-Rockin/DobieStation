@@ -1169,12 +1169,12 @@ void EmotionEngine::fpu_sqrt(uint32_t dest, uint32_t source)
 
 void EmotionEngine::fpu_abs(uint32_t dest, uint32_t source)
 {
-    fpu->sub_s(dest, source);
+    fpu->abs_s(dest, source);
 }
 
 void EmotionEngine::fpu_mov(uint32_t dest, uint32_t source)
 {
-    fpu->sub_s(dest, source);
+    fpu->mov_s(dest, source);
 }
 
 void EmotionEngine::fpu_neg(uint32_t dest, uint32_t source)

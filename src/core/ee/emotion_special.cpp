@@ -87,24 +87,24 @@ void EmotionInterpreter::special(EE_InstrInfo &info, uint32_t instruction)
             info.interpreter_fn = &mfhi;
             info.pipeline = EE_InstrInfo::Pipeline::Int0;
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
-            info.add_dependency(DependencyType::Read, RegType::GPR, EE_SpecialReg::HI);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
             break;
         case 0x11:
             info.interpreter_fn = &mthi;
             info.pipeline = EE_InstrInfo::Pipeline::Int0;
-            info.add_dependency(DependencyType::Write, RegType::GPR, EE_SpecialReg::HI);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x12:
             info.interpreter_fn = &mflo;
             info.pipeline = EE_InstrInfo::Pipeline::Int0;
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
-            info.add_dependency(DependencyType::Read, RegType::GPR, EE_SpecialReg::LO);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::LO);
             break;
         case 0x13:
             info.interpreter_fn = &mtlo;
             info.pipeline = EE_InstrInfo::Pipeline::Int0;
-            info.add_dependency(DependencyType::Write, RegType::GPR, EE_SpecialReg::LO);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x14:
@@ -134,8 +134,8 @@ void EmotionInterpreter::special(EE_InstrInfo &info, uint32_t instruction)
             info.throughput = 2;
             info.latency = 4;
             info.instruction_type = EE_InstrInfo::InstructionType::MULT;
-            info.add_dependency(DependencyType::Write, RegType::GPR, EE_SpecialReg::LO);
-            info.add_dependency(DependencyType::Write, RegType::GPR, EE_SpecialReg::HI);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
@@ -146,8 +146,8 @@ void EmotionInterpreter::special(EE_InstrInfo &info, uint32_t instruction)
             info.throughput = 2;
             info.latency = 4;
             info.instruction_type = EE_InstrInfo::InstructionType::MULT;
-            info.add_dependency(DependencyType::Write, RegType::GPR, EE_SpecialReg::LO);
-            info.add_dependency(DependencyType::Write, RegType::GPR, EE_SpecialReg::HI);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
@@ -158,8 +158,8 @@ void EmotionInterpreter::special(EE_InstrInfo &info, uint32_t instruction)
             info.throughput = 37;
             info.latency = 37;
             info.instruction_type = EE_InstrInfo::InstructionType::DIV;
-            info.add_dependency(DependencyType::Write, RegType::GPR, EE_SpecialReg::LO);
-            info.add_dependency(DependencyType::Write, RegType::GPR, EE_SpecialReg::HI);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
             break;
@@ -169,8 +169,8 @@ void EmotionInterpreter::special(EE_InstrInfo &info, uint32_t instruction)
             info.throughput = 37;
             info.latency = 37;
             info.instruction_type = EE_InstrInfo::InstructionType::DIV;
-            info.add_dependency(DependencyType::Write, RegType::GPR, EE_SpecialReg::LO);
-            info.add_dependency(DependencyType::Write, RegType::GPR, EE_SpecialReg::HI);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
             break;
@@ -234,12 +234,12 @@ void EmotionInterpreter::special(EE_InstrInfo &info, uint32_t instruction)
             info.interpreter_fn = &mfsa;
             info.pipeline = EE_InstrInfo::Pipeline::COP0;
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
-            info.add_dependency(DependencyType::Read, RegType::GPR, EE_SpecialReg::SA);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::SA);
             break;
         case 0x29:
             info.interpreter_fn = &mtsa;
             info.pipeline = EE_InstrInfo::Pipeline::COP0;
-            info.add_dependency(DependencyType::Write, RegType::GPR, EE_SpecialReg::HI);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x2A:

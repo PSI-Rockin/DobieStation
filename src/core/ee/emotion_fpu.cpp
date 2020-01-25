@@ -81,7 +81,7 @@ void EmotionInterpreter::cop_s(EE_InstrInfo &info, uint32_t instruction)
             info.interpreter_fn = &fpu_adda;
             info.pipeline = EE_InstrInfo::Pipeline::COP1;
             info.latency = 4;
-            info.add_dependency(DependencyType::Write, RegType::COP1, EE_SpecialReg::COP1_ACC);
+            info.add_dependency(DependencyType::Write, RegType::COP1, (uint8_t)EE_SpecialReg::COP1_ACC);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 16) & 0x1F);
             break;
@@ -89,7 +89,7 @@ void EmotionInterpreter::cop_s(EE_InstrInfo &info, uint32_t instruction)
             info.interpreter_fn = &fpu_suba;
             info.pipeline = EE_InstrInfo::Pipeline::COP1;
             info.latency = 4;
-            info.add_dependency(DependencyType::Write, RegType::COP1, EE_SpecialReg::COP1_ACC);
+            info.add_dependency(DependencyType::Write, RegType::COP1, (uint8_t)EE_SpecialReg::COP1_ACC);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 16) & 0x1F);
             break;
@@ -97,7 +97,7 @@ void EmotionInterpreter::cop_s(EE_InstrInfo &info, uint32_t instruction)
             info.interpreter_fn = &fpu_mula;
             info.pipeline = EE_InstrInfo::Pipeline::COP1;
             info.latency = 4;
-            info.add_dependency(DependencyType::Write, RegType::COP1, EE_SpecialReg::COP1_ACC);
+            info.add_dependency(DependencyType::Write, RegType::COP1, (uint8_t)EE_SpecialReg::COP1_ACC);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 16) & 0x1F);
             break;
@@ -121,7 +121,7 @@ void EmotionInterpreter::cop_s(EE_InstrInfo &info, uint32_t instruction)
             info.interpreter_fn = &fpu_madda;
             info.pipeline = EE_InstrInfo::Pipeline::COP1;
             info.latency = 4;
-            info.add_dependency(DependencyType::Write, RegType::COP1, EE_SpecialReg::COP1_ACC);
+            info.add_dependency(DependencyType::Write, RegType::COP1, (uint8_t)EE_SpecialReg::COP1_ACC);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 16) & 0x1F);
             break;
@@ -129,7 +129,7 @@ void EmotionInterpreter::cop_s(EE_InstrInfo &info, uint32_t instruction)
             info.interpreter_fn = &fpu_msuba;
             info.pipeline = EE_InstrInfo::Pipeline::COP1;
             info.latency = 4;
-            info.add_dependency(DependencyType::Write, RegType::COP1, EE_SpecialReg::COP1_ACC);
+            info.add_dependency(DependencyType::Write, RegType::COP1, (uint8_t)EE_SpecialReg::COP1_ACC);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 16) & 0x1F);
             break;
@@ -160,13 +160,13 @@ void EmotionInterpreter::cop_s(EE_InstrInfo &info, uint32_t instruction)
             info.interpreter_fn = &fpu_c_f_s;
             info.pipeline = EE_InstrInfo::Pipeline::COP1;
             info.latency = 4;
-            info.add_dependency(DependencyType::Write, RegType::COP1_CONTROL, COP1_Control_SpecialReg::CONDITION);
+            info.add_dependency(DependencyType::Write, RegType::COP1_CONTROL, (uint8_t)COP1_Control_SpecialReg::CONDITION);
             break;
         case 0x32:
             info.interpreter_fn = &fpu_c_eq_s;
             info.pipeline = EE_InstrInfo::Pipeline::COP1;
             info.latency = 4;
-            info.add_dependency(DependencyType::Write, RegType::COP1_CONTROL, COP1_Control_SpecialReg::CONDITION);
+            info.add_dependency(DependencyType::Write, RegType::COP1_CONTROL, (uint8_t)COP1_Control_SpecialReg::CONDITION);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 16) & 0x1F);
             break;
@@ -174,7 +174,7 @@ void EmotionInterpreter::cop_s(EE_InstrInfo &info, uint32_t instruction)
             info.interpreter_fn = &fpu_c_lt_s;
             info.pipeline = EE_InstrInfo::Pipeline::COP1;
             info.latency = 4;
-            info.add_dependency(DependencyType::Write, RegType::COP1_CONTROL, COP1_Control_SpecialReg::CONDITION);
+            info.add_dependency(DependencyType::Write, RegType::COP1_CONTROL, (uint8_t)COP1_Control_SpecialReg::CONDITION);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 16) & 0x1F);
             break;
@@ -182,7 +182,7 @@ void EmotionInterpreter::cop_s(EE_InstrInfo &info, uint32_t instruction)
             info.interpreter_fn = &fpu_c_le_s;
             info.pipeline = EE_InstrInfo::Pipeline::COP1;
             info.latency = 4;
-            info.add_dependency(DependencyType::Write, RegType::COP1_CONTROL, COP1_Control_SpecialReg::CONDITION);
+            info.add_dependency(DependencyType::Write, RegType::COP1_CONTROL, (uint8_t)COP1_Control_SpecialReg::CONDITION);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 16) & 0x1F);
             break;
