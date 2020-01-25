@@ -445,7 +445,7 @@ namespace EmotionInterpreter
     void psraw(EmotionEngine& cpu, uint32_t instruction);
 
     void pmfhlfmt(EmotionEngine& cpu, uint32_t instruction);
-    void mmi0(EmotionEngine& cpu, uint32_t instruction);
+    void mmi0(EE_InstrInfo& info, uint32_t instruction);
     int16_t clamp_halfword(int32_t word);
     int64_t clamp_doubleword(int64_t word);
     void pmthllw(EmotionEngine& cpu, uint32_t instruction);
