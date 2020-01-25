@@ -1171,6 +1171,12 @@ void EmotionEngine::qmtc2(int source, int cop_reg)
 
 void EmotionEngine::cop2_updatevu0()
 {
+    /**
+    * FIXME: IMPORTANT!
+    * We're flushing pipelines for VU0, as accurately handling COP2's pipelining is painful.
+    * I don't yet have a good solution for this that doesn't murder performance.
+    * Update: Kinda fixed?
+    */
     if (!vu0->is_running())
     {
         uint64_t cpu_cycles = get_cycle_count();

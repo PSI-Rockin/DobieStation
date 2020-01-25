@@ -1006,27 +1006,6 @@ void EmotionInterpreter::di(EmotionEngine& cpu, uint32_t instruction)
     cpu.di();
 }
 
-bool EmotionInterpreter::cop2_sync(EmotionEngine& cpu, uint32_t instruction)
-{
-    //Apparently, any COP2 instruction that is executed while VU0 is running causes COP2 to stall, so lets do that
-    //Dragons Quest 8 is a good test for this as it does COP2 while VU0 is running.
-    if (cpu.vu0_wait())
-    {
-        cpu.set_PC(cpu.get_PC() - 4);
-        return false;
-    }
-
-    uint16_t op = (instruction >> 21) & 0x1F;
-
-    //Update VU0 when doing CFC/CTC commands
-    if (op != 0x8 && !(instruction & 0x1))
-    {
-        cpu.cop2_updatevu0();
-    }
-
-    return true;
-}
-
 void EmotionInterpreter::cop(EE_InstrInfo& info, uint32_t instruction)
 {
     uint16_t op = (instruction >> 21) & 0x1F;
@@ -1220,6 +1199,7 @@ void EmotionInterpreter::cop1_cfc(EmotionEngine &cpu, uint32_t instruction)
 
 void EmotionInterpreter::cop2_cfc(EmotionEngine &cpu, uint32_t instruction)
 {
+    cpu.cop2_updatevu0();
     int emotion_reg = (instruction >> 16) & 0x1F;
     int cop_reg = (instruction >> 11) & 0x1F;
     cpu.cfc(2, emotion_reg, cop_reg, instruction);
@@ -1234,6 +1214,7 @@ void EmotionInterpreter::cop1_ctc(EmotionEngine &cpu, uint32_t instruction)
 
 void EmotionInterpreter::cop2_ctc(EmotionEngine &cpu, uint32_t instruction)
 {
+    cpu.cop2_updatevu0();
     int emotion_reg = (instruction >> 16) & 0x1F;
     int cop_reg = (instruction >> 11) & 0x1F;
     cpu.ctc(2, emotion_reg, cop_reg, instruction);
@@ -1259,6 +1240,8 @@ void EmotionInterpreter::cop2_qmfc2(EmotionEngine &cpu, uint32_t instruction)
         return;
     };
 
+    cpu.cop2_updatevu0();
+
     int dest = (instruction >> 16) & 0x1F;
     int cop_reg = (instruction >> 11) & 0x1F;
     int interlock = (instruction & 0x1);
@@ -1280,6 +1263,8 @@ void EmotionInterpreter::cop2_qmtc2(EmotionEngine &cpu, uint32_t instruction)
     {
         return;
     };
+
+    cpu.cop2_updatevu0();
 
     int source = (instruction >> 16) & 0x1F;
     int cop_reg = (instruction >> 11) & 0x1F;
