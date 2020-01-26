@@ -4462,18 +4462,30 @@ void GraphicsSynthesizerThread::recompile_depth_test()
     switch (current_ctx->zbuf.format)
     {
         case 0x00:
+            jit_call_func(emitter_dp, (uint64_t)&addr_PSMCT32);
+            break;
+        case 0x01:
+            jit_call_func(emitter_dp, (uint64_t)&addr_PSMCT32);
+            break;
+        case 0x02:
+            jit_call_func(emitter_dp, (uint64_t)&addr_PSMCT16);
+            break;
+        case 0x0A:
+            jit_call_func(emitter_dp, (uint64_t)&addr_PSMCT16S);
+            break;
+        case 0x30:
             //PSMCT32Z
             jit_call_func(emitter_dp, (uint64_t)&addr_PSMCT32Z);
             break;
-        case 0x01:
+        case 0x31:
             //PSMCT24Z
             jit_call_func(emitter_dp, (uint64_t)&addr_PSMCT32Z);
             break;
-        case 0x02:
+        case 0x32:
             //PSMCT16Z
             jit_call_func(emitter_dp, (uint64_t)&addr_PSMCT16Z);
             break;
-        case 0x0A:
+        case 0x3A:
             //PSMCT16SZ
             jit_call_func(emitter_dp, (uint64_t)&addr_PSMCT16SZ);
             break;
@@ -4519,9 +4531,11 @@ void GraphicsSynthesizerThread::recompile_depth_test()
         switch (current_ctx->zbuf.format)
         {
             case 0x00:
+            case 0x30:
                 emitter_dp.MOV32_TO_MEM(R14, RCX);
                 break;
             case 0x01:
+            case 0x31:
                 emitter_dp.MOV32_FROM_MEM(RCX, RAX);
                 emitter_dp.AND32_EAX(0xFF000000);
                 emitter_dp.AND32_REG_IMM(0xFFFFFF, R14);
