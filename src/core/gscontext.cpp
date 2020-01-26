@@ -182,7 +182,7 @@ void GSContext::set_frame(uint64_t value)
 void GSContext::set_zbuf(uint64_t value)
 {
     zbuf.base_pointer = (value & 0x1FF) * 2048 * 4;
-    zbuf.format = (value >> 24) & 0xF;
+    zbuf.format = ((value >> 24) & 0xF) | 0x30;
     zbuf.no_update = (value >> 32) & 0x1;
     printf("ZBUF: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);
     printf("Base pointer: $%08X\n", zbuf.base_pointer);
