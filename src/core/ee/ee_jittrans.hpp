@@ -81,7 +81,6 @@ private:
     int di_delay;
 
     void interpreter_pass(EmotionEngine &ee, uint32_t pc);
-    void fallback_interpreter(IR::Instruction& instr, uint32_t instr_word) const noexcept;
 
     void translate_op(uint32_t opcode, uint32_t pc, std::vector<IR::Instruction>& instrs);
     void translate_op_special(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs);
