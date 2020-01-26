@@ -90,6 +90,11 @@ uint32_t Instruction::get_opcode() const
     return opcode;
 }
 
+void (*Instruction::get_interpreter_fallback(void) const)(EmotionEngine&, uint32_t)
+{
+    return interpreter_fallback;
+};
+
 void Instruction::set_jump_dest(uint32_t addr)
 {
     jump_dest = addr;
@@ -158,6 +163,11 @@ void Instruction::set_is_link(bool value)
 void Instruction::set_opcode(uint32_t value)
 {
     opcode = value;
+}
+
+void Instruction::set_interpreter_fallback(void(*value)(EmotionEngine&, uint32_t))
+{
+    interpreter_fallback = value;
 }
 
 bool Instruction::is_jump()

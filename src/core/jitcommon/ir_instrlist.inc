@@ -1,4 +1,5 @@
 INSTR(Null)
+INSTR(Nop)
 
 INSTR(ParallelAnd)
 INSTR(ParallelNor)

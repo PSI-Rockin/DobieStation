@@ -106,12 +106,6 @@ uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee)
     return (uint8_t*)recompiledBlock->code_start;
 }
 
-void interpreter(EmotionEngine& ee, uint32_t instr)
-{
-    // TODO: Call fn pointer on EE_InstrInfo directly
-    //EmotionInterpreter::interpret(ee, instr);
-}
-
 uint16_t EE_JIT64::run(EmotionEngine& ee)
 {
     prologue_block(*this, ee, &jit_heap.lookup_cache[0]);
@@ -1606,7 +1600,7 @@ void EE_JIT64::fallback_interpreter(EmotionEngine& ee, const IR::Instruction &in
     prepare_abi((uint64_t)&ee);
     prepare_abi(instr_word);
 
-    call_abi_func((uint64_t)&interpreter);
+    call_abi_func((uint64_t)&(instr.get_interpreter_fallback()));
 }
 
 void EE_JIT64::wait_for_vu0(EmotionEngine& ee, IR::Instruction& instr)

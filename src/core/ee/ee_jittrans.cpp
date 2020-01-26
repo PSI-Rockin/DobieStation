@@ -19,7 +19,6 @@ uint32_t jump_offset_ee(uint32_t instr, uint32_t PC)
 
 IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
 {
-    //TODO
     IR::Block block;
     std::vector<IR::Instruction> instrs;
     instr_info.clear();
@@ -36,7 +35,34 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
     while (!branch_delayslot && !eret_op)
     {
         uint32_t opcode = ee.read32(pc);
-        translate_op(opcode, pc, instrs);
+
+        //TODO EE_Instr handling/data dependency analysis
+        EE_InstrInfo info;
+        EmotionInterpreter::lookup(info, opcode);
+
+        std::vector<IR::Instruction> translated_instrs;
+        translate_op(opcode, pc, translated_instrs);
+        
+
+        // todo: Insert a null op in cases where translated_instrs should be empty for more rigorous assertion testing?
+        if (!translated_instrs.size())
+        {
+            pc += 4;
+            cycle_count++;
+            continue;
+        }
+
+        if (translated_instrs.back().op == IR::Opcode::Nop)
+            continue;
+
+        // Set up fallback
+        translated_instrs[0].set_opcode(opcode);
+        translated_instrs[0].set_interpreter_fallback(info.interpreter_fn); 
+        for (int i = 1; i < translated_instrs.size(); ++i)
+        {
+            translated_instrs[i].set_opcode(opcode);
+            translated_instrs[i].set_interpreter_fallback(&EmotionInterpreter::nop);
+        }
 
         ops_translated++;
 
@@ -60,16 +86,16 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
             di_delay--;
             if (!di_delay)
             {
-                IR::Instruction instr;
-                uint32_t opcode = 0x42000039;
-                fallback_interpreter(instr, opcode);
-                instrs.push_back(instr);
+                IR::Instruction di_instr;
+                di_instr.set_opcode(0x42000039);
+                di_instr.set_interpreter_fallback(&EmotionInterpreter::di);
+                translated_instrs.push_back(di_instr);
             }
         }
 
-        if (instrs.size())
+        if (translated_instrs.size())
         {
-            branch_op = instrs.back().is_jump();
+            branch_op = translated_instrs.back().is_jump();
 
             //The EE has a bug in its pipelining logic that causes branches to be skipped in certain conditions.
             //They are as follows:
@@ -83,12 +109,12 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
             //Note that the branch delay slot has not been translated yet, so we use 5 instead of 6
             if (branch_op && ops_translated < 5)
             {
-                if (instrs.back().op != IR::Opcode::Jump && instrs.back().op != IR::Opcode::JumpIndirect)
+                if (translated_instrs.back().op != IR::Opcode::Jump && translated_instrs.back().op != IR::Opcode::JumpIndirect)
                 {
-                    if (instrs.back().get_jump_dest() == ee.get_PC() && ee.read32(pc + 4) != 0)
+                    if (translated_instrs.back().get_jump_dest() == ee.get_PC() && ee.read32(pc + 4) != 0)
                     {
                         //Set branch dest to instruction after delay slot
-                        instrs.back().set_jump_dest(pc + 8);
+                        translated_instrs.back().set_jump_dest(pc + 8);
                     }
                 }
             }
@@ -96,6 +122,9 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
 
         pc += 4;
         cycle_count++;
+
+        for (auto instr : translated_instrs)
+            instrs.push_back(instr);
     }
 
     for (auto instr : instrs)
@@ -772,7 +801,7 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
         }
         case 0x2F:
             // CACHE
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x31:
@@ -787,7 +816,7 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR
         }
         case 0x33:
             // PREFETCH
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x36:
@@ -1030,12 +1059,12 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
             break;
         case 0x0D:
             // BREAK
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x0F:
             // SYNC
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x10:
@@ -1463,7 +1492,7 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, std::v
         case 0x34:
             // TEQ
             Errors::print_warning("[EE_JIT] Unrecognized special op TEQ\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x38:
@@ -1738,7 +1767,7 @@ void EE_JitTranslator::translate_op_mmi(uint32_t opcode, uint32_t PC, std::vecto
         case 0x04:
             // PLZCW
             Errors::print_warning("[EE_JIT] Unrecognized mmi op PLZCW\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x08:
@@ -1854,13 +1883,13 @@ void EE_JitTranslator::translate_op_mmi(uint32_t opcode, uint32_t PC, std::vecto
         case 0x30:
             // PMFHLFMT
             Errors::print_warning("[EE_JIT] Unrecognized mmi op PMFHLFMT\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x31:
             // PMTHLLW
             Errors::print_warning("[EE_JIT] Unrecognized mmi op PMTHLLW\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x34:
@@ -2190,7 +2219,7 @@ void EE_JitTranslator::translate_op_mmi0(uint32_t opcode, uint32_t PC, std::vect
         case 0x12:
             // PEXTLW
             Errors::print_warning("[EE_JIT] Unrecognized mmi0 op PEXTLW\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x13:
@@ -2250,7 +2279,7 @@ void EE_JitTranslator::translate_op_mmi0(uint32_t opcode, uint32_t PC, std::vect
         case 0x16:
             // PEXTLH
             Errors::print_warning("[EE_JIT] Unrecognized mmi0 op PEXTLH\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x17:
@@ -2310,7 +2339,7 @@ void EE_JitTranslator::translate_op_mmi0(uint32_t opcode, uint32_t PC, std::vect
         case 0x1A:
             // PEXTLB
             Errors::print_warning("[EE_JIT] Unrecognized mmi0 op PEXTLB\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x1B:
@@ -2334,13 +2363,13 @@ void EE_JitTranslator::translate_op_mmi0(uint32_t opcode, uint32_t PC, std::vect
         case 0x1E:
             // PEXT5
             Errors::print_warning("[EE_JIT] Unrecognized mmi0 op PEXT5\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x1F:
             // PPAC5
             Errors::print_warning("[EE_JIT] Unrecognized mmi0 op PPAC5\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         default:
@@ -2411,7 +2440,7 @@ void EE_JitTranslator::translate_op_mmi1(uint32_t opcode, uint32_t PC, std::vect
         case 0x04:
             // PADSBH
             Errors::print_warning("[EE_JIT] Unrecognized mmi1 op PABSW\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x05:
@@ -2523,7 +2552,7 @@ void EE_JitTranslator::translate_op_mmi1(uint32_t opcode, uint32_t PC, std::vect
         case 0x12:
             // PEXTUW
             Errors::print_warning("[EE_JIT] Unrecognized mmi1 op PEXTUW\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x14:
@@ -2565,7 +2594,7 @@ void EE_JitTranslator::translate_op_mmi1(uint32_t opcode, uint32_t PC, std::vect
         case 0x16:
             // PEXTUH
             Errors::print_warning("[EE_JIT] Unrecognized mmi1 op PEXTUH\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x18:
@@ -2607,13 +2636,13 @@ void EE_JitTranslator::translate_op_mmi1(uint32_t opcode, uint32_t PC, std::vect
         case 0x1A:
             // PEXTUB
             Errors::print_warning("[EE_JIT] Unrecognized mmi1 op PEXTUB\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x1B:
             // QFSRV
             Errors::print_warning("[EE_JIT] Unrecognized mmi1 op QFSRV\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         default:
@@ -2632,25 +2661,25 @@ void EE_JitTranslator::translate_op_mmi2(uint32_t opcode, uint32_t PC, std::vect
         case 0x00:
             // PMADDW
             Errors::print_warning("[EE_JIT] Unrecognized mmi2 op PMADDW\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x02:
             // PSLLVW
             Errors::print_warning("[EE_JIT] Unrecognized mmi2 op PSLLVW\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x03:
             // PSRLVW
             Errors::print_warning("[EE_JIT] Unrecognized mmi2 op PSRLVW\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x04:
             // PMSUBW
             Errors::print_warning("[EE_JIT] Unrecognized mmi2 op PMSUBW\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x08:
@@ -2676,13 +2705,13 @@ void EE_JitTranslator::translate_op_mmi2(uint32_t opcode, uint32_t PC, std::vect
         case 0x0A:
             // PINTH
             Errors::print_warning("[EE_JIT] Unrecognized mmi2 op PINTH\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x0C:
             // PMULTW
             Errors::print_warning("[EE_JIT] Unrecognized mmi2 op PMULTW\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x0D:
@@ -2699,19 +2728,19 @@ void EE_JitTranslator::translate_op_mmi2(uint32_t opcode, uint32_t PC, std::vect
         case 0x0E:
             // PCPYLD
             Errors::print_warning("[EE_JIT] Unrecognized mmi2 op PCPYLD\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x10:
             // PMADDH
             Errors::print_warning("[EE_JIT] Unrecognized mmi2 op PMADDH\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x11:
             // PHMADH
             Errors::print_warning("[EE_JIT] Unrecognized mmi2 op PHMADH\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x12:
@@ -2753,13 +2782,13 @@ void EE_JitTranslator::translate_op_mmi2(uint32_t opcode, uint32_t PC, std::vect
         case 0x14:
             // PMSUBH
             Errors::print_warning("[EE_JIT] Unrecognized mmi2 op PMSUBH\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x15:
             // PHMSBH
             Errors::print_warning("[EE_JIT] Unrecognized mmi2 op PMADDW\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x1A:
@@ -2797,13 +2826,13 @@ void EE_JitTranslator::translate_op_mmi2(uint32_t opcode, uint32_t PC, std::vect
         case 0x1C:
             // PMULTH
             Errors::print_warning("[EE_JIT] Unrecognized mmi2 op PMULTH\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x1D:
             // PDIVBW
             Errors::print_warning("[EE_JIT] Unrecognized mmi2 op PDIVBW\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x1E:
@@ -2854,13 +2883,13 @@ void EE_JitTranslator::translate_op_mmi3(uint32_t opcode, uint32_t PC, std::vect
         case 0x00:
             // PMADDUW
             Errors::print_warning("[EE_JIT] Unrecognized mmi3 op PMADDUW\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x03:
             // PSRAVW
             Errors::print_warning("[EE_JIT] Unrecognized mmi3 op PSRAVW\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x08:
@@ -2886,25 +2915,25 @@ void EE_JitTranslator::translate_op_mmi3(uint32_t opcode, uint32_t PC, std::vect
         case 0x0A:
             // PINTEH
             Errors::print_warning("[EE_JIT] Unrecognized mmi3 op PINTEH\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x0C:
             // PMULTUW
             Errors::print_warning("[EE_JIT] Unrecognized mmi3 op PMULTUW\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x0D:
             // PDIVUW
             Errors::print_warning("[EE_JIT] Unrecognized mmi3 op PDIVUW\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x0E:
             // PCPYUD
             Errors::print_warning("[EE_JIT] Unrecognized mmi3 op PCPYUD\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x12:
@@ -2962,7 +2991,7 @@ void EE_JitTranslator::translate_op_mmi3(uint32_t opcode, uint32_t PC, std::vect
         case 0x1B:
             // PCPYH
             Errors::print_warning("[EE_JIT] Unrecognized mmi3 op PCYPH\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x1E:
@@ -2997,13 +3026,13 @@ void EE_JitTranslator::translate_op_cop0(uint32_t opcode, uint32_t PC, std::vect
         case 0x00:
             // MFC0
             Errors::print_warning("[EE_JIT] Unrecognized cop0 op MFC0\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x04:
             // MTC0
             Errors::print_warning("[EE_JIT] Unrecognized cop0 op MTC0\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x08:
@@ -3035,7 +3064,7 @@ void EE_JitTranslator::translate_op_cop0_type2(uint32_t opcode, uint32_t PC, std
         case 0x02:
             // TLBWI
             Errors::print_warning("[EE_JIT] Unrecognized cop0 type2 op TLBWI\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x18:
@@ -3048,7 +3077,7 @@ void EE_JitTranslator::translate_op_cop0_type2(uint32_t opcode, uint32_t PC, std
         case 0x38:
             // EI
             Errors::print_warning("[EE_JIT] Unrecognized cop0 type2 op EI\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x39:
@@ -3058,7 +3087,7 @@ void EE_JitTranslator::translate_op_cop0_type2(uint32_t opcode, uint32_t PC, std
             else
             {
                 Errors::print_warning("[EE_JIT] Unrecognized cop0 type2 op DI\n", op);
-                fallback_interpreter(instr, opcode);
+                instr.op = IR::Opcode::FallbackInterpreter;
                 instrs.push_back(instr);
             }
             break;
@@ -3468,25 +3497,25 @@ void EE_JitTranslator::translate_op_cop2(uint32_t opcode, uint32_t PC, std::vect
         case 0x01:
             // QMFC2
             Errors::print_warning("[EE_JIT] Unrecognized cop2 op QMFC2\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x02:
             // CFC2
             Errors::print_warning("[EE_JIT] Unrecognized cop2 op CFC2\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x05:
             // QMTC2
             Errors::print_warning("[EE_JIT] Unrecognized cop2 op QMTC2\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x06:
             // CTC2
             Errors::print_warning("[EE_JIT] Unrecognized cop2 op CTC2\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x08:
@@ -3536,7 +3565,7 @@ void EE_JitTranslator::translate_op_cop2_special(uint32_t opcode, uint32_t PC, s
         case 0x03:
             // VADDBC
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VADDBC\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x04:
@@ -3545,7 +3574,7 @@ void EE_JitTranslator::translate_op_cop2_special(uint32_t opcode, uint32_t PC, s
         case 0x07:
             // VSUBBC
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VSUBBC\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x08:
@@ -3554,7 +3583,7 @@ void EE_JitTranslator::translate_op_cop2_special(uint32_t opcode, uint32_t PC, s
         case 0x0B:
             // VMADDBC
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VMADDBC\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x0C:
@@ -3563,7 +3592,7 @@ void EE_JitTranslator::translate_op_cop2_special(uint32_t opcode, uint32_t PC, s
         case 0x0F:
             // VMSUBBC
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VMSUBBC\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x10:
@@ -3572,7 +3601,7 @@ void EE_JitTranslator::translate_op_cop2_special(uint32_t opcode, uint32_t PC, s
         case 0x13:
             // VMAXBC
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VMAXBC\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x14:
@@ -3581,7 +3610,7 @@ void EE_JitTranslator::translate_op_cop2_special(uint32_t opcode, uint32_t PC, s
         case 0x17:
             // VMINIBC
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VMINIBC\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x18:
@@ -3590,79 +3619,79 @@ void EE_JitTranslator::translate_op_cop2_special(uint32_t opcode, uint32_t PC, s
         case 0x1B:
             // VMULBC
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VMULBC\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x1C:
             // VMULQ
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VMULQ\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x1D:
             // VMAXI
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VMAXI\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x1E:
             // VMULI
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VMAXI\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x1F:
             // VMINII
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VMINII\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x20:
             // VADDQ
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VADDQ\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x21:
             // VMADDQ
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VMADDQ\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x22:
             // VADDI
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VADDI\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x23:
             // VMADDI
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VMADDI\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x24:
             // VSUBQ
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VSUBQ\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x25:
             // VMSUBQ
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VMSUBQ\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x26:
             // VSUBI
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VSUBI\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x27:
             // VMSUBI
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VMSUBI\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x28:
@@ -3683,7 +3712,7 @@ void EE_JitTranslator::translate_op_cop2_special(uint32_t opcode, uint32_t PC, s
         case 0x29:
             // VMADD
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VMADDI\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x2A:
@@ -3704,7 +3733,7 @@ void EE_JitTranslator::translate_op_cop2_special(uint32_t opcode, uint32_t PC, s
         case 0x2B:
             // VMAX
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VMAX\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x2C:
@@ -3725,49 +3754,49 @@ void EE_JitTranslator::translate_op_cop2_special(uint32_t opcode, uint32_t PC, s
         case 0x2D:
             // VMSUB
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VMSUB\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x2E:
             // VOPMSUB
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VOPMSUB\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x2F:
             // VMINI
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VMINI\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x30:
             // VIADD
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VIADD\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x31:
             // VISUB
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VISUB\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x32:
             // VIADDI
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VIADDI\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x34:
             // VIAND
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VIAND\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x35:
             // VIOR
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special op VIOR\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x38:
@@ -3813,7 +3842,7 @@ void EE_JitTranslator::translate_op_cop2_special2(uint32_t opcode, uint32_t PC, 
         case 0x03:
             // VADDABC
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VADDABC\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x04:
@@ -3822,7 +3851,7 @@ void EE_JitTranslator::translate_op_cop2_special2(uint32_t opcode, uint32_t PC, 
         case 0x07:
             // VSUBABC
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VSUBABC\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x08:
@@ -3831,7 +3860,7 @@ void EE_JitTranslator::translate_op_cop2_special2(uint32_t opcode, uint32_t PC, 
         case 0x0B:
             // VMADDABC
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VMADDABC\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x0C:
@@ -3840,55 +3869,55 @@ void EE_JitTranslator::translate_op_cop2_special2(uint32_t opcode, uint32_t PC, 
         case 0x0F:
             // VMSUBABC
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VMSUBABC\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x10:
             // VITOF0
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VITOF0\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x11:
             // VITOF4
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VITOF4\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x12:
             // VITOF12
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VITOF12\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x13:
             // VITOF15
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VITOF15\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x14:
             // VFTOI0
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VFTOI0\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x15:
             // VFTOI4
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VFTOI4\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x16:
             // VFTOI12
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VFTOI12\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x17:
             // VFTOI15
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VFTOI15\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x18:
@@ -3897,13 +3926,13 @@ void EE_JitTranslator::translate_op_cop2_special2(uint32_t opcode, uint32_t PC, 
         case 0x1B:
             // VMULABC
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VMULABC\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x1C:
             // VMULAQ
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VMULAQ\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x1D:
@@ -3930,25 +3959,25 @@ void EE_JitTranslator::translate_op_cop2_special2(uint32_t opcode, uint32_t PC, 
         case 0x1E:
             // VMULAI
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VMULAI\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x1F:
             // VCLIP
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VCLIP\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x20:
             // VADDAQ
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VADDAQ\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x21:
             // VMADDAQ
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VMADDAQ\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x22:
@@ -3960,180 +3989,174 @@ void EE_JitTranslator::translate_op_cop2_special2(uint32_t opcode, uint32_t PC, 
         case 0x23:
             // VMADDAI
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VMADDAI\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x25:
             // VMSUBAQ
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VMSUBAQ\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x27:
             // VMSUBAI
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VMSUBAI\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x28:
             // VADDA
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VADDA\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x29:
             // VMADDA
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VMADDA\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x2A:
             // VMULA
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VMULA\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x2C:
             // VSUBA
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VSUBA\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x2D:
             // VMSUBA
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VMSUBA\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x2E:
             // VOPMULA
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VOPMULA\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x2F:
             // VNOP ?
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VNOP (?)\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x30:
             // VMOVE
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VMOVE\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x31:
             // VMR32
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VMR32\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x34:
             // VLQI
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VLQI\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x35:
             // VSQI
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VSQI\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x36:
             // VLQD
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VLQD\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x37:
             // VSQD
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VSQD\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x38:
             // VDIV
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VDIV\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x39:
             // VSQRT
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VSQRT\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x3A:
             // VRSQRT
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VRSQRT\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x3B:
             // VWAITQ
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VWAITQ\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x3C:
             // VMTIR
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VMTIR\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x3D:
             // VMFIR
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VMFIR\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x3E:
             // VILWR
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VILWR\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x3F:
             // VISWR
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VISWR\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x40:
             // VRNEXT
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VRNEXT\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x41:
             // VRGET
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VRGET\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x42:
             // VRINIT
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VRINIT\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         case 0x43:
             // VRXOR
             Errors::print_warning("[EE_JIT] Unrecognized cop2 special2 op VRXOR\n", op);
-            fallback_interpreter(instr, opcode);
+            instr.op = IR::Opcode::FallbackInterpreter;
             instrs.push_back(instr);
             break;
         default:
             Errors::die("[EE_JIT] Unrecognized cop2 special2 op $%02X", op);
     }
-}
-
-void EE_JitTranslator::fallback_interpreter(IR::Instruction& instr, uint32_t instr_word) const noexcept
-{
-    instr.op = IR::Opcode::FallbackInterpreter;
-    instr.set_opcode(instr_word);
 }
 
 /**
