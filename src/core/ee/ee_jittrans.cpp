@@ -3480,16 +3480,19 @@ void EE_JitTranslator::translate_op_cop2(uint32_t opcode, uint32_t PC, std::vect
 {
     uint8_t op = (opcode >> 21) & 0x1F;
     IR::Instruction instr;
-    // run branch operation again if COP2 in block is in the delay slot
-    if (branch_op)
-        instr.set_return_addr(PC - 4);
-    else
-        instr.set_return_addr(PC);
-    instr.set_cycle_count(cycle_count);
-    instr.op = IR::Opcode::WaitVU0;
-    instr.set_opcode(0);
-    instrs.push_back(instr);
-    instr.set_opcode(opcode);
+    if (op >= 0x10)
+    {
+        // run branch operation again if COP2 in block is in the delay slot
+        if (branch_op)
+            instr.set_return_addr(PC - 4);
+        else
+            instr.set_return_addr(PC);
+        instr.set_cycle_count(cycle_count);
+        instr.op = IR::Opcode::WaitVU0;
+        instr.set_opcode(0);
+        instrs.push_back(instr);
+        instr.set_opcode(opcode);
+    }
 
     switch (op)
     {
