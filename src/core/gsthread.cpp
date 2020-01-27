@@ -1471,6 +1471,12 @@ void GraphicsSynthesizerThread::render_primitive()
     if (current_ctx->scissor.empty())
         return;
 
+    // confirmed by hw test
+    // in the event that a z format is specified for FRAME
+    // the depth format will swap to a color format
+    if ((current_ctx->frame.format & 0x30) == 0x30)
+        current_ctx->zbuf.format &= ~0x30;
+
 #ifdef GS_JIT
     jit_draw_pixel_func = get_jitted_draw_pixel(draw_pixel_state);
     //No need to recompile tex_lookup if texture mapping is disabled. TEX0 can contain bad data
@@ -1511,14 +1517,25 @@ bool GraphicsSynthesizerThread::depth_test(int32_t x, int32_t y, uint32_t z)
             switch (current_ctx->zbuf.format)
             {
                 case 0x00:
-                    return z >= read_PSMCT32Z_block(base, width, x, y);
+                    return z >= read_PSMCT32_block(base, width, x, y);
                 case 0x01:
                     z = min(z, 0xFFFFFFU);
-                    return z >= (read_PSMCT32Z_block(base, width, x, y) & 0xFFFFFF);
+                    return z >= (read_PSMCT32_block(base, width, x, y) & 0xFFFFFF);
                 case 0x02:
                     z = min(z, 0xFFFFU);
-                    return z >= read_PSMCT16Z_block(base, width, x, y);
+                    return z >= read_PSMCT16_block(base, width, x, y);
                 case 0x0A:
+                    z = min(z, 0xFFFFU);
+                    return z >= read_PSMCT16S_block(base, width, x, y);
+                case 0x30:
+                    return z >= read_PSMCT32Z_block(base, width, x, y);
+                case 0x31:
+                    z = min(z, 0xFFFFFFU);
+                    return z >= (read_PSMCT32Z_block(base, width, x, y) & 0xFFFFFF);
+                case 0x32:
+                    z = min(z, 0xFFFFU);
+                    return z >= read_PSMCT16Z_block(base, width, x, y);
+                case 0x3A:
                     z = min(z, 0xFFFFU);
                     return z >= read_PSMCT16SZ_block(base, width, x, y);
                 default:
@@ -1529,14 +1546,25 @@ bool GraphicsSynthesizerThread::depth_test(int32_t x, int32_t y, uint32_t z)
             switch (current_ctx->zbuf.format)
             {
                 case 0x00:
-                    return z > read_PSMCT32Z_block(base, width, x, y);
+                    return z > read_PSMCT32_block(base, width, x, y);
                 case 0x01:
                     z = min(z, 0xFFFFFFU);
-                    return z > (read_PSMCT32Z_block(base, width, x, y) & 0xFFFFFF);
+                    return z > (read_PSMCT32_block(base, width, x, y) & 0xFFFFFF);
                 case 0x02:
                     z = min(z, 0xFFFFU);
-                    return z > read_PSMCT16Z_block(base, width, x, y);
+                    return z > read_PSMCT16_block(base, width, x, y);
                 case 0x0A:
+                    z = min(z, 0xFFFFU);
+                    return z > read_PSMCT16S_block(base, width, x, y);
+                case 0x30:
+                    return z > read_PSMCT32Z_block(base, width, x, y);
+                case 0x31:
+                    z = min(z, 0xFFFFFFU);
+                    return z > (read_PSMCT32Z_block(base, width, x, y) & 0xFFFFFF);
+                case 0x32:
+                    z = min(z, 0xFFFFU);
+                    return z > read_PSMCT16Z_block(base, width, x, y);
+                case 0x3A:
                     z = min(z, 0xFFFFU);
                     return z > read_PSMCT16SZ_block(base, width, x, y);
                 default:
@@ -1874,21 +1902,33 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
                 Errors::die("Unknown FRAME format (%x) write attempted", current_ctx->frame.format);
         }
     }
-    
+
     if (update_z)
     {
         switch (current_ctx->zbuf.format)
         {
             case 0x00:
-                write_PSMCT32Z_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z);
+                write_PSMCT32_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z);
                 break;
             case 0x01:
-                write_PSMCT24Z_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z & 0xFFFFFF);
+                write_PSMCT24_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z & 0xFFFFFF);
                 break;
             case 0x02:
-                write_PSMCT16Z_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z & 0xFFFF);
+                write_PSMCT16_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z & 0xFFFF);
                 break;
             case 0x0A:
+                write_PSMCT16S_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z & 0xFFFF);
+                break;
+            case 0x30:
+                write_PSMCT32Z_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z);
+                break;
+            case 0x31:
+                write_PSMCT24Z_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z & 0xFFFFFF);
+                break;
+            case 0x32:
+                write_PSMCT16Z_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z & 0xFFFF);
+                break;
+            case 0x3A:
                 write_PSMCT16SZ_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z & 0xFFFF);
                 break;
         }
@@ -4422,18 +4462,30 @@ void GraphicsSynthesizerThread::recompile_depth_test()
     switch (current_ctx->zbuf.format)
     {
         case 0x00:
+            jit_call_func(emitter_dp, (uint64_t)&addr_PSMCT32);
+            break;
+        case 0x01:
+            jit_call_func(emitter_dp, (uint64_t)&addr_PSMCT32);
+            break;
+        case 0x02:
+            jit_call_func(emitter_dp, (uint64_t)&addr_PSMCT16);
+            break;
+        case 0x0A:
+            jit_call_func(emitter_dp, (uint64_t)&addr_PSMCT16S);
+            break;
+        case 0x30:
             //PSMCT32Z
             jit_call_func(emitter_dp, (uint64_t)&addr_PSMCT32Z);
             break;
-        case 0x01:
+        case 0x31:
             //PSMCT24Z
             jit_call_func(emitter_dp, (uint64_t)&addr_PSMCT32Z);
             break;
-        case 0x02:
+        case 0x32:
             //PSMCT16Z
             jit_call_func(emitter_dp, (uint64_t)&addr_PSMCT16Z);
             break;
-        case 0x0A:
+        case 0x3A:
             //PSMCT16SZ
             jit_call_func(emitter_dp, (uint64_t)&addr_PSMCT16SZ);
             break;
@@ -4479,9 +4531,11 @@ void GraphicsSynthesizerThread::recompile_depth_test()
         switch (current_ctx->zbuf.format)
         {
             case 0x00:
+            case 0x30:
                 emitter_dp.MOV32_TO_MEM(R14, RCX);
                 break;
             case 0x01:
+            case 0x31:
                 emitter_dp.MOV32_FROM_MEM(RCX, RAX);
                 emitter_dp.AND32_EAX(0xFF000000);
                 emitter_dp.AND32_REG_IMM(0xFFFFFF, R14);
