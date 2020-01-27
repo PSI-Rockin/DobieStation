@@ -24,6 +24,11 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
     instr_info.clear();
     uint32_t pc = ee.get_PC();
 
+    if (pc == 0x9fc42634)
+    {
+        ee.print_state();
+    }
+
     di_delay = 0;
 
     branch_op = false;
@@ -43,31 +48,22 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
         std::vector<IR::Instruction> translated_instrs;
         translate_op(opcode, pc, translated_instrs);
         
-
-        // todo: Insert a null op in cases where translated_instrs should be empty for more rigorous assertion testing?
-        if (!translated_instrs.size())
-        {
-            pc += 4;
-            cycle_count++;
-            continue;
-        }
-
-        if (translated_instrs.back().op == IR::Opcode::Nop)
-            continue;
-
-        // Set up fallback
-        translated_instrs[0].set_opcode(opcode);
-        translated_instrs[0].set_interpreter_fallback(info.interpreter_fn); 
-        for (int i = 1; i < translated_instrs.size(); ++i)
-        {
-            translated_instrs[i].set_opcode(opcode);
-            translated_instrs[i].set_interpreter_fallback(&EmotionInterpreter::nop);
-        }
+        if (branch_op)
+            branch_delayslot = true;
 
         ops_translated++;
 
-        if (branch_op)
-            branch_delayslot = true;
+        if (translated_instrs.size())
+        {
+            // Set up fallback
+            translated_instrs[0].set_opcode(opcode);
+            translated_instrs[0].set_interpreter_fallback(info.interpreter_fn);
+            for (int i = 1; i < translated_instrs.size(); ++i)
+            {
+                translated_instrs[i].set_opcode(opcode);
+                translated_instrs[i].set_interpreter_fallback(&EmotionInterpreter::nop);
+            }
+        }
 
         //The EE kernel has a bug where it tries to disable interrupts, but due to pipelining this doesn't happen.
         //The code in the kernel looks like this:
@@ -87,12 +83,14 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
             if (!di_delay)
             {
                 IR::Instruction di_instr;
+                di_instr.op = IR::Opcode::FallbackInterpreter;
                 di_instr.set_opcode(0x42000039);
                 di_instr.set_interpreter_fallback(&EmotionInterpreter::di);
                 translated_instrs.push_back(di_instr);
             }
         }
 
+        // todo: Insert a null op in cases where translated_instrs should be empty for more rigorous assertion testing?
         if (translated_instrs.size())
         {
             branch_op = translated_instrs.back().is_jump();
@@ -118,18 +116,19 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
                     }
                 }
             }
-        }
 
+            for (auto instr : translated_instrs)
+                instrs.push_back(instr);
+        }
         pc += 4;
         cycle_count++;
-
-        for (auto instr : translated_instrs)
-            instrs.push_back(instr);
     }
 
     for (auto instr : instrs)
         if (instr.op != IR::Opcode::Null)
             block.add_instr(instr);
+
+
 
     block.set_cycle_count(cycle_count);
 
