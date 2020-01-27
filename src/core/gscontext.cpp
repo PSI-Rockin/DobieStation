@@ -66,13 +66,9 @@ void GSContext::set_tex1(uint64_t value)
     tex1.MTBA = (value>>9) & 0x1;
     tex1.L = (value>>19) & 0x3;
 
-    bool k_sign = (value >> 43) & 0x1; // sign bit, 7 bits integer, 4 bits decimal.
-    uint16_t k_amount = (value >> 32) & 0x7FF;
-    tex1.K = (k_sign ? -1.0 : 1.0) * ((float)k_amount * 1.0 / 16.0);
-
-    //Should be +8 really but Street Fighter EX 3 hates that and
-    //Jurassic Park/Ratchet & Clank hate anything lower than 7
-    tex1.K = (tex1.K + 7.0) / 16.0;
+    int16_t k_amount = ((value >> 32) & 0xFFF) << 4;
+    k_amount >>= 4;
+    tex1.K = ((float)k_amount * 1.0 / 16.0);
 }
 
 void GSContext::set_tex2(uint64_t value)
