@@ -1600,7 +1600,7 @@ void EE_JIT64::fallback_interpreter(EmotionEngine& ee, const IR::Instruction &in
     prepare_abi((uint64_t)&ee);
     prepare_abi(instr_word);
 
-    call_abi_func((uint64_t)&(instr.get_interpreter_fallback()));
+    call_abi_func((uint64_t)instr.get_interpreter_fallback());
 }
 
 void EE_JIT64::wait_for_vu0(EmotionEngine& ee, IR::Instruction& instr)
