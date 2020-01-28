@@ -239,7 +239,7 @@ void EmotionInterpreter::special(EE_InstrInfo &info, uint32_t instruction)
         case 0x29:
             info.interpreter_fn = &mtsa;
             info.pipeline = EE_InstrInfo::Pipeline::COP0;
-            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::SA);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x2A:
