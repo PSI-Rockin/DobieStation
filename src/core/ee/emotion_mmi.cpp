@@ -1865,7 +1865,7 @@ void EmotionInterpreter::mmi2(EE_InstrInfo &info, uint32_t instruction)
             info.pipeline = EE_InstrInfo::Pipeline::IntWide;
             info.latency = 37;
             info.throughput = 37;
-            info.instruction_type = EE_InstrInfo::InstructionType::MULT;
+            info.instruction_type = EE_InstrInfo::InstructionType::DIV;
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO);
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
