@@ -1902,6 +1902,11 @@ void EmotionInterpreter::cop2_vopmula(EmotionEngine& cpu, uint32_t instruction)
 
 void EmotionInterpreter::cop2_vnop(EmotionEngine& cpu, uint32_t instruction)
 {
+    if (!cop2_sync(cpu, instruction))
+    {
+        return;
+    };
+
     cpu.cop2_updatevu0();
     VectorUnit& vu0 = cpu.get_VU0();
     vu0.decoder.reset();
@@ -2127,6 +2132,11 @@ void EmotionInterpreter::cop2_vrsqrt(EmotionEngine& cpu, uint32_t instruction)
 
 void EmotionInterpreter::cop2_vwaitq(EmotionEngine& cpu, uint32_t instruction)
 {
+    if (!cop2_sync(cpu, instruction))
+    {
+        return;
+    };
+
     cpu.cop2_updatevu0();
     VectorUnit& vu0 = cpu.get_VU0();
     vu0.decoder.reset();
