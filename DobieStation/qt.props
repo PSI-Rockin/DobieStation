@@ -95,7 +95,12 @@
     <QtAllPlugins Include="$(QtPluginsDir)**\*$(QtLibSuffix).dll" />
     <QtPlugins Condition="'$(Configuration)'=='Debug'"
                Include="@(QtAllPlugins)" />
+    <QtPlugins Condition="'$(Configuration)'=='Devel'"
+               Include="@(QtAllPlugins)" />
     <QtPlugins Condition="'$(Configuration)'=='Release'"
+               Exclude="$(QtPluginsDir)**\*$(QtDebugSuffix).dll"
+               Include="@(QtAllPlugins)" />
+    <QtPlugins Condition="'$(Configuration)'=='Release Optimized'"
                Exclude="$(QtPluginsDir)**\*$(QtDebugSuffix).dll"
                Include="@(QtAllPlugins)" />
     <QtPluginsDest
