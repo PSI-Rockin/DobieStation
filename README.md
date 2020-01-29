@@ -1,22 +1,23 @@
 # DobieStation
+[![Discord Server](https://img.shields.io/discord/430071684901371905?logo=discord)](https://discord.gg/zbEXKfN)
+[![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/github/PSI-Rockin/DobieStation?svg=true)](https://ci.appveyor.com/project/PSI-Rockin/dobiestation)
+
 A young PS2 emulator with plans for an optimized Android port, as well as a fast, accurate, and easy-to-use PC port.
 
 A large portion of the PS2's library can boot or get to menus. Some titles can even go in-game, including high-profile ones such as Final Fantasy X and Shadow of the Colossus. Not intended for general use.
-
-Discord: https://discord.gg/zbEXKfN
 
 ## Compiling
 DobieStation uses Qt 5 and supports qmake and CMake.
 
 ### Building with qmake
-```bash
+```
 cd DobieStation/DobieStation
 qmake DobieStation.pro
 make
 ```
 
 ### Building with CMake
-```bash
+```
 # Linux
 mkdir build && cd build
 cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo
@@ -39,7 +40,7 @@ start DobieStation.sln
 ### Note for Ubuntu Xenial
 While 16.04 is still officially supported they don't provide a recent enough version of Qt.
 As such if you wish to build Dobie on Xenial you will need to update Qt through a PPA
-```bash
+```
 add-apt-repository ppa:beineri/opt-qt-5.11.1-xenial
 apt-get update
 apt-get install qt511-meta-minimal qt511multimedia libglu1-mesa-dev
@@ -48,7 +49,7 @@ source /opt/qt511/bin/qt511-env.sh
 Alternatively, you may upgrade to the most recent Ubuntu LTS, 18.04.
 
 ### Building with Visual Studio
-Dobiestation is known to compile on 2017 and 2019.
+DobieStation is known to compile on 2017 and 2019.
 
 Before opening Visual Studio, you must set the `QTDIR` environment variable to your 64 bit QT install.
 For example on Visual Studio 2017: `C:\path\to\qt\5.12.1\msvc2017_64`
