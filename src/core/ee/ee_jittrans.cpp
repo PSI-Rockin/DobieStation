@@ -21,35 +21,23 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
 {
     IR::Block block;
     std::vector<IR::Instruction> instrs;
-    instr_info.clear();
+    std::vector<EE_InstrInfo> instr_info;
     uint32_t pc = ee.get_PC();
 
-    if (pc == 0x9fc42634)
-    {
-        ee.print_state();
-    }
-
     di_delay = 0;
-
+    cycle_count = 0;
     branch_op = false;
     branch_delayslot = false;
     eret_op = false;
-    cycle_count = 0;
     int ops_translated = 0;
 
-    while (!branch_delayslot && !eret_op)
+    get_block_operations(instr_info, ee, pc);
+
+    for (EE_InstrInfo info : instr_info)
     {
         uint32_t opcode = ee.read32(pc);
-
-        //TODO EE_Instr handling/data dependency analysis
-        EE_InstrInfo info;
-        EmotionInterpreter::lookup(info, opcode);
-
         std::vector<IR::Instruction> translated_instrs;
         translate_op(opcode, pc, translated_instrs);
-        
-        if (branch_op)
-            branch_delayslot = true;
 
         ops_translated++;
 
@@ -133,6 +121,98 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
     block.set_cycle_count(cycle_count);
 
     return block;
+}
+
+void EE_JitTranslator::get_block_operations(std::vector<EE_InstrInfo>& dest, EmotionEngine& ee, uint32_t pc)
+{
+    bool branch_op = false;
+    bool branch_delay_op = false;
+    bool eret_op = false;
+
+    while (!branch_delay_op && !eret_op)
+    {
+        uint32_t opcode = ee.read32(pc);
+        uint8_t op = opcode >> 26;
+        pc += 4;
+
+        if (branch_op)
+            branch_delay_op = true;
+
+        // check for jump or eret
+        switch (op)
+        {
+            case 0x00: // SPECIAL
+                op = opcode & 0x3F;
+                switch (op)
+                {
+                    case 0x08: // JR
+                    case 0x09: // JALR
+                        branch_op = true;
+                        break;
+                    case 0x0C: // SYSCALL
+                        eret_op = true;
+                        break;
+                }
+                break;
+            case 0x01: // REGIMM
+                op = (opcode >> 16) & 0x1F;
+                switch (op)
+                {
+                    case 0x00: // BLTZ
+                    case 0x01: // BGEZ
+                    case 0x02: // BLTZL
+                    case 0x03: // BGEZL
+                    case 0x10: // BLTZAL
+                    case 0x11: // BGEZAL
+                    case 0x12: // BLTZALL
+                    case 0x13: // BGEZALL
+                        branch_op = true;
+                        break;
+                }
+                break;
+            case 0x02: // J
+            case 0x03: // JAL
+            case 0x04: // BEQ
+            case 0x05: // BNE
+            case 0x06: // BLEZ
+            case 0x07: // BGTZ
+                branch_op = true;
+                break;
+            case 0x10: // COP0
+            case 0x11: // COP1
+            case 0x12: // COP2
+            case 0x13: // COP3
+            {
+                op = (opcode >> 21) & 0x1F;
+                uint8_t cop_id = (opcode >> 26) & 0x3;
+                switch (op | (cop_id * 0x100))
+                {
+                    case 0x010:
+                        if ((opcode & 0x3F) == 0x18) // ERET
+                            eret_op = true;
+                        break;
+                    case 0x008: // BC0
+                    case 0x108: // BC1
+                    case 0x208: // BC2
+                        branch_op = true;
+                        break;
+                }
+                break;
+            }
+            case 0x14: // BEQL
+            case 0x15: // BNEL
+            case 0x16: // BLEZL
+            case 0x17: // BGTZL
+                branch_op = true;
+                break;
+            default:
+                break;
+        }
+
+        EE_InstrInfo opcode_info;
+        EmotionInterpreter::lookup(opcode_info, opcode);
+        dest.push_back(opcode_info);
+    }
 }
 
 void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs)

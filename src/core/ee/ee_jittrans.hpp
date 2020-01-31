@@ -70,7 +70,6 @@ private:
     //TODO
     int cycles_this_block;
 
-    std::vector<EE_InstrInfo> instr_info = std::vector<EE_InstrInfo>();
     uint16_t end_PC;
     uint16_t cur_PC;
     bool cop2_encountered;
@@ -81,6 +80,7 @@ private:
     int di_delay;
 
     void interpreter_pass(EmotionEngine &ee, uint32_t pc);
+    void get_block_operations(std::vector<EE_InstrInfo>& dest, EmotionEngine& cpu, uint32_t pc);
 
     void translate_op(uint32_t opcode, uint32_t pc, std::vector<IR::Instruction>& instrs);
     void translate_op_special(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs);
