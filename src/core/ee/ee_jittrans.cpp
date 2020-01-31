@@ -235,7 +235,10 @@ void EE_JitTranslator::data_dependency_analysis(std::vector<EE_InstrInfo>& instr
         {
             EE_DependencyInfo dependency_info;
             info.get_dependency(dependency_info, i, DependencyType::Read);
-            cycles_penalty = std::max(cycles_penalty, data_dependencies[(int)dependency_info.type][(int)dependency_info.reg]);
+
+            // Ignore data dependencies on GPR $zero, everything else is fine
+            if (dependency_info.type != RegType::GPR || dependency_info.reg != (int)EE_NormalReg::zero)
+                cycles_penalty = std::max(cycles_penalty, data_dependencies[(int)dependency_info.type][(int)dependency_info.reg]);
         }
 
         for (int i = 0; i < info.write_dependencies.size(); ++i)
