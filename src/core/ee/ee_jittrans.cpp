@@ -3666,7 +3666,7 @@ void EE_JitTranslator::translate_op_cop2(uint32_t opcode, uint32_t PC, EE_InstrI
             Errors::print_warning("[EE_JIT] Unrecognized cop2 op QMTC2\n", op);
             if (interlock)
             {
-                // VU0 wait
+                // Check Interlock
                 // run branch operation again if COP2 in block is in the delay slot
                 if (branch_op)
                     instr.set_return_addr(PC - 4);
@@ -3674,7 +3674,7 @@ void EE_JitTranslator::translate_op_cop2(uint32_t opcode, uint32_t PC, EE_InstrI
                     instr.set_return_addr(PC);
                 instr.set_cycle_count(info.cycles);
                 fallback_interpreter(instr, 0, &EmotionInterpreter::nop);
-                instr.op = IR::Opcode::WaitVU0;
+                instr.op = IR::Opcode::CheckInterlockVU0;
                 instrs.push_back(instr);
             }
             // Set up fallback properties
@@ -3686,7 +3686,7 @@ void EE_JitTranslator::translate_op_cop2(uint32_t opcode, uint32_t PC, EE_InstrI
             Errors::print_warning("[EE_JIT] Unrecognized cop2 op CTC2\n", op);
             if (interlock)
             {
-                // VU0 wait
+                // Check interlock
                 // run branch operation again if COP2 in block is in the delay slot
                 if (branch_op)
                     instr.set_return_addr(PC - 4);
@@ -3694,7 +3694,7 @@ void EE_JitTranslator::translate_op_cop2(uint32_t opcode, uint32_t PC, EE_InstrI
                     instr.set_return_addr(PC);
                 instr.set_cycle_count(info.cycles);
                 fallback_interpreter(instr, 0, &EmotionInterpreter::nop);
-                instr.op = IR::Opcode::WaitVU0;
+                instr.op = IR::Opcode::CheckInterlockVU0;
                 instrs.push_back(instr);
             }
             // Set up fallback properties

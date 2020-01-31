@@ -139,7 +139,7 @@ EEJitPrologue EE_JIT64::create_prologue_block()
 
 void EE_JIT64::emit_dispatcher()
 {
-    //Check if cycles_to_run > 0 and VU0 wait is false. When both are true, we execute another block.
+    //Check if cycles_to_run > 0 and VU0 wait and check interlock is false. When both are true, we execute another block.
     //Otherwise, we return.
     emitter.CMP32_IMM_MEM(0, REG_64::R15, offsetof(EmotionEngine, cycles_to_run));
 
@@ -155,6 +155,14 @@ void EE_JIT64::emit_dispatcher()
     emit_epilogue();
 
     emitter.set_jump_dest(no_vu0_wait);
+
+    // Now do the interlock check
+    emitter.TEST8_MEM_IMM(0, REG_64::R15, offsetof(EmotionEngine, wait_for_interlock));
+
+    uint8_t* no_interlock_wait = emitter.JCC_NEAR_DEFERRED(ConditionCode::Z);
+    emit_epilogue();
+
+    emitter.set_jump_dest(no_interlock_wait);
 
     //Fetch pointer to index in cache
     //ptr = lookup_cache[(PC >> 2) & 0x7FFF]
@@ -302,6 +310,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             break;
         case IR::Opcode::BranchNotEqualZero:
             branch_not_equal_zero(ee, instr);
+            break;
+        case IR::Opcode::CheckInterlockVU0:
+            check_interlock_vu0(ee, instr);
             break;
         case IR::Opcode::ClearDoublewordReg:
             clear_doubleword_reg(ee, instr);
@@ -1612,7 +1623,7 @@ void EE_JIT64::wait_for_vu0(EmotionEngine& ee, IR::Instruction& instr)
     REG_64 R15 = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
 
     prepare_abi((uint64_t)&ee);
-    call_abi_func((uint64_t)ee_vu0_wait);
+    call_abi_func((uint64_t)&ee_vu0_wait);
     emitter.TEST8_REG(REG_64::AL, REG_64::AL);
 
     uint8_t* offset_addr = emitter.JCC_NEAR_DEFERRED(ConditionCode::Z);
@@ -1634,6 +1645,40 @@ void EE_JIT64::wait_for_vu0(EmotionEngine& ee, IR::Instruction& instr)
 
     // Otherwise continue execution of block otherwise
     emitter.set_jump_dest(offset_addr);
+    free_int_reg(ee, R15);
+}
+
+void EE_JIT64::check_interlock_vu0(EmotionEngine& ee, IR::Instruction& instr)
+{
+    // Alloc scratchpad registers
+    REG_64 R15 = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+
+    prepare_abi((uint64_t)&ee);
+    call_abi_func((uint64_t)&ee_check_interlock);
+    emitter.TEST8_REG(REG_64::AL, REG_64::AL);
+
+    uint8_t* offset_addr = emitter.JCC_NEAR_DEFERRED(ConditionCode::Z);
+
+    // If ee.ee_check_interlock(), set PC to the current operation's address and abort
+    emitter.load_addr((uint64_t)&ee.PC, REG_64::RAX);
+    emitter.MOV32_REG_IMM(instr.get_return_addr(), R15);
+    emitter.MOV32_TO_MEM(R15, REG_64::RAX);
+
+    // Set wait for interlock clear flag
+    emitter.load_addr((uint64_t)&ee.wait_for_interlock, REG_64::RAX);
+    emitter.MOV8_IMM_MEM(true, REG_64::RAX);
+
+    // Set cycle count to number of cycles executed
+    emitter.load_addr((uint64_t)&cycle_count, REG_64::RAX);
+    emitter.MOV16_IMM_MEM(instr.get_cycle_count(), REG_64::RAX);
+
+    cleanup_recompiler(ee, false);
+
+    // Otherwise clear interlock then continue execution of block otherwise
+    emitter.set_jump_dest(offset_addr);
+    prepare_abi((uint64_t)&ee);
+    call_abi_func((uint64_t)&ee_clear_interlock);
+
     free_int_reg(ee, R15);
 }
 
@@ -1725,6 +1770,16 @@ uint32_t vu0_read_CMSAR0_shl3(VectorUnit& vu0)
 }
 
 bool ee_vu0_wait(EmotionEngine& ee)
+{
+    return ee.vu0_wait();
+}
+
+bool ee_check_interlock(EmotionEngine& ee)
+{
+    return ee.check_interlock();
+}
+
+bool ee_clear_interlock(EmotionEngine& ee)
 {
     return ee.vu0_wait();
 }

@@ -250,7 +250,6 @@ private:
     void sub_doubleword_reg(EmotionEngine& ee, IR::Instruction& instr);
     void sub_word_reg(EmotionEngine& ee, IR::Instruction& instr);
     void system_call(EmotionEngine& ee, IR::Instruction& instr);
-    void update_vu0(EmotionEngine& ee, IR::Instruction& instr);
     void vabs(EmotionEngine& ee, IR::Instruction& instr);
     void vadd_vectors(EmotionEngine& ee, IR::Instruction& instr);
     void vcall_ms(EmotionEngine& ee, IR::Instruction& instr);
@@ -270,6 +269,8 @@ private:
     bool needs_clamping(int reg, uint8_t field);
     void set_clamping(int reg, bool value, uint8_t field);
     void update_mac_flags(EmotionEngine& ee, REG_64 reg, uint8_t field);
+    void check_interlock_vu0(EmotionEngine& ee, IR::Instruction& instr);
+    void update_vu0(EmotionEngine& ee, IR::Instruction& instr);
     void wait_for_vu0(EmotionEngine& ee, IR::Instruction& instr);
 
     // ABI prep/function call
@@ -335,5 +336,7 @@ void ee_syscall_exception(EmotionEngine& ee);
 void vu0_start_program(VectorUnit& vu0, uint32_t addr);
 uint32_t vu0_read_CMSAR0_shl3(VectorUnit& vu0);
 bool ee_vu0_wait(EmotionEngine& ee);
+bool ee_check_interlock(EmotionEngine& ee);
+bool ee_clear_interlock(EmotionEngine& ee);
 
 #endif // EE_JIT64_HPP
