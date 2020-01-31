@@ -86,21 +86,23 @@ private:
     void load_store_analysis(std::vector<EE_InstrInfo>& instr_info);
     void data_dependency_analysis(std::vector<EE_InstrInfo>& instr_info);
 
-    void translate_op(uint32_t opcode, uint32_t pc, std::vector<IR::Instruction>& instrs);
-    void translate_op_special(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs);
-    void translate_op_regimm(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs) const;
-    void translate_op_mmi(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs) const;
-    void translate_op_mmi0(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs) const;
-    void translate_op_mmi1(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs) const;
-    void translate_op_mmi2(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs) const;
-    void translate_op_mmi3(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs) const;
-    void translate_op_cop0(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs);
-    void translate_op_cop0_type2(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs);
-    void translate_op_cop1(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs) const;
-    void translate_op_cop1_fpu(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs) const;
-    void translate_op_cop2(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs);
-    void translate_op_cop2_special(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs);
-    void translate_op_cop2_special2(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs) const;
+    void translate_op(uint32_t opcode, uint32_t pc, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs);
+    void translate_op_special(uint32_t opcode, uint32_t PC, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs);
+    void translate_op_regimm(uint32_t opcode, uint32_t PC, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs) const;
+    void translate_op_mmi(uint32_t opcode, uint32_t PC, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs) const;
+    void translate_op_mmi0(uint32_t opcode, uint32_t PC, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs) const;
+    void translate_op_mmi1(uint32_t opcode, uint32_t PC, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs) const;
+    void translate_op_mmi2(uint32_t opcode, uint32_t PC, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs) const;
+    void translate_op_mmi3(uint32_t opcode, uint32_t PC, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs) const;
+    void translate_op_cop0(uint32_t opcode, uint32_t PC, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs);
+    void translate_op_cop0_type2(uint32_t opcode, uint32_t PC, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs);
+    void translate_op_cop1(uint32_t opcode, uint32_t PC, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs) const;
+    void translate_op_cop1_fpu(uint32_t opcode, uint32_t PC, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs) const;
+    void translate_op_cop2(uint32_t opcode, uint32_t PC, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs);
+    void translate_op_cop2_special(uint32_t opcode, uint32_t PC, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs);
+    void translate_op_cop2_special2(uint32_t opcode, uint32_t PC, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs) const;
+    void fallback_interpreter(IR::Instruction& instr, uint32_t opcode, void(*interpreter_fn)(EmotionEngine&, uint32_t)) const;
+
     void op_vector_by_scalar(IR::Instruction &instr, uint32_t upper, VU_SpecialReg scalar = VU_Regular) const;
 public:
     IR::Block translate(EmotionEngine& ee);
