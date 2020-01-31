@@ -49,7 +49,8 @@ enum class RegType
     COP1,
     COP1_CONTROL,
     COP2,
-    COP2_CONTROL
+    COP2_CONTROL,
+    MAX_VALUE
 };
 
 struct EE_DependencyInfo
@@ -173,11 +174,11 @@ struct EE_InstrInfo
         {
             case DependencyType::Read:
                 dest.type = (RegType)(read_dependencies[idx] >> 8);
-                dest.reg = read_dependencies[idx] | 0xFF;
+                dest.reg = read_dependencies[idx] & 0xFF;
                 break;
             case DependencyType::Write:
                 dest.type = (RegType)(write_dependencies[idx] >> 8);
-                dest.reg = write_dependencies[idx] | 0xFF;
+                dest.reg = write_dependencies[idx] & 0xFF;
                 break;
             default:
                 break;
