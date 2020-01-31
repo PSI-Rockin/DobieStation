@@ -207,7 +207,11 @@ void EE_JitTranslator::get_block_operations(std::vector<EE_InstrInfo>& dest, Emo
 void EE_JitTranslator::issue_cycle_analysis(std::vector<EE_InstrInfo>& instr_info)
 {
     // TODO: Dual-issue analysis
-    cycle_count += instr_info.size();
+    for (EE_InstrInfo& info : instr_info)
+    {
+        info.cycles = cycle_count;
+        ++cycle_count;
+    }
 }
 
 void EE_JitTranslator::load_store_analysis(std::vector<EE_InstrInfo>& instr_info)
@@ -215,10 +219,13 @@ void EE_JitTranslator::load_store_analysis(std::vector<EE_InstrInfo>& instr_info
     // adds LOAD_STORE_BIAS to every load/store op (on top of the issue cycle cost)
     const int LOAD_STORE_BIAS = 1;
 
-    for (EE_InstrInfo info : instr_info)
+    for (EE_InstrInfo& info : instr_info)
     {
         if (info.pipeline == EE_InstrInfo::Pipeline::LoadStore)
+        {
             cycle_count += LOAD_STORE_BIAS;
+            info.cycles += LOAD_STORE_BIAS;
+        }
     }
 }
 
@@ -228,7 +235,7 @@ void EE_JitTranslator::data_dependency_analysis(std::vector<EE_InstrInfo>& instr
 
     int data_dependencies[(int)RegType::MAX_VALUE][(int)EE_SpecialReg::MAX_VALUE] = {};
 
-    for (EE_InstrInfo info : instr_info)
+    for (EE_InstrInfo& info : instr_info)
     {
         int cycles_penalty = 0;
         for (int i = 0; i < info.read_dependencies.size(); ++i)
@@ -259,6 +266,7 @@ void EE_JitTranslator::data_dependency_analysis(std::vector<EE_InstrInfo>& instr
                 data_dependencies[i][j] = std::max(0, data_dependencies[i][j] - 1);
 
         cycle_count += cycles_penalty;
+        info.cycles += cycles_penalty;
     }
 }
 
@@ -3657,6 +3665,15 @@ void EE_JitTranslator::translate_op_cop2_special(uint32_t opcode, uint32_t PC, E
 {
     uint8_t op = opcode & 0x3F;
     IR::Instruction instr;
+    // run branch operation again if COP2 in block is in the delay slot
+    if (branch_op)
+        instr.set_return_addr(PC - 4);
+    else
+        instr.set_return_addr(PC);
+    instr.set_cycle_count(info.cycles);
+    fallback_interpreter(instr, 0, &EmotionInterpreter::nop);
+    instr.op = IR::Opcode::WaitVU0;
+    instrs.push_back(instr);
     
     // Set up fallback properties
     fallback_interpreter(instr, opcode, info.interpreter_fn);
