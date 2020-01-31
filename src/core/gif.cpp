@@ -28,15 +28,23 @@ void GraphicsInterface::reset()
     path3_vif_masked = false;
     path3_mode_masked = false;
     path3_dma_waiting = false;
+    gif_temporary_stop = false;
 }
 
 uint32_t GraphicsInterface::read_STAT()
 {
     uint32_t reg = 0;
 
-    //VIFMASK
+    //M3R
+    reg |= path3_mode_masked << 0;
+
+    //M3P
     reg |= path3_vif_masked << 1;
 
+    //IMT
+    reg |= intermittent_mode << 2;
+
+    //P#Q
     reg |= ((path_queue & (1 << 3)) != 0) << 6;
     reg |= ((path_queue & (1 << 2)) != 0) << 7;
     reg |= ((path_queue & (1 << 1)) != 0) << 8;
@@ -47,8 +55,14 @@ uint32_t GraphicsInterface::read_STAT()
     //APATH
     reg |= active_path << 10;
 
-    //Quadword count - since we don't emulate the FIFO, hack it to 16 if there's a transfer happening
-    reg |= ((active_path != 0) * 16) << 24;
+    //DIR
+    reg |= gs->read32_privileged(0x1040) << 12;
+
+    //Quadword count - since we don't always emulate the FIFO, hack it to 16 if there's a transfer happening
+    if (FIFO.size())
+        reg |= FIFO.size() << 24;
+    else
+        reg |= ((active_path == 3 || (path_queue & (1<<3))) * 16) << 24;
     //printf("[GIF] Read GIF_STAT: $%08X\n", reg);
     return reg;
 }
@@ -59,6 +73,14 @@ void GraphicsInterface::write_MODE(uint32_t value)
     intermittent_mode = value & 0x4;
     path3_mode_masked = value & 0x1;
     resume_path3();
+}
+
+void GraphicsInterface::write_CTRL(uint32_t value)
+{
+    if (value & 0x1)
+        reset();
+
+    gif_temporary_stop = value & 0x2;
 }
 
 void GraphicsInterface::process_PACKED(uint128_t data)
@@ -144,7 +166,8 @@ void GraphicsInterface::process_PACKED(uint128_t data)
         {
             //A+D: output data to address
             uint32_t addr = data2 & 0xFF;
-            gs->write64(addr, data1);
+            if(addr != 0x7F)
+                gs->write64(addr, data1);
         }
             break;
         case 0xF:
@@ -254,7 +277,9 @@ void GraphicsInterface::feed_GIF(uint128_t data)
     if (!path[active_path].current_tag.data_left && path[active_path].current_tag.end_of_packet)
     {
         path_status[active_path] = 4;
-        gs->assert_FINISH();
+        //Finish asserts after all host->local transfers have finished
+        if(path_queue == 0)
+            gs->assert_FINISH();
         gs->wake_gs_thread();
         arbitrate_paths();
     }
@@ -352,15 +377,15 @@ void GraphicsInterface::deactivate_PATH(int index)
 {
     //printf("[GIF] PATH%d deactivated\n", index);
 
+    path_queue &= ~(1 << index);
+
     //If for some reason the current path is still active (can happen with PATH3) kill it and check other paths
     if (active_path == index)
     {
         active_path = 0;
         arbitrate_paths();
     }
-
-    //Then do this last in case it has been put back in to the queue by the arbitrate
-    path_queue &= ~(1 << index);
+    //printf("Deactivated PATH%d Active path now %d Queued Path %x\n", index, active_path, path_queue);
 }
 
 void GraphicsInterface::arbitrate_paths()
@@ -472,10 +497,8 @@ void GraphicsInterface::dma_waiting(bool dma_waiting)
 
 void GraphicsInterface::intermittent_check()
 {
-    if (intermittent_active)
+    if (intermittent_mode && active_path == 3 && path_status[3] >= 2)
     {
-        intermittent_active = false;
-        deactivate_PATH(3);
-        path_queue |= 1 << 3;
+        arbitrate_paths();
     }
 }

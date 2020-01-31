@@ -414,7 +414,10 @@ int DMAC::process_GIF()
                 advance_source_dma(GIF);
                 count++;
                 if (gif->path3_done())
-                    break;
+                {
+                    arbitrate();
+                    return count;
+                }
             }
             else
             {

@@ -124,8 +124,10 @@ void VectorInterface::update(int cycles)
         if (flush_stall)
         {
             int active_path = gif->get_active_path();
-            if (active_path == 1 || active_path == 2)
+            int path_queue = gif->get_path_queue();
+            if (active_path == 1 || active_path == 2 || (path_queue & (1<<1)) || (path_queue & (1<<2)))
                 return;
+
             flush_stall = false;
         }
 

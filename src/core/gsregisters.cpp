@@ -171,6 +171,8 @@ uint32_t GS_REGISTERS::read32_privileged(uint32_t addr)
             //printf("[GS_r] read32_privileged!: CSR = %04X\n", reg);
             return reg;
         }
+        case 0x1040:
+            return BUSDIR;
         case 0x1080:
             return SIGLBLID.sig_id;
         default:
