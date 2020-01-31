@@ -256,7 +256,12 @@ void EE_JitTranslator::data_dependency_analysis(std::vector<EE_InstrInfo>& instr
         {
             EE_DependencyInfo dependency_info;
             info.get_dependency(dependency_info, i, DependencyType::Write);
-            data_dependencies[(int)dependency_info.type][(int)dependency_info.reg] = std::max((int)info.latency, data_dependencies[(int)dependency_info.type][(int)dependency_info.reg]);
+
+            // Wait for previous result to be written before overwriting
+            if (data_dependencies[(int)dependency_info.type][(int)dependency_info.reg] > 0)
+                cycles_penalty = std::max(cycles_penalty, data_dependencies[(int)dependency_info.type][(int)dependency_info.reg]);
+
+            data_dependencies[(int)dependency_info.type][(int)dependency_info.reg] = info.latency;
         }
 
         // decrement every dependency in the array
