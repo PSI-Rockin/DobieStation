@@ -956,6 +956,11 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, EE_InstrInfo& 
         case 0x36:
             // LQC2
         {
+            instr.op = IR::Opcode::UpdateVU0;
+            instr.set_cycle_count(info.cycles);
+            instr.set_return_addr(PC);
+            instrs.push_back(instr);
+
             uint8_t dest = (opcode >> 16) & 0x1F;
             if (!dest)
             {
@@ -998,6 +1003,11 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, EE_InstrInfo& 
         case 0x3E:
             // SQC2
         {
+            instr.op = IR::Opcode::UpdateVU0;
+            instr.set_cycle_count(info.cycles);
+            instr.set_return_addr(PC);
+            instrs.push_back(instr);
+
             instr.op = IR::Opcode::StoreQuadwordCoprocessor2;
             instr.set_dest((opcode >> 21) & 0x1F);
             instr.set_source((opcode >> 16) & 0x1F);
