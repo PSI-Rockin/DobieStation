@@ -82,6 +82,8 @@ private:
     void interpreter_pass(EmotionEngine &ee, uint32_t pc);
     void get_block_operations(std::vector<EE_InstrInfo>& dest, EmotionEngine& cpu, uint32_t pc);
 
+    void issue_cycle_analysis(std::vector<EE_InstrInfo>& instr_info);
+
     void translate_op(uint32_t opcode, uint32_t pc, std::vector<IR::Instruction>& instrs);
     void translate_op_special(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs);
     void translate_op_regimm(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs) const;

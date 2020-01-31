@@ -32,6 +32,7 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
     int ops_translated = 0;
 
     get_block_operations(instr_info, ee, pc);
+    issue_cycle_analysis(instr_info);
 
     for (EE_InstrInfo info : instr_info)
     {
@@ -109,7 +110,6 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
                 instrs.push_back(instr);
         }
         pc += 4;
-        cycle_count++;
     }
 
     for (auto instr : instrs)
@@ -213,6 +213,12 @@ void EE_JitTranslator::get_block_operations(std::vector<EE_InstrInfo>& dest, Emo
         EmotionInterpreter::lookup(opcode_info, opcode);
         dest.push_back(opcode_info);
     }
+}
+
+void EE_JitTranslator::issue_cycle_analysis(std::vector<EE_InstrInfo>& instr_info)
+{
+    // TODO: Dual-issue analysis
+    cycle_count += instr_info.size();
 }
 
 void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs)
