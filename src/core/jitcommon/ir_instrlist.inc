@@ -292,5 +292,6 @@ INSTR(SavePipelineState)
 INSTR(MoveDelayedBranch)
 INSTR(ClearIntDelay)
 INSTR(WaitVU0)
+INSTR(UpdateVU0)
 
 INSTR(FallbackInterpreter)

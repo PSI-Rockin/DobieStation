@@ -74,7 +74,7 @@ class EmotionEngine
         //Each register is 128-bit
         alignas(16) uint8_t gpr[32 * sizeof(uint64_t) * 2];
         alignas(16) uint128_t LO, HI;
-        uint32_t PC, new_PC;
+        uint32_t PC, PC_now, new_PC;
         uint64_t SA;
 
         EE_ICacheLine icache[128];
@@ -120,6 +120,7 @@ class EmotionEngine
         template <typename T> void set_gpr(int id, T value, int offset = 0);
         template <typename T> void set_LO(int id, T value, int offset = 0);
         uint32_t get_PC();
+        uint32_t get_PC_now();
         uint64_t get_LO();
         uint64_t get_LO1();
         uint64_t get_HI();

@@ -250,6 +250,7 @@ private:
     void sub_doubleword_reg(EmotionEngine& ee, IR::Instruction& instr);
     void sub_word_reg(EmotionEngine& ee, IR::Instruction& instr);
     void system_call(EmotionEngine& ee, IR::Instruction& instr);
+    void update_vu0(EmotionEngine& ee, IR::Instruction& instr);
     void vabs(EmotionEngine& ee, IR::Instruction& instr);
     void vadd_vectors(EmotionEngine& ee, IR::Instruction& instr);
     void vcall_ms(EmotionEngine& ee, IR::Instruction& instr);

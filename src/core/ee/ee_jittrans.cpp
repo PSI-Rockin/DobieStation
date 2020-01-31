@@ -3603,6 +3603,11 @@ void EE_JitTranslator::translate_op_cop2(uint32_t opcode, uint32_t PC, EE_InstrI
     uint8_t op = (opcode >> 21) & 0x1F;
     IR::Instruction instr;
 
+    instr.op = IR::Opcode::UpdateVU0;
+    instr.set_cycle_count(info.cycles);
+    instr.set_return_addr(PC);
+    instrs.push_back(instr);
+
     bool interlock = opcode & 1;
     switch (op)
     {
