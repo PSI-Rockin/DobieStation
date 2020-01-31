@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstring>
 #include "ee_jittrans.hpp"
 #include "emotioninterpreter.hpp"
@@ -34,6 +35,7 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
     get_block_operations(instr_info, ee, pc);
     issue_cycle_analysis(instr_info);
     load_store_analysis(instr_info);
+    data_dependency_analysis(instr_info);
 
     for (EE_InstrInfo info : instr_info)
     {
@@ -231,6 +233,38 @@ void EE_JitTranslator::load_store_analysis(std::vector<EE_InstrInfo>& instr_info
     {
         if (info.pipeline == EE_InstrInfo::Pipeline::LoadStore)
             cycle_count += LOAD_STORE_BIAS;
+    }
+}
+
+void EE_JitTranslator::data_dependency_analysis(std::vector<EE_InstrInfo>& instr_info)
+{
+    // TODO: Throughput analysis
+
+    int data_dependencies[(int)RegType::MAX_VALUE][(int)EE_SpecialReg::MAX_VALUE] = {};
+
+    for (EE_InstrInfo info : instr_info)
+    {
+        int cycles_penalty = 0;
+        for (int i = 0; i < info.read_dependencies.size(); ++i)
+        {
+            EE_DependencyInfo dependency_info;
+            info.get_dependency(dependency_info, i, DependencyType::Read);
+            cycles_penalty = std::max(cycles_penalty, data_dependencies[(int)dependency_info.type][(int)dependency_info.reg]);
+        }
+
+        for (int i = 0; i < info.write_dependencies.size(); ++i)
+        {
+            EE_DependencyInfo dependency_info;
+            info.get_dependency(dependency_info, i, DependencyType::Write);
+            data_dependencies[(int)dependency_info.type][(int)dependency_info.reg] = std::max((int)info.latency, data_dependencies[(int)dependency_info.type][(int)dependency_info.reg]);
+        }
+
+        // decrement every dependency in the array
+        for (int i = 0; i < (int)RegType::MAX_VALUE; ++i)
+            for (int j = 0; j < (int)EE_SpecialReg::MAX_VALUE; ++j)
+                data_dependencies[i][j] = std::max(0, data_dependencies[i][j] - 1);
+
+        cycle_count += cycles_penalty;
     }
 }
 
