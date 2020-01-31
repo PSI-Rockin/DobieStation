@@ -79,7 +79,7 @@ class EmotionEngine
 
         EE_ICacheLine icache[128];
 
-        bool wait_for_IRQ, wait_for_VU0;
+        bool wait_for_IRQ, wait_for_VU0, wait_for_interlock;
         bool branch_on;
         bool can_disassemble;
         int delay_slot;
