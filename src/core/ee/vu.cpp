@@ -161,9 +161,10 @@ void VectorUnit::reset()
     clip_flags = 0;
     PC = 0;
     //cycle_count = 1; //Set to 1 to prevent spurious events from occurring during execution
-    eecpu->set_cop2_last_cycle(eecpu->get_cycle_count());
+    if(!id)
+        eecpu->set_cop2_last_cycle(eecpu->get_cycle_count());
     cycle_count = eecpu->get_cycle_count();
-    run_event = eecpu->get_cycle_count();
+    run_event = cycle_count;
     running = false;
     tbit_stop = false;
     vumem_is_dirty = true; //assume we don't know the contents on reset
@@ -1213,8 +1214,10 @@ void VectorUnit::ctc(int index, uint32_t value)
             CMSAR0 = (uint16_t)value;
             break;
         case 28:
-            if (value & 0x2 && id == 0)
+            if (value & 0x2)
                 reset();
+            if (value & 0x200)
+                other_vu->reset();
             FBRST = value & ~0x303;
             break;
         default:
