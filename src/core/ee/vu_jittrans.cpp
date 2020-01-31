@@ -885,7 +885,7 @@ void VU_JitTranslator::update_xgkick(std::vector<IR::Instruction> &instrs)
     update.op = IR::Opcode::UpdateXgkick;
     update.set_source(cycles_since_xgkick_update);
     //Preserve the LSB since XGKick decrements 2 cycles at a time and we may have sent the request on an odd cycle
-    cycles_since_xgkick_update &= 1;
+    cycles_since_xgkick_update = 0;
     instrs.push_back(update);
 }
 
@@ -1601,6 +1601,7 @@ void VU_JitTranslator::lower1_special(std::vector<IR::Instruction> &instrs, uint
             instr.set_source2(instr_info[cur_PC].pipeline_state[1]);
             instr.set_dest(trans_branch_delay_slot);
             instr.set_jump_dest(trans_ebit_delay_slot);
+            instr.set_cycle_count(cycles_this_block);
             break;
         case 0x70:
             //ESADD
