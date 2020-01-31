@@ -738,6 +738,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
         case IR::Opcode::SystemCall:
             system_call(ee, instr);
             break;
+        case IR::Opcode::UpdateVU0:
+            update_vu0(ee, instr);
+            break;
         case IR::Opcode::VCallMS:
             vcall_ms(ee, instr);
             break;
@@ -1632,6 +1635,28 @@ void EE_JIT64::wait_for_vu0(EmotionEngine& ee, IR::Instruction& instr)
     // Otherwise continue execution of block otherwise
     emitter.set_jump_dest(offset_addr);
     free_int_reg(ee, R15);
+}
+
+void EE_JIT64::update_vu0(EmotionEngine& ee, IR::Instruction& instr)
+{
+    // Alloc scratchpad registers
+    REG_64 R15 = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 R14 = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+
+    // Update PC
+    emitter.load_addr((uint64_t)&ee, REG_64::RAX);
+    emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::RAX, offsetof(EmotionEngine, PC_now));
+
+    // Update cycle_count_now
+    // cycle_count_now = cycle_count - cycles_to_run + (<instruction cycle count>)
+    emitter.MOV32_FROM_MEM(REG_64::RAX, R15, offsetof(EmotionEngine, cycle_count));
+    emitter.MOV32_FROM_MEM(REG_64::RAX, R14, offsetof(EmotionEngine, cycles_to_run));
+    emitter.SUB32_REG(R14, R15);
+    emitter.ADD32_REG_IMM(instr.get_cycle_count(), R15);
+    emitter.MOV32_TO_MEM(R15, REG_64::RAX, offsetof(EmotionEngine, cycle_count_now));
+
+    free_int_reg(ee, R15);
+    free_int_reg(ee, R14);
 }
 
 uint8_t ee_read8(EmotionEngine& ee, uint32_t addr)

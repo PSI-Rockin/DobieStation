@@ -99,6 +99,7 @@ const char* EmotionEngine::SYSCALL(int id)
 void EmotionEngine::reset()
 {
     PC = 0xBFC00000;
+    PC_now = PC;
     cycle_count = 0;
     cycle_count_now = 0;
     cycles_to_run = 0;
@@ -189,11 +190,11 @@ void EmotionEngine::run_interpreter()
         }
 
         EmotionInterpreter::interpret(*this, instruction);
-        PC += 4;
+        set_PC(get_PC() + 4);
 
         //Simulate dual-issue if both instructions are NOPs
         if (!instruction && !read32(PC))
-            PC += 4;
+            set_PC(get_PC() + 4);
 
         if (branch_on)
         {
@@ -207,7 +208,7 @@ void EmotionEngine::run_interpreter()
                     {
                         Errors::die("[EE] Jump to invalid address $%08X from $%08X\n", new_PC, PC - 8);
                     }
-                    PC = new_PC;
+                    set_PC(new_PC);
                 }
             }
             else
@@ -299,6 +300,11 @@ bool EmotionEngine::check_interlock()
 uint32_t EmotionEngine::get_PC()
 {
     return PC;
+}
+
+uint32_t EmotionEngine::get_PC_now()
+{
+    return PC_now;
 }
 
 uint64_t EmotionEngine::get_LO()
@@ -472,6 +478,7 @@ uint128_t EmotionEngine::read128(uint32_t address)
 void EmotionEngine::set_PC(uint32_t addr)
 {
     PC = addr;
+    PC_now = addr;
 }
 
 void EmotionEngine::write8(uint32_t address, uint8_t value)
@@ -485,13 +492,13 @@ void EmotionEngine::write8(uint32_t address, uint8_t value)
     else if (mem == (uint8_t*)1)
         e->write8(address & 0x1FFFFFFF, value);
     else
-        Errors::die("[EE] Write8 to invalid address $%08X: $%02X, PC: $08X", address, value, PC);
+        Errors::die("[EE] Write8 to invalid address $%08X: $%02X, PC: $%08X", address, value, PC);
 }
 
 void EmotionEngine::write16(uint32_t address, uint16_t value)
 {
     if (address & 0x1)
-        Errors::die("[EE] Write16 to invalid address $%08X: $%04X, PC: $08X", address, value, PC);
+        Errors::die("[EE] Write16 to invalid address $%08X: $%04X, PC: $%08X", address, value, PC);
     uint8_t* mem = tlb_map[address / 4096];
     if (mem > (uint8_t*)1)
     {
@@ -517,13 +524,13 @@ void EmotionEngine::write32(uint32_t address, uint32_t value)
     else if (mem == (uint8_t*)1)
         e->write32(address & 0x1FFFFFFF, value);
     else
-        Errors::die("[EE] Write32 to invalid address $%08X: $%08X, PC: $08X", address, value, PC);
+        Errors::die("[EE] Write32 to invalid address $%08X: $%08X, PC: $%08X", address, value, PC);
 }
 
 void EmotionEngine::write64(uint32_t address, uint64_t value)
 {
     if (address & 0x7)
-        Errors::die("[EE] Write64 to invalid address $%08X: %llX, PC: $08X", address, value, PC);
+        Errors::die("[EE] Write64 to invalid address $%08X: %llX, PC: $%08X", address, value, PC);
     uint8_t* mem = tlb_map[address / 4096];
     if (mem > (uint8_t*)1)
     {
@@ -533,7 +540,7 @@ void EmotionEngine::write64(uint32_t address, uint64_t value)
     else if (mem == (uint8_t*)1)
         e->write64(address & 0x1FFFFFFF, value);
     else
-        Errors::die("[EE] Write64 to invalid address $%08X: %llX, PC: $08X", address, value, PC);
+        Errors::die("[EE] Write64 to invalid address $%08X: %llX, PC: $%08X", address, value, PC);
 }
 
 void EmotionEngine::write128(uint32_t address, uint128_t value)
@@ -547,7 +554,7 @@ void EmotionEngine::write128(uint32_t address, uint128_t value)
     else if (mem == (uint8_t*)1)
         e->write128(address & 0x1FFFFFFF, value);
     else
-        Errors::die("[EE] Write128 to invalid address $%08X, PC: $08X", address, PC);
+        Errors::die("[EE] Write128 to invalid address $%08X, PC: $%08X", address, PC);
 }
 
 void EmotionEngine::jp(uint32_t new_addr)
@@ -595,7 +602,7 @@ void EmotionEngine::branch_likely(bool condition, int offset)
         delay_slot = 1;
     }
     else
-        PC += 4;
+        set_PC(get_PC() + 4);
 }
 
 void EmotionEngine::mfc(int cop_id, int reg, int cop_reg)
@@ -860,7 +867,7 @@ void EmotionEngine::handle_exception(uint32_t new_addr, uint8_t code)
 
     branch_on = false;
     delay_slot = 0;
-    PC = new_addr;
+    set_PC(new_addr);
     unhalt();
     tlb_map = cp0->get_vtlb_map();
 }
@@ -1044,12 +1051,12 @@ void EmotionEngine::eret()
     //printf("[EE] Return from exception\n");
     if (cp0->status.error)
     {
-        PC = cp0->ErrorEPC;
+        set_PC(cp0->ErrorEPC);
         cp0->status.error = false;
     }
     else
     {
-        PC = cp0->EPC;
+        set_PC(cp0->EPC);
         cp0->status.exception = false;
     }
     //This hack is used for ISOs.
@@ -1068,7 +1075,7 @@ void EmotionEngine::eret()
     //And this is for ELFs.
     if (PC >= 0x00100000 && PC < 0x00100010)
         e->skip_BIOS();
-    PC -= 4;
+    set_PC(get_PC() - 4);
     tlb_map = cp0->get_vtlb_map();
 }
 
@@ -1184,7 +1191,7 @@ void EmotionEngine::cop2_updatevu0()
     {
         uint64_t cpu_cycles = get_cycle_count_now();
         uint64_t cop2_cycles = get_cop2_last_cycle();
-        uint32_t last_instr = read32(get_PC() - 4);
+        uint32_t last_instr = read32(get_PC_now() - 4);
         uint32_t upper_instr = (last_instr >> 26);
         uint32_t cop2_instr = (last_instr >> 21) & 0x1F;
 
