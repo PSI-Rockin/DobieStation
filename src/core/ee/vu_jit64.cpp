@@ -125,11 +125,25 @@ void vu_update_xgkick(VectorUnit& vu, int cycles)
     if (vu.transferring_GIF)
     {
         vu.gif->request_PATH(1, true);
-        while (cycles >= 2 && vu.gif->path_active(1, true))
+        vu.XGKICK_cycles += cycles;
+    }
+    else
+    {
+        vu.XGKICK_cycles = 0;
+        return;
+    }
+
+    while (vu.XGKICK_cycles >= 2)
+    {
+        if (vu.gif->path_active(1, true))
         {
             vu.handle_XGKICK();
-            //We send cycles in VU cycles (300Mhz), XGKick runs at Bus Clk (150Mhz)
-            cycles -= 2;
+            vu.XGKICK_cycles -= 2;
+        }
+        else
+        {
+            vu.XGKICK_cycles = 0;
+            break;
         }
     }
 }
