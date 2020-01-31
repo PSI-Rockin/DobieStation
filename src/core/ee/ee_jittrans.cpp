@@ -3272,7 +3272,7 @@ void EE_JitTranslator::translate_op_cop1(uint32_t opcode, uint32_t PC, EE_InstrI
 
             // undefined
             if (dest != 0x1F)
-                Errors::die("ee_jittrans.cpp: CTC1 has invalid source register %d", dest);
+                break;
 
             instrs.push_back(instr);
             break;
