@@ -33,6 +33,7 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
 
     get_block_operations(instr_info, ee, pc);
     issue_cycle_analysis(instr_info);
+    load_store_analysis(instr_info);
 
     for (EE_InstrInfo info : instr_info)
     {
@@ -219,6 +220,18 @@ void EE_JitTranslator::issue_cycle_analysis(std::vector<EE_InstrInfo>& instr_inf
 {
     // TODO: Dual-issue analysis
     cycle_count += instr_info.size();
+}
+
+void EE_JitTranslator::load_store_analysis(std::vector<EE_InstrInfo>& instr_info)
+{
+    // adds LOAD_STORE_BIAS to every load/store op (on top of the issue cycle cost)
+    const int LOAD_STORE_BIAS = 1;
+
+    for (EE_InstrInfo info : instr_info)
+    {
+        if (info.pipeline == EE_InstrInfo::Pipeline::LoadStore)
+            cycle_count += LOAD_STORE_BIAS;
+    }
 }
 
 void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs)
