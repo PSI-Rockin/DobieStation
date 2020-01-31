@@ -3603,6 +3603,16 @@ void EE_JitTranslator::translate_op_cop2(uint32_t opcode, uint32_t PC, EE_InstrI
     uint8_t op = (opcode >> 21) & 0x1F;
     IR::Instruction instr;
 
+    // run branch operation again if COP2 in block is in the delay slot
+    if (branch_op)
+        instr.set_return_addr(PC - 4);
+    else
+        instr.set_return_addr(PC);
+    instr.set_cycle_count(info.cycles);
+    fallback_interpreter(instr, 0, &EmotionInterpreter::nop);
+    instr.op = IR::Opcode::WaitVU0;
+    instrs.push_back(instr);
+
     // Set up fallback properties
     fallback_interpreter(instr, opcode, info.interpreter_fn);
 
@@ -3665,15 +3675,6 @@ void EE_JitTranslator::translate_op_cop2_special(uint32_t opcode, uint32_t PC, E
 {
     uint8_t op = opcode & 0x3F;
     IR::Instruction instr;
-    // run branch operation again if COP2 in block is in the delay slot
-    if (branch_op)
-        instr.set_return_addr(PC - 4);
-    else
-        instr.set_return_addr(PC);
-    instr.set_cycle_count(info.cycles);
-    fallback_interpreter(instr, 0, &EmotionInterpreter::nop);
-    instr.op = IR::Opcode::WaitVU0;
-    instrs.push_back(instr);
     
     // Set up fallback properties
     fallback_interpreter(instr, opcode, info.interpreter_fn);
