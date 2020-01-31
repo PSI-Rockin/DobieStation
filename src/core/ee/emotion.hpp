@@ -57,6 +57,7 @@ class EmotionEngine
         Emulator* e;
 
         uint64_t cycle_count;
+        uint64_t cycle_count_now;
         uint64_t cop2_last_cycle;
         int cycles_to_run;
         uint64_t run_event;
@@ -104,6 +105,7 @@ class EmotionEngine
         void run_jit();
         uint64_t get_cycle_count();
         uint64_t get_cycle_count_raw();
+        uint64_t get_cycle_count_now();
         void set_cycle_count(uint64_t value);
         uint64_t get_cop2_last_cycle();
         void set_cop2_last_cycle(uint64_t value);
@@ -234,6 +236,13 @@ inline uint64_t EmotionEngine::get_cycle_count()
 inline uint64_t EmotionEngine::get_cycle_count_raw()
 {
     return cycle_count;
+}
+
+// For the JIT, cycle_count_now will be updated before COP2 instructions
+// For the interpreter, this will represent a running cycle count
+inline uint64_t EmotionEngine::get_cycle_count_now()
+{
+    return cycle_count_now;
 }
 
 inline void EmotionEngine::set_cycle_count(uint64_t value)
