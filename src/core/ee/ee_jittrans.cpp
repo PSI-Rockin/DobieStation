@@ -217,12 +217,19 @@ void EE_JitTranslator::issue_cycle_analysis(std::vector<EE_InstrInfo>& instr_inf
         else
             dual_issue = false;
 
-        instr_info[i].cycles = cycle_count;
+        instr_info[i].cycles_before = cycle_count;
         
         if (dual_issue)
-            instr_info[++i].cycles = cycle_count;
-
-        ++cycle_count;
+        {
+            instr_info[i].cycles_after = cycle_count;
+            instr_info[i + 1].cycles_before = cycle_count;
+            instr_info[i + 1].cycles_after = ++cycle_count;
+            ++i;
+        }
+        else
+        {
+            instr_info[i].cycles_after = ++cycle_count;
+        }
     }
 
 }
@@ -371,8 +378,11 @@ void EE_JitTranslator::load_store_analysis(std::vector<EE_InstrInfo>& instr_info
         {
             sum += LOAD_STORE_BIAS;
 
+            for (int j = i + 1; j < instr_info.size(); ++j)
+                instr_info[j].cycles_before += (LOAD_STORE_BIAS >> 8);
+
             for (int j = i; j < instr_info.size(); ++j)
-                instr_info[j].cycles += (LOAD_STORE_BIAS >> 8);
+                instr_info[j].cycles_after += (LOAD_STORE_BIAS >> 8);
         }
     }
 
@@ -411,7 +421,7 @@ void EE_JitTranslator::data_dependency_analysis(std::vector<EE_InstrInfo>& instr
         }
 
         // decrement every dependency in the array according to the difference in cycles from the previous instruction to this instruction
-        int difference = instr_info[i].cycles - (i > 0 ? instr_info[i - 1].cycles : 0);
+        int difference = instr_info[i].cycles_after - (i > 0 ? instr_info[i - 1].cycles_after : 0);
 
         for (int i = 0; i < (int)RegType::MAX_VALUE; ++i)
             for (int j = 0; j < (int)EE_SpecialReg::MAX_VALUE; ++j)
@@ -420,8 +430,11 @@ void EE_JitTranslator::data_dependency_analysis(std::vector<EE_InstrInfo>& instr
         cycle_count += cycles_penalty;
 
         // Increment the cycle counts of the remaining instructions
+        for (int j = i + 1; j < instr_info.size(); ++j)
+            instr_info[j].cycles_before += cycles_penalty;
+
         for (int j = i; j < instr_info.size(); ++j)
-            instr_info[j].cycles += cycles_penalty;
+            instr_info[j].cycles_after += cycles_penalty;
     }
 }
 
@@ -1130,7 +1143,7 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, EE_InstrInfo& 
             // LQC2
         {
             instr.op = IR::Opcode::UpdateVU0;
-            instr.set_cycle_count(info.cycles);
+            instr.set_cycle_count(info.cycles_before);
             instr.set_return_addr(PC);
             instrs.push_back(instr);
 
@@ -1177,7 +1190,7 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, EE_InstrInfo& 
             // SQC2
         {
             instr.op = IR::Opcode::UpdateVU0;
-            instr.set_cycle_count(info.cycles);
+            instr.set_cycle_count(info.cycles_before);
             instr.set_return_addr(PC);
             instrs.push_back(instr);
 
@@ -3787,7 +3800,7 @@ void EE_JitTranslator::translate_op_cop2(uint32_t opcode, uint32_t PC, EE_InstrI
     IR::Instruction instr;
 
     instr.op = IR::Opcode::UpdateVU0;
-    instr.set_cycle_count(info.cycles);
+    instr.set_cycle_count(info.cycles_before);
     instr.set_return_addr(PC);
     instrs.push_back(instr);
 
@@ -3805,7 +3818,7 @@ void EE_JitTranslator::translate_op_cop2(uint32_t opcode, uint32_t PC, EE_InstrI
                     instr.set_return_addr(PC - 4);
                 else
                     instr.set_return_addr(PC);
-                instr.set_cycle_count(info.cycles);
+                instr.set_cycle_count(info.cycles_before);
                 fallback_interpreter(instr, 0, &EmotionInterpreter::nop);
                 instr.op = IR::Opcode::WaitVU0;
                 instrs.push_back(instr);
@@ -3825,7 +3838,7 @@ void EE_JitTranslator::translate_op_cop2(uint32_t opcode, uint32_t PC, EE_InstrI
                     instr.set_return_addr(PC - 4);
                 else
                     instr.set_return_addr(PC);
-                instr.set_cycle_count(info.cycles);
+                instr.set_cycle_count(info.cycles_before);
                 fallback_interpreter(instr, 0, &EmotionInterpreter::nop);
                 instr.op = IR::Opcode::WaitVU0;
                 instrs.push_back(instr);
@@ -3845,7 +3858,7 @@ void EE_JitTranslator::translate_op_cop2(uint32_t opcode, uint32_t PC, EE_InstrI
                     instr.set_return_addr(PC - 4);
                 else
                     instr.set_return_addr(PC);
-                instr.set_cycle_count(info.cycles);
+                instr.set_cycle_count(info.cycles_before);
                 fallback_interpreter(instr, 0, &EmotionInterpreter::nop);
                 instr.op = IR::Opcode::CheckInterlockVU0;
                 instrs.push_back(instr);
@@ -3865,7 +3878,7 @@ void EE_JitTranslator::translate_op_cop2(uint32_t opcode, uint32_t PC, EE_InstrI
                     instr.set_return_addr(PC - 4);
                 else
                     instr.set_return_addr(PC);
-                instr.set_cycle_count(info.cycles);
+                instr.set_cycle_count(info.cycles_before);
                 fallback_interpreter(instr, 0, &EmotionInterpreter::nop);
                 instr.op = IR::Opcode::CheckInterlockVU0;
                 instrs.push_back(instr);
@@ -3907,7 +3920,7 @@ void EE_JitTranslator::translate_op_cop2(uint32_t opcode, uint32_t PC, EE_InstrI
                 instr.set_return_addr(PC - 4);
             else
                 instr.set_return_addr(PC);
-            instr.set_cycle_count(info.cycles);
+            instr.set_cycle_count(info.cycles_before);
             fallback_interpreter(instr, 0, &EmotionInterpreter::nop);
             instr.op = IR::Opcode::WaitVU0;
             instrs.push_back(instr);

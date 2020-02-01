@@ -170,7 +170,8 @@ struct EE_InstrInfo
 
     uint8_t latency = 1;
     uint8_t throughput = 1;
-    uint8_t cycles = 0;
+    uint8_t cycles_before = 0;
+    uint8_t cycles_after = 0;
 
     inline void add_dependency(DependencyType dtype, RegType rtype, uint8_t reg)
     {
