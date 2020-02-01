@@ -30,9 +30,14 @@ private:
 
     std::vector<struct libevdev *> interestingDevices;
 
-    std::string events[5] = {"event0", "event1", "event2", "event3", "event4"};
+    std::string events[27] = {
+        "event0", "event1", "event2", "event3", "event4", "event5",
+        "event6", "event7", "event8", "event9", "event10", "event11",
+        "event12", "event13", "event14", "event15", "event16", "event17", "event18", "event19"
+                                                                                     "event20",
+        "event21", "event22", "event23", "event24", "event25", "event26", "event27"};
 
-    std::string filePath = "/dev/input/";
+    std::string filePath = "/dev/input/event27";
 
     std::string currentPath;
 
