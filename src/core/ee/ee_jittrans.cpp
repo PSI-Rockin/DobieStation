@@ -212,89 +212,14 @@ void EE_JitTranslator::issue_cycle_analysis(std::vector<EE_InstrInfo>& instr_inf
 {
     for (int i = 0; i < instr_info.size(); ++i)
     {
-        bool dual_issue = true;
+        bool dual_issue;
 
         // Try dual-issue
         if (instr_info.size() - i >= 2)
-        {
-            // Check for pipeline conflicts
-            const static std::pair<EE_InstrInfo::Pipeline, int> pipes[] =
-            {
-                {EE_InstrInfo::Pipeline::ERET, 1},
-                {EE_InstrInfo::Pipeline::SYNC, 1},
-                {EE_InstrInfo::Pipeline::LZC, 1},
-                {EE_InstrInfo::Pipeline::MAC1, 1},
-                {EE_InstrInfo::Pipeline::SA, 0},
-                {EE_InstrInfo::Pipeline::MAC0, 0},
-                {EE_InstrInfo::Pipeline::LoadStore, 1},
-                {EE_InstrInfo::Pipeline::LoadStore | EE_InstrInfo::Pipeline::COP1, 1},
-                {EE_InstrInfo::Pipeline::LoadStore | EE_InstrInfo::Pipeline::COP2, 1},
-                {EE_InstrInfo::Pipeline::COP0, 1},
-                {EE_InstrInfo::Pipeline::COP1, 0},
-                {EE_InstrInfo::Pipeline::COP2, 0},
-                {EE_InstrInfo::Pipeline::Int0, 0},
-                {EE_InstrInfo::Pipeline::Int1, 1},
-                {EE_InstrInfo::Pipeline::IntWide, 2},
-                {EE_InstrInfo::Pipeline::IntGeneric, 3},
-                {EE_InstrInfo::Pipeline::Branch, 3}
-            };
-
-            int pipe1;
-            int pipe2;
-
-            for (auto pipe : pipes)
-            {
-                if (instr_info[i].pipeline == pipe.first)
-                    pipe1 = pipe.second;
-            }
-            for (auto pipe : pipes)
-            {
-                if (instr_info[i + 1].pipeline == pipe.first)
-                    pipe2 = pipe.second;
-            }
-
-            // Check to see if we already have a pipeline match, or if they are both generic
-            if (pipe1 == pipe2 && pipe1 != 3)
-            {
-                dual_issue = false;
-                goto analysis_end;
-            }
-
-            // Manually check all pipelines for incompatible dual-issue
-            if (!check_pipeline_combination(instr_info[i].pipeline, instr_info[i + 1].pipeline))
-            {
-                dual_issue = false;
-                goto analysis_end;
-            }
-
-            // Check for data dependencies
-            for (int j = 0; j < instr_info[i].write_dependencies.size() && dual_issue; ++j)
-            {
-                EE_DependencyInfo wdependency;
-                instr_info[i].get_dependency(wdependency, j, DependencyType::Write);
-
-                // Ignore GPR $zero
-                if (wdependency.type == RegType::GPR && wdependency.reg == EE_NormalReg::zero)
-                    continue;
-
-                // If a write dependency from instr_info[i] is found in the read dependencies for instr_info[i + 1], we can't dual issue
-                for (int k = 0; k < instr_info[i + 1].read_dependencies.size(); ++k)
-                {
-                    EE_DependencyInfo rdependency;
-                    instr_info[i + 1].get_dependency(rdependency, k, DependencyType::Read);
-
-                    if (wdependency.type == rdependency.type && wdependency.reg == rdependency.reg)
-                    {
-                        dual_issue = false;
-                        goto analysis_end;
-                    }
-                }
-            }
-        }
+            dual_issue = dual_issue_analysis(instr_info[i], instr_info[i + 1]);
         else
             dual_issue = false;
 
-        analysis_end:
         instr_info[i].cycles = cycle_count;
         
         if (dual_issue)
@@ -303,6 +228,78 @@ void EE_JitTranslator::issue_cycle_analysis(std::vector<EE_InstrInfo>& instr_inf
         ++cycle_count;
     }
 
+}
+
+bool EE_JitTranslator::dual_issue_analysis(const EE_InstrInfo& instr1, const EE_InstrInfo& instr2)
+{
+    // Check for pipeline conflicts
+    const static std::pair<EE_InstrInfo::Pipeline, int> pipes[] =
+    {
+        {EE_InstrInfo::Pipeline::ERET, 1},
+        {EE_InstrInfo::Pipeline::SYNC, 1},
+        {EE_InstrInfo::Pipeline::LZC, 1},
+        {EE_InstrInfo::Pipeline::MAC1, 1},
+        {EE_InstrInfo::Pipeline::SA, 0},
+        {EE_InstrInfo::Pipeline::MAC0, 0},
+        {EE_InstrInfo::Pipeline::LoadStore, 1},
+        {EE_InstrInfo::Pipeline::LoadStore | EE_InstrInfo::Pipeline::COP1, 1},
+        {EE_InstrInfo::Pipeline::LoadStore | EE_InstrInfo::Pipeline::COP2, 1},
+        {EE_InstrInfo::Pipeline::COP0, 1},
+        {EE_InstrInfo::Pipeline::COP1, 0},
+        {EE_InstrInfo::Pipeline::COP2, 0},
+        {EE_InstrInfo::Pipeline::Int0, 0},
+        {EE_InstrInfo::Pipeline::Int1, 1},
+        {EE_InstrInfo::Pipeline::IntWide, 2},
+        {EE_InstrInfo::Pipeline::IntGeneric, 3},
+        {EE_InstrInfo::Pipeline::Branch, 3}
+    };
+
+    int pipe1;
+    int pipe2;
+
+    for (auto pipe : pipes)
+    {
+        if (instr1.pipeline == pipe.first)
+            pipe1 = pipe.second;
+    }
+    for (auto pipe : pipes)
+    {
+        if (instr2.pipeline == pipe.first)
+            pipe2 = pipe.second;
+    }
+
+    // Check to see if we already have a pipeline match, or if they aren't both generic
+    if (pipe1 == pipe2 && pipe1 != 3)
+        return false;
+
+    // If the first instruction is a branch, its delay slot cannot be dual-issued
+    if (instr1.pipeline == EE_InstrInfo::Pipeline::Branch)
+        return false;
+
+    // Manually check all pipelines for incompatible dual-issue
+    if (!check_pipeline_combination(instr1.pipeline, instr2.pipeline))
+        return false;
+
+    // Check for data dependencies
+    for (int j = 0; j < instr1.write_dependencies.size(); ++j)
+    {
+        EE_DependencyInfo wdependency;
+        instr1.get_dependency(wdependency, j, DependencyType::Write);
+
+        // Ignore GPR $zero
+        if (wdependency.type == RegType::GPR && wdependency.reg == EE_NormalReg::zero)
+            continue;
+
+        // If a write dependency from instr_info[i] is found in the read dependencies for instr_info[i + 1], we can't dual issue
+        for (int k = 0; k < instr2.read_dependencies.size(); ++k)
+        {
+            EE_DependencyInfo rdependency;
+            instr2.get_dependency(rdependency, k, DependencyType::Read);
+
+            if (wdependency.type == rdependency.type && wdependency.reg == rdependency.reg)
+                return false;
+        }
+    }
 }
 
 bool EE_JitTranslator::check_pipeline_combination(EE_InstrInfo::Pipeline pipeline1, EE_InstrInfo::Pipeline pipeline2)
@@ -385,29 +382,29 @@ void EE_JitTranslator::data_dependency_analysis(std::vector<EE_InstrInfo>& instr
 
     int data_dependencies[(int)RegType::MAX_VALUE][(int)EE_SpecialReg::MAX_VALUE] = {};
 
-    for (EE_InstrInfo& info : instr_info)
+    for (int i = 0; i < instr_info.size(); ++i)
     {
         int cycles_penalty = 0;
-        for (int i = 0; i < info.read_dependencies.size(); ++i)
+        for (int j = 0; j < instr_info[i].read_dependencies.size(); ++j)
         {
             EE_DependencyInfo dependency_info;
-            info.get_dependency(dependency_info, i, DependencyType::Read);
+            instr_info[i].get_dependency(dependency_info, j, DependencyType::Read);
 
             // Ignore data dependencies on GPR $zero, everything else is fine
             if (dependency_info.type != RegType::GPR || dependency_info.reg != (int)EE_NormalReg::zero)
                 cycles_penalty = std::max(cycles_penalty, data_dependencies[(int)dependency_info.type][(int)dependency_info.reg]);
         }
 
-        for (int i = 0; i < info.write_dependencies.size(); ++i)
+        for (int j = 0; j < instr_info[i].write_dependencies.size(); ++j)
         {
             EE_DependencyInfo dependency_info;
-            info.get_dependency(dependency_info, i, DependencyType::Write);
+            instr_info[i].get_dependency(dependency_info, j, DependencyType::Write);
 
             // Wait for previous result to be written before overwriting
             if (data_dependencies[(int)dependency_info.type][(int)dependency_info.reg] > 0)
                 cycles_penalty = std::max(cycles_penalty, data_dependencies[(int)dependency_info.type][(int)dependency_info.reg]);
 
-            data_dependencies[(int)dependency_info.type][(int)dependency_info.reg] = info.latency;
+            data_dependencies[(int)dependency_info.type][(int)dependency_info.reg] = instr_info[i].latency;
         }
 
         // decrement every dependency in the array
@@ -416,7 +413,14 @@ void EE_JitTranslator::data_dependency_analysis(std::vector<EE_InstrInfo>& instr
                 data_dependencies[i][j] = std::max(0, data_dependencies[i][j] - 1);
 
         cycle_count += cycles_penalty;
-        info.cycles += cycles_penalty;
+        instr_info[i].cycles += cycles_penalty;
+
+        // Check if next instruction was dual-issued
+        // If it was, we don't have to perform dependency analysis on the next instruction
+        // nor should the current dependencies be decremented 
+        if (instr_info.size() - i >= 2)
+            if (dual_issue_analysis(instr_info[i], instr_info[i + 1]))
+                ++i;
     }
 }
 

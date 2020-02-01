@@ -172,7 +172,7 @@ struct EE_InstrInfo
     uint8_t throughput = 1;
     uint8_t cycles = 0;
 
-    void add_dependency(DependencyType dtype, RegType rtype, uint8_t reg)
+    inline void add_dependency(DependencyType dtype, RegType rtype, uint8_t reg)
     {
         switch (dtype)
         {
@@ -187,7 +187,7 @@ struct EE_InstrInfo
         }
     }
 
-    void get_dependency(EE_DependencyInfo &dest, size_t idx, DependencyType dtype)
+    inline void get_dependency(EE_DependencyInfo &dest, size_t idx, DependencyType dtype) const
     {
         switch (dtype)
         {
