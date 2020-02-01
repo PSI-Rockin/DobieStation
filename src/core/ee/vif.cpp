@@ -37,6 +37,7 @@ void VectorInterface::reset()
     vif_stop = false;
     mark_detected = false;
     flush_stall = false;
+    stall_condition_active = false;
     fifo_reverse = false;
 
     if (id)
@@ -114,31 +115,34 @@ void VectorInterface::update(int cycles)
 
     while (!vif_stalled && run_cycles--)
     {
-        if (flush_stall)
+        if (stall_condition_active)
         {
-            int active_path = gif->get_active_path();
-            int path_queue = gif->get_path_queue();
-            if (active_path == 1 || active_path == 2 || (path_queue & (1<<1)) || (path_queue & (1<<2)))
-                return;
+            if (flush_stall)
+            {
+                int active_path = gif->get_active_path();
+                int path_queue = gif->get_path_queue();
+                if (active_path == 1 || active_path == 2 || (path_queue & (1 << 1)) || (path_queue & (1 << 2)))
+                    return;
+            }
+            if (wait_for_VU)
+            {
+                if (vu->is_running())
+                    return;
+                handle_wait_cmd(wait_cmd_value);
+            }
+            if (wait_for_PATH3)
+            {
+                if (!gif->path3_done())
+                    return;
+                gif->deactivate_PATH(3);
+            }
 
             flush_stall = false;
-        }
-
-        if (wait_for_PATH3)
-        {
-            if (!gif->path3_done())
-                return;
-            gif->deactivate_PATH(3);
-            wait_for_PATH3 = false;
-        }
-
-        if (wait_for_VU)
-        {
-            if (vu->is_running())
-                return;
             wait_for_VU = false;
-            handle_wait_cmd(wait_cmd_value);
+            wait_for_PATH3 = false;
+            stall_condition_active = false;
         }
+
 
         if ((command & 0x60) == 0x60)
         {
@@ -308,6 +312,7 @@ void VectorInterface::decode_cmd(uint32_t value)
         case 0x10:
             printf("[VIF] FLUSHE\n");
             wait_for_VU = true;
+            stall_condition_active = true;
             wait_cmd_value = value;
             command = 0;
             break;
@@ -315,6 +320,7 @@ void VectorInterface::decode_cmd(uint32_t value)
             printf("[VIF] FLUSH\n");
             wait_for_VU = true;
             flush_stall = true;
+            stall_condition_active = true;
             wait_cmd_value = value;
             command = 0;
             break;
@@ -323,12 +329,14 @@ void VectorInterface::decode_cmd(uint32_t value)
             wait_for_VU = true;
             flush_stall = true;
             wait_for_PATH3 = true;
+            stall_condition_active = true;
             wait_cmd_value = value;
             command = 0;
             break;
         case 0x14:
             printf("[VIF] MSCAL\n");
             wait_for_VU = true;
+            stall_condition_active = true;
             wait_cmd_value = value;
             command = 0;
             break;
@@ -336,12 +344,14 @@ void VectorInterface::decode_cmd(uint32_t value)
             printf("[VIF] MSCALF\n");
             wait_for_VU = true;
             flush_stall = true;
+            stall_condition_active = true;
             wait_cmd_value = value;
             command = 0;
             break;
         case 0x17:
             printf("[VIF] MSCNT\n");
             wait_for_VU = true;
+            stall_condition_active = true;
             wait_cmd_value = value;
             command = 0;
             break;
@@ -370,6 +380,7 @@ void VectorInterface::decode_cmd(uint32_t value)
             }
 
             wait_for_VU = true;
+            stall_condition_active = true;
             wait_cmd_value = value;
             break;
         case 0x50:
