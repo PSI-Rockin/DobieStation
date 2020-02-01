@@ -663,6 +663,17 @@ void EE_JIT64::jump(EmotionEngine& ee, IR::Instruction& instr)
         emitter.load_addr((uint64_t)get_gpr_addr(ee, EE_NormalReg::ra), REG_64::RAX);
         emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::RAX);
     }
+
+    // Only set in inane bnel, r1, r1, label instructions...
+    if (instr.get_is_likely())
+    {
+        likely_branch = true;
+
+        // Use the result of the FLAGS register from the last compare to set branch_on,
+        // this boolean is used in handle_likely_branch
+        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
+        emitter.MOV8_IMM_MEM(true, REG_64::RAX);
+    }
 }
 
 void EE_JIT64::jump_indirect(EmotionEngine& ee, IR::Instruction& instr)
