@@ -210,12 +210,82 @@ void EE_JitTranslator::get_block_operations(std::vector<EE_InstrInfo>& dest, Emo
 
 void EE_JitTranslator::issue_cycle_analysis(std::vector<EE_InstrInfo>& instr_info)
 {
-    // TODO: Dual-issue analysis
-    for (EE_InstrInfo& info : instr_info)
+    for (int i = 0; i < instr_info.size(); ++i)
     {
-        info.cycles = cycle_count;
+        bool dual_issue = true;
+
+        // Try dual-issue
+        if (instr_info.size() - i >= 2)
+        {
+            // Check to see if we can't dual-issue MMI
+            if (instr_info[i].pipeline == EE_InstrInfo::Pipeline::IntWide)
+            {
+                EE_InstrInfo::Pipeline pipe = instr_info[i + 1].pipeline;
+
+                switch (pipe)
+                {
+                    case EE_InstrInfo::Pipeline::Int0:
+                    case EE_InstrInfo::Pipeline::Int1:
+                    case EE_InstrInfo::Pipeline::IntWide:
+                    case EE_InstrInfo::Pipeline::IntGeneric:
+                        dual_issue = false;
+                        break;
+                    default:
+                        break;
+                }
+            }
+            if (instr_info[i + 1].pipeline == EE_InstrInfo::Pipeline::IntWide)
+            {
+                EE_InstrInfo::Pipeline pipe = instr_info[i].pipeline;
+
+                switch (pipe)
+                {
+                    case EE_InstrInfo::Pipeline::Int0:
+                    case EE_InstrInfo::Pipeline::Int1:
+                    case EE_InstrInfo::Pipeline::IntWide:
+                    case EE_InstrInfo::Pipeline::IntGeneric:
+                        dual_issue = false;
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            // Can't dual-issue instructions with the same pipeline
+            if (instr_info[i].pipeline == instr_info[i + 1].pipeline && instr_info[i].pipeline != EE_InstrInfo::Pipeline::IntGeneric)
+                dual_issue = false;
+
+            // Check for data dependencies
+            for (int j = 0; j < instr_info[i].write_dependencies.size() && dual_issue; ++j)
+            {
+                EE_DependencyInfo wdependency;
+                instr_info[i].get_dependency(wdependency, j, DependencyType::Write);
+
+                // If a write dependency from instr_info[i] is found in the read dependencies for instr_info[i + 1], we can't dual issue
+                for (int k = 0; k < instr_info[i + 1].read_dependencies.size(); ++k)
+                {
+                    EE_DependencyInfo rdependency;
+                    instr_info[i + 1].get_dependency(rdependency, k, DependencyType::Read);
+
+                    if (wdependency.type == rdependency.type && wdependency.reg == rdependency.reg)
+                    {
+                        dual_issue = false;
+                        break;
+                    }
+                }
+            }
+        }
+        else
+            dual_issue = false;
+
+        instr_info[i].cycles = cycle_count;
+        
+        if (dual_issue)
+            instr_info[++i].cycles = cycle_count;
+
         ++cycle_count;
     }
+
 }
 
 void EE_JitTranslator::load_store_analysis(std::vector<EE_InstrInfo>& instr_info)
