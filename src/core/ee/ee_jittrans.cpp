@@ -37,7 +37,7 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
     load_store_analysis(instr_info);
     data_dependency_analysis(instr_info);
 
-    for (EE_InstrInfo info : instr_info)
+    for (EE_InstrInfo& info : instr_info)
     {
         uint32_t opcode = ee.read32(pc);
         std::vector<IR::Instruction> translated_instrs;
@@ -357,7 +357,13 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, EE_InstrInfo& 
             uint8_t source2 = (opcode >> 16) & 0x1F;
             if (source == source2)
             {
-                // NOP
+                // Just jump to the failure location
+                // Why are games even doing this?
+                // TODO: Detect that this operation is pointless,
+                // and don't break the block on it
+                instr.op = IR::Opcode::Jump;
+                instr.set_jump_dest(PC + 8);
+                instrs.push_back(instr);
                 break;
             }
             if (!source)
