@@ -189,8 +189,7 @@ void EE_JIT64::emit_dispatcher()
 
     emitter.MOV64_FROM_MEM(REG_64::RAX, REG_64::RAX, offsetof(EEJitBlockRecord, code_start));
 
-    //Tail-call optimization
-    emitter.JMP_INDIR(REG_64::RAX);
+
 
     //Find a block the slow way.
     //This entails calling a C++ function that finds a block by looking in an unordered_map.
