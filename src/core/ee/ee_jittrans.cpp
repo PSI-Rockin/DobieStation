@@ -218,7 +218,7 @@ void EE_JitTranslator::issue_cycle_analysis(std::vector<EE_InstrInfo>& instr_inf
         if (instr_info.size() - i >= 2)
         {
             // Check for pipeline conflicts
-            static std::pair<EE_InstrInfo::Pipeline, int> pipes[] =
+            const static std::pair<EE_InstrInfo::Pipeline, int> pipes[] =
             {
                 {EE_InstrInfo::Pipeline::LoadStore, 1},
                 {EE_InstrInfo::Pipeline::LoadStore | EE_InstrInfo::Pipeline::COP1, 1},
