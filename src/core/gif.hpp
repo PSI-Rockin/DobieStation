@@ -76,7 +76,7 @@ class GraphicsInterface
 
         void request_PATH(int index, bool canInterruptPath3);
         void deactivate_PATH(int index);
-        void set_path3_vifmask(int value);
+        bool set_path3_vifmask(int value);
         bool path3_masked(int index);
         bool interrupt_path3(int index);
         bool path3_done();

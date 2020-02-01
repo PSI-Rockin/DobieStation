@@ -28,6 +28,7 @@ void VectorInterface::reset()
     CODE = 0;
     vu->set_TOP_regs(&TOP, &ITOP);
     vu->set_GIF(gif);
+    direct_wait = false;
     wait_for_VU = false;
     wait_for_PATH3 = false;
     vif_stalled = 0;
@@ -113,14 +114,6 @@ void VectorInterface::update(int cycles)
 
     while (!vif_stalled && run_cycles--)
     {
-        if (wait_for_VU)
-        {
-            if (vu->is_running())
-                return;
-            wait_for_VU = false;
-            handle_wait_cmd(wait_cmd_value);
-        }
-
         if (flush_stall)
         {
             int active_path = gif->get_active_path();
@@ -137,6 +130,14 @@ void VectorInterface::update(int cycles)
                 return;
             gif->deactivate_PATH(3);
             wait_for_PATH3 = false;
+        }
+
+        if (wait_for_VU)
+        {
+            if (vu->is_running())
+                return;
+            wait_for_VU = false;
+            handle_wait_cmd(wait_cmd_value);
         }
 
         if ((command & 0x60) == 0x60)
@@ -156,8 +157,12 @@ void VectorInterface::update(int cycles)
             {
                 command_len--;
                 FIFO.pop();
-                if (FIFO.size() <= (fifo_size - 4))
+
+                //FIXME: Should be fifo_size - 4 really, but causes hangs in WRC?
+                if (FIFO.size() <= (fifo_size / 2))
+                {
                     dmac->set_DMA_request(id);
+                }
             }
         }
     }
@@ -205,8 +210,11 @@ bool VectorInterface::process_data_word(uint32_t value)
             case 0x51:
                 //DIRECT/DIRECTHL
                 if (!gif->path_active(2, command == 0x50))
+                {
+                    direct_wait = true;
                     return false;
-
+                }
+                direct_wait = false;
                 buffer[buffer_size] = value;
                 buffer_size++;
                 if (buffer_size == 4)
@@ -287,9 +295,9 @@ void VectorInterface::decode_cmd(uint32_t value)
             break;
         case 0x06:
             printf("[VIF] MSKPATH3: %d\n", (value >> 15) & 0x1);
-            gif->set_path3_vifmask((value >> 15) & 0x1);
+            if(gif->set_path3_vifmask((value >> 15) & 0x1))
+                vif_stalled |= STALL_MSKPATH3;
             command = 0;
-            vif_stalled |= STALL_MSKPATH3;
             break;
         case 0x07:
             printf("[VIF] Set MARK: $%08X\n", value);
@@ -914,8 +922,9 @@ std::tuple<uint128_t, uint32_t>VectorInterface::readFIFO()
 uint32_t VectorInterface::get_stat()
 {
     uint32_t reg = 0;
-    reg |= (vif_stalled & (STALL_IBIT | STALL_STOP) || fifo_reverse) ? 0 : ((FIFO.size() != 0) * 3);
-    reg |= vu->is_running() << 2;
+    reg |= (vif_stalled & (STALL_IBIT | STALL_STOP) || fifo_reverse || (wait_for_PATH3 | flush_stall | direct_wait)) ? 0 : ((FIFO.size() != 0) * 3);
+    reg |= wait_for_VU << 2;
+    reg |= (wait_for_PATH3 | flush_stall | direct_wait) << 3;
     reg |= mark_detected << 6;
     reg |= DBF << 7;
     reg |= vif_stop << 8;

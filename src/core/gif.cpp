@@ -69,9 +69,11 @@ uint32_t GraphicsInterface::read_STAT()
 
 void GraphicsInterface::write_MODE(uint32_t value)
 {
+    bool old_value = path3_mode_masked;
     //printf("GIF PATH3Mask MODE set to %d\n", value & 0x1);
     intermittent_mode = value & 0x4;
     path3_mode_masked = value & 0x1;
+    if(old_value && !path3_mode_masked)
     resume_path3();
 }
 
@@ -299,10 +301,12 @@ void GraphicsInterface::run(int cycles)
     }
 }
 
-void GraphicsInterface::set_path3_vifmask(int value)
+bool GraphicsInterface::set_path3_vifmask(int value)
 {
     //printf("GIF PATH3Mask VIF set to %d\n", value);
+    bool old_value = path3_vif_masked;
     path3_vif_masked = value;
+    return old_value && !path3_vif_masked;
 }
 
 bool GraphicsInterface::path3_done()
@@ -466,11 +470,14 @@ void GraphicsInterface::flush_path3_fifo()
     feed_GIF(FIFO.front());
     FIFO.pop();
 
-    if ((fifo_empty() && !path3_dma_waiting) || path3_masked(3))
+    if (fifo_empty())
     {
-        //printf("GIF Deactivating PATH at FIFO flush end\n");
-        deactivate_PATH(3);
-        if (fifo_empty() && !path3_dma_waiting)
+        if (!path3_dma_waiting || path3_masked(3))
+        {
+            //printf("GIF Deactivating PATH at FIFO flush end\n");
+            deactivate_PATH(3);
+        }
+        else
             dmac->set_DMA_request(GIF);
     }
 }
