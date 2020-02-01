@@ -365,12 +365,14 @@ void EE_JitTranslator::load_store_analysis(std::vector<EE_InstrInfo>& instr_info
     const int LOAD_STORE_BIAS = 0x100;
     int sum = 0;
 
-    for (EE_InstrInfo& info : instr_info)
+    for (int i = 0; i < instr_info.size(); ++i)
     {
-        if ((info.pipeline & EE_InstrInfo::Pipeline::LoadStore) == EE_InstrInfo::Pipeline::LoadStore)
+        if ((instr_info[i].pipeline & EE_InstrInfo::Pipeline::LoadStore) == EE_InstrInfo::Pipeline::LoadStore)
         {
             sum += LOAD_STORE_BIAS;
-            info.cycles += (LOAD_STORE_BIAS >> 8);
+
+            for (int j = i; j < instr_info.size(); ++j)
+                instr_info[j].cycles += (LOAD_STORE_BIAS >> 8);
         }
     }
 
@@ -408,20 +410,18 @@ void EE_JitTranslator::data_dependency_analysis(std::vector<EE_InstrInfo>& instr
             data_dependencies[(int)dependency_info.type][(int)dependency_info.reg] = instr_info[i].latency;
         }
 
-        // decrement every dependency in the array
+        // decrement every dependency in the array according to the difference in cycles from the previous instruction to this instruction
+        int difference = instr_info[i].cycles - (i > 0 ? instr_info[i - 1].cycles : 0);
+
         for (int i = 0; i < (int)RegType::MAX_VALUE; ++i)
             for (int j = 0; j < (int)EE_SpecialReg::MAX_VALUE; ++j)
-                data_dependencies[i][j] = std::max(0, data_dependencies[i][j] - 1);
+                data_dependencies[i][j] = std::max(0, data_dependencies[i][j] - difference);
 
         cycle_count += cycles_penalty;
-        instr_info[i].cycles += cycles_penalty;
 
-        // Check if next instruction was dual-issued
-        // If it was, we don't have to perform dependency analysis on the next instruction
-        // nor should the current dependencies be decremented 
-        if (instr_info.size() - i >= 2)
-            if (dual_issue_analysis(instr_info[i], instr_info[i + 1]))
-                ++i;
+        // Increment the cycle counts of the remaining instructions
+        for (int j = i; j < instr_info.size(); ++j)
+            instr_info[j].cycles += cycles_penalty;
     }
 }
 
