@@ -73,8 +73,8 @@ void GS_REGISTERS::write64_privileged(uint32_t addr, uint64_t value)
             CSR.SIGNAL_stall &= ~(value & 0x1);
             if (value & 0x2)
             {
-                CSR.FINISH_enabled = true;
                 CSR.FINISH_generated = false;
+                CSR.FINISH_requested = false;
             }
             if (value & 0x8)
             {
@@ -361,11 +361,9 @@ bool GS_REGISTERS::assert_VSYNC()//returns true if the interrupt should be proce
 
 bool GS_REGISTERS::assert_FINISH()//returns true if the interrupt should be processed
 {
-    if (CSR.FINISH_requested && CSR.FINISH_enabled)
+    if (CSR.FINISH_requested && !CSR.FINISH_generated)
     {
         CSR.FINISH_generated = true;
-        CSR.FINISH_enabled = false;
-        CSR.FINISH_requested = false;
         return !IMR.finish;
     }
     return false;
