@@ -333,6 +333,8 @@ bool EE_JitTranslator::check_pipeline_combination(EE_InstrInfo::Pipeline pipelin
     // Check for invalid combination with MMI
     if (!check_mmi_combination(pipeline1, pipeline2))
         return false;
+
+    return true;
 }
 
 bool EE_JitTranslator::check_eret_combination(EE_InstrInfo::Pipeline pipeline1, EE_InstrInfo::Pipeline pipeline2)
