@@ -157,7 +157,8 @@ struct EE_InstrInfo
         MADD1,
         FPU_DIV,
         FPU_SQRT,
-        FPU_RSQRT
+        FPU_RSQRT,
+        MAX_VALUE
     };
 
     // By using basic_string instead of vector, constructing this structure

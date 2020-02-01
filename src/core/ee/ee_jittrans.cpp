@@ -391,9 +391,8 @@ void EE_JitTranslator::load_store_analysis(std::vector<EE_InstrInfo>& instr_info
 
 void EE_JitTranslator::data_dependency_analysis(std::vector<EE_InstrInfo>& instr_info)
 {
-    // TODO: Throughput analysis
-
     int data_dependencies[(int)RegType::MAX_VALUE][(int)EE_SpecialReg::MAX_VALUE] = {};
+    int throughputs[(int)EE_InstrInfo::InstructionType::MAX_VALUE] = {};
 
     for (int i = 0; i < instr_info.size(); ++i)
     {
@@ -420,12 +419,22 @@ void EE_JitTranslator::data_dependency_analysis(std::vector<EE_InstrInfo>& instr
             data_dependencies[(int)dependency_info.type][(int)dependency_info.reg] = instr_info[i].latency;
         }
 
-        // decrement every dependency in the array according to the difference in cycles from the previous instruction to this instruction
+        if (instr_info[i].instruction_type != EE_InstrInfo::InstructionType::OTHER)
+        {
+            if (throughputs[(int)instr_info[i].instruction_type])
+                cycles_penalty = std::max(cycles_penalty, throughputs[(int)instr_info[i].instruction_type]);
+            throughputs[(int)instr_info[i].instruction_type] = instr_info[i].throughput;
+        }
+
+        // decrement every dependency/throughput counter according to the difference in cycles from the previous instruction to this instruction
         int difference = instr_info[i].cycles_after - (i > 0 ? instr_info[i - 1].cycles_after : 0);
 
         for (int i = 0; i < (int)RegType::MAX_VALUE; ++i)
             for (int j = 0; j < (int)EE_SpecialReg::MAX_VALUE; ++j)
                 data_dependencies[i][j] = std::max(0, data_dependencies[i][j] - difference);
+
+        for (int i = 0; i < (int)EE_InstrInfo::InstructionType::MAX_VALUE; ++i)
+            throughputs[i] = std::max(0, throughputs[i] - difference);
 
         cycle_count += cycles_penalty;
 
