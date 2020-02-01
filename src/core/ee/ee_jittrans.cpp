@@ -293,6 +293,7 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, EE_InstrInfo& 
             instr.op = IR::Opcode::Jump;
             instr.set_jump_dest(jump_offset_ee(opcode, PC));
             instr.set_is_link(false);
+            instr.set_is_likely(false);
             instrs.push_back(instr);
             break;
         case 0x03:
@@ -301,6 +302,7 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, EE_InstrInfo& 
             instr.set_jump_dest(jump_offset_ee(opcode, PC));
             instr.set_return_addr(PC + 8);
             instr.set_is_link(true);
+            instr.set_is_likely(false);
             instrs.push_back(instr);
             break;
         case 0x04:
@@ -315,6 +317,7 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, EE_InstrInfo& 
                 instr.op = IR::Opcode::Jump;
                 instr.set_jump_dest(branch_offset_ee(opcode, PC));
                 instr.set_is_link(false);
+                instr.set_is_likely(false);
                 instrs.push_back(instr);
                 break;
             }
@@ -363,6 +366,7 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, EE_InstrInfo& 
                 // and don't break the block on it
                 instr.op = IR::Opcode::Jump;
                 instr.set_jump_dest(PC + 8);
+                instr.set_is_likely(false);
                 instrs.push_back(instr);
                 break;
             }
@@ -600,7 +604,15 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, EE_InstrInfo& 
             uint8_t source2 = (opcode >> 16) & 0x1F;
             if (source == source2)
             {
-                // NOP
+                // Just jump to the failure location
+                // Why are games even doing this?
+                // TODO: Detect that this operation is pointless,
+                // don't break the block on it, and skip the next instruction
+                // the next instruction will never execute... fun stuff
+                instr.op = IR::Opcode::Jump;
+                instr.set_jump_dest(PC + 8);
+                instr.set_is_likely(true);
+                instrs.push_back(instr);
                 break;
             }
             if (!source)
