@@ -11,123 +11,157 @@ void EmotionInterpreter::cop2_special(EE_InstrInfo& info, uint32_t instruction)
         case 0x01:
         case 0x02:
         case 0x03:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vaddbc;
             break;
         case 0x04:
         case 0x05:
         case 0x06:
         case 0x07:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vsubbc;
             break;
         case 0x08:
         case 0x09:
         case 0x0A:
         case 0x0B:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vmaddbc;
             break;
         case 0x0C:
         case 0x0D:
         case 0x0E:
         case 0x0F:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vmsubbc;
             break;
         case 0x10:
         case 0x11:
         case 0x12:
         case 0x13:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vmaxbc;
             break;
         case 0x14:
         case 0x15:
         case 0x16:
         case 0x17:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vminibc;
             break;
         case 0x18:
         case 0x19:
         case 0x1A:
         case 0x1B:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vmulbc;
             break;
         case 0x1C:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vmulq;
             break;
         case 0x1D:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vmaxi;
             break;
         case 0x1E:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vmuli;
             break;
         case 0x1F:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vminii;
             break;
         case 0x20:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vaddq;
             break;
         case 0x21:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vmaddq;
             break;
         case 0x22:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vaddi;
             break;
         case 0x23:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vmaddi;
             break;
         case 0x24:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vsubq;
             break;
         case 0x25:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vmsubq;
             break;
         case 0x26:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vsubi;
             break;
         case 0x27:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vmsubi;
             break;
         case 0x28:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vadd;
             break;
         case 0x29:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vmadd;
             break;
         case 0x2A:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vmul;
             break;
         case 0x2B:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vmax;
             break;
         case 0x2C:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vsub;
             break;
         case 0x2D:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vmsub;
             break;
         case 0x2E:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vopmsub;
             break;
         case 0x2F:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vmini;
             break;
         case 0x30:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_viadd;
             break;
         case 0x31:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_visub;
             break;
         case 0x32:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_viaddi;
             break;
         case 0x34:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_viand;
             break;
         case 0x35:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vior;
             break;
         case 0x38:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vcallms;
             break;
         case 0x39:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vcallmsr;
             break;
         case 0x3C:
@@ -1051,162 +1085,210 @@ void EmotionInterpreter::cop2_special2(EE_InstrInfo& info, uint32_t instruction)
         case 0x01:
         case 0x02:
         case 0x03:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vaddabc;
             break;
         case 0x04:
         case 0x05:
         case 0x06:
         case 0x07:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vsubabc;
             break;
         case 0x08:
         case 0x09:
         case 0x0A:
         case 0x0B:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vmaddabc;
             break;
         case 0x0C:
         case 0x0D:
         case 0x0E:
         case 0x0F:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vmsubabc;
             break;
         case 0x10:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vitof0;
             break;
         case 0x11:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vitof4;
             break;
         case 0x12:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vitof12;
             break;
         case 0x13:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vitof15;
             break;
         case 0x14:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vftoi0;
             break;
         case 0x15:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vftoi4;
             break;
         case 0x16:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vftoi12;
             break;
         case 0x17:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vftoi15;
             break;
         case 0x18:
         case 0x19:
         case 0x1A:
         case 0x1B:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vmulabc;
             break;
         case 0x1C:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vmulaq;
             break;
         case 0x1D:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vabs;
             break;
         case 0x1E:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vmulai;
             break;
         case 0x1F:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vclip;
             break;
         case 0x20:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vaddaq;
             break;
         case 0x21:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vmaddaq;
             break;
         case 0x22:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vaddai;
             break;
         case 0x23:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vmaddai;
             break;
         case 0x25:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vmsubaq;
             break;
         case 0x27:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vmsubai;
             break;
         case 0x28:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vadda;
             break;
         case 0x29:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vmadda;
             break;
         case 0x2A:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vmula;
             break;
         case 0x2C:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vsuba;
             break;
         case 0x2D:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vmsuba;
             break;
         case 0x2E:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vopmula;
             break;
         case 0x2F:
             /**
               * TODO: vnop?
               */
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vnop;
             break;
         case 0x30:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vmove;
             break;
         case 0x31:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vmr32;
             break;
         case 0x34:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vlqi;
             break;
         case 0x35:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vsqi;
             break;
         case 0x36:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vlqd;
             break;
         case 0x37:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vsqd;
             break;
         case 0x38:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vdiv;
             break;
         case 0x39:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vsqrt;
             break;
         case 0x3A:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vrsqrt;
             break;
         case 0x3B:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vwaitq;
             break;
         case 0x3C:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vmtir;
             break;
         case 0x3D:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vmfir;
             break;
         case 0x3E:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vilwr;
             break;
         case 0x3F:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_viswr;
             break;
         case 0x40:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vrnext;
             break;
         case 0x41:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vrget;
             break;
         case 0x42:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vrinit;
             break;
         case 0x43:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vrxor;
             break;
         default:
