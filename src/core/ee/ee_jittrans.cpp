@@ -42,9 +42,6 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
         uint32_t opcode = ee.read32(pc);
         std::vector<IR::Instruction> translated_instrs;
 
-        if (pc == 0x157544)
-            printf("nice");
-
         translate_op(opcode, pc, info, translated_instrs);
 
         ops_translated++;
@@ -364,16 +361,20 @@ bool EE_JitTranslator::check_mmi_combination(EE_InstrInfo::Pipeline pipeline1, E
 void EE_JitTranslator::load_store_analysis(std::vector<EE_InstrInfo>& instr_info)
 {
     // adds LOAD_STORE_BIAS to every load/store op (on top of the issue cycle cost)
-    const int LOAD_STORE_BIAS = 1;
+    // power of 2 fixed point with 8 bits for decimals
+    const int LOAD_STORE_BIAS = 0x100;
+    int sum = 0;
 
     for (EE_InstrInfo& info : instr_info)
     {
         if ((info.pipeline & EE_InstrInfo::Pipeline::LoadStore) == EE_InstrInfo::Pipeline::LoadStore)
         {
-            cycle_count += LOAD_STORE_BIAS;
-            info.cycles += LOAD_STORE_BIAS;
+            sum += LOAD_STORE_BIAS;
+            info.cycles += (LOAD_STORE_BIAS >> 8);
         }
     }
+
+    cycle_count += (sum >> 8);
 }
 
 void EE_JitTranslator::data_dependency_analysis(std::vector<EE_InstrInfo>& instr_info)
