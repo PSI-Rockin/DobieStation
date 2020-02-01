@@ -267,6 +267,10 @@ void EE_JitTranslator::issue_cycle_analysis(std::vector<EE_InstrInfo>& instr_inf
                 EE_DependencyInfo wdependency;
                 instr_info[i].get_dependency(wdependency, j, DependencyType::Write);
 
+                // Ignore GPR $zero
+                if (wdependency.type == RegType::GPR && wdependency.reg == EE_NormalReg::zero)
+                    continue;
+
                 // If a write dependency from instr_info[i] is found in the read dependencies for instr_info[i + 1], we can't dual issue
                 for (int k = 0; k < instr_info[i + 1].read_dependencies.size(); ++k)
                 {
