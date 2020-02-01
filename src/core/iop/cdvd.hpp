@@ -18,7 +18,8 @@ enum CDVD_STATUS
     STOPPED = 0x00,
     SPINNING = 0x02,
     READING = 0x06,
-    PAUSED = 0x0A
+    PAUSED = 0x0A,
+    SEEKING = 0x12
 };
 
 enum class NCOMMAND
