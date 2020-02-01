@@ -253,13 +253,6 @@ void EE_JitTranslator::issue_cycle_analysis(std::vector<EE_InstrInfo>& instr_inf
                     pipe2 = pipe.second;
             }
 
-            // If either instruction takes up both pipes (IntWide)
-            if (pipe1 == 2 || pipe2 == 2)
-            {
-                dual_issue = false;
-                goto analysis_end;
-            }
-
             // Check to see if we already have a pipeline match, or if they are both generic
             if (pipe1 == pipe2 && pipe1 != 3)
             {
