@@ -217,43 +217,49 @@ void EE_JitTranslator::issue_cycle_analysis(std::vector<EE_InstrInfo>& instr_inf
         // Try dual-issue
         if (instr_info.size() - i >= 2)
         {
-            // Check to see if we can't dual-issue MMI
-            if (instr_info[i].pipeline == EE_InstrInfo::Pipeline::IntWide)
+            // Check for pipeline conflicts
+            static std::pair<EE_InstrInfo::Pipeline, int> pipes[] =
             {
-                EE_InstrInfo::Pipeline pipe = instr_info[i + 1].pipeline;
+                {EE_InstrInfo::Pipeline::LoadStore, 1},
+                {EE_InstrInfo::Pipeline::LoadStore | EE_InstrInfo::Pipeline::COP1, 1},
+                {EE_InstrInfo::Pipeline::LoadStore | EE_InstrInfo::Pipeline::COP2, 1},
+                {EE_InstrInfo::Pipeline::COP0, 1},
+                {EE_InstrInfo::Pipeline::COP1, 0},
+                {EE_InstrInfo::Pipeline::COP2, 0},
+                {EE_InstrInfo::Pipeline::Int0, 0},
+                {EE_InstrInfo::Pipeline::Int1, 1},
+                {EE_InstrInfo::Pipeline::IntWide, 2},
+                {EE_InstrInfo::Pipeline::IntGeneric, 3},
+                {EE_InstrInfo::Pipeline::Branch, 3}
+            };
 
-                switch (pipe)
-                {
-                    case EE_InstrInfo::Pipeline::Int0:
-                    case EE_InstrInfo::Pipeline::Int1:
-                    case EE_InstrInfo::Pipeline::IntWide:
-                    case EE_InstrInfo::Pipeline::IntGeneric:
-                        dual_issue = false;
-                        break;
-                    default:
-                        break;
-                }
+            int pipe1;
+            int pipe2;
+
+            for (auto pipe : pipes)
+            {
+                if (instr_info[i].pipeline == pipe.first)
+                    pipe1 = pipe.second;
             }
-            if (instr_info[i + 1].pipeline == EE_InstrInfo::Pipeline::IntWide)
+            for (auto pipe : pipes)
             {
-                EE_InstrInfo::Pipeline pipe = instr_info[i].pipeline;
-
-                switch (pipe)
-                {
-                    case EE_InstrInfo::Pipeline::Int0:
-                    case EE_InstrInfo::Pipeline::Int1:
-                    case EE_InstrInfo::Pipeline::IntWide:
-                    case EE_InstrInfo::Pipeline::IntGeneric:
-                        dual_issue = false;
-                        break;
-                    default:
-                        break;
-                }
+                if (instr_info[i + 1].pipeline == pipe.first)
+                    pipe2 = pipe.second;
             }
 
-            // Can't dual-issue instructions with the same pipeline
-            if (instr_info[i].pipeline == instr_info[i + 1].pipeline && instr_info[i].pipeline != EE_InstrInfo::Pipeline::IntGeneric)
+            // If either instruction takes up both pipes (IntWide)
+            if (pipe1 == 2 || pipe2 == 2)
+            {
                 dual_issue = false;
+                goto analysis_end;
+            }
+
+            // We're good if the pipelines don't match or if one pipeline is generic
+            if (pipe1 == pipe2 && pipe1 != 3)
+            {
+                dual_issue = false;
+                goto analysis_end;
+            }
 
             // Check for data dependencies
             for (int j = 0; j < instr_info[i].write_dependencies.size() && dual_issue; ++j)
@@ -270,7 +276,7 @@ void EE_JitTranslator::issue_cycle_analysis(std::vector<EE_InstrInfo>& instr_inf
                     if (wdependency.type == rdependency.type && wdependency.reg == rdependency.reg)
                     {
                         dual_issue = false;
-                        break;
+                        goto analysis_end;
                     }
                 }
             }
@@ -278,6 +284,7 @@ void EE_JitTranslator::issue_cycle_analysis(std::vector<EE_InstrInfo>& instr_inf
         else
             dual_issue = false;
 
+        analysis_end:
         instr_info[i].cycles = cycle_count;
         
         if (dual_issue)
@@ -295,7 +302,7 @@ void EE_JitTranslator::load_store_analysis(std::vector<EE_InstrInfo>& instr_info
 
     for (EE_InstrInfo& info : instr_info)
     {
-        if (info.pipeline == EE_InstrInfo::Pipeline::LoadStore)
+        if ((info.pipeline & EE_InstrInfo::Pipeline::LoadStore) == EE_InstrInfo::Pipeline::LoadStore)
         {
             cycle_count += LOAD_STORE_BIAS;
             info.cycles += LOAD_STORE_BIAS;
