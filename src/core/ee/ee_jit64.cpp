@@ -527,154 +527,154 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             or_reg(ee, instr);
             break;
         case IR::Opcode::ParallelAbsoluteHalfword:
-            parallel_absolute_halfword(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelAbsoluteWord:
-            parallel_absolute_word(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelAnd:
-            parallel_and(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelAddByte:
-            parallel_add_byte(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelAddHalfword:
-            parallel_add_halfword(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelAddWord:
-            parallel_add_word(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelAddWithSignedSaturationByte:
-            parallel_add_with_signed_saturation_byte(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelAddWithSignedSaturationHalfword:
-            parallel_add_with_signed_saturation_halfword(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelAddWithSignedSaturationWord:
             fallback_interpreter(ee, instr); // TODO
             break;
         case IR::Opcode::ParallelAddWithUnsignedSaturationByte:
-            parallel_add_with_unsigned_saturation_byte(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, broken in YuGiOh Duelists of The Roses
             break;
         case IR::Opcode::ParallelAddWithUnsignedSaturationHalfword:
-            parallel_add_with_unsigned_saturation_halfword(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelAddWithUnsignedSaturationWord:
             fallback_interpreter(ee, instr); // TODO
             break;
         case IR::Opcode::ParallelCompareEqualByte:
-            parallel_compare_equal_byte(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelCompareEqualHalfword:
-            parallel_compare_equal_halfword(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelCompareEqualWord:
-            parallel_compare_equal_word(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelCompareGreaterThanByte:
-            parallel_compare_greater_than_byte(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelCompareGreaterThanHalfword:
-            parallel_compare_greater_than_halfword(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelCompareGreaterThanWord:
-            parallel_compare_greater_than_word(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelDivideWord:
-            parallel_divide_word(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelExchangeEvenHalfword:
-            parallel_exchange_halfword(ee, instr, true);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelExchangeCenterHalfword:
-            parallel_exchange_halfword(ee, instr, false);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelExchangeEvenWord:
-            parallel_exchange_word(ee, instr, true);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelExchangeCenterWord:
-            parallel_exchange_word(ee, instr, false);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelMaximizeHalfword:
-            parallel_maximize_halfword(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelMaximizeWord:
-            parallel_maximize_word(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelMinimizeHalfword:
-            parallel_minimize_halfword(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelMinimizeWord:
-            parallel_minimize_word(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelNor:
-            parallel_nor(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelOr:
-            parallel_or(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelPackToByte:
-            parallel_pack_to_byte(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelPackToHalfword:
-            parallel_pack_to_halfword(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelPackToWord:
-            parallel_pack_to_word(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelShiftLeftLogicalHalfword:
-            parallel_shift_left_logical_halfword(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelShiftLeftLogicalWord:
-            parallel_shift_left_logical_word(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelShiftRightArithmeticHalfword:
-            parallel_shift_right_arithmetic_halfword(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelShiftRightArithmeticWord:
-            parallel_shift_right_arithmetic_word(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelShiftRightLogicalHalfword:
-            parallel_shift_right_logical_halfword(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelShiftRightLogicalWord:
-            parallel_shift_right_logical_word(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelSubtractByte:
-            parallel_subtract_byte(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelSubtractHalfword:
-            parallel_subtract_halfword(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelSubtractWord:
-            parallel_subtract_word(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelSubtractWithSignedSaturationByte:
-            parallel_subtract_with_signed_saturation_byte(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelSubtractWithSignedSaturationHalfword:
-            parallel_subtract_with_signed_saturation_halfword(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelSubtractWithSignedSaturationWord:
             fallback_interpreter(ee, instr); // TODO
             break;
         case IR::Opcode::ParallelSubtractWithUnsignedSaturationByte:
-            parallel_subtract_with_unsigned_saturation_byte(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelSubtractWithUnsignedSaturationHalfword:
-            parallel_subtract_with_unsigned_saturation_halfword(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelReverseHalfword:
-            parallel_reverse_halfword(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelRotate3WordsLeft:
-            parallel_rotate_3_words_left(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelSubtractWithUnsignedSaturationWord:
             fallback_interpreter(ee, instr); // TODO
             break;
         case IR::Opcode::ParallelXor:
-            parallel_xor(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::SetOnLessThan:
             set_on_less_than(ee, instr);
