@@ -10,7 +10,7 @@ void EmotionInterpreter::mmi(EE_InstrInfo &info, uint32_t instruction)
     {
         case 0x00:
             info.interpreter_fn = &madd;
-            info.pipeline = EE_InstrInfo::Pipeline::Int0;
+            info.pipeline = EE_InstrInfo::Pipeline::MAC0;
             info.latency = 4;
             info.throughput = 2;
             info.instruction_type = EE_InstrInfo::InstructionType::MADD;
@@ -22,7 +22,7 @@ void EmotionInterpreter::mmi(EE_InstrInfo &info, uint32_t instruction)
             break;
         case 0x01:
             info.interpreter_fn = &maddu;
-            info.pipeline = EE_InstrInfo::Pipeline::Int0;
+            info.pipeline = EE_InstrInfo::Pipeline::MAC0;
             info.latency = 4;
             info.throughput = 2;
             info.instruction_type = EE_InstrInfo::InstructionType::MADD;
@@ -34,7 +34,7 @@ void EmotionInterpreter::mmi(EE_InstrInfo &info, uint32_t instruction)
             break;
         case 0x04:
             info.interpreter_fn = &plzcw;
-            info.pipeline = EE_InstrInfo::Pipeline::IntGeneric;
+            info.pipeline = EE_InstrInfo::Pipeline::LZC;
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
@@ -46,31 +46,31 @@ void EmotionInterpreter::mmi(EE_InstrInfo &info, uint32_t instruction)
             break;
         case 0x10:
             info.interpreter_fn = &mfhi1;
-            info.pipeline = EE_InstrInfo::Pipeline::Int1;
+            info.pipeline = EE_InstrInfo::Pipeline::MAC1;
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
             break;
         case 0x11:
             info.interpreter_fn = &mthi1;
-            info.pipeline = EE_InstrInfo::Pipeline::Int1;
+            info.pipeline = EE_InstrInfo::Pipeline::MAC1;
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x12:
             info.interpreter_fn = &mflo1;
-            info.pipeline = EE_InstrInfo::Pipeline::Int1;
+            info.pipeline = EE_InstrInfo::Pipeline::MAC1;
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::LO);
             break;
         case 0x13:
             info.interpreter_fn = &mtlo1;
-            info.pipeline = EE_InstrInfo::Pipeline::Int1;
+            info.pipeline = EE_InstrInfo::Pipeline::MAC1;
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO);
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x18:
             info.interpreter_fn = &mult1;
-            info.pipeline = EE_InstrInfo::Pipeline::Int1;
+            info.pipeline = EE_InstrInfo::Pipeline::MAC1;
             info.latency = 4;
             info.throughput = 2;
             info.instruction_type = EE_InstrInfo::InstructionType::MULT1;
@@ -82,7 +82,7 @@ void EmotionInterpreter::mmi(EE_InstrInfo &info, uint32_t instruction)
             break;
         case 0x19:
             info.interpreter_fn = &multu1;
-            info.pipeline = EE_InstrInfo::Pipeline::Int1;
+            info.pipeline = EE_InstrInfo::Pipeline::MAC1;
             info.latency = 4;
             info.throughput = 2;
             info.instruction_type = EE_InstrInfo::InstructionType::MULT1;
@@ -94,7 +94,7 @@ void EmotionInterpreter::mmi(EE_InstrInfo &info, uint32_t instruction)
             break;
         case 0x1A:
             info.interpreter_fn = &div1;
-            info.pipeline = EE_InstrInfo::Pipeline::Int1;
+            info.pipeline = EE_InstrInfo::Pipeline::MAC1;
             info.latency = 37;
             info.throughput = 37;
             info.instruction_type = EE_InstrInfo::InstructionType::DIV1;
@@ -105,7 +105,7 @@ void EmotionInterpreter::mmi(EE_InstrInfo &info, uint32_t instruction)
             break;
         case 0x1B:
             info.interpreter_fn = &divu1;
-            info.pipeline = EE_InstrInfo::Pipeline::Int1;
+            info.pipeline = EE_InstrInfo::Pipeline::MAC1;
             info.latency = 37;
             info.throughput = 37;
             info.instruction_type = EE_InstrInfo::InstructionType::DIV1;
@@ -116,7 +116,7 @@ void EmotionInterpreter::mmi(EE_InstrInfo &info, uint32_t instruction)
             break;
         case 0x20:
             info.interpreter_fn = &madd1;
-            info.pipeline = EE_InstrInfo::Pipeline::Int1;
+            info.pipeline = EE_InstrInfo::Pipeline::MAC1;
             info.latency = 4;
             info.throughput = 2;
             info.instruction_type = EE_InstrInfo::InstructionType::MADD;
@@ -128,7 +128,7 @@ void EmotionInterpreter::mmi(EE_InstrInfo &info, uint32_t instruction)
             break;
         case 0x21:
             info.interpreter_fn = &maddu1;
-            info.pipeline = EE_InstrInfo::Pipeline::Int1;
+            info.pipeline = EE_InstrInfo::Pipeline::MAC1;
             info.latency = 4;
             info.throughput = 2;
             info.instruction_type = EE_InstrInfo::InstructionType::MADD;

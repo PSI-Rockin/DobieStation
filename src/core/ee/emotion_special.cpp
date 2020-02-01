@@ -81,29 +81,29 @@ void EmotionInterpreter::special(EE_InstrInfo &info, uint32_t instruction)
         case 0x0F:
             // SYNC
             info.interpreter_fn = &nop;
-            info.pipeline = EE_InstrInfo::Pipeline::COP0;
+            info.pipeline = EE_InstrInfo::Pipeline::SYNC;
             break;
         case 0x10:
             info.interpreter_fn = &mfhi;
-            info.pipeline = EE_InstrInfo::Pipeline::Int0;
+            info.pipeline = EE_InstrInfo::Pipeline::MAC0;
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
             break;
         case 0x11:
             info.interpreter_fn = &mthi;
-            info.pipeline = EE_InstrInfo::Pipeline::Int0;
+            info.pipeline = EE_InstrInfo::Pipeline::MAC0;
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x12:
             info.interpreter_fn = &mflo;
-            info.pipeline = EE_InstrInfo::Pipeline::Int0;
+            info.pipeline = EE_InstrInfo::Pipeline::MAC0;
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::LO);
             break;
         case 0x13:
             info.interpreter_fn = &mtlo;
-            info.pipeline = EE_InstrInfo::Pipeline::Int0;
+            info.pipeline = EE_InstrInfo::Pipeline::MAC0;
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
@@ -130,7 +130,7 @@ void EmotionInterpreter::special(EE_InstrInfo &info, uint32_t instruction)
             break;
         case 0x18:
             info.interpreter_fn = &mult;
-            info.pipeline = EE_InstrInfo::Pipeline::Int0;
+            info.pipeline = EE_InstrInfo::Pipeline::MAC0;
             info.throughput = 2;
             info.latency = 4;
             info.instruction_type = EE_InstrInfo::InstructionType::MULT;
@@ -142,7 +142,7 @@ void EmotionInterpreter::special(EE_InstrInfo &info, uint32_t instruction)
             break;
         case 0x19:
             info.interpreter_fn = &multu;
-            info.pipeline = EE_InstrInfo::Pipeline::Int0;
+            info.pipeline = EE_InstrInfo::Pipeline::MAC0;
             info.throughput = 2;
             info.latency = 4;
             info.instruction_type = EE_InstrInfo::InstructionType::MULT;
@@ -154,7 +154,7 @@ void EmotionInterpreter::special(EE_InstrInfo &info, uint32_t instruction)
             break;
         case 0x1A:
             info.interpreter_fn = &div;
-            info.pipeline = EE_InstrInfo::Pipeline::Int0;
+            info.pipeline = EE_InstrInfo::Pipeline::MAC0;
             info.throughput = 37;
             info.latency = 37;
             info.instruction_type = EE_InstrInfo::InstructionType::DIV;
@@ -165,7 +165,7 @@ void EmotionInterpreter::special(EE_InstrInfo &info, uint32_t instruction)
             break;
         case 0x1B:
             info.interpreter_fn = &divu;
-            info.pipeline = EE_InstrInfo::Pipeline::Int0;
+            info.pipeline = EE_InstrInfo::Pipeline::MAC0;
             info.throughput = 37;
             info.latency = 37;
             info.instruction_type = EE_InstrInfo::InstructionType::DIV;
@@ -232,13 +232,13 @@ void EmotionInterpreter::special(EE_InstrInfo &info, uint32_t instruction)
             break;
         case 0x28:
             info.interpreter_fn = &mfsa;
-            info.pipeline = EE_InstrInfo::Pipeline::COP0;
+            info.pipeline = EE_InstrInfo::Pipeline::SA;
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::SA);
             break;
         case 0x29:
             info.interpreter_fn = &mtsa;
-            info.pipeline = EE_InstrInfo::Pipeline::COP0;
+            info.pipeline = EE_InstrInfo::Pipeline::SA;
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::SA);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;

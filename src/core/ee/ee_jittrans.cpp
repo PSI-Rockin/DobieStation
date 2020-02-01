@@ -220,6 +220,12 @@ void EE_JitTranslator::issue_cycle_analysis(std::vector<EE_InstrInfo>& instr_inf
             // Check for pipeline conflicts
             const static std::pair<EE_InstrInfo::Pipeline, int> pipes[] =
             {
+                {EE_InstrInfo::Pipeline::ERET, 1},
+                {EE_InstrInfo::Pipeline::SYNC, 1},
+                {EE_InstrInfo::Pipeline::LZC, 1},
+                {EE_InstrInfo::Pipeline::MAC1, 1},
+                {EE_InstrInfo::Pipeline::SA, 0},
+                {EE_InstrInfo::Pipeline::MAC0, 0},
                 {EE_InstrInfo::Pipeline::LoadStore, 1},
                 {EE_InstrInfo::Pipeline::LoadStore | EE_InstrInfo::Pipeline::COP1, 1},
                 {EE_InstrInfo::Pipeline::LoadStore | EE_InstrInfo::Pipeline::COP2, 1},
@@ -254,8 +260,15 @@ void EE_JitTranslator::issue_cycle_analysis(std::vector<EE_InstrInfo>& instr_inf
                 goto analysis_end;
             }
 
-            // We're good if the pipelines don't match or if one pipeline is generic
+            // Check to see if we already have a pipeline match, or if they are both generic
             if (pipe1 == pipe2 && pipe1 != 3)
+            {
+                dual_issue = false;
+                goto analysis_end;
+            }
+
+            // Manually check all pipelines for incompatible dual-issue
+            if (!check_pipeline_combination(instr_info[i].pipeline, instr_info[i + 1].pipeline))
             {
                 dual_issue = false;
                 goto analysis_end;
@@ -297,6 +310,63 @@ void EE_JitTranslator::issue_cycle_analysis(std::vector<EE_InstrInfo>& instr_inf
         ++cycle_count;
     }
 
+}
+
+bool EE_JitTranslator::check_pipeline_combination(EE_InstrInfo::Pipeline pipeline1, EE_InstrInfo::Pipeline pipeline2)
+{
+    // If both are COP1 (COP1 Move and COP1 operate) combination is invalid
+    if ((int)(pipeline1 & EE_InstrInfo::Pipeline::COP1) != 0 && (int)(pipeline2 & EE_InstrInfo::Pipeline::COP1) != 0)
+        return false;
+
+    // If both are COP2 (COP2 Move and COP2 operate) combination is invalid
+    if ((int)(pipeline1 & EE_InstrInfo::Pipeline::COP2) != 0 && (int)(pipeline2 & EE_InstrInfo::Pipeline::COP2) != 0)
+        return false;
+
+    // If both are branch combination is invalid
+    if (pipeline1 == pipeline2 && pipeline1 == EE_InstrInfo::Pipeline::Branch)
+        return false;
+
+    // Check for invalid combination with ERET
+    if (!check_eret_combination(pipeline1, pipeline2))
+        return false;
+
+    // Check for invalid combination with MMI
+    if (!check_mmi_combination(pipeline1, pipeline2))
+        return false;
+}
+
+bool EE_JitTranslator::check_eret_combination(EE_InstrInfo::Pipeline pipeline1, EE_InstrInfo::Pipeline pipeline2)
+{
+    if (pipeline1 == EE_InstrInfo::Pipeline::ERET)
+        return pipeline2 != EE_InstrInfo::Pipeline::Branch;
+
+    if (pipeline1 == EE_InstrInfo::Pipeline::Branch)
+        return pipeline2 != EE_InstrInfo::Pipeline::ERET;
+
+    return true;
+}
+
+bool EE_JitTranslator::check_mmi_combination(EE_InstrInfo::Pipeline pipeline1, EE_InstrInfo::Pipeline pipeline2)
+{
+    if (pipeline1 == EE_InstrInfo::Pipeline::IntWide)
+    {
+        return pipeline2 != EE_InstrInfo::Pipeline::Int0 &&
+               pipeline2 != EE_InstrInfo::Pipeline::Int1 &&
+               pipeline2 != EE_InstrInfo::Pipeline::IntWide &&
+               pipeline2 != EE_InstrInfo::Pipeline::IntGeneric &&
+               pipeline2 != EE_InstrInfo::Pipeline::MAC1;
+    }
+
+    if (pipeline2 == EE_InstrInfo::Pipeline::IntWide)
+    {
+        return pipeline1 != EE_InstrInfo::Pipeline::Int0 &&
+               pipeline1 != EE_InstrInfo::Pipeline::Int1 &&
+               pipeline1 != EE_InstrInfo::Pipeline::IntWide &&
+               pipeline1 != EE_InstrInfo::Pipeline::IntGeneric &&
+               pipeline1 != EE_InstrInfo::Pipeline::MAC1;
+    }
+
+    return true;
 }
 
 void EE_JitTranslator::load_store_analysis(std::vector<EE_InstrInfo>& instr_info)

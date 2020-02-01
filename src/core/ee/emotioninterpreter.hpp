@@ -109,7 +109,25 @@ struct EE_InstrInfo
         COP1 = 0x40,
 
         //COP2
-        COP2 = 0x80
+        COP2 = 0x80,
+
+        // SA operations
+        SA = 0x100,
+
+        // ERET
+        ERET = 0x200,
+
+        // SYNC
+        SYNC = 0x400,
+
+        // LZC
+        LZC = 0x800,
+
+        // MAC0, e.g. mult, div, madd
+        MAC0 = 0x1000,
+
+        // MAC1, e.g. mult1, div1, madd1
+        MAC1 = 0x2000,
     };
 
     friend Pipeline operator& (Pipeline x, Pipeline y)

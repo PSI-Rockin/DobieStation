@@ -365,13 +365,13 @@ void EmotionInterpreter::regimm(EE_InstrInfo &info, uint32_t instruction)
             break;
         case 0x18:
             info.interpreter_fn = &mtsab;
-            info.pipeline = EE_InstrInfo::Pipeline::IntGeneric;
+            info.pipeline = EE_InstrInfo::Pipeline::SA;
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::SA);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x19:
             info.interpreter_fn = &mtsah;
-            info.pipeline = EE_InstrInfo::Pipeline::IntGeneric;
+            info.pipeline = EE_InstrInfo::Pipeline::SA;
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::SA);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
@@ -1053,7 +1053,7 @@ void EmotionInterpreter::cop(EE_InstrInfo& info, uint32_t instruction)
                     break;
                 case 0x18:
                     info.interpreter_fn = &eret;
-                    info.pipeline = EE_InstrInfo::Pipeline::COP0;
+                    info.pipeline = EE_InstrInfo::Pipeline::ERET;
                     break;
                 case 0x38:
                     info.interpreter_fn = &ei;

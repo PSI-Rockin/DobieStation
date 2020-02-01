@@ -83,6 +83,9 @@ private:
     void get_block_operations(std::vector<EE_InstrInfo>& dest, EmotionEngine& cpu, uint32_t pc);
 
     void issue_cycle_analysis(std::vector<EE_InstrInfo>& instr_info);
+    bool check_pipeline_combination(EE_InstrInfo::Pipeline pipeline1, EE_InstrInfo::Pipeline pipeline2);
+    bool check_eret_combination(EE_InstrInfo::Pipeline pipeline1, EE_InstrInfo::Pipeline pipeline2);
+    bool check_mmi_combination(EE_InstrInfo::Pipeline pipeline1, EE_InstrInfo::Pipeline pipeline2);
     void load_store_analysis(std::vector<EE_InstrInfo>& instr_info);
     void data_dependency_analysis(std::vector<EE_InstrInfo>& instr_info);
 
