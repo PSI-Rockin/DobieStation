@@ -41,6 +41,10 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
     {
         uint32_t opcode = ee.read32(pc);
         std::vector<IR::Instruction> translated_instrs;
+
+        if (pc == 0x157544)
+            printf("nice");
+
         translate_op(opcode, pc, info, translated_instrs);
 
         ops_translated++;
