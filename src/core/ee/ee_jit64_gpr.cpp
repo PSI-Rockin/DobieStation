@@ -92,8 +92,7 @@ void EE_JIT64::branch_cop0(EmotionEngine& ee, IR::Instruction &instr)
     emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
     emitter.MOV32_REG_IMM(instr.get_jump_dest(), R15);
     emitter.CMOVCC32_REG(ConditionCode::E, R15, REG_64::RAX);
-    emitter.load_addr((uint64_t)&ee.PC, R15);
-    emitter.MOV32_TO_MEM(REG_64::RAX, R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15, offsetof(EmotionEngine, PC));
 
     if (instr.get_is_likely())
     {
@@ -101,8 +100,7 @@ void EE_JIT64::branch_cop0(EmotionEngine& ee, IR::Instruction &instr)
 
         // Use the result of the FLAGS register from the last compare to set branch_on,
         // this boolean is used in handle_likely_branch
-        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-        emitter.SETCC_MEM(ConditionCode::E, REG_64::RAX);
+        emitter.SETCC_MEM(ConditionCode::E, REG_64::R15, offsetof(EmotionEngine, branch_on));
     }
     free_int_reg(ee, R15);
 }
@@ -119,8 +117,7 @@ void EE_JIT64::branch_cop1(EmotionEngine& ee, IR::Instruction &instr)
     emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
     emitter.MOV32_REG_IMM(instr.get_jump_dest(), R15);
     emitter.CMOVCC32_REG(ConditionCode::E, R15, REG_64::RAX);
-    emitter.load_addr((uint64_t)&ee.PC, R15);
-    emitter.MOV32_TO_MEM(REG_64::RAX, R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15, offsetof(EmotionEngine, PC));
 
     if (instr.get_is_likely())
     {
@@ -128,8 +125,7 @@ void EE_JIT64::branch_cop1(EmotionEngine& ee, IR::Instruction &instr)
 
         // Use the result of the FLAGS register from the last compare to set branch_on,
         // this boolean is used in handle_likely_branch
-        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-        emitter.SETCC_MEM(ConditionCode::E, REG_64::RAX);
+        emitter.SETCC_MEM(ConditionCode::E, REG_64::R15, offsetof(EmotionEngine, branch_on));
     }
     free_int_reg(ee, R15);
 }
@@ -146,8 +142,7 @@ void EE_JIT64::branch_cop2(EmotionEngine& ee, IR::Instruction &instr)
     emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
     emitter.MOV32_REG_IMM(instr.get_jump_dest(), R15);
     emitter.CMOVCC32_REG(ConditionCode::E, R15, REG_64::RAX);
-    emitter.load_addr((uint64_t)&ee.PC, R15);
-    emitter.MOV32_TO_MEM(REG_64::RAX, R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15, offsetof(EmotionEngine, PC));
 
     if (instr.get_is_likely())
     {
@@ -155,8 +150,7 @@ void EE_JIT64::branch_cop2(EmotionEngine& ee, IR::Instruction &instr)
 
         // Use the result of the FLAGS register from the last compare to set branch_on,
         // this boolean is used in handle_likely_branch
-        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-        emitter.SETCC_MEM(ConditionCode::E, REG_64::RAX);
+        emitter.SETCC_MEM(ConditionCode::E, REG_64::R15, offsetof(EmotionEngine, branch_on));
     }
     free_int_reg(ee, R15);
 }
@@ -175,8 +169,7 @@ void EE_JIT64::branch_equal(EmotionEngine& ee, IR::Instruction &instr)
     emitter.MOV32_REG_IMM(instr.get_jump_dest(), R15);
     emitter.CMP64_REG(op2, op1);
     emitter.CMOVCC32_REG(ConditionCode::E, R15, REG_64::RAX);
-    emitter.load_addr((uint64_t)&ee.PC, R15);
-    emitter.MOV32_TO_MEM(REG_64::RAX, R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15, offsetof(EmotionEngine, PC));
 
     if (instr.get_is_likely())
     {
@@ -184,8 +177,7 @@ void EE_JIT64::branch_equal(EmotionEngine& ee, IR::Instruction &instr)
 
         // Use the result of the FLAGS register from the last compare to set branch_on,
         // this boolean is used in handle_likely_branch
-        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-        emitter.SETCC_MEM(ConditionCode::E, REG_64::RAX);
+        emitter.SETCC_MEM(ConditionCode::E, REG_64::R15, offsetof(EmotionEngine, branch_on));
     }
 
     // Free scratchpad registers
@@ -205,8 +197,7 @@ void EE_JIT64::branch_equal_zero(EmotionEngine& ee, IR::Instruction &instr)
     emitter.MOV32_REG_IMM(instr.get_jump_dest(), R15);
     emitter.TEST64_REG(op1, op1);
     emitter.CMOVCC32_REG(ConditionCode::Z, R15, REG_64::RAX);
-    emitter.load_addr((uint64_t)&ee.PC, R15);
-    emitter.MOV32_TO_MEM(REG_64::RAX, R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15, offsetof(EmotionEngine, PC));
 
     if (instr.get_is_likely())
     {
@@ -214,8 +205,7 @@ void EE_JIT64::branch_equal_zero(EmotionEngine& ee, IR::Instruction &instr)
 
         // Use the result of the FLAGS register from the last compare to set branch_on,
         // this boolean is used in handle_likely_branch
-        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-        emitter.SETCC_MEM(ConditionCode::Z, REG_64::RAX);
+        emitter.SETCC_MEM(ConditionCode::Z, REG_64::R15, offsetof(EmotionEngine, branch_on));
     }
 
     // Free scratchpad registers
@@ -233,8 +223,7 @@ void EE_JIT64::branch_greater_than_or_equal_zero(EmotionEngine& ee, IR::Instruct
     if (instr.get_is_link())
     {
         // Set the link register
-        emitter.load_addr((uint64_t)get_gpr_addr(ee, EE_NormalReg::ra), REG_64::RAX);
-        emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::RAX);
+        emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::R15, offsetof(EmotionEngine, gpr) + get_gpr_offset(EE_NormalReg::ra));
     }
 
     // Conditionally move the success or failure destination into ee.PC
@@ -242,8 +231,7 @@ void EE_JIT64::branch_greater_than_or_equal_zero(EmotionEngine& ee, IR::Instruct
     emitter.MOV32_REG_IMM(instr.get_jump_dest(), R15);
     emitter.TEST64_REG(op1, op1);
     emitter.CMOVCC32_REG(ConditionCode::NS, R15, REG_64::RAX);
-    emitter.load_addr((uint64_t)&ee.PC, R15);
-    emitter.MOV32_TO_MEM(REG_64::RAX, R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15, offsetof(EmotionEngine, PC));
 
     if (instr.get_is_likely())
     {
@@ -251,8 +239,7 @@ void EE_JIT64::branch_greater_than_or_equal_zero(EmotionEngine& ee, IR::Instruct
 
         // Use the result of the FLAGS register from the last compare to set branch_on,
         // this boolean is used in handle_likely_branch
-        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-        emitter.SETCC_MEM(ConditionCode::NS, REG_64::RAX);
+        emitter.SETCC_MEM(ConditionCode::NS, REG_64::R15, offsetof(EmotionEngine, branch_on));
     }
 
     // Free scratchpad registers
@@ -272,8 +259,7 @@ void EE_JIT64::branch_greater_than_zero(EmotionEngine& ee, IR::Instruction &inst
     emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
     emitter.MOV32_REG_IMM(instr.get_jump_dest(), R15);
     emitter.CMOVCC32_REG(ConditionCode::G, R15, REG_64::RAX);
-    emitter.load_addr((uint64_t)&ee.PC, R15);
-    emitter.MOV32_TO_MEM(REG_64::RAX, R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15, offsetof(EmotionEngine, PC));
 
     if (instr.get_is_likely())
     {
@@ -281,8 +267,7 @@ void EE_JIT64::branch_greater_than_zero(EmotionEngine& ee, IR::Instruction &inst
 
         // Use the result of the FLAGS register from the last compare to set branch_on,
         // this boolean is used in handle_likely_branch
-        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-        emitter.SETCC_MEM(ConditionCode::G, REG_64::RAX);
+        emitter.SETCC_MEM(ConditionCode::G, REG_64::R15, offsetof(EmotionEngine, branch_on));
     }
 
     // Free scratchpad registers
@@ -302,8 +287,7 @@ void EE_JIT64::branch_less_than_or_equal_zero(EmotionEngine& ee, IR::Instruction
     emitter.MOV32_REG_IMM(instr.get_jump_fail_dest(), REG_64::RAX);
     emitter.MOV32_REG_IMM(instr.get_jump_dest(), R15);
     emitter.CMOVCC32_REG(ConditionCode::LE, R15, REG_64::RAX);
-    emitter.load_addr((uint64_t)&ee.PC, R15);
-    emitter.MOV32_TO_MEM(REG_64::RAX, R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15, offsetof(EmotionEngine, PC));
 
     if (instr.get_is_likely())
     {
@@ -311,8 +295,7 @@ void EE_JIT64::branch_less_than_or_equal_zero(EmotionEngine& ee, IR::Instruction
 
         // Use the result of the FLAGS register from the last compare to set branch_on,
         // this boolean is used in handle_likely_branch
-        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-        emitter.SETCC_MEM(ConditionCode::LE, REG_64::RAX);
+        emitter.SETCC_MEM(ConditionCode::LE, REG_64::R15, offsetof(EmotionEngine, branch_on));
     }
 
     // Free scratchpad registers
@@ -330,8 +313,7 @@ void EE_JIT64::branch_less_than_zero(EmotionEngine& ee, IR::Instruction &instr)
     if (instr.get_is_link())
     {
         // Set the link register
-        emitter.load_addr((uint64_t)get_gpr_addr(ee, EE_NormalReg::ra), REG_64::RAX);
-        emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::RAX);
+        emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::R15, offsetof(EmotionEngine, gpr) + get_gpr_offset(EE_NormalReg::ra));
     }
 
     // Conditionally move the success or failure destination into ee.PC
@@ -339,8 +321,7 @@ void EE_JIT64::branch_less_than_zero(EmotionEngine& ee, IR::Instruction &instr)
     emitter.MOV32_REG_IMM(instr.get_jump_dest(), R15);
     emitter.TEST64_REG(op1, op1);
     emitter.CMOVCC32_REG(ConditionCode::S, R15, REG_64::RAX);
-    emitter.load_addr((uint64_t)&ee.PC, R15);
-    emitter.MOV32_TO_MEM(REG_64::RAX, R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15, offsetof(EmotionEngine, PC));
 
     if (instr.get_is_likely())
     {
@@ -348,8 +329,7 @@ void EE_JIT64::branch_less_than_zero(EmotionEngine& ee, IR::Instruction &instr)
 
         // Use the result of the FLAGS register from the last compare to set branch_on,
         // this boolean is used in handle_likely_branch
-        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-        emitter.SETCC_MEM(ConditionCode::S, REG_64::RAX);
+        emitter.SETCC_MEM(ConditionCode::S, REG_64::R15, offsetof(EmotionEngine, branch_on));
     }
 
     // Free scratchpad registers
@@ -371,8 +351,7 @@ void EE_JIT64::branch_not_equal(EmotionEngine& ee, IR::Instruction &instr)
     emitter.MOV32_REG_IMM(instr.get_jump_dest(), R15);
     emitter.CMP64_REG(op2, op1);
     emitter.CMOVCC32_REG(ConditionCode::NE, R15, REG_64::RAX);
-    emitter.load_addr((uint64_t)&ee.PC, R15);
-    emitter.MOV32_TO_MEM(REG_64::RAX, R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15, offsetof(EmotionEngine, PC));
 
     if (instr.get_is_likely())
     {
@@ -380,8 +359,7 @@ void EE_JIT64::branch_not_equal(EmotionEngine& ee, IR::Instruction &instr)
 
         // Use the result of the FLAGS register from the last compare to set branch_on,
         // this boolean is used in handle_likely_branch
-        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-        emitter.SETCC_MEM(ConditionCode::NE, REG_64::RAX);
+        emitter.SETCC_MEM(ConditionCode::NE, REG_64::R15, offsetof(EmotionEngine, branch_on));
     }
 
     // Free scratchpad registers
@@ -401,8 +379,7 @@ void EE_JIT64::branch_not_equal_zero(EmotionEngine& ee, IR::Instruction &instr)
     emitter.MOV32_REG_IMM(instr.get_jump_dest(), R15);
     emitter.TEST64_REG(op1, op1);
     emitter.CMOVCC32_REG(ConditionCode::NZ, R15, REG_64::RAX);
-    emitter.load_addr((uint64_t)&ee.PC, R15);
-    emitter.MOV32_TO_MEM(REG_64::RAX, R15);
+    emitter.MOV32_TO_MEM(REG_64::RAX, REG_64::R15, offsetof(EmotionEngine, PC));
 
     if (instr.get_is_likely())
     {
@@ -410,8 +387,7 @@ void EE_JIT64::branch_not_equal_zero(EmotionEngine& ee, IR::Instruction &instr)
 
         // Use the result of the FLAGS register from the last compare to set branch_on,
         // this boolean is used in handle_likely_branch
-        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-        emitter.SETCC_MEM(ConditionCode::NZ, REG_64::RAX);
+        emitter.SETCC_MEM(ConditionCode::NZ, REG_64::R15, offsetof(EmotionEngine, branch_on));
     }
 
     // Free scratchpad registers
@@ -654,14 +630,12 @@ void EE_JIT64::exception_return(EmotionEngine& ee, IR::Instruction& instr)
 void EE_JIT64::jump(EmotionEngine& ee, IR::Instruction& instr)
 {
     // Simply set the PC
-    emitter.load_addr((uint64_t)&ee.PC, REG_64::RAX);
-    emitter.MOV32_IMM_MEM(instr.get_jump_dest(), REG_64::RAX);
+    emitter.MOV32_IMM_MEM(instr.get_jump_dest(), REG_64::R15, offsetof(EmotionEngine, PC));
 
     if (instr.get_is_link())
     {
         // Set the link register
-        emitter.load_addr((uint64_t)get_gpr_addr(ee, EE_NormalReg::ra), REG_64::RAX);
-        emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::RAX);
+        emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::R15, offsetof(EmotionEngine, gpr) + get_gpr_offset(EE_NormalReg::ra));
     }
 
     // Only set in inane bnel, r1, r1, label instructions...
@@ -671,8 +645,7 @@ void EE_JIT64::jump(EmotionEngine& ee, IR::Instruction& instr)
 
         // Use the result of the FLAGS register from the last compare to set branch_on,
         // this boolean is used in handle_likely_branch
-        emitter.load_addr((uint64_t)&ee.branch_on, REG_64::RAX);
-        emitter.MOV8_IMM_MEM(true, REG_64::RAX);
+        emitter.MOV8_IMM_MEM(true, REG_64::R15, offsetof(EmotionEngine, branch_on));
     }
 }
 
@@ -681,14 +654,12 @@ void EE_JIT64::jump_indirect(EmotionEngine& ee, IR::Instruction& instr)
     REG_64 jump_dest = alloc_reg(ee, instr.get_source(), REG_TYPE::GPR, REG_STATE::READ);
 
     // Simply set the PC
-    emitter.load_addr((uint64_t)&ee.PC, REG_64::RAX);
-    emitter.MOV32_TO_MEM(jump_dest, REG_64::RAX);
+    emitter.MOV32_TO_MEM(jump_dest, REG_64::R15, offsetof(EmotionEngine, PC));
 
     if (instr.get_is_link())
     {
         // Set the link register
-        emitter.load_addr((uint64_t)get_gpr_addr(ee, (EE_NormalReg)instr.get_dest()), REG_64::RAX);
-        emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::RAX);
+        emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::R15, offsetof(EmotionEngine, gpr) + get_gpr_offset(EE_NormalReg::ra));
     }
 }
 

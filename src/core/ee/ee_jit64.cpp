@@ -1373,8 +1373,15 @@ void EE_JIT64::flush_int_reg(EmotionEngine& ee, int reg)
                 // old_int_reg = $zero, which should never be flushed
                 if (!old_int_reg)
                     break;
-                emitter.load_addr((uint64_t)get_gpr_addr(ee, old_int_reg), REG_64::RAX);
-                emitter.MOV64_TO_MEM((REG_64)reg, REG_64::RAX);
+                if (old_int_reg < 32)
+                {
+                    emitter.MOV64_TO_MEM((REG_64)reg, REG_64::R15, offsetof(EmotionEngine, gpr) + get_gpr_offset(old_int_reg));
+                }
+                else
+                {
+                    emitter.load_addr((uint64_t)get_gpr_addr(ee, old_int_reg), REG_64::RAX);
+                    emitter.MOV64_TO_MEM((REG_64)reg, REG_64::RAX);
+                }
                 break;
             case REG_TYPE::VI:
                 emitter.load_addr((uint64_t)get_vi_addr(ee, old_int_reg), REG_64::RAX);
@@ -1501,6 +1508,14 @@ uint64_t EE_JIT64::get_gpr_addr(const EmotionEngine &ee, int index) const
             Errors::die("[EE_JIT64] get_gpr_addr error: Unrecognized reg %d", index);
     }
     return 0;
+}
+
+uint64_t EE_JIT64::get_gpr_offset(int index) const
+{
+    if (index < 32)
+        return index * sizeof(uint128_t);
+    else
+        Errors::die("EE_JIT64::get_gpr_offset not supported for special registers");
 }
 
 void EE_JIT64::cleanup_recompiler(EmotionEngine& ee, bool clear_regs, uint32_t cycles)

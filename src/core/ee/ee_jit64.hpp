@@ -293,6 +293,7 @@ private:
 
     // Address lookup
     uint64_t get_gpr_addr(const EmotionEngine &ee, int index) const;
+    uint64_t get_gpr_offset(int index) const;
     uint64_t get_vi_addr(const EmotionEngine &ee, int index) const;
     uint64_t get_fpu_addr(const EmotionEngine &ee, int index) const;
     uint64_t get_vf_addr(const EmotionEngine &ee, int index) const;
