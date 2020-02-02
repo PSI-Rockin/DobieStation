@@ -310,7 +310,7 @@ private:
     void emit_dispatcher();
     void emit_instruction(EmotionEngine &ee, IR::Instruction &instr);
     EEJitBlockRecord* recompile_block(EmotionEngine& ee, IR::Block& block);
-    void cleanup_recompiler(EmotionEngine& ee, bool clear_regs);
+    void cleanup_recompiler(EmotionEngine& ee, bool clear_regs, uint32_t cycles);
     void emit_epilogue();
 public:
     EE_JIT64();

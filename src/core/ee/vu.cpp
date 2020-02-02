@@ -162,8 +162,8 @@ void VectorUnit::reset()
     PC = 0;
     //cycle_count = 1; //Set to 1 to prevent spurious events from occurring during execution
     if(!id)
-        eecpu->set_cop2_last_cycle(eecpu->get_cycle_count());
-    cycle_count = eecpu->get_cycle_count();
+        eecpu->set_cop2_last_cycle(eecpu->get_cycle_count_now());
+    cycle_count = eecpu->get_cycle_count_now();
     run_event = cycle_count;
     running = false;
     tbit_stop = false;
@@ -289,7 +289,7 @@ void VectorUnit::run(int cycles)
 
     if (running && !id)
     {
-        cycles_to_run = (eecpu->get_cycle_count() - eecpu->get_cop2_last_cycle());
+        cycles_to_run = (eecpu->get_cycle_count_now() - eecpu->get_cop2_last_cycle());
         if (cycles_to_run > 0)
             eecpu->set_cop2_last_cycle(eecpu->get_cop2_last_cycle() + cycles_to_run);
         else
@@ -928,7 +928,7 @@ void VectorUnit::start_program(uint32_t addr)
         //TODO: Account for VIF0 MSCAL timing
         if (!id)
         {
-            eecpu->set_cop2_last_cycle(eecpu->get_cycle_count());
+            eecpu->set_cop2_last_cycle(eecpu->get_cycle_count_now());
         }
         cycle_count = eecpu->get_cycle_count();
         flush_pipes();

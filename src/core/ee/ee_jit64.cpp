@@ -236,9 +236,6 @@ EEJitBlockRecord* EE_JIT64::recompile_block(EmotionEngine& ee, IR::Block& block)
     // An extra 0x8 is needed so that functions we call can have a 16-byte aligned stack pointer.
     emitter.SUB64_REG_IMM(0x1B8, REG_64::RSP);
 
-    //Update EE cycle count
-    emitter.SUB32_MEM_IMM(block.get_cycle_count(), REG_64::R15, offsetof(EmotionEngine, cycles_to_run));
-
     while (block.get_instruction_count() > 0 && !likely_branch)
     {
         IR::Instruction instr = block.get_next_instr();
@@ -248,7 +245,7 @@ EEJitBlockRecord* EE_JIT64::recompile_block(EmotionEngine& ee, IR::Block& block)
     if (likely_branch)
         handle_branch_likely(ee, block);
     else
-        cleanup_recompiler(ee, true);
+        cleanup_recompiler(ee, true, block.get_cycle_count());
 
     return jit_heap.insert_block(ee.get_PC(), &jit_block);
 }
@@ -1506,7 +1503,7 @@ uint64_t EE_JIT64::get_gpr_addr(const EmotionEngine &ee, int index) const
     return 0;
 }
 
-void EE_JIT64::cleanup_recompiler(EmotionEngine& ee, bool clear_regs)
+void EE_JIT64::cleanup_recompiler(EmotionEngine& ee, bool clear_regs, uint32_t cycles)
 {
     flush_regs(ee);
 
@@ -1522,6 +1519,9 @@ void EE_JIT64::cleanup_recompiler(EmotionEngine& ee, bool clear_regs)
             xmm_regs[i].stored = false;
         }
     }
+
+    //Update EE cycle count
+    emitter.SUB32_MEM_IMM(cycles, REG_64::R15, offsetof(EmotionEngine, cycles_to_run));
 
     //Clean up stack, has to be handled before we enter dispatcher
     emitter.ADD64_REG_IMM(0x1B8, REG_64::RSP);
@@ -1584,7 +1584,7 @@ void EE_JIT64::handle_branch_likely(EmotionEngine& ee, IR::Block& block)
     uint8_t* offset_addr = emitter.JCC_NEAR_DEFERRED(ConditionCode::NZ);
 
     // flush the EE state back to the EE and return, not executing the delay slot
-    cleanup_recompiler(ee, true);
+    cleanup_recompiler(ee, true, block.get_cycle_count());
 
     // ...Which we do here.
     emitter.set_jump_dest(offset_addr);
@@ -1592,7 +1592,7 @@ void EE_JIT64::handle_branch_likely(EmotionEngine& ee, IR::Block& block)
     // execute delay slot and flush EE state back to EE
     for (IR::Instruction instr = block.get_next_instr(); instr.op != IR::Opcode::Null; instr = block.get_next_instr())
         emit_instruction(ee, instr);
-    cleanup_recompiler(ee, true);
+    cleanup_recompiler(ee, true, block.get_cycle_count());
 }
 
 void EE_JIT64::fallback_interpreter(EmotionEngine& ee, const IR::Instruction &instr)
@@ -1640,7 +1640,7 @@ void EE_JIT64::wait_for_vu0(EmotionEngine& ee, IR::Instruction& instr)
     emitter.load_addr((uint64_t)&cycle_count, REG_64::RAX);
     emitter.MOV16_IMM_MEM(instr.get_cycle_count(), REG_64::RAX);
 
-    cleanup_recompiler(ee, false);
+    cleanup_recompiler(ee, false, instr.get_cycle_count());
 
     // Otherwise continue execution of block otherwise
     emitter.set_jump_dest(offset_addr);
@@ -1671,7 +1671,7 @@ void EE_JIT64::check_interlock_vu0(EmotionEngine& ee, IR::Instruction& instr)
     emitter.load_addr((uint64_t)&cycle_count, REG_64::RAX);
     emitter.MOV16_IMM_MEM(instr.get_cycle_count(), REG_64::RAX);
 
-    cleanup_recompiler(ee, false);
+    cleanup_recompiler(ee, false, instr.get_cycle_count());
 
     // Otherwise clear interlock then continue execution of block otherwise
     emitter.set_jump_dest(offset_addr);
