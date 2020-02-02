@@ -1561,8 +1561,7 @@ void EE_JIT64::emit_epilogue()
 void EE_JIT64::handle_branch_likely(EmotionEngine& ee, IR::Block& block)
 {
     // Load the "branch happened" variable
-    emitter.load_addr(reinterpret_cast<uint64_t>(&ee.branch_on), REG_64::RAX);
-    emitter.MOV8_FROM_MEM(REG_64::RAX, REG_64::RAX);
+    emitter.MOV8_FROM_MEM(REG_64::R15, REG_64::RAX, offsetof(EmotionEngine, branch_on));
 
     // Test variable. In the case that the variable is true,
     // we jump over the last instruction in the block in order
@@ -1618,9 +1617,6 @@ void EE_JIT64::fallback_interpreter(EmotionEngine& ee, const IR::Instruction &in
 
 void EE_JIT64::wait_for_vu0(EmotionEngine& ee, IR::Instruction& instr)
 {
-    // Alloc scratchpad registers
-    REG_64 R15 = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
-
     prepare_abi((uint64_t)&ee);
     call_abi_func((uint64_t)&ee_vu0_wait);
     emitter.TEST8_REG(REG_64::AL, REG_64::AL);
@@ -1628,23 +1624,20 @@ void EE_JIT64::wait_for_vu0(EmotionEngine& ee, IR::Instruction& instr)
     uint8_t* offset_addr = emitter.JCC_NEAR_DEFERRED(ConditionCode::Z);
 
     // If ee.vu0_wait(), set PC to the current operation's address and abort
-    emitter.load_addr((uint64_t)&ee.PC, REG_64::RAX);
-    emitter.MOV32_REG_IMM(instr.get_return_addr(), R15);
-    emitter.MOV32_TO_MEM(R15, REG_64::RAX);
+    emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::R15, offsetof(EmotionEngine, PC));
 
     // Set wait for VU0 flag
-    emitter.load_addr((uint64_t)&ee.wait_for_VU0, REG_64::RAX);
-    emitter.MOV8_IMM_MEM(true, REG_64::RAX);
+    emitter.MOV8_IMM_MEM(true, REG_64::R15, offsetof(EmotionEngine, wait_for_VU0));
 
     // Set cycle count to number of cycles executed
-    emitter.load_addr((uint64_t)&cycle_count, REG_64::RAX);
-    emitter.MOV16_IMM_MEM(instr.get_cycle_count(), REG_64::RAX);
+    // FIXME: This changes the return value of the JIT run function, but the return value of the JIT's run function is not used!
+    // What do we want to do here?
+    // emitter.MOV16_IMM_MEM(instr.get_cycle_count(), REG_64::R14, offsetof(EE_JIT64, cycle_count));
 
     cleanup_recompiler(ee, false, instr.get_cycle_count());
 
     // Otherwise continue execution of block otherwise
     emitter.set_jump_dest(offset_addr);
-    free_int_reg(ee, R15);
 }
 
 void EE_JIT64::check_interlock_vu0(EmotionEngine& ee, IR::Instruction& instr)
@@ -1659,17 +1652,15 @@ void EE_JIT64::check_interlock_vu0(EmotionEngine& ee, IR::Instruction& instr)
     uint8_t* offset_addr = emitter.JCC_NEAR_DEFERRED(ConditionCode::Z);
 
     // If ee.ee_check_interlock(), set PC to the current operation's address and abort
-    emitter.load_addr((uint64_t)&ee.PC, REG_64::RAX);
-    emitter.MOV32_REG_IMM(instr.get_return_addr(), R15);
-    emitter.MOV32_TO_MEM(R15, REG_64::RAX);
+    emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::R15, offsetof(EmotionEngine, PC));
 
     // Set wait for interlock clear flag
-    emitter.load_addr((uint64_t)&ee.wait_for_interlock, REG_64::RAX);
-    emitter.MOV8_IMM_MEM(true, REG_64::RAX);
+    emitter.MOV8_IMM_MEM(true, REG_64::R15, offsetof(EmotionEngine, wait_for_interlock));
 
     // Set cycle count to number of cycles executed
-    emitter.load_addr((uint64_t)&cycle_count, REG_64::RAX);
-    emitter.MOV16_IMM_MEM(instr.get_cycle_count(), REG_64::RAX);
+    // FIXME: This changes the return value of the JIT run function, but the return value of the JIT's run function is not used!
+    // What do we want to do here?
+    // emitter.MOV16_IMM_MEM(instr.get_cycle_count(), REG_64::R14, offsetof(EE_JIT64, cycle_count));
 
     cleanup_recompiler(ee, false, instr.get_cycle_count());
 
