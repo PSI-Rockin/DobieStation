@@ -158,7 +158,7 @@ void GS_REGISTERS::write32_privileged(uint32_t addr, uint32_t value)
 //reads from local copies only
 uint32_t GS_REGISTERS::read32_privileged(uint32_t addr)
 {
-    return read64_privileged(addr) >> (32 * ((addr & 0x4) != 0));
+    return read64_privileged(addr & ~0x4) >> (32 * ((addr & 0x4) != 0));
 }
 
 uint64_t GS_REGISTERS::read64_privileged(uint32_t addr)
