@@ -354,7 +354,7 @@ void VectorUnit::run(int cycles)
                 running = false;
                 finish_on = false;
                 flush_pipes();
-                cycle_count = eecpu->get_cop2_last_cycle() >> 1;
+                cycle_count = eecpu->get_cop2_last_cycle();
             }
             else
                 ebit_delay_slot--;
