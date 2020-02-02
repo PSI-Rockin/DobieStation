@@ -945,8 +945,6 @@ void Emitter64::LEA64_M(REG_64 source, REG_64 dest, uint32_t offset, uint32_t sh
 
 void Emitter64::LEA64_REG(REG_64 source, REG_64 source2, REG_64 dest, uint32_t offset, uint32_t shift)
 {
-    offset <<= shift;
-
     uint8_t rex = 0x48;
     if (dest & 0x8) rex += 0x4;
     if (source & 0x8) rex += 0x2;
@@ -954,7 +952,7 @@ void Emitter64::LEA64_REG(REG_64 source, REG_64 source2, REG_64 dest, uint32_t o
     block->write<uint8_t>(rex);
     block->write<uint8_t>(0x8D);
     modrm(0b10, dest, 4);
-    modrm(0b00, source, source2);
+    modrm(shift, source, source2);
     block->write<uint32_t>(offset);
 }
 

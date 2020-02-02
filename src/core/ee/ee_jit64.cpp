@@ -142,36 +142,25 @@ void EE_JIT64::emit_dispatcher()
     //Check if cycles_to_run > 0 and VU0 wait and check interlock is false. When both are true, we execute another block.
     //Otherwise, we return.
     emitter.CMP32_IMM_MEM(0, REG_64::R15, offsetof(EmotionEngine, cycles_to_run));
-
-    uint8_t* cycle_count_gt0 = emitter.JCC_NEAR_DEFERRED(ConditionCode::G);
-    emit_epilogue();
-
-    emitter.set_jump_dest(cycle_count_gt0);
+    uint8_t* exit_cyclecount = emitter.JCC_NEAR_DEFERRED(ConditionCode::LE);
 
     //Now do the VU0 wait check.
     emitter.TEST8_MEM_IMM(0, REG_64::R15, offsetof(EmotionEngine, wait_for_VU0));
-
-    uint8_t* no_vu0_wait = emitter.JCC_NEAR_DEFERRED(ConditionCode::Z);
-    emit_epilogue();
-
-    emitter.set_jump_dest(no_vu0_wait);
+    uint8_t* exit_vuwait = emitter.JCC_NEAR_DEFERRED(ConditionCode::NZ);
 
     // Now do the interlock check
     emitter.TEST8_MEM_IMM(0, REG_64::R15, offsetof(EmotionEngine, wait_for_interlock));
-
-    uint8_t* no_interlock_wait = emitter.JCC_NEAR_DEFERRED(ConditionCode::Z);
-    emit_epilogue();
-
-    emitter.set_jump_dest(no_interlock_wait);
+    uint8_t* exit_interlock = emitter.JCC_NEAR_DEFERRED(ConditionCode::NZ);
 
     //Fetch pointer to index in cache
     //ptr = lookup_cache[(PC >> 2) & 0x7FFF]
+    //lookup_cache is an array of size 8 elements, so we can skip shifting PC to the right
+    //by doing PC & (0x7FFF << 2), which would provide the correct array offset if the array consisted of size 4 elements.
+    //We can complete the lookup by adding that result * 2 to R13, which we do in a LEA operation.
     emitter.MOV32_FROM_MEM(REG_64::R15, REG_64::RCX, offsetof(EmotionEngine, PC));
     emitter.MOV32_REG(REG_64::RCX, REG_64::RAX);
-    emitter.SAR32_REG_IMM(2, REG_64::RAX);
-    emitter.AND32_EAX(0x7FFF);
-    emitter.SHL32_REG_IMM(3, REG_64::RAX);
-    emitter.ADD64_REG(REG_64::R13, REG_64::RAX);
+    emitter.AND32_EAX(0x7FFF << 2);
+    emitter.LEA64_REG(REG_64::RAX, REG_64::R13, REG_64::RAX, 0, 1);
     emitter.MOV64_FROM_MEM(REG_64::RAX, REG_64::RAX);
 
     //First we need to make sure the pointer isn't NULL, which means no block has been recompiled.
@@ -188,8 +177,6 @@ void EE_JIT64::emit_dispatcher()
     uint8_t* slow_path_dest2 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
 
     emitter.MOV64_FROM_MEM(REG_64::RAX, REG_64::RAX, offsetof(EEJitBlockRecord, code_start));
-
-
 
     //Find a block the slow way.
     //This entails calling a C++ function that finds a block by looking in an unordered_map.
@@ -213,6 +200,13 @@ void EE_JIT64::emit_dispatcher()
 
     //Tail-call optimization
     emitter.JMP_INDIR(REG_64::RAX);
+
+    // Exit the block (in case of waiting for COP2 sync, or if we've met the cycles goal)
+    emitter.set_jump_dest(exit_cyclecount);
+    emitter.set_jump_dest(exit_vuwait);
+    emitter.set_jump_dest(exit_interlock);
+
+    emit_epilogue();
 }
 
 EEJitBlockRecord* EE_JIT64::recompile_block(EmotionEngine& ee, IR::Block& block)
