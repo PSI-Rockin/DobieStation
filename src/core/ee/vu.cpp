@@ -312,8 +312,8 @@ void VectorUnit::run(int cycles)
         if (XGKICK_stall)
             break;
 
-        uint32_t upper_instr = *(uint32_t*)&instr_mem.m[PC + 4];
-        uint32_t lower_instr = *(uint32_t*)&instr_mem.m[PC];
+        uint32_t upper_instr = *(uint32_t*)&instr_mem.m[(PC + 4) & mem_mask];
+        uint32_t lower_instr = *(uint32_t*)&instr_mem.m[PC & mem_mask];
         //printf("[$%08X] $%08X:$%08X\n", PC, upper_instr, lower_instr);
         VU_Interpreter::interpret(*this, upper_instr, lower_instr);
 
@@ -1185,7 +1185,7 @@ void VectorUnit::branch(bool condition, int16_t imm, bool link, uint8_t linkreg)
         if (branch_on)
         {
             second_branch_pending = true;
-            secondbranch_PC = ((int16_t)PC + imm + 8) & 0x3fff;
+            secondbranch_PC = ((int16_t)PC + imm + 8) & mem_mask;
             if(link)
                 set_int(linkreg, (new_PC + 8) / 8);
         }
@@ -1193,7 +1193,7 @@ void VectorUnit::branch(bool condition, int16_t imm, bool link, uint8_t linkreg)
         {
             branch_on = true;
             branch_delay_slot = 1;
-            new_PC = ((int16_t)PC + imm + 8) & 0x3fff;
+            new_PC = ((int16_t)PC + imm + 8) & mem_mask;
             if (link)
                 set_int(linkreg, (PC + 16) / 8);
         }
@@ -1206,13 +1206,13 @@ void VectorUnit::jp(uint16_t addr, bool link, uint8_t linkreg)
     if (branch_on)
     {
         second_branch_pending = true;
-        secondbranch_PC = addr & 0x3FFF;
+        secondbranch_PC = addr & mem_mask;
         if (link)
             set_int(linkreg, (new_PC + 8) / 8);
     }
     else
     {
-        new_PC = addr & 0x3FFF;
+        new_PC = addr & mem_mask;
         branch_on = true;
         branch_delay_slot = 1;
         if (link)
