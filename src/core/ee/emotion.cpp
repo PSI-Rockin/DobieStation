@@ -236,6 +236,7 @@ void EmotionEngine::run_jit()
 
     //cycles_to_run and wait_for_VU0 are handled in the dispatcher, so no need to check for them here
     EE_JIT::run(this);
+    cycle_count = cycle_count_now;
 
     branch_on = false;
 }

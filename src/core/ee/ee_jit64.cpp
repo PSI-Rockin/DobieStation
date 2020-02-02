@@ -1529,8 +1529,17 @@ void EE_JIT64::cleanup_recompiler(EmotionEngine& ee, bool clear_regs, uint32_t c
         }
     }
 
-    //Update EE cycle count
-    emitter.SUB32_MEM_IMM(cycles, REG_64::R15, offsetof(EmotionEngine, cycles_to_run));
+    //TODO: Implement and use SUB64_MEM_IMM in emitter
+    emitter.MOV64_FROM_MEM(REG_64::R15, REG_64::RAX, offsetof(EmotionEngine, cycles_to_run));
+    emitter.SUB64_REG_IMM(cycles, REG_64::RAX);
+    emitter.MOV64_TO_MEM(REG_64::RAX, REG_64::R15, offsetof(EmotionEngine, cycles_to_run));
+
+    // Update cycle_count_now for COP2 sync
+    // cycle_count_now = cycle_count - cycles_to_run
+    emitter.MOV64_FROM_MEM(REG_64::R15, REG_64::RCX, offsetof(EmotionEngine, cycle_count));
+    emitter.MOV64_FROM_MEM(REG_64::R15, REG_64::RAX, offsetof(EmotionEngine, cycles_to_run));
+    emitter.SUB64_REG(REG_64::RAX, REG_64::RCX);
+    emitter.MOV64_TO_MEM(REG_64::RCX, REG_64::R15, offsetof(EmotionEngine, cycle_count_now));
 
     //Clean up stack, has to be handled before we enter dispatcher
     emitter.ADD64_REG_IMM(0x1B8, REG_64::RSP);
