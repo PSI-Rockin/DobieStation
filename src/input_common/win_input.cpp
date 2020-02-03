@@ -25,14 +25,26 @@ bool WinInput::reset()
 		}
 }
 
-void WinInput::poll() 
+inputEvent WinInput::poll() 
 {
 	DWORD button;
 
 	ZeroMemory(&button, sizeof(state));
 
 	button = XInputGetState(0, &state);
-	
+
+	float lstickLx = state.Gamepad.sThumbLX;
+	float lstickLy = state.Gamepad.sThumbLY;
+
+	float magnitude = sqrt(lstickLy * lstickLx + lstickLy * lstickLy);
+
+	event.lStickXAxis = lstickLx / magnitude;
+	event.lStickYAxis = lstickLy / magnitude;
+
+	std::cout << "Left X Axis: " << event.lStickXAxis << std::endl;
+	std::cout << "Left Y Axis: " << event.lStickYAxis << std::endl;
+
+
 	if (state.Gamepad.wButtons & XINPUT_GAMEPAD_A)
 	{
 		std::cout << "A is pressed" << std::endl;
@@ -57,4 +69,6 @@ void WinInput::poll()
 	{
 			std::cout << "Start is pressed" << std::endl;	
 	}
+
+	return event;
 }
