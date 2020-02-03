@@ -5,6 +5,8 @@
 #include <Windows.h>
 #include <Xinput.h>
 #include "common_input.hpp"
+#include <map>
+
 
 #pragma comment(lib, "Xinput9_1_0")
 
@@ -18,9 +20,17 @@ private:
 	XINPUT_STATE state; // General GamePad State
 	inputEvent event;
 
+	std::map <DWORD, virtualController> xinputMAP = { 
+	{XINPUT_GAMEPAD_A, virtualController::CROSS}, {XINPUT_GAMEPAD_B, virtualController::CIRCLE}, 
+	{XINPUT_GAMEPAD_X, virtualController::SQUARE}, {XINPUT_GAMEPAD_Y, virtualController::TRIANGLE}, 
+	{XINPUT_GAMEPAD_START, virtualController::START}, {XINPUT_GAMEPAD_BACK, virtualController::SELECT}
+	};
+
+
 public:
 	bool reset();
 	inputEvent poll();
 };
+
 
 #endif 
