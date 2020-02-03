@@ -3096,7 +3096,6 @@ uint128_t GraphicsSynthesizerThread::local_to_host()
                     TRXPOS.int_source_x++;
                     break;
                 case 0x1B:
-                    data <<= 8;
                     data |= (uint64_t)((read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
                         TRXPOS.int_source_x, TRXPOS.int_source_y) >> 24) & 0xFF) << (i * 8);
                     pixels_transferred++;
