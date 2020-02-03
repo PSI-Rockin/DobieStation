@@ -145,11 +145,11 @@ void EE_JIT64::emit_dispatcher()
     uint8_t* exit_cyclecount = emitter.JCC_NEAR_DEFERRED(ConditionCode::LE);
 
     //Now do the VU0 wait check.
-    emitter.TEST8_MEM_IMM(0, REG_64::R15, offsetof(EmotionEngine, wait_for_VU0));
+    emitter.CMP8_IMM_MEM(0, REG_64::R15, offsetof(EmotionEngine, wait_for_VU0));
     uint8_t* exit_vuwait = emitter.JCC_NEAR_DEFERRED(ConditionCode::NZ);
 
     // Now do the interlock check
-    emitter.TEST8_MEM_IMM(0, REG_64::R15, offsetof(EmotionEngine, wait_for_interlock));
+    emitter.CMP8_IMM_MEM(0, REG_64::R15, offsetof(EmotionEngine, wait_for_interlock));
     uint8_t* exit_interlock = emitter.JCC_NEAR_DEFERRED(ConditionCode::NZ);
 
     //Fetch pointer to index in cache
@@ -177,6 +177,9 @@ void EE_JIT64::emit_dispatcher()
     uint8_t* slow_path_dest2 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
 
     emitter.MOV64_FROM_MEM(REG_64::RAX, REG_64::RAX, offsetof(EEJitBlockRecord, code_start));
+
+    //Tail-call optimization
+    emitter.JMP_INDIR(REG_64::RAX);
 
     //Find a block the slow way.
     //This entails calling a C++ function that finds a block by looking in an unordered_map.

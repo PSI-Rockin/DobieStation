@@ -317,6 +317,22 @@ void Emitter64::CMP8_REG(REG_64 op2, REG_64 op1)
     modrm(0b11, op2, op1);
 }
 
+void Emitter64::CMP8_IMM_MEM(uint32_t imm, REG_64 mem, uint32_t offset)
+{
+    rex_rm(mem);
+    block->write<uint8_t>(0x80);
+    if ((mem & 7) == 5 || offset != 0)
+    {
+        modrm(0b10, 7, mem);
+        block->write<uint32_t>(offset);
+    }
+    else
+    {
+        modrm(0, 7, mem);
+    }
+    block->write<uint8_t>(imm);
+}
+
 void Emitter64::CMP16_IMM(uint16_t imm, REG_64 op)
 {
     block->write<uint8_t>(0x66);
@@ -798,7 +814,7 @@ void Emitter64::TEST8_REG_IMM(uint8_t imm, REG_64 op1)
     block->write<uint8_t>(imm);
 }
 
-void Emitter64::TEST8_MEM_IMM(uint8_t imm, REG_64 mem, uint32_t offset)
+void Emitter64::TEST8_IMM_MEM(uint8_t imm, REG_64 mem, uint32_t offset)
 {
     rex_r_rm((REG_64)0, mem);
     block->write<uint8_t>(0xF6);
