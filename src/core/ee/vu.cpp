@@ -930,7 +930,7 @@ void VectorUnit::start_program(uint32_t addr)
         {
             eecpu->set_cop2_last_cycle(eecpu->get_cycle_count_now());
         }
-        cycle_count = eecpu->get_cycle_count();
+        cycle_count = eecpu->get_cycle_count_now();
         flush_pipes();
     }
     //disasm_micromem();
