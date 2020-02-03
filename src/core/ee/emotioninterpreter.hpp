@@ -79,7 +79,7 @@ struct EE_InstrInfo
      * Because the EE is in-order, assuming no stalls, one can achieve optimal performance by pairing together
      * instructions using different physical pipelines.
      */
-    enum class Pipeline: uint8_t
+    enum class Pipeline: uint16_t
     {
         //Uninitialized. Error out if an instruction's pipeline is set to this.
         Unk = 0,
