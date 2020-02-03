@@ -247,8 +247,8 @@ void EmuThread::run()
                 pause(PAUSE_EVENT::GAME_NOT_LOADED);
             }
         }
+        e.poll_controller();
     }
-    e.poll_controller();
 }
 
 void EmuThread::shutdown()

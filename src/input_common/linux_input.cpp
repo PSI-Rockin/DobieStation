@@ -43,7 +43,6 @@ inputEvent LinuxInput::poll()
 
     while (rc >= 0)
     {
-        input_event ev;
         if (rc == LIBEVDEV_READ_STATUS_SYNC)
         {
             rc = libevdev_next_event(dev, LIBEVDEV_READ_FLAG_SYNC, &ev);
@@ -52,7 +51,7 @@ inputEvent LinuxInput::poll()
         {
             rc = libevdev_next_event(dev, LIBEVDEV_READ_FLAG_NORMAL, &ev);
         }
-        std::cout << "event: " << libevdev_event_type_get_name(ev.type) << " code: " << libevdev_event_code_get_name(ev.type, ev.code) << " value: " << ev.value << std::endl;
+        //std::cout << "event: " << libevdev_event_type_get_name(ev.type) << " code: " << libevdev_event_code_get_name(ev.type, ev.code) << " value: " << ev.value << std::endl;
     }
 
     inputEvent event = {};
@@ -79,5 +78,5 @@ inputEvent LinuxInput::poll()
         event.input[button.second] = key;
     }
 
-    event = {};
+    return event;
 }

@@ -13,5 +13,5 @@ void InputManager::initalize()
 
 inputEvent InputManager::poll()
 {
-	input->poll();
+	return input->poll();
 }
