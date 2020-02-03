@@ -110,6 +110,9 @@ uint16_t EE_JIT64::run(EmotionEngine& ee)
 {
     prologue_block(*this, ee, &jit_heap.lookup_cache[0]);
 
+    if (ee.cycle_count == 1)
+        ee.cycle_count = 0;
+
     return cycle_count;
 }
 
@@ -143,14 +146,6 @@ void EE_JIT64::emit_dispatcher()
     //Otherwise, we return.
     emitter.CMP32_IMM_MEM(0, REG_64::R15, offsetof(EmotionEngine, cycles_to_run));
     uint8_t* exit_cyclecount = emitter.JCC_NEAR_DEFERRED(ConditionCode::LE);
-
-    //Now do the VU0 wait check.
-    emitter.CMP8_IMM_MEM(0, REG_64::R15, offsetof(EmotionEngine, wait_for_VU0));
-    uint8_t* exit_vuwait = emitter.JCC_NEAR_DEFERRED(ConditionCode::NZ);
-
-    // Now do the interlock check
-    emitter.CMP8_IMM_MEM(0, REG_64::R15, offsetof(EmotionEngine, wait_for_interlock));
-    uint8_t* exit_interlock = emitter.JCC_NEAR_DEFERRED(ConditionCode::NZ);
 
     //Fetch pointer to index in cache
     //ptr = lookup_cache[(PC >> 2) & 0x7FFF]
@@ -206,8 +201,6 @@ void EE_JIT64::emit_dispatcher()
 
     // Exit the block (in case of waiting for COP2 sync, or if we've met the cycles goal)
     emitter.set_jump_dest(exit_cyclecount);
-    emitter.set_jump_dest(exit_vuwait);
-    emitter.set_jump_dest(exit_interlock);
 
     emit_epilogue();
 }
@@ -242,7 +235,7 @@ EEJitBlockRecord* EE_JIT64::recompile_block(EmotionEngine& ee, IR::Block& block)
     if (likely_branch)
         handle_branch_likely(ee, block);
     else
-        cleanup_recompiler(ee, true, block.get_cycle_count());
+        cleanup_recompiler(ee, true, true, block.get_cycle_count());
 
     return jit_heap.insert_block(ee.get_PC(), &jit_block);
 }
@@ -1515,7 +1508,7 @@ uint64_t EE_JIT64::get_gpr_offset(int index) const
         Errors::die("EE_JIT64::get_gpr_offset not supported for special registers");
 }
 
-void EE_JIT64::cleanup_recompiler(EmotionEngine& ee, bool clear_regs, uint32_t cycles)
+void EE_JIT64::cleanup_recompiler(EmotionEngine& ee, bool clear_regs, bool dispatcher, uint64_t cycles)
 {
     flush_regs(ee);
 
@@ -1538,18 +1531,20 @@ void EE_JIT64::cleanup_recompiler(EmotionEngine& ee, bool clear_regs, uint32_t c
     emitter.MOV64_TO_MEM(REG_64::RAX, REG_64::R15, offsetof(EmotionEngine, cycles_to_run));
 
     // Update cycle_count_now for COP2 sync
-    // cycle_count_now = cycle_count - cycles_to_run
-    emitter.MOV64_FROM_MEM(REG_64::R15, REG_64::RCX, offsetof(EmotionEngine, cycle_count));
-    emitter.MOV64_FROM_MEM(REG_64::R15, REG_64::RAX, offsetof(EmotionEngine, cycles_to_run));
-    emitter.SUB64_REG(REG_64::RAX, REG_64::RCX);
-    emitter.MOV64_TO_MEM(REG_64::RCX, REG_64::R15, offsetof(EmotionEngine, cycle_count_now));
+    // cycle_count_now = cycle_count_now += cycles
+    emitter.MOV64_FROM_MEM(REG_64::R15, REG_64::RAX, offsetof(EmotionEngine, cycle_count_now));
+    emitter.ADD64_REG_IMM(cycles, REG_64::RAX);
+    emitter.MOV64_TO_MEM(REG_64::RAX, REG_64::R15, offsetof(EmotionEngine, cycle_count_now));
 
     //Clean up stack, has to be handled before we enter dispatcher
     emitter.ADD64_REG_IMM(0x1B8, REG_64::RSP);
     emitter.POP(REG_64::RBP);
 
     //Go back to the dispatcher to potentially execute another block
-    emit_dispatcher();
+    if (dispatcher)
+        emit_dispatcher();
+    else
+        emit_epilogue();
 }
 
 void EE_JIT64::emit_prologue()
@@ -1604,7 +1599,7 @@ void EE_JIT64::handle_branch_likely(EmotionEngine& ee, IR::Block& block)
     uint8_t* offset_addr = emitter.JCC_NEAR_DEFERRED(ConditionCode::NZ);
 
     // flush the EE state back to the EE and return, not executing the delay slot
-    cleanup_recompiler(ee, true, block.get_cycle_count());
+    cleanup_recompiler(ee, true, true, block.get_cycle_count());
 
     // ...Which we do here.
     emitter.set_jump_dest(offset_addr);
@@ -1612,7 +1607,7 @@ void EE_JIT64::handle_branch_likely(EmotionEngine& ee, IR::Block& block)
     // execute delay slot and flush EE state back to EE
     for (IR::Instruction instr = block.get_next_instr(); instr.op != IR::Opcode::Null; instr = block.get_next_instr())
         emit_instruction(ee, instr);
-    cleanup_recompiler(ee, true, block.get_cycle_count());
+    cleanup_recompiler(ee, true, true, block.get_cycle_count());
 }
 
 void EE_JIT64::fallback_interpreter(EmotionEngine& ee, const IR::Instruction &instr)
@@ -1655,7 +1650,7 @@ void EE_JIT64::wait_for_vu0(EmotionEngine& ee, IR::Instruction& instr)
     // What do we want to do here?
     // emitter.MOV16_IMM_MEM(instr.get_cycle_count(), REG_64::R14, offsetof(EE_JIT64, cycle_count));
 
-    cleanup_recompiler(ee, false, instr.get_cycle_count());
+    cleanup_recompiler(ee, false, false, instr.get_cycle_count());
 
     // Otherwise continue execution of block otherwise
     emitter.set_jump_dest(offset_addr);
@@ -1683,7 +1678,7 @@ void EE_JIT64::check_interlock_vu0(EmotionEngine& ee, IR::Instruction& instr)
     // What do we want to do here?
     // emitter.MOV16_IMM_MEM(instr.get_cycle_count(), REG_64::R14, offsetof(EE_JIT64, cycle_count));
 
-    cleanup_recompiler(ee, false, instr.get_cycle_count());
+    cleanup_recompiler(ee, false, false, instr.get_cycle_count());
 
     // Otherwise clear interlock then continue execution of block otherwise
     emitter.set_jump_dest(offset_addr);
@@ -1703,13 +1698,11 @@ void EE_JIT64::update_vu0(EmotionEngine& ee, IR::Instruction& instr)
     emitter.load_addr((uint64_t)&ee, REG_64::RAX);
     emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::RAX, offsetof(EmotionEngine, PC_now));
 
-    // Update cycle_count_now
-    // cycle_count_now = cycle_count - cycles_to_run + (<instruction cycle count>)
-    emitter.MOV32_FROM_MEM(REG_64::RAX, R15, offsetof(EmotionEngine, cycle_count));
-    emitter.MOV32_FROM_MEM(REG_64::RAX, R14, offsetof(EmotionEngine, cycles_to_run));
-    emitter.SUB32_REG(R14, R15);
-    emitter.ADD32_REG_IMM(instr.get_cycle_count(), R15);
-    emitter.MOV32_TO_MEM(R15, REG_64::RAX, offsetof(EmotionEngine, cycle_count_now));
+    // Update cycle_count_now for COP2 sync
+    // cycle_count_now = cycle_count_now += cycles
+    emitter.MOV64_FROM_MEM(REG_64::R15, REG_64::RAX, offsetof(EmotionEngine, cycle_count_now));
+    emitter.ADD64_REG_IMM(instr.get_cycle_count(), REG_64::RAX);
+    emitter.MOV64_TO_MEM(REG_64::RAX, REG_64::R15, offsetof(EmotionEngine, cycle_count_now));
 
     free_int_reg(ee, R15);
     free_int_reg(ee, R14);

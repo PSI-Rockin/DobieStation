@@ -155,7 +155,6 @@ void EmotionEngine::init_tlb()
 void EmotionEngine::run(int cycles)
 {
     cycle_count_now = cycle_count;
-    cycle_count += cycles;
     if (!wait_for_IRQ)
     {
         cycles_to_run += cycles;
