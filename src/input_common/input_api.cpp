@@ -11,7 +11,7 @@ void InputManager::initalize()
 	input->reset();
 }
 
-void InputManager::poll()
+inputEvent InputManager::poll()
 {
 	input->poll();
 }

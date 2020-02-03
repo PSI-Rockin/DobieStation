@@ -14,7 +14,8 @@ enum virtualController
 	R3,
 	L1,
 	L2,
-	L3
+	L3,
+	CONTROLLER_BUTTON_MAX
 };
 
 enum deviceType
@@ -27,7 +28,7 @@ enum deviceType
 
 struct inputEvent
 {
-	virtualController input;
+	bool input[CONTROLLER_BUTTON_MAX];
 	int playerNumber;
 
 	float lStickXAxis;
@@ -35,16 +36,6 @@ struct inputEvent
 
 	float rStickXAxis;
 	float rStickYAxis;
-
-	void construct(virtualController eventI, int playerNum, int lXAxis, int lYAxis, int rXAxis, int rYAxis)
-	{
-		input = eventI;
-		lStickXAxis = lXAxis;
-		lStickYAxis = lYAxis;
-		rStickXAxis = rXAxis;
-		rStickYAxis = rYAxis;
-		playerNumber = playerNum;
-	}
 };
 
 enum DeviceAPI
@@ -67,7 +58,7 @@ protected:
 
 public:
 	virtual bool reset() = 0;
-	virtual void poll() = 0;
+	virtual inputEvent poll() = 0;
 };
 
 #endif

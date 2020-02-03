@@ -1,21 +1,22 @@
 #ifndef INPUTMANAGER_HPP
 #define INPUTMANAGER_HPP
 
-#ifdef __linux__ 
+#ifdef __linux__
 #include "linux_input.hpp"
 #include <memory>
 #elif WIN32
 #include "win_input.hpp"
 #endif
 
-class InputManager{
+class InputManager
+{
 
 private:
 	std::unique_ptr<CommonInput> input;
+
 public:
 	void initalize();
-	void poll();
+	inputEvent poll();
 };
-
 
 #endif

@@ -37,18 +37,47 @@ bool LinuxInput::reset()
     }
 }
 
-void LinuxInput::poll()
+inputEvent LinuxInput::poll()
 {
-    rc = libevdev_next_event(dev, LIBEVDEV_READ_FLAG_NORMAL, &ev);
-    // Grab any pending sync event.
-    if (rc == LIBEVDEV_READ_STATUS_SYNC)
+    int rc = LIBEVDEV_READ_STATUS_SUCCESS;
+
+    while (rc >= 0)
     {
-        std::cout << "SYNC" << std::endl;
-        rc = libevdev_next_event(dev, LIBEVDEV_READ_FLAG_NORMAL | LIBEVDEV_READ_FLAG_SYNC, &ev);
+        input_event ev;
+        if (rc == LIBEVDEV_READ_STATUS_SYNC)
+        {
+            rc = libevdev_next_event(dev, LIBEVDEV_READ_FLAG_SYNC, &ev);
+        }
+        else
+        {
+            rc = libevdev_next_event(dev, LIBEVDEV_READ_FLAG_NORMAL, &ev);
+        }
+        std::cout << "event: " << libevdev_event_type_get_name(ev.type) << " code: " << libevdev_event_code_get_name(ev.type, ev.code) << " value: " << ev.value << std::endl;
     }
 
-    /*if (libevdev_get_event_value(dev, EV_ABS, BTN_A) == 0)
-        printf("Button is up\n");
-    else
-        printf("Button is down\n");*/
+    inputEvent event = {};
+
+    //uint16_t buttons = 0;
+
+    int x1, y1, x2, y2;
+
+    libevdev_fetch_event_value(dev, EV_ABS, ABS_X, &x1);
+    libevdev_fetch_event_value(dev, EV_ABS, ABS_Y, &y1);
+    libevdev_fetch_event_value(dev, EV_ABS, ABS_THROTTLE, &x2);
+    libevdev_fetch_event_value(dev, EV_ABS, ABS_RZ, &y2);
+
+    event.lStickXAxis = x1;
+    event.lStickYAxis = y1;
+    event.rStickXAxis = x2;
+    event.rStickYAxis = y2;
+
+    for (auto button : buttonMap)
+    {
+        int key;
+        libevdev_fetch_event_value(dev, EV_KEY, button.first, &key);
+
+        event.input[button.second] = key;
+    }
+
+    event = {};
 }

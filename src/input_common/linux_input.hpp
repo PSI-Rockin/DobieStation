@@ -8,18 +8,7 @@
 #include <string.h>
 #include "common_input.hpp"
 #include <libevdev-1.0/libevdev/libevdev.h>
-
-enum evdev_controls
-{
-    AXIS_X1 = 0,
-    AXIS_X2 = 2,
-    AXIS_Y1 = 1,
-    AXIS_Y2 = 3,
-    A = 4,
-    B = 5,
-    C = 6,
-    D = 7
-}; // A = X, B = Circle, C = Square, D = Triangle
+#include <map>
 
 class LinuxInput : public CommonInput
 {
@@ -27,6 +16,15 @@ class LinuxInput : public CommonInput
 private:
     struct input_event ev;
     struct libevdev *dev;
+
+    struct inputEvent in;
+
+    std::map<uint, virtualController> buttonMap = {{BTN_TRIGGER, virtualController::CROSS},
+                                                   {BTN_THUMB2, virtualController::SQUARE},
+                                                   {BTN_BASE6, virtualController::START},
+                                                   {BTN_BASE5, virtualController::SELECT},
+                                                   {BTN_THUMB, virtualController::CIRCLE},
+                                                   {BTN_TOP, virtualController::TRIANGLE}};
 
     std::vector<struct libevdev *> interestingDevices;
 
@@ -46,7 +44,7 @@ private:
 
 public:
     bool reset();
-    void poll();
+    inputEvent poll();
 };
 
 #endif

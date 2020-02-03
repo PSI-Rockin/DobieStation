@@ -13,7 +13,6 @@ EmuThread::EmuThread()
     gsdump_reading = false;
     frame_advance = false;
     gsdump_read_buffer = new GSMessage[GSDUMP_BUFFERED_MESSAGES];
-    input.initalize();
 }
 
 EmuThread::~EmuThread()
@@ -59,7 +58,7 @@ void EmuThread::load_ELF(const uint8_t *ELF, uint64_t ELF_size)
     e.load_ELF(ELF, ELF_size);
 }
 
-void EmuThread::load_CDVD(const char* name, CDVD_CONTAINER type)
+void EmuThread::load_CDVD(const char *name, CDVD_CONTAINER type)
 {
     QMutexLocker locker(&emu_mutex);
     e.reset();
@@ -89,7 +88,7 @@ bool EmuThread::save_state(const char *name)
 bool EmuThread::gsdump_read(const char *name)
 {
     QMutexLocker locker(&emu_mutex);
-    gsdump.open(name,ios::binary);
+    gsdump.open(name, ios::binary);
     if (!gsdump.is_open())
         return 1;
     e.get_gs().reset();
@@ -112,14 +111,15 @@ void EmuThread::gsdump_single_frame()
     e.request_gsdump_single_frame();
 }
 
-GSMessage& EmuThread::get_next_gsdump_message()
+GSMessage &EmuThread::get_next_gsdump_message()
 {
-    if(!buffered_gs_messages) {
-        gsdump.read((char*)gsdump_read_buffer, sizeof(GSMessage) * GSDUMP_BUFFERED_MESSAGES);
+    if (!buffered_gs_messages)
+    {
+        gsdump.read((char *)gsdump_read_buffer, sizeof(GSMessage) * GSDUMP_BUFFERED_MESSAGES);
         current_gs_message = 0;
         buffered_gs_messages = gsdump.gcount() / sizeof(GSMessage);
     }
-    GSMessage& data = gsdump_read_buffer[current_gs_message];
+    GSMessage &data = gsdump_read_buffer[current_gs_message];
     current_gs_message++;
     buffered_gs_messages--;
     return data;
@@ -138,47 +138,47 @@ void EmuThread::gsdump_run()
         int draws_sent = 10;
         while (true)
         {
-            GSMessage& data = get_next_gsdump_message();
+            GSMessage &data = get_next_gsdump_message();
 
             switch (data.type)
             {
-                case set_xyz_t:
-                    e.get_gs().send_message(data);
-                    e.get_gs().wake_gs_thread();
-                    if (frame_advance && data.payload.xyz_payload.drawing_kick && --draws_sent <= 0)
-                    {
-                        uint16_t w, h;
-                        uint32_t* frame = e.get_gs().render_partial_frame(w, h);
-                        emit completed_frame(frame, w, h, w, h);
-                        pause(PAUSE_EVENT::FRAME_ADVANCE);
-                        return;
-                    }
-                    break;
-                case render_crt_t:
+            case set_xyz_t:
+                e.get_gs().send_message(data);
+                e.get_gs().wake_gs_thread();
+                if (frame_advance && data.payload.xyz_payload.drawing_kick && --draws_sent <= 0)
                 {
-                    printf("gsdump frame render\n");
-                    e.get_gs().render_CRT();
-                    int w, h, new_w, new_h;
-                    e.get_inner_resolution(w, h);
-                    e.get_resolution(new_w, new_h);
-
-                    emit completed_frame(e.get_gs().get_framebuffer(), w, h, new_w, new_h);
-                    printf("gsdump frame render complete\n");
+                    uint16_t w, h;
+                    uint32_t *frame = e.get_gs().render_partial_frame(w, h);
+                    emit completed_frame(frame, w, h, w, h);
                     pause(PAUSE_EVENT::FRAME_ADVANCE);
                     return;
                 }
-                case gsdump_t:
-                    pause(PAUSE_EVENT::GAME_NOT_LOADED);
-                    if (gsdump.peek() != EOF)
-                        Errors::die("gsdump ended before end of file!");
-                    gsdump.close();
-                    Errors::die("gsdump ended successfully\n");
-                case save_state_t:
-                case load_state_t:
-                    Errors::die("save_state save/load during gsdump not supported!");
-                default:
-                    e.get_gs().send_message(data);
-                    //e.get_gs().wake_gs_thread();
+                break;
+            case render_crt_t:
+            {
+                printf("gsdump frame render\n");
+                e.get_gs().render_CRT();
+                int w, h, new_w, new_h;
+                e.get_inner_resolution(w, h);
+                e.get_resolution(new_w, new_h);
+
+                emit completed_frame(e.get_gs().get_framebuffer(), w, h, new_w, new_h);
+                printf("gsdump frame render complete\n");
+                pause(PAUSE_EVENT::FRAME_ADVANCE);
+                return;
+            }
+            case gsdump_t:
+                pause(PAUSE_EVENT::GAME_NOT_LOADED);
+                if (gsdump.peek() != EOF)
+                    Errors::die("gsdump ended before end of file!");
+                gsdump.close();
+                Errors::die("gsdump ended successfully\n");
+            case save_state_t:
+            case load_state_t:
+                Errors::die("save_state save/load during gsdump not supported!");
+            default:
+                e.get_gs().send_message(data);
+                //e.get_gs().wake_gs_thread();
             }
             if (gsdump_eof())
                 Errors::die("gs dump unexpectedly ended");
@@ -247,8 +247,8 @@ void EmuThread::run()
                 pause(PAUSE_EVENT::GAME_NOT_LOADED);
             }
         }
-        input.poll();
     }
+    e.poll_controller();
 }
 
 void EmuThread::shutdown()
