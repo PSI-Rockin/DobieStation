@@ -20,7 +20,7 @@ private:
 
 public:
 	bool reset();
-	void poll();
+	inputEvent poll();
 };
 
 #endif 

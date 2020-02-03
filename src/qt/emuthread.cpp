@@ -248,7 +248,9 @@ void EmuThread::run()
             }
         }
     }
+
     e.poll_controller();
+
 }
 
 void EmuThread::shutdown()
