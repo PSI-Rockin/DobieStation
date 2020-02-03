@@ -215,6 +215,8 @@ void EmotionEngine::run_interpreter()
                 delay_slot--;
         }
     }
+
+    cycle_count = cycle_count_now;
 }
 
 void EmotionEngine::run_jit()

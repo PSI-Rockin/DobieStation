@@ -110,9 +110,6 @@ uint16_t EE_JIT64::run(EmotionEngine& ee)
 {
     prologue_block(*this, ee, &jit_heap.lookup_cache[0]);
 
-    if (ee.cycle_count == 1)
-        ee.cycle_count = 0;
-
     return cycle_count;
 }
 
