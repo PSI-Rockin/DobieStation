@@ -59,7 +59,7 @@ class EmotionEngine
         uint64_t cycle_count;
         uint64_t cycle_count_now;
         uint64_t cop2_last_cycle;
-        int cycles_to_run;
+        int32_t cycles_to_run;
         uint64_t run_event;
 
         Cop0* cp0;

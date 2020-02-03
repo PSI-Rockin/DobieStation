@@ -1526,10 +1526,8 @@ void EE_JIT64::cleanup_recompiler(EmotionEngine& ee, bool clear_regs, bool dispa
         }
     }
 
-    //TODO: Implement and use SUB64_MEM_IMM in emitter
-    emitter.MOV64_FROM_MEM(REG_64::R15, REG_64::RAX, offsetof(EmotionEngine, cycles_to_run));
-    emitter.SUB64_REG_IMM(cycles, REG_64::RAX);
-    emitter.MOV64_TO_MEM(REG_64::RAX, REG_64::R15, offsetof(EmotionEngine, cycles_to_run));
+    // Decrement cycles to run by the cycles argument
+    emitter.SUB32_MEM_IMM(cycles, REG_64::R15, offsetof(EmotionEngine, cycles_to_run));
 
     // Update cycle_count_now for COP2 sync
     // cycle_count_now = cycle_count_now += cycles
