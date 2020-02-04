@@ -59,6 +59,7 @@ inputEvent WinInput::poll()
 	if (state.Gamepad.wButtons & XINPUT_GAMEPAD_A)
 	{
 		std::cout << "A is pressed" << std::endl;
+		printf("Like a CHAD");
 		event.input[virtualController::CROSS] = state.Gamepad.wButtons & XINPUT_GAMEPAD_A ? 255 : 0;
 	}
 
