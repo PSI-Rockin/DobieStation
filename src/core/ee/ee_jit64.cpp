@@ -441,7 +441,7 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             load_quadword(ee, instr);
             break;
         case IR::Opcode::LoadQuadwordCoprocessor2:
-            load_quadword_coprocessor2(ee, instr);
+            fallback_interpreter(ee, instr);
             break;
         case IR::Opcode::MoveConditionalOnNotZero:
             move_conditional_on_not_zero(ee, instr);
@@ -723,7 +723,7 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             store_quadword(ee, instr);
             break;
         case IR::Opcode::StoreQuadwordCoprocessor2:
-            store_quadword_coprocessor2(ee, instr);
+            fallback_interpreter(ee, instr);
             break;
         case IR::Opcode::SubDoublewordReg:
             sub_doubleword_reg(ee, instr);
