@@ -221,7 +221,7 @@ void EE_JitTranslator::issue_cycle_analysis(std::vector<EE_InstrInfo>& instr_inf
         
         if (dual_issue)
         {
-            instr_info[i].cycles_after = cycle_count;
+            instr_info[i].cycles_after = cycle_count + 1;
             instr_info[i + 1].cycles_before = cycle_count;
             instr_info[i + 1].cycles_after = ++cycle_count;
             ++i;
@@ -369,20 +369,27 @@ void EE_JitTranslator::load_store_analysis(std::vector<EE_InstrInfo>& instr_info
 {
     // adds LOAD_STORE_BIAS to every load/store op (on top of the issue cycle cost)
     // power of 2 fixed point with 8 bits for decimals
-    const int LOAD_STORE_BIAS = 0x100;
+    const uint32_t LOAD_STORE_BIAS = 0x100;
     int sum = 0;
+    // Used to keep precision for non-integer bias
+    int load_ops = 0;
 
     for (int i = 0; i < instr_info.size(); ++i)
     {
         if ((instr_info[i].pipeline & EE_InstrInfo::Pipeline::LoadStore) == EE_InstrInfo::Pipeline::LoadStore)
         {
             sum += LOAD_STORE_BIAS;
+            ++load_ops;
+
+            // e.g. with LOAD_STORE_BIAS at +1.25 (0x140)
+            // ((LOAD_STORE_BIAS * 4) >> 8) * 4 - ((LOAD_STORE_BIAS * 3) >> 8) = 5 - 3 = +2 cycles for remaining instructions
+            uint32_t load_penalty = ((LOAD_STORE_BIAS * load_ops) >> 8) - ((LOAD_STORE_BIAS * load_ops - 1) >> 8);
 
             for (int j = i + 1; j < instr_info.size(); ++j)
-                instr_info[j].cycles_before += (LOAD_STORE_BIAS >> 8);
+                instr_info[j].cycles_before += load_penalty;
 
             for (int j = i; j < instr_info.size(); ++j)
-                instr_info[j].cycles_after += (LOAD_STORE_BIAS >> 8);
+                instr_info[j].cycles_after += load_penalty;
         }
     }
 
