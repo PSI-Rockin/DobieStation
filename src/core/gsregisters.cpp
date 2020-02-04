@@ -74,7 +74,6 @@ void GS_REGISTERS::write64_privileged(uint32_t addr, uint64_t value)
             if (value & 0x2)
             {
                 CSR.FINISH_generated = false;
-                CSR.FINISH_requested = false;
             }
             if (value & 0x8)
             {
@@ -130,7 +129,6 @@ void GS_REGISTERS::write32_privileged(uint32_t addr, uint32_t value)
             CSR.SIGNAL_stall &= ~(value & 1);
             if (value & 0x2)
             {
-                CSR.FINISH_enabled = true;
                 CSR.FINISH_generated = false;
             }
             if (value & 0x8)
@@ -350,6 +348,7 @@ bool GS_REGISTERS::assert_FINISH()//returns true if the interrupt should be proc
 {
     if (CSR.FINISH_requested && !CSR.FINISH_generated)
     {
+        CSR.FINISH_requested = false;
         CSR.FINISH_generated = true;
         return !IMR.finish;
     }
