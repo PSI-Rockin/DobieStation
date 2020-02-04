@@ -86,6 +86,9 @@ private:
     uint32_t ee_branch_delay_dest, ee_branch_delay_fail_dest;
     uint16_t cycle_count;
 
+    // Cycles added to the cycle count in the middle of the block, e.g. UpdateVU0
+    uint64_t cycles_added;
+
     bool should_update_mac;
 
     //Pointer to the dispatcher prologue that begins execution of recompiled code
