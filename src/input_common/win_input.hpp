@@ -20,10 +20,12 @@ private:
 	XINPUT_STATE state; // General GamePad State
 	inputEvent event;
 
-	std::map <DWORD, virtualController> xinputMAP = { 
-	{XINPUT_GAMEPAD_A, virtualController::CROSS}, {XINPUT_GAMEPAD_B, virtualController::CIRCLE}, 
-	{XINPUT_GAMEPAD_X, virtualController::SQUARE}, {XINPUT_GAMEPAD_Y, virtualController::TRIANGLE}, 
-	{XINPUT_GAMEPAD_START, virtualController::START}, {XINPUT_GAMEPAD_BACK, virtualController::SELECT}
+	std::map <virtualController, DWORD> xinputMAP = {
+	{virtualController::CROSS, XINPUT_GAMEPAD_A}, {virtualController::CIRCLE,XINPUT_GAMEPAD_B},
+	{virtualController::SQUARE, XINPUT_GAMEPAD_X}, {virtualController::TRIANGLE, XINPUT_GAMEPAD_Y },
+	{virtualController::START, XINPUT_GAMEPAD_START}, { virtualController::SELECT, XINPUT_GAMEPAD_BACK},
+	{virtualController::DPAD_UP, XINPUT_GAMEPAD_DPAD_UP}, {virtualController::DPAD_DOWN, XINPUT_GAMEPAD_DPAD_DOWN},
+	{ virtualController::DPAD_LEFT, XINPUT_GAMEPAD_DPAD_LEFT}, { virtualController::DPAD_RIGHT, XINPUT_GAMEPAD_DPAD_RIGHT}
 	};
 
 

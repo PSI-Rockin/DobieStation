@@ -31,14 +31,24 @@ inputEvent WinInput::poll()
 
 	uint16_t currentButton;
 
-	ZeroMemory(&button, sizeof(state));
+	ZeroMemory(&state, sizeof(state));
 
 	button = XInputGetState(0, &state);
 
+	if (float regX = fmaxf(-1, (float)state.Gamepad.sThumbLX / 32767))
+	{
+		event.lStickXAxis = (regX * (128 + 128));
+
+	}
 
 
-	event.lStickXAxis = fmaxf(-1, (float)state.Gamepad.sThumbLX / 32767);
-	event.lStickYAxis = fmaxf(-1, (float)state.Gamepad.sThumbLY / 32767);
+	if (float regY = fmaxf(-1, (float)state.Gamepad.sThumbLY / 32767))
+	{
+		event.lStickYAxis = (regY * (128 + 128));
+
+	}
+
+
 
 	std::cout << "Left X Axis: " << event.lStickXAxis << std::endl;
 	std::cout << "Left Y Axis: " << event.lStickYAxis << std::endl;
@@ -49,35 +59,54 @@ inputEvent WinInput::poll()
 	if (state.Gamepad.wButtons & XINPUT_GAMEPAD_A)
 	{
 		std::cout << "A is pressed" << std::endl;
-		event.input[virtualController::CROSS] = button & XINPUT_GAMEPAD_A ? 255 : 0;
+		event.input[virtualController::CROSS] = state.Gamepad.wButtons & XINPUT_GAMEPAD_A ? 255 : 0;
 	}
 
 	if (state.Gamepad.wButtons & XINPUT_GAMEPAD_B)
 	{
 		std::cout << "B is pressed" << std::endl;
-		event.input[virtualController::CIRCLE] = button & XINPUT_GAMEPAD_B ? 255 : 0;
+		event.input[virtualController::CIRCLE] = state.Gamepad.wButtons & XINPUT_GAMEPAD_B ? 255 : 0;
 	}
 		
 	if (state.Gamepad.wButtons & XINPUT_GAMEPAD_X)
 	{
 		std::cout << "X is pressed" << std::endl;
-		event.input[virtualController::SQUARE] = button & XINPUT_GAMEPAD_X ? 255 : 0;
+		event.input[virtualController::SQUARE] = state.Gamepad.wButtons & button & XINPUT_GAMEPAD_X ? 255 : 0;
 	}
 
 	if (state.Gamepad.wButtons & XINPUT_GAMEPAD_Y)
 	{
 		std::cout << "Y is pressed" << std::endl;
-		event.input[virtualController::TRIANGLE] = button & XINPUT_GAMEPAD_Y ? 255 : 0;
+		event.input[virtualController::TRIANGLE] = state.Gamepad.wButtons & XINPUT_GAMEPAD_Y ? 255 : 0;
 	}
 	
 	if (state.Gamepad.wButtons & XINPUT_GAMEPAD_START)	
 	{			
 		std::cout << "Start is pressed" << std::endl;
-		event.input[virtualController::START] = button & XINPUT_GAMEPAD_START ? 255 : 0;
+		event.input[virtualController::START] = state.Gamepad.wButtons & XINPUT_GAMEPAD_START ? 255 : 0;
 	}
 
-	ZeroMemory(&button, sizeof(state));
 
+	if (state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_UP)
+	{
+		std::cout << "DPAD UP" << std::endl;
+		event.input[virtualController::DPAD_UP] = state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_UP ? 255: 0;
+	}
+
+	if (state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_DOWN)
+	{
+		event.input[virtualController::DPAD_DOWN] = state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_DOWN ? 255 : 0;
+	}
+
+	if (state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT)
+	{
+		event.input[virtualController::DPAD_LEFT] = state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT ? 255 : 0;
+	}
+
+	if (state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_RIGHT)
+	{
+		event.input[virtualController::DPAD_RIGHT] = state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_RIGHT ? 255 : 0;
+	}
 
 	return event;
 }
