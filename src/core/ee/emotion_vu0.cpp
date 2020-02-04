@@ -1054,9 +1054,9 @@ void EmotionInterpreter::cop2_vcallms(EmotionEngine& cpu, uint32_t instruction)
     imm *= 8;
     cpu.clear_interlock();
     //Sega Superstars Tennis is accurate down to the cycle when doing a QMFC2, so we need to account for the VCALLMS/R cycle also
-    cpu.set_cycle_count(cpu.get_cycle_count_raw() + 1);
+    cpu.set_cycle_count(cpu.get_cycle_count() + 1);
     vu0.start_program(imm);
-    cpu.set_cycle_count(cpu.get_cycle_count_raw() - 1);
+    cpu.set_cycle_count(cpu.get_cycle_count() - 1);
 }
 
 void EmotionInterpreter::cop2_vcallmsr(EmotionEngine& cpu, uint32_t instruction)
@@ -1071,9 +1071,9 @@ void EmotionInterpreter::cop2_vcallmsr(EmotionEngine& cpu, uint32_t instruction)
 
     cpu.clear_interlock();
     //Sega Superstars Tennis is accurate down to the cycle when doing a QMFC2, so we need to account for the VCALLMS/R cycle also
-    cpu.set_cycle_count(cpu.get_cycle_count_raw() + 1);
+    cpu.set_cycle_count(cpu.get_cycle_count() + 1);
     vu0.start_program(vu0.read_CMSAR0() * 8);
-    cpu.set_cycle_count(cpu.get_cycle_count_raw() - 1);
+    cpu.set_cycle_count(cpu.get_cycle_count() - 1);
 }
 
 void EmotionInterpreter::cop2_special2(EE_InstrInfo& info, uint32_t instruction)

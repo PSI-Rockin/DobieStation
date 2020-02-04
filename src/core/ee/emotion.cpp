@@ -101,7 +101,6 @@ void EmotionEngine::reset()
     PC = 0xBFC00000;
     PC_now = PC;
     cycle_count = 0;
-    cycle_count_now = 0;
     cycles_to_run = 0;
     branch_on = false;
     can_disassemble = false;
@@ -154,7 +153,6 @@ void EmotionEngine::init_tlb()
 
 void EmotionEngine::run(int cycles)
 {
-    cycle_count_now = cycle_count;
     if (!wait_for_IRQ)
     {
         cycles_to_run += cycles;
@@ -177,7 +175,7 @@ void EmotionEngine::run_interpreter()
     while (cycles_to_run > 0)
     {
         cycles_to_run--;
-        cycle_count_now++;
+        cycle_count++;
 
         uint32_t instruction = read_instr(PC);
         uint32_t lastPC = PC;
@@ -215,8 +213,6 @@ void EmotionEngine::run_interpreter()
                 delay_slot--;
         }
     }
-
-    cycle_count = cycle_count_now;
 }
 
 void EmotionEngine::run_jit()
@@ -237,7 +233,6 @@ void EmotionEngine::run_jit()
 
     //cycles_to_run and wait_for_VU0 are handled in the dispatcher, so no need to check for them here
     EE_JIT::run(this);
-    cycle_count = cycle_count_now;
 
     branch_on = false;
 }
@@ -1195,7 +1190,7 @@ void EmotionEngine::cop2_updatevu0()
     */
     if (!vu0->is_running())
     {
-        uint64_t cpu_cycles = get_cycle_count_now();
+        uint64_t cpu_cycles = get_cycle_count();
         uint64_t cop2_cycles = get_cop2_last_cycle();
         uint32_t last_instr = read32(get_PC_now() - 4);
         uint32_t upper_instr = (last_instr >> 26);
@@ -1212,7 +1207,7 @@ void EmotionEngine::cop2_updatevu0()
     }
     else if (!vu0->is_interlocked())
     {
-        uint64_t current_count = (get_cycle_count_now() - cop2_last_cycle);
+        uint64_t current_count = (get_cycle_count() - cop2_last_cycle);
         vu0->run(current_count);
     }
 }

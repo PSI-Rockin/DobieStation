@@ -1530,10 +1530,10 @@ void EE_JIT64::cleanup_recompiler(EmotionEngine& ee, bool clear_regs, bool dispa
     emitter.SUB32_MEM_IMM(cycles, REG_64::R15, offsetof(EmotionEngine, cycles_to_run));
 
     // Update cycle_count_now for COP2 sync
-    // cycle_count_now = cycle_count_now += cycles
-    emitter.MOV64_FROM_MEM(REG_64::R15, REG_64::RAX, offsetof(EmotionEngine, cycle_count_now));
+    // cycle_count_now = cycle_count += cycles
+    emitter.MOV64_FROM_MEM(REG_64::R15, REG_64::RAX, offsetof(EmotionEngine, cycle_count));
     emitter.ADD64_REG_IMM(cycles, REG_64::RAX);
-    emitter.MOV64_TO_MEM(REG_64::RAX, REG_64::R15, offsetof(EmotionEngine, cycle_count_now));
+    emitter.MOV64_TO_MEM(REG_64::RAX, REG_64::R15, offsetof(EmotionEngine, cycle_count));
 
     //Clean up stack, has to be handled before we enter dispatcher
     emitter.ADD64_REG_IMM(0x1B8, REG_64::RSP);
@@ -1698,10 +1698,10 @@ void EE_JIT64::update_vu0(EmotionEngine& ee, IR::Instruction& instr)
     emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::RAX, offsetof(EmotionEngine, PC_now));
 
     // Update cycle_count_now for COP2 sync
-    // cycle_count_now = cycle_count_now += cycles
-    emitter.MOV64_FROM_MEM(REG_64::R15, REG_64::RAX, offsetof(EmotionEngine, cycle_count_now));
+    // cycle_count_now = cycle_count += cycles
+    emitter.MOV64_FROM_MEM(REG_64::R15, REG_64::RAX, offsetof(EmotionEngine, cycle_count));
     emitter.ADD64_REG_IMM(instr.get_cycle_count(), REG_64::RAX);
-    emitter.MOV64_TO_MEM(REG_64::RAX, REG_64::R15, offsetof(EmotionEngine, cycle_count_now));
+    emitter.MOV64_TO_MEM(REG_64::RAX, REG_64::R15, offsetof(EmotionEngine, cycle_count));
 
     free_int_reg(ee, R15);
     free_int_reg(ee, R14);
