@@ -490,8 +490,8 @@ void VU_JitTranslator::handle_vu_stalls(VectorUnit &vu, uint16_t PC, uint32_t lo
         if (q_pipe_delay > 0)
         {
             //printf("[VU_JIT] Q pipe delay of %d stall amount of %d\n", q_pipe_delay, instr_info[PC].stall_amount);
-            if (instr_info[PC].stall_amount < q_pipe_delay)
-                instr_info[PC].stall_amount = q_pipe_delay;
+            if (instr_info[PC].stall_amount < q_pipe_delay-1)
+                instr_info[PC].stall_amount = q_pipe_delay-1;
 
             instr_info[PC].update_q_pipeline = true;
         }
@@ -638,6 +638,8 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
     uint16_t PC = vu.get_PC();
     while (!block_end)
     {
+        PC &= vu.mem_mask;
+
         instr_info[PC].backup_vi = 0;
         instr_info[PC].use_backup_vi = false;
         instr_info[PC].stall_amount = 0;
@@ -1427,7 +1429,7 @@ void VU_JitTranslator::lower1(std::vector<IR::Instruction> &instrs, uint32_t low
     }
 
     //If it's writing to vi0, ignore it
-    if (!instr.get_dest())
+    if (!instr.get_dest() && instr.op != IR::Opcode::FallbackInterpreter)
         return;
 
     instrs.push_back(instr);
