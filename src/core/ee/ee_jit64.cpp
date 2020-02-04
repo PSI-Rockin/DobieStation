@@ -1507,9 +1507,10 @@ uint64_t EE_JIT64::get_gpr_offset(int index) const
 
 void EE_JIT64::cleanup_recompiler(EmotionEngine& ee, bool clear_regs, bool dispatcher, uint64_t cycles)
 {
-    // FIXME: COP2 should handle incrementing the EE cycle count on its on when spinning on mbit/vuwait.
+    // FIXME: COP2 should handle incrementing the EE cycle count on its on when spinning on mbit (we'll need to increment it ourself on vuwait)
+    // Maybe keep it after COP2 fixes incrementing on stalls and conditionally check for vu0wait?
     // Make sure to remove this line when that feature is implemented in COP2 logic!
-    cycles = std::max(1ull, cycles);
+    cycles = std::max((uint64_t)1, cycles);
 
     flush_regs(ee);
 
