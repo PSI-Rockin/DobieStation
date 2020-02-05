@@ -255,9 +255,6 @@ void Emulator::update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t va
 
 void Emulator::poll_controller()
 {
-
-    std::cout << "Test" << std::endl;
-
     inputEvent state = input.poll();
     for (int i = 0; i < CONTROLLER_BUTTON_MAX; i++)
     {

@@ -15,6 +15,10 @@ enum virtualController
 	L1,
 	L2,
 	L3,
+	DPAD_UP,
+	DPAD_DOWN,
+	DPAD_LEFT,
+	DPAD_RIGHT,
 	CONTROLLER_BUTTON_MAX
 };
 

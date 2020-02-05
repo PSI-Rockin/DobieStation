@@ -65,8 +65,14 @@ inputEvent LinuxInput::poll()
     libevdev_fetch_event_value(dev, EV_ABS, ABS_THROTTLE, &x2);
     libevdev_fetch_event_value(dev, EV_ABS, ABS_RZ, &y2);
 
-    event.lStickXAxis = x1;
-    event.lStickYAxis = y1;
+    float normLX = fmaxf(-1, x1 / 32767);
+    float normLY = fmaxf(-1, y1 / 32767);
+
+    std::cout << "normLX: " << normLX << std::endl;
+    std::cout << "normLY: " << normLY << std::endl;
+
+    event.lStickXAxis = normLX;
+    event.lStickYAxis = normLY;
     event.rStickXAxis = x2;
     event.rStickYAxis = y2;
 
