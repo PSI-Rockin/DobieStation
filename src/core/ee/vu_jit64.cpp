@@ -319,6 +319,7 @@ void VU_JIT64::handle_branch(VectorUnit& vu)
     emitter.load_addr((uint64_t)&vu.PC, REG_64::RAX);
     emitter.load_addr((uint64_t)&vu_branch_dest, REG_64::R15);
     emitter.MOV16_FROM_MEM(REG_64::R15, REG_64::R15);
+    emitter.AND16_REG_IMM(vu.mem_mask, REG_64::R15);
     emitter.MOV16_TO_MEM(REG_64::R15, REG_64::RAX);
     cleanup_recompiler(vu, end_of_program);
 
@@ -329,6 +330,7 @@ void VU_JIT64::handle_branch(VectorUnit& vu)
     emitter.load_addr((uint64_t)&vu.PC, REG_64::RAX);
     emitter.load_addr((uint64_t)&vu_branch_fail_dest, REG_64::R15);
     emitter.MOV16_FROM_MEM(REG_64::R15, REG_64::R15);
+    emitter.AND16_REG_IMM(vu.mem_mask, REG_64::R15);
     emitter.MOV16_TO_MEM(REG_64::R15, REG_64::RAX);
     cleanup_recompiler(vu, true);
 }
