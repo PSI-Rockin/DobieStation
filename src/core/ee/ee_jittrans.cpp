@@ -378,18 +378,22 @@ void EE_JitTranslator::load_store_analysis(std::vector<EE_InstrInfo>& instr_info
     {
         if ((instr_info[i].pipeline & EE_InstrInfo::Pipeline::LoadStore) == EE_InstrInfo::Pipeline::LoadStore)
         {
-            sum += LOAD_STORE_BIAS;
-            ++load_ops;
+            // Don't add a bias on LQC2, SQC2
+            if ((instr_info[i].pipeline & EE_InstrInfo::Pipeline::COP2) != EE_InstrInfo::Pipeline::COP2)
+            {
+                sum += LOAD_STORE_BIAS;
+                ++load_ops;
 
-            // e.g. with LOAD_STORE_BIAS at +1.25 (0x140)
-            // ((LOAD_STORE_BIAS * 4) >> 8) * 4 - ((LOAD_STORE_BIAS * 3) >> 8) = 5 - 3 = +2 cycles for remaining instructions
-            uint32_t load_penalty = ((LOAD_STORE_BIAS * load_ops) >> 8) - ((LOAD_STORE_BIAS * load_ops - 1) >> 8);
+                // e.g. with LOAD_STORE_BIAS at +1.25 (0x140)
+                // ((LOAD_STORE_BIAS * 4) >> 8) * 4 - ((LOAD_STORE_BIAS * 3) >> 8) = 5 - 3 = +2 cycles for remaining instructions
+                uint32_t load_penalty = ((LOAD_STORE_BIAS * load_ops) >> 8) - ((LOAD_STORE_BIAS * load_ops - 1) >> 8);
 
-            for (int j = i + 1; j < instr_info.size(); ++j)
-                instr_info[j].cycles_before += load_penalty;
+                for (int j = i + 1; j < instr_info.size(); ++j)
+                    instr_info[j].cycles_before += load_penalty;
 
-            for (int j = i; j < instr_info.size(); ++j)
-                instr_info[j].cycles_after += load_penalty;
+                for (int j = i; j < instr_info.size(); ++j)
+                    instr_info[j].cycles_after += load_penalty;
+            }
         }
     }
 
