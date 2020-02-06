@@ -4692,13 +4692,6 @@ void GraphicsSynthesizerThread::recompile_alpha_blend()
         emitter_dp.load_addr((uint64_t)&and_const, RAX);
         emitter_dp.PAND_XMM_FROM_MEM(RAX, XMM0);
     }
-    else
-    {
-        emitter_dp.load_addr((uint64_t)&zero_const, RAX);
-        emitter_dp.PMAXSW_XMM_FROM_MEM(RAX, XMM0);
-        emitter_dp.load_addr((uint64_t)&and_const, RAX);
-        emitter_dp.PMINUW_XMM_FROM_MEM(RAX, XMM0);
-    }
 
     //Convert 16-bit color components to 8-bit and clamp to a 0-0xFF range
     emitter_dp.PACKUSWB(XMM0, XMM0);
