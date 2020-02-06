@@ -1116,7 +1116,7 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
                 TRXPOS.int_dest_x = TRXPOS.dest_x;
                 TRXPOS.int_source_x = TRXPOS.source_x;
                 TRXPOS.int_dest_y = TRXPOS.dest_y;
-                TRXPOS.int_source_y = TRXPOS.dest_y;
+                TRXPOS.int_source_y = TRXPOS.source_y;
                 PSMCT24_unpacked_count = 0;
                 PSMCT24_color = 0;
                 //printf("Transfer addr: $%08X\n", transfer_addr);
