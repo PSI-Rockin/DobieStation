@@ -1519,6 +1519,15 @@ void Emitter64::PACKUSWB(REG_64 xmm_source, REG_64 xmm_dest)
     modrm(0b11, xmm_dest, xmm_source);
 }
 
+void Emitter64::PACKSSDW(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    block->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    block->write<uint8_t>(0x0F);
+    block->write<uint8_t>(0x6B);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
 void Emitter64::PABSB(REG_64 xmm_source, REG_64 xmm_dest)
 {
     block->write<uint8_t>(0x66);
@@ -1826,6 +1835,19 @@ void Emitter64::PMAXSW_XMM(REG_64 xmm_source, REG_64 xmm_dest)
     modrm(0b11, xmm_dest, xmm_source);
 }
 
+void Emitter64::PMAXSW_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t offset)
+{
+    block->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, indir_source);
+    block->write<uint8_t>(0x0F);
+    block->write<uint8_t>(0xEE);
+    modrm(0, xmm_dest, indir_source);
+    if ((indir_source & 7) == 4)
+        block->write<uint8_t>(0x24);
+    if ((indir_source & 7) == 5 || offset)
+        block->write<uint32_t>(offset);
+}
+
 void Emitter64::PMAXUB_XMM(REG_64 xmm_source, REG_64 xmm_dest)
 {
     block->write<uint8_t>(0x66);
@@ -1882,6 +1904,33 @@ void Emitter64::PMINSW_XMM(REG_64 xmm_source, REG_64 xmm_dest)
     block->write<uint8_t>(0x0F);
     block->write<uint8_t>(0xEA);
     modrm(0b11, xmm_dest, xmm_source);
+}
+
+void Emitter64::PMINSW_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t offset)
+{
+    block->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, indir_source);
+    block->write<uint8_t>(0x0F);
+    block->write<uint8_t>(0xEA);
+    modrm(0, xmm_dest, indir_source);
+    if ((indir_source & 7) == 4)
+        block->write<uint8_t>(0x24);
+    if ((indir_source & 7) == 5 || offset)
+        block->write<uint32_t>(offset);
+}
+
+void Emitter64::PMINUW_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t offset)
+{
+    block->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, indir_source);
+    block->write<uint8_t>(0x0F);
+    block->write<uint8_t>(0x38);
+    block->write<uint8_t>(0x3A);
+    modrm(0, xmm_dest, indir_source);
+    if ((indir_source & 7) == 4)
+        block->write<uint8_t>(0x24);
+    if ((indir_source & 7) == 5 || offset)
+        block->write<uint32_t>(offset);
 }
 
 void Emitter64::PMINSD_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t offset)
@@ -1948,6 +1997,36 @@ void Emitter64::PMOVZX8_TO_16(REG_64 xmm_source, REG_64 xmm_dest)
     block->write<uint8_t>(0x0F);
     block->write<uint8_t>(0x38);
     block->write<uint8_t>(0x30);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
+void Emitter64::PMOVZX16_TO_32(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    block->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    block->write<uint8_t>(0x0F);
+    block->write<uint8_t>(0x38);
+    block->write<uint8_t>(0x33);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
+void Emitter64::PMOVSX16_TO_32(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    block->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    block->write<uint8_t>(0x0F);
+    block->write<uint8_t>(0x38);
+    block->write<uint8_t>(0x23);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
+void Emitter64::PMULLD(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    block->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    block->write<uint8_t>(0x0F);
+    block->write<uint8_t>(0x38);
+    block->write<uint8_t>(0x40);
     modrm(0b11, xmm_dest, xmm_source);
 }
 
@@ -2129,6 +2208,15 @@ void Emitter64::PSUBSB(REG_64 xmm_source, REG_64 xmm_dest)
 }
 
 void Emitter64::PSUBSW(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    block->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    block->write<uint8_t>(0x0F);
+    block->write<uint8_t>(0xE9);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
+void Emitter64::PSUBSD(REG_64 xmm_source, REG_64 xmm_dest)
 {
     block->write<uint8_t>(0x66);
     rex_r_rm(xmm_dest, xmm_source);
