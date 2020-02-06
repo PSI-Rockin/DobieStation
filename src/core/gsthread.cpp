@@ -4660,16 +4660,19 @@ void GraphicsSynthesizerThread::recompile_alpha_blend()
             break;
     }
 
-    alignas(16) const static uint16_t and_const[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
-
+    alignas(16) const static uint16_t and_const[] = {0x00FF, 0x00FF, 0x00FF, 0x00FF};
+    alignas(16) const static uint16_t zero_const[] = { 0, 0, 0, 0 };
     //color component = (((A - B) * C) >> 7) + D
     if (current_ctx->alpha.spec_B < 2)
     {   
         //Calculate ((A - B) * C) >> 7
-        //BUG: If (A - B) * C >= +0x8000, this gets treated as negative and clamped to black.
-        emitter_dp.PSUBW(XMM1, XMM0);
-        emitter_dp.PMULLW(XMM2, XMM0);
-        emitter_dp.PSRAW(7, XMM0);
+        emitter_dp.PMOVZX16_TO_32(XMM0, XMM0);
+        emitter_dp.PMOVZX16_TO_32(XMM1, XMM1);
+        emitter_dp.PMOVZX16_TO_32(XMM2, XMM2);
+        emitter_dp.PSUBD(XMM1, XMM0);
+        emitter_dp.PMULLD(XMM2, XMM0);
+        emitter_dp.PSRAD(7, XMM0);
+        emitter_dp.PACKSSDW(XMM0, XMM0);
     }
     else
     {
@@ -4688,6 +4691,13 @@ void GraphicsSynthesizerThread::recompile_alpha_blend()
         //Extract the lower 8 bits from the blend result before packing
         emitter_dp.load_addr((uint64_t)&and_const, RAX);
         emitter_dp.PAND_XMM_FROM_MEM(RAX, XMM0);
+    }
+    else
+    {
+        emitter_dp.load_addr((uint64_t)&zero_const, RAX);
+        emitter_dp.PMAXSW_XMM_FROM_MEM(RAX, XMM0);
+        emitter_dp.load_addr((uint64_t)&and_const, RAX);
+        emitter_dp.PMINUW_XMM_FROM_MEM(RAX, XMM0);
     }
 
     //Convert 16-bit color components to 8-bit and clamp to a 0-0xFF range
