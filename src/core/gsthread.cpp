@@ -4660,7 +4660,7 @@ void GraphicsSynthesizerThread::recompile_alpha_blend()
             break;
     }
 
-    alignas(16) const static uint16_t and_const[] = {0x00FF, 0x00FF, 0x00FF, 0x00FF};
+    alignas(16) const static uint16_t and_const[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
     //color component = (((A - B) * C) >> 7) + D
     if (current_ctx->alpha.spec_B < 2)
