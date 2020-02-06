@@ -879,47 +879,55 @@ void EmotionEngine::syscall_exception()
     //if (op != 0x7A)
         //printf("[EE] SYSCALL: %s (id: $%02X) called at $%08X\n", SYSCALL(op), op, PC);
 
-    if (op == 0x64)
+    switch (op)
     {
-        int a0 = get_gpr<uint32_t>(4);
-
-        //We can't flush the EE JIT cache immediately as we're still executing in a block.
-        //We have to wait until after we've left the block before we can erase blocks.
-        if (a0 != 0 && a0 != 1)
+        case 0x4:
+        {
+            //On a real PS2, Exit returns to OSDSYS.
+            Errors::die("[EE] Exit syscall called!\n");
+            return;
+        }
+        case 0x7: // ExecPS2
+        {
+            // Flush the cache when executing a new ELF
             flush_jit_cache = true;
+            break;
+        }
+        case 0x4A: //SetOsdConfigParam
+        {
+            uint32_t ptr = get_gpr<uint32_t>(4);
+            uint32_t value = read32(ptr);
+
+            memcpy(&osd_config_param, &value, 4);
+            break;
+        }
+        case 0x4B: //GetOsdConfigParam
+        {
+            uint32_t ptr = get_gpr<uint32_t>(4);
+
+            uint32_t value;
+            memcpy(&value, &osd_config_param, 4);
+
+            write32(ptr, value);
+            return;
+        }
+        case 0x64: // FlushCache
+        {
+            int a0 = get_gpr<uint32_t>(4);
+
+            //We can't flush the EE JIT cache immediately as we're still executing in a block.
+            //We have to wait until after we've left the block before we can erase blocks.
+            if (a0 != 0 && a0 != 1)
+                flush_jit_cache = true;
+            break;
+        }
+        case 0x7C: // Deci2Call
+            deci2call(get_gpr<uint32_t>(4), get_gpr<uint32_t>(5));
+            return;
+        default:
+            break;
     }
 
-    if (op == 0x4A)
-    {
-        //SetOsdConfigParam
-        uint32_t ptr = get_gpr<uint32_t>(4);
-        uint32_t value = read32(ptr);
-
-        memcpy(&osd_config_param, &value, 4);
-    }
-
-    if (op == 0x4B)
-    {
-        //GetOsdConfigParam
-        uint32_t ptr = get_gpr<uint32_t>(4);
-
-        uint32_t value;
-        memcpy(&value, &osd_config_param, 4);
-
-        write32(ptr, value);
-        return;
-    }
-
-    if (op == 0x7C)
-    {
-        deci2call(get_gpr<uint32_t>(4), get_gpr<uint32_t>(5));
-        return;
-    }
-    if (op == 0x04)
-    {
-        //On a real PS2, Exit returns to OSDSYS.
-        Errors::die("[EE] Exit syscall called!\n");
-    }
     handle_exception(0x8000017C, 0x08);
 }
 
