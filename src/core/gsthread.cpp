@@ -4666,10 +4666,13 @@ void GraphicsSynthesizerThread::recompile_alpha_blend()
     if (current_ctx->alpha.spec_B < 2)
     {   
         //Calculate ((A - B) * C) >> 7
-        //BUG: If (A - B) * C >= +0x8000, this gets treated as negative and clamped to black.
-        emitter_dp.PSUBW(XMM1, XMM0);
-        emitter_dp.PMULLW(XMM2, XMM0);
-        emitter_dp.PSRAW(7, XMM0);
+        emitter_dp.PMOVZX16_TO_32(XMM0, XMM0);
+        emitter_dp.PMOVZX16_TO_32(XMM1, XMM1);
+        emitter_dp.PMOVZX16_TO_32(XMM2, XMM2);
+        emitter_dp.PSUBD(XMM1, XMM0);
+        emitter_dp.PMULLD(XMM2, XMM0);
+        emitter_dp.PSRAD(7, XMM0);
+        emitter_dp.PACKSSDW(XMM0, XMM0);
     }
     else
     {
