@@ -270,6 +270,7 @@ void EmotionInterpreter::lookup(EE_InstrInfo &info, uint32_t instruction)
         case 0x31:
             info.interpreter_fn = &lwc1;
             info.pipeline = EE_InstrInfo::Pipeline::COP1 | EE_InstrInfo::Pipeline::LoadStore;
+            info.latency = 2;
             info.add_dependency(DependencyType::Write, RegType::COP1, (instruction >> 16) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
@@ -1027,6 +1028,7 @@ void EmotionInterpreter::cop(EE_InstrInfo& info, uint32_t instruction)
         case 0x100:
             info.interpreter_fn = &cop1_mfc;
             info.pipeline = EE_InstrInfo::Pipeline::COP1;
+            info.latency = 2;
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 16) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 11) & 0x1F);
             break;
@@ -1039,6 +1041,7 @@ void EmotionInterpreter::cop(EE_InstrInfo& info, uint32_t instruction)
         case 0x104:
             info.interpreter_fn = &cop1_mtc;
             info.pipeline = EE_InstrInfo::Pipeline::COP1;
+            info.latency = 2;
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 16) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 11) & 0x1F);
             break;
