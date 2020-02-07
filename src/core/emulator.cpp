@@ -779,6 +779,12 @@ void Emulator::write32(uint32_t address, uint32_t value)
         case 0x10003C30:
             vif1.set_mark(value);
             return;
+        case 0x10004000:
+            vif0.transfer_word(value);
+            return;
+        case 0x10005000:
+            vif1.transfer_word(value);
+            return;
         case 0x1000F000:
             printf("Write32 INTC_STAT: $%08X\n", value);
             intc.write_stat(value);

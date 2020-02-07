@@ -852,6 +852,13 @@ void DMAC::advance_source_dma(int index)
     int mode = (channels[index].control >> 2) & 0x3;
 
     channels[index].address += 16;
+
+    //PS2 checks MFIFO MADR as it transfers but it needs to check also at the end of a packet
+    //and send an empty signal.  This needs to be done on the MADR as TADR doesn't incrmenet on END tags
+    //For the code to work, we need to check this before the QWC decrements. HW Test confirmed
+    if (channels[index].quadword_count == 1)
+        mfifo_handler(index);
+
     channels[index].quadword_count--;
 
     if (mode == 1) //Chain
@@ -986,7 +993,6 @@ void DMAC::handle_source_chain(int index)
             //end
             //TADR update is necessary: see transfer_end for an explanation
             channels[index].address = channels[index].tag_address + 16;
-            channels[index].tag_address = channels[index].address + (quadword_count * 16);
             channels[index].tag_end = true;
             break;
         default:
