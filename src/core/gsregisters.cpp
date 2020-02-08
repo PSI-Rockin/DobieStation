@@ -70,7 +70,20 @@ void GS_REGISTERS::write64_privileged(uint32_t addr, uint64_t value)
         case 0x1000:
             printf("[GS_r] Write64 to GS_CSR: $%08lX_%08lX\n", value >> 32, value & 0xFFFFFFFF);
             CSR.SIGNAL_generated &= ~(value & 1);
-            CSR.SIGNAL_stall &= ~(value & 0x1);
+            if (value & 1)
+            {
+                if (CSR.SIGNAL_stall)
+                {
+                    CSR.SIGNAL_stall = false;
+                    //Stalled SIGNAL event is processed and generated as soon as the first is cancelled
+                    //but the IRQ is delayed until IMR SIGMSK is toggled
+                    SIGLBLID.sig_id = SIGLBLID.backup_sig_id;
+                    CSR.SIGNAL_generated = true;
+                    CSR.SIGNAL_irq_pending = true;
+                }
+                else //Stalled SIGNAL interrupt has been cancelled (MGS3 for testing)
+                    CSR.SIGNAL_irq_pending = false;
+            }
             if (value & 0x2)
             {
                 CSR.FINISH_generated = false;
@@ -126,7 +139,20 @@ void GS_REGISTERS::write32_privileged(uint32_t addr, uint32_t value)
         case 0x1000:
             printf("[GS_r] Write32 to GS_CSR: $%08X\n", value);
             CSR.SIGNAL_generated &= ~(value & 1);
-            CSR.SIGNAL_stall &= ~(value & 1);
+            if (value & 1)
+            {
+                if (CSR.SIGNAL_stall)
+                {
+                    CSR.SIGNAL_stall = false;
+                    //Stalled SIGNAL event is processed and generated as soon as the first is cancelled
+                    //but the IRQ is delayed until IMR SIGMSK is toggled
+                    SIGLBLID.sig_id = SIGLBLID.backup_sig_id;
+                    CSR.SIGNAL_generated = true;
+                    CSR.SIGNAL_irq_pending = true;
+                }
+                else //Stalled SIGNAL interrupt has been cancelled (MGS3 for testing)
+                    CSR.SIGNAL_irq_pending = false;
+            }
             if (value & 0x2)
             {
                 CSR.FINISH_generated = false;
@@ -167,7 +193,7 @@ uint64_t GS_REGISTERS::read64_privileged(uint32_t addr)
         case 0x1000:
         {
             uint64_t reg = 0;
-            reg |= CSR.SIGNAL_generated;
+            reg |= CSR.SIGNAL_generated << 0;
             reg |= CSR.FINISH_generated << 1;
             reg |= CSR.VBLANK_generated << 3;
             reg |= CSR.is_odd_frame << 13;
@@ -200,7 +226,7 @@ bool GS_REGISTERS::write64(uint32_t addr, uint64_t value)
     switch (addr)
     {
         case 0x0060:
-            printf("[GS] SIGNAL requested!\n");
+            
         {
             uint32_t mask = value >> 32;
             uint32_t new_signal = value & mask;
@@ -208,11 +234,13 @@ bool GS_REGISTERS::write64(uint32_t addr, uint64_t value)
             {
                 printf("[GS] Second SIGNAL requested before acknowledged!\n");
                 CSR.SIGNAL_stall = true;
+                SIGLBLID.backup_sig_id = SIGLBLID.sig_id;
                 SIGLBLID.backup_sig_id &= ~mask;
                 SIGLBLID.backup_sig_id |= new_signal;
             }
             else
             {
+                printf("[GS] SIGNAL requested!\n");
                 CSR.SIGNAL_generated = true;
                 SIGLBLID.sig_id &= ~mask;
                 SIGLBLID.sig_id |= new_signal;
@@ -262,6 +290,7 @@ void GS_REGISTERS::reset()
     CSR.is_odd_frame = false;
     CSR.SIGNAL_generated = false;
     CSR.SIGNAL_stall = false;
+    CSR.SIGNAL_irq_pending = false;
     CSR.VBLANK_enabled = true;
     CSR.VBLANK_generated = false;
     CSR.FINISH_enabled = false;
@@ -272,6 +301,7 @@ void GS_REGISTERS::reset()
 
     SIGLBLID.lbl_id = 0;
     SIGLBLID.sig_id = 0;
+    SIGLBLID.backup_sig_id = 0;
 
     set_CRT(false, 0x2, false);
 }

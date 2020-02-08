@@ -51,6 +51,7 @@ struct GS_CSR
 {
     bool SIGNAL_generated;
     bool SIGNAL_stall; //Used only by main/GIF thread
+    bool SIGNAL_irq_pending; //As above
     bool VBLANK_generated;
     bool VBLANK_enabled;
     bool is_odd_frame;
