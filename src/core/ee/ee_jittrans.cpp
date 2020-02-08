@@ -37,6 +37,9 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
     load_store_analysis(instr_info);
     data_dependency_analysis(instr_info);
 
+    if (instr_info.back().cycles_after != this->cycle_count)
+        Errors::die("[EE_JITTRANS] instr_info.back().cycles_after != this->cycle_count after analysis!");
+
     for (EE_InstrInfo& info : instr_info)
     {
         uint32_t opcode = ee.read32(pc);
