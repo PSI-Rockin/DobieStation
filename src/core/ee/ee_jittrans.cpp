@@ -373,10 +373,11 @@ void EE_JitTranslator::load_store_analysis(std::vector<EE_InstrInfo>& instr_info
     // power of 2 fixed point with 8 bits for decimals
     const uint32_t LOAD_STORE_BIAS = 0x100;
     int sum = 0;
-    std::vector<size_t> load_idxs = std::vector<size_t>();
+    int ls_ops = 0;
+    uint32_t load_penalty = 0;
+    bool dual_issue = false;
 
-    // Record each encounter of a load/store operation and add it to the total cycle count
-    // Also record the idx of each instruction
+    // Catch each encounter of a load/store operation and add it to the total cycle count
     for (int i = 0; i < instr_info.size(); ++i)
     {
         if ((instr_info[i].pipeline & EE_InstrInfo::Pipeline::LoadStore) == EE_InstrInfo::Pipeline::LoadStore)
@@ -384,31 +385,33 @@ void EE_JitTranslator::load_store_analysis(std::vector<EE_InstrInfo>& instr_info
             // Don't add a bias on LQC2, SQC2
             if ((instr_info[i].pipeline & EE_InstrInfo::Pipeline::COP2) != EE_InstrInfo::Pipeline::COP2)
             {
-                load_idxs.push_back(i);
                 sum += LOAD_STORE_BIAS;
+                load_penalty = ((LOAD_STORE_BIAS * ++ls_ops) >> 8);
+            }
+        }
+        
+        // Add cycle counts to the rest of the instructions in the block
+        instr_info[i].cycles_after += load_penalty;
+
+        if (i + 1 < instr_info.size())
+        {
+            if (dual_issue)
+            {
+                instr_info[i + 1].cycles_before = instr_info[i].cycles_before;
+                dual_issue = false;
+            }
+            else
+            {
+                // Check if the next two instructions were dual-issued
+                if (i + 2 < instr_info.size() && instr_info[i + 1].cycles_before == instr_info[i + 2].cycles_before)
+                    dual_issue = true;
+
+                instr_info[i + 1].cycles_before += load_penalty;
             }
         }
     }
 
     cycle_count += (sum >> 8);
-
-    // Add cycle counts to the affected instructions
-    uint32_t ls_ops = 0;
-    if (load_idxs.size())
-    {
-        for (int i = load_idxs[0]; i < instr_info.size(); ++i)
-        {
-            if (ls_ops < load_idxs.size() && load_idxs[ls_ops] == i)
-                ++ls_ops;
-
-            // Multiply the penalty by the operations encountered before this point, then convert to regular int
-            uint32_t load_penalty = ((LOAD_STORE_BIAS * ls_ops) >> 8);
-
-            instr_info[i].cycles_after += load_penalty;
-            if (i + 1 < instr_info.size())
-                instr_info[i + 1].cycles_before += load_penalty;
-        }
-    }
 }
 
 void EE_JitTranslator::data_dependency_analysis(std::vector<EE_InstrInfo>& instr_info)
