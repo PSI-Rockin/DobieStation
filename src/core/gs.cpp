@@ -205,7 +205,7 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
     //We need a check for SIGNAL here so that we can fire the interrupt
     if (addr == 0x60)
     {
-        if (!reg.IMR.signal && !reg.CSR.SIGNAL_generated)
+        if (!reg.IMR.signal && !reg.CSR.SIGNAL_generated && !reg.CSR.SIGNAL_irq_pending)
             intc->assert_IRQ((int)Interrupt::GS);
     }
 
@@ -224,10 +224,10 @@ void GraphicsSynthesizer::write64_privileged(uint32_t addr, uint64_t value)
     reg.write64_privileged(addr, value);
 
     //When SIGNAL is written to twice, the interrupt will not be processed until IMR.signal is flipped from 1 to 0.
-    if (old_IMR && !reg.IMR.signal && reg.CSR.SIGNAL_stall)
+    if (old_IMR && !reg.IMR.signal && reg.CSR.SIGNAL_irq_pending)
     {
         intc->assert_IRQ((int)Interrupt::GS);
-        reg.SIGLBLID.sig_id = reg.SIGLBLID.backup_sig_id;
+        reg.CSR.SIGNAL_irq_pending = false;
     }
 }
 
@@ -238,7 +238,14 @@ void GraphicsSynthesizer::write32_privileged(uint32_t addr, uint32_t value)
 
     gs_thread.send_message({ GSCommand::write32_privileged_t,payload });
 
+    bool old_IMR = reg.IMR.signal;
     reg.write32_privileged(addr, value);
+    //When SIGNAL is written to twice, the interrupt will not be processed until IMR.signal is flipped from 1 to 0.
+    if (old_IMR && !reg.IMR.signal && reg.CSR.SIGNAL_irq_pending)
+    {
+        intc->assert_IRQ((int)Interrupt::GS);
+        reg.CSR.SIGNAL_irq_pending = false;
+    }
 }
 
 uint32_t GraphicsSynthesizer::read32_privileged(uint32_t addr)
