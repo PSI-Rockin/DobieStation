@@ -991,7 +991,6 @@ void DMAC::handle_source_chain(int index)
             break;
         case 7:
             //end
-            //TADR update is necessary: see transfer_end for an explanation
             channels[index].address = channels[index].tag_address + 16;
             channels[index].tag_end = true;
             break;
