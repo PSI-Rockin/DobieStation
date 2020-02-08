@@ -198,6 +198,7 @@ class VectorUnit
         void run(int cycles);
         void correct_jit_pipeline(int cycles);
         void run_jit(int cycles);
+        void update_XGKick();
         void handle_XGKICK();
         void start_program(uint32_t addr);
         void end_execution();

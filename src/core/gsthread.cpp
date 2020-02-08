@@ -1116,7 +1116,7 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
                 TRXPOS.int_dest_x = TRXPOS.dest_x;
                 TRXPOS.int_source_x = TRXPOS.source_x;
                 TRXPOS.int_dest_y = TRXPOS.dest_y;
-                TRXPOS.int_source_y = TRXPOS.dest_y;
+                TRXPOS.int_source_y = TRXPOS.source_y;
                 PSMCT24_unpacked_count = 0;
                 PSMCT24_color = 0;
                 //printf("Transfer addr: $%08X\n", transfer_addr);
@@ -3096,7 +3096,6 @@ uint128_t GraphicsSynthesizerThread::local_to_host()
                     TRXPOS.int_source_x++;
                     break;
                 case 0x1B:
-                    data <<= 8;
                     data |= (uint64_t)((read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
                         TRXPOS.int_source_x, TRXPOS.int_source_y) >> 24) & 0xFF) << (i * 8);
                     pixels_transferred++;
@@ -4667,10 +4666,13 @@ void GraphicsSynthesizerThread::recompile_alpha_blend()
     if (current_ctx->alpha.spec_B < 2)
     {   
         //Calculate ((A - B) * C) >> 7
-        //BUG: If (A - B) * C >= +0x8000, this gets treated as negative and clamped to black.
-        emitter_dp.PSUBW(XMM1, XMM0);
-        emitter_dp.PMULLW(XMM2, XMM0);
-        emitter_dp.PSRAW(7, XMM0);
+        emitter_dp.PMOVZX16_TO_32(XMM0, XMM0);
+        emitter_dp.PMOVZX16_TO_32(XMM1, XMM1);
+        emitter_dp.PMOVZX16_TO_32(XMM2, XMM2);
+        emitter_dp.PSUBD(XMM1, XMM0);
+        emitter_dp.PMULLD(XMM2, XMM0);
+        emitter_dp.PSRAD(7, XMM0);
+        emitter_dp.PACKSSDW(XMM0, XMM0);
     }
     else
     {

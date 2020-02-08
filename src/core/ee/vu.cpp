@@ -161,9 +161,10 @@ void VectorUnit::reset()
     clip_flags = 0;
     PC = 0;
     //cycle_count = 1; //Set to 1 to prevent spurious events from occurring during execution
-    eecpu->set_cop2_last_cycle(eecpu->get_cycle_count());
-    cycle_count = eecpu->get_cop2_last_cycle() >> 1;
-    run_event = 0;
+    if(!id)
+        eecpu->set_cop2_last_cycle(eecpu->get_cycle_count());
+    cycle_count = eecpu->get_cycle_count();
+    run_event = cycle_count;
     running = false;
     tbit_stop = false;
     vumem_is_dirty = true; //assume we don't know the contents on reset
@@ -310,10 +311,20 @@ void VectorUnit::run(int cycles)
         int_branch_pipeline.update();
 
         if (XGKICK_stall)
+        {
+            decoder.reset();
+            cycle_count += cycles_to_run - 1;
+            for (int i = cycles_to_run - 1; i > 0; i--)
+            {
+                update_mac_pipeline();
+                update_DIV_EFU_pipes();
+                int_branch_pipeline.update();
+            }
             break;
+        }
 
-        uint32_t upper_instr = *(uint32_t*)&instr_mem.m[PC + 4];
-        uint32_t lower_instr = *(uint32_t*)&instr_mem.m[PC];
+        uint32_t upper_instr = *(uint32_t*)&instr_mem.m[(PC + 4) & mem_mask];
+        uint32_t lower_instr = *(uint32_t*)&instr_mem.m[PC & mem_mask];
         //printf("[$%08X] $%08X:$%08X\n", PC, upper_instr, lower_instr);
         VU_Interpreter::interpret(*this, upper_instr, lower_instr);
 
@@ -343,7 +354,7 @@ void VectorUnit::run(int cycles)
                 running = false;
                 finish_on = false;
                 flush_pipes();
-                cycle_count = eecpu->get_cop2_last_cycle() >> 1;
+                cycle_count = eecpu->get_cop2_last_cycle();
             }
             else
                 ebit_delay_slot--;
@@ -407,12 +418,18 @@ void VectorUnit::run(int cycles)
 
     if (transferring_GIF)
     {
-        if (gif->path_active(1, true))
+        XGKICK_cycles += cycles_to_run;
+        while (XGKICK_cycles >= 2)
         {
-            while (cycles_to_run >= 2 && transferring_GIF)
+            if (gif->path_active(1, true))
             {
-                cycles_to_run -= 2;
                 handle_XGKICK();
+                XGKICK_cycles -= 2;
+            }
+            else
+            {
+                XGKICK_cycles = 0;
+                break;
             }
         }
     }
@@ -481,35 +498,65 @@ void VectorUnit::correct_jit_pipeline(int cycles)
     pipeline_state[1] |= (uint64_t)(ebit_delay_slot & 0x1) << 56UL;
 }
 
-void VectorUnit::run_jit(int cycles)
+void VectorUnit::update_XGKick()
 {
     int stalled_cycles = 0;
+    int cycles_to_xgkick = cycle_count - run_event;
+    if ((!running || XGKICK_stall) && transferring_GIF && cycles_to_xgkick > 0)
+    {
+        XGKICK_cycles += cycles_to_xgkick;
+        gif->request_PATH(1, true);
+        while (XGKICK_cycles >= 2)
+        {
+            if (gif->path_active(1, true))
+            {
+                if (XGKICK_stall)
+                {
+                    stalled_cycles += 2;
+                }
+                else if (running)
+                {
+                    XGKICK_cycles = 0;
+                    break;
+                }
+                XGKICK_cycles -= 2;
+                handle_XGKICK();
+            }
+            else
+            {
+                XGKICK_cycles = 0;
+                break;
+            }
+        }
+    }
+
+    //Get the pipeline in the right state after an XGKick stall
+    if (stalled_cycles > 0)
+    {
+        correct_jit_pipeline(stalled_cycles);
+        run_event += stalled_cycles;
+    }
+
+    if (!running)
+        run_event = cycle_count;
+}
+
+void VectorUnit::run_jit(int cycles)
+{
+    int runfor = 0;
     if (cycles > 0)
     {
         cycle_count += cycles;
-        if ((!running || XGKICK_stall) && transferring_GIF)
-        {
-            gif->request_PATH(1, true);
-            while (cycles >= 2 && gif->path_active(1, true))
-            {
-                if (XGKICK_stall)
-                    stalled_cycles+=2;
-                cycles -= 2; //BUS Speed
-                handle_XGKICK();
-            }
-        }
-        //Get the pipeline in the right state after an XGKick stall
-        if (stalled_cycles > 0)
-        {
-            correct_jit_pipeline(stalled_cycles);
-            run_event += stalled_cycles;
-        }
+
+        update_XGKick();
 
         while (running && !XGKICK_stall && run_event < cycle_count)
         {
             run_event += VU_JIT::run(this);
         }
     }
+    //If the program ends before all the cycles have passed, we need to update XGKick again
+    update_XGKick();
 }
 
 void VectorUnit::handle_XGKICK()
@@ -524,7 +571,6 @@ void VectorUnit::handle_XGKICK()
             //printf("[VU1] Activating stalled XGKICK transfer\n");
             XGKICK_stall = false;
             GIF_addr = stalled_GIF_addr;
-            run_event = cycle_count;
         }
         else
         {
@@ -1168,8 +1214,10 @@ void VectorUnit::ctc(int index, uint32_t value)
             CMSAR0 = (uint16_t)value;
             break;
         case 28:
-            if (value & 0x2 && id == 0)
+            if (value & 0x2)
                 reset();
+            if (value & 0x200)
+                other_vu->reset();
             FBRST = value & ~0x303;
             break;
         default:
@@ -1185,7 +1233,7 @@ void VectorUnit::branch(bool condition, int16_t imm, bool link, uint8_t linkreg)
         if (branch_on)
         {
             second_branch_pending = true;
-            secondbranch_PC = ((int16_t)PC + imm + 8) & 0x3fff;
+            secondbranch_PC = ((int16_t)PC + imm + 8) & mem_mask;
             if(link)
                 set_int(linkreg, (new_PC + 8) / 8);
         }
@@ -1193,7 +1241,7 @@ void VectorUnit::branch(bool condition, int16_t imm, bool link, uint8_t linkreg)
         {
             branch_on = true;
             branch_delay_slot = 1;
-            new_PC = ((int16_t)PC + imm + 8) & 0x3fff;
+            new_PC = ((int16_t)PC + imm + 8) & mem_mask;
             if (link)
                 set_int(linkreg, (PC + 16) / 8);
         }
@@ -1206,13 +1254,13 @@ void VectorUnit::jp(uint16_t addr, bool link, uint8_t linkreg)
     if (branch_on)
     {
         second_branch_pending = true;
-        secondbranch_PC = addr & 0x3FFF;
+        secondbranch_PC = addr & mem_mask;
         if (link)
             set_int(linkreg, (new_PC + 8) / 8);
     }
     else
     {
-        new_PC = addr & 0x3FFF;
+        new_PC = addr & mem_mask;
         branch_on = true;
         branch_delay_slot = 1;
         if (link)

@@ -889,6 +889,17 @@ void VectorInterface::process_UNPACK_quad(uint128_t &quad)
     }
 }
 
+bool VectorInterface::transfer_word(uint32_t value)
+{
+    //This should return false if the transfer stalls due to the FIFO filling up
+    if (FIFO.size() > (fifo_size - 1))
+        return false;
+
+    printf("[VIF] Transfer 32bit Value: $%08X\n", value);
+    FIFO.push(value);
+    return true;
+}
+
 bool VectorInterface::transfer_DMAtag(uint128_t tag)
 {
     //This should return false if the transfer stalls due to the FIFO filling up

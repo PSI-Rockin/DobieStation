@@ -188,6 +188,11 @@ bool DMAC::mfifo_handler(int index)
 void DMAC::transfer_end(int index)
 {
     printf("[DMAC] %s transfer ended\n", CHAN(index));
+
+    //Dirge of Cerberus ends a VIF1 transfer without restarting it and expects an MFIFO empty interrupt to occur.
+    //This can only happen when we handle MFIFO here and update TADR on an END tag.
+    //Otherwise, the game hangs when displaying the menu logo.
+    mfifo_handler(index);
     channels[index].control &= ~0x100;
     channels[index].started = false;
     interrupt_stat.channel_stat[index] = true;
@@ -850,6 +855,13 @@ void DMAC::advance_source_dma(int index)
     int mode = (channels[index].control >> 2) & 0x3;
 
     channels[index].address += 16;
+
+    //PS2 checks MFIFO MADR as it transfers but it needs to check also at the end of a packet
+    //and send an empty signal.  This needs to be done on the MADR as TADR doesn't incrmenet on END tags
+    //For the code to work, we need to check this before the QWC decrements. HW Test confirmed
+    if (channels[index].quadword_count == 1)
+        mfifo_handler(index);
+
     channels[index].quadword_count--;
 
     if (mode == 1) //Chain

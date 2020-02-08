@@ -125,11 +125,25 @@ void vu_update_xgkick(VectorUnit& vu, int cycles)
     if (vu.transferring_GIF)
     {
         vu.gif->request_PATH(1, true);
-        while (cycles >= 2 && vu.gif->path_active(1, true))
+        vu.XGKICK_cycles += cycles;
+    }
+    else
+    {
+        vu.XGKICK_cycles = 0;
+        return;
+    }
+
+    while (vu.XGKICK_cycles >= 2)
+    {
+        if (vu.gif->path_active(1, true))
         {
             vu.handle_XGKICK();
-            //We send cycles in VU cycles (300Mhz), XGKick runs at Bus Clk (150Mhz)
-            cycles -= 2;
+            vu.XGKICK_cycles -= 2;
+        }
+        else
+        {
+            vu.XGKICK_cycles = 0;
+            break;
         }
     }
 }
@@ -305,6 +319,7 @@ void VU_JIT64::handle_branch(VectorUnit& vu)
     emitter.load_addr((uint64_t)&vu.PC, REG_64::RAX);
     emitter.load_addr((uint64_t)&vu_branch_dest, REG_64::R15);
     emitter.MOV16_FROM_MEM(REG_64::R15, REG_64::R15);
+    emitter.AND16_REG_IMM(vu.mem_mask, REG_64::R15);
     emitter.MOV16_TO_MEM(REG_64::R15, REG_64::RAX);
     cleanup_recompiler(vu, end_of_program);
 
@@ -315,6 +330,7 @@ void VU_JIT64::handle_branch(VectorUnit& vu)
     emitter.load_addr((uint64_t)&vu.PC, REG_64::RAX);
     emitter.load_addr((uint64_t)&vu_branch_fail_dest, REG_64::R15);
     emitter.MOV16_FROM_MEM(REG_64::R15, REG_64::R15);
+    emitter.AND16_REG_IMM(vu.mem_mask, REG_64::R15);
     emitter.MOV16_TO_MEM(REG_64::R15, REG_64::RAX);
     cleanup_recompiler(vu, true);
 }

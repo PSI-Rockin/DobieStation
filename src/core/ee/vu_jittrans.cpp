@@ -46,6 +46,8 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
         std::vector<IR::Instruction> upper_instrs;
         std::vector<IR::Instruction> lower_instrs;
 
+        cur_PC &= vu.mem_mask;
+
         if (instr_info[cur_PC].branch_delay_slot || instr_info[cur_PC].ebit_delay_slot || instr_info[cur_PC].tbit_end)
         {
             block_end = true;
@@ -490,8 +492,8 @@ void VU_JitTranslator::handle_vu_stalls(VectorUnit &vu, uint16_t PC, uint32_t lo
         if (q_pipe_delay > 0)
         {
             //printf("[VU_JIT] Q pipe delay of %d stall amount of %d\n", q_pipe_delay, instr_info[PC].stall_amount);
-            if (instr_info[PC].stall_amount < q_pipe_delay)
-                instr_info[PC].stall_amount = q_pipe_delay;
+            if (instr_info[PC].stall_amount < q_pipe_delay-1)
+                instr_info[PC].stall_amount = q_pipe_delay-1;
 
             instr_info[PC].update_q_pipeline = true;
         }
@@ -638,6 +640,8 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
     uint16_t PC = vu.get_PC();
     while (!block_end)
     {
+        PC &= vu.mem_mask;
+
         instr_info[PC].backup_vi = 0;
         instr_info[PC].use_backup_vi = false;
         instr_info[PC].stall_amount = 0;
@@ -839,7 +843,7 @@ void VU_JitTranslator::flag_pass(VectorUnit &vu)
         {
             needs_update = true;
             mac_cycles -= instr_info[i].stall_amount;
-            if (mac_cycles <= 0)
+            if (mac_cycles <= 0 && instr_info[i].has_mac_result) //Need to check if timed position is a NOP
                 mac_instruction_found = false;
         }
 
@@ -847,7 +851,7 @@ void VU_JitTranslator::flag_pass(VectorUnit &vu)
         {
             needs_update = true;
             clip_cycles -= instr_info[i].stall_amount;
-            if (clip_cycles <= 0)
+            if (clip_cycles <= 0) //TODO When CLIP is implemented, make sure we get all the CLIP instructions
                 clip_instruction_found = false;
         }
 
@@ -884,8 +888,7 @@ void VU_JitTranslator::update_xgkick(std::vector<IR::Instruction> &instrs)
     IR::Instruction update;
     update.op = IR::Opcode::UpdateXgkick;
     update.set_source(cycles_since_xgkick_update);
-    //Preserve the LSB since XGKick decrements 2 cycles at a time and we may have sent the request on an odd cycle
-    cycles_since_xgkick_update &= 1;
+    cycles_since_xgkick_update = 0;
     instrs.push_back(update);
 }
 
@@ -1427,7 +1430,7 @@ void VU_JitTranslator::lower1(std::vector<IR::Instruction> &instrs, uint32_t low
     }
 
     //If it's writing to vi0, ignore it
-    if (!instr.get_dest())
+    if (!instr.get_dest() && instr.op != IR::Opcode::FallbackInterpreter)
         return;
 
     instrs.push_back(instr);
@@ -1601,6 +1604,7 @@ void VU_JitTranslator::lower1_special(std::vector<IR::Instruction> &instrs, uint
             instr.set_source2(instr_info[cur_PC].pipeline_state[1]);
             instr.set_dest(trans_branch_delay_slot);
             instr.set_jump_dest(trans_ebit_delay_slot);
+            instr.set_cycle_count(cycles_this_block);
             break;
         case 0x70:
             //ESADD
