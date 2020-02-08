@@ -418,8 +418,11 @@ int DMAC::process_GIF()
                 gif->send_PATH3(fetch128(channels[GIF].address));
                 advance_source_dma(GIF);
                 count++;
-                if (gif->path3_done())
-                    break;
+                if (gif->path3_done() && !channels[GIF].tag_end)
+                {
+                    arbitrate();
+                    return count;
+                }
             }
             else
             {

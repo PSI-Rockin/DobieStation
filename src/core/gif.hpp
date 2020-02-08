@@ -47,6 +47,7 @@ class GraphicsInterface
         bool intermittent_mode;
         bool intermittent_active;
         bool path3_dma_waiting;
+        bool gif_temporary_stop;
 
         float internal_Q;
 
@@ -65,15 +66,17 @@ class GraphicsInterface
         bool fifo_draining();
         void dma_waiting(bool dma_waiting);
         int get_active_path();
+        int get_path_queue();
         bool path_active(int index, bool canInterruptPath3);
         void resume_path3();
 
         uint32_t read_STAT();
         void write_MODE(uint32_t value);
+        void write_CTRL(uint32_t value);
 
         void request_PATH(int index, bool canInterruptPath3);
         void deactivate_PATH(int index);
-        void set_path3_vifmask(int value);
+        bool set_path3_vifmask(int value);
         bool path3_masked(int index);
         bool interrupt_path3(int index);
         bool path3_done();
@@ -97,13 +100,18 @@ inline int GraphicsInterface::get_active_path()
     return active_path;
 }
 
+inline int GraphicsInterface::get_path_queue()
+{
+    return path_queue;
+}
+
 inline bool GraphicsInterface::path_active(int index, bool canInterruptPath3)
 {
     if (index != 3 && canInterruptPath3)
     {
         interrupt_path3(index);
     }
-    return (active_path == index) && !gs->stalled();
+    return (active_path == index) && !gs->stalled() && !gif_temporary_stop;
 }
 
 inline void GraphicsInterface::resume_path3()

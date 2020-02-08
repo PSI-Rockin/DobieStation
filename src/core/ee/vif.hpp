@@ -69,8 +69,10 @@ class VectorInterface
         bool fifo_reverse;
         
         bool wait_for_VU;
+        bool direct_wait;
         bool wait_for_PATH3;
         bool flush_stall;
+        bool stall_condition_active;
         uint32_t wait_cmd_value;
         uint16_t mem_mask;
         uint32_t fifo_size;

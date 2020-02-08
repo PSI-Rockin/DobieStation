@@ -179,6 +179,8 @@ uint64_t GS_REGISTERS::read64_privileged(uint32_t addr)
             //printf("[GS_r] read64_privileged!: CSR = %08X\n", reg);
             return reg;
         }
+        case 0x1040:
+            return BUSDIR;
         case 0x1080:
         {
             uint64_t reg = 0;
