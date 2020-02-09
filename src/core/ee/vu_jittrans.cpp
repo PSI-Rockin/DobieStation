@@ -1469,9 +1469,6 @@ void VU_JitTranslator::lower1_special(std::vector<IR::Instruction> &instrs, uint
             instr.set_field((lower >> 21) & 0xF);
             instr.set_dest((lower >> 16) & 0x1F);
             instr.set_base((lower >> 11) & 0xF);
-
-            if (!instr.get_dest())
-                return;
             break;
         case 0x35:
             //SQI
@@ -1487,9 +1484,6 @@ void VU_JitTranslator::lower1_special(std::vector<IR::Instruction> &instrs, uint
             instr.set_field((lower >> 21) & 0xF);
             instr.set_dest((lower >> 16) & 0x1F);
             instr.set_base((lower >> 11) & 0xF);
-
-            if (!instr.get_dest())
-                return;
             break;
         case 0x37:
             //SQD

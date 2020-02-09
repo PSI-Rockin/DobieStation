@@ -560,28 +560,31 @@ void VU_JIT64::load_quad_inc(VectorUnit &vu, IR::Instruction &instr)
     uint8_t field = convert_field(instr.get_field());
     REG_64 base = alloc_int_reg(vu, instr.get_base(), REG_STATE::READ_WRITE);
 
-    //addr = (int_reg * 16) & mem_mask
-    emitter.MOVZX16_TO_64(base, REG_64::RAX);
-    emitter.SHL32_REG_IMM(4, REG_64::RAX);
-    emitter.AND32_EAX(vu.mem_mask);
-
-    //vf_reg.field = *(_XMM*)&vu.data_mem.m[addr]
-    emitter.load_addr((uint64_t)&vu.data_mem.m, REG_64::R15);
-    emitter.ADD64_REG(REG_64::RAX, REG_64::R15);
-
-    if (field == 0xF)
+    if (instr.get_dest())
     {
-        REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::WRITE);
-        emitter.MOVAPS_FROM_MEM(REG_64::R15, dest);
-        set_clamping(dest, true, 0xf);
-    }
-    else
-    {
-        REG_64 temp = REG_64::XMM0;
-        REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
-        emitter.MOVAPS_FROM_MEM(REG_64::R15, temp);
-        emitter.BLENDPS(field, temp, dest);
-        set_clamping(dest, true, field);
+        //addr = (int_reg * 16) & mem_mask
+        emitter.MOVZX16_TO_64(base, REG_64::RAX);
+        emitter.SHL32_REG_IMM(4, REG_64::RAX);
+        emitter.AND32_EAX(vu.mem_mask);
+
+        //vf_reg.field = *(_XMM*)&vu.data_mem.m[addr]
+        emitter.load_addr((uint64_t)&vu.data_mem.m, REG_64::R15);
+        emitter.ADD64_REG(REG_64::RAX, REG_64::R15);
+
+        if (field == 0xF)
+        {
+            REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::WRITE);
+            emitter.MOVAPS_FROM_MEM(REG_64::R15, dest);
+            set_clamping(dest, true, 0xf);
+        }
+        else
+        {
+            REG_64 temp = REG_64::XMM0;
+            REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
+            emitter.MOVAPS_FROM_MEM(REG_64::R15, temp);
+            emitter.BLENDPS(field, temp, dest);
+            set_clamping(dest, true, field);
+        }
     }
 
     if (instr.get_base())
@@ -626,28 +629,31 @@ void VU_JIT64::load_quad_dec(VectorUnit &vu, IR::Instruction &instr)
     if (instr.get_base())
         emitter.DEC16(base);
 
-    //addr = (int_reg * 16) & mem_mask
-    emitter.MOVZX16_TO_64(base, REG_64::RAX);
-    emitter.SHL32_REG_IMM(4, REG_64::RAX);
-    emitter.AND32_EAX(vu.mem_mask);
-
-    //vf_reg.field = *(_XMM*)&vu.data_mem.m[addr]
-    emitter.load_addr((uint64_t)&vu.data_mem.m, REG_64::R15);
-    emitter.ADD64_REG(REG_64::RAX, REG_64::R15);
-
-    if (field == 0xF)
+    if (instr.get_dest())
     {
-        REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::WRITE);
-        emitter.MOVAPS_FROM_MEM(REG_64::R15, dest);
-        set_clamping(dest, true, 0xf);
-    }
-    else
-    {
-        REG_64 temp = REG_64::XMM0;
-        REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
-        emitter.MOVAPS_FROM_MEM(REG_64::R15, temp);
-        emitter.BLENDPS(field, temp, dest);
-        set_clamping(dest, true, field);
+        //addr = (int_reg * 16) & mem_mask
+        emitter.MOVZX16_TO_64(base, REG_64::RAX);
+        emitter.SHL32_REG_IMM(4, REG_64::RAX);
+        emitter.AND32_EAX(vu.mem_mask);
+
+        //vf_reg.field = *(_XMM*)&vu.data_mem.m[addr]
+        emitter.load_addr((uint64_t)&vu.data_mem.m, REG_64::R15);
+        emitter.ADD64_REG(REG_64::RAX, REG_64::R15);
+
+        if (field == 0xF)
+        {
+            REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::WRITE);
+            emitter.MOVAPS_FROM_MEM(REG_64::R15, dest);
+            set_clamping(dest, true, 0xf);
+        }
+        else
+        {
+            REG_64 temp = REG_64::XMM0;
+            REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), REG_STATE::READ_WRITE);
+            emitter.MOVAPS_FROM_MEM(REG_64::R15, temp);
+            emitter.BLENDPS(field, temp, dest);
+            set_clamping(dest, true, field);
+        }
     }
 }
 
