@@ -473,6 +473,14 @@ uint8_t Emulator::read8(uint32_t address)
         return IOP_RAM[address & 0x1FFFFF];
     if (address >= 0x10008000 && address < 0x1000F000)
         return dmac.read8(address);
+    if (address >= 0x11000000 && address < 0x11004000)
+        return vu0.read_instr<uint8_t>(address);
+    if (address >= 0x11004000 && address < 0x11008000)
+        return vu0.read_mem<uint8_t>(address);
+    if (address >= 0x11008000 && address < 0x1100C000)
+        return vu1.read_instr<uint8_t>(address);
+    if (address >= 0x1100C000 && address < 0x11010000)
+        return vu1.read_mem<uint8_t>(address);
     switch (address)
     {
         case 0x1F40200F:
@@ -494,6 +502,14 @@ uint16_t Emulator::read16(uint32_t address)
         return dmac.read16(address);
     if (address >= 0x1C000000 && address < 0x1C200000)
         return *(uint16_t*)&IOP_RAM[address & 0x1FFFFF];
+    if (address >= 0x11000000 && address < 0x11004000)
+        return vu0.read_instr<uint16_t>(address);
+    if (address >= 0x11004000 && address < 0x11008000)
+        return vu0.read_mem<uint16_t>(address);
+    if (address >= 0x11008000 && address < 0x1100C000)
+        return vu1.read_instr<uint16_t>(address);
+    if (address >= 0x1100C000 && address < 0x11010000)
+        return vu1.read_mem<uint16_t>(address);
     switch (address)
     {
         case 0x10003C30:
@@ -668,6 +684,26 @@ void Emulator::write8(uint32_t address, uint8_t value)
         IOP_RAM[address & 0x1FFFFF] = value;
         return;
     }
+    if (address >= 0x11000000 && address < 0x11004000)
+    {
+        vu0.write_instr<uint8_t>(address, value);
+        return;
+    }
+    if (address >= 0x11004000 && address < 0x11008000)
+    {
+        vu0.write_mem<uint8_t>(address, value);
+        return;
+    }
+    if (address >= 0x11008000 && address < 0x1100C000)
+    {
+        vu1.write_instr<uint8_t>(address, value);
+        return;
+    }
+    if (address >= 0x1100C000 && address < 0x11010000)
+    {
+        vu1.write_mem<uint8_t>(address, value);
+        return;
+    }
     switch (address)
     {
         case 0x1000F180:
@@ -688,6 +724,26 @@ void Emulator::write16(uint32_t address, uint16_t value)
     if (address >= 0x1C000000 && address < 0x1C200000)
     {
         *(uint16_t*)&IOP_RAM[address & 0x1FFFFF] = value;
+        return;
+    }
+    if (address >= 0x11000000 && address < 0x11004000)
+    {
+        vu0.write_instr<uint16_t>(address, value);
+        return;
+    }
+    if (address >= 0x11004000 && address < 0x11008000)
+    {
+        vu0.write_mem<uint16_t>(address, value);
+        return;
+    }
+    if (address >= 0x11008000 && address < 0x1100C000)
+    {
+        vu1.write_instr<uint16_t>(address, value);
+        return;
+    }
+    if (address >= 0x1100C000 && address < 0x11010000)
+    {
+        vu1.write_mem<uint16_t>(address, value);
         return;
     }
     if (address >= 0x1A000000 && address < 0x1FC00000)
