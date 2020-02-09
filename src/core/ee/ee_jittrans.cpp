@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <cstring>
+#include <unordered_map> 
 #include "ee_jittrans.hpp"
 #include "emotioninterpreter.hpp"
 #include "../errors.hpp"
@@ -240,7 +241,7 @@ void EE_JitTranslator::issue_cycle_analysis(std::vector<EE_InstrInfo>& instr_inf
 bool EE_JitTranslator::dual_issue_analysis(const EE_InstrInfo& instr1, const EE_InstrInfo& instr2)
 {
     // Check for pipeline conflicts
-    const static std::pair<EE_InstrInfo::Pipeline, int> pipes[] =
+    const static std::unordered_map<EE_InstrInfo::Pipeline, int> pipes =
     {
         {EE_InstrInfo::Pipeline::ERET, 1},
         {EE_InstrInfo::Pipeline::SYNC, 1},
@@ -261,19 +262,8 @@ bool EE_JitTranslator::dual_issue_analysis(const EE_InstrInfo& instr1, const EE_
         {EE_InstrInfo::Pipeline::Branch, 3}
     };
 
-    int pipe1;
-    int pipe2;
-
-    for (auto pipe : pipes)
-    {
-        if (instr1.pipeline == pipe.first)
-            pipe1 = pipe.second;
-    }
-    for (auto pipe : pipes)
-    {
-        if (instr2.pipeline == pipe.first)
-            pipe2 = pipe.second;
-    }
+    int pipe1 = pipes.at(instr1.pipeline);
+    int pipe2 = pipes.at(instr2.pipeline);
 
     // Check to see if we already have a pipeline match, or if they aren't both generic
     if (pipe1 == pipe2 && pipe1 != 3)
