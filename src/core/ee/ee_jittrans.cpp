@@ -411,6 +411,8 @@ void EE_JitTranslator::data_dependency_analysis(std::vector<EE_InstrInfo>& instr
 {
     int data_dependencies[(int)RegType::MAX_VALUE][(int)EE_SpecialReg::MAX_VALUE] = {};
     int throughputs[(int)EE_InstrInfo::InstructionType::MAX_VALUE] = {};
+    int total_penalty = 0;
+    bool dual_issue = false;
 
     for (int i = 0; i < instr_info.size(); ++i)
     {
@@ -454,15 +456,30 @@ void EE_JitTranslator::data_dependency_analysis(std::vector<EE_InstrInfo>& instr
             throughputs[(int)instr_info[i].instruction_type] = instr_info[i].throughput;
         }
 
-        cycle_count += cycles_penalty;
+        total_penalty += cycles_penalty;
 
-        // Increment the cycle counts of the remaining instructions
-        for (int j = i + 1; j < instr_info.size(); ++j)
-            instr_info[j].cycles_before += cycles_penalty;
+        // Add cycle counts to the rest of the instructions in the block
+        instr_info[i].cycles_after += total_penalty;
 
-        for (int j = i; j < instr_info.size(); ++j)
-            instr_info[j].cycles_after += cycles_penalty;
+        if (i + 1 < instr_info.size())
+        {
+            if (dual_issue)
+            {
+                instr_info[i + 1].cycles_before = instr_info[i].cycles_before;
+                dual_issue = false;
+            }
+            else
+            {
+                // Check if the next two instructions were dual-issued
+                if (i + 2 < instr_info.size() && instr_info[i + 1].cycles_before == instr_info[i + 2].cycles_before)
+                    dual_issue = true;
+
+                instr_info[i + 1].cycles_before += total_penalty;
+            }
+        }
     }
+
+    cycle_count += total_penalty;
 }
 
 void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs)
