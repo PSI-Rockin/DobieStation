@@ -732,8 +732,12 @@ void CDVD_Drive::start_seek()
         Errors::print_warning("[CDVD] Negative sector seek, converting to end-of-disc offset\n");
     }
 
+	// Some Games have an evil race condition where it can happen that the game request
+	// a sector that is past the end of the disc. The real PS2 just ignore such requests so let's do the same.
+	// Games affected so far: "The Simpsons Game" "All Star Baseball 2005" "Hello Kitty: Roller Rescue"
+	// "Hot Wheels: Beat That! (NTSC)" "Ratchet & Clank 3 (PAL - 1.00)" "Test Drive: Eve of Destruction".
     if (seek_to > block_count)
-        Errors::die("[CDVD] Invalid sector read $%08X (max size: $%08X)", seek_to, block_count);
+        Errors::print_warning("[CDVD] Invalid sector read $%08X (max size: $%08X)", seek_to, block_count);
 
     container_seek((uint64_t)seek_to * 2048);
 
