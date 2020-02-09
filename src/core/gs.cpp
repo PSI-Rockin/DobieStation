@@ -107,8 +107,6 @@ void GraphicsSynthesizer::set_VBLANK(bool is_VBLANK)
     if (is_VBLANK)
     {
         printf("[GS] VBLANK start\n");
-        if (!reg.IMR.vsync)
-            intc->assert_IRQ((int)Interrupt::GS);
         intc->assert_IRQ((int)Interrupt::VBLANK_START);
     }
     else

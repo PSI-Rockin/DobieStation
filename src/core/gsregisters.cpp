@@ -90,7 +90,6 @@ void GS_REGISTERS::write64_privileged(uint32_t addr, uint64_t value)
             }
             if (value & 0x8)
             {
-                CSR.VBLANK_enabled = true;
                 CSR.VBLANK_generated = false;
             }
             break;
@@ -159,7 +158,6 @@ void GS_REGISTERS::write32_privileged(uint32_t addr, uint32_t value)
             }
             if (value & 0x8)
             {
-                CSR.VBLANK_enabled = true;
                 CSR.VBLANK_generated = false;
             }
             break;
@@ -291,9 +289,7 @@ void GS_REGISTERS::reset()
     CSR.SIGNAL_generated = false;
     CSR.SIGNAL_stall = false;
     CSR.SIGNAL_irq_pending = false;
-    CSR.VBLANK_enabled = true;
     CSR.VBLANK_generated = false;
-    CSR.FINISH_enabled = false;
     CSR.FINISH_generated = false;
     CSR.FINISH_requested = false;
     PMODE.circuit1 = false;
@@ -367,10 +363,9 @@ void GS_REGISTERS::set_VBLANK(bool is_VBLANK)
 
 bool GS_REGISTERS::assert_VSYNC()//returns true if the interrupt should be processed
 {
-    if (CSR.VBLANK_enabled)
+    if (!CSR.VBLANK_generated)
     {
         CSR.VBLANK_generated = true;
-        CSR.VBLANK_enabled = false;
         return !IMR.vsync;
     }
     return false;
