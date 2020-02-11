@@ -189,10 +189,6 @@ void DMAC::transfer_end(int index)
 {
     printf("[DMAC] %s transfer ended\n", CHAN(index));
 
-    //Dirge of Cerberus ends a VIF1 transfer without restarting it and expects an MFIFO empty interrupt to occur.
-    //This can only happen when we handle MFIFO here and update TADR on an END tag.
-    //Otherwise, the game hangs when displaying the menu logo.
-    mfifo_handler(index);
     channels[index].control &= ~0x100;
     channels[index].started = false;
     interrupt_stat.channel_stat[index] = true;
