@@ -48,6 +48,7 @@ set(SOURCES
     ee/vu_jit.cpp
     ee/vu_jit64.cpp
     ee/vu_jittrans.cpp
+    iop/cdvd/bincuereader.cpp
     iop/cdvd/cdvd.cpp
     iop/cdvd/cso_reader.cpp
     iop/cdvd/iso_reader.cpp
@@ -120,6 +121,7 @@ set(HEADERS
     ee/vu_jit.hpp
     ee/vu_jit64.hpp
     ee/vu_jittrans.hpp
+    iop/cdvd/bincueheader.hpp
     iop/cdvd/cdvd.hpp
     iop/cdvd/cso_reader.hpp
     iop/cdvd/iso_reader.hpp
