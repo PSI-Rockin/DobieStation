@@ -84,24 +84,18 @@ void EmotionInterpreter::cop_s(EE_InstrInfo &info, uint32_t instruction)
         case 0x18:
             info.interpreter_fn = &fpu_adda;
             info.pipeline = EE_InstrInfo::Pipeline::COP1;
-            info.latency = 4;
-            info.add_dependency(DependencyType::Write, RegType::COP1, (uint8_t)EE_SpecialReg::COP1_ACC);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 16) & 0x1F);
             break;
         case 0x19:
             info.interpreter_fn = &fpu_suba;
             info.pipeline = EE_InstrInfo::Pipeline::COP1;
-            info.latency = 4;
-            info.add_dependency(DependencyType::Write, RegType::COP1, (uint8_t)EE_SpecialReg::COP1_ACC);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 16) & 0x1F);
             break;
         case 0x1A:
             info.interpreter_fn = &fpu_mula;
             info.pipeline = EE_InstrInfo::Pipeline::COP1;
-            info.latency = 4;
-            info.add_dependency(DependencyType::Write, RegType::COP1, (uint8_t)EE_SpecialReg::COP1_ACC);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 16) & 0x1F);
             break;
@@ -124,16 +118,12 @@ void EmotionInterpreter::cop_s(EE_InstrInfo &info, uint32_t instruction)
         case 0x1E:
             info.interpreter_fn = &fpu_madda;
             info.pipeline = EE_InstrInfo::Pipeline::COP1;
-            info.latency = 4;
-            info.add_dependency(DependencyType::Write, RegType::COP1, (uint8_t)EE_SpecialReg::COP1_ACC);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 16) & 0x1F);
             break;
         case 0x1F:
             info.interpreter_fn = &fpu_msuba;
             info.pipeline = EE_InstrInfo::Pipeline::COP1;
-            info.latency = 4;
-            info.add_dependency(DependencyType::Write, RegType::COP1, (uint8_t)EE_SpecialReg::COP1_ACC);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::COP1, (instruction >> 16) & 0x1F);
             break;
