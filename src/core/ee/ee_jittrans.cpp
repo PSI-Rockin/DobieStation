@@ -3828,25 +3828,14 @@ void EE_JitTranslator::translate_op_cop2(uint32_t opcode, uint32_t PC, EE_InstrI
     instr.set_return_addr(PC);
     instrs.push_back(instr);
 
-    bool interlock = opcode & 1;
     switch (op)
     {
         case 0x01:
             // QMFC2
             Errors::print_warning("[EE_JIT] Unrecognized cop2 op QMFC2\n", op);
-            if (interlock)
-            {
-                // VU0 wait
-                // run branch operation again if COP2 in block is in the delay slot
-                if (branch_op)
-                    instr.set_return_addr(PC - 4);
-                else
-                    instr.set_return_addr(PC);
-                instr.set_cycle_count(info.cycles_before);
-                fallback_interpreter(instr, 0, &EmotionInterpreter::nop);
-                instr.op = IR::Opcode::WaitVU0;
-                instrs.push_back(instr);
-            }
+
+            check_interlock(opcode, PC, info, instrs, IR::Opcode::WaitVU0);
+
             // Set up fallback properties
             fallback_interpreter(instr, opcode, info.interpreter_fn);
             instrs.push_back(instr);
@@ -3854,19 +3843,9 @@ void EE_JitTranslator::translate_op_cop2(uint32_t opcode, uint32_t PC, EE_InstrI
         case 0x02:
             // CFC2
             Errors::print_warning("[EE_JIT] Unrecognized cop2 op CFC2\n", op);
-            if (interlock)
-            {
-                // VU0 wait
-                // run branch operation again if COP2 in block is in the delay slot
-                if (branch_op)
-                    instr.set_return_addr(PC - 4);
-                else
-                    instr.set_return_addr(PC);
-                instr.set_cycle_count(info.cycles_before);
-                fallback_interpreter(instr, 0, &EmotionInterpreter::nop);
-                instr.op = IR::Opcode::WaitVU0;
-                instrs.push_back(instr);
-            }
+
+            check_interlock(opcode, PC, info, instrs, IR::Opcode::WaitVU0);
+
             // Set up fallback properties
             fallback_interpreter(instr, opcode, info.interpreter_fn);
             instrs.push_back(instr);
@@ -3874,19 +3853,9 @@ void EE_JitTranslator::translate_op_cop2(uint32_t opcode, uint32_t PC, EE_InstrI
         case 0x05:
             // QMTC2
             Errors::print_warning("[EE_JIT] Unrecognized cop2 op QMTC2\n", op);
-            if (interlock)
-            {
-                // Check Interlock
-                // run branch operation again if COP2 in block is in the delay slot
-                if (branch_op)
-                    instr.set_return_addr(PC - 4);
-                else
-                    instr.set_return_addr(PC);
-                instr.set_cycle_count(info.cycles_before);
-                fallback_interpreter(instr, 0, &EmotionInterpreter::nop);
-                instr.op = IR::Opcode::CheckInterlockVU0;
-                instrs.push_back(instr);
-            }
+
+            check_interlock(opcode, PC, info, instrs, IR::Opcode::CheckInterlockVU0);
+
             // Set up fallback properties
             fallback_interpreter(instr, opcode, info.interpreter_fn);
             instrs.push_back(instr);
@@ -3894,19 +3863,9 @@ void EE_JitTranslator::translate_op_cop2(uint32_t opcode, uint32_t PC, EE_InstrI
         case 0x06:
             // CTC2
             Errors::print_warning("[EE_JIT] Unrecognized cop2 op CTC2\n", op);
-            if (interlock)
-            {
-                // Check interlock
-                // run branch operation again if COP2 in block is in the delay slot
-                if (branch_op)
-                    instr.set_return_addr(PC - 4);
-                else
-                    instr.set_return_addr(PC);
-                instr.set_cycle_count(info.cycles_before);
-                fallback_interpreter(instr, 0, &EmotionInterpreter::nop);
-                instr.op = IR::Opcode::CheckInterlockVU0;
-                instrs.push_back(instr);
-            }
+
+            check_interlock(opcode, PC, info, instrs, IR::Opcode::CheckInterlockVU0);
+
             // Set up fallback properties
             fallback_interpreter(instr, opcode, info.interpreter_fn);
             instrs.push_back(instr);
@@ -3937,18 +3896,7 @@ void EE_JitTranslator::translate_op_cop2(uint32_t opcode, uint32_t PC, EE_InstrI
         case 0x1E:
         case 0x1F:
             // COP2 Special Operation
-
-            // VU0 wait
-            // run branch operation again if COP2 in block is in the delay slot
-            if (branch_op)
-                instr.set_return_addr(PC - 4);
-            else
-                instr.set_return_addr(PC);
-            instr.set_cycle_count(info.cycles_before);
-            fallback_interpreter(instr, 0, &EmotionInterpreter::nop);
-            instr.op = IR::Opcode::WaitVU0;
-            instrs.push_back(instr);
-
+            wait_vu0(opcode, PC, info, instrs);
             translate_op_cop2_special(opcode, PC, info, instrs);
             break;
         default:
@@ -4490,6 +4438,40 @@ void EE_JitTranslator::translate_op_cop2_special2(uint32_t opcode, uint32_t PC, 
         default:
             Errors::die("[EE_JIT] Unrecognized cop2 special2 op $%02X", op);
     }
+}
+
+void EE_JitTranslator::check_interlock(uint32_t opcode, uint32_t PC, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs, IR::Opcode op) const
+{
+    bool interlock = opcode & 1;
+    IR::Instruction instr;
+    if (interlock)
+    {
+        // VU0 wait
+        // run branch operation again if COP2 in block is in the delay slot
+        if (branch_op)
+            instr.set_return_addr(PC - 4);
+        else
+            instr.set_return_addr(PC);
+        instr.set_cycle_count(info.cycles_before);
+        fallback_interpreter(instr, 0, &EmotionInterpreter::nop);
+        instr.op = op;
+        instrs.push_back(instr);
+    }
+}
+
+void EE_JitTranslator::wait_vu0(uint32_t opcode, uint32_t PC, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs) const
+{
+    IR::Instruction instr;
+
+    // run branch operation again if COP2 in block is in the delay slot
+    if (branch_op)
+        instr.set_return_addr(PC - 4);
+    else
+        instr.set_return_addr(PC);
+    instr.set_cycle_count(info.cycles_before);
+    fallback_interpreter(instr, 0, &EmotionInterpreter::nop);
+    instr.op = IR::Opcode::WaitVU0;
+    instrs.push_back(instr);
 }
 
 void EE_JitTranslator::fallback_interpreter(IR::Instruction& instr, uint32_t opcode, void(*interpreter_fn)(EmotionEngine&, uint32_t)) const
