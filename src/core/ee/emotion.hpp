@@ -73,8 +73,15 @@ class EmotionEngine
         //Each register is 128-bit
         alignas(16) uint8_t gpr[32 * sizeof(uint64_t) * 2];
         alignas(16) uint128_t LO, HI;
-        uint32_t PC, PC_now, new_PC;
+        uint32_t PC, new_PC;
         uint64_t SA;
+
+        /*
+           Property used by the JIT for COP2 sync purposes
+           Updated upon every COP2 instruction, necessary as a COP2 instruction in a branch delay slot
+           may otherwise mutate PC after a branch.
+        */
+        uint32_t PC_now;
 
         EE_ICacheLine icache[128];
 
