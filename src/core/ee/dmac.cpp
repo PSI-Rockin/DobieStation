@@ -693,11 +693,18 @@ int DMAC::process_SIF1()
         {
             if (control.stall_dest_channel == 3 && channels[EE_SIF1].can_stall_drain)
             {
-                if (channels[EE_SIF1].address + (8 * 16) > STADR)
+                if (channels[EE_SIF1].address == STADR)
                 {
-                    active_channel = nullptr;
-                    break;
+                    if (channels[EE_SIF1].has_dma_stalled == false)
+                    {
+                        printf("[DMAC] SIF1 DMA Stall at %x STADR = %x\n", channels[EE_SIF1].address, STADR);
+                        interrupt_stat.channel_stat[DMA_STALL] = true;
+                        int1_check();
+                        arbitrate();
+                        break;
+                    }
                 }
+                channels[EE_SIF1].has_dma_stalled = false;
             }
             sif->write_SIF1(fetch128(channels[EE_SIF1].address));
             advance_source_dma(EE_SIF1);
