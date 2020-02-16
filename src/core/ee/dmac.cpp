@@ -423,7 +423,7 @@ int DMAC::process_GIF()
                     }
 
                     arbitrate();
-                    break;
+                    return count;
                 }
                 channels[GIF].has_dma_stalled = false;
             }
