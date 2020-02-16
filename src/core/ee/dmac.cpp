@@ -285,7 +285,7 @@ int DMAC::process_VIF1()
                     channels[VIF1].has_dma_stalled = true;
                 }
 
-                arbitrate();
+                clear_DMA_request(VIF1);
                 return count;
             }
             channels[VIF1].has_dma_stalled = false;
@@ -414,7 +414,7 @@ int DMAC::process_GIF()
                     channels[GIF].has_dma_stalled = true;
                 }
 
-                arbitrate();
+                clear_DMA_request(GIF);
                 return count;
             }
             channels[GIF].has_dma_stalled = false;
@@ -705,7 +705,7 @@ int DMAC::process_SIF1()
                     int1_check();
                     channels[EE_SIF1].has_dma_stalled = true;
                 }
-                arbitrate();
+                clear_DMA_request(EE_SIF1);
                 return count;
             }
             channels[EE_SIF1].has_dma_stalled = false;
@@ -1650,7 +1650,7 @@ void DMAC::write32(uint32_t address, uint32_t value)
             break;
         case 0x1000E060:
             printf("[DMAC] Write to STADR: $%08X\n", value);
-            STADR = value;
+            update_stadr(value);
             break;
         default:
             printf("[DMAC] Unrecognized write32 of $%08X to $%08X\n", value, address);
@@ -1699,9 +1699,8 @@ void DMAC::update_stadr(uint32_t addr)
             Errors::die("DMAC::update_stadr: control.stall_dest_channel >= 4");
     }
 
-    uint32_t madr = channels[c].address + (8 * 16);
-    if (madr > old_stadr && madr <= STADR)
-        check_for_activation(c);
+    if(channels[c].has_dma_stalled)
+        set_DMA_request(c);
 }
 
 void DMAC::check_for_activation(int index)
