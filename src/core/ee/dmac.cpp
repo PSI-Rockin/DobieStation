@@ -290,9 +290,11 @@ int DMAC::process_VIF1()
                             printf("[DMAC] VIF1 DMA Stall at %x STADR = %x\n", channels[VIF1].address, STADR);
                             interrupt_stat.channel_stat[DMA_STALL] = true;
                             int1_check();
-                            arbitrate();
-                            break;
+                            channels[VIF1].has_dma_stalled = true;
                         }
+
+                        arbitrate();
+                        break;
                     }
                     channels[VIF1].has_dma_stalled = false;
                 }
@@ -416,10 +418,12 @@ int DMAC::process_GIF()
                         printf("[DMAC] GIF DMA Stall at %x STADR = %x\n", channels[GIF].address, STADR);
                         interrupt_stat.channel_stat[DMA_STALL] = true;
                         int1_check();
-                        arbitrate();
                         gif->deactivate_PATH(3);
-                        break;
+                        channels[GIF].has_dma_stalled = true;
                     }
+
+                    arbitrate();
+                    break;
                 }
                 channels[GIF].has_dma_stalled = false;
             }
@@ -699,9 +703,10 @@ int DMAC::process_SIF1()
                         printf("[DMAC] SIF1 DMA Stall at %x STADR = %x\n", channels[EE_SIF1].address, STADR);
                         interrupt_stat.channel_stat[DMA_STALL] = true;
                         int1_check();
-                        arbitrate();
-                        break;
+                        channels[EE_SIF1].has_dma_stalled = true;
                     }
+                    arbitrate();
+                    break;
                 }
                 channels[EE_SIF1].has_dma_stalled = false;
             }
@@ -1722,9 +1727,10 @@ void DMAC::check_for_activation(int index)
                 printf("DMA Stall Drain channel %d Addr %x STADR %x\n", index, channels[index].address, STADR);
                 interrupt_stat.channel_stat[DMA_STALL] = true;
                 int1_check();
-                queued_channels.push_back(&channels[index]);
-                return;
+                channels[index].has_dma_stalled = true;
             }
+            queued_channels.push_back(&channels[index]);
+            return;
         }
 
         if (!active_channel)
