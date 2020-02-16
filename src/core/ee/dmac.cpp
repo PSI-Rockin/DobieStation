@@ -534,8 +534,7 @@ int DMAC::process_IPU_FROM()
             uint128_t data = ipu->read_FIFO();
             store128(channels[IPU_FROM].address, data);
 
-            channels[IPU_FROM].address += 16;
-            channels[IPU_FROM].quadword_count--;
+            advance_dest_dma(IPU_FROM);
             count++;
         }
     }
@@ -914,6 +913,9 @@ void DMAC::advance_dest_dma(int index)
             update_stadr(channels[index].address);
         //SPR_FROM source stall drain
         if (index == 8 && control.stall_source_channel == 2)
+            update_stadr(channels[index].address);
+        //IPU_FROM source stall drain
+        if (index == 3 && control.stall_source_channel == 3)
             update_stadr(channels[index].address);
     }
 }
