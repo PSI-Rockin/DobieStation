@@ -283,11 +283,18 @@ int DMAC::process_VIF1()
             {
                 if (control.stall_dest_channel == 1 && channels[VIF1].can_stall_drain)
                 {
-                    if (channels[VIF1].address + (8 * 16) > STADR)
+                    if (channels[VIF1].address == STADR)
                     {
-                        active_channel = nullptr;
-                        break;
+                        if (channels[VIF1].has_dma_stalled == false)
+                        {
+                            printf("[DMAC] VIF1 DMA Stall at %x STADR = %x\n", channels[VIF1].address, STADR);
+                            interrupt_stat.channel_stat[DMA_STALL] = true;
+                            int1_check();
+                            arbitrate();
+                            break;
+                        }
                     }
+                    channels[VIF1].has_dma_stalled = false;
                 }
 
                 if (!vif1->feed_DMA(fetch128(channels[VIF1].address)))
@@ -390,23 +397,33 @@ int DMAC::process_GIF()
     {
         uint32_t max_qwc = 8 - ((channels[GIF].address >> 4) & 0x7);
         int quads_to_transfer = std::min(channels[GIF].quadword_count, max_qwc);
-        if (control.stall_dest_channel == 2 && channels[GIF].can_stall_drain)
-        {
-            if (channels[GIF].address + (quads_to_transfer * 16) > STADR)
-            {
-                gif->dma_waiting(true);
-                active_channel = nullptr;
-                arbitrate();
-                return 0;
-            }
-        }
+        
         while (count < quads_to_transfer)
         {
             if (!mfifo_handler(GIF))
             {
                 arbitrate();
+                gif->deactivate_PATH(3);
                 return count;
             }
+
+            if (control.stall_dest_channel == 2 && channels[GIF].can_stall_drain)
+            {
+                if (channels[GIF].address == STADR)
+                {
+                    if (channels[GIF].has_dma_stalled == false)
+                    {
+                        printf("[DMAC] GIF DMA Stall at %x STADR = %x\n", channels[GIF].address, STADR);
+                        interrupt_stat.channel_stat[DMA_STALL] = true;
+                        int1_check();
+                        arbitrate();
+                        gif->deactivate_PATH(3);
+                        break;
+                    }
+                }
+                channels[GIF].has_dma_stalled = false;
+            }
+
             gif->request_PATH(3, false);
             if (gif->path_active(3, false) && !gif->fifo_full() && !gif->fifo_draining())
             {
@@ -440,8 +457,10 @@ int DMAC::process_GIF()
             if (!mfifo_handler(GIF))
             {
                 arbitrate();
+                gif->deactivate_PATH(3);
                 return count;
             }
+            else gif->request_PATH(3, false);
             handle_source_chain(GIF);
         }
     }
@@ -1687,8 +1706,17 @@ void DMAC::check_for_activation(int index)
                 break;
         }
 
-        if (do_stall_check && channels[index].can_stall_drain && channels[index].address + (8 * 16) > STADR)
-            return;
+        if (do_stall_check && channels[index].can_stall_drain && channels[index].address == STADR)
+        {
+            if (channels[index].has_dma_stalled == false)
+            {
+                printf("DMA Stall Drain channel %d Addr %x STADR %x\n", index, channels[index].address, STADR);
+                interrupt_stat.channel_stat[DMA_STALL] = true;
+                int1_check();
+                queued_channels.push_back(&channels[index]);
+                return;
+            }
+        }
 
         if (!active_channel)
             active_channel = &channels[index];
