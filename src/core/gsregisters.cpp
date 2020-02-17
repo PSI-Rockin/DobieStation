@@ -195,6 +195,7 @@ uint64_t GS_REGISTERS::read64_privileged(uint32_t addr)
             reg |= CSR.FINISH_generated << 1;
             reg |= CSR.VBLANK_generated << 3;
             reg |= CSR.is_odd_frame << 13;
+            reg |= (uint32_t)CSR.FIFO_status << 14;
 
             //GS revision and ID respectively, taken from PCSX2.
             //Shadow Hearts needs this.
@@ -292,6 +293,7 @@ void GS_REGISTERS::reset()
     CSR.VBLANK_generated = false;
     CSR.FINISH_generated = false;
     CSR.FINISH_requested = false;
+    CSR.FIFO_status = 0x1; //Empty
     PMODE.circuit1 = false;
     PMODE.circuit2 = false;
 

@@ -248,6 +248,9 @@ void GraphicsInterface::feed_GIF(uint128_t data)
             if (path[active_path].current_tag.data_left != 0)
                 gs->write64(0, path[active_path].current_tag.PRIM);
         }
+
+        if (path[active_path].current_tag.data_left != 0)
+            gs->set_CSR_FIFO(0x2); //FIFO Full
     }
     else
     {
@@ -280,8 +283,11 @@ void GraphicsInterface::feed_GIF(uint128_t data)
     {
         path_status[active_path] = 4;
         //Finish asserts after all host->local transfers have finished
-        if(path_queue == 0)
+        if (path_queue == 0)
+        {
             gs->assert_FINISH();
+            gs->set_CSR_FIFO(0x1); //FIFO Empty
+        }
         gs->wake_gs_thread();
         arbitrate_paths();
     }
@@ -445,7 +451,7 @@ void GraphicsInterface::send_PATH2(uint32_t data[])
 void GraphicsInterface::send_PATH3(uint128_t data)
 {
     //printf("[GIF] Send PATH3 $%08X_%08X_%08X_%08X\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
-    if (!path3_masked(3))
+    if (!path3_masked(3) && active_path == 3)
         feed_GIF(data);
     else if (FIFO.size() < 16)
     {
