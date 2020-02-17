@@ -395,6 +395,14 @@ void GraphicsInterface::deactivate_PATH(int index)
         active_path = 0;
         arbitrate_paths();
     }
+
+    if (index == 3 && !path3_dma_waiting)
+    {
+        //Make sure the PATH is idle when finishing, PATH3 FIFO can have 0 written to it directly from hardware making it busy
+        //however if you ignore these with PATH3 masking during DMA transfers it breaks some games.
+        //True Crime NYC needs this behaviour else it hangs
+        path_status[3] = 4;
+    }
     //printf("Deactivated PATH%d Active path now %d Queued Path %x\n", index, active_path, path_queue);
 }
 
