@@ -49,7 +49,7 @@ void SPU::spu_check_irq(uint32_t address)
 {
     for (int j = 0; j < 2; j++)
     {
-        if (address == IRQA[j] && (core_att[j] & (1 << 6)))
+        if ((address == IRQA[j] || (address + 1)) == IRQA[j] && (core_att[j] & (1 << 6)))
             spu_irq(j);
     }
 }
@@ -76,13 +76,13 @@ void SPU::gen_sample()
             //Read header
             if (voices[i].block_pos == 0)
             {
-                voices[i].current_addr &= 0xFFFFF;
+                voices[i].current_addr &= 0x000FFFFF;
                 uint16_t header = RAM[voices[i].current_addr];
                 voices[i].loop_code = (header >> 8) & 0x3;
                 bool loop_start = header & (1 << 10);
 
                 if (loop_start && !voices[i].loop_addr_specified)
-                    voices[i].loop_addr = voices[i].current_addr;
+                    voices[i].loop_addr = voices[i].current_addr << 1;
 
                 voices[i].block_pos = 3;
             }
@@ -91,8 +91,9 @@ void SPU::gen_sample()
 
             if ((voices[i].block_pos % 4) == 0)
             {
-                spu_check_irq(voices[i].current_addr);
+                spu_check_irq(voices[i].current_addr << 1);
                 voices[i].current_addr++;
+                voices[i].current_addr &= 0x000FFFFF;
             }
 
             //End of block
@@ -107,12 +108,12 @@ void SPU::gen_sample()
                         break;
                     //Jump to loop addr, set ENDX, and go to Release mode
                     case 1:
-                        voices[i].current_addr = voices[i].loop_addr;
+                        voices[i].current_addr = voices[i].loop_addr >> 1;
                         ENDX |= 1 << i;
                         break;
                     //Jump to loop addr and set ENDX
                     case 3:
-                        voices[i].current_addr = voices[i].loop_addr;
+                        voices[i].current_addr = voices[i].loop_addr >> 1;
                         ENDX |= 1 << i;
                         break;
                 }
@@ -161,8 +162,8 @@ uint32_t SPU::read_DMA()
     uint32_t value = RAM[current_addr];
     value |= ((uint32_t)RAM[current_addr + 1]) << 16;
 
-    spu_check_irq(current_addr);
-    spu_check_irq(current_addr + 1);
+    spu_check_irq(current_addr << 1);
+    spu_check_irq((current_addr + 1) << 1);
     current_addr += 2;
     current_addr &= 0x000FFFFF;
     status.DMA_busy = true;
@@ -176,8 +177,8 @@ void SPU::write_DMA(uint32_t value)
     RAM[current_addr] = value & 0xFFFF;
     RAM[current_addr + 1] = value >> 16;
 
-    spu_check_irq(current_addr);
-    spu_check_irq(current_addr + 1);
+    spu_check_irq(current_addr << 1);
+    spu_check_irq((current_addr + 1) << 1);
     current_addr += 2;
     current_addr &= 0x000FFFFF;
     status.DMA_busy = true;
@@ -215,8 +216,9 @@ uint16_t SPU::read_mem()
 {
     printf("[SPU%d] Read mem $%04X ($%08X)\n", id, RAM[current_addr], current_addr);
 
-    spu_check_irq(current_addr);
+    spu_check_irq(current_addr << 1);
     current_addr++;
+    current_addr &= 0x000FFFFF;
 
     return RAM[current_addr - 1];
 }
@@ -226,8 +228,9 @@ void SPU::write_mem(uint16_t value)
     printf("[SPU%d] Write mem $%04X ($%08X)\n", id, value, current_addr);
     RAM[current_addr] = value;
     
-    spu_check_irq(current_addr);
+    spu_check_irq(current_addr << 1);
     current_addr++;
+    current_addr &= 0x000FFFFF;
 }
 
 uint16_t SPU::read16(uint32_t addr)
@@ -270,10 +273,10 @@ uint16_t SPU::read16(uint32_t addr)
                 return voices[v].loop_addr & 0xFFFF;
             case 8:
                 printf("[SPU%d] Read Voice %d NAXH: $%04X\n", id, v, (voices[v].current_addr >> 16) & 0x3F);
-                return (voices[v].current_addr >> 16) & 0x3F;
+                return (voices[v].current_addr >> 15) & 0x3F;
             case 10:
                 printf("[SPU%d] Read Voice %d NAXL: $%04X\n", id, v, voices[v].current_addr & 0xFFFF);
-                return voices[v].current_addr & 0xFFFF;
+                return (voices[v].current_addr << 1) & 0xFFFF;
         }
     }
     switch (addr)
@@ -550,13 +553,13 @@ void SPU::write16(uint32_t addr, uint16_t value)
         case 0x1A8:
             transfer_addr &= 0xFFFF;
             transfer_addr |= (value & 0x3F) << 16;
-            current_addr = transfer_addr;
+            current_addr = transfer_addr >> 1;
             printf("[SPU%d] Write Transfer addr: $%08X (H: $%04X)\n", id, transfer_addr, value);
             break;
         case 0x1AA:
             transfer_addr &= ~0xFFFF;
             transfer_addr |= value;
-            current_addr = transfer_addr;
+            current_addr = transfer_addr >> 1;
             printf("[SPU%d] Write Transfer addr: $%08X (L: $%04X)\n", id, transfer_addr, value);
             break;
         case 0x1AC:
@@ -617,7 +620,7 @@ void SPU::write_voice_reg(uint32_t addr, uint16_t value)
 void SPU::key_on_voice(int v)
 {
     //Copy start addr to current addr, clear ENDX bit, and set envelope to Attack mode
-    voices[v].current_addr = voices[v].start_addr;
+    voices[v].current_addr = voices[v].start_addr >> 1;
     voices[v].block_pos = 0;
     voices[v].loop_addr_specified = false;
     ENDX &= ~(1 << v);
