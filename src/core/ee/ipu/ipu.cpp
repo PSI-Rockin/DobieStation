@@ -1192,7 +1192,6 @@ void ImageProcessingUnit::write_FIFO(uint128_t quad)
     if (in_FIFO.f.size() == 7)
     {
         dmac->clear_DMA_request(IPU_TO);
-        printf("IPU TO FIFO FULL\n");
     }
     if (in_FIFO.f.size() >= 8)
     {
