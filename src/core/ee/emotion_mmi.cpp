@@ -54,7 +54,7 @@ void EmotionInterpreter::mmi(EE_InstrInfo &info, uint32_t instruction)
             info.interpreter_fn = &mthi1;
             info.pipeline = EE_InstrInfo::Pipeline::MAC1;
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI1);
-            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 21) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x12:
             info.interpreter_fn = &mflo1;
@@ -66,7 +66,7 @@ void EmotionInterpreter::mmi(EE_InstrInfo &info, uint32_t instruction)
             info.interpreter_fn = &mtlo1;
             info.pipeline = EE_InstrInfo::Pipeline::MAC1;
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO1);
-            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 21) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x18:
             info.interpreter_fn = &mult1;
