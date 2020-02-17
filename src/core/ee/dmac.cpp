@@ -410,7 +410,8 @@ int DMAC::process_GIF()
                     printf("[DMAC] GIF DMA Stall at %x STADR = %x\n", channels[GIF].address, STADR);
                     interrupt_stat.channel_stat[DMA_STALL] = true;
                     int1_check();
-                    gif->deactivate_PATH(3);
+                    if(gif->path3_done())
+                        gif->deactivate_PATH(3);
                     channels[GIF].has_dma_stalled = true;
                 }
 
