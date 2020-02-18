@@ -6,6 +6,7 @@
 
 #include "../emulator.hpp"
 #include "../errors.hpp"
+#include "../scheduler.hpp"
 
 using namespace std;
 
@@ -24,7 +25,11 @@ uint32_t CDVD_Drive::get_block_timing(bool mode_DVD)
     return (IOP_CLOCK * block_size) / (speed * (mode_DVD ? PSX_DVD_READSPEED : PSX_CD_READSPEED));
 }
 
-CDVD_Drive::CDVD_Drive(Emulator* e, IOP_DMA* dma) : e(e), dma(dma), container(CDVD_CONTAINER::ISO)
+CDVD_Drive::CDVD_Drive(Emulator* e, IOP_DMA* dma, Scheduler* scheduler) :
+    e(e),
+    dma(dma),
+    scheduler(scheduler),
+    container(CDVD_CONTAINER::ISO)
 {
 
 }
@@ -967,5 +972,5 @@ void CDVD_Drive::write_ISTAT(uint8_t value)
 
 void CDVD_Drive::add_event(uint64_t cycles)
 {
-    e->add_iop_event(CDVD_EVENT, &Emulator::cdvd_event, cycles);
+    scheduler->add_event([this] (uint64_t param) { handle_N_command(); }, cycles * 8);
 }

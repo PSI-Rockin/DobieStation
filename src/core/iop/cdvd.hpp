@@ -6,6 +6,7 @@
 
 class Emulator;
 class IOP_DMA;
+class Scheduler;
 
 enum CDVD_CONTAINER
 {
@@ -51,6 +52,7 @@ class CDVD_Drive
         uint64_t cycle_count;
         Emulator* e;
         IOP_DMA* dma;
+        Scheduler* scheduler;
         CDVD_CONTAINER container;
         std::ifstream cdvd_file;
         CSO_Reader cso_file;
@@ -115,7 +117,7 @@ class CDVD_Drive
         void S_command_sub(uint8_t func);
         void add_event(uint64_t cycles);
     public:
-        CDVD_Drive(Emulator* e, IOP_DMA* dma);
+        CDVD_Drive(Emulator* e, IOP_DMA* dma, Scheduler* scheduler);
         ~CDVD_Drive();
 
         std::string get_serial();
