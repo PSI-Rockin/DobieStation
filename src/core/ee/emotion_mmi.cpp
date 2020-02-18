@@ -151,7 +151,9 @@ void EmotionInterpreter::mmi(EE_InstrInfo &info, uint32_t instruction)
             info.interpreter_fn = &pmthllw;
             info.pipeline = EE_InstrInfo::Pipeline::IntWide;
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO1);
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI1);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x34:
@@ -382,35 +384,45 @@ void EmotionInterpreter::pmfhlfmt(EE_InstrInfo& info, uint32_t instruction)
             info.pipeline = EE_InstrInfo::Pipeline::IntWide;
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::LO);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::LO1);
             info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::HI1);
             break;
         case 0x01:
             info.interpreter_fn = &pmfhluw;
             info.pipeline = EE_InstrInfo::Pipeline::IntWide;
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::LO);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::LO1);
             info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::HI1);
             break;
         case 0x02:
             info.interpreter_fn = &pmfhlslw;
             info.pipeline = EE_InstrInfo::Pipeline::IntWide;
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::LO);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::LO1);
             info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::HI1);
             break;
         case 0x03:           
             info.interpreter_fn = &pmfhllh;
             info.pipeline = EE_InstrInfo::Pipeline::IntWide;
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::LO);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::LO1);
             info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::HI1);
             break;
         case 0x04:
             info.interpreter_fn = &pmfhlsh;
             info.pipeline = EE_InstrInfo::Pipeline::IntWide;
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::LO);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::LO1);
             info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::HI1);
             break;
     }
 }
@@ -1301,7 +1313,6 @@ void EmotionInterpreter::mmi1(EE_InstrInfo &info, uint32_t instruction)
             info.pipeline = EE_InstrInfo::Pipeline::IntWide;
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
-            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x06:
             info.interpreter_fn = &pceqh;
@@ -1391,6 +1402,7 @@ void EmotionInterpreter::mmi1(EE_InstrInfo &info, uint32_t instruction)
             info.interpreter_fn = &qfsrv;
             info.pipeline = EE_InstrInfo::Pipeline::IntWide;
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::SA);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
@@ -1798,7 +1810,9 @@ void EmotionInterpreter::mmi2(EE_InstrInfo &info, uint32_t instruction)
             info.throughput = 2;
             info.instruction_type = EE_InstrInfo::InstructionType::MADD;
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO1);
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI1);
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
@@ -1824,7 +1838,9 @@ void EmotionInterpreter::mmi2(EE_InstrInfo &info, uint32_t instruction)
             info.throughput = 2;
             info.instruction_type = EE_InstrInfo::InstructionType::MADD;
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO1);
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI1);
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
@@ -1834,12 +1850,14 @@ void EmotionInterpreter::mmi2(EE_InstrInfo &info, uint32_t instruction)
             info.pipeline = EE_InstrInfo::Pipeline::IntWide;
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::HI1);
             break;
         case 0x09:
             info.interpreter_fn = &pmflo;
             info.pipeline = EE_InstrInfo::Pipeline::IntWide;
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
-            info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::LO);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::LO1);
             break;
         case 0x0A:
             info.interpreter_fn = &pinth;
@@ -1855,7 +1873,9 @@ void EmotionInterpreter::mmi2(EE_InstrInfo &info, uint32_t instruction)
             info.throughput = 2;
             info.instruction_type = EE_InstrInfo::InstructionType::MULT;
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO1);
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI1);
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
@@ -1867,7 +1887,9 @@ void EmotionInterpreter::mmi2(EE_InstrInfo &info, uint32_t instruction)
             info.throughput = 37;
             info.instruction_type = EE_InstrInfo::InstructionType::DIV;
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO1);
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI1);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
             break;
@@ -1885,7 +1907,9 @@ void EmotionInterpreter::mmi2(EE_InstrInfo &info, uint32_t instruction)
             info.throughput = 2;
             info.instruction_type = EE_InstrInfo::InstructionType::MADD;
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO1);
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI1);
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
@@ -1897,7 +1921,9 @@ void EmotionInterpreter::mmi2(EE_InstrInfo &info, uint32_t instruction)
             info.throughput = 2;
             info.instruction_type = EE_InstrInfo::InstructionType::MADD;
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO1);
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI1);
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
@@ -1923,7 +1949,9 @@ void EmotionInterpreter::mmi2(EE_InstrInfo &info, uint32_t instruction)
             info.throughput = 2;
             info.instruction_type = EE_InstrInfo::InstructionType::MADD;
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO1);
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI1);
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
@@ -1935,7 +1963,9 @@ void EmotionInterpreter::mmi2(EE_InstrInfo &info, uint32_t instruction)
             info.throughput = 2;
             info.instruction_type = EE_InstrInfo::InstructionType::MADD;
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO1);
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI1);
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
@@ -1959,7 +1989,9 @@ void EmotionInterpreter::mmi2(EE_InstrInfo &info, uint32_t instruction)
             info.throughput = 2;
             info.instruction_type = EE_InstrInfo::InstructionType::MULT;
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO1);
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI1);
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
@@ -1971,7 +2003,9 @@ void EmotionInterpreter::mmi2(EE_InstrInfo &info, uint32_t instruction)
             info.throughput = 37;
             info.instruction_type = EE_InstrInfo::InstructionType::MULT;
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO1);
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI1);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
             break;
@@ -2691,7 +2725,9 @@ void EmotionInterpreter::mmi3(EE_InstrInfo& info, uint32_t instruction)
             info.throughput = 2;
             info.instruction_type = EE_InstrInfo::InstructionType::MADD;
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO1);
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI1);
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
@@ -2706,13 +2742,15 @@ void EmotionInterpreter::mmi3(EE_InstrInfo& info, uint32_t instruction)
             info.interpreter_fn = &pmthi;
             info.pipeline = EE_InstrInfo::Pipeline::IntWide;
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
-            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 21) & 0x1F);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI1);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x09:
             info.interpreter_fn = &pmtlo;
             info.pipeline = EE_InstrInfo::Pipeline::IntWide;
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO);
-            info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 21) & 0x1F);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO1);
+            info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             break;
         case 0x0A:
             info.interpreter_fn = &pinteh;
@@ -2728,7 +2766,9 @@ void EmotionInterpreter::mmi3(EE_InstrInfo& info, uint32_t instruction)
             info.throughput = 2;
             info.instruction_type = EE_InstrInfo::InstructionType::MULT;
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO1);
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI1);
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
@@ -2740,7 +2780,9 @@ void EmotionInterpreter::mmi3(EE_InstrInfo& info, uint32_t instruction)
             info.throughput = 2;
             info.instruction_type = EE_InstrInfo::InstructionType::DIV;
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::LO1);
             info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
+            info.add_dependency(DependencyType::Write, RegType::GPR, (uint8_t)EE_SpecialReg::HI1);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 21) & 0x1F);
             info.add_dependency(DependencyType::Read, RegType::GPR, (instruction >> 16) & 0x1F);
             break;
