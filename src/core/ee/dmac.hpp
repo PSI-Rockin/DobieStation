@@ -18,6 +18,7 @@ enum DMAC_CHANNELS
     EE_SIF2,
     SPR_FROM,
     SPR_TO,
+    DMA_STALL = 13,
     MFIFO_EMPTY = 14
 };
 
@@ -42,6 +43,7 @@ struct DMA_Channel
 
     bool started;
     bool can_stall_drain;
+    bool has_dma_stalled;
     bool dma_req;
     bool is_spr;
 
