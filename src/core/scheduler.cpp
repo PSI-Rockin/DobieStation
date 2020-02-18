@@ -60,8 +60,13 @@ unsigned int Scheduler::get_iop_run_cycles()
     return iop_run_cycles;
 }
 
-void Scheduler::add_event(SchedulerEvent& event)
+void Scheduler::add_event(std::function<void(uint64_t)> func, uint64_t delay, uint64_t param = 0)
 {
+    SchedulerEvent event;
+    event.func = func;
+    event.time_to_run = ee_cycles.count + delay;
+    event.param = param;
+
     closest_event_time = std::min(event.time_to_run, closest_event_time);
 
     events.push_back(event);

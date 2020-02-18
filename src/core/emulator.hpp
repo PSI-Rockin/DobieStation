@@ -100,6 +100,7 @@ class Emulator
         uint32_t ELF_size;
 
         void iop_IRQ_check(uint32_t new_stat, uint32_t new_mask);
+        void start_sound_sample_event();
 
         bool frame_ended;
     public:
@@ -129,7 +130,6 @@ class Emulator
         void vblank_end();
         void cdvd_event();
         void gen_sound_sample();
-        void ee_irq_check();
 
         bool request_load_state(const char* file_name);
         bool request_save_state(const char* file_name);
@@ -169,9 +169,6 @@ class Emulator
 
         void test_iop();
         GraphicsSynthesizer& get_gs();//used for gs dumps
-
-        void add_ee_event(EVENT_ID id, event_func func, uint64_t delta_time_to_run);
-        void add_iop_event(EVENT_ID id, event_func func, uint64_t delta_time_to_run);
 };
 
 #endif // EMULATOR_HPP

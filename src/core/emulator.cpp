@@ -17,7 +17,7 @@
 #define EELOAD_SIZE 0x20000
 
 Emulator::Emulator() :
-    cdvd(this, &iop_dma),
+    cdvd(this, &iop_dma, &scheduler),
     cp0(&dmac),
     cpu(&cp0, &fpu, this, &vu0, &vu1),
     dmac(&cpu, this, &gif, &ipu, &sif, &vif0, &vif1, &vu0, &vu1),
@@ -26,7 +26,7 @@ Emulator::Emulator() :
     iop(this),
     iop_dma(this, &cdvd, &sif, &sio2, &spu, &spu2),
     iop_timers(this),
-    intc(this, &cpu),
+    intc(&cpu, &scheduler),
     ipu(&intc, &dmac),
     timers(&intc),
     sio2(this, &pad, &memcard),
@@ -93,8 +93,8 @@ void Emulator::run()
 
     frame_ended = false;
 
-    add_ee_event(VBLANK_START, &Emulator::vblank_start, VBLANK_START_CYCLES);
-    add_ee_event(VBLANK_END, &Emulator::vblank_end, CYCLES_PER_FRAME);
+    scheduler.add_event([this] (uint64_t param) { vblank_start();}, VBLANK_START_CYCLES);
+    scheduler.add_event([this] (uint64_t param) { vblank_end(); }, CYCLES_PER_FRAME);
     
     while (!frame_ended)
     {
@@ -186,7 +186,7 @@ void Emulator::reset()
 
     iop_scratchpad_start = 0x1F800000;
 
-    add_iop_event(SPU_SAMPLE, &Emulator::gen_sound_sample, 768);
+    start_sound_sample_event();
 }
 
 void Emulator::print_state()
@@ -225,17 +225,16 @@ void Emulator::cdvd_event()
     cdvd.handle_N_command();
 }
 
+void Emulator::start_sound_sample_event()
+{
+    scheduler.add_event([this] (uint64_t param) { gen_sound_sample(); }, 768 * 8);
+}
+
 void Emulator::gen_sound_sample()
 {
     spu.gen_sample();
     spu2.gen_sample();
-    add_iop_event(SPU_SAMPLE, &Emulator::gen_sound_sample, 768);
-}
-
-void Emulator::ee_irq_check()
-{
-    //printf("[EE] INT0 check\n");
-    intc.int0_check();
+    start_sound_sample_event();
 }
 
 void Emulator::press_button(PAD_BUTTON button)
@@ -1735,27 +1734,8 @@ void Emulator::request_gsdump_toggle()
 {
     gsdump_requested = true;
 }
+
 void Emulator::request_gsdump_single_frame()
 {
     gsdump_single_frame = true;
-}
-
-void Emulator::add_ee_event(EVENT_ID id, event_func func, uint64_t delta_time_to_run)
-{
-    SchedulerEvent event;
-    event.id = id;
-    event.func = func;
-    event.time_to_run = scheduler.get_ee_cycles() + delta_time_to_run;
-
-    scheduler.add_event(event);
-}
-
-void Emulator::add_iop_event(EVENT_ID id, event_func func, uint64_t delta_time_to_run)
-{
-    SchedulerEvent event;
-    event.id = id;
-    event.func = func;
-    event.time_to_run = (scheduler.get_iop_cycles() + delta_time_to_run) << 3;
-
-    scheduler.add_event(event);
 }

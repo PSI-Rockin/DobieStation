@@ -1,21 +1,10 @@
 #ifndef SCHEDULER_HPP
 #define SCHEDULER_HPP
 #include <cstdint>
+#include <functional>
 #include <list>
 
 class Emulator;
-
-typedef void(Emulator::*event_func)();
-
-enum EVENT_ID
-{
-    VBLANK_START,
-    VBLANK_END,
-    TIMER_INT,
-    CDVD_EVENT,
-    SPU_SAMPLE,
-    EE_IRQ_CHECK
-};
 
 struct CycleCount
 {
@@ -25,9 +14,9 @@ struct CycleCount
 
 struct SchedulerEvent
 {
-    EVENT_ID id;
     int64_t time_to_run;
-    event_func func;
+    uint64_t param;
+    std::function<void(uint64_t)> func;
 };
 
 class Scheduler
@@ -54,7 +43,7 @@ class Scheduler
         int64_t get_ee_cycles();
         int64_t get_iop_cycles();
 
-        void add_event(SchedulerEvent& event);
+        void add_event(std::function<void(uint64_t)> func, uint64_t delay, uint64_t param = 0);
 
         void update_cycle_counts();
         void process_events(Emulator* e);
