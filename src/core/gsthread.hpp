@@ -5,6 +5,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <cstdint>
+#include <memory>
 #include "gscontext.hpp"
 #include "gsregisters.hpp"
 #include "circularFIFO.hpp"
@@ -341,6 +342,7 @@ typedef void (*GSTexLookupPrologue)(int16_t u, int16_t v, TexLookupInfo* info);
 class GraphicsSynthesizerThread
 {
     private:
+        constexpr static uint32_t VM_SIZE = 1024 * 1024 * 4;
 #ifdef _MSC_VER
         constexpr static REG_64 abi_args[] = {RCX, RDX, R8, R9};
 #else
@@ -360,7 +362,9 @@ class GraphicsSynthesizerThread
 
         bool frame_complete;
         int frame_count;
-        uint8_t* local_mem;
+
+        std::unique_ptr<uint8_t[]> local_mem;
+
         uint8_t CRT_mode;
         uint32_t screen_buffer[2048 * 2048];
         uint8_t clut_cache[1024];

@@ -152,7 +152,6 @@ GraphicsSynthesizerThread::GraphicsSynthesizerThread()
 
 GraphicsSynthesizerThread::~GraphicsSynthesizerThread()
 {
-    delete[] local_mem;
     delete message_queue;
     delete return_queue;
 }
@@ -454,8 +453,7 @@ void GraphicsSynthesizerThread::event_loop()
 
 void GraphicsSynthesizerThread::reset()
 {
-    if (!local_mem)
-        local_mem = new uint8_t[1024 * 1024 * 4];
+    local_mem = std::make_unique<uint8_t[]>(VM_SIZE);
 
     pixels_transferred = 0;
     num_vertices = 0;
@@ -4212,7 +4210,7 @@ GSPixelJitBlockRecord* GraphicsSynthesizerThread::recompile_draw_pixel(uint64_t 
 
     //[RBP + 0xD0] = pointer to framebuffer pixel
     //[RBP + 0xD8] = framebuffer pixel
-    emitter_dp.load_addr((uint64_t)local_mem, RCX);
+    emitter_dp.load_addr((uint64_t)local_mem.get(), RCX);
     emitter_dp.ADD64_REG(RCX, RAX);
     emitter_dp.MOV64_TO_MEM(RAX, RBP, 0xD0);
 
@@ -4493,7 +4491,7 @@ void GraphicsSynthesizerThread::recompile_depth_test()
     }
 
     //RCX = zbuffer address
-    emitter_dp.load_addr((uint64_t)local_mem, RCX);
+    emitter_dp.load_addr((uint64_t)local_mem.get(), RCX);
     emitter_dp.ADD64_REG(RAX, RCX);
 
     if (current_ctx->test.depth_method != 1)
@@ -4910,7 +4908,7 @@ GSTextureJitBlockRecord* GraphicsSynthesizerThread::recompile_tex_lookup(uint64_
                 jit_call_func(emitter_tex, (uint64_t)&addr_PSMCT32Z);
             else
                 jit_call_func(emitter_tex, (uint64_t)&addr_PSMCT32);
-            emitter_tex.load_addr((uint64_t)local_mem, RCX);
+            emitter_tex.load_addr((uint64_t)local_mem.get(), RCX);
             emitter_tex.ADD64_REG(RCX, RAX);
             emitter_tex.MOV32_FROM_MEM(RAX, RAX);
             break;
@@ -4920,7 +4918,7 @@ GSTextureJitBlockRecord* GraphicsSynthesizerThread::recompile_tex_lookup(uint64_
                 jit_call_func(emitter_tex, (uint64_t)&addr_PSMCT32Z);
             else
                 jit_call_func(emitter_tex, (uint64_t)&addr_PSMCT32);
-            emitter_tex.load_addr((uint64_t)local_mem, RCX);
+            emitter_tex.load_addr((uint64_t)local_mem.get(), RCX);
             emitter_tex.ADD64_REG(RCX, RAX);
             emitter_tex.MOV32_FROM_MEM(RAX, RAX);
             emitter_tex.AND32_EAX(0xFFFFFF);
@@ -4952,7 +4950,7 @@ GSTextureJitBlockRecord* GraphicsSynthesizerThread::recompile_tex_lookup(uint64_
                 else
                     jit_call_func(emitter_tex, (uint64_t)&addr_PSMCT16);
             }
-            emitter_tex.load_addr((uint64_t)local_mem, RCX);
+            emitter_tex.load_addr((uint64_t)local_mem.get(), RCX);
             emitter_tex.ADD64_REG(RCX, RAX);
             emitter_tex.MOV32_FROM_MEM(RAX, RAX);
             emitter_tex.AND32_EAX(0xFFFF);
@@ -4964,7 +4962,7 @@ GSTextureJitBlockRecord* GraphicsSynthesizerThread::recompile_tex_lookup(uint64_
             break;
         case 0x13:
             jit_call_func(emitter_tex, (uint64_t)&addr_PSMCT8);
-            emitter_tex.load_addr((uint64_t)local_mem, RCX);
+            emitter_tex.load_addr((uint64_t)local_mem.get(), RCX);
             emitter_tex.ADD64_REG(RCX, RAX);
             emitter_tex.MOV32_FROM_MEM(RAX, RDI);
             emitter_tex.AND32_REG_IMM(0xFF, RDI);
@@ -4978,7 +4976,7 @@ GSTextureJitBlockRecord* GraphicsSynthesizerThread::recompile_tex_lookup(uint64_
             jit_call_func(emitter_tex, (uint64_t)&addr_PSMCT4);
             emitter_tex.MOV32_REG(RAX, RCX);
             emitter_tex.SHR32_REG_IMM(1, RAX);
-            emitter_tex.load_addr((uint64_t)local_mem, RDI);
+            emitter_tex.load_addr((uint64_t)local_mem.get(), RDI);
             emitter_tex.ADD64_REG(RDI, RAX);
 
             //index = (local_mem[addr >> 1] >> ((addr & 0x1) << 2)) & 0xF
@@ -4996,7 +4994,7 @@ GSTextureJitBlockRecord* GraphicsSynthesizerThread::recompile_tex_lookup(uint64_
             break;
         case 0x1B:
             jit_call_func(emitter_tex, (uint64_t)&addr_PSMCT32);
-            emitter_tex.load_addr((uint64_t)local_mem, RCX);
+            emitter_tex.load_addr((uint64_t)local_mem.get(), RCX);
             emitter_tex.ADD64_REG(RCX, RAX);
             emitter_tex.MOV32_FROM_MEM(RAX, RDI);
             emitter_tex.SHR32_REG_IMM(24, RDI);
@@ -5008,7 +5006,7 @@ GSTextureJitBlockRecord* GraphicsSynthesizerThread::recompile_tex_lookup(uint64_
             break;
         case 0x24:
             jit_call_func(emitter_tex, (uint64_t)&addr_PSMCT32);
-            emitter_tex.load_addr((uint64_t)local_mem, RCX);
+            emitter_tex.load_addr((uint64_t)local_mem.get(), RCX);
             emitter_tex.ADD64_REG(RCX, RAX);
             emitter_tex.MOV32_FROM_MEM(RAX, RDI);
             emitter_tex.SHR32_REG_IMM(24, RDI);
@@ -5021,7 +5019,7 @@ GSTextureJitBlockRecord* GraphicsSynthesizerThread::recompile_tex_lookup(uint64_
             break;
         case 0x2C:
             jit_call_func(emitter_tex, (uint64_t)&addr_PSMCT32);
-            emitter_tex.load_addr((uint64_t)local_mem, RCX);
+            emitter_tex.load_addr((uint64_t)local_mem.get(), RCX);
             emitter_tex.ADD64_REG(RCX, RAX);
             emitter_tex.MOV32_FROM_MEM(RAX, RDI);
             emitter_tex.SHR32_REG_IMM(28, RDI);
@@ -5218,7 +5216,7 @@ void GraphicsSynthesizerThread::recompile_convert_16bit_tex(REG_64 color, REG_64
 
 void GraphicsSynthesizerThread::load_state(ifstream *state)
 {
-    state->read((char*)local_mem, 1024 * 1024 * 4);
+    state->read((char*)local_mem.get(), 1024 * 1024 * 4);
     state->read((char*)&IMR, sizeof(IMR));
     state->read((char*)&context1, sizeof(context1));
     state->read((char*)&context2, sizeof(context2));
@@ -5269,7 +5267,7 @@ void GraphicsSynthesizerThread::load_state(ifstream *state)
 
 void GraphicsSynthesizerThread::save_state(ofstream *state)
 {
-    state->write((char*)local_mem, 1024 * 1024 * 4);
+    state->write((char*)local_mem.get(), 1024 * 1024 * 4);
     state->write((char*)&IMR, sizeof(IMR));
     state->write((char*)&context1, sizeof(context1));
     state->write((char*)&context2, sizeof(context2));
