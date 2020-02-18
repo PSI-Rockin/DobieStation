@@ -34,7 +34,7 @@ private:
 public:
     // all these must have at least 16 byte alignment
     constexpr static int JIT_MAX_BLOCK_CODESIZE = 1024 * 4096; // 4 MB/block maximum code size
-    constexpr static int JIT_MAX_BLOCK_LITERALSIZE = 1024 * 8; // 1 MB/block maximum literal size
+    constexpr static int JIT_MAX_BLOCK_LITERALSIZE = 1024 * 1024; // 1 MB/block maximum literal size
 
     explicit JitBlock(const std::string &name);
     ~JitBlock();

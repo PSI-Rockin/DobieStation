@@ -90,6 +90,7 @@ class Emitter64
         void AND64_REG(REG_64 source, REG_64 dest);
 
         void CMP8_REG(REG_64 op2, REG_64 op1);
+        void CMP8_IMM_MEM(uint32_t imm, REG_64 mem, uint32_t offset = 0);
         void CMP16_IMM(uint16_t imm, REG_64 op);
         void CMP16_REG(REG_64 op2, REG_64 op1);
         void CMP32_IMM(uint32_t imm, REG_64 op);
@@ -156,7 +157,7 @@ class Emitter64
 
         void TEST8_REG(REG_64 op2, REG_64 op1);
         void TEST8_REG_IMM(uint8_t imm, REG_64 op1);
-        void TEST8_MEM_IMM(uint8_t imm, REG_64 mem, uint32_t offset = 0);
+        void TEST8_IMM_MEM(uint8_t imm, REG_64 mem, uint32_t offset = 0);
         void TEST16_REG(REG_64 op2, REG_64 op1);
         void TEST16_REG_IMM(uint16_t imm, REG_64 op1);
         void TEST32_EAX(uint32_t imm);
