@@ -150,12 +150,6 @@ GraphicsSynthesizerThread::GraphicsSynthesizerThread()
     thread = std::thread(&GraphicsSynthesizerThread::event_loop, this);
 }
 
-GraphicsSynthesizerThread::~GraphicsSynthesizerThread()
-{
-    delete message_queue;
-    delete return_queue;
-}
-
 void GraphicsSynthesizerThread::wait_for_return(GSReturn type, GSReturnMessage &data)
 {
     printf("[GS] Waiting for return\n");
@@ -218,16 +212,8 @@ void GraphicsSynthesizerThread::wake_thread()
 
 void GraphicsSynthesizerThread::reset_fifos()
 {
-    if (!message_queue)
-        message_queue = new gs_fifo();
-    if (!return_queue)
-        return_queue = new gs_return_fifo();
-
-    GSReturnMessage data;
-    while (return_queue->pop(data));
-
-    GSMessage data2;
-    while (message_queue->pop(data2));
+    message_queue = std::make_unique<gs_fifo>();
+    return_queue = std::make_unique<gs_return_fifo>();
 }
 
 void GraphicsSynthesizerThread::exit()

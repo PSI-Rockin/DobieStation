@@ -357,13 +357,13 @@ class GraphicsSynthesizerThread
         bool send_data = false;
         bool recieve_data = false;
 
-        gs_fifo* message_queue = nullptr;
-        gs_return_fifo* return_queue = nullptr;
+        std::unique_ptr<gs_fifo> message_queue{ nullptr };
+        std::unique_ptr<gs_return_fifo> return_queue{ nullptr };
 
         bool frame_complete;
         int frame_count;
 
-        std::unique_ptr<uint8_t[]> local_mem;
+        std::unique_ptr<uint8_t[]> local_mem{ nullptr };
 
         uint8_t CRT_mode;
         uint32_t screen_buffer[2048 * 2048];
@@ -532,7 +532,6 @@ class GraphicsSynthesizerThread
         void save_state(std::ofstream* state);
     public:
         GraphicsSynthesizerThread();
-        ~GraphicsSynthesizerThread();
         
         // safe to access from emu thread
         void send_message(GSMessage message);
