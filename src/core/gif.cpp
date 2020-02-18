@@ -226,7 +226,7 @@ void GraphicsInterface::feed_GIF(uint128_t data)
         path[active_path].current_tag.regs_left = path[active_path].current_tag.reg_count;
         path[active_path].current_tag.data_left = path[active_path].current_tag.NLOOP;
 
-        path_status[active_path] = path[active_path].current_tag.format;
+       
         //Q is initialized to 1.0 upon reading a GIFtag
         internal_Q = 1.0f;
 
@@ -250,7 +250,10 @@ void GraphicsInterface::feed_GIF(uint128_t data)
         }
 
         if (path[active_path].current_tag.data_left != 0)
+        {
+            path_status[active_path] = path[active_path].current_tag.format;
             gs->set_CSR_FIFO(0x2); //FIFO Full
+        }
     }
     else
     {
@@ -396,13 +399,6 @@ void GraphicsInterface::deactivate_PATH(int index)
         arbitrate_paths();
     }
 
-    if (index == 3 && !path3_dma_waiting)
-    {
-        //Make sure the PATH is idle when finishing, PATH3 FIFO can have 0 written to it directly from hardware making it busy
-        //however if you ignore these with PATH3 masking during DMA transfers it breaks some games.
-        //True Crime NYC needs this behaviour else it hangs
-        path_status[3] = 4;
-    }
     //printf("Deactivated PATH%d Active path now %d Queued Path %x\n", index, active_path, path_queue);
 }
 

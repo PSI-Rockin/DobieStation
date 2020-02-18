@@ -439,6 +439,7 @@ int DMAC::process_GIF()
                 count++;
                 if (gif->path3_done() && !channels[GIF].tag_end)
                 {
+                    gif->deactivate_PATH(3);
                     arbitrate();
                     return count;
                 }
