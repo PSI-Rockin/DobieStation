@@ -95,6 +95,11 @@ uint32_t* GraphicsSynthesizer::get_framebuffer()
     return out;
 }
 
+void GraphicsSynthesizer::set_CSR_FIFO(uint8_t value)
+{
+    reg.CSR.FIFO_status = value;
+}
+
 void GraphicsSynthesizer::set_VBLANK(bool is_VBLANK)
 {
     GSMessagePayload payload;

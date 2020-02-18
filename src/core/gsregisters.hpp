@@ -56,6 +56,7 @@ struct GS_CSR
     bool is_odd_frame;
     bool FINISH_generated;
     bool FINISH_requested;
+    uint8_t FIFO_status;
 };
 
 struct GS_SIGLBLID
