@@ -22,7 +22,7 @@ class GraphicsSynthesizer
 
         GS_REGISTERS reg;
 
-        GraphicsSynthesizerThread gs_thread;
+        std::unique_ptr<GraphicsSynthesizerThread> gs_thread;
     public:
         GraphicsSynthesizer(INTC* intc);
         ~GraphicsSynthesizer();

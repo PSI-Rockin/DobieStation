@@ -144,8 +144,40 @@ GraphicsSynthesizerThread::GraphicsSynthesizerThread()
         log2_lookup[i][3] = ldexp(calculation, 3);
     }
 
-    jit_draw_pixel_heap.flush_all_blocks();
+    local_mem = std::make_unique<uint8_t[]>(VM_SIZE);
+
+    pixels_transferred = 0;
+    num_vertices = 0;
+    frame_count = 0;
+    reg.deinterlace_method = BOB_DEINTERLACE;
+
+    COLCLAMP = true;
+
+    reg.reset();
+    context1.reset();
+    context2.reset();
+    PSMCT24_color = 0;
+    PSMCT24_unpacked_count = 0;
+    current_ctx = &context1;
+    current_PRMODE = &PRIM;
+    PRIM.reset();
+    PRMODE.reset();
+
+    jit_draw_pixel_func = nullptr;
+    jit_tex_lookup_func = nullptr;
+    jit_draw_pixel_prologue = nullptr;
+    jit_tex_lookup_prologue = nullptr;
+
     jit_tex_lookup_heap.flush_all_blocks();
+    jit_draw_pixel_heap.flush_all_blocks();
+
+    recompile_tex_lookup_prologue();
+    recompile_draw_pixel_prologue();
+
+    message_queue = std::make_unique<gs_fifo>();
+    return_queue = std::make_unique<gs_return_fifo>();
+
+    memset(screen_buffer, 0, sizeof(screen_buffer));
 
     thread = std::thread(&GraphicsSynthesizerThread::event_loop, this);
 }
@@ -210,13 +242,7 @@ void GraphicsSynthesizerThread::wake_thread()
     notifier.notify_one();
 }
 
-void GraphicsSynthesizerThread::reset_fifos()
-{
-    message_queue = std::make_unique<gs_fifo>();
-    return_queue = std::make_unique<gs_return_fifo>();
-}
-
-void GraphicsSynthesizerThread::exit()
+GraphicsSynthesizerThread::~GraphicsSynthesizerThread()
 {
     if (thread.joinable())
     {
@@ -232,8 +258,6 @@ void GraphicsSynthesizerThread::exit()
 void GraphicsSynthesizerThread::event_loop()
 {
     printf("[GS_t] Starting GS Thread\n");
-
-    reset();
 
     bool gsdump_recording = false;
     ofstream gsdump_file;
@@ -435,42 +459,6 @@ void GraphicsSynthesizerThread::event_loop()
         recieve_data = true;
         notifier.notify_one();
     }
-}
-
-void GraphicsSynthesizerThread::reset()
-{
-    local_mem = std::make_unique<uint8_t[]>(VM_SIZE);
-
-    pixels_transferred = 0;
-    num_vertices = 0;
-    frame_count = 0;
-    reg.deinterlace_method = BOB_DEINTERLACE;
-
-    COLCLAMP = true;
-
-    reg.reset();
-    context1.reset();
-    context2.reset();
-    PSMCT24_color = 0;
-    PSMCT24_unpacked_count = 0;
-    current_ctx = &context1;
-    current_PRMODE = &PRIM;
-    PRIM.reset();
-    PRMODE.reset();
-
-    jit_draw_pixel_func = nullptr;
-    jit_tex_lookup_func = nullptr;
-    jit_draw_pixel_prologue = nullptr;
-    jit_tex_lookup_prologue = nullptr;
-
-    jit_tex_lookup_heap.flush_all_blocks();
-    jit_draw_pixel_heap.flush_all_blocks();
-
-    recompile_tex_lookup_prologue();
-    recompile_draw_pixel_prologue();
-
-    reset_fifos();
-    memset(screen_buffer, 0, sizeof(screen_buffer));
 }
 
 void GraphicsSynthesizerThread::memdump(uint32_t* target, uint16_t& width, uint16_t& height)
