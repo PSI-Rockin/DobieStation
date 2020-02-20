@@ -1487,6 +1487,38 @@ void Emitter64::POP(REG_64 reg)
     block->write<uint8_t>(0x58 + (reg & 0x7));
 }
 
+void Emitter64::LDMXCSR(REG_64 mem, uint32_t offset)
+{
+    rex_rm(mem);
+    block->write<uint8_t>(0xF);
+    block->write<uint8_t>(0xAE);
+    if ((mem & 7) == 5 || offset != 0)
+    {
+        modrm(0b10, 2, mem);
+        block->write<uint32_t>(offset);
+    }
+    else
+    {
+        modrm(0, 2, mem);
+    }
+}
+
+void Emitter64::STMXCSR(REG_64 mem, uint32_t offset)
+{
+    rex_rm(mem);
+    block->write<uint8_t>(0xF);
+    block->write<uint8_t>(0xAE);
+    if ((mem & 7) == 5 || offset != 0)
+    {
+        modrm(0b10, 3, mem);
+        block->write<uint32_t>(offset);
+    }
+    else
+    {
+        modrm(0, 3, mem);
+    }
+}
+
 void Emitter64::CALL(uint64_t func)
 {
     int offset = func;

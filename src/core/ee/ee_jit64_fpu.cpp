@@ -336,9 +336,8 @@ void EE_JIT64::floating_point_reciprocal_square_root(EmotionEngine& ee, IR::Inst
     // Second operand's exponent is 0
     // dest = (source ^ source2) & 0x80000000
     emitter.MOVD_FROM_XMM(source, REG_64::RAX);
-    emitter.MOVD_FROM_XMM(source2, R15);
-    emitter.XOR32_REG(R15, REG_64::RAX);
     emitter.AND32_EAX(0x80000000);
+    emitter.OR32_REG_IMM(0x7F7FFFFF, REG_64::RAX);
     emitter.MOVD_TO_XMM(REG_64::RAX, dest);
     uint8_t *exit = emitter.JMP_NEAR_DEFERRED();
 
