@@ -334,7 +334,7 @@ void EE_JIT64::floating_point_reciprocal_square_root(EmotionEngine& ee, IR::Inst
     uint8_t *normalop = emitter.JCC_NEAR_DEFERRED(ConditionCode::NZ);
 
     // Second operand's exponent is 0
-    // dest = (source ^ source2) & 0x80000000
+    // dest = (source & 0x80000000) | 0x7F7FFFFF
     emitter.MOVD_FROM_XMM(source, REG_64::RAX);
     emitter.AND32_EAX(0x80000000);
     emitter.OR32_REG_IMM(0x7F7FFFFF, REG_64::RAX);
