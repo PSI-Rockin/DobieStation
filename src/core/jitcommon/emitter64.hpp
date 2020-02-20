@@ -235,6 +235,8 @@ class Emitter64
 
         void PUSH(REG_64 reg);
         void POP(REG_64 reg);
+        void LDMXCSR(REG_64 mem, uint32_t offset = 0);
+        void STMXCSR(REG_64 mem, uint32_t offset = 0);
         void CALL(uint64_t addr);
         void CALL_INDIR(REG_64 source);
         void JMP_INDIR(REG_64 source);

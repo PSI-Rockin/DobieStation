@@ -38,6 +38,8 @@ EE_JIT64::EE_JIT64() : jit_block("EE"), emitter(&jit_block), prologue_block(null
 
 void EE_JIT64::reset(bool clear_cache)
 {
+    ee_mxcsr = 0xFFC0;
+
     abi_int_count = 0;
     abi_xmm_count = 0;
     saved_int_regs = std::vector<REG_64>();
@@ -1560,10 +1562,18 @@ void EE_JIT64::emit_prologue()
     emitter.PUSH(REG_64::RDI);
     emitter.PUSH(REG_64::RSI);
 #endif
+    //Set DaZ FTZ and rounding modes etc for Denormal handling and rounding mode
+    emitter.load_addr((uint64_t)&saved_mxcsr, REG_64::R14);
+    emitter.load_addr((uint64_t)&ee_mxcsr, REG_64::R15);
+    emitter.STMXCSR(REG_64::R14);
+    emitter.LDMXCSR(REG_64::R15);
 }
 
 void EE_JIT64::emit_epilogue()
 {
+    //Revert rounding modes
+    emitter.load_addr((uint64_t)&saved_mxcsr, REG_64::R14);
+    emitter.LDMXCSR(REG_64::R14);
 #ifdef _WIN32
     emitter.POP(REG_64::RSI);
     emitter.POP(REG_64::RDI);

@@ -85,7 +85,8 @@ private:
     uint32_t ee_branch_dest, ee_branch_fail_dest;
     uint32_t ee_branch_delay_dest, ee_branch_delay_fail_dest;
     uint16_t cycle_count;
-
+    uint32_t saved_mxcsr;
+    uint32_t ee_mxcsr;
     // Cycles added to the cycle count in the middle of the block, e.g. UpdateVU0
     uint64_t cycles_added;
 

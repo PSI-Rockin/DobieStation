@@ -50,6 +50,9 @@ class VU_JIT64
 
         VU_GPR ftoi_table[4], itof_table[4];
 
+        uint32_t saved_mxcsr;
+        uint32_t vu_mxcsr;
+
         int abi_int_count;
         int abi_xmm_count;
 
