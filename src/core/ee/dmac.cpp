@@ -1070,13 +1070,18 @@ void DMAC::start_DMA(int index)
 
     //Stall drain happens on either normal transfers or refs tags
     int tag = (channels[index].control >> 28) & 0x7;
+    bool tag_irq = (channels[index].control >> 31) & 0x1;
+    bool TIE = channels[index].control & (1 << 7);
     channels[index].can_stall_drain = !(mode & 0x1) || tag == 4;
     switch (mode)
     {
         case 1: //Chain
             //If QWC > 0 and the current tag in CHCR is a terminal tag, end the transfer
             if (channels[index].quadword_count > 0)
-                channels[index].tag_end = (tag == 0 || tag == 7);
+            {
+                channels[index].tag_end = (tag == 0 || tag == 7) || (TIE && tag_irq);
+                channels[index].tag_id = tag;
+            }
             break;
         case 2: //Interleave
             channels[index].interleaved_qwc = SQWC.transfer_qwc;

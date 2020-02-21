@@ -104,21 +104,25 @@ void Emulator::run()
         scheduler.update_cycle_counts();
 
         cpu.run(ee_cycles);
-        dmac.run(bus_cycles);
-        timers.run(bus_cycles);
-        ipu.run();
-        vif0.update(bus_cycles);
-        vif1.update(bus_cycles);
-        gif.run(bus_cycles);
+        iop_timers.run(iop_cycles);
+        iop_dma.run(iop_cycles);
+        iop.run(iop_cycles);
+        iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
+
+        for (int i = 0; i < bus_cycles; i += 8)
+        {
+            dmac.run(8);
+            timers.run(8);
+            ipu.run();
+            vif0.update(8);
+            vif1.update(8);
+            gif.run(8);
+        }
         
         //VU's run at EE speed, however VU0 maintains its own speed
         vu0.run(ee_cycles);
         vu1_run_func(vu1, ee_cycles);
 
-        iop_timers.run(iop_cycles);
-        iop_dma.run(iop_cycles);
-        iop.run(iop_cycles);
-        iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
 
         scheduler.process_events(this);
     }
