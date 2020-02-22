@@ -49,7 +49,7 @@ void SPU::spu_check_irq(uint32_t address)
 {
     for (int j = 0; j < 2; j++)
     {
-        if ((address == IRQA[j] || (address + 1)) == IRQA[j] && (core_att[j] & (1 << 6)))
+        if (address == IRQA[j] && (core_att[j] & (1 << 6)))
             spu_irq(j);
     }
 }
@@ -91,7 +91,7 @@ void SPU::gen_sample()
 
             if ((voices[i].block_pos % 4) == 0)
             {
-                spu_check_irq(voices[i].current_addr << 1);
+                spu_check_irq(voices[i].current_addr);
                 voices[i].current_addr++;
                 voices[i].current_addr &= 0x000FFFFF;
             }
@@ -162,8 +162,8 @@ uint32_t SPU::read_DMA()
     uint32_t value = RAM[current_addr];
     value |= ((uint32_t)RAM[current_addr + 1]) << 16;
 
-    spu_check_irq(current_addr << 1);
-    spu_check_irq((current_addr + 1) << 1);
+    spu_check_irq(current_addr);
+    spu_check_irq(current_addr + 1);
     current_addr += 2;
     current_addr &= 0x000FFFFF;
     status.DMA_busy = true;
@@ -177,8 +177,8 @@ void SPU::write_DMA(uint32_t value)
     RAM[current_addr] = value & 0xFFFF;
     RAM[current_addr + 1] = value >> 16;
 
-    spu_check_irq(current_addr << 1);
-    spu_check_irq((current_addr + 1) << 1);
+    spu_check_irq(current_addr);
+    spu_check_irq(current_addr + 1);
     current_addr += 2;
     current_addr &= 0x000FFFFF;
     status.DMA_busy = true;
@@ -216,7 +216,7 @@ uint16_t SPU::read_mem()
 {
     printf("[SPU%d] Read mem $%04X ($%08X)\n", id, RAM[current_addr], current_addr);
 
-    spu_check_irq(current_addr << 1);
+    spu_check_irq(current_addr);
     current_addr++;
     current_addr &= 0x000FFFFF;
 
@@ -228,7 +228,7 @@ void SPU::write_mem(uint16_t value)
     printf("[SPU%d] Write mem $%04X ($%08X)\n", id, value, current_addr);
     RAM[current_addr] = value;
     
-    spu_check_irq(current_addr << 1);
+    spu_check_irq(current_addr);
     current_addr++;
     current_addr &= 0x000FFFFF;
 }
@@ -502,13 +502,13 @@ void SPU::write16(uint32_t addr, uint16_t value)
             break;
         case 0x19C:
             printf("[SPU%d] Write IRQA_H: $%04X\n", id, value);
-            IRQA[id - 1] &= 0xFFFF;
-            IRQA[id - 1] |= (value & 0x3F) << 16;
+            IRQA[id - 1] &= 0x7FFF;
+            IRQA[id - 1] |= (value & 0x3F) << 15;
             break;
         case 0x19E:
             printf("[SPU%d] Write IRQA_L: $%04X\n", id, value);
-            IRQA[id - 1] &= ~0xFFFF;
-            IRQA[id - 1] |= value & 0xFFFF;
+            IRQA[id - 1] &= ~0x7FFF;
+            IRQA[id - 1] |= (value >> 1) & 0x7FFF;
             break;
         case 0x1A0:
             printf("[SPU%d] Write KON0: $%04X\n", id, value);
