@@ -426,6 +426,7 @@ namespace EmotionInterpreter
     void cop2_vmaddai(EmotionEngine& cpu, uint32_t instruction);
     void cop2_vmsubaq(EmotionEngine& cpu, uint32_t instruction);
     void cop2_vaddai(EmotionEngine& cpu, uint32_t instruction);
+    void cop2_vsubai(EmotionEngine& cpu, uint32_t instruction);
     void cop2_vmsubai(EmotionEngine& cpu, uint32_t instruction);
     void cop2_vadda(EmotionEngine& cpu, uint32_t instruction);
     void cop2_vmadda(EmotionEngine& cpu, uint32_t instruction);

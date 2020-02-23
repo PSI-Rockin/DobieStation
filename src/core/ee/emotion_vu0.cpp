@@ -1184,6 +1184,10 @@ void EmotionInterpreter::cop2_special2(EE_InstrInfo& info, uint32_t instruction)
             info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vmsubaq;
             break;
+        case 0x26:
+            info.pipeline = EE_InstrInfo::Pipeline::COP2;
+            info.interpreter_fn = &cop2_vsubai;
+            break;
         case 0x27:
             info.pipeline = EE_InstrInfo::Pipeline::COP2;
             info.interpreter_fn = &cop2_vmsubai;
@@ -1791,6 +1795,27 @@ void EmotionInterpreter::cop2_vmsubaq(EmotionEngine& cpu, uint32_t instruction)
 
     vu0.handle_cop2_stalls();
     vu0.msubaq(instruction);
+}
+
+void EmotionInterpreter::cop2_vsubai(EmotionEngine &cpu, uint32_t instruction)
+{
+    if (!cop2_sync(cpu, instruction))
+    {
+        return;
+    };
+
+    cpu.cop2_updatevu0();
+    VectorUnit& vu0 = cpu.get_VU0();
+    vu0.decoder.reset();
+
+    uint8_t source = (instruction >> 11) & 0x1F;
+    uint8_t field = (instruction >> 21) & 0xF;
+
+    vu0.decoder.vf_read0[0] = source;
+    vu0.decoder.vf_read0_field[0] = field;
+
+    vu0.handle_cop2_stalls();
+    vu0.subai(instruction);
 }
 
 void EmotionInterpreter::cop2_vmsubai(EmotionEngine& cpu, uint32_t instruction)
