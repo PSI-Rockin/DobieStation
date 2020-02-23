@@ -807,6 +807,9 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             update_tex_lookup_state();
             break;
         case 0x0001:
+        case 0x0011:
+            //0x11 is used as an alias for RGBAQ in Ridge Racer V.
+            //Not handling this causes car shadow colors to be broken.
         {
             RGBAQ.r = value & 0xFF;
             RGBAQ.g = (value >> 8) & 0xFF;
