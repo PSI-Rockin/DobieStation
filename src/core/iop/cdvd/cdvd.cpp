@@ -55,6 +55,7 @@ void CDVD_Drive::reset()
     S_out_params = 0;
     read_bytes_left = 0;
     ISTAT = 0;
+    disc_type = CDVD_DISC_NONE;
     file_size = 0;
     time_t raw_time;
     struct tm * time;
@@ -257,6 +258,10 @@ bool CDVD_Drive::load_disc(const char *name, CDVD_CONTAINER a_container)
     container->read(pvd_sector, 2048);
 
     LBA = *(uint16_t*)&pvd_sector[128];
+    if (*(uint16_t*)&pvd_sector[166] == 2048)
+        disc_type = CDVD_DISC_CD;
+    else
+        disc_type = CDVD_DISC_DVD;
     printf("[CDVD] PVD LBA: $%08X\n", LBA);
 
     root_location = *(uint32_t*)&pvd_sector[156 + 2];
@@ -324,9 +329,7 @@ uint8_t CDVD_Drive::read_disc_type()
 {
     //Not sure what the exact limit is. We'll just go with 1 GB for now.
     printf("[CDVD] Read disc type\n");
-    if (file_size > (1024 * 1024 * 1024))
-        return 0x14;
-    return 0x12;
+    return disc_type;
 }
 
 uint8_t CDVD_Drive::read_N_status()

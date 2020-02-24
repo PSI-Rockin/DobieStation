@@ -35,6 +35,13 @@ enum class NCOMMAND
     BREAK
 };
 
+enum CDVD_DISC_TYPE
+{
+    CDVD_DISC_NONE = 0,
+    CDVD_DISC_CD = 0x12,
+    CDVD_DISC_DVD = 0x14
+};
+
 struct RTC
 {
     int vsyncs;
@@ -53,6 +60,7 @@ class CDVD_Drive
         uint64_t cycle_count;
         Emulator* e;
         IOP_DMA* dma;
+        CDVD_DISC_TYPE disc_type;
         std::unique_ptr<CDVD_Container> container;
         size_t file_size;
         int read_bytes_left;
