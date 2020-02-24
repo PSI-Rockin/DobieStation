@@ -4,7 +4,7 @@
 
 #define VER_MAJOR 0
 #define VER_MINOR 0
-#define VER_REV 29
+#define VER_REV 30
 
 using namespace std;
 
@@ -818,6 +818,7 @@ void CDVD_Drive::load_state(ifstream &state)
 {
     state.read((char*)&file_size, sizeof(file_size));
     state.read((char*)&read_bytes_left, sizeof(read_bytes_left));
+    state.read((char*)&disc_type, sizeof(disc_type));
     state.read((char*)&speed, sizeof(speed));
     state.read((char*)&current_sector, sizeof(current_sector));
     state.read((char*)&sector_pos, sizeof(sector_pos));
@@ -847,6 +848,7 @@ void CDVD_Drive::save_state(ofstream &state)
 {
     state.write((char*)&file_size, sizeof(file_size));
     state.write((char*)&read_bytes_left, sizeof(read_bytes_left));
+    state.write((char*)&disc_type, sizeof(disc_type));
     state.write((char*)&speed, sizeof(speed));
     state.write((char*)&current_sector, sizeof(current_sector));
     state.write((char*)&sector_pos, sizeof(sector_pos));
