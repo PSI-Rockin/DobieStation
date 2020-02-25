@@ -2631,7 +2631,7 @@ void EmotionInterpreter::div1(EmotionEngine &cpu, uint32_t instruction)
     op2 = cpu.get_gpr<int32_t>(op2);
     if (op1 == 0x80000000 && op2 == 0xFFFFFFFF)
     {
-        cpu.set_LO_HI((int64_t)(int32_t)0x80000000, 0, true);
+        cpu.set_LO_HI(0xFFFFFFFF'80000000, 0, true);
     }
     else if (op2)
     {
@@ -2660,7 +2660,7 @@ void EmotionInterpreter::divu1(EmotionEngine &cpu, uint32_t instruction)
     }
     else
     {
-        cpu.set_LO_HI((int64_t)-1, (int64_t)(int32_t)op1, true);
+        cpu.set_LO_HI(UINT64_MAX, (int64_t)(int32_t)op1, true);
     }
 }
 
