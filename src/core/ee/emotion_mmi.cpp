@@ -443,20 +443,9 @@ int64_t EmotionInterpreter::clamp_doubleword(int64_t word)
     }
 }
 
-int16_t EmotionInterpreter::clamp_halfword(int32_t word)
+inline int16_t EmotionInterpreter::clamp_halfword(int32_t word)
 {
-    if (word > (int32_t)0x00007FFF)
-    {
-        return 0x7FFF;
-    }
-    else if (word < (int32_t)0xFFFF80000)
-    {
-        return 0x8000;
-    }
-    else
-    {
-        return (int16_t)word;
-    }
+    return std::max((int32_t)0xFFFF8000, std::min(0x00007FFF, word));
 }
 
 /*
