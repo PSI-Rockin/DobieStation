@@ -109,15 +109,12 @@ void Emulator::run()
         iop.run(iop_cycles);
         iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
 
-        for (int i = 0; i < bus_cycles; i += 8)
-        {
-            dmac.run(8);
-            timers.run(8);
-            ipu.run();
-            vif0.update(8);
-            vif1.update(8);
-            gif.run(8);
-        }
+        dmac.run(bus_cycles);
+        timers.run(bus_cycles);
+        ipu.run();
+        vif0.update(bus_cycles);
+        vif1.update(bus_cycles);
+        gif.run(bus_cycles);
         
         //VU's run at EE speed, however VU0 maintains its own speed
         vu0.run(ee_cycles);
