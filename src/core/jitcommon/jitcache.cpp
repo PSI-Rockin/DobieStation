@@ -119,6 +119,8 @@ void* JitHeap::rwx_alloc(std::size_t size)
     return result;
 }
 
+// Size is used as a formal parameter in non-Windows platforms
+#pragma warning(disable:4100)
 void JitHeap::rwx_free(void* mem, std::size_t size)
 {
 #ifdef _WIN32
@@ -127,6 +129,7 @@ void JitHeap::rwx_free(void* mem, std::size_t size)
     munmap(mem, size);
 #endif
 }
+#pragma warning(default:4100)
 
 
 
