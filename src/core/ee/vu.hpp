@@ -7,6 +7,7 @@
 #include "emotion.hpp"
 #include "../int128.hpp"
 
+#pragma warning(disable:4324)
 union alignas(16) VU_R
 {
     float f;
@@ -32,6 +33,7 @@ struct alignas(16) VU_Mem
 {
     uint8_t m[1024 * 16];
 };
+#pragma warning(default:4324)
 
 struct VPU_STAT
 {
