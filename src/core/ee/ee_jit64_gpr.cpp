@@ -492,7 +492,7 @@ void EE_JIT64::divide_word(EmotionEngine& ee, IR::Instruction &instr, bool hi)
     uint8_t *label1_1 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
     emitter.CMP32_IMM(0xFFFFFFFF, divisor);
     uint8_t *label1_2 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
-    emitter.MOV64_OI((int64_t)(int32_t)0x80000000, LO);
+    emitter.MOV64_OI(0xFFFFFFFF'80000000, LO);
     emitter.MOV64_OI(0, HI);
     uint8_t *end_1 = emitter.JMP_NEAR_DEFERRED();
 
@@ -727,7 +727,7 @@ void EE_JIT64::load_doubleword_left(EmotionEngine& ee, IR::Instruction& instr)
     else
         emitter.MOV32_REG(source, addr);
     emitter.MOV32_REG(addr, RCX);
-    emitter.AND32_REG_IMM(~0x7, RCX);
+    emitter.AND32_REG_IMM(~0x7u, RCX);
     prepare_abi((uint64_t)&ee);
     prepare_abi_reg(RCX);
     call_abi_func((uint64_t)ee_read64);
@@ -764,7 +764,7 @@ void EE_JIT64::load_doubleword_right(EmotionEngine& ee, IR::Instruction& instr)
     else
         emitter.MOV32_REG(source, addr);
     emitter.MOV32_REG(addr, RCX);
-    emitter.AND32_REG_IMM(~0x7, RCX);
+    emitter.AND32_REG_IMM(~0x7u, RCX);
     prepare_abi((uint64_t)&ee);
     prepare_abi_reg(RCX);
     call_abi_func((uint64_t)ee_read64);
@@ -869,7 +869,7 @@ void EE_JIT64::load_word_left(EmotionEngine& ee, IR::Instruction& instr)
     else
         emitter.MOV32_REG(source, addr);
     emitter.MOV32_REG(addr, RCX);
-    emitter.AND32_REG_IMM(~0x3, RCX);
+    emitter.AND32_REG_IMM(~0x3u, RCX);
     prepare_abi((uint64_t)&ee);
     prepare_abi_reg(RCX);
     call_abi_func((uint64_t)ee_read32);
@@ -907,7 +907,7 @@ void EE_JIT64::load_word_right(EmotionEngine& ee, IR::Instruction& instr)
     else
         emitter.MOV32_REG(source, addr);
     emitter.MOV32_REG(addr, RCX);
-    emitter.AND32_REG_IMM(~0x3, RCX);
+    emitter.AND32_REG_IMM(~0x3u, RCX);
     prepare_abi((uint64_t)&ee);
     prepare_abi_reg(RCX);
     call_abi_func((uint64_t)ee_read32);
@@ -1388,7 +1388,7 @@ void EE_JIT64::store_doubleword_left(EmotionEngine& ee, IR::Instruction& instr)
     else
         emitter.MOV32_REG(dest, addr);
     emitter.MOV32_REG(addr, addr_backup);
-    emitter.AND32_REG_IMM(~0x7, addr);
+    emitter.AND32_REG_IMM(~0x7u, addr);
     prepare_abi((uint64_t)&ee);
     prepare_abi_reg(addr);
     call_abi_func((uint64_t)ee_read64);
@@ -1410,7 +1410,7 @@ void EE_JIT64::store_doubleword_left(EmotionEngine& ee, IR::Instruction& instr)
         emitter.LEA32_M(dest, addr_backup, offset);
     else
         emitter.MOV32_REG(dest, addr_backup);
-    emitter.AND32_REG_IMM(~0x7, addr_backup);
+    emitter.AND32_REG_IMM(~0x7u, addr_backup);
     prepare_abi((uint64_t)&ee);
     prepare_abi_reg(addr_backup);
     prepare_abi_reg(addr);
@@ -1434,7 +1434,7 @@ void EE_JIT64::store_doubleword_right(EmotionEngine& ee, IR::Instruction& instr)
     else
         emitter.MOV32_REG(dest, addr);
     emitter.MOV32_REG(addr, addr_backup);
-    emitter.AND32_REG_IMM(~0x7, addr);
+    emitter.AND32_REG_IMM(~0x7u, addr);
     prepare_abi((uint64_t)&ee);
     prepare_abi_reg(addr);
     call_abi_func((uint64_t)ee_read64);
@@ -1455,7 +1455,7 @@ void EE_JIT64::store_doubleword_right(EmotionEngine& ee, IR::Instruction& instr)
         emitter.LEA32_M(dest, addr_backup, offset);
     else
         emitter.MOV32_REG(dest, addr_backup);
-    emitter.AND32_REG_IMM(~0x7, addr_backup);
+    emitter.AND32_REG_IMM(~0x7u, addr_backup);
     prepare_abi((uint64_t)&ee);
     prepare_abi_reg(addr_backup);
     prepare_abi_reg(addr);
@@ -1515,7 +1515,7 @@ void EE_JIT64::store_word_left(EmotionEngine& ee, IR::Instruction& instr)
     else
         emitter.MOV32_REG(dest, addr);
     emitter.MOV32_REG(addr, addr_backup);
-    emitter.AND32_REG_IMM(~0x3, addr);
+    emitter.AND32_REG_IMM(~0x3u, addr);
     prepare_abi((uint64_t)&ee);
     prepare_abi_reg(addr);
     call_abi_func((uint64_t)ee_read32);
@@ -1537,7 +1537,7 @@ void EE_JIT64::store_word_left(EmotionEngine& ee, IR::Instruction& instr)
         emitter.LEA32_M(dest, addr_backup, offset);
     else
         emitter.MOV32_REG(dest, addr_backup);
-    emitter.AND32_REG_IMM(~0x3, addr_backup);
+    emitter.AND32_REG_IMM(~0x3u, addr_backup);
     prepare_abi((uint64_t)&ee);
     prepare_abi_reg(addr_backup);
     prepare_abi_reg(addr);
@@ -1561,7 +1561,7 @@ void EE_JIT64::store_word_right(EmotionEngine& ee, IR::Instruction& instr)
     else
         emitter.MOV32_REG(dest, addr);
     emitter.MOV32_REG(addr, addr_backup);
-    emitter.AND32_REG_IMM(~0x3, addr);
+    emitter.AND32_REG_IMM(~0x3u, addr);
     prepare_abi((uint64_t)&ee);
     prepare_abi_reg(addr);
     call_abi_func((uint64_t)ee_read32);
@@ -1582,7 +1582,7 @@ void EE_JIT64::store_word_right(EmotionEngine& ee, IR::Instruction& instr)
         emitter.LEA32_M(dest, addr_backup, offset);
     else
         emitter.MOV32_REG(dest, addr_backup);
-    emitter.AND32_REG_IMM(~0x3, addr_backup);
+    emitter.AND32_REG_IMM(~0x3u, addr_backup);
     prepare_abi((uint64_t)&ee);
     prepare_abi_reg(addr_backup);
     prepare_abi_reg(addr);
