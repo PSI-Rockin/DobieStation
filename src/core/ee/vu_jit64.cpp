@@ -228,7 +228,6 @@ uint64_t VU_JIT64::get_vf_addr(VectorUnit &vu, int index)
         default:
             Errors::die("[VU_JIT64] get_vf_addr error: Unrecognized reg %d", index);
     }
-    return 0;
 }
 
 void VU_JIT64::clamp_vfreg(uint8_t field, REG_64 xmm_reg)
