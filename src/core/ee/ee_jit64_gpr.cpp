@@ -431,7 +431,7 @@ void EE_JIT64::divide_unsigned_word(EmotionEngine& ee, IR::Instruction& instr, b
 
     emitter.set_jump_dest(label1);
     emitter.MOVSX32_TO_64(dividend, HI);
-    emitter.MOV64_OI(-1, LO);
+    emitter.MOV64_OI(ULLONG_MAX, LO);
 
     emitter.set_jump_dest(end);
 }
