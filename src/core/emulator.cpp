@@ -104,6 +104,11 @@ void Emulator::run()
         scheduler.update_cycle_counts();
 
         cpu.run(ee_cycles);
+        iop_timers.run(iop_cycles);
+        iop_dma.run(iop_cycles);
+        iop.run(iop_cycles);
+        iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
+
         dmac.run(bus_cycles);
         timers.run(bus_cycles);
         ipu.run();
@@ -115,10 +120,6 @@ void Emulator::run()
         vu0.run(ee_cycles);
         vu1_run_func(vu1, ee_cycles);
 
-        iop_timers.run(iop_cycles);
-        iop_dma.run(iop_cycles);
-        iop.run(iop_cycles);
-        iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
 
         scheduler.process_events(this);
     }

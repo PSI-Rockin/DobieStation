@@ -208,8 +208,13 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
     //We need a check for SIGNAL here so that we can fire the interrupt
     if (addr == 0x60)
     {
-        if (!reg.IMR.signal && !reg.CSR.SIGNAL_generated && !reg.CSR.SIGNAL_irq_pending)
-            intc->assert_IRQ((int)Interrupt::GS);
+        if (reg.CSR.SIGNAL_generated)
+        {
+            if(!reg.IMR.signal)
+                intc->assert_IRQ((int)Interrupt::GS);
+            else
+                reg.CSR.SIGNAL_irq_pending = true;
+        }
     }
 
     //also check for interrupt pre-processing

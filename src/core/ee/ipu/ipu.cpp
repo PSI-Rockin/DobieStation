@@ -145,8 +145,11 @@ void ImageProcessingUnit::run()
                         process_FDEC();
                     break;
                 case 0x05:
-                    if (!in_FIFO.advance_stream(command_option & 0x3F))
-                        break;
+                    if (!bytes_left)
+                    {
+                        if (!in_FIFO.advance_stream(command_option & 0x3F))
+                            break;
+                    }
                     while (bytes_left && in_FIFO.f.size())
                     {
                         uint32_t value;
