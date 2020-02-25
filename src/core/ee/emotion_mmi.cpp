@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
+#include <climits>
 #include "emotioninterpreter.hpp"
 
 void EmotionInterpreter::mmi(EE_InstrInfo &info, uint32_t instruction)

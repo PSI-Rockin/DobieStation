@@ -1,5 +1,6 @@
 #include <cstdio>
 #include <cstdlib>
+#include <climits>
 #include "emotioninterpreter.hpp"
 
 void EmotionInterpreter::special(EE_InstrInfo &info, uint32_t instruction)

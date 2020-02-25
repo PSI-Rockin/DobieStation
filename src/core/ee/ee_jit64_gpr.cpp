@@ -1,5 +1,6 @@
 #include <cmath>
 #include <algorithm>
+#include <climits>
 #include "ee_jit64.hpp"
 #include "vu.hpp"
 
