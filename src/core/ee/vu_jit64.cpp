@@ -1224,7 +1224,7 @@ void VU_JIT64::max_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     if(bc_reg != temp)
         emitter.MOVAPS_REG(bc_reg, temp);
     emitter.SHUFPS(bc, temp, temp);
-    emitter.MAXPS(source, temp);
+    emitter.PMAXSD_XMM(source, temp);
 
     if (field != 0xF || dest != temp)
         emitter.BLENDPS(field, temp, dest);
@@ -1242,7 +1242,7 @@ void VU_JIT64::max_vectors(VectorUnit &vu, IR::Instruction &instr)
     //GT4 has black screens during 3D if it isn't this way around
     if (op2 != temp)
         emitter.MOVAPS_REG(op2, temp);
-    emitter.MAXPS(op1, temp);
+    emitter.PMAXSD_XMM(op1, temp);
     if (field != 0xF || dest != temp)
         emitter.BLENDPS(field, temp, dest);
 
@@ -1263,7 +1263,7 @@ void VU_JIT64::min_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     if (bc_reg != temp)
         emitter.MOVAPS_REG(bc_reg, temp);
     emitter.SHUFPS(bc, temp, temp);
-    emitter.MINPS(source, temp);
+    emitter.PMINSD_XMM(source, temp);
     if (field != 0xF || dest != temp)
         emitter.BLENDPS(field, temp, dest);
 }
@@ -1280,7 +1280,7 @@ void VU_JIT64::min_vectors(VectorUnit &vu, IR::Instruction &instr)
     //GT4 has black screens during 3D if it isn't this way around
     if(temp != op2)
         emitter.MOVAPS_REG(op2, temp);
-    emitter.MINPS(op1, temp);
+    emitter.PMINSD_XMM(op1, temp);
     if (field != 0xF || dest != temp)
         emitter.BLENDPS(field, temp, dest);
 }
