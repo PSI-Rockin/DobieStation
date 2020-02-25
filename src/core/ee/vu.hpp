@@ -7,6 +7,7 @@
 #include "emotion.hpp"
 #include "../int128.hpp"
 
+// Prevent warnings due to padding inserted due to use of alignas
 #pragma warning(disable:4324)
 union alignas(16) VU_R
 {
@@ -55,6 +56,8 @@ struct DecodedRegs
     void reset();
 };
 
+// Prevent warnings due to padding inserted due to use of alignas
+#pragma warning(disable:4324)
 struct VuIntBranchPipelineEntry
 {
     uint8_t write_reg;   // reg that was overwritten
@@ -63,6 +66,7 @@ struct VuIntBranchPipelineEntry
 
     void clear();
 };
+#pragma warning(default:4324)
 
 struct VuIntBranchPipeline
 {
