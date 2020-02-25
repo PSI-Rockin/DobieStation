@@ -260,11 +260,15 @@ uint32_t addr_PSMCT4(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
 
 struct VertexF
 {
-    union {
+    union 
+    {
+        // Suppress warning about nameless struct
+        #pragma warning(disable:4201)
         struct
         {
             float x,y,w,r,g,b,a,q,u,v,s,t,fog;
         };
+        #pragma warning(default:4201)
         float data[13];
     };
     double z;

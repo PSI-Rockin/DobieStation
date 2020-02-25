@@ -9,11 +9,14 @@
  */
 union uint128_t
 {
+    // Suppress warning about nameless struct
+    #pragma warning(disable:4201)
     struct
     {
         uint64_t lo;
         uint64_t hi;
     };
+    #pragma warning(default:4201)
 
     uint64_t _u64[2];
     int64_t  _s64[2];
