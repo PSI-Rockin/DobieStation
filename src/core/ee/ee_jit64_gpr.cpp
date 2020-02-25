@@ -627,6 +627,9 @@ void EE_JIT64::exception_return(EmotionEngine& ee, IR::Instruction& instr)
     free_int_reg(ee, R15);
 }
 
+// EmotionEngine argument is unneeded in this method,
+// included for consistency in emit_instruction
+#pragma warning(disable:4100)
 void EE_JIT64::jump(EmotionEngine& ee, IR::Instruction& instr)
 {
     // Simply set the PC
@@ -638,6 +641,7 @@ void EE_JIT64::jump(EmotionEngine& ee, IR::Instruction& instr)
         emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::R15, offsetof(EmotionEngine, gpr) + get_gpr_offset(EE_NormalReg::ra));
     }
 }
+#pragma warning(default:4100)
 
 void EE_JIT64::jump_indirect(EmotionEngine& ee, IR::Instruction& instr)
 {
