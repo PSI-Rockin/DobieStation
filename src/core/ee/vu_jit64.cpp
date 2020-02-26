@@ -1368,6 +1368,10 @@ void VU_JIT64::min_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     uint8_t bc = instr.get_bc();
     bc |= (bc << 6) | (bc << 4) | (bc << 2);
 
+    if (source == dest)
+        emitter.MOVAPS_REG(source, temp2);
+    else if (bc_reg == dest)
+        emitter.MOVAPS_REG(bc_reg, temp2);
     emitter.MOVAPS_REG(bc_reg, temp);
     emitter.SHUFPS(bc, temp, temp);
     emitter.PMINSD_XMM(source, temp);
