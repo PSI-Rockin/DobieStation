@@ -2339,6 +2339,16 @@ void Emitter64::BLENDPS(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest)
     block->write<uint8_t>(imm);
 }
 
+void Emitter64::BLENDVPS(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    block->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    block->write<uint8_t>(0x0F);
+    block->write<uint8_t>(0x38);
+    block->write<uint8_t>(0x14);
+    modrm(0b11, xmm_dest, xmm_source);
+}
+
 void Emitter64::CMPEQPS(REG_64 xmm_source, REG_64 xmm_dest)
 {
     rex_r_rm(xmm_dest, xmm_source);

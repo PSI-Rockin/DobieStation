@@ -322,6 +322,7 @@ class Emitter64
         void ADDPS(REG_64 xmm_source, REG_64 xmm_dest);
         void ADDSS(REG_64 xmm_source, REG_64 xmm_dest);
         void BLENDPS(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest);
+        void BLENDVPS(REG_64 xmm_source, REG_64 xmm_dest);
         void CMPEQPS(REG_64 xmm_source, REG_64 xmm_dest);
         void CMPNLEPS(REG_64 xmm_source, REG_64 xmm_dest);
         void DPPS(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest);
