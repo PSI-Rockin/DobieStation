@@ -1236,10 +1236,7 @@ void VU_JIT64::max_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     {
         if (dest == source) // temp2 == source and bc_reg
         {
-            REG_64 temp3 = REG_64::XMM2;
-
-            if (xmm_regs[XMM2].used)
-                flush_sse_reg(vu, xmm_regs[XMM2].vu_reg);
+            REG_64 temp3 = alloc_sse_temp_reg(vu);
 
             emitter.MOVAPS_REG(temp2, temp3);
             emitter.SHUFPS(bc, temp3, temp3);
@@ -1248,6 +1245,8 @@ void VU_JIT64::max_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
             emitter.PMINSD_XMM(temp3, temp2);
             emitter.BLENDPS(~field, dest, temp2);
             emitter.BLENDVPS_XMM0(temp2, dest);
+
+            flush_sse_temp_reg(vu, temp3);
         }
         else
         {
@@ -1272,10 +1271,7 @@ void VU_JIT64::max_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     }
     else if (source == dest)//temp2 == source
     {
-        REG_64 temp3 = REG_64::XMM2;
-
-        if(xmm_regs[XMM2].used)
-            flush_sse_reg(vu, xmm_regs[XMM2].vu_reg);
+        REG_64 temp3 = alloc_sse_temp_reg(vu);
 
         emitter.MOVAPS_REG(bc_reg, temp3);
         emitter.SHUFPS(bc, temp3, temp3);
@@ -1284,13 +1280,12 @@ void VU_JIT64::max_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
         emitter.PMINSD_XMM(temp3, temp2);
         emitter.BLENDPS(~field, dest, temp2);
         emitter.BLENDVPS_XMM0(temp2, dest);
+
+        flush_sse_temp_reg(vu, temp3);
     }
     else
     {
-        REG_64 temp3 = REG_64::XMM2;
-
-        if (xmm_regs[XMM2].used)
-            flush_sse_reg(vu, xmm_regs[XMM2].vu_reg);
+        REG_64 temp3 = alloc_sse_temp_reg(vu);
 
         emitter.MOVAPS_REG(bc_reg, temp3);
         emitter.SHUFPS(bc, temp3, temp3);
@@ -1300,6 +1295,8 @@ void VU_JIT64::max_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
         emitter.PMINSD_XMM(temp3, temp2);
         emitter.BLENDPS(~field, dest, temp2);
         emitter.BLENDVPS_XMM0(temp2, dest);
+
+        flush_sse_temp_reg(vu, temp3);
     }
 }
 
@@ -1380,10 +1377,7 @@ void VU_JIT64::min_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     {
         if (dest == source) // temp2 == source and bc_reg
         {
-            REG_64 temp3 = REG_64::XMM2;
-
-            if (xmm_regs[XMM2].used)
-                flush_sse_reg(vu, xmm_regs[XMM2].vu_reg);
+            REG_64 temp3 = alloc_sse_temp_reg(vu);
 
             emitter.MOVAPS_REG(temp2, temp3);
             emitter.SHUFPS(bc, temp3, temp3);
@@ -1392,6 +1386,8 @@ void VU_JIT64::min_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
             emitter.PMAXSD_XMM(temp3, temp2);
             emitter.BLENDPS(~field, dest, temp2);
             emitter.BLENDVPS_XMM0(temp2, dest);
+
+            flush_sse_temp_reg(vu, temp3);
         }
         else
         {
@@ -1416,10 +1412,7 @@ void VU_JIT64::min_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     }
     else if (source == dest)//temp2 == source
     {
-        REG_64 temp3 = REG_64::XMM2;
-
-        if (xmm_regs[XMM2].used)
-            flush_sse_reg(vu, xmm_regs[XMM2].vu_reg);
+        REG_64 temp3 = alloc_sse_temp_reg(vu);
 
         emitter.MOVAPS_REG(bc_reg, temp3);
         emitter.SHUFPS(bc, temp3, temp3);
@@ -1428,13 +1421,12 @@ void VU_JIT64::min_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
         emitter.PMAXSD_XMM(temp3, temp2);
         emitter.BLENDPS(~field, dest, temp2);
         emitter.BLENDVPS_XMM0(temp2, dest);
+
+        flush_sse_temp_reg(vu, temp3);
     }
     else
     {
-        REG_64 temp3 = REG_64::XMM2;
-
-        if (xmm_regs[XMM2].used)
-            flush_sse_reg(vu, xmm_regs[XMM2].vu_reg);
+        REG_64 temp3 = alloc_sse_temp_reg(vu);
 
         emitter.MOVAPS_REG(bc_reg, temp3);
         emitter.SHUFPS(bc, temp3, temp3);
@@ -1444,6 +1436,8 @@ void VU_JIT64::min_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
         emitter.PMAXSD_XMM(temp3, temp2);
         emitter.BLENDPS(~field, dest, temp2);
         emitter.BLENDVPS_XMM0(temp2, dest);
+
+        flush_sse_temp_reg(vu, temp3);
     }
 }
 
@@ -2802,8 +2796,11 @@ REG_64 VU_JIT64::alloc_sse_scratchpad(VectorUnit &vu, int vf_reg)
     {
         //printf("[VU_JIT64] Flushing xmm reg %d! (vf%d)\n", xmm, xmm_regs[xmm].vu_reg);
         int old_vf_reg = xmm_regs[xmm].vu_reg;
-        emitter.load_addr(get_vf_addr(vu, old_vf_reg), REG_64::RAX);
-        emitter.MOVAPS_TO_MEM((REG_64)xmm, REG_64::RAX);
+        if (xmm_regs[xmm].modified)
+        {
+            emitter.load_addr(get_vf_addr(vu, old_vf_reg), REG_64::RAX);
+            emitter.MOVAPS_TO_MEM((REG_64)xmm, REG_64::RAX);
+        }
         xmm_regs[xmm].used = false;
     }
 
@@ -2833,6 +2830,29 @@ REG_64 VU_JIT64::alloc_sse_scratchpad(VectorUnit &vu, int vf_reg)
     return (REG_64)xmm;
 }
 
+REG_64 VU_JIT64::alloc_sse_temp_reg(VectorUnit &vu)
+{
+    //Get a free register
+    int xmm = search_for_register(xmm_regs, 0);
+    if (xmm_regs[xmm].used && xmm_regs[xmm].vu_reg)
+    {
+        //printf("[VU_JIT64] Flushing xmm reg %d! (vf%d)\n", xmm, xmm_regs[xmm].vu_reg);
+        int old_vf_reg = xmm_regs[xmm].vu_reg;
+        if (xmm_regs[xmm].modified)
+        {
+            emitter.load_addr(get_vf_addr(vu, old_vf_reg), REG_64::RAX);
+            emitter.MOVAPS_TO_MEM((REG_64)xmm, REG_64::RAX);
+        }
+        xmm_regs[xmm].used = false;
+    }
+
+    xmm_regs[xmm].modified = false;
+    xmm_regs[xmm].vu_reg = 0;
+    xmm_regs[xmm].used = true;
+    xmm_regs[xmm].age = 0;
+
+    return (REG_64)xmm;
+}
 
 void VU_JIT64::set_clamping(int xmmreg, bool value, uint8_t field)
 {
@@ -2892,6 +2912,13 @@ void VU_JIT64::flush_sse_reg(VectorUnit &vu, int vf_reg)
             break;
         }
     }
+}
+
+void VU_JIT64::flush_sse_temp_reg(VectorUnit& vu, REG_64 xmm)
+{
+    xmm_regs[xmm].modified = false;
+    xmm_regs[xmm].used = false;
+    xmm_regs[xmm].age = 0;
 }
 
 void VU_JIT64::create_prologue_block()
