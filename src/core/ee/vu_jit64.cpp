@@ -1263,8 +1263,7 @@ void VU_JIT64::max_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     {
         emitter.MOVAPS_REG(source, temp);
         emitter.SHUFPS(bc, temp2, temp2);
-        emitter.PAND_XMM(temp2, temp);
-        emitter.MOVMSKPS(temp, temp); //mask
+        emitter.PAND_XMM(temp2, temp); //mask
         emitter.PMINSD_XMM(source, temp2);
         emitter.BLENDPS(~field, dest, temp2);
         emitter.BLENDVPS_XMM0(temp2, dest);
@@ -1408,8 +1407,7 @@ void VU_JIT64::min_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     {
         emitter.MOVAPS_REG(source, temp);
         emitter.SHUFPS(bc, temp2, temp2);
-        emitter.PAND_XMM(temp2, temp);
-        emitter.MOVMSKPS(temp, temp); //mask
+        emitter.PAND_XMM(temp2, temp); //mask
         emitter.PMAXSD_XMM(source, temp2);
         emitter.BLENDPS(~field, dest, temp2);
         emitter.BLENDVPS_XMM0(temp2, dest);
