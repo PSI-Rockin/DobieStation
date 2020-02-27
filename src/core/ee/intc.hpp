@@ -34,6 +34,8 @@ class INTC
 
         int read_stat_count;
         bool stat_speedhack_active;
+
+        int int_check_event_id;
     public:
         INTC(EmotionEngine* cpu, Scheduler* scheduler);
 

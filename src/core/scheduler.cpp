@@ -10,6 +10,7 @@ Scheduler::Scheduler()
 
 void Scheduler::reset()
 {
+    registered_funcs.clear();
     ee_cycles.count = 0;
     bus_cycles.count = 0;
     iop_cycles.count = 0;
@@ -60,10 +61,19 @@ unsigned int Scheduler::get_iop_run_cycles()
     return iop_run_cycles;
 }
 
-void Scheduler::add_event(std::function<void(uint64_t)> func, uint64_t delay, uint64_t param = 0)
+int Scheduler::register_function(std::function<void (uint64_t)> func)
 {
+    int id = registered_funcs.size();
+    registered_funcs.push_back(func);
+    return id;
+}
+
+void Scheduler::add_event(int func_id, uint64_t delay, uint64_t param)
+{
+    if (func_id < 0 || func_id >= registered_funcs.size())
+        Errors::die("[Scheduler] Out-of-bounds func_id given in add_event");
     SchedulerEvent event;
-    event.func = func;
+    event.func_id = func_id;
     event.time_to_run = ee_cycles.count + delay;
     event.param = param;
 
@@ -102,7 +112,8 @@ void Scheduler::process_events(Emulator* e)
         {
             if (it->time_to_run <= closest_event_time)
             {
-                (e->*it->func)();
+                std::function<void(uint64_t)> func = registered_funcs[it->func_id];
+                func(it->param);
                 it = events.erase(it);
             }
             else

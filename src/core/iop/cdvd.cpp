@@ -164,6 +164,8 @@ void CDVD_Drive::reset()
     rtc.day = time->tm_mday;
     rtc.month = time->tm_mon+1; //Jan = 0
     rtc.year = time->tm_year - 100; //Returns Years since 1900
+
+    n_command_event_id = scheduler->register_function([this] (uint64_t param) { handle_N_command(); });
 }
 
 string CDVD_Drive::get_serial()
@@ -972,5 +974,5 @@ void CDVD_Drive::write_ISTAT(uint8_t value)
 
 void CDVD_Drive::add_event(uint64_t cycles)
 {
-    scheduler->add_event([this] (uint64_t param) { handle_N_command(); }, cycles * 8);
+    scheduler->add_event(n_command_event_id, cycles * 8);
 }

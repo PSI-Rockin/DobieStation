@@ -4,7 +4,7 @@
 
 #define VER_MAJOR 0
 #define VER_MINOR 0
-#define VER_REV 32
+#define VER_REV 33
 
 using namespace std;
 
@@ -886,23 +886,9 @@ void Scheduler::load_state(ifstream &state)
     for (int i = 0; i < event_size; i++)
     {
         SchedulerEvent event;
-        state.read((char*)&event.id, sizeof(event.id));
+        state.read((char*)&event.func_id, sizeof(event.func_id));
+        state.read((char*)&event.param, sizeof(event.param));
         state.read((char*)&event.time_to_run, sizeof(event.time_to_run));
-
-        switch (event.id)
-        {
-            case EVENT_ID::SPU_SAMPLE:
-                event.func = &Emulator::gen_sound_sample;
-                break;
-            case EVENT_ID::EE_IRQ_CHECK:
-                event.func = &Emulator::ee_irq_check;
-                break;
-            case EVENT_ID::CDVD_EVENT:
-                event.func = &Emulator::cdvd_event;
-                break;
-            default:
-                Errors::die("Event id %d not recognized!", event.id);
-        }
 
         events.push_back(event);
     }
@@ -922,7 +908,8 @@ void Scheduler::save_state(ofstream &state)
     for (auto it = events.begin(); it != events.end(); it++)
     {
         SchedulerEvent event = *it;
-        state.write((char*)&event.id, sizeof(event.id));
+        state.write((char*)&event.func_id, sizeof(event.func_id));
+        state.write((char*)&event.param, sizeof(event.param));
         state.write((char*)&event.time_to_run, sizeof(event.time_to_run));
     }
 }

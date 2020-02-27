@@ -68,6 +68,8 @@ class Emulator
         VectorInterface vif0, vif1;
         VectorUnit vu0, vu1;
 
+        int vblank_start_id, vblank_end_id, spu_event_id;
+
         bool VBLANK_sent;
         bool cop2_interlock, vu_interlock;
 

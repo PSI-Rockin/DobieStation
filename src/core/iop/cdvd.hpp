@@ -93,6 +93,8 @@ class CDVD_Drive
 
         uint8_t cdkey[16];
 
+        int n_command_event_id;
+
         uint32_t get_block_timing(bool mode_DVD);
         
         bool container_open(const char* file_path);
