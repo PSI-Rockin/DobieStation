@@ -93,8 +93,8 @@ void Emulator::run()
 
     frame_ended = false;
 
-    scheduler.add_event([this] (uint64_t param) { vblank_start();}, VBLANK_START_CYCLES);
-    scheduler.add_event([this] (uint64_t param) { vblank_end(); }, CYCLES_PER_FRAME);
+    scheduler.add_event(vblank_start_id, VBLANK_START_CYCLES);
+    scheduler.add_event(vblank_end_id, CYCLES_PER_FRAME);
     
     while (!frame_ended)
     {
@@ -144,6 +144,11 @@ void Emulator::reset()
     if (!SPU_RAM)
         SPU_RAM = new uint8_t[1024 * 1024 * 2];
 
+    //Scheduler should be reset before any other components.
+    //Components will register event functions in reset, so we need to make sure scheduler's vector is cleared
+    //as soon as possible.
+    scheduler.reset();
+
     cdvd.reset();
     cp0.reset();
     cp0.init_mem_pointers(RDRAM, BIOS, (uint8_t*)&scratchpad);
@@ -159,7 +164,6 @@ void Emulator::reset()
     intc.reset();
     ipu.reset();
     pad.reset();
-    scheduler.reset();
     sif.reset();
     sio2.reset();
     spu.reset(SPU_RAM);
@@ -185,6 +189,10 @@ void Emulator::reset()
     memset(IOP_RAM, 0, 0x00200000);
 
     iop_scratchpad_start = 0x1F800000;
+
+    vblank_start_id = scheduler.register_function([this] (uint64_t param) { vblank_start(); });
+    vblank_end_id = scheduler.register_function([this] (uint64_t param) { vblank_end(); });
+    spu_event_id = scheduler.register_function([this] (uint64_t param) { gen_sound_sample(); });
 
     start_sound_sample_event();
 }
@@ -227,7 +235,7 @@ void Emulator::cdvd_event()
 
 void Emulator::start_sound_sample_event()
 {
-    scheduler.add_event([this] (uint64_t param) { gen_sound_sample(); }, 768 * 8);
+    scheduler.add_event(spu_event_id, 768 * 8);
 }
 
 void Emulator::gen_sound_sample()

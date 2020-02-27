@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <functional>
 #include <list>
+#include <vector>
 
 class Emulator;
 
@@ -16,7 +17,7 @@ struct SchedulerEvent
 {
     int64_t time_to_run;
     uint64_t param;
-    std::function<void(uint64_t)> func;
+    int func_id;
 };
 
 class Scheduler
@@ -28,6 +29,7 @@ class Scheduler
 
         unsigned int run_cycles;
 
+        std::vector<std::function<void(uint64_t)> > registered_funcs;
         std::list<SchedulerEvent> events;
 
         int64_t closest_event_time;
@@ -43,7 +45,9 @@ class Scheduler
         int64_t get_ee_cycles();
         int64_t get_iop_cycles();
 
-        void add_event(std::function<void(uint64_t)> func, uint64_t delay, uint64_t param = 0);
+        int register_function(std::function<void(uint64_t)> func);
+
+        void add_event(int func_id, uint64_t delay, uint64_t param = 0);
 
         void update_cycle_counts();
         void process_events(Emulator* e);

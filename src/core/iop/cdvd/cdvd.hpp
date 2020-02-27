@@ -100,6 +100,8 @@ class CDVD_Drive
 
         uint8_t cdkey[16];
 
+        int n_command_event_id;
+
         uint32_t get_block_timing(bool mode_DVD);
 
         void start_seek();
