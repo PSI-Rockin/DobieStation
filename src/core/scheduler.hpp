@@ -5,8 +5,6 @@
 #include <list>
 #include <vector>
 
-class Emulator;
-
 struct CycleCount
 {
     int64_t count;
@@ -15,9 +13,12 @@ struct CycleCount
 
 struct SchedulerEvent
 {
-    int64_t time_to_run;
+    uint64_t event_id;
+    int64_t time_to_run, last_update;
     uint64_t param;
+    int64_t pause_delta;
     int func_id;
+    bool paused;
 };
 
 class Scheduler
@@ -28,6 +29,7 @@ class Scheduler
         CycleCount iop_cycles;
 
         unsigned int run_cycles;
+        uint64_t next_event_id;
 
         std::vector<std::function<void(uint64_t)> > registered_funcs;
         std::list<SchedulerEvent> events;
@@ -47,10 +49,14 @@ class Scheduler
 
         int register_function(std::function<void(uint64_t)> func);
 
-        void add_event(int func_id, uint64_t delay, uint64_t param = 0);
+        uint64_t add_event(int func_id, uint64_t delta, uint64_t param = 0);
+        void delete_event(uint64_t event_id);
+        void set_event_pause(uint64_t event_id, bool paused);
+        void set_new_event_delta(uint64_t event_id, uint64_t delta);
+        int64_t get_update_delta(uint64_t event_id);
 
         void update_cycle_counts();
-        void process_events(Emulator* e);
+        void process_events();
 
         void load_state(std::ifstream& state);
         void save_state(std::ofstream& state);

@@ -121,7 +121,7 @@ void Emulator::run()
         vu1_run_func(vu1, ee_cycles);
 
 
-        scheduler.process_events(this);
+        scheduler.process_events();
     }
     fesetround(originalRounding);
 }

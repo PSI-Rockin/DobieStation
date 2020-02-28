@@ -926,6 +926,7 @@ void Scheduler::load_state(ifstream &state)
     }
 
     state.read((char*)&next_event_id, sizeof(next_event_id));
+<<<<<<< HEAD
 
     int timer_size = 0;
     state.read((char*)&timer_size, sizeof(timer_size));
@@ -939,6 +940,8 @@ void Scheduler::load_state(ifstream &state)
 
         timers.push_back(timer);
     }
+=======
+>>>>>>> fdbaacca... Scheduler: Add new methods in preparation for handling timer logic in events
 }
 
 void Scheduler::save_state(ofstream &state)
@@ -959,12 +962,15 @@ void Scheduler::save_state(ofstream &state)
     }
 
     state.write((char*)&next_event_id, sizeof(next_event_id));
+<<<<<<< HEAD
 
     int timer_size = timers.size();
     state.write((char*)&timer_size, sizeof(timer_size));
 
     for (int i = 0; i < timer_size; i++)
         state.write((char*)&timers[i], sizeof(SchedulerTimer));
+=======
+>>>>>>> fdbaacca... Scheduler: Add new methods in preparation for handling timer logic in events
 }
 
 void Gamepad::load_state(ifstream &state)
