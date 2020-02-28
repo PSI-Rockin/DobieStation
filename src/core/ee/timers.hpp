@@ -47,6 +47,8 @@ class EmotionTiming
         uint32_t read_control(int index);
         void write_control(int index, uint32_t value);
 
+        uint64_t get_time_to_interrupt(int index);
+
         void update_timers();
         void reschedule();
     public:

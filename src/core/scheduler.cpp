@@ -1,7 +1,9 @@
 #include <algorithm>
+#include <limits>
 #include "errors.hpp"
-#include "emulator.hpp"
 #include "scheduler.hpp"
+
+using TimestampLimit = std::numeric_limits<int64_t>;
 
 Scheduler::Scheduler()
 {
@@ -19,7 +21,9 @@ void Scheduler::reset()
     bus_cycles.remainder = 0;
     iop_cycles.remainder = 0;
 
-    closest_event_time = 0x7FFFFFFFULL << 32ULL;
+    next_event_id = 0;
+
+    closest_event_time = TimestampLimit::max();
 
     events.clear();
 }
@@ -68,18 +72,94 @@ int Scheduler::register_function(std::function<void (uint64_t)> func)
     return id;
 }
 
-void Scheduler::add_event(int func_id, uint64_t delay, uint64_t param)
+uint64_t Scheduler::add_event(int func_id, uint64_t delta, uint64_t param)
 {
     if (func_id < 0 || func_id >= registered_funcs.size())
         Errors::die("[Scheduler] Out-of-bounds func_id given in add_event");
     SchedulerEvent event;
     event.func_id = func_id;
-    event.time_to_run = ee_cycles.count + delay;
+    event.time_to_run = ee_cycles.count + delta;
+    event.last_update = ee_cycles.count;
     event.param = param;
+    event.event_id = next_event_id;
+
+    next_event_id++;
 
     closest_event_time = std::min(event.time_to_run, closest_event_time);
 
     events.push_back(event);
+
+    return event.event_id;
+}
+
+void Scheduler::delete_event(uint64_t event_id)
+{
+    for (auto it = events.begin(); it != events.end(); it++)
+    {
+        if (it->event_id == event_id)
+        {
+            events.erase(it);
+            return;
+        }
+    }
+
+    Errors::die("[Scheduler] No event ID %lld found in delete_event", event_id);
+}
+
+void Scheduler::set_event_pause(uint64_t event_id, bool paused)
+{
+    for (auto it = events.begin(); it != events.end(); it++)
+    {
+        if (it->event_id == event_id)
+        {
+            //Only do something if pause status changes
+            if (it->paused == paused)
+                return;
+
+            if (paused)
+            {
+                it->pause_delta = it->time_to_run - ee_cycles.count;
+                it->time_to_run = TimestampLimit::max();
+            }
+            else
+                it->time_to_run = ee_cycles.count + it->pause_delta;
+
+            it->paused = paused;
+            return;
+        }
+    }
+
+    Errors::die("[Scheduler] No event ID %lld found in set_event_pause", event_id);
+}
+
+void Scheduler::set_new_event_delta(uint64_t event_id, uint64_t delta)
+{
+    for (auto it = events.begin(); it != events.end(); it++)
+    {
+        if (it->event_id == event_id)
+        {
+            it->time_to_run = ee_cycles.count + delta;
+            it->last_update = ee_cycles.count;
+            return;
+        }
+    }
+
+    Errors::die("[Scheduler] No event ID %lld found in set_new_event_delta", event_id);
+}
+
+int64_t Scheduler::get_update_delta(uint64_t event_id)
+{
+    for (auto it = events.begin(); it != events.end(); it++)
+    {
+        if (it->event_id == event_id)
+        {
+            int64_t delta = ee_cycles.count - it->last_update;
+            it->last_update = ee_cycles.count;
+            return delta;
+        }
+    }
+
+    Errors::die("[Scheduler] No event ID %lld found in get_update_delta", event_id);
 }
 
 void Scheduler::update_cycle_counts()
@@ -103,7 +183,7 @@ void Scheduler::update_cycle_counts()
     }
 }
 
-void Scheduler::process_events(Emulator* e)
+void Scheduler::process_events()
 {
     if (ee_cycles.count >= closest_event_time)
     {

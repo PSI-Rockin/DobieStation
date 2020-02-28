@@ -38,6 +38,24 @@ void EmotionTiming::run(int cycles)
     }
 }
 
+uint64_t EmotionTiming::get_time_to_interrupt(int index)
+{
+    if (timers[index].gated || !timers[index].control.enabled)
+        return 0xFFFFFFFF;
+    uint64_t overflow_mask = 0x10000;
+    uint64_t overflow_delta =
+            ((overflow_mask - timers[index].counter) * timers[index].clock_scale) - timers[index].clocks;
+
+    //Don't calculate target delta if the counter is higher, as overflow delta will be reached next
+    if (timers[index].compare <= timers[index].counter)
+        return overflow_delta;
+
+    uint64_t target_delta =
+            ((timers[index].compare - timers[index].counter) * timers[index].clock_scale) - timers[index].clocks;
+
+    return std::min(overflow_delta, target_delta);
+}
+
 void EmotionTiming::update_timers()
 {
     for (int i = 0; i < 4; i++)

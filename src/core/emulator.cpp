@@ -120,7 +120,7 @@ void Emulator::run()
         iop.run(iop_cycles);
         iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
 
-        scheduler.process_events(this);
+        scheduler.process_events();
     }
     fesetround(originalRounding);
 }
