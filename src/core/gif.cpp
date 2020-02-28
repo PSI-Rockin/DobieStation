@@ -253,7 +253,6 @@ void GraphicsInterface::feed_GIF(uint128_t data)
         {
             path_status[active_path] = path[active_path].current_tag.format;
             gs->set_CSR_FIFO(0x2); //FIFO Full
-            path_status[active_path] = path[active_path].current_tag.format;
         }
         else
             path_status[active_path] = 5;
