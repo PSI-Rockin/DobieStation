@@ -254,6 +254,8 @@ void GraphicsInterface::feed_GIF(uint128_t data)
             path_status[active_path] = path[active_path].current_tag.format;
             gs->set_CSR_FIFO(0x2); //FIFO Full
         }
+        else
+            path_status[active_path] = 5;
     }
     else
     {
@@ -372,7 +374,7 @@ void GraphicsInterface::request_PATH(int index, bool canInterruptPath3)
     {
         active_path = index;
 
-        if (active_path == 3 && (!path3_masked(3) || FIFO.size() <= 8))
+        if (active_path == 3 && (!path3_masked(3) || FIFO.size() <= 15))
             dmac->set_DMA_request(GIF);
         //printf("[GIF] PATH%d Active!\n", active_path);
     }
@@ -396,6 +398,7 @@ void GraphicsInterface::deactivate_PATH(int index)
     if (active_path == index)
     {
         active_path = 0;
+        clear_path_status(index);
         arbitrate_paths();
     }
 
