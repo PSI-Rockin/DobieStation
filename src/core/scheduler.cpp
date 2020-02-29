@@ -82,6 +82,7 @@ uint64_t Scheduler::add_event(int func_id, uint64_t delta, uint64_t param)
     event.last_update = ee_cycles.count;
     event.param = param;
     event.event_id = next_event_id;
+    event.paused = false;
 
     next_event_id++;
 
@@ -108,6 +109,7 @@ void Scheduler::delete_event(uint64_t event_id)
 
 void Scheduler::set_event_pause(uint64_t event_id, bool paused)
 {
+    printf("Set event pause %lld: %d\n", event_id, paused);
     for (auto it = events.begin(); it != events.end(); it++)
     {
         if (it->event_id == event_id)
@@ -122,7 +124,9 @@ void Scheduler::set_event_pause(uint64_t event_id, bool paused)
                 it->time_to_run = TimestampLimit::max();
             }
             else
+            {
                 it->time_to_run = ee_cycles.count + it->pause_delta;
+            }
 
             it->paused = paused;
             return;
@@ -138,7 +142,10 @@ void Scheduler::set_new_event_delta(uint64_t event_id, uint64_t delta)
     {
         if (it->event_id == event_id)
         {
-            it->time_to_run = ee_cycles.count + delta;
+            if (it->paused)
+                it->pause_delta = ee_cycles.count + delta;
+            else
+                it->time_to_run = ee_cycles.count + delta;
             it->last_update = ee_cycles.count;
             return;
         }
@@ -153,6 +160,8 @@ int64_t Scheduler::get_update_delta(uint64_t event_id)
     {
         if (it->event_id == event_id)
         {
+            if (it->paused)
+                return 0;
             int64_t delta = ee_cycles.count - it->last_update;
             it->last_update = ee_cycles.count;
             return delta;

@@ -28,7 +28,7 @@ Emulator::Emulator() :
     iop_timers(this),
     intc(&cpu, &scheduler),
     ipu(&intc, &dmac),
-    timers(&intc),
+    timers(&intc, &scheduler),
     sio2(this, &pad, &memcard),
     spu(1, this, &iop_dma),
     spu2(2, this, &iop_dma),
@@ -110,7 +110,6 @@ void Emulator::run()
         iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
 
         dmac.run(bus_cycles);
-        timers.run(bus_cycles);
         ipu.run();
         vif0.update(bus_cycles);
         vif1.update(bus_cycles);
