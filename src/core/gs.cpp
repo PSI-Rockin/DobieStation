@@ -205,7 +205,10 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
     
     gs_thread.send_message({ GSCommand::write64_t, payload });
 
-    //We need a check for SIGNAL here so that we can fire the interrupt
+    //Check for interrupt pre-processing
+    reg.write64(addr, value);
+
+    //We need a check for SIGNAL here so that we can fire the interrupt as soon as possible
     if (addr == 0x60)
     {
         if (reg.CSR.SIGNAL_generated)
@@ -216,9 +219,6 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
                 reg.CSR.SIGNAL_irq_pending = true;
         }
     }
-
-    //also check for interrupt pre-processing
-    reg.write64(addr, value);
 }
 
 void GraphicsSynthesizer::write64_privileged(uint32_t addr, uint64_t value)
