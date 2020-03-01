@@ -472,6 +472,8 @@ uint8_t Emulator::read8(uint32_t address)
 {
     if (address >= 0x1C000000 && address < 0x1C200000)
         return IOP_RAM[address & 0x1FFFFF];
+    if (address >= 0x10000000 && address < 0x10002000)
+        return (timers.read32(address & ~0xF) >> (8 * (address & 0x3)));
     if (address >= 0x10008000 && address < 0x1000F000)
         return dmac.read8(address);
     if (address >= 0x11000000 && address < 0x11004000)
