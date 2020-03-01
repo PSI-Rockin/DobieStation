@@ -1217,86 +1217,29 @@ void VU_JIT64::max_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), (field == 0xF) ? REG_STATE::WRITE : REG_STATE::READ_WRITE);
     REG_64 temp = REG_64::XMM0;
     REG_64 temp2 = REG_64::XMM1;
+    REG_64 temp3 = alloc_sse_temp_reg(vu);
 
     uint8_t bc = instr.get_bc();
     bc |= (bc << 6) | (bc << 4) | (bc << 2);
 
-    if (source == dest)
-        emitter.MOVAPS_REG(source, temp2);
-    else if(bc_reg == dest)
-        emitter.MOVAPS_REG(bc_reg, temp2);
+    emitter.MOVAPS_REG(source, temp2);
+    emitter.MOVAPS_REG(bc_reg, temp3);
+
     emitter.MOVAPS_REG(bc_reg, temp);
     emitter.SHUFPS(bc, temp, temp);
 
     emitter.PMAXSD_XMM(source, temp);
-
     emitter.BLENDPS(field, temp, dest);
 
-    if (source == bc_reg)
-    {
-        if (dest == source) // temp2 == source and bc_reg
-        {
-            REG_64 temp3 = alloc_sse_temp_reg(vu);
+    emitter.SHUFPS(bc, temp3, temp3);
+    emitter.MOVAPS_REG(temp3, temp);
 
-            emitter.MOVAPS_REG(temp2, temp3);
-            emitter.SHUFPS(bc, temp3, temp3);
-            emitter.MOVAPS_REG(temp3, temp);
-            emitter.PAND_XMM(temp2, temp); //mask
-            emitter.PMINSD_XMM(temp3, temp2);
-            emitter.BLENDPS(~field, dest, temp2);
-            emitter.BLENDVPS_XMM0(temp2, dest);
+    emitter.PAND_XMM(temp2, temp); //mask
+    emitter.PMINSD_XMM(temp3, temp2);
+    emitter.BLENDPS(~field, dest, temp2);
+    emitter.BLENDVPS_XMM0(temp2, dest);
 
-            flush_sse_temp_reg(vu, temp3);
-        }
-        else
-        {
-            emitter.MOVAPS_REG(source, temp);
-            emitter.MOVAPS_REG(bc_reg, temp2);
-            emitter.SHUFPS(bc, temp2, temp2);
-            emitter.PAND_XMM(temp2, temp); //mask
-            emitter.PMINSD_XMM(source, temp2);
-            emitter.BLENDPS(~field, dest, temp2);
-            emitter.BLENDVPS_XMM0(temp2, dest);
-        }
-    }
-    else if (bc_reg == dest) //temp2 == bc_reg
-    {
-        emitter.MOVAPS_REG(source, temp);
-        emitter.SHUFPS(bc, temp2, temp2);
-        emitter.PAND_XMM(temp2, temp); //mask
-        emitter.PMINSD_XMM(source, temp2);
-        emitter.BLENDPS(~field, dest, temp2);
-        emitter.BLENDVPS_XMM0(temp2, dest);
-    }
-    else if (source == dest)//temp2 == source
-    {
-        REG_64 temp3 = alloc_sse_temp_reg(vu);
-
-        emitter.MOVAPS_REG(bc_reg, temp3);
-        emitter.SHUFPS(bc, temp3, temp3);
-        emitter.MOVAPS_REG(temp3, temp);
-        emitter.PAND_XMM(temp2, temp); //mask
-        emitter.PMINSD_XMM(temp3, temp2);
-        emitter.BLENDPS(~field, dest, temp2);
-        emitter.BLENDVPS_XMM0(temp2, dest);
-
-        flush_sse_temp_reg(vu, temp3);
-    }
-    else
-    {
-        REG_64 temp3 = alloc_sse_temp_reg(vu);
-
-        emitter.MOVAPS_REG(bc_reg, temp3);
-        emitter.SHUFPS(bc, temp3, temp3);
-        emitter.MOVAPS_REG(source, temp2);
-        emitter.MOVAPS_REG(temp3, temp);
-        emitter.PAND_XMM(temp2, temp); //mask
-        emitter.PMINSD_XMM(temp3, temp2);
-        emitter.BLENDPS(~field, dest, temp2);
-        emitter.BLENDVPS_XMM0(temp2, dest);
-
-        flush_sse_temp_reg(vu, temp3);
-    }
+    flush_sse_temp_reg(vu, temp3);
 }
 
 void VU_JIT64::max_vectors(VectorUnit &vu, IR::Instruction &instr)
@@ -1308,51 +1251,28 @@ void VU_JIT64::max_vectors(VectorUnit &vu, IR::Instruction &instr)
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), (field == 0xF) ? REG_STATE::WRITE : REG_STATE::READ_WRITE);
     REG_64 temp = REG_64::XMM0;
     REG_64 temp2 = REG_64::XMM1;
+    REG_64 temp3 = alloc_sse_temp_reg(vu);
 
     if (op1 != op2)
     {
-        if (op2 == dest)
-            emitter.MOVAPS_REG(op2, temp2);
-        else if (op1 == dest)
-            emitter.MOVAPS_REG(op1, temp2);
-        //GT4 has black screens during 3D if it isn't this way around
+        emitter.MOVAPS_REG(op2, temp2);
+        emitter.MOVAPS_REG(op1, temp3);
         emitter.MOVAPS_REG(op2, temp);
+
         emitter.PMAXSD_XMM(op1, temp);
         emitter.BLENDPS(field, temp, dest);
+
+        emitter.MOVAPS_REG(temp2, temp);
+
+        emitter.PAND_XMM(temp3, temp); //mask
+        emitter.PMINSD_XMM(temp3, temp2);
+        emitter.BLENDPS(~field, dest, temp2);
+        emitter.BLENDVPS_XMM0(temp2, dest);
     }
     else
         emitter.BLENDPS(field, op1, dest);
 
-
-    if (op1 == op2)
-    {
-        //Do Nothing
-    }
-    else if (op2 == dest) //temp2 == op2
-    {
-        emitter.MOVAPS_REG(op1, temp);
-        emitter.PAND_XMM(temp2, temp); //mask
-        emitter.PMINSD_XMM(op1, temp2);
-        emitter.BLENDPS(~field, dest, temp2);
-        emitter.BLENDVPS_XMM0(temp2, dest);
-    }
-    else if (op1 == dest)//temp2 == op1
-    {
-        emitter.MOVAPS_REG(op2, temp);
-        emitter.PAND_XMM(temp2, temp); //mask
-        emitter.PMINSD_XMM(op2, temp2);
-        emitter.BLENDPS(~field, dest, temp2);
-        emitter.BLENDVPS_XMM0(temp2, dest);
-    }
-    else
-    {
-        emitter.MOVAPS_REG(op2, temp);
-        emitter.MOVAPS_REG(op1, temp2);
-        emitter.PAND_XMM(temp2, temp); //mask
-        emitter.PMINSD_XMM(op2, temp2);
-        emitter.BLENDPS(~field, dest, temp2);
-        emitter.BLENDVPS_XMM0(temp2, dest);
-    }
+    flush_sse_temp_reg(vu, temp3);
 }
 
 void VU_JIT64::min_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
@@ -1363,84 +1283,28 @@ void VU_JIT64::min_vector_by_scalar(VectorUnit &vu, IR::Instruction &instr)
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), (field == 0xF) ? REG_STATE::WRITE : REG_STATE::READ_WRITE);
     REG_64 temp = REG_64::XMM0;
     REG_64 temp2 = REG_64::XMM1;
+    REG_64 temp3 = alloc_sse_temp_reg(vu);
 
     uint8_t bc = instr.get_bc();
     bc |= (bc << 6) | (bc << 4) | (bc << 2);
 
-    if (source == dest)
-        emitter.MOVAPS_REG(source, temp2);
-    else if (bc_reg == dest)
-        emitter.MOVAPS_REG(bc_reg, temp2);
+    emitter.MOVAPS_REG(source, temp2);
+    emitter.MOVAPS_REG(bc_reg, temp3);
     emitter.MOVAPS_REG(bc_reg, temp);
     emitter.SHUFPS(bc, temp, temp);
+
     emitter.PMINSD_XMM(source, temp);
     emitter.BLENDPS(field, temp, dest);
 
-    if (source == bc_reg)
-    {
-        if (dest == source) // temp2 == source and bc_reg
-        {
-            REG_64 temp3 = alloc_sse_temp_reg(vu);
+    emitter.SHUFPS(bc, temp3, temp3);
+    emitter.MOVAPS_REG(temp3, temp);
 
-            emitter.MOVAPS_REG(temp2, temp3);
-            emitter.SHUFPS(bc, temp3, temp3);
-            emitter.MOVAPS_REG(temp3, temp);
-            emitter.PAND_XMM(temp2, temp); //mask
-            emitter.PMAXSD_XMM(temp3, temp2);
-            emitter.BLENDPS(~field, dest, temp2);
-            emitter.BLENDVPS_XMM0(temp2, dest);
+    emitter.PAND_XMM(temp2, temp); //mask
+    emitter.PMAXSD_XMM(temp3, temp2);
+    emitter.BLENDPS(~field, dest, temp2);
+    emitter.BLENDVPS_XMM0(temp2, dest);
 
-            flush_sse_temp_reg(vu, temp3);
-        }
-        else
-        {
-            emitter.MOVAPS_REG(source, temp);
-            emitter.MOVAPS_REG(bc_reg, temp2);
-            emitter.SHUFPS(bc, temp2, temp2);
-            emitter.PAND_XMM(temp2, temp); //mask
-            emitter.PMAXSD_XMM(source, temp2);
-            emitter.BLENDPS(~field, dest, temp2);
-            emitter.BLENDVPS_XMM0(temp2, dest);
-        }
-    }
-    else if (bc_reg == dest) //temp2 == bc_reg
-    {
-        emitter.MOVAPS_REG(source, temp);
-        emitter.SHUFPS(bc, temp2, temp2);
-        emitter.PAND_XMM(temp2, temp); //mask
-        emitter.PMAXSD_XMM(source, temp2);
-        emitter.BLENDPS(~field, dest, temp2);
-        emitter.BLENDVPS_XMM0(temp2, dest);
-    }
-    else if (source == dest)//temp2 == source
-    {
-        REG_64 temp3 = alloc_sse_temp_reg(vu);
-
-        emitter.MOVAPS_REG(bc_reg, temp3);
-        emitter.SHUFPS(bc, temp3, temp3);
-        emitter.MOVAPS_REG(temp3, temp);
-        emitter.PAND_XMM(temp2, temp); //mask
-        emitter.PMAXSD_XMM(temp3, temp2);
-        emitter.BLENDPS(~field, dest, temp2);
-        emitter.BLENDVPS_XMM0(temp2, dest);
-
-        flush_sse_temp_reg(vu, temp3);
-    }
-    else
-    {
-        REG_64 temp3 = alloc_sse_temp_reg(vu);
-
-        emitter.MOVAPS_REG(bc_reg, temp3);
-        emitter.SHUFPS(bc, temp3, temp3);
-        emitter.MOVAPS_REG(source, temp2);
-        emitter.MOVAPS_REG(temp3, temp);
-        emitter.PAND_XMM(temp2, temp); //mask
-        emitter.PMAXSD_XMM(temp3, temp2);
-        emitter.BLENDPS(~field, dest, temp2);
-        emitter.BLENDVPS_XMM0(temp2, dest);
-
-        flush_sse_temp_reg(vu, temp3);
-    }
+    flush_sse_temp_reg(vu, temp3);
 }
 
 void VU_JIT64::min_vectors(VectorUnit &vu, IR::Instruction &instr)
@@ -1452,50 +1316,27 @@ void VU_JIT64::min_vectors(VectorUnit &vu, IR::Instruction &instr)
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), (field == 0xF) ? REG_STATE::WRITE : REG_STATE::READ_WRITE);
     REG_64 temp = REG_64::XMM0;
     REG_64 temp2 = REG_64::XMM1;
+    REG_64 temp3 = alloc_sse_temp_reg(vu);
 
     if (op1 != op2)
     {
-        if (op2 == dest)
-            emitter.MOVAPS_REG(op2, temp2);
-        else if (op1 == dest)
-            emitter.MOVAPS_REG(op1, temp2);
+        emitter.MOVAPS_REG(op1, temp2);
+        emitter.MOVAPS_REG(op2, temp3);
+
         emitter.MOVAPS_REG(op2, temp);
         emitter.PMINSD_XMM(op1, temp);
         emitter.BLENDPS(field, temp, dest);
+
+        emitter.MOVAPS_REG(temp2, temp);
+        emitter.PAND_XMM(temp3, temp); //mask
+        emitter.PMAXSD_XMM(temp3, temp2);
+        emitter.BLENDPS(~field, dest, temp2);
+        emitter.BLENDVPS_XMM0(temp2, dest);
     }
     else
         emitter.BLENDPS(field, op1, dest);
 
-
-    if (op1 == op2)
-    {
-        //Do Nothing
-    }
-    else if (op2 == dest) //temp2 == op2
-    {
-        emitter.MOVAPS_REG(op1, temp);
-        emitter.PAND_XMM(temp2, temp); //mask
-        emitter.PMAXSD_XMM(op1, temp2);
-        emitter.BLENDPS(~field, dest, temp2);
-        emitter.BLENDVPS_XMM0(temp2, dest);
-    }
-    else if (op1 == dest)//temp2 == op1
-    {
-        emitter.MOVAPS_REG(op2, temp);
-        emitter.PAND_XMM(temp2, temp); //mask
-        emitter.PMAXSD_XMM(op2, temp2);
-        emitter.BLENDPS(~field, dest, temp2);
-        emitter.BLENDVPS_XMM0(temp2, dest);
-    }
-    else
-    {
-        emitter.MOVAPS_REG(op2, temp);
-        emitter.MOVAPS_REG(op1, temp2);
-        emitter.PAND_XMM(temp2, temp); //mask
-        emitter.PMAXSD_XMM(op2, temp2);
-        emitter.BLENDPS(~field, dest, temp2);
-        emitter.BLENDVPS_XMM0(temp2, dest);
-    }
+    flush_sse_temp_reg(vu, temp3);
 }
 
 void VU_JIT64::add_vectors(VectorUnit &vu, IR::Instruction &instr)
