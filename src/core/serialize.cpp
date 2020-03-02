@@ -4,7 +4,11 @@
 
 #define VER_MAJOR 0
 #define VER_MINOR 0
+<<<<<<< HEAD
 #define VER_REV 30
+=======
+#define VER_REV 34
+>>>>>>> be7db694... IPU: Changes to IDEC
 
 using namespace std;
 
