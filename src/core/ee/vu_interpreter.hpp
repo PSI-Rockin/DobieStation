@@ -60,6 +60,7 @@ namespace VU_Interpreter
     void addaq(VectorUnit& vu, uint32_t instr);
     void maddaq(VectorUnit& vu, uint32_t instr);
     void maddai(VectorUnit& vu, uint32_t instr);
+    void subaq(VectorUnit& vu, uint32_t instr);
     void msubaq(VectorUnit& vu, uint32_t instr);
     void subai(VectorUnit& vu, uint32_t instr);
     void msubai(VectorUnit& vu, uint32_t instr);
@@ -69,8 +70,6 @@ namespace VU_Interpreter
     void suba(VectorUnit &vu, uint32_t instr);
     void msuba(VectorUnit &vu, uint32_t instr);
     void opmula(VectorUnit& vu, uint32_t instr);
-
-    bool updates_mac_flags(uint32_t upper_instr);
 
     void lower(VectorUnit& vu, uint32_t instr);
     void lower1(VectorUnit& vu, uint32_t instr);
@@ -113,6 +112,9 @@ namespace VU_Interpreter
     void esqrt(VectorUnit& vu, uint32_t instr);
     void ersqrt(VectorUnit& vu, uint32_t instr);
     void esin(VectorUnit& vu, uint32_t instr);
+    void eatan(VectorUnit& vu, uint32_t instr);
+    void eatanxy(VectorUnit& vu, uint32_t instr);
+    void eatanxz(VectorUnit& vu, uint32_t instr);
     void eexp(VectorUnit& vu, uint32_t instr);
 
     void lower2(VectorUnit& vu, uint32_t instr);
@@ -126,8 +128,10 @@ namespace VU_Interpreter
     void fcset(VectorUnit& vu, uint32_t instr);
     void fcand(VectorUnit& vu, uint32_t instr);
     void fcor(VectorUnit& vu, uint32_t instr);
+    void fseq(VectorUnit& vu, uint32_t instr);
     void fsset(VectorUnit& vu, uint32_t instr);
     void fsand(VectorUnit& vu, uint32_t instr);
+    void fsor(VectorUnit& vu, uint32_t instr);
     void fmeq(VectorUnit& vu, uint32_t instr);
     void fmand(VectorUnit& vu, uint32_t instr);
     void fmor(VectorUnit& vu, uint32_t instr);

@@ -104,19 +104,22 @@ void Emulator::run()
         scheduler.update_cycle_counts();
 
         cpu.run(ee_cycles);
+        iop_timers.run(iop_cycles);
+        iop_dma.run(iop_cycles);
+        iop.run(iop_cycles);
+        iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
+
         dmac.run(bus_cycles);
         timers.run(bus_cycles);
         ipu.run();
         vif0.update(bus_cycles);
         vif1.update(bus_cycles);
         gif.run(bus_cycles);
-        vu0.run(bus_cycles);
-        vu1_run_func(vu1, bus_cycles);
+        
+        //VU's run at EE speed, however VU0 maintains its own speed
+        vu0.run(ee_cycles);
+        vu1_run_func(vu1, ee_cycles);
 
-        iop_timers.run(iop_cycles);
-        iop_dma.run(iop_cycles);
-        iop.run(iop_cycles);
-        iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
 
         scheduler.process_events(this);
     }
@@ -469,8 +472,18 @@ uint8_t Emulator::read8(uint32_t address)
 {
     if (address >= 0x1C000000 && address < 0x1C200000)
         return IOP_RAM[address & 0x1FFFFF];
+    if (address >= 0x10000000 && address < 0x10002000)
+        return (timers.read32(address & ~0xF) >> (8 * (address & 0x3)));
     if (address >= 0x10008000 && address < 0x1000F000)
         return dmac.read8(address);
+    if (address >= 0x11000000 && address < 0x11004000)
+        return vu0.read_instr<uint8_t>(address);
+    if (address >= 0x11004000 && address < 0x11008000)
+        return vu0.read_mem<uint8_t>(address);
+    if (address >= 0x11008000 && address < 0x1100C000)
+        return vu1.read_instr<uint8_t>(address);
+    if (address >= 0x1100C000 && address < 0x11010000)
+        return vu1.read_mem<uint8_t>(address);
     switch (address)
     {
         case 0x1F40200F:
@@ -492,6 +505,14 @@ uint16_t Emulator::read16(uint32_t address)
         return dmac.read16(address);
     if (address >= 0x1C000000 && address < 0x1C200000)
         return *(uint16_t*)&IOP_RAM[address & 0x1FFFFF];
+    if (address >= 0x11000000 && address < 0x11004000)
+        return vu0.read_instr<uint16_t>(address);
+    if (address >= 0x11004000 && address < 0x11008000)
+        return vu0.read_mem<uint16_t>(address);
+    if (address >= 0x11008000 && address < 0x1100C000)
+        return vu1.read_instr<uint16_t>(address);
+    if (address >= 0x1100C000 && address < 0x11010000)
+        return vu1.read_mem<uint16_t>(address);
     switch (address)
     {
         case 0x10003C30:
@@ -666,6 +687,26 @@ void Emulator::write8(uint32_t address, uint8_t value)
         IOP_RAM[address & 0x1FFFFF] = value;
         return;
     }
+    if (address >= 0x11000000 && address < 0x11004000)
+    {
+        vu0.write_instr<uint8_t>(address, value);
+        return;
+    }
+    if (address >= 0x11004000 && address < 0x11008000)
+    {
+        vu0.write_mem<uint8_t>(address, value);
+        return;
+    }
+    if (address >= 0x11008000 && address < 0x1100C000)
+    {
+        vu1.write_instr<uint8_t>(address, value);
+        return;
+    }
+    if (address >= 0x1100C000 && address < 0x11010000)
+    {
+        vu1.write_mem<uint8_t>(address, value);
+        return;
+    }
     switch (address)
     {
         case 0x1000F180:
@@ -686,6 +727,26 @@ void Emulator::write16(uint32_t address, uint16_t value)
     if (address >= 0x1C000000 && address < 0x1C200000)
     {
         *(uint16_t*)&IOP_RAM[address & 0x1FFFFF] = value;
+        return;
+    }
+    if (address >= 0x11000000 && address < 0x11004000)
+    {
+        vu0.write_instr<uint16_t>(address, value);
+        return;
+    }
+    if (address >= 0x11004000 && address < 0x11008000)
+    {
+        vu0.write_mem<uint16_t>(address, value);
+        return;
+    }
+    if (address >= 0x11008000 && address < 0x1100C000)
+    {
+        vu1.write_instr<uint16_t>(address, value);
+        return;
+    }
+    if (address >= 0x1100C000 && address < 0x11010000)
+    {
+        vu1.write_mem<uint16_t>(address, value);
         return;
     }
     if (address >= 0x1A000000 && address < 0x1FC00000)
@@ -776,6 +837,12 @@ void Emulator::write32(uint32_t address, uint32_t value)
             return;
         case 0x10003C30:
             vif1.set_mark(value);
+            return;
+        case 0x10004000:
+            vif0.transfer_word(value);
+            return;
+        case 0x10005000:
+            vif1.transfer_word(value);
             return;
         case 0x1000F000:
             printf("Write32 INTC_STAT: $%08X\n", value);

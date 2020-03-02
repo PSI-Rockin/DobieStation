@@ -419,6 +419,7 @@ void GraphicsSynthesizerThread::event_loop()
                     case request_local_host_tx:
                     {
                         GSReturnMessagePayload return_payload;
+                        return_payload.data_payload.status = (TRXDIR != 3);
                         return_payload.data_payload.quad_data = local_to_host();
                         return_queue->push({ GSReturn::local_host_transfer, return_payload });
                         std::unique_lock<std::mutex> lk(data_mutex);
@@ -459,6 +460,7 @@ void GraphicsSynthesizerThread::reset()
     pixels_transferred = 0;
     num_vertices = 0;
     frame_count = 0;
+    reg.deinterlace_method = BOB_DEINTERLACE;
 
     COLCLAMP = true;
 
@@ -484,6 +486,7 @@ void GraphicsSynthesizerThread::reset()
     recompile_draw_pixel_prologue();
 
     reset_fifos();
+    memset(screen_buffer, 0, sizeof(screen_buffer));
 }
 
 void GraphicsSynthesizerThread::memdump(uint32_t* target, uint16_t& width, uint16_t& height)
@@ -542,79 +545,108 @@ uint32_t GraphicsSynthesizerThread::get_CRT_color(DISPFB &dispfb, uint32_t x, ui
     }
 }
 
-void GraphicsSynthesizerThread::render_single_CRT(uint32_t *target, DISPFB &dispfb, DISPLAY &display)
+void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
 {
-    int width = display.width >> 2;
-    for (int y = 0; y < display.height; y++)
+    int width;
+    int height;
+    int y_increment = 1;
+    int start_scanline = 0;
+    int frame_line_increment = 1;
+    int fb_y = 0;
+
+    DISPLAY &cur_disp = reg.DISPLAY1;
+
+    //Makai Kingdom needs to take its display information from Display2
+    if (!reg.PMODE.circuit1)
     {
+        if (!reg.PMODE.circuit2)
+            return;
+
+        cur_disp = reg.DISPLAY2;
+    }
+
+    if (cur_disp.magnify_x)
+        width = cur_disp.width / cur_disp.magnify_x;
+    else
+        width = cur_disp.width >> 2;
+
+    //TODO - Find out why some games double their height
+    //Examples are Pool Paradise, Silent Hill 2
+    //Makai Kingdom + Disgaea go the other way and half their height, but this is ok
+    //Resident Evil 4 has it's height just slightly higher than width (pseudo widescreen), so we need to be careful to check that
+
+    /*
+    height 511 magy 1 width 2562 magx 6 actual width 427 dx 656 dy 73 Interlaced 1 Frame 0 --- Resident Evil 4 (strangely cut off, broken with PCRTC change)
+    height 896 magy 1 width 2560 magx 5 actual width 512 dx 652 dy 50 Interlaced 1 Frame 0 --- Silent Hill 2
+    height 960 magy 1 width 2560 magx 4 actual width 640 dx 636 dy 42 Interlaced 1 Frame 0 --- Pool Paradise
+    height 224 magy 1 width 2560 magx 4 actual width 640 dx 636 dy 25 Interlaced 0 Frame 1 --- Makai
+      */
+
+    //Check for extremely high heights, slightly higher heights are ok as they are a sort of widescreen resolution
+    if (cur_disp.height >= (width * 1.33))
+        height = cur_disp.height / 2;
+    else
+        height = cur_disp.height;
+
+    if (reg.SMODE2.interlaced)
+    {
+        if (reg.deinterlace_method != BOB_DEINTERLACE)
+        {
+            y_increment = 2;
+            start_scanline = !reg.CSR.is_odd_frame; //Seems to write the upper fields first
+
+            if (!reg.SMODE2.frame_mode)
+                frame_line_increment = 2;
+
+            fb_y = reg.CSR.is_odd_frame;
+        }
+    }
+
+    for (int y = start_scanline; y <= height; y += y_increment)
+    {
+        if (reg.SMODE2.interlaced)
+        {
+            //Gets rid of some nasty interlace bobbing artifacts
+            if (y == 0)
+                continue;
+        }
         for (int x = 0; x < width; x++)
         {
             int pixel_x = x;
             int pixel_y = y;
 
-            if (reg.SMODE2.frame_mode && reg.SMODE2.interlaced)
-                pixel_y *= 2;
-            if (pixel_x >= width || pixel_y >= display.height)
-                continue;
-            uint32_t scaled_x = dispfb.x + x;
-            uint32_t scaled_y = dispfb.y + y;
-            scaled_x = (scaled_x * dispfb.width) / width;
-            uint32_t value = get_CRT_color(dispfb, scaled_x, scaled_y);
+            uint32_t scaled_x1 = reg.DISPFB1.x + x;
+            uint32_t scaled_x2 = reg.DISPFB2.x + x;
+            uint32_t scaled_y1 = reg.DISPFB1.y + fb_y;
+            uint32_t scaled_y2 = reg.DISPFB2.y + fb_y;
 
-            target[pixel_x + (pixel_y * width)] = value | 0xFF000000;
+            uint32_t output1 = reg.PMODE.circuit1 ? get_CRT_color(reg.DISPFB1, scaled_x1, scaled_y1) : 0;
+            uint32_t output2 = reg.PMODE.circuit2 ? get_CRT_color(reg.DISPFB2, scaled_x2, scaled_y2) : reg.BGCOLOR;
 
-            if (reg.SMODE2.frame_mode && reg.SMODE2.interlaced)
-                target[pixel_x + ((pixel_y + 1) * width)] = value | 0xFF000000;
-        }
-    }
-}
+            if (reg.PMODE.blend_with_bg)
+                output2 = reg.BGCOLOR;
 
-void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
-{
-    //Circuit 1 only
-    if (reg.PMODE.circuit1 && !reg.PMODE.circuit2)
-        render_single_CRT(target, reg.DISPFB1, reg.DISPLAY1);
-    //Circuit 2 only
-    else if (!reg.PMODE.circuit1 && reg.PMODE.circuit2)
-        render_single_CRT(target, reg.DISPFB2, reg.DISPLAY2);
-    //Circuits 1 and 2 (merge circuit)
-    else
-    {
-        int width = reg.DISPLAY1.width >> 2;
-        for (int y = 0; y < reg.DISPLAY1.height; y++)
-        {
-            for (int x = 0; x < width; x++)
+            uint32_t r, g, b;
+            uint32_t r1, g1, b1, r2, g2, b2;
+            uint32_t final_color;
+
+            //If Circuit 1 is disabled, we can skip alpha blending on Circuit 2
+            //Some games (like Devil May Cry) will use Circuit 2 with an ALP of 255, making it effectively blank.
+            //However we think that on real hardware it will either skip the blending or duplicate Circuit 2 in the Circuit 1 output
+            //which effectively means output2 is outputted at full alpha
+            //Downhill Domination also has a dark screen if you do not follow this behaviour.  ALP 128 only circuit 2
+            if (reg.PMODE.circuit1)
             {
-                int pixel_x = x;
-                int pixel_y = y;
+                uint32_t alpha;
 
-                if (reg.SMODE2.frame_mode && reg.SMODE2.interlaced)
-                    pixel_y *= 2;
-                if (pixel_x >= width || pixel_y >= reg.DISPLAY1.height)
-                    continue;
-                uint32_t scaled_x1 = reg.DISPFB1.x + x;
-                uint32_t scaled_x2 = reg.DISPFB2.x + x;
-                uint32_t scaled_y1 = reg.DISPFB1.y + y;
-                uint32_t scaled_y2 = reg.DISPFB2.y + y;
-
-                scaled_x1 = (scaled_x1 * reg.DISPFB1.width) / width;
-                scaled_x2 = (scaled_x2 * reg.DISPFB2.width) / width;
-
-                uint32_t output1 = get_CRT_color(reg.DISPFB1, scaled_x1, scaled_y1);
-                uint32_t output2 = get_CRT_color(reg.DISPFB2, scaled_x2, scaled_y2);
-
-                if (reg.PMODE.blend_with_bg)
-                    output2 = reg.BGCOLOR;
-
-                int alpha = (output1 >> 24) * 2;
                 if (reg.PMODE.use_ALP)
                     alpha = reg.PMODE.ALP;
+                else
+                    alpha = (output1 >> 24) * 2;
 
                 if (alpha > 0xFF)
                     alpha = 0xFF;
 
-                uint32_t r1, g1, b1, r2, g2, b2, r, g, b;
-                uint32_t final_color;
                 r1 = output1 & 0xFF; r2 = output2 & 0xFF;
                 g1 = (output1 >> 8) & 0xFF; g2 = (output2 >> 8) & 0xFF;
                 b1 = (output1 >> 16) & 0xFF; b2 = (output2 >> 16) & 0xFF;
@@ -630,62 +662,118 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
                 b = ((b1 * alpha) + (b2 * (0xFF - alpha))) >> 8;
                 if (b > 0xFF)
                     b = 0xFF;
-
-                final_color = 0xFF000000 | r | (g << 8) | (b << 16);
-
-                target[pixel_x + (pixel_y * width)] = final_color;
-
-                if (reg.SMODE2.frame_mode && reg.SMODE2.interlaced)
-                    target[pixel_x + ((pixel_y + 1) * width)] = final_color;
             }
-        }
-    }
-}
-
-void GraphicsSynthesizerThread::dump_texture(uint32_t* target, uint32_t start_addr, uint32_t width)
-{
-    uint32_t dwidth = reg.DISPLAY2.width >> 2;
-    printf("[GS_t] Dumping texture\n");
-    int max_pixels = width * 256 / 2;
-    int p = 0;
-    while (p < max_pixels)
-    {
-        int x = p % width;
-        int y = p / width;
-        uint32_t addr = (x + (y * width));
-        for (int i = 0; i < 2; i++)
-        {
-            uint8_t entry;
-            entry = (local_mem[start_addr + (addr / 2)] >> (i * 4)) & 0xF;
-            uint32_t value = (entry << 4) | (entry << 12) | (entry << 20);
-            target[x + (y * dwidth)] = value;
-            target[x + (y * dwidth)] |= 0xFF000000;
-            x++;
-        }
-        p += 2;
-    }
-    /*for (int y = 0; y < 256; y++)
-    {
-        for (int x = 0; x < width; x++)
-        {
-            int pixel_x = x;
-            int pixel_y = y;
-            if (pixel_x >= width || pixel_y >= 256)
-                continue;
-            uint32_t addr = (pixel_x + (pixel_y * width));
-            for (int i = 0; i < 2; i++)
+            else
             {
-                uint8_t entry;
-                entry = (local_mem[start_addr + (addr / 2)] >> (i * 4)) & 0xF;
-                uint32_t value = (entry << 4) | (entry << 12) | (entry << 20);
-                output_buffer[pixel_x + (pixel_y * dwidth)] = value;
-                output_buffer[pixel_x + (pixel_y * dwidth)] |= 0xFF000000;
-                pixel_x++;
+                r = output2 & 0xFF;
+                g = (output2 >> 8) & 0xFF;
+                b = (output2 >> 16) & 0xFF;
             }
-            x++;
+
+            final_color = 0xFF000000 | r | (g << 8) | (b << 16);
+
+            if (reg.SMODE2.interlaced)
+            {
+                switch (reg.deinterlace_method)
+                {
+                    case MERGE_FIELD_DEINTERLACE:
+                    {
+                        if (!reg.CSR.is_odd_frame)
+                        {
+                            screen_buffer[pixel_x + (pixel_y * width)] = final_color;
+
+                            r1 = r; r2 = screen_buffer[pixel_x + ((pixel_y + 1) * width)] & 0xFF;
+                            g1 = g; g2 = (screen_buffer[pixel_x + ((pixel_y + 1) * width)] >> 8) & 0xFF;
+                            b1 = b; b2 = (screen_buffer[pixel_x + ((pixel_y + 1) * width)] >> 16) & 0xFF;
+
+                            r = (r1 + r2) >> 1;
+                            g = (g1 + g2) >> 1;
+                            b = (b1 + b2) >> 1;
+
+                            screen_buffer[pixel_x + (pixel_y * width)] = 0xFF000000 | r | (g << 8) | (b << 16);
+                        }
+                        else
+                        {
+                            screen_buffer[pixel_x + (pixel_y * width)] = final_color;
+
+                            r1 = r; r2 = screen_buffer[pixel_x + ((pixel_y - 1) * width)] & 0xFF;
+                            g1 = g; g2 = (screen_buffer[pixel_x + ((pixel_y - 1) * width)] >> 8) & 0xFF;
+                            b1 = b; b2 = (screen_buffer[pixel_x + ((pixel_y - 1) * width)] >> 16) & 0xFF;
+
+                            r = (r1 + r2) >> 1;
+                            g = (g1 + g2) >> 1;
+                            b = (b1 + b2) >> 1;
+
+                            screen_buffer[pixel_x + (pixel_y * width)] = 0xFF000000 | r | (g << 8) | (b << 16);
+                        }
+
+                        target[pixel_x + (pixel_y * width)] = screen_buffer[pixel_x + (pixel_y * width)];
+
+                        if (!reg.CSR.is_odd_frame)
+                            target[pixel_x + ((pixel_y + 1) * width)] = screen_buffer[pixel_x + ((pixel_y + 1) * width)];
+                        else if (pixel_y > 0)
+                            target[pixel_x + ((pixel_y - 1) * width)] = screen_buffer[pixel_x + ((pixel_y - 1) * width)];
+                        break;
+                    }
+                    case BLEND_SCANLINE_DEINTERLACE:
+                    {
+                        r1 = r; r2 = screen_buffer[pixel_x + ((pixel_y)* width)] & 0xFF;
+                        g1 = g; g2 = (screen_buffer[pixel_x + ((pixel_y)* width)] >> 8) & 0xFF;
+                        b1 = b; b2 = (screen_buffer[pixel_x + ((pixel_y)* width)] >> 16) & 0xFF;
+
+                        r = (r1 + r2) >> 1;
+                        g = (g1 + g2) >> 1;
+                        b = (b1 + b2) >> 1;
+
+                        final_color = 0xFF000000 | r | (g << 8) | (b << 16);
+
+                        screen_buffer[pixel_x + (pixel_y * width)] = final_color;
+                        target[pixel_x + (pixel_y * width)] = final_color;
+
+                        if (!reg.CSR.is_odd_frame)
+                            target[pixel_x + ((pixel_y + 1) * width)] = screen_buffer[pixel_x + ((pixel_y + 1) * width)];
+                        else if (pixel_y > 0)
+                            target[pixel_x + ((pixel_y - 1) * width)] = screen_buffer[pixel_x + ((pixel_y - 1) * width)];
+                        break;
+                    }
+                    case BOB_DEINTERLACE:
+                    {
+                        if (reg.SMODE2.frame_mode)
+                        {
+                            pixel_y *= 2;
+                            target[pixel_x + (pixel_y * width)] = final_color;
+                            target[pixel_x + ((pixel_y + 1)* width)] = final_color;
+                        }
+                        else
+                        {
+                            target[pixel_x + (pixel_y * width)] = final_color;
+                        }
+                        break;
+                    }
+                    default: //No Deinterlacing
+                    {
+                        screen_buffer[pixel_x + (pixel_y * width)] = final_color;
+
+                        target[pixel_x + (pixel_y * width)] = final_color;
+
+                        if (reg.SMODE2.interlaced)
+                        {
+                            if (!reg.CSR.is_odd_frame)
+                                target[pixel_x + ((pixel_y + 1) * width)] = screen_buffer[pixel_x + ((pixel_y + 1) * width)];
+                            else if (pixel_y > 0)
+                                target[pixel_x + ((pixel_y - 1) * width)] = screen_buffer[pixel_x + ((pixel_y - 1) * width)];
+                        }
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                target[pixel_x + (pixel_y * width)] = final_color;
+            }
         }
-    }*/
-    printf("[GS_t] Done dumping\n");
+        fb_y += frame_line_increment;
+    }
 }
 
 void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
@@ -719,13 +807,16 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             update_tex_lookup_state();
             break;
         case 0x0001:
+        case 0x0011:
+            //0x11 is used as an alias for RGBAQ in Ridge Racer V.
+            //Not handling this causes car shadow colors to be broken.
         {
             RGBAQ.r = value & 0xFF;
             RGBAQ.g = (value >> 8) & 0xFF;
             RGBAQ.b = (value >> 16) & 0xFF;
             RGBAQ.a = (value >> 24) & 0xFF;
 
-            uint32_t q = value >> 32;
+            uint32_t q = (value >> 32) & ~0xFF;
             RGBAQ.q = *(float*)&q;
             printf("[GS_t] RGBAQ: $%08X_%08X\n", value >> 32, value);
         }
@@ -1016,15 +1107,19 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             {
                 pixels_transferred = 0;
                 printf("Transfer started!\n");
+                printf("Src base: $%08X\n", BITBLTBUF.source_base);
                 printf("Dest base: $%08X\n", BITBLTBUF.dest_base);
-                printf("TRXPOS: (%d, %d)\n", TRXPOS.dest_x, TRXPOS.dest_y);
+                printf("Src TRXPOS: (%d, %d)\n", TRXPOS.source_x, TRXPOS.source_y);
+                printf("Dest TRXPOS: (%d, %d)\n", TRXPOS.dest_x, TRXPOS.dest_y);
                 printf("TRXREG (%d, %d)\n", TRXREG.width, TRXREG.height);
-                printf("Format: $%02X\n", BITBLTBUF.dest_format);
-                printf("Width: %d\n", BITBLTBUF.dest_width);
+                printf("Src Format: $%02X\n", BITBLTBUF.source_format);
+                printf("Dest Format: $%02X\n", BITBLTBUF.dest_format);
+                printf("Src Width: %d\n", BITBLTBUF.source_width);
+                printf("Dest Width: %d\n", BITBLTBUF.dest_width);
                 TRXPOS.int_dest_x = TRXPOS.dest_x;
                 TRXPOS.int_source_x = TRXPOS.source_x;
                 TRXPOS.int_dest_y = TRXPOS.dest_y;
-                TRXPOS.int_source_y = TRXPOS.dest_y;
+                TRXPOS.int_source_y = TRXPOS.source_y;
                 PSMCT24_unpacked_count = 0;
                 PSMCT24_color = 0;
                 //printf("Transfer addr: $%08X\n", transfer_addr);
@@ -1375,9 +1470,21 @@ void GraphicsSynthesizerThread::vertex_kick(bool drawing_kick)
 
 void GraphicsSynthesizerThread::render_primitive()
 {
+    // ignore nop draw
+    if (current_ctx->scissor.empty())
+        return;
+
+    // confirmed by hw test
+    // in the event that a z format is specified for FRAME
+    // the depth format will swap to a color format
+    if ((current_ctx->frame.format & 0x30) == 0x30)
+        current_ctx->zbuf.format &= ~0x30;
+
 #ifdef GS_JIT
     jit_draw_pixel_func = get_jitted_draw_pixel(draw_pixel_state);
-    jit_tex_lookup_func = get_jitted_tex_lookup(tex_lookup_state);
+    //No need to recompile tex_lookup if texture mapping is disabled. TEX0 can contain bad data
+    if(current_PRMODE->texture_mapping)
+        jit_tex_lookup_func = get_jitted_tex_lookup(tex_lookup_state);
 #endif
     switch (prim_type)
     {
@@ -1413,14 +1520,25 @@ bool GraphicsSynthesizerThread::depth_test(int32_t x, int32_t y, uint32_t z)
             switch (current_ctx->zbuf.format)
             {
                 case 0x00:
-                    return z >= read_PSMCT32Z_block(base, width, x, y);
+                    return z >= read_PSMCT32_block(base, width, x, y);
                 case 0x01:
                     z = min(z, 0xFFFFFFU);
-                    return z >= (read_PSMCT32Z_block(base, width, x, y) & 0xFFFFFF);
+                    return z >= (read_PSMCT32_block(base, width, x, y) & 0xFFFFFF);
                 case 0x02:
                     z = min(z, 0xFFFFU);
-                    return z >= read_PSMCT16Z_block(base, width, x, y);
+                    return z >= read_PSMCT16_block(base, width, x, y);
                 case 0x0A:
+                    z = min(z, 0xFFFFU);
+                    return z >= read_PSMCT16S_block(base, width, x, y);
+                case 0x30:
+                    return z >= read_PSMCT32Z_block(base, width, x, y);
+                case 0x31:
+                    z = min(z, 0xFFFFFFU);
+                    return z >= (read_PSMCT32Z_block(base, width, x, y) & 0xFFFFFF);
+                case 0x32:
+                    z = min(z, 0xFFFFU);
+                    return z >= read_PSMCT16Z_block(base, width, x, y);
+                case 0x3A:
                     z = min(z, 0xFFFFU);
                     return z >= read_PSMCT16SZ_block(base, width, x, y);
                 default:
@@ -1431,14 +1549,25 @@ bool GraphicsSynthesizerThread::depth_test(int32_t x, int32_t y, uint32_t z)
             switch (current_ctx->zbuf.format)
             {
                 case 0x00:
-                    return z > read_PSMCT32Z_block(base, width, x, y);
+                    return z > read_PSMCT32_block(base, width, x, y);
                 case 0x01:
                     z = min(z, 0xFFFFFFU);
-                    return z > (read_PSMCT32Z_block(base, width, x, y) & 0xFFFFFF);
+                    return z > (read_PSMCT32_block(base, width, x, y) & 0xFFFFFF);
                 case 0x02:
                     z = min(z, 0xFFFFU);
-                    return z > read_PSMCT16Z_block(base, width, x, y);
+                    return z > read_PSMCT16_block(base, width, x, y);
                 case 0x0A:
+                    z = min(z, 0xFFFFU);
+                    return z > read_PSMCT16S_block(base, width, x, y);
+                case 0x30:
+                    return z > read_PSMCT32Z_block(base, width, x, y);
+                case 0x31:
+                    z = min(z, 0xFFFFFFU);
+                    return z > (read_PSMCT32Z_block(base, width, x, y) & 0xFFFFFF);
+                case 0x32:
+                    z = min(z, 0xFFFFU);
+                    return z > read_PSMCT16Z_block(base, width, x, y);
+                case 0x3A:
                     z = min(z, 0xFFFFU);
                     return z > read_PSMCT16SZ_block(base, width, x, y);
                 default:
@@ -1509,6 +1638,7 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
     bool update_frame = true;
     bool update_alpha = true;
     bool update_z = !current_ctx->zbuf.no_update;
+    int fb, fg, fr;
 
     if (test->alpha_test)
     {
@@ -1558,9 +1688,10 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
                 case 2: //ZB_ONLY - Only update z-buffer
                     update_frame = false;
                     break;
-                case 3: //RGB_ONLY - Same as FB_ONLY, but ignore alpha
+                case 3: //RGB_ONLY - Same as FB_ONLY, but ignore alpha unless the color format is not RGB32, then it's treated as FB_ONLY
                     update_z = false;
-                    update_alpha = false;
+                    if(current_ctx->tex0.format == 0)
+                        update_alpha = false;
                     break;
             }
         }
@@ -1584,96 +1715,105 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
             return;
     }
 
-    //PABE - MSB of source alpha must be set to enable alpha blending
-    if (current_PRMODE->alpha_blend && (!PABE || (color.a & 0x80)))
+    if (update_frame)
     {
-        uint32_t r1, g1, b1;
-        uint32_t r2, g2, b2;
-        uint32_t cr, cg, cb;
-        uint32_t alpha;
-
-        switch (current_ctx->alpha.spec_A)
+        //PABE - MSB of source alpha must be set to enable alpha blending
+        if (current_PRMODE->alpha_blend && (!PABE || (color.a & 0x80)))
         {
-            case 0:
-                r1 = color.r;
-                g1 = color.g;
-                b1 = color.b;
-                break;
-            case 1:
-                r1 = lookup_frame_color(x, y) & 0xFF;
-                g1 = (lookup_frame_color(x, y) >> 8) & 0xFF;
-                b1 = (lookup_frame_color(x, y) >> 16) & 0xFF;
-                break;
-            case 2:
-            case 3:
-                r1 = 0;
-                g1 = 0;
-                b1 = 0;
-                break;
-        }
+            uint32_t r1, g1, b1;
+            uint32_t r2, g2, b2;
+            uint32_t cr, cg, cb;
+            uint32_t alpha;
 
-        switch (current_ctx->alpha.spec_B)
+            switch (current_ctx->alpha.spec_A)
+            {
+                case 0:
+                    r1 = color.r;
+                    g1 = color.g;
+                    b1 = color.b;
+                    break;
+                case 1:
+                    r1 = lookup_frame_color(x, y) & 0xFF;
+                    g1 = (lookup_frame_color(x, y) >> 8) & 0xFF;
+                    b1 = (lookup_frame_color(x, y) >> 16) & 0xFF;
+                    break;
+                case 2:
+                case 3:
+                    r1 = 0;
+                    g1 = 0;
+                    b1 = 0;
+                    break;
+            }
+
+            switch (current_ctx->alpha.spec_B)
+            {
+                case 0:
+                    r2 = color.r;
+                    g2 = color.g;
+                    b2 = color.b;
+                    break;
+                case 1:
+                    r2 = lookup_frame_color(x, y) & 0xFF;
+                    g2 = (lookup_frame_color(x, y) >> 8) & 0xFF;
+                    b2 = (lookup_frame_color(x, y) >> 16) & 0xFF;
+                    break;
+                case 2:
+                case 3:
+                    r2 = 0;
+                    g2 = 0;
+                    b2 = 0;
+                    break;
+            }
+
+            switch (current_ctx->alpha.spec_C)
+            {
+                case 0:
+                    alpha = color.a;
+                    break;
+                case 1:
+                    alpha = lookup_frame_color(x, y) >> 24;
+                    break;
+                case 2:
+                case 3:
+                    alpha = current_ctx->alpha.fixed_alpha;
+                    break;
+            }
+
+            switch (current_ctx->alpha.spec_D)
+            {
+                case 0:
+                    cr = color.r;
+                    cg = color.g;
+                    cb = color.b;
+                    break;
+                case 1:
+                    cr = lookup_frame_color(x, y) & 0xFF;
+                    cg = (lookup_frame_color(x, y) >> 8) & 0xFF;
+                    cb = (lookup_frame_color(x, y) >> 16) & 0xFF;
+                    break;
+                case 2:
+                case 3:
+                    cr = 0;
+                    cg = 0;
+                    cb = 0;
+                    break;
+            }
+
+            fb = (int)b1 - (int)b2;
+            fg = (int)g1 - (int)g2;
+            fr = (int)r1 - (int)r2;
+
+            //Color values are 9-bit after an alpha blending operation
+            fb = (((fb * (int)alpha) >> 7) + cb);
+            fg = (((fg * (int)alpha) >> 7) + cg);
+            fr = (((fr * (int)alpha) >> 7) + cr);
+        }
+        else
         {
-            case 0:
-                r2 = color.r;
-                g2 = color.g;
-                b2 = color.b;
-                break;
-            case 1:
-                r2 = lookup_frame_color(x, y) & 0xFF;
-                g2 = (lookup_frame_color(x, y) >> 8) & 0xFF;
-                b2 = (lookup_frame_color(x, y) >> 16) & 0xFF;
-                break;
-            case 2:
-            case 3:
-                r2 = 0;
-                g2 = 0;
-                b2 = 0;
-                break;
+            fb = color.b;
+            fg = color.g;
+            fr = color.r;
         }
-
-        switch (current_ctx->alpha.spec_C)
-        {
-            case 0:
-                alpha = color.a;
-                break;
-            case 1:
-                alpha = lookup_frame_color(x, y) >> 24;
-                break;
-            case 2:
-            case 3:
-                alpha = current_ctx->alpha.fixed_alpha;
-                break;
-        }
-
-        switch (current_ctx->alpha.spec_D)
-        {
-            case 0:
-                cr = color.r;
-                cg = color.g;
-                cb = color.b;
-                break;
-            case 1:
-                cr = lookup_frame_color(x, y) & 0xFF;
-                cg = (lookup_frame_color(x, y) >> 8) & 0xFF;
-                cb = (lookup_frame_color(x, y) >> 16) & 0xFF;
-                break;
-            case 2:
-            case 3:
-                cr = 0;
-                cg = 0;
-                cb = 0;
-                break;
-        }
-
-        int fb = (int)b1 - (int)b2;
-        int fg = (int)g1 - (int)g2;
-        int fr = (int)r1 - (int)r2;
-
-        //Color values are 9-bit after an alpha blending operation
-        fb = (((fb * (int)alpha) >> 7) + cb);
-        fg = (((fg * (int)alpha) >> 7) + cg);
-        fr = (((fr * (int)alpha) >> 7) + cr);
 
         //Dithering
         if (DTHE)
@@ -1682,6 +1822,7 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
             uint8_t dither_amount = dither & 0x3;
             if (dither & 0x4)
             {
+                dither_amount += 1;
                 fb -= dither_amount;
                 fg -= dither_amount;
                 fr -= dither_amount;
@@ -1716,70 +1857,19 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
             fr &= 0xFF;
         }
 
-        final_color |= alpha << 24;
+        if (!update_alpha)
+            final_color = lookup_frame_color(x, y) & 0xFF000000;
+        else
+        {
+            final_color = color.a << 24;
+
+            //FBA performs "alpha correction" - MSB of alpha is always set when writing to frame buffer
+            final_color |= current_ctx->FBA << 31;
+        }
+
         final_color |= fb << 16;
         final_color |= fg << 8;
         final_color |= fr;
-    }
-    else
-    {
-        //Dithering
-        if (DTHE)
-        {
-            uint8_t dither = dither_mtx[y % 4][x % 4];
-            uint8_t dither_amount = dither & 0x3;
-            if (dither & 0x4)
-            {
-                color.b -= dither_amount;
-                color.g -= dither_amount;
-                color.r -= dither_amount;
-            }
-            else
-            {
-                color.b += dither_amount;
-                color.g += dither_amount;
-                color.r += dither_amount;
-            }
-
-            if (COLCLAMP)
-            {
-                if (color.b < 0)
-                    color.b = 0;
-                if (color.g < 0)
-                    color.g = 0;
-                if (color.r < 0)
-                    color.r = 0;
-                if (color.b > 0xFF)
-                    color.b = 0xFF;
-                if (color.g > 0xFF)
-                    color.g = 0xFF;
-                if (color.r > 0xFF)
-                    color.r = 0xFF;
-            }
-            else
-            {
-                color.b &= 0xFF;
-                color.g &= 0xFF;
-                color.r &= 0xFF;
-            }
-        }
-        final_color |= color.a << 24;
-        final_color |= color.b << 16;
-        final_color |= color.g << 8;
-        final_color |= color.r;
-    }
-
-    if (update_frame)
-    {
-        if (!update_alpha)
-        {
-            uint8_t alpha = lookup_frame_color(x, y) >> 24;
-            final_color &= 0x00FFFFFF;
-            final_color |= alpha << 24;
-        }
-
-        //FBA performs "alpha correction" - MSB of alpha is always set when writing to frame buffer
-        final_color |= current_ctx->FBA << 31;
 
         uint32_t mask = current_ctx->frame.mask;
         final_color = (final_color & ~mask) | (lookup_frame_color(x, y) & mask);
@@ -1815,21 +1905,33 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
                 Errors::die("Unknown FRAME format (%x) write attempted", current_ctx->frame.format);
         }
     }
-    
+
     if (update_z)
     {
         switch (current_ctx->zbuf.format)
         {
             case 0x00:
-                write_PSMCT32Z_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z);
+                write_PSMCT32_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z);
                 break;
             case 0x01:
-                write_PSMCT24Z_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z & 0xFFFFFF);
+                write_PSMCT24_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z & 0xFFFFFF);
                 break;
             case 0x02:
-                write_PSMCT16Z_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z & 0xFFFF);
+                write_PSMCT16_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z & 0xFFFF);
                 break;
             case 0x0A:
+                write_PSMCT16S_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z & 0xFFFF);
+                break;
+            case 0x30:
+                write_PSMCT32Z_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z);
+                break;
+            case 0x31:
+                write_PSMCT24Z_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z & 0xFFFFFF);
+                break;
+            case 0x32:
+                write_PSMCT16Z_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z & 0xFFFF);
+                break;
+            case 0x3A:
                 write_PSMCT16SZ_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z & 0xFFFF);
                 break;
         }
@@ -2642,16 +2744,11 @@ void GraphicsSynthesizerThread::render_sprite()
 
     calculate_LOD(tex_info);
 
-    if (v1.x > v2.x)
-    {
-        swap(v1, v2);
-    }
-
     //Automatic scissoring test
-    int32_t min_y = ((std::max(v1.y, (int32_t)current_ctx->scissor.y1) + 8) >> 4) << 4;
-    int32_t min_x = ((std::max(v1.x, (int32_t)current_ctx->scissor.x1) + 8) >> 4) << 4;
-    int32_t max_y = ((std::min(v2.y, (int32_t)current_ctx->scissor.y2 + 0x10) + 8) >> 4) << 4;
-    int32_t max_x = ((std::min(v2.x, (int32_t)current_ctx->scissor.x2 + 0x10) + 8) >> 4) << 4;
+    const int32_t min_y = ((std::max(std::min(v1.y, v2.y), (int32_t)current_ctx->scissor.y1) + 8) >> 4) << 4;
+    const int32_t min_x = ((std::max(std::min(v1.x, v2.x), (int32_t)current_ctx->scissor.x1) + 8) >> 4) << 4;
+    const int32_t max_y = ((std::min(std::max(v1.y, v2.y), (int32_t)current_ctx->scissor.y2 + 0x10) + 8) >> 4) << 4;
+    const int32_t max_x = ((std::min(std::max(v1.x, v2.x), (int32_t)current_ctx->scissor.x2 + 0x10) + 8) >> 4) << 4;
 
     printf("Coords: (%d, %d) (%d, %d)\n", min_x >> 4, min_y >> 4, max_x >> 4, max_y >> 4);
 
@@ -2721,6 +2818,14 @@ void GraphicsSynthesizerThread::render_sprite()
 void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
 {
     int ppd = 0; //pixels per doubleword (64-bits)
+
+    //Invalid transfer if no height/width has been set
+    if (TRXREG.width == 0 || TRXREG.height == 0)
+    {
+        TRXDIR = 3;
+        pixels_transferred = 0;
+        return;
+    }
 
     switch (BITBLTBUF.dest_format)
     {
@@ -2873,11 +2978,15 @@ void GraphicsSynthesizerThread::write_HWREG(uint64_t data)
                 unpack_PSMCT24(data, i, true);
                 break;
         }
-        if (TRXPOS.int_dest_x - TRXPOS.dest_x == TRXREG.width)
+        if (pixels_transferred % TRXREG.width == 0)
         {
             TRXPOS.int_dest_x = TRXPOS.dest_x;
             TRXPOS.int_dest_y++;
         }
+
+        //Coordinates wrap at 2048 pixels
+        TRXPOS.int_dest_x %= 2048;
+        TRXPOS.int_dest_y %= 2048;
     }
 
     int max_pixels = TRXREG.width * TRXREG.height;
@@ -2898,6 +3007,14 @@ uint128_t GraphicsSynthesizerThread::local_to_host()
     return_data._u64[1] = 0;
     if (TRXDIR == 3)
         return return_data;
+
+    //Invalid transfer if no height/width has been set
+    if (TRXREG.width == 0 || TRXREG.height == 0)
+    {
+        TRXDIR = 3;
+        pixels_transferred = 0;
+        return return_data;
+    }
 
     switch (BITBLTBUF.source_format)
     {
@@ -2929,6 +3046,11 @@ uint128_t GraphicsSynthesizerThread::local_to_host()
         case 0x1B:
             ppd = 8;
             break;
+        //PSMZ32
+        case 0x30:
+            ppd = 2;
+            break;
+        //PSMZ24
         case 0x31:
             ppd = 1; //Does it all in one go
             break;
@@ -2977,9 +3099,14 @@ uint128_t GraphicsSynthesizerThread::local_to_host()
                     TRXPOS.int_source_x++;
                     break;
                 case 0x1B:
-                    data <<= 8;
                     data |= (uint64_t)((read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
                         TRXPOS.int_source_x, TRXPOS.int_source_y) >> 24) & 0xFF) << (i * 8);
+                    pixels_transferred++;
+                    TRXPOS.int_source_x++;
+                    break;
+                case 0x30:
+                    data |= (uint64_t)(read_PSMCT32Z_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                        TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFFFFFF) << (i * 32);
                     pixels_transferred++;
                     TRXPOS.int_source_x++;
                     break;
@@ -2992,11 +3119,15 @@ uint128_t GraphicsSynthesizerThread::local_to_host()
             }
 
 
-            if (TRXPOS.int_source_x - TRXPOS.source_x == TRXREG.width)
+            if (pixels_transferred % TRXREG.width == 0)
             {
                 TRXPOS.int_source_x = TRXPOS.source_x;
                 TRXPOS.int_source_y++;
             }
+
+            //Coordinates wrap at 2048 pixels
+            TRXPOS.int_source_x %= 2048;
+            TRXPOS.int_source_y %= 2048;
         }
 
         return_data._u64[datapart] = data;
@@ -3061,6 +3192,18 @@ uint64_t GraphicsSynthesizerThread::pack_PSMCT24(bool z_format)
             {
                 PSMCT24_unpacked_count = 0;
                 PSMCT24_color = 0;
+
+                pixels_transferred++;
+                //If this is the last read, reg updating is handled by the main loop
+                //Otherwise we need to do it here
+                if (data_in_output < 64)
+                {
+                    if (pixels_transferred % TRXREG.width == 0)
+                    {
+                        TRXPOS.int_source_x = TRXPOS.source_x;
+                        TRXPOS.int_source_y++;
+                    }
+                }
             }
 
             int max_pixels = TRXREG.width * TRXREG.height;
@@ -3072,22 +3215,20 @@ uint64_t GraphicsSynthesizerThread::pack_PSMCT24(bool z_format)
             if (z_format)
             {
                 PSMCT24_color = (uint64_t)(read_PSMCT32Z_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
-                    TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFFFF) << PSMCT24_unpacked_count;
+                    TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFFFF);
             }
             else
             {
                 PSMCT24_color = (uint64_t)(read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
-                    TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFFFF) << PSMCT24_unpacked_count;
+                    TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFFFF);
             }
             PSMCT24_unpacked_count += 24;
-            TRXPOS.int_source_x++;
-            pixels_transferred++;
 
-            if (TRXPOS.int_source_x - TRXPOS.source_x == TRXREG.width)
-            {
-                TRXPOS.int_source_x = TRXPOS.source_x;
-                TRXPOS.int_source_y++;
-            }
+            TRXPOS.int_source_x++;
+            
+            //Coordinates wrap at 2048 pixels
+            TRXPOS.int_source_x %= 2048;
+            TRXPOS.int_source_y %= 2048;
         }
     }
 
@@ -3102,36 +3243,52 @@ void GraphicsSynthesizerThread::local_to_local()
     printf("Source: $%08X Dest: $%08X\n", BITBLTBUF.source_base, BITBLTBUF.dest_base);
     int max_pixels = TRXREG.width * TRXREG.height;
 
-    uint16_t start_x = 0, start_y = 0;
+    uint16_t dest_start_x = 0, src_start_x = 0;
     int x_step = 0, y_step = 0;
+
+    //Invalid transfer if no height/width has been set
+    if (TRXREG.width == 0 || TRXREG.height == 0)
+    {
+        TRXDIR = 3;
+        pixels_transferred = 0;
+        return;
+    }
 
     switch (TRXPOS.trans_order)
     {
         case 0x00:
             //Upper-left to bottom-right
-            start_x = TRXPOS.int_dest_x = TRXPOS.dest_x;
-            start_y = TRXPOS.int_dest_y = TRXPOS.dest_y;
+            dest_start_x = TRXPOS.int_dest_x = TRXPOS.dest_x;
+            src_start_x = TRXPOS.int_source_x = TRXPOS.source_x;
+            TRXPOS.int_dest_y = TRXPOS.dest_y;
+            TRXPOS.int_source_y = TRXPOS.source_y;
             x_step = 1;
             y_step = 1;
             break;
         case 0x01:
             //Bottom-left to upper-right
-            start_x = TRXPOS.int_dest_x = TRXPOS.dest_x;
-            start_y = TRXPOS.int_dest_y = TRXPOS.dest_y + TRXREG.height - 1;
+            dest_start_x = TRXPOS.int_dest_x = TRXPOS.dest_x;
+            src_start_x = TRXPOS.int_source_x = TRXPOS.source_x;
+            TRXPOS.int_dest_y = TRXPOS.dest_y + TRXREG.height - 1;
+            TRXPOS.int_source_y = TRXPOS.source_y + TRXREG.height - 1;
             x_step = 1;
             y_step = -1;
             break;
         case 0x02:
             //Upper-right to bottom-left
-            start_x = TRXPOS.int_dest_x = TRXPOS.dest_x + TRXREG.width - 1;
-            start_y = TRXPOS.int_dest_y = TRXPOS.dest_y;
+            dest_start_x = TRXPOS.int_dest_x = TRXPOS.dest_x + TRXREG.width - 1;
+            src_start_x = TRXPOS.int_source_x = TRXPOS.source_x + TRXREG.width - 1;
+            TRXPOS.int_dest_y = TRXPOS.dest_y;
+            TRXPOS.int_source_y = TRXPOS.source_y;
             x_step = -1;
             y_step = 1;
             break;
         case 0x03:
             //Bottom-right to upper-left
-            start_x = TRXPOS.int_dest_x = TRXPOS.dest_x + TRXREG.width - 1;
-            start_y = TRXPOS.int_dest_y = TRXPOS.dest_y + TRXREG.height - 1;
+            dest_start_x = TRXPOS.int_dest_x = TRXPOS.dest_x + TRXREG.width - 1;
+            src_start_x = TRXPOS.int_source_x = TRXPOS.source_x + TRXREG.width - 1;
+            TRXPOS.int_dest_y = TRXPOS.dest_y + TRXREG.height - 1;
+            TRXPOS.int_source_y = TRXPOS.source_y + TRXREG.height - 1;
             x_step = -1;
             y_step = -1;
             break;
@@ -3149,6 +3306,14 @@ void GraphicsSynthesizerThread::local_to_local()
                 data = read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
                                           TRXPOS.int_source_x, TRXPOS.int_source_y);
                 break;
+            case 0x02:
+                data = read_PSMCT16_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                                          TRXPOS.int_source_x, TRXPOS.int_source_y);
+                break;
+            case 0x0A:
+                data = read_PSMCT16S_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                                          TRXPOS.int_source_x, TRXPOS.int_source_y);
+                break;
             case 0x13:
                 data = read_PSMCT8_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
                                          TRXPOS.int_source_x, TRXPOS.int_source_y);
@@ -3158,8 +3323,8 @@ void GraphicsSynthesizerThread::local_to_local()
                                          TRXPOS.int_source_x, TRXPOS.int_source_y);
                 break;
             case 0x2C:
-                data = read_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width,
-                    TRXPOS.int_dest_x, TRXPOS.int_dest_y) >> 28;
+                data = read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                    TRXPOS.int_source_x, TRXPOS.int_source_y) >> 28;
                 break;
             case 0x30:
             case 0x31:
@@ -3178,6 +3343,14 @@ void GraphicsSynthesizerThread::local_to_local()
                 break;
             case 0x01:
                 write_PSMCT24_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width,
+                                    TRXPOS.int_dest_x, TRXPOS.int_dest_y, data);
+                break;
+            case 0x02:
+                write_PSMCT16_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width,
+                                    TRXPOS.int_dest_x, TRXPOS.int_dest_y, data);
+                break;
+            case 0x0A:
+                write_PSMCT16S_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width,
                                     TRXPOS.int_dest_x, TRXPOS.int_dest_y, data);
                 break;
             case 0x13:
@@ -3215,17 +3388,23 @@ void GraphicsSynthesizerThread::local_to_local()
         }
 
         pixels_transferred++;
-        TRXPOS.int_source_x++;
+        TRXPOS.int_source_x += x_step;
         TRXPOS.int_dest_x += x_step;
 
         if (pixels_transferred % TRXREG.width == 0)
         {
-            TRXPOS.int_source_x = TRXPOS.source_x;
-            TRXPOS.int_source_y++;
+            TRXPOS.int_source_x = src_start_x;
+            TRXPOS.int_source_y += y_step;
 
-            TRXPOS.int_dest_x = start_x;
+            TRXPOS.int_dest_x = dest_start_x;
             TRXPOS.int_dest_y += y_step;
         }
+
+        //Coordinates wrap at 2048 pixels
+        TRXPOS.int_source_x %= 2048;
+        TRXPOS.int_source_y %= 2048;
+        TRXPOS.int_dest_x %= 2048;
+        TRXPOS.int_dest_y %= 2048;
     }
     pixels_transferred = 0;
     TRXDIR = 3;
@@ -3262,92 +3441,100 @@ int16_t GraphicsSynthesizerThread::multiply_tex_color(int16_t tex_color, int16_t
 
 void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
 {
+    //Need to reset the values here
+    //If the back of a triangle is MIP level 1 and the front is MIP level 0, it will have the wrong value
+    info.tex_base = current_ctx->tex0.texture_base;
+    info.buffer_width = current_ctx->tex0.width;
+    info.tex_width = current_ctx->tex0.tex_width;
+    info.tex_height = current_ctx->tex0.tex_height;
+
     float K = current_ctx->tex1.K;
 
-    if (current_ctx->tex1.LOD_method == 0 && !PRIM.use_UV && info.vtx_color.q != 1.0)
+    if (current_ctx->tex1.LOD_method == 0)
     {
-        uint32_t q_int = (*(uint32_t*)&info.vtx_color.q & 0x7FFFFFFF) >> 16;
-        info.LOD = log2_lookup[q_int][current_ctx->tex1.L] + K;
+        if (info.vtx_color.q != 1.0f)
+        {
+            uint32_t q_int = (*(uint32_t*)&info.vtx_color.q & 0x7FFFFFFF) >> 16;
+            info.LOD = log2_lookup[q_int][current_ctx->tex1.L] + K;
 
-        if (!(current_ctx->tex1.filter_smaller & 0x1))
-            info.LOD = round(info.LOD + 0.5);
+            if (!(current_ctx->tex1.filter_smaller & 0x1))
+                info.LOD = round(info.LOD);
+        }
+        else
+            info.LOD = K;
     }
     else
-        info.LOD = round(K);
+        info.LOD = K;
 
     //Mipmapping is only enabled when the max MIP level is > 0 and filtering is set to a MIPMAP type
-    if (current_ctx->tex1.max_MIP_level && current_ctx->tex1.filter_smaller >= 2)
+    if (!current_ctx->tex1.max_MIP_level || current_ctx->tex1.filter_smaller < 2)
     {
-        //Determine mipmap level
-        info.mipmap_level = min((int8_t)info.LOD, (int8_t)current_ctx->tex1.max_MIP_level);
-
-        if (info.mipmap_level < 0)
-            info.mipmap_level = 0;
-
-        if (info.mipmap_level > 0)
-        {
-            info.tex_base = current_ctx->tex0.texture_base;
-            info.buffer_width = current_ctx->tex0.width;
-            info.tex_width = current_ctx->tex0.tex_width;
-            info.tex_height = current_ctx->tex0.tex_height;
-
-            if (current_ctx->tex1.MTBA && info.mipmap_level < 4)
-            {
-                //Tex width and tex height must be equal for this mipmapping method to work
-                //Cartoon Network Racing breaks otherwise
-                if (info.tex_width < 32 || info.tex_width != info.tex_height)
-                {
-                    info.mipmap_level = 0;
-                    return;
-                }
-                //Counted in bytes
-                const static float format_sizes[] =
-                {
-                    //0x00
-                    4, 4, 2, 0, 0, 0, 0, 0,
-
-                    //0x08
-                    0, 0, 2, 0, 0, 0, 0, 0,
-
-                    //0x10
-                    0, 0, 0, 1, 0.5, 0, 0, 0,
-
-                    //0x18
-                    0, 0, 0, 4, 0, 0, 0, 0,
-
-                    //0x20
-                    0, 0, 0, 0, 4, 0, 0, 0,
-
-                    //0x28
-                    0, 0, 0, 0, 4, 0, 0, 0,
-
-                    //0x30
-                    4, 4, 2, 0, 0, 0, 0, 0,
-
-                    //0x38
-                    0, 0, 2, 0, 0, 0, 0, 0
-                };
-                //Calculate the texture base based on a continuous memory region
-
-                uint32_t offset;
-                for (int i = 0; i < info.mipmap_level; i++)
-                {
-                    offset = (info.tex_width * info.tex_height) >> (i << 1);
-                    info.tex_base += (offset * format_sizes[current_ctx->tex0.format]);
-                }
-            }
-            else
-                info.tex_base = current_ctx->miptbl.texture_base[info.mipmap_level - 1];
-            info.buffer_width = current_ctx->miptbl.width[info.mipmap_level - 1];
-            info.tex_width >>= info.mipmap_level;
-            info.tex_height >>= info.mipmap_level;
-
-            info.tex_width = max((int)info.tex_width, 1);
-            info.tex_height = max((int)info.tex_height, 1);
-        }
-    }
-    else
         info.mipmap_level = 0;
+        return;
+    }
+
+    //Determine mipmap level
+    info.mipmap_level = min((int8_t)info.LOD, (int8_t)current_ctx->tex1.max_MIP_level);
+
+    if (info.mipmap_level < 0)
+        info.mipmap_level = 0;
+
+    if (info.mipmap_level > 0)
+    {
+        if (current_ctx->tex1.MTBA && info.mipmap_level < 4)
+        {
+            //Tex width and tex height must be equal for this mipmapping method to work
+            //Cartoon Network Racing breaks otherwise
+            if (info.tex_width < 32 || info.tex_width != info.tex_height)
+            {
+                info.mipmap_level = 0;
+                return;
+            }
+            //Counted in bytes
+            const static float format_sizes[] =
+            {
+                //0x00
+                4, 4, 2, 0, 0, 0, 0, 0,
+
+                //0x08
+                0, 0, 2, 0, 0, 0, 0, 0,
+
+                //0x10
+                0, 0, 0, 1, 0.5, 0, 0, 0,
+
+                //0x18
+                0, 0, 0, 4, 0, 0, 0, 0,
+
+                //0x20
+                0, 0, 0, 0, 4, 0, 0, 0,
+
+                //0x28
+                0, 0, 0, 0, 4, 0, 0, 0,
+
+                //0x30
+                4, 4, 2, 0, 0, 0, 0, 0,
+
+                //0x38
+                0, 0, 2, 0, 0, 0, 0, 0
+            };
+            //Calculate the texture base based on a continuous memory region
+
+            uint32_t offset;
+            for (int i = 0; i < info.mipmap_level; i++)
+            {
+                offset = (info.tex_width * info.tex_height) >> (i << 1);
+                info.tex_base += (offset * format_sizes[current_ctx->tex0.format]);
+            }
+        }
+        else
+            info.tex_base = current_ctx->miptbl.texture_base[info.mipmap_level - 1];
+        info.buffer_width = current_ctx->miptbl.width[info.mipmap_level - 1];
+        info.tex_width >>= info.mipmap_level;
+        info.tex_height >>= info.mipmap_level;
+
+        info.tex_width = max((int)info.tex_width, 1);
+        info.tex_height = max((int)info.tex_height, 1);
+    }
 }
 
 void GraphicsSynthesizerThread::tex_lookup(int16_t u, int16_t v, TexLookupInfo& info)
@@ -3701,7 +3888,7 @@ void GraphicsSynthesizerThread::clut_lookup(uint8_t entry, RGBAQ_REG &tex_color)
         case 0x00:
         case 0x01:
         {
-            uint32_t color = *(uint32_t*)&clut_cache[((clut_addr << 1) + (entry << 2)) & 0x7FF];
+            uint32_t color = *(uint32_t*)&clut_cache[((clut_addr << 1) + (entry << 2)) & 0x3FF];
             tex_color.r = color & 0xFF;
             tex_color.g = (color >> 8) & 0xFF;
             tex_color.b = (color >> 16) & 0xFF;
@@ -3976,10 +4163,6 @@ GSPixelJitBlockRecord* GraphicsSynthesizerThread::recompile_draw_pixel(uint64_t 
     //Alpha test
     if ((current_ctx->test.alpha_test) && current_ctx->test.alpha_method != 1)
         recompile_alpha_test();
-
-    //Hack for SotC - removes overbloom (but breaks other games of course)
-    //else if (current_ctx->test.alpha_fail_method != 1)
-        //emitter_dp.OR32_REG_IMM(0x2, RBX);
 
     //Depth test
     if (current_ctx->test.depth_test)
@@ -4261,6 +4444,7 @@ void GraphicsSynthesizerThread::recompile_alpha_test()
 
 void GraphicsSynthesizerThread::recompile_depth_test()
 {
+    //If depth test is set to NEVER, don't draw anything
     if (current_ctx->test.depth_method == 0)
     {
         jit_epilogue_draw_pixel();
@@ -4280,18 +4464,30 @@ void GraphicsSynthesizerThread::recompile_depth_test()
     switch (current_ctx->zbuf.format)
     {
         case 0x00:
+            jit_call_func(emitter_dp, (uint64_t)&addr_PSMCT32);
+            break;
+        case 0x01:
+            jit_call_func(emitter_dp, (uint64_t)&addr_PSMCT32);
+            break;
+        case 0x02:
+            jit_call_func(emitter_dp, (uint64_t)&addr_PSMCT16);
+            break;
+        case 0x0A:
+            jit_call_func(emitter_dp, (uint64_t)&addr_PSMCT16S);
+            break;
+        case 0x30:
             //PSMCT32Z
             jit_call_func(emitter_dp, (uint64_t)&addr_PSMCT32Z);
             break;
-        case 0x01:
+        case 0x31:
             //PSMCT24Z
             jit_call_func(emitter_dp, (uint64_t)&addr_PSMCT32Z);
             break;
-        case 0x02:
+        case 0x32:
             //PSMCT16Z
             jit_call_func(emitter_dp, (uint64_t)&addr_PSMCT16Z);
             break;
-        case 0x0A:
+        case 0x3A:
             //PSMCT16SZ
             jit_call_func(emitter_dp, (uint64_t)&addr_PSMCT16SZ);
             break;
@@ -4337,9 +4533,11 @@ void GraphicsSynthesizerThread::recompile_depth_test()
         switch (current_ctx->zbuf.format)
         {
             case 0x00:
+            case 0x30:
                 emitter_dp.MOV32_TO_MEM(R14, RCX);
                 break;
             case 0x01:
+            case 0x31:
                 emitter_dp.MOV32_FROM_MEM(RCX, RAX);
                 emitter_dp.AND32_EAX(0xFF000000);
                 emitter_dp.AND32_REG_IMM(0xFFFFFF, R14);
@@ -4359,16 +4557,24 @@ void GraphicsSynthesizerThread::recompile_alpha_blend()
     printf("Alpha blend: %d %d %d %d\n", current_ctx->alpha.spec_A, current_ctx->alpha.spec_B,
            current_ctx->alpha.spec_C, current_ctx->alpha.spec_D);
 
+    uint8_t* pabe_fail_end = nullptr;
+
+    //Per-pixel alpha blending. If alpha is less than 0x80, do not perform alpha blending.
     if (PABE)
     {
-        //If alpha < 0x80, do not perform alpha blending
         emitter_dp.MOV64_MR(R15, RAX);
         emitter_dp.SHR64_REG_IMM(48, RAX);
         emitter_dp.TEST32_EAX(0x80);
 
         uint8_t* pabe_success = emitter_dp.JCC_NEAR_DEFERRED(ConditionCode::NE);
 
-        jit_epilogue_draw_pixel();
+        //Failure condition for PABE - set color as if alpha blending were disabled.
+        //R14 = color in RGBA32 format
+        emitter_dp.MOVQ_TO_XMM(R15, XMM0);
+        emitter_dp.PACKUSWB(XMM0, XMM0);
+        emitter_dp.MOVD_FROM_XMM(XMM0, R14);
+
+        pabe_fail_end = emitter_dp.JMP_NEAR_DEFERRED();
 
         emitter_dp.set_jump_dest(pabe_success);
     }
@@ -4377,22 +4583,24 @@ void GraphicsSynthesizerThread::recompile_alpha_blend()
     //Note that colors are 16-bit format so that we can handle overflows/underflows
     uint32_t fb_pixel_addr = 0xD8;
 
+    //Convert 8-bit frame color components into 16-bit
     emitter_dp.MOV32_FROM_MEM(RBP, RAX, fb_pixel_addr);
-
-    //Convert 32-bit framebuffer color to 64-bit
     emitter_dp.MOVD_TO_XMM(RAX, XMM4);
     emitter_dp.PMOVZX8_TO_16(XMM4, XMM4);
 
     switch (current_ctx->alpha.spec_A)
     {
         case 0:
+            //Source color
             emitter_dp.MOVQ_TO_XMM(R15, XMM0);
             break;
         case 1:
+            //Frame color
             emitter_dp.MOVAPS_REG(XMM4, XMM0);
             break;
         case 2:
         case 3:
+            //Zero
             emitter_dp.XORPS(XMM0, XMM0);
             break;
     }
@@ -4400,31 +4608,37 @@ void GraphicsSynthesizerThread::recompile_alpha_blend()
     switch (current_ctx->alpha.spec_B)
     {
         case 0:
+            //Source color
             emitter_dp.MOVQ_TO_XMM(R15, XMM1);
             break;
         case 1:
+            //Frame color
             emitter_dp.MOVAPS_REG(XMM4, XMM1);
             break;
         case 2:
         case 3:
-            //Do nothing. We can optimize out the subtraction in the alpha blending operation
+            //Zero. We can optimize by not emitting a sub in the blending operation.
             break;
     }
 
     switch (current_ctx->alpha.spec_C)
     {
         case 0:
+            //Source alpha
             emitter_dp.MOV64_MR(R15, RAX);
-            emitter_dp.SAR64_REG_IMM(48, RAX);
+            emitter_dp.SHR64_REG_IMM(48, RAX);
             break;
         case 1:
+            //Frame alpha - note that RAX has 8-bit components, not 16-bit components
+            //If the frame format is RGB24, only use 0x80 as alpha.
             if (!(current_ctx->frame.format & 0x1))
-                emitter_dp.SAR64_REG_IMM(48, RAX);
+                emitter_dp.SHR64_REG_IMM(24, RAX);
             else
                 emitter_dp.MOV32_REG_IMM(0x80, RAX);
             break;
         case 2:
         case 3:
+            //Fixed alpha
             emitter_dp.MOV32_REG_IMM(current_ctx->alpha.fixed_alpha, RAX);
             break;
     }
@@ -4436,13 +4650,16 @@ void GraphicsSynthesizerThread::recompile_alpha_blend()
     switch (current_ctx->alpha.spec_D)
     {
         case 0:
+            //Source color
             emitter_dp.MOVQ_TO_XMM(R15, XMM3);
             break;
         case 1:
+            //Frame color
             emitter_dp.MOVAPS_REG(XMM4, XMM3);
             break;
         case 2:
         case 3:
+            //Zero - we can optimize by not emitting an ADD instruction for D
             break;
     }
 
@@ -4450,38 +4667,48 @@ void GraphicsSynthesizerThread::recompile_alpha_blend()
 
     //color component = (((A - B) * C) >> 7) + D
     if (current_ctx->alpha.spec_B < 2)
-    {
-        //TODO: fix clamping in cases where (A - B) * C >= 0x8000 (with normal clamping, this goes to 0)
-        emitter_dp.PSUBW(XMM1, XMM0);
-        emitter_dp.PMULLW(XMM2, XMM0);
-        emitter_dp.PSRAW(7, XMM0);
+    {   
+        //Calculate ((A - B) * C) >> 7
+        emitter_dp.PMOVZX16_TO_32(XMM0, XMM0);
+        emitter_dp.PMOVZX16_TO_32(XMM1, XMM1);
+        emitter_dp.PMOVZX16_TO_32(XMM2, XMM2);
+        emitter_dp.PSUBD(XMM1, XMM0);
+        emitter_dp.PMULLD(XMM2, XMM0);
+        emitter_dp.PSRAD(7, XMM0);
+        emitter_dp.PACKSSDW(XMM0, XMM0);
     }
     else
     {
+        //If B is 0, the calculation simplifies to (A * C) >> 7
         emitter_dp.PMULLW(XMM2, XMM0);
         emitter_dp.PSRLW(7, XMM0);
     }
 
+    //If D is not 0, add it to the blend result
     if (current_ctx->alpha.spec_D < 2)
         emitter_dp.PADDW(XMM3, XMM0);
 
     //Clamp color
     if (!COLCLAMP)
     {
-        //Extract the lower 8 bits before packing
+        //Extract the lower 8 bits from the blend result before packing
         emitter_dp.load_addr((uint64_t)&and_const, RAX);
         emitter_dp.PAND_XMM_FROM_MEM(RAX, XMM0);
     }
 
+    //Convert 16-bit color components to 8-bit and clamp to a 0-0xFF range
     emitter_dp.PACKUSWB(XMM0, XMM0);
 
-    //Return color in R14
+    //Return color in R14. We need to replace the alpha component with the source alpha.
     emitter_dp.MOVD_FROM_XMM(XMM0, R14);
-
-    //Append alpha to color
     emitter_dp.AND32_REG_IMM(0xFFFFFF, R14);
-    emitter_dp.SHL32_REG_IMM(24, RAX);
+    emitter_dp.MOV64_MR(R15, RAX);
+    emitter_dp.SHR64_REG_IMM(24, RAX);
+    emitter_dp.AND32_REG_IMM(0xFF000000, RAX);
     emitter_dp.OR32_REG(RAX, R14);
+
+    if (PABE)
+        emitter_dp.set_jump_dest(pabe_fail_end);
 }
 
 void GraphicsSynthesizerThread::jit_call_func(Emitter64& emitter, uint64_t addr)
@@ -4538,9 +4765,16 @@ GSTextureJitBlockRecord* GraphicsSynthesizerThread::recompile_tex_lookup(uint64_
     emitter_tex.SAR32_REG_IMM(4, R12);
     emitter_tex.SAR32_REG_IMM(4, R13);
 
+    if (current_PRMODE->use_UV)
+    {
+        emitter_tex.MOV32_FROM_MEM(R14, RCX, offsetof(TexLookupInfo, mipmap_level));
+        emitter_tex.SAR32_CL(R12);
+        emitter_tex.SAR32_CL(R13);
+    }
+
     //Load tex width and height
     //RBX = width - 1, R15 = height - 1
-    emitter_tex.MOV32_FROM_MEM(R14, RBX, (sizeof(RGBAQ_REG) * 3) + (4 * 4));
+    emitter_tex.MOV32_FROM_MEM(R14, RBX, offsetof(TexLookupInfo, tex_width));
     emitter_tex.MOV32_REG(RBX, R15);
     emitter_tex.AND32_REG_IMM(0xFFFF, RBX);
     emitter_tex.DEC32(RBX);
@@ -4553,7 +4787,7 @@ GSTextureJitBlockRecord* GraphicsSynthesizerThread::recompile_tex_lookup(uint64_
 
     if (current_ctx->clamp.wrap_s >= 0x2)
     {
-        emitter_tex.MOV32_FROM_MEM(R14, RCX, sizeof(RGBAQ_REG) * 3 + sizeof(float));
+        emitter_tex.MOV32_FROM_MEM(R14, RCX, offsetof(TexLookupInfo, mipmap_level));
         emitter_tex.load_addr((uint64_t)&current_ctx->clamp.min_u, RDX);
         emitter_tex.MOV32_FROM_MEM(RDX, RDX);
         emitter_tex.AND32_REG_IMM(0xFFFF, RDX);
@@ -4568,7 +4802,7 @@ GSTextureJitBlockRecord* GraphicsSynthesizerThread::recompile_tex_lookup(uint64_
 
     if (current_ctx->clamp.wrap_t >= 0x2)
     {
-        emitter_tex.MOV32_FROM_MEM(R14, RCX, sizeof(RGBAQ_REG) * 3 + sizeof(float));
+        emitter_tex.MOV32_FROM_MEM(R14, RCX, offsetof(TexLookupInfo, mipmap_level));
         emitter_tex.load_addr((uint64_t)&current_ctx->clamp.min_v, R8);
         emitter_tex.MOV32_FROM_MEM(R8, R8);
         emitter_tex.AND32_REG_IMM(0xFFFF, R8);
@@ -5025,6 +5259,7 @@ void GraphicsSynthesizerThread::load_state(ifstream *state)
     state->read((char*)&TRXDIR, sizeof(TRXDIR));
     state->read((char*)&BUSDIR, sizeof(BUSDIR));
     state->read((char*)&pixels_transferred, sizeof(pixels_transferred));
+    state->read((char*)&dither_mtx, sizeof(dither_mtx));
 
     state->read((char*)&PSMCT24_color, sizeof(PSMCT24_color));
     state->read((char*)&PSMCT24_unpacked_count, sizeof(PSMCT24_unpacked_count));
@@ -5073,6 +5308,7 @@ void GraphicsSynthesizerThread::save_state(ofstream *state)
     state->write((char*)&TRXDIR, sizeof(TRXDIR));
     state->write((char*)&BUSDIR, sizeof(BUSDIR));
     state->write((char*)&pixels_transferred, sizeof(pixels_transferred));
+    state->write((char*)&dither_mtx, sizeof(dither_mtx));
 
     state->write((char*)&PSMCT24_color, sizeof(PSMCT24_color));
     state->write((char*)&PSMCT24_unpacked_count, sizeof(PSMCT24_unpacked_count));

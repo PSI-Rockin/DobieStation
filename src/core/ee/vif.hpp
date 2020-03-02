@@ -16,7 +16,8 @@ class DMAC;
 enum VIF_STALL
 {
     STALL_IBIT = 1,
-    STALL_MSKPATH3 = 2
+    STALL_MSKPATH3 = 2,
+    STALL_STOP = 4
 };
 
 struct MPG_Command
@@ -68,10 +69,13 @@ class VectorInterface
         bool fifo_reverse;
         
         bool wait_for_VU;
+        bool direct_wait;
         bool wait_for_PATH3;
         bool flush_stall;
+        bool stall_condition_active;
         uint32_t wait_cmd_value;
         uint16_t mem_mask;
+        uint32_t fifo_size;
 
         uint32_t buffer[4];
         int buffer_size;
@@ -97,7 +101,7 @@ class VectorInterface
         void MSCAL(uint32_t addr);
         void init_UNPACK(uint32_t value);
         bool is_filling_write();
-        void handle_UNPACK(uint32_t value);
+        void handle_UNPACK();
         void handle_UNPACK_masking(uint128_t& quad);
         void handle_UNPACK_mode(uint128_t& quad);
         void process_UNPACK_quad(uint128_t& quad);
@@ -109,10 +113,10 @@ class VectorInterface
 
         void reset();
         void update(int cycles);
-
+        bool transfer_word(uint32_t value);
         bool transfer_DMAtag(uint128_t tag);
         bool feed_DMA(uint128_t quad);
-        uint128_t readFIFO();
+        std::tuple<uint128_t, uint32_t>readFIFO();
 
         uint32_t get_stat();
         uint32_t get_mark();

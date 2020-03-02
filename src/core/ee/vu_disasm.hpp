@@ -62,6 +62,9 @@ namespace VU_Disasm
     std::string esqrt(uint32_t instr);
     std::string ersqrt(uint32_t instr);
     std::string esin(uint32_t instr);
+    std::string eatan(uint32_t instr);
+    std::string eatanxy(uint32_t instr);
+    std::string eatanxz(uint32_t instr);
     std::string eexp(uint32_t instr);
 
     std::string lower2(uint32_t PC, uint32_t instr);
@@ -75,8 +78,10 @@ namespace VU_Disasm
     std::string fcset(uint32_t instr);
     std::string fcand(uint32_t instr);
     std::string fcor(uint32_t instr);
+    std::string fseq(uint32_t instr);
     std::string fsset(uint32_t instr);
     std::string fsand(uint32_t instr);
+    std::string fsor(uint32_t instr);
     std::string fmeq(uint32_t instr);
     std::string fmand(uint32_t instr);
     std::string fmor(uint32_t instr);

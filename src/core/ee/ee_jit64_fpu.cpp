@@ -282,16 +282,34 @@ void EE_JIT64::floating_point_square_root(EmotionEngine& ee, IR::Instruction& in
 {
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
     REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
+    REG_64 XMM0 = lalloc_xmm_reg(ee, -1, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD, (REG_64)-1);
+
+    emitter.XORPS(XMM0, XMM0);
+    emitter.UCOMISS(XMM0, source);
+    uint8_t *zero_source = emitter.JCC_NEAR_DEFERRED(ConditionCode::E);
 
     // abs(source)
     if (source != dest)
         emitter.MOVSS_REG(source, dest);
     emitter.load_addr((uint64_t)&FPU_MASK_ABS[0], REG_64::RAX);
     emitter.PAND_XMM_FROM_MEM(REG_64::RAX, dest);
-    
-    emitter.SQRTSS(source, dest);
+
+    emitter.SQRTSS(dest, dest);
+    uint8_t *end = emitter.JMP_NEAR_DEFERRED();
+
+    emitter.set_jump_dest(zero_source);
+
+    // If the source is +0 or -0, the result is +0 and -0 respectively
+    // Since the JIT handles denormals as zero, the fractional component
+    // does not need to be masked here
+    if (source != dest)
+        emitter.MOVSS_REG(source, dest);
+
+    emitter.set_jump_dest(end);
 
     clamp_freg(dest);
+
+    free_xmm_reg(ee, XMM0);
 }
 
 void EE_JIT64::floating_point_subtract(EmotionEngine& ee, IR::Instruction& instr)
@@ -334,11 +352,10 @@ void EE_JIT64::floating_point_reciprocal_square_root(EmotionEngine& ee, IR::Inst
     uint8_t *normalop = emitter.JCC_NEAR_DEFERRED(ConditionCode::NZ);
 
     // Second operand's exponent is 0
-    // dest = (source ^ source2) & 0x80000000
+    // dest = (source & 0x80000000) | 0x7F7FFFFF
     emitter.MOVD_FROM_XMM(source, REG_64::RAX);
-    emitter.MOVD_FROM_XMM(source2, R15);
-    emitter.XOR32_REG(R15, REG_64::RAX);
     emitter.AND32_EAX(0x80000000);
+    emitter.OR32_REG_IMM(0x7F7FFFFF, REG_64::RAX);
     emitter.MOVD_TO_XMM(REG_64::RAX, dest);
     uint8_t *exit = emitter.JMP_NEAR_DEFERRED();
 

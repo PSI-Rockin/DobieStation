@@ -38,10 +38,13 @@ EE_JIT64::EE_JIT64() : jit_block("EE"), emitter(&jit_block), prologue_block(null
 
 void EE_JIT64::reset(bool clear_cache)
 {
+    ee_mxcsr = 0xFFC0;
+
     abi_int_count = 0;
     abi_xmm_count = 0;
     saved_int_regs = std::vector<REG_64>();
     saved_xmm_regs = std::vector<REG_64>();
+    cycles_added = 0;
     for (int i = 0; i < 16; i++)
     {
         xmm_regs[i].used = false;
@@ -106,11 +109,6 @@ uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee)
     return (uint8_t*)recompiledBlock->code_start;
 }
 
-void interpreter(EmotionEngine& ee, uint32_t instr)
-{
-    EmotionInterpreter::interpret(ee, instr);
-}
-
 uint16_t EE_JIT64::run(EmotionEngine& ee)
 {
     prologue_block(*this, ee, &jit_heap.lookup_cache[0]);
@@ -144,31 +142,20 @@ EEJitPrologue EE_JIT64::create_prologue_block()
 
 void EE_JIT64::emit_dispatcher()
 {
-    //Check if cycles_to_run > 0 and VU0 wait is false. When both are true, we execute another block.
+    //Check if cycles_to_run > 0 and VU0 wait and check interlock is false. When both are true, we execute another block.
     //Otherwise, we return.
     emitter.CMP32_IMM_MEM(0, REG_64::R15, offsetof(EmotionEngine, cycles_to_run));
-
-    uint8_t* cycle_count_gt0 = emitter.JCC_NEAR_DEFERRED(ConditionCode::G);
-    emit_epilogue();
-
-    emitter.set_jump_dest(cycle_count_gt0);
-
-    //Now do the VU0 wait check.
-    emitter.TEST8_MEM_IMM(0, REG_64::R15, offsetof(EmotionEngine, wait_for_VU0));
-
-    uint8_t* no_vu0_wait = emitter.JCC_NEAR_DEFERRED(ConditionCode::Z);
-    emit_epilogue();
-
-    emitter.set_jump_dest(no_vu0_wait);
+    uint8_t* exit_cyclecount = emitter.JCC_NEAR_DEFERRED(ConditionCode::LE);
 
     //Fetch pointer to index in cache
     //ptr = lookup_cache[(PC >> 2) & 0x7FFF]
+    //lookup_cache is an array of size 8 elements, so we can skip shifting PC to the right
+    //by doing PC & (0x7FFF << 2), which would provide the correct array offset if the array consisted of size 4 elements.
+    //We can complete the lookup by adding that result * 2 to R13, which we do in a LEA operation.
     emitter.MOV32_FROM_MEM(REG_64::R15, REG_64::RCX, offsetof(EmotionEngine, PC));
     emitter.MOV32_REG(REG_64::RCX, REG_64::RAX);
-    emitter.SAR32_REG_IMM(2, REG_64::RAX);
-    emitter.AND32_EAX(0x7FFF);
-    emitter.SHL32_REG_IMM(3, REG_64::RAX);
-    emitter.ADD64_REG(REG_64::R13, REG_64::RAX);
+    emitter.AND32_EAX(0x7FFF << 2);
+    emitter.LEA64_REG(REG_64::RAX, REG_64::R13, REG_64::RAX, 0, 1);
     emitter.MOV64_FROM_MEM(REG_64::RAX, REG_64::RAX);
 
     //First we need to make sure the pointer isn't NULL, which means no block has been recompiled.
@@ -211,10 +198,16 @@ void EE_JIT64::emit_dispatcher()
 
     //Tail-call optimization
     emitter.JMP_INDIR(REG_64::RAX);
+
+    // Exit the block (in case of waiting for COP2 sync, or if we've met the cycles goal)
+    emitter.set_jump_dest(exit_cyclecount);
+
+    emit_epilogue();
 }
 
 EEJitBlockRecord* EE_JIT64::recompile_block(EmotionEngine& ee, IR::Block& block)
 {
+    cycles_added = 0;
     ee_branch = false;
     likely_branch = false;
     saved_int_regs = std::vector<REG_64>();
@@ -234,9 +227,6 @@ EEJitBlockRecord* EE_JIT64::recompile_block(EmotionEngine& ee, IR::Block& block)
     // An extra 0x8 is needed so that functions we call can have a 16-byte aligned stack pointer.
     emitter.SUB64_REG_IMM(0x1B8, REG_64::RSP);
 
-    //Update EE cycle count
-    emitter.SUB32_MEM_IMM(block.get_cycle_count(), REG_64::R15, offsetof(EmotionEngine, cycles_to_run));
-
     while (block.get_instruction_count() > 0 && !likely_branch)
     {
         IR::Instruction instr = block.get_next_instr();
@@ -246,7 +236,7 @@ EEJitBlockRecord* EE_JIT64::recompile_block(EmotionEngine& ee, IR::Block& block)
     if (likely_branch)
         handle_branch_likely(ee, block);
     else
-        cleanup_recompiler(ee, true);
+        cleanup_recompiler(ee, true, true, block.get_cycle_count());
 
     return jit_heap.insert_block(ee.get_PC(), &jit_block);
 }
@@ -307,6 +297,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             break;
         case IR::Opcode::BranchNotEqualZero:
             branch_not_equal_zero(ee, instr);
+            break;
+        case IR::Opcode::CheckInterlockVU0:
+            check_interlock_vu0(ee, instr);
             break;
         case IR::Opcode::ClearDoublewordReg:
             clear_doubleword_reg(ee, instr);
@@ -450,7 +443,7 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             load_quadword(ee, instr);
             break;
         case IR::Opcode::LoadQuadwordCoprocessor2:
-            load_quadword_coprocessor2(ee, instr);
+            fallback_interpreter(ee, instr);
             break;
         case IR::Opcode::MoveConditionalOnNotZero:
             move_conditional_on_not_zero(ee, instr);
@@ -522,154 +515,154 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             or_reg(ee, instr);
             break;
         case IR::Opcode::ParallelAbsoluteHalfword:
-            parallel_absolute_halfword(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelAbsoluteWord:
-            parallel_absolute_word(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelAnd:
-            parallel_and(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelAddByte:
-            parallel_add_byte(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelAddHalfword:
-            parallel_add_halfword(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelAddWord:
-            parallel_add_word(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelAddWithSignedSaturationByte:
-            parallel_add_with_signed_saturation_byte(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelAddWithSignedSaturationHalfword:
-            parallel_add_with_signed_saturation_halfword(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelAddWithSignedSaturationWord:
             fallback_interpreter(ee, instr); // TODO
             break;
         case IR::Opcode::ParallelAddWithUnsignedSaturationByte:
-            parallel_add_with_unsigned_saturation_byte(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, broken in YuGiOh Duelists of The Roses
             break;
         case IR::Opcode::ParallelAddWithUnsignedSaturationHalfword:
-            parallel_add_with_unsigned_saturation_halfword(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelAddWithUnsignedSaturationWord:
             fallback_interpreter(ee, instr); // TODO
             break;
         case IR::Opcode::ParallelCompareEqualByte:
-            parallel_compare_equal_byte(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelCompareEqualHalfword:
-            parallel_compare_equal_halfword(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelCompareEqualWord:
-            parallel_compare_equal_word(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelCompareGreaterThanByte:
-            parallel_compare_greater_than_byte(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelCompareGreaterThanHalfword:
-            parallel_compare_greater_than_halfword(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelCompareGreaterThanWord:
-            parallel_compare_greater_than_word(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelDivideWord:
-            parallel_divide_word(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelExchangeEvenHalfword:
-            parallel_exchange_halfword(ee, instr, true);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelExchangeCenterHalfword:
-            parallel_exchange_halfword(ee, instr, false);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelExchangeEvenWord:
-            parallel_exchange_word(ee, instr, true);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelExchangeCenterWord:
-            parallel_exchange_word(ee, instr, false);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelMaximizeHalfword:
-            parallel_maximize_halfword(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelMaximizeWord:
-            parallel_maximize_word(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelMinimizeHalfword:
-            parallel_minimize_halfword(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelMinimizeWord:
-            parallel_minimize_word(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelNor:
-            parallel_nor(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelOr:
-            parallel_or(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelPackToByte:
-            parallel_pack_to_byte(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelPackToHalfword:
-            parallel_pack_to_halfword(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelPackToWord:
-            parallel_pack_to_word(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelShiftLeftLogicalHalfword:
-            parallel_shift_left_logical_halfword(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelShiftLeftLogicalWord:
-            parallel_shift_left_logical_word(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelShiftRightArithmeticHalfword:
-            parallel_shift_right_arithmetic_halfword(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelShiftRightArithmeticWord:
-            parallel_shift_right_arithmetic_word(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelShiftRightLogicalHalfword:
-            parallel_shift_right_logical_halfword(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelShiftRightLogicalWord:
-            parallel_shift_right_logical_word(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelSubtractByte:
-            parallel_subtract_byte(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelSubtractHalfword:
-            parallel_subtract_halfword(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelSubtractWord:
-            parallel_subtract_word(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelSubtractWithSignedSaturationByte:
-            parallel_subtract_with_signed_saturation_byte(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelSubtractWithSignedSaturationHalfword:
-            parallel_subtract_with_signed_saturation_halfword(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelSubtractWithSignedSaturationWord:
             fallback_interpreter(ee, instr); // TODO
             break;
         case IR::Opcode::ParallelSubtractWithUnsignedSaturationByte:
-            parallel_subtract_with_unsigned_saturation_byte(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelSubtractWithUnsignedSaturationHalfword:
-            parallel_subtract_with_unsigned_saturation_halfword(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelReverseHalfword:
-            parallel_reverse_halfword(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelRotate3WordsLeft:
-            parallel_rotate_3_words_left(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::ParallelSubtractWithUnsignedSaturationWord:
             fallback_interpreter(ee, instr); // TODO
             break;
         case IR::Opcode::ParallelXor:
-            parallel_xor(ee, instr);
+            fallback_interpreter(ee, instr); // TODO, needs testing
             break;
         case IR::Opcode::SetOnLessThan:
             set_on_less_than(ee, instr);
@@ -732,7 +725,7 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             store_quadword(ee, instr);
             break;
         case IR::Opcode::StoreQuadwordCoprocessor2:
-            store_quadword_coprocessor2(ee, instr);
+            fallback_interpreter(ee, instr);
             break;
         case IR::Opcode::SubDoublewordReg:
             sub_doubleword_reg(ee, instr);
@@ -742,6 +735,9 @@ void EE_JIT64::emit_instruction(EmotionEngine &ee, IR::Instruction &instr)
             break;
         case IR::Opcode::SystemCall:
             system_call(ee, instr);
+            break;
+        case IR::Opcode::UpdateVU0:
+            update_vu0(ee, instr);
             break;
         case IR::Opcode::VCallMS:
             vcall_ms(ee, instr);
@@ -1368,8 +1364,15 @@ void EE_JIT64::flush_int_reg(EmotionEngine& ee, int reg)
                 // old_int_reg = $zero, which should never be flushed
                 if (!old_int_reg)
                     break;
-                emitter.load_addr((uint64_t)get_gpr_addr(ee, old_int_reg), REG_64::RAX);
-                emitter.MOV64_TO_MEM((REG_64)reg, REG_64::RAX);
+                if (old_int_reg < 32)
+                {
+                    emitter.MOV64_TO_MEM((REG_64)reg, REG_64::R15, offsetof(EmotionEngine, gpr) + get_gpr_offset(old_int_reg));
+                }
+                else
+                {
+                    emitter.load_addr((uint64_t)get_gpr_addr(ee, old_int_reg), REG_64::RAX);
+                    emitter.MOV64_TO_MEM((REG_64)reg, REG_64::RAX);
+                }
                 break;
             case REG_TYPE::VI:
                 emitter.load_addr((uint64_t)get_vi_addr(ee, old_int_reg), REG_64::RAX);
@@ -1498,8 +1501,21 @@ uint64_t EE_JIT64::get_gpr_addr(const EmotionEngine &ee, int index) const
     return 0;
 }
 
-void EE_JIT64::cleanup_recompiler(EmotionEngine& ee, bool clear_regs)
+uint64_t EE_JIT64::get_gpr_offset(int index) const
 {
+    if (index < 32)
+        return index * sizeof(uint128_t);
+    else
+        Errors::die("EE_JIT64::get_gpr_offset not supported for special registers");
+}
+
+void EE_JIT64::cleanup_recompiler(EmotionEngine& ee, bool clear_regs, bool dispatcher, uint64_t cycles)
+{
+    // FIXME: COP2 should handle incrementing the EE cycle count on its on when spinning on mbit (we'll need to increment it ourself on vuwait)
+    // Maybe keep it after COP2 fixes incrementing on stalls and conditionally check for vu0wait?
+    // Make sure to remove this line when that feature is implemented in COP2 logic!
+    cycles = std::max((uint64_t)1, cycles);
+
     flush_regs(ee);
 
     if (clear_regs)
@@ -1515,12 +1531,24 @@ void EE_JIT64::cleanup_recompiler(EmotionEngine& ee, bool clear_regs)
         }
     }
 
+    // Decrement cycles to run by the cycles argument
+    emitter.SUB32_MEM_IMM(cycles, REG_64::R15, offsetof(EmotionEngine, cycles_to_run));
+
+    // Update cycle_count_now for COP2 sync
+    // cycle_count_now = cycle_count += cycles - cycles we already added
+    emitter.MOV64_FROM_MEM(REG_64::R15, REG_64::RAX, offsetof(EmotionEngine, cycle_count));
+    emitter.ADD64_REG_IMM(cycles - cycles_added, REG_64::RAX);
+    emitter.MOV64_TO_MEM(REG_64::RAX, REG_64::R15, offsetof(EmotionEngine, cycle_count));
+
     //Clean up stack, has to be handled before we enter dispatcher
     emitter.ADD64_REG_IMM(0x1B8, REG_64::RSP);
     emitter.POP(REG_64::RBP);
 
     //Go back to the dispatcher to potentially execute another block
-    emit_dispatcher();
+    if (dispatcher)
+        emit_dispatcher();
+    else
+        emit_epilogue();
 }
 
 void EE_JIT64::emit_prologue()
@@ -1534,10 +1562,18 @@ void EE_JIT64::emit_prologue()
     emitter.PUSH(REG_64::RDI);
     emitter.PUSH(REG_64::RSI);
 #endif
+    //Set DaZ FTZ and rounding modes etc for Denormal handling and rounding mode
+    emitter.load_addr((uint64_t)&saved_mxcsr, REG_64::R14);
+    emitter.load_addr((uint64_t)&ee_mxcsr, REG_64::R15);
+    emitter.STMXCSR(REG_64::R14);
+    emitter.LDMXCSR(REG_64::R15);
 }
 
 void EE_JIT64::emit_epilogue()
 {
+    //Revert rounding modes
+    emitter.load_addr((uint64_t)&saved_mxcsr, REG_64::R14);
+    emitter.LDMXCSR(REG_64::R14);
 #ifdef _WIN32
     emitter.POP(REG_64::RSI);
     emitter.POP(REG_64::RDI);
@@ -1553,8 +1589,7 @@ void EE_JIT64::emit_epilogue()
 void EE_JIT64::handle_branch_likely(EmotionEngine& ee, IR::Block& block)
 {
     // Load the "branch happened" variable
-    emitter.load_addr(reinterpret_cast<uint64_t>(&ee.branch_on), REG_64::RAX);
-    emitter.MOV8_FROM_MEM(REG_64::RAX, REG_64::RAX);
+    emitter.MOV8_FROM_MEM(REG_64::R15, REG_64::RAX, offsetof(EmotionEngine, branch_on));
 
     // Test variable. In the case that the variable is true,
     // we jump over the last instruction in the block in order
@@ -1576,7 +1611,7 @@ void EE_JIT64::handle_branch_likely(EmotionEngine& ee, IR::Block& block)
     uint8_t* offset_addr = emitter.JCC_NEAR_DEFERRED(ConditionCode::NZ);
 
     // flush the EE state back to the EE and return, not executing the delay slot
-    cleanup_recompiler(ee, true);
+    cleanup_recompiler(ee, true, true, block.get_cycle_count());
 
     // ...Which we do here.
     emitter.set_jump_dest(offset_addr);
@@ -1584,7 +1619,7 @@ void EE_JIT64::handle_branch_likely(EmotionEngine& ee, IR::Block& block)
     // execute delay slot and flush EE state back to EE
     for (IR::Instruction instr = block.get_next_instr(); instr.op != IR::Opcode::Null; instr = block.get_next_instr())
         emit_instruction(ee, instr);
-    cleanup_recompiler(ee, true);
+    cleanup_recompiler(ee, true, true, block.get_cycle_count());
 }
 
 void EE_JIT64::fallback_interpreter(EmotionEngine& ee, const IR::Instruction &instr)
@@ -1605,38 +1640,86 @@ void EE_JIT64::fallback_interpreter(EmotionEngine& ee, const IR::Instruction &in
     prepare_abi((uint64_t)&ee);
     prepare_abi(instr_word);
 
-    call_abi_func((uint64_t)&interpreter);
+    call_abi_func((uint64_t)instr.get_interpreter_fallback());
 }
 
 void EE_JIT64::wait_for_vu0(EmotionEngine& ee, IR::Instruction& instr)
 {
-    // Alloc scratchpad registers
-    REG_64 R15 = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
-
     prepare_abi((uint64_t)&ee);
-    call_abi_func((uint64_t)ee_vu0_wait);
+    call_abi_func((uint64_t)&ee_vu0_wait);
     emitter.TEST8_REG(REG_64::AL, REG_64::AL);
 
     uint8_t* offset_addr = emitter.JCC_NEAR_DEFERRED(ConditionCode::Z);
 
     // If ee.vu0_wait(), set PC to the current operation's address and abort
-    emitter.load_addr((uint64_t)&ee.PC, REG_64::RAX);
-    emitter.MOV32_REG_IMM(instr.get_return_addr(), R15);
-    emitter.MOV32_TO_MEM(R15, REG_64::RAX);
+    emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::R15, offsetof(EmotionEngine, PC));
 
     // Set wait for VU0 flag
-    emitter.load_addr((uint64_t)&ee.wait_for_VU0, REG_64::RAX);
-    emitter.MOV8_IMM_MEM(true, REG_64::RAX);
+    emitter.MOV8_IMM_MEM(true, REG_64::R15, offsetof(EmotionEngine, wait_for_VU0));
 
     // Set cycle count to number of cycles executed
-    emitter.load_addr((uint64_t)&cycle_count, REG_64::RAX);
-    emitter.MOV16_IMM_MEM(instr.get_cycle_count(), REG_64::RAX);
+    // FIXME: This changes the return value of the JIT run function, but the return value of the JIT's run function is not used!
+    // What do we want to do here?
+    // emitter.MOV16_IMM_MEM(instr.get_cycle_count(), REG_64::R14, offsetof(EE_JIT64, cycle_count));
 
-    cleanup_recompiler(ee, false);
+    cleanup_recompiler(ee, false, false, instr.get_cycle_count());
 
     // Otherwise continue execution of block otherwise
     emitter.set_jump_dest(offset_addr);
+}
+
+void EE_JIT64::check_interlock_vu0(EmotionEngine& ee, IR::Instruction& instr)
+{
+    // Alloc scratchpad registers
+    REG_64 R15 = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+
+    prepare_abi((uint64_t)&ee);
+    call_abi_func((uint64_t)&ee_check_interlock);
+    emitter.TEST8_REG(REG_64::AL, REG_64::AL);
+
+    uint8_t* offset_addr = emitter.JCC_NEAR_DEFERRED(ConditionCode::Z);
+
+    // If ee.ee_check_interlock(), set PC to the current operation's address and abort
+    emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::R15, offsetof(EmotionEngine, PC));
+
+    // Set wait for interlock clear flag
+    emitter.MOV8_IMM_MEM(true, REG_64::R15, offsetof(EmotionEngine, wait_for_interlock));
+
+    // Set cycle count to number of cycles executed
+    // FIXME: This changes the return value of the JIT run function, but the return value of the JIT's run function is not used!
+    // What do we want to do here?
+    // emitter.MOV16_IMM_MEM(instr.get_cycle_count(), REG_64::R14, offsetof(EE_JIT64, cycle_count));
+
+    cleanup_recompiler(ee, false, false, instr.get_cycle_count());
+
+    // Otherwise clear interlock then continue execution of block otherwise
+    emitter.set_jump_dest(offset_addr);
+    prepare_abi((uint64_t)&ee);
+    call_abi_func((uint64_t)&ee_clear_interlock);
+
     free_int_reg(ee, R15);
+}
+
+void EE_JIT64::update_vu0(EmotionEngine& ee, IR::Instruction& instr)
+{
+    // Alloc scratchpad registers
+    REG_64 R15 = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 R14 = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
+
+    // Update PC
+    emitter.load_addr((uint64_t)&ee, REG_64::RAX);
+    emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::RAX, offsetof(EmotionEngine, PC_now));
+
+    // Update cycle_count_now for COP2 sync
+    // cycle_count_now = cycle_count += cycles
+    emitter.MOV64_FROM_MEM(REG_64::R15, REG_64::RAX, offsetof(EmotionEngine, cycle_count));
+    emitter.ADD64_REG_IMM(instr.get_cycle_count() - cycles_added, REG_64::RAX);
+    emitter.MOV64_TO_MEM(REG_64::RAX, REG_64::R15, offsetof(EmotionEngine, cycle_count));
+
+    free_int_reg(ee, R15);
+    free_int_reg(ee, R14);
+
+    cycles_added = instr.get_cycle_count();
 }
 
 uint8_t ee_read8(EmotionEngine& ee, uint32_t addr)
@@ -1705,6 +1788,16 @@ uint32_t vu0_read_CMSAR0_shl3(VectorUnit& vu0)
 }
 
 bool ee_vu0_wait(EmotionEngine& ee)
+{
+    return ee.vu0_wait();
+}
+
+bool ee_check_interlock(EmotionEngine& ee)
+{
+    return ee.check_interlock();
+}
+
+bool ee_clear_interlock(EmotionEngine& ee)
 {
     return ee.vu0_wait();
 }

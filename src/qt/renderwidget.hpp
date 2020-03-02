@@ -13,7 +13,7 @@ class RenderWidget : public QWidget
     public:
         static const int MAX_SCALING = 4;
         static const int DEFAULT_WIDTH = 640;
-        static const int DEFAULT_HEIGHT = 448;
+        static const int DEFAULT_HEIGHT = 480;
 
         explicit RenderWidget(QWidget* parent = nullptr);
         void paintEvent(QPaintEvent* event) override;

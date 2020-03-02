@@ -22,6 +22,10 @@ void GS_REGISTERS::write64_privileged(uint32_t addr, uint64_t value)
             SMODE2.interlaced = value & 0x1;
             SMODE2.frame_mode = value & 0x2;
             SMODE2.power_mode = (value >> 2) & 0x3;
+            if(SMODE2.interlaced && SMODE2.frame_mode) //Interlace - Read Every Line
+                deinterlace_method = NO_DEINTERLACE;
+            else
+                deinterlace_method = BOB_DEINTERLACE;
             break;
         case 0x0070:
             printf("[GS_r] Write DISPFB1: $%08lX_%08lX\n", value >> 32, value & 0xFFFFFFFF);
@@ -66,15 +70,26 @@ void GS_REGISTERS::write64_privileged(uint32_t addr, uint64_t value)
         case 0x1000:
             printf("[GS_r] Write64 to GS_CSR: $%08lX_%08lX\n", value >> 32, value & 0xFFFFFFFF);
             CSR.SIGNAL_generated &= ~(value & 1);
-            CSR.SIGNAL_stall &= ~(value & 0x1);
+            if (value & 1)
+            {
+                if (CSR.SIGNAL_stall)
+                {
+                    CSR.SIGNAL_stall = false;
+                    //Stalled SIGNAL event is processed and generated as soon as the first is cancelled
+                    //but the IRQ is delayed until IMR SIGMSK is toggled
+                    SIGLBLID.sig_id = SIGLBLID.backup_sig_id;
+                    CSR.SIGNAL_generated = true;
+                    CSR.SIGNAL_irq_pending = true;
+                }
+                else //Stalled SIGNAL interrupt has been cancelled (MGS3 for testing)
+                    CSR.SIGNAL_irq_pending = false;
+            }
             if (value & 0x2)
             {
-                CSR.FINISH_enabled = true;
                 CSR.FINISH_generated = false;
             }
             if (value & 0x8)
             {
-                CSR.VBLANK_enabled = true;
                 CSR.VBLANK_generated = false;
             }
             break;
@@ -123,15 +138,26 @@ void GS_REGISTERS::write32_privileged(uint32_t addr, uint32_t value)
         case 0x1000:
             printf("[GS_r] Write32 to GS_CSR: $%08X\n", value);
             CSR.SIGNAL_generated &= ~(value & 1);
-            CSR.SIGNAL_stall &= ~(value & 1);
+            if (value & 1)
+            {
+                if (CSR.SIGNAL_stall)
+                {
+                    CSR.SIGNAL_stall = false;
+                    //Stalled SIGNAL event is processed and generated as soon as the first is cancelled
+                    //but the IRQ is delayed until IMR SIGMSK is toggled
+                    SIGLBLID.sig_id = SIGLBLID.backup_sig_id;
+                    CSR.SIGNAL_generated = true;
+                    CSR.SIGNAL_irq_pending = true;
+                }
+                else //Stalled SIGNAL interrupt has been cancelled (MGS3 for testing)
+                    CSR.SIGNAL_irq_pending = false;
+            }
             if (value & 0x2)
             {
-                CSR.FINISH_enabled = true;
                 CSR.FINISH_generated = false;
             }
             if (value & 0x8)
             {
-                CSR.VBLANK_enabled = true;
                 CSR.VBLANK_generated = false;
             }
             break;
@@ -154,25 +180,7 @@ void GS_REGISTERS::write32_privileged(uint32_t addr, uint32_t value)
 //reads from local copies only
 uint32_t GS_REGISTERS::read32_privileged(uint32_t addr)
 {
-    addr &= 0xFFFF;
-    switch (addr)
-    {
-        case 0x1000:
-        {
-            uint32_t reg = 0;
-            reg |= CSR.SIGNAL_generated;
-            reg |= CSR.FINISH_generated << 1;
-            reg |= CSR.VBLANK_generated << 3;
-            reg |= CSR.is_odd_frame << 13;
-            //printf("[GS_r] read32_privileged!: CSR = %04X\n", reg);
-            return reg;
-        }
-        case 0x1080:
-            return SIGLBLID.sig_id;
-        default:
-            printf("[GS_r] Unrecognized privileged read32 from $%04X\n", addr);
-            return 0;
-    }
+    return read64_privileged(addr & ~0x4) >> (32 * ((addr & 0x4) != 0));
 }
 
 uint64_t GS_REGISTERS::read64_privileged(uint32_t addr)
@@ -183,13 +191,21 @@ uint64_t GS_REGISTERS::read64_privileged(uint32_t addr)
         case 0x1000:
         {
             uint64_t reg = 0;
-            reg |= CSR.SIGNAL_generated;
+            reg |= CSR.SIGNAL_generated << 0;
             reg |= CSR.FINISH_generated << 1;
             reg |= CSR.VBLANK_generated << 3;
             reg |= CSR.is_odd_frame << 13;
+            reg |= (uint32_t)CSR.FIFO_status << 14;
+
+            //GS revision and ID respectively, taken from PCSX2.
+            //Shadow Hearts needs this.
+            reg |= 0x1B << 16;
+            reg |= 0x55 << 24;
             //printf("[GS_r] read64_privileged!: CSR = %08X\n", reg);
             return reg;
         }
+        case 0x1040:
+            return BUSDIR;
         case 0x1080:
         {
             uint64_t reg = 0;
@@ -209,7 +225,7 @@ bool GS_REGISTERS::write64(uint32_t addr, uint64_t value)
     switch (addr)
     {
         case 0x0060:
-            printf("[GS] SIGNAL requested!\n");
+            
         {
             uint32_t mask = value >> 32;
             uint32_t new_signal = value & mask;
@@ -217,11 +233,13 @@ bool GS_REGISTERS::write64(uint32_t addr, uint64_t value)
             {
                 printf("[GS] Second SIGNAL requested before acknowledged!\n");
                 CSR.SIGNAL_stall = true;
+                SIGLBLID.backup_sig_id = SIGLBLID.sig_id;
                 SIGLBLID.backup_sig_id &= ~mask;
                 SIGLBLID.backup_sig_id |= new_signal;
             }
             else
             {
+                printf("[GS] SIGNAL requested!\n");
                 CSR.SIGNAL_generated = true;
                 SIGLBLID.sig_id &= ~mask;
                 SIGLBLID.sig_id |= new_signal;
@@ -271,16 +289,17 @@ void GS_REGISTERS::reset()
     CSR.is_odd_frame = false;
     CSR.SIGNAL_generated = false;
     CSR.SIGNAL_stall = false;
-    CSR.VBLANK_enabled = true;
+    CSR.SIGNAL_irq_pending = false;
     CSR.VBLANK_generated = false;
-    CSR.FINISH_enabled = false;
     CSR.FINISH_generated = false;
     CSR.FINISH_requested = false;
+    CSR.FIFO_status = 0x1; //Empty
     PMODE.circuit1 = false;
     PMODE.circuit2 = false;
 
     SIGLBLID.lbl_id = 0;
     SIGLBLID.sig_id = 0;
+    SIGLBLID.backup_sig_id = 0;
 
     set_CRT(false, 0x2, false);
 }
@@ -294,21 +313,24 @@ void GS_REGISTERS::set_CRT(bool interlaced, int mode, bool frame_mode)
 
 void GS_REGISTERS::get_resolution(int &w, int &h)
 {
-    w = 640;
-    switch (CRT_mode)
+    /*switch (CRT_mode)
     {
-        case 0x2:
-            h = 448;
-            break;
-        case 0x3:
-            h = 512;
-            break;
-        case 0x1C:
-            h = 480;
-            break;
-        default:
-            h = 448;
-    }
+    case 0x2:
+        h = 448;
+        break;
+    case 0x3:
+        h = 512;
+        break;
+    case 0x1C:
+        h = 480;
+        break;
+    default:
+        h = 448;
+    }*/
+
+    //Force the window to display everything in 4:3 for now
+    w = 640;
+    h = 480;
 }
 
 void GS_REGISTERS::get_inner_resolution(int &w, int &h)
@@ -323,8 +345,14 @@ void GS_REGISTERS::get_inner_resolution(int &w, int &h)
     {
         current_display = DISPLAY2;
     }
-    w = current_display.width >> 2;
+    if (current_display.magnify_x)
+        w = current_display.width / current_display.magnify_x;
+    else
+        w = current_display.width >> 2;
     h = current_display.height;
+    //TODO - Find out why some games double their height
+    if (h >= (w * 1.33))
+        h /= 2;
 }
 
 void GS_REGISTERS::set_VBLANK(bool is_VBLANK)
@@ -337,10 +365,9 @@ void GS_REGISTERS::set_VBLANK(bool is_VBLANK)
 
 bool GS_REGISTERS::assert_VSYNC()//returns true if the interrupt should be processed
 {
-    if (CSR.VBLANK_enabled)
+    if (!CSR.VBLANK_generated)
     {
         CSR.VBLANK_generated = true;
-        CSR.VBLANK_enabled = false;
         return !IMR.vsync;
     }
     return false;
@@ -348,11 +375,10 @@ bool GS_REGISTERS::assert_VSYNC()//returns true if the interrupt should be proce
 
 bool GS_REGISTERS::assert_FINISH()//returns true if the interrupt should be processed
 {
-    if (CSR.FINISH_requested && CSR.FINISH_enabled)
+    if (CSR.FINISH_requested && !CSR.FINISH_generated)
     {
-        CSR.FINISH_generated = true;
-        CSR.FINISH_enabled = false;
         CSR.FINISH_requested = false;
+        CSR.FINISH_generated = true;
         return !IMR.finish;
     }
     return false;

@@ -188,6 +188,7 @@ bool DMAC::mfifo_handler(int index)
 void DMAC::transfer_end(int index)
 {
     printf("[DMAC] %s transfer ended\n", CHAN(index));
+
     channels[index].control &= ~0x100;
     channels[index].started = false;
     interrupt_stat.channel_stat[index] = true;
@@ -271,6 +272,25 @@ int DMAC::process_VIF1()
     {
         uint32_t max_qwc = 8 - ((channels[VIF1].address >> 4) & 0x7);
         int quads_to_transfer = std::min(channels[VIF1].quadword_count, max_qwc);
+
+        if ((channels[VIF1].control & 0x1) && control.stall_dest_channel == 1 && channels[VIF1].can_stall_drain)
+        {
+            if (channels[VIF1].address + (quads_to_transfer * 16) > STADR)
+            {
+                if (channels[VIF1].has_dma_stalled == false)
+                {
+                    printf("[DMAC] VIF1 DMA Stall at %x STADR = %x\n", channels[VIF1].address, STADR);
+                    interrupt_stat.channel_stat[DMA_STALL] = true;
+                    int1_check();
+                    channels[VIF1].has_dma_stalled = true;
+                }
+
+                clear_DMA_request(VIF1);
+                return count;
+            }
+            channels[VIF1].has_dma_stalled = false;
+        }
+
         while (count < quads_to_transfer)
         {
             if (!mfifo_handler(VIF1))
@@ -280,17 +300,16 @@ int DMAC::process_VIF1()
             }
             if (channels[VIF1].control & 0x1)
             {
-                if (control.stall_dest_channel == 1 && channels[VIF1].can_stall_drain)
-                {
-                    if (channels[VIF1].address + (8 * 16) > STADR)
-                    {
-                        active_channel = nullptr;
-                        break;
-                    }
-                }
-
                 if (!vif1->feed_DMA(fetch128(channels[VIF1].address)))
                     break;
+            }
+            else
+            {
+                auto quad_data = vif1->readFIFO();
+                if (std::get<1>(quad_data))
+                    store128(channels[VIF1].address, std::get<0>(quad_data));
+                else
+                    return count;
             }
             advance_source_dma(VIF1);
             count++;
@@ -381,23 +400,36 @@ int DMAC::process_GIF()
     {
         uint32_t max_qwc = 8 - ((channels[GIF].address >> 4) & 0x7);
         int quads_to_transfer = std::min(channels[GIF].quadword_count, max_qwc);
+
         if (control.stall_dest_channel == 2 && channels[GIF].can_stall_drain)
         {
             if (channels[GIF].address + (quads_to_transfer * 16) > STADR)
             {
-                gif->dma_waiting(true);
-                active_channel = nullptr;
-                arbitrate();
-                return 0;
+                if (channels[GIF].has_dma_stalled == false)
+                {
+                    printf("[DMAC] GIF DMA Stall at %x STADR = %x\n", channels[GIF].address, STADR);
+                    interrupt_stat.channel_stat[DMA_STALL] = true;
+                    int1_check();
+                    if(gif->path3_done())
+                        gif->deactivate_PATH(3);
+                    channels[GIF].has_dma_stalled = true;
+                }
+
+                clear_DMA_request(GIF);
+                return count;
             }
+            channels[GIF].has_dma_stalled = false;
         }
+        
         while (count < quads_to_transfer)
         {
             if (!mfifo_handler(GIF))
             {
                 arbitrate();
+                gif->deactivate_PATH(3);
                 return count;
             }
+
             gif->request_PATH(3, false);
             if (gif->path_active(3, false) && !gif->fifo_full() && !gif->fifo_draining())
             {
@@ -405,8 +437,12 @@ int DMAC::process_GIF()
                 gif->send_PATH3(fetch128(channels[GIF].address));
                 advance_source_dma(GIF);
                 count++;
-                if (gif->path3_done())
-                    break;
+                if (gif->path3_done() && !channels[GIF].tag_end)
+                {
+                    gif->deactivate_PATH(3);
+                    arbitrate();
+                    return count;
+                }
             }
             else
             {
@@ -428,8 +464,10 @@ int DMAC::process_GIF()
             if (!mfifo_handler(GIF))
             {
                 arbitrate();
+                gif->deactivate_PATH(3);
                 return count;
             }
+            else gif->request_PATH(3, false);
             handle_source_chain(GIF);
         }
     }
@@ -503,8 +541,7 @@ int DMAC::process_IPU_FROM()
             uint128_t data = ipu->read_FIFO();
             store128(channels[IPU_FROM].address, data);
 
-            channels[IPU_FROM].address += 16;
-            channels[IPU_FROM].quadword_count--;
+            advance_dest_dma(IPU_FROM);
             count++;
         }
     }
@@ -658,16 +695,26 @@ int DMAC::process_SIF1()
     {
         uint32_t max_qwc = 8 - ((channels[EE_SIF1].address >> 4) & 0x7);
         int quads_to_transfer = std::min(channels[EE_SIF1].quadword_count, max_qwc);
+
+        if (control.stall_dest_channel == 3 && channels[EE_SIF1].can_stall_drain)
+        {
+            if (channels[EE_SIF1].address + (quads_to_transfer * 16) > STADR)
+            {
+                if (channels[EE_SIF1].has_dma_stalled == false)
+                {
+                    printf("[DMAC] SIF1 DMA Stall at %x STADR = %x\n", channels[EE_SIF1].address, STADR);
+                    interrupt_stat.channel_stat[DMA_STALL] = true;
+                    int1_check();
+                    channels[EE_SIF1].has_dma_stalled = true;
+                }
+                clear_DMA_request(EE_SIF1);
+                return count;
+            }
+            channels[EE_SIF1].has_dma_stalled = false;
+        }
+
         while (count < quads_to_transfer)
         {
-            if (control.stall_dest_channel == 3 && channels[EE_SIF1].can_stall_drain)
-            {
-                if (channels[EE_SIF1].address + (8 * 16) > STADR)
-                {
-                    active_channel = nullptr;
-                    break;
-                }
-            }
             sif->write_SIF1(fetch128(channels[EE_SIF1].address));
             advance_source_dma(EE_SIF1);
             count++;
@@ -728,7 +775,7 @@ int DMAC::process_SPR_FROM()
                 channels[SPR_FROM].address = RBOR | (channels[SPR_FROM].address & RBSR);
             }
             uint128_t DMAData = fetch128(channels[SPR_FROM].scratchpad_address | (1 << 31));
-            store128(channels[SPR_FROM].address, DMAData);
+            store128(channels[SPR_FROM].address & 0x7FFFFFFF, DMAData);
 
             channels[SPR_FROM].scratchpad_address += 16;
             advance_dest_dma(SPR_FROM);
@@ -792,7 +839,7 @@ int DMAC::process_SPR_TO()
         int quads_to_transfer = std::min(channels[SPR_TO].quadword_count, max_qwc);
         while (count < quads_to_transfer)
         {
-            uint128_t DMAData = fetch128(channels[SPR_TO].address);
+            uint128_t DMAData = fetch128(channels[SPR_TO].address & 0x7FFFFFFF);
             store128(channels[SPR_TO].scratchpad_address | (1 << 31), DMAData);
             channels[SPR_TO].scratchpad_address += 16;
 
@@ -839,6 +886,13 @@ void DMAC::advance_source_dma(int index)
     int mode = (channels[index].control >> 2) & 0x3;
 
     channels[index].address += 16;
+
+    //PS2 checks MFIFO MADR as it transfers but it needs to check also at the end of a packet
+    //and send an empty signal.  This needs to be done on the MADR as TADR doesn't incrmenet on END tags
+    //For the code to work, we need to check this before the QWC decrements. HW Test confirmed
+    if (channels[index].quadword_count == 1)
+        mfifo_handler(index);
+
     channels[index].quadword_count--;
 
     if (mode == 1) //Chain
@@ -869,6 +923,9 @@ void DMAC::advance_dest_dma(int index)
             update_stadr(channels[index].address);
         //SPR_FROM source stall drain
         if (index == 8 && control.stall_source_channel == 2)
+            update_stadr(channels[index].address);
+        //IPU_FROM source stall drain
+        if (index == 3 && control.stall_source_channel == 3)
             update_stadr(channels[index].address);
     }
 }
@@ -1013,14 +1070,19 @@ void DMAC::start_DMA(int index)
     channels[index].tag_end = !(mode & 0x1); //always end transfers in normal and interleave mode
 
     //Stall drain happens on either normal transfers or refs tags
-    int tag = channels[index].control >> 24;
+    int tag = (channels[index].control >> 28) & 0x7;
+    bool tag_irq = (channels[index].control >> 31) & 0x1;
+    bool TIE = channels[index].control & (1 << 7);
     channels[index].can_stall_drain = !(mode & 0x1) || tag == 4;
     switch (mode)
     {
         case 1: //Chain
             //If QWC > 0 and the current tag in CHCR is a terminal tag, end the transfer
             if (channels[index].quadword_count > 0)
-                channels[index].tag_end = (tag == 0 || tag == 7);
+            {
+                channels[index].tag_end = (tag == 0 || tag == 7) || (TIE && tag_irq);
+                channels[index].tag_id = tag;
+            }
             break;
         case 2: //Interleave
             channels[index].interleaved_qwc = SQWC.transfer_qwc;
@@ -1595,7 +1657,7 @@ void DMAC::write32(uint32_t address, uint32_t value)
             break;
         case 0x1000E060:
             printf("[DMAC] Write to STADR: $%08X\n", value);
-            STADR = value;
+            update_stadr(value);
             break;
         default:
             printf("[DMAC] Unrecognized write32 of $%08X to $%08X\n", value, address);
@@ -1644,9 +1706,8 @@ void DMAC::update_stadr(uint32_t addr)
             Errors::die("DMAC::update_stadr: control.stall_dest_channel >= 4");
     }
 
-    uint32_t madr = channels[c].address + (8 * 16);
-    if (madr > old_stadr && madr <= STADR)
-        check_for_activation(c);
+    if(channels[c].has_dma_stalled)
+        set_DMA_request(c);
 }
 
 void DMAC::check_for_activation(int index)
@@ -1668,8 +1729,18 @@ void DMAC::check_for_activation(int index)
                 break;
         }
 
-        if (do_stall_check && channels[index].can_stall_drain && channels[index].address + (8 * 16) > STADR)
+        if (do_stall_check && channels[index].can_stall_drain && channels[index].address == STADR)
+        {
+            if (channels[index].has_dma_stalled == false)
+            {
+                printf("DMA Stall Drain channel %d Addr %x STADR %x\n", index, channels[index].address, STADR);
+                interrupt_stat.channel_stat[DMA_STALL] = true;
+                int1_check();
+                channels[index].has_dma_stalled = true;
+            }
+            queued_channels.push_back(&channels[index]);
             return;
+        }
 
         if (!active_channel)
             active_channel = &channels[index];

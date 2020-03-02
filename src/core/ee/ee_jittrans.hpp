@@ -1,36 +1,12 @@
 #ifndef EE_JITTRANS_HPP
 #define EE_JITTRANS_HPP
 #include <cstdint>
-//#include <vector>
+#include <vector>
 #include "../jitcommon/ir_block.hpp"
+#include "emotioninterpreter.hpp"
 
 class EmotionEngine;
 class VectorUnit;
-
-enum EE_NormalReg
-{
-    zero = 0,
-    at = 1,
-    v0 = 2, v1 = 3,
-    a0 = 4, a1 = 5, a2 = 6, a3 = 7,
-    t0 = 8, t1 = 9, t2 = 10, t3 = 11, t4 = 12, t5 = 13, t6 = 14, t7 = 15, t8 = 24, t9 = 25,
-    s0 = 16, s1 = 17, s2 = 18, s3 = 19, s4 = 20, s5 = 21, s6 = 22, s7 = 23,
-    k0 = 26, k1 = 27,
-    gp = 28,
-    sp = 29,
-    fp = 30,
-    ra = 31
-};
-
-enum class EE_SpecialReg
-{
-    EE_Regular = 0,
-    LO = 32,
-    LO1,
-    HI,
-    HI1,
-    SA
-};
 
 enum VU_SpecialReg
 {
@@ -88,60 +64,12 @@ enum class FPU_SpecialReg
     ACC = 32
 };
 
-struct EE_InstrInfo
-{
-    /**
-     * The EE has a dual-issue pipeline, meaning that under ideal circumstances, it can execute two instructions
-     * per cycle. The two instructions must have no dependencies with each other, exist in separate physical
-     * pipelines, and cause no stalls for the two to be executed in a single cycle.
-     *
-     * There are six physical pipelines: two integer pipelines, load/store, branch, COP1, and COP2.
-     * MMI instructions use both integer pipelines, so an MMI instruction and any other ALU instruction
-     * can never both be issued in the same cycle.
-     *
-     * Because the EE is in-order, assuming no stalls, one can achieve optimal performance by pairing together
-     * instructions using different physical pipelines.
-     */
-    enum class Pipeline
-    {
-        //Uninitialized. Error out if an instruction's pipeline is set to this.
-        Unk,
-
-        //Generic ALU instruction. Can be placed in either integer pipeline.
-        IntGeneric,
-
-        //ALU instruction that can only be used in integer pipeline 0.
-        Int0,
-
-        //... integer pipeline 1.
-        Int1,
-
-        //MMI instruction. Takes up both integer pipelines.
-        IntWide,
-
-        //Load/store instructions. This includes COP1 and COP2 load/store instructions.
-        LoadStore,
-
-        //Branches, jumps, and calls. This includes COP1 and COP2 branches.
-        Branch,
-
-        //COP1 arithmetic.
-        COP1,
-
-        //COP2 arithmetic.
-        COP2
-    };
-
-    Pipeline pipeline;
-};
-
 class EE_JitTranslator
 {
 private:
     //TODO
     int cycles_this_block;
 
-    std::vector<EE_InstrInfo> instr_info;
     uint16_t end_PC;
     uint16_t cur_PC;
     bool cop2_encountered;
@@ -152,23 +80,35 @@ private:
     int di_delay;
 
     void interpreter_pass(EmotionEngine &ee, uint32_t pc);
-    void fallback_interpreter(IR::Instruction& instr, uint32_t instr_word) const noexcept;
+    void get_block_operations(std::vector<EE_InstrInfo>& dest, EmotionEngine& cpu, uint32_t pc);
 
-    void translate_op(uint32_t opcode, uint32_t pc, std::vector<IR::Instruction>& instrs);
-    void translate_op_special(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs);
-    void translate_op_regimm(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs) const;
-    void translate_op_mmi(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs) const;
-    void translate_op_mmi0(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs) const;
-    void translate_op_mmi1(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs) const;
-    void translate_op_mmi2(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs) const;
-    void translate_op_mmi3(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs) const;
-    void translate_op_cop0(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs);
-    void translate_op_cop0_type2(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs);
-    void translate_op_cop1(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs) const;
-    void translate_op_cop1_fpu(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs) const;
-    void translate_op_cop2(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs);
-    void translate_op_cop2_special(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs);
-    void translate_op_cop2_special2(uint32_t opcode, uint32_t PC, std::vector<IR::Instruction>& instrs) const;
+    void issue_cycle_analysis(std::vector<EE_InstrInfo>& instr_info);
+    bool dual_issue_analysis(const EE_InstrInfo& instr1, const EE_InstrInfo& instr2);
+    bool check_pipeline_combination(EE_InstrInfo::Pipeline pipeline1, EE_InstrInfo::Pipeline pipeline2);
+    bool check_eret_combination(EE_InstrInfo::Pipeline pipeline1, EE_InstrInfo::Pipeline pipeline2);
+    bool check_mmi_combination(EE_InstrInfo::Pipeline pipeline1, EE_InstrInfo::Pipeline pipeline2);
+    void load_store_analysis(std::vector<EE_InstrInfo>& instr_info);
+    void data_dependency_analysis(std::vector<EE_InstrInfo>& instr_info);
+
+    void translate_op(uint32_t opcode, uint32_t pc, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs);
+    void translate_op_special(uint32_t opcode, uint32_t PC, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs);
+    void translate_op_regimm(uint32_t opcode, uint32_t PC, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs) const;
+    void translate_op_mmi(uint32_t opcode, uint32_t PC, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs) const;
+    void translate_op_mmi0(uint32_t opcode, uint32_t PC, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs) const;
+    void translate_op_mmi1(uint32_t opcode, uint32_t PC, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs) const;
+    void translate_op_mmi2(uint32_t opcode, uint32_t PC, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs) const;
+    void translate_op_mmi3(uint32_t opcode, uint32_t PC, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs) const;
+    void translate_op_cop0(uint32_t opcode, uint32_t PC, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs);
+    void translate_op_cop0_type2(uint32_t opcode, uint32_t PC, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs);
+    void translate_op_cop1(uint32_t opcode, uint32_t PC, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs) const;
+    void translate_op_cop1_fpu(uint32_t opcode, uint32_t PC, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs) const;
+    void translate_op_cop2(uint32_t opcode, uint32_t PC, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs);
+    void translate_op_cop2_special(uint32_t opcode, uint32_t PC, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs);
+    void translate_op_cop2_special2(uint32_t opcode, uint32_t PC, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs) const;
+    void check_interlock(uint32_t opcode, uint32_t PC, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs, IR::Opcode op) const;
+    void wait_vu0(uint32_t opcode, uint32_t PC, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs) const;
+    void fallback_interpreter(IR::Instruction& instr, uint32_t opcode, void(*interpreter_fn)(EmotionEngine&, uint32_t)) const;
+
     void op_vector_by_scalar(IR::Instruction &instr, uint32_t upper, VU_SpecialReg scalar = VU_Regular) const;
 public:
     IR::Block translate(EmotionEngine& ee);
