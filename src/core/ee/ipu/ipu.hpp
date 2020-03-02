@@ -62,6 +62,7 @@ enum class IDEC_STATE
     INIT_CSC,
     EXEC_CSC,
     CHECK_START_CODE,
+    VALID_START_CODE,
     MACRO_INC,
     DONE
 };
@@ -69,7 +70,6 @@ enum class IDEC_STATE
 struct IDEC_Command
 {
     IDEC_STATE state;
-    int delay;
     uint32_t macro_type;
 
     bool decodes_dct;

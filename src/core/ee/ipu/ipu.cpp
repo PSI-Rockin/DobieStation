@@ -217,12 +217,6 @@ bool ImageProcessingUnit::process_IDEC()
     {
         switch (idec.state)
         {
-            case IDEC_STATE::DELAY:
-                idec.delay--;
-                if (idec.delay > 0)
-                    return false;
-                idec.state = IDEC_STATE::ADVANCE;
-                break;
             case IDEC_STATE::ADVANCE:
                 printf("[IPU] Advance stream\n");
                 if (!in_FIFO.advance_stream(command_option & 0x3F))
@@ -313,12 +307,27 @@ bool ImageProcessingUnit::process_IDEC()
             {
                 printf("[IPU] Check start code\n");
                 uint32_t code;
-                if (!in_FIFO.get_bits(code, 23))
+                if (!in_FIFO.get_bits(code, 8))
                     return false;
                 if (!code)
-                    idec.state = IDEC_STATE::DONE;
+                {
+                    idec.state = IDEC_STATE::VALID_START_CODE;
+                    in_FIFO.byte_align();
+                }
                 else
                     idec.state = IDEC_STATE::MACRO_INC;
+            }
+                break;
+            case IDEC_STATE::VALID_START_CODE:
+            {
+                printf("[IPU] Validate start code\n");
+                uint32_t code;
+                if (!in_FIFO.get_bits(code, 24))
+                    return false;
+                if (code == 1)
+                    idec.state = IDEC_STATE::DONE;
+                else
+                    throw VLC_Error("IDEC start code invalid");
             }
                 break;
             case IDEC_STATE::MACRO_INC:
@@ -1081,8 +1090,7 @@ void ImageProcessingUnit::write_command(uint32_t value)
                 break;
             case 0x01:
                 printf("[IPU] IDEC\n");
-                idec.state = IDEC_STATE::DELAY;
-                idec.delay = 1000;
+                idec.state = IDEC_STATE::ADVANCE;
                 idec.macro_type = 0;
                 idec.qsc = (command_option >> 16) & 0x1F;
                 idec.decodes_dct = command_option & (1 << 24);
