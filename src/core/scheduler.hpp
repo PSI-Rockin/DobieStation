@@ -21,6 +21,12 @@ struct SchedulerEvent
     bool paused;
 };
 
+struct SchedulerTimer
+{
+    uint64_t counter, target, overflow_mask, clockrate;
+    uint64_t event_id;
+};
+
 class Scheduler
 {
     private:
