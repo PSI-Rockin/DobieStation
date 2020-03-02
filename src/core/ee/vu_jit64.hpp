@@ -181,10 +181,12 @@ class VU_JIT64
         REG_64 alloc_int_reg(VectorUnit& vu, int vi_reg, REG_STATE state = REG_STATE::READ_WRITE);
         REG_64 alloc_sse_reg(VectorUnit& vu, int vf_reg, REG_STATE state = REG_STATE::READ_WRITE);
         REG_64 alloc_sse_scratchpad(VectorUnit& vu, int vf_reg);
+        REG_64 alloc_sse_temp_reg(VectorUnit& vu);
         void set_clamping(int xmmreg, bool value, uint8_t field);
         bool needs_clamping(int xmmreg, uint8_t field);
         void flush_regs(VectorUnit& vu);
         void flush_sse_reg(VectorUnit& vu, int vf_reg);
+        void flush_sse_temp_reg(VectorUnit& vu, REG_64 xmm);
 
         void create_prologue_block();
         void emit_prologue();
