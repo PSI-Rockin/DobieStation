@@ -135,7 +135,7 @@ void EE_JIT64::branch_cop2(EmotionEngine& ee, IR::Instruction &instr)
     REG_64 R15 = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
 
     // Conditionally move the success or failure destination into ee.PC
-    emitter.load_addr((uint64_t)&ee.vu0->running, REG_64::RAX);
+    emitter.load_addr((uint64_t)&ee.vu1->running, REG_64::RAX);
     emitter.MOV8_FROM_MEM(REG_64::RAX, REG_64::RAX);
     emitter.MOV8_REG_IMM(instr.get_field(), R15);
     emitter.CMP8_REG(REG_64::RAX, R15);

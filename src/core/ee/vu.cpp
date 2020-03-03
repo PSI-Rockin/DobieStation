@@ -612,7 +612,7 @@ uint32_t VectorUnit::read_reg(uint32_t addr)
             case 0x370:
                 return P.u;
             case 0x3A0:
-                return PC;
+                return PC >> 2;
             default:
                 return 0;
         }
