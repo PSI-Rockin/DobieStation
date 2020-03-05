@@ -127,13 +127,13 @@ int64_t Scheduler::calculate_timer_event_delta(uint64_t timer_id)
     //Don't calculate target delta if compare isn't higher, as overflow delta will be reached next
     //We MAX with 8 to work around possible precision issues in update_timer_event_time
     if (timers[timer_id].target <= timers[timer_id].counter)
-        return std::max(overflow_delta, 8LL);
+        return std::max(overflow_delta, (int64_t)8LL);
 
     int64_t target_delta =
             convert_to_ee_cycles(std::abs(timers[timer_id].target - timers[timer_id].counter) & overflow_mask,
                                  timers[timer_id].clockrate) - (timers[timer_id].remainder_clocks >> 8);
 
-    return std::max(std::min(overflow_delta, target_delta), 8LL);
+    return std::max(std::min(overflow_delta, target_delta), (int64_t)8LL);
 }
 
 void Scheduler::update_timer_event_time(uint64_t timer_id)
