@@ -25,7 +25,7 @@ Emulator::Emulator() :
     gs(&intc),
     iop(this),
     iop_dma(this, &cdvd, &sif, &sio2, &spu, &spu2),
-    iop_timers(this),
+    iop_timers(this, &scheduler),
     intc(&cpu, &scheduler),
     ipu(&intc, &dmac),
     timers(&intc, &scheduler),
@@ -114,7 +114,6 @@ void Emulator::run()
         vu0.run(ee_cycles);
         vu1_run_func(vu1, ee_cycles);
 
-        iop_timers.run(iop_cycles);
         iop_dma.run(iop_cycles);
         iop.run(iop_cycles);
         iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));

@@ -4,7 +4,7 @@
 
 #define VER_MAJOR 0
 #define VER_MINOR 0
-#define VER_REV 36
+#define VER_REV 37
 
 using namespace std;
 
@@ -494,15 +494,11 @@ void EmotionTiming::save_state(ofstream &state)
 void IOPTiming::load_state(ifstream &state)
 {
     state.read((char*)&timers, sizeof(timers));
-    state.read((char*)&cycle_count, sizeof(cycle_count));
-    state.read((char*)&next_event, sizeof(next_event));
 }
 
 void IOPTiming::save_state(ofstream &state)
 {
     state.write((char*)&timers, sizeof(timers));
-    state.write((char*)&cycle_count, sizeof(cycle_count));
-    state.write((char*)&next_event, sizeof(next_event));
 }
 
 void DMAC::load_state(ifstream &state)

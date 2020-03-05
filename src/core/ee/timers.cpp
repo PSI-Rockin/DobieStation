@@ -38,7 +38,6 @@ void EmotionTiming::timer_interrupt(int index)
     //Target check
     if (old_counter < timers[index].compare && timers[index].counter >= timers[index].compare)
     {
-        printf("BLORP\n");
         if (timers[index].control.compare_int_enable)
         {
             if (timers[index].control.clear_on_reference)

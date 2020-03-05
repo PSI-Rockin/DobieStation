@@ -14,11 +14,9 @@ struct CycleCount
 struct SchedulerEvent
 {
     uint64_t event_id;
-    int64_t time_to_run;//, last_update;
+    int64_t time_to_run;
     uint64_t param;
-    //int64_t pause_delta;
     int func_id;
-    //bool paused;
     bool pulse;
 };
 
@@ -74,15 +72,11 @@ class Scheduler
 
         uint64_t add_event(int func_id, uint64_t delta, uint64_t param = 0);
         void delete_event(uint64_t event_id);
-        /*void set_event_pause(uint64_t event_id, bool paused);
-        void set_new_event_delta(uint64_t event_id, uint64_t delta);
-        int64_t get_update_delta(uint64_t event_id);*/
 
         uint64_t create_timer(int func_id, uint64_t overflow_mask, uint64_t param = 0);
         void restart_timer(uint64_t timer_id);
 
         uint64_t get_timer_counter(uint64_t timer_id);
-
         void set_timer_counter(uint64_t timer_id, uint64_t counter);
         void set_timer_target(uint64_t timer_id, uint64_t target);
         void set_timer_clockrate(uint64_t timer_id, uint64_t clockrate);
