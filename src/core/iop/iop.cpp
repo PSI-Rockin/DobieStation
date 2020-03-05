@@ -247,7 +247,12 @@ uint32_t IOP::read_instr(uint32_t addr)
         cycles_to_run -= 4;
         muldiv_delay = std::max(muldiv_delay - 4, 0);
     }
-    else
+
+    //This is supposed to be icache handling code.
+    //Either due to a misunderstanding of the icache, the lack of cache emulation on the EE, or some other problems,
+    //this exposes race conditions in several games (Shadow Hearts, Devil May Cry) and makes them not work.
+    //This code should remain commented out until we have a better understanding of PS2 cache timings.
+    /*else
     {
         int index = (addr >> 4) & 0xFF;
         uint32_t tag = (addr & 0x1FFFFFFF) >> 12;
@@ -262,7 +267,7 @@ uint32_t IOP::read_instr(uint32_t addr)
             icache[index].valid = true;
             icache[index].tag = tag;
         }
-    }
+    }*/
     return e->iop_read32(addr & 0x1FFFFFFF);
 }
 

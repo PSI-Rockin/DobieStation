@@ -317,6 +317,22 @@ void Emitter64::CMP8_REG(REG_64 op2, REG_64 op1)
     modrm(0b11, op2, op1);
 }
 
+void Emitter64::CMP8_IMM_MEM(uint32_t imm, REG_64 mem, uint32_t offset)
+{
+    rex_rm(mem);
+    block->write<uint8_t>(0x80);
+    if ((mem & 7) == 5 || offset != 0)
+    {
+        modrm(0b10, 7, mem);
+        block->write<uint32_t>(offset);
+    }
+    else
+    {
+        modrm(0, 7, mem);
+    }
+    block->write<uint8_t>(imm);
+}
+
 void Emitter64::CMP16_IMM(uint16_t imm, REG_64 op)
 {
     block->write<uint8_t>(0x66);
@@ -798,7 +814,7 @@ void Emitter64::TEST8_REG_IMM(uint8_t imm, REG_64 op1)
     block->write<uint8_t>(imm);
 }
 
-void Emitter64::TEST8_MEM_IMM(uint8_t imm, REG_64 mem, uint32_t offset)
+void Emitter64::TEST8_IMM_MEM(uint8_t imm, REG_64 mem, uint32_t offset)
 {
     rex_r_rm((REG_64)0, mem);
     block->write<uint8_t>(0xF6);
@@ -945,8 +961,6 @@ void Emitter64::LEA64_M(REG_64 source, REG_64 dest, uint32_t offset, uint32_t sh
 
 void Emitter64::LEA64_REG(REG_64 source, REG_64 source2, REG_64 dest, uint32_t offset, uint32_t shift)
 {
-    offset <<= shift;
-
     uint8_t rex = 0x48;
     if (dest & 0x8) rex += 0x4;
     if (source & 0x8) rex += 0x2;
@@ -954,7 +968,7 @@ void Emitter64::LEA64_REG(REG_64 source, REG_64 source2, REG_64 dest, uint32_t o
     block->write<uint8_t>(rex);
     block->write<uint8_t>(0x8D);
     modrm(0b10, dest, 4);
-    modrm(0b00, source, source2);
+    modrm(shift, source, source2);
     block->write<uint32_t>(offset);
 }
 
@@ -1471,6 +1485,38 @@ void Emitter64::POP(REG_64 reg)
 {
     rex_rm(reg);
     block->write<uint8_t>(0x58 + (reg & 0x7));
+}
+
+void Emitter64::LDMXCSR(REG_64 mem, uint32_t offset)
+{
+    rex_rm(mem);
+    block->write<uint8_t>(0xF);
+    block->write<uint8_t>(0xAE);
+    if ((mem & 7) == 5 || offset != 0)
+    {
+        modrm(0b10, 2, mem);
+        block->write<uint32_t>(offset);
+    }
+    else
+    {
+        modrm(0, 2, mem);
+    }
+}
+
+void Emitter64::STMXCSR(REG_64 mem, uint32_t offset)
+{
+    rex_rm(mem);
+    block->write<uint8_t>(0xF);
+    block->write<uint8_t>(0xAE);
+    if ((mem & 7) == 5 || offset != 0)
+    {
+        modrm(0b10, 3, mem);
+        block->write<uint32_t>(offset);
+    }
+    else
+    {
+        modrm(0, 3, mem);
+    }
 }
 
 void Emitter64::CALL(uint64_t func)
@@ -2291,6 +2337,16 @@ void Emitter64::BLENDPS(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest)
     block->write<uint8_t>(0x0C);
     modrm(0b11, xmm_dest, xmm_source);
     block->write<uint8_t>(imm);
+}
+
+void Emitter64::BLENDVPS_XMM0(REG_64 xmm_source, REG_64 xmm_dest)
+{
+    block->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, xmm_source);
+    block->write<uint8_t>(0x0F);
+    block->write<uint8_t>(0x38);
+    block->write<uint8_t>(0x14);
+    modrm(0b11, xmm_dest, xmm_source);
 }
 
 void Emitter64::CMPEQPS(REG_64 xmm_source, REG_64 xmm_dest)

@@ -145,8 +145,11 @@ void ImageProcessingUnit::run()
                         process_FDEC();
                     break;
                 case 0x05:
-                    if (!in_FIFO.advance_stream(command_option & 0x3F))
-                        return;
+                    if (!bytes_left)
+                    {
+                        if (!in_FIFO.advance_stream(command_option & 0x3F))
+                            break;
+                    }
                     while (bytes_left && in_FIFO.f.size())
                     {
                         uint32_t value;
@@ -1179,7 +1182,7 @@ uint128_t ImageProcessingUnit::read_FIFO()
 void ImageProcessingUnit::write_FIFO(uint128_t quad)
 {
     printf("[IPU] Write FIFO: $%08X_%08X_%08X_%08X\n", quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
-    dmac->clear_DMA_request(IPU_TO);
+    
 
     //Certain games (Theme Park, Neo Contra, etc) read command output without sending a command.
     //They expect to read the first word of a newly started IPU_TO transfer.
@@ -1188,6 +1191,10 @@ void ImageProcessingUnit::write_FIFO(uint128_t quad)
         command_output = quad._u32[0];
         command_output = (command_output >> 24) | (((command_output >> 16) & 0xFF) << 8) |
                          (((command_output >> 8) & 0xFF) << 16) | (command_output << 24);
+    }
+    if (in_FIFO.f.size() == 7)
+    {
+        dmac->clear_DMA_request(IPU_TO);
     }
     if (in_FIFO.f.size() >= 8)
     {
