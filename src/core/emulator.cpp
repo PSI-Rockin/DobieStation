@@ -104,6 +104,10 @@ void Emulator::run()
         scheduler.update_cycle_counts();
 
         cpu.run(ee_cycles);
+        iop_dma.run(iop_cycles);
+        iop.run(iop_cycles);
+        iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
+
         dmac.run(bus_cycles);
         ipu.run();
         vif0.update(bus_cycles);
@@ -113,10 +117,6 @@ void Emulator::run()
         //VU's run at EE speed, however VU0 maintains its own speed
         vu0.run(ee_cycles);
         vu1_run_func(vu1, ee_cycles);
-
-        iop_dma.run(iop_cycles);
-        iop.run(iop_cycles);
-        iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
 
         scheduler.process_events();
     }
@@ -476,6 +476,8 @@ uint8_t Emulator::read8(uint32_t address)
 {
     if (address >= 0x1C000000 && address < 0x1C200000)
         return IOP_RAM[address & 0x1FFFFF];
+    if (address >= 0x10000000 && address < 0x10002000)
+        return (timers.read32(address & ~0xF) >> (8 * (address & 0x3)));
     if (address >= 0x10008000 && address < 0x1000F000)
         return dmac.read8(address);
     if (address >= 0x11000000 && address < 0x11004000)

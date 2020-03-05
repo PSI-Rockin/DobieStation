@@ -1,6 +1,6 @@
 set(TARGET Core)
 
-set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD 14)
 
 set(SOURCES
     errors.cpp

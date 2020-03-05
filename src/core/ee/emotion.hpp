@@ -58,7 +58,7 @@ class EmotionEngine
 
         uint64_t cycle_count;
         uint64_t cop2_last_cycle;
-        int cycles_to_run;
+        int32_t cycles_to_run;
         uint64_t run_event;
 
         Cop0* cp0;
@@ -76,9 +76,16 @@ class EmotionEngine
         uint32_t PC, new_PC;
         uint64_t SA;
 
+        /*
+           Property used by the JIT for COP2 sync purposes
+           Updated upon every COP2 instruction, necessary as a COP2 instruction in a branch delay slot
+           may otherwise mutate PC after a branch.
+        */
+        uint32_t PC_now;
+
         EE_ICacheLine icache[128];
 
-        bool wait_for_IRQ, wait_for_VU0;
+        bool wait_for_IRQ, wait_for_VU0, wait_for_interlock;
         bool branch_on;
         bool can_disassemble;
         int delay_slot;
@@ -103,7 +110,7 @@ class EmotionEngine
         void run_interpreter();
         void run_jit();
         uint64_t get_cycle_count();
-        uint64_t get_cycle_count_raw();
+        uint64_t get_cycle_count_goal();
         void set_cycle_count(uint64_t value);
         uint64_t get_cop2_last_cycle();
         void set_cop2_last_cycle(uint64_t value);
@@ -118,11 +125,14 @@ class EmotionEngine
         template <typename T> void set_gpr(int id, T value, int offset = 0);
         template <typename T> void set_LO(int id, T value, int offset = 0);
         uint32_t get_PC();
+        uint32_t get_PC_now();
         uint64_t get_LO();
         uint64_t get_LO1();
         uint64_t get_HI();
         uint64_t get_HI1();
         uint64_t get_SA();
+        Cop1& get_FPU();
+        VectorUnit& get_VU0();
         bool check_interlock();
         void clear_interlock();
         bool vu0_wait();
@@ -193,14 +203,11 @@ class EmotionEngine
         void mfps(int reg);
         void mfpc(int pc_reg, int reg);
 
-        void fpu_cop_s(uint32_t instruction);
         void fpu_bc1(int32_t offset, bool test_true, bool likely);
         void cop2_bc2(int32_t offset, bool test_true, bool likely);
-        void fpu_cvt_s_w(int dest, int source);
 
         void qmfc2(int dest, int cop_reg);
         void qmtc2(int source, int cop_reg);
-        void cop2_special(EmotionEngine &cpu, uint32_t instruction);
         void cop2_updatevu0();
 
         void load_state(std::ifstream& state);
@@ -227,14 +234,16 @@ inline void EmotionEngine::set_gpr(int id, T value, int offset)
         *(T*)&gpr[(id * sizeof(uint64_t) * 2) + (offset * sizeof(T))] = value;
 }
 
+// Returns the current cycle count at a given moment
 inline uint64_t EmotionEngine::get_cycle_count()
 {
-    return cycle_count - cycles_to_run;
+    return cycle_count;
 }
 
-inline uint64_t EmotionEngine::get_cycle_count_raw()
+// Return how many cycles the EE should be running until
+inline uint64_t EmotionEngine::get_cycle_count_goal()
 {
-    return cycle_count;
+    return cycle_count + cycles_to_run;
 }
 
 inline void EmotionEngine::set_cycle_count(uint64_t value)

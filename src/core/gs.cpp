@@ -95,6 +95,11 @@ uint32_t* GraphicsSynthesizer::get_framebuffer()
     return out;
 }
 
+void GraphicsSynthesizer::set_CSR_FIFO(uint8_t value)
+{
+    reg.CSR.FIFO_status = value;
+}
+
 void GraphicsSynthesizer::set_VBLANK(bool is_VBLANK)
 {
     GSMessagePayload payload;
@@ -200,15 +205,20 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
     
     gs_thread.send_message({ GSCommand::write64_t, payload });
 
-    //We need a check for SIGNAL here so that we can fire the interrupt
+    //Check for interrupt pre-processing
+    reg.write64(addr, value);
+
+    //We need a check for SIGNAL here so that we can fire the interrupt as soon as possible
     if (addr == 0x60)
     {
-        if (!reg.IMR.signal && !reg.CSR.SIGNAL_generated && !reg.CSR.SIGNAL_irq_pending)
-            intc->assert_IRQ((int)Interrupt::GS);
+        if (reg.CSR.SIGNAL_generated)
+        {
+            if(!reg.IMR.signal)
+                intc->assert_IRQ((int)Interrupt::GS);
+            else
+                reg.CSR.SIGNAL_irq_pending = true;
+        }
     }
-
-    //also check for interrupt pre-processing
-    reg.write64(addr, value);
 }
 
 void GraphicsSynthesizer::write64_privileged(uint32_t addr, uint64_t value)

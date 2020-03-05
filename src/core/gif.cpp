@@ -226,7 +226,7 @@ void GraphicsInterface::feed_GIF(uint128_t data)
         path[active_path].current_tag.regs_left = path[active_path].current_tag.reg_count;
         path[active_path].current_tag.data_left = path[active_path].current_tag.NLOOP;
 
-        path_status[active_path] = path[active_path].current_tag.format;
+       
         //Q is initialized to 1.0 upon reading a GIFtag
         internal_Q = 1.0f;
 
@@ -248,6 +248,14 @@ void GraphicsInterface::feed_GIF(uint128_t data)
             if (path[active_path].current_tag.data_left != 0)
                 gs->write64(0, path[active_path].current_tag.PRIM);
         }
+
+        if (path[active_path].current_tag.data_left != 0)
+        {
+            path_status[active_path] = path[active_path].current_tag.format;
+            gs->set_CSR_FIFO(0x2); //FIFO Full
+        }
+        else
+            path_status[active_path] = 5;
     }
     else
     {
@@ -280,8 +288,11 @@ void GraphicsInterface::feed_GIF(uint128_t data)
     {
         path_status[active_path] = 4;
         //Finish asserts after all host->local transfers have finished
-        if(path_queue == 0)
+        if (path_queue == 0)
+        {
             gs->assert_FINISH();
+            gs->set_CSR_FIFO(0x1); //FIFO Empty
+        }
         gs->wake_gs_thread();
         arbitrate_paths();
     }
@@ -363,7 +374,7 @@ void GraphicsInterface::request_PATH(int index, bool canInterruptPath3)
     {
         active_path = index;
 
-        if (active_path == 3 && (!path3_masked(3) || FIFO.size() <= 8))
+        if (active_path == 3 && (!path3_masked(3) || FIFO.size() <= 15))
             dmac->set_DMA_request(GIF);
         //printf("[GIF] PATH%d Active!\n", active_path);
     }
@@ -387,8 +398,10 @@ void GraphicsInterface::deactivate_PATH(int index)
     if (active_path == index)
     {
         active_path = 0;
+        clear_path_status(index);
         arbitrate_paths();
     }
+
     //printf("Deactivated PATH%d Active path now %d Queued Path %x\n", index, active_path, path_queue);
 }
 
@@ -445,7 +458,7 @@ void GraphicsInterface::send_PATH2(uint32_t data[])
 void GraphicsInterface::send_PATH3(uint128_t data)
 {
     //printf("[GIF] Send PATH3 $%08X_%08X_%08X_%08X\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
-    if (!path3_masked(3))
+    if (!path3_masked(3) && active_path == 3)
         feed_GIF(data);
     else if (FIFO.size() < 16)
     {

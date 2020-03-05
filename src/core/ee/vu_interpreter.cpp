@@ -1497,7 +1497,6 @@ void rsqrt(VectorUnit &vu, uint32_t instr)
 void waitq(VectorUnit &vu, uint32_t instr)
 {
     //waitq should always execute before upper
-    vu.waitq(instr);
     lower_op = &VectorUnit::nop;
 }
 
@@ -1517,10 +1516,9 @@ void mfir(VectorUnit &vu, uint32_t instr)
     uint32_t is = (instr >> 11) & 0x1F;
     uint32_t ft = (instr >> 16) & 0x1F;
     uint8_t dest_field = (instr >> 21) & 0xF;
-    vu.decoder.vi_read0 = is;
     vu.decoder.vf_write[1] = ft;
     vu.decoder.vf_write_field[1] = dest_field;
-    vu.decoder.vi_read0 = _is_;
+    vu.decoder.vi_read0 = is;
     lower_op = &VectorUnit::mfir;
 }
 
