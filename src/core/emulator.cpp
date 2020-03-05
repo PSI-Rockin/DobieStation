@@ -25,7 +25,7 @@ Emulator::Emulator() :
     gs(&intc),
     iop(this),
     iop_dma(this, &cdvd, &sif, &sio2, &spu, &spu2),
-    iop_timers(this),
+    iop_timers(this, &scheduler),
     intc(&cpu, &scheduler),
     ipu(&intc, &dmac),
     timers(&intc, &scheduler),
@@ -95,7 +95,7 @@ void Emulator::run()
 
     scheduler.add_event(vblank_start_id, VBLANK_START_CYCLES);
     scheduler.add_event(vblank_end_id, CYCLES_PER_FRAME);
-    
+
     while (!frame_ended)
     {
         int ee_cycles = scheduler.calculate_run_cycles();
@@ -114,11 +114,14 @@ void Emulator::run()
         vif0.update(bus_cycles);
         vif1.update(bus_cycles);
         gif.run(bus_cycles);
-        
+
         //VU's run at EE speed, however VU0 maintains its own speed
         vu0.run(ee_cycles);
         vu1_run_func(vu1, ee_cycles);
 
+        iop_dma.run(iop_cycles);
+        iop.run(iop_cycles);
+        iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
 
         scheduler.process_events();
     }
@@ -436,7 +439,7 @@ bool Emulator::interlock_cop2_check(bool isCOP2)
         //If the interlock is set on COP2 and not the VU (yet) then wait
         if (!vu_interlock)
             return true;
-        else 
+        else
             return false;
     }
     else
@@ -1180,9 +1183,9 @@ uint32_t Emulator::iop_read32(uint32_t address)
             return 0;
         case 0x1F801480:
             return iop_timers.read_counter(3);
-        case 0x1F801484:            
+        case 0x1F801484:
             return iop_timers.read_control(3);
-        case 0x1F801488:            
+        case 0x1F801488:
             return iop_timers.read_target(3);
         case 0x1F801490:
             return iop_timers.read_counter(4);
