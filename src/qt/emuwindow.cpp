@@ -773,6 +773,25 @@ void EmuWindow::update_status()
 
     emu_thread.set_ee_mode(mode);
 
+void EmuWindow::set_vu0_mode()
+{
+    CPU_MODE mode;
+    if (Settings::instance().vu0_jit_enabled)
+    {
+        mode = CPU_MODE::JIT;
+        vu0_mode = "JIT";
+    }
+    else
+    {
+        mode = CPU_MODE::INTERPRETER;
+        vu0_mode = "Interpreter";
+    }
+    emu_thread.set_vu0_mode(mode);
+}
+
+void EmuWindow::set_vu1_mode()
+{
+    CPU_MODE mode;
     if (Settings::instance().vu1_jit_enabled)
     {
         mode = CPU_MODE::JIT;

@@ -19,7 +19,7 @@ GeneralTab::GeneralTab(QWidget* parent)
     : QWidget(parent)
 {
     QRadioButton* ee_jit_checkbox = new QRadioButton(tr("JIT"));
-    QRadioButton* vu0_jit_checkbox = new QRadioButton(tr("JIT - Experimental"));
+    QRadioButton* vu0_jit_checkbox = new QRadioButton(tr("JIT"));
     QRadioButton* vu1_jit_checkbox = new QRadioButton(tr("JIT"));
     QRadioButton* ee_interpreter_checkbox = new QRadioButton(tr("Interpreter"));
     QRadioButton* vu0_interpreter_checkbox = new QRadioButton(tr("Interpreter"));

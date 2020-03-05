@@ -320,7 +320,6 @@ void Emulator::set_ee_mode(CPU_MODE mode)
             cpu.set_run_func(&EmotionEngine::run_jit);
             break;
     }
-
     EE_JIT::reset(true);
 }
 
