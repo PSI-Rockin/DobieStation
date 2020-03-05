@@ -27,29 +27,22 @@ void EmotionTiming::reset()
     timer_interrupt_event_id = scheduler->register_function([this] (uint64_t index) { timer_interrupt(index); });
 
     for (int i = 0; i < 4; i++)
-    {
-        events[i] = scheduler->add_event(timer_interrupt_event_id, 0xFFFFFFFF, i);
-        scheduler->set_event_pause(events[i], true);
-    }
+        events[i] = scheduler->create_timer(timer_interrupt_event_id, 0xFFFF, i);
 }
 
 void EmotionTiming::timer_interrupt(int index)
 {
     uint32_t old_counter = timers[index].counter;
-    update_timer(index);
+    timers[index].counter = scheduler->get_timer_counter(events[index]) & 0x1FFFF;
 
     //Target check
     if (old_counter < timers[index].compare && timers[index].counter >= timers[index].compare)
     {
+        printf("BLORP\n");
         if (timers[index].control.compare_int_enable)
         {
             if (timers[index].control.clear_on_reference)
-            {
-                timers[index].counter -= timers[index].compare;
-                timers[index].compare &= 0xFFFF;
-            }
-            else
-                timers[index].compare |= 0x10000;
+                timers[index].counter = 0;
 
             timers[index].control.compare_int = true;
             intc->assert_IRQ((int)Interrupt::TIMER0 + index);
@@ -60,7 +53,6 @@ void EmotionTiming::timer_interrupt(int index)
     if (timers[index].counter >= 0x10000)
     {
         timers[index].counter -= 0x10000;
-        timers[index].compare &= 0xFFFF;
 
         if (timers[index].control.overflow_int_enable)
         {
@@ -69,53 +61,13 @@ void EmotionTiming::timer_interrupt(int index)
         }
     }
 
-    //Recreate timer event, as this event will be deleted after the function ends
-    events[index] = scheduler->add_event(timer_interrupt_event_id, get_time_to_interrupt(index), index);
+    scheduler->set_timer_counter(events[index], timers[index].counter);
+    scheduler->restart_timer(events[index]);
 }
 
 bool EmotionTiming::is_timer_enabled(int index)
 {
     return !timers[index].gated && timers[index].control.enabled;
-}
-
-void EmotionTiming::update_timer(int index)
-{
-    if (!is_timer_enabled(index))
-        return;
-    int64_t delta = scheduler->get_update_delta(events[index]) >> 1;
-
-    if (timers[index].clock_scale > 1)
-    {
-        timers[index].clocks += delta % timers[index].clock_scale;
-        int64_t remainder_delta = timers[index].clocks / timers[index].clock_scale;
-        delta /= timers[index].clock_scale;
-        if (remainder_delta > 0)
-        {
-            timers[index].clocks %= timers[index].clock_scale;
-            delta += remainder_delta;
-        }
-    }
-
-    timers[index].counter += delta;
-}
-
-uint64_t EmotionTiming::get_time_to_interrupt(int index)
-{
-    if (!is_timer_enabled(index))
-        return 0xFFFFFFFF;
-    uint64_t overflow_mask = 0x10000;
-    uint64_t overflow_delta =
-            ((overflow_mask - timers[index].counter) * timers[index].clock_scale) - timers[index].clocks;
-
-    //Don't calculate target delta if compare isn't higher, as overflow delta will be reached next
-    if (timers[index].compare <= timers[index].counter)
-        return overflow_delta << 1;
-
-    uint64_t target_delta =
-            ((timers[index].compare - timers[index].counter) * timers[index].clock_scale) - timers[index].clocks;
-
-    //Convert to EE cycles
-    return std::min(overflow_delta, target_delta) << 1;
 }
 
 void EmotionTiming::gate(bool VSYNC, bool high)
@@ -125,7 +77,6 @@ void EmotionTiming::gate(bool VSYNC, bool high)
         TimerControl* ctrl = &timers[i].control;
         if (ctrl->gate_enable && ctrl->gate_VBLANK == VSYNC)
         {
-            update_timer(i);
             switch (ctrl->gate_mode)
             {
                 case 0:
@@ -157,7 +108,7 @@ void EmotionTiming::gate(bool VSYNC, bool high)
                     timers[i].gated = false;
                     break;
             }
-            scheduler->set_event_pause(events[i], !is_timer_enabled(i));
+            scheduler->set_timer_pause(events[i], !is_timer_enabled(i));
         }
     }
 }
@@ -169,8 +120,8 @@ uint32_t EmotionTiming::read32(uint32_t addr)
     switch (reg)
     {
         case 0:
-            update_timer(index);
-            return timers[index].counter & 0xFFFF;
+            timers[index].counter = scheduler->get_timer_counter(events[index]);
+            return timers[index].counter;
         case 1:
             return read_control(index);
         case 2:
@@ -185,30 +136,27 @@ void EmotionTiming::write32(uint32_t addr, uint32_t value)
 {
     int id = (addr >> 11) & 0x3;
     int reg = (addr >> 4) & 0x3;
-    update_timer(id);
     switch (reg)
     {
         case 0:
             printf("[EE Timing] Write32 timer %d counter: $%08X\n", id, value);
             timers[id].counter = value & 0xFFFF;
-            if (timers[id].counter < (timers[id].compare & 0xFFFF))
-                timers[id].compare &= 0xFFFF;
+            scheduler->set_timer_counter(events[id], timers[id].counter);
             break;
         case 1:
             write_control(id, value);
-            scheduler->set_event_pause(events[id], !is_timer_enabled(id));
+            scheduler->set_timer_pause(events[id], !is_timer_enabled(id));
+            scheduler->set_timer_clockrate(events[id], Scheduler::BUS_CLOCKRATE / timers[id].clock_scale);
             break;
         case 2:
             printf("[EE Timing] Write32 timer %d compare: $%08X\n", id, value);
             timers[id].compare = value & 0xFFFF;
-            if (timers[id].compare < timers[id].counter)
-                timers[id].compare |= 0x10000;
+            scheduler->set_timer_target(events[id], timers[id].compare);
             break;
         default:
             printf("[EE Timing] Unrecognized write32 to $%08X of $%08X\n", addr, value);
             break;
     }
-    scheduler->set_new_event_delta(events[id], get_time_to_interrupt(id));
 }
 
 uint32_t EmotionTiming::read_control(int index)

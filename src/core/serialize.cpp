@@ -4,7 +4,7 @@
 
 #define VER_MAJOR 0
 #define VER_MINOR 0
-#define VER_REV 35
+#define VER_REV 36
 
 using namespace std;
 
@@ -890,6 +890,17 @@ void Scheduler::load_state(ifstream &state)
     }
 
     state.read((char*)&next_event_id, sizeof(next_event_id));
+
+    int timer_size = 0;
+    state.read((char*)&timer_size, sizeof(timer_size));
+
+    for (int i = 0; i < timer_size; i++)
+    {
+        SchedulerTimer timer;
+        state.read((char*)&timer, sizeof(timer));
+
+        timers.push_back(timer);
+    }
 }
 
 void Scheduler::save_state(ofstream &state)
@@ -910,6 +921,12 @@ void Scheduler::save_state(ofstream &state)
     }
 
     state.write((char*)&next_event_id, sizeof(next_event_id));
+
+    int timer_size = timers.size();
+    state.write((char*)&timer_size, sizeof(timer_size));
+
+    for (int i = 0; i < timer_size; i++)
+        state.write((char*)&timers[i], sizeof(SchedulerTimer));
 }
 
 void Gamepad::load_state(ifstream &state)

@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <cstdlib>
 #include <limits>
 #include "errors.hpp"
 #include "scheduler.hpp"
@@ -26,6 +27,7 @@ void Scheduler::reset()
     closest_event_time = TimestampLimit::max();
 
     events.clear();
+    timers.clear();
 }
 
 unsigned int Scheduler::calculate_run_cycles()
@@ -79,10 +81,8 @@ uint64_t Scheduler::add_event(int func_id, uint64_t delta, uint64_t param)
     SchedulerEvent event;
     event.func_id = func_id;
     event.time_to_run = ee_cycles.count + delta;
-    event.last_update = ee_cycles.count;
     event.param = param;
     event.event_id = next_event_id;
-    event.paused = false;
 
     next_event_id++;
 
@@ -107,7 +107,7 @@ void Scheduler::delete_event(uint64_t event_id)
     Errors::die("[Scheduler] No event ID %lld found in delete_event", event_id);
 }
 
-void Scheduler::set_event_pause(uint64_t event_id, bool paused)
+/*void Scheduler::set_event_pause(uint64_t event_id, bool paused)
 {
     printf("Set event pause %lld: %d\n", event_id, paused);
     for (auto it = events.begin(); it != events.end(); it++)
@@ -169,6 +169,157 @@ int64_t Scheduler::get_update_delta(uint64_t event_id)
     }
 
     Errors::die("[Scheduler] No event ID %lld found in get_update_delta", event_id);
+}*/
+
+uint64_t Scheduler::convert_to_ee_cycles(uint64_t cycles, uint64_t clockrate)
+{
+    return cycles * EE_CLOCKRATE / clockrate;
+}
+
+int64_t Scheduler::calculate_timer_event_delta(uint64_t timer_id)
+{
+    //Bit of a kludge: divide by 2 so that the returned value doesn't cause an overflow in update_timer_event_time
+    if (timers[timer_id].paused)
+        return TimestampLimit::max() >> 1;
+    uint64_t overflow_mask = timers[timer_id].overflow_mask;
+
+    //remainder_clocks is 8-bit fixed point, so we need to shift right by 8 when using it.
+    int64_t overflow_delta =
+            convert_to_ee_cycles((overflow_mask + 1) - timers[timer_id].counter,
+                                 timers[timer_id].clockrate) - (timers[timer_id].remainder_clocks >> 8);
+
+    //Don't calculate target delta if compare isn't higher, as overflow delta will be reached next
+    //We MAX with 8 to work around possible precision issues in update_timer_event_time
+    if (timers[timer_id].target <= timers[timer_id].counter)
+        return std::max(overflow_delta, 8LL);
+
+    int64_t target_delta =
+            convert_to_ee_cycles(std::abs(timers[timer_id].target - timers[timer_id].counter) & overflow_mask,
+                                 timers[timer_id].clockrate) - (timers[timer_id].remainder_clocks >> 8);
+
+    return std::max(std::min(overflow_delta, target_delta), 8LL);
+}
+
+void Scheduler::update_timer_event_time(uint64_t timer_id)
+{
+    int64_t time = ee_cycles.count + calculate_timer_event_delta(timer_id);
+    SchedulerEvent* event = get_event_ptr(timers[timer_id].event_id);
+    event->time_to_run = time;
+    closest_event_time = std::min(time, closest_event_time);
+}
+
+void Scheduler::update_timer_counter(uint64_t timer_id)
+{
+    if (timers[timer_id].paused)
+        return;
+
+    //Here we use 8-bit fixed point to allow for some extra precision.
+    int64_t delta = (ee_cycles.count - timers[timer_id].last_update) << 8;
+    timers[timer_id].last_update = ee_cycles.count;
+
+    uint64_t clock_scale = (EE_CLOCKRATE << 8) / timers[timer_id].clockrate;
+    timers[timer_id].remainder_clocks += delta % clock_scale;
+    int64_t remainder_delta = timers[timer_id].remainder_clocks / clock_scale;
+    delta /= clock_scale;
+    if (remainder_delta > 0)
+    {
+        timers[timer_id].remainder_clocks %= clock_scale;
+        delta += remainder_delta;
+    }
+
+    timers[timer_id].counter += delta;
+}
+
+SchedulerEvent* Scheduler::get_event_ptr(uint64_t event_id)
+{
+    for (auto it = events.begin(); it != events.end(); it++)
+    {
+        if (it->event_id == event_id)
+            return &(*it);
+    }
+
+    Errors::die("[Scheduler] No event ID %lld found in get_event_ptr", event_id);
+}
+
+uint64_t Scheduler::create_timer(int func_id, uint64_t overflow_mask, uint64_t param)
+{
+    SchedulerTimer timer;
+    timer.counter = 0;
+    timer.target = TimestampLimit::max();
+    timer.clockrate = 1;
+    timer.paused = true;
+    timer.last_update = ee_cycles.count;
+    timer.overflow_mask = overflow_mask;
+    timer.remainder_clocks = 0;
+    timer.event_id = add_event(func_id, TimestampLimit::max(), param);
+    timer.param = param;
+    timer.func_id = func_id;
+
+    timers.push_back(timer);
+    return timers.size() - 1;
+}
+
+void Scheduler::restart_timer(uint64_t timer_id)
+{
+    SchedulerTimer* t = &timers[timer_id];
+    t->event_id = add_event(t->func_id, TimestampLimit::max(), t->param);
+    update_timer_event_time(timer_id);
+}
+
+uint64_t Scheduler::get_timer_counter(uint64_t timer_id)
+{
+    if (!timers[timer_id].paused)
+        update_timer_counter(timer_id);
+
+    return timers[timer_id].counter;
+}
+
+void Scheduler::set_timer_pause(uint64_t timer_id, bool paused)
+{
+    if (paused == timers[timer_id].paused)
+        return;
+
+    if (paused)
+    {
+        update_timer_counter(timer_id);
+        SchedulerEvent* event = get_event_ptr(timers[timer_id].event_id);
+        event->time_to_run = TimestampLimit::max();
+    }
+    else
+    {
+        update_timer_event_time(timer_id);
+        timers[timer_id].last_update = ee_cycles.count;
+    }
+
+    timers[timer_id].paused = paused;
+}
+
+void Scheduler::set_timer_counter(uint64_t timer_id, uint64_t counter)
+{
+    if (!timers[timer_id].paused)
+        update_timer_counter(timer_id);
+    timers[timer_id].counter = counter;
+    if (!timers[timer_id].paused)
+        update_timer_event_time(timer_id);
+}
+
+void Scheduler::set_timer_target(uint64_t timer_id, uint64_t target)
+{
+    if (!timers[timer_id].paused)
+        update_timer_counter(timer_id);
+    timers[timer_id].target = target;
+    if (!timers[timer_id].paused)
+        update_timer_event_time(timer_id);
+}
+
+void Scheduler::set_timer_clockrate(uint64_t timer_id, uint64_t clockrate)
+{
+    if (!timers[timer_id].paused)
+        update_timer_counter(timer_id);
+    timers[timer_id].clockrate = clockrate;
+    timers[timer_id].remainder_clocks = 0;
+    if (!timers[timer_id].paused)
+        update_timer_event_time(timer_id);
 }
 
 void Scheduler::update_cycle_counts()

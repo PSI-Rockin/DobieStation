@@ -14,17 +14,21 @@ struct CycleCount
 struct SchedulerEvent
 {
     uint64_t event_id;
-    int64_t time_to_run, last_update;
+    int64_t time_to_run;//, last_update;
     uint64_t param;
-    int64_t pause_delta;
+    //int64_t pause_delta;
     int func_id;
-    bool paused;
+    //bool paused;
+    bool pulse;
 };
 
 struct SchedulerTimer
 {
-    uint64_t counter, target, overflow_mask, clockrate;
-    uint64_t event_id;
+    uint64_t event_id, param;
+    int64_t counter, target, overflow_mask, clockrate, remainder_clocks;
+    int64_t last_update, pause_delta;
+    int func_id;
+    bool paused;
 };
 
 class Scheduler
@@ -38,10 +42,23 @@ class Scheduler
         uint64_t next_event_id;
 
         std::vector<std::function<void(uint64_t)> > registered_funcs;
+        std::vector<SchedulerTimer> timers;
         std::list<SchedulerEvent> events;
 
         int64_t closest_event_time;
+
+        uint64_t convert_to_ee_cycles(uint64_t cycles, uint64_t clockrate);
+
+        int64_t calculate_timer_event_delta(uint64_t timer_id);
+        void update_timer_event_time(uint64_t timer_id);
+        void update_timer_counter(uint64_t timer_id);
+
+        SchedulerEvent* get_event_ptr(uint64_t event_id);
     public:
+        constexpr static uint64_t EE_CLOCKRATE = 294912000; //294.912 MHz
+        constexpr static uint64_t BUS_CLOCKRATE = EE_CLOCKRATE / 2;
+        constexpr static uint64_t IOP_CLOCKRATE = EE_CLOCKRATE / 8;
+
         Scheduler();
 
         void reset();
@@ -57,9 +74,19 @@ class Scheduler
 
         uint64_t add_event(int func_id, uint64_t delta, uint64_t param = 0);
         void delete_event(uint64_t event_id);
-        void set_event_pause(uint64_t event_id, bool paused);
+        /*void set_event_pause(uint64_t event_id, bool paused);
         void set_new_event_delta(uint64_t event_id, uint64_t delta);
-        int64_t get_update_delta(uint64_t event_id);
+        int64_t get_update_delta(uint64_t event_id);*/
+
+        uint64_t create_timer(int func_id, uint64_t overflow_mask, uint64_t param = 0);
+        void restart_timer(uint64_t timer_id);
+
+        uint64_t get_timer_counter(uint64_t timer_id);
+
+        void set_timer_counter(uint64_t timer_id, uint64_t counter);
+        void set_timer_target(uint64_t timer_id, uint64_t target);
+        void set_timer_clockrate(uint64_t timer_id, uint64_t clockrate);
+        void set_timer_pause(uint64_t timer_id, bool paused);
 
         void update_cycle_counts();
         void process_events();
