@@ -160,11 +160,11 @@ void VectorUnit::reset()
     status_pipe = 0;
     clip_flags = 0;
     PC = 0;
+    VU_JIT::reset(this);
     //cycle_count = 1; //Set to 1 to prevent spurious events from occurring during execution
     if(!id)
         eecpu->set_cop2_last_cycle(eecpu->get_cycle_count());
     cycle_count = eecpu->get_cycle_count();
-    run_event = cycle_count;
     running = false;
     tbit_stop = false;
     vumem_is_dirty = true; //assume we don't know the contents on reset
@@ -387,7 +387,7 @@ void VectorUnit::run(int cycles)
         {
             if (is_interlocked())
             {
-                //Errors::die("VU%d Using M-Bit\n", vu.get_id());
+                //Errors::die("VU%d Using M-Bit\n", get_id());
                 //Break out from the VU0 loop to give COP2 time to catch the interlock
                 if(check_interlock())
                     break;
@@ -500,8 +500,11 @@ void VectorUnit::correct_jit_pipeline(int cycles)
 
 void VectorUnit::update_XGKick()
 {
+    if (!id)
+        return;
+
     int stalled_cycles = 0;
-    int cycles_to_xgkick = cycle_count - run_event;
+    int cycles_to_xgkick = eecpu->get_cycle_count() - cycle_count;
     if ((!running || XGKICK_stall) && transferring_GIF && cycles_to_xgkick > 0)
     {
         XGKICK_cycles += cycles_to_xgkick;
@@ -534,26 +537,37 @@ void VectorUnit::update_XGKick()
     if (stalled_cycles > 0)
     {
         correct_jit_pipeline(stalled_cycles);
-        run_event += stalled_cycles;
+        cycle_count += stalled_cycles;
     }
 
     if (!running)
-        run_event = cycle_count;
+        cycle_count = eecpu->get_cycle_count();
 }
 
 void VectorUnit::run_jit(int cycles)
 {
     int runfor = 0;
-    if (cycles > 0)
+
+    if (running == true)
     {
-        cycle_count += cycles;
-
         update_XGKick();
+        uint64_t cpu_cycles = eecpu->get_cycle_count();
 
-        while (running && !XGKICK_stall && run_event < cycle_count)
+        if (!id && (int32_t)(cpu_cycles - cycle_count) > 0)
+            clear_interlock();
+
+        while (running && !XGKICK_stall && cycle_count < cpu_cycles)
         {
-            run_event += VU_JIT::run(this);
+            cycle_count += VU_JIT::run(this);
+
+            if (get_id() == 0 && is_interlocked())
+            {
+                //Break out from the VU0 loop to give COP2 time to catch the interlock
+                break;
+            }
         }
+        if (running == false && !id)
+            eecpu->set_cop2_last_cycle(cycle_count);
     }
     //If the program ends before all the cycles have passed, we need to update XGKick again
     update_XGKick();
@@ -817,10 +831,7 @@ void VectorUnit::disasm_micromem()
     uint32_t crc = crc_microprogram();
 
     //Set the current program crc to the VU JIT
-    if (get_id() == 1)
-    {
-        VU_JIT::set_current_program(crc);
-    }
+    VU_JIT::set_current_program(crc, this);
 
     clear_dirty();
 
@@ -912,9 +923,9 @@ void VectorUnit::start_program(uint32_t addr)
     //printf("[VU%d] CallMS Starting execution at $%08X! Cur PC %x\n", get_id(), new_addr, PC);
 
     //Enable this if disabling micromem disasm
-    if (get_id() == 1 && is_dirty())
+    if (is_dirty())
     {
-        VU_JIT::set_current_program(crc_microprogram());
+        VU_JIT::set_current_program(crc_microprogram(), this);
         clear_dirty();
     }
     
@@ -934,7 +945,6 @@ void VectorUnit::start_program(uint32_t addr)
         flush_pipes();
     }
     //disasm_micromem();
-    run_event = cycle_count;
 }
 
 void VectorUnit::end_execution()

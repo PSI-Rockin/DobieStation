@@ -176,6 +176,8 @@ class VU_JIT64
         void save_pc(VectorUnit& vu, IR::Instruction& instr);
         void save_pipeline_state(VectorUnit& vu, IR::Instruction& instr);
         void move_delayed_branch(VectorUnit& vu, IR::Instruction& instr);
+        void early_exit(VectorUnit &vu, IR::Instruction &instr);
+        void check_interlock_vu0(VectorUnit &vu, IR::Instruction &instr);
 
         int search_for_register(AllocReg* regs, int vu_reg);
         REG_64 alloc_int_reg(VectorUnit& vu, int vi_reg, REG_STATE state = REG_STATE::READ_WRITE);

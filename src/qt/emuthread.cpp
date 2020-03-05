@@ -47,6 +47,11 @@ void EmuThread::set_ee_mode(CPU_MODE mode)
     wait_for_lock([=]() {  e.set_ee_mode(mode); } );
 }
 
+void EmuThread::set_vu0_mode(CPU_MODE mode)
+{
+    wait_for_lock([=]() { e.set_vu0_mode(mode); });
+}
+
 void EmuThread::set_vu1_mode(CPU_MODE mode)
 {
     wait_for_lock([=]() { e.set_vu1_mode(mode); } );

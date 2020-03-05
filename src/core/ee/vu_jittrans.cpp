@@ -36,10 +36,17 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
     {
         trans_branch_delay_slot = (vu.pipeline_state[1] >> 55) & 0x1;
         trans_ebit_delay_slot = (vu.pipeline_state[1] >> 56) & 0x1;
+        if (instr_info[prev_pc].branch_delay_slot)
+        {
+            IR::Instruction clear_delay(IR::Opcode::ClearIntDelay);
+            block.add_instr(clear_delay);
+        }
     }
-
-    IR::Instruction clear_delay(IR::Opcode::ClearIntDelay);
-    block.add_instr(clear_delay);
+    else
+    {
+        IR::Instruction clear_delay(IR::Opcode::ClearIntDelay);
+        block.add_instr(clear_delay);
+    }
 
     while (!block_end)
     {
@@ -52,7 +59,7 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
         {
             block_end = true;
 
-            if (trans_ebit_delay_slot)
+            if (instr_info[cur_PC].ebit_delay_slot)
                 trans_ebit_delay_slot = true;
 
             if (instr_info[cur_PC].branch_delay_slot)
@@ -179,7 +186,10 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
             if (instr_info[cur_PC].tbit_end)
             {
                 IR::Instruction instr(IR::Opcode::StopTBit);
+                instr.set_return_addr(cur_PC);
                 instr.set_jump_dest(cur_PC + 8);
+                instr.set_source(instr_info[cur_PC].pipeline_state[0]);
+                instr.set_source2(instr_info[cur_PC].pipeline_state[1]);
                 block.add_instr(instr);
                 Errors::print_warning("[VU_JIT] Stopped by T-Bit\n");
             }
@@ -235,16 +245,42 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
             pipeline.set_source2(instr_info[cur_PC].pipeline_state[1]);
             block.add_instr(pipeline);
         }
+        else if (instr_info[cur_PC].is_mbit == true)
+        {
+            IR::Instruction mbit(IR::Opcode::CheckInterlockVU0);
+            block.add_instr(mbit);
+
+            IR::Instruction exit(IR::Opcode::EarlyExit);
+            exit.set_return_addr(cur_PC);
+            exit.set_source(instr_info[cur_PC].pipeline_state[0]);
+            exit.set_source2(instr_info[cur_PC].pipeline_state[1]);
+            block.add_instr(exit);
+
+            block_end = true;
+        }
+        else if (instr_info[cur_PC].early_exit == true)
+        {
+            IR::Instruction exit(IR::Opcode::EarlyExit);
+            exit.set_return_addr(cur_PC);
+            exit.set_source(instr_info[cur_PC].pipeline_state[0]);
+            exit.set_source2(instr_info[cur_PC].pipeline_state[1]);
+            block.add_instr(exit);
+
+            block_end = true;
+        }
 
         cur_PC += 8;
     }
 
-    IR::Instruction update;
-    update.op = IR::Opcode::UpdateXgkick;
-    update.set_source(cycles_since_xgkick_update);
-    block.add_instr(update);
-    block.set_cycle_count(cycles_this_block);
+    if (vu.get_id())
+    {
+        IR::Instruction update;
+        update.op = IR::Opcode::UpdateXgkick;
+        update.set_source(cycles_since_xgkick_update);
+        block.add_instr(update);
+    }
 
+    block.set_cycle_count(cycles_this_block);
     return block;
 }
 
@@ -655,9 +691,11 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
         instr_info[PC].ebit_delay_slot = false;
         instr_info[PC].is_branch = false;
         instr_info[PC].is_ebit = false;
+        instr_info[PC].is_mbit = false;
         instr_info[PC].q_pipeline_instr = false;
         instr_info[PC].p_pipeline_instr = false;
         instr_info[PC].tbit_end = false;
+        instr_info[PC].early_exit = false;
 
         uint32_t upper = *(uint32_t*)&instr_mem[PC + 4];
         uint32_t lower = *(uint32_t*)&instr_mem[PC];
@@ -762,10 +800,21 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
 
         if (upper & (1 << 27))
         {
-            if (vu.read_fbrst() & (1 << (3 + (vu.get_id() * 8))))
+            block_end = true;
+            instr_info[PC].tbit_end = true;
+        }
+
+        if (!vu.get_id())
+        {
+            if (upper & (1 << 29))
             {
+                instr_info[PC].is_mbit = true;
                 block_end = true;
-                instr_info[PC].tbit_end = true;
+            }
+            else if (!block_end && !branch_delay_slot && !ebit_delay_slot && (PC - vu.get_PC()) > 256)
+            {
+                instr_info[PC].early_exit = true;
+                block_end = true;
             }
         }
 

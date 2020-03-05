@@ -19,17 +19,22 @@ GeneralTab::GeneralTab(QWidget* parent)
     : QWidget(parent)
 {
     QRadioButton* ee_jit_checkbox = new QRadioButton(tr("JIT"));
+    QRadioButton* vu0_jit_checkbox = new QRadioButton(tr("JIT"));
     QRadioButton* vu1_jit_checkbox = new QRadioButton(tr("JIT"));
     QRadioButton* ee_interpreter_checkbox = new QRadioButton(tr("Interpreter"));
+    QRadioButton* vu0_interpreter_checkbox = new QRadioButton(tr("Interpreter"));
     QRadioButton* vu1_interpreter_checkbox = new QRadioButton(tr("Interpreter"));
     QLabel* warning = new QLabel(tr("NOTE: Changes will take effect the next time you load a game."));
 
 
     bool ee_jit = Settings::instance().ee_jit_enabled;
+    bool vu0_jit = Settings::instance().vu0_jit_enabled;
     bool vu1_jit = Settings::instance().vu1_jit_enabled;
 
     ee_jit_checkbox->setChecked(ee_jit);
     ee_interpreter_checkbox->setChecked(!ee_jit);
+    vu0_jit_checkbox->setChecked(vu0_jit);
+    vu0_interpreter_checkbox->setChecked(!vu0_jit);
     vu1_jit_checkbox->setChecked(vu1_jit);
     vu1_interpreter_checkbox->setChecked(!vu1_jit);
 
@@ -39,6 +44,14 @@ GeneralTab::GeneralTab(QWidget* parent)
 
     connect(ee_interpreter_checkbox, &QRadioButton::clicked, this, [=] (){
         Settings::instance().ee_jit_enabled = false;
+    });
+
+    connect(vu0_jit_checkbox, &QRadioButton::clicked, this, [=]() {
+        Settings::instance().vu0_jit_enabled = true;
+    });
+
+    connect(vu0_interpreter_checkbox, &QRadioButton::clicked, this, [=]() {
+        Settings::instance().vu0_jit_enabled = false;
     });
 
     connect(vu1_jit_checkbox, &QRadioButton::clicked, this, [=] (){
@@ -51,14 +64,23 @@ GeneralTab::GeneralTab(QWidget* parent)
 
     connect(&Settings::instance(), &Settings::reload, this, [=]() {
         bool ee_jit_enabled = Settings::instance().ee_jit_enabled;
+        bool vu0_jit_enabled = Settings::instance().vu0_jit_enabled;
         bool vu1_jit_enabled = Settings::instance().vu1_jit_enabled;
         ee_jit_checkbox->setChecked(ee_jit_enabled);
         ee_interpreter_checkbox->setChecked(!ee_jit_enabled);
+        vu0_jit_checkbox->setChecked(vu0_jit_enabled);
+        vu0_interpreter_checkbox->setChecked(!vu0_jit_enabled);
         vu1_jit_checkbox->setChecked(vu1_jit_enabled);
         vu1_interpreter_checkbox->setChecked(!vu1_jit_enabled);
     });
 
 
+    QVBoxLayout* vu0_layout = new QVBoxLayout;
+    vu0_layout->addWidget(vu0_jit_checkbox);
+    vu0_layout->addWidget(vu0_interpreter_checkbox);
+
+    QGroupBox* vu0_groupbox = new QGroupBox(tr("VU0"));
+    vu0_groupbox->setLayout(vu0_layout);
 
     QVBoxLayout* vu1_layout = new QVBoxLayout;
     vu1_layout->addWidget(vu1_jit_checkbox);
@@ -77,6 +99,7 @@ GeneralTab::GeneralTab(QWidget* parent)
 
     QVBoxLayout* layout = new QVBoxLayout;
     layout->addWidget(ee_groupbox);
+    layout->addWidget(vu0_groupbox);
     layout->addWidget(vu1_groupbox);
     layout->addWidget(warning);
     layout->addStretch(1);

@@ -78,6 +78,11 @@ void vu_tbit_stop_execution(VectorUnit& vu)
     vu.stop_by_tbit();
 }
 
+void vu_check_interlock(VectorUnit& vu)
+{
+    vu.check_interlock();
+}
+
 void vu_set_int(VectorUnit& vu, int dest, uint16_t value)
 {
     vu.set_int(dest, value);
@@ -434,7 +439,7 @@ void VU_JIT64::load_int(VectorUnit &vu, IR::Instruction &instr)
     else
     {
         REG_64 dest = alloc_int_reg(vu, instr.get_dest(), REG_STATE::WRITE);
-        uint16_t offset = (instr.get_source() + field_offset) & 0x3FFF;
+        uint16_t offset = (instr.get_source() + field_offset) & vu.mem_mask;
         emitter.load_addr((uint64_t)&vu.data_mem.m[offset], REG_64::R15);
         emitter.MOV16_FROM_MEM(REG_64::R15, dest);
     }
@@ -498,7 +503,7 @@ void VU_JIT64::load_quad(VectorUnit &vu, IR::Instruction &instr)
     }
     else
     {
-        uint16_t offset = instr.get_source() & 0x3FFF;
+        uint16_t offset = instr.get_source() & vu.mem_mask;
         emitter.load_addr((uint64_t)&vu.data_mem.m[offset], REG_64::R15);
     }
 
@@ -539,7 +544,7 @@ void VU_JIT64::store_quad(VectorUnit &vu, IR::Instruction &instr)
     }
     else
     {
-        uint16_t offset = instr.get_source2() & 0x3FFF;
+        uint16_t offset = instr.get_source2() & vu.mem_mask;
         emitter.load_addr((uint64_t)&vu.data_mem.m[offset], REG_64::R15);
     }
 
@@ -2360,6 +2365,8 @@ void VU_JIT64::move_xitop(VectorUnit &vu, IR::Instruction &instr)
 
 void VU_JIT64::xgkick(VectorUnit &vu, IR::Instruction &instr)
 {
+    if (vu.get_id() == 0)
+        return;
     REG_64 base = alloc_int_reg(vu, instr.get_base(), REG_STATE::READ);
 
     //Check if we're already transferring, and stall the VU if we are
@@ -2422,6 +2429,8 @@ void VU_JIT64::xgkick(VectorUnit &vu, IR::Instruction &instr)
 
 void VU_JIT64::update_xgkick(VectorUnit &vu, IR::Instruction &instr)
 {
+    if (vu.get_id() == 0)
+        return;
     flush_regs(vu);
     for (int i = 0; i < 16; i++)
     {
@@ -2452,6 +2461,13 @@ void VU_JIT64::stop(VectorUnit &vu, IR::Instruction &instr)
 
 void VU_JIT64::stop_by_tbit(VectorUnit &vu, IR::Instruction &instr)
 {
+    
+    emitter.load_addr((uint64_t)&vu.FBRST, REG_64::RAX);
+    emitter.TEST32_EAX((1 << (3 + (vu.get_id() * 8))));
+
+    //Jump if tbit not set
+    uint8_t* no_tbit = emitter.JCC_NEAR_DEFERRED(ConditionCode::E);
+
     prepare_abi(vu, (uint64_t)&vu);
     call_abi_func((uint64_t)vu_tbit_stop_execution);
 
@@ -2462,6 +2478,27 @@ void VU_JIT64::stop_by_tbit(VectorUnit &vu, IR::Instruction &instr)
     emitter.load_addr((uint64_t)&prev_pc, REG_64::RAX);
     emitter.MOV32_IMM_MEM(0xFFFFFFFF, REG_64::RAX);
 
+    uint8_t* end_tbit = emitter.JMP_NEAR_DEFERRED();
+
+    emitter.set_jump_dest(no_tbit);
+
+    emitter.load_addr((uint64_t)&vu.PC, REG_64::RAX);
+    emitter.MOV16_IMM_MEM(instr.get_jump_dest(), REG_64::RAX);
+
+    emitter.load_addr((uint64_t)&prev_pc, REG_64::RAX);
+    emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::RAX);
+
+    emitter.load_addr((uint64_t)&vu.pipeline_state[0], REG_64::RAX);
+    emitter.MOV64_OI(instr.get_source(), REG_64::R15);
+    emitter.MOV64_TO_MEM(REG_64::R15, REG_64::RAX);
+
+    emitter.load_addr((uint64_t)&vu.pipeline_state[1], REG_64::RAX);
+    emitter.MOV64_OI(instr.get_source2(), REG_64::R15);
+    emitter.MOV64_TO_MEM(REG_64::R15, REG_64::RAX);
+
+    cleanup_recompiler(vu, false);
+
+    emitter.set_jump_dest(end_tbit);
     end_of_program = true;
 }
 
@@ -2503,6 +2540,31 @@ void VU_JIT64::move_delayed_branch(VectorUnit &vu, IR::Instruction &instr)
     emitter.MOV8_TO_MEM(REG_64::R15, REG_64::RAX);
 
     vu_branch = true;
+}
+
+void VU_JIT64::early_exit(VectorUnit &vu, IR::Instruction &instr)
+{
+    emitter.load_addr((uint64_t)&vu.PC, REG_64::RAX);
+    emitter.MOV16_IMM_MEM(instr.get_return_addr() + 8, REG_64::RAX);
+
+    emitter.load_addr((uint64_t)&prev_pc, REG_64::RAX);
+    emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::RAX);
+
+    emitter.load_addr((uint64_t)&vu.pipeline_state[0], REG_64::RAX);
+    emitter.MOV64_OI(instr.get_source(), REG_64::R15);
+    emitter.MOV64_TO_MEM(REG_64::R15, REG_64::RAX);
+
+    emitter.load_addr((uint64_t)&vu.pipeline_state[1], REG_64::RAX);
+    emitter.MOV64_OI(instr.get_source2(), REG_64::R15);
+    emitter.MOV64_TO_MEM(REG_64::R15, REG_64::RAX);
+
+    cleanup_recompiler(vu, true);
+}
+
+void VU_JIT64::check_interlock_vu0(VectorUnit &vu, IR::Instruction &instr)
+{
+    prepare_abi(vu, (uint64_t)&vu);
+    call_abi_func((uint64_t)vu_check_interlock);
 }
 
 int VU_JIT64::search_for_register(AllocReg *regs, int vu_reg)
@@ -3090,6 +3152,12 @@ void VU_JIT64::emit_instruction(VectorUnit &vu, IR::Instruction &instr)
             break;
         case IR::Opcode::MoveDelayedBranch:
             move_delayed_branch(vu, instr);
+            break;
+        case IR::Opcode::EarlyExit:
+            early_exit(vu, instr);
+            break;
+        case IR::Opcode::CheckInterlockVU0:
+            check_interlock_vu0(vu, instr);
             break;
         case IR::Opcode::FallbackInterpreter:
             fallback_interpreter(vu, instr);

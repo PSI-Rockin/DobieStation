@@ -182,6 +182,7 @@ int EmuWindow::load_exec(const char* file_name, bool skip_BIOS)
     }
 
     set_ee_mode();
+    set_vu0_mode();
     set_vu1_mode();
 
     current_ROM = file_info;
@@ -554,10 +555,10 @@ void EmuWindow::update_FPS(double FPS)
     framerate_avg = 0.8 * framerate_avg + 0.2 * FPS;
 
     // avoid multiple copies
-    QString status = QString("FPS: %1 (%2 ms, %3 ms worst)- %4 [EE: %5] [VU1: %6]").arg(
+    QString status = QString("FPS: %1 (%2 ms, %3 ms worst)- %4 [EE: %5] [VU0: %6] [VU1: %7]").arg(
         QString::number(framerate_avg, 'f', 1), QString::number(frametime_avg * 1000., 'f', 1),
         QString::number(worst_frame_time * 1000., 'f', 1),
-        current_ROM.fileName(), ee_mode, vu1_mode
+        current_ROM.fileName(), ee_mode, vu0_mode, vu1_mode
     );
 
     setWindowTitle(status);
@@ -700,6 +701,22 @@ void EmuWindow::set_ee_mode()
         ee_mode = "Interpreter";
     }
     emu_thread.set_ee_mode(mode);
+}
+
+void EmuWindow::set_vu0_mode()
+{
+    CPU_MODE mode;
+    if (Settings::instance().vu0_jit_enabled)
+    {
+        mode = CPU_MODE::JIT;
+        vu0_mode = "JIT";
+    }
+    else
+    {
+        mode = CPU_MODE::INTERPRETER;
+        vu0_mode = "Interpreter";
+    }
+    emu_thread.set_vu0_mode(mode);
 }
 
 void EmuWindow::set_vu1_mode()

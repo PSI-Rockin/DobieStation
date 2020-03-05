@@ -19,6 +19,7 @@ class EmuWindow : public QMainWindow
     private:
         EmuThread emu_thread;
         QString ee_mode;
+        QString vu0_mode;
         QString vu1_mode;
 
         std::chrono::system_clock::time_point old_frametime;
@@ -43,6 +44,7 @@ class EmuWindow : public QMainWindow
 
         SettingsWindow* settings_window = nullptr;
 
+        void set_vu0_mode();
         void set_vu1_mode();
         void set_ee_mode();
         void show_render_view();

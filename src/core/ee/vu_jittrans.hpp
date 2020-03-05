@@ -28,6 +28,7 @@ struct VU_InstrInfo
     bool branch_delay_slot;
     bool ebit_delay_slot;
     bool is_ebit;
+    bool is_mbit;
     bool is_branch;
     bool tbit_end;
     bool swap_ops;
@@ -40,6 +41,7 @@ struct VU_InstrInfo
     bool has_clip_result;
     int flag_instruction;
     bool advance_mac_pipeline;
+    bool early_exit;
     int stall_amount;
     int backup_vi;
     int q_pipe_delay_int_pass;

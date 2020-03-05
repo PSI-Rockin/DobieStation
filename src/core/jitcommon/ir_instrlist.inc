@@ -294,5 +294,6 @@ INSTR(ClearIntDelay)
 INSTR(WaitVU0)
 INSTR(UpdateVU0)
 INSTR(CheckInterlockVU0)
+INSTR(EarlyExit)
 
 INSTR(FallbackInterpreter)
