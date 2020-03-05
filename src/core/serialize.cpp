@@ -878,6 +878,8 @@ void Scheduler::load_state(ifstream &state)
     state.read((char*)&run_cycles, sizeof(run_cycles));
     state.read((char*)&closest_event_time, sizeof(closest_event_time));
 
+    events.clear();
+
     int event_size = 0;
     state.read((char*)&event_size, sizeof(event_size));
 
@@ -893,6 +895,8 @@ void Scheduler::load_state(ifstream &state)
 
     int timer_size = 0;
     state.read((char*)&timer_size, sizeof(timer_size));
+
+    timers.clear();
 
     for (int i = 0; i < timer_size; i++)
     {
