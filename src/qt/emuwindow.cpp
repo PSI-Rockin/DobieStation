@@ -34,8 +34,13 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
 
     GameListWidget* game_list_widget = new GameListWidget;
     connect(game_list_widget, &GameListWidget::game_double_clicked, this, [=](QString path) {
-        load_exec(path.toLocal8Bit(), true);
+        if (!path.isEmpty())
+        {
+            Settings::instance().add_rom_path(path);
+            load_exec(path.toLocal8Bit(), true);
+        }
     });
+
     connect(game_list_widget, &GameListWidget::settings_requested, [=]() {
         open_settings_window();
         settings_window->show_path_tab();
