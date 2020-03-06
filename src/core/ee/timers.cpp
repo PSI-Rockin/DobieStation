@@ -87,7 +87,7 @@ void EmotionTiming::gate(bool VSYNC, bool high)
                     if (high)
                     {
                         timers[i].counter = 0;
-                        timers[i].compare &= 0xFFFF;
+                        scheduler->set_timer_counter(events[i], 0);
                     }
                     timers[i].gated = false;
                     break;
@@ -96,14 +96,14 @@ void EmotionTiming::gate(bool VSYNC, bool high)
                     if (!high)
                     {
                         timers[i].counter = 0;
-                        timers[i].compare &= 0xFFFF;
+                        scheduler->set_timer_counter(events[i], 0);
                     }
                     timers[i].gated = false;
                     break;
                 case 3:
                     //Reset on HIGH or LOW
                     timers[i].counter = 0;
-                    timers[i].compare &= 0xFFFF;
+                    scheduler->set_timer_counter(events[i], 0);
                     timers[i].gated = false;
                     break;
             }
