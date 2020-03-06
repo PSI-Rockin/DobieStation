@@ -2496,8 +2496,6 @@ void VU_JIT64::stop_by_tbit(VectorUnit &vu, IR::Instruction &instr)
     emitter.MOV64_OI(instr.get_source2(), REG_64::R15);
     emitter.MOV64_TO_MEM(REG_64::R15, REG_64::RAX);
 
-    cleanup_recompiler(vu, false);
-
     emitter.set_jump_dest(end_tbit);
     end_of_program = true;
 }
@@ -2557,8 +2555,6 @@ void VU_JIT64::early_exit(VectorUnit &vu, IR::Instruction &instr)
     emitter.load_addr((uint64_t)&vu.pipeline_state[1], REG_64::RAX);
     emitter.MOV64_OI(instr.get_source2(), REG_64::R15);
     emitter.MOV64_TO_MEM(REG_64::R15, REG_64::RAX);
-
-    cleanup_recompiler(vu, true);
 }
 
 void VU_JIT64::check_interlock_vu0(VectorUnit &vu, IR::Instruction &instr)

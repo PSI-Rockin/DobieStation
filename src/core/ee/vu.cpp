@@ -270,6 +270,8 @@ void VectorUnit::handle_cop2_stalls()
 //Propogate all pipeline updates instantly
 void VectorUnit::flush_pipes()
 {
+    decoder.reset();
+
     for (int i = 0; i < 4; i++)
         update_mac_pipeline();
 
