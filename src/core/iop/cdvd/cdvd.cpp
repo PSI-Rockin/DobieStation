@@ -35,7 +35,8 @@ CDVD_Drive::CDVD_Drive(Emulator* e, IOP_DMA* dma) : e(e), dma(dma)
 
 CDVD_Drive::~CDVD_Drive()
 {
-    container->close();
+    if (container)
+        container->close();
 }
 
 void CDVD_Drive::reset()
