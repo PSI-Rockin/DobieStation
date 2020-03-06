@@ -479,11 +479,15 @@ void EmuWindow::keyPressEvent(QKeyEvent *event)
             emit update_joystick(JOYSTICK::LEFT, JOYSTICK_AXIS::Y, 0xFF);
             break;
         case Qt::Key_F1:
-            load_exec(Settings::instance().recent_roms.first().toLocal8Bit(), true);
+            if(!Settings::instance().recent_roms.isEmpty())
+                load_exec(Settings::instance().recent_roms.first().toLocal8Bit(), true);
             break;
         case Qt::Key_F2:
-            load_exec(Settings::instance().recent_roms.first().toLocal8Bit(), true);
-            load_state();
+            if(!Settings::instance().recent_roms.isEmpty())
+            {
+                load_exec(Settings::instance().recent_roms.first().toLocal8Bit(), true);
+                load_state();
+            }
             break;
         case Qt::Key_F7:
             emu_thread.gsdump_single_frame();
