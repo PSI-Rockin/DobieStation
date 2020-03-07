@@ -342,6 +342,6 @@ void vu0_start_program(VectorUnit& vu0, uint32_t addr);
 uint32_t vu0_read_CMSAR0_shl3(VectorUnit& vu0);
 bool ee_vu0_wait(EmotionEngine& ee);
 bool ee_check_interlock(EmotionEngine& ee);
-bool ee_clear_interlock(EmotionEngine& ee);
+void ee_clear_interlock(EmotionEngine& ee);
 
 #endif // EE_JIT64_HPP

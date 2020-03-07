@@ -1797,7 +1797,7 @@ bool ee_check_interlock(EmotionEngine& ee)
     return ee.check_interlock();
 }
 
-bool ee_clear_interlock(EmotionEngine& ee)
+void ee_clear_interlock(EmotionEngine& ee)
 {
-    return ee.vu0_wait();
+    ee.clear_interlock();
 }
