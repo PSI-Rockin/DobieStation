@@ -1611,7 +1611,7 @@ void EE_JIT64::handle_branch_likely(EmotionEngine& ee, IR::Block& block)
     uint8_t* offset_addr = emitter.JCC_NEAR_DEFERRED(ConditionCode::NZ);
 
     // flush the EE state back to the EE and return, not executing the delay slot
-    cleanup_recompiler(ee, true, true, block.get_cycle_count());
+    cleanup_recompiler(ee, false, true, block.get_cycle_count());
 
     // ...Which we do here.
     emitter.set_jump_dest(offset_addr);
