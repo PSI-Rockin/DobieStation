@@ -780,7 +780,7 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
 {
     if (reg.write64(addr, value))
         return;
-    addr &= 0xFFFF;
+    addr &= 0x7F;
     switch (addr)
     {
         case 0x0000:
