@@ -1,6 +1,5 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-
   <!-- configurations -->
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Release Optimized|x64">
@@ -20,43 +19,34 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
-
   <!-- globals -->
   <PropertyGroup Label="Globals">
     <ProjectGuid>{A77564F4-56BB-3D08-8126-3FD5FC44F217}</ProjectGuid>
-    <WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
-
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-
   <!-- configuration defaults -->
   <PropertyGroup Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v142</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
-
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings" />
-
   <!-- prop includes -->
   <ImportGroup Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" />
     <Import Project="..\common.props" />
   </ImportGroup>
-
   <PropertyGroup Label="UserMacros" />
-
   <PropertyGroup>
     <TargetName>$(ProjectName)$(Postfix)</TargetName>
   </PropertyGroup>
-
   <ItemDefinitionGroup>
     <Lib>
       <OutputFile>$(BinDir)\$(ProjectName)$(Postfix).lib</OutputFile>
     </Lib>
   </ItemDefinitionGroup>
-
   <!-- c files -->
   <ItemGroup>
     <ClCompile Include="$(ExtDir)\libdeflate\lib\aligned_malloc.c">
@@ -68,7 +58,6 @@
     <ClCompile Include="$(ExtDir)\libdeflate\lib\deflate_decompress.c">
       <DisableSpecificWarnings>4127;4245;4100;4018;%(DisableSpecificWarnings)</DisableSpecificWarnings>
     </ClCompile>
-
     <!-- headers-->
     <ClInclude Include="$(ExtDir)\libdeflate\lib\x86\adler32_impl.h" />
     <ClInclude Include="$(ExtDir)\libdeflate\lib\adler32_vec_template.h" />
@@ -95,6 +84,5 @@
     <ClInclude Include="$(ExtDir)\libdeflate\lib\unaligned.h" />
     <ClInclude Include="$(ExtDir)\libdeflate\lib\zlib_constants.h" />
   </ItemGroup>
-
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

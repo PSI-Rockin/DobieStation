@@ -3,22 +3,22 @@
 
 enum virtualController
 {
-	CROSS,
+	SELECT,
+	L3,
+	R3,
+	START,
+	UP,
+	RIGHT,
+	DOWN,
+	LEFT,
+	L2,
+	R2,
+	L1,
+	R1,
 	TRIANGLE,
 	CIRCLE,
+	CROSS,
 	SQUARE,
-	START,
-	SELECT,
-	R1,
-	R2,
-	R3,
-	L1,
-	L2,
-	L3,
-	DPAD_UP,
-	DPAD_DOWN,
-	DPAD_LEFT,
-	DPAD_RIGHT,
 	CONTROLLER_BUTTON_MAX
 };
 

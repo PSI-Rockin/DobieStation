@@ -8,23 +8,15 @@
 #include <string.h>
 #include <math.h>
 #include <unordered_map>
+#include <dirent.h>
 #include "common_input.hpp"
 #include <libevdev-1.0/libevdev/libevdev.h>
 #include <map>
 
-class LinuxInput : public CommonInput
-{
+// These Key Codes brought to you by, Rpcs3! https://github.com/RPCS3/rpcs3/blob/master/rpcs3/Input/evdev_joystick_handler.h
 
-private:
-    struct input_event ev;
-    struct libevdev *dev;
-
-    struct inputEvent in;
-
-    // These Key Codes brought to you by, Rpcs3! https://github.com/RPCS3/rpcs3/blob/master/rpcs3/Input/evdev_joystick_handler.h
-
-    // Unique button names for the config files and our pad settings dialog
-    const std::unordered_map<uint32_t, std::string> button_list =
+// Unique button names for the config files and our pad settings dialog
+/* const std::unordered_map<uint32_t, std::string> button_list =
         {
             // Xbox One S Controller returns some buttons as key when connected through bluetooth
             {KEY_BACK, "Back Key"},
@@ -178,7 +170,13 @@ private:
             {ABS_VOLUME, "Volume+"},
             {ABS_MISC, "Misc+"},
             {ABS_MT_SLOT, "Slot+"},
-            {ABS_MT_TOUCH_MAJOR, "MT TMaj+"},
+            {AByou'll probably have to clamp what I said to 255 though
+￼
+￼
+￼
+[8:56 PM]
+as I think it can produce 256
+S_MT_TOUCH_MAJOR, "MT TMaj+"},
             {ABS_MT_TOUCH_MINOR, "MT TMin+"},
             {ABS_MT_WIDTH_MAJOR, "MT WMaj+"},
             {ABS_MT_WIDTH_MINOR, "MT WMin+"},
@@ -213,7 +211,8 @@ private:
             {ABS_HAT1X, "Hat1 X-"},
             {ABS_HAT1Y, "Hat1 Y-"},
             {ABS_HAT2X, "Hat2 X-"},
-            {ABS_HAT2Y, "Hat2 Y-"},
+            {ABS_HAT2Y, "Hat2 Y-"},            {BTN_B, virtualController::CIRCLE},
+
             {ABS_HAT3X, "Hat3 X-"},
             {ABS_HAT3Y, "Hat3 Y-"},
             {ABS_PRESSURE, "Pressure-"},
@@ -238,20 +237,52 @@ private:
             {ABS_MT_DISTANCE, "MT Distance-"},
             {ABS_MT_TOOL_X, "MT Tool X-"},
             {ABS_MT_TOOL_Y, "MT Tool Y-"},
+        };*/
+
+struct evdevController
+{
+
+    std::string controllerName;
+    struct libevdev *dev;
+};
+
+class LinuxInput : public CommonInput
+{
+
+private:
+    struct input_event ev;
+    struct evdevController *dev;
+    struct inputEvent in;
+
+    struct libevdev *tempDev;
+
+    DIR *dir;
+    struct dirent *files;
+
+    std::string event;
+
+    std::map<uint, virtualController> buttonMap =
+        {
+
+            {BTN_SELECT, virtualController::SELECT},
+            {BTN_THUMB, virtualController::L3},
+            {BTN_THUMB2, virtualController::R3},
+            {BTN_START, virtualController::START},
+            {BTN_DPAD_UP, virtualController::UP},
+            {BTN_DPAD_RIGHT, virtualController::RIGHT},
+            {BTN_DPAD_DOWN, virtualController::DOWN},
+            {BTN_DPAD_LEFT, virtualController::LEFT},
+            {BTN_TL, virtualController::L1},
+            {BTN_TR, virtualController::R1},
+            {BTN_X, virtualController::TRIANGLE},
+            {BTN_Y, virtualController::CIRCLE},
+            {BTN_A, virtualController::CROSS},
+            {BTN_C, virtualController::SQUARE},
+            {ABS_Z, virtualController::L2},
+            {ABS_RZ, virtualController::R2}
+
         };
-
-    std::map<uint, virtualController> buttonMap = {{BTN_A, virtualController::CROSS},
-                                                   {BTN_WEST, virtualController::SQUARE},
-                                                   {BTN_START, virtualController::START},
-                                                   {BTN_SELECT, virtualController::SELECT},
-                                                   {BTN_B, virtualController::CIRCLE},
-                                                   {BTN_NORTH, virtualController::TRIANGLE},
-                                                   {BTN_DPAD_UP, virtualController::DPAD_UP},
-                                                   {BTN_DPAD_DOWN, virtualController::DPAD_DOWN},
-                                                   {BTN_DPAD_LEFT, virtualController::DPAD_LEFT},
-                                                   {BTN_DPAD_RIGHT, virtualController::DPAD_RIGHT}};
-
-    std::vector<struct libevdev *> interestingDevices;
+    std::vector<struct evdevController *> interestingDevices;
 
     std::string events[27] = {
         "event0", "event1", "event2", "event3", "event4", "event5",
@@ -260,7 +291,7 @@ private:
                                                                                      "event20",
         "event21", "event22", "event23", "event24", "event25", "event26", "event27"};
 
-    std::string filePath = "/dev/input/event27";
+    std::string filePath = "/dev/input/";
 
     std::string currentPath;
 
