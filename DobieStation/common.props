@@ -7,6 +7,7 @@
     <UIDir>$(SrcDir)qt\</UIDir>
     <CoreDir>$(SrcDir)core\</CoreDir>
     <ExtDir>$(RootDir)ext\</ExtDir>
+	<InputDir>$(SrcDir)input_common\</InputDir>
     <BuildDir>$(RootDir)build\</BuildDir>
     <BinDir>$(BuildDir)bin\</BinDir>
 
@@ -63,7 +64,8 @@
       <DataExecutionPrevention>true</DataExecutionPrevention>
       <AdditionalDependencies>$(BinDir)\Core$(Postfix).lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies>$(BinDir)\libdeflate$(Postfix).lib;%(AdditionalDependencies)</AdditionalDependencies>
-    </Link>
+      <AdditionalDependencies>$(BinDir)\InputCommon$(Postfix).lib;%(AdditionalDependencies)</AdditionalDependencies>
+	</Link>
   </ItemDefinitionGroup>
 
   <!-- release compile -->

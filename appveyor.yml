@@ -33,7 +33,7 @@ install:
 - sh: sudo apt-get update -qq
 - sh: sudo apt-get install -qq qt5-default qtmultimedia5-dev
 - sh: sudo apt-get install -qq libglu1-mesa-dev
-
+- sh: sudo apt-get install -qq libevdev-dev
 before_build:
 - cmd: call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat" %arch%
 

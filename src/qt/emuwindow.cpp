@@ -52,11 +52,11 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
     create_menu();
 
     connect(this, SIGNAL(shutdown()), &emu_thread, SLOT(shutdown()));
-    connect(this, SIGNAL(press_key(PAD_BUTTON)), &emu_thread, SLOT(press_key(PAD_BUTTON)));
-    connect(this, SIGNAL(release_key(PAD_BUTTON)), &emu_thread, SLOT(release_key(PAD_BUTTON)));
-    connect(this, SIGNAL(update_joystick(JOYSTICK, JOYSTICK_AXIS, uint8_t)),
-        &emu_thread, SLOT(update_joystick(JOYSTICK, JOYSTICK_AXIS, uint8_t))
-    );
+   // connect(this, SIGNAL(press_key(PAD_BUTTON)), &emu_thread, SLOT(press_key(PAD_BUTTON)));
+    //connect(this, SIGNAL(release_key(PAD_BUTTON)), &emu_thread, SLOT(release_key(PAD_BUTTON)));
+    //connect(this, SIGNAL(update_joystick(JOYSTICK, JOYSTICK_AXIS, uint8_t)),
+      //  &emu_thread, SLOT(update_joystick(JOYSTICK, JOYSTICK_AXIS, uint8_t))
+    //);
     connect(&emu_thread, SIGNAL(update_FPS(double)), this, SLOT(update_FPS(double)));
     connect(&emu_thread, SIGNAL(emu_error(QString)), this, SLOT(emu_error(QString)));
     connect(&emu_thread, SIGNAL(emu_non_fatal_error(QString)), this, SLOT(emu_non_fatal_error(QString)));
@@ -417,7 +417,7 @@ void EmuWindow::closeEvent(QCloseEvent *event)
     event->accept();
 }
 
-void EmuWindow::keyPressEvent(QKeyEvent *event)
+/*void EmuWindow::keyPressEvent(QKeyEvent *event)
 {
     event->accept();
     switch (event->key())
@@ -532,7 +532,7 @@ void EmuWindow::keyReleaseEvent(QKeyEvent *event)
             emit update_joystick(JOYSTICK::LEFT, JOYSTICK_AXIS::Y, 0x80);
             break;
     }
-}
+}*/
 
 void EmuWindow::update_FPS(double FPS)
 {

@@ -421,5 +421,7 @@
     <None Include="$(RootDir)LICENSE" />
     <None Include="$(RootDir).gitignore" />
     <None Include="$(RootDir).github\*" />
+    <None Include="$(RootDir).github\*" />
+    <None Include="$(RootDir).github\*" />
   </ItemGroup>
 </Project>

@@ -21,13 +21,14 @@
   </ItemGroup>
   <!-- globals -->
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{abd605c8-f15d-43d6-9955-aac852bfcb6c}</ProjectGuid>
+    <ProjectGuid>{F61CEB41-9B79-417D-9908-0D91A97A18F8}</ProjectGuid>
     <WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>
+    <ProjectName>InputCommon</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <!-- configuration defaults -->
   <PropertyGroup Label="Configuration">
-    <ConfigurationType>Application</ConfigurationType>
+    <ConfigurationType>StaticLibrary</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
     <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
@@ -49,55 +50,51 @@
   </PropertyGroup>
   <!-- props -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
-  <ImportGroup Label="ExtensionSettings" />
+  <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.props" />
+  </ImportGroup>
   <!-- prop includes -->
   <ImportGroup Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" />
     <Import Project="common.props" />
-    <Import Project="qt.props" />
   </ImportGroup>
   <PropertyGroup>
-    <TargetName>DobieStation$(Postfix)</TargetName>
+    <TargetName>$(ProjectName)$(Postfix)</TargetName>
   </PropertyGroup>
   <!-- default link -->
   <ItemDefinitionGroup>
     <Link>
-      <OutputFile>$(OutDir)\DobieStation$(Postfix).exe</OutputFile>
-      <SubSystem>Console</SubSystem>
+      <OutputFile>$(BinDir)\$(ProjectName)$(Postfix).lib</OutputFile>
     </Link>
   </ItemDefinitionGroup>
   <!-- cpp files -->
   <ItemGroup>
-    <ClCompile Include="$(UIDir)emuthread.cpp" />
-    <ClCompile Include="$(UIDir)emuwindow.cpp" />
-    <ClCompile Include="$(UIDir)renderwidget.cpp" />
-    <ClCompile Include="$(UIDir)settingswindow.cpp" />
-    <ClCompile Include="$(UIDir)gamelistwidget.cpp" />
-    <ClCompile Include="$(UIDir)bios.cpp" />
-    <ClCompile Include="$(UIDir)settings.cpp" />
-    <ClCompile Include="$(UIDir)main.cpp" />
+    <ClCompile Include="$(InputDir)win_input.cpp" />
+    <ClCompile Include="$(InputDir)input_api.cpp" />
   </ItemGroup>
   <!-- headers -->
   <ItemGroup>
-    <ClInclude Include="$(UIDir)bios.hpp" />
+    <ClInclude Include="$(InputDir)common_input.hpp" />
+    <ClInclude Include="$(InputDir)win_input.hpp" />
+    <ClInclude Include="$(InputDir)input_api.hpp" />
+    <ClInclude Include="resource.h" />
   </ItemGroup>
-  <!-- moc files -->
+  <!-- misc -->
   <ItemGroup>
-    <QtMoc Include="$(UIDir)settings.hpp" />
-    <QtMoc Include="$(UIDir)emuthread.hpp" />
-    <QtMoc Include="$(UIDir)emuwindow.hpp" />
-    <QtMoc Include="$(UIDir)renderwidget.hpp" />
-    <QtMoc Include="$(UIDir)settingswindow.hpp" />
-    <QtMoc Include="$(UIDir)gamelistwidget.hpp" />
+    <None Include="$(RootDir)README.md" />
+    <None Include="$(CoreDir)jitcommon\ir_instrlist.inc" />
+    <None Include="$(RootDir)appveyor.yml" />
+    <None Include="$(RootDir)CMakeLists.txt" />
+    <None Include="$(RootDir)LICENSE" />
+    <None Include="$(RootDir).gitignore" />
+    <None Include="$(RootDir)CONTRIBUTING.md" />
+    <None Include="application\application.pro" />
   </ItemGroup>
-  <!-- moc compile -->
   <ItemGroup>
-    <ClCompile Include="$(QtMocOutPrefix)settings.cpp" />
-    <ClCompile Include="$(QtMocOutPrefix)emuthread.cpp" />
-    <ClCompile Include="$(QtMocOutPrefix)emuwindow.cpp" />
-    <ClCompile Include="$(QtMocOutPrefix)renderwidget.cpp" />
-    <ClCompile Include="$(QtMocOutPrefix)settingswindow.cpp" />
-    <ClCompile Include="$(QtMocOutPrefix)gamelistwidget.cpp" />
+    <ResourceCompile Include="InputCommon.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
+  </ImportGroup>
 </Project>
