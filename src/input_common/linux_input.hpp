@@ -256,6 +256,7 @@
 		{ ABS_MT_DISTANCE    , "MT Distance-" },
 		{ ABS_MT_TOOL_X      , "MT Tool X-"   },
 		{ ABS_MT_TOOL_Y      , "MT Tool Y-"   },
+
 };
 
 class LinuxInput : public CommonInput
@@ -304,6 +305,7 @@ private:
         "event21", "event22", "event23", "event24", "event25", "event26", "event27"};
 
     std::string file_path = "/dev/input/";
+
     std::string current_path;
 
     int fd;
