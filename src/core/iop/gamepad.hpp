@@ -2,6 +2,7 @@
 #define GAMEPAD_HPP
 #include <cstdint>
 #include <fstream>
+#include <iostream>
 
 enum class PAD_BUTTON
 {

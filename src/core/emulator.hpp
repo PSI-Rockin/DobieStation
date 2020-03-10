@@ -13,6 +13,7 @@
 
 #include "iop/cdvd/cdvd.hpp"
 #include "iop/gamepad.hpp"
+#include "../input_common/input_api.hpp"
 #include "iop/iop.hpp"
 #include "iop/iop_dma.hpp"
 #include "iop/iop_intc.hpp"
@@ -70,6 +71,7 @@ class Emulator
         SubsystemInterface sif;
         VectorInterface vif0, vif1;
         VectorUnit vu0, vu1;
+        InputManager controller;
 
         int vblank_start_id, vblank_end_id, spu_event_id;
 
@@ -115,6 +117,7 @@ class Emulator
         void release_button(PAD_BUTTON button);
         void update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t val);
         bool skip_BIOS();
+        void poll_controller();
         void fast_boot();
         void set_skip_BIOS_hack(SKIP_HACK type);
         void set_ee_mode(CPU_MODE mode);

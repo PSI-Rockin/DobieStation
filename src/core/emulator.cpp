@@ -152,6 +152,7 @@ void Emulator::run()
 
         scheduler.process_events();
     }
+
     fesetround(originalRounding);
 }
 
@@ -206,6 +207,7 @@ void Emulator::reset()
     VU_JIT::reset(&vu0);
     VU_JIT::reset(&vu1);
     EE_JIT::reset(true);
+    controller.reset();
 
     MCH_DRD = 0;
     MCH_RICM = 0;
@@ -288,6 +290,39 @@ void Emulator::update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t va
 {
     pad.update_joystick(joystick, axis, val);
 }
+
+void Emulator::poll_controller()
+{
+    PAD_DATA state;
+    state = controller.poll();
+
+    for (int i = 0; i < CONTROLLER_BUTTON_MAX; i++)
+    {
+        if (state.input[i])
+        {
+            //std::cout << "button: " << i << " state: " << state.input[i] << std::endl;
+            press_button((PAD_BUTTON)i);
+        }
+        else
+        {
+            release_button((PAD_BUTTON)i);
+        }
+    }
+
+    state.lStickXAxis = (state.lStickXAxis + 1) * 255 / 2;
+    state.lStickYAxis = (state.lStickYAxis * -1 + 1) * 255 / 2;
+    state.rStickXAxis = (state.rStickXAxis + 1) * 255 / 2;
+    state.rStickYAxis = (state.rStickYAxis * -1 + 1) * 255 / 2;
+
+    //std::cout << "L XAxis: " << state.lStickXAxis << std::endl;
+    //std::cout << "L YAxis: " << state.lStickYAxis << std::endl;
+
+    update_joystick(JOYSTICK::LEFT, JOYSTICK_AXIS::X, static_cast<uint8_t>(state.lStickXAxis + 0.5));
+    update_joystick(JOYSTICK::LEFT, JOYSTICK_AXIS::Y, static_cast<uint8_t>(state.lStickYAxis + 0.5));
+    update_joystick(JOYSTICK::RIGHT, JOYSTICK_AXIS::X, static_cast<uint8_t>(state.rStickXAxis + 0.5));
+    update_joystick(JOYSTICK::RIGHT, JOYSTICK_AXIS::Y, static_cast<uint8_t>(state.rStickYAxis + 0.5));
+}
+
 
 uint32_t* Emulator::get_framebuffer()
 {

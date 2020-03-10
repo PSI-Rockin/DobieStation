@@ -60,6 +60,7 @@ void Gamepad::release_button(PAD_BUTTON button)
 
 void Gamepad::update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t val)
 {
+    std::cout << "Value: " << unsigned(val) << std::endl;
     joysticks[(int)joystick][(int)axis] = val;
 }
 
