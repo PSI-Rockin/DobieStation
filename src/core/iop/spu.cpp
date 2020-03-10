@@ -181,7 +181,7 @@ void SPU::write_DMA(uint32_t value)
     current_addr++;
     current_addr &= 0x000FFFFF;
 
-    RAM[current_addr + 1] = value >> 16;
+    RAM[current_addr] = value >> 16;
     spu_check_irq(current_addr);
     current_addr++;
     current_addr &= 0x000FFFFF;
