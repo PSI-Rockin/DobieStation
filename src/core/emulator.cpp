@@ -1778,6 +1778,12 @@ GraphicsSynthesizer& Emulator::get_gs()
     return gs;
 }
 
+void Emulator::dump_voice_data()
+{
+    spu.dump_voice_data();
+    spu2.dump_voice_data();
+}
+
 void Emulator::request_gsdump_toggle()
 {
     gsdump_requested = true;

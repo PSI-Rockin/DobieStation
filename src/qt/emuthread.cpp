@@ -37,6 +37,11 @@ void EmuThread::reset()
     current_gs_message = 0;
 }
 
+void EmuThread::dump_voices()
+{
+    wait_for_lock([=]() { e.dump_voice_data(); } );
+}
+
 void EmuThread::set_skip_BIOS_hack(SKIP_HACK skip)
 {
     wait_for_lock([=]() { e.set_skip_BIOS_hack(skip); } );

@@ -173,6 +173,8 @@ class Emulator
 
         void test_iop();
         GraphicsSynthesizer& get_gs();//used for gs dumps
+
+        void dump_voice_data();
 };
 
 #endif // EMULATOR_HPP

@@ -93,6 +93,8 @@ class SPU
     public:
         SPU(int id, IOP_INTC* intc, IOP_DMA* dma);
 
+        void dump_voice_data();
+
         bool running_ADMA();
         bool can_write_ADMA();
 

@@ -1,5 +1,8 @@
 #include <algorithm>
 #include <cstdio>
+#include <fstream>
+#include <ostream>
+#include <sstream>
 #include "spu.hpp"
 #include "iop_dma.hpp"
 #include "iop_intc.hpp"
@@ -63,6 +66,43 @@ void SPU::spu_irq(int index)
     printf("[SPU%d] IRQA interrupt!\n", index);
     spdif_irq |= 4 << index;
     intc->assert_irq(9);
+}
+
+void SPU::dump_voice_data()
+{
+    std::ofstream ramdump("spu.ram", std::fstream::out | std::fstream::binary);
+    ramdump.write(reinterpret_cast<char const *>(RAM), 1024*1024*2);
+    ramdump.close();
+    for (int i = 0; i < 24; i++)
+    {
+        auto voice = voices[i];
+        printf("reading voice %d on spu %d starting at 0x%X\n", i, id, voice.start_addr);
+        printf("loop addr is %X\n", voice.loop_addr);
+        std::ostringstream fname;
+        fname << "spu_" << id << "_voice_" << i << ".spuv";
+        std::ofstream out(fname.str().c_str(), std::fstream::out | std::fstream::binary);
+
+        auto *data = (RAM + voice.start_addr);
+
+        int dataleft = 1;
+
+        if (out)
+        {
+            while (dataleft)
+            {
+                uint16_t header = *data;
+
+                if (((header >> 8) & 1) == 1)
+                {
+                    dataleft = 0;
+                }
+
+                out.write((char*)(data), 16);
+                data += 8;
+            }
+        }
+        out.close();
+    }
 }
 
 void SPU::gen_sample()

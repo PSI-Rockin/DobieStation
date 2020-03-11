@@ -46,6 +46,7 @@ class EmuThread : public QThread
         void reset();
 
         void set_skip_BIOS_hack(SKIP_HACK skip);
+        void dump_voices();
         void set_ee_mode(CPU_MODE mode);
         void set_vu0_mode(CPU_MODE mode);
         void set_vu1_mode(CPU_MODE mode);

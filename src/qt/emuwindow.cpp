@@ -381,6 +381,12 @@ void EmuWindow::create_menu()
         frame_action->setChecked(emu_thread.frame_advance);
     });
 
+    auto voice_action = new QAction(tr("&Dump SPU voices"), this);
+    connect(voice_action, &QAction::triggered, this, [=] (){
+        emu_thread.dump_voices();
+    });
+
+
     auto shutdown_action = new QAction(tr("&Shutdown"), this);
     connect(shutdown_action, &QAction::triggered, this, [=]() {
         emu_thread.pause(PAUSE_EVENT::GAME_NOT_LOADED);
@@ -394,6 +400,7 @@ void EmuWindow::create_menu()
     emulation_menu->addAction(unpause_action);
     emulation_menu->addSeparator();
     emulation_menu->addAction(frame_action);
+    emulation_menu->addAction(voice_action);
     emulation_menu->addSeparator();
     emulation_menu->addAction(shutdown_action);
 
