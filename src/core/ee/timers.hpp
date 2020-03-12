@@ -49,7 +49,7 @@ class EmotionTiming
         void write_control(int index, uint32_t value);
 
         bool is_timer_enabled(int index);
-        void timer_interrupt(int index);
+        void timer_interrupt(int index, bool overflow);
     public:
         EmotionTiming(INTC* intc, Scheduler* scheduler);
 
