@@ -28,6 +28,8 @@ void Scheduler::reset()
 
     events.clear();
     timers.clear();
+
+    timer_event_id = register_function([this] (uint64_t param) { timer_event(param);});
 }
 
 unsigned int Scheduler::calculate_run_cycles()
@@ -71,6 +73,13 @@ int Scheduler::register_function(std::function<void (uint64_t)> func)
 {
     int id = registered_funcs.size();
     registered_funcs.push_back(func);
+    return id;
+}
+
+int Scheduler::register_timer_callback(std::function<void (uint64_t, bool)> cb)
+{
+    int id = timer_callbacks.size();
+    timer_callbacks.push_back(cb);
     return id;
 }
 
@@ -166,6 +175,33 @@ void Scheduler::update_timer_counter(uint64_t timer_id)
     timers[timer_id].counter += delta;
 }
 
+void Scheduler::timer_event(uint64_t index)
+{
+    uint32_t old_counter = timers[index].counter;
+    timers[index].counter = get_timer_counter(index);
+
+    int cb_id = timers[index].callback_id;
+
+    //Target check
+    if ((old_counter <= timers[index].target && timers[index].counter >= timers[index].target) ||
+        (old_counter >= timers[index].target && timers[index].counter >= (timers[index].target | (timers[index].overflow_mask + 1))))
+    {
+        if (timers[index].can_target)
+            timer_callbacks[cb_id](timers[index].param, false);
+    }
+
+    //Overflow check
+    if (timers[index].counter > timers[index].overflow_mask)
+    {
+        timers[index].counter -= timers[index].overflow_mask + 1;
+
+        if (timers[index].can_overflow)
+            timer_callbacks[cb_id](timers[index].param, true);
+    }
+
+    restart_timer(index);
+}
+
 SchedulerEvent* Scheduler::get_event_ptr(uint64_t event_id)
 {
     for (auto it = events.begin(); it != events.end(); it++)
@@ -177,8 +213,10 @@ SchedulerEvent* Scheduler::get_event_ptr(uint64_t event_id)
     Errors::die("[Scheduler] No event ID %lld found in get_event_ptr", event_id);
 }
 
-uint64_t Scheduler::create_timer(int func_id, uint64_t overflow_mask, uint64_t param)
+uint64_t Scheduler::create_timer(int callback_id, uint64_t overflow_mask, uint64_t param)
 {
+    if (callback_id < 0 || callback_id >= timer_callbacks.size())
+        Errors::die("[Scheduler] Out-of-bounds callback ID %d given in create_timer", callback_id);
     SchedulerTimer timer;
     timer.counter = 0;
     timer.target = TimestampLimit::max();
@@ -187,9 +225,11 @@ uint64_t Scheduler::create_timer(int func_id, uint64_t overflow_mask, uint64_t p
     timer.last_update = ee_cycles.count;
     timer.overflow_mask = overflow_mask;
     timer.remainder_clocks = 0;
-    timer.event_id = add_event(func_id, TimestampLimit::max(), param);
+    timer.event_id = add_event(timer_event_id, TimestampLimit::max(), timers.size());
     timer.param = param;
-    timer.func_id = func_id;
+    timer.callback_id = callback_id;
+    timer.can_overflow = false;
+    timer.can_target = false;
 
     timers.push_back(timer);
     return timers.size() - 1;
@@ -198,7 +238,7 @@ uint64_t Scheduler::create_timer(int func_id, uint64_t overflow_mask, uint64_t p
 void Scheduler::restart_timer(uint64_t timer_id)
 {
     SchedulerTimer* t = &timers[timer_id];
-    t->event_id = add_event(t->func_id, TimestampLimit::max(), t->param);
+    t->event_id = add_event(timer_event_id, TimestampLimit::max(), timer_id);
     update_timer_event_time(timer_id);
 }
 
@@ -228,6 +268,12 @@ void Scheduler::set_timer_pause(uint64_t timer_id, bool paused)
     }
 
     timers[timer_id].paused = paused;
+}
+
+void Scheduler::set_timer_int_mask(uint64_t timer_id, bool can_overflow, bool can_target)
+{
+    timers[timer_id].can_overflow = can_overflow;
+    timers[timer_id].can_target = can_target;
 }
 
 void Scheduler::set_timer_counter(uint64_t timer_id, uint64_t counter)

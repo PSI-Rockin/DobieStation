@@ -29,7 +29,9 @@ void IOPTiming::reset()
         timers[i].target = 0;
     }
 
-    timer_interrupt_event_id = scheduler->register_function([this] (uint64_t param) { timer_interrupt(param); });
+    timer_interrupt_event_id =
+            scheduler->register_timer_callback(
+                [this] (uint64_t index, bool overflow) { IRQ_test(index, overflow); });
 
     for (int i = 0; i < 3; i++)
         events[i] = scheduler->create_timer(timer_interrupt_event_id, 0xFFFF, i);
@@ -41,40 +43,17 @@ void IOPTiming::reset()
         scheduler->set_timer_pause(events[i], false);
 }
 
-void IOPTiming::timer_interrupt(int index)
+void IOPTiming::IRQ_test(int index, bool overflow)
 {
-    uint64_t old_counter = timers[index].counter;
-    timers[index].counter = scheduler->get_timer_counter(events[index]);
-
-    //Target check
-    if (old_counter < timers[index].target && timers[index].counter >= timers[index].target)
+    if (!overflow)
     {
-        timers[index].control.compare_interrupt = true;
-        if (timers[index].control.compare_interrupt_enabled)
+        if (timers[index].control.zero_return)
         {
-            IRQ_test(index, false);
-            if (timers[index].control.zero_return)
-                timers[index].counter = 0;
+            timers[index].counter = 0;
+            scheduler->set_timer_counter(events[index], 0);
         }
     }
 
-    uint64_t overflow = (index > 2) ? 0x100000000ULL : 0x10000;
-
-    //Overflow check
-    if (timers[index].counter >= overflow)
-    {
-        timers[index].counter -= overflow;
-
-        if (timers[index].control.overflow_interrupt_enabled)
-            IRQ_test(index, true);
-    }
-
-    scheduler->set_timer_counter(events[index], timers[index].counter);
-    scheduler->restart_timer(events[index]);
-}
-
-void IOPTiming::IRQ_test(int index, bool overflow)
-{
     if (timers[index].control.int_enable)
     {
         const static int IRQs[] = {4, 5, 6, 14, 15, 16};
@@ -218,6 +197,9 @@ void IOPTiming::write_control(int index, uint16_t value)
     scheduler->set_timer_clockrate(events[index], clockrate);
     scheduler->set_timer_counter(events[index], 0);
     scheduler->set_timer_pause(events[index], !timers[index].control.started);
+    scheduler->set_timer_int_mask(events[index],
+                                  timers[index].control.overflow_interrupt_enabled,
+                                  timers[index].control.compare_interrupt_enabled);
 }
 
 void IOPTiming::write_target(int index, uint32_t value)
