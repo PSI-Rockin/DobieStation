@@ -74,3 +74,10 @@ void IPU_FIFO::reset()
     cached_bits = 0;
     bit_cache_dirty = true;
 }
+
+void IPU_FIFO::byte_align()
+{
+    int bits = bit_pointer & 0x7;
+    if (bits)
+        advance_stream(8 - bits);
+}
