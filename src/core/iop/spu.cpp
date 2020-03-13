@@ -282,7 +282,7 @@ uint16_t SPU::read16(uint32_t addr)
                 return (voices[v].current_addr >> 16) & 0xF;
             case 10:
                 printf("[SPU%d] Read Voice %d NAXL: $%04X\n", id, v, voices[v].current_addr & 0xFFFF);
-                return (voices[v].current_addr) & 0xFFFF;
+                return voices[v].current_addr & 0xFFFF;
         }
     }
     switch (addr)
@@ -421,7 +421,7 @@ void SPU::write16(uint32_t addr, uint16_t value)
                 break;
             case 2: //SSAL
                 voices[v].start_addr &= ~0xFFFF;
-                voices[v].start_addr |= value & 0xFFF0;
+                voices[v].start_addr |= value & 0xFFF8;
                 printf("[SPU%d] Write V%d SSA: $%08X (L: $%04X)\n", id, v, voices[v].start_addr, value);
                 break;
             case 4: //LSAXH
@@ -432,7 +432,7 @@ void SPU::write16(uint32_t addr, uint16_t value)
                 break;
             case 6: //LSAXL
                 voices[v].loop_addr &= ~0xFFFF;
-                voices[v].loop_addr |= value & 0xFFF0;
+                voices[v].loop_addr |= value & 0xFFF8;
                 voices[v].loop_addr_specified = true;
                 printf("[SPU%d] Write V%d LSAX: $%08X (L: $%04X)\n", id, v, voices[v].loop_addr, value);
                 break;
