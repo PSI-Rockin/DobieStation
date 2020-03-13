@@ -1,6 +1,12 @@
 #include <cstring>
 #include "bincuereader.hpp"
 
+/**
+ * Currently the CUE file is not parsed or even opened at all. I don't think this matters a whole lot for
+ * PS2 games, but it will cause quite a few problems with PSX games.
+ * Since there's no good way to test CUE parsing, it will have to wait for later.
+ */
+
 BinCueReader::BinCueReader()
 {
 
