@@ -46,6 +46,8 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
         std::vector<IR::Instruction> upper_instrs;
         std::vector<IR::Instruction> lower_instrs;
 
+        cur_PC &= vu.mem_mask;
+
         if (instr_info[cur_PC].branch_delay_slot || instr_info[cur_PC].ebit_delay_slot || instr_info[cur_PC].tbit_end)
         {
             block_end = true;
@@ -281,12 +283,17 @@ int VU_JitTranslator::efu_pipe_cycles(uint32_t lower_instr)
                 return 18;
             case 0x73:
                 return 24;
+            case 0x74:
+            case 0x75:
+                return 54;
             case 0x76:
             case 0x78:
             case 0x7A:
                 return 12;
             case 0x7C:
                 return 29;
+            case 0x7D:
+                return 54;
             case 0x7E:
                 return 44;
             default:
@@ -485,8 +492,8 @@ void VU_JitTranslator::handle_vu_stalls(VectorUnit &vu, uint16_t PC, uint32_t lo
         if (q_pipe_delay > 0)
         {
             //printf("[VU_JIT] Q pipe delay of %d stall amount of %d\n", q_pipe_delay, instr_info[PC].stall_amount);
-            if (instr_info[PC].stall_amount < q_pipe_delay)
-                instr_info[PC].stall_amount = q_pipe_delay;
+            if (instr_info[PC].stall_amount < q_pipe_delay-1)
+                instr_info[PC].stall_amount = q_pipe_delay-1;
 
             instr_info[PC].update_q_pipeline = true;
         }
@@ -494,7 +501,7 @@ void VU_JitTranslator::handle_vu_stalls(VectorUnit &vu, uint16_t PC, uint32_t lo
         q_pipe_delay = fdiv_pipe_cycles(lower);
     }
 
-    //WaitP, EATAN, EEXP, ELENG, ERCPR, ERLENG, ERSADD, ERSQRT, ESADD, ESIN, ESQRT, ESUM
+    //WaitP, EATAN(xy/xz), EEXP, ELENG, ERCPR, ERLENG, ERSADD, ERSQRT, ESADD, ESIN, ESQRT, ESUM
     if ((lower & (1 << 31)) && ((lower >> 2) & 0x1CF) == 0x1CF)
     {
         instr_info[PC].p_pipeline_instr = true;
@@ -633,6 +640,8 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
     uint16_t PC = vu.get_PC();
     while (!block_end)
     {
+        PC &= vu.mem_mask;
+
         instr_info[PC].backup_vi = 0;
         instr_info[PC].use_backup_vi = false;
         instr_info[PC].stall_amount = 0;
@@ -834,7 +843,7 @@ void VU_JitTranslator::flag_pass(VectorUnit &vu)
         {
             needs_update = true;
             mac_cycles -= instr_info[i].stall_amount;
-            if (mac_cycles <= 0)
+            if (mac_cycles <= 0 && instr_info[i].has_mac_result) //Need to check if timed position is a NOP
                 mac_instruction_found = false;
         }
 
@@ -842,7 +851,7 @@ void VU_JitTranslator::flag_pass(VectorUnit &vu)
         {
             needs_update = true;
             clip_cycles -= instr_info[i].stall_amount;
-            if (clip_cycles <= 0)
+            if (clip_cycles <= 0) //TODO When CLIP is implemented, make sure we get all the CLIP instructions
                 clip_instruction_found = false;
         }
 
@@ -1421,7 +1430,7 @@ void VU_JitTranslator::lower1(std::vector<IR::Instruction> &instrs, uint32_t low
     }
 
     //If it's writing to vi0, ignore it
-    if (!instr.get_dest())
+    if (!instr.get_dest() && instr.op != IR::Opcode::FallbackInterpreter)
         return;
 
     instrs.push_back(instr);
@@ -1460,9 +1469,6 @@ void VU_JitTranslator::lower1_special(std::vector<IR::Instruction> &instrs, uint
             instr.set_field((lower >> 21) & 0xF);
             instr.set_dest((lower >> 16) & 0x1F);
             instr.set_base((lower >> 11) & 0xF);
-
-            if (!instr.get_dest())
-                return;
             break;
         case 0x35:
             //SQI
@@ -1478,9 +1484,6 @@ void VU_JitTranslator::lower1_special(std::vector<IR::Instruction> &instrs, uint
             instr.set_field((lower >> 21) & 0xF);
             instr.set_dest((lower >> 16) & 0x1F);
             instr.set_base((lower >> 11) & 0xF);
-
-            if (!instr.get_dest())
-                return;
             break;
         case 0x37:
             //SQD
@@ -1595,6 +1598,7 @@ void VU_JitTranslator::lower1_special(std::vector<IR::Instruction> &instrs, uint
             instr.set_source2(instr_info[cur_PC].pipeline_state[1]);
             instr.set_dest(trans_branch_delay_slot);
             instr.set_jump_dest(trans_ebit_delay_slot);
+            instr.set_cycle_count(cycles_this_block);
             break;
         case 0x70:
             //ESADD
@@ -1615,6 +1619,16 @@ void VU_JitTranslator::lower1_special(std::vector<IR::Instruction> &instrs, uint
             //ERLENG
             instr.op = IR::Opcode::VErleng;
             instr.set_source((lower >> 11) & 0x1F);
+            break;
+        case 0x74:
+            //EATANxy
+            fallback_interpreter(instr, lower, false);
+            Errors::print_warning("[VU_JIT] Unrecognized lower1 special op EATANxy\n", op);
+            break;
+        case 0x75:
+            //EATANxz
+            fallback_interpreter(instr, lower, false);
+            Errors::print_warning("[VU_JIT] Unrecognized lower1 special op EATANxz\n", op);
             break;
         case 0x78:
             //ESQRT
@@ -1640,6 +1654,11 @@ void VU_JitTranslator::lower1_special(std::vector<IR::Instruction> &instrs, uint
             //ESIN
             fallback_interpreter(instr, lower, false);
             Errors::print_warning("[VU_JIT] Unrecognized lower1 special op ESIN\n", op);
+            break;
+        case 0x7D:
+            //EATAN
+            fallback_interpreter(instr, lower, false);
+            Errors::print_warning("[VU_JIT] Unrecognized lower1 special op EATAN\n", op);
             break;
         case 0x7E:
             //EEXP

@@ -38,6 +38,7 @@ class GraphicsSynthesizer
 
         inline bool stalled() { return reg.CSR.SIGNAL_stall; }
 
+        void set_CSR_FIFO(uint8_t value);
         void set_VBLANK(bool is_VBLANK);
         void assert_FINISH();
         void assert_VSYNC();
@@ -63,6 +64,6 @@ class GraphicsSynthesizer
         void send_message(GSMessage message);
         void wake_gs_thread();
 
-        uint128_t request_gs_download();
+        std::tuple<uint128_t, uint32_t>request_gs_download();
 };
 #endif // GS_HPP

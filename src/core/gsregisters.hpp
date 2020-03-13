@@ -51,12 +51,12 @@ struct GS_CSR
 {
     bool SIGNAL_generated;
     bool SIGNAL_stall; //Used only by main/GIF thread
+    bool SIGNAL_irq_pending; //As above
     bool VBLANK_generated;
-    bool VBLANK_enabled;
     bool is_odd_frame;
-    bool FINISH_enabled;
     bool FINISH_generated;
     bool FINISH_requested;
+    uint8_t FIFO_status;
 };
 
 struct GS_SIGLBLID
@@ -64,6 +64,15 @@ struct GS_SIGLBLID
     uint32_t sig_id;
     uint32_t backup_sig_id;
     uint32_t lbl_id;
+};
+
+//0 = No Deinterlacing, 1 = Merge Field (blurry/low res), 2 = Blend Scanline (ghosting), 3 = Bob (Best quality, can still have interlace bob)
+enum DeinterlaceMethod
+{
+    NO_DEINTERLACE,
+    MERGE_FIELD_DEINTERLACE,
+    BLEND_SCANLINE_DEINTERLACE,
+    BOB_DEINTERLACE,
 };
 
 struct GS_REGISTERS
@@ -79,6 +88,7 @@ struct GS_REGISTERS
     uint8_t CRT_mode;
     GS_SIGLBLID SIGLBLID;
     uint32_t BGCOLOR;
+    DeinterlaceMethod deinterlace_method;
     
     //EXTBUF, EXTDATA, EXTWRITE not currently implemented
 

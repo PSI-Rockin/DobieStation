@@ -25,23 +25,24 @@ class EmuThread : public QThread
 {
     Q_OBJECT
     private:
-        bool abort;
-        uint32_t pause_status;
+        std::atomic_bool abort;
+        std::atomic<uint32_t> pause_status;
         QMutex emu_mutex;
         Emulator e;
 
         std::chrono::system_clock::time_point old_frametime;
         std::ifstream gsdump;
         std::atomic_bool gsdump_reading;
+        std::atomic_bool block_run_loop;
         GSMessage* gsdump_read_buffer;
         int buffered_gs_messages;
         int current_gs_message;
 
         void gsdump_run();
+        template <typename Func> void wait_for_lock(Func f);
     public:
         EmuThread();
         ~EmuThread();
-
         void reset();
 
         void set_skip_BIOS_hack(SKIP_HACK skip);
@@ -58,7 +59,7 @@ class EmuThread : public QThread
         void gsdump_single_frame();
         GSMessage& get_next_gsdump_message();
         bool gsdump_eof();
-        bool frame_advance;
+        std::atomic_bool frame_advance;
     protected:
         void run() override;
     signals:

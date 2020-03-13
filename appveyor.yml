@@ -2,14 +2,20 @@ version: 0.0.{build}
 
 skip_tags: true
 
-image:
-- Visual Studio 2017
-- ubuntu1804
+skip_commits:
+  files:
+    - .github/*
+    - .github/*/*
+    - README.md
 
-configuration: Release
+image:
+  - Visual Studio 2017
+  - Ubuntu1804
+
+configuration: Release Optimized
+
 platform: x64
 
-# environment
 for:
 -
   matrix:
@@ -21,35 +27,38 @@ for:
     APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
     cc: VS2017
     QTDIR: C:\Qt\5.12\msvc2017_64
+
+  build:
+    parallel: true
+    project: DobieStation\DobieStation.sln
+
+  after_build:
+    - 7z a -xr!*.lib DobieStation.zip .\build\bin\* LICENSE
 -
   matrix:
     only:
-      - image: ubuntu1804
+      - image: Ubuntu1804
   environment:
-    APPVEYOR_BUILD_WORKER_IMAGE: ubuntu1804
+    APPVEYOR_BUILD_WORKER_IMAGE: Ubuntu1804
     cc: gcc
 
-install:
-- sh: sudo apt-get update -qq
-- sh: sudo apt-get install -qq qt5-default qtmultimedia5-dev
-- sh: sudo apt-get install -qq libglu1-mesa-dev
+  install:
+    - |-
+      sudo apt-get update -qq
+      sudo apt-get install -qq qt5-default qtmultimedia5-dev libglu1-mesa-dev
 
-before_build:
-- cmd: call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat" %arch%
+  build_script:
+    - |-
+      qmake -v
+      cd DobieStation
+      qmake DobieStation.pro
+      make -j$(nproc)
+      cd $APPVEYOR_BUILD_FOLDER
 
-build_script:
-- sh: qmake -v
-- sh: cd DobieStation 
-- sh: qmake DobieStation.pro
-- sh: make
-- cmd: msbuild "C:\projects\dobiestation\DobieStation\DobieStation.sln" /verbosity:normal /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
-
-after_build:
-- cmd: 7z a -xr!*.lib DobieStation.zip build/bin/
-- sh: 7z a ../DobieStation.zip DobieStation
+  after_build:
+    - 7z a DobieStation.zip ./DobieStation/DobieStation LICENSE
 
 test: off
 
 artifacts:
-- path: DobieStation.zip
-  type: WebDeployPackage
+  - path: DobieStation.zip

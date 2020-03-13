@@ -3,7 +3,7 @@ greaterThan(QT_MAJOR_VERSION, 4) : QT += widgets
 
 TEMPLATE = app
 TARGET = ../DobieStation
-CONFIG += console c++11
+CONFIG += console c++14
 CONFIG -= app_bundle
 
 INCLUDEPATH += ../../ext/libdeflate

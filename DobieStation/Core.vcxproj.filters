@@ -435,6 +435,6 @@
     <None Include="$(RootDir)CMakeLists.txt" />
     <None Include="$(RootDir)LICENSE" />
     <None Include="$(RootDir).gitignore" />
-    <None Include="$(RootDir)CONTRIBUTING.md" />
+    <None Include="$(RootDir).github\*" />
   </ItemGroup>
 </Project>

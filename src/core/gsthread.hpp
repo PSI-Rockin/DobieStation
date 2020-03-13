@@ -136,6 +136,7 @@ union GSReturnMessagePayload
     struct
     {
         uint128_t quad_data;
+        uint32_t status;
     } data_payload;
 };
 
@@ -247,7 +248,6 @@ struct TexLookupInfo
     bool new_lookup;
     int16_t lastu, lastv;
 };
-
 
 uint32_t addr_PSMCT32(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
 uint32_t addr_PSMCT32Z(uint32_t block, uint32_t width, uint32_t x, uint32_t y);
@@ -362,6 +362,7 @@ class GraphicsSynthesizerThread
         int frame_count;
         uint8_t* local_mem;
         uint8_t CRT_mode;
+        uint32_t screen_buffer[2048 * 2048];
         uint8_t clut_cache[1024];
         uint32_t CBP0, CBP1;
 
@@ -513,10 +514,7 @@ class GraphicsSynthesizerThread
         void memdump(uint32_t* target, uint16_t& width, uint16_t& height);
 
         uint32_t get_CRT_color(DISPFB& dispfb, uint32_t x, uint32_t y);
-        void render_single_CRT(uint32_t* target, DISPFB& dispfb, DISPLAY& display);
         void render_CRT(uint32_t* target);
-
-        void dump_texture(uint32_t* target, uint32_t start_addr, uint32_t width);
 
         void write64(uint32_t addr, uint64_t value);
 

@@ -28,6 +28,7 @@ void VectorInterface::reset()
     CODE = 0;
     vu->set_TOP_regs(&TOP, &ITOP);
     vu->set_GIF(gif);
+    direct_wait = false;
     wait_for_VU = false;
     wait_for_PATH3 = false;
     vif_stalled = 0;
@@ -36,12 +37,18 @@ void VectorInterface::reset()
     vif_stop = false;
     mark_detected = false;
     flush_stall = false;
+    stall_condition_active = false;
     fifo_reverse = false;
 
     if (id)
         mem_mask = 0x3FF;
     else
         mem_mask = 0xFF;
+
+    if (id)
+        fifo_size = 64;
+    else
+        fifo_size = 32;
 
     if(vu->get_id() == 1)
         VU_JIT::reset();
@@ -51,25 +58,25 @@ bool VectorInterface::check_vif_stall(uint32_t value)
 {
     if (command == 0)
     {
+        //Acknowledge the stall on the next command when triggered on MARK
         if (vif_ibit_detected)
         {
             printf("[VIF] VIF%x Stalled\n", get_id());
             vif_ibit_detected = false;
             vif_interrupt = true;
 
-            //Do not stall if the command is MARK
-            if (((value >> 24) & 0x7f) != 0x7)
-                vif_stalled |= STALL_IBIT;
-
             if (get_id())
                 intc->assert_IRQ((int)Interrupt::VIF1);
             else
                 intc->assert_IRQ((int)Interrupt::VIF0);
+
+            if(((value >> 24) & 0x7f) != 0x7)
+                vif_stalled |= STALL_IBIT;
             return true;
         }
         if (vif_stop)
         {
-            vif_stalled |= STALL_IBIT;
+            vif_stalled |= STALL_STOP;
             return true;
         }
     }
@@ -78,23 +85,26 @@ bool VectorInterface::check_vif_stall(uint32_t value)
 
 void VectorInterface::update(int cycles)
 {
-    //Since the loop processes per-word, we need to multiply cycles by 4
-    //This allows us to process one quadword per bus cycle
     if (fifo_reverse)
     {
-        if (FIFO.size() <= 60)
+        if (FIFO.size() <= (fifo_size - 4))
         {
-            uint128_t fifo_data;
             while (cycles--)
             {
-                fifo_data = gif->read_GSFIFO();
+                auto fifo_data = gif->read_GSFIFO();
+                //Check the GS still wants to send data
+                if (!std::get<1>(fifo_data))
+                    return;
+
                 for (int i = 0; i < 4; i++)
-                    FIFO.push(fifo_data._u32[i]);
+                    FIFO.push(std::get<0>(fifo_data)._u32[i]);
             }
         }
         return;
     }
-        
+
+    //Since the loop processes per-word, we need to multiply cycles by 4
+    //This allows us to process one quadword per bus cycle
     int run_cycles = cycles << 2;
    
     if (vif_stalled & STALL_MSKPATH3)
@@ -105,28 +115,38 @@ void VectorInterface::update(int cycles)
 
     while (!vif_stalled && run_cycles--)
     {
-        if (wait_for_VU)
+        if (stall_condition_active)
         {
-            if (vu->is_running())
-                return;
-            wait_for_VU = false;
-            handle_wait_cmd(wait_cmd_value);
-        }
+            if (flush_stall)
+            {
+                int active_path = gif->get_active_path();
+                int path_queue = gif->get_path_queue();
+                if (active_path == 1 || active_path == 2 || (path_queue & (1 << 1)) || (path_queue & (1 << 2)))
+                    return;
+            }
+            if (wait_for_VU)
+            {
+                if (vu->is_running())
+                    return;
+                handle_wait_cmd(wait_cmd_value);
+            }
+            if (wait_for_PATH3)
+            {
+                if (!gif->path3_done())
+                    return;
+                gif->deactivate_PATH(3);
+            }
 
-        if (flush_stall)
-        {
-            int active_path = gif->get_active_path();
-            if (active_path == 1 || active_path == 2)
-                return;
             flush_stall = false;
+            wait_for_VU = false;
+            wait_for_PATH3 = false;
+            stall_condition_active = false;
         }
 
-        if (wait_for_PATH3)
+
+        if ((command & 0x60) == 0x60)
         {
-            if (!gif->path3_done())
-                return;
-            gif->deactivate_PATH(3);
-            wait_for_PATH3 = false;
+            handle_UNPACK();
         }
 
         if(check_vif_stall(CODE) || !FIFO.size())
@@ -141,8 +161,12 @@ void VectorInterface::update(int cycles)
             {
                 command_len--;
                 FIFO.pop();
-                if (FIFO.size() <= 32)
+
+                //FIXME: Should be fifo_size - 4 really, but causes hangs in WRC?
+                if (FIFO.size() <= (fifo_size / 2))
+                {
                     dmac->set_DMA_request(id);
+                }
             }
         }
     }
@@ -190,8 +214,11 @@ bool VectorInterface::process_data_word(uint32_t value)
             case 0x51:
                 //DIRECT/DIRECTHL
                 if (!gif->path_active(2, command == 0x50))
+                {
+                    direct_wait = true;
                     return false;
-
+                }
+                direct_wait = false;
                 buffer[buffer_size] = value;
                 buffer_size++;
                 if (buffer_size == 4)
@@ -209,7 +236,10 @@ bool VectorInterface::process_data_word(uint32_t value)
                 break;
             default:
                 if ((command & 0x60) == 0x60)
-                    handle_UNPACK(value);
+                {
+                    buffer[buffer_size] = value;
+                    buffer_size++;
+                }
                 else
                 {
                     Errors::die("[VIF] Unhandled data for command $%02X\n", command);
@@ -229,8 +259,6 @@ void VectorInterface::decode_cmd(uint32_t value)
     {
         if (!VIF_ERR.mask_interrupt)
             vif_ibit_detected = true;
-        else
-            Errors::die("[VIF] Stall detected when VIF_ERR.MI1 set\n", command);
     }
 
     command_len = 1;
@@ -271,9 +299,9 @@ void VectorInterface::decode_cmd(uint32_t value)
             break;
         case 0x06:
             printf("[VIF] MSKPATH3: %d\n", (value >> 15) & 0x1);
-            gif->set_path3_vifmask((value >> 15) & 0x1);
+            if(gif->set_path3_vifmask((value >> 15) & 0x1))
+                vif_stalled |= STALL_MSKPATH3;
             command = 0;
-            vif_stalled |= STALL_MSKPATH3;
             break;
         case 0x07:
             printf("[VIF] Set MARK: $%08X\n", value);
@@ -284,6 +312,7 @@ void VectorInterface::decode_cmd(uint32_t value)
         case 0x10:
             printf("[VIF] FLUSHE\n");
             wait_for_VU = true;
+            stall_condition_active = true;
             wait_cmd_value = value;
             command = 0;
             break;
@@ -291,6 +320,7 @@ void VectorInterface::decode_cmd(uint32_t value)
             printf("[VIF] FLUSH\n");
             wait_for_VU = true;
             flush_stall = true;
+            stall_condition_active = true;
             wait_cmd_value = value;
             command = 0;
             break;
@@ -299,12 +329,14 @@ void VectorInterface::decode_cmd(uint32_t value)
             wait_for_VU = true;
             flush_stall = true;
             wait_for_PATH3 = true;
+            stall_condition_active = true;
             wait_cmd_value = value;
             command = 0;
             break;
         case 0x14:
             printf("[VIF] MSCAL\n");
             wait_for_VU = true;
+            stall_condition_active = true;
             wait_cmd_value = value;
             command = 0;
             break;
@@ -312,12 +344,14 @@ void VectorInterface::decode_cmd(uint32_t value)
             printf("[VIF] MSCALF\n");
             wait_for_VU = true;
             flush_stall = true;
+            stall_condition_active = true;
             wait_cmd_value = value;
             command = 0;
             break;
         case 0x17:
             printf("[VIF] MSCNT\n");
             wait_for_VU = true;
+            stall_condition_active = true;
             wait_cmd_value = value;
             command = 0;
             break;
@@ -346,6 +380,7 @@ void VectorInterface::decode_cmd(uint32_t value)
             }
 
             wait_for_VU = true;
+            stall_condition_active = true;
             wait_cmd_value = value;
             break;
         case 0x50:
@@ -532,11 +567,9 @@ bool VectorInterface::is_filling_write()
     return false;
 }
 
-void VectorInterface::handle_UNPACK(uint32_t value)
+void VectorInterface::handle_UNPACK()
 {
     int bufferpos = 0;
-    buffer[buffer_size] = value;
-    buffer_size++;
 
     while((is_filling_write() || (buffer_size >= unpack.words_per_op)) && unpack.num)
     {
@@ -856,10 +889,21 @@ void VectorInterface::process_UNPACK_quad(uint128_t &quad)
     }
 }
 
+bool VectorInterface::transfer_word(uint32_t value)
+{
+    //This should return false if the transfer stalls due to the FIFO filling up
+    if (FIFO.size() > (fifo_size - 1))
+        return false;
+
+    printf("[VIF] Transfer 32bit Value: $%08X\n", value);
+    FIFO.push(value);
+    return true;
+}
+
 bool VectorInterface::transfer_DMAtag(uint128_t tag)
 {
     //This should return false if the transfer stalls due to the FIFO filling up
-    if (FIFO.size() > 62)
+    if (FIFO.size() > (fifo_size - 2))
     {
         dmac->clear_DMA_request(id);
         return false;
@@ -872,7 +916,7 @@ bool VectorInterface::transfer_DMAtag(uint128_t tag)
 
 bool VectorInterface::feed_DMA(uint128_t quad)
 {
-    if (FIFO.size() > 60)
+    if (FIFO.size() > (fifo_size - 4))
     {
         dmac->clear_DMA_request(id);
         return false;
@@ -883,25 +927,26 @@ bool VectorInterface::feed_DMA(uint128_t quad)
     return true;
 }
 
-uint128_t VectorInterface::readFIFO()
+std::tuple<uint128_t, uint32_t>VectorInterface::readFIFO()
 {
     uint128_t quad;
     if (FIFO.empty())
-        return gif->read_GSFIFO();
+        return std::make_tuple(quad, false);
 
     for (int i = 0; i < 4; i++)
     {
         quad._u32[i] = FIFO.front();
         FIFO.pop();
     }
-    return quad;
+    return std::make_tuple(quad, true);
 }
 
 uint32_t VectorInterface::get_stat()
 {
     uint32_t reg = 0;
-    reg |= (vif_stalled & STALL_IBIT) ? 0 : ((FIFO.size() != 0) * 3);
-    reg |= vu->is_running() << 2;
+    reg |= (vif_stalled & (STALL_IBIT | STALL_STOP) || fifo_reverse || (wait_for_PATH3 | flush_stall | direct_wait)) ? 0 : ((FIFO.size() != 0) * 3);
+    reg |= wait_for_VU << 2;
+    reg |= (wait_for_PATH3 | flush_stall | direct_wait) << 3;
     reg |= mark_detected << 6;
     reg |= DBF << 7;
     reg |= vif_stop << 8;
@@ -980,7 +1025,7 @@ void VectorInterface::set_fbrst(uint32_t value)
     if (value & 0x8)
     {
         printf("[VIF] VIF%x Resumed\n", get_id());
-        vif_stalled &= ~STALL_IBIT;
+        vif_stalled &= ~(STALL_IBIT | STALL_STOP);
         vif_interrupt = false;
         vif_stop = false;
     }

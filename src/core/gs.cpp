@@ -95,6 +95,11 @@ uint32_t* GraphicsSynthesizer::get_framebuffer()
     return out;
 }
 
+void GraphicsSynthesizer::set_CSR_FIFO(uint8_t value)
+{
+    reg.CSR.FIFO_status = value;
+}
+
 void GraphicsSynthesizer::set_VBLANK(bool is_VBLANK)
 {
     GSMessagePayload payload;
@@ -107,8 +112,6 @@ void GraphicsSynthesizer::set_VBLANK(bool is_VBLANK)
     if (is_VBLANK)
     {
         printf("[GS] VBLANK start\n");
-        if (!reg.IMR.vsync)
-            intc->assert_IRQ((int)Interrupt::GS);
         intc->assert_IRQ((int)Interrupt::VBLANK_START);
     }
     else
@@ -202,15 +205,20 @@ void GraphicsSynthesizer::write64(uint32_t addr, uint64_t value)
     
     gs_thread.send_message({ GSCommand::write64_t, payload });
 
-    //We need a check for SIGNAL here so that we can fire the interrupt
+    //Check for interrupt pre-processing
+    reg.write64(addr, value);
+
+    //We need a check for SIGNAL here so that we can fire the interrupt as soon as possible
     if (addr == 0x60)
     {
-        if (!reg.IMR.signal && !reg.CSR.SIGNAL_generated)
-            intc->assert_IRQ((int)Interrupt::GS);
+        if (reg.CSR.SIGNAL_generated)
+        {
+            if(!reg.IMR.signal)
+                intc->assert_IRQ((int)Interrupt::GS);
+            else
+                reg.CSR.SIGNAL_irq_pending = true;
+        }
     }
-
-    //also check for interrupt pre-processing
-    reg.write64(addr, value);
 }
 
 void GraphicsSynthesizer::write64_privileged(uint32_t addr, uint64_t value)
@@ -224,10 +232,10 @@ void GraphicsSynthesizer::write64_privileged(uint32_t addr, uint64_t value)
     reg.write64_privileged(addr, value);
 
     //When SIGNAL is written to twice, the interrupt will not be processed until IMR.signal is flipped from 1 to 0.
-    if (old_IMR && !reg.IMR.signal && reg.CSR.SIGNAL_stall)
+    if (old_IMR && !reg.IMR.signal && reg.CSR.SIGNAL_irq_pending)
     {
         intc->assert_IRQ((int)Interrupt::GS);
-        reg.SIGLBLID.sig_id = reg.SIGLBLID.backup_sig_id;
+        reg.CSR.SIGNAL_irq_pending = false;
     }
 }
 
@@ -238,7 +246,14 @@ void GraphicsSynthesizer::write32_privileged(uint32_t addr, uint32_t value)
 
     gs_thread.send_message({ GSCommand::write32_privileged_t,payload });
 
+    bool old_IMR = reg.IMR.signal;
     reg.write32_privileged(addr, value);
+    //When SIGNAL is written to twice, the interrupt will not be processed until IMR.signal is flipped from 1 to 0.
+    if (old_IMR && !reg.IMR.signal && reg.CSR.SIGNAL_irq_pending)
+    {
+        intc->assert_IRQ((int)Interrupt::GS);
+        reg.CSR.SIGNAL_irq_pending = false;
+    }
 }
 
 uint32_t GraphicsSynthesizer::read32_privileged(uint32_t addr)
@@ -335,7 +350,7 @@ void GraphicsSynthesizer::wake_gs_thread()
     gs_thread.wake_thread();
 }
 
-uint128_t GraphicsSynthesizer::request_gs_download()
+std::tuple<uint128_t, uint32_t>GraphicsSynthesizer::request_gs_download()
 {
     GSMessagePayload payload;
     payload.no_payload = {};
@@ -343,6 +358,6 @@ uint128_t GraphicsSynthesizer::request_gs_download()
     gs_thread.wake_thread();
     GSReturnMessage data;
     gs_thread.wait_for_return(GSReturn::local_host_transfer, data);
-    return data.payload.data_payload.quad_data;
+    return std::make_tuple(data.payload.data_payload.quad_data, data.payload.data_payload.status);
 }
 

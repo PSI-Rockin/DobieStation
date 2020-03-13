@@ -90,6 +90,7 @@ class Emitter64
         void AND64_REG(REG_64 source, REG_64 dest);
 
         void CMP8_REG(REG_64 op2, REG_64 op1);
+        void CMP8_IMM_MEM(uint32_t imm, REG_64 mem, uint32_t offset = 0);
         void CMP16_IMM(uint16_t imm, REG_64 op);
         void CMP16_REG(REG_64 op2, REG_64 op1);
         void CMP32_IMM(uint32_t imm, REG_64 op);
@@ -156,7 +157,7 @@ class Emitter64
 
         void TEST8_REG(REG_64 op2, REG_64 op1);
         void TEST8_REG_IMM(uint8_t imm, REG_64 op1);
-        void TEST8_MEM_IMM(uint8_t imm, REG_64 mem, uint32_t offset = 0);
+        void TEST8_IMM_MEM(uint8_t imm, REG_64 mem, uint32_t offset = 0);
         void TEST16_REG(REG_64 op2, REG_64 op1);
         void TEST16_REG_IMM(uint16_t imm, REG_64 op1);
         void TEST32_EAX(uint32_t imm);
@@ -234,6 +235,8 @@ class Emitter64
 
         void PUSH(REG_64 reg);
         void POP(REG_64 reg);
+        void LDMXCSR(REG_64 mem, uint32_t offset = 0);
+        void STMXCSR(REG_64 mem, uint32_t offset = 0);
         void CALL(uint64_t addr);
         void CALL_INDIR(REG_64 source);
         void JMP_INDIR(REG_64 source);
@@ -241,6 +244,7 @@ class Emitter64
 
         void PACKUSDW(REG_64 xmm_source, REG_64 xmm_dest);
         void PACKUSWB(REG_64 xmm_source, REG_64 xmm_dest);
+        void PACKSSDW(REG_64 xmm_source, REG_64 xmm_dest);
         void PABSB(REG_64 xmm_source, REG_64 xmm_dest);
         void PABSD(REG_64 xmm_source, REG_64 xmm_dest);
         void PABSW(REG_64 xmm_source, REG_64 xmm_dest);
@@ -272,6 +276,7 @@ class Emitter64
         void PMAXSB_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void PMAXSD_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void PMAXSW_XMM(REG_64 xmm_source, REG_64 xmm_dest);
+        void PMAXSW_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t offset = 0);
         void PMAXUB_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void PMAXUD_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void PMAXUW_XMM(REG_64 xmm_source, REG_64 xmm_dest);
@@ -281,9 +286,14 @@ class Emitter64
         void PMINUB_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void PMINUD_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void PMINUW_XMM(REG_64 xmm_source, REG_64 xmm_dest);
+        void PMINSW_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t offset = 0);
+        void PMINUW_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t offset = 0);
         void PMINSD_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t offset = 0);
         void PMINUD_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t offset = 0);
         void PMOVZX8_TO_16(REG_64 xmm_source, REG_64 xmm_dest);
+        void PMOVZX16_TO_32(REG_64 xmm_source, REG_64 xmm_dest);
+        void PMOVSX16_TO_32(REG_64 xmm_source, REG_64 xmm_dest);
+        void PMULLD(REG_64 xmm_source, REG_64 xmm_dest);
         void PMULLW(REG_64 xmm_source, REG_64 xmm_dest);
         void POR_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void POR_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t offset = 0);
@@ -303,6 +313,7 @@ class Emitter64
         void PSUBW(REG_64 xmm_source, REG_64 xmm_dest);
         void PSUBSB(REG_64 xmm_source, REG_64 xmm_dest);
         void PSUBSW(REG_64 xmm_source, REG_64 xmm_dest);
+        void PSUBSD(REG_64 xmm_source, REG_64 xmm_dest);
         void PSUBUSB(REG_64 xmm_source, REG_64 xmm_dest);
         void PSUBUSW(REG_64 xmm_source, REG_64 xmm_dest);
         void PXOR_XMM(REG_64 xmm_source, REG_64 xmm_dest);
@@ -311,6 +322,7 @@ class Emitter64
         void ADDPS(REG_64 xmm_source, REG_64 xmm_dest);
         void ADDSS(REG_64 xmm_source, REG_64 xmm_dest);
         void BLENDPS(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest);
+        void BLENDVPS_XMM0(REG_64 xmm_source, REG_64 xmm_dest);
         void CMPEQPS(REG_64 xmm_source, REG_64 xmm_dest);
         void CMPNLEPS(REG_64 xmm_source, REG_64 xmm_dest);
         void DPPS(uint8_t imm, REG_64 xmm_source, REG_64 xmm_dest);

@@ -34,8 +34,13 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
 
     GameListWidget* game_list_widget = new GameListWidget;
     connect(game_list_widget, &GameListWidget::game_double_clicked, this, [=](QString path) {
-        load_exec(path.toLocal8Bit(), true);
+        if (!path.isEmpty())
+        {
+            Settings::instance().add_rom_path(path);
+            load_exec(path.toLocal8Bit(), true);
+        }
     });
+
     connect(game_list_widget, &GameListWidget::settings_requested, [=]() {
         open_settings_window();
         settings_window->show_path_tab();
@@ -316,7 +321,7 @@ void EmuWindow::create_menu()
     auto frame_action = new QAction(tr("&Frame Advance"), this);
     frame_action->setCheckable(true);
     connect(frame_action, &QAction::triggered, this, [=] (){
-        emu_thread.frame_advance ^= true;
+        emu_thread.frame_advance = emu_thread.frame_advance ^ true;
 
         if(!emu_thread.frame_advance)
             emu_thread.unpause(PAUSE_EVENT::FRAME_ADVANCE);
@@ -480,6 +485,17 @@ void EmuWindow::keyPressEvent(QKeyEvent *event)
             emit update_joystick(JOYSTICK::LEFT, JOYSTICK_AXIS::Y, 0xFF);
             break;
         case Qt::Key_F1:
+            if(!Settings::instance().recent_roms.isEmpty())
+                load_exec(Settings::instance().recent_roms.first().toLocal8Bit(), true);
+            break;
+        case Qt::Key_F2:
+            if(!Settings::instance().recent_roms.isEmpty())
+            {
+                load_exec(Settings::instance().recent_roms.first().toLocal8Bit(), true);
+                load_state();
+            }
+            break;
+        case Qt::Key_F7:
             emu_thread.gsdump_single_frame();
             break;
         case Qt::Key_F8:
@@ -542,6 +558,9 @@ void EmuWindow::keyReleaseEvent(QKeyEvent *event)
 
 void EmuWindow::update_FPS(double FPS)
 {
+    if (disable_fps_updates)
+        return;
+
     if(FPS > 0.01) {
         frametime_avg = 0.8 * frametime_avg + 0.2 / FPS;
         frametime_list[frametime_list_index] = 1. / FPS;
@@ -553,8 +572,6 @@ void EmuWindow::update_FPS(double FPS)
     {
         if(frametime_list[i] > worst_frame_time) worst_frame_time = frametime_list[i];
     }
-
-
 
     framerate_avg = 0.8 * framerate_avg + 0.2 * FPS;
 
@@ -680,12 +697,14 @@ void EmuWindow::save_state()
 
 void EmuWindow::show_default_view()
 {
+    disable_fps_updates = true;
     stack_widget->setCurrentIndex(0);
     setWindowTitle(QApplication::applicationName());
 }
 
 void EmuWindow::show_render_view()
 {
+    disable_fps_updates = false;
     stack_widget->setCurrentIndex(1);
 }
 
