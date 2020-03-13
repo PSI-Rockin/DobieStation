@@ -926,9 +926,6 @@ bool ImageProcessingUnit::process_CSC()
                 uint8_t* cb_block = csc.block + 0x100;
                 uint8_t* cr_block = csc.block + 0x140;
 
-                uint32_t alpha_thresh0 = (TH0 & 0xFF) | ((TH0 & 0xFF) << 8) | ((TH0 & 0xFF) << 16);
-                uint32_t alpha_thresh1 = (TH1 & 0xFF) | ((TH1 & 0xFF) << 8) | ((TH1 & 0xFF) << 16);
-
                 for (int i = 0; i < 16; i++)
                 {
                     for (int j = 0; j < 16; j++)
@@ -960,9 +957,9 @@ bool ImageProcessingUnit::process_CSC()
                         color |= ((uint8_t)b) << 16;
 
                         uint32_t alpha;
-                        if (r < (TH0 & 0xFF) && g < ((TH0 >> 8) & 0xFF) && b < ((TH0 >> 16) & 0xFF))
+                        if (r < TH0 && g < TH0 && b < TH0)
                             alpha = 0;
-                        else if (r < (TH1 & 0xFF) && g < ((TH1 >> 8) & 0xFF) && b < ((TH1 >> 16) & 0xFF))
+                        else if (r < TH1 && g < TH1 && b < TH1)
                             alpha = 1 << 30;
                         else
                             alpha = 1 << 31;
