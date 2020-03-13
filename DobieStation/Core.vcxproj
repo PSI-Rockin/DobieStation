@@ -90,7 +90,6 @@
     <ClCompile Include="$(CoreDir)ee\ee_jit64_gpr.cpp" />
     <ClCompile Include="$(CoreDir)ee\ee_jit64_mmi.cpp" />
     <ClCompile Include="$(CoreDir)ee\ee_jittrans.cpp" />
-    <ClCompile Include="$(CoreDir)iop\cso_reader.cpp" />
     <ClCompile Include="$(CoreDir)tests\iop\alu.cpp" />
     <ClCompile Include="$(CoreDir)ee\bios_hle.cpp" />
     <ClCompile Include="$(CoreDir)iop\cdvd\bincuereader.cpp" />
@@ -177,7 +176,6 @@
     <ClInclude Include="$(CoreDir)ee\ipu\dct_coeff_table0.hpp" />
     <ClInclude Include="$(CoreDir)ee\ipu\dct_coeff_table1.hpp" />
     <ClInclude Include="$(CoreDir)ee\dmac.hpp" />
-    <ClInclude Include="$(CoreDir)iop\cso_reader.hpp" />
     <ClInclude Include="$(CoreDir)jitcommon\emitter64.hpp" />
     <ClInclude Include="$(CoreDir)ee\emotion.hpp" />
     <ClInclude Include="$(CoreDir)ee\emotionasm.hpp" />
