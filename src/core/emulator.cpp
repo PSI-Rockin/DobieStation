@@ -117,6 +117,8 @@ void Emulator::run()
         }
     }
 
+    memcard.save_if_dirty();
+
     frame_ended = false;
 
     scheduler.add_event(vblank_start_id, VBLANK_START_CYCLES);
