@@ -156,3 +156,12 @@ void Settings::set_screenshot_directory(const QString& directory)
     screenshot_directory = directory;
     emit screenshot_directory_changed(directory);
 }
+
+void Settings::set_memcard_path(const QString &path)
+{
+    if (path.isEmpty())
+        return;
+
+    memcard_path = path;
+    emit memcard_changed(path);
+}

@@ -9,9 +9,11 @@
 #include "emuthread.hpp"
 
 #include "../qt/settings.hpp"
+#include "../qt/memcardwindow.hpp"
 #include "../core/emulator.hpp"
 
 class SettingsWindow;
+class MemcardWindow;
 class RenderWidget;
 
 class EmuWindow : public QMainWindow
@@ -44,6 +46,7 @@ class EmuWindow : public QMainWindow
         RenderWidget* render_widget;
 
         SettingsWindow* settings_window = nullptr;
+        MemcardWindow* memcard_window = nullptr;
 
         void update_status();
         void show_render_view();
@@ -59,6 +62,7 @@ class EmuWindow : public QMainWindow
 
         bool load_bios();
         void open_settings_window();
+        void open_memcard_window();
         void closeEvent(QCloseEvent *event) override;
         void keyPressEvent(QKeyEvent *event) override;
         void keyReleaseEvent(QKeyEvent *event) override;
