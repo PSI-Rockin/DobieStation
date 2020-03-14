@@ -86,6 +86,7 @@
     <ClCompile Include="$(UIDir)renderwidget.cpp" />
     <ClCompile Include="$(UIDir)settingswindow.cpp" />
     <ClCompile Include="$(UIDir)gamelistwidget.cpp" />
+    <ClCompile Include="$(UIDir)memcardwindow.cpp" />
     <ClCompile Include="$(UIDir)bios.cpp" />
     <ClCompile Include="$(UIDir)settings.cpp" />
     <ClCompile Include="$(UIDir)main.cpp" />
@@ -104,6 +105,7 @@
     <QtMoc Include="$(UIDir)renderwidget.hpp" />
     <QtMoc Include="$(UIDir)settingswindow.hpp" />
     <QtMoc Include="$(UIDir)gamelistwidget.hpp" />
+    <QtMoc Include="$(UIDir)memcardwindow.hpp" />
   </ItemGroup>
 
   <!-- moc compile -->
@@ -114,6 +116,7 @@
     <ClCompile Include="$(QtMocOutPrefix)renderwidget.cpp" />
     <ClCompile Include="$(QtMocOutPrefix)settingswindow.cpp" />
     <ClCompile Include="$(QtMocOutPrefix)gamelistwidget.cpp" />
+    <ClCompile Include="$(QtMocOutPrefix)memcardwindow.cpp" />  
   </ItemGroup>
 
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
