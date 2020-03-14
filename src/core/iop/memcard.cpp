@@ -29,12 +29,8 @@ Memcard::~Memcard()
 void Memcard::reset()
 {
     is_dirty = false;
-    cmd_length = 0;
-    cmd_params = 0;
-    response_read_pos = 0;
-    response_write_pos = 0;
-    response_size = 0;
-    auth_f0_do_xor = false;
+
+    start_transfer();
 
     //Initial value is needed for newer MCMANs to work
     terminator = 0x55;
@@ -76,7 +72,12 @@ bool Memcard::is_connected()
 
 void Memcard::start_transfer()
 {
-    reset();
+    cmd_length = 0;
+    cmd_params = 0;
+    response_read_pos = 0;
+    response_write_pos = 0;
+    response_size = 0;
+    auth_f0_do_xor = false;
 
     memset(response_buffer, 0, sizeof(response_buffer));
 }
