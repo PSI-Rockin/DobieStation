@@ -34,6 +34,10 @@ set(HEADERS
     settings.hpp
     bios.hpp)
 
+set(UIS
+    memcardwindow.ui
+)
+
 add_executable(${TARGET} ${SOURCES} ${HEADERS})
 set_target_properties(${TARGET} PROPERTIES OUTPUT_NAME "DobieStation") # Output as "DobieStation" instead of "DobieQt"
 target_compile_options(${TARGET} PRIVATE ${DOBIE_FLAGS})
