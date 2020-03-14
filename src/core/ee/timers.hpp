@@ -30,27 +30,28 @@ struct Timer
     bool gated;
 
     uint32_t clock_scale;
-    uint64_t last_update;
 };
 
 class INTC;
+class Scheduler;
 
 class EmotionTiming
 {
     private:
         INTC* intc;
+        Scheduler* scheduler;
         Timer timers[4];
 
-        uint64_t cycle_count;
-        uint64_t next_event;
+        int timer_interrupt_event_id;
+        int events[4];
 
         uint32_t read_control(int index);
         void write_control(int index, uint32_t value);
 
-        void update_timers();
-        void reschedule();
+        bool is_timer_enabled(int index);
+        void timer_interrupt(int index, bool overflow);
     public:
-        EmotionTiming(INTC* intc);
+        EmotionTiming(INTC* intc, Scheduler* scheduler);
 
         void reset();
         void run(int cycles);
