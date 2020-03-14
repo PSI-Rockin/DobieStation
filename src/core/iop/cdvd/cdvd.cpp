@@ -660,8 +660,11 @@ void CDVD_Drive::start_seek()
         Errors::print_warning("[CDVD] Negative sector seek, converting to end-of-disc offset\n");
     }
 
+    //Some games (Simpsons Hit and Run, All Star Baseball 2005, etc) read sectors beyond the disc boundary.
+    //I'm not sure how this is supposed to be handled, but the games seem to work fine otherwise.
+    //TODO: Investigate what the hardware actually does on an invalid seek. Maybe sets some error flag?
     if (seek_to > block_count)
-        Errors::die("[CDVD] Invalid sector read $%08X (max size: $%08X)", seek_to, block_count);
+        Errors::print_warning("[CDVD] Invalid sector read $%08X (max size: $%08X)", seek_to, block_count);
 
     container->seek(seek_to, std::ios::beg);
 
