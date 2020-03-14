@@ -17,7 +17,7 @@
 #define EELOAD_SIZE 0x20000
 
 Emulator::Emulator() :
-    cdvd(this, &iop_dma),
+    cdvd(this, &iop_dma, &scheduler),
     cp0(&dmac),
     cpu(&cp0, &fpu, this, &vu0, &vu1),
     dmac(&cpu, this, &gif, &ipu, &sif, &vif0, &vif1, &vu0, &vu1),
@@ -25,10 +25,10 @@ Emulator::Emulator() :
     gs(&intc),
     iop(this),
     iop_dma(this, &cdvd, &sif, &sio2, &spu, &spu2),
-    iop_timers(this),
-    intc(this, &cpu),
+    iop_timers(this, &scheduler),
+    intc(&cpu, &scheduler),
     ipu(&intc, &dmac),
-    timers(&intc),
+    timers(&intc, &scheduler),
     sio2(this, &pad, &memcard),
     spu(1, this, &iop_dma),
     spu2(2, this, &iop_dma),
@@ -94,8 +94,8 @@ void Emulator::run()
 
     frame_ended = false;
 
-    add_ee_event(VBLANK_START, &Emulator::vblank_start, VBLANK_START_CYCLES);
-    add_ee_event(VBLANK_END, &Emulator::vblank_end, CYCLES_PER_FRAME);
+    scheduler.add_event(vblank_start_id, VBLANK_START_CYCLES);
+    scheduler.add_event(vblank_end_id, CYCLES_PER_FRAME);
     
     while (!frame_ended)
     {
@@ -105,13 +105,11 @@ void Emulator::run()
         scheduler.update_cycle_counts();
 
         cpu.run(ee_cycles);
-        iop_timers.run(iop_cycles);
         iop_dma.run(iop_cycles);
         iop.run(iop_cycles);
         iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
 
         dmac.run(bus_cycles);
-        timers.run(bus_cycles);
         ipu.run();
         vif0.update(bus_cycles);
         vif1.update(bus_cycles);
@@ -121,7 +119,7 @@ void Emulator::run()
         vu0.run_func(vu0, ee_cycles);
         vu1.run_func(vu1, ee_cycles);
 
-        scheduler.process_events(this);
+        scheduler.process_events();
     }
     fesetround(originalRounding);
 }
@@ -144,6 +142,11 @@ void Emulator::reset()
     if (!SPU_RAM)
         SPU_RAM = new uint8_t[1024 * 1024 * 2];
 
+    //Scheduler should be reset before any other components.
+    //Components will register event functions in reset, so we need to make sure scheduler's vector is cleared
+    //as soon as possible.
+    scheduler.reset();
+
     cdvd.reset();
     cp0.reset();
     cp0.init_mem_pointers(RDRAM, BIOS, (uint8_t*)&scratchpad);
@@ -159,7 +162,6 @@ void Emulator::reset()
     intc.reset();
     ipu.reset();
     pad.reset();
-    scheduler.reset();
     sif.reset();
     sio2.reset();
     spu.reset(SPU_RAM);
@@ -185,7 +187,11 @@ void Emulator::reset()
 
     iop_scratchpad_start = 0x1F800000;
 
-    add_iop_event(SPU_SAMPLE, &Emulator::gen_sound_sample, 768);
+    vblank_start_id = scheduler.register_function([this] (uint64_t param) { vblank_start(); });
+    vblank_end_id = scheduler.register_function([this] (uint64_t param) { vblank_end(); });
+    spu_event_id = scheduler.register_function([this] (uint64_t param) { gen_sound_sample(); });
+
+    start_sound_sample_event();
 }
 
 void Emulator::print_state()
@@ -224,17 +230,16 @@ void Emulator::cdvd_event()
     cdvd.handle_N_command();
 }
 
+void Emulator::start_sound_sample_event()
+{
+    scheduler.add_event(spu_event_id, 768 * 8);
+}
+
 void Emulator::gen_sound_sample()
 {
     spu.gen_sample();
     spu2.gen_sample();
-    add_iop_event(SPU_SAMPLE, &Emulator::gen_sound_sample, 768);
-}
-
-void Emulator::ee_irq_check()
-{
-    //printf("[EE] INT0 check\n");
-    intc.int0_check();
+    start_sound_sample_event();
 }
 
 void Emulator::press_button(PAD_BUTTON button)
@@ -1772,27 +1777,8 @@ void Emulator::request_gsdump_toggle()
 {
     gsdump_requested = true;
 }
+
 void Emulator::request_gsdump_single_frame()
 {
     gsdump_single_frame = true;
-}
-
-void Emulator::add_ee_event(EVENT_ID id, event_func func, uint64_t delta_time_to_run)
-{
-    SchedulerEvent event;
-    event.id = id;
-    event.func = func;
-    event.time_to_run = scheduler.get_ee_cycles() + delta_time_to_run;
-
-    scheduler.add_event(event);
-}
-
-void Emulator::add_iop_event(EVENT_ID id, event_func func, uint64_t delta_time_to_run)
-{
-    SchedulerEvent event;
-    event.id = id;
-    event.func = func;
-    event.time_to_run = (scheduler.get_iop_cycles() + delta_time_to_run) << 3;
-
-    scheduler.add_event(event);
 }

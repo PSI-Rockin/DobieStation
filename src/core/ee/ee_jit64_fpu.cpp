@@ -284,28 +284,12 @@ void EE_JIT64::floating_point_square_root(EmotionEngine& ee, IR::Instruction& in
     REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
     REG_64 XMM0 = lalloc_xmm_reg(ee, -1, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD, (REG_64)-1);
 
-    emitter.XORPS(XMM0, XMM0);
-    emitter.UCOMISS(XMM0, source);
-    uint8_t *zero_source = emitter.JCC_NEAR_DEFERRED(ConditionCode::E);
-
-    // abs(source)
-    if (source != dest)
-        emitter.MOVSS_REG(source, dest);
-    emitter.load_addr((uint64_t)&FPU_MASK_ABS[0], REG_64::RAX);
-    emitter.PAND_XMM_FROM_MEM(REG_64::RAX, dest);
+    // dest = abs(source)
+    emitter.MOVD_FROM_XMM(source, REG_64::RAX);
+    emitter.AND32_EAX(0x7FFFFFFF);
+    emitter.MOVD_TO_XMM(REG_64::RAX, dest);
 
     emitter.SQRTSS(dest, dest);
-    uint8_t *end = emitter.JMP_NEAR_DEFERRED();
-
-    emitter.set_jump_dest(zero_source);
-
-    // If the source is +0 or -0, the result is +0 and -0 respectively
-    // Since the JIT handles denormals as zero, the fractional component
-    // does not need to be masked here
-    if (source != dest)
-        emitter.MOVSS_REG(source, dest);
-
-    emitter.set_jump_dest(end);
 
     clamp_freg(dest);
 
@@ -339,9 +323,7 @@ void EE_JIT64::floating_point_subtract(EmotionEngine& ee, IR::Instruction& instr
 
 void EE_JIT64::floating_point_reciprocal_square_root(EmotionEngine& ee, IR::Instruction& instr)
 {
-    REG_64 R15 = alloc_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
-    REG_64 XMM0 = alloc_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
-    REG_64 XMM1 = alloc_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 XMM0 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
     REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::FPU, REG_STATE::READ);
     REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
@@ -360,22 +342,22 @@ void EE_JIT64::floating_point_reciprocal_square_root(EmotionEngine& ee, IR::Inst
     uint8_t *exit = emitter.JMP_NEAR_DEFERRED();
 
     // Second operand's exponent is nonzero
-    // dest = clamp(source) / sqrt(fabs(clamp(source2)))
     emitter.set_jump_dest(normalop);
-    emitter.MOVAPS_REG(source, XMM0);
-    emitter.MOVAPS_REG(source2, XMM1);
+    
+    // dest = clamp(clamp(source) / sqrt(clamp(fabsf(source2))))
+    emitter.MOVD_FROM_XMM(source2, REG_64::RAX);
+    if (source != dest)
+        emitter.MOVSS_REG(source, dest);
+    emitter.AND32_EAX(0x7FFFFFFF);
+    emitter.MOVD_TO_XMM(REG_64::RAX, XMM0);
+    clamp_freg(dest);
     clamp_freg(XMM0);
-    clamp_freg(XMM1);
-    emitter.load_addr((uint64_t)&FPU_MASK_ABS[0], REG_64::RAX);
-    emitter.PAND_XMM_FROM_MEM(REG_64::RAX, XMM1);
-    emitter.SQRTSS(XMM1, XMM1);
-    emitter.MOVAPS_REG(XMM0, dest);
-    emitter.DIVSS(XMM1, dest);
+    emitter.SQRTSS(XMM0, XMM0);
+    emitter.DIVSS(XMM0, dest);
+    clamp_freg(dest);
 
     emitter.set_jump_dest(exit);
-    free_int_reg(ee, R15);
     free_xmm_reg(ee, XMM0);
-    free_xmm_reg(ee, XMM1);
 }
 
 void EE_JIT64::move_control_word_from_floating_point(EmotionEngine& ee, IR::Instruction& instr)

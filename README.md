@@ -1,5 +1,6 @@
 # DobieStation
 [![Discord Server](https://img.shields.io/discord/430071684901371905?logo=discord)](https://discord.gg/zbEXKfN)
+[![GitHub Actions Status](https://github.com/PSI-Rockin/DobieStation/workflows/CI/badge.svg?branch=master)](https://github.com/PSI-Rockin/DobieStation/actions)
 [![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/github/PSI-Rockin/DobieStation?svg=true)](https://ci.appveyor.com/project/PSI-Rockin/dobiestation)
 
 A young PS2 emulator with plans for an optimized Android port, as well as a fast, accurate, and easy-to-use PC port.
