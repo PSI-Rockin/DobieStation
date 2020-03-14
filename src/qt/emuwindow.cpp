@@ -140,6 +140,9 @@ int EmuWindow::load_exec(const char* file_name, bool skip_BIOS)
         return 1;
     }
 
+    if (!Settings::instance().memcard_path.isEmpty())
+        emu_thread.load_memcard(0, Settings::instance().memcard_path.toStdString().c_str());
+
     QString ext = file_info.suffix();
     if(QString::compare(ext, "elf", Qt::CaseInsensitive) == 0)
     {
@@ -297,6 +300,9 @@ void EmuWindow::create_menu()
     file_menu->addSeparator();
     file_menu->addAction(exit_action);
 
+    auto memcard_window_action = new QAction(tr("&Memcards"), this);
+    connect(memcard_window_action, &QAction::triggered, this, &EmuWindow::open_memcard_window);
+
     auto pause_action = new QAction(tr("&Pause"), this);
     connect(pause_action, &QAction::triggered, this, [=] (){
         emu_thread.pause(PAUSE_EVENT::USER_REQUESTED);
@@ -325,6 +331,8 @@ void EmuWindow::create_menu()
     });
 
     emulation_menu = menuBar()->addMenu(tr("Emulation"));
+    emulation_menu->addAction(memcard_window_action);
+    emulation_menu->addSeparator();
     emulation_menu->addAction(pause_action);
     emulation_menu->addAction(unpause_action);
     emulation_menu->addSeparator();
@@ -409,6 +417,15 @@ void EmuWindow::open_settings_window()
 
     settings_window->show();
     settings_window->raise();
+}
+
+void EmuWindow::open_memcard_window()
+{
+    if (!memcard_window)
+        memcard_window = new MemcardWindow(this);
+
+    memcard_window->show();
+    memcard_window->raise();
 }
 
 void EmuWindow::closeEvent(QCloseEvent *event)

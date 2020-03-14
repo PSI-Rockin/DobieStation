@@ -99,7 +99,8 @@ SOURCES += ../../src/qt/main.cpp \
     ../../src/core/ee/ee_jit64_cop2.cpp \
     ../../src/core/ee/ee_jit64_fpu.cpp \
     ../../src/core/ee/ee_jit64_fpu_avx.cpp \
-    ../../src/core/ee/ee_jit64_gpr.cpp
+    ../../src/core/ee/ee_jit64_gpr.cpp \
+    ../../src/qt/memcardwindow.cpp
 
 HEADERS += \
     ../../src/core/errors.hpp \
@@ -169,5 +170,9 @@ HEADERS += \
     ../../src/qt/gamelistwidget.hpp \
     ../../src/core/ee/ee_jittrans.hpp \
     ../../src/core/ee/ee_jit.hpp \
-    ../../src/core/ee/ee_jit64.hpp
+    ../../src/core/ee/ee_jit64.hpp \
+    ../../src/qt/memcardwindow.hpp
    
+
+FORMS += \
+    ../../src/qt/memcardwindow.ui

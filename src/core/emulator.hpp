@@ -119,6 +119,7 @@ class Emulator
         void load_BIOS(const uint8_t* BIOS);
         void load_ELF(const uint8_t* ELF, uint32_t size);
         bool load_CDVD(const char* name, CDVD_CONTAINER type);
+        void load_memcard(int port, const char* name);
         void execute_ELF();
         uint32_t* get_framebuffer();
         void get_resolution(int& w, int& h);

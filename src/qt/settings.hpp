@@ -31,6 +31,8 @@ class Settings final : public QObject
         bool vu1_jit_enabled;
         bool ee_jit_enabled;
 
+        QString memcard_path;
+
         void save();
         void reset();
         void update_last_used_directory(const QString& path);
@@ -38,6 +40,7 @@ class Settings final : public QObject
         void add_rom_path(const QString& path);
         void set_bios_path(const QString& path);
         void set_screenshot_directory(const QString& directory);
+        void set_memcard_path(const QString& path);
 
         void remove_rom_directory(const QString& directory);
         void clear_rom_paths();
@@ -51,6 +54,7 @@ class Settings final : public QObject
         void rom_directory_uncommitted(const QString& directory);
         void bios_changed(const QString& path);
         void screenshot_directory_changed(const QString& directory);
+        void memcard_changed(const QString& path);
         void reload();
 };
 #endif

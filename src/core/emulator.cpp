@@ -391,6 +391,13 @@ bool Emulator::load_CDVD(const char *name, CDVD_CONTAINER type)
     return cdvd.load_disc(name, type);
 }
 
+void Emulator::load_memcard(int port, const char *name)
+{
+    //TODO: handle port setting. Currently it's ignored and treated as Port 0
+    if (!memcard.open(name))
+        printf("Failed to open memcard %s\n", name);
+}
+
 void Emulator::execute_ELF()
 {
     if (!ELF_file)

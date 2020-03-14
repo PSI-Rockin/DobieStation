@@ -19,6 +19,7 @@ set(SOURCES
     settingswindow.cpp
     renderwidget.cpp
     gamelistwidget.cpp
+    memcardwindow.cpp
     main.cpp
     settings.cpp
     bios.cpp)
@@ -29,6 +30,7 @@ set(HEADERS
     settingswindow.hpp
     renderwidget.hpp
     gamelistwidget.hpp
+    memcardwindow.hpp
     settings.hpp
     bios.hpp)
 

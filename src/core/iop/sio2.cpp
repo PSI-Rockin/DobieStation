@@ -24,9 +24,6 @@ void SIO2::reset()
     port = 0;
 
     dma_reset();
-
-    if (!memcard->open("memcard.bin"))
-        printf("[SIO2] Failed to open memcard\n");
 }
 
 uint8_t SIO2::read_serial()

@@ -61,7 +61,10 @@ bool Memcard::open(std::string file_name)
         this->file_name = file_name;
     }
     else
+    {
+        this->file_name = "";
         file_opened = false;
+    }
 
     return file_opened;
 }
