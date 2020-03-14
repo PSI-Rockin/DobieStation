@@ -2844,8 +2844,6 @@ void VU_JIT64::create_prologue_block()
     state.param2 = 0;
     state.program = 0;
 
-    jit_block.print_block();
-
     prologue_block = (VUJitPrologue)jit_heap.insert_block(state, &jit_block)->code_start;
 }
 
