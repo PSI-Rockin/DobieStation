@@ -91,6 +91,8 @@ void Emulator::run()
         }
     }
 
+    memcard.save_if_dirty();
+
     frame_ended = false;
 
     add_ee_event(VBLANK_START, &Emulator::vblank_start, VBLANK_START_CYCLES);

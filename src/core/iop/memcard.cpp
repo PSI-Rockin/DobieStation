@@ -28,6 +28,7 @@ Memcard::~Memcard()
 
 void Memcard::reset()
 {
+    is_dirty = false;
     cmd_length = 0;
     cmd_params = 0;
     response_read_pos = 0;
@@ -41,7 +42,7 @@ void Memcard::reset()
 
 bool Memcard::open(std::string file_name)
 {
-    std::ifstream file(file_name);
+    std::ifstream file(file_name, std::ios::binary);
 
     if (mem)
     {
@@ -56,6 +57,8 @@ bool Memcard::open(std::string file_name)
         mem = new uint8_t[0x840000];
         file.read((char*)mem, 0x840000);
         file.close();
+
+        this->file_name = file_name;
     }
     else
         file_opened = false;
@@ -73,6 +76,17 @@ void Memcard::start_transfer()
     reset();
 
     memset(response_buffer, 0, sizeof(response_buffer));
+}
+
+void Memcard::save_if_dirty()
+{
+    if (is_dirty && file_opened)
+    {
+        std::ofstream file(file_name, std::ios::binary);
+        file.write((char*)mem, 0x840000);
+        file.close();
+        is_dirty = false;
+    }
 }
 
 uint8_t Memcard::write_serial(uint8_t data)
@@ -168,6 +182,8 @@ uint8_t Memcard::write_serial(uint8_t data)
                 //Erase sector
                 cmd_length = 2;
                 response_end();
+
+                is_dirty = true;
 
                 for (unsigned int i = 0; i < 528 * 16; i++)
                     mem[mem_addr + i] = 0xFF;
@@ -348,6 +364,7 @@ void Memcard::write_mem(uint8_t data)
     }
     else if (cmd_params - 1 < mem_write_size)
     {
+        is_dirty = true;
         mem[mem_addr] = data;
         mem_addr++;
     }

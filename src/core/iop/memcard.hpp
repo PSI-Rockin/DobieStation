@@ -13,7 +13,9 @@ class Memcard
         uint8_t cmd;
         uint8_t terminator;
 
+        std::string file_name;
         bool file_opened;
+        bool is_dirty;
 
         uint8_t response_buffer[1024];
         unsigned int response_read_pos;
@@ -44,6 +46,7 @@ class Memcard
         void reset();
         bool open(std::string file_name);
         bool is_connected();
+        void save_if_dirty();
 
         void start_transfer();
         uint8_t write_serial(uint8_t data);
