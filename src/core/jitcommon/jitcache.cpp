@@ -460,7 +460,7 @@ void EEJitHeap::jit_free(void *ptr)
 void* EEJitHeap::jit_malloc(std::size_t size)
 {
   size = std::max(get_min_bin_size(0), aligned_size(size));
-  if(size < sizeof(FreeList)) size = sizeof(FreeList);
+  size = std::max(sizeof(FreeList), size);
   void* mem = find_memory(size);
   if (mem)
     heap_usage += *get_size_ptr(mem); // this is the aligned size.  for tiny blocks they use 
@@ -564,6 +564,41 @@ EEJitBlockRecord* EEJitHeap::find_block(uint32_t PC)
         return &page_rec->block_array[idx];
     }
     return nullptr;
+}
+
+// TODO: For just determining if there's enough space left to hold a block of a specific size in the heap,
+// is there a faster solution? I'm ignorant as to this heap implementation - Souzooka
+// We'll also probably, if possible, remove free space checks from EEJitHeap and
+// JitUnorderedMapHeap and move it into JitHeap if possible.
+bool EEJitHeap::has_free_space(std::size_t size)
+{
+    // find smallest bin which contains chunks large enough for our object
+    uint8_t bin = JIT_ALLOC_BINS;
+    for (uint8_t i = 0; i < JIT_ALLOC_BINS; i++) {
+        if (get_min_bin_size(i) >= size) {
+            bin = i;
+            break;
+        }
+    }
+
+    // now find a bin list that's not the large bin
+    FreeList* selected_bin = nullptr;
+    for (uint8_t i = bin; i < JIT_ALLOC_BINS; i++) {
+        if (free_bin_lists[i])
+            return true;
+    }
+
+    std::size_t min_so_far = std::numeric_limits<std::size_t>::max();
+    // otherwise we need to search the large bin for the smallest chunk to split up.
+    selected_bin = free_bin_lists[JIT_ALLOC_BINS];
+    while (selected_bin) {
+        if (*get_size_ptr(selected_bin) >= size) {
+            return true;
+        }
+        selected_bin = selected_bin->next;
+    }
+
+    return false;
 }
 
 /*!

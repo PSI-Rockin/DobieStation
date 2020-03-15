@@ -111,6 +111,16 @@ uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee)
 
 uint16_t EE_JIT64::run(EmotionEngine& ee)
 {
+    //Need to check we have space on the heap before running any recompiled code
+    //Resetting the heap during recompilation wipes out the prologue/epilogue!
+    //Checks for maximum 5mb block size of space before continuing
+    if (!jit_heap.has_free_space(1024 * 1024 * 5))
+    {
+        printf("[EE JIT] Not enough room for new blocks, clearing cache\n");
+        jit_heap.flush_all_blocks();
+        create_prologue_block();
+    }
+
     prologue_block(*this, ee, &jit_heap.lookup_cache[0]);
 
     return cycle_count;
