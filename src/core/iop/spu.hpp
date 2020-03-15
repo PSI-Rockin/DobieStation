@@ -2,6 +2,8 @@
 #define SPU_HPP
 #include <cstdint>
 #include <fstream>
+#include "../audio/utils.hpp"
+#include "../audio/ps_adpcm.hpp"
 
 struct Voice
 {
@@ -12,6 +14,7 @@ struct Voice
 
     uint32_t start_addr;
     uint32_t current_addr;
+    uint32_t read_blocks;
     uint32_t loop_addr;
     bool loop_addr_specified;
 
@@ -19,8 +22,13 @@ struct Voice
     int block_pos;
     int loop_code;
 
+    ADPCM_info adpcm;
+    std::vector<int16_t> pcm;
+    WAVWriter* wavout;
+
     void reset()
     {
+        delete wavout;
         left_vol = 0;
         right_vol = 0;
         pitch = 0;
@@ -77,6 +85,7 @@ class SPU
         uint32_t ENDX;
         uint32_t key_on;
         uint32_t key_off;
+        ADPCM_decoder dec;
 
         void key_on_voice(int v);
         void key_off_voice(int v);

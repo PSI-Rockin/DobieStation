@@ -1,11 +1,14 @@
 #include <algorithm>
 #include <cstdio>
 #include <fstream>
+#include <memory>
 #include <ostream>
 #include <sstream>
 #include "spu.hpp"
 #include "iop_dma.hpp"
 #include "iop_intc.hpp"
+#include "../audio/ps_adpcm.hpp"
+#include "../audio/utils.hpp"
 
 /**
  * Notes on "AutoDMA", as it seems to not be documented anywhere else
@@ -42,6 +45,9 @@ void SPU::reset(uint8_t* RAM)
     for (int i = 0; i < 24; i++)
     {
         voices[i].reset();
+        std::ostringstream fname;
+        fname << "spu_" << id << "_voice_" << i << ".wav";
+        voices[i].wavout = new WAVWriter(fname.str());
     }
 
     IRQA[id-1] = 0x800;
@@ -70,38 +76,46 @@ void SPU::spu_irq(int index)
 
 void SPU::dump_voice_data()
 {
-    std::ofstream ramdump("spu.ram", std::fstream::out | std::fstream::binary);
-    ramdump.write(reinterpret_cast<char const *>(RAM), 1024*1024*2);
-    ramdump.close();
+    //std::ofstream ramdump("spu.ram", std::fstream::out | std::fstream::binary);
+    //ramdump.write(reinterpret_cast<char const *>(RAM), 1024*1024*2);
+    //ramdump.close();
     for (int i = 0; i < 24; i++)
     {
         auto voice = voices[i];
         printf("reading voice %d on spu %d starting at 0x%X\n", i, id, voice.start_addr);
         printf("loop addr is %X\n", voice.loop_addr);
         std::ostringstream fname;
-        fname << "spu_" << id << "_voice_" << i << ".spuv";
-        std::ofstream out(fname.str().c_str(), std::fstream::out | std::fstream::binary);
+        fname << "spu_" << id << "_voice_" << i << ".wav";
+        //std::ofstream out(fname.str().c_str(), std::fstream::out | std::fstream::binary);
 
         auto *data = (RAM + voice.start_addr);
 
+        ADPCM_info info = {};
+        ADPCM_decoder stream = {};
+
         int dataleft = 1;
+        std::vector<int16_t> pcm;
 
-        if (out)
+        //writewav(voices[i].pcm, fname.str());
+
+        while (dataleft)
         {
-            while (dataleft)
+            info.block = stream.read_block((uint8_t*)data);
+
+            if ((info.block.flags & 1) == 1)
             {
-                uint16_t header = *data;
-
-                if (((header >> 8) & 1) == 1)
-                {
-                    dataleft = 0;
-                }
-
-                out.write((char*)(data), 16);
-                data += 8;
+                dataleft = 0;
             }
+
+            auto newpcm = stream.decode_samples(&info, 14);
+            pcm.insert(pcm.end(), newpcm.begin(), newpcm.end());
+
+            voice.wavout->append_pcm(pcm);
+            data += 8;
         }
-        out.close();
+
+        //writewav(pcm, fname.str());
+        //out.close();
     }
 }
 
@@ -126,6 +140,10 @@ void SPU::gen_sample()
                     voices[i].loop_addr = voices[i].current_addr;
 
                 voices[i].block_pos = 3;
+
+                voices[i].adpcm.block = dec.read_block((uint8_t*)(RAM+voices[i].current_addr));
+                auto newpcm = dec.decode_samples(&voices[i].adpcm, 14);
+                voices[i].pcm.insert(voices[i].pcm.end(), newpcm.begin(), newpcm.end());
             }
 
             voices[i].block_pos++;
@@ -140,6 +158,9 @@ void SPU::gen_sample()
             //End of block
             if (voices[i].block_pos == 32)
             {
+                //printf("%zu\n", voices[i].pcm.size());
+
+                voices[i].read_blocks++;
                 voices[i].block_pos = 0;
                 switch (voices[i].loop_code)
                 {
@@ -158,7 +179,17 @@ void SPU::gen_sample()
                         break;
                 }
             }
+            if (voices[i].pcm.size() > 0x100)
+            {
+                voices[i].wavout->append_pcm(voices[i].pcm);
+                voices[i].pcm.clear();
+
+            }
         }
+        //printf("[SPU-%d]Read %d blocks for voice %d\n", id, voices[i].read_blocks, i);
+        //voices[i].read_blocks = 0;
+       // printf("[SPU] gen_sample for voice %d moved %d bytes since last call\n", i, (voices[i].current_addr - voices[i].loop_addr));
+       // voices[i].previous_addr = voices[i].current_addr;
     }
 
     if (ADMA_left > 0 && autodma_ctrl & (1 << (id - 1)))
