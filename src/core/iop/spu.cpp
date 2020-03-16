@@ -107,7 +107,7 @@ void SPU::dump_voice_data()
                 dataleft = 0;
             }
 
-            auto newpcm = stream.decode_samples(&info, 14);
+            auto newpcm = stream.decode_samples(info, 14);
             pcm.insert(pcm.end(), newpcm.begin(), newpcm.end());
 
             voice.wavout->append_pcm(pcm);
@@ -142,7 +142,7 @@ void SPU::gen_sample()
                 voices[i].block_pos = 3;
 
                 voices[i].adpcm.block = dec.read_block((uint8_t*)(RAM+voices[i].current_addr));
-                auto newpcm = dec.decode_samples(&voices[i].adpcm, 14);
+                auto newpcm = dec.decode_samples(voices[i].adpcm, 14);
                 voices[i].pcm.insert(voices[i].pcm.end(), newpcm.begin(), newpcm.end());
             }
 
