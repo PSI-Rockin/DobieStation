@@ -17,7 +17,7 @@ class WAVWriter
 
         std::fstream file;
         uint32_t data_size = 0;
-        uint32_t sample_rate = 44100;
+        uint32_t sample_rate = 48000;
         uint16_t channels = 1 ;
         uint16_t sample_size = 16;
 
