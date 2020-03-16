@@ -23,6 +23,8 @@ target.path = /usr/local/bin/
 INSTALLS += target
 
 SOURCES += ../../src/qt/main.cpp \
+    ../../src/core/audio/ps_adpcm.cpp \
+    ../../src/core/audio/utils.cpp \
     ../../src/core/errors.cpp \
     ../../src/core/ee/emotion.cpp \
     ../../src/core/emulator.cpp \
@@ -107,6 +109,8 @@ SOURCES += ../../src/qt/main.cpp \
     ../../src/core/iop/iop_intc.cpp
 
 HEADERS += \
+    ../../src/core/audio/ps_adpcm.hpp \
+    ../../src/core/audio/utils.hpp \
     ../../src/core/errors.hpp \
     ../../src/core/ee/emotion.hpp \
     ../../src/core/emulator.hpp \
