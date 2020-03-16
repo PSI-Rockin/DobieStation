@@ -1,10 +1,11 @@
 #include "ps_adpcm.hpp"
 #include <cstdint>
 #include <vector>
+#include <algorithm>
 
 int16_t clamp16(int32_t val)
 {
-    return std::max(std::min(INT16_MAX, val), INT16_MIN);
+    return std::max(std::min(32767, val), -32768);
 }
 
 

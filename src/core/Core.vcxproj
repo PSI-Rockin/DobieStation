@@ -75,6 +75,8 @@
   </ItemDefinitionGroup>
   <!-- cpp files -->
   <ItemGroup>
+    <ClCompile Include="audio\ps_adpcm.cpp" />
+    <ClCompile Include="audio\utils.cpp" />
     <ClCompile Include="ee\ee_jit.cpp" />
     <ClCompile Include="ee\ee_jit64.cpp" />
     <ClCompile Include="ee\ee_jit64_cop2.cpp" />
@@ -152,6 +154,8 @@
   </ItemGroup>
   <!-- headers -->
   <ItemGroup>
+    <ClInclude Include="audio\ps_adpcm.hpp" />
+    <ClInclude Include="audio\utils.hpp" />
     <ClInclude Include="ee\bios_hle.hpp" />
     <ClInclude Include="ee\ee_jit.hpp" />
     <ClInclude Include="ee\ee_jit64.hpp" />
