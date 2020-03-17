@@ -49,7 +49,6 @@ void writewav(std::vector<int16_t> pcm, std::string filename)
 
 WAVWriter::WAVWriter(std::string filename) : file(filename, std::fstream::out | std::fstream::binary)
 {
-    printf("SPU wav constructor called %s\n", filename.c_str());
     update_header();
 }
 

@@ -46,7 +46,7 @@ void SPU::reset(uint8_t* RAM)
     {
         voices[i].reset();
         std::ostringstream fname;
-        fname << "spu_" << id << "_voice_" << i << ".wav";
+        fname << "spu_" << id << "_voice_stream_" << i << ".wav";
         voices[i].wavout = new WAVWriter(fname.str());
     }
 
@@ -81,13 +81,13 @@ void SPU::dump_voice_data()
     //ramdump.close();
     for (int i = 0; i < 24; i++)
     {
-        auto voice = voices[i];
+        auto &voice = voices[i];
         printf("reading voice %d on spu %d starting at 0x%X\n", i, id, voice.start_addr);
         printf("loop addr is %X\n", voice.loop_addr);
         std::ostringstream fname;
         fname << "spu_" << id << "_voice_" << i << ".wav";
-        //std::ofstream out(fname.str().c_str(), std::fstream::out | std::fstream::binary);
 
+        WAVWriter out(fname.str());
         auto *data = (RAM + voice.start_addr);
 
         ADPCM_info info = {};
@@ -110,12 +110,11 @@ void SPU::dump_voice_data()
             auto newpcm = stream.decode_samples(info, 14);
             pcm.insert(pcm.end(), newpcm.begin(), newpcm.end());
 
-            voice.wavout->append_pcm(pcm);
             data += 8;
         }
 
-        //writewav(pcm, fname.str());
-        //out.close();
+
+        out.append_pcm(pcm);
     }
 }
 
