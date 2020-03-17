@@ -96,8 +96,6 @@ void SPU::dump_voice_data()
         int dataleft = 1;
         std::vector<int16_t> pcm;
 
-        //writewav(voices[i].pcm, fname.str());
-
         while (dataleft)
         {
             info.block = stream.read_block((uint8_t*)data);
@@ -107,7 +105,7 @@ void SPU::dump_voice_data()
                 dataleft = 0;
             }
 
-            auto newpcm = stream.decode_samples(info, 14);
+            auto newpcm = stream.decode_samples(info);
             pcm.insert(pcm.end(), newpcm.begin(), newpcm.end());
 
             data += 8;
@@ -122,6 +120,14 @@ void SPU::gen_sample()
 {
     for (int i = 0; i < 24; i++)
     {
+        int samples_produced = 0;
+        if (voices[i].key_switch_timeout != 0)
+        {
+            voices[i].key_switch_timeout--;
+        }
+
+        std::vector<int16_t> samples;
+
         voices[i].counter += voices[i].pitch;
         while (voices[i].counter >= 0x1000)
         {
@@ -138,15 +144,21 @@ void SPU::gen_sample()
                 if (loop_start && !voices[i].loop_addr_specified)
                     voices[i].loop_addr = voices[i].current_addr;
 
-                voices[i].block_pos = 3;
+                voices[i].block_pos = 4;
 
+                voices[i].last_pcm = voices[i].current_pcm;
                 voices[i].adpcm.block = dec.read_block((uint8_t*)(RAM+voices[i].current_addr));
-                auto newpcm = dec.decode_samples(voices[i].adpcm, 14);
-                voices[i].pcm.insert(voices[i].pcm.end(), newpcm.begin(), newpcm.end());
+                voices[i].current_pcm = dec.decode_samples(voices[i].adpcm);
+
+                spu_check_irq(voices[i].current_addr);
+                voices[i].current_addr++;
+                voices[i].current_addr &= 0x000FFFFF;
             }
 
-            voices[i].block_pos++;
+            samples.push_back(voices[i].current_pcm.at(voices[i].block_pos-4));
+            samples_produced++;
 
+            voices[i].block_pos++;
             if ((voices[i].block_pos % 4) == 0)
             {
                 spu_check_irq(voices[i].current_addr);
@@ -154,12 +166,10 @@ void SPU::gen_sample()
                 voices[i].current_addr &= 0x000FFFFF;
             }
 
+
             //End of block
             if (voices[i].block_pos == 32)
             {
-                //printf("%zu\n", voices[i].pcm.size());
-
-                voices[i].read_blocks++;
                 voices[i].block_pos = 0;
                 switch (voices[i].loop_code)
                 {
@@ -170,6 +180,8 @@ void SPU::gen_sample()
                     //No loop specified, set ENDX and mute channel
                     case 1:
                         ENDX |= 1 << i;
+                        voices[i].left_vol = 0;
+                        voices[i].right_vol = 0;
                         break;
                     //Jump to loop addr and set ENDX
                     case 3:
@@ -178,17 +190,46 @@ void SPU::gen_sample()
                         break;
                 }
             }
-            if (voices[i].pcm.size() > 0x100)
-            {
-                voices[i].wavout->append_pcm(voices[i].pcm);
-                voices[i].pcm.clear();
-
-            }
         }
-        //printf("[SPU-%d]Read %d blocks for voice %d\n", id, voices[i].read_blocks, i);
-        //voices[i].read_blocks = 0;
-       // printf("[SPU] gen_sample for voice %d moved %d bytes since last call\n", i, (voices[i].current_addr - voices[i].loop_addr));
-       // voices[i].previous_addr = voices[i].current_addr;
+
+        int16_t final_sample = 0;
+
+        if (samples_produced == 0)
+        {
+            final_sample = (voices[i].last_sample)*(voices[i].next_sample-voices[i].last_sample);
+            final_sample = (voices[i].last_sample*128+voices[i].next_sample*128)/255;
+        }
+
+        if (samples_produced == 1)
+        {
+            final_sample = voices[i].next_sample;
+            voices[i].next_sample = samples.at(0);
+        }
+
+        if (samples_produced > 1)
+        {
+            final_sample = voices[i].next_sample;
+            voices[i].next_sample = samples.at(samples_produced / 2);
+        }
+
+
+        //if (!voices[i].left_vol && !voices[i].right_vol)
+        //{
+        //    final_sample = 0;
+        //}
+
+
+
+        voices[i].last_sample = final_sample;
+        voices[i].out_pcm.push_back((int32_t(final_sample*voices[i].left_vol) >> 15));
+
+        //voices[i].out_pcm.insert(voices[i].out_pcm.end(), samples.begin(), samples.end());
+
+        if (voices[i].out_pcm.size() > 0x100)
+        {
+            voices[i].wavout->append_pcm(voices[i].out_pcm);
+            voices[i].out_pcm.clear();
+        }
     }
 
     if (ADMA_left > 0 && autodma_ctrl & (1 << (id - 1)))
@@ -667,10 +708,12 @@ void SPU::write_voice_reg(uint32_t addr, uint16_t value)
     switch (reg)
     {
         case 0:
-            //printf("[SPU%d] Write V%d VOLL: $%04X\n", id, v, value);
+            printf("[SPU%d] Write V%d VOLL: $%04X\n", id, v, value);
+            voices[v].left_vol = value;
             break;
         case 2:
-            //printf("[SPU%d] Write V%d VOLR: $%04X\n", id, v, value);
+            printf("[SPU%d] Write V%d VOLR: $%04X\n", id, v, value);
+            voices[v].right_vol = value;
             break;
         case 4:
             printf("[SPU%d] Write V%d PITCH: $%04X\n", id, v, value);
@@ -697,6 +740,13 @@ void SPU::write_voice_reg(uint32_t addr, uint16_t value)
 
 void SPU::key_on_voice(int v)
 {
+    if (voices[v].key_switch_timeout > 0)
+    {
+        printf("[SPU%d] Ignored key_on for voice %d, within 2 T of last change\n", id, v);
+        return;
+    }
+    voices[v].key_switch_timeout = 2;
+
     //Copy start addr to current addr, clear ENDX bit, and set envelope to Attack mode
     voices[v].current_addr = voices[v].start_addr;
     voices[v].block_pos = 0;
@@ -706,6 +756,16 @@ void SPU::key_on_voice(int v)
 
 void SPU::key_off_voice(int v)
 {
+    if (voices[v].key_switch_timeout > 0)
+    {
+        printf("[SPU%d] ignored key_off for voice %d, within 2 T of last change\n", id, v);
+        return;
+    }
+    voices[v].key_switch_timeout = 2;
+
+    voices[v].left_vol = 0;
+    voices[v].right_vol = 0;
+
     //Set envelope to Release mode
 }
 

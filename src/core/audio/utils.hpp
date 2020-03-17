@@ -10,6 +10,7 @@ class WAVWriter
 {
     public:
         WAVWriter(std::string filename);
+        WAVWriter(std::string filename, int channels);
         ~WAVWriter();
         void append_pcm(std::vector<int16_t> pcm);
     private:
@@ -18,7 +19,7 @@ class WAVWriter
         std::fstream file;
         uint32_t data_size = 0;
         uint32_t sample_rate = 48000;
-        uint16_t channels = 1 ;
+        int channels = 1 ;
         uint16_t sample_size = 16;
 
         const char* data = "data";

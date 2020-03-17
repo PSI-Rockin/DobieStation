@@ -7,23 +7,32 @@
 
 struct Voice
 {
-    uint16_t left_vol, right_vol;
+    int16_t left_vol, right_vol;
     uint16_t pitch;
     uint16_t adsr1, adsr2;
     uint16_t current_envelope;
 
     uint32_t start_addr;
     uint32_t current_addr;
-    uint32_t read_blocks;
     uint32_t loop_addr;
     bool loop_addr_specified;
+
+    bool on;
+    int key_switch_timeout;
 
     uint32_t counter;
     int block_pos;
     int loop_code;
 
     ADPCM_info adpcm;
-    std::vector<int16_t> pcm;
+
+    int16_t last_sample = 0;
+    int16_t next_sample = 0;
+
+    std::vector<int16_t> last_pcm;
+    std::vector<int16_t> current_pcm;
+
+    std::vector<int16_t> out_pcm;
     WAVWriter* wavout;
 
     void reset()

@@ -9,15 +9,15 @@ int16_t clamp16(int32_t val)
 }
 
 
-std::vector<int16_t> ADPCM_decoder::decode_samples(ADPCM_info &info, int num_samples)
+std::vector<int16_t> ADPCM_decoder::decode_samples(ADPCM_info &info)
 {
     std::vector<int16_t> pcm;
 
 
-    for (int i = 0; i < num_samples; i++)
+    for (int i = 0; i < 14; i++)
     {
 
-        uint8_t byte = info.block.data[info.block.pos+i];
+        uint8_t byte = info.block.data[i];
 
         for(int j = 0; j < 2; j++)
         {
