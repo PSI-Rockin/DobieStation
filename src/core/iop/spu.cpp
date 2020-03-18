@@ -47,7 +47,7 @@ void SPU::reset(uint8_t* RAM)
         voices[i].reset();
         std::ostringstream fname;
         fname << "spu_" << id << "_voice_stream_" << i << ".wav";
-        voices[i].wavout = new WAVWriter(fname.str());
+        voices[i].wavout = new WAVWriter(fname.str(), 2);
     }
 
     IRQA[id-1] = 0x800;
@@ -196,7 +196,6 @@ void SPU::gen_sample()
 
         if (samples_produced == 0)
         {
-            final_sample = (voices[i].last_sample)*(voices[i].next_sample-voices[i].last_sample);
             final_sample = (voices[i].last_sample*128+voices[i].next_sample*128)/255;
         }
 
@@ -221,14 +220,16 @@ void SPU::gen_sample()
 
 
         voices[i].last_sample = final_sample;
-        voices[i].out_pcm.push_back((int32_t(final_sample*voices[i].left_vol) >> 15));
+        voices[i].left_out_pcm.push_back((int32_t(final_sample*voices[i].left_vol) >> 15));
+        voices[i].right_out_pcm.push_back((int32_t(final_sample*voices[i].right_vol) >> 15));
 
         //voices[i].out_pcm.insert(voices[i].out_pcm.end(), samples.begin(), samples.end());
 
-        if (voices[i].out_pcm.size() > 0x100)
+        if (voices[i].left_out_pcm.size() > 0x100)
         {
-            voices[i].wavout->append_pcm(voices[i].out_pcm);
-            voices[i].out_pcm.clear();
+            voices[i].wavout->append_pcm_stereo(voices[i].left_out_pcm, voices[i].right_out_pcm);
+            voices[i].left_out_pcm.clear();
+            voices[i].right_out_pcm.clear();
         }
     }
 

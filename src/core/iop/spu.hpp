@@ -32,7 +32,8 @@ struct Voice
     std::vector<int16_t> last_pcm;
     std::vector<int16_t> current_pcm;
 
-    std::vector<int16_t> out_pcm;
+    std::vector<int16_t> left_out_pcm;
+    std::vector<int16_t> right_out_pcm;
     WAVWriter* wavout;
 
     void reset()
