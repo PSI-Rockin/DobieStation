@@ -3,49 +3,6 @@
 #include <iostream>
 #include <fstream>
 
-void writewav(std::vector<int16_t> pcm, std::string filename)
-{
-    std::ofstream out(filename, std::fstream::out | std::fstream::binary);
-
-    // HEADER
-    out.write("RIFF", 4);
-    uint32_t chunksize = 36 + (uint32_t)(pcm.size() * 2);
-    out.write((char*)&chunksize, 4);
-
-    out.write("WAVE", 4);
-
-    // fmt
-    out.write("fmt ", 4);
-    uint32_t subchunk1s = 16;
-    out.write((char*)&subchunk1s, 4);
-    uint16_t format = 1;
-    out.write((char*)&format, 2);
-    uint16_t channels = 1;
-    out.write((char*)&channels, 2);
-    uint32_t samplerate = 44100;
-    out.write((char*)&samplerate, 4);
-    uint32_t byterate = 44100 * 1 * 16/8;
-    out.write((char*)&byterate, 4);
-    uint16_t blockalign = 1 * 16/8;
-    out.write((char*)&blockalign, 2);
-    uint16_t bits = 16;
-    out.write((char*)&bits, 2);
-
-
-    // data
-    out.write("data", 4);
-    uint32_t subchunk2s = (uint32_t)pcm.size() * 2;
-    out.write((char*)&subchunk2s, 4);
-
-    for (auto s : pcm)
-    {
-        out.write((char*)&s, 2);
-
-    }
-    out.close();
-
-}
-
 WAVWriter::WAVWriter(std::string filename, int channels) : file(filename, std::fstream::out | std::fstream::binary),
                                                            channels(channels)
 {

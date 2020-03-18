@@ -4,7 +4,6 @@
 #include <vector>
 #include <string>
 
-void writewav(std::vector<int16_t> pcm, std::string filename);
 
 class WAVWriter
 {
