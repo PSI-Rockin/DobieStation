@@ -28,7 +28,7 @@ jobs:
       with:
         fetch-depth: 0
     - name: Install Qt
-      uses: ouuan/install-qt-action@v2.3.1
+      uses: jurplel/install-qt-action@v2
     - name: Setup MSBuild
       uses: microsoft/setup-msbuild@v1
     - name: Build
