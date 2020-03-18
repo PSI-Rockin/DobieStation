@@ -12,6 +12,7 @@ class WAVWriter
         WAVWriter(std::string filename, int channels);
         ~WAVWriter();
         void append_pcm(std::vector<int16_t> pcm);
+        void append_pcm_stereo(std::vector<int16_t> left, std::vector<int16_t> right);
     private:
         void update_header();
 
