@@ -887,6 +887,7 @@ void EmotionEngine::syscall_exception()
             Errors::die("[EE] Exit syscall called!\n");
             return;
         }
+        case 0x6: // LoadExecPS2
         case 0x7: // ExecPS2
         {
             // Flush the cache when executing a new ELF
