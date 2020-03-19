@@ -5,6 +5,12 @@
 #include "../audio/utils.hpp"
 #include "../audio/ps_adpcm.hpp"
 
+struct stereo_sample
+{
+    int16_t left;
+    int16_t right;
+};
+
 struct Voice
 {
     int16_t left_vol, right_vol;
@@ -96,6 +102,8 @@ class SPU
         uint32_t key_on;
         uint32_t key_off;
         ADPCM_decoder dec;
+
+        stereo_sample voice_gen_sample(int voice_id);
 
         void key_on_voice(int v);
         void key_off_voice(int v);

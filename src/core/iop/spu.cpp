@@ -116,114 +116,97 @@ void SPU::dump_voice_data()
     }
 }
 
+stereo_sample SPU::voice_gen_sample(int voice_id)
+{
+    Voice &voice = voices[voice_id];
+    if (voice.key_switch_timeout != 0)
+    {
+        voice.key_switch_timeout--;
+    }
+
+    voice.counter += voice.pitch;
+    while (voice.counter >= 0x1000)
+    {
+        voice.counter -= 0x1000;
+
+        //Read header
+        if (voice.block_pos == 0)
+        {
+            voice.current_addr &= 0x000FFFFF;
+            uint16_t header = RAM[voice.current_addr];
+            voice.loop_code = (header >> 8) & 0x3;
+            bool loop_start = header & (1 << 10);
+
+            if (loop_start && !voice.loop_addr_specified)
+                voice.loop_addr = voice.current_addr;
+
+            voice.block_pos = 4;
+
+            voice.last_pcm = voice.current_pcm;
+            voice.adpcm.block = dec.read_block((uint8_t*)(RAM+voice.current_addr));
+            voice.current_pcm = dec.decode_samples(voice.adpcm);
+
+            spu_check_irq(voice.current_addr);
+            voice.current_addr++;
+            voice.current_addr &= 0x000FFFFF;
+        }
+
+        voice.next_sample = voice.current_pcm.at(voice.block_pos-4);
+
+        voice.block_pos++;
+        if ((voice.block_pos % 4) == 0)
+        {
+            spu_check_irq(voice.current_addr);
+            voice.current_addr++;
+            voice.current_addr &= 0x000FFFFF;
+        }
+
+
+        //End of block
+        if (voice.block_pos == 32)
+        {
+            voice.block_pos = 0;
+            switch (voice.loop_code)
+            {
+                //Continue to next block
+                case 0:
+                case 2:
+                    break;
+                //No loop specified, set ENDX and mute channel
+                case 1:
+                    ENDX |= 1 << voice_id;
+                    voice.left_vol = 0;
+                    voice.right_vol = 0;
+                    break;
+                //Jump to loop addr and set ENDX
+                case 3:
+                    voice.current_addr = voice.loop_addr;
+                    ENDX |= 1 << voice_id;
+                    break;
+            }
+        }
+    }
+
+    // Linear interpolation
+
+    int16_t output_sample = (voice.last_sample*128+voice.next_sample*128)/255;
+    voice.last_sample = output_sample;
+
+    stereo_sample out;
+    out.left = (output_sample*voice.left_vol) >> 15;
+    out.right = (output_sample*voice.right_vol) >> 15;
+
+    return out;
+}
+
 void SPU::gen_sample()
 {
     for (int i = 0; i < 24; i++)
     {
-        int samples_produced = 0;
-        if (voices[i].key_switch_timeout != 0)
-        {
-            voices[i].key_switch_timeout--;
-        }
+        stereo_sample sample = voice_gen_sample(i);
 
-        std::vector<int16_t> samples;
-
-        voices[i].counter += voices[i].pitch;
-        while (voices[i].counter >= 0x1000)
-        {
-            voices[i].counter -= 0x1000;
-
-            //Read header
-            if (voices[i].block_pos == 0)
-            {
-                voices[i].current_addr &= 0x000FFFFF;
-                uint16_t header = RAM[voices[i].current_addr];
-                voices[i].loop_code = (header >> 8) & 0x3;
-                bool loop_start = header & (1 << 10);
-
-                if (loop_start && !voices[i].loop_addr_specified)
-                    voices[i].loop_addr = voices[i].current_addr;
-
-                voices[i].block_pos = 4;
-
-                voices[i].last_pcm = voices[i].current_pcm;
-                voices[i].adpcm.block = dec.read_block((uint8_t*)(RAM+voices[i].current_addr));
-                voices[i].current_pcm = dec.decode_samples(voices[i].adpcm);
-
-                spu_check_irq(voices[i].current_addr);
-                voices[i].current_addr++;
-                voices[i].current_addr &= 0x000FFFFF;
-            }
-
-            samples.push_back(voices[i].current_pcm.at(voices[i].block_pos-4));
-            samples_produced++;
-
-            voices[i].block_pos++;
-            if ((voices[i].block_pos % 4) == 0)
-            {
-                spu_check_irq(voices[i].current_addr);
-                voices[i].current_addr++;
-                voices[i].current_addr &= 0x000FFFFF;
-            }
-
-
-            //End of block
-            if (voices[i].block_pos == 32)
-            {
-                voices[i].block_pos = 0;
-                switch (voices[i].loop_code)
-                {
-                    //Continue to next block
-                    case 0:
-                    case 2:
-                        break;
-                    //No loop specified, set ENDX and mute channel
-                    case 1:
-                        ENDX |= 1 << i;
-                        voices[i].left_vol = 0;
-                        voices[i].right_vol = 0;
-                        break;
-                    //Jump to loop addr and set ENDX
-                    case 3:
-                        voices[i].current_addr = voices[i].loop_addr;
-                        ENDX |= 1 << i;
-                        break;
-                }
-            }
-        }
-
-        int16_t final_sample = 0;
-
-        if (samples_produced == 0)
-        {
-            final_sample = (voices[i].last_sample*128+voices[i].next_sample*128)/255;
-        }
-
-        if (samples_produced == 1)
-        {
-            final_sample = voices[i].next_sample;
-            voices[i].next_sample = samples.at(0);
-        }
-
-        if (samples_produced > 1)
-        {
-            final_sample = voices[i].next_sample;
-            voices[i].next_sample = samples.at(samples_produced / 2);
-        }
-
-
-        //if (!voices[i].left_vol && !voices[i].right_vol)
-        //{
-        //    final_sample = 0;
-        //}
-
-
-
-        voices[i].last_sample = final_sample;
-        voices[i].left_out_pcm.push_back((int32_t(final_sample*voices[i].left_vol) >> 15));
-        voices[i].right_out_pcm.push_back((int32_t(final_sample*voices[i].right_vol) >> 15));
-
-        //voices[i].out_pcm.insert(voices[i].out_pcm.end(), samples.begin(), samples.end());
+        voices[i].left_out_pcm.push_back(sample.left);
+        voices[i].right_out_pcm.push_back(sample.right);
 
         if (voices[i].left_out_pcm.size() > 0x100)
         {
