@@ -212,9 +212,6 @@ void SPU::gen_sample()
 
         core_output.left += sample.left;
         core_output.right += sample.right;
-
-        voices[i].left_out_pcm.push_back(sample.left);
-        voices[i].right_out_pcm.push_back(sample.right);
     }
 
     left_out_pcm.push_back(core_output.left);
