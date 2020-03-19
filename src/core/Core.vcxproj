@@ -140,6 +140,7 @@
     <ClCompile Include="sif.cpp" />
     <ClCompile Include="iop\sio2.cpp" />
     <ClCompile Include="iop\spu.cpp" />
+    <ClCompile Include="iop\spu_tables.cpp" />
     <ClCompile Include="ee\timers.cpp" />
     <ClCompile Include="ee\vif.cpp" />
     <ClCompile Include="ee\ipu\vlc_table.cpp" />

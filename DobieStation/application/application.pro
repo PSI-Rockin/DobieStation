@@ -60,6 +60,7 @@ SOURCES += ../../src/qt/main.cpp \
     ../../src/core/iop/firewire.cpp \
     ../../src/core/iop/gamepad.cpp \
     ../../src/core/iop/spu.cpp \
+    ../../src/core/iop/spu_tables.cpp \
     ../../src/qt/emuthread.cpp \
     ../../src/core/tests/iop/alu.cpp \
     ../../src/core/ee/vif.cpp \

@@ -32,7 +32,9 @@ struct Voice
 
     ADPCM_info adpcm;
 
-    int16_t last_sample = 0;
+    int16_t old1 = 0;
+    int16_t old2 = 0;
+    int16_t old3 = 0;
     int16_t next_sample = 0;
 
     std::vector<int16_t> last_pcm;
@@ -104,6 +106,7 @@ class SPU
         ADPCM_decoder dec;
 
         stereo_sample voice_gen_sample(int voice_id);
+        int16_t interpolate(int voice);
 
         void key_on_voice(int v);
         void key_off_voice(int v);
@@ -155,5 +158,6 @@ inline bool SPU::can_write_ADMA()
 {
     return (input_pos <= 128 || input_pos >= 384) && (ADMA_left < 0x400);
 }
+
 
 #endif // SPU_HPP

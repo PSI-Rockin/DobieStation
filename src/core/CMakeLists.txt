@@ -85,6 +85,7 @@ set(SOURCES
     iop/memcard.cpp
     iop/sio2.cpp
     iop/spu.cpp
+    iop/spu_tables.cpp
     jitcommon/emitter64.cpp
     jitcommon/ir_block.cpp
     jitcommon/ir_instr.cpp

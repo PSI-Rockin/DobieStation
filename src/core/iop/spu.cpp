@@ -118,6 +118,7 @@ void SPU::dump_voice_data()
     }
 }
 
+
 stereo_sample SPU::voice_gen_sample(int voice_id)
 {
     Voice &voice = voices[voice_id];
@@ -152,6 +153,10 @@ stereo_sample SPU::voice_gen_sample(int voice_id)
             voice.current_addr++;
             voice.current_addr &= 0x000FFFFF;
         }
+
+        voice.old3 = voice.old2;
+        voice.old2 = voice.old1;
+        voice.old1 = voice.next_sample;
 
         voice.next_sample = voice.current_pcm.at(voice.block_pos-4);
 
@@ -189,13 +194,10 @@ stereo_sample SPU::voice_gen_sample(int voice_id)
         }
     }
 
-    // Linear interpolation
-
-    int16_t output_sample = (voice.last_sample*128+voice.next_sample*128)/255;
-    voice.last_sample = output_sample;
+    int16_t output_sample = interpolate(voice_id);
 
     stereo_sample out;
-    out.left = (output_sample*voice.left_vol) >> 15;
+    out.left = (output_sample*voice.left_vol) >> 15; // 15
     out.right = (output_sample*voice.right_vol) >> 15;
 
     return out;
@@ -214,8 +216,8 @@ void SPU::gen_sample()
         core_output.right += sample.right;
     }
 
-    left_out_pcm.push_back(core_output.left);
-    right_out_pcm.push_back(core_output.right);
+    left_out_pcm.push_back(core_output.left * 2);
+    right_out_pcm.push_back(core_output.right * 2);
 
     if (left_out_pcm.size() > 0x100)
     {
