@@ -40,14 +40,16 @@ void SPU::reset(uint8_t* RAM)
     key_off = 0xFFFFFF;
     spdif_irq = 0;
 
+    std::ostringstream fname;
+    fname << "spu_" << id << "_stream" << ".wav";
+
+    coreout = new WAVWriter(fname.str(), 2);
+
     clear_dma_req();
 
     for (int i = 0; i < 24; i++)
     {
         voices[i].reset();
-        std::ostringstream fname;
-        fname << "spu_" << id << "_voice_stream_" << i << ".wav";
-        voices[i].wavout = new WAVWriter(fname.str(), 2);
     }
 
     IRQA[id-1] = 0x800;
@@ -201,19 +203,28 @@ stereo_sample SPU::voice_gen_sample(int voice_id)
 
 void SPU::gen_sample()
 {
+
+    stereo_sample core_output = {};
+
     for (int i = 0; i < 24; i++)
     {
         stereo_sample sample = voice_gen_sample(i);
 
+        core_output.left += sample.left;
+        core_output.right += sample.right;
+
         voices[i].left_out_pcm.push_back(sample.left);
         voices[i].right_out_pcm.push_back(sample.right);
+    }
 
-        if (voices[i].left_out_pcm.size() > 0x100)
-        {
-            voices[i].wavout->append_pcm_stereo(voices[i].left_out_pcm, voices[i].right_out_pcm);
-            voices[i].left_out_pcm.clear();
-            voices[i].right_out_pcm.clear();
-        }
+    left_out_pcm.push_back(core_output.left);
+    right_out_pcm.push_back(core_output.right);
+
+    if (left_out_pcm.size() > 0x100)
+    {
+        coreout->append_pcm_stereo(left_out_pcm, right_out_pcm);
+        left_out_pcm.clear();
+        right_out_pcm.clear();
     }
 
     if (ADMA_left > 0 && autodma_ctrl & (1 << (id - 1)))

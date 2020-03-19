@@ -40,11 +40,9 @@ struct Voice
 
     std::vector<int16_t> left_out_pcm;
     std::vector<int16_t> right_out_pcm;
-    WAVWriter* wavout;
 
     void reset()
     {
-        delete wavout;
         left_vol = 0;
         right_vol = 0;
         pitch = 0;
@@ -81,6 +79,11 @@ class SPU
         Voice voices[24];
         static uint16_t core_att[2];
         SPU_STAT status;
+
+        WAVWriter* coreout;
+        std::vector<int16_t> left_out_pcm;
+        std::vector<int16_t> right_out_pcm;
+
 
         static uint16_t spdif_irq;
 
