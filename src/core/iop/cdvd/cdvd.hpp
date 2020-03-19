@@ -100,13 +100,6 @@ class CDVD_Drive
         uint8_t cdkey[16];
 
         uint32_t get_block_timing(bool mode_DVD);
-        
-        /*bool container_open(const char* file_path);
-        void container_close();
-        bool container_isopen();
-        void container_seek(std::ios::streamoff ofs, std::ios::seekdir whence = std::ios::beg);
-        uint64_t container_tell();
-        size_t container_read(void* dst, size_t size);*/
 
         void start_seek();
         void prepare_S_outdata(int amount);
