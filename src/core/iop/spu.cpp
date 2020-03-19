@@ -754,10 +754,6 @@ void SPU::key_off_voice(int v)
         return;
     }
     voices[v].key_switch_timeout = 2;
-
-    voices[v].left_vol = 0;
-    voices[v].right_vol = 0;
-
     //Set envelope to Release mode
 }
 
