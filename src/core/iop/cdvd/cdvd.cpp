@@ -401,6 +401,7 @@ void CDVD_Drive::send_N_command(uint8_t value)
         case 0x04:
             //Pause
             e->iop_request_IRQ(2);
+            drive_status = PAUSED;
             break;
         case 0x05:
             sector_pos = *(uint32_t*)&N_command_params[0];
@@ -456,7 +457,7 @@ void CDVD_Drive::write_N_data(uint8_t value)
 void CDVD_Drive::write_BREAK()
 {
     printf("[CDVD] Write BREAK\n");
-    if (N_status || active_N_command == NCOMMAND::BREAK)
+    if (active_N_command == NCOMMAND::NONE || active_N_command == NCOMMAND::BREAK)
         return;
 
     add_event(64);
@@ -607,8 +608,8 @@ void CDVD_Drive::prepare_S_outdata(int amount)
 
 void CDVD_Drive::start_seek()
 {
-    N_status = 0;
-    drive_status = PAUSED;
+    N_status = 0x40;
+    drive_status = SEEKING;
 
     uint64_t cycles_to_seek = 0;
 
@@ -720,7 +721,7 @@ void CDVD_Drive::N_command_gettoc()
     read_buffer[5] = 0x72;
 
     read_buffer[17] = 0x03;
-    N_status = 0;
+    N_status = 0x40;
     drive_status = READING;
     dma->set_DMA_request(IOP_CDVD);
 }
