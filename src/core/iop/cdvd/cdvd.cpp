@@ -457,7 +457,7 @@ void CDVD_Drive::write_N_data(uint8_t value)
 void CDVD_Drive::write_BREAK()
 {
     printf("[CDVD] Write BREAK\n");
-    if (active_N_command == NCOMMAND::BREAK)
+    if (active_N_command == NCOMMAND::NONE || active_N_command == NCOMMAND::BREAK)
         return;
 
     add_event(64);
