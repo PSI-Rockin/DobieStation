@@ -2,9 +2,9 @@
 #include "emotion.hpp"
 #include "intc.hpp"
 
-#include "../emulator.hpp"
+#include "../scheduler.hpp"
 
-INTC::INTC(Emulator* e, EmotionEngine* cpu) : e(e), cpu(cpu)
+INTC::INTC(EmotionEngine* cpu, Scheduler* scheduler) : cpu(cpu), scheduler(scheduler)
 {
 
 }
@@ -16,6 +16,8 @@ void INTC::reset()
 
     read_stat_count = 0;
     stat_speedhack_active = false;
+
+    int_check_event_id = scheduler->register_function([this] (uint64_t param) { int0_check(); });
 }
 
 uint32_t INTC::read_mask()
@@ -62,7 +64,8 @@ void INTC::assert_IRQ(int id)
     //is registered.
     //If we fire the interrupt immediately, those games will never exit the loop.
     //I don't know the exact number of cycles we need to wait, but 8 seems to work.
-    e->add_ee_event(EE_IRQ_CHECK, &Emulator::ee_irq_check, 8);
+
+    scheduler->add_event(int_check_event_id, 8);
 }
 
 void INTC::deassert_IRQ(int id)

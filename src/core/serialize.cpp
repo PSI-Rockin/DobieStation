@@ -4,7 +4,7 @@
 
 #define VER_MAJOR 0
 #define VER_MINOR 0
-#define VER_REV 34
+#define VER_REV 37
 
 using namespace std;
 
@@ -482,29 +482,23 @@ void INTC::save_state(ofstream &state)
 void EmotionTiming::load_state(ifstream &state)
 {
     state.read((char*)&timers, sizeof(timers));
-    state.read((char*)&cycle_count, sizeof(cycle_count));
-    state.read((char*)&next_event, sizeof(next_event));
+    state.read((char*)&events, sizeof(events));
 }
 
 void EmotionTiming::save_state(ofstream &state)
 {
     state.write((char*)&timers, sizeof(timers));
-    state.write((char*)&cycle_count, sizeof(cycle_count));
-    state.write((char*)&next_event, sizeof(next_event));
+    state.write((char*)&events, sizeof(events));
 }
 
 void IOPTiming::load_state(ifstream &state)
 {
     state.read((char*)&timers, sizeof(timers));
-    state.read((char*)&cycle_count, sizeof(cycle_count));
-    state.read((char*)&next_event, sizeof(next_event));
 }
 
 void IOPTiming::save_state(ofstream &state)
 {
     state.write((char*)&timers, sizeof(timers));
-    state.write((char*)&cycle_count, sizeof(cycle_count));
-    state.write((char*)&next_event, sizeof(next_event));
 }
 
 void DMAC::load_state(ifstream &state)
@@ -882,31 +876,32 @@ void Scheduler::load_state(ifstream &state)
     state.read((char*)&run_cycles, sizeof(run_cycles));
     state.read((char*)&closest_event_time, sizeof(closest_event_time));
 
+    events.clear();
+
     int event_size = 0;
     state.read((char*)&event_size, sizeof(event_size));
 
     for (int i = 0; i < event_size; i++)
     {
         SchedulerEvent event;
-        state.read((char*)&event.id, sizeof(event.id));
-        state.read((char*)&event.time_to_run, sizeof(event.time_to_run));
-
-        switch (event.id)
-        {
-            case EVENT_ID::SPU_SAMPLE:
-                event.func = &Emulator::gen_sound_sample;
-                break;
-            case EVENT_ID::EE_IRQ_CHECK:
-                event.func = &Emulator::ee_irq_check;
-                break;
-            case EVENT_ID::CDVD_EVENT:
-                event.func = &Emulator::cdvd_event;
-                break;
-            default:
-                Errors::die("Event id %d not recognized!", event.id);
-        }
+        state.read((char*)&event, sizeof(event));
 
         events.push_back(event);
+    }
+
+    state.read((char*)&next_event_id, sizeof(next_event_id));
+
+    int timer_size = 0;
+    state.read((char*)&timer_size, sizeof(timer_size));
+
+    timers.clear();
+
+    for (int i = 0; i < timer_size; i++)
+    {
+        SchedulerTimer timer;
+        state.read((char*)&timer, sizeof(timer));
+
+        timers.push_back(timer);
     }
 }
 
@@ -924,9 +919,16 @@ void Scheduler::save_state(ofstream &state)
     for (auto it = events.begin(); it != events.end(); it++)
     {
         SchedulerEvent event = *it;
-        state.write((char*)&event.id, sizeof(event.id));
-        state.write((char*)&event.time_to_run, sizeof(event.time_to_run));
+        state.write((char*)&event, sizeof(event));
     }
+
+    state.write((char*)&next_event_id, sizeof(next_event_id));
+
+    int timer_size = timers.size();
+    state.write((char*)&timer_size, sizeof(timer_size));
+
+    for (int i = 0; i < timer_size; i++)
+        state.write((char*)&timers[i], sizeof(SchedulerTimer));
 }
 
 void Gamepad::load_state(ifstream &state)

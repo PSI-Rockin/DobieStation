@@ -3,8 +3,8 @@
 #include <cstdint>
 #include <fstream>
 
-class Emulator;
 class EmotionEngine;
+class Scheduler;
 
 enum class Interrupt
 {
@@ -28,14 +28,16 @@ enum class Interrupt
 class INTC
 {
     private:
-        Emulator* e;
         EmotionEngine* cpu;
+        Scheduler* scheduler;
         uint32_t INTC_MASK, INTC_STAT;
 
         int read_stat_count;
         bool stat_speedhack_active;
+
+        int int_check_event_id;
     public:
-        INTC(Emulator* e, EmotionEngine* cpu);
+        INTC(EmotionEngine* cpu, Scheduler* scheduler);
 
         void reset();
         void int0_check();

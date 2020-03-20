@@ -3,23 +3,20 @@
 #include "iop_timers.hpp"
 #include "../emulator.hpp"
 #include "../errors.hpp"
+#include "../scheduler.hpp"
 
-IOPTiming::IOPTiming(Emulator* e) : e(e)
+IOPTiming::IOPTiming(Emulator* e, Scheduler* scheduler) : e(e), scheduler(scheduler)
 {
 
 }
 
 void IOPTiming::reset()
 {
-    cycles_since_IRQ = 0;
     for (int i = 0; i < 6; i++)
     {
         timers[i].counter = 0;
-        timers[i].clocks = 0;
-        timers[i].clock_scale = 1;
         timers[i].control.gate_mode = 0;
         timers[i].control.use_gate = 0;
-        timers[i].last_update = 0;
         timers[i].control.zero_return = false;
         timers[i].control.compare_interrupt_enabled = false;
         timers[i].control.overflow_interrupt_enabled = false;
@@ -32,110 +29,31 @@ void IOPTiming::reset()
         timers[i].target = 0;
     }
 
-    cycle_count = 0;
-    next_event = 0xFFFFFFFF;
-}
+    timer_interrupt_event_id =
+            scheduler->register_timer_callback(
+                [this] (uint64_t index, bool overflow) { IRQ_test(index, overflow); });
 
-void IOPTiming::update_timers()
-{
+    for (int i = 0; i < 3; i++)
+        events[i] = scheduler->create_timer(timer_interrupt_event_id, 0xFFFF, i);
+
+    for (int i = 3; i < 6; i++)
+        events[i] = scheduler->create_timer(timer_interrupt_event_id, 0xFFFFFFFF, i);
+
     for (int i = 0; i < 6; i++)
-    {
-        if (!timers[i].control.started)
-        {
-            timers[i].clocks = 0;
-            timers[i].last_update = cycle_count;
-            continue;
-        }
-
-        uint64_t delta = cycle_count - timers[i].last_update;
-        uint64_t counter_delta = delta / timers[i].clock_scale;
-
-        //Keep track of cycles between counter updates
-        if (timers[i].clock_scale > 1)
-        {
-            uint64_t clock_delta = delta % timers[i].clock_scale;
-
-            timers[i].clocks += clock_delta;
-            if (timers[i].clocks >= timers[i].clock_scale)
-            {
-                timers[i].clocks -= timers[i].clock_scale;
-                counter_delta++;
-            }
-        }
-
-        timers[i].counter += counter_delta;
-        uint64_t overflow = (i > 2) ? 0x100000000UL : 0x10000;
-
-        //Target check
-        if ((timers[i].counter - counter_delta) < timers[i].target && timers[i].counter >= timers[i].target)
-        {
-            timers[i].control.compare_interrupt = true;
-            if (timers[i].control.compare_interrupt_enabled)
-            {
-                IRQ_test(i, false);
-                if (timers[i].control.zero_return)
-                {
-                    timers[i].counter -= timers[i].target;
-                    timers[i].target &= overflow - 1;
-                }
-                else
-                    timers[i].target |= overflow;
-            }
-        }
-
-        //Overflow check
-        if (timers[i].counter >= overflow)
-        {
-            while (timers[i].counter >= overflow)
-                timers[i].counter -= overflow;
-
-            timers[i].target &= overflow-1;
-
-            if (timers[i].control.overflow_interrupt_enabled)
-            {
-                IRQ_test(i, true);
-            }
-        }
-
-        timers[i].last_update = cycle_count;
-    }
-}
-
-void IOPTiming::reschedule()
-{
-    uint64_t next_event_delta = 0x100000000UL;
-    for (int i = 0; i < 6; i++)
-    {
-        if (!timers[i].control.started)
-            continue;
-
-        uint64_t overflow_mask = (i > 2) ? 0x100000000UL : 0x10000;
-        uint64_t overflow_delta = ((overflow_mask - timers[i].counter) * timers[i].clock_scale) - timers[i].clocks;
-
-        uint64_t target_delta = overflow_mask;
-
-        //Don't calculate target delta if the counter is higher, as overflow delta will be reached next
-        if (timers[i].target > timers[i].counter)
-            target_delta = ((timers[i].target - timers[i].counter) * timers[i].clock_scale) - timers[i].clocks;
-
-        next_event_delta = std::min({next_event_delta, overflow_delta, target_delta});
-    }
-
-    next_event = cycle_count + next_event_delta;
-}
-
-void IOPTiming::run(int cycles)
-{
-    cycle_count += cycles;
-    if (cycle_count >= next_event)
-    {
-        update_timers();
-        reschedule();
-    }
+        scheduler->set_timer_pause(events[i], false);
 }
 
 void IOPTiming::IRQ_test(int index, bool overflow)
 {
+    if (!overflow)
+    {
+        if (timers[index].control.zero_return)
+        {
+            timers[index].counter = 0;
+            scheduler->set_timer_counter(events[index], 0);
+        }
+    }
+
     if (timers[index].control.int_enable)
     {
         const static int IRQs[] = {4, 5, 6, 14, 15, 16};
@@ -160,7 +78,7 @@ void IOPTiming::IRQ_test(int index, bool overflow)
 
 uint32_t IOPTiming::read_counter(int index)
 {
-    update_timers();
+    timers[index].counter = scheduler->get_timer_counter(events[index]);
     //printf("[IOP Timing] Read timer %d counter: $%08lX\n", index, timers[index].counter);
     return timers[index].counter;
 }
@@ -198,24 +116,16 @@ uint16_t IOPTiming::read_control(int index)
 
 void IOPTiming::write_counter(int index, uint32_t value)
 {
-    uint64_t target_overflow = (index > 2) ? 0xFFFFFFFF : 0xFFFF;
-
-    update_timers();
     timers[index].counter = value;
-    timers[index].clocks = 0;
-
-    if (timers[index].counter < (timers[index].target & target_overflow))
-        timers[index].target &= target_overflow;
+    scheduler->set_timer_counter(events[index], value);
 
     printf("[IOP Timing] Write timer %d counter: $%08X\n", index, value);
-    reschedule();
 }
 
 void IOPTiming::write_control(int index, uint16_t value)
 {
     printf("[IOP Timing] Write timer %d control $%04X\n", index, value);
 
-    update_timers();
     timers[index].control.use_gate = value & 0x1;
     if (timers[index].control.use_gate)
     {
@@ -236,73 +146,68 @@ void IOPTiming::write_control(int index, uint16_t value)
     else
         timers[index].control.prescale = (value >> 13) & 0x3;
 
-    uint32_t clock_scale;
+    uint32_t clockrate;
 
     if (timers[index].control.extern_signal)
     {
         switch (index)
         {
             case 0:
-                //Pixel Clock
-                clock_scale = 3; //Actually too slow, it's more 2.73, but it's an easy value to use.
+                //Pixel clock - is this correct?
+                clockrate = 15 * 1000 * 1000;
                 break;
             case 1:
                 //HBlank
-                clock_scale = 2350;
+                clockrate = Scheduler::IOP_CLOCKRATE / 2350;
                 break;
             case 3:
                 //HBlank
-                clock_scale = 2350;
+                clockrate = Scheduler::IOP_CLOCKRATE / 2350;
                 break;
             default:
                 //IOP Clock
-                clock_scale = 1;
+                clockrate = Scheduler::IOP_CLOCKRATE;
                 break;
         }
     }
     else
-        clock_scale = 1;
+        clockrate = Scheduler::IOP_CLOCKRATE;
 
     switch (timers[index].control.prescale)
     {
         case 0:
             //IOP clock
-            timers[index].clock_scale = clock_scale;
             break;
         case 1:
             //1/8 IOP clock
-            timers[index].clock_scale = clock_scale * 8;
+            clockrate /= 8;
             break;
         case 2:
             //1/16 IOP clock
-            timers[index].clock_scale = clock_scale * 16;
+            clockrate /= 16;
             break;
         case 3:
             //1/256 IOP clock
-            timers[index].clock_scale = clock_scale * 256;
+            clockrate /= 256;
             break;
     }
 
     timers[index].counter = 0;
-    timers[index].clocks = 0;
-    timers[index].target &= (index > 2) ? 0xFFFFFFFF : 0xFFFF;
 
-    reschedule();
+    scheduler->set_timer_clockrate(events[index], clockrate);
+    scheduler->set_timer_counter(events[index], 0);
+    scheduler->set_timer_pause(events[index], !timers[index].control.started);
+    scheduler->set_timer_int_mask(events[index],
+                                  timers[index].control.overflow_interrupt_enabled,
+                                  timers[index].control.compare_interrupt_enabled);
 }
 
 void IOPTiming::write_target(int index, uint32_t value)
 {
-    uint64_t target_overflow = (index > 2) ? 0x100000000UL : 0x10000;
-
-    update_timers();
     printf("[IOP Timing] Write timer %d target $%08X\n", index, value);
     timers[index].target = value;
-
-    if (timers[index].target < timers[index].counter)
-        timers[index].target |= target_overflow;
+    scheduler->set_timer_target(events[index], value);
 
     if (!timers[index].control.toggle_int)
         timers[index].control.int_enable = true;
-
-    reschedule();
 }
