@@ -25,6 +25,7 @@ Emulator::Emulator() :
     gs(&intc),
     iop(this),
     iop_dma(this, &cdvd, &sif, &sio2, &spu, &spu2),
+    iop_intc(&iop),
     iop_timers(this, &scheduler),
     intc(&cpu, &scheduler),
     ipu(&intc, &dmac),
@@ -107,7 +108,6 @@ void Emulator::run()
         iop_timers.run(iop_cycles);
         iop_dma.run(iop_cycles);
         iop.run(iop_cycles);
-        iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
 
         dmac.run(bus_cycles);
         ipu.run();
@@ -133,7 +133,6 @@ void Emulator::reset()
     save_requested = false;
     load_requested = false;
     gsdump_requested = false;
-    iop_i_ctrl_delay = 0;
     ee_stdout = "";
     frames = 0;
     skip_BIOS_hack = NONE;
@@ -162,6 +161,7 @@ void Emulator::reset()
     gif.reset();
     iop.reset();
     iop_dma.reset(IOP_RAM);
+    iop_intc.reset();
     iop_timers.reset();
     intc.reset();
     ipu.reset();
@@ -181,9 +181,6 @@ void Emulator::reset()
     MCH_DRD = 0;
     MCH_RICM = 0;
     rdram_sdevid = 0;
-    IOP_I_STAT = 0;
-    IOP_I_MASK = 0;
-    IOP_I_CTRL = 0;
     IOP_POST = 0;
     clear_cop2_interlock();
 
@@ -1139,16 +1136,11 @@ uint32_t Emulator::iop_read32(uint32_t address)
             printf("[IOP] Read BD4: $%08X\n", sif.get_control() | 0xF0000002);
             return sif.get_control() | 0xF0000002;
         case 0x1F801070:
-            return IOP_I_STAT;
+            return iop_intc.read_istat();
         case 0x1F801074:
-            return IOP_I_MASK;
+            return iop_intc.read_imask();
         case 0x1F801078:
-        {
-            //I_CTRL is reset when read
-            uint32_t value = IOP_I_CTRL;
-            IOP_I_CTRL = 0;
-            return value;
-        }
+            return iop_intc.read_ictrl();
         case 0x1F8010B0:
             return iop_dma.get_chan_addr(3);
         case 0x1F8010B8:
@@ -1464,21 +1456,13 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
             printf("[IOP] SPU SSBUS: $%08X\n", value);
             return;
         case 0x1F801070:
-            //printf("[IOP] I_STAT: $%08X\n", value);
-            IOP_I_STAT &= value;
-            iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
+            iop_intc.write_istat(value);
             return;
         case 0x1F801074:
-            //printf("[IOP] I_MASK: $%08X\n", value);
-            IOP_I_MASK = value;
-            iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
+            iop_intc.write_imask(value);
             return;
         case 0x1F801078:
-            if (!IOP_I_CTRL && (value & 0x1))
-                iop_i_ctrl_delay = 4;
-            IOP_I_CTRL = value & 0x1;
-            //iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
-            //printf("[IOP] I_CTRL: $%08X\n", value);
+            iop_intc.write_ictrl(value);
             return;
         //CDVD DMA
         case 0x1F8010B0:
@@ -1653,9 +1637,7 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
 void Emulator::iop_request_IRQ(int index)
 {
     printf("[IOP] Requesting IRQ %d\n", index);
-    uint32_t new_stat = IOP_I_STAT | (1 << index);
-    IOP_I_STAT = new_stat;
-    iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
+    iop_intc.assert_irq(index);
 }
 
 void Emulator::iop_ksprintf()
