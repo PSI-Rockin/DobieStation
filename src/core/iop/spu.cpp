@@ -1,7 +1,7 @@
 #include <cstdio>
 #include "spu.hpp"
-#include "../emulator.hpp"
 #include "iop_dma.hpp"
+#include "iop_intc.hpp"
 
 /**
  * Notes on "AutoDMA", as it seems to not be documented anywhere else
@@ -13,7 +13,7 @@
 uint16_t SPU::spdif_irq = 0;
 uint16_t SPU::core_att[2];
 uint32_t SPU::IRQA[2];
-SPU::SPU(int id, Emulator* e, IOP_DMA* dma) : id(id), e(e), dma(dma)
+SPU::SPU(int id, IOP_INTC* intc, IOP_DMA* dma) : id(id), intc(intc), dma(dma)
 { 
 
 }
@@ -61,7 +61,7 @@ void SPU::spu_irq(int index)
 
     printf("[SPU%d] IRQA interrupt!\n", index);
     spdif_irq |= 4 << index;
-    e->iop_request_IRQ(9);
+    intc->assert_irq(9);
 }
 
 void SPU::gen_sample()

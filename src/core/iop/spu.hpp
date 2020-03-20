@@ -43,14 +43,14 @@ struct SPU_STAT
     bool DMA_busy;
 };
 
-class Emulator;
+class IOP_INTC;
 class IOP_DMA;
 
 class SPU
 {
     private:
         int id;
-        Emulator* e;
+        IOP_INTC* intc;
         IOP_DMA* dma;
 
         uint16_t* RAM;
@@ -91,7 +91,7 @@ class SPU
         void clear_dma_req();
         void set_dma_req();
     public:
-        SPU(int id, Emulator* e, IOP_DMA* dma);
+        SPU(int id, IOP_INTC* intc, IOP_DMA* dma);
 
         bool running_ADMA();
         bool can_write_ADMA();

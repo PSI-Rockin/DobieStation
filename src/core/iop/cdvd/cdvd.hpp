@@ -5,8 +5,9 @@
 #include <memory>
 #include "cdvd_container.hpp"
 
-class Emulator;
+class IOP_INTC;
 class IOP_DMA;
+class Scheduler;
 
 enum CDVD_CONTAINER
 {
@@ -20,7 +21,8 @@ enum CDVD_STATUS
     STOPPED = 0x00,
     SPINNING = 0x02,
     READING = 0x06,
-    PAUSED = 0x0A
+    PAUSED = 0x0A,
+    SEEKING = 0x12
 };
 
 enum class NCOMMAND
@@ -57,11 +59,12 @@ class CDVD_Drive
     private:
         uint64_t last_read;
         uint64_t cycle_count;
-        Emulator* e;
+        IOP_INTC* intc;
         IOP_DMA* dma;
         CDVD_DISC_TYPE disc_type;
         std::unique_ptr<CDVD_Container> container;
         size_t file_size;
+        Scheduler* scheduler;
         int read_bytes_left;
         int speed;
 
@@ -98,6 +101,8 @@ class CDVD_Drive
 
         uint8_t cdkey[16];
 
+        int n_command_event_id;
+
         uint32_t get_block_timing(bool mode_DVD);
 
         void start_seek();
@@ -115,7 +120,7 @@ class CDVD_Drive
         void S_command_sub(uint8_t func);
         void add_event(uint64_t cycles);
     public:
-        CDVD_Drive(Emulator* e, IOP_DMA* dma);
+        CDVD_Drive(IOP_INTC* intc, IOP_DMA* dma, Scheduler* scheduler);
         ~CDVD_Drive();
 
         std::string get_serial();

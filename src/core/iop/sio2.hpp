@@ -12,14 +12,14 @@ enum class SIO_DEVICE
     DUMMY
 };
 
-class Emulator;
+class IOP_INTC;
 class Gamepad;
 class Memcard;
 
 class SIO2
 {
     private:
-        Emulator* e;
+        IOP_INTC* intc;
         Gamepad* pad;
         Memcard* memcard;
 
@@ -42,7 +42,7 @@ class SIO2
 
         void write_device(uint8_t value);
     public:
-        SIO2(Emulator* e, Gamepad* pad, Memcard* memcard);
+        SIO2(IOP_INTC* intc, Gamepad* pad, Memcard* memcard);
 
         void reset();
 

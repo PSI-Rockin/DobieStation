@@ -1,14 +1,14 @@
 #include <cstdio>
 #include "gamepad.hpp"
+#include "iop_intc.hpp"
 #include "memcard.hpp"
 #include "sio2.hpp"
 
-#include "../emulator.hpp"
 #include "../errors.hpp"
 
 using namespace std;
 
-SIO2::SIO2(Emulator* e, Gamepad* pad, Memcard* memcard) : e(e), pad(pad), memcard(memcard)
+SIO2::SIO2(IOP_INTC* intc, Gamepad* pad, Memcard* memcard) : intc(intc), pad(pad), memcard(memcard)
 {
 
 }
@@ -140,7 +140,7 @@ void SIO2::set_control(uint32_t value)
 
     if (value & 0x1)
     {
-        e->iop_request_IRQ(17);
+        intc->assert_irq(17);
         control &= ~0x1;
     }
     else

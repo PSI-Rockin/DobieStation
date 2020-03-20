@@ -7,9 +7,10 @@
 #include "iso_reader.hpp"
 
 #include "../iop_dma.hpp"
+#include "../iop_intc.hpp"
 
-#include "../../emulator.hpp"
 #include "../../errors.hpp"
+#include "../../scheduler.hpp"
 
 using namespace std;
 
@@ -28,7 +29,11 @@ uint32_t CDVD_Drive::get_block_timing(bool mode_DVD)
     return (IOP_CLOCK * block_size) / (speed * (mode_DVD ? PSX_DVD_READSPEED : PSX_CD_READSPEED));
 }
 
-CDVD_Drive::CDVD_Drive(Emulator* e, IOP_DMA* dma) : e(e), dma(dma)
+CDVD_Drive::CDVD_Drive(IOP_INTC* intc, IOP_DMA* dma, Scheduler* scheduler) :
+    intc(intc),
+    dma(dma),
+    scheduler(scheduler),
+    container(nullptr)
 {
 
 }
@@ -70,6 +75,8 @@ void CDVD_Drive::reset()
     rtc.day = time->tm_mday;
     rtc.month = time->tm_mon+1; //Jan = 0
     rtc.year = time->tm_year - 100; //Returns Years since 1900
+
+    n_command_event_id = scheduler->register_function([this] (uint64_t param) { handle_N_command(); });
 }
 
 string CDVD_Drive::get_serial()
@@ -145,7 +152,7 @@ uint32_t CDVD_Drive::read_to_RAM(uint8_t *RAM, uint32_t bytes)
         {
             N_status = 0x4E;
             ISTAT |= 0x3;
-            e->iop_request_IRQ(2);
+            intc->assert_irq(2);
             drive_status = PAUSED;
             active_N_command = NCOMMAND::NONE;
         }
@@ -169,21 +176,21 @@ void CDVD_Drive::handle_N_command()
             current_sector = sector_pos;
             N_status = 0x4E;
             ISTAT |= 0x2;
-            e->iop_request_IRQ(2);
+            intc->assert_irq(2);
             break;
         case NCOMMAND::STANDBY:
             drive_status = PAUSED;
             active_N_command = NCOMMAND::NONE;
             N_status = 0x40;
             ISTAT |= 0x2;
-            e->iop_request_IRQ(2);
+            intc->assert_irq(2);
             break;
         case NCOMMAND::STOP:
             is_spinning = false;
             drive_status = STOPPED;
             N_status = 0x40;
             ISTAT |= 0x2;
-            e->iop_request_IRQ(2);
+            intc->assert_irq(2);
             break;
         case NCOMMAND::READ:
             if (!read_bytes_left)
@@ -208,7 +215,7 @@ void CDVD_Drive::handle_N_command()
             active_N_command = NCOMMAND::NONE;
             N_status = 0x4E;
             ISTAT |= 0x2;
-            e->iop_request_IRQ(2);
+            intc->assert_irq(2);
             break;
         case NCOMMAND::NONE:
             //Just do nothing
@@ -386,7 +393,7 @@ void CDVD_Drive::send_N_command(uint8_t value)
         //NOPSync/NOP
         case 0x00:
         case 0x01:
-            e->iop_request_IRQ(2);
+            intc->assert_irq(2);
             break;
         case 0x02:
             //Standby
@@ -400,7 +407,7 @@ void CDVD_Drive::send_N_command(uint8_t value)
             break;
         case 0x04:
             //Pause
-            e->iop_request_IRQ(2);
+            intc->assert_irq(2);
             drive_status = PAUSED;
             break;
         case 0x05:
@@ -769,7 +776,7 @@ void CDVD_Drive::N_command_readkey(uint32_t arg)
     }
 
     ISTAT |= 0x2;
-    e->iop_request_IRQ(2);
+    intc->assert_irq(2);
 }
 
 void CDVD_Drive::read_CD_sector()
@@ -898,5 +905,5 @@ void CDVD_Drive::write_ISTAT(uint8_t value)
 
 void CDVD_Drive::add_event(uint64_t cycles)
 {
-    e->add_iop_event(CDVD_EVENT, &Emulator::cdvd_event, cycles);
+    scheduler->add_event(n_command_event_id, cycles * 8);
 }
