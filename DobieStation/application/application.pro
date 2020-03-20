@@ -50,8 +50,8 @@ SOURCES += ../../src/qt/main.cpp \
     ../../src/core/ee/timers.cpp \
     ../../src/core/iop/iop_timers.cpp \
     ../../src/core/ee/intc.cpp \
-    ../../src/core/iop/cdvd.cpp \
-    ../../src/core/iop/cso_reader.cpp\
+    ../../src/core/iop/cdvd/cdvd.cpp \
+    ../../src/core/iop/cdvd/cso_reader.cpp\
     ../../src/core/iop/sio2.cpp \
     ../../src/core/ee/vu.cpp \
     ../../src/core/ee/emotion_vu0.cpp \
@@ -99,7 +99,9 @@ SOURCES += ../../src/qt/main.cpp \
     ../../src/core/ee/ee_jit64_cop2.cpp \
     ../../src/core/ee/ee_jit64_fpu.cpp \
     ../../src/core/ee/ee_jit64_fpu_avx.cpp \
-    ../../src/core/ee/ee_jit64_gpr.cpp
+    ../../src/core/ee/ee_jit64_gpr.cpp \
+    ../../src/core/iop/cdvd/iso_reader.cpp \
+    ../../src/core/iop/cdvd/bincuereader.cpp
 
 HEADERS += \
     ../../src/core/errors.hpp \
@@ -127,8 +129,8 @@ HEADERS += \
     ../../src/core/ee/timers.hpp \
     ../../src/core/iop/iop_timers.hpp \
     ../../src/core/ee/intc.hpp \
-    ../../src/core/iop/cdvd.hpp \
-    ../../src/core/iop/cso_reader.hpp\
+    ../../src/core/iop/cdvd/cdvd.hpp \
+    ../../src/core/iop/cdvd/cso_reader.hpp\
     ../../src/core/iop/sio2.hpp \
     ../../src/core/ee/vu.hpp \
     ../../src/core/iop/gamepad.hpp \
@@ -169,5 +171,8 @@ HEADERS += \
     ../../src/qt/gamelistwidget.hpp \
     ../../src/core/ee/ee_jittrans.hpp \
     ../../src/core/ee/ee_jit.hpp \
-    ../../src/core/ee/ee_jit64.hpp
+    ../../src/core/ee/ee_jit64.hpp \
+    ../../src/core/iop/cdvd/cdvd_container.hpp \
+    ../../src/core/iop/cdvd/iso_reader.hpp \
+    ../../src/core/iop/cdvd/bincuereader.hpp
    

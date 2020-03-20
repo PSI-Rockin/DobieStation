@@ -38,16 +38,22 @@
     <ClCompile Include="$(CoreDir)ee\ee_jittrans.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)iop\cso_reader.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
     <ClCompile Include="$(CoreDir)tests\iop\alu.cpp">
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="$(CoreDir)ee\bios_hle.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)iop\cdvd.cpp">
+    <ClCompile Include="$(CoreDir)iop\cdvd\bincuereader.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="$(CoreDir)iop\cdvd\cdvd.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="$(CoreDir)iop\cdvd\cso_reader.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="$(CoreDir)iop\cdvd\iso_reader.cpp">
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="$(CoreDir)ee\ipu\chromtable.cpp">
@@ -238,7 +244,19 @@
     <ClInclude Include="$(CoreDir)ee\ee_jittrans.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)iop\cdvd.hpp">
+    <ClInclude Include="$(CoreDir)iop\cdvd\bincuereader.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(CoreDir)iop\cdvd\cdvd.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(CoreDir)iop\cdvd\cdvd_container.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(CoreDir)iop\cdvd\cso_reader.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(CoreDir)iop\cdvd\iso_reader.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
     <ClInclude Include="$(CoreDir)ee\ipu\chromtable.hpp">
@@ -266,9 +284,6 @@
       <Filter>Headers</Filter>
     </ClInclude>
     <ClInclude Include="$(CoreDir)ee\dmac.hpp">
-      <Filter>Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="$(CoreDir)iop\cso_reader.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
     <ClInclude Include="$(CoreDir)jitcommon\emitter64.hpp">

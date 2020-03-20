@@ -1,8 +1,9 @@
 #ifndef CDVD_HPP
 #define CDVD_HPP
 
-#include "cso_reader.hpp"
 #include <fstream>
+#include <memory>
+#include "cdvd_container.hpp"
 
 class Emulator;
 class IOP_DMA;
@@ -11,7 +12,8 @@ class Scheduler;
 enum CDVD_CONTAINER
 {
     ISO,
-    CISO
+    CISO,
+    BIN_CUE
 };
 
 enum CDVD_STATUS
@@ -34,6 +36,13 @@ enum class NCOMMAND
     BREAK
 };
 
+enum CDVD_DISC_TYPE
+{
+    CDVD_DISC_NONE = 0,
+    CDVD_DISC_CD = 0x12,
+    CDVD_DISC_DVD = 0x14
+};
+
 struct RTC
 {
     int vsyncs;
@@ -52,11 +61,10 @@ class CDVD_Drive
         uint64_t cycle_count;
         Emulator* e;
         IOP_DMA* dma;
+        CDVD_DISC_TYPE disc_type;
+        std::unique_ptr<CDVD_Container> container;
+        size_t file_size;
         Scheduler* scheduler;
-        CDVD_CONTAINER container;
-        std::ifstream cdvd_file;
-        CSO_Reader cso_file;
-        uint64_t file_size;
         int read_bytes_left;
         int speed;
 
@@ -96,13 +104,6 @@ class CDVD_Drive
         int n_command_event_id;
 
         uint32_t get_block_timing(bool mode_DVD);
-        
-        bool container_open(const char* file_path);
-        void container_close();
-        bool container_isopen();
-        void container_seek(std::ios::streamoff ofs, std::ios::seekdir whence = std::ios::beg);
-        uint64_t container_tell();
-        size_t container_read(void* dst, size_t size);
 
         void start_seek();
         void prepare_S_outdata(int amount);

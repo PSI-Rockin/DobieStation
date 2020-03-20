@@ -58,8 +58,18 @@ set(SOURCES
     ee/ipu/mac_p_pic.cpp
     ee/ipu/motioncode.cpp
     ee/ipu/vlc_table.cpp
-    iop/cdvd.cpp
-    iop/cso_reader.cpp
+    ee/timers.cpp
+    ee/vif.cpp
+    ee/vu.cpp
+    ee/vu_disasm.cpp
+    ee/vu_interpreter.cpp
+    ee/vu_jit.cpp
+    ee/vu_jit64.cpp
+    ee/vu_jittrans.cpp
+    iop/cdvd/bincuereader.cpp
+    iop/cdvd/cdvd.cpp
+    iop/cdvd/cso_reader.cpp
+    iop/cdvd/iso_reader.cpp
     iop/gamepad.cpp
     iop/iop.cpp
     iop/iop_cop0.cpp
@@ -124,8 +134,18 @@ set(HEADERS
     ee/ipu/mac_p_pic.hpp
     ee/ipu/motioncode.hpp
     ee/ipu/vlc_table.hpp
-    iop/cdvd.hpp
-    iop/cso_reader.hpp
+    ee/timers.hpp
+    ee/vif.hpp
+    ee/vu.hpp
+    ee/vu_disasm.hpp
+    ee/vu_interpreter.hpp
+    ee/vu_jit.hpp
+    ee/vu_jit64.hpp
+    ee/vu_jittrans.hpp
+    iop/cdvd/bincuereader.hpp
+    iop/cdvd/cdvd.hpp
+    iop/cdvd/cso_reader.hpp
+    iop/cdvd/iso_reader.hpp
     iop/gamepad.hpp
     iop/iop.hpp
     iop/iop_cop0.hpp

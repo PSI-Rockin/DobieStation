@@ -1,5 +1,5 @@
 #include <cstdio>
-#include "cdvd.hpp"
+#include "cdvd/cdvd.hpp"
 #include "iop_dma.hpp"
 #include "sio2.hpp"
 #include "spu.hpp"

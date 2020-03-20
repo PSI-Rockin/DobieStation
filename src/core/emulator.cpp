@@ -290,34 +290,10 @@ void Emulator::fast_boot()
 {
     if (skip_BIOS_hack == LOAD_DISC)
     {
-        //First we need to determine the name of the game executable
-        //This is done by finding SYSTEM.CNF on the game disc, then getting the name of the executable it points to.
-        uint32_t system_cnf_size;
-        char* system_cnf = (char*)cdvd.read_file("SYSTEM.CNF;1", system_cnf_size);
-        if (!system_cnf)
-        {
-            Errors::die("[Emulator] Failed to load SYSTEM.CNF!\n");
-        }
-        std::string exec_name = "";
-        //Search for cdrom0:
-        int pos = 0;
-        while (strncmp("cdrom0:", system_cnf + pos, 7))
-            pos++;
-
-        printf("[Emulator] Found 'cdrom0:'\n");
-        pos += 8;
-
-        //Search for end of file name
-        while (system_cnf[pos] != ';')
-        {
-            exec_name += system_cnf[pos];
-            pos++;
-        }
-
-        delete[] system_cnf;
-
-        std::string path = "cdrom0:\\";
-        path += exec_name + ";1";
+        //We need to get the executable name.
+        //This is in the format of cdrom0:\[serial];1
+        std::string path = cdvd.get_serial();
+        path = "cdrom0:\\" + path + ";1";
 
         //Next we need to find the string "rom0:OSDSYS"
         for (uint32_t str = EELOAD_START; str < EELOAD_START + EELOAD_SIZE; str += 8)
