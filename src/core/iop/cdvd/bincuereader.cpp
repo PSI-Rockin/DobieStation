@@ -17,7 +17,7 @@ bool BinCueReader::open(std::string name)
     if (bin_file.is_open())
         close();
 
-    bin_file.open(name);
+    bin_file.open(name, std::ios::binary);
     return bin_file.is_open();
 }
 
