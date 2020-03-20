@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstdio>
 #include "spu.hpp"
 #include "iop_dma.hpp"
