@@ -101,7 +101,8 @@ SOURCES += ../../src/qt/main.cpp \
     ../../src/core/ee/ee_jit64_fpu_avx.cpp \
     ../../src/core/ee/ee_jit64_gpr.cpp \
     ../../src/core/iop/cdvd/iso_reader.cpp \
-    ../../src/core/iop/cdvd/bincuereader.cpp
+    ../../src/core/iop/cdvd/bincuereader.cpp \
+    ../../src/core/iop/iop_intc.cpp
 
 HEADERS += \
     ../../src/core/errors.hpp \
@@ -174,5 +175,6 @@ HEADERS += \
     ../../src/core/ee/ee_jit64.hpp \
     ../../src/core/iop/cdvd/cdvd_container.hpp \
     ../../src/core/iop/cdvd/iso_reader.hpp \
-    ../../src/core/iop/cdvd/bincuereader.hpp
+    ../../src/core/iop/cdvd/bincuereader.hpp \
+    ../../src/core/iop/iop_intc.hpp
    

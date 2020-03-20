@@ -4,7 +4,11 @@
 
 #define VER_MAJOR 0
 #define VER_MINOR 0
+<<<<<<< HEAD
 #define VER_REV 30
+=======
+#define VER_REV 38
+>>>>>>> 475322e... IOP INTC: Organize interrupt logic into a separate class
 
 using namespace std;
 
@@ -87,10 +91,7 @@ void Emulator::load_state(const char *file_name)
 
     //Interrupt registers
     intc.load_state(state);
-    state.read((char*)&IOP_I_CTRL, sizeof(uint32_t));
-    state.read((char*)&IOP_I_MASK, sizeof(uint32_t));
-    state.read((char*)&IOP_I_STAT, sizeof(uint32_t));
-    state.read((char*)&iop_i_ctrl_delay, sizeof(iop_i_ctrl_delay));
+    iop_intc.load_state(state);
 
     //Timers
     timers.load_state(state);
@@ -165,10 +166,7 @@ void Emulator::save_state(const char *file_name)
 
     //Interrupt registers
     intc.save_state(state);
-    state.write((char*)&IOP_I_CTRL, sizeof(uint32_t));
-    state.write((char*)&IOP_I_MASK, sizeof(uint32_t));
-    state.write((char*)&IOP_I_STAT, sizeof(uint32_t));
-    state.write((char*)&iop_i_ctrl_delay, sizeof(iop_i_ctrl_delay));
+    iop_intc.save_state(state);
 
     //Timers
     timers.save_state(state);
@@ -477,6 +475,20 @@ void INTC::save_state(ofstream &state)
     state.write((char*)&INTC_STAT, sizeof(INTC_STAT));
     state.write((char*)&stat_speedhack_active, sizeof(stat_speedhack_active));
     state.write((char*)&read_stat_count, sizeof(read_stat_count));
+}
+
+void IOP_INTC::load_state(ifstream &state)
+{
+    state.read((char*)&I_CTRL, sizeof(I_CTRL));
+    state.read((char*)&I_STAT, sizeof(I_STAT));
+    state.read((char*)&I_MASK, sizeof(I_MASK));
+}
+
+void IOP_INTC::save_state(ofstream &state)
+{
+    state.write((char*)&I_CTRL, sizeof(I_CTRL));
+    state.write((char*)&I_STAT, sizeof(I_STAT));
+    state.write((char*)&I_MASK, sizeof(I_MASK));
 }
 
 void EmotionTiming::load_state(ifstream &state)
