@@ -10,7 +10,7 @@ bool ISO_Reader::open(std::string name)
     if (file.is_open())
         close();
 
-    file.open(name);
+    file.open(name, std::ios::binary);
     return file.is_open();
 }
 
