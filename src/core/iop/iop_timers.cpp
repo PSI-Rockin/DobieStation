@@ -1,11 +1,12 @@
 #include <algorithm>
 #include <cstdio>
 #include "iop_timers.hpp"
+#include "iop_intc.hpp"
 #include "../emulator.hpp"
 #include "../errors.hpp"
 #include "../scheduler.hpp"
 
-IOPTiming::IOPTiming(Emulator* e, Scheduler* scheduler) : e(e), scheduler(scheduler)
+IOPTiming::IOPTiming(IOP_INTC* intc, Scheduler* scheduler) : intc(intc), scheduler(scheduler)
 {
 
 }
@@ -57,7 +58,7 @@ void IOPTiming::IRQ_test(int index, bool overflow)
     if (timers[index].control.int_enable)
     {
         const static int IRQs[] = {4, 5, 6, 14, 15, 16};
-        e->iop_request_IRQ(IRQs[index]);
+        intc->assert_irq(IRQs[index]);
 
         if (overflow)
             timers[index].control.overflow_interrupt = true;

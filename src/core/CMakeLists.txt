@@ -74,6 +74,7 @@ set(SOURCES
     iop/iop.cpp
     iop/iop_cop0.cpp
     iop/iop_dma.cpp
+    iop/iop_intc.cpp
     iop/iop_interpreter.cpp
     iop/iop_timers.cpp
     iop/memcard.cpp
@@ -150,6 +151,7 @@ set(HEADERS
     iop/iop.hpp
     iop/iop_cop0.hpp
     iop/iop_dma.hpp
+    iop/iop_intc.hpp
     iop/iop_interpreter.hpp
     iop/iop_timers.hpp
     iop/memcard.hpp

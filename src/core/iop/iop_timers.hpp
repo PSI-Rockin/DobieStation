@@ -27,13 +27,13 @@ struct IOP_Timer
     uint64_t target;
 };
 
-class Emulator;
+class IOP_INTC;
 class Scheduler;
 
 class IOPTiming
 {
     private:
-        Emulator* e;
+        IOP_INTC* intc;
         Scheduler* scheduler;
 
         IOP_Timer timers[6];
@@ -44,7 +44,7 @@ class IOPTiming
         void timer_interrupt(int index);
         void IRQ_test(int index, bool overflow);
     public:
-        IOPTiming(Emulator* e, Scheduler* scheduler);
+        IOPTiming(IOP_INTC* intc, Scheduler* scheduler);
 
         void reset();
         uint32_t read_counter(int index);

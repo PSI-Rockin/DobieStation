@@ -1,14 +1,15 @@
 #include <cstdio>
 #include "cdvd/cdvd.hpp"
 #include "iop_dma.hpp"
+#include "iop_intc.hpp"
 #include "sio2.hpp"
 #include "spu.hpp"
 
-#include "../emulator.hpp"
+#include "../errors.hpp"
 #include "../sif.hpp"
 
-IOP_DMA::IOP_DMA(Emulator* e, CDVD_Drive* cdvd, SubsystemInterface* sif, SIO2* sio2, class SPU* spu, class SPU* spu2) :
-    e(e), cdvd(cdvd), sif(sif), sio2(sio2), spu(spu), spu2(spu2)
+IOP_DMA::IOP_DMA(IOP_INTC* intc, CDVD_Drive* cdvd, SubsystemInterface* sif, SIO2* sio2, class SPU* spu, class SPU* spu2) :
+    intc(intc), cdvd(cdvd), sif(sif), sio2(sio2), spu(spu), spu2(spu2)
 {
     apply_dma_functions();
 }
@@ -291,7 +292,7 @@ void IOP_DMA::transfer_end(int index)
     {
         printf("[IOP DMA] IRQ requested: $%08X $%08X\n", DICR.STAT[dicr2], DICR.MASK[dicr2]);
         DICR.STAT[dicr2] |= 1 << index;
-        e->iop_request_IRQ(3);
+        intc->assert_irq(3);
     }
 }
 
@@ -413,7 +414,7 @@ void IOP_DMA::set_DICR(uint32_t value)
     DICR.master_int_enable[0] = value & (1 << 23);
     DICR.STAT[0] &= ~((value >> 24) & 0x7F);
     if (DICR.force_IRQ[0])
-        e->iop_request_IRQ(3);
+        intc->assert_irq(3);
 }
 
 void IOP_DMA::set_DICR2(uint32_t value)
@@ -424,7 +425,7 @@ void IOP_DMA::set_DICR2(uint32_t value)
     DICR.master_int_enable[1] = value & (1 << 23);
     DICR.STAT[1] &= ~((value >> 24) & 0x7F);
     if (DICR.force_IRQ[1])
-        e->iop_request_IRQ(3);
+        intc->assert_irq(3);
 }
 
 void IOP_DMA::set_DMA_request(int index)

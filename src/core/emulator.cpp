@@ -17,22 +17,22 @@
 #define EELOAD_SIZE 0x20000
 
 Emulator::Emulator() :
-    cdvd(this, &iop_dma, &scheduler),
+    cdvd(&iop_intc, &iop_dma, &scheduler),
     cp0(&dmac),
     cpu(&cp0, &fpu, this, &vu0, &vu1),
     dmac(&cpu, this, &gif, &ipu, &sif, &vif0, &vif1, &vu0, &vu1),
     gif(&gs, &dmac),
     gs(&intc),
     iop(this),
-    iop_dma(this, &cdvd, &sif, &sio2, &spu, &spu2),
+    iop_dma(&iop_intc, &cdvd, &sif, &sio2, &spu, &spu2),
     iop_intc(&iop),
-    iop_timers(this, &scheduler),
+    iop_timers(&iop_intc, &scheduler),
     intc(&cpu, &scheduler),
     ipu(&intc, &dmac),
     timers(&intc, &scheduler),
-    sio2(this, &pad, &memcard),
-    spu(1, this, &iop_dma),
-    spu2(2, this, &iop_dma),
+    sio2(&iop_intc, &pad, &memcard),
+    spu(1, &iop_intc, &iop_dma),
+    spu2(2, &iop_intc, &iop_dma),
     vif0(nullptr, &vu0, &intc, &dmac, 0),
     vif1(&gif, &vu1, &intc, &dmac, 1),
     vu0(0, this, &intc, &cpu, &vu1),
@@ -208,13 +208,13 @@ void Emulator::vblank_start()
     //cpu.set_disassembly(frames >= 223 && frames < 225);
     printf("VSYNC FRAMES: %d\n", frames);
     gs.assert_VSYNC();
-    iop_request_IRQ(0);
+    iop_intc.assert_irq(0);
 }
 
 void Emulator::vblank_end()
 {
     //VBLANK end
-    iop_request_IRQ(11);
+    iop_intc.assert_irq(11);
     gs.set_VBLANK(false);
     timers.gate(true, false);
     frame_ended = true;
@@ -1627,12 +1627,6 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
         return;
     }
     Errors::print_warning("Unrecognized IOP write32 to physical addr $%08X of $%08X\n", address, value);
-}
-
-void Emulator::iop_request_IRQ(int index)
-{
-    printf("[IOP] Requesting IRQ %d\n", index);
-    iop_intc.assert_irq(index);
 }
 
 void Emulator::iop_ksprintf()
