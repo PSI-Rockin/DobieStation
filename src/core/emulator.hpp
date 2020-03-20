@@ -15,6 +15,7 @@
 #include "iop/gamepad.hpp"
 #include "iop/iop.hpp"
 #include "iop/iop_dma.hpp"
+#include "iop/iop_intc.hpp"
 #include "iop/iop_timers.hpp"
 #include "iop/memcard.hpp"
 #include "iop/sio2.hpp"
@@ -91,10 +92,8 @@ class Emulator
         uint8_t rdram_sdevid;
 
         uint8_t IOP_POST;
-        uint32_t IOP_I_STAT;
-        uint32_t IOP_I_MASK;
-        uint32_t IOP_I_CTRL;
-        int iop_i_ctrl_delay;
+
+        IOP_INTC iop_intc;
 
         SKIP_HACK skip_BIOS_hack;
 
