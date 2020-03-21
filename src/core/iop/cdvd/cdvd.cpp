@@ -79,6 +79,29 @@ void CDVD_Drive::reset()
     n_command_event_id = scheduler->register_function([this] (uint64_t param) { handle_N_command(); });
 }
 
+string CDVD_Drive::get_ps2_exec_path()
+{
+    if (!container->is_open())
+        return "";
+
+    uint32_t cnf_size;
+    char* cnf = (char*)read_file("SYSTEM.CNF;1", cnf_size);
+    int pos = 0;
+    if (!cnf)
+        return "h";
+    while (strncmp("cdrom0:\\", cnf + pos, 7))
+        pos++;
+
+    string path;
+    while (strncmp(";1", cnf + pos, 2))
+    {
+        path += cnf[pos];
+        pos++;
+    }
+
+    return path + ";1";
+}
+
 string CDVD_Drive::get_serial()
 {
     if (!container->is_open())
