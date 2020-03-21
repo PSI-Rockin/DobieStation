@@ -290,9 +290,9 @@ bool CDVD_Drive::load_disc(const char *name, CDVD_CONTAINER a_container)
 
     LBA = *(uint16_t*)&pvd_sector[128];
     if (*(uint16_t*)&pvd_sector[166] == 2048)
-        disc_type = CDVD_DISC_CD;
+        disc_type = CDVD_DISC_PS2CD;
     else
-        disc_type = CDVD_DISC_DVD;
+        disc_type = CDVD_DISC_PS2DVD;
     printf("[CDVD] PVD LBA: $%08X\n", LBA);
 
     root_location = *(uint32_t*)&pvd_sector[156 + 2];
@@ -761,6 +761,7 @@ void CDVD_Drive::N_command_readkey(uint32_t arg)
     //Code referenced/taken from PCSX2
     //This performs some kind of encryption/checksum with the game's serial?
     memset(cdkey, 0, 16);
+
     string serial = get_serial();
 
     int32_t letters = (int32_t)((serial[3] & 0x7F) << 0) |
