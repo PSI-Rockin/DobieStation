@@ -292,12 +292,9 @@ void Emulator::fast_boot()
 {
     if (skip_BIOS_hack == LOAD_DISC)
     {
-        //We need to get the executable name.
-        //This is in the format of cdrom0:\[serial];1
-        std::string path = cdvd.get_serial();
-        path = "cdrom0:\\" + path + ";1";
+        //We need to find the string "rom0:OSDSYS" and replace it with the disc's executable.
+        std::string path = cdvd.get_ps2_exec_path();
 
-        //Next we need to find the string "rom0:OSDSYS"
         for (uint32_t str = EELOAD_START; str < EELOAD_START + EELOAD_SIZE; str += 8)
         {
             if (!strcmp((char*)&RDRAM[str], "rom0:OSDSYS"))

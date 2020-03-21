@@ -122,6 +122,7 @@ class CDVD_Drive
         CDVD_Drive(IOP_INTC* intc, IOP_DMA* dma, Scheduler* scheduler);
         ~CDVD_Drive();
 
+        std::string get_ps2_exec_path();
         std::string get_serial();
 
         void reset();
