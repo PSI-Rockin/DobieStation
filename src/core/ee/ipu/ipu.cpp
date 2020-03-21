@@ -145,10 +145,12 @@ void ImageProcessingUnit::run()
                         process_FDEC();
                     break;
                 case 0x05:
-                    if (!bytes_left)
+                    if (setiq_state == SETIQ_STATE::ADVANCE)
                     {
                         if (!in_FIFO.advance_stream(command_option & 0x3F))
                             break;
+
+                        setiq_state = SETIQ_STATE::POPULATE_TABLE;
                     }
                     while (bytes_left && in_FIFO.f.size())
                     {
@@ -1121,6 +1123,7 @@ void ImageProcessingUnit::write_command(uint32_t value)
             case 0x05:
                 printf("[IPU] SETIQ\n");
                 bytes_left = 64;
+                setiq_state = SETIQ_STATE::ADVANCE;
                 break;
             case 0x06:
                 printf("[IPU] SETVQ\n");
