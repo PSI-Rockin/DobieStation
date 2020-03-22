@@ -13,35 +13,23 @@ struct stereo_sample
 
 enum class adsr_phase
 {
+    Stopped,
     Attack,
     Decay,
     Sustain,
     Release,
-    Off
 };
-enum class adsr_rate
-{
-    Linear,
-    Exponential
-};
-enum class adsr_dir
-{
-    Inc,
-    Dec
-};
-
 
 struct adsr_params
 {
     adsr_phase phase;
-    adsr_rate mode;
-    adsr_dir direction;
-    uint16_t cycles;
+    bool exponential;
+    bool rising;
+    uint16_t cycles_left;
     uint8_t shift;
     int16_t step;
     int16_t target;
 
-    uint32_t reg;
     int16_t envelope;
 };
 
