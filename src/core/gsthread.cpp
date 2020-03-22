@@ -1474,20 +1474,6 @@ void GraphicsSynthesizerThread::render_primitive()
     if (current_ctx->scissor.empty())
         return;
 
-    // confirmed by hw test
-    // in the event that a z format is specified for FRAME
-    // the depth format will swap to a color format
-    if ((current_ctx->frame.format & 0x30) == 0x30)
-    {
-        current_ctx->zbuf.format &= ~0x30;
-        update_draw_pixel_state();
-    }
-    else
-    {
-        current_ctx->zbuf.format |= 0x30;
-        update_draw_pixel_state();
-    }
-
 #ifdef GS_JIT
     jit_draw_pixel_func = get_jitted_draw_pixel(draw_pixel_state);
     //No need to recompile tex_lookup if texture mapping is disabled. TEX0 can contain bad data

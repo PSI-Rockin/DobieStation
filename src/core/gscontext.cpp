@@ -173,6 +173,18 @@ void GSContext::set_frame(uint64_t value)
     printf("FRAME: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);
     printf("Width: %d\n", frame.width);
     printf("Format: %d\n", frame.format);
+
+    // confirmed by hw test
+    // in the event that a z format is specified for FRAME
+    // the depth format will swap to a color format
+    if ((frame.format & 0x30) == 0x30)
+    {
+        zbuf.format &= ~0x30;
+    }
+    else
+    {
+        zbuf.format |= 0x30;
+    }
 }
 
 void GSContext::set_zbuf(uint64_t value)
@@ -183,4 +195,12 @@ void GSContext::set_zbuf(uint64_t value)
     printf("ZBUF: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);
     printf("Base pointer: $%08X\n", zbuf.base_pointer);
     printf("Format: $%02X\n", zbuf.format);
+
+    // confirmed by hw test
+    // in the event that a z format is specified for FRAME
+    // the depth format will swap to a color format
+    if ((frame.format & 0x30) == 0x30)
+    {
+        zbuf.format &= ~0x30;
+    }
 }
