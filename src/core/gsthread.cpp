@@ -2776,8 +2776,8 @@ void GraphicsSynthesizerThread::render_sprite()
                 tex_info.fog = v2.fog;
                 if (tmp_st)
                 {
-                    pix_v = (pix_t * tex_info.tex_height) * 16.0;
-                    pix_u = (pix_s * tex_info.tex_width) * 16.0;
+                    pix_v = ((pix_t / v2.rgbaq.q) * tex_info.tex_height) * 16.0;
+                    pix_u = ((pix_s / v2.rgbaq.q) * tex_info.tex_width) * 16.0;
 #ifdef GS_JIT
                     jit_tex_lookup_prologue(pix_u, pix_v, &tex_info);
 #else
