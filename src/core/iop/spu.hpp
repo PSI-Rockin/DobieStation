@@ -11,6 +11,54 @@ struct stereo_sample
     int16_t right;
 };
 
+enum class adsr_phase
+{
+    Attack,
+    Decay,
+    Sustain,
+    Release
+};
+enum class adsr_rate
+{
+    Linear,
+    Exponential
+};
+enum class adsr_dir
+{
+    Inc,
+    Dec
+};
+
+
+struct adsr_params
+{
+    adsr_phase phase;
+    adsr_rate mode;
+    adsr_dir direction;
+    uint cycles;
+    uint8_t shift;
+    int16_t step;
+    uint target;
+
+    //rate attack_mode;
+    //int attack_shift;
+    //int attack_step;
+
+    //int decay_shift;
+    //int decay_step;
+
+    //rate sustain_mode;
+    //int sustain_level;
+    //int sustain_direction;
+    //int sustain_shift;
+    //int sustain_step;
+
+    //rate release_mode;
+    //int release_shift;
+
+    int16_t envelope;
+};
+
 struct Voice
 {
     int16_t left_vol, right_vol;
@@ -22,6 +70,8 @@ struct Voice
     uint32_t current_addr;
     uint32_t loop_addr;
     bool loop_addr_specified;
+
+    adsr_params adsr;
 
     bool on;
     int key_switch_timeout;
@@ -40,8 +90,12 @@ struct Voice
     std::vector<int16_t> last_pcm;
     std::vector<int16_t> current_pcm;
 
+
+    void set_adsr_phase(adsr_phase phase);
+
     void reset()
     {
+        adsr = {};
         left_vol = 0;
         right_vol = 0;
         pitch = 0;
@@ -107,6 +161,8 @@ class SPU
 
         stereo_sample voice_gen_sample(int voice_id);
         int16_t interpolate(int voice);
+
+        void advance_envelope(int voice_id);
 
         void key_on_voice(int v);
         void key_off_voice(int v);
