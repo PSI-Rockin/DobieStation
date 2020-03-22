@@ -16,7 +16,8 @@ enum class adsr_phase
     Attack,
     Decay,
     Sustain,
-    Release
+    Release,
+    Off
 };
 enum class adsr_rate
 {
@@ -35,27 +36,12 @@ struct adsr_params
     adsr_phase phase;
     adsr_rate mode;
     adsr_dir direction;
-    uint cycles;
+    uint16_t cycles;
     uint8_t shift;
     int16_t step;
-    uint target;
+    int16_t target;
 
-    //rate attack_mode;
-    //int attack_shift;
-    //int attack_step;
-
-    //int decay_shift;
-    //int decay_step;
-
-    //rate sustain_mode;
-    //int sustain_level;
-    //int sustain_direction;
-    //int sustain_shift;
-    //int sustain_step;
-
-    //rate release_mode;
-    //int release_shift;
-
+    uint32_t reg;
     int16_t envelope;
 };
 

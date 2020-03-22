@@ -168,14 +168,20 @@ void Voice::set_adsr_phase(adsr_phase phase)
             adsr.step = -8;
             adsr.phase = phase;
             break;
+        case adsr_phase::Off:
+            adsr.phase = phase;
     }
-
 }
 
 
 void SPU::advance_envelope(int voice_id)
 {
     adsr_params &adsr = voices[voice_id].adsr;
+
+    if (adsr.phase == adsr_phase::Off)
+    {
+        return;
+    }
 
     if (adsr.cycles > 0)
     {
@@ -235,6 +241,9 @@ void SPU::advance_envelope(int voice_id)
                 case adsr_phase::Decay:
                     printf("[SPU%d] EDEBUG Setting ADSR phase of voice %d to %d\n", id, voice_id, 2);
                     voices[voice_id].set_adsr_phase(adsr_phase::Sustain);
+                    break;
+                case adsr_phase::Release:
+                    voices[voice_id].set_adsr_phase(adsr_phase::Off);
                     break;
             }
         }
@@ -319,13 +328,13 @@ stereo_sample SPU::voice_gen_sample(int voice_id)
 
 
     int16_t output_sample = interpolate(voice_id);
-    if (voice_id == 23 && id == 1)
-    printf("%d times %d >> 15 == %d\n", output_sample, voice.adsr.envelope, ((output_sample * voice.adsr.envelope) >>15));
+    //if (voice_id == 23 && id == 1)
+    //    printf("%d times %d >> 15 == %d\n", output_sample, voice.adsr.envelope, ((output_sample * voice.adsr.envelope) >>15));
     output_sample = (output_sample * voice.adsr.envelope) >> 15;
 
     stereo_sample out;
-    out.left = (output_sample*voice.left_vol) >> 15; // 15
-    out.right = (output_sample*voice.right_vol)>> 15;
+    out.left = (output_sample*voice.left_vol) >> 15;
+    out.right = (output_sample*voice.right_vol) >> 15;
 
     advance_envelope(voice_id);
 
