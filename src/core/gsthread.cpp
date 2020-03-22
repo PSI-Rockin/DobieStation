@@ -1914,24 +1914,30 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
                 write_PSMCT32_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z);
                 break;
             case 0x01:
+                z = min(z, 0xFFFFFFU);
                 write_PSMCT24_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z & 0xFFFFFF);
                 break;
             case 0x02:
+                z = min(z, 0xFFFFU);
                 write_PSMCT16_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z & 0xFFFF);
                 break;
             case 0x0A:
+                z = min(z, 0xFFFFU);
                 write_PSMCT16S_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z & 0xFFFF);
                 break;
             case 0x30:
                 write_PSMCT32Z_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z);
                 break;
             case 0x31:
+                z = min(z, 0xFFFFFFU);
                 write_PSMCT24Z_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z & 0xFFFFFF);
                 break;
             case 0x32:
+                z = min(z, 0xFFFFU);
                 write_PSMCT16Z_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z & 0xFFFF);
                 break;
             case 0x3A:
+                z = min(z, 0xFFFFU);
                 write_PSMCT16SZ_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z & 0xFFFF);
                 break;
         }
@@ -4499,6 +4505,8 @@ void GraphicsSynthesizerThread::recompile_depth_test()
     emitter_dp.load_addr((uint64_t)local_mem, RCX);
     emitter_dp.ADD64_REG(RAX, RCX);
 
+    uint8_t* no_clamp;
+
     if (current_ctx->test.depth_method != 1)
     {
         ConditionCode depth_comparison;
@@ -4510,9 +4518,23 @@ void GraphicsSynthesizerThread::recompile_depth_test()
         emitter_dp.MOV32_FROM_MEM(RCX, RAX);
 
         if (current_ctx->zbuf.format & 0x2)
+        {
             emitter_dp.AND32_EAX(0xFFFF);
+
+            emitter_dp.CMP32_IMM(0xFFFF, R14);
+            no_clamp = emitter_dp.JCC_NEAR_DEFERRED(ConditionCode::L);
+            emitter_dp.MOV32_REG_IMM(0xFFFF, R14);
+            emitter_dp.set_jump_dest(no_clamp);
+        }
         else if (current_ctx->zbuf.format & 0x1)
+        {
             emitter_dp.AND32_EAX(0xFFFFFF);
+
+            emitter_dp.CMP32_IMM(0xFFFFFF, R14);
+            no_clamp = emitter_dp.JCC_NEAR_DEFERRED(ConditionCode::L);
+            emitter_dp.MOV32_REG_IMM(0xFFFFFF, R14);
+            emitter_dp.set_jump_dest(no_clamp);
+        }
 
         //64-bit compare to avoid signed bullshit
         emitter_dp.CMP64_REG(RAX, R14);
