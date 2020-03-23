@@ -673,6 +673,26 @@ void SPU::write16(uint32_t addr, uint16_t value)
     }
     switch (addr)
     {
+        case 0x180:
+            printf("[SPU%d] Write PMONH: $%04X\n", id, value);
+            voice_pitch_mod &= 0xFFFF;
+            voice_pitch_mod|= value << 16;
+            break;
+        case 0x182:
+            printf("[SPU%d] Write PMON: $%04X\n", id, value);
+            voice_pitch_mod &= ~0xFFFF;
+            voice_pitch_mod |= value;
+            break;
+        case 0x184:
+            printf("[SPU%d] Write NONH: $%04X\n", id, value);
+            voice_noise_gen &= 0xFFFF;
+            voice_noise_gen |= value << 16;
+            break;
+        case 0x186:
+            printf("[SPU%d] Write NONL: $%04X\n", id, value);
+            voice_noise_gen &= ~0xFFFF;
+            voice_noise_gen |= value;
+            break;
         case 0x188:
             printf("[SPU%d] Write VMIXLH: $%04X\n", id, value);
             voice_mixdry_left &= 0xFFFF;

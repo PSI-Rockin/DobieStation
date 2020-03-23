@@ -122,6 +122,8 @@ class SPU
         uint32_t voice_mixdry_right;
         uint32_t voice_mixwet_left;
         uint32_t voice_mixwet_right;
+        uint32_t voice_pitch_mod;
+        uint32_t voice_noise_gen;
         //ADMA bullshit
         uint16_t autodma_ctrl;
         int ADMA_left;
