@@ -126,7 +126,7 @@ void Voice::set_adsr_phase(adsr_phase phase)
             adsr.target = 0x7fff;
             adsr.exponential = ((adsr1 >> 15) & 1) ? true : false;
             adsr.rising = true;
-            adsr.shift = (adsr1 >> 10) & 0x0f;
+            adsr.shift = (adsr1 >> 10) & 0x1f;
             if (adsr.rising)
             {
                 adsr.step = 7 - ((adsr2 >> 8) & 0x03);
@@ -141,7 +141,7 @@ void Voice::set_adsr_phase(adsr_phase phase)
             adsr.target = ((adsr1 & 0x0F) + 1) * 0x800;
             adsr.exponential = true;
             adsr.rising = false;
-            adsr.shift = (adsr1 >> 4) & 0x0f;
+            adsr.shift = (adsr1 >> 4) & 0x1f;
             adsr.step = -8;
             adsr.phase = phase;
             break;
@@ -149,7 +149,7 @@ void Voice::set_adsr_phase(adsr_phase phase)
             adsr.target = 0;
             adsr.exponential = ((adsr2 >> 15) & 1) ? true : false;
             adsr.rising = ((adsr2 >> 14) & 1) ? false : true;
-            adsr.shift = (adsr2 >> 8) & 0x0f;
+            adsr.shift = (adsr2 >> 8) & 0x1f;
             if (adsr.rising)
             {
                 adsr.step = 7 - ((adsr2 >> 6) & 0x03);
@@ -164,7 +164,7 @@ void Voice::set_adsr_phase(adsr_phase phase)
             adsr.target = 0;
             adsr.exponential = ((adsr2 >> 5) & 1) ? true : false;
             adsr.rising = false;
-            adsr.shift = adsr2 & 0x0f;
+            adsr.shift = adsr2 & 0x1f;
             adsr.step = -8;
             adsr.phase = phase;
             break;

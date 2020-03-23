@@ -25,7 +25,7 @@ struct adsr_params
     adsr_phase phase;
     bool exponential;
     bool rising;
-    uint16_t cycles_left;
+    uint32_t cycles_left;
     uint8_t shift;
     int16_t step;
     uint16_t target;
