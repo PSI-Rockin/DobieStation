@@ -28,7 +28,7 @@ struct adsr_params
     uint16_t cycles_left;
     uint8_t shift;
     int16_t step;
-    int16_t target;
+    uint16_t target;
 
     int16_t envelope;
 };
