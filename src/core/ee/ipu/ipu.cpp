@@ -174,7 +174,7 @@ void ImageProcessingUnit::run()
                         for (int i = 0; i < 8; i++)
                         {
                             int index = (32 - bytes_left) >> 1;
-                            VQCLUT[index] = quad._u16[index];
+                            VQCLUT[index] = quad._u16[i];
                             bytes_left -= 2;
                         }
                     }
