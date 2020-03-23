@@ -320,6 +320,12 @@ stereo_sample SPU::voice_gen_sample(int voice_id)
     out.left = (output_sample*voice.left_vol) >> 15;
     out.right = (output_sample*voice.right_vol) >> 15;
 
+    // Just mute on this for now until we can actually do the right thing.
+    if (!voice.mix_state.dry_l && !voice.mix_state.wet_l)
+        out.left = 0;
+    if (!voice.mix_state.dry_r && !voice.mix_state.wet_r)
+        out.right = 0;
+
     advance_envelope(voice_id);
 
     return out;
@@ -697,41 +703,73 @@ void SPU::write16(uint32_t addr, uint16_t value)
             printf("[SPU%d] Write VMIXLH: $%04X\n", id, value);
             voice_mixdry_left &= 0xFFFF;
             voice_mixdry_left |= value << 16;
+            for (int i = 0; i < 16; i++)
+            {
+                voices[i].mix_state.dry_l = value & (1 << i);
+            }
             break;
         case 0x18A:
             printf("[SPU%d] Write VMIXLL: $%04X\n", id, value);
             voice_mixdry_left &= ~0xFFFF;
             voice_mixdry_left |= value;
+            for (int i = 0; i < 8; i++)
+            {
+                voices[i+16].mix_state.dry_l = value & (1 << i);
+            }
             break;
         case 0x18C:
             printf("[SPU%d] Write VMIXELH: $%04X\n", id, value);
             voice_mixwet_left &= 0xFFFF;
             voice_mixwet_left |= value << 16;
+            for (int i = 0; i < 16; i++)
+            {
+                voices[i].mix_state.wet_l = value & (1 << i);
+            }
             break;
         case 0x18E:
             printf("[SPU%d] Write VMIXELL: $%04X\n", id, value);
             voice_mixwet_left &= ~0xFFFF;
             voice_mixwet_left |= value;
+            for (int i = 0; i < 8; i++)
+            {
+                voices[i+16].mix_state.wet_l = value & (1 << i);
+            }
             break;
         case 0x190:
             printf("[SPU%d] Write VMIXRH: $%04X\n", id, value);
             voice_mixdry_right &= 0xFFFF;
             voice_mixdry_right |= value << 16;
+            for (int i = 0; i < 16; i++)
+            {
+                voices[i].mix_state.dry_r = value & (1 << i);
+            }
             break;
         case 0x192:
             printf("[SPU%d] Write VMIXRL: $%04X\n", id, value);
             voice_mixdry_right &= ~0xFFFF;
             voice_mixdry_right |= value;
+            for (int i = 0; i < 8; i++)
+            {
+                voices[i+16].mix_state.dry_r = value & (1 << i);
+            }
             break;
         case 0x194:
             printf("[SPU%d] Write VMIXERH: $%04X\n", id, value);
             voice_mixwet_right &= 0xFFFF;
             voice_mixwet_right |= value << 16;
+            for (int i = 0; i < 16; i++)
+            {
+                voices[i].mix_state.wet_r = value & (1 << i);
+            }
             break;
         case 0x196:
             printf("[SPU%d] Write VMIXERL: $%04X\n", id, value);
             voice_mixwet_right &= ~0xFFFF;
             voice_mixwet_right |= value;
+            for (int i = 0; i < 8; i++)
+            {
+                voices[i+16].mix_state.wet_r = value & (1 << i);
+            }
             break;
         case 0x19A:
             printf("[SPU%d] Write Core Att: $%04X\n", id, value);

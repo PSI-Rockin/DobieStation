@@ -33,6 +33,15 @@ struct adsr_params
     int16_t envelope;
 };
 
+struct voice_mix
+{
+    bool dry_l;
+    bool dry_r;
+    bool wet_l;
+    bool wet_r;
+
+};
+
 struct Voice
 {
     int16_t left_vol, right_vol;
@@ -44,6 +53,8 @@ struct Voice
     uint32_t current_addr;
     uint32_t loop_addr;
     bool loop_addr_specified;
+
+    voice_mix mix_state;
 
     adsr_params adsr;
 
