@@ -679,7 +679,7 @@ void SPU::write16(uint32_t addr, uint16_t value)
             voice_pitch_mod|= value << 16;
             break;
         case 0x182:
-            printf("[SPU%d] Write PMON: $%04X\n", id, value);
+            printf("[SPU%d] Write PMONL: $%04X\n", id, value);
             voice_pitch_mod &= ~0xFFFF;
             voice_pitch_mod |= value;
             break;
@@ -755,6 +755,7 @@ void SPU::write16(uint32_t addr, uint16_t value)
                 status.DMA_busy = false;
                 clear_dma_req();
             }
+            effect_enable = (value & (1 << 7));
             break;
         case 0x19C:
             printf("[SPU%d] Write IRQA_H: $%04X\n", id, value);
@@ -826,6 +827,30 @@ void SPU::write16(uint32_t addr, uint16_t value)
             autodma_ctrl = value;
             if (running_ADMA())
                 set_dma_req();
+            break;
+        case 0x2E0:
+            if (!effect_enable)
+            {
+                printf("[SPU%d] Write ESAH: $%04X\n", id, value);
+                effect_area_start &= 0xFFFF;
+                effect_area_start |= (value & 0xF) << 16;
+            }
+            break;
+        case 0x2E2:
+            if (!effect_enable)
+            {
+                printf("[SPU%d] Write ESAL: $%04X\n", id, value);
+                effect_area_start &= ~0xFFFF;
+                effect_area_start |= value;
+            }
+            break;
+        case 0x33C:
+            if (!effect_enable)
+            {
+                printf("[SPU%d] Write EEA: $%04X\n", id, value);
+                effect_area_end &= 0xFFFF;
+                effect_area_end |= (value & 0xF) << 16;
+            }
             break;
         case 0x340:
             ENDX &= 0xFF0000;

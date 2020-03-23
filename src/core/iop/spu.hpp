@@ -115,8 +115,11 @@ class SPU
         static uint16_t spdif_irq;
 
         uint32_t transfer_addr;
-
         uint32_t current_addr;
+
+        bool effect_enable;
+        uint32_t effect_area_start;
+        uint32_t effect_area_end;
 
         uint32_t voice_mixdry_left;
         uint32_t voice_mixdry_right;
