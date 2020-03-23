@@ -1474,12 +1474,6 @@ void GraphicsSynthesizerThread::render_primitive()
     if (current_ctx->scissor.empty())
         return;
 
-    // confirmed by hw test
-    // in the event that a z format is specified for FRAME
-    // the depth format will swap to a color format
-    if ((current_ctx->frame.format & 0x30) == 0x30)
-        current_ctx->zbuf.format &= ~0x30;
-
 #ifdef GS_JIT
     jit_draw_pixel_func = get_jitted_draw_pixel(draw_pixel_state);
     //No need to recompile tex_lookup if texture mapping is disabled. TEX0 can contain bad data
@@ -4065,12 +4059,12 @@ void GraphicsSynthesizerThread::update_draw_pixel_state()
     draw_pixel_state |= (uint64_t)DTHE << 34UL;
     draw_pixel_state |= (uint64_t)COLCLAMP << 35UL;
     draw_pixel_state |= (uint64_t)current_ctx->zbuf.format << 36UL;
-    draw_pixel_state |= (uint64_t)SCANMSK << 40UL;
-    draw_pixel_state |= (uint64_t)current_ctx->zbuf.no_update << 42UL;
-    draw_pixel_state |= (uint64_t)current_ctx->alpha.fixed_alpha << 43UL;
-    draw_pixel_state |= (uint64_t)(current_PRMODE == &PRIM) << 51UL;
-    draw_pixel_state |= (uint64_t)(current_ctx == &context1) << 52UL;
-    draw_pixel_state |= (uint64_t)(current_ctx->frame.mask != 0) << 53UL;
+    draw_pixel_state |= (uint64_t)SCANMSK << 42UL;
+    draw_pixel_state |= (uint64_t)current_ctx->zbuf.no_update << 44UL;
+    draw_pixel_state |= (uint64_t)current_ctx->alpha.fixed_alpha << 45UL;
+    draw_pixel_state |= (uint64_t)(current_PRMODE == &PRIM) << 53UL;
+    draw_pixel_state |= (uint64_t)(current_ctx == &context1) << 54UL;
+    draw_pixel_state |= (uint64_t)(current_ctx->frame.mask != 0) << 55UL;
 }
 
 void GraphicsSynthesizerThread::update_tex_lookup_state()
