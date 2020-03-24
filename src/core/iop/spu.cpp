@@ -204,9 +204,10 @@ void SPU::advance_envelope(int voice_id)
 
     /*
     printf("[SPU%d] EDEBUG %d phase %d\n", id, voice_id, adsr.phase);
-    printf("[SPU%d] EDEBUG %d next tick in %d cycles\n", id, voice_id, adsr.cycles);
+    printf("[SPU%d] EDEBUG %d next tick in %d cycles\n", id, voice_id, adsr.cycles_left);
     printf("[SPU%d] EDEBUG %d target %d\n", id, voice_id, adsr.target);
-    printf("[SPU%d] EDEBUG %d direction %d\n", id, voice_id, adsr.direction);
+    printf("[SPU%d] EDEBUG %d rising %d\n", id, voice_id, adsr.rising);
+    printf("[SPU%d] EDEBUG %d exponential %d\n", id, voice_id, adsr.exponential);
     printf("[SPU%d] EDEBUG %d shift %d\n", id, voice_id, adsr.shift);
     printf("[SPU%d] EDEBUG %d stepvalue %d\n", id, voice_id, adsr.step);
     printf("[SPU%d] EDEBUG %d step %d\n", id, voice_id, step);
@@ -300,7 +301,7 @@ stereo_sample SPU::voice_gen_sample(int voice_id)
                 case 1:
                     ENDX |= 1 << voice_id;
                     printf("[SPU%d] EDEBUG Setting ADSR phase of voice %d to %d\n", id, voice_id, 4);
-                    voice.adsr.phase = adsr_phase::Release;
+                    voice.set_adsr_phase(adsr_phase::Release);
                     voice.adsr.envelope = 0;
                     break;
                 //Jump to loop addr and set ENDX
@@ -614,8 +615,7 @@ uint16_t SPU::read_voice_reg(uint32_t addr)
             printf("[SPU%d] Read V%d ADSR2: $%04X\n", id, v, voices[v].adsr2);
             return voices[v].adsr2;
         case 10:
-            printf("[SPU%d] Read V%d ENVX: $%04X\n", id, v, voices[v].current_envelope);
-            //return voices[v].current_envelope;
+            printf("[SPU%d] Read V%d ENVX: $%04X\n", id, v, voices[v].adsr.envelope);
             return voices[v].adsr.envelope;
         default:
             printf("[SPU%d] V%d Read $%08X\n", id, v, addr);
@@ -935,7 +935,6 @@ void SPU::write_voice_reg(uint32_t addr, uint16_t value)
             break;
         case 10:
             printf("[SPU%d] Write V%d ENVX: $%04X\n", id, v, value);
-            //voices[v].current_envelope = value;
             voices[v].adsr.envelope = value;
             break;
         default:
@@ -957,7 +956,6 @@ void SPU::key_on_voice(int v)
     voices[v].block_pos = 0;
     voices[v].loop_addr_specified = false;
     ENDX &= ~(1 << v);
-    //voices[v].adsr.phase = adsr_phase::Attack;
     voices[v].set_adsr_phase(adsr_phase::Attack);
     voices[v].adsr.cycles_left = 0;
     voices[v].adsr.envelope = 0;
@@ -973,7 +971,6 @@ void SPU::key_off_voice(int v)
     }
     voices[v].key_switch_timeout = 2;
     //Set envelope to Release mode
-    //voices[v].adsr.phase = adsr_phase::Release;
     voices[v].set_adsr_phase(adsr_phase::Release);
     voices[v].adsr.cycles_left = 0;
     printf("[SPU%d] EDEBUG Setting ADSR phase of voice %d to %d\n", id, v, 4);
