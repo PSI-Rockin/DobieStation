@@ -4539,6 +4539,23 @@ void GraphicsSynthesizerThread::recompile_depth_test()
 
         emitter_dp.set_jump_dest(depth_passed);
     }
+    else
+    {
+        if (current_ctx->zbuf.format & 0x2)
+        {
+            emitter_dp.CMP32_IMM(0xFFFF, R14);
+            no_clamp = emitter_dp.JCC_NEAR_DEFERRED(ConditionCode::L);
+            emitter_dp.MOV32_REG_IMM(0xFFFF, R14);
+            emitter_dp.set_jump_dest(no_clamp);
+        }
+        else if (current_ctx->zbuf.format & 0x1)
+        {
+            emitter_dp.CMP32_IMM(0xFFFFFF, R14);
+            no_clamp = emitter_dp.JCC_NEAR_DEFERRED(ConditionCode::L);
+            emitter_dp.MOV32_REG_IMM(0xFFFFFF, R14);
+            emitter_dp.set_jump_dest(no_clamp);
+        }
+    }
 
     //Update zbuffer
     if (!current_ctx->zbuf.no_update)
