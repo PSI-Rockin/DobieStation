@@ -346,8 +346,8 @@
     <ClInclude Include="$(CoreDir)iop\iop_dma.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClCompile Include="$(CoreDir)iop\iop_intc.hpp”>
-      <Filter>Source</Filter>
+    <ClCompile Include="$(CoreDir)iop\iop_intc.hpp">
+      <Filter>Headers</Filter>
     </ClCompile>
     <ClInclude Include="$(CoreDir)iop\iop_interpreter.hpp">
       <Filter>Headers</Filter>
