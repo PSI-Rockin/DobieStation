@@ -44,6 +44,8 @@ void SPU::reset(uint8_t* RAM)
     key_on = 0;
     key_off = 0xFFFFFF;
     spdif_irq = 0;
+    ADMA_buf = 0;
+    buf_filled = false;
 
     std::ostringstream fname;
     fname << "spu_" << id << "_stream" << ".wav";
