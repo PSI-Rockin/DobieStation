@@ -122,7 +122,6 @@ class SPU
         std::vector<int16_t> left_out_pcm;
         std::vector<int16_t> right_out_pcm;
 
-
         static uint16_t spdif_irq;
 
         uint32_t transfer_addr;
@@ -140,7 +139,9 @@ class SPU
         uint32_t voice_noise_gen;
         //ADMA bullshit
         uint16_t autodma_ctrl;
-        int ADMA_left;
+        int ADMA_buf;
+        bool buf_filled;
+        int ADMA_progress;
         int input_pos;
 
         static uint32_t IRQA[2];
@@ -172,7 +173,6 @@ class SPU
         void dump_voice_data();
 
         bool running_ADMA();
-        bool can_write_ADMA();
 
         void reset(uint8_t* RAM);
         void gen_sample();
@@ -182,7 +182,6 @@ class SPU
         void finish_DMA();
 
         uint16_t read_mem();
-        void process_ADMA();
         uint32_t read_DMA();
         void write_DMA(uint32_t value);
         void write_ADMA(uint8_t* RAM);
@@ -190,6 +189,7 @@ class SPU
 
         uint16_t read16(uint32_t addr);
         void write16(uint32_t addr, uint16_t value);
+        uint32_t get_memin_addr();
 
         void load_state(std::ifstream& state);
         void save_state(std::ofstream& state);
@@ -199,11 +199,5 @@ inline bool SPU::running_ADMA()
 {
     return (autodma_ctrl & (1 << (id - 1)));
 }
-
-inline bool SPU::can_write_ADMA()
-{
-    return (input_pos <= 128 || input_pos >= 384) && (ADMA_left < 0x400);
-}
-
 
 #endif // SPU_HPP

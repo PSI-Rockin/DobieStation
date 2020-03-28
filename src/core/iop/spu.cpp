@@ -4,6 +4,7 @@
 #include <memory>
 #include <ostream>
 #include <sstream>
+#include <cstring>
 #include "spu.hpp"
 #include "iop_dma.hpp"
 #include "iop_intc.hpp"
@@ -17,6 +18,11 @@
  * Bits 0 and 1 of the ADMA control register determine if the core is transferring data via AutoDMA.
  * Bit 2 seems to be some sort of finish flag?
  */
+
+#define SPU_CORE0_MEMIN 0x2000
+#define SPU_CORE1_MEMIN 0x2400
+
+
 uint16_t SPU::spdif_irq = 0;
 uint16_t SPU::core_att[2];
 uint32_t SPU::IRQA[2];
@@ -34,7 +40,6 @@ void SPU::reset(uint8_t* RAM)
     current_addr = 0;
     core_att[id-1] = 0;
     autodma_ctrl = 0x0;
-    ADMA_left = 0;
     input_pos = 0;
     key_on = 0;
     key_off = 0xFFFFFF;
@@ -79,7 +84,7 @@ void SPU::spu_irq(int index)
 void SPU::dump_voice_data()
 {
     //std::ofstream ramdump("spu.ram", std::fstream::out | std::fstream::binary);
-    //ramdump.write(reinterpret_cast<char const *>(RAM), 1024*1024*2);
+    //ramdump.write((char*)RAM, 1024*1024*2);
     //ramdump.close();
     for (int i = 0; i < 24; i++)
     {
@@ -302,6 +307,7 @@ stereo_sample SPU::voice_gen_sample(int voice_id)
                     ENDX |= 1 << voice_id;
                     printf("[SPU%d] EDEBUG Setting ADSR phase of voice %d to %d\n", id, voice_id, 4);
                     voice.set_adsr_phase(adsr_phase::Release);
+                    voice.adsr.cycles_left = 0;
                     voice.adsr.envelope = 0;
                     break;
                 //Jump to loop addr and set ENDX
@@ -345,9 +351,6 @@ void SPU::gen_sample()
         core_output.right += sample.right;
     }
 
-    left_out_pcm.push_back(core_output.left);
-    right_out_pcm.push_back(core_output.right);
-
     if (left_out_pcm.size() > 0x100)
     {
         coreout->append_pcm_stereo(left_out_pcm, right_out_pcm);
@@ -355,20 +358,33 @@ void SPU::gen_sample()
         right_out_pcm.clear();
     }
 
-    if (ADMA_left > 0 && autodma_ctrl & (1 << (id - 1)))
-    {
-        input_pos++;
-        process_ADMA();
-        input_pos &= 0x1FF;
-    }
-
     if (running_ADMA())
     {
-        if (can_write_ADMA())
+        core_output.left  += RAM[get_memin_addr()+(ADMA_buf*0x100)+input_pos];
+        core_output.right += RAM[get_memin_addr()+(ADMA_buf*0x100)+input_pos+0x200];
+        input_pos++;
+
+        // We need to fill the next buffer
+        if (!buf_filled)
+        {
             set_dma_req();
-        else
-            clear_dma_req();
+            autodma_ctrl |= 0x4;
+
+        }
+
+        // Switch buffer
+        if (input_pos == 0x100)
+        {
+            input_pos &= 0xFF;
+            ADMA_buf = 1 - ADMA_buf;
+            buf_filled = false;
+        }
+
     }
+
+    left_out_pcm.push_back(core_output.left);
+    right_out_pcm.push_back(core_output.right);
+
 }
 
 void SPU::finish_DMA()
@@ -379,9 +395,10 @@ void SPU::finish_DMA()
 
 void SPU::start_DMA(int size)
 {
-    if (autodma_ctrl & (1 << (id - 1)))
+    if (running_ADMA())
     {
         printf("ADMA started with size: $%08X\n", size);
+        ADMA_progress = 0;
     }
     status.DMA_ready = false;
 }
@@ -426,31 +443,43 @@ void SPU::write_DMA(uint32_t value)
     status.DMA_ready = false;
 }
 
-void SPU::write_ADMA(uint8_t *RAM)
+void SPU::write_ADMA(uint8_t *source_RAM)
 {
-   // printf("[SPU%d] ADMA transfer: $%08X\n", id, ADMA_left);
-    ADMA_left += 2;
+    int next_buffer = 1 - ADMA_buf;
 
-    if (ADMA_left >= 0x400)
+    //if (ADMA_progress == 0)
+    //    printf("[SPU%d] Started recieving ADMA for buffer %d\n", id, next_buffer);
+
+    // Write to whichever buffer we're not currently reading from
+    // 2 samples (2 shorts) per write_ADMA
+
+    if (ADMA_progress < 256)
+    {
+        std::memcpy((RAM+get_memin_addr()+(next_buffer*0x100)+(ADMA_progress)), source_RAM, 4);
+
+    }
+    else if (ADMA_progress < 512)
+    {
+        std::memcpy((RAM+0x200+get_memin_addr()+(next_buffer*0x100)+(ADMA_progress-0x100)), source_RAM, 4);
+    }
+
+    ADMA_progress += 2;
+
+    if (ADMA_progress > 300)
+    {
+        autodma_ctrl &= ~0x4;
         clear_dma_req();
+    }
+
+    if (ADMA_progress >= 512)
+    {
+        ADMA_progress = 0;
+        buf_filled = true;
+    }
+
 
     status.DMA_busy = true;
     status.DMA_ready = false;
-}
-
-void SPU::process_ADMA() 
-{
-    if (input_pos == 128 || input_pos == 384)
-    {
-        ADMA_left -= std::min(ADMA_left, 0x200);
-
-        if (ADMA_left < 0x200)
-        {
-            autodma_ctrl |= 0x4;
-        }
-        else
-            autodma_ctrl &= ~0x4;
-    }
 }
 
 uint16_t SPU::read_mem()
@@ -990,4 +1019,15 @@ void SPU::set_dma_req()
         dma->set_DMA_request(IOP_SPU);
     else
         dma->set_DMA_request(IOP_SPU2);
+}
+
+uint32_t SPU::get_memin_addr()
+{
+    switch (id)
+    {
+        case 1:
+            return SPU_CORE0_MEMIN;
+        default:
+            return SPU_CORE1_MEMIN;
+    }
 }
