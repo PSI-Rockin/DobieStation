@@ -5127,29 +5127,33 @@ GSTextureJitBlockRecord* GraphicsSynthesizerThread::recompile_tex_lookup(uint64_
             Errors::die("[GS JIT] Unrecognized color function $%02X", current_ctx->tex0.color_function);
     }
 
-    //Do fogging
+    //Do fogging texcolor = ((texcolor * fog) >> 8) + (((0xff - fog) * FOGCOL) >> 8)
     if (current_PRMODE->fog)
     {
+        //(texcolor * fog) >> 8
         emitter_tex.MOV32_FROM_MEM(R14, RBX, offsetof(TexLookupInfo, fog));
         emitter_tex.AND32_REG_IMM(0xFF, RBX);
         emitter_tex.MOVQ_TO_XMM(RBX, XMM1);
         emitter_tex.PSHUFLW(0, XMM1, XMM1); //Fog
-        emitter_tex.PMULLW(XMM1, XMM0);
-        emitter_tex.PSRLW(8, XMM0);
+        emitter_tex.PMULLW(XMM1, XMM0); //XMM0 = texcolor
+        emitter_tex.PSRLW(8, XMM0); // >> 8
         emitter_tex.MOV64_MR(RAX, RDI); //Backup texture so we can extract the alpha later
         emitter_tex.MOVQ_FROM_XMM(XMM0, RAX); //Move calc back to texture
 
+        //((0xFF-fog) * FOGCOL) >> 8
         emitter_tex.MOV32_REG_IMM(0xFF, RDX);
         emitter_tex.SUB32_REG(RBX, RDX);
-        emitter_tex.MOVQ_TO_XMM(RDX, XMM1); //0xFF - Fog
+        emitter_tex.MOVQ_TO_XMM(RDX, XMM1); //XMM1 = 0xFF - Fog
         emitter_tex.PSHUFLW(0, XMM1, XMM1);
+
         emitter_tex.load_addr((uint64_t)&FOGCOL, RBX);
         emitter_tex.MOV64_FROM_MEM(RBX, RBX);
         emitter_tex.MOVQ_TO_XMM(RBX, XMM0);
-        emitter_tex.PMULLW(XMM1, XMM0);
-        emitter_tex.PSRLW(8, XMM0);
-        emitter_tex.MOVQ_TO_XMM(RAX, XMM1);
-        emitter_tex.PADDUSW(XMM0, XMM1);
+
+        emitter_tex.PMULLW(XMM1, XMM0); //((0xFF-fog) * FOGCOL)
+        emitter_tex.PSRLW(8, XMM0); // >> 8
+        emitter_tex.MOVQ_TO_XMM(RAX, XMM1); //Retrieve texcolor again
+        emitter_tex.PADDUSW(XMM0, XMM1); //Add them together
         emitter_tex.MOVQ_FROM_XMM(XMM1, RAX); //Move calc back to texture
     }
 
@@ -5178,6 +5182,7 @@ GSTextureJitBlockRecord* GraphicsSynthesizerThread::recompile_tex_lookup(uint64_
     }
     else if (current_PRMODE->fog)
     {
+        //Recover backed up texcolor so we can get the old alpha back
         emitter_tex.MOV64_MR(RDI, RBX);
         emitter_tex.SHR64_REG_IMM(48, RBX);
         emitter_tex.MOV16_TO_MEM(RBX, R14, sizeof(RGBAQ_REG) + (sizeof(uint16_t) * 3));
