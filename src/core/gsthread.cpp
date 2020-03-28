@@ -5136,7 +5136,7 @@ GSTextureJitBlockRecord* GraphicsSynthesizerThread::recompile_tex_lookup(uint64_
         emitter_tex.PSHUFLW(0, XMM1, XMM1); //Fog
         emitter_tex.PMULLW(XMM1, XMM0);
         emitter_tex.PSRLW(8, XMM0);
-
+        emitter_tex.MOV64_MR(RAX, RDI); //Backup texture so we can extract the alpha later
         emitter_tex.MOVQ_FROM_XMM(XMM0, RAX); //Move calc back to texture
 
         emitter_tex.MOV32_REG_IMM(0xFF, RDX);
@@ -5170,11 +5170,17 @@ GSTextureJitBlockRecord* GraphicsSynthesizerThread::recompile_tex_lookup(uint64_
         emitter_tex.SHR64_REG_IMM(48, RCX);
         emitter_tex.MOV16_TO_MEM(RCX, R14, sizeof(RGBAQ_REG) + (sizeof(uint16_t) * 3));
     }
-    else if (current_ctx->tex0.color_function == 3 || current_PRMODE->fog)
+    else if (current_ctx->tex0.color_function == 3)
     {
         //Keep tex_color.a unmodified (modulation equation affected alpha)
         emitter_tex.SHR64_REG_IMM(48, RSI);
         emitter_tex.MOV16_TO_MEM(RSI, R14, sizeof(RGBAQ_REG) + (sizeof(uint16_t) * 3));
+    }
+    else if (current_PRMODE->fog)
+    {
+        emitter_tex.MOV64_MR(RDI, RBX);
+        emitter_tex.SHR64_REG_IMM(48, RBX);
+        emitter_tex.MOV16_TO_MEM(RBX, R14, sizeof(RGBAQ_REG) + (sizeof(uint16_t) * 3));
     }
 
     emitter_tex.MOVAPS_FROM_MEM(RBP, XMM0, 0);
