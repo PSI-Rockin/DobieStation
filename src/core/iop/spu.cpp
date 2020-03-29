@@ -352,8 +352,7 @@ void SPU::gen_sample()
     {
         stereo_sample sample = voice_gen_sample(i);
 
-        core_output.left += sample.left;
-        core_output.right += sample.right;
+        core_output.mix(sample);
     }
 
     if (left_out_pcm.size() > 0x100)
@@ -365,10 +364,8 @@ void SPU::gen_sample()
 
     if (running_ADMA())
     {
-        core_output.left  += (RAM[get_memin_addr()+(ADMA_buf*0x100)+input_pos] * data_input_volume_l) >> 15;
-        core_output.right += (RAM[get_memin_addr()+(ADMA_buf*0x100)+input_pos+0x200] * data_input_volume_r) >> 15;
-        spu_check_irq(get_memin_addr()+(ADMA_buf*0x100)+input_pos);
-        spu_check_irq(get_memin_addr()+(ADMA_buf*0x100)+input_pos+0x200);
+        stereo_sample memin = read_memin();
+        core_output.mix(memin);
         input_pos++;
 
         // We need to fill the next buffer
@@ -1053,4 +1050,17 @@ uint32_t SPU::get_memin_addr()
         default:
             return SPU_CORE1_MEMIN;
     }
+}
+
+stereo_sample SPU::read_memin()
+{
+    stereo_sample sample = {};
+    uint32_t pos = get_memin_addr()+(ADMA_buf*0x100)+input_pos;
+    sample.left = (RAM[pos] * data_input_volume_l) >> 15;
+    sample.right = (RAM[pos+0x200] * data_input_volume_r) >> 15;
+
+    spu_check_irq(pos);
+    spu_check_irq(pos+0x200);
+
+    return sample;
 }

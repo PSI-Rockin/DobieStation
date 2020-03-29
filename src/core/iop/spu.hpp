@@ -9,6 +9,12 @@ struct stereo_sample
 {
     int16_t left;
     int16_t right;
+
+    void mix(stereo_sample two)
+    {
+       left += two.left;
+       right += two.right;
+    }
 };
 
 enum class adsr_phase
@@ -47,7 +53,6 @@ struct Voice
     int16_t left_vol, right_vol;
     uint16_t pitch;
     uint16_t adsr1, adsr2;
-    uint16_t current_envelope;
 
     uint32_t start_addr;
     uint32_t current_addr;
@@ -58,7 +63,6 @@ struct Voice
 
     adsr_params adsr;
 
-    bool on;
     int key_switch_timeout;
 
     uint32_t counter;
@@ -86,7 +90,6 @@ struct Voice
         pitch = 0;
         adsr1 = 0;
         adsr2 = 0;
-        current_envelope = 0;
         start_addr = 0;
         current_addr = 0;
         loop_addr = 0;
@@ -163,6 +166,8 @@ class SPU
 
         void spu_check_irq(uint32_t address);
         void spu_irq(int index);
+
+        stereo_sample read_memin();
 
         uint16_t read_voice_reg(uint32_t addr);
         void write_voice_reg(uint32_t addr, uint16_t value);
