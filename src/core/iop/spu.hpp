@@ -131,6 +131,9 @@ class SPU
         uint32_t effect_area_start;
         uint32_t effect_area_end;
 
+        int16_t data_input_volume_l;
+        int16_t data_input_volume_r;
+
         uint32_t voice_mixdry_left;
         uint32_t voice_mixdry_right;
         uint32_t voice_mixwet_left;

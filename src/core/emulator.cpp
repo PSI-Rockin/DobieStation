@@ -1343,7 +1343,7 @@ void Emulator::iop_write16(uint32_t address, uint16_t value)
         *(uint16_t*)&IOP_RAM[address] = value;
         return;
     }
-    if (address >= 0x1F900000 && address < 0x1F900400)
+    if ((address >= 0x1F900000 && address < 0x1F900400) || (address >= 0x1F900760 && address < 0x1F900788))
     {
         spu.write16(address, value);
         return;

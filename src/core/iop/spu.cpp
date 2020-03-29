@@ -46,6 +46,9 @@ void SPU::reset(uint8_t* RAM)
     spdif_irq = 0;
     ADMA_buf = 0;
     buf_filled = false;
+    data_input_volume_l = 0x7FFF;
+    data_input_volume_r = 0x7FFF;
+
 
     std::ostringstream fname;
     fname << "spu_" << id << "_stream" << ".wav";
@@ -362,8 +365,10 @@ void SPU::gen_sample()
 
     if (running_ADMA())
     {
-        core_output.left  += RAM[get_memin_addr()+(ADMA_buf*0x100)+input_pos];
-        core_output.right += RAM[get_memin_addr()+(ADMA_buf*0x100)+input_pos+0x200];
+        core_output.left  += (RAM[get_memin_addr()+(ADMA_buf*0x100)+input_pos] * data_input_volume_l) >> 15;
+        core_output.right += (RAM[get_memin_addr()+(ADMA_buf*0x100)+input_pos+0x200] * data_input_volume_r) >> 15;
+        spu_check_irq(get_memin_addr()+(ADMA_buf*0x100)+input_pos);
+        spu_check_irq(get_memin_addr()+(ADMA_buf*0x100)+input_pos+0x200);
         input_pos++;
 
         // We need to fill the next buffer
@@ -371,7 +376,6 @@ void SPU::gen_sample()
         {
             set_dma_req();
             autodma_ctrl |= 0x4;
-
         }
 
         // Switch buffer
@@ -399,7 +403,7 @@ void SPU::start_DMA(int size)
 {
     if (running_ADMA())
     {
-        printf("ADMA started with size: $%08X\n", size);
+        printf("[SPU%d] ADMA started with size: $%08X\n",id, size);
         ADMA_progress = 0;
     }
     status.DMA_ready = false;
@@ -666,7 +670,24 @@ void SPU::write16(uint32_t addr, uint16_t value)
             spdif_irq = value;
             return;
         }
-        printf("[SPU] Write high addr $%04X: $%04X\n", addr, value);
+
+        addr -= (id -1) * 0x28;
+
+        switch (addr)
+        {
+            case 0x76C:
+                printf("[SPU%d] Write (ADMA vol) BVOLL: $%04X\n", id, value);
+                data_input_volume_l = value;
+                break;
+            case 0x76E:
+                printf("[SPU%d] Write (ADMA vol) BVOLR: $%04X\n", id, value);
+                data_input_volume_r = value;
+                break;
+            default:
+                printf("[SPU] Write high addr $%04X: $%04X\n", addr, value);
+                return;
+        }
+
         return;
     }
     addr &= 0x3FF;
