@@ -128,6 +128,57 @@ void SPU::dump_voice_data()
     }
 }
 
+void vol_sweep::read(uint16_t val)
+{
+    if (!(val & 0x8000))
+    {
+        volume = val << 1;
+        running = false;
+        return;
+    }
+
+
+    running = val & (1 << 15);
+    exponential = val & (1 << 14);
+    rising = !(val & (1 << 13));
+    negative_phase = val & (1 << 12);
+    shift = (val >> 2) & 0x1f;
+    if (rising)
+    {
+        step_val = 7 - (val & 0x03);
+    }
+    else
+    {
+        step_val = -8 + (val & 0x03);
+    }
+}
+
+void vol_sweep::advance()
+{
+    if (!running)
+        return;
+
+    // I think we need to do something here when we have negative phase?
+
+    if (cycles_left > 0)
+    {
+        cycles_left--;
+        return;
+    }
+
+    cycles_left = 1 << std::max(0, shift-11);
+    int16_t step = step_val << std::max(0, 11-shift);
+
+    if (exponential && rising && volume > 0x6000)
+        cycles_left *= 4;
+
+    if (exponential && !rising)
+        step = step*volume/0x8000;
+
+    volume = std::max(std::min(volume+step, 0x7fff), -0x8000);
+
+}
+
 void Voice::set_adsr_phase(adsr_phase phase)
 {
     switch (phase)
@@ -329,8 +380,8 @@ stereo_sample SPU::voice_gen_sample(int voice_id)
     output_sample = (output_sample * voice.adsr.envelope) >> 15;
 
     stereo_sample out;
-    out.left = (output_sample*voice.left_vol) >> 15;
-    out.right = (output_sample*voice.right_vol) >> 15;
+    out.left = (output_sample*voice.left_vol.volume) >> 15;
+    out.right = (output_sample*voice.right_vol.volume) >> 15;
 
     // Just mute on this for now until we can actually do the right thing.
     if (!voice.mix_state.dry_l && !voice.mix_state.wet_l)
@@ -338,6 +389,8 @@ stereo_sample SPU::voice_gen_sample(int voice_id)
     if (!voice.mix_state.dry_r && !voice.mix_state.wet_r)
         out.right = 0;
 
+    voice.left_vol.advance();
+    voice.right_vol.advance();
     advance_envelope(voice_id);
 
     return out;
@@ -632,11 +685,11 @@ uint16_t SPU::read_voice_reg(uint32_t addr)
     switch (reg)
     {
         case 0:
-            printf("[SPU%d] Read V%d VOLL: $%04X\n", id, v, voices[v].left_vol);
-            return voices[v].left_vol;
+            printf("[SPU%d] Read V%d VOLL: $%04X\n", id, v, voices[v].left_vol.volume);
+            return voices[v].left_vol.volume;
         case 2:
-            printf("[SPU%d] Read V%d VOLR: $%04X\n", id, v, voices[v].right_vol);
-            return voices[v].right_vol;
+            printf("[SPU%d] Read V%d VOLR: $%04X\n", id, v, voices[v].right_vol.volume);
+            return voices[v].right_vol.volume;
         case 4:
             printf("[SPU%d] ReadV%d PITCH: $%04X\n", id, v, voices[v].pitch);
             return voices[v].pitch;
@@ -962,21 +1015,11 @@ void SPU::write_voice_reg(uint32_t addr, uint16_t value)
     {
         case 0:
             printf("[SPU%d] Write V%d VOLL: $%04X\n", id, v, value);
-            if (value & 0x8000)
-            {
-                printf("[SPU%d] SWEEP MODE ON VOICE, %d L, ignoring for now\n", id, v);
-                break;
-            }
-            voices[v].left_vol = value << 1;
+            voices[v].left_vol.read(value);
             break;
         case 2:
             printf("[SPU%d] Write V%d VOLR: $%04X\n", id, v, value);
-            if (value & 0x8000)
-            {
-                printf("[SPU%d] SWEEP MODE ON VOICE, %d R, ignoring for now\n", id, v);
-                break;
-            }
-            voices[v].right_vol = value << 1;
+            voices[v].right_vol.read(value);
             break;
         case 4:
             printf("[SPU%d] Write V%d PITCH: $%04X\n", id, v, value);

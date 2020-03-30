@@ -26,6 +26,22 @@ enum class adsr_phase
     Release,
 };
 
+struct vol_sweep
+{
+    bool running;
+    bool exponential;
+    bool rising;
+    bool negative_phase;
+    uint8_t shift;
+    int8_t step_val;
+    uint32_t cycles_left;
+
+    int16_t volume;
+
+    void advance();
+    void read(uint16_t val);
+};
+
 struct adsr_params
 {
     adsr_phase phase;
@@ -33,7 +49,7 @@ struct adsr_params
     bool rising;
     uint32_t cycles_left;
     uint8_t shift;
-    int16_t step;
+    int8_t step;
     uint16_t target;
 
     int16_t envelope;
@@ -50,7 +66,7 @@ struct voice_mix
 
 struct Voice
 {
-    int16_t left_vol, right_vol;
+    vol_sweep left_vol, right_vol;
     uint16_t pitch;
     uint16_t adsr1, adsr2;
 
@@ -85,8 +101,8 @@ struct Voice
     void reset()
     {
         adsr = {};
-        left_vol = 0;
-        right_vol = 0;
+        left_vol = {};
+        right_vol = {};
         pitch = 0;
         adsr1 = 0;
         adsr2 = 0;
