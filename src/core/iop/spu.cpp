@@ -962,15 +962,21 @@ void SPU::write_voice_reg(uint32_t addr, uint16_t value)
     {
         case 0:
             printf("[SPU%d] Write V%d VOLL: $%04X\n", id, v, value);
-            voices[v].left_vol = value;
             if (value & 0x8000)
-                printf("[SPU%d] SWEEP MODE ON VOICE %d\n", id, v);
+            {
+                printf("[SPU%d] SWEEP MODE ON VOICE, %d L, ignoring for now\n", id, v);
+                break;
+            }
+            voices[v].left_vol = value << 1;
             break;
         case 2:
             printf("[SPU%d] Write V%d VOLR: $%04X\n", id, v, value);
-            voices[v].right_vol = value;
             if (value & 0x8000)
-                printf("[SPU%d] SWEEP MODE ON VOICE %d\n", id, v);
+            {
+                printf("[SPU%d] SWEEP MODE ON VOICE, %d R, ignoring for now\n", id, v);
+                break;
+            }
+            voices[v].right_vol = value << 1;
             break;
         case 4:
             printf("[SPU%d] Write V%d PITCH: $%04X\n", id, v, value);
