@@ -820,6 +820,10 @@ void SPU::write16(uint32_t addr, uint16_t value)
                 voices[i+16].mix_state.wet_r = value & (1 << i);
             }
             break;
+        case 0x198:
+            printf("[SPU%d] Write MMIX: $%04X\n", id, value);
+            mix_state.read(value);
+            break;
         case 0x19A:
             printf("[SPU%d] Write Core Att: $%04X\n", id, value);
             if (core_att[id - 1] & (1 << 6))

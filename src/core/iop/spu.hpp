@@ -100,6 +100,39 @@ struct Voice
     }
 };
 
+struct core_mix
+{
+    bool sin_wet_r;
+    bool sin_wet_l;
+    bool sin_dry_r;
+    bool sin_dry_l;
+    bool memin_wet_r;
+    bool memin_wet_l;
+    bool memin_dry_r;
+    bool memin_dry_l;
+    bool voice_wet_r;
+    bool voice_wet_l;
+    bool voice_dry_r;
+    bool voice_dry_l;
+
+    void read(uint16_t val)
+    {
+        sin_wet_r = (val & (1 << 0));
+        sin_wet_l = (val & (1 << 1));
+        sin_dry_r = (val & (1 << 2));
+        sin_dry_l = (val & (1 << 3));
+        memin_wet_r = (val & (1 << 4));
+        memin_wet_l = (val & (1 << 5));
+        memin_dry_r = (val & (1 << 6));
+        memin_dry_l = (val & (1 << 7));
+        voice_wet_r = (val & (1 << 8));
+        voice_wet_l = (val & (1 << 9));
+        voice_dry_r = (val & (1 << 10));
+        voice_dry_l = (val & (1 << 11));
+    }
+
+};
+
 struct SPU_STAT
 {
     bool DMA_ready;
@@ -136,6 +169,8 @@ class SPU
 
         int16_t data_input_volume_l;
         int16_t data_input_volume_r;
+
+        core_mix mix_state;
 
         uint32_t voice_mixdry_left;
         uint32_t voice_mixdry_right;
