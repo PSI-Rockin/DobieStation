@@ -3322,6 +3322,10 @@ void GraphicsSynthesizerThread::local_to_local()
                 data = read_PSMCT4_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
                                          TRXPOS.int_source_x, TRXPOS.int_source_y);
                 break;
+            case 0x1B:
+                data = read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                    TRXPOS.int_source_x, TRXPOS.int_source_y) >> 24;
+                break;
             case 0x2C:
                 data = read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
                     TRXPOS.int_source_x, TRXPOS.int_source_y) >> 28;
@@ -3360,6 +3364,13 @@ void GraphicsSynthesizerThread::local_to_local()
             case 0x14:
                 write_PSMCT4_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width,
                                     TRXPOS.int_dest_x, TRXPOS.int_dest_y, data);
+                break;
+            case 0x1B:
+                data <<= 24;
+                data |= read_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width,
+                    TRXPOS.int_dest_x, TRXPOS.int_dest_y) & 0x00FFFFFF;
+                write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width,
+                    TRXPOS.int_dest_x, TRXPOS.int_dest_y, data);
                 break;
             case 0x24:
                 data <<= 24;
