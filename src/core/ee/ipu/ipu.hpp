@@ -67,6 +67,12 @@ enum class IDEC_STATE
     DONE
 };
 
+enum class SETIQ_STATE
+{
+    ADVANCE,
+    POPULATE_TABLE
+};
+
 struct IDEC_Command
 {
     IDEC_STATE state;
@@ -185,6 +191,7 @@ class ImageProcessingUnit
         BDEC_Command bdec;
         VDEC_STATE vdec_state, fdec_state;
         CSC_Command csc;
+        SETIQ_STATE setiq_state;
 
         double IDCT_table[8][8];
 
