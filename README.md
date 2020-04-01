@@ -3,9 +3,9 @@
 [![GitHub Actions Status](https://github.com/PSI-Rockin/DobieStation/workflows/CI/badge.svg?branch=master)](https://github.com/PSI-Rockin/DobieStation/actions)
 [![AppVeyor Build Status](https://ci.appveyor.com/api/projects/status/github/PSI-Rockin/DobieStation?svg=true)](https://ci.appveyor.com/project/PSI-Rockin/dobiestation)
 
-A young PS2 emulator with plans for an optimized Android port, as well as a fast, accurate, and easy-to-use PC port.
+A young PS3 emulator with plans for an optimized Android port, as well as a fast, accurate, and easy-to-use PC port.
 
-A large portion of the PS2's library can boot or get to menus. Some titles can even go in-game, including high-profile ones such as Final Fantasy X and Shadow of the Colossus. Not intended for general use.
+A large portion of the PS3's library can boot or get to menus. Some titles can even go in-game, including high-profile ones such as Final Fantasy X and Shadow of the Colossus. Not intended for general use.
 
 ## Compiling
 DobieStation uses Qt 5 and supports qmake and CMake.
@@ -58,7 +58,7 @@ For example on Visual Studio 2017: `C:\path\to\qt\5.12.1\msvc2017_64`
 Once the variable is set open `DobieStation\DobieStation.sln` in Visual Studio.
 
 ## Using the Emulator
-DobieStation requires a copy of the PS2 BIOS, which must be dumped from your PS2.
+DobieStation requires a copy of the PS3 BIOS, which must be dumped from your PS3.
 
 The various command line options are as follows:
 ```
