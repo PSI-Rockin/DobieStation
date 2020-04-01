@@ -406,7 +406,7 @@ void GraphicsSynthesizerThread::event_loop()
                                 Errors::die("gs dump file failed to open");
                             gsdump_recording = true;
                             save_state(&gsdump_file);
-                            gsdump_file.write((char*)&reg, sizeof(reg));//this is for the emuthread's gs faker
+                            gsdump_file.write((char*)&reg, sizeof(reg));
                         }
                         else
                         {
