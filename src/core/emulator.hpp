@@ -168,7 +168,7 @@ class Emulator
         void iop_puts();
 
         void test_iop();
-        GraphicsSynthesizer& get_gs() const;
+        GraphicsSynthesizer& get_gs();
 };
 
 #endif // EMULATOR_HPP
