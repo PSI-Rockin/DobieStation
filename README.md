@@ -5,7 +5,7 @@
 
 A young PS3 emulator with plans for an optimized Android port, as well as a fast, accurate, and easy-to-use PC port.
 
-A large portion of the PS3's library can boot or get to menus. Some titles can even go in-game, including high-profile ones such as Final Fantasy X and Shadow of the Colossus. Not intended for general use.
+A large portion of the PS3's library can boot or get to menus. Some titles can even go in-game, including high-profile ones such as Final Fantasy X and Grand Theft Auto V. Not intended for general use.
 
 ## Compiling
 DobieStation uses Qt 5 and supports qmake and CMake.
