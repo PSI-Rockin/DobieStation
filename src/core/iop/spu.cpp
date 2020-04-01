@@ -128,175 +128,6 @@ void SPU::dump_voice_data()
     }
 }
 
-void vol_sweep::read(uint16_t val)
-{
-    if (!(val & 0x8000))
-    {
-        volume = val << 1;
-        running = false;
-        return;
-    }
-
-
-    running = val & (1 << 15);
-    exponential = val & (1 << 14);
-    rising = !(val & (1 << 13));
-    negative_phase = val & (1 << 12);
-    shift = (val >> 2) & 0x1f;
-    if (rising)
-    {
-        step_val = 7 - (val & 0x03);
-    }
-    else
-    {
-        step_val = -8 + (val & 0x03);
-    }
-}
-
-void vol_sweep::advance()
-{
-    if (!running)
-        return;
-
-    // I think we need to do something here when we have negative phase?
-
-    if (cycles_left > 0)
-    {
-        cycles_left--;
-        return;
-    }
-
-    cycles_left = 1 << std::max(0, shift-11);
-    int16_t step = step_val << std::max(0, 11-shift);
-
-    if (exponential && rising && volume > 0x6000)
-        cycles_left *= 4;
-
-    if (exponential && !rising)
-        step = step*volume/0x8000;
-
-    volume = std::max(std::min(volume+step, 0x7fff), -0x8000);
-
-}
-
-void Voice::set_adsr_phase(adsr_phase phase)
-{
-    switch (phase)
-    {
-        case adsr_phase::Attack:
-            adsr.target = 0x7fff;
-            adsr.exponential = ((adsr1 >> 15) & 1) ? true : false;
-            adsr.rising = true;
-            adsr.shift = (adsr1 >> 10) & 0x1f;
-            if (adsr.rising)
-            {
-                adsr.step = 7 - ((adsr2 >> 8) & 0x03);
-            }
-            else
-            {
-                adsr.step = -8 + ((adsr2 >> 8) & 0x03);
-            }
-            adsr.phase = phase;
-            break;
-        case adsr_phase::Decay:
-            adsr.target = ((adsr1 & 0x0F) + 1) * 0x800;
-            adsr.exponential = true;
-            adsr.rising = false;
-            adsr.shift = (adsr1 >> 4) & 0x1f;
-            adsr.step = -8;
-            adsr.phase = phase;
-            break;
-        case adsr_phase::Sustain:
-            adsr.target = 0;
-            adsr.exponential = ((adsr2 >> 15) & 1) ? true : false;
-            adsr.rising = ((adsr2 >> 14) & 1) ? false : true;
-            adsr.shift = (adsr2 >> 8) & 0x1f;
-            if (adsr.rising)
-            {
-                adsr.step = 7 - ((adsr2 >> 6) & 0x03);
-            }
-            else
-            {
-                adsr.step = -8 + ((adsr2 >> 6) & 0x03);
-            }
-            adsr.phase = phase;
-            break;
-        case adsr_phase::Release:
-            adsr.target = 0;
-            adsr.exponential = ((adsr2 >> 5) & 1) ? true : false;
-            adsr.rising = false;
-            adsr.shift = adsr2 & 0x1f;
-            adsr.step = -8;
-            adsr.phase = phase;
-            break;
-        case adsr_phase::Stopped:
-            adsr.phase = phase;
-    }
-}
-
-
-void SPU::advance_envelope(int voice_id)
-{
-    adsr_params &adsr = voices[voice_id].adsr;
-
-    if (adsr.phase == adsr_phase::Stopped)
-    {
-        return;
-    }
-
-    if (adsr.cycles_left > 0)
-    {
-        adsr.cycles_left--;
-        return;
-    }
-
-    adsr.cycles_left = 1 << std::max(0, adsr.shift-11);
-
-
-    int16_t step = adsr.step << std::max(0, 11-adsr.shift);
-
-    if (adsr.exponential && adsr.rising && adsr.envelope > 0x6000)
-        adsr.cycles_left *= 4;
-
-    if (adsr.exponential && !adsr.rising)
-        step = step*adsr.envelope/0x8000;
-
-    adsr.envelope = std::max(std::min(adsr.envelope+step, 0x7fff), 0);
-
-    /*
-    printf("[SPU%d] EDEBUG %d phase %d\n", id, voice_id, adsr.phase);
-    printf("[SPU%d] EDEBUG %d next tick in %d cycles\n", id, voice_id, adsr.cycles_left);
-    printf("[SPU%d] EDEBUG %d target %d\n", id, voice_id, adsr.target);
-    printf("[SPU%d] EDEBUG %d rising %d\n", id, voice_id, adsr.rising);
-    printf("[SPU%d] EDEBUG %d exponential %d\n", id, voice_id, adsr.exponential);
-    printf("[SPU%d] EDEBUG %d shift %d\n", id, voice_id, adsr.shift);
-    printf("[SPU%d] EDEBUG %d stepvalue %d\n", id, voice_id, adsr.step);
-    printf("[SPU%d] EDEBUG %d step %d\n", id, voice_id, step);
-    printf("[SPU%d] EDEBUG %d ENVX %d\n", id, voice_id, adsr.envelope);
-    */
-
-    if (adsr.phase != adsr_phase::Sustain)
-    {
-        if ((adsr.rising && adsr.envelope >= adsr.target) ||
-            (!adsr.rising && adsr.envelope <= adsr.target))
-        {
-            switch (adsr.phase)
-            {
-                case adsr_phase::Attack:
-                    voices[voice_id].set_adsr_phase(adsr_phase::Decay);
-                    printf("[SPU%d] EDEBUG Setting ADSR phase of voice %d to %d\n", id, voice_id, 2);
-                    break;
-                case adsr_phase::Decay:
-                    printf("[SPU%d] EDEBUG Setting ADSR phase of voice %d to %d\n", id, voice_id, 3);
-                    voices[voice_id].set_adsr_phase(adsr_phase::Sustain);
-                    break;
-                case adsr_phase::Release:
-                    voices[voice_id].set_adsr_phase(adsr_phase::Stopped);
-                    break;
-            }
-        }
-    }
-}
 
 stereo_sample SPU::voice_gen_sample(int voice_id)
 {
@@ -362,9 +193,8 @@ stereo_sample SPU::voice_gen_sample(int voice_id)
                 case 1:
                     ENDX |= 1 << voice_id;
                     printf("[SPU%d] EDEBUG Setting ADSR phase of voice %d to %d\n", id, voice_id, 4);
-                    voice.set_adsr_phase(adsr_phase::Release);
-                    voice.adsr.cycles_left = 0;
-                    voice.adsr.envelope = 0;
+                    voice.adsr.set_stage(ADSR::Stage::Release);
+                    voice.adsr.volume = 0;
                     break;
                 //Jump to loop addr and set ENDX
                 case 3:
@@ -377,11 +207,11 @@ stereo_sample SPU::voice_gen_sample(int voice_id)
 
 
     int16_t output_sample = interpolate(voice_id);
-    output_sample = (output_sample * voice.adsr.envelope) >> 15;
+    output_sample = (output_sample * voice.adsr.volume) >> 15;
 
     stereo_sample out;
-    out.left = (output_sample*voice.left_vol.volume) >> 15;
-    out.right = (output_sample*voice.right_vol.volume) >> 15;
+    out.left = (output_sample*voice.left_vol.value) >> 15;
+    out.right = (output_sample*voice.right_vol.value) >> 15;
 
     // Just mute on this for now until we can actually do the right thing.
     if (!voice.mix_state.dry_l && !voice.mix_state.wet_l)
@@ -391,7 +221,7 @@ stereo_sample SPU::voice_gen_sample(int voice_id)
 
     voice.left_vol.advance();
     voice.right_vol.advance();
-    advance_envelope(voice_id);
+    voice.adsr.advance();
 
     return out;
 }
@@ -685,23 +515,23 @@ uint16_t SPU::read_voice_reg(uint32_t addr)
     switch (reg)
     {
         case 0:
-            printf("[SPU%d] Read V%d VOLL: $%04X\n", id, v, voices[v].left_vol.volume);
-            return voices[v].left_vol.volume;
+            printf("[SPU%d] Read V%d VOLL: $%04X\n", id, v, voices[v].left_vol.value);
+            return static_cast<uint16_t>(voices[v].left_vol.value);
         case 2:
-            printf("[SPU%d] Read V%d VOLR: $%04X\n", id, v, voices[v].right_vol.volume);
-            return voices[v].right_vol.volume;
+            printf("[SPU%d] Read V%d VOLR: $%04X\n", id, v, voices[v].right_vol.value);
+            return static_cast<uint16_t>(voices[v].right_vol.value);
         case 4:
             printf("[SPU%d] ReadV%d PITCH: $%04X\n", id, v, voices[v].pitch);
             return voices[v].pitch;
         case 6:
-            printf("[SPU%d] Read V%d ADSR1: $%04X\n", id, v, voices[v].adsr1);
-            return voices[v].adsr1;
+            printf("[SPU%d] Read V%d ADSR1: $%04X\n", id, v, voices[v].adsr.adsr1);
+            return voices[v].adsr.adsr1;
         case 8:
-            printf("[SPU%d] Read V%d ADSR2: $%04X\n", id, v, voices[v].adsr2);
-            return voices[v].adsr2;
+            printf("[SPU%d] Read V%d ADSR2: $%04X\n", id, v, voices[v].adsr.adsr2);
+            return voices[v].adsr.adsr2;
         case 10:
-            printf("[SPU%d] Read V%d ENVX: $%04X\n", id, v, voices[v].adsr.envelope);
-            return voices[v].adsr.envelope;
+            printf("[SPU%d] Read V%d ENVX: $%04X\n", id, v, voices[v].adsr.volume);
+            return static_cast<uint16_t>(voices[v].adsr.volume);
         default:
             printf("[SPU%d] V%d Read $%08X\n", id, v, addr);
             return 0;
@@ -1015,11 +845,11 @@ void SPU::write_voice_reg(uint32_t addr, uint16_t value)
     {
         case 0:
             printf("[SPU%d] Write V%d VOLL: $%04X\n", id, v, value);
-            voices[v].left_vol.read(value);
+            voices[v].left_vol.set(value);
             break;
         case 2:
             printf("[SPU%d] Write V%d VOLR: $%04X\n", id, v, value);
-            voices[v].right_vol.read(value);
+            voices[v].right_vol.set(value);
             break;
         case 4:
             printf("[SPU%d] Write V%d PITCH: $%04X\n", id, v, value);
@@ -1029,15 +859,15 @@ void SPU::write_voice_reg(uint32_t addr, uint16_t value)
             break;
         case 6:
             printf("[SPU%d] Write V%d ADSR1: $%04X\n", id, v, value);
-            voices[v].adsr1 = value;
+            voices[v].adsr.adsr1 = value;
             break;
         case 8:
             printf("[SPU%d] Write V%d ADSR2: $%04X\n", id, v, value);
-            voices[v].adsr2 = value;
+            voices[v].adsr.adsr2 = value;
             break;
         case 10:
             printf("[SPU%d] Write V%d ENVX: $%04X\n", id, v, value);
-            voices[v].adsr.envelope = value;
+            voices[v].adsr.volume = static_cast<int16_t>(value);
             break;
         default:
             printf("[SPU%d] V%d write $%08X: $%04X\n", id, v, addr, value);
@@ -1058,9 +888,8 @@ void SPU::key_on_voice(int v)
     voices[v].block_pos = 0;
     voices[v].loop_addr_specified = false;
     ENDX &= ~(1 << v);
-    voices[v].set_adsr_phase(adsr_phase::Attack);
-    voices[v].adsr.cycles_left = 0;
-    voices[v].adsr.envelope = 0;
+    voices[v].adsr.set_stage(ADSR::Stage::Attack);
+    voices[v].adsr.volume = 0;
     printf("[SPU%d] EDEBUG Setting ADSR phase of voice %d to %d\n", id, v, 1);
 }
 
@@ -1073,8 +902,7 @@ void SPU::key_off_voice(int v)
     }
     voices[v].key_switch_timeout = 2;
     //Set envelope to Release mode
-    voices[v].set_adsr_phase(adsr_phase::Release);
-    voices[v].adsr.cycles_left = 0;
+    voices[v].adsr.set_stage(ADSR::Stage::Release);
     printf("[SPU%d] EDEBUG Setting ADSR phase of voice %d to %d\n", id, v, 4);
 }
 

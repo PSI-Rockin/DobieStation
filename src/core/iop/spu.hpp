@@ -2,6 +2,7 @@
 #define SPU_HPP
 #include <cstdint>
 #include <fstream>
+#include "spu_envelope.hpp"
 #include "../audio/utils.hpp"
 #include "../audio/ps_adpcm.hpp"
 
@@ -17,44 +18,6 @@ struct stereo_sample
     }
 };
 
-enum class adsr_phase
-{
-    Stopped,
-    Attack,
-    Decay,
-    Sustain,
-    Release,
-};
-
-struct vol_sweep
-{
-    bool running;
-    bool exponential;
-    bool rising;
-    bool negative_phase;
-    uint8_t shift;
-    int8_t step_val;
-    uint32_t cycles_left;
-
-    int16_t volume;
-
-    void advance();
-    void read(uint16_t val);
-};
-
-struct adsr_params
-{
-    adsr_phase phase;
-    bool exponential;
-    bool rising;
-    uint32_t cycles_left;
-    uint8_t shift;
-    int8_t step;
-    uint16_t target;
-
-    int16_t envelope;
-};
-
 struct voice_mix
 {
     bool dry_l;
@@ -66,10 +29,8 @@ struct voice_mix
 
 struct Voice
 {
-    vol_sweep left_vol, right_vol;
+    Volume left_vol, right_vol;
     uint16_t pitch;
-    uint16_t adsr1, adsr2;
-
     uint32_t start_addr;
     uint32_t current_addr;
     uint32_t loop_addr;
@@ -77,7 +38,7 @@ struct Voice
 
     voice_mix mix_state;
 
-    adsr_params adsr;
+    ADSR adsr;
 
     int key_switch_timeout;
 
@@ -96,7 +57,8 @@ struct Voice
     std::vector<int16_t> current_pcm;
 
 
-    void set_adsr_phase(adsr_phase phase);
+    void set_envelope_stage(ADSR::Stage stage );
+    void read_sweep(Envelope envelope, uint16_t val);
 
     void reset()
     {
@@ -104,8 +66,6 @@ struct Voice
         left_vol = {};
         right_vol = {};
         pitch = 0;
-        adsr1 = 0;
-        adsr2 = 0;
         start_addr = 0;
         current_addr = 0;
         loop_addr = 0;
@@ -209,8 +169,6 @@ class SPU
 
         stereo_sample voice_gen_sample(int voice_id);
         int16_t interpolate(int voice);
-
-        void advance_envelope(int voice_id);
 
         void key_on_voice(int v);
         void key_off_voice(int v);
