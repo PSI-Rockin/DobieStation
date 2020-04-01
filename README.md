@@ -58,7 +58,7 @@ For example on Visual Studio 2017: `C:\path\to\qt\5.12.1\msvc2017_64`
 Once the variable is set open `DobieStation\DobieStation.sln` in Visual Studio.
 
 ## Using the Emulator
-DobieStation requires a copy of the PS3 BIOS, which must be dumped from your PS3.
+DobieStation requires a copy of the PS3 firmware, which must be dumped from your PS3.
 
 The various command line options are as follows:
 ```
