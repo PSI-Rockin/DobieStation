@@ -76,7 +76,7 @@ The key bindings are as follows:
 | <kbd>Z</kbd>     | Circle            |
 | <kbd>X</kbd>     | Cross             |
 | <kbd>Enter</kbd> | Start             |
-| <kbd>Shift</kbd> | Select            |
+| <kbd>Space</kbd> | Select            |
 | <kbd>Q</kbd>     | L1                |
 | N/A              | L2                |
 | N/A              | L3                |
