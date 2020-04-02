@@ -3,8 +3,8 @@
 #include <cstdint>
 #include <fstream>
 #include "spu_envelope.hpp"
-#include "../audio/utils.hpp"
-#include "../audio/ps_adpcm.hpp"
+#include "../../audio/utils.hpp"
+#include "spu_adpcm.hpp"
 
 struct stereo_sample
 {

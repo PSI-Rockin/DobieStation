@@ -23,7 +23,6 @@ target.path = /usr/local/bin/
 INSTALLS += target
 
 SOURCES += ../../src/qt/main.cpp \
-    ../../src/core/audio/ps_adpcm.cpp \
     ../../src/core/audio/utils.cpp \
     ../../src/core/errors.cpp \
     ../../src/core/ee/emotion.cpp \
@@ -59,9 +58,10 @@ SOURCES += ../../src/qt/main.cpp \
     ../../src/core/ee/emotion_vu0.cpp \
     ../../src/core/iop/firewire.cpp \
     ../../src/core/iop/gamepad.cpp \
-    ../../src/core/iop/spu.cpp \
-    ../../src/core/iop/spu_envelope.cpp \
-    ../../src/core/iop/spu_tables.cpp \
+    ../../src/core/iop/spu/spu.cpp \
+    ../../src/core/iop/spu/spu_adpcm.cpp \
+    ../../src/core/iop/spu/spu_envelope.cpp \
+    ../../src/core/iop/spu/spu_tables.cpp \
     ../../src/qt/emuthread.cpp \
     ../../src/core/tests/iop/alu.cpp \
     ../../src/core/ee/vif.cpp \
@@ -111,7 +111,6 @@ SOURCES += ../../src/qt/main.cpp \
     ../../src/core/iop/iop_intc.cpp
 
 HEADERS += \
-    ../../src/core/audio/ps_adpcm.hpp \
     ../../src/core/audio/utils.hpp \
     ../../src/core/errors.hpp \
     ../../src/core/ee/emotion.hpp \
@@ -144,8 +143,9 @@ HEADERS += \
     ../../src/core/ee/vu.hpp \
     ../../src/core/iop/firewire.hpp \
     ../../src/core/iop/gamepad.hpp \
-    ../../src/core/iop/spu.hpp \
-    ../../src/core/iop/spu_envelope.hpp \
+    ../../src/core/iop/spu/spu.hpp \
+    ../../src/core/iop/spu/ps_adpcm.hpp \
+    ../../src/core/iop/spu/spu_envelope.hpp \
     ../../src/qt/emuthread.hpp \
     ../../src/core/ee/vif.hpp \
     ../../src/core/int128.hpp \

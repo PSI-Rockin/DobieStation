@@ -1,4 +1,4 @@
-#include "ps_adpcm.hpp"
+#include "spu_adpcm.hpp"
 #include <cstdint>
 #include <vector>
 #include <algorithm>

@@ -75,7 +75,6 @@
   </ItemDefinitionGroup>
   <!-- cpp files -->
   <ItemGroup>
-    <ClCompile Include="audio\ps_adpcm.cpp" />
     <ClCompile Include="audio\utils.cpp" />
     <ClCompile Include="ee\ee_jit.cpp" />
     <ClCompile Include="ee\ee_jit64.cpp" />
@@ -139,9 +138,10 @@
     <ClCompile Include="serialize.cpp" />
     <ClCompile Include="sif.cpp" />
     <ClCompile Include="iop\sio2.cpp" />
-    <ClCompile Include="iop\spu.cpp" />
-    <ClCompile Include="iop\spu_envelope.cpp" />
-    <ClCompile Include="iop\spu_tables.cpp" />
+    <ClCompile Include="iop\spu\spu.cpp" />
+    <ClCompile Include="iop\spu\spu_adpcm.cpp" />
+    <ClCompile Include="iop\spu\spu_envelope.cpp" />
+    <ClCompile Include="iop\spu\spu_tables.cpp" />
     <ClCompile Include="ee\timers.cpp" />
     <ClCompile Include="ee\vif.cpp" />
     <ClCompile Include="ee\ipu\vlc_table.cpp" />
@@ -156,7 +156,6 @@
   </ItemGroup>
   <!-- headers -->
   <ItemGroup>
-    <ClInclude Include="audio\ps_adpcm.hpp" />
     <ClInclude Include="audio\utils.hpp" />
     <ClInclude Include="ee\bios_hle.hpp" />
     <ClInclude Include="ee\ee_jit.hpp" />
@@ -212,8 +211,9 @@
     <ClInclude Include="ee\ipu\motioncode.hpp" />
     <ClInclude Include="sif.hpp" />
     <ClInclude Include="iop\sio2.hpp" />
-    <ClInclude Include="iop\spu.hpp" />
-    <ClInclude Include="iop\spu_envelope.hpp" />
+    <ClInclude Include="iop\spu\spu.hpp" />
+    <ClInclude Include="iop\spu\ps_adpcm.hpp" />
+    <ClInclude Include="iop\spu\spu_envelope.hpp" />
     <ClInclude Include="ee\timers.hpp" />
     <ClInclude Include="ee\vif.hpp" />
     <ClInclude Include="ee\ipu\vlc_table.hpp" />

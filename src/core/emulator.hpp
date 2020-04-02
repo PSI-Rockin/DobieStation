@@ -19,7 +19,7 @@
 #include "iop/iop_timers.hpp"
 #include "iop/memcard.hpp"
 #include "iop/sio2.hpp"
-#include "iop/spu.hpp"
+#include "iop/spu/spu.hpp"
 #include "iop/firewire.hpp"
 
 #include "int128.hpp"
