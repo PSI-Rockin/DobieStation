@@ -1,5 +1,6 @@
 #include "spu_envelope.hpp"
 #include <algorithm>
+#include <cstdio>
 
 
 int16_t Envelope::next_step(int16_t volume)
@@ -18,16 +19,21 @@ int16_t Envelope::next_step(int16_t volume)
     if (exponential && rising && volume > 0x6000)
         cycles_left *= 4;
 
-    // This seems quite suspect, wonky in FFXII's no memory card warning screen
     if (exponential && !rising)
-        next_step = next_step*volume / 0x8000;
+        next_step = (next_step*volume) >> 15;
 
     return next_step;
 
 }
 
+void ADSR::update()
+{
+    set_stage(stage);
+}
+
 void ADSR::set_stage(ADSR::Stage new_stage)
 {
+    // If the parameters change it seems we need to run the next step ASAP
     envelope.cycles_left = 0;
     switch (new_stage)
     {

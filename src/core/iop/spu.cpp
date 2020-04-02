@@ -860,10 +860,12 @@ void SPU::write_voice_reg(uint32_t addr, uint16_t value)
         case 6:
             printf("[SPU%d] Write V%d ADSR1: $%04X\n", id, v, value);
             voices[v].adsr.adsr1 = value;
+            voices[v].adsr.update();
             break;
         case 8:
             printf("[SPU%d] Write V%d ADSR2: $%04X\n", id, v, value);
             voices[v].adsr.adsr2 = value;
+            voices[v].adsr.update();
             break;
         case 10:
             printf("[SPU%d] Write V%d ENVX: $%04X\n", id, v, value);

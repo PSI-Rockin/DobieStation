@@ -33,7 +33,7 @@ struct ADSR
     uint16_t adsr1, adsr2;
     void set_stage(Stage new_stage);
     void advance();
-
+    void update();
 };
 
 struct Volume
