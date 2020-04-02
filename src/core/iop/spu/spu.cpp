@@ -932,8 +932,8 @@ stereo_sample SPU::read_memin()
 {
     stereo_sample sample = {};
     uint32_t pos = get_memin_addr()+(ADMA_buf*0x100)+input_pos;
-    sample.left = (RAM[pos] * data_input_volume_l) >> 15;
-    sample.right = (RAM[pos+0x200] * data_input_volume_r) >> 15;
+    sample.left = (static_cast<int16_t>(RAM[pos]) * data_input_volume_l) >> 15;
+    sample.right = (static_cast<int16_t>(RAM[pos+0x200]) * data_input_volume_r) >> 15;
 
     spu_check_irq(pos);
     spu_check_irq(pos+0x200);
