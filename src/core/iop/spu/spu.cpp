@@ -102,7 +102,6 @@ void SPU::dump_voice_data()
         WAVWriter out(fname.str());
         auto *data = (RAM + voice.start_addr);
 
-        ADPCM_info info = {};
         ADPCM_decoder stream = {};
 
         int dataleft = 1;
@@ -110,14 +109,13 @@ void SPU::dump_voice_data()
 
         while (dataleft)
         {
-            info.block = stream.read_block((uint8_t*)data);
+            auto newpcm = stream.decode_block((uint8_t*)data);
 
-            if ((info.block.flags & 1) == 1)
+            if ((stream.flags & 1) == 1)
             {
                 dataleft = 0;
             }
 
-            auto newpcm = stream.decode_samples(info);
             pcm.insert(pcm.end(), newpcm.begin(), newpcm.end());
 
             data += 8;
@@ -155,9 +153,7 @@ stereo_sample SPU::voice_gen_sample(int voice_id)
 
             voice.block_pos = 4;
 
-            voice.last_pcm = voice.current_pcm;
-            voice.adpcm.block = dec.read_block((uint8_t*)(RAM+voice.current_addr));
-            voice.current_pcm = dec.decode_samples(voice.adpcm);
+            voice.pcm = voice.adpcm.decode_block((uint8_t*)(RAM+voice.current_addr));
 
             spu_check_irq(voice.current_addr);
             voice.current_addr++;
@@ -168,7 +164,7 @@ stereo_sample SPU::voice_gen_sample(int voice_id)
         voice.old2 = voice.old1;
         voice.old1 = voice.next_sample;
 
-        voice.next_sample = voice.current_pcm.at(voice.block_pos-4);
+        voice.next_sample = voice.pcm[voice.block_pos-4];
 
         voice.block_pos++;
         if ((voice.block_pos % 4) == 0)
@@ -926,13 +922,10 @@ void SPU::set_dma_req()
 
 uint32_t SPU::get_memin_addr()
 {
-    switch (id)
-    {
-        case 1:
-            return SPU_CORE0_MEMIN;
-        default:
-            return SPU_CORE1_MEMIN;
-    }
+    if (id == 1)
+        return SPU_CORE0_MEMIN;
+    else
+        return SPU_CORE1_MEMIN;
 }
 
 stereo_sample SPU::read_memin()

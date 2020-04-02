@@ -43,18 +43,17 @@ struct Voice
     int key_switch_timeout;
 
     uint32_t counter;
-    int block_pos;
+    unsigned block_pos;
     int loop_code;
 
-    ADPCM_info adpcm;
+    ADPCM_decoder adpcm;
 
     int16_t old1 = 0;
     int16_t old2 = 0;
     int16_t old3 = 0;
     int16_t next_sample = 0;
 
-    std::vector<int16_t> last_pcm;
-    std::vector<int16_t> current_pcm;
+    std::array<int16_t, 28> pcm;
 
 
     void set_envelope_stage(ADSR::Stage stage );
@@ -165,7 +164,6 @@ class SPU
         uint32_t ENDX;
         uint32_t key_on;
         uint32_t key_off;
-        ADPCM_decoder dec;
 
         stereo_sample voice_gen_sample(int voice_id);
         int16_t interpolate(int voice);
