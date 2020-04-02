@@ -120,7 +120,7 @@ class IOP_DMA;
 class SPU
 {
     private:
-        int id;
+        unsigned int id;
         IOP_INTC* intc;
         IOP_DMA* dma;
 
@@ -142,8 +142,16 @@ class SPU
         uint32_t effect_area_start;
         uint32_t effect_area_end;
 
+        // ADMA volume
         int16_t data_input_volume_l;
         int16_t data_input_volume_r;
+
+        int16_t effect_volume_l;
+        int16_t effect_volume_r;
+
+        // core0 to core1 input, only valid on 1
+        int16_t core_volume_l;
+        int16_t core_volume_r;
 
         core_mix mix_state;
 

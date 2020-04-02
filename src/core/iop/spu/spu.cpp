@@ -551,13 +551,29 @@ void SPU::write16(uint32_t addr, uint16_t value)
 
         switch (addr)
         {
+            case 0x764:
+                printf("[SPU%d] Write EVOLL: $%04X\n", id, value);
+                effect_volume_l = static_cast<int16_t>(value);
+                break;
+            case 0x766:
+                printf("[SPU%d] Write EVOLR: $%04X\n", id, value);
+                effect_volume_r = static_cast<int16_t>(value);
+                break;
+            case 0x768:
+                printf("[SPU%d] Write AVOLL: $%04X\n", id, value);
+                core_volume_l = static_cast<int16_t>(value);
+                break;
+            case 0x76A:
+                printf("[SPU%d] Write AVOLR: $%04X\n", id, value);
+                core_volume_r = static_cast<int16_t>(value);
+                break;
             case 0x76C:
                 printf("[SPU%d] Write (ADMA vol) BVOLL: $%04X\n", id, value);
-                data_input_volume_l = value;
+                data_input_volume_l = static_cast<int16_t>(value);
                 break;
             case 0x76E:
                 printf("[SPU%d] Write (ADMA vol) BVOLR: $%04X\n", id, value);
-                data_input_volume_r = value;
+                data_input_volume_r = static_cast<int16_t>(value);
                 break;
             default:
                 printf("[SPU] Write high addr $%04X: $%04X\n", addr, value);
@@ -610,7 +626,7 @@ void SPU::write16(uint32_t addr, uint16_t value)
         case 0x180:
             printf("[SPU%d] Write PMONH: $%04X\n", id, value);
             voice_pitch_mod &= 0xFFFF;
-            voice_pitch_mod|= value << 16;
+            voice_pitch_mod |= value << 16;
             break;
         case 0x182:
             printf("[SPU%d] Write PMONL: $%04X\n", id, value);
