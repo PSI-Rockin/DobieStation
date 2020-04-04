@@ -34,6 +34,7 @@ struct Voice
     uint32_t start_addr;
     uint32_t current_addr;
     uint32_t loop_addr;
+    uint32_t crest_out_pos;
     bool loop_addr_specified;
 
     voice_mix mix_state;

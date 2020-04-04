@@ -205,6 +205,27 @@ stereo_sample SPU::voice_gen_sample(int voice_id)
     int16_t output_sample = interpolate(voice_id);
     output_sample = (output_sample * voice.adsr.volume) >> 15;
 
+    unsigned int offset = 0x400;
+    if (id == 1)
+        offset = 0xC00;
+
+    if (voice_id == 1)
+    {
+        if (voice.crest_out_pos == 0x1FF)
+            voice.crest_out_pos = 0;
+        spu_check_irq(offset + voice.crest_out_pos);
+        RAM[offset + voice.crest_out_pos] = static_cast<uint16_t>(output_sample);
+        voice.crest_out_pos++;
+    }
+    if (voice_id == 3)
+    {
+        if (voice.crest_out_pos == 0x1FF)
+            voice.crest_out_pos = 0;
+        spu_check_irq(offset + voice.crest_out_pos);
+        RAM[offset + 0x200 + voice.crest_out_pos] = static_cast<uint16_t>(output_sample);
+        voice.crest_out_pos++;
+    }
+
     stereo_sample out;
     out.left = (output_sample*voice.left_vol.value) >> 15;
     out.right = (output_sample*voice.right_vol.value) >> 15;
