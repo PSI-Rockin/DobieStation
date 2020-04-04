@@ -1,6 +1,8 @@
 set(TARGET Core)
 
 set(CMAKE_CXX_STANDARD 14)
+include(DobieHelpers)
+
 
 set(SOURCES
     emulator.cpp
@@ -160,19 +162,11 @@ set(HEADERS
     jitcommon/emitter64.hpp
     jitcommon/ir_block.hpp
     jitcommon/ir_instr.hpp
-    jitcommon/jitcache.hpp
-)
+    jitcommon/jitcache.hpp)
 
 add_library(${TARGET} ${SOURCES} ${HEADERS})
 add_library(Dobie::Core ALIAS ${TARGET})
 
+target_include_directories(${TARGET} PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(${TARGET} Ext::libdeflate Threads::Threads)
-target_compile_options(${TARGET} PRIVATE ${DOBIE_FLAGS})
-
-if (WIN32)
-    # Needed to avoid ruining global scope with Windows.h on win32
-    target_compile_definitions(${TARGET} PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
-    if (MSVC)
-        target_compile_definitions(${TARGET} PRIVATE VC_EXTRALEAN)
-    endif()
-endif()
+dobie_cxx_compile_options(${TARGET})

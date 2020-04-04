@@ -10,6 +10,7 @@ demos
 CmakeSettings.json
 cmake-build-*/
 build/
+/*build/
 build-clang/
 build-DobieStation-*
 debug
@@ -18,3 +19,5 @@ Makefile*
 *.iso
 *.cso
 *.snp
+*_log.txt
+*.log
