@@ -339,8 +339,8 @@ stereo_sample SPU::run_reverb(stereo_sample wet)
     //_Input from Mixer (Input volume multiplied with incoming data)_____________
     // Lin = vLIN * LeftInput    ;from any channels that have Reverb enabled
     // Rin = vRIN * RightInput   ;from any channels that have Reverb enabled
-    Lin = wet.left * r.IN_COEF_L;
-    Lin = wet.right * r.IN_COEF_R;
+    Lin = wet.left * r.vLIN;
+    Lin = wet.right * r.vRIN;
     // ____Same Side Reflection (left-to-left and right-to-right)___________________
     // [mLSAME] = (Lin + [dLSAME]*vWALL - [mLSAME-2])*vIIR + [mLSAME-2]  ;L-to-L
     // [mRSAME] = (Rin + [dRSAME]*vWALL - [mRSAME-2])*vIIR + [mRSAME-2]  ;R-to-R
@@ -702,34 +702,34 @@ void SPU::write16(uint32_t addr, uint16_t value)
             switch (addr)
             {
                 case 0x774:
-                    reverb.IIR_VOL = static_cast<int16_t>(value);
+                    reverb.vIIR = static_cast<int16_t>(value);
                     break;
                 case 0x776:
-                    reverb.COMB1_VOL = static_cast<int16_t>(value);
+                    reverb.vCOMB1 = static_cast<int16_t>(value);
                     break;
                 case 0x778:
-                    reverb.COMB2_VOL = static_cast<int16_t>(value);
+                    reverb.vCOMB2 = static_cast<int16_t>(value);
                     break;
                 case 0x77A:
-                    reverb.COMB3_VOL = static_cast<int16_t>(value);
+                    reverb.vCOMB3 = static_cast<int16_t>(value);
                     break;
                 case 0x77C:
-                    reverb.COMB4_VOL = static_cast<int16_t>(value);
+                    reverb.vCOMB4 = static_cast<int16_t>(value);
                     break;
                 case 0x77E:
-                    reverb.WALL_VOL = static_cast<int16_t>(value);
+                    reverb.vWALL = static_cast<int16_t>(value);
                     break;
                 case 0x780:
-                    reverb.APF1_VOL = static_cast<int16_t>(value);
+                    reverb.vAPF1 = static_cast<int16_t>(value);
                     break;
                 case 0x782:
-                    reverb.APF2_VOL = static_cast<int16_t>(value);
+                    reverb.vAPF2 = static_cast<int16_t>(value);
                     break;
                 case 0x784:
-                    reverb.IN_COEF_L = static_cast<int16_t>(value);
+                    reverb.vLIN = static_cast<int16_t>(value);
                     break;
                 case 0x786:
-                    reverb.IN_COEF_R = static_cast<int16_t>(value);
+                    reverb.vRIN = static_cast<int16_t>(value);
                     break;
             }
             return;
