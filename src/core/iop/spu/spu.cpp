@@ -21,6 +21,7 @@
 
 #define SPU_CORE0_MEMIN 0x2000
 #define SPU_CORE1_MEMIN 0x2400
+#define REVERB_REG_BASE 0x2E4
 
 
 uint16_t SPU::spdif_irq = 0;
@@ -48,6 +49,7 @@ void SPU::reset(uint8_t* RAM)
     buf_filled = false;
     data_input_volume_l = 0x7FFF;
     data_input_volume_r = 0x7FFF;
+    reverb = {};
 
 
     std::ostringstream fname;
@@ -211,18 +213,16 @@ stereo_sample SPU::voice_gen_sample(int voice_id)
 
     if (voice_id == 1)
     {
-        if (voice.crest_out_pos == 0x1FF)
+        if (voice.crest_out_pos >= 0x1FF)
             voice.crest_out_pos = 0;
-        spu_check_irq(offset + voice.crest_out_pos);
-        RAM[offset + voice.crest_out_pos] = static_cast<uint16_t>(output_sample);
+        write(offset+voice.crest_out_pos, static_cast<uint16_t>(output_sample));
         voice.crest_out_pos++;
     }
     if (voice_id == 3)
     {
-        if (voice.crest_out_pos == 0x1FF)
+        if (voice.crest_out_pos >= 0x1FF)
             voice.crest_out_pos = 0;
-        spu_check_irq(offset + voice.crest_out_pos);
-        RAM[offset + 0x200 + voice.crest_out_pos] = static_cast<uint16_t>(output_sample);
+        write(offset+0x200+voice.crest_out_pos, static_cast<uint16_t>(output_sample));
         voice.crest_out_pos++;
     }
 
@@ -246,13 +246,15 @@ stereo_sample SPU::voice_gen_sample(int voice_id)
 void SPU::gen_sample()
 {
 
-    stereo_sample core_output = {};
+    stereo_sample core_dry = {};
+    stereo_sample core_wet = {};
+
 
     for (int i = 0; i < 24; i++)
     {
         stereo_sample sample = voice_gen_sample(i);
 
-        core_output.mix(sample);
+        core_dry.mix(sample);
     }
 
     if (left_out_pcm.size() > 0x100)
@@ -262,10 +264,12 @@ void SPU::gen_sample()
         right_out_pcm.clear();
     }
 
+    stereo_sample eout = run_reverb(core_wet);
+
     if (running_ADMA())
     {
         stereo_sample memin = read_memin();
-        core_output.mix(memin);
+        core_dry.mix(memin);
         input_pos++;
 
         // We need to fill the next buffer
@@ -285,9 +289,91 @@ void SPU::gen_sample()
 
     }
 
+    stereo_sample core_output = {};
+    core_output.mix(core_dry);
+    core_output.mix(eout);
+
     left_out_pcm.push_back(core_output.left);
     right_out_pcm.push_back(core_output.right);
 
+}
+
+uint32_t SPU::translate_reverb_offset(uint32_t offset)
+{
+    uint32_t addr;
+    addr = reverb.effect_area_start + reverb.effect_pos + offset;
+
+    while (addr > reverb.effect_area_end)
+    {
+        addr - (reverb.effect_area_end - reverb.effect_area_start);
+    }
+
+
+    return addr;
+}
+
+stereo_sample SPU::run_reverb(stereo_sample wet)
+{
+    // Reverb runs at half the rate
+    // In reality it alternates producing left and right samples
+    auto &r = reverb;
+
+    stereo_sample eout = {};
+    if (reverb.cycle > 0)
+    {
+        reverb.cycle--;
+        return eout;
+    }
+
+    if ((reverb.effect_area_end - reverb.effect_area_start) <= 0)
+        return eout;
+
+    if (reverb.effect_pos >= (reverb.effect_area_end - reverb.effect_area_start))
+        reverb.effect_pos = 0;
+
+    int16_t Lin, Rin = 0;
+
+
+    #define A(x) translate_reverb_offset((x))
+
+    //_Input from Mixer (Input volume multiplied with incoming data)_____________
+    // Lin = vLIN * LeftInput    ;from any channels that have Reverb enabled
+    // Rin = vRIN * RightInput   ;from any channels that have Reverb enabled
+    Lin = wet.left * r.IN_COEF_L;
+    Lin = wet.right * r.IN_COEF_R;
+    // ____Same Side Reflection (left-to-left and right-to-right)___________________
+    // [mLSAME] = (Lin + [dLSAME]*vWALL - [mLSAME-2])*vIIR + [mLSAME-2]  ;L-to-L
+    // [mRSAME] = (Rin + [dRSAME]*vWALL - [mRSAME-2])*vIIR + [mRSAME-2]  ;R-to-R
+
+    // ___Different Side Reflection (left-to-right and right-to-left)_______________
+    // [mLDIFF] = (Lin + [dRDIFF]*vWALL - [mLDIFF-2])*vIIR + [mLDIFF-2]  ;R-to-L
+    // [mRDIFF] = (Rin + [dLDIFF]*vWALL - [mRDIFF-2])*vIIR + [mRDIFF-2]  ;L-to-R
+
+    // ___Early Echo (Comb Filter, with input from buffer)__________________________
+    // Lout=vCOMB1*[mLCOMB1]+vCOMB2*[mLCOMB2]+vCOMB3*[mLCOMB3]+vCOMB4*[mLCOMB4]
+    // Rout=vCOMB1*[mRCOMB1]+vCOMB2*[mRCOMB2]+vCOMB3*[mRCOMB3]+vCOMB4*[mRCOMB4]
+
+    // ___Late Reverb APF1 (All Pass Filter 1, with input from COMB)________________
+    // Lout=Lout-vAPF1*[mLAPF1-dAPF1], [mLAPF1]=Lout, Lout=Lout*vAPF1+[mLAPF1-dAPF1]
+    // Rout=Rout-vAPF1*[mRAPF1-dAPF1], [mRAPF1]=Rout, Rout=Rout*vAPF1+[mRAPF1-dAPF1]
+
+    // ___Late Reverb APF2 (All Pass Filter 2, with input from APF1)________________
+    // Lout=Lout-vAPF2*[mLAPF2-dAPF2], [mLAPF2]=Lout, Lout=Lout*vAPF2+[mLAPF2-dAPF2]
+    // Rout=Rout-vAPF2*[mRAPF2-dAPF2], [mRAPF2]=Rout, Rout=Rout*vAPF2+[mRAPF2-dAPF2]
+
+    // ___Output to Mixer (Output volume multiplied with input from APF2)___________
+    // LeftOutput  = Lout*vLOUT
+    // RightOutput = Rout*vROUT
+
+    // ___Finally, before repeating the above steps_________________________________
+    // BufferAddress = MAX(mBASE, (BufferAddress+2) AND 7FFFEh)
+    // Wait one 1T, then repeat the above stuff
+    #undef A
+
+
+    r.effect_pos = std::max(r.effect_area_start, (r.effect_pos+2 & r.effect_area_end));
+    reverb.cycle = 1;
+    return eout;
 }
 
 void SPU::finish_DMA()
@@ -385,6 +471,18 @@ void SPU::write_ADMA(uint8_t *source_RAM)
     status.DMA_ready = false;
 }
 
+uint16_t SPU::read(uint32_t addr)
+{
+    spu_check_irq(addr);
+    return RAM[addr];
+}
+
+void SPU::write(uint32_t addr, uint16_t data)
+{
+    spu_check_irq(addr);
+    RAM[addr] = data;
+}
+
 uint16_t SPU::read_mem()
 {
     uint16_t return_value = RAM[current_addr];
@@ -453,6 +551,7 @@ uint16_t SPU::read16(uint32_t addr)
                 return voices[v].current_addr & 0xFFFF;
         }
     }
+
     switch (addr)
     {
         case 0x188:
@@ -505,6 +604,9 @@ uint16_t SPU::read16(uint32_t addr)
         case 0x1B0:
             printf("[SPU%d] Read ADMA stat: $%04X\n", id, autodma_ctrl);
             return autodma_ctrl;
+        case 0x33C:
+            printf("[SPU%d] Read EEA: $%04X\n", id, reverb.effect_area_end);
+            return reverb.effect_area_end >> 16;
         case 0x340:
             reg = ENDX >> 16;
             //printf("[SPU%d] Read ENDXH: $%04X\n", id, reg);
@@ -555,6 +657,27 @@ uint16_t SPU::read_voice_reg(uint32_t addr)
     }
 }
 
+void SPU::write_reverb_reg32(uint32_t addr, uint16_t value)
+{
+    // I hate this less than writing a million switch cases
+
+    // changing reverb settings is not allowed while enabled
+    if (!effect_enable)
+    {
+        unsigned int reg = (addr - REVERB_REG_BASE)/2;
+        if (reg & 1)
+        {
+            printf("[SPU%d] Write %04X reverb reg L %04X\n", id, value, reg/2);
+            reverb.regs[reg/2] |= value & 0x0000FFFF;
+        }
+        else
+        {
+            printf("[SPU%d] Write %04X reverb reg H %04X\n", id, value, reg/2);
+            reverb.regs[reg/2] |= static_cast<uint32_t>(value << 16) & 0xFFFF0000;
+        }
+    }
+}
+
 void SPU::write16(uint32_t addr, uint16_t value)
 {
     addr &= 0x7FF;
@@ -569,6 +692,48 @@ void SPU::write16(uint32_t addr, uint16_t value)
         }
 
         addr -= (id -1) * 0x28;
+
+        if (addr >= 0x774 && addr <= 0x786)
+        {
+            // seems these you can set whenever?
+            //if (!effect_enable)
+            //    return;
+
+            switch (addr)
+            {
+                case 0x774:
+                    reverb.IIR_VOL = static_cast<int16_t>(value);
+                    break;
+                case 0x776:
+                    reverb.COMB1_VOL = static_cast<int16_t>(value);
+                    break;
+                case 0x778:
+                    reverb.COMB2_VOL = static_cast<int16_t>(value);
+                    break;
+                case 0x77A:
+                    reverb.COMB3_VOL = static_cast<int16_t>(value);
+                    break;
+                case 0x77C:
+                    reverb.COMB4_VOL = static_cast<int16_t>(value);
+                    break;
+                case 0x77E:
+                    reverb.WALL_VOL = static_cast<int16_t>(value);
+                    break;
+                case 0x780:
+                    reverb.APF1_VOL = static_cast<int16_t>(value);
+                    break;
+                case 0x782:
+                    reverb.APF2_VOL = static_cast<int16_t>(value);
+                    break;
+                case 0x784:
+                    reverb.IN_COEF_L = static_cast<int16_t>(value);
+                    break;
+                case 0x786:
+                    reverb.IN_COEF_R = static_cast<int16_t>(value);
+                    break;
+            }
+            return;
+        }
 
         switch (addr)
         {
@@ -640,6 +805,11 @@ void SPU::write16(uint32_t addr, uint16_t value)
             default:
                 printf("[SPU%d] Write voice %d: $%04X ($%08X)\n", id, (addr - 0x1C0) / 0xC, value, addr);
         }
+        return;
+    }
+    if (addr >= 0x2E4 && addr <= 0x33A)
+    {
+        write_reverb_reg32(addr, value);
         return;
     }
     switch (addr)
@@ -839,24 +1009,27 @@ void SPU::write16(uint32_t addr, uint16_t value)
             if (!effect_enable)
             {
                 printf("[SPU%d] Write ESAH: $%04X\n", id, value);
-                effect_area_start &= 0xFFFF;
-                effect_area_start |= (value & 0xF) << 16;
+                reverb.effect_pos = 0;
+                reverb.effect_area_start &= 0xFFFF;
+                reverb.effect_area_start |= (value & 0x3F) << 16;
             }
             break;
         case 0x2E2:
             if (!effect_enable)
             {
                 printf("[SPU%d] Write ESAL: $%04X\n", id, value);
-                effect_area_start &= ~0xFFFF;
-                effect_area_start |= value;
+                reverb.effect_pos = 0;
+                reverb.effect_area_start &= ~0xFFFF;
+                reverb.effect_area_start |= value;
             }
             break;
         case 0x33C:
             if (!effect_enable)
             {
                 printf("[SPU%d] Write EEA: $%04X\n", id, value);
-                effect_area_end &= 0xFFFF;
-                effect_area_end |= (value & 0xF) << 16;
+                reverb.effect_pos = 0;
+                reverb.effect_area_end &= 0xFFFF;
+                reverb.effect_area_end |= (static_cast<uint32_t>(value & 0x3F) << 16) | 0xFFFF;
             }
             break;
         case 0x340:

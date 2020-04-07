@@ -109,6 +109,55 @@ struct core_mix
 
 };
 
+struct Reverb
+{
+    uint32_t effect_area_start;
+    uint32_t effect_area_end;
+    uint32_t effect_pos;
+    uint8_t cycle;
+
+    union
+    {
+        uint32_t regs[22];
+        struct
+        {
+            uint32_t APF1_SIZE;
+            uint32_t APF2_SIZE;
+            uint32_t SAME_L_DST;
+            uint32_t SAME_R_DST;
+            uint32_t COMB1_L_SRC;
+            uint32_t COMB1_R_SRC;
+            uint32_t COMB2_L_SRC;
+            uint32_t COMB2_R_SRC;
+            uint32_t SAME_L_SRC;
+            uint32_t SAME_R_SRC;
+            uint32_t DIFF_L_DST;
+            uint32_t DIFF_R_DST;
+            uint32_t COMB3_L_SRC;
+            uint32_t COMB3_R_SRC;
+            uint32_t COMB4_L_SRC;
+            uint32_t COMB4_R_SRC;
+            uint32_t DIFF_L_SRC;
+            uint32_t DIFF_R_SRC;
+            uint32_t APF1_L_DST;
+            uint32_t APF1_R_DST;
+            uint32_t APF2_L_DST;
+            uint32_t APF2_R_DST;
+        };
+    };
+
+    int16_t IN_COEF_L;
+    int16_t IN_COEF_R;
+    int16_t APF1_VOL;
+    int16_t APF2_VOL;
+    int16_t IIR_VOL;
+    int16_t WALL_VOL;
+    int16_t COMB1_VOL;
+    int16_t COMB2_VOL;
+    int16_t COMB3_VOL;
+    int16_t COMB4_VOL;
+};
+
 struct SPU_STAT
 {
     bool DMA_ready;
@@ -136,12 +185,12 @@ class SPU
 
         static uint16_t spdif_irq;
 
+        Reverb reverb;
+
         uint32_t transfer_addr;
         uint32_t current_addr;
 
         bool effect_enable;
-        uint32_t effect_area_start;
-        uint32_t effect_area_end;
 
         // ADMA volume
         int16_t data_input_volume_l;
@@ -185,8 +234,14 @@ class SPU
 
         stereo_sample read_memin();
 
+        uint16_t read(uint32_t addr);
+        void write(uint32_t addr, uint16_t data);
+
+        stereo_sample run_reverb(stereo_sample wet);
+        uint32_t translate_reverb_offset(uint32_t offset);
         uint16_t read_voice_reg(uint32_t addr);
         void write_voice_reg(uint32_t addr, uint16_t value);
+        void write_reverb_reg32(uint32_t addr, uint16_t value);
         void write_voice_addr(uint32_t addr, uint16_t value);
 
         void clear_dma_req();
@@ -217,6 +272,7 @@ class SPU
 
         void load_state(std::ifstream& state);
         void save_state(std::ofstream& state);
+
 };
 
 inline bool SPU::running_ADMA()
