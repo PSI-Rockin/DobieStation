@@ -50,6 +50,7 @@ void SPU::reset(uint8_t* RAM)
     data_input_volume_l = 0x7FFF;
     data_input_volume_r = 0x7FFF;
     reverb = {};
+    effect_enable = 0;
 
 
     std::ostringstream fname;
@@ -231,10 +232,10 @@ stereo_sample SPU::voice_gen_sample(int voice_id)
     out.right = (output_sample*voice.right_vol.value) >> 15;
 
     // Just mute on this for now until we can actually do the right thing.
-    if (!voice.mix_state.dry_l && !voice.mix_state.wet_l)
-        out.left = 0;
-    if (!voice.mix_state.dry_r && !voice.mix_state.wet_r)
-        out.right = 0;
+    //if (!voice.mix_state.dry_l && !voice.mix_state.wet_l)
+    //    out.left = 0;
+    //if (!voice.mix_state.dry_r && !voice.mix_state.wet_r)
+    //    out.right = 0;
 
     voice.left_vol.advance();
     voice.right_vol.advance();
@@ -246,7 +247,9 @@ stereo_sample SPU::voice_gen_sample(int voice_id)
 void SPU::gen_sample()
 {
 
+    stereo_sample voices_dry = {};
     stereo_sample core_dry = {};
+    stereo_sample voices_wet = {};
     stereo_sample core_wet = {};
 
 
@@ -254,8 +257,26 @@ void SPU::gen_sample()
     {
         stereo_sample sample = voice_gen_sample(i);
 
-        core_dry.mix(sample);
+        if (voices[i].mix_state.dry_l)
+            voices_dry.left += sample.left;
+        if (voices[i].mix_state.dry_r)
+            voices_dry.right += sample.right;
+
+        if (voices[i].mix_state.wet_l)
+            voices_wet.left += sample.left;
+        if (voices[i].mix_state.wet_r)
+            voices_wet.right += sample.right;
     }
+
+    if (mix_state.voice_dry_l)
+        core_dry.left += voices_dry.left;
+    if (mix_state.voice_dry_r)
+        core_dry.right += voices_dry.right;
+
+    if (mix_state.voice_wet_l)
+        core_wet.left += voices_wet.left;
+    if (mix_state.voice_wet_r)
+        core_wet.right += voices_wet.right;
 
     if (left_out_pcm.size() > 0x100)
     {
@@ -264,12 +285,20 @@ void SPU::gen_sample()
         right_out_pcm.clear();
     }
 
-    stereo_sample eout = run_reverb(core_wet);
-
     if (running_ADMA())
     {
         stereo_sample memin = read_memin();
-        core_dry.mix(memin);
+
+        if (mix_state.memin_dry_l)
+            core_dry.left += memin.left;
+        if (mix_state.memin_dry_r)
+            core_dry.right += memin.right;
+
+        if (mix_state.memin_wet_l)
+            core_wet.left += memin.left;
+        if (mix_state.memin_wet_r)
+            core_wet.right += memin.right;
+
         input_pos++;
 
         // We need to fill the next buffer
@@ -289,9 +318,12 @@ void SPU::gen_sample()
 
     }
 
+    run_reverb(core_wet);
+
     stereo_sample core_output = {};
     core_output.mix(core_dry);
-    core_output.mix(eout);
+    if (effect_enable)
+        core_output.mix(reverb.Eout);
 
     left_out_pcm.push_back(core_output.left);
     right_out_pcm.push_back(core_output.right);
@@ -301,79 +333,124 @@ void SPU::gen_sample()
 uint32_t SPU::translate_reverb_offset(uint32_t offset)
 {
     uint32_t addr;
-    addr = reverb.effect_area_start + reverb.effect_pos + offset;
+    // PCSX2 says iop modules multiply offsets by 4, which it assumes needs to be done for PS1
+    // nocash says they should be multiplied by 8, does this mean we multiply by 2?
+    // nvm that
+    // We actually have to /2 since offset is in bytes while we address by shorts
+    // (I think at least lol)
+    addr = reverb.effect_area_start + reverb.effect_pos + (offset/2);
+    //printf("SPU%d RDEBUG get offset at %08X, buf pos %08X, buf start %08X, buf end %08X\n", id, offset, reverb.effect_pos, reverb.effect_area_start, reverb.effect_area_end);
 
-    while (addr > reverb.effect_area_end)
+    while (addr >= reverb.effect_area_end)
     {
-        addr - (reverb.effect_area_end - reverb.effect_area_start);
+        addr -= (reverb.effect_area_end - reverb.effect_area_start);
     }
 
+
+    if (addr < reverb.effect_area_start || addr > reverb.effect_area_end)
+        printf("RDEBUG VERY BAD");
+
+    //printf("SPU%d RDEBUG return addr %08X\n", id, addr);
 
     return addr;
 }
 
-stereo_sample SPU::run_reverb(stereo_sample wet)
+void SPU::run_reverb(stereo_sample wet)
 {
     // Reverb runs at half the rate
     // In reality it alternates producing left and right samples
     auto &r = reverb;
 
-    stereo_sample eout = {};
     if (reverb.cycle > 0)
     {
         reverb.cycle--;
-        return eout;
+        return;
     }
 
-    if ((reverb.effect_area_end - reverb.effect_area_start) <= 0)
-        return eout;
+    if (static_cast<int>(reverb.effect_area_end - reverb.effect_area_start) <= 0)
+        return;
 
-    if (reverb.effect_pos >= (reverb.effect_area_end - reverb.effect_area_start))
-        reverb.effect_pos = 0;
-
-    int16_t Lin, Rin = 0;
+    int16_t Lin = 0, Rin = 0;
+    int16_t Lout = 0, Rout = 0;
 
 
-    #define A(x) translate_reverb_offset((x))
-
+#define W(x, value) write(translate_reverb_offset((x)), static_cast<uint16_t>((value)))
+#define R(x) static_cast<int16_t>(read(translate_reverb_offset((x))))
+#define MUL(x, y) ((x) * (y) >> 15)
     //_Input from Mixer (Input volume multiplied with incoming data)_____________
     // Lin = vLIN * LeftInput    ;from any channels that have Reverb enabled
     // Rin = vRIN * RightInput   ;from any channels that have Reverb enabled
-    Lin = wet.left * r.vLIN;
-    Lin = wet.right * r.vRIN;
-    // ____Same Side Reflection (left-to-left and right-to-right)___________________
-    // [mLSAME] = (Lin + [dLSAME]*vWALL - [mLSAME-2])*vIIR + [mLSAME-2]  ;L-to-L
-    // [mRSAME] = (Rin + [dRSAME]*vWALL - [mRSAME-2])*vIIR + [mRSAME-2]  ;R-to-R
+    Lin = (wet.left * r.vLIN) >> 15;
+    Rin = (wet.right * r.vRIN) >> 15;
+    if (effect_enable)
+    {
+        // ____Same Side Reflection (left-to-left and right-to-right)___________________
+        // [mLSAME] = (Lin + [dLSAME]*vWALL - [mLSAME-2])*vIIR + [mLSAME-2]  ;L-to-L
+        // [mRSAME] = (Rin + [dRSAME]*vWALL - [mRSAME-2])*vIIR + [mRSAME-2]  ;R-to-R
+        W(r.mLSAME,
+          MUL(Lin + MUL(R(r.dLSAME), r.vWALL) - R(r.mLSAME - 2), r.vIIR) +
+          R(r.mLSAME - 2));
+        W(r.mRSAME,
+          MUL(Rin + MUL(R(r.dRSAME), r.vWALL) - R(r.mRSAME - 2), r.vIIR) +
+          R(r.mRSAME - 2));
 
-    // ___Different Side Reflection (left-to-right and right-to-left)_______________
-    // [mLDIFF] = (Lin + [dRDIFF]*vWALL - [mLDIFF-2])*vIIR + [mLDIFF-2]  ;R-to-L
-    // [mRDIFF] = (Rin + [dLDIFF]*vWALL - [mRDIFF-2])*vIIR + [mRDIFF-2]  ;L-to-R
+        // ___Different Side Reflection (left-to-right and
+        // right-to-left)_______________
+        W(r.mLDIFF,
+          MUL(Lin + MUL(R(r.dLDIFF), r.vWALL) - R(r.mLDIFF - 2), r.vIIR) +
+          R(r.mLDIFF - 2));
+        W(r.mRDIFF,
+          MUL(Rin + MUL(R(r.dRDIFF), r.vWALL) - R(r.mRDIFF - 2), r.vIIR) +
+          R(r.mRDIFF - 2));
+    }
 
     // ___Early Echo (Comb Filter, with input from buffer)__________________________
     // Lout=vCOMB1*[mLCOMB1]+vCOMB2*[mLCOMB2]+vCOMB3*[mLCOMB3]+vCOMB4*[mLCOMB4]
     // Rout=vCOMB1*[mRCOMB1]+vCOMB2*[mRCOMB2]+vCOMB3*[mRCOMB3]+vCOMB4*[mRCOMB4]
+    Lout = MUL(r.vCOMB1, R(r.mLCOMB1))+MUL(r.vCOMB2, R(r.mLCOMB2))+MUL(r.vCOMB3, R(r.mLCOMB3))+MUL(r.vCOMB4, R(r.mLCOMB4));
+    Rout = MUL(r.vCOMB1, R(r.mRCOMB1))+MUL(r.vCOMB2, R(r.mRCOMB2))+MUL(r.vCOMB3, R(r.mRCOMB3))+MUL(r.vCOMB4, R(r.mRCOMB4));
 
     // ___Late Reverb APF1 (All Pass Filter 1, with input from COMB)________________
     // Lout=Lout-vAPF1*[mLAPF1-dAPF1], [mLAPF1]=Lout, Lout=Lout*vAPF1+[mLAPF1-dAPF1]
     // Rout=Rout-vAPF1*[mRAPF1-dAPF1], [mRAPF1]=Rout, Rout=Rout*vAPF1+[mRAPF1-dAPF1]
+    Lout = Lout-MUL(r.vAPF1, R(r.mLAPF1-r.dAFP1));
+    if (effect_enable)
+        W(r.mLAPF1, Lout);
+    Lout = MUL(Lout, r.vAPF1)+R(r.mLAPF1-r.dAFP1);
+
+    Rout = Rout-MUL(r.vAPF1, R(r.mRAPF1-r.dAFP1));
+    if (effect_enable)
+        W(r.mRAPF1, Rout);
+    Rout = MUL(Rout, r.vAPF1)+R(r.mRAPF1-r.dAFP1);
 
     // ___Late Reverb APF2 (All Pass Filter 2, with input from APF1)________________
     // Lout=Lout-vAPF2*[mLAPF2-dAPF2], [mLAPF2]=Lout, Lout=Lout*vAPF2+[mLAPF2-dAPF2]
     // Rout=Rout-vAPF2*[mRAPF2-dAPF2], [mRAPF2]=Rout, Rout=Rout*vAPF2+[mRAPF2-dAPF2]
+    Lout = Lout-MUL(r.vAPF2, R(r.mLAPF2-r.dAFP2));
+    if (effect_enable)
+        W(r.mLAPF2, Lout);
+    Lout = MUL(Lout, r.vAPF2)+R(r.mLAPF2-r.dAFP2);
 
+    Rout = Rout-MUL(r.vAPF2, R(r.mRAPF2-r.dAFP2));
+    if (effect_enable)
+        W(r.mRAPF2, Rout);
+    Rout = MUL(Rout, r.vAPF2)+R(r.mRAPF2-r.dAFP2);
     // ___Output to Mixer (Output volume multiplied with input from APF2)___________
     // LeftOutput  = Lout*vLOUT
     // RightOutput = Rout*vROUT
-
+    r.Eout.left = MUL(Lout, effect_volume_l);
+    r.Eout.right = MUL(Rout, effect_volume_r);
     // ___Finally, before repeating the above steps_________________________________
     // BufferAddress = MAX(mBASE, (BufferAddress+2) AND 7FFFEh)
     // Wait one 1T, then repeat the above stuff
-    #undef A
+    r.effect_pos += 1;
+    if (r.effect_pos >= (r.effect_area_end-r.effect_area_start))
+        r.effect_pos = 0;
+#undef R
+#undef W
+#undef MUL
 
-
-    r.effect_pos = std::max(r.effect_area_start, (r.effect_pos+2 & r.effect_area_end));
     reverb.cycle = 1;
-    return eout;
 }
 
 void SPU::finish_DMA()
@@ -673,7 +750,7 @@ void SPU::write_reverb_reg32(uint32_t addr, uint16_t value)
         else
         {
             printf("[SPU%d] Write %04X reverb reg H %04X\n", id, value, reg/2);
-            reverb.regs[reg/2] |= static_cast<uint32_t>(value << 16) & 0xFFFF0000;
+            reverb.regs[reg/2] |= static_cast<uint32_t>(value << 16);
         }
     }
 }

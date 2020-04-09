@@ -115,6 +115,7 @@ struct Reverb
     uint32_t effect_area_end;
     uint32_t effect_pos;
     uint8_t cycle;
+    stereo_sample Eout;
 
     union
     {
@@ -237,7 +238,7 @@ class SPU
         uint16_t read(uint32_t addr);
         void write(uint32_t addr, uint16_t data);
 
-        stereo_sample run_reverb(stereo_sample wet);
+        void run_reverb(stereo_sample wet);
         uint32_t translate_reverb_offset(uint32_t offset);
         uint16_t read_voice_reg(uint32_t addr);
         void write_voice_reg(uint32_t addr, uint16_t value);
