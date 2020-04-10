@@ -330,7 +330,7 @@ void SPU::gen_sample()
 
 }
 
-uint32_t SPU::translate_reverb_offset(uint32_t offset)
+uint32_t SPU::translate_reverb_offset(int offset)
 {
     uint32_t addr;
     // PCSX2 says iop modules multiply offsets by 4, which it assumes needs to be done for PS1
@@ -341,18 +341,22 @@ uint32_t SPU::translate_reverb_offset(uint32_t offset)
     addr = reverb.effect_area_start + reverb.effect_pos + (offset/2);
     //printf("SPU%d RDEBUG get offset at %08X, buf pos %08X, buf start %08X, buf end %08X\n", id, offset, reverb.effect_pos, reverb.effect_area_start, reverb.effect_area_end);
 
-    while (addr >= reverb.effect_area_end)
+    while (addr > reverb.effect_area_end)
     {
         addr -= (reverb.effect_area_end - reverb.effect_area_start);
+    }
+    while (addr < reverb.effect_area_start)
+    {
+        addr += (reverb.effect_area_end - reverb.effect_area_start);
     }
 
 
     if (addr < reverb.effect_area_start || addr > reverb.effect_area_end)
-        printf("RDEBUG VERY BAD");
+        printf("[SPU%d] RDEBUG reverb addr outside of buffer - VERY BAD\n", id);
 
     //printf("SPU%d RDEBUG return addr %08X\n", id, addr);
 
-    return addr;
+    return static_cast<uint32_t>(addr);
 }
 
 void SPU::run_reverb(stereo_sample wet)
@@ -374,7 +378,7 @@ void SPU::run_reverb(stereo_sample wet)
     int16_t Lout = 0, Rout = 0;
 
 
-#define W(x, value) write(translate_reverb_offset((x)), static_cast<uint16_t>((value)))
+#define W(x, value) write(translate_reverb_offset((static_cast<int>(x))), static_cast<uint16_t>((value)))
 #define R(x) static_cast<int16_t>(read(translate_reverb_offset((x))))
 #define MUL(x, y) ((x) * (y) >> 15)
     //_Input from Mixer (Input volume multiplied with incoming data)_____________

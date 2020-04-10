@@ -239,7 +239,7 @@ class SPU
         void write(uint32_t addr, uint16_t data);
 
         void run_reverb(stereo_sample wet);
-        uint32_t translate_reverb_offset(uint32_t offset);
+        uint32_t translate_reverb_offset(int offset);
         uint16_t read_voice_reg(uint32_t addr);
         void write_voice_reg(uint32_t addr, uint16_t value);
         void write_reverb_reg32(uint32_t addr, uint16_t value);
