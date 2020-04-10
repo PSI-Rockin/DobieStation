@@ -534,12 +534,12 @@ void SPU::write_ADMA(uint8_t *source_RAM)
     if (ADMA_progress > 300)
     {
         autodma_ctrl &= ~0x4;
-        clear_dma_req();
     }
 
     if (ADMA_progress >= 512)
     {
         ADMA_progress = 0;
+        clear_dma_req();
         buf_filled = true;
     }
 
