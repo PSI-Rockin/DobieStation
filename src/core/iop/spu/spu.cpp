@@ -214,14 +214,14 @@ stereo_sample SPU::voice_gen_sample(int voice_id)
 
     if (voice_id == 1)
     {
-        if (voice.crest_out_pos >= 0x1FF)
+        if (voice.crest_out_pos > 0x1FF)
             voice.crest_out_pos = 0;
         write(offset+voice.crest_out_pos, static_cast<uint16_t>(output_sample));
         voice.crest_out_pos++;
     }
     if (voice_id == 3)
     {
-        if (voice.crest_out_pos >= 0x1FF)
+        if (voice.crest_out_pos > 0x1FF)
             voice.crest_out_pos = 0;
         write(offset+0x200+voice.crest_out_pos, static_cast<uint16_t>(output_sample));
         voice.crest_out_pos++;
