@@ -1005,6 +1005,27 @@ void SPU::load_state(ifstream &state)
     state.read((char*)&ENDX, sizeof(ENDX));
     state.read((char*)&key_off, sizeof(key_off));
     state.read((char*)&key_on, sizeof(key_on));
+
+    state.read((char*)&reverb, sizeof(reverb));
+    state.read((char*)&effect_enable, sizeof(effect_enable));
+    state.read((char*)&effect_volume_l, sizeof(effect_volume_l));
+    state.read((char*)&effect_volume_r, sizeof(effect_volume_r));
+
+    state.read((char*)&ADMA_buf, sizeof(ADMA_buf));
+    state.read((char*)&buf_filled, sizeof(buf_filled));
+    state.read((char*)&ADMA_progress, sizeof(ADMA_progress));
+    state.read((char*)&data_input_volume_l, sizeof(data_input_volume_l));
+    state.read((char*)&data_input_volume_r, sizeof(data_input_volume_r));
+    state.read((char*)&core_volume_l, sizeof(core_volume_l));
+    state.read((char*)&core_volume_r, sizeof(core_volume_r));
+
+    state.read((char*)&mix_state, sizeof(mix_state));
+    state.read((char*)&voice_mixdry_left, sizeof(voice_mixdry_left));
+    state.read((char*)&voice_mixdry_right, sizeof(voice_mixdry_right));
+    state.read((char*)&voice_mixwet_left, sizeof(voice_mixwet_left));
+    state.read((char*)&voice_mixwet_right, sizeof(voice_mixwet_right));
+    state.read((char*)&voice_pitch_mod, sizeof(voice_pitch_mod));
+    state.read((char*)&voice_noise_gen, sizeof(voice_noise_gen));
 }
 
 void SPU::save_state(ofstream &state)
@@ -1021,4 +1042,25 @@ void SPU::save_state(ofstream &state)
     state.write((char*)&ENDX, sizeof(ENDX));
     state.write((char*)&key_off, sizeof(key_off));
     state.write((char*)&key_on, sizeof(key_on));
+
+    state.write((char*)&reverb, sizeof(reverb));
+    state.write((char*)&effect_enable, sizeof(effect_enable));
+    state.write((char*)&effect_volume_l, sizeof(effect_volume_l));
+    state.write((char*)&effect_volume_r, sizeof(effect_volume_r));
+
+    state.write((char*)&ADMA_buf, sizeof(ADMA_buf));
+    state.write((char*)&buf_filled, sizeof(buf_filled));
+    state.write((char*)&ADMA_progress, sizeof(ADMA_progress));
+    state.write((char*)&data_input_volume_l, sizeof(data_input_volume_l));
+    state.write((char*)&data_input_volume_r, sizeof(data_input_volume_r));
+    state.write((char*)&core_volume_l, sizeof(core_volume_l));
+    state.write((char*)&core_volume_r, sizeof(core_volume_r));
+
+    state.write((char*)&mix_state, sizeof(mix_state));
+    state.write((char*)&voice_mixdry_left, sizeof(voice_mixdry_left));
+    state.write((char*)&voice_mixdry_right, sizeof(voice_mixdry_right));
+    state.write((char*)&voice_mixwet_left, sizeof(voice_mixwet_left));
+    state.write((char*)&voice_mixwet_right, sizeof(voice_mixwet_right));
+    state.write((char*)&voice_pitch_mod, sizeof(voice_pitch_mod));
+    state.write((char*)&voice_noise_gen, sizeof(voice_noise_gen));
 }
