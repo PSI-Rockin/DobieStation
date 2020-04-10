@@ -2,12 +2,6 @@
 #include <cstdint>
 #include <algorithm>
 
-int16_t clamp16(int32_t val)
-{
-    return static_cast<int16_t>(std::max(std::min(32767, val), -32768));
-}
-
-
 std::array<int16_t, 28> ADPCM_decoder::decode_block(uint8_t *block)
 {
     std::array<int16_t, 28> pcm;

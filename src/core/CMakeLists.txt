@@ -168,6 +168,7 @@ set(HEADERS
     iop/spu/spu.hpp
     iop/spu/spu_adpcm.hpp
     iop/spu/spu_envelope.hpp
+    iop/spu/spu_utils.hpp
     jitcommon/emitter64.hpp
     jitcommon/ir_block.hpp
     jitcommon/ir_instr.hpp

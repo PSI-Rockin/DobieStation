@@ -146,6 +146,7 @@ HEADERS += \
     ../../src/core/iop/spu/spu.hpp \
     ../../src/core/iop/spu/ps_adpcm.hpp \
     ../../src/core/iop/spu/spu_envelope.hpp \
+    ../../src/core/iop/spu/spu_utils.hpp \
     ../../src/qt/emuthread.hpp \
     ../../src/core/ee/vif.hpp \
     ../../src/core/int128.hpp \

@@ -2,6 +2,7 @@
 #define __PS_ADPCM_H
 #include <array>
 #include <cstdint>
+#include "spu_utils.hpp"
 
 
 // Integer math version of ps-adpcm coefs

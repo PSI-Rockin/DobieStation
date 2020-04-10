@@ -214,6 +214,7 @@
     <ClInclude Include="iop\spu\spu.hpp" />
     <ClInclude Include="iop\spu\ps_adpcm.hpp" />
     <ClInclude Include="iop\spu\spu_envelope.hpp" />
+    <ClInclude Include="iop\spu\spu_utils.hpp" />
     <ClInclude Include="ee\timers.hpp" />
     <ClInclude Include="ee\vif.hpp" />
     <ClInclude Include="ee\ipu\vlc_table.hpp" />

@@ -5,6 +5,7 @@
 #include "spu_envelope.hpp"
 #include "../../audio/utils.hpp"
 #include "spu_adpcm.hpp"
+#include "spu_utils.hpp"
 
 struct stereo_sample
 {
@@ -279,16 +280,6 @@ class SPU
 inline bool SPU::running_ADMA()
 {
     return (autodma_ctrl & (1 << (id - 1)));
-}
-
-inline int16_t clamp16(int input)
-{
-    return static_cast<int16_t>(std::max(std::min(input, 32767), -32768));
-}
-
-inline int16_t mulvol(int one, int two)
-{
-    return static_cast<int16_t>((one * two) >> 15);
 }
 
 #endif // SPU_HPP
