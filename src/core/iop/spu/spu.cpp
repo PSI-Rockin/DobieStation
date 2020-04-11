@@ -10,6 +10,7 @@
 #include "../iop_intc.hpp"
 #include "spu_adpcm.hpp"
 #include "../../audio/utils.hpp"
+#include "../../errors.hpp"
 
 /**
  * Notes on "AutoDMA", as it seems to not be documented anywhere else
@@ -138,7 +139,19 @@ stereo_sample SPU::voice_gen_sample(int voice_id)
         voice.key_switch_timeout--;
     }
 
-    voice.counter += voice.pitch;
+    uint32_t step = voice.pitch;
+    if ((voice_pitch_mod & (1 < voice_id)) && voice_id != 0)
+    {
+        Errors::die("GAME USING PITCH MODULATION! Go tell us which game this is\n");
+        // Todo: handle the glitchyness described by nocash?
+        int factor = voices[voice_id-1].outx;
+        factor = factor + 0x8000;
+        step = (step * factor) >> 15;
+        step = step & 0xFFFF;
+    }
+    step = std::min(step, 0x3fffu);
+
+    voice.counter += step;
     while (voice.counter >= 0x1000)
     {
         voice.counter -= 0x1000;
@@ -207,6 +220,7 @@ stereo_sample SPU::voice_gen_sample(int voice_id)
 
     int16_t output_sample = interpolate(voice_id);
     output_sample = (output_sample * voice.adsr.volume) >> 15;
+    voice.outx = output_sample;
 
     unsigned int offset = 0x400;
     if (id == 1)
@@ -556,14 +570,11 @@ void SPU::write_ADMA(uint8_t *source_RAM)
 
     ADMA_progress += 2;
 
-    if (ADMA_progress > 300)
-    {
-        autodma_ctrl &= ~0x4;
-    }
-
     if (ADMA_progress >= 512)
     {
+        //printf("[SPU%d] Filled next ADMA buffer\n", id);
         ADMA_progress = 0;
+        autodma_ctrl &= ~0x4;
         clear_dma_req();
         buf_filled = true;
     }

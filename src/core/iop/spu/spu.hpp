@@ -14,8 +14,8 @@ struct stereo_sample
 
     void mix(stereo_sample two)
     {
-       left += two.left;
-       right += two.right;
+       left = clamp16(left + two.left);
+       right = clamp16(right + two.right);
     }
 };
 
@@ -54,6 +54,7 @@ struct Voice
     int16_t old2 = 0;
     int16_t old3 = 0;
     int16_t next_sample = 0;
+    int16_t outx = 0;
 
     std::array<int16_t, 28> pcm;
 
