@@ -675,6 +675,9 @@ uint16_t SPU::read16(uint32_t addr)
         case 0x196:
             //printf("[SPU%d] Read VMIXERL: $%04X\n", id, voice_mixwet_right & 0xFFFF);
             return voice_mixwet_right & 0xFFFF;
+        case 0x198:
+            printf("[SPU%d] Read MMIX $%04X\n", id, mix_state.reg);
+            return mix_state.reg;
         case 0x19A:
             printf("[SPU%d] Read Core Att\n", id);
             return core_att[id-1];

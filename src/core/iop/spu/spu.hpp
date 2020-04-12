@@ -82,6 +82,7 @@ struct Voice
 
 struct core_mix
 {
+    uint16_t reg;
     bool sin_wet_r;
     bool sin_wet_l;
     bool sin_dry_r;
@@ -97,6 +98,7 @@ struct core_mix
 
     void read(uint16_t val)
     {
+        reg = val;
         sin_wet_r = (val & (1 << 0));
         sin_wet_l = (val & (1 << 1));
         sin_dry_r = (val & (1 << 2));
