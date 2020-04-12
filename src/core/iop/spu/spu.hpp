@@ -12,10 +12,12 @@ struct stereo_sample
     int16_t left;
     int16_t right;
 
-    void mix(stereo_sample two)
+    void mix(stereo_sample two, bool l, bool r)
     {
-       left = clamp16(left + two.left);
-       right = clamp16(right + two.right);
+        if (l)
+            left = clamp16(left + two.left);
+        if (r)
+            right = clamp16(right + two.right);
     }
 };
 
@@ -205,6 +207,7 @@ class SPU
         // core0 to core1 input, only valid on 1
         int16_t core_volume_l;
         int16_t core_volume_r;
+        uint32_t sin_pos;
 
         core_mix mix_state;
 
