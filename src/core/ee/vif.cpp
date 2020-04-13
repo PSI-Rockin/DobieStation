@@ -39,6 +39,7 @@ void VectorInterface::reset()
     flush_stall = false;
     stall_condition_active = false;
     fifo_reverse = false;
+    vif_cmd_status = VIF_IDLE;
 
     if (id)
         mem_mask = 0x3FF;
@@ -84,6 +85,7 @@ void VectorInterface::update(int cycles)
 {
     if (fifo_reverse)
     {
+        vif_cmd_status = VIF_IDLE;
         if (FIFO.size() <= (fifo_size - 4))
         {
             while (cycles--)
@@ -143,11 +145,25 @@ void VectorInterface::update(int cycles)
 
         if ((command & 0x60) == 0x60)
         {
+            vif_cmd_status = VIF_TRANSFER;
             handle_UNPACK();
+            if (command == 0)
+                vif_cmd_status = VIF_DECODE;
         }
 
-        if(check_vif_stall(CODE) || !FIFO.size())
+        if (check_vif_stall(CODE) || !FIFO.size())
+        {
+            //If VIF ran for 0 cycles, there's no data incoming, so set it idle
+            if (run_cycles == ((cycles << 2) - 1) && vif_cmd_status == VIF_DECODE)
+            {
+                vif_cmd_status = VIF_IDLE;
+            }
+            else if (vif_cmd_status == VIF_TRANSFER)
+            {
+                vif_cmd_status = VIF_WAIT;
+            }
             return;
+        }
 
         uint32_t value = FIFO.front();
 
@@ -178,6 +194,8 @@ bool VectorInterface::process_data_word(uint32_t value)
     }
     else
     {
+        vif_cmd_status = VIF_TRANSFER;
+
         switch (command)
         {
             case 0x20:
@@ -244,6 +262,9 @@ bool VectorInterface::process_data_word(uint32_t value)
         }
     }
 
+    if(command == 0)
+        vif_cmd_status = VIF_DECODE; //Set to idle later
+
     return true;
 }
 
@@ -252,6 +273,8 @@ void VectorInterface::decode_cmd(uint32_t value)
     command = (value >> 24) & 0x7F;
     imm = value & 0xFFFF;
     CODE = value;
+    vif_cmd_status = VIF_DECODE;
+
     if (value & 0x80000000)
     {
         if (!VIF_ERR.mask_interrupt)
@@ -418,6 +441,7 @@ void VectorInterface::handle_wait_cmd(uint32_t value)
     if (command_len == 0)
     {
         command = 0;
+        vif_cmd_status = VIF_DECODE;
     }
     
 }
@@ -941,7 +965,7 @@ std::tuple<uint128_t, uint32_t>VectorInterface::readFIFO()
 uint32_t VectorInterface::get_stat()
 {
     uint32_t reg = 0;
-    reg |= (vif_stalled & (STALL_IBIT | STALL_STOP) || fifo_reverse || (wait_for_PATH3 | flush_stall | direct_wait)) ? 0 : ((FIFO.size() != 0) * 3);
+    reg |= vif_cmd_status;
     reg |= wait_for_VU << 2;
     reg |= (wait_for_PATH3 | flush_stall | direct_wait) << 3;
     reg |= mark_detected << 6;
