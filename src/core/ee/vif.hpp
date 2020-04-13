@@ -13,6 +13,14 @@
 class GraphicsInterface;
 class DMAC;
 
+enum VIF_STATUS
+{
+    VIF_IDLE = 0,
+    VIF_WAIT = 1,
+    VIF_DECODE = 2,
+    VIF_TRANSFER = 3
+};
+
 enum VIF_STALL
 {
     STALL_IBIT = 1,
@@ -64,6 +72,7 @@ class VectorInterface
 
         bool vif_ibit_detected;
         uint8_t vif_stalled;
+        uint8_t vif_cmd_status;
         bool vif_interrupt;
         bool vif_stop;
         bool fifo_reverse;
