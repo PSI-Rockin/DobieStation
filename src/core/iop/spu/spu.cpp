@@ -697,6 +697,12 @@ uint16_t SPU::read16(uint32_t addr)
         case 0x1B0:
             printf("[SPU%d] Read ADMA stat: $%04X\n", id, autodma_ctrl);
             return autodma_ctrl;
+        case 0x2E0:
+            printf("[SPU%d] Read ESAH: $%04X\n", id, (reverb.effect_area_start >> 16));
+            return reverb.effect_area_start >> 16;
+        case 0x2E2:
+            printf("[SPU%d] Read ESAL: $%04X\n", id, (reverb.effect_area_start & 0xFFFF));
+            return reverb.effect_area_start & 0xFFFF;
         case 0x33C:
             printf("[SPU%d] Read EEA: $%04X\n", id, reverb.effect_area_end);
             return reverb.effect_area_end >> 16;
