@@ -143,9 +143,8 @@ stereo_sample SPU::voice_gen_sample(int voice_id)
     }
 
     uint32_t step = voice.pitch;
-    if ((voice_pitch_mod & (1 < voice_id)) && voice_id != 0)
+    if ((voice_pitch_mod & (1 << voice_id)) && voice_id != 0)
     {
-        Errors::die("GAME USING PITCH MODULATION! Go tell us which game this is\n");
         // Todo: handle the glitchyness described by nocash?
         int factor = voices[voice_id-1].outx;
         factor = factor + 0x8000;
