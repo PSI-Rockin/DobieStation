@@ -248,12 +248,6 @@ stereo_sample SPU::voice_gen_sample(int voice_id)
     out.left = (output_sample*voice.left_vol.value) >> 15;
     out.right = (output_sample*voice.right_vol.value) >> 15;
 
-    // Just mute on this for now until we can actually do the right thing.
-    //if (!voice.mix_state.dry_l && !voice.mix_state.wet_l)
-    //    out.left = 0;
-    //if (!voice.mix_state.dry_r && !voice.mix_state.wet_r)
-    //    out.right = 0;
-
     voice.left_vol.advance();
     voice.right_vol.advance();
     voice.adsr.advance();
