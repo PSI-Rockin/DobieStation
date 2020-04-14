@@ -4,7 +4,7 @@
 
 #define VER_MAJOR 0
 #define VER_MINOR 0
-#define VER_REV 39
+#define VER_REV 40
 
 using namespace std;
 
@@ -725,12 +725,17 @@ void SubsystemInterface::save_state(ofstream &state)
 
 void VectorInterface::load_state(ifstream &state)
 {
-    int size;
+    int size, internal_size;
     uint32_t FIFO_buffer[64];
     state.read((char*)&size, sizeof(size));
     state.read((char*)&FIFO_buffer, sizeof(uint32_t) * size);
     for (int i = 0; i < size; i++)
         FIFO.push(FIFO_buffer[i]);
+
+    state.read((char*)&internal_size, sizeof(internal_size));
+    state.read((char*)&FIFO_buffer, sizeof(uint32_t) * internal_size);
+    for (int i = 0; i < internal_size; i++)
+        internal_FIFO.push(FIFO_buffer[i]);
 
     state.read((char*)&imm, sizeof(imm));
     state.read((char*)&command, sizeof(command));
@@ -771,6 +776,7 @@ void VectorInterface::load_state(ifstream &state)
 void VectorInterface::save_state(ofstream &state)
 {
     int size = FIFO.size();
+    int internal_size = internal_FIFO.size();
     uint32_t FIFO_buffer[64];
     for (int i = 0; i < size; i++)
     {
@@ -781,6 +787,16 @@ void VectorInterface::save_state(ofstream &state)
     state.write((char*)&FIFO_buffer, sizeof(uint32_t) * size);
     for (int i = 0; i < size; i++)
         FIFO.push(FIFO_buffer[i]);
+
+    for (int i = 0; i < internal_size; i++)
+    {
+        FIFO_buffer[i] = internal_FIFO.front();
+        internal_FIFO.pop();
+    }
+    state.write((char*)&internal_size, sizeof(internal_size));
+    state.write((char*)&FIFO_buffer, sizeof(uint32_t) * internal_size);
+    for (int i = 0; i < internal_size; i++)
+        internal_FIFO.push(FIFO_buffer[i]);
 
     state.write((char*)&imm, sizeof(imm));
     state.write((char*)&command, sizeof(command));
