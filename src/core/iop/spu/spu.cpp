@@ -767,13 +767,20 @@ void SPU::write_reverb_reg32(uint32_t addr, uint16_t value)
         if (reg & 1)
         {
             printf("[SPU%d] Write %04X reverb reg L %04X\n", id, value, reg/2);
-            reverb.regs[reg/2] |= value & 0x0000FFFF;
+            reverb.regs[reg/2] &= ~0xFFFFu;
+            reverb.regs[reg/2] |= value;
         }
         else
         {
             printf("[SPU%d] Write %04X reverb reg H %04X\n", id, value, reg/2);
+            reverb.regs[reg/2] &= 0xFFFFu;
             reverb.regs[reg/2] |= static_cast<uint32_t>(value << 16);
         }
+    }
+    else
+    {
+        unsigned int reg = (addr - REVERB_REG_BASE)/2;
+        printf("[SPU%d] Write to reverb reg %04X of %04X while reverb on\n", id, reg/2, value);
     }
 }
 
@@ -1031,7 +1038,11 @@ void SPU::write16(uint32_t addr, uint16_t value)
                 status.DMA_busy = false;
                 clear_dma_req();
             }
-            effect_enable = (value & (1 << 7));
+            if (((value >> 7) & 1) != effect_enable)
+            {
+                printf("[SPU%d] Reverb enable changed to %d\n", id, (value >> 7) & 1);
+            }
+            effect_enable = (value >> 7) & 1;
             break;
         case 0x19C:
             printf("[SPU%d] Write IRQA_H: $%04X\n", id, value);
