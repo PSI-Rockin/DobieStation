@@ -368,6 +368,11 @@ bool Emulator::load_CDVD(const char *name, CDVD_CONTAINER type)
     return cdvd.load_disc(name, type);
 }
 
+std::string Emulator::get_serial()
+{
+    return cdvd.get_serial();
+}
+
 void Emulator::execute_ELF()
 {
     if (!ELF_file)
