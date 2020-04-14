@@ -81,6 +81,18 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
     connect(&emu_thread, SIGNAL(update_FPS(double)), this, SLOT(update_FPS(double)));
     connect(&emu_thread, SIGNAL(emu_error(QString)), this, SLOT(emu_error(QString)));
     connect(&emu_thread, SIGNAL(emu_non_fatal_error(QString)), this, SLOT(emu_non_fatal_error(QString)));
+    connect(&emu_thread, &EmuThread::rom_loaded, this, [=](QString name, QString serial) {
+
+        QFileInfo file_info(name);
+
+        if (!serial.isEmpty())
+            setWindowTitle(QString("[%1] %2").arg(
+                serial, file_info.fileName()
+            ));
+        else
+            setWindowTitle(file_info.fileName());
+    });
+
     emu_thread.pause(PAUSE_EVENT::GAME_NOT_LOADED);
 
     emu_thread.reset();
@@ -175,6 +187,7 @@ int EmuWindow::load_exec(const char* file_name, bool skip_BIOS)
         QByteArray file_data(exec_file.readAll());
 
         emu_thread.load_ELF(
+            file_name,
             reinterpret_cast<uint8_t *>(file_data.data()),
             exec_file.size()
         );
@@ -723,8 +736,6 @@ void EmuWindow::show_render_view()
 {
     statusBar()->addWidget(avg_framerate);
     statusBar()->addWidget(frametime);
-
-    setWindowTitle(current_ROM.fileName());
 
     avg_framerate->show();
     frametime->show();
