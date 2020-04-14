@@ -4,6 +4,7 @@
 #include <chrono>
 #include <QMainWindow>
 #include <QStackedWidget>
+#include <QLabel>
 
 #include "emuthread.hpp"
 
@@ -18,16 +19,15 @@ class EmuWindow : public QMainWindow
     Q_OBJECT
     private:
         EmuThread emu_thread;
-        QString ee_mode;
-        QString vu0_mode;
-        QString vu1_mode;
+        QLabel* ee_mode;
+        QLabel* vu1_mode;
+        QLabel* frametime;
+        QLabel* avg_framerate;
 
         std::chrono::system_clock::time_point old_frametime;
         double framerate_avg, frametime_avg;
         double frametime_list[60];
         int frametime_list_index = 0;
-
-        bool disable_fps_updates{ false };
 
         QFileInfo current_ROM;
         QMenu* file_menu;
@@ -44,9 +44,8 @@ class EmuWindow : public QMainWindow
 
         SettingsWindow* settings_window = nullptr;
 
-        void set_vu0_mode();
         void set_vu1_mode();
-        void set_ee_mode();
+        void update_status();
         void show_render_view();
         void show_default_view();
     public:
