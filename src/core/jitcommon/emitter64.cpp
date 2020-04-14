@@ -1729,6 +1729,19 @@ void Emitter64::PCMPEQD_XMM(REG_64 xmm_source, REG_64 xmm_dest)
     modrm(0b11, xmm_dest, xmm_source);
 }
 
+void Emitter64::PCMPEQD_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t offset)
+{
+    block->write<uint8_t>(0x66);
+    rex_r_rm(xmm_dest, indir_source);
+    block->write<uint8_t>(0x0F);
+    block->write<uint8_t>(0x76);
+    modrm(0, xmm_dest, indir_source);
+    if ((indir_source & 7) == 4)
+        block->write<uint8_t>(0x24);
+    if ((indir_source & 7) == 5 || offset)
+        block->write<uint32_t>(offset);
+}
+
 void Emitter64::PCMPEQW_XMM(REG_64 xmm_source, REG_64 xmm_dest)
 {
     block->write<uint8_t>(0x66);
