@@ -303,6 +303,9 @@ void VectorInterface::decode_cmd(uint32_t value)
             printf("[VIF] Set CYCLE: $%08X\n", value);
             CYCLE.CL = imm & 0xFF;
             CYCLE.WL = imm >> 8;
+            internal_WL = CYCLE.WL;
+            if (internal_WL == 0)
+                internal_WL = 256;
             command = 0;
             break;
         case 0x02:
@@ -498,7 +501,7 @@ void VectorInterface::init_UNPACK(uint32_t value)
     else
         unpack.words_per_op = (32 >> vl) * (vn + 1);
 
-    if (CYCLE.WL <= CYCLE.CL)
+    if (internal_WL <= CYCLE.CL)
     {
         //Skip write
         //printf("[VIF] Command len: %d\n", command_len);
@@ -508,7 +511,7 @@ void VectorInterface::init_UNPACK(uint32_t value)
     {
         //Fill write
        // Errors::die("[VIF] WL > CL!\n");
-        data_read = CYCLE.CL * (unpack.num / CYCLE.WL) + std::min((int)(unpack.num % CYCLE.WL), (int)CYCLE.CL);
+        data_read = CYCLE.CL * (unpack.num / internal_WL) + std::min((int)(unpack.num % internal_WL), (int)CYCLE.CL);
     }
 
     data_read = unpack.words_per_op * data_read;
@@ -592,7 +595,7 @@ void VectorInterface::handle_UNPACK_mode(uint128_t& quad)
 
 bool VectorInterface::is_filling_write()
 {
-    if (CYCLE.CL < CYCLE.WL && unpack.blocks_written >= CYCLE.CL)
+    if (CYCLE.CL < internal_WL && unpack.blocks_written >= CYCLE.CL)
         return true;
 
     return false;
@@ -911,9 +914,9 @@ void VectorInterface::process_UNPACK_quad(uint128_t &quad)
     unpack.addr += 16;
     unpack.num -= 1;
     
-    if (unpack.blocks_written >= CYCLE.WL)
+    if (unpack.blocks_written >= internal_WL)
     {
-        if (CYCLE.CL > CYCLE.WL)
+        if (CYCLE.CL > internal_WL)
             unpack.addr += (CYCLE.CL - unpack.blocks_written) * 16;
 
         unpack.blocks_written = 0;
