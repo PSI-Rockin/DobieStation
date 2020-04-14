@@ -50,8 +50,13 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
     stack_widget = new QStackedWidget;
     stack_widget->addWidget(game_list_widget);
     stack_widget->addWidget(render_widget);
-    stack_widget->setMinimumWidth(RenderWidget::DEFAULT_WIDTH);
-    stack_widget->setMinimumHeight(RenderWidget::DEFAULT_HEIGHT);
+
+    int current_factor = Settings::instance().scaling_factor;
+
+    stack_widget->setMinimumSize(
+        RenderWidget::DEFAULT_WIDTH * current_factor,
+        RenderWidget::DEFAULT_HEIGHT * current_factor
+    );
 
     setCentralWidget(stack_widget);
 
@@ -100,7 +105,13 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
 
     //Initialize window
     show_default_view();
+
     show();
+
+    stack_widget->setMinimumSize(
+        RenderWidget::DEFAULT_WIDTH,
+        RenderWidget::DEFAULT_HEIGHT
+    );
 }
 
 int EmuWindow::init(int argc, char** argv)
@@ -416,6 +427,9 @@ void EmuWindow::create_menu()
                 RenderWidget::DEFAULT_WIDTH,
                 RenderWidget::DEFAULT_HEIGHT
             );
+
+            Settings::instance().scaling_factor = factor;
+            Settings::instance().save();
         });
 
         window_menu->addAction(scale_action);
