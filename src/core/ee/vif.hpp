@@ -90,6 +90,7 @@ class VectorInterface
 
         uint32_t buffer[4];
         int buffer_size;
+        uint16_t internal_WL;
 
         bool DBF;
         bool mark_detected;
