@@ -262,6 +262,7 @@ class Emitter64
         void PCMPEQB_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void PCMPEQW_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void PCMPEQD_XMM(REG_64 xmm_source, REG_64 xmm_dest);
+        void PCMPEQD_XMM_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest, uint32_t offset = 0);
         void PCMPGTB_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void PCMPGTD_XMM(REG_64 xmm_source, REG_64 xmm_dest);
         void PCMPGTW_XMM(REG_64 xmm_source, REG_64 xmm_dest);
