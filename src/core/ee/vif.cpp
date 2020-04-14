@@ -19,6 +19,8 @@ void VectorInterface::reset()
 {
     std::queue<uint32_t> empty;
     FIFO.swap(empty);
+    std::queue<uint32_t> empty2;
+    internal_FIFO.swap(empty2);
     command = 0;
     command_len = 0;
     buffer_size = 0;
@@ -102,7 +104,6 @@ void VectorInterface::update(int cycles)
                     FIFO.push(std::get<0>(fifo_data)._u32[i]);
             }
         }
-        return;
     }
 
     //Since the loop processes per-word, we need to multiply cycles by 4
@@ -124,6 +125,12 @@ void VectorInterface::update(int cycles)
 
     while (!vif_stalled && run_cycles--)
     {
+        while (!fifo_reverse && internal_FIFO.size() < 8 && FIFO.size() > 0)
+        {
+            internal_FIFO.push(FIFO.front());
+            FIFO.pop();
+        }
+
         if (stall_condition_active)
         {
             if (flush_stall)
@@ -160,7 +167,7 @@ void VectorInterface::update(int cycles)
                 vif_cmd_status = VIF_DECODE;
         }
 
-        if (check_vif_stall(CODE) || !FIFO.size())
+        if (check_vif_stall(CODE) || !internal_FIFO.size())
         {
             //If VIF ran for 0 cycles, there's no data incoming, so set it idle
             if (run_cycles == ((cycles << 2) - 1) && vif_cmd_status == VIF_DECODE)
@@ -176,7 +183,7 @@ void VectorInterface::update(int cycles)
             return;
         }
 
-        uint32_t value = FIFO.front();
+        uint32_t value = internal_FIFO.front();
 
         //If process_data_word returns false, this means the word was not processed, so don't pop the FIFO.
         if (process_data_word(value))
@@ -184,7 +191,7 @@ void VectorInterface::update(int cycles)
             if (command_len)
             {
                 command_len--;
-                FIFO.pop();
+                internal_FIFO.pop();
 
                 //FIXME: Should be fifo_size - 4 really, but causes hangs in WRC?
                 if (FIFO.size() <= (fifo_size / 2))
@@ -986,7 +993,7 @@ uint32_t VectorInterface::get_stat()
     reg |= (vif_stalled & STALL_IBIT) << 10;
     reg |= vif_interrupt << 11;
     reg |= fifo_reverse << 23;
-    reg |= ((FIFO.size() + 3) / 4) << 24;
+    reg |= (FIFO.size() / 4) << 24;
     //printf("[VIF] Get STAT: $%08X\n", reg);
     return reg;
 }
