@@ -49,6 +49,7 @@ VU_JIT64::VU_JIT64() : jit_block("VU"), emitter(&jit_block)
         abs_constant.u[i] = 0x7FFFFFFF;
         max_flt_constant.u[i] = 0x7F7FFFFF;
         min_flt_constant.u[i] = 0xFF7FFFFF;
+        sign_constant.u[i] = 0x80000000;
     }
 }
 
@@ -1966,6 +1967,7 @@ void VU_JIT64::float_to_fixed(VectorUnit &vu, IR::Instruction &instr, int table_
     REG_64 source = alloc_sse_reg(vu, instr.get_source(), REG_STATE::READ);
     REG_64 dest = alloc_sse_reg(vu, instr.get_dest(), (field == 0xF) ? REG_STATE::WRITE : REG_STATE::READ_WRITE);
     REG_64 temp = REG_64::XMM0;
+    REG_64 temp2 = REG_64::XMM1;
 
     clamp_vfreg(field, source);
 
@@ -1973,8 +1975,6 @@ void VU_JIT64::float_to_fixed(VectorUnit &vu, IR::Instruction &instr, int table_
 
     if (table_entry)
     {
-        REG_64 temp2 = REG_64::XMM1;
-
         uint64_t addr = (uint64_t)&ftoi_table[table_entry].u[0];
 
         emitter.load_addr(addr, REG_64::RAX);
@@ -1982,13 +1982,34 @@ void VU_JIT64::float_to_fixed(VectorUnit &vu, IR::Instruction &instr, int table_
 
         emitter.MULPS(temp2, temp);
     }
+    emitter.MOVAPS_REG(source, temp2); //Keep original value
 
     if (field == 0xF)
-        emitter.CVTTPS2DQ(temp, dest);
+        emitter.CVTTPS2DQ(temp, dest); //If above INT_MAX, result will be 0x80000000
     else
     {
-        emitter.CVTTPS2DQ(temp, temp);
+        emitter.CVTTPS2DQ(temp, temp); //If above INT_MAX, result will be 0x80000000
         emitter.BLENDPS(field, temp, dest);
+    }
+
+    //FTOI saturation code translated from PCSX2, since it's really cunning code
+    //This is to handle situations where the float value is greater than INT_MAX
+    emitter.load_addr((uint64_t)&sign_constant, REG_64::RAX);
+    emitter.PXOR_XMM_FROM_MEM(REG_64::RAX, temp2);  //Original sign bit flipped, Set if it wasn't negative
+    emitter.PSRAD(31, temp2); //Fill reg with sign bit (0xFFFFFFFF if was a positive value)
+    //Original conversion result already in "temp" Conversion result (either real integer or 0x80000000 if invalid)
+    emitter.PCMPEQD_XMM_FROM_MEM(REG_64::RAX, temp); //Compare sign of result and fill with 0xFFFFFFFF if was 0x80000000/invalid (trashes original result)
+    emitter.PAND_XMM(temp, temp2); //AND the result of the compare with the extended sign bit
+
+    if (field == 0xF)
+    {
+        emitter.PADDD(temp2, dest); //Add it to the original value (0x80000000 + 0xFFFFFFFF = 0x7FFFFFFF)
+    }
+    else
+    {
+        emitter.MOVAPS_REG(dest, temp); //Copy Conversion result from dest (either real integer or 0x80000000 if invalid)
+        emitter.PADDD(temp2, temp);  //Add it to the original value (0x80000000 + 0xFFFFFFFF = 0x7FFFFFFF)
+        emitter.BLENDPS(field, temp, dest); //Save it once more
     }
 }
 
