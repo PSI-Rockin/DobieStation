@@ -688,8 +688,9 @@ void EmuWindow::load_state()
         .append(file_name)
         .append(".snp");
 
-    if (!emu_thread.load_state(save_state.toLocal8Bit()))
+    if (!QFile::exists(save_state) || !emu_thread.load_state(save_state.toLocal8Bit()))
         printf("Failed to load %s\n", qPrintable(save_state));
+
     emu_thread.unpause(PAUSE_EVENT::FILE_DIALOG);
 }
 
