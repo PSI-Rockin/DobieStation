@@ -57,12 +57,13 @@ void EmuThread::load_BIOS(const uint8_t *BIOS)
     wait_for_lock([=]() { e.load_BIOS(BIOS); } );
 }
 
-void EmuThread::load_ELF(const uint8_t *ELF, uint64_t ELF_size)
+void EmuThread::load_ELF(QString name, const uint8_t *ELF, uint64_t ELF_size)
 {
     wait_for_lock([=]() 
     {
         e.reset();
         e.load_ELF(ELF, ELF_size);
+        emit rom_loaded(name, "");
     } );
 }
 
@@ -72,6 +73,7 @@ void EmuThread::load_CDVD(const char* name, CDVD_CONTAINER type)
     { 
         e.reset();
         e.load_CDVD(name, type);
+        emit rom_loaded(name, QString::fromStdString(e.get_serial()));
     } );
 }
 
@@ -104,6 +106,8 @@ bool EmuThread::gsdump_read(const char *name)
 
         printf("loaded gsdump\n");
         gsdump_reading = true;
+
+        emit rom_loaded(name, "");
     });
     return 0;
 }
