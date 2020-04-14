@@ -768,6 +768,7 @@ void VectorInterface::load_state(ifstream &state)
     state.read((char*)&vif_stalled, sizeof(vif_stalled));
     state.read((char*)&vif_stop, sizeof(vif_stop));
     state.read((char*)&vif_cmd_status, sizeof(vif_cmd_status));
+    state.read((char*)&internal_WL, sizeof(internal_WL));
 
     state.read((char*)&mark_detected, sizeof(mark_detected));
     state.read((char*)&VIF_ERR, sizeof(VIF_ERR));
@@ -829,6 +830,7 @@ void VectorInterface::save_state(ofstream &state)
     state.write((char*)&vif_stalled, sizeof(vif_stalled));
     state.write((char*)&vif_stop, sizeof(vif_stop));
     state.write((char*)&vif_cmd_status, sizeof(vif_cmd_status));
+    state.write((char*)&internal_WL, sizeof(internal_WL));
 
     state.write((char*)&mark_detected, sizeof(mark_detected));
     state.write((char*)&VIF_ERR, sizeof(VIF_ERR));
