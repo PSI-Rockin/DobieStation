@@ -224,6 +224,7 @@ bool VectorUnit::is_interlocked()
 {
     return e->check_cop2_interlock();
 }
+
 void VectorUnit::set_TOP_regs(uint16_t *TOP, uint16_t *ITOP)
 {
     VIF_TOP = TOP;
@@ -780,6 +781,15 @@ void VectorUnit::check_for_COP2_FMAC_stall()
             break;
         }
     }
+}
+
+int32_t VectorUnit::float_to_int(float value)
+{
+    if (value >= 2147483647.0)
+        return 2147483647;
+    if (value <= -2147483648.0)
+        return -2147483648;
+    return (int32_t)value;
 }
 
 void VectorUnit::backup_vf(bool newvf, int index)
@@ -1874,7 +1884,7 @@ void VectorUnit::ftoi0(uint32_t instr)
     {
         if (_field & (1 << (3 - i)))
         {
-            gpr[_ft_].s[i] = (int32_t)convert(gpr[_fs_].u[i]);
+            gpr[_ft_].s[i] = float_to_int(convert(gpr[_fs_].u[i]));
             printf("(%d)$%08X ", i, gpr[_ft_].s[i]);
         }
     }
@@ -1888,7 +1898,7 @@ void VectorUnit::ftoi4(uint32_t instr)
     {
         if (_field & (1 << (3 - i)))
         {
-            gpr[_ft_].s[i] = (int32_t)(convert(gpr[_fs_].u[i]) * (1.0f / 0.0625f));
+            gpr[_ft_].s[i] = float_to_int(convert(gpr[_fs_].u[i]) * (1.0f / 0.0625f));
             printf("(%d)$%08X ", i, gpr[_ft_].s[i]);
         }
     }
@@ -1902,7 +1912,7 @@ void VectorUnit::ftoi12(uint32_t instr)
     {
         if (_field & (1 << (3 - i)))
         {
-            gpr[_ft_].s[i] = (int32_t)(convert(gpr[_fs_].u[i]) * (1.0f / 0.000244140625f));
+            gpr[_ft_].s[i] = float_to_int(convert(gpr[_fs_].u[i]) * (1.0f / 0.000244140625f));
             printf("(%d)$%08X ", i, gpr[_ft_].s[i]);
         }
     }
@@ -1916,7 +1926,7 @@ void VectorUnit::ftoi15(uint32_t instr)
     {
         if (_field & (1 << (3 - i)))
         {
-            gpr[_ft_].s[i] = (int32_t)(convert(gpr[_fs_].u[i]) * (1.0f / 0.000030517578125f));
+            gpr[_ft_].s[i] = float_to_int(convert(gpr[_fs_].u[i]) * (1.0f / 0.000030517578125f));
             printf("(%d)$%08X ", i, gpr[_ft_].s[i]);
         }
     }
