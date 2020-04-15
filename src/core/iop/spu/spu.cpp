@@ -1046,7 +1046,7 @@ void SPU::write16(uint32_t addr, uint16_t value)
             {
                 printf("[SPU%d] Reverb enable changed to %d\n", id, (value >> 7) & 1);
             }
-            noise.stepsize = (value >> 8) & 0x3;
+            noise.stepsize = 4 + ((value >> 8) & 0x3);
             noise.shift = (value >> 10) & 0xF;
             effect_enable = (value >> 7) & 1;
             break;

@@ -175,12 +175,12 @@ struct Noise
     void step()
     {
         timer = timer - stepsize;
-        unsigned parity = ((output >> 15) & 1) ^
+        uint8_t paritybit = ((output >> 15) & 1) ^
             ((output >> 12) & 1) ^ ((output >> 11) & 1) ^
-            ((output >> 10)& 1) ^ 1;
+            ((output >> 10) & 1) ^ 1;
         if (timer < 0)
         {
-            output = output*2 + parity;
+            output = output*2 + paritybit;
             timer += 20000 >> shift;
         }
         if (timer < 0)
