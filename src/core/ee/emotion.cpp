@@ -105,8 +105,6 @@ void EmotionEngine::reset()
     branch_on = false;
     can_disassemble = false;
     wait_for_IRQ = false;
-    wait_for_VU0 = false;
-    wait_for_interlock = false;
     delay_slot = 0;
 
     //OsdConfigParam is used by certain games to detect language settings.
@@ -217,12 +215,6 @@ void EmotionEngine::run_interpreter()
 
 void EmotionEngine::run_jit()
 {
-    //If we're stalling on COP2 and VU0 is still active, we continue stalling.
-    wait_for_VU0 &= vu0_wait();
-
-    //Check for MBIT interlock
-    wait_for_interlock &= check_interlock();
-
     //If FlushCache(2) has been executed, reset the JIT.
     //This represents an icache flush.
     if (flush_jit_cache)
