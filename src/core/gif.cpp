@@ -357,7 +357,7 @@ bool GraphicsInterface::interrupt_path3(int index)
     if (index == 3)
         return true;
 
-    if ((intermittent_mode && path_status[3] >= 2) || path3_masked(3)) //IMAGE MODE or IDLE
+    if ((intermittent_mode && (path_status[3] == 2 || path_status[3] == 3)) || path3_masked(3)) //IMAGE MODE or IDLE
     {
         //printf("[GIF] Interrupting PATH3 with PATH%d\n", index);
         arbitrate_paths();
@@ -517,7 +517,7 @@ void GraphicsInterface::dma_waiting(bool dma_waiting)
 
 void GraphicsInterface::intermittent_check()
 {
-    if (intermittent_mode && active_path == 3 && path_status[3] >= 2)
+    if (active_path == 3 && (intermittent_mode && (path_status[3] == 2 || path_status[3] == 3)))
     {
         arbitrate_paths();
     }
