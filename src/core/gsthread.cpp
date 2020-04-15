@@ -3019,44 +3019,36 @@ uint128_t GraphicsSynthesizerThread::local_to_host()
     switch (BITBLTBUF.source_format)
     {
         //PSMCT32
+        //PSMZ32
         case 0x00:
+        case 0x30:
             ppd = 2;
             break;
         //PSMCT24
+        //PSMZ24
         case 0x01:
+        case 0x31:
             ppd = 1; //Does it all in one go
             break;
         //PSMCT16
-        case 0x02:
-            ppd = 4;
-            break;
         //PSMCT16S
+        case 0x02:
         case 0x0A:
+        case 0x32:
             ppd = 4;
             break;
         //PSMCT8
+        //PSMCT8H
         case 0x13:
+        case 0x1B:
             ppd = 8;
             break;
         //PSMCT4
         case 0x14:
             ppd = 16;
             break;
-        //PSMCT8H
-        case 0x1B:
-            ppd = 8;
-            break;
-        //PSMZ32
-        case 0x30:
-            ppd = 2;
-            break;
-        //PSMZ24
-        case 0x31:
-            ppd = 1; //Does it all in one go
-            break;
         default:
-            Errors::print_warning("[GS_t] GS Download Unrecognized BITBLTBUF source format $%02X\n", BITBLTBUF.source_format);
-            return return_data;
+            Errors::die("[GS_t] GS Download Unrecognized BITBLTBUF source format $%02X\n", BITBLTBUF.source_format);
     }
     uint64_t data = 0;
     for (int datapart = 0; datapart < 2; datapart++)
@@ -3113,9 +3105,14 @@ uint128_t GraphicsSynthesizerThread::local_to_host()
                 case 0x31:
                     data = pack_PSMCT24(true);
                     break;
+                case 0x32:
+                    data |= (uint64_t)(read_PSMCT16Z_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                        TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFF) << (i * 16);
+                    pixels_transferred++;
+                    TRXPOS.int_source_x++;
+                    break;
                 default:
-                    Errors::print_warning("[GS_t] GS Download Unrecognized BITBLTBUF source format $%02X\n", BITBLTBUF.source_format);
-                    return return_data;
+                    Errors::die("[GS_t] GS Download Unrecognized BITBLTBUF source format $%02X\n", BITBLTBUF.source_format);
             }
 
 
