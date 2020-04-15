@@ -106,9 +106,11 @@ void VectorInterface::update(int cycles)
     //This allows us to process one quadword per bus cycle
     int run_cycles = cycles << 2;
    
-    if (vif_stalled & STALL_WAIT)
+    //This is just a timing break for when DIRECT/HL runs and the GS path is busy
+    //Saves looping ~64 times when nothing is going to change
+    if (vif_stalled & STALL_DIRECT)
     {
-        vif_stalled &= ~STALL_WAIT;
+        vif_stalled &= ~STALL_DIRECT;
     }
 
     if (vif_stalled & STALL_MSKPATH3)
@@ -236,7 +238,7 @@ bool VectorInterface::process_data_word(uint32_t value)
                 if (!gif->path_active(2, command == 0x50))
                 {
                     direct_wait = true;
-                    vif_stalled |= STALL_WAIT;
+                    vif_stalled |= STALL_DIRECT;
                     return false;
                 }
                 direct_wait = false;
