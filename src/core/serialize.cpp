@@ -4,7 +4,7 @@
 
 #define VER_MAJOR 0
 #define VER_MINOR 0
-#define VER_REV 39
+#define VER_REV 41
 
 using namespace std;
 
@@ -643,6 +643,10 @@ void GraphicsInterface::load_state(ifstream &state)
     state.read((char*)&path3_vif_masked, sizeof(path3_vif_masked));
     state.read((char*)&internal_Q, sizeof(internal_Q));
     state.read((char*)&path3_dma_waiting, sizeof(path3_dma_waiting));
+    state.read((char*)&intermittent_mode, sizeof(intermittent_mode));
+    state.read((char*)&outputting_path, sizeof(outputting_path));
+    state.read((char*)&path3_mode_masked, sizeof(path3_mode_masked));
+    state.read((char*)&gif_temporary_stop, sizeof(gif_temporary_stop));
 }
 
 void GraphicsInterface::save_state(ofstream &state)
@@ -665,6 +669,10 @@ void GraphicsInterface::save_state(ofstream &state)
     state.write((char*)&path3_vif_masked, sizeof(path3_vif_masked));
     state.write((char*)&internal_Q, sizeof(internal_Q));
     state.write((char*)&path3_dma_waiting, sizeof(path3_dma_waiting));
+    state.write((char*)&intermittent_mode, sizeof(intermittent_mode));
+    state.write((char*)&outputting_path, sizeof(outputting_path));
+    state.write((char*)&path3_mode_masked, sizeof(path3_mode_masked));
+    state.write((char*)&gif_temporary_stop, sizeof(gif_temporary_stop));
 }
 
 void SubsystemInterface::load_state(ifstream &state)

@@ -39,13 +39,13 @@ class GraphicsInterface
         std::queue<uint128_t> FIFO;
 
         uint8_t active_path;
+        bool outputting_path;
         uint8_t path_queue;
         //4 = Idle, Others match tag ID's
         uint8_t path_status[4];
         bool path3_vif_masked;
         bool path3_mode_masked;
         bool intermittent_mode;
-        bool intermittent_active;
         bool path3_dma_waiting;
         bool gif_temporary_stop;
 
@@ -88,6 +88,7 @@ class GraphicsInterface
         bool send_PATH1(uint128_t quad);
         void send_PATH2(uint32_t data[4]);
         void send_PATH3(uint128_t quad);
+        void send_PATH3_FIFO(uint128_t quad);
         std::tuple<uint128_t, uint32_t>read_GSFIFO();
 
         void intermittent_check();
