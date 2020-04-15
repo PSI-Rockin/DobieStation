@@ -517,7 +517,7 @@ void GraphicsInterface::dma_waiting(bool dma_waiting)
 
 void GraphicsInterface::intermittent_check()
 {
-    if (intermittent_mode && active_path == 3 && path_status[3] >= 2)
+    if (active_path == 3 && (intermittent_mode && (path_status[3] == 2 || path_status[3] == 3)))
     {
         arbitrate_paths();
     }
