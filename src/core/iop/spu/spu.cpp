@@ -217,8 +217,17 @@ stereo_sample SPU::voice_gen_sample(int voice_id)
         }
     }
 
+    int16_t output_sample = 0;
 
-    int16_t output_sample = interpolate(voice_id);
+    if (!(voice_noise_gen & (1 << voice_id)))
+    {
+        output_sample = interpolate(voice_id);
+    }
+    else
+    {
+        output_sample = noise.output;
+    }
+
     output_sample = (output_sample * voice.adsr.volume) >> 15;
     voice.outx = output_sample;
 
@@ -323,6 +332,8 @@ void SPU::gen_sample()
 
     left_out_pcm.push_back(core_output.left);
     right_out_pcm.push_back(core_output.right);
+
+    noise.step();
 
     // Our position in the memout output buffers
     out_pos++;
@@ -1035,6 +1046,8 @@ void SPU::write16(uint32_t addr, uint16_t value)
             {
                 printf("[SPU%d] Reverb enable changed to %d\n", id, (value >> 7) & 1);
             }
+            noise.stepsize = (value >> 8) & 0x3;
+            noise.shift = (value >> 10) & 0xF;
             effect_enable = (value >> 7) & 1;
             break;
         case 0x19C:

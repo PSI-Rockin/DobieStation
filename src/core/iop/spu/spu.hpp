@@ -165,6 +165,29 @@ struct Reverb
     int16_t vRIN;
 };
 
+struct Noise
+{
+    uint8_t shift;
+    uint8_t stepsize;
+    int32_t timer;
+    int16_t output;
+
+    void step()
+    {
+        timer = timer - stepsize;
+        unsigned parity = ((output >> 15) & 1) ^
+            ((output >> 12) & 1) ^ ((output >> 11) & 1) ^
+            ((output >> 10)& 1) ^ 1;
+        if (timer < 0)
+        {
+            output = output*2 + parity;
+            timer += 20000 >> shift;
+        }
+        if (timer < 0)
+            timer += 20000 >> shift;
+    }
+};
+
 struct SPU_STAT
 {
     bool DMA_ready;
@@ -205,6 +228,7 @@ class SPU
         static uint16_t spdif_irq;
 
         Reverb reverb;
+        Noise noise;
 
         uint32_t transfer_addr;
         uint32_t current_addr;
