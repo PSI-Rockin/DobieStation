@@ -181,6 +181,18 @@ class SPU
         IOP_INTC* intc;
         IOP_DMA* dma;
 
+        enum MEMOUT
+        {
+            VOICE1 = 0x400,
+            VOICE3 = 0x600,
+            SINL = 0x800,
+            SINR = 0xA00,
+            MEMOUTL = 0x1000,
+            MEMOUTR = 0x1200,
+            MEMOUTEL = 0x1400,
+            MEMOUTER = 0x1600,
+        };
+
         uint16_t* RAM;
         Voice voices[24];
         static uint16_t core_att[2];
@@ -209,7 +221,7 @@ class SPU
         // core0 to core1 input, only valid on 1
         int16_t core_volume_l;
         int16_t core_volume_r;
-        uint32_t sin_pos;
+        uint32_t out_pos;
 
         core_mix mix_state;
 
@@ -244,6 +256,7 @@ class SPU
 
         uint16_t read(uint32_t addr);
         void write(uint32_t addr, uint16_t data);
+        void memout(MEMOUT addr, int16_t sample);
 
         void run_reverb(stereo_sample wet);
         uint32_t translate_reverb_offset(int offset);

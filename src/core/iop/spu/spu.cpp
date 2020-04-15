@@ -22,8 +22,6 @@
 
 #define SPU_CORE0_MEMIN 0x2000
 #define SPU_CORE1_MEMIN 0x2400
-#define SPU_SINL 0x800
-#define SPU_SINR 0xA00
 #define REVERB_REG_BASE 0x2E4
 
 
@@ -54,7 +52,7 @@ void SPU::reset(uint8_t* RAM)
     data_input_volume_r = 0x7FFF;
     reverb = {};
     effect_enable = 0;
-    sin_pos = 0;
+    out_pos = 0;
 
 
     std::ostringstream fname;
@@ -224,23 +222,13 @@ stereo_sample SPU::voice_gen_sample(int voice_id)
     output_sample = (output_sample * voice.adsr.volume) >> 15;
     voice.outx = output_sample;
 
-    unsigned int offset = 0x400;
-    if (id == 1)
-        offset = 0xC00;
-
     if (voice_id == 1)
     {
-        if (voice.crest_out_pos > 0x1FF)
-            voice.crest_out_pos = 0;
-        write(offset+voice.crest_out_pos, static_cast<uint16_t>(output_sample));
-        voice.crest_out_pos++;
+        memout(VOICE1, output_sample);
     }
     if (voice_id == 3)
     {
-        if (voice.crest_out_pos > 0x1FF)
-            voice.crest_out_pos = 0;
-        write(offset+0x200+voice.crest_out_pos, static_cast<uint16_t>(output_sample));
-        voice.crest_out_pos++;
+        memout(VOICE3, output_sample);
     }
 
     stereo_sample out;
@@ -272,6 +260,10 @@ void SPU::gen_sample()
         voices_wet.mix(sample, voices[i].mix_state.wet_l, voices[i].mix_state.wet_r);
     }
 
+    memout(MEMOUTL, voices_dry.left);
+    memout(MEMOUTR, voices_dry.right);
+    memout(MEMOUTEL, voices_wet.left);
+    memout(MEMOUTER, voices_wet.right);
 
     if (left_out_pcm.size() > 0x100)
     {
@@ -308,8 +300,8 @@ void SPU::gen_sample()
     if (id == 2)
     {
         stereo_sample sin;
-        sin.left  = mulvol(static_cast<int16_t>(read(SPU_SINL + sin_pos)), core_volume_l);
-        sin.right = mulvol(static_cast<int16_t>(read(SPU_SINR + sin_pos)), core_volume_r);
+        sin.left  = mulvol(static_cast<int16_t>(read(SINL + out_pos)), core_volume_l);
+        sin.right = mulvol(static_cast<int16_t>(read(SINR + out_pos)), core_volume_r);
         core_dry.mix(sin, mix_state.sin_dry_l, mix_state.sin_dry_r);
         core_wet.mix(sin, mix_state.sin_wet_l, mix_state.sin_wet_r);
     }
@@ -325,16 +317,17 @@ void SPU::gen_sample()
 
     if (id == 1)
     {
-        write(SPU_SINL + sin_pos, static_cast<uint16_t>(core_output.left));
-        write(SPU_SINR + sin_pos, static_cast<uint16_t>(core_output.right));
+        memout(SINL, core_output.left);
+        memout(SINR, core_output.right);
     }
-    sin_pos++;
-    if (sin_pos > 0x1FF)
-        sin_pos = 0;
 
     left_out_pcm.push_back(core_output.left);
     right_out_pcm.push_back(core_output.right);
 
+    // Our position in the memout output buffers
+    out_pos++;
+    if (out_pos > 0x1FF)
+        out_pos = 0;
 }
 
 uint32_t SPU::translate_reverb_offset(int offset)
@@ -672,7 +665,7 @@ uint16_t SPU::read16(uint32_t addr)
             printf("[SPU%d] Read MMIX $%04X\n", id, mix_state.reg);
             return mix_state.reg;
         case 0x19A:
-            printf("[SPU%d] Read Core Att\n", id);
+            printf("[SPU%d] Read Core Att: $%04X\n", id, (core_att[id-1]));
             return core_att[id-1];
         case 0x1A0:
             printf("[SPU%d] Read KON1: $%04X\n", id, (key_off >> 16));
@@ -1259,4 +1252,9 @@ stereo_sample SPU::read_memin()
     spu_check_irq(pos+0x200);
 
     return sample;
+}
+
+void SPU::memout(MEMOUT addr, int16_t sample)
+{
+    write(addr+out_pos+(id-1 ? 0x800 : 0x0), static_cast<uint16_t>(sample));
 }
