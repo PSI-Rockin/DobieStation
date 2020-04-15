@@ -961,7 +961,7 @@ void Emulator::write128(uint32_t address, uint128_t value)
             vif1.feed_DMA(value);
             return;
         case 0x10006000:
-            gif.send_PATH3(value);
+            gif.send_PATH3_FIFO(value);
             return;
         case 0x10007010:
             ipu.write_FIFO(value);
