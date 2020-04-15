@@ -65,16 +65,11 @@ void IOPTiming::IRQ_test(int index, bool overflow)
         else
             timers[index].control.compare_interrupt = true;
     }
-    else
-    {
-        if (!timers[index].control.repeat_int)
-            return;
-    }
 
-    if (timers[index].control.toggle_int)
-        timers[index].control.int_enable ^= true;
-    else
+    if (!timers[index].control.repeat_int)
         timers[index].control.int_enable = false;
+    else if (timers[index].control.toggle_int)
+        timers[index].control.int_enable ^= true;
 }
 
 uint32_t IOPTiming::read_counter(int index)
