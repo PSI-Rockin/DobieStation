@@ -49,7 +49,7 @@ class EmuThread : public QThread
         void set_ee_mode(CPU_MODE mode);
         void set_vu1_mode(CPU_MODE mode);
         void load_BIOS(const uint8_t* BIOS);
-        void load_ELF(const uint8_t* ELF, uint64_t ELF_size);
+        void load_ELF(QString name, const uint8_t* ELF, uint64_t ELF_size);
         void load_CDVD(const char* name, CDVD_CONTAINER type);
 
         bool load_state(const char* name);
@@ -67,6 +67,7 @@ class EmuThread : public QThread
         void update_FPS(double FPS);
         void emu_error(QString err);
         void emu_non_fatal_error(QString err);
+        void rom_loaded(QString name, QString serial);
     public slots:
         void shutdown();
         void press_key(PAD_BUTTON button);

@@ -46,7 +46,7 @@ class VU_JIT64
         //Set to 0x7FFFFFFF, repeated four times
         VU_GPR abs_constant;
 
-        VU_GPR max_flt_constant, min_flt_constant;
+        VU_GPR max_flt_constant, min_flt_constant, sign_constant;
 
         VU_GPR ftoi_table[4], itof_table[4];
 

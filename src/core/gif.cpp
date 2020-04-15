@@ -16,7 +16,6 @@ void GraphicsInterface::reset()
     path[3].current_tag.data_left = 0;
     active_path = 0;
     path_queue = 0;
-    intermittent_active = false;
     path_status[0] = 4;
     path_status[1] = 4;
     path_status[2] = 4;
@@ -29,6 +28,7 @@ void GraphicsInterface::reset()
     path3_mode_masked = false;
     path3_dma_waiting = false;
     gif_temporary_stop = false;
+    outputting_path = false;
 }
 
 uint32_t GraphicsInterface::read_STAT()
@@ -50,7 +50,7 @@ uint32_t GraphicsInterface::read_STAT()
     reg |= ((path_queue & (1 << 1)) != 0) << 8;
 
     //OPH
-    reg |= (active_path != 0) << 9;
+    reg |= outputting_path << 9;
 
     //APATH
     reg |= active_path << 10;
@@ -62,7 +62,7 @@ uint32_t GraphicsInterface::read_STAT()
     if (FIFO.size())
         reg |= FIFO.size() << 24;
     else
-        reg |= ((active_path == 3 || (path_queue & (1<<3))) * 16) << 24;
+        reg |= (((active_path == 3 || (path_queue & (1<<3))) && outputting_path) * 16) << 24;
     //printf("[GIF] Read GIF_STAT: $%08X\n", reg);
     return reg;
 }
@@ -211,6 +211,7 @@ void GraphicsInterface::feed_GIF(uint128_t data)
     //printf("[GIF] Data: $%08X_%08X_%08X_%08X\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
     uint64_t data1 = data._u64[0];
     uint64_t data2 = data._u64[1];
+    outputting_path = true;
     if (!path[active_path].current_tag.data_left)
     {
         //Read new GIFtag
@@ -357,7 +358,7 @@ bool GraphicsInterface::interrupt_path3(int index)
     if (index == 3)
         return true;
 
-    if ((intermittent_mode && path_status[3] >= 2) || path3_masked(3)) //IMAGE MODE or IDLE
+    if ((intermittent_mode && (path_status[3] == 2 || path_status[3] == 3)) || path3_masked(3)) //IMAGE MODE or IDLE
     {
         //printf("[GIF] Interrupting PATH3 with PATH%d\n", index);
         arbitrate_paths();
@@ -391,15 +392,24 @@ void GraphicsInterface::request_PATH(int index, bool canInterruptPath3)
 void GraphicsInterface::deactivate_PATH(int index)
 {
     //printf("[GIF] PATH%d deactivated\n", index);
-
-    path_queue &= ~(1 << index);
-
-    //If for some reason the current path is still active (can happen with PATH3) kill it and check other paths
-    if (active_path == index)
+    if (path_status[index] == 4)
     {
-        active_path = 0;
-        clear_path_status(index);
-        arbitrate_paths();
+        path_queue &= ~(1 << index);
+
+        //If for some reason the current path is still active (can happen with PATH3) kill it and check other paths
+        if (active_path == index)
+        {
+            active_path = 0;
+            outputting_path = false;
+            clear_path_status(index);
+            arbitrate_paths();
+        }
+        //printf("Deactivated PATH%d Active path now %d Queued Path %x\n", index, active_path, path_queue);
+    }
+    else
+    {
+        //printf("[GIF] PATH%d deactivation failed, still in progress\n", index);
+        outputting_path = false;
     }
 
     //printf("Deactivated PATH%d Active path now %d Queued Path %x\n", index, active_path, path_queue);
@@ -472,6 +482,16 @@ void GraphicsInterface::send_PATH3(uint128_t data)
     }
 }
 
+void GraphicsInterface::send_PATH3_FIFO(uint128_t data)
+{
+    //printf("[GIF] Send PATH3 FIFO $%08X_%08X_%08X_%08X\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
+    if (FIFO.size() < 16)
+    {
+        //printf("Adding data to GIF FIFO (size: %d)\n", FIFO.size());
+        FIFO.push(data);
+    }
+}
+
 std::tuple<uint128_t, uint32_t>GraphicsInterface::read_GSFIFO()
 {
     return gs->request_gs_download();
@@ -488,6 +508,9 @@ void GraphicsInterface::flush_path3_fifo()
         if (!path3_dma_waiting || path3_masked(3))
         {
             //printf("GIF Deactivating PATH at FIFO flush end\n");
+            //Handle situation where FIFO just sends a NOP packet to the GIF unit (True Crime NY)
+            if (path_status[3] == 5)
+                path_status[3] = 4;
             deactivate_PATH(3);
         }
         else
@@ -517,7 +540,7 @@ void GraphicsInterface::dma_waiting(bool dma_waiting)
 
 void GraphicsInterface::intermittent_check()
 {
-    if (intermittent_mode && active_path == 3 && path_status[3] >= 2)
+    if (active_path == 3 && (intermittent_mode && (path_status[3] == 2 || path_status[3] == 3)))
     {
         arbitrate_paths();
     }

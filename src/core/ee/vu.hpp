@@ -160,6 +160,8 @@ class VectorUnit
         uint64_t finish_EFU_event;
         bool EFU_event_started;
 
+        int32_t float_to_int(float value);
+
         float update_mac_flags(float value, int index);
         void clear_mac_flags(int index);
 

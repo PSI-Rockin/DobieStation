@@ -37,6 +37,8 @@ void Settings::reset()
     rom_directories_to_add = QStringList();
     rom_directories_to_remove = QStringList();
 
+    scaling_factor = qsettings().value("ui_scaling_factor", 1).toInt();
+
     emit reload();
 }
 
@@ -67,6 +69,7 @@ void Settings::save()
     qsettings().setValue("ee_jit_enabled", ee_jit_enabled);
     qsettings().setValue("vu1_jit_enabled", vu1_jit_enabled);
     qsettings().setValue("screenshot_directory", screenshot_directory);
+    qsettings().setValue("ui_scaling_factor", scaling_factor);
     qsettings().sync();
     reset();
 }
