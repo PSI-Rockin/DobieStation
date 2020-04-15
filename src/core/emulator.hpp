@@ -121,6 +121,7 @@ class Emulator
         void load_BIOS(const uint8_t* BIOS);
         void load_ELF(const uint8_t* ELF, uint32_t size);
         bool load_CDVD(const char* name, CDVD_CONTAINER type);
+        std::string get_serial();
         void execute_ELF();
         uint32_t* get_framebuffer();
         void get_resolution(int& w, int& h);

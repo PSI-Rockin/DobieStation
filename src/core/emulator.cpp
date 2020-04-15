@@ -320,6 +320,8 @@ void Emulator::set_ee_mode(CPU_MODE mode)
             cpu.set_run_func(&EmotionEngine::run_jit);
             break;
     }
+
+    EE_JIT::reset(true);
 }
 
 void Emulator::set_vu1_mode(CPU_MODE mode)
@@ -334,6 +336,8 @@ void Emulator::set_vu1_mode(CPU_MODE mode)
             vu1_run_func = &VectorUnit::run_jit;
             break;
     }
+
+    VU_JIT::reset();
 }
 
 void Emulator::load_BIOS(const uint8_t *BIOS_file)
@@ -361,6 +365,11 @@ void Emulator::load_ELF(const uint8_t *ELF, uint32_t size)
 bool Emulator::load_CDVD(const char *name, CDVD_CONTAINER type)
 {
     return cdvd.load_disc(name, type);
+}
+
+std::string Emulator::get_serial()
+{
+    return cdvd.get_serial();
 }
 
 void Emulator::execute_ELF()
