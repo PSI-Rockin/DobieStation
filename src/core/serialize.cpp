@@ -571,7 +571,7 @@ void DMAC::save_state(ofstream &state)
     state.write((char*)&size, sizeof(size));
     if (size > 0)
     {
-        for (auto it = queued_channels.begin(); it != queued_channels.end(); )
+        for (auto it = queued_channels.begin(); it != queued_channels.end(); it++ )
         {
             index = (*it)->index;
             state.write((char*)&index, sizeof(index));
