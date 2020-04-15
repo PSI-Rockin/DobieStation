@@ -109,6 +109,11 @@ void VectorInterface::update(int cycles)
     //This allows us to process one quadword per bus cycle
     int run_cycles = cycles << 2;
    
+    if (vif_stalled & STALL_WAIT)
+    {
+        vif_stalled &= ~STALL_WAIT;
+    }
+
     if (vif_stalled & STALL_MSKPATH3)
     {
         gif->resume_path3();
@@ -234,6 +239,7 @@ bool VectorInterface::process_data_word(uint32_t value)
                 if (!gif->path_active(2, command == 0x50))
                 {
                     direct_wait = true;
+                    vif_stalled |= STALL_WAIT;
                     return false;
                 }
                 direct_wait = false;
