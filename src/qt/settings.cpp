@@ -30,6 +30,7 @@ void Settings::reset()
     rom_directories = qsettings().value("rom_directories", {}).toStringList();
     recent_roms = qsettings().value("recent_roms", {}).toStringList();
     ee_jit_enabled = qsettings().value("ee_jit_enabled", true).toBool();
+    vu0_jit_enabled = qsettings().value("vu0_jit_enabled", true).toBool();
     vu1_jit_enabled = qsettings().value("vu1_jit_enabled", true).toBool();
     last_used_directory = qsettings().value("last_used_dir", QDir::homePath()).toString();
     screenshot_directory = qsettings().value("screenshot_directory", QDir::homePath()).toString();
@@ -67,6 +68,7 @@ void Settings::save()
     qsettings().setValue("rom_directories", rom_directories);
     qsettings().setValue("bios_path", bios_path);
     qsettings().setValue("ee_jit_enabled", ee_jit_enabled);
+    qsettings().setValue("vu0_jit_enabled", vu0_jit_enabled);
     qsettings().setValue("vu1_jit_enabled", vu1_jit_enabled);
     qsettings().setValue("screenshot_directory", screenshot_directory);
     qsettings().setValue("ui_scaling_factor", scaling_factor);

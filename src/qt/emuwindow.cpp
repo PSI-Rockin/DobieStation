@@ -61,6 +61,7 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
     setCentralWidget(stack_widget);
 
     ee_mode = new QLabel;
+    vu0_mode = new QLabel;
     vu1_mode = new QLabel;
 
     frametime = new QLabel;
@@ -73,6 +74,7 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
     });
 
     statusBar()->addPermanentWidget(ee_mode);
+    statusBar()->addPermanentWidget(vu0_mode);
     statusBar()->addPermanentWidget(vu1_mode);
 
     create_menu();
@@ -772,6 +774,18 @@ void EmuWindow::update_status()
     }
 
     emu_thread.set_ee_mode(mode);
+
+    if (Settings::instance().vu0_jit_enabled)
+    {
+        mode = CPU_MODE::JIT;
+        vu0_mode->setText("VU0: JIT");
+    }
+    else
+    {
+        mode = CPU_MODE::INTERPRETER;
+        vu0_mode->setText("VU0: Interpreter");
+    }
+    emu_thread.set_vu0_mode(mode);
 
     if (Settings::instance().vu1_jit_enabled)
     {

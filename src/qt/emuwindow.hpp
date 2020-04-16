@@ -20,6 +20,7 @@ class EmuWindow : public QMainWindow
     private:
         EmuThread emu_thread;
         QLabel* ee_mode;
+        QLabel* vu0_mode;
         QLabel* vu1_mode;
         QLabel* frametime;
         QLabel* avg_framerate;
@@ -44,7 +45,6 @@ class EmuWindow : public QMainWindow
 
         SettingsWindow* settings_window = nullptr;
 
-        void set_vu1_mode();
         void update_status();
         void show_render_view();
         void show_default_view();

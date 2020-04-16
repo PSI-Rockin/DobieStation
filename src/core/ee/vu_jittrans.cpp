@@ -29,17 +29,24 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
 
     interpreter_pass(vu, instr_mem, prev_pc);
     flag_pass(vu);
-       
+
     cur_PC = vu.get_PC();
 
     if (prev_pc != 0xFFFFFFFF)
     {
         trans_branch_delay_slot = (vu.pipeline_state[1] >> 55) & 0x1;
         trans_ebit_delay_slot = (vu.pipeline_state[1] >> 56) & 0x1;
+        if (instr_info[prev_pc].branch_delay_slot)
+        {
+            IR::Instruction clear_delay(IR::Opcode::ClearIntDelay);
+            block.add_instr(clear_delay);
+        }
     }
-
-    IR::Instruction clear_delay(IR::Opcode::ClearIntDelay);
-    block.add_instr(clear_delay);
+    else
+    {
+        IR::Instruction clear_delay(IR::Opcode::ClearIntDelay);
+        block.add_instr(clear_delay);
+    }
 
     while (!block_end)
     {
@@ -52,7 +59,7 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
         {
             block_end = true;
 
-            if (trans_ebit_delay_slot)
+            if (instr_info[cur_PC].ebit_delay_slot)
                 trans_ebit_delay_slot = true;
 
             if (instr_info[cur_PC].branch_delay_slot)
@@ -61,7 +68,7 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
 
         uint32_t upper = *(uint32_t*)&instr_mem[cur_PC + 4];
         uint32_t lower = *(uint32_t*)&instr_mem[cur_PC];
-        
+
         cycles_this_block += instr_info[cur_PC].stall_amount + 1;
         cycles_since_xgkick_update += instr_info[cur_PC].stall_amount + 1;
 
@@ -115,7 +122,7 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
             block.add_instr(loi);
         }
         else
-        {         
+        {
             translate_lower(lower_instrs, lower, cur_PC);
 
             if (instr_info[cur_PC].swap_ops)
@@ -141,7 +148,7 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
                 restore_old.set_source(vf_reg);
                 restore_old.set_dest(0); //0 = OldVF
                 block.add_instr(restore_old);
-               
+
                 for (unsigned int i = 0; i < lower_instrs.size(); i++)
                 {
                     block.add_instr(lower_instrs[i]);
@@ -173,13 +180,16 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
             if (instr_info[cur_PC].is_branch)
                 Errors::print_warning("[VU_JIT] Warning! E-Bit On Branch!\n");
         }
-        
+
         if (instr_info[cur_PC].ebit_delay_slot || instr_info[cur_PC].tbit_end)
         {
             if (instr_info[cur_PC].tbit_end)
             {
                 IR::Instruction instr(IR::Opcode::StopTBit);
+                instr.set_return_addr(cur_PC);
                 instr.set_jump_dest(cur_PC + 8);
+                instr.set_source(instr_info[cur_PC].pipeline_state[0]);
+                instr.set_source2(instr_info[cur_PC].pipeline_state[1]);
                 block.add_instr(instr);
                 Errors::print_warning("[VU_JIT] Stopped by T-Bit\n");
             }
@@ -220,7 +230,7 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
             mac_update.set_source(4);
             block.add_instr(mac_update);
         }
-        else if(block_end)
+        else if (block_end)
         {
             //Save end PC for block, helps us remember where the next block jumped from
             IR::Instruction savepc;
@@ -235,16 +245,42 @@ IR::Block VU_JitTranslator::translate(VectorUnit &vu, uint8_t* instr_mem, uint32
             pipeline.set_source2(instr_info[cur_PC].pipeline_state[1]);
             block.add_instr(pipeline);
         }
+        else if (instr_info[cur_PC].is_mbit == true)
+        {
+            IR::Instruction mbit(IR::Opcode::CheckInterlockVU0);
+            block.add_instr(mbit);
+
+            IR::Instruction exit(IR::Opcode::EarlyExit);
+            exit.set_return_addr(cur_PC);
+            exit.set_source(instr_info[cur_PC].pipeline_state[0]);
+            exit.set_source2(instr_info[cur_PC].pipeline_state[1]);
+            block.add_instr(exit);
+
+            block_end = true;
+        }
+        else if (instr_info[cur_PC].early_exit == true)
+        {
+            IR::Instruction exit(IR::Opcode::EarlyExit);
+            exit.set_return_addr(cur_PC);
+            exit.set_source(instr_info[cur_PC].pipeline_state[0]);
+            exit.set_source2(instr_info[cur_PC].pipeline_state[1]);
+            block.add_instr(exit);
+
+            block_end = true;
+        }
 
         cur_PC += 8;
     }
 
-    IR::Instruction update;
-    update.op = IR::Opcode::UpdateXgkick;
-    update.set_source(cycles_since_xgkick_update);
-    block.add_instr(update);
-    block.set_cycle_count(cycles_this_block);
+    if (vu.get_id())
+    {
+        IR::Instruction update;
+        update.op = IR::Opcode::UpdateXgkick;
+        update.set_source(cycles_since_xgkick_update);
+        block.add_instr(update);
+    }
 
+    block.set_cycle_count(cycles_this_block);
     return block;
 }
 
@@ -420,7 +456,7 @@ void VU_JitTranslator::analyze_FMAC_stalls(VectorUnit &vu, uint16_t PC)
         {
             uint8_t write0_field = (stall_pipe[i] >> 10) & 0xF;
             uint8_t write1_field = (stall_pipe[i] >> 14) & 0xF;
-            
+
             for (int j = 0; j < 2; j++)
             {
                 if (vu.decoder.vf_read0[j])
@@ -474,7 +510,7 @@ void VU_JitTranslator::analyze_FMAC_stalls(VectorUnit &vu, uint16_t PC)
 
         if (stall_found)
         {
-           // printf("[VU_JIT]FMAC stall at $%08X for %d cycles!\n", PC, 3 - i);
+            // printf("[VU_JIT]FMAC stall at $%08X for %d cycles!\n", PC, 3 - i);
             instr_info[PC].stall_amount = 3 - i;
             break;
         }
@@ -603,10 +639,10 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
     bool ebit_delay_slot = false;
     int q_pipe_delay = 0;
     int p_pipe_delay = 0;
-    
+
     //Restore state from end of the block we jumped from
     if (prev_pc != 0xFFFFFFFF)
-    {        
+    {
         printf("[VU_JIT64] Restoring state from %x\n", prev_pc);
         stall_pipe[0] = vu.pipeline_state[0] & 0x7FFFFF;
         stall_pipe[1] = (vu.pipeline_state[0] >> 23) & 0x7FFFFF;
@@ -655,9 +691,11 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
         instr_info[PC].ebit_delay_slot = false;
         instr_info[PC].is_branch = false;
         instr_info[PC].is_ebit = false;
+        instr_info[PC].is_mbit = false;
         instr_info[PC].q_pipeline_instr = false;
         instr_info[PC].p_pipeline_instr = false;
         instr_info[PC].tbit_end = false;
+        instr_info[PC].early_exit = false;
 
         uint32_t upper = *(uint32_t*)&instr_mem[PC + 4];
         uint32_t lower = *(uint32_t*)&instr_mem[PC];
@@ -733,7 +771,7 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
         {
             q_pipe_delay -= instr_info[PC].stall_amount + 1;
 
-            if(q_pipe_delay <= 0)
+            if (q_pipe_delay <= 0)
             {
                 instr_info[PC].update_q_pipeline = true;
                 q_pipe_delay = 0;
@@ -751,7 +789,7 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
             }
         }
 
-        if(instr_info[PC].stall_amount)
+        if (instr_info[PC].stall_amount)
             update_pipeline(vu, instr_info[PC].stall_amount);
 
         if (upper & (1 << 30))
@@ -762,10 +800,21 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
 
         if (upper & (1 << 27))
         {
-            if (vu.read_fbrst() & (1 << (3 + (vu.get_id() * 8))))
+            block_end = true;
+            instr_info[PC].tbit_end = true;
+        }
+
+        if (!vu.get_id())
+        {
+            if (upper & (1 << 29))
             {
+                instr_info[PC].is_mbit = true;
                 block_end = true;
-                instr_info[PC].tbit_end = true;
+            }
+            else if (!block_end && !branch_delay_slot && !ebit_delay_slot && (PC - vu.get_PC()) > 256)
+            {
+                instr_info[PC].early_exit = true;
+                block_end = true;
             }
         }
 
@@ -941,7 +990,7 @@ void VU_JitTranslator::translate_upper(std::vector<IR::Instruction>& instrs, uin
 {
     uint8_t op = upper & 0x3F;
     IR::Instruction instr;
-    
+
     switch (op)
     {
         case 0x00:
@@ -1067,7 +1116,7 @@ void VU_JitTranslator::translate_upper(std::vector<IR::Instruction>& instrs, uin
             instr.op = IR::Opcode::VSubVectorByScalar;
             op_vector_by_scalar(instr, upper, VU_SpecialReg::I);
             break;
-       case 0x27:
+        case 0x27:
             //MSUBi
             instr.op = IR::Opcode::VMsubVectorByScalar;
             op_vector_by_scalar(instr, upper, VU_SpecialReg::I);
@@ -1138,7 +1187,7 @@ void VU_JitTranslator::upper_special(std::vector<IR::Instruction> &instrs, uint3
 {
     uint8_t op = (upper & 0x3) | ((upper >> 4) & 0x7C);
     IR::Instruction instr;
-    
+
     switch (op)
     {
         case 0x00:
@@ -1391,7 +1440,7 @@ void VU_JitTranslator::lower1(std::vector<IR::Instruction> &instrs, uint32_t low
                 instr.set_source((int64_t)imm);
             }
         }
-            break;
+        break;
         case 0x34:
             //IAND
             instr.op = IR::Opcode::AndInt;
@@ -1693,7 +1742,7 @@ void VU_JitTranslator::lower2(std::vector<IR::Instruction> &instrs, uint32_t low
             if (!instr.get_dest())
                 return;
         }
-            break;
+        break;
         case 0x01:
             //SQ
         {
@@ -1706,7 +1755,7 @@ void VU_JitTranslator::lower2(std::vector<IR::Instruction> &instrs, uint32_t low
             instr.set_base((lower >> 16) & 0xF);
             instr.set_source2((int64_t)imm);
         }
-            break;
+        break;
         case 0x04:
             //ILW
         {
@@ -1722,7 +1771,7 @@ void VU_JitTranslator::lower2(std::vector<IR::Instruction> &instrs, uint32_t low
             if (!instr.get_dest())
                 return;
         }
-            break;
+        break;
         case 0x05:
             //ISW
         {
@@ -1736,7 +1785,7 @@ void VU_JitTranslator::lower2(std::vector<IR::Instruction> &instrs, uint32_t low
             instr.set_base((lower >> 11) & 0xF);
             instr.set_source2((int64_t)imm);
         }
-            break;
+        break;
         case 0x08:
         case 0x09:
             //IADDIU/ISUBIU
@@ -1759,7 +1808,7 @@ void VU_JitTranslator::lower2(std::vector<IR::Instruction> &instrs, uint32_t low
             if (!instr.get_dest())
                 return;
         }
-            break;
+        break;
         case 0x11:
             //FCSET
             instr.op = IR::Opcode::SetClipFlags;
@@ -1778,7 +1827,7 @@ void VU_JitTranslator::lower2(std::vector<IR::Instruction> &instrs, uint32_t low
         case 0x16:
             //FSAND
         {
-            uint16_t imm = (((lower >> 21 ) & 0x1) << 11) | (lower & 0x7FF);
+            uint16_t imm = (((lower >> 21) & 0x1) << 11) | (lower & 0x7FF);
             instr.op = IR::Opcode::AndStatFlags;
             instr.set_dest((lower >> 16) & 0xF);
             instr.set_source(imm);
@@ -1786,7 +1835,7 @@ void VU_JitTranslator::lower2(std::vector<IR::Instruction> &instrs, uint32_t low
             if (!instr.get_dest())
                 return;
         }
-            break;
+        break;
         case 0x18:
             //FMEQ
             instr.op = IR::Opcode::VMacEq;
