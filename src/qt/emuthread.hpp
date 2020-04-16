@@ -47,6 +47,7 @@ class EmuThread : public QThread
 
         void set_skip_BIOS_hack(SKIP_HACK skip);
         void set_ee_mode(CPU_MODE mode);
+        void set_vu0_mode(CPU_MODE mode);
         void set_vu1_mode(CPU_MODE mode);
         void load_BIOS(const uint8_t* BIOS);
         void load_ELF(QString name, const uint8_t* ELF, uint64_t ELF_size);

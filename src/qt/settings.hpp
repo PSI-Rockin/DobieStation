@@ -30,6 +30,7 @@ class Settings final : public QObject
 
         int scaling_factor;
 
+        bool vu0_jit_enabled;
         bool vu1_jit_enabled;
         bool ee_jit_enabled;
 

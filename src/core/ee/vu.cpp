@@ -42,7 +42,7 @@ uint32_t VectorUnit::FBRST = 0;
 void VuIntBranchPipelineEntry::clear()
 {
     write_reg = 0;
-    old_value = {0};
+    old_value = { 0 };
     read_and_write = false;
 }
 
@@ -66,7 +66,7 @@ VU_I VuIntBranchPipeline::get_branch_condition_reg(uint8_t reg, VU_I current_val
                 if (reg == pipeline[i].write_reg)
                 {
                     current_value = pipeline[i].old_value;
-                    printf("[VU%d] Integer branch using register from %d instructions ago (PC = 0x%x), vi%d now 0x%x!\n", vu_id, i+1, PC, reg, current_value.s);
+                    printf("[VU%d] Integer branch using register from %d instructions ago (PC = 0x%x), vi%d now 0x%x!\n", vu_id, i + 1, PC, reg, current_value.s);
                 }
 
             }
@@ -86,8 +86,8 @@ void VuIntBranchPipeline::write_reg(uint8_t reg, VU_I old_value, bool also_read)
 void VuIntBranchPipeline::update()
 {
     pipeline[0] = next;
-    for(int i = 0; i < length - 1; i++)
-        pipeline[i+1] = pipeline[i];
+    for (int i = 0; i < length - 1; i++)
+        pipeline[i + 1] = pipeline[i];
 
     next.clear();
 }
@@ -95,7 +95,7 @@ void VuIntBranchPipeline::update()
 // flushes the old stuff out, doesn't affect the current instruction
 void VuIntBranchPipeline::flush()
 {
-    for(auto& p : pipeline)
+    for (auto& p : pipeline)
         p.clear();
 }
 
@@ -160,11 +160,11 @@ void VectorUnit::reset()
     status_pipe = 0;
     clip_flags = 0;
     PC = 0;
+    VU_JIT::reset(this);
     //cycle_count = 1; //Set to 1 to prevent spurious events from occurring during execution
-    if(!id)
+    if (!id)
         eecpu->set_cop2_last_cycle(eecpu->get_cycle_count());
     cycle_count = eecpu->get_cycle_count();
-    run_event = cycle_count;
     running = false;
     tbit_stop = false;
     vumem_is_dirty = true; //assume we don't know the contents on reset
@@ -183,7 +183,7 @@ void VectorUnit::reset()
     pipeline_state[1] = 0;
     XGKICK_cycles = 0;
 
-    for(int i = 0; i < 4; i++) {
+    for (int i = 0; i < 4; i++) {
         MAC_pipeline[i] = 0;
         CLIP_pipeline[i] = 0;
         ILW_pipeline[i] = 0;
@@ -201,7 +201,7 @@ void VectorUnit::reset()
         gpr[i].f[0] = 0.0;
         gpr[i].f[1] = 0.0;
         gpr[i].f[2] = 0.0;
-        gpr[i].f[3] = 0.0;        
+        gpr[i].f[3] = 0.0;
     }
 
     for (int i = 0; i < 16; i++)
@@ -224,7 +224,6 @@ bool VectorUnit::is_interlocked()
 {
     return e->check_cop2_interlock();
 }
-
 void VectorUnit::set_TOP_regs(uint16_t *TOP, uint16_t *ITOP)
 {
     VIF_TOP = TOP;
@@ -271,6 +270,8 @@ void VectorUnit::handle_cop2_stalls()
 //Propogate all pipeline updates instantly
 void VectorUnit::flush_pipes()
 {
+    decoder.reset();
+
     for (int i = 0; i < 4; i++)
         update_mac_pipeline();
 
@@ -382,15 +383,15 @@ void VectorUnit::run(int cycles)
 
         cycles_this_op = cycle_count - cycles_this_op;
         XGKICK_cycles += cycles_this_op;
-        cycles_to_run-= cycles_this_op;
+        cycles_to_run -= cycles_this_op;
 
         if (get_id() == 0)
         {
             if (is_interlocked())
             {
-                //Errors::die("VU%d Using M-Bit\n", vu.get_id());
+                //Errors::die("VU%d Using M-Bit\n", get_id());
                 //Break out from the VU0 loop to give COP2 time to catch the interlock
-                if(check_interlock())
+                if (check_interlock())
                     break;
             }
         }
@@ -501,8 +502,11 @@ void VectorUnit::correct_jit_pipeline(int cycles)
 
 void VectorUnit::update_XGKick()
 {
+    if (!id)
+        return;
+
     int stalled_cycles = 0;
-    int cycles_to_xgkick = cycle_count - run_event;
+    int cycles_to_xgkick = eecpu->get_cycle_count() - cycle_count;
     if ((!running || XGKICK_stall) && transferring_GIF && cycles_to_xgkick > 0)
     {
         XGKICK_cycles += cycles_to_xgkick;
@@ -535,26 +539,37 @@ void VectorUnit::update_XGKick()
     if (stalled_cycles > 0)
     {
         correct_jit_pipeline(stalled_cycles);
-        run_event += stalled_cycles;
+        cycle_count += stalled_cycles;
     }
 
     if (!running)
-        run_event = cycle_count;
+        cycle_count = eecpu->get_cycle_count();
 }
 
 void VectorUnit::run_jit(int cycles)
 {
     int runfor = 0;
-    if (cycles > 0)
+
+    if (running == true)
     {
-        cycle_count += cycles;
-
         update_XGKick();
+        uint64_t cpu_cycles = eecpu->get_cycle_count();
 
-        while (running && !XGKICK_stall && run_event < cycle_count)
+        if (!id && (int32_t)(cpu_cycles - cycle_count) > 0)
+            clear_interlock();
+
+        while (running && !XGKICK_stall && cycle_count < cpu_cycles)
         {
-            run_event += VU_JIT::run(this);
+            cycle_count += VU_JIT::run(this);
+
+            if (get_id() == 0 && is_interlocked())
+            {
+                //Break out from the VU0 loop to give COP2 time to catch the interlock
+                break;
+            }
         }
+        if (running == false && !id)
+            eecpu->set_cop2_last_cycle(cycle_count);
     }
     //If the program ends before all the cycles have passed, we need to update XGKick again
     update_XGKick();
@@ -827,10 +842,7 @@ void VectorUnit::disasm_micromem()
     uint32_t crc = crc_microprogram();
 
     //Set the current program crc to the VU JIT
-    if (get_id() == 1)
-    {
-        VU_JIT::set_current_program(crc);
-    }
+    VU_JIT::set_current_program(crc, this);
 
     clear_dirty();
 
@@ -922,12 +934,12 @@ void VectorUnit::start_program(uint32_t addr)
     //printf("[VU%d] CallMS Starting execution at $%08X! Cur PC %x\n", get_id(), new_addr, PC);
 
     //Enable this if disabling micromem disasm
-    if (get_id() == 1 && is_dirty())
+    if (is_dirty())
     {
-        VU_JIT::set_current_program(crc_microprogram());
+        VU_JIT::set_current_program(crc_microprogram(), this);
         clear_dirty();
     }
-    
+
     if (running == false)
     {
         running = true;
@@ -944,7 +956,6 @@ void VectorUnit::start_program(uint32_t addr)
         flush_pipes();
     }
     //disasm_micromem();
-    run_event = cycle_count;
 }
 
 void VectorUnit::end_execution()
@@ -1060,7 +1071,7 @@ void VectorUnit::update_mac_pipeline()
     ILW_pipeline[1] = ILW_pipeline[0];
     ILW_pipeline[0] = decoder.vi_write_from_load;
 
-    if(updatestatus)
+    if (updatestatus)
         update_status();
 
     if (status_pipe > 0)
@@ -1106,7 +1117,7 @@ void VectorUnit::start_EFU_unit(int latency)
 
 void VectorUnit::write_int(uint8_t reg, uint8_t read0, uint8_t read1)
 {
-    if(reg)
+    if (reg)
     {
         int_branch_pipeline.write_reg(reg, int_gpr[reg], (reg == read0) || (reg == read1));
     }
@@ -1115,7 +1126,7 @@ void VectorUnit::write_int(uint8_t reg, uint8_t read0, uint8_t read1)
 VU_I VectorUnit::read_int_for_branch_condition(uint8_t reg)
 {
     VU_I value = int_gpr[reg];
-    if(reg)
+    if (reg)
     {
         value = int_branch_pipeline.get_branch_condition_reg(reg, value, id, PC);
     }
@@ -1124,7 +1135,7 @@ VU_I VectorUnit::read_int_for_branch_condition(uint8_t reg)
 
 float VectorUnit::convert(uint32_t value)
 {
-    switch(value & 0x7f800000)
+    switch (value & 0x7f800000)
     {
         case 0x0:
             value &= 0x80000000;
@@ -1244,7 +1255,7 @@ void VectorUnit::branch(bool condition, int16_t imm, bool link, uint8_t linkreg)
         {
             second_branch_pending = true;
             secondbranch_PC = ((int16_t)PC + imm + 8) & mem_mask;
-            if(link)
+            if (link)
                 set_int(linkreg, (new_PC + 8) / 8);
         }
         else
@@ -1356,7 +1367,7 @@ void VectorUnit::addai(uint32_t instr)
         if (_field & (1 << (3 - i)))
         {
             float temp = convert(gpr[_fs_].u[i]) + op;
-            ACC.f[i] = update_mac_flags(temp, i);            
+            ACC.f[i] = update_mac_flags(temp, i);
             printf("(%d)%f ", i, ACC.f[i]);
         }
         else
@@ -1515,10 +1526,10 @@ void VectorUnit::div(uint32_t instr)
 float VectorUnit::calculate_atan(float t)
 {
     //In reality, VU1 uses an approximation to derive the result. This is shown here.
-    const static float atan_const[] = 
-    { 
-        0.999999344348907f, -0.333298563957214f, 
-        0.199465364217758f, -0.139085337519646f, 
+    const static float atan_const[] =
+    {
+        0.999999344348907f, -0.333298563957214f,
+        0.199465364217758f, -0.139085337519646f,
         0.096420042216778f, -0.055909886956215f,
         0.021861229091883f, -0.004054057877511f
     };
@@ -1826,7 +1837,7 @@ void VectorUnit::fcset(uint32_t instr)
 void VectorUnit::fmeq(uint32_t instr)
 {
     printf("[VU] FMEQ VI%02D VI%02D: $%04X\n", _it_, _is_, int_gpr[_is_].u);
-    if((*MAC_flags & 0xFFFF) == (int_gpr[_is_].u & 0xFFFF))
+    if ((*MAC_flags & 0xFFFF) == (int_gpr[_is_].u & 0xFFFF))
         set_int(_it_, 1);
     else
         set_int(_it_, 0);
@@ -1865,7 +1876,7 @@ void VectorUnit::fsset(uint32_t instr)
 
 void VectorUnit::fsand(uint32_t instr)
 {
-    uint16_t imm = (((instr >> 21 ) & 0x1) << 11) | (instr & 0x7FF);
+    uint16_t imm = (((instr >> 21) & 0x1) << 11) | (instr & 0x7FF);
     printf("[VU] FSAND VI%02D: $%08X\n", _it_, imm);
     set_int(_it_, status & imm);
 }
@@ -2925,7 +2936,7 @@ void VectorUnit::rsqrt(uint32_t instr)
                 new_Q_instance.u = 0;
 
             status_value |= 0x10;
-            
+
         }
         else
         {

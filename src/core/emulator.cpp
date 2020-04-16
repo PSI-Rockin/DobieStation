@@ -48,6 +48,7 @@ Emulator::Emulator() :
     gsdump_single_frame = false;
     ee_log.open("ee_log.txt", std::ios::out);
     set_ee_mode(CPU_MODE::DONT_CARE);
+    set_vu0_mode(CPU_MODE::DONT_CARE);
     set_vu1_mode(CPU_MODE::DONT_CARE);
 }
 
@@ -114,9 +115,9 @@ void Emulator::run()
         vif1.update(bus_cycles);
         gif.run(bus_cycles);
         
-        //VU's run at EE speed, however VU0 maintains its own speed
-        vu0.run(ee_cycles);
-        vu1_run_func(vu1, ee_cycles);
+        //VU's run at EE speed, however both maintain their own speed
+        vu0.run_func(vu0, ee_cycles);
+        vu1.run_func(vu1, ee_cycles);
 
         scheduler.process_events();
     }
@@ -170,7 +171,8 @@ void Emulator::reset()
     vif1.reset();
     vu0.reset();
     vu1.reset();
-    VU_JIT::reset();
+    VU_JIT::reset(&vu0);
+    VU_JIT::reset(&vu1);
     EE_JIT::reset(true);
 
     MCH_DRD = 0;
@@ -324,20 +326,36 @@ void Emulator::set_ee_mode(CPU_MODE mode)
     EE_JIT::reset(true);
 }
 
+void Emulator::set_vu0_mode(CPU_MODE mode)
+{
+    switch (mode)
+    {
+    case CPU_MODE::INTERPRETER:
+        vu0.run_func = &VectorUnit::run;
+        break;
+    case CPU_MODE::JIT:
+    default:
+        vu0.run_func = &VectorUnit::run_jit;
+        break;
+    }
+
+    VU_JIT::reset(&vu0);
+}
+
 void Emulator::set_vu1_mode(CPU_MODE mode)
 {
     switch (mode)
     {
         case CPU_MODE::INTERPRETER:
-            vu1_run_func = &VectorUnit::run;
+            vu1.run_func = &VectorUnit::run;
             break;
         case CPU_MODE::JIT:
         default:
-            vu1_run_func = &VectorUnit::run_jit;
+            vu1.run_func = &VectorUnit::run_jit;
             break;
     }
 
-    VU_JIT::reset();
+    VU_JIT::reset(&vu1);
 }
 
 void Emulator::load_BIOS(const uint8_t *BIOS_file)

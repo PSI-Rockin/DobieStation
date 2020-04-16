@@ -76,7 +76,6 @@ class Emulator
 
         std::ofstream ee_log;
         std::string ee_stdout;
-        std::function<void(VectorUnit&, int)> vu1_run_func;
 
         uint8_t* RDRAM;
         uint8_t* IOP_RAM;
@@ -117,6 +116,7 @@ class Emulator
         void fast_boot();
         void set_skip_BIOS_hack(SKIP_HACK type);
         void set_ee_mode(CPU_MODE mode);
+        void set_vu0_mode(CPU_MODE mode);
         void set_vu1_mode(CPU_MODE mode);
         void load_BIOS(const uint8_t* BIOS);
         void load_ELF(const uint8_t* ELF, uint32_t size);

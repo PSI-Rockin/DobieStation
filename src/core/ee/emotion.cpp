@@ -158,6 +158,11 @@ void EmotionEngine::run(int cycles)
         cycles_to_run += cycles;
         run_func(*this);
     }
+    else
+    {
+        cycle_count += cycles;
+        cycles_to_run = 0;
+    }
 
     if (cp0->int_enabled())
     {
@@ -1211,6 +1216,6 @@ void EmotionEngine::cop2_updatevu0()
     else if (!vu0->is_interlocked())
     {
         uint64_t current_count = (get_cycle_count() - cop2_last_cycle);
-        vu0->run(current_count);
+        vu0->run_func(*vu0, current_count);
     }
 }

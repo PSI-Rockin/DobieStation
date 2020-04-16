@@ -11,21 +11,21 @@
 namespace VU_JIT
 {
 
-VU_JIT64 jit64;
+    VU_JIT64 jit64[2];
 
-uint16_t run(VectorUnit *vu)
-{
-    return jit64.run(*vu);
-}
+    uint16_t run(VectorUnit *vu)
+    {
+        return jit64[vu->get_id()].run(*vu);
+    }
 
-void reset()
-{
-    jit64.reset();
-}
+    void reset(VectorUnit *vu)
+    {
+        jit64[vu->get_id()].reset();
+    }
 
-void set_current_program(uint32_t crc)
-{
-    jit64.set_current_program(crc);
-}
+    void set_current_program(uint32_t crc, VectorUnit *vu)
+    {
+        jit64[vu->get_id()].set_current_program(crc);
+    }
 
 };
