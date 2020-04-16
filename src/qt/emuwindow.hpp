@@ -19,9 +19,9 @@ class EmuWindow : public QMainWindow
     Q_OBJECT
     private:
         EmuThread emu_thread;
-        QString ee_mode;
-        QString vu0_mode;
-        QString vu1_mode;
+        QLabel* ee_mode;
+        QLabel* vu0_mode;
+        QLabel* vu1_mode;
         QLabel* frametime;
         QLabel* avg_framerate;
 

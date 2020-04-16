@@ -335,6 +335,7 @@ void Emulator::set_vu0_mode(CPU_MODE mode)
             vu0.run_func = &VectorUnit::run_jit;
             break;
     }
+    VU_JIT::reset(&vu0);
 }
 
 void Emulator::set_vu1_mode(CPU_MODE mode)
@@ -350,7 +351,7 @@ void Emulator::set_vu1_mode(CPU_MODE mode)
             break;
     }
 
-    VU_JIT::reset();
+    VU_JIT::reset(&vu1);
 }
 
 void Emulator::load_BIOS(const uint8_t *BIOS_file)
