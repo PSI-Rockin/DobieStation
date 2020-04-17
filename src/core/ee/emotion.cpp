@@ -105,6 +105,8 @@ void EmotionEngine::reset()
     branch_on = false;
     can_disassemble = false;
     wait_for_IRQ = false;
+    wait_for_VU0 = false;
+    wait_for_interlock = false;
     delay_slot = 0;
 
     //OsdConfigParam is used by certain games to detect language settings.
@@ -223,10 +225,38 @@ void EmotionEngine::run_jit()
         flush_jit_cache = false;
     }
 
-    //cycles_to_run and wait_for_VU0 are handled in the dispatcher, so no need to check for them here
-    EE_JIT::run(this);
+    if (wait_for_VU0)
+    {
+        if (vu0->is_running())
+        {
+            cycle_count += cycles_to_run;
+            cycles_to_run = 0;
+            return;
+        }
+        wait_for_VU0 = false;
+    }
 
-    branch_on = false;
+    if (wait_for_interlock)
+    {
+        if (check_interlock())
+        {
+            cycle_count += 1; //Only run for 1 cycle, gotta keep VU0 and EE timing tight
+            cycles_to_run = 0;
+            return;
+        }
+        wait_for_interlock = false;
+    }
+
+    //cycles_to_run and wait_for_VU0 are handled in the dispatcher, so no need to check for them here
+    while (cycles_to_run > 0 && !wait_for_VU0 && !wait_for_interlock && !wait_for_IRQ)
+    {
+        EE_JIT::run(this);
+        branch_on = false;
+    }
+
+    if(wait_for_IRQ || wait_for_VU0)
+        cycle_count += cycles_to_run;
+    cycles_to_run = 0;
 }
 
 void EmotionEngine::set_run_func(std::function<void (EmotionEngine &)> func)

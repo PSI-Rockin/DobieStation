@@ -236,7 +236,7 @@ EEJitBlockRecord* EE_JIT64::recompile_block(EmotionEngine& ee, IR::Block& block)
     if (likely_branch)
         handle_branch_likely(ee, block);
     else
-        cleanup_recompiler(ee, true, true, block.get_cycle_count());
+        cleanup_recompiler(ee, true, false, block.get_cycle_count());
 
     return jit_heap.insert_block(ee.get_PC(), &jit_block);
 }
@@ -1620,7 +1620,7 @@ void EE_JIT64::handle_branch_likely(EmotionEngine& ee, IR::Block& block)
     // execute delay slot and flush EE state back to EE
     for (IR::Instruction instr = block.get_next_instr(); instr.op != IR::Opcode::Null; instr = block.get_next_instr())
         emit_instruction(ee, instr);
-    cleanup_recompiler(ee, true, true, block.get_cycle_count());
+    cleanup_recompiler(ee, true, false, block.get_cycle_count());
 }
 
 void EE_JIT64::fallback_interpreter(EmotionEngine& ee, const IR::Instruction &instr)
@@ -1659,7 +1659,8 @@ void EE_JIT64::wait_for_vu0(EmotionEngine& ee, IR::Instruction& instr)
     // FIXME: This changes the return value of the JIT run function, but the return value of the JIT's run function is not used!
     // What do we want to do here?
     // emitter.MOV16_IMM_MEM(instr.get_cycle_count(), REG_64::R14, offsetof(EE_JIT64, cycle_count));
-
+    // Set wait for VU0 flag
+    emitter.MOV8_IMM_MEM(true, REG_64::R15, offsetof(EmotionEngine, wait_for_VU0));
     cleanup_recompiler(ee, false, false, instr.get_cycle_count());
 
     // Otherwise continue execution of block otherwise
@@ -1681,7 +1682,7 @@ void EE_JIT64::check_interlock_vu0(EmotionEngine& ee, IR::Instruction& instr)
     // FIXME: This changes the return value of the JIT run function, but the return value of the JIT's run function is not used!
     // What do we want to do here?
     // emitter.MOV16_IMM_MEM(instr.get_cycle_count(), REG_64::R14, offsetof(EE_JIT64, cycle_count));
-
+    emitter.MOV8_IMM_MEM(true, REG_64::R15, offsetof(EmotionEngine, wait_for_interlock));
     cleanup_recompiler(ee, false, false, instr.get_cycle_count());
 
     // Otherwise clear interlock then continue execution of block otherwise
