@@ -143,7 +143,6 @@ void VectorInterface::update(int cycles)
             {
                 if (!gif->path3_done())
                     return;
-                gif->deactivate_PATH(3);
             }
 
             flush_stall = false;
@@ -170,6 +169,8 @@ void VectorInterface::update(int cycles)
             }
             else if (vif_cmd_status == VIF_TRANSFER)
             {
+                if(id)
+                    gif->deactivate_PATH(2);
                 vif_cmd_status = VIF_WAIT;
             }
             return;
@@ -238,6 +239,7 @@ bool VectorInterface::process_data_word(uint32_t value)
             case 0x50:
             case 0x51:
                 //DIRECT/DIRECTHL
+                gif->request_PATH(2, command == 0x50);
                 if (!gif->path_active(2, command == 0x50))
                 {
                     direct_wait = true;
@@ -421,7 +423,6 @@ void VectorInterface::decode_cmd(uint32_t value)
             else
                 command_len += (imm * 4);
             printf("[VIF] DIRECT: %d\n", command_len);
-            gif->request_PATH(2, command == 0x50);
             break;
         default:
             if ((command & 0x60) == 0x60)
