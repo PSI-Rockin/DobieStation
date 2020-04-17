@@ -572,6 +572,7 @@ void VectorUnit::handle_XGKICK()
             //printf("[VU1] Activating stalled XGKICK transfer\n");
             XGKICK_stall = false;
             GIF_addr = stalled_GIF_addr;
+            gif->request_PATH(1, true);
         }
         else
         {

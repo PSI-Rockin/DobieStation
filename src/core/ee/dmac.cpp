@@ -410,8 +410,7 @@ int DMAC::process_GIF()
                     printf("[DMAC] GIF DMA Stall at %x STADR = %x\n", channels[GIF].address, STADR);
                     interrupt_stat.channel_stat[DMA_STALL] = true;
                     int1_check();
-                    if(gif->path3_done())
-                        gif->deactivate_PATH(3);
+                    gif->deactivate_PATH(3);
                     channels[GIF].has_dma_stalled = true;
                 }
 
@@ -420,7 +419,7 @@ int DMAC::process_GIF()
             }
             channels[GIF].has_dma_stalled = false;
         }
-        
+
         while (count < quads_to_transfer)
         {
             if (!mfifo_handler(GIF))
@@ -430,19 +429,13 @@ int DMAC::process_GIF()
                 return count;
             }
 
-            gif->request_PATH(3, false);
-            if (gif->path_active(3, false) && !gif->fifo_full() && !gif->fifo_draining())
+            
+            if (!gif->fifo_full() && !gif->fifo_draining())
             {
                 gif->dma_waiting(false);
                 gif->send_PATH3(fetch128(channels[GIF].address));
                 advance_source_dma(GIF);
                 count++;
-                if (gif->path3_done() && !channels[GIF].tag_end)
-                {
-                    gif->deactivate_PATH(3);
-                    arbitrate();
-                    return count;
-                }
             }
             else
             {
@@ -457,7 +450,6 @@ int DMAC::process_GIF()
         if (channels[GIF].tag_end)
         {
             transfer_end(GIF);
-            gif->deactivate_PATH(3);
         }
         else
         {
@@ -467,7 +459,6 @@ int DMAC::process_GIF()
                 gif->deactivate_PATH(3);
                 return count;
             }
-            else gif->request_PATH(3, false);
             handle_source_chain(GIF);
         }
     }
@@ -1402,12 +1393,10 @@ void DMAC::write32(uint32_t address, uint32_t value)
                 if (value & 0x100)
                 {
                     start_DMA(GIF);
-                    gif->request_PATH(3, false);
                 }
                 else
                 {
                     channels[GIF].started = false;
-                    gif->deactivate_PATH(3);
                 }
             }
             else
@@ -1417,7 +1406,6 @@ void DMAC::write32(uint32_t address, uint32_t value)
                 if (!channels[GIF].started)
                 {
                     deactivate_channel(GIF);
-                    gif->deactivate_PATH(3);
                 }
             }
             break;
