@@ -236,7 +236,7 @@ EEJitBlockRecord* EE_JIT64::recompile_block(EmotionEngine& ee, IR::Block& block)
     if (likely_branch)
         handle_branch_likely(ee, block);
     else
-        cleanup_recompiler(ee, true, false, block.get_cycle_count());
+        cleanup_recompiler(ee, true, true, block.get_cycle_count());
 
     return jit_heap.insert_block(ee.get_PC(), &jit_block);
 }
@@ -1612,7 +1612,7 @@ void EE_JIT64::handle_branch_likely(EmotionEngine& ee, IR::Block& block)
 
     // flush the EE state back to the EE and return, not executing the delay slot
     // Don't call the dispatcher here, causes Soul Calibur 2 characters to spin around the map for some reason
-    cleanup_recompiler(ee, false, false, block.get_cycle_count());
+    cleanup_recompiler(ee, false, true, block.get_cycle_count());
 
     // ...Which we do here.
     emitter.set_jump_dest(offset_addr);
@@ -1620,7 +1620,7 @@ void EE_JIT64::handle_branch_likely(EmotionEngine& ee, IR::Block& block)
     // execute delay slot and flush EE state back to EE
     for (IR::Instruction instr = block.get_next_instr(); instr.op != IR::Opcode::Null; instr = block.get_next_instr())
         emit_instruction(ee, instr);
-    cleanup_recompiler(ee, true, false, block.get_cycle_count());
+    cleanup_recompiler(ee, true, true, block.get_cycle_count());
 }
 
 void EE_JIT64::fallback_interpreter(EmotionEngine& ee, const IR::Instruction &instr)
