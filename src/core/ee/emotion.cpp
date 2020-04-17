@@ -247,16 +247,9 @@ void EmotionEngine::run_jit()
         wait_for_interlock = false;
     }
 
-    //cycles_to_run and wait_for_VU0 are handled in the dispatcher, so no need to check for them here
-    while (cycles_to_run > 0 && !wait_for_VU0 && !wait_for_interlock && !wait_for_IRQ)
-    {
-        EE_JIT::run(this);
-        branch_on = false;
-    }
-
-    if(wait_for_IRQ || wait_for_VU0)
-        cycle_count += cycles_to_run;
-    cycles_to_run = 0;
+    //cycles_to_run is handled in the dispatcher, so no need to check it here
+    EE_JIT::run(this);
+    branch_on = false;
 }
 
 void EmotionEngine::set_run_func(std::function<void (EmotionEngine &)> func)
