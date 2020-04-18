@@ -1440,7 +1440,7 @@ void VU_JitTranslator::lower1(std::vector<IR::Instruction> &instrs, uint32_t low
                 instr.set_source((int64_t)imm);
             }
         }
-        break;
+            break;
         case 0x34:
             //IAND
             instr.op = IR::Opcode::AndInt;
@@ -1742,7 +1742,7 @@ void VU_JitTranslator::lower2(std::vector<IR::Instruction> &instrs, uint32_t low
             if (!instr.get_dest())
                 return;
         }
-        break;
+            break;
         case 0x01:
             //SQ
         {
@@ -1755,7 +1755,7 @@ void VU_JitTranslator::lower2(std::vector<IR::Instruction> &instrs, uint32_t low
             instr.set_base((lower >> 16) & 0xF);
             instr.set_source2((int64_t)imm);
         }
-        break;
+            break;
         case 0x04:
             //ILW
         {
@@ -1771,7 +1771,7 @@ void VU_JitTranslator::lower2(std::vector<IR::Instruction> &instrs, uint32_t low
             if (!instr.get_dest())
                 return;
         }
-        break;
+            break;
         case 0x05:
             //ISW
         {
@@ -1785,7 +1785,7 @@ void VU_JitTranslator::lower2(std::vector<IR::Instruction> &instrs, uint32_t low
             instr.set_base((lower >> 11) & 0xF);
             instr.set_source2((int64_t)imm);
         }
-        break;
+            break;
         case 0x08:
         case 0x09:
             //IADDIU/ISUBIU
@@ -1808,7 +1808,7 @@ void VU_JitTranslator::lower2(std::vector<IR::Instruction> &instrs, uint32_t low
             if (!instr.get_dest())
                 return;
         }
-        break;
+            break;
         case 0x11:
             //FCSET
             instr.op = IR::Opcode::SetClipFlags;
@@ -1835,7 +1835,7 @@ void VU_JitTranslator::lower2(std::vector<IR::Instruction> &instrs, uint32_t low
             if (!instr.get_dest())
                 return;
         }
-        break;
+            break;
         case 0x18:
             //FMEQ
             instr.op = IR::Opcode::VMacEq;
