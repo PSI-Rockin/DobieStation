@@ -337,13 +337,13 @@ void Emulator::set_vu0_mode(CPU_MODE mode)
 {
     switch (mode)
     {
-    case CPU_MODE::INTERPRETER:
-        vu0.run_func = &VectorUnit::run;
-        break;
-    case CPU_MODE::JIT:
-    default:
-        vu0.run_func = &VectorUnit::run_jit;
-        break;
+        case CPU_MODE::INTERPRETER:
+            vu0.run_func = &VectorUnit::run;
+            break;
+        case CPU_MODE::JIT:
+        default:
+            vu0.run_func = &VectorUnit::run_jit;
+            break;
     }
 
     VU_JIT::reset(&vu0);
