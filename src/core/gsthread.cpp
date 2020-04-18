@@ -3532,11 +3532,14 @@ void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
             {
                 offset = (info.tex_width * info.tex_height) >> (i << 1);
                 info.tex_base += (offset * format_sizes[current_ctx->tex0.format]);
+                info.buffer_width = max(info.buffer_width >> 1, 1U);
             }
         }
         else
+        {
             info.tex_base = current_ctx->miptbl.texture_base[info.mipmap_level - 1];
-        info.buffer_width = current_ctx->miptbl.width[info.mipmap_level - 1];
+            info.buffer_width = current_ctx->miptbl.width[info.mipmap_level - 1];
+        }
         info.tex_width >>= info.mipmap_level;
         info.tex_height >>= info.mipmap_level;
 
