@@ -3532,7 +3532,7 @@ void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
             {
                 offset = (info.tex_width * info.tex_height) >> (i << 1);
                 info.tex_base += (offset * format_sizes[current_ctx->tex0.format]);
-                info.buffer_width = max(info.buffer_width >> 1, 1U);
+                info.buffer_width = max(info.buffer_width >> 1, 64U);
             }
         }
         else
