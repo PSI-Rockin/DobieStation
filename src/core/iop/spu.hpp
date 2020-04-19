@@ -39,7 +39,7 @@ struct Voice
 
 struct SPU_STAT
 {
-    bool DMA_finished;
+    bool DMA_ready;
     bool DMA_busy;
 };
 
