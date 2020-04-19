@@ -1067,4 +1067,29 @@ void VectorInterface::set_fbrst(uint32_t value)
         printf("[VIF] VIF%x Stopped\n", get_id());
         vif_stop = true;
     }
+    if (value & 0x1)
+    {
+        printf("[VIF] VIF%x Reset\n", get_id());
+        command = 0;
+        command_len = 0;
+        buffer_size = 0;
+        DBF = false;
+        MODE = 0;
+        MASK = 0;
+        CODE = 0;
+        direct_wait = false;
+        wait_for_VU = false;
+        wait_for_PATH3 = false;
+        vif_stalled = 0;
+        vif_ibit_detected = false;
+        vif_interrupt = false;
+        vif_stop = false;
+        mark_detected = false;
+        flush_stall = false;
+        stall_condition_active = false;
+        fifo_reverse = false;
+        vif_cmd_status = VIF_IDLE;
+        while (!FIFO.empty())
+            FIFO.pop();
+    }
 }
