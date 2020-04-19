@@ -84,7 +84,8 @@ QStringList GameListModel::get_directory_entries(QString path)
         "*.iso",
         "*.cso",
         "*.elf",
-        "*.gsd"
+        "*.gsd",
+        "*.bin"
     });
 
     QDirIterator it(path, file_types,
