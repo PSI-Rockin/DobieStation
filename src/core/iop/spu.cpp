@@ -23,7 +23,7 @@ void SPU::reset(uint8_t* RAM)
 {
     this->RAM = (uint16_t*)RAM;
     status.DMA_busy = false;
-    status.DMA_finished = false;
+    status.DMA_ready = false;
     transfer_addr = 0;
     current_addr = 0;
     core_att[id-1] = 0;
@@ -139,7 +139,7 @@ void SPU::gen_sample()
 
 void SPU::finish_DMA()
 {
-    status.DMA_finished = true;
+    status.DMA_ready = true;
     status.DMA_busy = false;
 }
 
@@ -149,12 +149,13 @@ void SPU::start_DMA(int size)
     {
         printf("ADMA started with size: $%08X\n", size);
     }
-    status.DMA_finished = false;
+    status.DMA_ready = false;
 }
 
 void SPU::pause_DMA()
 {
     status.DMA_busy = false;
+    status.DMA_ready = true;
 }
 
 uint32_t SPU::read_DMA()
@@ -170,7 +171,7 @@ uint32_t SPU::read_DMA()
     current_addr &= 0x000FFFFF;
 
     status.DMA_busy = true;
-    status.DMA_finished = false;
+    status.DMA_ready = false;
     return value;
 }
 
@@ -188,7 +189,7 @@ void SPU::write_DMA(uint32_t value)
     current_addr &= 0x000FFFFF;
 
     status.DMA_busy = true;
-    status.DMA_finished = false;
+    status.DMA_ready = false;
 }
 
 void SPU::write_ADMA(uint8_t *RAM)
@@ -200,7 +201,7 @@ void SPU::write_ADMA(uint8_t *RAM)
         clear_dma_req();
 
     status.DMA_busy = true;
-    status.DMA_finished = false;
+    status.DMA_ready = false;
 }
 
 void SPU::process_ADMA() 
@@ -347,7 +348,7 @@ uint16_t SPU::read16(uint32_t addr)
             //printf("[SPU%d] Read ENDXL: $%04X\n", id, reg);
             break;
         case 0x344:
-            reg |= status.DMA_finished << 7;
+            reg |= status.DMA_ready << 7;
             reg |= status.DMA_busy << 10;
             printf("[SPU%d] Read status: $%04X\n", id, reg);
             return reg;
@@ -502,7 +503,7 @@ void SPU::write16(uint32_t addr, uint16_t value)
             core_att[id - 1] = value & 0x7FFF;
             if (value & (1 << 15))
             {
-                status.DMA_finished = false;
+                status.DMA_ready = false;
                 status.DMA_busy = false;
                 clear_dma_req();
             }
