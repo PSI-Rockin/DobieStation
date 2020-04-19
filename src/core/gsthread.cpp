@@ -4041,7 +4041,7 @@ void GraphicsSynthesizerThread::reload_clut(const GSContext& context)
             return;
     }
 
-    int entries = (eight_bit) ? 256 : 16;
+    int entries = (eight_bit) ? (256 - offset) : 16;
 
     if (reload)
     {
