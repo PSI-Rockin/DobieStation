@@ -2012,12 +2012,24 @@ void GraphicsSynthesizerThread::render_point()
             u = (uint32_t) v1.uv.u;
             v = (uint32_t) v1.uv.v;
         }
+#ifdef GS_JIT
+        jit_tex_lookup_prologue(u, v, &tex_info);
+#else
         tex_lookup(u, v, tex_info);
+#endif
+#ifdef GS_JIT
+        jit_draw_pixel_prologue(v1.x, v1.y, v1.z, tex_info.tex_color);
+#else
         draw_pixel(v1.x, v1.y, v1.z, tex_info.tex_color);
+#endif
     }
     else
     {
+#ifdef GS_JIT
+        jit_draw_pixel_prologue(v1.x, v1.y, v1.z, tex_info.vtx_color);
+#else
         draw_pixel(v1.x, v1.y, v1.z, tex_info.vtx_color);
+#endif
     }
 }
 
@@ -2027,6 +2039,12 @@ void GraphicsSynthesizerThread::render_line()
     Vertex v1 = vtx_queue[1]; v1.to_relative(current_ctx->xyoffset);
     Vertex v2 = vtx_queue[0]; v2.to_relative(current_ctx->xyoffset);
 
+    int32_t min_y = ((std::max(std::min(v1.y, v2.y), (int32_t)current_ctx->scissor.y1) + 8) >> 4) << 4;
+    int32_t min_x = ((std::max(std::min(v1.x, v2.x), (int32_t)current_ctx->scissor.x1) + 8) >> 4) << 4;
+    int32_t max_y = ((std::min(std::max(v1.y, v2.y), (int32_t)current_ctx->scissor.y2 + 0x10) + 8) >> 4) << 4;
+    int32_t max_x = ((std::min(std::max(v1.x, v2.x), (int32_t)current_ctx->scissor.x2 + 0x10) + 8) >> 4) << 4;
+    
+
     //Transpose line if it's steep
     bool is_steep = false;
     if (abs(v2.x - v1.x) < abs(v2.y - v1.y))
@@ -2034,19 +2052,17 @@ void GraphicsSynthesizerThread::render_line()
         swap(v1.x, v1.y);
         swap(v2.x, v2.y);
         is_steep = true;
+        printf("Steep\n");
+        min_x = min_y;
+        max_x = max_y;
     }
 
-    //Make line left-to-right
+    //Make line left-to-right (or top to bottom in steep cases)
     if (v1.x > v2.x)
     {
         swap(v1, v2);
     }
-    
-    int32_t min_x = max(v1.x, (int32_t)current_ctx->scissor.x1);
-    //int32_t min_y = max(v1.y, (int32_t)current_ctx->scissor.y1);
-    int32_t max_x = min(v2.x, (int32_t)current_ctx->scissor.x2);
-    //int32_t max_y = min(v2.y, (int32_t)current_ctx->scissor.y2);
-    
+
     TexLookupInfo tex_info;
     tex_info.new_lookup = true;
     tex_info.vtx_color = vtx_queue[0].rgbaq;
@@ -2054,16 +2070,18 @@ void GraphicsSynthesizerThread::render_line()
     tex_info.buffer_width = current_ctx->tex0.width;
     tex_info.tex_width = current_ctx->tex0.tex_width;
     tex_info.tex_height = current_ctx->tex0.tex_height;
+    float q = vtx_queue[0].rgbaq.q;
 
     printf("Coords: (%d, %d, %d) (%d, %d, %d)\n", v1.x >> 4, v1.y >> 4, v1.z, v2.x >> 4, v2.y >> 4, v2.z);
 
     for (int32_t x = min_x; x < max_x; x += 0x10)
     {
+        int32_t y = interpolate(x, v1.y, v1.x, v2.y, v2.x);
         uint32_t z = interpolate(x, v1.z, v1.x, v2.z, v2.x);
-        float t = (x - v1.x)/(float)(v2.x - v1.x);
-        int32_t y = v1.y*(1.-t) + v2.y*t;        
-        //if (y < min_y || y > max_y)
-            //continue;
+
+        /*if (y < min_y || y > max_y)
+            continue;
+            */
         tex_info.fog = interpolate(x, v1.fog, v1.x, v2.fog, v2.x);
         if (current_PRMODE->gourand_shading)
         {
@@ -2079,23 +2097,52 @@ void GraphicsSynthesizerThread::render_line()
             if (!current_PRMODE->use_UV)
             {
                 float tex_s, tex_t;
-                tex_s = interpolate_f(x, v1.s, v1.x, v2.s, v2.x);
-                tex_t = interpolate_f(y, v1.t, v1.y, v2.t, v2.y);
+                if (is_steep)
+                {
+                    tex_s = interpolate_f(y, v1.s, v1.y, v2.s, v2.y);
+                    tex_t = interpolate_f(x, v1.t, v1.x, v2.t, v2.x);
+                }
+                else
+                {
+                    tex_s = interpolate_f(x, v1.s, v1.x, v2.s, v2.x);
+                    tex_t = interpolate_f(y, v1.t, v1.y, v2.t, v2.y);
+                }
+                tex_s /= q;
+                tex_t /= q;
                 u = (tex_s * tex_info.tex_width) * 16.0;
                 v = (tex_t * tex_info.tex_height) * 16.0;
             }
             else
             {
-                v = interpolate(y, v2.uv.v, v1.y, v2.uv.v, v2.y);
-                u = interpolate(x, v1.uv.u, v1.x, v2.uv.u, v2.x);
+                if (is_steep)
+                {
+                    u = interpolate(y, v1.uv.u, v1.y, v2.uv.u, v2.y);
+                    v = interpolate(x, v1.uv.v, v1.x, v2.uv.v, v2.x);
+                }
+                else
+                {
+                    v = interpolate(y, v1.uv.v, v1.y, v2.uv.v, v2.y);
+                    u = interpolate(x, v1.uv.u, v1.x, v2.uv.u, v2.x);
+                }
             }
+#ifdef GS_JIT
+            jit_tex_lookup_prologue(u, v, &tex_info);
+#else
             tex_lookup(u, v, tex_info);
+#endif
             tex_info.vtx_color = tex_info.tex_color;
         }
+#ifdef GS_JIT
+        if (is_steep)
+            jit_draw_pixel_prologue(y, x, z, tex_info.vtx_color);
+        else
+            jit_draw_pixel_prologue(x, y, z, tex_info.vtx_color);
+#else
         if (is_steep)
             draw_pixel(y, x, z, tex_info.vtx_color);
         else
             draw_pixel(x, y, z, tex_info.vtx_color);
+#endif
     }
 }
 
