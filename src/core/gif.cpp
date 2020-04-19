@@ -10,6 +10,7 @@ GraphicsInterface::GraphicsInterface(GraphicsSynthesizer *gs, DMAC* dmac) : gs(g
 
 void GraphicsInterface::reset()
 {
+    printf("GIF Reset\n");
     path[0].current_tag.data_left = 0;
     path[1].current_tag.data_left = 0;
     path[2].current_tag.data_left = 0;
