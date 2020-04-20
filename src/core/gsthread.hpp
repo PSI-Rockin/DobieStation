@@ -470,7 +470,7 @@ class GraphicsSynthesizerThread
         void tex_lookup_int(int16_t u, int16_t v, TexLookupInfo& info, bool forced_lookup = false);
         void clut_lookup(uint8_t entry, RGBAQ_REG& tex_color);
         void clut_CSM2_lookup(uint8_t entry, RGBAQ_REG& tex_color);
-        void reload_clut(const GSContext& context);
+        void reload_clut(GSContext& context);
         void update_draw_pixel_state();
         void update_tex_lookup_state();
         uint8_t* get_jitted_draw_pixel(uint64_t state);
