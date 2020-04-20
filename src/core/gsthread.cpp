@@ -4011,7 +4011,8 @@ void GraphicsSynthesizerThread::reload_clut(const GSContext& context)
 
     uint32_t clut_addr = context.tex0.CLUT_base;
     uint32_t cache_addr = context.tex0.CLUT_offset;
-    uint32_t offset = (context.tex0.CLUT_offset / 4);
+    uint32_t offset = context.tex0.use_CSM2 ? 0 : (context.tex0.CLUT_offset / (context.tex0.CLUT_format ? 2 : 4));
+    uint32_t start_addr = eight_bit ? offset : 0;
     bool reload = false;
 
     switch (context.tex0.CLUT_control)
@@ -4046,7 +4047,7 @@ void GraphicsSynthesizerThread::reload_clut(const GSContext& context)
     if (reload)
     {
         printf("[GS_t] Reloading CLUT cache!\n");
-        for (int i = offset; i < entries; i++)
+        for (int i = start_addr; i < (start_addr+entries); i++)
         {
             if (context.tex0.use_CSM2)
             {
