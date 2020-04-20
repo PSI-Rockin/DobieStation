@@ -3079,6 +3079,8 @@ uint128_t GraphicsSynthesizerThread::local_to_host()
             break;
         //PSMCT16
         //PSMCT16S
+        //PSMZ16
+        //PSMZ16S
         case 0x02:
         case 0x0A:
         case 0x32:
