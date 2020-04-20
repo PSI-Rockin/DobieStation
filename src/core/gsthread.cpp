@@ -4002,8 +4002,8 @@ void GraphicsSynthesizerThread::reload_clut(const GSContext& context)
 
     uint32_t clut_addr = context.tex0.CLUT_base;
     uint32_t cache_addr = context.tex0.CLUT_offset;
-    uint32_t offset = context.tex0.use_CSM2 ? 0 : (context.tex0.CLUT_offset / (context.tex0.CLUT_format ? 2 : 4));
-    uint32_t start_addr = eight_bit ? offset : 0;
+    uint32_t offset = (context.tex0.CLUT_offset / (context.tex0.CLUT_format ? 2 : 4));
+
     bool reload = false;
 
     switch (context.tex0.CLUT_control)
@@ -4038,12 +4038,12 @@ void GraphicsSynthesizerThread::reload_clut(const GSContext& context)
     if (reload)
     {
         printf("[GS_t] Reloading CLUT cache!\n");
-        for (int i = start_addr; i < (start_addr+entries); i++)
+        for (int i = offset; i < (offset+entries); i++)
         {
             if (context.tex0.use_CSM2)
             {
                 uint16_t value = read_PSMCT16_block(current_ctx->tex0.CLUT_base, TEXCLUT.width,
-                                                    TEXCLUT.x + i, TEXCLUT.y);
+                                                    TEXCLUT.x + (i & (entries-1)), TEXCLUT.y);
                 *(uint16_t*)&clut_cache[cache_addr] = value;
                 cache_addr = (cache_addr + 2) & 0x3FF;
             }
@@ -4062,7 +4062,7 @@ void GraphicsSynthesizerThread::reload_clut(const GSContext& context)
                 else
                 {
                     x = i & 0x7;
-                    y = i / 8;
+                    y = (i / 8) & 0x1; //Max Y for 4bit is 1
                 }
 
                 switch (context.tex0.CLUT_format)
