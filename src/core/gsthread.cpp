@@ -3082,6 +3082,7 @@ uint128_t GraphicsSynthesizerThread::local_to_host()
         case 0x02:
         case 0x0A:
         case 0x32:
+        case 0x3A:
             ppd = 4;
             break;
         //PSMCT8
@@ -3154,6 +3155,12 @@ uint128_t GraphicsSynthesizerThread::local_to_host()
                     break;
                 case 0x32:
                     data |= (uint64_t)(read_PSMCT16Z_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                        TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFF) << (i * 16);
+                    pixels_transferred++;
+                    TRXPOS.int_source_x++;
+                    break;
+                case 0x3A:
+                    data |= (uint64_t)(read_PSMCT16SZ_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
                         TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFF) << (i * 16);
                     pixels_transferred++;
                     TRXPOS.int_source_x++;
