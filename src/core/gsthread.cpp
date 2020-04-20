@@ -780,6 +780,9 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
 {
     if (reg.write64(addr, value))
         return;
+
+    bool context_change = false;
+
     addr &= 0x7F;
     switch (addr)
     {
@@ -796,10 +799,21 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             if (current_PRMODE == &PRIM)
             {
                 if (PRIM.use_context2)
+                {
+                    if (current_ctx != &context2)
+                        context_change = true;
                     current_ctx = &context2;
+                }
                 else
+                {
+                    if (current_ctx != &context1)
+                        context_change = true;
                     current_ctx = &context1;
+                }
             }
+
+            if(context_change)
+                reload_clut(*current_ctx);
             PRIM.fix_fragment_value = value & (1 << 10);
             num_vertices = 0;
             printf("[GS_t] PRIM: $%08X\n", value);
@@ -930,9 +944,20 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
                     current_PRMODE = &PRMODE;
 
                 if (current_PRMODE->use_context2)
+                {
+                    if (current_ctx != &context2)
+                        context_change = true;
                     current_ctx = &context2;
+                }
                 else
+                {
+                    if (current_ctx != &context1)
+                        context_change = true;
                     current_ctx = &context1;
+                }
+
+                if (context_change)
+                    reload_clut(*current_ctx);
             }
             update_draw_pixel_state();
             update_tex_lookup_state();
@@ -950,11 +975,23 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             if (current_PRMODE == &PRMODE)
             {
                 if (PRMODE.use_context2)
+                {
+                    if (current_ctx != &context2)
+                        context_change = true;
                     current_ctx = &context2;
+                }
                 else
+                {
+                    if (current_ctx != &context1)
+                        context_change = true;
                     current_ctx = &context1;
+                }
             }
             PRMODE.fix_fragment_value = value & (1 << 10);
+
+            if(context_change)
+                reload_clut(*current_ctx);
+
             update_draw_pixel_state();
             update_tex_lookup_state();
             break;
@@ -3979,8 +4016,11 @@ void GraphicsSynthesizerThread::clut_CSM2_lookup(uint8_t entry, RGBAQ_REG &tex_c
     tex_color.a = get_16bit_alpha(color);
 }
 
-void GraphicsSynthesizerThread::reload_clut(const GSContext& context)
+void GraphicsSynthesizerThread::reload_clut(GSContext& context)
 {
+    if (&context != current_ctx)
+        return;
+
     int eight_bit = false;
     switch (context.tex0.format)
     {
