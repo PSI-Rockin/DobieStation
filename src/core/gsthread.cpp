@@ -4032,12 +4032,12 @@ void GraphicsSynthesizerThread::reload_clut(const GSContext& context)
             return;
     }
 
-    int entries = (eight_bit) ? (256 - offset) : 16;
+    int entries = (eight_bit) ? 256 : 16;
 
     if (reload)
     {
         printf("[GS_t] Reloading CLUT cache!\n");
-        for (int i = offset; i < (offset + entries); i++)
+        for (int i = offset; i < entries; i++)
         {
             if (context.tex0.use_CSM2)
             {
