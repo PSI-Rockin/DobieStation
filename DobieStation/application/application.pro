@@ -55,6 +55,7 @@ SOURCES += ../../src/qt/main.cpp \
     ../../src/core/iop/sio2.cpp \
     ../../src/core/ee/vu.cpp \
     ../../src/core/ee/emotion_vu0.cpp \
+    ../../src/core/iop/firewire.cpp \
     ../../src/core/iop/gamepad.cpp \
     ../../src/core/iop/spu.cpp \
     ../../src/qt/emuthread.cpp \
@@ -134,6 +135,7 @@ HEADERS += \
     ../../src/core/iop/cdvd/cso_reader.hpp\
     ../../src/core/iop/sio2.hpp \
     ../../src/core/ee/vu.hpp \
+    ../../src/core/iop/firewire.hpp \
     ../../src/core/iop/gamepad.hpp \
     ../../src/core/iop/spu.hpp \
     ../../src/qt/emuthread.hpp \
