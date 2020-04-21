@@ -33,6 +33,7 @@ Emulator::Emulator() :
     sio2(&iop_intc, &pad, &memcard),
     spu(1, &iop_intc, &iop_dma),
     spu2(2, &iop_intc, &iop_dma),
+    firewire(&iop_intc, &iop_dma),
     vif0(nullptr, &vu0, &intc, &dmac, 0),
     vif1(&gif, &vu1, &intc, &dmac, 1),
     vu0(0, this, &intc, &cpu, &vu1),
@@ -156,6 +157,7 @@ void Emulator::reset()
     cpu.reset();
     cpu.init_tlb();
     dmac.reset(RDRAM, (uint8_t*)&scratchpad);
+    firewire.reset();
     fpu.reset();
     gs.reset();
     gif.reset();
@@ -1128,6 +1130,8 @@ uint32_t Emulator::iop_read32(uint32_t address)
         return *(uint32_t*)&IOP_RAM[address];
     if (address >= 0x1FC00000 && address < 0x20000000)
         return *(uint32_t*)&BIOS[address & 0x3FFFFF];
+    if (address >= 0x1F808400 && address < 0x1F808550)
+        return firewire.read32(address);
     switch (address)
     {
         case 0x1D000000:
@@ -1434,6 +1438,11 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
             sio2.set_send2(index >> 3, value);
         else
             sio2.set_send1(index >> 3, value);
+        return;
+    }
+    if (address >= 0x1F808400 && address < 0x1F808550)
+    {
+        firewire.write32(address, value);
         return;
     }
     switch (address)

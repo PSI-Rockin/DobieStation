@@ -155,6 +155,7 @@
     <ClCompile Include="$(CoreDir)ee\vu_jit64.cpp" />
     <ClCompile Include="$(CoreDir)ee\vu_jittrans.cpp" />
     <ClCompile Include="$(CoreDir)scheduler.cpp" />
+    <ClCompile Include="$(CoreDir)iop\firewire.cpp" />
   </ItemGroup>
 
   <!-- headers -->
@@ -224,6 +225,7 @@
     <ClInclude Include="$(CoreDir)ee\vu_jit64.hpp" />
     <ClInclude Include="$(CoreDir)ee\vu_jittrans.hpp" />
     <ClInclude Include="$(CoreDir)scheduler.hpp" />
+    <ClInclude Include="$(CoreDir)iop\firewire.hpp" />
   </ItemGroup>
 
   <!-- misc -->
