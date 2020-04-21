@@ -343,8 +343,7 @@ void SPU::gen_sample()
 
 uint32_t SPU::translate_reverb_offset(int offset)
 {
-    // As far as I understand these offsets are in bytes, since we address by shorts we need to divide
-    uint32_t addr = reverb.effect_pos + (offset/2);
+    uint32_t addr = reverb.effect_pos + offset;
     uint32_t size = reverb.effect_area_end - reverb.effect_area_start;
     addr = reverb.effect_area_start + (addr % size);
 
