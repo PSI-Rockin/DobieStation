@@ -1220,8 +1220,6 @@ uint32_t Emulator::iop_read32(uint32_t address)
             return sio2.get_RECV2();
         case 0x1F808274:
             return sio2.get_RECV3();
-        case 0x1F808410:
-            return 8; // Some sort of FireWire thing
         case 0xFFFE0130: //Cache control?
             return 0;
     }
