@@ -20,6 +20,7 @@
 #include "iop/memcard.hpp"
 #include "iop/sio2.hpp"
 #include "iop/spu.hpp"
+#include "iop/firewire.hpp"
 
 #include "int128.hpp"
 #include "gs.hpp"
@@ -53,6 +54,7 @@ class Emulator
         DMAC dmac;
         EmotionEngine cpu;
         EmotionTiming timers;
+        Firewire firewire;
         Gamepad pad;
         GraphicsSynthesizer gs;
         GraphicsInterface gif;
