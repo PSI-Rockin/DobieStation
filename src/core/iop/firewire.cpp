@@ -30,7 +30,7 @@ void Firewire::readPHY()
 {
     uint8_t reg = (PHYAccess >> 24) & 0xF;
 
-    PHYAccess &= ~0x80000000; //Cancel read request and clear data return
+    PHYAccess &= ~0x80000000; //Cancel read request
     PHYAccess |= PHYregisters[reg] | ((uint16_t)reg << 8);
 
     if (intr0mask & 0x40000000) //PhyRRx
