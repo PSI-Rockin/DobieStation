@@ -76,6 +76,27 @@ void GS_REGISTERS::write64_privileged(uint32_t addr, uint64_t value)
         case 0x0050:
             printf("[GS_r] Unimplemented privileged write64 to SYNCH2: $%08lX_%08lX\n", value >> 32, value & 0xFFFFFFFF);
             break;
+        case 0x0060:
+            SYNCV.vertical_front_porch = value & 0x3FF;
+            SYNCV.halflines_after_front_porch = (value >> 10) & 0x3FF;
+            SYNCV.vertical_back_porch = (value >> 20) & 0xFFF;
+            SYNCV.halflines_after_back_porch = (value >> 32) & 0x3FF;
+            SYNCV.halflines_with_video = (value >> 42) & 0x7FF;
+            SYNCV.halflines_with_vsync = (value >> 53) & 0x7FF;
+
+            printf("[GS_r] Unimplemented privileged write64 to SYNCV: $%08lX_%08lX\n"
+                "\tVertical Front Porch: %d\n"
+                "\tHalflines After Front Porch: %d\n"
+                "\tVertical Back Porch: %d\n"
+                "\tHalflines After Back Porch: %d\n"
+                "\tHalflines with Video: %d\n"
+                "\tHalflines with VSYNC: %d\n",
+                value >> 32, value & 0xFFFFFFFF,
+                SYNCV.vertical_front_porch, SYNCV.halflines_after_front_porch,
+                SYNCV.halflines_after_back_porch, SYNCV.halflines_after_back_porch,
+                SYNCV.halflines_with_video, SYNCV.halflines_with_vsync
+            );
+            break;
         case 0x0070:
             printf("[GS_r] Write DISPFB1: $%08lX_%08lX\n", value >> 32, value & 0xFFFFFFFF);
             DISPFB1.frame_base = (value & 0x1FF) * 2048;
@@ -322,6 +343,13 @@ void GS_REGISTERS::reset()
 
     SYNCH1.horizontal_back_porch = 0;
     SYNCH1.horizontal_front_porch = 0;
+
+    SYNCV.halflines_after_back_porch = 0;
+    SYNCV.halflines_after_front_porch = 0;
+    SYNCV.halflines_with_video = 0;
+    SYNCV.halflines_with_vsync = 0;
+    SYNCV.vertical_back_porch = 0;
+    SYNCV.vertical_front_porch = 0;
 
     DISPLAY1.x = 0;
     DISPLAY1.y = 0;
