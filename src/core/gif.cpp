@@ -56,7 +56,7 @@ uint32_t GraphicsInterface::read_STAT()
     reg |= active_path << 10;
 
     //DIR
-    reg |= gs->read32_privileged(0x1040) << 12;
+    reg |= gs->get_busdir() << 12;
 
     //Quadword count - since we don't always emulate the FIFO, hack it to 16 if there's a transfer happening
     if (FIFO.size())

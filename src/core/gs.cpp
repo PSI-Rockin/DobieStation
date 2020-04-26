@@ -256,6 +256,11 @@ void GraphicsSynthesizer::write32_privileged(uint32_t addr, uint32_t value)
     }
 }
 
+uint32_t GraphicsSynthesizer::get_busdir()
+{
+    return reg.BUSDIR;
+}
+
 uint32_t GraphicsSynthesizer::read32_privileged(uint32_t addr)
 {
     return reg.read32_privileged(addr);
