@@ -4,7 +4,7 @@
 
 void GS_REGISTERS::write64_privileged(uint32_t addr, uint64_t value)
 {
-    addr &= 0xFFFF;
+    addr &= 0x13F0;
     switch (addr)
     {
         case 0x0000:
@@ -116,7 +116,7 @@ void GS_REGISTERS::write64_privileged(uint32_t addr, uint64_t value)
 
 void GS_REGISTERS::write32_privileged(uint32_t addr, uint32_t value)
 {
-    addr &= 0xFFFF;
+    addr &= 0x13F0;
     switch (addr)
     {
         case 0x0070:
@@ -185,12 +185,18 @@ uint32_t GS_REGISTERS::read32_privileged(uint32_t addr)
 
 uint64_t GS_REGISTERS::read64_privileged(uint32_t addr)
 {
-    addr &= 0xFFFF;
+    addr &= 0x13F0;
+
+    uint64_t reg = 0;
     switch (addr)
     {
-        case 0x1000:
-        {
-            uint64_t reg = 0;
+        case 0x1080:
+            reg |= SIGLBLID.sig_id;
+            reg |= (uint64_t)SIGLBLID.lbl_id << 32UL;
+            break;
+        default:
+            // All write only addresses return CSR
+            // but for completeness CSR is 0x1000
             reg |= CSR.SIGNAL_generated << 0;
             reg |= CSR.FINISH_generated << 1;
             reg |= CSR.VBLANK_generated << 3;
@@ -201,22 +207,9 @@ uint64_t GS_REGISTERS::read64_privileged(uint32_t addr)
             //Shadow Hearts needs this.
             reg |= 0x1B << 16;
             reg |= 0x55 << 24;
-            //printf("[GS_r] read64_privileged!: CSR = %08X\n", reg);
-            return reg;
-        }
-        case 0x1040:
-            return BUSDIR;
-        case 0x1080:
-        {
-            uint64_t reg = 0;
-            reg |= SIGLBLID.sig_id;
-            reg |= (uint64_t)SIGLBLID.lbl_id << 32UL;
-            return reg;
-        }
-        default:
-            printf("[GS_r] Unrecognized privileged read64 from $%04X\n", addr);
-            return 0;
     }
+
+    return reg;
 }
 
 bool GS_REGISTERS::write64(uint32_t addr, uint64_t value)
