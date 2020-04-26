@@ -57,6 +57,20 @@ struct SMODE2_REG
     uint8_t power_mode;
 };
 
+// SYNCH1 (undocumented)
+//| Field | Pos   | Format      | Notes                  |
+//| ----- | ----- | ----------- | ---------------------- |
+//| HFP   | 10:0  | int 0:11:0? | Horizontal front porch |
+//| HBP   | 21:11 | int 0:11:0? | Horizontal back porch  |
+//| HSEQ  | 31:22 | int 0:10:0? |                        |
+//| HSVS  | 42:32 | int 0:11:0? |                        |
+//| HS    | ??    | int 0:??:0? |                        |
+struct SYNCH1_REG
+{
+    uint16_t horizontal_front_porch;
+    uint16_t horizontal_back_porch;
+};
+
 struct DISPFB
 {
     uint32_t frame_base;
@@ -115,6 +129,7 @@ struct GS_REGISTERS
     PMODE_REG PMODE;
     SMODE1_REG SMODE1;
     SMODE2_REG SMODE2;
+    SYNCH1_REG SYNCH1;
     DISPFB DISPFB1, DISPFB2;
     DISPLAY DISPLAY1, DISPLAY2;
     GS_IMR IMR;
