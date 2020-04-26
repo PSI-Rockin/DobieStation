@@ -136,6 +136,16 @@ void GS_REGISTERS::write64_privileged(uint32_t addr, uint64_t value)
             printf("MAGH: %d\n", DISPLAY2.magnify_x);
             printf("MAGV: %d\n", DISPLAY2.magnify_y);
             break;
+        case 0x00B0:
+            printf("[GS_r] Unimplemented privileged write64 to EXTBUF: $%08lX_%08lX\n", value >> 32, value & 0xFFFFFFFF);
+            break;
+        case 0x00C0:
+            printf("[GS_r] Unimplemented privileged write64 to EXTDATA: $%08lX_%08lX\n", value >> 32, value & 0xFFFFFFFF);
+            break;
+        case 0x00D0:
+            if (value & 0x1)
+                Errors::die("[GS_r] Feedback Write activated but not implemented");
+            break;
         case 0x00E0:
             printf("[GS_r] Write BGCOLOR: $%08lX\n", value);
             BGCOLOR = value & 0xFFFFFF;
