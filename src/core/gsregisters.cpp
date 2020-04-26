@@ -62,6 +62,17 @@ void GS_REGISTERS::write64_privileged(uint32_t addr, uint64_t value)
             else
                 deinterlace_method = BOB_DEINTERLACE;
             break;
+        case 0x0040:
+            SYNCH1.horizontal_front_porch = value & 0x7FF;
+            SYNCH1.horizontal_back_porch = (value >> 11) & 0x7FF;
+
+            printf("[GS_r] Unimplemented privileged write64 to SYNCH1: $%08lX_%08lX\n"
+                "\tHorizontal Front Porch: %d\n"
+                "\tHorizontal Back Porch: %d\n",
+                value >> 32, value & 0xFFFFFFFF,
+                SYNCH1.horizontal_front_porch, SYNCH1.horizontal_back_porch
+            );
+            break;
         case 0x0070:
             printf("[GS_r] Write DISPFB1: $%08lX_%08lX\n", value >> 32, value & 0xFFFFFFFF);
             DISPFB1.frame_base = (value & 0x1FF) * 2048;
@@ -305,6 +316,9 @@ void GS_REGISTERS::reset()
     SMODE2.power_mode = 0;
 
     deinterlace_method = BOB_DEINTERLACE;
+
+    SYNCH1.horizontal_back_porch = 0;
+    SYNCH1.horizontal_front_porch = 0;
 
     DISPLAY1.x = 0;
     DISPLAY1.y = 0;
