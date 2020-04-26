@@ -73,6 +73,9 @@ void GS_REGISTERS::write64_privileged(uint32_t addr, uint64_t value)
                 SYNCH1.horizontal_front_porch, SYNCH1.horizontal_back_porch
             );
             break;
+        case 0x0050:
+            printf("[GS_r] Unimplemented privileged write64 to SYNCH2: $%08lX_%08lX\n", value >> 32, value & 0xFFFFFFFF);
+            break;
         case 0x0070:
             printf("[GS_r] Write DISPFB1: $%08lX_%08lX\n", value >> 32, value & 0xFFFFFFFF);
             DISPFB1.frame_base = (value & 0x1FF) * 2048;

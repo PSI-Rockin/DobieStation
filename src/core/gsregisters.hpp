@@ -71,6 +71,16 @@ struct SYNCH1_REG
     uint16_t horizontal_back_porch;
 };
 
+// SYNCH2 (undocumented)
+//| Field | Pos  | Format      | Notes |
+//| ----- | ---- | ----------- | ----- |
+//| HF    | 10:0 | int 0:11:0? |       |
+//| HB    | 21:0 | int 0:11:0? |       |
+//struct SYNCH2_REG
+//{
+//
+//};
+
 struct DISPFB
 {
     uint32_t frame_base;
