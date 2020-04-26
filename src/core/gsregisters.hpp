@@ -16,7 +16,41 @@ struct PMODE_REG
     uint8_t ALP;
 };
 
-struct SMODE
+// SMODE1 (undocumented)
+//| Field  | Pos   | Format     | Notes                           |
+//| ------ | ----- | ---------- | ------------------------------- |
+//| RC     | 2:0   | int 0:3:0  | PLL Reference Divider           |
+//| LC     | 9:3   | int 0:7:0  | PLL Loop Divider                |
+//| T1248  | 11:10 | int 0:2:0  | PLL Output divider              |
+//| SLCK   | 12    | int 0:1:0  |                                 |
+//| CMOD   | 14:13 | int 0:2:0  | 0=VESA 1=RESERVED 2=NTSC, 3=PAL |
+//| EX     | 15    | int 0:1:0  |                                 |
+//| PRST   | 16    | int 0:1:0  | PLL Reset                       |
+//| SINT   | 17    | int 0:1:0  | PLL                             |
+//| XPCK   | 18    | int 0:1:0  |                                 |
+//| PCK2   | 20:19 | int 0:2:0? |                                 |
+//| SPML   | 24:21 | int 0:4:0? |                                 |
+//| GCONT  | 25    | int 0:1:0  | 0 = RGBYC, 1 = YCRCB            |
+//| PHS    | 26    | int 0:1:0  | HSync Output                    |
+//| PVS    | 27    | int 0:1:0  | VSync Output                    |
+//| PEHS   | 28    | int 0:1:0  |                                 |
+//| PEVS   | 29    | int 0:1:0  |                                 |
+//| CLKSEL | 31:30 | int 0:2:0? |                                 |
+//| NVCK   | 32    | int 0:1:0  |                                 |
+//| SLCK2  | 33    | int 0:1:0  |                                 |
+//| VCKSEL | 35:34 | int 0:2:0? |                                 |
+//| VHP    | 36    | int 0:1:0  |                                 |
+struct SMODE1_REG
+{
+    bool PLL_reset;
+    bool YCBCR_color;
+    uint8_t PLL_reference_divider;
+    uint8_t PLL_loop_divider;
+    uint8_t PLL_output_divider;
+    uint8_t color_system;
+};
+
+struct SMODE2_REG
 {
     bool interlaced;
     bool frame_mode;
@@ -79,7 +113,8 @@ struct GS_REGISTERS
 {
     //Privileged registers
     PMODE_REG PMODE;
-    SMODE SMODE2;
+    SMODE1_REG SMODE1;
+    SMODE2_REG SMODE2;
     DISPFB DISPFB1, DISPFB2;
     DISPLAY DISPLAY1, DISPLAY2;
     GS_IMR IMR;

@@ -17,6 +17,41 @@ void GS_REGISTERS::write64_privileged(uint32_t addr, uint64_t value)
             PMODE.blend_with_bg = value & (1 << 7);
             PMODE.ALP = (value >> 8) & 0xFF;
             break;
+        case 0x0010:
+            SMODE1.PLL_reference_divider = value & 0x7;
+            SMODE1.PLL_loop_divider = (value >> 3) & 0x7F;
+            SMODE1.PLL_output_divider = (value >> 10) & 0x3;
+            SMODE1.color_system = (value >> 13) & 0x3;
+            SMODE1.PLL_reset = (value >> 16) & 0x1;
+            SMODE1.YCBCR_color = (value >> 25) & 0x1;
+            {
+                uint8_t SPML = (value >> 21) & 0xF;
+
+                // no divide by zero
+                if (SPML && SMODE1.PLL_loop_divider)
+                {
+                    float VCK = (13500000 * SMODE1.PLL_loop_divider) / ((SMODE1.PLL_output_divider + 1) * SMODE1.PLL_reference_divider);
+                    float PCK = VCK / SPML;
+
+                    printf("[GS_r] Unimplemented privileged write64 to SMODE1: $%08lX_%08lX\n"
+                        "\tPLL Reference Divider: %d\n"
+                        "\tPLL Loop Divider: %d\n"
+                        "\tPLL Output Divider: %d\n"
+                        "\tPLL Reset: %d\n"
+                        "\tColor System: %d\n"
+                        "\tYCBCR enabled: %d\n"
+                        "\tSPML: %d\n"
+                        "\tCalculated VCK: %4.6lf MHz\n"
+                        "\tCalculated PCK: %4.6lf MHz\n",
+                        value >> 32, value & 0xFFFFFFFF,
+                        SMODE1.PLL_reference_divider, SMODE1.PLL_loop_divider,
+                        SMODE1.PLL_output_divider, SMODE1.PLL_reset,
+                        SMODE1.color_system, SMODE1.YCBCR_color,
+                        SPML, VCK / 1000000, PCK / 1000000
+                    );
+                }
+            }
+            break;
         case 0x0020:
             printf("[GS_r] Write SMODE2: $%08lX_%08lX\n", value >> 32, value & 0xFFFFFFFF);
             SMODE2.interlaced = value & 0x1;
@@ -258,6 +293,19 @@ bool GS_REGISTERS::write64(uint32_t addr, uint64_t value)
 
 void GS_REGISTERS::reset()
 {
+    SMODE1.color_system = 0;
+    SMODE1.PLL_loop_divider = 0;
+    SMODE1.PLL_output_divider = 0;
+    SMODE1.PLL_reference_divider = 0;
+    SMODE1.PLL_reset = false;
+    SMODE1.YCBCR_color = false;
+
+    SMODE2.frame_mode = false;
+    SMODE2.interlaced = false;
+    SMODE2.power_mode = 0;
+
+    deinterlace_method = BOB_DEINTERLACE;
+
     DISPLAY1.x = 0;
     DISPLAY1.y = 0;
     DISPLAY1.width = 0;
