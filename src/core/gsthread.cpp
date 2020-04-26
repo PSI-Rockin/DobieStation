@@ -460,7 +460,6 @@ void GraphicsSynthesizerThread::reset()
     pixels_transferred = 0;
     num_vertices = 0;
     frame_count = 0;
-    reg.deinterlace_method = BOB_DEINTERLACE;
 
     COLCLAMP = true;
 
