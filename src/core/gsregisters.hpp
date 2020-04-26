@@ -81,6 +81,25 @@ struct SYNCH1_REG
 //
 //};
 
+// SYNCV
+//| Field | Pos   | Format      | Notes                                                             |
+//| ----- | ----- | ----------- | ----------------------------------------------------------------- |
+//| VFP   | 9:0   | int 0:10:0? | Vertical front porch, halflines with color burst after video data |
+//| VFPE  | 19:10 | int 0:10:0? | Halflines without color burst after VFP                           |
+//| VBP   | 31:20 | int 0:12:0? | Vertical back porch, halflines with color burst after VFPE        |
+//| VBPE  | 41:32 | int 0:10:0? | Halflines without color burst after VBP                           |
+//| VDP   | 43:33 | int 0:11:0? | Halflines with video data                                         |
+//| VS    | 54:44 | int 0:11:0? | Halflines with VSYNC                                              |
+struct SYNCV_REG
+{
+    uint16_t vertical_front_porch;
+    uint16_t vertical_back_porch;
+    uint16_t halflines_after_front_porch;
+    uint16_t halflines_after_back_porch;
+    uint16_t halflines_with_video;
+    uint16_t halflines_with_vsync;
+};
+
 struct DISPFB
 {
     uint32_t frame_base;
@@ -140,6 +159,7 @@ struct GS_REGISTERS
     SMODE1_REG SMODE1;
     SMODE2_REG SMODE2;
     SYNCH1_REG SYNCH1;
+    SYNCV_REG SYNCV;
     DISPFB DISPFB1, DISPFB2;
     DISPLAY DISPLAY1, DISPLAY2;
     GS_IMR IMR;
