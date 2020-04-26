@@ -62,6 +62,9 @@ void GS_REGISTERS::write64_privileged(uint32_t addr, uint64_t value)
             else
                 deinterlace_method = BOB_DEINTERLACE;
             break;
+        case 0x0030: // this register is undocumented, it's fields are unknown
+            printf("[GS_r] Unimplemented privileged write64 to SRFSH: $%08lX_%08lX\n", value >> 32, value & 0xFFFFFFFF);
+            break;
         case 0x0040:
             SYNCH1.horizontal_front_porch = value & 0x7FF;
             SYNCH1.horizontal_back_porch = (value >> 11) & 0x7FF;
