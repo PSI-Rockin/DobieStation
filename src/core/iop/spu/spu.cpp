@@ -17,7 +17,8 @@
  * ADMA is a way of streaming raw PCM to the SPUs.
  * 0x200 (512) bytes are transferred at a 48000 Hz rate
  * Bits 0 and 1 of the ADMA control register determine if the core is transferring data via AutoDMA.
- * Bit 2 seems to be some sort of finish flag?
+ * ---- (Bit 2 seems to be some sort of finish flag?)
+ * unlikely as libsd sets this when doing block reads
  */
 
 #define SPU_CORE0_MEMIN 0x2000
@@ -1121,6 +1122,8 @@ void SPU::write16(uint32_t addr, uint16_t value)
             break;
         case 0x1B0:
             printf("[SPU%d] Write ADMA: $%04X\n", id, value);
+            if (value & 0x4)
+                Errors::die("[SPU%d] ADMA bit 2 set, value %04x\n", id, value);
             autodma_ctrl = value;
             if (running_ADMA())
                 set_dma_req();
