@@ -53,6 +53,7 @@ void SPU::reset(uint8_t* RAM)
     reverb = {};
     effect_enable = 0;
     out_pos = 0;
+    output_enable = 1;
 
 
     std::ostringstream fname;
@@ -321,8 +322,11 @@ void SPU::gen_sample()
     run_reverb(core_wet);
 
     stereo_sample core_output = {};
-    core_output.mix(core_dry, true, true);
-    core_output.mix(reverb.Eout, true, true);
+    if (output_enable)
+    {
+        core_output.mix(core_dry, true, true);
+        core_output.mix(reverb.Eout, true, true);
+    }
 
     if (id == 1)
     {
@@ -1045,6 +1049,7 @@ void SPU::write16(uint32_t addr, uint16_t value)
             {
                 printf("[SPU%d] Reverb enable changed to %d\n", id, (value >> 7) & 1);
             }
+            output_enable = (value >> 14) & 1;
             noise.stepsize = 4 + ((value >> 8) & 0x3);
             noise.shift = (value >> 10) & 0xF;
             effect_enable = (value >> 7) & 1;

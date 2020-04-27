@@ -4,7 +4,7 @@
 
 #define VER_MAJOR 0
 #define VER_MINOR 0
-#define VER_REV 44
+#define VER_REV 45
 
 using namespace std;
 
@@ -1006,6 +1006,7 @@ void SPU::load_state(ifstream &state)
     state.read((char*)&key_off, sizeof(key_off));
     state.read((char*)&key_on, sizeof(key_on));
     state.read((char*)&noise, sizeof(noise));
+    state.read((char*)&output_enable, sizeof(output_enable));
 
     state.read((char*)&reverb, sizeof(reverb));
     state.read((char*)&effect_enable, sizeof(effect_enable));
@@ -1044,6 +1045,7 @@ void SPU::save_state(ofstream &state)
     state.write((char*)&key_off, sizeof(key_off));
     state.write((char*)&key_on, sizeof(key_on));
     state.write((char*)&noise, sizeof(noise));
+    state.write((char*)&output_enable, sizeof(output_enable));
 
     state.write((char*)&reverb, sizeof(reverb));
     state.write((char*)&effect_enable, sizeof(effect_enable));

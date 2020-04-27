@@ -233,6 +233,8 @@ class SPU
         uint32_t transfer_addr;
         uint32_t current_addr;
 
+        bool output_enable;
+
         bool effect_enable;
 
         // ADMA volume
