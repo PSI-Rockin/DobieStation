@@ -4,7 +4,7 @@
 
 #define VER_MAJOR 0
 #define VER_MINOR 0
-#define VER_REV 45
+#define VER_REV 46
 
 using namespace std;
 
@@ -1000,7 +1000,7 @@ void SPU::load_state(ifstream &state)
     state.read((char*)&transfer_addr, sizeof(transfer_addr));
     state.read((char*)&current_addr, sizeof(current_addr));
     state.read((char*)&autodma_ctrl, sizeof(autodma_ctrl));
-    state.read((char*)&input_pos, sizeof(input_pos));
+    state.read((char*)&buffer_pos, sizeof(buffer_pos));
     state.read((char*)&IRQA, sizeof(IRQA));
     state.read((char*)&ENDX, sizeof(ENDX));
     state.read((char*)&key_off, sizeof(key_off));
@@ -1013,8 +1013,7 @@ void SPU::load_state(ifstream &state)
     state.read((char*)&effect_volume_l, sizeof(effect_volume_l));
     state.read((char*)&effect_volume_r, sizeof(effect_volume_r));
 
-    state.read((char*)&ADMA_buf, sizeof(ADMA_buf));
-    state.read((char*)&buf_filled, sizeof(buf_filled));
+    state.read((char*)&current_buffer, sizeof(current_buffer));
     state.read((char*)&ADMA_progress, sizeof(ADMA_progress));
     state.read((char*)&data_input_volume_l, sizeof(data_input_volume_l));
     state.read((char*)&data_input_volume_r, sizeof(data_input_volume_r));
@@ -1039,7 +1038,7 @@ void SPU::save_state(ofstream &state)
     state.write((char*)&transfer_addr, sizeof(transfer_addr));
     state.write((char*)&current_addr, sizeof(current_addr));
     state.write((char*)&autodma_ctrl, sizeof(autodma_ctrl));
-    state.write((char*)&input_pos, sizeof(input_pos));
+    state.write((char*)&buffer_pos, sizeof(buffer_pos));
     state.write((char*)&IRQA, sizeof(IRQA));
     state.write((char*)&ENDX, sizeof(ENDX));
     state.write((char*)&key_off, sizeof(key_off));
@@ -1052,8 +1051,7 @@ void SPU::save_state(ofstream &state)
     state.write((char*)&effect_volume_l, sizeof(effect_volume_l));
     state.write((char*)&effect_volume_r, sizeof(effect_volume_r));
 
-    state.write((char*)&ADMA_buf, sizeof(ADMA_buf));
-    state.write((char*)&buf_filled, sizeof(buf_filled));
+    state.write((char*)&current_buffer, sizeof(current_buffer));
     state.write((char*)&ADMA_progress, sizeof(ADMA_progress));
     state.write((char*)&data_input_volume_l, sizeof(data_input_volume_l));
     state.write((char*)&data_input_volume_r, sizeof(data_input_volume_r));

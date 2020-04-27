@@ -37,7 +37,6 @@ struct Voice
     uint32_t start_addr;
     uint32_t current_addr;
     uint32_t loop_addr;
-    uint32_t crest_out_pos;
     bool loop_addr_specified;
 
     voice_mix mix_state;
@@ -247,7 +246,6 @@ class SPU
         // core0 to core1 input, only valid on 1
         int16_t core_volume_l;
         int16_t core_volume_r;
-        uint32_t out_pos;
 
         core_mix mix_state;
 
@@ -259,10 +257,9 @@ class SPU
         uint32_t voice_noise_gen;
         //ADMA bullshit
         uint16_t autodma_ctrl;
-        int ADMA_buf;
-        bool buf_filled;
-        int ADMA_progress;
-        int input_pos;
+        uint8_t current_buffer;
+        uint32_t ADMA_progress;
+        uint32_t buffer_pos;
 
         static uint32_t IRQA[2];
         uint32_t ENDX;

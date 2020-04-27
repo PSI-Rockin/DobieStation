@@ -43,17 +43,15 @@ void SPU::reset(uint8_t* RAM)
     current_addr = 0;
     core_att[id-1] = 0;
     autodma_ctrl = 0x0;
-    input_pos = 0;
+    buffer_pos = 0;
     key_on = 0;
     key_off = 0xFFFFFF;
     spdif_irq = 0;
-    ADMA_buf = 0;
-    buf_filled = false;
+    current_buffer = 0;
     data_input_volume_l = 0x7FFF;
     data_input_volume_r = 0x7FFF;
     reverb = {};
     effect_enable = 0;
-    out_pos = 0;
     output_enable = 1;
 
 
@@ -289,30 +287,13 @@ void SPU::gen_sample()
 
         core_dry.mix(memin, mix_state.memin_dry_l, mix_state.memin_dry_r);
         core_wet.mix(memin, mix_state.memin_wet_l, mix_state.memin_wet_r);
-
-        input_pos++;
-
-        // We need to fill the next buffer
-        if (!buf_filled)
-        {
-            set_dma_req();
-            autodma_ctrl |= 0x4;
-        }
-
-        // Switch buffer
-        if (input_pos == 0x100)
-        {
-            input_pos &= 0xFF;
-            ADMA_buf = 1 - ADMA_buf;
-            buf_filled = false;
-        }
-
     }
+
     if (id == 2)
     {
         stereo_sample sin;
-        sin.left  = mulvol(static_cast<int16_t>(read(SINL + out_pos)), core_volume_l);
-        sin.right = mulvol(static_cast<int16_t>(read(SINR + out_pos)), core_volume_r);
+        sin.left  = mulvol(static_cast<int16_t>(read(SINL + (current_buffer*0x100) + buffer_pos)), core_volume_l);
+        sin.right = mulvol(static_cast<int16_t>(read(SINR + (current_buffer*0x100) + buffer_pos)), core_volume_r);
         core_dry.mix(sin, mix_state.sin_dry_l, mix_state.sin_dry_r);
         core_wet.mix(sin, mix_state.sin_wet_l, mix_state.sin_wet_r);
     }
@@ -340,10 +321,17 @@ void SPU::gen_sample()
 
     noise.step();
 
-    // Our position in the memout output buffers
-    out_pos++;
-    if (out_pos > 0x1FF)
-        out_pos = 0;
+    // Output/input buffer management
+    buffer_pos++;
+    if (buffer_pos == 0x100)
+    {
+        buffer_pos &= 0xFF;
+        current_buffer = 1 - current_buffer;
+
+        // buffer switch! request more adma data if needed
+        if (running_ADMA())
+            set_dma_req();
+    }
 }
 
 uint32_t SPU::translate_reverb_offset(int offset)
@@ -535,7 +523,7 @@ void SPU::write_DMA(uint32_t value)
 
 void SPU::write_ADMA(uint8_t *source_RAM)
 {
-    int next_buffer = 1 - ADMA_buf;
+    int next_buffer = 1 - current_buffer;
 
     //if (ADMA_progress == 0)
     //    printf("[SPU%d] Started recieving ADMA for buffer %d\n", id, next_buffer);
@@ -559,9 +547,7 @@ void SPU::write_ADMA(uint8_t *source_RAM)
     {
         //printf("[SPU%d] Filled next ADMA buffer\n", id);
         ADMA_progress = 0;
-        autodma_ctrl &= ~0x4;
         clear_dma_req();
-        buf_filled = true;
     }
 
 
@@ -1264,7 +1250,7 @@ uint32_t SPU::get_memin_addr()
 stereo_sample SPU::read_memin()
 {
     stereo_sample sample = {};
-    uint32_t pos = get_memin_addr()+(ADMA_buf*0x100)+input_pos;
+    uint32_t pos = get_memin_addr()+(current_buffer*0x100)+buffer_pos;
     sample.left = (static_cast<int16_t>(RAM[pos]) * data_input_volume_l) >> 15;
     sample.right = (static_cast<int16_t>(RAM[pos+0x200]) * data_input_volume_r) >> 15;
 
@@ -1276,5 +1262,5 @@ stereo_sample SPU::read_memin()
 
 void SPU::memout(MEMOUT addr, int16_t sample)
 {
-    write(addr+out_pos+(id-1 ? 0x800 : 0x0), static_cast<uint16_t>(sample));
+    write(addr+(current_buffer*0x100)+buffer_pos+(id-1 ? 0x800 : 0x0), static_cast<uint16_t>(sample));
 }
