@@ -780,6 +780,9 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
 {
     if (reg.write64(addr, value))
         return;
+
+    bool context_change = false;
+
     addr &= 0x7F;
     switch (addr)
     {
@@ -796,10 +799,21 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             if (current_PRMODE == &PRIM)
             {
                 if (PRIM.use_context2)
+                {
+                    if (current_ctx != &context2)
+                        context_change = true;
                     current_ctx = &context2;
+                }
                 else
+                {
+                    if (current_ctx != &context1)
+                        context_change = true;
                     current_ctx = &context1;
+                }
             }
+
+            if(context_change)
+                reload_clut(*current_ctx);
             PRIM.fix_fragment_value = value & (1 << 10);
             num_vertices = 0;
             printf("[GS_t] PRIM: $%08X\n", value);
@@ -930,9 +944,20 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
                     current_PRMODE = &PRMODE;
 
                 if (current_PRMODE->use_context2)
+                {
+                    if (current_ctx != &context2)
+                        context_change = true;
                     current_ctx = &context2;
+                }
                 else
+                {
+                    if (current_ctx != &context1)
+                        context_change = true;
                     current_ctx = &context1;
+                }
+
+                if (context_change)
+                    reload_clut(*current_ctx);
             }
             update_draw_pixel_state();
             update_tex_lookup_state();
@@ -950,11 +975,23 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             if (current_PRMODE == &PRMODE)
             {
                 if (PRMODE.use_context2)
+                {
+                    if (current_ctx != &context2)
+                        context_change = true;
                     current_ctx = &context2;
+                }
                 else
+                {
+                    if (current_ctx != &context1)
+                        context_change = true;
                     current_ctx = &context1;
+                }
             }
             PRMODE.fix_fragment_value = value & (1 << 10);
+
+            if(context_change)
+                reload_clut(*current_ctx);
+
             update_draw_pixel_state();
             update_tex_lookup_state();
             break;
@@ -3955,7 +3992,7 @@ void GraphicsSynthesizerThread::clut_lookup(uint8_t entry, RGBAQ_REG &tex_color)
         case 0x00:
         case 0x01:
         {
-            uint32_t color = *(uint32_t*)&clut_cache[((clut_addr << 1) + (entry << 2)) & 0x3FF];
+            uint32_t color = *(uint32_t*)&clut_cache[(clut_addr + (entry << 2)) & 0x3FF];
             tex_color.r = color & 0xFF;
             tex_color.g = (color >> 8) & 0xFF;
             tex_color.b = (color >> 16) & 0xFF;
@@ -3967,7 +4004,7 @@ void GraphicsSynthesizerThread::clut_lookup(uint8_t entry, RGBAQ_REG &tex_color)
         //PSMCT16S
         case 0x0A:
         {
-            uint16_t color = *(uint16_t*)&clut_cache[((clut_addr + entry) << 1) & 0x3FF];
+            uint16_t color = *(uint16_t*)&clut_cache[(clut_addr + (entry << 1)) & 0x3FF];
             tex_color.r = (color & 0x1F) << 3;
             tex_color.g = ((color >> 5) & 0x1F) << 3;
             tex_color.b = ((color >> 10) & 0x1F) << 3;
@@ -3988,8 +4025,11 @@ void GraphicsSynthesizerThread::clut_CSM2_lookup(uint8_t entry, RGBAQ_REG &tex_c
     tex_color.a = get_16bit_alpha(color);
 }
 
-void GraphicsSynthesizerThread::reload_clut(const GSContext& context)
+void GraphicsSynthesizerThread::reload_clut(GSContext& context)
 {
+    if (&context != current_ctx)
+        return;
+
     int eight_bit = false;
     switch (context.tex0.format)
     {
@@ -4006,10 +4046,13 @@ void GraphicsSynthesizerThread::reload_clut(const GSContext& context)
             //Not sure what to do here?
             //Okami loads a new CLUT with a texture format of PSMCT32, so we
             eight_bit = true;
+            break;
     }
 
     uint32_t clut_addr = context.tex0.CLUT_base;
-    int cache_addr = context.tex0.CLUT_offset;
+    uint32_t cache_addr = context.tex0.CLUT_offset;
+    uint32_t offset = (context.tex0.CLUT_offset / (context.tex0.CLUT_format ? 2 : 4));
+
     bool reload = false;
 
     switch (context.tex0.CLUT_control)
@@ -4044,12 +4087,12 @@ void GraphicsSynthesizerThread::reload_clut(const GSContext& context)
     if (reload)
     {
         printf("[GS_t] Reloading CLUT cache!\n");
-        for (int i = 0; i < entries; i++)
+        for (int i = offset; i < (offset+entries); i++)
         {
             if (context.tex0.use_CSM2)
             {
                 uint16_t value = read_PSMCT16_block(current_ctx->tex0.CLUT_base, TEXCLUT.width,
-                                                    TEXCLUT.x + i, TEXCLUT.y);
+                                                    TEXCLUT.x + (i & (entries-1)), TEXCLUT.y);
                 *(uint16_t*)&clut_cache[cache_addr] = value;
                 cache_addr = (cache_addr + 2) & 0x3FF;
             }
@@ -4068,7 +4111,7 @@ void GraphicsSynthesizerThread::reload_clut(const GSContext& context)
                 else
                 {
                     x = i & 0x7;
-                    y = i / 8;
+                    y = (i / 8) & 0x1; //Max Y for 4bit is 1
                 }
 
                 switch (context.tex0.CLUT_format)
@@ -5265,10 +5308,9 @@ void GraphicsSynthesizerThread::recompile_clut_lookup()
     //Input: RDI (index)
     //Output: RAX (color in 32-bit format)
 
-    //RCX = current_ctx->tex0.CLUT_offset << 1
+    //RCX = current_ctx->tex0.CLUT_offset
     emitter_tex.load_addr((uint64_t)&current_ctx->tex0.CLUT_offset, RCX);
     emitter_tex.MOV32_FROM_MEM(RCX, RCX);
-    emitter_tex.SHL32_REG_IMM(1, RCX);
     emitter_tex.load_addr((uint64_t)&clut_cache, RAX);
 
     switch (current_ctx->tex0.CLUT_format)
@@ -5277,7 +5319,7 @@ void GraphicsSynthesizerThread::recompile_clut_lookup()
         case 0x01:
             emitter_tex.SHL32_REG_IMM(2, RDI);
             emitter_tex.ADD32_REG(RDI, RCX);
-            emitter_tex.AND32_REG_IMM(0x7FF, RCX);
+            emitter_tex.AND32_REG_IMM(0x3FF, RCX);
             emitter_tex.ADD64_REG(RCX, RAX);
             emitter_tex.MOV32_FROM_MEM(RAX, RAX);
             break;
