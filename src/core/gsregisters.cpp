@@ -193,7 +193,7 @@ void GS_REGISTERS::write64_privileged(uint32_t addr, uint64_t value)
             SIGLBLID.lbl_id = value >> 32;
             break;
         default:
-            printf("[GS_r] Unrecognized privileged write64 to reg $%04X: $%08lX_%08lX\n", addr, value >> 32, value & 0xFFFFFFFF);
+            Errors::die("[GS_r] Unrecognized privileged write64\nAddr: $%04X\nValue: $%08lX_%08lX\n", addr, value >> 32, value & 0xFFFFFFFF);
     }
 }
 
@@ -256,7 +256,7 @@ void GS_REGISTERS::write32_privileged(uint32_t addr, uint32_t value)
             SIGLBLID.sig_id = value;
             break;
         default:
-            printf("\n[GS_r] Unrecognized privileged write32 to reg $%04X: $%08X", addr, value);
+            Errors::die("[GS_r] Unrecognized privileged write32\nAddr: $%04X\nValue: $%08X", addr, value);
     }
 }
 
