@@ -1207,6 +1207,10 @@ void SPU::key_on_voice(int v)
     ENDX &= ~(1 << v);
     voices[v].adsr.set_stage(ADSR::Stage::Attack);
     voices[v].adsr.volume = 0;
+    voices[v].next_sample = 0;
+    voices[v].old1 = 0;
+    voices[v].old2 = 0;
+    voices[v].old3 = 0;
     printf("[SPU%d] EDEBUG Setting ADSR phase of voice %d to %d\n", id, v, 1);
 }
 
