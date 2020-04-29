@@ -737,11 +737,11 @@ void EE_JIT64::load_doubleword_left(EmotionEngine& ee, IR::Instruction& instr)
     emitter.SUB32_REG(addr, RCX);
     emitter.SHL64_CL(REG_64::RAX);
 
-    emitter.SUB16_REG_IMM(64, REG_64::RCX);
+    emitter.SUB16_REG_IMM(0x40, REG_64::RCX);
     emitter.NEG16(REG_64::RCX);
-    emitter.MOV32_REG_IMM(0x3F, addr);
+    emitter.XOR64_REG(addr, addr);
     emitter.CMP16_IMM(0x40, RCX);
-    emitter.CMOVCC16_REG(ConditionCode::E, addr, RCX);
+    emitter.CMOVCC64_REG(ConditionCode::E, addr, dest);
     emitter.SHL64_CL(dest);
     emitter.SHR64_CL(dest);
     emitter.OR64_REG(REG_64::RAX, dest);
@@ -773,11 +773,11 @@ void EE_JIT64::load_doubleword_right(EmotionEngine& ee, IR::Instruction& instr)
     emitter.MOV32_REG(addr, RCX);
     emitter.SHR64_CL(REG_64::RAX);
 
-    emitter.SUB16_REG_IMM(64, RCX);
+    emitter.SUB16_REG_IMM(0x40, RCX);
     emitter.NEG16(RCX);
-    emitter.MOV32_REG_IMM(0x3F, addr);
+    emitter.XOR64_REG(addr, addr);
     emitter.CMP16_IMM(0x40, RCX);
-    emitter.CMOVCC16_REG(ConditionCode::E, addr, RCX);
+    emitter.CMOVCC64_REG(ConditionCode::E, addr, dest);
     emitter.SHR64_CL(dest);
     emitter.SHL64_CL(dest);
     emitter.OR64_REG(REG_64::RAX, dest);
@@ -879,11 +879,11 @@ void EE_JIT64::load_word_left(EmotionEngine& ee, IR::Instruction& instr)
     emitter.SUB32_REG(addr, RCX);
     emitter.SHL32_CL(REG_64::RAX);
 
-    emitter.SUB16_REG_IMM(32, RCX);
+    emitter.SUB16_REG_IMM(0x20, RCX);
     emitter.NEG16(RCX);
-    emitter.MOV32_REG_IMM(0x1F, addr);
+    emitter.XOR32_REG(addr, addr);
     emitter.CMP16_IMM(0x20, RCX);
-    emitter.CMOVCC16_REG(ConditionCode::E, addr, RCX);
+    emitter.CMOVCC32_REG(ConditionCode::E, addr, dest);
     emitter.SHL32_CL(dest);
     emitter.SHR32_CL(dest);
     emitter.OR32_REG(REG_64::RAX, dest);
@@ -916,11 +916,11 @@ void EE_JIT64::load_word_right(EmotionEngine& ee, IR::Instruction& instr)
     emitter.MOV32_REG(addr, RCX);
     emitter.SHR32_CL(REG_64::RAX);
 
-    emitter.SUB16_REG_IMM(32, RCX);
+    emitter.SUB16_REG_IMM(0x20, RCX);
     emitter.NEG16(RCX);
-    emitter.MOV32_REG_IMM(0x1F, addr);
+    emitter.XOR32_REG(addr, addr);
     emitter.CMP16_IMM(0x20, RCX);
-    emitter.CMOVCC16_REG(ConditionCode::E, addr, RCX);
+    emitter.CMOVCC32_REG(ConditionCode::E, addr, dest);
     emitter.SHR32_CL(dest);
     emitter.SHL32_CL(dest);
     emitter.OR32_REG(REG_64::RAX, dest);
