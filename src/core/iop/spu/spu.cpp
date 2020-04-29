@@ -377,15 +377,15 @@ void SPU::run_reverb(stereo_sample wet)
     // [mLSAME] = (Lin + [dLSAME]*vWALL - [mLSAME-2])*vIIR + [mLSAME-2]  ;L-to-L
     // [mRSAME] = (Rin + [dRSAME]*vWALL - [mRSAME-2])*vIIR + [mRSAME-2]  ;R-to-R
     int16_t tLSAME = clamp16(Lin + mulvol(R(r.dLSAME), r.vWALL));
-    tLSAME = mulvol(clamp16(tLSAME - R(r.mLSAME - 2)), r.vIIR);
-    tLSAME = clamp16(tLSAME + R(r.mLSAME - 2));
+    tLSAME = mulvol(clamp16(tLSAME - R(r.mLSAME - 1)), r.vIIR);
+    tLSAME = clamp16(tLSAME + R(r.mLSAME - 1));
 
     if (effect_enable)
         W(r.mLSAME, tLSAME);
 
     int16_t tRSAME = clamp16(Rin + mulvol(R(r.dRSAME), r.vWALL));
-    tRSAME = mulvol(clamp16(tRSAME - R(r.mRSAME - 2)), r.vIIR);
-    tRSAME = clamp16(tRSAME + R(r.mRSAME - 2));
+    tRSAME = mulvol(clamp16(tRSAME - R(r.mRSAME - 1)), r.vIIR);
+    tRSAME = clamp16(tRSAME + R(r.mRSAME - 1));
 
     if (effect_enable)
         W(r.mRSAME, tRSAME);
@@ -393,16 +393,16 @@ void SPU::run_reverb(stereo_sample wet)
     // ___Different Side Reflection (left-to-right and right-to-left)_______________
     // [mLDIFF] = (Lin + [dRDIFF]*vWALL - [mLDIFF-2])*vIIR + [mLDIFF-2]  ;R-to-L
     // [mRDIFF] = (Rin + [dLDIFF]*vWALL - [mRDIFF-2])*vIIR + [mRDIFF-2]  ;L-to-R
-    int16_t tLDIFF = clamp16(Lin + mulvol(R(r.dLDIFF), r.vWALL));
-    tLDIFF = mulvol(clamp16(tLDIFF- R(r.mLDIFF - 2)), r.vIIR);
-    tLDIFF = clamp16(tLDIFF + R(r.mLDIFF - 2));
+    int16_t tLDIFF = clamp16(Lin + mulvol(R(r.dRDIFF), r.vWALL));
+    tLDIFF = mulvol(clamp16(tLDIFF- R(r.mLDIFF - 1)), r.vIIR);
+    tLDIFF = clamp16(tLDIFF + R(r.mLDIFF - 1));
 
     if (effect_enable)
         W(r.mLDIFF, tLDIFF);
 
-    int16_t tRDIFF = clamp16(Rin + mulvol(R(r.dRDIFF), r.vWALL));
-    tRDIFF = mulvol(clamp16(tRDIFF- R(r.mRDIFF - 2)), r.vIIR);
-    tRDIFF = clamp16(tRDIFF + R(r.mRDIFF - 2));
+    int16_t tRDIFF = clamp16(Rin + mulvol(R(r.dLDIFF), r.vWALL));
+    tRDIFF = mulvol(clamp16(tRDIFF- R(r.mRDIFF - 1)), r.vIIR);
+    tRDIFF = clamp16(tRDIFF + R(r.mRDIFF - 1));
 
     if (effect_enable)
         W(r.mRDIFF, tRDIFF);
