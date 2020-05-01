@@ -76,8 +76,8 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
         // todo: Insert a null op in cases where translated_instrs should be empty for more rigorous assertion testing?
         if (translated_instrs.size())
         {
-            /*branch_op = translated_instrs.back().is_jump();
-
+           branch_op = translated_instrs.back().is_jump();
+           /*
             //The EE has a bug in its pipelining logic that causes branches to be skipped in certain conditions.
             //They are as follows:
             // * The branch points to the start of a loop - forward branches are not affected
