@@ -43,8 +43,6 @@ struct Voice
 
     ADSR adsr;
 
-    int key_switch_timeout;
-
     uint32_t counter;
     unsigned block_pos;
     int loop_code;
@@ -271,6 +269,7 @@ class SPU
 
         void key_on_voice(int v);
         void key_off_voice(int v);
+        void update_voice_state();
 
         void spu_check_irq(uint32_t address);
         void spu_irq(int index);

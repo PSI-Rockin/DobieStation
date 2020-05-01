@@ -135,10 +135,6 @@ void SPU::dump_voice_data()
 stereo_sample SPU::voice_gen_sample(int voice_id)
 {
     Voice &voice = voices[voice_id];
-    if (voice.key_switch_timeout != 0)
-    {
-        voice.key_switch_timeout--;
-    }
 
     uint32_t step = voice.pitch;
     if ((voice_pitch_mod & (1 << voice_id)) && voice_id != 0)
@@ -260,7 +256,6 @@ void SPU::gen_sample()
     stereo_sample core_wet = {};
     stereo_sample memin = {};
 
-
     for (int i = 0; i < 24; i++)
     {
         stereo_sample sample = voice_gen_sample(i);
@@ -320,6 +315,10 @@ void SPU::gen_sample()
     right_out_pcm.push_back(core_output.right);
 
     noise.step();
+
+    // Key off/on voices
+    update_voice_state();
+
 
     // Output/input buffer management
     buffer_pos++;
@@ -1055,41 +1054,21 @@ void SPU::write16(uint32_t addr, uint16_t value)
             printf("[SPU%d] Write KON0: $%04X\n", id, value);
             key_on &= ~0xFFFF;
             key_on |= value;
-            for (int i = 0; i < 16; i++)
-            {
-                if (value & (1 << i))
-                    key_on_voice(i);
-            }
             break;
         case 0x1A2:
             printf("[SPU%d] Write KON1: $%04X\n", id, value);
             key_on &= ~0xFF0000;
             key_on |= (value & 0xFF) << 16;
-            for (int i = 0; i < 8; i++)
-            {
-                if (value & (1 << i))
-                    key_on_voice(i + 16);
-            }
             break;
         case 0x1A4:
             printf("[SPU%d] Write KOFF0: $%04X\n", id, value);
             key_off &= ~0xFFFF;
             key_off |= value;
-            for (int i = 0; i < 16; i++)
-            {
-                if (value & (1 << i))
-                    key_off_voice(i);
-            }
             break;
         case 0x1A6:
             printf("[SPU%d] Write KOFF1: $%04X\n", id, value);
             key_off &= ~0xFF0000;
             key_off |= (value & 0xFF) << 16;
-            for (int i = 0; i < 8; i++)
-            {
-                if (value & (1 << i))
-                    key_off_voice(i + 16);
-            }
             break;
         case 0x1A8:
             transfer_addr &= 0xFFFF;
@@ -1191,15 +1170,28 @@ void SPU::write_voice_reg(uint32_t addr, uint16_t value)
     }
 }
 
+void SPU::update_voice_state()
+{
+
+    for (int i = 0; i < 24; i++)
+    {
+        if (key_off & (1 << i))
+        {
+            key_off_voice(i);
+        }
+
+        if (key_on & (1 << i))
+        {
+            key_on_voice(i);
+        }
+
+    }
+    key_on = 0;
+    key_off = 0;
+}
+
 void SPU::key_on_voice(int v)
 {
-    if (voices[v].key_switch_timeout > 0)
-    {
-        printf("[SPU%d] Ignored key_on for voice %d, within 2 T of last change\n", id, v);
-        return;
-    }
-    voices[v].key_switch_timeout = 2;
-
     //Copy start addr to current addr, clear ENDX bit, and set envelope to Attack mode
     voices[v].current_addr = voices[v].start_addr;
     voices[v].block_pos = 0;
@@ -1216,12 +1208,6 @@ void SPU::key_on_voice(int v)
 
 void SPU::key_off_voice(int v)
 {
-    if (voices[v].key_switch_timeout > 0)
-    {
-        printf("[SPU%d] ignored key_off for voice %d, within 2 T of last change\n", id, v);
-        return;
-    }
-    voices[v].key_switch_timeout = 2;
     //Set envelope to Release mode
     voices[v].adsr.set_stage(ADSR::Stage::Release);
     printf("[SPU%d] EDEBUG Setting ADSR phase of voice %d to %d\n", id, v, 4);
