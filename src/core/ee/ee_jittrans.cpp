@@ -77,7 +77,7 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
         if (translated_instrs.size())
         {
             branch_op = translated_instrs.back().is_jump();
-
+            /*
             //The EE has a bug in its pipelining logic that causes branches to be skipped in certain conditions.
             //They are as follows:
             // * The branch points to the start of a loop - forward branches are not affected
@@ -86,6 +86,11 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
             // * Less than six instructions are present in the loop, including delay slot
             // * On EE revision #2.9 and later, the delay slot is not NOP
             // When all conditions are met, the branch is treated as if it were a NOP.
+
+            //Update - Refraction
+            //Me and Souzooka tested this on a real PS2 and couldn't get the bug to trigger with multiple scenarios
+            //So as far as I can tell this bug happens between VERY rarely to never.
+            //So Disabling for now, we can revisit this once we know how to trigger it.
 
             //Note that the branch delay slot has not been translated yet, so we use 5 instead of 6
             if (branch_op && ops_translated < 5)
@@ -98,7 +103,7 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
                         translated_instrs.back().set_jump_dest(pc + 8);
                     }
                 }
-            }
+            }*/
 
             for (auto instr : translated_instrs)
                 instrs.push_back(instr);
