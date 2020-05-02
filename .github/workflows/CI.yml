@@ -99,7 +99,7 @@ jobs:
       - name: Install Qt
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -qq qt5-default qtmultimedia5-dev libglu1-mesa-dev
+          sudo apt-get install -qq qt5-default qtmultimedia5-dev qtbase5-private-dev libglu1-mesa-dev libevdev2 libevdev-dev
       - name: Build
         working-directory: DobieStation
         run: |
