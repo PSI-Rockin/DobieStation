@@ -217,12 +217,6 @@ void EmotionEngine::run_interpreter()
 
 void EmotionEngine::run_jit()
 {
-    //If we're stalling on COP2 and VU0 is still active, we continue stalling.
-    wait_for_VU0 &= vu0_wait();
-
-    //Check for MBIT interlock
-    wait_for_interlock &= check_interlock();
-
     //If FlushCache(2) has been executed, reset the JIT.
     //This represents an icache flush.
     if (flush_jit_cache)
@@ -231,9 +225,30 @@ void EmotionEngine::run_jit()
         flush_jit_cache = false;
     }
 
-    //cycles_to_run and wait_for_VU0 are handled in the dispatcher, so no need to check for them here
-    EE_JIT::run(this);
+    if (wait_for_VU0)
+    {
+        if (vu0->is_running())
+        {
+            cycle_count += cycles_to_run;
+            cycles_to_run = 0;
+            return;
+        }
+        wait_for_VU0 = false;
+    }
 
+    if (wait_for_interlock)
+    {
+        if (check_interlock())
+        {
+            cycle_count += 1; //Only run for 1 cycle, gotta keep VU0 and EE timing tight
+            cycles_to_run = 0;
+            return;
+        }
+        wait_for_interlock = false;
+    }
+
+    //cycles_to_run is handled in the dispatcher, so no need to check it here
+    EE_JIT::run(this);
     branch_on = false;
 }
 

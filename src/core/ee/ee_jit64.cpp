@@ -1654,14 +1654,12 @@ void EE_JIT64::wait_for_vu0(EmotionEngine& ee, IR::Instruction& instr)
     // If ee.vu0_wait(), set PC to the current operation's address and abort
     emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::R15, offsetof(EmotionEngine, PC));
 
-    // Set wait for VU0 flag
-    emitter.MOV8_IMM_MEM(true, REG_64::R15, offsetof(EmotionEngine, wait_for_VU0));
-
     // Set cycle count to number of cycles executed
     // FIXME: This changes the return value of the JIT run function, but the return value of the JIT's run function is not used!
     // What do we want to do here?
     // emitter.MOV16_IMM_MEM(instr.get_cycle_count(), REG_64::R14, offsetof(EE_JIT64, cycle_count));
-
+    // Set wait for VU0 flag
+    emitter.MOV8_IMM_MEM(true, REG_64::R15, offsetof(EmotionEngine, wait_for_VU0));
     cleanup_recompiler(ee, false, false, instr.get_cycle_count());
 
     // Otherwise continue execution of block otherwise
@@ -1679,20 +1677,20 @@ void EE_JIT64::check_interlock_vu0(EmotionEngine& ee, IR::Instruction& instr)
     // If ee.ee_check_interlock(), set PC to the current operation's address and abort
     emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::R15, offsetof(EmotionEngine, PC));
 
-    // Set wait for interlock clear flag
-    emitter.MOV8_IMM_MEM(true, REG_64::R15, offsetof(EmotionEngine, wait_for_interlock));
-
     // Set cycle count to number of cycles executed
     // FIXME: This changes the return value of the JIT run function, but the return value of the JIT's run function is not used!
     // What do we want to do here?
     // emitter.MOV16_IMM_MEM(instr.get_cycle_count(), REG_64::R14, offsetof(EE_JIT64, cycle_count));
-
+    emitter.MOV8_IMM_MEM(true, REG_64::R15, offsetof(EmotionEngine, wait_for_interlock));
     cleanup_recompiler(ee, false, false, instr.get_cycle_count());
 
     // Otherwise clear interlock then continue execution of block otherwise
     emitter.set_jump_dest(offset_addr);
+    //Don't do this until CTC2 and QMTC2 are recompiled, otherwise we clear the interlock and it gets set again, causing problems
+    /*
     prepare_abi((uint64_t)&ee);
     call_abi_func((uint64_t)&ee_clear_interlock);
+    */
 }
 
 void EE_JIT64::update_vu0(EmotionEngine& ee, IR::Instruction& instr)
