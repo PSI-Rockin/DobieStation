@@ -29,6 +29,7 @@ class GameListModel final : public QAbstractTableModel
         void add_path(const QString& path);
         void remove_path(const QString& path);
     private:
+        void sort_games();
         QStringList get_directory_entries(QString path);
         QString get_formatted_data_size(uint64_t size) const;
 };

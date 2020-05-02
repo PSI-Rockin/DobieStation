@@ -11,6 +11,7 @@
 #include "settings.hpp"
 
 #include <cmath>
+#include <algorithm>
 
 GameListModel::GameListModel(QObject* parent)
     : QAbstractTableModel(parent)
@@ -19,6 +20,8 @@ GameListModel::GameListModel(QObject* parent)
     {
         games.append(get_directory_entries(path));
     }
+
+    sort_games();
 
     connect(&Settings::instance(), &Settings::rom_directory_committed,
         this, &GameListModel::add_path
@@ -127,13 +130,25 @@ QString GameListModel::get_formatted_data_size(uint64_t size) const
 #endif
 }
 
+void GameListModel::sort_games()
+{
+    std::sort(games.begin(), games.end(), [&](const QString& file1, const QString& file2) {
+        auto file_name1 = QFileInfo(file1).fileName();
+        auto file_name2 = QFileInfo(file2).fileName();
+
+        return file_name1.compare(file_name2, Qt::CaseInsensitive) < 0;
+    });
+}
+
 void GameListModel::add_path(const QString& path)
 {
     QStringList new_games = get_directory_entries(path);
 
     beginInsertRows(QModelIndex(), 0, new_games.size() - 1);
     games.append(new_games);
-    games.sort(Qt::CaseInsensitive);
+
+    sort_games();
+
     games.removeDuplicates();
     endInsertRows();
 }
