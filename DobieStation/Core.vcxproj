@@ -52,10 +52,12 @@
     <UseDebugLibraries>false</UseDebugLibraries>
   </PropertyGroup>
 
+
   <!-- debug -->
   <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
   </PropertyGroup>
+
 
   <!-- props -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
@@ -79,6 +81,7 @@
       <OutputFile>$(BinDir)\$(ProjectName)$(Postfix).lib</OutputFile>
     </Link>
   </ItemDefinitionGroup>
+
 
   <!-- cpp files -->
   <ItemGroup>
@@ -197,7 +200,6 @@
     <ClInclude Include="$(CoreDir)iop\iop.hpp" />
     <ClInclude Include="$(CoreDir)iop\iop_cop0.hpp" />
     <ClInclude Include="$(CoreDir)iop\iop_dma.hpp" />
-    <ClInclude Include="$(CoreDir)iop\iop_intc.hpp" />
     <ClInclude Include="$(CoreDir)iop\iop_interpreter.hpp" />
     <ClInclude Include="$(CoreDir)iop\iop_timers.hpp" />
     <ClInclude Include="$(CoreDir)ee\ipu\ipu.hpp" />
