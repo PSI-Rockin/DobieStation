@@ -2,10 +2,9 @@
 #include <Windows.h>
 #include "common_input.hpp"
 #include <WinUser.h>
-#include <QWidget.h>
 
 
-class RawInput : public CommonInput
+class RawInput //: public CommonInput
 {
 	
 private:

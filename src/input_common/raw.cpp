@@ -15,14 +15,11 @@ bool RawInput::reset()
 	device[1].dwFlags = 0;
 	device[1].hwndTarget = NULL; // Follows keyboard focus?
 	RegisterRawInputDevices(&device[1], 1, sizeof(device[1]));
+
+	return true;
 }
 
-bool GetData()
-{
-
-}
-
-PAD_DATA RawInput::poll()
+/*PAD_DATA RawInput::poll()
 {
 
 	switch (data)
@@ -32,5 +29,4 @@ PAD_DATA RawInput::poll()
 			break;
 	}
 
-
-}
+}*/

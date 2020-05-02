@@ -18,6 +18,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "libdeflate", "libdeflate\li
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "ThirdParty", "ThirdParty", "{A80C3A32-925E-454B-BA16-98D15D93AA2B}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "InputCommon", "InputCommon.vcxproj", "{F61CEB41-9B79-417D-9908-0D91A97A18F8}"
+EndProject
 		SolutionGuid = {332CD22F-A5D2-4C61-B77E-9A91CF2F57A9}
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

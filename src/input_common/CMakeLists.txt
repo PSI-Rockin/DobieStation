@@ -19,11 +19,13 @@ set(HEADERS
 
 if (CMAKE_ASM_MASM_COMPILER_LOADED)
     set_source_files_properties(SOURCES ${ASSEMBLY} PROPERTIES LANGUAGE ASM_MASM)
-    set(SOURCES ${SOURCES} ${ASSEMBLY})
+    set(SOURCES ${SOURCES} ${ASSEMBLY} ${Libevdev_INCLUDE_DIRS})
 endif()
 
-add_library(${TARGET} ${SOURCES} ${HEADERS})
+add_library(${TARGET} ${SOURCES} ${HEADERS} ${Libevdev_LIBRARIES})
 add_library(Dobie::InputCommon ALIAS ${TARGET})
+
+target_link_libraries(InputCommon ${Libevdev_LIBRARIES})
 
 target_compile_options(${TARGET} PRIVATE ${DOBIE_FLAGS})
 

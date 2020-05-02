@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+
   <!-- configurations -->
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Release Optimized|x64">
@@ -19,54 +20,66 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+
   <!-- globals -->
   <PropertyGroup Label="Globals">
     <ProjectGuid>{353E9072-F9AB-35F7-8AFF-FAC3EA8AFEE0}</ProjectGuid>
     <WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>
     <ProjectName>Core</ProjectName>
   </PropertyGroup>
+
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+
   <!-- configuration defaults -->
   <PropertyGroup Label="Configuration">
     <ConfigurationType>StaticLibrary</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
     <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
+
   <!-- release -->
   <PropertyGroup Condition="'$(Configuration)'=='Release'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
   </PropertyGroup>
+
   <!-- optimized release -->
   <PropertyGroup Condition="'$(Configuration)'=='Release Optimized'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
   </PropertyGroup>
+
   <!-- devel -->
   <PropertyGroup Condition="'$(Configuration)'=='Devel'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
   </PropertyGroup>
+
   <!-- debug -->
   <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
   </PropertyGroup>
+
   <!-- props -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.props" />
   </ImportGroup>
+
   <!-- prop includes -->
   <ImportGroup Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" />
     <Import Project="common.props" />
   </ImportGroup>
+
   <PropertyGroup>
     <TargetName>$(ProjectName)$(Postfix)</TargetName>
   </PropertyGroup>
+
   <!-- default link -->
   <ItemDefinitionGroup>
     <Link>
       <OutputFile>$(BinDir)\$(ProjectName)$(Postfix).lib</OutputFile>
     </Link>
   </ItemDefinitionGroup>
+
   <!-- cpp files -->
   <ItemGroup>
     <ClCompile Include="$(CoreDir)ee\ee_jit.cpp" />
@@ -77,10 +90,12 @@
     <ClCompile Include="$(CoreDir)ee\ee_jit64_gpr.cpp" />
     <ClCompile Include="$(CoreDir)ee\ee_jit64_mmi.cpp" />
     <ClCompile Include="$(CoreDir)ee\ee_jittrans.cpp" />
-    <ClCompile Include="$(CoreDir)iop\cso_reader.cpp" />
     <ClCompile Include="$(CoreDir)tests\iop\alu.cpp" />
     <ClCompile Include="$(CoreDir)ee\bios_hle.cpp" />
-    <ClCompile Include="$(CoreDir)iop\cdvd.cpp" />
+    <ClCompile Include="$(CoreDir)iop\cdvd\bincuereader.cpp" />
+    <ClCompile Include="$(CoreDir)iop\cdvd\cdvd.cpp" />
+    <ClCompile Include="$(CoreDir)iop\cdvd\cso_reader.cpp" />
+    <ClCompile Include="$(CoreDir)iop\cdvd\iso_reader.cpp" />
     <ClCompile Include="$(CoreDir)ee\ipu\chromtable.cpp" />
     <ClCompile Include="$(CoreDir)ee\ipu\codedblockpattern.cpp" />
     <ClCompile Include="$(CoreDir)ee\cop0.cpp" />
@@ -111,6 +126,7 @@
     <ClCompile Include="$(CoreDir)iop\iop.cpp" />
     <ClCompile Include="$(CoreDir)iop\iop_cop0.cpp" />
     <ClCompile Include="$(CoreDir)iop\iop_dma.cpp" />
+    <ClCompile Include="$(CoreDir)iop\iop_intc.cpp" />
     <ClCompile Include="$(CoreDir)iop\iop_interpreter.cpp" />
     <ClCompile Include="$(CoreDir)iop\iop_timers.cpp" />
     <ClCompile Include="$(CoreDir)ee\ipu\ipu.cpp" />
@@ -139,14 +155,20 @@
     <ClCompile Include="$(CoreDir)ee\vu_jit64.cpp" />
     <ClCompile Include="$(CoreDir)ee\vu_jittrans.cpp" />
     <ClCompile Include="$(CoreDir)scheduler.cpp" />
+    <ClCompile Include="$(CoreDir)iop\firewire.cpp" />
   </ItemGroup>
+
   <!-- headers -->
   <ItemGroup>
     <ClInclude Include="$(CoreDir)ee\bios_hle.hpp" />
     <ClInclude Include="$(CoreDir)ee\ee_jit.hpp" />
     <ClInclude Include="$(CoreDir)ee\ee_jit64.hpp" />
     <ClInclude Include="$(CoreDir)ee\ee_jittrans.hpp" />
-    <ClInclude Include="$(CoreDir)iop\cdvd.hpp" />
+    <ClInclude Include="$(CoreDir)iop\cdvd\bincueheader.hpp" />
+    <ClInclude Include="$(CoreDir)iop\cdvd\cdvd.hpp" />
+    <ClInclude Include="$(CoreDir)iop\cdvd\cdvd_container.hpp" />
+    <ClInclude Include="$(CoreDir)iop\cdvd\cso_reader.hpp" />
+    <ClInclude Include="$(CoreDir)iop\cdvd\iso_reader.hpp" />
     <ClInclude Include="$(CoreDir)ee\ipu\chromtable.hpp" />
     <ClInclude Include="$(CoreDir)circularFIFO.hpp" />
     <ClInclude Include="$(CoreDir)ee\ipu\codedblockpattern.hpp" />
@@ -156,7 +178,6 @@
     <ClInclude Include="$(CoreDir)ee\ipu\dct_coeff_table0.hpp" />
     <ClInclude Include="$(CoreDir)ee\ipu\dct_coeff_table1.hpp" />
     <ClInclude Include="$(CoreDir)ee\dmac.hpp" />
-    <ClInclude Include="$(CoreDir)iop\cso_reader.hpp" />
     <ClInclude Include="$(CoreDir)jitcommon\emitter64.hpp" />
     <ClInclude Include="$(CoreDir)ee\emotion.hpp" />
     <ClInclude Include="$(CoreDir)ee\emotionasm.hpp" />
@@ -176,6 +197,7 @@
     <ClInclude Include="$(CoreDir)iop\iop.hpp" />
     <ClInclude Include="$(CoreDir)iop\iop_cop0.hpp" />
     <ClInclude Include="$(CoreDir)iop\iop_dma.hpp" />
+    <ClInclude Include="$(CoreDir)iop\iop_intc.hpp" />
     <ClInclude Include="$(CoreDir)iop\iop_interpreter.hpp" />
     <ClInclude Include="$(CoreDir)iop\iop_timers.hpp" />
     <ClInclude Include="$(CoreDir)ee\ipu\ipu.hpp" />
@@ -203,7 +225,9 @@
     <ClInclude Include="$(CoreDir)ee\vu_jit64.hpp" />
     <ClInclude Include="$(CoreDir)ee\vu_jittrans.hpp" />
     <ClInclude Include="$(CoreDir)scheduler.hpp" />
+    <ClInclude Include="$(CoreDir)iop\firewire.hpp" />
   </ItemGroup>
+
   <!-- misc -->
   <ItemGroup>
     <None Include="$(RootDir)README.md" />
@@ -215,7 +239,9 @@
     <None Include="$(RootDir).github\*" />
     <None Include="application\application.pro" />
   </ItemGroup>
+
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+
   <ImportGroup Label="ExtensionTargets">
     <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
   </ImportGroup>
