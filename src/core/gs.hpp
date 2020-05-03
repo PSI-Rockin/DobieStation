@@ -45,6 +45,7 @@ class GraphicsSynthesizer
 
         void set_CRT(bool interlaced, int mode, bool frame_mode);
 
+        uint32_t get_busdir();
         uint32_t read32_privileged(uint32_t addr);
         uint64_t read64_privileged(uint32_t addr);
         void write32_privileged(uint32_t addr, uint32_t value);
