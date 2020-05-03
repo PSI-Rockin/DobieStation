@@ -239,22 +239,22 @@ S_MT_TOUCH_MAJOR, "MT TMaj+"},
             {ABS_MT_TOOL_Y, "MT Tool Y-"},
         };*/
 
-struct evdevController
+struct evdev_controller
 {
 
-    std::string controllerName;
-    struct libevdev *dev;
+    std::string controller_name;
+    libevdev *dev;
 };
 
 class LinuxInput : public CommonInput
 {
 
 private:
-    struct input_event ev;
-    struct evdevController *dev;
-    struct PAD_DATA in;
+     input_event ev;
+     evdev_controller *dev;
+     PAD_DATA in;
 
-    struct libevdev *temp_dev;
+    libevdev *temp_dev;
 
     DIR *dir;
     struct dirent *files;
@@ -282,7 +282,7 @@ private:
             {ABS_RZ, BUTTONS::R2}
 
         };
-    std::vector<struct evdevController *> interestingDevices;
+    std::vector<evdev_controller *> interesting_devices;
 
     std::string events[27] = {
         "event0", "event1", "event2", "event3", "event4", "event5",

@@ -43,12 +43,13 @@ bool LinuxInput::reset()
                     libevdev_has_event_code(temp_dev, EV_ABS, ABS_Y))
                 {
 
-                    dev = new evdevController();
-                    dev->controllerName = device_name;
+                    dev = new evdev_controller();
+                    dev->controller_name = device_name;
                     dev->dev = temp_dev;
 
                     std::cout << "Controller Detected" << std::endl;
-                    interestingDevices.push_back(dev);
+                    interesting_devices.push_back(dev);
+                    libevdev_free(temp_dev);
                     continue;
                 }
 
@@ -74,11 +75,11 @@ PAD_DATA LinuxInput::poll()
     {
         if (rc == LIBEVDEV_READ_STATUS_SYNC)
         {
-            rc = libevdev_next_event(interestingDevices[0]->dev, LIBEVDEV_READ_FLAG_SYNC, &ev);
+            rc = libevdev_next_event(interesting_devices[0]->dev, LIBEVDEV_READ_FLAG_SYNC, &ev);
         }
         else
         {
-            rc = libevdev_next_event(interestingDevices[0]->dev, LIBEVDEV_READ_FLAG_NORMAL, &ev);
+            rc = libevdev_next_event(interesting_devices[0]->dev, LIBEVDEV_READ_FLAG_NORMAL, &ev);
         }
         //std::cout << "event: " << libevdev_event_type_get_name(ev.type) << " code: " << libevdev_event_code_get_name(ev.type, ev.code) << " value: " << ev.value << std::endl;
     }
@@ -92,22 +93,22 @@ PAD_DATA LinuxInput::poll()
 
     //std::cout << "Device: " << interestingDevices[0]->controllerName << std::endl;
 
-    min_x1 = libevdev_get_abs_minimum(interestingDevices[0]->dev, ABS_X);
-    max_x1 = libevdev_get_abs_maximum(interestingDevices[0]->dev, ABS_X);
+    min_x1 = libevdev_get_abs_minimum(interesting_devices[0]->dev, ABS_X);
+    max_x1 = libevdev_get_abs_maximum(interesting_devices[0]->dev, ABS_X);
 
-    min_y1 = libevdev_get_abs_minimum(interestingDevices[0]->dev, ABS_Y);
-    max_y1 = libevdev_get_abs_maximum(interestingDevices[0]->dev, ABS_Y);
+    min_y1 = libevdev_get_abs_minimum(interesting_devices[0]->dev, ABS_Y);
+    max_y1 = libevdev_get_abs_maximum(interesting_devices[0]->dev, ABS_Y);
 
-    min_x2 = libevdev_get_abs_minimum(interestingDevices[0]->dev, ABS_THROTTLE);
-    max_x2 = libevdev_get_abs_maximum(interestingDevices[0]->dev, ABS_THROTTLE);
+    min_x2 = libevdev_get_abs_minimum(interesting_devices[0]->dev, ABS_RX);
+    max_x2 = libevdev_get_abs_maximum(interesting_devices[0]->dev, ABS_RX);
 
-    min_y2 = libevdev_get_abs_minimum(interestingDevices[0]->dev, ABS_RZ);
-    max_y2 = libevdev_get_abs_maximum(interestingDevices[0]->dev, ABS_RZ);
+    min_y2 = libevdev_get_abs_minimum(interesting_devices[0]->dev, ABS_RY);
+    max_y2 = libevdev_get_abs_maximum(interesting_devices[0]->dev, ABS_RY);
 
-    libevdev_fetch_event_value(interestingDevices[0]->dev, EV_ABS, ABS_X, &x1);
-    libevdev_fetch_event_value(interestingDevices[0]->dev, EV_ABS, ABS_Y, &y1);
-    libevdev_fetch_event_value(interestingDevices[0]->dev, EV_ABS, ABS_THROTTLE, &x2);
-    libevdev_fetch_event_value(interestingDevices[0]->dev, EV_ABS, ABS_RZ, &y2);
+    libevdev_fetch_event_value(interesting_devices[0]->dev, EV_ABS, ABS_X, &x1);
+    libevdev_fetch_event_value(interesting_devices[0]->dev, EV_ABS, ABS_Y, &y1);
+    libevdev_fetch_event_value(interesting_devices[0]->dev, EV_ABS, ABS_RX, &x2);
+    libevdev_fetch_event_value(interesting_devices[0]->dev, EV_ABS, ABS_RY, &y2);
 
     float LX = ((float)(x1 - min_x1) / (max_x1 - min_x1)) * 2;
     float LY = ((float)(y1 - min_y1) / (max_y1 - min_y1)) * 2;
@@ -130,7 +131,7 @@ PAD_DATA LinuxInput::poll()
     for (auto button : button_map)
     {
         int key;
-        libevdev_fetch_event_value(interestingDevices[0]->dev, EV_KEY, button.first, &key);
+        libevdev_fetch_event_value(interesting_devices[0]->dev, EV_KEY, button.first, &key);
         event.input[button.second] = key;
     }
     return event;
