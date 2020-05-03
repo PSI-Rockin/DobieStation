@@ -5,6 +5,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <cstdint>
+#include <memory>
 #include "gscontext.hpp"
 #include "gsregisters.hpp"
 #include "circularFIFO.hpp"
@@ -355,8 +356,8 @@ class GraphicsSynthesizerThread
         bool send_data = false;
         bool recieve_data = false;
 
-        gs_fifo* message_queue = nullptr;
-        gs_return_fifo* return_queue = nullptr;
+        std::unique_ptr<gs_fifo> message_queue{ nullptr };
+        std::unique_ptr<gs_return_fifo> return_queue{ nullptr };
 
         bool frame_complete;
         int frame_count;
@@ -509,8 +510,6 @@ class GraphicsSynthesizerThread
         void local_to_local();
 
         int32_t orient2D(const Vertex &v1, const Vertex &v2, const Vertex &v3);
-
-        void reset();
         void memdump(uint32_t* target, uint16_t& width, uint16_t& height);
 
         uint32_t get_CRT_color(DISPFB& dispfb, uint32_t x, uint32_t y);
@@ -534,7 +533,7 @@ class GraphicsSynthesizerThread
         void send_message(GSMessage message);
         void wake_thread();
         void wait_for_return(GSReturn type, GSReturnMessage &data);
-        void reset_fifos();
+        void reset();
         void exit();
 };
 #endif // GSTHREAD_HPP

@@ -146,15 +146,11 @@ GraphicsSynthesizerThread::GraphicsSynthesizerThread()
 
     jit_draw_pixel_heap.flush_all_blocks();
     jit_tex_lookup_heap.flush_all_blocks();
-
-    thread = std::thread(&GraphicsSynthesizerThread::event_loop, this);
 }
 
 GraphicsSynthesizerThread::~GraphicsSynthesizerThread()
 {
     delete[] local_mem;
-    delete message_queue;
-    delete return_queue;
 }
 
 void GraphicsSynthesizerThread::wait_for_return(GSReturn type, GSReturnMessage &data)
@@ -217,20 +213,6 @@ void GraphicsSynthesizerThread::wake_thread()
     notifier.notify_one();
 }
 
-void GraphicsSynthesizerThread::reset_fifos()
-{
-    if (!message_queue)
-        message_queue = new gs_fifo();
-    if (!return_queue)
-        return_queue = new gs_return_fifo();
-
-    GSReturnMessage data;
-    while (return_queue->pop(data));
-
-    GSMessage data2;
-    while (message_queue->pop(data2));
-}
-
 void GraphicsSynthesizerThread::exit()
 {
     if (thread.joinable())
@@ -247,8 +229,6 @@ void GraphicsSynthesizerThread::exit()
 void GraphicsSynthesizerThread::event_loop()
 {
     printf("[GS_t] Starting GS Thread\n");
-
-    reset();
 
     bool gsdump_recording = false;
     ofstream gsdump_file;
@@ -454,6 +434,8 @@ void GraphicsSynthesizerThread::event_loop()
 
 void GraphicsSynthesizerThread::reset()
 {
+    exit();
+
     if (!local_mem)
         local_mem = new uint8_t[1024 * 1024 * 4];
 
@@ -484,8 +466,11 @@ void GraphicsSynthesizerThread::reset()
     recompile_tex_lookup_prologue();
     recompile_draw_pixel_prologue();
 
-    reset_fifos();
     memset(screen_buffer, 0, sizeof(screen_buffer));
+
+    message_queue = std::make_unique<gs_fifo>();
+    return_queue = std::make_unique<gs_return_fifo>();
+    thread = std::thread(&GraphicsSynthesizerThread::event_loop, this);
 }
 
 void GraphicsSynthesizerThread::memdump(uint32_t* target, uint16_t& width, uint16_t& height)
