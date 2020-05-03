@@ -255,8 +255,9 @@ void EE_JIT64::floating_point_maximum(EmotionEngine& ee, IR::Instruction& instr)
     emitter.MOVAPS_REG(source, temp2);
     emitter.MOVAPS_REG(source2, temp3);
 
-    emitter.MOVAPS_REG(source2, dest);
-    emitter.PMAXSD_XMM(source, dest);
+    emitter.MOVAPS_REG(source2, temp);
+    emitter.PMAXSD_XMM(source, temp);
+    emitter.MOVAPS_REG(temp, dest);
 
     emitter.MOVAPS_REG(temp2, temp);
     emitter.PAND_XMM(temp3, temp); //mask
@@ -285,8 +286,9 @@ void EE_JIT64::floating_point_minimum(EmotionEngine& ee, IR::Instruction& instr)
     emitter.MOVAPS_REG(source, temp2);
     emitter.MOVAPS_REG(source2, temp3);
 
-    emitter.MOVAPS_REG(source2, dest);
-    emitter.PMINSD_XMM(source, dest);
+    emitter.MOVAPS_REG(source2, temp);
+    emitter.PMINSD_XMM(source, temp);
+    emitter.MOVAPS_REG(temp, dest);
 
     emitter.MOVAPS_REG(temp2, temp);
     emitter.PAND_XMM(temp3, temp); //mask
