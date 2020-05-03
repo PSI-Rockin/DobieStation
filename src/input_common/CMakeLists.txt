@@ -1,8 +1,11 @@
+if(UNIX)
+
 set(TARGET InputCommon)
 
 set(CMAKE_CXX_STANDARD 14)
 
 find_package(Libevdev REQUIRED)
+
 
 set(SOURCES
    linux_input.cpp
@@ -25,14 +28,9 @@ endif()
 add_library(${TARGET} ${SOURCES} ${HEADERS} ${Libevdev_LIBRARIES})
 add_library(Dobie::InputCommon ALIAS ${TARGET})
 
-target_link_libraries(InputCommon ${Libevdev_LIBRARIES})
+target_link_libraries(InputCommon Libevdev::Libevdev)
 
 target_compile_options(${TARGET} PRIVATE ${DOBIE_FLAGS})
 
-if (WIN32)
-    # Needed to avoid ruining global scope with Windows.h on win32
-    target_compile_definitions(${TARGET} PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX)
-    if (MSVC)
-        target_compile_definitions(${TARGET} PRIVATE VC_EXTRALEAN)
-    endif()
-endif()
+dobie_cxx_compile_options(${TARGET})
+endif (UNIX)

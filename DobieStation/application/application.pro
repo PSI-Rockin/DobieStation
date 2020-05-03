@@ -17,12 +17,13 @@ QMAKE_CFLAGS_RELEASE *= -O2
 QMAKE_CFLAGS_RELEASE -= -O3
 
 DEFINES += QT_DEPRECATED_WARNINGS
-DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000
+#DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000
 
 target.path = /usr/local/bin/
 INSTALLS += target
 
 SOURCES += ../../src/qt/main.cpp \
+    ../../src/core/audio/utils.cpp \
     ../../src/core/errors.cpp \
     ../../src/core/ee/emotion.cpp \
     ../../src/core/emulator.cpp \
@@ -57,7 +58,10 @@ SOURCES += ../../src/qt/main.cpp \
     ../../src/core/ee/emotion_vu0.cpp \
     ../../src/core/iop/firewire.cpp \
     ../../src/core/iop/gamepad.cpp \
-    ../../src/core/iop/spu.cpp \
+    ../../src/core/iop/spu/spu.cpp \
+    ../../src/core/iop/spu/spu_adpcm.cpp \
+    ../../src/core/iop/spu/spu_envelope.cpp \
+    ../../src/core/iop/spu/spu_tables.cpp \
     ../../src/qt/emuthread.cpp \
     ../../src/core/tests/iop/alu.cpp \
     ../../src/core/ee/vif.cpp \
@@ -101,19 +105,13 @@ SOURCES += ../../src/qt/main.cpp \
     ../../src/core/ee/ee_jit64_fpu.cpp \
     ../../src/core/ee/ee_jit64_fpu_avx.cpp \
     ../../src/core/ee/ee_jit64_gpr.cpp \
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
     ../../src/qt/memcardwindow.cpp \
->>>>>>> fb5edf49... qmake: Fix formatting
     ../../src/core/iop/cdvd/iso_reader.cpp \
     ../../src/core/iop/cdvd/bincuereader.cpp \
     ../../src/core/iop/iop_intc.cpp
-=======
-    ../../src/qt/memcardwindow.cpp
->>>>>>> d53e836a... Qt: Add basic UI for accessing a memcard
 
 HEADERS += \
+    ../../src/core/audio/utils.hpp \
     ../../src/core/errors.hpp \
     ../../src/core/ee/emotion.hpp \
     ../../src/core/emulator.hpp \
@@ -145,7 +143,10 @@ HEADERS += \
     ../../src/core/ee/vu.hpp \
     ../../src/core/iop/firewire.hpp \
     ../../src/core/iop/gamepad.hpp \
-    ../../src/core/iop/spu.hpp \
+    ../../src/core/iop/spu/spu.hpp \
+    ../../src/core/iop/spu/ps_adpcm.hpp \
+    ../../src/core/iop/spu/spu_envelope.hpp \
+    ../../src/core/iop/spu/spu_utils.hpp \
     ../../src/qt/emuthread.hpp \
     ../../src/core/ee/vif.hpp \
     ../../src/core/int128.hpp \
