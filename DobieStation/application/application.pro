@@ -197,7 +197,7 @@ HEADERS += \
 
 
 FORMS += \
-    ../../src/qt/memcardwindow.ui
+    ../../src/qt/memcardwindow.ui \
     ../../src/core/iop/iop_intc.hpp \
     ../../src/util/scoped_lib.hpp \
     ../../src/util/types.hpp \
