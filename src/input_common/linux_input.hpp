@@ -212,6 +212,7 @@
 		{ ABS_MT_TOOL_Y      , "MT Tool Y+"   },
 	};
 
+<<<<<<< HEAD
 	// Unique negative axis names for the config files and our pad settings dialog
 	const std::unordered_map<uint32_t, std::string> rev_axis_list =
 	{
@@ -257,6 +258,13 @@
 		{ ABS_MT_TOOL_X      , "MT Tool X-"   },
 		{ ABS_MT_TOOL_Y      , "MT Tool Y-"   },
 
+=======
+struct evdev_controller
+{
+
+    std::string controller_name;
+    libevdev *dev;
+>>>>>>> 216cfa9... Attempted to Fix Appveyor build and spacing. Changed variables from camelCase to snake_case
 };
 
 class LinuxInput : public CommonInput

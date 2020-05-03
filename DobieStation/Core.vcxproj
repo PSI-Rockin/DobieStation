@@ -52,19 +52,13 @@
     <UseDebugLibraries>false</UseDebugLibraries>
   </PropertyGroup>
 
-<<<<<<< HEAD
 
-=======
->>>>>>> ab3b997... Fixed several issues with windows. Namely added InputCommon to solution file. Removed code from the raw hpp and cpp files to ensure compilation Made several adjustments to Linux cmake files linking evdev and input common to DobieQT and InputCommon. Update CI recipe file. Update Readme to list current steps to use evdev in linux effectively
   <!-- debug -->
   <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
   </PropertyGroup>
 
-<<<<<<< HEAD
 
-=======
->>>>>>> ab3b997... Fixed several issues with windows. Namely added InputCommon to solution file. Removed code from the raw hpp and cpp files to ensure compilation Made several adjustments to Linux cmake files linking evdev and input common to DobieQT and InputCommon. Update CI recipe file. Update Readme to list current steps to use evdev in linux effectively
   <!-- props -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings">
@@ -88,10 +82,7 @@
     </Link>
   </ItemDefinitionGroup>
 
-<<<<<<< HEAD
 
-=======
->>>>>>> ab3b997... Fixed several issues with windows. Namely added InputCommon to solution file. Removed code from the raw hpp and cpp files to ensure compilation Made several adjustments to Linux cmake files linking evdev and input common to DobieQT and InputCommon. Update CI recipe file. Update Readme to list current steps to use evdev in linux effectively
   <!-- cpp files -->
   <ItemGroup>
     <ClCompile Include="$(CoreDir)ee\ee_jit.cpp" />

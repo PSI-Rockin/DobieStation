@@ -112,6 +112,7 @@ int LinuxInput::getEvent(int i)
                 //interesting_devices[i]->code_name = libevdev_event_code_get_name(EV_KEY, key);
                 //std::cout << "Code: " << interesting_devices[i]->code_name << std::endl;
             }
+
         }
     }   
         return key;
