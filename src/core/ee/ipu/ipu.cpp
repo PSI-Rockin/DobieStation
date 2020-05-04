@@ -276,7 +276,7 @@ bool ImageProcessingUnit::process_IDEC()
             case IDEC_STATE::INIT_CSC:
                 //BDEC outputs in RAW16. CSC works in RAW8, so we need to convert appropriately.
                 printf("[IPU] Init CSC\n");
-                for (int i = 0; i < BLOCK_SIZE / 8; i++)
+                for (int i = 0; i < RAW_BLOCK_SIZE / 8; i++)
                 {
                     uint128_t quad = idec.temp_fifo.f.front();
                     idec.temp_fifo.f.pop_front();
@@ -908,7 +908,7 @@ bool ImageProcessingUnit::process_CSC()
                     csc.state = CSC_STATE::DONE;
                 break;
             case CSC_STATE::READ:
-                if (csc.block_index == BLOCK_SIZE)
+                if (csc.block_index == RAW_BLOCK_SIZE)
                     csc.state = CSC_STATE::CONVERT;
                 else
                 {

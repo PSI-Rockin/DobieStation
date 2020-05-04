@@ -3,8 +3,6 @@
 #include <cstdint>
 #include <queue>
 
-#define BLOCK_SIZE 0x180
-
 #include "../../int128.hpp"
 #include "chromtable.hpp"
 #include "codedblockpattern.hpp"
@@ -16,6 +14,8 @@
 #include "mac_p_pic.hpp"
 #include "mac_b_pic.hpp"
 #include "motioncode.hpp"
+
+constexpr int RAW_BLOCK_SIZE = 0x180;
 
 struct IPU_CTRL
 {
@@ -140,7 +140,7 @@ struct CSC_Command
     int macroblocks;
     bool use_RGB16;
 
-    uint8_t block[BLOCK_SIZE];
+    uint8_t block[RAW_BLOCK_SIZE];
     int block_index;
 };
 
