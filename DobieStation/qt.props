@@ -13,7 +13,8 @@
       <QtLibDir>$(QTDIR)lib\</QtLibDir>
       <QtBinDir>$(QTDIR)bin\</QtBinDir>
       <QtPluginsDir>$(QTDIR)plugins\</QtPluginsDir>
-      <QtMocOutPrefix>$(QtToolOutDir)moc_</QtMocOutPrefix>
+      <QtMocDir>$(QtToolOutDir)</QtMocDir>
+      <QtMocPrefix>moc_</QtMocPrefix>
       <QtDebugSuffix>d</QtDebugSuffix>
       <QtLibSuffix Condition="'$(Configuration)'=='Debug'">$(QtDebugSuffix)</QtLibSuffix>
       <QtPluginFolder>QtPlugins</QtPluginFolder>
@@ -32,6 +33,8 @@
       <PreprocessorDefinitions>QT_CORE_LIB;%(PreprocessorDefinitions)</PreprocessorDefinitions>
 
       <!-- includes -->
+      <AdditionalIncludeDirectories>$(UIDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(UIDir)gamelist;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories>$(QtToolOutDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories>$(QtIncludeDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories>$(QtIncludeDir)QtCore;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -76,6 +79,7 @@
 
   <ItemGroup>
     <MocOutputs Include="$(QtToolOutDir)moc_*.cpp" />
+    <MocOutputs Include="$(QtToolOutDir)gamelist/moc_*.cpp" />
   </ItemGroup>
 
   <Target Name="QtMocClean">

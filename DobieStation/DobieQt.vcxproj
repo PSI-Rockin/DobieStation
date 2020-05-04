@@ -85,10 +85,11 @@
     <ClCompile Include="$(UIDir)emuwindow.cpp" />
     <ClCompile Include="$(UIDir)renderwidget.cpp" />
     <ClCompile Include="$(UIDir)settingswindow.cpp" />
-    <ClCompile Include="$(UIDir)gamelistwidget.cpp" />
     <ClCompile Include="$(UIDir)bios.cpp" />
     <ClCompile Include="$(UIDir)settings.cpp" />
     <ClCompile Include="$(UIDir)main.cpp" />
+    <ClCompile Include="$(UIDir)gamelist/gamelistwidget.cpp" />
+    <ClCompile Include="$(UIDir)gamelist/gamelistmodel.cpp" />
   </ItemGroup>
 
   <!-- headers -->
@@ -103,17 +104,19 @@
     <QtMoc Include="$(UIDir)emuwindow.hpp" />
     <QtMoc Include="$(UIDir)renderwidget.hpp" />
     <QtMoc Include="$(UIDir)settingswindow.hpp" />
-    <QtMoc Include="$(UIDir)gamelistwidget.hpp" />
+    <QtMoc Include="$(UIDir)gamelist/gamelistwidget.hpp" />
+    <QtMoc Include="$(UIDir)gamelist/gamelistmodel.hpp" />
   </ItemGroup>
 
   <!-- moc compile -->
   <ItemGroup>
-    <ClCompile Include="$(QtMocOutPrefix)settings.cpp" />
-    <ClCompile Include="$(QtMocOutPrefix)emuthread.cpp" />
-    <ClCompile Include="$(QtMocOutPrefix)emuwindow.cpp" />
-    <ClCompile Include="$(QtMocOutPrefix)renderwidget.cpp" />
-    <ClCompile Include="$(QtMocOutPrefix)settingswindow.cpp" />
-    <ClCompile Include="$(QtMocOutPrefix)gamelistwidget.cpp" />
+    <ClCompile Include="$(QtMocDir)$(QtMocPrefix)settings.cpp" />
+    <ClCompile Include="$(QtMocDir)$(QtMocPrefix)emuthread.cpp" />
+    <ClCompile Include="$(QtMocDir)$(QtMocPrefix)emuwindow.cpp" />
+    <ClCompile Include="$(QtMocDir)$(QtMocPrefix)renderwidget.cpp" />
+    <ClCompile Include="$(QtMocDir)$(QtMocPrefix)settingswindow.cpp" />
+    <ClCompile Include="$(QtMocDir)$(QtMocPrefix)gamelistwidget.cpp" />
+    <ClCompile Include="$(QtMocDir)$(QtMocPrefix)gamelistmodel.cpp" />
   </ItemGroup>
 
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
