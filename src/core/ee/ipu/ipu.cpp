@@ -808,6 +808,24 @@ bool ImageProcessingUnit::BDEC_read_diff()
     }
 }
 
+void ImageProcessingUnit::convert_RGB32_to_RGB16(const uint8_t* rgb32, uint16_t* rgb16)
+{
+    for (int i = 0; i < 16; ++i)
+    {
+        for (int j = 0; j < 16; ++j)
+        {
+            //It's worth noting that bit 30 is the alpha bit for RGB16, not bit 31.
+            //TODO: Figure out how dithering works. It uses "pixel position"
+            const int index = j + (i * 16);
+            const int r = rgb32[4 * index] >> 3;
+            const int g = rgb32[4 * index + 1] >> 3;
+            const int b = rgb32[4 * index + 2] >> 3;
+            const int a = rgb32[4 * index + 3] == 0x40;
+            rgb16[index] = r | g  << 5 | b << 10 | a << 15;
+        }
+    }
+}
+
 void ImageProcessingUnit::process_VDEC()
 {
     int table = command_option >> 26;
@@ -922,7 +940,7 @@ bool ImageProcessingUnit::process_CSC()
                 break;
             case CSC_STATE::CONVERT:
             {
-                uint32_t pixels[RGB_BLOCK_SIZE];
+                uint8_t rgb32[4 * RGB_BLOCK_SIZE];
 
                 uint8_t* lum_block = csc.block;
                 uint8_t* cb_block = csc.block + 0x100;
@@ -954,39 +972,33 @@ bool ImageProcessingUnit::process_CSC()
                         if (b > 255)
                             b = 255;
 
-                        uint32_t color = (uint8_t)r;
-                        color |= ((uint8_t)g) << 8;
-                        color |= ((uint8_t)b) << 16;
-
-                        uint32_t alpha;
+                        uint8_t alpha;
                         if (r < TH0 && g < TH0 && b < TH0)
                             alpha = 0;
                         else if (r < TH1 && g < TH1 && b < TH1)
-                            alpha = 1 << 30;
+                            alpha = 0x40;
                         else
-                            alpha = 1 << 31;
+                            alpha = 0x80;
 
-                        pixels[index] = color | alpha;
-                        //printf("Pixel: $%08X (%d, %d)\n", pixels[index], i, j);
+                        rgb32[4 * index] = (uint8_t)r;
+                        rgb32[4 * index + 1] = (uint8_t)g;
+                        rgb32[4 * index + 2] = (uint8_t)b;
+                        rgb32[4 * index + 3] = alpha;
                     }
                 }
 
                 uint128_t quad;
                 if (csc.use_RGB16)
                 {
-                    //We must convert from RGB32 to RGB16.
-                    //It's worth noting that bit 30 is the alpha bit for RGB16, not bit 31.
-                    //TODO: Figure out how dithering works. It uses "pixel position"
+                    uint16_t rgb16[RGB_BLOCK_SIZE];
+
+                    convert_RGB32_to_RGB16(rgb32, rgb16);
+
                     for (int i = 0; i < RGB_BLOCK_SIZE / 8; i++)
                     {
                         for (int j = 0; j < 8; j++)
                         {
-                            uint32_t color32 = pixels[j + (i * 8)];
-                            uint16_t color16 = (color32 >> 3) & 0x1F;
-                            color16 |= ((color32 >> 11) & 0x1F) << 5;
-                            color16 |= ((color32 >> 19) & 0x1F) << 10;
-                            color16 |= ((color32 >> 30) & 0x1) << 15;
-                            quad._u16[j] = color16;
+                            quad._u16[j] = rgb16[j + (i * 8)];
                         }
                         out_FIFO.f.push_back(quad);
                     }
@@ -997,7 +1009,13 @@ bool ImageProcessingUnit::process_CSC()
                     {
                         for (int j = 0; j < 4; j++)
                         {
-                            quad._u32[j] = pixels[j + (i * 4)];
+                            int index = 4 * (j + (i * 4));
+                            uint8_t r = rgb32[index];
+                            uint8_t g = rgb32[index + 1];
+                            uint8_t b = rgb32[index + 2];
+                            uint8_t a = rgb32[index + 3];
+                            uint32_t color = r | g << 8 | b << 16 | a << 24;
+                            quad._u32[j] = color;
                         }
                         out_FIFO.f.push_back(quad);
                     }
