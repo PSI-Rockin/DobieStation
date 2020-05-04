@@ -922,7 +922,7 @@ bool ImageProcessingUnit::process_CSC()
                 break;
             case CSC_STATE::CONVERT:
             {
-                uint32_t pixels[0x100];
+                uint32_t pixels[RGB_BLOCK_SIZE];
 
                 uint8_t* lum_block = csc.block;
                 uint8_t* cb_block = csc.block + 0x100;
@@ -977,7 +977,7 @@ bool ImageProcessingUnit::process_CSC()
                     //We must convert from RGB32 to RGB16.
                     //It's worth noting that bit 30 is the alpha bit for RGB16, not bit 31.
                     //TODO: Figure out how dithering works. It uses "pixel position"
-                    for (int i = 0; i < 0x100 / 8; i++)
+                    for (int i = 0; i < RGB_BLOCK_SIZE / 8; i++)
                     {
                         for (int j = 0; j < 8; j++)
                         {
@@ -993,7 +993,7 @@ bool ImageProcessingUnit::process_CSC()
                 }
                 else
                 {
-                    for (int i = 0; i < 0x100 / 4; i++)
+                    for (int i = 0; i < RGB_BLOCK_SIZE / 4; i++)
                     {
                         for (int j = 0; j < 4; j++)
                         {

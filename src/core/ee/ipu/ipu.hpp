@@ -16,6 +16,7 @@
 #include "motioncode.hpp"
 
 constexpr int RAW_BLOCK_SIZE = 0x180;
+constexpr int RGB_BLOCK_SIZE = 0x100;
 
 struct IPU_CTRL
 {
