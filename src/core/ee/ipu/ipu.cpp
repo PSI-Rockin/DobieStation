@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <limits>
 #include "ipu.hpp"
 #include "../dmac.hpp"
 #include "../intc.hpp"
@@ -188,6 +189,13 @@ void ImageProcessingUnit::run()
                     if (in_FIFO.f.size())
                     {
                         if (process_CSC())
+                            finish_command();
+                    }
+                    break;
+                case 0x08:
+                    if (in_FIFO.f.size())
+                    {
+                        if (process_PACK())
                             finish_command();
                     }
                     break;
@@ -1033,6 +1041,113 @@ bool ImageProcessingUnit::process_CSC()
     }
 }
 
+bool ImageProcessingUnit::process_PACK()
+{
+    while (true)
+    {
+        switch (pack.state)
+        {
+            case PACK_STATE::BEGIN:
+                if (pack.macroblocks)
+                {
+                    pack.state = PACK_STATE::READ;
+                    pack.block_index = 0;
+                }
+                else
+                    pack.state = PACK_STATE::DONE;
+                break;
+            case PACK_STATE::READ:
+                if (pack.block_index == 4 * RGB_BLOCK_SIZE)
+                    pack.state = PACK_STATE::CONVERT;
+                else
+                {
+                    uint32_t value;
+                    if (!in_FIFO.get_bits(value, 8))
+                        return false;
+                    in_FIFO.advance_stream(8);
+                    pack.block[pack.block_index] = value & 0xFF;
+                    pack.block_index++;
+                }
+                break;
+            case PACK_STATE::CONVERT:
+            {
+                uint16_t rgb16[RGB_BLOCK_SIZE];
+
+                convert_RGB32_to_RGB16(pack.block, rgb16, pack.use_dithering);
+
+                uint128_t quad;
+                if (pack.use_RGB16)
+                {
+                    for (int i = 0; i < RGB_BLOCK_SIZE / 8; ++i)
+                    {
+                        for (int j = 0; j < 8; ++j)
+                        {
+                            quad._u16[j] = rgb16[j + (i * 8)];
+                        }
+                        out_FIFO.f.push_back(quad);
+                    }
+                }
+                else
+                {
+                    int clut_r[16];
+                    int clut_g[16];
+                    int clut_b[16];
+                    for (int i = 0; i < 16; ++i)
+                    {
+                        clut_r[i] = VQCLUT[i] & 0x1F;
+                        clut_g[i] = (VQCLUT[i] >> 5) & 0x1F;
+                        clut_b[i] = (VQCLUT[i] >> 10) & 0x1F;
+                    }
+
+                    auto closest_index = [&](uint16_t color) {
+                        const int r = color & 0x1F;
+                        const int g = (color >> 5) & 0x1F;
+                        const int b = (color >> 10) & 0x1F;
+
+                        uint8_t index = 0;
+                        int min_distance = std::numeric_limits<int>::max();
+                        for (uint8_t i = 0; i < 16; ++i)
+                        {
+                            const int dr = r - clut_r[i];
+                            const int dg = g - clut_g[i];
+                            const int db = b - clut_b[i];
+                            const int distance = dr * dr + dg * dg + db * db;
+
+                            // TODO: If two distances are the same which index is used?
+                            if (min_distance > distance)
+                            {
+                                index = i;
+                                min_distance = distance;
+                            }
+                        }
+
+                        return index;
+                    };
+
+                    for (int i = 0; i < RGB_BLOCK_SIZE / 32; ++i)
+                    {
+                        for (int j = 0; j < 16; ++j)
+                        {
+                            int index = 2 * j + (i * 32);
+                            const uint16_t color16_low = rgb16[index];
+                            const uint16_t color16_high = rgb16[index + 1];
+                            quad._u8[j] = closest_index(color16_high) << 4 | closest_index(color16_low);
+                        }
+                        out_FIFO.f.push_back(quad);
+                    }
+                }
+                dmac->set_DMA_request(IPU_FROM);
+                pack.macroblocks--;
+                pack.state = PACK_STATE::BEGIN;
+            }
+                break;
+            case PACK_STATE::DONE:
+                printf("[IPU] PACK done!\n");
+                return true;
+        }
+    }
+}
+
 uint64_t ImageProcessingUnit::read_command()
 {
     uint64_t reg = 0;
@@ -1154,6 +1269,13 @@ void ImageProcessingUnit::write_command(uint32_t value)
                 csc.macroblocks = command_option & 0x7FF;
                 csc.use_RGB16 = command_option & (1 << 27);
                 csc.use_dithering = command_option & (1 << 26);
+                break;
+            case 0x08:
+                printf("[IPU] PACK\n");
+                pack.state = PACK_STATE::BEGIN;
+                pack.macroblocks = command_option & 0x7FF;
+                pack.use_RGB16 = command_option & (1 << 27);
+                pack.use_dithering = command_option & (1 << 26);
                 break;
             case 0x09:
                 printf("[IPU] SETTH\n");

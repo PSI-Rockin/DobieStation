@@ -146,6 +146,25 @@ struct CSC_Command
     int block_index;
 };
 
+enum class PACK_STATE
+{
+    BEGIN,
+    READ,
+    CONVERT,
+    DONE
+};
+
+struct PACK_Command
+{
+    PACK_STATE state;
+    int macroblocks;
+    bool use_RGB16;
+    bool use_dithering;
+
+    uint8_t block[4 * RGB_BLOCK_SIZE];
+    int block_index;
+};
+
 class INTC;
 class DMAC;
 
@@ -194,6 +213,7 @@ class ImageProcessingUnit
         VDEC_STATE vdec_state, fdec_state;
         CSC_Command csc;
         SETIQ_STATE setiq_state;
+        PACK_Command pack;
 
         double IDCT_table[8][8];
 
@@ -213,6 +233,7 @@ class ImageProcessingUnit
         void process_VDEC();
         void process_FDEC();
         bool process_CSC();
+        bool process_PACK();
     public:
         ImageProcessingUnit(INTC* intc, DMAC* dmac);
 
