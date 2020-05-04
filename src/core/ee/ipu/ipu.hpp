@@ -208,6 +208,7 @@ class ImageProcessingUnit
         bool BDEC_read_coeffs();
         bool BDEC_read_diff();
 
+        void convert_RGB32_to_RGB16(const uint8_t* rgb32, uint16_t *rgb16);
         void process_VDEC();
         void process_FDEC();
         bool process_CSC();
