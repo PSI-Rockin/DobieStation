@@ -240,42 +240,64 @@ void EE_JIT64::floating_point_negate(EmotionEngine& ee, IR::Instruction& instr)
 
 void EE_JIT64::floating_point_maximum(EmotionEngine& ee, IR::Instruction& instr)
 {
+    REG_64 temp = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD, REG_64::XMM0);
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
     REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::FPU, REG_STATE::READ);
     REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
-    REG_64 XMM0 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 temp2 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 temp3 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
 
     emitter.load_addr((uint64_t)&ee.fpu->control.u, REG_64::RAX);
     emitter.MOV8_IMM_MEM(false, REG_64::RAX);
     emitter.load_addr((uint64_t)&ee.fpu->control.o, REG_64::RAX);
     emitter.MOV8_IMM_MEM(false, REG_64::RAX);
 
-    // MAXSS returns the second source operand if both operands are zero, regardless of sign (e.g. +0 or -0).
-    // The EE returns the first source operand, so we use a temporary register in order to handle this case.
-    emitter.MOVAPS_REG(source, XMM0);
-    emitter.MOVAPS_REG(source2, dest);
-    emitter.MAXSS(XMM0, dest);
-    free_xmm_reg(ee, XMM0);
+    emitter.MOVAPS_REG(source, temp2);
+    emitter.MOVAPS_REG(source2, temp3);
+
+    emitter.MOVAPS_REG(source2, temp);
+    emitter.PMAXSD_XMM(source, temp);
+    emitter.MOVAPS_REG(temp, dest);
+
+    emitter.MOVAPS_REG(temp2, temp);
+    emitter.PAND_XMM(temp3, temp); //mask
+    emitter.PMINSD_XMM(temp3, temp2);
+    emitter.BLENDVPS_XMM0(temp2, dest);
+
+    free_xmm_reg(ee, temp);
+    free_xmm_reg(ee, temp2);
+    free_xmm_reg(ee, temp3);
 }
 
 void EE_JIT64::floating_point_minimum(EmotionEngine& ee, IR::Instruction& instr)
 {
+    REG_64 temp = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD, REG_64::XMM0);
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
     REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::FPU, REG_STATE::READ);
     REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
-    REG_64 XMM0 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 temp2 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
+    REG_64 temp3 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
 
     emitter.load_addr((uint64_t)&ee.fpu->control.u, REG_64::RAX);
     emitter.MOV8_IMM_MEM(false, REG_64::RAX);
     emitter.load_addr((uint64_t)&ee.fpu->control.o, REG_64::RAX);
     emitter.MOV8_IMM_MEM(false, REG_64::RAX);
 
-    // MINSS returns the second source operand if both operands are zero, regardless of sign (e.g. +0 or -0).
-    // The EE returns the first source operand, so we use a temporary register in order to handle this case.
-    emitter.MOVAPS_REG(source, XMM0);
-    emitter.MOVAPS_REG(source2, dest);
-    emitter.MINSS(XMM0, dest);
-    free_xmm_reg(ee, XMM0);
+    emitter.MOVAPS_REG(source, temp2);
+    emitter.MOVAPS_REG(source2, temp3);
+
+    emitter.MOVAPS_REG(source2, temp);
+    emitter.PMINSD_XMM(source, temp);
+    emitter.MOVAPS_REG(temp, dest);
+
+    emitter.MOVAPS_REG(temp2, temp);
+    emitter.PAND_XMM(temp3, temp); //mask
+    emitter.PMAXSD_XMM(temp3, temp2);
+    emitter.BLENDVPS_XMM0(temp2, dest);
+
+    free_xmm_reg(ee, temp);
+    free_xmm_reg(ee, temp2);
+    free_xmm_reg(ee, temp3);
 }
 
 void EE_JIT64::floating_point_square_root(EmotionEngine& ee, IR::Instruction& instr)
