@@ -75,22 +75,23 @@ ImageProcessingUnit::ImageProcessingUnit(INTC* intc, DMAC* dmac) : intc(intc), d
         }
     }
 
-    dither_mtx[0][0] = -8;
+    //I'm assuming the dithering process rounds down so I've rounded the matrix values down
+    dither_mtx[0][0] = -4;
     dither_mtx[0][1] = 0;
-    dither_mtx[0][2] = -6;
-    dither_mtx[0][3] = 2;
-    dither_mtx[1][0] = 4;
-    dither_mtx[1][1] = -4;
-    dither_mtx[1][2] = 6;
-    dither_mtx[1][3] = -2;
-    dither_mtx[2][0] = -5;
-    dither_mtx[2][1] = 3;
-    dither_mtx[2][2] = -7;
-    dither_mtx[2][3] = 1;
-    dither_mtx[3][0] = 7;
+    dither_mtx[0][2] = -3;
+    dither_mtx[0][3] = 1;
+    dither_mtx[1][0] = 2;
+    dither_mtx[1][1] = -2;
+    dither_mtx[1][2] = 3;
+    dither_mtx[1][3] = -1;
+    dither_mtx[2][0] = -3;
+    dither_mtx[2][1] = 1;
+    dither_mtx[2][2] = -4;
+    dither_mtx[2][3] = 0;
+    dither_mtx[3][0] = 3;
     dither_mtx[3][1] = -1;
-    dither_mtx[3][2] = 5;
-    dither_mtx[3][3] = -3;
+    dither_mtx[3][2] = 2;
+    dither_mtx[3][3] = -2;
 }
 
 void ImageProcessingUnit::reset()
@@ -808,18 +809,18 @@ bool ImageProcessingUnit::BDEC_read_diff()
     }
 }
 
-void ImageProcessingUnit::convert_RGB32_to_RGB16(const uint8_t* rgb32, uint16_t* rgb16)
+void ImageProcessingUnit::convert_RGB32_to_RGB16(const uint8_t* rgb32, uint16_t* rgb16, bool dithering)
 {
     for (int i = 0; i < 16; ++i)
     {
         for (int j = 0; j < 16; ++j)
         {
             //It's worth noting that bit 30 is the alpha bit for RGB16, not bit 31.
-            //TODO: Figure out how dithering works. It uses "pixel position"
             const int index = j + (i * 16);
-            const int r = rgb32[4 * index] >> 3;
-            const int g = rgb32[4 * index + 1] >> 3;
-            const int b = rgb32[4 * index + 2] >> 3;
+            const int dither = dithering ? dither_mtx[i & 3][j & 3] : 0;
+            const int r = std::max(0, std::min(rgb32[4 * index] + dither, 255)) >> 3;
+            const int g = std::max(0, std::min(rgb32[4 * index + 1] + dither, 255)) >> 3;
+            const int b = std::max(0, std::min(rgb32[4 * index + 2] + dither, 255)) >> 3;
             const int a = rgb32[4 * index + 3] == 0x40;
             rgb16[index] = r | g  << 5 | b << 10 | a << 15;
         }
@@ -992,7 +993,7 @@ bool ImageProcessingUnit::process_CSC()
                 {
                     uint16_t rgb16[RGB_BLOCK_SIZE];
 
-                    convert_RGB32_to_RGB16(rgb32, rgb16);
+                    convert_RGB32_to_RGB16(rgb32, rgb16, csc.use_dithering);
 
                     for (int i = 0; i < RGB_BLOCK_SIZE / 8; i++)
                     {
@@ -1152,6 +1153,7 @@ void ImageProcessingUnit::write_command(uint32_t value)
                 csc.state = CSC_STATE::BEGIN;
                 csc.macroblocks = command_option & 0x7FF;
                 csc.use_RGB16 = command_option & (1 << 27);
+                csc.use_dithering = command_option & (1 << 26);
                 break;
             case 0x09:
                 printf("[IPU] SETTH\n");
