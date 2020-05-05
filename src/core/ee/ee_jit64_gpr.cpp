@@ -652,7 +652,7 @@ void EE_JIT64::jump_indirect(EmotionEngine& ee, IR::Instruction& instr)
     if (instr.get_is_link())
     {
         // Set the link register
-        REG_64 link = alloc_reg(ee, EE_NormalReg::ra, REG_TYPE::GPR, REG_STATE::WRITE);
+        REG_64 link = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPR, REG_STATE::WRITE);
         emitter.MOV32_REG_IMM(instr.get_return_addr(), link);
     }
 }
