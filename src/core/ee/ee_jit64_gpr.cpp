@@ -223,7 +223,8 @@ void EE_JIT64::branch_greater_than_or_equal_zero(EmotionEngine& ee, IR::Instruct
     if (instr.get_is_link())
     {
         // Set the link register
-        emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::R15, offsetof(EmotionEngine, gpr) + get_gpr_offset(EE_NormalReg::ra));
+        REG_64 link = alloc_reg(ee, EE_NormalReg::ra, REG_TYPE::GPR, REG_STATE::WRITE);
+        emitter.MOV32_REG_IMM(instr.get_return_addr(), link);
     }
 
     // Conditionally move the success or failure destination into ee.PC
@@ -313,7 +314,8 @@ void EE_JIT64::branch_less_than_zero(EmotionEngine& ee, IR::Instruction &instr)
     if (instr.get_is_link())
     {
         // Set the link register
-        emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::R15, offsetof(EmotionEngine, gpr) + get_gpr_offset(EE_NormalReg::ra));
+        REG_64 link = alloc_reg(ee, EE_NormalReg::ra, REG_TYPE::GPR, REG_STATE::WRITE);
+        emitter.MOV32_REG_IMM(instr.get_return_addr(), link);
     }
 
     // Conditionally move the success or failure destination into ee.PC
