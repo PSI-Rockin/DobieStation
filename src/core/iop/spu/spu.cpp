@@ -125,15 +125,44 @@ void SPU::dump_voice_data()
             data += 8;
         }
 
-
         out.append_pcm(pcm);
     }
 }
 
+void SPU::switch_block(int voice_id)
+{
+    Voice &voice = voices[voice_id];
+    voice.current_addr &= 0x000FFFFF;
+    uint16_t header = RAM[voice.current_addr];
+    voice.loop_code = (header >> 8) & 0x3;
+    bool loop_start = header & (1 << 10);
+
+    if (loop_start && !voice.loop_addr_specified)
+        voice.loop_addr = voice.current_addr;
+
+    voice.sample_idx = 0;
+
+    voice.pcm = voice.adpcm.decode_block((uint8_t*)(RAM+voice.current_addr));
+
+    spu_check_irq(voice.current_addr);
+    voice.current_addr++;
+    voice.current_addr &= 0x000FFFFF;
+    voice.new_block = false;
+
+    voice.old3 = voice.old2;
+    voice.old2 = voice.old1;
+    voice.old1 = voice.next_sample;
+    voice.next_sample = voice.pcm.at(voice.sample_idx);
+}
 
 stereo_sample SPU::voice_gen_sample(int voice_id)
 {
     Voice &voice = voices[voice_id];
+
+    if (voice.new_block == true)
+    {
+        switch_block(voice_id);
+    }
 
     uint32_t step = voice.pitch;
     if ((voice_pitch_mod & (1 << voice_id)) && voice_id != 0)
@@ -145,51 +174,24 @@ stereo_sample SPU::voice_gen_sample(int voice_id)
         step = step & 0xFFFF;
     }
     step = std::min(step, 0x3fffu);
-
     voice.counter += step;
+
     while (voice.counter >= 0x1000)
     {
         voice.counter -= 0x1000;
 
-        //Read header
-        if (voice.block_pos == 0)
-        {
-            voice.current_addr &= 0x000FFFFF;
-            uint16_t header = RAM[voice.current_addr];
-            voice.loop_code = (header >> 8) & 0x3;
-            bool loop_start = header & (1 << 10);
 
-            if (loop_start && !voice.loop_addr_specified)
-                voice.loop_addr = voice.current_addr;
-
-            voice.block_pos = 4;
-
-            voice.pcm = voice.adpcm.decode_block((uint8_t*)(RAM+voice.current_addr));
-
-            spu_check_irq(voice.current_addr);
-            voice.current_addr++;
-            voice.current_addr &= 0x000FFFFF;
-        }
-
-        voice.old3 = voice.old2;
-        voice.old2 = voice.old1;
-        voice.old1 = voice.next_sample;
-
-        voice.next_sample = voice.pcm[voice.block_pos-4];
-
-        voice.block_pos++;
-        if ((voice.block_pos % 4) == 0)
+        voice.sample_idx++;
+        if ((voice.sample_idx % 4) == 0)
         {
             spu_check_irq(voice.current_addr);
             voice.current_addr++;
             voice.current_addr &= 0x000FFFFF;
         }
-
 
         //End of block
-        if (voice.block_pos == 32)
+        if (voice.sample_idx == 28)
         {
-            voice.block_pos = 0;
             switch (voice.loop_code)
             {
                 //Continue to next block
@@ -209,8 +211,15 @@ stereo_sample SPU::voice_gen_sample(int voice_id)
                     ENDX |= 1 << voice_id;
                     break;
             }
+            switch_block(voice_id);
+            continue;
         }
+        voice.old3 = voice.old2;
+        voice.old2 = voice.old1;
+        voice.old1 = voice.next_sample;
+        voice.next_sample = voice.pcm.at(voice.sample_idx);
     }
+
 
     int16_t output_sample = 0;
 
@@ -1197,15 +1206,16 @@ void SPU::key_on_voice(int v)
 {
     //Copy start addr to current addr, clear ENDX bit, and set envelope to Attack mode
     voices[v].current_addr = voices[v].start_addr;
-    voices[v].block_pos = 0;
+    voices[v].new_block = true;
     voices[v].loop_addr_specified = false;
+    // Clear previous sample data here to avoid pops and clicks.
+    voices[v].old3 = 0;
+    voices[v].old2 = 0;
+    voices[v].old1 = 0;
+    voices[v].next_sample = 0;
     ENDX &= ~(1 << v);
     voices[v].adsr.set_stage(ADSR::Stage::Attack);
     voices[v].adsr.volume = 0;
-    voices[v].next_sample = 0;
-    voices[v].old1 = 0;
-    voices[v].old2 = 0;
-    voices[v].old3 = 0;
     printf("[SPU%d] EDEBUG Setting ADSR phase of voice %d to %d\n", id, v, 1);
 }
 

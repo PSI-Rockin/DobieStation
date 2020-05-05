@@ -44,8 +44,9 @@ struct Voice
     ADSR adsr;
 
     uint32_t counter;
-    unsigned block_pos;
+    unsigned sample_idx;
     int loop_code;
+    bool new_block;
 
     ADPCM_decoder adpcm;
 
@@ -72,7 +73,7 @@ struct Voice
         loop_addr = 0;
         loop_addr_specified = false;
         counter = 0;
-        block_pos = 0;
+        sample_idx = 0;
         loop_code = 0;
     }
 };
@@ -270,6 +271,7 @@ class SPU
         void key_on_voice(int v);
         void key_off_voice(int v);
         void update_voice_state();
+        void switch_block(int voice_id);
 
         void spu_check_irq(uint32_t address);
         void spu_irq(int index);
