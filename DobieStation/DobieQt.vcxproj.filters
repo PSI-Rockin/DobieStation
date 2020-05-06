@@ -43,6 +43,9 @@
     <ClCompile Include="$(UIDir)gamelist/gamelistmodel.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="$(UIDir)gamelist/gamelistwatcher.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
 
   <ItemGroup>
@@ -65,6 +68,9 @@
       <Filter>Moc</Filter>
     </ClCompile>
     <ClCompile Include="$(QtMocDir)$(QtMocPrefix)gamelistmodel.cpp">
+      <Filter>Moc</Filter>
+    </ClCompile>
+    <ClCompile Include="$(QtMocDir)$(QtMocPrefix)gamelistwatcher.cpp">
       <Filter>Moc</Filter>
     </ClCompile>
   </ItemGroup>
@@ -95,6 +101,9 @@
       <Filter>Headers</Filter>
     </QtMoc>
     <QtMoc Include="$(UIDir)gamelist/gamelistmodel.hpp">
+      <Filter>Headers</Filter>
+    </QtMoc>
+    <QtMoc Include="$(UIDir)gamelist/gamelistwatcher.hpp">
       <Filter>Headers</Filter>
     </QtMoc>
   </ItemGroup>

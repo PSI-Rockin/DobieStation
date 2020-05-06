@@ -3,10 +3,16 @@
 
 #include <QWidget>
 #include <QStackedWidget>
+#include <QTableView>
+
+#include "gamelist/gamelistmodel.hpp"
 
 class GameListWidget : public QStackedWidget
 {
     Q_OBJECT
+    private:
+        GameListModel* m_model;
+        QTableView* m_table_view;
     public:
         enum VIEW
         {
@@ -14,9 +20,8 @@ class GameListWidget : public QStackedWidget
             GAMELIST
         };
         GameListWidget(QWidget* parent = nullptr);
-
-        void show_default_view();
-        void show_gamelist_view();
+    public slots:
+        void update_view();
     signals:
         void game_double_clicked(QString path);
         void settings_requested();

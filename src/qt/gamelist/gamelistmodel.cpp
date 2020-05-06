@@ -1,5 +1,6 @@
 #include <QDirIterator>
 #include <QLocale>
+#include <QDebug>
 
 #include "settings.hpp"
 #include "gamelist/gamelistmodel.hpp"
@@ -7,18 +8,19 @@
 GameListModel::GameListModel(QObject* parent)
     : QAbstractTableModel(parent)
 {
-    for (auto& path : Settings::instance().rom_directories)
-        games.append(get_directory_entries(path));
-
-    sort_games();
+    connect(&watcher, &GameListWatcher::game_loaded, this, &GameListModel::add_game);
+    connect(&watcher, &GameListWatcher::game_removed, this, &GameListModel::remove_game);
+    connect(&watcher, &GameListWatcher::directory_processed, [this]() {
+        emit directory_processed();
+    });
 
     connect(&Settings::instance(), &Settings::rom_directory_committed,
-        this, &GameListModel::add_path
-    );
-
+        &watcher, &GameListWatcher::add_directory);
     connect(&Settings::instance(), &Settings::rom_directory_uncommitted,
-        this, &GameListModel::remove_path
-    );
+        &watcher, &GameListWatcher::remove_directory);
+
+    for (const auto& path : Settings::instance().rom_directories)
+        watcher.add_directory(path);
 }
 
 QVariant GameListModel::data(
@@ -31,15 +33,14 @@ QVariant GameListModel::data(
     if (role != Qt::DisplayRole)
         return QVariant();
 
-    auto file = games.at(index.row());
-    QFileInfo file_info(file);
+    const auto& game = m_games.at(index.row());
 
     switch (index.column())
     {
         case COLUMN_NAME:
-            return file_info.fileName();
+            return game.name;
         case COLUMN_SIZE:
-            return get_formatted_data_size(file_info.size());
+            return get_formatted_data_size(game.size);
     }
 
     return QVariant();
@@ -49,6 +50,9 @@ QVariant GameListModel::headerData(
     int section, Qt::Orientation orientation, int role
 ) const
 {
+    if (orientation == Qt::Vertical || role != Qt::DisplayRole)
+        return QVariant();
+
     switch (section)
     {
         case COLUMN_NAME:
@@ -62,36 +66,41 @@ QVariant GameListModel::headerData(
 
 int GameListModel::rowCount(const QModelIndex& index) const
 {
-    return games.size();
+    if (index.isValid())
+        return 0;
+
+    return m_games.size();
 }
 
 int GameListModel::columnCount(const QModelIndex& index) const
 {
-    return 2;
+    return COLUMN_MAX;
 }
 
-QStringList GameListModel::get_directory_entries(QString path)
+GameInfo GameListModel::get_game_info(int index)
 {
-    const QStringList file_types({
-        "*.iso",
-        "*.cso",
-        "*.elf",
-        "*.gsd",
-        "*.bin"
-    });
+    return m_games[index];
+}
 
-    QDirIterator it(path, file_types,
-        QDir::Files, QDirIterator::Subdirectories
-    );
+GameListWatcher* GameListModel::get_watcher()
+{
+    return &watcher;
+}
 
-    QStringList list;
-    while (it.hasNext())
-    {
-        it.next();
-        list.append(it.filePath());
-    }
+void GameListModel::add_game(const GameInfo game)
+{
+    beginInsertRows(QModelIndex(), m_games.size(), m_games.size());
+    m_games.push_back(game);
+    endInsertRows();
+}
 
-    return list;
+void GameListModel::remove_game(const GameInfo game)
+{
+    auto index = m_games.indexOf(game);
+
+    beginRemoveRows(QModelIndex(), index, index);
+    m_games.removeAt(index);
+    endRemoveRows();
 }
 
 QString GameListModel::get_formatted_data_size(uint64_t size) const
@@ -117,43 +126,4 @@ QString GameListModel::get_formatted_data_size(uint64_t size) const
 #else
     return QLocale().formattedDataSize(size);
 #endif
-}
-
-void GameListModel::sort_games()
-{
-    std::sort(games.begin(), games.end(), [&](const QString& file1, const QString& file2) {
-        auto file_name1 = QFileInfo(file1).fileName();
-        auto file_name2 = QFileInfo(file2).fileName();
-
-        return file_name1.compare(file_name2, Qt::CaseInsensitive) < 0;
-    });
-}
-
-void GameListModel::add_path(const QString& path)
-{
-    QStringList new_games = get_directory_entries(path);
-
-    beginInsertRows(QModelIndex(), 0, new_games.size() - 1);
-    games.append(new_games);
-
-    sort_games();
-
-    games.removeDuplicates();
-    endInsertRows();
-}
-
-void GameListModel::remove_path(const QString& path)
-{
-    QStringList remove_games = get_directory_entries(path);
-
-    for (auto& game : remove_games)
-    {
-        int index = games.indexOf(game);
-        if (index == -1)
-            continue;
-
-        beginRemoveRows(QModelIndex(), index, index);
-        games.removeAll(game);
-        endRemoveRows();
-    }
 }

@@ -1,13 +1,12 @@
 #include <QLabel>
-#include <QTableView>
 #include <QHeaderView>
 #include <QAbstractItemView>
 #include <QPushButton>
 #include <QVBoxLayout>
+#include <QDebug>
 
 #include "settings.hpp"
 #include "gamelist/gamelistwidget.hpp"
-#include "gamelist/gamelistmodel.hpp"
 
 #include <cmath>
 #include <algorithm>
@@ -15,25 +14,20 @@
 GameListWidget::GameListWidget(QWidget* parent)
     : QStackedWidget(parent)
 {
-    auto game_list_widget = new QTableView(this);
-    auto game_list_model = new GameListModel(this);
+    m_table_view = new QTableView(this);
+    m_model = new GameListModel(this);
 
-    game_list_widget->setModel(game_list_model);
-    game_list_widget->setShowGrid(false);
-    game_list_widget->setFrameStyle(QFrame::NoFrame);
-    game_list_widget->setAlternatingRowColors(true);
-    game_list_widget->setSelectionMode(QAbstractItemView::ExtendedSelection);
-    game_list_widget->setSelectionBehavior(QAbstractItemView::SelectRows);
-    game_list_widget->verticalHeader()->setDefaultSectionSize(40);
+    m_table_view->setModel(m_model);
+    m_table_view->setShowGrid(false);
+    m_table_view->setFrameStyle(QFrame::NoFrame);
+    m_table_view->setAlternatingRowColors(true);
+    m_table_view->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    m_table_view->setSelectionBehavior(QAbstractItemView::SelectRows);
+    m_table_view->verticalHeader()->setDefaultSectionSize(40);
 
-    auto header = game_list_widget->horizontalHeader();
+    auto header = m_table_view->horizontalHeader();
     header->setMinimumSectionSize(40);
     header->setSectionResizeMode(GameListModel::COLUMN_NAME, QHeaderView::Stretch);
-
-    connect(game_list_widget, &QTableView::doubleClicked, [=](const QModelIndex& index) {
-        QString path = game_list_model->games.at(index.row());
-        emit game_double_clicked(path);
-    });
 
     auto default_label = new QLabel(this);
     default_label->setAlignment(Qt::AlignHCenter);
@@ -47,6 +41,14 @@ GameListWidget::GameListWidget(QWidget* parent)
         emit settings_requested();
     });
 
+    connect(m_model->get_watcher(), &GameListWatcher::directory_processed,
+        this, &GameListWidget::update_view);
+
+    connect(m_table_view, &QTableView::doubleClicked, [=](const QModelIndex& index) {
+        GameInfo info = m_model->get_game_info(index.row());
+        emit game_double_clicked(info.path);
+    });
+
     auto layout = new QVBoxLayout;
     layout->addWidget(default_label);
     layout->addWidget(default_button);
@@ -56,27 +58,15 @@ GameListWidget::GameListWidget(QWidget* parent)
     default_widget->setLayout(layout);
 
     addWidget(default_widget);
-    addWidget(game_list_widget);
+    addWidget(m_table_view);
 
-    if (game_list_widget->model()->rowCount())
-        show_gamelist_view();
-
-    connect(&Settings::instance(), &Settings::rom_directory_committed,
-        this, &GameListWidget::show_gamelist_view
-    );
-
-    connect(&Settings::instance(), &Settings::rom_directory_uncommitted, [=]() {
-        if (!game_list_widget->model()->rowCount())
-            show_default_view();
-    });
+    m_model->get_watcher()->start();
 }
 
-void GameListWidget::show_default_view()
+void GameListWidget::update_view()
 {
-    setCurrentIndex(VIEW::DEFAULT);
-}
-
-void GameListWidget::show_gamelist_view()
-{
-    setCurrentIndex(VIEW::GAMELIST);
+    if(m_table_view->model()->rowCount() || currentIndex() != VIEW::GAMELIST)
+        setCurrentIndex(VIEW::GAMELIST);
+    else if(!m_table_view->model()->rowCount())
+        setCurrentIndex(VIEW::DEFAULT);
 }
