@@ -165,25 +165,10 @@ struct Reverb
 
 struct Noise
 {
-    uint8_t shift;
-    uint8_t stepsize;
-    int32_t timer;
+    uint8_t clock;
     int16_t output;
-
-    void step()
-    {
-        timer = timer - stepsize;
-        uint8_t paritybit = ((output >> 15) & 1) ^
-            ((output >> 12) & 1) ^ ((output >> 11) & 1) ^
-            ((output >> 10) & 1) ^ 1;
-        if (timer < 0)
-        {
-            output = output*2 + paritybit;
-            timer += 20000 >> shift;
-        }
-        if (timer < 0)
-            timer += 20000 >> shift;
-    }
+    uint32_t count;
+    void step();
 };
 
 struct SPU_STAT

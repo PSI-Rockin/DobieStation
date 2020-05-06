@@ -472,6 +472,46 @@ void SPU::run_reverb(stereo_sample wet)
     reverb.cycle = 1;
 }
 
+static const uint8_t noise_add[64] = {
+    1, 0, 0, 1, 0, 1, 1, 0,
+    1, 0, 0, 1, 0, 1, 1, 0,
+    1, 0, 0, 1, 0, 1, 1, 0,
+    1, 0, 0, 1, 0, 1, 1, 0,
+    0, 1, 1, 0, 1, 0, 0, 1,
+    0, 1, 1, 0, 1, 0, 0, 1,
+    0, 1, 1, 0, 1, 0, 0, 1,
+    0, 1, 1, 0, 1, 0, 0, 1
+};
+
+static const uint16_t noise_freq_add[5] = {
+    0, 84, 140, 180, 210
+};
+
+// Dr. Hells noise algorithm, implementation borrowed from pcsxr
+
+void Noise::step()
+{
+    uint32_t level = 0x8000 >> (clock >> 2);
+    level <<= 16;
+
+    count += 0x10000;
+
+    count += noise_freq_add[clock & 3];
+    if((count & 0xffff) >= noise_freq_add[4])
+    {
+        count += 0x10000;
+        count -= noise_freq_add[clock & 3];
+    }
+
+    if(count >= level)
+    {
+        while(count >= level)
+            count -= level;
+
+       output = static_cast<int16_t>((output << 1) | noise_add[(output>>10) & 63 ]);
+    }
+}
+
 void SPU::finish_DMA()
 {
     status.DMA_ready = true;
@@ -1047,8 +1087,7 @@ void SPU::write16(uint32_t addr, uint16_t value)
                 printf("[SPU%d] Reverb enable changed to %d\n", id, (value >> 7) & 1);
             }
             output_enable = (value >> 14) & 1;
-            noise.stepsize = 4 + ((value >> 8) & 0x3);
-            noise.shift = (value >> 10) & 0xF;
+            noise.clock = (value >> 8) & 0x3F;
             effect_enable = (value >> 7) & 1;
             break;
         case 0x19C:
