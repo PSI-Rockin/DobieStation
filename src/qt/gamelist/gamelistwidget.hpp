@@ -5,8 +5,8 @@
 #include <QStackedWidget>
 #include <QTableView>
 
-#include "gamelist/gamelistmodel.hpp"
-#include "gamelist/gamelistproxy.hpp"
+#include "gamelistmodel.hpp"
+#include "gamelistproxy.hpp"
 
 class GameListWidget : public QStackedWidget
 {

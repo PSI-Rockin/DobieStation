@@ -4,7 +4,7 @@
 #include <QDebug>
 #include <QFileInfo>
 
-#include "gamelist/gamelistwatcher.hpp"
+#include "gamelistwatcher.hpp"
 
 void IOTask::add_directory(const QString dir)
 {
