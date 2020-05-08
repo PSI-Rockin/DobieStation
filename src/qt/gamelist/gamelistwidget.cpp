@@ -16,11 +16,15 @@ GameListWidget::GameListWidget(QWidget* parent)
 {
     m_table_view = new QTableView(this);
     m_model = new GameListModel(this);
+    m_proxy = new GameListProxy(this);
 
-    m_table_view->setModel(m_model);
+    m_proxy->setSourceModel(m_model);
+    m_table_view->setModel(m_proxy);
+
     m_table_view->setShowGrid(false);
     m_table_view->setFrameStyle(QFrame::NoFrame);
     m_table_view->setAlternatingRowColors(true);
+    m_table_view->setSortingEnabled(true);
     m_table_view->setSelectionMode(QAbstractItemView::ExtendedSelection);
     m_table_view->setSelectionBehavior(QAbstractItemView::SelectRows);
     m_table_view->verticalHeader()->setDefaultSectionSize(40);
@@ -45,7 +49,9 @@ GameListWidget::GameListWidget(QWidget* parent)
         this, &GameListWidget::update_view);
 
     connect(m_table_view, &QTableView::doubleClicked, [=](const QModelIndex& index) {
-        GameInfo info = m_model->get_game_info(index.row());
+        auto proxy_index = m_proxy->mapToSource(index);
+
+        GameInfo info = m_model->get_game_info(proxy_index.row());
         emit game_double_clicked(info.path);
     });
 

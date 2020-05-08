@@ -5,6 +5,14 @@
 #include "settings.hpp"
 #include "gamelist/gamelistmodel.hpp"
 
+static QMap<QString, QString> s_file_type_desc{
+    {"elf", "PS2 Executable"},
+    {"iso", "ISO Image"},
+    {"cso", "Compressed ISO"},
+    {"gsd", "GSDump"},
+    {"bin", "BIN/CUE"}
+};
+
 GameListModel::GameListModel(QObject* parent)
     : QAbstractTableModel(parent)
 {
@@ -30,7 +38,7 @@ QVariant GameListModel::data(
     // might be cool in the future
     // but for now let's just focus
     // on display role
-    if (role != Qt::DisplayRole)
+    if (!index.isValid())
         return QVariant();
 
     const auto& game = m_games.at(index.row());
@@ -38,9 +46,27 @@ QVariant GameListModel::data(
     switch (index.column())
     {
         case COLUMN_NAME:
-            return game.name;
+            if(role == Qt::DisplayRole || role == Qt::InitialSortOrderRole)
+                return game.name;
+            break;
+        case COLUMN_TYPE:
+            if (role == Qt::DisplayRole)
+                return s_file_type_desc[game.type];
+
+            // sort by the actual type and not
+            // the description
+            if (role == Qt::InitialSortOrderRole)
+                return game.type;
+            break;
         case COLUMN_SIZE:
-            return get_formatted_data_size(game.size);
+            if(role == Qt::DisplayRole)
+                return get_formatted_data_size(game.size);
+
+            // sort by the actual size and not
+            // the human readable string
+            if (role == Qt::InitialSortOrderRole)
+                return game.size;
+            break;
     }
 
     return QVariant();
@@ -57,6 +83,8 @@ QVariant GameListModel::headerData(
     {
         case COLUMN_NAME:
             return tr("Name");
+        case COLUMN_TYPE:
+            return tr("Type");
         case COLUMN_SIZE:
             return tr("Size");
     }

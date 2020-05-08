@@ -31,6 +31,7 @@ void IOTask::add_directory(const QString dir)
         info.path = it.filePath();
         info.name = file_info.baseName();
         info.size = file_info.size();
+        info.type = file_info.suffix().toLower();
 
         list.append(info);
         emit game_found(info);

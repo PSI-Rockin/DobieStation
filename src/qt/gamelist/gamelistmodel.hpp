@@ -17,6 +17,7 @@ class GameListModel final : public QAbstractTableModel
         {
             COLUMN_NAME,
             COLUMN_SIZE,
+            COLUMN_TYPE,
             COLUMN_MAX
         };
 

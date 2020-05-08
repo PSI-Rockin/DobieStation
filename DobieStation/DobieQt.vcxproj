@@ -91,6 +91,7 @@
     <ClCompile Include="$(UIDir)gamelist/gamelistwidget.cpp" />
     <ClCompile Include="$(UIDir)gamelist/gamelistmodel.cpp" />
     <ClCompile Include="$(UIDir)gamelist/gamelistwatcher.cpp" />
+    <ClCompile Include="$(UIDir)gamelist/gamelistproxy.cpp" />
   </ItemGroup>
 
   <!-- headers -->
@@ -108,6 +109,7 @@
     <QtMoc Include="$(UIDir)gamelist/gamelistwidget.hpp" />
     <QtMoc Include="$(UIDir)gamelist/gamelistmodel.hpp" />
     <QtMoc Include="$(UIDir)gamelist/gamelistwatcher.hpp" />
+    <QtMoc Include="$(UIDir)gamelist/gamelistproxy.hpp" />
   </ItemGroup>
 
   <!-- moc compile -->
@@ -120,6 +122,7 @@
     <ClCompile Include="$(QtMocDir)$(QtMocPrefix)gamelistwidget.cpp" />
     <ClCompile Include="$(QtMocDir)$(QtMocPrefix)gamelistmodel.cpp" />
     <ClCompile Include="$(QtMocDir)$(QtMocPrefix)gamelistwatcher.cpp" />
+    <ClCompile Include="$(QtMocDir)$(QtMocPrefix)gamelistproxy.cpp" />
   </ItemGroup>
 
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

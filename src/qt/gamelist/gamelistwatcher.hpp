@@ -8,6 +8,7 @@ struct GameInfo
 {
     QString path;
     QString name;
+    QString type;
     qint64 size;
 
     bool operator==(const GameInfo& other) const

@@ -6,12 +6,14 @@
 #include <QTableView>
 
 #include "gamelist/gamelistmodel.hpp"
+#include "gamelist/gamelistproxy.hpp"
 
 class GameListWidget : public QStackedWidget
 {
     Q_OBJECT
     private:
         GameListModel* m_model;
+        GameListProxy* m_proxy;
         QTableView* m_table_view;
     public:
         enum VIEW
