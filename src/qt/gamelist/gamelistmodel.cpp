@@ -2,6 +2,11 @@
 #include <QLocale>
 #include <QDebug>
 
+// For old Qt workaround
+#if QT_VERSION < QT_VERSION_CHECK(5, 10, 0)
+#include <cmath>
+#endif
+
 #include "../settings.hpp"
 #include "gamelistmodel.hpp"
 
