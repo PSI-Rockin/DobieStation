@@ -1,5 +1,5 @@
-#include "gamelist/gamelistproxy.hpp"
-#include "gamelist/gamelistmodel.hpp"
+#include "gamelistproxy.hpp"
+#include "gamelistmodel.hpp"
 
 GameListProxy::GameListProxy(QObject* parent)
     : QSortFilterProxyModel(parent)

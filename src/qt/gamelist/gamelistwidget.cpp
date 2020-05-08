@@ -5,8 +5,8 @@
 #include <QVBoxLayout>
 #include <QDebug>
 
-#include "settings.hpp"
-#include "gamelist/gamelistwidget.hpp"
+#include "../settings.hpp"
+#include "gamelistwidget.hpp"
 
 #include <cmath>
 #include <algorithm>

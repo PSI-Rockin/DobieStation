@@ -2,7 +2,7 @@
 #define GAMELISTMODEL_HPP
 
 #include <QAbstractTableModel>
-#include "gamelist/gamelistwatcher.hpp"
+#include "gamelistwatcher.hpp"
 
 class GameListModel final : public QAbstractTableModel
 {

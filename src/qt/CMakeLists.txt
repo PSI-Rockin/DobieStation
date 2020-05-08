@@ -18,19 +18,25 @@ set(SOURCES
     emuwindow.cpp
     settingswindow.cpp
     renderwidget.cpp
-    gamelistwidget.cpp
     main.cpp
     settings.cpp
-    bios.cpp)
+    bios.cpp
+    gamelist/gamelistmodel.cpp
+    gamelist/gamelistproxy.cpp
+    gamelist/gamelistwatcher.cpp
+    gamelist/gamelistwidget.cpp)
 
 set(HEADERS
     emuthread.hpp
     emuwindow.hpp
     settingswindow.hpp
     renderwidget.hpp
-    gamelistwidget.hpp
     settings.hpp
-    bios.hpp)
+    bios.hpp
+    gamelist/gamelistmodel.hpp
+    gamelist/gamelistproxy.hpp
+    gamelist/gamelistwatcher.hpp
+    gamelist/gamelistwidget.hpp)
 
 add_executable(${TARGET} ${SOURCES} ${HEADERS})
 set_target_properties(${TARGET} PROPERTIES OUTPUT_NAME "DobieStation") # Output as "DobieStation" instead of "DobieQt"

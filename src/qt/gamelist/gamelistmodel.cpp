@@ -2,8 +2,8 @@
 #include <QLocale>
 #include <QDebug>
 
-#include "settings.hpp"
-#include "gamelist/gamelistmodel.hpp"
+#include "../settings.hpp"
+#include "gamelistmodel.hpp"
 
 static QMap<QString, QString> s_file_type_desc{
     {"elf", "PS2 Executable"},
