@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <limits>
 #include "ipu.hpp"
 #include "../dmac.hpp"
 #include "../intc.hpp"
@@ -75,22 +76,23 @@ ImageProcessingUnit::ImageProcessingUnit(INTC* intc, DMAC* dmac) : intc(intc), d
         }
     }
 
-    dither_mtx[0][0] = -8;
+    //I'm assuming the dithering process rounds down so I've rounded the matrix values down
+    dither_mtx[0][0] = -4;
     dither_mtx[0][1] = 0;
-    dither_mtx[0][2] = -6;
-    dither_mtx[0][3] = 2;
-    dither_mtx[1][0] = 4;
-    dither_mtx[1][1] = -4;
-    dither_mtx[1][2] = 6;
-    dither_mtx[1][3] = -2;
-    dither_mtx[2][0] = -5;
-    dither_mtx[2][1] = 3;
-    dither_mtx[2][2] = -7;
-    dither_mtx[2][3] = 1;
-    dither_mtx[3][0] = 7;
+    dither_mtx[0][2] = -3;
+    dither_mtx[0][3] = 1;
+    dither_mtx[1][0] = 2;
+    dither_mtx[1][1] = -2;
+    dither_mtx[1][2] = 3;
+    dither_mtx[1][3] = -1;
+    dither_mtx[2][0] = -3;
+    dither_mtx[2][1] = 1;
+    dither_mtx[2][2] = -4;
+    dither_mtx[2][3] = 0;
+    dither_mtx[3][0] = 3;
     dither_mtx[3][1] = -1;
-    dither_mtx[3][2] = 5;
-    dither_mtx[3][3] = -3;
+    dither_mtx[3][2] = 2;
+    dither_mtx[3][3] = -2;
 }
 
 void ImageProcessingUnit::reset()
@@ -190,6 +192,13 @@ void ImageProcessingUnit::run()
                             finish_command();
                     }
                     break;
+                case 0x08:
+                    if (in_FIFO.f.size())
+                    {
+                        if (process_PACK())
+                            finish_command();
+                    }
+                    break;
                 default:
                     Errors::die("[IPU] Unrecognized command $%02X\n", command);
             }
@@ -276,7 +285,7 @@ bool ImageProcessingUnit::process_IDEC()
             case IDEC_STATE::INIT_CSC:
                 //BDEC outputs in RAW16. CSC works in RAW8, so we need to convert appropriately.
                 printf("[IPU] Init CSC\n");
-                for (int i = 0; i < BLOCK_SIZE / 8; i++)
+                for (int i = 0; i < RAW_BLOCK_SIZE / 8; i++)
                 {
                     uint128_t quad = idec.temp_fifo.f.front();
                     idec.temp_fifo.f.pop_front();
@@ -808,6 +817,24 @@ bool ImageProcessingUnit::BDEC_read_diff()
     }
 }
 
+void ImageProcessingUnit::convert_RGB32_to_RGB16(const uint8_t* rgb32, uint16_t* rgb16, bool dithering)
+{
+    for (int i = 0; i < 16; ++i)
+    {
+        for (int j = 0; j < 16; ++j)
+        {
+            //It's worth noting that bit 30 is the alpha bit for RGB16, not bit 31.
+            const int index = j + (i * 16);
+            const int dither = dithering ? dither_mtx[i & 3][j & 3] : 0;
+            const int r = std::max(0, std::min(rgb32[4 * index] + dither, 255)) >> 3;
+            const int g = std::max(0, std::min(rgb32[4 * index + 1] + dither, 255)) >> 3;
+            const int b = std::max(0, std::min(rgb32[4 * index + 2] + dither, 255)) >> 3;
+            const int a = rgb32[4 * index + 3] == 0x40;
+            rgb16[index] = r | g  << 5 | b << 10 | a << 15;
+        }
+    }
+}
+
 void ImageProcessingUnit::process_VDEC()
 {
     int table = command_option >> 26;
@@ -908,7 +935,7 @@ bool ImageProcessingUnit::process_CSC()
                     csc.state = CSC_STATE::DONE;
                 break;
             case CSC_STATE::READ:
-                if (csc.block_index == BLOCK_SIZE)
+                if (csc.block_index == RAW_BLOCK_SIZE)
                     csc.state = CSC_STATE::CONVERT;
                 else
                 {
@@ -922,7 +949,7 @@ bool ImageProcessingUnit::process_CSC()
                 break;
             case CSC_STATE::CONVERT:
             {
-                uint32_t pixels[0x100];
+                uint8_t rgb32[4 * RGB_BLOCK_SIZE];
 
                 uint8_t* lum_block = csc.block;
                 uint8_t* cb_block = csc.block + 0x100;
@@ -954,50 +981,50 @@ bool ImageProcessingUnit::process_CSC()
                         if (b > 255)
                             b = 255;
 
-                        uint32_t color = (uint8_t)r;
-                        color |= ((uint8_t)g) << 8;
-                        color |= ((uint8_t)b) << 16;
-
-                        uint32_t alpha;
+                        uint8_t alpha;
                         if (r < TH0 && g < TH0 && b < TH0)
                             alpha = 0;
                         else if (r < TH1 && g < TH1 && b < TH1)
-                            alpha = 1 << 30;
+                            alpha = 0x40;
                         else
-                            alpha = 1 << 31;
+                            alpha = 0x80;
 
-                        pixels[index] = color | alpha;
-                        //printf("Pixel: $%08X (%d, %d)\n", pixels[index], i, j);
+                        rgb32[4 * index] = (uint8_t)r;
+                        rgb32[4 * index + 1] = (uint8_t)g;
+                        rgb32[4 * index + 2] = (uint8_t)b;
+                        rgb32[4 * index + 3] = alpha;
                     }
                 }
 
                 uint128_t quad;
                 if (csc.use_RGB16)
                 {
-                    //We must convert from RGB32 to RGB16.
-                    //It's worth noting that bit 30 is the alpha bit for RGB16, not bit 31.
-                    //TODO: Figure out how dithering works. It uses "pixel position"
-                    for (int i = 0; i < 0x100 / 8; i++)
+                    uint16_t rgb16[RGB_BLOCK_SIZE];
+
+                    convert_RGB32_to_RGB16(rgb32, rgb16, csc.use_dithering);
+
+                    for (int i = 0; i < RGB_BLOCK_SIZE / 8; i++)
                     {
                         for (int j = 0; j < 8; j++)
                         {
-                            uint32_t color32 = pixels[j + (i * 8)];
-                            uint16_t color16 = (color32 >> 3) & 0x1F;
-                            color16 |= ((color32 >> 11) & 0x1F) << 5;
-                            color16 |= ((color32 >> 19) & 0x1F) << 10;
-                            color16 |= ((color32 >> 30) & 0x1) << 15;
-                            quad._u16[j] = color16;
+                            quad._u16[j] = rgb16[j + (i * 8)];
                         }
                         out_FIFO.f.push_back(quad);
                     }
                 }
                 else
                 {
-                    for (int i = 0; i < 0x100 / 4; i++)
+                    for (int i = 0; i < RGB_BLOCK_SIZE / 4; i++)
                     {
                         for (int j = 0; j < 4; j++)
                         {
-                            quad._u32[j] = pixels[j + (i * 4)];
+                            int index = 4 * (j + (i * 4));
+                            uint8_t r = rgb32[index];
+                            uint8_t g = rgb32[index + 1];
+                            uint8_t b = rgb32[index + 2];
+                            uint8_t a = rgb32[index + 3];
+                            uint32_t color = r | g << 8 | b << 16 | a << 24;
+                            quad._u32[j] = color;
                         }
                         out_FIFO.f.push_back(quad);
                     }
@@ -1009,6 +1036,113 @@ bool ImageProcessingUnit::process_CSC()
                 break;
             case CSC_STATE::DONE:
                 printf("[IPU] CSC done!\n");
+                return true;
+        }
+    }
+}
+
+bool ImageProcessingUnit::process_PACK()
+{
+    while (true)
+    {
+        switch (pack.state)
+        {
+            case PACK_STATE::BEGIN:
+                if (pack.macroblocks)
+                {
+                    pack.state = PACK_STATE::READ;
+                    pack.block_index = 0;
+                }
+                else
+                    pack.state = PACK_STATE::DONE;
+                break;
+            case PACK_STATE::READ:
+                if (pack.block_index == 4 * RGB_BLOCK_SIZE)
+                    pack.state = PACK_STATE::CONVERT;
+                else
+                {
+                    uint32_t value;
+                    if (!in_FIFO.get_bits(value, 8))
+                        return false;
+                    in_FIFO.advance_stream(8);
+                    pack.block[pack.block_index] = value & 0xFF;
+                    pack.block_index++;
+                }
+                break;
+            case PACK_STATE::CONVERT:
+            {
+                uint16_t rgb16[RGB_BLOCK_SIZE];
+
+                convert_RGB32_to_RGB16(pack.block, rgb16, pack.use_dithering);
+
+                uint128_t quad;
+                if (pack.use_RGB16)
+                {
+                    for (int i = 0; i < RGB_BLOCK_SIZE / 8; ++i)
+                    {
+                        for (int j = 0; j < 8; ++j)
+                        {
+                            quad._u16[j] = rgb16[j + (i * 8)];
+                        }
+                        out_FIFO.f.push_back(quad);
+                    }
+                }
+                else
+                {
+                    int clut_r[16];
+                    int clut_g[16];
+                    int clut_b[16];
+                    for (int i = 0; i < 16; ++i)
+                    {
+                        clut_r[i] = VQCLUT[i] & 0x1F;
+                        clut_g[i] = (VQCLUT[i] >> 5) & 0x1F;
+                        clut_b[i] = (VQCLUT[i] >> 10) & 0x1F;
+                    }
+
+                    auto closest_index = [&](uint16_t color) {
+                        const int r = color & 0x1F;
+                        const int g = (color >> 5) & 0x1F;
+                        const int b = (color >> 10) & 0x1F;
+
+                        uint8_t index = 0;
+                        int min_distance = std::numeric_limits<int>::max();
+                        for (uint8_t i = 0; i < 16; ++i)
+                        {
+                            const int dr = r - clut_r[i];
+                            const int dg = g - clut_g[i];
+                            const int db = b - clut_b[i];
+                            const int distance = dr * dr + dg * dg + db * db;
+
+                            // TODO: If two distances are the same which index is used?
+                            if (min_distance > distance)
+                            {
+                                index = i;
+                                min_distance = distance;
+                            }
+                        }
+
+                        return index;
+                    };
+
+                    for (int i = 0; i < RGB_BLOCK_SIZE / 32; ++i)
+                    {
+                        for (int j = 0; j < 16; ++j)
+                        {
+                            int index = 2 * j + (i * 32);
+                            const uint16_t color16_low = rgb16[index];
+                            const uint16_t color16_high = rgb16[index + 1];
+                            quad._u8[j] = closest_index(color16_high) << 4 | closest_index(color16_low);
+                        }
+                        out_FIFO.f.push_back(quad);
+                    }
+                }
+                dmac->set_DMA_request(IPU_FROM);
+                pack.macroblocks--;
+                pack.state = PACK_STATE::BEGIN;
+            }
+                break;
+            case PACK_STATE::DONE:
+                printf("[IPU] PACK done!\n");
                 return true;
         }
     }
@@ -1134,6 +1268,14 @@ void ImageProcessingUnit::write_command(uint32_t value)
                 csc.state = CSC_STATE::BEGIN;
                 csc.macroblocks = command_option & 0x7FF;
                 csc.use_RGB16 = command_option & (1 << 27);
+                csc.use_dithering = command_option & (1 << 26);
+                break;
+            case 0x08:
+                printf("[IPU] PACK\n");
+                pack.state = PACK_STATE::BEGIN;
+                pack.macroblocks = command_option & 0x7FF;
+                pack.use_RGB16 = command_option & (1 << 27);
+                pack.use_dithering = command_option & (1 << 26);
                 break;
             case 0x09:
                 printf("[IPU] SETTH\n");

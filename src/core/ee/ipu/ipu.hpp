@@ -3,8 +3,6 @@
 #include <cstdint>
 #include <queue>
 
-#define BLOCK_SIZE 0x180
-
 #include "../../int128.hpp"
 #include "chromtable.hpp"
 #include "codedblockpattern.hpp"
@@ -16,6 +14,9 @@
 #include "mac_p_pic.hpp"
 #include "mac_b_pic.hpp"
 #include "motioncode.hpp"
+
+constexpr int RAW_BLOCK_SIZE = 0x180;
+constexpr int RGB_BLOCK_SIZE = 0x100;
 
 struct IPU_CTRL
 {
@@ -139,8 +140,28 @@ struct CSC_Command
     CSC_STATE state;
     int macroblocks;
     bool use_RGB16;
+    bool use_dithering;
 
-    uint8_t block[BLOCK_SIZE];
+    uint8_t block[RAW_BLOCK_SIZE];
+    int block_index;
+};
+
+enum class PACK_STATE
+{
+    BEGIN,
+    READ,
+    CONVERT,
+    DONE
+};
+
+struct PACK_Command
+{
+    PACK_STATE state;
+    int macroblocks;
+    bool use_RGB16;
+    bool use_dithering;
+
+    uint8_t block[4 * RGB_BLOCK_SIZE];
     int block_index;
 };
 
@@ -192,6 +213,7 @@ class ImageProcessingUnit
         VDEC_STATE vdec_state, fdec_state;
         CSC_Command csc;
         SETIQ_STATE setiq_state;
+        PACK_Command pack;
 
         double IDCT_table[8][8];
 
@@ -207,9 +229,11 @@ class ImageProcessingUnit
         bool BDEC_read_coeffs();
         bool BDEC_read_diff();
 
+        void convert_RGB32_to_RGB16(const uint8_t* rgb32, uint16_t *rgb16, bool dithering);
         void process_VDEC();
         void process_FDEC();
         bool process_CSC();
+        bool process_PACK();
     public:
         ImageProcessingUnit(INTC* intc, DMAC* dmac);
 
