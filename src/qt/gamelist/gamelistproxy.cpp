@@ -7,6 +7,7 @@ GameListProxy::GameListProxy(QObject* parent)
     setDynamicSortFilter(true);
     setSortRole(Qt::InitialSortOrderRole);
     setSortCaseSensitivity(Qt::CaseInsensitive);
+    setFilterCaseSensitivity(Qt::CaseInsensitive);
 }
 
 bool GameListProxy::lessThan(const QModelIndex& left, const QModelIndex& right) const

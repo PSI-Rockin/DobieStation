@@ -4,6 +4,7 @@
 #include <QPushButton>
 #include <QVBoxLayout>
 #include <QDebug>
+#include <QLineEdit>
 
 #include "../settings.hpp"
 #include "gamelistwidget.hpp"
@@ -41,6 +42,24 @@ GameListWidget::GameListWidget(QWidget* parent)
     ));
 
     auto default_button = new QPushButton("&Open Settings", this);
+
+    auto default_layout = new QVBoxLayout;
+    default_layout->addWidget(default_label);
+    default_layout->addWidget(default_button);
+    default_layout->setAlignment(Qt::AlignVCenter | Qt::AlignHCenter);
+
+    auto gamelist_layout = new QVBoxLayout;
+    auto search_bar = new QLineEdit(this);
+    gamelist_layout->addWidget(search_bar);
+    gamelist_layout->addWidget(m_table_view);
+    gamelist_layout->setContentsMargins(0, 0, 0, 0);
+
+    auto default_widget = new QWidget(this);
+    default_widget->setLayout(default_layout);
+
+    auto gamelist_widget = new QWidget(this);
+    gamelist_widget->setLayout(gamelist_layout);
+
     connect(default_button, &QPushButton::clicked, [=]() {
         emit settings_requested();
     });
@@ -55,16 +74,11 @@ GameListWidget::GameListWidget(QWidget* parent)
         emit game_double_clicked(info.path);
     });
 
-    auto layout = new QVBoxLayout;
-    layout->addWidget(default_label);
-    layout->addWidget(default_button);
-    layout->setAlignment(Qt::AlignVCenter | Qt::AlignHCenter);
-
-    auto default_widget = new QWidget(this);
-    default_widget->setLayout(layout);
+    connect(search_bar, &QLineEdit::textChanged,
+        m_proxy, &QSortFilterProxyModel::setFilterFixedString);
 
     addWidget(default_widget);
-    addWidget(m_table_view);
+    addWidget(gamelist_widget);
 
     m_model->get_watcher()->start();
 }

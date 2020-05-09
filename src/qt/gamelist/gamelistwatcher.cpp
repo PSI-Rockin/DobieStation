@@ -68,12 +68,9 @@ GameListWatcher::GameListWatcher(QObject* parent)
     connect(this, &GameListWatcher::directory_added, &m_task, &IOTask::add_directory);
     connect(this, &GameListWatcher::directory_removed, &m_task, &IOTask::remove_directory);
 
-    connect(&m_task, &IOTask::game_found, [this](const GameInfo info) {
-        emit game_loaded(info);
-    });
-    connect(&m_task, &IOTask::game_removed, [this](const GameInfo info) {
-        emit game_removed(info);
-    });
+    connect(&m_task, &IOTask::game_found, this, &GameListWatcher::game_loaded);
+    connect(&m_task, &IOTask::game_removed, this, &GameListWatcher::game_removed);
+
     connect(&m_task, &IOTask::finished, [this]() {
         qDebug() << "[gamelist] IO task finished";
         emit directory_processed();
