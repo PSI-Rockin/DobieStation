@@ -225,6 +225,8 @@ class VectorUnit
         template <typename T> void write_data(uint32_t addr, T data);
         template <typename T> void write_mem(uint32_t addr, T data);
 
+        std::function<void(VectorUnit&, int)> run_func;
+
         bool is_running();
         bool stopped_by_tbit();
         bool is_dirty();

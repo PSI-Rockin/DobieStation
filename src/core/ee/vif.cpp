@@ -50,9 +50,6 @@ void VectorInterface::reset()
         fifo_size = 64;
     else
         fifo_size = 32;
-
-    if(vu->get_id() == 1)
-        VU_JIT::reset();
 }
 
 bool VectorInterface::check_vif_stall(uint32_t value)
