@@ -634,11 +634,13 @@ void VU_JitTranslator::populate_vu_state(VectorUnit &vu, int q_pipe_delay, int p
  */
 void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint32_t prev_pc)
 {
+    constexpr static int MAX_BLOCK_SIZE = 32;
     bool block_end = false;
     bool branch_delay_slot = false;
     bool ebit_delay_slot = false;
     int q_pipe_delay = 0;
     int p_pipe_delay = 0;
+    int instruction_count = 0;
 
     //Restore state from end of the block we jumped from
     if (prev_pc != 0xFFFFFFFF)
@@ -696,6 +698,7 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
         instr_info[PC].p_pipeline_instr = false;
         instr_info[PC].tbit_end = false;
         instr_info[PC].early_exit = false;
+        instruction_count++;
 
         uint32_t upper = *(uint32_t*)&instr_mem[PC + 4];
         uint32_t lower = *(uint32_t*)&instr_mem[PC];
@@ -811,7 +814,7 @@ void VU_JitTranslator::interpreter_pass(VectorUnit &vu, uint8_t *instr_mem, uint
                 instr_info[PC].is_mbit = true;
                 block_end = true;
             }
-            else if (!block_end && !branch_delay_slot && !ebit_delay_slot && (PC - vu.get_PC()) > 256)
+            else if (!block_end && !branch_delay_slot && !ebit_delay_slot && instruction_count >= MAX_BLOCK_SIZE)
             {
                 instr_info[PC].early_exit = true;
                 block_end = true;
