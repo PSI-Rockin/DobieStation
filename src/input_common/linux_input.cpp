@@ -39,10 +39,17 @@ bool LinuxInput::reset()
                 }
 
                 rc = libevdev_new_from_fd(fd, &temp_dev);
+<<<<<<< HEAD
 
                 std::string device_name = libevdev_get_name(temp_dev);
 
                 //std::cout << "Device: " << device_name << std::endl;
+=======
+
+                std::string device_name = libevdev_get_name(temp_dev);
+
+                std::cout << "Device: " << device_name << std::endl;
+>>>>>>> a77f949... Work on configureator, not sure how to extend that to windows stuff
                 if ( temp_dev!= nullptr)
                 {
                     if (libevdev_has_event_type(temp_dev, EV_KEY) &&
@@ -80,6 +87,19 @@ bool LinuxInput::reset()
 }
 
 std::vector<evdev_controller *> LinuxInput::get_interesting_devices()
+<<<<<<< HEAD
+=======
+{
+    return interesting_devices;
+}
+
+int LinuxInput::getEvent(int i)
+{
+    return  libevdev_next_event(interesting_devices[i]->dev, LIBEVDEV_READ_FLAG_SYNC, &ev);
+}
+
+PAD_DATA LinuxInput::poll()
+>>>>>>> a77f949... Work on configureator, not sure how to extend that to windows stuff
 {
     return interesting_devices;
 }
@@ -138,7 +158,11 @@ PAD_DATA LinuxInput::poll()
     int x1, y1, x2, y2;
     int min_x1, max_x1, min_y1, max_y1, min_x2, max_x2, min_y2, max_y2;
 
+<<<<<<< HEAD
     //std::cout << "Device: " <<  libevdev_get_name(interesting_devices[0]->dev) << std::endl;
+=======
+    std::cout << "Device: " <<  libevdev_get_name(interesting_devices[0]->dev) << std::endl;
+>>>>>>> a77f949... Work on configureator, not sure how to extend that to windows stuff
 
     min_x1 = libevdev_get_abs_minimum(interesting_devices[0]->dev, ABS_X);
     max_x1 = libevdev_get_abs_maximum(interesting_devices[0]->dev, ABS_X);
@@ -167,8 +191,8 @@ PAD_DATA LinuxInput::poll()
     float norm_x2 = (RX - 1.0);
     float norm_y2 = (RY - 1.0);
 
-    //std::cout << "normLX: " << norm_x1 << std::endl;
-    //std::cout << "normLY: " << norm_y1 << std::endl;
+    std::cout << "normLX: " << norm_x1 << std::endl;
+    std::cout << "normLY: " << norm_y1 << std::endl;
 
     event.lStickXAxis = norm_x1;
     event.lStickYAxis = norm_y1 * -1;

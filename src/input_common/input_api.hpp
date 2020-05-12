@@ -20,6 +20,7 @@ public:
 	void reset();
 	PAD_DATA poll();
 	int getEvent(int i); // For configuration not DobieStation ingame
+<<<<<<< HEAD
 
 	#ifdef __linux__
     	std::vector<evdev_controller *> get_interesting_devices();
@@ -27,6 +28,8 @@ public:
 	#elif WIN32
 	    std::vector<xinput_controller> get_interesting_devices();
 	#endif
+=======
+>>>>>>> a77f949... Work on configureator, not sure how to extend that to windows stuff
 };
 
 #endif

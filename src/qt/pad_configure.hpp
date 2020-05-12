@@ -3,10 +3,13 @@
 
 #include <QDialog>
 #include <QComboBox>
+<<<<<<< HEAD
 #include <QTimer>
 #include <QButtonGroup>
 #include "settings.hpp"
 #include <map>
+=======
+>>>>>>> a77f949... Work on configureator, not sure how to extend that to windows stuff
 #include "../input_common/input_api.hpp"
 
 
@@ -19,6 +22,7 @@ class PadConfigure : public QDialog
     Q_OBJECT
 
 public:
+<<<<<<< HEAD
     explicit PadConfigure(QWidget *parent = nullptr);
     void get_input(int button);
     void save();
@@ -41,6 +45,20 @@ private:
      QButtonGroup *button_widgets;
 
     std::map<BUTTONS, int> button_map; 
+=======
+    explicit pad_configure(QWidget *parent = nullptr);
+    void Initalize();
+    ~pad_configure();
+
+private:
+    Ui::pad_configure *ui;
+    QComboBox *Interesting;
+    LinuxInput Pad;
+
+    std::vector<evdev_controller *> CurrentDevices;
+
+    BUTTONS Current_To_Config;
+>>>>>>> a77f949... Work on configureator, not sure how to extend that to windows stuff
 
 };
 
