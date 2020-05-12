@@ -23,7 +23,8 @@ bool LinuxInput::reset()
                     continue;
                 }
 
-                rc = libevdev_new_from_fd(fd, &temp_dev);
+                temp_dev = libevdev_new();
+                rc = libevdev_set_fd(temp_dev, fd);
 
                 if (rc < 0)
                 {
@@ -34,22 +35,30 @@ bool LinuxInput::reset()
                     continue;
                 }
 
+                rc = libevdev_new_from_fd(fd, &temp_dev);
+
                 std::string device_name = libevdev_get_name(temp_dev);
 
                 std::cout << "Device: " << device_name << std::endl;
-
-                if (libevdev_has_event_type(temp_dev, EV_KEY) &&
-                    libevdev_has_event_code(temp_dev, EV_ABS, ABS_X) &&
-                    libevdev_has_event_code(temp_dev, EV_ABS, ABS_Y))
+                if ( temp_dev!= nullptr)
                 {
+                    if (libevdev_has_event_type(temp_dev, EV_KEY) &&
+                        libevdev_has_event_code(temp_dev, EV_ABS, ABS_X) &&
+                        libevdev_has_event_code(temp_dev, EV_ABS, ABS_Y))
+                    {
 
-                    dev = new evdev_controller();
-                    dev->controller_name = device_name;
-                    dev->dev = temp_dev;
+                        dev = new evdev_controller();
+                        dev->dev = libevdev_new();
 
-                    std::cout << "Controller Detected" << std::endl;
-                    interesting_devices.push_back(dev);
-                    libevdev_free(temp_dev);
+
+                        dev->controller_name = device_name;
+
+                        dev->dev = temp_dev;
+
+                        std::cout << "Controller Detected" << std::endl;
+                        interesting_devices.push_back(dev);
+                    }
+
                     continue;
                 }
 
@@ -65,6 +74,16 @@ bool LinuxInput::reset()
     current_path = " ";
     closedir(dir);
     return true;
+}
+
+std::vector<evdev_controller *> LinuxInput::get_interesting_devices()
+{
+    return interesting_devices;
+}
+
+int LinuxInput::getEvent(int i)
+{
+    return  libevdev_next_event(interesting_devices[i]->dev, LIBEVDEV_READ_FLAG_SYNC, &ev);
 }
 
 PAD_DATA LinuxInput::poll()
@@ -91,7 +110,7 @@ PAD_DATA LinuxInput::poll()
     int x1, y1, x2, y2;
     int min_x1, max_x1, min_y1, max_y1, min_x2, max_x2, min_y2, max_y2;
 
-    //std::cout << "Device: " << interestingDevices[0]->controllerName << std::endl;
+    std::cout << "Device: " <<  libevdev_get_name(interesting_devices[0]->dev) << std::endl;
 
     min_x1 = libevdev_get_abs_minimum(interesting_devices[0]->dev, ABS_X);
     max_x1 = libevdev_get_abs_maximum(interesting_devices[0]->dev, ABS_X);
@@ -120,8 +139,8 @@ PAD_DATA LinuxInput::poll()
     float norm_x2 = (RX - 1.0);
     float norm_y2 = (RY - 1.0);
 
-    //std::cout << "normLX: " << norm_x1 << std::endl;
-    //std::cout << "normLY: " << norm_y1 << std::endl;
+    std::cout << "normLX: " << norm_x1 << std::endl;
+    std::cout << "normLY: " << norm_y1 << std::endl;
 
     event.lStickXAxis = norm_x1;
     event.lStickYAxis = norm_y1 * -1;

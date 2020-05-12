@@ -184,9 +184,7 @@ S_MT_TOUCH_MAJOR, "MT TMaj+"},
             {ABS_MT_POSITION_X, "MT PosX+"},
             {ABS_MT_POSITION_Y, "MT PosY+"},
             {ABS_MT_TOOL_TYPE, "MT TType+"},
-            {ABS_MT_BLOB_ID, "MT Blob ID+"},
-            {ABS_MT_TRACKING_ID, "MT Track ID+"},
-            {ABS_MT_PRESSURE, "MT Pressure+"},
+            {ABS_MT_BLOB_ID, "MT Blob﻿ssure+"},
             {ABS_MT_DISTANCE, "MT Distance+"},
             {ABS_MT_TOOL_X, "MT Tool X+"},
             {ABS_MT_TOOL_Y, "MT Tool Y+"},
@@ -299,6 +297,9 @@ private:
     int rc;
 
 public:
+    std::vector<evdev_controller *> get_interesting_devices();
+    int getEvent(int i);
+
     bool reset();
     PAD_DATA poll();
 };

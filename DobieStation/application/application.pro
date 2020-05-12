@@ -84,6 +84,7 @@ SOURCES += ../../src/qt/main.cpp \
     ../../src/core/gsmem.cpp \
     ../../src/core/serialize.cpp \
     ../../src/core/iop/memcard.cpp \
+    ../../src/qt/pad_configure.cpp \
     ../../src/qt/settings.cpp \
     ../../src/core/jitcommon/jitcache.cpp \
     ../../src/core/jitcommon/emitter64.cpp \
@@ -168,6 +169,7 @@ HEADERS += \
     ../../src/core/ee/vu_disasm.hpp \
     ../../src/core/gsmem.hpp \
     ../../src/core/iop/memcard.hpp \
+    ../../src/qt/pad_configure.hpp \
     ../../src/qt/settings.hpp \
     ../../src/core/jitcommon/jitcache.hpp \
     ../../src/core/jitcommon/emitter64.hpp \
@@ -193,3 +195,9 @@ HEADERS += \
 
 FORMS += \
     ../../src/qt/memcardwindow.ui
+
+
+DISTFILES +=
+
+FORMS += \
+    ../../src/qt/pad_configure.ui

@@ -63,6 +63,8 @@ protected:
 public:
 	virtual bool reset() = 0;
 	virtual PAD_DATA poll() = 0;
+	virtual int getEvent(int i) = 0;
+
 };
 
 #endif

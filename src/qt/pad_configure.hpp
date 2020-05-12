@@ -2,7 +2,8 @@
 #define PAD_CONFIGURE_H
 
 #include <QDialog>
-#include "../input_common/common_input.hpp"
+#include <QComboBox>
+#include "../input_common/input_api.hpp"
 
 
 namespace Ui {
@@ -15,11 +16,18 @@ class pad_configure : public QDialog
 
 public:
     explicit pad_configure(QWidget *parent = nullptr);
+    void Initalize();
     ~pad_configure();
 
 private:
     Ui::pad_configure *ui;
-    QT_FEATURE_combobox Devices;
+    QComboBox *Interesting;
+    LinuxInput Pad;
+
+    std::vector<evdev_controller *> CurrentDevices;
+
+    BUTTONS Current_To_Config;
+
 };
 
 #endif // PAD_CONFIGURE_H
