@@ -78,7 +78,11 @@ class Gamepad
 
         void reset();
         void set_button(PAD_BUTTON button, uint8_t val);
+<<<<<<< HEAD
         void release_button(PAD_BUTTON button);
+=======
+        //void release_button(PAD_BUTTON button);
+>>>>>>> 07cec37... Several changes to core button stuff. Removed release button and made single set button function. With Kojin's help were bitshifting the buttons based on pressure val.
         void update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t val);
         
 

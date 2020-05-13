@@ -281,10 +281,10 @@ void Emulator::set_button(PAD_BUTTON button, uint8_t val)
     pad.set_button(button, val);
 }
 
-void Emulator::release_button(PAD_BUTTON button)
+/*void Emulator::release_button(PAD_BUTTON button)
 {
     pad.release_button(button);
-}
+}*/
 
 void Emulator::update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t val)
 {
@@ -298,8 +298,6 @@ void Emulator::poll_controller()
 
     for (int i = 0; i < CONTROLLER_BUTTON_MAX; i++)
     {
-        if (state.input[i])
-        {
             //std::cout << "button: " << i << " state: " << state.input[i] << std::endl;
             set_button((PAD_BUTTON)i, 255);
         }
@@ -329,7 +327,6 @@ void Emulator::poll_controller()
 
     //std::cout << "L XAxis: " << state.lTriggerAxis << std::endl;
     //std::cout << "R XAxis: " << state.rTriggerAxis << std::endl;
-
     update_joystick(JOYSTICK::LEFT, JOYSTICK_AXIS::X, static_cast<uint8_t>(state.lStickXAxis + 0.5));
     update_joystick(JOYSTICK::LEFT, JOYSTICK_AXIS::Y, static_cast<uint8_t>(state.lStickYAxis + 0.5));
     update_joystick(JOYSTICK::RIGHT, JOYSTICK_AXIS::X, static_cast<uint8_t>(state.rStickXAxis + 0.5));

@@ -1,16 +1,11 @@
 #include "pad_configure.hpp"
 #include "ui_pad_configure.h"
 
-<<<<<<< HEAD
 PadConfigure::PadConfigure(QWidget *parent) :
-=======
-pad_configure::pad_configure(QWidget *parent) :
->>>>>>> a77f949... Work on configureator, not sure how to extend that to windows stuff
     QDialog(parent),
     ui(new Ui::pad_configure)
 {
     ui->setupUi(this);
-<<<<<<< HEAD
     Interesting = ui->Interesting_Devices;
 
 
@@ -81,29 +76,11 @@ void PadConfigure::get_input(int button)
     else
     {
         return;
-=======
-    Interesting = findChild<QComboBox*>("Interesting_Devices");
-    Pad.reset();
-}
-
-void pad_configure::Initalize()
-{
-
-    CurrentDevices = Pad.get_interesting_devices();
-
-    for(int i = 0; i < Pad.get_interesting_devices().size(); i++)
-    {
-        Interesting->addItem( QString::fromStdString(CurrentDevices[i]->controller_name));
->>>>>>> a77f949... Work on configureator, not sure how to extend that to windows stuff
     }
 }
 
 
-<<<<<<< HEAD
 PadConfigure::~PadConfigure()
-=======
-pad_configure::~pad_configure()
->>>>>>> a77f949... Work on configureator, not sure how to extend that to windows stuff
 {
     delete ui;
 }

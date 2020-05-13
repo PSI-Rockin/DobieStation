@@ -99,7 +99,6 @@ public:
 	virtual bool reset() = 0;
 	virtual PAD_DATA poll() = 0;
 	virtual int getEvent(int i) = 0;
-<<<<<<< HEAD
 	
 	#ifdef __linux__
     virtual std::vector<evdev_controller *> get_interesting_devices() = 0;
@@ -107,8 +106,6 @@ public:
 	#elif WIN32	   
 	   		virtual std::vector<xinput_controller> get_interesting_devices() = 0;
 	#endif
-=======
->>>>>>> a77f949... Work on configureator, not sure how to extend that to windows stuff
 
 };
 
