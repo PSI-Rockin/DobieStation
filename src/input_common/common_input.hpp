@@ -40,6 +40,10 @@ struct PAD_DATA
 
 	float rStickXAxis;
 	float rStickYAxis;
+
+	float lTriggerAxis;
+	float rTriggerAxis;
+
 };
 
 enum DEVICE_API

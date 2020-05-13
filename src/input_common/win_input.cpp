@@ -26,6 +26,13 @@ bool WinInput::reset()
 	}
 }
 
+
+int WinInput::getEvent(int i)
+{
+	return XInputGetState(0, &state);
+}
+
+
 PAD_DATA WinInput::poll()
 {
 	DWORD controller;
@@ -47,9 +54,18 @@ PAD_DATA WinInput::poll()
 	float rightY = fmaxf(-1, (float)state.Gamepad.sThumbRY / 32767);
 	pad_data.rStickYAxis = rightY;
 
+	float lTrigger = fmaxf(-1, (float)state.Gamepad.bLeftTrigger / 32767);
+	pad_data.lTriggerAxis = lTrigger;
+
+	float rTrigger = fmaxf(-1, (float)state.Gamepad.bRightTrigger / 32767);
+	pad_data.rTriggerAxis = rTrigger;
 
 	//std::cout << "Left X Axis: " << pad_data.lStickXAxis << std::endl;
 	//std::cout << "Left Y Axis: " << pad_data.lStickYAxis << std::endl;
+
+	//std::cout << "Left L Trigger: " << (float)state.Gamepad.bLeftTrigger << std::endl;
+	//std::cout << "Left R Trigger: " << (float)state.Gamepad.bRightTrigger << std::endl;
+
 
 	// If max pressure or not pressed
 
@@ -66,6 +82,11 @@ PAD_DATA WinInput::poll()
 		pad_data.input[BUTTONS::DOWN] = (state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_DOWN);
 		pad_data.input[BUTTONS::LEFT] = (state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT);
 		pad_data.input[BUTTONS::RIGHT] = (state.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_RIGHT);
+		pad_data.input[BUTTONS::R3] = (state.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_THUMB);
+		pad_data.input[BUTTONS::L3] = (state.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_THUMB);
+		pad_data.input[BUTTONS::R1] = (state.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER);
+		pad_data.input[BUTTONS::L1] = (state.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER);
+
 
 	return pad_data;
 }

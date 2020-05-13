@@ -15,3 +15,8 @@ PAD_DATA InputManager::poll()
 {
 	return input->poll();
 }
+
+int InputManager::getEvent(int i)
+{
+	return input->getEvent(i);
+}

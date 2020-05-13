@@ -276,15 +276,15 @@ void Emulator::gen_sound_sample()
     start_sound_sample_event();
 }
 
-void Emulator::press_button(PAD_BUTTON button)
+void Emulator::set_button(PAD_BUTTON button, uint8_t val)
 {
-    pad.press_button(button);
+    pad.set_button(button, val);
 }
 
-void Emulator::release_button(PAD_BUTTON button)
+/*void Emulator::release_button(PAD_BUTTON button)
 {
     pad.release_button(button);
-}
+}*/
 
 void Emulator::update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t val)
 {
@@ -298,15 +298,8 @@ void Emulator::poll_controller()
 
     for (int i = 0; i < CONTROLLER_BUTTON_MAX; i++)
     {
-        if (state.input[i])
-        {
             //std::cout << "button: " << i << " state: " << state.input[i] << std::endl;
-            press_button((PAD_BUTTON)i);
-        }
-        else
-        {
-            release_button((PAD_BUTTON)i);
-        }
+            set_button((PAD_BUTTON)i, state.input[i] * 255);        
     }
 
     state.lStickXAxis = (state.lStickXAxis + 1) * 255 / 2;
@@ -314,8 +307,18 @@ void Emulator::poll_controller()
     state.rStickXAxis = (state.rStickXAxis + 1) * 255 / 2;
     state.rStickYAxis = (state.rStickYAxis * -1 + 1) * 255 / 2;
 
+    state.lTriggerAxis = (state.lTriggerAxis + 1) * 255 / 2;
+    state.rTriggerAxis = (state.rTriggerAxis + 1) * 255 / 2;
+
+    set_button(PAD_BUTTON::L2, state.lTriggerAxis);
+    set_button(PAD_BUTTON::R2, state.rTriggerAxis);
+
+
     //std::cout << "L XAxis: " << state.lStickXAxis << std::endl;
     //std::cout << "L YAxis: " << state.lStickYAxis << std::endl;
+
+    std::cout << "L XAxis: " << state.lTriggerAxis << std::endl;
+    std::cout << "R XAxis: " << state.rTriggerAxis << std::endl;
 
     update_joystick(JOYSTICK::LEFT, JOYSTICK_AXIS::X, static_cast<uint8_t>(state.lStickXAxis + 0.5));
     update_joystick(JOYSTICK::LEFT, JOYSTICK_AXIS::Y, static_cast<uint8_t>(state.lStickYAxis + 0.5));

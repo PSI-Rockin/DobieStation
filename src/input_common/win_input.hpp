@@ -36,6 +36,8 @@ private:
 public:
 	bool reset();
 	PAD_DATA poll();
+	int getEvent(int i);
+
 };
 
 #endif

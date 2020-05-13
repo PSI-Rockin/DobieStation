@@ -281,12 +281,12 @@ void EmuThread::shutdown()
 
 void EmuThread::press_key(PAD_BUTTON button)
 {
-    wait_for_lock([=]() { e.press_button(button); });
+    wait_for_lock([=]() { e.set_button(button, 255); });
 }
 
 void EmuThread::release_key(PAD_BUTTON button)
 {
-    wait_for_lock([=]() { e.release_button(button); });
+    wait_for_lock([=]() { e.set_button(button, 0); });
 }
 
 void EmuThread::update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t val)
