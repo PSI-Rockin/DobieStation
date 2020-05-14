@@ -895,7 +895,7 @@ void EmotionEngine::handle_exception(uint32_t new_addr, uint8_t code)
 
 void EmotionEngine::syscall_exception()
 {
-    int op = get_gpr<int>(3);
+    int op = abs(get_gpr<int>(3));
     //if (op != 0x7A)
         //printf("[EE] SYSCALL: %s (id: $%02X) called at $%08X\n", SYSCALL(op), op, PC);
 
@@ -942,6 +942,9 @@ void EmotionEngine::syscall_exception()
                 flush_jit_cache = true;
             break;
         }
+        case 0x77: // sceSifSetDma
+            log_sifrpc(get_gpr<uint32_t>(4), get_gpr<int>(5));
+            break;
         case 0x7C: // Deci2Call
             deci2call(get_gpr<uint32_t>(4), get_gpr<uint32_t>(5));
             return;
@@ -1005,6 +1008,111 @@ void EmotionEngine::deci2call(uint32_t func, uint32_t param)
         case 0x10:
             printf("kputs\n");
             e->ee_kputs(param);
+            break;
+    }
+}
+
+std::string EmotionEngine::sifrpc_lookup_module_name(uint32_t id)
+{
+    switch (id)
+    {
+        case 0x80000001:
+            return "FILEIO";
+        case 0x80000003:
+            return "IOPHEAP";
+        case 0x80000006:
+            return "LOADFILE";
+        case 0x80000100:
+            return "PAD1";
+        case 0x80000101:
+            return "PAD2";
+        case 0x80000400:
+            return "MCMAN";
+        case 0x80000592:
+            return "CDINIT";
+        case 0x80000593:
+            return "CDSCMD";
+        case 0x80000595:
+            return "CDNCMD";
+        case 0x80000597:
+            return "CDSEARCHFILE";
+        case 0x8000059A:
+            return "CDDISKREADY";
+        case 0x80000701:
+            return "SDREMOTE";
+        default:
+            return "UNK";
+    }
+}
+
+void EmotionEngine::log_sifrpc(uint32_t dma_struct_ptr, int len)
+{
+    if (len < 1)
+        return;
+    uint32_t call_ptr = dma_struct_ptr + (len * 0x10) - 0x10;
+    uint32_t pkt = read32(call_ptr);
+    uint32_t rpc_func = read32(pkt + 0x8);
+
+    switch (rpc_func)
+    {
+        case 0x80000002:
+            //INIT
+            printf("[SIFRPC] sceSifInitRpc\n");
+            iop_rpc_servers.clear();
+            break;
+        case 0x80000003:
+            //RESET
+            printf("[SIFRPC] sceSifResetIop\n");
+            iop_rpc_servers.clear();
+            break;
+        case 0x80000009:
+            //BIND
+        {
+            printf("[SIFRPC] sceSifBindRpc\n");
+            uint32_t module_id = read32(pkt + 0x20);
+            uint32_t client = read32(pkt + 0x1C);
+            SifRpcServer server;
+            server.client_ptr = client;
+            server.module_id = module_id;
+            server.name = sifrpc_lookup_module_name(module_id);
+
+            iop_rpc_servers.push_back(server);
+            printf("[SIFRPC] Client $%08X binding to %s ($%08X)\n", client, server.name.c_str(), module_id);
+        }
+            break;
+        case 0x8000000A:
+            //CALL
+            printf("[SIFRPC] sceSifCallRpc\n");
+        {
+            uint32_t client = read32(pkt + 0x1C);
+            uint32_t fno = read32(pkt + 0x20);
+
+            for (auto it = iop_rpc_servers.begin(); it != iop_rpc_servers.end(); it++)
+            {
+                if (it->client_ptr == client)
+                {
+                    printf("[SIFRPC] Call UNK ($%08X) on server %s ($%08X)\n", fno, it->name.c_str(), it->module_id);
+
+                    //Check for FILEIO write - if fd is one, it's printing a message to STDOUT
+                    if (it->module_id == 0x80000001 && fno == 3)
+                    {
+                        uint32_t arg_ptr = read32(dma_struct_ptr);
+                        uint32_t fd = read32(arg_ptr);
+
+                        if (fd == 1)
+                        {
+                            //HLE writing to STDOUT
+                            e->ee_kputs(arg_ptr + 4);
+                        }
+                    }
+                    return;
+                }
+            }
+            printf("[SIFRPC] Unable to find server for client $%08X!\n", client);
+        }
+            break;
+        default:
+            printf("[SIFRPC] Unknown RPC function $%08X\n", rpc_func);
             break;
     }
 }
