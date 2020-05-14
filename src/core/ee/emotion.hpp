@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <fstream>
 #include <functional>
+#include <list>
 #include "cop0.hpp"
 #include "cop1.hpp"
 
@@ -47,6 +48,13 @@ struct EE_OsdConfigParam
     /*16*/uint32_t language:5;
         /** timezone minutes offset from gmt */
     /*21*/uint32_t timezoneOffset:11;
+};
+
+struct SifRpcServer
+{
+    std::string name;
+    uint32_t module_id;
+    uint32_t client_ptr;
 };
 
 extern "C" uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee);
@@ -95,11 +103,15 @@ class EmotionEngine
 
         bool flush_jit_cache;
 
+        std::list<SifRpcServer> iop_rpc_servers;
         std::function<void(EmotionEngine&)> run_func;
 
         uint32_t get_paddr(uint32_t vaddr);
         void handle_exception(uint32_t new_addr, uint8_t code);
         void deci2call(uint32_t func, uint32_t param);
+
+        std::string sifrpc_lookup_module_name(uint32_t id);
+        void log_sifrpc(uint32_t dma_struct_ptr, int len);
     public:
         EmotionEngine(Cop0* cp0, Cop1* fpu, Emulator* e, VectorUnit* vu0, VectorUnit* vu1);
         static const char* REG(int id);
