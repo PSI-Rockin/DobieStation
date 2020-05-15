@@ -134,7 +134,7 @@ void VectorInterface::update(int cycles)
             {
                 if (vu->is_running())
                     return;
-                handle_wait_cmd(wait_cmd_value);
+                handle_wait_cmd(wait_cmd_value, cycles - (run_cycles >> 4));
             }
             if (wait_for_PATH3)
             {
@@ -166,7 +166,7 @@ void VectorInterface::update(int cycles)
             }
             else if (vif_cmd_status == VIF_TRANSFER)
             {
-                if(id)
+                if(id && gif->path_active(2, false))
                     gif->deactivate_PATH(2);
                 vif_cmd_status = VIF_WAIT;
             }
@@ -431,7 +431,7 @@ void VectorInterface::decode_cmd(uint32_t value)
     }
 }
 
-void VectorInterface::handle_wait_cmd(uint32_t value)
+void VectorInterface::handle_wait_cmd(uint32_t value, uint32_t cycles)
 {
     command = (value >> 24) & 0x7F;
     imm = value & 0xFFFF;
@@ -439,10 +439,10 @@ void VectorInterface::handle_wait_cmd(uint32_t value)
     {
         case 0x14:
         case 0x15:
-            MSCAL(imm * 8);
+            MSCAL(imm * 8, cycles);
             break;
         case 0x17:
-            MSCAL(vu->get_PC());
+            MSCAL(vu->get_PC(), cycles);
             break;
         default:
             break;
@@ -455,9 +455,9 @@ void VectorInterface::handle_wait_cmd(uint32_t value)
     
 }
 
-void VectorInterface::MSCAL(uint32_t addr)
+void VectorInterface::MSCAL(uint32_t addr, uint32_t cycles)
 {
-    vu->start_program(addr);
+    vu->start_program(addr, cycles);
 
     ITOP = ITOPS & mem_mask;
 

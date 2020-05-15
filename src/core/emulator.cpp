@@ -117,8 +117,8 @@ void Emulator::run()
         gif.run(bus_cycles);
         
         //VU's run at EE speed, however both maintain their own speed
-        vu0.run_func(vu0, ee_cycles);
-        vu1.run_func(vu1, ee_cycles);
+        vu0.run_func(vu0);
+        vu1.run_func(vu1);
 
         scheduler.process_events();
     }
