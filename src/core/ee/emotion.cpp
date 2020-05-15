@@ -715,7 +715,7 @@ void EmotionEngine::ctc(int cop_id, int reg, int cop_reg, uint32_t instruction)
                 clear_interlock();
             }
             if (cop_reg == 31)
-                vu1->start_program(bark << 3);
+                vu1->start_program(bark << 3, 0);
             else
                 vu0->ctc(cop_reg, bark);
             break;
@@ -1218,8 +1218,6 @@ void EmotionEngine::cop2_updatevu0()
 {
     if (!vu0->is_running())
     {
-        uint64_t cpu_cycles = get_cycle_count();
-        uint64_t cop2_cycles = get_cop2_last_cycle();
         uint32_t last_instr = read32(get_PC_now() - 4);
         uint32_t upper_instr = (last_instr >> 26);
         uint32_t cop2_instr = (last_instr >> 21) & 0x1F;
@@ -1227,15 +1225,12 @@ void EmotionEngine::cop2_updatevu0()
         //Always stall 1 VU cycle if the last op was LQC2, CTC2 or QMTC2
         if (upper_instr == 0x36 || (upper_instr == 0x12 && (cop2_instr == 0x5 || cop2_instr == 0x6)))
         {
-            vu0->cop2_updatepipes(1);
+            set_cycle_count(get_cycle_count() + 1);
         }
-
-        vu0->cop2_updatepipes(cpu_cycles - cop2_cycles);
-        set_cop2_last_cycle(cpu_cycles);
+        vu0->cop2_updatepipes();
     }
     else if (!vu0->is_interlocked())
     {
-        uint64_t current_count = (get_cycle_count() - cop2_last_cycle);
-        vu0->run_func(*vu0, current_count);
+        vu0->run_func(*vu0);
     }
 }

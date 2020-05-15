@@ -1765,7 +1765,7 @@ void ee_syscall_exception(EmotionEngine& ee)
 
 void vu0_start_program(VectorUnit& vu0, uint32_t addr)
 {
-    vu0.start_program(addr);
+    vu0.start_program(addr , 0);
 }
 
 uint32_t vu0_read_CMSAR0_shl3(VectorUnit& vu0)

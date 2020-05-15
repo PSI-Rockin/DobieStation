@@ -109,8 +109,8 @@ class VectorInterface
         int command_len;
         bool check_vif_stall(uint32_t value);
         void decode_cmd(uint32_t value);
-        void handle_wait_cmd(uint32_t value);
-        void MSCAL(uint32_t addr);
+        void handle_wait_cmd(uint32_t value, uint32_t cycles);
+        void MSCAL(uint32_t addr, uint32_t cycles);
         void init_UNPACK(uint32_t value);
         bool is_filling_write();
         void handle_UNPACK();

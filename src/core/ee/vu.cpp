@@ -162,8 +162,6 @@ void VectorUnit::reset()
     PC = 0;
     VU_JIT::reset(this);
     //cycle_count = 1; //Set to 1 to prevent spurious events from occurring during execution
-    if (!id)
-        eecpu->set_cop2_last_cycle(eecpu->get_cycle_count());
     cycle_count = eecpu->get_cycle_count();
     running = false;
     tbit_stop = false;
@@ -235,29 +233,37 @@ void VectorUnit::set_GIF(GraphicsInterface *gif)
     this->gif = gif;
 }
 
-void VectorUnit::cop2_updatepipes(int cycles)
+void VectorUnit::cop2_updatepipes()
 {
-    //TODO: Affect EE cycles when it's a 1 cycle stall caused by QMTC2, LQC2, CTC2
+    int cycles = eecpu->get_cycle_count() - cycle_count;
+
     if (cycles > 0)
     {
-        for (int i = 0; i < cycles; i++)
+        if (cycles >= 4 && DIV_event_started == false && EFU_event_started == false)
         {
-            //This could run for a long time if many cycles have passed, there's no reason
-            if (i > 4 && DIV_event_started == false && EFU_event_started == false)
+            cycle_count = eecpu->get_cycle_count();
+            flush_pipes();
+        }
+        else
+        {
+            for (int i = 0; i < cycles; i++)
             {
-                cycle_count += cycles - i;
-                flush_pipes();
-                break;
-            }
-            cycle_count++;
+                if (i > 4 && DIV_event_started == false && EFU_event_started == false)
+                {
+                    cycle_count = eecpu->get_cycle_count();
+                    return;
+                }
+                //This could run for a long time if many cycles have passed, there's no reason
+                cycle_count++;
 
-            if (i >= 1)
-            {
-                decoder.reset();
+                if (i >= 1)
+                {
+                    decoder.reset();
+                }
+                update_mac_pipeline();
+                update_DIV_EFU_pipes();
+                int_branch_pipeline.update();
             }
-            update_mac_pipeline();
-            update_DIV_EFU_pipes();
-            int_branch_pipeline.update();
         }
     }
 }
@@ -284,24 +290,15 @@ void VectorUnit::flush_pipes()
     P.u = new_P_instance.u;
 }
 
-void VectorUnit::run(int cycles)
+void VectorUnit::run()
 {
-    int cycles_to_run;
     uint32_t cycles_this_op = 0;
 
-    if (running && !id)
-    {
-        cycles_to_run = (eecpu->get_cycle_count() - eecpu->get_cop2_last_cycle());
-        if (cycles_to_run > 0)
-            eecpu->set_cop2_last_cycle(eecpu->get_cop2_last_cycle() + cycles_to_run);
-        else
-            return;
+    int cycles_to_run = (eecpu->get_cycle_count() - cycle_count);
 
-        clear_interlock();
-    }
-    else
+    if (!id && cycles_to_run > 0)
     {
-        cycles_to_run = cycles;
+        clear_interlock();
     }
 
     while (running && cycles_to_run > 0)
@@ -356,7 +353,6 @@ void VectorUnit::run(int cycles)
                 running = false;
                 finish_on = false;
                 flush_pipes();
-                cycle_count = eecpu->get_cop2_last_cycle();
             }
             else
                 ebit_delay_slot--;
@@ -397,6 +393,7 @@ void VectorUnit::run(int cycles)
         }
         else if (transferring_GIF)
         {
+            gif->request_PATH(1, true);
             while (XGKICK_cycles >= 2)
             {
                 if (gif->path_active(1, true))
@@ -413,13 +410,9 @@ void VectorUnit::run(int cycles)
         }
     }
 
-    if (cycles_to_run < 0 && !id)
-    {
-        eecpu->set_cop2_last_cycle(eecpu->get_cop2_last_cycle() + std::abs((int)cycles_to_run));
-    }
-
     if (transferring_GIF)
     {
+        gif->request_PATH(1, true);
         XGKICK_cycles += cycles_to_run;
         while (XGKICK_cycles >= 2)
         {
@@ -434,6 +427,14 @@ void VectorUnit::run(int cycles)
                 break;
             }
         }
+    }
+
+    if (!running && (cycle_count < eecpu->get_cycle_count()))
+    {
+        if (!id)
+            cop2_updatepipes();
+        else
+            cycle_count = eecpu->get_cycle_count();
     }
 }
 
@@ -541,15 +542,10 @@ void VectorUnit::update_XGKick()
         correct_jit_pipeline(stalled_cycles);
         cycle_count += stalled_cycles;
     }
-
-    if (!running)
-        cycle_count = eecpu->get_cycle_count();
 }
 
-void VectorUnit::run_jit(int cycles)
+void VectorUnit::run_jit()
 {
-    int runfor = 0;
-
     if (running == true)
     {
         update_XGKick();
@@ -562,17 +558,23 @@ void VectorUnit::run_jit(int cycles)
         {
             cycle_count += VU_JIT::run(this);
 
-            if (get_id() == 0 && is_interlocked())
+            if (!id && is_interlocked())
             {
                 //Break out from the VU0 loop to give COP2 time to catch the interlock
                 break;
             }
         }
-        if (running == false && !id)
-            eecpu->set_cop2_last_cycle(cycle_count);
     }
     //If the program ends before all the cycles have passed, we need to update XGKick again
     update_XGKick();
+
+    if (!running && (cycle_count < eecpu->get_cycle_count()))
+    {
+        if (!id)
+            cop2_updatepipes();
+        else
+            cycle_count = eecpu->get_cycle_count();
+    }
 }
 
 void VectorUnit::handle_XGKICK()
@@ -791,8 +793,9 @@ void VectorUnit::check_for_COP2_FMAC_stall()
                 update_mac_pipeline();
                 int_branch_pipeline.flush();
             }
-            //TODO: Affect EE cycles also
-            cycle_count += delay;
+
+            eecpu->set_cycle_count(eecpu->get_cycle_count() + delay);
+            cycle_count = eecpu->get_cycle_count();
             update_DIV_EFU_pipes();
             break;
         }
@@ -929,7 +932,7 @@ uint32_t VectorUnit::crc_microprogram()
     return ~crc;
 }
 
-void VectorUnit::start_program(uint32_t addr)
+void VectorUnit::start_program(uint32_t addr, uint32_t cycle_delay)
 {
     uint32_t new_addr = addr & mem_mask;
     //printf("[VU%d] CallMS Starting execution at $%08X! Cur PC %x\n", get_id(), new_addr, PC);
@@ -947,13 +950,7 @@ void VectorUnit::start_program(uint32_t addr)
         tbit_stop = false;
         PC = new_addr;
         //printf("[VU%d] Starting execution at PC %x!\n", id, PC);
-        //Try to keep VU0 in sync with the EE
-        //TODO: Account for VIF0 MSCAL timing
-        if (!id)
-        {
-            eecpu->set_cop2_last_cycle(eecpu->get_cycle_count());
-        }
-        cycle_count = eecpu->get_cycle_count();
+        cycle_count = eecpu->get_cycle_count() - cycle_delay;
         flush_pipes();
     }
     //disasm_micromem();
@@ -3229,7 +3226,6 @@ void VectorUnit::xgkick(uint32_t instr)
     }
     else
     {
-        gif->request_PATH(1, true);
         transferring_GIF = true;
         GIF_addr = (uint32_t)(int_gpr[_is_].u & 0x3ff) * 16;
         XGKICK_cycles = 0;
