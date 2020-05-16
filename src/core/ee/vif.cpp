@@ -54,6 +54,8 @@ void VectorInterface::reset()
 
 bool VectorInterface::check_vif_stall(uint32_t value)
 {
+    bool is_stalled = false;
+
     if (command == 0)
     {
         //Acknowledge the stall on the next command when triggered on MARK
@@ -70,15 +72,16 @@ bool VectorInterface::check_vif_stall(uint32_t value)
 
             if(((value >> 24) & 0x7f) != 0x7)
                 vif_stalled |= STALL_IBIT;
-            return true;
         }
         if (vif_stop)
         {
+            printf("[VIF] VIF%x Stopped (Stall)\n", get_id());
             vif_stalled |= STALL_STOP;
-            return true;
         }
     }
-    return false;
+    is_stalled = vif_stalled & (STALL_IBIT | STALL_STOP);
+
+    return is_stalled;
 }
 
 void VectorInterface::update(int cycles)
@@ -979,7 +982,7 @@ uint32_t VectorInterface::get_stat()
     reg |= (wait_for_PATH3 | flush_stall | direct_wait) << 3;
     reg |= mark_detected << 6;
     reg |= DBF << 7;
-    reg |= vif_stop << 8;
+    reg |= (vif_stalled & STALL_STOP) << 6;
     reg |= (vif_stalled & STALL_IBIT) << 10;
     reg |= vif_interrupt << 11;
     reg |= fifo_reverse << 23;
@@ -1063,6 +1066,10 @@ void VectorInterface::set_fbrst(uint32_t value)
     {
         printf("[VIF] VIF%x Stopped\n", get_id());
         vif_stop = true;
+    }
+    if (value & 0x2)
+    {
+        Errors::die("VIF%d Force Break Not Implemented\n", id);
     }
     if (value & 0x1)
     {
