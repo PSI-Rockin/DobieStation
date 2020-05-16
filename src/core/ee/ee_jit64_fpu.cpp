@@ -50,6 +50,9 @@ void EE_JIT64::floating_point_add(EmotionEngine& ee, IR::Instruction& instr)
     REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::FPU, REG_STATE::READ);
     REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
 
+    clamp_freg(source);
+    clamp_freg(source2);
+
     if (dest == source)
     {
         emitter.ADDSS(source2, dest);
@@ -78,6 +81,9 @@ void EE_JIT64::floating_point_compare_equal(EmotionEngine& ee, IR::Instruction& 
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
     REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::FPU, REG_STATE::READ);
 
+    clamp_freg(source);
+    clamp_freg(source2);
+
     emitter.UCOMISS(source2, source);
     emitter.load_addr((uint64_t)&ee.fpu->control.condition, REG_64::RAX);
     emitter.SETCC_MEM(ConditionCode::E, REG_64::RAX);
@@ -88,6 +94,8 @@ void EE_JIT64::floating_point_compare_less_than(EmotionEngine& ee, IR::Instructi
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
     REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::FPU, REG_STATE::READ);
 
+    clamp_freg(source);
+    clamp_freg(source2);
     emitter.UCOMISS(source2, source);
     emitter.load_addr((uint64_t)&ee.fpu->control.condition, REG_64::RAX);
     emitter.SETCC_MEM(ConditionCode::B, REG_64::RAX);
@@ -97,6 +105,9 @@ void EE_JIT64::floating_point_compare_less_than_or_equal(EmotionEngine& ee, IR::
 {
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
     REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::FPU, REG_STATE::READ);
+
+    clamp_freg(source);
+    clamp_freg(source2);
 
     emitter.UCOMISS(source2, source);
     emitter.load_addr((uint64_t)&ee.fpu->control.condition, REG_64::RAX);
@@ -112,6 +123,8 @@ void EE_JIT64::floating_point_convert_to_fixed_point(EmotionEngine& ee, IR::Inst
     // Convert single and test to see if the result is out of range. If out of range,
     // the result will be 0x80000000, which is fine for signed floats. However, the PS2
     // will expect 0x7FFFFFFF if the float was originally unsigned.
+    clamp_freg(source);
+
     emitter.CVTSS2SI(source, REG_64::RAX);
 
     emitter.CMP32_EAX(0x80000000);
@@ -165,6 +178,9 @@ void EE_JIT64::floating_point_multiply(EmotionEngine& ee, IR::Instruction& instr
     REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::FPU, REG_STATE::READ);
     REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
 
+    clamp_freg(source);
+    clamp_freg(source2);
+
     if (dest == source)
     {
         emitter.MULSS(source2, dest);
@@ -190,6 +206,10 @@ void EE_JIT64::floating_point_multiply_add(EmotionEngine& ee, IR::Instruction& i
     REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::FPU, REG_STATE::READ);
     REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
 
+    clamp_freg(source);
+    clamp_freg(source2);
+    clamp_freg(acc);
+
     emitter.MOVAPS_REG(source, XMM0);
     emitter.MULSS(source2, XMM0);
     emitter.ADDSS(acc, XMM0);
@@ -206,6 +226,10 @@ void EE_JIT64::floating_point_multiply_subtract(EmotionEngine& ee, IR::Instructi
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
     REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::FPU, REG_STATE::READ);
     REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
+
+    clamp_freg(source);
+    clamp_freg(source2);
+    clamp_freg(acc);
 
     emitter.MOVAPS_REG(source, XMM0);
     emitter.MULSS(source2, XMM0);
@@ -306,6 +330,8 @@ void EE_JIT64::floating_point_square_root(EmotionEngine& ee, IR::Instruction& in
     REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
     REG_64 XMM0 = lalloc_xmm_reg(ee, -1, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD, (REG_64)-1);
 
+    clamp_freg(source);
+
     // dest = abs(source)
     emitter.MOVD_FROM_XMM(source, REG_64::RAX);
     emitter.AND32_EAX(0x7FFFFFFF);
@@ -323,6 +349,9 @@ void EE_JIT64::floating_point_subtract(EmotionEngine& ee, IR::Instruction& instr
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::FPU, REG_STATE::READ);
     REG_64 source2 = alloc_reg(ee, instr.get_source2(), REG_TYPE::FPU, REG_STATE::READ);
     REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::FPU, REG_STATE::WRITE);
+
+    clamp_freg(source);
+    clamp_freg(source2);
 
     if (dest == source)
     {
