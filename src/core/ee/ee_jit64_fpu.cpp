@@ -96,6 +96,7 @@ void EE_JIT64::floating_point_compare_less_than(EmotionEngine& ee, IR::Instructi
 
     clamp_freg(source);
     clamp_freg(source2);
+
     emitter.UCOMISS(source2, source);
     emitter.load_addr((uint64_t)&ee.fpu->control.condition, REG_64::RAX);
     emitter.SETCC_MEM(ConditionCode::B, REG_64::RAX);
