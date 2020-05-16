@@ -55,6 +55,7 @@ struct SifRpcServer
     std::string name;
     uint32_t module_id;
     uint32_t client_ptr;
+    std::function<void(SifRpcServer& server, uint32_t fno, uint32_t buff, uint32_t buff_size)> rpc_func;
 };
 
 extern "C" uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee);
@@ -110,7 +111,9 @@ class EmotionEngine
         void handle_exception(uint32_t new_addr, uint8_t code);
         void deci2call(uint32_t func, uint32_t param);
 
-        std::string sifrpc_lookup_module_name(uint32_t id);
+        void sifrpc_register_server(std::string name, uint32_t module_id,
+                                    std::function<void(SifRpcServer& server,
+                                                       uint32_t fno, uint32_t buff, uint32_t buff_size)>);
         void log_sifrpc(uint32_t dma_struct_ptr, int len);
     public:
         EmotionEngine(Cop0* cp0, Cop1* fpu, Emulator* e, VectorUnit* vu0, VectorUnit* vu1);
