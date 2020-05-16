@@ -745,15 +745,46 @@ void CDVD_Drive::N_command_gettoc()
     sectors_left = 0;
     block_size = 2064;
     read_bytes_left = 2064;
-    memset(read_buffer, 0, 2064);
-    read_buffer[0] = 0x04;
-    read_buffer[1] = 0x02;
-    read_buffer[2] = 0xF2;
-    read_buffer[3] = 0x00;
-    read_buffer[4] = 0x86;
-    read_buffer[5] = 0x72;
 
-    read_buffer[17] = 0x03;
+    bool is_dual;
+    uint64_t layer2_start;
+    get_dual_layer_info(is_dual, layer2_start);
+
+    memset(read_buffer, 0, 2064);
+
+    if (!is_dual)
+    {
+        read_buffer[0] = 0x04;
+        read_buffer[1] = 0x02;
+        read_buffer[2] = 0xF2;
+        read_buffer[3] = 0x00;
+        read_buffer[4] = 0x86;
+        read_buffer[5] = 0x72;
+
+        read_buffer[17] = 0x03;
+    }
+    else
+    {
+        read_buffer[0] = 0x24;
+        read_buffer[1] = 0x02;
+        read_buffer[2] = 0xF2;
+        read_buffer[3] = 0x00;
+        read_buffer[4] = 0x41;
+        read_buffer[5] = 0x95;
+
+        read_buffer[14] = 0x60;
+
+        read_buffer[16] = 0x00;
+        read_buffer[17] = 0x03;
+        read_buffer[18] = 0x00;
+        read_buffer[19] = 0x00;
+
+        int32_t start = layer2_start + 0x30000 - 1;
+        read_buffer[20] = start >> 24;
+        read_buffer[21] = (start >> 16) & 0xff;
+        read_buffer[22] = (start >> 8) & 0xff;
+        read_buffer[23] = start & 0xFF;
+    }
     N_status = 0x40;
     drive_status = READING;
     dma->set_DMA_request(IOP_CDVD);
