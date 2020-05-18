@@ -72,9 +72,9 @@ class EmuThread : public QThread
         void rom_loaded(QString name, QString serial);
     public slots:
         void shutdown();
-        void press_key(PAD_BUTTON button);
-        void release_key(PAD_BUTTON button);
-        void update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t val);
+        //void press_key(PAD_BUTTON button);
+        //void release_key(PAD_BUTTON button);
+        //void update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t val);
         void pause(PAUSE_EVENT event);
         void unpause(PAUSE_EVENT event);
 };

@@ -65,8 +65,8 @@ class EmuWindow : public QMainWindow
         void open_settings_window();
         void open_memcard_window();
         void closeEvent(QCloseEvent *event) override;
-        void keyPressEvent(QKeyEvent *event) override;
-        void keyReleaseEvent(QKeyEvent *event) override;
+        //void keyPressEvent(QKeyEvent *event) override;
+        //void keyReleaseEvent(QKeyEvent *event) override;
 
     protected:
     #ifndef QT_NO_CONTEXTMENU
@@ -75,9 +75,9 @@ class EmuWindow : public QMainWindow
     
     signals:
         void shutdown();
-        void press_key(PAD_BUTTON button);
-        void release_key(PAD_BUTTON button);
-        void update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t val);
+       // void press_key(PAD_BUTTON button);
+        //void release_key(PAD_BUTTON button);
+        //void update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t val);
     public slots:
         void update_FPS(double FPS);
         void open_file_no_skip();

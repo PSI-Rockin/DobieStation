@@ -4,7 +4,7 @@
 #include <WinUser.h>
 #include "../util/wsi.hpp"
 
-class RawInput //: public CommonInput
+class Raw : public CommonInput
 {
 	
 private:
@@ -19,7 +19,7 @@ private:
 
 public:
 	bool reset();
-	PAD_DATA poll();
-
+	PAD_DATA poll(); 
+	int getEvent(int i);
 
 };

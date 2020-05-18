@@ -317,8 +317,8 @@ void Emulator::poll_controller()
     //std::cout << "L XAxis: " << state.lStickXAxis << std::endl;
     //std::cout << "L YAxis: " << state.lStickYAxis << std::endl;
 
-    std::cout << "L XAxis: " << state.lTriggerAxis << std::endl;
-    std::cout << "R XAxis: " << state.rTriggerAxis << std::endl;
+    //std::cout << "L XAxis: " << state.lTriggerAxis << std::endl;
+    //std::cout << "R XAxis: " << state.rTriggerAxis << std::endl;
 
     update_joystick(JOYSTICK::LEFT, JOYSTICK_AXIS::X, static_cast<uint8_t>(state.lStickXAxis + 0.5));
     update_joystick(JOYSTICK::LEFT, JOYSTICK_AXIS::Y, static_cast<uint8_t>(state.lStickYAxis + 0.5));

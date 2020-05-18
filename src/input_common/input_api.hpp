@@ -6,6 +6,7 @@
 #include <memory>
 #elif WIN32
 #include "win_input.hpp"
+#include "raw.hpp"
 #endif
 
 class InputManager
