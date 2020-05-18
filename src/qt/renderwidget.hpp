@@ -4,6 +4,13 @@
 #include <QWidget>
 #include <QPaintEvent>
 
+#ifdef __linux__
+#include <xcb/xcb.h>
+#include <QApplication>
+#include <qpa/qplatformnativeinterface.h>
+#endif
+
+
 class RenderWidget : public QWidget
 {
     Q_OBJECT
@@ -20,6 +27,9 @@ class RenderWidget : public QWidget
         bool get_respect_aspect_ratio() const;
 
         void* handle();
+    #ifdef __linux__
+            xcb_connection_t* connection();
+    #endif
     public slots:
         void draw_frame(uint32_t* buffer, int inner_w, int inner_h, int final_w, int final_h);
         void toggle_aspect_ratio();
