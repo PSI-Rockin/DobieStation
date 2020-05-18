@@ -11,6 +11,7 @@
 #include "../qt/settings.hpp"
 #include "../qt/memcardwindow.hpp"
 #include "../core/emulator.hpp"
+#include "../util/wsi.hpp"
 
 class SettingsWindow;
 class MemcardWindow;

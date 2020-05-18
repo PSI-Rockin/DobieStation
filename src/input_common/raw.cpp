@@ -6,7 +6,7 @@ bool RawInput::reset()
 	device[0].usUsagePage = 0x01;
 	device[0].usUsage = 0x06;
 	device[0].dwFlags = RIDEV_NOLEGACY;   // adds HID keyboard and also ignores legacy keyboard messages
-	device[0].hwndTarget = 0; //for directx tells what window is in focus if directx is in
+	device[0].hwndTarget = (HWND)wsi->surface;
 	RegisterRawInputDevices(&device[0], 0, sizeof(device[0]));
 
 	// This is GamePad Input
@@ -19,14 +19,26 @@ bool RawInput::reset()
 	return true;
 }
 
-/*PAD_DATA RawInput::poll()
+PAD_DATA RawInput::poll()
 {
 
 	switch (data)
 	{
 	case WM_INPUT:
+		RAWINPUT in;
+
+		unsigned int size = sizeof(RAWINPUT);
+
+
+		if (GetRawInputData((HRAWINPUT)lParam, RID_INPUT, &in, &size, sizeof(RAWINPUTHEADER)) > 0) 
+			{
+
+				uint32_t msg = in.data.keyboard.VKey;			
+			}
 
 			break;
+		
 	}
+	return pad_data;
 
-}*/
+}

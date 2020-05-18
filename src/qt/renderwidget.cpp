@@ -2,6 +2,8 @@
 #include <QImageWriter>
 #include <QDateTime>
 #include <QDebug>
+#include <qwindow.h>
+
 
 #include "renderwidget.hpp"
 #include "settings.hpp"
@@ -27,6 +29,14 @@ void RenderWidget::draw_frame(uint32_t* buffer, int inner_w, int inner_h, int fi
 
     update();
 }
+
+void* RenderWidget::handle()
+{
+    return reinterpret_cast<void*>(
+        windowHandle()->winId()
+        );
+}
+
 
 void RenderWidget::paintEvent(QPaintEvent* event)
 {

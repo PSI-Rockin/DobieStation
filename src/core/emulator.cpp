@@ -307,8 +307,8 @@ void Emulator::poll_controller()
     state.rStickXAxis = (state.rStickXAxis + 1) * 255 / 2;
     state.rStickYAxis = (state.rStickYAxis * -1 + 1) * 255 / 2;
 
-    state.lTriggerAxis = (state.lTriggerAxis + 1) * 255 / 2;
-    state.rTriggerAxis = (state.rTriggerAxis + 1) * 255 / 2;
+    state.lTriggerAxis = state.lTriggerAxis;
+    state.rTriggerAxis = state.rTriggerAxis;
 
     set_button(PAD_BUTTON::L2, state.lTriggerAxis);
     set_button(PAD_BUTTON::R2, state.rTriggerAxis);

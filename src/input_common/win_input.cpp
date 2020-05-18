@@ -54,10 +54,10 @@ PAD_DATA WinInput::poll()
 	float rightY = fmaxf(-1, (float)state.Gamepad.sThumbRY / 32767);
 	pad_data.rStickYAxis = rightY;
 
-	float lTrigger = fmaxf(-1, (float)state.Gamepad.bLeftTrigger / 32767);
+	float lTrigger = (float)state.Gamepad.bLeftTrigger;
 	pad_data.lTriggerAxis = lTrigger;
 
-	float rTrigger = fmaxf(-1, (float)state.Gamepad.bRightTrigger / 32767);
+	float rTrigger =  (float)state.Gamepad.bRightTrigger;
 	pad_data.rTriggerAxis = rTrigger;
 
 	//std::cout << "Left X Axis: " << pad_data.lStickXAxis << std::endl;

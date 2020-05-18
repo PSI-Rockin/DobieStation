@@ -67,6 +67,10 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
     vu0_mode = new QLabel;
     vu1_mode = new QLabel;
 
+    Util::WSI wsi = {};
+    wsi.surface = render_widget->handle();
+
+
     frametime = new QLabel;
     avg_framerate = new QLabel;
 
