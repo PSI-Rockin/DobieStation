@@ -40,7 +40,6 @@ PAD_DATA Raw::poll()
 
 				uint32_t msg = in.data.keyboard.VKey;			
 
-
 				std::cout << "vKey Code: " << unsigned(msg) << std::endl;
 
 				switch (msg)
