@@ -2,7 +2,7 @@
 #define WININPUT_HPP
 
 #include <iostream>
-#include <vector.h>
+#include <vector>
 #include <Windows.h>
 #include <Xinput.h>
 #include "common_input.hpp"
