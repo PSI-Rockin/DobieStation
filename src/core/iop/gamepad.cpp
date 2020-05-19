@@ -48,18 +48,15 @@ void Gamepad::reset()
 
 void Gamepad::set_button(PAD_BUTTON button, uint8_t val)
 {
-
     buttons &= ~(1 << (int)button);
-    buttons |= ((bool)val << (int)button);
-  
     button_pressure[(int)button] = val;
 }
 
-/*void Gamepad::release_button(PAD_BUTTON button)
+void Gamepad::release_button(PAD_BUTTON button)
 {
     buttons |= 1 << (int)button;
     button_pressure[(int)button] = 0;
-}*/
+}
 
 void Gamepad::update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t val)
 {

@@ -17,6 +17,7 @@ set(SOURCES
     emuthread.cpp
     emuwindow.cpp
     settingswindow.cpp
+    pad_configure.cpp
     renderwidget.cpp
     gamelistwidget.cpp
     memcardwindow.cpp
@@ -28,6 +29,7 @@ set(HEADERS
     emuthread.hpp
     emuwindow.hpp
     settingswindow.hpp
+    pad_configure.hpp
     renderwidget.hpp
     gamelistwidget.hpp
     memcardwindow.hpp

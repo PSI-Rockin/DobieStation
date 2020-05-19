@@ -12,6 +12,8 @@
 #include "../qt/memcardwindow.hpp"
 #include "../core/emulator.hpp"
 #include "../util/wsi.hpp"
+#include "../qt/pad_configure.hpp"
+
 
 class SettingsWindow;
 class MemcardWindow;
@@ -48,6 +50,7 @@ class EmuWindow : public QMainWindow
 
         SettingsWindow* settings_window = nullptr;
         MemcardWindow* memcard_window = nullptr;
+        PadConfigure* pad_configure = nullptr;
 
         void update_status();
         void show_render_view();
@@ -64,6 +67,7 @@ class EmuWindow : public QMainWindow
         bool load_bios();
         void open_settings_window();
         void open_memcard_window();
+        void open_controller_config();
         void closeEvent(QCloseEvent *event) override;
         //void keyPressEvent(QKeyEvent *event) override;
         //void keyReleaseEvent(QKeyEvent *event) override;

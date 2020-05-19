@@ -7,6 +7,8 @@ void InputManager::reset()
 	input = std::make_unique<LinuxInput>();
 #elif WIN32
 	input = std::make_unique<WinInput>();
+	#elif __APPLE__
+	input = std::make_unique<MacInput>();
 #endif
 	input->reset();
 }
@@ -20,3 +22,16 @@ int InputManager::getEvent(int i)
 {
 	return input->getEvent(i);
 }
+
+#ifdef __linux__
+	std::vector<evdev_controller*> InputManager::get_interesting_devices()
+	{
+		return input->get_interesting_devices();
+	}
+
+#elif WIN32
+	std::vector<XINPUT_STATE> InputManager::get_interesting_devices()
+	{
+		return input->get_interesting_devices();
+	}
+#endif

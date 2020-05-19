@@ -32,8 +32,8 @@
   <widget class="QWidget" name="Devices" native="true">
    <property name="geometry">
     <rect>
-     <x>460</x>
-     <y>50</y>
+     <x>520</x>
+     <y>60</y>
      <width>231</width>
      <height>80</height>
     </rect>
@@ -65,8 +65,8 @@
   <widget class="QWidget" name="Triangle_Widget" native="true">
    <property name="geometry">
     <rect>
-     <x>1000</x>
-     <y>160</y>
+     <x>960</x>
+     <y>150</y>
      <width>120</width>
      <height>80</height>
     </rect>
@@ -101,8 +101,8 @@
   <widget class="QWidget" name="Dpad_Up_Widget" native="true">
    <property name="geometry">
     <rect>
-     <x>140</x>
-     <y>170</y>
+     <x>240</x>
+     <y>180</y>
      <width>120</width>
      <height>80</height>
     </rect>
@@ -137,8 +137,8 @@
   <widget class="QWidget" name="Dpad_Left_Widget" native="true">
    <property name="geometry">
     <rect>
-     <x>60</x>
-     <y>250</y>
+     <x>140</x>
+     <y>260</y>
      <width>120</width>
      <height>80</height>
     </rect>
@@ -173,8 +173,8 @@
   <widget class="QWidget" name="Dpad_Right_Widget" native="true">
    <property name="geometry">
     <rect>
-     <x>230</x>
-     <y>250</y>
+     <x>310</x>
+     <y>260</y>
      <width>120</width>
      <height>80</height>
     </rect>
@@ -209,8 +209,8 @@
   <widget class="QWidget" name="Dpad_Down_Widget" native="true">
    <property name="geometry">
     <rect>
-     <x>140</x>
-     <y>330</y>
+     <x>220</x>
+     <y>350</y>
      <width>120</width>
      <height>80</height>
     </rect>
@@ -245,8 +245,8 @@
   <widget class="QWidget" name="Square_Widget" native="true">
    <property name="geometry">
     <rect>
-     <x>920</x>
-     <y>260</y>
+     <x>840</x>
+     <y>230</y>
      <width>120</width>
      <height>80</height>
     </rect>
@@ -281,8 +281,8 @@
   <widget class="QWidget" name="Circle_Widget" native="true">
    <property name="geometry">
     <rect>
-     <x>1090</x>
-     <y>260</y>
+     <x>1070</x>
+     <y>230</y>
      <width>120</width>
      <height>80</height>
     </rect>
@@ -317,8 +317,8 @@
   <widget class="QWidget" name="Cross_Widget" native="true">
    <property name="geometry">
     <rect>
-     <x>1000</x>
-     <y>360</y>
+     <x>950</x>
+     <y>310</y>
      <width>120</width>
      <height>80</height>
     </rect>
@@ -353,8 +353,8 @@
   <widget class="QWidget" name="Select_Widget" native="true">
    <property name="geometry">
     <rect>
-     <x>440</x>
-     <y>250</y>
+     <x>490</x>
+     <y>320</y>
      <width>101</width>
      <height>80</height>
     </rect>
@@ -389,8 +389,8 @@
   <widget class="QWidget" name="Start_Widget" native="true">
    <property name="geometry">
     <rect>
-     <x>609</x>
-     <y>250</y>
+     <x>660</x>
+     <y>320</y>
      <width>121</width>
      <height>71</height>
     </rect>

@@ -89,11 +89,6 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
     create_menu();
 
     connect(this, SIGNAL(shutdown()), &emu_thread, SLOT(shutdown()));
-    //connect(this, SIGNAL(press_key(PAD_BUTTON)), &emu_thread, SLOT(press_key(PAD_BUTTON)));
-    //connect(this, SIGNAL(release_key(PAD_BUTTON)), &emu_thread, SLOT(release_key(PAD_BUTTON)));
-    //connect(this, SIGNAL(update_joystick(JOYSTICK, JOYSTICK_AXIS, uint8_t)),
-      //  &emu_thread, SLOT(update_joystick(JOYSTICK, JOYSTICK_AXIS, uint8_t))
-    //);
     connect(&emu_thread, SIGNAL(update_FPS(double)), this, SLOT(update_FPS(double)));
     connect(&emu_thread, SIGNAL(emu_error(QString)), this, SLOT(emu_error(QString)));
     connect(&emu_thread, SIGNAL(emu_non_fatal_error(QString)), this, SLOT(emu_non_fatal_error(QString)));
@@ -406,8 +401,13 @@ void EmuWindow::create_menu()
     auto settings_action = new QAction(tr("&Settings"), this);
     connect(settings_action, &QAction::triggered, this, &EmuWindow::open_settings_window);
 
+    auto controller_action = new QAction(tr("&Controller"), this);
+    connect(controller_action, &QAction::triggered, this, &EmuWindow::open_controller_config);
+
+
     options_menu = menuBar()->addMenu(tr("&Options"));
     options_menu->addAction(settings_action);
+    options_menu->addAction(controller_action);
 
     auto ignore_aspect_ratio_action =
     new QAction(tr("&Ignore aspect ratio"), this);
@@ -492,6 +492,17 @@ void EmuWindow::open_memcard_window()
 
     memcard_window->show();
     memcard_window->raise();
+}
+
+void EmuWindow::open_controller_config()
+{
+    if (!pad_configure)
+    {
+        pad_configure = new PadConfigure(this);
+    }
+
+    pad_configure->show();
+    pad_configure->raise();
 }
 
 void EmuWindow::closeEvent(QCloseEvent *event)

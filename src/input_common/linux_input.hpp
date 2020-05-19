@@ -10,7 +10,6 @@
 #include <unordered_map>
 #include <dirent.h>
 #include "common_input.hpp"
-#include <libevdev-1.0/libevdev/libevdev.h>
 #include <map>
 
 // These Key Codes brought to you by, Rpcs3! https://github.com/RPCS3/rpcs3/blob/master/rpcs3/Input/evdev_joystick_handler.h
@@ -237,12 +236,6 @@ S_MT_TOUCH_MAJOR, "MT TMaj+"},
             {ABS_MT_TOOL_Y, "MT Tool Y-"},
         };*/
 
-struct evdev_controller
-{
-
-    std::string controller_name;
-    libevdev *dev;
-};
 
 class LinuxInput : public CommonInput
 {

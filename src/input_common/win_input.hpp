@@ -2,6 +2,7 @@
 #define WININPUT_HPP
 
 #include <iostream>
+#include <vector.h>
 #include <Windows.h>
 #include <Xinput.h>
 #include "common_input.hpp"
@@ -37,6 +38,7 @@ public:
 	bool reset();
 	PAD_DATA poll();
 	int getEvent(int i);
+	std::vector<XINPUT_STATE> get_xinput_devices();
 
 };
 

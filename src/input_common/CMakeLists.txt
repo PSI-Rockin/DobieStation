@@ -16,8 +16,6 @@ set(HEADERS
   input_api.hpp
   common_input.hpp
   linux_input.hpp
-  common_input.hpp
-  linux_input.hpp
   )
 
 if (CMAKE_ASM_MASM_COMPILER_LOADED)
@@ -34,3 +32,23 @@ target_compile_options(${TARGET} PRIVATE ${DOBIE_FLAGS})
 
 dobie_cxx_compile_options(${TARGET})
 endif (UNIX)
+
+
+if (APPLE)
+
+set(TARGET InputCommon)
+
+set(CMAKE_CXX_STANDARD 14)
+
+set(SOURCES
+   mac_input.cpp
+   input_api.cpp
+   )
+
+  set(HEADERS  
+  input_api.hpp
+  common_input.hpp
+  mac_input.hpp
+  )
+
+endif (APPLE)

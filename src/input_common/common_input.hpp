@@ -1,5 +1,7 @@
 #ifndef COMMONINPUT_H
 #define COMMONINPUT_H
+#include <libevdev-1.0/libevdev/libevdev.h>
+
 
 enum BUTTONS
 {
@@ -29,6 +31,18 @@ enum DEVICE_TYPE
 	KEYBOARD,
 	USB
 }; // USB is a subset of controllers like Guitar Hero stuff and for Pandubz future Eye Toy PR. Right pandubz ... you didnt forget, right?
+
+
+#ifdef __linux__
+
+struct evdev_controller
+{
+
+    std::string controller_name;
+    libevdev *dev;
+};
+#endif
+
 
 struct PAD_DATA
 {
@@ -68,6 +82,13 @@ public:
 	virtual bool reset() = 0;
 	virtual PAD_DATA poll() = 0;
 	virtual int getEvent(int i) = 0;
+	
+	#ifdef __linux__
+    virtual std::vector<evdev_controller *> get_interesting_devices() = 0;
+
+	#elif WIN32
+	   virtual std::vector<XINPUT_STATE> get_interesting_devices() = 0;
+	#endif
 
 };
 
