@@ -5,6 +5,7 @@
 #include "common_input.hpp"
 
 
+
 class MacInput : CommonInput
 {
     private:

@@ -1,4 +1,4 @@
-if(UNIX)
+if(UNIX AND NOT APPLE)
 
 set(TARGET InputCommon)
 
@@ -22,6 +22,7 @@ set(HEADERS_LINUX
 # MacOS
 set(SOURCES_MACOS
     mac_input.cpp)
+
 
 set(HEADERS_MACOS
     mac_input.hpp)
