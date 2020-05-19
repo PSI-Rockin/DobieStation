@@ -14,6 +14,7 @@ bool WinInput::reset()
 
 	is_connected = XInputGetState(0, &state.dev);
 
+
 	if (is_connected == ERROR_SUCCESS) // Controller is connected
 	{
 		state.player_number = 0;

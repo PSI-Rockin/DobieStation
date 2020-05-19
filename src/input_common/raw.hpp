@@ -25,5 +25,5 @@ public:
 	int getEvent(int i);
 
 };
-
 #endif
+

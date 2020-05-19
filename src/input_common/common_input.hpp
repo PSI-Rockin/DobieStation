@@ -7,6 +7,7 @@
 #elif WIN32
 #include <Windows.h>
 #include <Xinput.h>
+#include <WinUser.h>
 #elif __APPLE__
 #include <GCController>
 #endif
