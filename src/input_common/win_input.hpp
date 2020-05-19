@@ -3,7 +3,6 @@
 
 #include <iostream>
 #include <vector>
-
 #include "common_input.hpp"
 #include <map>
 
