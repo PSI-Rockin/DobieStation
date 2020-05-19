@@ -10,6 +10,8 @@ bool WinInput::reset()
 {
 	ZeroMemory(&is_connected, sizeof(state));
 
+	device_api = DEVICE_API::XINPUT;
+
 	is_connected = XInputGetState(0, &state);
 
 	if (is_connected == ERROR_SUCCESS) // Controller is connected

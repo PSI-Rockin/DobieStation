@@ -2,6 +2,9 @@
 
 bool LinuxInput::reset()
 {
+
+    device_api = DEVICE_API::EVDEV;
+
     //currentPath = filePath + events[i];
     if ((dir = opendir(file_path.c_str())) != nullptr)
     {

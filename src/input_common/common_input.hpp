@@ -7,6 +7,7 @@
 #elif WIN32
 #include <Windows.h>
 #include <Xinput.h>
+#include <WinUser.h>
 #elif __APPLE__
 #include <GCController>
 #endif
@@ -96,8 +97,8 @@ public:
 	#ifdef __linux__
     virtual std::vector<evdev_controller *> get_interesting_devices() = 0;
 
-	#elif WIN32
-	   virtual std::vector<XINPUT_STATE> get_interesting_devices() = 0;
+	#elif WIN32	   
+	   		virtual std::vector<XINPUT_STATE> get_interesting_devices() = 0;
 	#endif
 
 };

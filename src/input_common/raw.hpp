@@ -1,7 +1,9 @@
+#ifndef RAWINPUT_HPP
+#define RAWINPUT_HPP
+
 #include <iostream>
-#include <Windows.h>
+#include <vector>
 #include "common_input.hpp"
-#include <WinUser.h>
 #include "../util/wsi.hpp"
 
 class Raw : public CommonInput
@@ -23,3 +25,5 @@ public:
 	int getEvent(int i);
 
 };
+
+#endif

@@ -1,54 +1,37 @@
-if(UNIX AND NOT APPLE)
 
 set(TARGET InputCommon)
 
 set(CMAKE_CXX_STANDARD 14)
 
-find_package(Libevdev REQUIRED)
+# Common
+set(SOURCES_COMMON
+    input_api.cpp)
+
+set(HEADERS_COMMON
+    input_api.hpp
+    common_input.hpp)
+
+# Linux
+set(SOURCES_LINUX
+    linux_input.cpp)
+
+set(HEADERS_LINUX
+    linux_input.hpp)
+
+# MacOS
+set(SOURCES_MACOS
+    mac_input.cpp)
+
+set(HEADERS_MACOS
+    mac_input.hpp)
 
 
-set(SOURCES
-   linux_input.cpp
-   input_api.cpp
-   )
-
-set(HEADERS  
-  input_api.hpp
-  common_input.hpp
-  linux_input.hpp
-  )
-
-if (CMAKE_ASM_MASM_COMPILER_LOADED)
-    set_source_files_properties(SOURCES ${ASSEMBLY} PROPERTIES LANGUAGE ASM_MASM)
-    set(SOURCES ${SOURCES} ${ASSEMBLY} ${Libevdev_INCLUDE_DIRS})
-endif()
-
-add_library(${TARGET} ${SOURCES} ${HEADERS} ${Libevdev_LIBRARIES})
-add_library(Dobie::InputCommon ALIAS ${TARGET})
-
+add_library(${TARGET} ${SOURCES_COMMON} ${HEADERS_COMMON}
+    $<$<PLATFORM_ID:Linux>:${SOURCES_LINUX} ${HEADERS_LINUX}>
+    $<$<PLATFORM_ID:Darwin>:${SOURCES_MACOS} ${HEADERS_MACOS}>)
+    
+if(UNIX AND NOT APPLE)
+find_package(Libevdev REQUIRED)    
 target_link_libraries(InputCommon Libevdev::Libevdev)
-
-target_compile_options(${TARGET} PRIVATE ${DOBIE_FLAGS})
-
-dobie_cxx_compile_options(${TARGET})
 endif (UNIX AND NOT APPLE)
 
-
-if (APPLE)
-
-set(TARGET InputCommon)
-
-set(CMAKE_CXX_STANDARD 14)
-
-set(SOURCES
-   mac_input.cpp
-   input_api.cpp
-   )
-
-  set(HEADERS  
-  input_api.hpp
-  common_input.hpp
-  mac_input.hpp
-  )
-
-endif (APPLE)
