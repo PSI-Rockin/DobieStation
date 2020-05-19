@@ -167,8 +167,8 @@ PAD_DATA LinuxInput::poll()
     float norm_x2 = (RX - 1.0);
     float norm_y2 = (RY - 1.0);
 
-    std::cout << "normLX: " << norm_x1 << std::endl;
-    std::cout << "normLY: " << norm_y1 << std::endl;
+    //std::cout << "normLX: " << norm_x1 << std::endl;
+    //std::cout << "normLY: " << norm_y1 << std::endl;
 
     event.lStickXAxis = norm_x1;
     event.lStickYAxis = norm_y1 * -1;

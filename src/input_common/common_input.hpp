@@ -1,5 +1,7 @@
 #ifndef COMMONINPUT_H
 #define COMMONINPUT_H
+#include <libevdev-1.0/libevdev/libevdev.h>
+
 
 #ifdef __linux__
 #include <libevdev-1.0/libevdev/libevdev.h>

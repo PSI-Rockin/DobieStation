@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <vector>
+
 #include "common_input.hpp"
 #include <map>
 
@@ -39,6 +40,7 @@ public:
 	PAD_DATA poll();
 	int getEvent(int i);
 	std::vector<xinput_controller> get_interesting_devices();
+
 
 };
 

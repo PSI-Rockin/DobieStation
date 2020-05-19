@@ -505,6 +505,7 @@ void EmuWindow::open_controller_config()
     pad_configure->raise();
 }
 
+
 void EmuWindow::closeEvent(QCloseEvent *event)
 {
     emit shutdown();
