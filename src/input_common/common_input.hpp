@@ -1,6 +1,16 @@
 #ifndef COMMONINPUT_H
 #define COMMONINPUT_H
+
+#ifdef __linux__
 #include <libevdev-1.0/libevdev/libevdev.h>
+
+#elif WIN32
+#include <Windows.h>
+#include <Xinput.h>
+#elif __APPLE__
+#include <GCController>
+#endif
+
 
 
 enum BUTTONS

@@ -1,4 +1,4 @@
-if(UNIX)
+if(UNIX AND NOT APPLE)
 
 set(TARGET InputCommon)
 
@@ -31,7 +31,7 @@ target_link_libraries(InputCommon Libevdev::Libevdev)
 target_compile_options(${TARGET} PRIVATE ${DOBIE_FLAGS})
 
 dobie_cxx_compile_options(${TARGET})
-endif (UNIX)
+endif (UNIX AND NOT APPLE)
 
 
 if (APPLE)

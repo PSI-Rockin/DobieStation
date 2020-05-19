@@ -3,7 +3,6 @@
 
 #include <iostream>
 #include "input_common/common_input.hpp"
-#include <GCController>
 
 
 class MacInput : CommonInput
