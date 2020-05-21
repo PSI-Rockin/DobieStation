@@ -22,6 +22,7 @@ public:
     explicit PadConfigure(QWidget *parent = nullptr);
     void get_input(int button);
     void save();
+
     ~PadConfigure();
 
 private:
