@@ -7,7 +7,7 @@ CONFIG += console c++14
 CONFIG -= app_bundle
 
 INCLUDEPATH += ../../ext/libdeflate
-LIBS += -L../libdeflate
+LIBS += -L../libdeflate -ldl
 win32:LIBS += -llibdeflate
 else:LIBS += -ldeflate
 
@@ -21,6 +21,8 @@ DEFINES += QT_DEPRECATED_WARNINGS
 
 target.path = /usr/local/bin/
 INSTALLS += target
+
+QT += gui-private
 
 SOURCES += ../../src/qt/main.cpp \
     ../../src/core/audio/utils.cpp \
@@ -109,7 +111,8 @@ SOURCES += ../../src/qt/main.cpp \
     ../../src/qt/memcardwindow.cpp \
     ../../src/core/iop/cdvd/iso_reader.cpp \
     ../../src/core/iop/cdvd/bincuereader.cpp \
-    ../../src/core/iop/iop_intc.cpp
+    ../../src/core/iop/iop_intc.cpp \
+    ../../src/util/scoped_lib.cpp
 
 HEADERS += \
     ../../src/core/audio/utils.hpp \
@@ -195,9 +198,14 @@ HEADERS += \
 
 FORMS += \
     ../../src/qt/memcardwindow.ui
-
-
-DISTFILES +=
-
-FORMS += \
+    ../../src/core/iop/iop_intc.hpp \
+    ../../src/util/scoped_lib.hpp \
+    ../../src/util/types.hpp \
+    ../../src/util/wsi.hpp \
     ../../src/qt/pad_configure.ui
+
+
+DISTFILES += \
+    ../../src/util/CMakeLists.txt \
+    ../../src/util/Utils.vcxproj
+

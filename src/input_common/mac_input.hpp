@@ -2,7 +2,7 @@
 #define MACINPUT_H
 
 #include <iostream>
-#include "input_common/common_input.hpp"
+#include "common_input.hpp"
 
 
 class MacInput : CommonInput

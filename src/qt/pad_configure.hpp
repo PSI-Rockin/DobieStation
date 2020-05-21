@@ -19,9 +19,8 @@ class PadConfigure : public QDialog
 
 public:
     explicit PadConfigure(QWidget *parent = nullptr);
-    void initalize();
-    void update();
     void get_input(int button);
+    void save();
     ~PadConfigure();
 
 private:
