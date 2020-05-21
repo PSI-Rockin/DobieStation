@@ -12,8 +12,6 @@
 #include <GCController>
 #endif
 
-
-
 enum BUTTONS
 {
 	SELECT,

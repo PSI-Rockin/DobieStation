@@ -4,6 +4,7 @@
 #include <QDialog>
 #include <QComboBox>
 #include <QButtonGroup>
+#include "settings.hpp"
 #include <map>
 #include "../input_common/input_api.hpp"
 
@@ -20,7 +21,7 @@ public:
     explicit PadConfigure(QWidget *parent = nullptr);
     void initalize();
     void update();
-    void get_input();
+    void get_input(int button);
     ~PadConfigure();
 
 private:
@@ -38,7 +39,7 @@ private:
 #endif
      QButtonGroup *button_widgets;
 
-    std::map<BUTTONS, uint32_t> button_set; 
+    std::map<BUTTONS, uint> button_map; 
 
 };
 

@@ -47,6 +47,6 @@ dobie_cxx_compile_options(${TARGET})
 target_include_directories(${TARGET} PRIVATE
     ${CMAKE_SOURCE_DIR}/src
     ${Qt5Gui_PRIVATE_INCLUDE_DIRS})
-target_link_libraries(${TARGET} Dobie::Core InputCommon Qt5::Core Qt5::Widgets Qt5::Gui)
+target_link_libraries(${TARGET} Dobie::Core Dobie::InputCommon Qt5::Core Qt5::Widgets Qt5::Gui)
 
 install(TARGETS DobieQt RUNTIME DESTINATION bin)

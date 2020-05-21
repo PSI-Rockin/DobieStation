@@ -96,7 +96,7 @@ if (Libevdev_FOUND)
         add_library(Libevdev::Libevdev UNKNOWN IMPORTED)
         set_target_properties(Libevdev::Libevdev PROPERTIES
             IMPORTED_LOCATION             "${Libevdev_LIBRARY}"
-            INTERFACE_COMPILE_OPTIONS     "${SDL2_PC_CFLAGS_OTHER}"
+            INTERFACE_COMPILE_OPTIONS     "${_Libevdev_PC_CFLAGS_OTHER}"            
             INTERFACE_INCLUDE_DIRECTORIES "${Libevdev_INCLUDE_DIR}")
     endif()
 
@@ -104,7 +104,7 @@ if (Libevdev_FOUND)
     # set traditional library variables
     set(Libevdev_LIBRARIES    "${Libevdev_LIBRARY}")
     set(Libevdev_INCLUDE_DIRS "${Libevdev_INCLUDE_DIR}")
-    set(Libevdev_DEFINITIONS  "${SDL2_PC_CFLAGS_OTHER}")
-
+    set(Libevdev_DEFINITIONS  "${_Libevdev_PC_CFLAGS_OTHER}")
+    
     mark_as_advanced(Libevdev_LIBRARIES Libevdev_INCLUDE_DIRS Libevdev_DEFINITIONS)
 endif()

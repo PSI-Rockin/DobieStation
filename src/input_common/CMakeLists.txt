@@ -29,9 +29,10 @@ set(HEADERS_MACOS
 add_library(${TARGET} ${SOURCES_COMMON} ${HEADERS_COMMON}
     $<$<PLATFORM_ID:Linux>:${SOURCES_LINUX} ${HEADERS_LINUX}>
     $<$<PLATFORM_ID:Darwin>:${SOURCES_MACOS} ${HEADERS_MACOS}>)
-    
-if(UNIX AND NOT APPLE)
-find_package(Libevdev REQUIRED)    
-target_link_libraries(InputCommon Libevdev::Libevdev)
+add_library(Dobie::InputCommon ALIAS ${TARGET})
+
+if (UNIX AND NOT APPLE)
+    find_package(Libevdev REQUIRED)    
+    target_link_libraries(InputCommon Libevdev::Libevdev)
 endif (UNIX AND NOT APPLE)
 

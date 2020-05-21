@@ -21,4 +21,4 @@ Makefile*
 *.snp
 *_log.txt
 *.log
-.vscode/settings.json
+.vscode
