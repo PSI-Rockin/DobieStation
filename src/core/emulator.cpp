@@ -12,15 +12,15 @@
 /* Notes of timings from PS2*/
 /*
 
-Note: Values were counted using EE Timers 0 at a 1/256 diviver for v-blank cycles, H-BLANK's were counted with Timer 1 with CLK Source of H-BLANK
+Note: Values were counted using EE Timers 0 at a 1/256 divider for V-BLANK cycles, H-BLANK's were counted with Timer 1 with CLK Source of H-BLANK
 NTSC Non-Interlaced
-VBlank Off for 2248960 bus cycles (within 256 cycles), 240 H-BLANK's
-VBlank On for 215552 bus cycles (within 256 cycles), 23 H-BLANK's
+V-BLANK Off for 2248960 bus cycles (within 256 cycles), 240 H-BLANK's
+V-BLANK On for 215552 bus cycles (within 256 cycles), 23 H-BLANK's
 EE Cycles Per Frame between 4929024 & 4929536
 
 PAL Non-Interlaced
-VBlank Off for 2717696 bus cycles (within 256 cycles), 288 H-BLANK's
-VBlank On for 245504 bus cycles (within 256 cycles), 26 H-BLANK's
+V-BLANK Off for 2717696 bus cycles (within 256 cycles), 288 H-BLANK's
+V-BLANK On for 245504 bus cycles (within 256 cycles), 26 H-BLANK's
 EE Cycles Per Frame between 5926400 & 5926912
 */
 
