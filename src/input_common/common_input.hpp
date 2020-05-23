@@ -9,7 +9,6 @@
 #include <Xinput.h>
 #include <WinUser.h>
 #elif __APPLE__
-#include <GCController>
 #endif
 
 enum BUTTONS

@@ -3,6 +3,7 @@
 
 #include <QDialog>
 #include <QComboBox>
+#include <QTimer>
 #include <QButtonGroup>
 #include "settings.hpp"
 #include <map>
@@ -25,7 +26,8 @@ public:
 
 private:
     Ui::pad_configure *ui;
-    QComboBox *Interesting;    
+    QComboBox *Interesting;  
+    QTimer* CurrentTimer;  
     int selected_device;
 
     InputManager pad;

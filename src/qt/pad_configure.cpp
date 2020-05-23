@@ -43,12 +43,21 @@ PadConfigure::PadConfigure(QWidget *parent) :
 void PadConfigure::get_input(int button)
 {
 
-    uint current_button = (uint)pad.getEvent(selected_device);
+	//connect(&CurrentTimer, &QTimer::timeout, pad.getEvent(selected_device));
 
-    std::cout << "KeyCode: " << unsigned(current_button) << std::endl;
+    //if (CurrentTimer->isActive())
+    
+        uint current_button = (uint)pad.getEvent(selected_device);
 
-    button_map.emplace((BUTTONS)button, current_button);
+        std::cout << "KeyCode: " << unsigned(current_button) << std::endl;
 
+        button_map.emplace((BUTTONS)button, current_button);
+    
+
+    else
+    {
+        return;
+    }
 }
 
 
