@@ -208,6 +208,49 @@ void VectorUnit::reset()
     }
 }
 
+//Soft reset only clears out the control registers and stops the VU, everything else is preserved
+void VectorUnit::soft_reset()
+{
+    status = 0;
+    status_pipe = 0;
+    clip_flags = 0;
+    PC = 0;
+    cycle_count = eecpu->get_cycle_count();
+    running = false;
+    tbit_stop = false;
+    finish_on = false;
+    branch_on = false;
+    second_branch_pending = false;
+    secondbranch_PC = 0;
+    branch_delay_slot = 0;
+    ebit_delay_slot = 0;
+    
+    finish_DIV_event = 0;
+    pipeline_state[0] = 0;
+    pipeline_state[1] = 0;
+
+    for (int i = 0; i < 4; i++) {
+        MAC_pipeline[i] = 0;
+        CLIP_pipeline[i] = 0;
+        ILW_pipeline[i] = 0;
+    }
+
+    decoder.reset();
+    int_branch_pipeline.reset();
+
+    new_MAC_flags = 0;
+    new_Q_instance.u = 0;
+    new_P_instance.u = 0;
+    Q.u = 0;
+    P.u = 0;
+    DIV_event_started = false;
+    EFU_event_started = false;
+
+    int_backup_id = 0;
+    int_backup_reg = 0;
+    int_branch_delay = 0;
+}
+
 void VectorUnit::clear_interlock()
 {
     e->clear_cop2_interlock();
@@ -1234,9 +1277,9 @@ void VectorUnit::ctc(int index, uint32_t value)
             break;
         case 28:
             if (value & 0x2)
-                reset();
+                soft_reset();
             if (value & 0x200)
-                other_vu->reset();
+                other_vu->soft_reset();
             FBRST = value & ~0x303;
             break;
         default:

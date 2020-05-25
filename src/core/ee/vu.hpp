@@ -207,6 +207,7 @@ class VectorUnit
         void stop();
         void stop_by_tbit();
         void reset();
+        void soft_reset();
 
         void backup_vf(bool newvf, int index);
         void restore_vf(bool newvf, int index);
