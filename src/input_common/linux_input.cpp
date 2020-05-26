@@ -86,7 +86,27 @@ std::vector<evdev_controller *> LinuxInput::get_interesting_devices()
 
 int LinuxInput::getEvent(int i)
 {
-    return libevdev_next_event(interesting_devices[i]->dev, LIBEVDEV_READ_FLAG_SYNC, &ev);
+    int rc = LIBEVDEV_READ_STATUS_SUCCESS;
+
+    while (rc >= 0)
+    {
+        if (rc == LIBEVDEV_READ_STATUS_SYNC)
+        {
+            rc = libevdev_next_event(interesting_devices[0]->dev, LIBEVDEV_READ_FLAG_SYNC, &ev);
+        }
+        else
+        {
+            rc = libevdev_next_event(interesting_devices[0]->dev, LIBEVDEV_READ_FLAG_NORMAL, &ev);
+        }
+        //std::cout << "event: " << libevdev_event_type_get_name(ev.type) << " code: " << libevdev_event_code_get_name(ev.type, ev.code) << " value: " << ev.value << std::endl;
+    }
+
+    for (auto button : button_map)
+    {
+        int key;
+        libevdev_fetch_event_value(interesting_devices[0]->dev, EV_KEY, button.first, &key);
+        return key;
+    }
 }
 
 PAD_DATA LinuxInput::poll()
