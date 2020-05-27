@@ -199,7 +199,7 @@ void EmotionTiming::write_control(int index, uint32_t value)
             break;
         case 3:
             //TODO: actual value for HSYNC
-            timers[index].clock_scale = 9400;
+            timers[index].clock_scale = 9371; //9371.64800254076 To be exact
             break;
     }
 
