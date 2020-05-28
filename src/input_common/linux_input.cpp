@@ -86,45 +86,48 @@ std::vector<evdev_controller *> LinuxInput::get_interesting_devices()
 
 int LinuxInput::getEvent(int i)
 {
+    int key;
     int rc = LIBEVDEV_READ_STATUS_SUCCESS;
-
+    
     while (rc >= 0)
     {
+
         if (rc == LIBEVDEV_READ_STATUS_SYNC)
         {
-            rc = libevdev_next_event(interesting_devices[0]->dev, LIBEVDEV_READ_FLAG_SYNC, &ev);
+            // Controller not synced or connected
+            rc = libevdev_next_event(interesting_devices[i]->dev, LIBEVDEV_READ_FLAG_SYNC, &ev);
         }
-        else
-        {
-            rc = libevdev_next_event(interesting_devices[0]->dev, LIBEVDEV_READ_FLAG_NORMAL, &ev);
-        }
-        //std::cout << "event: " << libevdev_event_type_get_name(ev.type) << " code: " << libevdev_event_code_get_name(ev.type, ev.code) << " value: " << ev.value << std::endl;
-    }
+   
+        rc = libevdev_next_event(interesting_devices[i]->dev, LIBEVDEV_READ_FLAG_NORMAL, &ev);
+    }   
 
-    for (auto button : button_map)
+    if (rc == LIBEVDEV_READ_STATUS_SUCCESS)
     {
-        int key;
-        libevdev_fetch_event_value(interesting_devices[0]->dev, EV_KEY, button.first, &key);
+        for (auto button : button_map)
+        {   
+
+            libevdev_fetch_event_value(interesting_devices[i]->dev, EV_KEY, button.first, &key);
+            interesting_devices[i]->code_name = libevdev_event_code_get_name(EV_KEY, key);
+            std::cout << "Code: " << interesting_devices[i]->code_name << std::endl;
+        }
+
         return key;
     }
+      
 }
 
 PAD_DATA LinuxInput::poll()
 {
     int rc = LIBEVDEV_READ_STATUS_SUCCESS;
 
-    while (rc >= 0)
+    if (rc == LIBEVDEV_READ_STATUS_SYNC)
     {
-        if (rc == LIBEVDEV_READ_STATUS_SYNC)
-        {
-            rc = libevdev_next_event(interesting_devices[0]->dev, LIBEVDEV_READ_FLAG_SYNC, &ev);
-        }
-        else
-        {
-            rc = libevdev_next_event(interesting_devices[0]->dev, LIBEVDEV_READ_FLAG_NORMAL, &ev);
-        }
-        //std::cout << "event: " << libevdev_event_type_get_name(ev.type) << " code: " << libevdev_event_code_get_name(ev.type, ev.code) << " value: " << ev.value << std::endl;
+        rc = libevdev_next_event(interesting_devices[0]->dev, LIBEVDEV_READ_FLAG_SYNC, &ev);
     }
+   
+    rc = libevdev_next_event(interesting_devices[0]->dev, LIBEVDEV_READ_FLAG_NORMAL, &ev);
+    
+    //std::cout << "event: " << libevdev_event_type_get_name(ev.type) << " code: " << libevdev_event_code_get_name(ev.type, ev.code) << " value: " << ev.value << std::endl;
 
     PAD_DATA event = {};
 

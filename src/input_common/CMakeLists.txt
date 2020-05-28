@@ -34,5 +34,7 @@ add_library(Dobie::InputCommon ALIAS ${TARGET})
 if (UNIX AND NOT APPLE)
     find_package(Libevdev REQUIRED)    
     target_link_libraries(InputCommon Libevdev::Libevdev)
+    set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0")
+    set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0")
 endif (UNIX AND NOT APPLE)
 

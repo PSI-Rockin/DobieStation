@@ -8,7 +8,7 @@
 class MacInput : CommonInput
 {
     private:
-    string device_name;
+    std::string device_name;
 
     public:
     int getEvent(int i);
@@ -17,6 +17,6 @@ class MacInput : CommonInput
     PAD_DATA poll();
 
 
-}
+};
 
 #endif

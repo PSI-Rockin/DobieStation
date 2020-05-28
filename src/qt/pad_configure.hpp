@@ -40,7 +40,7 @@ private:
 #endif
      QButtonGroup *button_widgets;
 
-    std::map<BUTTONS, uint> button_map; 
+    std::map<BUTTONS, int> button_map; 
 
 };
 

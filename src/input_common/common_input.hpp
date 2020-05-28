@@ -47,7 +47,8 @@ struct evdev_controller
 {
 
     std::string controller_name;
-    libevdev *dev;
+	std::string code_name; // Which code did we get?
+    libevdev *dev; // The Controller itself	
 };
 #endif
 

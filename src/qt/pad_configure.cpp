@@ -49,11 +49,15 @@ void PadConfigure::get_input(int button)
 
     if (CurrentTimer->isActive())
     {
-        uint current_button = (uint)pad.getEvent(selected_device);
+        int current_button = pad.getEvent(selected_device);
 
-        std::cout << "KeyCode: " << unsigned(current_button) << std::endl;
+        std::cout << "KeyCode: " << libevdev_event_code_get_name(EV_KEY, current_button) << std::endl;
 
-        button_map.emplace((BUTTONS)button, current_button);
+        if (current_button > 0)
+        {
+            button_map.emplace((BUTTONS)button, current_button);
+            CurrentTimer->stop();
+        }
     }
 
     else
