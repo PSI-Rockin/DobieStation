@@ -305,7 +305,6 @@ private:
         "event21", "event22", "event23", "event24", "event25", "event26", "event27"};
 
     std::string file_path = "/dev/input/";
-
     std::string current_path;
 
     int fd;

@@ -91,6 +91,7 @@ int LinuxInput::getEvent(int i)
 
     if (i < interesting_devices.size())
     {
+
         if (rc == LIBEVDEV_READ_STATUS_SYNC)
         {
             // Controller not synced or connected
@@ -98,7 +99,6 @@ int LinuxInput::getEvent(int i)
         }
    
         rc = libevdev_next_event(interesting_devices[i]->dev, LIBEVDEV_READ_FLAG_NORMAL, &ev);
-  
 
         if (rc == LIBEVDEV_READ_STATUS_SUCCESS)
         {
