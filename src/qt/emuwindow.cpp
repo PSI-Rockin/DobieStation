@@ -27,6 +27,9 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
     framerate_avg = 0.0;
     frametime_avg = 0.016;
 
+    for (int i = 0; i < 60; i++)
+        frametime_list[i] = 0.016;
+
     render_widget = new RenderWidget;
 
     connect(&emu_thread, &EmuThread::completed_frame,
@@ -605,18 +608,26 @@ void EmuWindow::keyReleaseEvent(QKeyEvent *event)
 void EmuWindow::update_FPS(double FPS)
 {
     if(FPS > 0.01) {
-        frametime_avg = 0.8 * frametime_avg + 0.2 / FPS;
         frametime_list[frametime_list_index] = 1. / FPS;
         frametime_list_index = (frametime_list_index + 1) % 60;
     }
 
     double worst_frame_time = 0;
+    frametime_avg = 0;
+
     for(int i = 0; i < 60; i++)
     {
         if(frametime_list[i] > worst_frame_time) worst_frame_time = frametime_list[i];
+        frametime_avg += frametime_list[i];
     }
 
-    framerate_avg = 0.8 * framerate_avg + 0.2 * FPS;
+    if (frametime_avg > 0)
+    {
+        frametime_avg = frametime_avg / 60.0;
+        framerate_avg = 1.0 / frametime_avg;
+    }
+    else
+        framerate_avg = 0;
 
     avg_framerate->setText(QString("%1 fps").arg(
         QString::number(framerate_avg, 'f', 1)
