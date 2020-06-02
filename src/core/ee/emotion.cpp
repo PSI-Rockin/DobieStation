@@ -1,82 +1,26 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include "ee_jit.hpp"
 #include "emotion.hpp"
 #include "emotiondisasm.hpp"
 #include "emotioninterpreter.hpp"
 #include "vu.hpp"
-#include "../errors.hpp"
 
+#include "../errors.hpp"
 #include "../emulator.hpp"
-#include "ee_jit.hpp"
+#include "../sif.hpp"
 
 //#define SKIPMPEG_ON
 
 //#define printf(fmt, ...)(0)
 
-void default_rpc(SifRpcServer& server, uint32_t fno, uint32_t buffer, uint32_t size)
-{
-    printf("[SIFRPC] Unknown function $%08X called on %s ($%08X)\n", fno, server.name.c_str(), server.module_id);
-}
-
-EmotionEngine::EmotionEngine(Cop0* cp0, Cop1* fpu, Emulator* e, VectorUnit* vu0, VectorUnit* vu1) :
-    cp0(cp0), fpu(fpu), e(e), vu0(vu0), vu1(vu1)
+EmotionEngine::EmotionEngine(Cop0* cp0, Cop1* fpu, Emulator* e, SubsystemInterface* sif,
+                             VectorUnit* vu0, VectorUnit* vu1) :
+    cp0(cp0), fpu(fpu), e(e), sif(sif), vu0(vu0), vu1(vu1)
 {
     tlb_map = nullptr;
     set_run_func(&EmotionEngine::run_interpreter);
-
-    auto default_rpc_lambda = [] (SifRpcServer& server, uint32_t fno, uint32_t buffer, uint32_t size)
-    {
-        default_rpc(server, fno, buffer, size);
-    };
-
-    auto iopheap_lambda = [=] (SifRpcServer& server, uint32_t fno, uint32_t buffer, uint32_t size)
-    {
-        switch (fno)
-        {
-            case 0x1:
-                //sceSifAllocIopHeap
-                printf("[SIFRPC] sceSifAllocIopHeap($%08X)\n", read32(buffer));
-                break;
-            case 0x2:
-                //sceSifFreeIopHeap
-                printf("[SIFRPC] sceSifFreeIopHeap($%08X)\n", read32(buffer));
-                break;
-            default:
-                default_rpc(server, fno, buffer, size);
-        }
-    };
-
-    auto cdncmd_lambda = [=] (SifRpcServer& server, uint32_t fno, uint32_t buffer, uint32_t size)
-    {
-        switch (fno)
-        {
-            case 0x1:
-                //sceCdRead
-            {
-                uint32_t lbn = read32(buffer);
-                uint32_t sectors = read32(buffer + 4);
-                uint32_t data = read32(buffer + 8);
-                printf("[SIFRPC] sceCdRead(%d, %d, $%08X)\n", lbn, sectors, data);
-            }
-                break;
-            default:
-                default_rpc(server, fno, buffer, size);
-        }
-    };
-
-    sifrpc_register_server("FILEIO", 0x80000001, default_rpc_lambda);
-    sifrpc_register_server("IOPHEAP", 0x80000003, default_rpc_lambda);
-    sifrpc_register_server("LOADFILE", 0x80000006, default_rpc_lambda);
-    sifrpc_register_server("PAD1", 0x80000100, default_rpc_lambda);
-    sifrpc_register_server("PAD2", 0x80000101, default_rpc_lambda);
-    sifrpc_register_server("MCMAN", 0x80000400, default_rpc_lambda);
-    sifrpc_register_server("CDINIT", 0x80000592, default_rpc_lambda);
-    sifrpc_register_server("CDSCMD", 0x80000593, default_rpc_lambda);
-    sifrpc_register_server("CDNCMD", 0x80000595, cdncmd_lambda);
-    sifrpc_register_server("CDSEARCHFILE", 0x80000597, default_rpc_lambda);
-    sifrpc_register_server("CDDISKREADY", 0x8000059A, default_rpc_lambda);
-    sifrpc_register_server("SDREMOTE", 0x80000701, default_rpc_lambda);
 }
 
 const char* EmotionEngine::REG(int id)
@@ -1001,7 +945,7 @@ void EmotionEngine::syscall_exception()
             break;
         }
         case 0x77: // sceSifSetDma
-            log_sifrpc(get_gpr<uint32_t>(4), get_gpr<int>(5));
+            sif->ee_log_sifrpc(get_gpr<uint32_t>(4), get_gpr<int>(5));
             break;
         case 0x7C: // Deci2Call
             deci2call(get_gpr<uint32_t>(4), get_gpr<uint32_t>(5));
@@ -1068,109 +1012,6 @@ void EmotionEngine::deci2call(uint32_t func, uint32_t param)
             e->ee_kputs(param);
             break;
     }
-}
-
-void EmotionEngine::log_sifrpc(uint32_t dma_struct_ptr, int len)
-{
-    if (len < 1)
-        return;
-    uint32_t call_ptr = dma_struct_ptr + (len * 0x10) - 0x10;
-    uint32_t pkt = read32(call_ptr);
-    uint32_t rpc_func = read32(pkt + 0x8);
-
-    switch (rpc_func)
-    {
-        case 0x80000002:
-            //INIT
-            printf("[SIFRPC] sceSifInitRpc\n");
-            for (auto it = iop_rpc_servers.begin(); it != iop_rpc_servers.end(); it++)
-            {
-                it->client_ptr = 0;
-            }
-            break;
-        case 0x80000003:
-            //RESET
-            printf("[SIFRPC] sceSifResetIop\n");
-            break;
-        case 0x80000009:
-            //BIND
-        {
-            printf("[SIFRPC] sceSifBindRpc\n");
-            uint32_t module_id = read32(pkt + 0x20);
-            uint32_t client = read32(pkt + 0x1C);
-            for (auto it = iop_rpc_servers.begin(); it != iop_rpc_servers.end(); it++)
-            {
-                if (it->module_id == module_id)
-                {
-                    printf("[SIFRPC] Client $%08X binding to %s ($%08X)\n", client, it->name.c_str(), module_id);
-                    if (!it->client_ptr)
-                        it->client_ptr = client;
-                    return;
-                }
-            }
-
-            //Unable to find system server, so install a custom one.
-            sifrpc_register_server("CUSTOM", module_id,
-                                   [] (SifRpcServer& server, uint32_t fno, uint32_t buffer, uint32_t size)
-                                    { default_rpc(server, fno, buffer, size); });
-
-            for (auto it = iop_rpc_servers.begin(); it != iop_rpc_servers.end(); it++)
-            {
-                if (it->module_id == module_id)
-                {
-                    printf("[SIFRPC] Client $%08X binding to %s ($%08X)\n", client, it->name.c_str(), module_id);
-                    it->client_ptr = client;
-                    return;
-                }
-            }
-        }
-            break;
-        case 0x8000000A:
-            //CALL
-            printf("[SIFRPC] sceSifCallRpc\n");
-        {
-            uint32_t client = read32(pkt + 0x1C);
-            uint32_t fno = read32(pkt + 0x20);
-
-            for (auto it = iop_rpc_servers.begin(); it != iop_rpc_servers.end(); it++)
-            {
-                if (it->client_ptr == client)
-                {
-                    it->rpc_func(*it, fno, read32(dma_struct_ptr), 0);
-
-                    //Check for FILEIO write - if fd is one, it's printing a message to STDOUT
-                    /*if (it->module_id == 0x80000001 && fno == 3)
-                    {
-                        uint32_t arg_ptr = read32(dma_struct_ptr);
-                        uint32_t fd = read32(arg_ptr);
-
-                        if (fd == 1)
-                        {
-                            //HLE writing to STDOUT
-                            e->ee_kputs(arg_ptr + 4);
-                        }
-                    }*/
-                    return;
-                }
-            }
-            printf("[SIFRPC] Unable to find server for client $%08X!\n", client);
-        }
-            break;
-        default:
-            printf("[SIFRPC] Unknown RPC function $%08X\n", rpc_func);
-            break;
-    }
-}
-
-void EmotionEngine::sifrpc_register_server(std::string name, uint32_t module_id,
-                                           std::function<void(SifRpcServer&, uint32_t, uint32_t, uint32_t)> func)
-{
-    SifRpcServer server;
-    server.name = name;
-    server.module_id = module_id;
-    server.client_ptr = 0;
-    server.rpc_func = func;
-    iop_rpc_servers.push_back(server);
 }
 
 void EmotionEngine::int0()
