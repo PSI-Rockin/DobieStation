@@ -1,21 +1,23 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include "ee_jit.hpp"
 #include "emotion.hpp"
 #include "emotiondisasm.hpp"
 #include "emotioninterpreter.hpp"
 #include "vu.hpp"
-#include "../errors.hpp"
 
+#include "../errors.hpp"
 #include "../emulator.hpp"
-#include "ee_jit.hpp"
+#include "../sif.hpp"
 
 //#define SKIPMPEG_ON
 
 //#define printf(fmt, ...)(0)
 
-EmotionEngine::EmotionEngine(Cop0* cp0, Cop1* fpu, Emulator* e, VectorUnit* vu0, VectorUnit* vu1) :
-    cp0(cp0), fpu(fpu), e(e), vu0(vu0), vu1(vu1)
+EmotionEngine::EmotionEngine(Cop0* cp0, Cop1* fpu, Emulator* e, SubsystemInterface* sif,
+                             VectorUnit* vu0, VectorUnit* vu1) :
+    cp0(cp0), fpu(fpu), e(e), sif(sif), vu0(vu0), vu1(vu1)
 {
     tlb_map = nullptr;
     set_run_func(&EmotionEngine::run_interpreter);
@@ -895,7 +897,7 @@ void EmotionEngine::handle_exception(uint32_t new_addr, uint8_t code)
 
 void EmotionEngine::syscall_exception()
 {
-    int op = get_gpr<int>(3);
+    int op = abs(get_gpr<int>(3));
     //if (op != 0x7A)
         //printf("[EE] SYSCALL: %s (id: $%02X) called at $%08X\n", SYSCALL(op), op, PC);
 
@@ -942,6 +944,9 @@ void EmotionEngine::syscall_exception()
                 flush_jit_cache = true;
             break;
         }
+        case 0x77: // sceSifSetDma
+            sif->ee_log_sifrpc(get_gpr<uint32_t>(4), get_gpr<int>(5));
+            break;
         case 0x7C: // Deci2Call
             deci2call(get_gpr<uint32_t>(4), get_gpr<uint32_t>(5));
             return;
