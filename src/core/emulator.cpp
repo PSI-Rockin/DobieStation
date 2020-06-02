@@ -42,7 +42,7 @@ EE Cycles Per Frame between 5926400 & 5926912
 Emulator::Emulator() :
     cdvd(&iop_intc, &iop_dma, &scheduler),
     cp0(&dmac),
-    cpu(&cp0, &fpu, this, &vu0, &vu1),
+    cpu(&cp0, &fpu, this, &sif, &vu0, &vu1),
     dmac(&cpu, this, &gif, &ipu, &sif, &vif0, &vif1, &vu0, &vu1),
     gif(&gs, &dmac),
     gs(&intc),
@@ -61,7 +61,7 @@ Emulator::Emulator() :
     vif1(&gif, &vu1, &intc, &dmac, 1),
     vu0(0, this, &intc, &cpu, &vu1),
     vu1(1, this, &intc, &cpu, &vu0),
-    sif(&iop_dma, &dmac)
+    sif(&cpu, &iop_dma, &dmac)
 {
     BIOS = nullptr;
     RDRAM = nullptr;

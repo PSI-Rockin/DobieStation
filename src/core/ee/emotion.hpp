@@ -13,6 +13,7 @@ class Emulator;
 class VectorUnit;
 class EE_JIT64;
 class EmotionEngine;
+class SubsystemInterface;
 
 //Handler used for Deci2Call (syscall 0x7C)
 struct Deci2Handler
@@ -50,14 +51,6 @@ struct EE_OsdConfigParam
     /*21*/uint32_t timezoneOffset:11;
 };
 
-struct SifRpcServer
-{
-    std::string name;
-    uint32_t module_id;
-    uint32_t client_ptr;
-    std::function<void(SifRpcServer& server, uint32_t fno, uint32_t buff, uint32_t buff_size)> rpc_func;
-};
-
 extern "C" uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee);
 
 class EmotionEngine
@@ -72,6 +65,7 @@ class EmotionEngine
 
         Cop0* cp0;
         Cop1* fpu;
+        SubsystemInterface* sif;
         VectorUnit* vu0;
         VectorUnit* vu1;
 
@@ -104,19 +98,15 @@ class EmotionEngine
 
         bool flush_jit_cache;
 
-        std::list<SifRpcServer> iop_rpc_servers;
         std::function<void(EmotionEngine&)> run_func;
 
         uint32_t get_paddr(uint32_t vaddr);
         void handle_exception(uint32_t new_addr, uint8_t code);
         void deci2call(uint32_t func, uint32_t param);
 
-        void sifrpc_register_server(std::string name, uint32_t module_id,
-                                    std::function<void(SifRpcServer& server,
-                                                       uint32_t fno, uint32_t buff, uint32_t buff_size)>);
         void log_sifrpc(uint32_t dma_struct_ptr, int len);
     public:
-        EmotionEngine(Cop0* cp0, Cop1* fpu, Emulator* e, VectorUnit* vu0, VectorUnit* vu1);
+        EmotionEngine(Cop0* cp0, Cop1* fpu, Emulator* e, SubsystemInterface* sif, VectorUnit* vu0, VectorUnit* vu1);
         static const char* REG(int id);
         static const char* SYSCALL(int id);
         void reset();
