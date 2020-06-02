@@ -75,7 +75,7 @@ void SubsystemInterface::register_system_servers()
     };
 
     sifrpc_register_server("FILEIO", 0x80000001, default_rpc_lambda);
-    sifrpc_register_server("IOPHEAP", 0x80000003, default_rpc_lambda);
+    sifrpc_register_server("IOPHEAP", 0x80000003, iopheap_lambda);
     sifrpc_register_server("LOADFILE", 0x80000006, default_rpc_lambda);
     sifrpc_register_server("PAD1", 0x80000100, default_rpc_lambda);
     sifrpc_register_server("PAD2", 0x80000101, default_rpc_lambda);
@@ -141,7 +141,7 @@ void SubsystemInterface::send_SIF0_junk(int count)
 
 void SubsystemInterface::write_SIF1(uint128_t quad)
 {
-    printf("[SIF] Write SIF1: $%08X_%08X_%08X_%08X\n", quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
+    //printf("[SIF] Write SIF1: $%08X_%08X_%08X_%08X\n", quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
     for (int i = 0; i < 4; i++)
         SIF1_FIFO.push(quad._u32[i]);
     iop_dma->set_DMA_request(IOP_SIF1);
