@@ -29,7 +29,6 @@
       <DisableSpecificWarnings>4577;4244;4267;%(DisableSpecificWarnings)</DisableSpecificWarnings>
 
       <!-- includes -->
-      <AdditionalIncludeDirectories>$(UIDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories>$(ExtDir)\libdeflate;$(ExtDir)\libdeflate\common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
 
       <!-- preprocessor-->

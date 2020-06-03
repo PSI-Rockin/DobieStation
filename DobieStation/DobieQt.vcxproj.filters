@@ -19,9 +19,6 @@
     <ClCompile Include="$(UIDir)bios.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(UIDir)gamelistwidget.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
     <ClCompile Include="$(UIDir)emuwindow.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -40,25 +37,46 @@
     <ClCompile Include="$(UIDir)main.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="$(UIDir)gamelist/gamelistwidget.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="$(UIDir)gamelist/gamelistmodel.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="$(UIDir)gamelist/gamelistwatcher.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="$(UIDir)gamelist/gamelistproxy.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
 
   <ItemGroup>
-    <ClCompile Include="$(QtMocOutPrefix)settingswindow.cpp">
+    <ClCompile Include="$(QtMocDir)$(QtMocPrefix)settingswindow.cpp">
       <Filter>Moc</Filter>
     </ClCompile>
-    <ClCompile Include="$(QtMocOutPrefix)settings.cpp">
+    <ClCompile Include="$(QtMocDir)$(QtMocPrefix)settings.cpp">
       <Filter>Moc</Filter>
     </ClCompile>
-    <ClCompile Include="$(QtMocOutPrefix)renderwidget.cpp">
+    <ClCompile Include="$(QtMocDir)$(QtMocPrefix)renderwidget.cpp">
       <Filter>Moc</Filter>
     </ClCompile>
-    <ClCompile Include="$(QtMocOutPrefix)gamelistwidget.cpp">
+    <ClCompile Include="$(QtMocDir)$(QtMocPrefix)emuwindow.cpp">
       <Filter>Moc</Filter>
     </ClCompile>
-    <ClCompile Include="$(QtMocOutPrefix)emuwindow.cpp">
+    <ClCompile Include="$(QtMocDir)$(QtMocPrefix)emuthread.cpp">
       <Filter>Moc</Filter>
     </ClCompile>
-    <ClCompile Include="$(QtMocOutPrefix)emuthread.cpp">
+    <ClCompile Include="$(QtMocDir)$(QtMocPrefix)gamelistwidget.cpp">
+      <Filter>Moc</Filter>
+    </ClCompile>
+    <ClCompile Include="$(QtMocDir)$(QtMocPrefix)gamelistmodel.cpp">
+      <Filter>Moc</Filter>
+    </ClCompile>
+    <ClCompile Include="$(QtMocDir)$(QtMocPrefix)gamelistwatcher.cpp">
+      <Filter>Moc</Filter>
+    </ClCompile>
+    <ClCompile Include="$(QtMocDir)$(QtMocPrefix)gamelistproxy.cpp">
       <Filter>Moc</Filter>
     </ClCompile>
   </ItemGroup>
@@ -70,7 +88,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <QtMoc Include=".$(UIDir)renderwidget.hpp">
+    <QtMoc Include="$(UIDir)renderwidget.hpp">
       <Filter>Headers</Filter>
     </QtMoc>
     <QtMoc Include="$(UIDir)settingswindow.hpp">
@@ -85,7 +103,16 @@
     <QtMoc Include="$(UIDir)settings.hpp">
       <Filter>Headers</Filter>
     </QtMoc>
-    <QtMoc Include="$(UIDir)gamelistwidget.hpp">
+    <QtMoc Include="$(UIDir)gamelist/gamelistwidget.hpp">
+      <Filter>Headers</Filter>
+    </QtMoc>
+    <QtMoc Include="$(UIDir)gamelist/gamelistmodel.hpp">
+      <Filter>Headers</Filter>
+    </QtMoc>
+    <QtMoc Include="$(UIDir)gamelist/gamelistwatcher.hpp">
+      <Filter>Headers</Filter>
+    </QtMoc>
+    <QtMoc Include="$(UIDir)gamelist/gamelistproxy.hpp">
       <Filter>Headers</Filter>
     </QtMoc>
   </ItemGroup>

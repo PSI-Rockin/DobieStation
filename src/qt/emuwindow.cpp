@@ -14,8 +14,9 @@
 #include "emuwindow.hpp"
 #include "settingswindow.hpp"
 #include "renderwidget.hpp"
-#include "gamelistwidget.hpp"
 #include "bios.hpp"
+
+#include "gamelist/gamelistwidget.hpp"
 
 #include "arg.h"
 
