@@ -66,10 +66,10 @@ class Instruction
         uint32_t get_jump_dest() const;
         uint32_t get_jump_fail_dest() const;
         uint32_t get_return_addr() const;
-        uint64_t get_dest();
+        uint64_t get_dest() const;
         int get_base() const;
-        uint64_t get_source();
-        uint64_t get_source2();
+        uint64_t get_source() const;
+        uint64_t get_source2() const;
         uint16_t get_cycle_count() const;
         uint8_t get_bc() const;
         uint8_t get_field() const;

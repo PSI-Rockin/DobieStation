@@ -67,7 +67,7 @@ uint32_t Instruction::get_return_addr() const
 
     Which ideally gets converted into an instruction which stores at the absolute address 0x367470
 */
-uint64_t Instruction::get_dest()
+uint64_t Instruction::get_dest() const
 {
     if (!has_dest)
         Errors::die("Value does not exist: %s, %s:%d", __FUNCTION__, __FILE__, __LINE__);
@@ -80,7 +80,7 @@ int Instruction::get_base() const
     return base;
 }
 
-uint64_t Instruction::get_source()
+uint64_t Instruction::get_source() const
 {
     if (!has_source)
         Errors::die("Value does not exist: %s, %s:%d", __FUNCTION__, __FILE__, __LINE__);
@@ -88,7 +88,7 @@ uint64_t Instruction::get_source()
     return info[(int)RegisterType::Source].value;
 }
 
-uint64_t Instruction::get_source2()
+uint64_t Instruction::get_source2() const
 {
     if (!has_source2)
         Errors::die("Value does not exist: %s, %s:%d", __FUNCTION__, __FILE__, __LINE__);
