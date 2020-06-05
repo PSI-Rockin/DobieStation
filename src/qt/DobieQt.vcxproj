@@ -58,6 +58,7 @@
   </ImportGroup>
   <PropertyGroup>
     <TargetName>DobieStation$(Postfix)</TargetName>
+    <DisableFastUpToDateCheck>True</DisableFastUpToDateCheck>
   </PropertyGroup>
   <!-- default link -->
   <ItemDefinitionGroup>
@@ -102,5 +103,9 @@
     <ClCompile Include="$(QtMocOutPrefix)gamelistwidget.cpp" />
     <ClCompile Include="$(QtMocOutPrefix)memcardwindow.cpp" />
   </ItemGroup>
+  <!-- ui files -->
+  <!--<ItemGroup>
+    <QtUI Include="memcardwindow.ui" />
+  </ItemGroup>-->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>
