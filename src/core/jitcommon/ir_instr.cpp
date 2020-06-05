@@ -194,9 +194,19 @@ void Instruction::set_return_addr(uint32_t addr)
     return_addr = addr;
 }
 
-void Instruction::set_dest(int index)
+void Instruction::set_dest(uint64_t value, OperandType operandtype)
 {
-    dest = index;
+    InstructionInfo *info = get_dest_info();
+    if (info == nullptr)
+        append_info(value, operandtype, RegisterType::Dest);
+    else
+    {
+        if (operandtype == OperandType::Register)
+            info->value.reg = value;
+        else if (operandtype == OperandType::Immediate)
+            info->value.immediate = value;
+        info->operand_type = operandtype;
+    }
 }
 
 void Instruction::set_base(int index)
@@ -204,14 +214,34 @@ void Instruction::set_base(int index)
     base = index;
 }
 
-void Instruction::set_source(uint64_t value)
+void Instruction::set_source(uint64_t value, OperandType operandtype)
 {
-    source = value;
+    InstructionInfo *info = get_source_info();
+    if (info == nullptr)
+        append_info(value, operandtype, RegisterType::Source);
+    else
+    {
+        if (operandtype == OperandType::Register)
+            info->value.reg = value;
+        else if (operandtype == OperandType::Immediate)
+            info->value.immediate = value;
+        info->operand_type = operandtype;
+    }
 }
 
-void Instruction::set_source2(uint64_t value)
+void Instruction::set_source2(uint64_t value, OperandType operandtype)
 {
-    source2 = value;
+    InstructionInfo *info = get_source2_info();
+    if (info == nullptr)
+        append_info(value, operandtype, RegisterType::Source2);
+    else
+    {
+        if (operandtype == OperandType::Register)
+            info->value.reg = value;
+        else if (operandtype == OperandType::Immediate)
+            info->value.immediate = value;
+        info->operand_type = operandtype;
+    }
 }
 
 void Instruction::set_cycle_count(uint16_t value)
