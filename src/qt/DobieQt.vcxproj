@@ -53,8 +53,8 @@
   <!-- prop includes -->
   <ImportGroup Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" />
-    <Import Project="common.props" />
-    <Import Project="qt.props" />
+    <Import Project="..\..\DobieStation\common.props" />
+    <Import Project="..\..\DobieStation\qt.props" />
   </ImportGroup>
   <PropertyGroup>
     <TargetName>DobieStation$(Postfix)</TargetName>
@@ -80,7 +80,7 @@
   </ItemGroup>
   <!-- headers -->
   <ItemGroup>
-    <ClInclude Include="$(UIDir)bios.hpp" />
+    <ClInclude Include="bios.hpp" />
   </ItemGroup>
   <!-- moc files -->
   <ItemGroup>
@@ -100,7 +100,7 @@
     <ClCompile Include="$(QtMocOutPrefix)renderwidget.cpp" />
     <ClCompile Include="$(QtMocOutPrefix)settingswindow.cpp" />
     <ClCompile Include="$(QtMocOutPrefix)gamelistwidget.cpp" />
-    <ClCompile Include="$(QtMocOutPrefix)memcardwindow.cpp" />  
+    <ClCompile Include="$(QtMocOutPrefix)memcardwindow.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>
