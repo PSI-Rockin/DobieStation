@@ -1,0 +1,90 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Headers">
+      <UniqueIdentifier>{87EDF389-5729-4FF8-A76F-5F2336AF802E}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source">
+      <UniqueIdentifier>{051E0C76-21A1-468A-9166-1A9C71DD36A3}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Moc">
+      <UniqueIdentifier>{B3CE4CEA-322D-4A6F-A8FF-30C5D38C459D}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="UI">
+      <UniqueIdentifier>{25BD6226-F241-4A29-B904-779F2978593B}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="bios.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="main.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="settingswindow.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="emuthread.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="emuwindow.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="gamelistwidget.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="renderwidget.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="settings.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(QtToolOutDir)moc_emuthread.cpp">
+      <Filter>Moc</Filter>
+    </ClCompile>
+    <ClCompile Include="$(QtToolOutDir)moc_emuwindow.cpp">
+      <Filter>Moc</Filter>
+    </ClCompile>
+    <ClCompile Include="$(QtToolOutDir)moc_gamelistwidget.cpp">
+      <Filter>Moc</Filter>
+    </ClCompile>
+    <ClCompile Include="$(QtToolOutDir)moc_renderwidget.cpp">
+      <Filter>Moc</Filter>
+    </ClCompile>
+    <ClCompile Include="$(QtToolOutDir)moc_settings.cpp">
+      <Filter>Moc</Filter>
+    </ClCompile>
+    <ClCompile Include="$(QtToolOutDir)moc_settingswindow.cpp">
+      <Filter>Moc</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="bios.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <QtMoc Include="settingswindow.hpp">
+      <Filter>Headers</Filter>
+    </QtMoc>
+    <QtMoc Include="emuthread.hpp">
+      <Filter>Headers</Filter>
+    </QtMoc>
+    <QtMoc Include="emuwindow.hpp">
+      <Filter>Headers</Filter>
+    </QtMoc>
+    <QtMoc Include="settings.hpp">
+      <Filter>Headers</Filter>
+    </QtMoc>
+    <QtMoc Include="gamelistwidget.hpp">
+      <Filter>Headers</Filter>
+    </QtMoc>
+  </ItemGroup>
+  <!--<ItemGroup>
+    <QtUi Include="memcardwindow.ui">
+      <Filter>UI</Filter>
+    </QtUi>
+  </ItemGroup>-->
+</Project>
