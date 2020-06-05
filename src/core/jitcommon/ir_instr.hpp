@@ -24,19 +24,15 @@ enum class RegisterType : uint16_t
 {
     Dest,
     Source,
-    Source2
+    Source2,
+    MAXVALUE
 };
 
 struct alignas(16) InstructionInfo
 {
     public:
         OperandType operand_type;
-        RegisterType reg_type;
-        union
-        {
-            uint32_t reg;
-            uint64_t immediate;
-        } value;
+        uint64_t value;
 };
 
 
@@ -50,21 +46,22 @@ class Instruction
         uint16_t cycle_count;
         uint8_t bc, field, field2;
         bool is_likely, is_link;
-        InstructionInfo info[4];
-        size_t ninfo;
+        InstructionInfo info[(int)RegisterType::MAXVALUE];
 
         // interpreter fallback
         uint32_t opcode;
         void(*interpreter_fallback)(EmotionEngine&, uint32_t);
+    public:
+        Opcode op;
+        bool has_dest;
+        bool has_source;
+        bool has_source2;
+
+        Instruction(Opcode op = Null);
 
         InstructionInfo *get_dest_info();
         InstructionInfo *get_source_info();
         InstructionInfo *get_source2_info();
-        void append_info(uint64_t value, OperandType operandtype, RegisterType regtype);
-    public:
-        Opcode op;
-
-        Instruction(Opcode op = Null);
 
         uint32_t get_jump_dest() const;
         uint32_t get_jump_fail_dest() const;

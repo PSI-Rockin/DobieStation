@@ -6,11 +6,13 @@ namespace IR
 
 Instruction::Instruction(Opcode op) : op(op)
 {
+    has_dest = false;
+    has_source = false;
+    has_source2 = false;
     jump_dest = 0;
     jump_fail_dest = 0;
     return_addr = 0;
     base = 0;
-    ninfo = 0;
     cycle_count = 0;
     bc = 0;
     field = 0;
@@ -21,50 +23,23 @@ Instruction::Instruction(Opcode op) : op(op)
 
 InstructionInfo *Instruction::get_dest_info()
 {
-    for (int i = 0; i < ninfo; ++i)
-    {
-        if (info[i].reg_type == RegisterType::Dest)
-            return &info[i];
-    }
-
-    return nullptr;
+    if (!has_dest)
+        return nullptr;
+    return &info[(int)RegisterType::Dest];
 }
 
 InstructionInfo *Instruction::get_source_info()
 {
-    for (int i = 0; i < ninfo; ++i)
-    {
-        if (info[i].reg_type == RegisterType::Source)
-            return &info[i];
-    }
-
-    return nullptr;
+    if (!has_source)
+        return nullptr;
+    return &info[(int)RegisterType::Source];
 }
 
 InstructionInfo *Instruction::get_source2_info()
 {
-    for (int i = 0; i < ninfo; ++i)
-    {
-        if (info[i].reg_type == RegisterType::Source2)
-            return &info[i];
-    }
-
-    return nullptr;
-}
-
-void Instruction::append_info(uint64_t value, OperandType operandtype, RegisterType regtype)
-{
-    if ((int)&info[ninfo] - (int)&info[0] >= sizeof(info))
-        Errors::die("Buffer overflow on info: %s, %s:%d", __FUNCTION__, __FILE__, __LINE__);
-
-    if (operandtype == OperandType::Immediate)
-        info[ninfo].value.immediate = value;
-    else if (operandtype == OperandType::Register)
-        info[ninfo].value.reg = value;
-    info[ninfo].operand_type = operandtype;
-    info[ninfo].reg_type = regtype;
-
-    ++ninfo;
+    if (!has_source2)
+        return nullptr;
+    return &info[(int)RegisterType::Source2];
 }
 
 uint32_t Instruction::get_jump_dest() const
@@ -94,16 +69,10 @@ uint32_t Instruction::get_return_addr() const
 */
 uint64_t Instruction::get_dest()
 {
-    InstructionInfo *info = get_dest_info();
-    if (info != nullptr)
-    {
-        if (info->operand_type == OperandType::Register)
-            return info->value.reg;
-        else if (info->operand_type == OperandType::Immediate)
-            return info->value.immediate;
-    }
+    if (!has_dest)
+        Errors::die("Value does not exist: %s, %s:%d", __FUNCTION__, __FILE__, __LINE__);
 
-    Errors::die("Value does not exist: %s, %s:%d", __FUNCTION__, __FILE__, __LINE__);
+    return info[(int)RegisterType::Dest].value;
 }
 
 int Instruction::get_base() const
@@ -113,30 +82,18 @@ int Instruction::get_base() const
 
 uint64_t Instruction::get_source()
 {
-    InstructionInfo *info = get_source_info();
-    if (info != nullptr)
-    {
-        if (info->operand_type == OperandType::Register)
-            return info->value.reg;
-        else if (info->operand_type == OperandType::Immediate)
-            return info->value.immediate;
-    }
+    if (!has_source)
+        Errors::die("Value does not exist: %s, %s:%d", __FUNCTION__, __FILE__, __LINE__);
 
-    Errors::die("Value does not exist: %s, %s:%d", __FUNCTION__, __FILE__, __LINE__);
+    return info[(int)RegisterType::Source].value;
 }
 
 uint64_t Instruction::get_source2()
 {
-    InstructionInfo *info = get_source2_info();
-    if (info != nullptr)
-    {
-        if (info->operand_type == OperandType::Register)
-            return info->value.reg;
-        else if (info->operand_type == OperandType::Immediate)
-            return info->value.immediate;
-    }
+    if (!has_source2)
+        Errors::die("Value does not exist: %s, %s:%d", __FUNCTION__, __FILE__, __LINE__);
 
-    Errors::die("Value does not exist: %s, %s:%d", __FUNCTION__, __FILE__, __LINE__);
+    return info[(int)RegisterType::Source2].value;
 }
 
 uint16_t Instruction::get_cycle_count() const
@@ -196,17 +153,9 @@ void Instruction::set_return_addr(uint32_t addr)
 
 void Instruction::set_dest(uint64_t value, OperandType operandtype)
 {
-    InstructionInfo *info = get_dest_info();
-    if (info == nullptr)
-        append_info(value, operandtype, RegisterType::Dest);
-    else
-    {
-        if (operandtype == OperandType::Register)
-            info->value.reg = value;
-        else if (operandtype == OperandType::Immediate)
-            info->value.immediate = value;
-        info->operand_type = operandtype;
-    }
+    info[(int)RegisterType::Dest].value = value;
+    info[(int)RegisterType::Dest].operand_type = operandtype;
+    has_dest = true;
 }
 
 void Instruction::set_base(int index)
@@ -216,32 +165,16 @@ void Instruction::set_base(int index)
 
 void Instruction::set_source(uint64_t value, OperandType operandtype)
 {
-    InstructionInfo *info = get_source_info();
-    if (info == nullptr)
-        append_info(value, operandtype, RegisterType::Source);
-    else
-    {
-        if (operandtype == OperandType::Register)
-            info->value.reg = value;
-        else if (operandtype == OperandType::Immediate)
-            info->value.immediate = value;
-        info->operand_type = operandtype;
-    }
+    info[(int)RegisterType::Source].value = value;
+    info[(int)RegisterType::Source].operand_type = operandtype;
+    has_source = true;
 }
 
 void Instruction::set_source2(uint64_t value, OperandType operandtype)
 {
-    InstructionInfo *info = get_source2_info();
-    if (info == nullptr)
-        append_info(value, operandtype, RegisterType::Source2);
-    else
-    {
-        if (operandtype == OperandType::Register)
-            info->value.reg = value;
-        else if (operandtype == OperandType::Immediate)
-            info->value.immediate = value;
-        info->operand_type = operandtype;
-    }
+    info[(int)RegisterType::Source2].value = value;
+    info[(int)RegisterType::Source2].operand_type = operandtype;
+    has_source2 = true;
 }
 
 void Instruction::set_cycle_count(uint16_t value)
