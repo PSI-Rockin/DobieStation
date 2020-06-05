@@ -393,7 +393,7 @@ void GS_REGISTERS::reset(bool soft_reset)
     IMR.hsync = true;
     IMR.vsync = true;
     IMR.rawt = true;
-    if (soft_reset = false)
+    if (soft_reset == false)
     {
         CSR.is_odd_frame = false;
         CSR.SIGNAL_generated = false;
