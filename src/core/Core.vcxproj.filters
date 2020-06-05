@@ -7,9 +7,6 @@
     <Filter Include="Source">
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
     </Filter>
-    <Filter Include="x86">
-      <UniqueIdentifier>{62bcfebb-8387-4eba-8646-ae3a84de922d}</UniqueIdentifier>
-    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ee\ee_jit.cpp">
@@ -248,9 +245,6 @@
     <ClInclude Include="ee\ee_jittrans.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="iop\cdvd\bincuereader.hpp">
-      <Filter>Headers</Filter>
-    </ClInclude>
     <ClInclude Include="iop\cdvd\cdvd.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
@@ -347,9 +341,6 @@
     <ClInclude Include="iop\iop_dma.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClCompile Include="iop\iop_intc.hpp">
-      <Filter>Headers</Filter>
-    </ClCompile>
     <ClInclude Include="iop\iop_interpreter.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
@@ -431,7 +422,13 @@
     <ClInclude Include="scheduler.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\core\iop\firewire.hpp">
+    <ClInclude Include="iop\firewire.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="iop\cdvd\bincuereader.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="iop\iop_intc.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
   </ItemGroup>
