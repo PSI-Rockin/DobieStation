@@ -1,0 +1,231 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- configurations -->
+  <ItemGroup Label="ProjectConfigurations">
+    <ProjectConfiguration Include="Release Optimized|x64">
+      <Configuration>Release Optimized</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Release|x64">
+      <Configuration>Release</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Devel|x64">
+      <Configuration>Devel</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+    <ProjectConfiguration Include="Debug|x64">
+      <Configuration>Debug</Configuration>
+      <Platform>x64</Platform>
+    </ProjectConfiguration>
+  </ItemGroup>
+  <!-- globals -->
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>{353E9072-F9AB-35F7-8AFF-FAC3EA8AFEE0}</ProjectGuid>
+    <WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>
+    <ProjectName>Core</ProjectName>
+  </PropertyGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
+  <!-- configuration defaults -->
+  <PropertyGroup Label="Configuration">
+    <ConfigurationType>StaticLibrary</ConfigurationType>
+    <CharacterSet>Unicode</CharacterSet>
+    <PlatformToolset>v141</PlatformToolset>
+  </PropertyGroup>
+  <!-- release -->
+  <PropertyGroup Condition="'$(Configuration)'=='Release'" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+  </PropertyGroup>
+  <!-- optimized release -->
+  <PropertyGroup Condition="'$(Configuration)'=='Release Optimized'" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+  </PropertyGroup>
+  <!-- devel -->
+  <PropertyGroup Condition="'$(Configuration)'=='Devel'" Label="Configuration">
+    <UseDebugLibraries>false</UseDebugLibraries>
+  </PropertyGroup>
+  <!-- debug -->
+  <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
+    <UseDebugLibraries>true</UseDebugLibraries>
+  </PropertyGroup>
+  <!-- props -->
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
+  <ImportGroup Label="ExtensionSettings">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.props" />
+  </ImportGroup>
+  <!-- prop includes -->
+  <ImportGroup Label="PropertySheets">
+    <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" />
+    <Import Project="..\..\DobieStation\common.props" />
+  </ImportGroup>
+  <PropertyGroup>
+    <TargetName>$(ProjectName)$(Postfix)</TargetName>
+  </PropertyGroup>
+  <!-- default link -->
+  <ItemDefinitionGroup>
+    <Link>
+      <OutputFile>$(BinDir)\$(ProjectName)$(Postfix).lib</OutputFile>
+    </Link>
+  </ItemDefinitionGroup>
+  <!-- cpp files -->
+  <ItemGroup>
+    <ClCompile Include="ee\ee_jit.cpp" />
+    <ClCompile Include="ee\ee_jit64.cpp" />
+    <ClCompile Include="ee\ee_jit64_cop2.cpp" />
+    <ClCompile Include="ee\ee_jit64_fpu.cpp" />
+    <ClCompile Include="ee\ee_jit64_fpu_avx.cpp" />
+    <ClCompile Include="ee\ee_jit64_gpr.cpp" />
+    <ClCompile Include="ee\ee_jit64_mmi.cpp" />
+    <ClCompile Include="ee\ee_jittrans.cpp" />
+    <ClCompile Include="tests\iop\alu.cpp" />
+    <ClCompile Include="ee\bios_hle.cpp" />
+    <ClCompile Include="iop\cdvd\bincuereader.cpp" />
+    <ClCompile Include="iop\cdvd\cdvd.cpp" />
+    <ClCompile Include="iop\cdvd\cso_reader.cpp" />
+    <ClCompile Include="iop\cdvd\iso_reader.cpp" />
+    <ClCompile Include="ee\ipu\chromtable.cpp" />
+    <ClCompile Include="ee\ipu\codedblockpattern.cpp" />
+    <ClCompile Include="ee\cop0.cpp" />
+    <ClCompile Include="ee\cop1.cpp" />
+    <ClCompile Include="ee\ipu\dct_coeff.cpp" />
+    <ClCompile Include="ee\ipu\dct_coeff_table0.cpp" />
+    <ClCompile Include="ee\ipu\dct_coeff_table1.cpp" />
+    <ClCompile Include="ee\dmac.cpp" />
+    <ClCompile Include="jitcommon\emitter64.cpp" />
+    <ClCompile Include="ee\emotion.cpp" />
+    <ClCompile Include="ee\emotion_fpu.cpp" />
+    <ClCompile Include="ee\emotion_mmi.cpp" />
+    <ClCompile Include="ee\emotion_special.cpp" />
+    <ClCompile Include="ee\emotion_vu0.cpp" />
+    <ClCompile Include="ee\emotionasm.cpp" />
+    <ClCompile Include="ee\emotiondisasm.cpp" />
+    <ClCompile Include="ee\emotioninterpreter.cpp" />
+    <ClCompile Include="emulator.cpp" />
+    <ClCompile Include="errors.cpp" />
+    <ClCompile Include="iop\gamepad.cpp" />
+    <ClCompile Include="gif.cpp" />
+    <ClCompile Include="gs.cpp" />
+    <ClCompile Include="gscontext.cpp" />
+    <ClCompile Include="gsmem.cpp" />
+    <ClCompile Include="gsregisters.cpp" />
+    <ClCompile Include="gsthread.cpp" />
+    <ClCompile Include="ee\intc.cpp" />
+    <ClCompile Include="iop\iop.cpp" />
+    <ClCompile Include="iop\iop_cop0.cpp" />
+    <ClCompile Include="iop\iop_dma.cpp" />
+    <ClCompile Include="iop\iop_intc.cpp" />
+    <ClCompile Include="iop\iop_interpreter.cpp" />
+    <ClCompile Include="iop\iop_timers.cpp" />
+    <ClCompile Include="ee\ipu\ipu.cpp" />
+    <ClCompile Include="ee\ipu\ipu_fifo.cpp" />
+    <ClCompile Include="jitcommon\ir_block.cpp" />
+    <ClCompile Include="jitcommon\ir_instr.cpp" />
+    <ClCompile Include="jitcommon\jitcache.cpp" />
+    <ClCompile Include="ee\ipu\lumtable.cpp" />
+    <ClCompile Include="ee\ipu\mac_addr_inc.cpp" />
+    <ClCompile Include="ee\ipu\mac_b_pic.cpp" />
+    <ClCompile Include="ee\ipu\mac_i_pic.cpp" />
+    <ClCompile Include="ee\ipu\mac_p_pic.cpp" />
+    <ClCompile Include="iop\memcard.cpp" />
+    <ClCompile Include="ee\ipu\motioncode.cpp" />
+    <ClCompile Include="serialize.cpp" />
+    <ClCompile Include="sif.cpp" />
+    <ClCompile Include="iop\sio2.cpp" />
+    <ClCompile Include="iop\spu.cpp" />
+    <ClCompile Include="ee\timers.cpp" />
+    <ClCompile Include="ee\vif.cpp" />
+    <ClCompile Include="ee\ipu\vlc_table.cpp" />
+    <ClCompile Include="ee\vu.cpp" />
+    <ClCompile Include="ee\vu_disasm.cpp" />
+    <ClCompile Include="ee\vu_interpreter.cpp" />
+    <ClCompile Include="ee\vu_jit.cpp" />
+    <ClCompile Include="ee\vu_jit64.cpp" />
+    <ClCompile Include="ee\vu_jittrans.cpp" />
+    <ClCompile Include="scheduler.cpp" />
+    <ClCompile Include="iop\firewire.cpp" />
+  </ItemGroup>
+  <!-- headers -->
+  <ItemGroup>
+    <ClInclude Include="ee\bios_hle.hpp" />
+    <ClInclude Include="ee\ee_jit.hpp" />
+    <ClInclude Include="ee\ee_jit64.hpp" />
+    <ClInclude Include="ee\ee_jittrans.hpp" />
+    <ClInclude Include="iop\cdvd\bincueheader.hpp" />
+    <ClInclude Include="iop\cdvd\cdvd.hpp" />
+    <ClInclude Include="iop\cdvd\cdvd_container.hpp" />
+    <ClInclude Include="iop\cdvd\cso_reader.hpp" />
+    <ClInclude Include="iop\cdvd\iso_reader.hpp" />
+    <ClInclude Include="ee\ipu\chromtable.hpp" />
+    <ClInclude Include="circularFIFO.hpp" />
+    <ClInclude Include="ee\ipu\codedblockpattern.hpp" />
+    <ClInclude Include="ee\cop0.hpp" />
+    <ClInclude Include="ee\cop1.hpp" />
+    <ClInclude Include="ee\ipu\dct_coeff.hpp" />
+    <ClInclude Include="ee\ipu\dct_coeff_table0.hpp" />
+    <ClInclude Include="ee\ipu\dct_coeff_table1.hpp" />
+    <ClInclude Include="ee\dmac.hpp" />
+    <ClInclude Include="jitcommon\emitter64.hpp" />
+    <ClInclude Include="ee\emotion.hpp" />
+    <ClInclude Include="ee\emotionasm.hpp" />
+    <ClInclude Include="ee\emotiondisasm.hpp" />
+    <ClInclude Include="ee\emotioninterpreter.hpp" />
+    <ClInclude Include="emulator.hpp" />
+    <ClInclude Include="errors.hpp" />
+    <ClInclude Include="iop\gamepad.hpp" />
+    <ClInclude Include="gif.hpp" />
+    <ClInclude Include="gs.hpp" />
+    <ClInclude Include="gscontext.hpp" />
+    <ClInclude Include="gsmem.hpp" />
+    <ClInclude Include="gsregisters.hpp" />
+    <ClInclude Include="gsthread.hpp" />
+    <ClInclude Include="int128.hpp" />
+    <ClInclude Include="ee\intc.hpp" />
+    <ClInclude Include="iop\iop.hpp" />
+    <ClInclude Include="iop\iop_cop0.hpp" />
+    <ClInclude Include="iop\iop_dma.hpp" />
+    <ClInclude Include="iop\iop_intc.hpp" />
+    <ClInclude Include="iop\iop_interpreter.hpp" />
+    <ClInclude Include="iop\iop_timers.hpp" />
+    <ClInclude Include="ee\ipu\ipu.hpp" />
+    <ClInclude Include="ee\ipu\ipu_fifo.hpp" />
+    <ClInclude Include="jitcommon\ir_block.hpp" />
+    <ClInclude Include="jitcommon\ir_instr.hpp" />
+    <ClInclude Include="jitcommon\jitcache.hpp" />
+    <ClInclude Include="ee\ipu\lumtable.hpp" />
+    <ClInclude Include="ee\ipu\mac_addr_inc.hpp" />
+    <ClInclude Include="ee\ipu\mac_b_pic.hpp" />
+    <ClInclude Include="ee\ipu\mac_i_pic.hpp" />
+    <ClInclude Include="ee\ipu\mac_p_pic.hpp" />
+    <ClInclude Include="iop\memcard.hpp" />
+    <ClInclude Include="ee\ipu\motioncode.hpp" />
+    <ClInclude Include="sif.hpp" />
+    <ClInclude Include="iop\sio2.hpp" />
+    <ClInclude Include="iop\spu.hpp" />
+    <ClInclude Include="ee\timers.hpp" />
+    <ClInclude Include="ee\vif.hpp" />
+    <ClInclude Include="ee\ipu\vlc_table.hpp" />
+    <ClInclude Include="ee\vu.hpp" />
+    <ClInclude Include="ee\vu_disasm.hpp" />
+    <ClInclude Include="ee\vu_interpreter.hpp" />
+    <ClInclude Include="ee\vu_jit.hpp" />
+    <ClInclude Include="ee\vu_jit64.hpp" />
+    <ClInclude Include="ee\vu_jittrans.hpp" />
+    <ClInclude Include="scheduler.hpp" />
+    <ClInclude Include="iop\firewire.hpp" />
+  </ItemGroup>
+  <!-- misc -->
+  <ItemGroup>
+    <None Include="$(RootDir)README.md" />
+    <None Include="jitcommon\ir_instrlist.inc" />
+    <None Include="$(RootDir)appveyor.yml" />
+    <None Include="$(RootDir)CMakeLists.txt" />
+    <None Include="$(RootDir)LICENSE" />
+    <None Include="$(RootDir).gitignore" />
+    <None Include="$(RootDir).github\*" />
+    <None Include="application\application.pro" />
+  </ItemGroup>
+  <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <ImportGroup Label="ExtensionTargets">
+    <Import Project="$(VCTargetsPath)\BuildCustomizations\masm.targets" />
+  </ImportGroup>
+</Project>
