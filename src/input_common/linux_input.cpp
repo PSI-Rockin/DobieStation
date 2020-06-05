@@ -88,9 +88,6 @@ int LinuxInput::getEvent(int i)
 {
     int key;
     int rc = LIBEVDEV_READ_STATUS_SUCCESS;
-    
-    while (rc >= 0)
-    {
 
         if (rc == LIBEVDEV_READ_STATUS_SYNC)
         {
@@ -99,21 +96,23 @@ int LinuxInput::getEvent(int i)
         }
    
         rc = libevdev_next_event(interesting_devices[i]->dev, LIBEVDEV_READ_FLAG_NORMAL, &ev);
-    }   
+  
 
     if (rc == LIBEVDEV_READ_STATUS_SUCCESS)
     {
-        for (auto button : button_map)
-        {   
+        for (const auto& entry : button_list)
+	    {
+		    const auto code = entry.first;
+ 
 
-            libevdev_fetch_event_value(interesting_devices[i]->dev, EV_KEY, button.first, &key);
-            interesting_devices[i]->code_name = libevdev_event_code_get_name(EV_KEY, key);
-            std::cout << "Code: " << interesting_devices[i]->code_name << std::endl;
+            libevdev_fetch_event_value(interesting_devices[i]->dev, EV_KEY, code, &key);
+            std::cout << "Key Code: " << key << std::endl;
+            //interesting_devices[i]->code_name = libevdev_event_code_get_name(EV_KEY, key);
+            //std::cout << "Code: " << interesting_devices[i]->code_name << std::endl;
         }
-
-        return key;
     }
-      
+        
+        return key;
 }
 
 PAD_DATA LinuxInput::poll()

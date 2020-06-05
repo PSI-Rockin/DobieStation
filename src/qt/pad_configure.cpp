@@ -51,7 +51,7 @@ void PadConfigure::get_input(int button)
     {
         int current_button = pad.getEvent(selected_device);
 
-        std::cout << "KeyCode: " << libevdev_event_code_get_name(EV_KEY, current_button) << std::endl;
+        std::cout << "Key Code: " << unsigned(current_button) << std::endl;
 
         if (current_button > 0)
         {

@@ -15,7 +15,7 @@
 // These Key Codes brought to you by, Rpcs3! https://github.com/RPCS3/rpcs3/blob/master/rpcs3/Input/evdev_joystick_handler.h
 
 // Unique button names for the config files and our pad settings dialog
-	/*const std::unordered_map<uint32_t, std::string> button_list =
+	const std::unordered_map<uint32_t, std::string> button_list =
 	{
 		// Xbox One S Controller returns some buttons as key when connected through bluetooth
 		{ KEY_BACK            , "Back Key"    },
@@ -256,7 +256,7 @@
 		{ ABS_MT_DISTANCE    , "MT Distance-" },
 		{ ABS_MT_TOOL_X      , "MT Tool X-"   },
 		{ ABS_MT_TOOL_Y      , "MT Tool Y-"   },
-};*/
+};
 
 class LinuxInput : public CommonInput
 {

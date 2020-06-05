@@ -8,7 +8,7 @@ void InputManager::reset()
 #elif WIN32
 	input = std::make_unique<WinInput>();
 	#elif __APPLE__
-	input = std::make_unique<MacInput>();
+	//input = std::make_unique<MacInput>();
 #endif
 	input->reset();
 }
