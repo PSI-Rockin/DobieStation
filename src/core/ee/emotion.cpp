@@ -1,21 +1,23 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include "ee_jit.hpp"
 #include "emotion.hpp"
 #include "emotiondisasm.hpp"
 #include "emotioninterpreter.hpp"
 #include "vu.hpp"
-#include "../errors.hpp"
 
+#include "../errors.hpp"
 #include "../emulator.hpp"
-#include "ee_jit.hpp"
+#include "../sif.hpp"
 
 //#define SKIPMPEG_ON
 
 //#define printf(fmt, ...)(0)
 
-EmotionEngine::EmotionEngine(Cop0* cp0, Cop1* fpu, Emulator* e, VectorUnit* vu0, VectorUnit* vu1) :
-    cp0(cp0), fpu(fpu), e(e), vu0(vu0), vu1(vu1)
+EmotionEngine::EmotionEngine(Cop0* cp0, Cop1* fpu, Emulator* e, SubsystemInterface* sif,
+                             VectorUnit* vu0, VectorUnit* vu1) :
+    cp0(cp0), fpu(fpu), e(e), sif(sif), vu0(vu0), vu1(vu1)
 {
     tlb_map = nullptr;
     set_run_func(&EmotionEngine::run_interpreter);
@@ -158,6 +160,11 @@ void EmotionEngine::run(int cycles)
         cycles_to_run += cycles;
         run_func(*this);
     }
+    else
+    {
+        cycle_count += cycles;
+        cycles_to_run = 0;
+    }
 
     if (cp0->int_enabled())
     {
@@ -217,12 +224,6 @@ void EmotionEngine::run_interpreter()
 
 void EmotionEngine::run_jit()
 {
-    //If we're stalling on COP2 and VU0 is still active, we continue stalling.
-    wait_for_VU0 &= vu0_wait();
-
-    //Check for MBIT interlock
-    wait_for_interlock &= check_interlock();
-
     //If FlushCache(2) has been executed, reset the JIT.
     //This represents an icache flush.
     if (flush_jit_cache)
@@ -231,9 +232,30 @@ void EmotionEngine::run_jit()
         flush_jit_cache = false;
     }
 
-    //cycles_to_run and wait_for_VU0 are handled in the dispatcher, so no need to check for them here
-    EE_JIT::run(this);
+    if (wait_for_VU0)
+    {
+        if (vu0->is_running())
+        {
+            cycle_count += cycles_to_run;
+            cycles_to_run = 0;
+            return;
+        }
+        wait_for_VU0 = false;
+    }
 
+    if (wait_for_interlock)
+    {
+        if (check_interlock())
+        {
+            cycle_count += 1; //Only run for 1 cycle, gotta keep VU0 and EE timing tight
+            cycles_to_run = 0;
+            return;
+        }
+        wait_for_interlock = false;
+    }
+
+    //cycles_to_run is handled in the dispatcher, so no need to check it here
+    EE_JIT::run(this);
     branch_on = false;
 }
 
@@ -875,7 +897,7 @@ void EmotionEngine::handle_exception(uint32_t new_addr, uint8_t code)
 
 void EmotionEngine::syscall_exception()
 {
-    int op = get_gpr<int>(3);
+    int op = abs(get_gpr<int>(3));
     //if (op != 0x7A)
         //printf("[EE] SYSCALL: %s (id: $%02X) called at $%08X\n", SYSCALL(op), op, PC);
 
@@ -887,6 +909,7 @@ void EmotionEngine::syscall_exception()
             Errors::die("[EE] Exit syscall called!\n");
             return;
         }
+        case 0x6: // LoadExecPS2
         case 0x7: // ExecPS2
         {
             // Flush the cache when executing a new ELF
@@ -921,6 +944,9 @@ void EmotionEngine::syscall_exception()
                 flush_jit_cache = true;
             break;
         }
+        case 0x77: // sceSifSetDma
+            sif->ee_log_sifrpc(get_gpr<uint32_t>(4), get_gpr<int>(5));
+            break;
         case 0x7C: // Deci2Call
             deci2call(get_gpr<uint32_t>(4), get_gpr<uint32_t>(5));
             return;
@@ -1210,6 +1236,6 @@ void EmotionEngine::cop2_updatevu0()
     else if (!vu0->is_interlocked())
     {
         uint64_t current_count = (get_cycle_count() - cop2_last_cycle);
-        vu0->run(current_count);
+        vu0->run_func(*vu0, current_count);
     }
 }

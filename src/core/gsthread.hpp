@@ -5,6 +5,7 @@
 #include <mutex>
 #include <condition_variable>
 #include <cstdint>
+#include <memory>
 #include "gscontext.hpp"
 #include "gsregisters.hpp"
 #include "circularFIFO.hpp"
@@ -355,8 +356,8 @@ class GraphicsSynthesizerThread
         bool send_data = false;
         bool recieve_data = false;
 
-        gs_fifo* message_queue = nullptr;
-        gs_return_fifo* return_queue = nullptr;
+        std::unique_ptr<gs_fifo> message_queue{ nullptr };
+        std::unique_ptr<gs_return_fifo> return_queue{ nullptr };
 
         bool frame_complete;
         int frame_count;
@@ -470,7 +471,7 @@ class GraphicsSynthesizerThread
         void tex_lookup_int(int16_t u, int16_t v, TexLookupInfo& info, bool forced_lookup = false);
         void clut_lookup(uint8_t entry, RGBAQ_REG& tex_color);
         void clut_CSM2_lookup(uint8_t entry, RGBAQ_REG& tex_color);
-        void reload_clut(const GSContext& context);
+        void reload_clut(GSContext& context);
         void update_draw_pixel_state();
         void update_tex_lookup_state();
         uint8_t* get_jitted_draw_pixel(uint64_t state);
@@ -509,8 +510,6 @@ class GraphicsSynthesizerThread
         void local_to_local();
 
         int32_t orient2D(const Vertex &v1, const Vertex &v2, const Vertex &v3);
-
-        void reset();
         void memdump(uint32_t* target, uint16_t& width, uint16_t& height);
 
         uint32_t get_CRT_color(DISPFB& dispfb, uint32_t x, uint32_t y);
@@ -534,7 +533,7 @@ class GraphicsSynthesizerThread
         void send_message(GSMessage message);
         void wake_thread();
         void wait_for_return(GSReturn type, GSReturnMessage &data);
-        void reset_fifos();
+        void reset();
         void exit();
 };
 #endif // GSTHREAD_HPP

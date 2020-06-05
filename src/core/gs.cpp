@@ -29,6 +29,8 @@ GraphicsSynthesizer::~GraphicsSynthesizer()
 
 void GraphicsSynthesizer::reset()
 {
+    gs_thread.reset();
+
     if (!output_buffer1)
         output_buffer1 = new uint32_t[1920 * 1280];
 
@@ -40,8 +42,6 @@ void GraphicsSynthesizer::reset()
     frame_count = 0;
     set_CRT(false, 0x2, false);
     reg.reset();
-
-    gs_thread.reset_fifos();
 }
 
 void GraphicsSynthesizer::start_frame()
@@ -254,6 +254,11 @@ void GraphicsSynthesizer::write32_privileged(uint32_t addr, uint32_t value)
         intc->assert_IRQ((int)Interrupt::GS);
         reg.CSR.SIGNAL_irq_pending = false;
     }
+}
+
+uint32_t GraphicsSynthesizer::get_busdir()
+{
+    return reg.BUSDIR;
 }
 
 uint32_t GraphicsSynthesizer::read32_privileged(uint32_t addr)

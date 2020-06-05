@@ -38,16 +38,22 @@
     <ClCompile Include="$(CoreDir)ee\ee_jittrans.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)iop\cso_reader.cpp">
-      <Filter>Source</Filter>
-    </ClCompile>
     <ClCompile Include="$(CoreDir)tests\iop\alu.cpp">
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="$(CoreDir)ee\bios_hle.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)iop\cdvd.cpp">
+    <ClCompile Include="$(CoreDir)iop\cdvd\bincuereader.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="$(CoreDir)iop\cdvd\cdvd.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="$(CoreDir)iop\cdvd\cso_reader.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="$(CoreDir)iop\cdvd\iso_reader.cpp">
       <Filter>Source</Filter>
     </ClCompile>
     <ClCompile Include="$(CoreDir)ee\ipu\chromtable.cpp">
@@ -140,6 +146,9 @@
     <ClCompile Include="$(CoreDir)iop\iop_dma.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="$(CoreDir)iop\iop_intc.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="$(CoreDir)iop\iop_interpreter.cpp">
       <Filter>Source</Filter>
     </ClCompile>
@@ -224,6 +233,9 @@
     <ClCompile Include="$(CoreDir)scheduler.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="$(CoreDir)iop\firewire.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="$(CoreDir)ee\bios_hle.hpp">
@@ -238,7 +250,19 @@
     <ClInclude Include="$(CoreDir)ee\ee_jittrans.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)iop\cdvd.hpp">
+    <ClInclude Include="$(CoreDir)iop\cdvd\bincuereader.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(CoreDir)iop\cdvd\cdvd.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(CoreDir)iop\cdvd\cdvd_container.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(CoreDir)iop\cdvd\cso_reader.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="$(CoreDir)iop\cdvd\iso_reader.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
     <ClInclude Include="$(CoreDir)ee\ipu\chromtable.hpp">
@@ -266,9 +290,6 @@
       <Filter>Headers</Filter>
     </ClInclude>
     <ClInclude Include="$(CoreDir)ee\dmac.hpp">
-      <Filter>Headers</Filter>
-    </ClInclude>
-    <ClInclude Include="$(CoreDir)iop\cso_reader.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
     <ClInclude Include="$(CoreDir)jitcommon\emitter64.hpp">
@@ -328,6 +349,9 @@
     <ClInclude Include="$(CoreDir)iop\iop_dma.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
+    <ClCompile Include="$(CoreDir)iop\iop_intc.hpp">
+      <Filter>Headers</Filter>
+    </ClCompile>
     <ClInclude Include="$(CoreDir)iop\iop_interpreter.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
@@ -407,6 +431,9 @@
       <Filter>Headers</Filter>
     </ClInclude>
     <ClInclude Include="$(CoreDir)scheduler.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\core\iop\firewire.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
   </ItemGroup>

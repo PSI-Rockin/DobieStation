@@ -135,7 +135,7 @@ void EE_JIT64::branch_cop2(EmotionEngine& ee, IR::Instruction &instr)
     REG_64 R15 = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
 
     // Conditionally move the success or failure destination into ee.PC
-    emitter.load_addr((uint64_t)&ee.vu0->running, REG_64::RAX);
+    emitter.load_addr((uint64_t)&ee.vu1->running, REG_64::RAX);
     emitter.MOV8_FROM_MEM(REG_64::RAX, REG_64::RAX);
     emitter.MOV8_REG_IMM(instr.get_field(), R15);
     emitter.CMP8_REG(REG_64::RAX, R15);
@@ -223,7 +223,8 @@ void EE_JIT64::branch_greater_than_or_equal_zero(EmotionEngine& ee, IR::Instruct
     if (instr.get_is_link())
     {
         // Set the link register
-        emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::R15, offsetof(EmotionEngine, gpr) + get_gpr_offset(EE_NormalReg::ra));
+        REG_64 link = alloc_reg(ee, EE_NormalReg::ra, REG_TYPE::GPR, REG_STATE::WRITE);
+        emitter.MOV32_REG_IMM(instr.get_return_addr(), link);
     }
 
     // Conditionally move the success or failure destination into ee.PC
@@ -313,7 +314,8 @@ void EE_JIT64::branch_less_than_zero(EmotionEngine& ee, IR::Instruction &instr)
     if (instr.get_is_link())
     {
         // Set the link register
-        emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::R15, offsetof(EmotionEngine, gpr) + get_gpr_offset(EE_NormalReg::ra));
+        REG_64 link = alloc_reg(ee, EE_NormalReg::ra, REG_TYPE::GPR, REG_STATE::WRITE);
+        emitter.MOV32_REG_IMM(instr.get_return_addr(), link);
     }
 
     // Conditionally move the success or failure destination into ee.PC
@@ -635,7 +637,8 @@ void EE_JIT64::jump(EmotionEngine& ee, IR::Instruction& instr)
     if (instr.get_is_link())
     {
         // Set the link register
-        emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::R15, offsetof(EmotionEngine, gpr) + get_gpr_offset(EE_NormalReg::ra));
+        REG_64 link = alloc_reg(ee, EE_NormalReg::ra, REG_TYPE::GPR, REG_STATE::WRITE);
+        emitter.MOV32_REG_IMM(instr.get_return_addr(), link);
     }
 }
 
@@ -649,7 +652,8 @@ void EE_JIT64::jump_indirect(EmotionEngine& ee, IR::Instruction& instr)
     if (instr.get_is_link())
     {
         // Set the link register
-        emitter.MOV32_IMM_MEM(instr.get_return_addr(), REG_64::R15, offsetof(EmotionEngine, gpr) + get_gpr_offset(EE_NormalReg::ra));
+        REG_64 link = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPR, REG_STATE::WRITE);
+        emitter.MOV32_REG_IMM(instr.get_return_addr(), link);
     }
 }
 
@@ -737,11 +741,11 @@ void EE_JIT64::load_doubleword_left(EmotionEngine& ee, IR::Instruction& instr)
     emitter.SUB32_REG(addr, RCX);
     emitter.SHL64_CL(REG_64::RAX);
 
-    emitter.SUB16_REG_IMM(64, REG_64::RCX);
+    emitter.SUB16_REG_IMM(0x40, REG_64::RCX);
     emitter.NEG16(REG_64::RCX);
-    emitter.MOV32_REG_IMM(0x3F, addr);
+    emitter.XOR64_REG(addr, addr);
     emitter.CMP16_IMM(0x40, RCX);
-    emitter.CMOVCC16_REG(ConditionCode::E, addr, RCX);
+    emitter.CMOVCC64_REG(ConditionCode::E, addr, dest);
     emitter.SHL64_CL(dest);
     emitter.SHR64_CL(dest);
     emitter.OR64_REG(REG_64::RAX, dest);
@@ -773,11 +777,11 @@ void EE_JIT64::load_doubleword_right(EmotionEngine& ee, IR::Instruction& instr)
     emitter.MOV32_REG(addr, RCX);
     emitter.SHR64_CL(REG_64::RAX);
 
-    emitter.SUB16_REG_IMM(64, RCX);
+    emitter.SUB16_REG_IMM(0x40, RCX);
     emitter.NEG16(RCX);
-    emitter.MOV32_REG_IMM(0x3F, addr);
+    emitter.XOR64_REG(addr, addr);
     emitter.CMP16_IMM(0x40, RCX);
-    emitter.CMOVCC16_REG(ConditionCode::E, addr, RCX);
+    emitter.CMOVCC64_REG(ConditionCode::E, addr, dest);
     emitter.SHR64_CL(dest);
     emitter.SHL64_CL(dest);
     emitter.OR64_REG(REG_64::RAX, dest);
@@ -879,11 +883,11 @@ void EE_JIT64::load_word_left(EmotionEngine& ee, IR::Instruction& instr)
     emitter.SUB32_REG(addr, RCX);
     emitter.SHL32_CL(REG_64::RAX);
 
-    emitter.SUB16_REG_IMM(32, RCX);
+    emitter.SUB16_REG_IMM(0x20, RCX);
     emitter.NEG16(RCX);
-    emitter.MOV32_REG_IMM(0x1F, addr);
+    emitter.XOR32_REG(addr, addr);
     emitter.CMP16_IMM(0x20, RCX);
-    emitter.CMOVCC16_REG(ConditionCode::E, addr, RCX);
+    emitter.CMOVCC32_REG(ConditionCode::E, addr, dest);
     emitter.SHL32_CL(dest);
     emitter.SHR32_CL(dest);
     emitter.OR32_REG(REG_64::RAX, dest);
@@ -916,11 +920,11 @@ void EE_JIT64::load_word_right(EmotionEngine& ee, IR::Instruction& instr)
     emitter.MOV32_REG(addr, RCX);
     emitter.SHR32_CL(REG_64::RAX);
 
-    emitter.SUB16_REG_IMM(32, RCX);
+    emitter.SUB16_REG_IMM(0x20, RCX);
     emitter.NEG16(RCX);
-    emitter.MOV32_REG_IMM(0x1F, addr);
+    emitter.XOR32_REG(addr, addr);
     emitter.CMP16_IMM(0x20, RCX);
-    emitter.CMOVCC16_REG(ConditionCode::E, addr, RCX);
+    emitter.CMOVCC32_REG(ConditionCode::E, addr, dest);
     emitter.SHR32_CL(dest);
     emitter.SHL32_CL(dest);
     emitter.OR32_REG(REG_64::RAX, dest);

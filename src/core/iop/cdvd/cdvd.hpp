@@ -1,16 +1,19 @@
 #ifndef CDVD_HPP
 #define CDVD_HPP
 
-#include "cso_reader.hpp"
 #include <fstream>
+#include <memory>
+#include "cdvd_container.hpp"
 
-class Emulator;
+class IOP_INTC;
 class IOP_DMA;
+class Scheduler;
 
 enum CDVD_CONTAINER
 {
     ISO,
-    CISO
+    CISO,
+    BIN_CUE
 };
 
 enum CDVD_STATUS
@@ -33,6 +36,24 @@ enum class NCOMMAND
     BREAK
 };
 
+enum CDVD_DISC_TYPE
+{
+    CDVD_DISC_NONE = 0,
+    CDVD_DISC_DETECTING = 1,
+    CDVD_DISC_DETECTING_CD = 2,
+    CDVD_DISC_DETECTING_DVD = 3,
+    CDVD_DISC_DETECTING_DUAL_DVD = 4,
+    CDVD_DISC_UNK = 5,
+    CDVD_DISC_PSCD = 0x10,
+    CDVD_DISC_PSCDDA = 0x11,
+    CDVD_DISC_PS2CD = 0x12,
+    CDVD_DISC_PS2CDDA = 0x13,
+    CDVD_DISC_PS2DVD = 0x14,
+    CDVD_DISC_CDDA = 0xFD,
+    CDVD_DISC_DVDV = 0xFE,
+    CDVD_DISC_ILL = 0xFF
+};
+
 struct RTC
 {
     int vsyncs;
@@ -49,12 +70,12 @@ class CDVD_Drive
     private:
         uint64_t last_read;
         uint64_t cycle_count;
-        Emulator* e;
+        IOP_INTC* intc;
         IOP_DMA* dma;
-        CDVD_CONTAINER container;
-        std::ifstream cdvd_file;
-        CSO_Reader cso_file;
-        uint64_t file_size;
+        CDVD_DISC_TYPE disc_type;
+        std::unique_ptr<CDVD_Container> container;
+        size_t file_size;
+        Scheduler* scheduler;
         int read_bytes_left;
         int speed;
 
@@ -91,14 +112,9 @@ class CDVD_Drive
 
         uint8_t cdkey[16];
 
+        int n_command_event_id;
+
         uint32_t get_block_timing(bool mode_DVD);
-        
-        bool container_open(const char* file_path);
-        void container_close();
-        bool container_isopen();
-        void container_seek(std::ios::streamoff ofs, std::ios::seekdir whence = std::ios::beg);
-        uint64_t container_tell();
-        size_t container_read(void* dst, size_t size);
 
         void start_seek();
         void prepare_S_outdata(int amount);
@@ -115,9 +131,10 @@ class CDVD_Drive
         void S_command_sub(uint8_t func);
         void add_event(uint64_t cycles);
     public:
-        CDVD_Drive(Emulator* e, IOP_DMA* dma);
+        CDVD_Drive(IOP_INTC* intc, IOP_DMA* dma, Scheduler* scheduler);
         ~CDVD_Drive();
 
+        std::string get_ps2_exec_path();
         std::string get_serial();
 
         void reset();

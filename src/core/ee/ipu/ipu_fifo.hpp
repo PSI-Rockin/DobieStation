@@ -15,6 +15,7 @@ struct IPU_FIFO
     bool advance_stream(uint8_t amount);
 
     void reset();
+    void byte_align();
 };
 
 #endif // IPU_FIFO_HPP

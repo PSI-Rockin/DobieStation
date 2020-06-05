@@ -10,13 +10,13 @@ GraphicsInterface::GraphicsInterface(GraphicsSynthesizer *gs, DMAC* dmac) : gs(g
 
 void GraphicsInterface::reset()
 {
+    printf("GIF Reset\n");
     path[0].current_tag.data_left = 0;
     path[1].current_tag.data_left = 0;
     path[2].current_tag.data_left = 0;
     path[3].current_tag.data_left = 0;
     active_path = 0;
     path_queue = 0;
-    intermittent_active = false;
     path_status[0] = 4;
     path_status[1] = 4;
     path_status[2] = 4;
@@ -29,6 +29,7 @@ void GraphicsInterface::reset()
     path3_mode_masked = false;
     path3_dma_waiting = false;
     gif_temporary_stop = false;
+    outputting_path = false;
 }
 
 uint32_t GraphicsInterface::read_STAT()
@@ -50,19 +51,19 @@ uint32_t GraphicsInterface::read_STAT()
     reg |= ((path_queue & (1 << 1)) != 0) << 8;
 
     //OPH
-    reg |= (active_path != 0) << 9;
+    reg |= outputting_path << 9;
 
     //APATH
     reg |= active_path << 10;
 
     //DIR
-    reg |= gs->read32_privileged(0x1040) << 12;
+    reg |= gs->get_busdir() << 12;
 
     //Quadword count - since we don't always emulate the FIFO, hack it to 16 if there's a transfer happening
     if (FIFO.size())
         reg |= FIFO.size() << 24;
     else
-        reg |= ((active_path == 3 || (path_queue & (1<<3))) * 16) << 24;
+        reg |= (((active_path == 3 || (path_queue & (1<<3))) && outputting_path) * 16) << 24;
     //printf("[GIF] Read GIF_STAT: $%08X\n", reg);
     return reg;
 }
@@ -74,7 +75,7 @@ void GraphicsInterface::write_MODE(uint32_t value)
     intermittent_mode = value & 0x4;
     path3_mode_masked = value & 0x1;
     if(old_value && !path3_mode_masked)
-    resume_path3();
+        resume_path3();
 }
 
 void GraphicsInterface::write_CTRL(uint32_t value)
@@ -211,6 +212,7 @@ void GraphicsInterface::feed_GIF(uint128_t data)
     //printf("[GIF] Data: $%08X_%08X_%08X_%08X\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
     uint64_t data1 = data._u64[0];
     uint64_t data2 = data._u64[1];
+    outputting_path = true;
     if (!path[active_path].current_tag.data_left)
     {
         //Read new GIFtag
@@ -254,7 +256,7 @@ void GraphicsInterface::feed_GIF(uint128_t data)
             path_status[active_path] = path[active_path].current_tag.format;
             gs->set_CSR_FIFO(0x2); //FIFO Full
         }
-        else
+        else if(path_status[active_path] == 4)
             path_status[active_path] = 5;
     }
     else
@@ -294,7 +296,7 @@ void GraphicsInterface::feed_GIF(uint128_t data)
             gs->set_CSR_FIFO(0x1); //FIFO Empty
         }
         gs->wake_gs_thread();
-        arbitrate_paths();
+        deactivate_PATH(active_path);
     }
 }
 
@@ -322,7 +324,7 @@ bool GraphicsInterface::set_path3_vifmask(int value)
 
 bool GraphicsInterface::path3_done()
 {
-    return path_status[3] == 4;
+    return !(path_queue & (1 << 3)) && active_path != 3;
 }
 
 bool GraphicsInterface::path3_masked(int index)
@@ -338,11 +340,7 @@ bool GraphicsInterface::path3_masked(int index)
         if (masked)
         {
             //printf("[GIF] PATH3 Masked\n");
-            if (fifo_full())
-            {
-                deactivate_PATH(3);
-
-            }
+            deactivate_PATH(3);
         }
     }
     return masked;
@@ -357,7 +355,7 @@ bool GraphicsInterface::interrupt_path3(int index)
     if (index == 3)
         return true;
 
-    if ((intermittent_mode && path_status[3] >= 2) || path3_masked(3)) //IMAGE MODE or IDLE
+    if ((intermittent_mode && (path_status[3] == 2 || path_status[3] == 3)) || path3_masked(3)) //IMAGE MODE or IDLE
     {
         //printf("[GIF] Interrupting PATH3 with PATH%d\n", index);
         arbitrate_paths();
@@ -377,6 +375,7 @@ void GraphicsInterface::request_PATH(int index, bool canInterruptPath3)
         if (active_path == 3 && (!path3_masked(3) || FIFO.size() <= 15))
             dmac->set_DMA_request(GIF);
         //printf("[GIF] PATH%d Active!\n", active_path);
+        return;
     }
     else
     {
@@ -391,15 +390,25 @@ void GraphicsInterface::request_PATH(int index, bool canInterruptPath3)
 void GraphicsInterface::deactivate_PATH(int index)
 {
     //printf("[GIF] PATH%d deactivated\n", index);
-
-    path_queue &= ~(1 << index);
-
-    //If for some reason the current path is still active (can happen with PATH3) kill it and check other paths
-    if (active_path == index)
+    if (path_status[index] == 4)
     {
-        active_path = 0;
-        clear_path_status(index);
-        arbitrate_paths();
+        path_queue &= ~(1 << index);
+
+        //If for some reason the current path is still active (can happen with PATH3) kill it and check other paths
+        if (active_path == index)
+        {
+            active_path = 0;
+            outputting_path = false;
+            clear_path_status(index);
+            arbitrate_paths();
+        }
+        //printf("Deactivated PATH%d Active path now %d Queued Path %x\n", index, active_path, path_queue);
+    }
+    else
+    {
+        //printf("[GIF] PATH%d deactivation failed, still in progress\n", index);
+        if (active_path == index)
+            outputting_path = false;
     }
 
     //printf("Deactivated PATH%d Active path now %d Queued Path %x\n", index, active_path, path_queue);
@@ -458,7 +467,10 @@ void GraphicsInterface::send_PATH2(uint32_t data[])
 void GraphicsInterface::send_PATH3(uint128_t data)
 {
     //printf("[GIF] Send PATH3 $%08X_%08X_%08X_%08X\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
-    if (!path3_masked(3) && active_path == 3)
+    if(path3_done())
+        request_PATH(3, false);
+
+    if (!path3_masked(3) && path_active(3, false))
         feed_GIF(data);
     else if (FIFO.size() < 16)
     {
@@ -469,6 +481,16 @@ void GraphicsInterface::send_PATH3(uint128_t data)
         //If the dma execution is paused before then, the game will hang
         if (FIFO.size() > 15)
             dmac->clear_DMA_request(GIF);
+    }
+}
+
+void GraphicsInterface::send_PATH3_FIFO(uint128_t data)
+{
+    //printf("[GIF] Send PATH3 FIFO $%08X_%08X_%08X_%08X\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
+    if (FIFO.size() < 16)
+    {
+        //printf("Adding data to GIF FIFO (size: %d)\n", FIFO.size());
+        FIFO.push(data);
     }
 }
 
@@ -488,6 +510,9 @@ void GraphicsInterface::flush_path3_fifo()
         if (!path3_dma_waiting || path3_masked(3))
         {
             //printf("GIF Deactivating PATH at FIFO flush end\n");
+            //Handle situation where FIFO just sends a NOP packet to the GIF unit (True Crime NY)
+            if (path_status[3] == 5)
+                path_status[3] = 4;
             deactivate_PATH(3);
         }
         else
@@ -517,7 +542,7 @@ void GraphicsInterface::dma_waiting(bool dma_waiting)
 
 void GraphicsInterface::intermittent_check()
 {
-    if (intermittent_mode && active_path == 3 && path_status[3] >= 2)
+    if (active_path == 3 && (intermittent_mode && (path_status[3] == 2 || path_status[3] == 3)))
     {
         arbitrate_paths();
     }

@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <fstream>
 #include <functional>
+#include <list>
 #include "cop0.hpp"
 #include "cop1.hpp"
 
@@ -12,6 +13,7 @@ class Emulator;
 class VectorUnit;
 class EE_JIT64;
 class EmotionEngine;
+class SubsystemInterface;
 
 //Handler used for Deci2Call (syscall 0x7C)
 struct Deci2Handler
@@ -63,6 +65,7 @@ class EmotionEngine
 
         Cop0* cp0;
         Cop1* fpu;
+        SubsystemInterface* sif;
         VectorUnit* vu0;
         VectorUnit* vu1;
 
@@ -100,8 +103,10 @@ class EmotionEngine
         uint32_t get_paddr(uint32_t vaddr);
         void handle_exception(uint32_t new_addr, uint8_t code);
         void deci2call(uint32_t func, uint32_t param);
+
+        void log_sifrpc(uint32_t dma_struct_ptr, int len);
     public:
-        EmotionEngine(Cop0* cp0, Cop1* fpu, Emulator* e, VectorUnit* vu0, VectorUnit* vu1);
+        EmotionEngine(Cop0* cp0, Cop1* fpu, Emulator* e, SubsystemInterface* sif, VectorUnit* vu0, VectorUnit* vu1);
         static const char* REG(int id);
         static const char* SYSCALL(int id);
         void reset();

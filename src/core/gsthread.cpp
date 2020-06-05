@@ -146,15 +146,11 @@ GraphicsSynthesizerThread::GraphicsSynthesizerThread()
 
     jit_draw_pixel_heap.flush_all_blocks();
     jit_tex_lookup_heap.flush_all_blocks();
-
-    thread = std::thread(&GraphicsSynthesizerThread::event_loop, this);
 }
 
 GraphicsSynthesizerThread::~GraphicsSynthesizerThread()
 {
     delete[] local_mem;
-    delete message_queue;
-    delete return_queue;
 }
 
 void GraphicsSynthesizerThread::wait_for_return(GSReturn type, GSReturnMessage &data)
@@ -217,20 +213,6 @@ void GraphicsSynthesizerThread::wake_thread()
     notifier.notify_one();
 }
 
-void GraphicsSynthesizerThread::reset_fifos()
-{
-    if (!message_queue)
-        message_queue = new gs_fifo();
-    if (!return_queue)
-        return_queue = new gs_return_fifo();
-
-    GSReturnMessage data;
-    while (return_queue->pop(data));
-
-    GSMessage data2;
-    while (message_queue->pop(data2));
-}
-
 void GraphicsSynthesizerThread::exit()
 {
     if (thread.joinable())
@@ -247,8 +229,6 @@ void GraphicsSynthesizerThread::exit()
 void GraphicsSynthesizerThread::event_loop()
 {
     printf("[GS_t] Starting GS Thread\n");
-
-    reset();
 
     bool gsdump_recording = false;
     ofstream gsdump_file;
@@ -406,7 +386,7 @@ void GraphicsSynthesizerThread::event_loop()
                                 Errors::die("gs dump file failed to open");
                             gsdump_recording = true;
                             save_state(&gsdump_file);
-                            gsdump_file.write((char*)&reg, sizeof(reg));//this is for the emuthread's gs faker
+                            gsdump_file.write((char*)&reg, sizeof(reg));
                         }
                         else
                         {
@@ -454,13 +434,14 @@ void GraphicsSynthesizerThread::event_loop()
 
 void GraphicsSynthesizerThread::reset()
 {
+    exit();
+
     if (!local_mem)
         local_mem = new uint8_t[1024 * 1024 * 4];
 
     pixels_transferred = 0;
     num_vertices = 0;
     frame_count = 0;
-    reg.deinterlace_method = BOB_DEINTERLACE;
 
     COLCLAMP = true;
 
@@ -485,8 +466,11 @@ void GraphicsSynthesizerThread::reset()
     recompile_tex_lookup_prologue();
     recompile_draw_pixel_prologue();
 
-    reset_fifos();
     memset(screen_buffer, 0, sizeof(screen_buffer));
+
+    message_queue = std::make_unique<gs_fifo>();
+    return_queue = std::make_unique<gs_return_fifo>();
+    thread = std::thread(&GraphicsSynthesizerThread::event_loop, this);
 }
 
 void GraphicsSynthesizerThread::memdump(uint32_t* target, uint16_t& width, uint16_t& height)
@@ -780,7 +764,8 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
 {
     if (reg.write64(addr, value))
         return;
-    addr &= 0xFFFF;
+
+    addr &= 0x7F;
     switch (addr)
     {
         case 0x0000:
@@ -800,6 +785,7 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
                 else
                     current_ctx = &context1;
             }
+
             PRIM.fix_fragment_value = value & (1 << 10);
             num_vertices = 0;
             printf("[GS_t] PRIM: $%08X\n", value);
@@ -955,6 +941,7 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
                     current_ctx = &context1;
             }
             PRMODE.fix_fragment_value = value & (1 << 10);
+
             update_draw_pixel_state();
             update_tex_lookup_state();
             break;
@@ -1474,12 +1461,6 @@ void GraphicsSynthesizerThread::render_primitive()
     if (current_ctx->scissor.empty())
         return;
 
-    // confirmed by hw test
-    // in the event that a z format is specified for FRAME
-    // the depth format will swap to a color format
-    if ((current_ctx->frame.format & 0x30) == 0x30)
-        current_ctx->zbuf.format &= ~0x30;
-
 #ifdef GS_JIT
     jit_draw_pixel_func = get_jitted_draw_pixel(draw_pixel_state);
     //No need to recompile tex_lookup if texture mapping is disabled. TEX0 can contain bad data
@@ -1914,24 +1895,30 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
                 write_PSMCT32_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z);
                 break;
             case 0x01:
+                z = min(z, 0xFFFFFFU);
                 write_PSMCT24_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z & 0xFFFFFF);
                 break;
             case 0x02:
+                z = min(z, 0xFFFFU);
                 write_PSMCT16_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z & 0xFFFF);
                 break;
             case 0x0A:
+                z = min(z, 0xFFFFU);
                 write_PSMCT16S_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z & 0xFFFF);
                 break;
             case 0x30:
                 write_PSMCT32Z_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z);
                 break;
             case 0x31:
+                z = min(z, 0xFFFFFFU);
                 write_PSMCT24Z_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z & 0xFFFFFF);
                 break;
             case 0x32:
+                z = min(z, 0xFFFFU);
                 write_PSMCT16Z_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z & 0xFFFF);
                 break;
             case 0x3A:
+                z = min(z, 0xFFFFU);
                 write_PSMCT16SZ_block(current_ctx->zbuf.base_pointer, current_ctx->frame.width, x, y, z & 0xFFFF);
                 break;
         }
@@ -2012,12 +1999,24 @@ void GraphicsSynthesizerThread::render_point()
             u = (uint32_t) v1.uv.u;
             v = (uint32_t) v1.uv.v;
         }
+#ifdef GS_JIT
+        jit_tex_lookup_prologue(u, v, &tex_info);
+#else
         tex_lookup(u, v, tex_info);
+#endif
+#ifdef GS_JIT
+        jit_draw_pixel_prologue(v1.x, v1.y, v1.z, tex_info.tex_color);
+#else
         draw_pixel(v1.x, v1.y, v1.z, tex_info.tex_color);
+#endif
     }
     else
     {
+#ifdef GS_JIT
+        jit_draw_pixel_prologue(v1.x, v1.y, v1.z, tex_info.vtx_color);
+#else
         draw_pixel(v1.x, v1.y, v1.z, tex_info.vtx_color);
+#endif
     }
 }
 
@@ -2027,6 +2026,12 @@ void GraphicsSynthesizerThread::render_line()
     Vertex v1 = vtx_queue[1]; v1.to_relative(current_ctx->xyoffset);
     Vertex v2 = vtx_queue[0]; v2.to_relative(current_ctx->xyoffset);
 
+    int32_t min_y = ((std::max(std::min(v1.y, v2.y), (int32_t)current_ctx->scissor.y1) + 8) >> 4) << 4;
+    int32_t min_x = ((std::max(std::min(v1.x, v2.x), (int32_t)current_ctx->scissor.x1) + 8) >> 4) << 4;
+    int32_t max_y = ((std::min(std::max(v1.y, v2.y), (int32_t)current_ctx->scissor.y2 + 0x10) + 8) >> 4) << 4;
+    int32_t max_x = ((std::min(std::max(v1.x, v2.x), (int32_t)current_ctx->scissor.x2 + 0x10) + 8) >> 4) << 4;
+    
+
     //Transpose line if it's steep
     bool is_steep = false;
     if (abs(v2.x - v1.x) < abs(v2.y - v1.y))
@@ -2034,19 +2039,17 @@ void GraphicsSynthesizerThread::render_line()
         swap(v1.x, v1.y);
         swap(v2.x, v2.y);
         is_steep = true;
+        printf("Steep\n");
+        min_x = min_y;
+        max_x = max_y;
     }
 
-    //Make line left-to-right
+    //Make line left-to-right (or top to bottom in steep cases)
     if (v1.x > v2.x)
     {
         swap(v1, v2);
     }
-    
-    int32_t min_x = max(v1.x, (int32_t)current_ctx->scissor.x1);
-    //int32_t min_y = max(v1.y, (int32_t)current_ctx->scissor.y1);
-    int32_t max_x = min(v2.x, (int32_t)current_ctx->scissor.x2);
-    //int32_t max_y = min(v2.y, (int32_t)current_ctx->scissor.y2);
-    
+
     TexLookupInfo tex_info;
     tex_info.new_lookup = true;
     tex_info.vtx_color = vtx_queue[0].rgbaq;
@@ -2054,16 +2057,18 @@ void GraphicsSynthesizerThread::render_line()
     tex_info.buffer_width = current_ctx->tex0.width;
     tex_info.tex_width = current_ctx->tex0.tex_width;
     tex_info.tex_height = current_ctx->tex0.tex_height;
+    float q = vtx_queue[0].rgbaq.q;
 
     printf("Coords: (%d, %d, %d) (%d, %d, %d)\n", v1.x >> 4, v1.y >> 4, v1.z, v2.x >> 4, v2.y >> 4, v2.z);
 
     for (int32_t x = min_x; x < max_x; x += 0x10)
     {
+        int32_t y = interpolate(x, v1.y, v1.x, v2.y, v2.x);
         uint32_t z = interpolate(x, v1.z, v1.x, v2.z, v2.x);
-        float t = (x - v1.x)/(float)(v2.x - v1.x);
-        int32_t y = v1.y*(1.-t) + v2.y*t;        
-        //if (y < min_y || y > max_y)
-            //continue;
+
+        /*if (y < min_y || y > max_y)
+            continue;
+            */
         tex_info.fog = interpolate(x, v1.fog, v1.x, v2.fog, v2.x);
         if (current_PRMODE->gourand_shading)
         {
@@ -2079,23 +2084,52 @@ void GraphicsSynthesizerThread::render_line()
             if (!current_PRMODE->use_UV)
             {
                 float tex_s, tex_t;
-                tex_s = interpolate_f(x, v1.s, v1.x, v2.s, v2.x);
-                tex_t = interpolate_f(y, v1.t, v1.y, v2.t, v2.y);
+                if (is_steep)
+                {
+                    tex_s = interpolate_f(y, v1.s, v1.y, v2.s, v2.y);
+                    tex_t = interpolate_f(x, v1.t, v1.x, v2.t, v2.x);
+                }
+                else
+                {
+                    tex_s = interpolate_f(x, v1.s, v1.x, v2.s, v2.x);
+                    tex_t = interpolate_f(y, v1.t, v1.y, v2.t, v2.y);
+                }
+                tex_s /= q;
+                tex_t /= q;
                 u = (tex_s * tex_info.tex_width) * 16.0;
                 v = (tex_t * tex_info.tex_height) * 16.0;
             }
             else
             {
-                v = interpolate(y, v2.uv.v, v1.y, v2.uv.v, v2.y);
-                u = interpolate(x, v1.uv.u, v1.x, v2.uv.u, v2.x);
+                if (is_steep)
+                {
+                    u = interpolate(y, v1.uv.u, v1.y, v2.uv.u, v2.y);
+                    v = interpolate(x, v1.uv.v, v1.x, v2.uv.v, v2.x);
+                }
+                else
+                {
+                    v = interpolate(y, v1.uv.v, v1.y, v2.uv.v, v2.y);
+                    u = interpolate(x, v1.uv.u, v1.x, v2.uv.u, v2.x);
+                }
             }
+#ifdef GS_JIT
+            jit_tex_lookup_prologue(u, v, &tex_info);
+#else
             tex_lookup(u, v, tex_info);
+#endif
             tex_info.vtx_color = tex_info.tex_color;
         }
+#ifdef GS_JIT
+        if (is_steep)
+            jit_draw_pixel_prologue(y, x, z, tex_info.vtx_color);
+        else
+            jit_draw_pixel_prologue(x, y, z, tex_info.vtx_color);
+#else
         if (is_steep)
             draw_pixel(y, x, z, tex_info.vtx_color);
         else
             draw_pixel(x, y, z, tex_info.vtx_color);
+#endif
     }
 }
 
@@ -2776,8 +2810,8 @@ void GraphicsSynthesizerThread::render_sprite()
                 tex_info.fog = v2.fog;
                 if (tmp_st)
                 {
-                    pix_v = (pix_t * tex_info.tex_height) * 16.0;
-                    pix_u = (pix_s * tex_info.tex_width) * 16.0;
+                    pix_v = ((pix_t / v2.rgbaq.q) * tex_info.tex_height) * 16.0;
+                    pix_u = ((pix_s / v2.rgbaq.q) * tex_info.tex_width) * 16.0;
 #ifdef GS_JIT
                     jit_tex_lookup_prologue(pix_u, pix_v, &tex_info);
 #else
@@ -3019,44 +3053,39 @@ uint128_t GraphicsSynthesizerThread::local_to_host()
     switch (BITBLTBUF.source_format)
     {
         //PSMCT32
+        //PSMZ32
         case 0x00:
+        case 0x30:
             ppd = 2;
             break;
         //PSMCT24
+        //PSMZ24
         case 0x01:
+        case 0x31:
             ppd = 1; //Does it all in one go
             break;
         //PSMCT16
-        case 0x02:
-            ppd = 4;
-            break;
         //PSMCT16S
+        //PSMZ16
+        //PSMZ16S
+        case 0x02:
         case 0x0A:
+        case 0x32:
+        case 0x3A:
             ppd = 4;
             break;
         //PSMCT8
+        //PSMCT8H
         case 0x13:
+        case 0x1B:
             ppd = 8;
             break;
         //PSMCT4
         case 0x14:
             ppd = 16;
             break;
-        //PSMCT8H
-        case 0x1B:
-            ppd = 8;
-            break;
-        //PSMZ32
-        case 0x30:
-            ppd = 2;
-            break;
-        //PSMZ24
-        case 0x31:
-            ppd = 1; //Does it all in one go
-            break;
         default:
-            Errors::print_warning("[GS_t] GS Download Unrecognized BITBLTBUF source format $%02X\n", BITBLTBUF.source_format);
-            return return_data;
+            Errors::die("[GS_t] GS Download Unrecognized BITBLTBUF source format $%02X\n", BITBLTBUF.source_format);
     }
     uint64_t data = 0;
     for (int datapart = 0; datapart < 2; datapart++)
@@ -3113,9 +3142,20 @@ uint128_t GraphicsSynthesizerThread::local_to_host()
                 case 0x31:
                     data = pack_PSMCT24(true);
                     break;
+                case 0x32:
+                    data |= (uint64_t)(read_PSMCT16Z_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                        TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFF) << (i * 16);
+                    pixels_transferred++;
+                    TRXPOS.int_source_x++;
+                    break;
+                case 0x3A:
+                    data |= (uint64_t)(read_PSMCT16SZ_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                        TRXPOS.int_source_x, TRXPOS.int_source_y) & 0xFFFF) << (i * 16);
+                    pixels_transferred++;
+                    TRXPOS.int_source_x++;
+                    break;
                 default:
-                    Errors::print_warning("[GS_t] GS Download Unrecognized BITBLTBUF source format $%02X\n", BITBLTBUF.source_format);
-                    return return_data;
+                    Errors::die("[GS_t] GS Download Unrecognized BITBLTBUF source format $%02X\n", BITBLTBUF.source_format);
             }
 
 
@@ -3322,6 +3362,10 @@ void GraphicsSynthesizerThread::local_to_local()
                 data = read_PSMCT4_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
                                          TRXPOS.int_source_x, TRXPOS.int_source_y);
                 break;
+            case 0x1B:
+                data = read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
+                    TRXPOS.int_source_x, TRXPOS.int_source_y) >> 24;
+                break;
             case 0x2C:
                 data = read_PSMCT32_block(BITBLTBUF.source_base, BITBLTBUF.source_width,
                     TRXPOS.int_source_x, TRXPOS.int_source_y) >> 28;
@@ -3360,6 +3404,13 @@ void GraphicsSynthesizerThread::local_to_local()
             case 0x14:
                 write_PSMCT4_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width,
                                     TRXPOS.int_dest_x, TRXPOS.int_dest_y, data);
+                break;
+            case 0x1B:
+                data <<= 24;
+                data |= read_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width,
+                    TRXPOS.int_dest_x, TRXPOS.int_dest_y) & 0x00FFFFFF;
+                write_PSMCT32_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width,
+                    TRXPOS.int_dest_x, TRXPOS.int_dest_y, data);
                 break;
             case 0x24:
                 data <<= 24;
@@ -3524,11 +3575,14 @@ void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
             {
                 offset = (info.tex_width * info.tex_height) >> (i << 1);
                 info.tex_base += (offset * format_sizes[current_ctx->tex0.format]);
+                info.buffer_width = max(info.buffer_width >> 1, 64U);
             }
         }
         else
+        {
             info.tex_base = current_ctx->miptbl.texture_base[info.mipmap_level - 1];
-        info.buffer_width = current_ctx->miptbl.width[info.mipmap_level - 1];
+            info.buffer_width = current_ctx->miptbl.width[info.mipmap_level - 1];
+        }
         info.tex_width >>= info.mipmap_level;
         info.tex_height >>= info.mipmap_level;
 
@@ -3888,7 +3942,7 @@ void GraphicsSynthesizerThread::clut_lookup(uint8_t entry, RGBAQ_REG &tex_color)
         case 0x00:
         case 0x01:
         {
-            uint32_t color = *(uint32_t*)&clut_cache[((clut_addr << 1) + (entry << 2)) & 0x3FF];
+            uint32_t color = *(uint32_t*)&clut_cache[(clut_addr + (entry << 2)) & 0x3FF];
             tex_color.r = color & 0xFF;
             tex_color.g = (color >> 8) & 0xFF;
             tex_color.b = (color >> 16) & 0xFF;
@@ -3900,7 +3954,7 @@ void GraphicsSynthesizerThread::clut_lookup(uint8_t entry, RGBAQ_REG &tex_color)
         //PSMCT16S
         case 0x0A:
         {
-            uint16_t color = *(uint16_t*)&clut_cache[((clut_addr + entry) << 1) & 0x3FF];
+            uint16_t color = *(uint16_t*)&clut_cache[(clut_addr + (entry << 1)) & 0x3FF];
             tex_color.r = (color & 0x1F) << 3;
             tex_color.g = ((color >> 5) & 0x1F) << 3;
             tex_color.b = ((color >> 10) & 0x1F) << 3;
@@ -3921,7 +3975,7 @@ void GraphicsSynthesizerThread::clut_CSM2_lookup(uint8_t entry, RGBAQ_REG &tex_c
     tex_color.a = get_16bit_alpha(color);
 }
 
-void GraphicsSynthesizerThread::reload_clut(const GSContext& context)
+void GraphicsSynthesizerThread::reload_clut(GSContext& context)
 {
     int eight_bit = false;
     switch (context.tex0.format)
@@ -3939,10 +3993,13 @@ void GraphicsSynthesizerThread::reload_clut(const GSContext& context)
             //Not sure what to do here?
             //Okami loads a new CLUT with a texture format of PSMCT32, so we
             eight_bit = true;
+            break;
     }
 
     uint32_t clut_addr = context.tex0.CLUT_base;
-    int cache_addr = context.tex0.CLUT_offset;
+    uint32_t cache_addr = context.tex0.CLUT_offset;
+    uint32_t offset = (context.tex0.CLUT_offset / (context.tex0.CLUT_format ? 2 : 4));
+
     bool reload = false;
 
     switch (context.tex0.CLUT_control)
@@ -3973,16 +4030,17 @@ void GraphicsSynthesizerThread::reload_clut(const GSContext& context)
     }
 
     int entries = (eight_bit) ? 256 : 16;
+    int max_entries = (context.tex0.CLUT_format < 0x2 ? 256 : 512);
 
     if (reload)
     {
         printf("[GS_t] Reloading CLUT cache!\n");
-        for (int i = 0; i < entries; i++)
+        for (int i = offset; i < max_entries; i++)
         {
             if (context.tex0.use_CSM2)
             {
                 uint16_t value = read_PSMCT16_block(current_ctx->tex0.CLUT_base, TEXCLUT.width,
-                                                    TEXCLUT.x + i, TEXCLUT.y);
+                                                    TEXCLUT.x + (i & (entries-1)), TEXCLUT.y);
                 *(uint16_t*)&clut_cache[cache_addr] = value;
                 cache_addr = (cache_addr + 2) & 0x3FF;
             }
@@ -4001,7 +4059,7 @@ void GraphicsSynthesizerThread::reload_clut(const GSContext& context)
                 else
                 {
                     x = i & 0x7;
-                    y = i / 8;
+                    y = (i / 8) & 0x1; //Max Y for 4bit is 1
                 }
 
                 switch (context.tex0.CLUT_format)
@@ -4059,12 +4117,12 @@ void GraphicsSynthesizerThread::update_draw_pixel_state()
     draw_pixel_state |= (uint64_t)DTHE << 34UL;
     draw_pixel_state |= (uint64_t)COLCLAMP << 35UL;
     draw_pixel_state |= (uint64_t)current_ctx->zbuf.format << 36UL;
-    draw_pixel_state |= (uint64_t)SCANMSK << 40UL;
-    draw_pixel_state |= (uint64_t)current_ctx->zbuf.no_update << 42UL;
-    draw_pixel_state |= (uint64_t)current_ctx->alpha.fixed_alpha << 43UL;
-    draw_pixel_state |= (uint64_t)(current_PRMODE == &PRIM) << 51UL;
-    draw_pixel_state |= (uint64_t)(current_ctx == &context1) << 52UL;
-    draw_pixel_state |= (uint64_t)(current_ctx->frame.mask != 0) << 53UL;
+    draw_pixel_state |= (uint64_t)SCANMSK << 42UL;
+    draw_pixel_state |= (uint64_t)current_ctx->zbuf.no_update << 44UL;
+    draw_pixel_state |= (uint64_t)current_ctx->alpha.fixed_alpha << 45UL;
+    draw_pixel_state |= (uint64_t)(current_PRMODE == &PRIM) << 53UL;
+    draw_pixel_state |= (uint64_t)(current_ctx == &context1) << 54UL;
+    draw_pixel_state |= (uint64_t)(current_ctx->frame.mask != 0) << 55UL;
 }
 
 void GraphicsSynthesizerThread::update_tex_lookup_state()
@@ -4499,6 +4557,8 @@ void GraphicsSynthesizerThread::recompile_depth_test()
     emitter_dp.load_addr((uint64_t)local_mem, RCX);
     emitter_dp.ADD64_REG(RAX, RCX);
 
+    uint8_t* no_clamp;
+
     if (current_ctx->test.depth_method != 1)
     {
         ConditionCode depth_comparison;
@@ -4510,9 +4570,23 @@ void GraphicsSynthesizerThread::recompile_depth_test()
         emitter_dp.MOV32_FROM_MEM(RCX, RAX);
 
         if (current_ctx->zbuf.format & 0x2)
+        {
             emitter_dp.AND32_EAX(0xFFFF);
+
+            emitter_dp.CMP32_IMM(0xFFFF, R14);
+            no_clamp = emitter_dp.JCC_NEAR_DEFERRED(ConditionCode::L);
+            emitter_dp.MOV32_REG_IMM(0xFFFF, R14);
+            emitter_dp.set_jump_dest(no_clamp);
+        }
         else if (current_ctx->zbuf.format & 0x1)
+        {
             emitter_dp.AND32_EAX(0xFFFFFF);
+
+            emitter_dp.CMP32_IMM(0xFFFFFF, R14);
+            no_clamp = emitter_dp.JCC_NEAR_DEFERRED(ConditionCode::L);
+            emitter_dp.MOV32_REG_IMM(0xFFFFFF, R14);
+            emitter_dp.set_jump_dest(no_clamp);
+        }
 
         //64-bit compare to avoid signed bullshit
         emitter_dp.CMP64_REG(RAX, R14);
@@ -4522,6 +4596,23 @@ void GraphicsSynthesizerThread::recompile_depth_test()
         jit_epilogue_draw_pixel();
 
         emitter_dp.set_jump_dest(depth_passed);
+    }
+    else
+    {
+        if (current_ctx->zbuf.format & 0x2)
+        {
+            emitter_dp.CMP32_IMM(0xFFFF, R14);
+            no_clamp = emitter_dp.JCC_NEAR_DEFERRED(ConditionCode::L);
+            emitter_dp.MOV32_REG_IMM(0xFFFF, R14);
+            emitter_dp.set_jump_dest(no_clamp);
+        }
+        else if (current_ctx->zbuf.format & 0x1)
+        {
+            emitter_dp.CMP32_IMM(0xFFFFFF, R14);
+            no_clamp = emitter_dp.JCC_NEAR_DEFERRED(ConditionCode::L);
+            emitter_dp.MOV32_REG_IMM(0xFFFFFF, R14);
+            emitter_dp.set_jump_dest(no_clamp);
+        }
     }
 
     //Update zbuffer
@@ -5083,6 +5174,36 @@ GSTextureJitBlockRecord* GraphicsSynthesizerThread::recompile_tex_lookup(uint64_
             Errors::die("[GS JIT] Unrecognized color function $%02X", current_ctx->tex0.color_function);
     }
 
+    //Do fogging texcolor = ((texcolor * fog) >> 8) + (((0xff - fog) * FOGCOL) >> 8)
+    if (current_PRMODE->fog)
+    {
+        //(texcolor * fog) >> 8
+        emitter_tex.MOV32_FROM_MEM(R14, RBX, offsetof(TexLookupInfo, fog));
+        emitter_tex.AND32_REG_IMM(0xFF, RBX);
+        emitter_tex.MOVQ_TO_XMM(RBX, XMM1);
+        emitter_tex.PSHUFLW(0, XMM1, XMM1); //Fog
+        emitter_tex.PMULLW(XMM1, XMM0); //XMM0 = texcolor
+        emitter_tex.PSRLW(8, XMM0); // >> 8
+        emitter_tex.MOV64_MR(RAX, RDI); //Backup texture so we can extract the alpha later
+        emitter_tex.MOVQ_FROM_XMM(XMM0, RAX); //Move calc back to texture
+
+        //((0xFF-fog) * FOGCOL) >> 8
+        emitter_tex.MOV32_REG_IMM(0xFF, RDX);
+        emitter_tex.SUB32_REG(RBX, RDX);
+        emitter_tex.MOVQ_TO_XMM(RDX, XMM1); //XMM1 = 0xFF - Fog
+        emitter_tex.PSHUFLW(0, XMM1, XMM1);
+
+        emitter_tex.load_addr((uint64_t)&FOGCOL, RBX);
+        emitter_tex.MOV64_FROM_MEM(RBX, RBX);
+        emitter_tex.MOVQ_TO_XMM(RBX, XMM0);
+
+        emitter_tex.PMULLW(XMM1, XMM0); //((0xFF-fog) * FOGCOL)
+        emitter_tex.PSRLW(8, XMM0); // >> 8
+        emitter_tex.MOVQ_TO_XMM(RAX, XMM1); //Retrieve texcolor again
+        emitter_tex.PADDUSW(XMM0, XMM1); //Add them together
+        emitter_tex.MOVQ_FROM_XMM(XMM1, RAX); //Move calc back to texture
+    }
+
     //Store tex_color in the TexLookupInfo struct
     emitter_tex.MOV64_TO_MEM(RAX, R14, sizeof(RGBAQ_REG));
 
@@ -5106,6 +5227,13 @@ GSTextureJitBlockRecord* GraphicsSynthesizerThread::recompile_tex_lookup(uint64_
         emitter_tex.SHR64_REG_IMM(48, RSI);
         emitter_tex.MOV16_TO_MEM(RSI, R14, sizeof(RGBAQ_REG) + (sizeof(uint16_t) * 3));
     }
+    else if (current_PRMODE->fog)
+    {
+        //Recover backed up texcolor so we can get the old alpha back
+        emitter_tex.MOV64_MR(RDI, RBX);
+        emitter_tex.SHR64_REG_IMM(48, RBX);
+        emitter_tex.MOV16_TO_MEM(RBX, R14, sizeof(RGBAQ_REG) + (sizeof(uint16_t) * 3));
+    }
 
     emitter_tex.MOVAPS_FROM_MEM(RBP, XMM0, 0);
     emitter_tex.MOVAPS_FROM_MEM(RBP, XMM1, 0x10);
@@ -5128,10 +5256,9 @@ void GraphicsSynthesizerThread::recompile_clut_lookup()
     //Input: RDI (index)
     //Output: RAX (color in 32-bit format)
 
-    //RCX = current_ctx->tex0.CLUT_offset << 1
+    //RCX = current_ctx->tex0.CLUT_offset
     emitter_tex.load_addr((uint64_t)&current_ctx->tex0.CLUT_offset, RCX);
     emitter_tex.MOV32_FROM_MEM(RCX, RCX);
-    emitter_tex.SHL32_REG_IMM(1, RCX);
     emitter_tex.load_addr((uint64_t)&clut_cache, RAX);
 
     switch (current_ctx->tex0.CLUT_format)
@@ -5140,7 +5267,7 @@ void GraphicsSynthesizerThread::recompile_clut_lookup()
         case 0x01:
             emitter_tex.SHL32_REG_IMM(2, RDI);
             emitter_tex.ADD32_REG(RDI, RCX);
-            emitter_tex.AND32_REG_IMM(0x7FF, RCX);
+            emitter_tex.AND32_REG_IMM(0x3FF, RCX);
             emitter_tex.ADD64_REG(RCX, RAX);
             emitter_tex.MOV32_FROM_MEM(RAX, RAX);
             break;

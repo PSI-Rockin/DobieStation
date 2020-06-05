@@ -61,7 +61,7 @@ uint8_t CSO_Reader::get_version()
     return m_version;
 }
 
-uint64_t CSO_Reader::get_size()
+size_t CSO_Reader::get_size()
 {
     return m_size;
 }
@@ -77,13 +77,14 @@ uint32_t CSO_Reader::get_numblocks()
 }
 
 
-bool CSO_Reader::isopen()
+bool CSO_Reader::is_open()
 {
     return m_file.is_open();
 }
 
-void CSO_Reader::seek(int64_t ofs, std::ios::seekdir whence)
+void CSO_Reader::seek(size_t ofs, std::ios::seekdir whence)
 {
+    ofs *= 2048;
     if (whence == std::ios::beg)
     {
         if ((uint64_t)ofs < m_size)
@@ -160,7 +161,7 @@ bool CSO_Reader::read_block_internal(uint32_t block)
     return true;
 }
 
-uint64_t CSO_Reader::read(uint8_t* dst, uint64_t size)
+size_t CSO_Reader::read(uint8_t* dst, size_t size)
 {
     assert(size);
     assert(m_virtptr + size <= m_size);
@@ -192,11 +193,10 @@ uint64_t CSO_Reader::read(uint8_t* dst, uint64_t size)
     return total_read;
 }
 
-
-bool CSO_Reader::open(const char* path)
+bool CSO_Reader::open(std::string name)
 {
     close();
-    m_file = std::ifstream(path, std::ios::binary | std::ios::ate);
+    m_file = std::ifstream(name, std::ios::binary | std::ios::ate);
     if (!m_file.is_open())
     {
         fprintf(stderr, "failed to open file\n");

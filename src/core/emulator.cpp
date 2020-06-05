@@ -9,34 +9,59 @@
 #include "ee/vu_jit.hpp"
 #include "ee/ee_jit.hpp"
 
-#define CYCLES_PER_FRAME 4900000
-#define VBLANK_START_CYCLES CYCLES_PER_FRAME * 0.75
+/* Notes of timings from PS2*/
+/*
+
+Note: Values were counted using EE Timers 0 at a 1/256 divider for V-BLANK cycles, H-BLANK's were counted with Timer 1 with CLK Source of H-BLANK
+NTSC Non-Interlaced
+V-BLANK Off for 2248960 bus cycles (within 256 cycles), 240 H-BLANK's
+V-BLANK On for 215552 bus cycles (within 256 cycles), 23 H-BLANK's
+EE Cycles Per Frame between 4929024 & 4929536
+
+PAL Non-Interlaced
+V-BLANK Off for 2717696 bus cycles (within 256 cycles), 288 H-BLANK's
+V-BLANK On for 245504 bus cycles (within 256 cycles), 26 H-BLANK's
+EE Cycles Per Frame between 5926400 & 5926912
+*/
+
+/*
+//NTSC Non-Interlaced Timings
+#define CYCLES_PER_FRAME 4929486 //4929486.849336438 EE cycles to be exact FPS of 59.82610543726237hz
+#define VBLANK_START_CYCLES 4498391 //4498391.041219564 EE cycles to be exact, exactly 23 HBLANK's before the end
+*/
+
+//NTSC Interlaced Timings
+#define CYCLES_PER_FRAME 4920115 //4920115.2 EE cycles to be exact FPS of 59.94005994005994hz
+#define VBLANK_START_CYCLES 4489019 //4489019.391883126 Guess, exactly 23 HBLANK's before the end
+
 
 //These constants are used for the fast boot hack for .isos
 #define EELOAD_START 0x82000
 #define EELOAD_SIZE 0x20000
 
 Emulator::Emulator() :
-    cdvd(this, &iop_dma),
+    cdvd(&iop_intc, &iop_dma, &scheduler),
     cp0(&dmac),
-    cpu(&cp0, &fpu, this, &vu0, &vu1),
+    cpu(&cp0, &fpu, this, &sif, &vu0, &vu1),
     dmac(&cpu, this, &gif, &ipu, &sif, &vif0, &vif1, &vu0, &vu1),
     gif(&gs, &dmac),
     gs(&intc),
     iop(this),
-    iop_dma(this, &cdvd, &sif, &sio2, &spu, &spu2),
-    iop_timers(this),
-    intc(this, &cpu),
+    iop_dma(&iop_intc, &cdvd, &sif, &sio2, &spu, &spu2),
+    iop_intc(&iop),
+    iop_timers(&iop_intc, &scheduler),
+    intc(&cpu, &scheduler),
     ipu(&intc, &dmac),
-    timers(&intc),
-    sio2(this, &pad, &memcard),
-    spu(1, this, &iop_dma),
-    spu2(2, this, &iop_dma),
+    timers(&intc, &scheduler),
+    sio2(&iop_intc, &pad, &memcard),
+    spu(1, &iop_intc, &iop_dma),
+    spu2(2, &iop_intc, &iop_dma),
+    firewire(&iop_intc, &iop_dma),
     vif0(nullptr, &vu0, &intc, &dmac, 0),
     vif1(&gif, &vu1, &intc, &dmac, 1),
     vu0(0, this, &intc, &cpu, &vu1),
     vu1(1, this, &intc, &cpu, &vu0),
-    sif(&iop_dma, &dmac)
+    sif(&cpu, &iop_dma, &dmac)
 {
     BIOS = nullptr;
     RDRAM = nullptr;
@@ -47,6 +72,7 @@ Emulator::Emulator() :
     gsdump_single_frame = false;
     ee_log.open("ee_log.txt", std::ios::out);
     set_ee_mode(CPU_MODE::DONT_CARE);
+    set_vu0_mode(CPU_MODE::DONT_CARE);
     set_vu1_mode(CPU_MODE::DONT_CARE);
 }
 
@@ -95,8 +121,8 @@ void Emulator::run()
 
     frame_ended = false;
 
-    add_ee_event(VBLANK_START, &Emulator::vblank_start, VBLANK_START_CYCLES);
-    add_ee_event(VBLANK_END, &Emulator::vblank_end, CYCLES_PER_FRAME);
+    scheduler.add_event(vblank_start_id, VBLANK_START_CYCLES);
+    scheduler.add_event(vblank_end_id, CYCLES_PER_FRAME);
     
     while (!frame_ended)
     {
@@ -106,24 +132,20 @@ void Emulator::run()
         scheduler.update_cycle_counts();
 
         cpu.run(ee_cycles);
-        iop_timers.run(iop_cycles);
         iop_dma.run(iop_cycles);
         iop.run(iop_cycles);
-        iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
 
         dmac.run(bus_cycles);
-        timers.run(bus_cycles);
         ipu.run();
         vif0.update(bus_cycles);
         vif1.update(bus_cycles);
         gif.run(bus_cycles);
         
-        //VU's run at EE speed, however VU0 maintains its own speed
-        vu0.run(ee_cycles);
-        vu1_run_func(vu1, ee_cycles);
+        //VU's run at EE speed, however both maintain their own speed
+        vu0.run_func(vu0, ee_cycles);
+        vu1.run_func(vu1, ee_cycles);
 
-
-        scheduler.process_events(this);
+        scheduler.process_events();
     }
     fesetround(originalRounding);
 }
@@ -133,7 +155,6 @@ void Emulator::reset()
     save_requested = false;
     load_requested = false;
     gsdump_requested = false;
-    iop_i_ctrl_delay = 0;
     ee_stdout = "";
     frames = 0;
     skip_BIOS_hack = NONE;
@@ -146,22 +167,28 @@ void Emulator::reset()
     if (!SPU_RAM)
         SPU_RAM = new uint8_t[1024 * 1024 * 2];
 
+    //Scheduler should be reset before any other components.
+    //Components will register event functions in reset, so we need to make sure scheduler's vector is cleared
+    //as soon as possible.
+    scheduler.reset();
+
     cdvd.reset();
     cp0.reset();
     cp0.init_mem_pointers(RDRAM, BIOS, (uint8_t*)&scratchpad);
     cpu.reset();
     cpu.init_tlb();
     dmac.reset(RDRAM, (uint8_t*)&scratchpad);
+    firewire.reset();
     fpu.reset();
     gs.reset();
     gif.reset();
     iop.reset();
     iop_dma.reset(IOP_RAM);
+    iop_intc.reset();
     iop_timers.reset();
     intc.reset();
     ipu.reset();
     pad.reset();
-    scheduler.reset();
     sif.reset();
     sio2.reset();
     spu.reset(SPU_RAM);
@@ -171,15 +198,13 @@ void Emulator::reset()
     vif1.reset();
     vu0.reset();
     vu1.reset();
-    VU_JIT::reset();
+    VU_JIT::reset(&vu0);
+    VU_JIT::reset(&vu1);
     EE_JIT::reset(true);
 
     MCH_DRD = 0;
     MCH_RICM = 0;
     rdram_sdevid = 0;
-    IOP_I_STAT = 0;
-    IOP_I_MASK = 0;
-    IOP_I_CTRL = 0;
     IOP_POST = 0;
     clear_cop2_interlock();
 
@@ -188,7 +213,11 @@ void Emulator::reset()
 
     iop_scratchpad_start = 0x1F800000;
 
-    add_iop_event(SPU_SAMPLE, &Emulator::gen_sound_sample, 768);
+    vblank_start_id = scheduler.register_function([this] (uint64_t param) { vblank_start(); });
+    vblank_end_id = scheduler.register_function([this] (uint64_t param) { vblank_end(); });
+    spu_event_id = scheduler.register_function([this] (uint64_t param) { gen_sound_sample(); });
+
+    start_sound_sample_event();
 }
 
 void Emulator::print_state()
@@ -203,23 +232,24 @@ void Emulator::vblank_start()
 {
     VBLANK_sent = true;
     gs.set_VBLANK(true);
+
+    gs.render_CRT();
     timers.gate(true, true);
     cdvd.vsync();
     //cpu.set_disassembly(frames >= 223 && frames < 225);
     printf("VSYNC FRAMES: %d\n", frames);
     gs.assert_VSYNC();
-    iop_request_IRQ(0);
+    iop_intc.assert_irq(0);
 }
 
 void Emulator::vblank_end()
 {
     //VBLANK end
-    iop_request_IRQ(11);
+    iop_intc.assert_irq(11);
     gs.set_VBLANK(false);
     timers.gate(true, false);
     frame_ended = true;
     frames++;
-    gs.render_CRT();
 }
 
 void Emulator::cdvd_event()
@@ -227,17 +257,16 @@ void Emulator::cdvd_event()
     cdvd.handle_N_command();
 }
 
+void Emulator::start_sound_sample_event()
+{
+    scheduler.add_event(spu_event_id, 768 * 8);
+}
+
 void Emulator::gen_sound_sample()
 {
     spu.gen_sample();
     spu2.gen_sample();
-    add_iop_event(SPU_SAMPLE, &Emulator::gen_sound_sample, 768);
-}
-
-void Emulator::ee_irq_check()
-{
-    //printf("[EE] INT0 check\n");
-    intc.int0_check();
+    start_sound_sample_event();
 }
 
 void Emulator::press_button(PAD_BUTTON button)
@@ -288,36 +317,9 @@ void Emulator::fast_boot()
 {
     if (skip_BIOS_hack == LOAD_DISC)
     {
-        //First we need to determine the name of the game executable
-        //This is done by finding SYSTEM.CNF on the game disc, then getting the name of the executable it points to.
-        uint32_t system_cnf_size;
-        char* system_cnf = (char*)cdvd.read_file("SYSTEM.CNF;1", system_cnf_size);
-        if (!system_cnf)
-        {
-            Errors::die("[Emulator] Failed to load SYSTEM.CNF!\n");
-        }
-        std::string exec_name = "";
-        //Search for cdrom0:
-        int pos = 0;
-        while (strncmp("cdrom0:", system_cnf + pos, 7))
-            pos++;
+        //We need to find the string "rom0:OSDSYS" and replace it with the disc's executable.
+        std::string path = cdvd.get_ps2_exec_path();
 
-        printf("[Emulator] Found 'cdrom0:'\n");
-        pos += 8;
-
-        //Search for end of file name
-        while (system_cnf[pos] != ';')
-        {
-            exec_name += system_cnf[pos];
-            pos++;
-        }
-
-        delete[] system_cnf;
-
-        std::string path = "cdrom0:\\";
-        path += exec_name + ";1";
-
-        //Next we need to find the string "rom0:OSDSYS"
         for (uint32_t str = EELOAD_START; str < EELOAD_START + EELOAD_SIZE; str += 8)
         {
             if (!strcmp((char*)&RDRAM[str], "rom0:OSDSYS"))
@@ -348,6 +350,24 @@ void Emulator::set_ee_mode(CPU_MODE mode)
             cpu.set_run_func(&EmotionEngine::run_jit);
             break;
     }
+
+    EE_JIT::reset(true);
+}
+
+void Emulator::set_vu0_mode(CPU_MODE mode)
+{
+    switch (mode)
+    {
+        case CPU_MODE::INTERPRETER:
+            vu0.run_func = &VectorUnit::run;
+            break;
+        case CPU_MODE::JIT:
+        default:
+            vu0.run_func = &VectorUnit::run_jit;
+            break;
+    }
+
+    VU_JIT::reset(&vu0);
 }
 
 void Emulator::set_vu1_mode(CPU_MODE mode)
@@ -355,13 +375,15 @@ void Emulator::set_vu1_mode(CPU_MODE mode)
     switch (mode)
     {
         case CPU_MODE::INTERPRETER:
-            vu1_run_func = &VectorUnit::run;
+            vu1.run_func = &VectorUnit::run;
             break;
         case CPU_MODE::JIT:
         default:
-            vu1_run_func = &VectorUnit::run_jit;
+            vu1.run_func = &VectorUnit::run_jit;
             break;
     }
+
+    VU_JIT::reset(&vu1);
 }
 
 void Emulator::load_BIOS(const uint8_t *BIOS_file)
@@ -396,6 +418,11 @@ void Emulator::load_memcard(int port, const char *name)
     //TODO: handle port setting. Currently it's ignored and treated as Port 0
     if (!memcard.open(name))
         printf("Failed to open memcard %s\n", name);
+}
+
+std::string Emulator::get_serial()
+{
+    return cdvd.get_serial();
 }
 
 void Emulator::execute_ELF()
@@ -823,6 +850,9 @@ void Emulator::write32(uint32_t address, uint32_t value)
         case 0x10002010:
             ipu.write_control(value);
             return;
+        case 0x10003000:
+            gif.write_CTRL(value);
+            return;
         case 0x10003010:
             gif.write_MODE(value);
             return;
@@ -973,7 +1003,7 @@ void Emulator::write128(uint32_t address, uint128_t value)
             vif1.feed_DMA(value);
             return;
         case 0x10006000:
-            gif.send_PATH3(value);
+            gif.send_PATH3_FIFO(value);
             return;
         case 0x10007010:
             ipu.write_FIFO(value);
@@ -1149,6 +1179,8 @@ uint32_t Emulator::iop_read32(uint32_t address)
         return *(uint32_t*)&IOP_RAM[address];
     if (address >= 0x1FC00000 && address < 0x20000000)
         return *(uint32_t*)&BIOS[address & 0x3FFFFF];
+    if (address >= 0x1F808400 && address < 0x1F808550)
+        return firewire.read32(address);
     switch (address)
     {
         case 0x1D000000:
@@ -1163,16 +1195,11 @@ uint32_t Emulator::iop_read32(uint32_t address)
             printf("[IOP] Read BD4: $%08X\n", sif.get_control() | 0xF0000002);
             return sif.get_control() | 0xF0000002;
         case 0x1F801070:
-            return IOP_I_STAT;
+            return iop_intc.read_istat();
         case 0x1F801074:
-            return IOP_I_MASK;
+            return iop_intc.read_imask();
         case 0x1F801078:
-        {
-            //I_CTRL is reset when read
-            uint32_t value = IOP_I_CTRL;
-            IOP_I_CTRL = 0;
-            return value;
-        }
+            return iop_intc.read_ictrl();
         case 0x1F8010B0:
             return iop_dma.get_chan_addr(3);
         case 0x1F8010B8:
@@ -1247,8 +1274,6 @@ uint32_t Emulator::iop_read32(uint32_t address)
             return sio2.get_RECV2();
         case 0x1F808274:
             return sio2.get_RECV3();
-        case 0x1F808410:
-            return 8; // Some sort of FireWire thing
         case 0xFFFE0130: //Cache control?
             return 0;
     }
@@ -1462,6 +1487,11 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
             sio2.set_send1(index >> 3, value);
         return;
     }
+    if (address >= 0x1F808400 && address < 0x1F808550)
+    {
+        firewire.write32(address, value);
+        return;
+    }
     switch (address)
     {
         case 0x1D000000:
@@ -1488,21 +1518,13 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
             printf("[IOP] SPU SSBUS: $%08X\n", value);
             return;
         case 0x1F801070:
-            //printf("[IOP] I_STAT: $%08X\n", value);
-            IOP_I_STAT &= value;
-            iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
+            iop_intc.write_istat(value);
             return;
         case 0x1F801074:
-            //printf("[IOP] I_MASK: $%08X\n", value);
-            IOP_I_MASK = value;
-            iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
+            iop_intc.write_imask(value);
             return;
         case 0x1F801078:
-            if (!IOP_I_CTRL && (value & 0x1))
-                iop_i_ctrl_delay = 4;
-            IOP_I_CTRL = value & 0x1;
-            //iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
-            //printf("[IOP] I_CTRL: $%08X\n", value);
+            iop_intc.write_ictrl(value);
             return;
         //CDVD DMA
         case 0x1F8010B0:
@@ -1674,14 +1696,6 @@ void Emulator::iop_write32(uint32_t address, uint32_t value)
     Errors::print_warning("Unrecognized IOP write32 to physical addr $%08X of $%08X\n", address, value);
 }
 
-void Emulator::iop_request_IRQ(int index)
-{
-    printf("[IOP] Requesting IRQ %d\n", index);
-    uint32_t new_stat = IOP_I_STAT | (1 << index);
-    IOP_I_STAT = new_stat;
-    iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
-}
-
 void Emulator::iop_ksprintf()
 {
     uint32_t msg_pointer = iop.get_gpr(6);
@@ -1768,27 +1782,8 @@ void Emulator::request_gsdump_toggle()
 {
     gsdump_requested = true;
 }
+
 void Emulator::request_gsdump_single_frame()
 {
     gsdump_single_frame = true;
-}
-
-void Emulator::add_ee_event(EVENT_ID id, event_func func, uint64_t delta_time_to_run)
-{
-    SchedulerEvent event;
-    event.id = id;
-    event.func = func;
-    event.time_to_run = scheduler.get_ee_cycles() + delta_time_to_run;
-
-    scheduler.add_event(event);
-}
-
-void Emulator::add_iop_event(EVENT_ID id, event_func func, uint64_t delta_time_to_run)
-{
-    SchedulerEvent event;
-    event.id = id;
-    event.func = func;
-    event.time_to_run = (scheduler.get_iop_cycles() + delta_time_to_run) << 3;
-
-    scheduler.add_event(event);
 }

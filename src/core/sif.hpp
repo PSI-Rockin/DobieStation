@@ -2,16 +2,28 @@
 #define SIF_HPP
 #include <cstdint>
 #include <fstream>
+#include <functional>
+#include <list>
 #include <queue>
 
 #include "int128.hpp"
 
 class IOP_DMA;
 class DMAC;
+class EmotionEngine;
+
+struct SifRpcServer
+{
+    std::string name;
+    uint32_t module_id;
+    uint32_t client_ptr;
+    std::function<void(SifRpcServer& server, uint32_t fno, uint32_t buff, uint32_t buff_size)> rpc_func;
+};
 
 class SubsystemInterface
 {
     private:
+        EmotionEngine* ee;
         IOP_DMA* iop_dma;
         DMAC* dmac;
         uint32_t mscom;
@@ -24,11 +36,19 @@ class SubsystemInterface
 
         std::queue<uint32_t> SIF0_FIFO;
         std::queue<uint32_t> SIF1_FIFO;
+
+        std::list<SifRpcServer> rpc_servers;
+
+        bool sifrpc_bind(uint32_t module, uint32_t client);
+        void sifrpc_register_server(std::string name, uint32_t module_id,
+                                    std::function<void(SifRpcServer& server,
+                                                       uint32_t fno, uint32_t buff, uint32_t buff_size)>);
     public:
         constexpr static int MAX_FIFO_SIZE = 32;
-        SubsystemInterface(IOP_DMA* iop_dma, DMAC* dmac);
+        SubsystemInterface(EmotionEngine* ee, IOP_DMA* iop_dma, DMAC* dmac);
 
         void reset();
+        void register_system_servers();
         int get_SIF0_size();
         int get_SIF1_size();
 
@@ -52,6 +72,8 @@ class SubsystemInterface
 
         void set_control_EE(uint32_t value);
         void set_control_IOP(uint32_t value);
+
+        void ee_log_sifrpc(uint32_t transfer_ptr, int len);
 
         void load_state(std::ifstream& state);
         void save_state(std::ofstream& state);

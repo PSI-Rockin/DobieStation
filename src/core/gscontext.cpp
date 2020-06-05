@@ -38,10 +38,10 @@ void GSContext::set_tex0(uint64_t value)
     tex0.CLUT_base = ((value >> 37) & 0x3FFF) * 64 * 4;
     tex0.CLUT_format = (value >> 51) & 0xF;
     tex0.use_CSM2 = (value >> 55) & 0x1;
-    if (!tex0.CLUT_format)
-        tex0.CLUT_offset = ((value >> 56) & 0xF) * 16 * 2;
+    if (tex0.CLUT_format < 2)
+        tex0.CLUT_offset = ((value >> 56) & 0xF) * 16 * 4;
     else
-        tex0.CLUT_offset = ((value >> 56) & 0x1F) * 16;
+        tex0.CLUT_offset = ((value >> 56) & 0x1F) * 16 * 2;
     tex0.CLUT_control = (value >> 61) & 0x7;
 
     printf("TEX0: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);
@@ -77,10 +77,10 @@ void GSContext::set_tex2(uint64_t value)
     tex0.CLUT_base = ((value >> 37) & 0x3FFF) * 64 * 4;
     tex0.CLUT_format = (value >> 51) & 0xF;
     tex0.use_CSM2 = (value >> 55) & 0x1;
-    if (!tex0.CLUT_format)
-        tex0.CLUT_offset = ((value >> 56) & 0xF) * 16 * 2;
+    if (tex0.CLUT_format < 2)
+        tex0.CLUT_offset = ((value >> 56) & 0xF) * 16 * 4;
     else
-        tex0.CLUT_offset = ((value >> 56) & 0x1F) * 16;
+        tex0.CLUT_offset = ((value >> 56) & 0x1F) * 16 * 2;
     tex0.CLUT_control = (value >> 61) & 0x7;
 
     printf("TEX2: $%08X_%08X\n", value >> 32, value);
@@ -173,6 +173,18 @@ void GSContext::set_frame(uint64_t value)
     printf("FRAME: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);
     printf("Width: %d\n", frame.width);
     printf("Format: %d\n", frame.format);
+
+    // confirmed by hw test
+    // in the event that a z format is specified for FRAME
+    // the depth format will swap to a color format
+    if ((frame.format & 0x30) == 0x30)
+    {
+        zbuf.format &= ~0x30;
+    }
+    else
+    {
+        zbuf.format |= 0x30;
+    }
 }
 
 void GSContext::set_zbuf(uint64_t value)
@@ -183,4 +195,12 @@ void GSContext::set_zbuf(uint64_t value)
     printf("ZBUF: $%08X_%08X\n", value >> 32, value & 0xFFFFFFFF);
     printf("Base pointer: $%08X\n", zbuf.base_pointer);
     printf("Format: $%02X\n", zbuf.format);
+
+    // confirmed by hw test
+    // in the event that a z format is specified for FRAME
+    // the depth format will swap to a color format
+    if ((frame.format & 0x30) == 0x30)
+    {
+        zbuf.format &= ~0x30;
+    }
 }

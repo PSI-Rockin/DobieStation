@@ -49,8 +49,8 @@ struct DMA_DICR
     bool master_int_enable[2];
 };
 
-class Emulator;
 class CDVD_Drive;
+class IOP_INTC;
 class SubsystemInterface;
 class SIO2;
 class SPU;
@@ -76,7 +76,7 @@ class IOP_DMA
 {
     private:
         uint8_t* RAM;
-        Emulator* e;
+        IOP_INTC* intc;
         CDVD_Drive* cdvd;
         SubsystemInterface* sif;
         SIO2* sio2;
@@ -104,7 +104,7 @@ class IOP_DMA
         void apply_dma_functions();
     public:
         static const char* CHAN(int index);
-        IOP_DMA(Emulator* e, CDVD_Drive* cdvd, SubsystemInterface* sif, SIO2* sio2, SPU* spu, SPU* spu2);
+        IOP_DMA(IOP_INTC* intc, CDVD_Drive* cdvd, SubsystemInterface* sif, SIO2* sio2, SPU* spu, SPU* spu2);
 
         void reset(uint8_t* RAM);
         void run(int cycles);

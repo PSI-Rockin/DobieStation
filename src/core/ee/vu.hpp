@@ -160,6 +160,8 @@ class VectorUnit
         uint64_t finish_EFU_event;
         bool EFU_event_started;
 
+        int32_t float_to_int(float value);
+
         float update_mac_flags(float value, int index);
         void clear_mac_flags(int index);
 
@@ -222,6 +224,8 @@ class VectorUnit
         template <typename T> void write_instr(uint32_t addr, T data);
         template <typename T> void write_data(uint32_t addr, T data);
         template <typename T> void write_mem(uint32_t addr, T data);
+
+        std::function<void(VectorUnit&, int)> run_func;
 
         bool is_running();
         bool stopped_by_tbit();

@@ -1,0 +1,147 @@
+name: CI
+
+on:
+  push:
+    paths-ignore:
+      - '.github/CONTRIBUTING.md'
+      - '.github/FUNDING.md'
+      - '.github/ISSUE_TEMPLATE.md'
+      - '.appveyor.yml'
+      - 'README.md'
+  pull_request:
+    paths-ignore:
+      - '.github/CONTRIBUTING.md'
+      - '.github/FUNDING.md'
+      - '.github/ISSUE_TEMPLATE.md'
+      - '.appveyor.yml'
+      - 'README.md'
+
+jobs:
+  Windows:
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        Configuration: [Release Optimized, Release, Debug, Devel]
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v2
+    - name: Setup MSBuild
+      uses: microsoft/setup-msbuild@v1
+    - name: Build
+      run: msbuild DobieStation\DobieStation.sln /m /nologo /p:Configuration="${{ matrix.Configuration }}"
+      env:
+        QTDIR: ${{ env.Qt5_Dir }}
+    - name: Prepare artifacts
+      if: matrix.Configuration != 'Release'
+      run: |
+        robocopy . build\bin LICENSE /r:0 /w:0
+        If ($LastExitCode -lt 8) { $LastExitCode = 0 }
+        del build\bin\*.lib
+    - name: Upload artifacts
+      if: matrix.Configuration != 'Release'
+      uses: actions/upload-artifact@v1
+      with:
+        name: DobieStation-${{ runner.os }}-${{ matrix.Configuration }}
+        path: build\bin
+
+  Linux-cmake:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        Configuration: [Release, RelWithDebInfo, Debug]
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Install Qt
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -qq qt5-default qtmultimedia5-dev libglu1-mesa-dev
+    - name: Build
+      run: |
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.Configuration }}
+        make -j$(nproc)
+
+  Linux-qmake:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Install Qt
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -qq qt5-default qtmultimedia5-dev libglu1-mesa-dev
+    - name: Build
+      working-directory: DobieStation
+      run: |
+        qmake DobieStation.pro
+        make -j$(nproc)
+    - name: Prepare artifacts
+      run: |
+        mkdir artifacts
+        cp LICENSE DobieStation/DobieStation artifacts
+    - name: Upload artifact
+      uses: actions/upload-artifact@v1
+      with:
+        name: DobieStation-${{ runner.os }}
+        path: artifacts
+
+  macOS-cmake:
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        Configuration: [Release, RelWithDebInfo, Debug]
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Install Qt
+      env:
+        HOMEBREW_NO_ANALYTICS: 1
+      run: |
+        brew analytics off
+        brew install qt
+        brew link qt --force
+    - name: Build
+      run: |
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=${{ matrix.Configuration }} -DCMAKE_PREFIX_PATH=/usr/local/opt/qt5
+        make -j$(sysctl -n hw.ncpu)
+
+  macOS-qmake:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+    - name: Install Qt
+      env:
+        HOMEBREW_NO_ANALYTICS: 1
+      run: |
+        brew analytics off
+        brew install qt
+        brew link qt --force
+    - name: Build
+      working-directory: DobieStation
+      run: |
+        qmake DobieStation.pro
+        make -j$(sysctl -n hw.ncpu)
+    - name: Prepare artifacts
+      run: |
+        mkdir artifacts
+        cp LICENSE DobieStation/DobieStation artifacts
+    - name: Upload artifact
+      uses: actions/upload-artifact@v1
+      with:
+        name: DobieStation-${{ runner.os }}
+        path: artifacts

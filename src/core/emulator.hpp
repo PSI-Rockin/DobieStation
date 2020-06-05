@@ -11,14 +11,16 @@
 #include "ee/vif.hpp"
 #include "ee/vu.hpp"
 
-#include "iop/cdvd.hpp"
+#include "iop/cdvd/cdvd.hpp"
 #include "iop/gamepad.hpp"
 #include "iop/iop.hpp"
 #include "iop/iop_dma.hpp"
+#include "iop/iop_intc.hpp"
 #include "iop/iop_timers.hpp"
 #include "iop/memcard.hpp"
 #include "iop/sio2.hpp"
 #include "iop/spu.hpp"
+#include "iop/firewire.hpp"
 
 #include "int128.hpp"
 #include "gs.hpp"
@@ -52,6 +54,7 @@ class Emulator
         DMAC dmac;
         EmotionEngine cpu;
         EmotionTiming timers;
+        Firewire firewire;
         Gamepad pad;
         GraphicsSynthesizer gs;
         GraphicsInterface gif;
@@ -68,12 +71,13 @@ class Emulator
         VectorInterface vif0, vif1;
         VectorUnit vu0, vu1;
 
+        int vblank_start_id, vblank_end_id, spu_event_id;
+
         bool VBLANK_sent;
         bool cop2_interlock, vu_interlock;
 
         std::ofstream ee_log;
         std::string ee_stdout;
-        std::function<void(VectorUnit&, int)> vu1_run_func;
 
         uint8_t* RDRAM;
         uint8_t* IOP_RAM;
@@ -89,10 +93,8 @@ class Emulator
         uint8_t rdram_sdevid;
 
         uint8_t IOP_POST;
-        uint32_t IOP_I_STAT;
-        uint32_t IOP_I_MASK;
-        uint32_t IOP_I_CTRL;
-        int iop_i_ctrl_delay;
+
+        IOP_INTC iop_intc;
 
         SKIP_HACK skip_BIOS_hack;
 
@@ -100,6 +102,7 @@ class Emulator
         uint32_t ELF_size;
 
         void iop_IRQ_check(uint32_t new_stat, uint32_t new_mask);
+        void start_sound_sample_event();
 
         bool frame_ended;
     public:
@@ -115,11 +118,13 @@ class Emulator
         void fast_boot();
         void set_skip_BIOS_hack(SKIP_HACK type);
         void set_ee_mode(CPU_MODE mode);
+        void set_vu0_mode(CPU_MODE mode);
         void set_vu1_mode(CPU_MODE mode);
         void load_BIOS(const uint8_t* BIOS);
         void load_ELF(const uint8_t* ELF, uint32_t size);
         bool load_CDVD(const char* name, CDVD_CONTAINER type);
         void load_memcard(int port, const char* name);
+        std::string get_serial();
         void execute_ELF();
         uint32_t* get_framebuffer();
         void get_resolution(int& w, int& h);
@@ -130,7 +135,6 @@ class Emulator
         void vblank_end();
         void cdvd_event();
         void gen_sound_sample();
-        void ee_irq_check();
 
         bool request_load_state(const char* file_name);
         bool request_save_state(const char* file_name);
@@ -164,15 +168,11 @@ class Emulator
         void iop_write16(uint32_t address, uint16_t value);
         void iop_write32(uint32_t address, uint32_t value);
 
-        void iop_request_IRQ(int index);
         void iop_ksprintf();
         void iop_puts();
 
         void test_iop();
         GraphicsSynthesizer& get_gs();//used for gs dumps
-
-        void add_ee_event(EVENT_ID id, event_func func, uint64_t delta_time_to_run);
-        void add_iop_event(EVENT_ID id, event_func func, uint64_t delta_time_to_run);
 };
 
 #endif // EMULATOR_HPP

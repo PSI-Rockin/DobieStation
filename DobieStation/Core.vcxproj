@@ -90,10 +90,12 @@
     <ClCompile Include="$(CoreDir)ee\ee_jit64_gpr.cpp" />
     <ClCompile Include="$(CoreDir)ee\ee_jit64_mmi.cpp" />
     <ClCompile Include="$(CoreDir)ee\ee_jittrans.cpp" />
-    <ClCompile Include="$(CoreDir)iop\cso_reader.cpp" />
     <ClCompile Include="$(CoreDir)tests\iop\alu.cpp" />
     <ClCompile Include="$(CoreDir)ee\bios_hle.cpp" />
-    <ClCompile Include="$(CoreDir)iop\cdvd.cpp" />
+    <ClCompile Include="$(CoreDir)iop\cdvd\bincuereader.cpp" />
+    <ClCompile Include="$(CoreDir)iop\cdvd\cdvd.cpp" />
+    <ClCompile Include="$(CoreDir)iop\cdvd\cso_reader.cpp" />
+    <ClCompile Include="$(CoreDir)iop\cdvd\iso_reader.cpp" />
     <ClCompile Include="$(CoreDir)ee\ipu\chromtable.cpp" />
     <ClCompile Include="$(CoreDir)ee\ipu\codedblockpattern.cpp" />
     <ClCompile Include="$(CoreDir)ee\cop0.cpp" />
@@ -124,6 +126,7 @@
     <ClCompile Include="$(CoreDir)iop\iop.cpp" />
     <ClCompile Include="$(CoreDir)iop\iop_cop0.cpp" />
     <ClCompile Include="$(CoreDir)iop\iop_dma.cpp" />
+    <ClCompile Include="$(CoreDir)iop\iop_intc.cpp" />
     <ClCompile Include="$(CoreDir)iop\iop_interpreter.cpp" />
     <ClCompile Include="$(CoreDir)iop\iop_timers.cpp" />
     <ClCompile Include="$(CoreDir)ee\ipu\ipu.cpp" />
@@ -152,6 +155,7 @@
     <ClCompile Include="$(CoreDir)ee\vu_jit64.cpp" />
     <ClCompile Include="$(CoreDir)ee\vu_jittrans.cpp" />
     <ClCompile Include="$(CoreDir)scheduler.cpp" />
+    <ClCompile Include="$(CoreDir)iop\firewire.cpp" />
   </ItemGroup>
 
   <!-- headers -->
@@ -160,7 +164,11 @@
     <ClInclude Include="$(CoreDir)ee\ee_jit.hpp" />
     <ClInclude Include="$(CoreDir)ee\ee_jit64.hpp" />
     <ClInclude Include="$(CoreDir)ee\ee_jittrans.hpp" />
-    <ClInclude Include="$(CoreDir)iop\cdvd.hpp" />
+    <ClInclude Include="$(CoreDir)iop\cdvd\bincueheader.hpp" />
+    <ClInclude Include="$(CoreDir)iop\cdvd\cdvd.hpp" />
+    <ClInclude Include="$(CoreDir)iop\cdvd\cdvd_container.hpp" />
+    <ClInclude Include="$(CoreDir)iop\cdvd\cso_reader.hpp" />
+    <ClInclude Include="$(CoreDir)iop\cdvd\iso_reader.hpp" />
     <ClInclude Include="$(CoreDir)ee\ipu\chromtable.hpp" />
     <ClInclude Include="$(CoreDir)circularFIFO.hpp" />
     <ClInclude Include="$(CoreDir)ee\ipu\codedblockpattern.hpp" />
@@ -170,7 +178,6 @@
     <ClInclude Include="$(CoreDir)ee\ipu\dct_coeff_table0.hpp" />
     <ClInclude Include="$(CoreDir)ee\ipu\dct_coeff_table1.hpp" />
     <ClInclude Include="$(CoreDir)ee\dmac.hpp" />
-    <ClInclude Include="$(CoreDir)iop\cso_reader.hpp" />
     <ClInclude Include="$(CoreDir)jitcommon\emitter64.hpp" />
     <ClInclude Include="$(CoreDir)ee\emotion.hpp" />
     <ClInclude Include="$(CoreDir)ee\emotionasm.hpp" />
@@ -190,6 +197,7 @@
     <ClInclude Include="$(CoreDir)iop\iop.hpp" />
     <ClInclude Include="$(CoreDir)iop\iop_cop0.hpp" />
     <ClInclude Include="$(CoreDir)iop\iop_dma.hpp" />
+    <ClInclude Include="$(CoreDir)iop\iop_intc.hpp" />
     <ClInclude Include="$(CoreDir)iop\iop_interpreter.hpp" />
     <ClInclude Include="$(CoreDir)iop\iop_timers.hpp" />
     <ClInclude Include="$(CoreDir)ee\ipu\ipu.hpp" />
@@ -217,6 +225,7 @@
     <ClInclude Include="$(CoreDir)ee\vu_jit64.hpp" />
     <ClInclude Include="$(CoreDir)ee\vu_jittrans.hpp" />
     <ClInclude Include="$(CoreDir)scheduler.hpp" />
+    <ClInclude Include="$(CoreDir)iop\firewire.hpp" />
   </ItemGroup>
 
   <!-- misc -->

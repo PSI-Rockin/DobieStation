@@ -28,6 +28,9 @@ class Settings final : public QObject
         QStringList rom_directories_to_remove;
         QStringList recent_roms;
 
+        int scaling_factor;
+
+        bool vu0_jit_enabled;
         bool vu1_jit_enabled;
         bool ee_jit_enabled;
 

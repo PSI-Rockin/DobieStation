@@ -30,6 +30,7 @@ void Settings::reset()
     rom_directories = qsettings().value("rom_directories", {}).toStringList();
     recent_roms = qsettings().value("recent_roms", {}).toStringList();
     ee_jit_enabled = qsettings().value("ee_jit_enabled", true).toBool();
+    vu0_jit_enabled = qsettings().value("vu0_jit_enabled", true).toBool();
     vu1_jit_enabled = qsettings().value("vu1_jit_enabled", true).toBool();
     last_used_directory = qsettings().value("last_used_dir", QDir::homePath()).toString();
     screenshot_directory = qsettings().value("screenshot_directory", QDir::homePath()).toString();
@@ -38,6 +39,7 @@ void Settings::reset()
     rom_directories_to_remove = QStringList();
 
     memcard_path = qsettings().value("memcard_path", "").toString();
+    scaling_factor = qsettings().value("ui_scaling_factor", 1).toInt();
 
     emit reload();
 }
@@ -67,9 +69,11 @@ void Settings::save()
     qsettings().setValue("rom_directories", rom_directories);
     qsettings().setValue("bios_path", bios_path);
     qsettings().setValue("ee_jit_enabled", ee_jit_enabled);
+    qsettings().setValue("vu0_jit_enabled", vu0_jit_enabled);
     qsettings().setValue("vu1_jit_enabled", vu1_jit_enabled);
     qsettings().setValue("screenshot_directory", screenshot_directory);
     qsettings().setValue("memcard_path", memcard_path);
+    qsettings().setValue("ui_scaling_factor", scaling_factor);
     qsettings().sync();
     reset();
 }
@@ -119,12 +123,16 @@ void Settings::add_rom_path(const QString& path)
     if (path.isEmpty())
         return;
 
-    if (!recent_roms.contains(path, Qt::CaseInsensitive))
-    {
-        recent_roms.prepend(path);
-        qsettings().setValue("recent_roms", recent_roms);
-        emit rom_path_added(path);
-    }
+    if (recent_roms.contains(path))
+        recent_roms.removeAt(recent_roms.indexOf(path));
+
+    recent_roms.prepend(path);
+
+    if (recent_roms.size() > 10)
+        recent_roms = recent_roms.mid(0, 10);
+
+    qsettings().setValue("recent_roms", recent_roms);
+    emit rom_path_added(path);
 }
 
 void Settings::clear_rom_paths()

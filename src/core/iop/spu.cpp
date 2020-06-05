@@ -1,7 +1,8 @@
+#include <algorithm>
 #include <cstdio>
 #include "spu.hpp"
-#include "../emulator.hpp"
 #include "iop_dma.hpp"
+#include "iop_intc.hpp"
 
 /**
  * Notes on "AutoDMA", as it seems to not be documented anywhere else
@@ -13,7 +14,7 @@
 uint16_t SPU::spdif_irq = 0;
 uint16_t SPU::core_att[2];
 uint32_t SPU::IRQA[2];
-SPU::SPU(int id, Emulator* e, IOP_DMA* dma) : id(id), e(e), dma(dma)
+SPU::SPU(int id, IOP_INTC* intc, IOP_DMA* dma) : id(id), intc(intc), dma(dma)
 { 
 
 }
@@ -22,7 +23,7 @@ void SPU::reset(uint8_t* RAM)
 {
     this->RAM = (uint16_t*)RAM;
     status.DMA_busy = false;
-    status.DMA_finished = false;
+    status.DMA_ready = false;
     transfer_addr = 0;
     current_addr = 0;
     core_att[id-1] = 0;
@@ -61,7 +62,7 @@ void SPU::spu_irq(int index)
 
     printf("[SPU%d] IRQA interrupt!\n", index);
     spdif_irq |= 4 << index;
-    e->iop_request_IRQ(9);
+    intc->assert_irq(9);
 }
 
 void SPU::gen_sample()
@@ -138,7 +139,7 @@ void SPU::gen_sample()
 
 void SPU::finish_DMA()
 {
-    status.DMA_finished = true;
+    status.DMA_ready = true;
     status.DMA_busy = false;
 }
 
@@ -148,12 +149,13 @@ void SPU::start_DMA(int size)
     {
         printf("ADMA started with size: $%08X\n", size);
     }
-    status.DMA_finished = false;
+    status.DMA_ready = false;
 }
 
 void SPU::pause_DMA()
 {
     status.DMA_busy = false;
+    status.DMA_ready = true;
 }
 
 uint32_t SPU::read_DMA()
@@ -169,7 +171,7 @@ uint32_t SPU::read_DMA()
     current_addr &= 0x000FFFFF;
 
     status.DMA_busy = true;
-    status.DMA_finished = false;
+    status.DMA_ready = false;
     return value;
 }
 
@@ -181,13 +183,13 @@ void SPU::write_DMA(uint32_t value)
     current_addr++;
     current_addr &= 0x000FFFFF;
 
-    RAM[current_addr + 1] = value >> 16;
+    RAM[current_addr] = value >> 16;
     spu_check_irq(current_addr);
     current_addr++;
     current_addr &= 0x000FFFFF;
 
     status.DMA_busy = true;
-    status.DMA_finished = false;
+    status.DMA_ready = false;
 }
 
 void SPU::write_ADMA(uint8_t *RAM)
@@ -199,7 +201,7 @@ void SPU::write_ADMA(uint8_t *RAM)
         clear_dma_req();
 
     status.DMA_busy = true;
-    status.DMA_finished = false;
+    status.DMA_ready = false;
 }
 
 void SPU::process_ADMA() 
@@ -282,7 +284,7 @@ uint16_t SPU::read16(uint32_t addr)
                 return (voices[v].current_addr >> 16) & 0xF;
             case 10:
                 printf("[SPU%d] Read Voice %d NAXL: $%04X\n", id, v, voices[v].current_addr & 0xFFFF);
-                return (voices[v].current_addr) & 0xFFFF;
+                return voices[v].current_addr & 0xFFFF;
         }
     }
     switch (addr)
@@ -346,7 +348,7 @@ uint16_t SPU::read16(uint32_t addr)
             //printf("[SPU%d] Read ENDXL: $%04X\n", id, reg);
             break;
         case 0x344:
-            reg |= status.DMA_finished << 7;
+            reg |= status.DMA_ready << 7;
             reg |= status.DMA_busy << 10;
             printf("[SPU%d] Read status: $%04X\n", id, reg);
             return reg;
@@ -421,7 +423,7 @@ void SPU::write16(uint32_t addr, uint16_t value)
                 break;
             case 2: //SSAL
                 voices[v].start_addr &= ~0xFFFF;
-                voices[v].start_addr |= value & 0xFFF0;
+                voices[v].start_addr |= value & 0xFFF8;
                 printf("[SPU%d] Write V%d SSA: $%08X (L: $%04X)\n", id, v, voices[v].start_addr, value);
                 break;
             case 4: //LSAXH
@@ -432,7 +434,7 @@ void SPU::write16(uint32_t addr, uint16_t value)
                 break;
             case 6: //LSAXL
                 voices[v].loop_addr &= ~0xFFFF;
-                voices[v].loop_addr |= value & 0xFFF0;
+                voices[v].loop_addr |= value & 0xFFF8;
                 voices[v].loop_addr_specified = true;
                 printf("[SPU%d] Write V%d LSAX: $%08X (L: $%04X)\n", id, v, voices[v].loop_addr, value);
                 break;
@@ -501,7 +503,7 @@ void SPU::write16(uint32_t addr, uint16_t value)
             core_att[id - 1] = value & 0x7FFF;
             if (value & (1 << 15))
             {
-                status.DMA_finished = false;
+                status.DMA_ready = false;
                 status.DMA_busy = false;
                 clear_dma_req();
             }

@@ -9,6 +9,7 @@
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QTableWidget>
+#include <QStatusBar>
 
 #include "emuwindow.hpp"
 #include "settingswindow.hpp"
@@ -26,6 +27,9 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
     framerate_avg = 0.0;
     frametime_avg = 0.016;
 
+    for (int i = 0; i < 60; i++)
+        frametime_list[i] = 0.016;
+
     render_widget = new RenderWidget;
 
     connect(&emu_thread, &EmuThread::completed_frame,
@@ -34,8 +38,13 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
 
     GameListWidget* game_list_widget = new GameListWidget;
     connect(game_list_widget, &GameListWidget::game_double_clicked, this, [=](QString path) {
-        load_exec(path.toLocal8Bit(), true);
+        if (!path.isEmpty())
+        {
+            Settings::instance().add_rom_path(path);
+            load_exec(path.toLocal8Bit(), true);
+        }
     });
+
     connect(game_list_widget, &GameListWidget::settings_requested, [=]() {
         open_settings_window();
         settings_window->show_path_tab();
@@ -44,10 +53,32 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
     stack_widget = new QStackedWidget;
     stack_widget->addWidget(game_list_widget);
     stack_widget->addWidget(render_widget);
-    stack_widget->setMinimumWidth(RenderWidget::DEFAULT_WIDTH);
-    stack_widget->setMinimumHeight(RenderWidget::DEFAULT_HEIGHT);
+
+    int current_factor = Settings::instance().scaling_factor;
+
+    stack_widget->setMinimumSize(
+        RenderWidget::DEFAULT_WIDTH * current_factor,
+        RenderWidget::DEFAULT_HEIGHT * current_factor
+    );
 
     setCentralWidget(stack_widget);
+
+    ee_mode = new QLabel;
+    vu0_mode = new QLabel;
+    vu1_mode = new QLabel;
+
+    frametime = new QLabel;
+    avg_framerate = new QLabel;
+
+    update_status();
+
+    connect(&Settings::instance(), &Settings::reload, [=]() {
+        update_status();
+    });
+
+    statusBar()->addPermanentWidget(ee_mode);
+    statusBar()->addPermanentWidget(vu0_mode);
+    statusBar()->addPermanentWidget(vu1_mode);
 
     create_menu();
 
@@ -60,6 +91,18 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
     connect(&emu_thread, SIGNAL(update_FPS(double)), this, SLOT(update_FPS(double)));
     connect(&emu_thread, SIGNAL(emu_error(QString)), this, SLOT(emu_error(QString)));
     connect(&emu_thread, SIGNAL(emu_non_fatal_error(QString)), this, SLOT(emu_non_fatal_error(QString)));
+    connect(&emu_thread, &EmuThread::rom_loaded, this, [=](QString name, QString serial) {
+
+        QFileInfo file_info(name);
+
+        if (!serial.isEmpty())
+            setWindowTitle(QString("[%1] %2").arg(
+                serial, file_info.fileName()
+            ));
+        else
+            setWindowTitle(file_info.fileName());
+    });
+
     emu_thread.pause(PAUSE_EVENT::GAME_NOT_LOADED);
 
     emu_thread.reset();
@@ -67,7 +110,13 @@ EmuWindow::EmuWindow(QWidget *parent) : QMainWindow(parent)
 
     //Initialize window
     show_default_view();
+
     show();
+
+    stack_widget->setMinimumSize(
+        RenderWidget::DEFAULT_WIDTH,
+        RenderWidget::DEFAULT_HEIGHT
+    );
 }
 
 int EmuWindow::init(int argc, char** argv)
@@ -157,6 +206,7 @@ int EmuWindow::load_exec(const char* file_name, bool skip_BIOS)
         QByteArray file_data(exec_file.readAll());
 
         emu_thread.load_ELF(
+            file_name,
             reinterpret_cast<uint8_t *>(file_data.data()),
             exec_file.size()
         );
@@ -176,6 +226,12 @@ int EmuWindow::load_exec(const char* file_name, bool skip_BIOS)
         if (skip_BIOS)
             emu_thread.set_skip_BIOS_hack(SKIP_HACK::LOAD_DISC);
     }
+    else if (QString::compare(ext, "bin", Qt::CaseInsensitive) == 0)
+    {
+        emu_thread.load_CDVD(file_name, CDVD_CONTAINER::BIN_CUE);
+        if (skip_BIOS)
+            emu_thread.set_skip_BIOS_hack(SKIP_HACK::LOAD_DISC);
+    }
     else if (QString::compare(ext, "gsd", Qt::CaseInsensitive) == 0)
         emu_thread.gsdump_read(file_name);
     else
@@ -183,9 +239,6 @@ int EmuWindow::load_exec(const char* file_name, bool skip_BIOS)
         printf("Unrecognized file format %s\n", qPrintable(file_info.suffix()));
         return 1;
     }
-
-    set_ee_mode();
-    set_vu1_mode();
 
     current_ROM = file_info;
     emu_thread.unpause(PAUSE_EVENT::GAME_NOT_LOADED);
@@ -259,24 +312,7 @@ void EmuWindow::create_menu()
         recent_menu->addAction(recent_item_action);
     }
 
-    connect(&Settings::instance(), &Settings::rom_path_added, this, [=](QString path) {
-        auto new_action = new QAction(path);
-        auto top_action = recent_menu->actions().first();
-
-        connect(new_action, &QAction::triggered, this, [=]() {
-            load_exec(new_action->text().toLocal8Bit(), true);
-        });
-
-        recent_menu->insertAction(top_action, new_action);
-
-        if (recent_menu->actions().contains(default_action))
-            recent_menu->removeAction(default_action);
-    });
-
-    recent_menu->addSeparator();
-
     auto clear_action = new QAction(tr("Clear List"));
-
     connect(clear_action, &QAction::triggered, this, [=]() {
         Settings::instance().clear_rom_paths();
         for (auto& old_action : recent_menu->actions())
@@ -289,6 +325,27 @@ void EmuWindow::create_menu()
         recent_menu->addAction(clear_action);
     });
 
+    connect(&Settings::instance(), &Settings::rom_path_added, this, [=](QString path) {
+        recent_menu->clear();
+
+        for (auto& recent_file : Settings::instance().recent_roms)
+        {
+            auto recent_item_action = new QAction(recent_file);
+            connect(recent_item_action, &QAction::triggered, this, [=]() {
+                load_exec(recent_item_action->text().toLocal8Bit(), true);
+            });
+
+            recent_menu->addAction(recent_item_action);
+        }
+
+        if (recent_menu->actions().contains(default_action))
+            recent_menu->removeAction(default_action);
+
+        recent_menu->addSeparator();
+        recent_menu->addAction(clear_action);
+    });
+
+    recent_menu->addSeparator();
     recent_menu->addAction(clear_action);
 
     file_menu->addMenu(recent_menu);
@@ -383,6 +440,9 @@ void EmuWindow::create_menu()
                 RenderWidget::DEFAULT_WIDTH,
                 RenderWidget::DEFAULT_HEIGHT
             );
+
+            Settings::instance().scaling_factor = factor;
+            Settings::instance().save();
         });
 
         window_menu->addAction(scale_action);
@@ -491,6 +551,17 @@ void EmuWindow::keyPressEvent(QKeyEvent *event)
             emit update_joystick(JOYSTICK::LEFT, JOYSTICK_AXIS::Y, 0xFF);
             break;
         case Qt::Key_F1:
+            if(!Settings::instance().recent_roms.isEmpty())
+                load_exec(Settings::instance().recent_roms.first().toLocal8Bit(), true);
+            break;
+        case Qt::Key_F2:
+            if(!Settings::instance().recent_roms.isEmpty())
+            {
+                load_exec(Settings::instance().recent_roms.first().toLocal8Bit(), true);
+                load_state();
+            }
+            break;
+        case Qt::Key_F7:
             emu_thread.gsdump_single_frame();
             break;
         case Qt::Key_F8:
@@ -553,31 +624,36 @@ void EmuWindow::keyReleaseEvent(QKeyEvent *event)
 
 void EmuWindow::update_FPS(double FPS)
 {
-    if (disable_fps_updates)
-        return;
-
     if(FPS > 0.01) {
-        frametime_avg = 0.8 * frametime_avg + 0.2 / FPS;
         frametime_list[frametime_list_index] = 1. / FPS;
         frametime_list_index = (frametime_list_index + 1) % 60;
     }
 
     double worst_frame_time = 0;
+    frametime_avg = 0;
+
     for(int i = 0; i < 60; i++)
     {
         if(frametime_list[i] > worst_frame_time) worst_frame_time = frametime_list[i];
+        frametime_avg += frametime_list[i];
     }
 
-    framerate_avg = 0.8 * framerate_avg + 0.2 * FPS;
+    if (frametime_avg > 0)
+    {
+        frametime_avg = frametime_avg / 60.0;
+        framerate_avg = 1.0 / frametime_avg;
+    }
+    else
+        framerate_avg = 0;
 
-    // avoid multiple copies
-    QString status = QString("FPS: %1 (%2 ms, %3 ms worst)- %4 [EE: %5] [VU1: %6]").arg(
-        QString::number(framerate_avg, 'f', 1), QString::number(frametime_avg * 1000., 'f', 1),
-        QString::number(worst_frame_time * 1000., 'f', 1),
-        current_ROM.fileName(), ee_mode, vu1_mode
-    );
+    avg_framerate->setText(QString("%1 fps").arg(
+        QString::number(framerate_avg, 'f', 1)
+    ));
 
-    setWindowTitle(status);
+    frametime->setText(QString("%1 ms / %2 ms").arg(
+        QString::number(frametime_avg * 1000., 'f', 1),
+        QString::number(worst_frame_time * 1000., 'f', 1)
+    ));
 }
 
 void EmuWindow::bios_error(QString err)
@@ -629,7 +705,7 @@ void EmuWindow::open_file_no_skip()
     emu_thread.pause(PAUSE_EVENT::FILE_DIALOG);
     QString file_name = QFileDialog::getOpenFileName(
         this, tr("Open Rom"), Settings::instance().last_used_directory,
-        tr("ROM Files (*.elf *.iso *.cso)")
+        tr("ROM Files (*.elf *.iso *.cso *.bin)")
     );
 
     if (!file_name.isEmpty())
@@ -646,7 +722,7 @@ void EmuWindow::open_file_skip()
     emu_thread.pause(PAUSE_EVENT::FILE_DIALOG);
     QString file_name = QFileDialog::getOpenFileName(
         this, tr("Open Rom"), Settings::instance().last_used_directory,
-        tr("ROM Files (*.elf *.iso *.cso)")
+        tr("ROM Files (*.elf *.iso *.cso *.bin)")
     );
 
     if (!file_name.isEmpty())
@@ -669,8 +745,9 @@ void EmuWindow::load_state()
         .append(file_name)
         .append(".snp");
 
-    if (!emu_thread.load_state(save_state.toLocal8Bit()))
+    if (!QFile::exists(save_state) || !emu_thread.load_state(save_state.toLocal8Bit()))
         printf("Failed to load %s\n", qPrintable(save_state));
+
     emu_thread.unpause(PAUSE_EVENT::FILE_DIALOG);
 }
 
@@ -692,45 +769,61 @@ void EmuWindow::save_state()
 
 void EmuWindow::show_default_view()
 {
-    disable_fps_updates = true;
+    statusBar()->removeWidget(avg_framerate);
+    statusBar()->removeWidget(frametime);
+
     stack_widget->setCurrentIndex(0);
     setWindowTitle(QApplication::applicationName());
 }
 
 void EmuWindow::show_render_view()
 {
-    disable_fps_updates = false;
+    statusBar()->addWidget(avg_framerate);
+    statusBar()->addWidget(frametime);
+
+    avg_framerate->show();
+    frametime->show();
+
     stack_widget->setCurrentIndex(1);
 }
 
-void EmuWindow::set_ee_mode()
+void EmuWindow::update_status()
 {
     CPU_MODE mode;
     if (Settings::instance().ee_jit_enabled)
     {
         mode = CPU_MODE::JIT;
-        ee_mode = "JIT";
+        ee_mode->setText("EE: JIT");
     }
     else
     {
         mode = CPU_MODE::INTERPRETER;
-        ee_mode = "Interpreter";
+        ee_mode->setText("EE: Interpreter");
     }
-    emu_thread.set_ee_mode(mode);
-}
 
-void EmuWindow::set_vu1_mode()
-{
-    CPU_MODE mode;
+    emu_thread.set_ee_mode(mode);
+
+    if (Settings::instance().vu0_jit_enabled)
+    {
+        mode = CPU_MODE::JIT;
+        vu0_mode->setText("VU0: JIT");
+    }
+    else
+    {
+        mode = CPU_MODE::INTERPRETER;
+        vu0_mode->setText("VU0: Interpreter");
+    }
+    emu_thread.set_vu0_mode(mode);
+
     if (Settings::instance().vu1_jit_enabled)
     {
         mode = CPU_MODE::JIT;
-        vu1_mode = "JIT";
+        vu1_mode->setText("VU1: JIT");
     }
     else
     {
         mode = CPU_MODE::INTERPRETER;
-        vu1_mode = "Interpreter";
+        vu1_mode->setText("VU1: Interpreter");
     }
     emu_thread.set_vu1_mode(mode);
 }
