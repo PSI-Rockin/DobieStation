@@ -16,10 +16,37 @@ enum Opcode
 
 class Instruction
 {
+
+    enum class OperandType : uint16_t
+    {
+        Immediate,
+        Register,
+        Memory
+    };
+
+    enum class RegisterType : uint16_t
+    {
+        Dest,
+        Source,
+        Source2
+    };
+
+    struct alignas(16) InstructionInfo
+    {
+        public:
+            OperandType operand_type;
+            RegisterType reg_type;
+            union
+            {
+                uint32_t reg;
+                uint64_t immediate;
+            } value;
+    };
+
     private:
         uint32_t jump_dest, jump_fail_dest;
         uint32_t return_addr;
-
+        
         int dest, base;
         uint64_t source, source2;
         uint16_t cycle_count;
