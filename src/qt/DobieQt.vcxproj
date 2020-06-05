@@ -28,7 +28,7 @@
   </PropertyGroup>
 
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-  
+
   <!-- configuration defaults -->
   <PropertyGroup Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -81,15 +81,16 @@
 
   <!-- cpp files -->
   <ItemGroup>
-    <ClCompile Include="$(UIDir)emuthread.cpp" />
-    <ClCompile Include="$(UIDir)emuwindow.cpp" />
-    <ClCompile Include="$(UIDir)renderwidget.cpp" />
-    <ClCompile Include="$(UIDir)settingswindow.cpp" />
-    <ClCompile Include="$(UIDir)gamelistwidget.cpp" />
-    <ClCompile Include="$(UIDir)memcardwindow.cpp" />
-    <ClCompile Include="$(UIDir)bios.cpp" />
-    <ClCompile Include="$(UIDir)settings.cpp" />
-    <ClCompile Include="$(UIDir)main.cpp" />
+    <ClCompile Include="emuthread.cpp" />
+    <ClCompile Include="emuwindow.cpp" />
+    <ClCompile Include="renderwidget.cpp" />
+    <ClCompile Include="settingswindow.cpp" />
+    <ClCompile Include="gamelistwidget.cpp" />
+    <ClCompile Include="memcardwindow.cpp" />
+    <ClCompile Include="pad_configure.cpp" />
+    <ClCompile Include="bios.cpp" />
+    <ClCompile Include="settings.cpp" />
+    <ClCompile Include="main.cpp" />
   </ItemGroup>
 
   <!-- headers -->
@@ -99,13 +100,14 @@
 
   <!-- moc files -->
   <ItemGroup>
-    <QtMoc Include="$(UIDir)settings.hpp" />
-    <QtMoc Include="$(UIDir)emuthread.hpp" />
-    <QtMoc Include="$(UIDir)emuwindow.hpp" />
-    <QtMoc Include="$(UIDir)renderwidget.hpp" />
-    <QtMoc Include="$(UIDir)settingswindow.hpp" />
-    <QtMoc Include="$(UIDir)gamelistwidget.hpp" />
-    <QtMoc Include="$(UIDir)memcardwindow.hpp" />
+    <QtMoc Include="settings.hpp" />
+    <QtMoc Include="emuthread.hpp" />
+    <QtMoc Include="emuwindow.hpp" />
+    <QtMoc Include="renderwidget.hpp" />
+    <QtMoc Include="settingswindow.hpp" />
+    <QtMoc Include="gamelistwidget.hpp" />
+    <QtMoc Include="memcardwindow.hpp" />
+    <QtMoc Include="pad_configure.hpp" />
   </ItemGroup>
 
   <!-- moc compile -->
@@ -122,5 +124,13 @@
   <!--<ItemGroup>
     <QtUI Include="memcardwindow.ui" />
   </ItemGroup>
+
+    <ClCompile Include="$(QtToolOutDir)moc_pad_configre.cpp" />
+  </ItemGroup>
+  <!-- ui files -->
+  <ItemGroup>
+    <QtUI Include="pad_configure.ui" />
+  </ItemGroup>
+
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>
