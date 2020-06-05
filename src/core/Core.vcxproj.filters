@@ -3,434 +3,432 @@
   <ItemGroup>
     <Filter Include="Headers">
       <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
-      <Extensions>h;hpp;hxx;hm;inl;inc;xsd</Extensions>
     </Filter>
     <Filter Include="Source">
       <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
-      <Extensions>cpp;c;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
     </Filter>
     <Filter Include="x86">
       <UniqueIdentifier>{62bcfebb-8387-4eba-8646-ae3a84de922d}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="$(CoreDir)ee\ee_jit.cpp">
+    <ClCompile Include="ee\ee_jit.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\ee_jit64.cpp">
+    <ClCompile Include="ee\ee_jit64.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\ee_jit64_cop2.cpp">
+    <ClCompile Include="ee\ee_jit64_cop2.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\ee_jit64_fpu.cpp">
+    <ClCompile Include="ee\ee_jit64_fpu.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\ee_jit64_fpu_avx.cpp">
+    <ClCompile Include="ee\ee_jit64_fpu_avx.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\ee_jit64_gpr.cpp">
+    <ClCompile Include="ee\ee_jit64_gpr.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\ee_jit64_mmi.cpp">
+    <ClCompile Include="ee\ee_jit64_mmi.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\ee_jittrans.cpp">
+    <ClCompile Include="ee\ee_jittrans.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)tests\iop\alu.cpp">
+    <ClCompile Include="tests\iop\alu.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\bios_hle.cpp">
+    <ClCompile Include="ee\bios_hle.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)iop\cdvd\bincuereader.cpp">
+    <ClCompile Include="iop\cdvd\bincuereader.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)iop\cdvd\cdvd.cpp">
+    <ClCompile Include="iop\cdvd\cdvd.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)iop\cdvd\cso_reader.cpp">
+    <ClCompile Include="iop\cdvd\cso_reader.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)iop\cdvd\iso_reader.cpp">
+    <ClCompile Include="iop\cdvd\iso_reader.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\ipu\chromtable.cpp">
+    <ClCompile Include="ee\ipu\chromtable.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\ipu\codedblockpattern.cpp">
+    <ClCompile Include="ee\ipu\codedblockpattern.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\cop0.cpp">
+    <ClCompile Include="ee\cop0.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\cop1.cpp">
+    <ClCompile Include="ee\cop1.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\ipu\dct_coeff.cpp">
+    <ClCompile Include="ee\ipu\dct_coeff.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\ipu\dct_coeff_table0.cpp">
+    <ClCompile Include="ee\ipu\dct_coeff_table0.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\ipu\dct_coeff_table1.cpp">
+    <ClCompile Include="ee\ipu\dct_coeff_table1.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\dmac.cpp">
+    <ClCompile Include="ee\dmac.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)jitcommon\emitter64.cpp">
+    <ClCompile Include="jitcommon\emitter64.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\emotion.cpp">
+    <ClCompile Include="ee\emotion.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\emotion_fpu.cpp">
+    <ClCompile Include="ee\emotion_fpu.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\emotion_mmi.cpp">
+    <ClCompile Include="ee\emotion_mmi.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\emotion_special.cpp">
+    <ClCompile Include="ee\emotion_special.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\emotion_vu0.cpp">
+    <ClCompile Include="ee\emotion_vu0.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\emotionasm.cpp">
+    <ClCompile Include="ee\emotionasm.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\emotiondisasm.cpp">
+    <ClCompile Include="ee\emotiondisasm.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\emotioninterpreter.cpp">
+    <ClCompile Include="ee\emotioninterpreter.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)emulator.cpp">
+    <ClCompile Include="emulator.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)errors.cpp">
+    <ClCompile Include="errors.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)iop\gamepad.cpp">
+    <ClCompile Include="iop\gamepad.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)gif.cpp">
+    <ClCompile Include="gif.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)gs.cpp">
+    <ClCompile Include="gs.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)gscontext.cpp">
+    <ClCompile Include="gscontext.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)gsmem.cpp">
+    <ClCompile Include="gsmem.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)gsregisters.cpp">
+    <ClCompile Include="gsregisters.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)gsthread.cpp">
+    <ClCompile Include="gsthread.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\intc.cpp">
+    <ClCompile Include="ee\intc.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)iop\iop.cpp">
+    <ClCompile Include="iop\iop.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)iop\iop_cop0.cpp">
+    <ClCompile Include="iop\iop_cop0.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)iop\iop_dma.cpp">
+    <ClCompile Include="iop\iop_dma.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)iop\iop_intc.cpp">
+    <ClCompile Include="iop\iop_intc.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)iop\iop_interpreter.cpp">
+    <ClCompile Include="iop\iop_interpreter.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)iop\iop_timers.cpp">
+    <ClCompile Include="iop\iop_timers.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\ipu\ipu.cpp">
+    <ClCompile Include="ee\ipu\ipu.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\ipu\ipu_fifo.cpp">
+    <ClCompile Include="ee\ipu\ipu_fifo.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)jitcommon\ir_block.cpp">
+    <ClCompile Include="jitcommon\ir_block.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)jitcommon\ir_instr.cpp">
+    <ClCompile Include="jitcommon\ir_instr.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)jitcommon\jitcache.cpp">
+    <ClCompile Include="jitcommon\jitcache.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\ipu\lumtable.cpp">
+    <ClCompile Include="ee\ipu\lumtable.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\ipu\mac_addr_inc.cpp">
+    <ClCompile Include="ee\ipu\mac_addr_inc.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\ipu\mac_b_pic.cpp">
+    <ClCompile Include="ee\ipu\mac_b_pic.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\ipu\mac_i_pic.cpp">
+    <ClCompile Include="ee\ipu\mac_i_pic.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\ipu\mac_p_pic.cpp">
+    <ClCompile Include="ee\ipu\mac_p_pic.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)iop\memcard.cpp">
+    <ClCompile Include="iop\memcard.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\ipu\motioncode.cpp">
+    <ClCompile Include="ee\ipu\motioncode.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)serialize.cpp">
+    <ClCompile Include="serialize.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)sif.cpp">
+    <ClCompile Include="sif.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)iop\sio2.cpp">
+    <ClCompile Include="iop\sio2.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)iop\spu.cpp">
+    <ClCompile Include="iop\spu.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\timers.cpp">
+    <ClCompile Include="ee\timers.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\vif.cpp">
+    <ClCompile Include="ee\vif.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\ipu\vlc_table.cpp">
+    <ClCompile Include="ee\ipu\vlc_table.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\vu.cpp">
+    <ClCompile Include="ee\vu.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\vu_disasm.cpp">
+    <ClCompile Include="ee\vu_disasm.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\vu_interpreter.cpp">
+    <ClCompile Include="ee\vu_interpreter.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\vu_jit.cpp">
+    <ClCompile Include="ee\vu_jit.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\vu_jit64.cpp">
+    <ClCompile Include="ee\vu_jit64.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)ee\vu_jittrans.cpp">
+    <ClCompile Include="ee\vu_jittrans.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)scheduler.cpp">
+    <ClCompile Include="scheduler.cpp">
       <Filter>Source</Filter>
     </ClCompile>
-    <ClCompile Include="$(CoreDir)iop\firewire.cpp">
+    <ClCompile Include="iop\firewire.cpp">
       <Filter>Source</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="$(CoreDir)ee\bios_hle.hpp">
+    <ClInclude Include="ee\bios_hle.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)ee\ee_jit.hpp">
+    <ClInclude Include="ee\ee_jit.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)ee\ee_jit64.hpp">
+    <ClInclude Include="ee\ee_jit64.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)ee\ee_jittrans.hpp">
+    <ClInclude Include="ee\ee_jittrans.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)iop\cdvd\bincuereader.hpp">
+    <ClInclude Include="iop\cdvd\bincuereader.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)iop\cdvd\cdvd.hpp">
+    <ClInclude Include="iop\cdvd\cdvd.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)iop\cdvd\cdvd_container.hpp">
+    <ClInclude Include="iop\cdvd\cdvd_container.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)iop\cdvd\cso_reader.hpp">
+    <ClInclude Include="iop\cdvd\cso_reader.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)iop\cdvd\iso_reader.hpp">
+    <ClInclude Include="iop\cdvd\iso_reader.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)ee\ipu\chromtable.hpp">
+    <ClInclude Include="ee\ipu\chromtable.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)circularFIFO.hpp">
+    <ClInclude Include="circularFIFO.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)ee\ipu\codedblockpattern.hpp">
+    <ClInclude Include="ee\ipu\codedblockpattern.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)ee\cop0.hpp">
+    <ClInclude Include="ee\cop0.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)ee\cop1.hpp">
+    <ClInclude Include="ee\cop1.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)ee\ipu\dct_coeff.hpp">
+    <ClInclude Include="ee\ipu\dct_coeff.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)ee\ipu\dct_coeff_table0.hpp">
+    <ClInclude Include="ee\ipu\dct_coeff_table0.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)ee\ipu\dct_coeff_table1.hpp">
+    <ClInclude Include="ee\ipu\dct_coeff_table1.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)ee\dmac.hpp">
+    <ClInclude Include="ee\dmac.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)jitcommon\emitter64.hpp">
+    <ClInclude Include="jitcommon\emitter64.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)ee\emotion.hpp">
+    <ClInclude Include="ee\emotion.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)ee\emotionasm.hpp">
+    <ClInclude Include="ee\emotionasm.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)ee\emotiondisasm.hpp">
+    <ClInclude Include="ee\emotiondisasm.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)ee\emotioninterpreter.hpp">
+    <ClInclude Include="ee\emotioninterpreter.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)emulator.hpp">
+    <ClInclude Include="emulator.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)errors.hpp">
+    <ClInclude Include="errors.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)iop\gamepad.hpp">
+    <ClInclude Include="iop\gamepad.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)gif.hpp">
+    <ClInclude Include="gif.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)gs.hpp">
+    <ClInclude Include="gs.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)gscontext.hpp">
+    <ClInclude Include="gscontext.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)gsmem.hpp">
+    <ClInclude Include="gsmem.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)gsregisters.hpp">
+    <ClInclude Include="gsregisters.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)gsthread.hpp">
+    <ClInclude Include="gsthread.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)int128.hpp">
+    <ClInclude Include="int128.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)ee\intc.hpp">
+    <ClInclude Include="ee\intc.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)iop\iop.hpp">
+    <ClInclude Include="iop\iop.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)iop\iop_cop0.hpp">
+    <ClInclude Include="iop\iop_cop0.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)iop\iop_dma.hpp">
+    <ClInclude Include="iop\iop_dma.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClCompile Include="$(CoreDir)iop\iop_intc.hpp">
+    <ClCompile Include="iop\iop_intc.hpp">
       <Filter>Headers</Filter>
     </ClCompile>
-    <ClInclude Include="$(CoreDir)iop\iop_interpreter.hpp">
+    <ClInclude Include="iop\iop_interpreter.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)iop\iop_timers.hpp">
+    <ClInclude Include="iop\iop_timers.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)ee\ipu\ipu.hpp">
+    <ClInclude Include="ee\ipu\ipu.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)ee\ipu\ipu_fifo.hpp">
+    <ClInclude Include="ee\ipu\ipu_fifo.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)jitcommon\ir_block.hpp">
+    <ClInclude Include="jitcommon\ir_block.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)jitcommon\ir_instr.hpp">
+    <ClInclude Include="jitcommon\ir_instr.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)jitcommon\jitcache.hpp">
+    <ClInclude Include="jitcommon\jitcache.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)ee\ipu\lumtable.hpp">
+    <ClInclude Include="ee\ipu\lumtable.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)ee\ipu\mac_addr_inc.hpp">
+    <ClInclude Include="ee\ipu\mac_addr_inc.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)ee\ipu\mac_b_pic.hpp">
+    <ClInclude Include="ee\ipu\mac_b_pic.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)ee\ipu\mac_i_pic.hpp">
+    <ClInclude Include="ee\ipu\mac_i_pic.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)ee\ipu\mac_p_pic.hpp">
+    <ClInclude Include="ee\ipu\mac_p_pic.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)iop\memcard.hpp">
+    <ClInclude Include="iop\memcard.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)ee\ipu\motioncode.hpp">
+    <ClInclude Include="ee\ipu\motioncode.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)sif.hpp">
+    <ClInclude Include="sif.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)iop\sio2.hpp">
+    <ClInclude Include="iop\sio2.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)iop\spu.hpp">
+    <ClInclude Include="iop\spu.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)ee\timers.hpp">
+    <ClInclude Include="ee\timers.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)ee\vif.hpp">
+    <ClInclude Include="ee\vif.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)ee\ipu\vlc_table.hpp">
+    <ClInclude Include="ee\ipu\vlc_table.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)ee\vu.hpp">
+    <ClInclude Include="ee\vu.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)ee\vu_disasm.hpp">
+    <ClInclude Include="ee\vu_disasm.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)ee\vu_interpreter.hpp">
+    <ClInclude Include="ee\vu_interpreter.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)ee\vu_jit.hpp">
+    <ClInclude Include="ee\vu_jit.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)ee\vu_jit64.hpp">
+    <ClInclude Include="ee\vu_jit64.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)ee\vu_jittrans.hpp">
+    <ClInclude Include="ee\vu_jittrans.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
-    <ClInclude Include="$(CoreDir)scheduler.hpp">
+    <ClInclude Include="scheduler.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
     <ClInclude Include="..\src\core\iop\firewire.hpp">
@@ -440,7 +438,7 @@
   <ItemGroup>
     <None Include="application\application.pro" />
     <None Include="$(RootDir)README.md" />
-    <None Include="$(CoreDir)jitcommon\ir_instrlist.inc">
+    <None Include="jitcommon\ir_instrlist.inc">
       <Filter>Headers</Filter>
     </None>
     <None Include="$(RootDir)appveyor.yml" />
