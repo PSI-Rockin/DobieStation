@@ -1,0 +1,447 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Headers">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="ee\ee_jit.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\ee_jit64.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\ee_jit64_cop2.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\ee_jit64_fpu.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\ee_jit64_fpu_avx.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\ee_jit64_gpr.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\ee_jit64_mmi.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\ee_jittrans.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="tests\iop\alu.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\bios_hle.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="iop\cdvd\bincuereader.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="iop\cdvd\cdvd.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="iop\cdvd\cso_reader.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="iop\cdvd\iso_reader.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\ipu\chromtable.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\ipu\codedblockpattern.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\cop0.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\cop1.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\ipu\dct_coeff.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\ipu\dct_coeff_table0.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\ipu\dct_coeff_table1.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\dmac.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="jitcommon\emitter64.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\emotion.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\emotion_fpu.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\emotion_mmi.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\emotion_special.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\emotion_vu0.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\emotionasm.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\emotiondisasm.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\emotioninterpreter.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="emulator.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="errors.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="iop\gamepad.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="gif.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="gs.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="gscontext.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="gsmem.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="gsregisters.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="gsthread.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\intc.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="iop\iop.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="iop\iop_cop0.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="iop\iop_dma.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="iop\iop_intc.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="iop\iop_interpreter.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="iop\iop_timers.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\ipu\ipu.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\ipu\ipu_fifo.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="jitcommon\ir_block.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="jitcommon\ir_instr.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="jitcommon\jitcache.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\ipu\lumtable.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\ipu\mac_addr_inc.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\ipu\mac_b_pic.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\ipu\mac_i_pic.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\ipu\mac_p_pic.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="iop\memcard.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\ipu\motioncode.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="serialize.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="sif.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="iop\sio2.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="iop\spu.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\timers.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\vif.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\ipu\vlc_table.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\vu.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\vu_disasm.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\vu_interpreter.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\vu_jit.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\vu_jit64.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="ee\vu_jittrans.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="scheduler.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+    <ClCompile Include="iop\firewire.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="ee\bios_hle.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ee\ee_jit.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ee\ee_jit64.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ee\ee_jittrans.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="iop\cdvd\cdvd.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="iop\cdvd\cdvd_container.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="iop\cdvd\cso_reader.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="iop\cdvd\iso_reader.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ee\ipu\chromtable.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="circularFIFO.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ee\ipu\codedblockpattern.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ee\cop0.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ee\cop1.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ee\ipu\dct_coeff.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ee\ipu\dct_coeff_table0.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ee\ipu\dct_coeff_table1.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ee\dmac.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="jitcommon\emitter64.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ee\emotion.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ee\emotionasm.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ee\emotiondisasm.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ee\emotioninterpreter.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="emulator.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="errors.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="iop\gamepad.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="gif.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="gs.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="gscontext.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="gsmem.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="gsregisters.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="gsthread.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="int128.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ee\intc.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="iop\iop.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="iop\iop_cop0.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="iop\iop_dma.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="iop\iop_interpreter.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="iop\iop_timers.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ee\ipu\ipu.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ee\ipu\ipu_fifo.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="jitcommon\ir_block.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="jitcommon\ir_instr.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="jitcommon\jitcache.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ee\ipu\lumtable.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ee\ipu\mac_addr_inc.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ee\ipu\mac_b_pic.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ee\ipu\mac_i_pic.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ee\ipu\mac_p_pic.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="iop\memcard.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ee\ipu\motioncode.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="sif.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="iop\sio2.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="iop\spu.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ee\timers.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ee\vif.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ee\ipu\vlc_table.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ee\vu.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ee\vu_disasm.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ee\vu_interpreter.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ee\vu_jit.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ee\vu_jit64.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="ee\vu_jittrans.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="scheduler.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="iop\firewire.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="iop\cdvd\bincuereader.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+    <ClInclude Include="iop\iop_intc.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="application\application.pro" />
+    <None Include="$(RootDir)README.md" />
+    <None Include="jitcommon\ir_instrlist.inc">
+      <Filter>Headers</Filter>
+    </None>
+    <None Include="$(RootDir)appveyor.yml" />
+    <None Include="$(RootDir)CMakeLists.txt" />
+    <None Include="$(RootDir)LICENSE" />
+    <None Include="$(RootDir).gitignore" />
+    <None Include="$(RootDir).github\*" />
+  </ItemGroup>
+</Project>
