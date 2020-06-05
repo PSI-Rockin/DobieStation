@@ -3,9 +3,17 @@
 #include <cstdint>
 #include <string>
 
+struct MemcardSpecs
+{
+    uint16_t page_size;
+    uint16_t erase_block_pages;
+    uint32_t page_count;
+};
+
 class Memcard
 {
     private:
+        MemcardSpecs specs;
         uint8_t* mem;
 
         int cmd_length;

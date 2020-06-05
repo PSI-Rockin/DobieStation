@@ -48,10 +48,17 @@ bool Memcard::open(std::string file_name)
 
     if (file.is_open())
     {
+        //Specs are currently hardcoded for a standard 8 MB Sony memory card
+        specs.page_size = 0x200;
+        specs.erase_block_pages = 16;
+        specs.page_count = 0x4000;
         file_opened = true;
 
-        mem = new uint8_t[0x840000];
-        file.read((char*)mem, 0x840000);
+        //On standard memory cards, an additional 16 bytes is included in every page for ECC.
+        size_t memcard_size = (specs.page_size + 16) * specs.page_count;
+
+        mem = new uint8_t[memcard_size];
+        file.read((char*)mem, memcard_size);
         file.close();
 
         this->file_name = file_name;
@@ -128,27 +135,27 @@ uint8_t Memcard::write_serial(uint8_t data)
                 response_end();
                 break;
             case 0x26:
-                //Get specs - currently hardcoded for standard Sony 8 MB memory cards
+                //Get specs
             {
                 cmd_length = 11;
                 write_response(0x2B);
 
-                //Sector size in bytes (512)
-                write_response(0x00);
-                write_response(0x02);
+                //Page size, not including ECC area
+                write_response(specs.page_size & 0xFF);
+                write_response(specs.page_size >> 8);
 
-                //Erase block pages (16)
-                write_response(0x10);
-                write_response(0x00);
+                //Amount of pages in an erase block
+                write_response(specs.erase_block_pages & 0xFF);
+                write_response(specs.erase_block_pages >> 8);
 
-                //Total size in sectors (0x4000)
-                write_response(0x00);
-                write_response(0x40);
-                write_response(0x00);
-                write_response(0x00);
+                //Page count
+                write_response(specs.page_count & 0xFF);
+                write_response((specs.page_count >> 8) & 0xFF);
+                write_response((specs.page_count >> 16) & 0xFF);
+                write_response(specs.page_count >> 24);
 
-                //XOR checksum (0x52)
-                write_response(0x52);
+                //XOR checksum
+                write_response(do_checksum((uint8_t*)&specs, sizeof(specs)));
 
                 write_response(terminator);
             }
