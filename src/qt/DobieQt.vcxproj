@@ -103,7 +103,7 @@
     <ClCompile Include="$(QtToolOutDir)moc_gamelistwidget.cpp" />
     <ClCompile Include="$(QtToolOutDir)moc_memcardwindow.cpp" />  
   </ItemGroup>
-  <!—- ui files —>
+  <!—- ui files -—>
   <ItemGroup>
     <QtUI Include="memcardwindow.ui" />
   </ItemGroup>
