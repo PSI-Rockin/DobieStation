@@ -1,4 +1,5 @@
 #include "ir_instr.hpp"
+#include "../errors.hpp"
 
 namespace IR
 {
@@ -8,16 +9,62 @@ Instruction::Instruction(Opcode op) : op(op)
     jump_dest = 0;
     jump_fail_dest = 0;
     return_addr = 0;
-    dest = 0;
     base = 0;
-    source = 0;
-    source2 = 0;
+    ninfo = 0;
     cycle_count = 0;
     bc = 0;
     field = 0;
     field2 = 0;
     is_likely = 0;
     is_link = 0;
+}
+
+InstructionInfo *Instruction::get_dest_info()
+{
+    for (int i = 0; i < ninfo; ++i)
+    {
+        if (info[i].reg_type == RegisterType::Dest)
+            return &info[i];
+    }
+
+    return nullptr;
+}
+
+InstructionInfo *Instruction::get_source_info()
+{
+    for (int i = 0; i < ninfo; ++i)
+    {
+        if (info[i].reg_type == RegisterType::Source)
+            return &info[i];
+    }
+
+    return nullptr;
+}
+
+InstructionInfo *Instruction::get_source2_info()
+{
+    for (int i = 0; i < ninfo; ++i)
+    {
+        if (info[i].reg_type == RegisterType::Source2)
+            return &info[i];
+    }
+
+    return nullptr;
+}
+
+void Instruction::append_info(uint64_t value, OperandType operandtype, RegisterType regtype)
+{
+    if ((int)&info[ninfo] - (int)&info[0] >= sizeof(info))
+        Errors::die("Buffer overflow on info: %s, %s:%d", __FUNCTION__, __FILE__, __LINE__);
+
+    if (operandtype == OperandType::Immediate)
+        info[ninfo].value.immediate = value;
+    else if (operandtype == OperandType::Register)
+        info[ninfo].value.reg = value;
+    info[ninfo].operand_type = operandtype;
+    info[ninfo].reg_type = regtype;
+
+    ++ninfo;
 }
 
 uint32_t Instruction::get_jump_dest() const
@@ -35,9 +82,28 @@ uint32_t Instruction::get_return_addr() const
     return return_addr;
 }
 
-int Instruction::get_dest() const
+/*
+    Note that destination can be represented as an immediate value in some rare circumstances.
+    An example of this would be for store operations, where the actual address could be determined absolutely at compile time
+    Particularly for operation pairs such as
+
+    lui $v1, 0x36
+    sw $v0, 0x7470($v1)
+
+    Which ideally gets converted into an instruction which stores at the absolute address 0x367470
+*/
+uint64_t Instruction::get_dest()
 {
-    return dest;
+    InstructionInfo *info = get_dest_info();
+    if (info != nullptr)
+    {
+        if (info->operand_type == OperandType::Register)
+            return info->value.reg;
+        else if (info->operand_type == OperandType::Immediate)
+            return info->value.immediate;
+    }
+
+    Errors::die("Value does not exist: %s, %s:%d", __FUNCTION__, __FILE__, __LINE__);
 }
 
 int Instruction::get_base() const
@@ -45,14 +111,32 @@ int Instruction::get_base() const
     return base;
 }
 
-uint64_t Instruction::get_source() const
+uint64_t Instruction::get_source()
 {
-    return source;
+    InstructionInfo *info = get_source_info();
+    if (info != nullptr)
+    {
+        if (info->operand_type == OperandType::Register)
+            return info->value.reg;
+        else if (info->operand_type == OperandType::Immediate)
+            return info->value.immediate;
+    }
+
+    Errors::die("Value does not exist: %s, %s:%d", __FUNCTION__, __FILE__, __LINE__);
 }
 
-uint64_t Instruction::get_source2() const
+uint64_t Instruction::get_source2()
 {
-    return source2;
+    InstructionInfo *info = get_source2_info();
+    if (info != nullptr)
+    {
+        if (info->operand_type == OperandType::Register)
+            return info->value.reg;
+        else if (info->operand_type == OperandType::Immediate)
+            return info->value.immediate;
+    }
+
+    Errors::die("Value does not exist: %s, %s:%d", __FUNCTION__, __FILE__, __LINE__);
 }
 
 uint16_t Instruction::get_cycle_count() const
