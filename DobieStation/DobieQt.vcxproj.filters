@@ -14,7 +14,6 @@
       <Extensions>cpp;c;cxx;moc;h;def;odl;idl;res;</Extensions>
     </Filter>
   </ItemGroup>
-
   <ItemGroup>
     <ClCompile Include="$(UIDir)bios.cpp">
       <Filter>Source</Filter>
@@ -41,7 +40,6 @@
       <Filter>Source</Filter>
     </ClCompile>
   </ItemGroup>
-
   <ItemGroup>
     <ClCompile Include="$(QtMocOutPrefix)settingswindow.cpp">
       <Filter>Moc</Filter>
@@ -68,7 +66,6 @@
       <Filter>Headers</Filter>
     </ClInclude>
   </ItemGroup>
-
   <ItemGroup>
     <QtMoc Include=".$(UIDir)renderwidget.hpp">
       <Filter>Headers</Filter>
