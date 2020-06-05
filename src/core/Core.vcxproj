@@ -150,7 +150,7 @@
     <ClInclude Include="ee\ee_jit.hpp" />
     <ClInclude Include="ee\ee_jit64.hpp" />
     <ClInclude Include="ee\ee_jittrans.hpp" />
-    <ClInclude Include="iop\cdvd\bincueheader.hpp" />
+    <ClInclude Include="iop\cdvd\bincuereader.hpp" />
     <ClInclude Include="iop\cdvd\cdvd.hpp" />
     <ClInclude Include="iop\cdvd\cdvd_container.hpp" />
     <ClInclude Include="iop\cdvd\cso_reader.hpp" />
