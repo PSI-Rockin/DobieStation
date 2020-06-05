@@ -175,6 +175,10 @@ void GS_REGISTERS::write64_privileged(uint32_t addr, uint64_t value)
             {
                 CSR.VBLANK_generated = false;
             }
+            if (value & 0x200)
+            {
+                reset(true);
+            }
             break;
         case 0x1010:
             printf("[GS_r] Write64 GS_IMR: $%08lX_%08lX\n", value >> 32, value & 0xFFFFFFFF);
@@ -242,6 +246,10 @@ void GS_REGISTERS::write32_privileged(uint32_t addr, uint32_t value)
             if (value & 0x8)
             {
                 CSR.VBLANK_generated = false;
+            }
+            if (value & 0x200)
+            {
+                reset(true);
             }
             break;
         case 0x1010:
@@ -339,7 +347,7 @@ bool GS_REGISTERS::write64(uint32_t addr, uint64_t value)
     return false;
 }
 
-void GS_REGISTERS::reset()
+void GS_REGISTERS::reset(bool soft_reset)
 {
     SMODE1.color_system = 0;
     SMODE1.PLL_loop_divider = 0;
@@ -385,20 +393,23 @@ void GS_REGISTERS::reset()
     IMR.hsync = true;
     IMR.vsync = true;
     IMR.rawt = true;
-    CSR.is_odd_frame = false;
-    CSR.SIGNAL_generated = false;
-    CSR.SIGNAL_stall = false;
-    CSR.SIGNAL_irq_pending = false;
-    CSR.VBLANK_generated = false;
-    CSR.FINISH_generated = false;
-    CSR.FINISH_requested = false;
-    CSR.FIFO_status = 0x1; //Empty
+    if (soft_reset = false)
+    {
+        CSR.is_odd_frame = false;
+        CSR.SIGNAL_generated = false;
+        CSR.SIGNAL_stall = false;
+        CSR.SIGNAL_irq_pending = false;
+        CSR.VBLANK_generated = false;
+        CSR.FINISH_generated = false;
+        CSR.FINISH_requested = false;
+        CSR.FIFO_status = 0x1; //Empty
+
+        SIGLBLID.lbl_id = 0;
+        SIGLBLID.sig_id = 0;
+        SIGLBLID.backup_sig_id = 0;
+    }
     PMODE.circuit1 = false;
     PMODE.circuit2 = false;
-
-    SIGLBLID.lbl_id = 0;
-    SIGLBLID.sig_id = 0;
-    SIGLBLID.backup_sig_id = 0;
 
     set_CRT(false, 0x2, false);
 }
@@ -434,23 +445,38 @@ void GS_REGISTERS::get_resolution(int &w, int &h)
 
 void GS_REGISTERS::get_inner_resolution(int &w, int &h)
 {
-    DISPLAY &current_display = DISPLAY1;
+    int height, width;
+    int display1_magnify_y = DISPLAY1.magnify_y ? DISPLAY1.magnify_y : 1;
+    int display1_magnify_x = DISPLAY1.magnify_x ? DISPLAY1.magnify_x : 4;
+    int display2_magnify_y = DISPLAY2.magnify_y ? DISPLAY2.magnify_y : 1;
+    int display2_magnify_x = DISPLAY2.magnify_x ? DISPLAY2.magnify_x : 4;
+    int display1_height = DISPLAY1.height / display1_magnify_y;
+    int display2_height = DISPLAY2.height / display2_magnify_y;
+    int display1_width = DISPLAY1.width / display1_magnify_x;
+    int display2_width = DISPLAY2.width / display2_magnify_x;
 
-    if (PMODE.circuit1 == true)
+    if (display1_height > display2_height && PMODE.circuit1)
     {
-        current_display = DISPLAY1;
+        height = display1_height;
     }
     else
     {
-        current_display = DISPLAY2;
+        height = display2_height;
     }
-    if (current_display.magnify_x)
-        w = current_display.width / current_display.magnify_x;
+
+    if (display1_width > display2_width && PMODE.circuit1)
+    {
+        width = display1_width;
+    }
     else
-        w = current_display.width >> 2;
-    h = current_display.height;
+    {
+        width = display2_width;
+    }
+
+    h = height;
+    w = width;
     //TODO - Find out why some games double their height
-    if (h >= (w * 1.33))
+    if (h >= (w * 1.3))
         h /= 2;
 }
 

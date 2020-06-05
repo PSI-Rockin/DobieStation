@@ -432,6 +432,7 @@ class GraphicsSynthesizerThread
 
         float log2_lookup[32768][4];
 
+        void soft_reset();
         void event_loop();
 
         //Swizzling routines
@@ -512,7 +513,7 @@ class GraphicsSynthesizerThread
         int32_t orient2D(const Vertex &v1, const Vertex &v2, const Vertex &v3);
         void memdump(uint32_t* target, uint16_t& width, uint16_t& height);
 
-        uint32_t get_CRT_color(DISPFB& dispfb, uint32_t x, uint32_t y);
+        uint32_t get_CRT_color(DISPFB& dispfb, int32_t x, int32_t y);
         void render_CRT(uint32_t* target);
 
         void write64(uint32_t addr, uint64_t value);

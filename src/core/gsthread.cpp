@@ -256,6 +256,8 @@ void GraphicsSynthesizerThread::event_loop()
                     {
                         auto p = data.payload.write64_payload;
                         reg.write64_privileged(p.addr, p.value);
+                        if (p.value == 0x200)
+                            soft_reset();
                         break;
                     }
                     case write32_privileged_t:
@@ -444,8 +446,9 @@ void GraphicsSynthesizerThread::reset()
     frame_count = 0;
 
     COLCLAMP = true;
+    SCANMSK = 0;
 
-    reg.reset();
+    reg.reset(false);
     context1.reset();
     context2.reset();
     PSMCT24_color = 0;
@@ -471,6 +474,22 @@ void GraphicsSynthesizerThread::reset()
     message_queue = std::make_unique<gs_fifo>();
     return_queue = std::make_unique<gs_return_fifo>();
     thread = std::thread(&GraphicsSynthesizerThread::event_loop, this);
+}
+
+void GraphicsSynthesizerThread::soft_reset()
+{
+    COLCLAMP = true;
+    SCANMSK = 0;
+
+    reg.reset(true);
+    context1.reset();
+    context2.reset();
+    PSMCT24_color = 0;
+    PSMCT24_unpacked_count = 0;
+    current_ctx = &context1;
+    current_PRMODE = &PRIM;
+    PRIM.reset();
+    PRMODE.reset();
 }
 
 void GraphicsSynthesizerThread::memdump(uint32_t* target, uint16_t& width, uint16_t& height)
@@ -512,8 +531,11 @@ uint16_t convert_color_down(uint32_t col)
     return (r | (g << 5) | (b << 10) | (a << 15));
 }
 
-uint32_t GraphicsSynthesizerThread::get_CRT_color(DISPFB &dispfb, uint32_t x, uint32_t y)
+uint32_t GraphicsSynthesizerThread::get_CRT_color(DISPFB &dispfb, int32_t x, int32_t y)
 {
+    if (x < 0 || y < 0)
+        return 0;
+
     switch (dispfb.format)
     {
         case 0x0:
@@ -537,22 +559,64 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
     int start_scanline = 0;
     int frame_line_increment = 1;
     int fb_y = 0;
-
-    DISPLAY &cur_disp = reg.DISPLAY1;
-
-    //Makai Kingdom needs to take its display information from Display2
-    if (!reg.PMODE.circuit1)
+    int display1_magnify_y = reg.DISPLAY1.magnify_y ? reg.DISPLAY1.magnify_y : 1;
+    int display1_magnify_x = reg.DISPLAY1.magnify_x ? reg.DISPLAY1.magnify_x : 4;
+    int display2_magnify_y = reg.DISPLAY2.magnify_y ? reg.DISPLAY2.magnify_y : 1;
+    int display2_magnify_x = reg.DISPLAY2.magnify_x ? reg.DISPLAY2.magnify_x : 4;
+    int display1_height = reg.DISPLAY1.height / display1_magnify_y;
+    int display2_height = reg.DISPLAY2.height / display2_magnify_y;
+    int display1_width = reg.DISPLAY1.width / display1_magnify_x;
+    int display2_width = reg.DISPLAY2.width / display2_magnify_x;
+    int display1_y = reg.DISPLAY1.y / display1_magnify_y;
+    int display2_y = reg.DISPLAY2.y / display2_magnify_y;
+    int display1_x = reg.DISPLAY1.x / display1_magnify_x;
+    int display2_x = reg.DISPLAY2.x / display2_magnify_x;
+    int display1_yoffset = 0;
+    int display1_xoffset = 0;
+    int display2_yoffset = 0;
+    int display2_xoffset = 0;
+    bool enable1 = true;
+    bool enable2 = true;
+    //Calculate offsets
+    if (reg.PMODE.circuit1 && reg.PMODE.circuit2)
     {
-        if (!reg.PMODE.circuit2)
-            return;
+        if ((display1_x - display2_x) < 0)
+            display2_xoffset = display2_x - display1_x;
+        else if ((display1_x - display2_x) > 0)
+            display1_xoffset = (display1_x - display2_x);
 
-        cur_disp = reg.DISPLAY2;
+        if ((display1_y - display2_y) < 0)
+            display2_yoffset = display2_y - display1_y;
+        else if ((display1_y - display2_y) > 0)
+            display1_yoffset = (display1_y - display2_y);
     }
+    
 
-    if (cur_disp.magnify_x)
-        width = cur_disp.width / cur_disp.magnify_x;
+    //Get overall picture height, largest will likely cover whole screen
+    if (reg.PMODE.circuit1 && reg.PMODE.circuit2)
+    {
+        if (display1_height >= display2_height)
+            height = display1_height;
+        else
+            height = display2_height;
+
+        if (display1_width >= display2_width)
+            width = display1_width;
+        else
+            width = display2_width;
+    }
+    else if (reg.PMODE.circuit1)
+    {
+        height = display1_height;
+        width = display1_width;
+    }
+    else if (reg.PMODE.circuit2) //Makai Kingdom, SH2, GT4, True Crime needs to take its display information from Display2
+    {
+        height = display2_height;
+        width = display2_width;
+    }
     else
-        width = cur_disp.width >> 2;
+        return;
 
     //TODO - Find out why some games double their height
     //Examples are Pool Paradise, Silent Hill 2
@@ -567,10 +631,8 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
       */
 
     //Check for extremely high heights, slightly higher heights are ok as they are a sort of widescreen resolution
-    if (cur_disp.height >= (width * 1.33))
-        height = cur_disp.height / 2;
-    else
-        height = cur_disp.height;
+    if (height >= (width * 1.3))
+        height = height / 2;
 
     if (reg.SMODE2.interlaced)
     {
@@ -599,13 +661,21 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
             int pixel_x = x;
             int pixel_y = y;
 
-            uint32_t scaled_x1 = reg.DISPFB1.x + x;
-            uint32_t scaled_x2 = reg.DISPFB2.x + x;
-            uint32_t scaled_y1 = reg.DISPFB1.y + fb_y;
-            uint32_t scaled_y2 = reg.DISPFB2.y + fb_y;
+            int32_t scaled_x1 = reg.DISPFB1.x + x - display1_xoffset;
+            int32_t scaled_x2 = reg.DISPFB2.x + x - display2_xoffset;
+            int32_t scaled_y1 = reg.DISPFB1.y + fb_y - display1_yoffset;
+            int32_t scaled_y2 = reg.DISPFB2.y + fb_y - display2_yoffset;
+            enable1 = true;
+            enable2 = true;
 
-            uint32_t output1 = reg.PMODE.circuit1 ? get_CRT_color(reg.DISPFB1, scaled_x1, scaled_y1) : 0;
-            uint32_t output2 = reg.PMODE.circuit2 ? get_CRT_color(reg.DISPFB2, scaled_x2, scaled_y2) : reg.BGCOLOR;
+            if ((pixel_x - display1_xoffset) >= display1_width || (pixel_y - display1_yoffset) >= display1_height)
+                enable1 = false;
+
+            if ((pixel_x - display2_xoffset) >= display2_width || (pixel_y - display2_yoffset) >= display2_height)
+                enable2 = false;
+
+            uint32_t output1 = reg.PMODE.circuit1 && enable1 ? get_CRT_color(reg.DISPFB1, scaled_x1, scaled_y1) : 0;
+            uint32_t output2 = reg.PMODE.circuit2 && enable2 ? get_CRT_color(reg.DISPFB2, scaled_x2, scaled_y2) : reg.BGCOLOR;
 
             if (reg.PMODE.blend_with_bg)
                 output2 = reg.BGCOLOR;
@@ -619,7 +689,7 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
             //However we think that on real hardware it will either skip the blending or duplicate Circuit 2 in the Circuit 1 output
             //which effectively means output2 is outputted at full alpha
             //Downhill Domination also has a dark screen if you do not follow this behaviour.  ALP 128 only circuit 2
-            if (reg.PMODE.circuit1)
+            if (reg.PMODE.circuit1 && enable1)
             {
                 uint32_t alpha;
 
