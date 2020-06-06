@@ -129,6 +129,7 @@
   </ItemGroup>
   <!-- ui files -->
   <ItemGroup>
+    <QtUI Include="memcardwindow.ui" />
     <QtUI Include="pad_configure.ui" />
   </ItemGroup>
 

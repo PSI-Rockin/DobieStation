@@ -26,13 +26,26 @@ PadConfigure::PadConfigure(QWidget *parent) :
     button_widgets->addButton(ui->Cross);
     button_widgets->addButton(ui->Square);
     
+#ifdef __linux__
+
     EvdevDevices = pad.get_interesting_devices();
 
     for(int i = 0; i < pad.get_interesting_devices().size(); i++)
     {
         Interesting->addItem( QString::fromStdString(EvdevDevices[i]->controller_name));
     }
-            
+
+#elif WIN32
+
+    XinputDevices = pad.get_interesting_devices();
+    for (int i = 0; i < pad.get_interesting_devices().size(); i++)
+    {
+        Interesting->addItem(QString::number(XinputDevices[i].player_number));
+    }
+
+#endif
+
+
     selected_device = Interesting->currentIndex();
 
     connect(button_widgets, static_cast<void(QButtonGroup::*)(int)>(&QButtonGroup::buttonClicked), this, &PadConfigure::get_input);

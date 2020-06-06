@@ -50,6 +50,14 @@ struct evdev_controller
 	std::string code_name; // Which code did we get?
     libevdev *dev; // The Controller itself	
 };
+
+#elif _WIN32
+struct xinput_controller
+{
+	int player_number; // This is used for configurator
+	XINPUT_STATE dev; // The gampad state
+};
+
 #endif
 
 
@@ -96,7 +104,7 @@ public:
     virtual std::vector<evdev_controller *> get_interesting_devices() = 0;
 
 	#elif WIN32	   
-	   		virtual std::vector<XINPUT_STATE> get_interesting_devices() = 0;
+	   		virtual std::vector<xinput_controller> get_interesting_devices() = 0;
 	#endif
 
 };

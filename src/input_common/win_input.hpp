@@ -15,9 +15,11 @@ private:
 	int player_number;
 	DWORD is_connected; // Is she connected captian?
 	bool connected;
-	XINPUT_STATE state; // General GamePad State
+	xinput_controller state;
 	PAD_DATA pad_data;
 	BYTE trigger;
+
+	std::vector<xinput_controller> interesting_devices;
 
 	BUTTONS control;
 
@@ -36,7 +38,7 @@ public:
 	bool reset();
 	PAD_DATA poll();
 	int getEvent(int i);
-	std::vector<XINPUT_STATE> get_xinput_devices();
+	std::vector<xinput_controller> get_interesting_devices();
 
 };
 

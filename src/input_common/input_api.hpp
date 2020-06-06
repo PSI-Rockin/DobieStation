@@ -6,7 +6,6 @@
 #include <memory>
 #elif WIN32
 #include "win_input.hpp"
-#include "raw.hpp"
 #elif __APPLE__
 #include "mac_input.hpp"
 #endif
@@ -26,7 +25,7 @@ public:
     	std::vector<evdev_controller *> get_interesting_devices();
 
 	#elif WIN32
-	    std::vector<XINPUT_STATE> get_interesting_devices();
+	    std::vector<xinput_controller> get_interesting_devices();
 	#endif
 };
 

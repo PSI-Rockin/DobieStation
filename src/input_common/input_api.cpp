@@ -30,7 +30,7 @@ int InputManager::getEvent(int i)
 	}
 
 #elif WIN32
-	std::vector<XINPUT_STATE> InputManager::get_interesting_devices()
+	std::vector<xinput_controller> InputManager::get_interesting_devices()
 	{
 		return input->get_interesting_devices();
 	}

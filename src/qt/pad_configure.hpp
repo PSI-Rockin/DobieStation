@@ -35,8 +35,8 @@ private:
 
 #ifdef __linux__
     std::vector<evdev_controller *> EvdevDevices;
-#elif _WIN32
-    std::vector<XINPUT_STATE> XinputDevices;
+#elif WIN32
+    std::vector<xinput_controller> XinputDevices;
 #endif
      QButtonGroup *button_widgets;
 
