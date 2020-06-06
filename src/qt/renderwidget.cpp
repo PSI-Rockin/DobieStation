@@ -23,7 +23,7 @@ void RenderWidget::draw_frame(uint32_t* buffer, int inner_w, int inner_h, int fi
     final_image = QImage(
         reinterpret_cast<uint8_t*>(buffer),
         inner_w, inner_h, QImage::Format_RGBA8888
-    ).scaled(final_w, final_h);
+    ).scaled(final_w, final_h, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
 
     update();
 }
@@ -42,7 +42,8 @@ void RenderWidget::paintEvent(QPaintEvent* event)
 
     QImage image = final_image.scaled(
         widget_rect.width(), widget_rect.height(),
-        respect_aspect_ratio ? Qt::KeepAspectRatio : Qt::IgnoreAspectRatio
+        respect_aspect_ratio ? Qt::KeepAspectRatio : Qt::IgnoreAspectRatio,
+        Qt::SmoothTransformation
     );
 
     QRect src_rect(image.rect());
