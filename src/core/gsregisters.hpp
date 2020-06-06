@@ -115,6 +115,13 @@ struct DISPLAY
     uint16_t width, height;
 };
 
+struct CalculatedDISPLAY
+{
+    int32_t x, y;
+    int32_t magnify_x, magnify_y;
+    int32_t width, height;
+};
+
 struct GS_IMR //Interrupt masking
 {
     bool signal;
@@ -162,6 +169,7 @@ struct GS_REGISTERS
     SYNCV_REG SYNCV;
     DISPFB DISPFB1, DISPFB2;
     DISPLAY DISPLAY1, DISPLAY2;
+    CalculatedDISPLAY Calculated_DISPLAY1, Calculated_DISPLAY2;
     GS_IMR IMR;
     GS_CSR CSR;
     uint8_t BUSDIR;
