@@ -561,65 +561,45 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
     int32_t start_scanline = 0;
     int32_t frame_line_increment = 1;
     int32_t fb_offset = 0;
-    int32_t display1_magnify_y = reg.DISPLAY1.magnify_y ? reg.DISPLAY1.magnify_y : 1;
-    int32_t display1_magnify_x = reg.DISPLAY1.magnify_x ? reg.DISPLAY1.magnify_x : 4;
-    int32_t display2_magnify_y = reg.DISPLAY2.magnify_y ? reg.DISPLAY2.magnify_y : 1;
-    int32_t display2_magnify_x = reg.DISPLAY2.magnify_x ? reg.DISPLAY2.magnify_x : 4;
-    int32_t display1_height = reg.DISPLAY1.height / display1_magnify_y;
-    int32_t display2_height = reg.DISPLAY2.height / display2_magnify_y;
-    int32_t display1_width = reg.DISPLAY1.width / display1_magnify_x;
-    int32_t display2_width = reg.DISPLAY2.width / display2_magnify_x;
-    int32_t display1_y = reg.DISPLAY1.y / display1_magnify_y;
-    int32_t display2_y = reg.DISPLAY2.y / display2_magnify_y;
-    int32_t display1_x = reg.DISPLAY1.x / display1_magnify_x;
-    int32_t display2_x = reg.DISPLAY2.x / display2_magnify_x;
     int32_t display1_yoffset = 0;
     int32_t display1_xoffset = 0;
     int32_t display2_yoffset = 0;
     int32_t display2_xoffset = 0;
     bool enable_circuit1 = true;
     bool enable_circuit2 = true;
-    //Calculate offsets
-    if (reg.PMODE.circuit1 && reg.PMODE.circuit2)
-    {
-        if ((display1_x - display2_x) < 0)
-            display2_xoffset = display2_x - display1_x;
-        else if ((display1_x - display2_x) > 0)
-            display1_xoffset = (display1_x - display2_x);
-
-        if ((display1_y - display2_y) < 0)
-            display2_yoffset = display2_y - display1_y;
-        else if ((display1_y - display2_y) > 0)
-            display1_yoffset = (display1_y - display2_y);
-    }
-    
 
     //Get overall picture height, largest will likely cover whole screen
     if (reg.PMODE.circuit1 && reg.PMODE.circuit2)
     {
-        if (display1_height >= display2_height)
-            height = display1_height;
-        else
-            height = display2_height;
-
-        if (display1_width >= display2_width)
-            width = display1_width;
-        else
-            width = display2_width;
+        height = max(reg.Calculated_DISPLAY1.height, reg.Calculated_DISPLAY2.height);
+        width = max(reg.Calculated_DISPLAY1.width, reg.Calculated_DISPLAY2.width);
     }
     else if (reg.PMODE.circuit1)
     {
-        height = display1_height;
-        width = display1_width;
+        height = reg.Calculated_DISPLAY1.height;
+        width = reg.Calculated_DISPLAY1.width;
     }
     else if (reg.PMODE.circuit2) //Makai Kingdom, SH2, GT4, True Crime needs to take its display information from Display2
     {
-        height = display2_height;
-        width = display2_width;
+        height = reg.Calculated_DISPLAY2.height;
+        width = reg.Calculated_DISPLAY2.width;
     }
     else
         return;
 
+    //Calculate offsets
+    if (reg.PMODE.circuit1 && reg.PMODE.circuit2)
+    {
+        if ((reg.Calculated_DISPLAY1.x - reg.Calculated_DISPLAY2.x) < 0)
+            display2_xoffset = reg.Calculated_DISPLAY2.x - reg.Calculated_DISPLAY1.x;
+        else if ((reg.Calculated_DISPLAY1.x - reg.Calculated_DISPLAY2.x) > 0)
+            display1_xoffset = reg.Calculated_DISPLAY1.x - reg.Calculated_DISPLAY2.x;
+
+        if ((reg.Calculated_DISPLAY1.y - reg.Calculated_DISPLAY2.y) < 0)
+            display2_yoffset = reg.Calculated_DISPLAY2.y - reg.Calculated_DISPLAY1.y;
+        else if ((reg.Calculated_DISPLAY1.y - reg.Calculated_DISPLAY2.y) > 0)
+            display1_yoffset = reg.Calculated_DISPLAY1.y - reg.Calculated_DISPLAY2.y;
+    }
     //TODO - Find out why some games double their height
     //Examples are Pool Paradise, Silent Hill 2
     //Makai Kingdom + Disgaea go the other way and half their height, but this is ok
@@ -630,7 +610,7 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
     height 896 magy 1 width 2560 magx 5 actual width 512 dx 652 dy 50 Interlaced 1 Frame 0 --- Silent Hill 2
     height 960 magy 1 width 2560 magx 4 actual width 640 dx 636 dy 42 Interlaced 1 Frame 0 --- Pool Paradise
     height 224 magy 1 width 2560 magx 4 actual width 640 dx 636 dy 25 Interlaced 0 Frame 1 --- Makai
-      */
+    */
 
     //Check for extremely high heights, slightly higher heights are ok as they are a sort of widescreen resolution
     if (height >= (width * 1.3))
@@ -642,11 +622,10 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
         {
             y_increment = 2;
             start_scanline = reg.CSR.is_odd_frame;
+            fb_offset = reg.CSR.is_odd_frame;
 
             if (!reg.SMODE2.frame_mode)
                 frame_line_increment = 2;
-
-            fb_offset = reg.CSR.is_odd_frame;
         }
     }
 
@@ -671,10 +650,10 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
             enable_circuit2 = true;
 
             //Disable the outputs if the framebuffer or display is out of allowed range
-            if (pixel_x_disp1 >= display1_width || (pixel_y_disp1 + start_scanline) >= (display1_height - 1) || scaled_y1 < 0 || scaled_x1 < 0)
+            if (pixel_x_disp1 >= reg.Calculated_DISPLAY1.width || (pixel_y_disp1 + start_scanline) >= (reg.Calculated_DISPLAY1.height - 1) || scaled_y1 < 0 || scaled_x1 < 0)
                 enable_circuit1 = false;
 
-            if (pixel_x_disp2 >= display2_width || (pixel_y_disp2 + start_scanline) >= (display2_height - 1) || scaled_y2 < 0 || scaled_x2 < 0)
+            if (pixel_x_disp2 >= reg.Calculated_DISPLAY2.width || (pixel_y_disp2 + start_scanline) >= (reg.Calculated_DISPLAY2.height - 1) || scaled_y2 < 0 || scaled_x2 < 0)
                 enable_circuit2 = false;
 
             uint32_t output1 = reg.PMODE.circuit1 && enable_circuit1 ? get_CRT_color(reg.DISPFB1, scaled_x1, scaled_y1) : 0;
@@ -5440,6 +5419,12 @@ void GraphicsSynthesizerThread::load_state(ifstream *state)
         current_PRMODE = &PRIM;
     else
         current_PRMODE = &PRMODE;
+
+    state->read((char*)&reg.Calculated_DISPLAY1, sizeof(reg.Calculated_DISPLAY1));
+    state->read((char*)&reg.Calculated_DISPLAY2, sizeof(reg.Calculated_DISPLAY2));
+    state->read((char*)&reg.PMODE, sizeof(reg.PMODE));
+    state->read((char*)&reg.SMODE2, sizeof(reg.SMODE2));
+
     state->read((char*)&RGBAQ, sizeof(RGBAQ));
     state->read((char*)&UV, sizeof(UV));
     state->read((char*)&ST, sizeof(ST));
@@ -5488,6 +5473,11 @@ void GraphicsSynthesizerThread::save_state(ofstream *state)
     if (current_PRMODE == &PRMODE)
         current_PRMODE_id = 2;
     state->write((char*)&current_PRMODE_id, sizeof(current_PRMODE_id));
+
+    state->write((char*)&reg.Calculated_DISPLAY1, sizeof(reg.Calculated_DISPLAY1));
+    state->write((char*)&reg.Calculated_DISPLAY2, sizeof(reg.Calculated_DISPLAY2));
+    state->write((char*)&reg.PMODE, sizeof(reg.PMODE));
+    state->write((char*)&reg.SMODE2, sizeof(reg.SMODE2));
 
     state->write((char*)&RGBAQ, sizeof(RGBAQ));
     state->write((char*)&UV, sizeof(UV));

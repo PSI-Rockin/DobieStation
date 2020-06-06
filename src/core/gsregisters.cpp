@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstdio>
 #include "gsregisters.hpp"
 #include "errors.hpp"
@@ -116,6 +117,15 @@ void GS_REGISTERS::write64_privileged(uint32_t addr, uint64_t value)
             DISPLAY1.magnify_y = ((value >> 27) & 0x3) + 1;
             DISPLAY1.width = ((value >> 32) & 0xFFF) + 1;
             DISPLAY1.height = ((value >> 44) & 0x7FF) + 1;
+
+            Calculated_DISPLAY1.magnify_x = DISPLAY1.magnify_x ? DISPLAY1.magnify_x : 4;
+            Calculated_DISPLAY1.magnify_y = DISPLAY1.magnify_y ? DISPLAY1.magnify_y : 1;
+            Calculated_DISPLAY1.width = DISPLAY1.width / Calculated_DISPLAY1.magnify_x;
+            Calculated_DISPLAY1.height = DISPLAY1.height / Calculated_DISPLAY1.magnify_y;
+            Calculated_DISPLAY1.x = DISPLAY1.x / Calculated_DISPLAY1.magnify_x;
+            Calculated_DISPLAY1.y = DISPLAY1.y / Calculated_DISPLAY1.magnify_y;
+            printf("MAGH: %d\n", DISPLAY1.magnify_x);
+            printf("MAGV: %d\n", DISPLAY1.magnify_y);
             break;
         case 0x0090:
             printf("[GS_r] Write DISPFB2: $%08lX_%08lX\n", value >> 32, value & 0xFFFFFFFF);
@@ -133,6 +143,13 @@ void GS_REGISTERS::write64_privileged(uint32_t addr, uint64_t value)
             DISPLAY2.magnify_y = ((value >> 27) & 0x3) + 1;
             DISPLAY2.width = ((value >> 32) & 0xFFF) + 1;
             DISPLAY2.height = ((value >> 44) & 0x7FF) + 1;
+
+            Calculated_DISPLAY2.magnify_x = DISPLAY2.magnify_x ? DISPLAY2.magnify_x : 4;
+            Calculated_DISPLAY2.magnify_y = DISPLAY2.magnify_y ? DISPLAY2.magnify_y : 1;
+            Calculated_DISPLAY2.width = DISPLAY2.width / Calculated_DISPLAY2.magnify_x;
+            Calculated_DISPLAY2.height = DISPLAY2.height / Calculated_DISPLAY2.magnify_y;
+            Calculated_DISPLAY2.x = DISPLAY2.x / Calculated_DISPLAY2.magnify_x;
+            Calculated_DISPLAY2.y = DISPLAY2.y / Calculated_DISPLAY2.magnify_y;
             printf("MAGH: %d\n", DISPLAY2.magnify_x);
             printf("MAGV: %d\n", DISPLAY2.magnify_y);
             break;
@@ -388,6 +405,21 @@ void GS_REGISTERS::reset(bool soft_reset)
     DISPFB2.width = 0;
     DISPFB2.y = 0;
     DISPFB2.x = 0;
+
+    Calculated_DISPLAY1.magnify_x = 4;
+    Calculated_DISPLAY1.magnify_y = 1;
+    Calculated_DISPLAY1.width = 0;
+    Calculated_DISPLAY1.height = 0;
+    Calculated_DISPLAY1.x = 0;
+    Calculated_DISPLAY1.y = 0;
+
+    Calculated_DISPLAY2.magnify_x = 4;
+    Calculated_DISPLAY2.magnify_y = 1;
+    Calculated_DISPLAY2.width = 0;
+    Calculated_DISPLAY2.height = 0;
+    Calculated_DISPLAY2.x = 0;
+    Calculated_DISPLAY2.y = 0;
+
     IMR.signal = true;
     IMR.finish = true;
     IMR.hsync = true;
@@ -445,36 +477,9 @@ void GS_REGISTERS::get_resolution(int &w, int &h)
 
 void GS_REGISTERS::get_inner_resolution(int &w, int &h)
 {
-    int height, width;
-    int display1_magnify_y = DISPLAY1.magnify_y ? DISPLAY1.magnify_y : 1;
-    int display1_magnify_x = DISPLAY1.magnify_x ? DISPLAY1.magnify_x : 4;
-    int display2_magnify_y = DISPLAY2.magnify_y ? DISPLAY2.magnify_y : 1;
-    int display2_magnify_x = DISPLAY2.magnify_x ? DISPLAY2.magnify_x : 4;
-    int display1_height = DISPLAY1.height / display1_magnify_y;
-    int display2_height = DISPLAY2.height / display2_magnify_y;
-    int display1_width = DISPLAY1.width / display1_magnify_x;
-    int display2_width = DISPLAY2.width / display2_magnify_x;
+    h = std::max(Calculated_DISPLAY1.height, Calculated_DISPLAY2.height);
+    w = std::max(Calculated_DISPLAY1.width, Calculated_DISPLAY2.width);
 
-    if (display1_height > display2_height && PMODE.circuit1)
-    {
-        height = display1_height;
-    }
-    else
-    {
-        height = display2_height;
-    }
-
-    if (display1_width > display2_width && PMODE.circuit1)
-    {
-        width = display1_width;
-    }
-    else
-    {
-        width = display2_width;
-    }
-
-    h = height;
-    w = width;
     //TODO - Find out why some games double their height
     if (h >= (w * 1.3))
         h /= 2;
