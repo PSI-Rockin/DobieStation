@@ -14,7 +14,6 @@ bool WinInput::reset()
 
 	is_connected = XInputGetState(0, &state.dev);
 
-
 	if (is_connected == ERROR_SUCCESS) // Controller is connected
 	{
 		state.player_number = 0;
@@ -67,17 +66,10 @@ PAD_DATA WinInput::poll()
 	pad_data.rStickYAxis = rightY;
 
 	float lTrigger = (float)interesting_devices[0].dev.Gamepad.bLeftTrigger;
-<<<<<<< HEAD
 	pad_data.lTriggerAxis = lTrigger / 255;
 
 	float rTrigger =  (float)interesting_devices[0].dev.Gamepad.bRightTrigger;
 	pad_data.rTriggerAxis = rTrigger / 255;
-=======
-	pad_data.lTriggerAxis = lTrigger;
-
-	float rTrigger =  (float)interesting_devices[0].dev.Gamepad.bRightTrigger;
-	pad_data.rTriggerAxis = rTrigger;
->>>>>>> 5802c22... Fixed windows builds. Configurator also gets data from controller correctly
 
 	//std::cout << "Left X Axis: " << pad_data.lStickXAxis << std::endl;
 	//std::cout << "Left Y Axis: " << pad_data.lStickYAxis << std::endl;
@@ -92,25 +84,8 @@ PAD_DATA WinInput::poll()
 		pad_data.input[BUTTONS::CROSS] = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_A);
 		pad_data.input[BUTTONS::SQUARE] = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_X);
 		pad_data.input[BUTTONS::TRIANGLE] = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_Y);
-<<<<<<< HEAD
 
-=======
->>>>>>> 5802c22... Fixed windows builds. Configurator also gets data from controller correctly
 
-		pad_data.input[BUTTONS::START] = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_START);
-		pad_data.input[BUTTONS::SELECT] = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_BACK);
-
-<<<<<<< HEAD
-		pad_data.input[BUTTONS::UP] = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_UP);
-		pad_data.input[BUTTONS::DOWN] = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_DOWN);
-		pad_data.input[BUTTONS::LEFT] = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT);
-		pad_data.input[BUTTONS::RIGHT] = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_RIGHT);
-		pad_data.input[BUTTONS::R3] = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_THUMB);
-		pad_data.input[BUTTONS::L3] = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_THUMB);
-		pad_data.input[BUTTONS::R1] = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER);
-		pad_data.input[BUTTONS::L1] = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER);
-
-=======
 		pad_data.input[BUTTONS::START] = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_START);
 		pad_data.input[BUTTONS::SELECT] = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_BACK);
 
@@ -122,7 +97,7 @@ PAD_DATA WinInput::poll()
 		pad_data.input[BUTTONS::L3] = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_THUMB);
 		pad_data.input[BUTTONS::R1] = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER);
 		pad_data.input[BUTTONS::L1] = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER);
->>>>>>> 5802c22... Fixed windows builds. Configurator also gets data from controller correctly
+
 
 
 	return pad_data;
