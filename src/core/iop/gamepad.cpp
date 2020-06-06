@@ -1,6 +1,7 @@
 #include <cstdlib>
 #include <cstdio>
 #include <cstring>
+#include <bitset>
 #include "gamepad.hpp"
 #include "../errors.hpp"
 
@@ -48,8 +49,15 @@ void Gamepad::reset()
 
 void Gamepad::set_button(PAD_BUTTON button, uint8_t val)
 {
-    buttons &= ~(1 << (int)button);
+    if (val)
+        buttons |= 1 << (int)button;
+    else
+        buttons &= ~(1 << (int)button);
+        
     button_pressure[(int)button] = val;
+
+    std::cout << "button: " << (int)button << " state: " << std::bitset<16>(buttons) << std::endl;
+
 }
 
 void Gamepad::release_button(PAD_BUTTON button)

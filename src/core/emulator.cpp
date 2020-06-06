@@ -298,23 +298,17 @@ void Emulator::poll_controller()
 
     for (int i = 0; i < CONTROLLER_BUTTON_MAX; i++)
     {
-        if (state.input[i])
-        {
-            //std::cout << "button: " << i << " state: " << state.input[i] << std::endl;
-            set_button((PAD_BUTTON)i, 255);
-        }
-        else
-        {
-            release_button((PAD_BUTTON)i);
-        }
+
+        //std::cout << "button: " << i << " state: " << state.input[i] << std::endl;
+        set_button((PAD_BUTTON)i, state.button[i].pressure);
     }
     state.lStickXAxis = (state.lStickXAxis + 1) * 255 / 2;
     state.lStickYAxis = (state.lStickYAxis * -1 + 1) * 255 / 2;
     state.rStickXAxis = (state.rStickXAxis + 1) * 255 / 2;
     state.rStickYAxis = (state.rStickYAxis * -1 + 1) * 255 / 2;
 
-    state.lTriggerAxis = (state.lTriggerAxis + 1) * 255;
-    state.rTriggerAxis = (state.rTriggerAxis + 1) * 255;
+    state.lTriggerAxis = (state.lTriggerAxis ) * 255;
+    state.rTriggerAxis = (state.rTriggerAxis ) * 255;
 
     //std::cout << "Left L Trigger: " << state.lTriggerAxis << std::endl;
     //std::cout << "Left R Trigger: " << state.rTriggerAxis << std::endl;

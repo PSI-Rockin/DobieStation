@@ -69,14 +69,23 @@ struct xinput_controller
 	int player_number; // This is used for configurator
 	XINPUT_STATE dev; // The gampad state
 };
-
 #endif
+
+struct BUTTON_STATE
+{
+
+	bool input;
+	int pressure; // Filthy dirty hacksies
+
+};
+
 
 
 struct PAD_DATA
 {
-	bool input[CONTROLLER_BUTTON_MAX];
 	int player_number;
+
+	BUTTON_STATE button[CONTROLLER_BUTTON_MAX];
 
 	float lStickXAxis;
 	float lStickYAxis;

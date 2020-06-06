@@ -80,25 +80,41 @@ PAD_DATA WinInput::poll()
 
 	// If max pressure or not pressed
 
-		pad_data.input[BUTTONS::CIRCLE] = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_B);
-		pad_data.input[BUTTONS::CROSS] = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_A);
-		pad_data.input[BUTTONS::SQUARE] = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_X);
-		pad_data.input[BUTTONS::TRIANGLE] = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_Y);
+		pad_data.button[BUTTONS::CIRCLE].input = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_B ? 255 : 0);
+		pad_data.button[BUTTONS::CROSS].input = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_A ? 255 : 0);
+		pad_data.button[BUTTONS::SQUARE].input = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_X ? 255 : 0);
+		pad_data.button[BUTTONS::TRIANGLE].input = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_Y ? 255 : 0);
 
 
-		pad_data.input[BUTTONS::START] = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_START);
-		pad_data.input[BUTTONS::SELECT] = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_BACK);
+		pad_data.button[BUTTONS::START].input = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_START ? 255 : 0);
+		pad_data.button[BUTTONS::SELECT].input = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_BACK ? 255 : 0);
 
-		pad_data.input[BUTTONS::UP] = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_UP);
-		pad_data.input[BUTTONS::DOWN] = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_DOWN);
-		pad_data.input[BUTTONS::LEFT] = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT);
-		pad_data.input[BUTTONS::RIGHT] = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_RIGHT);
-		pad_data.input[BUTTONS::R3] = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_THUMB);
-		pad_data.input[BUTTONS::L3] = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_THUMB);
-		pad_data.input[BUTTONS::R1] = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER);
-		pad_data.input[BUTTONS::L1] = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER);
+		pad_data.button[BUTTONS::UP].input = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_UP ? 255 : 0);
+		pad_data.button[BUTTONS::DOWN].input = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_DOWN ? 255 : 0);
+		pad_data.button[BUTTONS::LEFT].input = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_LEFT ? 255 : 0);
+		pad_data.button[BUTTONS::RIGHT].input = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_DPAD_RIGHT ? 255 : 0);
+		pad_data.button[BUTTONS::R3].input = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_THUMB ? 255 : 0);
+		pad_data.button[BUTTONS::L3].input = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_THUMB ? 255 : 0);
+		pad_data.button[BUTTONS::R1].input = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER ? 255 : 0);
+		pad_data.button[BUTTONS::L1].input = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER ? 255 : 0);
+
+		for (int i = 0; i < CONTROLLER_BUTTON_MAX; i++)
+		{
+			if (pad_data.button[i].input)
+			{
+				pad_data.button[i].pressure = 255;
+			}
+
+			else
+			{
+				pad_data.button[i].pressure = 0;
+			}
+
+		}
 
 
+
+		//std::cout << "Pressure: " << pad_data.pressure << std::endl;
 
 	return pad_data;
 }
