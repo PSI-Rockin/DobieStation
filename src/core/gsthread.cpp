@@ -456,7 +456,7 @@ void GraphicsSynthesizerThread::reset()
     PSMCT24_color = 0;
     PSMCT24_unpacked_count = 0;
     current_ctx = &context1;
-    current_PRMODE = &PRIM;
+    current_PRMODE = &PRMODE;
     PRIM.reset();
     PRMODE.reset();
 
@@ -489,7 +489,7 @@ void GraphicsSynthesizerThread::soft_reset()
     PSMCT24_color = 0;
     PSMCT24_unpacked_count = 0;
     current_ctx = &context1;
-    current_PRMODE = &PRIM;
+    current_PRMODE = &PRMODE;
     PRIM.reset();
     PRMODE.reset();
 
