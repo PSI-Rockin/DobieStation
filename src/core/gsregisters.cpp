@@ -477,9 +477,21 @@ void GS_REGISTERS::get_resolution(int &w, int &h)
 
 void GS_REGISTERS::get_inner_resolution(int &w, int &h)
 {
-    h = std::max(Calculated_DISPLAY1.height, Calculated_DISPLAY2.height);
-    w = std::max(Calculated_DISPLAY1.width, Calculated_DISPLAY2.width);
-
+    if (PMODE.circuit1 && PMODE.circuit2)
+    {
+        h = std::max(Calculated_DISPLAY1.height, Calculated_DISPLAY2.height);
+        w = std::max(Calculated_DISPLAY1.width, Calculated_DISPLAY2.width);
+    }
+    else if (PMODE.circuit1)
+    {
+        h = Calculated_DISPLAY1.height;
+        w = Calculated_DISPLAY1.width;
+    }
+    else //Circuit 2 only or none
+    {
+        h = Calculated_DISPLAY2.height;
+        w = Calculated_DISPLAY2.width;
+    }
     //TODO - Find out why some games double their height
     if (h >= (w * 1.3))
         h /= 2;
