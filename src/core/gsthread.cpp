@@ -256,7 +256,7 @@ void GraphicsSynthesizerThread::event_loop()
                     {
                         auto p = data.payload.write64_payload;
                         reg.write64_privileged(p.addr, p.value);
-                        if (p.value == 0x200)
+                        if (p.addr == 0x12001000 && (p.value & 0x200))
                             soft_reset();
                         break;
                     }
@@ -264,6 +264,8 @@ void GraphicsSynthesizerThread::event_loop()
                     {
                         auto p = data.payload.write32_payload;
                         reg.write32_privileged(p.addr, p.value);
+                        if (p.addr == 0x12001000 && (p.value & 0x200))
+                            soft_reset();
                         break;
                     }
                     case set_rgba_t:
@@ -490,6 +492,9 @@ void GraphicsSynthesizerThread::soft_reset()
     current_PRMODE = &PRIM;
     PRIM.reset();
     PRMODE.reset();
+
+    update_draw_pixel_state();
+    update_tex_lookup_state();
 }
 
 void GraphicsSynthesizerThread::memdump(uint32_t* target, uint16_t& width, uint16_t& height)
@@ -533,9 +538,6 @@ uint16_t convert_color_down(uint32_t col)
 
 uint32_t GraphicsSynthesizerThread::get_CRT_color(DISPFB &dispfb, int32_t x, int32_t y)
 {
-    if (x < 0 || y < 0)
-        return 0;
-
     switch (dispfb.format)
     {
         case 0x0:
@@ -553,30 +555,30 @@ uint32_t GraphicsSynthesizerThread::get_CRT_color(DISPFB &dispfb, int32_t x, int
 
 void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
 {
-    int width;
-    int height;
-    int y_increment = 1;
-    int start_scanline = 0;
-    int frame_line_increment = 1;
-    int fb_y = 0;
-    int display1_magnify_y = reg.DISPLAY1.magnify_y ? reg.DISPLAY1.magnify_y : 1;
-    int display1_magnify_x = reg.DISPLAY1.magnify_x ? reg.DISPLAY1.magnify_x : 4;
-    int display2_magnify_y = reg.DISPLAY2.magnify_y ? reg.DISPLAY2.magnify_y : 1;
-    int display2_magnify_x = reg.DISPLAY2.magnify_x ? reg.DISPLAY2.magnify_x : 4;
-    int display1_height = reg.DISPLAY1.height / display1_magnify_y;
-    int display2_height = reg.DISPLAY2.height / display2_magnify_y;
-    int display1_width = reg.DISPLAY1.width / display1_magnify_x;
-    int display2_width = reg.DISPLAY2.width / display2_magnify_x;
-    int display1_y = reg.DISPLAY1.y / display1_magnify_y;
-    int display2_y = reg.DISPLAY2.y / display2_magnify_y;
-    int display1_x = reg.DISPLAY1.x / display1_magnify_x;
-    int display2_x = reg.DISPLAY2.x / display2_magnify_x;
-    int display1_yoffset = 0;
-    int display1_xoffset = 0;
-    int display2_yoffset = 0;
-    int display2_xoffset = 0;
-    bool enable1 = true;
-    bool enable2 = true;
+    int32_t width;
+    int32_t height;
+    int32_t y_increment = 1;
+    int32_t start_scanline = 0;
+    int32_t frame_line_increment = 1;
+    int32_t fb_offset = 0;
+    int32_t display1_magnify_y = reg.DISPLAY1.magnify_y ? reg.DISPLAY1.magnify_y : 1;
+    int32_t display1_magnify_x = reg.DISPLAY1.magnify_x ? reg.DISPLAY1.magnify_x : 4;
+    int32_t display2_magnify_y = reg.DISPLAY2.magnify_y ? reg.DISPLAY2.magnify_y : 1;
+    int32_t display2_magnify_x = reg.DISPLAY2.magnify_x ? reg.DISPLAY2.magnify_x : 4;
+    int32_t display1_height = reg.DISPLAY1.height / display1_magnify_y;
+    int32_t display2_height = reg.DISPLAY2.height / display2_magnify_y;
+    int32_t display1_width = reg.DISPLAY1.width / display1_magnify_x;
+    int32_t display2_width = reg.DISPLAY2.width / display2_magnify_x;
+    int32_t display1_y = reg.DISPLAY1.y / display1_magnify_y;
+    int32_t display2_y = reg.DISPLAY2.y / display2_magnify_y;
+    int32_t display1_x = reg.DISPLAY1.x / display1_magnify_x;
+    int32_t display2_x = reg.DISPLAY2.x / display2_magnify_x;
+    int32_t display1_yoffset = 0;
+    int32_t display1_xoffset = 0;
+    int32_t display2_yoffset = 0;
+    int32_t display2_xoffset = 0;
+    bool enable_circuit1 = true;
+    bool enable_circuit2 = true;
     //Calculate offsets
     if (reg.PMODE.circuit1 && reg.PMODE.circuit2)
     {
@@ -639,43 +641,44 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
         if (reg.deinterlace_method != BOB_DEINTERLACE)
         {
             y_increment = 2;
-            start_scanline = !reg.CSR.is_odd_frame; //Seems to write the upper fields first
+            start_scanline = reg.CSR.is_odd_frame;
 
             if (!reg.SMODE2.frame_mode)
                 frame_line_increment = 2;
 
-            fb_y = reg.CSR.is_odd_frame;
+            fb_offset = reg.CSR.is_odd_frame;
         }
     }
 
     for (int y = start_scanline; y <= height; y += y_increment)
     {
-        if (reg.SMODE2.interlaced)
-        {
-            //Gets rid of some nasty interlace bobbing artifacts
-            if (y == 0)
-                continue;
-        }
         for (int x = 0; x < width; x++)
         {
-            int pixel_x = x;
-            int pixel_y = y;
+            int32_t pixel_x = x;
+            int32_t pixel_y = y;
+            int32_t pixel_x_disp1 = pixel_x - display1_xoffset;
+            int32_t pixel_x_disp2 = pixel_x - display2_xoffset;
+            int32_t pixel_y_disp1 = (pixel_y - start_scanline) - display1_yoffset;
+            int32_t pixel_y_disp2 = (pixel_y - start_scanline) - display2_yoffset;
 
-            int32_t scaled_x1 = reg.DISPFB1.x + x - display1_xoffset;
-            int32_t scaled_x2 = reg.DISPFB2.x + x - display2_xoffset;
-            int32_t scaled_y1 = reg.DISPFB1.y + fb_y - display1_yoffset;
-            int32_t scaled_y2 = reg.DISPFB2.y + fb_y - display2_yoffset;
-            enable1 = true;
-            enable2 = true;
+            //Calculate Frame buffer Coordinates
+            int32_t scaled_x1 = (int32_t)reg.DISPFB1.x + pixel_x_disp1;
+            int32_t scaled_x2 = (int32_t)reg.DISPFB2.x + pixel_x_disp2;
+            int32_t scaled_y1 = (int32_t)reg.DISPFB1.y + fb_offset + ((pixel_y_disp1 >> (y_increment - 1)) << (frame_line_increment - 1));
+            int32_t scaled_y2 = (int32_t)reg.DISPFB2.y + fb_offset + ((pixel_y_disp2 >> (y_increment - 1)) << (frame_line_increment - 1));
 
-            if ((pixel_x - display1_xoffset) >= display1_width || (pixel_y - display1_yoffset) >= display1_height)
-                enable1 = false;
+            enable_circuit1 = true;
+            enable_circuit2 = true;
 
-            if ((pixel_x - display2_xoffset) >= display2_width || (pixel_y - display2_yoffset) >= display2_height)
-                enable2 = false;
+            //Disable the outputs if the framebuffer or display is out of allowed range
+            if (pixel_x_disp1 >= display1_width || (pixel_y_disp1 + start_scanline) >= (display1_height - 1) || scaled_y1 < 0 || scaled_x1 < 0)
+                enable_circuit1 = false;
 
-            uint32_t output1 = reg.PMODE.circuit1 && enable1 ? get_CRT_color(reg.DISPFB1, scaled_x1, scaled_y1) : 0;
-            uint32_t output2 = reg.PMODE.circuit2 && enable2 ? get_CRT_color(reg.DISPFB2, scaled_x2, scaled_y2) : reg.BGCOLOR;
+            if (pixel_x_disp2 >= display2_width || (pixel_y_disp2 + start_scanline) >= (display2_height - 1) || scaled_y2 < 0 || scaled_x2 < 0)
+                enable_circuit2 = false;
+
+            uint32_t output1 = reg.PMODE.circuit1 && enable_circuit1 ? get_CRT_color(reg.DISPFB1, scaled_x1, scaled_y1) : 0;
+            uint32_t output2 = reg.PMODE.circuit2 && enable_circuit2 ? get_CRT_color(reg.DISPFB2, scaled_x2, scaled_y2) : reg.BGCOLOR;
 
             if (reg.PMODE.blend_with_bg)
                 output2 = reg.BGCOLOR;
@@ -689,7 +692,7 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
             //However we think that on real hardware it will either skip the blending or duplicate Circuit 2 in the Circuit 1 output
             //which effectively means output2 is outputted at full alpha
             //Downhill Domination also has a dark screen if you do not follow this behaviour.  ALP 128 only circuit 2
-            if (reg.PMODE.circuit1 && enable1)
+            if (reg.PMODE.circuit1 && enable_circuit1)
             {
                 uint32_t alpha;
 
@@ -826,7 +829,6 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
                 target[pixel_x + (pixel_y * width)] = final_color;
             }
         }
-        fb_y += frame_line_increment;
     }
 }
 
