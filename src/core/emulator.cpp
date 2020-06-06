@@ -316,8 +316,8 @@ void Emulator::poll_controller()
     state.lTriggerAxis = (state.lTriggerAxis + 1) * 255;
     state.rTriggerAxis = (state.rTriggerAxis + 1) * 255;
 
-    std::cout << "Left L Trigger: " << state.lTriggerAxis << std::endl;
-    std::cout << "Left R Trigger: " << state.rTriggerAxis << std::endl;
+    //std::cout << "Left L Trigger: " << state.lTriggerAxis << std::endl;
+    //std::cout << "Left R Trigger: " << state.rTriggerAxis << std::endl;
 
 
     set_button(PAD_BUTTON::L2, state.lTriggerAxis);
