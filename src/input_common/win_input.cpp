@@ -66,10 +66,10 @@ PAD_DATA WinInput::poll()
 	pad_data.rStickYAxis = rightY;
 
 	float lTrigger = (float)interesting_devices[0].dev.Gamepad.bLeftTrigger;
-	pad_data.lTriggerAxis = lTrigger;
+	pad_data.lTriggerAxis = lTrigger / 255;
 
 	float rTrigger =  (float)interesting_devices[0].dev.Gamepad.bRightTrigger;
-	pad_data.rTriggerAxis = rTrigger;
+	pad_data.rTriggerAxis = rTrigger / 255;
 
 	//std::cout << "Left X Axis: " << pad_data.lStickXAxis << std::endl;
 	//std::cout << "Left Y Axis: " << pad_data.lStickYAxis << std::endl;
@@ -97,6 +97,7 @@ PAD_DATA WinInput::poll()
 		pad_data.input[BUTTONS::L3] = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_THUMB);
 		pad_data.input[BUTTONS::R1] = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER);
 		pad_data.input[BUTTONS::L1] = (interesting_devices[0].dev.Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER);
+
 
 
 	return pad_data;
