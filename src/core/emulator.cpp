@@ -117,6 +117,8 @@ void Emulator::run()
         }
     }
 
+    memcard.save_if_dirty();
+
     frame_ended = false;
 
     scheduler.add_event(vblank_start_id, VBLANK_START_CYCLES);
@@ -409,6 +411,13 @@ void Emulator::load_ELF(const uint8_t *ELF, uint32_t size)
 bool Emulator::load_CDVD(const char *name, CDVD_CONTAINER type)
 {
     return cdvd.load_disc(name, type);
+}
+
+void Emulator::load_memcard(int port, const char *name)
+{
+    //TODO: handle port setting. Currently it's ignored and treated as Port 0
+    if (!memcard.open(name))
+        printf("Failed to open memcard %s\n", name);
 }
 
 std::string Emulator::get_serial()

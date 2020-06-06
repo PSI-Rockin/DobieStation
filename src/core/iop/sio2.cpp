@@ -22,11 +22,13 @@ void SIO2::reset()
     new_command = false;
     RECV1 = 0x1D100;
     port = 0;
+
+    dma_reset();
 }
 
 uint8_t SIO2::read_serial()
 {
-    //printf("[SIO2] Read FIFO\n");
+    //printf("[SIO2] Read FIFO: $%02X\n", FIFO.front());
     uint8_t value = FIFO.front();
     FIFO.pop();
     return value;
@@ -61,6 +63,26 @@ void SIO2::set_send3(int index, uint32_t value)
         Errors::die("SIO2 set_send3 index (%d) out of range (0-4)", index);
 }
 
+void SIO2::dma_reset()
+{
+    dma_bytes_received = 0;
+}
+
+void SIO2::write_dma(uint8_t value)
+{
+    if (!command_length)
+    {
+        if (dma_bytes_received % 0x90)
+        {
+            dma_bytes_received++;
+            FIFO.push(0x00);
+            return;
+        }
+    }
+    dma_bytes_received++;
+    write_serial(value);
+}
+
 void SIO2::write_serial(uint8_t value)
 {
     //printf("[SIO2] DATAIN: $%02X\n", value);
@@ -81,9 +103,12 @@ void SIO2::write_serial(uint8_t value)
     }
 
     if (command_length)
+    {
         command_length--;
-
-    write_device(value);
+        write_device(value);
+    }
+    else
+        FIFO.push(0xFF);
 }
 
 void SIO2::write_device(uint8_t value)
@@ -95,6 +120,9 @@ void SIO2::write_device(uint8_t value)
             {
                 case 0x01:
                     active_command = SIO_DEVICE::PAD;
+                    break;
+                case 0x81:
+                    active_command = SIO_DEVICE::MEMCARD;
                     break;
                 default:
                     active_command = SIO_DEVICE::DUMMY;
@@ -122,6 +150,31 @@ void SIO2::write_device(uint8_t value)
             //printf("[SIO2] PAD reply: $%02X\n", reply);
             FIFO.push(reply);
         }
+            break;
+        case SIO_DEVICE::MEMCARD:
+            if (!memcard->is_connected())
+                RECV1 = 0x1D100;
+            else
+                RECV1 = 0x1100;
+            if (port || RECV1 == 0x1D100)
+            {
+                FIFO.push(0x00);
+                return;
+            }
+
+            if (new_command)
+            {
+                if (value == 0x81)
+                {
+                    new_command = false;
+                    memcard->start_transfer();
+                    FIFO.push(0xFF);
+                }
+                else
+                    FIFO.push(0);
+            }
+            else
+                FIFO.push(memcard->write_serial(value));
             break;
         case SIO_DEVICE::DUMMY:
             FIFO.push(0x00);
@@ -165,6 +218,6 @@ uint32_t SIO2::get_RECV2()
 
 uint32_t SIO2::get_RECV3()
 {
-    //printf("[SIO2] Read RECV3\n");
+    printf("[SIO2] Read RECV3\n");
     return 0;
 }
