@@ -37,10 +37,13 @@ MemcardWindow::MemcardWindow(QWidget *parent) :
         //Page size of 0x200 (+ ECC), 0x4000 pages, for a total of 0x840000 bytes, the size of an 8 MB card
         size_t memcard_size = (0x200 + 16) * 0x4000;
 
+        //Clear the entire file to 0xFF, required for games to format the card properly
+        uint8_t* fill_buff = new uint8_t[memcard_size];
+        memset(fill_buff, 0xFF, memcard_size);
         std::ofstream file(path.toStdString());
-        file.seekp(memcard_size - 1);
-        file.write("", 1);
+        file.write((char*)fill_buff, memcard_size);
         file.close();
+        delete[] fill_buff;
 
         Settings::instance().set_memcard_path(path);
         Settings::instance().save();
