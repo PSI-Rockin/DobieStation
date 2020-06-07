@@ -118,12 +118,12 @@ void GS_REGISTERS::write64_privileged(uint32_t addr, uint64_t value)
             DISPLAY1.width = ((value >> 32) & 0xFFF) + 1;
             DISPLAY1.height = ((value >> 44) & 0x7FF) + 1;
 
-            Calculated_DISPLAY1.magnify_x = DISPLAY1.magnify_x ? DISPLAY1.magnify_x : 4;
-            Calculated_DISPLAY1.magnify_y = DISPLAY1.magnify_y ? DISPLAY1.magnify_y : 1;
-            Calculated_DISPLAY1.width = DISPLAY1.width / Calculated_DISPLAY1.magnify_x;
-            Calculated_DISPLAY1.height = DISPLAY1.height / Calculated_DISPLAY1.magnify_y;
-            Calculated_DISPLAY1.x = DISPLAY1.x / Calculated_DISPLAY1.magnify_x;
-            Calculated_DISPLAY1.y = DISPLAY1.y / Calculated_DISPLAY1.magnify_y;
+            calculated_DISPLAY1.magnify_x = DISPLAY1.magnify_x;
+            calculated_DISPLAY1.magnify_y = DISPLAY1.magnify_y;
+            calculated_DISPLAY1.width = DISPLAY1.width / calculated_DISPLAY1.magnify_x;
+            calculated_DISPLAY1.height = DISPLAY1.height / calculated_DISPLAY1.magnify_y;
+            calculated_DISPLAY1.x = DISPLAY1.x / calculated_DISPLAY1.magnify_x;
+            calculated_DISPLAY1.y = DISPLAY1.y / calculated_DISPLAY1.magnify_y;
             printf("MAGH: %d\n", DISPLAY1.magnify_x);
             printf("MAGV: %d\n", DISPLAY1.magnify_y);
             break;
@@ -144,12 +144,12 @@ void GS_REGISTERS::write64_privileged(uint32_t addr, uint64_t value)
             DISPLAY2.width = ((value >> 32) & 0xFFF) + 1;
             DISPLAY2.height = ((value >> 44) & 0x7FF) + 1;
 
-            Calculated_DISPLAY2.magnify_x = DISPLAY2.magnify_x ? DISPLAY2.magnify_x : 4;
-            Calculated_DISPLAY2.magnify_y = DISPLAY2.magnify_y ? DISPLAY2.magnify_y : 1;
-            Calculated_DISPLAY2.width = DISPLAY2.width / Calculated_DISPLAY2.magnify_x;
-            Calculated_DISPLAY2.height = DISPLAY2.height / Calculated_DISPLAY2.magnify_y;
-            Calculated_DISPLAY2.x = DISPLAY2.x / Calculated_DISPLAY2.magnify_x;
-            Calculated_DISPLAY2.y = DISPLAY2.y / Calculated_DISPLAY2.magnify_y;
+            calculated_DISPLAY2.magnify_x = DISPLAY2.magnify_x;
+            calculated_DISPLAY2.magnify_y = DISPLAY2.magnify_y;
+            calculated_DISPLAY2.width = DISPLAY2.width / calculated_DISPLAY2.magnify_x;
+            calculated_DISPLAY2.height = DISPLAY2.height / calculated_DISPLAY2.magnify_y;
+            calculated_DISPLAY2.x = DISPLAY2.x / calculated_DISPLAY2.magnify_x;
+            calculated_DISPLAY2.y = DISPLAY2.y / calculated_DISPLAY2.magnify_y;
             printf("MAGH: %d\n", DISPLAY2.magnify_x);
             printf("MAGV: %d\n", DISPLAY2.magnify_y);
             break;
@@ -406,19 +406,19 @@ void GS_REGISTERS::reset(bool soft_reset)
     DISPFB2.y = 0;
     DISPFB2.x = 0;
 
-    Calculated_DISPLAY1.magnify_x = 4;
-    Calculated_DISPLAY1.magnify_y = 1;
-    Calculated_DISPLAY1.width = 0;
-    Calculated_DISPLAY1.height = 0;
-    Calculated_DISPLAY1.x = 0;
-    Calculated_DISPLAY1.y = 0;
+    calculated_DISPLAY1.magnify_x = 1;
+    calculated_DISPLAY1.magnify_y = 1;
+    calculated_DISPLAY1.width = 0;
+    calculated_DISPLAY1.height = 0;
+    calculated_DISPLAY1.x = 0;
+    calculated_DISPLAY1.y = 0;
 
-    Calculated_DISPLAY2.magnify_x = 4;
-    Calculated_DISPLAY2.magnify_y = 1;
-    Calculated_DISPLAY2.width = 0;
-    Calculated_DISPLAY2.height = 0;
-    Calculated_DISPLAY2.x = 0;
-    Calculated_DISPLAY2.y = 0;
+    calculated_DISPLAY2.magnify_x = 1;
+    calculated_DISPLAY2.magnify_y = 1;
+    calculated_DISPLAY2.width = 0;
+    calculated_DISPLAY2.height = 0;
+    calculated_DISPLAY2.x = 0;
+    calculated_DISPLAY2.y = 0;
 
     IMR.signal = true;
     IMR.finish = true;
@@ -427,7 +427,7 @@ void GS_REGISTERS::reset(bool soft_reset)
     IMR.rawt = true;
     if (soft_reset == false)
     {
-        CSR.is_odd_frame = false;
+        CSR.is_odd_frame = true; //First frame is always odd
         CSR.SIGNAL_generated = false;
         CSR.SIGNAL_stall = false;
         CSR.SIGNAL_irq_pending = false;
@@ -479,18 +479,18 @@ void GS_REGISTERS::get_inner_resolution(int &w, int &h)
 {
     if (PMODE.circuit1 && PMODE.circuit2)
     {
-        h = std::max(Calculated_DISPLAY1.height, Calculated_DISPLAY2.height);
-        w = std::max(Calculated_DISPLAY1.width, Calculated_DISPLAY2.width);
+        h = std::max(calculated_DISPLAY1.height, calculated_DISPLAY2.height);
+        w = std::max(calculated_DISPLAY1.width, calculated_DISPLAY2.width);
     }
     else if (PMODE.circuit1)
     {
-        h = Calculated_DISPLAY1.height;
-        w = Calculated_DISPLAY1.width;
+        h = calculated_DISPLAY1.height;
+        w = calculated_DISPLAY1.width;
     }
     else //Circuit 2 only or none
     {
-        h = Calculated_DISPLAY2.height;
-        w = Calculated_DISPLAY2.width;
+        h = calculated_DISPLAY2.height;
+        w = calculated_DISPLAY2.width;
     }
     //TODO - Find out why some games double their height
     if (h >= (w * 1.3))
