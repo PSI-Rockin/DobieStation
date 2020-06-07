@@ -156,43 +156,25 @@ VectorUnit::VectorUnit(int id, Emulator* e, INTC* intc, EmotionEngine* cpu, Vect
 
 void VectorUnit::reset()
 {
-    status = 0;
-    status_pipe = 0;
-    clip_flags = 0;
-    PC = 0;
+    soft_reset();
+
     VU_JIT::reset(this);
-    //cycle_count = 1; //Set to 1 to prevent spurious events from occurring during execution
-    cycle_count = eecpu->get_cycle_count();
-    running = false;
-    tbit_stop = false;
     vumem_is_dirty = true; //assume we don't know the contents on reset
-    finish_on = false;
-    branch_on = false;
-    second_branch_pending = false;
-    secondbranch_PC = 0;
-    branch_delay_slot = 0;
-    ebit_delay_slot = 0;
+    
     transferring_GIF = false;
     XGKICK_stall = false;
     new_MAC_flags = 0;
-    new_Q_instance.u = 0;
+
     finish_DIV_event = 0;
-    pipeline_state[0] = 0;
-    pipeline_state[1] = 0;
+    finish_EFU_event = 0;
+    new_Q_instance.u = 0;
+    new_P_instance.u = 0;
+    Q.u = 0;
+    P.u = 0;
+    DIV_event_started = false;
+    EFU_event_started = false;
+    
     XGKICK_cycles = 0;
-
-    for (int i = 0; i < 4; i++) {
-        MAC_pipeline[i] = 0;
-        CLIP_pipeline[i] = 0;
-        ILW_pipeline[i] = 0;
-    }
-
-    flush_pipes();
-    int_branch_pipeline.reset();
-
-    int_backup_id = 0;
-    int_backup_reg = 0;
-    int_branch_delay = 0;
 
     for (int i = 1; i < 32; i++)
     {
@@ -224,8 +206,8 @@ void VectorUnit::soft_reset()
     secondbranch_PC = 0;
     branch_delay_slot = 0;
     ebit_delay_slot = 0;
-    
-    finish_DIV_event = 0;
+
+    new_MAC_flags = 0;
     pipeline_state[0] = 0;
     pipeline_state[1] = 0;
 
@@ -234,17 +216,9 @@ void VectorUnit::soft_reset()
         CLIP_pipeline[i] = 0;
         ILW_pipeline[i] = 0;
     }
-
+    
     decoder.reset();
     int_branch_pipeline.reset();
-
-    new_MAC_flags = 0;
-    new_Q_instance.u = 0;
-    new_P_instance.u = 0;
-    Q.u = 0;
-    P.u = 0;
-    DIV_event_started = false;
-    EFU_event_started = false;
 
     int_backup_id = 0;
     int_backup_reg = 0;
