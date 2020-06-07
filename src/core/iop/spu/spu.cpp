@@ -90,45 +90,6 @@ void SPU::spu_irq(int index)
     intc->assert_irq(9);
 }
 
-void SPU::dump_voice_data()
-{
-    //std::ofstream ramdump("spu.ram", std::fstream::out | std::fstream::binary);
-    //ramdump.write((char*)RAM, 1024*1024*2);
-    //ramdump.close();
-    for (int i = 0; i < 24; i++)
-    {
-        auto &voice = voices[i];
-        printf("reading voice %d on spu %d starting at 0x%X\n", i, id, voice.start_addr);
-        printf("loop addr is %X\n", voice.loop_addr);
-        std::ostringstream fname;
-        fname << "spu_" << id << "_voice_" << i << ".wav";
-
-        WAVWriter out(fname.str());
-        auto *data = (RAM + voice.start_addr);
-
-        ADPCM_decoder stream = {};
-
-        int dataleft = 1;
-        std::vector<int16_t> pcm;
-
-        while (dataleft)
-        {
-            auto newpcm = stream.decode_block((uint8_t*)data);
-
-            if ((stream.flags & 1) == 1)
-            {
-                dataleft = 0;
-            }
-
-            pcm.insert(pcm.end(), newpcm.begin(), newpcm.end());
-
-            data += 8;
-        }
-
-        out.append_pcm(pcm);
-    }
-}
-
 void SPU::switch_block(int voice_id)
 {
     Voice &voice = voices[voice_id];
@@ -277,13 +238,6 @@ void SPU::gen_sample()
     memout(MEMOUTEL, voices_wet.left);
     memout(MEMOUTER, voices_wet.right);
 
-    if (left_out_pcm.size() > 0x100)
-    {
-        coreout->append_pcm_stereo(left_out_pcm, right_out_pcm);
-        left_out_pcm.clear();
-        right_out_pcm.clear();
-    }
-
     if (running_ADMA())
     {
         memin = read_memin();
@@ -319,8 +273,13 @@ void SPU::gen_sample()
         memout(SINR, core_output.right);
     }
 
-    left_out_pcm.push_back(core_output.left);
-    right_out_pcm.push_back(core_output.right);
+    // This would be where to get the PCM for an audio backend,
+    // core_output on SPU2 represents the final mixed output.
+
+    if (wav_output)
+    {
+        coreout->append_pcm_stereo(core_output);
+    }
 
     noise.step();
 

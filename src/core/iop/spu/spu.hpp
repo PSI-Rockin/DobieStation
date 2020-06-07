@@ -7,20 +7,6 @@
 #include "spu_adpcm.hpp"
 #include "spu_utils.hpp"
 
-struct stereo_sample
-{
-    int16_t left;
-    int16_t right;
-
-    void mix(stereo_sample two, bool l, bool r)
-    {
-        if (l)
-            left = clamp16(left + two.left);
-        if (r)
-            right = clamp16(right + two.right);
-    }
-};
-
 struct voice_mix
 {
     bool dry_l;
@@ -205,8 +191,6 @@ class SPU
         SPU_STAT status;
 
         WAVWriter* coreout;
-        std::vector<int16_t> left_out_pcm;
-        std::vector<int16_t> right_out_pcm;
 
         static uint16_t spdif_irq;
 
@@ -279,9 +263,8 @@ class SPU
     public:
         SPU(int id, IOP_INTC* intc, IOP_DMA* dma);
 
-        void dump_voice_data();
-
         bool running_ADMA();
+        bool wav_output;
 
         void reset(uint8_t* RAM);
         void gen_sample();

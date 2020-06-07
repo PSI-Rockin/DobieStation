@@ -42,35 +42,26 @@ void WAVWriter::update_header()
     file.write((char*)&size, 4);
 }
 
-void WAVWriter::append_pcm_stereo(std::vector<int16_t> left, std::vector<int16_t> right)
+void WAVWriter::append_pcm_stereo(stereo_sample pcm)
 {
-    file.seekp(44+data_size);
-    uint32_t samples = (uint32_t)left.size();
+    cache.push_back(pcm);
 
-    for (uint32_t i = 0; i < samples; i++)
+    if (cache.size() > 0x200)
     {
-        file.write((char*)&(left.at(i)), 2);
-        file.write((char*)&(right.at(i)), 2);
+        file.seekp(44+data_size);
+        uint32_t samples = (uint32_t)cache.size();
+
+        for (uint32_t i = 0; i < samples; i++)
+        {
+            file.write((char*)&(cache.at(i).left), 2);
+            file.write((char*)&(cache.at(i).right), 2);
+        }
+
+        data_size += samples * 4;
+
+        update_header();
+        cache.clear();
     }
-
-    data_size += samples * 4;
-
-    update_header();
-}
-
-void WAVWriter::append_pcm(std::vector<int16_t> pcm)
-{
-    file.seekp(44+data_size);
-
-    for (auto s : pcm)
-    {
-        file.write((char*)&s, 2);
-
-    }
-
-    data_size += (uint32_t)pcm.size() * 2;
-
-    update_header();
 }
 
 WAVWriter::~WAVWriter()

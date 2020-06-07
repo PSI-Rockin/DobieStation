@@ -381,9 +381,12 @@ void EmuWindow::create_menu()
         frame_action->setChecked(emu_thread.frame_advance);
     });
 
-    auto voice_action = new QAction(tr("&Dump SPU voices"), this);
-    connect(voice_action, &QAction::triggered, this, [=] (){
-        emu_thread.dump_voices();
+    auto wavoutput_action = new QAction(tr("&WAV Audio Output"), this);
+    wavoutput_action->setCheckable(true);
+    connect(wavoutput_action, &QAction::triggered, this, [=] (){
+        bool new_state = wavoutput_action->isChecked();
+        emu_thread.set_wavout(new_state);
+        wavoutput_action->setChecked(new_state);
     });
 
 
@@ -400,7 +403,7 @@ void EmuWindow::create_menu()
     emulation_menu->addAction(unpause_action);
     emulation_menu->addSeparator();
     emulation_menu->addAction(frame_action);
-    emulation_menu->addAction(voice_action);
+    emulation_menu->addAction(wavoutput_action);
     emulation_menu->addSeparator();
     emulation_menu->addAction(shutdown_action);
 

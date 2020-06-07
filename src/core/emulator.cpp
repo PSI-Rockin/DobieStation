@@ -1778,10 +1778,9 @@ GraphicsSynthesizer& Emulator::get_gs()
     return gs;
 }
 
-void Emulator::dump_voice_data()
+void Emulator::set_wav_output(bool state)
 {
-    spu.dump_voice_data();
-    spu2.dump_voice_data();
+    spu2.wav_output = state;
 }
 
 void Emulator::request_gsdump_toggle()
