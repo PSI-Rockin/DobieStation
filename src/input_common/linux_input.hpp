@@ -277,10 +277,10 @@ private:
     std::map<uint, BUTTONS> button_map =
         {
 
-            {BTN_TR, BUTTONS::SELECT},
+            {BTN_TL, BUTTONS::SELECT},
             {BTN_THUMB, BUTTONS::L3},
             {BTN_THUMB2, BUTTONS::R3},
-            {BTN_TL, BUTTONS::START},
+            {BTN_TR, BUTTONS::START},
             {BTN_TRIGGER_HAPPY3, BUTTONS::UP},
             {BTN_DPAD_RIGHT, BUTTONS::RIGHT},
             {BTN_TRIGGER_HAPPY2, BUTTONS::DOWN},

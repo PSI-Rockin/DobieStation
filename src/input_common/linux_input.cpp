@@ -177,7 +177,17 @@ PAD_DATA LinuxInput::poll()
     {
         int key;
         libevdev_fetch_event_value(interesting_devices[0]->dev, EV_KEY, button.first, &key);
-        event.input[button.second] = key;
+        event.button[button.second].input = key;
+        
+        if (event.button[button.second].input)
+        {
+            event.button[button.second].pressure = 255;
+        }
+
+        else
+        {
+            event.button[button.second].pressure = 0;
+        }
     }
     return event;
 }

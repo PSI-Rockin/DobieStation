@@ -298,8 +298,7 @@ void Emulator::poll_controller()
 
     for (int i = 0; i < CONTROLLER_BUTTON_MAX; i++)
     {
-
-        //std::cout << "button: " << i << " state: " << state.input[i] << std::endl;
+        std::cout << "button: " << i << " PRESSURE: " << state.button[i].pressure << std::endl;
         set_button((PAD_BUTTON)i, state.button[i].pressure);
     }
     state.lStickXAxis = (state.lStickXAxis + 1) * 255 / 2;

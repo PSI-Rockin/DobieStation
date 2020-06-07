@@ -49,15 +49,17 @@ void Gamepad::reset()
 
 void Gamepad::set_button(PAD_BUTTON button, uint8_t val)
 {
+
+    //std::cout << "Pressure: " << unsigned(val) << std::endl; 
+
     if (val)
-        buttons |= 1 << (int)button;
-    else
         buttons &= ~(1 << (int)button);
+    else
+        buttons |= 1 << (int)button;
         
     button_pressure[(int)button] = val;
 
-    std::cout << "button: " << (int)button << " state: " << std::bitset<16>(buttons) << std::endl;
-
+//printf("Button %d state %x\n", (int)button, (buttons >> (int)button) & 1);
 }
 
 void Gamepad::release_button(PAD_BUTTON button)
@@ -68,7 +70,7 @@ void Gamepad::release_button(PAD_BUTTON button)
 
 void Gamepad::update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t val)
 {
-    //std::cout << "Value: " << unsigned(val) << std::endl;
+    std::cout << "Value: " << unsigned(val) << std::endl;
     joysticks[(int)joystick][(int)axis] = val;
 }
 
