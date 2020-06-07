@@ -537,7 +537,7 @@ uint16_t convert_color_down(uint32_t col)
 }
 
 //Calculates DISPLAY bounding box
-bool GraphicsSynthesizerThread::isInDisplay(DISPLAY &display, int32_t x_start, int32_t y_start, int32_t x, int32_t y)
+bool GraphicsSynthesizerThread::is_in_display(DISPLAY &display, int32_t x_start, int32_t y_start, int32_t x, int32_t y)
 {
     //Inside X
     if (x >= x_start && x < (x_start + display.width))
@@ -664,8 +664,8 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
             int32_t scaled_y2 = (int32_t)reg.DISPFB2.y + fb_offset + ((pixel_y_disp2 >> (y_increment - 1)) << (frame_line_increment - 1));
 
             //Disable the outputs if the x, y are not in the display bounding box
-            enable_circuit1 = reg.PMODE.circuit1 && isInDisplay(reg.DISPLAY1, display1_xoffset, display1_yoffset, pixel_x, pixel_y);
-            enable_circuit2 = reg.PMODE.circuit2 && isInDisplay(reg.DISPLAY2, display2_xoffset, display2_yoffset, pixel_x, pixel_y);
+            enable_circuit1 = reg.PMODE.circuit1 && is_in_display(reg.DISPLAY1, display1_xoffset, display1_yoffset, pixel_x, pixel_y);
+            enable_circuit2 = reg.PMODE.circuit2 && is_in_display(reg.DISPLAY2, display2_xoffset, display2_yoffset, pixel_x, pixel_y);
 
             uint32_t output1 = enable_circuit1 ? get_CRT_color(reg.DISPFB1, scaled_x1, scaled_y1) : 0;
             uint32_t output2 = enable_circuit2 ? get_CRT_color(reg.DISPFB2, scaled_x2, scaled_y2) : reg.BGCOLOR;
