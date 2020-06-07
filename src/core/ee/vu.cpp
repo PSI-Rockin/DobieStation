@@ -160,13 +160,16 @@ void VectorUnit::reset()
 
     VU_JIT::reset(this);
     vumem_is_dirty = true; //assume we don't know the contents on reset
-    
+
+    PC = 0;
     finish_DIV_event = 0;
     finish_EFU_event = 0;
     new_Q_instance.u = 0;
     new_P_instance.u = 0;
     Q.u = 0;
     P.u = 0;
+    R.u = 0;
+    I.u = 0;
     DIV_event_started = false;
     EFU_event_started = false;
     
@@ -195,7 +198,6 @@ void VectorUnit::soft_reset()
     status = 0;
     status_pipe = 0;
     clip_flags = 0;
-    PC = 0;
     cycle_count = eecpu->get_cycle_count();
     running = false;
     tbit_stop = false;
