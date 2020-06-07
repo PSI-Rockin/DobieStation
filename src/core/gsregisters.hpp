@@ -110,9 +110,9 @@ struct DISPFB
 
 struct DISPLAY
 {
-    uint16_t x, y;
-    uint8_t magnify_x, magnify_y;
-    uint16_t width, height;
+    int32_t x, y;
+    int32_t magnify_x, magnify_y;
+    int32_t width, height;
 };
 
 struct GS_IMR //Interrupt masking
@@ -178,7 +178,7 @@ struct GS_REGISTERS
     void write64_privileged(uint32_t addr, uint64_t value);
     bool write64(uint32_t addr, uint64_t value);//returns false if address not part of these registers
 
-    void reset();
+    void reset(bool soft_reset);
 
     void set_CRT(bool interlaced, int mode, bool frame_mode);
     void get_resolution(int &w, int &h);

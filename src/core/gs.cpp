@@ -41,7 +41,7 @@ void GraphicsSynthesizer::reset()
     using_first_buffer = true;
     frame_count = 0;
     set_CRT(false, 0x2, false);
-    reg.reset();
+    reg.reset(false);
 }
 
 void GraphicsSynthesizer::start_frame()

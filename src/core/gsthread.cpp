@@ -256,12 +256,16 @@ void GraphicsSynthesizerThread::event_loop()
                     {
                         auto p = data.payload.write64_payload;
                         reg.write64_privileged(p.addr, p.value);
+                        if (p.addr == 0x12001000 && (p.value & 0x200))
+                            soft_reset();
                         break;
                     }
                     case write32_privileged_t:
                     {
                         auto p = data.payload.write32_payload;
                         reg.write32_privileged(p.addr, p.value);
+                        if (p.addr == 0x12001000 && (p.value & 0x200))
+                            soft_reset();
                         break;
                     }
                     case set_rgba_t:
@@ -444,14 +448,15 @@ void GraphicsSynthesizerThread::reset()
     frame_count = 0;
 
     COLCLAMP = true;
+    SCANMSK = 0;
 
-    reg.reset();
+    reg.reset(false);
     context1.reset();
     context2.reset();
     PSMCT24_color = 0;
     PSMCT24_unpacked_count = 0;
     current_ctx = &context1;
-    current_PRMODE = &PRIM;
+    current_PRMODE = &PRMODE;
     PRIM.reset();
     PRMODE.reset();
 
@@ -471,6 +476,25 @@ void GraphicsSynthesizerThread::reset()
     message_queue = std::make_unique<gs_fifo>();
     return_queue = std::make_unique<gs_return_fifo>();
     thread = std::thread(&GraphicsSynthesizerThread::event_loop, this);
+}
+
+void GraphicsSynthesizerThread::soft_reset()
+{
+    COLCLAMP = true;
+    SCANMSK = 0;
+
+    reg.reset(true);
+    context1.reset();
+    context2.reset();
+    PSMCT24_color = 0;
+    PSMCT24_unpacked_count = 0;
+    current_ctx = &context1;
+    current_PRMODE = &PRMODE;
+    PRIM.reset();
+    PRMODE.reset();
+
+    update_draw_pixel_state();
+    update_tex_lookup_state();
 }
 
 void GraphicsSynthesizerThread::memdump(uint32_t* target, uint16_t& width, uint16_t& height)
@@ -512,7 +536,23 @@ uint16_t convert_color_down(uint32_t col)
     return (r | (g << 5) | (b << 10) | (a << 15));
 }
 
-uint32_t GraphicsSynthesizerThread::get_CRT_color(DISPFB &dispfb, uint32_t x, uint32_t y)
+//Calculates DISPLAY bounding box
+bool GraphicsSynthesizerThread::is_in_display(DISPLAY &display, int32_t x_start, int32_t y_start, int32_t x, int32_t y)
+{
+    //Inside X
+    if (x >= x_start && x < (x_start + display.width))
+    {
+        //Inside Y
+        if (y >= y_start && y < (y_start + display.height))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+uint32_t GraphicsSynthesizerThread::get_CRT_color(DISPFB &dispfb, int32_t x, int32_t y)
 {
     switch (dispfb.format)
     {
@@ -531,86 +571,109 @@ uint32_t GraphicsSynthesizerThread::get_CRT_color(DISPFB &dispfb, uint32_t x, ui
 
 void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
 {
-    int width;
-    int height;
-    int y_increment = 1;
-    int start_scanline = 0;
-    int frame_line_increment = 1;
-    int fb_y = 0;
+    int32_t width;
+    int32_t height;
+    int32_t y_increment = 1;
+    int32_t start_scanline = 0;
+    int32_t frame_line_increment = 1;
+    int32_t fb_offset = 0;
+    int32_t display1_yoffset = 0;
+    int32_t display1_xoffset = 0;
+    int32_t display2_yoffset = 0;
+    int32_t display2_xoffset = 0;
+    bool enable_circuit1 = true;
+    bool enable_circuit2 = true;
 
-    DISPLAY &cur_disp = reg.DISPLAY1;
-
-    //Makai Kingdom needs to take its display information from Display2
-    if (!reg.PMODE.circuit1)
+    //Get overall picture height, largest will likely cover whole screen
+    if (reg.PMODE.circuit1 && reg.PMODE.circuit2)
     {
-        if (!reg.PMODE.circuit2)
-            return;
-
-        cur_disp = reg.DISPLAY2;
+        height = max(reg.DISPLAY1.height, reg.DISPLAY2.height);
+        width = max(reg.DISPLAY1.width, reg.DISPLAY2.width);
     }
-
-    if (cur_disp.magnify_x)
-        width = cur_disp.width / cur_disp.magnify_x;
+    else if (reg.PMODE.circuit1)
+    {
+        height = reg.DISPLAY1.height;
+        width = reg.DISPLAY1.width;
+    }
+    else if (reg.PMODE.circuit2) //Makai Kingdom, SH2, GT4, True Crime needs to take its display information from Display2
+    {
+        height = reg.DISPLAY2.height;
+        width = reg.DISPLAY2.width;
+    }
     else
-        width = cur_disp.width >> 2;
+        return;
+
+    //Calculate DISPLAY offsets
+    if (reg.PMODE.circuit1 && reg.PMODE.circuit2)
+    {
+        if ((reg.DISPLAY1.x - reg.DISPLAY2.x) < 0)
+            display2_xoffset = reg.DISPLAY2.x - reg.DISPLAY1.x;
+        else if ((reg.DISPLAY1.x - reg.DISPLAY2.x) > 0)
+            display1_xoffset = reg.DISPLAY1.x - reg.DISPLAY2.x;
+
+        if ((reg.DISPLAY1.y - reg.DISPLAY2.y) < 0)
+            display2_yoffset = reg.DISPLAY2.y - reg.DISPLAY1.y;
+        else if ((reg.DISPLAY1.y - reg.DISPLAY2.y) > 0)
+            display1_yoffset = reg.DISPLAY1.y - reg.DISPLAY2.y;
+    }
 
     //TODO - Find out why some games double their height
     //Examples are Pool Paradise, Silent Hill 2
     //Makai Kingdom + Disgaea go the other way and half their height, but this is ok
     //Resident Evil 4 has it's height just slightly higher than width (pseudo widescreen), so we need to be careful to check that
-
-    /*
-    height 511 magy 1 width 2562 magx 6 actual width 427 dx 656 dy 73 Interlaced 1 Frame 0 --- Resident Evil 4 (strangely cut off, broken with PCRTC change)
-    height 896 magy 1 width 2560 magx 5 actual width 512 dx 652 dy 50 Interlaced 1 Frame 0 --- Silent Hill 2
-    height 960 magy 1 width 2560 magx 4 actual width 640 dx 636 dy 42 Interlaced 1 Frame 0 --- Pool Paradise
-    height 224 magy 1 width 2560 magx 4 actual width 640 dx 636 dy 25 Interlaced 0 Frame 1 --- Makai
-      */
+    //height 511 magy 1 width 2562 magx 6 actual width 427 dx 656 dy 73 Interlaced 1 Frame 0 --- Resident Evil 4 (strangely cut off, broken with PCRTC change)
+    //height 896 magy 1 width 2560 magx 5 actual width 512 dx 652 dy 50 Interlaced 1 Frame 0 --- Silent Hill 2
+    //height 960 magy 1 width 2560 magx 4 actual width 640 dx 636 dy 42 Interlaced 1 Frame 0 --- Pool Paradise
+    //height 224 magy 1 width 2560 magx 4 actual width 640 dx 636 dy 25 Interlaced 0 Frame 1 --- Makai
 
     //Check for extremely high heights, slightly higher heights are ok as they are a sort of widescreen resolution
-    if (cur_disp.height >= (width * 1.33))
-        height = cur_disp.height / 2;
-    else
-        height = cur_disp.height;
+    if (height >= (width * 1.3))
+        height = height / 2;
 
     if (reg.SMODE2.interlaced)
     {
         if (reg.deinterlace_method != BOB_DEINTERLACE)
         {
             y_increment = 2;
-            start_scanline = !reg.CSR.is_odd_frame; //Seems to write the upper fields first
+            //We use !reg.CSR.is_odd_frame here because frames are counted from 1,2,3 etc, not 0, 1, 2, so the first frame is always odd
+            start_scanline = !reg.CSR.is_odd_frame;
 
             if (!reg.SMODE2.frame_mode)
+            {
                 frame_line_increment = 2;
-
-            fb_y = reg.CSR.is_odd_frame;
+                fb_offset = !reg.CSR.is_odd_frame;
+            }
         }
     }
 
-    for (int y = start_scanline; y <= height; y += y_increment)
+    for (int y = start_scanline; y < height; y += y_increment)
     {
-        if (reg.SMODE2.interlaced)
-        {
-            //Gets rid of some nasty interlace bobbing artifacts
-            if (y == 0)
-                continue;
-        }
         for (int x = 0; x < width; x++)
         {
-            int pixel_x = x;
-            int pixel_y = y;
+            int32_t pixel_x = x;
+            int32_t pixel_y = y;
+            int32_t pixel_x_disp1 = pixel_x - display1_xoffset;
+            int32_t pixel_x_disp2 = pixel_x - display2_xoffset;
+            int32_t pixel_y_disp1 = pixel_y - display1_yoffset;
+            int32_t pixel_y_disp2 = pixel_y - display2_yoffset;
 
-            uint32_t scaled_x1 = reg.DISPFB1.x + x;
-            uint32_t scaled_x2 = reg.DISPFB2.x + x;
-            uint32_t scaled_y1 = reg.DISPFB1.y + fb_y;
-            uint32_t scaled_y2 = reg.DISPFB2.y + fb_y;
+            //Calculate Frame buffer Coordinates
+            int32_t scaled_x1 = (int32_t)reg.DISPFB1.x + pixel_x_disp1;
+            int32_t scaled_x2 = (int32_t)reg.DISPFB2.x + pixel_x_disp2;
+            int32_t scaled_y1 = (int32_t)reg.DISPFB1.y + fb_offset + ((pixel_y_disp1 >> (y_increment - 1)) << (frame_line_increment - 1));
+            int32_t scaled_y2 = (int32_t)reg.DISPFB2.y + fb_offset + ((pixel_y_disp2 >> (y_increment - 1)) << (frame_line_increment - 1));
 
-            uint32_t output1 = reg.PMODE.circuit1 ? get_CRT_color(reg.DISPFB1, scaled_x1, scaled_y1) : 0;
-            uint32_t output2 = reg.PMODE.circuit2 ? get_CRT_color(reg.DISPFB2, scaled_x2, scaled_y2) : reg.BGCOLOR;
+            //Disable the outputs if the x, y are not in the display bounding box
+            enable_circuit1 = reg.PMODE.circuit1 && is_in_display(reg.DISPLAY1, display1_xoffset, display1_yoffset, pixel_x, pixel_y);
+            enable_circuit2 = reg.PMODE.circuit2 && is_in_display(reg.DISPLAY2, display2_xoffset, display2_yoffset, pixel_x, pixel_y);
+
+            uint32_t output1 = enable_circuit1 ? get_CRT_color(reg.DISPFB1, scaled_x1, scaled_y1) : 0;
+            uint32_t output2 = enable_circuit2 ? get_CRT_color(reg.DISPFB2, scaled_x2, scaled_y2) : reg.BGCOLOR;
 
             if (reg.PMODE.blend_with_bg)
                 output2 = reg.BGCOLOR;
 
-            uint32_t r, g, b;
+            uint32_t r = 0, g = 0, b = 0;
             uint32_t r1, g1, b1, r2, g2, b2;
             uint32_t final_color;
 
@@ -619,7 +682,7 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
             //However we think that on real hardware it will either skip the blending or duplicate Circuit 2 in the Circuit 1 output
             //which effectively means output2 is outputted at full alpha
             //Downhill Domination also has a dark screen if you do not follow this behaviour.  ALP 128 only circuit 2
-            if (reg.PMODE.circuit1)
+            if (enable_circuit1)
             {
                 uint32_t alpha;
 
@@ -647,7 +710,7 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
                 if (b > 0xFF)
                     b = 0xFF;
             }
-            else
+            else if(enable_circuit2)
             {
                 r = output2 & 0xFF;
                 g = (output2 >> 8) & 0xFF;
@@ -660,66 +723,6 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
             {
                 switch (reg.deinterlace_method)
                 {
-                    case MERGE_FIELD_DEINTERLACE:
-                    {
-                        if (!reg.CSR.is_odd_frame)
-                        {
-                            screen_buffer[pixel_x + (pixel_y * width)] = final_color;
-
-                            r1 = r; r2 = screen_buffer[pixel_x + ((pixel_y + 1) * width)] & 0xFF;
-                            g1 = g; g2 = (screen_buffer[pixel_x + ((pixel_y + 1) * width)] >> 8) & 0xFF;
-                            b1 = b; b2 = (screen_buffer[pixel_x + ((pixel_y + 1) * width)] >> 16) & 0xFF;
-
-                            r = (r1 + r2) >> 1;
-                            g = (g1 + g2) >> 1;
-                            b = (b1 + b2) >> 1;
-
-                            screen_buffer[pixel_x + (pixel_y * width)] = 0xFF000000 | r | (g << 8) | (b << 16);
-                        }
-                        else
-                        {
-                            screen_buffer[pixel_x + (pixel_y * width)] = final_color;
-
-                            r1 = r; r2 = screen_buffer[pixel_x + ((pixel_y - 1) * width)] & 0xFF;
-                            g1 = g; g2 = (screen_buffer[pixel_x + ((pixel_y - 1) * width)] >> 8) & 0xFF;
-                            b1 = b; b2 = (screen_buffer[pixel_x + ((pixel_y - 1) * width)] >> 16) & 0xFF;
-
-                            r = (r1 + r2) >> 1;
-                            g = (g1 + g2) >> 1;
-                            b = (b1 + b2) >> 1;
-
-                            screen_buffer[pixel_x + (pixel_y * width)] = 0xFF000000 | r | (g << 8) | (b << 16);
-                        }
-
-                        target[pixel_x + (pixel_y * width)] = screen_buffer[pixel_x + (pixel_y * width)];
-
-                        if (!reg.CSR.is_odd_frame)
-                            target[pixel_x + ((pixel_y + 1) * width)] = screen_buffer[pixel_x + ((pixel_y + 1) * width)];
-                        else if (pixel_y > 0)
-                            target[pixel_x + ((pixel_y - 1) * width)] = screen_buffer[pixel_x + ((pixel_y - 1) * width)];
-                        break;
-                    }
-                    case BLEND_SCANLINE_DEINTERLACE:
-                    {
-                        r1 = r; r2 = screen_buffer[pixel_x + ((pixel_y)* width)] & 0xFF;
-                        g1 = g; g2 = (screen_buffer[pixel_x + ((pixel_y)* width)] >> 8) & 0xFF;
-                        b1 = b; b2 = (screen_buffer[pixel_x + ((pixel_y)* width)] >> 16) & 0xFF;
-
-                        r = (r1 + r2) >> 1;
-                        g = (g1 + g2) >> 1;
-                        b = (b1 + b2) >> 1;
-
-                        final_color = 0xFF000000 | r | (g << 8) | (b << 16);
-
-                        screen_buffer[pixel_x + (pixel_y * width)] = final_color;
-                        target[pixel_x + (pixel_y * width)] = final_color;
-
-                        if (!reg.CSR.is_odd_frame)
-                            target[pixel_x + ((pixel_y + 1) * width)] = screen_buffer[pixel_x + ((pixel_y + 1) * width)];
-                        else if (pixel_y > 0)
-                            target[pixel_x + ((pixel_y - 1) * width)] = screen_buffer[pixel_x + ((pixel_y - 1) * width)];
-                        break;
-                    }
                     case BOB_DEINTERLACE:
                     {
                         if (reg.SMODE2.frame_mode)
@@ -742,7 +745,7 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
 
                         if (reg.SMODE2.interlaced)
                         {
-                            if (!reg.CSR.is_odd_frame)
+                            if (reg.CSR.is_odd_frame)
                                 target[pixel_x + ((pixel_y + 1) * width)] = screen_buffer[pixel_x + ((pixel_y + 1) * width)];
                             else if (pixel_y > 0)
                                 target[pixel_x + ((pixel_y - 1) * width)] = screen_buffer[pixel_x + ((pixel_y - 1) * width)];
@@ -756,7 +759,6 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
                 target[pixel_x + (pixel_y * width)] = final_color;
             }
         }
-        fb_y += frame_line_increment;
     }
 }
 
@@ -5368,6 +5370,12 @@ void GraphicsSynthesizerThread::load_state(ifstream *state)
         current_PRMODE = &PRIM;
     else
         current_PRMODE = &PRMODE;
+
+    state->read((char*)&reg.DISPLAY1, sizeof(reg.DISPLAY1));
+    state->read((char*)&reg.DISPLAY2, sizeof(reg.DISPLAY2));
+    state->read((char*)&reg.PMODE, sizeof(reg.PMODE));
+    state->read((char*)&reg.SMODE2, sizeof(reg.SMODE2));
+
     state->read((char*)&RGBAQ, sizeof(RGBAQ));
     state->read((char*)&UV, sizeof(UV));
     state->read((char*)&ST, sizeof(ST));
@@ -5416,6 +5424,11 @@ void GraphicsSynthesizerThread::save_state(ofstream *state)
     if (current_PRMODE == &PRMODE)
         current_PRMODE_id = 2;
     state->write((char*)&current_PRMODE_id, sizeof(current_PRMODE_id));
+
+    state->write((char*)&reg.DISPLAY1, sizeof(reg.DISPLAY1));
+    state->write((char*)&reg.DISPLAY2, sizeof(reg.DISPLAY2));
+    state->write((char*)&reg.PMODE, sizeof(reg.PMODE));
+    state->write((char*)&reg.SMODE2, sizeof(reg.SMODE2));
 
     state->write((char*)&RGBAQ, sizeof(RGBAQ));
     state->write((char*)&UV, sizeof(UV));

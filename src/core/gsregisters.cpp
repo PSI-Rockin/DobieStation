@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cstdio>
 #include "gsregisters.hpp"
 #include "errors.hpp"
@@ -116,6 +117,14 @@ void GS_REGISTERS::write64_privileged(uint32_t addr, uint64_t value)
             DISPLAY1.magnify_y = ((value >> 27) & 0x3) + 1;
             DISPLAY1.width = ((value >> 32) & 0xFFF) + 1;
             DISPLAY1.height = ((value >> 44) & 0x7FF) + 1;
+
+            //Calculate actual values
+            DISPLAY1.width /= DISPLAY1.magnify_x;
+            DISPLAY1.height /= DISPLAY1.magnify_y;
+            DISPLAY1.x /= DISPLAY1.magnify_x;
+            DISPLAY1.y /= DISPLAY1.magnify_y;
+            printf("MAGH: %d\n", DISPLAY1.magnify_x);
+            printf("MAGV: %d\n", DISPLAY1.magnify_y);
             break;
         case 0x0090:
             printf("[GS_r] Write DISPFB2: $%08lX_%08lX\n", value >> 32, value & 0xFFFFFFFF);
@@ -133,6 +142,12 @@ void GS_REGISTERS::write64_privileged(uint32_t addr, uint64_t value)
             DISPLAY2.magnify_y = ((value >> 27) & 0x3) + 1;
             DISPLAY2.width = ((value >> 32) & 0xFFF) + 1;
             DISPLAY2.height = ((value >> 44) & 0x7FF) + 1;
+
+            //Calculate actual values
+            DISPLAY2.width /= DISPLAY2.magnify_x;
+            DISPLAY2.height /= DISPLAY2.magnify_y;
+            DISPLAY2.x /= DISPLAY2.magnify_x;
+            DISPLAY2.y /= DISPLAY2.magnify_y;
             printf("MAGH: %d\n", DISPLAY2.magnify_x);
             printf("MAGV: %d\n", DISPLAY2.magnify_y);
             break;
@@ -174,6 +189,10 @@ void GS_REGISTERS::write64_privileged(uint32_t addr, uint64_t value)
             if (value & 0x8)
             {
                 CSR.VBLANK_generated = false;
+            }
+            if (value & 0x200)
+            {
+                reset(true);
             }
             break;
         case 0x1010:
@@ -242,6 +261,10 @@ void GS_REGISTERS::write32_privileged(uint32_t addr, uint32_t value)
             if (value & 0x8)
             {
                 CSR.VBLANK_generated = false;
+            }
+            if (value & 0x200)
+            {
+                reset(true);
             }
             break;
         case 0x1010:
@@ -339,7 +362,7 @@ bool GS_REGISTERS::write64(uint32_t addr, uint64_t value)
     return false;
 }
 
-void GS_REGISTERS::reset()
+void GS_REGISTERS::reset(bool soft_reset)
 {
     SMODE1.color_system = 0;
     SMODE1.PLL_loop_divider = 0;
@@ -364,14 +387,6 @@ void GS_REGISTERS::reset()
     SYNCV.vertical_back_porch = 0;
     SYNCV.vertical_front_porch = 0;
 
-    DISPLAY1.x = 0;
-    DISPLAY1.y = 0;
-    DISPLAY1.width = 0;
-    DISPLAY1.height = 0;
-    DISPLAY2.x = 0;
-    DISPLAY2.y = 0;
-    DISPLAY2.width = 0;
-    DISPLAY2.height = 0;
     DISPFB1.frame_base = 0;
     DISPFB1.width = 0;
     DISPFB1.x = 0;
@@ -380,25 +395,43 @@ void GS_REGISTERS::reset()
     DISPFB2.width = 0;
     DISPFB2.y = 0;
     DISPFB2.x = 0;
+
+    DISPLAY1.magnify_x = 1;
+    DISPLAY1.magnify_y = 1;
+    DISPLAY1.width = 0;
+    DISPLAY1.height = 0;
+    DISPLAY1.x = 0;
+    DISPLAY1.y = 0;
+
+    DISPLAY2.magnify_x = 1;
+    DISPLAY2.magnify_y = 1;
+    DISPLAY2.width = 0;
+    DISPLAY2.height = 0;
+    DISPLAY2.x = 0;
+    DISPLAY2.y = 0;
+
     IMR.signal = true;
     IMR.finish = true;
     IMR.hsync = true;
     IMR.vsync = true;
     IMR.rawt = true;
-    CSR.is_odd_frame = false;
-    CSR.SIGNAL_generated = false;
-    CSR.SIGNAL_stall = false;
-    CSR.SIGNAL_irq_pending = false;
-    CSR.VBLANK_generated = false;
-    CSR.FINISH_generated = false;
-    CSR.FINISH_requested = false;
-    CSR.FIFO_status = 0x1; //Empty
+    if (soft_reset == false)
+    {
+        CSR.is_odd_frame = true; //First frame is always odd
+        CSR.SIGNAL_generated = false;
+        CSR.SIGNAL_stall = false;
+        CSR.SIGNAL_irq_pending = false;
+        CSR.VBLANK_generated = false;
+        CSR.FINISH_generated = false;
+        CSR.FINISH_requested = false;
+        CSR.FIFO_status = 0x1; //Empty
+
+        SIGLBLID.lbl_id = 0;
+        SIGLBLID.sig_id = 0;
+        SIGLBLID.backup_sig_id = 0;
+    }
     PMODE.circuit1 = false;
     PMODE.circuit2 = false;
-
-    SIGLBLID.lbl_id = 0;
-    SIGLBLID.sig_id = 0;
-    SIGLBLID.backup_sig_id = 0;
 
     set_CRT(false, 0x2, false);
 }
@@ -434,23 +467,23 @@ void GS_REGISTERS::get_resolution(int &w, int &h)
 
 void GS_REGISTERS::get_inner_resolution(int &w, int &h)
 {
-    DISPLAY &current_display = DISPLAY1;
-
-    if (PMODE.circuit1 == true)
+    if (PMODE.circuit1 && PMODE.circuit2)
     {
-        current_display = DISPLAY1;
+        h = std::max(DISPLAY1.height, DISPLAY2.height);
+        w = std::max(DISPLAY1.width, DISPLAY2.width);
     }
-    else
+    else if (PMODE.circuit1)
     {
-        current_display = DISPLAY2;
+        h = DISPLAY1.height;
+        w = DISPLAY1.width;
     }
-    if (current_display.magnify_x)
-        w = current_display.width / current_display.magnify_x;
-    else
-        w = current_display.width >> 2;
-    h = current_display.height;
+    else //Circuit 2 only or none
+    {
+        h = DISPLAY2.height;
+        w = DISPLAY2.width;
+    }
     //TODO - Find out why some games double their height
-    if (h >= (w * 1.33))
+    if (h >= (w * 1.3))
         h /= 2;
 }
 
