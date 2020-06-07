@@ -28,7 +28,6 @@ set(SOURCES
     ee/ee_jit64_fpu_avx.cpp
     ee/ee_jit64_gpr.cpp
     ee/ee_jit64_mmi.cpp
-    ee/ee_jit64_vu.cpp
     ee/ee_jittrans.cpp
     ee/emotion.cpp
     ee/emotionasm.cpp
