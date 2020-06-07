@@ -175,6 +175,8 @@ void VectorUnit::reset()
     EFU_event_started = false;
     
     XGKICK_cycles = 0;
+    XGKICK_stall = false;
+    stalled_GIF_addr = 0;
 
     for (int i = 1; i < 32; i++)
     {
