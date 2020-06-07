@@ -169,7 +169,7 @@ struct GS_REGISTERS
     SYNCV_REG SYNCV;
     DISPFB DISPFB1, DISPFB2;
     DISPLAY DISPLAY1, DISPLAY2;
-    CalculatedDISPLAY Calculated_DISPLAY1, Calculated_DISPLAY2;
+    CalculatedDISPLAY calculated_DISPLAY1, calculated_DISPLAY2;
     GS_IMR IMR;
     GS_CSR CSR;
     uint8_t BUSDIR;
