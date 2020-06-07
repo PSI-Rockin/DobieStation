@@ -9,6 +9,7 @@ Instruction::Instruction(Opcode op) : op(op)
     has_dest = false;
     has_source = false;
     has_source2 = false;
+    ignore_likely = false;
     jump_dest = 0;
     jump_fail_dest = 0;
     return_addr = 0;

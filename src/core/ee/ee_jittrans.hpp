@@ -89,6 +89,7 @@ private:
     bool check_mmi_combination(EE_InstrInfo::Pipeline pipeline1, EE_InstrInfo::Pipeline pipeline2);
     void load_store_analysis(std::vector<EE_InstrInfo>& instr_info);
     void data_dependency_analysis(std::vector<EE_InstrInfo>& instr_info);
+    void const_analysis(std::vector<IR::Instruction>& instructions);
 
     void translate_op(uint32_t opcode, uint32_t pc, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs);
     void translate_op_special(uint32_t opcode, uint32_t PC, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs);

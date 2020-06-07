@@ -56,6 +56,7 @@ class Instruction
         bool has_dest;
         bool has_source;
         bool has_source2;
+        bool ignore_likely; // Used for loading constants at the end of a block
 
         Instruction(Opcode op = Null);
 

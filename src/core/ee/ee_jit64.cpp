@@ -1606,6 +1606,15 @@ void EE_JIT64::handle_branch_likely(EmotionEngine& ee, IR::Block& block)
         xmm_regs[i].used = false;
     }
 
+    std::vector<IR::Instruction> likely_instructions;
+
+    // Execute any special instructions (e.g. loading constants) not affected by a likely branch
+    for (IR::Instruction instr = block.get_next_instr(); instr.op != IR::Opcode::Null; instr = block.get_next_instr())
+        if (instr.ignore_likely)
+            emit_instruction(ee, instr);
+        else
+            likely_instructions.push_back(instr);
+
     // Because we don't know where the branch will jump to, we defer it.
     // Once the "branch failure" case has been finished recompiling, we can rewrite the branch offset...
     uint8_t* offset_addr = emitter.JCC_NEAR_DEFERRED(ConditionCode::NZ);
@@ -1617,7 +1626,7 @@ void EE_JIT64::handle_branch_likely(EmotionEngine& ee, IR::Block& block)
     emitter.set_jump_dest(offset_addr);
 
     // execute delay slot and flush EE state back to EE
-    for (IR::Instruction instr = block.get_next_instr(); instr.op != IR::Opcode::Null; instr = block.get_next_instr())
+    for (IR::Instruction instr : likely_instructions)
         emit_instruction(ee, instr);
     cleanup_recompiler(ee, true, true, block.get_cycle_count());
 }

@@ -76,7 +76,7 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
         // todo: Insert a null op in cases where translated_instrs should be empty for more rigorous assertion testing?
         if (translated_instrs.size())
         {
-            branch_op = translated_instrs.back().is_jump();
+            //branch_op = translated_instrs.back().is_jump();
             /*
             //The EE has a bug in its pipelining logic that causes branches to be skipped in certain conditions.
             //They are as follows:
@@ -111,11 +111,12 @@ IR::Block EE_JitTranslator::translate(EmotionEngine &ee)
         pc += 4;
     }
 
+
+    const_analysis(instrs);
+
     for (auto instr : instrs)
         if (instr.op != IR::Opcode::Null)
             block.add_instr(instr);
-
-
 
     block.set_cycle_count(cycle_count);
 
@@ -485,6 +486,1327 @@ void EE_JitTranslator::data_dependency_analysis(std::vector<EE_InstrInfo>& instr
     }
 
     cycle_count += total_penalty;
+}
+
+void EE_JitTranslator::const_analysis(std::vector<IR::Instruction>& instructions)
+{
+    /*
+        TODO: This is probably a really hamfisted way of doing constant analysis
+        
+        I think we might be able to do it cleaner if we split instructions into several categories,
+        the two biggest of which are instructions which interact with two registers, and instructions which
+        interact with a register and an immediate. We could also have a subrountine for each interpreter function
+        which determines the destination value for a particular operation without modifying the CPU, then use that value.
+        This will hopefully reduce a lot of the duplicated code in this function.
+
+        ~Souzooka
+    */
+
+    struct RegisterState
+    {
+        bool is_const; // Is actually a constant value
+        bool is_loaded; // Value has been inserted through code (e.g. before unrecognized op or op which needs the immediate)
+        uint64_t value;
+
+        // Todo: Might not really be needed if we just use LoadConst anyways
+        std::vector<void(*)(EmotionEngine&, uint32_t)> fallback_fn;
+        std::vector<uint32_t> fallback_arg;
+    };
+
+    RegisterState registers[(int)EE_SpecialReg::MAX_VALUE];
+    registers[0].is_const = true;
+    registers[0].value = 0;
+
+    for (int i = 1; i < (int)EE_SpecialReg::MAX_VALUE; ++i)
+    {
+        registers[i].is_const = false;
+        registers[i].is_loaded = false;
+    }
+
+    for (int i = 0; i < instructions.size(); ++i)
+    {
+        switch (instructions[i].op)
+        {
+            case IR::Opcode::Null:
+                break;
+            case IR::Opcode::AddDoublewordImm:
+            {
+                int source = instructions[i].get_source();
+                int dest = instructions[i].get_dest();
+                int imm = instructions[i].get_source2();
+                if (registers[source].is_const)
+                {
+                    uint64_t value = registers[source].value + imm;
+
+                    registers[dest].is_const = true;
+                    registers[dest].is_loaded = false;
+                    registers[dest].value = value;
+                    instructions.erase(instructions.begin() + i);
+                    --i;
+                }
+                else
+                    registers[dest].is_const = false;
+                break;
+            }
+            case IR::Opcode::AddWordImm:
+            {
+                int source = instructions[i].get_source();
+                int dest = instructions[i].get_dest();
+                int imm = instructions[i].get_source2();
+                if (registers[source].is_const)
+                {
+                    uint64_t value = (int64_t)(int32_t)(registers[source].value + imm);
+
+                    registers[dest].is_const = true;
+                    registers[dest].is_loaded = false;
+                    registers[dest].value = value;
+                    instructions.erase(instructions.begin() + i);
+                    --i;
+                }
+                else
+                    registers[dest].is_const = false;
+                break;
+            }
+            case IR::Opcode::AddDoublewordReg:
+            {
+                int source = instructions[i].get_source();
+                int source2 = instructions[i].get_source2();
+                int dest = instructions[i].get_dest();
+                uint64_t value = registers[source].value + registers[source2].value;
+
+                if (registers[source].is_const && registers[source2].is_const)
+                {
+                    registers[dest].is_const = true;
+                    registers[dest].is_loaded = false;
+                    registers[dest].value = value;
+                    instructions.erase(instructions.begin() + i);
+                    --i;
+                }
+                else if (registers[source].is_const && !registers[source].is_loaded)
+                {
+                    auto instr = IR::Instruction(IR::Opcode::LoadConst);
+                    instr.ignore_likely = true;
+                    instr.set_dest(source);
+                    instr.set_source(value);
+                    instructions.insert(instructions.begin() + i, instr);
+                    ++i;
+                }
+                else if (registers[source2].is_const && !registers[source2].is_loaded)
+                {
+                    auto instr = IR::Instruction(IR::Opcode::LoadConst);
+                    instr.ignore_likely = true;
+                    instr.set_dest(source2);
+                    instr.set_source(value);
+                    instructions.insert(instructions.begin() + i, instr);
+                    ++i;
+                }
+                else
+                    registers[dest].is_const = false;
+                break;
+            }
+            case IR::Opcode::AddWordReg:
+            {
+                int source = instructions[i].get_source();
+                int source2 = instructions[i].get_source2();
+                int dest = instructions[i].get_dest();
+                uint64_t value = (int64_t)(int32_t)(registers[source].value + registers[source2].value);
+
+                if (registers[source].is_const && registers[source2].is_const)
+                {
+                    registers[dest].is_const = true;
+                    registers[dest].is_loaded = false;
+                    registers[dest].value = value;
+                    instructions.erase(instructions.begin() + i);
+                    --i;
+                }
+                else if (registers[source].is_const && !registers[source].is_loaded)
+                {
+                    auto instr = IR::Instruction(IR::Opcode::LoadConst);
+                    instr.ignore_likely = true;
+                    instr.set_dest(source);
+                    instr.set_source(value);
+                    instructions.insert(instructions.begin() + i, instr);
+                    ++i;
+                }
+                else if (registers[source2].is_const && !registers[source2].is_loaded)
+                {
+                    auto instr = IR::Instruction(IR::Opcode::LoadConst);
+                    instr.ignore_likely = true;
+                    instr.set_dest(source2);
+                    instr.set_source(value);
+                    instructions.insert(instructions.begin() + i, instr);
+                    ++i;
+                }
+                else
+                    registers[dest].is_const = false;
+                break;
+            }
+            case IR::Opcode::AndImm:
+            {
+                int source = instructions[i].get_source();
+                int dest = instructions[i].get_dest();
+                int imm = instructions[i].get_source2();
+                if (registers[source].is_const)
+                {
+                    uint64_t value = registers[source].value & imm;
+
+                    registers[dest].is_const = true;
+                    registers[dest].is_loaded = false;
+                    registers[dest].value = value;
+                    instructions.erase(instructions.begin() + i);
+                    --i;
+                }
+                else
+                    registers[dest].is_const = false;
+                break;
+            }
+            case IR::Opcode::AndReg:
+            {
+                int source = instructions[i].get_source();
+                int source2 = instructions[i].get_source2();
+                int dest = instructions[i].get_dest();
+                uint64_t value = registers[source].value & registers[source2].value;
+
+                if (registers[source].is_const && registers[source2].is_const)
+                {
+                    registers[dest].is_const = true;
+                    registers[dest].is_loaded = false;
+                    registers[dest].value = value;
+                    instructions.erase(instructions.begin() + i);
+                    --i;
+                }
+                else if (registers[source].is_const && !registers[source].is_loaded)
+                {
+                    auto instr = IR::Instruction(IR::Opcode::LoadConst);
+                    instr.ignore_likely = true;
+                    instr.set_dest(source);
+                    instr.set_source(value);
+                    instructions.insert(instructions.begin() + i, instr);
+                    ++i;
+                }
+                else if (registers[source2].is_const && !registers[source2].is_loaded)
+                {
+                    auto instr = IR::Instruction(IR::Opcode::LoadConst);
+                    instr.ignore_likely = true;
+                    instr.set_dest(source2);
+                    instr.set_source(value);
+                    instructions.insert(instructions.begin() + i, instr);
+                    ++i;
+                }
+                else
+                    registers[dest].is_const = false;
+                break;
+            }
+            case IR::Opcode::BranchCop0:
+            case IR::Opcode::BranchCop1:
+            case IR::Opcode::BranchCop2:
+            case IR::Opcode::BranchEqual:
+            case IR::Opcode::BranchEqualZero:
+            case IR::Opcode::BranchGreaterThanOrEqualZero:
+            case IR::Opcode::BranchGreaterThanZero:
+            case IR::Opcode::BranchLessThanOrEqualZero:
+            case IR::Opcode::BranchLessThanZero:
+            case IR::Opcode::BranchNotEqual:
+            case IR::Opcode::BranchNotEqualZero:
+            case IR::Opcode::CheckInterlockVU0:
+                break;
+            case IR::Opcode::ClearDoublewordReg:
+            {
+                int dest = instructions[i].get_dest();
+                registers[dest].is_const = true;
+                registers[dest].is_loaded = false;
+                registers[dest].value = 0;
+                instructions.erase(instructions.begin() + i);
+                --i;
+                break;
+            }
+            case IR::Opcode::DivideWord:
+                // TODO: Divide
+                goto unimplemented_op;
+            case IR::Opcode::DivideWord1:
+                // TODO: Divide
+                goto unimplemented_op;
+            case IR::Opcode::DivideUnsignedWord:
+                // TODO: Divide
+                goto unimplemented_op;
+            case IR::Opcode::DivideUnsignedWord1:
+                // TODO: Divide
+                goto unimplemented_op;
+            case IR::Opcode::DoublewordShiftLeftLogical:
+            {
+                int source = instructions[i].get_source();
+                int dest = instructions[i].get_dest();
+                int imm = instructions[i].get_source2();
+                if (registers[source].is_const)
+                {
+                    uint64_t value = registers[source].value << imm;
+
+                    registers[dest].is_const = true;
+                    registers[dest].is_loaded = false;
+                    registers[dest].value = value;
+                    instructions.erase(instructions.begin() + i);
+                    --i;
+                }
+                else
+                    registers[dest].is_const = false;
+                break;
+            }
+            case IR::Opcode::DoublewordShiftLeftLogicalVariable:
+            {
+                int source = instructions[i].get_source();
+                int source2 = instructions[i].get_source2();
+                int dest = instructions[i].get_dest();
+                uint64_t value = registers[source].value << registers[source2].value;
+
+                if (registers[source].is_const && registers[source2].is_const)
+                {
+                    registers[dest].is_const = true;
+                    registers[dest].is_loaded = false;
+                    registers[dest].value = value;
+                    instructions.erase(instructions.begin() + i);
+                    --i;
+                }
+                else if (registers[source].is_const && !registers[source].is_loaded)
+                {
+                    auto instr = IR::Instruction(IR::Opcode::LoadConst);
+                    instr.ignore_likely = true;
+                    instr.set_dest(source);
+                    instr.set_source(value);
+                    instructions.insert(instructions.begin() + i, instr);
+                    ++i;
+                }
+                else if (registers[source2].is_const && !registers[source2].is_loaded)
+                {
+                    auto instr = IR::Instruction(IR::Opcode::LoadConst);
+                    instr.ignore_likely = true;
+                    instr.set_dest(source2);
+                    instr.set_source(value);
+                    instructions.insert(instructions.begin() + i, instr);
+                    ++i;
+                }
+                else
+                    registers[dest].is_const = false;
+                break;
+            }
+            case IR::Opcode::DoublewordShiftRightArithmetic:
+            {
+                int source = instructions[i].get_source();
+                int dest = instructions[i].get_dest();
+                int imm = instructions[i].get_source2();
+                if (registers[source].is_const)
+                {
+                    uint64_t value = (int64_t)registers[source].value >> imm;
+
+                    registers[dest].is_const = true;
+                    registers[dest].is_loaded = false;
+                    registers[dest].value = value;
+                    instructions.erase(instructions.begin() + i);
+                    --i;
+                }
+                else
+                    registers[dest].is_const = false;
+                break;
+            }
+            case IR::Opcode::DoublewordShiftRightArithmeticVariable:
+            {
+                int source = instructions[i].get_source();
+                int source2 = instructions[i].get_source2();
+                int dest = instructions[i].get_dest();
+                uint64_t value = (int64_t)registers[source].value >> registers[source2].value;
+
+                if (registers[source].is_const && registers[source2].is_const)
+                {
+                    registers[dest].is_const = true;
+                    registers[dest].is_loaded = false;
+                    registers[dest].value = value;
+                    instructions.erase(instructions.begin() + i);
+                    --i;
+                }
+                else if (registers[source].is_const && !registers[source].is_loaded)
+                {
+                    auto instr = IR::Instruction(IR::Opcode::LoadConst);
+                    instr.ignore_likely = true;
+                    instr.set_dest(source);
+                    instr.set_source(value);
+                    instructions.insert(instructions.begin() + i, instr);
+                    ++i;
+                }
+                else if (registers[source2].is_const && !registers[source2].is_loaded)
+                {
+                    auto instr = IR::Instruction(IR::Opcode::LoadConst);
+                    instr.ignore_likely = true;
+                    instr.set_dest(source2);
+                    instr.set_source(value);
+                    instructions.insert(instructions.begin() + i, instr);
+                    ++i;
+                }
+                else
+                    registers[dest].is_const = false;
+                break;
+            }
+            case IR::Opcode::DoublewordShiftRightLogical:
+            {
+                int source = instructions[i].get_source();
+                int dest = instructions[i].get_dest();
+                int imm = instructions[i].get_source2();
+                if (registers[source].is_const)
+                {
+                    uint64_t value = registers[source].value >> imm;
+
+                    registers[dest].is_const = true;
+                    registers[dest].is_loaded = false;
+                    registers[dest].value = value;
+                    instructions.erase(instructions.begin() + i);
+                    --i;
+                }
+                else
+                    registers[dest].is_const = false;
+                break;
+            }
+            case IR::Opcode::DoublewordShiftRightLogicalVariable:
+            {
+                int source = instructions[i].get_source();
+                int source2 = instructions[i].get_source2();
+                int dest = instructions[i].get_dest();
+                uint64_t value = registers[source].value >> registers[source2].value;
+
+                if (registers[source].is_const && registers[source2].is_const)
+                {
+                    registers[dest].is_const = true;
+                    registers[dest].is_loaded = false;
+                    registers[dest].value = value;
+                    instructions.erase(instructions.begin() + i);
+                    --i;
+                }
+                else if (registers[source].is_const && !registers[source].is_loaded)
+                {
+                    auto instr = IR::Instruction(IR::Opcode::LoadConst);
+                    instr.ignore_likely = true;
+                    instr.set_dest(source);
+                    instr.set_source(value);
+                    instructions.insert(instructions.begin() + i, instr);
+                    ++i;
+                }
+                else if (registers[source2].is_const && !registers[source2].is_loaded)
+                {
+                    auto instr = IR::Instruction(IR::Opcode::LoadConst);
+                    instr.ignore_likely = true;
+                    instr.set_dest(source2);
+                    instr.set_source(value);
+                    instructions.insert(instructions.begin() + i, instr);
+                    ++i;
+                }
+                else
+                    registers[dest].is_const = false;
+                break;
+            }
+            case IR::Opcode::ExceptionReturn:
+                goto unimplemented_op;
+            case IR::Opcode::FixedPointConvertToFloatingPoint:
+            case IR::Opcode::FloatingPointAbsoluteValue:
+            case IR::Opcode::FloatingPointAdd:
+            case IR::Opcode::FloatingPointClearControl:
+            case IR::Opcode::FloatingPointCompareEqual:
+            case IR::Opcode::FloatingPointCompareLessThan:
+            case IR::Opcode::FloatingPointCompareLessThanOrEqual:
+            case IR::Opcode::FloatingPointConvertToFixedPoint:
+            case IR::Opcode::FloatingPointDivide:
+            case IR::Opcode::FloatingPointMaximum:
+            case IR::Opcode::FloatingPointMinimum:
+            case IR::Opcode::FloatingPointMultiply:
+            case IR::Opcode::FloatingPointMultiplyAdd:
+            case IR::Opcode::FloatingPointMultiplySubtract:
+            case IR::Opcode::FloatingPointNegate:
+            case IR::Opcode::FloatingPointSquareRoot:
+            case IR::Opcode::FloatingPointSubtract:
+            case IR::Opcode::FloatingPointReciprocalSquareRoot:
+            case IR::Opcode::Jump:
+                break;
+            case IR::Opcode::JumpIndirect:
+            {
+                int source = instructions[i].get_source();
+                if (registers[source].is_const)
+                {
+                    auto instr = IR::Instruction(IR::Opcode::Jump);
+                    instr.set_jump_dest(registers[source].value);
+                    if (instr.has_dest)
+                        instr.set_dest(instructions[i].get_dest());
+                    instr.set_return_addr(instructions[i].get_return_addr());
+                    instr.set_is_link(instructions[i].get_is_link());
+                    instructions.erase(instructions.begin() + i);
+                    instructions.insert(instructions.begin() + i, instr);
+                }
+            }
+            case IR::Opcode::LoadByte:
+                goto unimplemented_op;
+            case IR::Opcode::LoadByteUnsigned:
+                goto unimplemented_op;
+            case IR::Opcode::LoadConst:
+            {
+                int dest = instructions[i].get_dest();
+                int imm = instructions[i].get_source();
+                registers[dest].is_const = true;
+                registers[dest].is_loaded = false;
+                registers[dest].value = imm;
+                instructions.erase(instructions.begin() + i);
+                --i;
+                break;
+            }
+            case IR::Opcode::LoadFloatConst:
+                break;
+            case IR::Opcode::LoadDoubleword:
+                goto unimplemented_op;
+            case IR::Opcode::LoadDoublewordLeft:
+                goto unimplemented_op;
+            case IR::Opcode::LoadDoublewordRight:
+                goto unimplemented_op;
+            case IR::Opcode::LoadHalfword:
+                goto unimplemented_op;
+            case IR::Opcode::LoadHalfwordUnsigned:
+                goto unimplemented_op;
+            case IR::Opcode::LoadWord:
+                goto unimplemented_op;
+            case IR::Opcode::LoadWordCoprocessor1:
+                goto unimplemented_op;
+            case IR::Opcode::LoadWordLeft:
+                goto unimplemented_op;
+            case IR::Opcode::LoadWordRight:
+                goto unimplemented_op;
+            case IR::Opcode::LoadWordUnsigned:
+                goto unimplemented_op;
+            case IR::Opcode::LoadQuadword:
+                goto unimplemented_op;
+            case IR::Opcode::LoadQuadwordCoprocessor2:
+                goto unimplemented_op;
+            case IR::Opcode::MoveConditionalOnNotZero:
+            {
+                goto unimplemented_op;
+
+                int source = instructions[i].get_source();
+                int source2 = instructions[i].get_source2();
+                int dest = instructions[i].get_dest();
+
+                if (!registers[source].is_const)
+                    break;
+
+                instructions.erase(instructions.begin() + i);
+                --i;
+                if (registers[source].value != 0)
+                {
+                    registers[dest].is_const = registers[source2].is_const;
+                    registers[dest].is_loaded = false;
+                    registers[dest].value = registers[source2].value;
+                    ++i;
+                    instructions.insert(instructions.begin() + i, IR::Instruction(IR::MoveDoublewordReg));
+                    instructions[i].set_dest(dest);
+                    instructions[i].set_source(source2);
+                }
+                else
+                {
+                    // NOP
+                }
+                break;
+            }
+            case IR::Opcode::MoveConditionalOnZero:
+            {
+                goto unimplemented_op;
+
+                int source = instructions[i].get_source();
+                int source2 = instructions[i].get_source2();
+                int dest = instructions[i].get_dest();
+
+                if (!registers[source].is_const)
+                    break;
+
+                instructions.erase(instructions.begin() + i);
+                --i;
+                if (registers[source].value == 0)
+                {
+                    registers[dest].is_const = registers[source2].is_const;
+                    registers[dest].is_loaded = false;
+                    registers[dest].value = registers[source2].value;
+                    ++i;
+                    instructions.insert(instructions.begin() + i, IR::Instruction(IR::MoveDoublewordReg));
+                    instructions[i].set_dest(dest);
+                    instructions[i].set_source(source2);
+                }
+                else
+                {
+                    // NOP
+                }
+                break;
+            }
+            case IR::Opcode::MoveControlWordFromFloatingPoint:
+            {
+                goto unimplemented_op;
+
+                int dest = instructions[i].get_dest();
+                registers[dest].is_const = false;
+                registers[dest].is_loaded = false;
+                break;
+            }
+            case IR::Opcode::MoveControlWordToFloatingPoint:
+            {
+                // Need to implement LoadFloatConst on JIT
+                goto unimplemented_op;
+
+                int dest = instructions[i].get_dest();
+                int source = instructions[i].get_source();
+
+                if (registers[source].is_const)
+                {
+                    instructions.erase(instructions.begin() + i);
+                    instructions.insert(instructions.begin() + i, IR::Instruction(IR::LoadFloatConst));
+                    instructions[i].set_dest(dest);
+                    instructions[i].set_source(registers[source].value);
+                }
+                break;
+            }
+            case IR::Opcode::MoveDoublewordReg:
+            {
+                int source = instructions[i].get_source();
+                int dest = instructions[i].get_dest();
+
+                if (registers[source].is_const)
+                {
+                    instructions.erase(instructions.begin() + i);
+                    --i;
+                    registers[dest].is_const = true;
+                    registers[dest].is_loaded = false;
+                    registers[dest].value = registers[source].value;
+                }
+                break;
+            }
+            case IR::Opcode::MoveFromCoprocessor1:
+            {
+                int dest = instructions[i].get_dest();
+                registers[dest].is_const = false;
+                registers[dest].is_loaded = false;
+                break;
+            }
+            case IR::Opcode::MoveToCoprocessor1:
+            {
+                // Need to implement LoadFloatConst on JIT
+                goto unimplemented_op;
+
+                int dest = instructions[i].get_dest();
+                int source = instructions[i].get_source();
+
+                if (registers[source].is_const)
+                {
+                    instructions.erase(instructions.begin() + i);
+                    instructions.insert(instructions.begin() + i, IR::Instruction(IR::LoadFloatConst));
+                    instructions[i].set_dest(dest);
+                    instructions[i].set_source(registers[source].value);
+                }
+            }
+            case IR::Opcode::MoveXmmReg:
+                break;
+            case IR::Opcode::MoveWordReg:
+            {
+                int source = instructions[i].get_source();
+                int dest = instructions[i].get_dest();
+
+                if (registers[source].is_const)
+                {
+                    instructions.erase(instructions.begin() + i);
+                    --i;
+                    registers[dest].is_const = true;
+                    registers[dest].is_loaded = false;
+                    registers[dest].value = (int32_t)registers[source].value;
+                }
+            }
+            case IR::Opcode::MoveQuadwordReg:
+                goto unimplemented_op;
+            case IR::Opcode::MultiplyAddUnsignedWord:
+                goto unimplemented_op;
+            case IR::Opcode::MultiplyAddUnsignedWord1:
+                goto unimplemented_op;
+            case IR::Opcode::MultiplyAddWord:
+                goto unimplemented_op;
+            case IR::Opcode::MultiplyAddWord1:
+                goto unimplemented_op;
+            case IR::Opcode::MultiplyUnsignedWord:
+                goto unimplemented_op;
+            case IR::Opcode::MultiplyUnsignedWord1:
+                goto unimplemented_op;
+            case IR::Opcode::MultiplyWord:
+                goto unimplemented_op;
+            case IR::Opcode::MultiplyWord1:
+                goto unimplemented_op;
+            case IR::Opcode::NegateDoublewordReg:
+                goto unimplemented_op;
+            case IR::Opcode::NegateWordReg:
+                goto unimplemented_op;
+            case IR::Opcode::NorReg:
+            {
+                int source = instructions[i].get_source();
+                int source2 = instructions[i].get_source2();
+                int dest = instructions[i].get_dest();
+                uint64_t value = ~(registers[source].value | registers[source2].value);
+
+                if (registers[source].is_const && registers[source2].is_const)
+                {
+                    registers[dest].is_const = true;
+                    registers[dest].is_loaded = false;
+                    registers[dest].value = value;
+                    instructions.erase(instructions.begin() + i);
+                    --i;
+                }
+                else if (registers[source].is_const && !registers[source].is_loaded)
+                {
+                    auto instr = IR::Instruction(IR::Opcode::LoadConst);
+                    instr.ignore_likely = true;
+                    instr.set_dest(source);
+                    instr.set_source(value);
+                    instructions.insert(instructions.begin() + i, instr);
+                    ++i;
+                }
+                else if (registers[source2].is_const && !registers[source2].is_loaded)
+                {
+                    auto instr = IR::Instruction(IR::Opcode::LoadConst);
+                    instr.ignore_likely = true;
+                    instr.set_dest(source2);
+                    instr.set_source(value);
+                    instructions.insert(instructions.begin() + i, instr);
+                    ++i;
+                }
+                else
+                    registers[dest].is_const = false;
+                break;
+            }
+            case IR::Opcode::OrImm:
+            {
+                int source = instructions[i].get_source();
+                int dest = instructions[i].get_dest();
+                int imm = instructions[i].get_source2();
+                if (registers[source].is_const)
+                {
+                    uint64_t value = registers[source].value | imm;
+
+                    registers[dest].is_const = true;
+                    registers[dest].is_loaded = false;
+                    registers[dest].value = value;
+                    instructions.erase(instructions.begin() + i);
+                    --i;
+                }
+                else
+                    registers[dest].is_const = false;
+                break;
+            }
+            case IR::Opcode::OrReg:
+            {
+                int source = instructions[i].get_source();
+                int source2 = instructions[i].get_source2();
+                int dest = instructions[i].get_dest();
+                uint64_t value = registers[source].value | registers[source2].value;
+
+                if (registers[source].is_const && registers[source2].is_const)
+                {
+                    registers[dest].is_const = true;
+                    registers[dest].is_loaded = false;
+                    registers[dest].value = value;
+                    instructions.erase(instructions.begin() + i);
+                    --i;
+                }
+                else if (registers[source].is_const && !registers[source].is_loaded)
+                {
+                    auto instr = IR::Instruction(IR::Opcode::LoadConst);
+                    instr.ignore_likely = true;
+                    instr.set_dest(source);
+                    instr.set_source(value);
+                    instructions.insert(instructions.begin() + i, instr);
+                    ++i;
+                }
+                else if (registers[source2].is_const && !registers[source2].is_loaded)
+                {
+                    auto instr = IR::Instruction(IR::Opcode::LoadConst);
+                    instr.ignore_likely = true;
+                    instr.set_dest(source2);
+                    instr.set_source(value);
+                    instructions.insert(instructions.begin() + i, instr);
+                    ++i;
+                }
+                else
+                    registers[dest].is_const = false;
+                break;
+            }
+            case IR::Opcode::ParallelAbsoluteHalfword:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelAbsoluteWord:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelAnd:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelAddByte:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelAddHalfword:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelAddWord:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelAddWithSignedSaturationByte:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelAddWithSignedSaturationHalfword:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelAddWithSignedSaturationWord:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelAddWithUnsignedSaturationByte:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelAddWithUnsignedSaturationHalfword:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelAddWithUnsignedSaturationWord:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelCompareEqualByte:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelCompareEqualHalfword:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelCompareEqualWord:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelCompareGreaterThanByte:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelCompareGreaterThanHalfword:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelCompareGreaterThanWord:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelDivideWord:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelExchangeEvenHalfword:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelExchangeCenterHalfword:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelExchangeEvenWord:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelExchangeCenterWord:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelMaximizeHalfword:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelMaximizeWord:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelMinimizeHalfword:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelMinimizeWord:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelNor:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelOr:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelPackToByte:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelPackToHalfword:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelPackToWord:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelShiftLeftLogicalHalfword:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelShiftLeftLogicalWord:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelShiftRightArithmeticHalfword:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelShiftRightArithmeticWord:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelShiftRightLogicalHalfword:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelShiftRightLogicalWord:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelSubtractByte:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelSubtractHalfword:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelSubtractWord:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelSubtractWithSignedSaturationByte:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelSubtractWithSignedSaturationHalfword:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelSubtractWithSignedSaturationWord:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelSubtractWithUnsignedSaturationByte:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelSubtractWithUnsignedSaturationHalfword:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelReverseHalfword:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelRotate3WordsLeft:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelSubtractWithUnsignedSaturationWord:
+                goto unimplemented_op;
+            case IR::Opcode::ParallelXor:
+                goto unimplemented_op;
+            case IR::Opcode::SetOnLessThan:
+            {
+                int source = instructions[i].get_source();
+                int source2 = instructions[i].get_source2();
+                int dest = instructions[i].get_dest();
+                uint64_t value = (int64_t)registers[source].value < (int64_t)registers[source2].value;
+
+                if (registers[source].is_const && registers[source2].is_const)
+                {
+                    registers[dest].is_const = true;
+                    registers[dest].is_loaded = false;
+                    registers[dest].value = value;
+                    instructions.erase(instructions.begin() + i);
+                    --i;
+                }
+                else if (registers[source].is_const && !registers[source].is_loaded)
+                {
+                    auto instr = IR::Instruction(IR::Opcode::LoadConst);
+                    instr.ignore_likely = true;
+                    instr.set_dest(source);
+                    instr.set_source(value);
+                    instructions.insert(instructions.begin() + i, instr);
+                    ++i;
+                }
+                else if (registers[source2].is_const && !registers[source2].is_loaded)
+                {
+                    auto instr = IR::Instruction(IR::Opcode::LoadConst);
+                    instr.ignore_likely = true;
+                    instr.set_dest(source2);
+                    instr.set_source(value);
+                    instructions.insert(instructions.begin() + i, instr);
+                    ++i;
+                }
+                else
+                    registers[dest].is_const = false;
+                break;
+            }
+            case IR::Opcode::SetOnLessThanUnsigned:
+            {
+                int source = instructions[i].get_source();
+                int source2 = instructions[i].get_source2();
+                int dest = instructions[i].get_dest();
+                uint64_t value = registers[source].value < registers[source2].value;
+
+                if (registers[source].is_const && registers[source2].is_const)
+                {
+                    registers[dest].is_const = true;
+                    registers[dest].is_loaded = false;
+                    registers[dest].value = value;
+                    instructions.erase(instructions.begin() + i);
+                    --i;
+                }
+                else if (registers[source].is_const && !registers[source].is_loaded)
+                {
+                    auto instr = IR::Instruction(IR::Opcode::LoadConst);
+                    instr.ignore_likely = true;
+                    instr.set_dest(source);
+                    instr.set_source(value);
+                    instructions.insert(instructions.begin() + i, instr);
+                    ++i;
+                }
+                else if (registers[source2].is_const && !registers[source2].is_loaded)
+                {
+                    auto instr = IR::Instruction(IR::Opcode::LoadConst);
+                    instr.ignore_likely = true;
+                    instr.set_dest(source2);
+                    instr.set_source(value);
+                    instructions.insert(instructions.begin() + i, instr);
+                    ++i;
+                }
+                else
+                    registers[dest].is_const = false;
+                break;
+            }
+            case IR::Opcode::SetOnLessThanImmediate:
+            {
+                int source = instructions[i].get_source();
+                int dest = instructions[i].get_dest();
+                int imm = instructions[i].get_source2();
+                if (registers[source].is_const)
+                {
+                    uint64_t value = (int64_t)registers[source].value < (int64_t)imm;
+
+                    registers[dest].is_const = true;
+                    registers[dest].is_loaded = false;
+                    registers[dest].value = value;
+                    instructions.erase(instructions.begin() + i);
+                    --i;
+                }
+                else
+                    registers[dest].is_const = false;
+                break;
+            }
+            case IR::Opcode::SetOnLessThanImmediateUnsigned:
+            {
+                int source = instructions[i].get_source();
+                int dest = instructions[i].get_dest();
+                uint64_t imm = instructions[i].get_source2();
+                if (registers[source].is_const)
+                {
+                    uint64_t value = registers[source].value < imm;
+
+                    registers[dest].is_const = true;
+                    registers[dest].is_loaded = false;
+                    registers[dest].value = value;
+                    instructions.erase(instructions.begin() + i);
+                    --i;
+                }
+                else
+                    registers[dest].is_const = false;
+                break;
+            }
+            case IR::Opcode::ShiftLeftLogical:
+            {
+                int source = instructions[i].get_source();
+                int dest = instructions[i].get_dest();
+                int imm = instructions[i].get_source2();
+                if (registers[source].is_const)
+                {
+                    uint64_t value = registers[source].value << imm;
+
+                    registers[dest].is_const = true;
+                    registers[dest].is_loaded = false;
+                    registers[dest].value = value;
+                    instructions.erase(instructions.begin() + i);
+                    --i;
+                }
+                else
+                    registers[dest].is_const = false;
+                break;
+            }
+            case IR::Opcode::ShiftLeftLogicalVariable:
+            {
+                int source = instructions[i].get_source();
+                int source2 = instructions[i].get_source2();
+                int dest = instructions[i].get_dest();
+                uint64_t value = registers[source].value << registers[source2].value;
+
+                if (registers[source].is_const && registers[source2].is_const)
+                {
+                    registers[dest].is_const = true;
+                    registers[dest].is_loaded = false;
+                    registers[dest].value = value;
+                    instructions.erase(instructions.begin() + i);
+                    --i;
+                }
+                else if (registers[source].is_const && !registers[source].is_loaded)
+                {
+                    auto instr = IR::Instruction(IR::Opcode::LoadConst);
+                    instr.ignore_likely = true;
+                    instr.set_dest(source);
+                    instr.set_source(value);
+                    instructions.insert(instructions.begin() + i, instr);
+                    ++i;
+                }
+                else if (registers[source2].is_const && !registers[source2].is_loaded)
+                {
+                    auto instr = IR::Instruction(IR::Opcode::LoadConst);
+                    instr.ignore_likely = true;
+                    instr.set_dest(source2);
+                    instr.set_source(value);
+                    instructions.insert(instructions.begin() + i, instr);
+                    ++i;
+                }
+                else
+                    registers[dest].is_const = false;
+                break;
+            }
+            case IR::Opcode::ShiftRightArithmetic:
+            {
+                int source = instructions[i].get_source();
+                int dest = instructions[i].get_dest();
+                int imm = instructions[i].get_source2();
+                if (registers[source].is_const)
+                {
+                    uint64_t value = (int64_t)registers[source].value >> imm;
+
+                    registers[dest].is_const = true;
+                    registers[dest].is_loaded = false;
+                    registers[dest].value = value;
+                    instructions.erase(instructions.begin() + i);
+                    --i;
+                }
+                else
+                    registers[dest].is_const = false;
+                break;
+            }
+            case IR::Opcode::ShiftRightArithmeticVariable:
+            {
+                int source = instructions[i].get_source();
+                int source2 = instructions[i].get_source2();
+                int dest = instructions[i].get_dest();
+                uint64_t value = (int64_t)registers[source].value >> registers[source2].value;
+
+                if (registers[source].is_const && registers[source2].is_const)
+                {
+                    registers[dest].is_const = true;
+                    registers[dest].is_loaded = false;
+                    registers[dest].value = value;
+                    instructions.erase(instructions.begin() + i);
+                    --i;
+                }
+                else if (registers[source].is_const && !registers[source].is_loaded)
+                {
+                    auto instr = IR::Instruction(IR::Opcode::LoadConst);
+                    instr.ignore_likely = true;
+                    instr.set_dest(source);
+                    instr.set_source(value);
+                    instructions.insert(instructions.begin() + i, instr);
+                    ++i;
+                }
+                else if (registers[source2].is_const && !registers[source2].is_loaded)
+                {
+                    auto instr = IR::Instruction(IR::Opcode::LoadConst);
+                    instr.ignore_likely = true;
+                    instr.set_dest(source2);
+                    instr.set_source(value);
+                    instructions.insert(instructions.begin() + i, instr);
+                    ++i;
+                }
+                else
+                    registers[dest].is_const = false;
+                break;
+            }
+            case IR::Opcode::ShiftRightLogical:
+            {
+                int source = instructions[i].get_source();
+                int dest = instructions[i].get_dest();
+                int imm = instructions[i].get_source2();
+                if (registers[source].is_const)
+                {
+                    uint64_t value = registers[source].value >> imm;
+
+                    registers[dest].is_const = true;
+                    registers[dest].is_loaded = false;
+                    registers[dest].value = value;
+                    instructions.erase(instructions.begin() + i);
+                    --i;
+                }
+                else
+                    registers[dest].is_const = false;
+                break;
+            }
+            case IR::Opcode::ShiftRightLogicalVariable:
+            {
+                int source = instructions[i].get_source();
+                int source2 = instructions[i].get_source2();
+                int dest = instructions[i].get_dest();
+                uint64_t value = registers[source].value >> registers[source2].value;
+
+                if (registers[source].is_const && registers[source2].is_const)
+                {
+                    registers[dest].is_const = true;
+                    registers[dest].is_loaded = false;
+                    registers[dest].value = value;
+                    instructions.erase(instructions.begin() + i);
+                    --i;
+                }
+                else if (registers[source].is_const && !registers[source].is_loaded)
+                {
+                    auto instr = IR::Instruction(IR::Opcode::LoadConst);
+                    instr.ignore_likely = true;
+                    instr.set_dest(source);
+                    instr.set_source(value);
+                    instructions.insert(instructions.begin() + i, instr);
+                    ++i;
+                }
+                else if (registers[source2].is_const && !registers[source2].is_loaded)
+                {
+                    auto instr = IR::Instruction(IR::Opcode::LoadConst);
+                    instr.ignore_likely = true;
+                    instr.set_dest(source2);
+                    instr.set_source(value);
+                    instructions.insert(instructions.begin() + i, instr);
+                    ++i;
+                }
+                else
+                    registers[dest].is_const = false;
+                break;
+            }
+            case IR::Opcode::StoreByte:
+                goto unimplemented_op;
+            case IR::Opcode::StoreDoubleword:
+                goto unimplemented_op;
+            case IR::Opcode::StoreDoublewordLeft:
+                goto unimplemented_op;
+            case IR::Opcode::StoreDoublewordRight:
+                goto unimplemented_op;
+            case IR::Opcode::StoreHalfword:
+                goto unimplemented_op;
+            case IR::Opcode::StoreWord:
+                goto unimplemented_op;
+            case IR::Opcode::StoreWordLeft:
+                goto unimplemented_op;
+            case IR::Opcode::StoreWordRight:
+                goto unimplemented_op;
+            case IR::Opcode::StoreWordCoprocessor1:
+                goto unimplemented_op;
+            case IR::Opcode::StoreQuadword:
+                goto unimplemented_op;
+            case IR::Opcode::StoreQuadwordCoprocessor2:
+                goto unimplemented_op;
+            case IR::Opcode::SubDoublewordReg:
+            {
+                int source = instructions[i].get_source();
+                int source2 = instructions[i].get_source2();
+                int dest = instructions[i].get_dest();
+                uint64_t value = registers[source].value - registers[source2].value;
+
+                if (registers[source].is_const && registers[source2].is_const)
+                {
+                    registers[dest].is_const = true;
+                    registers[dest].is_loaded = false;
+                    registers[dest].value = value;
+                    instructions.erase(instructions.begin() + i);
+                    --i;
+                }
+                else if (registers[source].is_const && !registers[source].is_loaded)
+                {
+                    auto instr = IR::Instruction(IR::Opcode::LoadConst);
+                    instr.ignore_likely = true;
+                    instr.set_dest(source);
+                    instr.set_source(value);
+                    instructions.insert(instructions.begin() + i, instr);
+                    ++i;
+                }
+                else if (registers[source2].is_const && !registers[source2].is_loaded)
+                {
+                    auto instr = IR::Instruction(IR::Opcode::LoadConst);
+                    instr.ignore_likely = true;
+                    instr.set_dest(source2);
+                    instr.set_source(value);
+                    instructions.insert(instructions.begin() + i, instr);
+                    ++i;
+                }
+                else
+                    registers[dest].is_const = false;
+                break;
+            }
+            case IR::Opcode::SubWordReg:
+            {
+                int source = instructions[i].get_source();
+                int source2 = instructions[i].get_source2();
+                int dest = instructions[i].get_dest();
+                uint64_t value = (int32_t)registers[source].value - (int32_t)registers[source2].value;
+
+                if (registers[source].is_const && registers[source2].is_const)
+                {
+                    registers[dest].is_const = true;
+                    registers[dest].is_loaded = false;
+                    registers[dest].value = value;
+                    instructions.erase(instructions.begin() + i);
+                    --i;
+                }
+                else if (registers[source].is_const && !registers[source].is_loaded)
+                {
+                    auto instr = IR::Instruction(IR::Opcode::LoadConst);
+                    instr.ignore_likely = true;
+                    instr.set_dest(source);
+                    instr.set_source(value);
+                    instructions.insert(instructions.begin() + i, instr);
+                    ++i;
+                }
+                else if (registers[source2].is_const && !registers[source2].is_loaded)
+                {
+                    auto instr = IR::Instruction(IR::Opcode::LoadConst);
+                    instr.ignore_likely = true;
+                    instr.set_dest(source2);
+                    instr.set_source(value);
+                    instructions.insert(instructions.begin() + i, instr);
+                    ++i;
+                }
+                else
+                    registers[dest].is_const = false;
+                break;
+            }
+            case IR::Opcode::SystemCall:
+                goto unimplemented_op;
+            case IR::Opcode::UpdateVU0:
+            case IR::Opcode::VCallMS:
+            case IR::Opcode::VCallMSR:
+            case IR::Opcode::WaitVU0:
+                break;
+            case IR::Opcode::XorImm:
+            {
+                int source = instructions[i].get_source();
+                int dest = instructions[i].get_dest();
+                int imm = instructions[i].get_source2();
+                if (registers[source].is_const)
+                {
+                    uint64_t value = registers[source].value ^ imm;
+
+                    registers[dest].is_const = true;
+                    registers[dest].is_loaded = false;
+                    registers[dest].value = value;
+                    instructions.erase(instructions.begin() + i);
+                    --i;
+                }
+                else
+                    registers[dest].is_const = false;
+                break;
+            }
+            case IR::Opcode::XorReg:
+            {
+                int source = instructions[i].get_source();
+                int source2 = instructions[i].get_source2();
+                int dest = instructions[i].get_dest();
+                uint64_t value = registers[source].value ^ registers[source2].value;
+
+                if (registers[source].is_const && registers[source2].is_const)
+                {
+                    registers[dest].is_const = true;
+                    registers[dest].is_loaded = false;
+                    registers[dest].value = value;
+                    instructions.erase(instructions.begin() + i);
+                    --i;
+                }
+                else if (registers[source].is_const && !registers[source].is_loaded)
+                {
+                    auto instr = IR::Instruction(IR::Opcode::LoadConst);
+                    instr.ignore_likely = true;
+                    instr.set_dest(source);
+                    instr.set_source(value);
+                    instructions.insert(instructions.begin() + i, instr);
+                    ++i;
+                }
+                else if (registers[source2].is_const && !registers[source2].is_loaded)
+                {
+                    auto instr = IR::Instruction(IR::Opcode::LoadConst);
+                    instr.ignore_likely = true;
+                    instr.set_dest(source2);
+                    instr.set_source(value);
+                    instructions.insert(instructions.begin() + i, instr);
+                    ++i;
+                }
+                else
+                    registers[dest].is_const = false;
+                break;
+            }
+            case IR::Opcode::FallbackInterpreter:
+            default:
+            unimplemented_op:
+                for (int j = 1; j < (int)EE_SpecialReg::MAX_VALUE; ++j)
+                {
+                    if (registers[j].is_const && !registers[j].is_loaded)
+                    {
+                        auto instr = IR::Instruction(IR::Opcode::LoadConst);
+                        instr.ignore_likely = true;
+                        instr.set_dest(j);
+                        instr.set_source(registers[j].value);
+                        instructions.insert(instructions.begin() + i, instr);
+                        ++i;
+                    }
+
+                    registers[j].is_const = false;
+                    registers[j].is_loaded = false;
+                    registers[j].fallback_fn.clear();
+                    registers[j].fallback_arg.clear();
+                }
+                break;
+        }
+    }
+
+    int idx = instructions.size();
+    for (int i = 1; i < (int)EE_SpecialReg::MAX_VALUE; ++i)
+    {
+        if (registers[i].is_const && !registers[i].is_loaded)
+        {
+            auto instr = IR::Instruction(IR::Opcode::LoadConst);
+            instr.ignore_likely = true;
+            instr.set_dest(i);
+            instr.set_source(registers[i].value);
+            instructions.insert(instructions.begin() + idx, instr);
+            ++idx;
+        }
+    }
 }
 
 void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, EE_InstrInfo& info, std::vector<IR::Instruction>& instrs)
