@@ -236,7 +236,6 @@ void Emulator::vblank_start()
     VBLANK_sent = true;
     gs.set_VBLANK(true);
 
-    gs.render_CRT();
     timers.gate(true, true);
     cdvd.vsync();
     //cpu.set_disassembly(frames >= 223 && frames < 225);
@@ -253,6 +252,7 @@ void Emulator::vblank_end()
     timers.gate(true, false);
     frame_ended = true;
     frames++;
+    gs.render_CRT();
 }
 
 void Emulator::cdvd_event()
