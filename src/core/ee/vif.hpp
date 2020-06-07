@@ -64,6 +64,7 @@ class VectorInterface
         INTC* intc;
         DMAC* dmac;
         std::queue<uint32_t> FIFO;
+        std::queue<uint32_t> internal_FIFO;
         int id;
         uint16_t imm;
         uint8_t command;
@@ -89,6 +90,7 @@ class VectorInterface
 
         uint32_t buffer[4];
         int buffer_size;
+        uint16_t internal_WL;
 
         bool DBF;
         bool mark_detected;
