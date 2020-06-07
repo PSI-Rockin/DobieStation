@@ -50,7 +50,7 @@ void Gamepad::reset()
 void Gamepad::set_button(PAD_BUTTON button, uint8_t val)
 {
 
-    //std::cout << "Pressure: " << unsigned(val) << std::endl; 
+    std::cout << "Button: " << (int)button << " Pressure: " << unsigned(val) << std::endl; 
 
     if (val)
         buttons &= ~(1 << (int)button);
