@@ -118,12 +118,11 @@ void GS_REGISTERS::write64_privileged(uint32_t addr, uint64_t value)
             DISPLAY1.width = ((value >> 32) & 0xFFF) + 1;
             DISPLAY1.height = ((value >> 44) & 0x7FF) + 1;
 
-            calculated_DISPLAY1.magnify_x = DISPLAY1.magnify_x;
-            calculated_DISPLAY1.magnify_y = DISPLAY1.magnify_y;
-            calculated_DISPLAY1.width = DISPLAY1.width / calculated_DISPLAY1.magnify_x;
-            calculated_DISPLAY1.height = DISPLAY1.height / calculated_DISPLAY1.magnify_y;
-            calculated_DISPLAY1.x = DISPLAY1.x / calculated_DISPLAY1.magnify_x;
-            calculated_DISPLAY1.y = DISPLAY1.y / calculated_DISPLAY1.magnify_y;
+            //Calculate actual values
+            DISPLAY1.width /= DISPLAY1.magnify_x;
+            DISPLAY1.height /= DISPLAY1.magnify_y;
+            DISPLAY1.x /= DISPLAY1.magnify_x;
+            DISPLAY1.y /= DISPLAY1.magnify_y;
             printf("MAGH: %d\n", DISPLAY1.magnify_x);
             printf("MAGV: %d\n", DISPLAY1.magnify_y);
             break;
@@ -144,12 +143,11 @@ void GS_REGISTERS::write64_privileged(uint32_t addr, uint64_t value)
             DISPLAY2.width = ((value >> 32) & 0xFFF) + 1;
             DISPLAY2.height = ((value >> 44) & 0x7FF) + 1;
 
-            calculated_DISPLAY2.magnify_x = DISPLAY2.magnify_x;
-            calculated_DISPLAY2.magnify_y = DISPLAY2.magnify_y;
-            calculated_DISPLAY2.width = DISPLAY2.width / calculated_DISPLAY2.magnify_x;
-            calculated_DISPLAY2.height = DISPLAY2.height / calculated_DISPLAY2.magnify_y;
-            calculated_DISPLAY2.x = DISPLAY2.x / calculated_DISPLAY2.magnify_x;
-            calculated_DISPLAY2.y = DISPLAY2.y / calculated_DISPLAY2.magnify_y;
+            //Calculate actual values
+            DISPLAY2.width /= DISPLAY2.magnify_x;
+            DISPLAY2.height /= DISPLAY2.magnify_y;
+            DISPLAY2.x /= DISPLAY2.magnify_x;
+            DISPLAY2.y /= DISPLAY2.magnify_y;
             printf("MAGH: %d\n", DISPLAY2.magnify_x);
             printf("MAGV: %d\n", DISPLAY2.magnify_y);
             break;
@@ -389,14 +387,6 @@ void GS_REGISTERS::reset(bool soft_reset)
     SYNCV.vertical_back_porch = 0;
     SYNCV.vertical_front_porch = 0;
 
-    DISPLAY1.x = 0;
-    DISPLAY1.y = 0;
-    DISPLAY1.width = 0;
-    DISPLAY1.height = 0;
-    DISPLAY2.x = 0;
-    DISPLAY2.y = 0;
-    DISPLAY2.width = 0;
-    DISPLAY2.height = 0;
     DISPFB1.frame_base = 0;
     DISPFB1.width = 0;
     DISPFB1.x = 0;
@@ -406,19 +396,19 @@ void GS_REGISTERS::reset(bool soft_reset)
     DISPFB2.y = 0;
     DISPFB2.x = 0;
 
-    calculated_DISPLAY1.magnify_x = 1;
-    calculated_DISPLAY1.magnify_y = 1;
-    calculated_DISPLAY1.width = 0;
-    calculated_DISPLAY1.height = 0;
-    calculated_DISPLAY1.x = 0;
-    calculated_DISPLAY1.y = 0;
+    DISPLAY1.magnify_x = 1;
+    DISPLAY1.magnify_y = 1;
+    DISPLAY1.width = 0;
+    DISPLAY1.height = 0;
+    DISPLAY1.x = 0;
+    DISPLAY1.y = 0;
 
-    calculated_DISPLAY2.magnify_x = 1;
-    calculated_DISPLAY2.magnify_y = 1;
-    calculated_DISPLAY2.width = 0;
-    calculated_DISPLAY2.height = 0;
-    calculated_DISPLAY2.x = 0;
-    calculated_DISPLAY2.y = 0;
+    DISPLAY2.magnify_x = 1;
+    DISPLAY2.magnify_y = 1;
+    DISPLAY2.width = 0;
+    DISPLAY2.height = 0;
+    DISPLAY2.x = 0;
+    DISPLAY2.y = 0;
 
     IMR.signal = true;
     IMR.finish = true;
@@ -479,18 +469,18 @@ void GS_REGISTERS::get_inner_resolution(int &w, int &h)
 {
     if (PMODE.circuit1 && PMODE.circuit2)
     {
-        h = std::max(calculated_DISPLAY1.height, calculated_DISPLAY2.height);
-        w = std::max(calculated_DISPLAY1.width, calculated_DISPLAY2.width);
+        h = std::max(DISPLAY1.height, DISPLAY2.height);
+        w = std::max(DISPLAY1.width, DISPLAY2.width);
     }
     else if (PMODE.circuit1)
     {
-        h = calculated_DISPLAY1.height;
-        w = calculated_DISPLAY1.width;
+        h = DISPLAY1.height;
+        w = DISPLAY1.width;
     }
     else //Circuit 2 only or none
     {
-        h = calculated_DISPLAY2.height;
-        w = calculated_DISPLAY2.width;
+        h = DISPLAY2.height;
+        w = DISPLAY2.width;
     }
     //TODO - Find out why some games double their height
     if (h >= (w * 1.3))
