@@ -82,6 +82,11 @@ void EmuThread::load_CDVD(const char* name, CDVD_CONTAINER type)
     } );
 }
 
+void EmuThread::load_memcard(int port, const char *name)
+{
+    wait_for_lock([=]() { e.load_memcard(port, name); });
+}
+
 bool EmuThread::load_state(const char *name)
 {
     bool fail = false;

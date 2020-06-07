@@ -19,6 +19,8 @@ void VectorInterface::reset()
 {
     std::queue<uint32_t> empty;
     FIFO.swap(empty);
+    std::queue<uint32_t> empty2;
+    internal_FIFO.swap(empty2);
     command = 0;
     command_len = 0;
     buffer_size = 0;
@@ -102,7 +104,6 @@ void VectorInterface::update(int cycles)
                     FIFO.push(std::get<0>(fifo_data)._u32[i]);
             }
         }
-        return;
     }
 
     //Since the loop processes per-word, we need to multiply cycles by 4
@@ -124,6 +125,12 @@ void VectorInterface::update(int cycles)
 
     while (!vif_stalled && run_cycles--)
     {
+        while (!fifo_reverse && internal_FIFO.size() < 8 && FIFO.size() > 0)
+        {
+            internal_FIFO.push(FIFO.front());
+            FIFO.pop();
+        }
+
         if (stall_condition_active)
         {
             if (flush_stall)
@@ -137,7 +144,7 @@ void VectorInterface::update(int cycles)
             {
                 if (vu->is_running())
                     return;
-                handle_wait_cmd(wait_cmd_value);
+                handle_wait_cmd(wait_cmd_value, (cycles - (run_cycles >> 2)) * 2);
             }
             if (wait_for_PATH3)
             {
@@ -160,7 +167,7 @@ void VectorInterface::update(int cycles)
                 vif_cmd_status = VIF_DECODE;
         }
 
-        if (check_vif_stall(CODE) || !FIFO.size())
+        if (check_vif_stall(CODE) || !internal_FIFO.size())
         {
             //If VIF ran for 0 cycles, there's no data incoming, so set it idle
             if (run_cycles == ((cycles << 2) - 1) && vif_cmd_status == VIF_DECODE)
@@ -169,14 +176,14 @@ void VectorInterface::update(int cycles)
             }
             else if (vif_cmd_status == VIF_TRANSFER)
             {
-                if(id)
+                if(id && gif->path_active(2, false))
                     gif->deactivate_PATH(2);
                 vif_cmd_status = VIF_WAIT;
             }
             return;
         }
 
-        uint32_t value = FIFO.front();
+        uint32_t value = internal_FIFO.front();
 
         //If process_data_word returns false, this means the word was not processed, so don't pop the FIFO.
         if (process_data_word(value))
@@ -184,7 +191,7 @@ void VectorInterface::update(int cycles)
             if (command_len)
             {
                 command_len--;
-                FIFO.pop();
+                internal_FIFO.pop();
 
                 //FIXME: Should be fifo_size - 4 really, but causes hangs in WRC?
                 if (FIFO.size() <= (fifo_size / 2))
@@ -306,6 +313,9 @@ void VectorInterface::decode_cmd(uint32_t value)
             printf("[VIF] Set CYCLE: $%08X\n", value);
             CYCLE.CL = imm & 0xFF;
             CYCLE.WL = imm >> 8;
+            internal_WL = CYCLE.WL;
+            if (internal_WL == 0)
+                internal_WL = 256;
             command = 0;
             break;
         case 0x02:
@@ -434,7 +444,7 @@ void VectorInterface::decode_cmd(uint32_t value)
     }
 }
 
-void VectorInterface::handle_wait_cmd(uint32_t value)
+void VectorInterface::handle_wait_cmd(uint32_t value, uint32_t cycles)
 {
     command = (value >> 24) & 0x7F;
     imm = value & 0xFFFF;
@@ -442,10 +452,10 @@ void VectorInterface::handle_wait_cmd(uint32_t value)
     {
         case 0x14:
         case 0x15:
-            MSCAL(imm * 8);
+            MSCAL(imm * 8, cycles);
             break;
         case 0x17:
-            MSCAL(vu->get_PC());
+            MSCAL(vu->get_PC(), cycles);
             break;
         default:
             break;
@@ -458,9 +468,9 @@ void VectorInterface::handle_wait_cmd(uint32_t value)
     
 }
 
-void VectorInterface::MSCAL(uint32_t addr)
+void VectorInterface::MSCAL(uint32_t addr, uint32_t cycles)
 {
-    vu->start_program(addr);
+    vu->start_program(addr, cycles);
 
     ITOP = ITOPS & mem_mask;
 
@@ -500,7 +510,7 @@ void VectorInterface::init_UNPACK(uint32_t value)
     else
         unpack.words_per_op = (32 >> vl) * (vn + 1);
 
-    if (CYCLE.WL <= CYCLE.CL)
+    if (internal_WL <= CYCLE.CL)
     {
         //Skip write
         //printf("[VIF] Command len: %d\n", command_len);
@@ -510,7 +520,7 @@ void VectorInterface::init_UNPACK(uint32_t value)
     {
         //Fill write
        // Errors::die("[VIF] WL > CL!\n");
-        data_read = CYCLE.CL * (unpack.num / CYCLE.WL) + std::min((int)(unpack.num % CYCLE.WL), (int)CYCLE.CL);
+        data_read = CYCLE.CL * (unpack.num / internal_WL) + std::min((int)(unpack.num % internal_WL), (int)CYCLE.CL);
     }
 
     data_read = unpack.words_per_op * data_read;
@@ -594,7 +604,7 @@ void VectorInterface::handle_UNPACK_mode(uint128_t& quad)
 
 bool VectorInterface::is_filling_write()
 {
-    if (CYCLE.CL < CYCLE.WL && unpack.blocks_written >= CYCLE.CL)
+    if (CYCLE.CL < internal_WL && unpack.blocks_written >= CYCLE.CL)
         return true;
 
     return false;
@@ -913,9 +923,9 @@ void VectorInterface::process_UNPACK_quad(uint128_t &quad)
     unpack.addr += 16;
     unpack.num -= 1;
     
-    if (unpack.blocks_written >= CYCLE.WL)
+    if (unpack.blocks_written >= internal_WL)
     {
-        if (CYCLE.CL > CYCLE.WL)
+        if (CYCLE.CL > internal_WL)
             unpack.addr += (CYCLE.CL - unpack.blocks_written) * 16;
 
         unpack.blocks_written = 0;
@@ -986,7 +996,7 @@ uint32_t VectorInterface::get_stat()
     reg |= (vif_stalled & STALL_IBIT) << 10;
     reg |= vif_interrupt << 11;
     reg |= fifo_reverse << 23;
-    reg |= ((FIFO.size() + 3) / 4) << 24;
+    reg |= (FIFO.size() / 4) << 24;
     //printf("[VIF] Get STAT: $%08X\n", reg);
     return reg;
 }

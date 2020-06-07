@@ -31,6 +31,7 @@ class SIO2
         uint32_t RECV3;
 
         int port;
+        int dma_bytes_received;
 
         std::queue<uint8_t> FIFO;
         uint32_t control;
@@ -58,6 +59,8 @@ class SIO2
 
         void set_control(uint32_t value);
         void write_serial(uint8_t value);
+        void write_dma(uint8_t value);
+        void dma_reset();
 };
 
 #endif // SIO2_HPP

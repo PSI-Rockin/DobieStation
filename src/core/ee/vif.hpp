@@ -64,6 +64,7 @@ class VectorInterface
         INTC* intc;
         DMAC* dmac;
         std::queue<uint32_t> FIFO;
+        std::queue<uint32_t> internal_FIFO;
         int id;
         uint16_t imm;
         uint8_t command;
@@ -89,6 +90,7 @@ class VectorInterface
 
         uint32_t buffer[4];
         int buffer_size;
+        uint16_t internal_WL;
 
         bool DBF;
         bool mark_detected;
@@ -107,8 +109,8 @@ class VectorInterface
         int command_len;
         bool check_vif_stall(uint32_t value);
         void decode_cmd(uint32_t value);
-        void handle_wait_cmd(uint32_t value);
-        void MSCAL(uint32_t addr);
+        void handle_wait_cmd(uint32_t value, uint32_t cycles);
+        void MSCAL(uint32_t addr, uint32_t cycles);
         void init_UNPACK(uint32_t value);
         bool is_filling_write();
         void handle_UNPACK();

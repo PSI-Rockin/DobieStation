@@ -59,7 +59,6 @@ class EmotionEngine
         Emulator* e;
 
         uint64_t cycle_count;
-        uint64_t cop2_last_cycle;
         int32_t cycles_to_run;
         uint64_t run_event;
 
@@ -117,8 +116,6 @@ class EmotionEngine
         uint64_t get_cycle_count();
         uint64_t get_cycle_count_goal();
         void set_cycle_count(uint64_t value);
-        uint64_t get_cop2_last_cycle();
-        void set_cop2_last_cycle(uint64_t value);
         void halt();
         void unhalt();
         void print_state();
@@ -254,16 +251,6 @@ inline uint64_t EmotionEngine::get_cycle_count_goal()
 inline void EmotionEngine::set_cycle_count(uint64_t value)
 {
     cycle_count = value;
-}
-
-inline uint64_t EmotionEngine::get_cop2_last_cycle()
-{
-    return cop2_last_cycle;
-}
-
-inline void EmotionEngine::set_cop2_last_cycle(uint64_t value)
-{
-    cop2_last_cycle = value;
 }
 
 inline void EmotionEngine::halt()

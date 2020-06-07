@@ -38,6 +38,7 @@ void Settings::reset()
     rom_directories_to_add = QStringList();
     rom_directories_to_remove = QStringList();
 
+    memcard_path = qsettings().value("memcard_path", "").toString();
     scaling_factor = qsettings().value("ui_scaling_factor", 1).toInt();
 
     emit reload();
@@ -71,6 +72,7 @@ void Settings::save()
     qsettings().setValue("vu0_jit_enabled", vu0_jit_enabled);
     qsettings().setValue("vu1_jit_enabled", vu1_jit_enabled);
     qsettings().setValue("screenshot_directory", screenshot_directory);
+    qsettings().setValue("memcard_path", memcard_path);
     qsettings().setValue("ui_scaling_factor", scaling_factor);
     qsettings().sync();
     reset();
@@ -155,4 +157,13 @@ void Settings::set_screenshot_directory(const QString& directory)
 
     screenshot_directory = directory;
     emit screenshot_directory_changed(directory);
+}
+
+void Settings::set_memcard_path(const QString &path)
+{
+    if (path.isEmpty())
+        return;
+
+    memcard_path = path;
+    emit memcard_changed(path);
 }

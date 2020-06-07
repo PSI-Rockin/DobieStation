@@ -194,19 +194,20 @@ class VectorUnit
         void check_for_FMAC_stall();
         void check_for_COP2_FMAC_stall();
         void flush_pipes();
-        void cop2_updatepipes(int cycles);
+        void cop2_updatepipes();
         void handle_cop2_stalls();
 
-        void run(int cycles);
+        void run();
         void correct_jit_pipeline(int cycles);
-        void run_jit(int cycles);
+        void run_jit();
         void update_XGKick();
         void handle_XGKICK();
-        void start_program(uint32_t addr);
+        void start_program(uint32_t addr, uint32_t cycle_delay);
         void end_execution();
         void stop();
         void stop_by_tbit();
         void reset();
+        void soft_reset();
 
         void backup_vf(bool newvf, int index);
         void restore_vf(bool newvf, int index);
@@ -225,7 +226,7 @@ class VectorUnit
         template <typename T> void write_data(uint32_t addr, T data);
         template <typename T> void write_mem(uint32_t addr, T data);
 
-        std::function<void(VectorUnit&, int)> run_func;
+        std::function<void(VectorUnit&)> run_func;
 
         bool is_running();
         bool stopped_by_tbit();
@@ -447,7 +448,7 @@ inline void VectorUnit::write_mem(uint32_t addr, T data)
 
 inline bool VectorUnit::is_running()
 {
-    return running;
+    return running || (eecpu->get_cycle_count() < cycle_count);
 }
 
 inline bool VectorUnit::stopped_by_tbit()

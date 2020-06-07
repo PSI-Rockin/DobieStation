@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-
   <!-- configurations -->
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Release Optimized|x64">
@@ -20,57 +19,47 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
-
   <!-- globals -->
   <PropertyGroup Label="Globals">
     <ProjectGuid>{abd605c8-f15d-43d6-9955-aac852bfcb6c}</ProjectGuid>
     <WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>
   </PropertyGroup>
-
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
-
   <!-- configuration defaults -->
   <PropertyGroup Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <CharacterSet>Unicode</CharacterSet>
     <PlatformToolset>v141</PlatformToolset>
   </PropertyGroup>
-
   <!-- release -->
   <PropertyGroup Condition="'$(Configuration)'=='Release'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
   </PropertyGroup>
-
   <!-- optimized release -->
   <PropertyGroup Condition="'$(Configuration)'=='Release Optimized'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
   </PropertyGroup>
-
   <!-- devel -->
   <PropertyGroup Condition="'$(Configuration)'=='Devel'" Label="Configuration">
     <UseDebugLibraries>false</UseDebugLibraries>
   </PropertyGroup>
-
   <!-- debug -->
   <PropertyGroup Condition="'$(Configuration)'=='Debug'" Label="Configuration">
     <UseDebugLibraries>true</UseDebugLibraries>
   </PropertyGroup>
-
   <!-- props -->
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.props" />
   <ImportGroup Label="ExtensionSettings" />
-
   <!-- prop includes -->
   <ImportGroup Label="PropertySheets">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" />
-    <Import Project="common.props" />
-    <Import Project="qt.props" />
+    <Import Project="..\..\DobieStation\common.props" />
+    <Import Project="..\..\DobieStation\qt.props" />
   </ImportGroup>
-
   <PropertyGroup>
     <TargetName>DobieStation$(Postfix)</TargetName>
+    <DisableFastUpToDateCheck>True</DisableFastUpToDateCheck>
   </PropertyGroup>
-
   <!-- default link -->
   <ItemDefinitionGroup>
     <Link>
@@ -78,43 +67,45 @@
       <SubSystem>Console</SubSystem>
     </Link>
   </ItemDefinitionGroup>
-
   <!-- cpp files -->
   <ItemGroup>
-    <ClCompile Include="$(UIDir)emuthread.cpp" />
-    <ClCompile Include="$(UIDir)emuwindow.cpp" />
-    <ClCompile Include="$(UIDir)renderwidget.cpp" />
-    <ClCompile Include="$(UIDir)settingswindow.cpp" />
-    <ClCompile Include="$(UIDir)gamelistwidget.cpp" />
-    <ClCompile Include="$(UIDir)bios.cpp" />
-    <ClCompile Include="$(UIDir)settings.cpp" />
-    <ClCompile Include="$(UIDir)main.cpp" />
+    <ClCompile Include="emuthread.cpp" />
+    <ClCompile Include="emuwindow.cpp" />
+    <ClCompile Include="renderwidget.cpp" />
+    <ClCompile Include="settingswindow.cpp" />
+    <ClCompile Include="gamelistwidget.cpp" />
+    <ClCompile Include="memcardwindow.cpp" />
+    <ClCompile Include="bios.cpp" />
+    <ClCompile Include="settings.cpp" />
+    <ClCompile Include="main.cpp" />
   </ItemGroup>
-
   <!-- headers -->
   <ItemGroup>
-    <ClInclude Include="$(UIDir)bios.hpp" />
+    <ClInclude Include="bios.hpp" />
   </ItemGroup>
-
   <!-- moc files -->
   <ItemGroup>
-    <QtMoc Include="$(UIDir)settings.hpp" />
-    <QtMoc Include="$(UIDir)emuthread.hpp" />
-    <QtMoc Include="$(UIDir)emuwindow.hpp" />
-    <QtMoc Include="$(UIDir)renderwidget.hpp" />
-    <QtMoc Include="$(UIDir)settingswindow.hpp" />
-    <QtMoc Include="$(UIDir)gamelistwidget.hpp" />
+    <QtMoc Include="settings.hpp" />
+    <QtMoc Include="emuthread.hpp" />
+    <QtMoc Include="emuwindow.hpp" />
+    <QtMoc Include="renderwidget.hpp" />
+    <QtMoc Include="settingswindow.hpp" />
+    <QtMoc Include="gamelistwidget.hpp" />
+    <QtMoc Include="memcardwindow.hpp" />
   </ItemGroup>
-
   <!-- moc compile -->
   <ItemGroup>
-    <ClCompile Include="$(QtMocOutPrefix)settings.cpp" />
-    <ClCompile Include="$(QtMocOutPrefix)emuthread.cpp" />
-    <ClCompile Include="$(QtMocOutPrefix)emuwindow.cpp" />
-    <ClCompile Include="$(QtMocOutPrefix)renderwidget.cpp" />
-    <ClCompile Include="$(QtMocOutPrefix)settingswindow.cpp" />
-    <ClCompile Include="$(QtMocOutPrefix)gamelistwidget.cpp" />
+    <ClCompile Include="$(QtToolOutDir)moc_settings.cpp" />
+    <ClCompile Include="$(QtToolOutDir)moc_emuthread.cpp" />
+    <ClCompile Include="$(QtToolOutDir)moc_emuwindow.cpp" />
+    <ClCompile Include="$(QtToolOutDir)moc_renderwidget.cpp" />
+    <ClCompile Include="$(QtToolOutDir)moc_settingswindow.cpp" />
+    <ClCompile Include="$(QtToolOutDir)moc_gamelistwidget.cpp" />
+    <ClCompile Include="$(QtToolOutDir)moc_memcardwindow.cpp" />  
   </ItemGroup>
-
+  <!-- ui files -->
+  <ItemGroup>
+    <QtUI Include="memcardwindow.ui" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>

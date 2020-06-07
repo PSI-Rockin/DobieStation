@@ -63,20 +63,36 @@
     <MocIncludes>"-I$(QtIncludeDir) " "-I$(QtToolOutDir) " $(MocIncludes)</MocIncludes>
   </PropertyGroup>
 
+  <ItemGroup>
+    <MocOutputs Include="$(QtToolOutDir)moc_*.cpp" />
+    <UIOutputs Include="$(QtToolOutDir)ui_*.h" />
+  </ItemGroup>
+
   <Target Name="QtMoc"
     BeforeTargets="ClCompile"
     Condition="'@(QtMoc)'!=''"
     Inputs="%(QtMoc.Identity);%(QtMoc.AdditionalDependencies);$(MSBuildProjectFile)"
     Outputs="$(QtToolOutDir)moc_%(QtMoc.Filename).cpp">
-    <Message Text="moc %(QtMoc.Filename)" Importance="High" />
-    <Error Condition="!$(QtDirValid)" Text="QT not found! Try installing it or setting QTDIR $(QTDIR)" />
-    <MakeDir Directories="$(QtToolOutDir)" />
-    <Exec Command="&quot;$(QtBinDir)moc.exe&quot; &quot;%(QtMoc.FullPath)&quot; -o &quot;$(QtToolOutDir)moc_%(QtMoc.Filename).cpp&quot; -f%(QtMoc.Filename)%(QtMoc.Extension) $(MocDefines) $(MocIncludes)" />
+      <Message Text="moc %(QtMoc.Filename)" Importance="High" />
+      <Error Condition="!$(QtDirValid)" Text="QT not found! Try installing it or setting QTDIR $(QTDIR)" />
+      <MakeDir Directories="$(QtToolOutDir)" />
+      <Exec Command="&quot;$(QtBinDir)moc.exe&quot; &quot;%(QtMoc.FullPath)&quot; -o &quot;$(QtToolOutDir)moc_%(QtMoc.Filename).cpp&quot; -f%(QtMoc.Filename)%(QtMoc.Extension) $(MocDefines) $(MocIncludes)" />
   </Target>
 
-  <ItemGroup>
-    <MocOutputs Include="$(QtToolOutDir)moc_*.cpp" />
-  </ItemGroup>
+  <Target Name="QtUI"
+  BeforeTargets="ClCompile"
+  Condition="'@(QtUI)'!=''"
+  Inputs="@(QtUI)"
+  Outputs="@(QtUI->'$(QtToolOutDir)ui_%(filename).h')">
+    <Message Text="ui %(QtUI.Filename)" Importance="High" />
+    <Error Condition="!$(QtDirValid)" Text="QT not found! Try installing it or setting QTDIR $(QTDIR)" />
+    <MakeDir Directories="$(QtToolOutDir)" />
+    <Exec Command="&quot;$(QtBinDir)uic.exe&quot; &quot;%(QtUI.FullPath)&quot; -o &quot;$(QtToolOutDir)ui_%(QtUI.Filename).h&quot;" />
+  </Target>
+
+  <Target Name="QtUIClean">
+    <Delete Files="@(UIOutputs)" />
+  </Target>
 
   <Target Name="QtMocClean">
     <Delete Files="@(MocOutputs)" />
@@ -86,6 +102,9 @@
     <PropertyPageSchema Include="$(MSBuildThisFileDirectory)$(MSBuildThisFileName).xml" />
     <AvailableItemName Include="QtMoc">
       <Targets>QtMoc</Targets>
+    </AvailableItemName>
+    <AvailableItemName Include="QtUI">
+      <Targets>QtUI</Targets>
     </AvailableItemName>
   </ItemGroup>
 
