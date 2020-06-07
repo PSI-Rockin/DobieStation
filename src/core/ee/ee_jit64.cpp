@@ -776,7 +776,7 @@ void EE_JIT64::prepare_abi(uint64_t value)
 
     if (abi_int_count >= 6)
         Errors::die("[EE_JIT64] ABI integer arguments exceeded 6!");
-#endif    
+#endif
 
     REG_64 arg = regs[abi_int_count];
     int_regs[arg].locked = true;
@@ -806,7 +806,7 @@ void EE_JIT64::prepare_abi_reg(REG_64 reg, uint32_t offset)
 
     if (abi_int_count >= 6)
         Errors::die("[EE_JIT64] ABI integer arguments exceeded 6!");
-#endif    
+#endif
 
     REG_64 arg = regs[abi_int_count];
     int_regs[arg].locked = true;
@@ -831,7 +831,7 @@ void EE_JIT64::prepare_abi_reg(REG_64 reg, uint32_t offset)
     }
     int_regs[arg].used = false;
     if (reg != regs[abi_int_count] && p == saved_int_regs.end())
-    {   
+    {
         if (offset)
             emitter.LEA64_M(reg, arg, offset);
         else
@@ -852,7 +852,7 @@ void EE_JIT64::prepare_abi_reg_from_xmm(REG_64 reg)
 
     if (abi_int_count >= 6)
         Errors::die("[EE_JIT64] ABI integer arguments exceeded 6!");
-#endif    
+#endif
 
     REG_64 arg = regs[abi_int_count];
     int_regs[arg].locked = true;
@@ -878,7 +878,7 @@ void EE_JIT64::call_abi_func(uint64_t addr)
 #else
     const static REG_64 saved_regs[] = { RDI, RSI, RCX, RDX, R8, R9, R10, R11 };
     const static REG_64 abi_regs[] = { RDI, RSI, RDX, RCX, R8, R9 };
-#endif    
+#endif
 
     for (int i = 0; i < abi_int_count; ++i)
         int_regs[abi_regs[i]].locked = false;

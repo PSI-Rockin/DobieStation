@@ -15,7 +15,7 @@ uint16_t SPU::spdif_irq = 0;
 uint16_t SPU::core_att[2];
 uint32_t SPU::IRQA[2];
 SPU::SPU(int id, IOP_INTC* intc, IOP_DMA* dma) : id(id), intc(intc), dma(dma)
-{ 
+{
 
 }
 
@@ -204,7 +204,7 @@ void SPU::write_ADMA(uint8_t *RAM)
     status.DMA_ready = false;
 }
 
-void SPU::process_ADMA() 
+void SPU::process_ADMA()
 {
     if (input_pos == 128 || input_pos == 384)
     {
@@ -235,7 +235,7 @@ void SPU::write_mem(uint16_t value)
 {
     printf("[SPU%d] Write mem $%04X ($%08X)\n", id, value, current_addr);
     RAM[current_addr] = value;
-    
+
     spu_check_irq(current_addr);
     current_addr++;
     current_addr &= 0x000FFFFF;
@@ -255,7 +255,7 @@ uint16_t SPU::read16(uint32_t addr)
         printf("[SPU] Read high addr $%04X\n", addr);
         return 0;
     }
-   
+
     addr &= 0x3FF;
     if (addr < 0x180)
     {
@@ -334,7 +334,7 @@ uint16_t SPU::read16(uint32_t addr)
         case 0x1AA:
             printf("[SPU%d] Read TSAL: $%04X\n", id, transfer_addr & 0xFFFF);
             return transfer_addr & 0xFFFF;
-        case 0x1AC:            
+        case 0x1AC:
             return read_mem();
         case 0x1B0:
             printf("[SPU%d] Read ADMA stat: $%04X\n", id, autodma_ctrl);

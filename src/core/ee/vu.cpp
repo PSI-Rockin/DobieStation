@@ -172,7 +172,7 @@ void VectorUnit::reset()
     I.u = 0;
     DIV_event_started = false;
     EFU_event_started = false;
-    
+
     XGKICK_cycles = 0;
     stalled_GIF_addr = 0;
     transferring_GIF = false;
@@ -217,7 +217,7 @@ void VectorUnit::soft_reset()
         CLIP_pipeline[i] = 0;
         ILW_pipeline[i] = 0;
     }
-    
+
     decoder.reset();
     int_branch_pipeline.reset();
 

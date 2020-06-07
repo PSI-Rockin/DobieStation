@@ -55,7 +55,7 @@ void Firewire::writePHY()
 void Firewire::write32(uint32_t addr, uint32_t value)
 {
     uint32_t address = addr & 0x1ff;
-    
+
     switch (address)
     {
         case 0x8:

@@ -173,7 +173,7 @@ class VectorUnit
         VU_I read_int_for_branch_condition(uint8_t reg);
         void disasm_micromem();
         uint32_t crc_microprogram();
-        
+
         void update_status();
         void advance_r();
         void print_vectors(uint8_t a, uint8_t b);
@@ -460,7 +460,7 @@ inline bool VectorUnit::is_dirty()
 {
     return vumem_is_dirty;
 }
- 
+
 inline void VectorUnit::clear_dirty()
 {
     vumem_is_dirty = false;

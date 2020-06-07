@@ -406,7 +406,7 @@ void EmotionInterpreter::pmfhlfmt(EE_InstrInfo& info, uint32_t instruction)
             info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::HI);
             info.add_dependency(DependencyType::Read, RegType::GPR, (uint8_t)EE_SpecialReg::HI1);
             break;
-        case 0x03:           
+        case 0x03:
             info.interpreter_fn = &pmfhllh;
             info.pipeline = EE_InstrInfo::Pipeline::IntWide;
             info.add_dependency(DependencyType::Write, RegType::GPR, (instruction >> 11) & 0x1F);
@@ -548,7 +548,7 @@ void EmotionInterpreter::pmfhlslw(EmotionEngine& cpu, uint32_t instruction)
 
     data._u64[0] = clamp_doubleword((uint64_t)lo._u32[0] | ((uint64_t)hi._u32[0] << 32));
     data._u64[1] = clamp_doubleword((uint64_t)lo._u32[2] | ((uint64_t)hi._u32[2] << 32));
-    
+
     cpu.set_gpr<uint128_t>(dest, data);
 }
 
@@ -2036,7 +2036,7 @@ void EmotionInterpreter::pmaddw(EmotionEngine &cpu, uint32_t instruction)
     uint128_t reg1 = cpu.get_gpr<uint128_t>((instruction >> 21) & 0x1F);
     uint128_t reg2 = cpu.get_gpr<uint128_t>((instruction >> 16) & 0x1F);
     uint32_t dest = (instruction >> 11) & 0x1F;
-    uint128_t lo, hi;    
+    uint128_t lo, hi;
     int64_t result, result2;
     int64_t op1, op2;
     lo._u64[0] = cpu.get_LO();
@@ -2048,7 +2048,7 @@ void EmotionInterpreter::pmaddw(EmotionEngine &cpu, uint32_t instruction)
     op1 = (int64_t)reg1._s32[0];
     op2 = (int64_t)reg2._s32[0];
     result = op1 * op2;
-        
+
     result2 = result + ((int64_t)hi._s32[0] << 32);
 
     //This gets around some one bit errors in the calculation for hi
@@ -2064,17 +2064,17 @@ void EmotionInterpreter::pmaddw(EmotionEngine &cpu, uint32_t instruction)
     op1 = (int64_t)reg1._s32[2];
     op2 = (int64_t)reg2._s32[2];
     result = op1 * op2;
-    
+
     result2 = result + ((int64_t)hi._s32[2] << 32);
     //4294967296 would be the full >> 32, but there seems to be an error amount
     result2 = (int32_t)(result2 / 4294967295);
     lo._s64[1] = (int32_t)(result & 0xffffffff) + lo._s32[2];
     hi._s64[1] = (int32_t)result2;
-   
+
     cpu.set_gpr<uint32_t>(dest, lo._u32[0]);
     cpu.set_gpr<uint32_t>(dest, hi._u32[0], 1);
     cpu.set_gpr<uint32_t>(dest, lo._u32[2], 2);
-    cpu.set_gpr<uint32_t>(dest, hi._u32[2], 3);    
+    cpu.set_gpr<uint32_t>(dest, hi._u32[2], 3);
 
     cpu.set_LO_HI(lo._u64[0], hi._u64[0], false);
     cpu.set_LO_HI(lo._u64[1], hi._u64[1], true);
@@ -2248,7 +2248,7 @@ void EmotionInterpreter::pmaddh(EmotionEngine &cpu, uint32_t instruction)
     hi._u32[2] = (int32_t)((int32_t)hi._u32[2] + (int16_t)reg1._u16[6] * (int16_t)reg2._u16[6]);
     hi._u32[3] = (int32_t)((int32_t)hi._u32[3] + (int16_t)reg1._u16[7] * (int16_t)reg2._u16[7]);
     cpu.set_gpr<uint32_t>(dest, hi._u32[2], 3);
-    
+
     cpu.set_LO_HI(lo._u64[0], hi._u64[0], false);
     cpu.set_LO_HI(lo._u64[1], hi._u64[1], true);
 }

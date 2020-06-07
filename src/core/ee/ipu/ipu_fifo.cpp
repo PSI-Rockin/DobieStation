@@ -43,7 +43,7 @@ bool IPU_FIFO::advance_stream(uint8_t amount)
 {
     if (amount > 32)
         amount = 32;
-    
+
     //printf("Advance stream: %d + %d = %d\n", bit_pointer - amount, amount, bit_pointer);
 
     if ((bit_pointer + amount) > (f.size() * 128))

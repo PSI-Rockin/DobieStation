@@ -475,7 +475,7 @@ namespace EmotionInterpreter
     void pmfhllw(EmotionEngine& cpu, uint32_t instruction);
     void pmfhluw(EmotionEngine& cpu, uint32_t instruction);
     void pmfhlslw(EmotionEngine& cpu, uint32_t instruction);
-    void pmfhllh(EmotionEngine& cpu, uint32_t instruction);    
+    void pmfhllh(EmotionEngine& cpu, uint32_t instruction);
     void pmfhlsh(EmotionEngine& cpu, uint32_t instruction);
     void paddw(EmotionEngine& cpu, uint32_t instruction);
     void psubw(EmotionEngine& cpu, uint32_t instruction);
@@ -543,7 +543,7 @@ namespace EmotionInterpreter
     void pmulth(EmotionEngine& cpu, uint32_t instruction);
     void pdivbw(EmotionEngine& cpu, uint32_t instruction);
     void pmultw(EmotionEngine &cpu, uint32_t instruction);
-    void pdivw(EmotionEngine& cpu, uint32_t instruction);    
+    void pdivw(EmotionEngine& cpu, uint32_t instruction);
     void pexew(EmotionEngine& cpu, uint32_t instruction);
     void prot3w(EmotionEngine& cpu, uint32_t instruction);
 

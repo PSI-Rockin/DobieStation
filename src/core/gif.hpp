@@ -33,7 +33,7 @@ class GraphicsInterface
     private:
         GraphicsSynthesizer* gs;
         DMAC* dmac;
-        
+
         GIFPath path[4];
 
         std::queue<uint128_t> FIFO;

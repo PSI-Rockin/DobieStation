@@ -960,7 +960,7 @@ void EE_JIT64::load_quadword(EmotionEngine& ee, IR::Instruction &instr)
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPR, REG_STATE::READ);
     REG_64 addr = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD);
     REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPREXTENDED, REG_STATE::WRITE);
-    
+
     int64_t offset = instr.get_source2();
 
     if (offset)

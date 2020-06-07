@@ -395,7 +395,7 @@ void EE_JIT64::floating_point_reciprocal_square_root(EmotionEngine& ee, IR::Inst
 
     // Second operand's exponent is nonzero
     emitter.set_jump_dest(normalop);
-    
+
     // dest = clamp(clamp(source) / sqrt(clamp(fabsf(source2))))
     emitter.MOVD_FROM_XMM(source2, REG_64::RAX);
     if (source != dest)

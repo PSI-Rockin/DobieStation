@@ -1332,7 +1332,7 @@ uint128_t ImageProcessingUnit::read_FIFO()
 void ImageProcessingUnit::write_FIFO(uint128_t quad)
 {
     printf("[IPU] Write FIFO: $%08X_%08X_%08X_%08X\n", quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
-    
+
 
     //Certain games (Theme Park, Neo Contra, etc) read command output without sending a command.
     //They expect to read the first word of a newly started IPU_TO transfer.
