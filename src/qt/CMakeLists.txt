@@ -12,31 +12,32 @@ endif()
 
 find_package(Qt5 COMPONENTS Core Widgets Gui REQUIRED)
 
-
 set(SOURCES
+    bios.cpp
     emuthread.cpp
     emuwindow.cpp
-    settingswindow.cpp
-    renderwidget.cpp
     gamelistwidget.cpp
-    memcardwindow.cpp
     main.cpp
+    memcardwindow.cpp
+    renderwidget.cpp
     settings.cpp
-    bios.cpp)
+    settingswindow.cpp
+    )
 
 set(HEADERS
+    bios.hpp
     emuthread.hpp
     emuwindow.hpp
-    settingswindow.hpp
-    renderwidget.hpp
     gamelistwidget.hpp
     memcardwindow.hpp
+    renderwidget.hpp
     settings.hpp
-    bios.hpp)
+    settingswindow.hpp
+    )
 
 set(UIS
     memcardwindow.ui
-)
+    )
 
 add_executable(${TARGET} ${SOURCES} ${HEADERS})
 set_target_properties(${TARGET} PROPERTIES OUTPUT_NAME "DobieStation") # Output as "DobieStation" instead of "DobieQt"
