@@ -144,7 +144,7 @@ void VectorInterface::update(int cycles)
             {
                 if (vu->is_running())
                     return;
-                handle_wait_cmd(wait_cmd_value, cycles - (run_cycles >> 4));
+                handle_wait_cmd(wait_cmd_value, (cycles - (run_cycles >> 2)) * 2);
             }
             if (wait_for_PATH3)
             {
