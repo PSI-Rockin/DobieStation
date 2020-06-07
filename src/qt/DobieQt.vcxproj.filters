@@ -39,6 +39,9 @@
     <ClCompile Include="settings.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="memcardwindow.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="$(QtToolOutDir)moc_emuthread.cpp">
@@ -57,6 +60,9 @@
       <Filter>Moc</Filter>
     </ClCompile>
     <ClCompile Include="$(QtToolOutDir)moc_settingswindow.cpp">
+      <Filter>Moc</Filter>
+    </ClCompile>
+    <ClCompile Include="$(QtToolOutDir)moc_memcardwindow.cpp">
       <Filter>Moc</Filter>
     </ClCompile>
   </ItemGroup>
@@ -79,6 +85,9 @@
       <Filter>Headers</Filter>
     </QtMoc>
     <QtMoc Include="gamelistwidget.hpp">
+      <Filter>Headers</Filter>
+    </QtMoc>
+    <QtMoc Include="memcardwindow.hpp">
       <Filter>Headers</Filter>
     </QtMoc>
   </ItemGroup>
