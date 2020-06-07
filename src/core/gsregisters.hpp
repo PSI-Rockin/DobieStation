@@ -110,13 +110,6 @@ struct DISPFB
 
 struct DISPLAY
 {
-    uint16_t x, y;
-    uint8_t magnify_x, magnify_y;
-    uint16_t width, height;
-};
-
-struct CalculatedDISPLAY
-{
     int32_t x, y;
     int32_t magnify_x, magnify_y;
     int32_t width, height;
@@ -169,7 +162,6 @@ struct GS_REGISTERS
     SYNCV_REG SYNCV;
     DISPFB DISPFB1, DISPFB2;
     DISPLAY DISPLAY1, DISPLAY2;
-    CalculatedDISPLAY calculated_DISPLAY1, calculated_DISPLAY2;
     GS_IMR IMR;
     GS_CSR CSR;
     uint8_t BUSDIR;

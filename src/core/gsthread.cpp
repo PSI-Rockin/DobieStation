@@ -537,7 +537,7 @@ uint16_t convert_color_down(uint32_t col)
 }
 
 //Calculates DISPLAY bounding box
-bool GraphicsSynthesizerThread::isInDisplay(CalculatedDISPLAY &display, int32_t x_start, int32_t y_start, int32_t x, int32_t y)
+bool GraphicsSynthesizerThread::isInDisplay(DISPLAY &display, int32_t x_start, int32_t y_start, int32_t x, int32_t y)
 {
     //Inside X
     if (x >= x_start && x < (x_start + display.width))
@@ -587,18 +587,18 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
     //Get overall picture height, largest will likely cover whole screen
     if (reg.PMODE.circuit1 && reg.PMODE.circuit2)
     {
-        height = max(reg.calculated_DISPLAY1.height, reg.calculated_DISPLAY2.height);
-        width = max(reg.calculated_DISPLAY1.width, reg.calculated_DISPLAY2.width);
+        height = max(reg.DISPLAY1.height, reg.DISPLAY2.height);
+        width = max(reg.DISPLAY1.width, reg.DISPLAY2.width);
     }
     else if (reg.PMODE.circuit1)
     {
-        height = reg.calculated_DISPLAY1.height;
-        width = reg.calculated_DISPLAY1.width;
+        height = reg.DISPLAY1.height;
+        width = reg.DISPLAY1.width;
     }
     else if (reg.PMODE.circuit2) //Makai Kingdom, SH2, GT4, True Crime needs to take its display information from Display2
     {
-        height = reg.calculated_DISPLAY2.height;
-        width = reg.calculated_DISPLAY2.width;
+        height = reg.DISPLAY2.height;
+        width = reg.DISPLAY2.width;
     }
     else
         return;
@@ -606,15 +606,15 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
     //Calculate DISPLAY offsets
     if (reg.PMODE.circuit1 && reg.PMODE.circuit2)
     {
-        if ((reg.calculated_DISPLAY1.x - reg.calculated_DISPLAY2.x) < 0)
-            display2_xoffset = reg.calculated_DISPLAY2.x - reg.calculated_DISPLAY1.x;
-        else if ((reg.calculated_DISPLAY1.x - reg.calculated_DISPLAY2.x) > 0)
-            display1_xoffset = reg.calculated_DISPLAY1.x - reg.calculated_DISPLAY2.x;
+        if ((reg.DISPLAY1.x - reg.DISPLAY2.x) < 0)
+            display2_xoffset = reg.DISPLAY2.x - reg.DISPLAY1.x;
+        else if ((reg.DISPLAY1.x - reg.DISPLAY2.x) > 0)
+            display1_xoffset = reg.DISPLAY1.x - reg.DISPLAY2.x;
 
-        if ((reg.calculated_DISPLAY1.y - reg.calculated_DISPLAY2.y) < 0)
-            display2_yoffset = reg.calculated_DISPLAY2.y - reg.calculated_DISPLAY1.y;
-        else if ((reg.calculated_DISPLAY1.y - reg.calculated_DISPLAY2.y) > 0)
-            display1_yoffset = reg.calculated_DISPLAY1.y - reg.calculated_DISPLAY2.y;
+        if ((reg.DISPLAY1.y - reg.DISPLAY2.y) < 0)
+            display2_yoffset = reg.DISPLAY2.y - reg.DISPLAY1.y;
+        else if ((reg.DISPLAY1.y - reg.DISPLAY2.y) > 0)
+            display1_yoffset = reg.DISPLAY1.y - reg.DISPLAY2.y;
     }
 
     //TODO - Find out why some games double their height
@@ -664,8 +664,8 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
             int32_t scaled_y2 = (int32_t)reg.DISPFB2.y + fb_offset + ((pixel_y_disp2 >> (y_increment - 1)) << (frame_line_increment - 1));
 
             //Disable the outputs if the x, y are not in the display bounding box
-            enable_circuit1 = reg.PMODE.circuit1 && isInDisplay(reg.calculated_DISPLAY1, display1_xoffset, display1_yoffset, pixel_x, pixel_y);
-            enable_circuit2 = reg.PMODE.circuit2 && isInDisplay(reg.calculated_DISPLAY2, display2_xoffset, display2_yoffset, pixel_x, pixel_y);
+            enable_circuit1 = reg.PMODE.circuit1 && isInDisplay(reg.DISPLAY1, display1_xoffset, display1_yoffset, pixel_x, pixel_y);
+            enable_circuit2 = reg.PMODE.circuit2 && isInDisplay(reg.DISPLAY2, display2_xoffset, display2_yoffset, pixel_x, pixel_y);
 
             uint32_t output1 = enable_circuit1 ? get_CRT_color(reg.DISPFB1, scaled_x1, scaled_y1) : 0;
             uint32_t output2 = enable_circuit2 ? get_CRT_color(reg.DISPFB2, scaled_x2, scaled_y2) : reg.BGCOLOR;
@@ -5371,8 +5371,8 @@ void GraphicsSynthesizerThread::load_state(ifstream *state)
     else
         current_PRMODE = &PRMODE;
 
-    state->read((char*)&reg.calculated_DISPLAY1, sizeof(reg.calculated_DISPLAY1));
-    state->read((char*)&reg.calculated_DISPLAY2, sizeof(reg.calculated_DISPLAY2));
+    state->read((char*)&reg.DISPLAY1, sizeof(reg.DISPLAY1));
+    state->read((char*)&reg.DISPLAY2, sizeof(reg.DISPLAY2));
     state->read((char*)&reg.PMODE, sizeof(reg.PMODE));
     state->read((char*)&reg.SMODE2, sizeof(reg.SMODE2));
 
@@ -5425,8 +5425,8 @@ void GraphicsSynthesizerThread::save_state(ofstream *state)
         current_PRMODE_id = 2;
     state->write((char*)&current_PRMODE_id, sizeof(current_PRMODE_id));
 
-    state->write((char*)&reg.calculated_DISPLAY1, sizeof(reg.calculated_DISPLAY1));
-    state->write((char*)&reg.calculated_DISPLAY2, sizeof(reg.calculated_DISPLAY2));
+    state->write((char*)&reg.DISPLAY1, sizeof(reg.DISPLAY1));
+    state->write((char*)&reg.DISPLAY2, sizeof(reg.DISPLAY2));
     state->write((char*)&reg.PMODE, sizeof(reg.PMODE));
     state->write((char*)&reg.SMODE2, sizeof(reg.SMODE2));
 
