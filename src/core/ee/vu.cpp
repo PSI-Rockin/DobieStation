@@ -161,10 +161,6 @@ void VectorUnit::reset()
     VU_JIT::reset(this);
     vumem_is_dirty = true; //assume we don't know the contents on reset
     
-    transferring_GIF = false;
-    XGKICK_stall = false;
-    new_MAC_flags = 0;
-
     finish_DIV_event = 0;
     finish_EFU_event = 0;
     new_Q_instance.u = 0;
@@ -175,8 +171,9 @@ void VectorUnit::reset()
     EFU_event_started = false;
     
     XGKICK_cycles = 0;
-    XGKICK_stall = false;
     stalled_GIF_addr = 0;
+    transferring_GIF = false;
+    XGKICK_stall = false;
 
     for (int i = 1; i < 32; i++)
     {
