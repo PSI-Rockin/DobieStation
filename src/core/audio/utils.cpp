@@ -3,21 +3,13 @@
 #include <iostream>
 #include <fstream>
 
-WAVWriter::WAVWriter(std::string filename, int channels) : file(filename, std::fstream::out | std::fstream::binary),
-                                                           channels(channels)
+WAVWriter::WAVWriter(std::string filename) : filename(filename)
 {
-    update_header();
-}
-
-WAVWriter::WAVWriter(std::string filename) : file(filename, std::fstream::out | std::fstream::binary)
-{
-    update_header();
 }
 
 void WAVWriter::update_header()
 {
     file.seekp(std::ios::beg);
-    //printf("test\n");
 
     // Header
     file.write(RIFF, 4);
@@ -48,6 +40,9 @@ void WAVWriter::append_pcm_stereo(stereo_sample pcm)
 
     if (cache.size() > 0x200)
     {
+        if (!file.is_open())
+            file.open(filename.c_str(), std::fstream::out);
+
         file.seekp(44+data_size);
         uint32_t samples = (uint32_t)cache.size();
 

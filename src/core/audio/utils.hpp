@@ -10,16 +10,16 @@ class WAVWriter
 {
     public:
         WAVWriter(std::string filename);
-        WAVWriter(std::string filename, int channels);
         ~WAVWriter();
         void append_pcm_stereo(stereo_sample pcm);
     private:
         void update_header();
 
         std::fstream file;
+        std::string filename;
         uint32_t data_size = 0;
         uint32_t sample_rate = 48000;
-        int channels = 1 ;
+        int channels = 2;
         uint16_t sample_size = 16;
 
         std::vector<stereo_sample> cache;

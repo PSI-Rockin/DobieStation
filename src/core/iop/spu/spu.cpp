@@ -57,7 +57,7 @@ void SPU::reset(uint8_t* RAM)
     std::ostringstream fname;
     fname << "spu_" << id << "_stream" << ".wav";
 
-    coreout = new WAVWriter(fname.str(), 2);
+    coreout = new WAVWriter(fname.str());
 
     clear_dma_req();
 
