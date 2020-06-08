@@ -14,7 +14,7 @@ static const int ps_adpcm_coefs_i[5][2] = {
         { 122 , -60 },
 };
 
-class ADPCM_decoder
+class ADPCM_Decoder
 {
     public:
         std::array<int16_t, 28> decode_block(uint8_t *block);

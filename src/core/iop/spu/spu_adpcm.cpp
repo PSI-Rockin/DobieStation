@@ -2,7 +2,7 @@
 #include <cstdint>
 #include <algorithm>
 
-std::array<int16_t, 28> ADPCM_decoder::decode_block(uint8_t *block)
+std::array<int16_t, 28> ADPCM_Decoder::decode_block(uint8_t *block)
 {
     std::array<int16_t, 28> pcm;
 

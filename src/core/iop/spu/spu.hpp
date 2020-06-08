@@ -7,7 +7,7 @@
 #include "spu_adpcm.hpp"
 #include "spu_utils.hpp"
 
-struct voice_mix
+struct VoiceMix
 {
     bool dry_l;
     bool dry_r;
@@ -25,7 +25,7 @@ struct Voice
     uint32_t loop_addr;
     bool loop_addr_specified;
 
-    voice_mix mix_state;
+    VoiceMix mix_state;
 
     ADSR adsr;
 
@@ -34,7 +34,7 @@ struct Voice
     int loop_code;
     bool new_block;
 
-    ADPCM_decoder adpcm;
+    ADPCM_Decoder adpcm;
 
     int16_t old1 = 0;
     int16_t old2 = 0;
@@ -64,7 +64,7 @@ struct Voice
     }
 };
 
-struct core_mix
+struct CoreMix
 {
     uint16_t reg;
     bool sin_wet_r;
@@ -215,7 +215,7 @@ class SPU
         int16_t core_volume_l;
         int16_t core_volume_r;
 
-        core_mix mix_state;
+        CoreMix mix_state;
 
         uint32_t voice_mixdry_left;
         uint32_t voice_mixdry_right;
