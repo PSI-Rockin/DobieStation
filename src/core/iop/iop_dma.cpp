@@ -3,7 +3,7 @@
 #include "iop_dma.hpp"
 #include "iop_intc.hpp"
 #include "sio2.hpp"
-#include "spu.hpp"
+#include "spu/spu.hpp"
 
 #include "../errors.hpp"
 #include "../sif.hpp"

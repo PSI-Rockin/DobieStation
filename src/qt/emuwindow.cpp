@@ -381,6 +381,15 @@ void EmuWindow::create_menu()
         frame_action->setChecked(emu_thread.frame_advance);
     });
 
+    auto wavoutput_action = new QAction(tr("&WAV Audio Output"), this);
+    wavoutput_action->setCheckable(true);
+    connect(wavoutput_action, &QAction::triggered, this, [=] (){
+        bool new_state = wavoutput_action->isChecked();
+        emu_thread.set_wavout(new_state);
+        wavoutput_action->setChecked(new_state);
+    });
+
+
     auto shutdown_action = new QAction(tr("&Shutdown"), this);
     connect(shutdown_action, &QAction::triggered, this, [=]() {
         emu_thread.pause(PAUSE_EVENT::GAME_NOT_LOADED);
@@ -394,6 +403,7 @@ void EmuWindow::create_menu()
     emulation_menu->addAction(unpause_action);
     emulation_menu->addSeparator();
     emulation_menu->addAction(frame_action);
+    emulation_menu->addAction(wavoutput_action);
     emulation_menu->addSeparator();
     emulation_menu->addAction(shutdown_action);
 

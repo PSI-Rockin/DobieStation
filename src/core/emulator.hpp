@@ -19,7 +19,7 @@
 #include "iop/iop_timers.hpp"
 #include "iop/memcard.hpp"
 #include "iop/sio2.hpp"
-#include "iop/spu.hpp"
+#include "iop/spu/spu.hpp"
 #include "iop/firewire.hpp"
 
 #include "int128.hpp"
@@ -173,6 +173,8 @@ class Emulator
 
         void test_iop();
         GraphicsSynthesizer& get_gs();//used for gs dumps
+
+        void set_wav_output(bool state);
 };
 
 #endif // EMULATOR_HPP
