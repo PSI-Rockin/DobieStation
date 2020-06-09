@@ -1199,7 +1199,16 @@ uint64_t ImageProcessingUnit::read_top()
     uint32_t next_data;
     in_FIFO.get_bits(next_data, max_bits);
     reg |= next_data << (32 - max_bits);
-    reg |= (uint64_t)command_decoding << 63UL;
+
+    /** Note on max_bits
+      * This seems to be undocumented behavior. FMV libraries use this bit to determine how much data is left
+      * in the input FIFO, for the purposes of flushing their bitstream cache.
+      * If this bit is set, this means that there are less than 32 bits left in the FIFO, and BP is then used.
+      * If this is not set, at least 32 bits are available.
+      *
+      * This is needed for rare cases where games peek in the FIFO when less than 32 bits are available.
+      */
+    reg |= ((uint64_t)command_decoding | (uint64_t)(max_bits < 32)) << 63UL;
     return reg;
 }
 
