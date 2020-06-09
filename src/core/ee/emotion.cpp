@@ -1165,7 +1165,7 @@ void EmotionEngine::mfpc(int pc_reg, int reg)
         pcr = (int32_t)cp0->PCR1;
     else
         pcr = (int32_t)cp0->PCR0;
-    printf("[EE] MFPC %d: $%08X\n", pc_reg, pcr);
+    //printf("[EE] MFPC %d: $%08X\n", pc_reg, pcr);
     set_gpr<int64_t>(reg, pcr);
 }
 
