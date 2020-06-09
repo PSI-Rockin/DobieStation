@@ -55,7 +55,7 @@ void interpret(VectorUnit &vu, uint32_t upper_instr, uint32_t lower_instr)
 
     // check for stalls before execution
     vu.check_for_FMAC_stall();
-    
+
     //LOI - upper op always executes first
     if (upper_instr & (1 << 31))
     {

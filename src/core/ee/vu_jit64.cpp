@@ -3270,7 +3270,7 @@ void VU_JIT64::prepare_abi(VectorUnit& vu, uint64_t value)
 
     if (abi_int_count >= 6)
         Errors::die("[VU_JIT64] ABI integer arguments exceeded 6!");
-#endif    
+#endif
 
     REG_64 arg = regs[abi_int_count];
 

@@ -467,7 +467,7 @@ string lower1_special(uint32_t PC, uint32_t instr)
             return eleng(instr);
         case 0x73:
             return erleng(instr);
-        case 0x74: 
+        case 0x74:
             return eatanxy(instr);
         case 0x75:
             return eatanxz(instr);

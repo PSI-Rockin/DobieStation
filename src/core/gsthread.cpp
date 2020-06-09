@@ -219,7 +219,7 @@ void GraphicsSynthesizerThread::exit()
     {
         GSMessagePayload payload;
         payload.no_payload = {0};
-        
+
         send_message({ GSCommand::die_t, payload });
         wake_thread();
         thread.join();
@@ -1977,7 +1977,7 @@ void GraphicsSynthesizerThread::render_point()
     printf("Coords: (%d, %d, %d)\n", v1.x >> 4, v1.y >> 4, v1.z);
     TexLookupInfo tex_info;
     tex_info.new_lookup = true;
-    
+
     tex_info.vtx_color = v1.rgbaq;
     tex_info.fog = v1.fog;
     tex_info.tex_base = current_ctx->tex0.texture_base;
@@ -2032,7 +2032,7 @@ void GraphicsSynthesizerThread::render_line()
     int32_t min_x = ((std::max(std::min(v1.x, v2.x), (int32_t)current_ctx->scissor.x1) + 8) >> 4) << 4;
     int32_t max_y = ((std::min(std::max(v1.y, v2.y), (int32_t)current_ctx->scissor.y2 + 0x10) + 8) >> 4) << 4;
     int32_t max_x = ((std::min(std::max(v1.x, v2.x), (int32_t)current_ctx->scissor.x2 + 0x10) + 8) >> 4) << 4;
-    
+
 
     //Transpose line if it's steep
     bool is_steep = false;
@@ -2556,7 +2556,7 @@ void GraphicsSynthesizerThread::render_triangle()
     int32_t min_y = min({v1.y, v2.y, v3.y});
     int32_t max_x = max({v1.x, v2.x, v3.x});
     int32_t max_y = max({v1.y, v2.y, v3.y});
-    
+
     //Automatic scissoring test
     min_x = max(min_x, (int32_t)current_ctx->scissor.x1);
     min_y = max(min_y, (int32_t)current_ctx->scissor.y1);
@@ -3227,7 +3227,7 @@ uint64_t GraphicsSynthesizerThread::pack_PSMCT24(bool z_format)
             //Data overflowed, so keep left over
             if (data_in_output > 64)
             {
-                PSMCT24_color >>= PSMCT24_unpacked_count - (data_in_output - 64);                
+                PSMCT24_color >>= PSMCT24_unpacked_count - (data_in_output - 64);
                 PSMCT24_unpacked_count = (data_in_output - 64);
             }
             else
@@ -3267,7 +3267,7 @@ uint64_t GraphicsSynthesizerThread::pack_PSMCT24(bool z_format)
             PSMCT24_unpacked_count += 24;
 
             TRXPOS.int_source_x++;
-            
+
             //Coordinates wrap at 2048 pixels
             TRXPOS.int_source_x %= 2048;
             TRXPOS.int_source_y %= 2048;
@@ -4760,7 +4760,7 @@ void GraphicsSynthesizerThread::recompile_alpha_blend()
 
     //color component = (((A - B) * C) >> 7) + D
     if (current_ctx->alpha.spec_B < 2)
-    {   
+    {
         //Calculate ((A - B) * C) >> 7
         emitter_dp.PMOVZX16_TO_32(XMM0, XMM0);
         emitter_dp.PMOVZX16_TO_32(XMM1, XMM1);

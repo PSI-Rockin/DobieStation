@@ -463,7 +463,7 @@ void* EEJitHeap::jit_malloc(std::size_t size)
   if(size < sizeof(FreeList)) size = sizeof(FreeList);
   void* mem = find_memory(size);
   if (mem)
-    heap_usage += *get_size_ptr(mem); // this is the aligned size.  for tiny blocks they use 
+    heap_usage += *get_size_ptr(mem); // this is the aligned size.  for tiny blocks they use
   //fprintf(stderr, "mem %ld / %ld (%.2f pct)\n", heap_usage, _heap_size, 100. * (double)heap_usage / (double)_heap_size);
   return mem;
 }

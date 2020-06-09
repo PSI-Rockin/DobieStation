@@ -3,7 +3,6 @@ set(TARGET Core)
 set(CMAKE_CXX_STANDARD 14)
 include(DobieHelpers)
 
-
 set(SOURCES
     emulator.cpp
     errors.cpp
@@ -16,6 +15,7 @@ set(SOURCES
     scheduler.cpp
     serialize.cpp
     sif.cpp
+
     ee/bios_hle.cpp
     ee/cop0.cpp
     ee/cop1.cpp
@@ -46,6 +46,7 @@ set(SOURCES
     ee/vu_jit.cpp
     ee/vu_jit64.cpp
     ee/vu_jittrans.cpp
+
     ee/ipu/chromtable.cpp
     ee/ipu/codedblockpattern.cpp
     ee/ipu/dct_coeff.cpp
@@ -60,18 +61,7 @@ set(SOURCES
     ee/ipu/mac_p_pic.cpp
     ee/ipu/motioncode.cpp
     ee/ipu/vlc_table.cpp
-    ee/timers.cpp
-    ee/vif.cpp
-    ee/vu.cpp
-    ee/vu_disasm.cpp
-    ee/vu_interpreter.cpp
-    ee/vu_jit.cpp
-    ee/vu_jit64.cpp
-    ee/vu_jittrans.cpp
-    iop/cdvd/bincuereader.cpp
-    iop/cdvd/cdvd.cpp
-    iop/cdvd/cso_reader.cpp
-    iop/cdvd/iso_reader.cpp
+
     iop/firewire.cpp
     iop/gamepad.cpp
     iop/iop.cpp
@@ -83,12 +73,19 @@ set(SOURCES
     iop/memcard.cpp
     iop/sio2.cpp
     iop/spu.cpp
+
+    iop/cdvd/bincuereader.cpp
+    iop/cdvd/cdvd.cpp
+    iop/cdvd/cso_reader.cpp
+    iop/cdvd/iso_reader.cpp
+
     jitcommon/emitter64.cpp
     jitcommon/ir_block.cpp
     jitcommon/ir_instr.cpp
     jitcommon/jitcache.cpp
+
     tests/iop/alu.cpp
-)
+    )
 
 set(HEADERS
     circularFIFO.hpp
@@ -103,6 +100,7 @@ set(HEADERS
     int128.hpp
     scheduler.hpp
     sif.hpp
+
     ee/bios_hle.hpp
     ee/cop0.hpp
     ee/cop1.hpp
@@ -124,6 +122,7 @@ set(HEADERS
     ee/vu_jit.hpp
     ee/vu_jit64.hpp
     ee/vu_jittrans.hpp
+
     ee/ipu/chromtable.hpp
     ee/ipu/codedblockpattern.hpp
     ee/ipu/dct_coeff.hpp
@@ -138,18 +137,7 @@ set(HEADERS
     ee/ipu/mac_p_pic.hpp
     ee/ipu/motioncode.hpp
     ee/ipu/vlc_table.hpp
-    ee/timers.hpp
-    ee/vif.hpp
-    ee/vu.hpp
-    ee/vu_disasm.hpp
-    ee/vu_interpreter.hpp
-    ee/vu_jit.hpp
-    ee/vu_jit64.hpp
-    ee/vu_jittrans.hpp
-    iop/cdvd/bincuereader.hpp
-    iop/cdvd/cdvd.hpp
-    iop/cdvd/cso_reader.hpp
-    iop/cdvd/iso_reader.hpp
+
     iop/firewire.hpp
     iop/gamepad.hpp
     iop/iop.hpp
@@ -161,10 +149,18 @@ set(HEADERS
     iop/memcard.hpp
     iop/sio2.hpp
     iop/spu.hpp
+
+    iop/cdvd/bincuereader.hpp
+    iop/cdvd/cdvd.hpp
+    iop/cdvd/cdvd_container.hpp
+    iop/cdvd/cso_reader.hpp
+    iop/cdvd/iso_reader.hpp
+
     jitcommon/emitter64.hpp
     jitcommon/ir_block.hpp
     jitcommon/ir_instr.hpp
-    jitcommon/jitcache.hpp)
+    jitcommon/jitcache.hpp
+    )
 
 add_library(${TARGET} ${SOURCES} ${HEADERS})
 add_library(Dobie::Core ALIAS ${TARGET})

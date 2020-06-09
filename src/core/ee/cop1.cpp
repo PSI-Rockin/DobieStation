@@ -31,7 +31,7 @@ void Cop1::check_overflow(uint32_t& dest, bool set_flags)
     {
         printf("[FPU] Overflow Dest = %x\n", dest);
         dest = (dest & 0x80000000) | 0x7F7FFFFF;
-       
+
         if (set_flags)
         {
             control.so = true;
@@ -51,7 +51,7 @@ void Cop1::check_underflow(uint32_t& dest, bool set_flags)
     {
         printf("[FPU] Underflow Dest = %x\n", dest);
         dest &= 0x80000000;
-        
+
         if (set_flags)
         {
             control.su = true;
@@ -401,7 +401,7 @@ void Cop1::madd_s(int dest, int reg1, int reg2)
     float op2 = convert(gpr[reg2].u);
     float acc = convert(accumulator.u);
     gpr[dest].f = acc + (op1 * op2);
-    
+
     check_overflow(gpr[dest].u, true);
     check_underflow(gpr[dest].u, true);
     printf("[FPU] madd.s: %f + %f * %f = %f\n", acc, op1, op2, gpr[dest].f);

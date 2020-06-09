@@ -169,7 +169,7 @@ struct GS_REGISTERS
     GS_SIGLBLID SIGLBLID;
     uint32_t BGCOLOR;
     DeinterlaceMethod deinterlace_method;
-    
+
     //EXTBUF, EXTDATA, EXTWRITE not currently implemented
 
     uint32_t read32_privileged(uint32_t addr);

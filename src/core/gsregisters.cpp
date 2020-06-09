@@ -324,7 +324,7 @@ bool GS_REGISTERS::write64(uint32_t addr, uint64_t value)
     switch (addr)
     {
         case 0x0060:
-            
+
         {
             uint32_t mask = value >> 32;
             uint32_t new_signal = value & mask;

@@ -24,17 +24,17 @@ struct CSO_Header
 {
     // fourcc "CISO"
     uint32_t magic;
-    
+
     // v0, v1: not reliable
     // v2: must be 0x18
     uint32_t header_len;
-    
+
     // uncompressed size of original ISO
     uint64_t raw_len;
-    
+
     // usually 2048
     uint32_t block_len;
-    
+
     uint8_t version;
     uint8_t index_shift;
     uint8_t reserved[2];
@@ -114,11 +114,11 @@ bool CSO_Reader::read_block_internal(uint32_t block)
     // if this block was decoded last time we don't need to do it again
     if (block == m_curframe)
         return true;
-    
+
     uint32_t index = m_indices[block];
     uint64_t ofs = (uint64_t)(index & ~IDX_COMPRESS_BIT) << m_shift;
     uint64_t len = ((uint64_t)(m_indices[block + 1] & ~IDX_COMPRESS_BIT) << m_shift) - ofs;
-    
+
     if (index & IDX_COMPRESS_BIT) // if uncompressed
     {
         m_file.seekg(ofs, std::ios::beg);
@@ -139,7 +139,7 @@ bool CSO_Reader::read_block_internal(uint32_t block)
             fprintf(stderr, "read error reading (compressed) block %d\n", block);
             return false;
         }
-        
+
         size_t read;
         auto res = libdeflate_deflate_decompress(m_inflate, m_readbuf, len, m_frame, m_framesize, &read);
         if (res != LIBDEFLATE_SUCCESS)
@@ -148,7 +148,7 @@ bool CSO_Reader::read_block_internal(uint32_t block)
             m_curframe = 0xFFFFFFFF;
             return false;
         }
-        
+
         if (read < m_blocksize)
         {
             fprintf(stderr, "compressed sector %d decoded to less than the blocksize\n", block);
@@ -156,7 +156,7 @@ bool CSO_Reader::read_block_internal(uint32_t block)
             return false;
         }
     }
-    
+
     m_curframe = block;
     return true;
 }
@@ -165,18 +165,18 @@ size_t CSO_Reader::read(uint8_t* dst, size_t size)
 {
     assert(size);
     assert(m_virtptr + size <= m_size);
-    
+
     const uint64_t start = m_virtptr;
     const uint64_t end = start + size;
     const auto start_block = (uint32_t)(start / m_blocksize);
     const auto end_block = (uint32_t)(end / m_blocksize);
-    
+
     uint64_t total_read = 0;
     for (uint32_t i = start_block; i <= end_block; ++i)
     {
         if (!read_block_internal(i))
             return total_read;
-        
+
         const uint64_t local_ofs = start - (uint64_t)start_block * m_blocksize;
         uint64_t readlen = m_blocksize;
         if (i == start_block)
@@ -189,7 +189,7 @@ size_t CSO_Reader::read(uint8_t* dst, size_t size)
         m_virtptr += readlen;
         dst += readlen;
     }
-    
+
     return total_read;
 }
 
@@ -204,7 +204,7 @@ bool CSO_Reader::open(std::string name)
     }
     auto file_len = m_file.tellg();
     m_file.seekg(0, std::ios::beg);
-    
+
     CSO_Header header;
     m_file.read((char*)&header.magic, sizeof(uint32_t));
     m_file.read((char*)&header.header_len, sizeof(uint32_t));
@@ -213,7 +213,7 @@ bool CSO_Reader::open(std::string name)
     m_file.read((char*)&header.version, sizeof(uint8_t));
     m_file.read((char*)&header.index_shift, sizeof(uint8_t));
     m_file.read((char*)header.reserved, 2 * sizeof(uint8_t));
-    
+
     // validate header
     if (header.magic != FOURCC("CISO"))
     {
@@ -225,7 +225,7 @@ bool CSO_Reader::open(std::string name)
         fprintf(stderr, "unsupported CSO version or corrupt file\n");
         return false;
     }
-    
+
     // reinstate these if CSOv2 support is ever added
     /*
     if (header.version == 2 && header.header_len != 0x18)
@@ -233,7 +233,7 @@ bool CSO_Reader::open(std::string name)
     if (header.version == 2 && (header.reserved[0] || header.reserved[1]))
         return false;
     */
-    
+
     // read indices
     auto num_entries = (uint32_t)((header.raw_len + header.block_len - 1) / header.block_len) + 1;
     m_indices = new uint32_t[num_entries];
@@ -244,7 +244,7 @@ bool CSO_Reader::open(std::string name)
         close();
         return false;
     }
-    
+
     // sanity check indices
     uint32_t lastidx = m_indices[0];
     if ((lastidx & ~IDX_COMPRESS_BIT) << header.index_shift < 0x18)
@@ -253,7 +253,7 @@ bool CSO_Reader::open(std::string name)
         close();
         return false;
     }
-    
+
     uint32_t framesize = header.block_len + (1 << header.index_shift);
     for (unsigned i = 1; i < num_entries; ++i)
     {
@@ -264,7 +264,7 @@ bool CSO_Reader::open(std::string name)
             close();
             return false;
         }
-        
+
         uint32_t idx = m_indices[i];
         uint32_t pos = (idx & ~IDX_COMPRESS_BIT) << header.index_shift;
         uint32_t len = pos - lastpos;
@@ -288,7 +288,7 @@ bool CSO_Reader::open(std::string name)
         }
         lastidx = idx;
     }
-    
+
     m_version = header.version;
     m_size = header.raw_len;
     m_shift = header.index_shift;
@@ -296,7 +296,7 @@ bool CSO_Reader::open(std::string name)
     m_framesize = framesize;
     m_frame = new uint8_t[m_framesize];
     m_readbuf = new uint8_t[m_framesize];
-    
+
     // setup libdeflate
     m_inflate = libdeflate_alloc_decompressor();
     if (!m_inflate)
@@ -305,7 +305,7 @@ bool CSO_Reader::open(std::string name)
         close();
         return false;
     }
-    
+
     return true;
 }
 
@@ -313,19 +313,19 @@ void CSO_Reader::close()
 {
     libdeflate_free_decompressor(m_inflate);
     m_inflate = nullptr;
-    
+
     delete[] m_readbuf;
     m_readbuf = nullptr;
 
     delete[] m_frame;
     m_frame = nullptr;
-    
+
     delete[] m_indices;
     m_indices = nullptr;
 
     if (m_file.is_open())
         m_file.close();
-    
+
     m_version = 0;
     m_virtptr = 0;
     m_size = 0;

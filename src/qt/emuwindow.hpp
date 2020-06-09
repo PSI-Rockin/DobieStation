@@ -71,7 +71,7 @@ class EmuWindow : public QMainWindow
     #ifndef QT_NO_CONTEXTMENU
         void contextMenuEvent(QContextMenuEvent* event) override;
     #endif
-    
+
     signals:
         void shutdown();
         void press_key(PAD_BUTTON button);

@@ -228,7 +228,7 @@ void GraphicsInterface::feed_GIF(uint128_t data)
         path[active_path].current_tag.regs_left = path[active_path].current_tag.reg_count;
         path[active_path].current_tag.data_left = path[active_path].current_tag.NLOOP;
 
-       
+
         //Q is initialized to 1.0 upon reading a GIFtag
         internal_Q = 1.0f;
 
@@ -301,7 +301,7 @@ void GraphicsInterface::feed_GIF(uint128_t data)
 }
 
 void GraphicsInterface::run(int cycles)
-{        
+{
     if (!path3_masked(3) && !fifo_empty())
     {
         request_PATH(3, false);

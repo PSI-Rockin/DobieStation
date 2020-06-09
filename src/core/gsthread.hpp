@@ -30,7 +30,7 @@ struct SwizzleTable
 };
 
 //Commands sent from the main thread to the GS thread.
-enum GSCommand:uint8_t 
+enum GSCommand:uint8_t
 {
     write64_t, write64_privileged_t, write32_privileged_t,
     set_rgba_t, set_st_t, set_uv_t, set_xyz_t, set_xyzf_t, set_crt_t,
@@ -38,32 +38,32 @@ enum GSCommand:uint8_t
     save_state_t, load_state_t, gsdump_t, request_local_host_tx,
 };
 
-union GSMessagePayload 
+union GSMessagePayload
 {
-    struct 
+    struct
     {
         uint32_t addr;
         uint64_t value;
     } write64_payload;
-    struct 
+    struct
     {
         uint32_t addr;
         uint32_t value;
     } write32_payload;
-    struct 
+    struct
     {
         uint8_t r, g, b, a;
         float q;
     } rgba_payload;
-    struct 
+    struct
     {
         uint32_t s, t;
     } st_payload;
-    struct 
+    struct
     {
         uint16_t u, v;
     } uv_payload;
-    struct 
+    struct
     {
         uint32_t x, y, z;
         bool drawing_kick;
@@ -74,17 +74,17 @@ union GSMessagePayload
         uint8_t fog;
         bool drawing_kick;
     } xyzf_payload;
-    struct 
+    struct
     {
         bool interlaced;
         int mode;
         bool frame_mode;
     } crt_payload;
-    struct 
+    struct
     {
         bool vblank;
     } vblank_payload;
-    struct 
+    struct
     {
         uint32_t* target;
         std::mutex* target_mutex;
@@ -97,9 +97,9 @@ union GSMessagePayload
     {
         std::ifstream* state;
     } load_state_payload;
-    struct 
+    struct
     {
-        uint8_t BLANK; 
+        uint8_t BLANK;
     } no_payload;//C++ doesn't like the empty struct
 };
 
@@ -530,7 +530,7 @@ class GraphicsSynthesizerThread
     public:
         GraphicsSynthesizerThread();
         ~GraphicsSynthesizerThread();
-        
+
         // safe to access from emu thread
         void send_message(GSMessage message);
         void wake_thread();

@@ -78,7 +78,7 @@ class VectorInterface
         bool vif_interrupt;
         bool vif_stop;
         bool fifo_reverse;
-        
+
         bool wait_for_VU;
         bool direct_wait;
         bool wait_for_PATH3;

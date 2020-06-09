@@ -429,7 +429,7 @@ int DMAC::process_GIF()
                 return count;
             }
 
-            
+
             if (!gif->fifo_full() && !gif->fifo_draining())
             {
                 gif->dma_waiting(false);
@@ -893,7 +893,7 @@ void DMAC::advance_source_dma(int index)
             case 1: //CNT
                 channels[index].tag_address = channels[index].address;
                 break;
-            default: 
+            default:
                 break;
         }
     }

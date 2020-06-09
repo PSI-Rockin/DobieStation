@@ -109,7 +109,7 @@ void VectorInterface::update(int cycles)
     //Since the loop processes per-word, we need to multiply cycles by 4
     //This allows us to process one quadword per bus cycle
     int run_cycles = cycles << 2;
-   
+
     //This is just a timing break for when DIRECT/HL runs and the GS path is busy
     //Saves looping ~64 times when nothing is going to change
     if (vif_stalled & STALL_DIRECT)
@@ -465,7 +465,7 @@ void VectorInterface::handle_wait_cmd(uint32_t value, uint32_t cycles)
         command = 0;
         vif_cmd_status = VIF_DECODE;
     }
-    
+
 }
 
 void VectorInterface::MSCAL(uint32_t addr, uint32_t cycles)
@@ -539,11 +539,11 @@ void VectorInterface::handle_UNPACK_masking(uint128_t& quad)
     if (unpack.masked || is_filling_write())
     {
         uint8_t tempmask;
-        
+
         for (int i = 0; i < 4; i++)
         {
             tempmask = (MASK >> ((i * 2) + std::min(unpack.blocks_written * 8, 24))) & 0x3;
-            
+
             switch (tempmask)
             {
                 case 1:
@@ -922,7 +922,7 @@ void VectorInterface::process_UNPACK_quad(uint128_t &quad)
     vu->write_mem<uint128_t>(unpack.addr, quad);
     unpack.addr += 16;
     unpack.num -= 1;
-    
+
     if (unpack.blocks_written >= internal_WL)
     {
         if (CYCLE.CL > internal_WL)

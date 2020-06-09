@@ -1,6 +1,6 @@
 #include <algorithm>
 #include <cstring>
-#include <unordered_map> 
+#include <unordered_map>
 #include "ee_jittrans.hpp"
 #include "emotioninterpreter.hpp"
 #include "../errors.hpp"
@@ -227,7 +227,7 @@ void EE_JitTranslator::issue_cycle_analysis(std::vector<EE_InstrInfo>& instr_inf
             dual_issue = false;
 
         instr_info[i].cycles_before = cycle_count;
-        
+
         if (dual_issue)
         {
             instr_info[i].cycles_after = cycle_count + 1;
@@ -387,7 +387,7 @@ void EE_JitTranslator::load_store_analysis(std::vector<EE_InstrInfo>& instr_info
                 load_penalty = ((LOAD_STORE_BIAS * ++ls_ops) >> 8);
             }
         }
-        
+
         // Add cycle counts to the rest of the instructions in the block
         instr_info[i].cycles_after += load_penalty;
 
@@ -491,7 +491,7 @@ void EE_JitTranslator::translate_op(uint32_t opcode, uint32_t PC, EE_InstrInfo& 
 {
     uint8_t op = opcode >> 26;
     IR::Instruction instr;
-    
+
     // Set up fallback properties
     fallback_interpreter(instr, opcode, info.interpreter_fn);
 
@@ -1249,7 +1249,7 @@ void EE_JitTranslator::translate_op_special(uint32_t opcode, uint32_t PC, EE_Ins
 {
     uint8_t op = opcode & 0x3F;
     IR::Instruction instr;
-    
+
     // Set up fallback properties
     fallback_interpreter(instr, opcode, info.interpreter_fn);
 
@@ -1958,7 +1958,7 @@ void EE_JitTranslator::translate_op_regimm(uint32_t opcode, uint32_t PC, EE_Inst
 {
     uint8_t op = (opcode >> 16) & 0x1F;
     IR::Instruction instr;
-    
+
     // Set up fallback properties
     fallback_interpreter(instr, opcode, info.interpreter_fn);
 
@@ -2104,7 +2104,7 @@ void EE_JitTranslator::translate_op_mmi(uint32_t opcode, uint32_t PC, EE_InstrIn
 {
     uint8_t op = opcode & 0x3F;
     IR::Instruction instr;
-    
+
     // Set up fallback properties
     fallback_interpreter(instr, opcode, info.interpreter_fn);
 
@@ -2337,7 +2337,7 @@ void EE_JitTranslator::translate_op_mmi0(uint32_t opcode, uint32_t PC, EE_InstrI
 {
     uint8_t op = (opcode >> 6) & 0x1F;
     IR::Instruction instr;
-    
+
     // Set up fallback properties
     fallback_interpreter(instr, opcode, info.interpreter_fn);
 
@@ -2742,7 +2742,7 @@ void EE_JitTranslator::translate_op_mmi1(uint32_t opcode, uint32_t PC, EE_InstrI
 {
     uint8_t op = (opcode >> 6) & 0x1F;
     IR::Instruction instr;
-    
+
     // Set up fallback properties
     fallback_interpreter(instr, opcode, info.interpreter_fn);
 
@@ -3012,7 +3012,7 @@ void EE_JitTranslator::translate_op_mmi2(uint32_t opcode, uint32_t PC, EE_InstrI
 {
     uint8_t op = (opcode >> 6) & 0x1F;
     IR::Instruction instr;
-    
+
     // Set up fallback properties
     fallback_interpreter(instr, opcode, info.interpreter_fn);
 
@@ -3223,7 +3223,7 @@ void EE_JitTranslator::translate_op_mmi3(uint32_t opcode, uint32_t PC, EE_InstrI
 {
     uint8_t op = (opcode >> 6) & 0x1F;
     IR::Instruction instr;
-    
+
     // Set up fallback properties
     fallback_interpreter(instr, opcode, info.interpreter_fn);
 
@@ -3361,7 +3361,7 @@ void EE_JitTranslator::translate_op_cop0(uint32_t opcode, uint32_t PC, EE_InstrI
 {
     uint8_t op = (opcode >> 21) & 0x1F;
     IR::Instruction instr;
-    
+
     // Set up fallback properties
     fallback_interpreter(instr, opcode, info.interpreter_fn);
 
@@ -3399,7 +3399,7 @@ void EE_JitTranslator::translate_op_cop0_type2(uint32_t opcode, uint32_t PC, EE_
 {
     uint8_t op = opcode & 0x3F;
     IR::Instruction instr;
-    
+
     // Set up fallback properties
     fallback_interpreter(instr, opcode, info.interpreter_fn);
 
@@ -3535,7 +3535,7 @@ void EE_JitTranslator::translate_op_cop1_fpu(uint32_t opcode, uint32_t PC, EE_In
 {
     uint8_t op = opcode & 0x3F;
     IR::Instruction instr;
-    
+
     // Set up fallback properties
     fallback_interpreter(instr, opcode, info.interpreter_fn);
 
@@ -3913,7 +3913,7 @@ void EE_JitTranslator::translate_op_cop2_special(uint32_t opcode, uint32_t PC, E
 {
     uint8_t op = opcode & 0x3F;
     IR::Instruction instr;
-    
+
     // Set up fallback properties
     fallback_interpreter(instr, opcode, info.interpreter_fn);
 
@@ -4163,7 +4163,7 @@ void EE_JitTranslator::translate_op_cop2_special2(uint32_t opcode, uint32_t PC, 
 {
     uint8_t op = opcode & 0x3F;
     IR::Instruction instr;
-    
+
     // Set up fallback properties
     fallback_interpreter(instr, opcode, info.interpreter_fn);
 

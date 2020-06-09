@@ -1275,7 +1275,7 @@ void EmotionInterpreter::cop2_qmtc2(EmotionEngine &cpu, uint32_t instruction)
     cpu.qmtc2(source, cop_reg);
 }
 
-void EmotionInterpreter::nop(EmotionEngine &cpu, uint32_t instruction) 
+void EmotionInterpreter::nop(EmotionEngine &cpu, uint32_t instruction)
 {
     // NULLSUB for sll $zero, $zero, 0 and unimplemented operations like prefetch
 }
