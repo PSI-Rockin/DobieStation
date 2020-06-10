@@ -522,9 +522,13 @@ void EE_JitTranslator::const_analysis(std::vector<IR::Instruction>& instructions
         registers[i].is_const = false;
         registers[i].is_loaded = false;
     }
-
+    
+    bool likely_branch = false;
     for (int i = 0; i < instructions.size(); ++i)
     {
+        if (likely_branch)
+            break;
+
         switch (instructions[i].op)
         {
             case IR::Opcode::Null:
@@ -545,7 +549,10 @@ void EE_JitTranslator::const_analysis(std::vector<IR::Instruction>& instructions
                     --i;
                 }
                 else
+                {
                     registers[dest].is_const = false;
+                    registers[dest].is_loaded = false;
+                }
                 break;
             }
             case IR::Opcode::AddWordImm:
@@ -564,7 +571,10 @@ void EE_JitTranslator::const_analysis(std::vector<IR::Instruction>& instructions
                     --i;
                 }
                 else
+                {
                     registers[dest].is_const = false;
+                    registers[dest].is_loaded = false;
+                }
                 break;
             }
             case IR::Opcode::AddDoublewordReg:
@@ -601,7 +611,10 @@ void EE_JitTranslator::const_analysis(std::vector<IR::Instruction>& instructions
                     ++i;
                 }
                 else
+                {
                     registers[dest].is_const = false;
+                    registers[dest].is_loaded = false;
+                }
                 break;
             }
             case IR::Opcode::AddWordReg:
@@ -638,7 +651,10 @@ void EE_JitTranslator::const_analysis(std::vector<IR::Instruction>& instructions
                     ++i;
                 }
                 else
+                {
                     registers[dest].is_const = false;
+                    registers[dest].is_loaded = false;
+                }
                 break;
             }
             case IR::Opcode::AndImm:
@@ -657,7 +673,10 @@ void EE_JitTranslator::const_analysis(std::vector<IR::Instruction>& instructions
                     --i;
                 }
                 else
+                {
                     registers[dest].is_const = false;
+                    registers[dest].is_loaded = false;
+                }
                 break;
             }
             case IR::Opcode::AndReg:
@@ -694,7 +713,10 @@ void EE_JitTranslator::const_analysis(std::vector<IR::Instruction>& instructions
                     ++i;
                 }
                 else
+                {
                     registers[dest].is_const = false;
+                    registers[dest].is_loaded = false;
+                }
                 break;
             }
             case IR::Opcode::BranchCop0:
@@ -708,6 +730,9 @@ void EE_JitTranslator::const_analysis(std::vector<IR::Instruction>& instructions
             case IR::Opcode::BranchLessThanZero:
             case IR::Opcode::BranchNotEqual:
             case IR::Opcode::BranchNotEqualZero:
+                if (instructions[i].get_is_likely())
+                    likely_branch = true;
+                break;
             case IR::Opcode::CheckInterlockVU0:
                 break;
             case IR::Opcode::ClearDoublewordReg:
@@ -748,7 +773,10 @@ void EE_JitTranslator::const_analysis(std::vector<IR::Instruction>& instructions
                     --i;
                 }
                 else
+                {
                     registers[dest].is_const = false;
+                    registers[dest].is_loaded = false;
+                }
                 break;
             }
             case IR::Opcode::DoublewordShiftLeftLogicalVariable:
@@ -785,7 +813,10 @@ void EE_JitTranslator::const_analysis(std::vector<IR::Instruction>& instructions
                     ++i;
                 }
                 else
+                {
                     registers[dest].is_const = false;
+                    registers[dest].is_loaded = false;
+                }
                 break;
             }
             case IR::Opcode::DoublewordShiftRightArithmetic:
@@ -804,7 +835,10 @@ void EE_JitTranslator::const_analysis(std::vector<IR::Instruction>& instructions
                     --i;
                 }
                 else
+                {
                     registers[dest].is_const = false;
+                    registers[dest].is_loaded = false;
+                }
                 break;
             }
             case IR::Opcode::DoublewordShiftRightArithmeticVariable:
@@ -841,7 +875,10 @@ void EE_JitTranslator::const_analysis(std::vector<IR::Instruction>& instructions
                     ++i;
                 }
                 else
+                {
                     registers[dest].is_const = false;
+                    registers[dest].is_loaded = false;
+                }
                 break;
             }
             case IR::Opcode::DoublewordShiftRightLogical:
@@ -860,7 +897,10 @@ void EE_JitTranslator::const_analysis(std::vector<IR::Instruction>& instructions
                     --i;
                 }
                 else
+                {
                     registers[dest].is_const = false;
+                    registers[dest].is_loaded = false;
+                }
                 break;
             }
             case IR::Opcode::DoublewordShiftRightLogicalVariable:
@@ -897,7 +937,10 @@ void EE_JitTranslator::const_analysis(std::vector<IR::Instruction>& instructions
                     ++i;
                 }
                 else
+                {
                     registers[dest].is_const = false;
+                    registers[dest].is_loaded = false;
+                }
                 break;
             }
             case IR::Opcode::ExceptionReturn:
@@ -929,8 +972,14 @@ void EE_JitTranslator::const_analysis(std::vector<IR::Instruction>& instructions
                 {
                     auto instr = IR::Instruction(IR::Opcode::Jump);
                     instr.set_jump_dest(registers[source].value);
-                    if (instr.has_dest)
-                        instr.set_dest(instructions[i].get_dest());
+                    int dest;
+                    if (instructions[i].has_dest)
+                        dest = instructions[i].get_dest();
+                    else
+                        dest = EE_NormalReg::ra;
+                    instr.set_dest(dest);
+                    registers[dest].is_const = false;
+                    registers[dest].is_loaded = false;
                     instr.set_return_addr(instructions[i].get_return_addr());
                     instr.set_is_link(instructions[i].get_is_link());
                     instructions.erase(instructions.begin() + i);
@@ -1172,7 +1221,10 @@ void EE_JitTranslator::const_analysis(std::vector<IR::Instruction>& instructions
                     ++i;
                 }
                 else
+                {
                     registers[dest].is_const = false;
+                    registers[dest].is_loaded = false;
+                }
                 break;
             }
             case IR::Opcode::OrImm:
@@ -1191,7 +1243,10 @@ void EE_JitTranslator::const_analysis(std::vector<IR::Instruction>& instructions
                     --i;
                 }
                 else
+                {
                     registers[dest].is_const = false;
+                    registers[dest].is_loaded = false;
+                }
                 break;
             }
             case IR::Opcode::OrReg:
@@ -1228,7 +1283,10 @@ void EE_JitTranslator::const_analysis(std::vector<IR::Instruction>& instructions
                     ++i;
                 }
                 else
+                {
                     registers[dest].is_const = false;
+                    registers[dest].is_loaded = false;
+                }
                 break;
             }
             case IR::Opcode::ParallelAbsoluteHalfword:
@@ -1365,7 +1423,10 @@ void EE_JitTranslator::const_analysis(std::vector<IR::Instruction>& instructions
                     ++i;
                 }
                 else
+                {
                     registers[dest].is_const = false;
+                    registers[dest].is_loaded = false;
+                }
                 break;
             }
             case IR::Opcode::SetOnLessThanUnsigned:
@@ -1421,7 +1482,10 @@ void EE_JitTranslator::const_analysis(std::vector<IR::Instruction>& instructions
                     --i;
                 }
                 else
+                {
                     registers[dest].is_const = false;
+                    registers[dest].is_loaded = false;
+                }
                 break;
             }
             case IR::Opcode::SetOnLessThanImmediateUnsigned:
@@ -1440,7 +1504,10 @@ void EE_JitTranslator::const_analysis(std::vector<IR::Instruction>& instructions
                     --i;
                 }
                 else
+                {
                     registers[dest].is_const = false;
+                    registers[dest].is_loaded = false;
+                }
                 break;
             }
             case IR::Opcode::ShiftLeftLogical:
@@ -1459,7 +1526,10 @@ void EE_JitTranslator::const_analysis(std::vector<IR::Instruction>& instructions
                     --i;
                 }
                 else
+                {
                     registers[dest].is_const = false;
+                    registers[dest].is_loaded = false;
+                }
                 break;
             }
             case IR::Opcode::ShiftLeftLogicalVariable:
@@ -1515,7 +1585,10 @@ void EE_JitTranslator::const_analysis(std::vector<IR::Instruction>& instructions
                     --i;
                 }
                 else
+                {
                     registers[dest].is_const = false;
+                    registers[dest].is_loaded = false;
+                }
                 break;
             }
             case IR::Opcode::ShiftRightArithmeticVariable:
@@ -1552,7 +1625,10 @@ void EE_JitTranslator::const_analysis(std::vector<IR::Instruction>& instructions
                     ++i;
                 }
                 else
+                {
                     registers[dest].is_const = false;
+                    registers[dest].is_loaded = false;
+                }
                 break;
             }
             case IR::Opcode::ShiftRightLogical:
@@ -1571,7 +1647,10 @@ void EE_JitTranslator::const_analysis(std::vector<IR::Instruction>& instructions
                     --i;
                 }
                 else
+                {
                     registers[dest].is_const = false;
+                    registers[dest].is_loaded = false;
+                }
                 break;
             }
             case IR::Opcode::ShiftRightLogicalVariable:
@@ -1608,7 +1687,10 @@ void EE_JitTranslator::const_analysis(std::vector<IR::Instruction>& instructions
                     ++i;
                 }
                 else
+                {
                     registers[dest].is_const = false;
+                    registers[dest].is_loaded = false;
+                }
                 break;
             }
             case IR::Opcode::StoreByte:
@@ -1667,7 +1749,10 @@ void EE_JitTranslator::const_analysis(std::vector<IR::Instruction>& instructions
                     ++i;
                 }
                 else
+                {
                     registers[dest].is_const = false;
+                    registers[dest].is_loaded = false;
+                }
                 break;
             }
             case IR::Opcode::SubWordReg:
@@ -1704,7 +1789,10 @@ void EE_JitTranslator::const_analysis(std::vector<IR::Instruction>& instructions
                     ++i;
                 }
                 else
+                {
                     registers[dest].is_const = false;
+                    registers[dest].is_loaded = false;
+                }
                 break;
             }
             case IR::Opcode::SystemCall:
@@ -1730,7 +1818,10 @@ void EE_JitTranslator::const_analysis(std::vector<IR::Instruction>& instructions
                     --i;
                 }
                 else
+                {
                     registers[dest].is_const = false;
+                    registers[dest].is_loaded = false;
+                }
                 break;
             }
             case IR::Opcode::XorReg:
@@ -1767,7 +1858,10 @@ void EE_JitTranslator::const_analysis(std::vector<IR::Instruction>& instructions
                     ++i;
                 }
                 else
+                {
                     registers[dest].is_const = false;
+                    registers[dest].is_loaded = false;
+                }
                 break;
             }
             case IR::Opcode::FallbackInterpreter:
