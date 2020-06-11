@@ -4,7 +4,7 @@
 
 #define VER_MAJOR 0
 #define VER_MINOR 0
-#define VER_REV 47
+#define VER_REV 48
 
 using namespace std;
 
@@ -745,6 +745,7 @@ void VectorInterface::load_state(ifstream &state)
     for (int i = 0; i < internal_size; i++)
         internal_FIFO.push(FIFO_buffer[i]);
 
+    state.read((char*)&fifo_is_filling, sizeof(fifo_is_filling));
     state.read((char*)&imm, sizeof(imm));
     state.read((char*)&command, sizeof(command));
     state.read((char*)&mpg, sizeof(mpg));
@@ -807,6 +808,7 @@ void VectorInterface::save_state(ofstream &state)
     for (int i = 0; i < internal_size; i++)
         internal_FIFO.push(FIFO_buffer[i]);
 
+    state.write((char*)&fifo_is_filling, sizeof(fifo_is_filling));
     state.write((char*)&imm, sizeof(imm));
     state.write((char*)&command, sizeof(command));
     state.write((char*)&mpg, sizeof(mpg));

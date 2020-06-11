@@ -998,9 +998,11 @@ void Emulator::write128(uint32_t address, uint128_t value)
     {
         case 0x10004000:
             vif0.feed_DMA(value);
+            vif0.fifo_dma_stopped();
             return;
         case 0x10005000:
             vif1.feed_DMA(value);
+            vif1.fifo_dma_stopped();
             return;
         case 0x10006000:
             gif.send_PATH3_FIFO(value);

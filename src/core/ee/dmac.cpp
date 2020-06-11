@@ -242,6 +242,7 @@ int DMAC::process_VIF0()
     {
         if (channels[VIF0].tag_end)
         {
+            vif0->fifo_dma_stopped();
             transfer_end(VIF0);
             return count;
         }
@@ -319,6 +320,7 @@ int DMAC::process_VIF1()
     {
         if (channels[VIF1].tag_end)
         {
+            vif1->fifo_dma_stopped();
             transfer_end(VIF1);
             return count;
         }

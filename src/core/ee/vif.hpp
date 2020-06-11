@@ -78,6 +78,7 @@ class VectorInterface
         bool vif_interrupt;
         bool vif_stop;
         bool fifo_reverse;
+        bool fifo_is_filling;
         
         bool wait_for_VU;
         bool direct_wait;
@@ -131,6 +132,7 @@ class VectorInterface
         std::tuple<uint128_t, uint32_t>readFIFO();
 
         uint32_t get_stat();
+        void fifo_dma_stopped();
         uint32_t get_mark();
         uint32_t get_err();
         uint32_t get_mode();

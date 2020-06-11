@@ -42,6 +42,7 @@ void VectorInterface::reset()
     stall_condition_active = false;
     fifo_reverse = false;
     vif_cmd_status = VIF_IDLE;
+    fifo_is_filling = false;
 
     if (id)
         mem_mask = 0x3FF;
@@ -127,6 +128,10 @@ void VectorInterface::update(int cycles)
     {
         while (!fifo_reverse && internal_FIFO.size() < 8 && FIFO.size() > 0)
         {
+            //Fifo is unavailable while the DMA is filling it
+            if (fifo_is_filling)
+                return;
+
             internal_FIFO.push(FIFO.front());
             FIFO.pop();
         }
@@ -194,8 +199,9 @@ void VectorInterface::update(int cycles)
                 internal_FIFO.pop();
 
                 //FIXME: Should be fifo_size - 4 really, but causes hangs in WRC?
-                if (FIFO.size() <= (fifo_size / 2))
+                if (FIFO.size() == 0)
                 {
+                    fifo_is_filling = true;
                     dmac->set_DMA_request(id);
                 }
             }
@@ -946,11 +952,13 @@ bool VectorInterface::transfer_word(uint32_t value)
 bool VectorInterface::transfer_DMAtag(uint128_t tag)
 {
     //This should return false if the transfer stalls due to the FIFO filling up
-    if (FIFO.size() > (fifo_size - 2))
+    if ((FIFO.size() + internal_FIFO.size()) > (fifo_size - 2))
     {
         dmac->clear_DMA_request(id);
+        fifo_is_filling = false;
         return false;
     }
+    fifo_is_filling = true;
     printf("[VIF] Transfer tag: $%08X_%08X_%08X_%08X\n", tag._u32[3], tag._u32[2], tag._u32[1], tag._u32[0]);
     for (int i = 2; i < 4; i++)
         FIFO.push(tag._u32[i]);
@@ -959,11 +967,13 @@ bool VectorInterface::transfer_DMAtag(uint128_t tag)
 
 bool VectorInterface::feed_DMA(uint128_t quad)
 {
-    if (FIFO.size() > (fifo_size - 4))
+    if ((FIFO.size() + internal_FIFO.size()) > (fifo_size - 4))
     {
         dmac->clear_DMA_request(id);
+        fifo_is_filling = false;
         return false;
     }
+    fifo_is_filling = true;
     printf("[VIF] Feed DMA: $%08X_%08X_%08X_%08X\n", quad._u32[3], quad._u32[2], quad._u32[1], quad._u32[0]);
     for (int i = 0; i < 4; i++)
         FIFO.push(quad._u32[i]);
@@ -999,6 +1009,13 @@ uint32_t VectorInterface::get_stat()
     reg |= (FIFO.size() / 4) << 24;
     //printf("[VIF] Get STAT: $%08X\n", reg);
     return reg;
+}
+void VectorInterface::fifo_dma_stopped()
+{
+    fifo_is_filling = false;
+
+    if(FIFO.size() > 0)
+        dmac->clear_DMA_request(id);
 }
 
 uint32_t VectorInterface::get_mark()
@@ -1105,5 +1122,11 @@ void VectorInterface::set_fbrst(uint32_t value)
         vif_cmd_status = VIF_IDLE;
         while (!FIFO.empty())
             FIFO.pop();
+
+        while (!internal_FIFO.empty())
+            internal_FIFO.pop();
+
+        fifo_is_filling = true;
+        dmac->set_DMA_request(id);
     }
 }
