@@ -191,6 +191,7 @@ class EmotionEngine
         void trap_exception();
         void int0();
         void int1();
+        void int_timer();
         void set_int0_signal(bool value);
         void set_int1_signal(bool value);
 

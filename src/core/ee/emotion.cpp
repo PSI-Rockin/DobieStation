@@ -166,15 +166,17 @@ void EmotionEngine::run(int cycles)
         cycles_to_run = 0;
     }
 
+    cp0->count_up(cycles);
+
     if (cp0->int_enabled())
     {
         if (cp0->cause.int0_pending)
             int0();
         else if (cp0->cause.int1_pending)
             int1();
+        else if (cp0->cause.timer_int_pending)
+            int_timer();
     }
-
-    cp0->count_up(cycles);
 }
 
 void EmotionEngine::run_interpreter()
@@ -1028,6 +1030,16 @@ void EmotionEngine::int1()
     if (cp0->status.int1_mask)
     {
         printf("[EE] INT1!\n");
+        //can_disassemble = true;
+        handle_exception(0x80000200, 0);
+    }
+}
+
+void EmotionEngine::int_timer()
+{
+    if (cp0->status.timer_int_mask)
+    {
+        printf("[EE] INT TIMER!\n");
         //can_disassemble = true;
         handle_exception(0x80000200, 0);
     }
