@@ -424,7 +424,7 @@ int DMAC::process_GIF()
             }
             channels[GIF].has_dma_stalled = false;
         }
-
+        gif->dma_waiting(true);
         while (count < quads_to_transfer)
         {
             if (!mfifo_handler(GIF))
@@ -437,16 +437,13 @@ int DMAC::process_GIF()
             
             if (!gif->fifo_full()/* && !gif->fifo_draining()*/)
             {
-                gif->dma_waiting(false);
+                
                 gif->send_PATH3(fetch128(channels[GIF].address));
                 advance_source_dma(GIF);
                 count++;
             }
             else
-            {
-                gif->dma_waiting(true);
                 break;
-            }
         }
     }
     //gif->intermittent_check();
@@ -454,6 +451,7 @@ int DMAC::process_GIF()
     {
         if (channels[GIF].tag_end)
         {
+            gif->dma_waiting(false);
             transfer_end(GIF);
         }
         else
@@ -462,8 +460,10 @@ int DMAC::process_GIF()
             {
                 arbitrate();
                 //gif->deactivate_PATH(3);
+                gif->dma_waiting(false);
                 return count;
             }
+            gif->dma_waiting(true);
             handle_source_chain(GIF);
         }
     }
@@ -1402,6 +1402,7 @@ void DMAC::write32(uint32_t address, uint32_t value)
                 else
                 {
                     channels[GIF].started = false;
+                    gif->dma_waiting(false);
                 }
             }
             else
@@ -1410,6 +1411,7 @@ void DMAC::write32(uint32_t address, uint32_t value)
                 channels[GIF].started = (channels[GIF].control & 0x100);
                 if (!channels[GIF].started)
                 {
+                    gif->dma_waiting(false);
                     deactivate_channel(GIF);
                 }
             }

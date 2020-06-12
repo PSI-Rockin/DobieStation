@@ -228,7 +228,7 @@ void GraphicsInterface::feed_GIF(uint128_t data)
         path[active_path].current_tag.regs_left = path[active_path].current_tag.reg_count;
         path[active_path].current_tag.data_left = path[active_path].current_tag.NLOOP;
 
-       
+        path_status[active_path] = path[active_path].current_tag.format;
         //Q is initialized to 1.0 upon reading a GIFtag
         internal_Q = 1.0f;
 
@@ -253,7 +253,6 @@ void GraphicsInterface::feed_GIF(uint128_t data)
 
         if (path[active_path].current_tag.data_left != 0)
         {
-            path_status[active_path] = path[active_path].current_tag.format;
             gs->set_CSR_FIFO(0x2); //FIFO Full
         }
     }
@@ -303,7 +302,7 @@ void GraphicsInterface::run(int cycles)
     if (!path3_masked(3) && !fifo_empty())
     {
         request_PATH(3, false);
-        //printf("GIF PATH3 should be flushing FIFO active = %d mask off, cycles = %d\n", path_active(3), cycles);
+        //printf("GIF PATH3 should be flushing FIFO active = %d mask off, cycles = %d\n", path_active(3, false), cycles);
     }
     while (path_active(3, false) && !path3_masked(3) && cycles && !fifo_empty())
     {
@@ -335,7 +334,7 @@ bool GraphicsInterface::path3_masked(int index)
     {
         masked = (path_status[3] == 4);
 
-        if (masked)
+        if (masked && active_path == 3)
         {
             //printf("[GIF] PATH3 Masked\n");
             deactivate_PATH(3);
@@ -504,7 +503,7 @@ void GraphicsInterface::flush_path3_fifo()
 
     if (fifo_empty())
     {
-        if(active_path == 3)
+        if(active_path == 3 && !path3_dma_waiting)
             outputting_path = false;
         //printf("GIF FIFO Empty, Setting DMA\n");
         dmac->set_DMA_request(GIF);
