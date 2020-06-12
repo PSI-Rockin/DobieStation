@@ -256,8 +256,6 @@ void GraphicsInterface::feed_GIF(uint128_t data)
             path_status[active_path] = path[active_path].current_tag.format;
             gs->set_CSR_FIFO(0x2); //FIFO Full
         }
-        else if(path_status[active_path] == 4)
-            path_status[active_path] = 5;
     }
     else
     {
@@ -399,7 +397,6 @@ void GraphicsInterface::deactivate_PATH(int index)
         {
             active_path = 0;
             outputting_path = false;
-            clear_path_status(index);
             arbitrate_paths();
         }
         //printf("Deactivated PATH%d Active path now %d Queued Path %x\n", index, active_path, path_queue);
@@ -407,7 +404,7 @@ void GraphicsInterface::deactivate_PATH(int index)
     else
     {
         //printf("[GIF] PATH%d deactivation failed, still in progress\n", index);
-        if (active_path == index)
+        if (active_path == index || !active_path)
             outputting_path = false;
     }
 
@@ -455,7 +452,7 @@ bool GraphicsInterface::send_PATH1(uint128_t quad)
     return !path[1].current_tag.data_left && path[1].current_tag.end_of_packet;
 }
 
-void GraphicsInterface::send_PATH2(uint32_t data[])
+void GraphicsInterface::send_PATH2(uint32_t data[4])
 {
     uint128_t blorp;
     for (int i = 0; i < 4; i++)
@@ -507,16 +504,10 @@ void GraphicsInterface::flush_path3_fifo()
 
     if (fifo_empty())
     {
-        if (!path3_dma_waiting || path3_masked(3))
-        {
-            //printf("GIF Deactivating PATH at FIFO flush end\n");
-            //Handle situation where FIFO just sends a NOP packet to the GIF unit (True Crime NY)
-            if (path_status[3] == 5)
-                path_status[3] = 4;
-            deactivate_PATH(3);
-        }
-        else
-            dmac->set_DMA_request(GIF);
+        if(active_path == 3)
+            outputting_path = false;
+        //printf("GIF FIFO Empty, Setting DMA\n");
+        dmac->set_DMA_request(GIF);
     }
 }
 
