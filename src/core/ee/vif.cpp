@@ -948,6 +948,7 @@ bool VectorInterface::transfer_word(uint32_t value)
 
     printf("[VIF] Transfer 32bit Value: $%08X\n", value);
     FIFO.push(value);
+    fifo_is_filling = false;
     return true;
 }
 
