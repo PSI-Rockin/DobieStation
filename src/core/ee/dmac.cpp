@@ -287,6 +287,7 @@ int DMAC::process_VIF1()
                 }
 
                 clear_DMA_request(VIF1);
+                vif1->fifo_dma_stopped();
                 return count;
             }
             channels[VIF1].has_dma_stalled = false;
@@ -297,6 +298,7 @@ int DMAC::process_VIF1()
             if (!mfifo_handler(VIF1))
             {
                 arbitrate();
+                vif1->fifo_dma_stopped();
                 return count;
             }
             if (channels[VIF1].control & 0x1)
@@ -329,6 +331,7 @@ int DMAC::process_VIF1()
             if (!mfifo_handler(VIF1))
             {
                 arbitrate();
+                vif1->fifo_dma_stopped();
                 return count;
             }
             uint128_t DMAtag = fetch128(channels[VIF1].tag_address);
@@ -412,7 +415,7 @@ int DMAC::process_GIF()
                     printf("[DMAC] GIF DMA Stall at %x STADR = %x\n", channels[GIF].address, STADR);
                     interrupt_stat.channel_stat[DMA_STALL] = true;
                     int1_check();
-                    gif->deactivate_PATH(3);
+                    //gif->deactivate_PATH(3);
                     channels[GIF].has_dma_stalled = true;
                 }
 
@@ -427,12 +430,12 @@ int DMAC::process_GIF()
             if (!mfifo_handler(GIF))
             {
                 arbitrate();
-                gif->deactivate_PATH(3);
+                //gif->deactivate_PATH(3);
                 return count;
             }
 
             
-            if (!gif->fifo_full() && !gif->fifo_draining())
+            if (!gif->fifo_full()/* && !gif->fifo_draining()*/)
             {
                 gif->dma_waiting(false);
                 gif->send_PATH3(fetch128(channels[GIF].address));
@@ -458,7 +461,7 @@ int DMAC::process_GIF()
             if (!mfifo_handler(GIF))
             {
                 arbitrate();
-                gif->deactivate_PATH(3);
+                //gif->deactivate_PATH(3);
                 return count;
             }
             handle_source_chain(GIF);

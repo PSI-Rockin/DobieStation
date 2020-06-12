@@ -137,9 +137,9 @@ void Emulator::run()
 
         dmac.run(bus_cycles);
         ipu.run();
+        gif.run(bus_cycles);
         vif0.update(bus_cycles);
         vif1.update(bus_cycles);
-        gif.run(bus_cycles);
         
         //VU's run at EE speed, however both maintain their own speed
         vu0.run_func(vu0);

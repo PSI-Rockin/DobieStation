@@ -319,7 +319,7 @@ bool GraphicsInterface::set_path3_vifmask(int value)
     //printf("GIF PATH3Mask VIF set to %d\n", value);
     bool old_value = path3_vif_masked;
     path3_vif_masked = value;
-    return old_value && !path3_vif_masked;
+    return false;// old_value && !path3_vif_masked;
 }
 
 bool GraphicsInterface::path3_done()
@@ -372,7 +372,7 @@ void GraphicsInterface::request_PATH(int index, bool canInterruptPath3)
     {
         active_path = index;
 
-        if (active_path == 3 && (!path3_masked(3) || FIFO.size() <= 15))
+        if (active_path == 3 && (!path3_masked(3) || FIFO.size() == 0))
             dmac->set_DMA_request(GIF);
         //printf("[GIF] PATH%d Active!\n", active_path);
         return;
@@ -434,7 +434,7 @@ void GraphicsInterface::arbitrate_paths()
 
             //printf("[GIF] PATH%d Activated from arbitration queue, PATH%d put in to queue\n", new_path, active_path);
             active_path = new_path;
-            if (active_path == 3 && FIFO.size() <= 8)
+            if (active_path == 3 && FIFO.size() == 0)
                 dmac->set_DMA_request(GIF);
             return;
         }
@@ -467,12 +467,12 @@ void GraphicsInterface::send_PATH2(uint32_t data[])
 void GraphicsInterface::send_PATH3(uint128_t data)
 {
     //printf("[GIF] Send PATH3 $%08X_%08X_%08X_%08X\n", data._u32[3], data._u32[2], data._u32[1], data._u32[0]);
-    if(path3_done())
+    /*if(path3_done())
         request_PATH(3, false);
 
     if (!path3_masked(3) && path_active(3, false))
         feed_GIF(data);
-    else if (FIFO.size() < 16)
+    else */if (FIFO.size() < 16)
     {
         //printf("Adding data to GIF FIFO (size: %d)\n", FIFO.size());
         FIFO.push(data);
