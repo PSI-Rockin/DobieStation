@@ -154,6 +154,7 @@ class DMAC
         void write16(uint32_t address, uint16_t value);
         void write32(uint32_t address, uint32_t value);
 
+        bool channel_active(int index);
         void set_DMA_request(int index);
         void clear_DMA_request(int index);
 

@@ -47,6 +47,7 @@ class GraphicsInterface
         bool path3_mode_masked;
         bool intermittent_mode;
         bool path3_dma_waiting;
+        bool dma_running;
         bool gif_temporary_stop;
 
         float internal_Q;
@@ -60,7 +61,7 @@ class GraphicsInterface
         GraphicsInterface(GraphicsSynthesizer* gs, DMAC* dmac);
         void reset();
         void run(int cycles);
-
+        void dma_stopped();
         bool fifo_full();
         bool fifo_empty();
         bool fifo_draining();

@@ -424,13 +424,13 @@ int DMAC::process_GIF()
             }
             channels[GIF].has_dma_stalled = false;
         }
-        gif->dma_waiting(true);
         while (count < quads_to_transfer)
         {
             if (!mfifo_handler(GIF))
             {
                 arbitrate();
                 //gif->deactivate_PATH(3);
+                gif->dma_stopped();
                 return count;
             }
 
@@ -451,7 +451,7 @@ int DMAC::process_GIF()
     {
         if (channels[GIF].tag_end)
         {
-            gif->dma_waiting(false);
+            gif->dma_stopped();
             transfer_end(GIF);
         }
         else
@@ -460,10 +460,9 @@ int DMAC::process_GIF()
             {
                 arbitrate();
                 //gif->deactivate_PATH(3);
-                gif->dma_waiting(false);
+                gif->dma_stopped();
                 return count;
             }
-            gif->dma_waiting(true);
             handle_source_chain(GIF);
         }
     }
@@ -1401,8 +1400,8 @@ void DMAC::write32(uint32_t address, uint32_t value)
                 }
                 else
                 {
+                    gif->dma_stopped();
                     channels[GIF].started = false;
-                    gif->dma_waiting(false);
                 }
             }
             else
@@ -1411,7 +1410,7 @@ void DMAC::write32(uint32_t address, uint32_t value)
                 channels[GIF].started = (channels[GIF].control & 0x100);
                 if (!channels[GIF].started)
                 {
-                    gif->dma_waiting(false);
+                    gif->dma_stopped();
                     deactivate_channel(GIF);
                 }
             }
@@ -1658,6 +1657,11 @@ void DMAC::write32(uint32_t address, uint32_t value)
             printf("[DMAC] Unrecognized write32 of $%08X to $%08X\n", value, address);
             break;
     }
+}
+
+bool DMAC::channel_active(int index)
+{
+    return channels[index].started && !channels[index].tag_end;
 }
 
 void DMAC::set_DMA_request(int index)

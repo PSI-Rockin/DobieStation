@@ -130,7 +130,7 @@ void VectorInterface::update(int cycles)
         {
             //Fifo is unavailable while the DMA is filling it
             if (fifo_is_filling)
-                return;
+                break;
 
             internal_FIFO.push(FIFO.front());
             FIFO.pop();
@@ -199,11 +199,16 @@ void VectorInterface::update(int cycles)
                 internal_FIFO.pop();
 
                 //FIXME: Should be fifo_size - 4 really, but causes hangs in WRC?
-                if (FIFO.size() == 0)
+                if (!FIFO.empty() && FIFO.size() <= (fifo_size - 32))
                 {
-                    fifo_is_filling = true;
-                    dmac->set_DMA_request(id);
+                    if (dmac->channel_active(id))
+                    {
+                        dmac->set_DMA_request(id);
+                        fifo_is_filling = true;
+                    }
                 }
+                else if(FIFO.empty())
+                    dmac->set_DMA_request(id);
             }
         }
     }
@@ -350,7 +355,6 @@ void VectorInterface::decode_cmd(uint32_t value)
             printf("[VIF] MSKPATH3: %d\n", (value >> 15) & 0x1);
             if(gif->set_path3_vifmask((value >> 15) & 0x1))
                 vif_stalled |= STALL_MSKPATH3;
-            dmac->set_DMA_request(id);
             command = 0;
             break;
         case 0x07:
@@ -381,7 +385,6 @@ void VectorInterface::decode_cmd(uint32_t value)
             wait_for_PATH3 = true;
             stall_condition_active = true;
             wait_cmd_value = value;
-            dmac->set_DMA_request(id);
             command = 0;
             break;
         case 0x14:
