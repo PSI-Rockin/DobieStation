@@ -1128,6 +1128,12 @@ uint32_t DMAC::read32(uint32_t address)
         case 0x10008030:
             reg = channels[VIF0].tag_address;
             break;
+        case 0x10008040:
+            reg = channels[VIF0].tag_save0;
+            break;
+        case 0x10008050:
+            reg = channels[VIF0].tag_save1;
+            break;
         case 0x10009000:
             reg = channels[VIF1].control;
             break;
@@ -1140,6 +1146,12 @@ uint32_t DMAC::read32(uint32_t address)
         case 0x10009030:
             reg = channels[VIF1].tag_address;
             break;
+        case 0x10009040:
+            reg = channels[VIF1].tag_save0;
+            break;
+        case 0x10009050:
+            reg = channels[VIF1].tag_save1;
+            break;
         case 0x1000A000:
             reg = channels[GIF].control;
             break;
@@ -1151,6 +1163,12 @@ uint32_t DMAC::read32(uint32_t address)
             break;
         case 0x1000A030:
             reg = channels[GIF].tag_address;
+            break;
+        case 0x1000A040:
+            reg = channels[GIF].tag_save0;
+            break;
+        case 0x1000A050:
+            reg = channels[GIF].tag_save1;
             break;
         case 0x1000B000:
             reg = channels[IPU_FROM].control;
@@ -1355,6 +1373,14 @@ void DMAC::write32(uint32_t address, uint32_t value)
             printf("[DMAC] VIF0 T_ADR: $%08X\n", value);
             channels[VIF0].tag_address = value & ~0xF;
             break;
+        case 0x10008040:
+            printf("[DMAC] VIF0 ASR0: $%08X\n", value);
+            channels[VIF0].tag_save0 = value;
+            break;
+        case 0x10008050:
+            printf("[DMAC] VIF0 ASR1: $%08X\n", value);
+            channels[VIF0].tag_save1 = value;
+            break;
         case 0x10009000:
             printf("[DMAC] VIF1 CTRL: $%08X\n", value);
             if (!(channels[VIF1].control & 0x100))
@@ -1384,6 +1410,14 @@ void DMAC::write32(uint32_t address, uint32_t value)
         case 0x10009030:
             printf("[DMAC] VIF1 T_ADR: $%08X\n", value);
             channels[VIF1].tag_address = value & ~0xF;
+            break;
+        case 0x10009040:
+            printf("[DMAC] VIF1 ASR0: $%08X\n", value);
+            channels[VIF1].tag_save0 = value;
+            break;
+        case 0x10009050:
+            printf("[DMAC] VIF1 ASR1: $%08X\n", value);
+            channels[VIF1].tag_save1 = value;
             break;
         case 0x1000A000:
             printf("[DMAC] GIF CTRL: $%08X\n", value);
@@ -1420,6 +1454,14 @@ void DMAC::write32(uint32_t address, uint32_t value)
         case 0x1000A030:
             printf("[DMAC] GIF T_ADR: $%08X\n", value);
             channels[GIF].tag_address = value & ~0xF;
+            break;
+        case 0x1000A040:
+            printf("[DMAC] GIF ASR0: $%08X\n", value);
+            channels[GIF].tag_save0 = value;
+            break;
+        case 0x1000A050:
+            printf("[DMAC] GIF ASR1: $%08X\n", value);
+            channels[GIF].tag_save1 = value;
             break;
         case 0x1000B000:
             printf("[DMAC] IPU_FROM CTRL: $%08X\n", value);
