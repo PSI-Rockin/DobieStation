@@ -50,9 +50,16 @@ void SPU::reset(uint8_t* RAM)
     data_input_volume_l = 0x7FFF;
     data_input_volume_r = 0x7FFF;
     reverb = {};
+    noise = {};
     effect_enable = 0;
     output_enable = 1;
-
+    voice_noise_gen = 0;
+    mix_state = {};
+    voice_mixdry_left = 0;
+    voice_mixdry_right = 0;
+    voice_mixwet_left = 0;
+    voice_mixwet_right = 0;
+    voice_pitch_mod = 0;
 
     std::ostringstream fname;
     fname << "spu_" << id << "_stream" << ".wav";
