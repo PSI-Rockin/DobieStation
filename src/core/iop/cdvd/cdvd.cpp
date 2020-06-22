@@ -916,6 +916,22 @@ void CDVD_Drive::N_command_readkey(uint32_t arg)
     intc->assert_irq(2);
 }
 
+void CDVD_Drive::decrypt_mechacon_sector()
+{
+    if (mecha_decode)
+    {
+        uint8_t shift_amount = (mecha_decode >> 4) & 7;
+        bool do_xor = (mecha_decode) & 1;
+        bool do_shift = (mecha_decode) & 2;
+
+        for (int i = 0; i < block_size; ++i)
+        {
+            if (do_xor) read_buffer[i] ^= cdkey[4];
+            if (do_shift) read_buffer[i] = (read_buffer[i] >> shift_amount) | (read_buffer[i] << (8 - shift_amount));
+        }
+    }
+}
+
 void CDVD_Drive::read_CD_sector()
 {
     printf("[CDVD] Read CD sector - Sector: %lu Size: %lu\n", current_sector, block_size);
@@ -929,18 +945,7 @@ void CDVD_Drive::read_CD_sector()
             break;
     }
 
-    if (mecha_decode)
-    {
-        uint8_t shift_amount = (mecha_decode >> 4) & 7;
-        bool do_xor = (mecha_decode) & 1;
-        bool do_shift = (mecha_decode) & 2;
-
-        for (int i = 0; i < 2064; ++i)
-        {
-            if (do_xor) read_buffer[i] ^= cdkey[4];
-            if (do_shift) read_buffer[i] = (read_buffer[i] >> shift_amount) | (read_buffer[i] << (8 - shift_amount));
-        }
-    }
+    decrypt_mechacon_sector();
 
     read_bytes_left = block_size;
     current_sector++;
@@ -1010,18 +1015,7 @@ void CDVD_Drive::read_DVD_sector()
     read_buffer[2062] = 0;
     read_buffer[2063] = 0;
 
-    if (mecha_decode)
-    {
-        uint8_t shift_amount = (mecha_decode >> 4) & 7;
-        bool do_xor = (mecha_decode) & 1;
-        bool do_shift = (mecha_decode) & 2;
-
-        for (int i = 0; i < 2064; ++i)
-        {
-            if (do_xor) read_buffer[i] ^= cdkey[4];
-            if (do_shift) read_buffer[i] = (read_buffer[i] >> shift_amount) | (read_buffer[i] << (8 - shift_amount));
-        }
-    }
+    decrypt_mechacon_sector();
 
     read_bytes_left = 2064;
     current_sector++;

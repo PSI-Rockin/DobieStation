@@ -120,6 +120,7 @@ class CDVD_Drive
         void start_seek();
         void prepare_S_outdata(int amount);
 
+        void decrypt_mechacon_sector();
         void read_CD_sector();
         void fill_CDROM_sector();
         void read_DVD_sector();
