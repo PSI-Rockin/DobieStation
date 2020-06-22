@@ -111,6 +111,7 @@ class CDVD_Drive
         uint8_t S_status;
 
         uint8_t cdkey[16];
+        uint8_t mecha_decode;
 
         int n_command_event_id;
 
@@ -163,6 +164,7 @@ class CDVD_Drive
         void send_S_command(uint8_t value);
         void write_S_data(uint8_t value);
         void write_ISTAT(uint8_t value);
+        void write_mecha_decode(uint8_t value);
 
         void load_state(std::ifstream& state);
         void save_state(std::ofstream& state);

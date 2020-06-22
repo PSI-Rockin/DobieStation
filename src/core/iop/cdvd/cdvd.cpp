@@ -63,6 +63,7 @@ void CDVD_Drive::reset()
     ISTAT = 0;
     disc_type = CDVD_DISC_NONE;
     file_size = 0;
+    mecha_decode = 0;
     time_t raw_time;
     struct tm * time;
     std::time(&raw_time);
@@ -927,6 +928,20 @@ void CDVD_Drive::read_CD_sector()
             container->read(read_buffer, block_size);
             break;
     }
+
+    if (mecha_decode)
+    {
+        uint8_t shiftAmount = (mecha_decode >> 4) & 7;
+        bool doXor = (mecha_decode) & 1;
+        bool doShift = (mecha_decode) & 2;
+
+        for (int i = 0; i < 2064; ++i)
+        {
+            if (doXor) read_buffer[i] ^= cdkey[4];
+            if (doShift) read_buffer[i] = (read_buffer[i] >> shiftAmount) | (read_buffer[i] << (8 - shiftAmount));
+        }
+    }
+
     read_bytes_left = block_size;
     current_sector++;
     sectors_left--;
@@ -994,6 +1009,20 @@ void CDVD_Drive::read_DVD_sector()
     read_buffer[2061] = 0;
     read_buffer[2062] = 0;
     read_buffer[2063] = 0;
+
+    if (mecha_decode)
+    {
+        uint8_t shiftAmount = (mecha_decode >> 4) & 7;
+        bool doXor = (mecha_decode) & 1;
+        bool doShift = (mecha_decode) & 2;
+
+        for (int i = 0; i < 2064; ++i)
+        {
+            if (doXor) read_buffer[i] ^= cdkey[4];
+            if (doShift) read_buffer[i] = (read_buffer[i] >> shiftAmount) | (read_buffer[i] << (8 - shiftAmount));
+        }
+    }
+
     read_bytes_left = 2064;
     current_sector++;
     sectors_left--;
@@ -1037,6 +1066,12 @@ void CDVD_Drive::write_ISTAT(uint8_t value)
 {
     printf("[CDVD] Write ISTAT: $%02X\n", value);
     ISTAT &= ~value;
+}
+
+void CDVD_Drive::write_mecha_decode(uint8_t value)
+{
+    printf("[CDVD] Write Mechacon Decode Value: $%02X\n", value);
+    mecha_decode = value;
 }
 
 void CDVD_Drive::add_event(uint64_t cycles)
