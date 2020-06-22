@@ -194,10 +194,10 @@ PathTab::PathTab(QWidget* parent)
     });
 
     QGridLayout* other_layout = new QGridLayout;
-    other_layout->addWidget(new QLabel(tr("Bios:"), 0, 0));
+    other_layout->addWidget(new QLabel(tr("Bios:")), 0, 0);
     other_layout->addWidget(bios_info, 0, 2);
     other_layout->addWidget(browse_button, 0, 3);
-    other_layout->addWidget(new QLabel("Screenshots:"), 1, 0);
+    other_layout->addWidget(new QLabel(tr("Screenshots:")), 1, 0);
     other_layout->addWidget(screenshot_label, 1, 2);
     other_layout->addWidget(screenshot_button, 1, 3);
 
