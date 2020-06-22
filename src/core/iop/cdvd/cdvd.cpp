@@ -931,14 +931,14 @@ void CDVD_Drive::read_CD_sector()
 
     if (mecha_decode)
     {
-        uint8_t shiftAmount = (mecha_decode >> 4) & 7;
-        bool doXor = (mecha_decode) & 1;
-        bool doShift = (mecha_decode) & 2;
+        uint8_t shift_amount = (mecha_decode >> 4) & 7;
+        bool do_xor = (mecha_decode) & 1;
+        bool do_shift = (mecha_decode) & 2;
 
         for (int i = 0; i < 2064; ++i)
         {
-            if (doXor) read_buffer[i] ^= cdkey[4];
-            if (doShift) read_buffer[i] = (read_buffer[i] >> shiftAmount) | (read_buffer[i] << (8 - shiftAmount));
+            if (do_xor) read_buffer[i] ^= cdkey[4];
+            if (do_shift) read_buffer[i] = (read_buffer[i] >> shift_amount) | (read_buffer[i] << (8 - shift_amount));
         }
     }
 
@@ -1012,14 +1012,14 @@ void CDVD_Drive::read_DVD_sector()
 
     if (mecha_decode)
     {
-        uint8_t shiftAmount = (mecha_decode >> 4) & 7;
-        bool doXor = (mecha_decode) & 1;
-        bool doShift = (mecha_decode) & 2;
+        uint8_t shift_amount = (mecha_decode >> 4) & 7;
+        bool do_xor = (mecha_decode) & 1;
+        bool do_shift = (mecha_decode) & 2;
 
         for (int i = 0; i < 2064; ++i)
         {
-            if (doXor) read_buffer[i] ^= cdkey[4];
-            if (doShift) read_buffer[i] = (read_buffer[i] >> shiftAmount) | (read_buffer[i] << (8 - shiftAmount));
+            if (do_xor) read_buffer[i] ^= cdkey[4];
+            if (do_shift) read_buffer[i] = (read_buffer[i] >> shift_amount) | (read_buffer[i] << (8 - shift_amount));
         }
     }
 
