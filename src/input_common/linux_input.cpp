@@ -88,6 +88,8 @@ int LinuxInput::getEvent(int i)
 {
     int key;
     int rc = LIBEVDEV_READ_STATUS_SUCCESS;
+    uint key_code;
+
 
     if (i < interesting_devices.size())
     {
@@ -106,10 +108,16 @@ int LinuxInput::getEvent(int i)
 		        const auto code = entry.first;
  
 
-                libevdev_fetch_event_value(interesting_devices[i]->dev, EV_KEY, code, &key);
-                std::cout << "Key Code: " << key << std::endl;
-                //interesting_devices[i]->code_name = libevdev_event_code_get_name(EV_KEY, key);
-                //std::cout << "Code: " << interesting_devices[i]->code_name << std::endl;
+                if (libevdev_fetch_event_value(interesting_devices[i]->dev, EV_KEY, code, &key) == 0)
+                continue;
+                
+                //if (libevdev_fetch_event_value(interesting_devices[i]->dev, EV_ABS, code, &key) == 0)
+                //continue;
+
+                
+                std::cout << "Key Code: " << unsigned(key_code) << std::endl;
+                interesting_devices[i]->code_name = libevdev_event_code_get_name(EV_KEY, key_code);
+                std::cout << "Code: " << interesting_devices[i]->code_name << std::endl;
             }
         }
     }   

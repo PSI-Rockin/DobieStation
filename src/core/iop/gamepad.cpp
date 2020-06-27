@@ -50,7 +50,7 @@ void Gamepad::reset()
 void Gamepad::set_button(PAD_BUTTON button, uint8_t val)
 {
 
-    std::cout << "Button: " << (int)button << " Pressure: " << unsigned(val) << std::endl; 
+    //std::cout << "Button: " << (int)button << " Pressure: " << unsigned(val) << std::endl; 
 
     if (val)
         buttons &= ~(1 << (int)button);
@@ -70,7 +70,7 @@ void Gamepad::release_button(PAD_BUTTON button)
 
 void Gamepad::update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t val)
 {
-    std::cout << "Value: " << unsigned(val) << std::endl;
+    //std::cout << "Value: " << unsigned(val) << std::endl;
     joysticks[(int)joystick][(int)axis] = val;
 }
 
@@ -95,6 +95,14 @@ uint8_t Gamepad::start_transfer(uint8_t value)
     return 0xFF;
 }
 
+void Gamepad::set_effects(MOTOR_DATA current_motor, uint8_t val)
+{
+
+    std::cout << "Current Motor: " << (int)current_motor << " Value: " << std::bitset<8>(val) << std::endl;
+
+    motors[(int)current_motor] = val;
+}
+
 uint8_t Gamepad::write_SIO(uint8_t value)
 {
     if (data_count > command_length)
@@ -108,6 +116,7 @@ uint8_t Gamepad::write_SIO(uint8_t value)
         {
             printf("[PAD] Command %c ($%02X) called while not in config mode!\n", value, value);
             command_length = 0;
+
             data_count = 1;
             return 0xF3;
         }
@@ -185,7 +194,7 @@ uint8_t Gamepad::write_SIO(uint8_t value)
                 set_result(set_mode);
                 reset_vibrate();
                 return 0xF3;
-            case 'E': //0x45 - query model and mode
+            case 'E': //0x45 - Device type (Status Info)
                 set_result(query_model_DS2);
                 command_buffer[5] = (pad_mode & 0xF) != 0x1;
                 return 0xF3;
@@ -201,6 +210,8 @@ uint8_t Gamepad::write_SIO(uint8_t value)
             case 'M': //0x4D - vibration toggle
                 command_length = 9;
                 memcpy(command_buffer + 2, rumble_values, 7);
+                for (int i = 0; i < 8; i++)
+                //std::cout << " Hex Result: " << std::hex << static_cast<int>(rumble_values[i]) << std::endl; 
                 reset_vibrate();
                 return 0xF3;
             case 'O': //0x4F - set DS2 native mode
@@ -215,6 +226,10 @@ uint8_t Gamepad::write_SIO(uint8_t value)
 
     switch (command)
     {
+        case 'B':
+        set_effects(motor_data, value);
+        break;
+
         case 'C':
             if (data_count == 3)
             {
@@ -257,7 +272,14 @@ uint8_t Gamepad::write_SIO(uint8_t value)
             break;
         case 'M':
             if (data_count >= 3)
-                rumble_values[data_count - 2] = value;
+            for (uint8_t i = data_count; i < 9; i++)
+            {
+                if (rumble_values[i] == 0x00)
+                motor_data = MOTOR_DATA::BIG_M;
+                if (rumble_values[i] == 0x01)
+                motor_data = MOTOR_DATA::SMALL_M;
+            }
+                //rumble_values[data_count - 2] = value;
             break;
         case 'O':
             if (data_count == 3 || data_count == 4)

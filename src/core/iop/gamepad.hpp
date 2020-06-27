@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <fstream>
 #include <iostream>
+#include <ios>
 
 enum class PAD_BUTTON
 {
@@ -43,11 +44,18 @@ enum PAD_MODE
     DS2_NATIVE = 0x79
 };
 
+enum MOTOR_DATA
+{
+    BIG_M = 0x00,
+    SMALL_M = 0x01
+};
+
 class Gamepad
 {
     private:
         uint8_t command_buffer[25];
         uint8_t rumble_values[8];
+        uint8_t motors[2]; //Big Motor, Small Motor 
         uint8_t mode_lock;
         uint16_t buttons;
         uint8_t joysticks[2][2];
@@ -69,6 +77,7 @@ class Gamepad
         const static uint8_t native_mode[7];
 
         PAD_MODE pad_mode;
+        MOTOR_DATA motor_data;
         bool config_mode;
 
         void reset_vibrate();
@@ -81,6 +90,7 @@ class Gamepad
         void release_button(PAD_BUTTON button);
         void update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t val);
         
+        void set_effects(MOTOR_DATA current_motor, uint8_t val);
 
         uint8_t start_transfer(uint8_t value);
         uint8_t write_SIO(uint8_t value);
