@@ -80,7 +80,6 @@ struct BUTTON_STATE
 };
 
 
-
 struct PAD_DATA
 {
 	int player_number;
@@ -120,7 +119,8 @@ public:
 	virtual bool reset() = 0;
 	virtual PAD_DATA poll() = 0;
 	virtual int getEvent(int i) = 0;
-	
+	virtual uint8_t* rumble(uint8_t* rumble_data) = 0;
+
 	#ifdef __linux__
     virtual std::vector<evdev_controller *> get_interesting_devices() = 0;
 

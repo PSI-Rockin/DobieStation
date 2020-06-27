@@ -20,6 +20,7 @@ public:
 	void reset();
 	PAD_DATA poll();
 	int getEvent(int i); // For configuration not DobieStation ingame
+	uint8_t* rumble(uint8_t* rumble_data);
 
 	#ifdef __linux__
     	std::vector<evdev_controller *> get_interesting_devices();

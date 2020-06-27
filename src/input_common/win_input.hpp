@@ -19,6 +19,8 @@ private:
 	PAD_DATA pad_data;
 	BYTE trigger;
 
+	uint8_t* motors;
+
 	std::vector<xinput_controller> interesting_devices;
 
 	BUTTONS control;
@@ -38,6 +40,7 @@ public:
 	bool reset();
 	PAD_DATA poll();
 	int getEvent(int i);
+	uint8_t* rumble(uint8_t* rumble_data);
 	std::vector<xinput_controller> get_interesting_devices();
 
 

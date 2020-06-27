@@ -124,6 +124,19 @@ int LinuxInput::getEvent(int i)
         return key;
 }
 
+uint8_t* LinuxInput::rumble(uint8_t* rumble_data)
+{
+    // Grab effects
+    motors = rumble_data;
+
+    for (int i = 0; i < 2; i++)
+    {
+        // HaHa effects go brr
+    }
+}
+
+
+
 PAD_DATA LinuxInput::poll()
 {
     int rc = LIBEVDEV_READ_STATUS_SUCCESS;

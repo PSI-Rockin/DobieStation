@@ -23,6 +23,12 @@ int InputManager::getEvent(int i)
 	return input->getEvent(i);
 }
 
+
+uint8_t* InputManager::rumble(uint8_t* rumble_data)
+{
+	return input->rumble(rumble_data);
+}
+
 #ifdef __linux__
 	std::vector<evdev_controller*> InputManager::get_interesting_devices()
 	{

@@ -291,6 +291,11 @@ void Emulator::update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t va
     pad.update_joystick(joystick, axis, val);
 }
 
+uint8_t* Emulator::send_effects()
+{
+    return controller.rumble(pad.send_effects());
+}
+
 void Emulator::poll_controller()
 {
     PAD_DATA state;

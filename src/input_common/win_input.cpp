@@ -35,6 +35,15 @@ std::vector<xinput_controller> WinInput::get_interesting_devices()
 }
 
 
+uint8_t* WinInput::rumble(uint8_t* rumble_data)
+{
+	motors = rumble_data; 
+
+	for (int i = 0; i < 2; i++)
+	{
+		// Effects Go BRR
+	}
+}
 
 
 int WinInput::getEvent(int i)

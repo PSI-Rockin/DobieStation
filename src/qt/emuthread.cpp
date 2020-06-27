@@ -271,6 +271,7 @@ void EmuThread::run()
         }
         
         e.poll_controller();
+        e.send_effects();
     }
 }
 

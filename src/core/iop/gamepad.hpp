@@ -46,8 +46,8 @@ enum PAD_MODE
 
 enum MOTOR_DATA
 {
-    BIG_M = 0x00,
-    SMALL_M = 0x01
+    SMALL_M = 0x00,
+    BIG_M = 0x01
 };
 
 class Gamepad
@@ -55,7 +55,7 @@ class Gamepad
     private:
         uint8_t command_buffer[25];
         uint8_t rumble_values[8];
-        uint8_t motors[2]; //Big Motor, Small Motor 
+        uint8_t motors[2]; //Big Motor, Small Motor         
         uint8_t mode_lock;
         uint16_t buttons;
         uint8_t joysticks[2][2];
@@ -91,6 +91,7 @@ class Gamepad
         void update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t val);
         
         void set_effects(MOTOR_DATA current_motor, uint8_t val);
+        uint8_t* send_effects();
 
         uint8_t start_transfer(uint8_t value);
         uint8_t write_SIO(uint8_t value);
