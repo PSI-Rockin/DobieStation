@@ -35,14 +35,29 @@ std::vector<xinput_controller> WinInput::get_interesting_devices()
 }
 
 
-uint8_t* WinInput::rumble(uint8_t* rumble_data)
+void WinInput::rumble(uint8_t* rumble_data)
 {
 	motors = rumble_data; 
 
-	for (int i = 0; i < 2; i++)
-	{
-		// Effects Go BRR
-	}
+	std::cout << "small data: " << std::hex << (int)rumble_data[0] << " big data " << std::hex << (int)rumble_data[1] << std::endl;
+
+	int small, big;
+
+	ZeroMemory(&interesting_devices[0].effects, sizeof(XINPUT_VIBRATION));
+
+	small = (int)((float)motors[0] * 65535.0f);
+	big = (int)((float)motors[1] * 65535.0f);
+
+	interesting_devices[0].effects.wLeftMotorSpeed = small;
+	interesting_devices[0].effects.wRightMotorSpeed = big;
+
+	std::cout << "Small motor: " << small << std::endl;
+	std::cout << "Big motor: " << big << std::endl;
+
+
+
+	XInputSetState(0, &interesting_devices[0].effects);
+
 }
 
 

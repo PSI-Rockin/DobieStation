@@ -68,6 +68,7 @@ struct xinput_controller
 {
 	int player_number; // This is used for configurator
 	XINPUT_STATE dev; // The gampad state
+	XINPUT_VIBRATION   effects;
 };
 #endif
 
@@ -119,7 +120,7 @@ public:
 	virtual bool reset() = 0;
 	virtual PAD_DATA poll() = 0;
 	virtual int getEvent(int i) = 0;
-	virtual uint8_t* rumble(uint8_t* rumble_data) = 0;
+	virtual void rumble(uint8_t* rumble_data) = 0;
 
 	#ifdef __linux__
     virtual std::vector<evdev_controller *> get_interesting_devices() = 0;

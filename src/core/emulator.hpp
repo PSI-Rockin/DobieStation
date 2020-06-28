@@ -150,7 +150,7 @@ class Emulator
         bool check_cop2_interlock();
 
         uint8_t read8(uint32_t address);
-        uint8_t* send_effects();
+        void send_effects();
         uint16_t read16(uint32_t address);
         uint32_t read32(uint32_t address);
         uint64_t read64(uint32_t address);

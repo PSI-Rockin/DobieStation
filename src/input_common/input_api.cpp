@@ -24,9 +24,9 @@ int InputManager::getEvent(int i)
 }
 
 
-uint8_t* InputManager::rumble(uint8_t* rumble_data)
+void InputManager::rumble(uint8_t* rumble_data)
 {
-	return input->rumble(rumble_data);
+	input->rumble(rumble_data);
 }
 
 #ifdef __linux__

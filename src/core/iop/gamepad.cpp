@@ -103,7 +103,6 @@ uint8_t* Gamepad::send_effects()
 void Gamepad::set_effects(MOTOR_DATA current_motor, uint8_t val)
 {
     std::cout << "Current Motor: " << std::hex << (int)current_motor << " Value: " << std::hex << (int)val << std::endl;
-
     motors[(int)current_motor] = val;
 }
 
@@ -231,9 +230,9 @@ uint8_t Gamepad::write_SIO(uint8_t value)
     switch (command)
     {
         case 'B':
-        if (data_count == MOTOR_DATA::SMALL_M)
+        if (motor_data == MOTOR_DATA::SMALL_M)
         set_effects(MOTOR_DATA::SMALL_M, 255 * (value & 0x1));
-        else if (data_count == MOTOR_DATA::BIG_M)
+        else if (motor_data == MOTOR_DATA::BIG_M)
         set_effects(MOTOR_DATA::BIG_M, value);
         break;
 

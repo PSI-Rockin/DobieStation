@@ -291,9 +291,10 @@ void Emulator::update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t va
     pad.update_joystick(joystick, axis, val);
 }
 
-uint8_t* Emulator::send_effects()
+void Emulator::send_effects()
 {
-    return controller.rumble(pad.send_effects());
+    std::cout << "Effect Motor 1: " << (int)pad.send_effects()[1] << "Effect Motor 2: " << (int)pad.send_effects()[2] << std::endl;
+    controller.rumble(pad.send_effects());
 }
 
 void Emulator::poll_controller()
