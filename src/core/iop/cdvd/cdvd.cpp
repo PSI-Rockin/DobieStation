@@ -589,6 +589,19 @@ void CDVD_Drive::send_S_command(uint8_t value)
             prepare_S_outdata(1);
             S_outdata[0] = 0;
             break;
+        case 0x36: //Stub until we have MEC and NVM file support
+            printf("[CDVD] GetRegionParams\n");
+            prepare_S_outdata(15);
+            //This is basically what PCSX2 returns on a blank NVM/MEC file
+            S_outdata[0] = 0;
+            S_outdata[1] = 1 << 0x3; //MEC encryption zone
+            S_outdata[2] = 0;
+            S_outdata[3] = 0x80; //Region Params
+            S_outdata[4] = 0x1;
+
+            for (int i = 5; i < 15; i++)
+                S_outdata[i] = 0;
+            break;
         case 0x40:
             printf("[CDVD] OpenConfig\n");
             prepare_S_outdata(1);
