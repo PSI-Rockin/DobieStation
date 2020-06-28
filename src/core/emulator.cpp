@@ -1314,6 +1314,9 @@ void Emulator::iop_write8(uint32_t address, uint8_t value)
         case 0x1F402017:
             cdvd.write_S_data(value);
             return;
+        case 0x1F40203A:
+            cdvd.write_mecha_decode(value);
+            return;
         //POST2?
         case 0x1F802070:
             return;
