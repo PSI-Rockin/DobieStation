@@ -69,7 +69,6 @@ class GraphicsInterface
         int get_path_queue();
         bool path_active(int index, bool canInterruptPath3);
         void resume_path3();
-        void clear_path_status(int index);
 
         uint32_t read_STAT();
         void write_MODE(uint32_t value);
@@ -126,12 +125,6 @@ inline void GraphicsInterface::resume_path3()
         path_status[3] = 0; //Force it to be busy so if VIF puts the mask back on quickly, it doesn't instantly mask it
         request_PATH(3, false);
     }
-}
-
-inline void GraphicsInterface::clear_path_status(int index)
-{
-    if(path_status[index] == 5)
-        path_status[index] = 4;
 }
 
 #endif // GIF_HPP
