@@ -286,6 +286,8 @@ class SPU
         void write16(uint32_t addr, uint16_t value);
         uint32_t get_memin_addr();
 
+        void gaussianConstructTable();
+
         void load_state(std::ifstream& state);
         void save_state(std::ofstream& state);
 

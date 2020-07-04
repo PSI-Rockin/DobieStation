@@ -61,7 +61,7 @@ SOURCES += ../../src/qt/main.cpp \
     ../../src/core/iop/spu/spu.cpp \
     ../../src/core/iop/spu/spu_adpcm.cpp \
     ../../src/core/iop/spu/spu_envelope.cpp \
-    ../../src/core/iop/spu/spu_tables.cpp \
+    ../../src/core/iop/spu/spu_interpolate.cpp \
     ../../src/qt/emuthread.cpp \
     ../../src/core/tests/iop/alu.cpp \
     ../../src/core/ee/vif.cpp \

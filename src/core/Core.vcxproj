@@ -141,7 +141,7 @@
     <ClCompile Include="iop\spu\spu.cpp" />
     <ClCompile Include="iop\spu\spu_adpcm.cpp" />
     <ClCompile Include="iop\spu\spu_envelope.cpp" />
-    <ClCompile Include="iop\spu\spu_tables.cpp" />
+    <ClCompile Include="iop\spu\spu_interpolate.cpp" />
     <ClCompile Include="ee\timers.cpp" />
     <ClCompile Include="ee\vif.cpp" />
     <ClCompile Include="ee\ipu\vlc_table.cpp" />
