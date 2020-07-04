@@ -240,6 +240,9 @@
     <ClCompile Include="iop\spu\spu_interpolate.cpp">
       <Filter>Source</Filter>
     </ClCompile>
+    <ClCompile Include="iop\spu\spu_reverb.cpp">
+      <Filter>Source</Filter>
+    </ClCompile>
     <ClCompile Include="audio\utils.cpp">
       <Filter>Source</Filter>
     </ClCompile>
