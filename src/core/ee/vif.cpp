@@ -142,7 +142,7 @@ void VectorInterface::update(int cycles)
             }
             if (wait_for_VU)
             {
-                if (vu->is_running())
+                if (vu->is_running() || vu->stopped_by_tbit())
                     return;
                 handle_wait_cmd(wait_cmd_value, (cycles - (run_cycles >> 2)) * 2);
             }
