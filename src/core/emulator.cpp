@@ -685,6 +685,14 @@ uint64_t Emulator::read64(uint32_t address)
         return gs.read64_privileged(address);
     if (address >= 0x1C000000 && address < 0x1C200000)
         return *(uint64_t*)&IOP_RAM[address & 0x1FFFFF];
+    if (address >= 0x11000000 && address < 0x11004000)
+        return vu0.read_instr<uint64_t>(address);
+    if (address >= 0x11004000 && address < 0x11008000)
+        return vu0.read_mem<uint64_t>(address);
+    if (address >= 0x11008000 && address < 0x1100C000)
+        return vu1.read_instr<uint64_t>(address);
+    if (address >= 0x1100C000 && address < 0x11010000)
+        return vu1.read_mem<uint64_t>(address);
     switch (address)
     {
         case 0x10002000:
