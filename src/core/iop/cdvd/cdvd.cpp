@@ -289,11 +289,21 @@ bool CDVD_Drive::load_disc(const char *name, CDVD_CONTAINER a_container)
     container->seek(sector, std::ios::beg);
     container->read(pvd_sector, 2048);
 
+    uint32_t path_table_sector = *(uint32_t*)&pvd_sector[140];
+    uint32_t volume_size = *(uint32_t*)&pvd_sector[80];
+
     LBA = *(uint16_t*)&pvd_sector[128];
-    if (*(uint16_t*)&pvd_sector[166] == 2048)
+
+    // Detecting disc type by abitrary variables
+    // 650MB (681574400 bytes) is the maximum disc size for CD's
+    // Just in case we can check if the path table is at sector 257 which is a forced location for DVD's
+    // However some CD's do use 257 for the path table location, but it's not common
+    if ((volume_size * LBA) <= 681574400 || path_table_sector != 257)
         disc_type = CDVD_DISC_PS2CD;
     else
         disc_type = CDVD_DISC_PS2DVD;
+
+    printf("%s Detected\n", disc_type == CDVD_DISC_PS2CD ? "CD" : "DVD");
     printf("[CDVD] PVD LBA: $%08X\n", LBA);
 
     root_location = *(uint32_t*)&pvd_sector[156 + 2];
