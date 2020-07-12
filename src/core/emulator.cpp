@@ -510,6 +510,8 @@ uint8_t Emulator::read8(uint32_t address)
         return IOP_RAM[address & 0x1FFFFF];
     if (address >= 0x10000000 && address < 0x10002000)
         return (timers.read32(address & ~0xF) >> (8 * (address & 0x3)));
+    if ((address & (0xFF000000)) == 0x12000000)
+        return (gs.read32_privileged(address & ~0x3) >> (8 * (address & 0x3)));
     if (address >= 0x10008000 && address < 0x1000F000)
         return dmac.read8(address);
     if (address >= 0x11000000 && address < 0x11004000)
@@ -539,6 +541,8 @@ uint16_t Emulator::read16(uint32_t address)
         return (uint16_t)timers.read32(address);
     if (address >= 0x10008000 && address < 0x1000F000)
         return dmac.read16(address);
+    if ((address & (0xFF000000)) == 0x12000000)
+        return (gs.read32_privileged(address & ~0x3) >> (8 * (address & 0x2)));
     if (address >= 0x1C000000 && address < 0x1C200000)
         return *(uint16_t*)&IOP_RAM[address & 0x1FFFFF];
     if (address >= 0x11000000 && address < 0x11004000)
