@@ -290,7 +290,7 @@ bool CDVD_Drive::load_disc(const char *name, CDVD_CONTAINER a_container)
     container->read(pvd_sector, 2048);
 
     uint32_t path_table_sector = *(uint32_t*)&pvd_sector[140];
-    uint32_t volume_size = *(uint32_t*)&pvd_sector[80];
+    uint64_t volume_size = *(uint32_t*)&pvd_sector[80];
 
     LBA = *(uint16_t*)&pvd_sector[128];
 
