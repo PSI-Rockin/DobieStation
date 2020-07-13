@@ -43,12 +43,16 @@ class VU_JIT64
         VU_JitTranslator ir;
         VUJitPrologue prologue_block;
 
+
+        // Prevent warnings due to padding inserted due to use of alignas (for VU_GPR)
+        #pragma warning(disable:4324)
         //Set to 0x7FFFFFFF, repeated four times
         VU_GPR abs_constant;
 
         VU_GPR max_flt_constant, min_flt_constant, sign_constant;
 
         VU_GPR ftoi_table[4], itof_table[4];
+        #pragma warning(default:4324)
 
         uint32_t saved_mxcsr;
         uint32_t vu_mxcsr;

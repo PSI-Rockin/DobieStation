@@ -7,6 +7,8 @@
 #include "emotion.hpp"
 #include "../int128.hpp"
 
+// Prevent warnings due to padding inserted due to use of alignas
+#pragma warning(disable:4324)
 union alignas(16) VU_R
 {
     float f;
@@ -32,6 +34,7 @@ struct alignas(16) VU_Mem
 {
     uint8_t m[1024 * 16];
 };
+#pragma warning(default:4324)
 
 struct VPU_STAT
 {
@@ -53,6 +56,8 @@ struct DecodedRegs
     void reset();
 };
 
+// Prevent warnings due to padding inserted due to use of alignas
+#pragma warning(disable:4324)
 struct VuIntBranchPipelineEntry
 {
     uint8_t write_reg;   // reg that was overwritten
@@ -61,6 +66,7 @@ struct VuIntBranchPipelineEntry
 
     void clear();
 };
+#pragma warning(default:4324)
 
 struct VuIntBranchPipeline
 {
@@ -87,6 +93,10 @@ extern "C" uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee);
 
 class VectorUnit
 {
+    // Suppress any warnings caused by the padding due to the use of alignas
+    // VU_R requires 16-bit alignment
+    #pragma warning(disable:4324)
+
     private:
         GraphicsInterface* gif;
         int id;
@@ -398,6 +408,8 @@ class VectorUnit
         friend void vu_update_pipelines(VectorUnit& vu, int cycles);
         friend uint8_t* exec_block_vu(VU_JIT64& jit, VectorUnit& vu);
         friend uint8_t* exec_block_ee(EE_JIT64& jit, EmotionEngine& ee);
+
+        #pragma warning(default:4324)
 };
 
 template <typename T>

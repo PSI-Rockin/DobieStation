@@ -72,9 +72,14 @@ class EmotionEngine
 
         EE_OsdConfigParam osd_config_param;
 
+        // Suppress any warnings caused by the padding due to the use of alignas
+        #pragma warning(disable:4324)
+
         //Each register is 128-bit
         alignas(16) uint8_t gpr[32 * sizeof(uint64_t) * 2];
         alignas(16) uint128_t LO, HI;
+        #pragma warning(default:4324)
+
         uint32_t PC, new_PC;
         uint64_t SA;
 

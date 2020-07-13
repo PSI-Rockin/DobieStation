@@ -1460,7 +1460,6 @@ uint64_t EE_JIT64::get_vf_addr(const EmotionEngine&ee, int index) const
         default:
             Errors::die("[EE_JIT64] get_vf_addr error: Unrecognized reg %d", index);
     }
-    return 0;
 }
 
 uint64_t EE_JIT64::get_fpu_addr(const EmotionEngine &ee, int index) const
@@ -1475,7 +1474,6 @@ uint64_t EE_JIT64::get_fpu_addr(const EmotionEngine &ee, int index) const
         default:
             Errors::die("[EE_JIT64] get_fpu_addr error: Unrecognized reg %d", index);
     }
-    return 0;
 }
 
 uint64_t EE_JIT64::get_gpr_addr(const EmotionEngine &ee, int index) const
@@ -1498,7 +1496,6 @@ uint64_t EE_JIT64::get_gpr_addr(const EmotionEngine &ee, int index) const
         default:
             Errors::die("[EE_JIT64] get_gpr_addr error: Unrecognized reg %d", index);
     }
-    return 0;
 }
 
 uint64_t EE_JIT64::get_gpr_offset(int index) const

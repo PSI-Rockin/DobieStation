@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
+#include <climits>
 #include "emotioninterpreter.hpp"
 
 void EmotionInterpreter::mmi(EE_InstrInfo &info, uint32_t instruction)
@@ -443,20 +444,9 @@ int64_t EmotionInterpreter::clamp_doubleword(int64_t word)
     }
 }
 
-int16_t EmotionInterpreter::clamp_halfword(int32_t word)
+inline int16_t EmotionInterpreter::clamp_halfword(int32_t word)
 {
-    if (word > (int32_t)0x00007FFF)
-    {
-        return 0x7FFF;
-    }
-    else if (word < (int32_t)0xFFFF80000)
-    {
-        return 0x8000;
-    }
-    else
-    {
-        return (int16_t)word;
-    }
+    return std::max((int32_t)0xFFFF8000, std::min(0x00007FFF, word));
 }
 
 /*
@@ -2642,7 +2632,7 @@ void EmotionInterpreter::div1(EmotionEngine &cpu, uint32_t instruction)
     op2 = cpu.get_gpr<int32_t>(op2);
     if (op1 == 0x80000000 && op2 == 0xFFFFFFFF)
     {
-        cpu.set_LO_HI((int64_t)(int32_t)0x80000000, 0, true);
+        cpu.set_LO_HI(0xFFFFFFFF'80000000, 0, true);
     }
     else if (op2)
     {
@@ -2671,7 +2661,7 @@ void EmotionInterpreter::divu1(EmotionEngine &cpu, uint32_t instruction)
     }
     else
     {
-        cpu.set_LO_HI((int64_t)-1, (int64_t)(int32_t)op1, true);
+        cpu.set_LO_HI(UINT64_MAX, (int64_t)(int32_t)op1, true);
     }
 }
 

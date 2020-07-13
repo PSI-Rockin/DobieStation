@@ -370,5 +370,4 @@ bool DCT_Coeff_Table1::get_runlevel_pair_dc(IPU_FIFO &FIFO, RunLevelPair &pair, 
 {
     //DCT_Coeff_Table1 only gets called by intra macroblocks, so this should never happen
     Errors::die("get_runlevel_pair_dc should never happen");
-    return false;
 }
