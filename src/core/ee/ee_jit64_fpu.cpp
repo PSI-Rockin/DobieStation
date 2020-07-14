@@ -159,6 +159,8 @@ void EE_JIT64::floating_point_divide(EmotionEngine& ee, IR::Instruction& instr)
     emitter.MOVD_FROM_XMM(source, REG_64::RAX);
     emitter.MOVD_FROM_XMM(source2, R15);
     emitter.XOR32_REG(R15, REG_64::RAX);
+    emitter.AND32_REG_IMM(0x80000000, REG_64::RAX);
+    emitter.OR32_REG_IMM(0x7F7FFFFF, REG_64::RAX);
     emitter.MOVD_TO_XMM(REG_64::RAX, dest);
     uint8_t *exit = emitter.JMP_NEAR_DEFERRED();
 
