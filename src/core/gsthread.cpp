@@ -958,6 +958,7 @@ void GraphicsSynthesizerThread::write64(uint32_t addr, uint64_t value)
             break;
         case 0x0022:
             SCANMSK = value & 0x3;
+            update_draw_pixel_state();
             break;
         case 0x0034:
             context1.set_miptbl1(value);
@@ -4125,6 +4126,7 @@ void GraphicsSynthesizerThread::update_draw_pixel_state()
     draw_pixel_state |= (uint64_t)(current_PRMODE == &PRIM) << 53UL;
     draw_pixel_state |= (uint64_t)(current_ctx == &context1) << 54UL;
     draw_pixel_state |= (uint64_t)(current_ctx->frame.mask != 0) << 55UL;
+    draw_pixel_state |= (uint64_t)(current_ctx->FBA) << 56UL;
 }
 
 void GraphicsSynthesizerThread::update_tex_lookup_state()
