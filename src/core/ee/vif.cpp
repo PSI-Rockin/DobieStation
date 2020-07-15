@@ -362,7 +362,8 @@ void VectorInterface::decode_cmd(uint32_t value)
         case 0x11:
             printf("[VIF] FLUSH\n");
             wait_for_VU = true;
-            flush_stall = true;
+            if (gif)
+                flush_stall = true;
             stall_condition_active = true;
             wait_cmd_value = value;
             command = 0;
@@ -370,8 +371,11 @@ void VectorInterface::decode_cmd(uint32_t value)
         case 0x13:
             printf("[VIF] FLUSHA\n");
             wait_for_VU = true;
-            flush_stall = true;
-            wait_for_PATH3 = true;
+            if (gif)
+            {
+                flush_stall = true;
+                wait_for_PATH3 = true;
+            }
             stall_condition_active = true;
             wait_cmd_value = value;
             command = 0;
@@ -386,7 +390,8 @@ void VectorInterface::decode_cmd(uint32_t value)
         case 0x15:
             printf("[VIF] MSCALF\n");
             wait_for_VU = true;
-            flush_stall = true;
+            if (gif)
+                flush_stall = true;
             stall_condition_active = true;
             wait_cmd_value = value;
             command = 0;

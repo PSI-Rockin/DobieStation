@@ -966,7 +966,8 @@ void EmotionEngine::break_exception()
 
 void EmotionEngine::trap_exception()
 {
-    Errors::die("[EE] TRAP opcode called (PC: $%08X)", PC);
+    handle_exception(0x8000017C, 0xD);
+    Errors::print_warning("[EE] TRAP opcode called (PC: $%08X)", PC);
 }
 
 void EmotionEngine::deci2call(uint32_t func, uint32_t param)
