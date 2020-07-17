@@ -159,6 +159,8 @@ void EE_JIT64::floating_point_divide(EmotionEngine& ee, IR::Instruction& instr)
     emitter.MOVD_FROM_XMM(source, REG_64::RAX);
     emitter.MOVD_FROM_XMM(source2, R15);
     emitter.XOR32_REG(R15, REG_64::RAX);
+    emitter.AND32_REG_IMM(0x80000000, REG_64::RAX);
+    emitter.OR32_REG_IMM(0x7F7FFFFF, REG_64::RAX);
     emitter.MOVD_TO_XMM(REG_64::RAX, dest);
     uint8_t *exit = emitter.JMP_NEAR_DEFERRED();
 
@@ -360,9 +362,12 @@ void EE_JIT64::floating_point_subtract(EmotionEngine& ee, IR::Instruction& instr
     }
     else if (dest == source2)
     {
-        emitter.SUBSS(source, dest);
-        emitter.load_addr((uint64_t)&FPU_MASK_NEG[0], REG_64::RAX);
-        emitter.PXOR_XMM_FROM_MEM(REG_64::RAX, dest);
+        // Would technically be nicer to do a backwards SUB and Negate, but this causes bugs in some situations
+        REG_64 XMM0 = lalloc_xmm_reg(ee, 0, REG_TYPE::XMMSCRATCHPAD, REG_STATE::SCRATCHPAD);
+        emitter.MOVAPS_REG(source, XMM0);
+        emitter.SUBSS(dest, XMM0);
+        emitter.MOVAPS_REG(XMM0, dest);
+        free_xmm_reg(ee, XMM0);
     }
     else
     {
