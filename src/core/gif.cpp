@@ -401,7 +401,10 @@ void GraphicsInterface::deactivate_PATH(int index)
     {
         //printf("[GIF] PATH%d deactivation failed, still in progress\n", index);
         if (active_path == index)
+        {
+            gs->set_CSR_FIFO(0x1);
             outputting_path = false;
+        }
     }
 
     //printf("Deactivated PATH%d Active path now %d Queued Path %x\n", index, active_path, path_queue);
