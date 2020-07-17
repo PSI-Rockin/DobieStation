@@ -1311,11 +1311,13 @@ void ImageProcessingUnit::write_control(uint32_t value)
     ctrl.picture_type = (value >> 24) & 0x7;
     if (value & (1 << 30))
     {
-        ctrl.busy = false;
-        command_decoding = false;
         command = 0;
         in_FIFO.reset();
         out_FIFO.reset();
+        // Note: A control reset does a forced command end, meaning it will force the procedure of a command stopping
+        // even if there is no command currently active, causing an interrupt to the core.
+        // Fightbox relies on this behaviour to boot and play its first two videos.
+        finish_command();
     }
 }
 
