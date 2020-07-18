@@ -119,7 +119,7 @@ inline void GraphicsInterface::resume_path3()
 {
     if (path3_vif_masked || path3_mode_masked)
         return;
-    if ((path3_dma_running || FIFO.size()) && path_status[3] == 4)
+    if (FIFO.size() && path_status[3] == 4)
     {
         //printf("[GIF] Resuming PATH3\n");
         path_status[3] = 0; //Force it to be busy so if VIF puts the mask back on quickly, it doesn't instantly mask it
