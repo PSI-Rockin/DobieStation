@@ -294,23 +294,55 @@ bool CDVD_Drive::load_disc(const char *name, CDVD_CONTAINER a_container)
 
     LBA = *(uint16_t*)&pvd_sector[128];
 
-    // Detecting disc type by abitrary variables
-    // 650MB (681574400 bytes) is the maximum disc size for CD's
-    // Just in case we can check if the path table is at sector 257 which is a forced location for DVD's
-    // However some CD's do use 257 for the path table location, but it's not common
-    if ((volume_size * LBA) <= 681574400 || path_table_sector != 257)
-        disc_type = CDVD_DISC_PS2CD;
-    else
-        disc_type = CDVD_DISC_PS2DVD;
-
-    printf("%s Detected\n", disc_type == CDVD_DISC_PS2CD ? "CD" : "DVD");
-    printf("[CDVD] PVD LBA: $%08X\n", LBA);
-
     root_location = *(uint32_t*)&pvd_sector[156 + 2];
     root_len = *(uint32_t*)&pvd_sector[156 + 10];
     printf("[CDVD] Root dir len: %d\n", *(uint16_t*)&pvd_sector[156]);
     printf("[CDVD] Extent loc: $%08lX\n", root_location * LBA);
     printf("[CDVD] Extent len: $%08lX\n", root_len);
+
+    // Detecting disc type by abitrary variables
+    // 650MB (681574400 bytes) is the maximum disc size for CD's
+    // Just in case we can check if the path table is at sector 257 which is a forced location for DVD's
+    // However some CD's do use 257 for the path table location, but it's not common
+    if ((volume_size * LBA) <= 681574400 || path_table_sector != 257)
+    {
+        uint32_t cnf_size;
+        char* cnf = (char*)read_file("SYSTEM.CNF;1", cnf_size);          
+    if (!cnf)
+        return "h";
+
+        char* pos = strstr(cnf, "BOOT ");
+
+        if (pos == NULL)
+        {
+            pos = strstr(cnf, "BOOT2 "); // PS2 disk
+
+            if (pos == NULL)
+            {
+                return false;
+            }
+
+            else
+            {              
+                disc_type = CDVD_DISC_PS2CD;
+                return true;   
+            }
+        }
+
+        else
+        {
+
+            printf("Detected PS1 \n");
+            disc_type = CDVD_DISC_PSCD;
+            return true;
+        }
+    }
+    
+    else
+        disc_type = CDVD_DISC_PS2DVD; 
+
+    printf("%s Detected\n", disc_type == CDVD_DISC_PS2CD ? "CD" : "DVD");
+    printf("[CDVD] PVD LBA: $%08X\n", LBA);
 
     return true;
 }
