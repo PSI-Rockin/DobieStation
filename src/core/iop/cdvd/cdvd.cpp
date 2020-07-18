@@ -269,8 +269,12 @@ bool CDVD_Drive::load_disc(const char *name, CDVD_CONTAINER a_container)
             container = nullptr;
             return false;
     }
-    if (!container->open(name))
+
+    if (!container->open(name)) // No Filename, No disc.
+    {
+        disc_type = CDVD_DISC_NONE;
         return false;
+    }
 
     file_size = container->get_size();
 
@@ -319,7 +323,9 @@ bool CDVD_Drive::load_disc(const char *name, CDVD_CONTAINER a_container)
 
             if (pos == NULL)
             {
-                return false;
+                printf("Non PlayStation Disc inserted \n");
+                disc_type = CDVD_DISC_ILL;
+                return true;
             }
 
             else
