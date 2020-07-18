@@ -313,7 +313,6 @@ uint64_t GS_REGISTERS::read64_privileged(uint32_t addr)
             //Shadow Hearts needs this.
             reg |= 0x1B << 16;
             reg |= 0x55 << 24;
-            printf("GS_CSR Read %x\n", reg);
     }
 
     return reg;
