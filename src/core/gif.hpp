@@ -46,7 +46,7 @@ class GraphicsInterface
         bool path3_vif_masked;
         bool path3_mode_masked;
         bool intermittent_mode;
-        bool path3_dma_waiting;
+        bool path3_dma_running;
         bool gif_temporary_stop;
 
         float internal_Q;
@@ -64,7 +64,7 @@ class GraphicsInterface
         bool fifo_full();
         bool fifo_empty();
         bool fifo_draining();
-        void dma_waiting(bool dma_waiting);
+        void dma_running(bool dma_running);
         int get_active_path();
         int get_path_queue();
         bool path_active(int index, bool canInterruptPath3);
@@ -119,7 +119,7 @@ inline void GraphicsInterface::resume_path3()
 {
     if (path3_vif_masked || path3_mode_masked)
         return;
-    if ((path3_dma_waiting || FIFO.size()) && path_status[3] == 4)
+    if ((path3_dma_running || FIFO.size()) && path_status[3] == 4)
     {
         //printf("[GIF] Resuming PATH3\n");
         path_status[3] = 0; //Force it to be busy so if VIF puts the mask back on quickly, it doesn't instantly mask it
