@@ -334,7 +334,7 @@ bool CDVD_Drive::load_disc(const char *name, CDVD_CONTAINER a_container)
             return true;
         }
 
-        if(cnf.find("BOOT") != std::string::npos)
+        if(cnf.find("BOOT") != std::string::npos || cnf.find("PSX.EXE") != std::string::npos)
         {
              printf("PlayStation 1 Detected \n");
              disc_type = CDVD_DISC_PSCD;
