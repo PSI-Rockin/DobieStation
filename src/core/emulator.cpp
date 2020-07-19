@@ -317,6 +317,16 @@ void Emulator::fast_boot()
 {
     if (skip_BIOS_hack == LOAD_DISC)
     {
+
+        if (cdvd.read_disc_type() != CDVD_DISC_PS2DVD)
+        {
+            if (cdvd.read_disc_type() != CDVD_DISC_PS2CD)
+            {
+                set_skip_BIOS_hack(SKIP_HACK::NONE);
+                return;
+            }
+        }
+
         //We need to find the string "rom0:OSDSYS" and replace it with the disc's executable.
         std::string path = cdvd.get_ps2_exec_path();
 

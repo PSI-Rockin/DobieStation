@@ -105,6 +105,12 @@ string CDVD_Drive::get_ps2_exec_path()
 
 string CDVD_Drive::get_serial()
 {
+
+    if(disc_type == CDVD_DISC_PSCD)
+    {
+        return "PlayStaion 1 Disc";
+    }
+
     if (!container->is_open())
         return "";
 
@@ -329,14 +335,14 @@ bool CDVD_Drive::load_disc(const char *name, CDVD_CONTAINER a_container)
 
         if (cnf.find("BOOT2") != std::string::npos)
         {
-            printf("PlayStation 2 Detected \n");
+            printf("PlayStation 2 CD Detected \n");
             disc_type = CDVD_DISC_PS2CD;
             return true;
         }
 
         if(cnf.find("BOOT") != std::string::npos || cnf.find("PSX.EXE") != std::string::npos)
         {
-             printf("PlayStation 1 Detected \n");
+             printf("PlayStation 1 CD Detected \n");
              disc_type = CDVD_DISC_PSCD;
              return true;   
         }
@@ -350,7 +356,10 @@ bool CDVD_Drive::load_disc(const char *name, CDVD_CONTAINER a_container)
     }
     
     else
+    {
+        printf("PlayStation 2 DVD Detected \n");
         disc_type = CDVD_DISC_PS2DVD; 
+    }
 
     printf("%s Detected\n", disc_type == CDVD_DISC_PS2CD ? "CD" : "DVD");
     printf("[CDVD] PVD LBA: $%08X\n", LBA);
