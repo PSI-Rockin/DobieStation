@@ -315,11 +315,11 @@ bool CDVD_Drive::load_disc(const char *name, CDVD_CONTAINER a_container)
     if (!cnf)
         return "h";
 
-        char* pos = strstr(cnf, "BOOT ");
+        char* pos = strstr(cnf, "BOOT2");
 
         if (pos == NULL)
         {
-            pos = strstr(cnf, "BOOT2 "); // PS2 disk
+            pos = strstr(cnf, "BOOT"); // PS2 disk
 
             if (pos == NULL)
             {
@@ -330,16 +330,16 @@ bool CDVD_Drive::load_disc(const char *name, CDVD_CONTAINER a_container)
 
             else
             {              
-                disc_type = CDVD_DISC_PS2CD;
+                printf("Detected PS1 \n");
+                disc_type = CDVD_DISC_PSCD;
                 return true;   
             }
         }
 
         else
         {
-
-            printf("Detected PS1 \n");
-            disc_type = CDVD_DISC_PSCD;
+            printf("Detected PS2 \n");
+            disc_type = CDVD_DISC_PS2CD;
             return true;
         }
     }
