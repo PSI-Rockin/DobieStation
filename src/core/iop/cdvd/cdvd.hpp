@@ -3,6 +3,8 @@
 
 #include <fstream>
 #include <memory>
+#include <algorithm>
+#include <string.h>
 #include "cdvd_container.hpp"
 
 class IOP_INTC;

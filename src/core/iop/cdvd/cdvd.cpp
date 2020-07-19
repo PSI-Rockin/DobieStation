@@ -311,17 +311,23 @@ bool CDVD_Drive::load_disc(const char *name, CDVD_CONTAINER a_container)
     if ((volume_size * LBA) <= 681574400 || path_table_sector != 257)
     {
         uint32_t cnf_size;
-        char* cnf = (char*)read_file("SYSTEM.CNF;1", cnf_size);          
-    if (!cnf)
-        return "h";
-
-        char* pos = strstr(cnf, "BOOT2");
-
-        if (pos == NULL)
+        std::string cnf = (char*)read_file("SYSTEM.CNF;1", cnf_size);          
+        if (cnf == "")
         {
-            pos = strstr(cnf, "BOOT"); // PS2 disk
+            printf("Non PlayStation Disc inserted \n");
+            disc_type = CDVD_DISC_ILL;
+            return true;
+        }
 
-            if (pos == NULL)
+      cnf.erase(std::remove_if(cnf.begin(), cnf.end(), ::isspace), cnf.end());
+
+        std::string pos = strstr(cnf.c_str(), "BOOT2");
+
+        if (pos.c_str() == nullptr)
+        {
+            pos = strstr(cnf.c_str(), "BOOT"); // PS2 disk
+
+            if (pos.c_str() == nullptr)
             {
                 printf("Non PlayStation Disc inserted \n");
                 disc_type = CDVD_DISC_ILL;
