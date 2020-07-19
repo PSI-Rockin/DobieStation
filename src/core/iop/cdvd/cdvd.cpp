@@ -272,6 +272,7 @@ bool CDVD_Drive::load_disc(const char *name, CDVD_CONTAINER a_container)
 
     if (!container->open(name)) // No Filename, No disc.
     {
+        printf("No Disk Inserted \n");
         disc_type = CDVD_DISC_NONE;
         return false;
     }
@@ -311,41 +312,39 @@ bool CDVD_Drive::load_disc(const char *name, CDVD_CONTAINER a_container)
     if ((volume_size * LBA) <= 681574400 || path_table_sector != 257)
     {
         uint32_t cnf_size;
-        std::string cnf = (char*)read_file("SYSTEM.CNF;1", cnf_size);          
-        if (cnf == "")
+        
+        std::string cnf;
+
+        if (char* temp = (char*)read_file("SYSTEM.CNF;1", cnf_size))
+            cnf = temp;
+
+        else 
         {
             printf("Non PlayStation Disc inserted \n");
             disc_type = CDVD_DISC_ILL;
             return true;
         }
 
-      cnf.erase(std::remove_if(cnf.begin(), cnf.end(), ::isspace), cnf.end());
+        cnf.erase(std::remove_if(cnf.begin(), cnf.end(), ::isspace), cnf.end());
 
-        std::string pos = strstr(cnf.c_str(), "BOOT2");
-
-        if (pos.c_str() == nullptr)
+        if (cnf.find("BOOT2") != std::string::npos)
         {
-            pos = strstr(cnf.c_str(), "BOOT"); // PS2 disk
+            printf("PlayStation 2 Detected \n");
+            disc_type = CDVD_DISC_PS2CD;
+            return true;
+        }
 
-            if (pos.c_str() == nullptr)
-            {
-                printf("Non PlayStation Disc inserted \n");
-                disc_type = CDVD_DISC_ILL;
-                return true;
-            }
-
-            else
-            {              
-                printf("Detected PS1 \n");
-                disc_type = CDVD_DISC_PSCD;
-                return true;   
-            }
+        if(cnf.find("BOOT") != std::string::npos)
+        {
+             printf("PlayStation 1 Detected \n");
+             disc_type = CDVD_DISC_PSCD;
+             return true;   
         }
 
         else
         {
-            printf("Detected PS2 \n");
-            disc_type = CDVD_DISC_PS2CD;
+            printf("Non PlayStation Disc inserted \n");
+            disc_type = CDVD_DISC_ILL;
             return true;
         }
     }
