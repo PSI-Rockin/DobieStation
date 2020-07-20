@@ -325,7 +325,6 @@ void Emulator::fast_boot()
                 return;
             }
         }
-
         //We need to find the string "rom0:OSDSYS" and replace it with the disc's executable.
         std::string path = cdvd.get_ps2_exec_path();
 
