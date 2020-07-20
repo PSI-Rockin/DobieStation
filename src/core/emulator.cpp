@@ -317,7 +317,6 @@ void Emulator::fast_boot()
 {
     if (skip_BIOS_hack == LOAD_DISC)
     {
-
         if (cdvd.read_disc_type() != CDVD_DISC_PS2DVD)
         {
             if (cdvd.read_disc_type() != CDVD_DISC_PS2CD)

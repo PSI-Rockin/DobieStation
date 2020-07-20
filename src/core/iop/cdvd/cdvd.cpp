@@ -106,7 +106,7 @@ string CDVD_Drive::get_ps2_exec_path()
 string CDVD_Drive::get_serial()
 {
 
-    if(disc_type == CDVD_DISC_PSCD)
+    if (disc_type == CDVD_DISC_PSCD)
     {
         return "PlayStaion 1 Disc";
     }
@@ -275,7 +275,6 @@ bool CDVD_Drive::load_disc(const char *name, CDVD_CONTAINER a_container)
             container = nullptr;
             return false;
     }
-
     if (!container->open(name)) // No Filename, No disc.
     {
         printf("No Disk Inserted \n");
@@ -340,7 +339,7 @@ bool CDVD_Drive::load_disc(const char *name, CDVD_CONTAINER a_container)
             return true;
         }
 
-        if(cnf.find("BOOT") != std::string::npos || cnf.find("PSX.EXE") != std::string::npos)
+        if (cnf.find("BOOT") != std::string::npos || cnf.find("PSX.EXE") != std::string::npos)
         {
              printf("PlayStation 1 CD Detected \n");
              disc_type = CDVD_DISC_PSCD;
@@ -357,8 +356,36 @@ bool CDVD_Drive::load_disc(const char *name, CDVD_CONTAINER a_container)
     
     else
     {
-        printf("PlayStation 2 DVD Detected \n");
-        disc_type = CDVD_DISC_PS2DVD; 
+        uint32_t cnf_size;
+        
+        std::string cnf;
+
+        if (char* temp = (char*)read_file("SYSTEM.CNF;1", cnf_size))
+            cnf = temp;
+
+        else 
+        {
+            printf("Non PlayStation Disc inserted \n");
+            disc_type = CDVD_DISC_ILL;
+            return true;
+        }
+
+        cnf.erase(std::remove_if(cnf.begin(), cnf.end(), ::isspace), cnf.end());
+
+        if (cnf.find("BOOT2") != std::string::npos)
+        {
+            printf("PlayStation 2 DVD Detected \n");
+            disc_type = CDVD_DISC_PS2DVD;
+            return true;
+        }
+
+        else 
+        {
+            printf("Non PlayStation Disc inserted \n");
+            disc_type = CDVD_DISC_ILL;
+            return true;
+        }
+         
     }
 
     printf("%s Detected\n", disc_type == CDVD_DISC_PS2CD ? "CD" : "DVD");
