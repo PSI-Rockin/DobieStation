@@ -107,7 +107,7 @@ string CDVD_Drive::get_serial()
 {
     if (disc_type == CDVD_DISC_PSCD)
     {
-        return "PlayStaion 1 Disc";
+        return "PlayStation 1 Disc";
     }
     if (!container->is_open())
         return "";
