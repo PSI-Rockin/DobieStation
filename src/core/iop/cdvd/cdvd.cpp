@@ -318,7 +318,7 @@ bool CDVD_Drive::load_disc(const char *name, CDVD_CONTAINER a_container)
 
     if (char* temp = (char*)read_file("SYSTEM.CNF;1", cnf_size))
     {
-        cnf = temp;
+        cnf = std::string(temp, cnf_size);
         delete[] temp;
     }
     else if (char* temp = (char*)read_file("PSX.EXE;1", cnf_size))
