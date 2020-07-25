@@ -823,9 +823,9 @@ void VectorUnit::check_for_COP2_FMAC_stall()
 int32_t VectorUnit::float_to_int(float value)
 {
     if (value >= 2147483647.0)
-        return 2147483647;
+        return 2147483647LL;
     if (value <= -2147483648.0)
-        return -2147483648;
+        return -2147483648LL;
     return (int32_t)value;
 }
 
@@ -1634,9 +1634,9 @@ void VectorUnit::eexp(uint32_t instr)
     //In reality, VU1 uses an approximation to derive the result. This is shown here.
     const static float coeffs[] =
     {
-        0.249998688697815, 0.031257584691048,
-        0.002591371303424, 0.000171562001924,
-        0.000005430199963, 0.000000690600018
+        0.249998688697815f, 0.031257584691048f,
+        0.002591371303424f, 0.000171562001924f,
+        0.000005430199963f, 0.000000690600018f
     };
     if (!id)
     {
@@ -1664,8 +1664,8 @@ void VectorUnit::esin(uint32_t instr)
 {
     const static float coeffs[] =
     {
-        -0.166666567325592, 0.008333025500178,
-        -0.000198074136279, 0.000002601886990
+        -0.166666567325592f, 0.008333025500178f,
+        -0.000198074136279f, 0.000002601886990f
     };
     float x = convert(gpr[_fs_].u[_fsf_]);
     new_P_instance.f = x;

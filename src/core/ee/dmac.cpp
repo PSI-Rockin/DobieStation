@@ -1225,6 +1225,9 @@ uint32_t DMAC::read32(uint32_t address)
         case 0x1000D020:
             reg = channels[SPR_FROM].quadword_count;
             break;
+        case 0x1000D080:
+            reg = channels[SPR_FROM].scratchpad_address;
+            break;
         case 0x1000D400:
             reg = channels[SPR_TO].control;
             break;
@@ -1236,6 +1239,9 @@ uint32_t DMAC::read32(uint32_t address)
             break;
         case 0x1000D430:
             reg = channels[SPR_TO].tag_address;
+            break;
+        case 0x1000D480:
+            reg = channels[SPR_TO].scratchpad_address;
             break;
         case 0x1000E000:
             reg |= control.master_enable;
