@@ -27,9 +27,10 @@ void GraphicsInterface::reset()
     intermittent_mode = false;
     path3_vif_masked = false;
     path3_mode_masked = false;
-    path3_dma_waiting = false;
+    path3_dma_running = false;
     gif_temporary_stop = false;
     outputting_path = false;
+    gs->set_CSR_FIFO(0x1);
 }
 
 uint32_t GraphicsInterface::read_STAT()
@@ -62,8 +63,8 @@ uint32_t GraphicsInterface::read_STAT()
     //Quadword count - since we don't always emulate the FIFO, hack it to 16 if there's a transfer happening
     if (FIFO.size())
         reg |= FIFO.size() << 24;
-    else
-        reg |= (((active_path == 3 || (path_queue & (1<<3))) && outputting_path) * 16) << 24;
+    else if(path3_dma_running)
+        reg |= 16 << 24;
     //printf("[GIF] Read GIF_STAT: $%08X\n", reg);
     return reg;
 }
@@ -229,7 +230,7 @@ void GraphicsInterface::feed_GIF(uint128_t data)
         path[active_path].current_tag.data_left = path[active_path].current_tag.NLOOP;
 
         path_status[active_path] = path[active_path].current_tag.format;
-        gs->set_CSR_FIFO(0x2); //FIFO Full
+        
        
         //Q is initialized to 1.0 upon reading a GIFtag
         internal_Q = 1.0f;
@@ -246,11 +247,15 @@ void GraphicsInterface::feed_GIF(uint128_t data)
             printf("Regs: $%08X_$%08X\n", path[active_path].current_tag.regs >> 32, path[active_path].current_tag.regs & 0xFFFFFFFF);
         }*/
 
-        if (path[active_path].current_tag.output_PRIM && path[active_path].current_tag.format == 0)
+        //NOP GIFTags ignore all fields except EOP
+        if (path[active_path].current_tag.data_left != 0)
         {
-            //NOP GIFTags ignore all fields except EOP
-            if (path[active_path].current_tag.data_left != 0)
+            gs->set_CSR_FIFO(0x2); //FIFO Full
+
+            if (path[active_path].current_tag.output_PRIM && path[active_path].current_tag.format == 0)
+            {
                 gs->write64(0, path[active_path].current_tag.PRIM);
+            }
         }
     }
     else
@@ -288,6 +293,7 @@ void GraphicsInterface::feed_GIF(uint128_t data)
         {
             gs->assert_FINISH();
             gs->set_CSR_FIFO(0x1); //FIFO Empty
+            outputting_path = false;
         }
         gs->wake_gs_thread();
         deactivate_PATH(active_path);
@@ -392,7 +398,6 @@ void GraphicsInterface::deactivate_PATH(int index)
         if (active_path == index)
         {
             active_path = 0;
-            outputting_path = false;
             arbitrate_paths();
         }
         //printf("Deactivated PATH%d Active path now %d Queued Path %x\n", index, active_path, path_queue);
@@ -403,7 +408,6 @@ void GraphicsInterface::deactivate_PATH(int index)
         if (active_path == index)
         {
             gs->set_CSR_FIFO(0x1);
-            outputting_path = false;
         }
     }
 
@@ -503,7 +507,7 @@ void GraphicsInterface::flush_path3_fifo()
 
     if (fifo_empty())
     {
-        if (!path3_dma_waiting || path3_masked(3))
+        if (!path3_dma_running || path3_masked(3))
         {
             //printf("GIF Deactivating PATH at FIFO flush end\n");
             deactivate_PATH(3);
@@ -528,9 +532,9 @@ bool GraphicsInterface::fifo_draining()
     return !fifo_empty() && !path3_masked(3);
 }
 
-void GraphicsInterface::dma_waiting(bool dma_waiting)
+void GraphicsInterface::dma_running(bool dma_running)
 {
-    path3_dma_waiting = dma_waiting;
+    path3_dma_running = dma_running;
 }
 
 void GraphicsInterface::intermittent_check()

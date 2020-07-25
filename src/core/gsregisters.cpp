@@ -415,23 +415,23 @@ void GS_REGISTERS::reset(bool soft_reset)
     IMR.hsync = true;
     IMR.vsync = true;
     IMR.rawt = true;
-    if (soft_reset == false)
-    {
-        CSR.is_odd_frame = true; //First frame is always odd
-        CSR.SIGNAL_generated = false;
-        CSR.SIGNAL_stall = false;
-        CSR.SIGNAL_irq_pending = false;
-        CSR.VBLANK_generated = false;
-        CSR.FINISH_generated = false;
-        CSR.FINISH_requested = false;
-        CSR.FIFO_status = 0x1; //Empty
 
-        SIGLBLID.lbl_id = 0;
-        SIGLBLID.sig_id = 0;
-        SIGLBLID.backup_sig_id = 0;
-    }
+    CSR.FIFO_status = 0x1; //Empty
+    CSR.SIGNAL_generated = false;
+    CSR.SIGNAL_stall = false;
+    CSR.SIGNAL_irq_pending = false;
+    CSR.VBLANK_generated = false;
+    CSR.FINISH_generated = false;
+    CSR.FINISH_requested = false;
+
+    SIGLBLID.lbl_id = 0;
+    SIGLBLID.sig_id = 0;
+    SIGLBLID.backup_sig_id = 0;
     PMODE.circuit1 = false;
     PMODE.circuit2 = false;
+
+    if (soft_reset == false)
+        CSR.is_odd_frame = true; //First frame is always odd
 
     set_CRT(false, 0x2, false);
 }
