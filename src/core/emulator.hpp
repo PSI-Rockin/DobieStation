@@ -71,7 +71,7 @@ class Emulator
         VectorInterface vif0, vif1;
         VectorUnit vu0, vu1;
 
-        int vblank_start_id, vblank_end_id, spu_event_id;
+        int vblank_start_id, vblank_end_id, spu_event_id, hblank_event_id, gs_vblank_event_id;
 
         bool VBLANK_sent;
         bool cop2_interlock, vu_interlock;
@@ -131,6 +131,8 @@ class Emulator
         void get_inner_resolution(int& w, int& h);
 
         //Events
+        void hblank_event();
+        void GS_vblank_event();
         void vblank_start();
         void vblank_end();
         void cdvd_event();

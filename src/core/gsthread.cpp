@@ -330,12 +330,12 @@ void GraphicsSynthesizerThread::event_loop()
                     case assert_vsync_t:
                         reg.assert_VSYNC();
                         break;
-                    case set_vblank_t:
-                    {
-                        auto p = data.payload.vblank_payload;
-                        reg.set_VBLANK(p.vblank);
+                    case assert_hblank_t:
+                        reg.assert_HBLANK();
                         break;
-                    }
+                    case swap_field_t:
+                        reg.swap_FIELD();
+                        break;
                     case memdump_t:
                     {
                         auto p = data.payload.render_payload;
@@ -590,7 +590,8 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
     int32_t display2_xoffset = 0;
     bool enable_circuit1 = true;
     bool enable_circuit2 = true;
-
+    bool field_offset = !reg.CSR.is_odd_frame;
+    
     //Get overall picture height, largest will likely cover whole screen
     if (reg.PMODE.circuit1 && reg.PMODE.circuit2)
     {
@@ -643,12 +644,12 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
         {
             y_increment = 2;
             //We use !reg.CSR.is_odd_frame here because frames are counted from 1,2,3 etc, not 0, 1, 2, so the first frame is always odd
-            start_scanline = !reg.CSR.is_odd_frame;
+            start_scanline = field_offset;
 
             if (!reg.SMODE2.frame_mode)
             {
                 frame_line_increment = 2;
-                fb_offset = !reg.CSR.is_odd_frame;
+                fb_offset = field_offset;
             }
         }
     }
@@ -752,7 +753,7 @@ void GraphicsSynthesizerThread::render_CRT(uint32_t* target)
 
                         if (reg.SMODE2.interlaced)
                         {
-                            if (reg.CSR.is_odd_frame)
+                            if (!field_offset)
                                 target[pixel_x + ((pixel_y + 1) * width)] = screen_buffer[pixel_x + ((pixel_y + 1) * width)];
                             else if (pixel_y > 0)
                                 target[pixel_x + ((pixel_y - 1) * width)] = screen_buffer[pixel_x + ((pixel_y - 1) * width)];

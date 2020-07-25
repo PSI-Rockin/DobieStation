@@ -129,6 +129,7 @@ struct GS_CSR
     bool SIGNAL_generated;
     bool SIGNAL_stall; //Used only by main/GIF thread
     bool SIGNAL_irq_pending; //As above
+    bool HBLANK_generated;
     bool VBLANK_generated;
     bool is_odd_frame;
     bool FINISH_generated;
@@ -183,8 +184,9 @@ struct GS_REGISTERS
     void set_CRT(bool interlaced, int mode, bool frame_mode);
     void get_resolution(int &w, int &h);
     void get_inner_resolution(int &w, int &h);
-    void set_VBLANK(bool is_VBLANK);
+    void swap_FIELD();
     bool assert_FINISH();
+    bool assert_HBLANK();
     bool assert_VSYNC();
 
 };

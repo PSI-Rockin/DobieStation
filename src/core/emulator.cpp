@@ -33,7 +33,8 @@ EE Cycles Per Frame between 5926400 & 5926912
 //NTSC Interlaced Timings
 #define CYCLES_PER_FRAME 4920115 //4920115.2 EE cycles to be exact FPS of 59.94005994005994hz
 #define VBLANK_START_CYCLES 4489019 //4489019.391883126 Guess, exactly 23 HBLANK's before the end
-
+#define HBLANK_CYCLES 18742
+#define GS_VBLANK_DELAY 65622 //CSR FIELD swap/vblank happens ~65622 cycles after the INTC VBLANK_START event
 
 //These constants are used for the fast boot hack for .isos
 #define EELOAD_START 0x82000
@@ -215,8 +216,11 @@ void Emulator::reset()
 
     vblank_start_id = scheduler.register_function([this] (uint64_t param) { vblank_start(); });
     vblank_end_id = scheduler.register_function([this] (uint64_t param) { vblank_end(); });
+    hblank_event_id = scheduler.register_function([this](uint64_t param) { hblank_event(); });
     spu_event_id = scheduler.register_function([this] (uint64_t param) { gen_sound_sample(); });
+    gs_vblank_event_id = scheduler.register_function([this](uint64_t param) { GS_vblank_event(); });
 
+    scheduler.add_event(hblank_event_id, HBLANK_CYCLES);
     start_sound_sample_event();
 }
 
@@ -228,28 +232,39 @@ void Emulator::print_state()
     iop.print_state();
 }
 
+void Emulator::hblank_event()
+{
+    gs.assert_HBLANK();
+    scheduler.add_event(hblank_event_id, HBLANK_CYCLES);
+}
+
+void Emulator::GS_vblank_event()
+{
+    gs.assert_VSYNC();
+    gs.swap_CSR_field();
+}
+
 void Emulator::vblank_start()
 {
+    gs.render_CRT();
     VBLANK_sent = true;
-    gs.set_VBLANK(true);
-
+    gs.set_VBLANK_irq(true);
     timers.gate(true, true);
     cdvd.vsync();
     //cpu.set_disassembly(frames >= 223 && frames < 225);
     printf("VSYNC FRAMES: %d\n", frames);
-    gs.assert_VSYNC();
     iop_intc.assert_irq(0);
+    scheduler.add_event(gs_vblank_event_id, GS_VBLANK_DELAY);
 }
 
 void Emulator::vblank_end()
 {
     //VBLANK end
     iop_intc.assert_irq(11);
-    gs.set_VBLANK(false);
+    gs.set_VBLANK_irq(false);
     timers.gate(true, false);
     frame_ended = true;
     frames++;
-    gs.render_CRT();
 }
 
 void Emulator::cdvd_event()
