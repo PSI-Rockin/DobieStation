@@ -1084,7 +1084,16 @@ void VectorInterface::set_fbrst(uint32_t value)
     }
     if (value & 0x2)
     {
-        Errors::die("VIF%d Force Break Not Implemented\n", id);
+        printf("VIF%d Force Break\n", id);
+        command = 0;
+        command_len = 0;
+        buffer_size = 0;
+        flush_stall = false;
+        stall_condition_active = false;
+        wait_for_VU = false;
+        wait_for_PATH3 = false;
+        direct_wait = false;
+        vif_cmd_status = VIF_IDLE;
     }
     if (value & 0x1)
     {
