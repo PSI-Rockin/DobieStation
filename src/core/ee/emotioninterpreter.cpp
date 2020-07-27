@@ -985,6 +985,10 @@ void EmotionInterpreter::cache(EmotionEngine &cpu, uint32_t instruction)
     }
 }
 
+void EmotionInterpreter::tlbr(EmotionEngine& cpu, uint32_t instruction)
+{
+    cpu.tlbr();
+}
 
 void EmotionInterpreter::tlbwi(EmotionEngine& cpu, uint32_t instruction)
 {
@@ -1050,6 +1054,10 @@ void EmotionInterpreter::cop(EE_InstrInfo& info, uint32_t instruction)
             uint8_t op2 = instruction & 0x3F;
             switch (op2)
             {
+                case 0x1:
+                    info.interpreter_fn = &tlbr;
+                    info.pipeline = EE_InstrInfo::Pipeline::COP0;
+                    break;
                 case 0x2:
                     info.interpreter_fn = &tlbwi;
                     info.pipeline = EE_InstrInfo::Pipeline::COP0;

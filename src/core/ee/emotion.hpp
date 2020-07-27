@@ -195,6 +195,7 @@ class EmotionEngine
         void set_int0_signal(bool value);
         void set_int1_signal(bool value);
 
+        void tlbr();
         void tlbwi();
         void tlbp();
         void eret();

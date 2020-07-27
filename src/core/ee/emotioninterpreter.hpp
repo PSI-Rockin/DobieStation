@@ -320,6 +320,7 @@ namespace EmotionInterpreter
 
     void cache(EmotionEngine& cpu, uint32_t instruction);
 
+    void tlbr(EmotionEngine& cpu, uint32_t instruction);
     void tlbwi(EmotionEngine& cpu, uint32_t instruction);
     void eret(EmotionEngine& cpu, uint32_t instruction);
     void ei(EmotionEngine& cpu, uint32_t instruction);

@@ -1064,6 +1064,12 @@ void EmotionEngine::set_int1_signal(bool value)
         printf("[EE] Set INT1\n");
 }
 
+void EmotionEngine::tlbr()
+{
+    int index = cp0->gpr[0];
+    cp0->read_tlb(index);
+}
+
 void EmotionEngine::tlbwi()
 {
     int index = cp0->gpr[0];

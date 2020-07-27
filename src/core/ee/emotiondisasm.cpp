@@ -911,6 +911,8 @@ string disasm_cop(uint32_t instruction, uint32_t instr_addr)
             uint8_t op2 = instruction & 0x3F;
             switch (op2)
             {
+                case 0x1:
+                    return "tlbr";
                 case 0x2:
                     return "tlbwi";
                 case 0x8:
