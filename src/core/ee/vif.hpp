@@ -26,7 +26,8 @@ enum VIF_STALL
     STALL_IBIT = 1,
     STALL_MSKPATH3 = 2,
     STALL_STOP = 4,
-    STALL_DIRECT = 8
+    STALL_DIRECT = 8,
+    STALL_FORCEBREAK = 16
 };
 
 struct MPG_Command
@@ -76,7 +77,7 @@ class VectorInterface
         uint8_t vif_stalled;
         uint8_t vif_cmd_status;
         bool vif_interrupt;
-        bool vif_stop;
+        bool vif_stop, vif_forcebreak;
         bool fifo_reverse;
         
         bool wait_for_VU;
