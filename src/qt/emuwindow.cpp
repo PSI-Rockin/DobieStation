@@ -522,16 +522,16 @@ void EmuWindow::keyPressEvent(QKeyEvent *event)
             emit press_key(PAD_BUTTON::RIGHT);
             break;
         case Qt::Key_Z:
-            emit press_key(PAD_BUTTON::CIRCLE);
-            break;
-        case Qt::Key_X:
             emit press_key(PAD_BUTTON::CROSS);
             break;
+        case Qt::Key_X:
+            emit press_key(PAD_BUTTON::CIRCLE );
+            break;
         case Qt::Key_A:
-            emit press_key(PAD_BUTTON::TRIANGLE);
+            emit press_key(PAD_BUTTON::SQUARE);
             break;
         case Qt::Key_S:
-            emit press_key(PAD_BUTTON::SQUARE);
+            emit press_key(PAD_BUTTON::TRIANGLE );
             break;
         case Qt::Key_Q:
             emit press_key(PAD_BUTTON::L1);
@@ -548,27 +548,27 @@ void EmuWindow::keyPressEvent(QKeyEvent *event)
         case Qt::Key_Period:
             emu_thread.unpause(PAUSE_EVENT::FRAME_ADVANCE);
             break;
-        case Qt::Key_J:
+        case Qt::Key_R:
             emit update_joystick(JOYSTICK::LEFT, JOYSTICK_AXIS::X, 0x00);
             break;
-        case Qt::Key_L:
+        case Qt::Key_F:
             emit update_joystick(JOYSTICK::LEFT, JOYSTICK_AXIS::X, 0xFF);
             break;
-        case Qt::Key_I:
+        case Qt::Key_G:
             emit update_joystick(JOYSTICK::LEFT, JOYSTICK_AXIS::Y, 0x00);
             break;
-        case Qt::Key_K:
+        case Qt::Key_D:
             emit update_joystick(JOYSTICK::LEFT, JOYSTICK_AXIS::Y, 0xFF);
             break;
-        case Qt::Key_1:
+        case Qt::Key_I:
              emit update_joystick(JOYSTICK::RIGHT,JOYSTICK_AXIS::X, 0x00);
              break;
-        case Qt::Key_2:
+        case Qt::Key_K:
              emit update_joystick(JOYSTICK::RIGHT,JOYSTICK_AXIS::X, 0xFF);
-        case Qt::Key_3:
+        case Qt::Key_J:
              emit update_joystick(JOYSTICK::RIGHT,JOYSTICK_AXIS::Y, 0x00);
              break;
-        case Qt::Key_5:
+        case Qt::Key_L:
              emit update_joystick(JOYSTICK::RIGHT,JOYSTICK_AXIS::Y, 0xFF);
              break;
         case Qt::Key_F1:
@@ -609,16 +609,16 @@ void EmuWindow::keyReleaseEvent(QKeyEvent *event)
             emit release_key(PAD_BUTTON::RIGHT);
             break;
         case Qt::Key_Z:
-            emit release_key(PAD_BUTTON::CIRCLE);
-            break;
-        case Qt::Key_X:
             emit release_key(PAD_BUTTON::CROSS);
             break;
+        case Qt::Key_X:
+            emit release_key(PAD_BUTTON::CIRCLE );
+            break;
         case Qt::Key_A:
-            emit release_key(PAD_BUTTON::TRIANGLE);
+            emit release_key(PAD_BUTTON::SQUARE);
             break;
         case Qt::Key_S:
-            emit release_key(PAD_BUTTON::SQUARE);
+            emit release_key(PAD_BUTTON::TRIANGLE);
             break;
         case Qt::Key_Q:
             emit release_key(PAD_BUTTON::L1);
@@ -632,20 +632,20 @@ void EmuWindow::keyReleaseEvent(QKeyEvent *event)
         case Qt::Key_Space:
             emit release_key(PAD_BUTTON::SELECT);
             break;
-        case Qt::Key_J:
-        case Qt::Key_L:
+        case Qt::Key_R:
+        case Qt::Key_F:
             emit update_joystick(JOYSTICK::LEFT, JOYSTICK_AXIS::X, 0x80);
             break;
-        case Qt::Key_K:
-        case Qt::Key_I:
+        case Qt::Key_D:
+        case Qt::Key_G:
             emit update_joystick(JOYSTICK::LEFT, JOYSTICK_AXIS::Y, 0x80);
             break;
-        case Qt::Key_1:
-        case Qt::Key_2:
+        case Qt::Key_I:
+        case Qt::Key_K:
             emit update_joystick(JOYSTICK::RIGHT, JOYSTICK_AXIS::X, 0x80);
             break;
-        case Qt::Key_3:
-        case Qt::Key_5:
+        case Qt::Key_J:
+        case Qt::Key_L:
             emit update_joystick(JOYSTICK::RIGHT, JOYSTICK_AXIS::Y, 0x80);
             break;
     }
