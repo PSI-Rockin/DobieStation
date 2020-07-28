@@ -20,7 +20,7 @@
 #include "iop/iop_timers.hpp"
 #include "iop/memcard.hpp"
 #include "iop/sio2.hpp"
-#include "iop/spu.hpp"
+#include "iop/spu/spu.hpp"
 #include "iop/firewire.hpp"
 
 #include "int128.hpp"
@@ -113,11 +113,12 @@ class Emulator
         void run();
         void reset();
         void print_state();
+        void send_effects();
         void set_button(PAD_BUTTON button, uint8_t);
         void release_button(PAD_BUTTON button);
         void update_joystick(JOYSTICK joystick, JOYSTICK_AXIS axis, uint8_t val);
-        bool skip_BIOS();
         void poll_controller();
+        bool skip_BIOS();
         void fast_boot();
         void set_skip_BIOS_hack(SKIP_HACK type);
         void set_ee_mode(CPU_MODE mode);
@@ -126,6 +127,7 @@ class Emulator
         void load_BIOS(const uint8_t* BIOS);
         void load_ELF(const uint8_t* ELF, uint32_t size);
         bool load_CDVD(const char* name, CDVD_CONTAINER type);
+        void load_memcard(int port, const char* name);
         std::string get_serial();
         void execute_ELF();
         uint32_t* get_framebuffer();
@@ -150,7 +152,6 @@ class Emulator
         bool check_cop2_interlock();
 
         uint8_t read8(uint32_t address);
-        void send_effects();
         uint16_t read16(uint32_t address);
         uint32_t read32(uint32_t address);
         uint64_t read64(uint32_t address);
@@ -176,6 +177,8 @@ class Emulator
 
         void test_iop();
         GraphicsSynthesizer& get_gs();//used for gs dumps
+
+        void set_wav_output(bool state);
 };
 
 #endif // EMULATOR_HPP

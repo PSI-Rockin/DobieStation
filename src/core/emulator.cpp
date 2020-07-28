@@ -132,7 +132,6 @@ void Emulator::run()
         scheduler.update_cycle_counts();
 
         cpu.run(ee_cycles);
-        iop_timers.run(iop_cycles);
         iop_dma.run(iop_cycles);
         iop.run(iop_cycles);
 
@@ -142,17 +141,12 @@ void Emulator::run()
         vif1.update(bus_cycles);
         gif.run(bus_cycles);
 
-        //VU's run at EE speed, however VU0 maintains its own speed
-        vu0.run(ee_cycles);
-        vu1_run_func(vu1, ee_cycles);
-
-        iop_dma.run(iop_cycles);
-        iop.run(iop_cycles);
-        iop.interrupt_check(IOP_I_CTRL && (IOP_I_MASK & IOP_I_STAT));
+        //VU's run at EE speed, however both maintain their own speed
+        vu0.run_func(vu0);
+        vu1.run_func(vu1);
 
         scheduler.process_events();
     }
-
     fesetround(originalRounding);
 }
 
@@ -462,6 +456,13 @@ void Emulator::load_ELF(const uint8_t *ELF, uint32_t size)
 bool Emulator::load_CDVD(const char *name, CDVD_CONTAINER type)
 {
     return cdvd.load_disc(name, type);
+}
+
+void Emulator::load_memcard(int port, const char *name)
+{
+    //TODO: handle port setting. Currently it's ignored and treated as Port 0
+    if (!memcard.open(name))
+        printf("Failed to open memcard %s\n", name);
 }
 
 std::string Emulator::get_serial()

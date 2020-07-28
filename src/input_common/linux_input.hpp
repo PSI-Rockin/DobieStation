@@ -309,7 +309,7 @@ public:
     std::vector<evdev_controller *> get_interesting_devices();
     int getEvent(int i);
 
-	uint8_t* rumble(uint8_t* rumble_data);
+	void rumble(uint8_t* rumble_data);
 
     bool reset();
     PAD_DATA poll();

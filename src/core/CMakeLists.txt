@@ -16,7 +16,6 @@ set(SOURCES
     scheduler.cpp
     serialize.cpp
     sif.cpp
-    audio/utils.cpp
     ee/bios_hle.cpp
     ee/cop0.cpp
     ee/cop1.cpp
@@ -83,10 +82,7 @@ set(SOURCES
     iop/iop_timers.cpp
     iop/memcard.cpp
     iop/sio2.cpp
-    iop/spu/spu.cpp
-    iop/spu/spu_adpcm.cpp
-    iop/spu/spu_envelope.cpp
-    iop/spu/spu_tables.cpp
+    iop/spu.cpp
     jitcommon/emitter64.cpp
     jitcommon/ir_block.cpp
     jitcommon/ir_instr.cpp
@@ -107,7 +103,6 @@ set(HEADERS
     int128.hpp
     scheduler.hpp
     sif.hpp
-    audio/utils.hpp
     ee/bios_hle.hpp
     ee/cop0.hpp
     ee/cop1.hpp

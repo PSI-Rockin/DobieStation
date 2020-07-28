@@ -98,7 +98,7 @@ int LinuxInput::getEvent(int i)
             // Controller not synced or connected
             rc = libevdev_next_event(interesting_devices[i]->dev, LIBEVDEV_READ_FLAG_SYNC, &ev);
         }
-   
+
         rc = libevdev_next_event(interesting_devices[i]->dev, LIBEVDEV_READ_FLAG_NORMAL, &ev);
 
         if (rc == LIBEVDEV_READ_STATUS_SUCCESS)
@@ -106,25 +106,25 @@ int LinuxInput::getEvent(int i)
             for (const auto& entry : button_list)
 	        {
 		        const auto code = entry.first;
- 
+
 
                 if (libevdev_fetch_event_value(interesting_devices[i]->dev, EV_KEY, code, &key) == 0)
                 continue;
-                
+
                 //if (libevdev_fetch_event_value(interesting_devices[i]->dev, EV_ABS, code, &key) == 0)
                 //continue;
 
-                
+
                 std::cout << "Key Code: " << unsigned(key_code) << std::endl;
                 interesting_devices[i]->code_name = libevdev_event_code_get_name(EV_KEY, key_code);
                 std::cout << "Code: " << interesting_devices[i]->code_name << std::endl;
             }
         }
-    }   
+    }
         return key;
 }
 
-uint8_t* LinuxInput::rumble(uint8_t* rumble_data)
+void LinuxInput::rumble(uint8_t* rumble_data)
 {
     // Grab effects
     motors = rumble_data;
@@ -145,9 +145,9 @@ PAD_DATA LinuxInput::poll()
     {
         rc = libevdev_next_event(interesting_devices[0]->dev, LIBEVDEV_READ_FLAG_SYNC, &ev);
     }
-   
+
     rc = libevdev_next_event(interesting_devices[0]->dev, LIBEVDEV_READ_FLAG_NORMAL, &ev);
-    
+
     //std::cout << "event: " << libevdev_event_type_get_name(ev.type) << " code: " << libevdev_event_code_get_name(ev.type, ev.code) << " value: " << ev.value << std::endl;
 
     PAD_DATA event = {};
@@ -199,7 +199,7 @@ PAD_DATA LinuxInput::poll()
         int key;
         libevdev_fetch_event_value(interesting_devices[0]->dev, EV_KEY, button.first, &key);
         event.button[button.second].input = key;
-        
+
         if (event.button[button.second].input)
         {
             event.button[button.second].pressure = 255;
