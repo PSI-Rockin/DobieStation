@@ -568,7 +568,7 @@ void EmuWindow::keyPressEvent(QKeyEvent *event)
         case Qt::Key_3:
              emit update_joystick(JOYSTICK::RIGHT,JOYSTICK_AXIS::Y, 0x00);
              break;
-        case Qt::Key_4:
+        case Qt::Key_5:
              emit update_joystick(JOYSTICK::RIGHT,JOYSTICK_AXIS::Y, 0xFF);
              break;
         case Qt::Key_F1:
@@ -645,7 +645,7 @@ void EmuWindow::keyReleaseEvent(QKeyEvent *event)
             emit update_joystick(JOYSTICK::RIGHT, JOYSTICK_AXIS::X, 0x80);
             break;
         case Qt::Key_3:
-        case Qt::Key_4:
+        case Qt::Key_5:
             emit update_joystick(JOYSTICK::RIGHT, JOYSTICK_AXIS::Y, 0x80);
             break;
     }
