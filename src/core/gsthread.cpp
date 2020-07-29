@@ -1674,7 +1674,7 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
                     break;
                 case 3: //RGB_ONLY - Same as FB_ONLY, but ignore alpha unless the color format is not RGB32, then it's treated as FB_ONLY
                     update_z = false;
-                    if(current_ctx->tex0.format == 0)
+                    if(current_ctx->tex0.format == 0 || ((current_ctx->tex0.format & 0x30) == 0x10 && current_ctx->tex0.CLUT_format == 0))
                         update_alpha = false;
                     break;
             }
