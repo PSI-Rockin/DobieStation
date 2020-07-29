@@ -1607,6 +1607,25 @@ uint32_t GraphicsSynthesizerThread::lookup_frame_color(int32_t x, int32_t y)
     return frame_color;
 }
 
+bool GraphicsSynthesizerThread::is_32bit_texture()
+{
+    switch (current_ctx->tex0.format)
+    {
+        case 0:
+            return true;
+            break;
+        case 0x13:
+        case 0x14:
+        case 0x1B:
+        case 0x24:
+        case 0x2C:
+            return current_ctx->tex0.CLUT_format == 0;
+        break;
+    }
+    return false;
+}
+
+
 void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGBAQ_REG& color)
 {
     frame_color_looked_up = false;
@@ -1674,7 +1693,7 @@ void GraphicsSynthesizerThread::draw_pixel(int32_t x, int32_t y, uint32_t z, RGB
                     break;
                 case 3: //RGB_ONLY - Same as FB_ONLY, but ignore alpha unless the color format is not RGB32, then it's treated as FB_ONLY
                     update_z = false;
-                    if(current_ctx->tex0.format == 0 || ((current_ctx->tex0.format & 0x30) == 0x10 && current_ctx->tex0.CLUT_format == 0))
+                    if(is_32bit_texture())
                         update_alpha = false;
                     break;
             }
