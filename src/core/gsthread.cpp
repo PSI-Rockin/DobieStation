@@ -4228,13 +4228,14 @@ GSPixelJitBlockRecord* GraphicsSynthesizerThread::recompile_draw_pixel(uint64_t 
     if ((current_ctx->test.alpha_test) && current_ctx->test.alpha_method != 1)
         recompile_alpha_test();
 
-    //Depth test
-    if (current_ctx->test.depth_test)
-        recompile_depth_test();
+    uint8_t* skip_frame_load = nullptr;
 
-    emitter_dp.TEST32_REG_IMM(0x1, RBX);
-    uint8_t* do_not_update_rgba = emitter_dp.JCC_NEAR_DEFERRED(ConditionCode::NE);
-
+    //If Desination alpha test is disabled and we're not updating the frame buffer, we can skip the framebuffer load
+    if (!current_ctx->test.dest_alpha_test)
+    {
+        emitter_dp.TEST32_REG_IMM(0x1, RBX);
+        skip_frame_load = emitter_dp.JCC_NEAR_DEFERRED(ConditionCode::NE);
+    }
     //Get framebuffer address and store on stack
     emitter_dp.load_addr((uint64_t)&current_ctx->frame.base_pointer, abi_args[0]);
     emitter_dp.MOV32_FROM_MEM(abi_args[0], abi_args[0]);
@@ -4343,6 +4344,18 @@ GSPixelJitBlockRecord* GraphicsSynthesizerThread::recompile_draw_pixel(uint64_t 
 
         emitter_dp.set_jump_dest(pass_dest_alpha_test);
     }
+
+    if (!current_ctx->test.dest_alpha_test)
+    {
+        emitter_dp.set_jump_dest(skip_frame_load);
+    }
+
+    //Depth test
+    if (current_ctx->test.depth_test)
+        recompile_depth_test();
+
+    emitter_dp.TEST32_REG_IMM(0x1, RBX);
+    uint8_t* do_not_update_rgba = emitter_dp.JCC_NEAR_DEFERRED(ConditionCode::NE);
 
     if (current_PRMODE->alpha_blend)
         recompile_alpha_blend();
