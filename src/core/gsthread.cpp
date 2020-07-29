@@ -1620,7 +1620,7 @@ bool GraphicsSynthesizerThread::is_32bit_texture()
         case 0x24:
         case 0x2C:
             return current_ctx->tex0.CLUT_format == 0;
-        break;
+            break;
     }
     return false;
 }
