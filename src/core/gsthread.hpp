@@ -496,6 +496,7 @@ class GraphicsSynthesizerThread
         bool depth_test(int32_t x, int32_t y, uint32_t z);
         void draw_pixel(int32_t x, int32_t y, uint32_t z, RGBAQ_REG& color);
         uint32_t lookup_frame_color(int32_t x, int32_t y);
+        bool is_32bit_texture();
         void render_primitive();
         void render_point();
         void render_line();
