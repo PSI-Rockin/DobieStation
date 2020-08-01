@@ -3456,6 +3456,10 @@ void GraphicsSynthesizerThread::local_to_local()
                 write_PSMCT24Z_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width,
                                     TRXPOS.int_dest_x, TRXPOS.int_dest_y, data);
                 break;
+            case 0x3A:
+                write_PSMCT16SZ_block(BITBLTBUF.dest_base, BITBLTBUF.dest_width,
+                                      TRXPOS.int_dest_x, TRXPOS.int_dest_y, data);
+                break;
             default:
                 Errors::die("[GS_t] Unrecognized local-to-local dest format $%02X", BITBLTBUF.dest_format);
         }
