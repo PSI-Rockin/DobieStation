@@ -4,7 +4,7 @@
 
 #define VER_MAJOR 0
 #define VER_MINOR 0
-#define VER_REV 48
+#define VER_REV 49
 
 using namespace std;
 
@@ -775,6 +775,7 @@ void VectorInterface::load_state(ifstream &state)
     state.read((char*)&vif_interrupt, sizeof(vif_interrupt));
     state.read((char*)&vif_stalled, sizeof(vif_stalled));
     state.read((char*)&vif_stop, sizeof(vif_stop));
+    state.read((char*)&vif_forcebreak, sizeof(vif_forcebreak));
     state.read((char*)&vif_cmd_status, sizeof(vif_cmd_status));
     state.read((char*)&internal_WL, sizeof(internal_WL));
 
@@ -837,6 +838,7 @@ void VectorInterface::save_state(ofstream &state)
     state.write((char*)&vif_interrupt, sizeof(vif_interrupt));
     state.write((char*)&vif_stalled, sizeof(vif_stalled));
     state.write((char*)&vif_stop, sizeof(vif_stop));
+    state.write((char*)&vif_forcebreak, sizeof(vif_forcebreak));
     state.write((char*)&vif_cmd_status, sizeof(vif_cmd_status));
     state.write((char*)&internal_WL, sizeof(internal_WL));
 
