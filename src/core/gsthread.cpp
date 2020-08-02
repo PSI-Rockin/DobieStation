@@ -3527,7 +3527,7 @@ void GraphicsSynthesizerThread::calculate_LOD(TexLookupInfo &info)
 
     float K = current_ctx->tex1.K;
 
-    if (current_ctx->tex1.LOD_method == 0)
+    if (current_ctx->tex1.LOD_method == 0 && !current_PRMODE->use_UV)
     {
         if (info.vtx_color.q != 1.0f)
         {
