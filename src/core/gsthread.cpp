@@ -4551,6 +4551,9 @@ void GraphicsSynthesizerThread::recompile_depth_test()
         return;
     }
 
+    if (current_ctx->test.depth_method == 1 && current_ctx->zbuf.no_update)
+        return;
+
     //Load address to zbuffer
     emitter_dp.load_addr((uint64_t)&current_ctx->zbuf.base_pointer, abi_args[0]);
     emitter_dp.load_addr((uint64_t)&current_ctx->frame.width, abi_args[1]);
