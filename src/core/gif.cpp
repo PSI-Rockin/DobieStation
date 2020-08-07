@@ -494,9 +494,9 @@ void GraphicsInterface::send_PATH3_FIFO(uint128_t data)
     }
 }
 
-std::tuple<uint128_t, uint32_t>GraphicsInterface::read_GSFIFO()
+std::tuple<uint128_t, bool>GraphicsInterface::read_GSFIFO()
 {
-    return gs->request_gs_download();
+    return gs->read_gs_download();
 }
 
 void GraphicsInterface::flush_path3_fifo()

@@ -88,7 +88,7 @@ class GraphicsInterface
         void send_PATH2(uint32_t data[4]);
         void send_PATH3(uint128_t quad);
         void send_PATH3_FIFO(uint128_t quad);
-        std::tuple<uint128_t, uint32_t>read_GSFIFO();
+        std::tuple<uint128_t, bool>read_GSFIFO();
 
         void intermittent_check();
 
@@ -112,7 +112,7 @@ inline bool GraphicsInterface::path_active(int index, bool canInterruptPath3)
     {
         interrupt_path3(index);
     }
-    return (active_path == index) && !gs->stalled() && !gif_temporary_stop;
+    return (active_path == index) && !gs->stalled() && !gif_temporary_stop && !gs->get_busdir();
 }
 
 inline void GraphicsInterface::resume_path3()

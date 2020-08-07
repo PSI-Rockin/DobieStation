@@ -91,6 +91,11 @@ union GSMessagePayload
     } render_payload;
     struct
     {
+        uint128_t* target;
+        std::mutex* target_mutex;
+    } download_payload;
+    struct
+    {
         std::ofstream* state;
     } save_state_payload;
     struct
@@ -136,9 +141,9 @@ union GSReturnMessagePayload
     } no_payload;//C++ doesn't like the empty struct
     struct
     {
-        uint128_t quad_data;
-        uint32_t status;
-    } data_payload;
+        uint32_t quad_count;
+    } download_payload;
+
 };
 
 struct GSReturnMessage
@@ -506,7 +511,7 @@ class GraphicsSynthesizerThread
                 float step_x0, float step_x1, float scx1, float scx2, TexLookupInfo& tex_info);
         void render_sprite();
         void write_HWREG(uint64_t data);
-        uint128_t local_to_host();
+        uint32_t local_to_host(uint128_t *target);
         void unpack_PSMCT24(uint64_t data, int offset, bool z_format);
         uint64_t pack_PSMCT24(bool z_format);
         void local_to_local();
