@@ -561,13 +561,13 @@ void EmuWindow::keyPressEvent(QKeyEvent *event)
             emit update_joystick(JOYSTICK::LEFT, JOYSTICK_AXIS::X, 0xFF);
             break;
         case Qt::Key_I:
-             emit update_joystick(JOYSTICK::RIGHT,JOYSTICK_AXIS::Y, 0x00); 
-             break;
+            emit update_joystick(JOYSTICK::RIGHT,JOYSTICK_AXIS::Y, 0x00); 
+            break;
         case Qt::Key_K:
-             emit update_joystick(JOYSTICK::RIGHT,JOYSTICK_AXIS::Y, 0xFF);
+            emit update_joystick(JOYSTICK::RIGHT,JOYSTICK_AXIS::Y, 0xFF);
         case Qt::Key_J:
-             emit update_joystick(JOYSTICK::RIGHT,JOYSTICK_AXIS::X, 0x00); 
-             break;
+            emit update_joystick(JOYSTICK::RIGHT,JOYSTICK_AXIS::X, 0x00); 
+            break;
         case Qt::Key_L:
              emit update_joystick(JOYSTICK::RIGHT,JOYSTICK_AXIS::X, 0xFF);
              break;
