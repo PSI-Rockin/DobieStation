@@ -561,15 +561,15 @@ void EmuWindow::keyPressEvent(QKeyEvent *event)
             emit update_joystick(JOYSTICK::LEFT, JOYSTICK_AXIS::Y, 0xFF);
             break;
         case Qt::Key_I:
-             emit update_joystick(JOYSTICK::RIGHT,JOYSTICK_AXIS::X, 0x00);
+             emit update_joystick(JOYSTICK::RIGHT,JOYSTICK_AXIS::Y, 0x00); 
              break;
         case Qt::Key_K:
-             emit update_joystick(JOYSTICK::RIGHT,JOYSTICK_AXIS::X, 0xFF);
+             emit update_joystick(JOYSTICK::RIGHT,JOYSTICK_AXIS::Y, 0xFF);
         case Qt::Key_J:
-             emit update_joystick(JOYSTICK::RIGHT,JOYSTICK_AXIS::Y, 0x00);
+             emit update_joystick(JOYSTICK::RIGHT,JOYSTICK_AXIS::X, 0x00); 
              break;
         case Qt::Key_L:
-             emit update_joystick(JOYSTICK::RIGHT,JOYSTICK_AXIS::Y, 0xFF);
+             emit update_joystick(JOYSTICK::RIGHT,JOYSTICK_AXIS::X, 0xFF);
              break;
         case Qt::Key_F1:
             if(!Settings::instance().recent_roms.isEmpty())
@@ -642,11 +642,11 @@ void EmuWindow::keyReleaseEvent(QKeyEvent *event)
             break;
         case Qt::Key_I:
         case Qt::Key_K:
-            emit update_joystick(JOYSTICK::RIGHT, JOYSTICK_AXIS::X, 0x80);
+            emit update_joystick(JOYSTICK::RIGHT, JOYSTICK_AXIS::Y, 0x80);
             break;
         case Qt::Key_J:
         case Qt::Key_L:
-            emit update_joystick(JOYSTICK::RIGHT, JOYSTICK_AXIS::Y, 0x80);
+            emit update_joystick(JOYSTICK::RIGHT, JOYSTICK_AXIS::X,0x80);
             break;
     }
 }
