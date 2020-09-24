@@ -24,8 +24,8 @@ GeneralTab::GeneralTab(QWidget* parent)
     QRadioButton* ee_interpreter_checkbox = new QRadioButton(tr("Interpreter"));
     QRadioButton* vu0_interpreter_checkbox = new QRadioButton(tr("Interpreter"));
     QRadioButton* vu1_interpreter_checkbox = new QRadioButton(tr("Interpreter"));
-    QRadioButton* light_theme_checkbox = new QRadioButton(tr("light theme"));
-    QRadioButton*  darktheme_checkbox = new QRadioButton(tr("dark theme"));
+    QRadioButton* light_theme_checkbox = new QRadioButton(tr("Light theme"));
+    QRadioButton*  darktheme_checkbox = new QRadioButton(tr("Dark theme"));
 
 
     bool ee_jit = Settings::instance().ee_jit_enabled;

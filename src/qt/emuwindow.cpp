@@ -828,7 +828,7 @@ void EmuWindow::update_status()
         qApp->setStyleSheet("QToolTip { color: #ffffff; background-color: #2a82da; border: 1px solid white; }");
     }
     
-    if (Settings::instance().l_theme)// Change to  light theme   
+    if (Settings::instance().l_theme)// Change to  Light theme   
     {
         qApp->setStyle(QStyleFactory::create("Fusion"));
         QPalette lightPalette;
