@@ -802,7 +802,7 @@ void EmuWindow::update_status()
 {
     CPU_MODE mode;
 
-    if (Settings::instance().d_theme) //Dark theme colour change  
+    if (Settings::instance().d_theme) //Dark Theme colour change  
     {
         qApp->setStyle(QStyleFactory::create("Fusion"));
         QPalette darkPalette;
@@ -828,7 +828,7 @@ void EmuWindow::update_status()
         qApp->setStyleSheet("QToolTip { color: #ffffff; background-color: #2a82da; border: 1px solid white; }");
     }
     
-    if (Settings::instance().l_theme)// Change to  Light theme   
+    if (Settings::instance().l_theme)// Change to  Light Theme    
     {
         qApp->setStyle(QStyleFactory::create("Fusion"));
         QPalette lightPalette;
