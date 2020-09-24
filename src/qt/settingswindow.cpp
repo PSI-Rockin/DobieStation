@@ -24,12 +24,18 @@ GeneralTab::GeneralTab(QWidget* parent)
     QRadioButton* ee_interpreter_checkbox = new QRadioButton(tr("Interpreter"));
     QRadioButton* vu0_interpreter_checkbox = new QRadioButton(tr("Interpreter"));
     QRadioButton* vu1_interpreter_checkbox = new QRadioButton(tr("Interpreter"));
+    QRadioButton* light_theme_checkbox = new QRadioButton(tr("light theme"));
+    QRadioButton*  darktheme_checkbox = new QRadioButton(tr("dark theme"));
 
 
     bool ee_jit = Settings::instance().ee_jit_enabled;
     bool vu0_jit = Settings::instance().vu0_jit_enabled;
     bool vu1_jit = Settings::instance().vu1_jit_enabled;
+    bool l_theme = Settings::instance().l_theme;
+    bool d_theme = Settings::instance().d_theme;
 
+    light_theme_checkbox->setChecked(l_theme);
+    darktheme_checkbox->setChecked(d_theme);
     ee_jit_checkbox->setChecked(ee_jit);
     ee_interpreter_checkbox->setChecked(!ee_jit);
     vu0_jit_checkbox->setChecked(vu0_jit);
@@ -60,23 +66,43 @@ GeneralTab::GeneralTab(QWidget* parent)
     connect(vu1_interpreter_checkbox, &QRadioButton::clicked, this, [=]() {
         Settings::instance().vu1_jit_enabled = false;
     });
+    connect(light_theme_checkbox, &QRadioButton::clicked, this, [=]() {
+        Settings::instance().l_theme = true;
+        Settings::instance().d_theme = false;
+    });
+    
+    connect(darktheme_checkbox, &QRadioButton::clicked, this, [=]() {
+        Settings::instance().d_theme = true;
+        Settings::instance().l_theme = false;
+    });
 
     connect(&Settings::instance(), &Settings::reload, this, [=]() {
         bool ee_jit_enabled = Settings::instance().ee_jit_enabled;
         bool vu0_jit_enabled = Settings::instance().vu0_jit_enabled;
         bool vu1_jit_enabled = Settings::instance().vu1_jit_enabled;
+        bool  l_theme =Settings::instance().l_theme;
+        bool  d_theme =Settings::instance().d_theme;
         ee_jit_checkbox->setChecked(ee_jit_enabled);
         ee_interpreter_checkbox->setChecked(!ee_jit_enabled);
         vu0_jit_checkbox->setChecked(vu0_jit_enabled);
         vu0_interpreter_checkbox->setChecked(!vu0_jit_enabled);
         vu1_jit_checkbox->setChecked(vu1_jit_enabled);
         vu1_interpreter_checkbox->setChecked(!vu1_jit_enabled);
+        light_theme_checkbox->setChecked(l_theme);
+        darktheme_checkbox->setChecked(d_theme);
     });
 
 
     QVBoxLayout* vu0_layout = new QVBoxLayout;
     vu0_layout->addWidget(vu0_jit_checkbox);
     vu0_layout->addWidget(vu0_interpreter_checkbox);
+
+    QVBoxLayout* theme_layout = new QVBoxLayout;
+    theme_layout->addWidget(light_theme_checkbox);
+    theme_layout->addWidget(darktheme_checkbox);
+     
+    QGroupBox* theme_group = new QGroupBox(tr("Theming")); 
+    theme_group->setLayout(theme_layout);
 
     QGroupBox* vu0_groupbox = new QGroupBox(tr("VU0"));
     vu0_groupbox->setLayout(vu0_layout);
@@ -93,17 +119,16 @@ GeneralTab::GeneralTab(QWidget* parent)
     ee_layout->addWidget(ee_interpreter_checkbox);
 
     QGroupBox* ee_groupbox = new QGroupBox(tr("EE"));
-    ee_groupbox->setLayout(ee_layout);
-
+    ee_groupbox->setLayout(ee_layout);    
 
     QVBoxLayout* layout = new QVBoxLayout;
     layout->addWidget(ee_groupbox);
     layout->addWidget(vu0_groupbox);
     layout->addWidget(vu1_groupbox);
+    layout->addWidget(theme_group);
     layout->addStretch(1);
 
     setLayout(layout);
-
     setMinimumWidth(400);
 }
 
@@ -246,7 +271,6 @@ SettingsWindow::SettingsWindow(QWidget *parent)
     QVBoxLayout* layout = new QVBoxLayout;
     layout->addWidget(tab_widget);
     layout->addWidget(close_buttons);
-
     setLayout(layout);
 }
 

@@ -34,12 +34,12 @@ void Settings::reset()
     vu1_jit_enabled = qsettings().value("vu1_jit_enabled", true).toBool();
     last_used_directory = qsettings().value("last_used_dir", QDir::homePath()).toString();
     screenshot_directory = qsettings().value("screenshot_directory", QDir::homePath()).toString();
-
     rom_directories_to_add = QStringList();
     rom_directories_to_remove = QStringList();
-
     memcard_path = qsettings().value("memcard_path", "").toString();
     scaling_factor = qsettings().value("ui_scaling_factor", 1).toInt();
+    d_theme = qsettings().value("dark theme", true).toBool();
+    l_theme = qsettings().value("light theme", false).toBool();
 
     emit reload();
 }
@@ -74,6 +74,8 @@ void Settings::save()
     qsettings().setValue("screenshot_directory", screenshot_directory);
     qsettings().setValue("memcard_path", memcard_path);
     qsettings().setValue("ui_scaling_factor", scaling_factor);
+    qsettings().setValue("dark theme", d_theme);
+    qsettings().setValue("light theme", l_theme);
     qsettings().sync();
     reset();
 }

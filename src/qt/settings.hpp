@@ -33,6 +33,8 @@ class Settings final : public QObject
         bool vu0_jit_enabled;
         bool vu1_jit_enabled;
         bool ee_jit_enabled;
+        bool d_theme;
+        bool l_theme;
 
         QString memcard_path;
 
@@ -44,7 +46,6 @@ class Settings final : public QObject
         void set_bios_path(const QString& path);
         void set_screenshot_directory(const QString& directory);
         void set_memcard_path(const QString& path);
-
         void remove_rom_directory(const QString& directory);
         void clear_rom_paths();
     private:
