@@ -802,15 +802,15 @@ void EmuWindow::update_status()
 {
     CPU_MODE mode;
 
-    if (Settings::instance().d_theme) //Dark Theme colour change  
+    if (Settings::instance().d_theme) // Dark Theme colour change  
     {
         qApp->setStyle(QStyleFactory::create("Fusion"));
         QPalette darkPalette;
-        QColor darkColor = QColor(0,70,70);
+        QColor darkColor = QColor(35,39,42);
         QColor disabledColor = QColor(200,45,69);
         darkPalette.setColor(QPalette::Window, darkColor);
         darkPalette.setColor(QPalette::WindowText, Qt::white);
-        darkPalette.setColor(QPalette::Base, QColor(60,60,60));
+        darkPalette.setColor(QPalette::Base, QColor(35,39,42));
         darkPalette.setColor(QPalette::AlternateBase, darkColor);
         darkPalette.setColor(QPalette::ToolTipBase, Qt::white);
         darkPalette.setColor(QPalette::ToolTipText, Qt::white);
