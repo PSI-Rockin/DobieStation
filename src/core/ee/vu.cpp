@@ -811,9 +811,8 @@ void VectorUnit::check_for_COP2_FMAC_stall()
                 update_mac_pipeline();
                 int_branch_pipeline.flush();
             }
-
-            eecpu->set_cycle_count(eecpu->get_cycle_count() + delay);
-            cycle_count = eecpu->get_cycle_count();
+            cycle_count += delay;
+            eecpu->set_cycle_count(cycle_count);
             update_DIV_EFU_pipes();
             break;
         }
@@ -3209,6 +3208,10 @@ void VectorUnit::waitp(uint32_t instr)
         int_branch_pipeline.update();
     }
     update_DIV_EFU_pipes();
+
+    //Need to update the EE cycle count if there was a stall
+    if (!running)
+        eecpu->set_cycle_count(cycle_count);
 }
 
 void VectorUnit::waitq(uint32_t instr)
@@ -3223,6 +3226,10 @@ void VectorUnit::waitq(uint32_t instr)
         int_branch_pipeline.update();
     }
     update_DIV_EFU_pipes();
+
+    //Need to update the EE cycle count if there was a stall
+    if (!running)
+        eecpu->set_cycle_count(cycle_count);
 }
 
 void VectorUnit::xgkick(uint32_t instr)
