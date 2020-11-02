@@ -25,6 +25,7 @@ GraphicsSynthesizer::~GraphicsSynthesizer()
 
     delete[] output_buffer1;
     delete[] output_buffer2;
+    delete[] gs_download_buffer;
 }
 
 void GraphicsSynthesizer::reset()
@@ -36,6 +37,12 @@ void GraphicsSynthesizer::reset()
 
     if (!output_buffer2)
         output_buffer2 = new uint32_t[1920 * 1280];
+
+    if (!gs_download_buffer)
+        gs_download_buffer = new uint128_t[(2048 * 2048) / 4];
+
+    gs_download_qwc = 0;
+    gs_download_addr = 0;
 
     current_lock = std::unique_lock<std::mutex>();
     using_first_buffer = true;
@@ -228,6 +235,9 @@ void GraphicsSynthesizer::write64_privileged(uint32_t addr, uint64_t value)
 
     gs_thread.send_message({ GSCommand::write64_privileged_t,payload });
 
+    if (addr == 0x12001040 && !reg.BUSDIR && value)
+        request_gs_download();
+
     bool old_IMR = reg.IMR.signal;
     reg.write64_privileged(addr, value);
 
@@ -245,6 +255,9 @@ void GraphicsSynthesizer::write32_privileged(uint32_t addr, uint32_t value)
     payload.write32_payload = { addr, value };
 
     gs_thread.send_message({ GSCommand::write32_privileged_t,payload });
+
+    if (addr == 0x12001040 && !reg.BUSDIR && value)
+        request_gs_download();
 
     bool old_IMR = reg.IMR.signal;
     reg.write32_privileged(addr, value);
@@ -355,14 +368,48 @@ void GraphicsSynthesizer::wake_gs_thread()
     gs_thread.wake_thread();
 }
 
-std::tuple<uint128_t, uint32_t>GraphicsSynthesizer::request_gs_download()
+void GraphicsSynthesizer::request_gs_download()
 {
     GSMessagePayload payload;
-    payload.no_payload = {};
+    GSReturnMessage return_packet;
+
+    payload.download_payload = { gs_download_buffer, &download_mutex };
     gs_thread.send_message({ GSCommand::request_local_host_tx, payload });
     gs_thread.wake_thread();
-    GSReturnMessage data;
-    gs_thread.wait_for_return(GSReturn::local_host_transfer, data);
-    return std::make_tuple(data.payload.data_payload.quad_data, data.payload.data_payload.status);
+
+    gs_thread.wait_for_return(GSReturn::local_host_transfer, return_packet);
+
+    while (!download_mutex.try_lock())
+    {
+        printf("[GS] buffer 1 lock failed!\n");
+        std::this_thread::yield();
+    }
+    std::lock_guard<std::mutex> lock(download_mutex, std::adopt_lock);
+
+    gs_download_addr = 0;
+    gs_download_qwc = return_packet.payload.download_payload.quad_count;
+}
+
+std::tuple<uint128_t, bool>GraphicsSynthesizer::read_gs_download()
+{
+    bool have_data;
+    uint128_t quad_data;
+
+    if (gs_download_qwc)
+    {
+        quad_data._u64[0] = gs_download_buffer[gs_download_addr]._u64[0];
+        quad_data._u64[1] = gs_download_buffer[gs_download_addr]._u64[1];
+        have_data = true;
+
+        gs_download_addr++;
+        gs_download_qwc--;
+    }
+    else
+    {
+        quad_data._u64[0] = 0;
+        quad_data._u64[1] = 0;
+        have_data = false;
+    }
+    return std::make_tuple(quad_data, have_data);
 }
 
