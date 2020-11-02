@@ -96,9 +96,10 @@ void VectorInterface::update(int cycles)
     if (fifo_reverse)
     {
         vif_cmd_status = VIF_IDLE;
-        if (FIFO.size() <= (fifo_size - 4))
+
+        while (cycles--)
         {
-            while (cycles--)
+            if (FIFO.size() <= (fifo_size - 4))
             {
                 auto fifo_data = gif->read_GSFIFO();
                 //Check the GS still wants to send data
@@ -108,7 +109,10 @@ void VectorInterface::update(int cycles)
                 for (int i = 0; i < 4; i++)
                     FIFO.push(std::get<0>(fifo_data)._u32[i]);
             }
+            else
+                break;
         }
+        return;
     }
 
     //Since the loop processes per-word, we need to multiply cycles by 4
