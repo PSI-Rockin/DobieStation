@@ -15,8 +15,8 @@ inline int16_t mulvol(int one, int two)
 
 struct stereo_sample
 {
-    int16_t left;
-    int16_t right;
+    int16_t left = 0;
+    int16_t right = 0;
 
     void mix(stereo_sample two, bool l, bool r)
     {

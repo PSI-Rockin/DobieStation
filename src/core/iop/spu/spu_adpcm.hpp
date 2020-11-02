@@ -4,16 +4,6 @@
 #include <cstdint>
 #include "spu_utils.hpp"
 
-
-// Integer math version of ps-adpcm coefs
-static const int ps_adpcm_coefs_i[5][2] = {
-        {   0 ,   0 },
-        {  60 ,   0 },
-        { 115 , -52 },
-        {  98 , -55 },
-        { 122 , -60 },
-};
-
 class ADPCM_Decoder
 {
     public:

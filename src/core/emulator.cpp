@@ -317,6 +317,14 @@ void Emulator::fast_boot()
 {
     if (skip_BIOS_hack == LOAD_DISC)
     {
+        if (cdvd.read_disc_type() != CDVD_DISC_PS2DVD)
+        {
+            if (cdvd.read_disc_type() != CDVD_DISC_PS2CD)
+            {
+                set_skip_BIOS_hack(SKIP_HACK::NONE);
+                return;
+            }
+        }
         //We need to find the string "rom0:OSDSYS" and replace it with the disc's executable.
         std::string path = cdvd.get_ps2_exec_path();
 
@@ -510,6 +518,8 @@ uint8_t Emulator::read8(uint32_t address)
         return IOP_RAM[address & 0x1FFFFF];
     if (address >= 0x10000000 && address < 0x10002000)
         return (timers.read32(address & ~0xF) >> (8 * (address & 0x3)));
+    if ((address & (0xFF000000)) == 0x12000000)
+        return (gs.read32_privileged(address & ~0x3) >> (8 * (address & 0x3)));
     if (address >= 0x10008000 && address < 0x1000F000)
         return dmac.read8(address);
     if (address >= 0x11000000 && address < 0x11004000)
@@ -539,6 +549,8 @@ uint16_t Emulator::read16(uint32_t address)
         return (uint16_t)timers.read32(address);
     if (address >= 0x10008000 && address < 0x1000F000)
         return dmac.read16(address);
+    if ((address & (0xFF000000)) == 0x12000000)
+        return (gs.read32_privileged(address & ~0x3) >> (8 * (address & 0x2)));
     if (address >= 0x1C000000 && address < 0x1C200000)
         return *(uint16_t*)&IOP_RAM[address & 0x1FFFFF];
     if (address >= 0x11000000 && address < 0x11004000)
@@ -681,6 +693,14 @@ uint64_t Emulator::read64(uint32_t address)
         return gs.read64_privileged(address);
     if (address >= 0x1C000000 && address < 0x1C200000)
         return *(uint64_t*)&IOP_RAM[address & 0x1FFFFF];
+    if (address >= 0x11000000 && address < 0x11004000)
+        return vu0.read_instr<uint64_t>(address);
+    if (address >= 0x11004000 && address < 0x11008000)
+        return vu0.read_mem<uint64_t>(address);
+    if (address >= 0x11008000 && address < 0x1100C000)
+        return vu1.read_instr<uint64_t>(address);
+    if (address >= 0x1100C000 && address < 0x11010000)
+        return vu1.read_mem<uint64_t>(address);
     switch (address)
     {
         case 0x10002000:
@@ -706,6 +726,9 @@ uint128_t Emulator::read128(uint32_t address)
         return vu1.read_instr<uint128_t>(address);
     if (address >= 0x1100C000 && address < 0x11010000)
         return vu1.read_mem<uint128_t>(address);
+
+    if (address == 0x10005000)
+        return std::get<0>(vif1.readFIFO());
 
     printf("Unrecognized read128 at physical addr $%08X\n", address);
     return uint128_t::from_u32(0);
@@ -1313,6 +1336,9 @@ void Emulator::iop_write8(uint32_t address, uint8_t value)
             return;
         case 0x1F402017:
             cdvd.write_S_data(value);
+            return;
+        case 0x1F40203A:
+            cdvd.write_mecha_decode(value);
             return;
         //POST2?
         case 0x1F802070:

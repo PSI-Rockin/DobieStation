@@ -2,6 +2,15 @@
 #include <cstdint>
 #include <algorithm>
 
+// Integer math version of ps-adpcm coefs
+static const int ps_adpcm_coefs_i[5][2] = {
+        {   0 ,   0 },
+        {  60 ,   0 },
+        { 115 , -52 },
+        {  98 , -55 },
+        { 122 , -60 },
+};
+
 std::array<int16_t, 28> ADPCM_Decoder::decode_block(uint8_t *block)
 {
     std::array<int16_t, 28> pcm;

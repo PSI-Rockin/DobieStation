@@ -1392,29 +1392,36 @@ void EE_JIT64::store_doubleword_left(EmotionEngine& ee, IR::Instruction& instr)
     else
         emitter.MOV32_REG(dest, addr);
     emitter.MOV32_REG(addr, addr_backup);
+    emitter.AND32_REG_IMM(0x7, addr_backup);
     emitter.AND32_REG_IMM(~0x7, addr);
+
     prepare_abi((uint64_t)&ee);
     prepare_abi_reg(addr);
     call_abi_func((uint64_t)ee_read64);
+
+    emitter.MOV64_MR(source, addr);
+    emitter.CMP16_IMM(0x7, addr_backup);
+    uint8_t* no_shift = emitter.JCC_NEAR_DEFERRED(ConditionCode::E);
+
     emitter.MOV32_REG(addr_backup, RCX);
     emitter.AND32_REG_IMM(0x7, RCX);
     emitter.SHL32_REG_IMM(0x3, RCX);
     emitter.XOR16_REG_IMM(56, RCX);
-    emitter.MOV64_MR(source, addr);
     emitter.SHR64_CL(addr);
     emitter.SUB16_REG_IMM(64, RCX);
     emitter.NEG16(RCX);
-    emitter.MOV32_REG_IMM(0x3F, addr_backup);
-    emitter.CMP16_IMM(0x40, RCX);
-    emitter.CMOVCC16_REG(ConditionCode::E, addr_backup, RCX);
     emitter.SHR64_CL(REG_64::RAX);
     emitter.SHL64_CL(REG_64::RAX);
     emitter.OR64_REG(REG_64::RAX, addr);
+
+    emitter.set_jump_dest(no_shift);
+
     if (offset)
         emitter.LEA32_M(dest, addr_backup, offset);
     else
         emitter.MOV32_REG(dest, addr_backup);
     emitter.AND32_REG_IMM(~0x7, addr_backup);
+
     prepare_abi((uint64_t)&ee);
     prepare_abi_reg(addr_backup);
     prepare_abi_reg(addr);
@@ -1438,28 +1445,35 @@ void EE_JIT64::store_doubleword_right(EmotionEngine& ee, IR::Instruction& instr)
     else
         emitter.MOV32_REG(dest, addr);
     emitter.MOV32_REG(addr, addr_backup);
+    emitter.AND32_REG_IMM(0x7, addr_backup);
     emitter.AND32_REG_IMM(~0x7, addr);
+
     prepare_abi((uint64_t)&ee);
     prepare_abi_reg(addr);
     call_abi_func((uint64_t)ee_read64);
+
+    emitter.MOV64_MR(source, addr);
+    emitter.CMP16_IMM(0, addr_backup);
+    uint8_t* no_shift = emitter.JCC_NEAR_DEFERRED(ConditionCode::E);
+
     emitter.MOV32_REG(addr_backup, RCX);
     emitter.AND32_REG_IMM(0x7, RCX);
     emitter.SHL32_REG_IMM(0x3, RCX);
-    emitter.MOV64_MR(source, addr);
     emitter.SHL64_CL(addr);
     emitter.SUB16_REG_IMM(64, RCX);
     emitter.NEG16(RCX);
-    emitter.MOV32_REG_IMM(0x3F, addr_backup);
-    emitter.CMP16_IMM(0x40, RCX);
-    emitter.CMOVCC16_REG(ConditionCode::E, addr_backup, RCX);
     emitter.SHL64_CL(REG_64::RAX);
     emitter.SHR64_CL(REG_64::RAX);
     emitter.OR64_REG(REG_64::RAX, addr);
+
+    emitter.set_jump_dest(no_shift);
+
     if (offset)
         emitter.LEA32_M(dest, addr_backup, offset);
     else
         emitter.MOV32_REG(dest, addr_backup);
     emitter.AND32_REG_IMM(~0x7, addr_backup);
+
     prepare_abi((uint64_t)&ee);
     prepare_abi_reg(addr_backup);
     prepare_abi_reg(addr);

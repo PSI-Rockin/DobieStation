@@ -74,6 +74,23 @@ void SubsystemInterface::register_system_servers()
         }
     };
 
+    auto cdsearchfile_lambda = [=] (SifRpcServer& server, uint32_t fno, uint32_t buffer, uint32_t size)
+    {
+        if (fno == 0)
+        {
+            uint32_t ptr = buffer + 0x24;
+            std::string name;
+            while (ee->read8(ptr) && name.size() < 0x100)
+            {
+                name += ee->read8(ptr);
+                ptr++;
+            }
+            printf("[SIFRPC] sceCdSearchFile(\"%s\")\n", name.c_str());
+        }
+        else
+            default_rpc(server, fno, buffer, size);
+    };
+
     sifrpc_register_server("FILEIO", 0x80000001, default_rpc_lambda);
     sifrpc_register_server("IOPHEAP", 0x80000003, iopheap_lambda);
     sifrpc_register_server("LOADFILE", 0x80000006, default_rpc_lambda);
@@ -83,7 +100,7 @@ void SubsystemInterface::register_system_servers()
     sifrpc_register_server("CDINIT", 0x80000592, default_rpc_lambda);
     sifrpc_register_server("CDSCMD", 0x80000593, default_rpc_lambda);
     sifrpc_register_server("CDNCMD", 0x80000595, cdncmd_lambda);
-    sifrpc_register_server("CDSEARCHFILE", 0x80000597, default_rpc_lambda);
+    sifrpc_register_server("CDSEARCHFILE", 0x80000597, cdsearchfile_lambda);
     sifrpc_register_server("CDDISKREADY", 0x8000059A, default_rpc_lambda);
     sifrpc_register_server("SDREMOTE", 0x80000701, default_rpc_lambda);
 }

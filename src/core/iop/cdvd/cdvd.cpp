@@ -63,6 +63,7 @@ void CDVD_Drive::reset()
     ISTAT = 0;
     disc_type = CDVD_DISC_NONE;
     file_size = 0;
+    mecha_decode = 0;
     time_t raw_time;
     struct tm * time;
     std::time(&raw_time);
@@ -104,6 +105,10 @@ string CDVD_Drive::get_ps2_exec_path()
 
 string CDVD_Drive::get_serial()
 {
+    if (disc_type == CDVD_DISC_PSCD)
+    {
+        return "PlayStation 1 Disc";
+    }
     if (!container->is_open())
         return "";
 
@@ -268,8 +273,12 @@ bool CDVD_Drive::load_disc(const char *name, CDVD_CONTAINER a_container)
             container = nullptr;
             return false;
     }
-    if (!container->open(name))
+    if (!container->open(name)) // No Filename, No disc.
+    {
+        printf("No Disk Inserted \n");
+        disc_type = CDVD_DISC_NONE;
         return false;
+    }
 
     file_size = container->get_size();
 
@@ -288,18 +297,76 @@ bool CDVD_Drive::load_disc(const char *name, CDVD_CONTAINER a_container)
     container->seek(sector, std::ios::beg);
     container->read(pvd_sector, 2048);
 
+    uint32_t path_table_sector = *(uint32_t*)&pvd_sector[140];
+    uint64_t volume_size = *(uint32_t*)&pvd_sector[80];
+
     LBA = *(uint16_t*)&pvd_sector[128];
-    if (*(uint16_t*)&pvd_sector[166] == 2048)
-        disc_type = CDVD_DISC_PS2CD;
-    else
-        disc_type = CDVD_DISC_PS2DVD;
-    printf("[CDVD] PVD LBA: $%08X\n", LBA);
 
     root_location = *(uint32_t*)&pvd_sector[156 + 2];
     root_len = *(uint32_t*)&pvd_sector[156 + 10];
     printf("[CDVD] Root dir len: %d\n", *(uint16_t*)&pvd_sector[156]);
     printf("[CDVD] Extent loc: $%08lX\n", root_location * LBA);
     printf("[CDVD] Extent len: $%08lX\n", root_len);
+
+    // Detecting disc type by abitrary variables
+    // 650MB (681574400 bytes) is the maximum disc size for CD's
+    // Just in case we can check if the path table is at sector 257 which is a forced location for DVD's
+    // However some CD's do use 257 for the path table location, but it's not common
+    uint32_t cnf_size;
+        
+    std::string cnf;
+
+    if (char* temp = (char*)read_file("SYSTEM.CNF;1", cnf_size))
+    {
+        cnf = std::string(temp, cnf_size);
+        delete[] temp;
+    }
+    else if (char* temp = (char*)read_file("PSX.EXE;1", cnf_size))
+    {
+        printf("PlayStation 1 CD Detected \n");
+        disc_type = CDVD_DISC_PSCD;        
+        delete[] temp;
+        return true;
+    }
+    else 
+    {
+        printf("Non PlayStation Disc inserted \n");
+        disc_type = CDVD_DISC_ILL;
+        return true;
+    }
+
+    cnf.erase(std::remove_if(cnf.begin(), cnf.end(), ::isspace), cnf.end());
+        
+    if (cnf.find("BOOT2") != std::string::npos)
+    {
+        if ((volume_size * LBA) <= 681574400 || path_table_sector != 257)
+        {
+            printf("PlayStation 2 CD Detected \n");
+            disc_type = CDVD_DISC_PS2CD;
+            return true;
+        }
+        else
+        {
+            printf("PlayStation 2 DVD Detected \n");
+            disc_type = CDVD_DISC_PS2DVD;
+            return true;
+        }
+    }    
+    else if (cnf.find("BOOT") != std::string::npos)
+    {
+        printf("PlayStation 1 CD Detected \n");
+        disc_type = CDVD_DISC_PSCD;
+        return true;   
+    }
+    else
+    {
+        printf("Non PlayStation Disc inserted \n");
+        disc_type = CDVD_DISC_ILL;
+        return true;
+    }
+
+    printf("%s Detected\n", disc_type == CDVD_DISC_PS2CD ? "CD" : "DVD");
+    printf("[CDVD] PVD LBA: $%08X\n", LBA);
 
     return true;
 }
@@ -587,6 +654,19 @@ void CDVD_Drive::send_S_command(uint8_t value)
             printf("[CDVD] CdRCBypassCtrl\n");
             prepare_S_outdata(1);
             S_outdata[0] = 0;
+            break;
+        case 0x36: //Stub until we have MEC and NVM file support
+            printf("[CDVD] GetRegionParams\n");
+            prepare_S_outdata(15);
+            //This is basically what PCSX2 returns on a blank NVM/MEC file
+            S_outdata[0] = 0;
+            S_outdata[1] = 1 << 0x3; //MEC encryption zone
+            S_outdata[2] = 0;
+            S_outdata[3] = 0x80; //Region Params
+            S_outdata[4] = 0x1;
+
+            for (int i = 5; i < 15; i++)
+                S_outdata[i] = 0;
             break;
         case 0x40:
             printf("[CDVD] OpenConfig\n");
@@ -915,6 +995,22 @@ void CDVD_Drive::N_command_readkey(uint32_t arg)
     intc->assert_irq(2);
 }
 
+void CDVD_Drive::decrypt_mechacon_sector()
+{
+    if (mecha_decode)
+    {
+        uint8_t shift_amount = (mecha_decode >> 4) & 7;
+        bool do_xor = (mecha_decode) & 1;
+        bool do_shift = (mecha_decode) & 2;
+
+        for (int i = 0; i < block_size; ++i)
+        {
+            if (do_xor) read_buffer[i] ^= cdkey[4];
+            if (do_shift) read_buffer[i] = (read_buffer[i] >> shift_amount) | (read_buffer[i] << (8 - shift_amount));
+        }
+    }
+}
+
 void CDVD_Drive::read_CD_sector()
 {
     printf("[CDVD] Read CD sector - Sector: %lu Size: %lu\n", current_sector, block_size);
@@ -927,6 +1023,9 @@ void CDVD_Drive::read_CD_sector()
             container->read(read_buffer, block_size);
             break;
     }
+
+    decrypt_mechacon_sector();
+
     read_bytes_left = block_size;
     current_sector++;
     sectors_left--;
@@ -994,6 +1093,9 @@ void CDVD_Drive::read_DVD_sector()
     read_buffer[2061] = 0;
     read_buffer[2062] = 0;
     read_buffer[2063] = 0;
+
+    decrypt_mechacon_sector();
+
     read_bytes_left = 2064;
     current_sector++;
     sectors_left--;
@@ -1037,6 +1139,12 @@ void CDVD_Drive::write_ISTAT(uint8_t value)
 {
     printf("[CDVD] Write ISTAT: $%02X\n", value);
     ISTAT &= ~value;
+}
+
+void CDVD_Drive::write_mecha_decode(uint8_t value)
+{
+    printf("[CDVD] Write Mechacon Decode Value: $%02X\n", value);
+    mecha_decode = value;
 }
 
 void CDVD_Drive::add_event(uint64_t cycles)

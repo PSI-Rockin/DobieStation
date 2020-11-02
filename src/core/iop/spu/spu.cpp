@@ -50,9 +50,16 @@ void SPU::reset(uint8_t* RAM)
     data_input_volume_l = 0x7FFF;
     data_input_volume_r = 0x7FFF;
     reverb = {};
+    noise = {};
     effect_enable = 0;
     output_enable = 1;
-
+    voice_noise_gen = 0;
+    mix_state = {};
+    voice_mixdry_left = 0;
+    voice_mixdry_right = 0;
+    voice_mixwet_left = 0;
+    voice_mixwet_right = 0;
+    voice_pitch_mod = 0;
 
     std::ostringstream fname;
     fname << "spu_" << id << "_stream" << ".wav";
@@ -674,6 +681,12 @@ uint16_t SPU::read16(uint32_t addr)
         case 0x19A:
             printf("[SPU%d] Read Core Att: $%04X\n", id, (core_att[id-1]));
             return core_att[id-1];
+        case 0x19C:
+            printf("[SPU%d] Read IRQA Hi: $%04X\n", id, IRQA[id - 1] >> 16);
+            return (IRQA[id - 1] >> 16);
+        case 0x19E:
+            printf("[SPU%d] Read IRQA Lo: $%04X\n", id, IRQA[id - 1] & 0xFFFF);
+            return (IRQA[id - 1] & 0xFFFF);
         case 0x1A0:
             printf("[SPU%d] Read KON1: $%04X\n", id, (key_off >> 16));
             return (key_on & 0xFFFF);

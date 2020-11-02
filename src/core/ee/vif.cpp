@@ -80,8 +80,13 @@ bool VectorInterface::check_vif_stall(uint32_t value)
             printf("[VIF] VIF%x Stopped (Stall)\n", get_id());
             vif_stalled |= STALL_STOP;
         }
+        if (vif_forcebreak)
+        {
+            printf("[VIF] VIF%x Force Break (Stall)\n", get_id());
+            vif_stalled |= STALL_FORCEBREAK;
+        }
     }
-    is_stalled = vif_stalled & (STALL_IBIT | STALL_STOP);
+    is_stalled = vif_stalled & (STALL_IBIT | STALL_STOP | STALL_FORCEBREAK);
 
     return is_stalled;
 }
@@ -142,7 +147,7 @@ void VectorInterface::update(int cycles)
             }
             if (wait_for_VU)
             {
-                if (vu->is_running())
+                if (vu->is_running() || vu->stopped_by_tbit())
                     return;
                 handle_wait_cmd(wait_cmd_value, (cycles - (run_cycles >> 2)) * 2);
             }
@@ -362,7 +367,8 @@ void VectorInterface::decode_cmd(uint32_t value)
         case 0x11:
             printf("[VIF] FLUSH\n");
             wait_for_VU = true;
-            flush_stall = true;
+            if (gif)
+                flush_stall = true;
             stall_condition_active = true;
             wait_cmd_value = value;
             command = 0;
@@ -370,8 +376,11 @@ void VectorInterface::decode_cmd(uint32_t value)
         case 0x13:
             printf("[VIF] FLUSHA\n");
             wait_for_VU = true;
-            flush_stall = true;
-            wait_for_PATH3 = true;
+            if (gif)
+            {
+                flush_stall = true;
+                wait_for_PATH3 = true;
+            }
             stall_condition_active = true;
             wait_cmd_value = value;
             command = 0;
@@ -386,7 +395,8 @@ void VectorInterface::decode_cmd(uint32_t value)
         case 0x15:
             printf("[VIF] MSCALF\n");
             wait_for_VU = true;
-            flush_stall = true;
+            if (gif)
+                flush_stall = true;
             stall_condition_active = true;
             wait_cmd_value = value;
             command = 0;
@@ -1068,9 +1078,10 @@ void VectorInterface::set_fbrst(uint32_t value)
     if (value & 0x8)
     {
         printf("[VIF] VIF%x Resumed\n", get_id());
-        vif_stalled &= ~(STALL_IBIT | STALL_STOP);
+        vif_stalled &= ~(STALL_IBIT | STALL_STOP | STALL_FORCEBREAK);
         vif_interrupt = false;
         vif_stop = false;
+        vif_forcebreak = false;
     }
     if (value & 0x4)
     {
@@ -1079,7 +1090,17 @@ void VectorInterface::set_fbrst(uint32_t value)
     }
     if (value & 0x2)
     {
-        Errors::die("VIF%d Force Break Not Implemented\n", id);
+        printf("VIF%d Force Break\n", id);
+        command = 0;
+        command_len = 0;
+        buffer_size = 0;
+        flush_stall = false;
+        stall_condition_active = false;
+        wait_for_VU = false;
+        wait_for_PATH3 = false;
+        direct_wait = false;
+        vif_forcebreak = true;
+        vif_cmd_status = VIF_IDLE;
     }
     if (value & 0x1)
     {
@@ -1098,6 +1119,7 @@ void VectorInterface::set_fbrst(uint32_t value)
         vif_ibit_detected = false;
         vif_interrupt = false;
         vif_stop = false;
+        vif_forcebreak = false;
         mark_detected = false;
         flush_stall = false;
         stall_condition_active = false;

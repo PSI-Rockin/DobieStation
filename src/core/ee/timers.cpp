@@ -42,10 +42,13 @@ void EmotionTiming::timer_interrupt(int index, bool overflow)
             scheduler->set_timer_counter(events[index], 0);
         }
 
-        timers[index].control.compare_int = true;
-        intc->assert_IRQ((int)Interrupt::TIMER0 + index);
+        if (!timers[index].control.compare_int)
+        {
+            timers[index].control.compare_int = true;
+            intc->assert_IRQ((int)Interrupt::TIMER0 + index);
+        }
     }
-    else
+    else if (!timers[index].control.overflow_int)
     {
         timers[index].control.overflow_int = true;
         intc->assert_IRQ((int)Interrupt::TIMER0 + index);

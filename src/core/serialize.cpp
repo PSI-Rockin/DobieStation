@@ -4,7 +4,7 @@
 
 #define VER_MAJOR 0
 #define VER_MINOR 0
-#define VER_REV 47
+#define VER_REV 49
 
 using namespace std;
 
@@ -242,7 +242,7 @@ void EmotionEngine::save_state(ofstream &state)
 
 void Cop0::load_state(ifstream &state)
 {
-    state.read((char*)&gpr, sizeof(uint32_t));
+    state.read((char*)&gpr, sizeof(gpr));
     state.read((char*)&status, sizeof(status));
     state.read((char*)&cause, sizeof(cause));
     state.read((char*)&EPC, sizeof(EPC));
@@ -259,7 +259,7 @@ void Cop0::load_state(ifstream &state)
 
 void Cop0::save_state(ofstream &state)
 {
-    state.write((char*)&gpr, sizeof(uint32_t));
+    state.write((char*)&gpr, sizeof(gpr));
     state.write((char*)&status, sizeof(status));
     state.write((char*)&cause, sizeof(cause));
     state.write((char*)&EPC, sizeof(EPC));
@@ -642,7 +642,7 @@ void GraphicsInterface::load_state(ifstream &state)
     state.read((char*)&path_queue, sizeof(path_queue));
     state.read((char*)&path3_vif_masked, sizeof(path3_vif_masked));
     state.read((char*)&internal_Q, sizeof(internal_Q));
-    state.read((char*)&path3_dma_waiting, sizeof(path3_dma_waiting));
+    state.read((char*)&path3_dma_running, sizeof(path3_dma_running));
     state.read((char*)&intermittent_mode, sizeof(intermittent_mode));
     state.read((char*)&outputting_path, sizeof(outputting_path));
     state.read((char*)&path3_mode_masked, sizeof(path3_mode_masked));
@@ -668,7 +668,7 @@ void GraphicsInterface::save_state(ofstream &state)
     state.write((char*)&path_queue, sizeof(path_queue));
     state.write((char*)&path3_vif_masked, sizeof(path3_vif_masked));
     state.write((char*)&internal_Q, sizeof(internal_Q));
-    state.write((char*)&path3_dma_waiting, sizeof(path3_dma_waiting));
+    state.write((char*)&path3_dma_running, sizeof(path3_dma_running));
     state.write((char*)&intermittent_mode, sizeof(intermittent_mode));
     state.write((char*)&outputting_path, sizeof(outputting_path));
     state.write((char*)&path3_mode_masked, sizeof(path3_mode_masked));
@@ -775,6 +775,7 @@ void VectorInterface::load_state(ifstream &state)
     state.read((char*)&vif_interrupt, sizeof(vif_interrupt));
     state.read((char*)&vif_stalled, sizeof(vif_stalled));
     state.read((char*)&vif_stop, sizeof(vif_stop));
+    state.read((char*)&vif_forcebreak, sizeof(vif_forcebreak));
     state.read((char*)&vif_cmd_status, sizeof(vif_cmd_status));
     state.read((char*)&internal_WL, sizeof(internal_WL));
 
@@ -837,6 +838,7 @@ void VectorInterface::save_state(ofstream &state)
     state.write((char*)&vif_interrupt, sizeof(vif_interrupt));
     state.write((char*)&vif_stalled, sizeof(vif_stalled));
     state.write((char*)&vif_stop, sizeof(vif_stop));
+    state.write((char*)&vif_forcebreak, sizeof(vif_forcebreak));
     state.write((char*)&vif_cmd_status, sizeof(vif_cmd_status));
     state.write((char*)&internal_WL, sizeof(internal_WL));
 

@@ -191,6 +191,9 @@ void Cop0::mtc(int index, uint32_t value)
         case 30:
             ErrorEPC = value;
             break;
+        case 11:
+            cause.timer_int_pending = false; //Interrupt is cleared on COMPARE write
+            //Fall through
         default:
             gpr[index] = value;
     }
@@ -297,47 +300,64 @@ void Cop0::set_tlb(int index)
 
 void Cop0::count_up(int cycles)
 {
+    //Check if TIMER interrupt has triggered
+    if (gpr[9] < gpr[11] && (gpr[9] + cycles) >= gpr[11])
+    {
+        cause.timer_int_pending = true;
+    }
+
     gpr[9] += cycles;
 
-    //Performance counter registers
     if (PCCR & (1 << 31))
     {
-        int event0 = (PCCR >> 5) & 0x1F;
-        int event1 = (PCCR >> 15) & 0x1F;
+        uint32_t PCR_MASK = (1 << (status.mode + 2)) | (status.exception << 1);
 
-        bool can_count0 = false;
-        bool can_count1 = false;
-        switch (event0)
+        //Performance counter registers
+        if (PCCR & PCR_MASK)
         {
-            case 1: //Processor cycle
-            case 2: //Single/double instruction issue
-            case 3: //Branch issued/mispredicted
-            case 12: //Instruction completed
-            case 13: //Non-delay slot instruction completed
-            case 14: //COP2/COP1 instruction completed
-            case 15: //Load/store instruction completed
-                can_count0 = true;
-                break;
+            int event0 = (PCCR >> 5) & 0x1F;
+            bool can_count0 = false;
+
+            switch (event0)
+            {
+                case 1: //Processor cycle
+                case 2: //Single/double instruction issue
+                case 3: //Branch issued/mispredicted
+                case 12: //Instruction completed
+                case 13: //Non-delay slot instruction completed
+                case 14: //COP2/COP1 instruction completed
+                case 15: //Load/store instruction completed
+                    can_count0 = true;
+                    break;
+            }
+
+            if (can_count0)
+                PCR0 += cycles;
         }
 
-        switch (event1)
+        PCR_MASK <<= 10;
+
+        if (PCCR & PCR_MASK)
         {
-            case 1: //Processor cycle
-            case 2: //Single/double instruction issue
-            case 3: //Branch issued/mispredicted
-            case 12: //Instruction completed
-            case 13: //Non-delay slot instruction completed
-            case 14: //COP2/COP1 instruction completed
-            case 15: //Load/store instruction completed
-                can_count1 = true;
-                break;
+            int event1 = (PCCR >> 15) & 0x1F;
+            bool can_count1 = false;
+
+            switch (event1)
+            {
+                case 1: //Processor cycle
+                case 2: //Single/double instruction issue
+                case 3: //Branch issued/mispredicted
+                case 12: //Instruction completed
+                case 13: //Non-delay slot instruction completed
+                case 14: //COP2/COP1 instruction completed
+                case 15: //Load/store instruction completed
+                    can_count1 = true;
+                    break;
+            }
+
+            if (can_count1)
+                PCR1 += cycles;
         }
-
-        if (can_count0)
-            PCR0 += cycles;
-
-        if (can_count1)
-            PCR1 += cycles;
     }
 }
 

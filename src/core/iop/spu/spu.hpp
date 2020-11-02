@@ -53,6 +53,8 @@ struct Voice
         adsr = {};
         left_vol = {};
         right_vol = {};
+        mix_state = {};
+        adpcm = {};
         pitch = 0;
         start_addr = 0;
         current_addr = 0;
@@ -61,6 +63,7 @@ struct Voice
         counter = 0;
         sample_idx = 0;
         loop_code = 0;
+        new_block = true;
     }
 };
 
@@ -264,7 +267,7 @@ class SPU
         SPU(int id, IOP_INTC* intc, IOP_DMA* dma);
 
         bool running_ADMA();
-        bool wav_output;
+        bool wav_output = false;
 
         void reset(uint8_t* RAM);
         void gen_sample();
