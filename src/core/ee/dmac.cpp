@@ -962,10 +962,10 @@ uint32_t DMAC::read32(uint32_t address)
             value = channels[VIF0].tag_address;
             break;
         case 0x10008040:
-            reg = channels[VIF0].tag_save0;
+            value = channels[VIF0].tag_save0;
             break;
         case 0x10008050:
-            reg = channels[VIF0].tag_save1;
+            value = channels[VIF0].tag_save1;
             break;
         case 0x10009000:
             value = channels[VIF1].control;
@@ -980,10 +980,10 @@ uint32_t DMAC::read32(uint32_t address)
             value = channels[VIF1].tag_address;
             break;
         case 0x10009040:
-            reg = channels[VIF1].tag_save0;
+            value = channels[VIF1].tag_save0;
             break;
         case 0x10009050:
-            reg = channels[VIF1].tag_save1;
+            value = channels[VIF1].tag_save1;
             break;
         case 0x1000A000:
             value = channels[GIF].control;
@@ -998,10 +998,10 @@ uint32_t DMAC::read32(uint32_t address)
             value = channels[GIF].tag_address;
             break;
         case 0x1000A040:
-            reg = channels[GIF].tag_save0;
+            value = channels[GIF].tag_save0;
             break;
         case 0x1000A050:
-            reg = channels[GIF].tag_save1;
+            value = channels[GIF].tag_save1;
             break;
         case 0x1000B000:
             value = channels[IPU_FROM].control;
@@ -1058,7 +1058,7 @@ uint32_t DMAC::read32(uint32_t address)
             value = channels[SPR_FROM].quadword_count;
             break;
         case 0x1000D080:
-            reg = channels[SPR_FROM].scratchpad_address;
+            value = channels[SPR_FROM].scratchpad_address;
             break;
         case 0x1000D400:
             value = channels[SPR_TO].control;
@@ -1073,7 +1073,7 @@ uint32_t DMAC::read32(uint32_t address)
             value = channels[SPR_TO].tag_address;
             break;
         case 0x1000D480:
-            reg = channels[SPR_TO].scratchpad_address;
+            value = channels[SPR_TO].scratchpad_address;
             break;
         case 0x1000E000:
             value |= control.master_enable;

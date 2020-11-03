@@ -94,26 +94,7 @@ bool VectorInterface::check_vif_stall(uint32_t value)
 void VectorInterface::update(int cycles)
 {
     if (fifo_reverse)
-    {
-        vif_cmd_status = VIF_IDLE;
-
-        while (cycles--)
-        {
-            if (FIFO.size() <= (fifo_size - 4))
-            {
-                auto fifo_data = gif->read_GSFIFO();
-                //Check the GS still wants to send data
-                if (!std::get<1>(fifo_data))
-                    return;
-
-                for (int i = 0; i < 4; i++)
-                    FIFO.push(std::get<0>(fifo_data)._u32[i]);
-            }
-            else
-                break;
-        }
         return;
-    }
 
     //Since the loop processes per-word, we need to multiply cycles by 4
     //This allows us to process one quadword per bus cycle
@@ -166,7 +147,6 @@ void VectorInterface::update(int cycles)
             wait_for_PATH3 = false;
             stall_condition_active = false;
         }
-
 
         if ((command & 0x60) == 0x60)
         {
@@ -986,16 +966,11 @@ bool VectorInterface::feed_DMA(uint128_t quad)
 
 std::tuple<uint128_t, uint32_t>VectorInterface::readFIFO()
 {
-    uint128_t quad;
-    if (FIFO.empty())
-        return std::make_tuple(quad, false);
+    if (!fifo_reverse)
+        Errors::die("[VIF] FIFO read when not reversed!");
 
-    for (int i = 0; i < 4; i++)
-    {
-        quad._u32[i] = FIFO.front();
-        FIFO.pop();
-    }
-    return std::make_tuple(quad, true);
+    auto fifo_data = gif->read_GSFIFO();
+    return fifo_data;
 }
 
 uint32_t VectorInterface::get_stat()
@@ -1055,6 +1030,7 @@ void VectorInterface::set_stat(uint32_t value)
 {
     if ((!fifo_reverse && ((value >> 23) & 0x1)) || (fifo_reverse && !((value >> 23) & 0x1)))
     {
+        vif_cmd_status = VIF_IDLE;
         while (!FIFO.empty())
             FIFO.pop();
     }
