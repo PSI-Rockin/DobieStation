@@ -3,16 +3,16 @@ name: CI
 on:
   push:
     paths-ignore:
-      - .github/*
-      - .github/ISSUE_TEMPLATE/**
-      - .appveyor.yml
-      - README.md
+      - '.github/*'
+      - '.github/*_TEMPLATE/**'
+      - '*.md'
+      - '*.yml'
   pull_request:
     paths-ignore:
-      - .github/*
-      - .github/ISSUE_TEMPLATE/**
-      - .appveyor.yml
-      - README.md
+      - '.github/*'
+      - '.github/*_TEMPLATE/**'
+      - '*.md'
+      - '*.yml'
 
 jobs:
   Windows:
@@ -35,15 +35,16 @@ jobs:
       run: msbuild DobieStation\DobieStation.sln /m /nologo /p:Configuration="${{ matrix.Configuration }}"
     - name: Prepare artifacts
       if: matrix.Configuration != 'Release'
-      run: |
-        mv LICENSE build\bin
-        rm build\bin\*.lib
+      run: Move-Item LICENSE build\bin
     - name: Upload artifacts
-      if: success()
+      if: matrix.Configuration != 'Release'
       uses: actions/upload-artifact@v2
       with:
         name: DobieStation-${{ runner.os }}-${{ matrix.Configuration }}
-        path: build\bin
+        path: |
+          build\bin
+          !**\*.lib
+        if-no-files-found: error
 
   Windows-CMake:
     runs-on: windows-latest
@@ -114,6 +115,7 @@ jobs:
       with:
         name: DobieStation-${{ runner.os }}
         path: artifacts
+        if-no-files-found: error
 
   macOS-CMake:
     runs-on: macos-latest
@@ -164,3 +166,4 @@ jobs:
       with:
         name: DobieStation-${{ runner.os }}
         path: artifacts
+        if-no-files-found: error
