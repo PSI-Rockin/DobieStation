@@ -90,7 +90,8 @@ size_t CHD_Reader::read(uint8_t *buff, size_t bytes)
 
         memcpy(buff, m_buf.get() + local_ofs, readlen);
         total_read += readlen;
-        m_virtptr += readlen;
+        //m_virtptr += readlen;
+        m_virtptr += m_header->unitbytes;
         buff += readlen;
     }
 
