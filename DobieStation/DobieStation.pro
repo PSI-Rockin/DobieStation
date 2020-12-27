@@ -1,4 +1,8 @@
 TEMPLATE = subdirs
-SUBDIRS = application libdeflate
+SUBDIRS = application libdeflate \
+    libFLAC \
+    libchdr \
+    lzma \
+    zlib
 
-application.depends = libdeflate
+application.depends = libdeflate zlib libchdr lzma libFLAC

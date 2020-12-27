@@ -31,6 +31,10 @@
       <!-- includes -->
       <AdditionalIncludeDirectories>$(UIDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories>$(ExtDir)\libdeflate;$(ExtDir)\libdeflate\common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ExtDir)\zlib\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ExtDir)\lzma\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ExtDir)\libFLAC\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ExtDir)\libchdr\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
 
       <!-- preprocessor-->
       <PreprocessToFile>false</PreprocessToFile>
@@ -39,6 +43,15 @@
       <PreprocessorDefinitions>WIN32;WIN64;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions>WIN32_LEAN_AND_MEAN;VC_EXTRALEAN;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <PreprocessorDefinitions>NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+
+      <PreprocessorDefinitions>_7ZIP_ST;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+
+      <!-- preprocessor crap for libFLAC -->
+      <PreprocessorDefinitions>PACKAGE_VERSION="1.3.2";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>FLAC__NO_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>FLAC__NO_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>FLAC__HAS_OGG=0;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>FLAC__HAS_X86INTRIN=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
 
       <!-- compiler -->
       <AdditionalOptions>-Zc:rvalueCast -Zc:inline -Zc:strictStrings -Zc:throwingNew -Zc:referenceBinding %(AdditionalOptions)</AdditionalOptions>
@@ -63,6 +76,10 @@
       <DataExecutionPrevention>true</DataExecutionPrevention>
       <AdditionalDependencies>$(BinDir)\Core$(Postfix).lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies>$(BinDir)\libdeflate$(Postfix).lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(BinDir)\libchdr$(Postfix).lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(BinDir)\libFLAC$(Postfix).lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(BinDir)\lzma$(Postfix).lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>$(BinDir)\zlib$(Postfix).lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
 

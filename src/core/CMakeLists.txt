@@ -73,6 +73,7 @@ set(SOURCES
     iop/cdvd/cdvd.cpp
     iop/cdvd/cso_reader.cpp
     iop/cdvd/iso_reader.cpp
+    iop/cdvd/chd_reader.cpp
     iop/firewire.cpp
     iop/gamepad.cpp
     iop/iop.cpp
@@ -155,6 +156,7 @@ set(HEADERS
     iop/cdvd/cdvd.hpp
     iop/cdvd/cso_reader.hpp
     iop/cdvd/iso_reader.hpp
+    iop/cdvd/chd_reader.hpp
     iop/firewire.hpp
     iop/gamepad.hpp
     iop/iop.hpp
@@ -178,5 +180,5 @@ add_library(${TARGET} ${SOURCES} ${HEADERS})
 add_library(Dobie::Core ALIAS ${TARGET})
 
 target_include_directories(${TARGET} PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(${TARGET} Ext::libdeflate Threads::Threads)
+target_link_libraries(${TARGET} Ext::libdeflate Threads::Threads libchdr)
 dobie_cxx_compile_options(${TARGET})

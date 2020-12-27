@@ -15,6 +15,7 @@ enum CDVD_CONTAINER
 {
     ISO,
     CISO,
+    CHD,
     BIN_CUE
 };
 

@@ -6,10 +6,23 @@ TARGET = ../DobieStation
 CONFIG += console c++14
 CONFIG -= app_bundle
 
-INCLUDEPATH += ../../ext/libdeflate
-LIBS += -L../libdeflate
-win32:LIBS += -llibdeflate
-else:LIBS += -ldeflate
+INCLUDEPATH += ../../ext/libdeflate \
+               ../../ext/libchdr/include
+LIBS += -L../libdeflate \
+        -L../libchdr \
+        -L../lzma \
+        -L../libFLAC \
+        -L../zlib
+win32:LIBS += -llibdeflate \
+              -llibchdr \
+              -llzma \
+              -llibFLAC \
+              -lzlib
+else:LIBS += -ldeflate \
+             -llibchdr \
+             -llzma \
+             -llibFLAC \
+             -lzlib
 
 QMAKE_CFLAGS_RELEASE -= -O
 QMAKE_CFLAGS_RELEASE -= -O1
@@ -53,6 +66,7 @@ SOURCES += ../../src/qt/main.cpp \
     ../../src/core/ee/intc.cpp \
     ../../src/core/iop/cdvd/cdvd.cpp \
     ../../src/core/iop/cdvd/cso_reader.cpp\
+    ../../src/core/iop/cdvd/chd_reader.cpp\
     ../../src/core/iop/sio2.cpp \
     ../../src/core/ee/vu.cpp \
     ../../src/core/ee/emotion_vu0.cpp \
@@ -139,6 +153,7 @@ HEADERS += \
     ../../src/core/ee/intc.hpp \
     ../../src/core/iop/cdvd/cdvd.hpp \
     ../../src/core/iop/cdvd/cso_reader.hpp\
+    ../../src/core/iop/cdvd/chd_reader.hpp\
     ../../src/core/iop/sio2.hpp \
     ../../src/core/ee/vu.hpp \
     ../../src/core/iop/firewire.hpp \

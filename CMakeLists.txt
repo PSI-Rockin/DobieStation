@@ -8,6 +8,10 @@ set(THREADS_PREFER_PTHREAD_FLAG ON) # -pthreads on GNU-like compilers
 
 # Externals
 add_subdirectory(ext/libdeflate)
+add_subdirectory(ext/zlib)
+add_subdirectory(ext/lzma)
+add_subdirectory(ext/libFLAC)
+add_subdirectory(ext/libchdr)
 
 # Shared packages
 find_package(Threads REQUIRED)

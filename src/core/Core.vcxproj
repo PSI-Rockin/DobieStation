@@ -90,6 +90,7 @@
     <ClCompile Include="iop\cdvd\cdvd.cpp" />
     <ClCompile Include="iop\cdvd\cso_reader.cpp" />
     <ClCompile Include="iop\cdvd\iso_reader.cpp" />
+    <ClCompile Include="iop\cdvd\chd_reader.cpp" />
     <ClCompile Include="ee\ipu\chromtable.cpp" />
     <ClCompile Include="ee\ipu\codedblockpattern.cpp" />
     <ClCompile Include="ee\cop0.cpp" />
@@ -166,6 +167,7 @@
     <ClInclude Include="iop\cdvd\cdvd_container.hpp" />
     <ClInclude Include="iop\cdvd\cso_reader.hpp" />
     <ClInclude Include="iop\cdvd\iso_reader.hpp" />
+    <ClInclude Include="iop\cdvd\chd_reader.hpp" />
     <ClInclude Include="ee\ipu\chromtable.hpp" />
     <ClInclude Include="circularFIFO.hpp" />
     <ClInclude Include="ee\ipu\codedblockpattern.hpp" />

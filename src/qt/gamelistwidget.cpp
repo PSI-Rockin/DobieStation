@@ -86,6 +86,7 @@ QStringList GameListModel::get_directory_entries(QString path)
     const QStringList file_types({
         "*.iso",
         "*.cso",
+        "*.chd",
         "*.elf",
         "*.gsd",
         "*.bin"
