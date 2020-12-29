@@ -6,20 +6,17 @@ TARGET = ../DobieStation
 CONFIG += console c++14
 CONFIG -= app_bundle
 
-INCLUDEPATH += ../../ext/libdeflate \
+INCLUDEPATH += ../../ext/zlib/include \
                ../../ext/libchdr/include
-LIBS += -L../libdeflate \
-        -L../libchdr \
+LIBS += -L../libchdr \
         -L../lzma \
         -L../libFLAC \
         -L../zlib
-win32:LIBS += -llibdeflate \
-              -llibchdr \
+win32:LIBS += -llibchdr \
               -llzma \
               -llibFLAC \
               -lzlib
-else:LIBS += -ldeflate \
-             -llibchdr \
+else:LIBS += -llibchdr \
              -llzma \
              -llibFLAC \
              -lzlib

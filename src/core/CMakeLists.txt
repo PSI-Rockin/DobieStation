@@ -180,5 +180,5 @@ add_library(${TARGET} ${SOURCES} ${HEADERS})
 add_library(Dobie::Core ALIAS ${TARGET})
 
 target_include_directories(${TARGET} PRIVATE ${CMAKE_SOURCE_DIR}/src)
-target_link_libraries(${TARGET} Ext::libdeflate Threads::Threads libchdr)
+target_link_libraries(${TARGET} Threads::Threads libchdr zlib)
 dobie_cxx_compile_options(${TARGET})

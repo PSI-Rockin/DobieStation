@@ -30,7 +30,6 @@
 
       <!-- includes -->
       <AdditionalIncludeDirectories>$(UIDir);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <AdditionalIncludeDirectories>$(ExtDir)\libdeflate;$(ExtDir)\libdeflate\common;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories>$(ExtDir)\zlib\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories>$(ExtDir)\lzma\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <AdditionalIncludeDirectories>$(ExtDir)\libFLAC\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
@@ -75,7 +74,6 @@
       <IgnoreImportLibrary>true</IgnoreImportLibrary>
       <DataExecutionPrevention>true</DataExecutionPrevention>
       <AdditionalDependencies>$(BinDir)\Core$(Postfix).lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalDependencies>$(BinDir)\libdeflate$(Postfix).lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies>$(BinDir)\libchdr$(Postfix).lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies>$(BinDir)\libFLAC$(Postfix).lib;%(AdditionalDependencies)</AdditionalDependencies>
       <AdditionalDependencies>$(BinDir)\lzma$(Postfix).lib;%(AdditionalDependencies)</AdditionalDependencies>
