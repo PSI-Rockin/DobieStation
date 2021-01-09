@@ -1203,7 +1203,6 @@ void SPU::write_voice_reg(uint32_t addr, uint16_t value)
 
 void SPU::update_voice_state()
 {
-
     for (int i = 0; i < 24; i++)
     {
         if (key_off & (1 << i))
@@ -1215,8 +1214,8 @@ void SPU::update_voice_state()
         {
             key_on_voice(i);
         }
-
     }
+
     key_on = 0;
     key_off = 0;
 }
