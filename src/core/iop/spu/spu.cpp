@@ -159,7 +159,7 @@ stereo_sample SPU::voice_gen_sample(int voice_id)
 
         if (voice.sample_idx == 24)
         {
-            if (voice.loop_code == 3)
+            if (voice.loop_code & 0x1)
             {
                 voice.current_addr = voice.loop_addr | 1;
             }
@@ -168,23 +168,16 @@ stereo_sample SPU::voice_gen_sample(int voice_id)
         //End of block
         if (voice.sample_idx == 28)
         {
-            switch (voice.loop_code)
+            if (voice.loop_code & 0x1) // looping back
             {
-                //Continue to next block
-                case 0:
-                case 2:
-                    break;
-                //No loop specified, set ENDX and mute channel
-                case 1:
-                    ENDX |= 1 << voice_id;
+                ENDX |= 1 << voice_id;
+
+                if (!(voice.loop_code & 0x2)) // stop voice
+                {
                     printf("[SPU%d] EDEBUG Setting ADSR phase of voice %d to %d\n", id, voice_id, 4);
                     voice.adsr.set_stage(ADSR::Stage::Release);
                     voice.adsr.volume = 0;
-                    break;
-                //Jump to loop addr and set ENDX
-                case 3:
-                    ENDX |= 1 << voice_id;
-                    break;
+                }
             }
 
             switch_block(voice_id);
