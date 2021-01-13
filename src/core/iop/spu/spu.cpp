@@ -174,7 +174,6 @@ stereo_sample SPU::voice_gen_sample(int voice_id)
 
                 if (!(voice.loop_code & 0x2)) // stop voice
                 {
-                    printf("[SPU%d] EDEBUG Setting ADSR phase of voice %d to %d\n", id, voice_id, 4);
                     voice.adsr.set_stage(ADSR::Stage::Release);
                     voice.adsr.volume = 0;
                 }
@@ -1227,14 +1226,12 @@ void SPU::key_on_voice(int v)
     ENDX &= ~(1 << v);
     voices[v].adsr.set_stage(ADSR::Stage::Attack);
     voices[v].adsr.volume = 0;
-    printf("[SPU%d] EDEBUG Setting ADSR phase of voice %d to %d\n", id, v, 1);
 }
 
 void SPU::key_off_voice(int v)
 {
     //Set envelope to Release mode
     voices[v].adsr.set_stage(ADSR::Stage::Release);
-    printf("[SPU%d] EDEBUG Setting ADSR phase of voice %d to %d\n", id, v, 4);
 }
 
 void SPU::clear_dma_req()
