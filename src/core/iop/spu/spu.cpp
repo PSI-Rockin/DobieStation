@@ -100,7 +100,7 @@ void SPU::spu_irq(int index)
 void SPU::switch_block(int voice_id)
 {
     Voice &voice = voices[voice_id];
-    voice.current_addr &= 0x000FFFFF;
+    voice.current_addr &= 0x000FFFF8;
     uint16_t header = RAM[voice.current_addr];
     voice.loop_code = (header >> 8) & 0x3;
     bool loop_start = header & (1 << 10);
@@ -148,8 +148,8 @@ stereo_sample SPU::voice_gen_sample(int voice_id)
     {
         voice.counter -= 0x1000;
 
-
         voice.sample_idx++;
+
         if ((voice.sample_idx % 4) == 0)
         {
             spu_check_irq(voice.current_addr);
@@ -157,37 +157,37 @@ stereo_sample SPU::voice_gen_sample(int voice_id)
             voice.current_addr &= 0x000FFFFF;
         }
 
+        if (voice.sample_idx == 24)
+        {
+            if (voice.loop_code & 0x1)
+            {
+                voice.current_addr = voice.loop_addr | 1;
+            }
+        }
+
         //End of block
         if (voice.sample_idx == 28)
         {
-            switch (voice.loop_code)
+            if (voice.loop_code & 0x1) // looping back
             {
-                //Continue to next block
-                case 0:
-                case 2:
-                    break;
-                //No loop specified, set ENDX and mute channel
-                case 1:
-                    ENDX |= 1 << voice_id;
-                    printf("[SPU%d] EDEBUG Setting ADSR phase of voice %d to %d\n", id, voice_id, 4);
+                ENDX |= 1 << voice_id;
+
+                if (!(voice.loop_code & 0x2)) // stop voice
+                {
                     voice.adsr.set_stage(ADSR::Stage::Release);
                     voice.adsr.volume = 0;
-                    break;
-                //Jump to loop addr and set ENDX
-                case 3:
-                    voice.current_addr = voice.loop_addr;
-                    ENDX |= 1 << voice_id;
-                    break;
+                }
             }
+
             switch_block(voice_id);
             continue;
         }
+
         voice.old3 = voice.old2;
         voice.old2 = voice.old1;
         voice.old1 = voice.next_sample;
         voice.next_sample = voice.pcm.at(voice.sample_idx);
     }
-
 
     int16_t output_sample = 0;
 
@@ -1195,7 +1195,6 @@ void SPU::write_voice_reg(uint32_t addr, uint16_t value)
 
 void SPU::update_voice_state()
 {
-
     for (int i = 0; i < 24; i++)
     {
         if (key_off & (1 << i))
@@ -1207,8 +1206,8 @@ void SPU::update_voice_state()
         {
             key_on_voice(i);
         }
-
     }
+
     key_on = 0;
     key_off = 0;
 }
@@ -1216,7 +1215,7 @@ void SPU::update_voice_state()
 void SPU::key_on_voice(int v)
 {
     //Copy start addr to current addr, clear ENDX bit, and set envelope to Attack mode
-    voices[v].current_addr = voices[v].start_addr;
+    voices[v].current_addr = voices[v].start_addr | 1;
     voices[v].new_block = true;
     voices[v].loop_addr_specified = false;
     // Clear previous sample data here to avoid pops and clicks.
@@ -1227,14 +1226,12 @@ void SPU::key_on_voice(int v)
     ENDX &= ~(1 << v);
     voices[v].adsr.set_stage(ADSR::Stage::Attack);
     voices[v].adsr.volume = 0;
-    printf("[SPU%d] EDEBUG Setting ADSR phase of voice %d to %d\n", id, v, 1);
 }
 
 void SPU::key_off_voice(int v)
 {
     //Set envelope to Release mode
     voices[v].adsr.set_stage(ADSR::Stage::Release);
-    printf("[SPU%d] EDEBUG Setting ADSR phase of voice %d to %d\n", id, v, 4);
 }
 
 void SPU::clear_dma_req()
