@@ -4,7 +4,7 @@
 
 #define VER_MAJOR 0
 #define VER_MINOR 0
-#define VER_REV 49
+#define VER_REV 50
 
 using namespace std;
 
@@ -1021,6 +1021,8 @@ void SPU::load_state(ifstream &state)
     state.read((char*)&data_input_volume_r, sizeof(data_input_volume_r));
     state.read((char*)&core_volume_l, sizeof(core_volume_l));
     state.read((char*)&core_volume_r, sizeof(core_volume_r));
+    state.read((char*)&MVOLL, sizeof(MVOLL));
+    state.read((char*)&MVOLR, sizeof(MVOLR));
 
     state.read((char*)&mix_state, sizeof(mix_state));
     state.read((char*)&voice_mixdry_left, sizeof(voice_mixdry_left));
@@ -1059,6 +1061,8 @@ void SPU::save_state(ofstream &state)
     state.write((char*)&data_input_volume_r, sizeof(data_input_volume_r));
     state.write((char*)&core_volume_l, sizeof(core_volume_l));
     state.write((char*)&core_volume_r, sizeof(core_volume_r));
+    state.write((char*)&MVOLL, sizeof(MVOLL));
+    state.write((char*)&MVOLR, sizeof(MVOLR));
 
     state.write((char*)&mix_state, sizeof(mix_state));
     state.write((char*)&voice_mixdry_left, sizeof(voice_mixdry_left));

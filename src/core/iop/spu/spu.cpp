@@ -60,6 +60,8 @@ void SPU::reset(uint8_t* RAM)
     voice_mixwet_left = 0;
     voice_mixwet_right = 0;
     voice_pitch_mod = 0;
+    MVOLL = {};
+    MVOLR = {};
 
     std::ostringstream fname;
     fname << "spu_" << id << "_stream" << ".wav";
@@ -273,6 +275,13 @@ void SPU::gen_sample()
         core_output.mix(core_dry, true, true);
         core_output.mix(reverb.Eout, true, true);
     }
+
+    MVOLL.advance();
+    MVOLR.advance();
+
+    // Could probably do with testing how core0 mvol gets applied to memory writes/input to core1
+    mulvol(core_output.left, MVOLL.value);
+    mulvol(core_output.right, MVOLR.value);
 
     if (id == 1)
     {
@@ -856,6 +865,14 @@ void SPU::write16(uint32_t addr, uint16_t value)
 
         switch (addr)
         {
+            case 0x760:
+                printf("[SPU%d] Write MVOLL: $%04X\n", id, value);
+                MVOLL.set(value);
+                break;
+            case 0x762:
+                printf("[SPU%d] Write MVOLR: $%04X\n", id, value);
+                MVOLR.set(value);
+                break;
             case 0x764:
                 printf("[SPU%d] Write EVOLL: $%04X\n", id, value);
                 effect_volume_l = static_cast<int16_t>(value);
