@@ -218,6 +218,10 @@ class SPU
         int16_t core_volume_l;
         int16_t core_volume_r;
 
+        // Master output volume.
+        Volume MVOLL;
+        Volume MVOLR;
+
         CoreMix mix_state;
 
         uint32_t voice_mixdry_left;
