@@ -5,7 +5,7 @@
 
 int16_t Envelope::next_step(int16_t volume)
 {
-    if (cycles_left > 0)
+    if (cycles_left > 1)
     {
         cycles_left--;
         return 0;
@@ -43,7 +43,7 @@ void ADSR::set_stage(ADSR::Stage new_stage)
             envelope.negative_phase = false;
             envelope.rising = true;
             envelope.shift = (adsr1 >> 10) & 0x1f;
-            envelope.step = (adsr2 >> 8) & 0x03;
+            envelope.step = (adsr1 >> 8) & 0x03;
             envelope.step = envelope.rising ? (7 - envelope.step) : (-8 + envelope.step);
             stage = new_stage;
             break;
@@ -52,7 +52,7 @@ void ADSR::set_stage(ADSR::Stage new_stage)
             envelope.negative_phase = false;
             envelope.exponential = true;
             envelope.rising = false;
-            envelope.shift = (adsr1 >> 4) & 0x1f;
+            envelope.shift = (adsr1 >> 4) & 0xf;
             envelope.step = -8;
             stage = new_stage;
             break;
