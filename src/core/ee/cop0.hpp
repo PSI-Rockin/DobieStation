@@ -123,6 +123,7 @@ class Cop0
 
         void count_up(int cycles);
 
+        void read_tlb(int index);
         void set_tlb(int index);
         void clear_tlb_modified(size_t page);
         void set_tlb_modified(size_t page);

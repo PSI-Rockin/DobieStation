@@ -223,6 +223,19 @@ bool Cop0::int_pending()
     return false;
 }
 
+void Cop0::read_tlb(int index)
+{
+    TLB_Entry* entry = &tlb[index];
+    //PageMask
+    gpr[5] = entry->page_mask << 13;
+    //EntryHi  (VPN | ASID) & ~PageMask
+    gpr[10] = ((entry->vpn2 << 13) | entry->asid) & ~gpr[5];
+    //EntryLo0
+    gpr[2] = (entry->is_scratchpad << 31) | (entry->pfn[1] << 6) | (entry->cache_mode[1] << 3) | (entry->dirty[1] << 2) | (entry->valid[1] << 1) | entry->global;
+    //EntryLo1
+    gpr[3] = (entry->pfn[0] << 6) | (entry->cache_mode[0] << 3) | (entry->dirty[0] << 2) | (entry->valid[0] << 1) | entry->global;
+}
+
 void Cop0::set_tlb(int index)
 {
     TLB_Entry* new_entry = &tlb[index];

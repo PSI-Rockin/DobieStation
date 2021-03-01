@@ -3405,6 +3405,11 @@ void EE_JitTranslator::translate_op_cop0_type2(uint32_t opcode, uint32_t PC, EE_
 
     switch (op)
     {
+        case 0x01:
+            // TLBR
+            Errors::print_warning("[EE_JIT] Unrecognized cop0 type2 op TLBR\n", op);
+            instrs.push_back(instr);
+            break;
         case 0x02:
             // TLBWI
             Errors::print_warning("[EE_JIT] Unrecognized cop0 type2 op TLBWI\n", op);
