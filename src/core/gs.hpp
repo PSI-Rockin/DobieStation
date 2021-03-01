@@ -41,9 +41,11 @@ class GraphicsSynthesizer
 
         inline bool stalled() { return reg.CSR.SIGNAL_stall; }
 
+        void swap_CSR_field();
         void set_CSR_FIFO(uint8_t value);
-        void set_VBLANK(bool is_VBLANK);
+        void set_VBLANK_irq(bool is_VBLANK);
         void assert_FINISH();
+        void assert_HBLANK();
         void assert_VSYNC();
 
         void set_CRT(bool interlaced, int mode, bool frame_mode);

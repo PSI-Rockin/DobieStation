@@ -107,15 +107,19 @@ void GraphicsSynthesizer::set_CSR_FIFO(uint8_t value)
     reg.CSR.FIFO_status = value;
 }
 
-void GraphicsSynthesizer::set_VBLANK(bool is_VBLANK)
+void GraphicsSynthesizer::swap_CSR_field()
 {
     GSMessagePayload payload;
-    payload.vblank_payload = { is_VBLANK };
-    
-    gs_thread.send_message({ GSCommand::set_vblank_t, payload });
-    gs_thread.wake_thread();
-    reg.set_VBLANK(is_VBLANK);
+    payload.no_payload = {};
 
+    gs_thread.send_message({ GSCommand::swap_field_t, payload });
+    gs_thread.wake_thread();
+    reg.swap_FIELD();
+}
+
+
+void GraphicsSynthesizer::set_VBLANK_irq(bool is_VBLANK)
+{
     if (is_VBLANK)
     {
         printf("[GS] VBLANK start\n");
@@ -127,6 +131,17 @@ void GraphicsSynthesizer::set_VBLANK(bool is_VBLANK)
         intc->assert_IRQ((int)Interrupt::VBLANK_END);
         frame_count++;
     }
+}
+
+void GraphicsSynthesizer::assert_HBLANK()
+{
+    GSMessagePayload payload;
+    payload.no_payload = {};
+
+    gs_thread.send_message({ GSCommand::assert_hblank_t, payload });
+
+    if (reg.assert_HBLANK())
+        intc->assert_IRQ((int)Interrupt::GS);
 }
 
 void GraphicsSynthesizer::assert_VSYNC()
@@ -158,8 +173,8 @@ void GraphicsSynthesizer::render_CRT()
     if (using_first_buffer)
         payload.render_payload = { output_buffer1, &output_buffer1_mutex };
     else
-        payload.render_payload = { output_buffer2, &output_buffer2_mutex }; ;
-    
+        payload.render_payload = { output_buffer2, &output_buffer2_mutex };
+
     gs_thread.send_message({ GSCommand::render_crt_t, payload });
     gs_thread.wake_thread();
 }
@@ -171,7 +186,7 @@ uint32_t* GraphicsSynthesizer::render_partial_frame(uint16_t& width, uint16_t& h
     if (using_first_buffer)
         payload.render_payload = { output_buffer1, &output_buffer1_mutex };
     else
-        payload.render_payload = { output_buffer2, &output_buffer2_mutex }; ;
+        payload.render_payload = { output_buffer2, &output_buffer2_mutex };
     
     gs_thread.send_message({ GSCommand::memdump_t,payload });
     gs_thread.wake_thread();

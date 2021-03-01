@@ -34,7 +34,7 @@ enum GSCommand:uint8_t
 {
     write64_t, write64_privileged_t, write32_privileged_t,
     set_rgba_t, set_st_t, set_uv_t, set_xyz_t, set_xyzf_t, set_crt_t,
-    render_crt_t, assert_finish_t, assert_vsync_t, set_vblank_t, memdump_t, die_t,
+    render_crt_t, assert_finish_t, assert_hblank_t, assert_vsync_t, swap_field_t, memdump_t, die_t,
     save_state_t, load_state_t, gsdump_t, request_local_host_tx,
 };
 

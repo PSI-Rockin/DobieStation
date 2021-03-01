@@ -186,6 +186,10 @@ void GS_REGISTERS::write64_privileged(uint32_t addr, uint64_t value)
             {
                 CSR.FINISH_generated = false;
             }
+            if (value & 0x4)
+            {
+                CSR.HBLANK_generated = false;
+            }
             if (value & 0x8)
             {
                 CSR.VBLANK_generated = false;
@@ -258,6 +262,10 @@ void GS_REGISTERS::write32_privileged(uint32_t addr, uint32_t value)
             {
                 CSR.FINISH_generated = false;
             }
+            if (value & 0x4)
+            {
+                CSR.HBLANK_generated = false;
+            }
             if (value & 0x8)
             {
                 CSR.VBLANK_generated = false;
@@ -305,6 +313,7 @@ uint64_t GS_REGISTERS::read64_privileged(uint32_t addr)
             // but for completeness CSR is 0x1000
             reg |= CSR.SIGNAL_generated << 0;
             reg |= CSR.FINISH_generated << 1;
+            reg |= CSR.HBLANK_generated << 2;
             reg |= CSR.VBLANK_generated << 3;
             reg |= CSR.is_odd_frame << 13;
             reg |= (uint32_t)CSR.FIFO_status << 14;
@@ -420,6 +429,7 @@ void GS_REGISTERS::reset(bool soft_reset)
     CSR.SIGNAL_generated = false;
     CSR.SIGNAL_stall = false;
     CSR.SIGNAL_irq_pending = false;
+    CSR.HBLANK_generated = false;
     CSR.VBLANK_generated = false;
     CSR.FINISH_generated = false;
     CSR.FINISH_requested = false;
@@ -487,12 +497,22 @@ void GS_REGISTERS::get_inner_resolution(int &w, int &h)
         h /= 2;
 }
 
-void GS_REGISTERS::set_VBLANK(bool is_VBLANK)
+void GS_REGISTERS::swap_FIELD()
 {
-    if (!is_VBLANK)
-    {
+    if (SYNCV.vertical_front_porch & 0x1)
         CSR.is_odd_frame = !CSR.is_odd_frame;
+    else
+        CSR.is_odd_frame = true;
+}
+
+bool GS_REGISTERS::assert_HBLANK()//returns true if the interrupt should be processed
+{
+    if (!CSR.HBLANK_generated)
+    {
+        CSR.HBLANK_generated = true;
+        return !IMR.hsync;
     }
+    return false;
 }
 
 bool GS_REGISTERS::assert_VSYNC()//returns true if the interrupt should be processed
