@@ -86,7 +86,8 @@ set(SOURCES
     iop/spu/spu.cpp
     iop/spu/spu_adpcm.cpp
     iop/spu/spu_envelope.cpp
-    iop/spu/spu_tables.cpp
+    iop/spu/spu_interpolate.cpp
+    iop/spu/spu_reverb.cpp
     jitcommon/emitter64.cpp
     jitcommon/ir_block.cpp
     jitcommon/ir_instr.cpp

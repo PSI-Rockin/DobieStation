@@ -74,6 +74,7 @@ Emulator::Emulator() :
     set_ee_mode(CPU_MODE::DONT_CARE);
     set_vu0_mode(CPU_MODE::DONT_CARE);
     set_vu1_mode(CPU_MODE::DONT_CARE);
+    spu.gaussianConstructTable();
 }
 
 Emulator::~Emulator()
