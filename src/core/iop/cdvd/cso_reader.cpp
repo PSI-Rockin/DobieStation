@@ -7,7 +7,7 @@ Based off reference by unknownbrackets:
 */
 
 #include "cso_reader.hpp"
-#include <libdeflate.h>
+#include <zlib.h>
 #include <cstring>
 #include <cassert>
 
@@ -47,8 +47,7 @@ CSO_Reader::CSO_Reader() :
     m_size(0), m_shift(0), m_blocksize(0), m_version(0), m_virtptr(0),
     m_indices(nullptr),
     m_framesize(0), m_curframe(0xFFFFFFFF),
-    m_frame(nullptr), m_readbuf(nullptr),
-    m_inflate(nullptr) {}
+    m_frame(nullptr), m_readbuf(nullptr) {}
 
 CSO_Reader::~CSO_Reader()
 {
@@ -139,22 +138,41 @@ bool CSO_Reader::read_block_internal(uint32_t block)
             fprintf(stderr, "read error reading (compressed) block %d\n", block);
             return false;
         }
-        
-        size_t read;
-        auto res = libdeflate_deflate_decompress(m_inflate, m_readbuf, len, m_frame, m_framesize, &read);
-        if (res != LIBDEFLATE_SUCCESS)
+
+        z_stream z;
+        z.zalloc = Z_NULL;
+        z.zfree = Z_NULL;
+        z.opaque = Z_NULL;
+        if (inflateInit2(&z, -15) != Z_OK)
         {
-            fprintf(stderr, "libdeflate error on block %d: %d\n", block, res);
-            m_curframe = 0xFFFFFFFF;
+            fprintf(stderr, "Unable to initialize inflate: %s\n", (z.msg) ? z.msg : "?");
             return false;
         }
-        
+
+        z.next_in = m_readbuf;
+        z.avail_in = len;
+        z.next_out = m_frame;
+        z.avail_out = m_framesize;
+
+        auto res = inflate(&z, Z_FINISH);
+        if (res != Z_STREAM_END)
+        {
+            fprintf(stderr, "zlib error on block %d: %d, %s\n", block, res, (z.msg) ? z.msg: "?");
+            m_curframe = 0xFFFFFFFF;
+            return false;
+
+        }
+
+        size_t read = z.total_out;
+
         if (read < m_blocksize)
         {
             fprintf(stderr, "compressed sector %d decoded to less than the blocksize\n", block);
             m_curframe = 0xFFFFFFFF;
             return false;
         }
+
+        inflateEnd(&z);
     }
     
     m_curframe = block;
@@ -297,23 +315,11 @@ bool CSO_Reader::open(std::string name)
     m_frame = new uint8_t[m_framesize];
     m_readbuf = new uint8_t[m_framesize];
     
-    // setup libdeflate
-    m_inflate = libdeflate_alloc_decompressor();
-    if (!m_inflate)
-    {
-        fprintf(stderr, "failed to allocate decompressor\n");
-        close();
-        return false;
-    }
-    
     return true;
 }
 
 void CSO_Reader::close()
 {
-    libdeflate_free_decompressor(m_inflate);
-    m_inflate = nullptr;
-    
     delete[] m_readbuf;
     m_readbuf = nullptr;
 

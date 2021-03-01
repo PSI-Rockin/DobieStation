@@ -22,8 +22,6 @@ class CSO_Reader : public CDVD_Container
         uint8_t* m_frame;
         uint8_t* m_readbuf;
 
-        struct libdeflate_decompressor* m_inflate;
-
         bool read_block_internal(uint32_t block);
     public:
         CSO_Reader();

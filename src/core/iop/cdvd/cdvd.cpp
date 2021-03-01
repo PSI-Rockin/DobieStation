@@ -5,6 +5,7 @@
 #include "cdvd.hpp"
 #include "cso_reader.hpp"
 #include "iso_reader.hpp"
+#include "chd_reader.hpp"
 
 #include "../iop_dma.hpp"
 #include "../iop_intc.hpp"
@@ -265,6 +266,9 @@ bool CDVD_Drive::load_disc(const char *name, CDVD_CONTAINER a_container)
             break;
         case CDVD_CONTAINER::CISO:
             container = std::unique_ptr<CDVD_Container>(new CSO_Reader());
+            break;
+        case CDVD_CONTAINER::CHD:
+            container = std::unique_ptr<CDVD_Container>(new CHD_Reader());
             break;
         case CDVD_CONTAINER::BIN_CUE:
             container = std::unique_ptr<CDVD_Container>(new BinCueReader());
