@@ -69,7 +69,6 @@ void CHD_Reader::find_offset()
 void CHD_Reader::close()
 {
     chd_close(m_file);
-    delete (m_header);
 }
 
 size_t CHD_Reader::read(uint8_t* buff, size_t bytes)
