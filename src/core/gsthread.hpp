@@ -10,6 +10,7 @@
 #include "gsregisters.hpp"
 #include "circularFIFO.hpp"
 #include "int128.hpp"
+#include "core/serialize.hpp"
 
 #include "jitcommon/emitter64.hpp"
 
@@ -35,7 +36,7 @@ enum GSCommand:uint8_t
     write64_t, write64_privileged_t, write32_privileged_t,
     set_rgba_t, set_st_t, set_uv_t, set_xyz_t, set_xyzf_t, set_crt_t,
     render_crt_t, assert_finish_t, assert_hblank_t, assert_vsync_t, swap_field_t, memdump_t, die_t,
-    save_state_t, load_state_t, gsdump_t, request_local_host_tx,
+    do_state_t, gsdump_t, request_local_host_tx,
 };
 
 union GSMessagePayload 
@@ -96,12 +97,8 @@ union GSMessagePayload
     } download_payload;
     struct
     {
-        std::ofstream* state;
-    } save_state_payload;
-    struct
-    {
-        std::ifstream* state;
-    } load_state_payload;
+        StateSerializer* state;
+    } do_state_payload;
     struct 
     {
         uint8_t BLANK; 
@@ -119,8 +116,7 @@ enum GSReturn :uint8_t
 {
     render_complete_t,
     death_error_t,
-    save_state_done_t,
-    load_state_done_t,
+    do_state_done_t,
     gsdump_render_partial_done_t,
     local_host_transfer,
 };
@@ -531,8 +527,7 @@ class GraphicsSynthesizerThread
         void set_XYZ(uint32_t x, uint32_t y, uint32_t z, bool drawing_kick);
         void set_XYZF(uint32_t x, uint32_t y, uint32_t z, uint8_t fog, bool drawing_kick);
 
-        void load_state(std::ifstream* state);
-        void save_state(std::ofstream* state);
+        void do_state(StateSerializer* state);
     public:
         GraphicsSynthesizerThread();
         ~GraphicsSynthesizerThread();

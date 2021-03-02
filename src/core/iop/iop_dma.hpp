@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <fstream>
 #include <list>
+#include "core/serialize.hpp"
 
 class IOP_DMA;
 
@@ -133,8 +134,7 @@ class IOP_DMA
         void set_chan_control(int index, uint32_t value);
         void set_chan_tag_addr(int index, uint32_t value);
 
-        void load_state(std::ifstream& state);
-        void save_state(std::ofstream& state);
+        void do_state(StateSerializer& state);
 };
 
 #endif // IOP_DMA_HPP

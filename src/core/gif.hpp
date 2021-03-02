@@ -6,6 +6,7 @@
 
 #include "gs.hpp"
 #include "int128.hpp"
+#include "core/serialize.hpp"
 
 class DMAC;
 
@@ -92,8 +93,7 @@ class GraphicsInterface
 
         void intermittent_check();
 
-        void load_state(std::ifstream& state);
-        void save_state(std::ofstream& state);
+        void do_state(StateSerializer& state);
 };
 
 inline int GraphicsInterface::get_active_path()

@@ -117,7 +117,7 @@ bool EmuThread::gsdump_read(const char *name)
         if (!gsdump.is_open())
             return 1;
         e.get_gs().reset();
-        e.get_gs().load_state(gsdump);
+        //e.get_gs().load_state(gsdump);
 
         printf("loaded gsdump\n");
         gsdump_reading = true;
@@ -198,8 +198,7 @@ void EmuThread::gsdump_run()
                         Errors::die("gsdump ended before end of file!");
                     gsdump.close();
                     Errors::die("gsdump ended successfully\n");
-                case save_state_t:
-                case load_state_t:
+                case do_state_t:
                     Errors::die("save_state save/load during gsdump not supported!");
                 default:
                     e.get_gs().send_message(data);

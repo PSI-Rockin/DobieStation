@@ -5,6 +5,7 @@
 #include <list>
 
 #include "../int128.hpp"
+#include "core/serialize.hpp"
 
 enum DMAC_CHANNELS
 {
@@ -157,8 +158,7 @@ class DMAC
         void set_DMA_request(int index);
         void clear_DMA_request(int index);
 
-        void load_state(std::ifstream& state);
-        void save_state(std::ofstream& state);
+        void do_state(StateSerializer& state);
 };
 
 #endif // DMAC_HPP

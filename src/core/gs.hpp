@@ -5,6 +5,7 @@
 #include <mutex>
 #include "gsthread.hpp"
 #include "gsregisters.hpp"
+#include "core/serialize.hpp"
 
 class INTC;
 
@@ -63,8 +64,7 @@ class GraphicsSynthesizer
         void set_XYZ(uint32_t x, uint32_t y, uint32_t z, bool drawing_kick);
         void set_XYZF(uint32_t x, uint32_t y, uint32_t z, uint8_t fog, bool drawing_kick);
 
-        void load_state(std::ifstream& state);
-        void save_state(std::ofstream& state);
+        void do_state(StateSerializer& state);
         void send_dump_request();
 
         void send_message(GSMessage message);

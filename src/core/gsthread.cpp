@@ -358,27 +358,18 @@ void GraphicsSynthesizerThread::event_loop()
                     }
                     case die_t:
                         return;
-                    case load_state_t:
+                    case do_state_t:
                     {
-                        load_state(data.payload.load_state_payload.state);
+                        do_state(data.payload.do_state_payload.state);
                         GSReturnMessagePayload return_payload;
                         return_payload.no_payload = { 0 };
-                        return_queue->push({ GSReturn::load_state_done_t,return_payload });
+                        return_queue->push({ GSReturn::do_state_done_t,return_payload });
                         std::unique_lock<std::mutex> lk(data_mutex);
                         recieve_data = true;
                         notifier.notify_one();
                         break;
                     }
-                    case save_state_t:
-                    {
-                        save_state(data.payload.save_state_payload.state);
-                        GSReturnMessagePayload return_payload;
-                        return_payload.no_payload = { 0 };
-                        return_queue->push({ GSReturn::save_state_done_t,return_payload });
-                        recieve_data = true;
-                        notifier.notify_one();
-                        break;
-                    }
+                   /*
                     case gsdump_t:
                     {
                         printf("gs dump! ");
@@ -400,6 +391,7 @@ void GraphicsSynthesizerThread::event_loop()
                         }
                         break;
                     }
+                    */
                     case request_local_host_tx:
                     {
                         auto p = data.payload.download_payload;
@@ -5403,113 +5395,76 @@ void GraphicsSynthesizerThread::recompile_convert_16bit_tex(REG_64 color, REG_64
     emitter_tex.MOV32_REG(temp2, color);
 }
 
-void GraphicsSynthesizerThread::load_state(ifstream *state)
+void GraphicsSynthesizerThread::do_state(StateSerializer *state)
 {
-    state->read((char*)local_mem, 1024 * 1024 * 4);
-    state->read((char*)&IMR, sizeof(IMR));
-    state->read((char*)&context1, sizeof(context1));
-    state->read((char*)&context2, sizeof(context2));
+    state->DoBytes(local_mem, 1024 * 1024 * 4);
+    state->Do(&IMR);
+    state->Do(&context1);
+    state->Do(&context2);
 
-    int current_ctx_id = 1;
-    state->read((char*)&current_ctx_id, sizeof(current_ctx_id));
-    if (current_ctx_id == 1)
-        current_ctx = &context1;
+    state->Do(&PRIM);
+    state->Do(&PRMODE);
+
+    if (state->GetMode() == StateSerializer::Mode::Read)
+    {
+        int current_ctx_id = 1;
+        state->Do(&current_ctx_id);
+        if (current_ctx_id == 1)
+            current_ctx = &context1;
+        else
+            current_ctx = &context2;
+
+        int current_PRMODE_id = 1;
+        state->Do(&current_PRMODE_id);
+        if (current_PRMODE_id == 1)
+            current_PRMODE = &PRIM;
+        else
+            current_PRMODE = &PRMODE;
+    }
     else
-        current_ctx = &context2;
+    {
+        int current_ctx_id = 1;
+        if (current_ctx == &context2)
+            current_ctx_id = 2;
+        state->Do(&current_ctx_id);
 
-    state->read((char*)&PRIM, sizeof(PRIM));
-    state->read((char*)&PRMODE, sizeof(PRMODE));
-    int current_PRMODE_id = 1;
-    state->read((char*)&current_PRMODE_id, sizeof(current_PRMODE_id));
-    if (current_PRMODE_id == 1)
-        current_PRMODE = &PRIM;
-    else
-        current_PRMODE = &PRMODE;
+        int current_PRMODE_id = 1;
+        if (current_PRMODE == &PRMODE)
+            current_PRMODE_id = 2;
+        state->Do(&current_PRMODE_id);
 
-    state->read((char*)&reg.DISPLAY1, sizeof(reg.DISPLAY1));
-    state->read((char*)&reg.DISPLAY2, sizeof(reg.DISPLAY2));
-    state->read((char*)&reg.PMODE, sizeof(reg.PMODE));
-    state->read((char*)&reg.SMODE2, sizeof(reg.SMODE2));
+    }
 
-    state->read((char*)&RGBAQ, sizeof(RGBAQ));
-    state->read((char*)&UV, sizeof(UV));
-    state->read((char*)&ST, sizeof(ST));
-    state->read((char*)&TEXA, sizeof(TEXA));
-    state->read((char*)&TEXCLUT, sizeof(TEXCLUT));
-    state->read((char*)&DTHE, sizeof(DTHE));
-    state->read((char*)&COLCLAMP, sizeof(COLCLAMP));
-    state->read((char*)&FOG, sizeof(FOG));
-    state->read((char*)&FOGCOL, sizeof(FOGCOL));
-    state->read((char*)&PABE, sizeof(PABE));
-    state->read((char*)&SCANMSK, sizeof(SCANMSK));
+    state->Do(&reg.DISPLAY1);
+    state->Do(&reg.DISPLAY2);
+    state->Do(&reg.PMODE);
+    state->Do(&reg.SMODE2);
 
-    state->read((char*)&BITBLTBUF, sizeof(BITBLTBUF));
-    state->read((char*)&TRXPOS, sizeof(TRXPOS));
-    state->read((char*)&TRXREG, sizeof(TRXREG));
-    state->read((char*)&TRXDIR, sizeof(TRXDIR));
-    state->read((char*)&BUSDIR, sizeof(BUSDIR));
-    state->read((char*)&pixels_transferred, sizeof(pixels_transferred));
-    state->read((char*)&dither_mtx, sizeof(dither_mtx));
+    state->Do(&RGBAQ);
+    state->Do(&UV);
+    state->Do(&ST);
+    state->Do(&TEXA);
+    state->Do(&TEXCLUT);
+    state->Do(&DTHE);
+    state->Do(&COLCLAMP);
+    state->Do(&FOG);
+    state->Do(&FOGCOL);
+    state->Do(&PABE);
+    state->Do(&SCANMSK);
 
-    state->read((char*)&PSMCT24_color, sizeof(PSMCT24_color));
-    state->read((char*)&PSMCT24_unpacked_count, sizeof(PSMCT24_unpacked_count));
+    state->Do(&BITBLTBUF);
+    state->Do(&TRXPOS);
+    state->Do(&TRXREG);
+    state->Do(&TRXDIR);
+    state->Do(&BUSDIR);
+    state->Do(&pixels_transferred);
+    state->Do(&dither_mtx);
 
-    state->read((char*)&reg, sizeof(reg));
-    state->read((char*)&current_vtx, sizeof(current_vtx));
-    state->read((char*)&vtx_queue, sizeof(vtx_queue));
-    state->read((char*)&num_vertices, sizeof(num_vertices));
-}
+    state->Do(&PSMCT24_color);
+    state->Do(&PSMCT24_unpacked_count);
 
-void GraphicsSynthesizerThread::save_state(ofstream *state)
-{
-    state->write((char*)local_mem, 1024 * 1024 * 4);
-    state->write((char*)&IMR, sizeof(IMR));
-    state->write((char*)&context1, sizeof(context1));
-    state->write((char*)&context2, sizeof(context2));
-
-    int current_ctx_id = 1;
-    if (current_ctx == &context2)
-        current_ctx_id = 2;
-    state->write((char*)&current_ctx_id, sizeof(current_ctx_id));
-
-    state->write((char*)&PRIM, sizeof(PRIM));
-    state->write((char*)&PRMODE, sizeof(PRMODE));
-
-    int current_PRMODE_id = 1;
-    if (current_PRMODE == &PRMODE)
-        current_PRMODE_id = 2;
-    state->write((char*)&current_PRMODE_id, sizeof(current_PRMODE_id));
-
-    state->write((char*)&reg.DISPLAY1, sizeof(reg.DISPLAY1));
-    state->write((char*)&reg.DISPLAY2, sizeof(reg.DISPLAY2));
-    state->write((char*)&reg.PMODE, sizeof(reg.PMODE));
-    state->write((char*)&reg.SMODE2, sizeof(reg.SMODE2));
-
-    state->write((char*)&RGBAQ, sizeof(RGBAQ));
-    state->write((char*)&UV, sizeof(UV));
-    state->write((char*)&ST, sizeof(ST));
-    state->write((char*)&TEXA, sizeof(TEXA));
-    state->write((char*)&TEXCLUT, sizeof(TEXCLUT));
-    state->write((char*)&DTHE, sizeof(DTHE));
-    state->write((char*)&COLCLAMP, sizeof(COLCLAMP));
-    state->write((char*)&FOG, sizeof(FOG));
-    state->write((char*)&FOGCOL, sizeof(FOGCOL));
-    state->write((char*)&PABE, sizeof(PABE));
-    state->write((char*)&SCANMSK, sizeof(SCANMSK));
-
-    state->write((char*)&BITBLTBUF, sizeof(BITBLTBUF));
-    state->write((char*)&TRXPOS, sizeof(TRXPOS));
-    state->write((char*)&TRXREG, sizeof(TRXREG));
-    state->write((char*)&TRXDIR, sizeof(TRXDIR));
-    state->write((char*)&BUSDIR, sizeof(BUSDIR));
-    state->write((char*)&pixels_transferred, sizeof(pixels_transferred));
-    state->write((char*)&dither_mtx, sizeof(dither_mtx));
-
-    state->write((char*)&PSMCT24_color, sizeof(PSMCT24_color));
-    state->write((char*)&PSMCT24_unpacked_count, sizeof(PSMCT24_unpacked_count));
-
-    state->write((char*)&reg, sizeof(reg));
-    state->write((char*)&current_vtx, sizeof(current_vtx));
-    state->write((char*)&vtx_queue, sizeof(vtx_queue));
-    state->write((char*)&num_vertices, sizeof(num_vertices));
+    state->Do(&reg);
+    state->Do(&current_vtx);
+    state->Do(&vtx_queue);
+    state->Do(&num_vertices);
 }

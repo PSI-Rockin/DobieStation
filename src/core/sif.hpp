@@ -6,6 +6,7 @@
 #include <list>
 #include <queue>
 
+#include "core/serialize.hpp"
 #include "int128.hpp"
 
 class IOP_DMA;
@@ -75,18 +76,17 @@ class SubsystemInterface
 
         void ee_log_sifrpc(uint32_t transfer_ptr, int len);
 
-        void load_state(std::ifstream& state);
-        void save_state(std::ofstream& state);
+        void do_state(StateSerializer& state);
 };
 
 inline int SubsystemInterface::get_SIF0_size()
 {
-    return SIF0_FIFO.size();
+    return static_cast<int>(SIF0_FIFO.size());
 }
 
 inline int SubsystemInterface::get_SIF1_size()
 {
-    return SIF1_FIFO.size();
+    return static_cast<int>(SIF1_FIFO.size());
 }
 
 #endif // SIF_HPP

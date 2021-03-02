@@ -8,6 +8,7 @@
 #include "intc.hpp"
 #include "vu.hpp"
 
+#include "core/serialize.hpp"
 #include "../int128.hpp"
 
 class GraphicsInterface;
@@ -144,8 +145,7 @@ class VectorInterface
         void set_err(uint32_t value);
         void set_fbrst(uint32_t value);
 
-        void load_state(std::ifstream& state);
-        void save_state(std::ofstream& state);
+        void do_state(StateSerializer& state);
 };
 
 inline int VectorInterface::get_id()

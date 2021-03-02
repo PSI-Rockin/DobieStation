@@ -4,6 +4,7 @@
 #include <functional>
 #include <list>
 #include <vector>
+#include "core/serialize.hpp"
 
 struct CycleCount
 {
@@ -93,8 +94,7 @@ class Scheduler
         void update_cycle_counts();
         void process_events();
 
-        void load_state(std::ifstream& state);
-        void save_state(std::ofstream& state);
+        void do_state(StateSerializer& state);
 };
 
 inline int64_t Scheduler::get_ee_cycles()

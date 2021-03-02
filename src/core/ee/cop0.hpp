@@ -2,6 +2,7 @@
 #define COP0_HPP
 #include <cstdint>
 #include <fstream>
+#include "core/serialize.hpp"
 
 
 class EE_JIT64;
@@ -129,8 +130,7 @@ class Cop0
         void set_tlb_modified(size_t page);
         bool get_tlb_modified(size_t page) const;
 
-        void load_state(std::ifstream &state);
-        void save_state(std::ofstream& state);
+        void do_state(StateSerializer &state);
 
         //Friends needed for JIT convenience
         friend class EE_JIT64;

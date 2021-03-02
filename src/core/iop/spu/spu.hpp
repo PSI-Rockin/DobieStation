@@ -2,6 +2,7 @@
 #define SPU_HPP
 #include <cstdint>
 #include <fstream>
+#include "core/serialize.hpp"
 #include "spu_envelope.hpp"
 #include "../../audio/utils.hpp"
 #include "spu_adpcm.hpp"
@@ -292,8 +293,7 @@ class SPU
 
         void gaussianConstructTable();
 
-        void load_state(std::ifstream& state);
-        void save_state(std::ofstream& state);
+        void do_state(StateSerializer& state);
 
 };
 
