@@ -103,11 +103,11 @@ void VectorInterface::update(int cycles)
             {
                 auto fifo_data = gif->read_GSFIFO();
                 //Check the GS still wants to send data
-                if (!std::get<1>(fifo_data))
+                if (!fifo_data.second)
                     return;
 
                 for (int i = 0; i < 4; i++)
-                    FIFO.push(std::get<0>(fifo_data)._u32[i]);
+                    FIFO.push(fifo_data.first._u32[i]);
             }
             else
                 break;
@@ -984,18 +984,18 @@ bool VectorInterface::feed_DMA(uint128_t quad)
     return true;
 }
 
-std::tuple<uint128_t, uint32_t>VectorInterface::readFIFO()
+std::pair<uint128_t, uint32_t>VectorInterface::readFIFO()
 {
     uint128_t quad;
     if (FIFO.empty())
-        return std::make_tuple(quad, false);
+        return std::make_pair(quad, false);
 
     for (int i = 0; i < 4; i++)
     {
         quad._u32[i] = FIFO.front();
         FIFO.pop();
     }
-    return std::make_tuple(quad, true);
+    return std::make_pair(quad, true);
 }
 
 uint32_t VectorInterface::get_stat()

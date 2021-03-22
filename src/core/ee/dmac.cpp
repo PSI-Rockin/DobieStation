@@ -306,8 +306,8 @@ int DMAC::process_VIF1()
             else
             {
                 auto quad_data = vif1->readFIFO();
-                if (std::get<1>(quad_data))
-                    store128(channels[VIF1].address, std::get<0>(quad_data));
+                if (quad_data.second)
+                    store128(channels[VIF1].address, quad_data.first);
                 else
                 {
                     arbitrate();

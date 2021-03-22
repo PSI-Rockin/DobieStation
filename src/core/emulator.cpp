@@ -744,7 +744,7 @@ uint128_t Emulator::read128(uint32_t address)
         return vu1.read_mem<uint128_t>(address);
 
     if (address == 0x10005000)
-        return std::get<0>(vif1.readFIFO());
+        return vif1.readFIFO().first;
 
     printf("Unrecognized read128 at physical addr $%08X\n", address);
     return uint128_t::from_u32(0);

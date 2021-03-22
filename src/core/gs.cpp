@@ -405,7 +405,7 @@ void GraphicsSynthesizer::request_gs_download()
     gs_download_qwc = return_packet.payload.download_payload.quad_count;
 }
 
-std::tuple<uint128_t, bool>GraphicsSynthesizer::read_gs_download()
+std::pair<uint128_t, bool>GraphicsSynthesizer::read_gs_download()
 {
     bool have_data;
     uint128_t quad_data;
@@ -425,6 +425,6 @@ std::tuple<uint128_t, bool>GraphicsSynthesizer::read_gs_download()
         quad_data._u64[1] = 0;
         have_data = false;
     }
-    return std::make_tuple(quad_data, have_data);
+    return std::make_pair(quad_data, have_data);
 }
 

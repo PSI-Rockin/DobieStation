@@ -129,7 +129,7 @@ class VectorInterface
         bool transfer_word(uint32_t value);
         bool transfer_DMAtag(uint128_t tag);
         bool feed_DMA(uint128_t quad);
-        std::tuple<uint128_t, uint32_t>readFIFO();
+        std::pair<uint128_t, uint32_t>readFIFO();
 
         uint32_t get_stat();
         uint32_t get_mark();

@@ -88,7 +88,7 @@ class GraphicsInterface
         void send_PATH2(uint32_t data[4]);
         void send_PATH3(uint128_t quad);
         void send_PATH3_FIFO(uint128_t quad);
-        std::tuple<uint128_t, bool>read_GSFIFO();
+        std::pair<uint128_t, bool>read_GSFIFO();
 
         void intermittent_check();
 

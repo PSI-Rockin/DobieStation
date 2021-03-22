@@ -71,6 +71,6 @@ class GraphicsSynthesizer
         void wake_gs_thread();
 
         void request_gs_download();
-        std::tuple<uint128_t, bool>read_gs_download();
+        std::pair<uint128_t, bool>read_gs_download();
 };
 #endif // GS_HPP
