@@ -494,8 +494,8 @@ void EE_JIT64::divide_word(EmotionEngine& ee, IR::Instruction &instr, bool hi)
     uint8_t *label1_1 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
     emitter.CMP32_IMM(0xFFFFFFFF, divisor);
     uint8_t *label1_2 = emitter.JCC_NEAR_DEFERRED(ConditionCode::NE);
-    emitter.MOV64_OI((int64_t)(int32_t)0x80000000, LO);
-    emitter.MOV64_OI(0, HI);
+    emitter.MOV64_OI((int64_t)(int32_t)0x80000000, LO); // if dividing INT32_MIN / -1, set lo to INT32_MIN
+    emitter.XOR32_REG(HI, HI); // and set hi to 0
     uint8_t *end_1 = emitter.JMP_NEAR_DEFERRED();
 
     emitter.set_jump_dest(label1_1);

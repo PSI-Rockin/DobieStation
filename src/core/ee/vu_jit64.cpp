@@ -2097,8 +2097,7 @@ void VU_JIT64::mac_eq(VectorUnit &vu, IR::Instruction &instr)
 
     //dest = mac == source
     emitter.load_addr((uint64_t)vu.MAC_flags, REG_64::RAX);
-    emitter.MOV32_FROM_MEM(REG_64::RAX, REG_64::RAX);
-    emitter.AND32_EAX(0xFFFF);
+    emitter.MOVZX16_TO_32_FROM_MEM(REG_64::RAX, REG_64::RAX); // movzx eax, word ptr [rax]
     emitter.CMP16_REG(REG_64::RAX, source);
     emitter.SETCC_REG(ConditionCode::E, REG_64::RAX);
     emitter.AND32_EAX(0x1);
