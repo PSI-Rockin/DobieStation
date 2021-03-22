@@ -1290,12 +1290,54 @@ void Emitter64::MOVZX8_TO_32(REG_64 source, REG_64 dest)
     modrm(0b11, dest, source);
 }
 
+// movzx r32, byte ptr [indir_source + offset]
+void Emitter64::MOVZX8_TO_32_FROM_MEM (REG_64 indir_source, REG_64 dest, uint32_t offset) {
+    rexw_r_rm(dest, indir_source); // Optional REX prefix
+    block->write<uint8_t>(0x0F); // 2-byte opcode
+    block->write<uint8_t>(0xB6);
+
+    if ((indir_source & 7) == 5 || offset) // ModRM 
+        modrm(0b10, dest, indir_source);
+    else
+        modrm(0, dest, indir_source);
+
+    if ((indir_source & 7) == 4) // SIB
+        block->write<uint8_t>(0x24);
+    if ((indir_source & 7) == 5 || offset)
+        block->write<uint32_t>(offset);
+}
+
 void Emitter64::MOVZX8_TO_64(REG_64 source, REG_64 dest)
 {
     rexw_r_rm(dest, source);
     block->write<uint8_t>(0x0F);
     block->write<uint8_t>(0xB6);
     modrm(0b11, dest, source);
+}
+
+void Emitter64::MOVZX16_TO_32(REG_64 source, REG_64 dest)
+{
+    rexw_r_rm(dest, source);
+    block->write<uint8_t>(0x0F);
+    block->write<uint8_t>(0xB7);
+    modrm(0b11, dest, source);
+}
+
+// movzx r32, word ptr [indir_source + offset]
+void Emitter64::MOVZX16_TO_32_FROM_MEM (REG_64 indir_source, REG_64 dest, uint32_t offset) {
+    rexw_r_rm(dest, indir_source); // Optional REX prefix
+    block->write<uint8_t>(0x0F); // 2-byte opcode
+    block->write<uint8_t>(0xB7);
+
+    if ((indir_source & 7) == 5 || offset) // ModRM 
+        modrm(0b10, dest, indir_source);
+    else
+        modrm(0, dest, indir_source);
+
+    if ((indir_source & 7) == 4) // SIB
+        block->write<uint8_t>(0x24);
+    if ((indir_source & 7) == 5 || offset)
+        block->write<uint32_t>(offset);
 }
 
 void Emitter64::MOVZX16_TO_64(REG_64 source, REG_64 dest)

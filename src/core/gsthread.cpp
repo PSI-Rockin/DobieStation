@@ -4628,7 +4628,7 @@ void GraphicsSynthesizerThread::recompile_depth_test()
 
         if (current_ctx->zbuf.format & 0x2)
         {
-            emitter_dp.AND32_EAX(0xFFFF);
+            emitter_dp.MOVZX16_TO_32 (RAX, RAX); // and eax, 0xFFFF
 
             emitter_dp.CMP32_IMM(0xFFFF, R14);
             no_clamp = emitter_dp.JCC_NEAR_DEFERRED(ConditionCode::L);
@@ -4924,7 +4924,7 @@ GSTextureJitBlockRecord* GraphicsSynthesizerThread::recompile_tex_lookup(uint64_
     //RBX = width - 1, R15 = height - 1
     emitter_tex.MOV32_FROM_MEM(R14, RBX, offsetof(TexLookupInfo, tex_width));
     emitter_tex.MOV32_REG(RBX, R15);
-    emitter_tex.AND32_REG_IMM(0xFFFF, RBX);
+    emitter_tex.MOVZX16_TO_32(RBX, RBX); // short form for and ebx, 0xFFFF
     emitter_tex.DEC32(RBX);
     emitter_tex.SHR32_REG_IMM(16, R15);
     emitter_tex.DEC32(R15);
@@ -4937,14 +4937,12 @@ GSTextureJitBlockRecord* GraphicsSynthesizerThread::recompile_tex_lookup(uint64_
     {
         emitter_tex.MOV32_FROM_MEM(R14, RCX, offsetof(TexLookupInfo, mipmap_level));
         emitter_tex.load_addr((uint64_t)&current_ctx->clamp.min_u, RDX);
-        emitter_tex.MOV32_FROM_MEM(RDX, RDX);
-        emitter_tex.AND32_REG_IMM(0xFFFF, RDX);
+        emitter_tex.MOVZX16_TO_32_FROM_MEM(RDX, RDX); // movzx edx, word ptr [rdx]
         emitter_tex.SHR32_CL(RDX);
 
         emitter_tex.XOR32_REG(RBX, RBX);
         emitter_tex.load_addr((uint64_t)&current_ctx->clamp.max_u, RBX);
-        emitter_tex.MOV32_FROM_MEM(RBX, RBX);
-        emitter_tex.AND32_REG_IMM(0xFFFF, RBX);
+        emitter_tex.MOVZX16_TO_32_FROM_MEM(RBX, RBX); // movzx ebx, word ptr [ebx]
         emitter_tex.SHR32_CL(RBX);
     }
 
@@ -4952,14 +4950,12 @@ GSTextureJitBlockRecord* GraphicsSynthesizerThread::recompile_tex_lookup(uint64_
     {
         emitter_tex.MOV32_FROM_MEM(R14, RCX, offsetof(TexLookupInfo, mipmap_level));
         emitter_tex.load_addr((uint64_t)&current_ctx->clamp.min_v, R8);
-        emitter_tex.MOV32_FROM_MEM(R8, R8);
-        emitter_tex.AND32_REG_IMM(0xFFFF, R8);
+        emitter_tex.MOVZX16_TO_32_FROM_MEM(R8, R8); // movzx r8d, word ptr [r8]
         emitter_tex.SHR32_CL(R8);
 
         emitter_tex.XOR32_REG(R15, R15);
         emitter_tex.load_addr((uint64_t)&current_ctx->clamp.max_v, R15);
-        emitter_tex.MOV32_FROM_MEM(R15, R15);
-        emitter_tex.AND32_REG_IMM(0xFFFF, R15);
+        emitter_tex.MOVZX16_TO_32_FROM_MEM(R15, R15); // movzx r15d, word ptr [r15]
         emitter_tex.SHR32_CL(R15);
     }
 
@@ -5105,20 +5101,18 @@ GSTextureJitBlockRecord* GraphicsSynthesizerThread::recompile_tex_lookup(uint64_
             }
             emitter_tex.load_addr((uint64_t)local_mem, RCX);
             emitter_tex.ADD64_REG(RCX, RAX);
-            emitter_tex.MOV32_FROM_MEM(RAX, RAX);
-            emitter_tex.AND32_EAX(0xFFFF);
+            emitter_tex.MOVZX16_TO_32_FROM_MEM(RAX, RAX); // movzx eax, word ptr [rax]
             recompile_convert_16bit_tex(RAX, RCX, RSI);
             break;
         case 0x09:
             //Invalid texture format used by FFX
-            emitter_tex.MOV32_REG_IMM(0, RAX);
+            emitter_tex.XOR64_REG(RAX, RAX); // mov eax, 0
             break;
         case 0x13:
             jit_call_func(emitter_tex, (uint64_t)&addr_PSMCT8);
             emitter_tex.load_addr((uint64_t)local_mem, RCX);
             emitter_tex.ADD64_REG(RCX, RAX);
-            emitter_tex.MOV32_FROM_MEM(RAX, RDI);
-            emitter_tex.AND32_REG_IMM(0xFF, RDI);
+            emitter_tex.MOVZX8_TO_32_FROM_MEM(RAX, RDI); // movzx edi, byte ptr [rax]
 
             if (current_ctx->tex0.use_CSM2)
                 recompile_csm2_lookup();
@@ -5334,8 +5328,7 @@ void GraphicsSynthesizerThread::recompile_clut_lookup()
             emitter_tex.ADD32_REG(RDI, RCX);
             emitter_tex.AND32_REG_IMM(0x3FF, RCX);
             emitter_tex.ADD64_REG(RCX, RAX);
-            emitter_tex.MOV32_FROM_MEM(RAX, RAX);
-            emitter_tex.AND32_EAX(0xFFFF);
+            emitter_tex.MOVZX16_TO_32_FROM_MEM(RAX, RAX);
 
             recompile_convert_16bit_tex(RAX, RCX, RDI);
             break;
@@ -5350,8 +5343,7 @@ void GraphicsSynthesizerThread::recompile_csm2_lookup()
     emitter_tex.load_addr((uint64_t)&clut_cache, RAX);
     emitter_tex.SHL32_REG_IMM(1, RDI);
     emitter_tex.ADD64_REG(RDI, RAX);
-    emitter_tex.MOV32_FROM_MEM(RAX, RAX);
-    emitter_tex.AND32_EAX(0xFFFF);
+    emitter_tex.MOVZX16_TO_32_FROM_MEM(RAX, RAX);
 
     recompile_convert_16bit_tex(RAX, RDI, RSI);
 }

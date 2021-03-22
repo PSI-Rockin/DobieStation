@@ -160,7 +160,7 @@ void EE_JIT64::emit_dispatcher()
 
     //First we need to make sure the pointer isn't NULL, which means no block has been recompiled.
     //If it is NULL, we go to the slow path.
-    emitter.CMP64_IMM(0, REG_64::RAX);
+    emitter.TEST64_REG(REG_64::RAX, REG_64::RAX);
     uint8_t* slow_path_dest1 = emitter.JCC_NEAR_DEFERRED(ConditionCode::E);
 
     //Compare current PC with the PC of the block

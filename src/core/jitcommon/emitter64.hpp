@@ -202,7 +202,10 @@ class Emitter64
         void MOVSX16_TO_64(REG_64 source, REG_64 dest);
         void MOVSX32_TO_64(REG_64 source, REG_64 dest);
         void MOVZX8_TO_32(REG_64 source, REG_64 dest);
+        void MOVZX8_TO_32_FROM_MEM (REG_64 indir_source, REG_64 dest, uint32_t offset = 0); // movzx source, byte ptr [indir_rest + offset]
         void MOVZX8_TO_64(REG_64 source, REG_64 dest);
+        void MOVZX16_TO_32(REG_64 source, REG_64 dest);
+        void MOVZX16_TO_32_FROM_MEM (REG_64 indir_source, REG_64 dest, uint32_t offset = 0); // movzx source, word ptr [indir_rest + offset]
         void MOVZX16_TO_64(REG_64 source, REG_64 dest);
 
         void MOVD_FROM_MEM(REG_64 indir_source, REG_64 xmm_dest);

@@ -2029,7 +2029,7 @@ void VU_JIT64::move_to_int(VectorUnit &vu, IR::Instruction &instr)
     }
 
     //Unsure if this is necessary
-    emitter.AND32_REG_IMM(0xFFFF, dest);
+    emitter.MOVZX16_TO_32(dest, dest); // shorter form for and dest, 0xFFFF (recommended by both g++ and Clang)
 }
 
 void VU_JIT64::move_from_int(VectorUnit &vu, IR::Instruction &instr)
