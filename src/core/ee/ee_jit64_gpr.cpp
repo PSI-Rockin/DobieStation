@@ -514,9 +514,9 @@ void EE_JIT64::divide_word(EmotionEngine& ee, IR::Instruction &instr, bool hi)
     emitter.SETCC_REG(ConditionCode::L, REG_64::RAX);
     emitter.SHL8_REG_1(REG_64::RAX);
     emitter.DEC8(REG_64::RAX);
-    emitter.MOVSX8_TO_64(REG_64::RAX, REG_64::RAX);
+    emitter.MOVSX8_TO_64(REG_64::RAX, REG_64::RAX); // sign extend al into rax
     emitter.MOVSX32_TO_64(dividend, dividend);
-    emitter.MOVSX8_TO_64(REG_64::RAX, LO);
+    emitter.MOV64_MR(REG_64::RAX, LO); // store the previously extended al into lo
     emitter.MOVSX32_TO_64(dividend, HI);
 
     emitter.set_jump_dest(end_1);
@@ -1327,8 +1327,7 @@ void EE_JIT64::shift_right_logical_variable(EmotionEngine& ee, IR::Instruction& 
     // Alloc variable into RCX
     REG_64 RCX = lalloc_int_reg(ee, 0, REG_TYPE::INTSCRATCHPAD, REG_STATE::SCRATCHPAD, REG_64::RCX);
     REG_64 variable = alloc_reg(ee, instr.get_source2(), REG_TYPE::GPR, REG_STATE::READ);
-    emitter.MOV8_REG(variable, RCX);
-    emitter.AND8_REG_IMM(0x1F, RCX);
+    emitter.MOV8_REG(variable, RCX); // While the MIPS spec dictates that the shift amount be masked by 31, this already happens implicitly on x86
 
     REG_64 source = alloc_reg(ee, instr.get_source(), REG_TYPE::GPR, REG_STATE::READ);
     REG_64 dest = alloc_reg(ee, instr.get_dest(), REG_TYPE::GPR, REG_STATE::WRITE);

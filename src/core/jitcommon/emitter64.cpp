@@ -139,9 +139,20 @@ void Emitter64::ADD32_REG(REG_64 source, REG_64 dest)
 void Emitter64::ADD32_REG_IMM(uint32_t imm, REG_64 dest)
 {
     rex_rm(dest);
-    block->write<uint8_t>(0x81);
-    modrm(0b11, 0, dest);
-    block->write<uint32_t>(imm);
+
+    if (imm > 0xFF) // 32-bit immediate version
+    { 
+        block->write<uint8_t>(0x81);
+        modrm(0b11, 0, dest);
+        block->write<uint32_t>(imm);
+    }
+
+    else // 8-bit immediate version 
+    {
+        block->write<uint8_t>(0x83);
+        modrm(0b11, 0, dest);
+        block->write<uint8_t>(imm);
+    }
 }
 
 void Emitter64::ADD64_REG(REG_64 source, REG_64 dest)
@@ -215,9 +226,20 @@ void Emitter64::AND32_REG(REG_64 source, REG_64 dest)
 void Emitter64::AND32_REG_IMM(uint32_t imm, REG_64 dest)
 {
     rex_rm(dest);
-    block->write<uint8_t>(0x81);
-    modrm(0b11, 4, dest);
-    block->write<uint32_t>(imm);
+
+    if (imm > 0xFF) // 32-bit-immediate version
+    { 
+        block->write<uint8_t>(0x81);
+        modrm(0b11, 4, dest);
+        block->write<uint32_t>(imm);
+    }
+
+    else // 8-bit-immediate version
+    { 
+        block->write<uint8_t>(0x83);
+        modrm(0b11, 4, dest);
+        block->write<uint8_t>(imm);
+    }
 }
 
 void Emitter64::AND64_REG(REG_64 source, REG_64 dest)
@@ -353,9 +375,20 @@ void Emitter64::CMP16_REG(REG_64 op2, REG_64 op1)
 void Emitter64::CMP32_IMM(uint32_t imm, REG_64 op)
 {
     rex_rm(op);
-    block->write<uint8_t>(0x81);
-    modrm(0b11, 7, op);
-    block->write<uint32_t>(imm);
+
+    if (imm > 0xFF) // 32-bit immediate version
+    { 
+        block->write<uint8_t>(0x81);
+        modrm(0b11, 7, op);
+        block->write<uint32_t>(imm);
+    }
+
+    else // 8-bit immediate version
+    {
+        block->write<uint8_t>(0x83);
+        modrm(0b11, 1, op);
+        block->write<uint8_t>(imm);
+    }
 }
 
 void Emitter64::CMP32_IMM_MEM(uint32_t imm, REG_64 mem, uint32_t offset)
@@ -547,9 +580,20 @@ void Emitter64::OR32_REG(REG_64 source, REG_64 dest)
 void Emitter64::OR32_REG_IMM(uint32_t imm, REG_64 dest)
 {
     rex_rm(dest);
-    block->write<uint8_t>(0x81);
-    modrm(0b11, 1, dest);
-    block->write<uint32_t>(imm);
+
+    if (imm > 0xFF) // 32-bit immediate version
+    { 
+        block->write<uint8_t>(0x81);
+        modrm(0b11, 1, dest);
+        block->write<uint32_t>(imm);
+    }
+
+    else // 8-bit immediate version 
+    {
+        block->write<uint8_t>(0x83);
+        modrm(0b11, 1, dest);
+        block->write<uint8_t>(imm);
+    }
 }
 
 void Emitter64::OR32_EAX(uint32_t imm)
