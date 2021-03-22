@@ -386,7 +386,7 @@ void Emitter64::CMP32_IMM(uint32_t imm, REG_64 op)
     else // 8-bit immediate version
     {
         block->write<uint8_t>(0x83);
-        modrm(0b11, 1, op);
+        modrm(0b11, 7, op);
         block->write<uint8_t>(imm);
     }
 }
