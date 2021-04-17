@@ -398,6 +398,9 @@
     <ClInclude Include="ee\ipu\motioncode.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
+    <ClInclude Include="serialize.hpp">
+      <Filter>Headers</Filter>
+    </ClInclude>
     <ClInclude Include="sif.hpp">
       <Filter>Headers</Filter>
     </ClInclude>
