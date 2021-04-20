@@ -2,7 +2,7 @@
 #define INTC_HPP
 #include <cstdint>
 #include <fstream>
-#include "core/serialize.hpp"
+#include "../serialize.hpp"
 
 class EmotionEngine;
 class Scheduler;

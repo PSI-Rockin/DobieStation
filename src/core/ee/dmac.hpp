@@ -5,7 +5,7 @@
 #include <list>
 
 #include "../int128.hpp"
-#include "core/serialize.hpp"
+#include "../serialize.hpp"
 
 enum DMAC_CHANNELS
 {

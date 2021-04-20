@@ -5,7 +5,7 @@
 #include <mutex>
 #include "gsthread.hpp"
 #include "gsregisters.hpp"
-#include "core/serialize.hpp"
+#include "serialize.hpp"
 
 class INTC;
 

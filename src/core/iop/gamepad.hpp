@@ -2,7 +2,7 @@
 #define GAMEPAD_HPP
 #include <cstdint>
 #include <fstream>
-#include "core/serialize.hpp"
+#include "../serialize.hpp"
 
 enum class PAD_BUTTON
 {

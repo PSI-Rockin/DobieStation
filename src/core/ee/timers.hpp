@@ -2,7 +2,7 @@
 #define TIMERS_HPP
 #include <cstdint>
 #include <fstream>
-#include "core/serialize.hpp"
+#include "../serialize.hpp"
 
 struct TimerControl
 {

@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <fstream>
 #include <list>
-#include "core/serialize.hpp"
+#include "../serialize.hpp"
 
 class IOP_DMA;
 

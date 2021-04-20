@@ -6,7 +6,7 @@
 
 #include "gs.hpp"
 #include "int128.hpp"
-#include "core/serialize.hpp"
+#include "serialize.hpp"
 
 class DMAC;
 

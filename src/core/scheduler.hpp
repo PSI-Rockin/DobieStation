@@ -4,7 +4,7 @@
 #include <functional>
 #include <list>
 #include <vector>
-#include "core/serialize.hpp"
+#include "serialize.hpp"
 
 struct CycleCount
 {

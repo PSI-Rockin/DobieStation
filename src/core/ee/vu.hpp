@@ -6,7 +6,7 @@
 #include <unordered_set>
 #include "emotion.hpp"
 #include "../int128.hpp"
-#include "core/serialize.hpp"
+#include "../serialize.hpp"
 
 union alignas(16) VU_R
 {

@@ -6,7 +6,7 @@
 #include <list>
 #include <queue>
 
-#include "core/serialize.hpp"
+#include "serialize.hpp"
 #include "int128.hpp"
 
 class IOP_DMA;

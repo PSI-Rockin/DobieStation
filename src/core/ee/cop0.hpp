@@ -2,7 +2,7 @@
 #define COP0_HPP
 #include <cstdint>
 #include <fstream>
-#include "core/serialize.hpp"
+#include "../serialize.hpp"
 
 
 class EE_JIT64;

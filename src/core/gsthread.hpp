@@ -10,7 +10,7 @@
 #include "gsregisters.hpp"
 #include "circularFIFO.hpp"
 #include "int128.hpp"
-#include "core/serialize.hpp"
+#include "serialize.hpp"
 
 #include "jitcommon/emitter64.hpp"
 

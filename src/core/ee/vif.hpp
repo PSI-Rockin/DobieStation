@@ -8,7 +8,7 @@
 #include "intc.hpp"
 #include "vu.hpp"
 
-#include "core/serialize.hpp"
+#include "../serialize.hpp"
 #include "../int128.hpp"
 
 class GraphicsInterface;

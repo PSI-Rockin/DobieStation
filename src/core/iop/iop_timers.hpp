@@ -2,7 +2,7 @@
 #define IOP_TIMERS_HPP
 #include <cstdint>
 #include <fstream>
-#include "core/serialize.hpp"
+#include "../serialize.hpp"
 
 struct IOP_Timer_Control
 {

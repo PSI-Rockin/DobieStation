@@ -8,7 +8,7 @@
 #include "cop1.hpp"
 
 #include "../int128.hpp"
-#include "core/serialize.hpp"
+#include "../serialize.hpp"
 
 class Emulator;
 class VectorUnit;
