@@ -231,7 +231,8 @@ void GraphicsSynthesizerThread::event_loop()
     printf("[GS_t] Starting GS Thread\n");
 
     bool gsdump_recording = false;
-    ofstream gsdump_file;
+    fstream gsdump_file;
+    auto gsdump = StateSerializer(gsdump_file, StateSerializer::Mode::Write);
 
     try
     {
@@ -242,7 +243,7 @@ void GraphicsSynthesizerThread::event_loop()
             if (message_queue->pop(data))
             {
                 if (gsdump_recording)
-                    gsdump_file.write((char*)&data, sizeof(data));
+                    gsdump.Do(&data);
 
                 switch (data.type)
                 {
@@ -369,7 +370,6 @@ void GraphicsSynthesizerThread::event_loop()
                         notifier.notify_one();
                         break;
                     }
-                   /*
                     case gsdump_t:
                     {
                         printf("gs dump! ");
@@ -380,8 +380,8 @@ void GraphicsSynthesizerThread::event_loop()
                             if (!gsdump_file.is_open())
                                 Errors::die("gs dump file failed to open");
                             gsdump_recording = true;
-                            save_state(&gsdump_file);
-                            gsdump_file.write((char*)&reg, sizeof(reg));
+                            do_state(&gsdump);
+                            gsdump.Do(&reg);
                         }
                         else
                         {
@@ -391,7 +391,6 @@ void GraphicsSynthesizerThread::event_loop()
                         }
                         break;
                     }
-                    */
                     case request_local_host_tx:
                     {
                         auto p = data.payload.download_payload;

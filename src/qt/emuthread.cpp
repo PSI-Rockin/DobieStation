@@ -113,11 +113,13 @@ bool EmuThread::gsdump_read(const char *name)
 {
     wait_for_lock([=]() 
     { 
-        gsdump.open(name,ios::binary);
+        gsdump.open(name, ios::binary | ios::in);
         if (!gsdump.is_open())
             return 1;
         e.get_gs().reset();
-        //e.get_gs().load_state(gsdump);
+
+        auto gsdump_reader = StateSerializer(gsdump, StateSerializer::Mode::Read);
+        e.get_gs().do_state(gsdump_reader);
 
         printf("loaded gsdump\n");
         gsdump_reading = true;
