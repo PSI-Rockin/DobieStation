@@ -131,8 +131,8 @@ jobs:
       env:
         HOMEBREW_NO_ANALYTICS: 1
       run: |
-        brew install qt
-        brew link qt --force
+        brew install qt@5
+        brew link qt@5 --force
         mkdir build
     - name: Build
       working-directory: build
@@ -150,8 +150,8 @@ jobs:
       env:
         HOMEBREW_NO_ANALYTICS: 1
       run: |
-        brew install qt
-        brew link qt --force
+        brew install qt@5
+        brew link qt@5 --force
     - name: Build
       working-directory: DobieStation
       run: |
