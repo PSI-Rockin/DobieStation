@@ -2,6 +2,7 @@
 #define INTC_HPP
 #include <cstdint>
 #include <fstream>
+#include "../serialize.hpp"
 
 class EmotionEngine;
 class Scheduler;
@@ -50,8 +51,7 @@ class INTC
         void assert_IRQ(int id);
         void deassert_IRQ(int id);
 
-        void load_state(std::ifstream& state);
-        void save_state(std::ofstream& state);
+        void do_state(StateSerializer& state);
 };
 
 #endif // INTC_HPP

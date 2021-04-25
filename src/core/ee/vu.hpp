@@ -6,6 +6,7 @@
 #include <unordered_set>
 #include "emotion.hpp"
 #include "../int128.hpp"
+#include "../serialize.hpp"
 
 union alignas(16) VU_R
 {
@@ -385,8 +386,7 @@ class VectorUnit
         void xitop(uint32_t instr);
         void xtop(uint32_t instr);
 
-        void load_state(std::ifstream& state);
-        void save_state(std::ofstream& state);
+        void do_state(StateSerializer& state);
 
         //Friends needed for JIT convenience
         friend class VU_JIT64;

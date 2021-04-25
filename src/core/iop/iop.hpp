@@ -5,6 +5,7 @@
 #include <cstdio>
 #include <fstream>
 #include "iop_cop0.hpp"
+#include "../serialize.hpp"
 
 class Emulator;
 
@@ -79,8 +80,7 @@ class IOP
         void write16(uint32_t addr, uint16_t value);
         void write32(uint32_t addr, uint32_t value);
 
-        void load_state(std::ifstream& state);
-        void save_state(std::ofstream& state);
+        void do_state(StateSerializer& state);
 };
 
 inline void IOP::halt()

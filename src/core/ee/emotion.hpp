@@ -8,6 +8,7 @@
 #include "cop1.hpp"
 
 #include "../int128.hpp"
+#include "../serialize.hpp"
 
 class Emulator;
 class VectorUnit;
@@ -214,8 +215,7 @@ class EmotionEngine
         void qmtc2(int source, int cop_reg);
         void cop2_updatevu0();
 
-        void load_state(std::ifstream& state);
-        void save_state(std::ofstream& state);
+        void do_state(StateSerializer &state);
 
         //Friends needed for JIT convenience
         friend class EE_JIT64;

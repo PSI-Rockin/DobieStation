@@ -2,6 +2,7 @@
 #define IOP_TIMERS_HPP
 #include <cstdint>
 #include <fstream>
+#include "../serialize.hpp"
 
 struct IOP_Timer_Control
 {
@@ -55,8 +56,7 @@ class IOPTiming
         void write_control(int index, uint16_t value);
         void write_target(int index, uint32_t value);
 
-        void load_state(std::ifstream& state);
-        void save_state(std::ofstream& state);
+        void do_state(StateSerializer& state);
 };
 
 #endif // IOP_TIMERS_HPP

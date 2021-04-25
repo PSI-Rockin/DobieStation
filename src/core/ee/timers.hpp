@@ -2,6 +2,7 @@
 #define TIMERS_HPP
 #include <cstdint>
 #include <fstream>
+#include "../serialize.hpp"
 
 struct TimerControl
 {
@@ -61,8 +62,7 @@ class EmotionTiming
         uint32_t read32(uint32_t addr);
         void write32(uint32_t addr, uint32_t value);
 
-        void load_state(std::ifstream& state);
-        void save_state(std::ofstream& state);
+        void do_state(StateSerializer& state);
 };
 
 #endif // TIMERS_HPP

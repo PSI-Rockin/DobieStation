@@ -31,7 +31,7 @@ class EmuThread : public QThread
         Emulator e;
 
         std::chrono::system_clock::time_point old_frametime;
-        std::ifstream gsdump;
+        std::fstream gsdump;
         std::atomic_bool gsdump_reading;
         std::atomic_bool block_run_loop;
         GSMessage* gsdump_read_buffer;

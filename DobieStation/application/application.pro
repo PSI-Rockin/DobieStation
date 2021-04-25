@@ -180,6 +180,7 @@ HEADERS += \
     ../../src/core/ee/vu_interpreter.hpp \
     ../../src/core/ee/vu_disasm.hpp \
     ../../src/core/gsmem.hpp \
+    ../../src/core/serialize.hpp \
     ../../src/core/iop/memcard.hpp \
     ../../src/qt/settings.hpp \
     ../../src/core/jitcommon/jitcache.hpp \

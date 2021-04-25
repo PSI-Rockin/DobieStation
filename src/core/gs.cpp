@@ -339,29 +339,16 @@ void GraphicsSynthesizer::set_XYZF(uint32_t x, uint32_t y, uint32_t z, uint8_t f
     gs_thread.send_message({ GSCommand::set_xyzf_t, payload });
 }
 
-void GraphicsSynthesizer::load_state(std::ifstream &state)
+void GraphicsSynthesizer::do_state(StateSerializer& state)
 {
     GSMessagePayload payload;
-    payload.load_state_payload = {&state};
-    gs_thread.send_message({ GSCommand::load_state_t, payload });
+    payload.do_state_payload = {&state};
+    gs_thread.send_message({ GSCommand::do_state_t, payload });
     gs_thread.wake_thread();
     GSReturnMessage data;
-    gs_thread.wait_for_return(GSReturn::load_state_done_t, data);
-    
-    state.read((char*)&reg, sizeof(reg));
-}
+    gs_thread.wait_for_return(GSReturn::do_state_done_t, data);
 
-void GraphicsSynthesizer::save_state(std::ofstream &state)
-{
-    GSMessagePayload payload;
-    payload.save_state_payload = {&state};
-
-    gs_thread.send_message({ GSCommand::save_state_t, payload });
-    gs_thread.wake_thread();
-    GSReturnMessage data;
-    gs_thread.wait_for_return(GSReturn::save_state_done_t, data);
-    
-    state.write((char*)&reg, sizeof(reg));
+    state.Do(&reg);
 }
 
 void GraphicsSynthesizer::send_dump_request()

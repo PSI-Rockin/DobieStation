@@ -5,6 +5,7 @@
 #include <memory>
 #include <algorithm>
 #include <string.h>
+#include "../../serialize.hpp"
 #include "cdvd_container.hpp"
 
 class IOP_INTC;
@@ -170,8 +171,7 @@ class CDVD_Drive
         void write_ISTAT(uint8_t value);
         void write_mecha_decode(uint8_t value);
 
-        void load_state(std::ifstream& state);
-        void save_state(std::ofstream& state);
+        void do_state(StateSerializer& state);
 };
 
 #endif // CDVD_HPP

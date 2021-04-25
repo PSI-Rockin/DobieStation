@@ -2,6 +2,7 @@
 #define IOP_INTC_HPP
 #include <cstdint>
 #include <fstream>
+#include "../serialize.hpp"
 
 class IOP;
 
@@ -27,8 +28,7 @@ class IOP_INTC
         void write_istat(uint32_t value);
         void write_ictrl(uint32_t value);
 
-        void load_state(std::ifstream& state);
-        void save_state(std::ofstream& state);
+        void do_state(StateSerializer& state);
 };
 
 #endif // IOP_INTC_HPP

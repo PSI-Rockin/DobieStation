@@ -2,6 +2,7 @@
 #define GAMEPAD_HPP
 #include <cstdint>
 #include <fstream>
+#include "../serialize.hpp"
 
 enum class PAD_BUTTON
 {
@@ -83,8 +84,7 @@ class Gamepad
         uint8_t start_transfer(uint8_t value);
         uint8_t write_SIO(uint8_t value);
 
-        void load_state(std::ifstream& state);
-        void save_state(std::ofstream& state);
+        void do_state(StateSerializer &state);
 };
 
 #endif // GAMEPAD_HPP

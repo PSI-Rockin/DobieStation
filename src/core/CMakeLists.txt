@@ -108,6 +108,7 @@ set(HEADERS
     gsthread.hpp
     int128.hpp
     scheduler.hpp
+    serialize.hpp
     sif.hpp
     audio/utils.hpp
     ee/bios_hle.hpp

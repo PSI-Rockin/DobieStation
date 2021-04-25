@@ -212,6 +212,7 @@
     <ClInclude Include="ee\ipu\mac_p_pic.hpp" />
     <ClInclude Include="iop\memcard.hpp" />
     <ClInclude Include="ee\ipu\motioncode.hpp" />
+    <ClInclude Include="serialize.hpp" />
     <ClInclude Include="sif.hpp" />
     <ClInclude Include="iop\sio2.hpp" />
     <ClInclude Include="iop\spu\spu.hpp" />
