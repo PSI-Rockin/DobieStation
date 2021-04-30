@@ -1,23 +1,46 @@
 #include "ir_instr.hpp"
+#include "../errors.hpp"
 
 namespace IR
 {
 
 Instruction::Instruction(Opcode op) : op(op)
 {
+    has_dest = false;
+    has_source = false;
+    has_source2 = false;
+    ignore_likely = false;
     jump_dest = 0;
     jump_fail_dest = 0;
     return_addr = 0;
-    dest = 0;
     base = 0;
-    source = 0;
-    source2 = 0;
     cycle_count = 0;
     bc = 0;
     field = 0;
     field2 = 0;
     is_likely = 0;
     is_link = 0;
+}
+
+InstructionInfo *Instruction::get_dest_info()
+{
+    if (!has_dest)
+        return nullptr;
+    return &info[(int)RegisterType::Dest];
+}
+
+InstructionInfo *Instruction::get_source_info()
+{
+    if (!has_source)
+        return nullptr;
+    return &info[(int)RegisterType::Source];
+}
+
+InstructionInfo *Instruction::get_source2_info()
+{
+    if (!has_source2)
+        return nullptr;
+    return &info[(int)RegisterType::Source2];
 }
 
 uint32_t Instruction::get_jump_dest() const
@@ -35,9 +58,22 @@ uint32_t Instruction::get_return_addr() const
     return return_addr;
 }
 
-int Instruction::get_dest() const
+/*
+    Note that destination can be represented as an immediate value in some rare circumstances.
+    An example of this would be for store operations, where the actual address could be determined absolutely at compile time
+    Particularly for operation pairs such as
+
+    lui $v1, 0x36
+    sw $v0, 0x7470($v1)
+
+    Which ideally gets converted into an instruction which stores at the absolute address 0x367470
+*/
+uint64_t Instruction::get_dest() const
 {
-    return dest;
+    if (!has_dest)
+        Errors::die("Value does not exist: %s, %s:%d", __FUNCTION__, __FILE__, __LINE__);
+
+    return info[(int)RegisterType::Dest].value;
 }
 
 int Instruction::get_base() const
@@ -47,12 +83,18 @@ int Instruction::get_base() const
 
 uint64_t Instruction::get_source() const
 {
-    return source;
+    if (!has_source)
+        Errors::die("Value does not exist: %s, %s:%d", __FUNCTION__, __FILE__, __LINE__);
+
+    return info[(int)RegisterType::Source].value;
 }
 
 uint64_t Instruction::get_source2() const
 {
-    return source2;
+    if (!has_source2)
+        Errors::die("Value does not exist: %s, %s:%d", __FUNCTION__, __FILE__, __LINE__);
+
+    return info[(int)RegisterType::Source2].value;
 }
 
 uint16_t Instruction::get_cycle_count() const
@@ -110,9 +152,11 @@ void Instruction::set_return_addr(uint32_t addr)
     return_addr = addr;
 }
 
-void Instruction::set_dest(int index)
+void Instruction::set_dest(uint64_t value, OperandType operandtype)
 {
-    dest = index;
+    info[(int)RegisterType::Dest].value = value;
+    info[(int)RegisterType::Dest].operand_type = operandtype;
+    has_dest = true;
 }
 
 void Instruction::set_base(int index)
@@ -120,14 +164,18 @@ void Instruction::set_base(int index)
     base = index;
 }
 
-void Instruction::set_source(uint64_t value)
+void Instruction::set_source(uint64_t value, OperandType operandtype)
 {
-    source = value;
+    info[(int)RegisterType::Source].value = value;
+    info[(int)RegisterType::Source].operand_type = operandtype;
+    has_source = true;
 }
 
-void Instruction::set_source2(uint64_t value)
+void Instruction::set_source2(uint64_t value, OperandType operandtype)
 {
-    source2 = value;
+    info[(int)RegisterType::Source2].value = value;
+    info[(int)RegisterType::Source2].operand_type = operandtype;
+    has_source2 = true;
 }
 
 void Instruction::set_cycle_count(uint16_t value)
