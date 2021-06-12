@@ -368,6 +368,7 @@ public:
     EEJitBlockRecord* lookup_cache[1024 * 32];
 
     EEJitBlockRecord *insert_block(uint32_t PC, JitBlock* block);
+    bool has_free_space(std::size_t size);
     void flush_all_blocks();
     void invalidate_ee_page(uint32_t page);
     EEJitBlockRecord *find_block(uint32_t PC);
