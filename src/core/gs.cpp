@@ -15,7 +15,8 @@ registers.
 
 GraphicsSynthesizer::GraphicsSynthesizer(INTC* intc) 
     : intc(intc), frame_complete(false),
-    output_buffer1(nullptr), output_buffer2(nullptr)
+    output_buffer1(nullptr), output_buffer2(nullptr),
+    gs_download_buffer(nullptr)
 {
 }
 
