@@ -66,10 +66,13 @@ void IOPTiming::IRQ_test(int index, bool overflow)
             timers[index].control.compare_interrupt = true;
     }
 
-    if (!timers[index].control.repeat_int)
-        timers[index].control.int_enable = false;
-    else if (timers[index].control.toggle_int)
-        timers[index].control.int_enable ^= true;
+    if (timers[index].control.compare_interrupt_enabled)
+    {
+        if (!timers[index].control.repeat_int)
+            timers[index].control.int_enable = false;
+        else if (timers[index].control.toggle_int)
+            timers[index].control.int_enable ^= true;
+    }
 }
 
 uint32_t IOPTiming::read_counter(int index)
@@ -194,8 +197,7 @@ void IOPTiming::write_control(int index, uint16_t value)
     scheduler->set_timer_counter(events[index], 0);
     scheduler->set_timer_pause(events[index], !timers[index].control.started);
     scheduler->set_timer_int_mask(events[index],
-                                  timers[index].control.overflow_interrupt_enabled,
-                                  timers[index].control.compare_interrupt_enabled);
+                                  timers[index].control.overflow_interrupt_enabled);
 }
 
 void IOPTiming::write_target(int index, uint32_t value)

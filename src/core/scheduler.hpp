@@ -27,7 +27,7 @@ struct SchedulerTimer
     int64_t last_update, pause_delta;
     int callback_id;
     bool paused;
-    bool can_overflow, can_target;
+    bool can_overflow;
 };
 
 class Scheduler
@@ -88,7 +88,7 @@ class Scheduler
         void set_timer_target(uint64_t timer_id, uint64_t target);
         void set_timer_clockrate(uint64_t timer_id, uint64_t clockrate);
         void set_timer_pause(uint64_t timer_id, bool paused);
-        void set_timer_int_mask(uint64_t timer_id, bool can_overflow, bool can_target);
+        void set_timer_int_mask(uint64_t timer_id, bool can_overflow);
 
         void update_cycle_counts();
         void process_events();

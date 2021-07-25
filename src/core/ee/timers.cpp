@@ -138,8 +138,7 @@ void EmotionTiming::write32(uint32_t addr, uint32_t value)
             scheduler->set_timer_pause(events[id], !is_timer_enabled(id));
             scheduler->set_timer_clockrate(events[id], Scheduler::BUS_CLOCKRATE / timers[id].clock_scale);
             scheduler->set_timer_int_mask(events[id],
-                                          timers[id].control.overflow_int_enable,
-                                          timers[id].control.compare_int_enable);
+                                          timers[id].control.overflow_int_enable);
             break;
         case 2:
             printf("[EE Timing] Write32 timer %d compare: $%08X\n", id, value);
