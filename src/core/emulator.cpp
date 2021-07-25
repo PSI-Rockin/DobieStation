@@ -799,6 +799,11 @@ void Emulator::write16(uint32_t address, uint16_t value)
         dmac.write16(address, value);
         return;
     }
+    if (address >= 0x10000000 && address < 0x10002000)
+    {
+        timers.write32(address, value);
+        return;
+    }
     if (address >= 0x1C000000 && address < 0x1C200000)
     {
         *(uint16_t*)&IOP_RAM[address & 0x1FFFFF] = value;

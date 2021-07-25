@@ -186,8 +186,7 @@ void Scheduler::timer_event(uint64_t index)
     if ((old_counter <= timers[index].target && timers[index].counter >= timers[index].target) ||
         (old_counter >= timers[index].target && timers[index].counter >= (timers[index].target | (timers[index].overflow_mask + 1))))
     {
-        if (timers[index].can_target)
-            timer_callbacks[cb_id](timers[index].param, false);
+        timer_callbacks[cb_id](timers[index].param, false);
     }
 
     //Overflow check
@@ -229,7 +228,6 @@ uint64_t Scheduler::create_timer(int callback_id, uint64_t overflow_mask, uint64
     timer.param = param;
     timer.callback_id = callback_id;
     timer.can_overflow = false;
-    timer.can_target = false;
 
     timers.push_back(timer);
     return timers.size() - 1;
@@ -270,10 +268,9 @@ void Scheduler::set_timer_pause(uint64_t timer_id, bool paused)
     timers[timer_id].paused = paused;
 }
 
-void Scheduler::set_timer_int_mask(uint64_t timer_id, bool can_overflow, bool can_target)
+void Scheduler::set_timer_int_mask(uint64_t timer_id, bool can_overflow)
 {
     timers[timer_id].can_overflow = can_overflow;
-    timers[timer_id].can_target = can_target;
 }
 
 void Scheduler::set_timer_counter(uint64_t timer_id, uint64_t counter)
