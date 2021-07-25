@@ -186,8 +186,7 @@ void Scheduler::timer_event(uint64_t index)
     if ((old_counter <= timers[index].target && timers[index].counter >= timers[index].target) ||
         (old_counter >= timers[index].target && timers[index].counter >= (timers[index].target | (timers[index].overflow_mask + 1))))
     {
-        if (timers[index].can_target)
-            timer_callbacks[cb_id](timers[index].param, false);
+        timer_callbacks[cb_id](timers[index].param, false);
     }
 
     //Overflow check
